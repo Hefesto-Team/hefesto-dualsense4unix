@@ -141,6 +141,13 @@ check_udev() {
     # (falso: é default desde o install) e ignorou 77/78 — sem a 77 o nó de LED
     # não é gravável e a cor por-controle degrada p/ hidraw em silêncio.
     # Regra da casa: um item no install = um check no doctor.
+    #
+    # NOTA DATADA 06/08/2026: a lista tinha caducado de novo, e a própria regra
+    # escrita acima é que apanhou. O `install_udev.sh` instala SEM FLAG também a
+    # 82 (nosniff do Pro), a 83 (snapshot de bonds na borda udev) e a 84
+    # (variante do clone 8BitDo) — linhas 132, 133 e 138 — e nenhuma das três era
+    # conferida aqui. Quem instalasse antes delas existirem ficava sem as três,
+    # em silêncio, e o doctor dava [OK]. As três entram na contagem.
     local r found=0 missing=""
     local rules=(70-ps5-controller.rules 71-uhid.rules 71-uinput.rules
                  72-ps5-controller-autosuspend.rules
@@ -150,7 +157,10 @@ check_udev() {
                  79-external-controller-leds.rules
                  80-motion-joydev-hide.rules
                  81-hefesto-usb-power.rules
-                 81-hefesto-usb-host-power.rules)
+                 81-hefesto-usb-host-power.rules
+                 82-nintendo-pro-nosniff.rules
+                 83-hefesto-bond-snapshot.rules
+                 84-nintendo-pro-variant.rules)
     local total=${#rules[@]}
     for r in "${rules[@]}"; do
         if [[ -e "/etc/udev/rules.d/${r}" || -e "/usr/lib/udev/rules.d/${r}" ]]; then
@@ -160,7 +170,7 @@ check_udev() {
         fi
     done
     if [[ "${found}" -eq "${total}" ]]; then
-        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72/76/77/78/79/80/81-power/81-host)"
+        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72/76/77/78/79/80/81-power/81-host/82/83/84)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else
@@ -602,6 +612,27 @@ _melhor_source_de_captura() {
     ' "${2:--}"
 }
 
+# PURA: filtra um `pactl list sources short` (stdin) e deixa passar só as fontes
+# cuja porta ativa NÃO está explicitamente `not available`. `$1` = o texto de
+# `LC_ALL=C pactl list sources` (o longo), de onde sai a disponibilidade.
+#
+# Existe para que o CHECK e a CURA usem o mesmo critério. Enquanto cada um tinha
+# o seu, o doctor reprovava e mandava eleger a onboard, e o `--fix-mic` — que já
+# filtrava — se recusava a eleger a mesma onboard. Duas verdades no mesmo
+# programa, e a que ela lia na tela era a errada (RECEITA-ERRADA-01, 06/08/2026).
+_sources_com_porta_usavel() {
+    local longo="$1" linha nome
+    while IFS= read -r linha; do
+        [[ -n "${linha}" ]] || continue
+        nome="$(printf '%s\n' "${linha}" | awk '{print $2}')"
+        if [[ -n "${nome}" ]] \
+           && printf '%s\n' "${longo}" | _source_porta_ativa_indisponivel "${nome}"; then
+            continue
+        fi
+        printf '%s\n' "${linha}"
+    done
+}
+
 check_default_source_monitor() {
     command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo a fonte de captura padrão"; return; }
     local cur classe
@@ -632,14 +663,36 @@ check_default_source_monitor() {
         fi
         return
     fi
-    fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA, não a voz; rode: scripts/doctor.sh --fix-mic"
-    local prefere=0 alvo
+    # RECEITA-ERRADA-01 (06/08/2026) — a mensagem mandava rodar `--fix-mic` SEM
+    # saber se ele tem o que fazer, e o alvo que ela oferecia saía de uma lista
+    # SEM o filtro de porta que a cura aplica. Nesta máquina isso produziu as
+    # duas metades do mesmo defeito:
+    #
+    #   - MEDIDO em 06/08, sem webcam e sem controle no cabo: o check reprovava
+    #     e mandava rodar `--fix-mic`; o `--fix-mic` respondia "não há nenhuma
+    #     fonte de captura com porta usável para eleger" e não fazia nada. A
+    #     receita levava a um comando que não podia funcionar;
+    #   - MEDIDO em 29 e 30/07: o check oferecia `pactl set-default-source
+    #     <onboard>`, cujas três portas estão `not available` — o pactl aceita,
+    #     o WirePlumber não consegue honrar e REELEGE o monitor. A receita
+    #     levava ao lugar errado, e o defeito voltava sozinho.
+    #
+    # Agora o alvo sai do MESMO filtro que a cura usa, então check e cura não
+    # podem mais discordar; e quando não há alvo, o texto diz o que está
+    # acontecendo em vez de apontar para um comando impotente.
+    local prefere=0 alvo longo
     _prefere_mic_do_dualsense && prefere=1
-    alvo="$(LC_ALL=C pactl list sources short 2>/dev/null | _melhor_source_de_captura "${prefere}")"
+    longo="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+    alvo="$(LC_ALL=C pactl list sources short 2>/dev/null \
+            | _sources_com_porta_usavel "${longo}" \
+            | _melhor_source_de_captura "${prefere}")"
     if [[ -n "${alvo}" ]]; then
+        fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA, não a voz; rode: scripts/doctor.sh --fix-mic"
         info "  cura: pactl set-default-source ${alvo}"
     else
-        info "  não há nenhuma fonte de CAPTURA nesta máquina para eleger — conecte um mic/webcam ou o DualSense"
+        fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA do sistema, não a voz, e o medidor de nível ainda mostra sinal (parece funcionando)"
+        info "  o --fix-mic NÃO resolve este caso: ele só sabe ELEGER outra fonte de captura, e não há nenhuma com porta usável nesta máquina agora"
+        info "  o que resolve é hardware: conecte um mic, uma webcam com mic, ou o DualSense (no cabo, ou por Bluetooth com o mic ligado)"
     fi
     # O rastro que explica o sintoma: configurado num nó que não existe mais, o
     # WirePlumber cai na eleição automática e o monitor ganha do mic rebaixado.
@@ -684,25 +737,30 @@ fix_default_source_monitor() {
     # ativa está explicitamente indisponível sai da disputa. `unknown` continua
     # valendo — é o caso da entrada do DualSense, que grava de verdade (medido:
     # pico 441 num quarto silencioso, contra pico 0 do silêncio digital).
-    local lista_curta lista_completa
+    #
+    # O filtro virou `_sources_com_porta_usavel` (06/08/2026) para que o CHECK
+    # ofereça exatamente o alvo que a CURA elegeria — antes cada um tinha o seu
+    # critério, e a tela dizia uma coisa e o `--fix-mic` fazia outra.
+    local lista_curta lista_completa _linha _nome
     lista_completa="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
-    lista_curta=""
+    lista_curta="$(LC_ALL=C pactl list sources short 2>/dev/null \
+                   | _sources_com_porta_usavel "${lista_completa}")"
     while IFS= read -r _linha; do
         [[ -n "${_linha}" ]] || continue
-        local _nome
         _nome="$(printf '%s\n' "${_linha}" | awk '{print $2}')"
-        if [[ -n "${_nome}" ]] \
-           && printf '%s\n' "${lista_completa}" \
-              | _source_porta_ativa_indisponivel "${_nome}"; then
-            info "  ${_nome}: porta de captura indisponível (nada plugado) — fora da disputa"
-            continue
-        fi
-        lista_curta+="${_linha}"$'\n'
+        [[ -n "${_nome}" ]] || continue
+        printf '%s\n' "${lista_curta}" | awk -v n="${_nome}" '$2 == n { achou = 1 } END { exit (achou ? 0 : 1) }' \
+            || info "  ${_nome}: porta de captura indisponível (nada plugado) — fora da disputa"
     done < <(LC_ALL=C pactl list sources short 2>/dev/null || true)
 
-    alvo="$(printf '%s' "${lista_curta}" | _melhor_source_de_captura "${prefere}")"
+    alvo="$(printf '%s\n' "${lista_curta}" | _melhor_source_de_captura "${prefere}")"
     if [[ -z "${alvo}" ]]; then
+        # RECEITA-ERRADA-01: dizer que não deu não basta. O estado em que ela
+        # fica é o defeito INTEIRO de pé — e ele não parece defeito, porque o
+        # medidor de nível mostra sinal (é o áudio de saída da máquina).
         warn "a fonte padrão é um MONITOR (${cur}) e não há nenhuma fonte de captura com porta usável para eleger"
+        info "  enquanto isso durar, TUDO o que qualquer aplicativo gravar é o áudio de SAÍDA do sistema, não a voz"
+        info "  esta cura só sabe eleger outra fonte de captura — sem nenhuma, o que resolve é conectar um mic, uma webcam com mic, ou o DualSense"
         return 0
     fi
     if pactl set-default-source "${alvo}" 2>/dev/null; then
@@ -1665,12 +1723,20 @@ check_btusb_autosuspend() {
 }
 
 # PLAT-04 item 3: FastConnectable = reconexão entrante mais rápida (botão PS).
+#
+# RADIO-ABERTO-01/E1-bis (06/08/2026): esta função só conhecia a sentinela
+# LEGADA `# >>> hefesto FastConnectable >>>`, que o bloco unificado (escrito
+# por todo install desde 21/07) NÃO tem. Reproduzi a cadeia de ramos na máquina
+# dela: caía no ramo do grep genérico e imprimia "FastConnectable já
+# configurado por TERCEIRO no main.conf" — o doctor atribuía a um terceiro o
+# bloco que este projeto tinha acabado de escrever. O alternador cobre as três
+# sentinelas e o doctor volta a saber de quem é o bloco.
 check_bluez_fastconnectable() {
     local dropin=/etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf
     if [[ -f "${dropin}" ]]; then
         pass "FastConnectable do BlueZ instalado (drop-in main.conf.d) — botão PS reconecta mais rápido (vale desde o último start do bluetoothd)"
-    elif grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-        pass "FastConnectable do BlueZ instalado (bloco marcado no main.conf) — vale desde o último start do bluetoothd"
+    elif grep -qsE '^# >>> hefesto (bluetooth|FastConnectable) >>>' /etc/bluetooth/main.conf 2>/dev/null; then
+        pass "FastConnectable do BlueZ instalado (bloco marcado hefesto no main.conf) — vale desde o último start do bluetoothd"
     elif grep -qsE '^[[:space:]]*FastConnectable[[:space:]]*=[[:space:]]*true' /etc/bluetooth/main.conf 2>/dev/null; then
         pass "FastConnectable já configurado por terceiro no main.conf"
     elif [[ ! -e /etc/bluetooth/main.conf ]]; then
@@ -1678,6 +1744,126 @@ check_bluez_fastconnectable() {
     else
         warn "reconexão rápida BT (FastConnectable) não configurada — rode ./install.sh (entra por default, SEM restart do bluetoothd)"
     fi
+}
+
+# RADIO-ABERTO-01/E1-bis (06/08/2026) — O DETECTOR QUE NÃO EXISTIA.
+#
+# Até hoje o `doctor.sh` mencionava `JustWorksRepairing` ZERO vezes (grep fecha
+# a conta). Foi essa cegueira, somada ao check acima que mentia sobre a
+# autoria do bloco, que deixou `JustWorksRepairing=always` viver quatro dias em
+# /etc/bluetooth/main.conf DEPOIS de a sprint declarar a E1 "FEITA": o valor
+# seguro estava no repositório e ninguém tinha como ver que não estava no disco.
+#
+# `always` remove a ÚLTIMA recusa do BlueZ ao re-pareamento por Just Works de
+# quem já tem bond. Com o agente NoInputNoOutput e o FastConnectable, quem
+# clonar o BD_ADDR de um controle bondado sobrescreve a LinkKey sem interação
+# humana — e o device que sobe escolhe o próprio descritor HID, que pode ser um
+# TECLADO. Por isso o veredito aqui é `fail`, não `warn`.
+#
+# O segundo ramo é a contrapartida honesta da cura: `confirm` aceita SÓ se
+# houver agente registrado, enquanto `always` aceitava sem depender de ninguém.
+# A troca transfere peso para o `hefesto-bt-agent.service`, uma unit que já
+# falhou duas vezes em 04/08 (BT-AGENT-TRAVA-O-RESTART-01 e
+# BT-AGENT-MORTO-FICA-MORTO-01). Com o agente morto, o re-pareamento legítimo
+# dela para de funcionar — e é o doctor que tem de dizer isso antes que ela
+# descubra pelo controle que não conecta.
+#
+# QUEM LÊ O VALOR (06/08/2026): `scripts/bluez_config.sh verificar`, e só ele.
+# A primeira versão desta função REIMPLEMENTAVA aqui o mesmo `sed` do dono da
+# config — duas fontes para a mesma regra, que é exatamente a classe de defeito
+# que esta leva veio fechar (a lógica morava dentro do install.sh, ninguém
+# conseguia exercitá-la, e o `always` viveu quatro dias). O `verificar` é modo
+# de leitura pura, e aqui roda com `HEFESTO_BT_SUDO=""` de propósito: um
+# diagnóstico não pede senha. Se o arquivo estiver ilegível, ele diz
+# `ilegível` — e nós dizemos também, em vez de inventar "não declarado".
+#
+# POR QUE A RAIZ É VARIÁVEL AQUI (06/08/2026): a raiz vinha literal
+# (`/etc/bluetooth/main.conf`), e era isso que tornava esta função INTESTÁVEL —
+# nenhuma bancada pode exercitá-la contra o /etc de verdade, e por isso os dois
+# únicos testes que existiam eram grep de TEXTO no doctor.sh. MEDIDO: trocar o
+# `fail` do ramo `always` por `pass` deixava a suíte INTEIRA verde (138 passed),
+# e apagar a CHAMADA em `main()` também — o detector de segurança podia ser
+# invertido ou desligado sem uma linha vermelha. Com a raiz saindo de
+# `HEFESTO_BT_ETC` (o mesmo override que o dono único já usa; em produção fica
+# no padrão), `tests/unit/test_doctor_justworks_comportamento.py` roda os cinco
+# ramos DE VERDADE contra uma raiz falsa, e as duas mutações ficam vermelhas.
+check_bluez_justworks_repairing() {
+    local dono="${ROOT_DIR}/scripts/bluez_config.sh" valor state
+    local etc_bt="${HEFESTO_BT_ETC:-/etc/bluetooth}"
+    # "NÃO EXISTE" e "NÃO CONSIGO VER" são respostas diferentes, e o doctor
+    # dizia a primeira nos dois casos (achado de 06/08/2026).
+    #
+    # Dentro de um Flatpak sem `--filesystem=host` — que é o caso do nosso
+    # manifesto — `/etc/bluetooth` simplesmente NÃO EXISTE no sandbox: o /etc do
+    # host não é alcançável. O ramo abaixo caía no `info ... pulo o check`, que
+    # não é WARN nem FAIL, numa máquina cujo HOST tem `JustWorksRepairing=always`
+    # ativo. Pior que o caso do .deb, que ao menos avisava com WARN. Silêncio
+    # sobre injeção de teclas é o defeito que abriu esta sprint, de costas.
+    #
+    # O marcador é `/.flatpak-info`, que o próprio flatpak monta em todo
+    # sandbox; `FLATPAK_ID`, `SNAP` e `/run/.containerenv` cobrem os vizinhos.
+    # Os dois caminhos saem de variável para a bancada poder exercitá-los sem
+    # container nenhum — mesma escola do `HEFESTO_BT_ETC`.
+    local marca_flatpak="${HEFESTO_MARCA_SANDBOX:-/.flatpak-info}"
+    local marca_container="${HEFESTO_MARCA_CONTAINER:-/run/.containerenv}"
+    local em_sandbox=0
+    if [[ -e "${marca_flatpak}" || -e "${marca_container}" \
+          || -n "${FLATPAK_ID:-}" || -n "${SNAP:-}" ]]; then
+        em_sandbox=1
+    fi
+    if [[ ! -e "${etc_bt}/main.conf" && "${em_sandbox}" -eq 1 ]]; then
+        warn "NÃO SEI o valor de JustWorksRepairing nesta máquina: estou num sandbox (Flatpak/Snap/container) e o /etc do host não é alcançável daqui — ${etc_bt}/main.conf não existe DENTRO do sandbox, o que não diz nada sobre o host. Rode o doctor FORA do pacote: bash scripts/doctor.sh, ou sudo bash scripts/bluez_config.sh verificar"
+        return
+    fi
+    if [[ ! -e "${etc_bt}/main.conf" ]]; then
+        info "sem ${etc_bt}/main.conf (BlueZ ausente?) — pulo o check de JustWorksRepairing"
+        return
+    fi
+    if [[ ! -f "${dono}" ]]; then
+        warn "scripts/bluez_config.sh ausente — o dono único da config do BlueZ não está aqui, e não leio JustWorksRepairing por fora dele"
+        return
+    fi
+    valor="$(HEFESTO_BT_SUDO="" bash "${dono}" verificar 2>/dev/null \
+        | sed -n 's/^JustWorksRepairing: //p' || true)"
+    case "${valor}" in
+        confirm)
+            pass "JustWorksRepairing=confirm no main.conf — re-pareamento de quem já tem bond passa pelo agente (RADIO-ABERTO-01)"
+            state="$(systemctl is-active hefesto-bt-agent.service 2>/dev/null || true)"
+            if [[ "${state}" != "active" ]]; then
+                warn "JustWorksRepairing=confirm depende de um agente registrado, e o hefesto-bt-agent.service está ${state:-ausente} — re-pareamento legítimo pode ser RECUSADO ('Refusing connection from ...'); ligue: sudo systemctl enable --now hefesto-bt-agent.service"
+            fi
+            ;;
+        always)
+            fail "JustWorksRepairing=always ATIVO no ${etc_bt}/main.conf — remove a última recusa do BlueZ ao re-pareamento por Just Works de quem já tem bond; com o agente NoInputNoOutput isso termina em injeção de teclas (RADIO-ABERTO-01). Cura: rode ./install.sh SEM --no-udev (a flag pula este passo inteiro) ou, direto, sudo bash scripts/bluez_config.sh aplicar — os dois corrigem o bloco antigo do hefesto SEM reiniciar o bluetoothd"
+            ;;
+        ausente|"")
+            warn "JustWorksRepairing não está declarado no main.conf — o BlueZ cai no default da distro, que não é decisão desta casa; rode ./install.sh (entra por default, e NÃO com --no-udev, que pula este passo)"
+            ;;
+        ilegível)
+            warn "não consigo LER ${etc_bt}/main.conf — sem leitura não sei o valor de JustWorksRepairing; rode: sudo bash ${dono} verificar"
+            ;;
+        recusado)
+            # Achado de 06/08/2026: uma linha malformada em QUALQUER ponto do
+            # arquivo faz o GKeyFile abortar a carga, e o bluetoothd fica sem
+            # config nenhuma — nem a nossa. Antes, o dono lia a chave normal e o
+            # doctor dava selo verde a um arquivo que o BlueZ descarta inteiro.
+            fail "${etc_bt}/main.conf tem uma linha que o parser do bluetoothd (GKeyFile) RECUSA, e uma linha recusada invalida o ARQUIVO INTEIRO: o BlueZ fica sem config nenhuma — nem JustWorksRepairing, nem FastConnectable, nem o que já era dela. Veja qual linha é e conserte-a à mão: bash ${dono} verificar"
+            ;;
+        never)
+            # A PROMESSA AQUI ERA FALSA NA METADE DOS CASOS (06/08/2026): dizia
+            # sem ressalva que "a sua linha é neutralizada, e 'remover' a
+            # devolve". Só vale FORA do bloco hefesto. DENTRO do bloco — que é
+            # onde quem lê este aviso vai escrever, porque é onde a chave já
+            # está — a faixa inteira é reescrita, nenhuma marca é gravada e o
+            # `remover` entrega o arquivo SEM a chave. O `aplicar` sabe dizer
+            # qual dos dois casos é o dela (ele lê a posição da linha que vence);
+            # o doctor não precisa saber, precisa é não prometer o que não pode.
+            warn "JustWorksRepairing=never no main.conf — é MAIS restritivo que o 'confirm' desta casa (recusa todo re-pareamento de quem já tem bond). Se foi escolha sua, NÃO rode ./install.sh: ele rebaixa para 'confirm'. E confira ONDE a sua linha está: FORA das sentinelas do hefesto ela é neutralizada e o 'bluez_config.sh remover' a devolve inteira; DENTRO do bloco ela é reescrita junto com o bloco e não volta (só o backup guarda)"
+            ;;
+        *)
+            warn "JustWorksRepairing=${valor} no main.conf — esta casa instala 'confirm'; rode ./install.sh se o valor não foi escolha sua"
+            ;;
+    esac
 }
 
 # O "clone DS4" 054C:05C4 que stormou o rádio com 211 mil erros de CRC numa
@@ -2651,13 +2837,134 @@ check_controller() {
     fi
 }
 
+# PURA: varre regras udev e imprime `arquivo:linha:conteúdo` de toda regra que
+# abre TODO nó hidraw para quem não é dono nem do grupo. Nenhum privilégio é
+# necessário — `/etc/udev/rules.d` e `/usr/lib/udev/rules.d` são legíveis por
+# qualquer usuário. Sem argumento, varre esses dois, nessa ordem.
+#
+# ACUSA-O-CULPADO-01 (medido nesta máquina em 06/08/2026). O aviso antigo dizia
+# "provável ajuste manual" para cada nó 0666 — e o ajuste manual não existia. A
+# causa era UMA linha, `KERNEL=="hidraw*", MODE="0666"`, num arquivo de terceiro
+# (`60-openrgb.rules`), que abria os SEIS nós que ninguém reivindicava — entre
+# eles os receptores do teclado e do mouse dela. A mensagem acusava a única
+# pessoa que não tinha feito aquilo, e mandava procurar onde não estava.
+#
+# Os três critérios, e por que cada um:
+#
+#  1. a linha tem de casar `hidraw` (`KERNEL=="hidraw*"` ou `SUBSYSTEM=="hidraw"`);
+#  2. o MODE tem de dar algum bit para OUTROS (último octeto != 0). O check
+#     antigo casava só o literal `666` e deixava passar `664`, `662` e `646` —
+#     e é o bit de LEITURA (4) que vaza o que é digitado, não só o de escrita;
+#  3. a regra NÃO pode estreitar por aparelho. `ATTRS{idVendor}`, `KERNELS==` e
+#     companhia são o que separa "abriu o gamepad dele" de "abriu a máquina
+#     inteira". CONTROLE POSITIVO vivo nesta máquina:
+#     `/usr/lib/udev/rules.d/71-pdp-controllers.rules` tem `MODE="0666"` com
+#     `ATTRS{idVendor}=="0e6f"` — é regra de distro, mira UM controle, e NÃO
+#     pode aparecer aqui.
+#
+# SOMBRA: arquivo de mesmo nome em `/etc` anula o de `/usr/lib` (é assim que o
+# udev resolve), então o primeiro diretório em que o nome aparece é o que vale.
+_udev_hidraw_rw_global() {
+    local dirs=("$@")
+    [[ ${#dirs[@]} -gt 0 ]] || dirs=(/etc/udev/rules.d /usr/lib/udev/rules.d)
+    local d f base v sombreado vistos=()
+    for d in "${dirs[@]}"; do
+        [[ -d "${d}" ]] || continue
+        for f in "${d}"/*.rules; do
+            [[ -f "${f}" ]] || continue
+            base="${f##*/}"
+            sombreado=0
+            for v in ${vistos[@]+"${vistos[@]}"}; do
+                [[ "${v}" == "${base}" ]] && sombreado=1
+            done
+            vistos+=("${base}")
+            [[ "${sombreado}" -eq 1 ]] && continue
+            awk -v arq="${f}" '
+                {
+                    linha = $0
+                    sub(/^[[:space:]]+/, "", linha)
+                    sub(/[[:space:]]+$/, "", linha)
+                }
+                linha == "" || linha ~ /^#/ { next }
+                linha !~ /KERNEL=="hidraw/ && linha !~ /SUBSYSTEM=="hidraw"/ { next }
+                # Estreitamento por aparelho: a regra é de quem a escreveu.
+                linha ~ /ATTRS?\{id(Vendor|Product)\}/ { next }
+                linha ~ /KERNELS[[:space:]]*==/ { next }
+                linha ~ /ENV\{ID_(VENDOR|MODEL)_ID\}/ { next }
+                {
+                    if (match(linha, /MODE[[:space:]]*:?=[[:space:]]*"[0-7]+"/) == 0) next
+                    modo = substr(linha, RSTART, RLENGTH)
+                    gsub(/[^0-7]/, "", modo)
+                    if (modo == "") next
+                    outros = substr(modo, length(modo), 1)
+                    if (outros == "0") next
+                    print arq ":" FNR ":" linha
+                }
+            ' "${f}"
+        done
+    done
+}
+
+# O que o nó hidraw É, em palavra humana — para o aviso poder dizer o que está
+# aberto em vez de só o caminho. Sem udevadm, devolve vazio (e o aviso degrada
+# para o nome do nó, que é melhor que nada).
+_hidraw_classe_humana() {
+    local no="${1##*/}" sys="/sys/class/hidraw/${1##*/}/device" nome="" props="" classe=""
+    command -v udevadm >/dev/null 2>&1 || return 0
+    [[ -d "${sys}" ]] || return 0
+    nome="$(udevadm info -q property -p "${sys}" 2>/dev/null \
+            | sed -n 's/^HID_NAME=//p' | head -n1)"
+    local i
+    for i in "${sys}"/input/input*; do
+        [[ -d "${i}" ]] || continue
+        props+="$(udevadm info -q property -p "${i}" 2>/dev/null \
+                  | grep -E '^ID_INPUT_(KEYBOARD|MOUSE)=1' || true)"$'\n'
+    done
+    [[ "${props}" == *ID_INPUT_KEYBOARD=1* ]] && classe="teclado"
+    if [[ "${props}" == *ID_INPUT_MOUSE=1* ]]; then
+        classe="${classe:+${classe}+}mouse"
+    fi
+    printf '%s' "${classe:+${classe} }${nome:-${no}}"
+}
+
+# ACUSA-O-CULPADO-01: UM aviso por CAUSA, não um por nó. Uma linha de regra
+# produziu quatro avisos idênticos em 06/08 — quatro vezes a mesma notícia, e
+# nenhuma vez o endereço.
+#
+# O grau continua [WARN] DE PROPÓSITO, e isso foi decidido, não esquecido: só o
+# `fail` alimenta o `FAILS` que é o código de saída do doctor. Fazer a
+# configuração de um programa de TERCEIRO reprovar o portão de saúde do Hefesto
+# seria dizer "estou doente" por algo que não é nosso, e empurrar quem usa a
+# desinstalar o vizinho para o nosso relatório ficar verde. A gravidade vai no
+# TEXTO, que é onde ela sempre deveria ter estado.
 check_perms_soft() {
-    local h mode
+    local h mode abertos=() classes="" causas=""
     for h in /dev/hidraw*; do
         [[ -e "$h" ]] || continue
         mode="$(stat -c '%a' "$h" 2>/dev/null || echo '?')"
-        [[ "${mode}" == "666" ]] && warn "${h} está 0666 (rw global) — provável ajuste manual; esperado é 0660+uaccess"
+        # Último octeto != 0 = algum bit para "outros". 4 (leitura) já basta:
+        # hidraw entrega os relatórios de entrada CRUS, em paralelo ao evdev —
+        # quem lê o nó do receptor do teclado lê o que está sendo digitado.
+        [[ "${mode}" =~ ^[0-7]*[1-7]$ ]] || continue
+        abertos+=("${h}")
+        classes+="  ${h} (${mode}): $(_hidraw_classe_humana "${h}")"$'\n'
     done
+    [[ ${#abertos[@]} -eq 0 ]] && return 0
+    causas="$(_udev_hidraw_rw_global)"
+    if [[ -n "${causas}" ]]; then
+        warn "${#abertos[@]} nó(s) hidraw abertos a qualquer usuário local — QUALQUER processo, sem privilégio, lê o que esses aparelhos reportam"
+    else
+        warn "${#abertos[@]} nó(s) hidraw abertos a qualquer usuário local, e NENHUMA regra udev explica — aí sim, ajuste manual é hipótese (esperado é 0660+uaccess)"
+    fi
+    printf '%s' "${classes}"
+    if [[ -n "${causas}" ]]; then
+        info "  CAUSA (regra udev que abre TODO hidraw, sem estreitar por aparelho):"
+        printf '%s\n' "${causas}" | while IFS= read -r linha; do
+            [[ -n "${linha}" ]] && info "    ${linha}"
+        done
+        info "  este arquivo NÃO é do Hefesto — a decisão de mantê-lo é de quem o instalou."
+        info "  os aparelhos do Hefesto não são afetados: a 70-ps5-controller.rules roda depois e os devolve a 0660+uaccess."
+    fi
 }
 
 # 8BIT-03: assinatura de morte por Bluetooth do 8BitDo SN30 Pro (firmware
@@ -3223,6 +3530,7 @@ main() {
     check_power_saboteurs
     check_btusb_autosuspend
     check_bluez_fastconnectable
+    check_bluez_justworks_repairing
     check_bt_clone_ds4
     check_bt_radio
     check_bt_crc_counters

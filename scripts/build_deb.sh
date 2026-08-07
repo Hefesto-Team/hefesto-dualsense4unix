@@ -188,7 +188,21 @@ install -Dm755 scripts/install_snd_quirk.sh \
 # M10 (auditoria): os scripts que a GUI/doctor executam (via _find_repo_file, que
 # resolve /usr/share/.../scripts) precisam existir no .deb — senão o cartão
 # anti-storm ("Reaplicar fixes seguros") e o doctor caem em no-op silencioso.
-for _s in doctor.sh disable_steam_input.sh fix_wireplumber_default_source.sh dsx_recover.sh; do
+#
+# O DOCTOR EMPACOTADO ERA CEGO (achado de 06/08/2026, MEDIDO): `bluez_config.sh`
+# não estava nesta lista. Como `check_bluez_justworks_repairing` lê EXCLUSIVAMENTE
+# pelo dono único em `${ROOT_DIR}/scripts/bluez_config.sh` — e no layout do .deb
+# o ROOT_DIR do doctor é /usr/share/hefesto-dualsense4unix — a função caía no
+# ramo `warn ... o dono único da config do BlueZ não está aqui` e NÃO VIA NADA,
+# reproduzido contra o /etc real desta máquina, que tem `JustWorksRepairing=always`.
+# A dívida registrada ("empacotar a config do BlueZ exige postinst próprio, e é
+# entrega à parte") é verdadeira para APLICAR — reescreve conffile do dpkg — e
+# FALSA para o DETECTOR, que é leitura pura e cabe nesta linha. O `verificar` não
+# precisa de assets/bluetooth/: só o `aplicar` os exige.
+# Portão: `tests/unit/test_doctor_justworks_comportamento.py`
+# (`test_empacotamento_leva_o_dono_do_bluez`) e a seção de paridade do BlueZ em
+# `scripts/check_packaging_parity.sh` — quem levar doctor.sh leva bluez_config.sh.
+for _s in doctor.sh bluez_config.sh disable_steam_input.sh fix_wireplumber_default_source.sh dsx_recover.sh; do
     [ -f "scripts/${_s}" ] && install -Dm755 "scripts/${_s}" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/${_s}"
 done

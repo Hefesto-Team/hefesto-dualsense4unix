@@ -503,6 +503,27 @@ def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
     if EXIGE_GTK_REAL and _MODULOS_PULADOS_SEM_GI:
         session.exitstatus = 1
 
+    # ARVORE-CONGELADA-01, segunda metade: o produto mudou DEBAIXO da medição?
+    # Então este run não mediu uma coisa só, e nenhum verde nem vermelho dele
+    # vale. Reprovar é a única saída honesta: um verde falso passa despercebido
+    # para sempre, e foi assim que uma mordida real foi declarada inexistente.
+    deltas_produto = _deltas_do_congelado()
+    if deltas_produto:
+        mostrados = deltas_produto[:_CONGELADA_LIMITE_RELATO]
+        restam = len(deltas_produto) - len(mostrados)
+        _escrever_no_terminal(session, [
+            "",
+            "ARVORE-CONGELADA-01: o PRODUTO mudou durante esta sessão "
+            f"({len(deltas_produto)} arquivo(s)):",
+            *[f"  - {d}" for d in mostrados],
+            *([f"  ... e mais {restam}"] if restam > 0 else []),
+            "  A bancada mediu a foto do início; a árvore de hoje é outra. Este",
+            "  run NÃO decide nada — nem o verde, nem o vermelho. Rode de novo",
+            "  com a árvore parada (um mutador por vez, ou um git worktree por",
+            "  agente) antes de gravar qualquer nota que dependa dele.",
+        ])
+        session.exitstatus = 1
+
     if not _canario_ligado() or not _CANARIO_ARMADO:
         return
     deltas = _deltas_do_canario(_CANARIO_FOTO_INICIAL, _fotografar_tudo())
@@ -526,6 +547,150 @@ def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
 # NOTA: a sonda antiga `_gtk_response_type_ausente()` foi fundida em
 # `_sondar_gtk_do_ambiente()` acima — um subprocesso responde as DUAS
 # perguntas (gi real? ResponseType presente?) em vez de dois.
+
+
+# ---------------------------------------------------------------------------
+# ARVORE-CONGELADA-01 — o produto MEDIDO não pode mudar no meio da medição
+# ---------------------------------------------------------------------------
+#
+# O DEFEITO, MEDIDO em 06/08/2026 (diagnóstico com reprodução em três braços):
+# uma bancada que roda `bash /caminho/absoluto/da/arvore/scripts/x.sh` mede o
+# arquivo que estiver no disco NAQUELE INSTANTE. Quando outro processo edita
+# esse arquivo durante a sessão — um agente irmão fazendo "arrancar a cura ->
+# rodar -> devolver", um `git checkout` noutro terminal, um editor salvando —
+# a bancada mede o produto de outra pessoa. O braço de controle da reprodução:
+#
+#   bancada em cópia A, ninguém mutando A ......... 0 falhas / 10
+#   bancada em cópia A, mutador ciclando em A ..... 5 falhas / 10 (testes
+#                                                   DIFERENTES a cada rodada)
+#   bancada em cópia B, mutador ciclando em A ..... 0 falhas / 10
+#
+# O terceiro braço é a prova de que o canal é o ARQUIVO COMPARTILHADO, e não
+# carga da máquina nem concorrência entre execuções (18 `pytest` simultâneos na
+# árvore real: 0 falhas / 18).
+#
+# E a contaminação vai nos DOIS sentidos, o que é o pior da história: mutação
+# alheia viva produz VERMELHO FALSO (mordida afirmada que não existe), e um
+# `cp ORIG` alheio que desfaz a sua mutação antes do `pytest` rodar produz
+# VERDE FALSO (mordida real declarada inexistente). É exatamente a classe que
+# a regra "teste tem de MORDER" existe para impedir.
+#
+# A CURA que não depende de disciplina de processo: a bancada não lê a árvore
+# de trabalho — lê uma CÓPIA tirada UMA VEZ, no início da sessão. O que roda
+# continua sendo o que está na árvore no instante em que o `pytest` começou
+# (então arrancar uma cura ANTES de rodar continua ficando vermelho, como tem
+# de ser); o que deixa de existir é a janela em que o arquivo muda DEBAIXO da
+# medição.
+#
+# Não substitui o CANARIO-FS-01 acima: aquele vigia o `$HOME` DELA contra
+# escrita da suíte; este protege a MEDIÇÃO contra escrita de terceiros.
+
+#: O que uma bancada de shell precisa enxergar. Lista explícita de propósito:
+#: `packaging/cosmic-applet/target` tem 18 GB e copiar a árvore inteira seria
+#: trocar um defeito por outro.
+_CONGELAR: tuple[str, ...] = (
+    "scripts",
+    "assets/bluetooth",
+    "flatpak",
+    "packaging/arch",
+    "packaging/debian",
+    "packaging/fedora",
+    "packaging/nix",
+    ".github/workflows",
+    "install.sh",
+    "uninstall.sh",
+)
+
+#: Lixo de build que nunca é produto.
+_CONGELAR_IGNORAR = ("__pycache__", "target", ".flatpak-builder", "build", "*.pyc")
+
+#: Preenchido na primeira chamada e nunca mais — a foto é da SESSÃO.
+_ARVORE_CONGELADA: list[Path] = []
+
+
+def arvore_congelada() -> Path:
+    """Cópia só-leitura da árvore, tirada UMA VEZ por sessão de `pytest`.
+
+    Use-a como raiz em toda bancada que EXECUTA um arquivo do repositório
+    (``bash scripts/...``) em vez de apenas lê-lo: é o que impede que uma
+    escrita de terceiro no meio da sessão vire falha (ou aprovação) inventada.
+    Ver ARVORE-CONGELADA-01 acima.
+    """
+    if _ARVORE_CONGELADA:
+        return _ARVORE_CONGELADA[0]
+
+    import atexit
+    import shutil
+    import tempfile
+
+    origem_raiz = Path(__file__).resolve().parents[1]
+    destino = Path(tempfile.mkdtemp(prefix="hefesto-arvore-congelada-"))
+    atexit.register(shutil.rmtree, destino, True)
+    ignorar = shutil.ignore_patterns(*_CONGELAR_IGNORAR)
+    for relativo in _CONGELAR:
+        origem = origem_raiz / relativo
+        alvo = destino / relativo
+        if origem.is_dir():
+            alvo.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(origem, alvo, ignore=ignorar, symlinks=True)
+        elif origem.is_file():
+            alvo.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(origem, alvo)
+    _ARVORE_CONGELADA.append(destino)
+    return destino
+
+
+#: Teto de linhas do relatório — uma sessão contaminada de verdade muda poucos
+#: arquivos; se mudou centenas, a lista inteira não ajuda ninguém.
+_CONGELADA_LIMITE_RELATO = 20
+
+
+def _deltas_do_congelado() -> list[str]:
+    """O produto MUDOU entre a foto e o fim da sessão? Diga quais arquivos.
+
+    Congelar torna o veredito COERENTE (uma sessão inteira mede o mesmo
+    produto) — não torna a bancada imune: uma mutação que já estivesse viva no
+    instante da foto é medida a sessão inteira, e é indistinguível de um defeito
+    de verdade, como TEM de ser (é assim que se prova mordida). O que faltava era
+    a outra metade: DIZER quando isso aconteceu, em vez de acreditar no veredito.
+    Sem isto, um `cp ORIG` de terceiro no meio da sessão desfaz a sua mutação e
+    a suíte declara VERDE uma mordida real — o pior dos dois erros.
+
+    O LIMITE DESTA SONDA, MEDIDO e declarado para ninguém a tomar por garantia:
+    ela compara DOIS INSTANTES (a foto e o fim), não vigia o intervalo. Numa
+    reprodução de 06/08/2026 com um mutador ciclando a 2 Hz na árvore durante
+    dez execuções, a sonda acusou 3 das 10 — e as 7 restantes eram sessões em
+    que a árvore estava no MESMO estado nos dois instantes. O que a sonda pega
+    de graça é o caso que mais engana: a árvore mexida e devolvida (ou mexida e
+    deixada mexida) enquanto a suíte roda. O ganho grande da mesma reprodução é
+    outro, e esse é total: as falhas deixaram de ser SORTEADAS. Antes, testes
+    diferentes caíam a cada rodada; depois, TODA rodada vermelha caiu no mesmo
+    conjunto de quatro — exatamente a mordida pretendida da mutação viva.
+    Vermelho reproduzível é diagnosticável; vermelho sorteado não é.
+    """
+    if not _ARVORE_CONGELADA:
+        return []
+    congelada = _ARVORE_CONGELADA[0]
+    viva = Path(__file__).resolve().parents[1]
+    deltas: list[str] = []
+    for copia in sorted(congelada.rglob("*")):
+        if not copia.is_file():
+            continue
+        relativo = copia.relative_to(congelada)
+        atual = viva / relativo
+        if not atual.is_file():
+            deltas.append(f"APAGADO  {relativo}")
+            continue
+        try:
+            if atual.read_bytes() != copia.read_bytes():
+                deltas.append(f"MUDADO   {relativo}")
+                continue
+        except OSError:
+            deltas.append(f"ILEGÍVEL {relativo}")
+            continue
+        if (atual.stat().st_mode & 0o777) != (copia.stat().st_mode & 0o777):
+            deltas.append(f"MODO     {relativo}")
+    return deltas
 
 
 @pytest.fixture(scope="session")

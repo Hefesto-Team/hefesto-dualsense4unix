@@ -47,6 +47,8 @@ SCRIPTS = [
 INSTALL = REPO_ROOT / "install.sh"
 UNINSTALL = REPO_ROOT / "uninstall.sh"
 DOCTOR = REPO_ROOT / "scripts" / "doctor.sh"
+#: Dono da config do BlueZ desde RADIO-ABERTO-01/E1-bis (06/08/2026).
+BLUEZ_CONFIG = REPO_ROOT / "scripts" / "bluez_config.sh"
 
 
 class TestAssetsExistem:
@@ -79,19 +81,26 @@ class TestBlocoUnificadoMainConf:
         assert "# <<< hefesto bluetooth <<<" in text
 
     def test_install_reescreve_removendo_blocos_anteriores(self) -> None:
-        text = INSTALL.read_text(encoding="utf-8")
+        # RADIO-ABERTO-01/E1-bis (06/08/2026): o mecanismo saiu do install.sh
+        # para scripts/bluez_config.sh — este teste de TEXTO nunca conseguiu
+        # acusar que a cura de `confirm` não chegava ao disco (o que aconteceu,
+        # e foi medido). Quem prova hoje é tests/unit/test_bluez_config_sh.py,
+        # que roda o mecanismo contra raiz falsa. O contrato de texto continua
+        # aqui, mirando o dono novo, e ganhou a fiação.
+        text = BLUEZ_CONFIG.read_text(encoding="utf-8")
         # O awk de reescrita precisa cobrir o bloco unificado E os dois legados.
         assert "hefesto (bluetooth|FastConnectable|JustWorksRepairing)" in text, (
-            "install.sh deve remover os três blocos sentinelados antes de apensar"
+            "bluez_config.sh deve remover os três blocos sentinelados antes de apensar"
         )
         assert "hefesto-bt.block" in text
+        assert 'scripts/bluez_config.sh" aplicar' in INSTALL.read_text(encoding="utf-8")
 
     def test_uninstall_remove_o_bloco_unificado(self) -> None:
-        text = UNINSTALL.read_text(encoding="utf-8")
-        assert "# >>> hefesto bluetooth >>>" in text
-        # E segue removendo os legados de instalações antigas.
-        assert "# >>> hefesto JustWorksRepairing >>>" in text
-        assert "# >>> hefesto FastConnectable >>>" in text
+        text = BLUEZ_CONFIG.read_text(encoding="utf-8")
+        # Um alternador que cobre o bloco unificado de hoje E os dois legados
+        # de instalações anteriores a 21/07.
+        assert "hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>" in text
+        assert 'scripts/bluez_config.sh" remover' in UNINSTALL.read_text(encoding="utf-8")
 
 
 class TestDropinResilience:

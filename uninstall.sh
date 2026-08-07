@@ -278,7 +278,18 @@ _NEEDS_SUDO=0
 # com --keep-udev) — precisa entrar na priming independente do REMOVE_UDEV.
 [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]] && _NEEDS_SUDO=1
 [[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] && _NEEDS_SUDO=1
-grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
+# BUG-UNINSTALL-PRIMING-CEGO-AO-BLOCO-UNIFICADO-01 (RADIO-ABERTO-01/E1-bis,
+# 06/08/2026): esta lista primava a credencial pelos sentinelas LEGADOS e pelos
+# drop-ins, e NUNCA pelo `# >>> hefesto bluetooth >>>` — que é o único artefato
+# de BlueZ de toda máquina instalada desde 21/07, inclusive a dela. Resultado
+# MEDIDO por leitura: `uninstall.sh --keep-udev` numa máquina assim não pedia
+# sudo, caía no ramo "sudo indisponível" e o bloco com `JustWorksRepairing`
+# FICAVA PARA TRÁS. Um alternador cobre as três sentinelas de uma vez, e a
+# marca de neutralização entra junto (linha de terceiro a devolver também é
+# escrita em /etc).
+grep -qsE '^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>' \
+    /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
+grep -qsF '#hefesto-desativou# ' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf" ]] && _NEEDS_SUDO=1
 [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
 dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
@@ -587,78 +598,40 @@ elif [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# FastConnectable do BlueZ (PLAT-04) — simétrico ao install 3d. Drop-in OU
-# bloco marcado entre as sentinelas hefesto no /etc/bluetooth/main.conf
-# (conffile do dpkg → backup antes de mexer). NUNCA reinicia o bluetoothd
-# (derrubaria os controles BT conectados); a remoção vale no próximo
-# boot/restart natural do serviço.
+# Config do BlueZ (FastConnectable + JustWorksRepairing) — simétrico ao passo
+# 3d do install, e pelo MESMO dono: scripts/bluez_config.sh remover.
+#
+# RADIO-ABERTO-01/E1-bis (06/08/2026) — o que este bloco substituiu, e por quê:
+# havia TRÊS removedores independentes aqui (bloco legado FastConnectable,
+# bloco legado JustWorksRepairing e bloco unificado), cada um com o próprio
+# `cp` de backup e o próprio `sed -i` de faixa. Três defeitos disso:
+#
+#   1. numa máquina com os dois legados MAIS o unificado, uma única execução
+#      deixava TRÊS `main.conf.bak.hefesto-uninstall-<ts>` em /etc/bluetooth —
+#      e nenhum dos três scripts jamais podou backup (37 acumulados, 272 KB,
+#      MEDIDO em 06/08/2026);
+#   2. o `sed '/A/,/B/d'` com a sentinela de fechamento ancorada em `$` nunca
+#      fecha a faixa se alguém deixou um espaço no fim da linha — e faixa sem
+#      fim APAGA ATÉ O FIM DO ARQUIVO. O `remover` de hoje RECUSA nesse caso;
+#   3. o install APAGAVA chave de terceiro (`JustWorksRepairing = never`, por
+#      exemplo) e o uninstall nunca a devolvia: instalar+desinstalar era uma
+#      operação destrutiva líquida. Agora o install NEUTRALIZA com a marca
+#      `#hefesto-desativou# ` e é este `remover` que devolve a linha original.
+#
+# NUNCA reinicia o bluetoothd (derrubaria os controles BT conectados); a
+# remoção vale no próximo boot/restart natural do serviço.
 # ---------------------------------------------------------------------------
 if sudo -n true 2>/dev/null; then
-    if [[ -f /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]]; then
-        log "removendo FastConnectable (drop-in /etc/bluetooth/main.conf.d)"
-        sudo rm -f /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf || true
-    fi
-    if [[ -f /etc/bluetooth/main.conf ]] \
-       && sudo grep -qF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-        log "removendo bloco FastConnectable do /etc/bluetooth/main.conf (backup antes)"
-        sudo cp /etc/bluetooth/main.conf \
-            "/etc/bluetooth/main.conf.bak.hefesto-uninstall-$(date +%s)" 2>/dev/null || true
-        sudo sed -i '/^# >>> hefesto FastConnectable >>>$/,/^# <<< hefesto FastConnectable <<<$/d' \
-            /etc/bluetooth/main.conf || log "  ERRO: sed do bloco marcado falhou — remova manualmente"
-        log "  (vale no próximo boot/restart do bluetoothd — não reiniciamos o serviço)"
-    fi
+    log "removendo config do BlueZ do hefesto (bloco do main.conf + drop-ins)"
+    HEFESTO_BT_ASSETS="${ROOT_DIR}/assets/bluetooth" \
+        bash "${ROOT_DIR}/scripts/bluez_config.sh" remover \
+        || log "  ERRO: remoção da config do BlueZ falhou — confira /etc/bluetooth/main.conf"
 elif [[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] \
-     || grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-    log "sudo indisponível — FastConnectable do BlueZ não removido"
-    log "  (remova /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ou o bloco"
-    log "   entre as sentinelas '# >>> hefesto FastConnectable >>>' do main.conf)"
-fi
-
-# ---------------------------------------------------------------------------
-# Onda R (bluetoothd 5.72 crasha crônico — estudo 2026-07-19-estudo-bluez-
-# backport-onda-r.md): JustWorksRepairing do BlueZ + agente de pareamento
-# persistente + restauração do bluez. Mesmo cuidado da FastConnectable: NUNCA
-# reinicia o bluetoothd na remoção do bloco/drop-in (só a restauração do bluez,
-# mais abaixo, reinicia — e por isso pede confirmação).
-# ---------------------------------------------------------------------------
-
-# JustWorksRepairing — sentinelas/drop-in, mesmo mecanismo da FastConnectable.
-if sudo -n true 2>/dev/null; then
-    if [[ -f /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]]; then
-        log "removendo JustWorksRepairing (drop-in /etc/bluetooth/main.conf.d)"
-        sudo rm -f /etc/bluetooth/main.conf.d/hefesto-justworks.conf || true
-    fi
-    if [[ -f /etc/bluetooth/main.conf ]] \
-       && sudo grep -qF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-        log "removendo bloco JustWorksRepairing do /etc/bluetooth/main.conf (backup antes)"
-        sudo cp /etc/bluetooth/main.conf \
-            "/etc/bluetooth/main.conf.bak.hefesto-uninstall-$(date +%s)" 2>/dev/null || true
-        sudo sed -i '/^# >>> hefesto JustWorksRepairing >>>$/,/^# <<< hefesto JustWorksRepairing <<<$/d' \
-            /etc/bluetooth/main.conf || log "  ERRO: sed do bloco marcado falhou — remova manualmente"
-        log "  (vale no próximo boot/restart do bluetoothd — não reiniciamos o serviço)"
-    fi
-elif [[ -e /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]] \
-     || grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-    log "sudo indisponível — JustWorksRepairing do BlueZ não removido"
-    log "  (remova /etc/bluetooth/main.conf.d/hefesto-justworks.conf ou o bloco"
-    log "   entre as sentinelas '# >>> hefesto JustWorksRepairing >>>' do main.conf)"
-fi
-
-# Bloco UNIFICADO do main.conf (camada 1 da sprint BlueZ 2026-07-21 — o
-# install idempotente escreve FastConnectable+JustWorksRepairing num bloco só;
-# os dois removedores legados acima seguem existindo para instalações antigas).
-if sudo -n true 2>/dev/null; then
-    if [[ -f /etc/bluetooth/main.conf ]] \
-       && sudo grep -qF '# >>> hefesto bluetooth >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-        log "removendo bloco unificado hefesto do /etc/bluetooth/main.conf (backup antes)"
-        sudo cp /etc/bluetooth/main.conf \
-            "/etc/bluetooth/main.conf.bak.hefesto-uninstall-$(date +%s)" 2>/dev/null || true
-        sudo sed -i '/^# >>> hefesto bluetooth >>>$/,/^# <<< hefesto bluetooth <<<$/d' \
-            /etc/bluetooth/main.conf || log "  ERRO: sed do bloco unificado falhou — remova manualmente"
-        log "  (vale no próximo boot/restart do bluetoothd — não reiniciamos o serviço)"
-    fi
-elif grep -qsF '# >>> hefesto bluetooth >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-    log "sudo indisponível — bloco unificado hefesto do main.conf não removido"
+     || [[ -e /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]] \
+     || grep -qsE '^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>' \
+             /etc/bluetooth/main.conf 2>/dev/null; then
+    log "sudo indisponível — config do BlueZ do hefesto NÃO removida"
+    log "  (rode: sudo bash ${ROOT_DIR}/scripts/bluez_config.sh remover)"
 fi
 
 # ONDA-R2: resiliência do bluetoothd (camada 2 — simétrico ao passo 3e-bis do

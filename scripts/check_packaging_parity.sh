@@ -510,6 +510,171 @@ else
     echo "[ OK ] hefesto-hidraw-broker: assets/systemd/hefesto-hidraw-broker.service ausente — nada a checar"
 fi
 
+# RADIO-ABERTO-01/E1-bis (06/08/2026): assets/bluetooth/ NUNCA esteve sob gate
+# nenhum aqui (`grep -n bluetooth` neste arquivo dava ZERO antes desta seção), e
+# é por isso que passou despercebido que o `.deb`/`.rpm`/`PKGBUILD`/flatpak não
+# levam a configuração do BlueZ.
+#
+# A DÍVIDA FOI PARTIDA EM DUAS (06/08/2026, correção de decisão gravada). O
+# curador anterior escreveu aqui que a lacuna inteira era "dívida registrada,
+# exige postinst próprio, e é entrega à parte". Isso é verdade para APLICAR a
+# config — reescrever `/etc/bluetooth/main.conf`, que é conffile do dpkg, de
+# dentro de um pacote, exige postinst e é mesmo outra entrega. É FALSO para o
+# DETECTOR: `check_bluez_justworks_repairing` é LEITURA PURA e lê exclusivamente
+# pelo dono único em `${ROOT_DIR}/scripts/bluez_config.sh`. Como o `.deb` copiava
+# o `doctor.sh` e não o dono, no layout empacotado a função caía no ramo "o dono
+# único da config do BlueZ não está aqui" e NÃO VIA NADA — MEDIDO contra o /etc
+# real desta máquina, que tem `JustWorksRepairing=always`. Isto está curado
+# (`scripts/build_deb.sh`) e travado abaixo pela REGRA DE PAR: quem empacota o
+# `doctor.sh` empacota o `bluez_config.sh`.
+#
+# O resto desta seção trava o que já era verdade e não pode regredir: existe um
+# dono único da config (scripts/bluez_config.sh), install e uninstall o chamam
+# pelos dois lados, e o dono conhece cada asset de assets/bluetooth/ — inclusive
+# os dois blocos legados, que só existem para o `remover` limpar instalação
+# antiga. Sem isto, um asset podia ficar órfão (ninguém aplica, ninguém remove)
+# exatamente como o `always` ficou órfão no disco dela por quatro dias.
+echo "== paridade da config do BlueZ (assets/bluetooth × bluez_config.sh) =="
+if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
+    missing=()
+    grep -qF 'scripts/bluez_config.sh" aplicar' install.sh 2>/dev/null \
+        || missing+=("install.sh não chama bluez_config.sh aplicar")
+    grep -qF 'scripts/bluez_config.sh" remover' uninstall.sh 2>/dev/null \
+        || missing+=("uninstall.sh não chama bluez_config.sh remover")
+    for _bt_asset in hefesto-bt.block hefesto-fastconnectable.conf hefesto-justworks.conf; do
+        grep -qF "${_bt_asset}" scripts/bluez_config.sh 2>/dev/null \
+            || missing+=("scripts/bluez_config.sh não cita ${_bt_asset}")
+    done
+    # Os .block legados não são mais APLICADOS; o contrato é que o removedor
+    # ainda saiba limpá-los pelas sentinelas de instalações anteriores a 21/07.
+    #
+    # ERA VÁCUO ATÉ 06/08/2026: o teste era `grep -qF FastConnectable`, e a
+    # palavra aparece na regex de NEUTRALIZAÇÃO — o portão passava com o
+    # tratamento legado inteiramente arrancado. Uma linha que LIA como proteção
+    # e não protegia. O que se exige agora é a ALTERNÂNCIA das três sentinelas,
+    # que é o mecanismo de verdade e não sobrevive a arrancá-lo.
+    for _bt_sent in '>>>' '<<<'; do
+        grep -qF "hefesto (bluetooth|FastConnectable|JustWorksRepairing) ${_bt_sent}" \
+            scripts/bluez_config.sh 2>/dev/null \
+            || missing+=("scripts/bluez_config.sh não reconhece as sentinelas legadas (${_bt_sent})")
+    done
+    # A poda de backup NÃO pode voltar a ser automática: apagaria a evidência
+    # medida do colapso 404 -> 3 linhas na primeira execução do install
+    # (decisão de 06/08/2026, registrada na sprint RADIO-ABERTO-01).
+    #
+    # ERA CHECAGEM DE GRAFIA ATÉ 06/08/2026: o teste era `grep -qF
+    # '_podar_backups'`, o NOME LITERAL da função que fora removida. Renomear a
+    # função e devolver a chamada passava batido — MEDIDO por mutação. Hoje o
+    # portão RODA o `aplicar` contra uma raiz falsa em `mktemp -d`, com o
+    # diretório povoado de backups, e confere no disco que nenhum sumiu. Nada
+    # em /etc é tocado (HEFESTO_BT_ETC + HEFESTO_BT_SUDO vazio), e o mecanismo
+    # não tem grafia de que fugir.
+    #
+    # O CONTEÚDO DOS 12 É IDÊNTICO DE PROPÓSITO. Com conteúdos diferentes a
+    # regra "conteúdo ÚNICO nunca sai" protegeria todos, o `_podar` não teria
+    # candidato nenhum e o portão passaria verde mesmo com a poda automática de
+    # volta — foi exatamente o que aconteceu no primeiro desenho deste bloco, e
+    # é a armadilha do teste que não morde. Iguais, os 12 são candidatos
+    # legítimos: só a proteção do MAIS ANTIGO e a retenção seguram dois deles, e
+    # uma poda automática levaria os outros dez.
+    _bt_raiz="$(mktemp -d)"
+    mkdir -p "${_bt_raiz}/bluetooth"
+    printf '[General]\nName = BlueZ\n' > "${_bt_raiz}/bluetooth/main.conf"
+    for _bt_i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+        printf '[General]\n' \
+            > "${_bt_raiz}/bluetooth/main.conf.bak.hefesto-17860000${_bt_i}"
+        # mtimes distintos e crescentes: a ordem "do mais novo para o mais
+        # velho" é o que define quem a retenção pouparia.
+        touch -d "@$(( 1786000000 + _bt_i * 60 ))" \
+            "${_bt_raiz}/bluetooth/main.conf.bak.hefesto-17860000${_bt_i}" 2>/dev/null || true
+    done
+    _bt_antes="$(find "${_bt_raiz}/bluetooth" -maxdepth 1 -type f \
+                      -name 'main.conf.bak.hefesto-*' | wc -l)"
+    HEFESTO_BT_ETC="${_bt_raiz}/bluetooth" \
+    HEFESTO_BT_ASSETS="${PWD}/assets/bluetooth" \
+    HEFESTO_BT_SUDO="" \
+    HEFESTO_BT_BACKUPS_MANTER=1 \
+        bash scripts/bluez_config.sh aplicar >/dev/null 2>&1 || true
+    _bt_depois="$(find "${_bt_raiz}/bluetooth" -maxdepth 1 -type f \
+                       -name 'main.conf.bak.hefesto-*' | wc -l)"
+    # O `aplicar` mudou o arquivo, então nasce UM backup novo. O que não pode é
+    # QUALQUER um dos 12 anteriores ter sumido.
+    _bt_sumidos=()
+    for _bt_i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+        [[ -f "${_bt_raiz}/bluetooth/main.conf.bak.hefesto-17860000${_bt_i}" ]] \
+            || _bt_sumidos+=("main.conf.bak.hefesto-17860000${_bt_i}")
+    done
+    if [[ "${#_bt_sumidos[@]}" -gt 0 ]]; then
+        missing+=("bluez_config.sh aplicar APAGOU ${#_bt_sumidos[@]} backup(s) sem ninguém pedir — a poda automática voltou (havia ${_bt_antes}, ficaram ${_bt_depois}; sumiram: ${_bt_sumidos[*]})")
+    fi
+    rm -rf "${_bt_raiz}"
+    grep -qF 'podar)' scripts/bluez_config.sh 2>/dev/null \
+        || missing+=("scripts/bluez_config.sh perdeu o subcomando explícito 'podar'")
+    # O doctor é o único que enxerga o disco entre um install e o próximo — e
+    # tem de LER pelo dono único, não reimplementar o parser.
+    grep -qF "JustWorksRepairing" scripts/doctor.sh 2>/dev/null \
+        || missing+=("scripts/doctor.sh não checa JustWorksRepairing")
+    # `-E` com fronteira de palavra de propósito: `-qF ... verificar` casaria
+    # com `verificar-qualquer-coisa` e o portão voltaria a ser decorativo.
+    grep -qE '(bluez_config\.sh|\$\{dono\})" verificar([[:space:]]|$)' \
+        scripts/doctor.sh 2>/dev/null \
+        || missing+=("scripts/doctor.sh não consome bluez_config.sh verificar")
+    # A CHAMADA, não só a função. MEDIDO em 06/08/2026: apagar a linha
+    # `check_bluez_justworks_repairing` de `main()` deixava a suíte inteira
+    # verde E este portão OK — porque tudo o que ele procurava continuava vivo
+    # DENTRO da função morta. ENTREGA-QUE-NAO-LIGOU-01 literal. O `awk` recorta
+    # o CORPO de `main()` (a definição da função fica de fora por construção) e
+    # exige a chamada lá dentro.
+    awk '/^main\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
+        scripts/doctor.sh 2>/dev/null \
+        | grep -qE '^[[:space:]]*check_bluez_justworks_repairing[[:space:]]*$' \
+        || missing+=("scripts/doctor.sh define check_bluez_justworks_repairing e NÃO a chama em main()")
+    # A REGRA DE PAR do empacotamento: quem leva o doctor.sh leva o dono único.
+    # Sem ela o detector empacotado é CEGO (cai no ramo "o dono único da config
+    # do BlueZ não está aqui") e o portão imprimia "com detector no doctor" sem
+    # nunca conferir que o dono viaja junto — o mesmo vácuo que esta leva veio
+    # fechar duas seções acima.
+    #
+    # OS COMENTÁRIOS SÃO DESCARTADOS ANTES DO GREP, e isso não é detalhe: o
+    # primeiro desenho deste bloco procurava a palavra no arquivo inteiro, e o
+    # próprio comentário que EXPLICA a regra a satisfazia — arrancar o
+    # `bluez_config.sh` da linha de cópia do `build_deb.sh` passava verde
+    # (MEDIDO por mutação, 06/08/2026). Era a mesma classe de vácuo que o
+    # `grep -qF FastConnectable` de duas seções acima tinha, e que esta leva
+    # veio fechar. Só linha de CÓDIGO conta.
+    #
+    # E O FLATPAK ESTAVA NA LISTA PELO ARQUIVO ERRADO (achado de 06/08/2026,
+    # MEDIDO): a lista trazia `scripts/build_flatpak.sh`, que é um INVÓLUCRO de
+    # 120 linhas — ele chama o `flatpak-builder` e não lista arquivo nenhum.
+    # Quem declara o conteúdo do pacote é o MANIFESTO
+    # `flatpak/br.andrefarias.Hefesto.yml`, que não estava em lista nenhuma.
+    # Resultado: pôr o `doctor.sh` no manifesto SEM o `bluez_config.sh` passava
+    # VERDE aqui e na bancada — o invólucro não cita `doctor.sh`, então o
+    # `continue` disparava e a regra de PAR nunca era aplicada ao Flatpak.
+    # O manifesto é YAML e comenta com `#`, então o descarte de comentários
+    # acima continua valendo letra por letra.
+    for _bt_pkg in scripts/build_deb.sh flatpak/br.andrefarias.Hefesto.yml \
+                   scripts/build_appimage.sh scripts/build_appimage_gui.sh \
+                   packaging/fedora/hefesto-dualsense4unix.spec \
+                   packaging/arch/PKGBUILD packaging/nix/package.nix; do
+        [[ -f "${_bt_pkg}" ]] || continue
+        _bt_codigo="$(grep -v '^[[:space:]]*#' "${_bt_pkg}" 2>/dev/null || true)"
+        printf '%s\n' "${_bt_codigo}" | grep -qF 'doctor.sh' || continue
+        printf '%s\n' "${_bt_codigo}" | grep -qF 'bluez_config.sh' \
+            || missing+=("${_bt_pkg} empacota doctor.sh e deixa bluez_config.sh para trás (detector CEGO no pacote: cai em 'o dono único da config do BlueZ não está aqui')")
+    done
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] config do BlueZ: dono único, chamado nos dois lados, detector CHAMADO em main(), dono empacotado com o doctor, e a poda provada não-automática"
+    else
+        echo "[FAIL] config do BlueZ: ${missing[*]}"
+        echo "       JustWorksRepairing=always sem detector foi o defeito de 06/08/2026:"
+        echo "       a cura estava no repositório e não chegava ao disco dela."
+        rc=1
+    fi
+else
+    echo "[ OK ] config do BlueZ: assets/bluetooth/hefesto-bt.block ausente — nada a checar"
+fi
+
 echo "─────────────────────────────────────────"
 if [[ "${rc}" -eq 0 ]]; then
     echo "paridade de empacotamento OK"
