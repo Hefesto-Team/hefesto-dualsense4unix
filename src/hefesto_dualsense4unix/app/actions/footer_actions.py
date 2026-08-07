@@ -559,7 +559,12 @@ class FooterActionsMixin(ProfileWriterMixin):
         filtro.add_pattern("*.json")
         chooser.add_filter(filtro)
 
-        response = chooser.run()
+        # DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): o seletor de arquivo é
+        # modal e bloqueante como os avisos — e um seletor que nasce invisível
+        # mata a janela do mesmo jeito. Passa pelo envelope da casa.
+        response = gui_dialogs.executar_dialogo(
+            chooser, nome="importar_perfil_escolher_arquivo"
+        )
         filename = chooser.get_filename()
         chooser.destroy()
 

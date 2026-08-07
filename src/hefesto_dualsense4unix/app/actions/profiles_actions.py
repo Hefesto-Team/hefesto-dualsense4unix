@@ -400,6 +400,24 @@ _RESP_RENOMEAR = 201
 _RESP_COPIA = 202
 
 
+def _motivo_do_cancelamento() -> str:
+    """A frase da barra depois de um diálogo que devolveu "não".
+
+    DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): quando o envelope da casa
+    desiste de um diálogo que não conseguiu aparecer, ele responde CANCELAR
+    por ela — e um "Operação cancelada." seco a mandaria procurar um clique
+    que ela nunca deu. Aqui a barra diz o que de fato aconteceu.
+    """
+    from hefesto_dualsense4unix.app import gui_dialogs
+
+    if gui_dialogs.ultimo_socorro() is not None:
+        return (
+            "O aviso não conseguiu aparecer na tela — nada foi alterado. "
+            "Tente salvar de novo."
+        )
+    return "Operação cancelada."
+
+
 def dialogo_renomear_ou_copiar(
     parent: Any, antigo: str, novo: str
 ) -> str | None:
@@ -414,8 +432,15 @@ def dialogo_renomear_ou_copiar(
 
     Mora aqui, e não em `app.gui_dialogs`, para esta correção não colidir com
     o outro trabalho em curso naquele módulo; a assinatura segue o padrão de
-    lá (parent + strings, run/destroy, sem IPC).
+    lá (parent + strings, sem IPC).
+
+    DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): morar fora do módulo dos
+    diálogos não o dispensa do envelope da casa — este era um dos DEZ
+    `dialog.run()` capazes de deixar a janela dela morta, e agora passa por
+    `gui_dialogs.executar_dialogo` como os outros nove.
     """
+    from hefesto_dualsense4unix.app import gui_dialogs
+
     dialog = Gtk.MessageDialog(
         parent=parent,
         modal=True,
@@ -435,7 +460,7 @@ def dialogo_renomear_ou_copiar(
     dialog.add_button("Renomear", _RESP_RENOMEAR)
     dialog.set_default_response(_RESP_RENOMEAR)
 
-    response = dialog.run()
+    response = gui_dialogs.executar_dialogo(dialog, nome="renomear_ou_copiar")
     dialog.destroy()
     if response == _RESP_RENOMEAR:
         return "renomear"
@@ -1552,7 +1577,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         ):
             escolha = self._prompt_rename_or_copy(selecionado.name, profile.name)
             if escolha is None:
-                self._toast_profile("Operação cancelada.")
+                self._toast_profile(_motivo_do_cancelamento())
                 return
             if escolha == "renomear":
                 renomeando_de = selecionado.name
@@ -1576,7 +1601,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             window = self._get("main_window")
             # `alvo.name` e não `profile.name`: quem some é o perfil do disco.
             if not gui_dialogs.prompt_overwrite_existing(parent=window, name=alvo.name):
-                self._toast_profile("Operação cancelada.")
+                self._toast_profile(_motivo_do_cancelamento())
                 return
         # COR-A: salvar um perfil que ANTES valia só num programa específico
         # (MatchCriteria) como MatchAny apaga o alvo em silêncio — o caminho
@@ -1607,7 +1632,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                 name=original.name,
                 regra_atual=_match_label(original.match),
             ):
-                self._toast_profile("Operação cancelada.")
+                self._toast_profile(_motivo_do_cancelamento())
                 return
         # SALVAR-NAO-REBAIXA-02: e a PRIORIDADE, que nos perfis dela (já em
         # `MatchAny` desde o defeito de 27/07) é a única coisa que ainda podia
@@ -1624,7 +1649,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                 de=int(original.priority),
                 para=int(profile.priority),
             ):
-                self._toast_profile("Operação cancelada.")
+                self._toast_profile(_motivo_do_cancelamento())
                 return
         # R-10: quem estava ativo ANTES do save — é com esse nome que o daemon
         # conhece o perfil renomeado. Lido aqui (e não depois do delete) porque

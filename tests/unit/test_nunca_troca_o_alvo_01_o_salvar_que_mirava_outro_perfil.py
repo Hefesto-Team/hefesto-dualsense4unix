@@ -798,7 +798,15 @@ class TestOImportarPerguntaPeloSlug:
 
         perguntas: list[str] = []
 
+        from hefesto_dualsense4unix.app import gui_dialogs as gd_real
+
         class _Dialogos:
+            # DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): o seletor de arquivo
+            # passou a abrir pelo envelope da casa. O dublê usa o envelope DE
+            # VERDADE (só o `_Chooser` é falso) — trocá-lo por um `lambda` que
+            # devolvesse OK esconderia deste teste justamente a camada nova.
+            executar_dialogo = staticmethod(gd_real.executar_dialogo)
+
             @staticmethod
             def prompt_import_conflict(parent: Any, name: str) -> str | None:
                 perguntas.append(name)
@@ -881,7 +889,13 @@ class TestOImportarPerguntaPeloSlug:
         _Chooser.arquivo = str(arquivo)
         monkeypatch.setattr(Gtk, "FileChooserDialog", _Chooser)
 
+        from hefesto_dualsense4unix.app import gui_dialogs as gd_real
+
         class _Dialogos:
+            # DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): o envelope de verdade,
+            # como no dublê irmão logo acima.
+            executar_dialogo = staticmethod(gd_real.executar_dialogo)
+
             @staticmethod
             def prompt_import_conflict(parent: Any, name: str) -> str | None:
                 return "renomear"

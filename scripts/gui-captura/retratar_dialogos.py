@@ -49,15 +49,26 @@ Havia duas saídas óbvias, e as duas custavam caro:
 
 A rota escolhida é uma terceira, e ela é MELHOR que a extração no próprio
 critério que tornava a extração preferível — "a foto tem de ser do diálogo
-REAL": este script troca `Gtk.MessageDialog.run` por uma função que, em vez de
-bloquear, FOTOGRAFA o diálogo que está na mão e devolve `CANCEL`. Quem monta o
-diálogo continua sendo a função de produção, inteira, sem uma linha de desvio —
-nem sequer uma função `_montar_*` de onde a pública pudesse divergir. Produção
-não muda; nenhum teste precisa mudar; e a foto é, por construção, o produto.
+REAL": este script troca `gui_dialogs.executar_dialogo` por uma função que, em
+vez de bloquear, FOTOGRAFA o diálogo que está na mão e devolve `CANCEL`. Quem
+monta o diálogo continua sendo a função de produção, inteira, sem uma linha de
+desvio — nem sequer uma função `_montar_*` de onde a pública pudesse divergir.
+Produção não muda; nenhum teste precisa mudar; e a foto é, por construção, o
+produto.
 
-Nota: com o `run()` trocado o diálogo **nunca chega a ser mostrado** — quem
-chama `gtk_widget_show` num `Gtk.Dialog` é o próprio `run()`. Por isso este
-script não abre janela nenhuma, nem mesmo se rodar com a sessão dela na tela.
+O ponto de troca mudou em 06/08/2026 (DIÁLOGO-QUE-MATA-A-JANELA-01), e a
+mudança é o que MANTÉM esta rota segura. Antes o alvo era
+`Gtk.MessageDialog.run`, e a nota abaixo dependia de um detalhe do GTK: quem
+chama `gtk_widget_show` num `Gtk.Dialog` é o próprio `run()`. Desde a cura,
+quem mostra o diálogo é o envelope da casa (`show_all` + `present`, ANTES do
+laço) — trocar só o `run()` faria este script abrir janela de verdade na tela
+dela. Trocando o ENVELOPE, nada é mostrado, e o alvo passou a ser uma função
+desta casa em vez de um método do GTK: o dia em que o envelope mudar de forma,
+é aqui que se lê o porquê.
+
+Nota: com o envelope trocado o diálogo **nunca chega a ser mostrado**. Por isso
+este script não abre janela nenhuma, nem mesmo se rodar com a sessão dela na
+tela.
 
 ARMADILHAS QUE ESTE ARQUIVO JÁ PAGOU (não as repita)
 -----------------------------------------------------
@@ -203,16 +214,22 @@ def _carregar_o_tema() -> str:
 _EM_CURSO: dict[str, object] = {}
 
 
-def _fotografar_em_vez_de_bloquear(dialogo) -> int:  # type: ignore[no-untyped-def]
-    """Substitui `Gtk.MessageDialog.run`: fotografa e devolve `CANCEL`.
+def _fotografar_em_vez_de_bloquear(  # type: ignore[no-untyped-def]
+    dialogo, *, nome: str = "", resposta_de_socorro: int | None = None
+) -> int:
+    """Substitui `gui_dialogs.executar_dialogo`: fotografa e devolve `CANCEL`.
 
     Quando esta função roda, o diálogo já está INTEIRO — todas as chamadas de
     montagem (`format_secondary_text`, `add_button`, `set_default_response`)
-    vêm antes do `run()` nas três funções de produção. É o instante exato em
-    que ela veria o diálogo na tela.
+    vêm antes do envelope nas funções de produção. É o instante exato em que
+    ela veria o diálogo na tela.
 
-    Devolve `CANCEL` porque é a resposta que não faz nada: as três funções
-    traduzem qualquer coisa diferente de `OK` para "não confirmou".
+    A assinatura é a do envelope, palavra por palavra (`nome` e
+    `resposta_de_socorro` são só aceitos e ignorados): se ela mudar lá e não
+    mudar aqui, o script quebra alto em vez de fotografar errado.
+
+    Devolve `CANCEL` porque é a resposta que não faz nada: as funções traduzem
+    qualquer coisa diferente de `OK` para "não confirmou".
     """
     miolo = dialogo.get_child()
     if miolo is None:
@@ -320,7 +337,10 @@ def main(destino: str | None = None) -> int:
         return 1
 
     print(f"  {_carregar_o_tema()}")
-    Gtk.MessageDialog.run = _fotografar_em_vez_de_bloquear
+    # O envelope da casa, não o `run()` do GTK: ver "A ROTA" no cabeçalho.
+    from hefesto_dualsense4unix.app import gui_dialogs
+
+    gui_dialogs.executar_dialogo = _fotografar_em_vez_de_bloquear
 
     print(f"\n  {'arquivo':<42} tamanho     o que a foto prova")
     print("  " + "-" * 100)
