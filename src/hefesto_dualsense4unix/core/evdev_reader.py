@@ -34,6 +34,13 @@ DUALSENSE_PIDS = {0x0CE6, 0x0DF2}  # DualSense + DualSense Edge
 DUALSENSE_GYRO_RES_PER_DEG_S = 1024
 
 
+#: Teto da faixa canônica do domínio Hefesto para eixos e gatilhos (0..255) —
+#: é o que o DualSense já entrega CRU, e é a escala em que todo o resto do
+#: projeto fala (perfis, curvas, vpad, repasse ao jogo). O normalizador existe
+#: para que um aparelho com OUTRA faixa chegue aqui sem que nada abaixo saiba.
+EIXO_MAX_HEFESTO = 255
+
+
 @dataclass
 class EvdevSnapshot:
     """Snapshot imutável do estado lido via evdev."""
@@ -45,6 +52,105 @@ class EvdevSnapshot:
     rx: int = 128
     ry: int = 128
     buttons_pressed: frozenset[str] = field(default_factory=frozenset)
+
+
+@dataclass(frozen=True)
+class EixoAbsoluto:
+    """A faixa que um node evdev DECLARA para um eixo, lida do `absinfo`.
+
+    Não é metadado decorativo: é o que separa "centro do analógico" de "talo à
+    esquerda". O DualSense declara `0..255` e o Nintendo Pro declara
+    `-32767..32767` — o mesmo valor CRU `0` significa *extremo esquerdo* num e
+    *centro* no outro (medição de 06/08/2026, LUGAR-À-MESA-01).
+
+    `flat` (zona morta declarada pelo aparelho; 0 no DualSense, 500 no Pro) e
+    `fuzz` viajam junto porque quem for tratá-los depois precisa do número do
+    APARELHO, não de uma tabela de "controles conhecidos" — que é a versão que
+    só funciona nesta bancada. **Nenhum dos dois é aplicado hoje**, e isso é
+    escolha declarada: aplicar zona morta é decisão de produto, não de leitura.
+    """
+
+    minimo: int = 0
+    maximo: int = 0
+    flat: int = 0
+    fuzz: int = 0
+    resolucao: int = 0
+
+    @property
+    def e_a_faixa_do_dualsense(self) -> bool:
+        """True se a faixa declarada já É a faixa canônica da casa (0..255)."""
+        return self.minimo == 0 and self.maximo == EIXO_MAX_HEFESTO
+
+
+def normalizar_eixo(valor: int, faixa: EixoAbsoluto | None) -> int:
+    """Converte o valor CRU de um eixo para os 0..255 do domínio Hefesto.
+
+    Sem isto, `EvdevReader._handle_abs` fazia `valor & 0xFF` — que é a
+    identidade para quem já nasce em 0..255 e um moedor de carne para quem não
+    nasce: no Nintendo Pro (-32767..32767) o CENTRO do analógico vira `0`, que
+    em 0..255 significa **talo à esquerda e para cima**. O personagem anda
+    sozinho para o canto e não para.
+
+    Duas propriedades, e as duas têm teste:
+
+    1. **O DualSense sai bit a bit idêntico ao de hoje.** Faixa `0..255` (e
+       faixa ilegível/ausente) cai no MESMO `& 0xFF` de sempre — inclusive para
+       valor fora da faixa, onde `& 0xFF` e um `clamp` discordariam. Este é um
+       caminho quente de input de TODOS os controles: mudar o número de quem já
+       funcionava para consertar quem não funciona é o defeito, não a cura.
+    2. **A conversão é do APARELHO**, montada do `absinfo` do node aberto — não
+       de uma lista de VID/PID conhecidos, que funcionaria só nesta mesa.
+
+    Aritmética inteira com arredondamento meio-para-cima
+    (`(x*510 + span) // (2*span)`): o centro do Pro dá exatamente **128**, e não
+    os 127 que um `//` cru devolveria. Valor fora da faixa é grampeado — vindo
+    de um aparelho com faixa declarada, ele é ruído, não intenção.
+    """
+    if faixa is None or faixa.maximo <= faixa.minimo or faixa.e_a_faixa_do_dualsense:
+        return valor & 0xFF
+    span = faixa.maximo - faixa.minimo
+    cru = min(max(valor, faixa.minimo), faixa.maximo)
+    return ((cru - faixa.minimo) * (2 * EIXO_MAX_HEFESTO) + span) // (2 * span)
+
+
+def faixas_de_eixo(caps: Any, ev_abs: int) -> dict[int, EixoAbsoluto]:
+    """Mapa `código evdev -> faixa declarada` a partir do `capabilities()`.
+
+    Uma leitura só: o `capabilities()` do python-evdev já traz o `absinfo`
+    junto (default `absinfo=True`), então não custa um ioctl por eixo. Ler isto
+    DENTRO do `_handle_event` custaria um ioctl por evento, a 250-765 Hz — é o
+    mesmo motivo pelo qual o `MotionSensorReader` lê a resolução no open.
+
+    Tolerante por contrato: `capabilities()` ilegível, entrada em formato
+    inesperado ou valor não-inteiro deixa o eixo FORA do mapa, e quem consome
+    cai no comportamento histórico (`& 0xFF`). Num caminho quente de input, o
+    único modo de falha aceitável é **degradar para o que já rodava**.
+
+    Um eixo PRESENTE mas sem faixa utilizável (dublê que lista só o código)
+    entra no mapa mesmo assim: a presença é o que decide se o gatilho digital
+    precisa ser sintetizado, e ela é verdadeira mesmo sem o `absinfo`.
+    """
+    faixas: dict[int, EixoAbsoluto] = {}
+    try:
+        entradas = caps.get(ev_abs, ())
+    except Exception:
+        return faixas
+    if not isinstance(entradas, (list, tuple)):
+        return faixas
+    for entrada in entradas:
+        if isinstance(entrada, tuple) and len(entrada) == 2:
+            code, info = entrada
+        else:
+            code, info = entrada, None
+        with contextlib.suppress(Exception):
+            faixas[int(code)] = EixoAbsoluto(
+                minimo=int(getattr(info, "min", 0) or 0),
+                maximo=int(getattr(info, "max", 0) or 0),
+                flat=int(getattr(info, "flat", 0) or 0),
+                fuzz=int(getattr(info, "fuzz", 0) or 0),
+                resolucao=int(getattr(info, "resolution", 0) or 0),
+            )
+    return faixas
 
 
 def _read_input_attr(device_dir: str, attr: str) -> str:
@@ -148,37 +254,17 @@ def discover_dualsense_evdevs() -> dict[str, Path]:
 
     Filtra devices virtuais (uinput, ver `_is_virtual_evdev`) e nodes sem caps
     de gamepad (touchpad/motion sensors ficam de fora).
-    """
-    try:
-        from evdev import InputDevice, ecodes, list_devices
-    except ImportError:
-        return {}
-    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
-    found: dict[str, Path] = {}
-    for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
-        if _is_virtual_evdev(path):
-            continue
-        try:
-            dev = InputDevice(path)
-            try:
-                is_gamepad = (
-                    dev.info.vendor == DUALSENSE_VENDOR
-                    and dev.info.product in DUALSENSE_PIDS
-                )
-                # O evdev principal tem gamepad caps (BTN_GAMEPAD); o touchpad não.
-                if is_gamepad:
-                    buttons = dev.capabilities().get(ecodes.EV_KEY, [])
-                    if ecodes.BTN_GAMEPAD in buttons or ecodes.BTN_SOUTH in buttons:
-                        key = norm_mac(getattr(dev, "uniq", None)) or f"path:{path}"
-                        # 1º node vence em duplicata do mesmo MAC (ordem estável
-                        # por número de node) — duplicata real não deve existir.
-                        found.setdefault(key, Path(path))
-            finally:
-                dev.close()
-        except Exception:
-            continue
-    return found
+    LUGAR-À-MESA-01/E2: passou a ser uma VISTA da descoberta única
+    (`discover_gamepads`) — o laço, os filtros e a regra de chave continuam
+    exatamente os mesmos, mas moram num lugar só. `com_sysfs=False` porque
+    este caminho nunca leu driver/hidraw e não vai começar a pagar por eles.
+    """
+    return {
+        gp.identidade: Path(gp.evdev_path)
+        for gp in discover_gamepads(com_sysfs=False)
+        if gp.especie == ESPECIE_DUALSENSE
+    }
 
 
 def find_all_dualsense_evdevs() -> list[Path]:
@@ -376,6 +462,187 @@ def _external_dedup_key(
     return f"dev:{dono}" if dono else f"path:{event_path}"
 
 
+#: As duas espécies que a descoberta única distingue. Não é taxonomia de
+#: marca: é DE QUEM É O CAMINHO. `dualsense` é o domínio do caminho existente
+#: (co-op, vpad, hidraw broker); `external` é todo o resto do plástico da mesa.
+ESPECIE_DUALSENSE = "dualsense"
+ESPECIE_EXTERNAL = "external"
+
+
+@dataclass(frozen=True)
+class GamepadDescoberto:
+    """Um controle FÍSICO visto pela descoberta única, com tudo o que se sabe.
+
+    Um registro por PLÁSTICO (os vários nodes de um mesmo aparelho — gamepad,
+    IMU, touchpad — colapsam num só), com a `identidade` já resolvida pela
+    regra da própria espécie. É o que a LUGAR-À-MESA-01 chama de *um produtor
+    de identidade em vez de dois*.
+    """
+
+    especie: str
+    identidade: str
+    evdev_path: str
+    name: str
+    vid: str
+    pid: str
+    bus: str
+    uniq: str | None
+    driver: str | None
+    hidraw: str | None
+    #: `código evdev -> faixa declarada` (ver `EixoAbsoluto`). É o que o
+    #: normalizador consome; vazio quando o node não declara `absinfo` legível.
+    eixos: dict[int, EixoAbsoluto] = field(default_factory=dict)
+
+    def como_entrada_de_inventario(self) -> dict[str, Any]:
+        """O dict do inventário 8BIT-01, com as MESMAS oito chaves de sempre.
+
+        O `eixos` fica DE FORA de propósito: este dict viaja no JSON-RPC e é
+        mutado pelos consumidores (`holders`, identidade carimbada). Chave nova
+        num payload que a GUI já lê é mudança que ninguém pediu.
+        """
+        return {
+            "name": self.name,
+            "vid": self.vid,
+            "pid": self.pid,
+            "bus": self.bus,
+            "uniq": self.uniq,
+            "driver": self.driver,
+            "evdev_path": self.evdev_path,
+            "hidraw": self.hidraw,
+        }
+
+
+def _int_ou(valor: Any, reserva: int) -> int:
+    """`int(valor)` tolerante — devolve `reserva` se o campo não converter."""
+    try:
+        return int(valor)
+    except Exception:
+        return reserva
+
+
+def discover_gamepads(*, com_sysfs: bool = True) -> list[GamepadDescoberto]:
+    """Descoberta ÚNICA: abre cada node de /dev/input UMA vez e classifica.
+
+    LUGAR-À-MESA-01/E2. Até aqui havia DOIS laços — `discover_dualsense_evdevs`
+    e `discover_external_gamepads` — que abriam **todos** os nodes, cada um com
+    a sua regra de identidade e o seu filtro. Quem precisava dos dois lados
+    pagava a enumeração duas vezes, e a identidade de um mesmo aparelho tinha
+    dois donos. Agora as duas portas antigas são VISTAS desta função, com o
+    contrato de retorno intacto.
+
+    Regras preservadas, uma a uma:
+
+    - virtuais fora (`_is_virtual_evdev`) — cobre o vpad uhid do daemon, os
+      vpads do Steam Input e o teclado virtual;
+    - só nodes com caps de gamepad (`BTN_GAMEPAD`/`BTN_SOUTH`): touchpad e
+      motion sensors ficam de fora;
+    - espécie `dualsense` para `DUALSENSE_VENDOR` + `DUALSENSE_PIDS`,
+      `external` para todo o resto;
+    - **identidade por espécie, e a diferença é medida**: o DualSense usa o MAC
+      direto (`norm_mac(uniq)`, `path:` como último recurso) porque esta perna é
+      fechada em vendor e o `hid_playstation` não fabrica endereço; o externo
+      usa `_external_dedup_key`, que sabe descartar o endereço SINTÉTICO do
+      `hid-nintendo` degradado — igual para dois clones idênticos;
+    - 1º node vence por espécie+identidade (ordem estável por número de node).
+
+    `com_sysfs=False` pula a subida no sysfs (driver/hidraw): é o que o caminho
+    do co-op nunca leu e não vai começar a pagar.
+
+    **O que ela NÃO faz: adotar ninguém.** Devolver um externo aqui é dizer que
+    ele existe e qual a forma dos eixos dele — não é dar-lhe vpad nem lugar na
+    partida. O veto de 19/07 (*"externo não ganha controle virtual"*) segue de
+    pé; quem o derruba é a `E3`, e ela é dela.
+
+    CUSTO (lição PERF-MULTI-CONTROLLER-01): abre TODOS os nodes de /dev/input
+    (open + ioctls + close, ~10-40 ms) — PROIBIDO no event loop do daemon e em
+    qualquer caminho quente (`state_full`/tick). **GRAU: SUSPEITA COM
+    MECANISMO** sobre o delta: o caminho DualSense passa a chamar
+    `capabilities()` também nos nodes de outro vendor (antes o filtro de vendor
+    curto-circuitava antes) — alguns ioctls a mais por node, num caminho que já
+    é gated pelo `InputDirWatch` e só roda em hotplug. Não foi medido com
+    aparelho na mesa.
+    """
+    try:
+        from evdev import InputDevice, ecodes, list_devices
+    except ImportError:
+        return []
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    encontrados: dict[tuple[str, str], GamepadDescoberto] = {}
+    for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
+        if _is_virtual_evdev(path):
+            continue
+        try:
+            dev = InputDevice(path)
+            try:
+                vendor = int(dev.info.vendor)
+                product = int(dev.info.product)
+                caps = dev.capabilities()
+                buttons = caps.get(ecodes.EV_KEY, [])
+                if not (
+                    ecodes.BTN_GAMEPAD in buttons or ecodes.BTN_SOUTH in buttons
+                ):
+                    continue
+                uniq_raw = str(getattr(dev, "uniq", "") or "").strip()
+                if vendor == DUALSENSE_VENDOR and product in DUALSENSE_PIDS:
+                    especie = ESPECIE_DUALSENSE
+                    identidade = norm_mac(uniq_raw) or f"path:{path}"
+                else:
+                    especie = ESPECIE_EXTERNAL
+                    identidade = _external_dedup_key(path, uniq_raw, vendor, product)
+                driver, hidraw = (
+                    _external_device_sysfs(path) if com_sysfs else (None, None)
+                )
+                # `name`/`bustype` são lidos com tolerância porque as duas
+                # portas antigas divergiam: a do DualSense nunca os tocava, a
+                # dos externos morria no `int(...)` e o node sumia do
+                # inventário SEM UMA LINHA DE LOG. Unificar com a leitura
+                # estrita reprovaria os nodes que a porta do DualSense sempre
+                # aceitou; unificar com a tolerante só troca o sumiço silencioso
+                # por uma entrada com o campo em branco. Kernel real sempre
+                # publica os dois.
+                encontrados.setdefault(
+                    (especie, identidade),
+                    GamepadDescoberto(
+                        especie=especie,
+                        identidade=identidade,
+                        evdev_path=str(path),
+                        name=str(getattr(dev, "name", "") or ""),
+                        vid=f"{vendor:04x}",
+                        pid=f"{product:04x}",
+                        bus=_bus_name(_int_ou(getattr(dev.info, "bustype", 0), 0)),
+                        uniq=uniq_raw or None,
+                        driver=driver,
+                        hidraw=hidraw,
+                        eixos=faixas_de_eixo(caps, ecodes.EV_ABS),
+                    ),
+                )
+            finally:
+                dev.close()
+        except Exception:
+            continue
+    return list(encontrados.values())
+
+
+def localizar_node_por_identidade(identidade: str) -> Path | None:
+    """Node evdev do controle de `identidade` — DualSense **ou** externo.
+
+    É o REENCONTRO da `E2`: `EvdevReader._locate` só sabia procurar em
+    `discover_dualsense_evdevs()`, então um controle externo que perdesse o
+    node (replug, re-enumeração pós-storm, troca de barramento) nunca mais era
+    achado — o `eventN` é volátil e a identidade é o que sobrevive.
+
+    Não confere espécie de propósito: quem chama já escolheu O CONTROLE, e a
+    identidade é única entre eles. Quem NÃO tem alvo continua caindo em
+    `find_dualsense_evdev`, que segue fechado em Sony — sem alvo, adotar um
+    externo seria adoção por acidente.
+    """
+    for gp in discover_gamepads(com_sysfs=False):
+        if gp.identidade == identidade:
+            return Path(gp.evdev_path)
+    return None
+
+
 def discover_external_gamepads() -> list[dict[str, Any]]:
     """Inventário READ-ONLY de gamepads físicos NÃO-DualSense (8BIT-01).
 
@@ -407,47 +674,17 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
     (open + ioctls + close, ~10-40 ms) — PROIBIDO no event loop do daemon e
     em qualquer caminho quente (`state_full`/tick). Consumidor canônico: o
     handler `controller.list` sob opt-in, via thread.
-    """
-    try:
-        from evdev import InputDevice, ecodes, list_devices
-    except ImportError:
-        return []
 
-    found: dict[str, dict[str, Any]] = {}
-    for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
-        if _is_virtual_evdev(path):
-            continue
-        try:
-            dev = InputDevice(path)
-            try:
-                vendor = int(dev.info.vendor)
-                product = int(dev.info.product)
-                if vendor == DUALSENSE_VENDOR and product in DUALSENSE_PIDS:
-                    continue
-                buttons = dev.capabilities().get(ecodes.EV_KEY, [])
-                if not (
-                    ecodes.BTN_GAMEPAD in buttons or ecodes.BTN_SOUTH in buttons
-                ):
-                    continue
-                uniq_raw = str(getattr(dev, "uniq", "") or "").strip()
-                driver, hidraw = _external_device_sysfs(path)
-                entry: dict[str, Any] = {
-                    "name": str(dev.name),
-                    "vid": f"{vendor:04x}",
-                    "pid": f"{product:04x}",
-                    "bus": _bus_name(int(dev.info.bustype)),
-                    "uniq": uniq_raw or None,
-                    "driver": driver,
-                    "evdev_path": str(path),
-                    "hidraw": hidraw,
-                }
-                key = _external_dedup_key(path, uniq_raw, vendor, product)
-                found.setdefault(key, entry)
-            finally:
-                dev.close()
-        except Exception:
-            continue
-    return list(found.values())
+    LUGAR-À-MESA-01/E2: virou uma VISTA da descoberta única
+    (`discover_gamepads`). As oito chaves do dict e a regra de dedup são as
+    mesmas; cada chamada devolve dicts NOVOS, porque os consumidores os mutam
+    (o `controller.list` carimba `holders` e a identidade do aparelho).
+    """
+    return [
+        gp.como_entrada_de_inventario()
+        for gp in discover_gamepads()
+        if gp.especie == ESPECIE_EXTERNAL
+    ]
 
 
 class _EvdevReconnectLoop:
@@ -829,6 +1066,17 @@ class EvdevReader(_EvdevReconnectLoop):
         # Falha de grab NÃO pode ser silenciosa: com gamepad virtual ligado,
         # físico sem grab = input DOBRADO no jogo.
         self._grab_state: str = "off"
+        # LUGAR-À-MESA-01/E2 — a forma dos eixos DESTE aparelho, lida do
+        # `absinfo` no open (`_on_device_opened`). Vazio = faixa desconhecida,
+        # e aí o `_handle_abs` cai no `& 0xFF` histórico: o DualSense continua
+        # bit a bit igual mesmo se a leitura do node falhar.
+        self._eixos: dict[int, EixoAbsoluto] = {}
+        # Gatilho ANALÓGICO ausente no aparelho (o Nintendo Pro não publica
+        # `ABS_Z`/`ABS_RZ`, medido em 06/08/2026): sem síntese, o gatilho fica
+        # 0 para sempre e o botão físico não chega ao jogo. Nunca liga num
+        # DualSense — lá o eixo existe, e sobrescrevê-lo mataria o analógico.
+        self._sintetizar_l2: bool = False
+        self._sintetizar_r2: bool = False
 
     def retarget(self, uniq: str | None) -> None:
         """Re-aponta o reader para o controle de MAC `uniq` (normalizado).
@@ -920,13 +1168,47 @@ class EvdevReader(_EvdevReconnectLoop):
     # Hooks do loop base ------------------------------------------------
 
     def _locate(self) -> Path | None:
-        """Resolve o node do controle-alvo (por MAC) ou o primeiro físico."""
+        """Resolve o node do controle-alvo (por identidade) ou o 1º DualSense.
+
+        LUGAR-À-MESA-01/E2 (reencontro): com alvo, procura na descoberta ÚNICA
+        — que enxerga DualSense **e** externo. Antes só olhava
+        `discover_dualsense_evdevs()`, então um externo que trocasse de `eventN`
+        (replug, re-enumeração) nunca mais era reencontrado. Sem alvo, nada
+        muda: continua o primeiro DualSense físico, porque adotar um externo
+        sem ninguém ter pedido seria adoção por acidente — e a adoção é a `E3`.
+        """
         if self._target_uniq is not None:
-            return discover_dualsense_evdevs().get(self._target_uniq)
+            return localizar_node_por_identidade(self._target_uniq)
         return find_dualsense_evdev()
 
     def _find_device(self) -> Path | None:
         return self._locate()
+
+    def _on_device_opened(self, dev: Any) -> None:
+        """Monta o normalizador DESTE aparelho a partir do `absinfo` do node.
+
+        Um ioctl por conexão, nunca por evento (mesmo motivo do
+        `MotionSensorReader._on_device_opened`). Falha aqui não é fatal: o mapa
+        fica vazio e o `_handle_abs` volta ao `& 0xFF` de sempre — degradar
+        para o que já rodava é o único modo de falha aceitável aqui.
+        """
+        try:
+            from evdev import ecodes
+        except ImportError:  # pragma: no cover - sem evdev não há loop
+            return
+        caps: Any = {}
+        with contextlib.suppress(Exception):
+            caps = dev.capabilities()
+        eixos = faixas_de_eixo(caps, getattr(ecodes, "EV_ABS", 3))
+        z = getattr(ecodes, "ABS_Z", None)
+        rz = getattr(ecodes, "ABS_RZ", None)
+        with self._lock:
+            self._eixos = eixos
+            # Só sintetiza quando a leitura FOI POSSÍVEL e o eixo não estava
+            # lá. Mapa vazio (node ilegível) é "não sei", não "não tem" — e
+            # chutar "não tem" num DualSense mataria o gatilho analógico dele.
+            self._sintetizar_l2 = bool(eixos) and z is not None and z not in eixos
+            self._sintetizar_r2 = bool(eixos) and rz is not None and rz not in eixos
 
     def _reapply_grab(self, dev: Any) -> None:
         """Reaplica o grab pedido ao (re)abrir o device, com estado observável."""
@@ -953,7 +1235,21 @@ class EvdevReader(_EvdevReconnectLoop):
             self._pressed.clear()
             self._dpad_x = 0
             self._dpad_y = 0
-            self._snapshot = self._with(buttons_pressed=frozenset())
+            mudancas: dict[str, Any] = {"buttons_pressed": frozenset()}
+            # E2: gatilho SINTETIZADO vem do botão, e o botão acabou de ser
+            # solto à força — deixá-lo em 255 seria um gatilho travado no
+            # fundo. O gatilho ANALÓGICO não é tocado: ali o valor congelado é
+            # o comportamento de sempre, e mudá-lo não foi pedido.
+            if self._sintetizar_l2:
+                mudancas["l2_raw"] = 0
+            if self._sintetizar_r2:
+                mudancas["r2_raw"] = 0
+            self._snapshot = self._with(**mudancas)
+            # A forma dos eixos é do NODE, e o node morreu: o próximo open
+            # relê. Enquanto isso, "não sei" — que é o `& 0xFF` histórico.
+            self._eixos = {}
+            self._sintetizar_l2 = False
+            self._sintetizar_r2 = False
         # Grab pedido volta a "pending" — será reaplicado (com verificação)
         # quando o loop reabrir o device (BUG-COOP-GRAB-SILENT-FAIL-01).
         if self._grab:
@@ -970,24 +1266,31 @@ class EvdevReader(_EvdevReconnectLoop):
 
     def _handle_abs(self, code: int, value: int, ecodes: Any) -> None:
         with self._lock:
+            # E2: a faixa é DO APARELHO (`absinfo` lido no open). Sem faixa
+            # conhecida, `normalizar_eixo` devolve o mesmo `value & 0xFF` que
+            # esta função fazia seis vezes seguidas até 07/08/2026.
             if code == ecodes.ABS_X:
-                self._snapshot = self._with(lx=value & 0xFF)
+                self._snapshot = self._with(lx=self._normalizado(code, value))
             elif code == ecodes.ABS_Y:
-                self._snapshot = self._with(ly=value & 0xFF)
+                self._snapshot = self._with(ly=self._normalizado(code, value))
             elif code == ecodes.ABS_RX:
-                self._snapshot = self._with(rx=value & 0xFF)
+                self._snapshot = self._with(rx=self._normalizado(code, value))
             elif code == ecodes.ABS_RY:
-                self._snapshot = self._with(ry=value & 0xFF)
+                self._snapshot = self._with(ry=self._normalizado(code, value))
             elif code == ecodes.ABS_Z:
-                self._snapshot = self._with(l2_raw=value & 0xFF)
+                self._snapshot = self._with(l2_raw=self._normalizado(code, value))
             elif code == ecodes.ABS_RZ:
-                self._snapshot = self._with(r2_raw=value & 0xFF)
+                self._snapshot = self._with(r2_raw=self._normalizado(code, value))
             elif code == ecodes.ABS_HAT0X:
                 self._dpad_x = int(value)
                 self._refresh_dpad_buttons()
             elif code == ecodes.ABS_HAT0Y:
                 self._dpad_y = int(value)
                 self._refresh_dpad_buttons()
+
+    def _normalizado(self, code: int, value: int) -> int:
+        """Valor do eixo `code` na faixa canônica da casa (0..255)."""
+        return normalizar_eixo(int(value), self._eixos.get(code))
 
     def _handle_key(self, code: int, value: int, ecodes: Any) -> None:
         # evdev retorna keycode numerico; converte pra nome canonico
@@ -999,7 +1302,29 @@ class EvdevReader(_EvdevReconnectLoop):
                 self._pressed.add(name)
             elif value == 0:
                 self._pressed.discard(name)
+            self._sintetizar_gatilho(name, value)
             self._sync_buttons_to_snapshot()
+
+    def _sintetizar_gatilho(self, name: str, value: int) -> None:
+        """Gatilho DIGITAL: o botão vira 0/255 quando o eixo não existe.
+
+        O Nintendo Pro não publica `ABS_Z`/`ABS_RZ` — o ZL/ZR dele é botão, não
+        eixo (medido em 06/08/2026). Sem esta síntese o gatilho fica **0 para
+        sempre** e o dedo da pessoa não chega ao jogo.
+
+        Chamado sempre, mas só faz algo quando o open confirmou que o eixo
+        FALTA neste aparelho. Num DualSense o eixo existe, a síntese fica
+        desligada, e o `BTN_TL2` continua sendo só um botão — sobrescrever o
+        analógico com 255 ao cruzar o limiar seria matar o gatilho adaptativo,
+        que é metade do produto.
+        """
+        if value not in (0, 1):
+            return  # autorepeat (value == 2) não muda estado de gatilho
+        nivel = EIXO_MAX_HEFESTO if value == 1 else 0
+        if name == "l2_btn" and self._sintetizar_l2:
+            self._snapshot = self._with(l2_raw=nivel)
+        elif name == "r2_btn" and self._sintetizar_r2:
+            self._snapshot = self._with(r2_raw=nivel)
 
     def _keycode_name(self, code: int, ecodes: Any) -> str | None:
         for evdev_name, hefesto_name in self.BUTTON_MAP.items():
@@ -1437,8 +1762,13 @@ __all__ = [
     "DUALSENSE_GYRO_RES_PER_DEG_S",
     "DUALSENSE_PIDS",
     "DUALSENSE_VENDOR",
+    "EIXO_MAX_HEFESTO",
+    "ESPECIE_DUALSENSE",
+    "ESPECIE_EXTERNAL",
+    "EixoAbsoluto",
     "EvdevReader",
     "EvdevSnapshot",
+    "GamepadDescoberto",
     "GyroSnapshot",
     "MotionSensorReader",
     "TouchState",
@@ -1446,8 +1776,12 @@ __all__ = [
     "discover_dualsense_motion_evdevs",
     "discover_dualsense_touchpad_evdevs",
     "discover_external_gamepads",
+    "discover_gamepads",
+    "faixas_de_eixo",
     "find_all_dualsense_evdevs",
     "find_dualsense_evdev",
     "find_dualsense_touchpad_evdev",
     "graus_por_segundo",
+    "localizar_node_por_identidade",
+    "normalizar_eixo",
 ]
