@@ -44,6 +44,21 @@ controle duplicado), esses jogos precisam de uma **exceção por jogo** — o bo
 o jogo está em sessão o físico volta a ficar visível (e o gamepad virtual sai
 de cena: nesse jogo vale só o controle 1, sem co-op).
 
+> **NOTA DATADA — 06/08/2026. O parágrafo acima está certo e é a metade da
+> história.** Medido em jogo, com o Mullet Mad Jack aberto: durante a exceção o
+> Hefesto entrega ao jogo a **entrada** (solta o controle físico e tira o
+> virtual de cena), mas **continua escrevendo no seu controle** — a cor que você
+> escolheu **fica**, e a resistência de gatilho que você aplicou **segura**. A
+> exceção **não** cala o Hefesto: ela troca **qual dispositivo o jogo enxerga**,
+> e só isso.
+>
+> **O critério de quando marcar também mudou de nome.** Esta lista de exceções
+> **não** é "os jogos com DualSense nativo" — é **"os jogos cujo DualSense passa
+> pela Steam"**, como o próprio título desta seção diz. Um jogo com suporte
+> nativo de verdade **não precisa** dela: o Sackboy foi medido no mesmo dia, fora
+> da lista, e funcionou completo. Registro em
+> [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
+
 Para desfazer, ainda não há botão; a saída é pela linha de comando:
 `hefesto-dualsense4unix gamepad steam-input list` mostra os jogos marcados pelo
 nome, e `hefesto-dualsense4unix gamepad steam-input remove <nome ou appid>`
@@ -65,6 +80,25 @@ Falam com o controle direto, sem intermediário. Funcionam completos com
 
 Casos medidos nesta máquina: **Sackboy: A Big Adventure**, **Pragmata**,
 **Mad King Redemption**.
+
+> **NOTA DATADA — 06/08/2026. Estes jogos NÃO precisam da lista de exceções — e
+> eles mandam na luz e nos gatilhos.** Medido com o Sackboy: fora da lista, com
+> o Hefesto no caminho, ele listou **um** controle, com botões de PlayStation, e
+> andou normal. Mas ele **também escreve no controle** — e o que ele escreve
+> **vence o que você escolheu**: a lightbar voltou ao **azul da Sony** (aplicar a
+> sua cor muda por um instante, e o jogo devolve), e os gatilhos ficaram
+> **moles** apesar da Resistência aplicada. **A vibração é a exceção: nela você
+> continua vencendo**, inclusive o multiplicador do controle deslizante.
+>
+> Isso é política declarada, não defeito: o Hefesto repassa fielmente ao seu
+> controle o que o jogo pede, porque escalar ou trocar o que o jogo pinta seria
+> mentir sobre o que ele pediu. **Um jogo desta lista na lista de exceções não
+> ganha nada** e perde o co-op. Registro em
+> [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
+>
+> **Uma contradição desta página, anotada e não resolvida:** o **Pragmata** está
+> nesta seção *e* na lista de exceções do produto. Só um dos dois lugares pode
+> estar certo, e decidir isso é medição em jogo — não foi feita.
 
 ## Não repetir a escolha toda vez
 
