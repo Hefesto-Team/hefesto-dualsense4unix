@@ -37,6 +37,33 @@ done
 """
 
 
+def _semeia_simbolico(raiz: Path) -> None:
+    """Põe no repo fake o simbólico da bandeja e a cópia do applet.
+
+    APPLET-MONOCROMÁTICO-01 (07/08/2026): o gate passou a exigir que o
+    simbólico exista e que bandeja e applet sirvam o MESMO desenho. Sem estes
+    dois arquivos, todo teste de "passa" deste módulo reprovaria por uma seção
+    que não é o alvo dele — e, pior, a saída começaria pela seção de udev,
+    mandando quem lesse procurar no lugar errado.
+    """
+    desenho = '<svg viewBox="0 0 16 16"><title>fake</title></svg>\n'
+    alvos = (
+        raiz / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg",
+        raiz
+        / "packaging"
+        / "cosmic-applet"
+        / "data"
+        / "icons"
+        / "hicolor"
+        / "symbolic"
+        / "apps"
+        / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg",
+    )
+    for alvo in alvos:
+        alvo.parent.mkdir(parents=True, exist_ok=True)
+        alvo.write_text(desenho, encoding="utf-8")
+
+
 @pytest.fixture
 def fake_repo(tmp_path: Path) -> Path:
     """Repo fake mínimo: só o script + uma regra 79 coberta em TODO lugar.
@@ -93,6 +120,7 @@ def fake_repo(tmp_path: Path) -> Path:
         f"          /app/share/hefesto-dualsense4unix/udev-rules/{RULE}\n",
         encoding="utf-8",
     )
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -327,6 +355,7 @@ def fake_repo_broker(tmp_path: Path) -> Path:
     (tmp_path / "packaging" / "debian" / "postrm").write_text(
         f"# {BROKER_TXT}\n", encoding="utf-8"
     )
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -511,6 +540,7 @@ def fake_repo_dkms_nintendo(tmp_path: Path) -> Path:
     (tmp_path / "uninstall.sh").write_text(
         _DKMS_REMOVE_NINTENDO, encoding="utf-8"
     )
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -647,6 +677,7 @@ def fake_repo_dkms_playstation(tmp_path: Path) -> Path:
     (tmp_path / "uninstall.sh").write_text(
         _DKMS_REMOVE_PLAYSTATION, encoding="utf-8"
     )
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -775,6 +806,7 @@ def fake_repo_icone(tmp_path: Path) -> Path:
         ok, encoding="utf-8"
     )
     (tmp_path / "packaging" / "nix" / "package.nix").write_text(ok, encoding="utf-8")
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -933,3 +965,37 @@ def test_comentario_do_manifesto_nao_satisfaz_a_regra_de_par(
     assert _mensagem_de_par(resultado.stdout), (
         "um COMENTÁRIO no manifesto satisfez a regra de PAR"
     )
+
+
+# ---------------------------------------------------------------------------
+# APPLET-MONOCROMÁTICO-01 (07/08/2026) — o simbólico do painel
+# ---------------------------------------------------------------------------
+
+
+def test_simbolico_ausente_falha(fake_repo: Path) -> None:
+    """Sem o arquivo, a bandeja dela cai no ícone colorido — e ninguém vê."""
+    (fake_repo / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg").unlink()
+    result = run_check(fake_repo)
+    assert result.returncode == 1
+    assert "não existe" in result.stdout
+    assert "assets/simbolico/hefesto-dualsense4unix-symbolic.svg" in result.stdout
+
+
+def test_simbolico_do_applet_divergente_falha(fake_repo: Path) -> None:
+    """Dois nomes, um desenho só: se divergirem, a mesma aplicação aparece com
+    ícones diferentes conforme a superfície — que é o defeito desta sprint."""
+    alvo = (
+        fake_repo
+        / "packaging"
+        / "cosmic-applet"
+        / "data"
+        / "icons"
+        / "hicolor"
+        / "symbolic"
+        / "apps"
+        / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
+    )
+    alvo.write_text('<svg viewBox="0 0 16 16"><title>outro</title></svg>\n', encoding="utf-8")
+    result = run_check(fake_repo)
+    assert result.returncode == 1
+    assert "DIVERGIRAM" in result.stdout

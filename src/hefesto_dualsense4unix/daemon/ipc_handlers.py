@@ -1396,8 +1396,9 @@ class IpcHandlersMixin:
                          completa do gate do poll loop);
         - `bloqueio`  -- POR QUE não emitiria: `"desligada"`, `"sem_device"`,
                          `"modo_jogo"` (a supressão que ela chama de modo jogo),
-                         `"vpad_suspenso_pelo_steam_input"` (o jogo assumiu — o
-                         defeito medido em 29/07) ou `null` quando emite.
+                         `"vpad_suspenso_pelo_steam_input"` (o jogo assumiu a
+                         ENTRADA — o defeito medido em 29/07; a saída continua
+                         do Hefesto, MEDIDO em 06/08) ou `null` quando emite.
 
         `getattr` defensivo em tudo: daemon/config dublados em teste não precisam
         conhecer os campos novos, e este handler roda a 10-20 Hz.
@@ -1438,8 +1439,11 @@ class IpcHandlersMixin:
         distinguem os dois desfechos possíveis do opt-in —
 
           - `excecao_ativa=True` + `vpad_suspenso=True`  → o jogo da allowlist
-            está rodando com o Hefesto fora do caminho (é o regime em que o R1
-            dela emitia Alt+Tab, e agora o que cala o desktop);
+            está rodando com a ENTRADA entregue a ele (é o regime em que o R1
+            dela emitia Alt+Tab, e agora o que cala o desktop). Só a entrada:
+            cor, gatilhos e vibração seguem sendo do Hefesto — MEDIDO em 06/08
+            (`CONTROLE-SONY-MEDIDO-01`, *A INVERSÃO*), e quem escrever a frase
+            da aba a partir daqui não pode prometer o contrário;
           - `excecao_ativa=True` + `vpad_suspenso=False` → o jogo da allowlist
             está rodando com o vpad DE PÉ porque a suspensão não pôde ser armada
             (ver `suspend_vpads_for_steam_input`).

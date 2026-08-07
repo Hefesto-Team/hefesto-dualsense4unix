@@ -372,7 +372,20 @@ class TestExecucaoDePontaAPonta:
         # NENHUM passo repetido: 1 remove (da 1ª sincronização), 1 cp -a,
         # 1 add, 1 build, 1 install — a 2ª chamada não re-registra nada.
         assert registro.count("sudo dkms remove") == 1
-        assert registro.count("sudo cp -a") == 1
+        # A contagem do `cp -a` exclui o destino `LICENSES/` desde 07/08/2026:
+        # a LICENÇA-QUE-VIAJA-01 acrescentou UMA cópia de `LICENSES/` para
+        # dentro de `/usr/src/<pkg>-<ver>` (a GPL-2.0, seção 1, pede que o
+        # texto acompanhe o fonte). Ela é do passo 1-bis, tem guarda de `diff`
+        # própria e NÃO se repete na 2ª chamada — que é o que este teste
+        # protege. Contar `cp -a` cru mediria "quantas cópias existem", não
+        # "a 2ª chamada repetiu alguma"; quem cobra a não-repetição da licença
+        # é `tests/unit/test_licenca_viaja_com_o_fonte_dkms.py`.
+        copias_de_source = [
+            linha
+            for linha in registro.splitlines()
+            if "sudo cp -a" in linha and "LICENSES" not in linha
+        ]
+        assert len(copias_de_source) == 1, copias_de_source
         assert registro.count("sudo dkms add") == 1
         assert registro.count("sudo dkms build hefesto-teste/9.9.9") == 1
         assert registro.count("sudo dkms install hefesto-teste/9.9.9") == 1

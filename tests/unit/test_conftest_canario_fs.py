@@ -32,17 +32,43 @@ class _SessaoFalsa:
 
 
 def _lar_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Um ``$HOME`` de mentira com a árvore que o canário vigia."""
+    """Um ``$HOME`` de mentira com as árvores que o canário vigia.
+
+    As duas listas: a que REPROVA (`_CANARIO_ALVOS`) e a que só AVISA
+    (`_CANARIO_ALVOS_AVISO`, acrescentada em 07/08/2026). A foto de aviso é
+    tirada aqui, já com o ``HOME`` desviado — sem isto o `sessionfinish`
+    compararia a foto da sessão VIVA (o `$HOME` real) contra este lar de
+    mentira, e acusaria a árvore inteira de ter sumido.
+    """
     lar = tmp_path / "lar"
     (lar / ".config" / "hefesto-dualsense4unix" / "profiles").mkdir(parents=True)
     (lar / ".config" / "wireplumber").mkdir(parents=True)
     (lar / ".local" / "share" / "hefesto-dualsense4unix").mkdir(parents=True)
+    (lar / ".local" / "state" / "hefesto-dualsense4unix" / "launch_env").mkdir(
+        parents=True
+    )
     (lar / ".config" / "hefesto-dualsense4unix" / "profiles" / "vitoria.json").write_text(
         '{"name": "vitoria", "match": {"type": "any"}, "priority": 0}\n',
         encoding="utf-8",
     )
+    (
+        lar / ".local" / "state" / "hefesto-dualsense4unix" / "launch_env" / "default.env"
+    ).write_text("PROTON_DISABLE_HIDRAW=0x054C/0x0CE6\n", encoding="utf-8")
     monkeypatch.setenv("HOME", str(lar))
     monkeypatch.delenv(canario._CANARIO_DESLIGADO_ENV, raising=False)
+    monkeypatch.setattr(
+        canario, "_CANARIO_FOTO_AVISO", canario._fotografar_tudo_de_aviso()
+    )
+    # Os testes daqui chamam o `pytest_sessionfinish` DE VERDADE, e ele carrega
+    # três guardas. A da ARVORE-CONGELADA-01 mede a árvore REAL do repositório e
+    # também escreve `exitstatus = 1` — então, numa árvore viva (outro agente
+    # editando, um `git checkout` ao lado), ela derrubava as asserções de
+    # `exitstatus == 0` daqui por um motivo que nada tem a ver com o canário.
+    # MEDIDO em 07/08/2026: 5 vermelhos numa suíte inteira, todos por um arquivo
+    # meu salvo durante a execução. Neutralizar a guarda vizinha isola a unidade
+    # sob teste e NÃO afrouxa nada — a mordida do canário é o `exitstatus = 1`
+    # que o bloco DELE escreve, e essa continua valendo linha por linha.
+    monkeypatch.setattr(canario, "_deltas_do_congelado", lambda: [])
     return lar
 
 
@@ -200,3 +226,120 @@ def test_canario_desarmado_nao_acusa_o_home_inteiro(
     sessao: Any = _SessaoFalsa()
     canario.pytest_sessionfinish(sessao, 0)
     assert sessao.exitstatus == 0
+
+
+# ---------------------------------------------------------------------------
+# A segunda lista, de 07/08/2026: a árvore que só AVISA
+# ---------------------------------------------------------------------------
+# O PORQUÊ, MEDIDO em 07/08 com retrato do disco antes e depois de uma suíte
+# inteira: os quatro `~/.local/state/hefesto-dualsense4unix/launch_env/*.env`
+# foram REGRAVADOS às 16:19:38, dentro da janela da suíte. Quem escreveu não foi
+# a suíte — foi o daemon VIVO dela (`launch_env_materializado` no journal, pid
+# 2870305), 20 s depois da primeira rajada de teclados uinput que a suíte cria,
+# e o próprio daemon nomeia o mecanismo duas linhas adiante:
+# `backend_hotplug_reconcile trigger=input_dir_change`.
+#
+# Essa árvore estava FORA de qualquer instrumento desta casa. Entrou — como
+# aviso, e não como portão, porque um portão que fica vermelho na máquina dela e
+# verde na CI é um portão que alguém desliga na semana seguinte (é a lição do
+# DIV-11, os 15 `.lock` da estreia do canário).
+
+
+def test_arvore_de_aviso_e_resolvida_contra_o_home_vivo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lar = _lar_falso(tmp_path, monkeypatch)
+    assert canario._canario_raizes_de_aviso() == [
+        lar / ".local/state/hefesto-dualsense4unix",
+    ]
+
+
+def test_mudanca_na_arvore_de_aviso_relata_e_nao_reprova(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """As duas metades do contrato do aviso, na mesma asserção: ele APARECE, e
+    a sessão continua verde.
+
+    MORDIDA: mover o bloco do aviso para dentro do bloco que reprova (ou
+    acrescentar um `session.exitstatus = 1` a ele) derruba a segunda asserção.
+    """
+    lar = _lar_falso(tmp_path, monkeypatch)
+    monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
+    monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)
+    (
+        lar / ".local/state/hefesto-dualsense4unix/launch_env/default.env"
+    ).write_text("PROTON_DISABLE_HIDRAW=0x054C/0x0CE6\n# outro\n", encoding="utf-8")
+
+    sessao: Any = _SessaoFalsa()
+    canario.pytest_sessionfinish(sessao, 0)
+
+    saida = capsys.readouterr().out
+    assert "default.env" in saida
+    assert "aviso, não é portão" in saida
+    assert sessao.exitstatus == 0, "o aviso NÃO pode reprovar a sessão"
+
+
+def test_o_aviso_nao_engole_o_portao(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """As duas listas convivem: aviso na de aviso, REPROVA na que reprova.
+
+    MORDIDA: um `return` no bloco do aviso (ou pô-lo depois do `if not deltas:
+    return`) faz um dos dois sumir — e o que some em silêncio é sempre o que
+    importava.
+    """
+    lar = _lar_falso(tmp_path, monkeypatch)
+    monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
+    monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)
+    (
+        lar / ".local/state/hefesto-dualsense4unix/launch_env/default.env"
+    ).write_text("mudou\n", encoding="utf-8")
+    (lar / ".config/hefesto-dualsense4unix/profiles/vitoria.json").write_text(
+        '{"name": "outra-coisa"}\n', encoding="utf-8"
+    )
+
+    sessao: Any = _SessaoFalsa()
+    canario.pytest_sessionfinish(sessao, 0)
+
+    saida = capsys.readouterr().out
+    assert "aviso, não é portão" in saida
+    assert "a suíte ESCREVEU nos diretórios reais" in saida
+    assert sessao.exitstatus == 1
+
+
+def test_escotilha_desliga_tambem_o_aviso(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    lar = _lar_falso(tmp_path, monkeypatch)
+    monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
+    monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)
+    monkeypatch.setenv(canario._CANARIO_DESLIGADO_ENV, "1")
+    (
+        lar / ".local/state/hefesto-dualsense4unix/launch_env/default.env"
+    ).write_text("mudou\n", encoding="utf-8")
+
+    sessao: Any = _SessaoFalsa()
+    canario.pytest_sessionfinish(sessao, 0)
+
+    assert "aviso" not in capsys.readouterr().out
+    assert sessao.exitstatus == 0
+
+
+def test_o_aviso_nunca_restaura_nada(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Contrato declarado, e é o que separa este mecanismo de um estrago: o
+    canário MEDE o ``$HOME``, e não desfaz escrita nenhuma. Quem escreveu na
+    árvore de aviso costuma ser a daemon VIVA dela, e desfazer isso seria o
+    dano maior.
+    """
+    lar = _lar_falso(tmp_path, monkeypatch)
+    monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
+    monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)
+    alvo = lar / ".local/state/hefesto-dualsense4unix/launch_env/default.env"
+    alvo.write_text("escrita da daemon dela\n", encoding="utf-8")
+
+    sessao: Any = _SessaoFalsa()
+    canario.pytest_sessionfinish(sessao, 0)
+
+    assert alvo.read_text(encoding="utf-8") == "escrita da daemon dela\n"

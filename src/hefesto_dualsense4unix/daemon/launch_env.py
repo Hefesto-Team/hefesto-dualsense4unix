@@ -54,7 +54,7 @@ import contextlib
 import datetime as _dt
 import os
 import time
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -80,7 +80,156 @@ ENV_ALLOWLIST = (
     "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP",
 )
 
-_IGNORE_VALUE = "0x054c/0x0ce6"
+#: MÁSCARA-01, entrega 3 — METADE SEGURA (07/08/2026): o par VID/PID do
+#: DualSense FÍSICO. Ele estava cravado DENTRO das duas strings abaixo; agora é
+#: o ÚNICO item de uma LISTA, e as duas strings são COMPOSTAS por
+#: `compor_lista_vidpid`. O chamador continua passando só este par — a função
+#: nasce testada e NÃO LIGADA. A condição para a lista crescer está escrita no
+#: docstring dela, e não é hoje.
+#:
+#: Fonte canônica dos dois números: `integrations.uhid_gamepad`
+#: (`DUALSENSE_VENDOR`/`DUALSENSE_PRODUCT`). Aqui eles são repetidos DE
+#: PROPÓSITO: este módulo importa `uhid_gamepad` de forma LAZY (dentro de
+#: `_env_for_profile`), e um import de topo criaria a aresta
+#: `daemon -> integrations -> core` só para ler dois inteiros. Quem impede as
+#: duas cópias de divergirem é um teste dedicado
+#: (`tests/unit/test_launch_env_lista_vidpid.py`), não a boa vontade de quem
+#: for editar.
+PAR_DUALSENSE_FISICO = (0x054C, 0x0CE6)
+
+
+def _par_vidpid(par: Any) -> tuple[int, int] | None:
+    """`(vid, pid)` quando o par cabe em 16 bits cada; `None` quando não cabe.
+
+    RECUSA em vez de corrigir. Um número fora da faixa formatado por `%04x`
+    sai com CINCO dígitos, e o par seguinte gruda no anterior — o SDL leria um
+    VID que ninguém pediu, e o winebus deixaria de casar a agulha certa.
+    Descartar é o lado seguro da assimetria desta casa: um par A MENOS é o
+    controle DUPLICADO (o pior caso aceito por escrito em
+    `assets/hefesto-launch.sh` e `install.sh`); um par ERRADO a mais some com
+    o controle de alguém.
+
+    `bool` é `int` em Python e entraria aqui como 0/1 sem querer dizer isso —
+    fica de fora de propósito.
+    """
+    try:
+        vid, pid = par
+    except (TypeError, ValueError):
+        return None
+    if isinstance(vid, bool) or isinstance(pid, bool):
+        return None
+    if not isinstance(vid, int) or not isinstance(pid, int):
+        return None
+    if not (0 <= vid <= 0xFFFF) or not (0 <= pid <= 0xFFFF):
+        return None
+    return vid, pid
+
+
+def compor_lista_vidpid(pares: Iterable[tuple[int, int]], *, maiusculas: bool) -> str:
+    """O VALOR de uma env de VID/PID, composto a partir de uma LISTA de pares.
+
+    Formato: `0xVVVV/0xPPPP`, quatro dígitos hexadecimais com zero à esquerda,
+    pares separados por VÍRGULA e mais nada (nem espaço). Lista vazia devolve
+    string VAZIA, e quem chama tem de OMITIR a variável: `VAR=` no arquivo tem
+    a mesma cara de quem escondeu alguém, e o `.env` é a primeira coisa que se
+    lê ao diagnosticar um jogo que "enxerga controle demais".
+
+    O FORMATO, e o grau de cada metade
+    ----------------------------------
+
+    `PROTON_DISABLE_HIDRAW` — **GRAU: MEDIDO** em 07/08/2026, no Proton 10
+    instalado na máquina dela. O `is_hidraw_enabled` do
+    `files/lib/wine/x86_64-windows/winebus.sys` monta a agulha com o molde
+    WIDE `0x%04X/0x%04X` e procura com `wcscasestr` — busca de SUBSTRING, sem
+    caixa. Daí: o prefixo `0x` e os quatro dígitos são OBRIGATÓRIOS (fazem
+    parte da agulha), a CAIXA é indiferente e o SEPARADOR é livre, então a
+    vírgula serve. O próprio Proton escreve uma lista assim no `proton:1828`
+    (contorno do God of War Ragnarok no Deck):
+    `0x054C/0x05C4,0x054C/0x09CC,0x054C/0x0BA0,0x054C/0x0CE6,0x054C/0x0DF2`.
+
+    `SDL_GAMECONTROLLER_IGNORE_DEVICES` — **GRAU: SUSPEITA COM MECANISMO**
+    (forte; nenhum parser do SDL foi executado). Três corroborações: o formato
+    documentado do hint é lista separada por vírgula de `0xVID/0xPID`; a
+    LaunchOptions DELA já foi estendida por vírgula, e o repositório tem regra
+    escrita para não quebrar isso (`integrations/steam_launch_options.py:147`);
+    e o Proton usa exatamente esse formato na env irmã. Medir o parser exigiria
+    plantar um joystick falso em `/dev/input` na máquina dela, com três
+    controles conectados e ela jogando — recusado, e é por isso que o grau
+    para aqui.
+
+    A CAIXA de cada valor não é enfeite
+    -----------------------------------
+
+    Minúsculas no IGNORE porque `integrations/steam_launch_options.py:97`
+    compara a LaunchOptions envenenada contra o token LITERAL
+    `SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6`, byte a byte (**GRAU:
+    MEDIDO**, é a `IGNORE_SIGNATURE`). Trocar a caixa aqui faria o `has_poison`
+    deixar de reconhecer o veneno que as versões antigas persistiram — e
+    veneno com o vpad fora de cena é ZERO controles. Maiúsculas no DISABLE por
+    paridade com o que o próprio Proton escreve; ali a caixa é indiferente ao
+    `wcscasestr`, então é preservação do que já roda, não exigência.
+
+    O WRAPPER NÃO MUDA — e isto foi conferido
+    -----------------------------------------
+
+    **GRAU: MEDIDO** na leitura de `assets/hefesto-launch.sh`: a allowlist
+    espelhada (`:85-91`) filtra por NOME de variável (`case "$line" in
+    SDL_GAMECONTROLLER_IGNORE_DEVICES=*)`), nunca por valor; e o laço final
+    (`:309-313`) passa cada linha INTEIRA como UM argumento do `env(1)`, sem
+    word-split. Um valor com vírgulas atravessa literal. O aviso da sprint
+    ("mudar de um lado exige mudar do outro") vale para NOME novo de variável,
+    e nenhum nasce aqui.
+
+    QUANDO ESTA LISTA PODE CRESCER — a condição, escrita
+    ----------------------------------------------------
+
+    Ela recebe um SEGUNDO par quando existir a `E4` da LUGAR-À-MESA-01
+    (`docs/process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md`),
+    que é a **cobertura POR PAR**: *"o par só sai no `IGNORE` se TODO aparelho
+    daquele par na mesa tiver vpad vivo"*. E a `E4` vem depois da `E3` (a
+    adoção dos externos), que ela adiou até a máscara existir.
+
+    O que a condição protege, MEDIDO naquela sprint: `054c:05c4` é o par do
+    8BitDo em modo PS4 **e** o de um DualShock 4 Sony genuíno. Emitir esse par
+    numa mesa onde o aparelho é um DS4 SEM vpad some com o controle da pessoa.
+    Enquanto a cobertura por par não existir, esta função tem de continuar
+    recebendo um par só — e é o que ela recebe.
+    """
+    molde = "0x%04X/0x%04X" if maiusculas else "0x%04x/0x%04x"
+    vistos: set[tuple[int, int]] = set()
+    saida: list[str] = []
+    for par in pares:
+        normal = _par_vidpid(par)
+        if normal is None:
+            logger.warning("launch_env_par_vidpid_descartado", par=str(par))
+            continue
+        if normal in vistos:
+            continue
+        vistos.add(normal)
+        saida.append(molde % normal)
+    return ",".join(saida)
+
+
+def valor_ignore_devices(pares: Iterable[tuple[int, int]]) -> str:
+    """Valor do `SDL_GAMECONTROLLER_IGNORE_DEVICES` para estes pares.
+
+    Minúsculas — a caixa é contrato com o `IGNORE_SIGNATURE` do
+    `steam_launch_options`, ver `compor_lista_vidpid`.
+    """
+    return compor_lista_vidpid(pares, maiusculas=False)
+
+
+def valor_disable_hidraw(pares: Iterable[tuple[int, int]]) -> str:
+    """Valor do `PROTON_DISABLE_HIDRAW` para estes pares.
+
+    Maiúsculas — paridade com o que o próprio Proton escreve, ver
+    `compor_lista_vidpid`.
+    """
+    return compor_lista_vidpid(pares, maiusculas=True)
+
+
+#: O valor de HOJE, byte a byte: um par só, o do DualSense físico.
+_IGNORE_VALUE = valor_ignore_devices((PAR_DUALSENSE_FISICO,))
 
 #: GUERRA-01: lista VID/PID que o winebus.sys dos Protons 10/11 lê para NEGAR
 #: hidraw (a whitelist default dele dá hidraw à família Sony INTEIRA — físico
@@ -88,7 +237,7 @@ _IGNORE_VALUE = "0x054c/0x0ce6"
 #: Edge 0df2 PRECISA do hidraw (é por ele que rumble/triggers/lightbar do
 #: jogo chegam) — NUNCA incluir 0x0DF2. `PROTON_ENABLE_HIDRAW` morreu no
 #: Proton 10 e foi aposentada (só AMPLIAVA exposição).
-_DISABLE_HIDRAW_VALUE = "0x054C/0x0CE6"
+_DISABLE_HIDRAW_VALUE = valor_disable_hidraw((PAR_DUALSENSE_FISICO,))
 
 #: UNIFICA-PREDICADO-01: o predicado "isto é janela de jogo da Steam?" DESCEU
 #: para `profiles/steam_app.py` (stdlib pura, sem import do projeto) e é
@@ -480,9 +629,21 @@ def arm_launch_profile(
     depois, ao enumerar os controles.
 
     Appid da allowlist do Steam Input NÃO tem a MÁSCARA armada (contradição 11
-    do plano): a allowlist é opt-in explícito de "o Hefesto sai de cena neste
-    jogo", e impor a máscara de um perfil ali seria contradizer a própria
-    exceção.
+    do plano): a allowlist é opt-in explícito de "quem entrega a ENTRADA deste
+    jogo é a Steam", e impor a máscara de um perfil ali seria contradizer a
+    própria exceção — a máscara é justamente uma opinião sobre o dispositivo
+    de entrada.
+
+    NOTA DATADA — 07/08/2026. O parágrafo acima dizia que a allowlist é opt-in
+    de *"o Hefesto sai de cena neste jogo"*, e essa leitura está **refutada
+    pela metade** pela medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`, seção
+    *A INVERSÃO*, grau MEDIDO): o Hefesto sai da ENTRADA e **fica inteiro na
+    saída** — os gatilhos dela seguraram e a cor dela ficou, com o jogo da
+    lista aberto. A decisão de código NÃO muda (a máscara continua fora, e por
+    um motivo agora mais preciso); o que muda é a frase que a descreve, e ela
+    é a mesma que o estudo
+    `docs/process/estudos/2026-08-06-desenho-a-flag-do-jogo-e-o-perfil-a-partir-da-biblioteca.md`
+    (seção 5.3, item 2) já cobrava desta função.
 
     ALLOWLIST-SUPRESSAO-01 (auditoria 24/07): "sair de cena" era largo demais e
     engolia o que NÃO disputa nada com o jogo. O `return` antecipado da
@@ -1040,8 +1201,10 @@ __all__ = [
     "ENV_ALLOWLIST",
     "ESTADO_ALLOWLIST_STEAM_INPUT",
     "LAUNCH_ARM_WINDOW_SEC",
+    "PAR_DUALSENSE_FISICO",
     "WRAPPER_MARKER_WINDOW_SEC",
     "arm_launch_profile",
+    "compor_lista_vidpid",
     "compose_env",
     "launch_session_appid",
     "materialize_launch_env",
@@ -1053,6 +1216,8 @@ __all__ = [
     "steam_appid_from_wm_class",
     "steam_input_appids",
     "steam_input_exception_appid",
+    "valor_disable_hidraw",
+    "valor_ignore_devices",
     "wrapper_game_running",
     "wrapper_used_state",
 ]

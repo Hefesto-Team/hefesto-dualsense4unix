@@ -1837,10 +1837,50 @@ if command -v convert >/dev/null 2>&1; then
     mkdir -p "${HOME}/.local/share/pixmaps"
     cp -f "${ICON_SRC}" "${HOME}/.local/share/pixmaps/${APP_ID}.png"
     # Remove SVG placeholder de instalações anteriores (v3.4.2 colocava lah).
+    #
+    # ATENÇÃO, 07/08/2026 (APPLET-MONOCROMÁTICO-01): esta linha apaga
+    # `scalable/apps/${APP_ID}.svg` — o nome SEM sufixo, e SÓ ele. Ela NÃO
+    # alcança o simbólico instalado logo abaixo, que se chama
+    # `${APP_ID}-symbolic.svg` e vive em `symbolic/apps/`. O alvo está cravado
+    # de propósito: um `rm -f .../scalable/apps/${APP_ID}*.svg` apagaria o
+    # simbólico a cada instalação, e o sintoma seria um joystick genérico na
+    # barra dela, sem ninguém entender por quê.
     rm -f "${ICON_HICOLOR_BASE}/scalable/apps/${APP_ID}.svg"
 else
     printf '      aviso: ImageMagick (convert) ausente — so 256x256 PNG\n'
     printf '             instale: sudo apt install imagemagick\n'
+fi
+
+# ICONE SIMBOLICO DA BANDEJA — APPLET-MONOCROMATICO-01 (07/08/2026)
+# ------------------------------------------------------------------
+# Pedido dela, olhando a própria barra: "o applet do hefesto deve ficar em preto
+# e branco (...) no cosmic todos os applet são assim". Estava certa: dez dos
+# treze applets do System76 declaram `-symbolic`, e o Hefesto era o único de
+# glifo fixo que não declarava.
+#
+# Este arquivo NÃO é derivado dos PNGs acima, e não passa pelo ImageMagick: é
+# desenho próprio na grade 16x16 (a logo cheia a 20 px vira borrão). Por isso
+# fica FORA do `if command -v convert` — sem ImageMagick o resto degrada, este
+# não precisa degradar junto.
+#
+# O destino é `symbolic/apps/`, e isso foi MEDIDO em 07/08 na máquina dela: o
+# `index.theme` do `hicolor` do HOME dela NÃO lista `symbolic/apps`, e mesmo
+# assim a busca de ícones acha o arquivo lá (GTK) — e o painel desenhou um item
+# de bandeja de prova servido desse diretório. É onde o `hicolor` do sistema
+# declara o bloco `[symbolic/apps]` e onde o vizinho que já funciona (Flatpak do
+# Spotify) põe o dele.
+#
+# Sem este arquivo, `tray.py` cai para o nome antigo (logo colorida) e, se nem
+# ele existir, para o joystick genérico `input-gaming`.
+ICON_SIMBOLICO_SRC="${ROOT_DIR}/assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
+ICON_SIMBOLICO_DIR="${ICON_HICOLOR_BASE}/symbolic/apps"
+if [[ -r "${ICON_SIMBOLICO_SRC}" ]]; then
+    mkdir -p "${ICON_SIMBOLICO_DIR}"
+    cp -f "${ICON_SIMBOLICO_SRC}" "${ICON_SIMBOLICO_DIR}/${APP_ID}-symbolic.svg"
+    printf '      ícone simbólico da bandeja instalado (%s-symbolic.svg)\n' "${APP_ID}"
+else
+    printf '      aviso: %s ausente — a bandeja cai no ícone colorido\n' \
+        "assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
 fi
 
 # Detecção COSMIC → dois caminhos complementares para autoswitch funcionar:

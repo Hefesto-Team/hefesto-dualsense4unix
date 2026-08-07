@@ -142,6 +142,16 @@ if [ -f "assets/appimage/Hefesto-Dualsense4Unix.png" ]; then
     cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png"
 fi
 
+# APPLET-MONOCROMÁTICO-01 (07/08/2026): o ícone SIMBÓLICO da bandeja. O
+# código pede `hefesto-dualsense4unix-symbolic` (app/tray.py), e esse nome
+# NÃO se satisfaz com PNG: PNG nunca é recolorido pelo tema, e o ícone
+# ficaria o único cromático do painel. Destino `symbolic/apps/`.
+if [ -f "assets/simbolico/hefesto-dualsense4unix-symbolic.svg" ]; then
+    mkdir -p "${STAGING}/usr/share/icons/hicolor/symbolic/apps"
+    cp "assets/simbolico/hefesto-dualsense4unix-symbolic.svg" \
+        "${STAGING}/usr/share/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg"
+fi
+
 # ---------------------------------------------------------------------------
 # Copiar regras udev
 # ---------------------------------------------------------------------------

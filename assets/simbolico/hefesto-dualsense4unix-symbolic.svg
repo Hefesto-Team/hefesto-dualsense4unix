@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ícone SIMBÓLICO do painel — o ARO com a BORDA DO MARTELO ao centro.
+
+  É o desenho que ela pediu em 07/08/2026, na língua dela: "o applet do hefesto
+  deve ficar em preto e branco, talvez só o círculo com borda preta e a borda do
+  martelo ao centro. no cosmic todos os applet são assim". Ela estava certa
+  sobre a regra: dez dos treze applets do System76 declaram `-symbolic`, e o
+  Hefesto era o único de glifo fixo que não declarava.
+
+  Fonte da forma: `assets/hefesto-logo.svg` — o aro é a "Borda" da logo, o
+  martelo é o grupo "Martelo". Este arquivo NÃO é derivado por escala da logo
+  (a logo a 16 px vira borrão): é desenho próprio na grade simbólica, e por
+  isso NÃO passa pelo `scripts/gerar_icones.sh`. Quem o trava é
+  `tests/unit/test_simbolico_do_painel.py`.
+
+  AS QUATRO REGRAS QUE ESTE ARQUIVO OBEDECE, e o que cada uma custou.
+  (Nada de linha de traços aqui dentro: dois hifens seguidos fecham comentário
+  em XML, e o arquivo inteiro vira ilegível para o librsvg. Aconteceu ao
+  escrever este cabeçalho, em 07/08 — e nenhum teste pegava. Hoje pega:
+  `test_o_simbolico_e_xml_valido`.)
+  1. UMA COR SÓ, ACROMÁTICA E CLARA (#bebebe), cravada — a escola do vizinho
+     Flatpak (`com.spotify.Client-symbolic.svg`), que é o único ícone de
+     origem colorida da barra dela que aparece branco. `currentColor` NÃO
+     serve: renderizado sem contexto de cor (rsvg-convert, resvg) ele cai para
+     PRETO. Medido em 07/08: o simbólico antigo, que usava `currentColor`, sai
+     `srgb(0,0,0)` — 1,59:1 sobre o `#2F2F3A` do painel dela. Some.
+     Dentro do painel a cor deste arquivo é irrelevante: medido em 07/08, o
+     `cosmic-applet-status-area` RECOLORE tudo que tem nome `-symbolic` (um
+     item de bandeja de prova pedindo este mesmo desenho em `#ff00ff` saiu com
+     saturação máxima 30,6 — a mesma do vizinho Spotify, que é só o azulado do
+     fundo do painel entrando no recorte). A cor clara é o seguro para FORA do
+     painel.
+
+  2. CONTORNO FEITO DE PREENCHIMENTO, NUNCA DE `stroke` + `fill="none"`.
+     Esta é a armadilha que quase estragou o pedido dela, e ela foi
+     REPRODUZIDA em 07/08. O GTK recolore símbolo injetando CSS
+     `rect,circle,path {fill: <cor> !important;}` — o `!important` atropela
+     `fill="none"`, e o mesmo aro desenhado com `stroke` virou um DISCO
+     CHAPADO, com a logo inteira sumida dentro dele. Aqui todo contorno é um
+     `path` com `fill-rule="evenodd"` e dois subcaminhos (fora e dentro): o
+     furo sobrevive à recoloração porque `fill-rule` não é `fill`.
+
+  3. FUNDO TRANSPARENTE. O desenho é o RECORTE. A recoloração da pilha do
+     COSMIC substitui o RGB e PRESERVA o alfa (`iced_wgpu/image/vector.rs`):
+     qualquer `<circle>` opaco de fundo viraria disco liso da cor do tema.
+
+  4. SEM `transform-origin` e sem `transform` — CSS SVG2 que o librsvg
+     (renderizador do GTK) ignora, jogando a forma para fora do `viewBox`.
+     Armadilha medida antes, registrada no simbólico da bigorna.
+
+  Grade 16x16 (padrão simbólico), mas o alvo real é 20 px: é o que o
+  `cosmic-panel` dá a um ícone simbólico com o painel no tamanho `S`, que é o
+  dela (`get_applet_icon_size(is_symbolic=true)` → S=20; sem simbólico, S=32).
+  O ícone ENCOLHE ao virar simbólico — é esperado, e é o que o deixa do
+  tamanho dos vizinhos.
+
+  Validado com `rsvg-convert -w N -h N` em 16, 20, 24 e 48 px sobre o `#2F2F3A`
+  medido do painel dela, e na barra de verdade, ao lado dos vizinhos, com um
+  item de bandeja de prova (07/08/2026).
+
+  A OUTRA OPÇÃO, que é dela para escolher: `assets/simbolico/opcao-b-bigorna-symbolic.svg`,
+  a bigorna em silhueta desenhada em 27/06. Ver a sprint
+  `docs/process/sprints/2026-08-07-APPLET-MONOCROMATICO-01-o-icone-que-destoa-do-painel.md`.
+-->
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hefesto - Dualsense4Unix">
+  <title>Aro e martelo</title>
+  <!-- Aro: círculo com borda, feito de dois subcaminhos (anel), nunca de stroke. -->
+  <path fill="#bebebe" fill-rule="evenodd" d="M 8,0.6 A 7.4,7.4 0 1,0 8,15.4 A 7.4,7.4 0 1,0 8,0.6 Z M 8,1.75 A 6.25,6.25 0 1,0 8,14.25 A 6.25,6.25 0 1,0 8,1.75 Z"/>
+  <!-- Cabeça do martelo: moldura vazada (a "borda" que ela pediu). -->
+  <path fill="#bebebe" fill-rule="evenodd" d="M 4.5,4.1 L 11.5,4.1 L 11.5,7.5 L 4.5,7.5 Z M 5.3,4.9 L 5.3,6.7 L 10.7,6.7 L 10.7,4.9 Z"/>
+  <!-- Cabo: barra cheia. A 20 px um cabo vazado teria furo de 0,9 px e viraria borrão. -->
+  <path fill="#bebebe" d="M 7.4,7.5 L 8.6,7.5 L 8.6,12.1 L 7.4,12.1 Z"/>
+</svg>

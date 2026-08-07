@@ -9,9 +9,12 @@ interface reportam PASSED contra um GTK de mentira. Cobertura falsa é pior do
 que cobertura ausente. Ver ``exigir_gi_real`` e ``pytest_collectstart`` abaixo.
 """
 
+import contextlib
 import hashlib
 import os
+import shutil
 import sys
+import tempfile
 import types
 from pathlib import Path
 from typing import Any
@@ -369,13 +372,33 @@ _CANARIO_ALVOS: tuple[str, ...] = (
     ".local/share/hefesto-dualsense4unix",
 )
 
+#: Árvores REAIS que a suíte também não devia mexer — mas onde um delta quase
+#: nunca é escrita da suíte, e sim a **daemon VIVA dela reagindo à suíte**.
+#: MEDIDO em 07/08/2026, com retrato do disco antes e depois de uma suíte
+#: inteira: os quatro `launch_env/*.env` foram REGRAVADOS às 16:19:38, dentro
+#: da janela da suíte, pelo daemon dela (pid 2870305, `launch_env_materializado`
+#: no journal), 20 s depois da primeira rajada de teclados uinput que a suíte
+#: cria — e o próprio daemon nomeia o mecanismo duas linhas adiante:
+#: `backend_hotplug_reconcile trigger=input_dir_change`. A suíte não escreveu:
+#: ela mexeu em `/dev/input`, e quem escreveu foi o daemon.
+#:
+#: Por isso AVISO e não portão. Reprovar aqui seria um alarme que fica vermelho
+#: na máquina dela e verde na CI — exatamente o portão que se aprende a
+#: desligar (é a lição do DIV-11, os 15 `.lock` da estreia do canário). O que
+#: faltava era ENXERGAR: esta árvore estava fora de qualquer instrumento.
+_CANARIO_ALVOS_AVISO: tuple[str, ...] = (".local/state/hefesto-dualsense4unix",)
+
 #: Escotilha de saída, para quem PRECISA rodar a suíte contra o HOME real
 #: (nunca deveria ser preciso — existe para não obrigar ninguém a comentar
 #: código quando o daemon está de pé e mexendo no session.json ao lado).
+#: Desliga as duas listas: a que reprova e a que só avisa.
 _CANARIO_DESLIGADO_ENV = "HEFESTO_SEM_CANARIO_FS"
 
 #: Fotografia do início da sessão: {caminho: (mtime_ns, tamanho, resumo)}.
 _CANARIO_FOTO_INICIAL: dict[str, tuple[int, int, str]] = {}
+
+#: A mesma coisa, para as árvores de AVISO (`_CANARIO_ALVOS_AVISO`).
+_CANARIO_FOTO_AVISO: dict[str, tuple[int, int, str]] = {}
 
 #: True só depois que a foto inicial foi tirada. Sem este selo, uma sessão que
 #: começou com o canário desligado e terminou com ele ligado compararia contra
@@ -384,8 +407,13 @@ _CANARIO_FOTO_INICIAL: dict[str, tuple[int, int, str]] = {}
 _CANARIO_ARMADO = False
 
 #: Acima disto o arquivo não é resumido (só mtime+tamanho). Nada nos diretórios
-#: vigiados chega perto — medido em 05/08: 93 arquivos, 356 KB no total.
+#: vigiados chega perto — medido em 05/08: 93 arquivos, 356 KB no total; a
+#: árvore de aviso somava 60 KB em 07/08.
 _CANARIO_LIMITE_RESUMO = 4 * 1024 * 1024
+
+#: Teto de linhas do relato de AVISO — ele não decide nada, e uma lista longa
+#: só ensina a pular o bloco inteiro.
+_CANARIO_LIMITE_AVISO = 10
 
 
 def _canario_ligado() -> bool:
@@ -401,6 +429,12 @@ def _canario_raizes() -> list[Path]:
     """
     lar = Path(os.path.expanduser("~"))
     return [lar / alvo for alvo in _CANARIO_ALVOS]
+
+
+def _canario_raizes_de_aviso() -> list[Path]:
+    """As árvores que só AVISAM, resolvidas contra o ``HOME`` VIVO."""
+    lar = Path(os.path.expanduser("~"))
+    return [lar / alvo for alvo in _CANARIO_ALVOS_AVISO]
 
 
 def _resumo_do_arquivo(caminho: Path, tamanho: int) -> str:
@@ -449,6 +483,13 @@ def _fotografar_tudo() -> dict[str, tuple[int, int, str]]:
     return foto
 
 
+def _fotografar_tudo_de_aviso() -> dict[str, tuple[int, int, str]]:
+    foto: dict[str, tuple[int, int, str]] = {}
+    for raiz in _canario_raizes_de_aviso():
+        foto.update(_fotografar_arvore(raiz))
+    return foto
+
+
 def _deltas_do_canario(
     antes: dict[str, tuple[int, int, str]], depois: dict[str, tuple[int, int, str]]
 ) -> list[str]:
@@ -470,12 +511,308 @@ def _deltas_do_canario(
     return deltas
 
 
+# ---------------------------------------------------------------------------
+# BERCO-DE-TMP-01 — a suíte devolve o `/tmp` como encontrou
+# ---------------------------------------------------------------------------
+# O PORQUÊ, MEDIDO em 07/08/2026 (retrato do disco antes e depois de uma suíte
+# inteira, 7619 passed em 232 s): o CANARIO-FS-01 acima vigia três árvores do
+# ``$HOME`` e ficou CALADO — a suíte não escreveu em nenhuma. Mas ela deixou
+# **16 entradas novas em `/tmp`**, que nenhum instrumento desta casa olhava:
+#
+#   9  `tmp<8>/`  ....... `tempfile.mkdtemp()` SEM limpeza, nos dois arquivos
+#                         de teste de migração de perfil (7 + 2 chamadas);
+#   6  `tmp.<10>`  ...... `mktemp` de shell, dentro de script sob teste;
+#   1  `pulse-<12>/`  ... a libpulse criando o runtime dir dela.
+#
+# E o acumulado no dia da medição: **906** diretórios `tmp<8>`, dos quais 892
+# ainda continham os arquivos que só os dois testes de migração escrevem
+# (`.coop_default_on_migrated`, `.flavor_xbox_migrated`, `quebrado.json`…), mais
+# 99 `pulse-*` e 3 `hefesto-arvore-congelada-*` que o `atexit` não alcançou
+# porque a sessão foi morta. Ninguém limpou porque ninguém sabia.
+#
+# A CURA que não depende de alguém lembrar: **o `/tmp` da sessão não é o `/tmp`
+# da máquina**. No `pytest_sessionstart` a suíte cria um BERÇO
+# (``/tmp/hefesto-berco-<pid>``) e aponta `tempfile.tempdir` e `TMPDIR`/`TMP`/
+# `TEMP` para ele. Tudo que nascer de `tempfile` (Python), de `mktemp` (shell,
+# nos scripts sob teste) ou de qualquer biblioteca que respeite `TMPDIR`
+# (libpulse) nasce DENTRO do berço; no fim da sessão o berço inteiro sai.
+#
+# O CRITÉRIO DE "ISTO É LIXO DE TESTE" É POSITIVO, e é o ponto do desenho:
+# não é *"não reconheço este arquivo, então apago"* — é *"este diretório foi
+# aberto por ESTA sessão de pytest, com ESTE pid no nome, e tudo que está
+# dentro nasceu depois disso"*. Nada fora do berço é tocado, nunca, por
+# nenhum caminho de código daqui.
+#
+# O que fica DE FORA do berço, de propósito:
+#
+#   - **o `basetemp` do pytest** (`/tmp/pytest-of-<user>/pytest-N`). Ele é
+#     resolvido À FORÇA antes do desvio (`_fixar_basetemp_do_pytest`) por dois
+#     motivos medidos: (a) o pytest já tem retenção própria (guarda as 3
+#     últimas execuções, que é o que se olha quando um teste cai), e (b) o
+#     `sun_path` de um `AF_UNIX` tem ~108 bytes — empurrar todo `tmp_path` para
+#     dentro do berço somaria 27 bytes a caminhos que já batem em 95;
+#   - **o `$HOME` dela.** Este mecanismo NÃO restaura nada em `$HOME`, e isso é
+#     decisão, não esquecimento: a suíte não é a única a escrever ali (o daemon
+#     e a janela DELA estão vivos ao lado), e "devolver ao estado anterior" um
+#     arquivo que a daemon dela acabou de gravar é destruir trabalho real.
+#     Para o `$HOME` o desenho continua sendo prevenir e DETECTAR — o
+#     CANARIO-FS-01 acima.
+
+#: Prefixo do berço. O nome carrega o pid da sessão: é ele que torna o critério
+#: de varredura POSITIVO (nasceu desta sessão) em vez de negativo.
+_BERCO_PREFIXO = "hefesto-berco-"
+
+#: Escotilha, mesma lógica do canário: quem PRECISA inspecionar o que a suíte
+#: deixou em `/tmp` desliga o desvio em vez de comentar código.
+_BERCO_DESLIGADO_ENV = "HEFESTO_SEM_BERCO_TMP"
+
+#: No máximo um elemento — o berço desta sessão. Lista para poder ser preenchida
+#: dentro do hook sem `global`.
+_BERCO: list[Path] = []
+
+#: O `/tmp` de VERDADE, capturado ANTES do desvio.
+_TMP_REAL: list[Path] = []
+
+#: As variáveis de ambiente que decidem onde nasce um temporário — as três,
+#: porque o `mktemp` de shell e a `tempfile` do Python não olham as mesmas.
+_VARS_DE_TMP = ("TMPDIR", "TMP", "TEMP")
+
+#: O valor que cada uma tinha ANTES do desvio (None = não existia), mais o
+#: `tempfile.tempdir` sob a chave `None`. A varredura DEVOLVE, em vez de apagar:
+#: quem chama o pytest de dentro de outro processo pode ter um `TMPDIR` próprio,
+#: e ele não é nosso para jogar fora.
+_TMP_ENV_ANTES: dict[str | None, str | None] = {}
+
+#: `id()` da Session REAL desta execução, e ele não é zelo — é defeito medido em
+#: 07/08/2026, na primeira integração deste berço. Nove testes do
+#: `test_conftest_canario_fs.py` CHAMAM `pytest_sessionfinish` com uma Session
+#: de mentira, de propósito, para provar que o canário reprova. Sem esta guarda,
+#: a primeira dessas chamadas varria o berço da sessão VIVA no meio dela e
+#: devolvia `tempfile.tempdir` para o `/tmp` real — a suíte voltava calada ao
+#: comportamento antigo, e a única pista era um punhado de testes pulando.
+_SESSAO_REAL: list[int] = []
+
+#: Nomes de primeiro nível do `/tmp` real no início da sessão, para o aviso de
+#: "nasceu FORA do berço" (caminho fixo escrito à mão num teste, por exemplo).
+_TMP_ANTES: set[str] = set()
+
+#: Teto de nomes listados nos relatos — nenhum deles é portão, e uma lista de
+#: trezentas linhas no fim da suíte é uma lista que ninguém lê.
+_BERCO_LIMITE_RELATO = 8
+
+
+def _berco_ligado() -> bool:
+    return os.environ.get(_BERCO_DESLIGADO_ENV) != "1"
+
+
+def berco() -> Path | None:
+    """O berço desta sessão, ou None quando o desvio não está armado."""
+    return _BERCO[0] if _BERCO else None
+
+
+def _pid_vivo(pid: int) -> bool:
+    """True quando existe processo com este pid.
+
+    ``PermissionError`` conta como VIVO: é processo de outro usuário, e a
+    dúvida sempre se resolve para "não mexa".
+    """
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:  # pragma: no cover — pid inválido não chega aqui
+        return True
+    return True
+
+
+def _pid_do_berco(nome: str) -> int | None:
+    """O pid gravado no nome do berço, ou None quando o nome NÃO é de berço.
+
+    Deliberadamente estrito: o sufixo tem de ser dígito puro. Um
+    ``hefesto-berco-de-outra-coisa`` devolve None e nunca vira alvo.
+    """
+    if not nome.startswith(_BERCO_PREFIXO):
+        return None
+    resto = nome[len(_BERCO_PREFIXO) :]
+    if not resto.isdigit():
+        return None
+    return int(resto)
+
+
+def _bercos_orfaos(raiz: Path) -> list[Path]:
+    """Berços de sessões MORTAS sob `raiz`, do mais antigo para o mais novo.
+
+    Critério, todo ele positivo: o nome tem o prefixo do berço, o sufixo é um
+    pid, é diretório, e esse pid NÃO está vivo. Sessão viva (inclusive a nossa)
+    nunca entra na lista.
+    """
+    orfaos: list[Path] = []
+    try:
+        entradas = sorted(raiz.iterdir())
+    except OSError:
+        return orfaos
+    for entrada in entradas:
+        pid = _pid_do_berco(entrada.name)
+        if pid is None or not entrada.is_dir() or entrada.is_symlink():
+            continue
+        if _pid_vivo(pid):
+            continue
+        orfaos.append(entrada)
+    return orfaos
+
+
+def _armar_berco(session: Any) -> None:
+    """Cria o berço e desvia `tempfile` + `TMPDIR` para dentro dele."""
+    if not _berco_ligado() or _BERCO:
+        return
+    _fixar_basetemp_do_pytest(session)
+    raiz = Path(tempfile.gettempdir())
+    _TMP_REAL.append(raiz)
+    with contextlib.suppress(OSError):
+        _TMP_ANTES.update(os.listdir(raiz))
+    # Varre berços de sessões mortas ANTES de criar o nosso: uma sessão morta
+    # (kill, queda de energia) não roda `sessionfinish`, e sem esta linha o
+    # berço dela ficaria para sempre.
+    for orfao in _bercos_orfaos(raiz):
+        shutil.rmtree(orfao, ignore_errors=True)
+    destino = raiz / f"{_BERCO_PREFIXO}{os.getpid()}"
+    # Se já existe, é berço de uma sessão morta cujo pid o sistema reciclou
+    # para nós — não pode ser de sessão viva, porque a sessão viva com este pid
+    # somos nós.
+    if destino.exists():
+        shutil.rmtree(destino, ignore_errors=True)
+    try:
+        destino.mkdir(mode=0o700)
+    except OSError:  # pragma: no cover — /tmp sem escrita derruba a suíte antes
+        return
+    _BERCO.append(destino)
+    _SESSAO_REAL.append(id(session))
+    _TMP_ENV_ANTES[None] = tempfile.tempdir
+    tempfile.tempdir = str(destino)
+    for var in _VARS_DE_TMP:
+        _TMP_ENV_ANTES[var] = os.environ.get(var)
+        os.environ[var] = str(destino)
+
+
+def _fixar_basetemp_do_pytest(session: Any) -> None:
+    """Resolve (e cacheia) o `basetemp` do pytest ANTES do desvio do `TMPDIR`.
+
+    O `TempPathFactory` guarda o resultado em `self._basetemp` na primeira
+    chamada; forçando-a aqui, `tmp_path` continua morando no `/tmp` real, com a
+    retenção das 3 últimas execuções que o pytest já faz. Toda esta função é
+    best-effort: se um pytest futuro mudar o atributo privado, o berço
+    simplesmente passa a englobar o `basetemp` — e nada quebra.
+    """
+    fabrica = getattr(getattr(session, "config", None), "_tmp_path_factory", None)
+    if fabrica is None:  # pragma: no cover — pytest sempre publica a fábrica
+        return
+    with contextlib.suppress(Exception):
+        fabrica.getbasetemp()
+
+
+def _nascidos_fora_do_berco() -> list[str]:
+    """Nomes de primeiro nível que apareceram no `/tmp` REAL durante a sessão.
+
+    É AVISO, nunca portão, e o motivo está escrito no relato: a máquina dela
+    está viva, e o navegador, o PipeWire e os screenshots dela também escrevem
+    em `/tmp`. O que este aviso pega de graça é a classe que o berço não
+    alcança — caminho FIXO escrito à mão dentro de um teste, que ignora
+    `TMPDIR` por construção (foi assim que `hefesto_teste_pactl_chamadas.txt`
+    apareceu na medição de 07/08).
+    """
+    if not _TMP_REAL:
+        return []
+    nosso = berco()
+    try:
+        agora = set(os.listdir(_TMP_REAL[0]))
+    except OSError:  # pragma: no cover
+        return []
+    novos = agora - _TMP_ANTES
+    if nosso is not None:
+        novos.discard(nosso.name)
+    return sorted(novos)
+
+
+def _varrer_berco(session: Any, exitstatus: int) -> None:
+    """Fim de sessão: o berço inteiro sai, e o que havia nele é relatado.
+
+    Só a Session que ARMOU o berço pode varrê-lo — ver `_SESSAO_REAL`. Uma
+    Session de mentira (teste que chama o hook direto, para provar um portão)
+    é ignorada aqui, e não no chamador: quem tem de saber quem é o dono do
+    berço é o berço.
+    """
+    nosso = berco()
+    if nosso is None:
+        return
+    if _SESSAO_REAL and id(session) not in _SESSAO_REAL:
+        return
+    try:
+        restos = sorted(p.name for p in nosso.iterdir())
+    except OSError:  # pragma: no cover
+        restos = []
+
+    if exitstatus != 0 and restos:
+        # Sessão vermelha: o que a suíte deixou pode ser prova. Guardar custa
+        # um diretório e a próxima sessão o varre pelo pid morto.
+        _escrever_no_terminal(session, [
+            "",
+            f"BERCO-DE-TMP-01: sessão vermelha — o berço FICA, com {len(restos)} "
+            f"entrada(s): {nosso}",
+        ])
+    else:
+        shutil.rmtree(nosso, ignore_errors=True)
+        if restos:
+            mostrados = restos[:_BERCO_LIMITE_RELATO]
+            restam = len(restos) - len(mostrados)
+            cauda = f" (+{restam})" if restam > 0 else ""
+            _escrever_no_terminal(session, [
+                "",
+                f"BERCO-DE-TMP-01: a suíte deixaria {len(restos)} entrada(s) em "
+                f"/tmp; nasceram no berço e saíram com ele: "
+                f"{', '.join(mostrados)}{cauda}",
+            ])
+
+    _BERCO.clear()
+    tempfile.tempdir = _TMP_ENV_ANTES.get(None)
+    for var, valor in _TMP_ENV_ANTES.items():
+        if var is None:
+            continue
+        if valor is None:
+            os.environ.pop(var, None)
+        else:
+            os.environ[var] = valor
+    _TMP_ENV_ANTES.clear()
+
+    fora = _nascidos_fora_do_berco()
+    if fora:
+        mostrados = fora[:_BERCO_LIMITE_RELATO]
+        restam = len(fora) - len(mostrados)
+        cauda = f" (+{restam})" if restam > 0 else ""
+        _escrever_no_terminal(session, [
+            f"BERCO-DE-TMP-01 (aviso, não é portão): apareceram em "
+            f"{_TMP_REAL[0]} durante a sessão, FORA do berço: "
+            f"{', '.join(mostrados)}{cauda}",
+            "  A máquina dela também escreve em /tmp — mas se algum destes tem "
+            "cara de teste,",
+            "  é caminho FIXO escrito à mão num teste, e caminho fixo ignora o "
+            "TMPDIR do berço.",
+        ])
+
+
 def pytest_sessionstart(session: Any) -> None:
-    """CANARIO-FS-01: primeira fotografia dos diretórios REAIS da usuária."""
+    """CANARIO-FS-01: primeira fotografia dos diretórios REAIS da usuária.
+
+    E BERCO-DE-TMP-01: a partir daqui, todo temporário desta sessão nasce
+    dentro de um diretório que só esta sessão conhece.
+    """
     global _CANARIO_ARMADO
+    _armar_berco(session)
     if not _canario_ligado():
         return
     _CANARIO_FOTO_INICIAL.update(_fotografar_tudo())
+    _CANARIO_FOTO_AVISO.update(_fotografar_tudo_de_aviso())
     _CANARIO_ARMADO = True
 
 
@@ -499,7 +836,21 @@ def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
     E, sempre, o CANARIO-FS-01: se a suíte mexeu em qualquer arquivo dos
     diretórios REAIS da usuária, o run REPROVA com a lista do que mudou. Um
     teste hermético não deixa rastro nenhum em ``$HOME``.
+
+    Por último, e SEMPRE (daí o `finally`), o BERCO-DE-TMP-01 leva embora o
+    `/tmp` desta sessão. Depois de tudo, e não antes, porque a cópia congelada
+    da ARVORE-CONGELADA-01 mora dentro do berço: varrer primeiro apagaria o
+    lado esquerdo da comparação que decide se o produto mudou no meio da
+    medição.
     """
+    try:
+        _sessionfinish_das_guardas(session)
+    finally:
+        _varrer_berco(session, getattr(session, "exitstatus", exitstatus))
+
+
+def _sessionfinish_das_guardas(session: Any) -> None:
+    """GUARDA-GI-REAL-01 + ARVORE-CONGELADA-01 + CANARIO-FS-01, nesta ordem."""
     if EXIGE_GTK_REAL and _MODULOS_PULADOS_SEM_GI:
         session.exitstatus = 1
 
@@ -526,6 +877,28 @@ def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
 
     if not _canario_ligado() or not _CANARIO_ARMADO:
         return
+
+    # As árvores de AVISO primeiro, porque elas NÃO reprovam e não podem ser
+    # engolidas por um `return` do bloco que reprova.
+    deltas_aviso = _deltas_do_canario(
+        _CANARIO_FOTO_AVISO, _fotografar_tudo_de_aviso()
+    )
+    if deltas_aviso:
+        mostrados = deltas_aviso[:_CANARIO_LIMITE_AVISO]
+        restam = len(deltas_aviso) - len(mostrados)
+        _escrever_no_terminal(session, [
+            "",
+            "CANARIO-FS-01 (aviso, não é portão): mudou durante a sessão, em "
+            f"árvore que a suíte não devia provocar ({len(deltas_aviso)}):",
+            *[f"  - {d}" for d in mostrados],
+            *([f"  ... e mais {restam}"] if restam > 0 else []),
+            "  Quase sempre isto NÃO é a suíte escrevendo: é o daemon VIVO dela",
+            "  reagindo ao que a suíte faz em /dev/input (procure no journal por",
+            "  `backend_hotplug_reconcile trigger=input_dir_change`). Ver a",
+            "  SUITE-QUE-SUJA-O-JORNAL-01. Nada aqui é restaurado: escrita da",
+            "  daemon dela é trabalho real, e desfazê-la seria o dano maior.",
+        ])
+
     deltas = _deltas_do_canario(_CANARIO_FOTO_INICIAL, _fotografar_tudo())
     if not deltas:
         return

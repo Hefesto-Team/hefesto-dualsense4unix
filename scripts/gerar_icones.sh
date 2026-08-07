@@ -27,6 +27,23 @@
 # A FONTE CANÔNICA É UMA SÓ: assets/hefesto-logo.svg
 # Mexeu no desenho? Rode isto. Todos os derivados nascem dele.
 #
+# O QUE ESTE SCRIPT NÃO GERA, E POR QUÊ — 07/08/2026 (APPLET-MONOCROMÁTICO-01)
+# ---------------------------------------------------------------------------
+# `assets/simbolico/*.svg` (o ícone do painel) fica DE FORA, de propósito, e
+# isso é decisão, não esquecimento. O simbólico não é derivável por escala da
+# logo colorida: a logo cheia a 20 px — que é o tamanho real do painel dela —
+# vira borrão, e o formato exige o oposto do que a logo é (uma cor só,
+# acromática, fundo transparente, contorno feito de preenchimento). Rodar
+# `compare -metric AE` entre ele e a logo reprovaria SEMPRE, por construção.
+#
+# Mas ele NÃO ficou sem dono, que é como o `-symbolic` antigo chegou a 07/08
+# instalado sob um nome que ninguém pedia. Quem o trava:
+#   - `tests/unit/test_simbolico_do_painel.py` — grade 16x16, uma cor só,
+#     acromática e clara, sem `currentColor`, sem `stroke`, sem fundo opaco, e
+#     o contrato de nome (`-symbolic`) em tray.py, app.rs e no .desktop;
+#   - `scripts/check_packaging_parity.sh` — os quatro formatos instalam o
+#     arquivo, e o desenho da bandeja e o do applet são o mesmo.
+#
 # O QUE ESTE SCRIPT CUROU
 # -----------------------
 # Antes dele, o `install.sh` copiava `assets/appimage/Hefesto-Dualsense4Unix.png`

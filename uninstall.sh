@@ -119,7 +119,12 @@ readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4uni
 # O uninstall nativo não os conhecia → sobreviviam ao wipe (rastro deixado).
 readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
 readonly APPLET_DESKTOP="/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop"
+# Caminho ANTIGO do simbólico (até 07/08/2026) — continua na lista porque
+# instalação velha ainda tem o arquivo lá, e desinstalar não pode deixar rastro.
 readonly APPLET_ICON="/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
+# Caminho de hoje (APPLET-MONOCROMÁTICO-01): `symbolic/apps/`, onde o hicolor
+# do sistema declara o bloco e onde o vizinho Flatpak põe o dele.
+readonly APPLET_ICON_SYMB="/usr/share/icons/hicolor/symbolic/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
 readonly APPLET_ICON_PNG="/usr/share/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png"
 # Drop-in do WirePlumber (fix de microfone) — só o nosso arquivo, nunca o dir.
 readonly WIREPLUMBER_DROPIN="${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf"
@@ -291,7 +296,7 @@ grep -qsE '^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>' \
     /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 grep -qsF '#hefesto-desativou# ' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf" ]] && _NEEDS_SUDO=1
-[[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
+[[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_SYMB}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
 dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
 # Onda R: bloco JustWorksRepairing (main.conf/drop-in), agente de pareamento
 # (unit de sistema) e restauração do bluez (apt) — todos pedem root.
@@ -424,6 +429,10 @@ for size in 16 22 24 32 48 64 96 128 192 256 512; do
     rm -f "${HOME}/.local/share/icons/hicolor/${size}x${size}/apps/${APP_ID}.png"
 done
 rm -f "${HOME}/.local/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
+# APPLET-MONOCROMÁTICO-01 (07/08/2026): o simbólico da bandeja. Sem esta linha,
+# desinstalar deixa lixo de ícone — e lixo de ícone é o tipo que reaparece numa
+# instalação futura e produz "não mudou nada" sem explicação.
+rm -f "${HOME}/.local/share/icons/hicolor/symbolic/apps/${APP_ID}-symbolic.svg"
 rm -f "${HOME}/.local/share/pixmaps/${APP_ID}.png"
 
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
@@ -446,9 +455,9 @@ fi
 
 # Applet COSMIC nativo (Rust): instalado em /usr/local + /usr/share via sudo
 # por packaging/cosmic-applet. Remove só se existir (evita pedir sudo à toa).
-if [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_PNG}" ]]; then
+if [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_SYMB}" || -e "${APPLET_ICON_PNG}" ]]; then
     log "removendo applet COSMIC (sudo): binário + .desktop + ícones"
-    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" "${APPLET_ICON_PNG}" 2>/dev/null || true
+    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" "${APPLET_ICON_SYMB}" "${APPLET_ICON_PNG}" 2>/dev/null || true
     sudo gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
     sudo update-desktop-database -q /usr/share/applications 2>/dev/null || true
     # cosmic-panel só relê a lista de applets ao reiniciar — sem isso o applet

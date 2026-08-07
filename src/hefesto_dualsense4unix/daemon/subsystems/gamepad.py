@@ -27,8 +27,19 @@ Política:
     Steam Input escolhe QUAL dispositivo o jogo enxerga (nela, o físico), nunca
     QUANTOS. Enquanto um appid da allowlist está em sessão, o vpad é retirado
     de cena (`suspend_vpads_for_steam_input`) e devolvido na saída — sem isso,
-    "o Hefesto sai da frente" significava o jogo enumerar o físico E o virtual
-    e reparti-los entre dois jogadores.
+    a exceção significava o jogo enumerar o físico E o virtual e reparti-los
+    entre dois jogadores.
+  - **A exceção mexe na ENTRADA, e só nela** (NOTA DATADA, 07/08/2026): a casa
+    dizia *"o Hefesto sai da frente"*, e a medição dela de 06/08
+    (`docs/process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md`,
+    seção *A INVERSÃO*, grau MEDIDO) mostrou que a frase é meia verdade: as
+    três coisas que este módulo faz na exceção — soltar o grab, desfazer o
+    esconde-esconde do hidraw e derrubar o vpad — são todas de ENTRADA.
+    **Nenhum caminho fecha o handle de saída**: os oito chamadores de
+    `steam_input_excecao_ativa` estão todos NESTE arquivo, nenhum em `core/`, e
+    por isso lightbar, gatilhos, vibração e LED de jogador seguem sendo
+    escritos no físico durante a exceção inteira. Com o Mullet Mad Jack aberto,
+    os gatilhos dela seguraram duros e o vermelho dela ficou.
 """
 from __future__ import annotations
 
@@ -313,13 +324,21 @@ def steam_input_vpad_suspenso(daemon: Any) -> bool:
     Leitura de flag em memória, como `steam_input_excecao_ativa` — e pelo mesmo
     motivo (é gate de caminho quente). É a resposta honesta para a pergunta que
     a aba Emulação precisa fazer ("por que a emulação aparece desligada com o
-    jogo aberto?"): a emulação não foi desligada, ela SAIU DA FRENTE deste jogo.
+    jogo aberto?"): a emulação não foi desligada, o **controle virtual** foi
+    recolhido neste jogo, para o jogo enxergar um dispositivo só.
+
+    **A frase da aba Emulação não pode dizer mais que isso** (NOTA DATADA,
+    07/08/2026): a versão antiga desta docstring escrevia *"ela SAIU DA FRENTE
+    deste jogo"*, e quem lesse aquilo escreveria na tela um texto que a medição
+    dela de 06/08 refuta pela metade (`CONTROLE-SONY-MEDIDO-01`, *A INVERSÃO*).
+    Só a entrada é recolhida; cor, gatilhos e vibração continuam sendo do
+    Hefesto durante a exceção inteira.
 
     Superfície pendente (Entrega 2 da sprint JOGO-01, fora desta frente porque a
     GUI está com outro dono): quem for ligar a frase na aba Emulação lê ISTO
     junto de `steam_input_excecao_ativa` — o par ("exceção ativa", "vpad
     suspenso") distingue os dois estados possíveis do opt-in: o jogo da
-    allowlist rodando com o Hefesto fora do caminho (os dois True) e o jogo da
+    allowlist rodando com a entrada entregue a ele (os dois True) e o jogo da
     allowlist rodando com o vpad de pé porque a suspensão não pôde ser armada
     (primeiro True, segundo False — ver `suspend_vpads_for_steam_input`).
     """

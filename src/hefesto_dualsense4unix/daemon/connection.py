@@ -11,6 +11,7 @@ import os
 
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.daemon.battery_journal import registrar_queda_da_bateria
 from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -464,6 +465,15 @@ async def reconnect_loop(
             # Transição online→offline detectada pelo probe (poll_loop também
             # pode detectar via exceção em read_state e disparar reconnect()
             # legado; logamos aqui só se chegamos primeiro).
+            # PROTOCOLO-QUEDA-01 (07/08): ANTES de publicar, deixa no journal a
+            # última capacidade conhecida. O `probe_offline` é o daemon
+            # PERCEBENDO, não causando — e sem a carga ao lado dele a linha não
+            # distingue "acabou a bateria" de "o link caiu". A leitura mais
+            # fresca vem do nó do kernel, que costuma sobreviver alguns
+            # instantes ao handle; o `idade_s` da linha diz qual das duas é.
+            registrar_queda_da_bateria(
+                daemon, "probe_offline", asyncio.get_running_loop().time()
+            )
             daemon.bus.publish(
                 EventTopic.CONTROLLER_DISCONNECTED, {"reason": "probe_offline"}
             )

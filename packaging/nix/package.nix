@@ -148,6 +148,12 @@ python3Packages.buildPythonApplication rec {
         $out/share/icons/hicolor/256x256/apps/hefesto.png
     install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
         $out/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
+    # APPLET-MONOCROMÁTICO-01 (07/08/2026): o ícone SIMBÓLICO da bandeja. O
+    # código pede `hefesto-dualsense4unix-symbolic` (app/tray.py), e esse nome
+    # NÃO se satisfaz com PNG: PNG nunca é recolorido pelo tema, e o ícone
+    # ficaria o único cromático do painel. Destino `symbolic/apps/`.
+    install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
+        $out/share/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg
 
     # Catalogos i18n compilados.
     if [ -d locale ]; then
