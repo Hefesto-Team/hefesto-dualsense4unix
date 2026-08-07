@@ -119,7 +119,14 @@ DIRS_IGNORADOS = frozenset(
 #: por definição -- descrevem o repositório como ele era, e cobrar deles o
 #: presente é cobrar o impossível. É a mesma exclusão que o gate de acentuação
 #: já aplica no .pre-commit-config.yaml.
-PREFIXOS_IGNORADOS = ("docs/history/", "docs/research/")
+#:
+#: `process/agentes/` entrou em 06/08/2026 pelo mesmo motivo, e por mais um: é
+#: saída BRUTA de agente, e um relatório cita o caminho que existia no instante
+#: da medição — às vezes em `/tmp`, às vezes num arquivo que a própria leva
+#: depois renomeou. Corrigir esses caminhos falsificaria o registro; cobrá-los
+#: seria cobrar do passado o presente. O que NÃO é isento ali é segurança:
+#: `tests/unit/test_saida_de_agente_sanitizada.py` varre MAC e segredo.
+PREFIXOS_IGNORADOS = ("docs/history/", "docs/research/", "docs/process/agentes/")
 
 #: Arquivos que existem, mas em OUTRO projeto. Citar `pydualsense.py` é citar a
 #: biblioteca de terceiros; citar `universal-sanitizer.py` é citar a ferramenta
