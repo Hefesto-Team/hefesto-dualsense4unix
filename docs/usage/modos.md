@@ -107,6 +107,20 @@ jogadores e recebem número de LED próprio, acima da faixa reservada aos DualSe
 > do `hid-nintendo` para "não numerado"), e o controle virtual e o DualSense
 > físico acenderam **o mesmo jogador 3** ao mesmo tempo.
 >
+> **CORREÇÃO DATADA — 07/08/2026: as duas ressalvas acima estavam mal lidas.** Na
+> barra do DualSense, o número do jogador é o **desenho** das cinco lâmpadas, não
+> o nome de uma delas: só a do meio acesa é o **jogador 1**; a primeira, a do meio
+> e a última acesas são o **jogador 3**. A medição foi refeita em 07/08 lendo as
+> cinco: o controle virtual era o jogador **1** e o DualSense físico era o jogador
+> **3** — **nunca houve dois controles no mesmo número.** Ela mesma tinha lido
+> certo, de olho: *"o dualsense branco dessa vez conectado como player 3"*. E o
+> padrão do Pro Controller (verdes 1 e 2) é **jogador 2 escrito pelo próprio
+> Hefesto**, não um padrão do `hid-nintendo`.
+>
+> **O que continua verdade, e é o que importa para você:** o número que o Hefesto
+> acende **não é** o número que o jogo usa. Um mesmo controle pode mostrar `3` no
+> plástico e chegar ao jogo como jogador 1.
+>
 > **GRAU: SEM PROVA** — que o jogo veja os três como jogador 1; é o relato dela,
 > e o caminho até o jogo não foi instrumentado. A cura são as entregas E3 e E4 da
 > [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md),
