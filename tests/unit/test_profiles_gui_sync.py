@@ -405,6 +405,20 @@ def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNa
 
     stub._get = _get  # type: ignore[attr-defined]
     stub._aplica_a = combo  # type: ignore[attr-defined]
+    # A caixinha do Steam Input (decisão dela, 07/08/2026) é irmã do box do
+    # jogo, e `_on_aplica_a_changed` a mostra/esconde junto. O método REAL é
+    # amarrado ao stub — e não substituído por um no-op — para este arquivo
+    # continuar exercitando o handler de produção inteiro; sem o widget no
+    # `_get`, ele sai pela porta que já existe para glade desatualizado.
+    from types import MethodType
+
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        ProfilesActionsMixin,
+    )
+
+    stub._mostrar_caixa_do_steam_input = MethodType(  # type: ignore[attr-defined]
+        ProfilesActionsMixin._mostrar_caixa_do_steam_input, stub
+    )
     return stub
 
 
