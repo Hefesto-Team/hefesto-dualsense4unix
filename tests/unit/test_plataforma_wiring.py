@@ -30,6 +30,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 INSTALL = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
 UNINSTALL = (REPO_ROOT / "uninstall.sh").read_text(encoding="utf-8")
 DOCTOR = (REPO_ROOT / "scripts" / "doctor.sh").read_text(encoding="utf-8")
+#: RADIO-ABERTO-01/E1-bis (06/08/2026): a config do BlueZ saiu de dentro do
+#: install.sh/uninstall.sh para `scripts/bluez_config.sh`, justamente para
+#: deixar de ser testável só por TEXTO — a bancada de raiz falsa está em
+#: tests/unit/test_bluez_config_sh.py. Os contratos abaixo passaram a olhar o
+#: novo dono, e ganharam um que não existia: o de que install e uninstall
+#: realmente o CHAMAM (sem isso, mover a lógica seria mover o furo).
+BLUEZ_CONFIG = (REPO_ROOT / "scripts" / "bluez_config.sh").read_text(encoding="utf-8")
 
 
 # --- PLAT-01: Proton pinado --------------------------------------------------
@@ -151,23 +158,34 @@ class TestBtMaximoWiring:
     def test_uninstall_remove_o_modprobe_do_btusb(self) -> None:
         assert "/etc/modprobe.d/hefesto-btusb-no-autosuspend.conf" in UNINSTALL
 
-    def test_install_decide_dropin_ou_bloco_marcado(self) -> None:
-        assert "/etc/bluetooth/main.conf.d" in INSTALL
-        assert "hefesto-fastconnectable.conf" in INSTALL
+    def test_install_e_uninstall_chamam_o_dono_da_config_do_bluez(self) -> None:
+        """A fiação que substitui os testes de texto: quem faz é o script."""
+        assert 'scripts/bluez_config.sh" aplicar' in INSTALL
+        assert 'scripts/bluez_config.sh" remover' in UNINSTALL
+
+    def test_install_escreve_dropin_e_tambem_o_bloco_marcado(self) -> None:
         # ONDA-R2 (camada 1 da sprint BlueZ 2026-07-21): o bloco apensado ao
         # main.conf virou o UNIFICADO (hefesto-bt.block), reescrito de forma
         # idempotente — os .block legados só existem para o uninstall limpar
         # instalações antigas.
-        assert "hefesto-bt.block" in INSTALL
+        #
+        # RADIO-ABERTO-01/E1-bis (06/08/2026): era "decide dropin OU bloco", e
+        # o OU era o furo — com main.conf.d presente o install nunca abria o
+        # main.conf, onde o `always` seguia vivo. Hoje é E: os dois lugares
+        # recebem o mesmo valor. Quem prova o comportamento é
+        # test_bluez_config_sh.py::test_dropin_presente_nao_deixa_always_no_main_conf.
+        assert "/etc/bluetooth" in BLUEZ_CONFIG
+        assert "hefesto-fastconnectable.conf" in BLUEZ_CONFIG
+        assert "hefesto-bt.block" in BLUEZ_CONFIG
 
     def test_install_faz_backup_do_conffile_antes_de_apensar(self) -> None:
-        assert "main.conf.bak.hefesto-" in INSTALL
+        assert "main.conf.bak.hefesto-" in BLUEZ_CONFIG
 
     def test_uninstall_remove_pelo_bloco_de_sentinelas(self) -> None:
-        assert "# >>> hefesto FastConnectable >>>" in UNINSTALL
-        assert "# <<< hefesto FastConnectable <<<" in UNINSTALL
+        assert "hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>" in BLUEZ_CONFIG
+        assert "hefesto (bluetooth|FastConnectable|JustWorksRepairing) <<<" in BLUEZ_CONFIG
 
-    @pytest.mark.parametrize("texto", [INSTALL, UNINSTALL])
+    @pytest.mark.parametrize("texto", [INSTALL, UNINSTALL, BLUEZ_CONFIG])
     def test_nunca_reinicia_o_bluetoothd(self, texto: str) -> None:
         # Derrubaria os controles BT conectados (provado ao vivo 2026-07-17).
         assert "systemctl restart bluetooth" not in texto
@@ -176,6 +194,12 @@ class TestBtMaximoWiring:
     def test_doctor_checa_btusb_e_fastconnectable(self) -> None:
         assert "enable_autosuspend" in DOCTOR
         assert "FastConnectable" in DOCTOR
+        # RADIO-ABERTO-01/E1-bis (06/08/2026): o doctor mencionava
+        # `JustWorksRepairing` ZERO vezes. Foi essa cegueira que deixou o
+        # `always` viver quatro dias no main.conf dela depois de a sprint
+        # declarar a E1 "FEITA" — o valor seguro estava no repositório e
+        # ninguém tinha como ver que não estava no disco.
+        assert "JustWorksRepairing" in DOCTOR
 
 
 # --- PLAT-04/doctor: clone DS4 e rádio ---------------------------------------

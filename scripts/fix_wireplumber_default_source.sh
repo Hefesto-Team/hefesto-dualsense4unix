@@ -144,11 +144,89 @@ install_disable_dropin() {
 # Remove a chave de fonte padrão persistida que aponta para o DualSense, para que
 # o WirePlumber não tente reeleger o mic do controle no próximo boot. Preserva o
 # resto do state. Idempotente.
+#
+# PILHA-TRUNCADA-01 — MEDIDO em 06/08/2026, no código do WirePlumber 0.5.12
+# instalado nesta máquina. O `sed` que estava aqui apagava só a chave-BASE:
+#
+#     sed -i.bak '/^default\.configured\.audio\.source=.*[Dd]ual[Ss]ense/Id'
+#
+# O `=` logo depois de `source` faz o padrão casar `...source=` e NÃO casar
+# `...source.0=` / `...source.1=`. E o histórico de fontes padrão não é um
+# conjunto de chaves independentes: é uma PILHA CONTÍGUA, lida assim em
+# `/usr/share/wireplumber/scripts/default-nodes/state-default-nodes.lua`
+# (`collectStored`, linhas 141-155):
+#
+#     key = key_base                      -- default.configured.audio.source
+#     repeat
+#       local v = state_table [key]
+#       table.insert (stored, v)
+#       key = key_base .. "." .. tostring (index)
+#       index = index + 1
+#     until v == nil                      -- PARA no primeiro buraco
+#
+# Apagada a base, a leitura para na primeira volta e `.0`/`.1` ficam
+# INALCANÇÁVEIS: some o histórico INTEIRO de preferência de microfone dela, não
+# só a linha do DualSense.
+#
+# São DOIS defeitos, não um, e o estado real desta máquina exibe os dois — ele
+# tem três níveis (base = onboard, `.0` = mic do DualSense, `.1` = um sink que
+# já foi fonte, assinatura de "um monitor já foi eleito aqui"):
+#
+#   - quando a base NÃO é o DualSense (o caso de hoje), o `grep`/`sed` antigo
+#     não casa nada e a função é um NO-OP: as duas entradas do DualSense que ela
+#     existe para tirar ficam exatamente onde estavam;
+#   - quando a base É o DualSense, ela casa, apaga a base, e leva junto todo o
+#     resto da pilha por truncamento.
+#
+# Falhar em fazer o trabalho e destruir o histórico são os dois lados da mesma
+# linha, e nenhum deles aparecia no log: os dois terminavam com a função
+# devolvendo 0.
+#
+# A correção reescreve a pilha CONTÍGUA sem as entradas do DualSense, em ordem:
+# quem sobra vira base, `.0`, `.1`, ... É o que o comentário sempre prometeu
+# ("preserva o resto do state") e o que o código não fazia.
+#
+# GRAU: MEDIDO no código dos dois lados (o `sed` e o `collectStored`);
+# SUSPEITA COM MECANISMO no efeito em produção, porque esta função edita o
+# arquivo com o WirePlumber VIVO — e o próprio script documenta, em
+# `unmute_dualsense_routes`, que o WirePlumber GRAVA o estado ao sair e
+# sobrescreveria a edição. Ou o `sed` era sobrescrito (no-op silencioso) ou
+# vencia e truncava. Essa ordem NÃO foi mexida aqui: virou item de sprint.
+_pilha_sem_dualsense() {   # PURA: state na stdin, state corrigido na stdout
+    awk '
+        BEGIN { base = "default.configured.audio.source" }
+        {
+            linha = $0
+            p = index(linha, "=")
+            chave = (p > 1) ? substr(linha, 1, p - 1) : ""
+            valor = (p > 0) ? substr(linha, p + 1) : ""
+            if (chave != base && chave !~ ("^" base "\\.[0-9]+$")) { print; next }
+            if (tolower(valor) ~ /dualsense/) next
+            pilha[n++] = valor
+        }
+        END {
+            for (i = 0; i < n; i++) {
+                if (i == 0) print base "=" pilha[i]
+                else        print base "." (i - 1) "=" pilha[i]
+            }
+        }
+    '
+}
+
 remove_configured_dualsense() {
     [[ -f "${STATE_FILE}" ]] || return 0
-    if grep -qiE '^default\.configured\.audio\.source=.*[Dd]ual[Ss]ense' "${STATE_FILE}" 2>/dev/null; then
-        sed -i.bak '/^default\.configured\.audio\.source=.*[Dd]ual[Ss]ense/Id' "${STATE_FILE}"
-        log "removida a chave configured do DualSense do state (backup .bak)"
+    if grep -qiE '^default\.configured\.audio\.source(\.[0-9]+)?=.*[Dd]ual[Ss]ense' "${STATE_FILE}" 2>/dev/null; then
+        cp -f "${STATE_FILE}" "${STATE_FILE}.bak" 2>/dev/null || true
+        local tmp
+        tmp="$(mktemp "${STATE_FILE}.hefesto.XXXXXX")" || return 1
+        if _pilha_sem_dualsense < "${STATE_FILE}" > "${tmp}"; then
+            mv -f "${tmp}" "${STATE_FILE}"
+            log "entradas do DualSense removidas da pilha de fonte padrão, resto do histórico preservado (backup .bak)"
+        else
+            rm -f "${tmp}"
+            log "ERRO: não consegui reescrever ${STATE_FILE} — nada foi alterado"
+            return 1
+        fi
     fi
 }
 
@@ -376,6 +454,13 @@ promote_source_dualsense() {
         return 1
     fi
 }
+
+# `source scripts/fix_wireplumber_default_source.sh` carrega as funções SEM
+# despachar — é o que permite testar `_pilha_sem_dualsense` executando a função
+# de verdade, em vez de reimplementá-la no teste. Mesmo molde do `scripts/doctor.sh`
+# (que faz `if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then main; fi` no fim).
+# A execução direta segue idêntica: MODE já foi resolvido acima.
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] || return 0
 
 case "${MODE}" in
     status)

@@ -140,6 +140,16 @@ class TestFiacao:
     #: a resposta errada, porque o comentário que explica o filtro cita os dois
     #: nomes antes de qualquer código. Chamada contra chamada.
     INVOCACAO_ESCOLHA = '| _melhor_source_de_captura "'
+    #: NOTA DATADA 06/08/2026 (RECEITA-ERRADA-01). O filtro deixou de ser
+    #: inline na cura e virou `_sources_com_porta_usavel`, para que o CHECK
+    #: ofereça o MESMO alvo que a cura elegeria. Enquanto cada um tinha o seu
+    #: critério, o check mandava `pactl set-default-source <onboard>` (portas
+    #: `not available`) e a cura se recusava a eleger a mesma onboard: duas
+    #: verdades no mesmo programa, e a que aparecia na tela dela era a errada.
+    #: O contrato não afrouxou — ele agora cobre os DOIS lados, e a cadeia
+    #: `_sources_com_porta_usavel -> _source_porta_ativa_indisponivel` continua
+    #: verificada por chamada, nunca por menção.
+    INVOCACAO_FILTRO = '| _sources_com_porta_usavel "'
 
     @staticmethod
     def _corpo_da_cura() -> str:
@@ -148,10 +158,17 @@ class TestFiacao:
         fim = fonte.index("\n}\n", inicio)
         return fonte[inicio:fim]
 
+    @staticmethod
+    def _corpo(nome: str) -> str:
+        fonte = DOCTOR.read_text(encoding="utf-8")
+        inicio = fonte.index(f"{nome}()")
+        fim = fonte.index("\n}\n", inicio)
+        return fonte[inicio:fim]
+
     def test_a_cura_filtra_por_porta_antes_de_escolher(self) -> None:
         corpo = self._corpo_da_cura()
 
-        assert self.INVOCACAO in corpo, (
+        assert self.INVOCACAO_FILTRO in corpo, (
             "`fix_default_source_monitor` voltou a escolher sem CHAMAR o filtro "
             "de porta usável: elege um nó que o WirePlumber não honra, reporta "
             "sucesso, e o monitor volta em segundos"
@@ -159,10 +176,38 @@ class TestFiacao:
         assert self.INVOCACAO_ESCOLHA in corpo, (
             "não achei a chamada do seletor — o padrão de busca envelheceu?"
         )
-        pos_filtro = corpo.index(self.INVOCACAO)
+        pos_filtro = corpo.index(self.INVOCACAO_FILTRO)
         pos_escolha = corpo.index(self.INVOCACAO_ESCOLHA)
         assert pos_filtro < pos_escolha, (
             "o filtro tem de rodar ANTES da escolha, senão não filtra nada"
+        )
+
+    def test_o_filtro_compartilhado_chama_mesmo_o_criterio_de_porta(self) -> None:
+        """A cadeia inteira, por CHAMADA — o elo do meio não pode ser oco."""
+        corpo = self._corpo("_sources_com_porta_usavel")
+        assert self.INVOCACAO in corpo, (
+            "`_sources_com_porta_usavel` virou um cano que não filtra nada: o "
+            "critério de porta usável não é mais invocado por dentro dele"
+        )
+
+    def test_o_check_oferece_o_alvo_que_a_cura_elegeria(self) -> None:
+        """RECEITA-ERRADA-01 — a metade nova do portão.
+
+        MEDIDO em 29 e 30/07: o check reprovava e mandava eleger a onboard,
+        cujas três portas de captura estão `not available`. O `pactl` aceita, o
+        WirePlumber não consegue honrar e REELEGE o monitor — a receita levava
+        ao lugar errado e o defeito voltava sozinho, agora com a chancela do
+        doctor. O check tem de passar pelo mesmo filtro da cura.
+        """
+        corpo = self._corpo("check_default_source_monitor")
+        assert self.INVOCACAO_FILTRO in corpo, (
+            "o check voltou a calcular o alvo SEM o filtro de porta usável — "
+            "ele vai oferecer um comando que a própria cura se recusa a rodar"
+        )
+        pos_filtro = corpo.index(self.INVOCACAO_FILTRO)
+        pos_escolha = corpo.index(self.INVOCACAO_ESCOLHA)
+        assert pos_filtro < pos_escolha, (
+            "no check, o filtro tem de rodar ANTES da escolha"
         )
 
     def test_a_funcao_de_filtro_nao_ficou_orfa_no_arquivo(self) -> None:

@@ -835,3 +835,101 @@ def test_icone_do_repo_real_esta_verde() -> None:
     secao = result.stdout.split("== Icon dos .desktop de aplicativo", 1)
     assert len(secao) == 2, "seção de Icon do aplicativo ausente na saída"
     assert "[FAIL]" not in secao[1].split("== ", 1)[0]
+
+
+# ---------------------------------------------------------------------------
+# A REGRA DE PAR do BlueZ olhava o arquivo ERRADO no Flatpak
+#
+# Achado de 06/08/2026, MEDIDO: a lista de empacotadores trazia
+# `scripts/build_flatpak.sh`, que é um INVÓLUCRO de 120 linhas — chama o
+# `flatpak-builder` e não lista arquivo nenhum. Quem declara o conteúdo do
+# pacote é o MANIFESTO `flatpak/br.andrefarias.Hefesto.yml`, que não estava em
+# lista nenhuma. Como o invólucro não cita `doctor.sh`, o `continue` disparava e
+# a regra de PAR NUNCA alcançava o Flatpak: pôr o doctor no manifesto sem o
+# `bluez_config.sh` passava VERDE — e o detector empacotado fica CEGO, porque lê
+# exclusivamente pelo dono único em `${ROOT_DIR}/scripts/bluez_config.sh`.
+# ---------------------------------------------------------------------------
+
+_MANIFESTO = "flatpak/br.andrefarias.Hefesto.yml"
+
+
+@pytest.fixture
+def fake_repo_bluez(tmp_path: Path) -> Path:
+    """O mínimo para a seção do BlueZ rodar: o asset que a abre + o manifesto."""
+    repo_root = Path(__file__).resolve().parents[2]
+    origem = repo_root / SCRIPT_REL_PATH
+    if not origem.exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+    (tmp_path / "scripts").mkdir()
+    shutil.copy2(origem, tmp_path / SCRIPT_REL_PATH)
+    (tmp_path / "flatpak").mkdir()
+    (tmp_path / "assets" / "bluetooth").mkdir(parents=True)
+    (tmp_path / "assets" / "bluetooth" / "hefesto-bt.block").write_text(
+        "# >>> hefesto bluetooth >>>\n", encoding="utf-8"
+    )
+    return tmp_path
+
+
+def _mensagem_de_par(saida: str) -> bool:
+    return f"{_MANIFESTO} empacota doctor.sh e deixa bluez_config.sh para trás" in saida
+
+
+def test_manifesto_flatpak_com_doctor_sem_o_dono_reprova(fake_repo_bluez: Path) -> None:
+    """O caso que passava verde: o doctor viaja, o dono único fica para trás."""
+    (fake_repo_bluez / _MANIFESTO).write_text(
+        "modules:\n"
+        "  - name: hefesto\n"
+        "    build-commands:\n"
+        "      - install -Dm755 scripts/doctor.sh /app/share/hefesto/scripts/doctor.sh\n",
+        encoding="utf-8",
+    )
+
+    resultado = run_check(fake_repo_bluez)
+
+    assert resultado.returncode == 1
+    assert _mensagem_de_par(resultado.stdout), (
+        "o portão não alcançou o MANIFESTO do Flatpak — enquanto ele enumerava "
+        "o invólucro build_flatpak.sh, um doctor.sh sem o bluez_config.sh no "
+        f"pacote passava verde. Saída:\n{resultado.stdout}"
+    )
+
+
+def test_manifesto_flatpak_com_o_par_completo_passa(fake_repo_bluez: Path) -> None:
+    """A linha de base: com o dono junto, a regra de PAR se cala."""
+    (fake_repo_bluez / _MANIFESTO).write_text(
+        "modules:\n"
+        "  - name: hefesto\n"
+        "    build-commands:\n"
+        "      - install -Dm755 scripts/doctor.sh /app/share/hefesto/scripts/doctor.sh\n"
+        "      - install -Dm755 scripts/bluez_config.sh"
+        " /app/share/hefesto/scripts/bluez_config.sh\n",
+        encoding="utf-8",
+    )
+
+    resultado = run_check(fake_repo_bluez)
+
+    assert not _mensagem_de_par(resultado.stdout), resultado.stdout
+
+
+def test_comentario_do_manifesto_nao_satisfaz_a_regra_de_par(
+    fake_repo_bluez: Path,
+) -> None:
+    """Só linha de CÓDIGO conta — o manifesto é YAML e comenta com `#`.
+
+    Foi assim que a primeira versão desta regra passou verde no `build_deb.sh`
+    com a cópia arrancada: o próprio comentário que EXPLICA a regra a satisfazia.
+    """
+    (fake_repo_bluez / _MANIFESTO).write_text(
+        "modules:\n"
+        "  - name: hefesto\n"
+        "    build-commands:\n"
+        "      # o scripts/bluez_config.sh viaja junto (não viaja)\n"
+        "      - install -Dm755 scripts/doctor.sh /app/share/hefesto/scripts/doctor.sh\n",
+        encoding="utf-8",
+    )
+
+    resultado = run_check(fake_repo_bluez)
+
+    assert _mensagem_de_par(resultado.stdout), (
+        "um COMENTÁRIO no manifesto satisfez a regra de PAR"
+    )

@@ -1235,7 +1235,55 @@ fi
 #     (conffile do dpkg → backup antes). ARMADILHA respeitada: NUNCA
 #     reiniciamos o bluetoothd (derrubaria os controles BT conectados —
 #     provado ao vivo 2026-07-17); vale no próximo boot/restart natural.
-if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
+#
+# O PULO TEM DE FALAR (achado de 06/08/2026): este passo era gateado por
+# `SKIP_UDEV -eq 0` SEM `else`. Com `--no-udev`, o `step "3d"` nem imprimia: a
+# cura do BlueZ inteira sumia da saída, e numa máquina com
+# `JustWorksRepairing=always` no disco o valor perigoso SOBREVIVIA ao install
+# sem uma palavra — enquanto o detector novo do doctor manda "rode ./install.sh"
+# sem ressalva. O vizinho 3d-bis já fazia certo.
+#
+# NOTA DATADA — A JUSTIFICATIVA ANTERIOR ERA FALSA (06/08/2026). Até hoje este
+# comentário sustentava o gate dizendo que "é o que o CI sem hardware usa:
+# separar o gate faria o CI reescrever /etc/bluetooth/main.conf da máquina de
+# build". MEDIDO que a premissa não existe: **o CI não roda o `install.sh`**.
+#
+# E A INSTRUÇÃO DE REPRODUÇÃO DESTA NOTA ESTAVA ERRADA (correção do mesmo dia,
+# achado por verificação independente): ela mandava rodar
+# `grep -rn 'install\.sh' .github/workflows/` e dizia que acha UMA linha. Acha
+# DUAS, e a segunda é armadilha de leitura — `ci.yml:120` casa porque a palavra
+# `install.sh` está DENTRO de `uninstall.sh`, num comentário. A conclusão não
+# muda: a única linha que fala do arquivo é `ci.yml:136`,
+# `shellcheck -S error scripts/*.sh install.sh uninstall.sh`, e nenhuma das duas
+# INVOCA o instalador. Mas mandar o próximo leitor conferir um número que não
+# bate é o começo de ele desconfiar do resto — e o resto está certo.
+#
+# Decisão gravada sobre medição que não existe é a semente da próxima "hipótese
+# que não explica o que já funcionava", então a nota fica.
+#
+# A DECISÃO SE MANTÉM, pelo motivo VERDADEIRO: `--no-udev` está documentado no
+# cabeçalho deste arquivo (linha "…--no-udev pula os que tocam /etc") como o
+# opt-out dos passos que escrevem em /etc, e este passo escreve em
+# /etc/bluetooth/main.conf — que é conffile do dpkg. Tirar o passo do gate faria
+# a flag deixar de cumprir o próprio contrato, na máquina de quem a usa por
+# escolha e não em CI nenhum. O que MUDOU em 06/08 é que o pulo é anunciado, com
+# o comando exato do que ficou por fazer, e o estado ATUAL do disco é lido e
+# dito — leitura pura, pelo dono único, sem sudo.
+if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+    step "3d" "Bluetooth no máximo — PULADO (--no-udev)"
+    warn "btusb sem autosuspend e config do BlueZ NÃO aplicados (o passo toca /etc)"
+    warn "  falta fazer: sudo bash ${ROOT_DIR}/scripts/bluez_config.sh aplicar"
+    warn "  falta fazer: sudo install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+    _bt_estado="$(HEFESTO_BT_SUDO="" HEFESTO_BT_ASSETS="${ROOT_DIR}/assets/bluetooth" \
+        bash "${ROOT_DIR}/scripts/bluez_config.sh" verificar 2>/dev/null \
+        | sed -n 's/^JustWorksRepairing: //p' || true)"
+    if [[ "${_bt_estado}" == "always" ]]; then
+        warn "  e ATENÇÃO: o disco está com JustWorksRepairing=always AGORA — com --no-udev este install NÃO corrigiu isso (RADIO-ABERTO-01)"
+    elif [[ -n "${_bt_estado}" && "${_bt_estado}" != "confirm" && "${_bt_estado}" != "ausente" ]]; then
+        warn "  e o disco está com JustWorksRepairing=${_bt_estado} AGORA — este install NÃO tocou nesse valor"
+    fi
+    unset _bt_estado
+elif command -v sudo >/dev/null 2>&1; then
     step "3d" "Bluetooth no máximo (btusb sem autosuspend + reconexão rápida)"
     if ! sudo -n true 2>/dev/null; then
         warn "sudo recusado — passos de BT no máximo pulados (re-execute ./install.sh)"
@@ -1250,79 +1298,43 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         if [[ -e /sys/module/btusb/parameters/enable_autosuspend ]]; then
             printf '0' | sudo tee /sys/module/btusb/parameters/enable_autosuspend >/dev/null 2>&1 || true
         fi
-        # Config do BlueZ (camada 1 da sprint 2026-07-21 BlueZ): UM bloco
-        # gerenciado (FastConnectable + JustWorksRepairing juntos), escrito de
-        # forma IDEMPOTENTE — o rewrite remove qualquer versão anterior (o
-        # bloco unificado, os DOIS blocos legados com sentinelas próprias E
-        # chaves soltas nossas fora de bloco) antes de apensar. Rodar o
-        # install N vezes nunca acumula seções (bug real medido em 21/07:
-        # main.conf com 3× [General] de appends empilhados).
-        # main.conf segue sendo conffile do dpkg: SEMPRE com backup antes.
+        # Config do BlueZ (FastConnectable + JustWorksRepairing): o dono é o
+        # scripts/bluez_config.sh, e a lógica saiu DAQUI de propósito.
+        #
+        # RADIO-ABERTO-01/E1-bis (06/08/2026) — POR QUE A MUDANÇA:
+        # o mecanismo morava inline neste arquivo, e por isso nenhum teste da
+        # suíte conseguia EXERCITÁ-LO (todos liam install.sh/uninstall.sh como
+        # texto). Foi assim que passou despercebido o defeito MEDIDO na máquina
+        # dela em 06/08: `/etc/bluetooth/main.conf:25` com
+        # `JustWorksRepairing=always`, DENTRO do bloco `# >>> hefesto bluetooth
+        # >>>` — escrito por uma versão anterior deste próprio projeto. Os
+        # assets passaram a `confirm` em 05/08 e o valor perigoso continuou no
+        # disco porque só uma execução do install reescreve o arquivo, e não
+        # houve nenhuma entre as duas datas. Com o mecanismo num script
+        # próprio, a bancada de raiz falsa (tests/unit/test_bluez_config_sh.py)
+        # prova que valor inseguro preexistente vira `confirm`.
+        #
+        # O que o `aplicar` garante, e este passo não repete para não divergir:
+        # idempotência (rodar N vezes não acumula seção nem backup), backup do
+        # conffile só quando há mudança real, escrita ATÔMICA (temporário no
+        # mesmo diretório + rename, para que uma queda no meio não deixe o
+        # conffile dela truncado), neutralização reversível de chave de
+        # terceiro, RELATÓRIO (nunca poda automática) dos backups e — a
+        # assimetria fechada — o
+        # main.conf normalizado SEMPRE, com os drop-ins de main.conf.d POR CIMA
+        # quando o diretório existe (antes, o diretório presente fazia o
+        # install anunciar `confirm` sem nunca abrir o main.conf, onde o
+        # `always` seguia vivo).
         # ARMADILHA respeitada: NUNCA reiniciamos o bluetoothd aqui.
-        if [[ -d /etc/bluetooth/main.conf.d ]]; then
-            # BlueZ com main.conf.d: drop-ins dedicados (idempotentes por
-            # natureza — install -D sobrescreve no lugar, nunca acumula).
-            _bt_dropin_ok=1
-            sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-fastconnectable.conf" \
-                    /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf 2>/dev/null || _bt_dropin_ok=0
-            sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-justworks.conf" \
-                    /etc/bluetooth/main.conf.d/hefesto-justworks.conf 2>/dev/null || _bt_dropin_ok=0
-            if [[ "${_bt_dropin_ok}" -eq 1 ]]; then
-                printf '      FastConnectable + JustWorksRepairing via drop-ins main.conf.d (valem no próximo restart do bluetoothd)\n'
-            else
-                warn "drop-in de config do BlueZ falhou em main.conf.d"
-            fi
-        elif [[ -f /etc/bluetooth/main.conf ]]; then
-            _bt_tmp="$(mktemp)"
-            # O awk descarta: (a) os três blocos sentinelados (unificado +
-            # legados), (b) chaves nossas soltas fora de bloco (deixadas por
-            # edições manuais — só as NÃO comentadas; as comentadas do
-            # template upstream ficam), (c) as linhas em branco do FIM do
-            # arquivo.
-            #
-            # BUG-INSTALL-MAIN-CONF-CRESCE-01 (25/07): o (c) é novo e é o que
-            # torna o passo REALMENTE idempotente. As sentinelas delimitam só o
-            # bloco; a linha em branco que o `printf '\n'` abaixo apensa como
-            # separador ficava FORA delas e sobrevivia ao awk — cada execução do
-            # install empurrava o bloco uma linha para baixo. Medido nesta
-            # máquina: 10 linhas em branco acumuladas entre o `[General]`
-            # upstream e a sentinela, e o arquivo crescendo 1 byte por install.
-            # Guardar os brancos e só imprimi-los quando vem conteúdo depois
-            # preserva os brancos INTERNOS e descarta os do fim.
-            if sudo awk '
-                    /^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>/ { _skip=1; next }
-                    _skip && /^# <<< hefesto (bluetooth|FastConnectable|JustWorksRepairing) <<</ { _skip=0; next }
-                    _skip { next }
-                    /^[[:space:]]*(FastConnectable|JustWorksRepairing)[[:space:]]*=/ { next }
-                    /^[[:space:]]*$/ { _brancos++; next }
-                    { for (; _brancos > 0; _brancos--) print ""; print }
-                  ' /etc/bluetooth/main.conf > "${_bt_tmp}" \
-               && { printf '\n'; cat "${ROOT_DIR}/assets/bluetooth/hefesto-bt.block"; } >> "${_bt_tmp}"; then
-                # BUG-INSTALL-MAIN-CONF-BACKUP-INFINITO-01 (25/07): o backup era
-                # feito ANTES de saber se havia mudança, com timestamp no nome —
-                # cada install deixava mais um `main.conf.bak.hefesto-<ts>` em
-                # /etc/bluetooth (22 acumulados nesta máquina). Agora comparamos
-                # primeiro: conteúdo idêntico = no-op honesto, sem backup novo.
-                if sudo cmp -s "${_bt_tmp}" /etc/bluetooth/main.conf; then
-                    printf '      bloco hefesto já está no main.conf, byte a byte — nada a reescrever (sem backup novo)\n'
-                else
-                    _bt_backup="/etc/bluetooth/main.conf.bak.hefesto-$(date +%s)"
-                    if sudo cp /etc/bluetooth/main.conf "${_bt_backup}" 2>/dev/null \
-                       && sudo install -m644 -o root -g root "${_bt_tmp}" /etc/bluetooth/main.conf; then
-                        printf '      bloco hefesto (FastConnectable + JustWorksRepairing) reescrito no main.conf (backup: %s)\n' "${_bt_backup}"
-                        printf '      vale no próximo boot/restart do bluetoothd — NÃO reiniciamos o serviço (derrubaria os controles BT)\n'
-                    else
-                        warn "não consegui reescrever o bloco hefesto no /etc/bluetooth/main.conf"
-                    fi
-                fi
-            else
-                warn "não consegui preparar o bloco hefesto para o /etc/bluetooth/main.conf"
-            fi
-            rm -f "${_bt_tmp}"
-        else
-            printf '      sem /etc/bluetooth/main.conf (BlueZ ausente?) — config do BlueZ pulada\n'
+        if ! HEFESTO_BT_ASSETS="${ROOT_DIR}/assets/bluetooth" \
+             bash "${ROOT_DIR}/scripts/bluez_config.sh" aplicar; then
+            warn "config do BlueZ (FastConnectable + JustWorksRepairing) não ficou garantida"
         fi
     fi
+else
+    step "3d" "Bluetooth no máximo — PULADO (sem sudo nesta máquina)"
+    warn "sem o comando sudo: config do BlueZ e modprobe.d do btusb NÃO aplicados"
+    warn "  falta fazer, como root: bash ${ROOT_DIR}/scripts/bluez_config.sh aplicar"
 fi
 
 # ---------------------------------------------------------------------------
