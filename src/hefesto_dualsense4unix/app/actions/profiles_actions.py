@@ -1835,6 +1835,36 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._reload_profiles_store()
         self._toast_profile("Lista recarregada")
 
+    def _perfil_salvo_muda_o_modo_ativo(
+        self, profile: Any, ativo_antes: str | None
+    ) -> bool:
+        """True quando salvar este perfil muda o que o JOGO vê, agora.
+
+        RELANCAR-NO-BOTAO-01. Três condições, e todas têm de valer — cada uma
+        elimina um caso em que perguntar seria ruído:
+
+        1. **o perfil é o ATIVO** — salvar um perfil que não está valendo não
+           muda nada na partida em curso;
+        2. **ele declara uma seção `mode`** — perfil sem modo não toca a entrada
+           (é a metade da INVERSÃO: cor, gatilho e vibração seguem valendo ao
+           vivo);
+        3. **o modo dele diverge do vigente** — salvar sem mudar o modo é o caso
+           comum, e não pode interromper.
+
+        Erra para o lado de NÃO perguntar: qualquer leitura que falhe devolve
+        False e o save segue silencioso, como sempre foi.
+        """
+        if not ativo_antes or not mesmo_slug(getattr(profile, "name", ""), ativo_antes):
+            return False
+        modo = getattr(profile, "mode", None)
+        if modo is None:
+            return False
+        with contextlib.suppress(Exception):
+            vigente = getattr(self, "_modo_vigente_do_daemon", None)
+            if vigente is not None and getattr(modo, "kind", None) == vigente:
+                return False
+        return True
+
     def on_profile_save(self, _btn: Gtk.Button | None) -> None:
         try:
             profile = self._build_profile_from_editor()
@@ -1954,6 +1984,33 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             ativo_antes = active_profile_name()
         except Exception:
             ativo_antes = None
+        # RELANCAR-NO-BOTAO-01 (08/08/2026) — desenho DELA, e melhor que o meu:
+        #
+        #   *"talvez fosse interessante isso aparecer somente quando clicarmos no
+        #    botão final em aplicar, o botão verde — dessa forma eu posso passar
+        #    em todas as abas e isso entra na alteração do perfil ativo, aí
+        #    pergunta se quero aplicar e ele pede pra fechar."*
+        #
+        # Perguntar a cada seletor interrompe ela no meio do trabalho, e várias
+        # vezes. Perguntar UMA vez, no gesto que fecha a edição, respeita como
+        # ela usa a janela: passa pelas abas, ajusta tudo, e só então decide.
+        #
+        # A pergunta só vale quando as três coisas são verdade ao mesmo tempo:
+        # o perfil salvo é o ATIVO (senão não muda nada agora), a seção `mode`
+        # dele diverge do que está valendo, e há jogo aberto. Sem isso o save é
+        # o de sempre — silencioso.
+        if self._perfil_salvo_muda_o_modo_ativo(profile, ativo_antes):
+            def _gravar_e_seguir() -> None:
+                with contextlib.suppress(Exception):
+                    save_profile(profile)
+                self._toast_profile(f"Perfil {profile.name} salvo.")
+
+            if self._perguntar_antes_de_relancar(
+                mudanca="perfil_com_modo",
+                valor=profile.name,
+                aplicar=_gravar_e_seguir,
+            ):
+                return
         try:
             save_profile(profile)
         except OSError as exc:

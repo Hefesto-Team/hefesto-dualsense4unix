@@ -1136,6 +1136,10 @@ class HomeActionsMixin(WidgetAccessMixin):
             # em vez de sondar processo com dois `pgrep` de 5 s que
             # congelariam a janela. Uma fonte da verdade, não duas.
             sinal = state.get("game_signal") if isinstance(state, dict) else None
+            # RELANCAR-NO-BOTAO-01: o modo vigente, para o "Salvar este
+            # perfil" saber se o perfil salvo MUDA o que o jogo vê. Mesma
+            # fonte da aba Início — nunca uma segunda verdade.
+            self._modo_vigente_do_daemon = mode_of_state(state) or "desktop"
             self._jogo_aberto = (
                 isinstance(sinal, dict) and sinal.get("authority") == "game"
             )
