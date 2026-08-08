@@ -231,14 +231,19 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     fora = _modulos_que_escrevem_portugues_cru(DIR_ACOES)
     total = len(list(DIR_ACOES.glob("*.py")))
 
-    assert total == 18, (
-        f"`app/actions/` tem {total} módulos, não 18. A contagem citada em "
+    # RELANCAR-01 (08/08/2026): 18 viraram 19 com o `relancar.py`, e 15 viraram
+    # 16 — ele escreve o texto do diálogo em português, direto, como os outros.
+    # Os números sobem juntos de propósito: se um subir sozinho, alguém ligou (ou
+    # desligou) o encanamento num módulo, e é isso que este teste existe para
+    # acusar. As três páginas ganharam nota datada em vez de reescrita.
+    assert total == 19, (
+        f"`app/actions/` tem {total} módulos, não 19. A contagem citada em "
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
         "`docs/usage/troubleshooting.md` precisa mudar junto."
     )
-    assert len(fora) == 15, (
+    assert len(fora) == 16, (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
-        f"tradução, não 15: {', '.join(sorted(fora))}. Se o número CAIU, é "
+        f"tradução, não 16: {', '.join(sorted(fora))}. Se o número CAIU, é "
         "trabalho bom — atualize as três páginas que o citam. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )
@@ -248,7 +253,7 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     # seria desligado na terceira vez — que é como portão vira decoração. O que
     # precisa doer é o volume DESABAR, porque aí a premissa mudou.
     assert sum(fora.values()) >= 400, (
-        f"os 15 módulos somam agora {sum(fora.values())} literais acentuados; "
+        f"os 16 módulos somam agora {sum(fora.values())} literais acentuados; "
         "eram 561 em 07/08/2026. Uma queda desta ordem significa que o texto "
         "vivo das abas mudou de lugar, e a decisão da língua precisa ser "
         "remedida antes de continuar valendo como está escrita."

@@ -11,6 +11,7 @@ gui_prefs.load_gui_prefs / gui_prefs.set_pref.
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Callable
 from typing import Any
 
 import gi
@@ -19,6 +20,7 @@ from pydantic import ValidationError
 gi.require_version("Gtk", "3.0")
 from gi.repository import GObject, Gtk
 
+from hefesto_dualsense4unix.app.actions import relancar
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.home_actions import (
     texto_do_custo_da_mascara,
@@ -26,6 +28,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
 from hefesto_dualsense4unix.app.ipc_bridge import (
     PROFILE_SWITCH_TIMEOUT_S,
+    _get_executor,
     active_profile_name,
     call_async,
     profile_switch,
@@ -1298,6 +1301,27 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             )
             self._sincronizar_caixa_do_steam_input()
             return
+        # RELANCAR-01 (08/08/2026): marcar/desmarcar cria uma BORDA em
+        # `sync_steam_input_exception`, que faz ungrab e suspende os vpads. Com
+        # o jogo aberto isso não chega ao processo dele (o wrapper faz
+        # `exec env`) e ainda mexe no controle ao vivo — foi o que a deixou sem
+        # controle nenhum no meio da partida. Então: sonda primeiro, e se houver
+        # jogo aberto, PERGUNTA antes de escrever no disco.
+        if self._perguntar_antes_de_relancar(
+            mudanca="steam_input_do_jogo",
+            valor="marcado" if marcar else "desmarcado",
+            aplicar=lambda: self._gravar_marca_do_steam_input(appid, marcar),
+        ):
+            return
+        self._gravar_marca_do_steam_input(appid, marcar)
+
+    def _gravar_marca_do_steam_input(self, appid: str, marcar: bool) -> None:
+        """Escreve a marca no disco e avisa o daemon. Separado de propósito.
+
+        RELANCAR-01: o gesto e a ESCRITA viraram funções diferentes porque, com
+        um jogo aberto, entre um e outro pode haver um diálogo e uma decisão
+        dela. Enquanto era um bloco só, não havia onde perguntar.
+        """
         try:
             from hefesto_dualsense4unix.integrations import (
                 steam_launch_options as slo,
@@ -1344,6 +1368,119 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         """
         contagem = getattr(self, "_controles_conectados", None)
         return contagem if isinstance(contagem, int) else None
+
+    # --- RELANCAR-01: o que só vale quando o jogo reabre --------------------
+
+    #: Ids de resposta do diálogo. Positivos de propósito: os `Gtk.ResponseType`
+    #: nativos são negativos, então não há colisão (mesmo padrão do
+    #: `_RESP_RENOMEAR`).
+    _RESP_DEPOIS = 210
+    _RESP_FECHAR_E_ABRIR = 211
+
+    def _perguntar_antes_de_relancar(
+        self,
+        *,
+        mudanca: str,
+        valor: str | None,
+        aplicar: Callable[[], None],
+    ) -> bool:
+        """True se assumiu o gesto (vai perguntar); False para aplicar direto.
+
+        RELANCAR-01 (08/08/2026). Sonda num worker — dois `pgrep` de até 5 s
+        congelariam a janela — e decide na thread do GTK, que é o padrão de
+        `emulation_actions.on_emulation_steam_input_disable`.
+
+        **Devolver False no erro é deliberado:** se a sondagem falhar, a mudança
+        aplica como sempre aplicou. Um diálogo que aparece por engano no meio da
+        partida é pior que uma pergunta que não foi feita — e a sondagem é
+        best-effort por natureza.
+        """
+        if mudanca not in relancar.EXIGEM_RELANCAR:
+            return False
+        jogo_aberto = bool(getattr(self, "_jogo_aberto", False))
+        if not relancar.precisa_perguntar(
+            mudanca=mudanca, jogo_aberto=jogo_aberto
+        ):
+            # Sem jogo aberto NADA muda: aplica na hora, síncrono, como sempre.
+            # Este retorno é o que mantém o caminho comum sem diálogo e sem
+            # espera — e é o que os testes da caixinha exercitam.
+            return False
+        self._relancar_decidir(mudanca, valor, True, aplicar)
+        return True
+
+    def _relancar_decidir(
+        self,
+        mudanca: str,
+        valor: str | None,
+        jogo: object,
+        aplicar: Callable[[], None],
+    ) -> bool:
+        """Na thread do GTK: sem jogo aplica; com jogo, pergunta."""
+        nome_do_jogo = jogo if isinstance(jogo, str) and jogo else None
+
+        def _resposta(dialog: Any, resposta: int) -> None:
+            with contextlib.suppress(Exception):
+                dialog.destroy()
+            if resposta == self._RESP_FECHAR_E_ABRIR:
+                aplicar()
+                self._toast_profile(
+                    relancar.toast_da_escolha("fechar_e_abrir", jogo=nome_do_jogo)
+                )
+                self._relancar_o_jogo()
+            elif resposta == self._RESP_DEPOIS:
+                # A mudança é aplicada AGORA no disco; o que fica para depois é o
+                # jogo enxergá-la. Guardar a intenção sem escrever criaria um
+                # segundo estado pendente invisível, que é o defeito que a casa
+                # mais paga — o disco já é o lugar onde a marca dela mora.
+                aplicar()
+                self._toast_profile(
+                    relancar.toast_da_escolha("na_proxima_abertura", jogo=nome_do_jogo)
+                )
+            else:
+                self._toast_profile(relancar.toast_da_escolha("cancelar"))
+                # A tela volta ao que o disco diz: janela que não mente.
+                with contextlib.suppress(Exception):
+                    self._sincronizar_caixa_do_steam_input()
+
+        from hefesto_dualsense4unix.app.actions.daemon_actions import (
+            build_consentimento_dialog,
+        )
+
+        dialog = build_consentimento_dialog(
+            getattr(self, "window", None),
+            titulo=relancar.TITULO,
+            corpo=relancar.corpo_do_dialogo(
+                mudanca=mudanca, valor=valor, jogo=nome_do_jogo
+            ),
+            botoes=[
+                (relancar.ROTULO_CANCELAR, Gtk.ResponseType.CANCEL),
+                (relancar.ROTULO_DEPOIS, self._RESP_DEPOIS),
+                (relancar.ROTULO_FECHAR, self._RESP_FECHAR_E_ABRIR),
+            ],
+            on_response=_resposta,
+            destrutivo=self._RESP_FECHAR_E_ABRIR,
+        )
+        with contextlib.suppress(Exception):
+            dialog.show_all()
+        return False
+
+    def _relancar_o_jogo(self) -> None:
+        """Fecha a Steam (e o jogo com ela) e pede a abertura de volta.
+
+        Fica num método próprio para o caminho destrutivo ter UM dono, e para o
+        teste poder trocá-lo por um dublê sem tocar no resto.
+        """
+
+        def _fazer() -> None:
+            from hefesto_dualsense4unix.integrations import (
+                steam_launch_options as slo,
+            )
+
+            with contextlib.suppress(Exception):
+                slo.stop_steam()
+
+        with contextlib.suppress(Exception):
+            _get_executor().submit(_fazer)
 
     def _avisar_o_daemon_da_allowlist(self) -> None:
         """Faz a marca VALER agora, sem reiniciar nada.

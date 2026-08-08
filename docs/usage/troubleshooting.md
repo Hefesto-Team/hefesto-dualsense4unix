@@ -350,6 +350,10 @@ Se já está em v3.2.0+ e o problema persiste, abra issue com o output de
 > português mesmo com `LANG=en_US.UTF-8`. **Medido em 07/08/2026:** dos 18
 > módulos de `src/hefesto_dualsense4unix/app/actions/`, **15** não importam a
 > função de tradução e carregam 561 literais acentuados em português.
+>
+> **Nota datada — 08/08/2026:** são **19** módulos desde a `RELANCAR-01`, que
+> acrescentou `relancar.py`. Ele **não** importa a função de tradução, então a
+> proporção passou a **16 de 19** — o quadro não mudou de natureza.
 > Se você chegou aqui esperando uma janela inteiramente em inglês, o problema
 > não é a sua instalação — é a promessa antiga, e ela foi retirada. Registro em
 > `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.

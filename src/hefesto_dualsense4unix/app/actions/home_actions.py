@@ -1129,6 +1129,16 @@ class HomeActionsMixin(WidgetAccessMixin):
             # já recebe o estado, já filtrou os conectados, e roda a cada tique.
             # Uma contagem só, num lugar só, para as duas abas não divergirem.
             self._controles_conectados = len(connected)
+            # RELANCAR-01 (08/08/2026): a aba Perfis precisa saber se há jogo
+            # aberto para decidir se pergunta antes de mudar a entrada — e o
+            # toast dela é SÍNCRONO. Guardar aqui usa o MESMO critério que
+            # `reconciliar_aviso` já usa (`game_signal.authority == "game"`),
+            # em vez de sondar processo com dois `pgrep` de 5 s que
+            # congelariam a janela. Uma fonte da verdade, não duas.
+            sinal = state.get("game_signal") if isinstance(state, dict) else None
+            self._jogo_aberto = (
+                isinstance(sinal, dict) and sinal.get("authority") == "game"
+            )
             self._render_home_controllers(
                 connected,
                 grab_state=state.get("primary_grab_state"),
