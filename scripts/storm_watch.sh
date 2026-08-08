@@ -51,6 +51,19 @@ GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not 
 # Classificador: linha short-iso do journal → "TIMESTAMP [TAG] mensagem".
 # Ordem: do mais específico para o mais genérico (JOYCON/JOYCON-PROBE antes
 # de USB-71 etc.). mawk-compatível (sem IGNORECASE): casa sobre tolower($0).
+#
+# CADERNO-QUE-NÃO-ESCREVE-01 (08/08/2026): o `fflush()` do fim do bloco NÃO é
+# higiene — é a cura de um defeito MEDIDO. Sem ele, a saída do `awk` fica num
+# buffer de 256 KiB que o `SIGTERM` do desligamento descarta, e o caderno dela
+# ficava vazio para sempre: 120 linhas, a última de 20/07, contra 723 eventos no
+# journal do mesmo período. O reboot de 08/08 00:00 fez o experimento de graça e
+# promoveu o defeito de SUSPEITA COM MECANISMO para MEDIDO.
+#
+# ARMADILHA PARA QUEM FOR TESTAR ISTO: um teste que alimente o `stdin` e o deixe
+# fechar naturalmente PASSA COM A CURA ARRANCADA, porque o EOF descarrega o
+# buffer sozinho. O teste tem de MATAR o processo com o buffer no meio — é o que
+# `tests/unit/test_storm_watch_fflush.py` faz, e é por isso que ele parece
+# complicado demais para uma linha.
 classify() {
     awk '
     {
@@ -68,6 +81,7 @@ classify() {
         sub(/^[^ ]+ +/, "", rest)     # remove o hostname
         sub(/^[^ ]+: +/, "", rest)    # remove "kernel:" / "bluetoothd[pid]:"
         print ts " " tag " " rest
+        fflush()
     }'
 }
 

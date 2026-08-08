@@ -554,6 +554,36 @@ def launch_session_appid(
     return marker[0] if vivo else None
 
 
+#: Classes de janela que NÃO são evidência de "outro app está na frente".
+#: PARTIDA-PICOTADA-01: são os dois casos medidos no journal dela em 08/08 —
+#: o backend não conseguiu ler (`unknown`/vazio) e a janela em foco ser a nossa
+#: própria (ela abrindo o editor de perfil no meio da partida). Espelha
+#: `autoswitch._tick_sem_informacao` e `autoswitch._janela_propria`; a lista de
+#: classes da GUI vem de lá, para não haver duas verdades.
+_CLASSES_CEGAS: frozenset[str] = frozenset({"", "unknown"})
+
+
+def _leitura_cega(wm_class: str | None) -> bool:
+    """True quando a leitura de janela não é evidência de app nenhum.
+
+    PARTIDA-PICOTADA-01. Duas famílias, as duas medidas no journal dela:
+    o detector não leu nada (`None`, vazio ou ``"unknown"``), ou a janela em
+    foco é a do próprio Hefesto. Nenhuma das duas significa "o jogo saiu da
+    frente", e tratá-las como se significassem é o que picotava a partida.
+    """
+    if wm_class is None:
+        return True
+    normalizada = wm_class.strip().casefold()
+    if normalizada in _CLASSES_CEGAS:
+        return True
+    # Importado aqui, e não no topo, porque `profiles.autoswitch` importa deste
+    # módulo — subir o import quebraria o ciclo que `daemon/protocols.py` existe
+    # para manter desfeito.
+    from hefesto_dualsense4unix.profiles.autoswitch import OWN_GUI_WM_CLASSES
+
+    return normalizada in OWN_GUI_WM_CLASSES
+
+
 def steam_input_exception_appid(
     daemon: Any | None = None,
     *,
@@ -583,6 +613,26 @@ def steam_input_exception_appid(
     continuam sendo exatamente estas, e não uma janela mais folgada: enquanto
     esta função disser um appid, a usuária está SEM vpad — o sinal tem de
     apagar assim que o jogo sai da frente, não 30 s depois.
+
+    PARTIDA-PICOTADA-01 (08/08/2026): "leitura crua" não pode significar
+    "leitura CEGA derruba a exceção". A crueza existe para que um alt-tab de
+    verdade apague o sinal na hora; ela **não** existe para que um tique sem
+    informação faça o mesmo. A diferença é o defeito inteiro, e ele foi medido:
+    em 08/08, entre 01:43 e 03:03, oito ciclos de suspender/retomar vpad no meio
+    da partida dela, e **todos** os encerramentos vieram colados a um tique cego
+    — `wm_class=unknown` (o backend não leu) ou a classe da PRÓPRIA janela do
+    Hefesto, quando ela ia mexer na configuração. Nenhum deles é "o jogo saiu da
+    frente". O contraste fecha a conta: no sábado 01-02/08 foram 15 quedas de
+    vpad em **48 h**; em 08/08, **12 em 1h25** — vinte e sete vezes mais.
+
+    A cura é a mesma disciplina que o autoswitch já aplica em
+    `_tick_sem_informacao` e `_janela_propria`, e é assimétrica de propósito:
+    **só evidência POSITIVA de outra janela encerra a exceção.** Um tique cego
+    ou a própria GUI não decidem nada — mantêm o que valia antes, consultando o
+    sinal sticky (`window_detect_last_class`). O medo registrado no parágrafo
+    acima — o físico exposto ao desktop 30 s depois do alt-tab — continua
+    coberto, porque um alt-tab de verdade produz leitura POSITIVA da outra
+    janela, e essa apaga a exceção no mesmo tique.
     """
     appids = allowlist if allowlist is not None else steam_input_appids()
     if not appids:
@@ -592,7 +642,13 @@ def steam_input_exception_appid(
         return sessao
     store = getattr(daemon, "store", None)
     wm_class = getattr(store, "window_detect_current_class", None)
-    foco = steam_appid_from_wm_class(wm_class if isinstance(wm_class, str) else None)
+    crua = wm_class if isinstance(wm_class, str) else None
+    if _leitura_cega(crua):
+        # Tique sem informação, ou a nossa própria janela: não é evidência de
+        # nada. Cai no sticky — a última classe ÚTIL que o detector viu.
+        sticky = getattr(store, "window_detect_last_class", None)
+        crua = sticky if isinstance(sticky, str) else None
+    foco = steam_appid_from_wm_class(crua)
     if foco is not None and foco in appids:
         return foco
     return None
