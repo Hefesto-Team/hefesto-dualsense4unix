@@ -43,6 +43,13 @@ def numero_do_controle(entry: dict[str, Any]) -> int:
     return 1
 
 
+#: DEPOIS-QUE-APLICAVA-AGORA-01: as mudanças cuja APLICAÇÃO é a própria escrita
+#: em disco — para essas, "aplicar na próxima abertura" pode escrever agora, e a
+#: única coisa adiada é o jogo relê-las. As demais (modo, máscara) recriam
+#: dispositivo ao vivo e NÃO podem ser aplicadas neste ramo.
+_MUDANCAS_QUE_SAO_ESCRITA: frozenset[str] = frozenset({"steam_input_do_jogo"})
+
+
 class WidgetAccessMixin:
     """Acesso comum ao `Gtk.Builder` via `self.builder`.
 
@@ -110,13 +117,36 @@ class WidgetAccessMixin:
                 )
                 self._relancar_o_jogo()
             elif resposta == self._RESP_DEPOIS:
-                # A mudança é aplicada AGORA no disco; o que fica para depois é o
-                # jogo enxergá-la. Guardar a intenção sem escrever criaria um
-                # segundo estado pendente invisível, que é o defeito que a casa
-                # mais paga — o disco já é o lugar onde a marca dela mora.
-                aplicar()
+                # DEPOIS-QUE-APLICAVA-AGORA-01 (08/08/2026) — defeito MEU, achado
+                # por verificação adversarial antes de ela pagar por ele.
+                #
+                # Esta linha chamava `aplicar()` incondicionalmente, com o
+                # raciocínio de que "a marca dela mora no disco, então escrever é
+                # o certo". Isso vale para a caixinha do Steam Input, cuja
+                # aplicação É a escrita no arquivo. **Não vale para a máscara:**
+                # ali `aplicar()` chama `gamepad.emulation.set`, que RECRIA O VPAD
+                # AO VIVO — exatamente o dano que este diálogo existe para evitar.
+                #
+                # Ou seja: o botão "Aplicar na próxima abertura" fazia, na
+                # máscara, a mesma coisa que o "Aplicar agora" — sem fechar o
+                # jogo, e portanto deixando o jogo e a máquina em desacordo.
+                #
+                # Agora só aplica o que é ESCRITA (a marca no disco). O que
+                # recria dispositivo fica para a próxima abertura de verdade, e o
+                # toast diz isso. Enquanto o rascunho não souber segurar a
+                # máscara, o honesto é não fingir que guardou.
+                if mudanca in _MUDANCAS_QUE_SAO_ESCRITA:
+                    aplicar()
+                else:
+                    logger.info(
+                        "relancar_adiado_sem_guardar", mudanca=mudanca
+                    )
                 self._toast_do_relancar(
-                    relancar.toast_da_escolha("na_proxima_abertura", jogo=nome_do_jogo)
+                    relancar.toast_da_escolha(
+                        "na_proxima_abertura",
+                        jogo=nome_do_jogo,
+                        guardou=mudanca in _MUDANCAS_QUE_SAO_ESCRITA,
+                    )
                 )
             else:
                 self._toast_do_relancar(relancar.toast_da_escolha("cancelar"))
