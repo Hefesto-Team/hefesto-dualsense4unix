@@ -252,6 +252,177 @@ def test_caminho_com_barra_inexistente_reprova(repo_falso: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Link que SOBE (`../`) -- a cegueira curada em 07/08/2026.
+#
+# Até essa data `candidatos_da_linha` descartava TODO token com `..`, e os 246
+# links `../` desta árvore podiam apodrecer em silêncio. MEDIDO: trocado o alvo
+# do link do LUGAR-À-MESA-01 em `docs/usage/modos.md` por um nome inexistente,
+# o portão respondeu "OK: 1 documento(s) sem referência morta", saída 0.
+#
+# A exclusão tinha motivo, e ele também foi medido: dos 249 tokens com `..` na
+# árvore, três eram RETICÊNCIA DE ELISÃO. Os testes abaixo vêm em par -- a
+# mordida nova e a proteção velha -- porque curar um cegando o outro seria
+# trocar de defeito, não corrigir.
+# ---------------------------------------------------------------------------
+
+#: A forma exata dos seis links que a leva de 07/08 acrescentou: de
+#: `docs/usage/` para `docs/process/sprints/`.
+SPRINT_REAL = "2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md"
+
+
+def _com_sprint(raiz: Path) -> None:
+    """Cria a sprint real que os links de subida deste bloco apontam."""
+    pasta = raiz / "docs" / "process" / "sprints"
+    pasta.mkdir(parents=True, exist_ok=True)
+    (pasta / SPRINT_REAL).write_text("# LUGAR-À-MESA-01\n", encoding="utf-8")
+
+
+def test_link_que_sobe_para_arquivo_inexistente_reprova(repo_falso: Path) -> None:
+    """A MORDIDA da cura: `../` para nome inventado tem de reprovar.
+
+    Este é o teste que, arrancada a cura (devolvido o `".."` à linha de
+    filtros de `candidatos_da_linha`), volta a passar com saída 0 -- que é
+    exatamente o defeito medido na árvore real.
+    """
+    _com_sprint(repo_falso)
+    escrever_doc(
+        repo_falso,
+        "modos.md",
+        "> Ver [LUGAR-À-MESA-01](../process/sprints/2026-08-06-NUNCA-EXISTIU-99.md).\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, (
+        "o validador ACEITOU um link `../` para arquivo inexistente -- "
+        "continua cego ao caminho que sobe.\n"
+        f"saída: {proc.stdout}{proc.stderr}"
+    )
+    assert "2026-08-06-NUNCA-EXISTIU-99.md" in proc.stdout
+    assert "modos.md:1" in proc.stdout
+
+
+def test_link_que_sobe_para_arquivo_existente_passa(repo_falso: Path) -> None:
+    """O outro lado: os 246 links vivos da árvore não podem virar ruído."""
+    _com_sprint(repo_falso)
+    escrever_doc(
+        repo_falso,
+        "modos-ok.md",
+        f"> Ver [LUGAR-À-MESA-01](../process/sprints/{SPRINT_REAL}).\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+def test_subida_dupla_resolve_ate_a_raiz(repo_falso: Path) -> None:
+    """`../../CHANGELOG.md` e `../../README.md` são a forma mais comum em usage."""
+    (repo_falso / "CHANGELOG.md").write_text("# Mudanças\n", encoding="utf-8")
+    escrever_doc(
+        repo_falso,
+        "instalacao.md",
+        "O caminho curto está no [CHANGELOG](../../CHANGELOG.md).\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+def test_subida_dupla_para_arquivo_inexistente_reprova(repo_falso: Path) -> None:
+    """A contraprova do anterior: sem o arquivo na raiz, o portão morde."""
+    escrever_doc(
+        repo_falso,
+        "instalacao.md",
+        "O caminho curto está no [CHANGELOG](../../CHANGELOG.md).\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, proc.stdout
+    assert "CHANGELOG.md" in proc.stdout
+
+
+def test_link_que_sobe_alto_demais_e_sai_da_arvore_reprova(repo_falso: Path) -> None:
+    """Subir acima da raiz do repositório é sempre link morto para quem clona.
+
+    Sem esta cobrança a cura teria criado uma cegueira nova no lugar da velha:
+    bastaria um `../` a mais para o token escapar de toda verificação.
+    """
+    escrever_doc(
+        repo_falso,
+        "fugitivo.md",
+        "Ver [fora da árvore](../../../../outro-repo/LEIA.md).\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, (
+        "o validador ACEITOU link que sai da árvore do repositório.\n"
+        f"saída: {proc.stdout}{proc.stderr}"
+    )
+    assert "outro-repo/LEIA.md" in proc.stdout
+
+
+def test_link_que_sobe_nao_ganha_a_leniencia_de_sufixo(repo_falso: Path) -> None:
+    """`../gui/main.glade` não pode casar com o `gui/main.glade` de qualquer lugar.
+
+    A leniência de sufixo existe para o caminho ENCURTADO (`gui/main.glade`),
+    que não afirma posição. `../` afirma: ou o arquivo está exatamente ali, ou
+    o link está quebrado. Sem este teste, a cura poderia ser "aceita qualquer
+    coisa que exista em algum canto", que é aceitar quase tudo.
+    """
+    escrever_doc(repo_falso, "posicao.md", "A janela mora em `../gui/main.glade`.\n")
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, (
+        "um `../` errado casou por sufixo com o arquivo real.\n"
+        f"saída: {proc.stdout}{proc.stderr}"
+    )
+    assert "../gui/main.glade" in proc.stdout
+
+
+def test_reticencia_de_elisao_continua_descartada(repo_falso: Path) -> None:
+    """A proteção que a exclusão de `..` de fato prestava, medida na árvore.
+
+    As três formas abaixo são literais dos documentos reais em 07/08/2026:
+    `docs/protocol/trigger-modes.md:34`,
+    `docs/process/sprints/2026-08-06-LUGAR-A-MESA-01-...md:1177` e
+    `docs/process/estudos/2026-08-05-o-sistema-de-perfis-...md:1181`. Nenhuma é
+    caminho: é o autor elidindo o meio com reticência. Se este teste ficar
+    vermelho, a cura do `../` trocou uma cegueira por uma chuva de falso
+    positivo -- e o cabeçalho do portão avisa que isso o torna inútil.
+    """
+    escrever_doc(
+        repo_falso,
+        "reticencia.md",
+        "Fonte histórica: `.venv/lib/.../pydualsense/enums.py` para HID.\n"
+        "\n"
+        "Ver [o painel](.../painel-de-decisoes.md) e também\n"
+        "`docs/process/sprints/2026-08-05-TRAVA-QUE-SOLTA-TARDE-01-...md`.\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, (
+        "reticência de elisão virou referência morta -- a cura do `../` "
+        "reabriu o falso positivo que a exclusão original segurava.\n"
+        f"saída: {proc.stdout}"
+    )
+
+
+def test_dois_pontos_no_meio_do_caminho_continua_descartado(repo_falso: Path) -> None:
+    """`docs/../scripts/x.sh` não é forma desta casa e segue fora.
+
+    A cura foi deliberadamente estreita: só prefixo de subida BEM FORMADO. Um
+    `..` no meio continua descartado, como sempre esteve.
+    """
+    escrever_doc(
+        repo_falso,
+        "meio.md",
+        "Roda `docs/../scripts/nunca_existiu.sh` no fim.\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+# ---------------------------------------------------------------------------
 # Escapes -- para o portão não ser impossível de satisfazer.
 # ---------------------------------------------------------------------------
 
