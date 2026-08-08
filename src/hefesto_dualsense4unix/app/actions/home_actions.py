@@ -1237,26 +1237,35 @@ class HomeActionsMixin(WidgetAccessMixin):
         # HARM-01: a sequência (sair do nativo antes de ligar o gamepad, com a
         # folga de 2s) mora em `mode_transition` — a Início é a dona do modo,
         # não da mecânica; a Emulação chama exatamente o mesmo caminho.
-        # RELANCAR-01 (08/08/2026): trocar o modo com um jogo aberto muda
-        # `native_mode`/`emulation_enabled` no `compose_env` — e o jogo já
-        # recebeu o env na abertura (`exec env`, `hefesto-launch.sh`). Aplicar ao
-        # vivo derruba e recria o vpad debaixo dele: foi assim que ela ficou sem
-        # controle nenhum no meio da partida, e foi assim que nasceu o "Jogador
-        # 3" fantasma. Então pergunta antes, em vez de trocar o dono do input
-        # embaixo de um jogo em curso.
-        def _aplicar() -> None:
-            apply_mode(
-                mode_id,
-                flavor=self._home_flavor_selector.get_active_id(),
-                on_done=_done,
-                on_fail=_fail,
-            )
-
-        if self._perguntar_antes_de_relancar(
-            mudanca="modo", valor=_mode_label(mode_id), aplicar=_aplicar
-        ):
-            return
-        _aplicar()
+        # RELANCAR-ORDEM-01 (08/08/2026) — o modo NÃO pergunta, e isso é decisão
+        # dela depois de ver o defeito na tela:
+        #
+        #   *"tá zuado, ele aparece antes de me deixar clicar em xbox ou ps5 —
+        #    então como já aparece a tela de aplicar e reiniciar se nem sei o que
+        #    ele vai aplicar?"*
+        #
+        # Ela tem razão, e é erro de DESENHO, não de código. A máscara ("O jogo
+        # vê o controle como") só existe DENTRO de "Jogar pelo Hefesto": o fluxo
+        # real é escolher o modo → a máscara aparecer → escolher a máscara.
+        # Perguntar no primeiro passo é pedir para reiniciar o jogo por uma
+        # configuração que ela ainda vai fazer — e ela escolheu a saída A, que é
+        # perguntar só onde a decisão está completa.
+        #
+        # Perguntar aqui também produziria DOIS diálogos numa sequência só (um no
+        # modo, outro na máscara), que é exatamente o "caos" que ela descreveu ao
+        # relatar a partida de ontem.
+        #
+        # O que fica ABERTO, e está escrito para não passar por curado: trocar o
+        # modo com um jogo aberto continua mexendo no `compose_env` ao vivo, e é
+        # o caminho que produziu o "Jogador 3" fantasma. A cura dele NÃO é este
+        # diálogo — é impedir o estado meio-a-meio (vpad de pé com o grab
+        # pulado), e isso é a JOGADOR-3-FANTASMA-01, ainda por escrever.
+        apply_mode(
+            mode_id,
+            flavor=self._home_flavor_selector.get_active_id(),
+            on_done=_done,
+            on_fail=_fail,
+        )
 
     def _on_home_flavor_changed(self, selector: Any) -> None:
         flavor_id = selector.get_active_id()
