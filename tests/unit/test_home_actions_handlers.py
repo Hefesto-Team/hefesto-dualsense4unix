@@ -106,7 +106,7 @@ def test_sinal_changed_dispara_ipc_do_modo_nativo(
 
     selector.set_active_id("native")
 
-    assert ("native.mode.set", {"enabled": True}) in ipc_calls
+    assert ("native.mode.set", {"enabled": True, "origin": "manual"}) in ipc_calls
 
 
 def test_modo_gamepad_sai_do_nativo_e_liga_com_flavor(
@@ -119,8 +119,8 @@ def test_modo_gamepad_sai_do_nativo_e_liga_com_flavor(
     stub._on_home_mode_changed(stub._home_mode_selector)
 
     assert ipc_calls == [
-        ("native.mode.set", {"enabled": False}),
-        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox"}),
+        ("native.mode.set", {"enabled": False, "origin": "manual"}),
+        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox", "origin": "manual"}),
     ]
 
 
@@ -139,8 +139,8 @@ def test_modo_desktop_desliga_nativo_e_gamepad_preservando_coop(
     stub._on_home_mode_changed(stub._home_mode_selector)
 
     assert ipc_calls == [
-        ("native.mode.set", {"enabled": False}),
-        ("gamepad.emulation.set", {"enabled": False}),
+        ("native.mode.set", {"enabled": False, "origin": "manual"}),
+        ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
         ("mouse.emulation.restore", {}),
     ]
 
@@ -170,7 +170,7 @@ def test_flavor_changed_reaplica_gamepad_com_a_mascara(
     flavor.set_active_id("xbox")
 
     assert ipc_calls == [
-        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox"}),
+        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox", "origin": "manual"}),
     ]
 
 

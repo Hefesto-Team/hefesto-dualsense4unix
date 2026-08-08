@@ -182,3 +182,74 @@ def test_o_porque_esta_escrito_no_codigo() -> None:
             f"o registro do defeito saiu de `{arquivo}`. Sem o porquê, "
             "`origin` sem default parece rigor gratuito e volta a ter default."
         )
+
+
+# --- a janela DECLARA que o clique é dela -------------------------------------
+
+
+#: Os métodos IPC cujo pedido, vindo da janela, é gesto dela — e que o daemon
+#: recusa dentro de um jogo marcado se chegarem sem `origin`.
+METODOS_DE_MODO = ("gamepad.emulation.set", "native.mode.set", "mouse.emulation.set")
+
+#: Os arquivos da janela que disparam esses métodos por clique dela.
+TELAS = (
+    "app/actions/mode_transition.py",
+    "app/actions/home_actions.py",
+    "app/actions/mouse_actions.py",
+)
+
+
+@pytest.mark.parametrize("arquivo", TELAS)
+def test_a_janela_declara_o_gesto_dela(arquivo: str) -> None:
+    """Todo pedido de modo saído da janela leva `origin: "manual"`.
+
+    ARRANQUE A CURA e este teste REPROVA — e o defeito que ele descreve foi
+    MEDIDO na máquina dela: com o Sackboy marcado na allowlist, o botão "Jogar
+    pelo Hefesto" **parou de funcionar**. O clique chegava sem `origin`, era
+    lido como reconciliação, e o daemon o recusava com
+    `gamepad_start_recusado_steam_input`.
+
+    É a metade que faltava da ORIGEM-QUE-MENTE-01: inverter o default protegeu o
+    daemon de clientes distraídos, mas a janela também era um deles. Curar só um
+    lado troca um defeito por outro — antes qualquer coisa virava gesto dela;
+    depois, nem o gesto dela era gesto dela.
+    """
+    texto = (RAIZ / "src" / "hefesto_dualsense4unix" / arquivo).read_text(
+        encoding="utf-8"
+    )
+    for metodo in METODOS_DE_MODO:
+        for trecho in texto.split(f'"{metodo}",')[1:]:
+            # o dicionário de params do pedido vem logo depois do método. Um
+            # trecho que NÃO abre `{` antes de fechar não é um pedido — é o
+            # método citado numa lista/conjunto (`_MODE_DEFINING_METHODS`), e
+            # esses não têm params para declarar.
+            fecha = trecho.index("}")
+            if "{" not in trecho[:fecha]:
+                continue
+            bloco = trecho[: fecha + 1]
+            assert '"origin": "manual"' in bloco, (
+                f"em `{arquivo}` há um pedido a `{metodo}` sem "
+                '`"origin": "manual"`. Dentro de um jogo marcado, o daemon vai '
+                "recusar o clique dela — foi assim que o botão 'Jogar pelo "
+                "Hefesto' parou de funcionar em 08/08."
+            )
+
+
+def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
+    """O contrapeso: reconciliação continua sendo reconciliação.
+
+    `mouse.emulation.restore` devolve a preferência que o daemon persistiu — não
+    há dedo dela nisso. Se ele passasse a viajar como "manual", a cura viraria
+    "tudo é gesto dela", que é exatamente o defeito de origem, agora escrito de
+    propósito.
+    """
+    texto = (
+        RAIZ / "src" / "hefesto_dualsense4unix" / "app/actions/mode_transition.py"
+    ).read_text(encoding="utf-8")
+    trecho = texto[texto.index('"mouse.emulation.restore"') :]
+    bloco = trecho[: trecho.index("}") + 1]
+    assert '"origin"' not in bloco, (
+        "o `mouse.emulation.restore` passou a declarar origem. Ele restaura "
+        "preferência persistida: é reconciliação por definição, e chamá-lo de "
+        "gesto dela reabre o defeito pelo outro lado."
+    )

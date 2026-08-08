@@ -1278,7 +1278,9 @@ class HomeActionsMixin(WidgetAccessMixin):
 
         call_async(
             "gamepad.emulation.set",
-            {"enabled": True, "flavor": flavor_id},
+            # ORIGEM-QUE-MENTE-01: ela clicou no seletor de máscara. Sem declarar,
+            # o daemon lê como reconciliação e recusa dentro de um jogo marcado.
+            {"enabled": True, "flavor": flavor_id, "origin": "manual"},
             _done,
             _fail,
             timeout_s=_MODE_IPC_TIMEOUT_S,

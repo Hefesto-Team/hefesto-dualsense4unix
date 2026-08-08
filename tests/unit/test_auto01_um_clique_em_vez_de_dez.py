@@ -544,7 +544,7 @@ class TestUmDonoSoParaAMascara:
         """Sem escolha explícita, o campo NÃO vai — quem decide é o daemon."""
         plano = mode_transition.plan_mode_transition("gamepad", None)
 
-        assert plano[-1] == ("gamepad.emulation.set", {"enabled": True})
+        assert plano[-1] == ("gamepad.emulation.set", {"enabled": True, "origin": "manual"})
 
     def test_as_duas_portas_de_entrada_pedem_a_mesma_coisa(
         self, monkeypatch: pytest.MonkeyPatch
@@ -594,7 +594,10 @@ class TestUmDonoSoParaAMascara:
         """
         passo = mode_transition.plan_mode_transition("gamepad", "dualsense")[-1]
 
-        assert passo == ("gamepad.emulation.set", {"enabled": True, "flavor": "dualsense"})
+        assert passo == (
+            "gamepad.emulation.set",
+            {"enabled": True, "flavor": "dualsense", "origin": "manual"},
+        )
 
 
 # ---------------------------------------------------------------------------

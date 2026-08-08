@@ -116,8 +116,8 @@ def _methods(calls: list[Call]) -> list[tuple[str, dict[str, Any]]]:
 def test_plano_do_gamepad_sai_do_nativo_antes_de_ligar_o_vpad() -> None:
     """Ordem FIFO do worker: na ordem inversa o vpad nasce com o físico grabado."""
     assert mode_transition.plan_mode_transition("gamepad", "xbox") == [
-        ("native.mode.set", {"enabled": False}),
-        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox"}),
+        ("native.mode.set", {"enabled": False, "origin": "manual"}),
+        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox", "origin": "manual"}),
     ]
 
 
@@ -128,15 +128,15 @@ def test_plano_do_desktop_desliga_nativo_e_gamepad_e_liga_o_mouse() -> None:
     exclusão mútua do daemon derrubar o mouse recém-ligado.
     """
     assert mode_transition.plan_mode_transition("desktop") == [
-        ("native.mode.set", {"enabled": False}),
-        ("gamepad.emulation.set", {"enabled": False}),
+        ("native.mode.set", {"enabled": False, "origin": "manual"}),
+        ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
         ("mouse.emulation.restore", {}),
     ]
 
 
 def test_plano_do_nativo_so_liga_o_nativo() -> None:
     assert mode_transition.plan_mode_transition("native") == [
-        ("native.mode.set", {"enabled": True})
+        ("native.mode.set", {"enabled": True, "origin": "manual"})
     ]
 
 
@@ -155,7 +155,7 @@ def test_plano_sem_flavor_nao_escolhe_mascara_nenhuma() -> None:
     escolher por ela.
     """
     plan = mode_transition.plan_mode_transition("gamepad", None)
-    assert plan[-1] == ("gamepad.emulation.set", {"enabled": True})
+    assert plan[-1] == ("gamepad.emulation.set", {"enabled": True, "origin": "manual"})
     assert "flavor" not in plan[-1][1]
 
 
@@ -165,7 +165,7 @@ def test_plano_com_flavor_explicito_manda_o_campo() -> None:
 
     assert plan[-1] == (
         "gamepad.emulation.set",
-        {"enabled": True, "flavor": "dualsense"},
+        {"enabled": True, "flavor": "dualsense", "origin": "manual"},
     )
 
 
@@ -225,8 +225,8 @@ def test_emulacao_xbox_sai_do_nativo_antes_de_ligar_o_vpad(ipc: list[Call]) -> N
     _EmulStub().on_emulation_gamepad_xbox(None)
 
     assert _methods(ipc) == [
-        ("native.mode.set", {"enabled": False}),
-        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox"}),
+        ("native.mode.set", {"enabled": False, "origin": "manual"}),
+        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox", "origin": "manual"}),
     ]
 
 
@@ -236,8 +236,8 @@ def test_emulacao_dualsense_sai_do_nativo_antes_de_ligar_o_vpad(
     _EmulStub().on_emulation_gamepad_dualsense(None)
 
     assert _methods(ipc) == [
-        ("native.mode.set", {"enabled": False}),
-        ("gamepad.emulation.set", {"enabled": True, "flavor": "dualsense"}),
+        ("native.mode.set", {"enabled": False, "origin": "manual"}),
+        ("gamepad.emulation.set", {"enabled": True, "flavor": "dualsense", "origin": "manual"}),
     ]
 
 
@@ -247,8 +247,8 @@ def test_emulacao_desligado_tambem_sai_do_nativo(ipc: list[Call]) -> None:
     _EmulStub().on_emulation_gamepad_off(None)
 
     assert _methods(ipc) == [
-        ("native.mode.set", {"enabled": False}),
-        ("gamepad.emulation.set", {"enabled": False}),
+        ("native.mode.set", {"enabled": False, "origin": "manual"}),
+        ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
         ("mouse.emulation.restore", {}),
     ]
 

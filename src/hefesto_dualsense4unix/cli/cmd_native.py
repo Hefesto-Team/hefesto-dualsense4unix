@@ -42,7 +42,7 @@ def _call_sync(method: str, params: dict[str, Any] | None = None) -> Any:
 @app.command("on")
 def cmd_on() -> None:
     """Liga o Modo Nativo — solta o controle para o jogo."""
-    result = _call_sync("native.mode.set", {"enabled": True})
+    result = _call_sync("native.mode.set", {"enabled": True, "origin": "manual"})
     ok = isinstance(result, dict) and bool(result.get("native_mode"))
     if ok:
         console.print("[green]Modo Nativo LIGADO[/green] — controle solto para o jogo.")
@@ -57,7 +57,7 @@ def cmd_on() -> None:
 @app.command("off")
 def cmd_off() -> None:
     """Desliga o Modo Nativo — o hefesto reassume (restaura o último perfil)."""
-    _call_sync("native.mode.set", {"enabled": False})
+    _call_sync("native.mode.set", {"enabled": False, "origin": "manual"})
     console.print("[green]Modo Nativo DESLIGADO[/green] — hefesto reassumiu o controle.")
 
 

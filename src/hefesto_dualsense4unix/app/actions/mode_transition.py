@@ -84,15 +84,31 @@ def plan_mode_transition(
 
     Levanta ``ValueError`` em modo desconhecido — um modo novo tem que passar
     por aqui em vez de virar um terceiro dono.
+
+    ORIGEM-QUE-MENTE-01 (08/08/2026): todo passo que define modo viaja com
+    ``origin="manual"``. É AQUI que o clique dela vira pedido, e o daemon
+    precisa saber disso: desde a cura da origem, o silêncio no protocolo
+    significa "automático", e automático NÃO fura o portão da allowlist do
+    Steam Input.
+
+    MEDIDO na máquina dela, e o custo foi imediato: com o Sackboy marcado, o
+    botão "Jogar pelo Hefesto" parou de funcionar — o clique chegava sem
+    ``origin``, era lido como reconciliação e o daemon o recusava com
+    ``gamepad_start_recusado_steam_input``. A cura tinha um contrapeso escrito
+    no teste (*"quem declara manual continua sendo tratado como gesto dela"*) e
+    faltava esta metade: **a janela precisa DECLARAR**.
+
+    O ``mouse.emulation.restore`` não leva ``origin``: ele restaura a
+    preferência persistida, que é reconciliação por definição.
     """
     if mode_id == MODE_NATIVE:
-        return [("native.mode.set", {"enabled": True})]
+        return [("native.mode.set", {"enabled": True, "origin": "manual"})]
     if mode_id == MODE_GAMEPAD:
-        ligar: dict[str, Any] = {"enabled": True}
+        ligar: dict[str, Any] = {"enabled": True, "origin": "manual"}
         if flavor:
             ligar["flavor"] = flavor
         return [
-            ("native.mode.set", {"enabled": False}),
+            ("native.mode.set", {"enabled": False, "origin": "manual"}),
             ("gamepad.emulation.set", ligar),
         ]
     if mode_id == MODE_DESKTOP:
@@ -106,8 +122,8 @@ def plan_mode_transition(
         # último: ligar o mouse antes de o gamepad sair faria a exclusão mútua
         # do daemon derrubar o mouse recém-ligado.
         return [
-            ("native.mode.set", {"enabled": False}),
-            ("gamepad.emulation.set", {"enabled": False}),
+            ("native.mode.set", {"enabled": False, "origin": "manual"}),
+            ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
             ("mouse.emulation.restore", {}),
         ]
     raise ValueError(f"modo desconhecido: {mode_id!r}")
