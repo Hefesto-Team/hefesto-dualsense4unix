@@ -9,7 +9,7 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions import relancar
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor
@@ -149,10 +149,34 @@ class WidgetAccessMixin:
         return False
 
     def _relancar_o_jogo(self) -> None:
-        """Fecha a Steam (e o jogo com ela) e pede a abertura de volta.
+        """Fecha a Steam e o jogo, espera, e ABRE o jogo de novo.
 
-        Fica num método próprio para o caminho destrutivo ter UM dono, e para o
-        teste poder trocá-lo por um dublê sem tocar no resto.
+        RELANCAR-AGORA-01 (08/08/2026) — corrige um defeito que ela viu na tela
+        antes de qualquer teste pegar: *"a última opção deveria ser aplicar agora
+        e reiniciar jogo. Pior que essa terceira opção nem faz isso né? Só fecha
+        mesmo, não sei nem se aplicou."*
+
+        Estava certa nas três coisas. O botão dizia "Fechar o jogo e abrir de
+        novo", chamava `stop_steam()` e acabava ali — **não abria nada**, e o
+        docstring anterior desta função afirmava que abria. Um botão que promete
+        e não cumpre é pior que um botão que não existe: ela fica sem o jogo e
+        sem saber se a mudança valeu.
+
+        A sequência, e cada passo tem um porquê:
+
+        1. **descobrir o appid ANTES de fechar** — depois do `stop_steam` o
+           processo do jogo já morreu, e com ele a única pista de qual jogo era
+           (`SteamLaunch AppId=`);
+        2. **fechar** com o mesmo `stop_steam` do precedente HONESTIDADE-STEAM-01,
+           que já espera até 30 s e escala se preciso;
+        3. **reabrir por `steam://rungameid/<appid>`**, que é como a própria Steam
+           abre pelos atalhos — e é o que faz o jogo nascer COM o wrapper do
+           Hefesto, lendo o `launch_env` novo. Chamar o executável direto pularia
+           o wrapper, e a mudança dela não valeria.
+
+        Roda inteiro num worker: o `stop_steam` bloqueia por até 30 s, e a janela
+        não pode congelar nesse tempo. O toast final é despachado de volta pela
+        thread do GTK.
         """
 
         def _fazer() -> None:
@@ -160,8 +184,25 @@ class WidgetAccessMixin:
                 steam_launch_options as slo,
             )
 
+            appid = None
             with contextlib.suppress(Exception):
-                slo.stop_steam()
+                appid = slo.steam_game_running_appid()
+
+            fechou = False
+            with contextlib.suppress(Exception):
+                fechou = bool(slo.stop_steam())
+
+            reabriu = False
+            if appid is not None:
+                with contextlib.suppress(Exception):
+                    reabriu = bool(slo.start_steam_game(appid))
+
+            GLib.idle_add(
+                self._toast_do_relancar,
+                relancar.toast_do_relancamento(
+                    fechou=fechou, reabriu=reabriu, appid=appid
+                ),
+            )
 
         with contextlib.suppress(Exception):
             _get_executor().submit(_fazer)

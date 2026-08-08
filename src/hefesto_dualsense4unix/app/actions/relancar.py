@@ -170,7 +170,12 @@ TITULO: Final = "Posso fechar o jogo e abrir de novo?"
 #: toca no processo do jogo dela.
 ROTULO_CANCELAR: Final = "Cancelar"
 ROTULO_DEPOIS: Final = "Aplicar na próxima abertura"
-ROTULO_FECHAR: Final = "Fechar o jogo e abrir de novo"
+#: RELANCAR-AGORA-01 (08/08/2026): ela leu o rótulo e apontou o que ele deveria
+#: dizer — *"a última opção deveria ser aplicar agora e reiniciar jogo"*. O nome
+#: antigo ("Fechar o jogo e abrir de novo") descrevia o MEIO e calava o fim: ela
+#: não clica ali para fechar o jogo, clica para a mudança valer AGORA. E, na
+#: versão anterior, ele nem reabria — só fechava.
+ROTULO_FECHAR: Final = "Aplicar agora e reiniciar o jogo"
 
 
 def toast_da_escolha(escolha: Escolha, *, jogo: str | None = None) -> str:
@@ -184,3 +189,39 @@ def toast_da_escolha(escolha: Escolha, *, jogo: str | None = None) -> str:
             "vale."
         )
     return "Pronto — o jogo fechou, a mudança valeu e eu pedi a abertura à Steam."
+
+
+def toast_do_relancamento(
+    *, fechou: bool, reabriu: bool, appid: int | None = None
+) -> str:
+    """O que o rodapé diz DEPOIS do relançamento — o que de fato aconteceu.
+
+    RELANCAR-AGORA-01. A frase anterior era uma só, fixa, dizendo "o jogo fechou,
+    a mudança valeu e eu pedi a abertura à Steam" — dita ANTES de qualquer uma
+    das três coisas acontecer. Ela viu e disse: *"não sei nem se aplicou"*.
+
+    Agora há uma frase por desfecho, e nenhuma promete o que não foi conferido.
+    Em especial: reabrir é **pedir** à Steam. Ela leva de segundos a minutos
+    (shader cache, atualização), e afirmar "abriu" seria mentir de novo — no
+    mesmo lugar, na segunda tentativa.
+    """
+    if not fechou:
+        return (
+            "A Steam não fechou — a mudança está gravada e vale na próxima vez "
+            "que você abrir o jogo."
+        )
+    if not reabriu:
+        if appid is None:
+            return (
+                "Fechei a Steam e a mudança valeu. Não consegui identificar qual "
+                "jogo reabrir — abra pela Steam quando quiser."
+            )
+        return (
+            "Fechei a Steam e a mudança valeu, mas não consegui pedir a abertura "
+            "do jogo — abra pela Steam."
+        )
+    return (
+        "Pronto: fechei o jogo, a mudança valeu, e pedi à Steam para abrir de "
+        "novo. Pode demorar alguns segundos."
+    )
+
