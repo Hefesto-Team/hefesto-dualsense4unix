@@ -21,8 +21,29 @@ StartLimitBurst=5
 [Service]
 Type=simple
 ExecStart=/usr/bin/bt-agent --capability=NoInputNoOutput
-Restart=on-failure
-RestartSec=5
+# AGENTE-QUE-SOME-01 (08/08/2026) — a terceira camada desta mesma história, e a
+# medição que faltava: quantas vezes o agente cai, e por quanto tempo ele fica
+# fora. MEDIDO no journal dela: **36 quedas e 36 SIGKILL desde 29/07** — cem por
+# cento, porque o `bt-agent` não trata SIGTERM e NUNCA sai sozinho. Cada ciclo
+# deixava de 3 a 5 s sem agente registrado.
+#
+# Por que esses segundos custam caro: com `JustWorksRepairing=confirm` no nosso
+# `/etc/bluetooth/main.conf`, repareamento SEM agente é RECUSADO — não há quem
+# confirme. A janela não é detalhe de ciclo de vida; é tempo em que o controle
+# dela não consegue voltar. E ela caiu justo às 00:56:26 de 08/08, quando a vigia
+# reiniciou o `bluetooth.service` e os quatro controles precisavam repare-ar.
+#
+# `always` em vez de `on-failure`: com o `SuccessExitStatus=SIGKILL` abaixo — que
+# existe por bom motivo, ver BT-AGENT-MORTO-FICA-MORTO-01 — a morte por SIGKILL
+# passou a ser saída LIMPA, e `on-failure` não religa saída limpa. As duas linhas
+# se anulavam. Para este serviço não há desfecho em que ficar fora seja correto:
+# sem ele, o pareamento dela não funciona.
+Restart=always
+# 5 s eram o grosso da janela medida. 250 ms é o menor valor que ainda evita laço
+# de reinício apertado, e o `StartLimitBurst=5/60s` do bloco [Unit] continua de
+# guarda contra o agente que morre em rajada (MEDIDO: esse limite nunca foi
+# atingido em 36 quedas).
+RestartSec=250ms
 # BT-AGENT-TRAVA-O-RESTART-01 (04/08/2026) — MEDIDO no crash de 03/08.
 #
 # O `bt-agent` do bluez-tools NÃO responde ao SIGTERM quando o bluetoothd morre
@@ -43,7 +64,12 @@ RestartSec=5
 # 3 s e SIGKILL. É seguro: o `bt-agent` é um agente de pareamento sem estado em
 # disco — matá-lo não corrompe bond nenhum, e o pareamento em curso (se houver)
 # falha do mesmo jeito, porque o bluetoothd que o serve já morreu.
-TimeoutStopSec=3s
+# AGENTE-QUE-SOME-01: 3 s viraram 1 s. O processo não trata SIGTERM e nunca sai
+# sozinho — os 36 de 36 provam —, então esperar três segundos por uma saída limpa
+# que não vem só alonga a janela sem agente. O SIGKILL abaixo é o caminho NORMAL
+# deste serviço, não a exceção; 1 s é a margem para o caso raro de uma versão do
+# `bt-agent` que passe a tratar o sinal.
+TimeoutStopSec=1s
 SendSIGKILL=yes
 # BT-AGENT-MORTO-FICA-MORTO-01, 04/08/2026 — MEDIDO com ela, e é o defeito que a
 # linha acima INTRODUZIU.

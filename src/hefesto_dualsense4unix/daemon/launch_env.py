@@ -568,8 +568,8 @@ def _leitura_cega(wm_class: str | None) -> bool:
 
     PARTIDA-PICOTADA-01. Duas famílias, as duas medidas no journal dela:
     o detector não leu nada (`None`, vazio ou ``"unknown"``), ou a janela em
-    foco é a do próprio Hefesto. Nenhuma das duas significa "o jogo saiu da
-    frente", e tratá-las como se significassem é o que picotava a partida.
+    foco é a desta própria aplicação. Nenhuma das duas é evidência de outro app
+    em foco, e tratá-las como se fossem é o que picotava a partida.
     """
     if wm_class is None:
         return True
@@ -620,9 +620,9 @@ def steam_input_exception_appid(
     informação faça o mesmo. A diferença é o defeito inteiro, e ele foi medido:
     em 08/08, entre 01:43 e 03:03, oito ciclos de suspender/retomar vpad no meio
     da partida dela, e **todos** os encerramentos vieram colados a um tique cego
-    — `wm_class=unknown` (o backend não leu) ou a classe da PRÓPRIA janela do
-    Hefesto, quando ela ia mexer na configuração. Nenhum deles é "o jogo saiu da
-    frente". O contraste fecha a conta: no sábado 01-02/08 foram 15 quedas de
+    — `wm_class=unknown` (o backend não leu) ou a classe da PRÓPRIA janela desta
+    aplicação, quando ela ia mexer na configuração. Nenhum deles é evidência de
+    outro app em foco. O contraste fecha a conta: no sábado 01-02/08 foram 15 quedas de
     vpad em **48 h**; em 08/08, **12 em 1h25** — vinte e sete vezes mais.
 
     A cura é a mesma disciplina que o autoswitch já aplica em
