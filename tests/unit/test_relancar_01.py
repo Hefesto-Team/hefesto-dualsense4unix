@@ -237,3 +237,53 @@ def test_o_toast_nunca_afirma_que_o_jogo_abriu() -> None:
         assert promessa not in ok.lower(), (
             f"o toast afirma {promessa!r} — só sabemos que o pedido saiu."
         )
+
+
+# --- RELANCAR-ORDEM-01: pergunta onde a decisão está COMPLETA ----------------
+
+
+def test_o_modo_nao_pergunta_porque_a_decisao_ainda_nao_fechou() -> None:
+    """Trocar o modo não abre diálogo — decisão dela, vendo a tela.
+
+    A máscara ("O jogo vê o controle como") só EXISTE dentro de "Jogar pelo
+    Hefesto": o fluxo real é escolher o modo → a máscara aparecer → escolher a
+    máscara. Perguntar no primeiro passo é pedir para reiniciar o jogo por uma
+    configuração que ela ainda vai fazer.
+
+    Ela viu e apontou: *"como já aparece a tela de aplicar e reiniciar se nem sei
+    o que ele vai aplicar?"*. E perguntar nos dois produziria DOIS diálogos numa
+    sequência só — o "caos" que ela descreveu.
+
+    ARRANQUE A CURA (ponha "modo" de volta em `EXIGEM_RELANCAR`) e este teste
+    REPROVA.
+    """
+    assert "modo" not in r.EXIGEM_RELANCAR, (
+        "`modo` voltou a perguntar. O diálogo apareceria ANTES de ela poder "
+        "escolher a máscara, pedindo para reiniciar o jogo sem ela saber pelo "
+        "quê. Ver RELANCAR-ORDEM-01."
+    )
+    assert r.precisa_perguntar(mudanca="modo", jogo_aberto=True) is False
+
+
+def test_a_mascara_continua_perguntando() -> None:
+    """O contrapeso: tirar do modo não pode esvaziar a cura.
+
+    A máscara é onde a decisão fecha, e é a mudança que de fato chega ao jogo
+    (`SDL_JOYSTICK_HIDAPI` no Xbox, vpad recriado nos dois). Se ela também
+    parasse de perguntar, o produto voltaria a trocar o dono do input embaixo de
+    um jogo em curso — que é o defeito de origem.
+    """
+    assert "mascara" in r.EXIGEM_RELANCAR
+    assert r.precisa_perguntar(mudanca="mascara", jogo_aberto=True) is True
+
+
+def test_a_frase_do_modo_continua_existindo() -> None:
+    """O texto do modo fica, porque o diálogo pode voltar a usá-lo.
+
+    Quando a JOGADOR-3-FANTASMA-01 for curada de verdade, o caminho do modo pode
+    passar a oferecer o relançamento. Apagar a frase agora obrigaria a próxima
+    pessoa a reescrevê-la — e a reescrever pior, sem o léxico da tela.
+    """
+    assert "O que o controle faz agora" in r.frase_da_mudanca(
+        "modo", "Jogar pelo Hefesto"
+    )
