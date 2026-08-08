@@ -107,7 +107,22 @@ class TestDropinResilience:
     def test_dropin_tem_watchdog_restart_e_snapshot_na_parada(self) -> None:
         text = DROPIN.read_text(encoding="utf-8")
         assert re.search(r"^Restart=on-failure$", text, re.M)
-        assert re.search(r"^WatchdogSec=\d+$", text, re.M)
+        # BLUETOOTHD-MORTO-POR-NOS-01 (08/08/2026): este portão aceitava
+        # `WatchdogSec=\d+` — QUALQUER número — e por isso ficou verde enquanto o
+        # valor 30 matava o bluetoothd dela com SIGABRT às 00:27:35, levando os
+        # quatro pareamentos junto. Um portão que aceita qualquer valor não trava
+        # valor nenhum: ele trava a PRESENÇA da linha, que nunca foi o risco.
+        #
+        # Agora exige o zero, e exige que ele esteja escrito: o pacote do BlueZ
+        # entrega a linha COMENTADA, e ligá-la foi decisão nossa — desligar
+        # também tem de ser, por escrito.
+        assert re.search(r"^WatchdogSec=0$", text, re.M), (
+            "o `WatchdogSec` do drop-in não é 0. Ligar o watchdog do systemd "
+            "sobre o bluetoothd faz o systemd MATAR o daemon quando ele demora a "
+            "responder — e ele demora por motivos legítimos (um `sdptool browse` "
+            "medido em 35 s). Ver "
+            "docs/process/sprints/2026-08-08-BLUETOOTHD-MORTO-POR-NOS-01-*.md"
+        )
         # "-" prefixado: falha do snapshot nunca contamina o stop do serviço.
         assert re.search(
             r"^ExecStopPost=-/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot\.sh",
