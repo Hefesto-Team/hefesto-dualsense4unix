@@ -16,7 +16,7 @@ import contextlib
 import time
 from collections.abc import Callable
 from dataclasses import asdict, replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.core.trigger_effects import off as trigger_off
@@ -29,6 +29,35 @@ if TYPE_CHECKING:
     from hefesto_dualsense4unix.core.controller import IController
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
     from hefesto_dualsense4unix.daemon.state_store import StateStore
+
+
+def origem_do_pedido(params: dict[str, Any] | None) -> Literal["manual", "profile"]:
+    """A origem declarada pelo cliente. Silêncio = automático, nunca "manual".
+
+    ORIGEM-QUE-MENTE-01 (08/08/2026). Os setters do daemon tinham `origin`
+    com default `"manual"`, e o protocolo IPC não expunha o campo — então o
+    daemon lia a AUSÊNCIA de informação como a mão dela, e um cliente que
+    apenas reconciliava estado era promovido a gesto humano.
+
+    O custo, MEDIDO: com o Sackboy aberto e marcado na allowlist do Steam
+    Input, isso furou o portão JOGO-01 (`gamepad.py`, `if origin != "manual"`),
+    devolveu o gamepad virtual com o grab e o esconde-esconde pulados, e o jogo
+    passou a ver o controle físico E o virtual. Ela fotografou um "Jogador 3"
+    fantasma. Ver JOGADOR-3-FANTASMA-01.
+
+    A regra aqui é assimétrica de propósito, e é a inversão do default antigo:
+    **"manual" só quando o cliente DIZ que é manual.** Errar para "profile"
+    custa, no pior caso, um gesto dela que não fura o portão — e o produto lhe
+    diz por quê. Errar para "manual", como antes, custa o controle dela no meio
+    da partida.
+    """
+    bruto = (params or {}).get("origin")
+    if bruto is None:
+        return "profile"
+    if bruto not in ("manual", "profile"):
+        raise ValueError("'origin' precisa ser 'manual' ou 'profile'")
+    return cast('Literal["manual", "profile"]', bruto)
+
 
 logger = get_logger(__name__)
 
@@ -1559,7 +1588,7 @@ class IpcHandlersMixin:
             enabled = raw
         else:
             raise ValueError("native.mode.set exige 'enabled' boolean ou omitido")
-        new_state = self.daemon.set_native_mode(enabled)
+        new_state = self.daemon.set_native_mode(enabled, origin=origem_do_pedido(params))
         return {"status": "ok", "native_mode": bool(new_state)}
 
     async def _handle_daemon_state_full(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -3134,7 +3163,10 @@ class IpcHandlersMixin:
             }
 
         ok = self.daemon.set_mouse_emulation(
-            enabled=enabled, speed=speed, scroll_speed=scroll_speed
+            enabled=enabled,
+            speed=speed,
+            scroll_speed=scroll_speed,
+            origin=origem_do_pedido(params),
         )
         return {"status": "ok" if ok else "failed", "enabled": enabled and ok}
 
@@ -3223,7 +3255,9 @@ class IpcHandlersMixin:
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar o gamepad virtual")
 
-        ok = self.daemon.set_gamepad_emulation(enabled=enabled, flavor=flavor)
+        ok = self.daemon.set_gamepad_emulation(
+            enabled=enabled, flavor=flavor, origin=origem_do_pedido(params)
+        )
         active_flavor = getattr(self.daemon.config, "gamepad_flavor", None)
         return {
             "status": "ok" if ok else "failed",
@@ -3278,7 +3312,9 @@ class IpcHandlersMixin:
                 "players": players_recusa,
                 "motivo": COOP_SEMPRE_LIGADO_MOTIVO,
             }
-        effective = self.daemon.set_coop_enabled(enabled)
+        effective = self.daemon.set_coop_enabled(
+            enabled, origin=origem_do_pedido(params)
+        )
         coop = getattr(self.daemon, "_coop_manager", None)
         players = coop.player_count() if coop is not None else 1
         return {"status": "ok", "enabled": bool(effective), "players": players}

@@ -122,7 +122,7 @@ class TestP1:
         self, wired: tuple[_FakeDaemon, dict[str, Any]]
     ) -> None:
         daemon, capturado = wired
-        assert gp.start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
         # A calibração do PRIMÁRIO viajou até a factory do vpad.
         assert capturado["calibration_0x05"] == _CALIB
         reader = daemon._motion_reader
@@ -137,7 +137,7 @@ class TestP1:
         self, wired: tuple[_FakeDaemon, dict[str, Any]]
     ) -> None:
         daemon, _ = wired
-        gp.start_gamepad_emulation(daemon, flavor="dualsense")
+        gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
         device = daemon._gamepad_device
         gp.stop_gamepad_emulation(daemon)
         assert daemon._motion_reader is None
@@ -154,7 +154,7 @@ class TestP1:
         monkeypatch.setattr(
             vp, "make_virtual_pad", lambda *_a, **_k: _FakeVpad(backend="uinput")
         )
-        gp.start_gamepad_emulation(daemon, flavor="dualsense")
+        gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
         assert daemon._motion_reader is None
 
     def test_backend_sem_hidraw_nao_ganha_reader(
@@ -163,7 +163,7 @@ class TestP1:
         daemon, _ = wired
         del daemon.controller.__class__.hidraw_path
         try:
-            gp.start_gamepad_emulation(daemon, flavor="dualsense")
+            gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
             assert daemon._motion_reader is None
         finally:
             _FakeController.hidraw_path = lambda self, uniq=None: "/dev/hidraw9"  # type: ignore[method-assign]

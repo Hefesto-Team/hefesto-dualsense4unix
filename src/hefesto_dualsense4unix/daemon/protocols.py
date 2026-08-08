@@ -20,7 +20,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.core.controller import ControllerState, IController
@@ -140,11 +140,23 @@ class DaemonProtocol(Protocol):
         """Substitui a config em runtime (usado pelo IPC `daemon.set_config`)."""
         ...
 
+    # ORIGEM-QUE-MENTE-01 (08/08/2026): os quatro setters abaixo declaram
+    # `origin` SEM default, e é keyword-only. Antes o protocolo NÃO mencionava
+    # `origin` — a armadilha morava no contrato, não só na implementação: quem
+    # programasse contra este protocolo não tinha como saber que existia essa
+    # decisão a tomar, e a implementação assumia `"manual"` no silêncio.
+    #
+    # O custo, MEDIDO: um cliente reconciliando estado furou o portão JOGO-01
+    # com o jogo da allowlist aberto, o gamepad virtual voltou com o grab
+    # pulado, e o jogo passou a ver o físico E o virtual. Ver
+    # JOGADOR-3-FANTASMA-01.
     def set_mouse_emulation(
         self,
         enabled: bool,
         speed: int | None = None,
         scroll_speed: int | None = None,
+        *,
+        origin: Literal["manual", "profile"],
     ) -> bool:
         """Liga/desliga emulação de mouse e ajusta velocidades."""
         ...
@@ -166,11 +178,19 @@ class DaemonProtocol(Protocol):
         """
         ...
 
-    def set_gamepad_emulation(self, enabled: bool, flavor: str | None = None) -> bool:
+    def set_gamepad_emulation(
+        self,
+        enabled: bool,
+        flavor: str | None = None,
+        *,
+        origin: Literal["manual", "profile"],
+    ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
         ...
 
-    def set_coop_enabled(self, enabled: bool) -> bool:
+    def set_coop_enabled(
+        self, enabled: bool, *, origin: Literal["manual", "profile"]
+    ) -> bool:
         """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01)."""
         ...
 
@@ -202,7 +222,13 @@ class DaemonProtocol(Protocol):
         """True se o Modo Nativo está ativo (FEAT-NATIVE-MODE-01)."""
         ...
 
-    def set_native_mode(self, enabled: bool, *, reapply: bool = True) -> bool:
+    def set_native_mode(
+        self,
+        enabled: bool,
+        *,
+        reapply: bool = True,
+        origin: Literal["manual", "profile"],
+    ) -> bool:
         """Liga/desliga o Modo Nativo — solta o controle para o jogo nativo."""
         ...
 

@@ -832,7 +832,7 @@ class Daemon:
         *,
         reapply: bool = True,
         restore_stash: bool = False,
-        origin: Literal["manual", "profile"] = "manual",
+        origin: Literal["manual", "profile"],
     ) -> bool:
         """Liga/desliga o Modo Nativo — "release total" do controle.
 
@@ -1083,10 +1083,12 @@ class Daemon:
         stop_hotkey_manager(self)
         start_hotkey_manager(self)
         if old.mouse_emulation_enabled != new_config.mouse_emulation_enabled:
+            # ORIGEM-QUE-MENTE-01: aplicar config nova é reconciliação.
             self.set_mouse_emulation(
                 new_config.mouse_emulation_enabled,
                 speed=new_config.mouse_speed,
                 scroll_speed=new_config.mouse_scroll_speed,
+                origin="profile",
             )
         if old.keyboard_emulation_enabled != new_config.keyboard_emulation_enabled:
             if new_config.keyboard_emulation_enabled:
@@ -1105,7 +1107,7 @@ class Daemon:
         speed: int | None = None,
         scroll_speed: int | None = None,
         *,
-        origin: Literal["manual", "profile"] = "manual",
+        origin: Literal["manual", "profile"],
     ) -> bool:
         """Liga/desliga emulação de mouse e atualiza velocidades. Usado pelo IPC.
 
@@ -1177,7 +1179,8 @@ class Daemon:
         pref, speed, scroll_speed = load_mouse_preference()
         if pref is None:
             pref = True
-        ok = self.set_mouse_emulation(pref, speed, scroll_speed)
+        # ORIGEM-QUE-MENTE-01: restaurar preferência salva é reconciliação.
+        ok = self.set_mouse_emulation(pref, speed, scroll_speed, origin="profile")
         logger.info("mouse_preference_restored", enabled=pref, ok=ok)
         return bool(pref and ok)
 
@@ -1268,12 +1271,30 @@ class Daemon:
             # pedido (`stop_keyboard_emulation` é idempotente e best-effort).
             return ativo if enabled else True
 
+    # ORIGEM-QUE-MENTE-01 (08/08/2026): `origin` NÃO tem default, e é
+    # keyword-only. O default antigo era `"manual"`, e isso fazia o daemon
+    # ler a AUSÊNCIA de informação como a mão dela — quem esquecesse o
+    # parâmetro era promovido a gesto humano.
+    #
+    # O que isso custou, MEDIDO: com o Sackboy aberto e marcado na allowlist
+    # do Steam Input, um cliente reconciliando estado chamou o setter sem
+    # `origin`; o portão JOGO-01 (`gamepad.py`, `if origin != "manual"`)
+    # deixou passar, o gamepad virtual voltou com o grab e o esconde-esconde
+    # pulados, e o jogo passou a ver o físico E o virtual. Ela fotografou um
+    # "Jogador 3" fantasma. Ver JOGADOR-3-FANTASMA-01.
+    #
+    # E o ramo `origin == "manual"` ainda carimba `_emu_manual_ts`, que cala
+    # o perfil por 30 s: o cliente distraído não só furava o portão como
+    # silenciava o autoswitch depois.
+    #
+    # Sem default, o `mypy` obriga cada chamador a DECLARAR o que é. Silêncio
+    # deixa de ser resposta.
     def set_gamepad_emulation(
         self,
         enabled: bool,
         flavor: str | None = None,
         *,
-        origin: Literal["manual", "profile"] = "manual",
+        origin: Literal["manual", "profile"],
     ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara. Usado pelo IPC.
 
@@ -1363,7 +1384,7 @@ class Daemon:
         self,
         enabled: bool,
         *,
-        origin: Literal["manual", "profile"] = "manual",
+        origin: Literal["manual", "profile"],
     ) -> bool:
         """Liga o co-op local (FEAT-DSX-COOP-LOCAL-01). Usado pelo IPC.
 

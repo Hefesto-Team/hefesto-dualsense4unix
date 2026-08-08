@@ -133,7 +133,7 @@ def test_reload_config_recria_hotkey_manager():
 
 
 def test_reload_config_mouse_ligado_chama_set_mouse_emulation(monkeypatch):
-    """Reload com mouse_emulation_enabled=True chama set_mouse_emulation(True)."""
+    """Reload com mouse_emulation_enabled=True chama set_mouse_emulation(True, origin="manual")."""
     daemon = _make_daemon(mouse_emulation_enabled=False)
     daemon._start_hotkey_manager()
 
@@ -143,6 +143,7 @@ def test_reload_config_mouse_ligado_chama_set_mouse_emulation(monkeypatch):
         enabled: bool,
         speed: int | None = None,
         scroll_speed: int | None = None,
+        **_kw: object,  # ORIGEM-QUE-MENTE-01: o `origin` agora viaja explícito
     ) -> bool:
         chamadas.append((enabled, speed, scroll_speed))
         return True
