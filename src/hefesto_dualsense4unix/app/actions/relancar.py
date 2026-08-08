@@ -187,15 +187,26 @@ ROTULO_DEPOIS: Final = "Aplicar na próxima abertura"
 ROTULO_FECHAR: Final = "Aplicar agora e reiniciar o jogo"
 
 
-def toast_da_escolha(escolha: Escolha, *, jogo: str | None = None) -> str:
+def toast_da_escolha(
+    escolha: Escolha, *, jogo: str | None = None, guardou: bool = True
+) -> str:
     """O que o rodapé diz depois. Cada saída tem a sua frase honesta."""
     if escolha == "cancelar":
         return "Nada mudou — o jogo continua como estava."
     if escolha == "na_proxima_abertura":
         alvo = jogo or "o jogo"
+        if guardou:
+            return (
+                f"Guardado — aplico assim que {alvo} fechar. Na próxima abertura "
+                "já vale."
+            )
+        # DEPOIS-QUE-APLICAVA-AGORA-01: quando a mudança recria dispositivo, o
+        # produto NÃO tem onde guardá-la sem aplicá-la ao vivo — e aplicar ao
+        # vivo é o dano. Dizer "guardado" aqui seria a mentira mais cara possível:
+        # ela terminaria a partida confiando, e a mudança não estaria lá.
         return (
-            f"Guardado — aplico assim que {alvo} fechar. Na próxima abertura já "
-            "vale."
+            "Não mudei nada agora — isto só vale quando o jogo abre. Refaça a "
+            f"escolha depois de fechar {alvo}."
         )
     return "Pronto — o jogo fechou, a mudança valeu e eu pedi a abertura à Steam."
 
