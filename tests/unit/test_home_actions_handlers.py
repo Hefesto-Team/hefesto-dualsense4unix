@@ -57,6 +57,14 @@ class _HomeStub:
     _on_home_mode_changed = HomeActionsMixin._on_home_mode_changed
     _on_home_flavor_changed = HomeActionsMixin._on_home_flavor_changed
 
+    # RELANCAR-01 (08/08/2026): os handlers passam pelo `_perguntar_antes_de_
+    # relancar` da base antes de aplicar. Aqui ele devolve False — "não assumi o
+    # gesto" — que é EXATAMENTE o caminho real quando não há jogo aberto, e é o
+    # que estes testes exercitam. O caminho com jogo tem testes próprios em
+    # `test_relancar_01.py`, sem GTK.
+    def _perguntar_antes_de_relancar(self, **_kw: object) -> bool:
+        return False
+
     def __init__(self) -> None:
         self._home_guard = False
         self._home_mode_desc = _FakeLabel()

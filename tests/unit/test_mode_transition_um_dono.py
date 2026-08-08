@@ -294,6 +294,11 @@ class _FakeLabel:
 class _HomeStub:
     _on_home_mode_changed = home_actions.HomeActionsMixin._on_home_mode_changed
 
+    # RELANCAR-01: sem jogo aberto, o gancho devolve False e o handler aplica
+    # direto — que é o caminho que este arquivo mede (o plano de transição).
+    def _perguntar_antes_de_relancar(self, **_kw: object) -> bool:
+        return False
+
     def __init__(self, flavor: str) -> None:
         self._home_guard = False
         self._home_mode_desc = _FakeLabel()

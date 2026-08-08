@@ -2,12 +2,20 @@
 # ruff: noqa: E402
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Callable
 from typing import Any
 
 import gi
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
+
+from hefesto_dualsense4unix.app.actions import relancar
+from hefesto_dualsense4unix.app.ipc_bridge import _get_executor
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def numero_do_controle(entry: dict[str, Any]) -> int:
@@ -42,6 +50,139 @@ class WidgetAccessMixin:
     """
 
     builder: Gtk.Builder
+
+    # --- RELANCAR-01: o que só vale quando o jogo reabre --------------------
+
+    #: Ids de resposta do diálogo. Positivos de propósito: os `Gtk.ResponseType`
+    #: nativos são negativos, então não há colisão (mesmo padrão do
+    #: `_RESP_RENOMEAR`).
+    _RESP_DEPOIS = 210
+    _RESP_FECHAR_E_ABRIR = 211
+
+    def _perguntar_antes_de_relancar(
+        self,
+        *,
+        mudanca: str,
+        valor: str | None,
+        aplicar: Callable[[], None],
+    ) -> bool:
+        """True se assumiu o gesto (vai perguntar); False para aplicar direto.
+
+        RELANCAR-01 (08/08/2026). Sonda num worker — dois `pgrep` de até 5 s
+        congelariam a janela — e decide na thread do GTK, que é o padrão de
+        `emulation_actions.on_emulation_steam_input_disable`.
+
+        **Devolver False no erro é deliberado:** se a sondagem falhar, a mudança
+        aplica como sempre aplicou. Um diálogo que aparece por engano no meio da
+        partida é pior que uma pergunta que não foi feita — e a sondagem é
+        best-effort por natureza.
+        """
+        if mudanca not in relancar.EXIGEM_RELANCAR:
+            return False
+        jogo_aberto = bool(getattr(self, "_jogo_aberto", False))
+        if not relancar.precisa_perguntar(
+            mudanca=mudanca, jogo_aberto=jogo_aberto
+        ):
+            # Sem jogo aberto NADA muda: aplica na hora, síncrono, como sempre.
+            # Este retorno é o que mantém o caminho comum sem diálogo e sem
+            # espera — e é o que os testes da caixinha exercitam.
+            return False
+        self._relancar_decidir(mudanca, valor, True, aplicar)
+        return True
+
+    def _relancar_decidir(
+        self,
+        mudanca: str,
+        valor: str | None,
+        jogo: object,
+        aplicar: Callable[[], None],
+    ) -> bool:
+        """Na thread do GTK: sem jogo aplica; com jogo, pergunta."""
+        nome_do_jogo = jogo if isinstance(jogo, str) and jogo else None
+
+        def _resposta(dialog: Any, resposta: int) -> None:
+            with contextlib.suppress(Exception):
+                dialog.destroy()
+            if resposta == self._RESP_FECHAR_E_ABRIR:
+                aplicar()
+                self._toast_do_relancar(
+                    relancar.toast_da_escolha("fechar_e_abrir", jogo=nome_do_jogo)
+                )
+                self._relancar_o_jogo()
+            elif resposta == self._RESP_DEPOIS:
+                # A mudança é aplicada AGORA no disco; o que fica para depois é o
+                # jogo enxergá-la. Guardar a intenção sem escrever criaria um
+                # segundo estado pendente invisível, que é o defeito que a casa
+                # mais paga — o disco já é o lugar onde a marca dela mora.
+                aplicar()
+                self._toast_do_relancar(
+                    relancar.toast_da_escolha("na_proxima_abertura", jogo=nome_do_jogo)
+                )
+            else:
+                self._toast_do_relancar(relancar.toast_da_escolha("cancelar"))
+                # A tela volta ao que o disco diz: janela que não mente.
+                with contextlib.suppress(Exception):
+                    sincronizar = getattr(self, "_sincronizar_caixa_do_steam_input", None)
+                    if callable(sincronizar):
+                        sincronizar()
+
+        from hefesto_dualsense4unix.app.actions.daemon_actions import (
+            build_consentimento_dialog,
+        )
+
+        dialog = build_consentimento_dialog(
+            getattr(self, "window", None),
+            titulo=relancar.TITULO,
+            corpo=relancar.corpo_do_dialogo(
+                mudanca=mudanca, valor=valor, jogo=nome_do_jogo
+            ),
+            botoes=[
+                (relancar.ROTULO_CANCELAR, Gtk.ResponseType.CANCEL),
+                (relancar.ROTULO_DEPOIS, self._RESP_DEPOIS),
+                (relancar.ROTULO_FECHAR, self._RESP_FECHAR_E_ABRIR),
+            ],
+            on_response=_resposta,
+            destrutivo=self._RESP_FECHAR_E_ABRIR,
+        )
+        with contextlib.suppress(Exception):
+            dialog.show_all()
+        return False
+
+    def _relancar_o_jogo(self) -> None:
+        """Fecha a Steam (e o jogo com ela) e pede a abertura de volta.
+
+        Fica num método próprio para o caminho destrutivo ter UM dono, e para o
+        teste poder trocá-lo por um dublê sem tocar no resto.
+        """
+
+        def _fazer() -> None:
+            from hefesto_dualsense4unix.integrations import (
+                steam_launch_options as slo,
+            )
+
+            with contextlib.suppress(Exception):
+                slo.stop_steam()
+
+        with contextlib.suppress(Exception):
+            _get_executor().submit(_fazer)
+
+    def _toast_do_relancar(self, texto: str) -> None:
+        """Onde o resultado do diálogo aparece. A aba dona pode especializar.
+
+        RELANCAR-01: o diálogo é compartilhado pelas abas Início e Perfis, mas o
+        rodapé é de cada uma. Este gancho evita que a base assuma qual toast
+        usar — e, na ausência dos dois, o texto vai para o log em vez de sumir.
+        """
+        for nome in ("_toast_profile", "_status_toast_home", "_status_toast"):
+            metodo = getattr(self, nome, None)
+            if callable(metodo):
+                with contextlib.suppress(Exception):
+                    if nome == "_status_toast":
+                        metodo("home", texto)
+                    else:
+                        metodo(texto)
+                    return
+        logger.info("relancar_toast_sem_destino", texto=texto)
 
     def _get(self, widget_id: str) -> Any:
         return self.builder.get_object(widget_id)
