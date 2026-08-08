@@ -14,6 +14,42 @@ hardware REAL desta bancada precisa ter os octetos 4 e 5 zerados (a máscara).
 Os OUIs em si já são públicos no repo (docs mascarados citam todos) — o que
 identifica o aparelho é o SUFIXO, e é ele que este teste bloqueia.
 MACs forjados (``aa:bb:cc:*``, ``02:fe:*`` do vpad) ficam fora do contrato.
+
+O QUE ESTE PORTÃO NÃO VÊ, E NUNCA VIU: O HISTÓRICO
+--------------------------------------------------
+
+NOTA DATADA — 07/08/2026. **GRAU: MEDIDO.**
+
+Este portão lê a **árvore de trabalho**: ``git ls-files`` mais o disco. É a
+regra desta casa, e ela é correta para tudo — menos para isto. **Nenhum portão
+do projeto varre o histórico do ``git``**, e o histórico é público.
+
+Medido nesta árvore em 07/08, com o critério escrito para poder ser refeito:
+varridas as **linhas adicionadas** de todos os **655** commits alcançáveis a
+partir do ``HEAD``, procurando a forma completa de um MAC cujo prefixo esteja
+em ``_OUIS_REAIS_OCTETOS`` e cujos octetos 4 e 5 **não** sejam a máscara,
+**16** commits casam — nas duas grafias, com separador e colada. E os dois
+testes deste arquivo passam **verdes** no mesmo instante, porque a árvore de
+hoje está limpa. O portão não está mentindo: ele está respondendo outra
+pergunta.
+
+O piso desses 16 é confiável e o teto não — a varredura é por FORMA, como a que
+achou o BURACO-DO-PORTAO-01. A
+``2026-08-06-RELOGIO-NAO-E-ASSERCAO-01`` registra a mesma classe com outra
+régua (*"três commits publicados os carregam"*, contados sobre o que está em
+``origin/main``); os dois números medem coisas diferentes e nenhum substitui o
+outro.
+
+**O que segue SEM PROVA, e por isso não se decide aqui:** se uma nova purga
+paga o custo. Já houve uma, em 20/07, os endereços **voltaram** depois dela, e
+sobraram **438** ``replace refs`` ativos que ninguém recontou. A ``CLEAN-ROOM``
+nomeia o ``filter-repo`` como a ferramenta certa e diz que neste caso a
+exposição **é** o dano. **É decisão dela**, não de portão: reescrever histórico
+publicado é destrutivo e não desfaz o que já foi clonado.
+
+**O que seria um portão viável também segue SEM PROVA:** ninguém desenhou. A
+única forma barata que já foi sugerida — varrer só os commits **novos** de cada
+leva, e não o histórico inteiro — nunca foi escrita nem medida.
 """
 from __future__ import annotations
 

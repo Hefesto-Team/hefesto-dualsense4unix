@@ -49,6 +49,25 @@ de uma vez. Devolvi só o ponteiro da `flatpak.md` (uma frase, sem comando) e
 reprovou de novo. Depois arranquei a condição do encanamento (fingindo os 18
 módulos traduzidos) e o portão passou a ACEITAR a receita — que é a metade
 condicional funcionando, e não um "não" disfarçado de condição.
+
+O ALCANCE DESTE PORTÃO, MEDIDO (07/08/2026) — leia antes de confiar nele
+------------------------------------------------------------------------
+
+Ele é ESTREITO, e isso é de propósito. As quatro marcas são casadas com A
+REDAÇÃO QUE SAIU, não com a ideia. Um convite EQUIVALENTE escrito com outras
+palavras passa VERDE, e isso está medido: acrescentado à `docs/usage/flatpak.md`
+um bloco com cabeçalho "Traduzir o Hefesto", o comando `msginit` do `gettext`
+sobre um `.pot` e o pedido de mandar o arquivo num pull request, os 50 testes
+deste arquivo passaram. Trocado só o comando pelo `i18n_extract.sh --add`, o
+mesmo bloco reprovou na hora (`1 failed, 49 passed`). A página foi devolvida
+byte a byte depois das duas medições. GRAU: MEDIDO.
+
+NÃO alargue isto procurando a palavra `traduzir`: a seção "O CRITÉRIO" acima
+explica por que essa versão reprovaria três documentos honestos e seria
+desligada na terceira vez. O que este portão promete é impedir que a receita
+REMOVIDA volte sozinha — e é só isso que ele entrega. Contra a forma reescrita,
+a defesa é a revisão humana. O registro completo está na
+LINGUA-DO-PRODUTO-01, seção "O que fica ABERTO".
 """
 from __future__ import annotations
 

@@ -341,6 +341,29 @@ _valor_ativo() {
 #: GLib para chamar aqui, e um `python3 -c` no meio de um script de shell que o
 #: install roda como root é dependência que não se paga. A bancada fecha a
 #: diferença do jeito certo: cada caso é conferido contra o oráculo de verdade.
+#:
+#: NOTA DATADA — 07/08/2026: A RÉPLICA RECUSA MENOS QUE O ORÁCULO. GRAU: MEDIDO,
+#: por execução, contra o GKeyFile de verdade (GLib 2.80.0). QUATRO formas fazem
+#: o `bluetoothd` DESCARTAR O ARQUIVO INTEIRO enquanto esta função não devolve
+#: nada e o `verificar` responde `veredito: OK` com saída 0:
+#:
+#:     =valor          nome de chave vazio    -> "is not a key-value pair"
+#:     =               só o igual             -> "is not a key-value pair"
+#:     cha[ve=valor    colchete no nome       -> "Invalid key name"
+#:     cha]ve=valor    colchete no nome       -> "Invalid key name"
+#:
+#: E mais DUAS que não dão `OK`, mas mentem o motivo: grupo `[]` e grupo com
+#: colchete no nome saem como `veredito: INSEGURO / JustWorksRepairing ausente`,
+#: quando o que há é o arquivo descartado inteiro — a receita que a pessoa
+#: seguir a partir daí conserta a coisa errada.
+#:
+#: NÃO curado: a cura é acrescentar as regras aqui E na `_TABELA_DA_RECUSA` de
+#: `tests/unit/test_bluez_config_sh.py`, que hoje só tem casos que já caem nas
+#: duas regras acima. A tabela medida, com a mensagem exata do GKeyFile em cada
+#: linha, está na sprint SELO-VERDE-CEDO-DEMAIS-01, seção "ABERTO, GRAVIDADE
+#: ALTA". Cuidado ao alargar: o GKeyFile é MAIS PERMISSIVO em pelo menos um
+#: ponto (aceita valor com byte UTF-8 inválido), e réplica que recusasse ali
+#: passaria a reprovar arquivo bom.
 _linha_que_o_parser_recusa() {
     local arquivo="$1"
     [[ -f "${arquivo}" ]] || return 0

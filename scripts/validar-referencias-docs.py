@@ -22,7 +22,7 @@ REGRA 1 -- ARQUIVO (nasceu na PORTÃO-VIVO-01, vale para `docs/` inteiro)
     (`daemon.toml`, `controllers.json`) é artefato de tempo de execução que
     vive em ~/.config, e por isso fica de fora;
   - caminho absoluto (/etc/...), caminho de HOME (~/...), variável de shell
-    ($VAR), URL, glob, placeholder entre sinais de menor e maior, e `..` são
+    ($VAR), URL, glob e placeholder entre sinais de menor e maior são
     ignorados;
   - bloco de código cercado por três crases é ignorado inteiro: ali mora
     comando de terminal, não referência a arquivo do repositório.
@@ -30,6 +30,31 @@ REGRA 1 -- ARQUIVO (nasceu na PORTÃO-VIVO-01, vale para `docs/` inteiro)
   A verificação aceita SUFIXO: `gui/main.glade` casa com o caminho real
   `src/hefesto_dualsense4unix/gui/main.glade`, porque a casa cita caminho
   encurtado o tempo todo e cobrar o caminho completo seria ruído puro.
+
+  LINK QUE SOBE (`../`) -- curado em 07/08/2026, autorizado por ela.
+
+  Até esta data a linha de filtro descartava TODO token que contivesse `..`, e
+  com isso os 246 links `../` desta árvore podiam apodrecer sem que portão
+  nenhum falasse. MEDIDO por arrancamento: trocado o alvo do link do
+  LUGAR-À-MESA-01 em `docs/usage/modos.md` por um nome inexistente, o portão
+  respondeu "OK: 1 documento(s) sem referência morta" e saiu 0.
+
+  O motivo da exclusão original também foi MEDIDO, sondando a árvore inteira
+  sem o filtro: dos 249 tokens com `..`, 246 eram link de subida legítimo e os
+  outros três eram RETICÊNCIA DE ELISÃO -- `.../painel-de-decisoes.md`,
+  `.venv/lib/.../pydualsense/enums.py` e
+  `2026-08-05-TRAVA-QUE-SOLTA-TARDE-01-...md`. É isso que o `..` segurava, e o
+  terceiro ponto do `...` é a única coisa que separa os dois casos.
+
+  Por isso a cura NÃO reabre o buraco: `..` só passa em PREFIXO DE SUBIDA BEM
+  FORMADO (`../`, `../../`, ...), conferido por `_SUBIDA`. Reticência em
+  qualquer posição, e `..` no meio do caminho (`docs/../scripts/x.sh`),
+  continuam descartados como antes.
+
+  Link de subida NÃO ganha a leniência de sufixo: quem escreve `../` está
+  afirmando uma posição exata no disco, e ela se confere resolvendo o caminho
+  contra a pasta do próprio documento. Se a resolução SAIR da árvore, é achado:
+  não há link legítimo, dentro do repositório, para acima da raiz dele.
 
 REGRA 2 -- VARIÁVEL DE AMBIENTE (sprint DOC-VERDADE-02, entrega E10)
 
@@ -259,6 +284,13 @@ _ENV = re.compile(r"\bHEFESTO_[A-Z0-9_]+")
 _METODO = re.compile(r"^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){1,2}$")
 _NOTA_DE_VERIFICACAO = re.compile(r"^#{1,6}\s*Nota de verifica", re.IGNORECASE)
 
+#: Prefixo de subida BEM FORMADO: um ou mais `../` colados no começo do token.
+#: Arrancar este prefixo e ainda achar `..` no resto denuncia reticência de
+#: elisão (`.../painel.md`, `.venv/lib/.../enums.py`, `FOO-01-...md`) ou `..` no
+#: meio do caminho -- as duas formas que a exclusão original segurava e que
+#: continuam descartadas.
+_SUBIDA = re.compile(r"^(?:\.\./)+")
+
 #: Rótulo humano de cada regra, para o relatório dizer O QUE está morto.
 REGRA_ARQUIVO = "arquivo"
 REGRA_ENV = "variável de ambiente"
@@ -425,6 +457,11 @@ def candidatos_da_linha(linha: str) -> list[str]:
     escreve [texto](alvo) está afirmando que existe algo naquele caminho. Um
     índice de sprints apontando para arquivo que não existe é justamente um
     dos defeitos que a sprint mandou pegar, e ele aparece só nessa forma.
+
+    Desde 07/08/2026 o token pode SUBIR (`../`, `../../`). Quem confere a
+    subida é `varrer_documento`, resolvendo contra a pasta do documento; aqui
+    só se separa o prefixo de subida bem formado da reticência de elisão, que
+    era o que a exclusão antiga de `..` de fato segurava (ver o cabeçalho).
     """
     brutos = [(m.group(1), True) for m in _CRASE.finditer(linha)]
     brutos += [(m.group(1), False) for m in _LINK.finditer(linha)]
@@ -444,7 +481,11 @@ def candidatos_da_linha(linha: str) -> list[str]:
             continue
         if texto[0] in "/~$":
             continue
-        if any(ruim in texto for ruim in ("*", "?", "<", ">", "..", "{", "}")):
+        if any(ruim in texto for ruim in ("*", "?", "<", ">", "{", "}")):
+            continue
+        # `..` só vale como PREFIXO DE SUBIDA. Arrancado o prefixo, sobrar `..`
+        # significa reticência de elisão ou `..` no meio: descarta, como antes.
+        if ".." in _SUBIDA.sub("", texto, count=1):
             continue
         if not _TOKEN_LIMPO.fullmatch(texto):
             continue
@@ -506,6 +547,11 @@ def varrer_documento(
             if referencia in sufixos:
                 continue
             # Última chance: link relativo ao diretório do próprio documento.
+            # É por aqui que passa o link que SOBE (`../`, `../../`): ele nunca
+            # casa por sufixo -- índice nenhum começa com `..` -- e por isso
+            # depende inteiramente desta resolução. Se ela sair da árvore
+            # (`ValueError`), fica achado: não há link legítimo, dentro do
+            # repositório, para acima da raiz dele.
             vizinho = (caminho.parent / referencia).resolve()
             try:
                 relativo = vizinho.relative_to(raiz).as_posix()

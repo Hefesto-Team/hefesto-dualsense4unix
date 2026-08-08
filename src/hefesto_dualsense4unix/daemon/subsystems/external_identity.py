@@ -971,11 +971,13 @@ class ExternalLedSync:
     ``daemon.display_authority`` ('game'|'daemon'|'unknown'; atributo ausente
     = sem fiação = comportamento HEAD):
 
-    - ``daemon``: antes do skip por-valor, RE-LÊ o padrão físico via classe
+    - ``daemon``: antes do skip por-valor, RE-LÊ o padrão via classe LED
       (:func:`read_player_pattern` — memória do kernel, zero subcomando BT);
-      padrão ≠ slot = escritor estrangeiro ⇒ repinta DENTRO do rate-limit de
-      2s + log ``external_led_repintado`` (o cache por-VALOR sozinho era o
-      ponto cego S5: terceiro escrevia o LED e o daemon não repintava);
+      padrão ≠ slot ⇒ repinta DENTRO do rate-limit de 2s + log
+      ``external_led_repintado`` (o cache por-VALOR sozinho era o ponto cego
+      S5: terceiro escrevia o LED e o daemon não repintava). **O rótulo
+      "escritor estrangeiro" desta divergência CADUCOU — ver a nota datada no
+      fim deste docstring;**
     - ``game``/``unknown``: device já cacheado NÃO é corrigido (externos não
       são disputados em jogo), mas device NOVO sem cache ainda recebe a
       numeração 1x (atribuição ≠ disputa — 8BitDo chegando mid-game não
@@ -990,6 +992,28 @@ class ExternalLedSync:
     simétrico ao provider, que deixa de emitir ``player_leds``) + cache
     limpo; OFF→ON reescreve os slots. A ATRIBUIÇÃO de slot roda sempre,
     antes do gate.
+
+    .. warning::
+
+       **NOTA DATADA — 07/08/2026 21h04: ``external_led_repintado`` NÃO
+       significa "escritor estrangeiro".** Em **11 de 11** ocorrências do lado
+       A de 07/08, o "intruso" que este tick acusou era **a nossa própria
+       escrita anterior** — as repinturas são o daemon perseguindo o próprio
+       eco.
+
+       **O mecanismo:** :func:`read_player_pattern` lê o ``brightness`` da
+       classe LED, que é memória do valor **PEDIDO**; o kernel o grava antes de
+       tentar o hardware e nunca o reverte na falha. Uma escrita que morreu no
+       rádio (``-110``) continua sendo relida como o número pedido. Logo esta
+       comparação **não pode** distinguir firmware de terceiro: ela só enxerga
+       escrita de **outro processo** pelo mesmo ``sysfs`` (a Steam pintando
+       "player 1+3"), que é tudo o que ela sempre pôde enxergar.
+
+       **Quem for contar repinturas em qualquer janela do journal precisa ler
+       isto antes:** o número não mede disputa de LED. A medição, e a correção
+       de uma linha que devolveria o nome ao log (S3), estão em
+       ``docs/process/sprints/2026-08-07-A-LUZ-QUE-CUROU-01-calar-parou-o-bombardeio-e-voltar-tem-preco.md``,
+       seções 2.1 a 2.3 e 6. GRAU: MEDIDO.
     """
 
     def __init__(self, daemon: Any, registry: ExternalIdentityRegistry) -> None:
@@ -1262,9 +1286,12 @@ class ExternalLedSync:
 
                 intruso: int | None = None
                 if autoridade == "daemon" and ja_cacheado:
-                    # (a)/(c) daemon: re-lê o padrão físico ANTES do skip por-
-                    # valor — escritor estrangeiro é detectado por CLASSE LED
-                    # (zero subcomando BT), nunca por sonda.
+                    # (a)/(c) daemon: re-lê o padrão ANTES do skip por-valor,
+                    # por CLASSE LED (zero subcomando BT), nunca por sonda.
+                    # NOTA DATADA 07/08/2026: o que se detecta aqui NÃO é
+                    # "escritor estrangeiro" — é divergência no sysfs, e em 11
+                    # de 11 casos ela era a nossa própria escrita anterior.
+                    # Ver a nota datada no docstring do ExternalLedSync.
                     hid_instance = hid_instance_for_hidraw(hidraw)
                     if hid_instance:
                         padrao = read_player_pattern(hid_instance)

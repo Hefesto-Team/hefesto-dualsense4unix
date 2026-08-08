@@ -195,22 +195,58 @@ def enable_imu(hidraw_dev: str | None, *, packet_num: int = 0) -> bool:
 def read_player_pattern(
     hid_instance: str, leds_root: str | None = None
 ) -> int | None:
-    """Lê o padrão de player ACESO na barra do externo (PURA, NUMA-03).
+    """Lê o padrão de player que o KERNEL tem em memória (PURA, NUMA-03).
+
+    .. warning::
+
+       **NOTA DATADA — 07/08/2026 21h04: esta função NÃO enxerga lâmpada
+       nenhuma, e a redação anterior ("o padrão ACESO na barra") é o que
+       enganou a casa.** O que ela lê é o ``brightness`` da classe LED do
+       kernel, que guarda o valor **PEDIDO** — o kernel o grava ANTES de tentar
+       o hardware e **nunca o reverte** quando a escrita falha.
+
+       MEDIDO em 07/08 às 15h24: os cinco nós do Pro liam ``1,1,0,0,0``, que é
+       exatamente o slot 2 pedido às 15:24:01 — e **três** daquelas cinco
+       escritas tinham falhado com ``-110`` (``ETIMEDOUT``). No
+       ``hid-nintendo`` a escrita é assíncrona, então o ``write(2)`` volta com
+       sucesso 1,18 s a 3,45 s ANTES de o erro existir.
+
+       **Consequências, e as duas doem:**
+
+       - **o leitor é cego à falha de escrita.** Escrita que morreu no rádio é
+         invisível aqui **para sempre**, e não há outro caminho na árvore que
+         saiba dela (83 falhas no kernel contra ZERO avisos do daemon na mesma
+         janela);
+       - **o ``-1`` NÃO distingue firmware de terceiro.** Ele só separa
+         "padrão não-canônico neste ``sysfs``" de "padrão canônico" — e quem
+         escreveu o não-canônico pode ter sido outro processo (a Steam) ou nós
+         mesmos numa versão anterior do writer. Em 11 de 11 repinturas do lado
+         A de 07/08, o "intruso" acusado era **a nossa própria escrita
+         anterior**.
+
+       A medição inteira está em
+       ``docs/process/sprints/2026-08-07-A-LUZ-QUE-CUROU-01-calar-parou-o-bombardeio-e-voltar-tem-preco.md``,
+       seções 2.1 a 2.3. GRAU: MEDIDO.
 
     Espelho de leitura de :func:`write_player_number` — e tem de acompanhá-la
     bit a bit (R-25): se o writer passa a usar o azul como "+5" e o reader
     continua só nos verdes, todo controle em slot ≥5 é lido como um número
     diferente do que está escrito, o tick o declara "escritor estrangeiro" e
-    repinta o mesmo LED de 2 em 2 segundos para sempre — exatamente o
-    bombardeio de subcomando que o EXT-04 existe para não repetir.
+    repinta o mesmo LED de 2 em 2 segundos — exatamente o bombardeio de
+    subcomando que o EXT-04 existe para não repetir. (O "para sempre" desta
+    frase caducou em 07/08: ver a nota datada acima. Divergência entre writer e
+    reader é a ÚNICA forma de divergência que este leitor enxerga de verdade, e
+    por isso a simetria bit a bit continua obrigatória.)
 
     Retorno:
 
     - ``1..9`` — padrão canônico (verdes 1..n em prefixo + azul = +5), o que
       o próprio daemon escreve;
     - ``0`` — tudo apagado (kernel default ou apagão de terceiro);
-    - ``-1`` — padrão NÃO-canônico (buracos nos verdes — assinatura de
-      escritor estrangeiro, ex.: o "player 1+3" que a Steam pinta);
+    - ``-1`` — padrão NÃO-canônico (buracos nos verdes, ex.: o "player 1+3"
+      que a Steam pinta). **NÃO é assinatura de "escritor estrangeiro"** — ver
+      a nota datada de 07/08 acima: ele não distingue firmware de terceiro, e
+      escrita nossa que morreu no rádio nunca aparece aqui;
     - ``None`` — algum nó VERDE ausente/ilegível (device sumiu, modo DS4 sem
       barra verde) — o chamador trata como "sem leitura" (skip, comportamento
       de hoje), NUNCA como padrão apagado.

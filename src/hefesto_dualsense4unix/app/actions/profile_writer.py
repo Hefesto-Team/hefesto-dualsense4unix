@@ -199,6 +199,34 @@ class ProfileWriterMixin(WidgetAccessMixin):
         deixa o rascunho onde estava, de propósito). Se disparar, o defeito é
         alguém ter trocado a ordem dos passos do funil — e o lugar de descobrir
         isso é a suíte, não o disco dela.
+
+        NOTA DATADA — 07/08/2026: ESTA REDE MORDE, E ESTÁ MEDIDO.
+
+        Circulava a leitura de que "nenhum teste viola a invariante para vê-la
+        disparar". É FALSO, e foi medido por arrancamento em 07/08: trocado o
+        ``draft.with_profile_identity(profile)`` do ``_reapontar_rascunho`` por
+        um ``self.draft = draft`` cru, este ``assert`` dispara OITO vezes em
+        ``test_gravacao_de_perfil_passa_pelo_funil.py`` — sete no ``source_name``
+        e um no ``source_priority`` —, com a mensagem por extenso e o par de
+        nomes que divergiu. A cura foi devolvida byte a byte (``sha256``
+        conferido). GRAU: MEDIDO. A docstring daquele arquivo já registrava
+        "quatro reprovam pelo assert de invariante do funil"; a recontagem de
+        hoje bate com ela e a torna mais precisa.
+
+        O QUE É VERDADE, e continua sendo: isto é uma REDE DE TESTE, não uma
+        guarda de produção. ``assert`` some inteiro sob ``python -O`` — medido
+        na venv desta árvore: a mesma função levanta ``AssertionError`` sem a
+        flag e PASSA RETO com ela. Nada neste repositório roda otimizado hoje
+        (``PYTHONOPTIMIZE``, ``python -O`` e ``compileall`` com otimização: zero
+        ocorrências em ``scripts/``, ``packaging/`` e nas unidades ``systemd``),
+        então o risco é LATENTE, não vivo: ele nasce no dia em que alguém
+        empacotar com otimização. GRAU: MEDIDO para os dois fatos; SUSPEITA COM
+        MECANISMO para a consequência futura.
+
+        A decisão pedida desde a ``E4.2`` da ``FIACAO-QUE-FALTA-01`` — virar
+        exceção de verdade ou ficar como rede de teste — continua ABERTA e não
+        é tomada aqui. O que esta nota fecha é a metade barata dela: está
+        escrito, no próprio lugar, que é rede de teste.
         """
         draft = getattr(self, "draft", None)
         if draft is None:

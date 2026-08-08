@@ -748,6 +748,33 @@ D-input, LED2 X-input, LED3 macOS, rotativo = Switch ou pareamento). GRAU:
 **MÉDIA** — a semântica dos LEDs vem do manual do fabricante, e **a parte física
 nunca foi olhada nesta casa**. Fecha com cinco segundos de olho dela.
 
+> **NOTA DATADA — 07/08/2026 21h06: ela olhou, e a metade física da `P-4` está
+> respondida.** Nas palavras dela, sobre o aparelho na mão: *"não há lightbar
+> mas existe led de identificação de player nele também, igual o pro
+> controller"*.
+>
+> - **A ausência de lightbar RGB física está CONFIRMADA** — a frase acima sobe
+>   de MÉDIA para **MEDIDA** nessa metade. Escrever `red`/`green`/`blue` neste
+>   aparelho é, de fato, escrita em nó que não acende cor nenhuma;
+> - **o que a página não dizia, e é o achado:** o plástico **tem** luzes de
+>   identificação de jogador, como as do Pro. E o **driver não as expõe** — o
+>   `hid-playstation` registra `player_leds[5]` só no caminho do DualSense
+>   (`assets/dkms/hid-playstation/hid-playstation.c:250-252` e o laço de
+>   registro em `:1946`); no caminho do DualShock 4 existe **só** `lightbar_leds`
+>   (`:2348`). Isso é correto para o DS4 da Sony, que de fato não tem a barra, e
+>   **errado como descrição do 8BitDo**, que é um clone com quatro luzes no
+>   plástico falando um protocolo que não as prevê. GRAU: ALTA (leitura do
+>   driver);
+> - **o que continua aberto é a outra metade — quem acende aquelas luzes.** Ou o
+>   firmware do 8BitDo traduz a cor da lightbar que escrevemos para os LEDs
+>   físicos, e então `write_lightbar_slot` já numera o aparelho; ou ele as
+>   acende por conta própria e ignora o que mandamos, e então escrevemos num
+>   lugar que não chega a lugar nenhum. **GRAU: SEM PROVA**, e é isto que a
+>   `P-4` da seção 8.4 passa a perguntar.
+>
+> **Decisão dela em 07/08 (resposta 23):** *"preparar, e rodar quando ele
+> estiver ligado"*. GRAU: DECISÃO DELA.
+
 **O produto não escreve nesses nós desde 07/08 02:59**
 (`EXTERNAL_PLAYER_LED_ENABLED = False`).
 
@@ -1062,6 +1089,33 @@ modo. **Cinco segundos.**
 **PREVISÃO.** O SN30 Pro **não tem lightbar RGB**. Se confirmado, todo o caminho
 `ds4` de LED externo é **escrita em nó que não acende**, e isso muda o valor da
 E3.
+
+> **NOTA DATADA — 07/08/2026 21h06: metade desta pergunta está RESPONDIDA, e a
+> previsão acima se confirmou.** Ela olhou o aparelho: *"não há lightbar mas
+> existe led de identificação de player nele também, igual o pro controller"*.
+> Os cinco segundos foram gastos e o desfecho está na seção 4.7.
+>
+> **O que RESTA da `P-4`, e ela vira esta pergunta:** *quando o daemon escreve
+> uma cor conhecida na lightbar do 8BitDo, as quatro luzes do plástico mudam?*
+>
+> - **por que importa:** decide se `write_lightbar_slot` já numera o aparelho
+>   (o firmware traduz a cor para os LEDs físicos) ou se escreve num lugar que
+>   não chega a lugar nenhum (ele acende as luzes por conta própria). É a
+>   dependência que **bloqueia a numeração do 8BitDo**;
+> - **custo:** uma escrita e o olho dela. **Trinta segundos**, e continua sendo
+>   o item mais barato desta seção;
+> - **P0 e travas:** o aparelho tem de estar **ligado e no rádio** — ele não
+>   está desde a saída de 19h38 (seção 1.2). A escrita é no caminho `ds4`, que
+>   **não** passa pelo `EXTERNAL_PLAYER_LED_ENABLED`, então a decisão 12 dela
+>   (a luz dos externos fica calada) tem de ser lida **antes** de armar isto:
+>   pintar uma cor É afirmar alguma coisa no plástico dela;
+> - **DECISÃO DELA (resposta 23, 07/08):** *"preparar, e rodar quando ele
+>   estiver ligado"*. Logo o preparo pode ser escrito agora; a rodada espera o
+>   aparelho.
+>
+> **GRAU: SEM PROVA** — ninguém mediu, e a docstring de `write_lightbar_slot`
+> em `src/hefesto_dualsense4unix/core/external_leds.py` carrega a mesma
+> pergunta, com a leitura do driver que a sustenta.
 
 ### 8.5 P-5. Recontar a perda de IMU do Pro com a mesa vazia
 
