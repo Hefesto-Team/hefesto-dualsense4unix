@@ -2200,7 +2200,7 @@ check_bt_resilience() {
         warn "resiliência do bluetoothd não instalada (crash do bluetoothd destrói bonds sem backup); rode ./install.sh (passo ONDA-R2 aplica por default)"
     fi
     if [[ ! -f /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf ]]; then
-        warn "drop-in 10-hefesto-resilience.conf ausente — sem WatchdogSec (hang sem crash fica invisível) e sem snapshot na parada do serviço"
+        warn "drop-in 10-hefesto-resilience.conf ausente — sem o desarme do watchdog do systemd (BLUETOOTHD-MORTO-POR-NOS-01) e sem snapshot na parada do serviço"
     fi
     # BT-NINTENDO-ACTIVE-01 + BT-SNIFF-PER-OUI-01 (23/07): o modo ativo é o nome
     # "Nintendo*" (do ADAPTADOR, vale para todos) + no-sniff SÓ no Pro genuíno

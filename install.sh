@@ -1486,7 +1486,9 @@ fi
 #      captura forense (esta última NUNCA ligada por default);
 #   2. drop-in do bluetooth.service: Restart=on-failure reafirmado (o template
 #      upstream traz comentado — bump futuro do pacote pode regredir) +
-#      WatchdogSec=30 (hang sem crash) + snapshot de bonds a cada parada;
+#      WatchdogSec=0 (BLUETOOTHD-MORTO-POR-NOS-01: era 30 e o systemd MATOU o
+#      bluetoothd dela com SIGABRT em 08/08, levando os quatro pareamentos)
+#      + snapshot de bonds a cada parada;
 #   3. timer de snapshot (15min, deduplicado por conteúdo, NUNCA fotografa
 #      estado vazio) — restauração é MANUAL (bt_bonds_restore.sh; automática
 #      poderia restaurar chave que o controle rotacionou → loop de auth);
@@ -1527,7 +1529,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
             _btres_ok=0
         fi
         if [[ "${_btres_ok}" -eq 1 ]]; then
-            printf '      drop-in de resiliência instalado (Restart reafirmado + WatchdogSec=30 + snapshot na parada)\n'
+            printf '      drop-in de resiliência instalado (Restart reafirmado + WatchdogSec=0 + snapshot na parada)\n'
             printf '      vale no próximo restart do bluetoothd; captura forense é OPT-IN: bt_crash_capture.sh --on\n'
         else
             warn "resiliência do bluetoothd instalada PARCIALMENTE — confira as mensagens acima"

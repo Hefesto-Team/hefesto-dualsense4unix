@@ -48,24 +48,47 @@ set -uo pipefail
 # existe no patch — o retry agindo). [JOYCON] intacto (exceeded max attempts).
 GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)"
 
+# CADERNO-QUE-NÃO-ESCREVE-01: o `awk` desta casa lê de um cano que NUNCA fecha
+# (`journalctl -f`), e o mawk bufferiza a ENTRADA — ver o comentário do
+# `classify()`. O `-W interactive` é o que o destrava, e só o mawk o entende: o
+# gawk o recusa como opção desconhecida e sai com erro, o que deixaria a vigia
+# muda de um jeito ainda pior. Por isso a escolha é medida, não assumida.
+_escolher_awk() {
+    if awk -W interactive 'BEGIN { exit 0 }' </dev/null >/dev/null 2>&1; then
+        echo "awk -W interactive"
+    else
+        echo "awk"
+    fi
+}
+_AWK_CMD="$(_escolher_awk)"
+
 # Classificador: linha short-iso do journal → "TIMESTAMP [TAG] mensagem".
 # Ordem: do mais específico para o mais genérico (JOYCON/JOYCON-PROBE antes
 # de USB-71 etc.). mawk-compatível (sem IGNORECASE): casa sobre tolower($0).
 #
-# CADERNO-QUE-NÃO-ESCREVE-01 (08/08/2026): o `fflush()` do fim do bloco NÃO é
-# higiene — é a cura de um defeito MEDIDO. Sem ele, a saída do `awk` fica num
-# buffer de 256 KiB que o `SIGTERM` do desligamento descarta, e o caderno dela
-# ficava vazio para sempre: 120 linhas, a última de 20/07, contra 723 eventos no
-# journal do mesmo período. O reboot de 08/08 00:00 fez o experimento de graça e
-# promoveu o defeito de SUSPEITA COM MECANISMO para MEDIDO.
+# CADERNO-QUE-NÃO-ESCREVE-01 (08/08/2026). O caderno dela estava VAZIO: 120
+# linhas, todas banners do próprio shell, a última de 20/07 — contra 723 eventos
+# de storm no journal do mesmo período, com a vigia `enabled` e `active` o tempo
+# todo. Ela pediu a explicação da queda dos controles, e o arquivo que a guardaria
+# não tinha nada.
 #
-# ARMADILHA PARA QUEM FOR TESTAR ISTO: um teste que alimente o `stdin` e o deixe
-# fechar naturalmente PASSA COM A CURA ARRANCADA, porque o EOF descarrega o
-# buffer sozinho. O teste tem de MATAR o processo com o buffer no meio — é o que
-# `tests/unit/test_storm_watch_fflush.py` faz, e é por isso que ele parece
-# complicado demais para uma linha.
+# A CURA É O `-W interactive`, E NÃO O `fflush()`. Esta distinção custou duas
+# medições e uma afirmação errada, então está escrita por extenso. O gargalo é a
+# ENTRADA do mawk, não a saída: ele lê com buffer PRÓPRIO, fora do stdio, e nem
+# chega a executar o bloco — então não há o que um `fflush()` de saída descarregue,
+# e o `stdbuf` também não alcança (o `LD_PRELOAD` dele só mexe no stdio).
+#
+# MEDIDO nesta bancada, com produtor vivo e 3-4 s de espera:
+#     mawk '{print; fflush()}'                -> 0 bytes
+#     stdbuf -oL -i0 mawk '{print; fflush()}' -> 0 bytes
+#     mawk -W interactive '{print}'           -> escreve na hora
+#
+# O `fflush()` FICA junto, e não é redundante: ele é o que garante a escrita por
+# linha quando o `awk` desta máquina não for o mawk (o gawk ignora `-W
+# interactive` como opção desconhecida mas honra o `fflush()`). Os dois juntos
+# cobrem os dois interpretadores.
 classify() {
-    awk '
+    ${_AWK_CMD:-awk} '
     {
         low = tolower($0)
         tag = "[KERNEL]"
