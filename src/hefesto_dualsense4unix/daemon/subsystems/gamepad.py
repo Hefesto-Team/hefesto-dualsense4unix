@@ -110,7 +110,10 @@ class GamepadSubsystem:
         if not getattr(cfg, "gamepad_emulation_enabled", False):
             _materialize_launch_env(daemon)
             return
-        start_gamepad_emulation(daemon, flavor=getattr(cfg, "gamepad_flavor", None))
+        # ORIGEM-QUE-MENTE-01: boot de subsistema NUNCA é gesto dela.
+        start_gamepad_emulation(
+            daemon, flavor=getattr(cfg, "gamepad_flavor", None), origin="profile"
+        )
 
     async def stop(self) -> None:  # pragma: no cover - simetria de protocolo
         # O teardown real fica a cargo de stop_gamepad_emulation no shutdown do
@@ -1175,7 +1178,8 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
             "vpad_revivendo_pos_falha_total",
             flavor=getattr(daemon.config, "gamepad_flavor", None),
         )
-        return start_gamepad_emulation(daemon)
+        # ORIGEM-QUE-MENTE-01: revive pós-falha é rede de segurança, não gesto.
+        return start_gamepad_emulation(daemon, origin="profile")
     if getattr(device, "flavor", None) != "dualsense":
         return False
     if not uhid_available():
@@ -1203,7 +1207,8 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     # `persist=False`: a preferência não mudou, só o backend. `release_grab=False`:
     # soltar o grab aqui devolveria o controle físico ao jogo no meio da troca.
     stop_gamepad_emulation(daemon, persist=False, release_grab=False)
-    return start_gamepad_emulation(daemon, flavor="dualsense")
+    # ORIGEM-QUE-MENTE-01: promoção de backend é manutenção interna.
+    return start_gamepad_emulation(daemon, flavor="dualsense", origin="profile")
 
 
 def read_primary_calibration(daemon: DaemonProtocol) -> bytes | None:
@@ -1376,7 +1381,7 @@ def start_gamepad_emulation(
     daemon: DaemonProtocol,
     flavor: str | None = None,
     *,
-    origin: Literal["manual", "profile"] = "manual",
+    origin: Literal["manual", "profile"],
 ) -> bool:
     """Cria o gamepad virtual com a máscara `flavor`. Idempotente.
 

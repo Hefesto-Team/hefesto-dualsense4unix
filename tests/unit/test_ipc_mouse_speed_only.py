@@ -51,7 +51,7 @@ class _FakeDaemon:
         self,
         enabled: bool,
         speed: int | None = None,
-        scroll_speed: int | None = None,
+        scroll_speed: int | None = None, origin="manual"
     ) -> bool:
         self.emulation_calls.append((enabled, speed, scroll_speed))
         return True
@@ -225,7 +225,7 @@ def test_set_mouse_emulation_ligar_ja_ligado_re_persiste_velocidades(
     daemon._mouse_device = device
     daemon.config.mouse_emulation_enabled = True
 
-    assert daemon.set_mouse_emulation(True, speed=11, scroll_speed=2) is True
+    assert daemon.set_mouse_emulation(True, speed=11, scroll_speed=2, origin="manual") is True
 
     device.set_speed.assert_called_once_with(mouse_speed=11, scroll_speed=2)
     assert saved == [(True, 11, 2)]

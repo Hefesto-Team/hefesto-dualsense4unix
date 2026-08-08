@@ -69,7 +69,7 @@ def daemon(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def test_apply_identico_nao_recria_o_vpad_nem_forca_o_coop(daemon: Any) -> None:
-    assert daemon.set_gamepad_emulation(True, "dualsense") is True
+    assert daemon.set_gamepad_emulation(True, "dualsense", origin="manual") is True
     device = daemon._gamepad_device
     assert device is not None
     assert daemon._coop_manager.syncs == [True], (
@@ -77,7 +77,7 @@ def test_apply_identico_nao_recria_o_vpad_nem_forca_o_coop(daemon: Any) -> None:
     )
 
     # Apply idêntico (toggle repetido / perfil reaplicando o mesmo modo):
-    assert daemon.set_gamepad_emulation(True, "dualsense") is True
+    assert daemon.set_gamepad_emulation(True, "dualsense", origin="manual") is True
     assert daemon._gamepad_device is device, (
         "apply idêntico recriou o vpad — invalida os handles do jogo mid-game"
     )
@@ -88,10 +88,10 @@ def test_apply_identico_nao_recria_o_vpad_nem_forca_o_coop(daemon: Any) -> None:
 
 
 def test_mudanca_de_flavor_recria_e_repropaga(daemon: Any) -> None:
-    assert daemon.set_gamepad_emulation(True, "dualsense") is True
+    assert daemon.set_gamepad_emulation(True, "dualsense", origin="manual") is True
     device = daemon._gamepad_device
 
-    assert daemon.set_gamepad_emulation(True, "xbox") is True
+    assert daemon.set_gamepad_emulation(True, "xbox", origin="manual") is True
     assert daemon._gamepad_device is not device, "flavor mudou: recria"
     assert device.stopped is True
     assert daemon._coop_manager.syncs == [True, True], (
@@ -100,11 +100,11 @@ def test_mudanca_de_flavor_recria_e_repropaga(daemon: Any) -> None:
 
 
 def test_religar_depois_de_desligar_recria(daemon: Any) -> None:
-    daemon.set_gamepad_emulation(True, "dualsense")
+    daemon.set_gamepad_emulation(True, "dualsense", origin="manual")
     device = daemon._gamepad_device
-    daemon.set_gamepad_emulation(False)
+    daemon.set_gamepad_emulation(False, origin="manual")
     assert device.stopped is True
-    daemon.set_gamepad_emulation(True, "dualsense")
+    daemon.set_gamepad_emulation(True, "dualsense", origin="manual")
     assert daemon._gamepad_device is not None
     assert daemon._gamepad_device is not device
     assert daemon._coop_manager.syncs == [True, True]
