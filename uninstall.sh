@@ -713,9 +713,35 @@ if sudo -n true 2>/dev/null; then
         fi
     fi
     if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then
-        log "removendo snapshots de bonds em /var/lib/hefesto-dualsense4unix/bt-bonds"
-        log "  (contêm LinkKeys; se quiser preservar, copie ANTES de rodar o uninstall)"
-        sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
+        # CICLO-QUE-PROVA-01 (08/08/2026) — MEDIDO no ciclo real, na máquina dela:
+        # este bloco fazia `rm -rf` por default, sem flag e sem confirmação, e o
+        # install recria só o diretório VAZIO. Doze snapshots viraram um.
+        #
+        # Por que isso é grave e não é higiene: os snapshots são a ÚNICA rede
+        # entre um crash do `bluetoothd` e ela repareando quatro controles à mão.
+        # Na mesma noite o crash das 00:27:35 mostrou para que servem — o
+        # salva-vidas gravou os quatro bonds dois segundos depois, sozinho — e um
+        # ciclo de manutenção normal os apagaria.
+        #
+        # A doutrina da casa para dado dela já estava escrita, e é a mesma que
+        # vale para a config: PRESERVA por default, apaga só com `--purge-config`
+        # explícito. Os bonds passam a seguir a mesma regra.
+        #
+        # E preservar NÃO é deixar credencial espalhada: o destino carrega o
+        # carimbo de que é sobra de desinstalação, e o modo 700 do diretório-pai
+        # continua valendo. Quem quiser o wipe de verdade tem a flag.
+        if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
+            _bonds_destino="/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-$(date +%Y%m%d-%H%M%S)"
+            log "preservando snapshots de bonds (contêm LinkKeys) em ${_bonds_destino}"
+            log "  para restaurar: sudo cp -a ${_bonds_destino}/. /var/lib/hefesto-dualsense4unix/bt-bonds/"
+            log "  para apagar de vez: rode o uninstall com --purge-config"
+            sudo mv "/var/lib/hefesto-dualsense4unix/bt-bonds" "${_bonds_destino}" 2>/dev/null \
+                || sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
+        else
+            log "removendo snapshots de bonds em /var/lib/hefesto-dualsense4unix/bt-bonds (--purge-config)"
+            log "  (contêm LinkKeys — wipe pedido explicitamente)"
+            sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
+        fi
         # O diretório-pai só sai junto com a unit de snapshot: ela declara
         # ReadWritePaths=/var/lib/hefesto-dualsense4unix sem o prefixo `-`, e o
         # systemd RECUSA iniciar a unit se o caminho não existir. Preservada a
