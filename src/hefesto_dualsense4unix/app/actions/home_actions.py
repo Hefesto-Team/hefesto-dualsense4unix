@@ -1237,12 +1237,26 @@ class HomeActionsMixin(WidgetAccessMixin):
         # HARM-01: a sequência (sair do nativo antes de ligar o gamepad, com a
         # folga de 2s) mora em `mode_transition` — a Início é a dona do modo,
         # não da mecânica; a Emulação chama exatamente o mesmo caminho.
-        apply_mode(
-            mode_id,
-            flavor=self._home_flavor_selector.get_active_id(),
-            on_done=_done,
-            on_fail=_fail,
-        )
+        # RELANCAR-01 (08/08/2026): trocar o modo com um jogo aberto muda
+        # `native_mode`/`emulation_enabled` no `compose_env` — e o jogo já
+        # recebeu o env na abertura (`exec env`, `hefesto-launch.sh`). Aplicar ao
+        # vivo derruba e recria o vpad debaixo dele: foi assim que ela ficou sem
+        # controle nenhum no meio da partida, e foi assim que nasceu o "Jogador
+        # 3" fantasma. Então pergunta antes, em vez de trocar o dono do input
+        # embaixo de um jogo em curso.
+        def _aplicar() -> None:
+            apply_mode(
+                mode_id,
+                flavor=self._home_flavor_selector.get_active_id(),
+                on_done=_done,
+                on_fail=_fail,
+            )
+
+        if self._perguntar_antes_de_relancar(
+            mudanca="modo", valor=_mode_label(mode_id), aplicar=_aplicar
+        ):
+            return
+        _aplicar()
 
     def _on_home_flavor_changed(self, selector: Any) -> None:
         flavor_id = selector.get_active_id()
@@ -1276,15 +1290,27 @@ class HomeActionsMixin(WidgetAccessMixin):
             self._refresh_home_tab()
             return False
 
-        call_async(
-            "gamepad.emulation.set",
-            # ORIGEM-QUE-MENTE-01: ela clicou no seletor de máscara. Sem declarar,
-            # o daemon lê como reconciliação e recusa dentro de um jogo marcado.
-            {"enabled": True, "flavor": flavor_id, "origin": "manual"},
-            _done,
-            _fail,
-            timeout_s=_MODE_IPC_TIMEOUT_S,
-        )
+        # RELANCAR-01: máscara diferente recria o vpad, e o Xbox ainda muda o
+        # `SDL_JOYSTICK_HIDAPI` no env — que o jogo já leu na abertura. É o gesto
+        # exemplar desta cura: ela vai ao Hefesto no meio da partida justamente
+        # para trocar isto.
+        def _aplicar() -> None:
+            call_async(
+                "gamepad.emulation.set",
+                # ORIGEM-QUE-MENTE-01: ela clicou no seletor de máscara. Sem
+                # declarar, o daemon lê como reconciliação e recusa dentro de um
+                # jogo marcado.
+                {"enabled": True, "flavor": flavor_id, "origin": "manual"},
+                _done,
+                _fail,
+                timeout_s=_MODE_IPC_TIMEOUT_S,
+            )
+
+        if self._perguntar_antes_de_relancar(
+            mudanca="mascara", valor=_flavor_label(flavor_id), aplicar=_aplicar
+        ):
+            return
+        _aplicar()
 
     def _on_home_autoswitch_lock_toggled(self, check: Any) -> None:
         """FEAT-AUTOSWITCH-LOCK-01: liga/desliga o cadeado da troca automática.
