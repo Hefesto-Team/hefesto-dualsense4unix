@@ -44,7 +44,7 @@ def test_mouse_on_sem_parametros(mock_ipc: dict[str, Any]) -> None:
     mock_ipc["response"] = {"status": "ok", "enabled": True}
     result = runner.invoke(app, ["mouse", "on"])
     assert result.exit_code == 0, result.output
-    assert mock_ipc["calls"] == [("mouse.emulation.set", {"enabled": True})]
+    assert mock_ipc["calls"] == [("mouse.emulation.set", {"enabled": True, "origin": "manual"})]
     assert "ligada" in result.output
 
 
@@ -53,7 +53,10 @@ def test_mouse_on_com_parametros(mock_ipc: dict[str, Any]) -> None:
     result = runner.invoke(app, ["mouse", "on", "--speed", "8", "--scroll-speed", "2"])
     assert result.exit_code == 0, result.output
     assert mock_ipc["calls"] == [
-        ("mouse.emulation.set", {"enabled": True, "speed": 8, "scroll_speed": 2})
+        (
+            "mouse.emulation.set",
+            {"enabled": True, "speed": 8, "scroll_speed": 2, "origin": "manual"},
+        )
     ]
 
 
@@ -68,7 +71,7 @@ def test_mouse_off(mock_ipc: dict[str, Any]) -> None:
     mock_ipc["response"] = {"status": "ok", "enabled": False}
     result = runner.invoke(app, ["mouse", "off"])
     assert result.exit_code == 0, result.output
-    assert mock_ipc["calls"] == [("mouse.emulation.set", {"enabled": False})]
+    assert mock_ipc["calls"] == [("mouse.emulation.set", {"enabled": False, "origin": "manual"})]
     assert "desligada" in result.output
 
 

@@ -236,7 +236,13 @@ class MouseActionsMixin(WidgetAccessMixin):
 
         ipc_bridge.call_async(
             "mouse.emulation.set",
-            {"enabled": enabled, "speed": speed, "scroll_speed": scroll},
+            # ORIGEM-QUE-MENTE-01: clique dela na aba Mouse.
+            {
+                "enabled": enabled,
+                "speed": speed,
+                "scroll_speed": scroll,
+                "origin": "manual",
+            },
             on_success=_on_ok,
             on_failure=_on_err,
         )
@@ -328,7 +334,8 @@ class MouseActionsMixin(WidgetAccessMixin):
 
         ipc_bridge.call_async(
             "mouse.emulation.set",
-            {param: int(value)},
+            # ORIGEM-QUE-MENTE-01: ela mexeu no controle deslizante.
+            {param: int(value), "origin": "manual"},
             on_success=_on_ok,
             on_failure=_on_err,
         )
