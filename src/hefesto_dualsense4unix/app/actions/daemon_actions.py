@@ -236,6 +236,54 @@ def format_apply_wrapper_result(result: object) -> str:
     return msg
 
 
+def build_consentimento_dialog(
+    parent: Any,
+    *,
+    titulo: str,
+    corpo: str,
+    botoes: Sequence[tuple[str, int]],
+    on_response: Any,
+    destrutivo: int | None = None,
+) -> Gtk.MessageDialog:
+    """O construtor de diálogo de consentimento — um dono do widget, N políticas.
+
+    RELANCAR-01 (08/08/2026): extraído de `build_steam_close_consent_dialog`,
+    que passou a ser uma casca sobre ele. O motivo de extrair em vez de copiar é
+    o mesmo que fez o original existir: consentimento pesado não pode divergir
+    entre botões. Duas cópias divergem no primeiro conserto.
+
+    `botoes` é `[(rótulo, resposta), ...]`, na ordem em que entram — a resposta
+    de cancelar deve vir primeiro, e é ela o `set_default_response` (a tecla Esc
+    e o Enter distraído caem no que não faz nada).
+
+    `destrutivo` marca UMA resposta com a classe `destructive-action`, a mesma do
+    botão "Desligar Hefesto": é o que separa visualmente o botão que toca no
+    processo dela dos que não tocam.
+
+    Temado e NÃO-bloqueante (`connect("response")`, nunca `run()`) — há portão
+    AST que reprova o contrário.
+    """
+    dialog = Gtk.MessageDialog(
+        transient_for=parent,
+        flags=0,
+        message_type=Gtk.MessageType.QUESTION,
+        buttons=Gtk.ButtonsType.NONE,
+        text=titulo,
+    )
+    with contextlib.suppress(Exception):
+        dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
+    dialog.format_secondary_text(corpo)
+    for rotulo, resposta in botoes:
+        botao = dialog.add_button(rotulo, resposta)
+        if destrutivo is not None and resposta == destrutivo:
+            with contextlib.suppress(Exception):
+                botao.get_style_context().add_class("destructive-action")
+    if botoes:
+        dialog.set_default_response(botoes[0][1])
+    dialog.connect("response", on_response)
+    return dialog
+
+
 def build_steam_close_consent_dialog(
     parent: Any,
     *,
@@ -257,21 +305,20 @@ def build_steam_close_consent_dialog(
     Temado e NÃO-bloqueante (`connect("response")`, nunca `run()`), padrão de
     `_build_proton_lock_confirm_dialog`/`gui_dialogs._apply_app_theme`.
     """
-    dialog = Gtk.MessageDialog(
-        transient_for=parent,
-        flags=0,
-        message_type=Gtk.MessageType.QUESTION,
-        buttons=Gtk.ButtonsType.NONE,
-        text=titulo,
+    # RELANCAR-01: o widget passou a ser construído por
+    # `build_consentimento_dialog`; esta função continua sendo o ÚNICO lugar que
+    # define a POLÍTICA de "posso fechar a Steam?" — os dois botões, o rótulo e
+    # o default. Quem chamava não muda uma linha.
+    return build_consentimento_dialog(
+        parent,
+        titulo=titulo,
+        corpo=corpo,
+        botoes=[
+            ("Cancelar", Gtk.ResponseType.CANCEL),
+            (rotulo_ok, Gtk.ResponseType.OK),
+        ],
+        on_response=on_response,
     )
-    with contextlib.suppress(Exception):
-        dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
-    dialog.format_secondary_text(corpo)
-    dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-    dialog.add_button(rotulo_ok, Gtk.ResponseType.OK)
-    dialog.set_default_response(Gtk.ResponseType.CANCEL)
-    dialog.connect("response", on_response)
-    return dialog
 
 
 def format_steam_janela_recusa(janela: object) -> str | None:
