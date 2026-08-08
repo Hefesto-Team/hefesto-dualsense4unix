@@ -293,11 +293,36 @@ def write_lightbar_slot(
 ) -> bool:
     """Pinta a lightbar RGB (DualShock4) com a cor canônica do ``slot``.
 
-    O 8BitDo por Bluetooth cai em modo DS4 — sem barra de player, só a lightbar
-    RGB (``<prefix>:red|:green|:blue`` + ``:global`` mestre 0/1). Como indicador
+    O 8BitDo por Bluetooth cai em modo DS4 — o KERNEL só expõe a lightbar RGB
+    (``<prefix>:red|:green|:blue`` + ``:global`` mestre 0/1). Como indicador
     de posição, acende a lightbar na cor do slot (1=azul, 2=vermelho, 3=verde,
     4=rosa — a MESMA paleta dos DualSense). Best-effort: ``False`` se os nós não
     existem/são graváveis (sem a regra udev do DS4, sem regressão).
+
+    .. warning::
+
+       **NOTA DATADA — 07/08/2026: esta docstring dizia "sem barra de player", e
+       a frase era falsa sobre o PLÁSTICO.** A mantenedora corrigiu, olhando o
+       aparelho: *"não há lightbar mas existe led de identificação de player
+       nele também, igual o pro controller"*.
+
+       O que é verdade, e a distinção importa: o **driver** ``hid-playstation``
+       registra ``player_leds[5]`` apenas no caminho do DualSense
+       (``assets/dkms/hid-playstation/hid-playstation.c:250-252`` e o laço de
+       registro em ``:1946``); no caminho do DualShock4 existe só
+       ``lightbar_leds`` (``:2348``). Isso é correto para o DS4 da Sony, que de
+       fato não tem a barra — e **errado como descrição do 8BitDo**, que é um
+       clone com quatro luzes no plástico falando um protocolo que não as prevê.
+
+       **O que ninguém mediu, e bloqueia a numeração dele:** quem acende aquelas
+       luzes. Ou o firmware do 8BitDo traduz a cor da lightbar que escrevemos
+       aqui para os LEDs físicos — e então esta função já numera o aparelho —,
+       ou ele as acende por conta própria e ignora o que mandamos, e então esta
+       função escreve num lugar que não chega a lugar nenhum.
+
+       **GRAU: SEM PROVA.** A medição que decide custa uma escrita e o olho dela:
+       pintar um slot conhecido e perguntar o que as luzes fizeram. Está na
+       ``P-4`` de :doc:`docs/protocol/externos-referencia-canonica`.
     """
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
