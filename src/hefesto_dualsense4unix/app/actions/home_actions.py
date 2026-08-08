@@ -1122,6 +1122,13 @@ class HomeActionsMixin(WidgetAccessMixin):
             # controles conectados que os cards mostram (`state_full`), uma
             # fonte só, nunca o cache assíncrono de outra aba.
             self._home_players_hint.set_text(_format_players_hint(connected))
+            # QUEM-DÁ-O-JOGADOR-2-01 (08/08/2026): a caixinha do Steam Input, na
+            # aba Perfis, precisa saber quantos controles há para avisar que a
+            # marca troca o dono do jogador 2 — e o toast dela é SÍNCRONO, sem
+            # tempo de perguntar ao daemon. Guardar aqui é de graça: esta função
+            # já recebe o estado, já filtrou os conectados, e roda a cada tique.
+            # Uma contagem só, num lugar só, para as duas abas não divergirem.
+            self._controles_conectados = len(connected)
             self._render_home_controllers(
                 connected,
                 grab_state=state.get("primary_grab_state"),

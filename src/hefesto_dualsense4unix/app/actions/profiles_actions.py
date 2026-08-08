@@ -393,7 +393,9 @@ def mensagem_de_ativacao(name: str, result: Any = None) -> str:
     return f"Perfil ativado: {name} — {_mensagem_de_aplicacao(relato)}"
 
 
-def texto_da_marca_do_steam_input(status: str, appid: object = None) -> str:
+def texto_da_marca_do_steam_input(
+    status: str, appid: object = None, controles: int | None = None
+) -> str:
     """Toast da caixinha do Steam Input — pura, testável sem GTK.
 
     O texto obedece ao que ELA mediu em 06/08/2026
@@ -405,6 +407,24 @@ def texto_da_marca_do_steam_input(status: str, appid: object = None) -> str:
 
     Por isso aqui não se escreve "o Hefesto sai da frente": é meia verdade
     medida, e a metade que falta é justamente a que ela usa.
+
+    QUEM-DA-O-JOGADOR-2-01 (08/08/2026) — o que faltava dizer.
+    ----------------------------------------------------------
+    O texto contava a metade da SAÍDA e calava a metade que só aparece com **dois
+    controles na mesa**: a exceção recolhe os gamepads virtuais dos secundários,
+    e o co-op do Hefesto sai de cena junto (`coop_derrubado_pela_excecao_steam_
+    input` no journal dela, sete vezes em 08/08). Isso é o desenho funcionando —
+    são justamente esses vpads que fariam o controle dobrado —, mas muda **quem
+    entrega o jogador 2**: passa a ser o Steam Input, não nós.
+
+    Com um controle só, a frase antiga estava completa e nada muda. Com dois ou
+    mais, ela omitia a troca — e omissão numa caixinha que ela marca no meio da
+    noite custou a ela uma sessão inteira de Sackboy.
+
+    **O que este texto NÃO promete, de propósito:** que o jogo vai ver dois
+    jogadores. Ninguém mediu se o Steam Input entrega os dois controles físicos
+    ao jogo nesta máquina — é SEM PROVA, e prometer aqui seria inventar. O texto
+    diz o que muda e manda ela conferir, que é o que a casa pode sustentar.
     """
     if status == "appid_invalido":
         return "Esse não é um número de jogo da Steam — nada foi mudado."
@@ -415,14 +435,29 @@ def texto_da_marca_do_steam_input(status: str, appid: object = None) -> str:
     if status == "nao_estava":
         return f"O jogo {appid} não estava marcado."
     if status == "removido":
+        volta_do_coop = (
+            " O co-op volta a ser do Hefesto."
+            if controles is not None and controles >= 2
+            else ""
+        )
         return (
             f"Tirei a marca do jogo {appid}: ele volta a ver o controle "
-            "virtual do Hefesto. Feche e abra o jogo para valer."
+            f"virtual do Hefesto.{volta_do_coop} Feche e abra o jogo para valer."
         )
+    # QUEM-DA-O-JOGADOR-2-01: com dois ou mais na mesa, a marca troca o dono do
+    # jogador 2. Dizer isso é obrigação; prometer que o jogo vai ver os dois
+    # seria inventar (ninguém mediu).
+    troca_do_coop = (
+        f" Atenção: com {controles} controles, quem passa a dar o jogador 2 é o "
+        "Steam Input, não o Hefesto — confira na tela do jogo se os dois "
+        "aparecem."
+        if controles is not None and controles >= 2
+        else ""
+    )
     return (
         f"Marquei o jogo {appid}: ele passa a ver o controle de verdade, sem "
-        "o controle dobrado, e a sua cor e os seus gatilhos continuam valendo. "
-        "Feche e abra o jogo para valer."
+        "o controle dobrado, e a sua cor e os seus gatilhos continuam valendo."
+        f"{troca_do_coop} Feche e abra o jogo para valer."
     )
 
 
@@ -1277,12 +1312,38 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         except Exception as exc:
             logger.warning("steam_input_do_perfil_falhou", err=str(exc))
             status = "erro"
-        self._toast_profile(texto_da_marca_do_steam_input(status, appid))
+        self._toast_profile(
+            texto_da_marca_do_steam_input(status, appid, self._controles_na_mesa())
+        )
         if status in ("adicionado", "removido"):
             self._avisar_o_daemon_da_allowlist()
         # O disco é a verdade: se a escrita não valeu, a caixa volta ao que o
         # arquivo diz em vez de mentir que valeu.
         self._sincronizar_caixa_do_steam_input()
+
+    def _controles_na_mesa(self) -> int | None:
+        """Quantos controles CONECTADOS o daemon reporta, ou None se não der.
+
+        QUEM-DA-O-JOGADOR-2-01: é o que decide se a caixinha precisa avisar da
+        troca de dono do jogador 2. Lê o mesmo campo que a aba Início já usa
+        (`state["controllers"]`, filtrado por `connected`), para não haver duas
+        contagens divergentes na mesma janela.
+
+        **Devolve None em vez de zero quando não consegue ler**, e a diferença
+        importa: zero significaria "não há controle, não avise", e um palpite
+        errado aqui faria a caixinha CALAR justamente quando ela tem dois na
+        mesa. None faz o texto voltar à forma antiga, que é verdadeira para um
+        controle e apenas incompleta para dois — falha para o lado de dizer
+        menos, nunca de dizer errado.
+
+        **Por que não perguntar ao daemon aqui:** o toast é síncrono e a ponte
+        IPC desta janela é assíncrona (`call_async`). Uma chamada nova ou
+        bloquearia a interface, ou chegaria depois do texto já mostrado. A aba
+        Início já busca esse estado a cada tique e agora guarda a contagem — ler
+        dali é de graça e mantém UMA contagem só na janela inteira.
+        """
+        contagem = getattr(self, "_controles_conectados", None)
+        return contagem if isinstance(contagem, int) else None
 
     def _avisar_o_daemon_da_allowlist(self) -> None:
         """Faz a marca VALER agora, sem reiniciar nada.
