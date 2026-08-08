@@ -168,3 +168,72 @@ def test_os_tres_rotulos_existem_e_sao_distintos() -> None:
         "o botão de adiar não diz QUANDO vale — sem isso ela não sabe o que está "
         "escolhendo."
     )
+
+
+# --- RELANCAR-AGORA-01: o botão faz o que promete ----------------------------
+
+
+def test_o_rotulo_promete_o_fim_e_nao_o_meio() -> None:
+    """"Aplicar agora e reiniciar o jogo" — as palavras dela.
+
+    O rótulo antigo ("Fechar o jogo e abrir de novo") descrevia o MEIO e calava
+    o fim: ela não clica ali para fechar o jogo, clica para a mudança valer
+    agora. Ela leu na tela e apontou: *"a última opção deveria ser aplicar agora
+    e reiniciar jogo"*.
+    """
+    assert "Aplicar agora" in r.ROTULO_FECHAR, (
+        "o rótulo voltou a descrever o meio (fechar) em vez do fim (aplicar). "
+        "Quem lê o botão precisa saber o que GANHA, não só o que perde."
+    )
+    assert "reiniciar o jogo" in r.ROTULO_FECHAR, (
+        "o rótulo não diz mais que o jogo reinicia — e reiniciar é o preço que "
+        "ela aceita pagar CONSCIENTEMENTE."
+    )
+
+
+def test_o_toast_do_relancamento_diz_o_que_de_fato_aconteceu() -> None:
+    """Uma frase por desfecho, e nenhuma promete o que não foi conferido.
+
+    ARRANQUE a distinção (volte a uma frase fixa) e este teste REPROVA. O texto
+    anterior dizia "o jogo fechou, a mudança valeu e eu pedi a abertura" ANTES
+    de qualquer uma das três coisas acontecer — e ela viu: *"não sei nem se
+    aplicou"*.
+    """
+    ok = r.toast_do_relancamento(fechou=True, reabriu=True, appid=1599660)
+    assert "fechei o jogo" in ok.lower() and "mudança valeu" in ok
+    assert "pode demorar" in ok.lower(), (
+        "o toast do caminho feliz não avisa que a Steam demora — sem isso ela "
+        "acha que falhou e clica de novo."
+    )
+
+    nao_fechou = r.toast_do_relancamento(fechou=False, reabriu=False)
+    assert "não fechou" in nao_fechou, "não diz que a Steam resistiu"
+    assert "próxima vez" in nao_fechou, (
+        "não diz o que ACONTECEU com a mudança dela — ela fica sem saber se "
+        "precisa refazer."
+    )
+
+    sem_appid = r.toast_do_relancamento(fechou=True, reabriu=False, appid=None)
+    assert "não consegui identificar qual jogo" in sem_appid.lower(), (
+        "quando o appid não foi descoberto, o toast tem de dizer POR QUE não "
+        "reabriu — senão parece defeito aleatório."
+    )
+
+    sem_abrir = r.toast_do_relancamento(fechou=True, reabriu=False, appid=1599660)
+    assert "abra pela Steam" in sem_abrir, (
+        "quando não conseguiu reabrir, o toast tem de dizer o que ELA faz agora."
+    )
+
+
+def test_o_toast_nunca_afirma_que_o_jogo_abriu() -> None:
+    """Reabrir é PEDIR à Steam. Afirmar "abriu" seria mentir de novo.
+
+    A Steam leva de segundos a minutos (shader cache, atualização). O contrato
+    do produto aqui é "o pedido saiu", e o texto tem de espelhar isso — mentir no
+    mesmo lugar, na segunda tentativa, é o que queima a confiança de vez.
+    """
+    ok = r.toast_do_relancamento(fechou=True, reabriu=True, appid=1)
+    for promessa in ("o jogo abriu", "jogo aberto", "está aberto"):
+        assert promessa not in ok.lower(), (
+            f"o toast afirma {promessa!r} — só sabemos que o pedido saiu."
+        )

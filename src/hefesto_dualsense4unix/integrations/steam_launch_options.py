@@ -614,6 +614,68 @@ def steam_game_running() -> bool:
     return proc.returncode == 0
 
 
+
+def steam_game_running_appid() -> int | None:
+    """O appid do jogo da Steam em execução, ou None.
+
+    RELANCAR-AGORA-01 (08/08/2026). A `steam_game_running` acima já casava
+    ``SteamLaunch AppId=<id>`` e **jogava o id fora**, devolvendo só um booleano.
+    Isso bastava para RECUSAR ("há jogo aberto, não mexo"), e não basta para
+    OFERECER: quem promete reabrir o jogo precisa saber qual é.
+
+    Ela apontou o defeito olhando o botão: *"pior que essa terceira opção nem faz
+    isso né? Só fecha mesmo"*. Estava certa — o botão dizia "Fechar o jogo e
+    abrir de novo" e só fechava.
+
+    Devolve o PRIMEIRO appid encontrado. Com dois jogos abertos a escolha é
+    arbitrária, e é aceitável: o diálogo que consome isto nasce de um gesto dela
+    sobre o jogo que está na frente, e a alternativa — recusar quando há dois —
+    tiraria a cura no caso comum por causa do raro.
+    """
+    try:
+        proc = subprocess.run(
+            ["pgrep", "-af", "SteamLaunch AppId="],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    achado = re.search(r"SteamLaunch AppId=(\d+)", proc.stdout or "")
+    return int(achado.group(1)) if achado else None
+
+
+def start_steam_game(appid: int) -> bool:
+    """Pede à Steam que abra o jogo. True = o pedido saiu.
+
+    RELANCAR-AGORA-01. Usa a URL `steam://rungameid/<appid>`, que é o caminho
+    que a própria Steam usa nos atalhos do menu — e é o que faz o jogo nascer
+    COM o wrapper do Hefesto, lendo o `launch_env` novo. Chamar o executável
+    direto puralaria o wrapper e a mudança dela não valeria, que é o oposto do
+    ponto.
+
+    **Não espera o jogo subir**: a Steam leva de segundos a minutos (shader
+    cache, atualização), e bloquear a janela por isso seria pior que o defeito.
+    O True diz "o pedido saiu", nunca "o jogo abriu" — e o texto da tela precisa
+    dizer a mesma coisa, sob pena de mentir.
+    """
+    url = f"steam://rungameid/{int(appid)}"
+    for cmd in (["steam", url], ["xdg-open", url]):
+        if shutil.which(cmd[0]) is None:
+            continue
+        try:
+            subprocess.Popen(
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            return True
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return False
+
+
 def stop_steam() -> bool:
     """Fecha a Steam (steam -shutdown, espera até 30 s). True = fechada."""
     if not steam_running():
