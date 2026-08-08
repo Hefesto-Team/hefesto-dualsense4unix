@@ -39,6 +39,13 @@ set -euo pipefail
 
 JANELA_MIN=10
 LIMIAR_RECUSAS=8
+# VIGIA-QUE-DERRUBA-01 (08/08/2026): quantos APARELHOS DISTINTOS precisam estar
+# sendo recusados para que isso seja doença do daemon, e não de um aparelho.
+# Dois é o menor número que separa as duas leituras: um aparelho martelando é o
+# caso medido em 08/08 (nove recusas, um 8BitDo, e o restart custou os controles
+# dela); a doença de 21/07, que esta vigia existe para pegar, atinge vários ao
+# mesmo tempo porque o defeito é do daemon.
+LIMIAR_APARELHOS=2
 RATE_LIMIT_S=600
 STAMP_RESTART=/run/hefesto-bt-watchdog.restart-stamp
 STAMP_DIR=/run/hefesto-bt-watchdog
@@ -216,13 +223,30 @@ systemctl is-active --quiet bluetooth.service || { log "bluetooth.service inativ
 # MAC sem objeto é o daemon SÃO cumprindo o protocolo (medido 22/07: um 8BitDo
 # órfão de bond martelou "unknown device" 8x/10min e o watchdog derrubou uma
 # sessão com 3 controles vivos por confundir isso com doença).
+# VIGIA-QUE-DERRUBA-01 (08/08/2026): a contagem é de APARELHOS DISTINTOS, não de
+# eventos. MEDIDO na máquina dela: às 00:56:26 a vigia registrou "estado doente
+# confirmado (9 recusas/10min, 0 conectados)" e REINICIOU o `bluetooth.service`.
+# As nove recusas eram de **um aparelho só** (o 8BitDo, `E4:17:…`), insistindo
+# depois que o crash do bluetoothd às 00:27:35 levou os quatro bonds embora.
+#
+# Um aparelho insistindo nove vezes não é daemon doente. E a "cura" é pior que o
+# sintoma, porque não tem relação com ele: **reiniciar o serviço não cria bond
+# nenhum** — só derruba quem estava de pé, e o restart matou junto o
+# `hefesto-bt-agent`, que é quem confirmaria o repareamento.
+#
+# A doença que esta vigia existe para pegar (medida em 21/07) é o daemon recusando
+# device PRESENTE na lista — e essa se manifesta em VÁRIOS aparelhos ao mesmo
+# tempo, porque o defeito é do daemon, não do aparelho. Contar aparelhos
+# distintos separa as duas leituras sem inventar instrumento novo.
 DEVICE_PATHS="$(_dbus_device_paths)"
 RECUSAS=0
 RECUSAS_ORFAS=0
+MACS_RECUSADOS=""
 while IFS= read -r MAC; do
     [[ -z "${MAC}" ]] && continue
     if grep -qi "dev_${MAC//:/_}$" <<<"${DEVICE_PATHS}"; then
         RECUSAS=$((RECUSAS + 1))
+        MACS_RECUSADOS+="${MAC,,}"$'\n'
     else
         RECUSAS_ORFAS=$((RECUSAS_ORFAS + 1))
     fi
@@ -231,6 +255,10 @@ done < <(journalctl -u bluetooth --since "-${JANELA_MIN} min" --no-pager 2>/dev/
     | grep -oE '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || true)
 if [[ "${RECUSAS_ORFAS}" -gt 0 ]]; then
     log "${RECUSAS_ORFAS} recusa(s) de MAC sem objeto no BlueZ ignoradas (órfão re-tentando; daemon são)"
+fi
+APARELHOS_RECUSADOS=0
+if [[ -n "${MACS_RECUSADOS}" ]]; then
+    APARELHOS_RECUSADOS="$(printf '%s' "${MACS_RECUSADOS}" | sort -u | grep -c . || true)"
 fi
 
 CONECTADOS=0
@@ -242,7 +270,13 @@ while IFS= read -r OBJ; do
 done <<<"${DEVICE_PATHS}"
 
 if [[ "${RECUSAS}" -ge "${LIMIAR_RECUSAS}" ]]; then
-    if [[ "${CONECTADOS}" -gt 0 ]]; then
+    if [[ "${APARELHOS_RECUSADOS}" -lt "${LIMIAR_APARELHOS}" ]]; then
+        # VIGIA-QUE-DERRUBA-01: um aparelho só, martelando. É problema DELE (bond
+        # perdido, chave rotacionada, firmware confuso), e reiniciar o serviço não
+        # resolve nenhum dos três — só derruba os outros. Vira AVISO, que é o que
+        # o sintoma merece: alguém precisa saber, ninguém precisa ser derrubado.
+        log "AVISO: ${RECUSAS} recusa(s)/${JANELA_MIN}min concentradas em ${APARELHOS_RECUSADOS} aparelho(s) — parece bond perdido do aparelho, não daemon doente; restart NÃO resolveria (ver VIGIA-QUE-DERRUBA-01)"
+    elif [[ "${CONECTADOS}" -gt 0 ]]; then
         log "estado doente suspeito (${RECUSAS} recusas/${JANELA_MIN}min) mas há ${CONECTADOS} device(s) conectado(s) — restart adiado (nunca derrubo sessão viva)"
     else
         AGORA="$(date +%s)"
