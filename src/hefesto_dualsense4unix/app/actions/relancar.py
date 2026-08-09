@@ -46,17 +46,29 @@ from typing import Final, Literal
 #: entrou por suspeita.
 EXIGEM_RELANCAR: Final[frozenset[str]] = frozenset(
     {
-        # RELANCAR-ORDEM-01 (08/08/2026): "modo" SAIU desta lista, por decisão
-        # dela. A máscara só existe dentro de "Jogar pelo Hefesto", então
-        # perguntar no modo é perguntar antes de a decisão estar completa — ela
-        # viu na tela e disse: *"como já aparece a tela de aplicar e reiniciar se
-        # nem sei o que ele vai aplicar?"*. Quem pergunta é a `mascara`, logo
-        # abaixo, que é onde a escolha fecha.
+        # "O que o controle faz agora" — trocar o modo mexe no `compose_env` ao
+        # vivo, e o jogo já leu o ambiente na abertura.
         #
-        # O nome fica registrado aqui, e não na `MUDA_NA_HORA`, porque trocar o
-        # modo com jogo aberto NÃO muda na hora sem custo — ele mexe no
-        # `compose_env` ao vivo. A cura daquele caminho é a JOGADOR-3-FANTASMA-01
-        # (impedir o estado meio-a-meio), não este diálogo.
+        # AGORA-E-DEPOIS-01 (08/08/2026, noite): "modo" VOLTOU a esta lista, e a
+        # ida e a volta são a mesma decisão dela vista de dois lugares.
+        #
+        # Ele saiu na RELANCAR-ORDEM-01 porque o diálogo nascia no CLIQUE do
+        # seletor — antes de ela poder escolher a máscara: *"como já aparece a
+        # tela de aplicar e reiniciar se nem sei o que ele vai aplicar?"*. Estava
+        # certa: perguntar ali é perguntar sobre uma decisão pela metade.
+        #
+        # Com o clique deixando de aplicar, a pergunta mudou de lugar — ela mora
+        # no "Aplicar" do rodapé, onde modo E máscara já estão escolhidos. O
+        # motivo da retirada caducou, e ela disse o que quer, vendo a tela:
+        # *"se o jogo tiver aberto aparece o popup falando em fechar o jogo pra
+        # aplicar e afins. e isso vai permitir aplicar tudo que alterar em todas
+        # as abas"*.
+        #
+        # Sem isto, mudar SÓ o modo com o jogo aberto aplicava direto — que é o
+        # caminho que produziu o "Jogador 3" fantasma. A JOGADOR-3-FANTASMA-01
+        # continua sendo a cura do estado meio-a-meio; este diálogo é o que
+        # impede de chegar lá sem ela saber.
+        "modo",
         # "O jogo vê o controle como" — máscara diferente recria o vpad, e o
         # Xbox ainda acrescenta `SDL_JOYSTICK_HIDAPI=0`.
         "mascara",

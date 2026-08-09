@@ -86,7 +86,7 @@ class WidgetAccessMixin:
         mudanca: str,
         valor: str | None,
         aplicar: Callable[[], None],
-        ao_adiar: Callable[[], None] | None = None,
+        ao_nao_relancar: Callable[[str], None] | None = None,
     ) -> bool:
         """True se assumiu o gesto (vai perguntar); False para aplicar direto.
 
@@ -99,19 +99,22 @@ class WidgetAccessMixin:
         partida é pior que uma pergunta que não foi feita — e a sondagem é
         best-effort por natureza.
 
-        ``ao_adiar`` (AGORA-E-DEPOIS-01, 08/08/2026) roda **só** no ramo
-        "Aplicar na próxima abertura", e existe porque quem chama daqui pode ter
-        mais coisa a fazer nesse ramo do que este módulo tem como saber. O caso
-        real é o "Aplicar" do rodapé: ele carrega SETE seções que mudam na hora
-        (gatilhos, LEDs, rumble…) além do modo/máscara que adiam. Sem este
-        gancho, adiar o que só vale na abertura engoliria em silêncio tudo o que
-        valia agora.
+        ``ao_nao_relancar`` roda nos DOIS ramos em que o jogo não é relançado —
+        "Aplicar na próxima abertura" e "Cancelar" —, recebendo qual deles foi.
+        Existe porque quem chama daqui pode ter mais a fazer do que este módulo
+        tem como saber: o "Aplicar" do rodapé carrega SETE seções que mudam na
+        hora (gatilhos, LEDs, rumble…) além do modo/máscara que adiam.
 
-        Nos outros dois ramos ele NÃO roda, e cada ausência tem razão: no
-        "Aplicar agora e reiniciar", quem continua a sequência é o callback de
-        sucesso do próprio ``aplicar``; no "Cancelar", o toast promete que
-        **nada** mudou, e rodar qualquer coisa depois dele faria da promessa uma
-        mentira.
+        AGORA-E-DEPOIS-01 → O-AGORA-NAO-E-REFEM-DO-DEPOIS-01 (08/08/2026, noite).
+        Ele nasceu cobrindo só o ramo de adiar, com a razão escrita de que o
+        "Cancelar" promete que **nada** mudou. A verificação adversarial mostrou
+        que a promessa é sobre o JOGO — *"não mexe na minha partida"* — e que
+        engolir a cor que ela ajustou na aba ao lado não é honrar promessa
+        nenhuma; é perder trabalho dela. Pior: o Cancelar é o botão DEFAULT do
+        diálogo, então Esc e o X da janela caíam ali.
+
+        No "Aplicar agora e reiniciar" ele NÃO roda, e isso continua certo: ali
+        quem continua a sequência é o callback de sucesso do próprio ``aplicar``.
         """
         if mudanca not in relancar.EXIGEM_RELANCAR:
             return False
@@ -123,7 +126,17 @@ class WidgetAccessMixin:
             # Este retorno é o que mantém o caminho comum sem diálogo e sem
             # espera — e é o que os testes da caixinha exercitam.
             return False
-        self._relancar_decidir(mudanca, valor, True, aplicar, ao_adiar)
+        # H (achado adversarial de 08/08): se o diálogo NÃO nascer — exceção
+        # no construtor, GTK sem tela —, quem chamou não pode ficar sem resposta.
+        # Antes, a exceção subia com o `True` já prometido e o clique dela morria
+        # em silêncio: sem toast, sem log, sem aplicação. Devolver False aqui
+        # devolve o gesto ao chamador, que aplica direto — é a MESMA filosofia
+        # de fail-safe já escrita acima: na dúvida, não interromper.
+        try:
+            self._relancar_decidir(mudanca, valor, True, aplicar, ao_nao_relancar)
+        except Exception as exc:
+            logger.warning("relancar_dialogo_nao_nasceu", erro=str(exc))
+            return False
         return True
 
     def _relancar_decidir(
@@ -132,7 +145,7 @@ class WidgetAccessMixin:
         valor: str | None,
         jogo: object,
         aplicar: Callable[[], None],
-        ao_adiar: Callable[[], None] | None = None,
+        ao_nao_relancar: Callable[[str], None] | None = None,
     ) -> bool:
         """Na thread do GTK: sem jogo aplica; com jogo, pergunta."""
         nome_do_jogo = jogo if isinstance(jogo, str) and jogo else None
@@ -183,11 +196,22 @@ class WidgetAccessMixin:
                 # ver com a abertura do jogo. Vem depois do toast de propósito:
                 # quem chama pode escrever o seu por cima, e a última palavra
                 # tem de ser a de quem sabe o que aconteceu por inteiro.
-                if ao_adiar is not None:
+                if ao_nao_relancar is not None:
                     with contextlib.suppress(Exception):
-                        ao_adiar()
+                        ao_nao_relancar("na_proxima_abertura")
             else:
                 self._toast_do_relancar(relancar.toast_da_escolha("cancelar"))
+                # O-AGORA-NAO-E-REFEM-DO-DEPOIS-01: cancelar é sobre o JOGO —
+                # "não mexe na minha partida" —, e não sobre a cor da luz que
+                # ela ajustou na aba ao lado. Antes, este ramo engolia as sete
+                # seções do "Aplicar" em silêncio, e era o pior lugar possível
+                # para isso: o Cancelar é o botão DEFAULT do diálogo
+                # (`daemon_actions.build_consentimento_dialog` chama
+                # `set_default_response(botoes[0])`), então Esc, Enter distraído
+                # e o X da janela caíam todos aqui.
+                if ao_nao_relancar is not None:
+                    with contextlib.suppress(Exception):
+                        ao_nao_relancar("cancelar")
                 # A tela volta ao que o disco diz: janela que não mente.
                 with contextlib.suppress(Exception):
                     sincronizar = getattr(self, "_sincronizar_caixa_do_steam_input", None)

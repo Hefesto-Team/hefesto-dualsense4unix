@@ -242,27 +242,33 @@ def test_o_toast_nunca_afirma_que_o_jogo_abriu() -> None:
 # --- RELANCAR-ORDEM-01: pergunta onde a decisão está COMPLETA ----------------
 
 
-def test_o_modo_nao_pergunta_porque_a_decisao_ainda_nao_fechou() -> None:
-    """Trocar o modo não abre diálogo — decisão dela, vendo a tela.
+def test_o_modo_pergunta_agora_que_a_decisao_fecha_no_aplicar() -> None:
+    """O modo voltou a perguntar — e a ida e a volta são a MESMA decisão dela.
 
-    A máscara ("O jogo vê o controle como") só EXISTE dentro de "Jogar pelo
-    Hefesto": o fluxo real é escolher o modo → a máscara aparecer → escolher a
-    máscara. Perguntar no primeiro passo é pedir para reiniciar o jogo por uma
-    configuração que ela ainda vai fazer.
+    NOTA DATADA (08/08/2026, noite — AGORA-E-DEPOIS-01). Este teste travava o
+    contrário, e o texto anterior continua valendo para o mundo em que ele
+    nasceu: enquanto o diálogo aparecia no CLIQUE do seletor, perguntar no modo
+    era perguntar sobre uma decisão pela metade — *"como já aparece a tela de
+    aplicar e reiniciar se nem sei o que ele vai aplicar?"*.
 
-    Ela viu e apontou: *"como já aparece a tela de aplicar e reiniciar se nem sei
-    o que ele vai aplicar?"*. E perguntar nos dois produziria DOIS diálogos numa
-    sequência só — o "caos" que ela descreveu.
+    O que mudou não foi a opinião dela; foi o LUGAR da pergunta. O clique deixou
+    de aplicar, e o diálogo passou a nascer no "Aplicar" do rodapé, onde modo e
+    máscara já estão escolhidos. Aí ela disse: *"se o jogo tiver aberto aparece
+    o popup falando em fechar o jogo pra aplicar e afins. e isso vai permitir
+    aplicar tudo que alterar em todas as abas"*.
 
-    ARRANQUE A CURA (ponha "modo" de volta em `EXIGEM_RELANCAR`) e este teste
-    REPROVA.
+    O "caos" dos dois diálogos numa sequência só, que era o risco de antes,
+    não pode mais acontecer: os cliques não perguntam nada, e o "Aplicar"
+    pergunta UMA vez pela mudança inteira.
     """
-    assert "modo" not in r.EXIGEM_RELANCAR, (
-        "`modo` voltou a perguntar. O diálogo apareceria ANTES de ela poder "
-        "escolher a máscara, pedindo para reiniciar o jogo sem ela saber pelo "
-        "quê. Ver RELANCAR-ORDEM-01."
+    assert "modo" in r.EXIGEM_RELANCAR, (
+        "`modo` saiu da lista de novo. Com o diálogo no 'Aplicar', trocar o "
+        "modo com o jogo aberto voltaria a mexer no `compose_env` ao vivo sem "
+        "ela saber — o caminho do 'Jogador 3' fantasma."
     )
-    assert r.precisa_perguntar(mudanca="modo", jogo_aberto=True) is False
+    assert r.precisa_perguntar(mudanca="modo", jogo_aberto=True) is True
+    # E o contrapeso de sempre: sem jogo aberto não se pergunta nada.
+    assert r.precisa_perguntar(mudanca="modo", jogo_aberto=False) is False
 
 
 def test_a_mascara_continua_perguntando() -> None:
