@@ -128,6 +128,70 @@ def led(
     cmd_led(color=color, brightness=brightness)
 
 
+@app.command("lightbar-reset")
+def lightbar_reset(
+    uniq: str | None = typer.Option(
+        None, "--uniq", help="Só neste controle (o MAC/uniq). Sem isto, todos."
+    ),
+) -> None:
+    """Devolve ao host o claim da lightbar (Reset LED state, 0x08).
+
+    INSTRUMENTO DE MEDIÇÃO — LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026).
+
+    A adoção de um DualSense por Bluetooth derruba o claim da lightbar na
+    máquina de estados do FIRMWARE: a barra apaga e passa a IGNORAR as escritas
+    de cor, enquanto os LEDs de jogador e os gatilhos seguem funcionando. Este
+    comando manda o report que devolve o claim, pelo handle que o daemon já tem
+    aberto — sem disputar o hidraw com ele.
+
+    Ele existe para tornar falsificável uma contradição entre duas medições da
+    casa: o 0x08 dentro da janela de ~3,4 s pós-conexão travou a barra (7/7 em
+    03/08), e sem 0x08 nenhum a barra ficou morta por 5 dias (08/08). A
+    hipótese que as concilia — ele cura FORA da janela — se testa aqui, com o
+    olho de quem está com o controle na mão.
+
+    Exige o daemon vivo: é ele que tem o handle.
+    """
+    from hefesto_dualsense4unix.cli.cmd_lightbar_reset import cmd_lightbar_reset
+
+    cmd_lightbar_reset(uniq=uniq)
+
+
+@app.command("player-leds")
+def player_leds(
+    acao: str = typer.Argument(
+        ..., help="'off' suprime a escrita do LED de jogador; 'on' devolve."
+    ),
+) -> None:
+    """Liga/desliga a escrita do LED de JOGADOR — instrumento de eliminação.
+
+    LIGHTBAR-ISOLAR-OS-PLAYERS-01 (08/08/2026). Serve a UMA pergunta: **é a
+    escrita do LED de jogador que derruba o claim da lightbar quando o controle
+    acaba de conectar?**
+
+    O que aponta para lá: o report que DEVOLVE a barra (0x08) apaga os players
+    — as duas coisas vivem na mesma máquina de estados do firmware —, e a barra
+    apaga justamente quando o controle acaba de conectar, que é quando o
+    priming escreve os players.
+
+    Como medir, e a ordem importa:
+
+        1. `player-leds off`  (com o controle ligado — não reinicie nada)
+        2. desligue e religue o controle
+        3. olhe a barra: acendeu?
+        4. `player-leds on` para devolver o produto ao normal
+
+    Se a barra sobreviver com os players suprimidos, a escrita deles é a causa.
+    Se apagar do mesmo jeito, a causa é a conexão em si e este caminho está
+    inocente — e as duas respostas valem, porque as duas eliminam uma variável.
+
+    Não persiste: um restart do daemon devolve o comportamento normal.
+    """
+    from hefesto_dualsense4unix.cli.cmd_lightbar_reset import cmd_player_leds
+
+    cmd_player_leds(acao=acao)
+
+
 @app.command()
 def tui() -> None:
     """Abre a TUI Textual do Hefesto - Dualsense4Unix."""

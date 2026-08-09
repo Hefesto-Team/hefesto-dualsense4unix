@@ -222,6 +222,52 @@ class FooterActionsMixin(ProfileWriterMixin):
             return
         self._apply_draft_agora()
 
+    def _ha_jogo_aberto_agora(self) -> bool:
+        """Relê o sinal de jogo aberto NA HORA. Devolve o que ficou em cache.
+
+        JOGO-ABERTO-SO-NA-INICIO-01 (09/08/2026) — defeito achado por
+        verificação adversarial poucas horas depois de a cura que ele fura ter
+        sido entregue.
+
+        O ``_jogo_aberto`` tem UM escritor: `home_actions._render_home`
+        (`:1339`), e ele **só roda com a aba Início à vista** — o poller checa a
+        página corrente antes de trabalhar (`home_actions.py:1050-1054`).
+        Consequência: clicar no "Aplicar" a partir da aba Lightbar, ou nos
+        primeiros 2 s da janela, deixava o flag em ``False`` e o diálogo **não
+        aparecia** — a transição saía direto, com o jogo aberto. É exatamente o
+        caminho que produziu o "Jogador 3" fantasma, e que esta leva dizia ter
+        fechado.
+
+        Por que uma leitura SÍNCRONA aqui é aceitável, sendo que a casa recusa
+        I/O bloqueante na thread do GTK: este método só roda no clique do
+        "Aplicar", que **já congela a janela** para a transação
+        (`_apply_draft_agora`), e o teto é o mesmo `STATE_IPC_TIMEOUT_S` que a
+        aba Início usa para a MESMA leitura. Não há caminho de tique por aqui.
+
+        Falha para o lado de **não mudar de opinião**: qualquer erro mantém o
+        valor que estava lá. Um diálogo que não aparece por engano é ruim, mas
+        um diálogo que aparece porque o IPC engasgou interrompe a partida dela —
+        e essa é a assimetria que o `_perguntar_antes_de_relancar` já declara.
+        """
+        import contextlib
+
+        from hefesto_dualsense4unix.app.actions.mode_transition import (
+            STATE_IPC_TIMEOUT_S,
+        )
+
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.app.ipc_bridge import _run_call
+
+            estado = _run_call("daemon.state_full", None, timeout=STATE_IPC_TIMEOUT_S)
+            if isinstance(estado, dict):
+                sinal = estado.get("game_signal")
+                # MESMO critério da aba Início (`home_actions.py:1337-1341`) —
+                # duas leituras do mesmo fato não podem discordar.
+                self._jogo_aberto = (
+                    isinstance(sinal, dict) and sinal.get("authority") == "game"
+                )
+        return bool(getattr(self, "_jogo_aberto", False))
+
     def _aplicar_escolha_pendente(self, pendente: dict[str, str]) -> None:
         """Aplica o que ela escolheu na aba Início e SÓ ENTÃO o rascunho.
 
@@ -230,17 +276,22 @@ class FooterActionsMixin(ProfileWriterMixin):
 
         1. **sem jogo** → aplica a transição e emenda o ``apply_draft`` no
            callback de sucesso;
-        2. **com jogo e MÁSCARA pendente** → o diálogo de relançamento pergunta
-           (``base._perguntar_antes_de_relancar``), porque trocar a máscara
-           recria o gamepad virtual e o jogo em curso não veria nada disso;
-        3. **com jogo e só o MODO pendente** → aplica direto, sem perguntar.
+        2. **com jogo aberto** → o diálogo de relançamento pergunta
+           (``base._perguntar_antes_de_relancar``), tanto para a máscara quanto
+           para o modo: os dois mexem no que o jogo em curso já leu, e ela
+           decidiu isso vendo a tela em 08/08 à noite (§12.2 do plano).
 
-        O caminho 3 é **decisão dela** (RELANCAR-ORDEM-01, mantida em 08/08 à
-        noite), e não é descuido: ``"modo"`` não está em
-        ``relancar.EXIGEM_RELANCAR``, então o helper devolve ``False`` sozinho e
-        a transição segue. O preço está declarado no plano (§9, decisão 1) — o
-        "Jogador 3" fantasma continua alcançável por este caminho, e a cura dele
-        é a JOGADOR-3-FANTASMA-01, não mais um diálogo.
+        NOTA DATADA (09/08/2026, madrugada): as três linhas que estavam aqui
+        diziam que o modo **não** perguntava, e caducaram na mesma noite em que
+        foram escritas — ``"modo"`` voltou a `relancar.EXIGEM_RELANCAR`
+        (`relancar.py:47-71`) horas depois. Uma verificação adversarial pegou a
+        contradição entre este texto e o código. Fica registrado porque é a
+        mesma família de defeito que esta casa persegue na tela: **um comentário
+        que descreve o gesto errado mente onde mais custa** — para quem for
+        mexer aqui depois.
+
+        O ESTADO DO JOGO É LIDO NA HORA, e essa parte é a metade que faltava.
+        Ver `_ha_jogo_aberto_agora`.
         """
         from hefesto_dualsense4unix.app.actions.home_actions import (
             _flavor_label,
@@ -249,6 +300,9 @@ class FooterActionsMixin(ProfileWriterMixin):
             render_pendente,
         )
         from hefesto_dualsense4unix.app.actions.mode_transition import apply_mode
+
+        # JOGO-ABERTO-SO-NA-INICIO-01 (09/08/2026): confere ANTES de decidir.
+        self._ha_jogo_aberto_agora()
 
         # O alvo do modo: a escolha dela, ou — quando só a máscara mudou — o que
         # já está valendo. Nunca um default nosso: escolher "gamepad" por conta

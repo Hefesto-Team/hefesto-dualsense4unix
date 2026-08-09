@@ -1206,3 +1206,100 @@ class TestOAgoraNaoEeRefemDoDepois:
 
         metodos = [m for m, _ in ipc_do_rodape]
         assert "gamepad.emulation.set" in metodos and "profile.apply_draft" in metodos
+
+
+# ---------------------------------------------------------------------------
+# 7. O diálogo não pode depender de qual aba está à vista
+# ---------------------------------------------------------------------------
+
+
+class TestOJogoAbertoELidoNaHora:
+    """JOGO-ABERTO-SO-NA-INICIO-01 (09/08/2026).
+
+    O `_jogo_aberto` tinha UM escritor — `home_actions._render_home` — e ele só
+    roda com a aba Início à vista (o poller checa a página corrente antes de
+    trabalhar). Quem clicasse no "Aplicar" a partir da aba Lightbar, ou nos
+    primeiros 2 s da janela, tinha o flag em `False` e **nenhuma pergunta era
+    feita**: a transição saía direto com o jogo aberto.
+
+    É o caminho que produziu o "Jogador 3" fantasma — o mesmo que esta leva
+    dizia ter fechado horas antes. A cura é reler o sinal no clique, e estes
+    testes existem para que a dependência de aba não volte por descuido.
+    """
+
+    def test_o_aplicar_rele_o_sinal_mesmo_sem_a_aba_inicio_ter_rodado(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        ipc_do_rodape: list[tuple[str, dict[str, Any]]],
+    ) -> None:
+        """O cenário exato: janela recém-aberta, ela nunca passou pela Início.
+
+        ARRANQUE A CURA (tire a chamada de `_ha_jogo_aberto_agora`) e este teste
+        REPROVA — o diálogo não abre e a transição sai por cima do jogo dela.
+        """
+        dialogo_falso = _Dialogo()
+        monkeypatch.setattr(
+            daemon_actions, "build_consentimento_dialog", dialogo_falso.construir
+        )
+        import hefesto_dualsense4unix.app.ipc_bridge as ponte
+
+        monkeypatch.setattr(
+            ponte,
+            "_run_call",
+            lambda *_a, **_k: {"game_signal": {"authority": "game"}},
+        )
+        rodape = _Rodape(jogo_aberto=False)  # como nasce, sem a Início renderizar
+        rodape._escolha_pendente = {"mascara": "xbox"}
+
+        rodape.on_apply_draft()
+
+        assert rodape._jogo_aberto is True, "o sinal não foi relido no clique"
+        assert dialogo_falso.aberto is True, (
+            "o diálogo não apareceu porque a aba Início não estava à vista — é o "
+            "caminho do 'Jogador 3' fantasma de volta."
+        )
+        assert ipc_do_rodape == [], "algo saiu antes de ela responder"
+
+    def test_leitura_que_falha_nao_muda_de_opiniao(
+        self, monkeypatch: pytest.MonkeyPatch, ipc_do_rodape: list[tuple[str, dict[str, Any]]]
+    ) -> None:
+        """Fail-safe: IPC que engasga mantém o que já se sabia.
+
+        A assimetria é deliberada e é a mesma que o `_perguntar_antes_de_relancar`
+        já declara: um diálogo que não aparece é ruim, mas um diálogo que aparece
+        porque o IPC engasgou **interrompe a partida dela**.
+        """
+        import hefesto_dualsense4unix.app.ipc_bridge as ponte
+
+        def _explode(*_a: Any, **_k: Any) -> Any:
+            raise ConnectionError("socket mudo")
+
+        monkeypatch.setattr(ponte, "_run_call", _explode)
+        rodape = _Rodape(jogo_aberto=False)
+        rodape._escolha_pendente = {"modo": "desktop"}
+
+        rodape.on_apply_draft()
+
+        assert rodape._jogo_aberto is False
+        # E o gesto segue: sem jogo conhecido, aplica como sempre aplicou.
+        assert [m for m, _ in ipc_do_rodape][:1] == ["native.mode.set"]
+
+    def test_o_criterio_e_o_mesmo_da_aba_inicio(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Duas leituras do mesmo fato não podem discordar.
+
+        A aba Início decide por `game_signal.authority == "game"`. Se o rodapé
+        inventasse outro critério, a janela passaria a ter duas verdades sobre
+        se há jogo aberto — o defeito que esta casa persegue desde a HARM-01.
+        """
+        import hefesto_dualsense4unix.app.ipc_bridge as ponte
+
+        for autoridade, esperado in (("game", True), ("daemon", False), (None, False)):
+            monkeypatch.setattr(
+                ponte,
+                "_run_call",
+                lambda *_a, _v=autoridade, **_k: {"game_signal": {"authority": _v}},
+            )
+            rodape = _Rodape(jogo_aberto=not esperado)
+            assert rodape._ha_jogo_aberto_agora() is esperado, autoridade

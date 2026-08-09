@@ -2667,6 +2667,55 @@ class IpcHandlersMixin:
 
     # --- rumble ----------------------------------------------------------
 
+    async def _handle_lightbar_reset(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição.
+
+        LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026). Ver
+        `backend_pydualsense.enviar_release_leds` para as três medições que este
+        caminho existe para conciliar. Em uma linha: o 0x08 devolve o claim da
+        lightbar ao host, e a suspeita é que ele só TRAVA quando mandado dentro
+        da janela de ~3,4 s pós-conexão. Sem um gesto sob demanda, essa
+        diferença não é falsificável sem brigar com o daemon pelo hidraw.
+
+        ``uniq`` opcional restringe a um controle. A resposta traz o que foi
+        enviado por handle — ``{}`` quer dizer "nenhum handle aberto", que é
+        informação, não falha.
+        """
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("lightbar.reset: 'uniq' precisa ser texto")
+        # O backend é `self.controller` (o `IController` que o IpcServer
+        # carrega), não `daemon.backend` — o primeiro tiro deste instrumento
+        # errou exatamente aqui, e o defeito foi útil: provou que o handler
+        # levanta ANTES de escrever no controle, então uma chamada que falha
+        # não gasta a medição.
+        enviar = getattr(self.controller, "enviar_release_leds", None)
+        if not callable(enviar):
+            raise RuntimeError("backend sem suporte a lightbar.reset")
+        enviados = enviar(uniq=uniq)
+        return {"status": "ok", "enviados": enviados}
+
+    async def _handle_debug_player_leds(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação.
+
+        LIGHTBAR-ISOLAR-OS-PLAYERS-01 (08/08/2026), hipótese dela. Ver
+        `backend_pydualsense.suprimir_player_leds` para o porquê e para as
+        medições que apontam para cá.
+
+        Comutável ao vivo de propósito: o experimento anterior se perdeu porque
+        o instrumento exigia reiniciar o daemon, e o restart curou a barra antes
+        do gesto que se queria medir.
+        """
+        suprimir = params.get("suprimir")
+        if not isinstance(suprimir, bool):
+            raise ValueError("debug.player_leds exige 'suprimir' booleano")
+        alternar = getattr(self.controller, "suprimir_player_leds", None)
+        if not callable(alternar):
+            raise RuntimeError("backend sem suporte a debug.player_leds")
+        return {"status": "ok", "suprimir": bool(alternar(suprimir))}
+
     async def _handle_rumble_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Aplica rumble com política de intensidade (FEAT-RUMBLE-POLICY-01).
 

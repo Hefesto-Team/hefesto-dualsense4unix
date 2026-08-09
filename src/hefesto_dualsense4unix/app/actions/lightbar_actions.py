@@ -634,7 +634,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 uniq=self._edit_uniq(),
             )
         msg = (
-            f"Cor aplicada no controle ({pct}% de brilho)"
+            _TOAST_COR_ENVIADA.format(pct=pct)
             if ok
             else (mensagem_de_secao_fora(resposta) or _AVISO_HEFESTO_DESLIGADO)
         )
