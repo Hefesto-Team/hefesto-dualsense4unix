@@ -411,20 +411,34 @@ def texto_da_marca_do_steam_input(
     QUEM-DA-O-JOGADOR-2-01 (08/08/2026) — o que faltava dizer.
     ----------------------------------------------------------
     O texto contava a metade da SAÍDA e calava a metade que só aparece com **dois
-    controles na mesa**: a exceção recolhe os gamepads virtuais dos secundários,
-    e o co-op do Hefesto sai de cena junto (`coop_derrubado_pela_excecao_steam_
-    input` no journal dela, sete vezes em 08/08). Isso é o desenho funcionando —
-    são justamente esses vpads que fariam o controle dobrado —, mas muda **quem
-    entrega o jogador 2**: passa a ser o Steam Input, não nós.
+    controles na mesa**: a exceção recolhia os gamepads virtuais dos secundários,
+    e o co-op do Hefesto saía de cena junto (`coop_derrubado_pela_excecao_steam_
+    input` no journal dela, sete vezes em 08/08 quando isto foi escrito, vinte no
+    fim do dia). Isso mudava **quem entrega o jogador 2**: passava a ser o Steam
+    Input, não nós.
 
-    Com um controle só, a frase antiga estava completa e nada muda. Com dois ou
+    Com um controle só, a frase antiga estava completa e nada mudava. Com dois ou
     mais, ela omitia a troca — e omissão numa caixinha que ela marca no meio da
     noite custou a ela uma sessão inteira de Sackboy.
 
-    **O que este texto NÃO promete, de propósito:** que o jogo vai ver dois
-    jogadores. Ninguém mediu se o Steam Input entrega os dois controles físicos
-    ao jogo nesta máquina — é SEM PROVA, e prometer aqui seria inventar. O texto
-    diz o que muda e manda ela conferir, que é o que a casa pode sustentar.
+    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela)
+    ------------------------------------------------------------------
+    **O aviso acima saiu porque o defeito que ele avisava foi curado, não porque
+    incomodava.** A marca mudou de lado: em vez de recolher os controles
+    virtuais, ela esconde o controle FÍSICO. Os virtuais ficam de pé, um por
+    controle, e o jogador 2 continua sendo do Hefesto — que é justamente o que o
+    aviso dizia que se perdia. Manter a frase agora seria a doença de sempre pelo
+    avesso: a tela avisando de um preço que o produto parou de cobrar.
+
+    O que este texto continua NÃO prometendo, e pelo mesmo motivo de antes: que o
+    jogo vai LISTAR dois jogadores. Isso depende do jogo, ninguém mediu nesta
+    máquina, e a prova é dela — abrir o jogo marcado com dois controles e contar.
+
+    O que ele PASSOU a dizer, e não é enfeite: **"feche e abra o jogo"**, em toda
+    marcação. Metade da marca é a env que o jogo lê UMA vez, na abertura
+    (`assets/hefesto-launch.sh`, `exec env "$@"`); marcar com o jogo aberto muda
+    o daemon e não muda o que aquele processo já enumerou. Foi assim que nasceu o
+    "Jogador 3" fantasma de 08/08.
     """
     if status == "appid_invalido":
         return "Esse não é um número de jogo da Steam — nada foi mudado."
@@ -435,29 +449,21 @@ def texto_da_marca_do_steam_input(
     if status == "nao_estava":
         return f"O jogo {appid} não estava marcado."
     if status == "removido":
-        volta_do_coop = (
-            " O co-op volta a ser do Hefesto."
-            if controles is not None and controles >= 2
-            else ""
-        )
         return (
-            f"Tirei a marca do jogo {appid}: ele volta a ver o controle "
-            f"virtual do Hefesto.{volta_do_coop} Feche e abra o jogo para valer."
+            f"Tirei a marca do jogo {appid}: ele volta a enxergar também o "
+            "controle físico. Feche e abra o jogo para valer."
         )
-    # QUEM-DA-O-JOGADOR-2-01: com dois ou mais na mesa, a marca troca o dono do
-    # jogador 2. Dizer isso é obrigação; prometer que o jogo vai ver os dois
-    # seria inventar (ninguém mediu).
-    troca_do_coop = (
-        f" Atenção: com {controles} controles, quem passa a dar o jogador 2 é o "
-        "Steam Input, não o Hefesto — confira na tela do jogo se os dois "
-        "aparecem."
+    jogadores = (
+        f" Os seus {controles} controles continuam sendo do Hefesto, um jogador "
+        "cada — confira na tela do jogo."
         if controles is not None and controles >= 2
         else ""
     )
     return (
-        f"Marquei o jogo {appid}: ele passa a ver o controle de verdade, sem "
-        "o controle dobrado, e a sua cor e os seus gatilhos continuam valendo."
-        f"{troca_do_coop} Feche e abra o jogo para valer."
+        f"Marquei o jogo {appid}: o controle físico fica escondido e ele passa a "
+        "ver só o controle do Hefesto, sem o controle dobrado — a sua cor, os "
+        f"seus gatilhos e a sua vibração continuam valendo.{jogadores} Feche e "
+        "abra o jogo para valer."
     )
 
 
@@ -1299,11 +1305,20 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             self._sincronizar_caixa_do_steam_input()
             return
         # RELANCAR-01 (08/08/2026): marcar/desmarcar cria uma BORDA em
-        # `sync_steam_input_exception`, que faz ungrab e suspende os vpads. Com
-        # o jogo aberto isso não chega ao processo dele (o wrapper faz
-        # `exec env`) e ainda mexe no controle ao vivo — foi o que a deixou sem
-        # controle nenhum no meio da partida. Então: sonda primeiro, e se houver
-        # jogo aberto, PERGUNTA antes de escrever no disco.
+        # `sync_steam_input_exception`, que mexe no controle AO VIVO. Com o jogo
+        # aberto essa mudança não chega ao processo dele (o wrapper faz
+        # `exec env`) — foi o que a deixou sem controle nenhum no meio da
+        # partida. Então: sonda primeiro, e se houver jogo aberto, PERGUNTA
+        # antes de escrever no disco.
+        #
+        # NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): a frase antiga
+        # dizia que a borda *"faz ungrab e suspende os vpads"*. Não faz mais: a
+        # marca inverteu de lado e a borda agora GRABA o físico e esconde o
+        # hidraw dele. A pergunta continua obrigatória, e a razão ficou mais
+        # forte — com o jogo aberto, marcar tira dele exatamente o dispositivo
+        # que ele já enumerou, e o vpad que o substitui só existe para o
+        # processo seguinte, porque quem apaga o físico da lista do SDL é a env
+        # lida uma vez na abertura.
         if self._perguntar_antes_de_relancar(
             mudanca="steam_input_do_jogo",
             valor="marcado" if marcar else "desmarcado",

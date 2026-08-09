@@ -420,7 +420,11 @@ def test_aplicar_no_controle_em_todos_leva_toggle_no_ipc(
         }
     ]
     assert any(_AVISO_D4 in toast for toast in host._toasts)
-    assert any("aplicada" in toast for toast in host._toasts)
+    # TELA-QUE-SO-AFIRMA-O-QUE-SABE-01: a frase do caminho feliz virou "Cor
+    # ENVIADA ao controle" — o `ok` do daemon sempre significou "o report
+    # saiu", nunca "a barra acendeu". O que este teste mede segue igual: o
+    # aviso do D4 não engoliu o resultado do envio.
+    assert any("enviada" in toast for toast in host._toasts)
 
 
 def test_aplicar_no_controle_com_alvo_usa_led_set(

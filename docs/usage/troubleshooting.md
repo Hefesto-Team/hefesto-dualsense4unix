@@ -66,7 +66,7 @@ groups $USER | grep -E 'input|plugdev'  # opcional, ACL via udev tag uaccess é 
    flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
    ```
 
-   Todos aplicam o mesmo conjunto canônico — **14 regras** por padrão (mais a
+   Todos aplicam o mesmo conjunto canônico — **15 regras** por padrão (mais a
    `75`, que só entra com `--disable-usb-audio`) + o `modules-load` de
    `uinput`/`uhid`, com origem única em `assets/`. Após rodar, desplugue e
    replugue o controle (USB) ou re-pareie (BT).

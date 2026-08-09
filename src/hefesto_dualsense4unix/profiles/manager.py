@@ -685,6 +685,14 @@ class ProfileManager:
                     bool(secao.muted),
                     uniq=uniq,
                     origin=origin,
+                    # SOM-ROTA-01/perfil: o CANAL vai junto do par volume+mudo.
+                    # O esquema já GUARDAVA a rota e ninguém a escrevia no
+                    # controle — perfil com "Todo o som do PC" salvo ativava
+                    # mudo e o som continuava saindo por onde estava. `None`
+                    # (o default de quem nunca mexeu no seletor) significa
+                    # NÃO TOCAR no `common[7]`, que é o mesmo byte do caminho
+                    # do microfone: sem opinião continua sendo silêncio.
+                    rota=getattr(secao, "rota", None),
                 )
             )
         except Exception as exc:

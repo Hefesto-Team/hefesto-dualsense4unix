@@ -26,7 +26,6 @@ from typing import Any
 import pytest
 import structlog
 
-from hefesto_dualsense4unix.daemon import launch_env as le
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
@@ -260,7 +259,17 @@ class TestOJournalDizQueOCoopCaiu:
         )
         assert queda["secundarios_derrubados"] == 1
         assert queda["secundarios_restantes"] == 2
-        assert gp.steam_input_coop_derrubados(daemon) == 1
+        # NOTA DATADA — 09/08/2026 (AVISO-FALSO-DO-COOP-01): aqui havia
+        # `steam_input_coop_derrubados(daemon) == 1`, quando o número da JANELA
+        # ainda era o de vpads recolhidos. Era esse número que acendia o aviso
+        # vermelho "1 jogador saiu" com os controles dela conectados na tela. O
+        # RESIDUAL desta sprint continua exato — no journal, que é onde ele
+        # sempre foi o fato de engenharia; a janela passou a falar de CONTROLE
+        # e só acende quando um deles sai da mesa de verdade. A mesa fica
+        # registrada com a identidade de quem caiu, e é dela que o tique do
+        # co-op pergunta (ver `test_aviso_falso_do_coop_01.py`).
+        assert gp.steam_input_coop_derrubados(daemon) == 0
+        assert gp.coop_sentados_na_suspensao(daemon) == ("aa:bb:cc:00:00:00",)
 
 
 # ---------------------------------------------------------------------------
@@ -275,7 +284,11 @@ class TestOAvisoMorreQuandoOCoopVolta:
         daemon = _DaemonDublado(secundarios=2)
         assert gp.suspend_vpads_for_steam_input(daemon, appid=APPID) is True
         await _encerrar_vigia(daemon)
-        assert gp.steam_input_coop_derrubados(daemon) == 2
+        # NOTA DATADA — 09/08/2026 (AVISO-FALSO-DO-COOP-01): a suspensão sozinha
+        # já não acende o aviso (recolher vpad não é controle saindo da mesa),
+        # então o "aviso aceso" que esta saída tem de apagar é construído aqui,
+        # medindo a mesa VAZIA — os dois controles caíram de verdade.
+        assert gp.reavaliar_coop_fora_da_mesa(daemon, set()) == 2
 
         with structlog.testing.capture_logs() as registros:
             assert gp.resume_vpads_after_steam_input(daemon) is True
@@ -298,7 +311,8 @@ class TestOAvisoMorreQuandoOCoopVolta:
         daemon._steam_input_excecao = True
         assert gp.suspend_vpads_for_steam_input(daemon, appid=APPID) is True
         await _encerrar_vigia(daemon)
-        assert gp.steam_input_coop_derrubados(daemon) == 2
+        # NOTA DATADA — 09/08/2026: ver a saída irmã acima (AVISO-FALSO-DO-COOP-01).
+        assert gp.reavaliar_coop_fora_da_mesa(daemon, set()) == 2
 
         gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
 
@@ -363,23 +377,34 @@ class TestOStateFullPublicaAQueda:
 # ---------------------------------------------------------------------------
 
 
-async def test_a_borda_de_entrada_segue_derrubando_o_coop_antes_do_p1(
-    monkeypatch: pytest.MonkeyPatch, sem_disco_nem_broker: None
+async def test_a_suspensao_segue_derrubando_o_coop_antes_do_p1(
+    sem_disco_nem_broker: None,
 ) -> None:
     """Guarda: esta sprint é observabilidade, não mudança de gatilho.
 
     A ordem importa e está explicada em `suspend_vpads_for_steam_input` —
     derrubar o P1 primeiro deixaria o jogo enumerar vpads órfãos até o tick
     seguinte do co-op. Se alguém "melhorar" o gatilho, este teste reprova.
+
+    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela): este
+    teste entrava por `sync_steam_input_exception`, porque era a BORDA DA MARCA
+    que suspendia. Não é mais — a marca passou a esconder o controle físico e a
+    deixar os virtuais de pé, justamente porque o preço medido desta suspensão é
+    o jogador 2. A ordem interna da suspensão, que é o que este teste guarda,
+    não mudou uma linha; mudou quem a percorre. Entrar por uma porta que hoje
+    não leva a lugar nenhum deixaria o teste verde e mudo.
     """
     daemon = _DaemonDublado(secundarios=3)
-    monkeypatch.setattr(le, "steam_input_exception_appid", lambda d, **k: APPID)
 
-    assert gp.sync_steam_input_exception(daemon) is True
+    assert gp.suspend_vpads_for_steam_input(daemon, appid=APPID) is True
     await _encerrar_vigia(daemon)
 
     assert daemon._coop_manager.desligados == 1
     assert daemon._coop_manager._players == {}
     assert daemon._gamepad_device is None
-    assert daemon.grabs == [False], "o jogo tem de ver o evdev do físico"
-    assert gp.steam_input_coop_derrubados(daemon) == 3
+    # NOTA DATADA — 09/08/2026 (AVISO-FALSO-DO-COOP-01): aqui havia `== 3`, do
+    # tempo em que o número da janela era o de vpads recolhidos. O gatilho —
+    # que é o que este teste guarda — não mudou: os três secundários caem, na
+    # mesma ordem, antes do P1. O que mudou é quem a JANELA ouve.
+    assert gp.steam_input_coop_derrubados(daemon) == 0
+    assert len(gp.coop_sentados_na_suspensao(daemon)) == 3

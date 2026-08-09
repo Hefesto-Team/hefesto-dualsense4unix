@@ -64,7 +64,7 @@ flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
 ```
 
 O script copia o mesmo conjunto canônico que o `install_udev.sh` do código-fonte
-— hoje **14 regras** — para `/etc/udev/rules.d/`, mais o `modules-load` de
+— hoje **15 regras** — para `/etc/udev/rules.d/`, mais o `modules-load` de
 `uinput`/`uhid` e os drop-ins de `modprobe` do BlueZ e dos módulos HID. As
 principais:
 

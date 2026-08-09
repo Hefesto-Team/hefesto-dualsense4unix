@@ -10,7 +10,10 @@
 # exibição do co-op (NUMA-05: quem manda em lightbar/numeração agora — jogo,
 # daemon ou "unknown" — e a CAUSA quando presa em unknown); reconhece também,
 # no journal do kernel, a assinatura de morte por Bluetooth do 8BitDo em modo
-# Switch (cascata do hid-nintendo — informativo, não gerenciamos o controle);
+# Switch (cascata do hid-nintendo — informativo, não gerenciamos o controle) e
+# a do DualSense que o driver do kernel ABORTOU no probe (PROBE-MORTO-PS-01 —
+# aborto cruzado com o estado de agora: órfão AGORA é FAIL com a cura pronta,
+# aborto que já recuperou é só informação);
 # e (G2) o rádio/pareamento — versão do bluez vs. o piso 5.79, o
 # hefesto-bt-agent.service, bond "meio-salvo" por dois ângulos (Connected sem
 # hidraw correspondente E Paired sem Bonded) e o sink de áudio padrão mudo;
@@ -157,9 +160,19 @@ check_udev() {
     # (variante do clone 8BitDo) — linhas 132, 133 e 138 — e nenhuma das três era
     # conferida aqui. Quem instalasse antes delas existirem ficava sem as três,
     # em silêncio, e o doctor dava [OK]. As três entram na contagem.
+    #
+    # NOTA DATADA 09/08/2026 (OQ-6): entra a 72-hefesto-touchpad-motion-uaccess,
+    # que o `install_udev.sh` também põe SEM FLAG. Ela é a que dá ACL da sessão
+    # aos nós de ENTRADA do touchpad e dos sensores de movimento — a regra do
+    # sistema (70-uaccess.rules) só marca `ID_INPUT_JOYSTICK`, e esses dois nós
+    # são `ID_INPUT_TOUCHPAD`/`ID_INPUT_ACCELEROMETER`. A presença do ARQUIVO é
+    # o que se cobra aqui; o EFEITO (a ACL existir no nó vivo) é outra pergunta,
+    # e tem função própria — `check_input_uaccess`. As duas são necessárias:
+    # a regra pode estar no disco e não ter pegado (ver o comentário de lá).
     local r found=0 missing=""
     local rules=(70-ps5-controller.rules 71-uhid.rules 71-uinput.rules
                  72-ps5-controller-autosuspend.rules
+                 72-hefesto-touchpad-motion-uaccess.rules
                  76-dualsense-touchpad-libinput-ignore.rules
                  77-dualsense-leds.rules
                  78-dualsense-motion-not-joystick.rules
@@ -179,7 +192,7 @@ check_udev() {
         fi
     done
     if [[ "${found}" -eq "${total}" ]]; then
-        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72/76/77/78/79/80/81-power/81-host/82/83/84)"
+        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72-autosuspend/72-uaccess/76/77/78/79/80/81-power/81-host/82/83/84)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else
@@ -315,6 +328,146 @@ check_hid_playstation() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# PROBE-MORTO-PS-01 — o DualSense que o driver do kernel ABORTOU no probe.
+# ---------------------------------------------------------------------------
+# check_hid_playstation (acima) só conferia se o MÓDULO carregou. Módulo
+# carregado e controle invisível são compatíveis, e foi o que aconteceu 6x na
+# máquina dela em 08/08/2026: o controle conecta no Bluetooth, acende a luz do
+# PRÓPRIO firmware e não existe para o sistema — sem hidraw, sem input, sem nó
+# de LED, sem bateria. A dona tinha dois controles ligados, a janela mostrava
+# um, e nada em lugar nenhum do produto sabia dizer por quê.
+#
+# A assinatura no journal do kernel:
+#
+#   playstation 0005:054C:0CE6.0069: Failed to retrieve feature with reportID 32: -5
+#   playstation 0005:054C:0CE6.0069: Failed to retrieve DualSense firmware info: -5
+#   playstation 0005:054C:0CE6.0069: Failed to create dualsense.
+#   playstation 0005:054C:0CE6.0069: probe with driver playstation failed with error -5
+#
+# NÃO é hardware — tese vetada por escrito por ela depois de dias perdidos
+# nela. É CONTENÇÃO: dois DualSense subindo no mesmo adaptador com ~1 s de
+# diferença; o segundo perde o canal de controle L2CAP, o BlueZ estoura o teto
+# de 3 s (hidp_report_req_timeout) e o uhid achata o erro em -EIO (o -5 é
+# máscara). A cadeia está medida elo a elo em
+# assets/dkms/hid-playstation/README.md:62-114.
+#
+# Função PURA (stdin -> stdout), uma linha por instância hid que abortou:
+# "INSTANCIA n_probe n_feature". O gate é o ABORTO (probe >= 1); a falha de
+# feature é CORROBORAÇÃO da causa — contada e reportada, nunca exigida, porque
+# um aborto por outro motivo não pode ficar invisível. Falha de feature SEM
+# aborto é o transiente que o probe sobreviveu: sai vazio de propósito.
+_hid_playstation_probe_scan() {
+    sed -nE \
+        -e 's/^.*playstation ([0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4,}).*probe with driver playstation failed.*$/\1 probe/p' \
+        -e 's/^.*playstation ([0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4,}).*Failed to retrieve feature with reportID.*$/\1 feature/p' \
+      | awk '
+            $2 == "probe"   { p[$1]++ }
+            $2 == "feature" { f[$1]++ }
+            END {
+                for (i in p) printf "%s %d %d\n", i, p[i], (i in f ? f[i] : 0)
+            }
+        ' | sort
+}
+
+# O estado ATUAL, que é quem decide o veredito: DualSense por Bluetooth em
+# /sys/bus/hid/devices SEM o symlink `driver` — órfão é o que NÃO tem driver.
+# Mesmo escopo estreito do scripts/bt_rebind_orphans.sh, e pelas mesmas razões:
+# barramento 0005 (Bluetooth) é o único onde a contenção medida acontece, e
+# exclui por construção o vpad do próprio hefesto, que nasce por uhid no
+# barramento 0003; vendor 054C (Sony) é o dono do driver `playstation`. Só
+# leitura de sysfs. HEFESTO_HID_DEVICES_DIR é a MESMA costura de teste do
+# bt_rebind_orphans.sh — em produção nunca é definida.
+_hid_playstation_orfaos_agora() {
+    local raiz="${HEFESTO_HID_DEVICES_DIR:-/sys/bus/hid/devices}" dev id bus vid
+    for dev in "${raiz}"/*; do
+        [[ -d "${dev}" ]] || continue
+        [[ -e "${dev}/driver" ]] && continue   # tem driver: foi adotado
+        id="$(basename "${dev}")"
+        bus="${id%%:*}"
+        vid="${id#*:}"; vid="${vid%%:*}"
+        [[ "${bus}" == "0005" ]] || continue
+        [[ "${vid^^}" == "054C" ]] || continue
+        printf '%s\n' "${id}"
+    done
+}
+
+# O veredito. TRÊS casos, e a diferença entre eles é o que separa diagnóstico
+# de ruído: dos 6 abortos de 08/08, TODOS recuperaram sozinhos em 2 a 20 min.
+# Um FAIL por aborto que já passou ensina a ignorar o doctor — por isso o
+# aborto é cruzado com o estado de AGORA:
+#   1. controle órfão AGORA          -> FAIL (defeito ativo, cura pronta);
+#   2. aborto na janela, sem órfão   -> info (histórico, nada a fazer);
+#   3. nem uma coisa nem outra       -> pass.
+# O órfão é conferido ANTES do journal e vale sozinho: o journal pode estar
+# ilegível (sem grupo adm) e o sintoma continua sendo o sysfs.
+#
+# JANELA: `journalctl _TRANSPORT=kernel --since`, NUNCA `journalctl -k` — o -k
+# implica o boot atual, e uma janela que atravessa reboot devolveria ZERO,
+# indistinguível de "não houve nada". Esta casa já pagou quatro medições
+# falsas por essa armadilha (índice de 08/08, §8).
+#
+# O TAMANHO da janela foi MEDIDO na máquina dela em 09/08, e a primeira
+# escolha estava errada: com 24 h a mesma consulta via 1 dos 6 abortos de
+# 08/08 (o boot dela é mais velho que um dia), e com 3 dias via os 6. Como o
+# aborto recuperado é só `info`, uma janela larga custa pouco ruído e devolve
+# o contexto inteiro do episódio. HEFESTO_DOCTOR_PROBE_JANELA ajusta.
+#
+# READ-ONLY, como todo check: aponta a cura (scripts/bt_rebind_orphans.sh) e
+# a vigia que a chama de 2 em 2 min, e NÃO executa nenhuma das duas — o
+# doctor confere e não cura.
+check_hid_playstation_probe_abortado() {
+    local janela="${HEFESTO_DOCTOR_PROBE_JANELA:-3 days ago}"
+    local orfaos abortos tem_journal=0
+    orfaos="$(_hid_playstation_orfaos_agora)"
+    abortos=""
+    if command -v journalctl >/dev/null 2>&1; then
+        tem_journal=1
+        abortos="$(journalctl _TRANSPORT=kernel --since "${janela}" --no-pager 2>/dev/null \
+            | _hid_playstation_probe_scan)"
+    fi
+
+    if [[ -n "${orfaos}" ]]; then
+        local id detalhe
+        while read -r id; do
+            [[ -z "${id}" ]] && continue
+            detalhe=""
+            if [[ -n "${abortos}" ]]; then
+                detalhe="$(printf '%s\n' "${abortos}" \
+                    | awk -v alvo="${id}" '$1 == alvo { printf "%dx aborto e %dx falha de feature no journal", $2, $3 }')"
+            fi
+            fail "DualSense ÓRFÃO AGORA (${id}): o driver playstation abortou a probe e o controle NÃO existe para o sistema — sem hidraw, sem input, sem nó de LED, sem bateria; invisível para o daemon e para a janela, mesmo conectado e com a luz acesa pelo próprio firmware${detalhe:+ (${detalhe})}. Cura pronta, sem reboot e sem derrubar quem já funciona: sudo /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh (no checkout: sudo bash scripts/bt_rebind_orphans.sh)"
+        done <<<"${orfaos}"
+        local tw=""
+        if command -v systemctl >/dev/null 2>&1; then
+            tw="$(systemctl is-active hefesto-bt-health-watchdog.timer 2>/dev/null || true)"
+        fi
+        if [[ "${tw}" == "active" ]]; then
+            info "a vigia hefesto-bt-health-watchdog.timer está ativa e chama esse mesmo rebind de 2 em 2 minutos — se o controle voltar sozinho em até 2 min, foi ela"
+        else
+            warn "a vigia que chamaria o rebind sozinha (hefesto-bt-health-watchdog.timer) está ${tw:-ausente} — sem ela o controle órfão só volta à mão; ligue: sudo systemctl enable --now hefesto-bt-health-watchdog.timer"
+        fi
+        info "não é hardware (tese vetada por ela, por escrito, depois de dias perdidos nela): é contenção — dois DualSense subindo no mesmo adaptador com ~1 s de diferença; o segundo perde o canal de controle L2CAP e o BlueZ desiste no teto de 3 s (hidp_report_req_timeout). Cadeia medida: assets/dkms/hid-playstation/README.md:62-114"
+        return
+    fi
+
+    if [[ -n "${abortos}" ]]; then
+        local total_probe total_feature instancias
+        total_probe="$(printf '%s\n' "${abortos}" | awk '{s += $2} END {printf "%d", s + 0}')"
+        total_feature="$(printf '%s\n' "${abortos}" | awk '{s += $3} END {printf "%d", s + 0}')"
+        instancias="$(printf '%s\n' "${abortos}" | awk '{printf "%s%s", (NR > 1 ? ", " : ""), $1}')"
+        info "aborto de probe do hid-playstation na janela (${janela}), JÁ RECUPERADO: ${total_probe}x 'probe with driver playstation failed' em ${instancias} (${total_feature}x 'Failed to retrieve feature' antes) — nenhum DualSense está órfão AGORA, então não há o que fazer: é histórico, não defeito ativo (os 6 abortos de 08/08 voltaram sozinhos em 2 a 20 min, por reconexão)"
+        info "se acontecer de novo COM o controle sumindo, a cura é o rebind (sudo /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh) e a vigia hefesto-bt-health-watchdog.timer a chama de 2 em 2 minutos; a causa medida é contenção de dois controles no mesmo adaptador, não hardware (assets/dkms/hid-playstation/README.md:62-114)"
+        return
+    fi
+
+    if [[ "${tem_journal}" -eq 0 ]]; then
+        info "nenhum DualSense órfão agora (todo device HID Sony por Bluetooth tem driver) — sem journalctl não dá para olhar o histórico de abortos de probe"
+        return
+    fi
+    pass "nenhum DualSense órfão agora e nenhum aborto de probe do hid-playstation na janela (${janela})"
+}
+
 # COR-06/STATUS-07: probe READ-ONLY da gravabilidade do LED do DualSense FÍSICO.
 # A regra 77 (default no install) dá escrita ao usuário nos nós de LED do kernel;
 # sem ela o daemon só alcança a cor por hidraw — que em BT sofre EIO — e a cor
@@ -344,6 +497,119 @@ check_led_sysfs_gravavel() {
     else
         info "sem DualSense físico com nó de LED agora (só o controle virtual, ou nenhum) — pulo o teste de gravabilidade; conecte o controle p/ validar a regra 77"
     fi
+}
+
+# ---------------------------------------------------------------------------
+# OQ-6 (09/08/2026) — o touchpad e o giroscópio funcionavam por ACIDENTE.
+# ---------------------------------------------------------------------------
+# A regra do SISTEMA que dá ACL aos nós de entrada
+# (/usr/lib/udev/rules.d/70-uaccess.rules) só marca ID_INPUT_JOYSTICK, e o
+# `input_id` do kernel classifica o nó de movimento como
+# ID_INPUT_ACCELEROMETER e o do touchpad como ID_INPUT_TOUCHPAD. Nenhum dos
+# dois casava, e regra nenhuma desta casa os cobria: o acesso vinha do grupo
+# `input`, em que a usuária desta máquina está POR FORA do produto (instalador
+# nenhum daqui toca esse grupo). Numa máquina nova, nada funciona — e o sintoma
+# é a AUSÊNCIA de dado: `core/evdev_reader.py:1396` engole a PermissionError
+# num `except Exception: continue`, o nó some do mapa e o daemon relata
+# "esse controle não tem sensor".
+#
+# A cura é `assets/72-hefesto-touchpad-motion-uaccess.rules`.
+#
+# POR QUE ESTA FUNÇÃO EXISTE SE `check_udev` JÁ CONFERE O ARQUIVO: porque as
+# duas perguntas são diferentes. `check_udev` responde "a regra está no disco?";
+# esta responde "a regra PEGOU?". Uma regra udev só age no (re)add do device —
+# um controle que já estava conectado quando a regra chegou continua sem ACL
+# até o replug. Arquivo presente e efeito ausente é exatamente o estado que
+# passa despercebido.
+#
+# CONFERE E NÃO CURA (regra da casa): diz o comando, nunca o executa. E
+# distingue os DOIS jeitos de o nó estar legível — a ACL da sessão (que a
+# regra entrega, e que existe em máquina limpa) e o grupo do nó (o acidente,
+# que não existe em máquina limpa). Só o primeiro é PASS.
+#
+# FÍSICO E VIRTUAL SÃO CONTADOS SEPARADAMENTE, e isso não é preciosismo — foi
+# um FALSO VERDE MEDIDO em 09/08/2026. Rodando a primeira versão desta função
+# nesta máquina ela imprimiu "[PASS] ... em 2 nó(s)", e os dois nós eram
+# `.../input/event259` e `event261`, ambos em
+# `/sys/devices/virtual/misc/uhid/0003:054C:0DF2.008F` — os nós auxiliares do
+# VPAD que o próprio daemon acabara de criar. Não havia DualSense físico
+# conectado. O instrumento deu verde sobre um device que nós mesmos fabricamos,
+# e ficou calado exatamente sobre o que a pergunta era (o controle dela).
+# `check_led_sysfs_gravavel` já resolvia isto do jeito certo, com
+# `[[ "${dev_real}" == */devices/virtual/* ]] && continue`.
+#
+# OS DOIS IMPORTAM, por motivos diferentes, e por isso nenhum é descartado:
+#   - o FÍSICO é o que alimenta a interface (o widget de giroscópio da aba
+#     Status, via `daemon/sensor_hub.py`) e o cursor/teclas do touchpad;
+#   - o VIRTUAL é o que o JOGO abre na máscara DualSense — sem ACL nele, o
+#     jogo não lê giroscópio nem touchpad do vpad.
+# O que não pode acontecer é um verde do virtual passar por resposta sobre o
+# físico. Quando não há físico agora, a função DIZ que não há.
+check_input_uaccess() {
+    local regra="72-hefesto-touchpad-motion-uaccess.rules"
+    if [[ ! -e "/etc/udev/rules.d/${regra}" && ! -e "/usr/lib/udev/rules.d/${regra}" ]]; then
+        fail "${regra} ausente — o touchpad e o giroscópio só funcionam para quem está no grupo 'input' por fora do produto (numa máquina nova, não funcionam). Rode: sudo bash scripts/install_udev.sh"
+        return
+    fi
+    local node base nome vid dev_real eu classe
+    local vistos_fis=0 vistos_virt=0
+    local sem_acesso=() so_pelo_grupo=() sem_acesso_virt=() so_grupo_virt=()
+    eu="$(id -un 2>/dev/null || true)"
+    for node in /dev/input/event*; do
+        [[ -e "${node}" ]] || continue
+        base="$(basename "${node}")"
+        # Âncora de FABRICANTE, igual à da regra — sem ela o check alarmaria
+        # sobre um touchpad de notebook cujo nome também termina em "Touchpad",
+        # que a regra nunca cobre. Instrumento e produto casam o MESMO conjunto.
+        vid="$(cat "/sys/class/input/${base}/device/id/vendor" 2>/dev/null || true)"
+        case "${vid}" in
+            054c|057e) ;;
+            *) continue ;;
+        esac
+        nome="$(cat "/sys/class/input/${base}/device/name" 2>/dev/null || true)"
+        case "${nome}" in
+            *"Motion Sensors"|*"Touchpad"|*"(IMU)") ;;
+            *) continue ;;
+        esac
+        dev_real="$(readlink -f "/sys/class/input/${base}/device" 2>/dev/null || true)"
+        if [[ "${dev_real}" == */devices/virtual/* ]]; then
+            classe="virt"
+            vistos_virt=$((vistos_virt + 1))
+        else
+            classe="fis"
+            vistos_fis=$((vistos_fis + 1))
+        fi
+        if [[ ! -r "${node}" ]]; then
+            [[ "${classe}" == "fis" ]] && sem_acesso+=("${base}") || sem_acesso_virt+=("${base}")
+        elif command -v getfacl >/dev/null 2>&1 && [[ -n "${eu}" ]] \
+             && ! getfacl -p "${node}" 2>/dev/null | grep -q "^user:${eu}:"; then
+            [[ "${classe}" == "fis" ]] && so_pelo_grupo+=("${base}") || so_grupo_virt+=("${base}")
+        fi
+    done
+    # O vpad primeiro e sempre em separado: ele é nosso, e um problema nele é
+    # problema do jogo, não da interface.
+    if [[ "${#sem_acesso_virt[@]}" -gt 0 ]]; then
+        fail "o gamepad VIRTUAL tem ${#sem_acesso_virt[@]} nó(s) de touchpad/movimento sem leitura (${sem_acesso_virt[*]}) — na máscara DualSense o jogo não lê giroscópio nem touchpad do vpad. Rode: sudo bash scripts/install_udev.sh"
+    elif [[ "${#so_grupo_virt[@]}" -gt 0 ]]; then
+        warn "o gamepad VIRTUAL tem ${#so_grupo_virt[@]} nó(s) legíveis só pelo GRUPO (${so_grupo_virt[*]}), sem ACL da sessão — funciona nesta máquina e não numa limpa"
+    fi
+    if [[ "${vistos_fis}" -eq 0 ]]; then
+        if [[ "${vistos_virt}" -gt 0 ]]; then
+            info "nenhum controle FÍSICO com nó de touchpad/movimento agora — os ${vistos_virt} nó(s) vistos são do gamepad virtual (/devices/virtual). Conecte o controle para validar o caso que importa."
+        else
+            info "nenhum nó de touchpad/movimento presente agora (controle desligado?) — nada a conferir"
+        fi
+        return
+    fi
+    if [[ "${#sem_acesso[@]}" -gt 0 ]]; then
+        fail "sem permissão de leitura em ${#sem_acesso[@]} de ${vistos_fis} nó(s) FÍSICOS de touchpad/movimento (${sem_acesso[*]}) — o daemon engole o EACCES e relata 'sem sensor'. A ACL nasce no (re)add do device: desconecte e reconecte o controle; se persistir, rode: sudo bash scripts/install_udev.sh"
+        return
+    fi
+    if [[ "${#so_pelo_grupo[@]}" -gt 0 ]]; then
+        warn "${#so_pelo_grupo[@]} de ${vistos_fis} nó(s) FÍSICOS de touchpad/movimento legíveis só pelo GRUPO do nó (${so_pelo_grupo[*]}), sem a ACL da sessão — funciona NESTA máquina (você está no grupo 'input') e NÃO funcionaria numa limpa. Reconecte o controle para a ${regra} pegar."
+        return
+    fi
+    pass "touchpad e giroscópio com ACL da sessão em ${vistos_fis} nó(s) do controle físico — sem depender do grupo 'input'"
 }
 
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5 (Opção D): o quirk de boot
@@ -3933,7 +4199,12 @@ main() {
     check_uinput
     check_uhid
     check_hid_playstation
+    check_hid_playstation_probe_abortado
     check_led_sysfs_gravavel
+    # OQ-6: logo depois do check da 77 (nó de LED gravável) porque é a mesma
+    # pergunta — "a regra desta casa chegou a valer no nó vivo?" — só que para
+    # os nós de ENTRADA do touchpad e dos sensores de movimento.
+    check_input_uaccess
     hdr "energia USB e rádio"
     check_usb_power_devices
     check_usb_power_hosts

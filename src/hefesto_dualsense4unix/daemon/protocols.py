@@ -270,6 +270,7 @@ class DaemonProtocol(Protocol):
         *,
         uniq: str | None = None,
         origin: str = "autoswitch",
+        rota: int | None = None,
     ) -> str:
         """Aplica a seção `speaker` de um perfil (SOM-02/E4).
 
@@ -287,6 +288,9 @@ class DaemonProtocol(Protocol):
 
         `volume` é sempre explícito (0-255): chamada sem volume toma a posse e
         manda ZERO — a armadilha 1, medida na SOM-02.
+
+        `rota` é o CANAL de saída do perfil (SOM-ROTA-01). `None` significa não
+        tocar no `common[7]`, que carrega a rota E o caminho do microfone.
         """
         ...
 

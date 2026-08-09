@@ -115,6 +115,7 @@ import contextlib
 from typing import Any, Final, NamedTuple
 
 from hefesto_dualsense4unix.app import audio_saida, ipc_bridge
+from hefesto_dualsense4unix.app.draft_config import registrar_alto_falante_no_rascunho
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     GyroBars,
     LightbarBar,
@@ -1791,6 +1792,20 @@ if _GTK_DISPONIVEL:
             self._speaker_canal_pintando = False
             #: SOM-CANAL-01: a aba injeta aqui quem executa a camada 1.
             self._pedir_rota_do_sistema: Any = None
+            #: SOM-02/E4: quem GUARDA o rascunho do perfil em edição (a
+            #: `HefestoApp`), injetado pela aba — o card não o descobre
+            #: sozinho, pela mesma razão do `definir_sink_de_saida`. `None` =
+            #: card avulso (teste, ou antes de a janela terminar de nascer):
+            #: o gesto continua indo ao daemon e simplesmente não é anotado.
+            self._dono_do_rascunho: Any = None
+            #: O último `(volume, muted)` LIDO do daemon — a preferência que
+            #: ele publica, não o que a tela desenhou. Os gestos SEM número (o
+            #: mudo e o canal) precisam de um volume para registrar, e o do
+            #: controle deslizante não volta igual fora da faixa útil do
+            #: registrador: 200 desenha 100 % e a volta pela tela devolve 102,
+            #: a saturação que ela mediu em 01/08. Registrar o número da tela
+            #: baixaria o volume guardado dela sem ninguém ter pedido.
+            self._speaker_lido: tuple[int, bool | None] | None = None
             self._speaker_pintando = False
             self._speaker_repouso_id: int | None = None
             self._speaker_volume_enviado: int | None = None
@@ -3254,7 +3269,13 @@ if _GTK_DISPONIVEL:
                 ok = ipc_bridge.speaker_set(volume=volume, uniq=uniq)
                 return self._confirmar_com_som() if ok else None
 
-            ipc_bridge.run_in_thread(_pedir, self._on_som_de_confirmacao)
+            # `muted=False` não é chute: `set_speaker_volume` calcula
+            # `efetivo = 0 if muted else pref`, e um pedido só de volume chega
+            # com `muted=None` — ou seja, este gesto DESMUDA. Registrar o que
+            # ficou de pé é registrar isso.
+            ipc_bridge.run_in_thread(
+                _pedir, self._confirmado_pelo_daemon(volume=volume, muted=False)
+            )
 
         def _on_canal_do_speaker_mudou(self, seletor: Any) -> None:
             """O gesto dela no seletor: escolhe ONDE o som do controle sai.
@@ -3337,7 +3358,27 @@ if _GTK_DISPONIVEL:
                     pedir_rota_do_sistema(canal == CANAL_TODO_O_PC)
                 return self._confirmar_com_som() if ok else None
 
-            ipc_bridge.run_in_thread(_pedir, self._on_som_de_confirmacao)
+            # SOM-CANAL-NO-PERFIL-01 (09/08/2026, decisão dela): *"quero a
+            # ideia é respeitar tudo (...) tanto usar o mic do controle quanto
+            # usar o canal de saída de som específico do DS"*. A rota entra no
+            # rascunho junto do volume porque é a MESMA posse: este gesto já
+            # manda os dois no mesmo `speaker.set` desde a cura de 04/08, e
+            # anotar um sem o outro deixaria o perfil com metade do gesto.
+            #
+            # O volume anotado é o LIDO do daemon quando existe: o número da
+            # tela não volta igual fora da faixa útil do registrador, e trocar
+            # o canal não pode baixar o volume dela. Sem leitura
+            # (primeira escrita da sessão) vale o que acabou de ser mandado,
+            # que é o único número que existe.
+            volume_anotado = self._volume_lido_do_daemon()
+            ipc_bridge.run_in_thread(
+                _pedir,
+                self._confirmado_pelo_daemon(
+                    volume=volume if volume_anotado is None else volume_anotado,
+                    muted=False,
+                    rota=rota,
+                ),
+            )
 
         def definir_pedido_de_rota(self, callback: Any) -> None:
             """Quem executa a camada 1 quando ela troca o canal.
@@ -3348,6 +3389,83 @@ if _GTK_DISPONIVEL:
             byte da camada 2 e o card não fica mudo.
             """
             self._pedir_rota_do_sistema = callback
+
+        def definir_dono_do_rascunho(self, janela: Any) -> None:
+            """Quem GUARDA o rascunho do perfil em edição (SOM-02/E4).
+
+            A aba injeta a própria janela na montagem dos cards, do mesmo jeito
+            que injeta o sink e o pedido de rota. Sem ela o bloco continua
+            funcionando ao vivo e nada é anotado — que é o comportamento
+            correto de um card avulso, e é como todo teste de geometria deste
+            widget o monta.
+
+            **O card PEDE, quem escreve é o dono.** A escrita mora em
+            ``draft_config.registrar_alto_falante_no_rascunho``, escritor único
+            e visível ao portão de AST: a classe de defeito desta casa é *"três
+            escritores do perfil sem dono"* (auditoria 23/07).
+            """
+            self._dono_do_rascunho = janela
+
+        def _confirmado_pelo_daemon(
+            self,
+            *,
+            volume: int | None = None,
+            muted: bool = False,
+            rota: int | None = None,
+            soltar: bool = False,
+        ) -> Any:
+            """O callback de sucesso dos gestos do alto-falante.
+
+            REGISTRAR NÃO É APLICAR, e registrar é DEPOIS. Quem aplica é o
+            ``speaker.set`` que já saiu; aqui só se anota no rascunho o que
+            ficou DE PÉ, para o "Salvar Perfil" persistir — a mesma disciplina
+            de ``registrar_modo_no_rascunho`` na aba Emulação.
+
+            O defeito que isto cura (auditoria de 09/08/2026): o bloco mandava
+            o volume por IPC e não tocava no rascunho, então ``to_profile``
+            devolvia o número VELHO e ``lifecycle.apply_profile_speaker`` o
+            reaplicava ao controle na ativação. Ela ajustava o volume, clicava
+            em Salvar, e o próprio gesto de salvar desfazia o ajuste — não só
+            perder o valor novo, mas persistir um eco do estado velho.
+
+            ``resultado is None`` é o daemon tendo RECUSADO o pedido (contrato
+            escrito em ``_on_som_de_confirmacao``): aí não há o que registrar,
+            porque o rascunho descreve o que está de pé e não a intenção.
+
+            ``soltar`` é a DEVOLUÇÃO da posse, e apaga a seção do rascunho — um
+            perfil salvo depois de "Soltar" não pode continuar carregando um
+            número que a ativação seguinte reaplicaria, retomando a posse que
+            ela acabou de largar.
+
+            ``volume=None`` SEM ``soltar`` não registra nada, e a distinção é a
+            entrega: "não sei o volume" e "ela largou o volume" são coisas
+            opostas, e confundi-las apagaria a seção do perfil num gesto de
+            mudo que só não tinha leitura ainda.
+            """
+
+            def _feito(resultado: Any) -> bool:
+                if resultado is not None and (soltar or volume is not None):
+                    registrar_alto_falante_no_rascunho(
+                        self._dono_do_rascunho,
+                        volume=None if soltar else volume,
+                        muted=muted,
+                        rota=rota,
+                    )
+                return self._on_som_de_confirmacao(resultado)
+
+            return _feito
+
+        def _volume_lido_do_daemon(self) -> int | None:
+            """A preferência de volume que o daemon publica, ou None.
+
+            É ela que entra no rascunho nos gestos que NÃO carregam número (o
+            mudo e o canal). O valor do controle deslizante não serve: fora da
+            faixa útil do registrador a volta pela tela não é a identidade
+            (200 desenha 100 % e volta 102), e registrá-lo baixaria o volume
+            guardado dela por efeito colateral de outro gesto.
+            """
+            lido = self._speaker_lido
+            return None if lido is None else lido[0]
 
         def _on_speaker_mudo_clicado(self, _botao: Any) -> None:
             """Silenciar/Ativar — nunca a PRIMEIRA escrita (ver `acao_speaker_mudo`)."""
@@ -3361,7 +3479,16 @@ if _GTK_DISPONIVEL:
                 ok = ipc_bridge.speaker_set(muted=muted, uniq=uniq)
                 return self._confirmar_com_som() if ok else None
 
-            ipc_bridge.run_in_thread(_pedir, self._on_som_de_confirmacao)
+            # O mudo é MODULAÇÃO de um volume conhecido (o backend recusa mudo
+            # sem volume, SOM-02/E3), e o botão só é sensível quando esse
+            # volume existe. O par volume+mudo entra junto no rascunho porque
+            # é o único par que o esquema do perfil aceita.
+            ipc_bridge.run_in_thread(
+                _pedir,
+                self._confirmado_pelo_daemon(
+                    volume=self._volume_lido_do_daemon(), muted=muted
+                ),
+            )
 
         def _on_speaker_devolucao_clicada(self, _botao: Any) -> None:
             """Devolver a posse dos bytes de volume (SOM-02, entrega 3)."""
@@ -3374,7 +3501,13 @@ if _GTK_DISPONIVEL:
                 ok = ipc_bridge.speaker_set(release=True, uniq=uniq)
                 return self._confirmar_com_som() if ok else None
 
-            ipc_bridge.run_in_thread(_pedir, self._on_som_de_confirmacao)
+            # `soltar` APAGA a seção do rascunho: devolver a posse é a ausência
+            # de opinião, não um valor. Sem isto, o "Salvar Perfil" depois de
+            # Soltar guardaria o último número e a ativação seguinte retomaria
+            # a posse que ela acabou de largar.
+            ipc_bridge.run_in_thread(
+                _pedir, self._confirmado_pelo_daemon(soltar=True)
+            )
 
         # ------------------------------------------------------------------
         # Alto-falante: o som que confirma (SOM-04, entrega 1)
@@ -3852,6 +3985,11 @@ if _GTK_DISPONIVEL:
 
         def _update_speaker(self, entry: dict[str, Any], mic: Any = None) -> None:
             dados = speaker_do_entry(entry)
+            # SOM-02/E4: guardado ANTES do diff, e fora dele. O que o mudo e
+            # o canal registram no rascunho é esta LEITURA — a preferência que
+            # o daemon publica —, e não o número do controle deslizante, que
+            # fora da faixa útil do registrador não volta igual.
+            self._speaker_lido = dados
             saida_muda = saida_muda_do_entry(entry, mic)
             chave = (dados, saida_muda)
             if chave == self._last_speaker:

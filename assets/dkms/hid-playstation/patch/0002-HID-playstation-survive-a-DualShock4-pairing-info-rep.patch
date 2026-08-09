@@ -81,15 +81,15 @@ of DanielOgorchock/linux record.
 
 Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
 ---
- drivers/hid/hid-playstation.c | 112 +++++++++++++++++++++++++++++++++-
- 1 file changed, 111 insertions(+), 1 deletion(-)
+ drivers/hid/hid-playstation.c | 112 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 111 insertions(+), 1 deletions(-)
 
 index e2486e3..3de02c3 100644
 --- a/drivers/hid/hid-playstation.c
 +++ b/drivers/hid/hid-playstation.c
-@@ -35,6 +35,25 @@ MODULE_PARM_DESC(feature_retries,
- /* Backoff before the first retry; doubled for each further attempt. */
- #define PS_FEATURE_RETRY_DELAY_MS	100
+@@ -61,6 +61,25 @@
+  */
+ #define PS_FEATURE_RETRY_USB_DELAY_MS	100
 
 +/*
 + * Third-party controllers cloning the DualShock4's USB IDs (054c:05c4) answer
@@ -113,7 +113,7 @@ index e2486e3..3de02c3 100644
  /* List of connected playstation devices. */
  static DEFINE_MUTEX(ps_devices_lock);
  static LIST_HEAD(ps_devices_list);
-@@ -356,6 +375,8 @@ struct dualsense_output_report {
+@@ -382,6 +401,8 @@
  #define DS4_FEATURE_REPORT_FIRMWARE_INFO_SIZE	49
  #define DS4_FEATURE_REPORT_PAIRING_INFO		0x12
  #define DS4_FEATURE_REPORT_PAIRING_INFO_SIZE	16
@@ -122,7 +122,7 @@ index e2486e3..3de02c3 100644
 
  /*
   * Status of a DualShock4 touch point contact.
-@@ -2189,6 +2210,93 @@ err_free:
+@@ -2228,6 +2249,93 @@
  	return ret;
  }
 
@@ -216,7 +216,7 @@ index e2486e3..3de02c3 100644
  static int dualshock4_get_mac_address(struct dualshock4 *ds4)
  {
  	struct hid_device *hdev = ds4->base.hdev;
-@@ -2204,10 +2312,12 @@ static int dualshock4_get_mac_address(struct dualshock4 *ds4)
+@@ -2243,10 +2351,12 @@
  				    DS4_FEATURE_REPORT_PAIRING_INFO_SIZE, false);
  		if (ret) {
  			hid_err(hdev, "Failed to retrieve DualShock4 pairing info: %d\n", ret);

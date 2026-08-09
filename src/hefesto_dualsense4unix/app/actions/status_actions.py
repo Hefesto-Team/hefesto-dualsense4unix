@@ -168,6 +168,79 @@ def texto_de_contagem(contagem: ContagemDeControles) -> str:
     return _("{n} do Hefesto + {ext}").format(n=adotados, ext=parte_ext)
 
 
+#: CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026): de quantos em quantos minutos o
+#: produto TENTA sozinho trazer de volta o controle que o sistema não adotou.
+#: Não é número escolhido aqui: é o `OnUnitActiveSec` de
+#: `assets/systemd/hefesto-bt-health-watchdog.timer`, a vigia que chama o
+#: `bt_rebind_orphans.sh`. O texto da tela promete ESTE número, então ele tem
+#: de sair do mesmo lugar que o cumpre — há teste que confere os dois.
+MINUTOS_ENTRE_TENTATIVAS = 2
+
+#: Posição do banner na caixa da aba Status: logo abaixo dos dois banners do
+#: glade (`status_vpad_banner` = 0, `status_wrapper_banner` = 1) e acima do
+#: frame "Estado". Ele não pôde nascer no glade como os outros dois — este
+#: widget é montado em código —, e sem a reordenação `pack_start` o jogaria
+#: para o fim da aba, abaixo dos cards, que é onde ninguém procura o motivo de
+#: um controle estar faltando.
+POSICAO_DO_BANNER_NAO_ADOTADO = 2
+
+
+def texto_de_controle_nao_adotado(state: dict[str, Any] | None) -> str:
+    """Aviso de que há controle LIGADO que o sistema não entregou ao Hefesto.
+
+    CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026). Medido na máquina dela: dois
+    DualSense ligados e pareados, e a janela mostrava UM — sem, em lugar
+    nenhum do produto, uma pista do porquê. O driver do kernel havia abortado
+    o segundo na probe; ele conecta no rádio, acende a luz do próprio firmware
+    e não ganha hidraw, nó de LED nem dispositivo de entrada. Para o Hefesto,
+    que enumera handles abertos, ele não existe.
+
+    O texto tem três partes obrigatórias, e cada uma desfaz uma leitura errada
+    que a tela de hoje produz:
+
+    - **o que está acontecendo, na língua dela** — "está ligado, mas não
+      chegou até aqui". As palavras do defeito (probe, hidraw, driver, órfão)
+      não aparecem: elas descrevem o mecanismo, e o mecanismo não é o que ela
+      vê. O que ela vê é um controle aceso que a janela não conta;
+    - **que o produto tenta sozinho, e em quanto tempo** — a cura existe e é
+      automática (`bt_rebind_orphans.sh`, chamado pela vigia
+      `bt_health_watchdog.sh` a cada ``MINUTOS_ENTRE_TENTATIVAS`` minutos).
+      Sem esta parte o aviso seria só um susto: ela desligaria o controle bom
+      para "resolver";
+    - **a saída, se a tentativa não pegar** — desligar o controle no botão PS
+      e ligar de novo. É a mesma cura manual que o script loga quando desiste,
+      e reconectar dá orçamento novo de tentativas por construção (o id do
+      device muda).
+
+    Devolve ``""`` quando não há nada a dizer: daemon sem resposta, payload
+    torto ou daemon antigo sem a chave. Um aviso deste peso não pode acender
+    por ausência de dado.
+    """
+    if not isinstance(state, dict):
+        return ""
+    bloco = state.get("controles_sem_driver")
+    if not isinstance(bloco, dict):
+        return ""
+    quantos = bloco.get("quantidade")
+    if not isinstance(quantos, int) or isinstance(quantos, bool) or quantos <= 0:
+        return ""
+    if quantos == 1:
+        return _(
+            "Um controle está ligado, mas o sistema não conseguiu entregá-lo "
+            "ao Hefesto — ele acende e não aparece aqui. O Hefesto tenta "
+            "trazê-lo sozinho, e a próxima tentativa é em até {min} minutos. "
+            "Se ele não voltar, desligue o controle segurando o botão PS por "
+            "10 segundos e ligue de novo."
+        ).format(min=MINUTOS_ENTRE_TENTATIVAS)
+    return _(
+        "{n} controles estão ligados, mas o sistema não conseguiu entregá-los "
+        "ao Hefesto — eles acendem e não aparecem aqui. O Hefesto tenta "
+        "trazê-los sozinho, e a próxima tentativa é em até {min} minutos. Se "
+        "eles não voltarem, desligue cada um segurando o botão PS por 10 "
+        "segundos e ligue de novo."
+    ).format(n=quantos, min=MINUTOS_ENTRE_TENTATIVAS)
+
+
 def _lista_de_jogadores(quantos: int) -> str:
     """``"P2, P3 e P4"`` — quem saiu, por nome, a partir de P2.
 
@@ -365,6 +438,11 @@ class StatusActionsMixin(WidgetAccessMixin):
     # é o único sensor do card que não vem pelo IPC: capturar áudio é da
     # sessão gráfica, não do daemon.
     _mic_monitor: Any = None
+    # CONTROLE-QUE-NAO-ENTROU-01: o banner do controle que está ligado e que o
+    # sistema não conseguiu entregar ao Hefesto. Montado em CÓDIGO (ver
+    # `_montar_banner_nao_adotado`), e não no glade como os dois banners
+    # vizinhos — o `main.glade` é de outra frente nesta leva.
+    _banner_nao_adotado: Any = None
 
     def install_status_polling(self) -> None:
         """Liga os timers da aba Status e prepara o container dos cards.
@@ -389,6 +467,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._status_cards = {}
         self._status_card_keys = []
         self._init_controller_target_combo()
+        self._montar_banner_nao_adotado()
         # SOM-04: o botão da rota de som. Ligado por CÓDIGO e não por `signal`
         # do Glade, no molde do seletor de número: assim um Glade antigo (ou o
         # builder dublado de um teste de outra área) não derruba a montagem da
@@ -750,6 +829,13 @@ class StatusActionsMixin(WidgetAccessMixin):
             definir_sink = getattr(card, "definir_sink_de_saida", None)
             if definir_sink is not None:
                 definir_sink(monitor.sink_de(uniq) if tem_uniq else "")
+            # SOM-02/E4: quem GUARDA o rascunho do perfil em edição. O bloco
+            # "Alto-falante" registra nele o que ficou de pé DEPOIS de o daemon
+            # confirmar — é isso que faz o "Salvar Perfil" persistir o volume
+            # dela em vez do número velho.
+            dono = getattr(card, "definir_dono_do_rascunho", None)
+            if dono is not None:
+                dono(self)
 
     def _rebuild_status_cards(
         self, slot: Any, keys: list[tuple[Any, ...]]
@@ -2058,6 +2144,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._refresh_vpad_banner(None)
         # GUI-05: idem para o aviso "jogo sem wrapper".
         self._refresh_wrapper_banner(None)
+        # CONTROLE-QUE-NAO-ENTROU-01: sem daemon não há varredura do sistema —
+        # o aviso apaga em vez de sobreviver a um estado morto.
+        self._refresh_banner_nao_adotado(None)
         self._reset_live_widgets()
 
     @staticmethod
@@ -2152,6 +2241,12 @@ class StatusActionsMixin(WidgetAccessMixin):
 
         # GUI-05 item 3: banner "jogo sem wrapper" (honestidade do dedup).
         self._refresh_wrapper_banner(state)
+
+        # CONTROLE-QUE-NAO-ENTROU-01: o controle ligado que o sistema não
+        # conseguiu entregar ao Hefesto. Vai no tique LENTO de propósito: o
+        # dado é uma varredura do sistema com TTL no daemon, e ele muda por
+        # gesto humano (ligar/desligar controle), nunca a 10 Hz.
+        self._refresh_banner_nao_adotado(state)
 
         # STATUS-02: o tick lento também mantém o CONJUNTO de cards em dia —
         # com a aba Status fora de foco o tick rápido pausa, e sem isto a
@@ -2273,6 +2368,70 @@ class StatusActionsMixin(WidgetAccessMixin):
             banner.set_text(aviso)
         banner.set_visible(bool(aviso))
 
+    # ------------------------------------------------------------------
+    # CONTROLE-QUE-NAO-ENTROU-01: o controle ligado que não chegou até aqui
+    # ------------------------------------------------------------------
+
+    def _montar_banner_nao_adotado(self) -> None:
+        """Cria o banner do controle que o sistema não entregou ao Hefesto.
+
+        Nasce em CÓDIGO, e não no `main.glade` como os dois banners vizinhos.
+        Isso muda uma coisa e só uma: ele precisa ser REORDENADO depois do
+        `pack_start`, porque a caixa da aba é vertical e o padrão empurraria o
+        aviso para o fim — abaixo dos cards, que é o lugar em que ninguém
+        procura o motivo de um controle estar faltando.
+
+        Nasce escondido e com `no_show_all`, igual aos vizinhos: sem isso, um
+        `show_all` da aba acenderia o aviso com a tela em ordem, que é
+        exatamente a mentira nova que este banner existe para não criar.
+
+        MEDIDO nesta bancada em 09/08, com a janela em 1920 e os dois banners
+        acesos lado a lado: este e o `status_vpad_banner` do glade saem em
+        ``x=13`` e ``width=1894``, com a mesma classe de estilo e a mesma cor
+        resolvida. É de propósito que não se corrige a largura aqui: os três
+        banners da aba são um padrão só, e um deles estreito (com a
+        `CaixaDeTetoElastico` do card, por exemplo) daria à aba duas larguras
+        de aviso em vez de uma. Se um dia esse teto valer, vale para os três,
+        e o lugar é o glade — que não é desta leva.
+
+        No-op silencioso quando não há caixa (builder dublado de teste de
+        outra área, ou glade antigo): a aba abre sem o banner, como abria
+        ontem.
+        """
+        caixa = self._get(ABA_STATUS)
+        if caixa is None or not hasattr(caixa, "pack_start"):
+            return
+        banner = Gtk.Label()
+        banner.set_line_wrap(True)
+        banner.set_xalign(0.0)
+        with contextlib.suppress(Exception):
+            banner.get_style_context().add_class(
+                "hefesto-dualsense4unix-status-warn"
+            )
+        banner.set_no_show_all(True)
+        banner.hide()
+        caixa.pack_start(banner, False, False, 0)
+        with contextlib.suppress(Exception):
+            caixa.reorder_child(banner, POSICAO_DO_BANNER_NAO_ADOTADO)
+        self._banner_nao_adotado = banner
+
+    def _refresh_banner_nao_adotado(self, state: dict[str, Any] | None) -> None:
+        """Acende/apaga o aviso a partir do `controles_sem_driver` do daemon.
+
+        Mesmo desenho dos banners do vpad e do wrapper: a decisão inteira mora
+        na função pura (`texto_de_controle_nao_adotado`) e aqui só se pinta.
+        `state=None` (daemon sem resposta) apaga — sem daemon não há varredura
+        do sistema, e um aviso pendurado sobre um estado morto seria pior que
+        o silêncio.
+        """
+        banner = getattr(self, "_banner_nao_adotado", None)
+        if banner is None:
+            return
+        aviso = texto_de_controle_nao_adotado(state)
+        if aviso:
+            banner.set_text(aviso)
+        banner.set_visible(bool(aviso))
+
     def _reset_live_widgets(self) -> None:
         """IPC sem resposta neste tick: os cards mostram "—".
 
@@ -2290,9 +2449,12 @@ __all__ = [
     "ALL_BUTTONS",
     "GRID_BOTOES",
     "L2_R2_THRESHOLD",
+    "MINUTOS_ENTRE_TENTATIVAS",
+    "POSICAO_DO_BANNER_NAO_ADOTADO",
     "ContagemDeControles",
     "StatusActionsMixin",
     "texto_de_contagem",
+    "texto_de_controle_nao_adotado",
     "texto_do_coop_derrubado",
     "tooltip_do_coop_derrubado",
 ]

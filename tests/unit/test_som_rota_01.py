@@ -249,3 +249,109 @@ def test_a_rota_preserva_o_microfone_quando_assume_o_byte_do_zero() -> None:
         "microfone do controle — medido"
     )
     assert (novo & rep.OUTPUT_PATH_SEL_MASK) >> rep.OUTPUT_PATH_SEL_SHIFT == 3
+
+
+# ---------------------------------------------------------------------------
+# E4 — a LEITURA da rota: o seletor da janela deixa de ser cego
+# ---------------------------------------------------------------------------
+#
+# O buraco medido em 09/08/2026, quando a rota passou a viajar no perfil: o
+# perfil ESCREVE o canal e o `speaker_state_for` publicava só `{volume, muted}`.
+# A janela então desenhava "Sons do jogo" — o primeiro item da lista — mesmo
+# com o controle em "Todo o som do PC". Tela afirmando o que não é.
+#
+# A honestidade é a mesma do volume, e a mesma do `common[7]` inteiro: o
+# firmware NÃO devolve este byte. Só sabemos o canal quando fomos nós a
+# mandá-lo — e enquanto não fomos, a resposta é a AUSÊNCIA da chave, nunca um
+# padrão desenhado por conta própria.
+
+
+def _backend_com_um_handle() -> tuple[Any, Any]:
+    """`PyDualSenseController` real com um handle mínimo e sem hardware.
+
+    Real de propósito: o que se afere aqui é a leitura que sobe ao daemon, e um
+    dublê de backend provaria apenas que a chave foi digitada.
+    """
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+    from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+    reader = EvdevReader(device_path=None)
+    reader._device_path = None
+    inst = PyDualSenseController(evdev_reader=reader)
+    handle = _Handle()
+    inst._handles = {"AA:BB:CC:00:00:01": handle}
+    inst._primary_key = "AA:BB:CC:00:00:01"
+    return inst, handle
+
+
+def test_sem_posse_do_byte_a_chave_da_rota_nem_existe() -> None:
+    """Ausência é resposta — a mesma regra do volume não ajustado.
+
+    Quem lê tem de poder dizer "não dá para saber". Um default numérico aqui
+    faria a janela AFIRMAR um canal que nunca foi escrito, que é a mentira que
+    esta entrega existe para não contar.
+
+    MORDIDA: publicar `"rota": 0` (ou qualquer número) quando `volumes[3]` é
+    None — o seletor volta a desenhar um canal inventado, agora com a
+    autoridade de um campo do daemon.
+    """
+    inst, handle = _backend_com_um_handle()
+    # Volume escrito SEM canal: é o caso de quem nunca tocou no seletor.
+    handle._volumes_audio = [180, 180, None, None]
+    handle._speaker_volume_pref = 180
+
+    estado = inst.speaker_state_for()
+
+    assert estado is not None
+    assert estado["volume"] == 180
+    assert "rota" not in estado
+
+
+@pytest.mark.parametrize(
+    "rota",
+    [
+        rep.SAIDA_ESTEREO_NO_FONE,
+        rep.SAIDA_MONO_NO_FONE,
+        rep.SAIDA_L_FONE_R_ALTO_FALANTE,
+        rep.SAIDA_SO_NO_ALTO_FALANTE,
+    ],
+)
+def test_o_canal_em_vigor_sobe_ao_daemon(rota: int) -> None:
+    """Os quatro valores voltam pela leitura, e só os bits 4-5 são lidos.
+
+    MORDIDA: apagar o bloco da `rota` de `speaker_state_for`. O seletor de
+    canal da janela volta a ser cego e a mostrar "Sons do jogo" com o controle
+    em "Todo o som do PC" — inclusive logo depois de um perfil ter aplicado o
+    canal, que é o caminho novo desta leva.
+    """
+    inst, handle = _backend_com_um_handle()
+    handle._volumes_audio = [180, 180, None, _byte_da_rota(_Handle(), rota)]
+    handle._speaker_volume_pref = 180
+
+    estado = inst.speaker_state_for()
+
+    assert estado is not None
+    assert estado["rota"] == rota
+
+
+def test_a_leitura_ignora_o_meio_byte_do_microfone() -> None:
+    """Só os bits 4-5 são canal — o resto é o caminho do mic, e não é lido.
+
+    Se a leitura devolvesse o byte inteiro, a janela receberia um número fora
+    de 0-3 e o seletor não casaria com item nenhum: um canal em vigor viraria
+    "não sei" por erro de máscara.
+
+    MORDIDA: devolver `int(volumes[3])` cru, sem máscara e sem deslocamento.
+    """
+    inst, handle = _backend_com_um_handle()
+    # Caminho do microfone ligado (bits fora dos 4-5) + canal 3.
+    byte = rep.AUDIO_CONTROL_FORCE_INTERNAL_MIC | (
+        rep.SAIDA_SO_NO_ALTO_FALANTE << rep.OUTPUT_PATH_SEL_SHIFT
+    )
+    handle._volumes_audio = [180, 180, None, byte]
+    handle._speaker_volume_pref = 180
+
+    estado = inst.speaker_state_for()
+
+    assert estado is not None
+    assert estado["rota"] == rep.SAIDA_SO_NO_ALTO_FALANTE

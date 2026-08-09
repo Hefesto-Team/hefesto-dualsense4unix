@@ -194,8 +194,29 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             )
         return False
 
+    def _registrar_espera(nome: str) -> None:
+        """Deixa a recusa VISÍVEL no estado, não só no journal.
+
+        PERFIL-ADIADO-POR-JANELA-01 (09/08/2026). Até aqui, desistir do restore
+        por escopo escrevia UMA linha de journal e ia embora — e o
+        `daemon.state_full` respondia `active_profile: None`, a mesma palavra
+        que usa para "não há perfil nenhum configurado". Na máquina dela isso
+        acontece em TODO boot desde 31/07 (30+ ocorrências medidas), e a leitura
+        que sobra para quem olha a janela é "o Hefesto perdeu o meu perfil".
+
+        Best-effort de propósito: um daemon enxuto (CLI, dublês da suíte) sem
+        `store` — ou com um store antigo, sem o setter — não pode ver o restore
+        de boot cair por causa de uma dica de interface.
+        """
+        store = getattr(daemon, "store", None)
+        registrar = getattr(store, "set_perfil_adiado_por_janela", None)
+        if callable(registrar):
+            with contextlib.suppress(Exception):
+                registrar(nome)
+
     if _escopado_a_janela(name):
         logger.info("last_profile_restore_pulado_perfil_de_janela", name=name)
+        _registrar_espera(name)
         return
     # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers — o
     # restore pode rodar antes/depois do keyboard subir e após reconexão
@@ -266,6 +287,7 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             logger.info(
                 "last_profile_restore_pulado_perfil_de_janela", name=fallback
             )
+            _registrar_espera(fallback)
             return
         logger.info(
             "last_profile_seed_marker_invalido", marker=name, fallback=fallback

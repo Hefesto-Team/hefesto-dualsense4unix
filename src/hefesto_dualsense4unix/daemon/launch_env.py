@@ -41,12 +41,18 @@ gamepad virtual de pé é o próprio duplicado: medido ao vivo com UM DualSense
 no cabo, o Mullet Mad Jack (2111190) enxergava js0=vpad e js2=físico (mais os
 dois pads que o Steam Input cria), atribuía jogador 1 a um e jogador 2 ao
 outro e metade dos comandos dela ia para o controle que o jogo não estava
-lendo. O invariante que faltava, e que agora vale nos dois lados desta
-fronteira: **um controle físico produz exatamente UM dispositivo de jogo**. A
-allowlist muda QUAL dispositivo (o físico, falando com a Steam), nunca
-QUANTOS — quem retira o vpad de cena enquanto o jogo da allowlist está em
-sessão é `subsystems.gamepad.sync_steam_input_exception`, a partir do mesmo
-appid que `steam_input_exception_appid` decide aqui.
+lendo. O invariante que faltava, e que segue valendo nos dois lados desta
+fronteira: **um controle físico produz exatamente UM dispositivo de jogo**.
+
+NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela): **a
+allowlist do Steam Input não tem mais ramo nenhum neste arquivo de saída.** A
+marca passou a significar "esconda o controle FÍSICO neste jogo", e não "entregue
+o físico à Steam"; o jogo marcado recebe exatamente a mesma env de qualquer
+outro jogo. O obituário do ramo, com o motivo de cada linha dele, está em
+`materialize_launch_env`. O appid da allowlist continua vivo aqui para DUAS
+outras coisas, e só elas: decidir a sessão da exceção
+(`steam_input_exception_appid`) e pular o arming da máscara
+(`arm_launch_profile`).
 """
 from __future__ import annotations
 
@@ -275,9 +281,17 @@ LAUNCH_ARM_WINDOW_SEC = 60.0
 #: JOGO-01: rótulo do `estado:` gravado no `steam_app_<appid>.env` dos jogos da
 #: allowlist. O texto antigo ("allowlist Steam Input (sem dedup)") descrevia com
 #: precisão o que o ramo fazia — e era exatamente o defeito: "sem dedup" com o
-#: vpad de pé é o controle duplicado. O rótulo agora diz a REGRA que passou a
-#: valer, porque este arquivo é a primeira coisa que se lê ao diagnosticar um
-#: jogo que "enxerga quatro controles onde existe um".
+#: vpad de pé é o controle duplicado. O rótulo dizia a REGRA que passou a valer,
+#: porque este arquivo é a primeira coisa que se lê ao diagnosticar um jogo que
+#: "enxerga quatro controles onde existe um".
+#:
+#: NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): **nada mais escreve
+#: este rótulo.** A regra que ele afirma — "físico é o único dispositivo" —
+#: deixou de valer por decisão dela: no jogo marcado o único dispositivo passou
+#: a ser o do Hefesto. A constante fica exportada porque é a chave de leitura de
+#: qualquer `.env` antigo que ainda exista numa máquina (a varredura de
+#: `materialize_launch_env` apaga os dela na primeira passagem, mas um arquivo
+#: copiado num relatório de defeito sobrevive a isso).
 ESTADO_ALLOWLIST_STEAM_INPUT = "allowlist Steam Input (físico é o único dispositivo)"
 
 
@@ -700,6 +714,19 @@ def arm_launch_profile(
     é a mesma que o estudo
     `docs/process/estudos/2026-08-06-desenho-a-flag-do-jogo-e-o-perfil-a-partir-da-biblioteca.md`
     (seção 5.3, item 2) já cobrava desta função.
+
+    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). A refutação virou
+    inteira: a marca deixou de entregar a entrada à Steam e passou a **esconder
+    o controle físico**, com o Hefesto na frente do jogo marcado de ponta a
+    ponta. Com isso, o motivo escrito acima — *"impor a máscara ali seria
+    contradizer a própria exceção"* — deixou de existir: não há mais exceção a
+    contradizer, e a máscara do perfil dela é uma opinião sobre o vpad que o
+    jogo marcado agora enxerga. **O código NÃO foi mudado nesta leva, de
+    propósito.** Ligar o arming num jogo marcado muda o que ela vê ao abrir o
+    jogo, e trocar o modo de um jogo dela sem que ela peça é a regra mais velha
+    desta casa ao contrário. Fica registrado como pergunta para ela, com o preço
+    declarado: enquanto isto for assim, marcar um jogo continua desligando,
+    calado, o modo do perfil daquele jogo NO LANÇAMENTO.
 
     ALLOWLIST-SUPRESSAO-01 (auditoria 24/07): "sair de cena" era largo demais e
     engolia o que NÃO disputa nada com o jogo. O `return` antecipado da
@@ -1203,40 +1230,43 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
             name = f"steam_app_{appid}.env"
             _write_atomic(target / name, _render(env, f"{motivo} | {estado}"))
             desired.add(name)
-        # R-06 (auditoria 23/07): a allowlist do Steam Input é fonte de verdade
-        # do launch — e VENCE (contradição 11 do plano). Ela é opt-in EXPLÍCITO
-        # da usuária para "neste jogo o DualSense é entregue pela Steam"; nesse
-        # caso esconder o físico (IGNORE do SDL + PROTON_DISABLE_HIDRAW) mata
-        # exatamente a via que ela pediu. O arquivo nasce mesmo SEM perfil
-        # (antes o jogo caía no `default.env`, que carrega o dedup) e sobrescreve
-        # de propósito o arquivo derivado de perfil do mesmo appid — daí este
-        # laço vir DEPOIS do de perfis.
+        # NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Aqui morreu o
+        # laço da allowlist do Steam Input, e ele merece o obituário inteiro
+        # porque cada linha dele tinha medição por trás.
         #
-        # `native_mode=True` aqui não liga o Modo Nativo do daemon: é só o ramo
-        # de `compose_env` que produz "nenhuma env de hidraw", que é exatamente
-        # a semântica pedida (o preload de shaders e o rótulo de botões seguem,
-        # como em toda variante).
+        # O que ele fazia: para cada appid marcado, sobrescrevia o
+        # `steam_app_<appid>.env` com `compose_env(native_mode=True,
+        # emulation_enabled=False, backends=[])` — ou seja, SEM
+        # `SDL_GAMECONTROLLER_IGNORE_DEVICES` e SEM `PROTON_DISABLE_HIDRAW`. Em
+        # português: *"jogo, olhe para o controle físico"*. Era o par obrigatório
+        # da outra metade da marca, que retirava o gamepad virtual de cena
+        # (`gamepad.sync_steam_input_exception`): o físico ficava sendo o único
+        # dispositivo, e escondê-lo aqui seria zero controles.
         #
-        # JOGO-01: a env continua a MESMA — e agora ela é honesta. Omitir o
-        # IGNORE só está certo porque o gamepad virtual sai de cena enquanto o
-        # jogo da allowlist estiver em sessão (`gamepad.sync_steam_input_
-        # exception`): o físico passa a ser o único dispositivo, e escondê-lo
-        # aqui seria zero controles. Enquanto o par não era par — env sem dedup
-        # + vpad de pé — cada metade estava certa isoladamente e o resultado era
-        # o duplicado que o jogo dividia entre dois jogadores.
-        for appid in sorted(steam_input_appids()):
-            name = f"steam_app_{appid}.env"
-            env_allow = compose_env(
-                native_mode=True,
-                emulation_enabled=False,
-                flavor=flavor,
-                backends=[],
-            )
-            _write_atomic(
-                target / name,
-                _render(env_allow, f"{ESTADO_ALLOWLIST_STEAM_INPUT} | {estado}"),
-            )
-            desired.add(name)
+        # A decisão dela inverteu a marca: o jogo marcado passa a ver o controle
+        # DO HEFESTO, e é o FÍSICO que se esconde. Com a outra metade invertida,
+        # esta aqui não pode ficar como estava — o par tem de continuar sendo
+        # par. Uma env que manda o jogo olhar para o físico enquanto o daemon o
+        # graba e esconde o hidraw produz exatamente o "Jogador 3" fantasma que
+        # ela viu no Sackboy em 08/08 (`JOGADOR-3-FANTASMA-01`): um controle
+        # enumerado que não responde a nada.
+        #
+        # E a inversão não vira um ramo novo: vira a AUSÊNCIA de ramo. O jogo
+        # marcado passa a receber exatamente a mesma env de qualquer outro jogo
+        # — a do perfil dele, se houver, e o `default.env` se não houver —, que é
+        # a leitura literal da regra dela: *"a allowlist do Steam Input NÃO tira
+        # o Hefesto da frente"*. De quebra, herda sem escrever uma linha as três
+        # travas de segurança que o ramo antigo contornava: a cobertura por
+        # físico (`cobertura_total`), o vpad degradado em uinput e o perfil
+        # nativo fora da antecipação. Nenhuma delas pode ser dispensada por
+        # opt-in — todas existem contra o mesmo desfecho, que é ela ficar com
+        # ZERO controles, e o invariante desta casa continua sendo
+        # "duplicado > zero controles".
+        #
+        # A limpeza do arquivo velho é de graça: o `steam_app_<appid>.env` sem
+        # dedup que as versões anteriores gravaram na máquina dela não está mais
+        # em `desired`, então a varredura logo abaixo o apaga sozinha na primeira
+        # materialização — sem passo manual, como manda a regra de 08/08.
         for stale in target.glob("steam_app_*.env"):
             if stale.name not in desired:
                 with contextlib.suppress(OSError):

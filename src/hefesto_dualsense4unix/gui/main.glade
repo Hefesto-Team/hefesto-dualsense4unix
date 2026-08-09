@@ -2098,12 +2098,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                 <property name="no-show-all">True</property>
                                 <child>
                                   <object class="GtkCheckButton" id="profile_steam_input_check">
-                                    <property name="label" translatable="yes">Deixar a Steam entregar o controle neste jogo</property>
-                                    <property name="tooltip-text" translatable="yes">Para jogos que já falam DualSense pela Steam e por isso mostram o controle DOBRADO (um Xbox e um Sony). Marcado: o jogo passa a ver o controle de verdade e lista UM só — e a sua cor, os seus gatilhos e a sua vibração continuam valendo (medido em 06/08 com o Mullet Mad Jack). Desmarcado: o jogo vê o controle virtual do Hefesto, e quem manda na luz e nos gatilhos passa a ser o jogo. Vale na hora, sem esperar o Salvar.</property>
+                                    <property name="label" translatable="yes">Esconder o controle físico neste jogo</property>
+                                    <property name="tooltip-text" translatable="yes">Para jogos que mostram o seu controle DOBRADO — um Xbox e um Sony. Marcado: o jogo vê só o controle do Hefesto, e a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Desmarcado: o jogo volta a enxergar também o controle físico. Feche e abra o jogo para valer.</property>
                                   <child internal-child="accessible">
                                     <object class="AtkObject">
-                                      <property name="AtkObject::accessible-name" translatable="yes">Deixar a Steam entregar o controle neste jogo</property>
-                                      <property name="AtkObject::accessible-description" translatable="yes">Marca ou desmarca este jogo na lista de exceções do Steam Input. Marcado, o jogo lista um controle só e os seus ajustes continuam valendo; desmarcado, quem manda na luz e nos gatilhos é o jogo. Vale na hora, sem esperar o Salvar</property>
+                                      <property name="AtkObject::accessible-name" translatable="yes">Esconder o controle físico neste jogo</property>
+                                      <property name="AtkObject::accessible-description" translatable="yes">Para jogos que mostram o seu controle dobrado, um Xbox e um Sony. Marcado, o jogo vê só o controle do Hefesto, e a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Feche e abra o jogo para a marca valer</property>
                                     </object>
                                   </child>
                                   </object>
@@ -2488,14 +2488,27 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                o jogo marcado, os gatilhos dela seguraram e a
                                cor dela ficou. O que a marca entrega é a
                                ENTRADA (fim do controle dobrado); a SAÍDA
-                               continua sendo do Hefesto. -->
+                               continua sendo do Hefesto.
+
+                               NOTA DATADA — 09/08/2026
+                               (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela): "o
+                               controle passa a ser entregue pela Steam" morreu.
+                               A marca inverteu de lado — em vez de tirar o
+                               Hefesto da frente, ela ESCONDE o controle físico
+                               do jogo. O texto agora diz isso, e é o mesmo que
+                               a caixinha da aba Perfis diz, porque marcam a
+                               mesma coisa. O que a inversão devolveu, e o texto
+                               velho tinha de omitir: os JOGADORES. Derrubar os
+                               controles virtuais para curar o dobrado derrubava
+                               o jogador 2 junto — vinte vezes no journal dela em
+                               08/08. -->
                           <object class="GtkButton" id="btn_steam_game_broken">
                             <property name="label" translatable="yes">Este jogo não funciona</property>
-                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele o controle passa a ser entregue pela Steam, o jogo deixa de mostrar o controle dobrado e a sua cor e os seus gatilhos continuam valendo (medido em 06/08). Use quando um jogo específico ignora o controle. Não fecha a Steam. Para tirar a marca: aba Perfis, no editor do perfil, logo abaixo do jogo escolhido.</property>
+                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele o controle físico fica escondido, o jogo deixa de mostrar o controle dobrado e passa a ver só o controle do Hefesto — a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Use quando um jogo específico ignora o controle. Não fecha a Steam. Feche e abra o jogo para valer. Para tirar a marca: aba Perfis, no editor do perfil, logo abaixo do jogo escolhido.</property>
                           <child internal-child="accessible">
                             <object class="AtkObject">
                               <property name="AtkObject::accessible-name" translatable="yes">Este jogo não funciona</property>
-                              <property name="AtkObject::accessible-description" translatable="yes">Troca a estratégia do último jogo aberto: o controle passa a ser entregue pela Steam. Para tirar a marca, use a caixinha no editor do perfil, na aba Perfis</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Esconde o controle físico no último jogo aberto: o jogo passa a ver só o controle do Hefesto. Para tirar a marca, use a caixinha no editor do perfil, na aba Perfis</property>
                             </object>
                           </child>
                           </object>

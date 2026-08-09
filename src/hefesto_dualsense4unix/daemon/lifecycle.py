@@ -1688,6 +1688,22 @@ class Daemon:
             #
             # A cura é a simetria, e ela vale nas duas leituras: se ausência de
             # regra não é ordem para LIBERAR, também não é ordem para LIGAR.
+            #
+            # NOTA DATADA — 09/08/2026 (MODO-JOGO-VONTADE-DELA-01). Este gate
+            # deixou de ser só a cura do disco de 05/08: ele virou a CONDIÇÃO de
+            # uma entrega da janela. Até hoje a aba Emulação RECUSAVA guardar
+            # `suppress: true` num perfil catch-all, e a recusa se justificava
+            # por escrito com a ausência deste gate — mas ele já existia desde
+            # 05/08, e a janela nunca foi avisada. Decisão dela em 09/08 ("a
+            # vontade na GUI prevalece sempre"): o gesto dela passa a ser
+            # guardado, porque cinco dos perfis dela são catch-all e para ela
+            # isso era "liguei e não ficou salvo". Consequência: a partir de
+            # hoje há `suppress: true` em catch-all no disco dela DE PROPÓSITO,
+            # e quem impede aquilo de virar mouse e teclado suspensos no
+            # desktop, em toda ativação (o restauro do boot inclusive), são
+            # estas seis linhas. Arrancá-las devolve o alçapão, agora com mais
+            # arquivos para abri-lo — a mordida está em
+            # `test_modo_jogo_a_vontade_dela_prevalece.py`.
             if self._perfil_e_catch_all(profile):
                 logger.info(
                     "profile_suppression_skipped",
@@ -2658,6 +2674,7 @@ class Daemon:
         *,
         uniq: str | None = None,
         origin: str = "autoswitch",
+        rota: int | None = None,
     ) -> str:
         """Aplica a seção `speaker` de um perfil recém-ativado (SOM-02/E4).
 
@@ -2696,6 +2713,14 @@ class Daemon:
         Vocabulário de retorno (R-03): `APLICADO`, `IGNORADO_SEM_CONTROLE`
         (nenhum handle para o `uniq` — nada foi escrito e ninguém mentiu
         "aplicado") e `FALHOU`.
+
+        `rota` é o CANAL de saída (SOM-ROTA-01) e vem do `speaker.rota` do
+        perfil. `None` — o default, e o que todo perfil de antes desta linha
+        carrega — quer dizer **não tocar no `common[7]`**: aquele byte guarda a
+        rota de saída (bits 4-5) E o caminho do microfone (o resto), e
+        escrevê-lo inteiro apagaria o caminho do mic em silêncio. Quem preserva
+        os outros bits é o `_byte_da_rota` do backend, que lê o valor vigente
+        do handle antes de trocar só os dois bits da rota.
         """
         if volume is None:
             # Nunca um `set_speaker_volume` sem volume — ver a docstring. A
@@ -2708,13 +2733,14 @@ class Daemon:
             return IGNORADO_SEM_CONTROLE
         alvo = max(0, min(255, int(volume)))
         try:
-            ok = bool(setter(alvo, muted=bool(muted), uniq=uniq))
+            ok = bool(setter(alvo, muted=bool(muted), uniq=uniq, rota=rota))
         except Exception as exc:
             logger.warning(
                 "profile_speaker_apply_failed",
                 volume=alvo,
                 muted=bool(muted),
                 uniq=uniq,
+                rota=rota,
                 err=str(exc),
             )
             return FALHOU
@@ -2730,6 +2756,7 @@ class Daemon:
             volume=alvo,
             muted=bool(muted),
             uniq=uniq,
+            rota=rota,
             origin=origin,
         )
         return APLICADO

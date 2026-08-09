@@ -434,13 +434,24 @@ def test_o_toast_nao_contradiz_o_que_ela_mediu() -> None:
     Hefesto entrega a ENTRADA e mantém a SAÍDA — os gatilhos dela seguraram e a
     cor dela ficou, com o jogo aberto. Um toast que dissesse "o Hefesto sai da
     frente" contaria à mantenedora o contrário do que ela viu na tela.
+
+    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): a meia verdade virou
+    verdade inteira. A marca deixou de entregar a ENTRADA ao jogo — ela esconde
+    o controle físico e o Hefesto fica na frente de ponta a ponta. O "sai da
+    frente" continua proibido no texto, agora sem nenhuma metade que o
+    justifique.
+
+    A asserção da saída deixou de ser um trecho literal: o texto ganhou a
+    vibração no meio da lista (*"a sua cor, os seus gatilhos e a sua vibração
+    continuam valendo"*) e casar a frase inteira travaria a ORDEM das palavras
+    dela, não o fato. O que este teste guarda é o fato.
     """
     marcou = texto_da_marca_do_steam_input("adicionado", APPID)
     tirou = texto_da_marca_do_steam_input("removido", APPID)
 
     assert "sai da frente" not in marcou
     assert "dobrado" in marcou, "o defeito que a marca cura é o controle dobrado"
-    assert "gatilhos continuam valendo" in marcou
+    assert "gatilhos" in marcou and "continuam valendo" in marcou
     assert APPID in marcou and APPID in tirou
     assert texto_da_marca_do_steam_input("erro") .startswith("Não consegui")
     assert "não estava" in texto_da_marca_do_steam_input("nao_estava", APPID)
