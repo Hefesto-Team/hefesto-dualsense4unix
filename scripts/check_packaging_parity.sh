@@ -320,6 +320,92 @@ for rules_path in assets/[0-9][0-9]-*.rules; do
     fi
 done
 
+# OQ-6 (09/08/2026): o bloco acima cobra que cada regra que
+# EXISTE viaje em todo instalador — e passava verde com a regra que NÃO existia.
+# Nenhuma linha desta casa dava acesso aos nós de ENTRADA (`/dev/input/event*`)
+# do touchpad e dos sensores de movimento, e ninguém percebeu porque a usuária
+# desta máquina está no grupo `input` POR FORA do produto (`id` devolve
+# `995(input)`; instalador nenhum daqui toca esse grupo). MEDIDO em 09/08 com
+# `udevadm info -q property` nos nós vivos:
+#
+#   event6  "DualSense Wireless Controller"                 TAGS=:uaccess:seat:
+#   event7  "DualSense Wireless Controller Motion Sensors"  TAGS=:systemd:
+#   event8  "DualSense Wireless Controller Touchpad"        TAGS=(vazio)
+#
+# Numa máquina nova, touchpad e giroscópio não funcionam — e o sintoma é a
+# AUSÊNCIA de dado, que não acusa ninguém. Este portão cobra a EXISTÊNCIA da
+# regra, não a paridade dela (dessa o bloco acima já cuida).
+#
+# TRÊS COISAS SÃO COBRADAS, e a segunda é a que tem dente:
+#   1. existe linha de CÓDIGO (comentário não conta) que case `SUBSYSTEM=="input"`
+#      + `KERNEL=="event*"` e dê `TAG+="uaccess"`;
+#   2. o arquivo que a contém é numerado **< 73**. Quem transforma a TAG em ACL
+#      é a `/usr/lib/udev/rules.d/73-seat-late.rules`; numerada >= 73 a regra
+#      instala, o `udevadm verify` aprova, o portão de paridade fica verde — e
+#      a TAG nunca vira ACL. Já aconteceu duas vezes nesta casa (a `71-uhid`
+#      nasceu 79; a `79-external-controller-leds` tinha uma TAG morta que o
+#      bloco ONDA-R foi remover). Sem esta cobrança, renomear o arquivo para 79
+#      é uma regressão silenciosa e completa;
+#   3. os DOIS nós estão cobertos — o de movimento (giroscópio) e o de touchpad.
+#      Cobrir um só é meia cura, e foi meia cura que ela pediu para não ter.
+echo "== acesso da sessão aos nós de ENTRADA (touchpad + sensores de movimento) =="
+if [[ "${HAS_UDEV_RULES}" -eq 0 ]]; then
+    echo "[ OK ] sem assets/NN-*.rules neste checkout — nada a checar"
+else
+    _in_motion=""
+    _in_touch=""
+    _in_tarde=()
+    for _in_path in assets/[0-9][0-9]-*.rules; do
+        [[ -f "${_in_path}" ]] || continue
+        _in_nome="$(basename "${_in_path}")"
+        _in_num="$(( 10#${_in_nome:0:2} ))"
+        while IFS= read -r _in_linha; do
+            [[ "${_in_linha}" == *'SUBSYSTEM=="input"'* ]] || continue
+            [[ "${_in_linha}" == *'KERNEL=="event*"'*   ]] || continue
+            [[ "${_in_linha}" == *'TAG+="uaccess"'*     ]] || continue
+            if [[ "${_in_num}" -ge 73 ]]; then
+                # Um arquivo com três linhas mortas é UM arquivo morto: a
+                # mensagem nomeia o arquivo uma vez, não uma vez por linha.
+                [[ " ${_in_tarde[*]-} " == *" ${_in_nome} "* ]] \
+                    || _in_tarde+=("${_in_nome}")
+                continue
+            fi
+            case "${_in_linha}" in
+                *"Motion Sensors"*|*"IMU"*) _in_motion="${_in_nome}" ;;
+            esac
+            case "${_in_linha}" in
+                *Touchpad*) _in_touch="${_in_nome}" ;;
+            esac
+        done < <(grep -v '^[[:space:]]*#' "${_in_path}" 2>/dev/null)
+    done
+    _in_falhas=()
+    if [[ "${#_in_tarde[@]}" -gt 0 ]]; then
+        _in_falhas+=("TAG uaccess em event* num arquivo >= 73 (${_in_tarde[*]}): a 73-seat-late.rules já passou, a TAG NUNCA vira ACL — renumere para < 73")
+    fi
+    [[ -n "${_in_motion}" ]] \
+        || _in_falhas+=("nenhuma regra dá uaccess ao nó dos SENSORES DE MOVIMENTO (giroscópio): ele é ID_INPUT_ACCELEROMETER, não ID_INPUT_JOYSTICK, então a 70-uaccess.rules do sistema não o cobre")
+    [[ -n "${_in_touch}" ]] \
+        || _in_falhas+=("nenhuma regra dá uaccess ao nó do TOUCHPAD: ele é ID_INPUT_TOUCHPAD, não ID_INPUT_JOYSTICK, então a 70-uaccess.rules do sistema não o cobre")
+    # Sem o trigger de `input` a regra só vale no próximo replug do controle —
+    # "funciona por default" viraria "funciona depois que você desplugar".
+    for _in_inst in scripts/install_udev.sh scripts/install-host-udev.sh; do
+        [[ -f "${_in_inst}" ]] || continue
+        grep -qF 'subsystem-match=input' "${_in_inst}" 2>/dev/null \
+            || _in_falhas+=("${_in_inst} não dispara 'udevadm trigger --subsystem-match=input' — a regra de acesso só valeria no próximo replug")
+    done
+    if [[ "${#_in_falhas[@]}" -eq 0 ]]; then
+        echo "[ OK ] touchpad (${_in_touch}) e movimento (${_in_motion}) com uaccess em regra < 73, e o trigger de input nos dois instaladores"
+    else
+        for _in_f in "${_in_falhas[@]}"; do
+            echo "[FAIL] ${_in_f}"
+        done
+        echo "       sem isso o touchpad e o giroscópio dependem de a usuária estar"
+        echo "       no grupo 'input' por fora do produto — que é como estavam até"
+        echo "       09/08/2026, e que numa máquina nova simplesmente não acontece."
+        rc=1
+    fi
+fi
+
 # M11 (auditoria): a cura de RAIZ do storm (assets/modprobe/*.conf) precisa ser
 # empacotada por TODOS os caminhos, senão o install-host-udev.sh pula a cura em
 # silêncio (SNDQUIRK_SRC=""). O glob de regras acima só pega *.rules — este bloco

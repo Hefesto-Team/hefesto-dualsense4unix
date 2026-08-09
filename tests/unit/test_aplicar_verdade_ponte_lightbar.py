@@ -219,7 +219,10 @@ def test_sucesso_continua_sendo_sucesso(monkeypatch: pytest.MonkeyPatch) -> None
     host.on_lightbar_apply(None)
 
     msg = _ultimo_toast(host)
-    assert "Cor aplicada no controle" in msg
+    # TELA-QUE-SO-AFIRMA-O-QUE-SABE-01: a frase do caminho feliz virou "Cor
+    # ENVIADA ao controle" — o `ok` sempre significou "o report saiu". O que
+    # este teste mede continua sendo o mesmo: sucesso não vira aviso de falha.
+    assert "Cor enviada ao controle" in msg
     assert "não entrou" not in msg
 
 
@@ -290,4 +293,4 @@ def test_daemon_antigo_sem_os_campos_novos_nao_vira_falha(
 
     host.on_lightbar_apply(None)
 
-    assert "Cor aplicada no controle" in _ultimo_toast(host)
+    assert "Cor enviada ao controle" in _ultimo_toast(host)

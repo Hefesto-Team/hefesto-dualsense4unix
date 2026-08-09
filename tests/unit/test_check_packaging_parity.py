@@ -18,14 +18,14 @@ import pytest
 
 SCRIPT_REL_PATH = "scripts/check_packaging_parity.sh"
 
-RULE = "79-teste-parity.rules"
+RULE = "72-teste-parity.rules"
 
 #: build_deb.sh fake no molde do real: UMA lista de globs consumida pelos DOIS
 #: destinos (diretório vivo /usr/lib/udev/rules.d + espelho
 #: /usr/share/hefesto-dualsense4unix/udev-rules).
 _BUILD_DEB_DOIS_DESTINOS = """\
 UDEV_RULES_GLOBS=(
-    assets/79-*.rules
+    assets/72-*.rules
 )
 for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
     cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
@@ -66,12 +66,22 @@ def _semeia_simbolico(raiz: Path) -> None:
 
 @pytest.fixture
 def fake_repo(tmp_path: Path) -> Path:
-    """Repo fake mínimo: só o script + uma regra 79 coberta em TODO lugar.
+    """Repo fake mínimo: só o script + uma regra 72 coberta em TODO lugar.
 
     Sem packaging/, as seções de applet COSMIC passam vazias — aqui o alvo é
     exclusivamente a seção de paridade udev. FIX-FLATPAK-UDEV-PARITY-01: o
     check passou a exigir a regra também no manifesto Flatpak, então o repo
     fake ganha um flatpak/fake.yml cobrindo a regra obrigatória.
+
+    OQ-6 (09/08/2026): a regra do fixture era `79-teste-parity`
+    e virou `72-teste-parity`, com CONTEÚDO de regra de acesso. Motivo: o
+    portão ganhou a seção "acesso da sessão aos nós de ENTRADA", que cobra que
+    ALGUMA regra dê `TAG+="uaccess"` ao touchpad e aos sensores de movimento —
+    e um repo com regras udev e nenhuma delas dando acesso é exatamente o
+    defeito que a seção existe para acusar. O número mudou junto porque a mesma
+    seção cobra `< 73`: acima disso a `73-seat-late.rules` já passou e a TAG
+    nunca vira ACL. O alvo destes testes (paridade contra instaladores) não muda —
+    a regra continua obrigatória e continua tendo de aparecer em todo formato.
     """
     repo_root = Path(__file__).resolve().parents[2]
     src_script = repo_root / SCRIPT_REL_PATH
@@ -87,15 +97,29 @@ def fake_repo(tmp_path: Path) -> Path:
     shutil.copy2(src_script, dst_script)
     dst_script.chmod(0o755)
 
-    (tmp_path / "assets" / RULE).write_text("# regra de teste\n", encoding="utf-8")
+    # OQ-6: conteúdo de regra de ACESSO, não um comentário
+    # solto — a seção nova do portão cobra `TAG+="uaccess"` no nó de touchpad e
+    # no de sensores de movimento, e só linha de CÓDIGO conta.
+    (tmp_path / "assets" / RULE).write_text(
+        "# regra de teste\n"
+        'ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", '
+        'ATTRS{id/vendor}=="054c", ATTRS{name}=="*Motion Sensors", TAG+="uaccess"\n'
+        'ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", '
+        'ATTRS{id/vendor}=="054c", ATTRS{name}=="*Touchpad", TAG+="uaccess"\n',
+        encoding="utf-8",
+    )
     # Cobertura completa: nativo e host por nome; .deb por glob (como o real);
-    # Flatpak por nome no manifesto.
+    # Flatpak por nome no manifesto. O `udevadm trigger` de input também é
+    # cobrado (sem ele a regra de acesso só valeria no próximo replug).
     (tmp_path / "scripts" / "install_udev.sh").write_text(
-        f'sudo install -Dm644 "$ASSETS/{RULE}" /etc/udev/rules.d/{RULE}\n',
+        f'sudo install -Dm644 "$ASSETS/{RULE}" /etc/udev/rules.d/{RULE}\n'
+        "sudo udevadm trigger --action=change --subsystem-match=input\n",
         encoding="utf-8",
     )
     (tmp_path / "scripts" / "install-host-udev.sh").write_text(
-        f'RULES=("{RULE}")\n', encoding="utf-8"
+        f'RULES=("{RULE}")\n'
+        'cmd+="udevadm trigger --action=change --subsystem-match=input; "\n',
+        encoding="utf-8",
     )
     # BUG-DEB-MIRROR-RULES-INCOMPLETO-01: o .deb tem DOIS destinos (o
     # diretório vivo e o espelho /usr/share/.../udev-rules, que o
@@ -192,7 +216,7 @@ def test_espelho_do_deb_com_glob_proprio_defasado_falha(fake_repo: Path) -> None
     """
     (fake_repo / "scripts" / "build_deb.sh").write_text(
         # Destino VIVO cobre a regra...
-        'for rules_file in assets/79-*.rules; do\n'
+        'for rules_file in assets/72-*.rules; do\n'
         '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'
         "done\n"
         # ...e o ESPELHO tem glob PRÓPRIO que a deixa de fora.
@@ -214,7 +238,7 @@ def test_espelho_do_deb_fora_da_lista_unica_falha(fake_repo: Path) -> None:
     laços consumam a MESMA lista."""
     (fake_repo / "scripts" / "build_deb.sh").write_text(
         "UDEV_RULES_GLOBS=(\n"
-        "    assets/79-*.rules\n"
+        "    assets/72-*.rules\n"
         ")\n"
         'for rules_file in "${UDEV_RULES_GLOBS[@]}"; do\n'
         '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'
@@ -235,7 +259,7 @@ def test_regra_so_no_espelho_sem_diretorio_vivo_falha(fake_repo: Path) -> None:
     """Simetria do anterior: sumir com o espelho também reprova."""
     (fake_repo / "scripts" / "build_deb.sh").write_text(
         "UDEV_RULES_GLOBS=(\n"
-        "    assets/79-*.rules\n"
+        "    assets/72-*.rules\n"
         ")\n"
         'for rules_file in "${UDEV_RULES_GLOBS[@]}"; do\n'
         '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'

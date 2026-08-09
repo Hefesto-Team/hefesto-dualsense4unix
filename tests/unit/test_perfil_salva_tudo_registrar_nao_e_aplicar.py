@@ -37,6 +37,18 @@ INICIO_PY = ACOES / "home_actions.py"
 #: Ele saiu dos cliques da Início (que deixaram de aplicar) e foi para o
 #: "Aplicar" do rodapé, que é onde a mudança sai — e onde o daemon confirma.
 RODAPE_PY = ACOES / "footer_actions.py"
+#: SOM-02/E4 (09/08/2026): o alto-falante entrou no mesmo contrato. O gesto
+#: mora no CARD (é widget, não mixin) e o escritor mora no ``draft_config``,
+#: escritor único — a fiação que faltava desde 29/07, quando ``with_speaker``
+#: nasceu com teste e sem um único chamador no produto.
+CARD_PY = (
+    RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "widgets" / "controller_card.py"
+)
+RASCUNHO_PY = RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "draft_config.py"
+#: A aba que MONTA os cards, e por isso a única que pode dizer a cada um quem é
+#: o dono do rascunho. Sem essa injeção o escritor do alto-falante fica com
+#: chamador de mentira: ele roda, e não tem em que escrever.
+STATUS_PY = ACOES / "status_actions.py"
 
 #: Tudo que MUDA a máquina dela: IPC, transição de modo, worker, timer da GUI.
 #: Um escritor de rascunho não pode mencionar nenhum destes nomes.
@@ -67,6 +79,8 @@ ESCRITORES = {
         "rascunho_com_modo_jogo",
         "registrar_modo_jogo_no_rascunho",
     ),
+    RASCUNHO_PY: ("registrar_alto_falante_no_rascunho",),
+    CARD_PY: ("_confirmado_pelo_daemon",),
 }
 
 
@@ -107,14 +121,24 @@ def test_nenhum_escritor_de_rascunho_aplica_nada() -> None:
             )
 
 
-def test_o_modo_jogo_so_e_gravado_pelo_lugar_que_tem_o_gate_do_catch_all() -> None:
-    """``with_suppress`` tem UM chamador na janela, e ele é o que recusa.
+def test_o_modo_jogo_so_e_gravado_por_um_lugar_na_janela() -> None:
+    """``with_suppress`` tem UM chamador na janela: ``rascunho_com_modo_jogo``.
 
-    O gate mora em ``rascunho_com_modo_jogo`` porque
-    ``lifecycle.apply_profile_suppression`` liga a supressão SEM passar pelo
-    ``_perfil_tem_opiniao`` (só o ramo de LIBERAR passa). Um segundo chamador
-    plantaria ``suppress: true`` num catch-all dela por outra porta — e ali é
-    alçapão de mão única.
+    NOTA DATADA — 09/08/2026 (MODO-JOGO-VONTADE-DELA-01). Este portão se chamava
+    ``..._que_tem_o_gate_do_catch_all`` e existia para proteger uma RECUSA: até
+    hoje ``rascunho_com_modo_jogo`` não guardava ``suppress: true`` em perfil
+    catch-all, e um segundo chamador de ``with_suppress`` plantaria o valor por
+    outra porta. A recusa caiu por decisão dela (*"a vontade na GUI prevalece
+    sempre"*) — a premissa dela, "o daemon liga sem gate", já era falsa desde
+    05/08.
+
+    O portão FICA, com o dono trocado. Quem impede o alçapão hoje é o gate do
+    daemon (``apply_profile_suppression``, ramo ``if desired:``); o que se
+    protege aqui é o mesmo de sempre nesta casa — um escritor só por assunto,
+    porque "três escritores do perfil sem dono" (auditoria 23/07) é a classe de
+    bug desta janela — e mais uma coisa nova: é ``rascunho_com_modo_jogo`` que
+    sabe quando a janela deve DIZER que o valor guardado não volta sozinho. Um
+    segundo escritor grava calado.
     """
     for caminho in (EMULACAO_PY, INICIO_PY):
         for no in ast.walk(_arvore(caminho)):
@@ -123,8 +147,8 @@ def test_o_modo_jogo_so_e_gravado_pelo_lugar_que_tem_o_gate_do_catch_all() -> No
             if "with_suppress" not in _nomes_chamados(no):
                 continue
             assert no.name == "rascunho_com_modo_jogo", (
-                f"{caminho.name}:{no.name} chama with_suppress direto, sem o gate "
-                "do catch-all (R-02)"
+                f"{caminho.name}:{no.name} chama with_suppress direto, fora do "
+                "único escritor do modo jogo"
             )
 
 
@@ -138,6 +162,16 @@ def test_cada_gesto_continua_chamando_o_escritor() -> None:
         # rascunho); quem registra é o callback de sucesso da transição, para o
         # rascunho continuar descrevendo o que ficou DE PÉ.
         (RODAPE_PY, "_aplicar_escolha_pendente"): "registrar_modo_no_rascunho",
+        # SOM-02/E4: os TRÊS gestos do bloco "Alto-falante" que viram perfil —
+        # volume, mudo e canal de saída — mais a devolução da posse, que
+        # registra a AUSÊNCIA. Apagar qualquer uma destas chamadas devolve o
+        # defeito medido em 09/08/2026: ela ajusta o volume, salva o perfil, e
+        # o valor VELHO volta ao controle na ativação seguinte.
+        (CARD_PY, "_enviar_volume_do_controle"): "_confirmado_pelo_daemon",
+        (CARD_PY, "_on_speaker_mudo_clicado"): "_confirmado_pelo_daemon",
+        (CARD_PY, "_on_canal_do_speaker_mudou"): "_confirmado_pelo_daemon",
+        (CARD_PY, "_on_speaker_devolucao_clicada"): "_confirmado_pelo_daemon",
+        (CARD_PY, "_confirmado_pelo_daemon"): "registrar_alto_falante_no_rascunho",
     }
     for (caminho, gesto), escritor in esperado.items():
         chamados = _nomes_chamados(_funcao(caminho, gesto))
@@ -152,8 +186,9 @@ def test_o_rascunho_tem_um_escritor_so_de_modo_em_cada_aba() -> None:
 
     Um segundo escritor é a classe de bug desta casa: *"três escritores do perfil
     sem dono"* (auditoria 23/07). Aqui ele seria pior — um escritor que não passe
-    por ``rascunho_com_modo_jogo`` planta ``suppress: true`` num catch-all dela
-    sem o gate do R-02, e ali é alçapão de mão única.
+    por ``rascunho_com_modo_jogo`` grava o modo jogo sem a ressalva que a janela
+    deve a ela quando o perfil vale para qualquer janela (09/08/2026,
+    MODO-JOGO-VONTADE-DELA-01).
 
     O portão também tranca o desenho: nada de método-ponte por aba. Os dois
     mixins entram na MESMA classe (``HefestoApp``) e nomes iguais se sombreariam
@@ -177,3 +212,62 @@ def test_o_rascunho_tem_um_escritor_so_de_modo_em_cada_aba() -> None:
                 f"{caminho.name}:{no.name} escreve no rascunho por fora dos donos "
                 f"{sorted(donos)} — segundo escritor sem dono (auditoria 23/07)"
             )
+
+
+def test_a_aba_status_diz_ao_card_quem_e_o_dono_do_rascunho() -> None:
+    """SOM-02/E4, a FIAÇÃO da aba (09/08/2026) — o andar sem o qual nada chega.
+
+    O escritor existe, o gesto do card o chama, e ainda assim o perfil dela
+    guardava o número VELHO: faltava alguém DIZER ao card quem é o dono. A aba
+    Status é a única que pode — é ela que monta os cards, e é ela que já injeta
+    ali o sink de saída e o pedido de rota.
+
+    Este portão é irmão do ``test_cada_gesto_continua_chamando_o_escritor`` e
+    está separado dele porque a injeção é por ``getattr`` com nome em string (o
+    card pode ser um dublê de outra leva), e não por chamada de nome — o
+    ``_nomes_chamados`` não a enxerga. O que se afere aqui é o par completo:
+    o nome procurado E a chamada do que foi encontrado, com ``self``.
+
+    MORDIDA: apagar o bloco `definir_dono_do_rascunho` de
+    ``_sync_status_cards``. O produto continua verde em tudo o mais — os gestos
+    seguem indo ao vivo — e o "Salvar Perfil" volta a gravar o volume velho,
+    que a ativação seguinte reaplica ao controle.
+    """
+    funcao = _funcao(STATUS_PY, "_sync_status_cards")
+    procurados = [
+        no
+        for no in ast.walk(funcao)
+        if isinstance(no, ast.Call)
+        and isinstance(no.func, ast.Name)
+        and no.func.id == "getattr"
+        and len(no.args) >= 2
+        and isinstance(no.args[1], ast.Constant)
+        and no.args[1].value == "definir_dono_do_rascunho"
+    ]
+    assert procurados, (
+        "status_actions._sync_status_cards não procura "
+        "'definir_dono_do_rascunho' no card — o registro do alto-falante volta "
+        "a ser inerte e o 'Salvar Perfil' grava o volume velho"
+    )
+    # E o que foi encontrado tem de ser CHAMADO com a janela. Um `getattr` cujo
+    # resultado ninguém usa passaria no portão acima e não ligaria nada.
+    ligou = False
+    for no in ast.walk(funcao):
+        if not isinstance(no, ast.Assign) or no.value not in procurados:
+            continue
+        alvos = {a.id for a in no.targets if isinstance(a, ast.Name)}
+        for chamada in ast.walk(funcao):
+            if (
+                isinstance(chamada, ast.Call)
+                and isinstance(chamada.func, ast.Name)
+                and chamada.func.id in alvos
+                and any(
+                    isinstance(arg, ast.Name) and arg.id == "self"
+                    for arg in chamada.args
+                )
+            ):
+                ligou = True
+    assert ligou, (
+        "o `definir_dono_do_rascunho` do card é procurado e nunca chamado com "
+        "`self` — a janela não chega ao card e o rascunho fica sem dono"
+    )

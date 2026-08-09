@@ -186,6 +186,12 @@ RULES=(
     "71-uhid.rules"
     "71-uinput.rules"
     "72-ps5-controller-autosuspend.rules"
+    # 72 (uaccess de entrada): touchpad + sensores de movimento com ACL da
+    # sessão. A 70-uaccess.rules do sistema só cobre ID_INPUT_JOYSTICK, e esses
+    # dois nós são touchpad/acelerômetro — sem esta regra ficam root:input e só
+    # funcionam para quem está no grupo `input` por fora do produto.
+    # OQ-6. O número TEM de ser < 73 (73-seat-late.rules).
+    "72-hefesto-touchpad-motion-uaccess.rules"
     "76-dualsense-touchpad-libinput-ignore.rules"
     "77-dualsense-leds.rules"
     "78-dualsense-motion-not-joystick.rules"

@@ -126,6 +126,7 @@ package() {
         assets/71-uhid.rules \
         assets/71-uinput.rules \
         assets/72-ps5-controller-autosuspend.rules \
+        assets/72-hefesto-touchpad-motion-uaccess.rules \
         assets/76-dualsense-touchpad-libinput-ignore.rules \
         assets/77-dualsense-leds.rules \
         assets/78-dualsense-motion-not-joystick.rules \

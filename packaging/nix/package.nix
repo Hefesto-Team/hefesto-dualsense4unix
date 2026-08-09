@@ -100,6 +100,13 @@ python3Packages.buildPythonApplication rec {
         $out/lib/udev/rules.d/71-uhid.rules
     install -Dm644 assets/72-ps5-controller-autosuspend.rules \
         $out/lib/udev/rules.d/72-ps5-controller-autosuspend.rules
+    # 72-hefesto-touchpad-motion-uaccess: touchpad e sensores de movimento com
+    # ACL da sessão. A 70-uaccess.rules do sistema só cobre ID_INPUT_JOYSTICK, e
+    # o kernel classifica esses dois nós como touchpad/acelerômetro — sem esta
+    # regra ficam root:input e só funcionam para quem está no grupo `input` por
+    # fora do produto. OQ-6. O número precisa ser < 73.
+    install -Dm644 assets/72-hefesto-touchpad-motion-uaccess.rules \
+        $out/lib/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules
     # As 73/74 (GUI auto-spawn no hotplug) foram DESCONTINUADAS e REMOVIDAS do
     # repositorio em 2026-07-18 — este postInstall continuava instalando as
     # duas e o build quebrava aqui, antes mesmo do fakeSha256 do pydualsense.

@@ -55,6 +55,7 @@ for f in \
     "$ASSETS/71-uhid.rules" \
     "$ASSETS/71-uinput.rules" \
     "$ASSETS/72-ps5-controller-autosuspend.rules" \
+    "$ASSETS/72-hefesto-touchpad-motion-uaccess.rules" \
     "$ASSETS/76-dualsense-touchpad-libinput-ignore.rules" \
     "$ASSETS/77-dualsense-leds.rules" \
     "$ASSETS/78-dualsense-motion-not-joystick.rules" \
@@ -102,6 +103,14 @@ sudo install -Dm644 "$ASSETS/71-uinput.rules"                     /etc/udev/rule
 # dela e o /dev/uhid ficava root-only (MODE aplicado, ACL não) — medido ao vivo.
 sudo install -Dm644 "$ASSETS/71-uhid.rules"                       /etc/udev/rules.d/71-uhid.rules
 sudo install -Dm644 "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rules.d/72-ps5-controller-autosuspend.rules
+# 72 (uaccess de entrada): o TOUCHPAD e os SENSORES DE MOVIMENTO do controle
+# ganham ACL da sessão como o gamepad principal já tinha. A regra do sistema
+# (70-uaccess.rules) só marca `ID_INPUT_JOYSTICK`, e o kernel classifica esses
+# dois nós como touchpad/acelerômetro — ficavam `0660 root:input`, acessíveis
+# só a quem estivesse no grupo `input` POR FORA do produto. Numa máquina nova,
+# touchpad e giroscópio simplesmente não funcionavam. OQ-6.
+# O número TEM de ser < 73 (a 73-seat-late.rules é quem vira a TAG em ACL).
+sudo install -Dm644 "$ASSETS/72-hefesto-touchpad-motion-uaccess.rules" /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules
 # 76: touchpad do DualSense ignorado como ponteiro libinput (para de brigar com a
 # emulação analógica do hefesto). FEAT-DUALSENSE-TOUCHPAD-IGNORE-01. Não-destrutivo
 # e reversível (remover o arquivo). Só vale após re-add do device (replug/relogin).

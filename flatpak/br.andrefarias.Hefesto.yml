@@ -207,6 +207,8 @@ modules:
           /app/share/hefesto-dualsense4unix/udev-rules/71-uinput.rules
       - install -Dm644 assets/72-ps5-controller-autosuspend.rules
           /app/share/hefesto-dualsense4unix/udev-rules/72-ps5-controller-autosuspend.rules
+      - install -Dm644 assets/72-hefesto-touchpad-motion-uaccess.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/72-hefesto-touchpad-motion-uaccess.rules
       - install -Dm644 assets/76-dualsense-touchpad-libinput-ignore.rules
           /app/share/hefesto-dualsense4unix/udev-rules/76-dualsense-touchpad-libinput-ignore.rules
       - install -Dm644 assets/77-dualsense-leds.rules

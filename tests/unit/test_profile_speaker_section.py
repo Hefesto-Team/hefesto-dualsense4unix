@@ -106,9 +106,10 @@ class _BackendComAudio(FakeController):
         *,
         muted: bool | None = None,
         uniq: str | None = None,
+        rota: int | None = None,
     ) -> bool:
         self.escritas_de_audio.append(
-            {"volume": volume, "muted": muted, "uniq": uniq}
+            {"volume": volume, "muted": muted, "uniq": uniq, "rota": rota}
         )
         pref = self._pref
         if volume is not None:
@@ -140,8 +141,11 @@ def _applier_do_daemon(backend: _BackendComAudio):  # type: ignore[no-untyped-de
         *,
         uniq: str | None = None,
         origin: str = "manual",
+        rota: int | None = None,
     ) -> bool:
-        return bool(backend.set_speaker_volume(volume, muted=muted, uniq=uniq))
+        return bool(
+            backend.set_speaker_volume(volume, muted=muted, uniq=uniq, rota=rota)
+        )
 
     return aplicar
 
@@ -380,8 +384,58 @@ def test_perfil_com_a_secao_escreve_o_par_completo(
     _manager(backend).activate("som")
 
     assert backend.escritas_de_audio == [
-        {"volume": 180, "muted": False, "uniq": None}
+        {"volume": 180, "muted": False, "uniq": None, "rota": None}
     ]
+
+
+def test_o_canal_do_perfil_chega_ao_controle(isolated_profiles_dir: Path) -> None:
+    """SOM-ROTA-01/perfil (09/08/2026): o campo GUARDADO passa a ser ESCRITO.
+
+    O esquema aceitava ``speaker.rota`` desde a leva da madrugada, o seletor
+    de canal do card já a salvava, e a ativação **não a mandava a lugar
+    nenhum**: o perfil dela dizia "Todo o som do PC", ativava, e o controle
+    continuava no canal em que estava. Registro sem aplicação é a mesma classe
+    de defeito do volume — só que um andar adiante, porque aqui o valor já
+    chegava ao disco.
+
+    MORDIDA: apagar ``rota=getattr(secao, "rota", None)`` da chamada em
+    ``ProfileManager.apply_speaker`` (ou o ``rota=rota`` do
+    ``setter(...)`` em ``lifecycle.apply_profile_speaker``) faz esta escrita
+    voltar a sair com ``rota=None`` — o byte intocado, o canal ignorado.
+    """
+    save_profile(
+        _mk_profile("todo_o_pc", speaker={"volume": 180, "rota": 3})
+    )
+    backend = _BackendComAudio()
+    backend.connect()
+    _manager(backend).activate("todo_o_pc")
+
+    assert backend.escritas_de_audio == [
+        {"volume": 180, "muted": False, "uniq": None, "rota": 3}
+    ]
+
+
+def test_perfil_sem_canal_nao_toca_o_byte_do_microfone(
+    isolated_profiles_dir: Path,
+) -> None:
+    """A outra metade da regra, e a mais cara: ``None`` é NÃO ESCREVER.
+
+    O ``common[7]`` guarda a rota de saída (bits 4-5) E o caminho do
+    microfone (o resto). Um default numérico aqui — "0 é o padrão, né?" —
+    faria todo perfil legado reescrever o byte inteiro na ativação e apagar o
+    caminho do mic em silêncio, que é a família de defeito da
+    SEM-MICROFONE-NENHUM-01. Sem opinião continua sendo silêncio.
+
+    MORDIDA: trocar o ``None`` por ``0`` em qualquer elo da cadeia
+    (``getattr(secao, "rota", 0)``, ou o default do applier) põe um número
+    onde havia ausência, e este teste fica vermelho.
+    """
+    save_profile(_mk_profile("legado_sem_canal", speaker={"volume": 120}))
+    backend = _BackendComAudio()
+    backend.connect()
+    _manager(backend).activate("legado_sem_canal")
+
+    assert backend.escritas_de_audio[0]["rota"] is None
 
 
 def test_trocar_de_perfil_muda_o_volume_e_o_estado_publica(
@@ -412,7 +466,7 @@ def test_nenhuma_escrita_sai_sem_volume(isolated_profiles_dir: Path) -> None:
     _manager(backend).activate("mudo")
 
     assert backend.escritas_de_audio == [
-        {"volume": 180, "muted": True, "uniq": None}
+        {"volume": 180, "muted": True, "uniq": None, "rota": None}
     ]
     assert all(e["volume"] is not None for e in backend.escritas_de_audio)
     # O par mudo/preferência do backend real: efetivo 0, preferido preservado.
@@ -503,7 +557,7 @@ def test_reaplica_no_connect_so_com_a_secao(isolated_profiles_dir: Path) -> None
     backend.escritas_de_audio.clear()
     assert manager.reapply_speaker_on_connect() == "aplicado"
     assert backend.escritas_de_audio == [
-        {"volume": 180, "muted": False, "uniq": None}
+        {"volume": 180, "muted": False, "uniq": None, "rota": None}
     ]
 
     manager.activate("v1_puro")
@@ -551,7 +605,7 @@ def test_reaplica_no_connect_roteia_por_uniq(isolated_profiles_dir: Path) -> Non
     manager.reapply_speaker_on_connect(uniq="aabbcc000002")
 
     assert backend.escritas_de_audio == [
-        {"volume": 90, "muted": False, "uniq": "aabbcc000002"}
+        {"volume": 90, "muted": False, "uniq": "aabbcc000002", "rota": None}
     ]
 
 

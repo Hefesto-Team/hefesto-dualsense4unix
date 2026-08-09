@@ -147,8 +147,8 @@ hefesto-dualsense4unix-gui
 
 **Antes de instalar, saiba o que ele toca.** O Hefesto não é um aplicativo de
 espaço de usuário puro: boa parte das curas mora em regra de udev, módulo de
-kernel e serviço de sistema. Com os padrões de fábrica ele grava 14 regras udev
-(mais uma 15ª que só entra por opt-in), drop-ins de `modprobe` e do BlueZ,
+kernel e serviço de sistema. Com os padrões de fábrica ele grava 15 regras udev
+(mais uma 16ª que só entra por opt-in), drop-ins de `modprobe` e do BlueZ,
 serviços em `/etc/systemd/system`, **três** módulos de kernel via DKMS
 (`hid-nintendo`, `hid-playstation` e `rtw88-usb`), um parâmetro no cmdline do
 kernel e ajustes na

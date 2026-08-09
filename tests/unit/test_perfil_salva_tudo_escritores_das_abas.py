@@ -383,11 +383,28 @@ class TestAAbaInicioEscreveNoRascunho:
 
 
 # ---------------------------------------------------------------------------
-# O "modo jogo" — e a recusa MEDIDA em perfil catch-all
+# O "modo jogo" — e a recusa que CAIU em 09/08
 # ---------------------------------------------------------------------------
 
 
 class TestOModoJogoEntraNoPerfilQuePodeReceber:
+    """MODO-JOGO-VONTADE-DELA-01 (09/08/2026): *"a vontade na GUI prevalece
+    sempre"*.
+
+    Esta classe travava a RECUSA: ligar o modo jogo num perfil catch-all não era
+    guardado. A recusa se justificava por escrito com a ausência de gate no ramo
+    ``if desired:`` de ``lifecycle.apply_profile_suppression`` — e essa premissa
+    caducou em 05/08, quando o gate nasceu (``PERFIL-REESCRITO-NA-PARTIDA-01``,
+    item 2), sem que ninguém voltasse aqui. Cinco dos perfis dela são catch-all,
+    então por quatro dias a janela lhe cobrou, para nada, a configuração que ela
+    pedia.
+
+    O que estes testes travam agora é a decisão dela E o preço dela: o gesto é
+    guardado em qualquer perfil, e num "vale sempre" a janela DIZ que o daemon
+    não vai ligá-lo sozinho depois. Que ele de fato não ligue — o alçapão — é
+    outro portão, headless, em ``test_modo_jogo_a_vontade_dela_prevalece.py``.
+    """
+
     def test_perfil_com_regra_guarda_o_modo_jogo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -399,31 +416,61 @@ class TestOModoJogoEntraNoPerfilQuePodeReceber:
         assert janela.draft.suppress_dirty is True
         salvo = janela.draft.to_profile("Sackboy")
         assert salvo.suppress_desktop_emulation is True
-        # A frase normal, porque guardou de verdade.
+        # A frase normal, e SEM a ressalva: este perfil tem regra, então o
+        # daemon liga o modo jogo de novo na próxima ativação.
         assert janela.toasts[-1].startswith("Modo jogo ligado")
-        assert janela.toasts[-1] != ea.MODO_JOGO_NAO_GUARDADO
+        assert janela.toasts[-1] != ea.MODO_JOGO_GUARDADO_SEM_REGRA
 
-    def test_catch_all_nao_recebe_suppress_true_e_ela_e_avisada(
+    def test_catch_all_agora_guarda_o_modo_jogo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Os cinco perfis "vale sempre" dela.
+        """A MORDIDA da decisão dela: os cinco perfis "vale sempre".
 
-        MEDIDO em ``lifecycle.apply_profile_suppression``: o ramo ``if desired:``
-        liga SEM passar pelo ``_perfil_tem_opiniao`` — só o de LIBERAR passa. Um
-        ``suppress: true`` num catch-all é alçapão de mão única: liga em toda
-        ativação (inclusive no restauro do último perfil, no boot) e o caminho de
-        volta está fechado pelo R-02. Trocar a perda de configuração dela por um
-        desktop sem ponteiro não é cura.
+        Com a recusa de volta em ``rascunho_com_modo_jogo``, ``suppress_dirty``
+        fica ``False``, o arquivo nasce com ``suppress_desktop_emulation: false``
+        e a queixa dela volta inteira — *"liguei e não ficou salvo"*.
         """
         janela = _Janela(_perfil("Pragmata2", com_regra=False))
         _ipc_que_confirma(monkeypatch)
 
         janela.on_emulation_pause(None)
 
-        assert janela.draft.suppress_dirty is False
-        assert janela.draft.to_profile("Pragmata2").suppress_desktop_emulation is False
-        # E a janela NÃO fica calada sobre o que ela vai perder no próximo boot.
-        assert janela.toasts[-1] == ea.MODO_JOGO_NAO_GUARDADO
+        assert janela.draft.suppress_dirty is True
+        assert janela.draft.to_profile("Pragmata2").suppress_desktop_emulation is True
+
+    def test_o_catch_all_guarda_mas_a_janela_diz_o_preco(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A outra metade da mordida: guardar calado seria uma promessa falsa.
+
+        Num perfil que vale para qualquer janela o daemon NÃO liga o modo jogo
+        na ativação seguinte (é o gate que mantém o desktop com ponteiro). Se a
+        janela responder só "Modo jogo ligado", ela promete um retorno que não
+        vai acontecer — a mesma classe de mentira que a recusa antiga evitava,
+        agora pelo outro lado.
+        """
+        janela = _Janela(_perfil("Pragmata2", com_regra=False))
+        _ipc_que_confirma(monkeypatch)
+
+        janela.on_emulation_pause(None)
+
+        assert janela.toasts[-1] == ea.MODO_JOGO_GUARDADO_SEM_REGRA
+
+    def test_desligar_em_catch_all_nao_ganha_ressalva(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """DESLIGAR não tem preço a declarar — a ressalva é só do ramo de ligar.
+
+        ``suppress: false`` é o default do esquema e o applier o respeita em
+        qualquer perfil; avisar aqui seria assustar sem motivo.
+        """
+        janela = _Janela(_perfil("Pragmata2", com_regra=False, suppress=True))
+        _ipc_que_confirma(monkeypatch)
+
+        janela.on_emulation_resume(None)
+
+        assert janela.toasts[-1] != ea.MODO_JOGO_GUARDADO_SEM_REGRA
+        assert janela.toasts[-1].startswith("Modo jogo desligado")
 
     def test_desligar_o_modo_jogo_e_guardado_ate_em_catch_all(
         self, monkeypatch: pytest.MonkeyPatch
@@ -554,6 +601,42 @@ class TestOsMiolosPuros:
         assert novo is not None
         assert novo.to_profile("Pragmata").mode is not None
         assert novo.to_profile("Pragmata").mode.gamepad_flavor is None  # type: ignore[union-attr]
+
+    def test_a_frase_do_modo_jogo_so_ressalva_o_ligar_sem_regra(self) -> None:
+        """O miolo puro da frase (MODO-JOGO-VONTADE-DELA-01), nos quatro casos."""
+        padrao = "Modo jogo ligado"
+        assert (
+            ea.frase_do_modo_jogo(padrao, ligado=True, guardado=True, tem_regra=False)
+            == ea.MODO_JOGO_GUARDADO_SEM_REGRA
+        )
+        assert (
+            ea.frase_do_modo_jogo(padrao, ligado=True, guardado=True, tem_regra=True)
+            == padrao
+        )
+        # Sem rascunho não há perfil para guardar nem promessa a desmentir.
+        assert (
+            ea.frase_do_modo_jogo(padrao, ligado=True, guardado=False, tem_regra=False)
+            == padrao
+        )
+        assert (
+            ea.frase_do_modo_jogo(padrao, ligado=False, guardado=True, tem_regra=False)
+            == padrao
+        )
+
+    def test_o_catch_all_guarda_no_miolo_puro(self) -> None:
+        """``rascunho_com_modo_jogo`` não recusa mais — nem no ligar.
+
+        A recusa morava exatamente aqui (um ``if ligado and not
+        perfil_do_rascunho_tem_opiniao(draft)``), e é o miolo que o resto da aba
+        usa. Sem esta linha, o teste de handler acima é o único a morder.
+        """
+        catch_all = DraftConfig.from_profile(_perfil("vitoria", com_regra=False))
+
+        novo, guardado = ea.rascunho_com_modo_jogo(catch_all, True)
+
+        assert guardado is True
+        assert novo is not None
+        assert novo.to_profile("vitoria").suppress_desktop_emulation is True
 
     def test_o_predicado_de_opiniao_espelha_o_do_daemon(self) -> None:
         """Mesmo veredito do ``Profile.e_catch_all`` (R-01), nos três formatos."""

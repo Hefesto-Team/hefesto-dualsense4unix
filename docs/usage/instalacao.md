@@ -75,7 +75,7 @@ seu `$HOME`, com os padrões de fábrica:
 
 | Caminho | O que é |
 |---|---|
-| `/etc/udev/rules.d/` | 14 regras (permissão, autosuspend, LEDs, touchpad, motion, energia do USB, sniff e variante dos Nintendo-class, snapshot de bonds). Uma 15ª, a `75` que desliga o áudio USB do controle, só entra com `--disable-usb-audio` |
+| `/etc/udev/rules.d/` | 15 regras (permissão de hidraw e dos nós de entrada do touchpad/giroscópio, autosuspend, LEDs, touchpad, motion, energia do USB, sniff e variante dos Nintendo-class, snapshot de bonds). Uma 16ª, a `75` que desliga o áudio USB do controle, só entra com `--disable-usb-audio` |
 | `/etc/modules-load.d/hefesto-dualsense4unix.conf` | carrega `uinput` e `uhid` no boot |
 | `/etc/modprobe.d/hefesto-dualsense-storm.conf` | a cura do travamento do USB (mantém mic e fone do controle) |
 | `/etc/modprobe.d/hefesto-btusb-no-autosuspend.conf` | evita o adaptador BT dormir no meio do jogo |

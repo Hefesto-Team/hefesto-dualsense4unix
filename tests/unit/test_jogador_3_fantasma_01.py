@@ -61,7 +61,19 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 
 
 class _DaemonFalso:
-    """O mínimo que os dois caminhos leem."""
+    """O mínimo que os dois caminhos leem.
+
+    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): ganhou
+    `is_native_mode` e `config` porque a borda de ENTRADA da marca passou a
+    ler os dois. Não é enfeite de dublê: a borda virou
+    `esconder_o_fisico_para_o_jogo`, e os gates dela são os do estado canônico
+    (Modo Nativo, emulação ligada, vpad vivo) justamente para a marca nunca
+    esconder o físico sem ter um virtual para devolver no lugar.
+
+    `gamepad_emulation_enabled=False` de propósito: aqui o que se afirma é
+    QUANDO a exceção liga, não o que ela faz depois — e com a emulação
+    desligada a borda para no primeiro gate, sem tocar grab nem broker.
+    """
 
     def __init__(self, *, excecao: bool, appid: int | None) -> None:
         self._steam_input_excecao = excecao
@@ -71,6 +83,12 @@ class _DaemonFalso:
         self._steam_input_excecao_dispensada_appid: int | None = None
         self._appid_visivel = appid
         self._gamepad_device = None
+        self.config = SimpleNamespace(
+            gamepad_emulation_enabled=False, gamepad_flavor="dualsense"
+        )
+
+    def is_native_mode(self) -> bool:
+        return False
 
 
 APPID = 1599660
@@ -193,7 +211,11 @@ def test_sem_dispensa_a_excecao_continua_valendo(monkeypatch: pytest.MonkeyPatch
         "hefesto_dualsense4unix.daemon.launch_env.steam_input_exception_appid", _appid
     )
     monkeypatch.setattr(gp, "_set_evdev_grab", lambda *_a, **_k: None)
-    monkeypatch.setattr(gp, "suspend_vpads_for_steam_input", lambda *_a, **_k: None)
+    # NOTA DATADA — 09/08/2026: aqui também se dublava
+    # `suspend_vpads_for_steam_input`, porque a borda de entrada a chamava.
+    # Não chama mais (ESCONDER-EM-VEZ-DE-SAIR-01) — deixar o dublê seria
+    # neutralizar uma função que ninguém mais percorre por este caminho, e dar
+    # a impressão de que ela ainda mora nele.
 
     assert gp.sync_steam_input_exception(d) is True, (
         "jogo marcado na frente deixou de ligar a exceção — o controle dobrado "

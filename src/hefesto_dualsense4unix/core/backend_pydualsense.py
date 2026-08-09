@@ -2459,6 +2459,18 @@ class PyDualSenseController(IController):
 
         `muted` é derivado: mudo = volume efetivo 0. O bloco de volume do
         report não tem bit de mute próprio.
+
+        A CHAVE `rota` (SOM-ROTA-01/leitura, 09/08/2026) segue a MESMA regra de
+        honestidade, e por isso ela é **opcional**: o `common[7]` também não é
+        legível — não há report de entrada nem feature que o devolva. Ela só
+        aparece quando somos donos daquele byte, e o valor é o que estamos
+        mandando; enquanto ninguém escreveu o canal, a chave NÃO existe, e
+        quem lê tem de dizer "não dá para saber" em vez de desenhar um padrão.
+
+        Sem ela, o seletor de canal da janela era cego: ele desenhava "Sons do
+        jogo" por ser o primeiro da lista, inclusive depois de um perfil ter
+        posto o controle em "Todo o som do PC" — a tela afirmando um canal que
+        não era o vigente.
         """
         handle = self._handle_for(uniq)
         if handle is None:
@@ -2469,7 +2481,18 @@ class PyDualSenseController(IController):
         preferido = getattr(handle, "_speaker_volume_pref", None)
         efetivo = int(volumes[1])
         base = int(preferido) if isinstance(preferido, int) else efetivo
-        return {"volume": max(0, min(255, base)), "muted": efetivo == 0}
+        estado: dict[str, Any] = {
+            "volume": max(0, min(255, base)),
+            "muted": efetivo == 0,
+        }
+        # `len(volumes) > 3` porque o dublê de teste (e um handle de outra
+        # versão) pode ter a lista mais curta — a ausência do byte é a mesma
+        # resposta de nunca o termos escrito.
+        if len(volumes) > 3 and volumes[3] is not None:
+            estado["rota"] = (
+                int(volumes[3]) & rep.OUTPUT_PATH_SEL_MASK
+            ) >> rep.OUTPUT_PATH_SEL_SHIFT
+        return estado
 
     def set_speaker_volume(
         self,

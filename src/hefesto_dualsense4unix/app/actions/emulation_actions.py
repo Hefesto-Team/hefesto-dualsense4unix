@@ -443,14 +443,31 @@ def descrever_teclado_emulado(bloco: object) -> tuple[bool | None, str]:
 # IPC, no clique dela; aqui só se anota o que ficou.
 
 
-#: Frase para o caso que este código RECUSA guardar. Ela precisa saber que o
-#: interruptor pegou AGORA e que o perfil não vai lembrar — silêncio aqui seria
-#: a janela mentindo a favor dela, que é o defeito-mãe desta sprint.
-MODO_JOGO_NAO_GUARDADO = (
-    "Modo jogo ligado — mouse e teclado suspensos agora. Não guardei no perfil: "
-    "ele vale para qualquer janela, e guardado ali suspenderia mouse e teclado "
-    "em toda ativação, até quando o Hefesto liga. Dê uma regra a ele na aba "
-    "Perfis."
+#: NOTA DATADA — 09/08/2026 (MODO-JOGO-VONTADE-DELA-01). Esta constante se
+#: chamava ``MODO_JOGO_NAO_GUARDADO`` e dizia *"Não guardei no perfil"*. A
+#: recusa que ela anunciava CAIU hoje, por decisão dela: **a vontade na GUI
+#: prevalece sempre**. Cinco dos perfis dela são catch-all, e para ela a recusa
+#: era literalmente *"liguei e não ficou salvo"*.
+#:
+#: O raciocínio antigo NÃO estava errado — ele está datado. Ele dizia que
+#: ``suppress: true`` num catch-all era alçapão de mão única, porque
+#: ``lifecycle.apply_profile_suppression`` ligava a supressão sem gate no ramo
+#: ``if desired:``. Isso valia quando foi escrito (30/07/2026). O gate nasceu em
+#: 05/08 (``PERFIL-REESCRITO-NA-PARTIDA-01``, item 2) e ninguém voltou aqui: a
+#: janela seguiu recusando por quatro dias apoiada num defeito já curado. O que
+#: permitiu a recusa cair é aquele gate, e só ele — por isso ele agora carrega
+#: uma nota que o declara CONDIÇÃO desta entrega, e por isso a mordida dele mora
+#: em ``tests/unit/test_modo_jogo_a_vontade_dela_prevalece.py``.
+#:
+#: A frase que sobra não é comemoração: num perfil "vale sempre" o modo jogo é
+#: guardado mas NÃO volta sozinho na próxima ativação, justamente porque o gate
+#: existe. Calar isso seria a janela mentindo a favor dela, que é o defeito-mãe
+#: desta sprint — só que ao contrário.
+MODO_JOGO_GUARDADO_SEM_REGRA = (
+    "Modo jogo ligado — mouse e teclado suspensos agora, e guardei no perfil. "
+    "Como ele vale para qualquer janela, o Hefesto não liga o modo jogo sozinho "
+    "na próxima ativação (senão o desktop acordaria sem mouse). Dê uma regra a "
+    "ele na aba Perfis para ele voltar ligado."
 )
 
 
@@ -459,8 +476,12 @@ def perfil_do_rascunho_tem_opiniao(draft: DraftConfig | None) -> bool:
 
     Pergunta o MESMO predicado do daemon (`Profile.e_catch_all`, dono único do
     R-01: `MatchAny` e `MatchCriteria` vazio contam igual) sondando o `match` que
-    a fotografia do rascunho guardou. Sem `match` legível responde False — o
-    fail-safe daqui é NÃO guardar.
+    a fotografia do rascunho guardou. Sem `match` legível responde False.
+
+    NOTA DATADA — 09/08/2026: este predicado deixou de decidir se GUARDA (agora
+    guarda sempre — ver `rascunho_com_modo_jogo`) e passou a decidir o que a
+    janela DIZ. O fail-safe mudou de lugar junto: na dúvida ela recebe o aviso,
+    porque prometer que volta ligado é o único erro que custa caro aqui.
     """
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -479,30 +500,64 @@ def rascunho_com_modo_jogo(
 ) -> tuple[DraftConfig | None, bool]:
     """(rascunho, guardei?) para o "modo jogo". Pura: NÃO aplica nada.
 
-    O ramo de DESLIGAR sempre entra no rascunho. É gesto dela e é seguro: `False`
-    é o default do esquema, e na ativação o applier só LIBERA quando a supressão
-    veio de perfil e o perfil tem opinião (R-02). Sem este ramo, salvar um perfil
-    que dizia `suppress: true` (o `sackboy_nativo` e o `coop_local` dela) ia
-    ressuscitar a supressão que ela acabou de desligar.
+    Os DOIS ramos entram no rascunho. É gesto dela, e o gesto dela é o que a
+    janela guarda — `guardei?` só responde `False` quando não há rascunho onde
+    escrever (janela sem perfil aberto), que não é recusa, é ausência de papel.
 
-    O ramo de LIGAR é RECUSADO em perfil catch-all, e isto foi MEDIDO em
-    `daemon/lifecycle.apply_profile_suppression`: o ramo ``if desired:`` liga sem
-    passar pelo `_perfil_tem_opiniao` — só o ramo de LIBERAR passa. Como os cinco
-    perfis "vale sempre" dela não têm opinião, um `suppress: true` gravado num
-    deles seria alçapão de mão única: liga em TODA ativação (inclusive no restauro
-    do último perfil no boot) e o caminho de volta está fechado justamente pelo
-    R-02 — mouse e teclado suspensos no desktop dela, sem ela pedir. Trocar a
-    perda de configuração por um desktop sem ponteiro não é cura.
+    O ramo de DESLIGAR sempre valeu: `False` é o default do esquema, e na
+    ativação o applier só LIBERA quando a supressão veio de perfil e o perfil tem
+    opinião (R-02). Sem ele, salvar um perfil que dizia `suppress: true` (o
+    `sackboy_nativo` e o `coop_local` dela) ressuscitaria a supressão que ela
+    acabou de desligar.
 
-    Quando o gate do daemon existir no ramo de ligar (ver o contrato relatado
-    nesta entrega), esta recusa pode cair — e o teste que a trava vai apontar
-    exatamente para cá.
+    NOTA DATADA — 09/08/2026 (MODO-JOGO-VONTADE-DELA-01). Até hoje o ramo de
+    LIGAR era RECUSADO em perfil catch-all. A recusa foi retirada por decisão
+    dela — *"a vontade na GUI prevalece sempre"* —, e o raciocínio que ela
+    carregava não é apagado porque não era capricho: ele dizia, com razão em
+    30/07/2026, que `daemon/lifecycle.apply_profile_suppression` ligava a
+    supressão no ramo ``if desired:`` SEM gate de catch-all, e que gravar
+    `suppress: true` num dos cinco perfis "vale sempre" dela seria alçapão de mão
+    única — liga em toda ativação (o restauro do boot inclusive) e o caminho de
+    volta fechado pelo R-02, isto é, mouse e teclado suspensos no desktop dela
+    sem ela pedir.
+
+    O que caducou foi a premissa, não o medo: o gate nasceu em 05/08
+    (`PERFIL-REESCRITO-NA-PARTIDA-01`, item 2, `_perfil_e_catch_all`) e esta
+    docstring não soube. A recusa continuou de pé por quatro dias defendendo
+    contra um defeito já curado, cobrando dela a configuração que ela pedia. A
+    verificação de que o alçapão SEGUE fechado — e não a palavra desta docstring
+    — é o que sustenta a retirada: `tests/unit/
+    test_modo_jogo_a_vontade_dela_prevalece.py`, com a mordida feita arrancando
+    o gate do daemon.
+
+    O preço que sobra é honesto e vai para a tela (`MODO_JOGO_GUARDADO_SEM_REGRA`):
+    num catch-all o valor fica guardado no arquivo, mas o daemon não o liga
+    sozinho na ativação seguinte — porque é exatamente isso que impede o desktop
+    de acordar sem ponteiro. Quem escolhe entre as duas coisas é ela, com o preço
+    na mesa, e não este `if`.
     """
     if draft is None:
         return draft, False
-    if ligado and not perfil_do_rascunho_tem_opiniao(draft):
-        return draft, False
     return draft.with_suppress(ligado), True
+
+
+def frase_do_modo_jogo(
+    padrao: str, *, ligado: bool, guardado: bool, tem_regra: bool
+) -> str:
+    """Toast do botão "Modo jogo" — pura, o miolo testável sem GTK.
+
+    Três casos, e nenhum deles pode afirmar mais do que aconteceu:
+
+    - DESLIGAR, ou perfil COM regra: a frase normal do gesto. Guardou, e na
+      próxima ativação o daemon liga de novo (é o ramo `if desired:` com opinião);
+    - LIGAR em perfil catch-all: guardou também (decisão dela de 09/08), mas o
+      daemon não liga sozinho depois — e é isso que a frase acrescenta;
+    - sem rascunho (janela sem perfil aberto): a frase normal. Não há perfil para
+      guardar nem promessa a desmentir; inventar aviso aqui seria ruído.
+    """
+    if ligado and guardado and not tem_regra:
+        return MODO_JOGO_GUARDADO_SEM_REGRA
+    return padrao
 
 
 def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
@@ -511,10 +566,13 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
     Função de MÓDULO pela mesma razão de `registrar_modo_no_rascunho` (dono
     único, e dublê parcial de teste não pode quebrar por causa da MRO).
 
-    O ``False`` não é erro: é a recusa deliberada de plantar `suppress: true`
-    num perfil catch-all (ver `rascunho_com_modo_jogo`). Quem chama usa a
-    resposta para dizer a VERDADE na barra de status — e o log fica, porque
-    "não guardei" precisa deixar rastro tanto quanto "guardei".
+    NOTA DATADA — 09/08/2026: o ``False`` já significou "recusei plantar
+    `suppress: true` num catch-all". Não significa mais (ver a nota em
+    `rascunho_com_modo_jogo`): hoje ele só diz que não havia rascunho onde
+    escrever. O log de "guardei num perfil que vale sempre" fica, porque é o
+    caso em que o arquivo dela passa a dizer uma coisa que a ativação seguinte
+    não vai fazer — e isso precisa de rastro no journal tanto quanto a recusa
+    precisava.
     """
     draft = getattr(janela, "draft", None)
     if draft is None:
@@ -522,9 +580,9 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
     novo, guardado = rascunho_com_modo_jogo(draft, ligado)
     if guardado and novo is not None:
         janela.draft = novo
-    elif ligado:
+    if ligado and guardado and not perfil_do_rascunho_tem_opiniao(draft):
         logger.info(
-            "modo_jogo_nao_guardado_no_perfil",
+            "modo_jogo_guardado_em_perfil_sem_regra",
             motivo="catch_all_sem_opiniao",
             perfil=getattr(draft, "source_name", None),
         )
@@ -1081,13 +1139,21 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def _set_suppress(self, suppressed: bool, msg: str) -> None:
         def _on_ok(_res: Any) -> bool:
             # PERFIL-SALVA-TUDO-01/E3: o "modo jogo" dela vira configuração do
-            # perfil — quando o perfil pode recebê-lo. A frase troca quando a
-            # resposta é "não guardei": a janela não pode ficar calada sobre o
-            # que ela vai perder no próximo boot.
+            # perfil. MODO-JOGO-VONTADE-DELA-01 (09/08): qualquer perfil o
+            # recebe — o que muda com o catch-all é a FRASE, não o que é
+            # guardado. A janela não pode ficar calada sobre o que o daemon vai
+            # (ou não vai) fazer com aquilo na próxima ativação.
             guardado = registrar_modo_jogo_no_rascunho(self, suppressed)
             self._refresh_gamepad_and_gamemode()
             self._toast_emulation(
-                msg if (guardado or not suppressed) else MODO_JOGO_NAO_GUARDADO
+                frase_do_modo_jogo(
+                    msg,
+                    ligado=suppressed,
+                    guardado=guardado,
+                    tem_regra=perfil_do_rascunho_tem_opiniao(
+                        getattr(self, "draft", None)
+                    ),
+                )
             )
             return False
 

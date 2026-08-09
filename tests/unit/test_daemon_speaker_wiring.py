@@ -104,9 +104,10 @@ class _BackendComAudio(FakeController):
         *,
         muted: bool | None = None,
         uniq: str | None = None,
+        rota: int | None = None,
     ) -> bool:
         self.escritas_de_audio.append(
-            {"volume": volume, "muted": muted, "uniq": uniq}
+            {"volume": volume, "muted": muted, "uniq": uniq, "rota": rota}
         )
         if self._explode:
             raise RuntimeError("controle sumiu no meio da escrita")
@@ -190,7 +191,7 @@ class TestApplierDoDaemon:
 
         assert estado == "aplicado"
         assert backend.escritas_de_audio == [
-            {"volume": 180, "muted": False, "uniq": None}
+            {"volume": 180, "muted": False, "uniq": None, "rota": None}
         ]
         assert backend.speaker_state_for() == {"volume": 180, "muted": False}
 
@@ -201,7 +202,7 @@ class TestApplierDoDaemon:
         _daemon(backend).apply_profile_speaker(180, True)
 
         assert backend.escritas_de_audio == [
-            {"volume": 180, "muted": True, "uniq": None}
+            {"volume": 180, "muted": True, "uniq": None, "rota": None}
         ]
         assert backend.speaker_state_for() == {"volume": 180, "muted": True}
 
@@ -217,13 +218,44 @@ class TestApplierDoDaemon:
         assert backend.escritas_de_audio == []
         assert backend.speaker_state_for() is None
 
+    def test_repassa_o_canal_ao_backend(self) -> None:
+        """SOM-ROTA-01/perfil: o applier do daemon carrega o canal até o byte.
+
+        MORDIDA: apagar o ``rota=rota`` do ``setter(...)`` em
+        ``Daemon.apply_profile_speaker``. O perfil continua guardando o canal,
+        a ativação continua dizendo "aplicado", e o controle nunca muda de
+        canal — a mentira mais barata de todas.
+        """
+        backend = _BackendComAudio()
+        backend.connect()
+        estado = _daemon(backend).apply_profile_speaker(180, False, rota=3)
+
+        assert estado == "aplicado"
+        assert backend.escritas_de_audio == [
+            {"volume": 180, "muted": False, "uniq": None, "rota": 3}
+        ]
+
+    def test_sem_canal_o_byte_do_microfone_fica_intocado(self) -> None:
+        """O default é a AUSÊNCIA, e ela tem de atravessar até o backend.
+
+        O ``common[7]`` carrega a rota E o caminho do microfone. Um default
+        numérico no applier faria todo perfil sem opinião de canal reescrever
+        aquele byte na ativação — apagando o caminho do mic sem ninguém notar,
+        que é a família da SEM-MICROFONE-NENHUM-01.
+        """
+        backend = _BackendComAudio()
+        backend.connect()
+        _daemon(backend).apply_profile_speaker(180, False)
+
+        assert backend.escritas_de_audio[0]["rota"] is None
+
     def test_repassa_o_uniq_do_controle(self) -> None:
         backend = _BackendComAudio()
         backend.connect()
         _daemon(backend).apply_profile_speaker(90, False, uniq="aabbcc000002")
 
         assert backend.escritas_de_audio == [
-            {"volume": 90, "muted": False, "uniq": "aabbcc000002"}
+            {"volume": 90, "muted": False, "uniq": "aabbcc000002", "rota": None}
         ]
 
     def test_volume_fora_do_range_e_grampeado(self) -> None:
@@ -232,7 +264,7 @@ class TestApplierDoDaemon:
         _daemon(backend).apply_profile_speaker(999, False)
 
         assert backend.escritas_de_audio == [
-            {"volume": 255, "muted": False, "uniq": None}
+            {"volume": 255, "muted": False, "uniq": None, "rota": None}
         ]
 
     def test_sem_handle_diz_sem_controle_e_nao_mente_aplicado(self) -> None:
@@ -636,7 +668,7 @@ class TestReaplicacaoNoConnect:
         )
 
         assert backend.escritas_de_audio == [
-            {"volume": 90, "muted": False, "uniq": "aabbcc000002"}
+            {"volume": 90, "muted": False, "uniq": "aabbcc000002", "rota": None}
         ]
 
     @pytest.mark.asyncio

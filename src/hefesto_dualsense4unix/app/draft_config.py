@@ -174,12 +174,19 @@ class SpeakerDraft(BaseModel):
     ninguém deu, e persistir opinião não dada é tomar a posse do volume do
     controle por conta própria (armadilha 1 da sprint — a chamada sem volume
     manda ZERO e o mudo não a solta).
+
+    ``rota`` é o canal de SAÍDA do controle (``OUTPUT_PATH_SEL``, 0-3 — ver
+    ``ProfileSpeakerConfig``), pedido dela em 09/08/2026. ``None`` = sem
+    opinião, e o mesmo argumento do volume vale aqui: o byte ``common[7]``
+    carrega também o caminho do microfone, então "não sei" tem de continuar
+    sendo "não escrevo".
     """
 
     model_config = ConfigDict(frozen=True)
 
     volume: int | None = Field(default=None, ge=0, le=255)
     muted: bool = False
+    rota: int | None = Field(default=None, ge=0, le=3)
     dirty: bool = False
     in_profile: bool = False
 
@@ -437,6 +444,7 @@ class DraftConfig(BaseModel):
             speaker = SpeakerDraft(
                 volume=profile.speaker.volume,
                 muted=profile.speaker.muted,
+                rota=getattr(profile.speaker, "rota", None),
                 dirty=False,
                 in_profile=True,
             )
@@ -529,7 +537,11 @@ class DraftConfig(BaseModel):
         # e a razão é medida (perfil só com `muted` faria a ativação mandar
         # ZERO e tomar a posse do alto-falante).
         speaker_cfg = (
-            ProfileSpeakerConfig(volume=self.speaker.volume, muted=self.speaker.muted)
+            ProfileSpeakerConfig(
+                volume=self.speaker.volume,
+                muted=self.speaker.muted,
+                rota=self.speaker.rota,
+            )
             if (
                 self.speaker.volume is not None
                 and (self.speaker.dirty or self.speaker.in_profile)
@@ -721,30 +733,58 @@ class DraftConfig(BaseModel):
             update={"source_suppress": bool(suppress), "suppress_dirty": True}
         )
 
-    def with_speaker(self, volume: int, *, muted: bool = False) -> DraftConfig:
-        """Rascunho com o volume do ALTO-FALANTE trocado por gesto DELA.
+    def with_speaker(
+        self, volume: int, *, muted: bool = False, rota: int | None = None
+    ) -> DraftConfig:
+        """Rascunho com o ALTO-FALANTE trocado por gesto DELA.
 
         SOM-02/E4. Quem chama é a superfície que MANDOU o volume ao daemon
-        (o controle deslizante da E1), DEPOIS de o pedido ir — o rascunho
-        registra o que está de pé para o "Salvar Perfil" persistir, exatamente
-        como ``with_mode``/``with_suppress``.
+        (o controle deslizante da E1), DEPOIS de o daemon confirmar — o
+        rascunho registra o que está de pé para o "Salvar Perfil" persistir,
+        exatamente como ``with_mode``/``with_suppress``.
 
         ``volume`` é sempre explícito, 0-255: não existe caminho aqui para
         marcar a seção sem número, porque não existe caminho no protocolo para
         mandar mudo sem volume sem trancar o alto-falante em zero (SOM-02,
         armadilhas 1 e 2). ``dirty`` liga porque é gesto dela — é o que faz o
         valor sobreviver a um "Salvar Perfil" com nome NOVO.
+
+        ``rota=None`` NÃO apaga a rota já registrada: significa "este gesto não
+        tem opinião sobre o canal", que é a verdade do controle deslizante e do
+        botão de mudo — nenhum dos dois toca no ``OUTPUT_PATH_SEL``. Quem apaga
+        a rota é ``without_speaker``, porque soltar a posse solta o byte
+        inteiro. Sem essa preservação, mexer no volume depois de escolher o
+        canal desfaria o canal no rascunho em silêncio.
         """
         return self.model_copy(
             update={
                 "speaker": SpeakerDraft(
                     volume=max(0, min(255, int(volume))),
                     muted=bool(muted),
+                    rota=self.speaker.rota if rota is None else int(rota),
                     dirty=True,
                     in_profile=True,
                 )
             }
         )
+
+    def without_speaker(self) -> DraftConfig:
+        """Rascunho SEM a seção do alto-falante — ela DEVOLVEU a posse.
+
+        SOM-02/E3 mais SOM-02/E4. "Soltar" faz o hefesto parar de mandar os
+        bytes de volume: o registrador volta a ser do firmware e o
+        ``daemon.state_full`` deixa de publicar a chave ``speaker``. Um perfil
+        salvo DEPOIS desse gesto não pode continuar carregando um número —
+        ``lifecycle.apply_profile_speaker`` o reaplicaria na ativação seguinte
+        e tomaria de volta uma posse que ela acabou de largar, que é
+        exatamente o eco de estado velho que esta fiação existe para matar.
+
+        Zera a seção inteira (volta ao ``SpeakerDraft()`` de fábrica) em vez de
+        só apagar o número: com ``volume=None`` o gate de ``to_profile`` já
+        omite a seção, e deixar ``muted``/``in_profile`` de pé seria guardar a
+        sombra de uma opinião que não existe mais.
+        """
+        return self.model_copy(update={"speaker": SpeakerDraft()})
 
     # --- overrides por-controle (PERFIL-04) ---
 
@@ -1133,6 +1173,51 @@ class DraftConfig(BaseModel):
         }
 
 
+# ---------------------------------------------------------------------------
+# Registro do ALTO-FALANTE no rascunho (SOM-02/E4 — a fiação que faltava)
+# ---------------------------------------------------------------------------
+
+
+def registrar_alto_falante_no_rascunho(
+    janela: Any, *, volume: int | None, muted: bool = False, rota: int | None = None
+) -> None:
+    """Anota no rascunho o alto-falante que ficou DE PÉ. NÃO aplica nada.
+
+    A fiação que faltava desde a SOM-02/E4: ``with_speaker`` existia, tinha
+    teste e **nenhum chamador no produto**. O bloco "Alto-falante" do card
+    mandava o volume por IPC e não tocava no rascunho, então o "Salvar Perfil"
+    persistia o número VELHO — e a ativação seguinte o devolvia ao controle
+    (``lifecycle.apply_profile_speaker``). Ela ajustava o volume, salvava, e o
+    próprio gesto de salvar desfazia o ajuste.
+
+    Quem chama é o CALLBACK DE SUCESSO do gesto no card, nunca o gesto em si:
+    o rascunho descreve o que ficou de pé, não a intenção — a mesma disciplina
+    de ``registrar_modo_no_rascunho`` (Emulação) e do "Aplicar" do rodapé. Um
+    pedido recusado pelo daemon não registra nada.
+
+    ``volume=None`` significa **soltar** (a devolução da posse da SOM-02/E3) e
+    apaga a seção; qualquer número registra volume e mudo juntos, que é o
+    único par que o protocolo aceita sem trancar o alto-falante em zero.
+    ``rota`` só vem do gesto que MEXEU no canal — ``None`` preserva a rota já
+    registrada em vez de apagá-la (ver ``with_speaker``).
+
+    Função de MÓDULO, e um escritor só, pela razão já paga por esta base em
+    ``registrar_modo_no_rascunho``: o dono do rascunho do alto-falante tem de
+    ser único e visível ao portão de AST — a classe de defeito desta casa é
+    *"três escritores do perfil sem dono"*. ``janela`` sem ``draft`` (card
+    avulso de teste, ou antes de a janela terminar de nascer) é caso normal e
+    sai calado: o gesto ao vivo já foi, e não há rascunho para anotar.
+    """
+    draft = getattr(janela, "draft", None)
+    if not isinstance(draft, DraftConfig):
+        return
+    janela.draft = (
+        draft.without_speaker()
+        if volume is None
+        else draft.with_speaker(volume, muted=muted, rota=rota)
+    )
+
+
 __all__ = [
     "DraftConfig",
     "EmulationDraft",
@@ -1143,4 +1228,5 @@ __all__ = [
     "SpeakerDraft",
     "TriggerDraft",
     "TriggersDraft",
+    "registrar_alto_falante_no_rascunho",
 ]

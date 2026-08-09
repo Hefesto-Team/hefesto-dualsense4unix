@@ -81,6 +81,98 @@ _BTN_GIVE_BACK_TO_GAME = BTN_GIVE_BACK_TO_GAME
 _MSG_HEFESTO_OFF = "não consegui — o Hefesto pode estar desligado (ligue na aba Sistema)."
 
 
+def texto_dos_pedidos_de_vibracao(state: dict[str, Any]) -> str | None:
+    """O pedaço da linha que conta os pedidos de vibração DO JOGO.
+
+    ``None`` = **não sei**, e aí a linha não diz nada sobre pedidos. É o único
+    silêncio que sobra: antes desta função o silêncio significava as duas
+    coisas ao mesmo tempo, porque a contagem só aparecia com ``plays > 0``.
+
+    O caso ruim era justamente o mudo. Medido na mesa dela em 08-09/08:
+    ``rumble_ff = {plays: 0, vpads: 0}`` durante dias de zero vibração em
+    qualquer jogo — a aba tinha o número na mão, sabia que o jogo nunca pediu
+    nada, e não dizia. Quatro agentes foram investigar o que a linha podia ter
+    respondido sozinha.
+
+    As perguntas estão na ORDEM DA VERDADE, que é a mesma de
+    ``widgets.controller_card.estado_do_recurso`` e não pode ser trocada:
+
+    1. **Conexão Nativa (Sony)?** Não há gamepad virtual porque não deve
+       haver — o jogo abre o hidraw do controle físico e vibra por lá. Contar
+       pedidos ao vpad aqui não faz sentido, e responder "ninguém pediu" seria
+       mentira. A frase é a que as outras duas telas já usam
+       (``emulation_actions`` e ``controller_card``: *"o jogo fala direto com
+       o controle"*);
+    2. **O dado veio?** ``rumble_ff`` ausente (daemon sem config no
+       ``state_full``, resposta que não chegou, daemon mais velho) ou ``plays``
+       que não é inteiro: silêncio. Afirmar zero com o campo ausente é a
+       família de erro que o ``gyro_do_inputs`` já paga para não cometer —
+       "zero" e "não sei" levam a caças completamente diferentes;
+    3. **Chegou pedido que não soubemos ler?** (``descartados``) Vem primeiro
+       porque é o único caso em que o defeito é NOSSO e a tela tem como saber:
+       o jogo mandou motor não-nulo num report cujos bits de vibração não
+       reconhecemos. Dizer "o jogo não pediu" aqui seria a mentira mais cara
+       da aba;
+    4. **Alguém pediu FORÇA?** (``nao_nulos``) Este é o número que vale. Ver
+       RUMBLE-QUE-NAO-SE-SENTE-01: medido na mesa dela em 09/08, ``plays=117``
+       com ela sem sentir nada — e ``plays`` sobe na PARADA também, porque o
+       ``+= 1`` do vpad acontece antes de os bytes dos motores serem lidos.
+       Anunciar "o jogo pediu vibração 117x" quando as 117 podiam ser pedidos
+       de força ZERO mandaria caçar no lugar errado;
+    5. **Falou de vibração e pediu zero?** (``plays > 0``, ``nao_nulos == 0``)
+       É o jogo pedindo SILÊNCIO — conclusão oposta à de cima, e a caça é no
+       jogo/máscara, nunca no nosso caminho de saída;
+    6. **Há gamepad virtual?** ``vpads == 0`` e ``plays == 0`` não é o jogo
+       calado: é jogo NENHUM tendo onde pedir. Conclusão oposta à de baixo — um
+       manda ligar a emulação, o outro manda olhar o jogo — e é por isso que as
+       duas frases são distintas. ``vpads`` ausente não autoriza nenhuma das
+       duas afirmações: cai no caso geral, que só fala do que ``plays`` prova.
+
+    **Daemon mais velho** não manda ``nao_nulos``/``descartados``. Aí a função
+    volta EXATAMENTE ao texto antigo (o número de ``plays``): com o campo
+    ausente não se sabe qual das duas causas é, e inventar uma seria repetir o
+    defeito que esta função existe para curar.
+    """
+    if bool(state.get("native_mode")):
+        return "Conexão Nativa (Sony): o jogo fala direto com o controle"
+    ff = state.get("rumble_ff")
+    if not isinstance(ff, dict):
+        return None
+    plays = ff.get("plays")
+    if not isinstance(plays, int) or isinstance(plays, bool):
+        return None
+    descartados = _inteiro(ff.get("descartados"))
+    if descartados:
+        return (
+            f"o jogo pediu vibração {descartados}x num formato que o Hefesto "
+            "não reconheceu — é defeito nosso, mande esta tela para o suporte"
+        )
+    nao_nulos = _inteiro(ff.get("nao_nulos"))
+    if nao_nulos is None:
+        # Daemon antigo: só o número ambíguo, e nenhuma afirmação além dele.
+        if plays > 0:
+            return f"o jogo pediu vibração {plays}x"
+    elif nao_nulos > 0:
+        return f"o jogo pediu vibração {nao_nulos}x — se não sentiu, é aqui dentro"
+    elif plays > 0:
+        return f"o jogo falou de vibração {plays}x, mas pediu força zero em todas"
+    vpads = ff.get("vpads")
+    if isinstance(vpads, int) and not isinstance(vpads, bool) and vpads == 0:
+        return "não há gamepad virtual — nenhum jogo tem onde pedir vibração"
+    return "o jogo ainda não pediu vibração nenhuma"
+
+
+def _inteiro(valor: Any) -> int | None:
+    """O inteiro do payload, ou ``None`` quando o campo não veio (daemon velho).
+
+    RUMBLE-QUE-NAO-SE-SENTE-01. `bool` é `int` em Python e entraria como 0/1 —
+    a mesma blindagem que o resto desta aba já faz.
+    """
+    if isinstance(valor, int) and not isinstance(valor, bool):
+        return valor
+    return None
+
+
 class RumbleActionsMixin(WidgetAccessMixin):
     """Controla a aba Rumble."""
 
@@ -542,16 +634,18 @@ class RumbleActionsMixin(WidgetAccessMixin):
         """Feature #4: mostra o estado vivo da vibração na aba Rumble.
 
         `rumble_passthrough` True = o JOGO controla (o esperado para jogar);
-        False = FIXO pela GUI (o FF do jogo é ignorado). `rumble_ff.plays` = quantas
-        vezes o jogo pediu vibração no gamepad virtual — em 0 durante o jogo indica
-        que o jogo não está enxergando o vpad (ex.: máscara errada)."""
+        False = FIXO pela GUI (o FF do jogo é ignorado).
+
+        A metade dos PEDIDOS DO JOGO (`rumble_ff`) é decidida pela função pura
+        ``texto_dos_pedidos_de_vibracao`` — inclusive o caso em que ela ficava
+        muda, que era o caso em que ela tinha algo a dizer. O que sobra aqui é
+        a costura: nenhuma das frases de lá leva ``<``, ``&`` ou aspas, então
+        elas entram inteiras no markup do Pango, sem escapar."""
         label = self._get("rumble_state_label")
         if label is None:
             return
         passthrough = state.get("rumble_passthrough")
         active = state.get("rumble_active")
-        ff = state.get("rumble_ff") if isinstance(state.get("rumble_ff"), dict) else {}
-        plays = ff.get("plays", 0) if isinstance(ff, dict) else 0
         if passthrough is True:
             estado = '<span foreground="#50fa7b">o JOGO controla a vibração</span>'
         elif isinstance(active, list) and len(active) == 2:
@@ -568,9 +662,8 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 )
         else:
             estado = "—"
-        plays_txt = ""
-        if isinstance(plays, int) and not isinstance(plays, bool) and plays > 0:
-            plays_txt = f"  ·  o jogo pediu vibração {plays}x"
+        pedidos = texto_dos_pedidos_de_vibracao(state)
+        plays_txt = f"  ·  {pedidos}" if pedidos else ""
         label.set_markup(f"Estado da vibração: {estado}{plays_txt}")
 
     def _toast_rumble(self, msg: str) -> None:

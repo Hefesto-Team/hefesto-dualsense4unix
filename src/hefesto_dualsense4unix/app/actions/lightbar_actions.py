@@ -24,6 +24,35 @@ _AVISO_HEFESTO_DESLIGADO = (
     "(ligue na aba Sistema)"
 )
 
+#: A frase do CAMINHO FELIZ, e a palavra dela é "enviada" de propósito.
+#:
+#: Ela dizia "Cor aplicada no controle", e isso é uma afirmação que o produto
+#: NÃO tem como sustentar: o ``ok`` que a escolhe significa "o daemon aceitou o
+#: pedido" (``led.set``) ou "a seção ``leds`` entrou no ``apply_draft``" — nos
+#: dois casos, "o report saiu", nunca "a barra acendeu".
+#:
+#: A medição que obriga a troca (LIGHTBAR-BT-RESET-01, provado ao vivo em
+#: 17-18/07 e ainda em vigor na mesa dela em 09/08): por Bluetooth, depois que o
+#: daemon adota o controle, o firmware perde o claim da lightbar e passa a
+#: ACEITAR E IGNORAR as escritas de cor — 330 mil escritas ignoradas com a barra
+#: apagada. Nesse estado a frase antiga era falsa em 100% das vezes, e ela passou
+#: dias acreditando que a cor tinha ido, porque a janela dizia que sim.
+#:
+#: Por que não existe aqui uma confirmação de verdade: a única leitura de volta
+#: que o produto tem é o nó sysfs ``multi_intensity``, e ele é o ECO do nosso
+#: pedido, não a lâmpada (``core/sysfs_leds.get_rgb``: o valor sai do último
+#: write pela classe LED; o caminho interno do kernel que acende a barra nunca o
+#: atualiza, e escrita por hidraw também não). Confirmar por ele seria trocar
+#: uma afirmação sem prova por outra. Quem sabe se acendeu é o olho dela.
+#:
+#: O vocabulário é EMPRESTADO da própria tela, não inventado: o botão que
+#: dispara isto se descreve como "Envia cor selecionada para a barra de LED do
+#: controle" (``main.glade``, descrição acessível de ``lightbar_apply``) e o
+#: seletor de cor diz "a cor só vai ao controle quando você clicar em Aplicar no
+#: controle". O "(N% de brilho)" fica: o brilho é o que foi ENVIADO, e é a
+#: informação que ela usa para saber que o seletor viajou junto.
+_TOAST_COR_ENVIADA = "Cor enviada ao controle ({pct}% de brilho)"
+
 #: Aviso D4 (sprint cores-e-led-automaticos): cor única em "Todos" com o
 #: automático ligado seria INVISÍVEL (a paleta vence o global no merge do
 #: backend) — então o fluxo desliga o toggle e avisa, nunca em popup.

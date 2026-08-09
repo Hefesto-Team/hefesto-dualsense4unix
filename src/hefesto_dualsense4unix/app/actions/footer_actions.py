@@ -326,6 +326,26 @@ class FooterActionsMixin(ProfileWriterMixin):
             # o que ficou DE PÉ; uma intenção que falhou não pode virar perfil
             # salvo. (Este registro morava nos callbacks dos seletores da aba
             # Início, e veio junto com o IPC que saiu de lá.)
+            #
+            # A-VONTADE-DA-GUI-PREVALECE-01 (09/08/2026) — decisão dela, e ela
+            # resolve uma dúvida que a auditoria desta madrugada levantou.
+            #
+            # A auditoria apontou que registrar aqui planta um `mode.kind` no
+            # perfil mesmo quando ela mexeu SÓ na máscara (o `modo_alvo` cai no
+            # vigente do daemon, `:311`), e chamou isso de eco virando opinião —
+            # a família do `enabled` do mouse que o HARM-05 arrancou.
+            #
+            # Cheguei a recusar o registro nesse caso. **Estava errado**, e ela
+            # cortou em uma frase: *"a vontade na GUI prevalece sempre"*.
+            #
+            # O raciocínio dela fecha melhor que o meu: a máscara SÓ existe
+            # dentro de "Jogar pelo Hefesto" (`home_actions._on_home_flavor_
+            # changed` recusa em qualquer outro modo), então escolher máscara É
+            # escolher o modo em que ela vale. O `kind` que viaja junto não é
+            # eco — é a metade implícita do gesto dela. E o esquema não aceita
+            # máscara sem `kind` (`profiles/schema.ProfileModeConfig`), então
+            # recusar o `kind` era recusar a máscara: perder o gesto dela para
+            # proteger o perfil de uma opinião que ela deu.
             registrar_modo_no_rascunho(
                 self,
                 modo_alvo,

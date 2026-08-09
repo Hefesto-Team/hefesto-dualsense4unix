@@ -148,6 +148,18 @@ _RUMBLE_STRONG_OFFSET = 3
 #: e manda COMPATIBLE_VIBRATION2 no valid_flag2, deixando o valid_flag0 com
 #: 0x02 SOZINHO. Os dois DualSense da máquina de teste são 0x0630 — testar só o
 #: 0x01 descartava TODO o rumble justamente no hardware alvo.
+#:
+#: **Nota de 09/08/2026 — RUMBLE-QUE-NAO-SE-SENTE-01.** O parágrafo acima vale
+#: para o `hid-playstation`, que foi onde ele foi medido: o driver liga
+#: `HAPTICS_SELECT` no flag0 SEMPRE (`dualsense_output_worker`), e por isso a
+#: máscara 0x03 basta para ele. Mas o driver do kernel NÃO é o único escritor
+#: deste report — quem escreve no hidraw do vpad é o JOGO (ou a camada dele:
+#: SDL, winebus, a implementação DualSense do próprio título). Nada obriga
+#: esses escritores a repetir o `HAPTICS_SELECT`, e um deles mandando SÓ o bit
+#: v2 no flag2 tinha todo o rumble descartado aqui, em silêncio.
+#:
+#: Esta constante segue certa e segue em uso — ela é o ramo v1. Quem decide o
+#: gate agora é :func:`_fala_de_vibracao`, que aceita os DOIS ramos.
 _VIBRATION_FLAGS = 0x03
 
 #: RUMBLE-PRESO-01 — teto de silêncio do rumble do JOGO, em segundos.
@@ -697,6 +709,38 @@ def _e_a_parada_do_sdl(body: bytes) -> bool:
     return not (body[_RUMBLE_WEAK_OFFSET] or body[_RUMBLE_STRONG_OFFSET])
 
 
+def _fala_de_vibracao(body: bytes) -> bool:
+    """True quando o report do jogo AUTORIZA os bytes 2-3 como vibração.
+
+    RUMBLE-QUE-NAO-SE-SENTE-01. São DUAS codificações, e o gate histórico
+    conhecia só uma.
+
+    * **v1** — `valid_flag0` com `COMPATIBLE_VIBRATION` (0x01) e/ou
+      `HAPTICS_SELECT` (0x02): é o :data:`_VIBRATION_FLAGS`;
+    * **v2** — `valid_flag2` com `COMPATIBLE_VIBRATION2` (0x04). O firmware
+      2.21+ trocou o método de vibração, e quem escreve pode mandar SÓ o bit
+      v2. O nosso próprio `core/ds_output_report.py` já nomeia essa constante,
+      e o `core/backend_pydualsense.py` já a manipula ao ESCREVER no controle
+      físico — mas o caminho de LEITURA (o jogo → vpad) nunca a consultou.
+
+    O flag2 é lido com guarda de tamanho: um report curto (jogo que manda só
+    o cabeçalho de vibração) não pode levantar `IndexError` dentro do pump.
+
+    Aceitar o bit v2 NÃO afrouxa o gate que o RUMBLE-PRESO-01 instalou: o
+    report de gatilho liga `flag0 & 0x0C`, o de luz liga `flag1 & 0x14` e o de
+    brilho/setup de lightbar liga `flag2 & 0x03` — nenhum deles encosta no
+    0x04 do flag2. O que era descartado aqui era vibração de verdade.
+    """
+    if len(body) <= _RUMBLE_STRONG_OFFSET:
+        return False
+    if body[_VALID_FLAG0_OFFSET] & _VIBRATION_FLAGS:
+        return True
+    return (
+        len(body) > rep.COMMON_VALID_FLAG2
+        and bool(body[rep.COMMON_VALID_FLAG2] & rep.VALID_FLAG2_COMPATIBLE_VIBRATION2)
+    )
+
+
 
 @dataclass
 class UhidDualSense:
@@ -750,6 +794,32 @@ class UhidDualSense:
     _rumble_visto_em: float | None = None
     _output_count: int = 0
     _rumble_count: int = 0
+    #: RUMBLE-QUE-NAO-SE-SENTE-01 — os pedidos que MEXERIAM o motor.
+    #:
+    #: `_rumble_count` conta report que FALA de vibração, e o `+= 1` acontece
+    #: antes de os bytes 2-3 serem lidos: a parada (motores 0) conta igual ao
+    #: pedido. Medido na mesa dela em 09/08 com `plays=117` e ela sem sentir
+    #: nada — 117 não distingue "pediu 117 vibrações que sumiram do nosso lado"
+    #: de "mencionou vibração 117 vezes para pedir ZERO", e as duas conclusões
+    #: mandam caçar em pontas opostas do código. Este conta só (weak|strong) > 0.
+    _rumble_nao_nulo_count: int = 0
+    #: O MAIOR par pedido na sessão. Um jogo que só pede (3, 4) está vibrando
+    #: abaixo do que a mão sente, e isso não é defeito nosso — sem este número
+    #: "não senti" e "não chegou" seguem indistinguíveis.
+    _rumble_maior_pedido: tuple[int, int] = (0, 0)
+    #: Reports com motor NÃO-NULO que o gate de vibração DESCARTOU (nem
+    #: `_VIBRATION_FLAGS` no flag0, nem `COMPATIBLE_VIBRATION2` no flag2).
+    #: Enquanto ninguém contava isto, "o jogo não pediu" era afirmado sem que
+    #: nada no código soubesse distinguir disso de "pediu numa codificação que
+    #: não reconhecemos" — a família de erro que esta casa paga para não cometer.
+    _rumble_descartado_count: int = 0
+    #: Amostra do último descarte: (flag0, flag1, flag2, weak, strong). É o que
+    #: transforma o contador acima em diagnóstico — diz QUAL codificação veio.
+    _rumble_descartado_amostra: tuple[int, int, int, int, int] | None = None
+    #: Quantos pedidos entraram SÓ pelo bit v2 (`COMPATIBLE_VIBRATION2` no
+    #: valid_flag2). > 0 prova que o gate antigo, que só olhava o flag0, estava
+    #: jogando vibração fora.
+    _rumble_v2_count: int = 0
     _started: bool = False
     #: REPLICA-03: sessão de jogo (UHID_OPEN..UHID_CLOSE) + graça pós-bind.
     _game_open: bool = False
@@ -910,8 +980,51 @@ class UhidDualSense:
         Conta só os reports com a flag de vibração — o jogo usa o mesmo report
         0x02 para lightbar/gatilhos/mic, e contá-los aqui dava um diagnóstico
         falso-positivo ("o jogo pediu rumble") para quem só acendeu um LED.
+
+        **Não confunda com "pediu para vibrar"**: a PARADA também fala de
+        vibração, e este contador sobe nela igual. Quem responde "o motor
+        mexeria?" é :attr:`ff_nao_nulo_count` — ver RUMBLE-QUE-NAO-SE-SENTE-01.
         """
         return self._rumble_count
+
+    @property
+    def ff_nao_nulo_count(self) -> int:
+        """Nº de pedidos do jogo com motor NÃO-NULO (`weak` ou `strong` > 0).
+
+        RUMBLE-QUE-NAO-SE-SENTE-01 — o número que separa as duas caças:
+        `ff_play_count` alto com este em ZERO é o jogo pedindo silêncio (a
+        caça é no jogo/máscara); este subindo com ela sem sentir nada é o
+        pedido morrendo do nosso lado (a caça é no sink/política/backend).
+        """
+        return self._rumble_nao_nulo_count
+
+    @property
+    def ff_maior_pedido(self) -> tuple[int, int]:
+        """Maior par (weak, strong) que o jogo pediu na sessão."""
+        return self._rumble_maior_pedido
+
+    @property
+    def ff_descartado_count(self) -> int:
+        """Nº de reports com motor não-nulo que o gate de vibração DESCARTOU.
+
+        > 0 significa que o jogo pediu vibração numa codificação que não
+        reconhecemos — e :attr:`ff_descartado_amostra` diz qual.
+        """
+        return self._rumble_descartado_count
+
+    @property
+    def ff_descartado_amostra(self) -> tuple[int, int, int, int, int] | None:
+        """(flag0, flag1, flag2, weak, strong) do último descarte, ou None."""
+        return self._rumble_descartado_amostra
+
+    @property
+    def ff_v2_count(self) -> int:
+        """Nº de pedidos aceitos SÓ pelo bit v2 (`COMPATIBLE_VIBRATION2`).
+
+        > 0 é a prova de que o gate antigo — que só olhava o `valid_flag0` —
+        estava jogando vibração do jogo fora.
+        """
+        return self._rumble_v2_count
 
     @property
     def output_count(self) -> int:
@@ -1129,6 +1242,11 @@ class UhidDualSense:
             self._last_sent = (0, 0)
             self._output_count = 0
             self._rumble_count = 0
+            self._rumble_nao_nulo_count = 0
+            self._rumble_maior_pedido = (0, 0)
+            self._rumble_descartado_count = 0
+            self._rumble_descartado_amostra = None
+            self._rumble_v2_count = 0
             self._started = False
             self._game_open = False
             self._bound_at = None
@@ -1623,17 +1741,45 @@ class UhidDualSense:
                 self._emit_rumble(0, 0)
                 logger.info("uhid_parada_do_sdl_honrada", player=self.player)
             return
-        if not body[_VALID_FLAG0_OFFSET] & _VIBRATION_FLAGS:
+        weak = body[_RUMBLE_WEAK_OFFSET]
+        strong = body[_RUMBLE_STRONG_OFFSET]
+        if not _fala_de_vibracao(body):
             # RUMBLE-PRESO-01: este report NÃO fala de vibração (é lightbar,
             # gatilho ou mic) e os bytes 2-3 dele vêm zerados — encaminhá-los
             # mataria a vibração em curso, que é o defeito que o gate cura.
             # Mas o silêncio precisa ser CRONOMETRADO: enquanto o jogo segue
             # falando de outras coisas com um rumble não-nulo pendurado, é o
             # `_expirar_rumble_preso` (chamado do pump) que decide.
+            #
+            # RUMBLE-QUE-NAO-SE-SENTE-01: descartar é certo, descartar EM
+            # SILÊNCIO não é. Um report sem bit de vibração e com motor
+            # não-nulo é ou uma codificação que não conhecemos, ou lixo — e
+            # sem contá-lo a tela afirmaria "o jogo não pediu" sem ter como
+            # saber. Só o caso não-nulo entra: report de gatilho/luz traz os
+            # motores zerados e inflaria o contador a 60 Hz.
+            if weak or strong:
+                self._rumble_descartado_count += 1
+                self._rumble_descartado_amostra = (
+                    body[_VALID_FLAG0_OFFSET],
+                    body[_VALID_FLAG1_OFFSET],
+                    body[rep.COMMON_VALID_FLAG2]
+                    if len(body) > rep.COMMON_VALID_FLAG2
+                    else 0,
+                    weak,
+                    strong,
+                )
             return
         self._rumble_count += 1
-        weak = body[_RUMBLE_WEAK_OFFSET]
-        strong = body[_RUMBLE_STRONG_OFFSET]
+        if (
+            len(body) > rep.COMMON_VALID_FLAG2
+            and body[rep.COMMON_VALID_FLAG2] & rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
+            and not body[_VALID_FLAG0_OFFSET] & _VIBRATION_FLAGS
+        ):
+            self._rumble_v2_count += 1
+        if weak or strong:
+            self._rumble_nao_nulo_count += 1
+            if (weak, strong) > self._rumble_maior_pedido:
+                self._rumble_maior_pedido = (weak, strong)
         # O carimbo vem ANTES do dedup: um jogo que reafirma o MESMO valor está
         # dizendo "ainda quero vibrar", e isso tem de adiar o teto de silêncio
         # mesmo sem haver o que reenviar ao hardware.

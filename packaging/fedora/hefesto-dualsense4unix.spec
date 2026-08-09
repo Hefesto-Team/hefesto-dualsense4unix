@@ -134,6 +134,7 @@ install -Dm644 -t %{buildroot}%{_udevrulesdir} \
     assets/71-uhid.rules \
     assets/71-uinput.rules \
     assets/72-ps5-controller-autosuspend.rules \
+    assets/72-hefesto-touchpad-motion-uaccess.rules \
     assets/76-dualsense-touchpad-libinput-ignore.rules \
     assets/77-dualsense-leds.rules \
     assets/78-dualsense-motion-not-joystick.rules \
@@ -344,6 +345,7 @@ fi
 %{_udevrulesdir}/71-uhid.rules
 %{_udevrulesdir}/71-uinput.rules
 %{_udevrulesdir}/72-ps5-controller-autosuspend.rules
+%{_udevrulesdir}/72-hefesto-touchpad-motion-uaccess.rules
 %{_udevrulesdir}/76-dualsense-touchpad-libinput-ignore.rules
 %{_udevrulesdir}/77-dualsense-leds.rules
 %{_udevrulesdir}/78-dualsense-motion-not-joystick.rules

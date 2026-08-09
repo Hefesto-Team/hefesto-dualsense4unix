@@ -1,0 +1,115 @@
+# hefesto-dualsense4unix — acesso da usuária aos nós de ENTRADA do TOUCHPAD e
+# dos SENSORES DE MOVIMENTO (giroscópio + acelerômetro).
+#
+# OQ-6 — este é o item, e ele já tinha nome antes desta regra existir:
+#   docs/process/sprints/2026-08-07-INDICE-a-ordem-de-execucao-do-que-o-
+#     diagnostico-abriu.md:372 — *"a regra que daria acesso aos nós de entrada
+#     nunca foi escrita"*, custo M, entra no jogo;
+#   docs/process/sprints/2026-08-08-INDICE-a-madrugada-em-que-o-produto-era-o-
+#     reu.md:123 — o mesmo item como C-3, grau MEDIDO;
+#   docs/process/sprints/2026-08-09-A-NOITE-DOS-QUATRO-INVENTARIOS-01-o-que-a-
+#     casa-sabe-e-o-que-o-produto-faz.md:133 — F-8, *"o touchpad e o giroscópio
+#     dela funcionam por acidente"*.
+# Autorização dela, 09/08/2026: *"autorizo inclusive o touchpad e giroscópio
+# devem funcionar por default em todos os modos possíveis"*.
+#
+# O DEFEITO QUE ESTA REGRA CURA — medido em 09/08/2026 na máquina dela, com
+# `udevadm info -q property` e `getfacl` nos nós vivos:
+#
+#   /dev/input/event6  "DualSense Wireless Controller"                 TAGS=:uaccess:seat:
+#   /dev/input/event7  "DualSense Wireless Controller Motion Sensors"  TAGS=:systemd:
+#   /dev/input/event8  "DualSense Wireless Controller Touchpad"        TAGS=(vazio)
+#
+# Só o GAMEPAD ganhava ACL. Quem a dá é a regra do sistema
+# `/usr/lib/udev/rules.d/70-uaccess.rules`:
+#
+#   SUBSYSTEM=="input", ENV{ID_INPUT_JOYSTICK}=="?*", TAG+="uaccess"
+#
+# e os nós auxiliares do `hid_playstation` NÃO são joystick: o `input_id` do
+# kernel classifica o de movimento como `ID_INPUT_ACCELEROMETER=1` e o do
+# touchpad como `ID_INPUT_TOUCHPAD=1`. Nenhum dos dois casa aquela linha, e
+# nenhuma regra desta casa dava acesso a eles — eles ficavam no `0660
+# root:input` do default do udev.
+#
+# POR QUE ISSO NUNCA APARECEU: a usuária desta máquina está no grupo `input`
+# **por fora do produto** (`id` devolve `995(input)`). Nenhum instalador daqui
+# põe ninguém nesse grupo — o `install_udev.sh` só cria o grupo `hefesto`. Ou
+# seja: o touchpad e o giroscópio funcionavam por ACIDENTE HISTÓRICO, e numa
+# máquina nova não funcionariam, sem ninguém saber por quê.
+#
+# POR QUE `uaccess` E NÃO GRUPO — a decisão, e não só o mecanismo:
+#
+#   1. o grupo `input` é PROIBIDO nesta casa desde o item 3.3 de
+#      `docs/history/RESPOSTAS_V1.md` — *"NÃO adicionar usuário ao grupo input.
+#      Criar udev rule seletiva por VID/PID"* — e a `71-uhid.rules` repete o
+#      porquê: "grupo DEDICADO de propósito: nunca o 'input' (membro de input
+#      lê todos os /dev/input/event* = primitiva de keylogger)". Entrar no
+#      `input` daria à usuária leitura do teclado dela inteiro para resolver um
+#      problema de touchpad de controle. Esta regra é a "udev rule seletiva"
+#      que aquele item pediu, e que nunca tinha sido escrita;
+#   2. um grupo NOVO (à moda do `hefesto`) resolveria o escopo mas não o
+#      tempo: `usermod -aG` só vale no PRÓXIMO login, e é mudança persistente
+#      no `/etc/group` da máquina. O `uaccess` já é o mecanismo que o sistema
+#      oferece para exatamente isto — ACL por SESSÃO, no nó NOMEADO, viva
+#      enquanto ela estiver na frente da máquina e removida quando ela sai;
+#   3. é o mesmo mecanismo que o gamepad principal já usa (linha 63 da
+#      70-uaccess.rules acima) — o auxiliar passa a ser tratado como o
+#      principal, em vez de depender de um grupo que o produto não gerencia.
+#
+# O NÚMERO 72 É CONTRATO, NÃO GOSTO: quem transforma `TAG+="uaccess"` em ACL é
+# a `/usr/lib/udev/rules.d/73-seat-late.rules`
+# (`TAG=="uaccess", ENV{MAJOR}!="", RUN{builtin}+="uaccess"`). Numerada >= 73 a
+# TAG nunca vira ACL e o arquivo vira decoração — foi o que aconteceu com a
+# `79-external-controller-leds.rules` (ver o bloco ONDA-R lá) e o que quase
+# aconteceu com a `71-uhid.rules`, que nasceu 79. O portão
+# `scripts/check_packaging_parity.sh` cobra o número, não só o texto.
+#
+# COMO CASA, E POR QUE ASSIM: `ATTRS{id/vendor}` + `ATTRS{name}` vivem os DOIS
+# no mesmo pai (o `inputNN`), que é o requisito do udev para combinar vários
+# `ATTRS{}` numa regra só — conferido com `udevadm info -a -n /dev/input/event3`:
+#
+#   ATTRS{id/vendor}=="054c"   ATTRS{id/product}=="0ce6"
+#   ATTRS{name}=="DualSense Wireless Controller Motion Sensors"
+#
+# `id/vendor` é o VID do device HID, e existe igual por USB e por Bluetooth —
+# ao contrário de `ATTRS{idVendor}`, que só aparece quando há um pai USB de
+# verdade (e por BT não há). O sufixo do nome vem do kernel `hid_playstation`
+# e é estável em todas as encarnações: USB, Bluetooth, DualSense Edge e os
+# vpads uhid do daemon ("DualSense Wireless Controller (Hefesto P1) Touchpad").
+#
+# ANCORAR NO VENDOR **E** NO SUFIXO, e não em VID:PID: uma lista de PIDs faz o
+# próximo modelo de DualSense nascer sem giroscópio em silêncio — o defeito que
+# esta regra existe para não repetir. `054c` cobre DualSense (`0ce6`), Edge e
+# vpad (`0df2`), DualShock4 (`05c4`/`09cc`/`0ba0`) e, com ele, o 8BitDo em modo
+# PS4, que se apresenta como DualShock4 (ver `79-external-controller-leds.rules`).
+#
+# LIMITE HONESTO: o casamento é por FABRICANTE + sufixo de nome, então um
+# device Sony NÃO-controle cujo nó de entrada terminasse em "Touchpad" também
+# ganharia a ACL da sessão local. Não há um na casa, e o preço da alternativa
+# (lista de PIDs) é o defeito acima. A ACL vai para a usuária da sessão ATIVA,
+# nunca para um grupo do sistema.
+#
+# O QUE ESTA REGRA **NÃO** DESFAZ:
+#   - `76-dualsense-touchpad-libinput-ignore.rules` — o touchpad continua
+#     ignorado como ponteiro do libinput; permissão e `LIBINPUT_IGNORE_DEVICE`
+#     são coisas separadas, e o libinput lê como root de qualquer jeito;
+#   - `78-dualsense-motion-not-joystick.rules` — o nó de movimento continua
+#     fora da lista de gamepads (não devolvemos `ID_INPUT_JOYSTICK`; damos a
+#     TAG direto, que é o que separa "quem enxerga" de "quem tem acesso");
+#   - `80-motion-joydev-hide.rules` — os `jsN` legados continuam em MODE 0000.
+#     Só `event*` entra aqui, de propósito.
+#
+# Reverter: remover este arquivo e `sudo udevadm control --reload`. Nada aqui
+# escreve em atributo de device, não cria grupo e não altera modo nem dono.
+
+# --- Sony: DualSense, DualSense Edge, DualShock4, 8BitDo em modo PS4, e os
+#     vpads uhid do daemon (todos com id/vendor 054c) ---
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="054c", ATTRS{name}=="*Motion Sensors", TAG+="uaccess"
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="054c", ATTRS{name}=="*Touchpad", TAG+="uaccess"
+
+# --- Nintendo/8BitDo em modo Switch: o `hid-nintendo` publica a IMU num nó
+#     separado, nomeado "<nome do controle> (IMU)"
+#     (assets/dkms/hid-nintendo/hid-nintendo.c:2353). Ele não é joystick para o
+#     `input_id` — mesma lacuna do "Motion Sensors" da Sony. Não há touchpad
+#     nesta família. ---
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="057e", ATTRS{name}=="*(IMU)", TAG+="uaccess"

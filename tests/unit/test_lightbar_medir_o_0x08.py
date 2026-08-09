@@ -145,7 +145,7 @@ def test_sem_handle_aberto_devolve_vazio_em_vez_de_estourar() -> None:
     backend = _backend({}, {})
 
     assert backend.enviar_release_leds() == {}
-    assert backend.enviar_release_leds(uniq="ff:ff:ff:ff:ff:ff") == {}
+    assert backend.enviar_release_leds(uniq="00:00:00:00:00:00") == {}
 
 
 def test_falha_de_um_handle_nao_derruba_o_outro() -> None:

@@ -9,7 +9,15 @@ import os
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
@@ -375,12 +383,42 @@ class ProfileSpeakerConfig(BaseModel):
 
     ``muted=True`` manda 0 ao firmware e guarda os 180 como preferência; o
     ``muted=False`` posterior devolve os 180 (medido na sprint).
+
+    A ROTA DE SAÍDA (``rota``), pedido DELA em 09/08/2026: *"tanto usar o mic
+    do controle quanto usar o canal de saída de som específico do DS"*. É o
+    ``OUTPUT_PATH_SEL`` (``audio_control``, bits 4-5) da referência canônica,
+    o mesmo número que o ``rota`` do ``speaker.set`` já carrega:
+
+    ==== ==========================================================
+    0    estéreo → fone
+    1    canal L → fone (mono)
+    2    L → fone, R → ALTO-FALANTE (o caso Zelda; "Sons do jogo")
+    3    canal R → alto-falante interno ("Todo o som do PC")
+    ==== ==========================================================
+
+    ADITIVO e sem bump de versão, como a seção inteira já é: perfil antigo sem
+    o campo carrega com ``rota=None``, que significa **não tocar no byte** — o
+    ``common[7]`` guarda a rota de saída E o caminho do microfone, e escrever
+    o byte inteiro apagaria o caminho do mic sem ninguém notar
+    (``_byte_da_rota``, SOM-ROTA-01). Sem opinião continua sendo silêncio.
+
+    A rota não pode vir SOZINHA porque a seção inteira exige ``volume``: quem
+    escreve o byte é o mesmo ``set_speaker_volume`` que escreve o volume, e é
+    a mesma posse. Na janela isso já é verdade — o seletor de canal do card
+    manda ``rota`` e ``volume`` juntos desde a cura de 04/08, justamente
+    porque mandar a rota sem volume trancava o alto-falante em zero.
+
+    LIMITE DECLARADO: a rota é a CAMADA 2 (o firmware). O estado "Todo o som
+    do PC" da janela também mexe na CAMADA 1 (o *default sink* do PipeWire),
+    que é um fato GLOBAL do sistema e não é campo de perfil — restaurá-lo na
+    ativação é decisão dela, não efeito colateral de trocar de janela.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     volume: int = Field(ge=0, le=255)
     muted: bool = False
+    rota: int | None = Field(default=None, ge=0, le=3)
 
     @model_validator(mode="before")
     @classmethod
@@ -394,6 +432,25 @@ class ProfileSpeakerConfig(BaseModel):
                 "conseguiria soltá-lo (SOM-02, armadilhas 1 e 2)."
             )
         return data
+
+    @model_serializer(mode="wrap")
+    def _rota_sem_opiniao_nao_vai_para_o_disco(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Sem opinião de rota, a chave nem aparece no arquivo.
+
+        Não é faxina de estética: ``extra="forbid"`` faz um hefesto ANTIGO
+        RECUSAR o perfil inteiro ao ver uma chave que ele não conhece. Gravar
+        ``"rota": null`` em todo perfil salvo transformaria "voltar uma versão"
+        em "todos os perfis com som quebrados" — e daemon velho com janela nova
+        é combinação real nesta casa. Omitindo o campo quando ninguém opinou,
+        o perfil dela continua idêntico ao que era, byte a byte, e só quem de
+        fato escolheu um canal carrega a chave nova.
+        """
+        dados = handler(self)
+        if isinstance(dados, dict) and dados.get("rota") is None:
+            dados.pop("rota", None)
+        return dados
 
 
 class ProfileModeConfig(BaseModel):

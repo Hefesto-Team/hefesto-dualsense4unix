@@ -1128,6 +1128,7 @@ else
             70-*) rules_desc='permissão hidraw (USB, BT e vpad virtual)' ;;
             71-uinput.rules) rules_desc='emulação Xbox360 via uinput' ;;
             71-uhid.rules) rules_desc='DualSense virtual via uhid (vibração na máscara PS)' ;;
+            72-hefesto-touchpad-motion-uaccess.rules) rules_desc='touchpad e giroscópio acessíveis à sessão (uaccess)' ;;
             72-*) rules_desc='evita desconexão intermitente USB' ;;
             76-*) rules_desc='touchpad só pelo hefesto (sem briga)' ;;
             77-*) rules_desc='lightbar/player-LED graváveis via sysfs' ;;

@@ -164,6 +164,22 @@ class StateStore:
         # 6969) e quem lê (o dispatch do gamepad virtual, a cada tick) são
         # dois mundos que só se encontram pelo store.
         self._udp_trigger_thresholds: dict[str, int] = {"left": 0, "right": 0}
+        # PERFIL-ADIADO-POR-JANELA-01 (09/08/2026): nome do perfil que o restore
+        # de boot RECUSOU restaurar de propósito por ser escopado a uma janela
+        # (RESTORE-ESCOPO-01, ver `daemon/connection.py`). None = nenhuma recusa
+        # pendente.
+        #
+        # Existe porque `active_profile=None` respondia a DUAS perguntas muito
+        # diferentes com a mesma palavra: "nenhum perfil foi configurado" e "o
+        # perfil dela existe, é válido, mas está esperando a janela do jogo".
+        # Medido na máquina dela: em TODO boot desde 31/07 o journal registra
+        # `last_profile_restore_pulado_perfil_de_janela` (name=Pragmata2, depois
+        # name=Sackboy) e o `daemon.state_full` responde `active_profile: None` —
+        # a recusa fica só no journal, e a janela não tem como contar a diferença.
+        # O perfil volta sozinho quando o jogo abre (16 `profile_autoswitch` para
+        # `Sackboy` medidos em 08/08), então NÃO se force o restore: o que falta
+        # é dizer a verdade enquanto a espera dura.
+        self._perfil_adiado_por_janela: str | None = None
 
     # --- escritas ------------------------------------------------------
 
@@ -174,8 +190,32 @@ class StateStore:
                 self._last_battery_pct = state.battery_pct
 
     def set_active_profile(self, name: str | None) -> None:
+        """Publica o perfil ativo — e ENCERRA a espera do perfil adiado.
+
+        PERFIL-ADIADO-POR-JANELA-01: a limpeza mora aqui, e não no autoswitch,
+        porque este é o ponto de estrangulamento ÚNICO por onde toda ativação
+        passa (`ProfileManager.activate`, de qualquer origem: manual, autoswitch,
+        system). A espera termina quando um perfil entra de verdade — foi
+        exatamente o que aconteceu na máquina dela às 00:04:58, quando o
+        `profile.switch` manual para `Sackboy` apagou a pergunta.
+
+        Limpa também no `None` (o `delete()` do perfil ativo, `manager.py:188`):
+        preferimos perder a dica a exibi-la velha. O journal guarda o fato
+        original de qualquer jeito.
+        """
         with self._lock:
             self._active_profile = name
+            self._perfil_adiado_por_janela = None
+
+    def set_perfil_adiado_por_janela(self, name: str | None) -> None:
+        """Registra que o restore de boot adiou `name` por ser de janela.
+
+        PERFIL-ADIADO-POR-JANELA-01. Chamado por `restore_last_profile`
+        (`daemon/connection.py`) nos dois pontos em que ele desiste por escopo —
+        o nome resolvido e o fallback do session.json. `None` limpa.
+        """
+        with self._lock:
+            self._perfil_adiado_por_janela = name or None
 
     def bump(self, counter: str, delta: int = 1) -> int:
         with self._lock:
@@ -415,6 +455,27 @@ class StateStore:
     def active_profile(self) -> str | None:
         with self._lock:
             return self._active_profile
+
+    @property
+    def perfil_adiado_por_janela(self) -> str | None:
+        """Perfil que o boot recusou restaurar por ser escopado a uma janela.
+
+        PERFIL-ADIADO-POR-JANELA-01. Só tem valor enquanto `active_profile` é
+        `None`: é o par dos dois que carrega a informação inteira —
+
+          - `active_profile=None`, adiado=`None`   → não há perfil nenhum;
+          - `active_profile=None`, adiado=`"Sackboy"` → o perfil dela existe e
+            está esperando a janela do jogo (o autoswitch o ativa quando ela
+            abrir o Sackboy);
+          - `active_profile="Sackboy"`             → entrou; nada pendente.
+
+        Nunca é "erro": a recusa é o desenho do RESTORE-ESCOPO-01 (um perfil de
+        jogo que voltasse no boot pintaria a lightbar e suprimiria a paleta
+        automática com o jogo fechado). O que era defeito é ela não ter como
+        saber disso.
+        """
+        with self._lock:
+            return self._perfil_adiado_por_janela
 
     @property
     def last_battery_pct(self) -> int | None:

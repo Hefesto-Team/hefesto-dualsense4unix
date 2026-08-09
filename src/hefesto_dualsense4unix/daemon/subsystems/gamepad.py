@@ -24,29 +24,41 @@ Política:
     controle físico PRIMÁRIO, passando pela mesma política global de
     intensidade do reassert. `dispatch_gamepad` bombeia o FF a cada tick.
   - **Um controle físico = UM dispositivo de jogo** (JOGO-01): a allowlist do
-    Steam Input escolhe QUAL dispositivo o jogo enxerga (nela, o físico), nunca
-    QUANTOS. Enquanto um appid da allowlist está em sessão, o vpad é retirado
-    de cena (`suspend_vpads_for_steam_input`) e devolvido na saída — sem isso,
-    a exceção significava o jogo enumerar o físico E o virtual e reparti-los
-    entre dois jogadores.
+    Steam Input escolhe QUAL dispositivo o jogo enxerga, nunca QUANTOS.
+  - **A marca esconde o FÍSICO; ela não tira o Hefesto da frente**
+    (ESCONDER-EM-VEZ-DE-SAIR-01, 09/08/2026 — decisão dela). Um controle
+    duplicado se cura por dois lados: escondendo o virtual (o produto saindo de
+    cena) ou escondendo o físico (o produto ficando). O caminho escolhido é o
+    segundo, e o mecanismo é o MESMO na direção contrária — o `hide` do broker
+    de hidraw, que é o estado canônico desta casa desde sempre.
+
+    NOTA DATADA — o que morreu aqui em 09/08, e a medição que o matou: até esta
+    data a exceção soltava o grab, mandava o broker `restore_all` e **suspendia
+    os gamepads virtuais** (`suspend_vpads_for_steam_input`). Curava o duplicado
+    com UM controle e derrubava o jogador 2 junto, porque o jogador 2 **é** um
+    gamepad virtual — `coop_derrubado_pela_excecao_steam_input`, vinte
+    ocorrências no journal dela em 08/08. O raciocínio antigo não estava errado
+    sobre o duplicado; estava errado sobre o preço, que ninguém tinha declarado.
+    As funções da suspensão continuam neste arquivo, documentadas e testadas,
+    mas **fora do caminho da exceção** — ver `suspend_vpads_for_steam_input`.
   - **A exceção mexe na ENTRADA, e só nela** (NOTA DATADA, 07/08/2026): a casa
     dizia *"o Hefesto sai da frente"*, e a medição dela de 06/08
     (`docs/process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md`,
-    seção *A INVERSÃO*, grau MEDIDO) mostrou que a frase é meia verdade: as
-    três coisas que este módulo faz na exceção — soltar o grab, desfazer o
-    esconde-esconde do hidraw e derrubar o vpad — são todas de ENTRADA.
-    **Nenhum caminho fecha o handle de saída**: os oito chamadores de
+    seção *A INVERSÃO*, grau MEDIDO) mostrou que a frase é meia verdade.
+    **Nenhum caminho fecha o handle de saída**: os chamadores de
     `steam_input_excecao_ativa` estão todos NESTE arquivo, nenhum em `core/`, e
     por isso lightbar, gatilhos, vibração e LED de jogador seguem sendo
     escritos no físico durante a exceção inteira. Com o Mullet Mad Jack aberto,
-    os gatilhos dela seguraram duros e o vermelho dela ficou.
+    os gatilhos dela seguraram duros e o vermelho dela ficou. Com a inversão de
+    09/08 isso deixou de ser meia verdade e virou verdade inteira: a entrada
+    também continua sendo do Hefesto.
 """
 from __future__ import annotations
 
 import asyncio
 import contextlib
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any, Literal
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -172,15 +184,17 @@ def _set_controller_grab(daemon: DaemonProtocol, grab: bool) -> None:
     grab faz o daemon ser o leitor exclusivo do evdev real (ele já é o leitor),
     escondendo o controle cru dos clientes evdev (SDL2).
 
-    R-06: com a exceção de Steam Input ATIVA (appid da allowlist rodando), o
-    grab de entrada é PULADO — a exceção existe justamente para o jogo ver o
-    controle físico. O ungrab nunca é pulado: expor nunca é errado (mesma
-    assimetria já documentada no `_broker_sync_grab`).
+    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Aqui havia um desvio
+    do R-06: *"com a exceção de Steam Input ATIVA o grab de entrada é PULADO —
+    a exceção existe justamente para o jogo ver o controle físico"*. A premissa
+    caducou por decisão dela: a marca do Steam Input passou a significar
+    **esconder o físico**, e não entregá-lo. O grab volta a valer em todo jogo,
+    marcado ou não, e é justamente ele que faz o jogo marcado ver UM dispositivo
+    por controle em vez de dois. O log `gamepad_grab_pulado_steam_input`
+    (que aparece na linha do tempo do JOGADOR-3-FANTASMA-01, 08/08) deixou de
+    existir por isso — não porque alguém o silenciou.
     """
-    if grab and steam_input_excecao_ativa(daemon):
-        logger.info("gamepad_grab_pulado_steam_input", motivo="excecao_por_appid")
-    else:
-        _set_evdev_grab(daemon, grab)
+    _set_evdev_grab(daemon, grab)
     # BROKER-01: hide/restore do hidraw colado ao EVIOCGRAB — fora do
     # suppress acima (falha de grab não silencia o broker) e com o próprio
     # suppress lá dentro. A colocação aqui dá DE GRAÇA a regra da troca de
@@ -218,12 +232,15 @@ def _broker_sync_grab(daemon: DaemonProtocol, grab: bool) -> None:
         if grab:
             if daemon.is_native_mode():
                 return
-            if steam_input_excecao_ativa(daemon):
-                # R-06: esconder o hidraw do físico é exatamente o que tornava
-                # a allowlist inerte — a Steam precisa LER o hidraw para
-                # entregar o DualSense pela API dela (SetDualSenseTriggerEffect).
-                logger.info("broker_hide_pulado_steam_input", motivo="excecao_por_appid")
-                return
+            # NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Havia aqui
+            # o segundo desvio do R-06: *"esconder o hidraw do físico é
+            # exatamente o que tornava a allowlist inerte — a Steam precisa LER
+            # o hidraw para entregar o DualSense pela API dela"*. O raciocínio
+            # continua correto sobre a Steam; o que mudou é o que a marca PEDE.
+            # Decisão dela: o jogo marcado passa a ver o controle do Hefesto, e
+            # quem entrega cor, gatilhos e vibração continua sendo o Hefesto —
+            # logo o hidraw do físico fica escondido também nele. O log
+            # `broker_hide_pulado_steam_input` morreu junto com o desvio.
             node = hidraw_fn()
             if isinstance(node, str) and node:
                 broker_call_nonblocking(daemon, lambda: client.hide(node))
@@ -247,27 +264,37 @@ def sync_steam_input_exception(
 ) -> bool:
     """Liga/desliga a exceção de Steam Input por appid. True = ativa (R-06).
 
-    Achado: a allowlist (`steam_input_apps.txt`, com o 2111190 do Mullet Mad
-    Jack) era INERTE — o guard de VDF a respeitava, mas o daemon continuava
-    fazendo EVIOCGRAB no evdev e mandando o broker esconder o hidraw do
-    controle físico. Resultado medido: o jogo cujo suporte a DualSense vem PELA
-    Steam não achava controle nenhum da Sony, e a exceção que ela configurou
-    não mudava nada.
+    O que a marca do Steam Input faz, desde 09/08/2026
+    -------------------------------------------------
+    **Esconde o controle FÍSICO do jogo marcado e mantém os virtuais de pé**
+    (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela). O jogo enxerga um dispositivo
+    por controle — o do Hefesto —, e cor, gatilhos, vibração e numeração
+    continuam sendo nossos. É o mesmo estado canônico de qualquer outro jogo,
+    reforçado na borda de entrada por `esconder_o_fisico_para_o_jogo`.
 
-    A cura é o "Modo Nativo por appid": enquanto um jogo da allowlist está em
-    sessão, o físico volta a ficar visível (ungrab + restore do broker) e, ao
-    sair, o estado canônico é retomado.
+    NOTA DATADA — o que esta função fazia até 08/08, e por que morreu
+    ----------------------------------------------------------------
+    Ela era o "Modo Nativo por appid": na borda de entrada soltava o grab,
+    pedia `restore_all` ao broker e **suspendia os gamepads virtuais**; na
+    saída, devolvia tudo. Cada peça tinha medição por trás e nenhuma delas era
+    boba:
 
-    JOGO-01 (25/07): o R-06 parou no meio do caminho e o preço que ele declarou
-    aceitável ("o jogo passa a ver o físico E o vpad") era o defeito, não o
-    preço. Com um DualSense no cabo o Mullet Mad Jack enumerava js0=vpad e
-    js2=físico, dava jogador 1 a um e jogador 2 ao outro, escrevia a lightbar
-    direto no aparelho e metade dos comandos dela ia para o controle que o jogo
-    não estava lendo — "ele muda a cor, vai pro player 2 e não funciona". Opt-in
-    NÃO significa "dois controles onde existe um": significa trocar QUAL
-    dispositivo o jogo vê. Por isso a exceção agora também RETIRA o gamepad
-    virtual de cena (`suspend_vpads_for_steam_input`) e o devolve na saída
-    (`resume_vpads_after_steam_input`).
+    - **R-06 (23/07)** — a allowlist era INERTE: o daemon grabava e escondia o
+      hidraw, e o jogo cuja via oficial de DualSense é a API Steamworks não
+      achava controle nenhum da Sony;
+    - **JOGO-01 (25/07)** — expor o físico COM o vpad de pé é o duplicado: o
+      Mullet Mad Jack enumerava js0=vpad e js2=físico e repartia os dois entre
+      dois jogadores. Daí a suspensão do vpad.
+
+    O que ninguém tinha declarado é o preço, e ele foi MEDIDO na máquina dela em
+    08/08: **o jogador 2 é um gamepad virtual.** Derrubar os virtuais para curar
+    o duplicado do jogador 1 derruba o jogador 2 junto —
+    `coop_derrubado_pela_excecao_steam_input`, vinte ocorrências num dia.
+
+    A decisão dela fecha a conta pelo outro lado: *"a allowlist do Steam Input
+    NÃO tira o Hefesto da frente"*. O duplicado tem duas curas — esconder o
+    virtual ou esconder o físico — e a segunda custa o jogador 2, a primeira
+    não. O mecanismo é o mesmo `hide`/`restore` do broker, na direção contrária.
 
     Só age nas BORDAS (o flag em memória guarda o estado anterior): sem borda,
     a função é uma comparação e nada de I/O de grab/broker.
@@ -282,27 +309,15 @@ def sync_steam_input_exception(
     daemon._steam_input_excecao = ativa  # type: ignore[attr-defined]
     if ativa:
         logger.info("steam_input_excecao_ativada", appid=appid)
-        _set_evdev_grab(daemon, False)
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
-                broker_call_nonblocking,
-                broker_client_for,
-            )
-
-            client = broker_client_for(daemon)
-            broker_call_nonblocking(daemon, client.restore_all)
-        # JOGO-01: o flag JÁ está de pé quando o vpad cai — é ele que faz o
-        # `start_gamepad_emulation` recusar o apply automático que o autoswitch
-        # dispara segundos depois, quando a janela do jogo ganha foco.
-        with contextlib.suppress(Exception):
-            suspend_vpads_for_steam_input(daemon, appid=appid)
+        esconder_o_fisico_para_o_jogo(daemon, appid=appid)
         return True
     logger.info("steam_input_excecao_encerrada")
-    # JOGO-01: a devolução do vpad vem ANTES dos gates canônicos abaixo — com o
-    # vpad suspenso, `gamepad_emulation_enabled` está False em memória (é o que
-    # cala os revivedores automáticos durante o jogo) e os gates devolveriam
-    # "nada a fazer" para sempre. O start já refaz grab + hide por dentro, então
-    # retomar aqui encerra o trabalho desta borda.
+    # CINTO, não caminho (ESCONDER-EM-VEZ-DE-SAIR-01): a exceção não suspende
+    # mais vpad nenhum, então isto devolve False e cai nos gates canônicos
+    # abaixo. Fica porque a suspensão ainda TEM outra entrada viva — o gesto
+    # dela de religar a emulação na mão sobre uma suspensão herdada de um
+    # daemon que subiu antes desta cura —, e sair da exceção com o flag
+    # pendurado deixaria a janela avisando de um estrago encerrado.
     if resume_vpads_after_steam_input(daemon):
         return False
     # Saída da exceção: retoma o estado canônico SÓ se ele valeria agora — os
@@ -319,6 +334,70 @@ def sync_steam_input_exception(
     with contextlib.suppress(Exception):
         rehide_physical_hidraw(daemon)
     return False
+
+
+def esconder_o_fisico_para_o_jogo(
+    daemon: DaemonProtocol, *, appid: int | None = None
+) -> bool:
+    """Borda de ENTRADA da marca: garante o físico escondido e os virtuais de pé.
+
+    True = o esconderijo está garantido agora. ESCONDER-EM-VEZ-DE-SAIR-01,
+    09/08/2026 — é esta função que substitui as três demolições da borda antiga
+    (ungrab + `restore_all` + `suspend_vpads_for_steam_input`).
+
+    **Não cria, não destrói e não recria device nenhum**, e isso é requisito, não
+    coincidência: a `PARTIDA-PICOTADA-01` (08/08) mediu oito ciclos de
+    suspender/retomar vpad no meio da partida dela, todos disparados por um
+    tique cego, e a lição foi que a borda desta exceção não pode ter poder
+    destrutivo. Aqui ela tem exatamente o poder de reafirmar o estado canônico:
+    EVIOCGRAB no evdev do físico + `hide` do hidraw de cada físico com vpad vivo.
+    Idempotente por construção — os dois são operações "deixe assim", não
+    "alterne".
+
+    **Os gates são os MESMOS do estado canônico** (`rehide_physical_hidraw`), e
+    a razão é o invariante mais antigo desta casa: *duplicado > zero controles*.
+    Esconder o físico só é seguro quando existe um virtual vivo para devolvê-lo
+    ao jogo. Modo Nativo, emulação desligada ou vpad morto ⇒ **não esconde
+    nada** e diz por quê no journal; a marca não pode deixá-la sem controle
+    nenhum por causa de uma caixinha que ela clicou semanas atrás.
+
+    **Metade do trabalho não é daqui, e é honesto dizer isso.** O EVIOCGRAB
+    impede o físico de PRODUZIR entrada, mas não o apaga da enumeração do SDL —
+    quem o apaga é o `SDL_GAMECONTROLLER_IGNORE_DEVICES` do
+    `steam_app_<appid>.env`, que o jogo lê UMA vez, na abertura
+    (`assets/hefesto-launch.sh`, `exec env "$@"`). Por isso a marca só vale
+    inteira no próximo lançamento do jogo — o que o toast da caixinha já diz —
+    e por isso `_materialize_launch_env` é chamado aqui: a env do appid tem de
+    estar gravada com a verdade de agora antes do próximo `exec`.
+    """
+    if daemon.is_native_mode():
+        # Modo Nativo é a escolha dela de que o dispositivo do jogo é o físico.
+        # Esconder aqui é o "zero controles" relatado ao vivo em GUERRA-01.
+        logger.info("steam_input_fisico_nao_escondido", appid=appid, motivo="modo_nativo")
+        return False
+    if not getattr(daemon.config, "gamepad_emulation_enabled", False):
+        logger.info(
+            "steam_input_fisico_nao_escondido", appid=appid, motivo="emulacao_desligada"
+        )
+        return False
+    if not _vpad_vivo(daemon):
+        logger.info(
+            "steam_input_fisico_nao_escondido", appid=appid, motivo="sem_vpad_vivo"
+        )
+        return False
+    _set_evdev_grab(daemon, True)
+    # Achados Onda S #6/#10: I/O de socket do broker JAMAIS no event loop —
+    # `sync_steam_input_exception` é chamada do tick do dispatch. Mesmo
+    # despachante que a borda antiga usava para o `restore_all`.
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            broker_call_nonblocking,
+        )
+
+        broker_call_nonblocking(daemon, lambda: rehide_physical_hidraw(daemon))
+    _materialize_launch_env(daemon)
+    logger.info("steam_input_fisico_escondido", appid=appid)
+    return True
 
 
 def steam_input_vpad_suspenso(daemon: Any) -> bool:
@@ -349,18 +428,27 @@ def steam_input_vpad_suspenso(daemon: Any) -> bool:
 
 
 def steam_input_coop_derrubados(daemon: Any) -> int:
-    """Quantos jogadores de co-op a exceção de Steam Input derrubou (0 = nenhum).
+    """Quantos CONTROLES do co-op saíram da mesa na suspensão (0 = nenhum).
 
     CONTAGEM-E-COOP-01 (29/07). Conta SECUNDÁRIOS (P2, P3, P4) — o P1 não é
     jogador do co-op, ele é o vpad primário, e a queda dele já tem observável
     próprio (`steam_input_vpad_suspenso`). Somar os dois num número só faria
     "co-op de três" virar "4" na tela.
 
+    NOTA DATADA — 09/08/2026 (AVISO-FALSO-DO-COOP-01). Até aqui este número era
+    "quantos gamepads virtuais o teardown recolheu", e por isso a janela
+    acusava *"1 jogador saiu"* com os dois controles dela listados logo abaixo,
+    conectados: a caixinha de Steam Input recolhe vpad a cada entrada em sessão
+    (20 vezes num dia no journal dela) e nenhuma delas era um controle saindo
+    da mesa. O número do journal continua sendo o dos vpads — é o fato de
+    engenharia; este, que é o que a JANELA lê, passou a ser o dos CONTROLES
+    (`coop.secundarios_fora_da_mesa`).
+
     Leitura de um inteiro em memória, como as duas irmãs deste módulo, e pelo
-    mesmo motivo (é consumida pelo `state_full`, que roda a 10 Hz). Vive
-    exatamente enquanto a suspensão vive: `suspend_vpads_for_steam_input`
-    escreve o valor medido e as DUAS saídas da suspensão (a borda de saída da
-    exceção e o gesto manual de religar a emulação) zeram junto com o flag —
+    mesmo motivo (é consumida pelo `state_full`, que roda a 10 Hz) — a
+    enumeração é paga no tique lento do co-op, nunca aqui. Vive
+    exatamente enquanto a suspensão vive: as DUAS saídas dela (a borda de saída
+    da exceção e o gesto manual de religar a emulação) zeram junto com o flag —
     um número pendurado depois de o co-op voltar mandaria a janela avisar de um
     estrago que já acabou.
     """
@@ -368,8 +456,64 @@ def steam_input_coop_derrubados(daemon: Any) -> int:
     return valor if isinstance(valor, int) and not isinstance(valor, bool) else 0
 
 
+def coop_sentados_na_suspensao(daemon: Any) -> tuple[str, ...]:
+    """Identidades (MAC) dos secundários que a suspensão em curso derrubou.
+
+    AVISO-FALSO-DO-COOP-01. Vazio quando não há suspensão com co-op derrubado —
+    e é esse vazio que faz a reavaliação do tick não custar nada no caso comum.
+    Só strings entram: dublê de teste com `MagicMock` no lugar do dict devolveria
+    objetos que não são identidade de coisa nenhuma.
+    """
+    macs = getattr(daemon, "_steam_input_coop_caidos", ())
+    if not isinstance(macs, (tuple, list, set, frozenset)):
+        return ()
+    return tuple(mac for mac in macs if isinstance(mac, str))
+
+
+def reavaliar_coop_fora_da_mesa(daemon: Any, presentes: Iterable[str]) -> int:
+    """Recalcula o número do aviso e o publica no daemon. Devolve o novo valor.
+
+    AVISO-FALSO-DO-COOP-01, o CONTRAPESO. A borda de entrada da suspensão não
+    mede (lá o teardown não desconecta ninguém — ver
+    `suspend_vpads_for_steam_input`); quem mede é o tique lento do co-op,
+    `CoopManager._reavaliar_a_mesa_suspensa`, que passa em `presentes` a MESMA
+    enumeração que sentou cada secundário. Quando um controle DELA cair de
+    verdade no meio da partida, a identidade dele some de `presentes`, o número
+    sobe e o aviso aparece — que é a metade sem a qual esta cura trocaria um
+    defeito por outro pior.
+
+    Sem suspensão com gente sentada não mexe em nada: devolve o que já estava
+    publicado.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.coop import secundarios_fora_da_mesa
+
+    sentados = coop_sentados_na_suspensao(daemon)
+    if not sentados:
+        return steam_input_coop_derrubados(daemon)
+    antes = steam_input_coop_derrubados(daemon)
+    agora = secundarios_fora_da_mesa(sentados, presentes)
+    daemon._steam_input_coop_derrubados = agora
+    if agora != antes:
+        # INFO nos dois sentidos: é o aviso da janela acendendo ou apagando, e
+        # foi a ausência deste registro que fez o defeito durar um dia inteiro.
+        logger.info(
+            "coop_controles_fora_da_mesa",
+            antes=antes,
+            agora=agora,
+            secundarios_suspensos=len(sentados),
+        )
+    return agora
+
+
 async def _vigia_da_excecao_steam_input(daemon: DaemonProtocol) -> None:
     """Reconciliação de launch a 1 Hz enquanto o vpad está suspenso (JOGO-01).
+
+    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): a vigia nasce junto
+    com a suspensão e a suspensão saiu do caminho da marca, então na prática ela
+    não é mais armada. Continua aqui porque é o par indissociável da suspensão
+    (ver `_armar_vigia_da_excecao`: não se suspende sem quem devolva) e porque
+    com a inversão o beco sem saída que ela cobre deixou de existir — com o vpad
+    de pé, o `dispatch_gamepad` segue chamando `_reconciliar_launch` sozinho.
 
     O tick canônico (`_reconciliar_launch`, chamado por `dispatch_gamepad`) só
     existe com vpad: `lifecycle._poll_loop` gateia o dispatch em
@@ -449,6 +593,21 @@ def suspend_vpads_for_steam_input(
 ) -> bool:
     """Retira o gamepad virtual de cena pelo tempo do jogo da allowlist (JOGO-01).
 
+    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): **fora do caminho da
+    marca do Steam Input.** Nenhuma borda da exceção chama mais esta função.
+    Ela fica inteira, com o raciocínio abaixo intacto, por três motivos: o
+    raciocínio tinha medição por trás e não se apaga decisão medida; o co-op
+    lê o estado que ela publica (`AVISO-FALSO-DO-COOP-01`); e um daemon que
+    subiu ANTES desta cura pode estar com uma suspensão de pé agora — as saídas
+    (`resume_vpads_after_steam_input` e o gesto manual em
+    `start_gamepad_emulation`) continuam sendo o caminho de volta dele.
+
+    O preço que este texto nunca declarou, e que a matou: **o jogador 2 é um
+    gamepad virtual.** O parágrafo abaixo diz que "o vpad é o duplicado" — é
+    verdade para o P1 e é falso para o P2, que não duplica nada, é o único
+    dispositivo daquela pessoa. Medido em 08/08 na máquina dela:
+    `coop_derrubado_pela_excecao_steam_input`, vinte ocorrências.
+
     True = suspendeu de verdade. O princípio da sprint é "um controle físico
     produz exatamente UM dispositivo de jogo": nos appids da allowlist esse
     dispositivo é o FÍSICO (é ele que a Steam entrega ao jogo, com os gatilhos
@@ -467,6 +626,11 @@ def suspend_vpads_for_steam_input(
       (a mesma regra do R-07/HARM-06 — só gesto manual escreve em disco), e
       `release_grab=False` porque a borda de entrada da exceção já soltou o grab
       e restaurou o hidraw; repetir seria I/O de broker à toa.
+
+      NOTA DATADA — 09/08/2026: o motivo do `release_grab=False` caducou junto
+      com a borda antiga, que era quem soltava o grab. O parâmetro continua
+      False, e agora por uma razão MAIS forte: com o físico escondido, soltar o
+      grab aqui reexporia ao jogo um controle que a marca acabou de esconder.
 
     O `gamepad_emulation_enabled=False` que o stop deixa em memória não é efeito
     colateral: é ele que cala os revivedores automáticos (o ramo VPAD-09 de
@@ -504,6 +668,12 @@ def suspend_vpads_for_steam_input(
     # que `jogadores` aponta, e um log de "jogadores_coop=0" na linha que acabou
     # de derrubar quatro jogadores seria uma mentira difícil de perceber.
     n_jogadores = len(jogadores)
+    # AVISO-FALSO-DO-COOP-01: as IDENTIDADES, não só a contagem. É contra elas
+    # que se pergunta, agora e a cada reavaliação, se o CONTROLE saiu da mesa —
+    # depois do `disable()` o dict está vazio e não haveria mais a quem
+    # perguntar. Cópia (`tuple`), porque `jogadores` é o MESMO dict que o
+    # teardown esvazia.
+    sentados = tuple(jogadores)
     daemon._steam_input_vpad_suspenso = True  # type: ignore[attr-defined]
     # Máscara a devolver — `None` quando não havia vpad do P1 para derrubar (só
     # jogadores de co-op órfãos, estado que o `should_be_active()` do co-op não
@@ -531,9 +701,26 @@ def suspend_vpads_for_steam_input(
     # `coop.disable()` roda sob `suppress(Exception)` e um teardown que estoura
     # no meio deixa jogadores de pé — declarar "derrubei 3" nesse caso seria a
     # mesma classe de mentira que o log de "jogadores_coop=0".
-    restantes = len(getattr(coop, "_players", None) or {}) if coop is not None else 0
-    derrubados = max(0, n_jogadores - restantes)
-    daemon._steam_input_coop_derrubados = derrubados  # type: ignore[attr-defined]
+    de_pe = set(getattr(coop, "_players", None) or {}) if coop is not None else set()
+    restantes = len(de_pe)
+    caidos = tuple(mac for mac in sentados if mac not in de_pe)
+    derrubados = len(caidos)
+    # AVISO-FALSO-DO-COOP-01 (09/08/2026): `derrubados` conta VPADS recolhidos e
+    # segue sendo o número do journal — é o fato de engenharia, e foi ele que
+    # deixou medir o defeito (20 ocorrências num dia na máquina dela). O que a
+    # JANELA publica virou outra pergunta: quantos desses jogadores perderam
+    # também o CONTROLE FÍSICO. Recolher vpad não é ninguém saindo da mesa, e o
+    # aviso vermelho dizia que era, com os dois controles dela listados logo
+    # abaixo, conectados. Ver `coop.secundarios_fora_da_mesa`.
+    #
+    # Na BORDA o número nasce 0 sem medir, e isso não é suposição: o teardown
+    # daqui solta grabs e fecha gamepads virtuais — não desconecta controle
+    # nenhum. Quem mede é o tique do co-op
+    # (`CoopManager._reavaliar_a_mesa_suspensa`), assim que o /dev/input
+    # acusar mudança; e um aviso deste peso não pode acender por ausência de
+    # dado, então enquanto não há medição ele fica calado.
+    daemon._steam_input_coop_caidos = caidos  # type: ignore[attr-defined]
+    daemon._steam_input_coop_derrubados = 0  # type: ignore[attr-defined]
     logger.info(
         "steam_input_vpad_suspenso",
         appid=appid,
@@ -591,6 +778,10 @@ def resume_vpads_after_steam_input(daemon: DaemonProtocol) -> bool:
     # encerrado. Ver `steam_input_coop_derrubados`.
     derrubados_antes = steam_input_coop_derrubados(daemon)
     daemon._steam_input_coop_derrubados = 0  # type: ignore[attr-defined]
+    # AVISO-FALSO-DO-COOP-01: a lista dos sentados morre junto com o número, e
+    # pelo mesmo motivo — deixá-la de pé faria o tick do co-op reabrir a conta
+    # de uma suspensão encerrada e ressuscitar o aviso sozinho.
+    daemon._steam_input_coop_caidos = ()  # type: ignore[attr-defined]
     if derrubados_antes:
         # Nome do fato EXATO: o aviso acabou. "Devolvido" seria mentira nas
         # saídas que não recriam o co-op (Modo Nativo, "não havia vpad") — quem
@@ -668,11 +859,13 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
     """
     if daemon.is_native_mode():
         return
-    if steam_input_excecao_ativa(daemon):
-        # R-06: sem este gate a reconciliação online (a cada ≤30 s) desfaria a
-        # exceção sozinha no meio do jogo da allowlist — o físico voltaria a
-        # 0600 e a Steam perderia o hidraw que ela acabou de ganhar.
-        return
+    # NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). O terceiro e último
+    # desvio do R-06 morreu aqui: *"sem este gate a reconciliação online (a cada
+    # ≤30 s) desfaria a exceção sozinha no meio do jogo da allowlist — o físico
+    # voltaria a 0600 e a Steam perderia o hidraw que ela acabou de ganhar"*.
+    # Com a inversão, a reconciliação online passou a ser AMIGA da marca: é ela
+    # que reesconde o nó que o replug/wake BT recriou visível no meio da partida
+    # (§2.2 do BROKER-01). Não há mais nada a desfazer.
     if not getattr(daemon.config, "gamepad_emulation_enabled", False):
         return
     if not _vpad_vivo(daemon):
@@ -1153,14 +1346,13 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     device = getattr(daemon, "_gamepad_device", None)
     if isinstance(device, UhidDualSense):
         return False
-    if steam_input_excecao_ativa(daemon):
-        # JOGO-01: esta é a REDE DE SEGURANÇA do vpad, e durante a exceção não
-        # há vpad a salvar — o dispositivo do jogo é o físico. Sem este gate, o
-        # ramo VPAD-09 (device None + emulação desejada) tentaria ressuscitar o
-        # vpad na primeira reconexão de controle no meio da partida, que é o
-        # cenário mais provável de todos nesta máquina (BT reconectando).
-        logger.debug("vpad_revive_pulado_steam_input")
-        return False
+    # NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Havia aqui um gate
+    # que recusava a rede de segurança do vpad durante a exceção: *"durante a
+    # exceção não há vpad a salvar — o dispositivo do jogo é o físico"*. A
+    # premissa inverteu-se. Agora o dispositivo do jogo marcado É o vpad, e um
+    # vpad que morreu no meio da partida (reconexão BT, o cenário mais provável
+    # desta máquina) precisa da rede MAIS no jogo marcado do que fora dele —
+    # sem ele, o físico segue escondido e ela fica com zero controles.
     if not controller_allows_uhid(daemon):
         return False  # backend fake: nunca registrar um Edge real (VPAD-08)
     if device is None:
@@ -1393,12 +1585,19 @@ def start_gamepad_emulation(
     usuária destrava a promoção por apply idêntico — perfil/autoswitch nunca
     recriam o vpad degradado (o latch anti-churn; ver `_deve_promover_backend`).
 
-    JOGO-01: com a exceção de Steam Input ATIVA, todo apply AUTOMÁTICO é
+    NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Aqui havia a trava da
+    JOGO-01: *"com a exceção de Steam Input ATIVA, todo apply AUTOMÁTICO é
     recusado — nos appids da allowlist o dispositivo do jogo é o físico, e o
-    autoswitch (que reaplica a emulação a cada troca de janela, ou seja,
-    justamente quando o jogo ganha foco) recriaria o vpad que a suspensão
-    acabou de retirar. O gesto MANUAL segue passando: a última palavra é dela,
-    e um vpad pedido no botão encerra a suspensão em vez de brigar com ela.
+    autoswitch recriaria o vpad que a suspensão acabou de retirar"*. Ela existia
+    para PROTEGER a suspensão, e a suspensão saiu do caminho da marca: no jogo
+    marcado o dispositivo do jogo passou a ser o vpad. Recusar o apply do perfil
+    ali seria recusar justamente o dispositivo que a marca promete entregar. O
+    ramo que encerra uma suspensão HERDADA continua abaixo, agora guardado pelo
+    flag da suspensão e não pela exceção: ele existe para o daemon que subiu
+    ANTES desta cura e está com uma suspensão de pé agora. Deixou de ser só o
+    gesto dela — QUALQUER apply passa a encerrá-la, e tem de ser assim, porque
+    do contrário a suspensão herdada sobreviveria até ela lembrar de clicar no
+    botão. Por isso a origem foi para dentro do log.
     """
     from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
     from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
@@ -1407,32 +1606,35 @@ def start_gamepad_emulation(
         flavor if flavor is not None else getattr(daemon.config, "gamepad_flavor", None)
     )
 
-    if steam_input_excecao_ativa(daemon):
-        if origin != "manual":
+    if steam_input_vpad_suspenso(daemon):
+        # Alguém pediu o vpad sobre uma suspensão herdada: ele volta AGORA e a
+        # suspensão morre aqui (senão a saída da exceção tentaria devolver um
+        # vpad que já está de pé).
+        #
+        # A ORIGEM vai no log, não a palavra "gesto_manual" (que era o que
+        # estava escrito aqui até 09/08, quando só o gesto dela chegava neste
+        # ramo). Agora o apply automático do perfil também chega — a trava que
+        # o recusava morreu com a inversão —, e carimbar "gesto_manual" num
+        # apply de autoswitch seria o journal contando quem fez a coisa errado,
+        # justamente no registro que se lê para descobrir por que o vpad voltou.
+        logger.info("steam_input_vpad_retomado", motivo="apply", origem=origin)
+        daemon._steam_input_vpad_suspenso = False  # type: ignore[attr-defined]
+        daemon._steam_input_flavor_suspenso = None  # type: ignore[attr-defined]
+        # CONTAGEM-E-COOP-01: a SEGUNDA saída da suspensão. O aviso do co-op
+        # derrubado tem de morrer aqui também — senão a janela seguiria
+        # avisando depois de ela mesma religar a emulação na mão.
+        coop_derrubado_antes = steam_input_coop_derrubados(daemon)
+        daemon._steam_input_coop_derrubados = 0  # type: ignore[attr-defined]
+        # AVISO-FALSO-DO-COOP-01: ver a saída irmã em
+        # `resume_vpads_after_steam_input` — a lista morre com o número.
+        daemon._steam_input_coop_caidos = ()  # type: ignore[attr-defined]
+        if coop_derrubado_antes:
             logger.info(
-                "gamepad_start_recusado_steam_input", flavor=key, origem=origin
+                "steam_input_coop_aviso_encerrado",
+                secundarios_derrubados=coop_derrubado_antes,
+                motivo="apply",
+                origem=origin,
             )
-            return False
-        if steam_input_vpad_suspenso(daemon):
-            # Ela religou a emulação na mão com o jogo da allowlist aberto: o
-            # vpad volta AGORA e a suspensão morre aqui (senão a saída da
-            # exceção tentaria devolver um vpad que já está de pé). O preço —
-            # este jogo volta a ver dois dispositivos — é escolha dela, e fica
-            # no journal.
-            logger.info("steam_input_vpad_retomado", motivo="gesto_manual")
-            daemon._steam_input_vpad_suspenso = False  # type: ignore[attr-defined]
-            daemon._steam_input_flavor_suspenso = None  # type: ignore[attr-defined]
-            # CONTAGEM-E-COOP-01: a SEGUNDA saída da suspensão. O aviso do co-op
-            # derrubado tem de morrer aqui também — senão a janela seguiria
-            # avisando depois de ela mesma religar a emulação na mão.
-            coop_derrubado_antes = steam_input_coop_derrubados(daemon)
-            daemon._steam_input_coop_derrubados = 0  # type: ignore[attr-defined]
-            if coop_derrubado_antes:
-                logger.info(
-                    "steam_input_coop_aviso_encerrado",
-                    secundarios_derrubados=coop_derrubado_antes,
-                    motivo="gesto_manual",
-                )
 
     existing = daemon._gamepad_device
     if existing is not None:
@@ -1651,6 +1853,7 @@ __all__ = [
     "dedup_status",
     "dispatch_gamepad",
     "end_game_output_session",
+    "esconder_o_fisico_para_o_jogo",
     "make_primary_replica_sinks",
     "make_primary_rumble_sink",
     "notify_vpad_degradado",

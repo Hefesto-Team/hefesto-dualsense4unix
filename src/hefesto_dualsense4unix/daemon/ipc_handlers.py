@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import time
 from collections.abc import Callable
 from dataclasses import asdict, replace
@@ -143,6 +144,97 @@ class _NumeroForaDaMesaError(Exception):
 _WRAPPER_MARKER_TTL_SEC = 2.0
 
 
+# ---------------------------------------------------------------------------
+# CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026): o controle que está LIGADO e que o
+# sistema não conseguiu entregar ao Hefesto.
+#
+# Medido na máquina dela em 09/08: dois DualSense ligados e pareados, e a
+# janela mostrava UM. O driver do kernel abortou o segundo na probe
+# (`probe with driver playstation failed`) — e um controle assim conecta no
+# rádio, acende a luz do próprio firmware e NÃO tem hidraw, nem nó de LED, nem
+# dispositivo de entrada. Como `describe_controllers` devolve uma entrada por
+# HANDLE ABERTO, ele simplesmente não existe para nós; a aba Início chegava a
+# escrever "Nenhum controle conectado." para um controle ligado e pareado.
+#
+# Ele NÃO é um controle desconectado (está no rádio) e NÃO é um externo (não
+# tem `/dev/input` para o inventário de externos enumerar): é um TERCEIRO
+# estado, e era ele que o produto não sabia representar.
+#
+# A REGRA É DE UM DONO SÓ, e o dono é `scripts/bt_rebind_orphans.sh` — a cura
+# que roda de 2 em 2 minutos pela vigia `bt_health_watchdog.sh`. O que está
+# aqui é a MESMA leitura, para EXIBIR o que aquele script vai tentar curar; se
+# os dois discordarem, a janela promete uma cura que não vem. É por isso que o
+# teste desta leva confere estas três constantes contra o texto do script.
+# ---------------------------------------------------------------------------
+
+#: Onde o kernel lista os devices HID. Parametrizável só como COSTURA DE
+#: TESTE (a suíte aponta para um diretório temporário) — em produção o default
+#: é o que vale, exatamente como no script.
+_HID_DEVICES_DIR = "/sys/bus/hid/devices"
+
+#: Barramento 0005 = Bluetooth. É o único onde a contenção de probe medida
+#: acontece, e é o que exclui por construção o gamepad virtual do próprio
+#: Hefesto, que nasce por uhid no barramento 0003.
+_HID_ORFAO_BUS = "0005"
+
+#: Vendor 054C = Sony — o dono é o driver `playstation`. Device órfão de
+#: qualquer outro fabricante é problema de outra pessoa, e o script não o toca.
+_HID_ORFAO_VID = "054C"
+
+#: TTL (s) da varredura do sysfs no `state_full`. O tick da GUI é 10 Hz e este
+#: é um fato que muda por gesto humano (ligar/desligar controle) — sem o cache
+#: seriam 10 `listdir` por segundo para responder a mesma pergunta. Mesmo
+#: padrão e mesmo número do cache do marker do wrapper, logo acima.
+_HID_ORFAOS_TTL_SEC = 2.0
+
+
+def _e_dualsense_por_bluetooth(id_do_device: str) -> bool:
+    """O nome do diretório é ``BUS:VID:PID.INSTANCIA`` — ex. ``0005:054C:0CE6.000F``.
+
+    Mesmo `_e_candidato` do `bt_rebind_orphans.sh`, traduzido: barramento
+    Bluetooth **e** vendor Sony. O `upper()` no vendor repete o `tr a-f A-F`
+    do script — o kernel escreve em maiúsculas, mas a comparação não pode
+    depender disso.
+    """
+    partes = id_do_device.split(":")
+    if len(partes) < 3:
+        return False
+    return partes[0] == _HID_ORFAO_BUS and partes[1].upper() == _HID_ORFAO_VID
+
+
+def dualsense_sem_driver(devices_dir: str | None = None) -> list[str]:
+    """Os DualSense presentes no sistema e SEM driver — a lista de ids do sysfs.
+
+    O critério é o do `bt_rebind_orphans.sh`, e é cirúrgico: **órfão é o que
+    NÃO tem o symlink `driver`**. Um controle que perdeu a probe fica em
+    `/sys/bus/hid/devices` sem `driver`, e por isso sem hidraw, sem input, sem
+    LED e sem bateria — invisível para todo o resto do produto.
+
+    ``devices_dir=None`` resolve `_HID_DEVICES_DIR` **na hora da chamada**, e
+    não no `def`: assim a constante do módulo continua sendo o único lugar
+    onde o caminho está escrito, e a suíte a troca por um diretório temporário
+    sem precisar mexer no default da função.
+
+    Devolve lista vazia quando o diretório não existe ou não pode ser lido:
+    este caminho roda dentro do `state_full`, e um `OSError` aqui derrubaria a
+    aba Status inteira por causa da linha menos importante dela.
+    """
+    alvo = devices_dir if devices_dir is not None else _HID_DEVICES_DIR
+    try:
+        entradas = sorted(os.listdir(alvo))
+    except OSError:
+        return []
+    achados: list[str] = []
+    for id_do_device in entradas:
+        # `os.path.exists` e não `lexists`: o `[[ -e ]]` do script SEGUE o
+        # symlink, e as duas leituras têm de dizer a mesma coisa.
+        if os.path.exists(os.path.join(alvo, id_do_device, "driver")):
+            continue  # tem driver: o sistema o adotou, nada a dizer
+        if _e_dualsense_por_bluetooth(id_do_device):
+            achados.append(id_do_device)
+    return achados
+
+
 def _visto_ha_s(vp: Any) -> dict[str, float]:
     """O ``visto_ha_s`` do vpad, saneado para o payload de IPC.
 
@@ -184,6 +276,38 @@ def _audio_do_jogo_amostra(vp: Any) -> dict[str, int] | None:
         for k, v in cru.items()
         if isinstance(v, (int, float)) and not isinstance(v, bool)
     }
+
+
+def _par_de_motores(cru: Any) -> list[int] | None:
+    """Um par (weak, strong) do vpad saneado para o payload, ou None.
+
+    RUMBLE-QUE-NAO-SE-SENTE-01. Mesmas defesas dos dois helpers acima: o vpad
+    pode ser um `uinput` (que não tem esta propriedade) ou um dublê de teste
+    devolvendo `MagicMock`, e o `state_full` não pode morrer por causa de uma
+    linha de diagnóstico. Sai como `list` porque JSON não tem tupla — e o
+    consumidor (aba Rumble) já trata os dois casos.
+    """
+    if not isinstance(cru, tuple) or len(cru) != 2:
+        return None
+    if not all(isinstance(v, int) and not isinstance(v, bool) for v in cru):
+        return None
+    return [int(cru[0]), int(cru[1])]
+
+
+def _amostra_de_descarte(cru: Any) -> dict[str, int] | None:
+    """(flag0, flag1, flag2, weak, strong) do último descarte, nomeado.
+
+    RUMBLE-QUE-NAO-SE-SENTE-01 — é o dado que diz QUAL codificação de vibração
+    chegou sem o gate reconhecer. Vai nomeado, e não como lista de cinco
+    números, porque quem vai ler isto numa madrugada precisa saber qual byte é
+    qual sem abrir o código.
+    """
+    if not isinstance(cru, tuple) or len(cru) != 5:
+        return None
+    if not all(isinstance(v, int) and not isinstance(v, bool) for v in cru):
+        return None
+    nomes = ("flag0", "flag1", "flag2", "weak", "strong")
+    return dict(zip(nomes, (int(v) for v in cru), strict=True))
 
 
 def _norm_uniq(value: Any) -> str | None:
@@ -402,6 +526,12 @@ class IpcHandlersMixin:
     #: attributes (o mixin não é dataclass) com shadow por instância no 1º uso.
     _wrapper_marker_cache: tuple[float, tuple[int, int] | None] | None = None
     _wrapper_first_seen: tuple[int, float] | None = None
+
+    #: CONTROLE-QUE-NAO-ENTROU-01: cache TTL da varredura de
+    #: `/sys/bus/hid/devices` (ver `dualsense_sem_driver`). Mesmo padrão dos
+    #: caches acima: class attribute (o mixin não é dataclass) com shadow por
+    #: instância no primeiro uso.
+    _hid_orfaos_cache: tuple[float, list[str]] | None = None
 
     #: S2 (sensores na aba Status): `SensorHub` lazy — os readers de
     #: giroscópio/touchpad só nascem quando alguém pede o `state_full` e
@@ -1754,6 +1884,15 @@ class IpcHandlersMixin:
                         [c for c in controllers if isinstance(c, dict)], state
                     )
 
+        # CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026): fica AO LADO do bloco
+        # `controllers` de propósito — é a resposta à pergunta que aquele bloco
+        # não consegue responder. `controllers` tem uma entrada por handle
+        # ABERTO; um controle cuja probe abortou no kernel não tem handle
+        # nenhum, e some da lista sem deixar rastro. Sem esta chave, a única
+        # coisa que o produto tinha a dizer sobre ele era "Nenhum controle
+        # conectado.".
+        result["controles_sem_driver"] = self._controles_sem_driver_payload()
+
         # FEAT-DSX-CONTROLLER-SELECTOR-01: índice do controle-alvo de output
         # (None = TODOS / broadcast). getattr defensivo: backends sem o método
         # (FakeController) ou controller MagicMock em teste → None.
@@ -1952,11 +2091,20 @@ class IpcHandlersMixin:
                         if getattr(p, "vpad", None) is not None
                     )
             ff_plays = 0
+            ff_nao_nulos = 0
+            ff_descartados = 0
+            ff_v2 = 0
             ff_last: tuple[int, int] = (0, 0)
             per_vpad: list[dict[str, Any]] = []
             for player_num, vp, motion_reader in vpads:
                 with contextlib.suppress(Exception):
                     ff_plays += int(getattr(vp, "ff_play_count", 0) or 0)
+                    # RUMBLE-QUE-NAO-SE-SENTE-01: agregados irmãos do `plays`,
+                    # somados na MESMA varredura (a tela lê o total; o
+                    # `per_vpad` é quem responde "qual jogador").
+                    ff_nao_nulos += int(getattr(vp, "ff_nao_nulo_count", 0) or 0)
+                    ff_descartados += int(getattr(vp, "ff_descartado_count", 0) or 0)
+                    ff_v2 += int(getattr(vp, "ff_v2_count", 0) or 0)
                     last = getattr(vp, "ff_last_sent", None)
                     if isinstance(last, tuple) and len(last) == 2 and last != (0, 0):
                         ff_last = (int(last[0]), int(last[1]))
@@ -1977,6 +2125,23 @@ class IpcHandlersMixin:
                             "player": player_num,
                             "backend": backend if isinstance(backend, str) else None,
                             "ff_play_count": int(getattr(vp, "ff_play_count", 0) or 0),
+                            # RUMBLE-QUE-NAO-SE-SENTE-01: `ff_play_count` sobe
+                            # na PARADA também, então sozinho ele não separa
+                            # "pediu e sumiu" de "pediu zero". Estes quatro
+                            # separam — ver `integrations/uhid_gamepad`.
+                            "ff_nao_nulo_count": int(
+                                getattr(vp, "ff_nao_nulo_count", 0) or 0
+                            ),
+                            "ff_maior_pedido": _par_de_motores(
+                                getattr(vp, "ff_maior_pedido", None)
+                            ),
+                            "ff_descartado_count": int(
+                                getattr(vp, "ff_descartado_count", 0) or 0
+                            ),
+                            "ff_descartado_amostra": _amostra_de_descarte(
+                                getattr(vp, "ff_descartado_amostra", None)
+                            ),
+                            "ff_v2_count": int(getattr(vp, "ff_v2_count", 0) or 0),
                             "output_count": int(getattr(vp, "output_count", 0) or 0),
                             "trigger_replicas": int(
                                 getattr(vp, "trigger_replicas", 0) or 0
@@ -2025,6 +2190,12 @@ class IpcHandlersMixin:
                     )
             result["rumble_ff"] = {
                 "plays": ff_plays,
+                # RUMBLE-QUE-NAO-SE-SENTE-01 — `plays` sozinho é ambíguo: ele
+                # conta a PARADA junto com o pedido. `nao_nulos` é o número que
+                # a aba Rumble usa para dizer QUAL das duas causas está viva.
+                "nao_nulos": ff_nao_nulos,
+                "descartados": ff_descartados,
+                "v2": ff_v2,
                 "last_weak": ff_last[0],
                 "last_strong": ff_last[1],
                 "vpads": len(vpads),
@@ -2574,6 +2745,33 @@ class IpcHandlersMixin:
         marker = read_last_run_marker()
         self._wrapper_marker_cache = (now, marker)
         return marker
+
+    # --- CONTROLE-QUE-NAO-ENTROU-01: o controle ligado que não entrou ------
+
+    def _controles_sem_driver_payload(self) -> dict[str, Any]:
+        """Quantos DualSense estão ligados e o sistema NÃO conseguiu adotar.
+
+        Derivado do SISTEMA a cada leitura (`dualsense_sem_driver`), nunca de
+        um segundo campo mantido em paralelo. A distinção é a lição da
+        `ESTADO-QUE-MENTE-01` (03/08), que segue aberta neste mesmo payload: o
+        topo do `state_full` é mantido ao lado da lista de controles em vez de
+        derivado dela, e por isso a aba afirma "Conectado · USB · 85%" com a
+        mesa vazia. Este campo novo não pode nascer com o mesmo defeito.
+
+        `ids` são os nomes de diretório do sysfs (``0005:054C:0CE6.000F`` —
+        barramento, fabricante, produto e instância; **não** há MAC neles).
+        Vão para o payload porque é o que o `doctor` e o log precisam citar
+        para casar com a linha do `bt_rebind_orphans.sh`; a janela usa só a
+        quantidade.
+        """
+        now = time.monotonic()
+        hit = self._hid_orfaos_cache
+        if hit is not None and (now - hit[0]) < _HID_ORFAOS_TTL_SEC:
+            ids = hit[1]
+        else:
+            ids = dualsense_sem_driver()
+            self._hid_orfaos_cache = (now, ids)
+        return {"quantidade": len(ids), "ids": list(ids)}
 
     async def _handle_controller_list(self, params: dict[str, Any]) -> dict[str, Any]:
         """Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01.

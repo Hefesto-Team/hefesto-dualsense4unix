@@ -54,7 +54,7 @@ from hefesto_dualsense4unix.core.led_control import player_led_pattern
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
     from hefesto_dualsense4unix.core.evdev_reader import EvdevReader, EvdevSnapshot
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
@@ -71,6 +71,46 @@ logger = get_logger(__name__)
 #: jogador sem vpad. Fail-safe: na dúvida o jogador NASCE (drift leve de gyro é
 #: tolerável; "sem controle" não é).
 _CALIB_PRAZO_S = 2.0
+
+
+def secundarios_fora_da_mesa(
+    sentados: Iterable[str], presentes: Iterable[str]
+) -> int:
+    """Quantos dos secundários DERRUBADOS perderam também o controle físico.
+
+    AVISO-FALSO-DO-COOP-01 (09/08/2026). O aviso vermelho *"1 jogador saiu —
+    não foi você; volta sozinho"* aparecia com os DOIS controles dela na tela,
+    conectados: ele contava **gamepads virtuais recolhidos**, e recolher vpad
+    não é controle saindo da mesa. Na máquina dela isso aconteceu 20 vezes num
+    dia — a caixinha de Steam Input do jogo suspende os vpads a cada entrada em
+    sessão, e cada reinício do daemon repete a suspensão.
+
+    A regra de produto, em uma linha: **o produto fala do que ela vê.** O aviso
+    diz *controle*; enquanto todo controle que estava sentado continuar
+    conectado, o número é 0 e a janela cala.
+
+    O contrapeso é a razão de esta função existir em vez de um `return 0`:
+    quando um controle DELA cai de verdade (bateria, replug, rádio), a
+    identidade dele some de `presentes` e o número sobe — o aviso tem de
+    aparecer, senão trocaríamos um defeito por outro pior.
+
+    Os dois lados são medidos com a **mesma régua**: `presentes` vem de
+    `discover_dualsense_evdevs()`, exatamente a enumeração que o `sync()` usa
+    para SENTAR cada secundário. Comparar contra outro inventário (handles do
+    backend, por exemplo) mediria "estar na mesa" com uma régua diferente da
+    que usou para servir o lugar — a armadilha nº 1 da casa.
+
+    Identidades-fallback (`path:…`, node sem `uniq` legível) ficam de fora: o
+    node é volátil por construção (uma re-enumeração troca `eventN` sem ninguém
+    sair), e acusar queda a partir dele seria o mesmo aviso falso com outra
+    roupa.
+    """
+    vivos = {str(mac) for mac in presentes}
+    return sum(
+        1
+        for mac in sentados
+        if isinstance(mac, str) and not mac.startswith("path:") and mac not in vivos
+    )
 
 
 def calibration_cache(daemon: Any) -> dict[str, bytes]:
@@ -285,6 +325,7 @@ class CoopManager:
             self._was_active = False
             if self._players or self._leds_overridden:
                 self.disable()
+            self._reavaliar_a_mesa_suspensa()
             return
 
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
@@ -388,6 +429,46 @@ class CoopManager:
         # como o replug também dispara o watch, este reassert devolve o padrão
         # do jogador logo em seguida).
         self._apply_coop_player_leds()
+
+    def _reavaliar_a_mesa_suspensa(self) -> None:
+        """Reabre a conta do aviso enquanto os vpads estão suspensos.
+
+        AVISO-FALSO-DO-COOP-01, o CONTRAPESO. A suspensão de Steam Input entra
+        publicando 0 (o teardown dela recolhe vpad, não desconecta controle) e
+        o co-op fica INATIVO enquanto ela dura — `should_be_active()` é False
+        sem `_gamepad_device`, e o `sync()` retornava ali mesmo. Sem esta
+        reavaliação o número ficaria congelado em 0 e um controle que caísse
+        DURANTE a partida nunca acenderia o aviso: seria trocar um defeito por
+        outro pior, que é o que a regra proíbe.
+
+        Roda no ramo INATIVO do `sync()` de propósito, e só quando há uma
+        suspensão em curso com gente sentada: fora disso não toca em nada, nem
+        no watch.
+
+        PERF-MULTI-CONTROLLER-01 continua valendo — a enumeração cara
+        (~10-40ms) só roda quando o `listdir` de /dev/input mudou, que é
+        justamente o evento "um controle sumiu/voltou". Consumir o watch aqui
+        não rouba ciclo do caminho ativo: a volta do co-op passa por
+        `_was_active=False` → `activated=True`, que força o ciclo cheio
+        independentemente do watch.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            coop_sentados_na_suspensao,
+            reavaliar_coop_fora_da_mesa,
+        )
+
+        if not coop_sentados_na_suspensao(self._daemon):
+            return
+        if not self._watch.poll():
+            return
+        from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
+
+        try:
+            presentes = set(discover_dualsense_evdevs())
+        except Exception as exc:  # nunca derruba o poll loop
+            logger.debug("coop_reavaliacao_da_mesa_falhou", err=str(exc))
+            return
+        reavaliar_coop_fora_da_mesa(self._daemon, presentes)
 
     def _flavor(self) -> str:
         from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
@@ -1402,4 +1483,7 @@ __all__ = [
     "get_coop_manager",
     "player_led_pattern",
     "resolve_player_numbers",
+    # AVISO-FALSO-DO-COOP-01: a regra do aviso é pura e mora aqui, longe do
+    # daemon, para poder ser mordida dos dois lados sem subir um daemon.
+    "secundarios_fora_da_mesa",
 ]
