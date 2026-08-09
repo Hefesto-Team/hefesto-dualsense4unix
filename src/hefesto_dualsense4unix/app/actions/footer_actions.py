@@ -290,10 +290,29 @@ class FooterActionsMixin(ProfileWriterMixin):
             # A pendência FICA quando a transição falha: ela ainda não valeu, e
             # apagá-la aqui faria a linha "vai mudar para:" sumir da tela sem
             # que nada tivesse mudado — a janela mentindo por omissão.
-            self._footer_toast(
-                _("ERRO ao aplicar o que vale na abertura: {erro}").format(erro=exc)
-            )
             logger.warning("aplicar_pendencia_falhou", erro=str(exc))
+            # O-AGORA-NAO-E-REFEM-DO-DEPOIS-01 (08/08/2026, noite): esta linha
+            # é o conserto de um defeito MEU, achado por verificação adversarial
+            # e provável causa do *"não aplica mais as cores"* que ela relatou.
+            #
+            # Sem ela, uma transição de modo que FALHASSE engolia as sete seções
+            # do rascunho — gatilhos, LEDs, rumble, mouse, mic, teclado — em
+            # silêncio, e o toast falava só do modo. E não é hipótese remota: o
+            # `apply_mode` espera 2,0 s por chamada, e a recriação do vpad com
+            # dois controles, MEDIDA no journal dela hoje, levou ~1,7 s. Está na
+            # borda: um estouro do timeout levava a cor dela junto.
+            #
+            # A regra que fica: **o AGORA nunca é refém do DEPOIS.** Cor,
+            # brilho, gatilho e vibração mudam na hora e não dependem de o jogo
+            # abrir — falhar em preparar a próxima abertura não pode cancelar o
+            # que já valia agora.
+            self._footer_toast(
+                _(
+                    "Não consegui preparar o que vale na próxima abertura "
+                    "({erro}) — o resto dos ajustes foi aplicado."
+                ).format(erro=exc)
+            )
+            self._apply_draft_agora()
             return False
 
         def _aplicar() -> None:
@@ -309,24 +328,35 @@ class FooterActionsMixin(ProfileWriterMixin):
         else:
             mudanca, valor = "modo", _mode_label(modo_alvo)
 
-        def _ao_adiar() -> None:
-            # "Aplicar na próxima abertura": o modo/máscara NÃO são aplicados
-            # (recriariam o vpad ao vivo — DEPOIS-QUE-APLICAVA-AGORA-01), e a
-            # pendência sai da tela porque o toast do diálogo acabou de dizer
-            # que ela precisa refazer a escolha depois de fechar o jogo. Deixar
-            # a linha "vai mudar para:" acesa aqui poria a tela contradizendo o
-            # rodapé, na mesma janela e no mesmo segundo.
-            #
-            # É AQUI que o passo 6 do plano entra quando existir (a pendência
-            # gravada em disco, aplicada sozinha quando o jogo fechar). Enquanto
-            # ele não existe, esta é a saída honesta — e o
-            # `relancar.toast_da_escolha(guardou=False)` já diz a verdade.
-            self._escolha_pendente = None
-            render_pendente(self)
+        def _sem_relancar(escolha: str) -> None:
+            """Os dois ramos em que o jogo NÃO é relançado.
+
+            Em ambos, o modo/máscara não são aplicados — recriariam o vpad ao
+            vivo, que é o dano que o diálogo existe para evitar
+            (DEPOIS-QUE-APLICAVA-AGORA-01). E em ambos **o AGORA sai**: as sete
+            seções do rascunho não mexem no jogo em curso e são trabalho dela.
+
+            A diferença está na PENDÊNCIA:
+
+            - *"na próxima abertura"* → some da tela, porque o toast do diálogo
+              acabou de dizer que ela precisa refazer a escolha depois de fechar
+              o jogo. Deixar a linha "vai mudar para:" acesa poria a tela
+              contradizendo o rodapé no mesmo segundo. (É aqui que o passo 6 do
+              plano entra quando existir: a pendência gravada em disco, aplicada
+              sozinha quando o jogo fechar.)
+            - *"cancelar"* → **fica**. Ela não desistiu da escolha; ela recusou
+              relançar o jogo agora. Apagá-la seria decidir no lugar dela.
+            """
+            if escolha != "cancelar":
+                self._escolha_pendente = None
+                render_pendente(self)
             self._apply_draft_agora()
 
         if self._perguntar_antes_de_relancar(
-            mudanca=mudanca, valor=valor, aplicar=_aplicar, ao_adiar=_ao_adiar
+            mudanca=mudanca,
+            valor=valor,
+            aplicar=_aplicar,
+            ao_nao_relancar=_sem_relancar,
         ):
             return
         _aplicar()
@@ -337,10 +367,16 @@ class FooterActionsMixin(ProfileWriterMixin):
         Congela UI durante a transação (~500ms); callback via GLib.idle_add
         reabilita e exibe resultado na statusbar.
         """
+        # O-AGORA-NAO-E-REFEM-DO-DEPOIS-01: o payload é montado ANTES do
+        # congelamento, e a ordem não é estética. `FROZEN_WIDGET_IDS` inclui o
+        # `lightbar_color_button` e o `lightbar_brightness_scale`: se
+        # `to_ipc_dict()` levantasse com a UI já congelada, a exceção subiria e
+        # os controles de cor ficariam INSENSÍVEIS pelo resto da sessão — que é,
+        # ao pé da letra, "não aplica mais as cores". Montar primeiro faz uma
+        # falha de serialização não deixar rastro na tela.
+        draft_dict = self.draft.to_ipc_dict()
         self._freeze_ui(True)
         self._footer_toast(_("Aplicando perfil inteiro..."))
-
-        draft_dict = self.draft.to_ipc_dict()
 
         def _on_ok(result: Any) -> bool:
             self._freeze_ui(False)

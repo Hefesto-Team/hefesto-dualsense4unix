@@ -1226,16 +1226,25 @@ class HomeActionsMixin(WidgetAccessMixin):
             modo_exibido = pendente.get("modo") or mode
             selector.set_active_id(modo_exibido)
             self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(modo_exibido, ""))
-            # A VISIBILIDADE, não. Decisão dela de 08/08 (AGORA-E-DEPOIS-01 §9,
-            # decisão 2): a caixa da máscara continua obedecendo ao DAEMON — ela
-            # só nasce quando "Jogar pelo Hefesto" está VALENDO. Foi escolha
-            # consciente entre duas saídas: guardar a visibilidade também
-            # deixaria escolher modo e máscara na mesma passada, ao preço de
-            # mais uma guarda; obedecer ao daemon custa dois "Aplicar", um por
-            # decisão. Ela escolheu os dois Aplicar. NÃO troque `mode` por
-            # `modo_exibido` aqui achando que é descuido.
-            self._home_gamepad_opts.set_visible(mode == "gamepad")
-            self._home_gamepad_opts.set_no_show_all(mode != "gamepad")
+            # E a VISIBILIDADE junto. AGORA-E-DEPOIS-01 §9, decisão 2 —
+            # REVISTA por ela em 08/08 à noite, VENDO a tela:
+            #
+            #   *"a máscara volta ao que era. Não temos que burocratizar aí.
+            #    Clico hefesto, a máscara aparece, clico em jogar xbox ou
+            #    dualsense e ao clicar em aplicar lá embaixo o efeito aplica de
+            #    fato. só isso"*
+            #
+            # A primeira versão fazia esta linha ler `mode` (o do daemon), e o
+            # efeito na tela dela foi o pior possível: clicou em "Jogar pelo
+            # Hefesto", o botão acendeu e a caixa da máscara **sumiu** — porque
+            # o daemon ainda estava em desktop. Ler "a máscara ainda não cabe
+            # aqui" exige saber que o modo é pendente; o que se lê é "a máscara
+            # sumiu", que é outra coisa.
+            #
+            # Agora a caixa segue a ESCOLHA: um "Aplicar" só, com modo e máscara
+            # decididos juntos — que é como ela usa a janela.
+            self._home_gamepad_opts.set_visible(modo_exibido == "gamepad")
+            self._home_gamepad_opts.set_no_show_all(modo_exibido != "gamepad")
 
             # AUTO-01.3: o dono da máscara é o DAEMON — a GUI só ECOA o que ele
             # reporta (`gamepad_emulation.flavor`, presente sempre que o daemon
