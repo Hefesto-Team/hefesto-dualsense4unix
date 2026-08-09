@@ -104,53 +104,38 @@ def ipc_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, dict[str, Any]
     return calls
 
 
-def test_sinal_changed_dispara_ipc_do_modo_nativo(
+def test_sinal_changed_com_um_argumento_chega_ao_handler(
     ipc_calls: list[tuple[str, dict[str, Any]]],
 ) -> None:
-    """Fluxo real: clique no seletor emite "changed" com 1 arg e chega ao IPC."""
+    """Fluxo real: o clique emite "changed" com 1 arg e o handler REGISTRA.
+
+    AGORA-E-DEPOIS-01 (08/08/2026): o que ele registra deixou de ser uma chamada
+    ao daemon e passou a ser a escolha dela, aplicada depois pelo "Aplicar" do
+    rodapé. O que este teste guarda continua sendo o mesmo: a ARIDADE do sinal —
+    um handler que peça um segundo argumento faz o PyGObject engolir o
+    `TypeError`, e o botão muda de visual sem nada acontecer.
+    """
     stub = _HomeStub()
     selector = stub._home_mode_selector
     selector.connect("changed", stub._on_home_mode_changed)
 
     selector.set_active_id("native")
 
-    assert ("native.mode.set", {"enabled": True, "origin": "manual"}) in ipc_calls
+    assert stub._escolha_pendente == {"modo": "native"}
+    assert ipc_calls == [], "o clique voltou a falar com o daemon"
 
 
-def test_modo_gamepad_sai_do_nativo_e_liga_com_flavor(
-    ipc_calls: list[tuple[str, dict[str, Any]]],
-) -> None:
-    stub = _HomeStub()
-    stub._home_flavor_selector = _FakeSelector("xbox")
-    stub._home_mode_selector.set_active_id("gamepad")
-
-    stub._on_home_mode_changed(stub._home_mode_selector)
-
-    assert ipc_calls == [
-        ("native.mode.set", {"enabled": False, "origin": "manual"}),
-        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox", "origin": "manual"}),
-    ]
-
-
-def test_modo_desktop_desliga_nativo_e_gamepad_preservando_coop(
-    ipc_calls: list[tuple[str, dict[str, Any]]],
-) -> None:
-    """FEAT-COOP-DEFAULT-ON-01: desktop NÃO desliga o co-op (preferência
-    preservada — desligar o gamepad já desmonta os jogadores).
-
-    HARM-06: e desktop LIGA o mouse (conforme a preferência persistida) — o
-    modo é o dono da emulação de mouse/teclado, não a aba Mouse.
-    """
-    stub = _HomeStub()
-    stub._home_mode_selector.set_active_id("desktop")
-
-    stub._on_home_mode_changed(stub._home_mode_selector)
-
-    assert ipc_calls == [
-        ("native.mode.set", {"enabled": False, "origin": "manual"}),
-        ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
-        ("mouse.emulation.restore", {}),
-    ]
+# LÁPIDE — AGORA-E-DEPOIS-01 (08/08/2026). Aqui moravam
+# `test_modo_gamepad_sai_do_nativo_e_liga_com_flavor` e
+# `test_modo_desktop_desliga_nativo_e_gamepad_preservando_coop`: os dois
+# afirmavam a SEQUÊNCIA de IPC que o clique no seletor disparava. O clique não
+# dispara mais nada — quem aplica é o botão "Aplicar" do rodapé.
+#
+# A sequência NÃO deixou de ser testada, e é por isso que estes dois puderam
+# sair em vez de virar remendo: `test_mode_transition_um_dono.py` a trava na
+# fonte (`plan_mode_transition`, incluindo o co-op preservado do
+# FEAT-COOP-DEFAULT-ON-01 e o mouse religado do HARM-06), e
+# `test_agora_e_depois_01.py` trava que o "Aplicar" a dispara.
 
 
 def test_guard_de_render_nao_dispara_ipc(
@@ -166,9 +151,14 @@ def test_guard_de_render_nao_dispara_ipc(
     assert ipc_calls == []
 
 
-def test_flavor_changed_reaplica_gamepad_com_a_mascara(
+def test_flavor_changed_marca_a_mascara_sem_falar_com_o_daemon(
     ipc_calls: list[tuple[str, dict[str, Any]]],
 ) -> None:
+    """AGORA-E-DEPOIS-01: o clique na máscara registra e para por aí.
+
+    Era o defeito 2 dela, na palavra dela: *"clicar em dualsense ainda pede pra
+    aplicar agora, ao invés de ser só no botão aplicar"*.
+    """
     stub = _HomeStub()
     stub._home_mode_selector.set_active_id("gamepad")
     ipc_calls.clear()
@@ -177,9 +167,8 @@ def test_flavor_changed_reaplica_gamepad_com_a_mascara(
 
     flavor.set_active_id("xbox")
 
-    assert ipc_calls == [
-        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox", "origin": "manual"}),
-    ]
+    assert stub._escolha_pendente == {"mascara": "xbox"}
+    assert ipc_calls == []
 
 
 def test_flavor_changed_fora_do_modo_gamepad_e_no_op(
@@ -210,11 +199,23 @@ class TestCheckboxDeCoopSumiu:
     def test_nenhum_caminho_da_aba_chama_coop_set(
         self, ipc_calls: list[tuple[str, dict[str, Any]]]
     ) -> None:
-        """Os três modos + a máscara: nenhum deles fala em `coop.set`."""
+        """Os três modos: nenhum deles fala em `coop.set`.
+
+        AGORA-E-DEPOIS-01: a guarda de "o teste exercitou algo" era
+        ``ipc_calls != []`` — e ela caducou junto com o IPC do clique. No lugar
+        dela vai a prova nova de que o caminho rodou: a escolha ficou marcada.
+        Sem alguma prova aqui, este teste passaria com os handlers apagados.
+        """
+        marcadas: list[dict[str, str] | None] = []
         for modo in ("desktop", "gamepad", "native"):
             stub = _HomeStub()
             stub._home_mode_selector.set_active_id(modo)
             stub._on_home_mode_changed(stub._home_mode_selector)
+            marcadas.append(stub._escolha_pendente)
 
-        assert [method for method, _ in ipc_calls] != []
+        assert marcadas == [
+            {"modo": "desktop"},
+            {"modo": "gamepad"},
+            {"modo": "native"},
+        ]
         assert not [method for method, _ in ipc_calls if method == "coop.set"]

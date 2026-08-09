@@ -58,6 +58,20 @@ class WidgetAccessMixin:
 
     builder: Gtk.Builder
 
+    #: AGORA-E-DEPOIS-01 (08/08/2026): a escolha dela que ainda não valeu —
+    #: ``{"modo": ..., "mascara": ...}``, ou ``None`` quando não há nada
+    #: pendente. Chave ausente significa "este campo segue o daemon".
+    #:
+    #: A DECLARAÇÃO mora aqui, na base comum, porque dois mixins da mesma classe
+    #: a tocam: a aba Início escreve (o clique marca) e o rodapé lê e limpa (o
+    #: "Aplicar" aplica). Declarar em cada um faria dois tipos para o mesmo
+    #: atributo na MRO de `HefestoApp` — o mypy pega, e ele está certo: seriam
+    #: dois donos da mesma verdade, que é o defeito que esta casa persegue.
+    #:
+    #: O dono do VALOR continua sendo a aba Início (`home_actions`), que é onde
+    #: ele nasce e onde mora a regra de reconciliação com o daemon.
+    _escolha_pendente: dict[str, str] | None = None
+
     # --- RELANCAR-01: o que só vale quando o jogo reabre --------------------
 
     #: Ids de resposta do diálogo. Positivos de propósito: os `Gtk.ResponseType`
@@ -72,6 +86,7 @@ class WidgetAccessMixin:
         mudanca: str,
         valor: str | None,
         aplicar: Callable[[], None],
+        ao_adiar: Callable[[], None] | None = None,
     ) -> bool:
         """True se assumiu o gesto (vai perguntar); False para aplicar direto.
 
@@ -83,6 +98,20 @@ class WidgetAccessMixin:
         aplica como sempre aplicou. Um diálogo que aparece por engano no meio da
         partida é pior que uma pergunta que não foi feita — e a sondagem é
         best-effort por natureza.
+
+        ``ao_adiar`` (AGORA-E-DEPOIS-01, 08/08/2026) roda **só** no ramo
+        "Aplicar na próxima abertura", e existe porque quem chama daqui pode ter
+        mais coisa a fazer nesse ramo do que este módulo tem como saber. O caso
+        real é o "Aplicar" do rodapé: ele carrega SETE seções que mudam na hora
+        (gatilhos, LEDs, rumble…) além do modo/máscara que adiam. Sem este
+        gancho, adiar o que só vale na abertura engoliria em silêncio tudo o que
+        valia agora.
+
+        Nos outros dois ramos ele NÃO roda, e cada ausência tem razão: no
+        "Aplicar agora e reiniciar", quem continua a sequência é o callback de
+        sucesso do próprio ``aplicar``; no "Cancelar", o toast promete que
+        **nada** mudou, e rodar qualquer coisa depois dele faria da promessa uma
+        mentira.
         """
         if mudanca not in relancar.EXIGEM_RELANCAR:
             return False
@@ -94,7 +123,7 @@ class WidgetAccessMixin:
             # Este retorno é o que mantém o caminho comum sem diálogo e sem
             # espera — e é o que os testes da caixinha exercitam.
             return False
-        self._relancar_decidir(mudanca, valor, True, aplicar)
+        self._relancar_decidir(mudanca, valor, True, aplicar, ao_adiar)
         return True
 
     def _relancar_decidir(
@@ -103,6 +132,7 @@ class WidgetAccessMixin:
         valor: str | None,
         jogo: object,
         aplicar: Callable[[], None],
+        ao_adiar: Callable[[], None] | None = None,
     ) -> bool:
         """Na thread do GTK: sem jogo aplica; com jogo, pergunta."""
         nome_do_jogo = jogo if isinstance(jogo, str) and jogo else None
@@ -148,6 +178,14 @@ class WidgetAccessMixin:
                         guardou=mudanca in _MUDANCAS_QUE_SAO_ESCRITA,
                     )
                 )
+                # AGORA-E-DEPOIS-01: o resto do gesto de quem chamou — hoje, as
+                # sete seções do "Aplicar" que mudam NA HORA e não têm nada a
+                # ver com a abertura do jogo. Vem depois do toast de propósito:
+                # quem chama pode escrever o seu por cima, e a última palavra
+                # tem de ser a de quem sabe o que aconteceu por inteiro.
+                if ao_adiar is not None:
+                    with contextlib.suppress(Exception):
+                        ao_adiar()
             else:
                 self._toast_do_relancar(relancar.toast_da_escolha("cancelar"))
                 # A tela volta ao que o disco diz: janela que não mente.
