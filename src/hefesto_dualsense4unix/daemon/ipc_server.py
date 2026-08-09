@@ -125,6 +125,18 @@ class IpcServer(IpcHandlersMixin):
             "controller.target.set": self._handle_controller_target_set,
             "daemon.reload": self._handle_daemon_reload,
             "launch_env.refresh": self._handle_launch_env_refresh,
+            # LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026): instrumento de
+            # medição, não caminho automático. Manda o Reset LED state
+            # (0x08) sob demanda pelo handle que o daemon já tem aberto —
+            # é o que separa "o 0x08 trava a barra" de "o 0x08 trava a
+            # barra QUANDO mandado em cima da conexão", que é a
+            # contradição aberta entre a LIGHTBAR-BT-CULPADO-01 (03/08) e
+            # a medição de 08/08 (5 dias sem 0x08, barra morta).
+            "lightbar.reset": self._handle_lightbar_reset,
+            # LIGHTBAR-ISOLAR-OS-PLAYERS-01: o outro instrumento da mesma
+            # medição — desliga a escrita do LED de JOGADOR ao vivo, para
+            # ela reconectar o controle e ver se a barra sobrevive.
+            "debug.player_leds": self._handle_debug_player_leds,
             # D4: volume/mudo do alto-falante do DualSense (assume a posse dos
             # bytes de volume do report — ver `_handle_speaker_set`). Desde a
             # SOM-02 (E3) o MESMO método também DEVOLVE a posse, por

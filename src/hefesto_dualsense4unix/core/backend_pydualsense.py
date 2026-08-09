@@ -986,6 +986,9 @@ class PyDualSenseController(IController):
         # a escrita pydualsense desses LEDs é suprimida (anti-contenção). Vazio =
         # ninguém coberto (sem regra udev / driver antigo) → caminho pydualsense.
         self._sysfs: dict[str, Any] = {}
+        # LIGHTBAR-ISOLAR-OS-PLAYERS-01: instrumento de eliminação, sempre
+        # desligado ao nascer (ver `suprimir_player_leds`).
+        self._suprimir_player_leds = False
         # STATUS-01: rastreio "escrito por nós" — key (a mesma de `_sysfs`) ->
         # última cor RGB escrita POR ESTE backend via classe LED (sysfs). É a
         # prova de POSSE do nó que autoriza ler `multi_intensity` como verdade
@@ -1922,7 +1925,9 @@ class PyDualSenseController(IController):
                     cor = desired.led if desired.led is not None else KERNEL_DEFAULT_BLUE
                     if node.set_rgb(*cor):
                         self.record_sysfs_write(key, cor)
-                    if desired.player_leds is not None:
+                    if desired.player_leds is not None and (
+                        self._pode_escrever_player_leds()
+                    ):
                         node.set_players(desired.player_leds)
 
         with self._io_lock:
@@ -2105,6 +2110,98 @@ class PyDualSenseController(IController):
             except Exception as exc:
                 logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
 
+    def suprimir_player_leds(self, ativo: bool) -> bool:
+        """Liga/desliga a escrita dos LEDs de JOGADOR. Instrumento de eliminação.
+
+        LIGHTBAR-ISOLAR-OS-PLAYERS-01 (08/08/2026) — hipótese DELA, e o método é
+        o mesmo que ela usou para mapear a lightbar: *"vamos isolar os leds dos
+        players então. igual fizemos naquele dia com o lightbar"*.
+
+        A pergunta: **é a escrita do LED de jogador que derruba o claim da
+        lightbar quando o controle acaba de conectar?** O que aponta para lá:
+
+        - o 0x08, que DEVOLVE a barra, **apaga os players** (medido ao vivo hoje,
+          23:35) — as duas coisas vivem na mesma máquina de estados do firmware;
+        - a barra apaga quando o controle **acaba de conectar** (observação dela,
+          08/08), e é exatamente aí que o priming escreve os players;
+        - um restart do daemon com o controle JÁ conectado pinta a barra sem
+          problema (journal, 23:33:10) — mesma adoção, sem conexão nova.
+
+        **É comutável ao vivo, e isso é a metade que importa.** O experimento de
+        23:35 se perdeu porque o instrumento exigia reiniciar o daemon, e o
+        restart curou a barra antes do gesto que eu queria medir. Aqui ela liga a
+        supressão com o controle na mão, desliga e religa o controle, e olha —
+        sem nada mais mudar no meio.
+
+        Devolve o estado que ficou. Não persiste: um restart volta ao normal, de
+        propósito — instrumento esquecido ligado é defeito com data marcada.
+        """
+        self._suprimir_player_leds = bool(ativo)
+        logger.info("player_leds_suprimidos", ativo=self._suprimir_player_leds)
+        return self._suprimir_player_leds
+
+    def _pode_escrever_player_leds(self) -> bool:
+        """False enquanto o instrumento de eliminação estiver ligado."""
+        return not getattr(self, "_suprimir_player_leds", False)
+
+    def enviar_release_leds(self, *, uniq: str | None = None) -> dict[str, bool]:
+        """Manda o Reset LED state (0x08) SOB DEMANDA. É um INSTRUMENTO.
+
+        LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026). Ele existe porque duas medições
+        desta casa se contradizem em aparência, e não havia como separá-las sem
+        disputar o hidraw com o daemon — que é a armadilha nº 3 do
+        `COMO-OLHAR-A-TELA.md` ("o instrumento pode estar brigando com o
+        produto"). Aqui não há disputa: quem escreve é o handle que o daemon
+        **já tem aberto**.
+
+        As três medições a conciliar:
+
+        1. a adoção do controle derruba o claim da lightbar no firmware
+           (17-18/07, `core/lightbar_reset.py:1-11`);
+        2. o 0x08 mandado DENTRO da janela de ~3,4 s pós-conexão trava a barra
+           — 7 de 7 (`LIGHTBAR-BT-CULPADO-01`, 03/08), e foi por isso que ele
+           foi removido em `108b711` (04/08);
+        3. o 0x08 mandado FORA dessa janela **não trava** (controle negativo da
+           MESMA sprint) — e sem 0x08 nenhum a barra ficou morta por 5 dias e
+           20 adoções (medido 08/08).
+
+        A hipótese que as três permitem: **o 0x08 devolve o claim, desde que
+        não seja mandado em cima da conexão.** Este método é o que torna isso
+        falsificável na mesa dela — uma variável, um gesto, um olho.
+
+        ``uniq`` restringe a um controle (o MAC/uniq do handle); ausente, manda
+        a todos. Devolve ``{key: enviou?}`` — vazio significa nenhum handle
+        aberto, que é resposta e não erro.
+
+        NÃO é chamado por caminho automático nenhum: se um dia o reset voltar à
+        adoção, ele volta lá, com a sua própria decisão e o seu próprio teste.
+        """
+        from hefesto_dualsense4unix.core.lightbar_reset import send_release_leds
+
+        with self._io_lock:
+            if uniq is not None:
+                handle = self._handles.get(uniq)
+                alvos = [(uniq, handle)] if handle is not None else []
+            else:
+                alvos = list(self._handles.items())
+        resultado: dict[str, bool] = {}
+        for key, handle in alvos:
+            ok = send_release_leds(handle)
+            resultado[key] = ok
+            logger.info("lightbar_reset_sob_demanda", key=key, enviado=ok)
+            if not ok:
+                continue
+            # O 0x08 zera o estado de LED do firmware, então o cache do nó
+            # sysfs passa a mentir sobre o que está aceso: sem invalidar, a
+            # próxima escrita da MESMA cor seria pulada e a barra ficaria
+            # apagada com o produto achando que já pintou. Vinha junto do
+            # reset original e foi removido junto com ele em `108b711`.
+            no = self._sysfs.get(key) if isinstance(self._sysfs, dict) else None
+            invalidar = getattr(no, "invalidate_cache", None)
+            if callable(invalidar):
+                invalidar()
+        return resultado
+
     def _for_each_led(
         self,
         *,
@@ -2231,8 +2328,14 @@ class PyDualSenseController(IController):
                 node is not None and not muted and node.set_rgb(*out.led)
             ):
                 handle.light.setColorI(*out.led)
-            if out.player_leds is not None and not (
-                node is not None and not muted and node.set_players(out.player_leds)
+            if (
+                out.player_leds is not None
+                and self._pode_escrever_player_leds()
+                and not (
+                    node is not None
+                    and not muted
+                    and node.set_players(out.player_leds)
+                )
             ):
                 mask = sum(1 << i for i, b in enumerate(out.player_leds) if b)
                 handle.light.playerNumber = PlayerID(mask)
@@ -2635,6 +2738,13 @@ class PyDualSenseController(IController):
         """
         from pydualsense.enums import PlayerID
 
+        # LIGHTBAR-ISOLAR-OS-PLAYERS-01: com o instrumento ligado, NENHUMA
+        # escrita de player-LED sai — nem o gesto direto. Cobrir só o priming
+        # deixaria a numeração do co-op escrevendo por trás e a medição não
+        # teria variável única.
+        if not self._pode_escrever_player_leds():
+            logger.info("player_leds_suprimidos_noop", op="set_player_leds")
+            return
         bitmask = sum(1 << i for i, b in enumerate(bits) if b)
         # Prefere a rota sysfs do kernel (player-LED em USB E BT, sem disputa);
         # cai no pydualsense quando o controle não está coberto.
@@ -2688,7 +2798,7 @@ class PyDualSenseController(IController):
                 what="apply_output_defaults",
                 broadcast=True,
             )
-        if spec.player_leds is not None:
+        if spec.player_leds is not None and self._pode_escrever_player_leds():
             from pydualsense.enums import PlayerID
 
             bits = spec.player_leds

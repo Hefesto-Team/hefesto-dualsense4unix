@@ -339,6 +339,12 @@ class _RodapeStub:
     def _perguntar_antes_de_relancar(self, **_kw: object) -> bool:
         return False
 
+    def _ha_jogo_aberto_agora(self) -> bool:
+        # JOGO-ABERTO-SO-NA-INICIO-01: o rodapé relê o sinal no clique. Aqui não
+        # há daemon, e este arquivo mede a SEQUÊNCIA de IPC do modo — não o
+        # diálogo. Sem jogo aberto é o caminho que ele exercita.
+        return False
+
     def _apply_draft_agora(self) -> None:
         pass
 
