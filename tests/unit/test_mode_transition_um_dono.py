@@ -78,6 +78,7 @@ _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import (
     emulation_actions,
+    footer_actions,
     home_actions,
     mode_transition,
 )
@@ -293,6 +294,7 @@ class _FakeLabel:
 
 class _HomeStub:
     _on_home_mode_changed = home_actions.HomeActionsMixin._on_home_mode_changed
+    _on_home_flavor_changed = home_actions.HomeActionsMixin._on_home_flavor_changed
 
     # RELANCAR-01: sem jogo aberto, o gancho devolve False e o handler aplica
     # direto — que é o caminho que este arquivo mede (o plano de transição).
@@ -312,6 +314,41 @@ class _HomeStub:
         pass
 
 
+class _RodapeStub:
+    """O botão verde, com o método REAL que aplica a escolha da aba Início.
+
+    AGORA-E-DEPOIS-01: o caminho da Início tem dois tempos agora (marcar no
+    clique, aplicar no rodapé) e a paridade com a Emulação só é medível
+    percorrendo os dois. O método vem do mixin de verdade — um dublê que
+    reimplementasse a regra mediria o dublê.
+
+    ``_apply_draft_agora`` é no-op aqui: o rascunho das sete seções não faz
+    parte da paridade de MODO que este arquivo mede, e o fake de `call_async`
+    deste módulo nem chama os callbacks.
+    """
+
+    _aplicar_escolha_pendente = (
+        footer_actions.FooterActionsMixin._aplicar_escolha_pendente
+    )
+
+    def __init__(self, pendente: dict[str, str]) -> None:
+        self._escolha_pendente: dict[str, str] | None = dict(pendente)
+        self._modo_vigente_do_daemon = "desktop"
+        self._mascara_vigente_do_daemon: str | None = None
+
+    def _perguntar_antes_de_relancar(self, **_kw: object) -> bool:
+        return False
+
+    def _apply_draft_agora(self) -> None:
+        pass
+
+    def _footer_toast(self, _msg: str, _context: str = "footer") -> None:
+        pass
+
+    def aplicar(self) -> None:
+        self._aplicar_escolha_pendente(dict(self._escolha_pendente or {}))
+
+
 @pytest.mark.parametrize(
     ("mode_id", "flavor", "emul_handler"),
     [
@@ -324,16 +361,59 @@ def test_inicio_e_emulacao_emitem_a_mesma_sequencia(
     ipc: list[Call], mode_id: str, flavor: str, emul_handler: str
 ) -> None:
     """Aceite do HARM-01: alternar Início<->Emulação nunca mostra estados
-    diferentes porque as duas abas fazem literalmente a mesma coisa."""
+    diferentes porque as duas abas fazem literalmente a mesma coisa.
+
+    AGORA-E-DEPOIS-01 (08/08/2026): o GESTO da Início mudou de lugar — o clique
+    no seletor marca, e quem aplica é o "Aplicar" do rodapé. O invariante NÃO
+    mudou, e é por isso que este teste continua existindo em vez de sair: as
+    duas abas têm de chegar à MESMA sequência de IPC, senão voltam a poder
+    mostrar estados diferentes do mesmo sistema.
+
+    Por isso o caminho da Início aqui é o completo — marcar E aplicar. Medir só
+    o clique diria "a Início não emite nada", que é verdade e não é o ponto.
+    """
     home = _HomeStub(flavor)
     home._home_mode_selector.set_active_id(mode_id)
     home._on_home_mode_changed(home._home_mode_selector)
+    if mode_id == "gamepad":
+        # Os botões da Emulação dizem a máscara no próprio rótulo ("Xbox 360"),
+        # então o gesto equivalente na Início é escolher as DUAS coisas — que é
+        # o que a caixa "Quando o jogo abrir" oferece.
+        home._home_flavor_selector.set_active_id(flavor)
+        home._on_home_flavor_changed(home._home_flavor_selector)
+    _RodapeStub(home._escolha_pendente or {}).aplicar()
     pela_inicio = list(ipc)
 
     ipc.clear()
     getattr(_EmulStub(), emul_handler)(None)
 
     assert pela_inicio == list(ipc)
+
+
+def test_a_inicio_sem_mascara_escolhida_nao_impoe_mascara_nenhuma(
+    ipc: list[Call],
+) -> None:
+    """AUTO-01.3, no caminho novo: quem não escolheu não manda.
+
+    Trocar só o modo ("Jogar pelo Hefesto") não é escolher máscara. O passo sai
+    SEM o campo, e o daemon preserva a que já está configurada — enquanto a aba
+    Emulação, cujos botões dizem a máscara no rótulo, manda o campo sempre.
+
+    A diferença é de DESENHO e está travada aqui de propósito: ecoar de volta a
+    máscara vigente parece inofensivo e recria, por outra porta, o "segundo dono
+    do valor" que a AUTO-01.3 enterrou — a GUI decidindo máscara por causa de um
+    payload que ela apenas leu.
+    """
+    home = _HomeStub("dualsense")
+    home._home_mode_selector.set_active_id("gamepad")
+    home._on_home_mode_changed(home._home_mode_selector)
+
+    _RodapeStub(home._escolha_pendente or {}).aplicar()
+
+    ligar = [p for m, p, _t in ipc if m == "gamepad.emulation.set"]
+    assert ligar and "flavor" not in ligar[0], (
+        "a Início mandou uma máscara que ninguém escolheu"
+    )
 
 
 # --- HARM-03: "Modo jogo" não é oferecido em "Controlar o PC" ---------------

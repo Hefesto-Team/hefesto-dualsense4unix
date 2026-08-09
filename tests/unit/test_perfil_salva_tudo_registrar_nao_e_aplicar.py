@@ -33,6 +33,10 @@ RAIZ = Path(__file__).resolve().parents[2]
 ACOES = RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions"
 EMULACAO_PY = ACOES / "emulation_actions.py"
 INICIO_PY = ACOES / "home_actions.py"
+#: AGORA-E-DEPOIS-01 (08/08/2026): o gesto que registra o modo mudou de aba.
+#: Ele saiu dos cliques da Início (que deixaram de aplicar) e foi para o
+#: "Aplicar" do rodapé, que é onde a mudança sai — e onde o daemon confirma.
+RODAPE_PY = ACOES / "footer_actions.py"
 
 #: Tudo que MUDA a máquina dela: IPC, transição de modo, worker, timer da GUI.
 #: Um escritor de rascunho não pode mencionar nenhum destes nomes.
@@ -129,8 +133,11 @@ def test_cada_gesto_continua_chamando_o_escritor() -> None:
     esperado = {
         (EMULACAO_PY, "_apply_mode"): "registrar_modo_no_rascunho",
         (EMULACAO_PY, "_set_suppress"): "registrar_modo_jogo_no_rascunho",
-        (INICIO_PY, "_on_home_mode_changed"): "registrar_modo_no_rascunho",
-        (INICIO_PY, "_on_home_flavor_changed"): "registrar_modo_no_rascunho",
+        # AGORA-E-DEPOIS-01: o gesto da aba Início é o "Aplicar" do rodapé.
+        # Os cliques nos seletores só MARCAM a escolha (nenhum IPC, nenhum
+        # rascunho); quem registra é o callback de sucesso da transição, para o
+        # rascunho continuar descrevendo o que ficou DE PÉ.
+        (RODAPE_PY, "_aplicar_escolha_pendente"): "registrar_modo_no_rascunho",
     }
     for (caminho, gesto), escritor in esperado.items():
         chamados = _nomes_chamados(_funcao(caminho, gesto))

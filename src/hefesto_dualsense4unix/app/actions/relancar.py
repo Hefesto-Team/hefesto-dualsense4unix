@@ -98,6 +98,48 @@ MUDA_NA_HORA: Final[frozenset[str]] = frozenset(
 #: O que a pessoa escolheu no diálogo.
 Escolha = Literal["fechar_e_abrir", "na_proxima_abertura", "cancelar"]
 
+#: AGORA-E-DEPOIS-01: o marcador da linha do pendente. Um ponto, não um ícone —
+#: a aba Início não tem ícone nenhum, e um símbolo novo aqui seria vocabulário
+#: novo na tela (o que ela recusa) por causa de decoração.
+MARCADOR_PENDENTE: Final = "●"
+
+
+def texto_do_pendente(*, modo: str | None = None, mascara: str | None = None) -> str:
+    """A linha que diz o que ainda NÃO valeu — função pura, sem GTK.
+
+    AGORA-E-DEPOIS-01 (08/08/2026). Ela é metade da entrega, e não decoração:
+    com o clique deixando de aplicar na hora, esta linha é **a única prova de
+    que o clique registrou**. Sem ela, o desenho novo vira defeito — a pessoa
+    clica, nada acontece, e conclui que a janela ignorou o gesto.
+
+    Recebe os RÓTULOS já traduzidos (``"Jogar pelo Hefesto"``), nunca os ids
+    (``"gamepad"``): o léxico da tela mora em `home_actions._MODE_ITEMS` /
+    `_FLAVOR_ITEMS`, e importá-lo daqui faria ciclo (`home_actions` → `base` →
+    este módulo). Quem chama traduz; este módulo só compõe a frase.
+
+    Sem nada pendente devolve ``""`` — e quem chama esconde o rótulo, em vez de
+    deixar uma linha vazia ocupando lugar na caixa.
+    """
+    partes = [p for p in (modo, mascara) if p]
+    if not partes:
+        return ""
+    return f"{MARCADOR_PENDENTE} vai mudar para: " + ", ".join(partes)
+
+
+#: O que o rodapé diz no clique que NÃO aplica mais. Ele responde a única
+#: pergunta que a pessoa tem naquele instante — *"o clique valeu?"* — e diz onde
+#: está o gesto que fecha a decisão, pelo nome que o botão tem na tela.
+TOAST_ESCOLHA_ANOTADA: Final = (
+    'Anotado. Clique em "Aplicar" para valer — o jogo vê a mudança quando abrir.'
+)
+
+#: E quando ela volta ao que já está valendo: não há pendência, logo não há
+#: nada a aplicar. Dizer "anotado" aqui mandaria a pessoa clicar em "Aplicar"
+#: para aplicar coisa nenhuma.
+TOAST_ESCOLHA_DESFEITA: Final = (
+    "Isso já é o que está valendo — não há o que aplicar."
+)
+
 
 def precisa_perguntar(*, mudanca: str, jogo_aberto: bool) -> bool:
     """True quando esta mudança, agora, exige decidir sobre o jogo aberto.

@@ -193,6 +193,145 @@ class FooterActionsMixin(ProfileWriterMixin):
     # ------------------------------------------------------------------
 
     def on_apply_draft(self, _btn: Any = None) -> None:
+        """O botão verde do rodapé. Aplica o AGORA e, se houver, o DEPOIS.
+
+        AGORA-E-DEPOIS-01 (08/08/2026). Este handler mandava só o ``DraftConfig``
+        — e o payload dele **não carrega modo nem máscara** por contrato
+        (``draft_config.to_ipc_dict``, e o porquê está lá). Era o defeito 1 da
+        OITO-DEFEITOS-01, na palavra dela: *"quando eu clico ali no inferior no
+        verde em aplicar, ele não aplica e não abre o pop up"*.
+
+        Agora ele é o dono dos DOIS tempos da janela:
+
+        - o **AGORA** (gatilhos, LEDs, rumble, mouse, mic, teclado) segue pelo
+          ``profile.apply_draft``, como sempre;
+        - o **DEPOIS** (modo e máscara, que o jogo só lê quando abre) vem da
+          escolha pendente da aba Início e passa antes, pelo caminho que já
+          existe — ``mode_transition.apply_mode``, nunca por dentro do
+          ``apply_draft``. Ver o fato 5 do plano: ``apply_mode`` dispara até 3
+          chamadas de 2,0 s e o ``apply_draft`` daqui tem ``timeout_s=1.5``;
+          juntá-los produziria "ERRO ao aplicar" com o modo JÁ aplicado, que é
+          exatamente a mentira que o APLICAR-VERDADE-02 existe para matar.
+
+        Sem pendência nada disto acontece e o caminho é o de sempre — inclusive
+        para quem não tem a aba Início montada (``getattr`` devolve ``None``).
+        """
+        pendente = getattr(self, "_escolha_pendente", None)
+        if pendente:
+            self._aplicar_escolha_pendente(dict(pendente))
+            return
+        self._apply_draft_agora()
+
+    def _aplicar_escolha_pendente(self, pendente: dict[str, str]) -> None:
+        """Aplica o que ela escolheu na aba Início e SÓ ENTÃO o rascunho.
+
+        AGORA-E-DEPOIS-01. Três caminhos, e a diferença entre eles é uma só
+        pergunta — *há um jogo aberto agora?*:
+
+        1. **sem jogo** → aplica a transição e emenda o ``apply_draft`` no
+           callback de sucesso;
+        2. **com jogo e MÁSCARA pendente** → o diálogo de relançamento pergunta
+           (``base._perguntar_antes_de_relancar``), porque trocar a máscara
+           recria o gamepad virtual e o jogo em curso não veria nada disso;
+        3. **com jogo e só o MODO pendente** → aplica direto, sem perguntar.
+
+        O caminho 3 é **decisão dela** (RELANCAR-ORDEM-01, mantida em 08/08 à
+        noite), e não é descuido: ``"modo"`` não está em
+        ``relancar.EXIGEM_RELANCAR``, então o helper devolve ``False`` sozinho e
+        a transição segue. O preço está declarado no plano (§9, decisão 1) — o
+        "Jogador 3" fantasma continua alcançável por este caminho, e a cura dele
+        é a JOGADOR-3-FANTASMA-01, não mais um diálogo.
+        """
+        from hefesto_dualsense4unix.app.actions.home_actions import (
+            _flavor_label,
+            _mode_label,
+            registrar_modo_no_rascunho,
+            render_pendente,
+        )
+        from hefesto_dualsense4unix.app.actions.mode_transition import apply_mode
+
+        # O alvo do modo: a escolha dela, ou — quando só a máscara mudou — o que
+        # já está valendo. Nunca um default nosso: escolher "gamepad" por conta
+        # própria aqui seria um segundo dono do valor, o defeito que a AUTO-01.3
+        # enterrou.
+        modo_alvo = pendente.get("modo") or getattr(
+            self, "_modo_vigente_do_daemon", None
+        )
+        mascara_alvo = pendente.get("mascara")
+        if not modo_alvo:
+            # Sem modo vigente conhecido (daemon offline, aba nunca renderizada)
+            # não há transição honesta a fazer — some com a pendência não, que
+            # é dela; só segue com o que este botão sempre soube aplicar.
+            logger.info("aplicar_pendencia_sem_modo_vigente")
+            self._apply_draft_agora()
+            return
+
+        def _done(_resultado: Any) -> bool:
+            # Decisão 3 dela (08/08, noite): o modo entra no rascunho AQUI —
+            # quando o Aplicar confirma —, nunca no clique. O rascunho descreve
+            # o que ficou DE PÉ; uma intenção que falhou não pode virar perfil
+            # salvo. (Este registro morava nos callbacks dos seletores da aba
+            # Início, e veio junto com o IPC que saiu de lá.)
+            registrar_modo_no_rascunho(
+                self,
+                modo_alvo,
+                mascara_alvo or getattr(self, "_mascara_vigente_do_daemon", None),
+            )
+            self._escolha_pendente = None
+            render_pendente(self)
+            # E só agora o AGORA: as sete seções do rascunho. Emendado no
+            # sucesso, não disparado em paralelo — duas transações concorrentes
+            # sobre o mesmo controle é como se recria vpad no meio de uma
+            # aplicação de LEDs.
+            self._apply_draft_agora()
+            return False
+
+        def _fail(exc: Exception) -> bool:
+            # A pendência FICA quando a transição falha: ela ainda não valeu, e
+            # apagá-la aqui faria a linha "vai mudar para:" sumir da tela sem
+            # que nada tivesse mudado — a janela mentindo por omissão.
+            self._footer_toast(
+                _("ERRO ao aplicar o que vale na abertura: {erro}").format(erro=exc)
+            )
+            logger.warning("aplicar_pendencia_falhou", erro=str(exc))
+            return False
+
+        def _aplicar() -> None:
+            apply_mode(
+                modo_alvo,
+                flavor=mascara_alvo,
+                on_done=_done,
+                on_fail=_fail,
+            )
+
+        if mascara_alvo:
+            mudanca, valor = "mascara", _flavor_label(mascara_alvo)
+        else:
+            mudanca, valor = "modo", _mode_label(modo_alvo)
+
+        def _ao_adiar() -> None:
+            # "Aplicar na próxima abertura": o modo/máscara NÃO são aplicados
+            # (recriariam o vpad ao vivo — DEPOIS-QUE-APLICAVA-AGORA-01), e a
+            # pendência sai da tela porque o toast do diálogo acabou de dizer
+            # que ela precisa refazer a escolha depois de fechar o jogo. Deixar
+            # a linha "vai mudar para:" acesa aqui poria a tela contradizendo o
+            # rodapé, na mesma janela e no mesmo segundo.
+            #
+            # É AQUI que o passo 6 do plano entra quando existir (a pendência
+            # gravada em disco, aplicada sozinha quando o jogo fechar). Enquanto
+            # ele não existe, esta é a saída honesta — e o
+            # `relancar.toast_da_escolha(guardou=False)` já diz a verdade.
+            self._escolha_pendente = None
+            render_pendente(self)
+            self._apply_draft_agora()
+
+        if self._perguntar_antes_de_relancar(
+            mudanca=mudanca, valor=valor, aplicar=_aplicar, ao_adiar=_ao_adiar
+        ):
+            return
+        _aplicar()
+
+    def _apply_draft_agora(self) -> None:
         """Envia DraftConfig inteiro ao daemon via IPC ``profile.apply_draft``.
 
         Congela UI durante a transação (~500ms); callback via GLib.idle_add

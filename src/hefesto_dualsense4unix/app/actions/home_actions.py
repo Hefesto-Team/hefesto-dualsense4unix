@@ -35,8 +35,17 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_IPC_TIMEOUT_S,
     MODES,
     STATE_IPC_TIMEOUT_S,
-    apply_mode,
     mode_of_state,
+)
+
+# AGORA-E-DEPOIS-01: os textos do "depois" moram no módulo puro — a aba Início e
+# o diálogo do rodapé dizem as mesmas palavras porque leem a mesma fonte, e o
+# teste os alcança sem abrir janela nenhuma. (O `apply_mode` saiu deste import
+# junto com o IPC dos cliques: quem aplica agora é o rodapé.)
+from hefesto_dualsense4unix.app.actions.relancar import (
+    TOAST_ESCOLHA_ANOTADA,
+    TOAST_ESCOLHA_DESFEITA,
+    texto_do_pendente,
 )
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
@@ -609,6 +618,84 @@ def rascunho_com_modo(
     return draft.with_mode(ProfileModeConfig.model_validate(secao))
 
 
+def reconciliar_pendente(janela: Any) -> dict[str, str]:
+    """A escolha dela MENOS o que o daemon já alcançou. Devolve o que sobra.
+
+    AGORA-E-DEPOIS-01 (08/08/2026). Uma pendência só existe enquanto DIVERGE do
+    vigente: se o daemon chegou ao que ela escolheu — por esta janela, pela CLI,
+    pelo applet ou por uma troca de perfil —, não há mais nada a aplicar, e
+    manter a linha "vai mudar para:" na tela seria a janela prometendo uma
+    mudança que já aconteceu.
+
+    Roda no `_render_home` (a cada tique) e no clique, com a MESMA regra nos
+    dois lugares porque é a MESMA pergunta. Escreve em ``_escolha_pendente`` de
+    propósito: a limpeza tem de sobreviver ao retorno, senão a próxima leitura
+    ressuscita o que este tique acabou de dar por resolvido.
+
+    Função de MÓDULO pelas duas razões já pagas por esta base em
+    `registrar_modo_no_rascunho`: o rodapé precisa do MESMO reconciliador que a
+    Início (um método em cada mixin seriam dois donos, sombreados em silêncio
+    pela MRO da `HefestoApp`), e chamada entre mixins quebra dublê PARCIAL de
+    teste — o `_HomeStub` copia handlers avulsos, sem o resto da classe.
+    """
+    pendente = dict(getattr(janela, "_escolha_pendente", None) or {})
+    if "modo" in pendente and pendente["modo"] == getattr(
+        janela, "_modo_vigente_do_daemon", None
+    ):
+        pendente.pop("modo")
+    if "mascara" in pendente and pendente["mascara"] == getattr(
+        janela, "_mascara_vigente_do_daemon", None
+    ):
+        pendente.pop("mascara")
+    janela._escolha_pendente = pendente or None
+    return pendente
+
+
+def render_pendente(janela: Any, *, visivel: bool = True) -> None:
+    """Escreve (ou apaga) a linha do que ela escolheu e ainda não aplicou.
+
+    ``visivel=False`` esconde a linha SEM tocar na escolha — é o que o ramo
+    offline usa: sem daemon não há como aplicar, mas o que ela decidiu não pode
+    evaporar por causa de um engasgo de IPC.
+
+    Sem o rótulo montado (dublê de teste, aba nunca instalada) reconcilia
+    assim mesmo e volta: o estado da escolha é verdade do modelo, não do widget.
+    """
+    pendente = reconciliar_pendente(janela)
+    label = getattr(janela, "_home_pendente_label", None)
+    if label is None:
+        return
+    texto = texto_do_pendente(
+        modo=_mode_label(pendente["modo"]) if "modo" in pendente else None,
+        mascara=(
+            _flavor_label(pendente["mascara"]) if "mascara" in pendente else None
+        ),
+    )
+    if texto:
+        label.set_text(texto)
+    label.set_visible(visivel and bool(texto))
+
+
+def marcar_escolha(janela: Any, campo: str, valor: str) -> None:
+    """Grava a escolha dela — e **não aplica nada**.
+
+    AGORA-E-DEPOIS-01. Este é o passo 2 do plano, e a coisa que ela NÃO faz é a
+    entrega: nenhum IPC sai daqui. Quem aplica é o "Aplicar" do rodapé, que é
+    onde a mudança sai — e é lá que o diálogo de relançamento pergunta UMA vez,
+    em vez de a cada clique de seletor.
+    """
+    pendente = dict(getattr(janela, "_escolha_pendente", None) or {})
+    pendente[campo] = valor
+    janela._escolha_pendente = pendente
+    render_pendente(janela)
+    # Depois da reconciliação: se ela voltou ao que já está valendo, a pendência
+    # se desfez sozinha e o rodapé tem de dizer ISSO.
+    ficou = bool(getattr(janela, "_escolha_pendente", None))
+    toast = getattr(janela, "_status_toast", None)
+    if callable(toast):
+        toast("home", TOAST_ESCOLHA_ANOTADA if ficou else TOAST_ESCOLHA_DESFEITA)
+
+
 def registrar_modo_no_rascunho(
     janela: Any, kind: str, flavor: object = None
 ) -> None:
@@ -649,6 +736,25 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_installed = True
         self._home_guard = False
         self._home_inflight = False
+        # AGORA-E-DEPOIS-01 (08/08/2026): o que ELA escolheu e ainda não
+        # aplicou. `None` = nada pendente, e a caixa espelha o vigente do
+        # daemon, exatamente como sempre fez. Chaves possíveis: "modo" e
+        # "mascara" — os dois campos cujo efeito só chega ao jogo na ABERTURA.
+        #
+        # Isto NÃO revoga a AUTO-01.3 ("o dono da máscara é o DAEMON, a GUI só
+        # ECOA"): não há dois donos do MESMO valor. Há o valor VIGENTE (do
+        # daemon, que a caixa continua ecoando quando não há pendência) e o
+        # valor ESCOLHIDO (dela, que mora aqui até o "Aplicar" do rodapé).
+        #
+        # A declaração de tipo mora em `base.WidgetAccessMixin` (o rodapé também
+        # toca este campo, e dois mixins da mesma classe não podem declará-lo
+        # cada um do seu jeito); aqui é só a partida de cada sessão da aba.
+        self._escolha_pendente = None
+        # O vigente do daemon, guardado no mesmo tique do `_render_home` —
+        # é contra ele que uma escolha se cancela sozinha (escolher o que já
+        # está valendo não é pendência nenhuma). O do modo mora em
+        # `_modo_vigente_do_daemon`, que a aba Perfis já usava.
+        self._mascara_vigente_do_daemon: str | None = None
         # AVISO-VIVO-01: quando a chamada em voo saiu (relógio monotônico) —
         # é o que dá prazo de validade ao latch acima.
         self._home_inflight_since = 0.0
@@ -699,12 +805,31 @@ class HomeActionsMixin(WidgetAccessMixin):
             SegmentedSelector,
         )
 
-        frame_mode = Gtk.Frame(label="O que o controle faz agora")
+        # AGORA-E-DEPOIS-01 (08/08/2026): a caixa se chamava "O que o controle
+        # faz agora" — e era MENTIRA, no defeito 8 da OITO-DEFEITOS-01. Nada do
+        # que está aqui dentro vale agora: o jogo lê a configuração UMA VEZ, na
+        # abertura (`assets/hefesto-launch.sh:320`, `exec env "$@"`), então modo
+        # e máscara só o alcançam quando ele abre. Cor, brilho, gatilho,
+        # vibração e microfone — esses sim mudam na hora — moram em outras abas.
+        #
+        # O nome sai do desenho que ela aprovou em 08/08, e deriva do produto:
+        # ela recusa vocabulário novo que não venha do que já existe.
+        frame_mode = Gtk.Frame(label="Quando o jogo abrir")
         mode_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         mode_box.set_margin_top(10)
         mode_box.set_margin_bottom(10)
         mode_box.set_margin_start(12)
         mode_box.set_margin_end(12)
+
+        # O rótulo do CAMPO desceu do frame para cá, e isso não é cosmética: a
+        # frase "O que o controle faz agora" é o nome do seletor em três páginas
+        # da documentação (`docs/usage/modos.md`, `interface.md`, `quickstart.md`)
+        # e no texto do diálogo de relançamento (`relancar.frase_da_mudanca`).
+        # Perdê-la deixaria as quatro órfãs; aqui ela continua nomeando
+        # exatamente o que sempre nomeou — o seletor logo abaixo.
+        modo_label = Gtk.Label(label="O que o controle faz agora:")
+        modo_label.set_xalign(0.0)
+        mode_box.pack_start(modo_label, False, False, 0)
 
         # wrap=True: FlowBox — lado a lado em janela larga, empilha na estreita
         # (sem estourar o frame sob tiling do COSMIC).
@@ -773,6 +898,25 @@ class HomeActionsMixin(WidgetAccessMixin):
 
         self._home_gamepad_opts = opts
         mode_box.pack_start(opts, False, False, 0)
+
+        # AGORA-E-DEPOIS-01: a linha do que ela escolheu e ainda não aplicou.
+        # Fica FORA do `opts` de propósito: uma pendência de modo ("Controlar o
+        # PC") existe quando a caixa da máscara está escondida, e dentro do
+        # `opts` ela sumiria junto — a pessoa clicaria e não veria prova nenhuma
+        # de que o clique registrou, que é o defeito que esta linha existe para
+        # não criar. Texto pela função pura `relancar.texto_do_pendente`.
+        pendente = Gtk.Label(label="")
+        pendente.set_xalign(0.0)
+        pendente.set_line_wrap(True)
+        # Mesmo desenho dos banners de vpad/wrapper: `no_show_all` para o
+        # `show_all()` do build não desfazer o que o `_render_home` mandou.
+        pendente.set_no_show_all(True)
+        pendente.set_visible(False)
+        pendente.get_style_context().add_class(
+            "hefesto-dualsense4unix-status-warn"
+        )
+        self._home_pendente_label = pendente
+        mode_box.pack_start(pendente, False, False, 0)
 
         origin = Gtk.Label(label="")
         origin.set_xalign(0.0)
@@ -989,6 +1133,12 @@ class HomeActionsMixin(WidgetAccessMixin):
                 self._home_mode_desc.set_text("")
                 self._home_origin_label.set_text("")
                 self._home_gamepad_opts.set_visible(False)
+                # AGORA-E-DEPOIS-01: sem daemon não há como aplicar, então a
+                # linha do pendente sai da tela — mas a ESCOLHA fica guardada
+                # em `_escolha_pendente`: o daemon volta e ela reaparece
+                # inteira. Apagar a escolha aqui perderia, num engasgo de IPC,
+                # o que a pessoa acabou de decidir.
+                render_pendente(self, visivel=False)
                 # UX-03: offline não é degradação do vpad — o banner some junto.
                 self._home_vpad_banner.set_visible(False)
                 # GUI-05: idem para o aviso "jogo sem wrapper".
@@ -1058,8 +1208,32 @@ class HomeActionsMixin(WidgetAccessMixin):
             # deriva do MESMO payload pela MESMA regra, então as duas abas não
             # podem mais discordar sobre em que modo o sistema está.
             mode = mode_of_state(state) or "desktop"
-            selector.set_active_id(mode)
-            self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(mode, ""))
+            # AGORA-E-DEPOIS-01: os dois vigentes do daemon são gravados AQUI,
+            # antes de qualquer coisa que os leia. A máscara vem do mesmo
+            # payload, umas linhas abaixo — subi-la para cá é o que permite
+            # reconciliar a pendência no MESMO tique em que o daemon mudou, em
+            # vez de um tique depois (2 s de tela mostrando escolha vencida).
+            flavor = gamepad.get("flavor")
+            if isinstance(flavor, str) and flavor:
+                self._mascara_vigente_do_daemon = flavor
+            self._modo_vigente_do_daemon = mode
+            # A guarda do valor. Enquanto não há pendência os seletores
+            # espelham o daemon, como sempre; com pendência eles mostram a
+            # ESCOLHA DELA, e este tique não a sobrescreve. Sem isto o desenho
+            # inteiro cai: `_render_home` roda a cada 2 s, e a escolha dela
+            # voltaria sozinha antes de ela alcançar o botão "Aplicar".
+            pendente = reconciliar_pendente(self)
+            modo_exibido = pendente.get("modo") or mode
+            selector.set_active_id(modo_exibido)
+            self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(modo_exibido, ""))
+            # A VISIBILIDADE, não. Decisão dela de 08/08 (AGORA-E-DEPOIS-01 §9,
+            # decisão 2): a caixa da máscara continua obedecendo ao DAEMON — ela
+            # só nasce quando "Jogar pelo Hefesto" está VALENDO. Foi escolha
+            # consciente entre duas saídas: guardar a visibilidade também
+            # deixaria escolher modo e máscara na mesma passada, ao preço de
+            # mais uma guarda; obedecer ao daemon custa dois "Aplicar", um por
+            # decisão. Ela escolheu os dois Aplicar. NÃO troque `mode` por
+            # `modo_exibido` aqui achando que é descuido.
             self._home_gamepad_opts.set_visible(mode == "gamepad")
             self._home_gamepad_opts.set_no_show_all(mode != "gamepad")
 
@@ -1071,13 +1245,21 @@ class HomeActionsMixin(WidgetAccessMixin):
             # um payload incompleto. Sem valor conhecido, o seletor fica como
             # está e o plano de transição sai sem o campo (ver
             # `plan_mode_transition`), preservando a máscara vigente.
-            flavor = gamepad.get("flavor")
-            if isinstance(flavor, str) and flavor:
-                self._home_flavor_selector.set_active_id(flavor)
-            # MASCARA-CUSTO-01: o preço da máscara vigente, embaixo do seletor.
+            # (o `flavor` foi lido acima, junto do modo — AGORA-E-DEPOIS-01.)
+            # A mesma guarda do modo, para o mesmo defeito: sem ela a máscara
+            # escolhida voltaria à do daemon no tique seguinte.
+            mascara_exibida = pendente.get("mascara") or (
+                flavor if isinstance(flavor, str) and flavor else None
+            )
+            if mascara_exibida:
+                self._home_flavor_selector.set_active_id(mascara_exibida)
+            # MASCARA-CUSTO-01: o preço da máscara, embaixo do seletor — e é o
+            # preço do que a caixa MOSTRA. Com uma máscara pendente, mostrar o
+            # custo da vigente responderia a pergunta errada: ela está decidindo
+            # sobre a nova, e é o preço DELA que precisa estar na mesa.
             custo = getattr(self, "_home_flavor_custo", None)
             if custo is not None:
-                texto = texto_do_custo_da_mascara(flavor)
+                texto = texto_do_custo_da_mascara(mascara_exibida)
                 custo.set_text(texto)
                 custo.set_visible(bool(texto))
                 custo.set_no_show_all(not texto)
@@ -1139,7 +1321,12 @@ class HomeActionsMixin(WidgetAccessMixin):
             # RELANCAR-NO-BOTAO-01: o modo vigente, para o "Salvar este
             # perfil" saber se o perfil salvo MUDA o que o jogo vê. Mesma
             # fonte da aba Início — nunca uma segunda verdade.
-            self._modo_vigente_do_daemon = mode_of_state(state) or "desktop"
+            # AGORA-E-DEPOIS-01: reusa o `mode` já derivado acima em vez de
+            # derivá-lo de novo. Duas chamadas de `mode_of_state` no mesmo tique
+            # não podem discordar hoje, mas são duas leituras onde cabe uma — e
+            # a pendência agora depende deste valor para saber se a escolha dela
+            # ainda diverge do que está valendo.
+            self._modo_vigente_do_daemon = mode
             self._jogo_aberto = (
                 isinstance(sinal, dict) and sinal.get("authority") == "game"
             )
@@ -1148,6 +1335,11 @@ class HomeActionsMixin(WidgetAccessMixin):
                 grab_state=state.get("primary_grab_state"),
                 gamepad_on=bool(gamepad.get("enabled")),
             )
+            # AGORA-E-DEPOIS-01: a linha do pendente é reescrita a cada tique,
+            # como todo o resto desta aba. Isso não é desperdício — é o que faz
+            # a pendência SUMIR sozinha quando o daemon alcança a escolha dela
+            # por outro caminho (a CLI, o applet, a troca de perfil).
+            render_pendente(self)
             # Gtk referenciado para manter o import local óbvio (sem uso direto
             # neste ramo; os cards usam via _render_home_controllers).
             _ = Gtk
@@ -1216,114 +1408,46 @@ class HomeActionsMixin(WidgetAccessMixin):
         mode_id = selector.get_active_id()
         if getattr(self, "_home_guard", False) or not mode_id:
             return
+        # A descrição acompanha o botão que ela acabou de clicar — ela descreve
+        # o que ESTÁ ESCOLHIDO, não o que está valendo, e é o único retorno
+        # imediato junto da linha do pendente.
         self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(mode_id, ""))
-
-        def _done(_result: Any) -> bool:
-            # PERFIL-SALVA-TUDO-01/E3: o modo que ela acabou de escolher entra no
-            # rascunho AQUI — depois de o daemon confirmar, e nunca antes: o
-            # rascunho descreve o que ficou de pé, não uma intenção que pode ter
-            # falhado. Registrar não aplica nada (ver `rascunho_com_modo`).
-            registrar_modo_no_rascunho(
-                self, mode_id, self._home_flavor_selector.get_active_id()
-            )
-            # LEIGO-02: o toast dizia "Modo aplicado: gamepad" — o id interno,
-            # uma palavra que não existe em botão nenhum. Ecoa o rótulo que ela
-            # acabou de clicar.
-            self._status_toast("home", f"Pronto — agora: {_mode_label(mode_id)}")
-            self._refresh_home_tab()
-            return False
-
-        def _fail(exc: Exception) -> bool:
-            self._status_toast("home", f"Falha ao mudar o modo ({exc})")
-            self._refresh_home_tab()
-            return False
-
-        # HARM-01: a sequência (sair do nativo antes de ligar o gamepad, com a
-        # folga de 2s) mora em `mode_transition` — a Início é a dona do modo,
-        # não da mecânica; a Emulação chama exatamente o mesmo caminho.
-        # RELANCAR-ORDEM-01 (08/08/2026) — o modo NÃO pergunta, e isso é decisão
-        # dela depois de ver o defeito na tela:
+        # AGORA-E-DEPOIS-01 (08/08/2026): aqui saíam `apply_mode(...)` e o
+        # registro no rascunho. Os dois foram para o "Aplicar" do rodapé — o
+        # botão verde, que é o gesto que ela usa para fechar a edição:
         #
-        #   *"tá zuado, ele aparece antes de me deixar clicar em xbox ou ps5 —
-        #    então como já aparece a tela de aplicar e reiniciar se nem sei o que
-        #    ele vai aplicar?"*
+        #   *"talvez fosse interessante isso aparecer somente quando clicarmos
+        #    no botão final em aplicar, o botão verde — dessa forma eu posso
+        #    passar em todas as abas e isso entra na alteração do perfil ativo"*
         #
-        # Ela tem razão, e é erro de DESENHO, não de código. A máscara ("O jogo
-        # vê o controle como") só existe DENTRO de "Jogar pelo Hefesto": o fluxo
-        # real é escolher o modo → a máscara aparecer → escolher a máscara.
-        # Perguntar no primeiro passo é pedir para reiniciar o jogo por uma
-        # configuração que ela ainda vai fazer — e ela escolheu a saída A, que é
-        # perguntar só onde a decisão está completa.
+        # O clique só MARCA. É o que desfaz o defeito 2 da OITO-DEFEITOS-01 (a
+        # máscara perguntando a cada clique): sem aplicação não há o que
+        # perguntar, e a pergunta passa a existir uma vez só, onde a mudança
+        # sai. E é o que desfaz o 8: a caixa deixa de misturar o que É com o que
+        # VAI SER.
         #
-        # Perguntar aqui também produziria DOIS diálogos numa sequência só (um no
-        # modo, outro na máscara), que é exatamente o "caos" que ela descreveu ao
-        # relatar a partida de ontem.
-        #
-        # O que fica ABERTO, e está escrito para não passar por curado: trocar o
-        # modo com um jogo aberto continua mexendo no `compose_env` ao vivo, e é
-        # o caminho que produziu o "Jogador 3" fantasma. A cura dele NÃO é este
-        # diálogo — é impedir o estado meio-a-meio (vpad de pé com o grab
-        # pulado), e isso é a JOGADOR-3-FANTASMA-01, ainda por escrever.
-        apply_mode(
-            mode_id,
-            flavor=self._home_flavor_selector.get_active_id(),
-            on_done=_done,
-            on_fail=_fail,
-        )
+        # O `_home_guard` continua indispensável e não foi substituído por isto:
+        # ele impede que o `set_active_id` do próprio `_render_home` entre aqui
+        # como se fosse clique dela — o que gravaria uma "pendência" igual ao
+        # vigente a cada 2 segundos.
+        marcar_escolha(self, "modo", mode_id)
 
     def _on_home_flavor_changed(self, selector: Any) -> None:
         flavor_id = selector.get_active_id()
         if getattr(self, "_home_guard", False) or not flavor_id:
             return
+        # O gate lê o seletor de MODO, que com pendência mostra a escolha dela:
+        # quem marcou "Controlar o PC" e ainda não aplicou não está escolhendo
+        # máscara nenhuma — a máscara só existe dentro de "Jogar pelo Hefesto".
         mode = self._home_mode_selector.get_active_id()
         if mode != "gamepad":
             return
-
-        def _done(_result: Any) -> bool:
-            # PERFIL-SALVA-TUDO-01/E3: a máscara é a segunda metade da seção
-            # `mode` do perfil — o `kind` aqui é necessariamente "gamepad" (o
-            # gate logo acima já devolveu em qualquer outro modo).
-            registrar_modo_no_rascunho(self, MODE_GAMEPAD, flavor_id)
-            # LEIGO-02: era "Máscara do gamepad: xbox" — jargão + id cru.
-            self._status_toast(
-                "home", f"O jogo agora vê: {_flavor_label(flavor_id)}"
-            )
-            return False
-
-        def _fail(_exc: Exception) -> bool:
-            # EMU-06: sem callback de falha, a troca podia falhar em silêncio e
-            # o botão "pulava" de volta ~2s depois (o poller reconcilia) sem
-            # nenhuma explicação. Avisa e reconcilia agora, como o seletor de
-            # modo.
-            self._status_toast(
-                "home",
-                "Não consegui trocar o que o jogo vê — o Hefesto pode estar "
-                "desligado.",
-            )
-            self._refresh_home_tab()
-            return False
-
-        # RELANCAR-01: máscara diferente recria o vpad, e o Xbox ainda muda o
-        # `SDL_JOYSTICK_HIDAPI` no env — que o jogo já leu na abertura. É o gesto
-        # exemplar desta cura: ela vai ao Hefesto no meio da partida justamente
-        # para trocar isto.
-        def _aplicar() -> None:
-            call_async(
-                "gamepad.emulation.set",
-                # ORIGEM-QUE-MENTE-01: ela clicou no seletor de máscara. Sem
-                # declarar, o daemon lê como reconciliação e recusa dentro de um
-                # jogo marcado.
-                {"enabled": True, "flavor": flavor_id, "origin": "manual"},
-                _done,
-                _fail,
-                timeout_s=_MODE_IPC_TIMEOUT_S,
-            )
-
-        if self._perguntar_antes_de_relancar(
-            mudanca="mascara", valor=_flavor_label(flavor_id), aplicar=_aplicar
-        ):
-            return
-        _aplicar()
+        # AGORA-E-DEPOIS-01: idem ao modo — aqui saíam o `gamepad.emulation.set`
+        # e o `_perguntar_antes_de_relancar`. A pergunta não sumiu: ela migrou
+        # para o "Aplicar" (`footer_actions._aplicar_escolha_pendente`), onde a
+        # decisão dela está COMPLETA — modo e máscara escolhidos — em vez de
+        # interromper no meio da escolha.
+        marcar_escolha(self, "mascara", flavor_id)
 
     def _on_home_autoswitch_lock_toggled(self, check: Any) -> None:
         """FEAT-AUTOSWITCH-LOCK-01: liga/desliga o cadeado da troca automática.

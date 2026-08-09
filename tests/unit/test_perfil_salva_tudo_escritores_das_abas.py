@@ -35,6 +35,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("PERFIL-SALVA-TUDO-01/E3 (escritores das abas Inicio/Emulacao)")
 
 from hefesto_dualsense4unix.app.actions import emulation_actions as ea
+from hefesto_dualsense4unix.app.actions import footer_actions as fa
 from hefesto_dualsense4unix.app.actions import home_actions as ha
 from hefesto_dualsense4unix.app.actions import mode_transition as mt
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -102,12 +103,23 @@ class _FakeLabel:
         self.text = text
 
 
-class _Janela(ea.EmulationActionsMixin, ha.HomeActionsMixin):
-    """Emulação + Início compartilhando UM rascunho (a MRO do HefestoApp)."""
+class _Janela(ea.EmulationActionsMixin, ha.HomeActionsMixin, fa.FooterActionsMixin):
+    """Emulação + Início + rodapé compartilhando UM rascunho (a MRO do HefestoApp).
+
+    AGORA-E-DEPOIS-01 (08/08/2026): o rodapé entrou na lista porque o gesto da
+    aba Início passou a terminar nele — o clique no seletor marca, o "Aplicar"
+    aplica e registra. Sem os três na mesma casca, este arquivo mediria metade
+    do caminho.
+    """
 
     def __init__(self, perfil: Profile) -> None:
         self.draft = DraftConfig.from_profile(perfil)
         self.toasts: list[str] = []
+        self.window = None
+        self._escolha_pendente = None
+        self._modo_vigente_do_daemon = "desktop"
+        self._mascara_vigente_do_daemon = "xbox"
+        self._jogo_aberto = False
         self._home_guard = False
         self._home_mode_desc = _FakeLabel()
         self._home_mode_selector = _FakeSelector("desktop")
@@ -127,6 +139,12 @@ class _Janela(ea.EmulationActionsMixin, ha.HomeActionsMixin):
         return None
 
     def _refresh_home_tab(self) -> None:
+        return None
+
+    def _footer_toast(self, msg: str, _context: str = "footer") -> None:
+        self.toasts.append(msg)
+
+    def _reload_profiles_store(self, select_name: str | None = None) -> None:
         return None
 
 
@@ -150,6 +168,10 @@ def _ipc_que_confirma(
     monkeypatch.setattr(ea, "call_async", _fake)
     monkeypatch.setattr(ha, "call_async", _fake)
     monkeypatch.setattr(mt, "call_async", _fake)
+    # AGORA-E-DEPOIS-01: o "Aplicar" do rodapé manda o rascunho por outro
+    # cano (`footer_actions.ipc_bridge`) — sem cobri-lo, o gesto novo da aba
+    # Início falaria com o daemon de verdade no meio do teste.
+    monkeypatch.setattr(fa.ipc_bridge, "call_async", _fake)
     return chamadas
 
 
@@ -169,6 +191,10 @@ def _ipc_que_falha(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ea, "call_async", _fake)
     monkeypatch.setattr(ha, "call_async", _fake)
     monkeypatch.setattr(mt, "call_async", _fake)
+    # AGORA-E-DEPOIS-01: o "Aplicar" do rodapé manda o rascunho por outro
+    # cano (`footer_actions.ipc_bridge`) — sem cobri-lo, o gesto novo da aba
+    # Início falaria com o daemon de verdade no meio do teste.
+    monkeypatch.setattr(fa.ipc_bridge, "call_async", _fake)
 
 
 def _ipc_envenenado(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -188,6 +214,7 @@ def _ipc_envenenado(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ha, "call_async", _bomba)
     monkeypatch.setattr(mt, "call_async", _bomba)
     monkeypatch.setattr(mt, "apply_mode", _bomba)
+    monkeypatch.setattr(fa.ipc_bridge, "call_async", _bomba)
 
 
 # ---------------------------------------------------------------------------
@@ -246,11 +273,23 @@ class TestAAbaInicioEscreveNoRascunho:
     def test_comutador_de_modo_registra_o_que_ela_escolheu(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """AGORA-E-DEPOIS-01: o gesto tem dois tempos, e o registro é no segundo.
+
+        O clique no seletor MARCA (e nada mais); o "Aplicar" do rodapé aplica e
+        registra. A queixa dela que este teste guarda continua a mesma — *"salvei
+        o perfil e as configs das outras abas não ficam salvas"* — e agora ela só
+        estaria de volta se o caminho INTEIRO falhasse.
+        """
         janela = _Janela(_perfil("Pragmata", com_regra=True))
         _ipc_que_confirma(monkeypatch)
 
         # O gesto real: clique no seletor emite "changed" com UM argumento.
         janela._home_mode_selector.set_active_id("native")
+        assert janela.draft.to_profile("Pragmata").mode is None, (
+            "o clique registrou sozinho — o rascunho voltou a guardar intenção "
+            "em vez do que ficou de pé"
+        )
+        janela.on_apply_draft()
 
         salvo = janela.draft.to_profile("Pragmata")
         assert salvo.mode is not None and salvo.mode.kind == "native"
@@ -260,9 +299,11 @@ class TestAAbaInicioEscreveNoRascunho:
     ) -> None:
         janela = _Janela(_perfil("Pragmata", com_regra=True))
         janela._home_mode_selector = _FakeSelector("gamepad")
+        janela._modo_vigente_do_daemon = "gamepad"
         _ipc_que_confirma(monkeypatch)
 
         janela._home_flavor_selector.set_active_id("dualsense")
+        janela.on_apply_draft()
 
         salvo = janela.draft.to_profile("Pragmata")
         assert salvo.mode is not None and salvo.mode.kind == "gamepad"
