@@ -55,6 +55,28 @@ janela. O leitor por controle do `daemon/sensor_hub.py` é sob demanda da aba
 Status, então amarrar o clique a ele faria o botão do jogador 2 depender de a
 janela do Hefesto estar aberta.
 
+O fone e o microfone pegam a mesma carona (JACK-QUE-NAO-LIGOU-01)
+----------------------------------------------------------------
+O byte 53 do payload (`status[1]`) diz ao jogo se há fone plugado no controle,
+se há microfone e se ele está mudo. O vpad tinha o `forward_jack` desde 02/08
+e ele NUNCA foi chamado — a sprint `2026-08-03-ENTREGA-QUE-NAO-LIGOU-01` já o
+tinha declarado órfão, e seis dias depois continuava com zero referências. Pior:
+mesmo fiado ele não emitiria, porque escrevia o cache e não chamava
+`_emit_if_changed`. Os dois defeitos foram curados em 09/08/2026 — o chamador é
+este reader, pela mesma razão do clique: o byte mora no report cru, fora da
+janela de motion, e o reader é por jogador e vive com o daemon.
+
+E a bateria, que é o mesmo defeito com 25 dias a mais (BATERIA-QUE-NAO-CHEGOU-01)
+--------------------------------------------------------------------------------
+O byte 52 diz ao jogo quanta carga o controle tem. O `forward_battery` do vpad
+nasceu em 15/07 (`69951a7`) e nunca teve um único chamador em `src/` — e a
+consequência estava escrita na docstring dele desde o primeiro dia: *"o vpad
+anuncia 5% descarregando para sempre e o jogo mostra alerta de bateria fraca num
+controle cheio"*. Ele tinha também o segundo defeito do jack, numa forma mais
+sorrateira: chamava `_emit_if_changed()` **sem** `from_reader=True`, e o gate do
+`_motion_streaming` — que está LIGADO exatamente quando há reader, o caso normal
+— engolia a emissão. Fiado sem isso, ele continuaria não chegando ao jogo.
+
 Nada aqui toca o cursor: o clique é um BIT no report do vpad, não um evento de
 mouse. O descarte do movimento do dedo para o cursor enquanto o vpad está de pé
 (`daemon/subsystems/mouse.discard_touchpad_motion`) e a exclusão do nó do vpad
@@ -106,6 +128,48 @@ MOTION_WINDOW_LEN = 25
 #: de graça, no mesmo report que o motion.
 BUTTONS2_OFFSET = 9
 TOUCHPAD_CLICK_BIT = 0x02
+
+#: JACK-QUE-NAO-LIGOU-01 — o byte de `status[1]` dentro do payload
+#: (`payload[53]`): fone plugado (bit 0), microfone presente (bit 1) e
+#: microfone mudo no firmware (bit 2). Mesmo número do `_STATUS1_OFFSET` do
+#: vpad (`integrations/uhid_gamepad.py`) — travados um no outro por teste.
+#:
+#: Ele pega carona aqui pelo MESMO argumento que o clique do touchpad já usou:
+#: mora fora da janela de motion (15..39), chega de graça no mesmo report cru,
+#: e o reader é POR JOGADOR e vive com o daemon — não com a janela. O
+#: `forward_jack` do vpad existia desde 02/08 sem um único chamador, e a
+#: sprint `2026-08-03-ENTREGA-QUE-NAO-LIGOU-01` já o tinha declarado órfão.
+JACK_STATUS_OFFSET = 53
+
+#: BATERIA-QUE-NAO-CHEGOU-01 (09/08/2026) — o byte de `status[0]` dentro do
+#: payload (`payload[52]`): nibble baixo = nível, nibble alto = estado de
+#: carga. Mesmo número do `_STATUS_OFFSET` do vpad
+#: (`integrations/uhid_gamepad.py`) — travados um no outro por teste.
+#:
+#: Terceiro passageiro da mesma carona, pelo mesmo argumento do clique e do
+#: jack: mora fora da janela de motion (15..39) e chega de graça no mesmo
+#: report cru. O `forward_battery` do vpad nasceu em 15/07 (`69951a7`) e
+#: passou 25 dias com ZERO chamadores em `src/` — a consequência estava
+#: escrita na própria docstring dele desde o primeiro dia: *"o vpad anuncia 5%
+#: descarregando para sempre e o jogo mostra alerta de bateria fraca num
+#: controle cheio"*.
+BATTERY_STATUS_OFFSET = 52
+
+#: A tabela do `dualsense_parse_report` (kernel 6.18, `hid-playstation.c`) —
+#: grau **ALTA** pela régua da referência canônica (§6 e a linha 52,
+#: `ucBatteryLevel` = `nibble*10+5`), porque está no kernel mainline e é o
+#: MESMO código que vai ler o report do nosso vpad do outro lado.
+#:
+#: nibble alto  significado                       o que o kernel faz
+#: -----------  -------------------------------   ------------------------
+#: 0x0          descarregando                     capacidade = nibble*10+5
+#: 0x1          carregando                        capacidade = nibble*10+5
+#: 0x2          cheio (na base)                   capacidade = 100
+#: 0xa, 0xb     tensão/temperatura fora de faixa  capacidade = 0
+#: 0xf          erro de carga                     capacidade = 0
+_CARGA_DESCARREGANDO = 0x0
+_CARGA_CARREGANDO = 0x1
+_CARGA_CHEIO = 0x2
 
 #: Cap da taxa de emissão ao vpad. 250 Hz = taxa nativa do físico em USB (nada
 #: é jogado fora no cabo) e o mesmo teto do rate-limit do REPLICA-03; em BT
@@ -280,6 +344,89 @@ def extract_touchpad_click(report: bytes) -> bool | None:
     return bool(report[idx] & TOUCHPAD_CLICK_BIT)
 
 
+def extract_jack_status(report: bytes) -> int | None:
+    """Byte de fone/microfone (`status[1]`) de um report CRU, ou None.
+
+    JACK-QUE-NAO-LIGOU-01. Mesma disciplina de transporte do clique
+    (`_struct_base`, com CRC do BT): ``None`` é *"este report não diz nada
+    sobre o jack"* — id desconhecido, tamanho curto, CRC ruim — e é DIFERENTE
+    de ``0x00``, que é *"o report chegou íntegro e não há fone nem microfone"*.
+    Confundir os dois faria um pacote corrompido de rádio desplugar o fone
+    dentro do jogo.
+
+    Devolve o byte INTEIRO, sem máscara: quem decide o que encaminhar é o vpad
+    (`forward_jack` filtra pelos três bits conhecidos). O extrator lê o
+    aparelho; a política de o que sai no report é do outro lado.
+    """
+    base = _struct_base(report)
+    if base is None:
+        return None
+    idx = base + JACK_STATUS_OFFSET
+    if len(report) <= idx:
+        return None
+    return int(report[idx])
+
+
+def extract_battery_status(report: bytes) -> int | None:
+    """Byte de bateria (`status[0]`) de um report CRU, ou None.
+
+    BATERIA-QUE-NAO-CHEGOU-01. Mesma disciplina de transporte do clique e do
+    jack (`_struct_base`, com CRC do BT): ``None`` é *"este report não diz
+    nada sobre bateria"* — id desconhecido, tamanho curto, CRC ruim — e é
+    DIFERENTE de ``0x00``, que é um controle descarregando com 5%. Confundir
+    os dois faria um pacote corrompido de rádio anunciar bateria acabando no
+    meio da partida dela.
+
+    Devolve o byte INTEIRO, sem decodificar: a leitura é do aparelho, e o que
+    significa cada nibble é a `decodificar_bateria`, logo abaixo.
+    """
+    base = _struct_base(report)
+    if base is None:
+        return None
+    idx = base + BATTERY_STATUS_OFFSET
+    if len(report) <= idx:
+        return None
+    return int(report[idx])
+
+
+def decodificar_bateria(status0: int) -> tuple[int | None, bool]:
+    """``(percentual, carregando)`` do byte de bateria; ``None`` = não sei.
+
+    BATERIA-QUE-NAO-CHEGOU-01. A conta é a do `dualsense_parse_report` do
+    kernel 6.18, e ela vale nos DOIS sentidos: é a mesma tabela que o
+    `hid-playstation` vai aplicar ao byte que o nosso vpad escrever. Este é o
+    ponto em que "não converta no chute" foi cobrado — a escala não é uma
+    porcentagem, são **11 níveis** (5, 15, ..., 95, 100) num nibble.
+
+    O caminho de volta (`_percent_para_nibble`, no vpad) é o inverso EXATO
+    desta conta para os 11 níveis, e há teste que percorre os onze. Nenhum
+    arredondamento é introduzido aqui: nível `n` vira `n*10+5`, que volta a
+    ser `n`.
+
+    Os estados de carga que o nibble alto pode dizer são cinco, e o report do
+    vpad só sabe escrever dois (carregando / descarregando — o
+    `_CHARGING_SHIFT` do `forward_battery`). A escolha de cada um:
+
+    * **cheio (0x2)** vira ``(100, carregando=True)``. É o mais próximo que o
+      campo consegue dizer, e é honesto no que importa: o controle está na
+      base, cheio, e nenhum alerta de bateria fraca deve aparecer. Dizer
+      "100% descarregando" seria inventar um consumo que não existe;
+    * **fora de faixa / erro de carga (0xa, 0xb, 0xf)** e qualquer nibble que
+      não conhecemos viram ``(None, False)`` — e ``None`` é o que faz o
+      `forward_battery` escrever `_STATUS_DESCONHECIDO`. O kernel devolve
+      capacidade **0** nesses casos, e repassar zero seria acender alerta de
+      bateria crítica por causa de um controle quente. "Não sei" é a resposta
+      que a casa já escolheu para esse byte, e ela não dispara alerta nenhum.
+    """
+    nivel = status0 & 0x0F
+    carga = (status0 & 0xF0) >> 4
+    if carga in (_CARGA_DESCARREGANDO, _CARGA_CARREGANDO):
+        return (min(nivel * 10 + 5, 100), carga == _CARGA_CARREGANDO)
+    if carga == _CARGA_CHEIO:
+        return (100, True)
+    return (None, False)
+
+
 class PhysicalReportReader:
     """Thread que espelha a janela de motion do hidraw físico no vpad.
 
@@ -348,6 +495,21 @@ class PhysicalReportReader:
         # esquecer junto ou a pressionada não voltaria a ser entregue).
         self._touchpad_click: bool | None = None
         self._touchpad_clicks = 0
+        # JACK-QUE-NAO-LIGOU-01: último byte de fone/mic ENTREGUE ao vpad.
+        # `None` = nada entregue nesta abertura do fd, e é o que faz o primeiro
+        # report depois de reabrir re-sincronizar o jack — o vpad zera o byte no
+        # fail-safe de `set_motion_streaming(False)`, então o cache do reader
+        # tem de esquecer junto ou um fone plugado antes da queda nunca mais
+        # seria anunciado ao jogo.
+        self._jack_status: int | None = None
+        self._jack_forwards = 0
+        # BATERIA-QUE-NAO-CHEGOU-01: último byte de bateria ENTREGUE ao vpad,
+        # pelo mesmo contrato do jack acima. `None` = nada entregue nesta
+        # abertura do fd — e é ele que faz o primeiro report depois de reabrir
+        # re-sincronizar a carga, porque o vpad volta a "não sei" no fail-safe
+        # de `set_motion_streaming(False)`.
+        self._battery_status: int | None = None
+        self._battery_forwards = 0
         # Telemetria (GYRO-03 lê): reports vistos, janelas emitidas, drops de
         # CRC/tamanho no caminho BT e a taxa de emissão (EMA em Hz).
         self._reports_seen = 0
@@ -378,6 +540,16 @@ class PhysicalReportReader:
     def touchpad_clicks(self) -> int:
         """Nº de PRESSIONADAS do touchpad entregues ao vpad (TOUCH-CLICK-01)."""
         return self._touchpad_clicks
+
+    @property
+    def jack_forwards(self) -> int:
+        """Nº de mudanças de fone/mic entregues ao vpad (JACK-QUE-NAO-LIGOU-01)."""
+        return self._jack_forwards
+
+    @property
+    def battery_forwards(self) -> int:
+        """Nº de mudanças de bateria entregues ao vpad (BATERIA-QUE-NAO-CHEGOU-01)."""
+        return self._battery_forwards
 
     @property
     def emit_hz(self) -> float:
@@ -435,8 +607,12 @@ class PhysicalReportReader:
             self._close_wake_pipe()
         # Idempotente com o finally do loop — cinto e suspensório: o vpad não
         # pode ficar em streaming sem reader vivo (input congelaria no jogo),
-        # nem com o clique do touchpad preso (TOUCH-CLICK-01).
+        # nem com o clique do touchpad preso (TOUCH-CLICK-01), nem com um fone
+        # fantasma anunciado ao jogo (JACK-QUE-NAO-LIGOU-01), nem com a bateria
+        # de um controle que já foi embora (BATERIA-QUE-NAO-CHEGOU-01).
         self._reset_touchpad_click()
+        self._reset_jack()
+        self._reset_battery()
         with contextlib.suppress(Exception):
             self._vpad.set_motion_streaming(False)
 
@@ -520,7 +696,13 @@ class PhysicalReportReader:
                 # com o clique do touchpad SOLTO (TOUCH-CLICK-01 — nunca um
                 # botão preso abrindo o mapa sozinho). O reset local vem junto:
                 # o vpad esqueceu, o cache do reader tem de esquecer também.
+                # O jack anda junto (JACK-QUE-NAO-LIGOU-01, mesmo fail-safe), e
+                # a bateria também (BATERIA-QUE-NAO-CHEGOU-01): perder o físico
+                # com 8% no cache deixaria o jogo alertando bateria fraca para
+                # um controle que nem está mais lá.
                 self._reset_touchpad_click()
+                self._reset_jack()
+                self._reset_battery()
                 with contextlib.suppress(Exception):
                     self._vpad.set_motion_streaming(False)
             if not self._stop_flag.is_set():
@@ -594,6 +776,18 @@ class PhysicalReportReader:
             # hora; o custo é 2 writes extras por clique, contra os 250/s que
             # o throttle já governa.
             self._observe_touchpad_click(data)
+            # JACK-QUE-NAO-LIGOU-01: o fone/microfone sai pelo mesmo caminho e
+            # pelo mesmo motivo do clique — mora fora da janela de motion, e o
+            # `_maybe_emit` dedupa e capa POR JANELA. Um controle parado na
+            # mesa (janela repetida, ou BT em repouso) engoliria o "plugou o
+            # fone" se ele dependesse da janela para viajar. Por BORDA: o byte
+            # muda uma vez por plugada, não 250 vezes por segundo.
+            self._observe_jack(data)
+            # BATERIA-QUE-NAO-CHEGOU-01: e a bateria, pelo terceiro motivo
+            # idêntico. Ela muda ~11 vezes numa descarga inteira, então o custo
+            # de olhar por report é uma comparação de inteiro, e o de entregar
+            # por borda é irrisório perto dos 250/s do motion.
+            self._observe_battery(data)
             window = extract_motion_window(data)
             if window is None:
                 if data[0] == INPUT_REPORT_BT:
@@ -638,6 +832,91 @@ class PhysicalReportReader:
         reentregaria a pressionada — clique morto até soltar e apertar de novo.
         """
         self._touchpad_click = None
+
+    # -- fone e microfone do controle (JACK-QUE-NAO-LIGOU-01) -------------
+
+    def _observe_jack(self, report: bytes) -> None:
+        """Entrega ao vpad a MUDANÇA de fone/microfone deste report cru.
+
+        Irmão exato do `_observe_touchpad_click`, e as três defesas dele valem
+        aqui pelas mesmas razões: só borda (o report vem a 250-765 Hz e
+        reafirmar o mesmo byte seria um write no /dev/uhid por report),
+        ``None`` do extrator não mexe no estado (CRC ruim não despluga fone), e
+        vpad sem o método degrada calado (uinput e dublês de teste — mesmo
+        contrato duck-typed do `forward_motion`).
+
+        A comparação é com o byte CRU, e o vpad filtra os três bits conhecidos.
+        É de propósito: se o firmware mexer num bit que não encaminhamos, o
+        cache muda, o `forward_jack` reconhece que o valor filtrado é o mesmo e
+        sai cedo — nenhum report a mais no /dev/uhid, e nenhuma entrega perdida
+        se o bit conhecido mudar junto.
+        """
+        status = extract_jack_status(report)
+        if status is None or status == self._jack_status:
+            return
+        forward = getattr(self._vpad, "forward_jack", None)
+        if forward is None:
+            return
+        self._jack_status = status
+        try:
+            forward(status)
+            self._jack_forwards += 1
+        except Exception as exc:
+            logger.warning("motion_reader_jack_failed", err=str(exc))
+
+    def _reset_jack(self) -> None:
+        """Esquece o fone ao perder o fd — o vpad já o zerou no fail-safe.
+
+        Sem este esquecimento, um fone plugado no instante do hotplug ficaria
+        no cache: o vpad zera o byte em `set_motion_streaming(False)` e, na
+        reabertura, o reader compararia igual e nunca reentregaria — o jogo
+        ficaria sem saber do fone até ela desplugar e plugar de novo.
+        """
+        self._jack_status = None
+
+    # -- bateria do controle (BATERIA-QUE-NAO-CHEGOU-01) ------------------
+
+    def _observe_battery(self, report: bytes) -> None:
+        """Entrega ao vpad a MUDANÇA de bateria deste report cru.
+
+        Terceiro irmão do `_observe_touchpad_click`, com as três defesas dele
+        pelas mesmas razões: só borda, ``None`` do extrator não mexe no estado
+        (CRC ruim de rádio não descarrega o controle dela) e vpad sem o método
+        degrada calado — que aqui não é hipótese de teste: o `UinputGamepad`
+        **não tem** `forward_battery`, porque o evdev não carrega bateria no
+        mesmo canal. Vale para USB e para BT (o `_struct_base` já cuida dos
+        dois transportes) e para os N controles, um reader por jogador.
+
+        A comparação é com o byte CRU, e quem o traduz é a
+        `decodificar_bateria`. É de propósito, e o motivo é o mesmo do jack:
+        se o firmware mexer num bit que não sabemos ler, o cache muda, a
+        tradução dá o mesmo par e o `forward_battery` sai cedo — nenhum report
+        a mais no /dev/uhid.
+        """
+        status = extract_battery_status(report)
+        if status is None or status == self._battery_status:
+            return
+        forward = getattr(self._vpad, "forward_battery", None)
+        if forward is None:
+            return
+        self._battery_status = status
+        percentual, carregando = decodificar_bateria(status)
+        try:
+            forward(percentual, charging=carregando, from_reader=True)
+            self._battery_forwards += 1
+        except Exception as exc:
+            logger.warning("motion_reader_battery_failed", err=str(exc))
+
+    def _reset_battery(self) -> None:
+        """Esquece a bateria ao perder o fd — o vpad já voltou a "não sei".
+
+        Mesma armadilha do fone, com um custo maior: sem este esquecimento, um
+        controle que caiu com 8% ficaria 8% no cache do reader; o vpad volta
+        para `_STATUS_DESCONHECIDO` no fail-safe e, na reabertura, o reader
+        compararia igual e NUNCA reentregaria — o jogo passaria a partida
+        inteira achando que o controle está cheio e carregando.
+        """
+        self._battery_status = None
 
     # -- throttle ---------------------------------------------------------
 
@@ -695,15 +974,20 @@ class PhysicalReportReader:
 
 
 __all__ = [
+    "BATTERY_STATUS_OFFSET",
     "BUTTONS2_OFFSET",
     "INPUT_REPORT_BT",
     "INPUT_REPORT_BT_SIZE",
     "INPUT_REPORT_USB",
+    "JACK_STATUS_OFFSET",
     "MOTION_EMIT_MAX_HZ",
     "MOTION_WINDOW_LEN",
     "MOTION_WINDOW_OFFSET",
     "TOUCHPAD_CLICK_BIT",
     "PhysicalReportReader",
+    "decodificar_bateria",
+    "extract_battery_status",
+    "extract_jack_status",
     "extract_motion_window",
     "extract_touchpad_click",
 ]

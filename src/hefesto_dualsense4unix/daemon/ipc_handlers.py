@@ -294,6 +294,80 @@ def _par_de_motores(cru: Any) -> list[int] | None:
     return [int(cru[0]), int(cru[1])]
 
 
+def _contador_do_vpad(vp: Any, nome: str) -> int:
+    """Um contador cumulativo do vpad, com tipagem ESTRITA; 0 quando não há.
+
+    ORFAOS-QUE-VOLTAM-01. Os contadores vizinhos usam ``int(getattr(...) or 0)``
+    e isso basta para eles, porque um número a mais num diagnóstico só engana
+    quem está lendo o log. Estes dois não: ``motion_forwards`` decide a FRASE
+    do card (é ele que separa "o giroscópio parou" de "nunca começou"), e
+    ``int()`` de um `MagicMock` devolve **1** — um vpad dublado, ou um uinput
+    que não tem a property, publicaria "já fluiu uma vez" e a tela diria
+    "parou" num caminho que nunca existiu.
+
+    A disciplina é a mesma que o `motion_streaming` deste payload já aplica, e
+    pelo mesmo motivo escrito lá: um MagicMock nunca vira dado.
+    """
+    valor = getattr(vp, nome, 0)
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        return 0
+    return valor
+
+
+def _idade_ou_none(cru: Any) -> float | None:
+    """Uma idade em segundos saneada para o payload, ou None.
+
+    MOTOR-QUE-NAO-SE-VE-01. `None` significa **nunca aconteceu**, e é
+    diferente de `0.0`, que é "acabou de acontecer" — a mesma distinção que o
+    `visto_ha_s` faz omitindo a categoria. Publicar zero para "nunca" apagaria
+    a diferença e faria a tela dizer que os motores acabaram de girar num vpad
+    que nunca vibrou.
+    """
+    if isinstance(cru, bool) or not isinstance(cru, (int, float)):
+        return None
+    return float(cru)
+
+
+def _jack_do_vpad(vp: Any) -> dict[str, bool] | None:
+    """O `jack` do vpad (fone/microfone/mudo) saneado para o payload, ou None.
+
+    JACK-QUE-NAO-LIGOU-01. Mesmas defesas dos helpers acima: o vpad pode ser
+    um `uinput` (que não tem report 0x01 e portanto não tem byte 53) ou um
+    dublê devolvendo `MagicMock`, e o `state_full` não pode morrer por causa
+    de uma linha de diagnóstico. `None` = este vpad não fala de jack.
+    """
+    cru = getattr(vp, "jack", None)
+    if not isinstance(cru, dict):
+        return None
+    return {
+        str(k): bool(v) for k, v in cru.items() if isinstance(v, bool)
+    }
+
+
+def _bateria_do_vpad(vp: Any) -> dict[str, Any] | None:
+    """A bateria que o vpad ANUNCIA ao jogo, saneada para o payload, ou None.
+
+    BATERIA-QUE-NAO-CHEGOU-01. Mesmas defesas do `_jack_do_vpad`: o vpad pode
+    ser um `uinput` (que não tem report 0x01 nem byte 52) ou um dublê de teste
+    devolvendo `MagicMock`, e o `state_full` não pode morrer por causa de uma
+    linha de diagnóstico.
+
+    `pct` é `None` quando o vpad está em `_STATUS_DESCONHECIDO` — o "não sei"
+    honesto do byte, que é diferente de zero e não pode virar zero aqui: zero
+    é bateria crítica, e "não sei" é justamente o estado que existe para não
+    acender alerta nenhum.
+    """
+    cru = getattr(vp, "bateria_anunciada", None)
+    if not isinstance(cru, tuple) or len(cru) != 2:
+        return None
+    pct, carregando = cru
+    if pct is not None and (isinstance(pct, bool) or not isinstance(pct, int)):
+        return None
+    if not isinstance(carregando, bool):
+        return None
+    return {"pct": pct, "carregando": carregando}
+
+
 def _amostra_de_descarte(cru: Any) -> dict[str, int] | None:
     """(flag0, flag1, flag2, weak, strong) do último descarte, nomeado.
 
@@ -308,6 +382,45 @@ def _amostra_de_descarte(cru: Any) -> dict[str, int] | None:
         return None
     nomes = ("flag0", "flag1", "flag2", "weak", "strong")
     return dict(zip(nomes, (int(v) for v in cru), strict=True))
+
+
+def _anel_de_vibracao(cru: Any) -> list[dict[str, Any]] | None:
+    """Os últimos reports de vibração do vpad, nomeados (QUEM ESCREVEU-01).
+
+    Cada item vira ``{ha_s, flag0, flag1, flag2, weak, strong, ramo}``. É a
+    prova que os contadores não dão: *quem* escreveu o report e *o quê*. O
+    caso medido em 09/08 (``plays=4`` com força zero em todas) tem dois
+    autores possíveis — o jogo pelo hidraw e o ``hid_playstation`` do kernel
+    traduzindo force-feedback do nó evdev —, e só os bytes os separam.
+
+    ``None`` quando o vpad não expõe o anel (backend uinput, dublê de teste):
+    lista vazia diria "nada chegou", e "não sei" é outra coisa.
+    """
+    if not isinstance(cru, list):
+        return None
+    nomes = ("ha_s", "flag0", "flag1", "flag2", "weak", "strong", "ramo")
+    itens: list[dict[str, Any]] = []
+    for entrada in cru:
+        if not isinstance(entrada, tuple) or len(entrada) != 7:
+            return None
+        *numeros, ramo = entrada
+        if not isinstance(ramo, str):
+            return None
+        if not all(
+            isinstance(v, (int, float)) and not isinstance(v, bool) for v in numeros
+        ):
+            return None
+        itens.append(dict(zip(nomes, (*numeros, ramo), strict=True)))
+    return itens
+
+
+def _report_estranho(cru: Any) -> dict[str, int] | None:
+    """(report_id, tamanho) do último output com envelope que não lemos."""
+    if not isinstance(cru, tuple) or len(cru) != 2:
+        return None
+    if not all(isinstance(v, int) and not isinstance(v, bool) for v in cru):
+        return None
+    return {"report_id": int(cru[0]), "tamanho": int(cru[1])}
 
 
 def _norm_uniq(value: Any) -> str | None:
@@ -1559,6 +1672,21 @@ class IpcHandlersMixin:
                          ENTRADA — o defeito medido em 29/07; a saída continua
                          do Hefesto, MEDIDO em 06/08) ou `null` quando emite.
 
+        A quinta chave é de outra natureza e entrou em 10/08/2026
+        (TECLADO-QUE-NAO-DIGITA-01):
+
+        - `osk_disponivel` -- há teclado na tela instalado na MÁQUINA. É o que
+                         decide se o L3 (`__OPEN_OSK__`, o binding de fábrica)
+                         abre alguma coisa ou só avisa que não tem o que abrir —
+                         e, como nenhum dos nove atalhos de fábrica digita uma
+                         LETRA, é também o que decide se existe algum caminho
+                         para ESCREVER TEXTO com o controle.
+
+        Por que sai DAQUI e não de um `shutil.which` na janela: num Flatpak a
+        janela olharia dentro do sandbox e responderia sobre uma máquina que não
+        é a dela. O daemon é quem enxerga o host e é quem vai spawnar o
+        processo — a resposta tem de vir de quem executa.
+
         `getattr` defensivo em tudo: daemon/config dublados em teste não precisam
         conhecer os campos novos, e este handler roda a 10-20 Hz.
         """
@@ -1582,11 +1710,28 @@ class IpcHandlersMixin:
             bloqueio = "modo_jogo"
         else:
             bloqueio = motivo_jogo
+        # Pergunta ao `_OSKController` do daemon quando ele existe (o cache dele
+        # já está quente) e cai na sonda de módulo quando não existe — que é o
+        # caso enquanto a emulação de teclado está desligada, justamente quando
+        # a janela mais precisa saber se ligar valeria alguma coisa. As duas
+        # respostas têm o mesmo TTL e a mesma ordem de candidatos.
+        osk_disponivel = False
+        with contextlib.suppress(Exception):
+            controlador = getattr(daemon, "_osk_controller", None)
+            if controlador is not None:
+                osk_disponivel = bool(controlador.disponivel())
+            else:
+                from hefesto_dualsense4unix.daemon.subsystems.keyboard import (
+                    osk_disponivel_no_sistema,
+                )
+
+                osk_disponivel = bool(osk_disponivel_no_sistema())
         return {
             "enabled": enabled,
             "device_ativo": device_ativo,
             "despachando": bloqueio is None,
             "bloqueio": bloqueio,
+            "osk_disponivel": osk_disponivel,
         }
 
     def _steam_input_payload(self) -> dict[str, bool]:
@@ -2094,6 +2239,10 @@ class IpcHandlersMixin:
             ff_nao_nulos = 0
             ff_descartados = 0
             ff_v2 = 0
+            # QUEM ESCREVEU-01: agregados dos dois silêncios que a tela lia
+            # como "o jogo não pediu nada".
+            ff_paradas = 0
+            ff_estranhos = 0
             ff_last: tuple[int, int] = (0, 0)
             per_vpad: list[dict[str, Any]] = []
             for player_num, vp, motion_reader in vpads:
@@ -2105,6 +2254,10 @@ class IpcHandlersMixin:
                     ff_nao_nulos += int(getattr(vp, "ff_nao_nulo_count", 0) or 0)
                     ff_descartados += int(getattr(vp, "ff_descartado_count", 0) or 0)
                     ff_v2 += int(getattr(vp, "ff_v2_count", 0) or 0)
+                    ff_paradas += int(getattr(vp, "ff_parada_sdl_count", 0) or 0)
+                    ff_estranhos += int(
+                        getattr(vp, "ff_report_estranho_count", 0) or 0
+                    )
                     last = getattr(vp, "ff_last_sent", None)
                     if isinstance(last, tuple) and len(last) == 2 and last != (0, 0):
                         ff_last = (int(last[0]), int(last[1]))
@@ -2142,6 +2295,21 @@ class IpcHandlersMixin:
                                 getattr(vp, "ff_descartado_amostra", None)
                             ),
                             "ff_v2_count": int(getattr(vp, "ff_v2_count", 0) or 0),
+                            # QUEM ESCREVEU-01: os três buracos que faziam
+                            # "ninguém pediu nada" e "chegou e nós descartamos
+                            # na porta" saírem com o MESMO painel zerado.
+                            "ff_parada_sdl_count": int(
+                                getattr(vp, "ff_parada_sdl_count", 0) or 0
+                            ),
+                            "ff_report_estranho_count": int(
+                                getattr(vp, "ff_report_estranho_count", 0) or 0
+                            ),
+                            "ff_report_estranho_amostra": _report_estranho(
+                                getattr(vp, "ff_report_estranho_amostra", None)
+                            ),
+                            "ff_ultimos_reports": _anel_de_vibracao(
+                                getattr(vp, "ff_ultimos_reports", None)
+                            ),
                             "output_count": int(getattr(vp, "output_count", 0) or 0),
                             "trigger_replicas": int(
                                 getattr(vp, "trigger_replicas", 0) or 0
@@ -2171,6 +2339,55 @@ class IpcHandlersMixin:
                             "touchpad_clicks": int(
                                 getattr(vp, "touchpad_click_count", 0) or 0
                             ),
+                            # ORFAOS-QUE-VOLTAM-01 (09/08/2026) — o ESTADO ao
+                            # lado da contagem. `touchpad_clicks` conta bordas;
+                            # com o dedo APERTADO ele para de subir, e a tela,
+                            # que decide por idade do carimbo, dizia "parou"
+                            # com o botão ainda pressionado no jogo. A property
+                            # `touchpad_click` existia desde a TOUCH-CLICK-01 e
+                            # nunca tinha sido lida por ninguém.
+                            "touchpad_pressionado": bool(
+                                getattr(vp, "touchpad_click", False) is True
+                            ),
+                            # ORFAOS-QUE-VOLTAM-01: quantas JANELAS de motion o
+                            # vpad de fato escreveu no /dev/uhid. Irmão do
+                            # `motion_hz` e diferente dele: o Hz é a taxa do
+                            # reader AGORA (morre em 1 s de silêncio), este é
+                            # cumulativo e responde "já fluiu alguma vez?" —
+                            # é ele que separa "o giroscópio nunca começou" de
+                            # "o giroscópio parou", que a tela dizia igual.
+                            "motion_forwards": _contador_do_vpad(
+                                vp, "motion_forward_count"
+                            ),
+                            # JACK-QUE-NAO-LIGOU-01: o que o vpad DIZ AO JOGO
+                            # sobre fone/microfone do controle (byte 53). Saía
+                            # fixo em 0x00 desde sempre — o `forward_jack`
+                            # existia desde 02/08 sem chamador e sem emissão.
+                            "jack": _jack_do_vpad(vp),
+                            "jack_forwards": _contador_do_vpad(
+                                vp, "jack_forward_count"
+                            ),
+                            # BATERIA-QUE-NAO-CHEGOU-01: o que o vpad DIZ AO
+                            # JOGO sobre a carga (byte 52). Diferente do
+                            # `battery_pct` do controle FÍSICO que a aba Status
+                            # já mostra: com o `forward_battery` órfão desde
+                            # 15/07, o físico podia estar em 95% e o jogo lia
+                            # "cheio e carregando" fixo — ou, antes disso, "5%
+                            # descarregando" e alertava bateria fraca.
+                            "bateria_no_jogo": _bateria_do_vpad(vp),
+                            "battery_forwards": _contador_do_vpad(
+                                vp, "battery_forward_count"
+                            ),
+                            # MOTOR-QUE-NAO-SE-VE-01: o par que foi AOS
+                            # MOTORES, depois da política de intensidade. Todos
+                            # os `ff_*` acima são o que o JOGO PEDIU; entre um
+                            # e outro há uma multiplicação que a tela não via.
+                            "rumble_no_fisico": _par_de_motores(
+                                getattr(vp, "rumble_no_fisico", None)
+                            ),
+                            "rumble_no_fisico_ha_s": _idade_ou_none(
+                                getattr(vp, "rumble_no_fisico_ha_s", None)
+                            ),
                             # PAINEL-DA-VERDADE-01/E1 — o campo que faz a aba
                             # Status parar de confundir "já funcionou uma vez"
                             # com "está funcionando". Todos os contadores acima
@@ -2196,6 +2413,12 @@ class IpcHandlersMixin:
                 "nao_nulos": ff_nao_nulos,
                 "descartados": ff_descartados,
                 "v2": ff_v2,
+                # QUEM ESCREVEU-01: `paradas` > 0 é PROVA de vibração viva
+                # (ninguém manda parar o que nunca começou) e `estranhos` > 0 é
+                # dado CHEGANDO e descartado na porta — o oposto exato da
+                # conclusão "o jogo não enxergou o gamepad virtual".
+                "paradas": ff_paradas,
+                "estranhos": ff_estranhos,
                 "last_weak": ff_last[0],
                 "last_strong": ff_last[1],
                 "vpads": len(vpads),

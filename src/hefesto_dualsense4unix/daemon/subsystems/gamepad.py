@@ -938,8 +938,18 @@ def apply_game_rumble(
     strong: int,
     *,
     target_uniq: str | None = None,
-) -> None:
+) -> tuple[int, int] | None:
     """Aplica no controle FÍSICO o rumble vindo do jogo (FF do vpad).
+
+    Devolve o par (weak, strong) EFETIVO que foi escrito no controle, ou
+    ``None`` quando nada foi escrito (rumble fixado pela GUI vencendo, ou
+    escrita recusada pelo backend). MOTOR-QUE-NAO-SE-VE-01, 09/08/2026: o
+    valor de retorno é o único jeito de o vpad — e por ele a aba Status —
+    saber o que chegou aos motores. Entre o pedido do jogo e este par há a
+    multiplicação da política de intensidade, e ela era invisível: em
+    `economia` (0,3) um pedido de 1 vira ZERO e a tela continuava dizendo
+    "vibração chegando". Chamador que ignora o retorno continua correto (era
+    o contrato até aqui).
 
     FEAT-VPAD-FF-PASSTHROUGH-01. Decisões (documentadas):
       - `rumble_active` FIXADO manual VENCE: com rumble fixado (usuária
@@ -960,7 +970,7 @@ def apply_game_rumble(
         TODOS os controles vibram juntos.
     """
     if daemon.config.rumble_active is not None:
-        return  # rumble fixado manual vence o FF do jogo
+        return None  # rumble fixado manual vence o FF do jogo
     controller = daemon.controller
     mult = _game_rumble_mult(daemon, time.monotonic())
     weak_eff = max(0, min(255, round(weak * mult)))
@@ -972,15 +982,17 @@ def apply_game_rumble(
     if target_uniq is not None and callable(rumble_for):
         try:
             if rumble_for(target_uniq, weak_eff, strong_eff):
-                return
+                return (weak_eff, strong_eff)
         except Exception as exc:
             logger.warning("game_rumble_target_failed", err=str(exc), target=target_uniq)
-            return
+            return None
         # MAC não casou nenhum handle → broadcast histórico (documentado).
     try:
         controller.set_rumble(weak=weak_eff, strong=strong_eff)
     except Exception as exc:
         logger.warning("game_rumble_failed", err=str(exc))
+        return None
+    return (weak_eff, strong_eff)
 
 
 def apply_game_trigger(
@@ -1487,6 +1499,31 @@ def stop_motion_reader(daemon: DaemonProtocol) -> None:
     logger.info("motion_reader_stopped", player=1)
 
 
+def anotar_rumble_no_vpad(vpad: Any, efetivo: tuple[int, int] | None) -> None:
+    """Anota no vpad o par que FOI AOS MOTORES (MOTOR-QUE-NAO-SE-VE-01).
+
+    Dono único da anotação, e função de módulo por isso: os dois sinks (o do
+    P1 aqui e o de cada jogador do co-op em `CoopManager`) escrevem no MESMO
+    campo, e dois jeitos de escrevê-lo divergiriam na primeira mudança — a
+    classe de defeito registrada nesta casa.
+
+    ``efetivo is None`` NÃO anota: é o rumble fixado pela GUI vencendo o do
+    jogo, ou uma escrita recusada pelo backend. Registrar zero ali seria dizer
+    "os motores receberam parada" quando o que houve foi "ninguém escreveu".
+
+    Vpad ausente ou sem o método degrada calado — é o mesmo contrato
+    duck-typed do `forward_motion`: no caminho uinput não há o que anotar, e
+    os dublês de teste não precisam conhecer o método.
+    """
+    if efetivo is None or vpad is None:
+        return
+    anotar = getattr(vpad, "registrar_rumble_no_fisico", None)
+    if anotar is None:
+        return
+    with contextlib.suppress(Exception):
+        anotar(efetivo[0], efetivo[1])
+
+
 def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], None]:
     """Sink de FF do vpad do P1 → rumble físico do controle PRIMÁRIO.
 
@@ -1494,16 +1531,21 @@ def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], Non
     rumble (`primary_uniq` muda em hotplug); com o co-op ativo isso garante
     que o rumble do P1 não sacode o controle dos outros jogadores. Backend
     sem `primary_uniq` (ex.: FakeController) cai em broadcast.
+
+    MOTOR-QUE-NAO-SE-VE-01: o vpad é lido AQUI, na hora do rumble, e não
+    capturado na criação do sink — o sink nasce ANTES do vpad (ele é argumento
+    do construtor), e uma referência capturada seria eternamente None.
     """
 
     def _sink(weak: int, strong: int) -> None:
         uniq = getattr(daemon.controller, "primary_uniq", None)
-        apply_game_rumble(
+        efetivo = apply_game_rumble(
             daemon,
             weak,
             strong,
             target_uniq=uniq if isinstance(uniq, str) and uniq else None,
         )
+        anotar_rumble_no_vpad(getattr(daemon, "_gamepad_device", None), efetivo)
 
     return _sink
 
@@ -1846,6 +1888,7 @@ __all__ = [
     "REBACKEND_COOLDOWN_SEC",
     "STEAM_INPUT_VIGIA_INTERVAL_SEC",
     "GamepadSubsystem",
+    "anotar_rumble_no_vpad",
     "apply_game_lightbar",
     "apply_game_player_leds",
     "apply_game_rumble",

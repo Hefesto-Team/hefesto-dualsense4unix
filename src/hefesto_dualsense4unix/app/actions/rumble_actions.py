@@ -108,21 +108,28 @@ def texto_dos_pedidos_de_vibracao(state: dict[str, Any]) -> str | None:
        que não é inteiro: silêncio. Afirmar zero com o campo ausente é a
        família de erro que o ``gyro_do_inputs`` já paga para não cometer —
        "zero" e "não sei" levam a caças completamente diferentes;
-    3. **Chegou pedido que não soubemos ler?** (``descartados``) Vem primeiro
-       porque é o único caso em que o defeito é NOSSO e a tela tem como saber:
-       o jogo mandou motor não-nulo num report cujos bits de vibração não
-       reconhecemos. Dizer "o jogo não pediu" aqui seria a mentira mais cara
-       da aba;
-    4. **Alguém pediu FORÇA?** (``nao_nulos``) Este é o número que vale. Ver
+    3. **Chegou report que nem chegamos a abrir?** (``estranhos``) QUEM
+       ESCREVEU-01, 09/08/2026. O vpad só lê o envelope 0x02; qualquer outro
+       report id era descartado na PRIMEIRA linha do ``_handle_output``, antes
+       até de o ``output_count`` subir. Ou seja: dado chegando produzia
+       exatamente o mesmo painel zerado que "nenhum jogo enxergou o gamepad
+       virtual" — e as duas conclusões mandam caçar em pontas opostas (uma
+       manda olhar dedup/udev/máscara, a outra manda olhar o nosso parser).
+       Vem antes do descarte porque é mais a montante: aqui nem o layout foi
+       lido;
+    4. **Chegou pedido que não soubemos ler?** (``descartados``) O jogo mandou
+       motor não-nulo num report cujos bits de vibração não reconhecemos.
+       Dizer "o jogo não pediu" aqui seria a mentira mais cara da aba;
+    5. **Alguém pediu FORÇA?** (``nao_nulos``) Este é o número que vale. Ver
        RUMBLE-QUE-NAO-SE-SENTE-01: medido na mesa dela em 09/08, ``plays=117``
        com ela sem sentir nada — e ``plays`` sobe na PARADA também, porque o
        ``+= 1`` do vpad acontece antes de os bytes dos motores serem lidos.
        Anunciar "o jogo pediu vibração 117x" quando as 117 podiam ser pedidos
        de força ZERO mandaria caçar no lugar errado;
-    5. **Falou de vibração e pediu zero?** (``plays > 0``, ``nao_nulos == 0``)
+    6. **Falou de vibração e pediu zero?** (``plays > 0``, ``nao_nulos == 0``)
        É o jogo pedindo SILÊNCIO — conclusão oposta à de cima, e a caça é no
        jogo/máscara, nunca no nosso caminho de saída;
-    6. **Há gamepad virtual?** ``vpads == 0`` e ``plays == 0`` não é o jogo
+    7. **Há gamepad virtual?** ``vpads == 0`` e ``plays == 0`` não é o jogo
        calado: é jogo NENHUM tendo onde pedir. Conclusão oposta à de baixo — um
        manda ligar a emulação, o outro manda olhar o jogo — e é por isso que as
        duas frases são distintas. ``vpads`` ausente não autoriza nenhuma das
@@ -141,6 +148,12 @@ def texto_dos_pedidos_de_vibracao(state: dict[str, Any]) -> str | None:
     plays = ff.get("plays")
     if not isinstance(plays, int) or isinstance(plays, bool):
         return None
+    estranhos = _inteiro(ff.get("estranhos"))
+    if estranhos:
+        return (
+            f"o jogo escreveu {estranhos}x no controle virtual num envelope que "
+            "o Hefesto nem abriu — é defeito nosso, mande esta tela para o suporte"
+        )
     descartados = _inteiro(ff.get("descartados"))
     if descartados:
         return (

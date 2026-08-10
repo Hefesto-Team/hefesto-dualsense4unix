@@ -17,6 +17,12 @@
 , wrapGAppsHook
 , glib
 , makeWrapper
+# TECLADO-QUE-NAO-DIGITA-01: o teclado na tela que o L3 do controle abre. Vem
+# como argumento com default `null` de proposito — `callPackage` passa
+# `pkgs.wvkbd` quando o atributo existe (nixpkgs by-name/wv/wvkbd) e cai no
+# default quando nao existe, entao um nixpkgs mais velho nao QUEBRA a
+# derivacao por causa de um acessorio. O `null` e tratado abaixo.
+, wvkbd ? null
 }:
 
 python3Packages.buildPythonApplication rec {
@@ -176,9 +182,24 @@ python3Packages.buildPythonApplication rec {
 
   # Wrappa o binario com GI_TYPELIB_PATH e LD_LIBRARY_PATH para o
   # libayatana-appindicator ser descoberto em runtime.
+  #
+  # E com o TECLADO NA TELA no PATH (TECLADO-QUE-NAO-DIGITA-01): o daemon
+  # resolve `wvkbd-mobintl` por `shutil.which` quando o L3 pede o teclado na
+  # tela, e sem ele o unico caminho do produto para ESCREVER TEXTO com o
+  # controle nao existe (nenhum dos nove atalhos de fabrica digita LETRA).
+  # `--suffix` e nao `--prefix` de proposito: um wvkbd que a usuaria ja tenha
+  # no ambiente vence o nosso.
+  #
+  # So o wvkbd, e nao o onboard: em NixOS a sessao e Wayland na esmagadora
+  # maioria, o wvkbd digita pelo zwp_virtual_keyboard_manager_v1 (nativo) e o
+  # onboard digita por XTEST — em Wayland ele abriria e nao digitaria fora do
+  # XWayland. Quem estiver em X11 instala o onboard no proprio perfil, e o
+  # scripts/doctor.sh diz isso com todas as letras.
   preFixup = ''
     gappsWrapperArgs+=(
       --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ libayatana-appindicator hidapi ]}"
+      ${lib.optionalString (wvkbd != null)
+        ''--suffix PATH : "${lib.makeBinPath [ wvkbd ]}"''}
     )
   '';
 

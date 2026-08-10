@@ -70,7 +70,14 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     ALL_BUTTONS,
     GRID_BOTOES,
     L2_R2_THRESHOLD,
+    CaixaDeTetoElastico,
     ControllerCard,
+)
+from hefesto_dualsense4unix.app.widgets.painel_no_jogo import (
+    TEXTO_SEM_CONTROLE,
+    PainelNoJogo,
+    recado_global,
+    texto_do_contexto,
 )
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -81,6 +88,14 @@ logger = get_logger(__name__)
 #: é por ele que o tick de 10 Hz pergunta se a aba está à vista — nunca pelo
 #: número da página (EST-10).
 ABA_STATUS = "tab_status_box"
+
+#: Id do Glade da aba "No jogo" (ESCONDER-EM-VEZ-DE-SAIR, 09/08/2026).
+#:
+#: Mesma disciplina do `ABA_STATUS` logo acima, e pelo mesmo motivo medido: o
+#: tique pergunta se ESTA aba está à vista pelo id do Glade, nunca pelo número
+#: da página — inserir uma aba renumera todas, e um gate por índice passaria a
+#: pintar a aba errada em silêncio (EST-10 / JANELA-FIEL-01).
+ABA_NO_JOGO = "tab_no_jogo_box"
 
 #: A coluna e a altura do botão da rota de som NO BERÇO (o `status_grid` do
 #: frame Estado). Elas repetem o empacotamento do Glade porque a devolução
@@ -497,6 +512,188 @@ class StatusActionsMixin(WidgetAccessMixin):
         # subiu no boot — usuário precisa do passo de Daemon > Start).
         self._first_poll_succeeded = False
         GLib.timeout_add_seconds(5, self._check_initial_poll_fallback)
+        # ESCONDER-EM-VEZ-DE-SAIR: a aba "No jogo" nasce aqui, junto com os
+        # timers que ela usa. Ela NÃO ganha timer próprio — ver
+        # `_sync_paineis_no_jogo`.
+        self.install_no_jogo_tab()
+
+    # ------------------------------------------------------------------
+    # Aba "No jogo": o que atravessa para o jogo (ESCONDER-EM-VEZ-DE-SAIR)
+    # ------------------------------------------------------------------
+
+    #: Painéis da aba "No jogo", por chave de controle. `None` = a aba nunca
+    #: foi montada (glade antigo, ou builder dublado de outra área de teste).
+    _no_jogo_paineis: Any = None
+    #: O conjunto de chaves com que os painéis de hoje foram construídos —
+    #: mesmo mecanismo do `_status_card_keys`, e a MESMA função que o produz.
+    _no_jogo_keys: Any = None
+    _no_jogo_slot: Any = None
+    _no_jogo_contexto: Any = None
+    _no_jogo_recado: Any = None
+    _no_jogo_vazio: Any = None
+
+    def install_no_jogo_tab(self) -> None:
+        """Monta a aba "No jogo" — cabeçalho de contexto + berço dos painéis.
+
+        O pedido dela, literal (09/08/2026): *"eu sei que a aba status é uma
+        coisa, mas isso converter em input seja via xbox ou dualsense ou nativo
+        é outra"*. A aba Status responde pelo controle FÍSICO; esta responde
+        pelo que atravessa para o JOGO, e é ela que fecha a pergunta *"funciona
+        nos três modos?"* sem terminal e sem o testador da Steam.
+
+        **Três decisões de montagem, e o preço de cada uma na mesa.**
+
+        *Página própria, e não uma seção da aba Status.* A aba Status está
+        exatamente no orçamento de largura — dois cards pedem 1180px numa
+        janela de 1180 —, e não há rolagem horizontal para onde fugir: um
+        widget novo dentro do card sobe intacto até a janela. Uma página nova
+        não disputa largura com ninguém. O preço é uma aba a mais na tira, que
+        é `scrollable` desde sempre.
+
+        *Teto elástico por código, e não pela lista do `app.py`.* O
+        `_PAGINAS_COM_TETO_ELASTICO` mora noutro arquivo; a mesma
+        `CaixaDeTetoElastico` que ele usa é pública e entra aqui direto. A aba
+        para nos mesmos 1400px das outras na tela de 1920 dela, sem uma segunda
+        lista de páginas para alguém esquecer de atualizar.
+
+        *Nada de `GLib` novo.* O gate de timers desta mixin
+        (`test_status_cards`) conta as ocorrências no fonte, e o número não
+        muda: quem pinta esta aba é o tique de 2 Hz que já existia.
+        """
+        pagina = self._get(ABA_NO_JOGO)
+        if pagina is None or not hasattr(pagina, "pack_start"):
+            # Glade antigo, ou builder dublado de teste de outra área: a aba
+            # simplesmente não existe, e a janela abre igual. Mesma linha do
+            # `_sync_status_cards` quando o slot não está lá.
+            return
+        self._no_jogo_paineis = {}
+        self._no_jogo_keys = []
+
+        miolo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+
+        # A linha de contexto: em que modo e com que máscara a janela está
+        # AGORA. Ela existe porque a pergunta que a aba fecha é sobre os três
+        # modos — sem o modo escrito ao lado da resposta, a foto da tela não
+        # diz de qual dos três ela é.
+        self._no_jogo_contexto = Gtk.Label(label="")
+        self._no_jogo_contexto.set_xalign(0.0)
+        self._no_jogo_contexto.set_line_wrap(True)
+        self._no_jogo_contexto.set_max_width_chars(100)
+        self._no_jogo_contexto.set_halign(Gtk.Align.START)
+        self._no_jogo_contexto.get_style_context().add_class(
+            "hefesto-titulo-secao"
+        )
+        miolo.pack_start(self._no_jogo_contexto, False, False, 0)
+
+        # O recado que vale para a JANELA inteira. A Conexão Nativa e o
+        # "Controlar o PC" tiram o Hefesto da frente de TODOS os controles ao
+        # mesmo tempo, e a explicação é uma só — repetida dentro de um painel
+        # por controle ela saía duas vezes, palavra por palavra (medido na foto
+        # de 10/08 com dois controles na mesa). Ele SUBSTITUI os painéis.
+        self._no_jogo_recado = Gtk.Label(label="")
+        self._no_jogo_recado.set_xalign(0.0)
+        self._no_jogo_recado.set_line_wrap(True)
+        self._no_jogo_recado.set_max_width_chars(84)
+        self._no_jogo_recado.set_halign(Gtk.Align.START)
+        self._no_jogo_recado.get_style_context().add_class("dim-label")
+        self._no_jogo_recado.set_no_show_all(True)
+        miolo.pack_start(self._no_jogo_recado, False, False, 0)
+
+        self._no_jogo_vazio = Gtk.Label(label=TEXTO_SEM_CONTROLE)
+        self._no_jogo_vazio.set_xalign(0.0)
+        self._no_jogo_vazio.set_halign(Gtk.Align.START)
+        self._no_jogo_vazio.get_style_context().add_class("dim-label")
+        # `no_show_all`: quem decide se esta frase aparece é o tique, e um
+        # `show_all()` de fora (a janela nasce com um) a traria de volta em
+        # cima dos painéis — que foi exatamente o que a primeira foto mostrou.
+        self._no_jogo_vazio.set_no_show_all(True)
+        miolo.pack_start(self._no_jogo_vazio, False, False, 0)
+
+        # EMPILHA-01 vale aqui também, e por antecipação: os painéis são baixos
+        # (seis linhas) e empilhados eles leem como uma lista de controles. A
+        # rolagem vertical desta página já existe (`_wrap_notebook_pages_in_scroll`).
+        self._no_jogo_slot = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL, spacing=12
+        )
+        miolo.pack_start(self._no_jogo_slot, False, False, 0)
+
+        pagina.pack_start(CaixaDeTetoElastico(miolo), True, True, 0)
+        pagina.show_all()
+
+    def _sync_paineis_no_jogo(self, state: dict[str, Any] | None) -> None:
+        """Repinta a aba "No jogo" a partir do ``state_full``.
+
+        Chamada pelo tique LENTO (2 Hz) e só com esta aba à vista, exatamente
+        como o tique de 10 Hz da aba Status só trabalha com a Status à vista
+        (BUG-STATUS-TICK-HIDDEN-TAB-01: com outra aba na frente, pintar é gasto
+        de CPU que ninguém vê — e um poller cego já custou 104% de um núcleo
+        nesta casa).
+
+        2 Hz e não 10: o que muda aqui é a SITUAÇÃO de um recurso, que dura
+        segundos (`ATIVIDADE_FRESCA_S` é 3,0 s), nunca um valor por quadro. E a
+        carona no tique lento é o que mantém o gate de timers intacto — nenhum
+        `GLib.timeout_add` novo.
+
+        ``state`` ``None`` = daemon desligado: o cabeçalho passa a dizer isso e
+        os painéis somem, em vez de congelarem o último estado bom. Painel
+        parado com número de três minutos atrás ao lado da palavra "no jogo
+        agora" é a mentira confortável que esta aba existe para não contar.
+        """
+        slot = self._no_jogo_slot
+        if slot is None:
+            return
+        notebook = self._get("main_notebook")
+        if (
+            notebook is not None
+            and id_da_pagina_corrente(notebook) != ABA_NO_JOGO
+        ):
+            return
+        self._no_jogo_contexto.set_text(texto_do_contexto(state))
+        recado = recado_global(state)
+        self._no_jogo_recado.set_text(recado or "")
+        self._no_jogo_recado.set_visible(recado is not None)
+        conectados = (
+            self._connected_controllers(state)
+            if isinstance(state, dict) and recado is None
+            else []
+        )
+        keys = self._status_card_keys_for(conectados)
+        if keys != self._no_jogo_keys:
+            self._rebuild_paineis_no_jogo(slot, keys)
+        # A frase "Nenhum controle conectado." só faz sentido quando a resposta
+        # SERIA por controle: no Nativo e no "Controlar o PC" o recado global já
+        # explicou tudo, e dizer que não há controle ao lado dele seria falso —
+        # há controle, ele é que não passa por aqui.
+        self._no_jogo_vazio.set_visible(
+            recado is None and isinstance(state, dict) and not conectados
+        )
+        for key, entry in zip(keys, conectados, strict=True):
+            painel = self._no_jogo_paineis.get(key)
+            if painel is not None and isinstance(state, dict):
+                painel.atualizar(entry, state)
+
+    def _rebuild_paineis_no_jogo(self, slot: Any, keys: list[Any]) -> None:
+        """Recria os painéis — o conjunto de controles mudou.
+
+        Mesma regra dos cards da aba Status: reconstrução SÓ quando o conjunto
+        de chaves ``(index, uniq)`` muda, e a chave sai da MESMA função
+        (`_status_card_keys_for`). Duas regras de identidade de controle na
+        mesma janela divergiriam na primeira mudança do co-op.
+        """
+        for filho in list(slot.get_children()):
+            slot.remove(filho)
+            filho.destroy()
+        self._no_jogo_paineis = {}
+        self._no_jogo_keys = list(keys)
+        for key in keys:
+            # Sem `hexpand` e sem `halign` daqui: o teto de largura do painel é
+            # dele (`LARGURA_PAINEL` + `halign=START`, no próprio widget), e
+            # mandar `FILL` daqui o desfazia — a primeira foto saiu com uma
+            # moldura de 1400px em volta de 430px de tinta.
+            painel = PainelNoJogo()
+            slot.pack_start(painel, False, False, 0)
+            self._no_jogo_paineis[key] = painel
+        slot.show_all()
 
     # ------------------------------------------------------------------
     # Microfone: a captura só existe com a aba Status à vista (S2)
@@ -2147,6 +2344,11 @@ class StatusActionsMixin(WidgetAccessMixin):
         # CONTROLE-QUE-NAO-ENTROU-01: sem daemon não há varredura do sistema —
         # o aviso apaga em vez de sobreviver a um estado morto.
         self._refresh_banner_nao_adotado(None)
+        # ESCONDER-EM-VEZ-DE-SAIR: sem daemon não há o que atravessar para o
+        # jogo, e o último estado bom não pode ficar na tela como se fosse de
+        # agora — o `None` faz a aba dizer "O Hefesto está desligado." e
+        # esvaziar os painéis.
+        self._sync_paineis_no_jogo(None)
         self._reset_live_widgets()
 
     @staticmethod
@@ -2252,6 +2454,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         # com a aba Status fora de foco o tick rápido pausa, e sem isto a
         # troca de aba mostraria cards do conjunto antigo por até 100 ms.
         self._sync_status_cards(state)
+
+        # ESCONDER-EM-VEZ-DE-SAIR: a aba "No jogo" pega carona neste tique, e a
+        # carona é a decisão — um timer próprio quebraria o gate de timers
+        # desta mixin sem entregar nada, porque o dado que ela mostra muda em
+        # segundos. Quem decide se há trabalho a fazer é o gate de aba à vista,
+        # lá dentro.
+        self._sync_paineis_no_jogo(state)
 
     def _set_estado_global(self, widget_id: str, texto: str) -> None:
         """Escreve "Perfil ativo"/"Hefesto" nos DOIS lugares que os mostram.
@@ -2445,6 +2654,7 @@ class StatusActionsMixin(WidgetAccessMixin):
 
 
 __all__ = [
+    "ABA_NO_JOGO",
     "ABA_STATUS",
     "ALL_BUTTONS",
     "GRID_BOTOES",

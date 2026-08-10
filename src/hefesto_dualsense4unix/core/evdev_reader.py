@@ -197,6 +197,51 @@ def _is_virtual_evdev(event_path: str) -> bool:
     return phys.startswith("hefesto-vpad") or uniq.startswith("02fe")
 
 
+#: Base do udev: um arquivo por device, nomeado `<tipo><major>:<minor>` ("c" de
+#: char device, que é o que todo `/dev/input/event*` é). As linhas `E:` são as
+#: PROPRIEDADES do nó — exatamente as que `udevadm info -q property` imprime.
+#: Lemos o arquivo em vez de chamar o `udevadm` porque isto roda no open de um
+#: reader, dentro do daemon: um fork por (re)conexão de controle seria caro e
+#: acrescentaria uma dependência de binário externo onde basta um `open()`.
+UDEV_DB_DIR = Path("/run/udev/data")
+
+
+def libinput_ignora_device(event_path: Path | str | None) -> bool:
+    """True se o udev marcou `LIBINPUT_IGNORE_DEVICE` neste nó de entrada.
+
+    TOUCHPAD-DO-SISTEMA-01 (2026-08-09). É a pergunta "de quem é o cursor?":
+    marcado, o libinput não enxerga o nó e o hefesto é a única fonte possível de
+    ponteiro; desmarcado, quem move o cursor é o SISTEMA — e o hefesto tem de
+    ficar fora, senão o mesmo dedo move o cursor duas vezes (o "engasgo" medido
+    em 26/06 em `assets/76-dualsense-touchpad-libinput-ignore.rules`).
+
+    Medido no nó vivo dela em 09/08/2026 (`/run/udev/data/c13:68`, o touchpad do
+    DualSense por USB): a linha é literalmente ``E:LIBINPUT_IGNORE_DEVICE=1``.
+
+    Falha de leitura (sem udev rodando, base ausente, nó sumido no meio do
+    caminho) devolve **False**, e isso não é um chute: sem base do udev nenhuma
+    regra foi aplicada ao nó, então o libinput o está enxergando — "o sistema é
+    o dono" é a resposta FISICAMENTE correta, e é também a conservadora, porque
+    o pior caso dela é o hefesto não mover o cursor, nunca movê-lo em dobro.
+    """
+    if event_path is None:
+        return False
+    try:
+        st = os.stat(event_path)
+        arquivo = UDEV_DB_DIR / f"c{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"
+        with open(arquivo, encoding="utf-8", errors="replace") as fh:
+            for linha in fh:
+                if not linha.startswith("E:LIBINPUT_IGNORE_DEVICE="):
+                    continue
+                valor = linha.split("=", 1)[1].strip()
+                # O udev grava "1"; qualquer valor não-vazio e não-"0" vale
+                # como marcado (é como o próprio libinput lê a propriedade).
+                return valor not in ("", "0")
+    except OSError:
+        return False
+    return False
+
+
 def _event_num(path: Path) -> int:
     """Número do node evdev (`event12` → 12) para ordenação determinística."""
     import re
@@ -1470,10 +1515,25 @@ class TouchpadReader(_EvdevReconnectLoop):
     2. **Movimento do cursor** (`consume_motion()`, FEAT-DSX-TOUCHPAD-CURSOR-B4):
        enquanto `BTN_TOUCH` está ativo, acumula o delta de `ABS_X`/`ABS_Y`
        entre frames. O poll loop drena esse delta a cada tick e o converte em
-       REL_X/REL_Y via o mouse virtual — touchpad como fonte ÚNICA do cursor
-       (a rule 76 já tira o device do libinput, então não há briga = sem
-       engasgo). `BTN_TOUCH` solto zera a posição de referência: levantar e
-       reapoiar o dedo em outro ponto NÃO faz o cursor pular.
+       REL_X/REL_Y via o mouse virtual — touchpad como fonte ÚNICA do cursor,
+       sem briga = sem engasgo. `BTN_TOUCH` solto zera a posição de referência:
+       levantar e reapoiar o dedo em outro ponto NÃO faz o cursor pular.
+
+    TOUCHPAD-DO-SISTEMA-01 (2026-08-09) — QUEM É O DONO DO DEDO: as duas
+    responsabilidades acima só valem quando o touchpad **não** é ponteiro do
+    sistema. Desde 09/08 a `assets/76-dualsense-touchpad-libinput-ignore.rules`
+    tira do libinput só o touchpad do VPAD; o FÍSICO volta a ser o touchpad do
+    sistema em todos os modos, que foi o que ela pediu — *"a ideia do touchpad é
+    ele voltar a funcionar assim, seja no modo nativo ou dualsense"*. Nesse
+    estado o libinput já move o cursor e já entrega o clique, e o reader tem de
+    ficar de fora: o mesmo dedo movendo o cursor por dois caminhos é o "engasgo"
+    de 26/06, e o mesmo clique virando botão do mouse E `KEY_BACKSPACE` seria o
+    mesmo defeito na tecla. Quem responde é `libinput_ignora_device`, lida UMA
+    vez por (re)conexão no `_on_device_opened` — o estado real do nó, não um
+    modo que o udev não conhece. `ponteiro_do_sistema` é observável de fora.
+
+    O reader continua LENDO tudo em qualquer caso: o painel de Status desenha o
+    dedo pelo `touch_state()`, e observar nunca duplicou nada.
 
     Threadsafe via RLock.
     """
@@ -1529,6 +1589,23 @@ class TouchpadReader(_EvdevReconnectLoop):
         self._motion_last_y: int | None = None
         self._accum_dx: int = 0
         self._accum_dy: int = 0
+        # TOUCHPAD-DO-SISTEMA-01: quem move o cursor com este nó. Nasce False
+        # (o hefesto é o dono) e é decidido de verdade no `_on_device_opened`,
+        # que o loop base SEMPRE chama antes do primeiro evento — nenhum evento
+        # é consumido com o valor de nascença.
+        self._ponteiro_do_sistema: bool = False
+
+    @property
+    def ponteiro_do_sistema(self) -> bool:
+        """True se o libinput é quem move o cursor com ESTE nó de touchpad.
+
+        Observável de fora porque o consumidor do CLIQUE também precisa dela:
+        `daemon/subsystems/keyboard._combine_with_touchpad` não pode transformar
+        a região em tecla enquanto o sistema já está transformando o mesmo
+        clique em botão do mouse.
+        """
+        with self._lock:
+            return self._ponteiro_do_sistema
 
     def regions_pressed(self) -> frozenset[str]:
         with self._lock:
@@ -1582,6 +1659,30 @@ class TouchpadReader(_EvdevReconnectLoop):
     def _log_prefix(self) -> str:
         return "touchpad_reader"
 
+    def _on_device_opened(self, dev: Any) -> None:
+        """Decide de quem é o cursor deste nó (TOUCHPAD-DO-SISTEMA-01).
+
+        Uma leitura por (re)conexão, no mesmo lugar em que o `MotionSensorReader`
+        lê a `resolution` — e pelo mesmo motivo: a resposta muda quando o kernel
+        recria o nó (replug, storm, troca USB↔BT), e perguntar por evento
+        custaria um `open()` a cada frame do dedo.
+        """
+        caminho = getattr(dev, "path", None) or self._device_path
+        do_sistema = libinput_ignora_device(caminho) is False
+        with self._lock:
+            mudou = do_sistema != self._ponteiro_do_sistema
+            self._ponteiro_do_sistema = do_sistema
+            if mudou:
+                # Trocou de dono: o que estava acumulado é do dono ANTERIOR e
+                # viraria um salto de cursor na primeira drenagem do novo.
+                self._accum_dx = 0
+                self._accum_dy = 0
+        logger.info(
+            "touchpad_reader_dono_do_cursor",
+            ponteiro_do_sistema=do_sistema,
+            path=str(caminho) if caminho else None,
+        )
+
     def _handle_event(self, event: Any, ecodes: Any) -> None:
         if event.type == ecodes.EV_ABS:
             if event.code == ecodes.ABS_X:
@@ -1610,22 +1711,24 @@ class TouchpadReader(_EvdevReconnectLoop):
                     self._motion_last_x = None
                     self._motion_last_y = None
 
+    def _acumula_agora(self) -> bool:
+        """Se este reader pode acumular movimento para o cursor do hefesto.
+
+        Duas condições, e as duas negam por razões diferentes:
+        `_acumular_movimento=False` é o OBSERVADOR (o painel de Status abre o
+        mesmo nó e não pode roubar delta); `_ponteiro_do_sistema` é o dedo já
+        estar movendo o cursor pelo libinput (TOUCHPAD-DO-SISTEMA-01).
+        """
+        return self._acumular_movimento and not self._ponteiro_do_sistema
+
     def _accumulate_axis_x(self, value: int) -> None:
         """Acumula delta de X se há dedo e âncora; senão só seeda a âncora."""
-        if (
-            self._acumular_movimento
-            and self._touching
-            and self._motion_last_x is not None
-        ):
+        if self._acumula_agora() and self._touching and self._motion_last_x is not None:
             self._accum_dx += value - self._motion_last_x
         self._motion_last_x = value
 
     def _accumulate_axis_y(self, value: int) -> None:
-        if (
-            self._acumular_movimento
-            and self._touching
-            and self._motion_last_y is not None
-        ):
+        if self._acumula_agora() and self._touching and self._motion_last_y is not None:
             self._accum_dy += value - self._motion_last_y
         self._motion_last_y = value
 

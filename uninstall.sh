@@ -1334,6 +1334,8 @@ log "  kernel cmdline de TERCEIRO (pcie_aspm, mitigations, etc.) — só os para
 log "    REGISTRADOS como do hefesto (cmdline-owners.conf) são revertidos acima"
 log "  ~/.config/wireplumber/wireplumber.conf.d/   — dir compartilhado, só nosso .conf é removido"
 log "  ~/.local/lib/python*/site-packages/         — pip --user pode ser compartilhado"
+log "  wvkbd / onboard (teclado na tela do L3)      — pacote do sistema, pode servir a outra coisa"
+log "    (mesma decisão do libopus0 da ponte de mic: o install instala, o uninstall não desinstala)"
 
 # FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01: desliga Steam Input PSSupport em
 # todos os localconfig.vdf por default. Simétrico com install.sh — sem isso,
@@ -1415,6 +1417,21 @@ rmdir "${HOME}/.local/share/hefesto-dualsense4unix/bin" 2>/dev/null || true
 if [[ -d "${HOME}/.local/state/hefesto-dualsense4unix/launch_env" ]]; then
     log "removendo materialização de launch (~/.local/state/hefesto-dualsense4unix/launch_env)"
     rm -rf "${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
+fi
+# TECLADO-QUE-NAO-DIGITA-01: o PACOTE do teclado na tela (wvkbd / onboard) NÃO
+# sai daqui. É pacote de SISTEMA, instalado pelo gerenciador da distribuição, e
+# pode estar servindo a qualquer outra coisa da máquina dela — remover seria o
+# Hefesto decidindo sobre software que não é dele. É a mesma decisão já tomada
+# para o `libopus0` da ponte de microfone por Bluetooth: o install instala, o
+# uninstall não desinstala.
+#
+# O que SAI é a SENTINELA, que é estado nosso. E isso não é detalhe: enquanto
+# ela existir dizendo "instalado", o doctor leria uma máquina já desinstalada
+# como "o pacote sumiu depois do install" — daria diagnóstico de um produto que
+# não está mais aqui.
+if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf" ]]; then
+    log "removendo a sentinela do teclado na tela (o PACOTE wvkbd/onboard fica — é do sistema)"
+    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf"
 fi
 rmdir "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
 # O passo anterior de limpeza do share-dir roda antes do wrapper sair — repete

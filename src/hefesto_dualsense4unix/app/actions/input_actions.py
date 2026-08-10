@@ -30,16 +30,51 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
     format_binding,
     parse_binding,
 )
+from hefesto_dualsense4unix.integrations.uinput_mouse import (
+    BUTTON_TO_UINPUT as _MOUSE_BOTOES,
+)
+from hefesto_dualsense4unix.integrations.uinput_mouse import (
+    DPAD_TO_KEY as _MOUSE_DPAD,
+)
+from hefesto_dualsense4unix.integrations.uinput_mouse import (
+    EDGE_KEY_MAP as _MOUSE_TECLAS_TAP,
+)
 
 # Legenda do layout de bindings — exibida acima do TreeView como referência
 # rápida dos tokens aceitos. Tokens `__*__` são virtuais (OSK); demais são
 # KEY_* canônicos do evdev.ecodes.
+#
+# TECLADO-QUE-NAO-DIGITA-01 (09/08/2026): a legenda abria com *"cada botão do
+# controle pode digitar uma tecla do teclado"* e a lista abaixo dela mostrava
+# SÓ os botões que já tinham tecla — os outros onze simplesmente não existiam
+# na tela. Quem ligava "Emular teclado" via seis linhas, apertava X, Círculo,
+# Quadrado, direcional, e concluía, com razão, que "o teclado não funciona":
+# nada na tela dizia que aqueles botões não digitam nada, e nada dizia que
+# NENHUM atalho de fábrica digita LETRA. As duas linhas novas abaixo (e a
+# `frase_dos_botoes_sem_tecla`, montada a cada refresh) são o que faltava.
 BINDINGS_LEGEND = (
     "<b>Como funciona:</b> cada botão do controle pode digitar uma tecla do "
     "teclado. Clique duas vezes na coluna “Tecla do teclado” para trocar.\n"
     "<b>Combinações:</b> junte teclas com “+” (ex.: Alt + Tab).\n"
     "<b>Teclado na tela:</b> escreva “Abrir teclado na tela” ou "
-    "“Fechar teclado na tela”."
+    "“Fechar teclado na tela”.\n"
+    "<b>Para ESCREVER texto:</b> nenhum atalho de fábrica digita letra — os de "
+    "fábrica são atalhos (Alt + Tab, Super, PrintScreen, Enter, Delete, "
+    "Backspace). Para escrever, abra o teclado na tela com L3; ele precisa do "
+    "programa <tt>onboard</tt> ou <tt>wvkbd-mobintl</tt> instalado no "
+    "computador."
+)
+
+#: Botões que o MOUSE emulado já usa quando "Emular mouse" está ligado. Vem dos
+#: mapas do próprio `integrations/uinput_mouse.py` (fonte única — lista copiada
+#: à mão envelhece calada), mais L2/R2, que aquele device injeta como
+#: cross/triangle acima do limiar analógico (`_resolve_emulated_set`).
+#:
+#: Dar uma tecla a um deles NÃO substitui o mouse: o botão passa a fazer as DUAS
+#: coisas ao mesmo tempo, cada uma pelo SEU dispositivo virtual — são dois donos
+#: do mesmo botão, e a lista oferecia os vinte botões sem dizer isso.
+BOTOES_JA_DO_MOUSE: frozenset[str] = frozenset(
+    {*_MOUSE_BOTOES, *_MOUSE_DPAD, *_MOUSE_TECLAS_TAP, "l2", "r2"}
 )
 
 
@@ -63,9 +98,26 @@ CANONICAL_BUTTONS: tuple[str, ...] = (
     "options",
     "create",
     "ps",
-    "touchpad_left_press",
-    "touchpad_middle_press",
-    "touchpad_right_press",
+    # TOUCHPAD-DO-SISTEMA-01 (09/08/2026) — decisão dela: as três regiões do
+    # touchpad SAÍRAM da aba, e a razão é que o produto não pode oferecer duas
+    # coisas que se atropelam no mesmo dedo.
+    #
+    # O touchpad voltou a ser touchpad do SISTEMA, como era antes do Hefesto
+    # (pedido dela: *"a ideia do touchpad é ele voltar a funcionar assim, seja
+    # no modo nativo ou dualsense"*). Com isso, o clique dele já vira clique de
+    # mouse pelo libinput. Manter as regiões mapeadas somaria uma TECLA ao
+    # mesmo gesto — e o padrão de fábrica era `KEY_BACKSPACE`, ou seja: um
+    # clique apagaria texto sem ela pedir.
+    #
+    # Listar aqui um botão que o produto não dispara mais é a janela mentindo,
+    # que é o defeito que esta casa mais persegue. O runtime já se cala
+    # (`daemon/subsystems/keyboard.py`, o gate `_combine_with_touchpad`); a aba
+    # para de oferecer.
+    #
+    # PARA VOLTAR: é a mesma decisão, do outro lado — o touchpad passaria a ser
+    # do Hefesto de novo (a reversão da regra está escrita no cabeçalho de
+    # `assets/76-dualsense-touchpad-libinput-ignore.rules`), e estas três linhas
+    # voltam junto. Uma coisa não vai sem a outra.
 )
 
 
@@ -167,6 +219,49 @@ def dehumanize_binding(friendly: str) -> str:
     return "+".join(saida)
 
 
+def frase_dos_botoes_sem_tecla(bindings: dict[str, tuple[str, ...]]) -> str:
+    """Nomeia, em português, os botões do controle que NÃO digitam nada.
+
+    TECLADO-QUE-NAO-DIGITA-01. A lista da aba só cria linha para botão COM
+    tecla (`_refresh_key_bindings_from_draft`), então o botão sem tecla não
+    aparece "vazio": ele some. Para quem olha, a lista parece completa — e
+    apertar X, Círculo ou o direcional esperando que o teclado emulado digite
+    algo é a conclusão natural, e errada, que ela teve em 09/08/2026.
+
+    Pura de propósito: é o miolo do que ela lê, e precisa de teste sem montar
+    janela (mesma disciplina do `descrever_teclado_emulado`). Devolve `""`
+    quando todos os botões têm tecla — nada a dizer é melhor que uma linha
+    vazia na tela.
+    """
+    orfaos = [botao for botao in CANONICAL_BUTTONS if not bindings.get(botao)]
+    if not orfaos:
+        return ""
+    if len(orfaos) == len(CANONICAL_BUTTONS):
+        # `key_bindings == {}` é uma escolha legítima ("teclado silencioso"),
+        # mas na tela ela era indistinguível de defeito: lista vazia, sem uma
+        # palavra. Agora diz o que é e como sair.
+        return (
+            "<b>Sem tecla:</b> nenhum botão digita nada agora — a lista está "
+            "vazia porque todos os atalhos foram removidos. Clique em “Voltar "
+            "ao padrão” para devolver os de fábrica."
+        )
+    nomes = ", ".join(humanize_button(botao) for botao in orfaos)
+    frase = f"<b>Sem tecla (não digitam nada):</b> {nomes}."
+    do_mouse = [botao for botao in orfaos if botao in BOTOES_JA_DO_MOUSE]
+    if do_mouse:
+        # Sem repetir os nomes: a lista acima já os deu, e repeti-la fazia a
+        # frase dobrar de tamanho na tela dela.
+        quantos = (
+            "Um deles já é" if len(do_mouse) == 1 else f"{len(do_mouse)} deles já são"
+        )
+        frase += (
+            f" {quantos} do mouse quando “Emular mouse” está ligado (clique, "
+            "rolagem, setas): dar uma tecla a esses faz o botão fazer as duas "
+            "coisas ao mesmo tempo."
+        )
+    return frase
+
+
 class InputActionsMixin(MouseActionsMixin):
     """Mixin da aba "Mouse e Teclado": mouse handlers + key_bindings CRUD."""
 
@@ -244,6 +339,20 @@ class InputActionsMixin(MouseActionsMixin):
             if binding is None:
                 continue
             store.append([button, format_binding(binding)])
+        # TECLADO-QUE-NAO-DIGITA-01: a legenda é recalculada A CADA refresh
+        # porque a lista de "sem tecla" muda com o rascunho (adicionar, remover,
+        # voltar ao padrão, trocar de perfil). Pintá-la só na instalação do
+        # TreeView, como era, deixaria a frase mentindo no primeiro Adicionar.
+        self._atualizar_legenda(bindings)
+
+    def _atualizar_legenda(self, bindings: dict[str, tuple[str, ...]]) -> None:
+        """Pinta a legenda fixa + a frase dos botões sem tecla. Tolera glade sem ela."""
+        legend = self._get("key_bindings_legend")
+        if legend is None:
+            return
+        frase = frase_dos_botoes_sem_tecla(bindings)
+        texto = BINDINGS_LEGEND + (f"\n{frase}" if frase else "")
+        legend.set_markup(texto)
 
     def _resolve_effective_bindings(self) -> dict[str, tuple[str, ...]]:
         """Resolve o draft atual em mapping de botões → tupla de tokens."""

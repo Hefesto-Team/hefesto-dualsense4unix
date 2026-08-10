@@ -642,6 +642,35 @@
               <object class="GtkLabel"><property name="label" translatable="yes">Status</property></object>
             </child>
 
+            <!-- ABA "NO JOGO" (ESCONDER-EM-VEZ-DE-SAIR / 09/08/2026).
+                 Pedido dela, olhando a aba Status: *"eu sei que a aba status é
+                 uma coisa, mas isso converter em input seja via xbox ou
+                 dualsense ou nativo é outra"*. A aba Status mostra o controle
+                 FÍSICO; esta mostra o que atravessa para o JOGO, recurso por
+                 recurso, nos três modos.
+
+                 Ela mora AQUI, colada na Status, e não dentro dela: a aba
+                 Status está exatamente no orçamento de largura (dois cards
+                 pedem 1180px numa janela de 1180), e qualquer widget novo
+                 dentro de um card estoura o portão de geometria. Uma página
+                 própria não disputa largura com ninguém.
+
+                 O conteúdo é montado em CÓDIGO (`install_no_jogo_tab`, em
+                 `status_actions.py`), no molde da aba Início e dos cards do
+                 Status: o glade só reserva a página e o berço. -->
+            <child>
+              <object class="GtkBox" id="tab_no_jogo_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel" id="tab_no_jogo_label">
+                <property name="label" translatable="yes">No jogo</property>
+              </object>
+            </child>
+
             <!-- ABA TRIGGERS -->
             <child>
               <object class="GtkBox" id="tab_triggers_box">

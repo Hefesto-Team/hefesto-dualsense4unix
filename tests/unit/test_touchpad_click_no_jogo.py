@@ -629,8 +629,13 @@ class TestOCursorNaoAnda:
         regra = (
             _RAIZ / "assets/76-dualsense-touchpad-libinput-ignore.rules"
         ).read_text(encoding="utf-8")
-        # O wildcard cobre "Hefesto Virtual DualSense P1 Touchpad".
-        assert 'ATTRS{name}=="*DualSense*Touchpad"' in regra
+        # TOUCHPAD-DO-SISTEMA-01 (09/08/2026): o curinga `*DualSense*Touchpad`
+        # saiu — ele apagava também o touchpad FÍSICO, em todos os modos. O que
+        # esta classe cobra segue igual e é o que impede o toque em DOBRO: o nó
+        # do VPAD continua fora do libinput. As duas âncoras do vpad são o nome
+        # ("… (Hefesto P1) Touchpad") e o MAC forjado 02:fe.
+        assert 'ATTRS{name}=="*Hefesto*Touchpad"' in regra
+        assert 'ATTRS{uniq}=="02:fe:*"' in regra
         assert 'ENV{LIBINPUT_IGNORE_DEVICE}="1"' in regra
 
     def test_o_vpad_nao_ganhou_metodo_de_cursor(self) -> None:

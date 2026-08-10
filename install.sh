@@ -135,6 +135,22 @@
 #                         Nada quebra sem elas (o CSS tem fallback); o que muda é
 #                         a interface ser a do design e as medidas de texto
 #                         baterem com as do mockup.
+#   (DEFAULT) teclado na tela — o que o L3 do controle abre. Instalado em TODO
+#                         formato pelo scripts/install_osk.sh, que escolhe pela
+#                         SESSÃO: em Wayland o `wvkbd` (binário wvkbd-mobintl,
+#                         cliente Wayland puro, digita pelo
+#                         zwp_virtual_keyboard_manager_v1 que o cosmic-comp
+#                         expõe — medido); em X11 o `onboard` (GTK3, digita por
+#                         XTEST, que em Wayland só alcança janelas XWayland).
+#                         Importa porque nenhum dos nove atalhos de fábrica
+#                         digita uma LETRA: sem isto, "o teclado emulado não
+#                         digita" é literalmente verdade. Best-effort (o install
+#                         nunca aborta por causa dele) e o passo GRAVA o que fez
+#                         em ~/.local/state/hefesto-dualsense4unix/
+#                         teclado-na-tela.conf, para o doctor distinguir "ela não
+#                         quis" de "o install não instalou". Opt-out: --no-osk.
+#   --no-osk              pula o teclado na tela. O L3 do controle passa a só
+#                         avisar na tela que não tem o que abrir.
 #   (DEFAULT) cura gentil do WirePlumber: REBAIXA o DualSense para não virar o
 #                         microfone padrão (drop-in 51, user-space) — simétrica com o
 #                         uninstall que a remove. Opt-out: --keep-dualsense-mic.
@@ -196,6 +212,14 @@ NO_DEV=0
 # nada indicar, e as MEDIDAS de texto mudam com a fonte — foi a falta dessas
 # métricas que fez a CI pedir 431px de altura onde aqui cabia em 357.
 NO_FONTS=0
+# TECLADO-QUE-NAO-DIGITA-01 (10/08/2026). DEFAULT ON, pela regra dela de
+# 08/08: "toda cura entra no install, sem flag — nada à mão, nada opt-in".
+# Medido antes desta linha existir: `grep -c onboard install.sh` dava 0, e o
+# `command -v onboard wvkbd-mobintl` na máquina dela não achava nenhum dos
+# dois. O produto oferecia "Abrir teclado na tela" no L3 e não instalava o que
+# ele precisa. O opt-out existe pelo mesmo motivo que o --no-fonts: CI e
+# máquina enxuta não querem pacote gráfico novo.
+NO_OSK=0
 # BUG-UNINSTALL-WP-ASYMMETRY: DEFAULT ON. O uninstall remove o drop-in 51 por
 # padrão, então o install tem de recolocá-lo por padrão (simetria) — senão o
 # ciclo uninstall→install deixa o DualSense virar o microfone padrão. É a cura
@@ -231,6 +255,7 @@ for arg in "$@"; do
         --no-cosmic-applet|--disable-cosmic-applet) DISABLE_COSMIC_APPLET=1 ;;
         --no-dev)             NO_DEV=1 ;;
         --no-fonts)           NO_FONTS=1 ;;
+        --no-osk)             NO_OSK=1 ;;
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;  # já é default; mantida p/ compat
         --keep-dualsense-mic) WITH_WIREPLUMBER_FIX=0 ;;
         --no-doctor) RUN_DOCTOR=0 ;;
@@ -491,6 +516,43 @@ install_udev_host() {
         fi
     else
         warn "sudo ausente — rode scripts/install_udev.sh como root depois"
+    fi
+}
+
+# TECLADO-QUE-NAO-DIGITA-01: o teclado na tela é DEFAULT em TODO formato, pela
+# mesma razão do broker logo abaixo — e pelo mesmo furo. O `exit 0` do bloco de
+# formatos (poucas linhas adiante) deixa doze passos de cura para trás, e um
+# passo escrito só no fluxo native cairia do lado errado da cerca: flatpak,
+# appimage e deb sairiam sem o único caminho do produto para ESCREVER TEXTO,
+# em silêncio. Por isso a função nasce AQUI, acima da bifurcação, e é chamada
+# dos DOIS lados — é o mesmo molde do `install_broker_host`.
+#
+# Best-effort integral: o `scripts/install_osk.sh` sai 0 mesmo quando não
+# consegue instalar (sem sudo, sem rede, distro sem o pacote) e grava o que
+# aconteceu na sentinela; o `if` aqui é só o cinto contra o `set -e`.
+install_osk_host() {
+    if [[ "${NO_OSK}" -eq 1 ]]; then
+        printf '      teclado na tela pulado (--no-osk) — o L3 do controle só avisa que não tem o que abrir\n'
+        # A escolha dela também vira sentinela: sem isto, "ela não quis" e "o
+        # install não instalou" ficariam com a MESMA cara para o doctor — a
+        # armadilha do commit 108b711, palavra por palavra.
+        mkdir -p "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
+        {
+            printf '# gravado por install.sh (--no-osk) — NÃO editar à mão.\n'
+            printf 'resultado=pulado\n'
+            printf 'motivo=--no-osk\n'
+            printf 'data=%s\n' "$(date -Is 2>/dev/null || date)"
+        } > "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf" 2>/dev/null || true
+        return 0
+    fi
+    if [[ ! -r "${ROOT_DIR}/scripts/install_osk.sh" ]]; then
+        warn "scripts/install_osk.sh ausente — teclado na tela pulado"
+        return 0
+    fi
+    if [[ "${AUTO_YES}" -eq 1 ]]; then
+        bash "${ROOT_DIR}/scripts/install_osk.sh" --yes || true
+    else
+        bash "${ROOT_DIR}/scripts/install_osk.sh" || true
     fi
 }
 
@@ -931,6 +993,12 @@ if [[ "${FORMAT}" != "native" ]]; then
     # módulo ficou staged.
     step "dkms-i" "regenerar initramfs se algum módulo DKMS mudou (INITRAMFS-01)"
     flush_initramfs_host
+    # TECLADO-QUE-NAO-DIGITA-01: mesmo achado do broker (#7 da Onda S) numa
+    # camada nova — o teclado na tela é pacote do SISTEMA, ortogonal ao formato
+    # do app. Sem esta chamada, `--flatpak`/`--appimage`/`--deb` sairiam pelo
+    # `exit 0` logo abaixo sem o único caminho do produto para digitar texto.
+    step "osk" "teclado na tela do L3 (TECLADO-QUE-NAO-DIGITA-01 — DEFAULT em todo formato)"
+    install_osk_host
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
     printf ' Obs.: ajuste do microfone, desligar do Steam Input, preparo dos\n'
@@ -2075,6 +2143,26 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 4f. Teclado na tela — o que o L3 do controle abre (TECLADO-QUE-NAO-DIGITA-01)
+# ---------------------------------------------------------------------------
+# O mapa de fábrica dá ao L3 o token `__OPEN_OSK__` desde sempre, e o daemon o
+# cumpre abrindo um teclado na tela DO SISTEMA. Só que ninguém instalava esse
+# teclado: medido em 09/08/2026 na máquina dela, `command -v onboard
+# wvkbd-mobintl` não achava nenhum dos dois e `grep -c onboard install.sh` dava
+# ZERO. Como nenhum dos nove atalhos de fábrica digita uma LETRA (Super,
+# PrintScreen, Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois
+# tokens de OSK), sem o teclado na tela a frase "o teclado emulado não digita"
+# era literalmente verdade.
+#
+# Fica ao lado das fontes porque é a mesma natureza: acabamento que o produto
+# PROMETE, que vem de pacote da distribuição, best-effort, sem derrubar o
+# install. A escolha do pacote (wvkbd em Wayland, onboard em X11) e o porquê
+# MEDIDO moram num dono só — scripts/install_osk.sh —, para o instalador, o
+# doctor e o daemon nunca divergirem sobre qual binário é o certo.
+step "4f" "teclado na tela do L3 (wvkbd em Wayland, onboard em X11)"
+install_osk_host
+
+# ---------------------------------------------------------------------------
 # 5. Symlink ~/.local/bin/hefesto-dualsense4unix
 # ---------------------------------------------------------------------------
 step "5/11" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
@@ -2375,6 +2463,8 @@ step "10/11" "audio: impedir o DualSense de virar o microfone padrão"
 if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
     [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]] && warn "--with-wireplumber-disable-mic vence --with-wireplumber-fix"
     # exit 2 (DualSense é a única fonte) não é falha de instalação — só aviso.
+    # exit 3 (a fonte padrão é um MONITOR) não fala do DualSense: quem dá esse
+    # veredito é a conferência do fim deste passo, depois da cura do microfone.
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source; rc=$?; [[ "${rc:-0}" -ne 1 ]]; then
         printf '      mic do DualSense DESABILITADO (node.disabled; controle só-HID)\n'
     else
@@ -2382,7 +2472,14 @@ if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
     fi
 elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; rc=$?; [[ "${rc:-0}" -ne 1 ]]; then
-        printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
+        # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o drop-in ter entrado NÃO é o
+        # microfone estar certo, e dizer "fonte padrão reeleita" quando ela não
+        # foi era a metade da contradição que ela leu na tela. rc 3 = monitor.
+        if [[ "${rc:-0}" -eq 3 ]]; then
+            printf '      drop-in do WirePlumber instalado (a fonte padrão ainda não é um microfone)\n'
+        else
+            printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
+        fi
     else
         warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
     fi
@@ -2417,6 +2514,45 @@ if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -ne 1 ]]; then
     else
         printf '      microfone: cura incompleta — rode: bash scripts/doctor.sh --fix-mic\n'
     fi
+fi
+
+# INSTALADOR-QUE-APROVOU-O-MONITOR-01 (09/08/2026) — a CONFERÊNCIA FINAL do
+# microfone, e o motivo de ela existir.
+#
+# MEDIDO na máquina dela, no mesmo terminal, com dois minutos de diferença:
+#
+#   passo 10/11:  OK: microfone padrão ativo = alsa_output…iec958-stereo.monitor
+#   doctor.sh:    [FAIL] a fonte de captura padrão é um MONITOR — o que qualquer
+#                 app gravar é o áudio de SAÍDA do sistema, não a voz
+#
+# O install declarava sucesso sobre um estado que o próprio produto reprova. A
+# verificação do `--install` do wp-fix já parou de aprovar monitor (exit 3), mas
+# ela roda ANTES da cura (`--fix-mic`), então o veredito dela é sempre parcial:
+# quem tem a última palavra é esta leitura, DEPOIS de tudo o que o passo tenta.
+#
+# Não oferece comando: RECEITA-ERRADA-01 mostrou o preço de mandar rodar algo que
+# não pode funcionar. Quando não há microfone nenhum na máquina, o que resolve é
+# hardware — e é isso que a linha diz.
+if command -v pactl >/dev/null 2>&1; then
+    _fonte_agora="$(pactl get-default-source 2>/dev/null || true)"
+    case "${_fonte_agora}" in
+        *.monitor|*.Monitor)
+            warn "o microfone padrão do sistema é um MONITOR (${_fonte_agora})"
+            printf '      isto NÃO é microfone: o que Discord, chat de jogo ou gravador\n'
+            printf '      captarem é o áudio que SAI do PC, não a voz de quem fala — e o\n'
+            printf '      medidor de nível mostra sinal, então parece estar funcionando.\n'
+            printf '      Não há comando que resolva sem uma entrada de verdade: conecte o\n'
+            printf '      DualSense (no cabo), um microfone/headset no jack, ou uma webcam\n'
+            printf '      com microfone. A janela do Hefesto avisa enquanto durar.\n'
+            ;;
+        "")
+            printf '      microfone: nenhuma fonte padrão eleita (PipeWire parado?)\n'
+            ;;
+        *)
+            printf '      microfone padrão do sistema: %s (entrada de verdade)\n' "${_fonte_agora}"
+            ;;
+    esac
+    unset _fonte_agora
 fi
 
 # ---------------------------------------------------------------------------

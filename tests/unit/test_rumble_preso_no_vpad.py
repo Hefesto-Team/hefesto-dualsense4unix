@@ -71,6 +71,13 @@ class _VpadDeBancada(uhid.UhidDualSense):
         self._rumble_visto_em = None
         self._rumble_count = 0
         self._output_count = 0
+        # QUEM ESCREVEU-01: os campos que o `_handle_output` passou a escrever
+        # para dizer QUEM escreveu o report de vibração. Mesma razão do
+        # `_visto_em` abaixo: bancada sem `__init__` acompanha campo novo.
+        self._rumble_parada_sdl_count = 0
+        self._output_id_estranho_count = 0
+        self._output_id_estranho_amostra = None
+        self._rumble_anel = []
         # PAINEL-DA-VERDADE-01: os carimbos de recência. A bancada lista o
         # estado que usa em vez de chamar o `__init__` do dataclass (ela
         # precisa do fd de pipe), então campo novo entra aqui — e é de
