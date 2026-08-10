@@ -1,13 +1,20 @@
 """DraftApplier — aplica `profile.apply_draft` em ordem canônica.
 
 Extraído de `_handle_profile_apply_draft` em AUDIT-FINDING-IPC-SERVER-SPLIT-01.
-Cada seção (leds, triggers, controllers, rumble, mouse, keyboard) é aplicada
-de forma best-effort: falha em uma seção loga warning, fica registrada em
-``failed`` (APLICAR-VERDADE-01) e não bloqueia as demais. A ordem é leds
--> triggers -> controllers -> rumble -> mouse ->
-keyboard (leds primeiro por ser menos transiente visualmente; controllers
-DEPOIS das seções globais para o override por-controle vencer no alvo —
-PERFIL-04).
+Cada seção (leds, triggers, controllers, rumble, mouse, keyboard, mic, speaker)
+é aplicada de forma best-effort: falha em uma seção loga warning, fica registrada
+em ``failed`` (APLICAR-VERDADE-01) e não bloqueia as demais. A ordem é leds
+-> triggers -> controllers -> rumble -> mouse -> keyboard -> mic -> speaker
+(leds primeiro por ser menos transiente visualmente; controllers DEPOIS das
+seções globais para o override por-controle vencer no alvo — PERFIL-04).
+
+ESTA LISTA É A PROMESSA DO BOTÃO VERDE, e ela ficou desatualizada duas vezes
+antes de alguém notar: o `mic` entrou pela MIC-EXPOSE-01 sem ser citado aqui, e
+o `speaker` faltava por inteiro até 10/08/2026 — `grep -c speaker` neste arquivo
+devolvia ZERO, e o volume que ela ajustava no card só chegava ao controle na
+próxima troca de perfil. Há portão que compara esta lista com o que o rascunho
+emite; se as duas divergirem, ele reprova
+(`tests/unit/test_o_verde_leva_tudo_01.py`).
 """
 from __future__ import annotations
 
@@ -85,6 +92,20 @@ class DraftApplier:
         )
         # MIC-EXPOSE-01: seção `mic` (botão de mic  mute do sistema).
         self._apply_section(applied, params.get("mic"), "mic", self._apply_mic)
+        # O-VERDE-NAO-LEVAVA-O-SOM-01 (10/08/2026): a seção `speaker` faltava
+        # aqui, e a palavra é literal — `grep -c speaker` neste arquivo devolvia
+        # ZERO. O botão verde "Aplicar" carregava gatilho, luz, rumble, mouse,
+        # teclado e mic, e deixava o alto-falante do controle para trás.
+        #
+        # O volume, o mudo e o canal chegavam ao PERFIL (`to_profile`) e ao
+        # hardware na ATIVAÇÃO do perfil (`apply_profile_speaker`, pela rota do
+        # autoswitch), mas não no AGORA: ela mexia no card, clicava no verde, e
+        # o som não mudava até trocar de perfil. É metade exata da queixa dela —
+        # *"literalmente nenhuma feature ficou lá"*.
+        #
+        # Por último de propósito, como o mic: é a seção mais barata de refazer
+        # se falhar, e nenhuma outra depende dela.
+        self._apply_section(applied, params.get("speaker"), "speaker", self._apply_speaker)
         return applied
 
     def _apply_section(
@@ -409,6 +430,57 @@ class DraftApplier:
             raise ValueError("daemon não disponível para alterar o botão de mic")
         self.daemon.config.mic_button_toggles_system = valor
         logger.info("mic_button_toggles_system_aplicado", enabled=valor)
+
+    def _apply_speaker(self, speaker_raw: Any) -> None:
+        """Aplica a seção `speaker` do rascunho — O-VERDE-NAO-LEVAVA-O-SOM-01.
+
+        Três campos, os MESMOS do `ProfileSpeakerConfig` e do `SpeakerDraft`:
+        ``volume`` (0 a 255, byte do registrador), ``muted`` e ``rota`` (o canal de saída). Um nome
+        diferente aqui criaria um terceiro vocabulário para o mesmo fato.
+
+        **Reusa a porta que já existe**, `Daemon.apply_profile_speaker`, e isso
+        é requisito, não conveniência: ela é a mesma que a ativação de perfil
+        usa, já sabe conversar por-`uniq` e já carrega a política de silêncio da
+        SOM-02/E4. Um caminho novo direto ao backend seria um segundo dono dos
+        bytes de áudio — e o `set_speaker_volume` do backend, medido em 10/08,
+        **não tem gate de `_output_mute`**: chamá-lo por fora responderia `ok` em
+        Modo Nativo sem mandar byte nenhum, e a tela diria que aplicou.
+
+        Campo ausente é campo NÃO tocado (`volume` obrigatório, o resto opcional):
+        o rascunho só emite esta seção quando ela mexeu, e mesmo assim o mudo e a
+        rota podem não ter opinião. Sem opinião é silêncio, nunca ordem.
+        """
+        if not isinstance(speaker_raw, dict):
+            raise ValueError("speaker deve ser objeto")
+        if "volume" not in speaker_raw:
+            return
+        volume = speaker_raw.get("volume")
+        if not isinstance(volume, int) or isinstance(volume, bool):
+            raise ValueError("speaker.volume deve ser inteiro")
+        # A RÉGUA É 0..255, e errar isso recusa o volume NORMAL dela. Medido em
+        # 10/08/2026: a primeira versão desta guarda usou 0..100, por eu ter lido
+        # "volume" como porcentagem — e o controle deslizante do card em 100 %
+        # sai como **102**. A seção cairia em `failed` e o rodapé diria que o som
+        # falhou, no gesto mais comum que existe. O registrador do controle é um
+        # byte, e é assim em toda a casa: `ProfileSpeakerConfig` (`ge=0, le=255`),
+        # o `SpeakerDraft`, o IPC `speaker.set` e o `set_speaker_volume` do
+        # backend. Aqui não pode ser diferente — quatro réguas iguais e uma
+        # sozinha é como se recusa em silêncio o que a pessoa acabou de escolher.
+        if not 0 <= volume <= 255:
+            raise ValueError("speaker.volume fora de 0..255")
+        muted = speaker_raw.get("muted", False)
+        if not isinstance(muted, bool):
+            raise ValueError("speaker.muted deve ser booleano")
+        rota = speaker_raw.get("rota")
+        if rota is not None and (not isinstance(rota, int) or isinstance(rota, bool)):
+            raise ValueError("speaker.rota deve ser inteiro ou nulo")
+        applier = getattr(self.daemon, "apply_profile_speaker", None)
+        if not callable(applier):
+            raise ValueError("daemon não expõe apply_profile_speaker")
+        applier(volume, muted, uniq=speaker_raw.get("uniq"), origin="draft", rota=rota)
+        logger.info(
+            "speaker_do_rascunho_aplicado", volume=volume, muted=muted, rota=rota
+        )
 
     def _apply_keyboard(self, keyboard_raw: Any) -> None:
         """Aplica os key_bindings editados ao device de teclado virtual vivo.

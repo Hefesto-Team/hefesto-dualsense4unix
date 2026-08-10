@@ -505,6 +505,69 @@ def confirm_downgrade_match_to_any(
     return bool(response == Gtk.ResponseType.OK)
 
 
+def confirm_downgrade_match_to_manual(
+    parent: Gtk.Window,
+    name: str,
+    regra_atual: str | None = None,
+) -> bool:
+    """Confirma tirar o alvo de um perfil, deixando-o só-manual.
+
+    O-AVANCADO-QUE-MOSTRAVA-VAZIO-01 (10/08/2026). O irmão que faltava do
+    ``confirm_downgrade_match_to_any``: aquele é guardado por
+    ``isinstance(profile.match, MatchAny)``, e o editor avançado com os TRÊS
+    campos em branco grava ``MatchManual`` (R-12 item 3). Os dois são "o perfil
+    perdeu o alvo", por lados opostos — e reusar o texto do outro seria o aviso
+    mentindo na frase mais importante: ali o perfil passa a valer para tudo,
+    aqui ele passa a não valer para nada.
+
+    Medido no editor dela antes desta leva: perfil ``Pragmata``
+    (``window_class: ["steam_app_3357650"]``, prioridade 200) → trocar o número
+    do jogo na página simples → ligar o "Modo avançado" (que mostrava os três
+    campos VAZIOS) → Salvar. O disco recebia ``{"type": "manual"}``, o toast
+    dizia "Perfil salvo", e o perfil do jogo dela nunca mais entrava sozinho.
+
+    A cura de fundo é a página avançada mostrar a regra de verdade. Este
+    diálogo é o cinto para o gesto que continua sendo LEGÍTIMO — ela ler os
+    campos cheios e apagá-los de propósito. A vontade dela prevalece: isto
+    PERGUNTA, nunca recusa.
+
+    ``regra_atual`` é o rótulo do que o perfil é HOJE, na língua da coluna
+    "Quando usar" (mesma disciplina do irmão, desde a SALVAR-NAO-REBAIXA-02).
+
+    Retorna True se ela confirmou, False se cancelou.
+    """
+    titulo = (
+        _("O perfil '%s' vai deixar de entrar sozinho.") % name
+        if regra_atual is None
+        else _("O perfil '%s' vai deixar de entrar sozinho — hoje ele é: %s.")
+        % (name, regra_atual)
+    )
+    dialog = Gtk.MessageDialog(
+        parent=parent,
+        modal=True,
+        destroy_with_parent=True,
+        message_type=Gtk.MessageType.WARNING,
+        buttons=Gtk.ButtonsType.NONE,
+        text=titulo,
+    )
+    _apply_app_theme(dialog)
+    dialog.format_secondary_text(
+        _(
+            "Com os três campos do Modo avançado em branco, o perfil fica "
+            "\"Só manual (nunca ativa sozinho)\": ele só entra quando você o "
+            "escolher na lista, e apaga os programas em que ele valia. "
+            "Tem certeza?"
+        )
+    )
+    dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Deixar só na mão"), Gtk.ResponseType.OK)
+    dialog.set_default_response(Gtk.ResponseType.CANCEL)
+
+    response = executar_dialogo(dialog, nome="rebaixar_regra_para_so_manual")
+    dialog.destroy()
+    return bool(response == Gtk.ResponseType.OK)
+
+
 def confirm_downgrade_priority(
     parent: Gtk.Window,
     name: str,
@@ -867,6 +930,7 @@ __all__ = [
     "confirm_delete_profile",
     "confirm_discard_pending_edits",
     "confirm_downgrade_match_to_any",
+    "confirm_downgrade_match_to_manual",
     "confirm_downgrade_priority",
     "confirm_restore_default",
     "dialogo_alcancavel",

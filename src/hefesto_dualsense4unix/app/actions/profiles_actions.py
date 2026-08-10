@@ -324,6 +324,37 @@ def queda_de_prioridade_pede_aviso(antes: int, depois: int) -> bool:
     ) >= QUEDA_DE_PRIORIDADE_QUE_PEDE_AVISO
 
 
+# --- O-AVANCADO-QUE-MOSTRAVA-VAZIO-01: o alvo também some pelo outro lado ---
+# `confirm_downgrade_match_to_any` cobre "o perfil passou a valer para TUDO".
+# O editor avançado com os TRÊS campos em branco escreve o oposto exato —
+# `MatchManual` (R-12 item 3), "nunca ativa sozinho" — e esse caminho não tinha
+# aviso nenhum. Medido em 10/08 no editor dela, antes desta leva: o `Pragmata`
+# (`window_class: ["steam_app_3357650"]`, prioridade 200) virava
+# `{"type": "manual"}` com o toast dizendo "Perfil salvo".
+
+
+def _nunca_entra_sozinho(match: object) -> bool:
+    """O perfil com esta regra nunca casa com janela nenhuma?
+
+    Fonte única: o rótulo da coluna "Quando usar". `MatchManual` (a intenção) e
+    o `MatchCriteria` vazio (o acidente) já dizem a MESMA frase para ela, e um
+    predicado que os separasse aqui faria a janela avisar sobre um e calar
+    sobre o outro — sendo que o efeito no autoswitch é idêntico.
+    """
+    return _match_label(match) == LABEL_SO_MANUAL
+
+
+def rebaixamento_para_so_manual(antes: object, depois: object) -> bool:
+    """Este Salvar tira do perfil o que o fazia entrar sozinho? (função pura).
+
+    Vale tanto para o perfil de programa específico quanto para o "Sempre": os
+    dois ENTRAVAM, e passam a não entrar. Quem já era só-manual não perde nada
+    e não recebe pergunta — um diálogo por Salvar vira o ruído que se aprende a
+    clicar sem ler, e aí mata também o aviso que importa.
+    """
+    return _nunca_entra_sozinho(depois) and not _nunca_entra_sozinho(antes)
+
+
 # --- ATIVAR-NAO-MENTE-01: a janela passa a LER o relatório do daemon --------
 # `profile.switch` responde a verdade desde a R-03 (`secoes`, `mode_aplicado`,
 # `motivo`) e a janela descartava o resultado inteiro (`lambda _result:`) —
@@ -1110,12 +1141,35 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         switch: Gtk.Switch,
         state: bool,
     ) -> bool:
-        """Alterna entre modo simples e avançado; persiste preferência."""
+        """Alterna entre modo simples e avançado; persiste preferência.
+
+        O-AVANCADO-QUE-MOSTRAVA-VAZIO-01 (10/08/2026, duas fotos dela às 04:34,
+        a mesma tela com um segundo de diferença): com o switch DESLIGADO,
+        "Jogo da Steam · 3357650"; com o switch LIGADO, os três campos crus em
+        branco, só com os textos-fantasma do glade. O arquivo dela, no mesmo
+        instante, dizia ``window_class: ["steam_app_3357650"]``.
+
+        A mecânica: ``_populate_editor`` só escreve nos campos crus no ramo do
+        match COMPLEXO — no ramo do preset simples ele mexe no seletor e no
+        campo livre e deixa os crus como estiverem. Este handler, que é a outra
+        porta para a página avançada, só trocava a página da stack. Ligar o
+        avançado depois do perfil aberto nunca teve de onde tirar a regra.
+
+        Por que isso é grave, e não só feio: os três campos vazios são o que o
+        ``_build_profile_from_editor`` LÊ com o avançado ligado. Medido nesta
+        cura, no editor sem ela: trocar o número do jogo na página simples,
+        ligar o avançado e Salvar gravava ``MatchManual`` — o perfil do jogo
+        dela virava "só ativa na mão", sem uma palavra na tela. E a frase do
+        ``exigencia_invisivel`` manda "Ligue o Modo avançado para ver e mudar",
+        ou seja, a janela mandava olhar exatamente onde ela mentia.
+        """
         # BUG-ADVANCED-TOGGLE-CLOBBER-01: ignora chamadas programáticas (set_active
         # em _populate_editor) — só persiste quando o usuário move o switch.
         if self._suppress_advanced_toggle:
             return False
         self._mode_advanced = state
+        if state:
+            self._mostrar_a_regra_nos_campos_crus()
         self._apply_editor_mode()
         set_pref("advanced_editor", state)
         return False  # retorno False = deixa o GTK atualizar o estado visual
@@ -1986,6 +2040,35 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             ):
                 self._toast_profile(_motivo_do_cancelamento())
                 return
+        # O-AVANCADO-QUE-MOSTRAVA-VAZIO-01 (10/08): o MESMO estrago pelo lado
+        # oposto, e este passava calado. O editor avançado com os três campos
+        # em branco grava `MatchManual` — o perfil deixa de entrar sozinho para
+        # sempre. Com a página avançada mostrando os campos VAZIOS (o defeito
+        # fotografado às 04:34), chegar aqui não exigia gesto nenhum sobre a
+        # regra: bastava trocar o número do jogo na página simples e ligar o
+        # switch para conferir.
+        #
+        # A cura de fundo é a página dizer a verdade
+        # (`_mostrar_a_regra_nos_campos_crus`). Isto é o cinto para o gesto que
+        # continua legítimo — ela ler os campos cheios e apagá-los de propósito.
+        # PERGUNTA, nunca recusa: a vontade dela na GUI prevalece sempre.
+        #
+        # `if` solto (e não `elif`) porque os dois avisos são exclusivos por
+        # construção — `MatchAny` é "Sempre" e nunca é "Só manual" —, e a
+        # independência deixa cada um responder pela própria pergunta.
+        if original is not None and rebaixamento_para_so_manual(
+            original.match, profile.match
+        ):
+            from hefesto_dualsense4unix.app import gui_dialogs
+
+            window = self._get("main_window")
+            if not gui_dialogs.confirm_downgrade_match_to_manual(
+                parent=window,
+                name=original.name,
+                regra_atual=_match_label(original.match),
+            ):
+                self._toast_profile(_motivo_do_cancelamento())
+                return
         # SALVAR-NAO-REBAIXA-02: e a PRIORIDADE, que nos perfis dela (já em
         # `MatchAny` desde o defeito de 27/07) é a única coisa que ainda podia
         # cair calada — e é o termo que decide qual dos "Sempre" vence.
@@ -2113,6 +2196,106 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         stack: Gtk.Stack = self._get("profile_editor_stack")
         page = "avancado" if self._mode_advanced else "simples"
         stack.set_visible_child_name(page)
+
+    # --- O-AVANCADO-QUE-MOSTRAVA-VAZIO-01: a página avançada diz a verdade ---
+
+    def _regra_real_do_perfil_aberto(self) -> Match | None:
+        """A regra que o perfil aberto TEM agora — a mesma conta do Salvar.
+
+        Não é "o que está no disco" nem "o que a página simples mostra": é o
+        que este editor gravaria se ela clicasse Salvar neste segundo. Por isso
+        a conta é a MESMA de `_build_profile_from_editor`, linha por linha —
+        duas contas para a mesma pergunta divergiriam no primeiro caso de
+        borda, e aí a página avançada voltaria a mentir, só que de um jeito
+        mais convincente.
+
+        Os dois ramos, na ordem em que o Salvar os avalia:
+
+        - ela ainda NÃO mexeu na regra → vale o que o disco diz, inteiro. É o
+          ramo que preserva o campo que a página simples não mostra
+          (ESCONDER-EM-VEZ-DE-SAIR-01) e o que impede a ida ao avançado de
+          apagar um match complexo que o seletor "Aplica a" não sabe exprimir;
+        - ela MEXEU → vale a leitura da página simples, que é a página que
+          estava na frente até agora (este helper só é chamado ao LIGAR o
+          avançado).
+
+        ``None`` quer dizer "não há regra conhecida a mostrar" — perfil novo
+        sem escolha utilizável, dublê de teste, glade degradado. O chamador não
+        escreve nada nesse caso: em branco por falta de resposta é melhor que
+        em branco por invenção.
+        """
+        nome = ""
+        with contextlib.suppress(Exception):
+            nome = (self._get("profile_name_entry").get_text() or "").strip()
+        regra_do_disco = self._regra_do_disco_ao_salvar(nome)
+        # O espelho de `_build_profile_from_editor`: sem fotografia de abertura
+        # (o "Novo perfil" salvando por cima de um arquivo que existe), a única
+        # evidência de intenção é o GESTO — não há assinatura para comparar.
+        mexida = (
+            self._regra_foi_mexida()
+            if self._regra_do_disco is not None
+            else self._regra_tocada
+        )
+        if regra_do_disco is not None and not mexida:
+            return regra_do_disco
+        custom: str | None = None
+        with contextlib.suppress(Exception):
+            custom = (
+                self._get("profile_simple_custom_name").get_text() or ""
+            ).strip() or None
+        try:
+            return from_simple_choice(
+                choice=self._selected_simple_choice(),
+                custom_name=custom,
+                regra_do_disco=regra_do_disco,
+            )
+        except ValueError:
+            # Página simples incompleta ("Jogo da Steam" sem o número). Quem
+            # reclama disso é o Salvar, com a frase de gente; ligar o switch
+            # para OLHAR não pode virar um erro na cara dela.
+            return regra_do_disco
+
+    def _mostrar_a_regra_nos_campos_crus(self) -> None:
+        """Escreve nos três campos crus a regra real do perfil aberto.
+
+        A fotografia de abertura é RETIRADA depois de escrever, e só quando ela
+        ainda não tinha mexido na regra. Sem isso, a cura desarmaria a guarda
+        SALVAR-NAO-REBAIXA-01 pela porta dos fundos: `_regra_foi_mexida`
+        compara os campos de agora com os da abertura, e o simples ato de ligar
+        o switch passaria a contar como gesto dela sobre a regra — que é
+        exatamente o que a docstring de `_assinatura_da_regra_no_editor`
+        recusa ("o switch fica DE FORA de propósito").
+
+        E só quando ela ainda não tinha mexido: retirar a fotografia por cima
+        de um gesto dela apagaria a prova do gesto, e o Salvar devolveria a
+        regra do disco por cima do que ela acabou de escolher.
+        """
+        regra = self._regra_real_do_perfil_aberto()
+        if regra is None:
+            return
+        mexida_antes = self._regra_foi_mexida()
+        campos = (
+            (
+                "profile_window_class_entry",
+                ",".join(getattr(regra, "window_class", None) or []),
+            ),
+            (
+                "profile_title_regex_entry",
+                getattr(regra, "window_title_regex", None) or "",
+            ),
+            (
+                "profile_process_name_entry",
+                ",".join(getattr(regra, "process_name", None) or []),
+            ),
+        )
+        for widget_id, texto in campos:
+            widget = self._get(widget_id)
+            if widget is None:
+                continue
+            with contextlib.suppress(Exception):
+                widget.set_text(texto)
+        if not mexida_antes:
+            self._assinatura_da_regra_ao_abrir = self._assinatura_da_regra_no_editor()
 
     def _selected_simple_choice(self) -> str:
         """Retorna o id ativo do seletor "Aplica a:".
