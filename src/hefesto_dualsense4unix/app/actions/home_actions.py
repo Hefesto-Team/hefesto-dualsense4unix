@@ -834,6 +834,14 @@ def registrar_modo_no_rascunho(
 class HomeActionsMixin(WidgetAccessMixin):
     """Mixin da aba Início (página 0 do notebook)."""
 
+    #: O-DESLIGADO-DE-ONTEM-01: última leitura do opt-out de gamepad no disco.
+    #: Ele é um arquivo-flag (`gamepad_disabled.flag`) e muda por GESTO dela, o
+    #: que é raro; o `_render_home` roda junto do estado, a cada tique. Ler o
+    #: disco ali dentro seria um `stat()` por repintura para responder uma
+    #: pergunta que muda uma vez por sessão — o poller cego que esta casa já
+    #: pagou uma vez (104 % de um núcleo). Quem atualiza é o tique lento.
+    _home_opt_out_cache: bool = False
+
     def install_home_tab(self) -> None:
         """Monta o conteúdo dinâmico da aba Início. Idempotente."""
         from gi.repository import GLib, Gtk
@@ -886,6 +894,24 @@ class HomeActionsMixin(WidgetAccessMixin):
         vpad_banner.set_visible(False)
         self._home_vpad_banner = vpad_banner
         box.pack_start(vpad_banner, False, False, 0)
+
+        # --- Banner: a emulação está desligada por escolha ANTERIOR ---------
+        # O-DESLIGADO-DE-ONTEM-01 (10/08/2026). Mesmo desenho dos dois vizinhos.
+        # Ele existe porque o estado mais confuso deste produto não é o
+        # quebrado — é o inerte por decisão antiga: nada falha, nada avisa, e o
+        # giroscópio simplesmente não chega ao jogo. Ver
+        # `aviso_de_opt_out_antigo`.
+        opt_out_banner = Gtk.Label(label="")
+        opt_out_banner.set_xalign(0.0)
+        opt_out_banner.set_line_wrap(True)
+        opt_out_banner.set_max_width_chars(96)
+        opt_out_banner.get_style_context().add_class(
+            "hefesto-dualsense4unix-status-warn"
+        )
+        opt_out_banner.set_no_show_all(True)
+        opt_out_banner.set_visible(False)
+        self._home_opt_out_banner = opt_out_banner
+        box.pack_start(opt_out_banner, False, False, 0)
 
         # --- Banner: jogo aberto SEM o wrapper (GUI-05 item 3) --------------
         # Mesmo desenho do banner do vpad: label inline, invisível por padrão;
@@ -1177,6 +1203,18 @@ class HomeActionsMixin(WidgetAccessMixin):
     def _tick_home_state(self) -> bool:
         notebook = self._get("main_notebook")
         if notebook is not None and id_da_pagina_corrente(notebook) == ABA_INICIO:
+            # O-DESLIGADO-DE-ONTEM-01: o opt-out sai do disco AQUI, no tique, e
+            # não no `_render_home` — uma leitura por ciclo, e só com a aba à
+            # vista. `suppress` porque um flag ilegível não pode derrubar a aba:
+            # sem leitura, não há aviso, que é o mesmo silêncio de antes e nunca
+            # pior que ele.
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.utils.session import (
+                    load_gamepad_preference,
+                )
+
+                preferencia, _flavor = load_gamepad_preference()
+                self._home_opt_out_cache = preferencia is False
             self._refresh_home_tab()
         return True  # timer permanente
 
@@ -1438,6 +1476,33 @@ class HomeActionsMixin(WidgetAccessMixin):
             if aviso_wrapper:
                 self._home_wrapper_banner.set_text(aviso_wrapper)
             self._home_wrapper_banner.set_visible(bool(aviso_wrapper))
+
+            # O-DESLIGADO-DE-ONTEM-01: a leitura do flag é I/O, e por isso vem
+            # do cache do tique lento (`_home_opt_out_cache`), nunca a cada
+            # repintura — o `_render_home` roda junto do estado e não pode virar
+            # um `stat()` por quadro.
+            aviso_opt_out = aviso_de_opt_out_antigo(
+                state,
+                opt_out=bool(getattr(self, "_home_opt_out_cache", False)),
+                conectados=len(
+                    [
+                        c
+                        for c in (state.get("controllers") or [])
+                        if isinstance(c, dict) and c.get("connected")
+                    ]
+                ),
+            )
+            # `getattr` e não acesso direto: os dublês de teste desta aba montam
+            # só os widgets que o caso deles precisa, e um atributo novo aqui
+            # derrubou 51 testes de cinco arquivos na primeira versão desta cura.
+            # É a lição já escrita para `registrar_modo_no_rascunho` — código de
+            # aba tem de sobreviver a dublê parcial, senão cada widget novo cobra
+            # um pedágio em arquivos que não têm nada a ver com ele.
+            banner_opt_out = getattr(self, "_home_opt_out_banner", None)
+            if banner_opt_out is not None:
+                if aviso_opt_out:
+                    banner_opt_out.set_text(aviso_opt_out)
+                banner_opt_out.set_visible(bool(aviso_opt_out))
 
             origin_bits: list[str] = []
             if state.get("native_mode") and state.get("native_mode_origin") == "profile":
@@ -1821,3 +1886,50 @@ __all__ = [
     "vpad_degradation_text",
     "wrapper_banner_text",
 ]
+
+
+def aviso_de_opt_out_antigo(
+    state: dict[str, Any] | None, *, opt_out: bool, conectados: int
+) -> str | None:
+    """O produto está inerte por uma escolha ANTIGA dela. ``None`` = nada a dizer.
+
+    O-DESLIGADO-DE-ONTEM-01 (10/08/2026). Ela: *"o touchpad não tá funcionando e
+    o giroscópio não funciona também e se tão no modo nativo ou hefesto dualsense,
+    deveriam funcionar por default"*.
+
+    O QUE FOI MEDIDO na máquina dela, com o controle no cabo e 85 % de bateria:
+
+        native_mode: False | emulacao: False | vpads vivos: 0 | perfil: nenhum
+        ~/.config/hefesto-dualsense4unix/gamepad_disabled.flag  ->  09/08 23:50
+
+    O flag é opt-out **explícito e permanente** — o daemon o respeita a cada
+    boot e diz por quê a cada dois segundos no journal
+    (``motivo=desligada_de_proposito``). É a regra R-07, e ela está certa: só o
+    gesto manual escreve preferência em disco, e uma automação não pode desfazer
+    o que a dona mandou.
+
+    O QUE ESTAVA ERRADO era o silêncio, e o preço dele foi grande: sem gamepad
+    virtual não há por onde o giroscópio chegar ao jogo, e ela passou a noite
+    concluindo que o **produto** estava quebrado. O que a tela mostrava —
+    "Controlar o PC" — é a verdade, e é insuficiente: diz o QUE está valendo e
+    não que isso veio de uma decisão de ontem que continua valendo hoje.
+
+    Some no instante em que ela troca de modo, e não reaparece enquanto o gesto
+    novo estiver de pé: é aviso de estado, nunca um pedido repetido.
+
+    Sem controle na mesa devolve ``None``: aí não há nada para atravessar, e o
+    aviso seria ruído sobre um problema que não existe agora.
+    """
+    if not isinstance(state, dict) or not opt_out or conectados < 1:
+        return None
+    if state.get("native_mode"):
+        return None
+    gamepad = state.get("gamepad_emulation")
+    if isinstance(gamepad, dict) and gamepad.get("enabled"):
+        return None
+    return (
+        "O controle está em “Controlar o PC” porque a emulação foi desligada "
+        "numa sessão anterior, e essa escolha vale até você mudá-la. Enquanto "
+        "estiver assim, o giroscópio e a vibração não chegam a jogo nenhum — "
+        "escolha “Jogar pelo Hefesto” ou “Conexão Nativa (Sony)” aqui em cima."
+    )
