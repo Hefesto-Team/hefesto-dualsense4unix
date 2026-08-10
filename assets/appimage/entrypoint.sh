@@ -23,7 +23,7 @@ set -e
 # num bundle incompleto. Mesmo papel do fallback de __version__ em
 # src/.../__init__.py: é ALVO do scripts/check_version_consistency.py, logo o
 # portão de release reprova se o pyproject subir e este número ficar atrás.
-HEFESTO_VERSION_FALLBACK="0.9.2"
+HEFESTO_VERSION_FALLBACK="0.9.3"
 
 PYTHON=""
 for candidate in "$APPDIR"/opt/python*/bin/python3.*; do

@@ -5,6 +5,34 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.9.3] — 2026-08-10
+
+### O produto ficava inerte por uma decisão de ontem, e a tela não dizia
+
+Ela relatou que o touchpad e o giroscópio não funcionavam. Medido na máquina
+dela: o Hefesto estava **fora dos dois modos** — nem Conexão Nativa, nem "Jogar
+pelo Hefesto" —, sem gamepad virtual e sem perfil ativo. A causa estava datada
+no disco: a emulação foi desligada em **09/08 às 23:50**, um gesto legítimo que
+grava opt-out permanente. Hoje ela chegou a ser ligada, mas por perfil — e
+perfil não escreve preferência, por decisão. No reinício seguinte, o desligado
+de ontem venceu de novo.
+
+Sem gamepad virtual não há por onde o giroscópio chegar ao jogo. O produto
+estava obedecendo, e ninguém dizia isso: a tela mostrava "Controlar o PC" — a
+verdade — sem contar que aquilo vinha de uma escolha anterior que continua
+valendo.
+
+**A aba Início passa a avisar**, com as duas saídas nomeadas, e o aviso some no
+instante em que o modo muda. O opt-out continua permanente e respeitado: o que
+mudou foi ele deixar de ser invisível.
+
+**E o que ela pediu já era o desenho, agora medido e escrito:** na Conexão
+Nativa o jogo fala direto com o controle nos quatro recursos, e os nós de
+giroscópio e touchpad têm acesso pela regra `72-hefesto-touchpad-motion-uaccess`;
+com a máscara DualSense, o controle virtual carrega o giroscópio e o touchpad.
+Só a máscara Xbox 360 não os tem, por limite da API daquele controle.
+
+
 ## [0.9.2] — 2026-08-10
 
 ### O Salvar e o Aplicar param de deixar features para trás

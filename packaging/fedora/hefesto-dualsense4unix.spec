@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.9.2
+Version:        0.9.3
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -392,7 +392,7 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
-* Sun Aug 02 2026 Vitoria Maria <[REDACTED]> - 1:0.9.2-1
+* Sun Aug 02 2026 Vitoria Maria <[REDACTED]> - 1:0.9.3-1
 - Sete presets de gatilho nao faziam nada: tres mandavam o modo que vale OFF
   no firmware e quatro mandavam modo oficial sem o bitmask de zonas ativas
 - Aba Status passou a dizer o que CHEGA ao jogo, e nao so o que existe
