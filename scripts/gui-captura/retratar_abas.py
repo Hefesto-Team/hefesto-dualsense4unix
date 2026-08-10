@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retrata as NOVE abas da janela, com o card do controle vivo dentro.
+"""Retrata as DEZ abas da janela, com o card do controle vivo dentro.
 
 É o script que a documentação e quem for trabalhar na interface usam —
 pessoa ou assistente. Uma execução, nenhum
@@ -107,6 +107,7 @@ LARGURA, ALTURA = 1920, 1080
 NOMES = (
     "readme_inicio",
     "readme_status",
+    "readme_no_jogo",
     "readme_gatilhos",
     "readme_lightbar",
     "readme_rumble",
@@ -239,6 +240,117 @@ def _montar_aba_inicio(builder) -> str:  # type: ignore[no-untyped-def]
     return "aba Início montada (2 controles = 2 jogadores)"
 
 
+#: Os dois controles da aba "No jogo", e o vpad de cada um.
+#:
+#: Os MACs são falsos por construção (octetos 4 e 5 zerados, a máscara desta
+#: casa — há portão que reprova MAC real em arquivo versionado), e os números
+#: do vpad são os de uma mesa de verdade medida em 09/08 com o jogo aberto:
+#: 158,3 Hz de giroscópio, o clique do touchpad visto há 73 s e a vibração
+#: chegando aos motores. A mistura é DE PROPÓSITO: só assim a foto mostra as
+#: três situações da aba de uma vez — "no jogo agora", "parou" e "sem pedido
+#: ainda" — que é o que ela precisa reconhecer ao trocar de máscara.
+_NO_JOGO_CONTROLES = (
+    {
+        "index": 0,
+        "connected": True,
+        "transport": "usb",
+        "is_primary": True,
+        "player": 1,
+        "player_slot": 1,
+        "uniq": "aa:bb:cc:00:00:01",
+    },
+    {
+        "index": 1,
+        "connected": True,
+        "transport": "bt",
+        "is_primary": False,
+        "player": 2,
+        "player_slot": 2,
+        "uniq": "aa:bb:cc:00:00:02",
+    },
+)
+
+_NO_JOGO_ESTADO = {
+    "connected": True,
+    "native_mode": False,
+    "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
+    "controllers": list(_NO_JOGO_CONTROLES),
+    "rumble_ff": {
+        "per_vpad": [
+            {
+                "player": 1,
+                "backend": "uhid",
+                "motion_streaming": True,
+                "motion_hz": 158.3,
+                "motion_forwards": 48210,
+                "touchpad_pressionado": False,
+                "rumble_no_fisico": [30, 120],
+                "rumble_no_fisico_ha_s": 0.4,
+                "visto_ha_s": {
+                    "rumble": 0.4,
+                    "lightbar": 1.1,
+                    "touchpad_click": 73.0,
+                },
+            },
+            {
+                "player": 2,
+                "backend": "uhid",
+                # O espelho DESTE jogador caiu agora há pouco: `motion_streaming`
+                # falso com `motion_forwards` > 0 é exatamente o par que separa
+                # "o giroscópio parou" de "nunca começou" (ORFAOS-QUE-VOLTAM-01).
+                "motion_streaming": False,
+                "motion_hz": 0.0,
+                "motion_forwards": 12904,
+                "touchpad_pressionado": False,
+                "visto_ha_s": {"rumble": 0.9},
+            },
+        ]
+    },
+}
+
+
+def _montar_aba_no_jogo(builder) -> str:  # type: ignore[no-untyped-def]
+    """Monta a aba "No jogo" e a preenche com uma mesa de dois jogadores.
+
+    Mesmo desenho do card do Status e da aba Início: host mínimo com um `_get`
+    que resolve ids do builder, nada de IPC e nada de tique. Os métodos são os
+    de PRODUÇÃO (`install_no_jogo_tab` e `_sync_paineis_no_jogo`) — uma cópia
+    da montagem aqui seria um segundo dono do desenho, e a foto passaria a
+    mentir no dia em que a `status_actions` mudasse.
+
+    O `_get` devolve `None` para o `main_notebook` de propósito: o gate de "só
+    trabalha com a aba à vista" não tem sentido numa janela offscreen em que
+    TODAS as páginas são fotografadas — é o mesmo escape que a própria mixin já
+    documenta para quem monta sem glade.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.status_actions import (
+            StatusActionsMixin,
+        )
+    except Exception as exc:
+        return f'aba "No jogo" não montada ({exc})'
+
+    class _Host(StatusActionsMixin):  # type: ignore[misc]
+        def __init__(self) -> None:
+            self.builder = builder
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            if nome == "main_notebook":
+                return None
+            return self.builder.get_object(nome)
+
+    try:
+        host = _Host()
+        host.install_no_jogo_tab()
+        host._sync_paineis_no_jogo(dict(_NO_JOGO_ESTADO))
+    except Exception as exc:
+        return f'aba "No jogo" não montada ({exc})'
+    caixa = builder.get_object("tab_no_jogo_box")
+    if caixa is not None:
+        caixa.show_all()
+    return 'aba "No jogo" montada (2 jogadores, as três situações na tela)'
+
+
 def _injetar_modos_de_gatilho(builder) -> str:  # type: ignore[no-untyped-def]
     """Põe os 19 modos de gatilho na aba Gatilhos.
 
@@ -368,6 +480,7 @@ def main(destino: str | None = None) -> int:
     print(f"  {_injetar_card(builder)}")
     print(f"  {_injetar_modos_de_gatilho(builder)}")
     print(f"  {_montar_aba_inicio(builder)}")
+    print(f"  {_montar_aba_no_jogo(builder)}")
     _assentar()
 
     total = notebook.get_n_pages()

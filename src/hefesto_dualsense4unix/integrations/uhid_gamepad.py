@@ -60,6 +60,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
+from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -244,6 +245,18 @@ _LUZ_FLAGS = 0x14
 #: Cap de eventos drenados por tick — o jogo pode mandar output em rajada.
 _MAX_EVENTS_PER_PUMP = 64
 
+#: QUEM ESCREVEU-01 — quantos reports de vibração o anel guarda. Oito bastam
+#: para ver o padrão (start/stop, escada de fade-out, o zero solto do
+#: `input_ff_flush` do kernel) e cabem numa tela sem virar histórico.
+_ANEL_DE_VIBRACAO_MAX = 8
+
+#: Rótulos do ramo pelo qual o report entrou — vocabulário do anel e contrato
+#: com a tela. Trocá-los sem trocar o consumidor deixa o painel mudo.
+RAMO_V1 = "v1"
+RAMO_V2 = "v2"
+RAMO_PARADA_SDL = "parada_sdl"
+RAMO_DESCARTADO = "descartado"
+
 # --- PAINEL-DA-VERDADE-01: recência, e não só contagem ---------------------
 #
 #: As categorias que o vpad carimba quando ALGO de fato passou por ele. Elas
@@ -270,6 +283,11 @@ ATIVIDADE_PLAYER_LEDS = "player_leds"
 ATIVIDADE_RUMBLE = "rumble"
 ATIVIDADE_TOUCHPAD_CLICK = "touchpad_click"
 ATIVIDADE_OUTPUT = "output"
+#: JACK-QUE-NAO-LIGOU-01 (09/08/2026) — o byte 53 (fone/microfone/mudo) do
+#: físico SAINDO no report do vpad. Categoria própria, e não um apêndice do
+#: `output`: o que ela pergunta é se o jogo enxerga o fone e o microfone do
+#: controle, e essa é a única linha do payload que responde.
+ATIVIDADE_JACK = "jack"
 #: PARIDADE-SONY-01/E1 — o INSTRUMENTO do portão de medição da sprint.
 #:
 #: A pergunta que ela abre é: *"algum jogo que ela joga escreve os bytes de
@@ -516,6 +534,12 @@ _STATUS1_NEUTRO = 0x00
 #: firmware — repassar bit desconhecido é a mesma classe de erro que autorizar
 #: um campo de áudio sem escrever valor nele.
 _STATUS1_BITS_CONHECIDOS = 0x07
+
+#: Os três bits, um a um — para a leitura (`jack`) e a escrita usarem os
+#: MESMOS números. Nomes do `hid-playstation.c` (kernel 6.18).
+_STATUS1_HP_DETECT = 0x01
+_STATUS1_MIC_DETECT = 0x02
+_STATUS1_MIC_MUTE = 0x04
 _CHARGING_SHIFT = 4
 _BATTERY_MAX_NIBBLE = 0x0A
 
@@ -807,6 +831,17 @@ class UhidDualSense:
     #: abaixo do que a mão sente, e isso não é defeito nosso — sem este número
     #: "não senti" e "não chegou" seguem indistinguíveis.
     _rumble_maior_pedido: tuple[int, int] = (0, 0)
+    #: MOTOR-QUE-NAO-SE-VE-01 (09/08/2026) — o par que de fato foi ESCRITO no
+    #: controle físico, DEPOIS da política de intensidade, e o instante dele.
+    #: `None` = nada escrito nesta sessão.
+    #:
+    #: Todos os contadores acima medem o que o JOGO pediu ao vpad. Nenhum mede
+    #: o que saiu do nosso lado, e a diferença entre os dois é uma
+    #: multiplicação: com `rumble_policy=economia` (0,3), um pedido de 20
+    #: chega ao motor como 6, e um pedido de 1 chega como ZERO. A tela dizia
+    #: "vibração chegando" nos dois casos.
+    _rumble_no_fisico: tuple[int, int] | None = None
+    _rumble_no_fisico_em: float | None = None
     #: Reports com motor NÃO-NULO que o gate de vibração DESCARTOU (nem
     #: `_VIBRATION_FLAGS` no flag0, nem `COMPATIBLE_VIBRATION2` no flag2).
     #: Enquanto ninguém contava isto, "o jogo não pediu" era afirmado sem que
@@ -820,6 +855,50 @@ class UhidDualSense:
     #: valid_flag2). > 0 prova que o gate antigo, que só olhava o flag0, estava
     #: jogando vibração fora.
     _rumble_v2_count: int = 0
+    # --- QUEM ESCREVEU-01 (09/08/2026): os três buracos do painel -----------
+    #
+    #: Nº de PARADAS do SDL honradas (`_e_a_parada_do_sdl`). Elas voltam do
+    #: `_handle_output` ANTES do `_rumble_count += 1`, de propósito e certo —
+    #: mas isso as tornava invisíveis, e a diferença entre "o jogo vibrou e
+    #: mandou parar" e "ninguém pediu nada" é justamente esta. Sem o número, o
+    #: painel lê os dois casos como o mesmo silêncio.
+    _rumble_parada_sdl_count: int = 0
+    #: Reports de output que chegaram com um report id que NÃO é o 0x02.
+    #:
+    #: O `_handle_output` os descarta na primeira linha — antes até do
+    #: `_output_count`. Ou seja: um jogo (ou uma camada dele) escrevendo no
+    #: hidraw do vpad com outro envelope produzia EXATAMENTE o mesmo painel
+    #: que um jogo que nunca enxergou o controle: zero em tudo. A conclusão
+    #: que a tela tirava — "o jogo não viu o vpad" — mandava caçar dedup,
+    #: udev e máscara, quando o dado estava chegando.
+    _output_id_estranho_count: int = 0
+    #: (report_id, tamanho) do último report de id estranho — o que transforma
+    #: o contador acima em diagnóstico.
+    _output_id_estranho_amostra: tuple[int, int] | None = None
+    #: QUEM ESCREVEU-01 — os últimos reports que falaram de vibração, crus.
+    #:
+    #: **Por que um anel, e não mais um contador.** Os contadores respondem
+    #: "quantas vezes"; a pergunta que sobrou depois deles é *"quem escreveu, e
+    #: o quê"* — e ela só se responde com os BYTES. O caso medido na mesa dela
+    #: em 09/08 (`plays=4`, `nao_nulos=0`, `descartados=0`) tem pelo menos dois
+    #: autores possíveis, e eles mandam caçar em pontas opostas:
+    #:
+    #: * o **jogo** (SDL/winebus) escrevendo no hidraw: o pedido de vibração
+    #:   sai com `flag0 & 0x03` (v1) ou `flag2 & 0x04` (v2) e os motores no
+    #:   valor pedido;
+    #: * o **`hid_playstation` do kernel**, que também é escritor deste report:
+    #:   ele monta a saída quando ALGUÉM faz force-feedback no nó evdev do
+    #:   vpad, e o `input_ff_flush` do kernel emite um efeito ZERADO a cada
+    #:   `close()` do nó — um `plays` que sobe sozinho, com força zero, toda
+    #:   vez que a Steam abre e fecha o joystick.
+    #:
+    #: Cada entrada é `(instante, flag0, flag1, flag2, weak, strong, ramo)`.
+    #: `ramo` é o vocabulário do painel: "v1", "v2", "parada_sdl", "descartado".
+    #: Teto pequeno de propósito (:data:`_ANEL_DE_VIBRACAO_MAX`) — o anel é
+    #: prova, não histórico, e ele vive na thread do poll loop.
+    _rumble_anel: list[tuple[float, int, int, int, int, int, str]] = field(
+        default_factory=list
+    )
     _started: bool = False
     #: REPLICA-03: sessão de jogo (UHID_OPEN..UHID_CLOSE) + graça pós-bind.
     _game_open: bool = False
@@ -851,6 +930,16 @@ class UhidDualSense:
     _status_byte: int = _STATUS_DESCONHECIDO
     #: BT-E-VPAD-01, furo 2: espelho do byte 53 do físico (fone/mic/mudo).
     _status1_byte: int = _STATUS1_NEUTRO
+    #: Nº de vezes que o byte 53 espelhado SAIU no report do vpad
+    #: (JACK-QUE-NAO-LIGOU-01). Só sobe quando o report de fato foi escrito —
+    #: um contador que subisse na chamada mediria o chamador, não a entrega.
+    _jack_forward_count: int = 0
+    #: Nº de vezes que o byte 52 (bateria) SAIU no report do vpad
+    #: (BATERIA-QUE-NAO-CHEGOU-01). Mesma disciplina do irmão acima, e pela
+    #: mesma razão: durante 25 dias existiu chamada nenhuma, e um contador que
+    #: subisse antes da emissão teria dito "entregue" no dia em que o gate do
+    #: `_motion_streaming` engolia tudo.
+    _battery_forward_count: int = 0
     #: GYRO-01: janela de motion (payload[15:40]) espelhada do físico pelo
     #: `PhysicalReportReader`. Nasce NEUTRA (= report idêntico ao histórico).
     _motion_window: bytes = _MOTION_NEUTRAL
@@ -1003,6 +1092,41 @@ class UhidDualSense:
         """Maior par (weak, strong) que o jogo pediu na sessão."""
         return self._rumble_maior_pedido
 
+    def registrar_rumble_no_fisico(self, weak: int, strong: int) -> None:
+        """Anota o par que FOI ESCRITO no controle físico (MOTOR-QUE-NAO-SE-VE-01).
+
+        Quem chama é o `rumble_sink` deste vpad, DEPOIS de `apply_game_rumble`
+        devolver o par efetivo — nunca antes. O contrato é o mesmo do rascunho
+        do perfil e pela mesma razão: isto descreve o que aconteceu, não o que
+        se pretendia. Um pedido que a política zerou, ou que o rumble FIXADO
+        pela GUI engoliu, não escreve nada aqui — e é justamente esse silêncio
+        que a tela precisa poder mostrar.
+
+        Sem esta anotação, o único número do lado de cá era o `ff_last_sent`,
+        que é o que o JOGO pediu. Entre um e outro há a multiplicação da
+        política de intensidade, e ela é invisível: `economia` (0,3) transforma
+        um pedido de 1 em zero e a tela seguia dizendo "vibração chegando".
+        """
+        self._rumble_no_fisico = (int(weak), int(strong))
+        self._rumble_no_fisico_em = self.time_fn()
+
+    @property
+    def rumble_no_fisico(self) -> tuple[int, int] | None:
+        """Último par (weak, strong) escrito no controle FÍSICO; None = nenhum."""
+        return self._rumble_no_fisico
+
+    @property
+    def rumble_no_fisico_ha_s(self) -> float | None:
+        """Há quantos segundos o último par foi escrito no físico; None = nunca.
+
+        Já resolvido em SEGUNDOS DE IDADE pela mesma razão do `visto_ha_s`:
+        quem lê é a janela, noutro processo, e ela não tem este relógio.
+        """
+        quando = self._rumble_no_fisico_em
+        if quando is None:
+            return None
+        return round(max(0.0, self.time_fn() - quando), 1)
+
     @property
     def ff_descartado_count(self) -> int:
         """Nº de reports com motor não-nulo que o gate de vibração DESCARTOU.
@@ -1025,6 +1149,49 @@ class UhidDualSense:
         estava jogando vibração do jogo fora.
         """
         return self._rumble_v2_count
+
+    @property
+    def ff_parada_sdl_count(self) -> int:
+        """Nº de paradas de vibração do SDL honradas (QUEM ESCREVEU-01).
+
+        > 0 prova que houve vibração VIVA neste vpad — ninguém manda parar o
+        que nunca começou. Com este contador em zero e `plays` > 0, o que
+        subiu não foi o jogo pedindo e desistindo.
+        """
+        return self._rumble_parada_sdl_count
+
+    @property
+    def ff_report_estranho_count(self) -> int:
+        """Nº de reports de output com report id diferente de 0x02.
+
+        > 0 é dado CHEGANDO e sendo descartado na porta — o oposto da
+        conclusão "o jogo não enxergou o gamepad virtual", que é a que o
+        painel tirava do silêncio.
+        """
+        return self._output_id_estranho_count
+
+    @property
+    def ff_report_estranho_amostra(self) -> tuple[int, int] | None:
+        """(report_id, tamanho) do último report de id estranho, ou None."""
+        return self._output_id_estranho_amostra
+
+    @property
+    def ff_ultimos_reports(self) -> list[tuple[float, int, int, int, int, int, str]]:
+        """Os últimos reports de vibração, com a IDADE já resolvida em segundos.
+
+        QUEM ESCREVEU-01. Cada item é
+        ``(ha_s, flag0, flag1, flag2, weak, strong, ramo)``. A idade vem
+        resolvida (e não o instante cru) pela mesma razão do `visto_ha_s`:
+        quem lê é a janela, noutro processo, e ela não tem este relógio.
+
+        Cópia a cada leitura, e não a lista viva: o anel é escrito na thread do
+        poll loop e lido pelo `state_full`.
+        """
+        agora = self.time_fn()
+        return [
+            (round(max(0.0, agora - quando), 1), f0, f1, f2, w, s, ramo)
+            for quando, f0, f1, f2, w, s, ramo in self._rumble_anel
+        ]
 
     @property
     def output_count(self) -> int:
@@ -1244,9 +1411,21 @@ class UhidDualSense:
             self._rumble_count = 0
             self._rumble_nao_nulo_count = 0
             self._rumble_maior_pedido = (0, 0)
+            # MOTOR-QUE-NAO-SE-VE-01: o que foi aos motores morre com a sessão,
+            # como todo o resto da contabilidade. Herdá-lo faria a próxima vida
+            # do vpad nascer dizendo que os motores acabaram de girar.
+            self._rumble_no_fisico = None
+            self._rumble_no_fisico_em = None
             self._rumble_descartado_count = 0
             self._rumble_descartado_amostra = None
             self._rumble_v2_count = 0
+            # QUEM ESCREVEU-01: a prova morre com a sessão, como o resto da
+            # contabilidade — um anel herdado descreveria um device que não
+            # existe mais.
+            self._rumble_parada_sdl_count = 0
+            self._output_id_estranho_count = 0
+            self._output_id_estranho_amostra = None
+            self._rumble_anel = []
             self._started = False
             self._game_open = False
             self._bound_at = None
@@ -1270,6 +1449,12 @@ class UhidDualSense:
             self._motion_window = _MOTION_NEUTRAL
             self._motion_streaming = False
             self._motion_count = 0
+            # BATERIA-QUE-NAO-CHEGOU-01: a carga espelhada morre com o device,
+            # como os carimbos acima. A próxima vida do vpad não pode nascer
+            # anunciando ao jogo a bateria do controle da vida anterior — e o
+            # `_STATUS_DESCONHECIDO` é o mesmo default do nascimento.
+            self._status_byte = _STATUS_DESCONHECIDO
+            self._battery_forward_count = 0
 
     def _silence_rumble(self) -> None:
         """Zera os motores do controle físico se o jogo os deixou ligados.
@@ -1412,6 +1597,19 @@ class UhidDualSense:
         zerar a janela não o alcança — sem esta linha, perder o físico com o
         dedo apertado (hotplug, cabo puxado) deixaria o botão preso para
         sempre no jogo, com o mapa/inventário abrindo e fechando sozinho.
+
+        JACK-QUE-NAO-LIGOU-01: o byte 53 volta ao NEUTRO pela terceira vez
+        pelo mesmo argumento. Sem reader não há quem espelhe o fone, e manter
+        "há fone plugado" de uma sessão morta faria o jogo rotear o som para
+        um fone que não está mais lá. `_STATUS1_NEUTRO` é o valor honesto: com
+        os bits em zero, nada é declarado.
+
+        BATERIA-QUE-NAO-CHEGOU-01: e o byte 52 pela quarta vez, com o custo
+        mais visível de todos. Sem reader não há quem espelhe a carga, e um
+        controle que caiu com 8% ficaria 8% no report do vpad para sempre — o
+        jogo passaria a partida inteira piscando alerta de bateria fraca por um
+        controle que já foi embora. `_STATUS_DESCONHECIDO` é o "não sei" que
+        esta casa já escolheu para este byte, e ele não dispara alerta nenhum.
         """
         with self._lock:
             alvo = bool(on)
@@ -1422,6 +1620,8 @@ class UhidDualSense:
             if not alvo:
                 self._motion_window = _MOTION_NEUTRAL
                 self._touchpad_click = False
+                self._status1_byte = _STATUS1_NEUTRO
+                self._status_byte = _STATUS_DESCONHECIDO
                 self._emit_if_changed()
 
     @property
@@ -1433,6 +1633,54 @@ class UhidDualSense:
     def motion_forward_count(self) -> int:
         """Nº de janelas de motion emitidas (telemetria GYRO-03)."""
         return self._motion_count
+
+    @property
+    def jack_forward_count(self) -> int:
+        """Nº de mudanças do byte 53 que SAÍRAM no report (JACK-QUE-NAO-LIGOU-01)."""
+        return self._jack_forward_count
+
+    @property
+    def battery_forward_count(self) -> int:
+        """Nº de mudanças do byte 52 que SAÍRAM no report (BATERIA-QUE-NAO-CHEGOU-01)."""
+        return self._battery_forward_count
+
+    @property
+    def bateria_anunciada(self) -> tuple[int | None, bool]:
+        """``(percentual, carregando)`` que o vpad DIZ AO JOGO; None = não sei.
+
+        BATERIA-QUE-NAO-CHEGOU-01. Não é leitura do controle físico (essa é o
+        `battery_pct` da aba Status): é o que o gamepad VIRTUAL declara no byte
+        52, decodificado pela conta do kernel — a mesma que o `hid-playstation`
+        vai aplicar do outro lado. A diferença é a pergunta inteira: com o
+        `forward_battery` órfão, o físico podia estar em 95% e o vpad seguia
+        anunciando `_STATUS_DESCONHECIDO` para sempre.
+        """
+        byte = self._status_byte
+        if byte == _STATUS_DESCONHECIDO:
+            return (None, False)
+        estado = (byte & 0xF0) >> _CHARGING_SHIFT
+        return (min((byte & 0x0F) * 10 + 5, 100), estado == 0x1)
+
+    @property
+    def jack(self) -> dict[str, bool]:
+        """O que o vpad DIZ AO JOGO sobre fone/microfone do controle.
+
+        JACK-QUE-NAO-LIGOU-01. É o byte 53 do report de entrada, decodificado
+        nos três bits que este projeto conhece (`_STATUS1_BITS_CONHECIDOS`) —
+        os mesmos nomes do kernel 6.18: `HP_DETECT`, `MIC_DETECT`, `MIC_MUTE`.
+
+        Não é leitura do controle físico: é o que o gamepad VIRTUAL declara.
+        A diferença importa e é o motivo de a chave existir — a aba Status já
+        mostra o mudo do FÍSICO (`entry['audio']`), e a pergunta em aberto era
+        outra: *o jogo enxerga isso?*. Com o `forward_jack` órfão a resposta
+        era "não, nunca" — o campo saía fixo em 0x00 desde sempre.
+        """
+        byte = self._status1_byte
+        return {
+            "fone": bool(byte & _STATUS1_HP_DETECT),
+            "microfone": bool(byte & _STATUS1_MIC_DETECT),
+            "mudo": bool(byte & _STATUS1_MIC_MUTE),
+        }
 
     def _emit_if_changed(self, *, from_reader: bool = False) -> bool:
         """Emite o report 0x01 só quando o payload mudou.
@@ -1506,30 +1754,98 @@ class UhidDualSense:
         encaminhar — mandar bits desconhecidos é a mesma classe de erro que
         autorizar um campo de áudio sem escrever valor.
 
-        Segue o desenho do `forward_battery`: sai cedo quando nada muda, para
-        não sujar o caminho de emissão com report idêntico.
-        """
-        novo = int(status1) & _STATUS1_BITS_CONHECIDOS
-        if novo == self._status1_byte:
-            return
-        self._status1_byte = novo
+        Sai cedo quando nada muda, para não sujar o caminho de emissão com
+        report idêntico.
 
-    def forward_battery(self, percent: int | None, *, charging: bool = False) -> None:
+        ---- A CORREÇÃO DE 09/08/2026 (JACK-QUE-NAO-LIGOU-01) ----
+
+        Este método nasceu em 02/08 (`5801de9`) com DOIS defeitos, e a sprint
+        `2026-08-03-ENTREGA-QUE-NAO-LIGOU-01` já tinha nomeado os dois: *"não
+        tem chamador, e não emitiria se tivesse"*. Seis dias depois continuava
+        com zero referências em `src/`.
+
+        1. **Não emitia.** Ele escrevia `_status1_byte` e parava ali. O irmão
+           `forward_touchpad_click` chama `_emit_if_changed`; este não. Um
+           campo que só muda o cache espera o próximo report de OUTRA coisa
+           para viajar — e com o controle parado na mesa (BT em repouso, sem
+           janela de motion nova) esse próximo report pode nunca vir. Plugar o
+           fone e o jogo não saber é exatamente o sintoma.
+        2. **Não tinha chamador.** O chamador é o `PhysicalReportReader`, o
+           mesmo do motion e do clique: o byte 53 mora no report CRU, fora da
+           janela 15..39, e chega de graça no mesmo `read`.
+
+        `from_reader=True` pela mesma razão do clique: com `_motion_streaming`
+        ligado, o gate de `_emit_if_changed` só deixa emitir quem vem do
+        reader — e é o reader que chama. Sob `_lock` porque `_status1_byte`
+        entra no `_encode_body`, que o poll loop também executa.
+
+        Sem guarda de `_fd`, ao contrário do `forward_touchpad_click` e junto
+        com o `forward_battery`: quem já sabe recusar sem device é o
+        `send_report`, e o cache do byte tem de acompanhar o físico mesmo
+        antes de o /dev/uhid existir — é ele que o `_encode_body` lê no
+        primeiro report da vida do vpad. É também o contrato que a
+        BT-E-VPAD-01 já afere sem device nenhum.
+        """
+        with self._lock:
+            novo = int(status1) & _STATUS1_BITS_CONHECIDOS
+            if novo == self._status1_byte:
+                return
+            self._status1_byte = novo
+            if self._emit_if_changed(from_reader=True):
+                self._jack_forward_count += 1
+                self._carimbar(ATIVIDADE_JACK)
+
+    def forward_battery(
+        self,
+        percent: int | None,
+        *,
+        charging: bool = False,
+        from_reader: bool = False,
+    ) -> None:
         """Espelha a bateria do controle físico no vpad (opcional).
 
         Sem isto o vpad anuncia 5% descarregando para sempre e o jogo mostra
         alerta de bateria fraca num controle cheio. `percent=None` volta para
         "cheio e carregando", que não dispara alerta nenhum.
+
+        ---- A CORREÇÃO DE 09/08/2026 (BATERIA-QUE-NAO-CHEGOU-01) ----
+
+        Este método nasceu em 15/07 (`69951a7`) e passou 25 dias com **zero
+        chamadores em `src/`** — a frase acima descrevia, o tempo todo, o que
+        de fato acontecia com o controle dela. É a mesma família do
+        `forward_jack`, curado horas antes, e tinha os mesmos dois defeitos:
+
+        1. **Não emitia**, e de um jeito mais sorrateiro que o do jack: ele
+           CHAMAVA `_emit_if_changed()`, só que sem `from_reader`. Com
+           `_motion_streaming` ligado — que é o estado normal, porque é o
+           reader quem liga — o gate devolve `False` na primeira linha e nada
+           sai. Fiar o chamador sem esta palavra-chave teria produzido uma
+           cura que passa em revisão e não entrega nada;
+        2. **não tinha chamador.** É o `PhysicalReportReader`, o mesmo do
+           motion, do clique e do jack: o byte 52 mora no report CRU e chega
+           de graça no mesmo `read`.
+
+        `from_reader` é PARÂMETRO, e não `True` fixo, por uma razão medida: o
+        contrato do `set_motion_streaming` promete que os forwards do POLL LOOP
+        viram só-cache enquanto o reader é o relógio, e `forward_battery` é
+        nominalmente um deles (a docstring de lá o cita). Quem vem do reader
+        diz que vem; quem vier do poll loop continua governado pelo gate, e o
+        report do reader carrega o cache junto no tick seguinte.
+
+        Sob `_lock` porque `_status_byte` entra no `_encode_body`, que o poll
+        loop executa noutra thread — a mesma correção que o jack recebeu.
         """
         if percent is None:
             novo = _STATUS_DESCONHECIDO
         else:
             estado = 0x1 if charging else 0x0
             novo = (estado << _CHARGING_SHIFT) | _percent_para_nibble(percent)
-        if novo == self._status_byte:
-            return
-        self._status_byte = novo
-        self._emit_if_changed()
+        with self._lock:
+            if novo == self._status_byte:
+                return
+            self._status_byte = novo
+            if self._emit_if_changed(from_reader=from_reader):
+                self._battery_forward_count += 1
 
     @staticmethod
     def _dpad_hat(pressed: frozenset[str]) -> int:
@@ -1691,6 +2007,15 @@ class UhidDualSense:
                                                 6 + HID_MAX_DESCRIPTOR_SIZE])[0]
         report = data[4:4 + min(payload_size, HID_MAX_DESCRIPTOR_SIZE)]
         if len(report) < 2 or report[0] != _OUTPUT_REPORT_USB:
+            # QUEM ESCREVEU-01: descartar é certo (só o 0x02 tem o layout que
+            # lemos), descartar EM SILÊNCIO era o buraco: sem contador, um
+            # escritor usando outro envelope produzia o MESMO painel zerado que
+            # "nenhum jogo enxergou o vpad" — e as duas conclusões mandam caçar
+            # em lugares opostos. O report vazio (len < 2) não conta: ele não
+            # tem id para reportar e não é escrita de ninguém.
+            if len(report) >= 1:
+                self._output_id_estranho_count += 1
+                self._output_id_estranho_amostra = (report[0], len(report))
             return
         self._output_count += 1
         # O carimbo do OUTPUT é o mais bruto e o mais valioso dos seis: ele diz
@@ -1736,6 +2061,12 @@ class UhidDualSense:
             # de luz não entra aqui, porque esses TÊM flags ligados.
             self._carimbar(ATIVIDADE_RUMBLE)
             self._rumble_visto_em = None
+            # QUEM ESCREVEU-01: a parada volta daqui ANTES do `_rumble_count`,
+            # e isso está certo (ela não é pedido). Mas sem contá-la, "o jogo
+            # vibrou e mandou parar" e "ninguém nunca pediu nada" ficavam com
+            # o mesmo painel — e uma parada é PROVA de vibração viva.
+            self._rumble_parada_sdl_count += 1
+            self._anotar_no_anel(body, 0, 0, RAMO_PARADA_SDL)
             if self._last_sent != (0, 0):
                 self._last_sent = (0, 0)
                 self._emit_rumble(0, 0)
@@ -1768,18 +2099,25 @@ class UhidDualSense:
                     weak,
                     strong,
                 )
+                self._anotar_no_anel(body, weak, strong, RAMO_DESCARTADO)
             return
         self._rumble_count += 1
-        if (
+        e_v2 = bool(
             len(body) > rep.COMMON_VALID_FLAG2
             and body[rep.COMMON_VALID_FLAG2] & rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
             and not body[_VALID_FLAG0_OFFSET] & _VIBRATION_FLAGS
-        ):
+        )
+        if e_v2:
             self._rumble_v2_count += 1
+        self._anotar_no_anel(body, weak, strong, RAMO_V2 if e_v2 else RAMO_V1)
         if weak or strong:
             self._rumble_nao_nulo_count += 1
-            if (weak, strong) > self._rumble_maior_pedido:
-                self._rumble_maior_pedido = (weak, strong)
+            # MASCARA-XBOX-MUDA-01: por INTENSIDADE, nunca pela ordem de tupla
+            # do Python — `(1, 0) > (0, 255)` é True e apagaria a prova de que
+            # o jogo pediu uma vibração máxima. Ver `core.rumble.pedido_mais_forte`.
+            self._rumble_maior_pedido = pedido_mais_forte(
+                self._rumble_maior_pedido, (weak, strong)
+            )
         # O carimbo vem ANTES do dedup: um jogo que reafirma o MESMO valor está
         # dizendo "ainda quero vibrar", e isso tem de adiar o teto de silêncio
         # mesmo sem haver o que reenviar ao hardware.
@@ -1793,6 +2131,37 @@ class UhidDualSense:
             return
         self._last_sent = (weak, strong)
         self._emit_rumble(weak, strong)
+
+    def _anotar_no_anel(
+        self, body: bytes, weak: int, strong: int, ramo: str
+    ) -> None:
+        """Guarda os BYTES do report de vibração no anel (QUEM ESCREVEU-01).
+
+        Chamado nos QUATRO ramos que decidem o destino de um report que fala
+        (ou parece falar) de vibração — v1, v2, parada do SDL e descarte —,
+        porque a pergunta que o anel responde é justamente *qual* deles o
+        report tomou, e um ramo de fora dele viraria o próximo ponto cego.
+
+        Barato de propósito: uma tupla de inteiros, teto de
+        :data:`_ANEL_DE_VIBRACAO_MAX`, sem formatação e sem log. Isto roda na
+        thread do poll loop, dentro do dreno do uhid.
+        """
+        flag2 = (
+            body[rep.COMMON_VALID_FLAG2] if len(body) > rep.COMMON_VALID_FLAG2 else 0
+        )
+        self._rumble_anel.append(
+            (
+                self.time_fn(),
+                body[_VALID_FLAG0_OFFSET],
+                body[_VALID_FLAG1_OFFSET] if len(body) > _VALID_FLAG1_OFFSET else 0,
+                flag2,
+                int(weak),
+                int(strong),
+                ramo,
+            )
+        )
+        if len(self._rumble_anel) > _ANEL_DE_VIBRACAO_MAX:
+            del self._rumble_anel[:-_ANEL_DE_VIBRACAO_MAX]
 
     def _expirar_rumble_preso(self) -> None:
         """Zera um rumble do jogo que ficou pendurado além do teto de silêncio.

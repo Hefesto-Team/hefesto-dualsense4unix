@@ -301,14 +301,25 @@ def test_a_frase_separa_chegando_de_parado_de_nunca() -> None:
     )
     frase = resumo_do_que_chega_ao_jogo(_PRIMARIO, estado)
 
+    # SOM-DO-JOGO-NA-LINHA-01 (09/08/2026, decisão dela: *"sim, na linha de
+    # recursos do card"*): o alto-falante é o SEXTO recurso da lista desde
+    # hoje. A frase inteira continua sendo o contrato — só que agora ela tem
+    # mais um nome, e este teste é o lugar onde isso fica registrado.
     assert frase == (
         "No jogo agora: giroscópio (~194 Hz), vibração · "
         "pararam: gatilho · "
-        "sem pedido ainda: luz, clique do touchpad."
+        "sem pedido ainda: luz, clique do touchpad, som do controle."
     )
     # E cada recurso aparece UMA vez na frase — a ordem dos grupos pode mudar,
     # a repetição não pode voltar.
-    for nome in ("giroscópio", "vibração", "gatilho", "luz", "clique do touchpad"):
+    for nome in (
+        "giroscópio",
+        "vibração",
+        "gatilho",
+        "luz",
+        "clique do touchpad",
+        "som do controle",
+    ):
         assert frase.count(nome) == 1, f"{nome!r} aparece mais de uma vez"
 
 

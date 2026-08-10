@@ -90,6 +90,44 @@ class VirtualPad(Protocol):
         ...
 
     @property
+    def ff_nao_nulo_count(self) -> int:
+        """Nº de pedidos com FORÇA — os que fariam o motor mexer.
+
+        MASCARA-XBOX-MUDA-01 (09/08/2026). Entra no Protocol junto com o
+        `ff_maior_pedido` por um motivo medido: enquanto só o backend uhid os
+        tinha, o `daemon/ipc_handlers` os lia com `getattr(vp, ..., 0)` e o
+        zero do default virava AFIRMAÇÃO — com a máscara Xbox vibrando
+        perfeitamente, a aba Rumble dizia *"o jogo falou de vibração Nx, mas
+        pediu força zero em todas"*. Um backend que não responde a pergunta é
+        indistinguível de um backend que responde "não" e, num painel de
+        diagnóstico, essa é a mentira mais cara que existe.
+
+        O Protocol é o lugar certo do conserto: aqui a pergunta passa a ser
+        obrigatória, e um backend novo não tem como nascer mudo.
+        """
+        ...
+
+    @property
+    def ff_maior_pedido(self) -> tuple[int, int]:
+        """Maior par (weak, strong) que o jogo pediu — "dava para SENTIR?".
+
+        Comparado por INTENSIDADE (`core.rumble.pedido_mais_forte`), nunca
+        pela ordem de tupla do Python.
+        """
+        ...
+
+    @property
+    def ff_descartado_count(self) -> int:
+        """Nº de pedidos do jogo que NÃO viraram vibração por falha nossa.
+
+        No uhid: report com motor não-nulo cujos bits de vibração não
+        reconhecemos. No uinput: play de efeito que não está no catálogo. Nos
+        dois é o mesmo significado para quem lê a tela — *o jogo pediu e nós
+        perdemos* —, e é o único caso em que o painel pode acusar a si mesmo.
+        """
+        ...
+
+    @property
     def ff_last_sent(self) -> tuple[int, int]:
         """Último par (weak, strong) 0-255 entregue ao `rumble_sink`."""
         ...

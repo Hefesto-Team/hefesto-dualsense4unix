@@ -1051,6 +1051,27 @@ _CATEGORIA_DO_RECURSO: Final[dict[str, str]] = {
     "lightbar": "lightbar",
     "gatilho": "trigger",
     "vibracao": "rumble",
+    # SOM-DO-JOGO-NA-LINHA-01 (09/08/2026, decisão dela: *"sim, na linha de
+    # recursos do card"*). O carimbo `audio_do_jogo` existe no vpad desde
+    # 02/08 (PARIDADE-SONY-01/E1) e NADA na janela o lia — mais um órfão da
+    # mesma família dos quatro de hoje, e o único que já tinha respondido
+    # "sim" ao vivo: medido com o jogo aberto, `{flag0: 160, fone: 0,
+    # alto_falante: 100, microfone: 0, rota: 48}`.
+    #
+    # É o recurso que ela descreveu assim: *"o jogo tem duas saídas de áudio:
+    # a do HDMI, que é a do jogo padrão, e a do speaker do controle, que
+    # normalmente é uma feature extra usada pra adicionar efeitos sonoros
+    # extras, SFX. (...) no Zelda Skyward Sword, ao golpear com o Link usando
+    # uma espada, o efeito de uma lâmina cortando o ar sai pelo speaker do
+    # próprio controle. A Sony fez o mesmo pro DualSense."*
+    #
+    # O carimbo é EXATAMENTE a pergunta da linha, e por construção: ele só sai
+    # quando o escritor liga um dos quatro bits de áudio, manda byte não-nulo
+    # E há sessão de jogo aberta (`_replicating()`) — o áudio que o PROBE do
+    # `hid-playstation` escreve ao nascer do vpad não entra, que foi a
+    # correção de 02/08. Por isso "sem pedido ainda" aqui significa mesmo
+    # "nenhum jogo pediu", e não "o kernel ainda não passou por aqui".
+    "alto_falante": "audio_do_jogo",
 }
 
 #: O nome de cada recurso na frase, e a ORDEM em que eles aparecem nela.
@@ -1068,12 +1089,25 @@ _CATEGORIA_DO_RECURSO: Final[dict[str, str]] = {
 #: sobre o conjunto, não sobre cada peça: *"não sei se o alto-falante,
 #: giroscópio, microfone e touchpad — todas as features — na hora de jogar um
 #: jogo na Steam se elas vão estar funcionando"*.
+#:
+#: SOM-DO-JOGO-NA-LINHA-01: o alto-falante entra por ÚLTIMO e sem número.
+#: Sem número por decisão dela — a linha diz que o som está chegando, e não
+#: em que volume; a amostra medida (`audio_do_jogo_amostra`) continua sendo
+#: dado de diagnóstico, não texto de tela. E o nome vem do léxico que o card
+#: já usa nos dois lugares que falam disto: o rótulo do canal ("Sons do
+#: jogo", `CANAIS_DO_SPEAKER`) e o nome da peça ("alto-falante", em toda a
+#: coluna do som). O nome final é DELA, escolhido em 09/08/2026 ao ver as
+#: duas opções: ela chamou o recurso assim quando o explicou — *"a do
+#: speaker do controle, que normalmente é uma feature extra usada pra
+#: adicionar efeitos sonoros extras"*. Não é uma
+#: palavra nova.
 _NOME_NA_FRASE: Final[tuple[tuple[str, str], ...]] = (
     ("giroscopio", "giroscópio"),
     ("vibracao", "vibração"),
     ("gatilho", "gatilho"),
     ("lightbar", "luz"),
     ("touchpad", "clique do touchpad"),
+    ("alto_falante", "som do controle"),
 )
 
 #: A frase do estado IMPOSSÍVEL, por recurso. Ela é a mais valiosa das quatro
@@ -1137,6 +1171,57 @@ def _visto_ha_s_do_vpad(entry: dict[str, Any], state_global: dict[str, Any]) -> 
     return visto if isinstance(visto, dict) else {}
 
 
+def _contagem(item: Any, chave: str) -> int:
+    """Um contador cumulativo do bloco do vpad; 0 quando não há.
+
+    ORFAOS-QUE-VOLTAM-01. Um `int` estrito: daemon antigo não manda a chave, e
+    um `MagicMock` de teste devolveria algo que compara `> 0` com qualquer
+    coisa — a mesma blindagem que o resto deste módulo já aplica a `motion_hz`.
+    """
+    if not isinstance(item, dict):
+        return 0
+    valor = item.get(chave)
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        return 0
+    return valor
+
+
+def motores_no_fisico(item: Any) -> tuple[int, int] | None:
+    """``(weak, strong)`` que chegou AOS MOTORES agora; ``None`` = nada a dizer.
+
+    MOTOR-QUE-NAO-SE-VE-01 (09/08/2026). Três respostas viram ``None``, e as
+    três de propósito:
+
+    * **daemon antigo / vpad uinput** — a chave não existe. Silêncio, como em
+      todo campo opcional deste payload;
+    * **nunca escreveu** (``rumble_no_fisico_ha_s`` ausente) — dizer 0/0 aqui
+      seria afirmar que os motores receberam uma parada, quando o que houve
+      foi ninguém ter escrito;
+    * **velho** — mais de `ATIVIDADE_FRESCA_S` sem escrita. É o mesmo teto que
+      governa o resto da linha, e pelo mesmo motivo: um número congelado de
+      três minutos atrás ao lado da palavra "chegando" é a mentira confortável
+      que esta tela existe para não contar.
+
+    O par ``(0, 0)`` fresco também some: ele é o jogo mandando PARAR, e a
+    parada não é o número que responde *"a vibração saiu do nosso lado?"*.
+    """
+    if not isinstance(item, dict):
+        return None
+    idade = item.get("rumble_no_fisico_ha_s")
+    if isinstance(idade, bool) or not isinstance(idade, (int, float)):
+        return None
+    if idade > ATIVIDADE_FRESCA_S:
+        return None
+    par = item.get("rumble_no_fisico")
+    if not isinstance(par, (list, tuple)) or len(par) != 2:
+        return None
+    if not all(isinstance(v, int) and not isinstance(v, bool) for v in par):
+        return None
+    if par[0] == 0 and par[1] == 0:
+        return None
+    return (int(par[0]), int(par[1]))
+
+
 def estado_do_recurso(
     recurso: str, entry: dict[str, Any], state_global: dict[str, Any]
 ) -> EstadoDoRecurso | None:
@@ -1171,14 +1256,26 @@ def estado_do_recurso(
     if visto is None:
         return None
 
+    item = _item_do_vpad(entry, state_global)
+
     if recurso == "giroscopio":
         # O giroscópio não passa por carimbo: ele é fluxo CONTÍNUO e já tem
         # medida própria de recência (`motion_hz`, com morte por inatividade
         # em 1,0 s no `physical_report_reader`). Reaproveitar o carimbo aqui
         # seria um segundo jeito de dizer "agora" no mesmo payload — e o
         # `motion_hz` é melhor: ele traz o número que ela vê na tela.
-        item = _item_do_vpad(entry, state_global)
         if not isinstance(item, dict) or item.get("motion_streaming") is not True:
+            # ORFAOS-QUE-VOLTAM-01 (09/08/2026): sem espelho vivo, o card dizia
+            # "sem pedido ainda" — inclusive depois de meia hora de giroscópio
+            # fluindo, se o reader tivesse acabado de cair. As duas situações
+            # mandam agir em lugares opostos ("nunca ligou" é fiação; "parou"
+            # é o reader/o rádio), e a própria constante desta tela existe
+            # para não as confundir. Quem as separa é `motion_forwards`, o
+            # contador CUMULATIVO de janelas que o vpad de fato escreveu no
+            # /dev/uhid — a property `motion_forward_count` existia desde
+            # 19/07 e nunca tinha sido lida por ninguém.
+            if _contagem(item, "motion_forwards") > 0:
+                return EstadoDoRecurso(SITUACAO_PARADO, "giroscópio")
             return EstadoDoRecurso(SITUACAO_NUNCA, "giroscópio")
         hz = item.get("motion_hz")
         if isinstance(hz, (int, float)) and not isinstance(hz, bool) and hz > 0:
@@ -1190,6 +1287,22 @@ def estado_do_recurso(
     categoria = _CATEGORIA_DO_RECURSO.get(recurso)
     if categoria is None:
         return None
+    nome = dict(_NOME_NA_FRASE)[recurso]
+
+    # ORFAOS-QUE-VOLTAM-01: o clique SEGURADO. O carimbo marca a BORDA (a
+    # pressionada), então um dedo que fica em cima do touchpad por mais de
+    # `ATIVIDADE_FRESCA_S` fazia a tela dizer "parou" com o botão ainda
+    # apertado dentro do jogo — o oposto do que estava acontecendo. O estado
+    # vivo vence o carimbo, e só nesse sentido: ele pode PROMOVER a chegando,
+    # nunca rebaixar. A property `touchpad_click` estava no vpad desde a
+    # TOUCH-CLICK-01 sem uma única leitura real.
+    if (
+        recurso == "touchpad"
+        and isinstance(item, dict)
+        and item.get("touchpad_pressionado") is True
+    ):
+        return EstadoDoRecurso(SITUACAO_CHEGANDO, nome)
+
     idade = visto.get(categoria)
     if not isinstance(idade, (int, float)) or isinstance(idade, bool):
         situacao = SITUACAO_NUNCA
@@ -1197,7 +1310,19 @@ def estado_do_recurso(
         situacao = SITUACAO_CHEGANDO
     else:
         situacao = SITUACAO_PARADO
-    return EstadoDoRecurso(situacao, dict(_NOME_NA_FRASE)[recurso])
+
+    # MOTOR-QUE-NAO-SE-VE-01: a vibração ganha o número que ela pediu — o par
+    # que foi AOS MOTORES, e não o que o jogo pediu ao vpad. Entre um e outro
+    # há a política de intensidade: em `economia` (0,3) um pedido de 20 chega
+    # como 6 e um de 1 chega como ZERO, e a linha dizia "chegando" nos dois
+    # casos. Mesmo desenho do `(~250 Hz)` do giroscópio: o número entra na
+    # frase só quando ele existe e é fresco.
+    if recurso == "vibracao" and situacao == SITUACAO_CHEGANDO:
+        motores = motores_no_fisico(item)
+        if motores is not None:
+            nome = f"{nome} (motores: {motores[0]}/{motores[1]})"
+
+    return EstadoDoRecurso(situacao, nome)
 
 
 def resumo_do_que_chega_ao_jogo(
@@ -2675,7 +2800,6 @@ if _GTK_DISPONIVEL:
             self._mic_bt_switch = interruptor
             self._mic_bt_linha = linha_mic
             interruptor.connect("state-set", self._on_ponte_bt_alternada)
-
             grupo = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
             grupo.add_widget(medidor)
             grupo.add_widget(selo)

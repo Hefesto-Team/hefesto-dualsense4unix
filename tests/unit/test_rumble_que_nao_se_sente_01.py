@@ -75,6 +75,13 @@ class _VpadDeBancada(uhid.UhidDualSense):
         self._rumble_descartado_count = 0
         self._rumble_descartado_amostra = None
         self._rumble_v2_count = 0
+        # QUEM ESCREVEU-01: os três campos que o `_handle_output` passou a
+        # escrever. A bancada monta o vpad sem `__init__` (o fd é um pipe),
+        # então ela é quem tem de acompanhar os campos novos.
+        self._rumble_parada_sdl_count = 0
+        self._output_id_estranho_count = 0
+        self._output_id_estranho_amostra = None
+        self._rumble_anel = []
         self._visto_em = {}
 
     def fechar(self) -> None:

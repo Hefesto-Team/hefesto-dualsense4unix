@@ -111,9 +111,14 @@ sudo install -Dm644 "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rule
 # touchpad e giroscópio simplesmente não funcionavam. OQ-6.
 # O número TEM de ser < 73 (a 73-seat-late.rules é quem vira a TAG em ACL).
 sudo install -Dm644 "$ASSETS/72-hefesto-touchpad-motion-uaccess.rules" /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules
-# 76: touchpad do DualSense ignorado como ponteiro libinput (para de brigar com a
-# emulação analógica do hefesto). FEAT-DUALSENSE-TOUCHPAD-IGNORE-01. Não-destrutivo
-# e reversível (remover o arquivo). Só vale após re-add do device (replug/relogin).
+# 76: só o touchpad do VPAD é ignorado como ponteiro libinput — o touchpad
+# FÍSICO volta a ser o touchpad do sistema em TODOS os modos, que é o pedido
+# dela de 09/08 (TOUCHPAD-DO-SISTEMA-01; o curinga antigo apagava o físico em
+# todo modo e em todo aparelho, inclusive onde não havia emulação com que
+# brigar). O toque em dobro dentro do jogo continua curado: o nó do vpad — que
+# recebe os touch points copiados do físico — segue fora do libinput.
+# Não-destrutivo e reversível (remover o arquivo). Só vale após re-add do
+# device (replug/relogin).
 sudo install -Dm644 "$ASSETS/76-dualsense-touchpad-libinput-ignore.rules" /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules
 # 77: torna graváveis os nós de LED do kernel (lightbar + player) p/ o daemon
 # (usuário) controlar a COR via sysfs — funciona em USB E BT. FEAT-DSX-LIGHTBAR-SYSFS-01.

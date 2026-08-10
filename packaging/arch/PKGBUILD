@@ -53,6 +53,13 @@ makedepends=(
 )
 optdepends=(
     'wlrctl: backend Wayland (wlroots) para auto-switch de perfis'
+    # TECLADO-QUE-NAO-DIGITA-01: o teclado na tela que o L3 do controle abre —
+    # o ÚNICO caminho do produto para escrever texto (nenhum dos nove atalhos
+    # de fábrica digita letra). wvkbd digita pelo protocolo Wayland
+    # zwp_virtual_keyboard_manager_v1; onboard digita por XTEST e, numa sessão
+    # Wayland, só alcança janelas XWayland — abre e não digita.
+    'wvkbd: teclado na tela do L3 em sessão Wayland (cliente Wayland nativo)'
+    'onboard: teclado na tela do L3 em sessão X11 (injeta por XTEST)'
     'dkms: módulos patchados hid-nintendo (Onda T — probe BT Nintendo/8BitDo) e rtw88_usb (Onda W — fantasma USB do dongle WiFi)'
     'linux-headers: build dos módulos DKMS patchados (hid-nintendo, rtw88-usb)'
 )

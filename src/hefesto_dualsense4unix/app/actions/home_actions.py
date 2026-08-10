@@ -31,6 +31,7 @@ from hefesto_dualsense4unix.app.actions.base import (
     numero_do_controle,
 )
 from hefesto_dualsense4unix.app.actions.mode_transition import (
+    MODE_DESKTOP,
     MODE_GAMEPAD,
     MODE_IPC_TIMEOUT_S,
     MODES,
@@ -160,9 +161,17 @@ _FLAVOR_ITEMS = [
 ]
 
 _MODE_DESCRIPTIONS = {
+    # NOTA DATADA (MODO-QUE-NAO-CONTROLA-01, 09/08/2026): esta frase mandava
+    # para "as abas Mouse e Teclado", e essas duas abas NÃO EXISTEM desde a
+    # PALAVRA-01 (28/07, pedido dela: o nome curto) — as duas colunas moram numa
+    # aba só, "Navegação" (`tab_navegacao_dsx` no glade, com `tab_mouse` e
+    # `tab_keyboard` como os boxes de dentro). Caducou naquele dia e ficou
+    # apontando para um lugar que a janela não tem — o que só apareceu agora,
+    # porque a linha logo abaixo passou a dizer ONDE ligar o mouse e as duas
+    # não podiam divergir.
     "desktop": (
-        "O controle vira mouse/teclado do computador (ajustes nas abas "
-        "Mouse e Teclado)."
+        "O controle vira mouse/teclado do computador (ajustes na aba "
+        "Navegação)."
     ),
     # LEIGO-02: a recomendação de 3 linhas ("use a máscara Xbox 360 e cole as
     # opções da Steam") existia só para contornar a máscara DualSense que não
@@ -420,6 +429,105 @@ def _reconciliar_gate_text(state: dict[str, Any] | None) -> str | None:
         return None
     if game_signal.get("authority") == "game":
         return RECONCILIAR_JOGO_ABERTO_TEXT
+    return None
+
+
+# MODO-QUE-NAO-CONTROLA-01 (09/08/2026) — medido com ela ao vivo, às 23h50.
+#
+# Ela escolheu "Controlar o PC", clicou no "Aplicar" e relatou: *"cliquei em
+# aplicar e nada"*. O modo ENTROU (o journal prova: `native_mode_changed
+# native=False`, `gamepad_controller_grab state=off`, `mouse_preference_restored
+# enabled=False ok=True`) — e o controle não movia o cursor, porque a
+# preferência de mouse persistida dela estava desligada.
+#
+# O daemon fez o certo, e continua fazendo: `mouse.emulation.restore` RESTAURA a
+# preferência dela (HARM-06), não impõe uma. Ligar o mouse por conta própria
+# atropelaria o interruptor que ela mesma desligou na aba Navegação — e "a
+# vontade na GUI prevalece sempre" (decisão dela, 09/08) vale para o gesto do
+# interruptor tanto quanto para o gesto do modo.
+#
+# O que estava errado era o SILÊNCIO: o modo cujo nome promete controlar o PC
+# entrava sem controlar nada e nenhuma superfície dizia por quê. Ela só
+# descobriu quando alguém leu o journal por ela.
+#
+# Estas frases são o mesmo padrão do `_reconciliar_gate_text` logo acima: dizem
+# o que NÃO vai acontecer e onde é o botão — sem impedir gesto nenhum. E são o
+# espelho do `mouse_actions.MODE_GATE_HINT`, que já mandava a usuária de lá para
+# cá ("Só dá para ligar o mouse em \"Controlar o PC\" (aba Início)"); faltava a
+# volta.
+TEXTO_DESKTOP_SEM_MOUSE: Final[str] = (
+    "Você está em \"Controlar o PC\", mas o mouse emulado está desligado — o "
+    "controle não move o cursor. Ligue \"Emular mouse\" na aba Navegação."
+)
+
+TEXTO_DESKTOP_SEM_TECLADO: Final[str] = (
+    "Você está em \"Controlar o PC\", mas o teclado emulado está desligado — o "
+    "controle não digita. Ligue \"Emular teclado\" na aba Navegação."
+)
+
+TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO: Final[str] = (
+    "Você está em \"Controlar o PC\", mas o mouse e o teclado emulados estão "
+    "desligados — o controle não move o cursor nem digita. Ligue os dois na "
+    "aba Navegação."
+)
+
+
+def texto_do_desktop_sem_emulacao(
+    state: dict[str, Any] | None,
+    *,
+    modo_exibido: object = None,
+    modo_mudou_agora: bool = False,
+) -> str | None:
+    """Aviso do "Controlar o PC" calado; ``None`` = nada a dizer — função pura.
+
+    MODO-QUE-NAO-CONTROLA-01. Mesmo desenho de `vpad_degradation_text` e
+    `wrapper_banner_text`: quem decide é uma função sem GTK e sem daemon, e a
+    aba só escreve o que ela devolve.
+
+    As três condições, e cada uma existe para não acender alarme falso:
+
+    1. **o modo VIGENTE é desktop** (`mode_of_state`) — em "Jogar pelo Hefesto"
+       e no Modo Nativo o mouse está desligado pela exclusão mútua do daemon, o
+       que é o desenho normal e não tem nada de errado;
+    2. **o modo EXIBIDO também é desktop** — com uma escolha pendente de SAIR do
+       desktop, avisar sobre o modo que ela está deixando responderia a pergunta
+       errada (a caixa mostra a escolha dela, não o vigente: AGORA-E-DEPOIS-01);
+    3. **o modo não mudou NESTE tique** — a transição para desktop dispara três
+       IPCs e o `mouse.emulation.restore` é o ÚLTIMO deles. Julgar a emulação no
+       mesmo tique em que o modo mudou acenderia o aviso enquanto a cura ainda
+       está em voo, e ele sumiria sozinho 2 s depois. Um aviso que pisca é
+       ruído; este espera um tique e só fala do que ficou de pé.
+
+    Só o ``False`` LITERAL acende, para mouse e teclado: bloco ausente (daemon
+    antigo, payload incompleto) ou chave ausente não viram aviso — a mesma
+    disciplina do ``wrapper_used``.
+
+    O teclado entra aqui pela mesma razão que o mouse: "Controlar o PC" promete
+    mouse E teclado (`_MODE_DESCRIPTIONS["desktop"]`), e o teclado emulado tem
+    interruptor próprio na mesma aba Navegação desde a EMULACAO-NO-JOGO-01. A
+    diferença é que o "off" do teclado é SEMPRE gesto dela — nenhum caminho
+    automático escreve `keyboard_emulation_enabled` (só o boot, lendo o flag
+    dela, e o `keyboard.emulation.set`) —, então aqui não há nem a dúvida que o
+    mouse tem.
+    """
+    if not isinstance(state, dict):
+        return None
+    if modo_mudou_agora:
+        return None
+    if mode_of_state(state) != MODE_DESKTOP:
+        return None
+    if modo_exibido is not None and modo_exibido != MODE_DESKTOP:
+        return None
+    mouse = state.get("mouse_emulation")
+    teclado = state.get("keyboard_emulation")
+    mouse_off = isinstance(mouse, dict) and mouse.get("enabled") is False
+    teclado_off = isinstance(teclado, dict) and teclado.get("enabled") is False
+    if mouse_off and teclado_off:
+        return TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO
+    if mouse_off:
+        return TEXTO_DESKTOP_SEM_MOUSE
+    if teclado_off:
+        return TEXTO_DESKTOP_SEM_TECLADO
     return None
 
 
@@ -846,6 +954,25 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_mode_desc = desc
         mode_box.pack_start(desc, False, False, 0)
 
+        # MODO-QUE-NAO-CONTROLA-01 (09/08/2026): logo ABAIXO da descrição do
+        # modo, porque é a continuação dela — a descrição promete "o controle
+        # vira mouse/teclado do computador" e esta linha diz quando essa
+        # promessa não está de pé. Mesmo desenho dos banners de vpad/wrapper
+        # (label inline, `no_show_all` para o `show_all()` do build não desfazer
+        # o que o `_render_home` mandou), e a mesma classe de aviso da linha do
+        # pendente: é ressalva, não erro — o modo entrou.
+        desktop_aviso = Gtk.Label(label="")
+        desktop_aviso.set_xalign(0.0)
+        desktop_aviso.set_line_wrap(True)
+        desktop_aviso.set_max_width_chars(100)
+        desktop_aviso.get_style_context().add_class(
+            "hefesto-dualsense4unix-status-warn"
+        )
+        desktop_aviso.set_no_show_all(True)
+        desktop_aviso.set_visible(False)
+        self._home_desktop_aviso = desktop_aviso
+        mode_box.pack_start(desktop_aviso, False, False, 0)
+
         # BUG-HOME-MASK-CLIP-01: co-op e máscara em LINHAS separadas — na mesma
         # HBox o seletor de máscara estourava a largura do frame e era cortado
         # na borda direita (visto ao vivo 2026-07-13). A linha própria dá ao
@@ -1143,6 +1270,11 @@ class HomeActionsMixin(WidgetAccessMixin):
                 self._home_vpad_banner.set_visible(False)
                 # GUI-05: idem para o aviso "jogo sem wrapper".
                 self._home_wrapper_banner.set_visible(False)
+                # MODO-QUE-NAO-CONTROLA-01: sem daemon não há modo nem emulação
+                # a julgar — "não sei" não pode virar "o mouse está desligado".
+                _desktop_aviso = getattr(self, "_home_desktop_aviso", None)
+                if _desktop_aviso is not None:
+                    _desktop_aviso.set_visible(False)
                 self._render_home_controllers([])
                 # ONDA-U (U1): toggle in-place — o botão de "Desligar" vira
                 # "Ligar o Hefesto" bem aqui, nada de mandar pra aba Sistema.
@@ -1216,6 +1348,12 @@ class HomeActionsMixin(WidgetAccessMixin):
             flavor = gamepad.get("flavor")
             if isinstance(flavor, str) and flavor:
                 self._mascara_vigente_do_daemon = flavor
+            # MODO-QUE-NAO-CONTROLA-01: o modo do tique ANTERIOR, lido antes de
+            # ser sobrescrito na linha seguinte. É com ele que o aviso do
+            # desktop calado sabe que a transição acabou de acontecer e que o
+            # `mouse.emulation.restore` — o ÚLTIMO dos três IPCs do plano —
+            # ainda pode estar em voo. Ver `texto_do_desktop_sem_emulacao`.
+            modo_anterior = getattr(self, "_modo_vigente_do_daemon", None)
             self._modo_vigente_do_daemon = mode
             # A guarda do valor. Enquanto não há pendência os seletores
             # espelham o daemon, como sempre; com pendência eles mostram a
@@ -1226,6 +1364,19 @@ class HomeActionsMixin(WidgetAccessMixin):
             modo_exibido = pendente.get("modo") or mode
             selector.set_active_id(modo_exibido)
             self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(modo_exibido, ""))
+            # MODO-QUE-NAO-CONTROLA-01: e, logo abaixo da descrição, a ressalva
+            # — "Controlar o PC" de pé com o mouse (ou o teclado) emulado
+            # desligado. Quem decide é a função pura; a aba só escreve.
+            aviso_desktop = texto_do_desktop_sem_emulacao(
+                state,
+                modo_exibido=modo_exibido,
+                modo_mudou_agora=modo_anterior != mode,
+            )
+            _desktop_aviso = getattr(self, "_home_desktop_aviso", None)
+            if _desktop_aviso is not None:
+                if aviso_desktop:
+                    _desktop_aviso.set_text(aviso_desktop)
+                _desktop_aviso.set_visible(bool(aviso_desktop))
             # E a VISIBILIDADE junto. AGORA-E-DEPOIS-01 §9, decisão 2 —
             # REVISTA por ela em 08/08 à noite, VENDO a tela:
             #
@@ -1657,12 +1808,16 @@ __all__ = [
     "HOME_POLL_INTERVAL_MS",
     "RECONCILIAR_JOGO_ABERTO_TEXT",
     "RECONCILIAR_LABEL",
+    "TEXTO_DESKTOP_SEM_MOUSE",
+    "TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO",
+    "TEXTO_DESKTOP_SEM_TECLADO",
     "VPAD_DEGRADED_TEXT",
     "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",
     "id_da_pagina",
     "id_da_pagina_corrente",
     "reconciliar_toast",
+    "texto_do_desktop_sem_emulacao",
     "vpad_degradation_text",
     "wrapper_banner_text",
 ]

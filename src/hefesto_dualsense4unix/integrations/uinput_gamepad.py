@@ -45,6 +45,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -267,6 +268,36 @@ class UinputGamepad:
     #: Incrementa em cada `_start_ff_effect` de efeito válido; exposto no
     #: state_full para a GUI/doctor confirmarem se o jogo enxerga o vpad.
     _ff_play_count: int = 0
+    # --- MASCARA-XBOX-MUDA-01 (09/08/2026) ------------------------------
+    #
+    #: Nº de pares NÃO-NULOS que saíram para o `rumble_sink` — o irmão do
+    #: `ff_nao_nulo_count` do caminho uhid.
+    #:
+    #: **Por que ele existe, e é defeito de verdade.** O painel da aba Rumble
+    #: (`app/actions/rumble_actions.texto_dos_pedidos_de_vibracao`) pergunta
+    #: `nao_nulos` ANTES de `plays`, e o `daemon/ipc_handlers` lê os dois com
+    #: `getattr(vp, ..., 0)`. Como este backend nunca teve `ff_nao_nulo_count`,
+    #: o zero do default virava afirmação: com a máscara **Xbox** funcionando
+    #: perfeitamente, a tela dizia *"o jogo falou de vibração Nx, mas pediu
+    #: força zero em todas"* — e a frase manda caçar no jogo/máscara, que é o
+    #: lado oposto do código. Um modo inteiro do produto era, por construção,
+    #: impossível de medir; e o número que ele mostrava acusava o inocente.
+    #:
+    #: A contagem é no `_refresh_ff`, no instante em que o par vai ao sink:
+    #: é o mesmo ponto do caminho uhid (o PEDIDO do jogo em 0-255, antes do
+    #: multiplicador da política) e, aqui, DEPOIS do ganho e do `>> 8` — que
+    #: é honesto: um efeito de magnitude 200/65535 vira zero nos motores, e
+    #: contá-lo como "pediu força" seria a mesma mentira ao contrário.
+    _ff_nao_nulo_count: int = 0
+    #: Maior par pedido (weak, strong) — "dava para SENTIR?". Comparado por
+    #: intensidade (o maior motor, desempate pela soma) e nunca por ordem
+    #: lexicográfica de tupla: `(0, 255)` é um pedido enorme e `(1, 0)` é
+    #: imperceptível, mas `(1, 0) > (0, 255)` em Python.
+    _ff_maior_pedido: tuple[int, int] = (0, 0)
+    #: Play de efeito que nunca foi uploadado — pedido do jogo que NÃO virou
+    #: vibração por falha nossa (catálogo perdido). Sem contá-lo, o descarte
+    #: era invisível e a tela dizia "o jogo não pediu".
+    _ff_descartado_count: int = 0
 
     @classmethod
     def for_flavor(
@@ -359,6 +390,9 @@ class UinputGamepad:
         self._ff_gain = 1.0
         self._ff_last_sent = (0, 0)
         self._ff_play_count = 0
+        self._ff_nao_nulo_count = 0
+        self._ff_maior_pedido = (0, 0)
+        self._ff_descartado_count = 0
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -372,6 +406,26 @@ class UinputGamepad:
     def ff_play_count(self) -> int:
         """Nº de play de FF que o JOGO pediu neste vpad (diagnóstico de rumble)."""
         return self._ff_play_count
+
+    @property
+    def ff_nao_nulo_count(self) -> int:
+        """Nº de pedidos com FORÇA — os que fariam o motor mexer.
+
+        MASCARA-XBOX-MUDA-01. Este é o número que a aba Rumble pergunta
+        primeiro; sem ele a máscara Xbox respondia zero por ausência e a tela
+        acusava o jogo de pedir silêncio. Ver o campo `_ff_nao_nulo_count`.
+        """
+        return self._ff_nao_nulo_count
+
+    @property
+    def ff_maior_pedido(self) -> tuple[int, int]:
+        """Maior par (weak, strong) pedido pelo jogo — "dava para sentir?"."""
+        return self._ff_maior_pedido
+
+    @property
+    def ff_descartado_count(self) -> int:
+        """Nº de play de efeito que NÃO tínhamos no catálogo (perdido por nós)."""
+        return self._ff_descartado_count
 
     @property
     def ff_last_sent(self) -> tuple[int, int]:
@@ -551,7 +605,12 @@ class UinputGamepad:
         """Marca o efeito como tocando, com deadline = duração x repetições."""
         params = self._ff_effects.get(effect_id)
         if params is None:
-            return  # play de efeito nunca uploadado — ignora
+            # MASCARA-XBOX-MUDA-01: play de efeito nunca uploadado é um pedido
+            # do jogo que NÃO vira vibração — descartar é certo (não há o que
+            # tocar), descartar EM SILÊNCIO não é. Sem o contador, a tela
+            # afirmava "o jogo não pediu" sem ter como saber.
+            self._ff_descartado_count += 1
+            return
         duration_ms = params[2]
         if duration_ms <= 0:
             # Duração 0 significa "toca até o jogo mandar parar" (semântica do
@@ -597,6 +656,14 @@ class UinputGamepad:
         pair = (weak, strong)
         if pair == self._ff_last_sent:
             return
+        # MASCARA-XBOX-MUDA-01: as duas perguntas que a aba Rumble faz — "o
+        # jogo pediu FORÇA?" e "dava para sentir?" — respondidas no MESMO
+        # ponto em que o par vai ao sink. Antes do dedup não serve: um jogo
+        # que reafirma o mesmo valor 60x/s inflaria a contagem; depois dele,
+        # cada número é uma mudança real de pedido, igual ao caminho uhid.
+        if weak or strong:
+            self._ff_nao_nulo_count += 1
+            self._ff_maior_pedido = pedido_mais_forte(self._ff_maior_pedido, pair)
         self._ff_last_sent = pair
         sink = self.rumble_sink
         if sink is None:

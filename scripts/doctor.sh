@@ -3067,6 +3067,140 @@ PYEOF
     fi
 }
 
+# ---------------------------------------------------------------------------
+# TECLADO-QUE-NAO-DIGITA-01 — o teclado na tela que o L3 do controle abre.
+# ---------------------------------------------------------------------------
+# ESTE CHECK CONFERE E NÃO CURA. É regra desta casa, e aqui ela tem dente
+# próprio: instalar pacote de sistema é decisão com senha de root, e o doctor
+# roda no meio de um diagnóstico — quem instala é o install.sh (passo 4f e o
+# bloco dos formatos de pacote), quem confere é este. Nem o `--fix` toca nisto.
+#
+# O CONTRATO DE NOMES é o mesmo do `scripts/install_osk.sh` e o mesmo do
+# `daemon/subsystems/keyboard.py`, e o `scripts/check_packaging_parity.sh`
+# cobra a coincidência dos três: instalador, conferidor e daemon têm de estar
+# falando do MESMO binário para a MESMA sessão, senão o produto instala um e
+# procura outro — e ninguém percebe, porque cada um dos três passa sozinho.
+#
+# A ARMADILHA QUE ESTE CHECK EXISTE PARA NÃO REPETIR (commit 108b711):
+# "install.sh ARMA, uninstall.sh DESARMA, doctor.sh lê a AUSÊNCIA como escolha
+# dela — máquina curada e máquina quebrada são o MESMO estado para o portão".
+# Aqui a ausência tem QUATRO histórias possíveis, e o binário faltando é
+# idêntico nas quatro:
+#
+#   1. o install nunca passou por aqui (produto anterior a esta cura, ou
+#      install nunca rodado nesta máquina);
+#   2. ela pediu para pular (`--no-osk`);
+#   3. o install TENTOU e não conseguiu (sem sudo, sem rede, distro sem o
+#      pacote);
+#   4. o pacote foi instalado e alguém o removeu depois — não fomos nós: o
+#      uninstall do Hefesto NUNCA remove pacote de sistema.
+#
+# O que as distingue é a sentinela que o install grava
+# (~/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf). Sem ela, este
+# check só poderia dizer "não tem" — que é exatamente a resposta que fez a
+# máquina dela ficar quatro dias quebrada em agosto. O caso (2) é o único que
+# NÃO é FAIL: é escolha dela, registrada e datada.
+readonly OSK_BIN_WAYLAND="wvkbd-mobintl"
+readonly OSK_BIN_X11="onboard"
+readonly OSK_PKG_WAYLAND="wvkbd"
+readonly OSK_PKG_X11="onboard"
+readonly OSK_SENTINELA="${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf"
+
+# `WAYLAND_DISPLAY` primeiro, `DISPLAY` só depois: numa sessão Wayland com
+# XWayland os DOIS estão setados (nesta máquina, `WAYLAND_DISPLAY=wayland-1` e
+# `DISPLAY=:1`), então olhar `DISPLAY` antes diria "X11" para toda sessão
+# Wayland moderna — e o veredito sairia invertido.
+_osk_sessao() {
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]] || [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
+        printf 'wayland\n'
+    elif [[ -n "${DISPLAY:-}" ]] || [[ "${XDG_SESSION_TYPE:-}" == "x11" ]]; then
+        printf 'x11\n'
+    else
+        printf 'desconhecida\n'
+    fi
+}
+
+_osk_sentinela() {
+    local chave="$1"
+    [[ -r "${OSK_SENTINELA}" ]] || return 1
+    sed -n "s/^${chave}=//p" "${OSK_SENTINELA}" | head -1
+}
+
+check_teclado_na_tela() {
+    local sessao esperado pacote gestor comando instalado outro
+    sessao="$(_osk_sessao)"
+    if [[ "${sessao}" == "x11" ]]; then
+        esperado="${OSK_BIN_X11}";     pacote="${OSK_PKG_X11}"
+        outro="${OSK_BIN_WAYLAND}"
+    else
+        esperado="${OSK_BIN_WAYLAND}"; pacote="${OSK_PKG_WAYLAND}"
+        outro="${OSK_BIN_X11}"
+    fi
+    gestor="sua distribuição"
+    comando="instale o pacote ${pacote} pela ${gestor}"
+    if command -v apt-get >/dev/null 2>&1; then
+        comando="sudo apt install ${pacote}"
+    elif command -v dnf >/dev/null 2>&1; then
+        comando="sudo dnf install ${pacote}"
+    elif command -v pacman >/dev/null 2>&1; then
+        comando="sudo pacman -S ${pacote}"
+    fi
+
+    if command -v "${esperado}" >/dev/null 2>&1; then
+        pass "teclado na tela: ${esperado} instalado (sessão ${sessao}) — o L3 do controle abre"
+        return
+    fi
+
+    # O caso que mais engana: o binário do OUTRO mundo está instalado. "Tem
+    # teclado na tela" seria verdade e resposta errada — o onboard numa sessão
+    # Wayland ABRE (via XWayland) e as teclas só chegam a clientes XWayland; o
+    # wvkbd numa sessão X11 nem abre, porque é cliente Wayland puro.
+    if command -v "${outro}" >/dev/null 2>&1; then
+        if [[ "${sessao}" == "x11" ]]; then
+            warn "teclado na tela: só ${outro} instalado, e esta sessão é X11 — ele é cliente Wayland puro e não abre aqui"
+        else
+            warn "teclado na tela: só ${outro} instalado, e esta sessão é Wayland — ele digita por XTEST e as teclas só chegam a janelas XWayland (abre e não digita)"
+        fi
+        info "quem digita nesta sessão é ${esperado}: ${comando}"
+        info "o Hefesto NÃO remove o ${outro} — pacote de sistema é seu, não nosso"
+        return
+    fi
+
+    # Daqui para baixo: nenhum dos dois no disco. Qual das quatro histórias?
+    local resultado motivo data pacote_gravado
+    resultado="$(_osk_sentinela resultado || true)"
+    motivo="$(_osk_sentinela motivo || true)"
+    data="$(_osk_sentinela data || true)"
+    pacote_gravado="$(_osk_sentinela pacote || true)"
+
+    case "${resultado}" in
+        pulado)
+            # ESCOLHA DELA — e é por isso que não é FAIL. Sem a sentinela esta
+            # linha seria indistinguível do FAIL de baixo, que é o defeito de
+            # 04/08 (108b711) inteiro em uma frase.
+            info "teclado na tela: PULADO a pedido (${motivo:-"--no-osk"}, em ${data:-data não registrada})"
+            info "o L3 do controle avisa na tela que não tem o que abrir, em vez de abrir"
+            info "para ter: ${comando} (ou reinstale sem --no-osk)"
+            ;;
+        instalado|ja-instalado)
+            fail "teclado na tela: o install registrou ${pacote_gravado:-${pacote}} instalado em ${data:-data não registrada}, e ele NÃO está mais na máquina"
+            info "não fomos nós: o uninstall do Hefesto nunca remove pacote de sistema"
+            info "para devolver: ${comando}"
+            ;;
+        falhou|dry-run)
+            fail "teclado na tela: o install TENTOU instalar ${pacote_gravado:-${pacote}} e não conseguiu (motivo: ${motivo:-não registrado}, em ${data:-data não registrada})"
+            info "rode: ${comando}"
+            ;;
+        *)
+            fail "teclado na tela AUSENTE (${esperado}) e o install nunca passou por aqui — sem sentinela em ${OSK_SENTINELA}"
+            info "é o ÚNICO caminho de fábrica para ESCREVER TEXTO com o controle:"
+            info "nenhum dos nove atalhos padrão digita letra (Super, PrintScreen,"
+            info "Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois de OSK)"
+            info "rode: ${comando}    — ou reinstale: ./install.sh"
+            ;;
+    esac
+}
+
 check_steam_input() {
     local script="${ROOT_DIR}/scripts/disable_steam_input.sh"
     if [[ ! -x "$script" ]]; then
@@ -4251,6 +4385,8 @@ main() {
     check_hidraw_broker
     hdr "giroscópio no jogo (vpad Motion)"
     check_vpad_motion
+    hdr "teclado na tela (o que o L3 do controle abre)"
+    check_teclado_na_tela
     hdr "controle"
     check_controller
     check_perms_soft

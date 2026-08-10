@@ -269,6 +269,35 @@ class RumbleEngine:
         return self._last_mult_applied
 
 
+def pedido_mais_forte(
+    atual: tuple[int, int], novo: tuple[int, int]
+) -> tuple[int, int]:
+    """O maior de dois pedidos de vibração, comparado por INTENSIDADE.
+
+    MASCARA-XBOX-MUDA-01 (09/08/2026). Os dois gamepads virtuais guardam "o
+    maior pedido que o jogo fez" para responder a única pergunta que importa
+    depois de "pediu?": **dava para SENTIR?**. Os dois guardavam-no com o
+    operador de tupla do Python, que compara na ordem lexicográfica:
+
+        (1, 0) > (0, 255)   # True — e é a resposta errada
+
+    Um pedido de ``(0, 255)`` sacode o controle inteiro; ``(1, 0)`` não move
+    nada. Com a comparação lexicográfica, um único pedido de motor fraco
+    APAGA o registro de uma vibração máxima que veio antes, e o painel passa a
+    dizer que o maior pedido do jogo foi imperceptível. É a armadilha nº 1
+    desta casa (o instrumento mente mais que o produto) na sua forma mais
+    barata: um operador que parecia óbvio.
+
+    O critério é o motor mais forte do par; empate desempata pela soma (um
+    pedido nos DOIS motores é mais forte que o mesmo pico num só). Dono único
+    aqui, e não uma cópia por backend, porque duas comparações divergiriam na
+    primeira mudança — a classe de defeito registrada nesta casa.
+    """
+    if (max(novo), sum(novo)) > (max(atual), sum(atual)):
+        return novo
+    return atual
+
+
 def _clamp(value: int) -> int:
     if value < RUMBLE_MIN:
         return RUMBLE_MIN
@@ -284,4 +313,5 @@ __all__ = [
     "RumbleCommand",
     "RumbleEngine",
     "_effective_mult",
+    "pedido_mais_forte",
 ]

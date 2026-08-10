@@ -28,8 +28,47 @@
 #
 # Exit code (modos install/disable-source): 0 = microfone ativo != DualSense (OK);
 #   2 = DualSense ainda ativo por ser a ÚNICA fonte disponível (aviso, não falha);
-#   1 = DualSense ativo COM outra fonte available (falha real — drop-in não pegou).
+#   1 = DualSense ativo COM outra fonte available (falha real — drop-in não pegou);
+#   3 = a fonte padrão é um MONITOR — não é o DualSense, e também não é microfone
+#       nenhum (ver INSTALADOR-QUE-APROVOU-O-MONITOR-01, logo abaixo).
 # (FEAT-WIREPLUMBER-DISABLE-SOURCE-MODE-01, BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01, ADR-019.)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# INSTALADOR-QUE-APROVOU-O-MONITOR-01 (09/08/2026) — MEDIDO na máquina dela, num
+# `install.sh` completo, e a contradição estava no mesmo terminal:
+#
+#   passo 10/11 do install:  OK: microfone padrão ativo = alsa_output.pci-…
+#                                .iec958-stereo.monitor (DualSense fora)
+#   doctor.sh, dois minutos depois:
+#                            [FAIL] a fonte de captura padrão é um MONITOR — o
+#                                que qualquer app gravar é o áudio de SAÍDA do
+#                                sistema, não a voz
+#
+# O critério ERRADO era o DAQUI. Esta verificação só perguntava "o ativo é o mic
+# do DualSense?" — e um monitor não é, então ela respondia OK e o install
+# imprimia sucesso. Perguntar só pelo DualSense num passo cujo veredito o
+# instalador usa como "o microfone está bem" é a mesma família do
+# BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01: a pergunta é estreita demais para a
+# afirmação que sai dela. O doctor estava certo.
+#
+# A medição que a sprint SEM-MICROFONE-NENHUM-01 deixou pendente também foi
+# feita, e REFUTA a hipótese do pipewire-pulse (que estava SEM PROVA):
+#
+#   $ pw-metadata -n default
+#   default.configured.audio.source = alsa_input.pci-0000_0c_00.4.analog-stereo
+#   default.audio.source            = alsa_output.pci-0000_0c_00.4.iec958-stereo
+#
+# Quem elege é o WirePlumber: a metadata NÃO está vazia, e o valor eleito é o nó
+# do SINK — o `.monitor` é sufixo que a camada pulse acrescenta ao publicar. Cura
+# pelo lado do WirePlumber CHEGA no `pactl get-default-source`. GRAU: MEDIDO.
+#
+# A mesma medição mostra o segundo defeito daqui: o `configured` é a onboard, que
+# o `reset_default_source` elegeu — e o WirePlumber a recusa (as três portas de
+# captura dela estão `not available`) e reelege o sink. Elegemos um nó que não
+# para de pé, sobrescrevemos a preferência persistida dela com ele, e chamamos
+# isso de sucesso. Por isso a escolha do alvo passou a sair do MESMO filtro de
+# porta usável do `doctor.sh` (RECEITA-ERRADA-01): um critério só, aqui e lá.
+# ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
@@ -47,6 +86,10 @@ readonly DROPIN_OUTPUT_NAME="53-hefesto-dualsense-disable-output.conf"
 readonly DROPIN_OUTPUT_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_OUTPUT_NAME}"
 readonly DROPIN_OUTPUT_DST="${DROPIN_DIR}/${DROPIN_OUTPUT_NAME}"
 readonly STATE_FILE="${HOME}/.local/state/wireplumber/default-nodes"
+# INSTALADOR-QUE-APROVOU-O-MONITOR-01: o doctor é o dono do critério de "fonte de
+# captura que se sustenta" (`_sources_com_porta_usavel` + `_melhor_source_de_captura`).
+# Reusamos as funções PURAS dele em vez de reescrever o critério aqui.
+readonly DOCTOR_SH="${ROOT_DIR}/scripts/doctor.sh"
 
 MODE="install"
 for arg in "$@"; do
@@ -106,6 +149,43 @@ pick_target_source_id() {
         }
         END { if (def != "") print def; else print first }
     '
+}
+
+# NOME da melhor fonte de captura que SE SUSTENTA, pelo critério do doctor.
+#
+# INSTALADOR-QUE-APROVOU-O-MONITOR-01. O `pick_target_source_id` acima escolhe a
+# primeira fonte não-DualSense do `wpctl status` e pronto — sem o filtro de porta
+# que a cura do doctor aplica desde a RECEITA-ERRADA-01. Medido na máquina dela:
+# isso elegia `alsa_input.pci-…analog-stereo`, cujas TRÊS portas de captura estão
+# `not available`; o `pactl`/`wpctl` aceita, o WirePlumber não consegue honrar um
+# nó sem porta usável, reelege sozinho, e o `.monitor` do sink volta. O estrago é
+# duplo: o defeito continua, e a preferência PERSISTIDA dela foi sobrescrita por
+# um nó que não para de pé.
+#
+# Silêncio (saída vazia) COM exit 0 quer dizer "consultei e não há fonte de
+# captura que se sustente" — e nesse caso não se elege nada. Eleger por eleger é
+# o que produzia o falso sucesso. Exit 1 é outra coisa: "não consegui consultar"
+# (sem doctor, sem pactl) — só aí o chamador cai no caminho antigo do `wpctl`.
+pick_target_source_name() {
+    [[ -r "${DOCTOR_SH}" ]] || return 1
+    command -v pactl >/dev/null 2>&1 || return 1
+    local longo curta
+    longo="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+    curta="$(LC_ALL=C pactl list sources short 2>/dev/null || true)"
+    [[ -n "${curta}" ]] || return 1
+    # Subshell própria: carrega o doctor SEM despachar o main dele (mesmo molde
+    # do `source scripts/doctor.sh` dos testes) e sem contaminar este script.
+    # O `set --` limpa os posicionais para o doctor não despachar o `main` dele
+    # ao ser carregado — e por isso ele vem DEPOIS de os argumentos serem
+    # guardados. Na primeira versão ele vinha antes, e apagava justamente o
+    # `$1`/`$2` que as linhas seguintes usavam: a função devolvia vazio SEMPRE,
+    # e vazio aqui é indistinguível de "não há fonte elegível".
+    printf '%s\n' "${curta}" | bash -c '
+        doutor="$1"; longo="$2"
+        set --
+        source "${doutor}" >/dev/null 2>&1 || exit 0
+        _sources_com_porta_usavel "${longo}" | _melhor_source_de_captura 0
+    ' -- "${DOCTOR_SH}" "${longo}" 2>/dev/null || true
 }
 
 install_dropin() {
@@ -259,8 +339,18 @@ is_dualsense_mic() {
     [[ "$1" =~ [Dd]ual[Ss]ense ]] && [[ "$1" != *[Mm]onitor* ]]
 }
 
-# Verifica que o microfone ATIVO não é o MIC do DualSense (settle ~2s).
-# Exit: 0 OK; 2 ÚNICO (DualSense por escassez — aviso); 1 FALHA real.
+# PURA: 0 quando o nome `$1` é um MONITOR (loopback da SAÍDA). No PipeWire todo
+# monitor termina em `.monitor` — o sufixo é do nó, não heurística de nome. É o
+# mesmo critério do `_default_source_classe` do doctor, e é de propósito: os dois
+# programas têm de responder a mesma coisa sobre o mesmo estado.
+is_monitor_source() {
+    [[ "$1" == *.monitor ]] || [[ "$1" == *.[Mm]onitor ]]
+}
+
+# Verifica que o microfone ATIVO é um microfone DE VERDADE e não é o MIC do
+# DualSense (settle ~2s).
+# Exit: 0 OK; 2 ÚNICO (DualSense por escassez — aviso); 1 FALHA real;
+#       3 MONITOR (INSTALADOR-QUE-APROVOU-O-MONITOR-01 — nem DualSense, nem voz).
 verify_active_not_dualsense() {
     local i cur=""
     for i in 1 2 3 4 5 6 7 8; do          # ~2s (8 x 250ms)
@@ -268,12 +358,20 @@ verify_active_not_dualsense() {
         is_dualsense_mic "${cur}" || break
         sleep 0.25
     done
+    # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o monitor vem ANTES do resto. Ele não é
+    # o mic do DualSense — e era exatamente por isso que a resposta saía "OK",
+    # enquanto o doctor reprovava o mesmo estado dois minutos depois. Monitor é
+    # defeito PRÓPRIO: o que qualquer aplicativo gravar é o áudio de SAÍDA do
+    # sistema, não a voz dela. Não se chama isso de microfone padrão ativo.
+    if is_monitor_source "${cur}"; then
+        log "FALHA: a fonte padrão é um MONITOR (${cur}) — não é microfone nenhum:"
+        log "       o que qualquer aplicativo gravar é o áudio de SAÍDA do sistema,"
+        log "       não a voz — e o medidor de nível mostra sinal, então PARECE que"
+        log "       está funcionando."
+        return 3
+    fi
     if ! is_dualsense_mic "${cur}"; then
-        if [[ "${cur}" =~ [Dd]ual[Ss]ense ]]; then
-            log "OK: mic do DualSense desabilitado (ativo é só o monitor do sink: ${cur})"
-        else
-            log "OK: microfone padrão ativo = ${cur:-<nenhum>} (DualSense fora)"
-        fi
+        log "OK: microfone padrão ativo = ${cur:-<nenhum>} (DualSense fora)"
         return 0
     fi
     if other_source_available; then
@@ -286,6 +384,22 @@ verify_active_not_dualsense() {
 }
 
 reset_default_source() {
+    # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o alvo sai do MESMO filtro da cura do
+    # doctor. Quando ele responde "nenhuma", não elegemos nada — e dizemos por quê.
+    local nome=""
+    if nome="$(pick_target_source_name)"; then
+        if [[ -z "${nome}" ]]; then
+            log "nenhuma fonte de captura com porta usável para eleger — não elejo nada"
+            log "  (eleger uma fonte sem porta usável é o que o WirePlumber desfaz sozinho,"
+            log "   devolvendo o monitor do sink e sobrescrevendo a preferência persistida)"
+            return 0
+        fi
+        if pactl set-default-source "${nome}" 2>/dev/null; then
+            log "fonte padrão reeleita para ${nome} (porta usável, critério do doctor)"
+            return 0
+        fi
+        log "aviso: 'pactl set-default-source ${nome}' falhou — tento pelo wpctl"
+    fi
     if ! command -v wpctl >/dev/null 2>&1; then
         log "wpctl ausente — pulei o reset da fonte padrão"
         return 0

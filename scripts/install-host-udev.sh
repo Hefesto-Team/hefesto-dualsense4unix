@@ -192,6 +192,10 @@ RULES=(
     # funcionam para quem está no grupo `input` por fora do produto.
     # OQ-6. O número TEM de ser < 73 (73-seat-late.rules).
     "72-hefesto-touchpad-motion-uaccess.rules"
+    # 76: tira do libinput SÓ o touchpad do vpad (TOUCHPAD-DO-SISTEMA-01,
+    # 09/08/2026). O touchpad FÍSICO é ponteiro do sistema em todos os modos;
+    # quem evita a briga com a emulação do hefesto é o gate de runtime do
+    # `TouchpadReader`, não mais um curinga que apagava o físico sempre.
     "76-dualsense-touchpad-libinput-ignore.rules"
     "77-dualsense-leds.rules"
     "78-dualsense-motion-not-joystick.rules"

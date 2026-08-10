@@ -56,6 +56,19 @@ Recommends:     wlrctl
 # Onda T: modulo hid-nintendo patchado via DKMS (cura de raiz do probe BT
 # dos controles Nintendo/8BitDo) — o install-host-udev.sh roda o build.
 Recommends:     dkms
+# TECLADO-QUE-NAO-DIGITA-01: o teclado na tela que o L3 do controle abre.
+# Sem ele nenhum atalho de fabrica digita LETRA (os nove sao Super,
+# PrintScreen, Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois
+# tokens de OSK) — o unico caminho para ESCREVER TEXTO com o controle.
+#
+# wvkbd primeiro porque digita pelo zwp_virtual_keyboard_manager_v1 (Wayland
+# nativo); onboard digita por XTEST, que em sessao Wayland so alcanca janelas
+# XWayland. Weak dependency de proposito: o produto inteiro funciona sem, e
+# `Recommends` do RPM e IGNORADO em silencio quando o pacote nao existe nos
+# repositorios habilitados — nao trava a instalacao em nenhuma spin. Quem diz
+# a verdade sobre a maquina depois e o scripts/doctor.sh.
+Recommends:     wvkbd
+Suggests:       onboard
 
 %description
 Hefesto - Dualsense4Unix is a user-level Linux daemon that enables the
@@ -74,6 +87,8 @@ After installation, start the daemon as user service:
 Recommended optional packages:
 
     sudo dnf install wlrctl       # auto-switch in Wayland
+    sudo dnf install wvkbd        # on-screen keyboard opened by L3 (Wayland)
+    sudo dnf install onboard      # same, for X11 sessions
 
 %prep
 %autosetup -n %{pypi_name}-%{version}

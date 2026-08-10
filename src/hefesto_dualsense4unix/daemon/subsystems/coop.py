@@ -571,10 +571,19 @@ class CoopManager:
         daemon = self._daemon
 
         def _sink(weak: int, strong: int) -> None:
-            from hefesto_dualsense4unix.daemon.subsystems.gamepad import apply_game_rumble
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                anotar_rumble_no_vpad,
+                apply_game_rumble,
+            )
 
             target = None if identity.startswith("path:") else identity
-            apply_game_rumble(daemon, weak, strong, target_uniq=target)
+            efetivo = apply_game_rumble(daemon, weak, strong, target_uniq=target)
+            # MOTOR-QUE-NAO-SE-VE-01: o jogador é procurado AQUI, na hora do
+            # rumble. O sink nasce antes do vpad (é argumento do construtor
+            # dele) e o `_players[identity]` é recriado a cada respawn — uma
+            # referência capturada apontaria para o vpad de uma vida anterior.
+            jogador = self._players.get(identity)
+            anotar_rumble_no_vpad(getattr(jogador, "vpad", None), efetivo)
 
         return _sink
 

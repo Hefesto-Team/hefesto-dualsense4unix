@@ -31,6 +31,7 @@ import contextlib
 import os
 import shutil
 import subprocess
+import time
 from typing import TYPE_CHECKING
 
 from hefesto_dualsense4unix.core.keyboard_mappings import TOKEN_CLOSE_OSK, TOKEN_OPEN_OSK
@@ -41,15 +42,95 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Candidatos de teclado virtual em ordem de preferência. Testados na 1ª vez que
-# OSK é solicitado. Cada string aqui é um `shutil.which`-ável; o argv completo
-# para spawn fica em `_OSK_SPAWN_ARGS`.
-_OSK_CANDIDATES: tuple[str, ...] = ("onboard", "wvkbd-mobintl")
+# TECLADO-QUE-NAO-DIGITA-01 — o CONTRATO DE NOMES.
+#
+# Estas duas constantes são as mesmas do `scripts/install_osk.sh` (quem
+# instala) e do `scripts/doctor.sh` (quem confere), e o
+# `scripts/check_packaging_parity.sh` cobra a coincidência dos três. Sem esse
+# amarre, o produto pode instalar um binário e procurar outro — e os três
+# passam sozinhos, cada um coerente consigo mesmo.
+_OSK_BIN_WAYLAND = "wvkbd-mobintl"
+_OSK_BIN_X11 = "onboard"
+
+# Candidatos de teclado virtual. Cada string aqui é um `shutil.which`-ável; o
+# argv completo para spawn fica em `_OSK_SPAWN_ARGS`.
+#
+# A ORDEM FIXA ERA UM DEFEITO, e ele estava aqui desde sempre: era
+# `("onboard", "wvkbd-mobintl")`, com o onboard PRIMEIRO. Numa sessão Wayland
+# com os dois instalados, o daemon escolheria o onboard — que digita por XTEST
+# (`Depends: libxtst6`) e portanto só alcança clientes XWayland. A janela nativa
+# em foco não receberia nada: o teclado ABRE e não DIGITA, que é pior que não
+# abrir, porque parece que funcionou. Quem decide agora é `_osk_candidatos()`,
+# pela sessão viva.
+_OSK_CANDIDATES: tuple[str, ...] = (_OSK_BIN_WAYLAND, _OSK_BIN_X11)
 _OSK_SPAWN_ARGS: dict[str, list[str]] = {
-    "onboard": ["onboard"],
+    _OSK_BIN_X11: [_OSK_BIN_X11],
     # `--layer 0` ancora wvkbd no bottom (padrão); mantém footprint mínimo.
-    "wvkbd-mobintl": ["wvkbd-mobintl"],
+    _OSK_BIN_WAYLAND: [_OSK_BIN_WAYLAND],
 }
+
+#: Janela (s) do cache de resolução do binário. O `_resolve` era um cache
+#: PERMANENTE (`_resolved_checked` nunca voltava a False), e isso tinha um custo
+#: concreto: ela roda `sudo apt install wvkbd` com o daemon no ar, aperta o L3 e
+#: continua não acontecendo nada — o daemon decidiu "não existe" antes de o
+#: pacote existir e não reveria a decisão até o próximo start. É a armadilha do
+#: "daemon vivo mais velho que o código" na forma de PATH. Dez segundos é
+#: barato: o `shutil.which` só é chamado quando o L3 é apertado (não no poll
+#: loop) e no `disponivel()` que o `state_full` consulta.
+_OSK_RESOLVE_TTL_SEG = 10.0
+
+
+def _osk_candidatos() -> tuple[str, ...]:
+    """Candidatos na ordem que FUNCIONA na sessão gráfica de agora.
+
+    `WAYLAND_DISPLAY` primeiro, `DISPLAY` só depois — e essa ordem é o miolo da
+    correção. Numa sessão Wayland com XWayland os DOIS estão setados (medido em
+    10/08/2026 no ambiente do daemon vivo desta máquina: `WAYLAND_DISPLAY=
+    wayland-1` E `DISPLAY=:1`, importados pelo `ExecStartPre` da unit), então
+    olhar `DISPLAY` antes classificaria toda sessão Wayland moderna como X11.
+
+    O daemon enxerga essas variáveis porque a unit faz
+    `systemctl --user import-environment WAYLAND_DISPLAY DISPLAY`; isso não é
+    detalhe de conforto, é o que permite ao `wvkbd-mobintl` que nós spawnamos
+    achar o compositor — o filho herda este mesmo ambiente.
+
+    A lista sempre traz os DOIS: se o preferido não estiver instalado, o outro
+    ainda é melhor que nada (num X11 sem onboard, um wvkbd instalado não abre —
+    mas aí o `open()` falha e loga, em vez de o produto fingir que não há nada).
+    """
+    if os.environ.get("WAYLAND_DISPLAY") or os.environ.get("XDG_SESSION_TYPE") == "wayland":
+        return (_OSK_BIN_WAYLAND, _OSK_BIN_X11)
+    if os.environ.get("DISPLAY") or os.environ.get("XDG_SESSION_TYPE") == "x11":
+        return (_OSK_BIN_X11, _OSK_BIN_WAYLAND)
+    # Sessão desconhecida (daemon headless, CI): a aposta é declarada — vale a
+    # de Wayland, que é o padrão de todo desktop atual.
+    return (_OSK_BIN_WAYLAND, _OSK_BIN_X11)
+
+
+#: Cache (instante, resposta) da sonda de módulo abaixo. Lista de um elemento
+#: para não precisar de `global`.
+_OSK_SONDA: list[tuple[float, bool]] = [(float("-inf"), False)]
+
+
+def osk_disponivel_no_sistema() -> bool:
+    """Há teclado na tela instalado nesta máquina, agora?
+
+    Existe para quem precisa da resposta SEM ter um `_OSKController` à mão — o
+    `state_full` do daemon, que a publica para a janela. A janela não pode fazer
+    o `shutil.which` por conta própria: num Flatpak ela olharia dentro do
+    sandbox e responderia sobre uma máquina que não é a da usuária.
+
+    Mesmo TTL do `_OSKController._resolve` e pelo mesmo motivo (instalar o
+    pacote com o daemon no ar tem de passar a valer sem restart), e mesmo custo:
+    um `shutil.which` a cada 10 s, no máximo, mesmo com o `state_full` a 20 Hz.
+    """
+    agora = time.monotonic()
+    quando, valor = _OSK_SONDA[0]
+    if agora - quando < _OSK_RESOLVE_TTL_SEG:
+        return valor
+    valor = any(shutil.which(candidato) for candidato in _osk_candidatos())
+    _OSK_SONDA[0] = (agora, valor)
+    return valor
 
 
 class _OSKController:
@@ -64,33 +145,79 @@ class _OSKController:
     def __init__(self) -> None:
         self._resolved_bin: str | None = None
         self._resolved_checked: bool = False
+        self._resolved_em: float = 0.0
         self._process: subprocess.Popen[bytes] | None = None
         self._missing_warned: bool = False
 
     def _resolve(self) -> str | None:
-        if self._resolved_checked:
+        """Primeiro binário de teclado na tela que existe, na ordem da sessão.
+
+        O cache tem PRAZO (`_OSK_RESOLVE_TTL_SEG`) em vez de ser eterno: ver a
+        constante para o porquê — sem prazo, instalar o pacote com o daemon no
+        ar não tinha efeito nenhum até o próximo start, e o sintoma para ela é
+        idêntico ao de não ter instalado.
+        """
+        agora = time.monotonic()
+        if self._resolved_checked and (agora - self._resolved_em) < _OSK_RESOLVE_TTL_SEG:
             return self._resolved_bin
-        for candidate in _OSK_CANDIDATES:
+        self._resolved_em = agora
+        self._resolved_checked = True
+        for candidate in _osk_candidatos():
             path = shutil.which(candidate)
             if path:
                 self._resolved_bin = candidate
-                self._resolved_checked = True
                 return candidate
         self._resolved_bin = None
-        self._resolved_checked = True
         return None
+
+    def disponivel(self) -> bool:
+        """True se há programa de teclado na tela instalado (cache do `_resolve`).
+
+        TECLADO-QUE-NAO-DIGITA-01: quem quiser dizer na tela que L3 não tem o
+        que abrir pergunta aqui, em vez de repetir o `shutil.which`.
+        """
+        return self._resolve() is not None
+
+    def _avisar_ausencia(self) -> None:
+        """L3 sem teclado na tela deixa de ser silêncio (TECLADO-QUE-NAO-DIGITA-01).
+
+        O ramo "nenhum candidato instalado" logava um `warning` e retornava —
+        e um warning no journal não é resposta a quem acabou de apertar um
+        botão. Medido na máquina dela em 09/08/2026: nem `onboard` nem
+        `wvkbd-mobintl` existem, e `l3` é justamente o ÚNICO caminho do produto
+        para ESCREVER texto com o controle (nenhum binding de fábrica digita
+        letra). O aperto sumia inteiro.
+
+        O log continua uma vez só (`_missing_warned`); a notificação tem
+        dedup próprio (`once_key` do `notify`), então ela sobrevive a um
+        `_OSKController` novo dentro do mesmo daemon sem virar rajada.
+        Best-effort de ponta a ponta: sem jeepney/sem servidor de notificação o
+        `notify` devolve False e nada quebra.
+        """
+        # `_osk_candidatos()` e não `_OSK_CANDIDATES`: a frase é "instale X ou
+        # Y", e QUAL vem primeiro é a diferença entre um conselho que resolve e
+        # um que faz ela instalar o programa que abre sem digitar. Em Wayland o
+        # primeiro nome tem de ser o wvkbd.
+        candidatos = list(_osk_candidatos())
+        if not self._missing_warned:
+            logger.warning(
+                "osk_binary_missing",
+                candidates=candidatos,
+            )
+            self._missing_warned = True
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.integrations.desktop_notifications import (
+                notify_teclado_na_tela_ausente,
+            )
+
+            notify_teclado_na_tela_ausente(candidatos)
 
     def open(self) -> None:
         if self._process is not None and self._process.poll() is None:
             return
         resolved = self._resolve()
         if resolved is None:
-            if not self._missing_warned:
-                logger.warning(
-                    "osk_binary_missing",
-                    candidates=list(_OSK_CANDIDATES),
-                )
-                self._missing_warned = True
+            self._avisar_ausencia()
             return
         args = _OSK_SPAWN_ARGS[resolved]
         try:
@@ -237,9 +364,21 @@ def _combine_with_touchpad(
     Extraído para reuso por `dispatch_keyboard` e `prime_keyboard` (mesma
     visão de botões que o device de teclado enxerga). Falha de leitura do
     reader é tratada como "nenhuma região pressionada".
+
+    TOUCHPAD-DO-SISTEMA-01 (2026-08-09): quando o touchpad é ponteiro do
+    SISTEMA, o mesmo `BTN_LEFT` já está virando botão do mouse no libinput —
+    somar a região aqui faria um clique só disparar DUAS coisas (o clique dela e
+    um `KEY_BACKSPACE`/`ENTER`/`DELETE` dos bindings default de
+    `core/keyboard_mappings.py`). É o defeito do cursor engasgado de 26/06 na
+    forma de tecla, e ele nasceria no mesmo dia em que o touchpad físico voltou
+    ao libinput. Quem responde é o próprio reader (`ponteiro_do_sistema`), pelo
+    estado real do nó. Reader antigo/dublê sem a propriedade conta como "o
+    hefesto é o dono", que é o comportamento histórico.
     """
     reader = getattr(daemon, "_touchpad_reader", None)
     if reader is None:
+        return buttons_pressed
+    if getattr(reader, "ponteiro_do_sistema", False):
         return buttons_pressed
     regions: frozenset[str]
     try:
@@ -291,6 +430,7 @@ def dispatch_keyboard(daemon: DaemonProtocol, buttons_pressed: frozenset[str]) -
 __all__ = [
     "_OSKController",
     "dispatch_keyboard",
+    "osk_disponivel_no_sistema",
     "prime_keyboard",
     "start_keyboard_emulation",
     "stop_keyboard_emulation",
