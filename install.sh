@@ -999,11 +999,37 @@ if [[ "${FORMAT}" != "native" ]]; then
     # `exit 0` logo abaixo sem o único caminho do produto para digitar texto.
     step "osk" "teclado na tela do L3 (TECLADO-QUE-NAO-DIGITA-01 — DEFAULT em todo formato)"
     install_osk_host
+    # MIC-EM-TODO-FORMATO-01 (10/08/2026): a voz dela também é ortogonal ao
+    # formato do app, e ficava para trás por acidente de posição.
+    #
+    # Os drop-ins do WirePlumber vivem em `~/.config/wireplumber/` — o HOME dela,
+    # não o prefixo do pacote. **Nenhum formato os empacota** (conferido: zero
+    # ocorrências de "wireplumber" em packaging/ e flatpak/), então o único jeito
+    # de eles chegarem é este script chamar o dono deles. Instalando por
+    # `--flatpak`/`--appimage`/`--deb`, o microfone do controle ficava sem o
+    # promotor: a entrada nasce com `priority.session = 50`, o monitor da saída
+    # ganha a eleição, e o que qualquer aplicativo grava é o eco do que sai — não
+    # a voz dela. Medido em 08/08 e curado no MONITOR-QUE-VENCE-01, mas só no
+    # caminho nativo.
+    #
+    # Respeita as MESMAS flags do passo 10 do nativo: quem pediu
+    # `--keep-dualsense-mic` continua sem ninguém mexendo no áudio, e
+    # `--with-wireplumber-disable-mic` continua vencendo. O que muda é só a
+    # posição no arquivo — a decisão é a dela, em qualquer formato.
+    if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
+        step "mic" "áudio: desabilitar o microfone do DualSense (--with-wireplumber-disable-mic)"
+        bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source \
+            || warn "disable-source falhou — rode: bash scripts/fix_wireplumber_default_source.sh --disable-source"
+    elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
+        step "mic" "áudio: a voz do controle acima do eco da saída (MIC-EM-TODO-FORMATO-01)"
+        bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install \
+            || warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
+    fi
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
-    printf ' Obs.: ajuste do microfone, desligar do Steam Input, preparo dos\n'
-    printf ' jogos da Steam e os passos de plataforma (Proton pinado, BT no\n'
-    printf ' máximo, cmdline) só valem no formato "native" (padrão).\n'
+    printf ' Obs.: desligar do Steam Input, preparo dos jogos da Steam e os\n'
+    printf ' passos de plataforma (Proton pinado, BT no máximo, cmdline) só\n'
+    printf ' valem no formato "native" (padrão).\n'
     printf ' Desinstalar: ./uninstall.sh\n'
     printf '─────────────────────────────────────────\n\n'
     exit 0
