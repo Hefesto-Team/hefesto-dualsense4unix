@@ -24,6 +24,40 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
+    <release version="0.9.0" date="2026-08-10">
+      <description>
+        <p>
+          O touchpad voltou a ser o touchpad do sistema em todos os modos. Uma
+          regra udev nossa, com curinga, o apagava para o desktop inteiro; agora
+          so o controle virtual fica fora do libinput, que era quem dobrava o
+          toque. O giroscopio e o touchpad tambem ganharam acesso aos nos de
+          entrada, que faltava desde sempre.
+        </p>
+        <p>
+          O teclado na tela que o L3 do controle abre passou a ser instalado. O
+          produto oferecia o gesto e nao instalava nada, e a escolha agora e
+          medida: wvkbd em Wayland, onboard em X11 — o segundo digita por XTEST
+          e, numa sessao Wayland, abre e nao digita.
+        </p>
+        <p>
+          A aba "No jogo" responde, recurso por recurso, o que esta chegando ao
+          jogo agora: giroscopio, vibracao, gatilho, luz, toque e som do
+          controle. E diz quando o perfil que voce escreveu para aquele jogo nao
+          entrou, com o que ele exigiu e o que o Hefesto viu.
+        </p>
+        <p>
+          O jogo via TRES controles com o Steam Input ligado: o Steam faz um
+          espelho de cada controle que enxerga, inclusive do virtual do Hefesto,
+          e os espelhos nao estavam sendo escondidos. Agora estao.
+        </p>
+        <p>
+          O botao "Ligar" do microfone apagava a propria cura que faz a sua voz
+          vencer o eco da saida — e a tela dizia "Ligado". O volume, o mudo e o
+          canal do alto-falante voltaram a chegar ao perfil, e a bateria do
+          controle chega ao jogo em vez de ficar em 5% para sempre.
+        </p>
+      </description>
+    </release>
     <release version="0.8.0" date="2026-08-02">
       <description>
         <p>
