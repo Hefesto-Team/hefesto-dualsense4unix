@@ -775,6 +775,37 @@ class Daemon:
                     err=str(exc),
                     exc_info=True,
                 )
+            # ENV-VELHA-NO-BOOT-01 (10/08/2026): materializa o launch_env no
+            # BOOT, e não só nas transições.
+            #
+            # Ela perguntou, com o defeito na mão: *"temos soluções que não
+            # dependam desse feito manual? Tipo mais automático de fato?"*.
+            # Tinha razão, e o buraco era estrutural: TODOS os gatilhos de
+            # `materialize_launch_env` eram de TRANSIÇÃO — start/stop do
+            # gamepad, Modo Nativo, co-op, os handlers de IPC. Nenhum no start
+            # do daemon. Provado no disco dela em 10/08: apaguei o
+            # `steam_app_3357650.env`, reiniciei o daemon, e o arquivo NÃO
+            # voltou.
+            #
+            # O preço aparecia exatamente no pior momento — quando a cura acabou
+            # de entrar. O daemon subia com o código novo e continuava servindo
+            # ao wrapper o arquivo escrito pelo daemon ANTIGO, até ela conectar
+            # o controle. É a versão em arquivo do `[[o-daemon-vivo-e-mais-velho-
+            # que-o-codigo]]`: quem estava velho não era o processo, era o que
+            # ele tinha deixado no disco. Foi assim que a cura do
+            # TRES-CONTROLES-01 nasceu inerte na máquina dela.
+            #
+            # Aqui, no fim do boot, porque é onde o estado já é o real: modo,
+            # máscara, backends e perfil restaurado. Antes disto o conteúdo
+            # sairia de um estado provisório, e regravar com dado provisório é
+            # pior que não regravar. `suppress` porque a regra desta função vale
+            # inteira: materialização quebrada nunca derruba o start.
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.launch_env import (
+                    materialize_launch_env,
+                )
+
+                materialize_launch_env(self)
             # Reconnect probe em background — não bloqueia o boot e cobre
             # transicoes onlineoffline em runtime.
             self._reconnect_task = asyncio.create_task(
