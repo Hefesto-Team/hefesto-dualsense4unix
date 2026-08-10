@@ -433,10 +433,20 @@ class _Rotulo:
 
     def __init__(self) -> None:
         self.texto = ""
+        self.markup = ""
         self.visivel = False
 
     def set_text(self, texto: str) -> None:
         self.texto = texto
+        self.markup = ""
+
+    def set_markup(self, markup: str) -> None:
+        # PERFIL-MUDO-01: o aviso do perfil sai por markup (a cor não vem de
+        # CSS nesta janela — ver `COR_DA_SITUACAO`). O dublê guarda os dois:
+        # `texto` para as asserções de conteúdo, `markup` para provar que a
+        # linha saiu colorida e não em branco.
+        self.markup = markup
+        self.texto = markup
 
     def set_visible(self, visivel: bool) -> None:
         self.visivel = bool(visivel)
@@ -471,6 +481,7 @@ class _Janela:
         self._no_jogo_slot = _Slot()
         self._no_jogo_contexto = _Rotulo()
         self._no_jogo_recado = _Rotulo()
+        self._no_jogo_perfil = _Rotulo()
         self._no_jogo_vazio = _Rotulo()
         self._no_jogo_paineis: dict[Any, _Painel] = {}
         self._no_jogo_keys: list[Any] = []
@@ -575,3 +586,82 @@ def test_no_nativo_o_recado_substitui_os_paineis(sem_notebook_real: None) -> Non
     assert janela._no_jogo_recado.texto == TEXTO_NATIVO
     assert janela._no_jogo_paineis == {}
     assert janela._no_jogo_vazio.visivel is False
+
+
+def test_o_aviso_do_perfil_sai_colorido_e_aparece_ate_no_nativo(
+    sem_notebook_real: None,
+) -> None:
+    """PERFIL-MUDO-01, do estado até o pixel. Duas mordidas numa.
+
+    1. **A cor.** Nesta janela classe de CSS NÃO pinta rótulo — está medido em
+       `COR_DA_SITUACAO`, com foto: a regra `.hefesto-dualsense4unix-window
+       label` do tema tem especificidade maior. Trocar o `set_markup` por
+       `set_text` faz esta asserção reprovar, e sem ela o aviso sairia branco no
+       meio de uma tela onde branco é o texto comum.
+    2. **O Modo Nativo.** O recado global SUBSTITUI os painéis, e a tentação é
+       deixar o aviso do perfil sair junto. Ele não pode: um perfil que não
+       entrou é fato do disco e da janela em foco, e no Nativo é justamente o
+       perfil dela que ligaria o modo certo. Arrancar a linha do sync (ou
+       escondê-la quando há recado) faz a última asserção reprovar.
+    """
+    from hefesto_dualsense4unix.app.actions.status_actions import ABA_NO_JOGO
+    from hefesto_dualsense4unix.app.widgets.painel_no_jogo import (
+        COR_DO_AVISO_DE_PERFIL,
+    )
+
+    estado = _estado(native=True, gamepad=False)
+    estado["active_profile"] = "fallback"
+    estado["perfil_do_jogo_que_nao_entrou"] = [
+        {"nome": "Pragmata", "frase": 'O perfil "Pragmata" não entrou: X.'}
+    ]
+    janela = _sincronizar(ABA_NO_JOGO, estado)
+
+    assert janela._no_jogo_perfil.visivel is True
+    assert COR_DO_AVISO_DE_PERFIL in janela._no_jogo_perfil.markup
+    assert "Pragmata" in janela._no_jogo_perfil.markup
+    assert "não entrou" in janela._no_jogo_perfil.markup
+    assert "fallback" in janela._no_jogo_perfil.markup
+    # E o recado do Nativo continua no lugar dele: os dois convivem.
+    assert janela._no_jogo_recado.texto == TEXTO_NATIVO
+
+
+def test_nome_de_perfil_com_e_comercial_nao_quebra_o_markup(
+    sem_notebook_real: None,
+) -> None:
+    """Terceira mordida: o escape do Pango.
+
+    O nome do perfil vem do disco — dela — e `set_markup` interpreta `&` e `<`.
+    Um perfil chamado "Rock & Roll" derrubaria a pintura da linha inteira com
+    um erro de parse, e a aba perderia justamente o aviso.
+
+    Arranque do `GLib.markup_escape_text`: o `&` cru sai no markup e o GTK real
+    reclama. Aqui o dublê não faz o parse, então a asserção é sobre a forma:
+    o que sai TEM de estar escapado.
+    """
+    from hefesto_dualsense4unix.app.actions.status_actions import ABA_NO_JOGO
+
+    estado = _estado()
+    estado["active_profile"] = "fallback"
+    estado["perfil_do_jogo_que_nao_entrou"] = [
+        {"nome": "Rock & Roll", "frase": 'O perfil "Rock & Roll" <não> entrou.'}
+    ]
+    janela = _sincronizar(ABA_NO_JOGO, estado)
+
+    markup = janela._no_jogo_perfil.markup
+    assert "&amp;" in markup and "&lt;não&gt;" in markup
+    # O único `<` que sobra é o da própria etiqueta de cor.
+    assert markup.count("<") == markup.count("<span") + markup.count("</span")
+
+
+def test_sem_aviso_de_perfil_a_linha_fica_escondida(sem_notebook_real: None) -> None:
+    """O caso comum — nenhum perfil ficou de fora — não deixa rótulo em branco.
+
+    Arranque do `set_visible(False)`: uma linha vazia abre um buraco entre o
+    cabeçalho e o primeiro painel, em toda sessão de jogo que dá certo.
+    """
+    from hefesto_dualsense4unix.app.actions.status_actions import ABA_NO_JOGO
+
+    janela = _sincronizar(ABA_NO_JOGO, _estado())
+
+    assert janela._no_jogo_perfil.visivel is False
+    assert janela._no_jogo_perfil.texto == ""
