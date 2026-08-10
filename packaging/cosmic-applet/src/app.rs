@@ -964,8 +964,23 @@ fn spawn_stop_daemon() {
         .spawn();
 }
 
-/// Mic liberado quando NÃO há drop-ins de supressão (52/53) do WirePlumber.
+/// Mic ligado DE VERDADE: sem supressão (52/53) **e** com o promotor (51).
 /// FEAT-DUALSENSE-MIC-TOGGLE-01. Leitura de filesystem (a verdade do estado).
+///
+/// LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026): esta função olhava só o 52/53, e a
+/// janela do Hefesto tinha exatamente o mesmo furo (`_mic_is_on`, curado no
+/// mesmo dia). Desde o MONITOR-QUE-VENCE-01 (08/08) o drop-in **51** deixou de
+/// ser supressão e virou o PROMOTOR: ele põe a entrada do controle em
+/// `priority.session = 1500`, acima de qualquer monitor. Sem ele o microfone
+/// EXISTE, mas perde a eleição para o eco da saída — e chamar isso de "ligado"
+/// é afirmar o contrário do que a pessoa vai gravar.
+///
+/// Aqui o applet devolve `false` nesse caso, que é conservador de propósito: um
+/// applet tem um ícone, não três estados, e entre dizer "ligado" sobre um
+/// microfone que grava o eco e "desligado" sobre um que precisa de um clique
+/// para valer, o segundo erra para o lado que ela consegue corrigir. Quem conta
+/// a história inteira — "Ligado sem prioridade", com o motivo — é a aba
+/// Emulação da janela.
 fn mic_is_on() -> bool {
     let Ok(home) = std::env::var("HOME") else {
         return false;
@@ -977,7 +992,10 @@ fn mic_is_on() -> bool {
     ]
     .iter()
     .any(|name| base.join(name).exists());
-    !suppressed
+    let promoted = base
+        .join("51-hefesto-dualsense-no-default-source.conf")
+        .exists();
+    !suppressed && promoted
 }
 
 /// Liga/desliga o mic do DualSense via CLI (best-effort; falha silenciosa).

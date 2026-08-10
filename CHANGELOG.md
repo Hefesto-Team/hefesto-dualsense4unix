@@ -5,6 +5,26 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-08-10
+
+### Três coisas que estavam abertas e sem dono
+
+**O jogador 2 deixa de ser refém do controle do jogador 1.** `coop.sync()` e
+`coop.forward_all()` moravam depois do gate de conexão do primário, então um
+blip de Bluetooth no controle do P1 tirava o input do P2 no meio da partida. O
+co-op subiu para antes do gate — o sexto bloco a fazer essa viagem.
+
+**O microfone entra no install em TODOS os formatos.** Os drop-ins do
+WirePlumber vivem no HOME e nenhum formato os empacota; instalando por flatpak,
+appimage ou deb, a entrada do controle nascia sem o promotor e o monitor da
+saída vencia — o que os aplicativos gravavam era o eco, não a voz. As flags
+`--keep-dualsense-mic` e `--with-wireplumber-disable-mic` continuam valendo.
+
+**O applet do COSMIC parou de chamar de "Ligado" um microfone que perde para o
+eco.** Ele tinha o mesmo furo que a janela: olhava só os drop-ins de supressão.
+Um portão novo amarra as cinco superfícies que citam o nome do promotor.
+
+
 ## [0.9.0] — 2026-08-10
 
 > **NOTA DATADA — 10/08/2026: esta seção tem um buraco de quatro dias, e ele

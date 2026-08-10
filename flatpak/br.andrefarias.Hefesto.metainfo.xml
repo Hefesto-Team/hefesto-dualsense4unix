@@ -24,6 +24,24 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
+    <release version="0.9.1" date="2026-08-10">
+      <description>
+        <p>
+          O jogador 2 do co-op deixa de perder o input quando o controle do
+          jogador 1 sai da mesa: cada secundario tem o seu controle e o seu
+          gamepad virtual, e nenhum dos dois depende do primario.
+        </p>
+        <p>
+          O ajuste do microfone passa a valer em todos os formatos de
+          instalacao, e nao so no nativo. Sem ele a entrada do controle nasce
+          sem prioridade e o eco da saida vence a voz.
+        </p>
+        <p>
+          O applet do COSMIC parou de dizer "Ligado" sobre um microfone que
+          perde para o eco.
+        </p>
+      </description>
+    </release>
     <release version="0.9.0" date="2026-08-10">
       <description>
         <p>
