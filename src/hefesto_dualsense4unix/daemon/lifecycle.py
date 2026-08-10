@@ -3720,6 +3720,34 @@ class Daemon:
                 # a de dois segundos atrás.
                 with contextlib.suppress(Exception):
                     self._drenar_modo_pendente()
+            # JOGADOR-2-REFEM-01 (10/08/2026): o co-op SOBE PARA CÁ, para antes
+            # do gate de conexão — o sexto bloco a fazer essa viagem, pela mesma
+            # razão dos cinco acima.
+            #
+            # O DEFEITO, medido lendo o laço: `coop.sync()` e `coop.forward_all()`
+            # moravam DEPOIS do `if not self.controller.is_connected(): continue`.
+            # Cada jogador secundário tem o SEU próprio controle físico e o SEU
+            # próprio gamepad virtual, e nenhum dos dois depende do primário — mas
+            # o `continue` levava tudo junto. Com o DualSense do P1 fora da mesa
+            # (bateria, cabo solto, blip de BT), o jogador 2 ficava sem input no
+            # meio da partida, sem uma linha no journal explicando.
+            #
+            # É o mesmo raciocínio já escrito para o LED dos externos duas telas
+            # acima — *"o 8BitDo/Pro Controller merece número mesmo sem nenhum
+            # DualSense plugado"* —, e vale ainda mais aqui: número é cosmética,
+            # input é o produto.
+            #
+            # O `grace_passed` do primário continua sendo o gate, e sobe junto:
+            # ele é o anti-ghost-input da conexão (`_input_ready_at`), um relógio
+            # que segue correndo depois do unplug — então desconectar não o
+            # rearma, e o P2 não paga o settling de um controle que nem está lá.
+            grace_passed = tick_started >= self._input_ready_at
+            if grace_passed:
+                coop = get_coop_manager(self)
+                if tick_started >= coop_sync_next_at:
+                    coop.sync()
+                    coop_sync_next_at = tick_started + 2.0
+                coop.forward_all()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: se o controller ainda não está
             # conectado (boot sem hardware ou pós-unplug), pula o tick
             # silenciosamente. O `reconnect_loop` cuida de retentar; quando
@@ -3814,6 +3842,15 @@ class Daemon:
             # grace-period (anti-ghost-input), com os botões CRUS: o jogo quer
             # PS/Options/dpad crus; a subtração de combo (abaixo) é proteção
             # contra vazamento pro DESKTOP e não se aplica ao gamepad.
+            #
+            # RELÊ o grace, e isto NÃO é linha repetida: desde a
+            # JOGADOR-2-REFEM-01 (10/08/2026) o `grace_passed` também é calculado
+            # lá em cima, antes do gate de conexão, para o co-op. Entre um ponto
+            # e outro está a borda desconectado→conectado, que ARMA um grace novo
+            # (`_input_ready_at = tick_started + INPUT_GRACE_SEC`). Apagar esta
+            # linha por parecer duplicada faria o primário despachar com o valor
+            # de ANTES da borda — ou seja, sem o settling anti-ghost, que é o
+            # defeito inteiro que o BUG-DAEMON-CONNECT-GHOST-INPUT-01 curou.
             grace_passed = tick_started >= self._input_ready_at
             gamepad_dispatched = False
             if grace_passed and self._gamepad_device is not None:
@@ -3826,17 +3863,14 @@ class Daemon:
                     discard_touchpad_motion(self)
                 gamepad_dispatched = True
 
-            # FEAT-DSX-COOP-LOCAL-01: co-op local — repassa cada controle
-            # SECUNDÁRIO ao SEU gamepad virtual (P2+). Como o P1 acima, sobrevive
-            # a pause/modo-jogo (é rota pro jogo) e é gateado só pelo grace. A
-            # reconciliação (sync, throttada ~2s) cria/derruba os secundários e
-            # também desmonta tudo se o co-op/gamepad for desligado.
-            if grace_passed:
-                coop = get_coop_manager(self)
-                if tick_started >= coop_sync_next_at:
-                    coop.sync()
-                    coop_sync_next_at = tick_started + 2.0
-                coop.forward_all()
+            # FEAT-DSX-COOP-LOCAL-01: o co-op local — repassar cada controle
+            # SECUNDÁRIO ao SEU gamepad virtual (P2+) — morava AQUI, e subiu para
+            # antes do gate de conexão em 10/08/2026 (JOGADOR-2-REFEM-01). O
+            # comportamento é o mesmo em tudo o que este bloco garantia:
+            # sobrevive a pause e ao modo jogo (é rota pro jogo), é gateado só
+            # pelo grace, e a reconciliação segue throttada em ~2 s. O que mudou
+            # é que ele deixou de ser refém do controle do P1 estar plugado.
+            # A leitura do primário continua abaixo, onde sempre esteve.
 
             # BUG-DAEMON-CONNECT-GHOST-INPUT-01: gate de assentamento. Enquanto
             # `loop.time() < _input_ready_at`, NÃO despacha teclado/mouse/hotkey
