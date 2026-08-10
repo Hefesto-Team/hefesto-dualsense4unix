@@ -1209,11 +1209,52 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             return
         if mostrar:
             self._sincronizar_caixa_do_steam_input()
+            self._sincronizar_exigencia_invisivel()
             with contextlib.suppress(Exception):
                 box.set_no_show_all(False)
             box.show_all()
         else:
             box.hide()
+
+    def _sincronizar_exigencia_invisivel(self) -> None:
+        """Diz o que o perfil exige e esta página NÃO mostra.
+
+        A-REGRA-QUE-A-TELA-NAO-MOSTRA-01 (10/08/2026), de uma foto dela. O editor
+        simples mostrava "Jogo da Steam · 3357650" e o arquivo tinha também
+        `process_name: ["PRAGMATA.exe"]`. O `matches` é AND, então o campo
+        invisível é o que decidia: o perfil não entrava sozinho — medido seis
+        vezes em dois minutos, com ela jogando, e o que ficava valendo era o
+        perfil anterior (o "Navegação", que casa com a janela do Steam).
+
+        Preservar o campo invisível ao salvar continua certo (é o que impede a
+        janela de apagar o que ela não mostra). Esconder que ele EXISTE é que
+        não: a tela afirmava uma regra que não era a regra.
+
+        Lê da fotografia tirada quando o perfil abriu — o mesmo dado que o
+        `_regra_do_disco_ao_salvar` usa para preservar. Sem fotografia (perfil
+        novo) não há nada invisível a declarar, e a linha some.
+
+        `set_markup` com o amarelo do "parou" pela razão já medida nesta casa:
+        classe de CSS não pinta rótulo nesta janela (ver `COR_DA_SITUACAO`).
+        """
+        rotulo = self._get("profile_exigencia_invisivel")
+        if rotulo is None:
+            return
+        from hefesto_dualsense4unix.profiles.simple_match import exigencia_invisivel
+
+        regra = self._regra_do_disco
+        texto = exigencia_invisivel(regra) if regra is not None else ""
+        if texto:
+            from gi.repository import GLib
+
+            rotulo.set_markup(
+                f'<span foreground="#f1fa8c">{GLib.markup_escape_text(texto)}</span>'
+            )
+            with contextlib.suppress(Exception):
+                rotulo.set_no_show_all(False)
+        else:
+            rotulo.set_text("")
+        rotulo.set_visible(bool(texto))
 
     @staticmethod
     def _appids_do_steam_input() -> set[str]:
