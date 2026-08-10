@@ -802,6 +802,169 @@ else
     echo "[ OK ] config do BlueZ: assets/bluetooth/hefesto-bt.block ausente — nada a checar"
 fi
 
+# TECLADO-QUE-NAO-DIGITA-01 (10/08/2026): o teclado na tela que o L3 do controle
+# abre não estava em instalador NENHUM. Medido antes desta seção existir:
+#
+#     command -v onboard wvkbd-mobintl        ->  NENHUM DOS DOIS
+#     grep -c onboard install.sh              ->  0
+#     grep -c onboard packaging/debian/control ->  0
+#
+# O produto oferecia "Abrir teclado na tela" no botão L3, e como nenhum dos nove
+# atalhos de fábrica digita uma LETRA (Super, PrintScreen, Alt+Tab,
+# Alt+Shift+Tab, Enter, Delete, Backspace e os dois tokens de OSK), o único
+# caminho para ESCREVER TEXTO com o controle simplesmente não existia na
+# máquina. Esta seção é o que impede isso de voltar por qualquer um dos flancos.
+echo "== teclado na tela do L3 (instalador × empacotamentos × doctor × daemon) =="
+# A ÂNCORA DESTA SEÇÃO É A PROMESSA, NÃO A CURA. O molde das seções acima é
+# gatear pelo asset (`assets/systemd/hefesto-hidraw-broker.service`,
+# `assets/bluetooth/hefesto-bt.block`), e aqui isso seria um erro sutil:
+# gatear por `scripts/install_osk.sh` faria a seção EMUDECER exatamente quando
+# alguém apagasse o instalador — o portão calaria justo no defeito que ele
+# existe para acusar.
+#
+# Então o gate é o que CRIA a promessa: o token `__OPEN_OSK__` no mapa de
+# fábrica. Enquanto o produto oferecer "abrir teclado na tela" no L3, ele tem
+# de instalar, declarar e conferir o que isso precisa. Se um dia a promessa
+# sair do mapa, a seção fica quieta por direito — e é isso que também mantém
+# esta seção silenciosa nos checkouts sintéticos dos testes do próprio portão,
+# que trazem só `scripts/` e `assets/`.
+_osk_promessa="src/hefesto_dualsense4unix/core/keyboard_mappings.py"
+if [[ ! -f "${_osk_promessa}" ]] || ! grep -q '__OPEN_OSK__' "${_osk_promessa}" 2>/dev/null; then
+    echo "[ OK ] teclado na tela: o mapa de fábrica não promete __OPEN_OSK__ neste checkout — nada a checar"
+elif [[ ! -f scripts/install_osk.sh ]]; then
+    echo "[FAIL] o mapa de fábrica promete __OPEN_OSK__ no L3 e scripts/install_osk.sh não existe"
+    echo "       o teclado na tela ficou sem dono: o produto oferece o gesto e não instala nada."
+    rc=1
+else
+    missing=()
+
+    # 1) O install chama o dono dos DOIS lados da cerca. O `exit 0` do bloco de
+    #    formatos deixa doze passos de cura para trás, e um passo escrito só no
+    #    fluxo native cairia do lado errado — foi exatamente o achado #7 da Onda
+    #    S (o broker) numa camada nova. Comentários fora: um comentário citando
+    #    a função satisfaria um grep ingênuo e o portão viraria decoração.
+    _osk_install_codigo="$(grep -v '^[[:space:]]*#' install.sh 2>/dev/null || true)"
+    _osk_bloco_formatos="$(printf '%s\n' "${_osk_install_codigo}" | awk '
+        /^if \[\[ "\$\{FORMAT\}" != "native" \]\]; then$/ { dentro = 1 }
+        dentro { print }
+        dentro && /^[[:space:]]+exit 0$/ { exit }')"
+    _osk_bloco_native="$(printf '%s\n' "${_osk_install_codigo}" | awk '
+        /^if \[\[ "\$\{FORMAT\}" != "native" \]\]; then$/ { dentro = 1 }
+        dentro && /^fi$/ { depois = 1; next }
+        depois { print }')"
+    printf '%s\n' "${_osk_bloco_formatos}" | grep -qE '^[[:space:]]*install_osk_host[[:space:]]*$' \
+        || missing+=("install.sh NÃO instala o teclado na tela nos formatos de pacote (flatpak/appimage/deb saem pelo 'exit 0' sem ele)")
+    printf '%s\n' "${_osk_bloco_native}" | grep -qE '^[[:space:]]*install_osk_host[[:space:]]*$' \
+        || missing+=("install.sh NÃO instala o teclado na tela no fluxo native")
+
+    # 2) Todo empacotamento DECLARA o teclado na tela. O .deb/.rpm/PKGBUILD
+    #    declaram como dependência fraca (o gerenciador instala por padrão e
+    #    ela pode remover sem desinstalar o Hefesto); o Flatpak BUNDLA, porque
+    #    dentro do sandbox um pacote do host é invisível — sem o módulo, o
+    #    `shutil.which` do daemon devolve None para sempre, por construção.
+    #
+    #    CADA UM COM O PADRÃO DO SEU CAMPO, e isto foi MEDIDO por mutação em
+    #    10/08/2026: o primeiro desenho desta parte procurava a palavra "wvkbd"
+    #    no arquivo inteiro, sem comentários. Arrancar `wvkbd | onboard` do
+    #    `Recommends:` do debian/control passava VERDE — porque a palavra
+    #    continuava viva na PROSA da `Description`, que não é comentário e por
+    #    isso sobrevivia ao filtro. É a mesma armadilha do `grep -qF
+    #    FastConnectable` da seção do BlueZ com outra roupa: um texto que
+    #    EXPLICA a regra satisfazendo a regra. Só o campo que o gerenciador de
+    #    pacotes de fato lê conta.
+    _osk_declaram=(
+        "packaging/debian/control:^(Depends|Recommends|Suggests):.*wvkbd"
+        "packaging/fedora/hefesto-dualsense4unix.spec:^(Requires|Recommends|Suggests):[[:space:]]*wvkbd"
+        "packaging/arch/PKGBUILD:^[[:space:]]*'wvkbd:"
+        "packaging/nix/package.nix:makeBinPath.*wvkbd"
+        "flatpak/br.andrefarias.Hefesto.yml:^[[:space:]]*-[[:space:]]*name:[[:space:]]*wvkbd[[:space:]]*$"
+    )
+    for _osk_item in "${_osk_declaram[@]}"; do
+        _osk_decl="${_osk_item%%:*}"
+        _osk_padrao="${_osk_item#*:}"
+        [[ -f "${_osk_decl}" ]] || continue
+        grep -v '^[[:space:]]*#' "${_osk_decl}" 2>/dev/null \
+            | grep -qE "${_osk_padrao}" \
+            || missing+=("${_osk_decl} não DECLARA o teclado na tela no campo que o gerenciador lê (padrão: ${_osk_padrao})")
+    done
+
+    # 3) O doctor CONFERE — e a chamada, não só a função. Definir
+    #    `check_teclado_na_tela` e não chamá-la em `main()` deixaria a suíte
+    #    verde e o portão OK com a conferência morta: é o
+    #    ENTREGA-QUE-NAO-LIGOU-01 literal, o mesmo recorte de `main()` que a
+    #    seção do BlueZ já faz por este motivo.
+    grep -qE '^check_teclado_na_tela\(\) \{' scripts/doctor.sh 2>/dev/null \
+        || missing+=("scripts/doctor.sh não define check_teclado_na_tela")
+    awk '/^main\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
+        scripts/doctor.sh 2>/dev/null \
+        | grep -qE '^[[:space:]]*check_teclado_na_tela[[:space:]]*$' \
+        || missing+=("scripts/doctor.sh define check_teclado_na_tela e NÃO a chama em main()")
+
+    # 4) O doctor CONFERE E NÃO CURA (regra da casa). Nenhuma das rotas de cura
+    #    pode instalar pacote: `apply_fixes` e `fix_mic_dualsense` rodam sem ela
+    #    pedir, e instalar software de sistema por baixo de um diagnóstico é
+    #    exatamente o tipo de surpresa que esta casa não entrega.
+    awk '/^apply_fixes\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
+        scripts/doctor.sh 2>/dev/null \
+        | grep -qE 'apt|dnf|pacman|install_osk' \
+        && missing+=("scripts/doctor.sh CURA o teclado na tela dentro de apply_fixes — o doctor confere e não cura")
+
+    # 5) O uninstall NÃO remove o pacote (é do sistema, e pode servir a outra
+    #    coisa — mesma decisão do libopus0 da ponte de mic), e REMOVE a
+    #    sentinela (essa é nossa). Sem apagar a sentinela, o doctor leria uma
+    #    máquina já desinstalada como "o pacote sumiu depois do install".
+    _osk_uninstall_codigo="$(grep -v '^[[:space:]]*#' uninstall.sh 2>/dev/null || true)"
+    printf '%s\n' "${_osk_uninstall_codigo}" \
+        | grep -qE '(apt-get|apt|dnf|pacman|rpm)[^|]*(remove|purge|erase|-R)[^|]*(wvkbd|onboard)' \
+        && missing+=("uninstall.sh REMOVE o pacote do teclado na tela — pacote de sistema não é nosso para desinstalar")
+    printf '%s\n' "${_osk_uninstall_codigo}" | grep -qF 'teclado-na-tela.conf' \
+        || missing+=("uninstall.sh não apaga a sentinela teclado-na-tela.conf (o doctor passaria a acusar remoção de um produto que já saiu)")
+
+    # 6) O CONTRATO DE NOMES entre os três que precisam concordar: quem instala
+    #    (scripts/install_osk.sh), quem confere (scripts/doctor.sh) e quem
+    #    executa (daemon/subsystems/keyboard.py). Se um deles trocar de binário
+    #    ou inverter o par sessão↔programa, os três continuam coerentes CONSIGO
+    #    MESMOS e o produto instala um e procura outro.
+    _osk_keyboard="src/hefesto_dualsense4unix/daemon/subsystems/keyboard.py"
+    for _osk_dono in scripts/install_osk.sh scripts/doctor.sh "${_osk_keyboard}"; do
+        [[ -f "${_osk_dono}" ]] || { missing+=("${_osk_dono} ausente"); continue; }
+        grep -qE '(OSK_BIN_WAYLAND|_OSK_BIN_WAYLAND)[ =]+"wvkbd-mobintl"' "${_osk_dono}" 2>/dev/null \
+            || missing+=("${_osk_dono} não casa Wayland com wvkbd-mobintl")
+        grep -qE '(OSK_BIN_X11|_OSK_BIN_X11)[ =]+"onboard"' "${_osk_dono}" 2>/dev/null \
+            || missing+=("${_osk_dono} não casa X11 com onboard")
+    done
+
+    # 7) O MECANISMO, rodado de verdade — a parte de que nenhum comentário pode
+    #    fugir. O dono é executado em dry-run contra uma sentinela em mktemp,
+    #    com a sessão forçada nos dois sentidos: nada é instalado, nada da
+    #    máquina é tocado, e o que se cobra é a DECISÃO gravada no disco. Se
+    #    alguém inverter o par sessão↔pacote, esta parte reprova sozinha,
+    #    mesmo com todo o texto acima intacto.
+    _osk_tmp="$(mktemp -d)"
+    for _osk_par in "wayland:wvkbd" "x11:onboard"; do
+        _osk_sessao="${_osk_par%%:*}"
+        _osk_esperado="${_osk_par##*:}"
+        HEFESTO_OSK_STATE="${_osk_tmp}/${_osk_sessao}.conf" \
+        HEFESTO_OSK_SESSAO="${_osk_sessao}" \
+        HEFESTO_OSK_GERENCIADOR="apt" \
+        HEFESTO_OSK_DRY_RUN=1 \
+            bash scripts/install_osk.sh >/dev/null 2>&1 || true
+        _osk_gravado="$(sed -n 's/^pacote=//p' "${_osk_tmp}/${_osk_sessao}.conf" 2>/dev/null | head -1)"
+        [[ "${_osk_gravado}" == "${_osk_esperado}" ]] \
+            || missing+=("install_osk.sh em sessão ${_osk_sessao} escolheria '${_osk_gravado:-nada}' e o certo é '${_osk_esperado}'")
+    done
+    rm -rf "${_osk_tmp}"
+
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] teclado na tela: instalado em TODO formato, declarado nos 5 empacotamentos, conferido (e não curado) pelo doctor, preservado pelo uninstall, e o par sessão↔programa provado por execução"
+    else
+        echo "[FAIL] teclado na tela: ${missing[*]}"
+        echo "       sem ele, NENHUM atalho de fábrica digita uma letra — 'o teclado"
+        echo "       emulado não digita' volta a ser literalmente verdade."
+        rc=1
+    fi
+fi
+
 echo "─────────────────────────────────────────"
 if [[ "${rc}" -eq 0 ]]; then
     echo "paridade de empacotamento OK"

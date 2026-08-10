@@ -2418,6 +2418,30 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         except Exception:
             return None
 
+    def _regra_do_disco_ao_salvar(self, name: str) -> Match | None:
+        """A regra que este Salvar sobrescreve — para NÃO apagar o que a tela não mostra.
+
+        ESCONDER-EM-VEZ-DE-SAIR-01 (10/08/2026). A página simples do "Jogo da
+        Steam" tem um campo só, o número; um perfil pode ter no disco também um
+        ``process_name`` do mesmo jogo. ``from_simple_choice`` precisa dele para
+        preservar o campo invisível — ver `profiles/simple_match.py`.
+
+        Duas fontes, na mesma ordem que as guardas SALVAR-NAO-REBAIXA já usam:
+        a fotografia tirada quando o perfil ABRIU (o caso normal) e, quando não
+        há fotografia (perfil "novo" salvando por cima de um arquivo que
+        existe — o buraco que a SALVAR-NAO-REBAIXA-02 mediu), o próprio disco
+        pelo slug.
+
+        Vale SÓ para o editor simples, e é de propósito: no avançado o
+        ``process_name`` está na tela, e apagá-lo ali é um gesto dela. Devolver
+        esta regra para lá desfaria a exclusão que ela acabou de fazer.
+        """
+        regra = self._regra_do_disco
+        if regra is not None:
+            return regra
+        alvo = self._perfil_que_o_salvar_sobrescreve(name)
+        return alvo.match if alvo is not None else None
+
     def _esquecer_a_fotografia_do_editor(self) -> None:
         """Zera as fotografias — o editor deixou de mostrar um perfil do disco.
 
@@ -2573,7 +2597,15 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         else:
             choice = self._selected_simple_choice()
             custom = self._get("profile_simple_custom_name").get_text().strip() or None
-            match = from_simple_choice(choice=choice, custom_name=custom)
+            # ESCONDER-EM-VEZ-DE-SAIR-01: a página simples do jogo da Steam
+            # mostra o NÚMERO e mais nada — a regra do disco vai junto para que
+            # um `process_name` do mesmo jogo sobreviva ao round-trip em vez de
+            # evaporar por falta de campo na tela.
+            match = from_simple_choice(
+                choice=choice,
+                custom_name=custom,
+                regra_do_disco=self._regra_do_disco_ao_salvar(name),
+            )
 
         # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: usa o cache — este método roda a
         # cada montagem do perfil, e reler o disco aqui travava a thread GTK.
