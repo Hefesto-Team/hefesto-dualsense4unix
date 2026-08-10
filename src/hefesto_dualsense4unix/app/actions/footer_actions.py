@@ -79,6 +79,10 @@ _NOMES_DE_SECAO: dict[str, str] = {
     "mouse": "mouse",
     "keyboard": "teclado",
     "mic": "microfone",
+    # O-VERDE-NAO-LEVAVA-O-SOM-01: sem esta linha a seção aparecia na statusbar
+    # como `speaker` cru, em inglês, no meio de uma frase em português — e é
+    # justamente a linha que ela leria quando o som falhasse.
+    "speaker": "alto-falante",
     "controllers": "ajustes por controle",
 }
 
@@ -476,6 +480,13 @@ class FooterActionsMixin(ProfileWriterMixin):
             # aqui a perderia em silêncio.
             if aplicou and _secao_aplicada(result, "mouse"):
                 self._clear_mouse_dirty()
+            # O-VERDE-NAO-LEVAVA-O-SOM-01 (10/08/2026): o som ganhou o mesmo
+            # tratamento do mouse no MESMO tique em que passou a viajar. Sem
+            # isto o `speaker.dirty` ficaria de pé o resto da sessão e todo
+            # Aplicar seguinte reenviaria o mesmo volume — idempotente, sem dano
+            # medido, e assimétrico com o vizinho de cima sem nenhuma razão.
+            if aplicou and _secao_aplicada(result, "speaker"):
+                self._clear_speaker_dirty()
             msg = (
                 _mensagem_de_aplicacao(result)
                 if aceita
@@ -526,6 +537,21 @@ class FooterActionsMixin(ProfileWriterMixin):
             return
         novo_mouse = draft.mouse.model_copy(update={"dirty": False, "in_profile": True})
         self.draft = draft.model_copy(update={"mouse": novo_mouse})
+
+    def _clear_speaker_dirty(self) -> None:
+        """Baixa o ``dirty`` do alto-falante depois de aplicar — irmão do mouse.
+
+        Mesma regra e mesma razão do ``_clear_mouse_dirty``, que a docstring ao
+        lado explica por extenso: aplicou, acabou a pendência. E o
+        ``in_profile=True`` junto pelo mesmo motivo — sem ele, "Aplicar" antes de
+        "Salvar Perfil" faria o perfil salvo perder a seção do som, que é
+        exatamente o defeito que ela relatou em 10/08 no outro sentido.
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None or not draft.speaker.dirty:
+            return
+        novo = draft.speaker.model_copy(update={"dirty": False, "in_profile": True})
+        self.draft = draft.model_copy(update={"speaker": novo})
 
     # ------------------------------------------------------------------
     # Handler: Salvar Perfil

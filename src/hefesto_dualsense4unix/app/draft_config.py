@@ -1094,13 +1094,45 @@ class DraftConfig(BaseModel):
         ``key_bindings`` (None → DEFAULT_BUTTON_BINDINGS; dict → override). Daemon
         antigo ignora a seção desconhecida (aditivo, sem quebra de contrato).
 
-        SOM-02/E4: a seção ``speaker`` NÃO viaja aqui, de propósito. Quem manda
-        o volume ao vivo é o ``speaker.set`` do IPC, disparado pela superfície
-        que a usuária tocou (o controle deslizante da E1) — o rascunho só
-        guarda o que ficou, para o "Salvar Perfil" persistir. Emiti-la no
-        "Aplicar" repetiria o estrago do HARM-05 numa seção com preço: um
-        Aplicar disparado por ter mexido num gatilho tomaria a posse dos bytes
-        de volume do controle sem ninguém ter pedido volume nenhum.
+        SOM-02/E4: a seção ``speaker`` NÃO viajava aqui, de propósito. Quem
+        manda o volume ao vivo é o ``speaker.set`` do IPC, disparado pela
+        superfície que a usuária tocou (o controle deslizante da E1) — o
+        rascunho só guardava o que ficou, para o "Salvar Perfil" persistir.
+        Emiti-la no "Aplicar" repetiria o estrago do HARM-05 numa seção com
+        preço: um Aplicar disparado por ter mexido num gatilho tomaria a posse
+        dos bytes de volume do controle sem ninguém ter pedido volume nenhum.
+
+        NOTA DATADA — 10/08/2026 (pedido dela: *"cada feature de cada aba ao
+        clicarmos em salvar perfil e aplicar (botão verde) tudo fique salvo no
+        perfil ativo (...) speaker, mic (...) tudo"*). O parágrafo acima
+        CADUCOU como ausência e sobrevive INTEIRO como regra de portão: a seção
+        viaja, mas só com ``speaker.dirty`` — a MESMA regra do ``mouse`` e do
+        ``mic``, e é ela que impede o Aplicar de outra aba de mexer no som pelas
+        costas dela. O medo era de emissão INCONDICIONAL, e com o portão ele não
+        se realiza: sem gesto de som nesta sessão não há chave nenhuma no
+        payload, e "Soltar" (``without_speaker``) zera o rascunho e cala a seção
+        junto.
+
+        O que a nota corrige, medido em 10/08/2026: o botão verde levava o
+        volume, o mudo e o canal para o ARQUIVO (``to_profile``) e não os levava
+        ao CONTROLE — a única seção do rascunho que ela edita e que o "Aplicar"
+        não conhecia. ``volume=None`` nunca viaja, porque seção sem número faz o
+        backend cair na preferência ZERO e tomar a posse (SOM-02, armadilha 1);
+        e ``rota`` só viaja quando há opinião, porque o byte ``common[7]``
+        carrega junto o caminho do MICROFONE — chave ausente é "não escrevo".
+
+        A RÉGUA, que é o contrato com a outra ponta: o ``volume`` daqui é
+        **0-255**, a régua do REGISTRADOR — a mesma do ``SpeakerDraft``, a do
+        ``ProfileSpeakerConfig`` do esquema e a do IPC ``speaker.set``, que
+        recusa com *"'volume' fora de 0-255"*. Não é a porcentagem da tela:
+        quem converte é o ``core/speaker_scale.volume_do_percentual``, uma vez
+        só, no card (a régua única da SOM-02). Quem ler esta seção do outro lado
+        valida 0-255; validar 0-100 recusaria o volume normal dela (180 no
+        registrador) e o botão verde reportaria a seção como falha.
+
+        A chave é ADITIVA: seção desconhecida é IGNORADA pelo ``DraftApplier``,
+        nunca recusada, então daemon sem suporte não quebra — e sem ela a ponta
+        do daemon não teria o que receber.
 
         A seção ``mouse`` é ``None`` quando não foi tocada nesta sessão
         (``MouseDraft.dirty`` False) — o DraftApplier pula seção None
@@ -1118,6 +1150,17 @@ class DraftConfig(BaseModel):
         rota speed-only do applier, que não liga nem desliga nada.
         """
         rgb = self.leds.lightbar_rgb
+        # SOM-NO-AGORA-01 (10/08/2026) — ver a NOTA DATADA acima. Montada fora
+        # do dicionário porque o gate tem duas perguntas e a ``rota`` é
+        # condicional: um literal aninhado esconderia as duas.
+        speaker_ipc: dict[str, Any] | None = None
+        if self.speaker.dirty and self.speaker.volume is not None:
+            speaker_ipc = {
+                "volume": int(self.speaker.volume),
+                "muted": bool(self.speaker.muted),
+            }
+            if self.speaker.rota is not None:
+                speaker_ipc["rota"] = int(self.speaker.rota)
         return {
             "triggers": {
                 "left": {
@@ -1158,6 +1201,12 @@ class DraftConfig(BaseModel):
                 if self.mic.dirty
                 else None
             ),
+            # SOM-NO-AGORA-01: volume, mudo e canal do alto-falante — só quando
+            # ela mexeu no som nesta sessão (``dirty``) e há número para mandar.
+            # O nome das três chaves é o do IPC ``speaker.set`` de propósito: o
+            # daemon já sabe validá-las, e um segundo vocabulário para o mesmo
+            # byte seria mais uma tradução onde não há necessidade nenhuma.
+            "speaker": speaker_ipc,
             "keyboard": {
                 "key_bindings": (
                     {b: list(tokens) for b, tokens in self.key_bindings.items()}

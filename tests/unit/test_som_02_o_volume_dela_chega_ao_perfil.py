@@ -524,19 +524,43 @@ def test_soltar_recusado_pelo_daemon_nao_apaga_nada(
 # --- 6. As cercas: registrar NÃO é aplicar ------------------------------------
 
 
-def test_a_secao_do_alto_falante_nao_viaja_no_aplicar(pedidos: _Pedidos) -> None:
-    """SOM-02/E4: o "Aplicar" do rodapé não pode tomar a posse do volume.
+def test_a_secao_do_alto_falante_so_viaja_quando_ela_mexeu_no_som(
+    pedidos: _Pedidos,
+) -> None:
+    """NOTA DATADA — 10/08/2026 (O-VERDE-NAO-LEVAVA-O-SOM-01).
 
-    Registrar é para o SALVAR. Se a seção viajasse no ``to_ipc_dict``, um
-    "Aplicar" disparado por ela ter mexido num GATILHO mandaria ``speaker.set``
-    e tomaria os bytes de volume do controle sem ninguém ter pedido volume
-    nenhum — o estrago do HARM-05 numa seção com preço.
+    Este teste se chamava ``test_a_secao_do_alto_falante_nao_viaja_no_aplicar`` e
+    exigia ``"speaker" not in to_ipc_dict()``. **O medo dele estava certo e
+    continua valendo**, palavra por palavra:
+
+        Registrar é para o SALVAR. Se a seção viajasse no ``to_ipc_dict``, um
+        "Aplicar" disparado por ela ter mexido num GATILHO mandaria
+        ``speaker.set`` e tomaria os bytes de volume do controle sem ninguém ter
+        pedido volume nenhum — o estrago do HARM-05 numa seção com preço.
+
+    O que caducou foi a CURA, não a razão. A ausência total protegia contra o
+    Aplicar alheio e cobrava o preço no gesto dela: ela mexia no volume, clicava
+    no verde, e o som **não mudava** até a próxima troca de perfil — metade exata
+    da queixa de 10/08, *"literalmente nenhuma feature ficou lá"*.
+
+    O gate ``dirty`` separa as duas coisas que a ausência juntava: a seção viaja
+    quando ela mexeu NO SOM, e continua calada num Aplicar disparado de qualquer
+    outra aba. É a mesma regra que o ``mouse`` e o ``mic`` já usavam ao lado, e o
+    HARM-05 segue coberto — pelo gate, agora, e não pelo silêncio.
+
+    As duas metades estão medidas aqui: mexeu, viaja; não mexeu, não viaja.
     """
     card, dona = _bancada(perfil=_perfil(volume=VOLUME_VELHO))
+
+    # Antes de qualquer gesto de som: calado, mesmo com o Aplicar disparado.
+    assert dona.draft.to_ipc_dict().get("speaker") is None
+
     _arrastar_e_soltar(card, PORCENTAGEM_NOVA)
     pedidos.rodar()
 
-    assert "speaker" not in dona.draft.to_ipc_dict()
+    secao = dona.draft.to_ipc_dict().get("speaker")
+    assert secao is not None, "ela mexeu no volume e o Aplicar não leva o som"
+    assert secao["volume"] == volume_do_percentual(PORCENTAGEM_NOVA)
 
 
 def test_card_sem_dono_do_rascunho_continua_mandando_ao_vivo(
