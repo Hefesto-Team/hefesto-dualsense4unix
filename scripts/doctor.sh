@@ -744,6 +744,36 @@ check_wireplumber_source() {
             pass "microfone ativo é o DualSense (DUALSENSE_MIC_INTENDED=1 — desejado)"
             return ;;
     esac
+    # O-PRODUTO-PROMOVE-E-RECLAMA-01 (10/08/2026): o PROMOTOR no disco também é
+    # opt-in, e é o único que ela consegue dar.
+    #
+    # A incoerência foi medida no install dela, e terminava em `[FAIL]` na tela:
+    #
+    #   [FAIL] DualSense é o microfone ATIVO com outra fonte disponível
+    #   [ OK ] a fonte de captura padrão é uma entrada de verdade (alsa_input...DualSense...)
+    #
+    # Duas linhas seguidas, o mesmo aparelho, vereditos opostos — e as seis
+    # linhas seguintes todas OK. O motivo: em 08/08 (MONITOR-QUE-VENCE-01) o
+    # drop-in 51 deixou de SUPRIMIR e passou a PROMOVER a entrada do controle
+    # (`priority.session = 1500`), e ele entra por DEFAULT no install
+    # (`WITH_WIREPLUMBER_FIX=1`). O produto passou a criar a condição que este
+    # check continuou acusando. O nome do arquivo ainda diz "no-default-source",
+    # que é o fóssil da regra antiga.
+    #
+    # E o opt-in que existia era uma VARIÁVEL DE AMBIENTE. Pela regra desta casa
+    # (*"tudo tem que focar em funcionar na interface do app e no install"*),
+    # opt-in que só se alcança exportando env não é opt-in dela: é opt-in de
+    # quem lê o código. O promotor no disco, sim, é gesto dela — ele só existe
+    # se o install rodou sem `--keep-dualsense-mic` ou se ela clicou "Ligar" na
+    # aba Emulação.
+    #
+    # Continua ALARMANDO no caso que o check foi criado para pegar: promotor
+    # ausente e o DualSense virando padrão sozinho, que é o mic dela sequestrado
+    # sem ninguém pedir.
+    if [[ -f "${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf" ]]; then
+        pass "microfone ativo é o DualSense (o promotor está instalado — foi pedido)"
+        return
+    fi
     # ativo É o DualSense (não desejado) — distingue escassez (única fonte) de falha real.
     local has_other=""
     if command -v wpctl >/dev/null 2>&1; then
