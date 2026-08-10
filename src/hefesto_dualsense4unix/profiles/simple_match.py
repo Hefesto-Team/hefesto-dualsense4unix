@@ -74,8 +74,16 @@ def normalize_appid(raw: str | None) -> str | None:
 def from_simple_choice(
     choice: str,
     custom_name: str | None = None,
+    regra_do_disco: Match | None = None,
 ) -> MatchCriteria | MatchAny:
     """Converte escolha do radio "Aplica a" em MatchCriteria ou MatchAny.
+
+    ``regra_do_disco`` é a regra que este Salvar vai sobrescrever, e existe só
+    para o "steam_game": a página simples tem um campo (o número do jogo) e o
+    perfil no disco pode ter também um ``process_name`` do MESMO jogo, que ela
+    nunca viu na tela e portanto nunca pediu para tirar
+    (ESCONDER-EM-VEZ-DE-SAIR-01; ver `_process_name_a_preservar`). Omitir o
+    parâmetro é o comportamento histórico — nada a preservar.
 
     Regras:
     - "steam_game" + appid    → MatchCriteria(window_class=["steam_app_<id>"])
@@ -100,7 +108,10 @@ def from_simple_choice(
             if custom_name and custom_name.strip():
                 raise ValueError(MSG_STEAM_APPID_INVALIDO)
             raise ValueError(MSG_STEAM_SEM_APPID)
-        return MatchCriteria(window_class=[f"steam_app_{appid}"])
+        return MatchCriteria(
+            window_class=[f"steam_app_{appid}"],
+            process_name=_process_name_a_preservar(regra_do_disco, appid),
+        )
     if choice == "game":
         if custom_name and custom_name.strip():
             return MatchCriteria(process_name=[custom_name.strip()])
@@ -178,12 +189,45 @@ def simple_extra(match: Match) -> str:
 
 
 def _detect_steam_appid(match: Match) -> str | None:
-    """Appid quando o match é EXATAMENTE "um jogo da Steam", senão None.
+    """Appid quando o match é "um jogo da Steam", senão None.
 
-    Exige window_class com um único ``steam_app_<id>`` e nenhum outro campo:
-    ``MatchCriteria.matches`` é AND entre campos preenchidos, então um regex de
-    título junto mudaria o significado e o editor simples estaria mentindo
-    sobre o que o perfil faz.
+    Exige window_class com um único ``steam_app_<id>`` e NENHUM
+    ``window_title_regex``: ``MatchCriteria.matches`` é AND entre campos
+    preenchidos, então um regex de título junto ESTREITA o perfil para um
+    subconjunto das janelas daquele jogo (uma tela, um mapa, um título
+    traduzido). O editor simples não tem como exprimir esse recorte, e mostrar
+    o perfil como "Jogo da Steam <id>" seria mentir sobre o que ele faz.
+
+    NOTA DATADA — 10/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, relatado por ela:
+    *"sumiu a opção de entregar o controle pra Steam? pq ela é que impedia o
+    dual input em jogos como pragmata"*). A regra estrita também recusava
+    ``process_name``, e ESSA metade caducou. O parágrafo acima continua
+    valendo inteiro para ``window_title_regex``.
+
+    Por que ``process_name`` é diferente — e é MEDIDO, não deduzido:
+
+    1. Ele designa o MESMO jogo que a ``steam_app_<id>``, não um segundo alvo.
+       Trocar "3357650 E PRAGMATA.exe" por "Jogo da Steam 3357650" na tela não
+       muda a resposta a *de qual jogo é este perfil*, que é a única pergunta
+       que o seletor "Aplica a" faz.
+    2. A precisão que a recusa dizia proteger não existia. No journal dela de
+       10/08, com a janela ``steam_app_3357650`` em foco, o daemon registrou
+       ``profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']``
+       — o perfil ``Pragmata`` NÃO era candidato ao próprio jogo. Sob Proton o
+       basename de ``/proc/PID/exe`` é o binário do wine, nunca ``PRAGMATA.exe``
+       (é a razão de "steam_game" existir; ver o cabeçalho deste módulo), então
+       o AND com ``process_name`` não estreita o casamento: ele o ANULA.
+    3. O preço da recusa era a janela. Com ``detect_simple_preset`` devolvendo
+       ``None``, o perfil abria no editor avançado com o seletor rebaixado a
+       "Vale sempre", e a caixinha "Esconder o controle físico neste jogo" só
+       nasce com "Jogo da Steam" escolhido
+       (``profiles_actions._mostrar_caixa_do_steam_input``). O único gesto que
+       ela tinha para desfazer a duplicação de controle sumia da tela.
+
+    Reconhecer NÃO é apagar: ``from_simple_choice`` preserva o ``process_name``
+    do disco quando o appid não mudou (ver ``_process_name_a_preservar``). Sem
+    isso, reabrir e salvar tiraria da regra dela um campo que ela não pediu
+    para tirar — que é exatamente o round-trip quebrado de onde o R-12 nasceu.
 
     UNIFICA-PREDICADO-01: o reconhecimento vem da fonte única
     (`profiles/steam_app.py`), que já absorveu o ``.strip()`` daqui. O
@@ -195,10 +239,33 @@ def _detect_steam_appid(match: Match) -> str | None:
     """
     if not isinstance(match, MatchCriteria):
         return None
-    if len(match.window_class) != 1 or match.window_title_regex or match.process_name:
+    if len(match.window_class) != 1 or match.window_title_regex:
         return None
     appid = steam_appid_from_wm_class(match.window_class[0])
     return None if appid is None else str(appid)
+
+
+def _process_name_a_preservar(regra_do_disco: Match | None, appid: str) -> list[str]:
+    """O ``process_name`` que o editor simples não mostra, mas não pode apagar.
+
+    ESCONDER-EM-VEZ-DE-SAIR-01 (10/08/2026). ``_detect_steam_appid`` passou a
+    reconhecer o jogo da Steam mesmo com ``process_name`` junto — e a página
+    simples tem UM campo, o do número. Sem esta preservação, reabrir o perfil
+    ``Pragmata`` dela e salvar gravaria ``window_class`` sozinho: o
+    ``PRAGMATA.exe`` evaporaria porque a tela não tinha onde mostrá-lo, que é
+    o mesmo defeito de round-trip que o R-12 catalogou.
+
+    **Só do MESMO jogo.** Se ela digitar outro appid no campo, o perfil passou
+    a ser de OUTRO jogo, e carregar junto o nome do programa do jogo anterior
+    seria pior que apagar: o perfil novo nasceria com um AND que nunca casa,
+    sem nada na tela dizendo por quê. Regra de disco que não é jogo da Steam
+    (ou ausente) também não empresta nada.
+    """
+    if regra_do_disco is None:
+        return []
+    if _detect_steam_appid(regra_do_disco) != appid:
+        return []
+    return list(getattr(regra_do_disco, "process_name", None) or [])
 
 
 def _criteria_equal(a: MatchCriteria, b: MatchCriteria) -> bool:
