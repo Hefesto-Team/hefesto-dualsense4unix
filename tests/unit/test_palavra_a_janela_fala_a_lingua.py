@@ -67,8 +67,22 @@ _TAG_MARKUP = re.compile(r"<[^>]*>")
 _PRIMEIRA_LETRA = re.compile(r"[^\W\d_]", re.UNICODE)
 
 
+#: Tabelas de rótulo por estado: o texto vive na tupla e o `<span` é montado
+#: longe dali. LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026) — este portão coletava
+#: SÓ strings com `<span` dentro, e no dia em que os três estados do microfone
+#: viraram um dicionário (`_MIC_ROTULOS`) ele parou de enxergá-los. Reprovou
+#: dizendo que "Ligado" tinha sumido da tela; "Ligado" estava lá, o COLETOR é
+#: que tinha ficado míope.
+#:
+#: Portão que muda de cor por refatoração é portão que se aprende a desligar. A
+#: cura é olhar para os dois lugares — o markup montado na hora E as tabelas de
+#: rótulo —, e é por isso que este nome é uma lista, não um caso especial: a
+#: próxima tabela entra aqui.
+_TABELAS_DE_ROTULO: tuple[str, ...] = ("_MIC_ROTULOS",)
+
+
 def _textos_de_tela(caminho: Path) -> list[str]:
-    """Strings do módulo que carregam markup Pango — o que vai para o rótulo.
+    """Strings do módulo que chegam ao rótulo — por markup ou por tabela.
 
     A concatenação implícita já vem resolvida pelo parser; de f-string só
     entram os pedaços literais, que é onde mora a capitalização.
@@ -86,7 +100,39 @@ def _textos_de_tela(caminho: Path) -> list[str]:
                     if isinstance(parte, ast.Constant) and isinstance(parte.value, str)
                 )
             )
-    return [t for t in achados if "<span" in t]
+    # `>` depois do `<span`: a tag tem de FECHAR. Sem isto entra o esqueleto de
+    # f-string (`'<span foreground="'`, o pedaço literal de
+    # `f'<span foreground="{cor}">'`), que não é texto de tela nenhum — e
+    # reprovava como "começa em minúscula", apontando o `s` de `span`.
+    com_markup = [t for t in achados if "<span" in t and ">" in t.split("<span", 1)[1]]
+    return com_markup + _textos_das_tabelas(arvore)
+
+
+def _textos_das_tabelas(arvore: ast.AST) -> list[str]:
+    """O texto CURTO de cada estado nas tabelas de rótulo.
+
+    Só o segundo item da tupla `(cor, texto, explicação)`: é ele que vai para o
+    rótulo. A explicação longa mora no tooltip e obedece a outra regra (pode
+    começar com o nome do recurso em minúscula no meio de uma frase).
+    """
+    achados: list[str] = []
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.AnnAssign | ast.Assign):
+            continue
+        alvos = [no.target] if isinstance(no, ast.AnnAssign) else no.targets
+        nomes = {a.id for a in alvos if isinstance(a, ast.Name)}
+        if not (nomes & set(_TABELAS_DE_ROTULO)):
+            continue
+        valor = no.value
+        if not isinstance(valor, ast.Dict):
+            continue
+        for item in valor.values:
+            if not isinstance(item, ast.Tuple) or len(item.elts) < 2:
+                continue
+            texto = item.elts[1]
+            if isinstance(texto, ast.Constant) and isinstance(texto.value, str):
+                achados.append(texto.value)
+    return achados
 
 
 def _sem_markup(texto: str) -> str:

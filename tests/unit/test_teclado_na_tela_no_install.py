@@ -137,11 +137,21 @@ class TestInstalaEmTodoFormato:
 # ---------------------------------------------------------------------------
 
 
-def _roda_dono(tmp_path: Path, sessao: str) -> dict[str, str]:
+def _roda_dono(
+    tmp_path: Path, sessao: str, instalado: str = "nenhum"
+) -> dict[str, str]:
     """Executa o dono em dry-run e devolve a sentinela lida como dicionário.
 
     Nada é instalado e nada da máquina é tocado: `HEFESTO_OSK_DRY_RUN=1` corta
     antes do gerenciador de pacotes, e a sentinela vai para o tmp do teste.
+
+    `instalado` fecha o ÚLTIMO fio solto para a máquina real, e ele custou uma
+    reprova: até 10/08/2026 o dublê deixava o `binario_instalado` ler o PATH de
+    verdade, e no minuto seguinte ao `apt install wvkbd` na máquina dela o
+    `resultado` virou `ja-instalado` — o mesmo teste, o mesmo código, veredito
+    diferente porque o DISCO mudou. Um portão assim fica vermelho na máquina de
+    quem trabalha e verde na CI, e é o que se aprende a desligar. O default
+    "nenhum" é a máquina limpa, que é o cenário que estes testes descrevem.
     """
     sentinela = tmp_path / f"{sessao}.conf"
     env = dict(os.environ)
@@ -149,6 +159,7 @@ def _roda_dono(tmp_path: Path, sessao: str) -> dict[str, str]:
         "HEFESTO_OSK_STATE": str(sentinela),
         "HEFESTO_OSK_SESSAO": sessao,
         "HEFESTO_OSK_GERENCIADOR": "apt",
+        "HEFESTO_OSK_INSTALADO": instalado,
         "HEFESTO_OSK_DRY_RUN": "1",
     })
     r = subprocess.run(

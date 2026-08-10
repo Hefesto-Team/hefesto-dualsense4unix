@@ -18,7 +18,9 @@ Esta bateria vigia o que quebraria em silêncio:
    substring sem caixa);
 4. **par inválido é descartado, nunca corrigido** — a assimetria da casa manda
    errar para o lado do controle DUPLICADO, jamais para o do controle sumido;
-5. **a lista não cresceu** — `compose_env` continua emitindo um par só.
+5. **nenhum par de controle FÍSICO entra sem cobertura** — era "a lista não
+   cresceu"; virou isto em 10/08/2026, quando o espelho VIRTUAL do Steam Input
+   (`28de:11ff`) entrou. Ver a nota datada no teste 5.
 
 Nenhum aparelho, nenhum GTK, nenhum Xvfb: tudo é função pura sobre inteiros.
 """
@@ -210,11 +212,29 @@ def test_par_repetido_entra_uma_vez_so_e_a_ordem_de_chegada_sobrevive():
 # --- 5. a função NÃO está ligada --------------------------------------------
 
 
-def test_compose_env_continua_emitindo_um_par_so():
-    """A entrega é a função pura; a lista não cresceu, e não pode ter crescido.
+def test_compose_env_nao_esconde_controle_fisico_sem_cobertura_por_par():
+    """A trava original desta bateria, com o alvo dito por extenso.
 
-    Ligar isto sem a cobertura POR PAR da `E4` tiraria controle do jogo dela —
-    é o motivo MEDIDO pelo qual a entrega 3 continua BLOQUEADA.
+    NOTA DATADA — 10/08/2026 (TRES-CONTROLES-01)
+    ============================================
+    Este teste se chamava `test_compose_env_continua_emitindo_um_par_so` e
+    afirmava, literalmente, que a lista tinha um item e que não podia haver
+    vírgula. **A razão continua inteira e não foi revogada**: somar o par de um
+    controle FÍSICO ao IGNORE sem a cobertura POR PAR da `E4` esconde aquele
+    aparelho do jogo sem haver vpad que o devolva — e a assimetria desta casa
+    manda errar para o lado do DUPLICADO, nunca para o do controle sumido.
+
+    O que mudou é que um segundo par entrou, e ele **não é um controle da
+    mesa**: `28de:11ff` é o espelho VIRTUAL que o Steam Input cria a partir dos
+    controles que ele enxerga. Escondê-lo não subtrai aparelho nenhum — subtrai
+    uma CÓPIA de um aparelho que continua chegando ao jogo pelo nosso vpad. O
+    perigo que a trava vigiava não existe nesse par, e por isso ela deixou de
+    ser "um par só" e passou a ser o que sempre quis dizer: **nenhum par de
+    controle físico sem cobertura**.
+
+    O `PROTON_DISABLE_HIDRAW` continua com um par só, e esse "um" é literal: ele
+    nega hidraw, e negar hidraw ao vpad Edge `0df2` cortaria rumble, gatilhos e
+    lightbar do jogo (ver a constante em `launch_env.py`).
     """
     env = compose_env(
         native_mode=False,
@@ -222,7 +242,13 @@ def test_compose_env_continua_emitindo_um_par_so():
         flavor="dualsense",
         backends=["uhid"],
     )
-    assert env[_IGNORE] == _IGNORE_DE_HOJE
+    pares = env[_IGNORE].split(",")
+    # O físico continua lá, byte a byte, na caixa que é contrato.
+    assert _IGNORE_DE_HOJE in pares
+    # E nenhum par de controle FÍSICO além dele — que é o que a trava protege.
+    assert set(pares) == {_IGNORE_DE_HOJE, "0x28de/0x11ff"}, (
+        "entrou um par novo no IGNORE. Se for de um controle FÍSICO, ele "
+        "precisa da cobertura POR PAR da E4 antes — senão some do jogo dela."
+    )
     assert env[_DISABLE] == _DISABLE_DE_HOJE
-    assert "," not in env[_IGNORE]
     assert "," not in env[_DISABLE]
