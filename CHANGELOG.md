@@ -5,6 +5,8 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-08-10
+
 > **NOTA DATADA — 10/08/2026: esta seção tem um buraco de quatro dias, e ele
 > está declarado em vez de disfarçado.** O último commit a tocar este arquivo
 > foi o `0b5a3a2`, de 06/08/2026. As entregas de **09 e 10/08** foram escritas
