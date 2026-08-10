@@ -275,3 +275,46 @@ def _criteria_equal(a: MatchCriteria, b: MatchCriteria) -> bool:
         and a.window_title_regex == b.window_title_regex
         and sorted(a.process_name) == sorted(b.process_name)
     )
+
+
+def exigencia_invisivel(match: Match) -> str:
+    """O que o perfil exige e a página SIMPLES não mostra. "" = nada escondido.
+
+    A-REGRA-QUE-A-TELA-NAO-MOSTRA-01 (10/08/2026), e nasceu de uma foto dela.
+
+    O editor simples do "Jogo da Steam" tem um campo só — o número. O
+    `from_simple_choice` PRESERVA um `process_name` que já esteja no disco, e
+    isso é certo: salvar pela janela não pode apagar o que a tela não mostra
+    (ESCONDER-EM-VEZ-DE-SAIR-01). O que estava errado era o silêncio em volta.
+
+    Na foto do editor dela, o perfil "Pragmata" aparecia assim:
+
+        Aplica a: [Jogo da Steam]   Nome do jogo: 3357650
+
+    e no arquivo estava `process_name: ["PRAGMATA.exe"]`. O `matches` é AND, e o
+    campo invisível é o que decidia — o perfil não entrava sozinho, medido seis
+    vezes num intervalo de dois minutos com ela jogando. A tela mostrava uma
+    regra que não era a regra.
+
+    Preservar o invisível continua certo. Esconder que ele EXISTE é que não.
+
+    A frase é factual e não manda apagar nada: quem escreveu o critério foi ela,
+    e a decisão de mudá-lo é dela. Diz o que há e onde mexer.
+    """
+    if not isinstance(match, MatchCriteria):
+        return ""
+    if _detect_steam_appid(match) is None:
+        return ""
+    partes: list[str] = []
+    if match.process_name:
+        nomes = ", ".join(f'"{n}"' for n in match.process_name)
+        partes.append(f"nome do processo {nomes}")
+    if match.window_title_regex:
+        partes.append(f'título da janela "{match.window_title_regex}"')
+    if not partes:
+        return ""
+    return (
+        f"Este perfil também exige {' e '.join(partes)}, e só entra quando isso "
+        "bater junto com o número do jogo. Ligue o Modo avançado para ver e "
+        "mudar."
+    )
