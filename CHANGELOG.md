@@ -5,6 +5,250 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+> **NOTA DATADA — 10/08/2026: esta seção tem um buraco de quatro dias, e ele
+> está declarado em vez de disfarçado.** O último commit a tocar este arquivo
+> foi o `0b5a3a2`, de 06/08/2026. As entregas de **09 e 10/08** foram escritas
+> aqui hoje (as sete seções logo abaixo). As de **07 e 08/08** — 46 commits, do
+> `71727a0` ao `47a6275`, entre eles a máscara por controle, o diálogo de
+> relançamento, a separação do AGORA e do DEPOIS no Aplicar, e a leva de
+> Bluetooth do rádio — **continuam fora**. Quem for fechar a próxima versão
+> começa por `git log --format='%h %ad %s' --date=short 0b5a3a2..HEAD`.
+
+### O touchpad voltou a ser o touchpad do sistema, nos três modos
+
+Achado dela em 09/08/2026, com o controle na mão: *"quando eu conecto o controle
+DualSense no PC via BT ou cabo, ANTES do Hefesto, o touchpad funciona como
+mouse. No Hefesto impedimos isso de funcionar em todos os modos. A ideia do
+touchpad é ele voltar a funcionar assim, seja no modo nativo ou dualsense."*
+
+Era uma regra nossa com curinga, apagando o touchpad físico do libinput em USB,
+Bluetooth e no controle virtual, e **nos três modos** — inclusive na Conexão
+Nativa, onde não há emulação nenhuma com que brigar, e no "Controlar o PC" com a
+emulação de mouse **desligada**, que era o estado dela. **MEDIDO** no nó vivo
+(`/run/udev/data/c13:68`): `ID_INPUT_TOUCHPAD=1` **e**
+`LIBINPUT_IGNORE_DEVICE=1` — o dedo andava e o cursor não.
+
+As duas brigas que a regra curava continuam curadas, cada uma pelo lado certo da
+cerca. O **toque em dobro** (medido em 21/07) era o libinput enxergando dois
+ponteiros alimentados por um dedo: o touchpad físico e o do vpad, que recebe os
+pontos de toque copiados do report cru. Agora só o do **vpad** fica fora do
+libinput, para sempre e em todos os modos — o jogo lê o touchpad pelo HID do
+vpad, nunca pelo ponteiro. O **cursor engasgado** (26/06) era o Hefesto e o
+libinput movendo o mesmo cursor a partir do mesmo dedo: a cura virou de
+**runtime** e mora no produto — o `TouchpadReader` lê a própria flag no nó que
+abriu e se cala quando o sistema é o ponteiro. Um dono por vez, decidido pelo
+estado real do nó e não por um modo que o udev não tem como conhecer no
+`add|change`. O vpad é reconhecido por duas âncoras de propósito: o nome
+(`*Hefesto*Touchpad`, que cobre o atual e o legado) e o MAC forjado na faixa
+`02:fe:*` — já foi uma mudança de nome que furou o match exato de 26/06.
+
+**O preço foi posto na mesa e aceito por ela: as três regiões do touchpad saíram
+da aba de teclas.** Com o touchpad de volta ao sistema o clique dele já é clique
+de mouse, e somar a tecla faria um clique **apagar texto** sem ela pedir — o
+padrão de fábrica da região esquerda era `KEY_BACKSPACE`. Listar na janela um
+botão que o produto não dispara mais seria a janela mentindo. Voltar é a mesma
+decisão do outro lado, e está escrita no cabeçalho da regra: o touchpad volta a
+ser do Hefesto e as três regiões voltam junto — uma coisa não vai sem a outra.
+
+**VALIDADO POR ELA** no desktop e dentro do jogo, sem dobrar.
+
+### O teclado emulado não digitava letra, e a tela passou a dizer isso
+
+Ela disse *"o botão emular teclado não funciona"* — e o motor funciona: 34
+teclas emitidas no journal, o Alt+Tab pegou. O que não funcionava era a
+**promessa**. **NENHUM dos nove atalhos de fábrica digita uma letra** (são
+Super, PrintScreen, Alt+Tab, Alt+Shift+Tab, Enter, Delete e Backspace), e o
+único caminho para escrever texto — o L3, que abre o teclado na tela — dependia
+de um programa que o produto **não instalava, não declarava e não conferia**.
+
+Pior: os **onze botões sem tecla eram escondidos** da lista, que por isso
+parecia completa. Quem ligava "Emular teclado" via seis linhas, apertava X,
+Círculo, Quadrado e o direcional, e concluía, com razão, que o teclado não
+funcionava. Agora a aba mostra os vinte, diz o que **não** digita, e o L3 sem o
+programa **avisa na tela** em vez de sumir.
+
+### O produto passou a instalar o teclado na tela que ele promete no L3
+
+Pergunta dela: *"pera, isso não deveria estar no install então? tipo sem
+flag?"*. Estava certa, e o número era constrangedor: `grep -c onboard
+install.sh` devolvia **zero**.
+
+**A escolha do pacote é MEDIDA, não preferida.** Em Wayland vai o `wvkbd`; em
+X11, o `onboard`. O `apt-cache show onboard` traz `libxtst6` — XTEST é **como**
+ele digita, e em sessão Wayland ele abre por XWayland e as teclas só chegam a
+clientes XWayland: abre e não digita, que é pior que não abrir. O
+`wayland-info` do compositor dela expõe `zwp_virtual_keyboard_manager_v1` e
+`zwlr_layer_shell_v1`, os dois protocolos de que o wvkbd precisa. E o `.deb`
+entrega exatamente `/usr/bin/wvkbd-mobintl`, o nome que o código já procurava.
+
+**Dois defeitos que isso revelou.** A lista de candidatos era `("onboard",
+"wvkbd-mobintl")`, com o onboard **primeiro**: com os dois instalados em
+Wayland, o daemon escolheria justamente o que não digita. Agora a ordem sai da
+sessão viva (`WAYLAND_DISPLAY` antes de `DISPLAY` — numa sessão Wayland com
+XWayland os dois estão setados). E o cache do resolvedor era **eterno**: ela
+rodaria `apt install` com o daemon no ar e continuaria sem nada até o próximo
+start. Ganhou prazo de 10 s, e por isso o comando dela não precisa mais de
+reinício.
+
+**Entra em todos os formatos**, e o caminho não-nativo foi respeitado:
+`Recommends` no `.deb` (o apt instala Recommends por padrão — é o que atende
+"sem flag") e no Fedora, `optdepends` no Arch, argumento com default nulo no
+Nix, e **bundlado** no Flatpak (v0.14.3) — dentro do sandbox um pacote do host é
+invisível, então sem o módulo a busca pelo binário devolveria "não existe" para
+sempre, por construção. O `uninstall.sh` **não remove** o pacote: é software de
+sistema.
+
+**O doctor confere e não cura**, e a ausência tem **quatro histórias** com o
+mesmo `command -v` vazio. Uma sentinela as separa: ela escolheu pular (info, não
+falha), o install tentou e falhou (falha, com o motivo), o install nunca passou
+(falha), ou estava instalado e sumiu — e aí o veredito diz "não fomos nós: o
+uninstall nunca remove pacote de sistema". Máquina curada e máquina quebrada
+deixam de imprimir o mesmo veredito.
+
+Para quem já instalou antes disto: `sudo apt install wvkbd`, e o L3 passa a
+abrir na hora.
+
+### A aba "No jogo": o que atravessa para o jogo, recurso por recurso
+
+Ela nomeou o buraco: *"eu sei que a aba status é uma coisa, mas isso converter
+em input seja via xbox ou dualsense ou nativo é outra"*. Estava certa — a Status
+mostra o controle **físico**, e não havia tela nenhuma do lado do jogo. Para
+responder, a única saída era abrir o testador da Steam.
+
+Agora há uma **linha por recurso, na mesma ordem sempre** (giroscópio, vibração,
+gatilho, luz, clique do touchpad e som do controle): ela troca a máscara na aba
+Início, aplica, e confere olhando duas vezes para o mesmo lugar. A aba distingue
+"no jogo agora" de "parou" de "sem pedido ainda" de "a máscara Xbox 360 não tem
+giroscópio" — este último apagado, não vermelho: não é avaria nossa, é a API do
+controle de Xbox. E diz a verdade na Conexão Nativa, onde não há vpad para
+medir.
+
+**A vibração ganhou instrumento e revelou um defeito real:** o backend da
+máscara Xbox nunca teve os contadores de força, e a aba pergunta "teve força?"
+antes de "teve pedido?". Com a vibração funcionando perfeitamente no Xbox, a
+tela dizia "o jogo pediu força zero em todas" — um modo inteiro era impossível
+de medir, por construção. O anel dos últimos 8 pedidos crus passa a separar o
+que era indistinguível: se o pedido chega e descartamos, se é o kernel se
+passando por jogo, ou se ninguém escreveu.
+
+**CORREÇÃO DE UMA AFIRMAÇÃO DA CASA:** "plays: 4, nao_nulos: 0" foi lido como "o
+jogo pediu quatro vezes e veio zero". Não estava provado — o contador não sabe
+**quem** escreveu, e o driver do kernel também escreve nesse canal a cada
+fechamento de joystick. O que os números dizem é outra coisa: 19 escritas em
+três horas de jogo, ou seja, silêncio no canal.
+
+### A janela passou a dizer qual perfil daquele jogo não entrou — e o que ele exigiu
+
+Ela foi jogar Pragmata para testar touchpad e giroscópio, e o controle veio
+duplicado. O perfil `Pragmata` estava no disco, com o `appid` certo, e **não
+entrou**. O daemon sabia: quatro linhas de
+`profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']
+wm_class=steam_app_3357650`. A janela não disse nada. **O journal não é
+interface.**
+
+**A CAUSA, ISOLADA.** O critério era `window_class` **E** `process_name:
+PRAGMATA.exe`, e `MatchCriteria.matches` é **AND**. Reproduzido fora do journal,
+com os perfis dela e o mesmo código: como está no disco os candidatos são
+`['fallback']`; tirando **só** o `PRAGMATA.exe` viram `['fallback',
+'Pragmata']`. Sob Proton o basename de `/proc/PID/exe` nunca é o `.exe` do jogo
+— é o binário do wine. O AND com `process_name` não estreitava: **anulava**.
+
+**O TAMANHO**, no journal de 30 dias dela: os perfis que o autoswitch já elegeu
+sozinho — Sackboy, Big Walk, Dont Scream, Navegação — são **todos** identificados
+por `window_class`, nenhum com `process_name`. E os cinco que só têm
+`process_name` (Ação, Aventura, Corrida, Esportes, FPS) **nunca apareceram,
+nenhuma vez**. Cinco perfis dela nunca ativaram, e ela não tinha como saber.
+
+**O que entrou:** a aba "No jogo" ganha uma linha amarela com o exigido e o
+observado lado a lado — *"O seu perfil 'Pragmata' é deste jogo, mas não entrou:
+ele exige nome do processo 'PRAGMATA.exe', e aqui vê 'wine64-preloader'.
+Enquanto isso, vale o perfil 'fallback'."* Factual, nunca prescritiva; só as
+regras **daquele** jogo (na máquina dela doze perfis "não entram" a cada janela
+de desktop, todos por funcionarem como deveriam); o rótulo é o do editor ("nome
+do processo"), senão a frase mandaria procurar um campo que a tela não tem. E
+aparece nos três modos, inclusive no Nativo — onde é justamente o perfil dela
+que ligaria o modo certo.
+
+**O custo foi parte da entrega:** `state_full` roda a 10 Hz e
+`load_all_profiles()` lê o disco inteiro — seriam ~140 JSON por segundo. Fora de
+janela de jogo não toca no disco; dentro dela, cache chaveado pela tripla que o
+matcher consome.
+
+**O que NÃO foi feito, e é decisão:** o perfil dela não foi mexido — *"a vontade
+na GUI prevalece sempre"*, e quem escreveu aquele campo foi ela. E nada foi
+afirmado sobre o Proton no veredito do doctor: a leitura tentadora ("o
+`/proc/PID/exe` é o binário do wine") não foi medida com jogo Proton aberto, e
+por isso não entrou em código, em frase de tela nem em diagnóstico.
+
+### A caixinha do jogo dela sumia porque o perfil do Pragmata não era candidato ao Pragmata
+
+Do mesmo campo, outro sintoma: *"sumiu na interface. mas sumiu na interface?"*.
+A caixinha do Steam Input não sumiu — o perfil dela **deixou de ser reconhecido
+como jogo da Steam**. O `_detect_steam_appid` recusava qualquer campo além da
+classe; sem reconhecer, o editor abria no Modo avançado, o seletor "Aplica a:"
+ia para "Vale sempre", e a caixinha — que é filha da página simples e só aparece
+em "Jogo da Steam" — sumia da tela.
+
+E a medição achou coisa pior que o sintoma: o comentário do R-12 dizia que a
+recusa protegia precisão, e a precisão **não existia** — era o mesmo AND acima.
+Quem impedia o catch-all de desktop de entrar por cima era o veto R-21, não a
+regra dela.
+
+O `process_name` foi **preservado** no round-trip, e isso é escolha: apagá-lo em
+silêncio seria mudança que ela não pediu. Ela pode tirá-lo pelo Modo avançado —
+e provavelmente deve, porque é ele que impede o perfil de ligar sozinho no jogo.
+A preservação vale só quando o `appid` não muda. Fica de pé o que o R-12
+protegia de verdade: regex de título junto continua indo para o editor avançado.
+
+Um perfil dela estava afetado; os outros três de jogo da Steam (`sackboy`,
+`big_walk`, `dont_scream`) têm só a `window_class` e sempre abriram certo.
+
+### Também nesta leva (09-10/08/2026)
+
+- **O acesso aos nós de entrada virou produto (OQ-6).** Decisão dela: *"touchpad
+  e giroscópio devem funcionar por default em todos os modos possíveis"*. Três
+  linhas de udev com TAG `uaccess` nos nós de movimento e touchpad — o que
+  funcionava por **acidente** (ela estar no grupo `input`, por fora do produto)
+  passou a ser instalado. Medido antes e depois no disco dela: os dois nós
+  ganharam ACL da sessão, e pegou sem replug. São **15** regras udev por padrão
+  agora (a 16ª, a `75`, continua só com `--disable-usb-audio`).
+- **O "Modo jogo" passou a ser guardado no perfil, inclusive em catch-all.**
+  Decisão dela — *"a vontade na GUI prevalece sempre"*. A recusa da janela caiu;
+  o alçapão continua fechado pelo gate do daemon, que existia desde 05/08 e que
+  esta recusa passou **quatro dias** duplicando. Provado arrancando o gate (o
+  teste reproduz o restauro do BOOT acordando com mouse e teclado suspensos). O
+  preço vai para a tela: num catch-all o valor fica no arquivo e o daemon não o
+  liga sozinho.
+- **O som do controle chega ao perfil — volume, mudo E canal de saída.** A
+  função que gravaria isso tinha **zero chamadores desde 21/04**: ela ajustava,
+  salvava, e o perfil gravava o valor **velho** — que depois voltava ao hardware
+  na ativação. O gesto dela era desfeito pelo próprio gesto de salvar.
+- **"Controlar o PC" deixou de entrar mudo.** O modo entrava e restaurava a
+  preferência de mouse dela — que estava desligada. O daemon fazia o certo (não
+  impor preferência é decisão medida do HARM-06), mas o modo cujo **nome**
+  promete controlar o PC entrava sem fazer nada e nenhuma superfície dizia por
+  quê. Agora a aba Início diz, e diz onde ligar. Curou junto uma frase que
+  mandava para as abas "Mouse e Teclado", que não existem desde 28/07.
+- **A bateria do controle passou a chegar ao jogo** — era fixa em "5%
+  descarregando para sempre", e o chamador nunca existiu desde 15/07.
+- **O aviso falso do co-op** ("1 jogador saiu" com os dois controles na tela
+  dela) foi curado na fonte: passa a contar controle **físico** fora da mesa,
+  não vpad recolhido.
+- **A janela aprendeu a dizer** que um controle está ligado no rádio e o sistema
+  não conseguiu adotá-lo — antes escrevia "Nenhum controle conectado" para um
+  controle ligado e pareado.
+- **As telas pararam de mentir:** "Cor **enviada** ao controle" em vez de
+  "aplicada" (o ok significa que o report saiu, nunca que a barra acendeu), e a
+  linha do rumble passa a falar no zero, que é justamente quando ela tinha algo
+  a dizer.
+- **O backoff do retry do `hid-playstation`** passou a cavalgar os 3 s do BlueZ
+  (eram 100 ms contra uma janela de 3 s — 30x pequeno demais). A hipótese de
+  25/07 caiu com nota datada: 6 de 6 abortos retentaram e nenhum foi salvo.
+- **O doctor aprendeu** a detectar controle que o driver abortou, distinguindo
+  órfão AGORA de aborto já recuperado, e a conferir o acesso aos nós de entrada
+  — dizendo a verdade incômoda: *"funciona NESTA máquina e não funcionaria numa
+  limpa"*.
+
 ### A janela morria num aviso que ela não conseguia ver
 
 **MEDIDO em 06/08/2026 às 20h22, com ela na frente da tela.** Baixando a

@@ -79,7 +79,8 @@
 # GANCHOS DE TESTE (é assim que o portão de paridade roda isto sem sudo e sem
 # tocar na máquina): HEFESTO_OSK_STATE (caminho da sentinela),
 # HEFESTO_OSK_SESSAO (força wayland|x11|desconhecida), HEFESTO_OSK_GERENCIADOR
-# (força apt|dnf|pacman|nenhum), HEFESTO_OSK_DRY_RUN=1 (nunca chama o
+# (força apt|dnf|pacman|nenhum), HEFESTO_OSK_INSTALADO (força o que já está
+# instalado: "nenhum" ou o nome do binário), HEFESTO_OSK_DRY_RUN=1 (nunca chama o
 # gerenciador de pacotes).
 
 set -uo pipefail
@@ -170,8 +171,24 @@ pacote_do_binario() {
 
 # Qualquer um dos dois que esteja no PATH — inclusive o "errado" para esta
 # sessão. Quem julga se serve é quem chama.
+#
+# HEFESTO_OSK_INSTALADO é o quarto hook de teste, e nasceu de um portão que
+# MUDOU DE COR SOZINHO em 10/08/2026: o `test_a_sentinela_grava_o_que_aconteceu`
+# passou meses verde afirmando `resultado=dry-run` e reprovou no minuto seguinte
+# ao `apt install wvkbd` na máquina dela — porque lia o PATH REAL e passou a ver
+# o binário. O teste estava certo sobre o produto e errado sobre si mesmo: um
+# portão que depende do disco de quem o roda fica vermelho aqui e verde na CI, e
+# é o portão que alguém desliga na semana seguinte.
+#
+# Vazio (o normal) = lê o PATH, como sempre. "nenhum" = finge que não há nada.
+# Qualquer outro valor = finge que AQUELE binário está instalado.
 binario_instalado() {
     local b
+    if [[ -n "${HEFESTO_OSK_INSTALADO:-}" ]]; then
+        [[ "${HEFESTO_OSK_INSTALADO}" == "nenhum" ]] && return 1
+        printf '%s\n' "${HEFESTO_OSK_INSTALADO}"
+        return 0
+    fi
     for b in "${OSK_BIN_WAYLAND}" "${OSK_BIN_X11}"; do
         if command -v "${b}" >/dev/null 2>&1; then
             printf '%s\n' "${b}"

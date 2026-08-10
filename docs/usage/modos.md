@@ -18,6 +18,61 @@ para a Sony e a sua configuração de luzes não vale.
 Pela linha de comando os mesmos três estados são `mouse on`, `gamepad on` e
 `native on`.
 
+> **O seletor mora no quadro "Quando o jogo abrir", e o nome é literal**
+> (08/08/2026). O jogo lê modo e máscara **uma vez, na abertura** — clicar num
+> modo com o jogo já aberto não muda nada dentro dele. O clique **marca** a
+> escolha; é o **Aplicar** do rodapé que a aplica, e quando a mudança só valeria
+> na próxima abertura com um jogo na frente, a janela **pergunta** em vez de
+> aplicar por cima. Cor, brilho, gatilho, vibração e microfone — esses sim mudam
+> na hora — moram em outras abas.
+
+## O touchpad é touchpad do sistema
+
+**Em qualquer um dos três modos**, o dedo no touchpad do DualSense move o cursor
+do desktop pelo libinput, exatamente como move quando o controle é plugado sem o
+Hefesto instalado. O clique dele é clique de mouse.
+
+Isso é decisão dela, de 09/08/2026, a partir do que ela mediu com o controle na
+mão: *"quando eu conecto o controle DualSense no PC via BT ou cabo, ANTES do
+Hefesto, o touchpad funciona como mouse. No Hefesto impedimos isso de funcionar
+em todos os modos. A ideia do touchpad é ele voltar a funcionar assim, seja no
+modo nativo ou dualsense"*.
+
+> **NOTA DATADA — 09/08/2026: até esta data o Hefesto apagava o touchpad
+> físico, e em todos os modos.** Uma regra udev com curinga tirava o touchpad do
+> libinput em USB, Bluetooth e no controle virtual, nos três modos — inclusive
+> na **Conexão Nativa**, onde não há emulação nenhuma com que brigar.
+> **GRAU: MEDIDO** no nó vivo dela (`/run/udev/data/c13:68`):
+> `ID_INPUT_TOUCHPAD=1` **e** `LIBINPUT_IGNORE_DEVICE=1` — o dedo andava e o
+> cursor não. A regra nasceu de duas brigas reais, e as duas continuam curadas,
+> cada uma pelo lado certo da cerca:
+>
+> - **o toque em dobro** (21/07) era o libinput enxergando dois ponteiros
+>   alimentados por um dedo — o touchpad físico e o do **controle virtual**, que
+>   recebe os pontos de toque copiados do report cru. Hoje quem fica fora do
+>   libinput é **só o do controle virtual**, para sempre e em todos os modos: o
+>   jogo lê o touchpad pelo HID do vpad, nunca pelo ponteiro do libinput. Nada
+>   se perde e o dobro não volta;
+> - **o cursor engasgado** (26/06) era o Hefesto e o libinput movendo o mesmo
+>   cursor a partir do mesmo dedo. A cura agora é de **runtime** e mora no
+>   produto: quando o sistema é o ponteiro, o leitor de touchpad do Hefesto não
+>   acumula movimento nem entrega região de clique ao teclado emulado. Um dono
+>   por vez, decidido pelo estado real do nó.
+>
+> **O preço, aceito por ela com o número na mesa:** as três regiões do touchpad
+> (esquerda / meio / direita) saíram da aba Navegação. Com o clique já sendo
+> clique de mouse, somar a tecla faria um clique **apagar texto** — o padrão de
+> fábrica da região esquerda era Backspace. Voltar é a mesma decisão do outro
+> lado, e as duas coisas andam juntas.
+>
+> **Validado por ela** no desktop e dentro do jogo, sem dobrar.
+
+Nada disso é o **mouse emulado**, que é outra coisa e mora na aba Navegação: o
+mouse emulado move o cursor pelo **analógico esquerdo**, só existe no modo
+"Controlar o PC" e tem interruptor próprio. Os dois podem estar de pé ao mesmo
+tempo — dois caminhos até o mesmo cursor, cada um com o seu gesto. Ver
+[`interface.md`](interface.md#navegação).
+
 > **Mudou de nome em 06/08/2026.** O terceiro modo se chamava
 > **"Jogar direto (Sony)"**. O nome caducou por decisão dela — *"Jogar direto é
 > péssimo também. Já tinha pedido pra deixarmos: Conexão Nativa (Sony)"* — e o
@@ -167,7 +222,19 @@ instalador já faz isso por padrão em todos os jogos; `--keep-steam-input` pres
 
 Com a emulação de mouse ligada, o stick "anda sozinho" dentro do jogo. O combo
 **PS + Options** alterna o modo jogo: suspende a emulação de mouse/teclado
-mantendo os atalhos de troca de perfil vivos, e avisa por notificação. É
-transitório — não sobrevive ao reinício do daemon.
+mantendo os atalhos de troca de perfil vivos, e avisa por notificação. O gesto
+em si é transitório — não sobrevive ao reinício do daemon.
+
+> **NOTA DATADA — 09/08/2026: "é transitório" deixou de ser a história
+> completa.** O **gesto** continua transitório, e é isso que a frase acima diz
+> hoje. O que mudou é que a janela passou a **guardar** o modo jogo no perfil: o
+> interruptor da aba Emulação escreve no rascunho e o **Salvar Perfil** do
+> rodapé o persiste em `suppress_desktop_emulation`, **inclusive** em perfil
+> "Vale sempre" — a recusa que existia nesse caso caiu por decisão dela, *"a
+> vontade na GUI prevalece sempre"*. Num perfil "Vale sempre" o valor fica
+> guardado no arquivo mas o daemon **não o liga sozinho** na ativação seguinte,
+> e isso é de propósito: é o que impede o desktop de acordar sem ponteiro depois
+> de um boot. Detalhe do campo em
+> [`creating-profiles.md`](creating-profiles.md#seção-opcional-mouse-e-suppress_desktop_emulation).
 
 Ver [`hotkeys.md`](hotkeys.md) para os demais atalhos do controle.

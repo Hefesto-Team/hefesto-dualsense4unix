@@ -231,6 +231,22 @@ O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões
 4. **Flathub**: o Hefesto - Dualsense4Unix não está publicado no Flathub ainda. A instalação é
    via bundle local ou build a partir do código-fonte.
 
+5. **Teclado na tela: só `wvkbd`, e ele vem embutido** (desde 10/08/2026). O
+   **L3** do controle abre o teclado na tela — o único caminho de fábrica para
+   escrever texto. Nos outros formatos o programa vem do sistema (`wvkbd` em
+   Wayland, `onboard` em X11); aqui não pode: **dentro do sandbox um pacote do
+   host é invisível**. Este manifesto não pede
+   `--talk-name=org.freedesktop.Flatpak` nem nada que permita
+   `flatpak-spawn --host`, então o daemon só enxerga o que está em `/app` — sem
+   um módulo próprio, a busca pelo binário devolveria "não existe" **para
+   sempre, por construção**. Por isso o manifesto constrói o `wvkbd` (v0.14.3,
+   binário `wvkbd-mobintl`) como módulo do bundle.
+
+   **O `onboard` não é embutido, e é decisão, não esquecimento:** o sandbox
+   monta `--socket=wayland` e o `onboard` digita por XTEST — dentro daqui ele
+   abriria e não digitaria fora do XWayland. Embutir um teclado que abre e não
+   digita é pior do que não embutir nenhum.
+
 ---
 
 ## Construir e distribuir

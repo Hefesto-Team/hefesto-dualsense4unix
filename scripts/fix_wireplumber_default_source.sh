@@ -14,8 +14,9 @@
 #     --disable-source  DESABILITA a source do DualSense (node.disabled; só-HID).
 #                       Remove o mic do controle de vez — vence até escassez de fonte.
 #     --reset-only      só reelege a fonte padrão e reinicia (sem (re)instalar drop-in).
-#     --enable-mic      REMOVE os drop-ins de supressão e deixa o mic do DualSense
-#                       utilizável/elegível como padrão (o oposto de --install).
+#     --enable-mic      REMOVE os drop-ins de supressão (52/53), GARANTE o
+#                       promotor (51) e deixa o mic do DualSense utilizável e
+#                       acima de qualquer monitor (o oposto de --install).
 #     --promote-source  PROMOÇÃO EXPLÍCITA (MIC-USB-01): faz o mic do controle ser
 #                       o microfone PADRÃO e persiste a escolha. É o --enable-mic
 #                       mais a cura das camadas 1 e 2 e a eleição de fato.
@@ -473,6 +474,66 @@ usb_quirk_active_session() {
     return 1
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026) — o 51 deixou de ser supressão em
+# 08/08, e esta função continuou tratando-o como se fosse.
+#
+# Até MONITOR-QUE-VENCE-01 (commit 6c428cd) o drop-in 51 REBAIXAVA a entrada do
+# controle para `priority.session = 50`, e apagá-lo aqui era exatamente o que o
+# nome dizia: tirar uma supressão. Naquele commit ele virou o CONTRÁRIO — a
+# entrada passou a 1500, a faixa MEDIDA que fica acima de qualquer monitor
+# (1109 nesta máquina) e abaixo de qualquer captura real (2009). O 51 é o
+# PROMOTOR desde então, e o `rm -f` que ficou aqui desarmava a cura de 08/08 no
+# gesto de LIGAR o microfone: sem o arquivo, a entrada volta ao 50 de fábrica, o
+# monitor vence de novo por vinte e duas vezes, e o que qualquer aplicativo
+# grava é o eco do que sai — não a voz dela. A aba Emulação, enquanto isso,
+# escrevia "Ligado" em verde, porque só olhava o 52/53.
+#
+# Quem liga o mic quer o mic: o promotor FICA, e passa a ser GARANTIDO
+# (instalado se faltar). É ele que faz o botão "Ligar" entregar a voz em vez do
+# eco. Supressão de verdade é só o 52/53 (`node.disabled = true`).
+#
+# Por que a promoção EXPLÍCITA continua removendo o 51 (`sem-promotor`, abaixo):
+# `doctor.sh:_prefere_mic_do_dualsense` lê a AUSÊNCIA do 51 como "a usuária
+# promoveu o controle a dedo". Manter o arquivo ali mudaria o significado de um
+# sinal que outro programa consome — está anotado como item aberto na sprint
+# 2026-08-08-MONITOR-QUE-VENCE-01.
+#
+# Portão: `tests/unit/test_ligar_que_apagava_a_cura_01.py`.
+# ─────────────────────────────────────────────────────────────────────────────
+# SÓ ARQUIVOS: nenhum `systemctl`, `wpctl` ou `pactl` vive aqui. É o que permite
+# ao portão exercitar esta função DE VERDADE num HOME de mentira, sem tocar no
+# áudio de quem roda a suíte.
+#   $1 = "sem-promotor" -> promoção explícita: o 51 sai junto.
+#        (vazio)        -> o padrão do `--enable-mic`: o 51 é garantido.
+_arma_dropins_do_mic() {
+    local modo="${1:-}"
+    # Os drop-ins que DESABILITAM o mic (52) e a saída (53) do DualSense saem
+    # sempre: são eles que impedem o nó de existir. Idempotente.
+    local f removed=0
+    for f in "${DROPIN_DISABLE_DST}" "${DROPIN_OUTPUT_DST}"; do
+        if [[ -f "$f" ]]; then
+            rm -f "$f" && { log "removido drop-in de supressão: $f"; removed=1; }
+        fi
+    done
+    [[ "$removed" -eq 0 ]] && log "nenhum drop-in de supressão presente (mic já livre)"
+    if [[ "${modo}" == "sem-promotor" ]]; then
+        if [[ -f "${DROPIN_DST}" ]]; then
+            rm -f "${DROPIN_DST}" \
+                && log "removido o drop-in 51 (promoção explícita: a ausência dele é o sinal que o doctor lê)"
+        fi
+        return 0
+    fi
+    if [[ -f "${DROPIN_DST}" ]]; then
+        log "promotor mantido: ${DROPIN_DST} (a entrada do controle fica acima de qualquer monitor)"
+    elif install_dropin; then
+        log "promotor instalado: sem ele o monitor da saída venceria o microfone"
+    else
+        log "AVISO: não consegui instalar o promotor (${DROPIN_NAME}) — o mic fica livre, mas um monitor pode vencê-lo"
+    fi
+    return 0
+}
+
 enable_mic_dualsense() {
     # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: ligar o mic SEM o quirk de áudio USB
     # ativo nesta sessão pode REABRIR o storm -71 (o controle começa a cair no
@@ -482,16 +543,10 @@ enable_mic_dualsense() {
         printf '[wp-fix] AVISO: ligar o mic do DualSense SEM o quirk de áudio USB ativo nesta sessão pode REABRIR o storm -71 (o controle cai no meio do jogo).\n' >&2
         printf '[wp-fix]        fix: aplique o quirk com `scripts/install_usb_quirk.sh` (efetivo só no próximo boot/replug).\n' >&2
     fi
-    # Remove os drop-ins que suprimem/desabilitam o mic do DualSense, deixando-o
-    # utilizável e elegível como fonte padrão (a persistência do default fica por
-    # conta do estado do WirePlumber + profile pro-audio do card). Idempotente.
-    local f removed=0
-    for f in "${DROPIN_DST}" "${DROPIN_DISABLE_DST}" "${DROPIN_OUTPUT_DST}"; do
-        if [[ -f "$f" ]]; then
-            rm -f "$f" && { log "removido drop-in de supressão: $f"; removed=1; }
-        fi
-    done
-    [[ "$removed" -eq 0 ]] && log "nenhum drop-in de supressão presente (mic já livre)"
+    # Deixa o mic utilizável e elegível como fonte padrão (a persistência do
+    # default fica por conta do estado do WirePlumber + profile pro-audio do
+    # card). LIGAR-QUE-APAGAVA-A-CURA-01: o promotor é garantido aqui.
+    _arma_dropins_do_mic "${1:-}"
     # BUG-MIC-MUDO-PERSISTIDO-01: sem isto o mic volta, mas volta MUDO.
     unmute_dualsense_routes
     restart_wireplumber
@@ -534,9 +589,16 @@ pick_dualsense_source_id() {
 # e 2 do mudo (delegadas ao `doctor.sh --fix-mic`, que é o dono dessa cura) e a
 # ausência de eleição. O caminho de volta é o `--install` de sempre.
 promote_source_dualsense() {
-    # Reusa o enable-mic inteiro: remove 51/52/53, desmuta as rotas, avisa sobre
-    # o quirk de áudio USB e reinicia o WirePlumber.
-    enable_mic_dualsense
+    # Reusa o enable-mic inteiro: remove 52/53, desmuta as rotas, avisa sobre o
+    # quirk de áudio USB e reinicia o WirePlumber.
+    #
+    # LIGAR-QUE-APAGAVA-A-CURA-01: o `sem-promotor` é o que mantém ESTE modo
+    # como ele sempre foi — o 51 sai, e sai ANTES do restart, como antes. Não é
+    # descuido: `doctor.sh:_prefere_mic_do_dualsense` lê a ausência do 51 como a
+    # promoção explícita da usuária, e é ela que impede a cura do doctor de
+    # eleger outra fonte por cima da escolha dela. O que mudou foi só o
+    # `--enable-mic`, onde apagar o promotor era desarmar MONITOR-QUE-VENCE-01.
+    enable_mic_dualsense "sem-promotor"
     # Camadas 1 e 2 têm UM dono: o doctor. Promover uma fonte cujo perfil está no
     # S/PDIF seria promover silêncio — o pior resultado possível para este modo,
     # porque a usuária veria "DualSense é o microfone padrão" e pico 0.

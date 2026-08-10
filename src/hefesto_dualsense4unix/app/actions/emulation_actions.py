@@ -857,6 +857,22 @@ class EmulationActionsMixin(WidgetAccessMixin):
         "53-hefesto-dualsense-disable-output.conf",
     )
 
+    #: LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026): o 51 NÃO é supressão. Desde
+    #: MONITOR-QUE-VENCE-01 (08/08, commit 6c428cd) ele é o PROMOTOR — põe a
+    #: entrada do controle em `priority.session = 1500`, a faixa medida que fica
+    #: acima de qualquer monitor (1109) e abaixo de qualquer captura real (2009).
+    #: Sem ele a entrada volta ao 50 de fábrica e o monitor da saída vence: o que
+    #: qualquer aplicativo grava é o eco do que sai, não a voz dela.
+    _WP_PROMOTER_DROPIN = "51-hefesto-dualsense-no-default-source.conf"
+
+    #: Os três estados que os drop-ins sabem dizer. São três porque a diferença
+    #: entre eles importa para quem está olhando: "suprimido" é escolha, "sem
+    #: prioridade" é o mic livre porém desprotegido, e só o terceiro é o que a
+    #: tela pode chamar de Ligado sem mentir.
+    MIC_SUPRIMIDO = "suprimido"
+    MIC_SEM_PROMOTOR = "sem-promotor"
+    MIC_LIGADO = "ligado"
+
     def _mic_script(self) -> Path | None:
         for cand in (
             ROOT_DIR / "scripts" / "fix_wireplumber_default_source.sh",
@@ -870,11 +886,30 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 return cand
         return None
 
+    def _mic_state(self) -> str:
+        """O que os drop-ins do WirePlumber dizem sobre o mic, em três estados.
+
+        Só LÊ arquivo — é chamada a cada entrada na aba Emulação e não pode ter
+        efeito colateral nenhum (ver `_refresh_emulation_tab`).
+        """
+        dropins = self._wp_dropin_dir()
+        if any((dropins / name).exists() for name in self._WP_DISABLE_DROPINS):
+            return self.MIC_SUPRIMIDO
+        if not (dropins / self._WP_PROMOTER_DROPIN).exists():
+            return self.MIC_SEM_PROMOTOR
+        return self.MIC_LIGADO
+
     def _mic_is_on(self) -> bool:
-        """Mic ON quando nenhum drop-in de supressão (52/53) está presente."""
-        return not any(
-            (self._wp_dropin_dir() / name).exists() for name in self._WP_DISABLE_DROPINS
-        )
+        """Mic ligado DE VERDADE: sem supressão (52/53) **e** com o promotor (51).
+
+        LIGAR-QUE-APAGAVA-A-CURA-01: esta função perguntava só pelo 52/53, e o
+        próprio botão "Ligar" apagava o 51 — então a tela escrevia "Ligado" em
+        verde no exato instante em que a captura padrão voltava a poder cair no
+        monitor da saída. Sem o promotor o microfone existe, mas perde a eleição
+        para o eco do que sai; chamar isso de Ligado é afirmar o contrário do
+        que aconteceu.
+        """
+        return self._mic_state() == self.MIC_LIGADO
 
     # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB
     # (usbcore.quirks=054c:0ce6:gn) é o que segura o storm -71 COM o mic ligado.
@@ -899,14 +934,40 @@ class EmulationActionsMixin(WidgetAccessMixin):
                     return True
         return False
 
+    #: O texto curto de cada estado, e a explicação inteira que não cabe nele.
+    #: O rótulo tem `width-chars = 11` e quebra linha (VAO-01/E2): a frase longa
+    #: vai na dica de tooltip, onde não empurra a largura da aba.
+    _MIC_ROTULOS: ClassVar[dict[str, tuple[str, str, str]]] = {
+        MIC_LIGADO: (
+            "#50fa7b",
+            "Ligado",
+            "O microfone do controle está livre e com prioridade acima do eco "
+            "da saída.",
+        ),
+        MIC_SEM_PROMOTOR: (
+            "#ffb86c",
+            "Ligado sem prioridade",
+            "O microfone está livre, mas sem a prioridade que o mantém acima "
+            "do eco da saída — do jeito que está, o que os aplicativos gravam "
+            "pode ser o som do sistema em vez da sua voz. Clique em “Ligar” "
+            "para armar de novo.",
+        ),
+        MIC_SUPRIMIDO: (
+            "#ffb86c",
+            "Desligado (suprimido)",
+            "O microfone do controle está desligado por escolha — clique em "
+            "“Ligar” para liberá-lo.",
+        ),
+    }
+
     def _refresh_mic_status(self) -> None:
         label = self._get("emulation_mic_status_label")
         if label is None:
             return
-        if self._mic_is_on():
-            label.set_markup('<span foreground="#50fa7b">Ligado</span>')
-        else:
-            label.set_markup('<span foreground="#ffb86c">Desligado (suprimido)</span>')
+        cor, texto, dica = self._MIC_ROTULOS[self._mic_state()]
+        label.set_markup(f'<span foreground="{cor}">{texto}</span>')
+        with contextlib.suppress(Exception):
+            label.set_tooltip_text(dica)
 
     def _run_mic(self, flag: str, done_msg: str) -> None:
         script = self._mic_script()

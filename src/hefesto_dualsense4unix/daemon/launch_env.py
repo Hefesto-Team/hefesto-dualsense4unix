@@ -103,6 +103,40 @@ ENV_ALLOWLIST = (
 #: for editar.
 PAR_DUALSENSE_FISICO = (0x054C, 0x0CE6)
 
+#: O gamepad VIRTUAL que o Steam Input cria — Valve, `28de:11ff`.
+#:
+#: TRES-CONTROLES-01 (10/08/2026), medido na máquina dela com o Pragmata aberto
+#: e o controle dobrado na mão. O `/dev/input` tinha QUATRO aparelhos para um
+#: controle físico:
+#:
+#:     event2   Sony ... DualSense Wireless Controller       054c:0ce6  (físico)
+#:     event6   DualSense Wireless Controller (Hefesto P1)   054c:0df2  (nosso)
+#:     event21  Microsoft X-Box 360 pad 0                    28de:11ff  (Steam)
+#:     event23  Microsoft X-Box 360 pad 1                    28de:11ff  (Steam)
+#:
+#: O `steam` (pid 3699757) era o único processo com `/dev/uinput` aberto além do
+#: `input-remapper` do sistema, e o `pad 0` nasceu no MESMO segundo em que o
+#: daemon logou `steam_input_excecao_ativada appid=3357650` (02:13:40). São dois
+#: porque o Steam Input enxerga DOIS controles — o físico e o nosso vpad — e faz
+#: um espelho Xbox para cada.
+#:
+#: O `SDL_GAMECONTROLLER_IGNORE_DEVICES` escondia só o `054c:0ce6`. Os espelhos
+#: da Valve nunca estiveram em lista nenhuma deste projeto, e o jogo ficava com
+#: três controles: o nosso e os dois do Steam.
+#:
+#: POR QUE ISTO E NÃO O `_EXCEPT`. A saída elegante seria
+#: `SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT=0x054c/0x0df2` ("aceite só o nosso
+#: vpad"), e ela está ERRADA para esta casa: mataria junto os controles
+#: EXTERNOS que ela exige que funcionem — *"deve ser universal, caso eu tenha 4
+#: novos dual sense ou novos pro controler ou 8bitdo"*. O Pro Controller e o
+#: 8BitDo são read-only por decisão de produto (numeramos e acendemos o LED, não
+#: adotamos), então eles chegam ao jogo POR SI — e um `_EXCEPT` os apagaria.
+#:
+#: E POR QUE NÃO MATA O STEAM CONTROLLER DELA: o aparelho físico da Valve é
+#: `28de:1102`/`28de:1142` (o segundo já está nomeado em
+#: `app/actions/external_controllers.py`). O `11ff` é só o espelho virtual.
+PAR_STEAM_INPUT_VIRTUAL = (0x28DE, 0x11FF)
+
 
 def _par_vidpid(par: Any) -> tuple[int, int] | None:
     """`(vid, pid)` quando o par cabe em 16 bits cada; `None` quando não cabe.
@@ -234,8 +268,27 @@ def valor_disable_hidraw(pares: Iterable[tuple[int, int]]) -> str:
     return compor_lista_vidpid(pares, maiusculas=True)
 
 
-#: O valor de HOJE, byte a byte: um par só, o do DualSense físico.
-_IGNORE_VALUE = valor_ignore_devices((PAR_DUALSENSE_FISICO,))
+#: O valor de HOJE, byte a byte: o DualSense físico E o espelho do Steam Input.
+#:
+#: TRES-CONTROLES-01 (10/08/2026): o segundo par entrou aqui, e NÃO num ramo
+#: novo, de propósito — assim ele herda, sem uma linha de gate própria, os três
+#: portões que esta variável já atravessa e que custaram medição para existir:
+#: fora do Modo Nativo, com a emulação ligada, e só com `cobertura_total` (um
+#: vpad por físico). O invariante que manda nesta casa é *duplicado > zero
+#: controles*: se o IGNORE não pode sair, o espelho da Valve também não é
+#: escondido, e o pior caso continua sendo o controle dobrado — nunca um jogo
+#: sem controle nenhum.
+#:
+#: NOTA DATADA — o que caducou. Até 09/08 a exceção do Steam Input SUSPENDIA o
+#: nosso vpad; o Steam via um controle só, criava um espelho só, e o jogo via
+#: um. A decisão dela de 09/08 (ESCONDER-EM-VEZ-DE-SAIR-01) manteve o vpad de
+#: pé para não derrubar o jogador 2 do co-op junto — e com isso o Steam passou a
+#: ver dois controles e a criar dois espelhos. A JOGO-01 (25/07) escreveu o
+#: invariante que voltou a valer aqui: *"a allowlist muda QUAL dispositivo o
+#: jogo vê, nunca QUANTOS"*.
+_IGNORE_VALUE = valor_ignore_devices(
+    (PAR_DUALSENSE_FISICO, PAR_STEAM_INPUT_VIRTUAL)
+)
 
 #: GUERRA-01: lista VID/PID que o winebus.sys dos Protons 10/11 lê para NEGAR
 #: hidraw (a whitelist default dele dá hidraw à família Sony INTEIRA — físico

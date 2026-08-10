@@ -65,12 +65,14 @@ Todas as formas de instalar, o que o instalador toca no sistema e como reverter:
 ## 3. Primeira abertura
 
 Abra pelo menu de aplicativos (ou `hefesto-dualsense4unix-gui` no terminal). A
-janela tem nove abas: **Início, Status, Gatilhos, Lightbar, Rumble, Perfis,
-Sistema, Emulação, Navegação DSX**.
+janela tem dez abas: **Início, Status, No jogo, Gatilhos, Lightbar, Rumble,
+Perfis, Sistema, Emulação, Navegação**.
 
 Plugue o DualSense por USB ou pareie por Bluetooth. A aba **Status** mostra
 conexão, transporte, bateria, perfil ativo, sticks, gatilhos e a grade de botões
-ao vivo.
+ao vivo — tudo isso é o controle **físico**. Para saber o que está chegando ao
+**jogo** (giroscópio, vibração, gatilho, luz, clique do touchpad e som do
+controle), a aba é a **No jogo**.
 
 > A janela **não** abre sozinha ao plugar o controle: as regras udev que faziam
 > isso foram retiradas (elas abriam o controle via `hidraw` a cada evento e
@@ -96,9 +98,10 @@ Comparação completa e quando usar cada um: [`modos.md`](modos.md).
 
 ---
 
-## 5. Navegação DSX (mouse e teclado pelo controle)
+## 5. Navegação (mouse e teclado pelo controle)
 
-Na aba **Navegação DSX**, ligue "Emular mouse+teclado":
+Na aba **Navegação** há **dois interruptores irmãos e independentes**: "Emular
+mouse" e "Emular teclado". Eles ficam disponíveis no modo **Controlar o PC**.
 
 | Botão                          | Ação                       |
 |--------------------------------|----------------------------|
@@ -111,8 +114,39 @@ Na aba **Navegação DSX**, ligue "Emular mouse+teclado":
 | Analógico esquerdo             | Movimento do cursor        |
 | Analógico direito              | Rolagem vertical/horizontal|
 
-Os sliders de velocidade do cursor e da rolagem ficam na mesma aba, junto com a
-deadzone do giroscópio.
+Os controles deslizantes de velocidade do cursor e da rolagem ficam na mesma
+aba. E o **touchpad do controle move o cursor sozinho**, pelo sistema, sem
+depender de nenhum destes interruptores e em qualquer um dos três modos — ver
+[`modos.md`](modos.md#o-touchpad-é-touchpad-do-sistema).
+
+> **A aba se chamava "Navegação DSX"**; o rótulo na tira é só **"Navegação"**
+> desde a PALAVRA-01 — "DSX" é o nome de outro programa.
+
+### Escrever texto: o teclado na tela do L3
+
+**Nenhum atalho de fábrica digita uma letra.** Os de fábrica são atalhos:
+Super, PrintScreen, Alt+Tab, Alt+Shift+Tab, Enter, Delete e Backspace. O único
+caminho de fábrica para **escrever texto** é o teclado na tela:
+
+| Gesto | Ação |
+|---|---|
+| **L3** (clique no analógico esquerdo) | abre o teclado na tela |
+| **R3** (clique no analógico direito)  | fecha o teclado na tela |
+
+Ele precisa de um programa do sistema, e desde 10/08/2026 o `install.sh` o
+instala sozinho, **sem flag**: `wvkbd` em sessão Wayland, `onboard` em X11. Se
+você instalou antes dessa data ou pulou o passo:
+
+```bash
+sudo apt install wvkbd     # sessão Wayland (COSMIC, GNOME Wayland, KDE Wayland)
+sudo apt install onboard   # sessão X11
+```
+
+O `onboard` digita por XTEST e, numa sessão Wayland, abriria sem digitar fora do
+XWayland — por isso a escolha sai da sessão viva, e não de preferência. Sem
+nenhum dos dois, o L3 **avisa na tela** em vez de não fazer nada, e você não
+precisa reiniciar o daemon depois de instalar: o Hefesto reconsulta o sistema a
+cada 10 segundos.
 
 ---
 

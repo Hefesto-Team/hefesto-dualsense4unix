@@ -17,6 +17,10 @@ todas as formas de instalar, o que o instalador toca no sistema, e como reverter
 - GTK 3 + PyGObject — sem eles não há janela, só CLI e TUI.
 - `wlrctl` em sessões Wayland (o instalador oferece instalar em COSMIC).
 - Extensão `ubuntu-appindicators@ubuntu.com` no GNOME 42+, para o ícone de bandeja.
+- **Teclado na tela**: `wvkbd` em sessão Wayland, `onboard` em X11. Desde
+  10/08/2026 **o instalador o instala sozinho, sem flag** (passo 4f) — a linha
+  aqui é para quem instalou antes disso ou pulou o passo. É ele que o **L3** do
+  controle abre, e é o único caminho de fábrica para escrever texto.
 
 **Opcionais**
 
@@ -87,7 +91,27 @@ seu `$HOME`, com os padrões de fábrica:
 | `/var/lib/hefesto-dualsense4unix/bt-bonds/` | cópias de segurança dos pareamentos Bluetooth |
 | cmdline do kernel | `usbcore.autosuspend=-1` **e** `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn`, via kernelstub ou grub (passo 3e, padrão). O passo funde o token de quirks que já existir em vez de somar um segundo, registra que a atribuição é do Hefesto e o `uninstall.sh` reverte só a nossa; um valor posto por terceiros é registrado e preservado |
 | **DKMS** | `hefesto-hid-nintendo`, `hefesto-hid-playstation` e `hefesto-rtw88-usb` — três módulos fora da árvore |
+| **teclado na tela** (passo 4f) | instala `wvkbd` (Wayland) ou `onboard` (X11) pelo gerenciador de pacotes da distro. É o programa que o **L3** do controle abre |
 | configuração da Steam | desliga o Steam Input, migra as Opções de Inicialização, trava o Proton (sempre com cópia de segurança ao lado) |
+
+**O teclado na tela entra sem flag, desde 10/08/2026, e a escolha é medida.** O
+produto oferecia "Abrir teclado na tela" no L3 e não instalava nada:
+`grep -c onboard install.sh` devolvia **zero**, e esse é o único caminho de
+fábrica para escrever texto — nenhum dos nove atalhos de fábrica digita uma
+letra. Em Wayland o pacote é o `wvkbd` (binário `wvkbd-mobintl`), porque ele
+digita pelo `zwp_virtual_keyboard_manager_v1`, nativo; o `onboard` digita por
+XTEST e, em sessão Wayland, abriria e só alcançaria clientes XWayland — pior do
+que não abrir. Em X11 é o inverso, e o `onboard` é o certo.
+
+O passo entra em **todos os formatos**: `Recommends` no `.deb` (o apt instala
+Recommends por padrão, que é o que atende "sem flag") e no Fedora, `optdepends`
+no Arch, argumento com default nulo no Nix, e **bundlado** no Flatpak — dentro
+do sandbox um pacote do host é invisível, então sem o módulo o produto nunca
+acharia o binário, por construção. O `uninstall.sh` **não remove** o pacote: é
+software de sistema, e desinstalar o Hefesto não é motivo para tirar o teclado
+na tela de quem passou a usá-lo. O `hefesto-dualsense4unix doctor` confere e
+distingue as quatro histórias por trás de um `command -v` vazio — você pulou, o
+install tentou e falhou, o install nunca passou, ou estava instalado e sumiu.
 
 Quatro curas de Bluetooth entram **por padrão** e merecem nome, porque mexem em
 serviço de sistema:

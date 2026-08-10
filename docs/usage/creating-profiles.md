@@ -58,6 +58,49 @@ de mouse e o modo-jogo:
   trava mudanças por perfil por 30 s. Atenção: este campo NÃO desliga o gamepad
   virtual (footgun documentado — o gamepad do jogo morreria no meio da partida).
 
+> **Desde 09/08/2026 a janela guarda o modo jogo — inclusive em perfil "Vale
+> sempre".** O interruptor de modo jogo da aba Emulação escreve no rascunho, e o
+> **Salvar Perfil** do rodapé o persiste neste campo. Até então a janela
+> **recusava** o gesto em perfil catch-all; a recusa caiu por decisão dela — *"a
+> vontade na GUI prevalece sempre"*. **O raciocínio que ela carregava não era
+> capricho e fica registrado:** com `suppress: true` num perfil "vale sempre", a
+> supressão entraria em toda ativação (o restauro do boot inclusive) e o caminho
+> de volta estaria fechado — mouse e teclado suspensos no desktop sem ninguém
+> pedir. **O que caducou foi a premissa, não o medo:** o gate que fecha esse
+> alçapão existe no daemon desde 05/08. **O preço que sobra vai para a tela:**
+> num catch-all o valor fica guardado no arquivo, mas o daemon **não o liga
+> sozinho** na ativação seguinte — e é exatamente isso que impede o desktop de
+> acordar sem ponteiro.
+
+## Seção opcional `speaker` (alto-falante e fone do controle)
+
+```json
+{
+  "speaker": {"volume": 180, "muted": false, "rota": 2}
+}
+```
+
+Perfil **sem** a seção não tem opinião: ativá-lo não toca no volume e **não toma
+a posse** dos bytes de áudio do report de saída.
+
+- `volume` (0-255) é **obrigatório**, e a recusa é na borda do esquema, com a
+  razão medida: uma chamada com `muted` e sem `volume` faz a preferência cair a
+  zero, toma a posse e tranca o alto-falante — e nem o próprio mudo o solta.
+  Quem quer "mudo" escreve o volume que quer de volta: `{"volume": 180,
+  "muted": true}`.
+- `rota` (0-3) é o canal de saída (`OUTPUT_PATH_SEL`): `0` estéreo → fone; `1`
+  canal L → fone (mono); `2` L → fone e R → alto-falante interno (o caso
+  Zelda / "Sons do jogo"); `3` canal R → alto-falante interno ("Todo o som do
+  PC"). Ausente significa **não tocar no byte** — ele guarda também o caminho
+  do microfone.
+
+> **Nota datada — 09/08/2026: até esta data a janela não gravava nada disso.**
+> A função que escreveria a seção tinha **zero chamadores desde 21/04**: você
+> ajustava o volume, o mudo ou o canal, clicava em Salvar Perfil, e o arquivo
+> guardava o valor **velho** — que voltava ao hardware na ativação seguinte. O
+> gesto era desfeito pelo próprio gesto de salvar. Hoje os três chegam ao
+> perfil.
+
 ## Perfil default `point_and_click` (Grim Fandango e afins)
 
 Instalado com os presets, casa `window_class` `GrimFandango`/`grim` com
@@ -77,6 +120,22 @@ o gamepad virtual. Para levar o point-and-click a outra aventura, adicione o
   Options = Esc (menu), Create = I (inventário), touchpad esquerda/meio/
   direita = E (examinar) / U (usar) / P (pegar).
 - Gatilhos Off/Off, rumble passthrough, lightbar âmbar.
+
+> **NOTA DATADA — 09/08/2026: as três regiões de touchpad deste preset não
+> disparam mais.** O `point_and_click.json` continua trazendo
+> `touchpad_left_press`/`middle`/`right` (E / U / P) e o schema continua
+> aceitando o campo — decisão medida não se apaga. O que caducou é o efeito: o
+> touchpad do DualSense voltou a ser o touchpad do **sistema** em todos os
+> modos (decisão dela, `TOUCHPAD-DO-SISTEMA-01`), e o daemon **cala** as
+> regiões quando o ponteiro é do sistema — quem responde é o estado real do nó
+> (`core/evdev_reader.py: ponteiro_do_sistema`), não o modo. A razão é que o
+> clique do touchpad já é clique de mouse pelo libinput; somar a tecla faria um
+> clique disparar duas coisas. As três regiões também saíram da aba
+> **Navegação**, porque listar um botão que o produto não dispara mais é a
+> janela mentindo. Para o Grim Fandango, use os outros botões — ou desfaça a
+> devolução do touchpad ao sistema (a reversão está escrita no cabeçalho de
+> `assets/76-dualsense-touchpad-libinput-ignore.rules`), lembrando que as duas
+> coisas andam juntas.
 
 Notas para o Grim Fandango Remastered:
 
@@ -100,7 +159,47 @@ aberto (ver seção abaixo) — ports via Proton/ScummVM usam classes diferentes
 - **OR dentro de cada lista**: `window_class: ["a", "b"]` casa qualquer um.
 - **Regex**: `window_title_regex` usa `re.search` (padrões com `.*` são redundantes).
 - **Basename**: `process_name` casa com o basename de `/proc/PID/exe`, não `comm` truncado.
-- **Prioridade**: perfil com maior `priority` vence em empate.
+- **Prioridade**: perfil com maior `priority` vence em empate. É o **segundo**
+  critério, nunca o primeiro: um perfil com regra de janela sempre vence um
+  perfil "Sempre" (catch-all), por mais alta que seja a prioridade deste.
+
+### A armadilha do `process_name` em jogo da Steam (MEDIDO em 10/08/2026)
+
+**O AND não estreita: ele anula.** Um perfil de jogo da Steam que traga
+`window_class: ["steam_app_XXXXXXX"]` **e** `process_name: ["JOGO.exe"]` pode
+nunca ativar — e o exemplo no topo desta página (`cyberpunk_driving`) é
+exatamente esse formato.
+
+O motivo é o Proton: o `process_name` casa com o basename de `/proc/PID/exe`, e
+sob Proton esse binário **nunca** é o `.exe` do jogo — é o binário do wine. No
+journal dela, com a janela do Pragmata em foco: `window_class` batia
+(`steam_app_3357650`), `process_name` exigia `PRAGMATA.exe`, a máquina via
+`wine64-preloader`, e o resultado foi
+`profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']`. O
+perfil do jogo **não era candidato ao próprio jogo**. Tirando só o
+`process_name`, os candidatos viraram `['fallback', 'Pragmata']`.
+
+O tamanho do problema, medido no journal de 30 dias dela: **todos** os perfis
+que o autoswitch já elegeu sozinho são identificados por `window_class`, nenhum
+com `process_name`. E os cinco que **só** têm `process_name` (Ação, Aventura,
+Corrida, Esportes, FPS) nunca ativaram, nenhuma vez.
+
+**A regra prática:** para jogo da Steam, use **só** a `window_class`
+`steam_app_<appid>`. Se o perfil tiver `process_name` junto, tire-o pelo **Modo
+avançado** da aba Perfis — a janela **não** o apaga sozinha, porque apagar em
+silêncio o que você escreveu seria mudança que você não pediu.
+
+**Como perceber isso sem ler journal:** a aba [**No jogo**](interface.md#no-jogo)
+diz, com o jogo na frente, qual perfil daquele jogo não entrou e o que ele
+exigiu, lado a lado com o que a máquina vê.
+
+> Um efeito colateral do mesmo campo, corrigido em 10/08/2026: com
+> `process_name` junto, o editor da aba Perfis não reconhecia mais o perfil como
+> jogo da Steam — abria no **Modo avançado**, o seletor "Aplica a:" ia para
+> "Vale sempre" e a caixinha do Steam Input sumia da tela. Hoje o
+> reconhecimento aceita o `process_name` ao lado do appid, e o campo é
+> preservado no round-trip do salvar. Regex de título junto continua indo para
+> o editor avançado, que é o que aquela recusa protegia de verdade.
 
 ## Descobrindo wm_class / title / exe
 

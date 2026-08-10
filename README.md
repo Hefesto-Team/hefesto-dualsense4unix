@@ -87,13 +87,22 @@ Bluetooth) entram como jogadores adicionais.
   que use só os modos paramétricos funciona; um que chame `Instruction.Hard()`
   não faz nada. A lista completa do que falta está em
   [docs/protocol/udp-schema.md](docs/protocol/udp-schema.md).
+- **O touchpad continua sendo o touchpad do sistema** — em qualquer um dos três
+  modos, o dedo no touchpad do DualSense move o cursor pelo libinput, como move
+  quando o controle é plugado sem o Hefesto instalado. Decisão dela, de
+  09/08/2026: *"a ideia do touchpad é ele voltar a funcionar assim, seja no modo
+  nativo ou dualsense"*. Só o touchpad do **controle virtual** fica fora do
+  libinput — era ele quem duplicava cada toque dentro do jogo.
+- **Teclado na tela pelo controle** — L3 abre, R3 fecha. É o único caminho de
+  fábrica para escrever texto, e o `install.sh` instala o programa sozinho
+  (`wvkbd` em Wayland, `onboard` em X11).
 - **Automação** — socket JSON-RPC local para scripts e um sistema de plugins
   Python com ganchos de tique, botão e bateria.
 
 ## Instalação
 
 > **Onde esta versão mora — instale pela tag, não por branch nenhuma.** O ponto
-> recomendado é a tag da versão corrente, hoje a **`v0.7.0`**. Duas ressalvas
+> recomendado é a tag da versão corrente, hoje a **`v0.8.0`**. Duas ressalvas
 > antes de clonar:
 >
 > - **Não clone por branch.** As páginas de uso já mandaram, no passado, clonar
@@ -105,11 +114,20 @@ Bluetooth) entram como jogadores adicionais.
 >   isto.
 >
 > Conferido em 30/07/2026 contra o `pyproject.toml`.
+>
+> **NOTA DATADA — 10/08/2026: esta caixa dizia `v0.7.0` e o comando abaixo
+> mandava `git checkout v0.7.0`.** Caducou em 02/08/2026, quando a 0.8.0 saiu:
+> **GRAU: MEDIDO** hoje, `scripts/check_version_consistency.py` responde *"11
+> alvo(s) versionado(s) em 0.8.0"* e o `pyproject.toml` traz `version =
+> "0.8.0"`. As páginas de uso ([`quickstart.md`](docs/usage/quickstart.md) e
+> [`instalacao.md`](docs/usage/instalacao.md)) já diziam `v0.8.0` — era esta
+> capa que estava atrás, e quem seguiu o comando daqui instalou **um
+> lançamento a menos** por oito dias.
 
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.7.0
+git checkout v0.8.0
 ./install.sh
 ```
 
@@ -163,8 +181,8 @@ alfa, o caminho testado é o do código-fonte.
 
 ### A janela
 
-Nove abas. A primeira, **Início**, é a de decisão: escolha ali *o que o controle
-faz agora*.
+Dez abas. A primeira, **Início**, é a de decisão: no quadro *"Quando o jogo
+abrir"* escolhe-se *o que o controle faz agora* e como o jogo o enxerga.
 
 | Modo | O que acontece |
 |---|---|
@@ -172,8 +190,14 @@ faz agora*.
 | **Jogar pelo Hefesto** | o jogo enxerga um controle virtual — é o padrão para jogar, e o único modo com co-op local |
 | **Conexão Nativa (Sony)** | o Hefesto solta o controle e o jogo fala direto com ele |
 
+A segunda pergunta que a janela responde tem aba própria desde 10/08/2026: a
+**No jogo** mostra, recurso por recurso e com a linha sempre na mesma posição,
+o que está atravessando para o jogo — giroscópio, vibração, gatilho, luz,
+clique do touchpad e som do controle. A **Status** responde pelo controle
+**físico**; a **No jogo**, pelo que o jogo recebe.
+
 As outras oito abas — Status, Gatilhos, Lightbar, Rumble, Perfis, Sistema,
-Emulação e Navegação DSX — estão descritas uma a uma em
+Emulação e Navegação — estão descritas uma a uma em
 **[docs/usage/interface.md](docs/usage/interface.md)**.
 
 ### Atalhos no próprio controle
@@ -183,7 +207,26 @@ Emulação e Navegação DSX — estão descritas uma a uma em
 | PS + D-pad cima / baixo | perfil seguinte / anterior |
 | PS (toque curto) | abre a Steam (configurável) |
 | PS + Options | modo jogo: suspende a emulação de mouse e teclado |
+| L3 / R3 (clique no analógico) | abre / fecha o **teclado na tela** |
 | Botão de microfone | muta o microfone do sistema |
+
+O **teclado na tela do L3 é o único caminho de fábrica para escrever texto**:
+nenhum dos nove atalhos de fábrica digita uma letra (são Super, PrintScreen,
+Alt+Tab, Alt+Shift+Tab, Enter, Delete e Backspace). Ele depende de um programa
+do sistema, e desde 10/08/2026 o `install.sh` o instala sozinho, sem flag —
+`wvkbd` em sessão Wayland, `onboard` em X11. Numa instalação anterior a essa
+data, ou se você pulou o passo:
+
+```bash
+sudo apt install wvkbd     # sessão Wayland (COSMIC, GNOME Wayland, KDE Wayland)
+sudo apt install onboard   # sessão X11
+```
+
+A escolha não é gosto: o `onboard` digita por XTEST, e em sessão Wayland ele
+abre e as teclas só alcançam clientes XWayland — pior do que não abrir. O
+`wvkbd` é cliente Wayland puro e digita pelo
+`zwp_virtual_keyboard_manager_v1`. Sem nenhum dos dois instalado, o L3 avisa na
+tela em vez de não fazer nada.
 
 Detalhes e configuração em [docs/usage/hotkeys.md](docs/usage/hotkeys.md).
 
@@ -215,7 +258,7 @@ Referência completa dos comandos em [docs/usage/cli.md](docs/usage/cli.md).
 
 ## Capturas de tela
 
-As nove abas, na ordem em que aparecem na janela, na resolução em que ela usa a
+As dez abas, na ordem em que aparecem na janela, na resolução em que ela usa a
 janela maximizada. São geradas por `scripts/gui-captura/retratar_abas.py` — um
 comando, sem clique nenhum — e por isso **acompanham a versão**: quem mexe na
 interface roda o script antes de commitar, e estas imagens deixam de poder
@@ -223,8 +266,10 @@ envelhecer.
 
 | | |
 |---|---|
-| **Início** — o que o controle faz agora | **Status** — tudo o que o controle está fazendo |
+| **Início** — quando o jogo abrir | **Status** — tudo o que o controle está fazendo |
 | [![Início](docs/usage/assets/readme_inicio.png)](docs/usage/interface.md) | [![Status](docs/usage/assets/readme_status.png)](docs/usage/interface.md) |
+| **No jogo** — o que atravessa para o jogo | |
+| [![No jogo](docs/usage/assets/readme_no_jogo.png)](docs/usage/interface.md) | |
 | **Gatilhos** — os dezenove modos de resistência | **Lightbar** — a cor e o desenho das cinco luzes |
 | [![Gatilhos](docs/usage/assets/readme_gatilhos.png)](docs/usage/interface.md) | [![Lightbar](docs/usage/assets/readme_lightbar.png)](docs/usage/interface.md) |
 | **Rumble** — a intensidade da vibração dos jogos | **Perfis** — um ajuste por jogo, que entra sozinho |
