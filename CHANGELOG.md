@@ -24,6 +24,14 @@ saída vencia — o que os aplicativos gravavam era o eco, não a voz. As flags
 eco.** Ele tinha o mesmo furo que a janela: olhava só os drop-ins de supressão.
 Um portão novo amarra as cinco superfícies que citam o nome do promotor.
 
+**O doctor parou de acusar a escolha dela como falha.** Desde 08/08 o install
+PROMOVE o microfone do controle por default, e o doctor continuava chamando de
+`[FAIL]` o resultado disso — duas linhas depois de dizer `[ OK ]` sobre o mesmo
+aparelho. O opt-in que existia era uma variável de ambiente, que não é opt-in
+dela: agora o promotor no disco conta como o gesto que é. O alarme continua
+inteiro para o caso que ele foi criado para pegar — o DualSense virando padrão
+sozinho, sem promotor, com outro microfone disponível.
+
 
 ## [0.9.0] — 2026-08-10
 
