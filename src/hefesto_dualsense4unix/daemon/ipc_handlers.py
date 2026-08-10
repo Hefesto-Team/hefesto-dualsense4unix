@@ -2138,6 +2138,12 @@ class IpcHandlersMixin:
                         if motivo_atual
                         else "jogo_sem_wrapper"
                     )
+            # PERFIL-MUDO-01 (10/08/2026): o perfil DAQUELE jogo que não entrou.
+            # O daemon já sabia e só contava ao journal — quatro linhas de
+            # `profile_select_catch_all_sem_autoridade_em_jogo` enquanto ela
+            # jogava o Pragmata com o controle duplicado, e a janela muda. Aqui
+            # o fato vira estado, e a janela passa a poder dizer.
+            result["perfil_do_jogo_que_nao_entrou"] = self._perfil_que_nao_entrou()
             # FEAT-DSX-COOP-LOCAL-01: estado do co-op local (toggle + nº de
             # jogadores ativos) p/ GUI/applet/CLI.
             coop_mgr = getattr(self.daemon, "_coop_manager", None)
@@ -2921,6 +2927,57 @@ class IpcHandlersMixin:
         }
 
     # --- GUI-05 item 3: honestidade do wrapper (`wrapper_used`) -----------
+
+    #: PERFIL-MUDO-01 — cache do último cálculo, chaveado pela janela em foco.
+    #: `state_full` roda a 10 Hz e `load_all_profiles()` lê o disco inteiro;
+    #: sem isto seriam ~140 leituras de JSON por segundo com os 14 perfis dela.
+    #: A chave é a tripla que o matcher consome, então a resposta só é
+    #: recalculada quando a pergunta muda de verdade.
+    _perfil_mudo_cache: tuple[tuple[str, str, str], list[dict[str, str]]] | None = None
+
+    def _perfil_que_nao_entrou(self) -> list[dict[str, str]]:
+        """Perfis que são regra DESTE jogo e mesmo assim não entraram.
+
+        Só as regras do jogo em foco (`e_regra_deste_jogo`), e essa poda é a
+        diferença entre informação e ruído: com 14 perfis no disco, doze
+        "não entraram" a cada janela de desktop, e todos por funcionarem como
+        deveriam. O que ela precisa ver é o perfil que ela escreveu PARA aquele
+        jogo e que o jogo abriu sem.
+
+        Fora de janela de jogo devolve `[]` sem tocar em disco: o predicado
+        `e_regra_deste_jogo` exige um appid em foco, então não há resposta
+        possível — e pagar `load_all_profiles()` para descobrir isso, a 10 Hz e
+        com ela no desktop, seria o poller cego que esta casa já pagou uma vez.
+        """
+        from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
+
+        def _txt(nome: str) -> str:
+            valor = getattr(self.store, nome, None)
+            return valor if isinstance(valor, str) else ""
+
+        wm_class = _txt("window_detect_current_class")
+        if steam_appid_from_wm_class(wm_class) is None:
+            self._perfil_mudo_cache = None
+            return []
+        chave = (wm_class, _txt("window_detect_current_name"), _txt("window_detect_current_exe"))
+        cache = self._perfil_mudo_cache
+        if cache is not None and cache[0] == chave:
+            return cache[1]
+
+        from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+        from hefesto_dualsense4unix.profiles.porque_nao_entrou import (
+            frase_do_perfil_que_nao_entrou,
+            perfis_que_nao_entraram,
+        )
+
+        info = {"wm_class": chave[0], "wm_name": chave[1], "exe_basename": chave[2]}
+        achados = [
+            {"nome": a.nome, "frase": frase_do_perfil_que_nao_entrou(a)}
+            for a in perfis_que_nao_entraram(info, load_all_profiles())
+            if a.e_regra_deste_jogo
+        ]
+        self._perfil_mudo_cache = (chave, achados)
+        return achados
 
     def _wrapper_used_now(self) -> bool | None:
         """`wrapper_used` do momento: True/False com jogo em foco, None sem.

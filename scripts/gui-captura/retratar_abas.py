@@ -275,6 +275,23 @@ _NO_JOGO_ESTADO = {
     "native_mode": False,
     "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
     "controllers": list(_NO_JOGO_CONTROLES),
+    # PERFIL-MUDO-01 (10/08/2026): o aviso do perfil que não entrou. A foto o
+    # mostra porque ele é a única linha desta aba que pede DECISÃO dela, e uma
+    # imagem de documentação que só mostra o caso bom ensina a não procurá-lo.
+    # O texto é o do caso real, com o `wine64-preloader` que o Hefesto vê no
+    # lugar do `.exe` — a mesma frase que o daemon monta em
+    # `profiles.porque_nao_entrou`.
+    "active_profile": "fallback",
+    "perfil_do_jogo_que_nao_entrou": [
+        {
+            "nome": "Pragmata",
+            "frase": (
+                'O seu perfil "Pragmata" é deste jogo, mas não entrou: '
+                'ele exige nome do processo "PRAGMATA.exe", e aqui vê '
+                '"wine64-preloader".'
+            ),
+        }
+    ],
     "rumble_ff": {
         "per_vpad": [
             {

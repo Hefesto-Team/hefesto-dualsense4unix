@@ -141,6 +141,11 @@ COR_DA_SITUACAO: Final[dict[str, str]] = {
     SITUACAO_PARADO: "#f1fa8c",
 }
 
+#: PERFIL-MUDO-01: a cor do aviso do perfil que não entrou. É o MESMO amarelo do
+#: "parou", e pela mesma razão: era para estar valendo e não está. Vermelho seria
+#: exagero — o Hefesto continua funcionando, com o perfil errado.
+COR_DO_AVISO_DE_PERFIL: Final[str] = "#f1fa8c"
+
 #: As situações que ficam apagadas — as três que EXPLICAM em vez de acusar.
 SITUACOES_APAGADAS: Final[frozenset[str]] = frozenset(
     {SITUACAO_NUNCA, SITUACAO_IMPOSSIVEL, SITUACAO_NATIVO}
@@ -345,6 +350,44 @@ def recado_global(state_global: dict[str, Any] | None) -> str | None:
     if modo == MODE_DESKTOP:
         return TEXTO_DESKTOP
     return None
+
+
+def aviso_do_perfil(state_global: dict[str, Any] | None) -> str | None:
+    """O perfil que ela escreveu PARA este jogo e que não entrou. ``None`` = nada a dizer.
+
+    PERFIL-MUDO-01 (10/08/2026). O daemon manda as frases prontas (ele é quem
+    tem os perfis do disco e a janela em foco); aqui só se decide se há o que
+    mostrar e como juntar mais de uma. As frases vêm de
+    `profiles.porque_nao_entrou`, e são factuais de propósito — dizem o que o
+    perfil exigiu e o que o Hefesto viu, sem mandar apagar nada: quem escreveu o
+    critério foi ela.
+
+    O fecho ("Enquanto isso, vale o perfil ...") é o que transforma o aviso em
+    resposta completa: sem ele a aba diria que um perfil não entrou e deixaria a
+    pergunta óbvia — *então qual entrou?* — sem resposta na mesma tela. E o
+    ``active_profile`` já viajava no estado desde sempre.
+
+    Duas regras para o mesmo jogo são raras e possíveis (ela teve ``Pragmata`` e
+    ``Pragmata2`` no disco em 01/08). Aparecem as duas, uma por linha: escolher
+    uma para mostrar seria o produto decidindo qual das configurações dela
+    importa.
+    """
+    if not isinstance(state_global, dict):
+        return None
+    achados = state_global.get("perfil_do_jogo_que_nao_entrou")
+    if not isinstance(achados, list):
+        return None
+    frases = [
+        str(a.get("frase") or "")
+        for a in achados
+        if isinstance(a, dict) and a.get("frase")
+    ]
+    if not frases:
+        return None
+    ativo = state_global.get("active_profile")
+    if isinstance(ativo, str) and ativo:
+        frases.append(f'Enquanto isso, vale o perfil "{ativo}".')
+    return "\n".join(frases)
 
 
 def texto_do_contexto(state_global: dict[str, Any] | None) -> str:
@@ -559,6 +602,7 @@ else:
 
 __all__ = [
     "COR_DA_SITUACAO",
+    "COR_DO_AVISO_DE_PERFIL",
     "LARGURA_PAINEL",
     "NOME_DO_RECURSO",
     "PALAVRA_DA_SITUACAO",
@@ -571,6 +615,7 @@ __all__ = [
     "TEXTO_SEM_VPAD",
     "LinhaDoJogo",
     "PainelNoJogo",
+    "aviso_do_perfil",
     "linhas_do_controle",
     "recado_do_controle",
     "recado_global",

@@ -74,8 +74,10 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     ControllerCard,
 )
 from hefesto_dualsense4unix.app.widgets.painel_no_jogo import (
+    COR_DO_AVISO_DE_PERFIL,
     TEXTO_SEM_CONTROLE,
     PainelNoJogo,
+    aviso_do_perfil,
     recado_global,
     texto_do_contexto,
 )
@@ -530,6 +532,7 @@ class StatusActionsMixin(WidgetAccessMixin):
     _no_jogo_slot: Any = None
     _no_jogo_contexto: Any = None
     _no_jogo_recado: Any = None
+    _no_jogo_perfil: Any = None
     _no_jogo_vazio: Any = None
 
     def install_no_jogo_tab(self) -> None:
@@ -599,6 +602,26 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._no_jogo_recado.set_no_show_all(True)
         miolo.pack_start(self._no_jogo_recado, False, False, 0)
 
+        # PERFIL-MUDO-01 (10/08/2026): o perfil que ela escreveu PARA este jogo
+        # e que o jogo abriu sem. Fica ACIMA dos painéis e não os substitui: os
+        # recursos continuam sendo a resposta da aba, e este é o aviso de que
+        # eles estão respondendo com a configuração ERRADA. Sem ele, a aba
+        # dizia "vibração: no jogo agora" com toda a razão — e com a vibração
+        # do `fallback`, não a do perfil dela.
+        #
+        # Não é `dim-label`: o resto desta aba é observação, e isto é a única
+        # linha que pede uma decisão dela. A cor sai por `set_markup` e não por
+        # classe de CSS pela razão já MEDIDA nesta aba (ver `COR_DA_SITUACAO`):
+        # a regra `.hefesto-dualsense4unix-window label` do tema tem
+        # especificidade maior, e a classe é aplicada sem pintar nada.
+        self._no_jogo_perfil = Gtk.Label(label="")
+        self._no_jogo_perfil.set_xalign(0.0)
+        self._no_jogo_perfil.set_line_wrap(True)
+        self._no_jogo_perfil.set_max_width_chars(84)
+        self._no_jogo_perfil.set_halign(Gtk.Align.START)
+        self._no_jogo_perfil.set_no_show_all(True)
+        miolo.pack_start(self._no_jogo_perfil, False, False, 0)
+
         self._no_jogo_vazio = Gtk.Label(label=TEXTO_SEM_CONTROLE)
         self._no_jogo_vazio.set_xalign(0.0)
         self._no_jogo_vazio.set_halign(Gtk.Align.START)
@@ -652,6 +675,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         recado = recado_global(state)
         self._no_jogo_recado.set_text(recado or "")
         self._no_jogo_recado.set_visible(recado is not None)
+        # PERFIL-MUDO-01: aparece nos TRÊS modos, inclusive junto do recado
+        # global. O perfil que não entrou é fato do disco e da janela em foco —
+        # não depende de haver gamepad virtual —, e calar sobre ele na Conexão
+        # Nativa esconderia justamente o caso em que o perfil dela era quem
+        # ligaria o modo certo.
+        aviso = aviso_do_perfil(state)
+        if aviso is not None:
+            self._no_jogo_perfil.set_markup(
+                f'<span foreground="{COR_DO_AVISO_DE_PERFIL}">'
+                f"{GLib.markup_escape_text(aviso)}</span>"
+            )
+        else:
+            self._no_jogo_perfil.set_text("")
+        self._no_jogo_perfil.set_visible(aviso is not None)
         conectados = (
             self._connected_controllers(state)
             if isinstance(state, dict) and recado is None
