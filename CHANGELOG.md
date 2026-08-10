@@ -5,6 +5,36 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.9.2] — 2026-08-10
+
+### O Salvar e o Aplicar param de deixar features para trás
+
+**O botão verde nunca aplicou o alto-falante.** O volume, o mudo e o canal
+chegavam ao perfil e ao hardware quando um perfil era ativado, mas nunca pelo
+AGORA: ela mexia no card, clicava no verde, e o som só mudava na próxima troca
+de perfil. Agora a seção viaja — e só quando ela mexeu no som, para um Aplicar
+disparado de outra aba continuar sem tocar no volume.
+
+**O editor avançado abria com os campos vazios.** Ligar o Modo avançado depois
+de abrir um perfil nunca teve de onde tirar a regra: mostrava vazio, ou pior, a
+regra de outro perfil. Salvar assim gravava "só manual (nunca ativa sozinho)" —
+o perfil do jogo deixaria de entrar no jogo para sempre, e sem aviso. Curado, e
+com um diálogo que pergunta antes desse rebaixamento acontecer.
+
+**Um portão que impede a próxima feature de nascer solta.** Três testes novos:
+um deriva em tempo de execução o que a janela emite e o que o daemon aplica e
+reprova quando uma seção existe só de um lado; um faz o caminho de ida e volta
+de cada seção do perfil (gesto, salvar, arquivo, recarregar); e um lê os campos
+do perfil em runtime e exige que cada um tenha caminho ou isenção com a razão
+escrita.
+
+**O que foi medido e está inteiro:** nome, regra, prioridade, gatilhos, luzes,
+vibração, teclas, mouse, alto-falante, modo, modo jogo e os ajustes por
+controle (o caso do Bluetooth, por endereço). **O que falta:** a seção do
+microfone tem consumidor e nenhum produtor — nenhuma tela a escreve. Está
+marcada como pendência que reprova sozinha quando for ligada.
+
+
 ## [0.9.1] — 2026-08-10
 
 ### Três coisas que estavam abertas e sem dono

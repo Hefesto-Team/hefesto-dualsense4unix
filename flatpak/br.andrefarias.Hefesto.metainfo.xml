@@ -24,6 +24,26 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
+    <release version="0.9.2" date="2026-08-10">
+      <description>
+        <p>
+          O botao verde "Aplicar" nunca aplicava o alto-falante do controle: o
+          volume so mudava na proxima troca de perfil. Agora vai na hora, e
+          continua calado quando o Aplicar parte de outra aba.
+        </p>
+        <p>
+          O editor avancado abria com os campos da regra vazios, e salvar assim
+          transformava o perfil em "so manual" — ele deixava de entrar no jogo
+          para sempre, sem aviso. Agora a regra aparece, e o rebaixamento
+          pergunta antes.
+        </p>
+        <p>
+          E um portao novo confere, a cada teste, que toda configuracao de toda
+          aba tem caminho ate o arquivo do perfil e de volta — para que a
+          proxima feature nao nasca solta.
+        </p>
+      </description>
+    </release>
     <release version="0.9.1" date="2026-08-10">
       <description>
         <p>
