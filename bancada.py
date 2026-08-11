@@ -6,8 +6,13 @@ servidor. Esta bancada é o oposto — existe para o momento em que ela está co
 controle na mão, mede uma coisa, e precisa gravar o que mediu no mesmo CSV.
 
 Os dois leem e escrevem `docs/data/mapa-controles.csv`. Depois de gravar aqui,
-rode `python3 scripts/gerar-mapa.py` para o artefato acompanhar — o portão
-`--check` reprova se você esquecer.
+rode `python3 scripts/gerar-mapa.py` para o artefato acompanhar — o `--check`
+acusa quem esquecer.
+
+Em 11/08/2026, quando esta linha foi conferida, o `--check` ainda precisava ser
+chamado À MÃO: nenhum portão do CI, do pre-commit ou da suíte o invocava. Ele
+está escrito e provado nos três casos, mas escrito não é ligado — e chamar de
+"portão" o que ninguém chama é o defeito mais caro desta casa.
 
 Desde a migração v2 o grão é `(chave, controle)`: uma feature de um controle é
 UMA linha, com o cabo e o rádio lado a lado em colunas `cabo_*` / `radio_*`. O
