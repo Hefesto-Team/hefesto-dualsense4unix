@@ -339,12 +339,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
         # no draft — o "Salvar Perfil" do rodapé persiste a política que a
         # usuária vê. Preset zera custom_mult (o valor só faz sentido em
         # policy="custom"; o schema do perfil rejeita a combinação).
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-            new_rumble = draft.rumble.model_copy(
-                update={"policy": policy, "custom_mult": None}
-            )
-            self.draft = draft.model_copy(update={"rumble": new_rumble})
+        self._gravar_intensidade_no_rascunho(policy, None)
 
         # HARM-19: recusa do daemon VIVO (motivo preenchido) não pode virar
         # acusação de daemon morto — é o tratamento que os gatilhos já têm.
@@ -395,13 +390,60 @@ class RumbleActionsMixin(WidgetAccessMixin):
         self._rumble_policy = "custom"
         # FEAT-RUMBLE-POLICY-PROFILE-01: persiste o custom no draft (mesma
         # razão do preset em `_set_policy` — o rodapé salva o que ela vê).
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-            new_rumble = draft.rumble.model_copy(
-                update={"policy": "custom", "custom_mult": mult}
-            )
-            self.draft = draft.model_copy(update={"rumble": new_rumble})
+        self._gravar_intensidade_no_rascunho("custom", mult)
         rumble_policy_custom(mult)
+
+    # --- POR-UNIDADE-01 (10/08/2026): a intensidade é da PEÇA ---
+
+    def _rumble_edit_uniq(self) -> str | None:
+        """MAC do alvo de edição escolhido no seletor, ou None ("Todos").
+
+        MESMA fonte da Lightbar e dos Gatilhos (``_edit_target_uniq``, que a
+        aba Status mantém em sincronia com o daemon) — o seletor é UM só, e o
+        selo ao lado dele já diz qual peça está sendo editada. Getattr
+        defensivo: a aba montada fora da janela completa (testes de geometria)
+        segue pela rota global, como sempre.
+        """
+        return getattr(self, "_edit_target_uniq", None)
+
+    def _gravar_intensidade_no_rascunho(
+        self, policy: str, mult: float | None
+    ) -> None:
+        """Anota a intensidade escolhida no rascunho — global ou da peça.
+
+        POR-UNIDADE-01, pedido dela em 10/08/2026: *"uma guia específica do
+        perfil X pro controle branco e outra pro mesmo perfil pra um controle
+        preto"*. O molde é o da Lightbar, linha por linha: alvo "Todos" grava
+        o GLOBAL e LIMPA o campo dos overrides (senão a peça ressuscitaria a
+        intensidade velha na próxima ativação — o fix HIGH de 2026-07-16, que
+        vale igual aqui); alvo específico grava só na peça, semeado com o
+        efetivo em tela.
+
+        NOTA HONESTA sobre o daemon vivo: o ``rumble.policy_set``/
+        ``policy_custom`` que sai logo depois deste registro é GLOBAL — não há
+        IPC de política por unidade, e inventar um seria mecanismo novo. O que
+        vale por peça chega ao hardware pelo "Aplicar" do rodapé e pela
+        ativação do perfil (a escala do backend, ``set_rumble_scales``). Com
+        uma peça selecionada, portanto, o que ela ouve na hora é o global; o
+        que ela SALVA é da peça.
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        uniq = self._rumble_edit_uniq()
+        if uniq is None:
+            new_rumble = draft.rumble.model_copy(
+                update={"policy": policy, "custom_mult": mult}
+            )
+            draft = draft.model_copy(update={"rumble": new_rumble})
+            self.draft = draft.with_override_fields_cleared(
+                "rumble", {"policy", "custom_mult"}
+            )
+            return
+        base = draft.effective_rumble_for(uniq)
+        self.draft = draft.with_controller_rumble(
+            uniq, base.model_copy(update={"policy": policy, "custom_mult": mult})
+        )
 
     def _activate_policy_toggle(self, policy: str) -> None:
         """Ativa o toggle correspondente à política (sem guard)."""
@@ -557,9 +599,13 @@ class RumbleActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         if draft is None:
             return
+        # POR-UNIDADE-01: a aba exibe a intensidade EFETIVA do alvo escolhido
+        # no seletor — o override da peça quando existe, senão o global. Mesma
+        # regra de `_refresh_lightbar_from_draft`. `weak`/`strong` (o teste de
+        # motores) vêm sempre do global: nunca foram do perfil.
+        rumble = draft.effective_rumble_for(self._rumble_edit_uniq())
         self._rumble_guard_refresh = True
         try:
-            rumble = draft.rumble
             weak_scale: Gtk.Scale = self._get("rumble_weak_scale")
             strong_scale: Gtk.Scale = self._get("rumble_strong_scale")
             if weak_scale is not None:

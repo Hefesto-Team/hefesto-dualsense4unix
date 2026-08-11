@@ -28,7 +28,27 @@ from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 #: handler `rumble.policy_custom` e 200% no slider da GUI ao mesmo tempo — de 101%
 #: em diante a usuária levava um erro de validação que a aba reportava como
 #: "daemon offline?". Quem mudar o teto muda AQUI e os três seguem juntos.
-RUMBLE_CUSTOM_MULT_MAX = 2.0
+#:
+#: SATURA-01 (11/08/2026) — o teto VOLTOU a 1.0, e é medição que manda.
+#: O 2.0 entrou em 13/07 (646cadf) dentro de uma leva de 17 correções, com uma
+#: linha de mensagem ("slider custom ate 200%") e NENHUMA medição. Rodando a
+#: conta exata do produto — `max(0, min(255, round(bruto * mult)))` — sobre os
+#: 256 valores que o jogo pode pedir:
+#:
+#:     mult 1.0 → nenhum valor satura
+#:     mult 1.5 → satura a partir de 170: 33% da faixa vira 255
+#:     mult 2.0 → satura a partir de 128: METADE da faixa vira 255
+#:
+#: A 2.0 o jogo manda 128, 180 e 255 e o controle recebe 255 nas três — a
+#: variação da vibração some, e o que ela sentiu foi força constante, não força
+#: maior ("vibra muito mais do que o normal a ponto de não parar", 10/08).
+#: Amplificar sem nuance não é amplificar: é achatar.
+#:
+#: O que se perde ao baixar: nada que estivesse medido. O que se ganha: a curva
+#: inteira do jogo chega ao motor. Se um dia alguém quiser passar de 1.0, o
+#: caminho honesto é comprimir (uma curva) em vez de cortar — e aí muda-se AQUI,
+#: com a medição na mão.
+RUMBLE_CUSTOM_MULT_MAX = 1.0
 
 
 def _casa_sem_caixa(valor: object, aceitos: list[str]) -> bool:
@@ -496,25 +516,124 @@ class ProfileModeConfig(BaseModel):
     coop: bool = True
 
 
+class ControllerRumbleOverride(BaseModel):
+    """A INTENSIDADE da vibração de UMA unidade física (POR-UNIDADE-01, 10/08).
+
+    Subconjunto DELIBERADO de ``RumbleConfig``: só ``policy`` e
+    ``custom_mult``, os dois campos que descrevem *o quanto* aquela peça de
+    plástico vibra. É o que ela pediu em 10/08/2026 — "uma guia específica do
+    perfil X pro controle branco e outra pro mesmo perfil pro controle preto".
+
+    ``passthrough`` FICA DE FORA, e a ausência é a entrega. Ele não descreve a
+    peça: descreve *quem manda na vibração agora* — soltar o rumble que a GUI
+    TRAVOU (``DaemonConfig.rumble_active``, um valor só para o daemon inteiro)
+    de volta para o jogo. Duas unidades pedindo passthrough diferente no mesmo
+    perfil não têm resposta honesta enquanto a trava for uma só, e a casa já
+    recusa campo aceito-e-ignorado na BORDA do esquema em vez de deixá-lo
+    virar comportamento errado silencioso meses depois (ver ``custom_mult``
+    fora de ``policy='custom'``, logo abaixo). ``extra="forbid"`` faz a recusa:
+    um override com ``passthrough`` é rejeitado no load, com mensagem.
+
+    ``auto`` também fica de fora, e pela mesma disciplina — mas por uma
+    MEDIÇÃO, não por uma opinião. O ``auto`` resolve o multiplicador pela
+    BATERIA, e quem a lê é ``core.rumble._effective_mult``, a partir do
+    ``store.snapshot().controller`` — o controle PRIMÁRIO, um só. Aceitar
+    ``auto`` por unidade guardaria no perfil dela uma promessa que o caminho
+    do rumble não sabe cumprir: as duas peças escalariam pela bateria da
+    mesma. Quando o dia do ``auto`` por peça chegar, o que falta é a bateria
+    POR UNIQ chegando ao ponto de escala — não este campo.
+
+    Campo não escrito = sem opinião: o merge POR CAMPO herda o global do
+    perfil, exatamente como em ``leds``/``triggers``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    policy: Literal["economia", "balanceado", "max", "custom"] | None = None
+    custom_mult: float | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _auto_nao_e_por_unidade(cls, data: Any) -> Any:
+        """Mensagem que EXPLICA a recusa do ``auto`` em vez do literal cru."""
+        if isinstance(data, dict) and data.get("policy") == "auto":
+            raise ValueError(
+                "controllers[...].rumble: 'auto' não vale por unidade — ele "
+                "escala pela BATERIA, e quem a lê é o controle PRIMÁRIO "
+                "(core.rumble._effective_mult). Guardar 'auto' aqui faria as "
+                "duas peças escalarem pela bateria da mesma. Use 'economia', "
+                "'balanceado', 'max' ou 'custom'; o 'auto' continua valendo "
+                "na seção GLOBAL do perfil."
+            )
+        return data
+
+    @model_validator(mode="after")
+    def _validate_custom_mult(self) -> ControllerRumbleOverride:
+        """MESMA regra do ``RumbleConfig`` — a borda recusa o par incoerente."""
+        if self.custom_mult is not None:
+            if not (0.0 <= self.custom_mult <= RUMBLE_CUSTOM_MULT_MAX):
+                raise ValueError(
+                    f"custom_mult fora de [0.0, {RUMBLE_CUSTOM_MULT_MAX}]: "
+                    f"{self.custom_mult}"
+                )
+            if self.policy != "custom":
+                raise ValueError(
+                    "custom_mult só é válido com policy='custom' "
+                    f"(policy={self.policy!r})"
+                )
+        return self
+
+
 class ControllerOverrides(BaseModel):
     """Overrides POR CONTROLE dentro do perfil (PERFIL-02, 2026-07-16).
 
     Subconjunto deliberado das seções do perfil que fazem sentido por
-    controle físico: ``leds`` (lightbar + player_leds + brilho) e
-    ``triggers``. Campo ``None`` = sem opinião — o controle herda a seção
+    controle físico. Campo ``None`` = sem opinião — o controle herda a seção
     GLOBAL do perfil (merge POR CAMPO na aplicação, PERFIL-01: override
     parcial nunca apaga a cor global no replug).
+
+    - ``leds`` (lightbar + player_leds + brilho) e ``triggers``, desde
+      PERFIL-02;
+    - ``rumble`` e ``speaker``, desde POR-UNIDADE-01 (10/08/2026) — a
+      intensidade da vibração e o alto-falante são da PEÇA: cada unidade tem
+      seus dois motores e seu alto-falante, e a fiação por-``uniq`` para os
+      dois já existia (``set_rumble_for``, ``apply_profile_speaker(uniq=...)``
+      e ``speaker.set``, todos com o alvo no parâmetro).
 
     Fora por decisão (revisão adversarial do sprint perfis-por-controle):
     - ``label`` — identidade visível é outra frente (4P-03);
     - ``mic_led`` — o mic jamais é colateral de troca de perfil
       (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01).
+
+    Fora porque NÃO TÊM RESPOSTA HONESTA por unidade — a nota datada de
+    10/08/2026, para não se reaprender (ver
+    ``docs/process/sprints/2026-08-10-POR-UNIDADE-01-*``):
+
+    - ``mode`` e a máscara do gamepad são da SESSÃO, não da peça (decisão
+      dela, 10/08/2026): duas unidades pedindo modos diferentes no mesmo
+      perfil não têm resposta;
+    - ``suppress_desktop_emulation`` (o "modo jogo") é irmão do ``mode`` pelo
+      mesmo eixo — ele cala a emulação do DESKTOP, que é uma só;
+    - ``mouse`` e ``key_bindings`` esbarram numa medição, não numa opinião:
+      ``PyDualSenseController.read_state`` diz, em comentário de código, que
+      *"INPUT vem SEMPRE do controle PRIMÁRIO"* e que a emulação de
+      mouse/teclado/gamepad é **single-controller por construção**. Há UM
+      ``_mouse_device`` e UM ``_keyboard_device`` no daemon, alimentados por
+      um ``read_state()`` por tick. Guardar velocidade por unidade sem
+      pipeline por unidade seria guardar um número que ninguém lê;
+    - ``mic.button_toggles_system`` pelo mesmo motivo do lado do barramento: o
+      ``EventTopic.BUTTON_DOWN`` publica ``{"button", "pressed"}`` e **não
+      carrega uniq**, então o laço do mic não tem como saber de qual peça veio
+      o toque. Somado a isso, o alvo do gesto é o microfone PADRÃO DO SISTEMA,
+      que é um só.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
+    rumble: ControllerRumbleOverride | None = None
+    speaker: ProfileSpeakerConfig | None = None
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
@@ -868,6 +987,7 @@ __all__ = [
     "PRIORIDADE_MAXIMA",
     "PRIORIDADE_MINIMA",
     "ControllerOverrides",
+    "ControllerRumbleOverride",
     "LedsConfig",
     "Match",
     "MatchAny",

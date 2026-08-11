@@ -56,7 +56,12 @@ def test_o_schema_recusa_acima_do_teto() -> None:
         RumbleConfig(policy="custom", custom_mult=RUMBLE_CUSTOM_MULT_MAX + 0.1)
 
 
-@pytest.mark.parametrize("percentual", [0, 50, 100, 150, 200])
+# SATURA-01 (11/08/2026): 150 e 200 saíram porque o teto voltou a 100%. Os
+# valores desta lista têm de ser os que o SLIDER produz — derivá-los do teto
+# em vez de escrevê-los à mão mantém o teste amarrado ao dono único.
+@pytest.mark.parametrize(
+    "percentual", [0, 50, int(RUMBLE_CUSTOM_MULT_MAX * 100)]
+)
 def test_todo_valor_do_slider_passa_no_handler(percentual: int) -> None:
     """O que a UI oferece, o daemon aceita — em TODA a faixa.
 

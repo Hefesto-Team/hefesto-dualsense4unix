@@ -140,17 +140,71 @@ DEFAULT_FLAVOR = "xbox"
 DEVICE_NAME = XBOX360_NAME
 
 
+#: Sinônimos tolerados na CLI/IPC → chave canônica de :data:`FLAVORS`. As
+#: chaves canônicas NÃO entram aqui (o resolvedor consulta o `FLAVORS` antes,
+#: para que um terceiro sabor no catálogo valha sem uma linha de edição nesta
+#: tabela — a mesma regra de fonte única do `external_mask.mascaras_validas`).
+#:
+#: NOTA DATADA — 10/08/2026: **"sony"** e **"ps5"** entraram aqui porque eram a
+#: palavra que ela usa para pedir a máscara de PlayStation, e caíam no `else`
+#: junto com o lixo: `normalize_flavor("sony")` devolvia **"xbox"** — a máscara
+#: OPOSTA à pedida, sem erro e sem log. Não entram "nintendo"/"switch"/"pro":
+#: não existe máscara de Switch neste catálogo, e mapeá-las para dualsense
+#: repetiria o defeito (entregar calado uma máscara que ninguém pediu). Elas são
+#: nome desconhecido, e nome desconhecido agora é ERRO no portão do IPC
+#: (`ipc_handlers._handle_gamepad_emulation_set`), não default.
+FLAVOR_SINONIMOS: dict[str, str] = {
+    "ps": "dualsense",
+    "ps5": "dualsense",
+    "playstation": "dualsense",
+    "sony": "dualsense",
+    "ds": "dualsense",
+    "xbox360": "xbox",
+    "x360": "xbox",
+    "xinput": "xbox",
+}
+
+
+def resolver_flavor(flavor: object) -> str | None:
+    """A máscara canônica de `flavor`, ou **None** quando ninguém a reconhece.
+
+    A metade ESTRITA do par: aceita as chaves de :data:`FLAVORS` e os
+    :data:`FLAVOR_SINONIMOS` (sem caixa e sem espaço em volta) e devolve `None`
+    para qualquer outra coisa — inclusive `None`, número e `""`. Quem chama
+    decide o que fazer com a recusa; o que esta função JAMAIS faz é escolher uma
+    máscara por conta própria.
+
+    É a função que o portão do IPC usa. O :func:`normalize_flavor` continua
+    tolerante porque os caminhos internos (perfil em disco, config do daemon,
+    co-op) precisam de um valor sempre — mas nenhum deles é a usuária digitando.
+    """
+    if not isinstance(flavor, str):
+        return None
+    key = flavor.strip().lower()
+    if key in FLAVORS:
+        return key
+    return FLAVOR_SINONIMOS.get(key)
+
+
+def nomes_de_flavor_aceitos() -> tuple[str, ...]:
+    """Todo nome que :func:`resolver_flavor` reconhece, ordenado.
+
+    Existe para a mensagem de recusa do portão poder DIZER o que vale — recusar
+    sem listar a alternativa é trocar um default calado por um erro calado.
+    """
+    return tuple(sorted(set(FLAVORS) | set(FLAVOR_SINONIMOS)))
+
+
 def normalize_flavor(flavor: str | None) -> str:
-    """Resolve um flavor válido; cai no default se desconhecido/None."""
+    """Resolve um flavor válido; cai no default se desconhecido/None.
+
+    TOLERANTE de propósito, e por isso NÃO serve de portão: o desconhecido vira
+    :data:`DEFAULT_FLAVOR` em silêncio. Quem valida entrada de gente (IPC, CLI)
+    usa :func:`resolver_flavor`, que devolve `None` em vez de escolher.
+    """
     if flavor is None:
         return DEFAULT_FLAVOR
-    key = flavor.strip().lower()
-    # Sinônimos tolerados na CLI/IPC.
-    if key in ("ps", "playstation", "ds", "dualsense"):
-        return "dualsense"
-    if key in ("xbox", "xbox360", "x360", "xinput"):
-        return "xbox"
-    return key if key in FLAVORS else DEFAULT_FLAVOR
+    return resolver_flavor(flavor) or DEFAULT_FLAVOR
 
 # Mapeamento canonico Hefesto - Dualsense4Unix (HOTFIX-2) -> evdev constant usado no uinput.
 # Layout Xbox: cross=A, circle=B, square=X, triangle=Y.
@@ -700,10 +754,13 @@ __all__ = [
     "DUALSENSE_PRODUCT",
     "DUALSENSE_VENDOR",
     "FLAVORS",
+    "FLAVOR_SINONIMOS",
     "MAX_FF_EFFECTS",
     "XBOX360_NAME",
     "XBOX360_PRODUCT",
     "XBOX360_VENDOR",
     "UinputGamepad",
+    "nomes_de_flavor_aceitos",
     "normalize_flavor",
+    "resolver_flavor",
 ]

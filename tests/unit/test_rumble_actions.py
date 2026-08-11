@@ -253,6 +253,9 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         "on_rumble_passthrough",
         # ABAS-04: "Parar"/"Deixar o jogo controlar" agora escrevem no rascunho.
         "_zerar_rumble_no_rascunho",
+        # POR-UNIDADE-01: a intensidade passou a ter alvo (global ou peça).
+        "_gravar_intensidade_no_rascunho",
+        "_rumble_edit_uniq",
         "_refresh_rumble_from_draft",
         "_refresh_rumble_state_label_async",
         "_cancel_rumble_test_timer",

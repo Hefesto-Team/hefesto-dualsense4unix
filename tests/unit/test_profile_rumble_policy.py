@@ -43,10 +43,10 @@ def daemon() -> Daemon:
 
 
 def test_schema_aceita_policy_e_custom_mult() -> None:
-    p = _profile({"policy": "custom", "custom_mult": 1.5})
+    p = _profile({"policy": "custom", "custom_mult": 0.75})
     assert isinstance(p.rumble, RumbleConfig)
     assert p.rumble.policy == "custom"
-    assert p.rumble.custom_mult == pytest.approx(1.5)
+    assert p.rumble.custom_mult == pytest.approx(0.75)
     # Perfil v1 (só passthrough) continua válido — aditivo, sem opinião.
     legado = _profile({"passthrough": False})
     assert legado.rumble.policy is None
