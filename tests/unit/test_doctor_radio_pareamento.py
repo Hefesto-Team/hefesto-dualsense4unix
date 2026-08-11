@@ -105,6 +105,29 @@ class TestBluezVersionVerdict:
     def test_versao_vazia_e_unknown(self) -> None:
         assert _rodar("_bluez_version_verdict", "") == "unknown"
 
+    # --- TETO 5.87: o UAF em dev_disconnected (estudo 2026-08-07 §D) --------
+    # A faixa aceita tem DOIS limites. Sem o teto, uma máquina que já veio com
+    # bluez >= 5.87 (o PC novo) passava CALADA no doctor, carregando o
+    # uso-depois-de-liberado que esta casa recusou em 22/07 e de novo em 07/08.
+
+    def test_versao_do_backport_dela_fica_ok(self) -> None:
+        """A versão REAL instalada nesta máquina não pode cair no teto —
+        é a prova de que a cura explica o que JÁ funcionava."""
+        assert _rodar("_bluez_version_verdict", "5.86-0ubuntu0.1~hefesto24.04.3") == "ok"
+
+    def test_versao_no_teto_e_nova(self) -> None:
+        """Boundary: 5.87 exatamente já é 'nova' (a MENOR versão rejeitada)."""
+        assert _rodar("_bluez_version_verdict", "5.87") == "nova"
+
+    def test_versao_empacotada_no_teto_e_nova(self) -> None:
+        """O que chega de fábrica é '5.87-0ubuntu1', não '5.87' pelado."""
+        assert _rodar("_bluez_version_verdict", "5.87-0ubuntu1") == "nova"
+
+    def test_versao_acima_do_teto_e_nova(self) -> None:
+        """5.88+ também cai no teto: enquanto ninguém conferir se o lançamento
+        carrega o 5bc6aa79, o doctor tem de falar — em WARN, não em silêncio."""
+        assert _rodar("_bluez_version_verdict", "5.88") == "nova"
+
 
 class TestCheckBluezBackportVersion:
     """FALHA-SEM/PASSA-COM de ponta-a-ponta: dpkg-query FAKE, dpkg real
@@ -129,6 +152,23 @@ class TestCheckBluezBackportVersion:
         saida = _rodar_check("check_bluez_backport_version", fake_bin)
         assert "[ OK ]" in saida
         assert "[FAIL]" not in saida
+
+    def test_bluez_acima_do_teto_e_warn_que_nomeia_o_motivo(
+        self, tmp_path: Path
+    ) -> None:
+        """O PC novo pode vir com 5.87. Antes do teto, isto passava como [ OK ]
+        e o UAF entrava calado. Agora é WARN — e o WARN NOMEIA o defeito, senão
+        quem lê não tem como decidir nada."""
+        fake_bin = self._fake_dpkg_query(tmp_path, "5.87-0ubuntu1")
+        saida = _rodar_check("check_bluez_backport_version", fake_bin)
+        assert "[WARN]" in saida
+        assert "[ OK ]" not in saida
+        assert "[FAIL]" not in saida
+        assert "5.87-0ubuntu1" in saida
+        # o motivo, com nome e sobrenome — não "versão não suportada"
+        assert "dev_disconnected" in saida
+        assert "uso-depois-de-liberado" in saida
+        assert "5bc6aa79" in saida
 
     def test_bluez_ausente_e_info_neutro(self, tmp_path: Path) -> None:
         """dpkg-query sem saída (bluez não instalado via dpkg) — nunca FAIL/WARN."""
@@ -457,6 +497,23 @@ class TestFiacaoNoDoctor:
     def test_check_bluez_usa_a_funcao_pura(self) -> None:
         bloco = self._bloco("check_bluez_backport_version() {")
         assert "_bluez_version_verdict" in bloco
+
+    def test_o_teto_existe_e_e_usado_pelo_veredito(self) -> None:
+        """O teto é uma decisão MEDIDA (estudo 2026-08-07 §D) — não pode sumir
+        numa refatoração sem que este teste caia junto."""
+        texto = self._texto()
+        assert 'readonly _BZ_TETO="5.87"' in texto
+        bloco = self._bloco("_bluez_version_verdict() {")
+        assert "_BZ_TETO" in bloco
+        assert "_BZ_PISO" in bloco
+
+    def test_o_ramo_do_teto_esta_ligado_no_check(self) -> None:
+        """Veredito sem tratamento cai no `*)` (info neutro) e o UAF volta a
+        passar calado — o `case` tem de ter o ramo `nova)` em WARN."""
+        bloco = self._bloco("check_bluez_backport_version() {")
+        assert "nova)" in bloco
+        depois = bloco[bloco.index("nova)") :]
+        assert "warn " in depois[: depois.index(";;")]
 
     def test_check_hidraw_usa_as_funcoes_puras(self) -> None:
         bloco = self._bloco("check_bt_connected_sem_hidraw() {")
