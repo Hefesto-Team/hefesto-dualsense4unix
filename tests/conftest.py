@@ -16,6 +16,8 @@ import shutil
 import sys
 import tempfile
 import types
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -1130,3 +1132,299 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # resolvesse o default esconderia/abriria hidraw DE VERDADE no meio da
     # suíte. Testes do próprio cliente passam o caminho explicitamente.
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))
+
+
+# ---------------------------------------------------------------------------
+# PARIDADE-BYTE-01 — o transporte vira DIMENSÃO do caso, não rótulo num dict
+# ---------------------------------------------------------------------------
+#
+# O PORQUÊ, MEDIDO em 10/08/2026 contra os 8589 testes coletados (o diagnóstico
+# inteiro está na seção 2 do índice
+# `docs/process/sprints/2026-08-10-INDICE-o-mapa-que-vira-portao.md`):
+#
+#   testes que MENCIONAM transporte ................... 718 (9,7%)
+#   testes que tocam o envelope no nível de BYTE ......  93 (1,1%)
+#   `parametrize` cruzando os DOIS transportes ........   0, de 233
+#   fixtures parametrizadas por transporte ............   0
+#   capturas HID gravadas na suíte ....................   1, e é USB
+#
+# E a prova por mutação, que é a que não deixa dúvida: trocar **R por B** dentro
+# de `_build_common` (vermelho vira azul na lightbar) deixava a suíte INTEIRA
+# verde — 8584 passaram; e matar os gatilhos adaptativos **só no BT**, com
+# envelope e CRC perfeitos, reprovava **1 teste em 8589** — e era o genérico "o
+# payload sai verbatim", que não sabe o que é gatilho.
+#
+# O diagnóstico em uma frase: cada feature era provada UMA vez, no transporte
+# que estava na mesa de quem escreveu o teste — quase sempre o cabo.
+#
+# A CURA é esta fixture: `transporte` é PARAMETRIZADA (`usb` e `bt`), então todo
+# caso que a pede roda DUAS vezes, com ids `[usb]` e `[bt]`, e reprova quando um
+# dos lados quebra sozinho.
+#
+# O QUE ELA NÃO FAZ, DE PROPÓSITO: reimplementar o envelope. Uma fixture que
+# monta o 0x31 por conta própria mede a si mesma — é a armadilha nº 1 desta casa
+# (o instrumento brigando com o produto). Todo valor aqui ou é uma constante
+# importada de `core/ds_output_report.py`, ou é MEDIDO chamando o builder de
+# produção: o deslocamento do common não está escrito em lugar nenhum daqui,
+# `_medir_deslocamento_do_common` procura um payload marcado DENTRO do report
+# que a produção montou.
+
+#: Os dois transportes que o DualSense fala, nos nomes que a casa usa (são os
+#: mesmos do `Transport` do backend e das colunas `cabo_*`/`radio_*` do mapa).
+TRANSPORTES: tuple[str, ...] = ("usb", "bt")
+
+
+def _montar_usb(common: bytes | bytearray, *, seq: int = 0) -> bytearray:
+    """Adaptador de assinatura: o 0x02 não tem sequência, e `seq` é inócuo.
+
+    Existe para que o caso de teste chame `transporte.montar(common, seq=…)`
+    sem saber em qual transporte está — que é justamente o ponto de o
+    transporte ser dimensão do caso. Não monta nada: delega ao builder de
+    produção.
+    """
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    return rep.build_usb_report(common)
+
+
+def _medir_deslocamento_do_common(montar: Callable[..., bytearray]) -> int:
+    """Onde o common de 47 bytes CAI dentro do report que a produção monta.
+
+    Medido, não declarado: monta um common marcado (0,1,2,…,46 — uma sequência
+    que não se repete no envelope) e procura essa subsequência no buffer. Se um
+    dia o envelope mudar de forma, este número muda junto com o produto, em vez
+    de virar uma segunda verdade que ninguém atualiza.
+    """
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    marcado = bytes(range(rep.COMMON_LEN))
+    posicao = bytes(montar(marcado)).find(marcado)
+    if posicao < 0:
+        raise RuntimeError(
+            "o builder de produção não embutiu o common marcado no report — "
+            "o envelope mudou de forma e a fixture de transporte não sabe medi-lo"
+        )
+    return posicao
+
+
+@dataclass(frozen=True)
+class EnvelopeDeTransporte:
+    """Tudo que separa o cabo do rádio, do report id ao CRC.
+
+    Os campos respondem, para UM transporte, as perguntas que o diagnóstico de
+    10/08 mostrou que nenhum teste fazia duas vezes:
+
+    - `report_id` — 0x02 no cabo, 0x31 no rádio;
+    - `deslocamento_do_common` — 1 no cabo, 3 no rádio (MEDIDO no builder);
+    - `tamanho_do_report` — 64 e 78;
+    - `tag` — o 0x10 obrigatório do BT, ausente no USB;
+    - `semente_do_crc` — 0xA2 no BT, `None` no USB (o cabo não tem CRC);
+    - `tem_nibble_de_sequencia` — o nibble alto de `[1]`, só no BT.
+    """
+
+    nome: str
+    nome_do_contype: str
+    report_id: int
+    tamanho_do_report: int
+    deslocamento_do_common: int
+    tag: int | None
+    semente_do_crc: int | None
+    tem_nibble_de_sequencia: bool
+    montar: Callable[..., bytearray]
+
+    @property
+    def tipo_de_conexao(self) -> Any:
+        """O membro de `ConnectionType` da pydualsense deste transporte."""
+        from pydualsense.enums import ConnectionType
+
+        return getattr(ConnectionType, self.nome_do_contype)
+
+    def extrair_common(self, report: bytes | bytearray | list[int]) -> bytes:
+        """Os 47 bytes de payload de dentro do envelope deste transporte."""
+        from hefesto_dualsense4unix.core import ds_output_report as rep
+
+        bruto = bytes(report)
+        inicio = self.deslocamento_do_common
+        return bruto[inicio : inicio + rep.COMMON_LEN]
+
+    def sequencia_de(self, report: bytes | bytearray | list[int]) -> int | None:
+        """O nibble de sequência do report, ou `None` onde ele não existe."""
+        if not self.tem_nibble_de_sequencia:
+            return None
+        return (bytes(report)[1] >> 4) & 0x0F
+
+    def crc_do_report(self, report: bytes | bytearray | list[int]) -> int | None:
+        """O CRC-32 que ESTÁ gravado no report, ou `None` sem CRC."""
+        if self.semente_do_crc is None:
+            return None
+        return int.from_bytes(bytes(report)[-4:], "little")
+
+    def crc_esperado(self, report: bytes | bytearray | list[int]) -> int | None:
+        """O CRC-32 que a receita de produção calcula, ou `None` sem CRC."""
+        from hefesto_dualsense4unix.core import ds_output_report as rep
+
+        if self.semente_do_crc is None:
+            return None
+        return rep.bt_crc32(bytes(report)[:-4], seed=self.semente_do_crc)
+
+    def problemas_do_envelope(self, report: bytes | bytearray | list[int]) -> list[str]:
+        """Lista legível do que está errado no envelope (vazia = está inteiro).
+
+        É lista e não `assert` para o caso de teste poder dizer QUAL transporte
+        quebrou na mensagem — o ponto inteiro desta camada é que "quebrou" nunca
+        mais seja uma resposta sem lado.
+        """
+        from hefesto_dualsense4unix.core import ds_output_report as rep
+
+        bruto = bytes(report)
+        if len(bruto) != self.tamanho_do_report:
+            return [
+                f"{self.nome}: tamanho {len(bruto)}, esperado {self.tamanho_do_report}"
+            ]
+        problemas: list[str] = []
+        if bruto[0] != self.report_id:
+            problemas.append(
+                f"{self.nome}: report id {bruto[0]:#04x}, esperado {self.report_id:#04x}"
+            )
+        if self.tag is not None and bruto[2] != self.tag:
+            problemas.append(
+                f"{self.nome}: tag {bruto[2]:#04x}, esperado {self.tag:#04x} "
+                "(o firmware descarta o 0x31 sem o tag mágico)"
+            )
+        fim_do_common = self.deslocamento_do_common + rep.COMMON_LEN
+        fim_do_corpo = len(bruto) - (0 if self.semente_do_crc is None else 4)
+        if any(bruto[fim_do_common:fim_do_corpo]):
+            problemas.append(f"{self.nome}: há lixo no reservado depois do common")
+        if self.semente_do_crc is not None:
+            gravado = self.crc_do_report(bruto)
+            esperado = self.crc_esperado(bruto)
+            if gravado != esperado:
+                problemas.append(
+                    f"{self.nome}: CRC {gravado:#010x}, esperado {esperado:#010x}"
+                )
+        return problemas
+
+
+#: Medido UMA vez por sessão, na primeira fixture que pedir (o import do módulo
+#: de produção fica fora do topo do conftest de propósito: ele é avaliado na
+#: coleta, e nada aqui pode depender de o pacote estar importável tão cedo).
+_ENVELOPES: dict[str, EnvelopeDeTransporte] = {}
+
+
+def _medir_os_transportes() -> dict[str, EnvelopeDeTransporte]:
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    return {
+        "usb": EnvelopeDeTransporte(
+            nome="usb",
+            nome_do_contype="USB",
+            report_id=rep.USB_REPORT_ID,
+            tamanho_do_report=rep.USB_REPORT_LEN,
+            deslocamento_do_common=_medir_deslocamento_do_common(_montar_usb),
+            tag=None,
+            semente_do_crc=None,
+            tem_nibble_de_sequencia=False,
+            montar=_montar_usb,
+        ),
+        "bt": EnvelopeDeTransporte(
+            nome="bt",
+            nome_do_contype="BT",
+            report_id=rep.BT_REPORT_ID,
+            tamanho_do_report=rep.BT_REPORT_LEN,
+            deslocamento_do_common=_medir_deslocamento_do_common(rep.build_bt_report),
+            tag=rep.BT_TAG,
+            semente_do_crc=rep.BT_CRC_SEED,
+            tem_nibble_de_sequencia=True,
+            montar=rep.build_bt_report,
+        ),
+    }
+
+
+def envelope_de(nome: str) -> EnvelopeDeTransporte:
+    """O envelope de UM transporte pelo nome (`"usb"` / `"bt"`)."""
+    if not _ENVELOPES:
+        _ENVELOPES.update(_medir_os_transportes())
+    return _ENVELOPES[nome]
+
+
+@pytest.fixture(params=["usb", "bt"])
+def transporte(request: Any) -> EnvelopeDeTransporte:
+    """O transporte como DIMENSÃO do caso: todo teste que a pede roda 2x.
+
+    Os ids saem `[usb]` e `[bt]`, então o relatório do pytest diz qual LADO
+    quebrou — que é a informação que faltava em 10/08, quando matar os gatilhos
+    só no BT reprovava um único teste genérico.
+
+    OS DOIS NOMES ESTÃO ESCRITOS À MÃO NO DECORADOR, e não como `TRANSPORTES`,
+    de propósito: quem faz o CENSO desta camada lê o código com `ast`, e uma
+    indireção (`params=TRANSPORTES`) some do censo — a fixture existiria e o
+    portão continuaria contando zero. `test_paridade_transporte_envelope.py`
+    trava as duas listas juntas para que a duplicação não possa divergir.
+    """
+    return envelope_de(str(request.param))
+
+
+@pytest.fixture()
+def transportes() -> tuple[EnvelopeDeTransporte, ...]:
+    """Os DOIS envelopes de uma vez, para o caso que os COMPARA entre si.
+
+    Complementa a `transporte` (que roda um por vez): há afirmação do produto
+    que só existe no cruzamento — "o common de 47 bytes é IDÊNTICO nos dois
+    transportes, muda só o envelope" não cabe num caso que enxerga um lado.
+    """
+    return tuple(envelope_de(nome) for nome in TRANSPORTES)
+
+
+@pytest.fixture()
+def fabrica_de_bancada(monkeypatch: pytest.MonkeyPatch) -> Callable[..., Any]:
+    """Fábrica de `_PinnedPyDualSense` SEM device, num transporte escolhido.
+
+    O handle nasce pelo `__init__` de produção (que não toca em hardware) e
+    ganha à mão só o que o `init()` criaria DEPOIS de achar o device — as
+    quatro peças de estado (`light`, `audio`, `triggerL`, `triggerR`) e o
+    `conType`. Nada de estado privado escrito à mão: `_rumble_active`,
+    `_volumes_audio`, `_preamp_audio` e companhia vêm do construtor de verdade,
+    e é por isso que este handle não vira uma segunda implementação do produto.
+
+    A ARMADILHA Nº 1 DESTA CASA FICA FECHADA AQUI: `prepareReport` tem um
+    `except Exception` que cai no report do UPSTREAM (cujo 0x31 é malformado).
+    Um atributo faltando na bancada faria o teste medir a pydualsense e chamar
+    isso de produto — instrumento brigando com o produto, medição inventada.
+    Com este monkeypatch, o fallback EXPLODE em vez de mentir.
+
+    É fábrica, e não um handle pronto, porque há afirmação que só existe no
+    CRUZAMENTO: comparar o report do cabo com o do rádio exige os dois handles
+    vivos no mesmo caso.
+    """
+    from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger, pydualsense
+
+    from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
+
+    def _fallback_proibido(self: Any) -> list[int]:
+        raise AssertionError(
+            "prepareReport caiu no fallback do upstream: a bancada está "
+            "incompleta e o teste mediria a pydualsense, não o hefesto"
+        )
+
+    monkeypatch.setattr(pydualsense, "prepareReport", _fallback_proibido)
+
+    def _fabricar(envelope: EnvelopeDeTransporte) -> Any:
+        handle = _PinnedPyDualSense(b"/dev/hidraw-de-bancada", is_edge=False)
+        handle.light = DSLight()
+        handle.audio = DSAudio()
+        handle.triggerL = DSTrigger()
+        handle.triggerR = DSTrigger()
+        handle.conType = envelope.tipo_de_conexao
+        handle.input_report_length = envelope.tamanho_do_report
+        handle.output_report_length = envelope.tamanho_do_report
+        return handle
+
+    return _fabricar
+
+
+@pytest.fixture()
+def ds5_de_bancada(
+    transporte: EnvelopeDeTransporte, fabrica_de_bancada: Callable[..., Any]
+) -> Any:
+    """O handle de bancada do transporte DESTE caso (ver `fabrica_de_bancada`)."""
+    return fabrica_de_bancada(transporte)
