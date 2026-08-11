@@ -439,8 +439,21 @@ _WHITELIST_RE = [re.compile(p) for p in WHITELIST_PATTERNS]
 EXTENSOES_ALVO = (
     ".py", ".sh", ".zsh", ".bash",
     ".md", ".yml", ".yaml", ".toml",
-    ".cfg", ".ini", ".txt",
+    ".cfg", ".ini", ".txt", ".csv",
 )
+
+# `.csv` entrou em 11/08/2026, e o motivo importa: `docs/data/mapa-controles.csv`
+# deixou de ser tabela de números e virou 291 linhas de PROSA em português —
+# evidências, ressalvas, notas de medição. O portão não o via, e as células
+# novas nasceram sem acento nenhum (69 violações na primeira varredura).
+#
+# ARMADILHA, paga na hora: uma substituição cega de `nao` por `não` também
+# reescreve os VALORES DE DOMÍNIO — `nao-tem` virou `não-tem` e
+# `inferido-do-codigo` virou `inferido-do-código`, e o censo do mapa saltou de
+# 15 para 368 reprovações de integridade. Valor de domínio é chave, não texto:
+# ele nunca leva acento. Quem for acentuar em massa um `.csv` deste projeto
+# corrige a PROSA e deixa as colunas de enumeração em paz
+# (`existe`, `*_aceita`, `*_aciona`, `*_canal`, `*_confianca`, `*_grau`).
 
 
 def is_whitelisted(rel_path: str) -> bool:
