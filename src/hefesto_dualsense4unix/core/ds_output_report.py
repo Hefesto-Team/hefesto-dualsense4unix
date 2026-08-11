@@ -66,11 +66,34 @@ VALID_FLAG0_RIGHT_TRIGGER_FFB = 0x04
 VALID_FLAG0_LEFT_TRIGGER_FFB = 0x08
 #: 0x10..0x80 habilitam os QUATRO bytes de áudio common[4..7] — volume do
 #: fone (4), volume do alto-falante interno (5), volume do microfone (6) e o
-#: byte de roteamento/caminho de áudio (7). O kernel (`hid-playstation`)
-#: declara common[4..7] como `reserved[4]` e NUNCA os escreve; a nomenclatura
-#: por bit vem da documentação de comunidade do report 0x02 (Nielk1 / DS5
-#: wiki), que é a única fonte que os descreve — por isso o mapeamento
-#: bitbyte está documentado como PROVÁVEL, não como medido.
+#: byte de roteamento/caminho de áudio (7).
+#:
+#: TEXTO DE 01/08/2026, preservado porque proveniência não se apaga: *"O
+#: kernel (`hid-playstation`) declara common[4..7] como `reserved[4]` e NUNCA
+#: os escreve; a nomenclatura por bit vem da documentação de comunidade do
+#: report 0x02 (Nielk1 / DS5 wiki), que é a única fonte que os descreve — por
+#: isso o mapeamento bitbyte está documentado como PROVÁVEL, não como
+#: medido."*
+#:
+#: NOTA DATADA DE 11/08/2026 — o parágrafo acima CADUCOU, e caducou contra
+#: este mesmo arquivo: os TETOS logo abaixo (`TETO_HEADPHONE_VOLUME`,
+#: `TETO_MIC_VOLUME`) são atribuídos ali ao kernel 6.18, enquanto este
+#: comentário dizia que o kernel não conhecia os campos. Um dos dois estava
+#: errado, e é este. O Linux 6.18 (patches do jack de áudio, Collabora)
+#: NOMEIA os campos. Grau novo: **ALTA** para o alto-falante (5), o microfone
+#: (6) e o caminho de áudio (7).
+#:
+#: O fone (4) fica em DUAS partes, e a distinção é o que importa aqui: o
+#: CAMPO é nomeado pelo kernel, mas o BIT DE AUTORIZAÇÃO `0x10` logo abaixo
+#: **não** — o kernel define enable para alto-falante, microfone e
+#: audio_control, e nenhum para o fone. O `0x10` segue sendo de fonte de
+#: COMUNIDADE, grau MÉDIA, e ninguém mediu o que ele faz neste firmware.
+#:
+#: Limite honesto desta nota: o fonte do `hid-playstation` NÃO foi relido
+#: nesta passagem. Ela se apoia no comentário dos tetos, na seção 2 de
+#: `docs/protocol/dualsense-referencia-canonica.md` e no registro do mapa de
+#: canais (`docs/data/mapa-controles.csv`, linha `audio.jack.volume`), que
+#: leu o kernel desta máquina.
 VALID_FLAG0_HEADPHONE_VOLUME = 0x10
 VALID_FLAG0_SPEAKER_VOLUME = 0x20
 VALID_FLAG0_MIC_VOLUME = 0x40
@@ -118,9 +141,6 @@ SAIDA_SO_NO_ALTO_FALANTE = 3
 OUTPUT_PATH_SEL_SHIFT = 4
 OUTPUT_PATH_SEL_MASK = 0x30
 
-#: O ganho do pré-amplificador do alto-falante, nos bits 0-2 de `common[37]`.
-#: `0x2` é o valor que o kernel 6.18 escolhe, e é o que a E1 da SOM-ROTA-01
-#: passou a escrever.
 #: Os bits do MICROFONE dentro do `common[7]`, e o valor que preserva o
 #: microfone interno funcionando quando assumimos a posse do byte.
 #:
@@ -141,6 +161,21 @@ OUTPUT_PATH_SEL_MASK = 0x30
 AUDIO_CONTROL_FORCE_INTERNAL_MIC = 0x01
 AUDIO_CONTROL_BASE_SEGURA = AUDIO_CONTROL_FORCE_INTERNAL_MIC
 
+#: O ganho do pré-amplificador do alto-falante, nos bits 0-2 de `common[37]`.
+#: `0x2` é o valor que o kernel 6.18 escolhe, e é o que a E1 da SOM-ROTA-01
+#: passou a escrever.
+#:
+#: NOTA DATADA DE 11/08/2026 — estas três linhas estavam ÓRFÃS: elas abriam o
+#: bloco de comentário das constantes do MICROFONE (`common[7]`), quatro
+#: constantes acima, e documentavam um par que ficava aqui embaixo sem
+#: comentário nenhum. Nada de lógica mudou; o comentário voltou para o que
+#: ele descreve.
+#:
+#: E o que ele descreve JÁ ESTÁ VIVO: `core/backend_pydualsense.py:786-790`
+#: escreve `common[37]` e liga o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` sempre
+#: que há um pré-amp pedido, e a linha `:2695` manda o
+#: `SP_PREAMP_GAIN_PADRAO`. A seção 3 da referência canônica dizia até hoje
+#: que *"este projeto escreve só o volume"* — ela recebeu nota datada.
 SP_PREAMP_GAIN_MASK = 0x07
 SP_PREAMP_GAIN_PADRAO = 0x02
 
