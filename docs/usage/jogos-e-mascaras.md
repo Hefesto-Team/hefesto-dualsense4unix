@@ -28,8 +28,17 @@ O sinal é direto:
   Xbox-only → use **Xbox 360**;
 - funciona com vibração, gatilhos e luz → deixe **DualSense (PS)**.
 
-Com `Xbox 360` a vibração continua; o que se perde é o **giroscópio** (a API do
-XInput não tem canal de movimento) e os gatilhos adaptativos.
+Com `Xbox 360` a vibração continua; o que se perde são **cinco coisas**:
+giroscópio, touchpad, cor da lightbar, gatilhos adaptativos e leitura de
+bateria.
+
+A causa não é o Linux nem falta de trabalho aqui — é o **formato do controle
+que a máscara imita**. O relatório de um Xbox 360 tem vinte bytes, treze deles
+usados por botões, analógicos e gatilhos: não sobra lugar para eixos de
+movimento, pontos de toque, cor ou carga. Escolher `Xbox 360` é escolher
+**vibração que funciona em tudo** e pagar com as cinco. A demonstração, em três
+camadas independentes, está em
+[a pilha do Steam Input](../protocol/pilha-steam-input-xpad-sdl.md), seção 1.5.
 
 ## O terceiro caso, que confunde: suporte a DualSense **pela Steam**
 
@@ -107,7 +116,8 @@ Casos medidos nesta máquina: **Sackboy: A Big Adventure**, **Pragmata**,
 > Isso é política declarada, não defeito: o Hefesto repassa fielmente ao seu
 > controle o que o jogo pede, porque escalar ou trocar o que o jogo pinta seria
 > mentir sobre o que ele pediu. **Um jogo desta lista na lista de exceções não
-> ganha nada** e perde o co-op. Registro em
+> ganha nada** — e, desde 09/08/2026, também não perde nada: a exceção só troca
+> qual controle o jogo enxerga, e o jogador 2 fica. Registro em
 > [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
 >
 > **Uma contradição desta página, anotada e não resolvida:** o **Pragmata** está

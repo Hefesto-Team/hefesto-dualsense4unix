@@ -90,7 +90,7 @@ como:"*. Ele muda que tipo de controle virtual sobe:
 | Máscara | Como sobe | O que o jogo recebe |
 |---|---|---|
 | **DualSense (botões PlayStation)** — padrão | device HID real via `/dev/uhid` | botões e eixos, vibração, gatilhos adaptativos, lightbar, LEDs de jogador, giroscópio e touchpad |
-| **Xbox 360** | device evdev via `/dev/uinput` | botões, eixos e vibração |
+| **Xbox 360** | device evdev via `/dev/uinput` | botões, eixos e vibração — e só |
 
 A máscara DualSense é a completa: o controle virtual é um DualSense de verdade
 para o kernel, o `hid_playstation` faz bind nele, e o que o jogo escreve nesse
@@ -113,8 +113,16 @@ físico e espelhado no virtual, para o jogo receber a mira por movimento.
 > [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
 
 A máscara Xbox 360 é o piso de compatibilidade — para jogos que só aceitam
-gamepad da Microsoft. Ela é evdev, então só carrega botões, eixos e vibração:
-nada de gatilho adaptativo, luz ou giroscópio.
+gamepad da Microsoft. Ela carrega botões, eixos e vibração, e nada mais: você
+perde **cinco coisas** — giroscópio, touchpad, cor da lightbar, gatilhos
+adaptativos e leitura de bateria.
+
+Isso não é limitação do Linux nem falta de trabalho aqui: é o **formato do
+controle que a máscara imita**. O relatório de um Xbox 360 tem vinte bytes,
+treze deles usados por botões, analógicos e gatilhos, e não sobra lugar para
+movimento, toque, cor ou carga. A demonstração, em três camadas independentes,
+está em [a pilha do Steam Input](../protocol/pilha-steam-input-xpad-sdl.md),
+seção 1.5.
 
 > Se o `/dev/uhid` não estiver acessível, ou o kernel recusar o device, a máscara
 > DualSense **cai para uinput** — e aí ela vira uma Xbox com botões de PlayStation,

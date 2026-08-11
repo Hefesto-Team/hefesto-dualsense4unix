@@ -25,8 +25,19 @@ todas as formas de instalar, o que o instalador toca no sistema, e como reverter
 **Opcionais**
 
 - `python-uinput` — extra `[emulation]`, para o controle virtual pela via uinput.
-- `dkms` + `linux-headers-$(uname -r)` — para os módulos de kernel (abaixo).
-  Sem eles o instalador só avisa e segue; os módulos do kernel continuam valendo.
+
+**O que o instalador oferece instalar por você**
+
+- `dkms`, `build-essential` e `linux-headers-$(uname -r)` — são o que os três
+  módulos de kernel desta casa (abaixo) precisam para compilar. Desde
+  11/08/2026 o `install.sh` confere se estão presentes, **pergunta** e instala
+  com `sudo` quando você aceita. Se você recusar, ou se os headers do seu
+  kernel exato não existirem no repositório da distro, ele avisa e segue: o
+  produto funciona com os drivers de fábrica do kernel, só sem as curas — e a
+  conferência final diz quais faltaram.
+
+A tabela de versões validadas de cada peça (Python, BlueZ, kernel) está em
+[as versões em que isto funciona](versoes-validadas.md).
 
 ## Do código-fonte
 
@@ -141,10 +152,12 @@ serviço de sistema:
   `scripts/bt_bonds_restore.sh` devolve.
 
 Sobre os três módulos DKMS: eles **não apagam** os módulos originais do kernel —
-entram por precedência (`updates/dkms`) e só valem no próximo boot ou replug. Se
-o `dkms` ou os headers do kernel faltarem, ou se a compilação falhar, o instalador
-avisa e continua; o kernel segue com os módulos de fábrica. Para não instalá-los,
-use `--no-dkms` (a flag cobre os três de uma vez).
+entram por precedência (`updates/dkms`) e só valem no próximo boot ou replug.
+Se faltar `dkms`, `build-essential` ou os headers do kernel, o instalador
+pergunta se pode instalá-los antes de seguir; se você recusar, ou se a
+compilação falhar mesmo assim, ele avisa e continua, e o kernel segue com os
+módulos de fábrica. Para não instalá-los, use `--no-dkms` (a flag cobre os três
+de uma vez).
 
 O `hefesto-hid-playstation` existe por causa de um caso medido em julho de 2026:
 com dois DualSense pareando com cerca de um segundo de diferença, o segundo
@@ -247,3 +260,8 @@ Sendo alfa, a validação é honesta e curta:
 
 Os pacotes de Arch, Fedora e Nix são mantidos, mas nenhum foi validado em hardware
 nesta linha. Se você rodar em alguma dessas, um relato de issue vale ouro.
+
+A versão exata de cada peça desta bancada — kernel, Python, BlueZ, GTK — e a
+faixa que o produto confere sozinho estão em
+**[as versões em que isto funciona](versoes-validadas.md)**. É a página para
+consultar antes de instalar em máquina nova.
