@@ -175,13 +175,27 @@
 
   <!-- PRECISA-DO-OLHO-DELA: cinco lâmpadas sob o touchpad. O NÚMERO do jogador
        é o PADRÃO aceso, não uma lâmpada individual. -->
+  <!-- ESPAÇAMENTO CORRIGIDO em 11/08/2026, por observação dela no aparelho.
+       As cinco NÃO são igualmente espaçadas: o plástico agrupa
+       `1 | vão | 3 | vão | 1` — uma lâmpada isolada em cada ponta e três
+       juntas no meio. Antes estavam com passo uniforme de 2,7, que era
+       suposição de quem desenhou.
+       Como isso foi medido, e por que custou três tentativas: acender UMA
+       lâmpada de ponta contra o plástico não aparece em foto (some no reflexo
+       do acrílico), e apagar UMA lâmpada de ponta também não, porque ela já é
+       isolada por um vão. O que respondeu foi o teste de controle —
+       TODAS apagadas num controle contra TODAS acesas no outro: o primeiro
+       apagou (logo a rota sysfs obedece) e o segundo manteve o padrão
+       `1-vão-3-vão-1`, provando que os vãos são do PLÁSTICO e não lâmpadas
+       apagadas. A lição vale para as próximas peças: antes de perguntar
+       "de que lado acende", prove que acende. -->
   <g id="led-jogador" data-feature="led-jogador">
-      <title>Indicador de jogador</title>
-      <rect id="led-jogador-1" fill="#c9ced8" x="57.6" y="59.6" width="2" height="1" rx="0.5"/>
-      <rect id="led-jogador-2" fill="#c9ced8" x="60.3" y="59.6" width="2" height="1" rx="0.5"/>
-      <rect id="led-jogador-3" fill="#c9ced8" x="63.0" y="59.6" width="2" height="1" rx="0.5"/>
-      <rect id="led-jogador-4" fill="#c9ced8" x="65.7" y="59.6" width="2" height="1" rx="0.5"/>
-      <rect id="led-jogador-5" fill="#c9ced8" x="68.4" y="59.6" width="2" height="1" rx="0.5"/>
+      <title>Indicador de jogador (cinco lâmpadas: 1, vão, 3, vão, 1)</title>
+      <rect id="led-jogador-1" fill="#c9ced8" x="57.0" y="59.6" width="2" height="1" rx="0.5"/>
+      <rect id="led-jogador-2" fill="#c9ced8" x="61.3" y="59.6" width="2" height="1" rx="0.5"/>
+      <rect id="led-jogador-3" fill="#c9ced8" x="63.7" y="59.6" width="2" height="1" rx="0.5"/>
+      <rect id="led-jogador-4" fill="#c9ced8" x="66.1" y="59.6" width="2" height="1" rx="0.5"/>
+      <rect id="led-jogador-5" fill="#c9ced8" x="70.4" y="59.6" width="2" height="1" rx="0.5"/>
   </g>
 
   <!-- Features sem corpo visível: onde a coisa MORA no aparelho.
