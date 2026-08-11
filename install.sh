@@ -947,6 +947,118 @@ format_deb() {
     printf '\n      Instalado via apt (udev + .desktop via postinst).\n      Abrir: hefesto-dualsense4unix-gui\n'
 }
 
+# ANTES DO DESVIO DE FORMATO (11/08/2026) — e a posição importa.
+#
+# Estes dois blocos nasceram DEPOIS da linha do `exit 0`, e a revisão de 11/08
+# pegou o furo: os três módulos DKMS são construídos no ramo de pacote (os
+# `step "dkms*"` logo abaixo), ANTES daquele `exit`. Garantir as dependências
+# só no fluxo nativo deixava o "verde mentiroso" de pé em `--deb`, `--flatpak`
+# e `--appimage` — exatamente o que o bloco existe para curar. Mover para cá é
+# a cura; deixar embaixo era comentário prometendo o que a posição não
+# entregava.
+
+# VOO DE RECONHECIMENTO (11/08/2026) — o que esta máquina é, ANTES de mexer
+# nela.
+#
+# Nasceu de uma frase dela sobre levar o produto para outro PC: "o ideal é que o
+# nosso install contivesse isso também". Antes, as três respostas que decidem se
+# a instalação vai funcionar só apareciam DEPOIS: o aviso de Secure Boot mora em
+# `scripts/dkms_lib.sh:110` e só dispara no passo 3i, quando a senha já foi
+# digitada e quarenta passos já rodaram; o veredito de BlueZ só sai na
+# conferência final; e a família da distro só se descobre quando o `run_apt`
+# falha.
+#
+# Nenhum destes três ABORTA. Eles informam no momento em que a informação ainda
+# muda a decisão de quem instala — que é a diferença entre um aviso e um
+# lamento.
+_reconhecimento() {
+    local achou_algo=0
+
+    # 1. Família da distro. O caminho nativo só sabe `apt-get` (ver `run_apt`).
+    if ! command -v apt-get >/dev/null 2>&1; then
+        warn "sem apt-get: esta não é uma distro da família Debian/Ubuntu"
+        printf '      O caminho nativo instala dependências só por apt. Em Fedora, Arch ou\n'
+        printf '      Nix, use o pacote da sua distro (ver docs/usage/instalacao.md) — e saiba\n'
+        printf '      que nenhum deles foi validado em hardware ainda.\n'
+        achou_algo=1
+    fi
+
+    # 2. BlueZ. A faixa validada é a mesma que o doctor cobra no fim.
+    local _bz
+    _bz="$(bluetoothctl --version 2>/dev/null | awk '{print $NF}')"
+    if [[ -n "${_bz}" ]]; then
+        # Compara só major.minor; o formato do bluetoothctl é "bluetoothctl: 5.86".
+        if [[ "$(printf '%s\n5.79\n' "${_bz}" | sort -V | head -1)" != "5.79" ]]; then
+            warn "bluez ${_bz} — abaixo de 5.79, a faixa que esta casa validou"
+            printf '      Abaixo de 5.79 há crashes crônicos de input/HIDP (medidos: 6 em 5 dias).\n'
+            printf '      A conferência final vai REPROVAR por isto. A cura é um backport, e a\n'
+            printf '      receita está em docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md\n'
+            achou_algo=1
+        fi
+    fi
+
+    # 3. Secure Boot. É o único dos três que deixa a máquina PIOR que antes: o
+    # kernel recusa o .ko e NÃO volta ao módulo in-tree sozinho.
+    if command -v mokutil >/dev/null 2>&1 &&
+       mokutil --sb-state 2>/dev/null | grep -qi 'SecureBoot enabled'; then
+        warn "Secure Boot ATIVO — os módulos DKMS podem não carregar no próximo boot"
+        printf '      Sem a chave MOK enrolada, o kernel RECUSA o .ko e não volta ao driver\n'
+        printf '      in-tree sozinho: um controle Nintendo pode sumir depois de reiniciar.\n'
+        printf '      Se acontecer: sudo mokutil --import /var/lib/dkms/mok.pub\n'
+        printf '      (placa NVIDIA por DKMS funcionando indica que a chave já está enrolada.)\n'
+        achou_algo=1
+    fi
+
+    [[ "${achou_algo}" -eq 0 ]] && info "distro, bluez e Secure Boot: nada que atrapalhe"
+    return 0
+}
+_reconhecimento
+ok
+
+# --- DKMS-CAUSA-RAIZ-01: o que os três módulos precisam para COMPILAR --------
+# Medido em 11/08/2026, na auditoria de "o que só existe nesta máquina": o
+# `install.sh` instala TRÊS módulos DKMS por padrão, sem flag, e nunca garantia
+# `dkms` nem os headers do kernel. Quando faltam, `scripts/dkms_lib.sh:269` e
+# `:273` pulam o módulo com um aviso que some entre 46 passos — e, pior, o
+# `doctor` chama módulo ausente de `info`, que não conta como falha.
+#
+# O resultado numa máquina nova era o pior possível: os três forks não entram,
+# a conferência final sai VERDE, e o aparelho se comporta diferente sem que
+# nada na tela explique por quê. Esta é a causa raiz daquele verde mentiroso.
+#
+# Best-effort com a mesma disciplina do bloco de áudio abaixo: se ela recusar,
+# ou se a distro não tiver os headers deste kernel exato (kernel de fora do
+# apt), o instalador AVISA e SEGUE. Abortar seria pior — o driver in-tree
+# continua funcionando, só sem as curas.
+if [[ "${NO_DKMS}" -eq 0 ]] && command -v apt-get >/dev/null 2>&1; then
+    _dkms_faltando=()
+    command -v dkms >/dev/null 2>&1 || _dkms_faltando+=("dkms")
+    command -v make >/dev/null 2>&1 || _dkms_faltando+=("build-essential")
+    [[ -d "/lib/modules/$(uname -r)/build" ]] || _dkms_faltando+=("linux-headers-$(uname -r)")
+
+    if [[ "${#_dkms_faltando[@]}" -gt 0 ]]; then
+        printf '\n      Os três módulos de kernel desta casa precisam compilar, e falta:\n'
+        printf '        %s\n' "${_dkms_faltando[*]}"
+        printf '      Sem eles, as curas NÃO entram: o controle da Nintendo pode não subir\n'
+        printf '      pelo rádio, e dois DualSense no mesmo adaptador podem virar um só.\n\n'
+        ask_yn "instalar agora com sudo?" "${AUTO_YES}"
+        if [[ "${REPLY,,}" =~ ^y ]]; then
+            if run_apt "${_dkms_faltando[@]}"; then
+                printf '      pronto para compilar os módulos\n'
+            else
+                warn "não consegui instalar ${_dkms_faltando[*]} — os módulos DKMS vão ser pulados"
+                printf '      O produto funciona com os drivers in-tree, sem as curas desta casa.\n'
+                printf '      A conferência final no fim vai dizer quais faltaram.\n'
+            fi
+        else
+            warn "sem ${_dkms_faltando[*]}: os três módulos DKMS vão ser pulados"
+            printf '      Reexecute o install depois de instalá-los para ganhar as curas.\n'
+        fi
+    fi
+    unset _dkms_faltando
+fi
+
+
 if [[ "${FORMAT}" != "native" ]]; then
     case "${FORMAT}" in
         flatpak)  format_flatpak ;;
@@ -1040,6 +1152,7 @@ fi
 # ---------------------------------------------------------------------------
 step "1/11" "verificando dependências do sistema"
 require python3
+
 ok
 
 # Limpeza de caches Python e build dirs.
@@ -1693,7 +1806,13 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
             if [[ ! -f "${_bz_sums}" || -z "${_bz_deb_bluez}" || -z "${_bz_deb_cups}" || -z "${_bz_deb_libbt}" ]]; then
                 # (d) .debs ausentes: NÃO falha o install, só orienta o build.
                 warn "backport não encontrado em ${_bz_dir} — bluetoothd 5.72 crônico segue ativo"
-                printf '      como gerar: git show arquivo/processo-pre-1.0:docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3 item 1\n'
+                # A receita mora na ÁRVORE desde 11/08/2026. Antes esta linha
+                # mandava para `git show arquivo/processo-pre-1.0:...`, um ramo
+                # arquivado — e o `install.sh:1638` já citava o documento como se
+                # ele estivesse aqui. Quem levasse o produto para outra máquina
+                # lia uma instrução que não podia seguir.
+                printf '      como gerar: docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md, seção 3, caminho 1\n'
+                printf '      resumo: dget do .dsc do resolute -> dch --local -> mk-build-deps -ir -> dpkg-buildpackage -us -uc -b\n'
             else
                 # SHA256SUMS por basename (portátil — o arquivo pode ter sido
                 # gerado com caminho absoluto de outra máquina/usuário).
