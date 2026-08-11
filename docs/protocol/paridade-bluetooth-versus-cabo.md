@@ -47,7 +47,7 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 | **Player-LEDs** | sim | sim, pelo mesmo caminho | sim | **MEDIDO AO VIVO** |
 | **Gatilhos adaptativos** | sim | sim, **sem ramo de transporte** — o `common` é idêntico nos dois envelopes | com preset aplicado | **MEDIDO AO VIVO** (*"l2 funciona"*, 03/08) |
 | **Rumble** | sim (kernel implementa rumble + CRC-32 do BT) | sim, **zero gate de transporte** | exige o vpad | **MEDIDO AO VIVO** (03/08 — vibrou e parou) |
-| **Giroscópio / acelerômetro** | sim | sim, cópia byte a byte da janela de motion | sim, com o vpad uhid | dado a ~300 Hz no rádio: **MEDIDO**. Chegada ao **jogo**: não medida em transporte nenhum |
+| **Giroscópio / acelerômetro** | sim | sim, cópia byte a byte da janela de motion | sim, com o vpad uhid | **taxa do aparelho MEDIDA em 11/08:** cabo 250,0 Hz exatos, rádio variável em rajadas (ver abaixo). Chegada ao **jogo**: continua não medida, nos dois transportes |
 | **Touchpad (dedo e clique)** | sim | sim, mesma janela + `payload[9] & 0x02` | sim | **IMPLEMENTADO, NÃO MEDIDO** em jogo |
 | **Microfone** | **sim** — Opus em HID | **sim, inteiro** (`integrations/dualsense_bt_audio.py`) | **não** — opt-in por privacidade e banda | **MEDIDO AO VIVO** (WAV em 25/07 e em 03/08) |
 | **Alto-falante — volume/rota/pré-amp** | sim (são registradores no `common`) | sim, sem gate de transporte | só depois do primeiro `speaker.set` | **IMPLEMENTADO, NÃO MEDIDO** |
@@ -80,10 +80,29 @@ silêncio **por transporte**: 30 s no rádio contra 1 s no cabo
 o reader solta o fd, zera a janela de motion e **solta o clique do touchpad** no
 vpad, depois reabre.
 
-> **Ressalva de honestidade, medida em 03/08:** com os controles **parados na
-> mesa**, os dois emitiram **~300 Hz** (1.402.128 bytes em 60 s). O rádio **não**
-> emudeceu nesta medição. O teto continua justificado pelo defeito que o
-> originou, mas a premissa merece ser remedida.
+> **NOTA DATADA — 03/08/2026, e a régua fica registrada porque é reutilizável
+> e barata:** com os controles **parados na mesa**, medindo por **contagem de
+> bytes**, os dois emitiram **~300 Hz** (1.402.128 bytes em 60 s). O rádio
+> **não** emudeceu nesta medição. O teto continua justificado pelo defeito que
+> o originou.
+>
+> **NOTA DATADA — 11/08/2026: a régua de 03/08 acertou a faixa; o que ela não
+> podia ver é que o número era a média de UMA janela.** Remedido com duas
+> réguas independentes sobre o nó evdev `Motion Sensors` — relógio do host e
+> `sensor_timestamp` do próprio controle — em cinco janelas de 8 a 10 s, com o
+> controle parado: **363,3 · 239,9 · 334,1 · 55,4 · 69,7 Hz**. Os ~300 Hz de
+> 03/08 caem dentro dessa faixa, e é por isso que a régua antiga **fica**: ela
+> mostrou primeiro que o rádio não é 1000 Hz, é uma contagem de bytes, e
+> corrobora a nova por um caminho que não compartilha nenhum instrumento com
+> ela.
+>
+> **O que a medição nova acrescenta é a instabilidade, e ela é o achado:** a
+> taxa caiu de ~334 para ~55 Hz entre duas janelas consecutivas, sem que nada
+> mudasse. O p05 do intervalo é teimosamente 1255 us (~797 Hz **instantâneos**)
+> enquanto o p95 chega a 187 ms — **o fluxo é em rajadas**, e o que varia é o
+> silêncio entre elas. **O rádio não tem taxa típica**: quem citar um número só
+> está citando uma janela. Números completos em
+> [o driver `hid-playstation` por dentro](driver-hid-playstation.md), seção 6.
 
 ### 3. A contenção com múltiplos controles
 
@@ -140,23 +159,40 @@ Ordenado por (impacto ÷ custo):
 
 - **o alto-falante por BT existe, e por qual report?** As duas fontes internas
   divergem e nenhuma foi medida aqui;
-- **o dado de sensor chega ao JOGO?** Nunca validado — em transporte nenhum;
-- **a taxa declarada do vpad** — o gamepad virtual se anuncia DualSense Edge, e
-  o SDL atribui 1000 Hz a um Edge por USB enquanto o espelho entrega ~300. Um
-  jogo que integre velocidade angular pela taxa declarada teria escala errada.
-  Não medido, e **só medível contra a SDL3 que a Steam distribui** — medir
-  contra a `libSDL2` do sistema já produziu um alarme falso inteiro nesta casa.
+- **o dado de sensor chega ao JOGO?** Nunca validado, nem por cabo nem por
+  rádio. E esta é pergunta de **chegada**, não de taxa: a taxa do aparelho está
+  medida desde 11/08 nos dois transportes (cabo 250,0 Hz, rádio em rajadas);
+- **a taxa que o SDL DECLARA ao jogo** — e é só essa metade que falta. O
+  gamepad virtual se anuncia DualSense Edge (`VPAD_PRODUCT = 0x0DF2`,
+  `integrations/uhid_gamepad.py:123`), e o SDL atribui **1000 Hz a um Edge por
+  USB**. O que o aparelho entrega **está medido desde 11/08, e por transporte**:
+  **250,0 Hz exatos no cabo**, e no rádio uma taxa **variável em rajadas**, de
+  ~38 a ~392 Hz de média conforme a janela. A razão de 4× que preocupa é a do
+  **cabo** — 1000 declarados contra 250 entregues. Um jogo que integre
+  velocidade angular pela taxa declarada teria escala errada.
 
-  > **NOTA DATADA — 11/08/2026: reconferido, e o desfecho é "continua não
-  > medido" — o que é resultado, não pendência esquecida.** A premissa está
-  > firme (`VPAD_PRODUCT = 0x0DF2`, `integrations/uhid_gamepad.py:123`), e
-  > **não existe nesta árvore uma linha sequer que reconcilie a taxa declarada
-  > com a real**: nem conversão, nem aviso, nem número guardado. Duas
-  > correções ao que se citava: a sprint `GYRO-EDGE-RATE-01` **não existe como
-  > arquivo** em `docs/process/sprints/`, e o aparelho vizinho já tem o
-  > análogo MEDIDO — o Pro declara 8 ms e entrega 11,2 ms, três medições em
-  > 07/08 (canônica dos externos, seção 3.5). Isso torna a hipótese plausível
-  > e **não** a prova aqui.
+  A metade que falta é **só medível contra a SDL3 que a Steam distribui** —
+  medir contra a `libSDL2` do sistema já produziu um alarme falso inteiro nesta
+  casa.
+
+  > **NOTA DATADA — 11/08/2026: o par transporte-número que estava escrito aqui
+  > misturava os dois transportes, e a correção importa mais que o número.** A
+  > frase antiga dizia *"o SDL atribui 1000 Hz a um Edge por **USB** enquanto o
+  > espelho entrega ~300"*: os ~300 Hz são do **rádio**, não do cabo. Por cabo
+  > o físico entrega 250,0 Hz, medidos por duas réguas independentes e
+  > previstos pelo `bInterval = 6` do descritor. Comparar o declarado de um
+  > transporte com o entregue do outro produz uma razão que não existe.
+  >
+  > **`GYRO-EDGE-RATE-01` é NOME DE DIVERGÊNCIA, não sprint.** Não existe
+  > arquivo com esse nome em `docs/process/sprints/`, e chamá-lo de sprint faz
+  > parecer que alguém está com o trabalho na mão. O apelido está registrado em
+  > [divergências nomeadas](../process/DIVERGENCIAS-NOMEADAS.md).
+  >
+  > **Continua não existindo nesta árvore uma linha que reconcilie a taxa
+  > declarada com a real** — nem conversão, nem aviso, nem número guardado. E o
+  > aparelho vizinho já tem o análogo MEDIDO: o Pro declara 8 ms e entrega
+  > 11,2 ms, três medições em 07/08 (canônica dos externos, seção 3.5). Isso
+  > torna a hipótese plausível e **não** a prova aqui.
 
 ---
 
@@ -182,8 +218,11 @@ Ordenado por (impacto ÷ custo):
   afirmação da ADR: **BAIXA, sem procedência**. Enquanto ninguém sentir os dois
   modos por rádio e por cabo lado a lado, esta página vence — e a diferença, se
   existir, é do **firmware**, não deste projeto;
-- **[a referência canônica do DualSense](dualsense-referencia-canonica.md)**
-  recebeu, em 11/08, notas datadas em oito pontos que estavam vencidos (o byte
-  53, o pré-amp, os modos de gatilho, o P4, a taxa do giroscópio, entre
-  outros). O índice fica no topo daquela página, em *"O que caducou em
-  11/08/2026"*. Nenhum deles muda a tabela desta.
+- **[a referência canônica do DualSense](dualsense-referencia-canonica.md)** foi
+  reconciliada em 11/08 em oito pontos que estavam vencidos (o byte 53, o
+  pré-amp, os modos de gatilho, o P4, a taxa do giroscópio, entre outros). Onde
+  era **fato errado** — o padrão do jogador 4 e o *"nunca medido"* das taxas — o
+  texto foi **substituído**, não riscado; onde era **decisão medida**, ficou nota
+  datada. O índice fica no topo daquela página, em *"O que caducou em
+  11/08/2026"*. Nenhum deles muda a tabela desta — o que muda são os dois
+  números de taxa desta página, já corrigidos acima.
