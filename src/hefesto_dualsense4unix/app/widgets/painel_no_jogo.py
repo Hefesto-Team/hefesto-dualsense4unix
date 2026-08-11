@@ -390,6 +390,46 @@ def aviso_do_perfil(state_global: dict[str, Any] | None) -> str | None:
     return "\n".join(frases)
 
 
+def jogo_steam_aberto(state_global: dict[str, Any] | None) -> bool | None:
+    """Há jogo da Steam aberto AGORA? ``None`` = **não dá para saber**.
+
+    ABA-DO-JOGO-01 (10/08/2026), o pedido dela, literal: *"essa aba no jogo só
+    deveria aparecer quando efetivamente eu tivesse com um jogo steam aberto"*.
+
+    Três respostas, e o ``None`` é tão resposta quanto as outras duas:
+
+    * ``True``  — o daemon sondou e há jogo (o ``appid`` veio junto);
+    * ``False`` — o daemon sondou e **não** há jogo;
+    * ``None``  — ninguém sondou ainda (``lido`` falso), o daemon está desligado
+      (``state`` ``None``), ou o daemon vivo é anterior a esta versão e sequer
+      conhece a chave. Os três dizem a mesma coisa a quem consome: **não mexa**.
+
+    O terceiro caso é o que o `lido` do daemon existe para carregar até aqui, e
+    é também a razão de a ausência da chave devolver ``None`` em vez de
+    ``False``: nesta casa "o daemon vivo é mais velho que o código" é rotina
+    (install editable — a cura do daemon só vale no próximo start), e um
+    ``False`` inventado a partir do silêncio faria a aba sumir por causa da
+    IDADE do daemon, não do estado do jogo.
+
+    O preço desse ``None``, dito na mesa: com um daemon anterior a esta versão a
+    aba **não volta** — ela nasce fora da tira e nada a traz, porque ninguém
+    responde. É o desfecho seguro dos dois possíveis (o defeito relatado é a aba
+    aparecer sem jogo), dura até o daemon reiniciar, e o `install.sh` reinicia o
+    daemon. Quem estiver mexendo no código com o daemon antigo de pé vê a aba
+    sumida — e a cura é o restart, nunca um `False` de mentira aqui.
+
+    Não lê ``appid`` sem ``lido``: o par viaja junto exatamente para o ``null``
+    não ter dois significados (ver `StateStore.set_steam_jogo_appid`).
+    """
+    if not isinstance(state_global, dict):
+        return None
+    bloco = state_global.get("jogo_steam")
+    if not isinstance(bloco, dict) or bloco.get("lido") is not True:
+        return None
+    appid = bloco.get("appid")
+    return isinstance(appid, int) and not isinstance(appid, bool)
+
+
 def texto_do_contexto(state_global: dict[str, Any] | None) -> str:
     """A linha de cabeçalho da aba: em que modo e com que máscara ela está.
 
@@ -616,6 +656,7 @@ __all__ = [
     "LinhaDoJogo",
     "PainelNoJogo",
     "aviso_do_perfil",
+    "jogo_steam_aberto",
     "linhas_do_controle",
     "recado_do_controle",
     "recado_global",

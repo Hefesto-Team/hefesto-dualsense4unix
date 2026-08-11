@@ -378,6 +378,76 @@ def _relido(nome: str) -> Profile:
     return load_profile(nome)
 
 
+class _LinhaDoPendente:
+    """Dublê do rótulo "vai mudar para:" da aba Início — só o que ele expõe.
+
+    O-SALVAR-TAMBEM-APLICA-01 (11/08/2026). Sem ele, "a pendência foi limpa" só
+    se mede no MODELO (``_escolha_pendente``), e o pedido dela é sobre a TELA:
+    *"a linha vai mudar para: tem de apagar"*. As duas coisas podem divergir —
+    ``render_pendente`` sai cedo quando não há rótulo montado —, e um teste que
+    olhasse só o modelo passaria com a linha acesa na cara dela.
+    """
+
+    def __init__(self) -> None:
+        self.texto = ""
+        self.visivel = False
+
+    def set_text(self, texto: str) -> None:
+        self.texto = texto
+
+    def set_visible(self, visivel: bool) -> None:
+        self.visivel = bool(visivel)
+
+    def get_visible(self) -> bool:
+        return self.visivel
+
+
+def _sem_daemon(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Nenhum IPC de leitura sai desta bancada — nem para o daemon dela.
+
+    ``_ha_jogo_aberto_agora`` lê o estado vivo e ENGOLE o erro, mantendo
+    "nenhum jogo aberto" — o caminho sem diálogo de relançamento, que é o que
+    estes casos medem. A armadilha existe para o teste não depender do que está
+    ligado na máquina de quem o roda (o socket já é isolado pelo modo fake do
+    conftest; isto é a segunda rede, e é a que documenta a intenção).
+    """
+
+    def _explode(*_a: Any, **_kw: Any) -> Any:
+        raise RuntimeError("daemon ausente nesta bancada")
+
+    monkeypatch.setattr(footer_actions.ipc_bridge, "_run_call", _explode)
+
+
+def _armadilha_de_apply_mode(
+    monkeypatch: pytest.MonkeyPatch, *, desfecho: str = "sucesso"
+) -> list[tuple[str, str | None]]:
+    """Registra CADA ``apply_mode`` e devolve a lista — a régua da transição.
+
+    ``desfecho`` escolhe o que o daemon responde: ``"sucesso"`` chama o
+    ``on_done``, ``"falha"`` chama o ``on_fail``, e ``"mudo"`` não chama nada
+    (o caso em que o IPC ainda está em voo).
+    """
+    from hefesto_dualsense4unix.app.actions import mode_transition
+
+    chamadas: list[tuple[str, str | None]] = []
+
+    def _apply_mode_falso(
+        mode_id: str,
+        *,
+        flavor: str | None = None,
+        on_done: Callable[[Any], bool],
+        on_fail: Callable[[Exception], bool],
+    ) -> None:
+        chamadas.append((mode_id, flavor))
+        if desfecho == "sucesso":
+            on_done({"status": "ok"})
+        elif desfecho == "falha":
+            on_fail(RuntimeError("o daemon recusou a transição"))
+
+    monkeypatch.setattr(mode_transition, "apply_mode", _apply_mode_falso)
+    return chamadas
+
+
 # ---------------------------------------------------------------------------
 # OS GESTOS — um por seção do perfil, no ponto mais próximo do dedo dela
 # ---------------------------------------------------------------------------
@@ -816,6 +886,71 @@ class TestTudoDeUmaVezSo:
             "(o cenário da queixa dela):\n  - " + "\n  - ".join(perdidas)
         )
 
+    def test_a_inicio_entra_no_cenario_pelo_dedo_dela_com_um_salvar_so(
+        self, disco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O mesmo cenário, mas a aba Início entra pelo GESTO — não pelo escritor.
+
+        O PEDIDO DELA, 10/08/2026, literal:
+
+            *"eu ir de uma aba pra outra depois de alterar todas as anteriores
+            mas eu clicar em salvar somente na última. ele vai salvar na última
+            aba todas as informações passadas."*
+
+        O teste acima faz a Início entrar por ``registrar_modo_no_rascunho``,
+        que é o escritor — e por isso ele nunca viu o buraco. O dedo dela não
+        chama o escritor: clicar no seletor de modo só MARCA a escolha em
+        ``_escolha_pendente`` (AGORA-E-DEPOIS-01), e até 10/08/2026 quem levava
+        a marca ao rascunho era **só** o callback do botão VERDE. Sem o verde,
+        este Salvar gravava ``mode: null`` em cima do que ela acabara de
+        escolher — a Início era a ÚNICA das oito abas que não contribuía.
+
+        MORDIDA: apague a chamada a ``recolher_escolha_pendente_no_rascunho``
+        da primeira linha de ``footer_actions._persist_profile_async`` e este
+        teste reprova com ``mode:`` na lista de seções perdidas, enquanto o
+        teste acima — que entra pelo escritor — continua VERDE.
+        """
+        from hefesto_dualsense4unix.app.actions import home_actions
+
+        perfil = _semear(_perfil_de_partida())
+        janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
+        # O-SALVAR-TAMBEM-APLICA-01 (11/08/2026): este Salvar passou a disparar
+        # a transição de modo, e uma bancada de DISCO não pode falar com daemon
+        # nenhum. As duas armadilhas mantêm o teste hermético e medindo o que
+        # ele sempre mediu — o arquivo. Quem mede a transição são os casos
+        # próprios, em `TestOSalvarSozinho...`.
+        _sem_daemon(monkeypatch)
+        _armadilha_de_apply_mode(monkeypatch)
+
+        # Mesma ordem e mesma razão do teste acima; `mode` sai da lista porque
+        # aqui ele entra pela porta dela, logo abaixo.
+        ordem = [c for c in SECOES_COBERTAS if c not in ("controllers", "mode")]
+        for campo in [*ordem, "controllers"]:
+            if campo in _QUEBRADAS_HOJE:
+                continue
+            _gesto_de(campo, janela, monkeypatch)
+
+        # A aba Início, pelo dedo dela: dois cliques em seletor, nada mais.
+        home_actions.marcar_escolha(janela, "modo", "gamepad")
+        home_actions.marcar_escolha(janela, "mascara", "xbox")
+
+        # E o único clique em "Salvar Perfil", na ÚLTIMA aba.
+        _salvar_pelo_rodape(janela, perfil.name)
+
+        relido = _relido(perfil.name)
+        perdidas: list[str] = []
+        for campo in SECOES_COBERTAS:
+            if campo in _QUEBRADAS_HOJE:
+                continue
+            try:
+                _GESTOS[campo][1](relido)
+            except AssertionError as exc:
+                perdidas.append(f"{campo}: {exc}")
+        assert not perdidas, (
+            "seções perdidas quando ela passa por TODAS as abas e clica em "
+            "Salvar só na última:\n  - " + "\n  - ".join(perdidas)
+        )
+
 
 class TestOBotaoVerdeLevaAEscolhaDaAbaInicioAoArquivo:
     """O caminho INTEIRO do modo, do jeito que ele funciona desde 08/08/2026.
@@ -881,6 +1016,267 @@ class TestOBotaoVerdeLevaAEscolhaDaAbaInicioAoArquivo:
 
         _salvar_pelo_rodape(janela, perfil.name)
         _confere_mode(_relido(perfil.name))
+
+
+class TestOSalvarSozinhoLevaAEscolhaDaAbaInicioAoArquivoEAoControle:
+    """O Salvar sem o verde — e, desde 11/08/2026, ele também APLICA.
+
+    A classe irmã acima mede o caminho COM o botão verde, e ele continua igual.
+    Esta mede o caminho que ela descreveu em 10/08: mexer em tudo, aba por aba,
+    e clicar em Salvar **uma vez só**, na última.
+
+    NOTA DATADA — 11/08/2026 (O-SALVAR-TAMBEM-APLICA-01). Esta classe se chamava
+    ``...AoArquivo``, e o que estava travado nela era a decisão CONTRÁRIA: a de
+    que o Salvar grava e **não** aplica, com a pendência ficando acesa de
+    propósito e um toast mandando clicar no verde. Aquilo não era descuido —
+    estava escrito como consequência assumida, com a pergunta declarada EM
+    ABERTO para ela. Ela respondeu, e a resposta é uma frase: *"salvar também
+    aplica"*.
+
+    O que caducou, exatamente, para quem for ler o histórico:
+
+    - o toast *"foi para o arquivo e vale na próxima abertura; para mudar agora,
+      clique em Aplicar"* — a divisão que ele ensinava deixou de existir;
+    - a asserção de que ``apply_mode`` NUNCA sai de um Salvar. Ela virou o
+      contrário: sai, e este arquivo prova que sai.
+
+    O que **não** caducou, e continua medido aqui: registrar não é aplicar
+    (HARM-05) segue de pé no ESCRITOR — quem aplica é o rodapé, nunca
+    ``recolher_escolha_pendente_no_rascunho``, e o portão de AST ao lado
+    (``test_perfil_salva_tudo_registrar_nao_e_aplicar.py``) é quem tranca isso.
+    """
+
+    def test_marcar_na_inicio_e_salvar_sem_o_verde_grava_e_aplica_o_modo(
+        self, disco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Ela marca o modo na Início e salva **SEM** tocar no botão verde.
+
+        (O ``sem`` do nome é minúsculo porque o ``N802`` do ruff reprova nome de
+        função com maiúscula — a ênfase mora aqui.)
+
+        Mede as QUATRO metades do pedido dela, e cada uma tem uma mordida
+        própria, medidas em 11/08/2026 uma a uma:
+
+        1. o arquivo tem o modo — MORDIDA: apague a chamada a
+           ``recolher_escolha_pendente_no_rascunho`` da primeira linha de
+           ``footer_actions._persist_profile_async``;
+        2. o daemon recebeu o ``apply_mode`` — MORDIDA: apague o
+           ``depois_na_janela=depois`` do ``_gravar_perfil_async`` no mesmo
+           método, e o arquivo continua certo enquanto a máquina fica para trás
+           (que é o defeito exato que ela mandou consertar);
+        3. a linha "vai mudar para:" apagou — MORDIDA: troque o
+           ``_esquecer_a_pendencia(self)`` do ``_aplicou`` por um
+           ``self._escolha_pendente = None`` cru, e o modelo fica limpo com a
+           linha ACESA na tela;
+        4. o toast diz a verdade nova — MORDIDA: devolva o texto antigo
+           ("próxima abertura") ao ``_texto_do_perfil_salvo``.
+        """
+        from hefesto_dualsense4unix.app.actions import home_actions
+
+        perfil = _semear(_perfil_de_partida())
+        janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
+        janela._home_pendente_label = _LinhaDoPendente()
+        _sem_daemon(monkeypatch)
+        aplicados = _armadilha_de_apply_mode(monkeypatch)
+
+        # O gesto dela na aba Início — e SÓ ele. Nenhum clique no verde.
+        home_actions.marcar_escolha(janela, "modo", "gamepad")
+        home_actions.marcar_escolha(janela, "mascara", "xbox")
+        assert janela._home_pendente_label.visivel, (
+            "a linha 'vai mudar para:' nem chegou a acender — o teste mediria "
+            "o apagar de uma linha que nunca esteve na tela"
+        )
+
+        _salvar_pelo_rodape(janela, perfil.name)
+
+        # 1. o ARQUIVO.
+        _confere_mode(_relido(perfil.name))
+
+        # 2. o DAEMON. A escolha dela viaja inteira: modo E máscara, porque a
+        # máscara foi escolha explícita dela (o clique no seletor).
+        assert aplicados == [("gamepad", "xbox")], (
+            "o Salvar não pediu a transição de modo ao daemon — o arquivo "
+            f"mudou e a máquina ficou para trás: {aplicados!r}"
+        )
+
+        # 3. a TELA. As duas metades: o modelo e o rótulo.
+        assert janela._escolha_pendente is None, (
+            "a pendência sobreviveu a um Salvar que APLICOU: "
+            f"{janela._escolha_pendente!r} — a janela promete uma mudança que "
+            "já aconteceu"
+        )
+        assert not janela._home_pendente_label.visivel, (
+            "a linha 'vai mudar para:' continua acesa depois de o daemon "
+            f"confirmar a mudança (texto: {janela._home_pendente_label.texto!r})"
+        )
+
+        # 4. o TOAST. A última palavra é a que ela lê, e ela não pode mandar
+        # clicar em nada nem falar de "próxima abertura": já está valendo.
+        ultimo = janela.toasts[-1]
+        assert "Jogar pelo Hefesto" in ultimo and "já está valendo" in ultimo, (
+            f"o último toast do Salvar não diz que o modo já vale: {ultimo!r}"
+        )
+        # E NENHUM dos toasts da sequência pode ter sobrado do desenho antigo.
+        # A varredura é sobre todos, e não só sobre o último, porque o texto
+        # velho morava no PRIMEIRO (`_texto_do_perfil_salvo`, dito no instante
+        # em que o arquivo fica pronto) — uma asserção só sobre a última frase
+        # deixaria a mentira passar no meio do caminho.
+        mentiras = [
+            t
+            for t in janela.toasts
+            if "próxima abertura" in t or "clique em “Aplicar”" in t
+        ]
+        assert not mentiras, (
+            "o Salvar ainda manda esperar a próxima abertura (ou clicar no "
+            f"verde) com o modo JÁ aplicado: {mentiras!r}"
+        )
+
+    def test_a_falha_ao_aplicar_nao_desfaz_o_arquivo_e_o_toast_nao_mente(
+        self, disco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O desfecho honesto quando o daemon recusa a transição.
+
+        A decisão, escrita por extenso em
+        ``footer_actions._aplicar_o_modo_que_foi_gravado``: o arquivo FICA como
+        ela pediu (um perfil descreve o que vale quando ele ativa, e o daemon
+        aplica a seção ``mode`` na ativação), a pendência FICA acesa (é a única
+        coisa na tela que diz que o daemon está atrasado em relação ao arquivo),
+        e o toast diz as DUAS metades — gravei, não apliquei.
+
+        MORDIDA: faça o ``_falhou`` chamar ``_esquecer_a_pendencia(self)`` — o
+        caminho "limpa sempre", que parece simetria e é a janela mentindo por
+        omissão — e este teste reprova com a linha apagada e o daemon no modo
+        velho.
+        """
+        from hefesto_dualsense4unix.app.actions import home_actions
+
+        perfil = _semear(_perfil_de_partida())
+        janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
+        janela._home_pendente_label = _LinhaDoPendente()
+        _sem_daemon(monkeypatch)
+        aplicados = _armadilha_de_apply_mode(monkeypatch, desfecho="falha")
+
+        home_actions.marcar_escolha(janela, "modo", "gamepad")
+        home_actions.marcar_escolha(janela, "mascara", "xbox")
+
+        _salvar_pelo_rodape(janela, perfil.name)
+
+        assert aplicados == [("gamepad", "xbox")], (
+            f"o Salvar nem tentou a transição: {aplicados!r}"
+        )
+        # O arquivo NÃO se desfaz: desfazer seria apagar a escolha dela por
+        # causa de um engasgo de IPC.
+        _confere_mode(_relido(perfil.name))
+        # E a tela continua dizendo o que é verdade: o daemon não chegou lá.
+        assert janela._escolha_pendente == {"modo": "gamepad", "mascara": "xbox"}, (
+            "a escolha dela evaporou numa transição que FALHOU: "
+            f"{janela._escolha_pendente!r}"
+        )
+        assert janela._home_pendente_label.visivel, (
+            "a linha 'vai mudar para:' apagou sem que o daemon tivesse mudado "
+            "coisa nenhuma — a janela mentindo por omissão"
+        )
+        ultimo = janela.toasts[-1]
+        assert "salvo" in ultimo and "não consegui mudar" in ultimo, (
+            f"o toast da falha não conta as duas metades: {ultimo!r}"
+        )
+        assert "já está valendo" not in ultimo, (
+            f"o toast anuncia um modo que o daemon RECUSOU: {ultimo!r}"
+        )
+
+    def test_o_salvar_nao_impoe_a_mascara_que_ela_nao_escolheu(
+        self, disco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """AUTO-01.3 no caminho novo: quem não escolheu não manda.
+
+        Trocar só o modo não é escolher máscara. O passo tem de sair SEM o
+        campo, e o daemon preserva a que já está configurada — o MESMO contrato
+        que ``test_a_inicio_sem_mascara_escolhida_nao_impoe_mascara_nenhuma``
+        tranca para o botão verde.
+
+        Aqui a tentação é maior que lá, e é por isso que este caso existe: o
+        recolhimento devolve ``{"modo": "gamepad", "mascara": "dualsense"}`` —
+        com a máscara VINDA DO DAEMON, porque o esquema não aceita ``kind``
+        gamepad sem ela —, e reaproveitar esse dicionário inteiro no IPC parece
+        a coisa óbvia a fazer. Seria a GUI decidindo máscara por causa de um
+        payload que ela apenas leu: o "segundo dono do valor" da AUTO-01.3,
+        entrando pela porta nova.
+
+        MORDIDA: em ``_persist_profile_async``, troque a máscara explícita
+        (``escolhida``) por ``recolhido.get("mascara")`` e este teste reprova
+        com ``flavor='dualsense'`` na chamada.
+        """
+        from hefesto_dualsense4unix.app.actions import home_actions
+
+        perfil = _semear(_perfil_de_partida())
+        janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
+        # O que a aba Início leu do daemon no último tique.
+        janela._modo_vigente_do_daemon = "desktop"
+        janela._mascara_vigente_do_daemon = "dualsense"
+        _sem_daemon(monkeypatch)
+        aplicados = _armadilha_de_apply_mode(monkeypatch)
+
+        # Ela escolhe o MODO, e só ele.
+        home_actions.marcar_escolha(janela, "modo", "gamepad")
+
+        _salvar_pelo_rodape(janela, perfil.name)
+
+        assert aplicados == [("gamepad", None)], (
+            "o Salvar impôs uma máscara que ela não escolheu — ecoar o vigente "
+            f"do daemon é o segundo dono do valor: {aplicados!r}"
+        )
+        # E o ARQUIVO continua guardando a máscara vigente, que é outra
+        # pergunta: o esquema exige uma, e o recolhimento a herda do daemon.
+        relido = _relido(perfil.name)
+        assert relido.mode is not None and relido.mode.kind == "gamepad", (
+            f"o modo não chegou ao arquivo: {relido.mode!r}"
+        )
+
+    def test_mascara_sem_modo_com_daemon_offline_nao_grava_nem_aplica_nada(
+        self, disco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem ``kind`` conhecido não se grava NADA — nem um default nosso.
+
+        O esquema não aceita máscara sem ``kind``
+        (``profiles/schema.ProfileModeConfig``), então o recolhimento precisa de
+        um modo. Ele o tira da escolha dela ou do vigente do daemon — a MESMA
+        expressão do "Aplicar" (``footer_actions._aplicar_escolha_pendente``).
+        Com o daemon offline não há nem um nem outro, e a resposta honesta é
+        não escrever: escolher ``"gamepad"`` por conta própria aqui criaria um
+        SEGUNDO dono do valor, que é o defeito que a AUTO-01.3 enterrou.
+
+        O-SALVAR-TAMBEM-APLICA-01 (11/08/2026): e não se aplica nada tampouco.
+        Nada gravado, nada aplicado — a transição é a sombra da gravação, nunca
+        um gesto por conta própria.
+
+        MORDIDA: troque, em ``home_actions.recolher_escolha_pendente_no_rascunho``,
+        o degrau de trás por um default (``or MODE_GAMEPAD``) e este teste
+        reprova com "o Salvar inventou um modo".
+        """
+        from hefesto_dualsense4unix.app.actions import home_actions
+
+        perfil = _semear(_perfil_de_partida())
+        janela = _janela(DraftConfig.from_profile(perfil), perfil.name)
+        # Daemon offline: a aba Início nunca renderizou, logo não há vigente.
+        assert getattr(janela, "_modo_vigente_do_daemon", None) is None
+        _sem_daemon(monkeypatch)
+        aplicados = _armadilha_de_apply_mode(monkeypatch)
+
+        home_actions.marcar_escolha(janela, "mascara", "xbox")
+
+        _salvar_pelo_rodape(janela, perfil.name)
+
+        relido = _relido(perfil.name)
+        assert relido.mode is None, (
+            f"o Salvar inventou um modo: {relido.mode!r} — sem escolha dela e "
+            "sem vigente do daemon não há `kind` honesto para gravar"
+        )
+        assert aplicados == [], (
+            f"o Salvar aplicou um modo que ele não gravou: {aplicados!r}"
+        )
+        assert janela._escolha_pendente == {"mascara": "xbox"}, (
+            f"a escolha de máscara dela evaporou: {janela._escolha_pendente!r}"
+        )
 
 
 class TestARegistroEACoberturaNaoPodemDivergir:

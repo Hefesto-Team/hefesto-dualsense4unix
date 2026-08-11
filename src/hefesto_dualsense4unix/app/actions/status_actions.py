@@ -49,6 +49,7 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     transport_label,
 )
 from hefesto_dualsense4unix.app.actions.home_actions import (
+    id_da_pagina,
     id_da_pagina_corrente,
     vpad_degradation_text,
     wrapper_banner_text,
@@ -78,6 +79,7 @@ from hefesto_dualsense4unix.app.widgets.painel_no_jogo import (
     TEXTO_SEM_CONTROLE,
     PainelNoJogo,
     aviso_do_perfil,
+    jogo_steam_aberto,
     recado_global,
     texto_do_contexto,
 )
@@ -642,6 +644,123 @@ class StatusActionsMixin(WidgetAccessMixin):
 
         pagina.pack_start(CaixaDeTetoElastico(miolo), True, True, 0)
         pagina.show_all()
+        self._nascer_aba_no_jogo_escondida()
+
+    # ------------------------------------------------------------------
+    # ABA-DO-JOGO-01: a aba EXISTE só enquanto há jogo da Steam aberto
+    # ------------------------------------------------------------------
+
+    def _pagina_do_notebook(self, page_id: str) -> Any:
+        """O filho DIRETO do notebook cuja página é ``page_id``. ``None`` = não há.
+
+        Não é o mesmo widget que ``self._get(page_id)`` devolve, e a diferença é
+        a que faz a aba aparecer ou não: `_wrap_notebook_pages_in_scroll` (em
+        `app.py`, no `__init__`) embrulha oito das nove páginas num
+        `GtkScrolledWindow`, e é o EMBRULHO que o notebook conhece. Esconder a
+        caixa de dentro deixaria a aba na tira, clicável, abrindo uma página em
+        branco — pior que o defeito.
+
+        O desembrulho é o `id_da_pagina` de sempre (dono único, EST-10), então
+        isto continua valendo se um dia o embrulho mudar de forma.
+        """
+        notebook = self._get("main_notebook")
+        if notebook is None or not hasattr(notebook, "get_children"):
+            return None
+        for filho in notebook.get_children():
+            if id_da_pagina(filho) == page_id:
+                return filho
+        return None
+
+    def _nascer_aba_no_jogo_escondida(self) -> None:
+        """A aba "No jogo" nasce FORA da tira, e é o tique que a traz.
+
+        ABA-DO-JOGO-01, o pedido dela: *"essa aba no jogo só deveria aparecer
+        quando efetivamente eu tivesse com um jogo steam aberto"*.
+
+        A ordem das três chamadas é a cura, e cada uma tem um porquê:
+
+        1. ``show_all()`` no embrulho — marca os filhos como visíveis AGORA,
+           enquanto ainda dá; sem isto, o ``show()`` do dia em que o jogo abrir
+           revelaria uma página com o miolo ainda escondido;
+        2. ``set_no_show_all(True)`` — o ``window.show_all()`` de `app.show()`
+           roda DEPOIS de toda montagem e traria a aba de volta, todo boot. É o
+           mesmo trinco que o `_no_jogo_vazio` já usa três telas acima, e pela
+           mesma razão medida;
+        3. ``hide()`` — e só então ela some da tira.
+
+        Nasce escondida, e não visível-até-a-primeira-resposta, porque o
+        contrário é a aba PISCANDO em todo boot sem jogo: a tira abriria com ela
+        e a perderia meio segundo depois, na primeira leitura de estado.
+        """
+        alvo = self._pagina_do_notebook(ABA_NO_JOGO)
+        if alvo is None or not hasattr(alvo, "hide"):
+            return
+        with contextlib.suppress(Exception):
+            alvo.show_all()
+            alvo.set_no_show_all(True)
+            alvo.hide()
+
+    def _sync_visibilidade_no_jogo(self, state: dict[str, Any] | None) -> None:
+        """Põe/tira a aba "No jogo" da tira conforme haja jogo da Steam aberto.
+
+        ABA-DO-JOGO-01. Este é o gate de EXISTÊNCIA da aba, e ele não é o gate
+        que já morava aqui: o de `_sync_paineis_no_jogo` decide se REPINTA (e só
+        trabalha com a aba à vista, BUG-STATUS-TICK-HIDDEN-TAB-01). Confundir os
+        dois foi exatamente o que deixou a aba na tira desde 09/08 — uma página
+        fixa do Glade, montada sem condição nenhuma, com um gate de pintura que
+        parecia responder por ela. Por isso este roda ANTES daquele, e nunca
+        atrás dele: uma aba escondida jamais é a aba à vista, e o gate de pintura
+        engoliria a chamada para sempre.
+
+        ``None`` de `jogo_steam_aberto` não mexe em nada — nem mostra nem
+        esconde. São os três casos em que ninguém sabe a resposta (daemon
+        desligado, sonda ainda não feita, daemon mais velho que este código), e
+        em todos eles a única coisa honesta é deixar a tela como está.
+
+        **Quando ela está NA aba e o jogo fecha**, o foco vai para a Status antes
+        de a página sumir. Não é zelo: medido no GTK3 desta casa, esconder a
+        página corrente faz o notebook cair sozinho na página SEGUINTE — com o
+        layout de hoje, "Gatilhos". Ela estaria lendo o que atravessa para o jogo
+        e acordaria editando a curva do L2. A Status é o destino porque é a
+        vizinha e a outra metade da mesma pergunta: aquela responde pelo controle
+        FÍSICO, esta respondia pelo que atravessa para o JOGO.
+
+        **E o "Controlar o PC"?** O recado dele (`TEXTO_DESKTOP`, via
+        `recado_global`) continua nesta aba e continua alcançável — porque o
+        único instante em que ele acrescenta alguma coisa é justamente com um
+        jogo aberto: aí "o Hefesto não entrega controle nenhum ao jogo" explica
+        um jogo que não responde ao controle, e a frase termina apontando o
+        gesto que resolve. Com o jogo fechado a mesma frase é só a descrição de
+        um modo que ela escolheu de propósito — e a tela que fala desse modo, com
+        o comutador para sair dele, é a aba Início, que nunca esteve escondida.
+        Nenhum conteúdo ficou sem casa.
+        """
+        aberto = jogo_steam_aberto(state)
+        if aberto is None:
+            return
+        alvo = self._pagina_do_notebook(ABA_NO_JOGO)
+        if alvo is None or not hasattr(alvo, "hide"):
+            return
+        with contextlib.suppress(Exception):
+            if aberto:
+                alvo.show()
+                return
+            if not alvo.get_visible():
+                return
+            self._sair_da_aba_no_jogo()
+            alvo.hide()
+
+    def _sair_da_aba_no_jogo(self) -> None:
+        """Leva o foco para a aba Status se ela estiver NA aba que vai sumir."""
+        notebook = self._get("main_notebook")
+        if notebook is None or id_da_pagina_corrente(notebook) != ABA_NO_JOGO:
+            return
+        destino = self._pagina_do_notebook(ABA_STATUS)
+        if destino is None:
+            return
+        indice = notebook.page_num(destino)
+        if isinstance(indice, int) and indice >= 0:
+            notebook.set_current_page(indice)
 
     def _sync_paineis_no_jogo(self, state: dict[str, Any] | None) -> None:
         """Repinta a aba "No jogo" a partir do ``state_full``.
@@ -665,6 +784,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         slot = self._no_jogo_slot
         if slot is None:
             return
+        # ABA-DO-JOGO-01: a EXISTÊNCIA da aba se decide aqui, uma linha ACIMA do
+        # gate de pintura, e a ordem é a cura inteira — atrás dele esta chamada
+        # nunca aconteceria com a aba escondida, e a aba escondida nunca voltaria.
+        self._sync_visibilidade_no_jogo(state)
         notebook = self._get("main_notebook")
         if (
             notebook is not None
@@ -1910,8 +2033,19 @@ class StatusActionsMixin(WidgetAccessMixin):
         badge.show()
 
     def _refresh_target_tabs(self) -> None:
-        """Re-popula as abas por-controle para exibir os valores do alvo novo."""
-        for nome in ("_refresh_lightbar_from_draft", "_refresh_triggers_from_draft"):
+        """Re-popula as abas por-controle para exibir os valores do alvo novo.
+
+        POR-UNIDADE-01 (10/08/2026): a aba Rumble entra na lista. Ela passou a
+        exibir a INTENSIDADE efetiva do alvo (``effective_rumble_for``), e sem
+        este refresh a troca de peça no seletor deixaria a tela mostrando a
+        intensidade da peça ANTERIOR — o mesmo defeito que a lista existe para
+        evitar na Lightbar e nos Gatilhos.
+        """
+        for nome in (
+            "_refresh_lightbar_from_draft",
+            "_refresh_triggers_from_draft",
+            "_refresh_rumble_from_draft",
+        ):
             fn = getattr(self, nome, None)
             if fn is None:
                 continue
