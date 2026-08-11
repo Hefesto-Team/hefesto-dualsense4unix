@@ -380,8 +380,57 @@ presente por nome no `steamclient.so` dela (**MEDIDO AQUI**).
 **O que isto NÃO diz.** Não diz que a cura da TRES-CONTROLES-01 é inútil: um
 jogo pode não usar SDL (título nativo com input próprio, Unity antigo, ou um
 executável Windows que só enxerga o mundo pelo `winebus`), e nesses caminhos o
-par não passa por este ramo. Também não diz qual valor a variável tem no
-ambiente do jogo — **isso não foi medido**, e é exatamente o item 1 da seção 7.
+par não passa por este ramo.
+
+### 2.4-bis MEDIDO EM JOGO — 11/08/2026
+
+O item que a seção 7 listava como não medido foi medido no mesmo dia, com um
+jogo em sessão (`AppId 1599660`, que está na allowlist de exceção dela) e os
+controles na mesa. Instrumento: `scripts/medir_steam_virtual_gamepad.sh`,
+leitura pura de `/proc/<pid>/environ`.
+
+**1. A variável está em 1, e no processo do jogo.**
+`SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1` apareceu em cinco processos
+da árvore da Steam, incluindo o `reaper SteamLaunch` e o binário do jogo. **A
+suspeita estava certa quanto ao mecanismo:** o atalho vence, e o par
+`0x28de/0x11ff` do nosso `_IGNORE_VALUE` não esconde espelho nenhum.
+
+**2. E, ainda assim, o defeito NÃO se manifesta — porque não há espelho.**
+Varredura de `/sys/class/input` com o jogo rodando: nenhum dispositivo
+`X-Box 360 pad` nem `Steam Virtual`. O atalho autoriza um aparelho que a Steam
+não criou. O par continua **redundante**, agora por medição e não por leitura.
+
+**3. A metade que importa da nossa lista funciona, e é outra.** O jogo recebeu
+`SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6,0x28de/0x11ff`. O primeiro par
+é o DualSense **físico** — ele **não** passa pelo atalho (não é o gamepad
+virtual da Steam), então é consultado pelo caminho normal. É ele que faz o jogo
+enxergar os vpads em vez dos físicos. Também chegou
+`PROTON_DISABLE_HIDRAW=0x054C/0x0CE6`, escondendo só o físico e deixando o
+`0x0DF2` do vpad intacto — que é o desenho.
+
+**4. O quadro de dispositivos no momento da medição**, e ele fecha a história:
+dois DualSense físicos (`054c:0ce6`), **dois vpads do Hefesto** (`054c:0df2`,
+P1 e P2), dois controles Nintendo, e **zero espelhos**. O co-op de dois
+jogadores estava de pé, num jogo com exceção de Steam Input ativa — que é
+exatamente o que `docs/usage/jogos-e-mascaras.md` afirmava ser impossível até
+ser corrigido no mesmo dia.
+
+**5. O ACEITE DELA, no mesmo jogo, e é o que decide.** Palavras dela: *"na hora
+do vamos ver os 4 conectaram certinho. cada qual com seu player rumble e
+afins"*. Quatro controles, cada um com o seu número, a sua vibração e o resto —
+com a exceção de Steam Input ativa naquele appid.
+
+Isso fecha o par que este documento vinha perseguindo. A leitura do fonte
+previa um risco real; a medição de ambiente confirmou o mecanismo e mostrou que
+ele não tem alvo; e o olho dela confirmou o resultado. **Os três concordam**, e
+é raro — na maior parte desta sessão eles discordaram, e foi por isso que a
+sessão existiu.
+
+**GRAU: MEDIDO AQUI.** O que continua sem medição é o comportamento com um
+título que **use** o espelho: se um dia a Steam voltar a criá-lo, o atalho
+passa a decidir, e aí o par vira o problema que a leitura do fonte previu. O
+instrumento fica no repositório justamente para isso — é uma linha de comando,
+com a Steam aberta.
 
 ### 2.5 O que faz o jogo escolher um dispositivo ou outro
 

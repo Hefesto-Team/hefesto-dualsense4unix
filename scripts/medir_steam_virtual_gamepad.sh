@@ -82,24 +82,35 @@ done
 
 azul ""
 azul "== PERGUNTA 2: a nossa lista de ignorados chegou ao jogo? =="
+# LE UMA VEZ SO. A primeira versão varria os PIDs duas vezes — uma para
+# imprimir, outra para decidir se algo foi achado — e imprimiu "não chegou a
+# processo nenhum" logo abaixo de três linhas mostrando que chegou (medido em
+# 11/08/2026, com o jogo subindo). Processo de jogo em inicialização nasce e
+# morre rapido: a segunda varredura via outra mesa.
+achou_ignore=0
 for p in "${PIDS[@]}"; do
     v="$(le_env "$p" SDL_GAMECONTROLLER_IGNORE_DEVICES)"
-    [[ -n "${v}" ]] && { ok "pid $p: ${v}"; }
-done | sort -u || true
-if ! for p in "${PIDS[@]}"; do le_env "$p" SDL_GAMECONTROLLER_IGNORE_DEVICES; done | grep -q .; then
+    if [[ -n "${v}" ]]; then
+        achou_ignore=1
+        ok "pid $p: ${v}"
+    fi
+done
+if [[ "${achou_ignore}" -eq 0 ]]; then
     falhou "IGNORE_DEVICES não chegou a processo nenhum"
     info "É o que o wrapper hefesto-launch deveria injetar nas Launch Options."
 fi
 
 azul ""
 azul "== PERGUNTA 3: o Proton está com o hidraw desligado? =="
+achou_proton=0
 for p in "${PIDS[@]}"; do
     v="$(le_env "$p" PROTON_DISABLE_HIDRAW)"
-    [[ -n "${v}" ]] && ok "pid $p: PROTON_DISABLE_HIDRAW=${v}"
-done | sort -u || true
-if ! for p in "${PIDS[@]}"; do le_env "$p" PROTON_DISABLE_HIDRAW; done | grep -q .; then
-    info "não exportada (só importa com um jogo Proton em sessão)"
-fi
+    if [[ -n "${v}" ]]; then
+        achou_proton=1
+        ok "pid $p: PROTON_DISABLE_HIDRAW=${v}"
+    fi
+done
+[[ "${achou_proton}" -eq 0 ]] && info "não exportada (só importa com um jogo Proton em sessão)"
 
 azul ""
 azul "== o espelho existe AGORA? =="
