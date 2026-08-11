@@ -928,6 +928,16 @@ class PyDualSenseController(IController):
         # brilho escala a cor RESOLVIDA (automática inclusive) sem opinar
         # sobre qual cor é.
         self._led_scale_by_uniq: dict[str, float] = {}
+        # POR-UNIDADE-01 (10/08/2026): a escala de VIBRAÇÃO por-uniq — irmã
+        # exata do `_led_scale_by_uniq` acima, e pelo mesmo motivo de desenho.
+        # O que chega do perfil é uma POLÍTICA de intensidade por controle
+        # ("o branco vibra em economia, o preto no máximo"), e o daemon só
+        # sabe escalar a política GLOBAL (`DaemonConfig.rumble_policy`, um
+        # número para a casa inteira). Guardar aqui um FATOR por peça deixa o
+        # `set_rumble` broadcast continuar sendo UM valor pedido — cada handle
+        # recebe o seu, escalado na saída. Ausência de entrada = sem opinião
+        # (fator 1.0, byte-idêntico ao de hoje).
+        self._rumble_scale_by_uniq: dict[str, float] = {}
         # COR-03: provider da camada AUTOMÁTICA do desejado (cor do slot +
         # player-LED do número do controle), injetado pelo daemon via
         # `set_auto_output_provider` (injeção de dependência — core/ nunca
@@ -2110,6 +2120,36 @@ class PyDualSenseController(IController):
             except Exception as exc:
                 logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
 
+    def _for_each_com_key(
+        self,
+        op: Callable[[pydualsense, str], None],
+        *,
+        what: str,
+        broadcast: bool = False,
+    ) -> None:
+        """`_for_each` cuja `op` recebe a KEY do handle junto (POR-UNIDADE-01).
+
+        Mesma resolução de alvo, mesmo tratamento de falha por handle, mesmo
+        I/O fora do `_io_lock`. A diferença é a única que a escala por peça
+        exige: a `op` precisa saber EM QUEM está escrevendo para resolver o
+        fator daquela unidade. Sem `record` de propósito — quem usa isto (o
+        rumble) é TRANSITÓRIO e nunca entra no estado desejado.
+        """
+        with self._io_lock:
+            target = self._output_target_key
+            if not broadcast and target is not None and target in self._handles:
+                handles = [(target, self._handles[target])]
+            else:
+                handles = list(self._handles.items())
+        if not handles:
+            logger.debug("output_offline_noop", op=what)
+            return
+        for key, handle in handles:
+            try:
+                op(handle, key)
+            except Exception as exc:
+                logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
+
     def suprimir_player_leds(self, ativo: bool) -> bool:
         """Liga/desliga a escrita dos LEDs de JOGADOR. Instrumento de eliminação.
 
@@ -2369,11 +2409,65 @@ class PyDualSenseController(IController):
     def set_rumble(self, weak: int, strong: int) -> None:
         # Rumble é TRANSITÓRIO (efeito de jogo) — NÃO entra em `_desired`, logo
         # não é "ressuscitado" num controle plugado depois.
-        def _do(handle: pydualsense) -> None:
-            handle.setLeftMotor(strong)
-            handle.setRightMotor(weak)
+        #
+        # POR-UNIDADE-01: o valor pedido continua sendo UM (o do jogo, o do
+        # teste de motores, o do keepalive); o que muda por peça é o FATOR do
+        # perfil. `_escalar_rumble` devolve o par intacto quando a unidade não
+        # tem opinião — sem escalas registradas isto é byte-idêntico ao que
+        # era. O escopo (alvo do seletor ou broadcast) segue do `_for_each`.
+        def _do(handle: pydualsense, key: str) -> None:
+            eff_weak, eff_strong = self._escalar_rumble(key, weak, strong)
+            handle.setLeftMotor(eff_strong)
+            handle.setRightMotor(eff_weak)
 
-        self._for_each(_do, what="set_rumble")
+        self._for_each_com_key(_do, what="set_rumble")
+
+    def _escalar_rumble(self, key: str, weak: int, strong: int) -> tuple[int, int]:
+        """Aplica a escala de vibração por-uniq da `key` (POR-UNIDADE-01).
+
+        Espelho de `_scaled_led`, um andar acima: lê o fator registrado por
+        `set_rumble_scales` e satura em 0-255. Sem fator (o caso de todo
+        perfil de antes desta linha) devolve o par recebido SEM tocar nele —
+        nenhum arredondamento novo entra no caminho de quem não pediu nada.
+
+        Não segura `_io_lock`: é chamado de dentro do laço de I/O do
+        `_for_each_com_key`, que já soltou o lock de propósito (o HID write
+        não pode acontecer sob lock). O dict é substituído inteiro em
+        `set_rumble_scales` — leitura de referência é atômica no CPython e o
+        pior caso é um tick com o fator anterior, que o próximo report corrige.
+        """
+        uniq = self._key_to_uniq(key)
+        fator = self._rumble_scale_by_uniq.get(uniq) if uniq is not None else None
+        if fator is None:
+            return weak, strong
+        return (
+            max(0, min(255, int(weak * fator))),
+            max(0, min(255, int(strong * fator))),
+        )
+
+    def set_rumble_scales(self, scales: Mapping[str, float] | None = None) -> None:
+        """SUBSTITUI o mapa de escala de VIBRAÇÃO por-uniq (POR-UNIDADE-01).
+
+        Camada do PERFIL — é do bloco ``controllers`` do JSON dele que vem —,
+        aplicada na SAÍDA de cada handle, depois de o chamador já ter decidido
+        o valor. Contrato copiado de `set_led_scales`, campo por campo: chave
+        sem MAC estável é ignorada com aviso (não há como mirar uma peça sem
+        endereço), fator ≤ 0 é aceito (é o que "vibração desligada nesta
+        unidade" significa) e ausência de entrada = sem opinião.
+
+        Sem escrita de hardware: o rumble é transitório e não tem reassert. O
+        fator vale a partir do PRÓXIMO `set_rumble` — o que é a verdade do que
+        se está pedindo (não existe "re-vibrar o que já passou").
+        """
+        novo: dict[str, float] = {}
+        for uniq, fator in (scales or {}).items():
+            alvo = self._key_to_uniq(uniq)
+            if alvo is None:
+                logger.warning("escala_de_vibracao_sem_mac_ignorada", uniq=uniq)
+                continue
+            novo[alvo] = float(fator)
+        with self._io_lock:
+            self._rumble_scale_by_uniq = novo
 
     def force_rumble_stop(self) -> None:
         """Para os motores de TODOS os controles com um report de stop (HARM-16).
@@ -3116,9 +3210,13 @@ class PyDualSenseController(IController):
             handle = self._handles.get(key) if key is not None else None
         if handle is None:
             return False
+        # POR-UNIDADE-01: o co-op mira UMA peça, e a peça pode ter escala
+        # própria do perfil. Escalar aqui também é o que impede a incoerência
+        # de o mesmo controle vibrar diferente conforme a rota (co-op x jogo).
+        eff_weak, eff_strong = self._escalar_rumble(str(key), weak, strong)
         try:
-            handle.setLeftMotor(strong)
-            handle.setRightMotor(weak)
+            handle.setLeftMotor(eff_strong)
+            handle.setRightMotor(eff_weak)
         except Exception as exc:
             logger.warning("output_handle_failed", op="set_rumble_for", key=key, err=str(exc))
         return True

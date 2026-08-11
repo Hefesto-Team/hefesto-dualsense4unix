@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 from hefesto_dualsense4unix.core.controller import IController, OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS, KeyBinding
@@ -399,6 +400,15 @@ class ProfileManager:
         escalar = getattr(self.controller, "set_led_scales", None)
         if callable(escalar):
             escalar(escalas or None)
+        # POR-UNIDADE-01: a intensidade de vibração por peça segue o MESMO
+        # ciclo de vida da escala de brilho — publicada aqui, SUBSTITUINDO o
+        # mapa inteiro (perfil sem overrides limpa o que o anterior deixou).
+        escalas_rumble = _controllers_to_rumble_scales(
+            profile.controllers, getattr(profile, "rumble", None)
+        )
+        escalar_rumble = getattr(self.controller, "set_rumble_scales", None)
+        if callable(escalar_rumble):
+            escalar_rumble(escalas_rumble or None)
         publicar = getattr(self.controller, "reset_profile_overrides", None)
         if callable(publicar):
             publicar(overrides or None)
@@ -624,6 +634,58 @@ class ProfileManager:
         # SOM-02/E4: o alto-falante entra POR ÚLTIMO e só quando o perfil tem
         # opinião — ver `apply_speaker`.
         self.apply_speaker(profile, origin=origin, relatorio=resultado)
+        # POR-UNIDADE-01: e DEPOIS do global, a peça que discorda dele.
+        self.apply_controller_speakers(profile, origin=origin, relatorio=resultado)
+        return resultado
+
+    def apply_controller_speakers(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+    ) -> dict[str, str]:
+        """Aplica o alto-falante das UNIDADES que discordam do global (10/08).
+
+        Ela, em 10/08/2026: *"se eu quiser fazer uma guia específica do perfil
+        X pro controle branco e outra pro mesmo perfil mas pra um controle
+        preto"*. O alto-falante é da peça — cada unidade tem o seu —, e a
+        fiação por-``uniq`` já existia inteira e nunca fora ligada:
+        ``apply_speaker`` aceita ``uniq`` desde a SOM-02/E4 e
+        ``lifecycle.apply_profile_speaker`` o repassa a
+        ``set_speaker_volume(uniq=...)``. Faltava o perfil ter ONDE guardar
+        quem é quem — agora tem (``ControllerOverrides.speaker``).
+
+        DEPOIS do global, e é a ordem que importa: o global já escreveu em
+        todo mundo (``uniq=None`` = broadcast), e cada override reescreve
+        apenas a SUA peça por cima. Unidade sem override fica com o global,
+        que é o que "sem opinião" quer dizer aqui como em toda seção.
+
+        A seção do alto-falante NÃO é parcial por construção (``volume`` é
+        obrigatório no esquema — SOM-02, armadilhas 1 e 2), então não há
+        merge por campo a fazer: o override substitui a seção inteira daquela
+        peça. Reusa ``apply_speaker`` VERBATIM através de uma vista do perfil
+        (``model_copy``) para não duplicar as três guardas dela — a trava
+        manual de áudio, o par volume+mudo completo e o silêncio de quem não
+        pediu nada valem igual para a peça.
+
+        Relatório: ``speaker:<uniq>`` → estado, uma chave por unidade. Chave
+        distinta da ``speaker`` global de propósito, para a GUI conseguir
+        dizer QUAL peça foi ignorada pela trava manual em vez de fundir tudo
+        num rótulo só.
+        """
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        controllers = getattr(profile, "controllers", None)
+        if not controllers:
+            return resultado
+        for uniq, cfg in controllers.items():
+            secao = getattr(cfg, "speaker", None)
+            if secao is None:
+                continue
+            vista = profile.model_copy(update={"speaker": secao})
+            estado = self.apply_speaker(vista, origin=origin, uniq=str(uniq))
+            if estado is not None:
+                resultado[f"speaker:{uniq}"] = estado
         return resultado
 
     def apply_speaker(
@@ -1079,6 +1141,80 @@ def _controllers_to_led_scales(
         if "lightbar" in campos or "lightbar_brightness" not in campos:
             continue
         fator = float(cfg.leds.lightbar_brightness) / base
+        if fator == 1.0:
+            continue
+        out[uniq] = fator
+    return out
+
+
+#: Política de intensidade que o daemon assume quando NINGUÉM opinou — o
+#: default de `DaemonConfig.rumble_policy`. É o denominador honesto do fator
+#: por unidade num perfil sem seção `rumble.policy` própria: sem opinião
+#: global, o que o hardware recebe é o "balanceado" do daemon.
+_RUMBLE_POLICY_PADRAO = "balanceado"
+
+
+def _mult_da_politica(policy: str | None, custom_mult: float | None) -> float | None:
+    """Multiplicador de uma política FIXA de rumble, ou None se não há.
+
+    Fonte única: a MESMA tabela `RUMBLE_POLICY_MULT` que o daemon usa
+    (`daemon.subsystems.rumble`), com import lazy — `profiles/` não importa
+    `daemon/` no topo. `auto` devolve None de propósito: ele não é um número,
+    é uma função da bateria (ver `ControllerRumbleOverride`).
+    """
+    if policy is None:
+        return None
+    if policy == "custom":
+        return None if custom_mult is None else float(custom_mult)
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+    return RUMBLE_POLICY_MULT.get(policy)
+
+
+def _controllers_to_rumble_scales(
+    controllers: dict[str, ControllerOverrides] | None,
+    global_rumble: Any | None = None,
+) -> dict[str, float]:
+    """Escala de VIBRAÇÃO por controle do perfil (POR-UNIDADE-01, 10/08/2026).
+
+    Devolve `{uniq: fator}` — o mesmo contrato, campo por campo, de
+    `_controllers_to_led_scales`, e pela MESMA razão de desenho: o valor que
+    chega ao `set_rumble` do backend JÁ vem escalado pela política GLOBAL
+    (`apply_rumble_policy` faz isso em todo caminho de rumble), então o que a
+    unidade registra tem de ser RELATIVO — `mult_da_unidade / mult_global` —,
+    senão a peça escalaria duas vezes.
+
+    O denominador é a política do PRÓPRIO perfil quando ele tem uma; sem
+    opinião global, é o `balanceado` que o daemon assume. Com o global em
+    `auto`, o denominador é um número que muda com a bateria a cada tick — e
+    aí a entrada é PULADA, com log: um fator contra denominador móvel faria a
+    peça vibrar de forma imprevisível, e prometer isso seria pior do que não
+    entregar. (O `auto` por unidade já é recusado na borda do esquema.)
+
+    Fator 1.0 não entra — é "sem opinião", igual ao irmão dos LEDs.
+    """
+    out: dict[str, float] = {}
+    policy_global = getattr(global_rumble, "policy", None) or _RUMBLE_POLICY_PADRAO
+    base = _mult_da_politica(
+        policy_global, getattr(global_rumble, "custom_mult", None)
+    )
+    for uniq, cfg in (controllers or {}).items():
+        if cfg.rumble is None:
+            continue
+        campos = cfg.rumble.model_fields_set
+        if "policy" not in campos:
+            continue
+        mult = _mult_da_politica(cfg.rumble.policy, cfg.rumble.custom_mult)
+        if mult is None:
+            continue
+        if base is None or base <= 0.0:
+            logger.info(
+                "escala_de_vibracao_pulada_base_movel",
+                uniq=uniq,
+                policy_global=policy_global,
+            )
+            continue
+        fator = mult / base
         if fator == 1.0:
             continue
         out[uniq] = fator

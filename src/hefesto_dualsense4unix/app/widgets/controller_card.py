@@ -3574,6 +3574,13 @@ if _GTK_DISPONIVEL:
                         volume=None if soltar else volume,
                         muted=muted,
                         rota=rota,
+                        # POR-UNIDADE-01: DE QUEM foi o gesto. O bloco já manda
+                        # este mesmo `uniq` no `speaker.set` — o que faltava era
+                        # o rascunho saber. Quem decide se isso vira override da
+                        # peça ou opinião da casa é o escritor único (ver
+                        # `registrar_alto_falante_no_rascunho`); o card só diz
+                        # a verdade sobre onde a mão dela encostou.
+                        uniq=self._uniq,
                     )
                 return self._on_som_de_confirmacao(resultado)
 

@@ -11,6 +11,13 @@ Padrão de thread:
   para um worker via ``ipc_bridge.run_in_thread`` e renderizado no callback
   (``GLib.idle_add``) — PERF-FOOTER-ASYNC-IO-01.
 
+O-SALVAR-TAMBEM-APLICA-01 (11/08/2026), decisão dela, textual: *"salvar também
+aplica"*. Os DOIS botões que mexem no modo — o verde "Aplicar" e o "Salvar
+Perfil" — passam pela MESMA sequência de transição (``_transicao_de_modo``, no
+fim deste módulo), que por sua vez passa por ``mode_transition.apply_mode``.
+Nunca por dentro do ``apply_draft``: o porquê está na docstring de
+``on_apply_draft`` e é a armadilha mais cara desta fronteira.
+
 GRAVA-POR-UM-FUNIL-01 (04/08/2026): os TRÊS botões que gravam perfil (Salvar,
 Importar, Restaurar Padrão) não chamam ``save_profile`` — eles montam o
 ``Profile`` e entregam ao ``_gravar_perfil_async`` do ``ProfileWriterMixin``,
@@ -26,6 +33,7 @@ Importações de topo para permitir patch nos testes:
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -219,6 +227,12 @@ class FooterActionsMixin(ProfileWriterMixin):
 
         Sem pendência nada disto acontece e o caminho é o de sempre — inclusive
         para quem não tem a aba Início montada (``getattr`` devolve ``None``).
+
+        O-SALVAR-TAMBEM-APLICA-01 (11/08/2026): o botão do lado passou a fazer o
+        DEPOIS também, e pelo mesmo caminho — ``_transicao_de_modo``, que é este
+        parágrafo virado função. A armadilha acima continua valendo palavra por
+        palavra: quem for juntar modo e rascunho numa chamada só vai encontrar
+        de novo o "ERRO ao aplicar" com o modo JÁ aplicado.
         """
         pendente = getattr(self, "_escolha_pendente", None)
         if pendente:
@@ -247,6 +261,16 @@ class FooterActionsMixin(ProfileWriterMixin):
         "Aplicar", que **já congela a janela** para a transação
         (`_apply_draft_agora`), e o teto é o mesmo `STATE_IPC_TIMEOUT_S` que a
         aba Início usa para a MESMA leitura. Não há caminho de tique por aqui.
+
+        NOTA DATADA — 11/08/2026 (O-SALVAR-TAMBEM-APLICA-01): a frase *"só roda
+        no clique do Aplicar"* caducou. O "Salvar Perfil" também chega aqui, por
+        `_transicao_de_modo`, e ele **não congela a janela**. O que sustenta a
+        leitura síncrona continua de pé, e agora por três razões em vez de uma:
+        o teto é 1,0 s, ela roda UMA vez por clique dela (nunca em tique), e a
+        pergunta que ela responde é a que impede o Salvar de recriar o vpad no
+        meio da partida — o caminho do "Jogador 3" fantasma. Sem esta leitura o
+        `_jogo_aberto` do Salvar seria o que a aba Início deixou lá, e a partir
+        de qualquer aba que não a Início isso é `False` por omissão.
 
         Falha para o lado de **não mudar de opinião**: qualquer erro mantém o
         valor que estava lá. Um diálogo que não aparece por engano é ruim, mas
@@ -296,17 +320,20 @@ class FooterActionsMixin(ProfileWriterMixin):
 
         O ESTADO DO JOGO É LIDO NA HORA, e essa parte é a metade que faltava.
         Ver `_ha_jogo_aberto_agora`.
+
+        O-SALVAR-TAMBEM-APLICA-01 (11/08/2026): a SEQUÊNCIA (ler o sinal de jogo,
+        perguntar quando há jogo aberto, disparar o `apply_mode`) saiu daqui para
+        `_transicao_de_modo` porque o "Salvar Perfil" passou a precisar dela
+        inteira. O que ficou neste método é só o que é DO VERDE: o degrau de trás
+        do modo alvo, o registro no rascunho e as sete seções do AGORA. Uma
+        diferença de ORDEM veio junto e está declarada: a leitura do sinal de
+        jogo agora acontece DEPOIS do teste de modo vigente, dentro do núcleo —
+        sem modo alvo não há transição para decidir, então não há o que perguntar
+        ao daemon.
         """
         from hefesto_dualsense4unix.app.actions.home_actions import (
-            _flavor_label,
-            _mode_label,
             registrar_modo_no_rascunho,
-            render_pendente,
         )
-        from hefesto_dualsense4unix.app.actions.mode_transition import apply_mode
-
-        # JOGO-ABERTO-SO-NA-INICIO-01 (09/08/2026): confere ANTES de decidir.
-        self._ha_jogo_aberto_agora()
 
         # O alvo do modo: a escolha dela, ou — quando só a máscara mudou — o que
         # já está valendo. Nunca um default nosso: escolher "gamepad" por conta
@@ -324,7 +351,7 @@ class FooterActionsMixin(ProfileWriterMixin):
             self._apply_draft_agora()
             return
 
-        def _done(_resultado: Any) -> bool:
+        def _done() -> None:
             # Decisão 3 dela (08/08, noite): o modo entra no rascunho AQUI —
             # quando o Aplicar confirma —, nunca no clique. O rascunho descreve
             # o que ficou DE PÉ; uma intenção que falhou não pode virar perfil
@@ -355,16 +382,14 @@ class FooterActionsMixin(ProfileWriterMixin):
                 modo_alvo,
                 mascara_alvo or getattr(self, "_mascara_vigente_do_daemon", None),
             )
-            self._escolha_pendente = None
-            render_pendente(self)
+            _esquecer_a_pendencia(self)
             # E só agora o AGORA: as sete seções do rascunho. Emendado no
             # sucesso, não disparado em paralelo — duas transações concorrentes
             # sobre o mesmo controle é como se recria vpad no meio de uma
             # aplicação de LEDs.
             self._apply_draft_agora()
-            return False
 
-        def _fail(exc: Exception) -> bool:
+        def _fail(exc: Exception) -> None:
             # A pendência FICA quando a transição falha: ela ainda não valeu, e
             # apagá-la aqui faria a linha "vai mudar para:" sumir da tela sem
             # que nada tivesse mudado — a janela mentindo por omissão.
@@ -391,20 +416,6 @@ class FooterActionsMixin(ProfileWriterMixin):
                 ).format(erro=exc)
             )
             self._apply_draft_agora()
-            return False
-
-        def _aplicar() -> None:
-            apply_mode(
-                modo_alvo,
-                flavor=mascara_alvo,
-                on_done=_done,
-                on_fail=_fail,
-            )
-
-        if mascara_alvo:
-            mudanca, valor = "mascara", _flavor_label(mascara_alvo)
-        else:
-            mudanca, valor = "modo", _mode_label(modo_alvo)
 
         def _sem_relancar(escolha: str) -> None:
             """Os dois ramos em que o jogo NÃO é relançado.
@@ -426,18 +437,17 @@ class FooterActionsMixin(ProfileWriterMixin):
               relançar o jogo agora. Apagá-la seria decidir no lugar dela.
             """
             if escolha != "cancelar":
-                self._escolha_pendente = None
-                render_pendente(self)
+                _esquecer_a_pendencia(self)
             self._apply_draft_agora()
 
-        if self._perguntar_antes_de_relancar(
-            mudanca=mudanca,
-            valor=valor,
-            aplicar=_aplicar,
+        _transicao_de_modo(
+            self,
+            modo=modo_alvo,
+            mascara=mascara_alvo,
+            ao_aplicar=_done,
+            ao_falhar=_fail,
             ao_nao_relancar=_sem_relancar,
-        ):
-            return
-        _aplicar()
+        )
 
     def _apply_draft_agora(self) -> None:
         """Envia DraftConfig inteiro ao daemon via IPC ``profile.apply_draft``.
@@ -779,6 +789,36 @@ class FooterActionsMixin(ProfileWriterMixin):
         viram campos explícitos) e reabriria a resolução-por-objeto refutada —
         a guarda está escrita no fim do ``DraftConfig.to_profile``.
         """
+        # A-INICIO-TAMBEM-SALVA-01 (10/08/2026) — PRIMEIRA linha, antes de
+        # `self.draft` ser lido: o que ela marcou na aba Início mora em
+        # `_escolha_pendente`, não no rascunho, e até hoje só o botão VERDE o
+        # trazia para cá. Quem salvasse sem clicar no verde gravava `mode: null`
+        # em cima da própria escolha — a Início era a ÚNICA das oito abas que
+        # não contribuía para o Salvar. O porquê inteiro está no escritor.
+        #
+        # A ordem é medição, não estética: `draft = self.draft` fotografa o
+        # rascunho para o worker, e recolher DEPOIS dessa linha escreveria num
+        # objeto que ninguém mais lê.
+        #
+        # Import TARDIO pelo mesmo motivo do `_aplicar_escolha_pendente` logo
+        # acima: `home_actions` puxa a aba inteira, e o rodapé é importado no
+        # bootstrap da janela.
+        from hefesto_dualsense4unix.app.actions.home_actions import (
+            recolher_escolha_pendente_no_rascunho,
+        )
+
+        # O-SALVAR-TAMBEM-APLICA-01 (11/08/2026): a máscara que vai VIAJAR no IPC
+        # é fotografada ANTES do recolhimento, e ela é a **escolha explícita**
+        # dela — nunca o que o recolhimento devolve. Os dois divergem de
+        # propósito: o recolhido cai no `_mascara_vigente_do_daemon` quando ela
+        # mexeu só no modo (o esquema não aceita `kind` gamepad sem máscara), e
+        # mandar esse eco de volta ao daemon é exatamente o "segundo dono do
+        # valor" que a AUTO-01.3 enterrou e que o
+        # `test_a_inicio_sem_mascara_escolhida_nao_impoe_mascara_nenhuma` tranca
+        # para o botão verde. Sem escolha explícita o passo sai sem o campo e o
+        # daemon preserva a máscara que já está lá.
+        escolhida = dict(getattr(self, "_escolha_pendente", None) or {}).get("mascara")
+        recolhido = recolher_escolha_pendente_no_rascunho(self)
         draft = self.draft
         prioridade = self._prioridade_do_save(existente)
         regra = self._regra_do_save(existente, draft)
@@ -789,16 +829,180 @@ class FooterActionsMixin(ProfileWriterMixin):
             perfil: Profile = draft.to_profile(nome, priority=prioridade)
             return perfil.model_copy(update={"match": regra})
 
+        # GRAVAR PRIMEIRO, APLICAR DEPOIS — e a ordem é decisão, não acaso. Ela
+        # está por extenso em `_aplicar_o_modo_que_foi_gravado`; em uma linha:
+        # o disco é a verdade, e a máquina é levada até ele.
+        depois: Callable[[Profile, Path, Any], None] | None = None
+        if recolhido:
+            gravado: dict[str, str] = recolhido
+
+            def _levar_a_maquina_ate_o_arquivo(
+                _perfil: Profile, _caminho: Path, _extra: Any
+            ) -> None:
+                self._aplicar_o_modo_que_foi_gravado(gravado, escolhida)
+
+            depois = _levar_a_maquina_ate_o_arquivo
+
         self._gravar_perfil_async(
             _construir,
             adotar_como_ativo=True,
-            mensagem_ok=lambda _perfil, caminho: _(
-                "Perfil salvo em {caminho}"
-            ).format(caminho=caminho),
+            mensagem_ok=lambda _perfil, caminho: self._texto_do_perfil_salvo(
+                caminho, recolhido
+            ),
             mensagem_erro=lambda exc: _("Falha ao salvar perfil: {erro}").format(
                 erro=exc
             ),
             evento="footer_save_profile",
+            depois_na_janela=depois,
+        )
+
+    def _aplicar_o_modo_que_foi_gravado(
+        self, gravado: dict[str, str], mascara_escolhida: str | None
+    ) -> None:
+        """O Salvar leva a MÁQUINA até o arquivo que ele acabou de gravar.
+
+        O-SALVAR-TAMBEM-APLICA-01 (11/08/2026) — decisão dela, textual:
+        *"salvar também aplica"*.
+
+        Ela responde a pergunta que ficou EM ABERTO em 10/08 (a nota estava em
+        ``_texto_do_perfil_salvo``, e está revogada lá). O defeito que a resposta
+        fecha era visível na tela: depois do Salvar o ARQUIVO já tinha o modo
+        novo e o DAEMON continuava no antigo, então a linha "vai mudar para:"
+        ficava acesa apontando para um valor **já gravado** — a janela cobrando
+        dela um segundo clique para terminar um gesto que ela deu por terminado.
+
+        A ORDEM — gravar primeiro, aplicar depois — tem três razões, e nenhuma é
+        estética:
+
+        1. **o Salvar carrega SETE abas de trabalho dela**, é barato e é
+           reversível; a transição de modo é cara (até 3 chamadas de 2,0 s),
+           pode falhar e pode depender de uma decisão dela num diálogo. Pendurar
+           a gravação no sucesso da transição faria o trabalho das sete abas
+           refém do DEPOIS — a O-AGORA-NAO-E-REFEM-DO-DEPOIS-01 vista pelo outro
+           lado do espelho;
+        2. **falha em gravar não pode mexer na máquina**: se o disco recusa, o
+           gesto dela não aconteceu, e mudar o modo do mesmo jeito seria a janela
+           agindo por um pedido que ela viu falhar. Por isso este método é o
+           ``depois_na_janela`` do funil, que só roda no sucesso da gravação;
+        3. **com o jogo aberto a transição pode não acontecer** (ela pode
+           cancelar no diálogo), e o arquivo tem de estar gravado do mesmo jeito:
+           o diálogo pergunta sobre o JOGO, não sobre salvar.
+
+        E SE A APLICAÇÃO FALHAR? O arquivo FICA como está, com o modo dela.
+        Não se desfaz a gravação, e isto é decisão:
+
+        - um perfil descreve o que vale **quando ele ativa**, não o que a máquina
+          está fazendo agora — o daemon aplica a seção ``mode`` na ativação
+          (``daemon/lifecycle.apply_profile_mode``, com pendência própria para o
+          jogo aberto). Um arquivo à frente do daemon não é mentira: é a próxima
+          abertura, que é exatamente o que a linha "vai mudar para:" diz;
+        - desfazer exigiria uma SEGUNDA gravação, por cima da que ela pediu, para
+          apagar a escolha dela por causa de um engasgo de IPC — o contrário do
+          *"a vontade na GUI prevalece sempre"* (09/08);
+        - o que sobra de desonesto seria a TELA, e é lá que se paga: a pendência
+          **fica acesa** e o toast diz as duas metades — gravei, não apliquei.
+
+        Aplica-se o que FOI GRAVADO (``gravado`` vem do rascunho, depois da
+        normalização do ``rascunho_com_modo``), nunca o que se pediu: se a
+        máscara foi descartada por não ser modo gamepad, o arquivo não a tem e a
+        máquina também não pode tê-la. A máscara que VIAJA, porém, é só a
+        explícita — ver o comentário no chamador.
+        """
+        modo = gravado.get("modo")
+        if not modo:
+            # Rascunho sem `kind` legível: não há transição honesta a fazer, e
+            # `apply_mode` levantaria `ValueError` dentro do callback do funil,
+            # depois de o arquivo já estar em disco.
+            logger.info("salvar_nao_aplica_sem_modo")
+            return
+        alvo = _rotulo_do_modo(gravado)
+
+        def _aplicou() -> None:
+            # A linha "vai mudar para:" APAGA aqui, e só aqui: é o único ponto
+            # em que o daemon confirmou que já mudou. Mesmo gesto do verde, pela
+            # mesma função.
+            _esquecer_a_pendencia(self)
+            logger.info("salvar_aplicou_o_modo", modo=modo)
+            self._footer_toast(
+                _("Perfil salvo, e o modo “{alvo}” já está valendo.").format(alvo=alvo)
+            )
+
+        def _falhou(exc: Exception) -> None:
+            # A pendência FICA — mesma regra do verde, e aqui ela carrega o peso
+            # extra de ser a única coisa na tela que ainda diz que o daemon está
+            # atrasado em relação ao arquivo.
+            logger.warning("salvar_nao_aplicou_o_modo", modo=modo, erro=str(exc))
+            self._footer_toast(
+                _(
+                    "Perfil salvo, mas não consegui mudar para “{alvo}” agora "
+                    "({erro}) — a escolha continua marcada."
+                ).format(alvo=alvo, erro=exc)
+            )
+
+        def _sem_relancar(_escolha: str) -> None:
+            # Os DOIS ramos do diálogo em que o jogo não é relançado dizem a
+            # mesma coisa aqui, e é uma frase verdadeira nos dois: o arquivo tem
+            # a escolha, a máquina não. A pendência fica nos dois pelo mesmo
+            # motivo — ela descreve o daemon, e o daemon não mudou.
+            #
+            # É a diferença deste botão para o verde, onde "na próxima abertura"
+            # APAGA a linha: lá o produto não tinha onde guardar a escolha, e o
+            # toast do diálogo mandava refazê-la depois de fechar o jogo. Aqui
+            # ela está guardada — no arquivo —, e mandar refazer seria mentira.
+            # Este toast vem DEPOIS do toast do diálogo de propósito
+            # (`base._relancar_decidir`): a última palavra é de quem sabe o que
+            # aconteceu por inteiro.
+            self._footer_toast(
+                _(
+                    "Perfil salvo — o modo “{alvo}” está no arquivo e vale "
+                    "quando o jogo abrir de novo."
+                ).format(alvo=alvo)
+            )
+
+        _transicao_de_modo(
+            self,
+            modo=modo,
+            mascara=mascara_escolhida,
+            ao_aplicar=_aplicou,
+            ao_falhar=_falhou,
+            ao_nao_relancar=_sem_relancar,
+        )
+
+    def _texto_do_perfil_salvo(
+        self, caminho: Any, recolhido: dict[str, str] | None
+    ) -> str:
+        """O toast do Salvar, dito no instante em que o ARQUIVO ficou pronto.
+
+        A-INICIO-TAMBEM-SALVA-01 (10/08/2026). O Salvar passou a gravar o modo
+        que ela escolheu na aba Início, e um toast que dissesse só *"Perfil
+        salvo"* deixaria a metade cara da verdade de fora.
+
+        NOTA DATADA — 11/08/2026, O-SALVAR-TAMBEM-APLICA-01. A frase que estava
+        aqui — *"o modo foi para o arquivo e vale na próxima abertura do jogo;
+        para mudar agora, clique em Aplicar"* — **caducou por decisão dela**,
+        textual: *"salvar também aplica"*. A divisão que ela ensinava (o Salvar
+        grava, o verde muda a máquina) deixou de existir para o modo: os dois
+        botões mudam a máquina agora. Manter aquele texto seria mandá-la clicar
+        num botão para terminar um gesto que já terminou — e a pergunta EM
+        ABERTO que a nota antiga registrava está respondida em
+        ``_aplicar_o_modo_que_foi_gravado``, com a ordem e o desfecho da falha.
+
+        Esta frase é a PRIMEIRA de duas, e o funil a diz antes de
+        ``depois_na_janela`` rodar (``profile_writer._ao_gravar``). Ela cobre a
+        janela de até 6 s em que o ``apply_mode`` está em voo: sem um "aplicando"
+        no rodapé, o silêncio seria lido como "não fez nada" — e a última palavra
+        (aplicou / não consegui / está no arquivo) vem do callback.
+
+        Os rótulos vêm de ``_mode_label``/``_flavor_label`` — os MESMOS da aba
+        Início e da linha do pendente. Ela lê "Jogar pelo Hefesto" no botão; um
+        toast dizendo "gamepad" falaria de uma coisa que não está escrita em
+        lugar nenhum da tela (LEIGO-02).
+        """
+        base = _("Perfil salvo em {caminho}").format(caminho=caminho)
+        if not recolhido:
+            return base
+        return base + " " + _("Aplicando o modo “{alvo}”...").format(
+            alvo=_rotulo_do_modo(recolhido)
         )
 
     # ------------------------------------------------------------------
@@ -1032,6 +1236,128 @@ class FooterActionsMixin(ProfileWriterMixin):
 # ------------------------------------------------------------------
 # Helpers de módulo
 # ------------------------------------------------------------------
+#
+# O-SALVAR-TAMBEM-APLICA-01 (11/08/2026): as três funções abaixo são de MÓDULO,
+# e não métodos do mixin, pela armadilha que esta base já pagou duas vezes —
+# **chamada entre partes quebra dublê PARCIAL de teste**. O `_RodapeStub` de
+# `test_mode_transition_um_dono.py` copia UM handler avulso do mixin
+# (`_aplicar_escolha_pendente`) para medir a paridade de IPC entre a Início e a
+# Emulação; um `self._transicao_de_modo(...)` ali dentro viraria `AttributeError`
+# e mataria a medição. Função de módulo atravessa o dublê intacta — é o mesmo
+# desenho, e o mesmo motivo, de `home_actions.registrar_modo_no_rascunho`.
+
+
+def _rotulo_do_modo(escolha: dict[str, str]) -> str:
+    """"Jogar pelo Hefesto (Xbox 360)" a partir de ``{"modo","mascara"}``.
+
+    Uma fonte só para o nome do modo nos toasts do rodapé: as quatro frases do
+    Salvar falam do MESMO alvo, e escrever o rótulo em cada uma seria quatro
+    lugares para divergir. O léxico é o da tela (`_mode_label`/`_flavor_label`,
+    os mesmos da aba Início e da linha do pendente) — LEIGO-02: ela lê "Jogar
+    pelo Hefesto" no botão, e um toast dizendo "gamepad" falaria de uma coisa
+    que não está escrita em lugar nenhum.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        _flavor_label,
+        _mode_label,
+    )
+
+    alvo = _mode_label(escolha.get("modo"))
+    mascara = escolha.get("mascara")
+    if mascara:
+        alvo = f"{alvo} ({_flavor_label(mascara)})"
+    return alvo
+
+
+def _esquecer_a_pendencia(janela: Any) -> None:
+    """Apaga a escolha pendente E a linha "vai mudar para:" da aba Início.
+
+    As duas coisas juntas, sempre, e é por isso que existe: `_escolha_pendente`
+    é o modelo e a linha é a tela, e quem apagasse só um dos dois deixaria a
+    janela prometendo uma mudança que já aconteceu (ou escondendo uma que não
+    aconteceu). Os dois botões do rodapé limpam pelo MESMO gesto.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import render_pendente
+
+    janela._escolha_pendente = None
+    render_pendente(janela)
+
+
+def _transicao_de_modo(
+    janela: Any,
+    *,
+    modo: str,
+    mascara: str | None,
+    ao_aplicar: Callable[[], None],
+    ao_falhar: Callable[[Exception], None],
+    ao_nao_relancar: Callable[[str], None],
+) -> None:
+    """A sequência que leva a MÁQUINA ao modo escolhido. Os dois botões usam.
+
+    O-SALVAR-TAMBEM-APLICA-01 (11/08/2026). Este é o caminho CERTO do modo, e
+    ele já existia — era o corpo do "Aplicar" (`_aplicar_escolha_pendente`). Ele
+    virou função para o "Salvar Perfil" poder percorrê-lo inteiro em vez de
+    inventar um segundo caminho; a docstring de `on_apply_draft` diz por que o
+    caminho ERRADO (juntar o modo ao `apply_draft`) produz "ERRO ao aplicar" com
+    o modo JÁ aplicado.
+
+    O que ela faz, nesta ordem e para os dois botões:
+
+    1. **relê o sinal de jogo na hora** (`_ha_jogo_aberto_agora`) — sem isto o
+       Salvar decidiria com o `_jogo_aberto` que a aba Início deixou, que é
+       `False` por omissão a partir de qualquer outra aba;
+    2. **pergunta, quando há jogo aberto** — modo e máscara mexem no que o jogo
+       em curso já leu, e recriar o vpad ao vivo é o caminho do "Jogador 3"
+       fantasma (DEPOIS-QUE-APLICAVA-AGORA-01). O Salvar herda a pergunta de
+       graça, e tinha de herdar: sem ela o botão de gravar seria mais perigoso
+       que o verde;
+    3. **dispara `apply_mode`**, com o `MODE_IPC_TIMEOUT_S` de 2,0 s por chamada
+       — nunca o 1,5 s do `apply_draft` — e **sem congelar a janela**. Os até
+       3 x 2,0 s correm no worker do `ipc_bridge`; quem chama recebe o desfecho
+       no `ao_aplicar`/`ao_falhar` e escreve o toast que sabe contar.
+
+    O import de `apply_mode` é TARDIO de propósito, e não só pelo ciclo: é o que
+    deixa o `monkeypatch.setattr(mode_transition, "apply_mode", ...)` alcançar
+    esta chamada — a armadilha com que as duas suítes provam que a transição
+    saiu (ou que não saiu).
+
+    A MÁSCARA que chega aqui é a **escolha explícita** dela, ou `None`. Ecoar de
+    volta a máscara vigente do daemon recria o "segundo dono do valor" que a
+    AUTO-01.3 enterrou: sem o campo, o daemon preserva a que já está lá.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        _flavor_label,
+        _mode_label,
+    )
+    from hefesto_dualsense4unix.app.actions.mode_transition import apply_mode
+
+    # JOGO-ABERTO-SO-NA-INICIO-01 (09/08/2026): confere ANTES de decidir.
+    janela._ha_jogo_aberto_agora()
+
+    def _done(_resultado: Any) -> bool:
+        ao_aplicar()
+        return False  # GLib.idle_add não repete
+
+    def _fail(exc: Exception) -> bool:
+        ao_falhar(exc)
+        return False
+
+    def _aplicar() -> None:
+        apply_mode(modo, flavor=mascara, on_done=_done, on_fail=_fail)
+
+    if mascara:
+        mudanca, valor = "mascara", _flavor_label(mascara)
+    else:
+        mudanca, valor = "modo", _mode_label(modo)
+
+    if janela._perguntar_antes_de_relancar(
+        mudanca=mudanca,
+        valor=valor,
+        aplicar=_aplicar,
+        ao_nao_relancar=ao_nao_relancar,
+    ):
+        return
+    _aplicar()
 
 
 def _lista_de_secoes(secoes: Any) -> str:

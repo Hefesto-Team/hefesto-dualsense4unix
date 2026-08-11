@@ -831,6 +831,78 @@ def registrar_modo_no_rascunho(
         janela.draft = novo
 
 
+def recolher_escolha_pendente_no_rascunho(janela: Any) -> dict[str, str] | None:
+    """Leva ao rascunho o que ela marcou na Início e ainda não aplicou.
+
+    A-INICIO-TAMBEM-SALVA-01 (10/08/2026), pedido dela, literal:
+
+        *"eu ir de uma aba pra outra depois de alterar todas as anteriores mas
+        eu clicar em salvar somente na última. ele vai salvar na última aba
+        todas as informações passadas."*
+
+    MEDIDO na bancada em 10/08: com UM "Salvar Perfil" no fim, sete das oito
+    abas chegavam ao arquivo. Falhava só a Início. A razão é a AGORA-E-DEPOIS-01
+    (08/08): clicar no seletor de modo deixou de aplicar e passou a só MARCAR a
+    escolha em ``_escolha_pendente``, e o único caminho de lá até o rascunho era
+    o callback de sucesso do botão VERDE
+    (``footer_actions._aplicar_escolha_pendente``). Quem salvasse sem o verde
+    gravava ``mode: null`` em cima do que acabara de escolher — a queixa do
+    ``pragmata2.json``, pela última porta que ainda estava aberta.
+
+    **REGISTRAR NÃO É APLICAR** (HARM-05), e aqui a linha é mais fina do que de
+    costume, então fica escrita: daqui não sai IPC nenhum. Este recolhimento
+    prepara o que vai para o DISCO; quem muda a máquina continua sendo o verde,
+    e só ele. Pela mesma razão a pendência **não é limpa**: ela descreve o que o
+    daemon ainda não alcançou, e depois de um Salvar isso continua verdadeiro.
+
+    O DEGRAU DE TRÁS do ``kind`` é a MESMA expressão do "Aplicar"
+    (``footer_actions._aplicar_escolha_pendente``): a escolha dela, ou o vigente
+    do daemon quando ela mexeu só na máscara. Duas leituras do mesmo fato não
+    podem discordar. E **sem nenhum dos dois não se escreve nada**: o esquema não
+    aceita máscara sem ``kind`` (``profiles/schema.ProfileModeConfig``), mas
+    carimbar um default nosso aqui criaria um SEGUNDO dono do valor — o defeito
+    que a AUTO-01.3 enterrou. Falha para o lado de não inventar.
+
+    Função de MÓDULO e delegando ao escritor único pelas duas razões já pagas
+    por esta base (ver ``registrar_modo_no_rascunho``): dois mixins na mesma
+    classe se sombreariam pela MRO, e chamada entre mixins quebra dublê PARCIAL
+    de teste. Aqui vale uma terceira: quem chama é o RODAPÉ, que não é a aba
+    dona do modo — se ele escrevesse o rascunho por conta própria seria o
+    segundo escritor que o portão de AST existe para impedir.
+
+    Devolve o que FOI registrado — ``{"modo": ...}`` mais ``"mascara"`` quando
+    há —, ou ``None`` quando não havia nada a recolher. O rodapé usa isso para
+    o toast dizer a verdade sobre o que acabou de acontecer; e o que se devolve
+    é lido **de volta do rascunho**, nunca do que se pediu, porque só o rascunho
+    sabe o que sobreviveu à normalização (máscara fora do modo gamepad, por
+    exemplo, é descartada por ``rascunho_com_modo``).
+    """
+    pendente = dict(getattr(janela, "_escolha_pendente", None) or {})
+    if not pendente:
+        return None
+    kind = pendente.get("modo") or getattr(janela, "_modo_vigente_do_daemon", None)
+    if not kind:
+        logger.info("salvar_recolhe_pendencia_sem_modo_conhecido")
+        return None
+    flavor = pendente.get("mascara") or getattr(
+        janela, "_mascara_vigente_do_daemon", None
+    )
+    antes = getattr(janela, "draft", None)
+    registrar_modo_no_rascunho(janela, kind, flavor)
+    depois = getattr(janela, "draft", None)
+    if depois is antes:
+        # Rascunho ausente (dublê, bootstrap ainda em voo) ou ``kind`` que o
+        # `rascunho_com_modo` não conhece: nada foi escrito, nada a anunciar.
+        return None
+    secao = getattr(depois, "source_mode", None)
+    registrado: dict[str, str] = {"modo": str(getattr(secao, "kind", "") or "")}
+    sabor = getattr(secao, "gamepad_flavor", None)
+    if sabor:
+        registrado["mascara"] = str(sabor)
+    logger.info("salvar_recolheu_pendencia", **registrado)
+    return registrado
+
+
 class HomeActionsMixin(WidgetAccessMixin):
     """Mixin da aba Início (página 0 do notebook)."""
 

@@ -279,6 +279,23 @@ def _triggers_config_to_draft(cfg: Any) -> TriggersDraft:
     )
 
 
+def _override_vazio(override: Any) -> bool:
+    """True quando um ``ControllerOverrides`` não tem mais NENHUMA seção.
+
+    Entrada vazia some do mapa — se ficasse, o JSON salvo carregaria uma chave
+    de MAC apontando para ``{}`` e a próxima leitura acharia que aquela peça
+    tem opinião. A checagem varre os campos DECLARADOS do modelo em vez de
+    listá-los à mão: até 10/08/2026 a linha era ``leds is None and triggers is
+    None``, e cada seção nova por unidade (``rumble``, ``speaker``) teria de
+    lembrar de vir aqui — o tipo de esquecimento que só aparece meses depois,
+    como um override fantasma que ninguém consegue apagar pela janela.
+    """
+    campos = getattr(type(override), "model_fields", None)
+    if not campos:
+        return False
+    return all(getattr(override, nome, None) is None for nome in campos)
+
+
 def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
     """Converte o sub-draft de gatilhos em ``TriggersConfig`` persistível."""
     from hefesto_dualsense4unix.profiles.schema import TriggerConfig, TriggersConfig
@@ -900,6 +917,110 @@ class DraftConfig(BaseModel):
             uniq, "triggers", _triggers_draft_to_config(triggers)
         )
 
+    # --- POR-UNIDADE-01 (10/08/2026): vibração e som por peça ---
+
+    def effective_rumble_for(self, uniq: str | None) -> RumbleDraft:
+        """Vibração EFETIVA que a aba Rumble exibe para o alvo ``uniq``.
+
+        MESMA regra de ``effective_leds_for``, campo por campo: o override
+        traz só a INTENSIDADE (``policy``/``custom_mult``) e herda o resto do
+        global — inclusive ``weak``/``strong``, que são o teste de motores e
+        nunca foram do perfil, e ``passthrough``, que é da sessão (ver
+        ``ControllerRumbleOverride``).
+        """
+        override = self.controller_override(uniq)
+        cfg = getattr(override, "rumble", None)
+        if cfg is None:
+            return self.rumble
+        campos = cfg.model_fields_set
+        if "policy" not in campos:
+            return self.rumble
+        return self.rumble.model_copy(
+            update={"policy": cfg.policy, "custom_mult": cfg.custom_mult}
+        )
+
+    def with_controller_rumble(self, uniq: str, rumble: RumbleDraft) -> DraftConfig:
+        """Novo draft com a INTENSIDADE de ``uniq`` substituída.
+
+        Contrato copiado de ``with_controller_leds``, incluindo a regra COR-04:
+        o override guarda só o que DIVERGE do global do rascunho. Intensidade
+        igual à global não vira override — herda, e a peça some do mapa quando
+        não sobra mais nada nela. É o que faz "voltei os dois para Balanceado"
+        deixar o perfil limpo em vez de guardar dois overrides idênticos ao
+        global que a próxima ativação teria de reaplicar.
+
+        ``auto`` NÃO chega aqui como override: o esquema o recusa por unidade
+        (escala pela bateria do controle PRIMÁRIO). Escolher "Auto" com uma
+        peça selecionada limpa o override dela e devolve a peça ao global —
+        que é a leitura honesta do gesto, e não um erro silencioso.
+        """
+        from hefesto_dualsense4unix.profiles.schema import ControllerRumbleOverride
+
+        igual_ao_global = (
+            rumble.policy == self.rumble.policy
+            and rumble.custom_mult == self.rumble.custom_mult
+        )
+        if igual_ao_global or rumble.policy is None or rumble.policy == "auto":
+            return self.with_controller_fields_cleared(
+                uniq, "rumble", {"policy", "custom_mult"}
+            )
+        campos: dict[str, Any] = {"policy": rumble.policy}
+        if rumble.policy == "custom":
+            campos["custom_mult"] = rumble.custom_mult
+        return self._with_override_section(
+            uniq, "rumble", ControllerRumbleOverride(**campos)
+        )
+
+    def effective_speaker_for(self, uniq: str | None) -> SpeakerDraft:
+        """Alto-falante EFETIVO que o card exibe para o alvo ``uniq``.
+
+        Sem merge por campo, e é o esquema que decide: ``volume`` é
+        OBRIGATÓRIO em ``ProfileSpeakerConfig`` (SOM-02, armadilhas 1 e 2),
+        então a seção nunca é parcial — o override substitui a seção inteira
+        daquela peça, ou não existe.
+        """
+        override = self.controller_override(uniq)
+        cfg = getattr(override, "speaker", None)
+        if cfg is None:
+            return self.speaker
+        return SpeakerDraft(
+            volume=int(cfg.volume),
+            muted=bool(cfg.muted),
+            rota=getattr(cfg, "rota", None),
+            dirty=self.speaker.dirty,
+            in_profile=True,
+        )
+
+    def with_controller_speaker(self, uniq: str, speaker: SpeakerDraft) -> DraftConfig:
+        """Novo draft com o alto-falante de ``uniq`` substituído.
+
+        Mesma regra COR-04 do ``with_controller_leds``: valor igual ao global
+        não vira override. ``volume=None`` é "esta peça não tem mais opinião"
+        e LIMPA o override — nunca grava a seção sem número, porque uma seção
+        sem volume manda ZERO ao firmware e tranca o alto-falante (SOM-02,
+        armadilha 1); o esquema também a recusaria.
+        """
+        from hefesto_dualsense4unix.profiles.schema import ProfileSpeakerConfig
+
+        igual_ao_global = (
+            speaker.volume == self.speaker.volume
+            and speaker.muted == self.speaker.muted
+            and speaker.rota == self.speaker.rota
+        )
+        if speaker.volume is None or igual_ao_global:
+            return self.with_controller_fields_cleared(
+                uniq, "speaker", {"volume", "muted", "rota"}
+            )
+        return self._with_override_section(
+            uniq,
+            "speaker",
+            ProfileSpeakerConfig(
+                volume=int(speaker.volume),
+                muted=bool(speaker.muted),
+                rota=speaker.rota,
+            ),
+        )
+
     def _with_override_section(
         self, uniq: str, section: str, value: Any
     ) -> DraftConfig:
@@ -958,7 +1079,7 @@ class DraftConfig(BaseModel):
                 else None
             )
             novo_override = override.model_copy(update={section: nova_secao})
-            if novo_override.leds is None and novo_override.triggers is None:
+            if _override_vazio(novo_override):
                 continue  # entrada esvaziou — some do mapa
             novo[uniq] = novo_override
         if not mudou:
@@ -993,7 +1114,7 @@ class DraftConfig(BaseModel):
         )
         novo_override = override.model_copy(update={section: nova_secao})
         mapa: dict[str, Any] = dict(self.source_controllers or {})
-        if novo_override.leds is None and novo_override.triggers is None:
+        if _override_vazio(novo_override):
             mapa.pop(uniq, None)  # entrada esvaziou — some do mapa
         else:
             mapa[uniq] = novo_override
@@ -1063,6 +1184,28 @@ class DraftConfig(BaseModel):
                     }
                 if trig_entry:
                     entry["triggers"] = trig_entry
+            # POR-UNIDADE-01: a INTENSIDADE de vibração da peça viaja no
+            # "Aplicar" (o global não viaja — a aba já o aplicou ao vivo pelo
+            # `rumble.policy_set`, e não existe IPC vivo por unidade). Sem
+            # isto, a escolha por peça só valeria na PRÓXIMA ativação.
+            if override.rumble is not None:
+                campos_r = override.rumble.model_fields_set
+                if "policy" in campos_r and override.rumble.policy is not None:
+                    rumble_entry: dict[str, Any] = {"policy": override.rumble.policy}
+                    if override.rumble.custom_mult is not None:
+                        rumble_entry["custom_mult"] = float(
+                            override.rumble.custom_mult
+                        )
+                    entry["rumble"] = rumble_entry
+            if override.speaker is not None:
+                speaker_entry: dict[str, Any] = {
+                    "volume": int(override.speaker.volume),
+                    "muted": bool(override.speaker.muted),
+                }
+                rota_ovr = getattr(override.speaker, "rota", None)
+                if rota_ovr is not None:
+                    speaker_entry["rota"] = int(rota_ovr)
+                entry["speaker"] = speaker_entry
             if entry:
                 out[str(uniq)] = entry
         return out or None
@@ -1228,7 +1371,12 @@ class DraftConfig(BaseModel):
 
 
 def registrar_alto_falante_no_rascunho(
-    janela: Any, *, volume: int | None, muted: bool = False, rota: int | None = None
+    janela: Any,
+    *,
+    volume: int | None,
+    muted: bool = False,
+    rota: int | None = None,
+    uniq: str | None = None,
 ) -> None:
     """Anota no rascunho o alto-falante que ficou DE PÉ. NÃO aplica nada.
 
@@ -1256,15 +1404,55 @@ def registrar_alto_falante_no_rascunho(
     *"três escritores do perfil sem dono"*. ``janela`` sem ``draft`` (card
     avulso de teste, ou antes de a janela terminar de nascer) é caso normal e
     sai calado: o gesto ao vivo já foi, e não há rascunho para anotar.
+
+    ``uniq`` — POR-UNIDADE-01 (10/08/2026), o alcance que ela pediu: *"uma guia
+    específica do perfil X pro controle branco e outra pro mesmo perfil pra um
+    controle preto"*. O card SEMPRE soube de quem é o bloco (o ``speaker.set``
+    dele já sai com ``uniq``); o que faltava era o perfil ter onde guardar isso.
+
+    QUEM DECIDE se a anotação é da casa ou da peça é o SELETOR DE ALVO, o
+    mesmo ``_edit_target_uniq`` que a Lightbar, os Gatilhos e agora a Rumble
+    já obedecem — e o mesmo selo ao lado dele que diz, na tela, qual peça está
+    sendo editada. Só quando ela ESCOLHEU aquela peça no seletor a anotação
+    vira override; com o seletor em "Todos" (o padrão, e o caso de quem tem um
+    controle só) nada muda: a escrita é a GLOBAL de sempre, byte-idêntica.
+
+    A alternativa — deduzir a peça do card em que ela encostou — foi medida e
+    RECUSADA: com um controle só, todo gesto de volume viraria um override por
+    MAC e a seção global do perfil nunca mais seria escrita
+    (``test_a_secao_do_alto_falante_so_viaja_quando_ela_mexeu_no_som`` reprova
+    exatamente isso). O card diz de quem foi o gesto; o SELETOR diz para quem
+    ela quer que valha, e é essa a pergunta.
+
+    Dentro do ramo por peça vale a regra COR-04 de ``with_controller_leds``:
+    valor igual ao global não vira override (herda), e a entrada some do mapa
+    quando esvazia.
     """
     draft = getattr(janela, "draft", None)
     if not isinstance(draft, DraftConfig):
         return
-    janela.draft = (
-        draft.without_speaker()
-        if volume is None
-        else draft.with_speaker(volume, muted=muted, rota=rota)
-    )
+    if volume is None:
+        # "Soltar" a posse é da CASA: solta em todo mundo (o byte de áudio
+        # volta a ser do firmware) e nenhuma peça pode continuar carregando um
+        # número que a próxima ativação reaplicaria.
+        janela.draft = draft.without_speaker().with_override_fields_cleared(
+            "speaker", {"volume", "muted", "rota"}
+        )
+        return
+    alvo = getattr(janela, "_edit_target_uniq", None)
+    if uniq and alvo and str(alvo) == str(uniq):
+        atual = draft.effective_speaker_for(uniq)
+        update: dict[str, Any] = {
+            "volume": max(0, min(255, int(volume))),
+            "muted": bool(muted),
+        }
+        if rota is not None:
+            update["rota"] = int(rota)
+        janela.draft = draft.with_controller_speaker(
+            uniq, atual.model_copy(update=update)
+        )
+        return
+    janela.draft = draft.with_speaker(volume, muted=muted, rota=rota)
 
 
 __all__ = [

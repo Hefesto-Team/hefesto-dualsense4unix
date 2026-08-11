@@ -73,6 +73,26 @@ ESCRITORES = {
         "_coop_do_rascunho",
         "rascunho_com_modo",
         "registrar_modo_no_rascunho",
+        # A-INICIO-TAMBEM-SALVA-01 (10/08/2026): o recolhimento que o "Salvar
+        # Perfil" faz da escolha pendente da Início. Ele entra AQUI e não na
+        # lista de gestos porque é escritor, e é o escritor cuja tentação de
+        # aplicar é maior de todas — está a uma linha do botão que grava.
+        #
+        # NOTA DATADA — 11/08/2026 (O-SALVAR-TAMBEM-APLICA-01): a pergunta que
+        # esta linha registrava como EM ABERTO — *"o Salvar não deveria aplicar
+        # também?"* — foi respondida por ela: *"salvar também aplica"*. O texto
+        # antigo previa o que aconteceria nesse dia (*"quem mudar isto vai bater
+        # neste portão e ter de mover o gesto de lugar, em vez de plantar um
+        # `apply_mode` dentro de um escritor de rascunho"*) e é exatamente o que
+        # aconteceu: o `apply_mode` do Salvar mora no RODAPÉ
+        # (`footer_actions._aplicar_o_modo_que_foi_gravado`, pela mesma
+        # `_transicao_de_modo` do botão verde), e esta função continua pura.
+        #
+        # O portão FICA, e agora com dois donos em vez de um: ele separa o
+        # ESCRITOR (que só anota no rascunho) do GESTO (que aplica). A entrada
+        # nova em `test_cada_gesto_continua_chamando_o_escritor` é a outra
+        # metade — ela cobra que o gesto exista.
+        "recolher_escolha_pendente_no_rascunho",
     ),
     EMULACAO_PY: (
         "perfil_do_rascunho_tem_opiniao",
@@ -153,8 +173,13 @@ def test_o_modo_jogo_so_e_gravado_por_um_lugar_na_janela() -> None:
 
 
 def test_cada_gesto_continua_chamando_o_escritor() -> None:
-    """A fiação: apagar a chamada devolve a queixa dela inteira."""
-    esperado = {
+    """A fiação: apagar a chamada devolve a queixa dela inteira.
+
+    O valor é UM nome ou uma TUPLA deles — um gesto pode ter mais de um elo
+    obrigatório (o "Salvar Perfil" tem dois desde 11/08/2026: levar a escolha
+    ao arquivo e levar a mesma escolha à máquina).
+    """
+    esperado: dict[tuple[Path, str], str | tuple[str, ...]] = {
         (EMULACAO_PY, "_apply_mode"): "registrar_modo_no_rascunho",
         (EMULACAO_PY, "_set_suppress"): "registrar_modo_jogo_no_rascunho",
         # AGORA-E-DEPOIS-01: o gesto da aba Início é o "Aplicar" do rodapé.
@@ -162,6 +187,28 @@ def test_cada_gesto_continua_chamando_o_escritor() -> None:
         # rascunho); quem registra é o callback de sucesso da transição, para o
         # rascunho continuar descrevendo o que ficou DE PÉ.
         (RODAPE_PY, "_aplicar_escolha_pendente"): "registrar_modo_no_rascunho",
+        # A-INICIO-TAMBEM-SALVA-01 (10/08/2026): o OUTRO botão do rodapé. Medido
+        # na bancada neste dia — com um Salvar só no fim, sete das oito abas
+        # chegavam ao arquivo e a Início não, porque a escolha dela mora em
+        # `_escolha_pendente` e só o verde a trazia para o rascunho. Apagar esta
+        # chamada devolve o `mode: null` do `pragmata2.json`.
+        # O-SALVAR-TAMBEM-APLICA-01 (11/08/2026), decisão dela: *"salvar também
+        # aplica"*. O Salvar passou a ter DOIS elos obrigatórios no mesmo
+        # método, e eles medem coisas diferentes: recolher leva a escolha ao
+        # ARQUIVO; o gesto de aplicar leva a mesma escolha à MÁQUINA. Apagar o
+        # segundo devolve o defeito que ela mandou consertar — o arquivo com o
+        # modo novo, o daemon no antigo, e a linha "vai mudar para:" acesa
+        # apontando para um valor JÁ gravado.
+        (RODAPE_PY, "_persist_profile_async"): (
+            "recolher_escolha_pendente_no_rascunho",
+            "_aplicar_o_modo_que_foi_gravado",
+        ),
+        # E o gesto passa pela transição ÚNICA, a mesma do botão verde. Este é o
+        # elo que impede a recaída cara: quem "simplificar" isto para dentro do
+        # `apply_draft` reencontra o `timeout_s=1.5` contra os 3 x 2,0 s do
+        # `apply_mode` — o "ERRO ao aplicar" com o modo JÁ aplicado que o
+        # APLICAR-VERDADE-02 existe para matar (ver `on_apply_draft`).
+        (RODAPE_PY, "_aplicar_o_modo_que_foi_gravado"): "_transicao_de_modo",
         # SOM-02/E4: os TRÊS gestos do bloco "Alto-falante" que viram perfil —
         # volume, mudo e canal de saída — mais a devolução da posse, que
         # registra a AUSÊNCIA. Apagar qualquer uma destas chamadas devolve o
@@ -173,12 +220,13 @@ def test_cada_gesto_continua_chamando_o_escritor() -> None:
         (CARD_PY, "_on_speaker_devolucao_clicada"): "_confirmado_pelo_daemon",
         (CARD_PY, "_confirmado_pelo_daemon"): "registrar_alto_falante_no_rascunho",
     }
-    for (caminho, gesto), escritor in esperado.items():
+    for (caminho, gesto), elos in esperado.items():
         chamados = _nomes_chamados(_funcao(caminho, gesto))
-        assert escritor in chamados, (
-            f"{caminho.name}:{gesto} não chama {escritor} — o gesto dela volta a "
-            "morrer com a sessão (PERFIL-SALVA-TUDO-01)"
-        )
+        for escritor in (elos,) if isinstance(elos, str) else elos:
+            assert escritor in chamados, (
+                f"{caminho.name}:{gesto} não chama {escritor} — o gesto dela "
+                "volta a morrer com a sessão (PERFIL-SALVA-TUDO-01)"
+            )
 
 
 def test_o_rascunho_tem_um_escritor_so_de_modo_em_cada_aba() -> None:

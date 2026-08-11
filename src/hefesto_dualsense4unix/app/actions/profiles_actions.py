@@ -300,6 +300,108 @@ def explicacao_da_disputa(
     )
 
 
+# --- PERFIL-ATUAL-01 (10/08/2026): a linha do perfil dela tem cor e é a 1ª ---
+# Pedido dela, literal: *"esse perfil inclusive precisa ter uma linha de cor de
+# destaque e aparecer primeiro na guia de perfil pra sempre evidenciar o perfil
+# atual"*.
+#
+# E "esse perfil" tem dono decidido no mesmo dia, também com as palavras dela:
+# *"aquele cujo escolho vir na aba perfis e aperto em ativar"*. Não é o que o
+# autoswitch elegeu pela janela aberta, e não é o `active_profile` do daemon
+# quando ele está vazio — que é o caso VIVO da máquina dela, com o cadeado do
+# autoswitch ligado desde 03:59 de hoje: `daemon.status` responde `null` e o
+# destaque nasceria invisível.
+#
+# O gesto de Ativar, esse, deixa fato em disco: `profile.switch` grava
+# `session.json` (`save_last_profile`) e `active_profile.txt`
+# (`save_active_marker`), os dois manual-only desde o PERFIL-03 — o autoswitch
+# não encosta em nenhum deles. `resolve_boot_profile()` é quem já sabe ler os
+# dois e resolver a divergência, e é o MESMO nome que o daemon restaura no
+# boot. Por isso a lista parte dele em vez de partir do vazio.
+
+#: A cor do "ligado" desta casa — `@green` do `gui/theme.css:26`, a mesma que a
+#: janela compacta já usa para o perfil ativo (`compact_window.py:309`). Literal
+#: pelo mesmo motivo dela: `@define-color` não chega à célula de um
+#: `GtkTreeView`, que quer uma cor e não um nome do tema.
+COR_DO_PERFIL_ATIVO = "#50fa7b"
+
+#: A cor pronta como atributo de Pango, montada uma vez só. Ver
+#: `realce_do_perfil_ativo` para a razão de não ser uma string de `foreground`.
+_REALCE_DO_ATIVO: Any = None
+
+
+def realce_do_perfil_ativo() -> Any:
+    """A cor da linha dela como `Pango.AttrList` — e o motivo é MEDIDO.
+
+    O caminho óbvio era a coluna `foreground` do `GtkCellRendererText`. Ele foi
+    escrito, fotografado, e a foto reprovou: **o GTK3 descarta o `foreground` da
+    célula quando a linha está SELECIONADA** (`gtkcellrenderertext.c` só aplica
+    o atributo quando o estado não tem `GTK_CELL_RENDERER_SELECTED`). E a linha
+    selecionada é justamente a do perfil ativo — a aba abre com ela selecionada,
+    e o `_sync_selection_with_active_profile` a seleciona de novo a cada volta do
+    daemon. O verde sumia exatamente no caso mais comum, que é o oposto do
+    "**sempre** evidenciar o perfil atual" que ela pediu.
+
+    Medido lado a lado na mesma foto, com todas as linhas selecionadas:
+    `foreground=` some, `cell-background=` fica escondido sob a faixa da seleção,
+    e `markup=`/`attributes=` sobrevivem. Entre os dois sobreviventes, o
+    `attributes` é o que NÃO mexe no conteúdo: a coluna 0 continua sendo o nome
+    cru (a IDENTIDADE que `_selected_profile_name` lê), sem escape de markup e
+    sem um perfil chamado "A & B" quebrar a lista.
+
+    Uma instância só, compartilhada por todas as linhas: `AttrList` é imutável
+    aqui e o modelo só guarda a referência.
+    """
+    global _REALCE_DO_ATIVO
+    if _REALCE_DO_ATIVO is None:
+        from gi.repository import Pango
+
+        # `#rrggbb` -> os 16 bits por canal que o Pango quer (0xff -> 0xffff).
+        r, g, b = (int(COR_DO_PERFIL_ATIVO[i : i + 2], 16) * 257 for i in (1, 3, 5))
+        lista = Pango.AttrList()
+        lista.insert(Pango.attr_foreground_new(r, g, b))
+        _REALCE_DO_ATIVO = lista
+    return _REALCE_DO_ATIVO
+
+
+def perfil_que_ela_ativou() -> str | None:
+    """O último perfil que ela ATIVOU pela aba Perfis — lido do disco.
+
+    Sobrevive ao daemon responder `active_profile: null`, que é o estado da
+    máquina dela hoje, e sobrevive a fechar e reabrir a janela. Best-effort:
+    qualquer falha de I/O vira `None`, e a lista simplesmente não destaca
+    ninguém — nunca uma exceção na thread GTK.
+    """
+    from hefesto_dualsense4unix.utils.session import resolve_boot_profile
+
+    with contextlib.suppress(Exception):
+        return resolve_boot_profile()
+    return None
+
+
+def ordem_de_exibicao(perfis: list[Any], ativo: str | None) -> list[Any]:
+    """A ordem em que as linhas aparecem: o ativo primeiro, o resto como veio.
+
+    Função PURA, e usada SÓ para iterar o `append` — nunca para alimentar
+    `rotulo_quando_usar`/`explicacao_da_disputa`. O terceiro termo do desempate
+    é a ORDEM DE CARGA do loader (ver o bloco EMPATE-01/E2 acima), e o tooltip
+    da disputa lista os concorrentes nessa ordem: passar a lista reordenada
+    faria a GUI recitar a fila numa ordem que não é a do daemon. Medido em
+    10/08 — o vencedor anunciado não muda (mover UM item para a frente preserva
+    a ordem relativa dos outros, e quando o movido está entre os empatados ele é
+    o próprio incumbente, que já ganharia), mas o texto do tooltip muda, e uma
+    frase que diverge do daemon é exatamente o que esta casa não entrega.
+
+    `ativo` que não existe na lista (perfil renomeado, marker de versão antiga)
+    devolve a ordem de carga intacta.
+    """
+    if not ativo:
+        return list(perfis)
+    primeiro = [p for p in perfis if str(getattr(p, "name", "")) == ativo]
+    resto = [p for p in perfis if str(getattr(p, "name", "")) != ativo]
+    return primeiro + resto
+
+
 # --- SALVAR-NAO-REBAIXA-02: a prioridade também cai calada ------------------
 # O aviso de rebaixamento desta casa (`confirm_downgrade_match_to_any`) só
 # dispara quando o match ORIGINAL é específico. Os perfis dela JÁ ESTÃO em
@@ -640,6 +742,11 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     # `None` = o editor não mira arquivo nenhum (perfil novo, cópia, dublê de
     # teste), e aí quem responde volta a ser a linha selecionada.
     _alvo_do_salvar: str | None = None
+    # PERFIL-ATUAL-01: o perfil que ELA ativou — o que ganha a cor, o negrito e o
+    # primeiro lugar da lista. Semeado do DISCO em `install_profiles_tab`
+    # (`perfil_que_ela_ativou`) e atualizado pelo gesto de Ativar; o
+    # `daemon.status` só o reescreve quando traz um nome, nunca com `null`.
+    _active_profile_hint: str | None = None
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
@@ -648,12 +755,26 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # perfil ATIVO em negrito — a lista não dizia qual estava valendo.
         # EMPATE-01/E2: a 5ª coluna é o TOOLTIP da linha (nunca desenhada) —
         # a explicação da disputa não cabe na célula sem empurrar a aba.
+        # PERFIL-ATUAL-01: a 6ª carrega a COR da linha ativa, como `AttrList` do
+        # Pango. Coluna do modelo, e não classe CSS: medido que
+        # `.hefesto-dualsense4unix-window label` vence classe própria por
+        # especificidade, e a célula de um `GtkTreeView` não é um `GtkLabel` para
+        # receber a classe de qualquer jeito. E `AttrList` em vez de uma cor de
+        # `foreground` porque o GTK descarta o `foreground` da linha SELECIONADA
+        # — ver `realce_do_perfil_ativo`, que tem a foto por trás.
+        #
+        # O `Pango` entra aqui dentro, e não no topo do módulo, pela mesma razão
+        # do bloco da elipse logo abaixo: um import de topo derruba a COLETA dos
+        # testes que plantam um `gi` falso com só `Gtk` e `GObject`.
+        from gi.repository import Pango
+
         store = Gtk.ListStore(
             GObject.TYPE_STRING,
             GObject.TYPE_INT,
             GObject.TYPE_STRING,
             GObject.TYPE_INT,
             GObject.TYPE_STRING,
+            Pango.AttrList,
         )
         tree.set_model(store)
         self._profiles_store = store
@@ -663,7 +784,17 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # entra?", então é esse o título.
         for idx, title in ((0, "Nome"), (1, "Prioridade"), (2, "Quando usar")):
             renderer = Gtk.CellRendererText()
-            column = Gtk.TreeViewColumn(title, renderer, text=idx, weight=3)
+            # PERFIL-ATUAL-01: `attributes=5` nas TRÊS colunas visíveis — ela
+            # pediu a LINHA de cor, não a célula do nome. Fora da linha ativa a
+            # coluna carrega `None`, que é "nenhum atributo extra": quem escolhe
+            # a cor das outras linhas continua sendo o tema.
+            #
+            # NÃO troque por `foreground=`: é o mesmo desenho, uma linha mais
+            # curto, e some na linha selecionada — que é a do perfil ativo.
+            # A medição está em `realce_do_perfil_ativo`.
+            column = Gtk.TreeViewColumn(
+                title, renderer, text=idx, weight=3, attributes=5
+            )
             if idx == 2:
                 # EMPATE-01/E2: esta coluna passou a carregar a disputa e é a
                 # única que cresce com o NOME de outro perfil. O scroller da
@@ -750,6 +881,12 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._apply_editor_mode()
 
         self._profiles_cache = []
+        # PERFIL-ATUAL-01: a lista já nasce sabendo qual perfil é o DELA. Sem
+        # esta linha o destaque dependia de `daemon.status` responder um nome, e
+        # na máquina dela ele responde `null` — a linha verde nasceria invisível
+        # e o primeiro lugar não aconteceria nunca. O nome vem do gesto de
+        # Ativar gravado em disco, que é o que ela chamou de perfil atual.
+        self._active_profile_hint = perfil_que_ela_ativou()
         self._reload_profiles_store(on_done=self._sync_selection_with_active_profile)
 
     def _install_mode_section(self) -> None:
@@ -2397,8 +2534,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             select_iter = None
             first_iter = None
             active = getattr(self, "_active_profile_hint", None)
-            for profile in profiles:
-                weight = 700 if profile.name == active else 400
+            # PERFIL-ATUAL-01: DUAS listas, e é de propósito. `exibicao` diz a
+            # ORDEM DAS LINHAS (o ativo primeiro, pedido dela); `profiles`
+            # continua na ORDEM DE CARGA e é a única que alimenta as funções da
+            # disputa — ver `ordem_de_exibicao` para o preço de trocar as duas.
+            for profile in ordem_de_exibicao(profiles, active):
+                e_o_ativo = profile.name == active
+                weight = 700 if e_o_ativo else 400
                 row_iter = store.append(
                     [
                         profile.name,
@@ -2411,9 +2553,15 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                         rotulo_quando_usar(profile, profiles, active),
                         weight,
                         explicacao_da_disputa(profile, profiles, active),
+                        realce_do_perfil_ativo() if e_o_ativo else None,
                     ]
                 )
                 if first_iter is None:
+                    # PERFIL-ATUAL-01: o fallback de seleção (boot, ou o perfil
+                    # selecionado que sumiu do disco) deixou de ser o primeiro
+                    # ARQUIVO em ordem de carga — que era "Ação" no disco dela e
+                    # deu origem à queixa do "nome aleatório" descrita acima — e
+                    # passou a ser o perfil DELA, porque ele é quem está no topo.
                     first_iter = row_iter
                 desejado = select_name if select_name is not None else atual
                 if desejado is not None and profile.name == desejado:
@@ -2425,12 +2573,17 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             self._selecao_programatica = anterior
 
     def _mark_active_profile_row(self, active: str | None) -> None:
-        """Realça (negrito) a linha do perfil ATIVO no ListStore, in-place.
+        """Realça a linha do perfil ATIVO no ListStore, in-place: cor, negrito e topo.
 
         EMPATE-01/E2: o perfil ativo é também o INCUMBENTE, que é o terceiro
         termo do desempate entre os "Sempre" — trocar de perfil pode trocar o
         vencedor anunciado. Por isso as colunas da disputa (2 e 4) são
         recalculadas aqui junto com o negrito, e não só na recarga do disco.
+
+        PERFIL-ATUAL-01: e a linha ativa também ganha a COR e o PRIMEIRO LUGAR
+        aqui, sem passar pelo disco — ativar um perfil é gesto dela, e reler
+        `load_all_profiles()` para mover uma linha faria a lista piscar em cima
+        do editor aberto.
         """
         self._active_profile_hint = active
         store = getattr(self, "_profiles_store", None)
@@ -2441,7 +2594,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         row = store.get_iter_first()
         while row is not None:
             name = store.get_value(row, 0)
-            store.set_value(row, 3, 700 if name == active else 400)
+            e_o_ativo = name == active
+            store.set_value(row, 3, 700 if e_o_ativo else 400)
+            store.set_value(row, 5, realce_do_perfil_ativo() if e_o_ativo else None)
             perfil = por_nome.get(name)
             if perfil is not None:
                 with contextlib.suppress(Exception):
@@ -2452,6 +2607,43 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                         row, 4, explicacao_da_disputa(perfil, cache, active)
                     )
             row = store.iter_next(row)
+        self._levar_o_ativo_para_o_topo(store, active)
+
+    def _levar_o_ativo_para_o_topo(self, store: Any, active: str | None) -> None:
+        """Move a linha do perfil dela para a primeira posição (PERFIL-ATUAL-01).
+
+        A ordem-alvo é a MESMA de `ordem_de_exibicao` calculada sobre o cache em
+        ordem de carga, e não "empurra o novo ativo para a frente do que já
+        estava lá": trocar de perfil três vezes deixaria as três escolhas
+        antigas empilhadas no topo, e a promessa é *o resto na ordem de carga*.
+
+        Desiste em silêncio quando o store e o cache discordam (nomes repetidos,
+        recarga em voo): a cor e o negrito acima já valem sozinhos, e mexer no
+        `reorder` com um mapa incompleto embaralharia a lista dela.
+        """
+        cache: list[Profile] = list(getattr(self, "_profiles_cache", []) or [])
+        if not cache:
+            return
+        nomes: list[str] = []
+        row = store.get_iter_first()
+        while row is not None:
+            nomes.append(str(store.get_value(row, 0)))
+            row = store.iter_next(row)
+        if len(set(nomes)) != len(nomes):
+            return
+        desejada = [
+            str(getattr(p, "name", "")) for p in ordem_de_exibicao(cache, active)
+        ]
+        if sorted(desejada) != sorted(nomes):
+            return
+        posicao = {nome: idx for idx, nome in enumerate(nomes)}
+        # `new_order[nova_posicao] = posicao_antiga` — o contrato do
+        # `gtk_list_store_reorder`, conferido ao vivo em 10/08.
+        nova_ordem = [posicao[nome] for nome in desejada]
+        if nova_ordem == list(range(len(nova_ordem))):
+            return
+        with contextlib.suppress(Exception):
+            store.reorder(nova_ordem)
 
     def _find_cached_profile(self, name: str) -> Profile | None:
         """Retorna o perfil do cache em memória pelo nome, ou None."""

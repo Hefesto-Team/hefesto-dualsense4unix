@@ -166,7 +166,7 @@ class _Seletor:
 
 class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc]
     def __init__(self, draft: DraftConfig, ativo: str) -> None:
-        from gi.repository import GObject, Gtk
+        from gi.repository import GObject, Gtk, Pango
 
         self.draft = draft
         self._draft_baseline: Any = draft
@@ -188,8 +188,9 @@ class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc
         self.toasts: list[str] = []
         self.dialogos: list[str] = []
 
-        # A MESMA montagem de `install_profiles_tab` (5 colunas: nome,
-        # prioridade, "quando usar", peso da fonte, tooltip da disputa).
+        # A MESMA montagem de `install_profiles_tab` (6 colunas: nome,
+        # prioridade, "quando usar", peso da fonte, tooltip da disputa e —
+        # PERFIL-ATUAL-01, 10/08/2026 — o realce da linha ativa).
         tree = Gtk.TreeView()
         store = Gtk.ListStore(
             GObject.TYPE_STRING,
@@ -197,6 +198,7 @@ class _Janela(pa.ProfilesActionsMixin, FooterActionsMixin):  # type: ignore[misc
             GObject.TYPE_STRING,
             GObject.TYPE_INT,
             GObject.TYPE_STRING,
+            Pango.AttrList,
         )
         tree.set_model(store)
         self._profiles_store = store
