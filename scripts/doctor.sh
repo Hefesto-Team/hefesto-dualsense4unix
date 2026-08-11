@@ -14,7 +14,8 @@
 # a do DualSense que o driver do kernel ABORTOU no probe (PROBE-MORTO-PS-01 —
 # aborto cruzado com o estado de agora: órfão AGORA é FAIL com a cura pronta,
 # aborto que já recuperou é só informação);
-# e (G2) o rádio/pareamento — versão do bluez vs. o piso 5.79, o
+# e (G2) o rádio/pareamento — versão do bluez vs. a faixa aceita (piso 5.79,
+# teto 5.87: o UAF em dev_disconnected), o
 # hefesto-bt-agent.service, bond "meio-salvo" por dois ângulos (Connected sem
 # hidraw correspondente E Paired sem Bonded) e o sink de áudio padrão mudo;
 # e (BROKER-01, Onda S) o broker root hide-hidraw fd-injection — unit de
@@ -2425,19 +2426,45 @@ check_cmdline_platform() {
 # check_display_authority, mais abaixo) — não duplicado aqui.
 # ============================================================================
 
-# Compara a versão do bluez instalada com o piso 5.79 (abaixo dele: crashes
-# crônicos de input/HIDP documentados no estudo da Onda R). Função PURA —
-# só `dpkg --compare-versions`, sem tocar em pacote nenhum.
+# A faixa de bluez que esta casa aceita tem DOIS limites, não um.
+#
+# PISO 5.79 — abaixo dele, crashes crônicos de input/HIDP (estudo da Onda R,
+#   2026-07-19-estudo-bluez-backport-onda-r.md).
+#
+# TETO 5.87 — a MENOR versão REJEITADA conhecida. Motivo medido (estudo
+#   docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-
+#   outros-cinco.md §D, GRAU MEDIDO pela topologia do git): o commit `5d836f1`
+#   introduziu um uso-depois-de-liberado (UAF) em `dev_disconnected`
+#   (`src/adapter.c`) — `device_is_connected()` chamado DEPOIS de
+#   `adapter_remove_connection()`, que pode ter liberado o device. `5d836f1` é
+#   ancestral da tag 5.87 (dentro); a correção `5bc6aa79` está UM commit depois
+#   do 5.87 e NENHUM lançamento a carrega ainda. Por isso o alvo do backport é
+#   o 5.86 (install.sh, passo 3f) e o 5.87 foi recusado em 22/07 e de novo em
+#   07/08 — com número.
+#
+# Por que o teto é WARN e não FAIL: numa máquina que já veio com bluez ≥ 5.87
+# (o caso do PC novo), nada disto é escolha dela, e o primeiro lançamento pós-
+# 5.87 que carregue o `5bc6aa79` (previsivelmente o 5.88) sai desta faixa por
+# mérito próprio. O dever do doctor aqui é NOMEAR o motivo, não decidir por
+# ela. Quando o 5.88 sair com a correção, este teto sobe — e o estudo §D é o
+# lugar onde se confere isso antes de mexer.
+readonly _BZ_PISO="5.79"
+readonly _BZ_TETO="5.87"
+
+# Compara a versão do bluez instalada com a faixa [_BZ_PISO, _BZ_TETO).
+# Função PURA — só `dpkg --compare-versions`, sem tocar em pacote nenhum.
 _bluez_version_verdict() {
     local ver="$1"
     if [[ -z "${ver}" ]]; then
         printf 'unknown\n'
         return
     fi
-    if dpkg --compare-versions "${ver}" ge 5.79 2>/dev/null; then
-        printf 'ok\n'
-    else
+    if ! dpkg --compare-versions "${ver}" ge "${_BZ_PISO}" 2>/dev/null; then
         printf 'old\n'
+    elif dpkg --compare-versions "${ver}" ge "${_BZ_TETO}" 2>/dev/null; then
+        printf 'nova\n'
+    else
+        printf 'ok\n'
     fi
 }
 
@@ -2451,7 +2478,10 @@ check_bluez_backport_version() {
     veredito="$(_bluez_version_verdict "${ver}")"
     case "${veredito}" in
         ok)
-            pass "bluez ${ver} >= 5.79 (sem os crashes crônicos de input/HIDP do 5.72)"
+            pass "bluez ${ver} >= ${_BZ_PISO} e < ${_BZ_TETO} (sem os crashes crônicos de input/HIDP do 5.72, e sem o UAF do 5.87)"
+            ;;
+        nova)
+            warn "bluez ${ver} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo desta casa é o backport 5.86 (./install.sh, passo 3f); o porquê está em docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md §D"
             ;;
         old)
             fail "bluez ${ver} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: ./install.sh (passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os: git show arquivo/processo-pre-1.0:docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3)"
