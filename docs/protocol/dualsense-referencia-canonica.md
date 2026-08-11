@@ -28,6 +28,31 @@ convincente e falso.** Em 01/08 mediu-se o gamepad virtual contra a `libSDL2`
 do Ubuntu e concluiu-se que ele não entregava nada; a biblioteca que os jogos
 usam entrega tudo. Todo instrumento tem de declarar contra o que mediu.
 
+## O que caducou em 11/08/2026 — leia antes de citar esta página
+
+Oito afirmações daqui foram confrontadas **linha a linha contra o código desta
+árvore** em 11/08/2026, a partir das ressalvas do mapa de canais
+(`docs/data/mapa-controles.csv`). **Nada foi apagado:** cada ponto ganhou nota
+datada na sua própria seção, com o `caminho:linha` conferido. Este índice é só
+o atalho.
+
+| onde | o que a página dizia | o que vale em 11/08 |
+|---|---|---|
+| §2 | `common[4..7]` é PROVÁVEL; o kernel os chama `reserved[4]` | **CADUCOU** — ALTA nos bytes 5, 6 e 7. O byte 4 se parte em dois: campo ALTA, **bit** de autorização MÉDIA |
+| §3 | *"Este projeto escreve só o volume"* | **CADUCOU** — o pré-amp e a rota são escritos desde 01-02/08 |
+| §3 | o áudio por Bluetooth sai no report `0x32` | **CONTRADIÇÃO EM ABERTO** com o `0x39` que o código descreve — **nenhum dos dois medido** |
+| §4 | a decodificação dos modos está curada | `weapon()` e `vibration()` seguem mandando o modo ERRADO pela régua desta própria seção — **não medido** |
+| §5 | player LED P4 = `x-xx-` | **CONTRADIÇÃO doc × código** (o código traz `xx-xx`) — **não medido** |
+| §5 | a taxa do giroscópio, sprint `GYRO-EDGE-RATE-01` | **CONTINUA NÃO MEDIDO** — e a sprint não existe como arquivo |
+| §6 | *"o gamepad virtual nunca escreve o byte 53"* | **CADUCOU** — escreve desde 09/08, e a conclusão que se tirava dali estava **invertida** |
+| §6 | byte 52 = `ucBatteryLevel` | **INCOMPLETO** — o nibble ALTO é estado de carga, e o código o decodifica em cinco casos |
+
+**Documento irmão:**
+[os externos — Pro Controller e 8BitDo](externos-referencia-canonica.md). Esta
+página vale **só para o DualSense**. Os controles das outras linhagens têm
+envelope, escalas de IMU, régua de bateria e limitador de taxa **diferentes** —
+e um instrumento escrito para um deles escreve lixo no outro.
+
 ---
 
 ## 1. De onde vem a documentação da Sony
@@ -141,6 +166,35 @@ porque o kernel os declarava `reserved`. **Isso caducou:** o Linux 6.18
 exatamente assim**. Os bytes 5, 6 e 7 podem ser promovidos a ALTA; o byte 4
 (fone) segue MÉDIA.
 
+> **NOTA DATADA — 11/08/2026: o código não tinha acompanhado, e ele se
+> contradizia sozinho.**
+>
+> A nota acima é de 01/08 e diz *"podem ser promovidos"*. Dez dias depois o
+> comentário do `core/ds_output_report.py` **ainda** afirmava que o kernel
+> declara `common[4..7]` como `reserved[4]`, que nunca os escreve, e que o
+> mapeamento é PROVÁVEL — enquanto **o mesmo arquivo**, umas dezenas de linhas
+> abaixo, atribuía ao kernel 6.18 os tetos `0x7F` (fone) e `0x40`
+> (microfone). Um comentário negava a fonte que o outro citava.
+>
+> **Curado hoje**, sem tocar em lógica: `core/ds_output_report.py:70-96`. O
+> texto de 01/08 ficou visível ali dentro, riscado por nota, não por deleção.
+>
+> **O grau, agora explícito** — e ele se parte em dois no byte 4, que é o
+> ponto que se perdia quando a linha dizia só *"MÉDIA"*:
+>
+> | | o CAMPO | o BIT que o autoriza |
+> |---|---|---|
+> | `common[5]` alto-falante | **ALTA** (kernel) | **ALTA** — `SPEAKER_VOLUME_ENABLE` |
+> | `common[6]` microfone | **ALTA** (kernel, com o teto `0x40` no fonte) | **ALTA** — `MIC_VOLUME_ENABLE` |
+> | `common[7]` caminho de áudio | **ALTA** (kernel) | **ALTA** — `AUDIO_CONTROL_ENABLE` |
+> | `common[4]` fone | **ALTA** (kernel, teto `0x7F` no fonte) | **MÉDIA** — o kernel **não** define bit4; o `0x10` desta árvore é de comunidade, e **ninguém mediu o que ele faz** |
+>
+> **Limite honesto:** o fonte do `hid-playstation` **não foi relido nesta
+> passagem**. A promoção se apoia na fonte já citada na §9 (os patches do jack
+> de áudio, 6.18), no comentário dos tetos deste projeto e no registro do mapa
+> de canais, que leu o kernel desta máquina. Quem quiser o grau MEDIDO AQUI
+> para o bit `0x10` precisa do ensaio da lista final desta página.
+
 ---
 
 ## 3. Áudio — o caso do alto-falante que a mantenedora descreveu
@@ -184,6 +238,31 @@ estar mexendo em um de três botões — e o `0x64` que o kernel escolhe é
 exatamente o topo da faixa medida aqui. **A medição desta casa e o kernel
 concordam**, e o que falta é o pré-amp e a rota.
 
+> **NOTA DATADA — 11/08/2026: o parágrafo acima descreve o produto de 01/08,
+> e induz a refazer trabalho já feito.**
+>
+> *"Este projeto escreve só o volume"* **caducou**. Os três campos são
+> escritos hoje, e cada um tem endereço:
+>
+> | campo | onde é escrito | grau |
+> |---|---|---|
+> | volume, `common[5]` | `core/backend_pydualsense.py:780-782` — o laço dos quatro bytes de áudio | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:783-790`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:789`; o valor padrão `0x2` sai de `:2695` | **ALTA** — lido no código |
+> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:259-287` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
+>
+> **E a medição da curva caducou junto, que é o efeito mais caro deste
+> parágrafo.** O *"mudo até 38, satura em 102"* foi levantado **sem** o
+> pré-amp, num caminho de código que não existe mais. O número continua
+> verdadeiro sobre o que foi medido em 01/08 e **deixou de descrever o produto
+> de hoje**; a curva **com** pré-amp é **não medida**. Quem citar os 64 passos
+> úteis como propriedade do hardware está citando uma régua que mediu outra
+> coisa.
+>
+> Só o **quarto** item do áudio de saída continua não escrito, e ele não é
+> registrador nenhum: são os **dados** de PCM (a §7, itens 14 a 17). Não
+> confundir *"o Hefesto não toca som"* com *"o Hefesto não mexe no
+> alto-falante"*.
+
 ### Haptics VCM — ALTA para USB, MÉDIA para Bluetooth
 
 - **Por USB é ÁUDIO.** O DualSense é uma placa USB Audio de **4 canais**:
@@ -197,6 +276,36 @@ concordam**, e o que falta é o pré-amp e a rota.
   *"special HID packets using Bluetooth"*. Report `0x32`, corpo TLV, `pid 0x12`
   para áudio (64 bytes), CRC-32 semente `0xA2`. PCM de 3000 Hz, 2 canais, 8
   bits com sinal.
+
+> **NOTA DATADA — 11/08/2026: CONTRADIÇÃO INTERNA EM ABERTO, e não é a que
+> parece.**
+>
+> A linha acima e o `integrations/dualsense_bt_audio.py` discordam sobre o
+> report que leva **os dados de áudio para fora** — e a discordância
+> sobreviveu porque os dois falam de `0x32` em algum ponto:
+>
+> | fonte | diz | grau |
+> |---|---|---|
+> | esta página | os blocos TLV de áudio saem no report **`0x32`**, tag `0x12` | **BAIXA** — fonte única de comunidade (SAxense) |
+> | `integrations/dualsense_bt_audio.py:31` e `:213-219` | o `0x32` é o **AudioControl** (liga/desliga do microfone, tag `0x11`); quem carrega háptico (`0x12`) e alto-falante (`0x13`/`0x16`) é o report **`0x39`** | **BAIXA** — lido do firmware `DS5Dongle`, não medido |
+>
+> **O `0x32` que esta casa mediu não decide a questão.** O que foi medido ao
+> vivo em 25/07 é o `0x32` de **controle** — 142 bytes, TLV `0x11|0x80`, o
+> byte que destrava o microfone (`integrations/dualsense_bt_audio.py:210`).
+> Isso não é o report de **payload**, e nunca foi. Ninguém aqui escreveu um
+> byte de áudio de saída por rádio.
+>
+> **Não escolhemos um lado.** Os dois candidatos são de fonte única e nenhum
+> foi medido nesta máquina; a coincidência do número `0x32` é exatamente o
+> tipo de semelhança que produz alarme convincente e falso.
+>
+> **O ensaio que resolve:** ler o *report descriptor* do DualSense por
+> Bluetooth e ver quais IDs de output existem e com que tamanho declarado — é
+> como o `0x32` de 142 bytes já foi estabelecido (`85 32 09 32 95 8d 91 02`,
+> registrado em `integrations/dualsense_bt_audio.py:207-211`). Se houver um
+> `0x39` no descritor, com tamanho compatível com dois blocos de 200 bytes, a
+> contradição fecha sem tocar no controle. É leitura pura, sem escrita, sem
+> risco.
 
 ### Microfone
 
@@ -324,6 +433,38 @@ mandar o modo oficial correto COM o bitmask de zonas.
 **zona inativa** — expresso no bitmask que esta árvore não escreve. Os 8 níveis
 SÃO expressáveis.
 
+> **NOTA DATADA — 11/08/2026: a cura da TRIGGER-CANON-01 não alcançou dois
+> presets, e são justamente os dois de nome oficial.**
+>
+> A seção acima conta a leva curada. Conferido no código hoje, **dois efeitos
+> continuam mandando o modo que esta própria tabela chama de errado**, e
+> ninguém mediu se fazem alguma coisa:
+>
+> | função | manda | a tabela desta seção decodifica como | deveria ser |
+> |---|---|---|---|
+> | `weapon()` — `core/trigger_effects.py:461-466` | `PULSE_B` = **`0x06`** (`:129`) | Simple_Vibration, **legado** | `0x25`, o Weapon oficial |
+> | `vibration()` — `core/trigger_effects.py:469-481` | `PULSE_A` = **`0x22`** (`:128`) | **Bow**, não oficial | `0x26`, o Vibration oficial |
+>
+> Eles ficaram **fora dos dois grupos** da cura: não estão entre os SETE que
+> ela mediu como inertes e que foram corrigidos, nem entre os CINCO que ela
+> aprovou pela sensação e cujos bytes viraram dado travado em
+> `tests/unit/test_trigger_canon_01.py`. Caíram no vão.
+>
+> **Grau: BAIXA, e a incerteza é real, não formal.** A régua que os condena é
+> a decodificação desta seção, que é ALTA; mas a §4 também registra que os
+> modos **não oficiais e legados NÃO validam parâmetros** — foi por isso que
+> os cinco presets de `0x26` produziram sensações diferentes por acidente. Um
+> `0x22` com os parâmetros de uma vibração pode muito bem estar entregando
+> algo que ela aprova. **Nada aqui autoriza trocar os bytes sem a mão dela no
+> gatilho.**
+>
+> **O ensaio que resolve, e ele é o mesmo de 01/08:** aplicar os dois pela aba
+> Gatilhos, com o daemon vivo, e perguntar o que o dedo sente. Se
+> `weapon()` não resistir e `vibration()` não pulsar, é a mesma classe de
+> defeito já curada; se ela gostar do que sente, o nome é que está errado, e
+> a decisão dela em 01/08 já disse qual vence — *"as duas temos nomes
+> perfeitos, pq essa é a sensação de usar ambas"*.
+
 ### Leitura de estado — recurso que ninguém usa aqui
 
 O **nibble alto** do byte de status de cada gatilho, no report de entrada, diz
@@ -339,11 +480,48 @@ o que o gatilho está sentindo. A Apple expõe os mesmos estados com nome:
 no feature report `0x05`, 41 bytes, **imutável por unidade** — cachear por MAC
 está certo.
 
+> **Contraste obrigatório, acrescentado em 11/08/2026 — estas escalas são
+> SÓ do DualSense.** O Pro Controller usa `4096` LSB/g (±8 g) e `14,247`
+> LSB/(°/s) (±2000 °/s), medidos no driver desta máquina e registrados na
+> [canônica dos externos](externos-referencia-canonica.md), seção 3.5. Quem
+> comparar eixos das duas linhagens sem converter erra por **2×** no
+> acelerômetro e por cerca de **14×** no giroscópio. GRAU: ALTA.
+
 **Taxas do SDL — e uma divergência a investigar:** DualSense por USB **250 Hz**;
 por Bluetooth **1000 Hz**; **DualSense Edge por USB 1000 Hz**. O gamepad virtual
 deste projeto se declara **Edge** (PID `0x0DF2`) e entrega os ~250 Hz do físico.
 Um jogo que integre velocidade angular pela taxa declarada teria escala 4×
 errada. **Não medido** — sprint `GYRO-EDGE-RATE-01`.
+
+> **NOTA DATADA — 11/08/2026: continua NÃO MEDIDO, e isto é resultado, não
+> pendência esquecida.**
+>
+> Reconferido hoje, ponto a ponto:
+>
+> - **a premissa é ALTA e segue de pé:** o vpad nasce Edge por construção —
+>   `VPAD_PRODUCT = 0x0DF2` em `integrations/uhid_gamepad.py:123`, com o
+>   fallback de `uinput` espelhando a mesma constante (invariante VPAD-06);
+> - **a taxa NUNCA foi medida**, em transporte nenhum. Não há, nesta árvore,
+>   uma única linha que reconcilie a taxa declarada com a real: nem conversão,
+>   nem aviso, nem sequer um número guardado. O jogo recebe os dois valores e
+>   ninguém os confronta;
+> - **a sprint `GYRO-EDGE-RATE-01` não existe como arquivo.** O nome aparece
+>   nesta página, na canônica dos externos e no mapa de canais, e não há
+>   documento em `docs/process/sprints/` com ele. Citar uma sprint que não
+>   existe faz parecer que alguém está com o trabalho na mão.
+>
+> **O ensaio que resolve — e a régua é metade do ensaio:** só vale contra a
+> **SDL3 que a Steam distribui**, que é a biblioteca que os jogos usam. Medir
+> contra a `libSDL2` do sistema já produziu, nesta casa, um alarme falso
+> inteiro (é a armadilha do topo desta página). Enquanto o número não vier de
+> lá, o grau é **BAIXA**, e a frase honesta é *"não medido"*.
+>
+> **O aparelho vizinho já mostrou que a família de defeito é real:** o Pro
+> **declara** 8 ms no comentário do driver, 15 ms no default, e **entrega**
+> 11,2 ms — medido três vezes em 07/08, na
+> [canônica dos externos](externos-referencia-canonica.md), seção 3.5. É o
+> mesmo desenho de defeito, com um segundo aparelho e um número medido. Não é
+> prova sobre o DualSense.
 
 **Touchpad — ALTA.** 1920×1080, **2 pontos**, cada um com id e flag de contato
 **invertida** (`0x80` = sem dedo). Clique é botão. Confirma o que está em
@@ -353,6 +531,49 @@ errada. **Não medido** — sprint `GYRO-EDGE-RATE-01`.
 out** (confirma a armadilha `LIGHTBAR-BT-KEEPALIVE-01` desta casa).
 `led_brightness` tem 3 níveis. Padrões oficiais do PS5:
 P1 `--x--`, P2 `-x-x-`, P3 `x-x-x`, P4 `x-xx-`, P5 `xxxxx`.
+
+> **NOTA DATADA — 11/08/2026, ponto 1: o P4 desta linha CONTRADIZ o código, e
+> ninguém olhou o controle.**
+>
+> | | P1 | P2 | P3 | **P4** | P5 |
+> |---|---|---|---|---|---|
+> | esta página | `--x--` | `-x-x-` | `x-x-x` | **`x-xx-`** | `xxxxx` |
+> | `core/led_control.py:105-114` | `--x--` | `-x-x-` | `x-x-x` | **`xx-xx`** | `xxxxx` |
+>
+> Quatro dos cinco batem. E o `x-xx-` desta página é, **byte a byte**, o
+> `_PLAYER_LED_OVERFLOW` do código (`core/led_control.py:119`) — o padrão de
+> *"slot fora da tabela"*, escolhido para **não** se confundir com nenhum
+> número real. Se a página estiver certa, o jogador 4 e o slot 9 exibem a
+> mesma coisa.
+>
+> **Nenhum dos dois lados foi medido.** Não subimos nem descemos grau: a
+> linha oficial acima continua declarada como veio, e o código continua como
+> está. **Grau da contradição: BAIXA dos dois lados.**
+>
+> **O ensaio que resolve:** olhar o controle. Numerar quatro controles (ou
+> forçar o slot 4) e ver qual das duas figuras acende. É a medição mais barata
+> desta lista, e é do tipo que só o olho dela fecha.
+>
+> **NOTA DATADA — 11/08/2026, ponto 2: o `lightbar_setup` tem DOIS regimes
+> neste produto, e esta página não os distingue.**
+>
+> A frase *"bit1 é o fade out"* é ALTA e continua verdadeira sobre o campo. O
+> que falta é o que este projeto faz com ele, e são coisas opostas por
+> transporte:
+>
+> - **fora de supressão (cabo):** o `flag2` sai com setup **e** brilho
+>   ligados em TODO report, e o `common[41]` vai sempre zero
+>   (`core/backend_pydualsense.py:818`) — escolha deliberada, travada por
+>   teste;
+> - **sob supressão (rádio):** o bit de setup é **explicitamente limpo**
+>   (`core/backend_pydualsense.py:772-777`), porque reengatá-lo em regime
+>   trava a exibição no firmware — é a `LIGHTBAR-BT-KEEPALIVE-01`.
+>
+> E o perigo registrado, que esta página não carregava: a
+> `LIGHTBAR-BT-CLAIM-01` propôs usar o `LIGHT_OUT` para *"tomar a barra de
+> volta"*. **Testado ao vivo: nenhum efeito.** Quem executasse aquela proposta
+> escreveria código para APAGAR a barra achando que a acendia. GRAU: MEDIDO
+> AQUI.
 
 ---
 
@@ -374,6 +595,59 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 `0x00`. Consequência: o vpad anuncia **"fone e microfone sempre plugados"**, que
 é o pior default possível justamente para o caso do alto-falante. Sprint aberta.
 
+> **NOTA DATADA — 11/08/2026: o parágrafo acima está errado DUAS VEZES, e o
+> título desta seção envelheceu com ele.**
+>
+> **(1) O byte 53 é escrito hoje.** A sprint fechou em 09/08/2026
+> (`JACK-QUE-NAO-LIGOU-01`), e o caminho inteiro existe:
+>
+> | etapa | onde | grau |
+> |---|---|---|
+> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:347` (`extract_jack_status`), offset em `:142` | **ALTA** — lido no código |
+> | entrega ao vpad na borda | `core/physical_report_reader.py:854-865` (`_observe_jack`) | **ALTA** |
+> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1744` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:536` | **ALTA** |
+> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1729`, offset `_STATUS1_OFFSET = 53` em `:526` | **ALTA** |
+>
+> **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
+> dois**, porque sobreviveria mesmo se a sprint nunca tivesse fechado. Os bits
+> são de **detecção**: `HP_DETECT` **ligado** significa *"há fone"*. Com o byte
+> em `0x00`, o vpad não anunciava *"fone e microfone sempre plugados"* —
+> anunciava **"nada plugado"**, que é o oposto. O código diz isso com todas as
+> letras em `integrations/uhid_gamepad.py:528-531`: *"O valor neutro do byte
+> 53: nada plugado, nada mudo (...) é honesto, porque 'não sei' e 'não há'
+> levam o jogo à mesma decisão (usar o alto-falante do controle)"*.
+>
+> Ou seja: o default de antes era o **melhor** possível para o caso do
+> alto-falante, e não o pior. Quem lesse o parágrafo original e fosse
+> "consertar" o default inverteria um byte que já estava certo.
+>
+> **(3) O título da seção** — *"e o byte que este projeto esquece"* — deixou
+> de descrever a árvore em 09/08. Fica como está, porque decisão medida não se
+> apaga, mas o byte não é mais esquecido.
+>
+> **NOTA DATADA — 11/08/2026: o byte 52 da tabela acima está INCOMPLETO.**
+>
+> A linha diz `ucBatteryLevel` (`nibble*10+5`), e isso descreve só o **nibble
+> baixo**. O **nibble alto é o estado de carga**, o kernel o nomeia, e o
+> código o decodifica em cinco casos
+> (`core/physical_report_reader.py:392-427`, `decodificar_bateria`):
+>
+> | nibble alto | significa | o que esta árvore faz |
+> |---|---|---|
+> | `0x0` | descarregando | `(nível*10+5, carregando=False)` |
+> | `0x1` | carregando | `(nível*10+5, carregando=True)` |
+> | `0x2` | cheio | `(100, carregando=True)` — o campo do vpad só sabe dizer dois estados |
+> | `0xa`, `0xb`, `0xf` | erro de temperatura / carga | `(None, False)` = **"não sei"**, que não dispara alerta |
+>
+> A escala **não é percentual**: são **11 níveis** (5, 15, ..., 95, 100) num
+> nibble. E este byte também é espelhado ao vpad desde 09/08
+> (`integrations/uhid_gamepad.py:1798` `forward_battery`, saindo em `:1726`,
+> offset `_STATUS_OFFSET = 52` em `:504`) — a mesma leva do byte 53.
+>
+> **Grau: ALTA** (a conta é a do `dualsense_parse_report` do kernel 6.18, e o
+> código a aplica nos dois sentidos). **Não medido:** o que o **jogo** faz com
+> o número — nenhum jogo foi observado lendo bateria do vpad.
+
 ---
 
 ## 7. O que um DualSense virtual precisa cumprir — checklist
@@ -394,6 +668,22 @@ Derivada do que o SDL exige no probe e do que os jogos procuram. **ALTA.**
 7. `0x09` com ≥ 7 bytes, MAC nos bytes 1-6
 8. `0x20` com ≥ 46 bytes, versão nos bytes 44-45
 9. `0x05` com 41 bytes de calibração **daquela unidade**
+
+> **Acrescentado em 11/08/2026 — as TRÊS sementes de CRC-32, não uma.** Esta
+> página só documentava a de saída. O mesmo CRC vale nos três sentidos, com
+> semente diferente em cada um, e por Bluetooth **o feature report também é
+> assinado** — os 4 últimos bytes do `0x05` lido de um físico BT são CRC, não
+> calibração. Quem os tratar como dado corrompe a calibração daquela unidade.
+>
+> | sentido | semente | onde |
+> |---|---|---|
+> | saída (`HIDP DATA\|OUTPUT`) | `0xA2` | `core/ds_output_report.py:51` |
+> | entrada (`HIDP DATA\|INPUT`) | `0xA1` | `core/ds_output_report.py:57` |
+> | feature (`GET_REPORT` por BT) | `0xA3` | `core/ds_output_report.py:58` |
+>
+> GRAU: **ALTA** (`ps_check_crc32` do `hid-playstation`; as três estão em uso
+> nesta árvore). As sementes são **compartilhadas com o DualShock 4** — ver a
+> [canônica dos externos](externos-referencia-canonica.md).
 
 **Saída honrada**
 10. Rumble nos bytes 2-3; **a parada do SDL vem com `valid_flag0 == 0` e
@@ -437,6 +727,31 @@ O discriminador que separa os dois casos é limpo:
   zerados;
 - **report de gatilho:** `valid_flag0 & 0x0C ≠ 0`;
 - **report de lightbar/player:** `valid_flag1 & 0x14 ≠ 0`.
+
+---
+
+## O que continua em aberto por falta de medição — 11/08/2026
+
+Estas seis linhas **não** foram resolvidas na conferência de 11/08, e nenhuma
+delas se resolve lendo código: cada uma precisa do controle na mão. Estão aqui
+juntas porque é assim que se ataca uma de cada vez, com variável única.
+
+| # | pergunta em aberto | o ensaio que a fecha | onde |
+|---|---|---|---|
+| 1 | o áudio de saída por Bluetooth sai no `0x32` ou no `0x39`? | ler o *report descriptor* por BT e listar os IDs de output com o tamanho declarado — **leitura pura, sem escrita** | §3 |
+| 2 | `weapon()` e `vibration()` fazem alguma coisa no gatilho? | aplicar os dois pela aba Gatilhos, daemon vivo, e perguntar o que o dedo sente | §4 |
+| 3 | o player LED P4 é `x-xx-` ou `xx-xx`? | numerar quatro controles e **olhar** qual figura acende | §5 |
+| 4 | a taxa do giroscópio do vpad Edge: 250 Hz ou 1000 Hz para o jogo? | medir **contra a SDL3 que a Steam distribui** — nunca contra a `libSDL2` do sistema | §5 |
+| 5 | o bit `0x10` (autorização do volume do fone) existe neste firmware? | com headset no jack, variar `common[4]` com e sem o bit e ouvir | §2 |
+| 6 | a curva do volume do alto-falante **com** o pré-amp ligado | refazer a curva pelo caminho de hoje; a de 01/08 mediu um código que não existe mais | §3 |
+
+O item 4 tem irmão já medido no aparelho vizinho (o Pro declara 8 ms e entrega
+11,2 ms) — ver a
+[canônica dos externos](externos-referencia-canonica.md), seção 3.5. Isso torna
+a hipótese plausível; **não** a torna provada aqui.
+
+A régua de paridade entre transportes, e o que já está medido em cada um, mora
+em [paridade Bluetooth × cabo](paridade-bluetooth-versus-cabo.md).
 
 ---
 

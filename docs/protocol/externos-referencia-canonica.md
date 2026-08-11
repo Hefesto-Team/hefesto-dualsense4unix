@@ -370,6 +370,12 @@ ATENÇÃO: **quem integrar velocidade angular do Pro pela constante do driver, e
 vez de pelo valor aprendido, erra a escala.** É o análogo, para o Pro, da
 divergência que a `GYRO-EDGE-RATE-01` deixa aberta para o DualSense.
 
+> **NOTA DATADA — 11/08/2026:** `GYRO-EDGE-RATE-01` é **nome de divergência**,
+> não sprint — não há documento com esse nome em `docs/process/sprints/`
+> (conferido hoje). E a assimetria entre os dois aparelhos é a informação
+> importante: **aqui o número está medido** (11,2 ms, três medições em 07/08);
+> **no DualSense a taxa continua NÃO MEDIDA**. Ver a seção 11 desta página.
+
 #### O instrumento de qualidade de rádio que estava de graça no journal
 
 O driver avisa sempre que perde **mais de 3** relatórios de IMU seguidos
@@ -1254,3 +1260,21 @@ E os três pontos em que a página do DualSense **ganha** conteúdo desta:
    driver, 15 ms no default) e **entrega outra** (11,2 ms, medida três vezes). É
    a mesma família de defeito da sprint aberta, com um segundo aparelho e um
    número medido.
+
+> **NOTA DATADA — 11/08/2026: dívida PAGA, e uma correção de vocabulário.**
+>
+> Os quatro itens acima entraram na página do DualSense em 11/08, com a mão
+> livre: o "Documento irmão" está no cabeçalho dela, o contraste das escalas de
+> IMU está na seção 5, e as três sementes de CRC-32 (`0xA2` saída, `0xA1`
+> entrada, `0xA3` feature) ganharam tabela própria na seção 7. Esta seção 11
+> fica como está — ela registra por que a recíproca demorou, e isso não se
+> apaga.
+>
+> **A correção:** `GYRO-EDGE-RATE-01` vem sendo citada como *"sprint aberta"*
+> aqui (`:371` e o item 3 acima), na página do DualSense e no mapa de canais —
+> e **não existe documento nenhum com esse nome** em `docs/process/sprints/`.
+> É um **nome de divergência**, não um trabalho em curso. Chamá-la de sprint
+> faz parecer que alguém está com aquilo na mão, e ninguém está: a taxa do
+> DualSense **continua não medida**, e só é medível contra a SDL3 que a Steam
+> distribui. O que o Pro tem medido (11,2 ms contra os 8 ms declarados) é
+> **irmão** dela, não prova dela.

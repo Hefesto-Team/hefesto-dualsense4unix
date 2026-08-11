@@ -119,6 +119,18 @@ Ordenado por (impacto ÷ custo):
    **não existe** no rádio. Custo: **sprint inteira**, e antes da primeira linha
    é preciso resolver uma contradição interna: `dualsense_bt_audio.py` diz report
    `0x39`, a referência canônica diz `0x32`. Nenhuma das duas foi medida aqui;
+
+   > **NOTA DATADA — 11/08/2026: a contradição é mais estreita do que parece,
+   > e a precisão importa para não fechá-la com a medição errada.** O `0x32`
+   > que esta casa mediu ao vivo em 25/07 é o de **controle** (142 bytes, TLV
+   > `0x11` AudioControl, o byte que destrava o microfone —
+   > `integrations/dualsense_bt_audio.py:210`). O report em disputa é o que
+   > leva os **dados**: o módulo o dá como `0x39`, com os blocos `0x12`
+   > (háptico) e `0x13`/`0x16` (alto-falante), em `:31` e `:213-219`; a
+   > canônica o dá como `0x32` com tag `0x12`. **Continuam os dois de fonte
+   > única e nenhum medido** — o `0x32` medido **não** é evidência para
+   > nenhum dos lados. Fecha por leitura do *report descriptor* por BT, sem
+   > escrever no controle;
 6. **o slider do alto-falante por BT promete som que não sai** — enquanto o item
    5 não vier, a tela precisa dizer isso. Custo: baixo.
 
@@ -135,6 +147,17 @@ Ordenado por (impacto ÷ custo):
   Não medido, e **só medível contra a SDL3 que a Steam distribui** — medir
   contra a `libSDL2` do sistema já produziu um alarme falso inteiro nesta casa.
 
+  > **NOTA DATADA — 11/08/2026: reconferido, e o desfecho é "continua não
+  > medido" — o que é resultado, não pendência esquecida.** A premissa está
+  > firme (`VPAD_PRODUCT = 0x0DF2`, `integrations/uhid_gamepad.py:123`), e
+  > **não existe nesta árvore uma linha sequer que reconcilie a taxa declarada
+  > com a real**: nem conversão, nem aviso, nem número guardado. Duas
+  > correções ao que se citava: a sprint `GYRO-EDGE-RATE-01` **não existe como
+  > arquivo** em `docs/process/sprints/`, e o aparelho vizinho já tem o
+  > análogo MEDIDO — o Pro declara 8 ms e entrega 11,2 ms, três medições em
+  > 07/08 (canônica dos externos, seção 3.5). Isso torna a hipótese plausível
+  > e **não** a prova aqui.
+
 ---
 
 ## Documentos que contradizem esta tabela (dívida aberta)
@@ -147,3 +170,20 @@ Ordenado por (impacto ÷ custo):
   número medido sob uma condição que deixou de existir quatro minutos depois;
 - **`cli/cmd_mic.py`** afirma que o install instala os drop-ins 52/53 — não
   instala (`install.sh` os deixa em opt-in, desligados).
+
+**Acrescentado em 11/08/2026:**
+
+- **`docs/adr/008-bt-vs-usb-polling.md:9`** afirma que *"gatilho adaptativo via
+  BT tem comportamento ligeiramente diferente em `Machine` e `Galloping`"*.
+  **Essa linha não tem fonte, medição nem rastro em lugar nenhum deste
+  repositório**, e contradiz a linha "Gatilhos adaptativos" da tabela desta
+  página, que é **MEDIDO AO VIVO** e diz o contrário: o `common` é idêntico nos
+  dois envelopes e não há ramo de transporte no caminho do gatilho. Grau da
+  afirmação da ADR: **BAIXA, sem procedência**. Enquanto ninguém sentir os dois
+  modos por rádio e por cabo lado a lado, esta página vence — e a diferença, se
+  existir, é do **firmware**, não deste projeto;
+- **[a referência canônica do DualSense](dualsense-referencia-canonica.md)**
+  recebeu, em 11/08, notas datadas em oito pontos que estavam vencidos (o byte
+  53, o pré-amp, os modos de gatilho, o P4, a taxa do giroscópio, entre
+  outros). O índice fica no topo daquela página, em *"O que caducou em
+  11/08/2026"*. Nenhum deles muda a tabela desta.
