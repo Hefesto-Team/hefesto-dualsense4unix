@@ -146,8 +146,26 @@
        derivadas do retângulo medido do touchpad e dos analógicos. As três
        marcadas com PRECISA-DO-OLHO-DELA são palpite meu e ela confirma. -->
 
-  <g id="lightbar" data-feature="lightbar" data-posicao="nao-localizada">
-      <title>Lightbar (posição a confirmar)</title>
+  <!-- POSIÇÃO LOCALIZADA em 11/08/2026, por FOTO DELA de dois DualSense acesos
+       ao mesmo tempo: o roxo com a barra AZUL e o branco com a barra VERMELHA.
+       A foto mostra que a lightbar não é uma peça só — são DUAS tiras, uma de
+       cada lado do touchpad, na costura entre ele e a carcaça.
+       Geometria ancorada nas bordas do touchpad (x 42.5..85.5, y 28.8..51.5):
+       cada tira encosta na borda vertical dele e vai de y 30 a y 52.
+       As bordas saíram da RENDERIZAÇÃO, não de caminhar o caminho: a primeira
+       tentativa usou uma caixa calculada por varredura dos comandos do path,
+       que devolveu x 38.8..86.4 — larga demais, porque o walker conta pontos
+       de controle das curvas como se fossem extremidades. As tiras nasceram
+       em cima dos ombros. Renderizar e OLHAR corrigiu em um passo o que a
+       aritmética errou.
+       As duas tiras acendem JUNTAS e sempre da mesma cor: para o mapa é UMA
+       feature com duas peças, e por isso as duas moram no mesmo grupo. Se um
+       dia alguém quiser endereçá-las em separado, é aqui que se descobre que
+       o firmware não oferece isso. -->
+  <g id="lightbar" data-feature="lightbar" data-posicao="ladeia-o-touchpad">
+      <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" x="41.3" y="30" width="1.2" height="22" rx="0.6"/>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" x="85.5" y="30" width="1.2" height="22" rx="0.6"/>
   </g>
 
   <g id="ps" data-entrada="ps">
