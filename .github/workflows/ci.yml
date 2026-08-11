@@ -112,6 +112,50 @@ jobs:
       - name: Varredura de referências
         run: python3 scripts/validar-referencias-docs.py --all
 
+  mapa-de-canais:
+    name: Mapa de canais (o publicado bate com as fontes + o censo)
+    runs-on: ubuntu-latest
+    # PARIDADE-PORTAO-01 (11/08). O commit que criou o mapa afirma, na própria
+    # mensagem, que "o mapa de canais existe, e ele é portão — não
+    # documentação". MEDIDO em 11/08: não era. O `--check` do `gerar-mapa.py`
+    # existia e NINGUÉM o chamava — nem workflow, nem hook, nem teste. É a
+    # família exata do PORTÃO-VIVO-01 e do ÍCONE-VIVO-01: o gate que se anuncia
+    # no cabeçalho e não roda em lugar nenhum.
+    #
+    # LIMITE HONESTO DO PRIMEIRO PASSO: `gerar-mapa.py --check` compara MTIME, e
+    # mtime aqui é ordem de checkout, não histórico de edição — o
+    # `actions/checkout` escreve em ordem de caminho e `specs.html` (raiz, "sp")
+    # sai depois de `docs/` e de `scripts/`, então ele nasce sempre "mais novo"
+    # que as fontes. Neste runner o passo passa quase sempre; ele vale de
+    # verdade no `.pre-commit-config.yaml`, na máquina de quem edita, onde mtime
+    # é informação. Quem morde por CONTEÚDO aqui é o censo do passo seguinte,
+    # que exige o `id` de cada linha do CSV dentro do `specs.html`.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: O specs.html publicado reflete o CSV e os desenhos
+        run: python3 scripts/gerar-mapa.py --check
+      # O censo NASCE INFORMATIVO, e o motivo está medido, não suposto: contra o
+      # CSV de 11/08 ele reprova em toda célula que afirma `aciona = sim` com
+      # `confianca = medido` e não aponta teste nenhum. A coluna
+      # `teste_que_morde` nasceu INTEIRA VAZIA e começou a ser preenchida na
+      # mesma leva pela sprint SEGUINTE (PARIDADE-BYTE-01, que depende desta) —
+      # a dívida encolheu de uma medição para a outra, e o que sobra são as
+      # células cuja mordida ainda não foi escrita. É o mesmo caminho do
+      # `referencias-docs` e do `shellcheck` acima: entram informativos com a
+      # dívida escrita, e o `continue-on-error` sai no dia em que ela é paga.
+      #
+      # Informativo NÃO é decorativo: o número aparece no log de todo run, e o
+      # dia em que ele chegar a zero esta linha some. Enquanto isso, as outras
+      # regras dele (mordida que aponta teste que o pytest não coleta, prova
+      # vencida, integridade do CSV, linha nova que ninguém publicou) já estão
+      # verdes — e é justamente por elas que o passo precisa estar aqui hoje.
+      - name: Censo do mapa (afirmação forte sem teste que morda)
+        continue-on-error: true
+        run: python3 scripts/check_paridade_transporte.py
+
   shellcheck:
     name: Shellcheck (severidade error)
     runs-on: ubuntu-latest
