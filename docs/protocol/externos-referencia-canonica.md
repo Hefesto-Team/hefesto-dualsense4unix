@@ -8,6 +8,14 @@ DualSense entendem.**
   Nintendo genuíno e um 8BitDo em modo PS4. Por três frentes de pesquisa
   simultâneas (o driver do kernel, o rádio, o conhecimento público), e conferido
   contra o código desta árvore.
+- **Atualizado em:** 11/08/2026, com o 8BitDo **pelo cabo** em modo Switch e o
+  Pro genuíno no rádio. Entraram a seção 5 inteira (o modo Switch saiu de "nada
+  medido" para "medido no cabo, sem medição no rádio"), o aviso de `sysfs` da
+  3.6, a `P-2` respondida na 8.2 e a dívida de doutrina da 7.3, que ficou paga.
+  As medições daquele dia estão em
+  [`externos-firmware-e-modos.md`](externos-firmware-e-modos.md) e em
+  [`driver-hid-nintendo-por-dentro.md`](driver-hid-nintendo-por-dentro.md), e
+  não se repetem aqui.
 - **Leitura pura.** Nenhuma escrita em `hidraw`, nenhum serviço reiniciado,
   nenhum controle derrubado. O que só fecha escrevendo no aparelho está na
   seção 8, como protocolo para ela executar.
@@ -39,7 +47,8 @@ decisão errada por confundir "documentação de comunidade" com "fato".
 | **ALTA** | está no código do driver que **esta máquina carrega**, ou em duas engenharias reversas independentes que concordam |
 | **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida, **ainda não conferida na máquina dela** |
 | **BAIXA** | inferência, ou fonte única, ou derivação de duas medições que não se tocam |
-| **MEDIDO AQUI** | conferido nesta máquina, nesta sessão, com o comando citado |
+| **MEDIDO AQUI** | conferido nesta máquina na varredura de 07/08, com o comando citado |
+| **MEDIDO 11/08** | conferido nesta máquina em 11/08/2026, com o 8BitDo pelo **cabo** em modo Switch e o Pro genuíno no rádio. Vale o mesmo que MEDIDO AQUI; a data está no rótulo porque a **mesa era outra**, e transporte não atravessa |
 
 ### 0.2 As três camadas que esta página separa — e é o motivo de ela existir
 
@@ -84,6 +93,11 @@ E a lei desta página, medida no 8BitDo e válida para os dois aparelhos:
 Endereços mascarados pela máscara da casa (octetos 4 e 5 zerados); há portão que
 reprova o contrário.
 
+**Esta tabela é a foto de 07/08, com os quatro no rádio.** Em **11/08** a mesa
+foi outra — o 8BitDo pelo **cabo**, em modo Switch, e o Pro genuíno no rádio — e
+o que se mediu ali está na seção 5.1, não aqui. Toda linha desta página que
+disser `MEDIDO 11/08` vem daquela mesa.
+
 **As duas premissas do pedido dela estão certas, e ficam MEDIDO AQUI:** o Pro
 genuíno por Bluetooth casa com o driver `nintendo`; o 8BitDo em modo PS4 casa com
 o `playstation`. É exatamente essa bifurcação de driver que o
@@ -115,6 +129,10 @@ de taxa, de probe e de recuperação desta página **só vale declarando isso**.
 `ds4_synthetic_mac=Y`, `feature_retries=2`. GRAU: MEDIDO AQUI.
 
 ### 1.2 O achado desta varredura — o 8BitDo com o link de pé e SEM HID nenhum
+
+**Isto é sobre o 8BitDo em `054c:05c4` e POR RÁDIO** — o aparelho HID daquele
+modo, e só dele. A confusão já foi cometida uma vez em página irmã: **o modo
+Switch pelo cabo proba inteiro**, e está medido na seção 5.1.
 
 Este é o fato mais importante desta página, e ele **aconteceu durante a
 varredura**, entre uma frente e outra:
@@ -438,6 +456,25 @@ Três consequências, e as três mordem:
    **separado**. Portanto uma escrita de "cinco lâmpadas" pelo `sysfs` custa
    **cinco** subcomandos ao rádio — quatro redundantes mais o do HOME. GRAU:
    ALTA.
+
+ATENÇÃO — **valor lido no `sysfs` NÃO é prova de que alguma luz acendeu**, e
+aqui isso vale ainda mais forte que na lightbar do `ds4` (a mesma advertência
+está em 4.7, escrita só para lá). Três razões, e as três são desta máquina:
+
+1. **Não há leitura de estado nenhuma.** O `hid-nintendo` **não registra
+   `brightness_get`** em nó de LED algum, e o subcomando que perguntaria ao
+   aparelho — `JC_SUBCMD_GET_PLAYER_LIGHTS` (`0x31`, definido em
+   `assets/dkms/hid-nintendo/hid-nintendo.c:142`) — **é definido e jamais
+   chamado**. GRAU: ALTA (conferido no fonte desta árvore).
+2. **O que se lê é a cache do subsistema de LED**, isto é, o último valor que
+   alguém *escreveu*. É **fonte de intenção, nunca de estado**.
+3. **E nesta máquina há um caminho a mais para divergir, ligado de propósito:**
+   com `register_leds_on_set_failure=Y` (parâmetro do fork, `:82-84`, usado em
+   `:2557` e `:2594`) o driver **registra os nós mesmo quando o único `set`
+   falhou** — inclusive com `-ETIMEDOUT`. O nó passa a afirmar um padrão que o
+   aparelho **nunca recebeu**. GRAU: ALTA.
+
+Quem quiser saber o que está aceso olha o plástico. Não há atalho.
 
 **O driver acende sozinho um padrão de jogador no probe, antes de qualquer
 software.** O `joycon_leds_create` aloca um id num IDA global e usa
@@ -804,33 +841,128 @@ GRAU: ALTA (`hid-playstation.c:2958` e `:2965`, sem condicional) + MEDIDO AQUI
 
 ## 5. O 8BitDo em modo Switch — `057e:2009`, driver `nintendo`
 
-**Não está na mesa, e não tem bond neste adaptador.** São **quatro** bonds, e
-nenhum é ele. GRAU: MEDIDO AQUI. **Qualquer medição daquele modo começa por um
-pareamento novo** — é o item mais caro desta página.
+**Este modo está medido pelo CABO e continua sem medição pelo RÁDIO.** A
+distinção governa a seção inteira: cada afirmação abaixo declara em que
+transporte foi feita, e **nenhuma atravessa de um para o outro**.
 
-**Nada do que esta página afirma sobre "o 8BitDo" foi medido naquele modo.**
+### 5.1 Pelo CABO — a probe conclui inteira
 
-O que se sabe sem ele ligado:
+Em 11/08/2026 o clone esteve na mesa **ligado por cabo, em modo Switch**, e a
+probe do `hid-nintendo` concluiu. A instância é `0003:057E:2009.0008`:
 
-| afirmação | GRAU |
+| o que | o que foi medido |
 |---|---|
-| contra o Pro genuíno ele colide em **tudo** o que se consulta: VID/PID (`057e:2009`), nome (`Pro Controller`), serial (`000000000001`), `HID_NAME` e `MODALIAS` | ALTA |
-| por rádio o **único** discriminador é a OUI — `e0:f6:b5` genuíno, `e4:17:d8` clone | ALTA (três lugares independentes da árvore concordam) |
-| por cabo há um segundo, o `bcdDevice` `0210`/`0200` — que **não existe** por Bluetooth | ALTA |
-| os dois têm requisitos de firmware **incompatíveis** quanto ao sniff — ver 6.3 | ALTA (A/B de 23/07, transcrito em `scripts/bt_active_mode.sh`) |
+| driver ligado | `nintendo` |
+| inputs | **dois** — `Nintendo Co., Ltd. Pro Controller` e `... (IMU)` |
+| `hidraw` | presente |
+| LEDs registrados | **cinco** — `:green:player-1` a `-4` mais `:blue:player-5` |
+| bateria | nó `nintendo_switch_controller_battery_*` presente |
+| calibração | `using factory cal` no stick esquerdo, no direito **e** na IMU |
+| descritor HID | **203 bytes**, parseados item a item, **sem um item malformado** |
+| `bcdDevice` | `0200` (o genuíno é `0210`) |
+| endereço reportado | `E4:17:D8:00:00:1A`, a OUI pública da 8BitDo |
+
+GRAU: **MEDIDO 11/08**. Compare com o estado quebrado que o
+`assets/dkms/hid-nintendo/README.md` descreve, em que o diretório do device
+tinha só `modalias power report_descriptor subsystem uevent`: **quem fez a
+diferença foi o patch `0003` do DKMS desta casa, e ele está no ar.**
+
+**Três coisas que o cabo fechou, e cada uma estava escrita ao contrário:**
+
+1. **A identidade é REAL, não sintetizada.** O journal do boot traz
+   `controller MAC = E4:17:D8:00:00:1A` para a instância, e **não traz uma única
+   linha** de `falling back to a synthesized identity` — que é o que o driver
+   imprime no caminho degradado, junto com um endereço fabricado começando em
+   `02:`. Logo o clone **responde ao `REQ_DEV_INFO` (`0x02`)**: o endereço só
+   existe porque a resposta veio. GRAU: **MEDIDO 11/08**, ALTA.
+2. **A IMU é real, e a prova é por VALOR, não por taxa.** Taxa não prova sensor:
+   o relatório `0x30` sempre carrega os bytes de IMU, e um firmware que mandasse
+   zeros produziria a mesma contagem. Com os dois aparelhos **parados** por 6 s,
+   o eixo Z do acelerômetro do clone fica entre **4153 e 4269** e o do genuíno
+   entre **4200 e 4207** — é a gravidade **na mesma escala**, a de 4096 LSB/g da
+   seção 3.5. Um firmware que mentisse não acertaria a escala do genuíno por
+   acaso. GRAU: **MEDIDO 11/08**, ALTA. As taxas (199,4 amostras/s no clone pelo
+   cabo, 267,2 no genuíno pelo rádio) foram medidas duas vezes por réguas
+   diferentes e concordam, mas **não são a prova** — são o contexto dela.
+3. **A quinta lâmpada NÃO é um quinto jogador.** Os cinco nós do clone são os
+   mesmos cinco do genuíno: quatro `:green:player-N` de escala 0-1, por
+   `SET_PLAYER_LIGHTS` (`0x30`), e **um `:blue:player-5` de escala 0-15, que é o
+   LED HOME**, por `SET_HOME_LIGHT` (`0x38`) — a seção 3.6 desenvolve. O nó
+   existe no clone com `max_brightness=15`, medido. **Que a lâmpada física
+   acenda continua SEM PROVA**, e é o que resta da `P-4` (seção 8.4).
+
+**Uma diferença medida que NÃO é firmware:** o genuíno diz `using **user** cal`
+nos três, o clone diz `using **factory** cal`. Isso é conteúdo da SPI — a
+calibração de usuário é o que um console Switch grava quando alguém calibra o
+controle por lá. Atualizar firmware não muda isso. GRAU: ALTA para o mecanismo.
+
+**E uma que sobra aberta:** em repouso, o acelerômetro do clone é **4 a 6 vezes
+mais ruidoso** que o do genuíno (desvio de 7,3/5,5/9,1 contra 1,8/1,5/1,4). Peça
+ou filtragem de firmware, e não dá para dizer qual. GRAU: **SEM PROVA** para a
+causa; MEDIDO 11/08 para o número.
+
+### 5.2 Pelo RÁDIO — continua sem medição, e o preço é um pareamento novo
+
+> **NOTA DATADA — 07/08/2026, e ela continua valendo para o RÁDIO.** Neste
+> adaptador **não há bond do 8BitDo em modo Switch**: eram quatro bonds em
+> 07/08, e nenhum era ele. **Qualquer medição deste modo pelo rádio começa por
+> um pareamento novo**, e continua sendo o item mais caro desta página. O que
+> caducou é o **alcance** da frase: em 07/08 ela valia para o modo inteiro;
+> desde 11/08 vale **só para o rádio**, porque o cabo respondeu (5.1).
+
+O que o cabo **não** responde, e por construção:
+
+- **se a probe conclui por rádio neste modo.** Pelo cabo o caminho é outro: há
+  handshake USB, e é exatamente ali que o clone diverge do genuíno — o driver
+  transmite `0x80 0x02` em **2 bytes** e o clone ignora o comando curto;
+- **se a morte por Bluetooth em modo Switch** — a cascata de timeouts descrita na
+  [página de uso](../usage/troubleshooting-8bitdo.md) — ainda acontece com o
+  patch `0003` no ar;
+- **se a distinção por OUI se comporta neste modo por rádio.** Ver 5.3.
+
+### 5.3 A identidade, por transporte — e a doutrina da casa, agora medida
+
+| afirmação | transporte | GRAU |
+|---|---|---|
+| contra o Pro genuíno ele colide em **tudo** o que se consulta: VID/PID (`057e:2009`), nome (`Pro Controller`), serial (`000000000001`), `HID_NAME` e `MODALIAS` | os dois | ALTA, e **MEDIDO 11/08** no cabo |
+| o `bcdDevice` separa os dois: `0210` genuíno, `0200` clone | **só cabo** | **MEDIDO 11/08** |
+| o `bcdDevice` **não existe** por rádio — o Modalias publicado traz `d0001` nos dois | rádio | MEDIDO AQUI (07/08) |
+| o **único** discriminador é a OUI — `e0:f6:b5` genuíno, `e4:17:d8` clone | rádio | ALTA (três lugares independentes da árvore concordam) |
+| os dois têm requisitos de firmware **incompatíveis** quanto ao sniff — ver 6.3 | rádio | ALTA (A/B de 23/07, transcrito em `scripts/bt_active_mode.sh`) |
 
 **A OUI separa clone de genuíno, mas NÃO diz em que modo o clone está** — é o
 mesmo rádio nos dois modos. Quem separa os modos é o par **nome + VID/PID**
 (`Wireless Controller`/`054c:05c4` contra `Pro Controller`/`057e:2009`) **e** o
 driver que pega. **Nenhuma chave sozinha basta: precisa das duas.** GRAU: ALTA.
 
-ATENÇÃO — **o buraco sério, e ele expõe a doutrina da casa:** que o 8BitDo
-mantenha o **mesmo endereço de rádio** nos dois modos **nunca foi medido aqui**.
-GRAU: **BAIXA** (derivação de um modo só). **As regras `udev` casam por
-`HID_UNIQ`, isto é, por endereço.** Se o endereço mudar com o modo, elas mudam de
-alvo sem avisar — e a `assets/82-nintendo-pro-nosniff.rules`, que existe
-precisamente para **não** pegar o clone, pode estar acertando por sorte. Fecha
-com um pareamento novo no modo Switch e uma leitura de endereço; está em 8.2.
+**O endereço de rádio MUDA com o modo, e isso está medido.** O clone usa
+endereços **diferentes em cada modo**, os dois com a OUI `E4:17:D8`. Duas rotas
+independentes, 17 dias entre elas:
+
+- **25/07** — os bonds do BlueZ nesta bancada, dois endereços que só diferem no
+  fim, um em modo Switch e outro em `054c:05c4`. Registrado em
+  [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md) e
+  na [IDENT-01](../process/sprints/2026-07-25-IDENT-01-um-controle-duas-identidades.md),
+  que é quem mediu;
+- **11/08** — o `REQ_DEV_INFO` pelo cabo devolveu, para o modo Switch, **o mesmo
+  endereço** que o log daquele dia registrara para aquele modo, sem parear nada.
+
+GRAU: **MEDIDO**. Foi esta a `P-2` desta página, e ela está fechada (seção 8.2).
+
+**A consequência para a doutrina, que era a dívida 7.3:** as regras `udev` da
+casa casam por `HID_UNIQ`, isto é, **por endereço**. Como o endereço muda com o
+modo, **toda regra que case o endereço INTEIRO troca de alvo quando ela troca de
+modo** — é a armadilha, e ela é real. A `assets/82-nintendo-pro-nosniff.rules`
+**não é uma delas, e não está acertando por sorte:** ela casa
+`ENV{HID_UNIQ}=="e0:f6:b5:*"`, ou seja **só o prefixo de OUI do Pro genuíno**, e
+os dois endereços medidos do clone carregam a OUI da 8BitDo — em modo nenhum a
+do Pro. **A doutrina de escopo por OUI está certa e agora está medida.**
+
+O que resta aberto é outra coisa, e menor: o clone **por rádio em modo Switch**
+nunca esteve nesta bancada, então a regra nunca foi **observada** com ele naquele
+estado. Isso é a `P-2` do
+[`driver-hid-nintendo-por-dentro.md`](driver-hid-nintendo-por-dentro.md), seção
+8, item 4 — e vive em 5.2, não na fila de perguntas abertas desta página.
 
 ---
 
@@ -985,24 +1117,37 @@ linha de grau baixo, isso é dívida e tem de estar à vista.**
 | # | o produto faz | apoiado em | GRAU do apoio | dívida |
 |---|---|---|---|---|
 | 1 | bifurca `nintendo` x `ds4` por driver em `resolve_external_leds` | a bifurcação de driver | **ALTA** | nenhuma |
-| 2 | identifica o Pro genuíno por OUI em três lugares | a OUI ser o único discriminador por rádio | **ALTA** | nenhuma **para o modo PS4**; ver 7.3 |
+| 2 | identifica o Pro genuíno por OUI em três lugares | a OUI ser o único discriminador por rádio | **ALTA** | **nenhuma, e agora medida nos dois modos do clone** (5.3): o endereço dele muda com o modo, a OUI não |
 | 3 | `ExternalImuEnabler` monta um `0x40`/`0x01` de **12 bytes** e o manda por `hidraw` | que o firmware honre um report `0x01` **curto**, contra os 48 bytes de corpo que o descritor declara | **SEM PROVA** | **dívida real** — e o item E-2 do estudo de hoje é quem a paga |
 | 4 | o mesmo componente existe para ligar a IMU | o driver **já a liga**, em todo barramento, no probe | **ALTA de que é duplicado** | **provável código morto**; o porteiro `bus == "usb"` só impede que a duplicação vá ao rádio |
 | 5 | `write_player_number` trata o `:blue:player-5` como o bit "+5" da numeração e escreve `1` nele | o nó é o **LED HOME**, escala 0-15, outro subcomando | **ALTA de que está errado** | **defeito conhecido**, hoje calado pelo portão. **Não voltar sem corrigir** |
 | 6 | `write_player_number` faz cinco escritas de `sysfs` em sequência | cada escrita vira subcomando; a de verde reescreve os quatro | **ALTA** | **cinco subcomandos por chamada** — é a origem medida das 12 recusas e 3 `-110` por chamada, e é o que a escrita idempotente da E3 tem de curar |
 | 7 | `discover_external_gamepads` conta o externo como presente e ele participa da numeração | presença de nó, não de tráfego | **ALTA de que é insuficiente** | o 8BitDo **mudo** contava como presente e disparava renumeração dos outros |
 | 8 | o produto **não lê** bateria de externo | — | — | **é bom que não leia**: leria `AUSENTE` no Pro e `100%` mentiroso no 8BitDo |
-| 9 | a vigia de zumbi do watchdog | `Connected=true` **e** zero `hidraw` **e** cache de SDP sem `[ServiceRecords]` | **ALTA de que tem buraco** | **duas** formas escapam: "link de pé + `hidraw` presente + mudo" e "link de pé + sem `hidraw` + cache completo" — esta segunda está viva **neste minuto** (seção 1.2) |
+| 9 | a vigia de zumbi do watchdog | `Connected=true` **e** zero `hidraw` **e** cache de SDP sem `[ServiceRecords]` | **ALTA de que tem buraco** | **duas** formas escapam: "link de pé + `hidraw` presente + mudo" e "link de pé + sem `hidraw` + cache completo" — esta segunda foi observada ao vivo na varredura de **07/08** (seção 1.2) |
 
-### 7.3 A dívida de doutrina, e é a mais escondida
+### 7.3 A dívida de doutrina — PAGA em 11/08, e o que sobra dela
 
 As regras `udev` da casa casam por **`HID_UNIQ`**, isto é, **por endereço de
-rádio**. A doutrina de identificar o clone por OUI está **certa e medida** — para
-o modo PS4. Mas **que o clone mantenha o mesmo endereço ao trocar de modo é grau
-BAIXA**, nunca medido aqui. Se ele trocar, as regras mudam de alvo sem avisar.
+rádio**. Até 07/08 esta seção registrava, com grau BAIXA, que *"o clone pode
+trocar de endereço ao trocar de modo"* — e era a única linha da página em que o
+produto se apoiava, sem saber, num grau baixo.
 
-**Esta é a única linha desta página em que o produto se apoia, sem saber, num
-grau BAIXO.** Fecha com o item 8.2.
+**Está medido, e ele TROCA:** são dois endereços, um por modo, ambos com a OUI
+`E4:17:D8` (25/07 pelos bonds, 11/08 pelo `REQ_DEV_INFO` no cabo; ver 5.3 e 8.2).
+
+**A consequência, separada em duas, porque só uma é dívida:**
+
+- **regra que case o endereço INTEIRO troca de alvo quando ela troca de modo.**
+  O risco é real e fica nomeado aqui para quem for escrever a próxima;
+- **regra que case só o prefixo de OUI não troca**, e é o caso da
+  `assets/82-nintendo-pro-nosniff.rules`, que casa `ENV{HID_UNIQ}=="e0:f6:b5:*"`
+  — o prefixo do Pro **genuíno**. Ela nunca esteve acertando por sorte. **A
+  doutrina de escopo por OUI está certa e agora está MEDIDA.**
+
+**O que sobra, e não é doutrina, é bancada:** o clone **por rádio em modo
+Switch** nunca esteve neste adaptador, então nenhuma destas regras foi observada
+com ele naquele estado. Ver 5.2.
 
 ---
 
@@ -1016,6 +1161,11 @@ medir.
 Nenhum item aqui repete os cinco do
 [estudo dos externos de 07/08](../process/estudos/2026-08-07-ISOLAR-os-externos-o-metodo-da-lightbar-no-pro-e-no-8bitdo.md)
 (E-1 a E-5). Estes são os que **esta página** abriu.
+
+**A fila abriu com cinco e hoje tem QUATRO.** A `P-2` fechou em 11/08 — e o
+essencial dela já estava respondido desde 25/07, em outra página desta mesma
+árvore. O número fica no lugar, com a resposta no corpo, para não quebrar as
+citações das páginas irmãs; o que saiu foi a pergunta.
 
 ### 8.1 P-1. O timeout de supervisão — o número que falta para tudo
 
@@ -1040,27 +1190,35 @@ ganha.
 **CONSEQUÊNCIA.** **A casa nunca soube o timeout de supervisão de nenhum destes
 controles.** Nenhum instrumento da árvore o lê.
 
-### 8.2 P-2. O 8BitDo troca de endereço ao trocar de modo?
+### 8.2 P-2. RESPONDIDA — o 8BitDo troca de endereço ao trocar de modo: SIM
 
-**Pergunta.** O clone mantém o mesmo endereço de rádio no modo Switch e no modo
-PS4?
+**A resposta.** O clone usa **dois endereços de rádio, um por modo**, ambos com
+a OUI `E4:17:D8`. GRAU: **MEDIDO**, por duas rotas independentes e 17 dias de
+distância — os bonds do BlueZ em **25/07** (dois endereços que só diferem no
+fim, um em Switch, outro em `054c:05c4`) e o `REQ_DEV_INFO` pelo cabo em
+**11/08**, que devolveu para o modo Switch o mesmo endereço registrado naquele
+dia. O desenvolvimento está em 5.3.
 
-**Por que existe.** É a dívida 7.3 — a doutrina de escopo por OUI e as regras
-`udev` por `HID_UNIQ` dependem disso, e **nunca foi medido**.
+**Onde ela já estava respondida, e é a lição que custa.** A medição de 25/07
+está em [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md)
+e na [IDENT-01](../process/sprints/2026-07-25-IDENT-01-um-controle-duas-identidades.md)
+**desde 25/07** — duas semanas antes de esta página abrir a pergunta. Esta
+página perguntou o que a casa já sabia, em outra página da mesma árvore. Fica
+registrado: **antes de abrir item de medição, procurar a resposta no
+repositório.**
 
-**P0.** Snapshot de bonds **antes** (há script e timer, e o timer está `active`,
-tendo rodado às 19:37:20 com `estado idêntico ao último snapshot — no-op`).
-**Destrancar:** o modo Switch **não tem bond** neste adaptador, então o teste
-começa por um pareamento novo, e o desfecho esperado é ficar com **dois** bonds
-do mesmo aparelho — ou com **um**, e é justamente essa a resposta.
-**ELA.** Põe o 8BitDo em modo Switch (`Y+Start`), pareia, e avisa. Depois volta
-para PS4 (`Start+A`).
-**PREVISÃO.** Se surgir um **quinto** bond com OUI `e4:17:d8` e sufixo
-**diferente**, o aparelho tem dois endereços, e a
-`assets/82-nintendo-pro-nosniff.rules` está acertando por sorte. Se o bond
-existente for **reusado**, a doutrina está certa e sobe de BAIXA para MEDIDO.
-**CONTRASTE.** O Pro genuíno na mesma janela — se ele também perder ou ganhar
-bond, foi no host.
+**O que a resposta muda na doutrina, e não é o que a previsão antiga esperava.**
+A previsão dizia que dois endereços significariam que a
+`assets/82-nintendo-pro-nosniff.rules` estava *"acertando por sorte"*. **Não
+está.** A regra casa `ENV{HID_UNIQ}=="e0:f6:b5:*"`, isto é, **só o prefixo de
+OUI do Pro genuíno**, e os dois endereços do clone carregam a OUI da 8BitDo em
+qualquer modo. O risco existe e continua nomeado — mas é para regras que casem o
+**endereço inteiro**, e esta não é uma delas. A dívida 7.3 sai de BAIXA e vira
+**MEDIDA**.
+
+**O que continua sem medição, e é outro item.** O clone **por rádio em modo
+Switch** nunca esteve nesta bancada — não há bond dele aqui, e qualquer medição
+começa por um pareamento novo. Isso é 5.2, não fila de perguntas de protocolo.
 
 ### 8.3 P-3. O botão de taxa do DualShock 4 muda a permanência do 8BitDo?
 
@@ -1122,6 +1280,23 @@ E3.
 > **GRAU: SEM PROVA** — ninguém mediu, e a docstring de `write_lightbar_slot`
 > em `src/hefesto_dualsense4unix/core/external_leds.py` carrega a mesma
 > pergunta, com a leitura do driver que a sustenta.
+
+> **NOTA DATADA — 11/08/2026: a `P-4` ganhou uma SEGUNDA lâmpada para perguntar,
+> e ela é de outro modo.** Em modo Switch pelo cabo o clone registra os **cinco**
+> nós do Pro, e o quinto é `<instância>:blue:player-5` com `max_brightness=15`
+> — o **LED HOME**, por `SET_HOME_LIGHT` (`0x38`), não um quinto jogador (3.6 e
+> 5.1). **O nó existe: MEDIDO 11/08. Que o anel de Home do 8BitDo ACENDA
+> continua SEM PROVA.**
+>
+> - **por que importa:** enquanto isso não fechar, a numeração de jogador do
+>   clone não tem a quinta lâmpada que o código de hoje acha que tem — e é a
+>   dependência que o defeito registrado em 7.2, item 5, precisa para ser
+>   curado com desenho, não com chute;
+> - **custo:** o controle no cabo em modo Switch, uma escrita no nó azul e o
+>   olho dela. **Cinco segundos**, e é o item mais barato desta seção;
+> - **o que NÃO responde:** nada disto diz o que o `054c:05c4` faz. São dois
+>   modos, dois drivers e duas famílias de LED — a metade acima continua aberta
+>   do jeito que está.
 
 ### 8.5 P-5. Recontar a perda de IMU do Pro com a mesa vazia
 
@@ -1195,9 +1370,9 @@ varredura acrescentou:
 **Upstream**
 
 - `hid-nintendo` no kernel —
-  `https://github.com/torvalds/linux/blob/master/drivers/hid/hid-nintendo.c`
+  `https://github.com/torvalds/linux/blob/v7.0/drivers/hid/hid-nintendo.c`
 - `hid-playstation` no kernel (autor da SIE) —
-  `https://github.com/torvalds/linux/blob/master/drivers/hid/hid-playstation.c`
+  `https://github.com/torvalds/linux/blob/v7.0/drivers/hid/hid-playstation.c`
 - O remendo do relatório curto do DualShock 4 (Max Staudt, 15/01/2024) —
   `https://lkml.rescloud.iu.edu/2401.3/01396.html`
 
@@ -1228,7 +1403,15 @@ varredura acrescentou:
   — o método, o E-1 fechado e os cinco itens de protocolo que esta página **não**
   repete
 - [a página de uso do 8BitDo](../usage/troubleshooting-8bitdo.md) — e a nota 3
-  dela, que **continua aberta** (ver 4.8)
+  dela, que **continua aberta** (ver 4.8). É também quem mediu, em 25/07, os
+  dois endereços de rádio do clone — a resposta da `P-2`
+- [firmware e modos dos externos](externos-firmware-e-modos.md) — a mesa de
+  11/08 com o clone no cabo: a identidade real, a IMU provada por valor, o mapa
+  dos cinco modos e o caminho do `fwupd`. Toda linha `MEDIDO 11/08` desta página
+  vem de lá ou da página abaixo
+- [o `hid-nintendo` por dentro](driver-hid-nintendo-por-dentro.md) — o C que
+  governa os dois `057E:2009`, com `arquivo.c:linha`, e a probe completa do
+  clone pelo cabo
 
 ---
 

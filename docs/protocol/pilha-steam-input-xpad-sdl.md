@@ -745,9 +745,17 @@ período fixo. Quantos jogos fazem isso, **não se sabe**.
 ### 5.3 O que continua NÃO MEDIDO — e a régua do ensaio
 
 **Nada disto é medição.** É leitura do código que **decide** a taxa declarada.
-A taxa **real** do vpad nunca foi medida em transporte nenhum, e não há uma
-linha nesta árvore que reconcilie as duas: nem conversão, nem aviso, nem um
-número guardado.
+
+**O que MUDOU em 11/08:** a taxa do **controle físico** passou a ser medida —
+cabo **250,0 Hz exatos** por três réguas concordantes, rádio em rajadas com
+sustentado entre 38 e 392 Hz, e **nunca** os 1000 Hz que o SDL declara (ver
+[driver-hid-playstation.md](driver-hid-playstation.md)).
+
+**O que continua sem medição é outra coisa:** a taxa que o **vpad** entrega ao
+jogo, que não é obrigatoriamente a do físico — entre os dois há o espelho de
+motion, o rate-limit de 250 Hz do `uhid_gamepad.py` e o poll do daemon. E
+continua não havendo linha nesta árvore que reconcilie a taxa declarada com a
+entregue: nem conversão, nem aviso, nem um número guardado.
 
 O ensaio que fecha, e a régua é metade dele:
 

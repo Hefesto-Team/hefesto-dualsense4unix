@@ -28,8 +28,12 @@
 > mandariam OFF. A medição está na sprint
 > [TRIGGER-CANON-01](../process/sprints/2026-08-01-TRIGGER-CANON-01-os-modos-de-gatilho-contra-a-enum-da-sony.md).
 >
-> O texto abaixo fica como registro do que se acreditava — não se reescreve
-> decisão tomada; ela ganha nota.
+> O texto abaixo fica como registro do que se acreditava. Pela regra da casa
+> (`CLAUDE.md`, "As regras desta casa"), **fato errado se substitui e decisão
+> medida se data** — e este é o segundo caso: a tabela antiga não é um número
+> errado, é o que a bancada acreditava antes de a TRIGGER-CANON-01 medir contra
+> a enum da Sony. Apagá-la faria alguém remedir o que já foi medido, e é esse o
+> teste que decide entre guardar e substituir.
 
 > Fonte histórica (até 01/08/2026): `pydualsense >= 0.7.5` (`.venv/lib/.../pydualsense/enums.py`) para HID e README do DSX Paliverse para presets de alto nível. Esta tabela é referência para W2.1.
 

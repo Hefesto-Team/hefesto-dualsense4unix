@@ -47,6 +47,11 @@ Módulo `hid-nintendo` patchado para curar duas mortes de probe distintas:
 
 ## [E] O clone USB `057E:2009` — o que morre e por quê
 
+**Leia esta seção como o estado SEM o patch `0003`.** Ela descreve o que foi
+medido em 25/07, com o módulo vanilla, e é o que a cura veio curar. **Com o
+patch no ar — o caso desta máquina desde então — nada disto acontece:** o clone
+proba inteiro pelo cabo, medido em 11/08. Ver a seção de instalação, abaixo.
+
 ### O sintoma medido
 
 Dois "Pro Controller" no USB, indistinguíveis por ID (mesmo VID:PID, mesmo
@@ -170,11 +175,21 @@ Caminho USB (`3-1`, `1-4`) **não** serve de chave: ela troca de porta.
 
 ### Instalar o patch 0003 (passo MANUAL, com o Bluetooth em paz)
 
-O patch 0003 foi escrito e **compilado**, mas nunca carregado — nada foi
-instalado. Ele exige `dkms install` + módulo novo em memória, e trocar o
-`hid-nintendo` com controle BT vivo é proibido no projeto (a regra dura:
-`rmmod`/`modprobe -r` de driver HID com BT conectado derruba o link e come
-bond). Faça isto com jogo fechado, e de preferência com os controles BT
+**O patch 0003 está NO AR nesta máquina, e funcionou.** Conferido em 11/08/2026:
+`modinfo -F filename hid_nintendo` aponta para `updates/dkms`, e os três
+parâmetros dele estão vivos e ligados —
+`usb_cmd_pad_to_report=Y usb_send_conn_status=Y usb_probe_degrade=Y`. Com ele no
+ar, o 8BitDo pelo cabo em modo Switch **proba inteiro**: dois inputs, `hidraw`,
+cinco LEDs, bateria e calibração de fábrica lida — em vez do diretório com só
+`modalias power report_descriptor subsystem uevent` que a seção do sintoma
+descreve. A medição está em
+`docs/protocol/externos-referencia-canonica.md`, seção 5.1.
+
+O que segue é o procedimento, e ele continua valendo para **outra máquina, outro
+kernel ou uma reinstalação**: o passo exige `dkms install` mais módulo novo em
+memória, e trocar o `hid-nintendo` com controle BT vivo é proibido no projeto (a
+regra dura: `rmmod`/`modprobe -r` de driver HID com BT conectado derruba o link
+e come bond). Faça isto com jogo fechado, e de preferência com os controles BT
 desconectados:
 
 ```bash
@@ -203,6 +218,29 @@ modinfo -F filename hid-nintendo                     # tem que dizer updates/dkm
 
 Só então **plugue o 8BitDo** e leia o `dmesg`. Sucesso é: `probe - success`,
 um `hidraw`/`input` novo, e `/dev/hefesto/8bitdo-pro-clone` existindo.
+
+**E o sucesso aqui foi maior do que este parágrafo previa**, medido em 11/08: a
+identidade veio **real**, não sintetizada. A prova está na forma da linha de
+log. O journal traz
+
+```
+nintendo 0003:057E:2009.0008: controller MAC = E4:17:D8:00:00:1A
+```
+
+que é o `hid_info` de dentro do `joycon_read_info` (`hid-nintendo.c:2727`), **e
+não** a forma do caminho degradado (`:2831`), que acrescentaria
+`(USB connection status)` ou `(synthesized)` mais `type = ... (from product ID)`.
+Não há nenhuma linha de `falling back to a synthesized identity` (`:2906`) no
+boot inteiro. **Logo o clone respondeu ao `REQ_DEV_INFO` (`0x02`)** — ou seja, o
+controle foi de fato posto em modo USB, e o `usb_probe_degrade` está ligado como
+rede de segurança **sem ter precisado entrar em ação**.
+
+**O que isto NÃO separa:** das duas curas que agem antes do `read_info` — o
+padding do `usb_cmd_pad_to_report` e o `0x80 0x01` do `usb_send_conn_status` —
+não dá para dizer qual fez o handshake passar, porque as duas estavam ligadas.
+Separar custa um A/B: desligar uma pelo `sysfs`, replugar, ler o `dmesg`, e
+devolver. Enquanto isso não for feito, *"o padding é a aposta forte"* segue
+sendo aposta, e não medição.
 
 ### Voltar atrás (se travar)
 

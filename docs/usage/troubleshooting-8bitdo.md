@@ -17,8 +17,14 @@ Esta página existe porque o controle divide a máquina com o daemon e o
 `scripts/doctor.sh` sabe reconhecer a assinatura de morte dele.
 
 Cada afirmação abaixo carrega o seu nível de prova: **PROVADO** (medido nesta
-máquina em 2026-07-16), **HIPÓTESE** (plausível, não provada) ou
-**EXPERIMENTO** (nunca exercitado aqui).
+máquina, com a **data**, o **modo** e o **transporte** ditos na própria linha),
+**HIPÓTESE** (plausível, não provada) ou **EXPERIMENTO** (nunca exercitado
+aqui).
+
+**PROVADO sem escopo não vale.** Este controle tem cinco modos e dois
+transportes, e o que é verdade num não é verdade no outro: foi assim que uma
+linha de journal medida num modo virou, nesta página, uma afirmação sobre "o
+firmware clone" inteiro — ver o fim da seção de identificação.
 
 ---
 
@@ -26,18 +32,38 @@ máquina em 2026-07-16), **HIPÓTESE** (plausível, não provada) ou
 
 | Modo do controle | Identidade no kernel | Driver | Gyro | Nível de prova |
 |---|---|---|---|---|
-| **DirectInput/PS4 por Bluetooth** | `054c:05c4` (bus `0005`) | `hid-playstation` | não³ | **RECOMENDADO - PROVADO estável** (2026-07-25 — a via boa por Bluetooth) |
-| Switch **por cabo** | `057e:2009` (bus `0003`) | `hid-nintendo` | sim¹ | **PROVADO estável** (instância USB sem um único timeout) |
-| Switch por Bluetooth | `057e:2009` (bus `0005`) | `hid-nintendo` | sim¹ | **PROVADO instável** (mortes medidas em 2026-07-16, com e sem Steam) |
+| **DirectInput/PS4 por Bluetooth** | `054c:05c4` (bus `0005`) | `hid-playstation` | não³ | **RECOMENDADO — PROVADO que conecta** (25/07: subiu de primeira e ficou de pé na sessão de quatro controles). **A estabilidade longa NÃO está provada** — ver a ressalva logo abaixo da tabela |
+| Switch **por cabo** | `057e:2009` (bus `0003`) | `hid-nintendo` | sim¹ | **PROVADO estável, no cabo** (16/07: instância USB sem um único timeout; 11/08: probe completa — dois inputs, `hidraw`, cinco LEDs, bateria e calibração de fábrica de stick e de IMU) |
+| Switch por Bluetooth | `057e:2009` (bus `0005`) | `hid-nintendo` | sim¹ | **PROVADO instável, no rádio** (mortes medidas em 16/07, com e sem Steam) |
 | X-input **por cabo** | `045e:028e` | `xpad` | não² | Xbox 360 real; estabilidade esperada, não medida |
-| X-input por Bluetooth | `045e`, PID provável `02e0`/`02fd` | `hid-microsoft`/`hid-generic` | não² | **EXPERIMENTO** — `xpad` é USB-only (zero aliases `hid:`), nunca exercitado aqui |
+| X-input por Bluetooth | `045e:02e0` | `hid-microsoft` | não² | **driver MEDIDO em 11/08** (o alias `hid:b0005g*v0000045Ep000002E0` está no `hid-microsoft` instalado aqui); o **aparelho** neste modo continua **EXPERIMENTO** — ninguém o ligou nesta casa |
 
-¹ O gyro existe e é real (**PROVADO**: `using factory cal for IMU` + input
-`Pro Controller (IMU)` com `ID_INPUT_ACCELEROMETER=1`) — mas só chega ao
-**jogo** com Steam Input ativo; veja o conflito com o guard abaixo.
+¹ O gyro existe e é real — **PROVADO em 11/08, por VALOR e não por taxa**: com o
+controle parado no cabo, o eixo Z do acelerômetro fica entre **4153 e 4269**,
+que é a gravidade na mesma escala em que o Pro genuíno a reporta (4200 a 4207).
+Taxa **não** prova sensor: o relatório `0x30` sempre carrega os bytes de IMU, e
+um firmware que mandasse zeros produziria a mesma contagem (199,4 amostras/s no
+clone). A existência do nó `Pro Controller (IMU)` e a linha `using factory cal
+for IMU` também não provam — provam que o driver criou o nó e leu a SPI. O que
+chega ao **jogo** só chega com Steam Input ativo; veja o conflito com o guard
+abaixo.
 ² Limitação do protocolo XInput (não tem canal de motion), não do controle.
 ³ Não verificado. O DualShock 4 real tem IMU; se o clone expõe a dele neste
 modo é **pergunta em aberto** — ninguém mediu.
+
+**A ressalva do modo por Bluetooth, e ela é do escopo, não do modo.** O que
+está provado do `054c:05c4` é que **ele conecta** — medido em 25/07, com quatro
+controles no rádio ao mesmo tempo. **Ficar de pé por horas não está provado:**
+em 07/08, entre 19h17 e 19h41, este mesmo modo foi medido **mudo** (zero
+relatórios em três janelas de leitura pura) e depois **sem HID nenhum, com o
+link de rádio ainda autenticado e cifrado**. A medição inteira está na
+[canônica dos externos](../protocol/externos-referencia-canonica.md), seção 1.2.
+
+**O `045e:02e0` está confirmado como alias do `hid-microsoft` desta máquina**,
+mas o ID é documentado para o SN30 Pro**+**; para o SN30 Pro sem "+" a atribuição
+é de fonte pública, não medida. E o `045e:02fd`, que esta página listava como
+PID provável do 8BitDo, é o **Xbox One Model 1708 genuíno** da Microsoft
+(`assets/dkms/hid-nintendo/hid-ids.h:1018`) — nada tem a ver com este controle.
 
 **Por Bluetooth, use o modo DirectInput/PS4.** Por cabo, o modo Switch é o
 provadamente estável.
@@ -166,7 +192,7 @@ for d in /sys/bus/hid/devices/*; do
 done
 # 057e:2009 + driver=nintendo                  -> modo Switch
 # 045e:028e + driver=xpad                      -> modo X-input por cabo
-# 045e:02e0/02fd + hid-microsoft/hid-generic   -> modo X-input por Bluetooth
+# 045e:02e0 + driver=microsoft                 -> modo X-input por Bluetooth
 ```
 
 ```bash
@@ -187,9 +213,19 @@ done
 #   udevadm info /dev/input/eventN
 ```
 
-Detalhe do firmware (**PROVADO**): no bind aparece `unknown main item tag 0x0`
-— descriptor HID malformado, típico de firmware clone; o original não produz
-isso. É contexto, não defeito a consertar.
+**Detalhe do firmware, e ele vale para UM modo, não para o aparelho.** Em
+25/07 apareceu no bind a linha `unknown main item tag 0x0`, de descritor HID
+malformado. **Em modo Switch pelo cabo isso NÃO acontece** — medido em 11/08 por
+duas rotas independentes: o `journalctl -k` do boot inteiro não tem uma única
+linha `unknown main item tag`, e os **203 bytes** do descritor daquele modo
+foram parseados item a item **sem um item malformado** — nem main desconhecido,
+nem item reservado.
+
+Cada modo publica **outro** descritor (o do `054c:05c4` tem **364 bytes**), então
+descritor malformado **não é propriedade "do firmware clone"**: é propriedade de
+um modo. **Em qual modo a linha de 25/07 apareceu não está registrado**, e o
+journal daquele dia não é mais legível — a observação foi real, a generalização
+é que caiu. Nos dois casos é contexto, não defeito a consertar.
 
 ---
 
@@ -201,10 +237,15 @@ isso. É contexto, não defeito a consertar.
 > [A cura do Bluetooth](#-a-cura-do-bluetooth-trocar-de-modo-não-consertar-o-driver-25072026).
 > O que segue continua valendo como diagnóstico de quem insistir no modo Switch.
 
-**PROVADO**: por Bluetooth, em modo Switch, o firmware clone engasga com o
-protocolo de subcommands do `hid-nintendo`; o driver estoura o rate-limiter e
-desiste — o input morre com o link BT ainda de pé (`bluetoothctl` segue
-dizendo `Connected: yes`).
+**PROVADO em 16/07, por Bluetooth e em modo Switch:** o input morre com o link
+BT ainda de pé (`bluetoothctl` segue dizendo `Connected: yes`), e o journal
+traz a cascata abaixo — dezenas de timeouts culminando no rate-limiter do
+`hid-nintendo`, que estoura e desiste.
+
+**O que está medido é a assinatura; a causa é mecanismo, não medição.** A
+leitura de que o firmware do clone não acompanha o ritmo dos subcomandos é a
+explicação com mecanismo mais plausível, e continua sem changelog do fabricante
+nem bancada que a feche. Por **cabo**, no mesmo modo, não há um único timeout.
 
 A assinatura no journal do kernel é a **CASCATA**, na MESMA instância hid:
 
@@ -232,9 +273,23 @@ O `scripts/doctor.sh` faz essa leitura sozinho: se o boot atual tiver a
 cascata, ele imprime o diagnóstico citando a instância; com journal limpo (ou
 só linhas isoladas), fica em silêncio.
 
-O hefesto está fora da cadeia causal (**PROVADO no código**): filtro
-Sony-only no discovery, zero referências a Nintendo/8BitDo em `src/`, e as
-launch options de jogos não participam — as mortes foram em BT, fora de jogo.
+**O hefesto está fora da cadeia causal destas mortes, e a razão não é ausência
+de código.** O `src/` tem hoje mais de uma centena de linhas que falam de
+Nintendo e de 8BitDo — o módulo `core/external_leds.py` é inteiro sobre elas. A
+razão é o **escopo do que ele escreve**, e a superfície de escrita em externo
+são **duas** funções:
+
+- `apply_player_number`, que escreve no `sysfs` de LED e está **desligada**
+  desde 07/08 (`EXTERNAL_PLAYER_LED_ENABLED = False`, em
+  `daemon/subsystems/external_identity.py:194`);
+- `enable_imu`, que escreve no `hidraw` e só é disparada pelo
+  `ExternalImuEnabler` quando a OUI é a do Pro **genuíno** (`e0:f6:b5`) **e** o
+  barramento é **USB**.
+
+Some-se o filtro do discovery, que só adota por VID **e** PID Sony (`054C` com
+`0CE6`/`0DF2`), e as launch options de jogos, que não participam: as mortes
+foram no **rádio**, no clone, e fora de jogo. **PROVADO no código**, com os dois
+caminhos de escrita nomeados acima.
 
 ---
 
@@ -272,9 +327,10 @@ comandos da seção de identificação.
 
 ## Quem segura o hidraw (e por que isso é normal)
 
-**PROVADO**: o Steam mantém aberto o hidraw de TODO controle suportado — o do
-8BitDo E os dos DualSense saudáveis, mesmo com PSSupport desligado. **Fd
-aberto é estado normal, não assinatura de conflito.** A sonda, se quiser ver
+**PROVADO na sessão de 16/07**, com o 8BitDo e os DualSense no rádio: o Steam
+mantém aberto o hidraw de TODO controle suportado — o do 8BitDo E os dos
+DualSense saudáveis, mesmo com PSSupport desligado. **Fd aberto é estado normal,
+não assinatura de conflito.** A sonda, se quiser ver
 com os próprios olhos (só processos seus, sem sudo):
 
 ```bash
@@ -298,5 +354,7 @@ o modo escolhido — não um aviso automático.
   do Steam — quebra em vez de proteger, com efeito colateral no sistema todo.
 - **Não trate "fechar o Steam" como cura**: a morte por BT está provada sem
   Steam rodando.
-- **Não culpe o hefesto nem launch options de jogos**: o daemon é incapaz de
-  abrir devices `057e`, e as mortes aconteceram fora de jogo.
+- **Não culpe o hefesto nem launch options de jogos**: a única escrita do daemon
+  num `057e:2009` é o `enable_imu`, e ela é escopada ao Pro **genuíno** e ao
+  **cabo** — nunca ao clone, nunca no rádio. As mortes aconteceram no rádio e
+  fora de jogo.

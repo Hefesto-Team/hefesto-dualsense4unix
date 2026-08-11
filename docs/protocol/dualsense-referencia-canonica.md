@@ -22,19 +22,43 @@ tomou decisão errada por confundir "documentação de comunidade" com "fato".
 | **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida | o byte de volume do fone |
 | **BAIXA** | inferência ou fonte única | os modos de gatilho "não oficiais" |
 | **MEDIDO AQUI** | conferido nesta máquina, nesta árvore | a curva do volume do alto-falante |
+| **FONTE DESTA MÁQUINA** | lido no fonte que compilou o módulo carregado agora, com `caminho:linha` | o padrão de player LED do jogador 4 |
 
 E a regra que a origina: **medir contra a ferramenta errada produz um resultado
 convincente e falso.** Em 01/08 mediu-se o gamepad virtual contra a `libSDL2`
 do Ubuntu e concluiu-se que ele não entregava nada; a biblioteca que os jogos
 usam entrega tudo. Todo instrumento tem de declarar contra o que mediu.
 
+**A régua de fonte, fixada em 11/08/2026 — toda citação diz contra QUE fonte
+foi feita.** São duas metades:
+
+1. **Fonte externa se cita por tag ou commit, nunca por ramo.** `master` e
+   `main` andam sozinhos, e uma citação de linha contra eles apodrece sem
+   ninguém notar. Toda URL desta página está fixada.
+2. **Afirmação sobre *"o kernel"* diz QUAL kernel.** O que roda aqui é
+   `7.0.11-76070011-generic`, e o `hid-playstation` dele **não é o vanilla**: é
+   o DKMS desta árvore (`assets/dkms/hid-playstation/`), que é o `v7.0.11` do
+   Pop!_OS mais os dois patches desta casa — proveniência e `sha256` conferidos
+   em `assets/dkms/hid-playstation/patch/BASELINE`. É esse arquivo que as
+   linhas **FONTE DESTA MÁQUINA** citam.
+
+**Consequência de grau, e ela derruba linhas que já estiveram escritas aqui:**
+grau herdado de *"o kernel tal faz assim"*, sem o fonte na mão, **não é ALTA**.
+Ou se abre o arquivo e se cita a linha — e aí é FONTE DESTA MÁQUINA — ou o grau
+desce.
+
 ## O que caducou em 11/08/2026 — leia antes de citar esta página
 
 Oito afirmações daqui foram confrontadas **linha a linha contra o código desta
 árvore** em 11/08/2026, a partir das ressalvas do mapa de canais
-(`docs/data/mapa-controles.csv`). **Nada foi apagado:** cada ponto ganhou nota
-datada na sua própria seção, com o `caminho:linha` conferido. Este índice é só
-o atalho.
+(`docs/data/mapa-controles.csv`). Este índice é só o atalho.
+
+**E a segunda passagem do mesmo dia mudou o que se faz com o que caduca**, por
+decisão dela: **fato errado se substitui, decisão medida se data.** Número
+errado não guarda decisão nenhuma — mantê-lo ao lado do certo só obriga a
+próxima pessoa a escolher entre duas afirmações, e ela pode escolher errado. O
+que ganha nota datada é o que, se sumisse, faria alguém repetir trabalho ou
+pagar um custo já pago.
 
 | onde | o que a página dizia | o que vale em 11/08 |
 |---|---|---|
@@ -42,8 +66,8 @@ o atalho.
 | §3 | *"Este projeto escreve só o volume"* | **CADUCOU** — o pré-amp e a rota são escritos desde 01-02/08 |
 | §3 | o áudio por Bluetooth sai no report `0x32` | **CONTRADIÇÃO EM ABERTO** com o `0x39` que o código descreve — **nenhum dos dois medido** |
 | §4 | a decodificação dos modos está curada | `weapon()` e `vibration()` seguem mandando o modo ERRADO pela régua desta própria seção — **não medido** |
-| §5 | player LED P4 = `x-xx-` | **CONTRADIÇÃO doc × código** (o código traz `xx-xx`) — **não medido** |
-| §5 | a taxa do giroscópio, sprint `GYRO-EDGE-RATE-01` | **CONTINUA NÃO MEDIDO** — e a sprint não existe como arquivo |
+| §5 | player LED do jogador 4 | **CORRIGIDO** — é `xx-xx`, pelo fonte do driver desta máquina. O padrão que estava escrito aqui é o de *slot fora da tabela* do código desta casa |
+| §5 | a taxa do giroscópio, *"nunca medida"* | **MEDIDA em 11/08** — cabo 250,0 Hz exatos, rádio variável em rajadas. O que continua aberto é o que o **SDL declara ao jogo**, não o que o aparelho entrega |
 | §6 | *"o gamepad virtual nunca escreve o byte 53"* | **CADUCOU** — escreve desde 09/08, e a conclusão que se tirava dali estava **invertida** |
 | §6 | byte 52 = `ucBatteryLevel` | **INCOMPLETO** — o nibble ALTO é estado de carga, e o código o decodifica em cinco casos |
 
@@ -94,7 +118,8 @@ ATENÇÃO: **Ressalva jurídica, e ela é séria:** o texto é da Sony e está m
 *"SIE CONFIDENTIAL"*. Use como referência de **semântica e faixas**, cite a
 URL — **nunca copie o header para dentro deste repositório.**
 
-Fonte: `https://github.com/rlabrecque/SteamworksSDK/blob/master/public/steam/isteamdualsense.h`
+Fonte, fixada no commit (o repositório não publica tag, e o ramo padrão anda):
+`https://github.com/rlabrecque/SteamworksSDK/blob/df2baabf574a738ef1ea90a7e89339107fc0a279/public/steam/isteamdualsense.h`
 
 ### 1.2. O driver `hid-playstation` — escrito por um funcionário da Sony — ALTA
 
@@ -121,7 +146,12 @@ omissão declarada do driver**, não por acidente. É por isso que eles chegam
 intactos ao `hidraw`.
 
 Fontes: `https://yhbt.net/lore/all/20210117230956.173031-3-roderick@gaikai.com/T/`
-· `https://github.com/torvalds/linux/blob/master/drivers/hid/hid-playstation.c`
+· mainline fixado na tag,
+`https://github.com/torvalds/linux/blob/v7.0/drivers/hid/hid-playstation.c`
+· **e o fonte que roda aqui**, que é o que esta página cita por linha:
+`assets/dkms/hid-playstation/hid-playstation.c` — `v7.0.11` do Pop!_OS
+(`raw.githubusercontent.com/pop-os/linux/3af2f9de43174ce5063110f94b7b01226499ba13/drivers/hid/hid-playstation.c`)
+mais os dois patches desta casa
 
 ### 1.3. O que a Sony publicou para PC — nada de técnico
 
@@ -133,7 +163,10 @@ falando HID cru.
 
 ## 2. O report de saída `0x02` — os 47 bytes do `common`
 
-**Grau: ALTA** (kernel mainline 6.18 + `dualsensectl`, idênticos).
+**Grau: FONTE DESTA MÁQUINA** — a `struct dualsense_output_report_common` do
+driver que roda aqui (`assets/dkms/hid-playstation/hid-playstation.c:320-348`,
+com o `static_assert` de 47 bytes em `:349`) e o `dualsensectl` são idênticos
+campo a campo.
 
 | off | campo | faixa | validado por |
 |---|---|---|---|
@@ -161,10 +194,14 @@ falando HID cru.
 
 **Nota de proveniência que muda o que estava escrito nesta árvore:** o
 `core/ds_output_report.py` marcava `common[4..7]` como *"PROVÁVEL, não medido"*,
-porque o kernel os declarava `reserved`. **Isso caducou:** o Linux 6.18
-(patches da Collabora, tratamento do jack de áudio) **nomeia esses campos
-exatamente assim**. Os bytes 5, 6 e 7 podem ser promovidos a ALTA; o byte 4
-(fone) segue MÉDIA.
+porque o kernel os declarava `reserved`. **Isso caducou**, e a fonte que o
+derruba está no disco: o driver desta máquina **nomeia esses campos exatamente
+assim** — `headphone_volume`, `speaker_volume`, `mic_volume` e `audio_control`
+em `assets/dkms/hid-playstation/hid-playstation.c:329-332`, com os tetos `0x7f`
+e `0x40` escritos no próprio comentário do fonte. (A origem upstream é a série
+do jack de áudio da Collabora, que entrou no 6.18; o que se cita aqui por linha
+é o fonte compilado nesta máquina, não o 6.18.) Os bytes 5, 6 e 7 podem ser
+promovidos a ALTA; o byte 4 (fone) segue MÉDIA.
 
 > **NOTA DATADA — 11/08/2026: o código não tinha acompanhado, e ele se
 > contradizia sozinho.**
@@ -173,8 +210,9 @@ exatamente assim**. Os bytes 5, 6 e 7 podem ser promovidos a ALTA; o byte 4
 > comentário do `core/ds_output_report.py` **ainda** afirmava que o kernel
 > declara `common[4..7]` como `reserved[4]`, que nunca os escreve, e que o
 > mapeamento é PROVÁVEL — enquanto **o mesmo arquivo**, umas dezenas de linhas
-> abaixo, atribuía ao kernel 6.18 os tetos `0x7F` (fone) e `0x40`
-> (microfone). Um comentário negava a fonte que o outro citava.
+> abaixo, atribuía "ao kernel 6.18", sem dizer contra que fonte, os tetos
+> `0x7F` (fone) e `0x40` (microfone). Um comentário negava a fonte que o outro
+> citava, e nenhum dos dois apontava para um arquivo que alguém pudesse abrir.
 >
 > **Curado hoje**, sem tocar em lógica: `core/ds_output_report.py:70-96`. O
 > texto de 01/08 ficou visível ali dentro, riscado por nota, não por deleção.
@@ -184,16 +222,22 @@ exatamente assim**. Os bytes 5, 6 e 7 podem ser promovidos a ALTA; o byte 4
 >
 > | | o CAMPO | o BIT que o autoriza |
 > |---|---|---|
-> | `common[5]` alto-falante | **ALTA** (kernel) | **ALTA** — `SPEAKER_VOLUME_ENABLE` |
-> | `common[6]` microfone | **ALTA** (kernel, com o teto `0x40` no fonte) | **ALTA** — `MIC_VOLUME_ENABLE` |
-> | `common[7]` caminho de áudio | **ALTA** (kernel) | **ALTA** — `AUDIO_CONTROL_ENABLE` |
-> | `common[4]` fone | **ALTA** (kernel, teto `0x7F` no fonte) | **MÉDIA** — o kernel **não** define bit4; o `0x10` desta árvore é de comunidade, e **ninguém mediu o que ele faz** |
+> | `common[5]` alto-falante | **ALTA** — `hid-playstation.c:330` | **ALTA** — `SPEAKER_VOLUME_ENABLE`, `:209` |
+> | `common[6]` microfone | **ALTA** — `:331`, com o teto `0x40` no comentário do fonte | **ALTA** — `MIC_VOLUME_ENABLE`, `:210` |
+> | `common[7]` caminho de áudio | **ALTA** — `:332` | **ALTA** — `AUDIO_CONTROL_ENABLE`, `:211` |
+> | `common[4]` fone | **ALTA** — `:329`, com o teto `0x7f` no comentário do fonte | **MÉDIA** — o driver define enable para os outros três e **nenhum** para o fone; o `0x10` desta árvore é de comunidade, e **ninguém mediu o que ele faz** |
 >
-> **Limite honesto:** o fonte do `hid-playstation` **não foi relido nesta
-> passagem**. A promoção se apoia na fonte já citada na §9 (os patches do jack
-> de áudio, 6.18), no comentário dos tetos deste projeto e no registro do mapa
-> de canais, que leu o kernel desta máquina. Quem quiser o grau MEDIDO AQUI
-> para o bit `0x10` precisa do ensaio da lista final desta página.
+> **A fonte, agora com endereço:** o `hid-playstation` **foi relido em 11/08**,
+> e o que se releu é o desta máquina —
+> `assets/dkms/hid-playstation/hid-playstation.c`, o fonte que compilou o
+> módulo carregado agora. As linhas da tabela acima saem dele. A leitura
+> completa, seção a seção, está em
+> [o driver `hid-playstation` por dentro](driver-hid-playstation.md).
+>
+> **O que a releitura NÃO fecha:** o bit `0x10`. Ele não existe no driver em
+> forma nenhuma, então nenhuma leitura de fonte pode promovê-lo — quem quiser
+> grau MEDIDO AQUI para ele precisa do ensaio da lista final desta página, com
+> headset no jack.
 
 ---
 
@@ -224,8 +268,10 @@ audio_control (byte 7):
 ### O que isso corrige na medição desta casa
 
 Em 01/08 mediu-se a curva do volume do alto-falante: **mudo até 38, satura em
-102** — 60% do curso inerte. A explicação está aqui: o kernel 6.18, para fazer
-o alto-falante soar quando o fone sai, escreve **três** campos:
+102** — 60% do curso inerte. A explicação está aqui: o driver desta máquina,
+para fazer o alto-falante soar quando o fone sai, escreve **três** campos —
+`assets/dkms/hid-playstation/hid-playstation.c:1508-1524`, no ramo `else` da
+borda de `DS_STATUS1_HP_DETECT`:
 
 ```c
 common->audio_control  = FIELD_PREP(...OUTPUT_PATH_SEL, 0x3);   /* a ROTA */
@@ -234,9 +280,10 @@ common->audio_control2 = FIELD_PREP(...SP_PREAMP_GAIN, 0x2);    /* o PRÉ-AMP */
 ```
 
 Este projeto escreve **só o volume**. Os 64 passos úteis são a assinatura de
-estar mexendo em um de três botões — e o `0x64` que o kernel escolhe é
-exatamente o topo da faixa medida aqui. **A medição desta casa e o kernel
-concordam**, e o que falta é o pré-amp e a rota.
+estar mexendo em um de três botões — e o `0x64` que o driver escolhe é
+exatamente o topo da faixa medida aqui. **A medição desta casa e o driver
+concordam**, e o que falta é o pré-amp e a rota. (O comentário do próprio fonte,
+em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 
 > **NOTA DATADA — 11/08/2026: o parágrafo acima descreve o produto de 01/08,
 > e induz a refazer trabalho já feito.**
@@ -312,9 +359,12 @@ concordam**, e o que falta é o pré-amp e a rota.
 - **USB:** placa de áudio comum. Volume em `common[6]`, **máximo 0x40** (não
   0xFF). Caminho e processamento em `audio_control`. Mute em
   `power_save_control` bit4.
-- **Detecção de jack — novidade do 6.18, ALTA:** `DS_STATUS1_HP_DETECT` (bit0)
-  e `DS_STATUS1_MIC_DETECT` (bit1) **no report de entrada, byte 53**. Dá para
-  saber se há fone sem adivinhar.
+- **Detecção de jack — FONTE DESTA MÁQUINA:** `DS_STATUS1_HP_DETECT` (bit0) e
+  `DS_STATUS1_MIC_DETECT` (bit1) **no report de entrada, byte 53**, definidos em
+  `assets/dkms/hid-playstation/hid-playstation.c:177-178` (e o `MIC_MUTE` do
+  bit2 em `:180`). Dá para saber se há fone sem adivinhar. Upstream isto veio
+  com a série do jack de áudio da Collabora, no 6.18; aqui está lido no fonte
+  que compilou o módulo carregado agora.
 - **Bluetooth:** não há A2DP/HFP. Áudio Opus tunelado em HID — **mono, 48 kHz,
   quadros de 10 ms de 71 bytes**, dentro do report `0x31` com o bit1 do byte 1
   ligado. Este projeto já implementa a leitura.
@@ -487,34 +537,85 @@ está certo.
 > comparar eixos das duas linhagens sem converter erra por **2×** no
 > acelerômetro e por cerca de **14×** no giroscópio. GRAU: ALTA.
 
-**Taxas do SDL — e uma divergência a investigar:** DualSense por USB **250 Hz**;
-por Bluetooth **1000 Hz**; **DualSense Edge por USB 1000 Hz**. O gamepad virtual
-deste projeto se declara **Edge** (PID `0x0DF2`) e entrega os ~250 Hz do físico.
-Um jogo que integre velocidade angular pela taxa declarada teria escala 4×
-errada. **Não medido** — sprint `GYRO-EDGE-RATE-01`.
+### As taxas de relatório — o que o APARELHO entrega, medido em 11/08/2026
 
-> **NOTA DATADA — 11/08/2026: continua NÃO MEDIDO, e isto é resultado, não
-> pendência esquecida.**
+**Grau: MEDIDO AQUI.** Antes do número, o que o driver impõe: **nada**. Ele não
+pede taxa nenhuma ao DualSense, nem por cabo nem por rádio — não há campo,
+função nem default no fonte desta máquina. O contraste dentro do mesmo arquivo
+é a prova:
+o **DualShock 4** tem `bt_poll_interval` na struct
+(`assets/dkms/hid-playstation/hid-playstation.c:483-484`, dentro de
+`struct dualshock4` de `:462`), um `dualshock4_set_bt_poll_interval` (`:2873`)
+e um default aplicado na probe (`:3022`); a `struct dualsense` de `:233` **não
+tem equivalente de nada disso**. O que chega é o que o aparelho e o transporte
+decidem, e foi isso que se mediu.
+
+**As réguas, declaradas** — duas, independentes, sobre o nó evdev
+`Motion Sensors`, que emite `MSC_TIMESTAMP` a cada report:
+
+1. **relógio do host** — contagem de `SYN_REPORT` sobre tempo de parede;
+2. **relógio do controle** — média das diferenças de `MSC_TIMESTAMP`, que o
+   driver deriva do `sensor_timestamp` do próprio aparelho. Esta **não depende
+   do agendamento do host**.
+
+**O cabo: 250,0 Hz exatos**, e três fontes independentes concordam.
+
+| o que diz | quem diz |
+|---|---|
+| **250,0 Hz** (4,00 ms; 2501 reports em 10,000 s) | relógio do host |
+| **250,0 Hz** (delta médio 4000,3 us) | relógio do controle |
+| **250 Hz** previstos: `bInterval = 6` nos dois endpoints de interrupção, e em High Speed o intervalo de serviço é `2^5 × 125 us = 4000 us` | o descritor USB |
+
+A terceira nem é medição: é o intervalo de serviço que o endpoint **declara**.
+**Os 250 Hz do cabo estão fechados.**
+
+**O rádio: variável, em rajadas, e nunca 1000 Hz.** Cinco janelas de 8 a 10 s,
+mesmo controle, parado sobre a mesa, e as duas réguas por janela (o traço é
+janela em que aquela régua não foi colhida):
+
+| janela | relógio do host | relógio do controle |
+|---|---|---|
+| 1 (10 s) | 363,3 Hz | — |
+| 2 (10 s) | — | 239,9 Hz |
+| 3 (8 s) | 334,1 Hz | 392,4 Hz |
+| 4 (8 s) | 55,4 Hz | 38,3 Hz |
+| 5 (8 s) | 69,7 Hz | 48,5 Hz |
+
+**O rádio não tem taxa típica.** A média sustentada mais alta foi ~392 Hz e a
+mais baixa ~38 Hz, no mesmo controle, entre janelas consecutivas, sem que nada
+mudasse. E o fluxo é **em rajadas**: o p05 do intervalo é teimosamente 1255 us
+(~797 Hz **instantâneos**) enquanto o p95 chega a 187 ms — dentro da rajada o
+controle é rápido, e o que varia é o silêncio entre rajadas. Quem citar um
+número só para o rádio está citando **uma janela**, não o transporte.
+
+**Os 1000 Hz que o SDL declara para Bluetooth não aparecem em janela nenhuma**,
+nem como média nem como mediana.
+
+A medição completa, com as cinco janelas e as medianas, está em
+[o driver `hid-playstation` por dentro](driver-hid-playstation.md), seção 6.
+
+**O que isto NÃO fecha, e é a divergência que continua aberta:** o SDL
+**declara** DualSense por USB 250 Hz, por Bluetooth 1000 Hz, e **Edge por USB
+1000 Hz**. O gamepad virtual deste projeto se declara **Edge** (`VPAD_PRODUCT =
+0x0DF2`, `integrations/uhid_gamepad.py:123`) e entrega os 250 Hz do físico. Um
+jogo que integre velocidade angular pela taxa declarada teria escala 4× errada.
+O lado do **aparelho** está medido acima; o lado do **SDL** não.
+
+> **NOTA DATADA — 11/08/2026: a régua é metade do ensaio, e ela custou um
+> alarme falso inteiro.**
 >
-> Reconferido hoje, ponto a ponto:
+> A metade que falta só vale medida contra a **SDL3 que a Steam distribui**,
+> que é a biblioteca que os jogos usam — **nunca** contra a `libSDL2` do
+> sistema. Medir contra a biblioteca errada já produziu, nesta casa, um alarme
+> falso inteiro (é a armadilha do topo desta página). Enquanto o número não
+> vier de lá, o grau daquela metade é **BAIXA**, e a frase honesta é *"não
+> medido"*.
 >
-> - **a premissa é ALTA e segue de pé:** o vpad nasce Edge por construção —
->   `VPAD_PRODUCT = 0x0DF2` em `integrations/uhid_gamepad.py:123`, com o
->   fallback de `uinput` espelhando a mesma constante (invariante VPAD-06);
-> - **a taxa NUNCA foi medida**, em transporte nenhum. Não há, nesta árvore,
->   uma única linha que reconcilie a taxa declarada com a real: nem conversão,
->   nem aviso, nem sequer um número guardado. O jogo recebe os dois valores e
->   ninguém os confronta;
-> - **a sprint `GYRO-EDGE-RATE-01` não existe como arquivo.** O nome aparece
->   nesta página, na canônica dos externos e no mapa de canais, e não há
->   documento em `docs/process/sprints/` com ele. Citar uma sprint que não
->   existe faz parecer que alguém está com o trabalho na mão.
->
-> **O ensaio que resolve — e a régua é metade do ensaio:** só vale contra a
-> **SDL3 que a Steam distribui**, que é a biblioteca que os jogos usam. Medir
-> contra a `libSDL2` do sistema já produziu, nesta casa, um alarme falso
-> inteiro (é a armadilha do topo desta página). Enquanto o número não vier de
-> lá, o grau é **BAIXA**, e a frase honesta é *"não medido"*.
+> **`GYRO-EDGE-RATE-01` é NOME DE DIVERGÊNCIA, não sprint.** Não existe
+> arquivo com esse nome em `docs/process/sprints/`, e chamá-lo de sprint faz
+> parecer que alguém está com o trabalho na mão. O apelido está registrado em
+> [divergências nomeadas](../process/DIVERGENCIAS-NOMEADAS.md), que é onde se
+> confere o que cada nome desses quer dizer.
 >
 > **O aparelho vizinho já mostrou que a família de defeito é real:** o Pro
 > **declara** 8 ms no comentário do driver, 15 ms no default, e **entrega**
@@ -527,32 +628,52 @@ errada. **Não medido** — sprint `GYRO-EDGE-RATE-01`.
 **invertida** (`0x80` = sem dedo). Clique é botão. Confirma o que está em
 `core/physical_report_reader.py`.
 
-**Lightbar e player LEDs — ALTA.** `lightbar_setup` bit1 é literalmente o **fade
-out** (confirma a armadilha `LIGHTBAR-BT-KEEPALIVE-01` desta casa).
-`led_brightness` tem 3 níveis. Padrões oficiais do PS5:
-P1 `--x--`, P2 `-x-x-`, P3 `x-x-x`, P4 `x-xx-`, P5 `xxxxx`.
+**Lightbar — ALTA.** `lightbar_setup` bit1 é literalmente o **fade out**
+(confirma a armadilha `LIGHTBAR-BT-KEEPALIVE-01` desta casa). `led_brightness`
+tem 3 níveis.
 
-> **NOTA DATADA — 11/08/2026, ponto 1: o P4 desta linha CONTRADIZ o código, e
-> ninguém olhou o controle.**
+**Os padrões de player LED — FONTE DESTA MÁQUINA.** A tabela sai do driver, em
+`assets/dkms/hid-playstation/hid-playstation.c:1836-1842`, e o comentário logo
+acima (`:1831-1834`) diz de onde ela vem: *"Behavior on the PlayStation 5
+console is to center the player id across the LEDs"*.
+
+| jogador | `player_ids[N]` no fonte | valor | as cinco lâmpadas |
+|---|---|---:|---|
+| P1 | `BIT(2)` | 4 | `--x--` |
+| P2 | `BIT(3) \| BIT(1)` | 10 | `-x-x-` |
+| P3 | `BIT(4) \| BIT(2) \| BIT(0)` | 21 | `x-x-x` |
+| **P4** | `BIT(4) \| BIT(3) \| BIT(1) \| BIT(0)` (`:1840`) | **27** | **`xx-xx`** |
+| P5 | `BIT(4) \| BIT(3) \| BIT(2) \| BIT(1) \| BIT(0)` | 31 | `xxxxx` |
+
+**As cinco figuras são palíndromos.** 4, 10, 21, 27 e 31 leem igual nos dois
+sentidos, então **não há como errar por orientação** — a pergunta *"a figura
+começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
+é uma pergunta mal formulada. Este parágrafo existe para encerrá-la.
+
+> **NOTA DATADA — 11/08/2026: o P4 já custou quatro leituras por olho, e o
+> fonte resolveu em uma. Fica registrado para ninguém repetir o caminho.**
 >
-> | | P1 | P2 | P3 | **P4** | P5 |
-> |---|---|---|---|---|---|
-> | esta página | `--x--` | `-x-x-` | `x-x-x` | **`x-xx-`** | `xxxxx` |
-> | `core/led_control.py:105-114` | `--x--` | `-x-x-` | `x-x-x` | **`xx-xx`** | `xxxxx` |
+> Esta página atribuiu ao jogador 4, até hoje, uma figura que **é de outra
+> coisa**: `x-xx-`, byte a byte o `_PLAYER_LED_OVERFLOW` de
+> `core/led_control.py:119` — o padrão de *"slot fora da tabela"* (≥9),
+> escolhido justamente para **não** se confundir com número de jogador nenhum.
+> Alguém trocou os dois. **O código desta casa sempre esteve certo**
+> (`core/led_control.py:105-114`, com o P4 em `:109`); quem estava errado era
+> a página, e o número saiu.
 >
-> Quatro dos cinco batem. E o `x-xx-` desta página é, **byte a byte**, o
-> `_PLAYER_LED_OVERFLOW` do código (`core/led_control.py:119`) — o padrão de
-> *"slot fora da tabela"*, escolhido para **não** se confundir com nenhum
-> número real. Se a página estiver certa, o jogador 4 e o slot 9 exibem a
-> mesma coisa.
+> **O custo já pago, que é o motivo desta nota existir:** antes de alguém
+> abrir o fonte do driver, houve **quatro tentativas de ler o padrão pelo
+> olho**, e as quatro falharam — porque o que se escreveu no aparelho para
+> "ver o P4" (`0x02`, `0x08`, `0x05`, `0x01`, `0x10`) são valores que a tabela
+> do driver **não produz**. Não se estava olhando o P4; estava-se olhando
+> figuras inventadas. Quem for medir player LED por observação escreve `27`,
+> ou não está medindo o P4.
 >
-> **Nenhum dos dois lados foi medido.** Não subimos nem descemos grau: a
-> linha oficial acima continua declarada como veio, e o código continua como
-> está. **Grau da contradição: BAIXA dos dois lados.**
->
-> **O ensaio que resolve:** olhar o controle. Numerar quatro controles (ou
-> forçar o slot 4) e ver qual das duas figuras acende. É a medição mais barata
-> desta lista, e é do tipo que só o olho dela fecha.
+> **O limite desta resposta, e ele é honesto:** o fonte prova o que o **Linux**
+> manda ao aparelho. Não prova o que o **console PS5** desenha — nenhum
+> PS5 foi observado aqui, e o comentário do driver diz *"follow a similar
+> mapping"*, que é semelhança declarada, não igualdade medida. Para o produto
+> isto não muda nada: o que roda na máquina dela é o Linux.
 >
 > **NOTA DATADA — 11/08/2026, ponto 2: o `lightbar_setup` tem DOIS regimes
 > neste produto, e esta página não os distingue.**
@@ -628,8 +749,11 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > **NOTA DATADA — 11/08/2026: o byte 52 da tabela acima está INCOMPLETO.**
 >
 > A linha diz `ucBatteryLevel` (`nibble*10+5`), e isso descreve só o **nibble
-> baixo**. O **nibble alto é o estado de carga**, o kernel o nomeia, e o
-> código o decodifica em cinco casos
+> baixo**. O **nibble alto é o estado de carga**: o driver desta máquina parte
+> o byte em dois campos nomeados —
+> `assets/dkms/hid-playstation/hid-playstation.c:175-176`,
+> `DS_STATUS0_BATTERY_CAPACITY` = `GENMASK(3, 0)` e `DS_STATUS0_CHARGING` =
+> `GENMASK(7, 4)` — e o código desta casa o decodifica em cinco casos
 > (`core/physical_report_reader.py:392-427`, `decodificar_bateria`):
 >
 > | nibble alto | significa | o que esta árvore faz |
@@ -644,9 +768,14 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > (`integrations/uhid_gamepad.py:1798` `forward_battery`, saindo em `:1726`,
 > offset `_STATUS_OFFSET = 52` em `:504`) — a mesma leva do byte 53.
 >
-> **Grau: ALTA** (a conta é a do `dualsense_parse_report` do kernel 6.18, e o
-> código a aplica nos dois sentidos). **Não medido:** o que o **jogo** faz com
-> o número — nenhum jogo foi observado lendo bateria do vpad.
+> **Grau: FONTE DESTA MÁQUINA** — o `switch` de `charging_status` dentro de
+> `dualsense_parse_report` está em
+> `assets/dkms/hid-playstation/hid-playstation.c:1727-1753`, com o
+> `min(battery_data * 10 + 5, 100)` em `:1733` e `:1737`, e o código desta casa
+> aplica a mesma conta nos dois sentidos. **O grau não é mais herdado de "o
+> kernel 6.18 faz assim":** é o fonte que compilou o módulo carregado agora, com
+> a linha na mão. **Não medido:** o que o **jogo** faz com o número — nenhum
+> jogo foi observado lendo bateria do vpad.
 
 ---
 
@@ -732,7 +861,7 @@ O discriminador que separa os dois casos é limpo:
 
 ## O que continua em aberto por falta de medição — 11/08/2026
 
-Estas seis linhas **não** foram resolvidas na conferência de 11/08, e nenhuma
+Estas cinco linhas **não** foram resolvidas na conferência de 11/08, e nenhuma
 delas se resolve lendo código: cada uma precisa do controle na mão. Estão aqui
 juntas porque é assim que se ataca uma de cada vez, com variável única.
 
@@ -740,13 +869,18 @@ juntas porque é assim que se ataca uma de cada vez, com variável única.
 |---|---|---|---|
 | 1 | o áudio de saída por Bluetooth sai no `0x32` ou no `0x39`? | ler o *report descriptor* por BT e listar os IDs de output com o tamanho declarado — **leitura pura, sem escrita** | §3 |
 | 2 | `weapon()` e `vibration()` fazem alguma coisa no gatilho? | aplicar os dois pela aba Gatilhos, daemon vivo, e perguntar o que o dedo sente | §4 |
-| 3 | o player LED P4 é `x-xx-` ou `xx-xx`? | numerar quatro controles e **olhar** qual figura acende | §5 |
-| 4 | a taxa do giroscópio do vpad Edge: 250 Hz ou 1000 Hz para o jogo? | medir **contra a SDL3 que a Steam distribui** — nunca contra a `libSDL2` do sistema | §5 |
-| 5 | o bit `0x10` (autorização do volume do fone) existe neste firmware? | com headset no jack, variar `common[4]` com e sem o bit e ouvir | §2 |
-| 6 | a curva do volume do alto-falante **com** o pré-amp ligado | refazer a curva pelo caminho de hoje; a de 01/08 mediu um código que não existe mais | §3 |
+| 3 | a taxa que o **SDL declara** ao jogo para o vpad Edge: 250 ou 1000 Hz? | medir **contra a SDL3 que a Steam distribui** — nunca contra a `libSDL2` do sistema. A taxa do **aparelho** já está medida (§5) | §5 |
+| 4 | o bit `0x10` (autorização do volume do fone) existe neste firmware? | com headset no jack, variar `common[4]` com e sem o bit e ouvir | §2 |
+| 5 | a curva do volume do alto-falante **com** o pré-amp ligado | refazer a curva pelo caminho de hoje; a de 01/08 mediu um código que não existe mais | §3 |
 
-O item 4 tem irmão já medido no aparelho vizinho (o Pro declara 8 ms e entrega
-11,2 ms) — ver a
+**Duas perguntas saíram desta lista em 11/08, e é bom saber para onde foram:**
+o padrão do player LED do **jogador 4** foi respondido pelo **fonte do driver**,
+e a §5 traz a tabela e a ressalva do que o fonte não cobre (o console PS5); e a
+**taxa do aparelho** foi medida nos dois transportes, também na §5 — o que
+sobrou dela é a pergunta 3 acima, que é do lado do SDL, não do lado do controle.
+
+A pergunta 3 tem irmão já medido no aparelho vizinho (o Pro declara 8 ms e
+entrega 11,2 ms) — ver a
 [canônica dos externos](externos-referencia-canonica.md), seção 3.5. Isso torna
 a hipótese plausível; **não** a torna provada aqui.
 
@@ -757,11 +891,20 @@ em [paridade Bluetooth × cabo](paridade-bluetooth-versus-cabo.md).
 
 ## 9. Fontes
 
+**Toda URL desta lista está fixada em tag ou commit**, pela régua de fonte do
+topo desta página: `master` e `main` andam, e uma citação de linha contra eles
+apodrece sozinha. Quem acrescentar fonte aqui fixa também.
+
 **Oficiais / semi-oficiais**
-- `isteamdualsense.h` (header da Sony no Steamworks SDK) —
-  `https://github.com/rlabrecque/SteamworksSDK/blob/master/public/steam/isteamdualsense.h`
-- `hid-playstation.c` (kernel, autor da SIE) —
-  `https://github.com/torvalds/linux/blob/master/drivers/hid/hid-playstation.c`
+- `hid-playstation.c` **como roda nesta máquina** — a fonte que esta página
+  cita por linha: `assets/dkms/hid-playstation/hid-playstation.c` desta árvore.
+  Proveniência, `sha256` e a lista de patches em
+  `assets/dkms/hid-playstation/patch/BASELINE`; o vanilla veio de
+  `https://raw.githubusercontent.com/pop-os/linux/3af2f9de43174ce5063110f94b7b01226499ba13/drivers/hid/hid-playstation.c`
+- `isteamdualsense.h` (header da Sony no Steamworks SDK), fixado no commit —
+  `https://github.com/rlabrecque/SteamworksSDK/blob/df2baabf574a738ef1ea90a7e89339107fc0a279/public/steam/isteamdualsense.h`
+- `hid-playstation.c` (kernel mainline, autor da SIE), fixado na tag `v7.0` —
+  `https://github.com/torvalds/linux/blob/v7.0/drivers/hid/hid-playstation.c`
 - Série de patches e cover letters na `linux-input` —
   `https://yhbt.net/lore/all/20210117230956.173031-3-roderick@gaikai.com/T/`
 - Patches do jack de áudio (Collabora, 6.18) —
@@ -775,8 +918,8 @@ em [paridade Bluetooth × cabo](paridade-bluetooth-versus-cabo.md).
 - `dualsensectl` — `https://github.com/nowrep/dualsensectl`
 - Game Controller Collective Wiki —
   `https://controllers.fandom.com/wiki/Sony_DualSense/Data_Structures`
-- `SDL_hidapi_ps5.c` —
-  `https://github.com/libsdl-org/SDL/blob/main/src/joystick/hidapi/SDL_hidapi_ps5.c`
+- `SDL_hidapi_ps5.c`, fixado na tag `release-3.4.14` —
+  `https://github.com/libsdl-org/SDL/blob/release-3.4.14/src/joystick/hidapi/SDL_hidapi_ps5.c`
 - SAxense (haptics por BT) — `https://github.com/egormanga/SAxense`
 - DS5Dongle (mic por BT, fonte canônica) — `https://github.com/awalol/DS5Dongle`
 

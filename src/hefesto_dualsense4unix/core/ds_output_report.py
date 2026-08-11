@@ -89,11 +89,15 @@ VALID_FLAG0_LEFT_TRIGGER_FFB = 0x08
 #: audio_control, e nenhum para o fone. O `0x10` segue sendo de fonte de
 #: COMUNIDADE, grau MÉDIA, e ninguém mediu o que ele faz neste firmware.
 #:
-#: Limite honesto desta nota: o fonte do `hid-playstation` NÃO foi relido
-#: nesta passagem. Ela se apoia no comentário dos tetos, na seção 2 de
-#: `docs/protocol/dualsense-referencia-canonica.md` e no registro do mapa de
-#: canais (`docs/data/mapa-controles.csv`, linha `audio.jack.volume`), que
-#: leu o kernel desta máquina.
+#: Fonte, desde 11/08/2026: o fonte do driver DESTA máquina foi lido linha a
+#: linha — `assets/dkms/hid-playstation/hid-playstation.c:209-211` define os
+#: bits de autorização, e **não define o bit4**. É isso que sustenta o MÉDIA
+#: do fone: o kernel não conhece o `0x10`, então quem o afirma é a comunidade.
+#: A leitura completa está em `docs/protocol/driver-hid-playstation.md`.
+#:
+#: (Até 11/08 esta nota dizia que o fonte "NÃO foi relido nesta passagem" e se
+#: apoiava só no comentário dos tetos. Foi relido; a conclusão não mudou, mas
+#: o grau deixou de ser herdado.)
 VALID_FLAG0_HEADPHONE_VOLUME = 0x10
 VALID_FLAG0_SPEAKER_VOLUME = 0x20
 VALID_FLAG0_MIC_VOLUME = 0x40
