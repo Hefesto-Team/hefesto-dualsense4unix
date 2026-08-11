@@ -1034,3 +1034,67 @@ Os dois botões, para quem for escrever a regra (medido no fonte do driver,
 leitura por `evdev` foi tentada em 11/08 e não capturou nada — ficou pendente,
 e é o que decide se o mapeamento no Linux já está igual ao do Switch ou
 invertido.
+
+### Os dois botões do meio, medidos — e não há o que trocar
+
+Ela perguntou se dava para trocar, por firmware, o botão do coração pelo da
+estrela, *"pra ele sempre funcionar nesse sentido"*. Medido em 11/08/2026, no
+aparelho dela, pelo cabo e em modo Switch (`scripts/ver_botao.py`):
+
+| botão no plástico | evdev | code | o que faz |
+|---|---|---|---|
+| **coração** | `BTN_MODE` | 316 | home |
+| **estrela** | `BTN_Z` | 309 | captura (print) |
+
+**É o mesmo comportamento que ela relata no Switch** — *"o botão coração traz o
+input de home e o botão estrela de print"*. Console e Linux concordam; não há
+divergência de plataforma.
+
+**Mas o pedido dela não era corrigir divergência — era INVERTER os dois**, de
+modo que a **estrela** acione o home e o coração acione o print, e que isso
+valesse **também no Switch**. Registrado com todas as letras porque quem escreve
+isto entendeu errado na primeira leitura e chegou a anotar "não há o que
+corrigir": não há **defeito**, e há um **pedido**, que são coisas diferentes.
+
+**No Switch: não dá.** O mapeamento vive no firmware, e o SN30 Pro de 2018 não
+tem remapeamento persistente — medido por ela: *"8bitdo ultimate software não
+funciona nem a pau no meu controle"*. O Ultimate Software atende os aparelhos
+novos (Ultimate, Pro 2, parte dos Pro+); este modelo era servido pela ferramenta
+antiga, que **atualiza firmware e não remapeia**. Some-se a isso que o `fwupd`
+recusa o aparelho fora do modo bootloader (medido acima), e o caminho de
+firmware fecha por dois lados.
+
+**No Linux dá — mas NÃO por `hwdb`, e isto foi medido antes de escrever o
+arquivo.** O `hwdb` remapeia por `KEYBOARD_KEY_<scancode>`, e este aparelho não
+tem scancode: o `hid-nintendo` chama `input_report_key` direto
+(`assets/dkms/hid-nintendo/hid-nintendo.c:1945`), e o dispositivo declara apenas
+`EV_SYN`, `EV_KEY`, `EV_ABS` e `EV_FF` — **sem `EV_MSC`**. Um arquivo em
+`/etc/udev/hwdb.d/` seria ignorado em silêncio, e quem o escrevesse acharia que
+errou a sintaxe.
+
+**O que funciona é o `input-remapper`**, que intercepta no nível do `evdev` em
+vez do scancode — e ele já está instalado nesta máquina, ativo em três outros
+dispositivos dela. É por interface: escolher o 8BitDo, apertar o botão, dizer o
+que ele passa a emitir, salvar. A troca é `BTN_MODE` <-> `BTN_Z`, e desfazer é
+apagar o preset.
+
+**Cuidado ao escolher o dispositivo:** os dois controles compartilham VID/PID
+(`057e:2009`). O que separa é o `bcdDevice` — `0200` no 8BitDo, `0210` no Pro
+genuíno — ou o endereço, cuja OUI `e0:f6:b5` é da Nintendo. Na lista do
+`input-remapper` os dois aparecem como "Pro Controller"; o do cabo, hoje, é o
+clone.
+
+O que **nada** disto resolve: o comportamento no console, que continua como o
+plástico manda.
+
+Fica registrado porque a pergunta foi feita e porque o caminho até a resposta
+custou quatro tentativas. **O defeito não era do aparelho nem da captura: era
+de sincronia.** As três primeiras tentativas rodaram um leitor por 60 a 180
+segundos e imprimiam "aperte agora" — mas quem opera o terminal só lê essa
+mensagem *depois* que o comando termina. Zero eventos, três vezes, e nenhuma
+conclusão possível.
+
+A cura foi inverter quem dá a partida: `scripts/ver_botao.py` é feito para ELA
+rodar, com o retorno na própria tela no instante do aperto. A quarta tentativa
+levou dez segundos. **A lição vale além deste caso:** medição que depende de a
+pessoa agir dentro de uma janela que ela não enxerga não é medição — é sorte.
