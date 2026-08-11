@@ -489,6 +489,19 @@ class _Janela:
         self._sync = sa.StatusActionsMixin._sync_paineis_no_jogo.__get__(self)
         self._status_card_keys_for = sa.StatusActionsMixin._status_card_keys_for
         self._connected_controllers = sa.StatusActionsMixin._connected_controllers
+        # ABA-DO-JOGO-01 (10/08/2026): o `_sync_paineis_no_jogo` passou a decidir
+        # também a EXISTÊNCIA da aba, uma linha antes do gate de pintura. O
+        # método vem REAL, como todos os outros aqui — e é inócuo nesta bancada
+        # porque o `_get` acima não devolve notebook nenhum e os estados destes
+        # testes não têm a chave `jogo_steam` (que é "não dá para saber", e não
+        # mexe em nada). Quem cobra a visibilidade é a bancada própria dela,
+        # `test_aba_no_jogo_entra_e_sai_da_tira`, com GTK de verdade.
+        self._sync_visibilidade_no_jogo = (
+            sa.StatusActionsMixin._sync_visibilidade_no_jogo.__get__(self)
+        )
+        self._pagina_do_notebook = (
+            sa.StatusActionsMixin._pagina_do_notebook.__get__(self)
+        )
 
     def _get(self, widget_id: str) -> Any:
         return object() if widget_id == "main_notebook" else None

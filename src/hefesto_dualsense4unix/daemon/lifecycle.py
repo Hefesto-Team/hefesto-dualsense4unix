@@ -3642,6 +3642,64 @@ class Daemon:
                     replay()
 
     # ------------------------------------------------------------------
+    # ABA-DO-JOGO-01: há jogo da Steam aberto AGORA? (o fato passa a viajar)
+    # ------------------------------------------------------------------
+
+    #: Task da sonda por jogo da Steam. `pgrep` é subprocesso: um tique que ainda
+    #: não voltou não pode ganhar companhia a cada 2 s. Molde (e ponto de
+    #: cancelamento na saída do poll loop) do `_external_tick_task`.
+    _steam_jogo_task: asyncio.Task[Any] | None = None
+
+    def _schedule_steam_jogo_tick(self) -> None:
+        """Tique lento (~2 s) da pergunta *"há jogo da Steam aberto?"*.
+
+        ABA-DO-JOGO-01 (10/08/2026). Nenhuma capacidade nova: quem responde é a
+        `steam_game_running_appid`, que existe desde 08/08 (RELANCAR-AGORA-01) e
+        até hoje só era chamada por gesto dela, dentro da janela. O que muda é
+        que o fato passa a VIAJAR — o daemon o publica no store, o `state_full` o
+        leva, e a janela deixa de ter que adivinhar.
+
+        **Por que no daemon e não na janela**, que já tem executor próprio: a
+        pergunta é uma varredura de `/proc` e as respostas seriam idênticas em
+        três consumidores (janela, applet, CLI). Uma sonda a 0,5 Hz no daemon
+        serve os três; três sondas a 0,5 Hz cada seriam a mesma resposta paga
+        três vezes.
+
+        **Por que agendado e não `await` inline** (HANG-01, a lição do tique dos
+        externos, escrito duas telas acima): `pgrep` é `fork`+`exec`, e um `fork`
+        que engasga — memória apertada, `/proc` gigante — pendura QUEM ESPERAR.
+        O poll loop é a rota do controle para o jogo e não pode ficar pendurado
+        por uma pergunta de cosmética de aba. Aqui ele só AGENDA; se a sonda
+        anterior não voltou, este tique simplesmente não acontece.
+
+        Falha é silêncio de propósito: sem resposta, `set_steam_jogo_appid` não é
+        chamado, o `steam_jogo_lido` do store fica como está, e a janela mantém a
+        aba exatamente como ela estava. O contrário — tratar "não consegui
+        perguntar" como "não há jogo" — sumiria com a aba debaixo dela no meio da
+        partida, que é o oposto do pedido.
+        """
+        task = self._steam_jogo_task
+        if task is not None and not task.done():
+            return
+        self._steam_jogo_task = asyncio.create_task(
+            self._sondar_steam_jogo(), name="steam_jogo_tick"
+        )
+
+    async def _sondar_steam_jogo(self) -> None:
+        """Corpo da TASK da sonda (ABA-DO-JOGO-01). Ver `_schedule_steam_jogo_tick`."""
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            steam_game_running_appid,
+        )
+
+        try:
+            appid = await self._run_blocking(steam_game_running_appid)
+        except Exception as exc:  # sonda muda: o último fato continua valendo
+            logger.debug("steam_jogo_sonda_falhou", err=str(exc))
+            return
+        with contextlib.suppress(Exception):
+            self.store.set_steam_jogo_appid(appid)
+
+    # ------------------------------------------------------------------
     # Poll loop (permanece aqui: testes fazem monkeypatch de daemon._poll_loop)
     # ------------------------------------------------------------------
 
@@ -3669,6 +3727,11 @@ class Daemon:
         # antes do gate de conexão — o marker do wrapper e a janela do jogo
         # independem do controle estar plugado neste instante.
         game_signal_next_at: float = 0.0
+        # ABA-DO-JOGO-01: sonda por jogo da Steam aberto, no MESMO tick lento e
+        # pela MESMA razão de vir antes do gate de conexão — o jogo dela pode
+        # estar aberto com o DualSense carregando na mesa, e a aba "No jogo" tem
+        # de contar isso do mesmo jeito.
+        steam_jogo_next_at: float = 0.0
         # PROTOCOLO-QUEDA-01: sonda da bateria, no MESMO intervalo do diário
         # (`INTERVALO_SONDA_S`, 30 s) — pedir mais vezes não adiantaria nada: o
         # `DiarioDaBateria.observar` se gateia pelo próprio relógio e devolveria
@@ -3713,6 +3776,11 @@ class Daemon:
             if tick_started >= game_signal_next_at:
                 game_signal_next_at = tick_started + 2.0
                 await self._sync_game_signal()
+            if tick_started >= steam_jogo_next_at:
+                steam_jogo_next_at = tick_started + 2.0
+                # ABA-DO-JOGO-01: AGENDA (não espera) — ver
+                # `_schedule_steam_jogo_tick`, no molde do tique dos externos.
+                self._schedule_steam_jogo_tick()
             if tick_started >= mode_pending_next_at:
                 mode_pending_next_at = tick_started + 1.0
                 # R-03: DEPOIS do `_sync_game_signal` de propósito — a guarda de
@@ -4008,6 +4076,11 @@ class Daemon:
         tick_task = self._external_tick_task
         if tick_task is not None and not tick_task.done():
             tick_task.cancel()
+        # ABA-DO-JOGO-01: a sonda da Steam é agendada pelo mesmo laço e sai pela
+        # mesma porta — best-effort, igual à de cima.
+        steam_task = self._steam_jogo_task
+        if steam_task is not None and not steam_task.done():
+            steam_task.cancel()
 
     # ------------------------------------------------------------------
     # Helpers internos

@@ -1,7 +1,8 @@
 # A janela, aba por aba
 
-A janela principal tem dez abas. Esta página diz o que cada uma faz e o que se
-ajusta nela.
+A janela principal tem dez abas — nove sempre à vista e a **No jogo**, que entra
+na tira quando há um jogo da Steam aberto e sai quando ele fecha (10/08/2026).
+Esta página diz o que cada uma faz e o que se ajusta nela.
 
 > **Sobre as capturas.** Elas são geradas por
 > `scripts/gui-captura/retratar_abas.py` — um comando, sem clique nenhum — e
@@ -74,6 +75,17 @@ o sensor. Nunca aparece um zero fingindo repouso.
 ## No jogo
 
 ![Aba No jogo](assets/readme_no_jogo.png)
+
+> **Esta aba só aparece com um jogo da Steam aberto** (10/08/2026, pedido dela:
+> *"essa aba no jogo só deveria aparecer quando efetivamente eu tivesse com um
+> jogo steam aberto"*). Sem jogo, ela sai da tira — e volta sozinha alguns
+> segundos depois de o jogo abrir, sem clique nenhum. A captura acima é,
+> portanto, o que se vê **jogando**.
+>
+> Se o jogo fechar com você lendo esta aba, a janela leva você para a **Status**
+> antes de a página sumir — é a vizinha, e a outra metade da mesma pergunta.
+> Enquanto o daemon não responde (ele acabou de subir, ou está desligado), a aba
+> fica **como estava**: não pisca.
 
 **Aba nova em 10/08/2026.** A Status responde pelo controle **físico**; esta
 responde pelo que atravessa para o **jogo**. Ela nasceu de um pedido dela, ao

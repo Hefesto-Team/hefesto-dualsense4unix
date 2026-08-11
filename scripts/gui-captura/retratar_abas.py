@@ -335,10 +335,18 @@ def _montar_aba_no_jogo(builder) -> str:  # type: ignore[no-untyped-def]
     da montagem aqui seria um segundo dono do desenho, e a foto passaria a
     mentir no dia em que a `status_actions` mudasse.
 
-    O `_get` devolve `None` para o `main_notebook` de propósito: o gate de "só
-    trabalha com a aba à vista" não tem sentido numa janela offscreen em que
-    TODAS as páginas são fotografadas — é o mesmo escape que a própria mixin já
-    documenta para quem monta sem glade.
+    O `_get` devolve `None` para o `main_notebook` de propósito, e desde a
+    ABA-DO-JOGO-01 (10/08/2026) por DUAS razões, não uma:
+
+    * o gate de "só trabalha com a aba à vista" não tem sentido numa janela
+      offscreen em que TODAS as páginas são fotografadas;
+    * e o gate de EXISTÊNCIA da aba — ela só entra na tira com um jogo da Steam
+      aberto — tiraria da documentação justamente a foto que se quer, que é a
+      da aba **jogando**. Sem notebook, `_pagina_do_notebook` devolve `None` e
+      os dois gates saem do caminho.
+
+    É o mesmo escape que a própria mixin já documenta para quem monta sem glade.
+    Devolver um notebook de verdade aqui apagaria a foto desta aba.
     """
     try:
         from hefesto_dualsense4unix.app.actions.status_actions import (
