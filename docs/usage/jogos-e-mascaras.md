@@ -40,17 +40,31 @@ Input daquele jogo LIGADO**, e o jogo precisa enxergar o **controle físico**.
 
 Como o Hefesto normalmente esconde o hidraw do físico (para o jogo não ver o
 controle duplicado), esses jogos precisam de uma **exceção por jogo** — o botão
-**"Este jogo não funciona"**, na aba **Sistema**. Com a exceção ativa, enquanto
-o jogo está em sessão o físico volta a ficar visível (e o gamepad virtual sai
-de cena: nesse jogo vale só o controle 1, sem co-op).
+**"Este jogo não funciona"**, na aba **Sistema**.
 
-> **NOTA DATADA — 06/08/2026. O parágrafo acima está certo e é a metade da
-> história.** Medido em jogo, com o Mullet Mad Jack aberto: durante a exceção o
-> Hefesto entrega ao jogo a **entrada** (solta o controle físico e tira o
-> virtual de cena), mas **continua escrevendo no seu controle** — a cor que você
-> escolheu **fica**, e a resistência de gatilho que você aplicou **segura**. A
-> exceção **não** cala o Hefesto: ela troca **qual dispositivo o jogo enxerga**,
-> e só isso.
+**O co-op continua funcionando nesses jogos.** A exceção troca *qual* controle o
+jogo enxerga, e não derruba ninguém da partida: o gamepad virtual continua de pé
+e o jogador 2 permanece.
+
+> **NOTA DATADA — 06/08/2026, e metade dela caducou em 09/08.** Medido em jogo,
+> com o Mullet Mad Jack aberto: durante a exceção o Hefesto **continua
+> escrevendo no seu controle** — a cor que você escolheu **fica**, e a
+> resistência de gatilho que você aplicou **segura**. A exceção **não** cala o
+> Hefesto: ela troca **qual dispositivo o jogo enxerga**, e só isso. **Isto
+> continua valendo.**
+>
+> **O que mudou:** naquele dia a exceção soltava o físico e **tirava o virtual
+> de cena** — e era isso que derrubava o jogador 2, com o
+> `coop_derrubado_pela_excecao_steam_input` aparecendo vinte vezes num dia. Em
+> 09/08, por decisão dela, a
+> [ESCONDER-EM-VEZ-DE-SAIR-01](../process/sprints/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md)
+> inverteu o mecanismo: **esconde-se o físico, e o produto FICA**. O duplicado
+> se cura pelos dois lados, e este é o lado que não custa o co-op.
+>
+> A frase antiga — *"nesse jogo vale só o controle 1, sem co-op"* — sobreviveu
+> nesta página por dois dias depois de a cura entrar. Foi achada na varredura de
+> 11/08 e é a razão de o índice daquele dia se chamar
+> [duas verdades no mesmo repositório](../process/sprints/2026-08-11-INDICE-duas-verdades-no-mesmo-repositorio.md).
 >
 > **O critério de quando marcar também mudou de nome.** Esta lista de exceções
 > **não** é "os jogos com DualSense nativo" — é **"os jogos cujo DualSense passa
