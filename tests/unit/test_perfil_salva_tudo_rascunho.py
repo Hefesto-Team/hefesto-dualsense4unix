@@ -73,7 +73,7 @@ def _perfil_com_todas_as_secoes(nome: str = "Pragmata") -> Profile:
             lightbar_brightness=0.5,
             auto_player_colors=False,
         ),
-        rumble=RumbleConfig(passthrough=True, policy="custom", custom_mult=1.5),
+        rumble=RumbleConfig(passthrough=True, policy="custom", custom_mult=0.75),
         key_bindings={"r1": ["KEY_DOT"]},
         mouse=ProfileMouseConfig(enabled=True, speed=9, scroll_speed=3),
         mic=ProfileMicConfig(button_toggles_system=False),

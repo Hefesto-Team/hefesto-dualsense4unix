@@ -21,6 +21,7 @@ from tests.conftest import exigir_gi_real
 # GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
 exigir_gi_real("card único 01")
 
+import math
 from typing import Any
 
 import gi
@@ -44,6 +45,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     ControllerCard,
 )
 from hefesto_dualsense4unix.gui.widgets.stick_preview_gtk import (
+    BORDA_COLOR,
     FUNDO_COLOR,
     StickPreviewGtk,
 )
@@ -423,6 +425,84 @@ def test_o_tamanho_da_marca_dagua_acompanha_o_desenho() -> None:
     assert grande > pequeno * 2, (
         f"a marca d'água rendeu {grande} pixels no desenho grande e "
         f"{pequeno} no pequeno: ela não está acompanhando o tamanho"
+    )
+
+
+#: Fração do raio que delimita o anel onde se procura a "barra quebrada".
+#:
+#: O piso (0,55) fica FORA do maior glifo medido — a marca d'água de "R3" a
+#: 0,95 do raio chega a ~0,50 do raio no canto mais distante — e o teto (0,93)
+#: fica dentro da borda, cujo traço vive entre `raio-1` e `raio+1`. No meio
+#: desse anel, com o stick centrado, não há NADA a pintar.
+ANEL_DA_BARRA = (0.55, 0.93)
+
+#: Tolerância por canal para reconhecer o traço do anel, em 0-255.
+#:
+#: A distinção não é de lugar, é de OPACIDADE, e a folga entre os dois casos é
+#: enorme: o segmento espúrio sai da mesma chamada que a borda, opaco
+#: (`set_source_rgb`, ~153 por canal). Tudo o que pode legitimamente cair no
+#: anel é translúcido sobre o fundo escuro — a marca d'água a 0,3 dá ~74 e a
+#: cruz a 0,35 dá ~79. Vinte de folga separa 153 de 79 sem encostar em nenhum.
+TOLERANCIA_DO_TRACO = 20
+
+
+def _tinta_opaca_da_borda_no_anel(surface: Any, lado: int) -> int:
+    """Quantos pixels do ANEL estão pintados com a borda OPACA.
+
+    Ver `ANEL_DA_BARRA` e `TOLERANCIA_DO_TRACO` para o porquê dos números.
+    """
+    dados = bytes(surface.get_data())
+    stride = surface.get_stride()
+    cx = cy = lado / 2
+    raio = lado / 2 - 4
+    dentro, fora = (f * raio for f in ANEL_DA_BARRA)
+    alvo = tuple(round(c * 255) for c in BORDA_COLOR)
+    tinta = 0
+    for y in range(lado):
+        for x in range(lado):
+            dist = math.hypot(x + 0.5 - cx, y + 0.5 - cy)
+            if not dentro <= dist <= fora:
+                continue
+            base = y * stride + x * 4
+            # ARGB32 em little-endian: os bytes saem B, G, R, A.
+            b, g, r = dados[base], dados[base + 1], dados[base + 2]
+            canais = zip((r, g, b), alvo, strict=True)
+            if all(abs(c - a) <= TOLERANCIA_DO_TRACO for c, a in canais):
+                tinta += 1
+    return tinta
+
+
+@pytest.mark.parametrize("label", ["L3", "R3"])
+@pytest.mark.parametrize("lado", [90, 120, 180])
+def test_a_marca_dagua_nao_deixa_barra_atravessando_o_circulo(
+    label: str, lado: int
+) -> None:
+    """Ela viu e fotografou: uma barra riscando o círculo do L3 e do R3.
+
+    A causa é de ESTADO, não de desenho: `show_text` deixa um ponto corrente
+    no fim do glifo, na baseline. O `ctx.arc` da borda, três linhas adiante,
+    encontra esse ponto e o Cairo o LIGA ao início do arco com um segmento de
+    reta; o `stroke` seguinte pinta o segmento com a cor e a espessura do
+    anel. Por isso a barra sempre saía do meio da letra em direção à direita
+    do círculo — e por isso ela só apareceu quando a marca d'água nasceu
+    (CARD-ÚNICO-01, entrega 3): antes, o `arc` da borda era a primeira coisa
+    a tocar o caminho depois do `paint`, e o caminho estava vazio.
+
+    A medida não é de lugar, é de OPACIDADE: no anel entre a letra e a borda,
+    com o stick centrado, nada legítimo é pintado OPACO. A marca d'água mora
+    em alpha 0,3 e a cruz em 0,35; o segmento espúrio herda o
+    `set_source_rgb` da borda e sai cheio.
+
+    Mordida: arrancar o `ctx.new_path()` de `_desenhar_marca_dagua`. Medido
+    em 10/08/2026: 31/48/63 pixels opacos no anel para "L3" nos três
+    tamanhos, contra 0 com a cura.
+    """
+    barra = _tinta_opaca_da_borda_no_anel(_pintar(label, lado), lado)
+
+    assert barra == 0, (
+        f"{barra} pixels da cor OPACA da borda no anel do desenho {lado}x{lado} "
+        f"de {label!r}: há um traço atravessando o círculo — o ponto corrente "
+        "deixado por `show_text` está sendo ligado ao início do arco da borda"
     )
 
 

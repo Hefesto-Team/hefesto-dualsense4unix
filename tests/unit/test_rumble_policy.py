@@ -356,14 +356,27 @@ class TestIpcHandlers:
         with pytest.raises(ValueError, match="fora de"):
             asyncio.run(server._handle_rumble_policy_custom({"mult": 2.5}))
 
-    def test_policy_custom_amplificado_e_aceito(self) -> None:
-        """150% no slider = mult 1.5 — o que a UI oferece, o daemon aceita."""
+    def test_policy_custom_no_teto_e_aceito(self) -> None:
+        """O TOPO do slider é aceito pelo daemon — a invariante é essa.
+
+        SATURA-01 (11/08/2026): o teste chamava-se "amplificado" e travava o
+        1.5 como número literal, porque o slider ia a 200%. O teto voltou a
+        100% (medido: acima disso metade da faixa do jogo satura em 255 e a
+        vibração perde a variação), e o valor passou a sair do dono único —
+        `RUMBLE_CUSTOM_MULT_MAX` no esquema. Assim o teste continua provando o
+        que importa, "o que a UI oferece, o daemon aceita", e não precisa ser
+        reescrito na próxima vez que o teto mudar.
+        """
+        from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
+
         server, cfg = self._make_server()
 
-        result = asyncio.run(server._handle_rumble_policy_custom({"mult": 1.5}))
+        result = asyncio.run(
+            server._handle_rumble_policy_custom({"mult": RUMBLE_CUSTOM_MULT_MAX})
+        )
 
-        assert result["mult"] == 1.5
-        assert cfg.rumble_policy_custom_mult == 1.5
+        assert result["mult"] == RUMBLE_CUSTOM_MULT_MAX
+        assert cfg.rumble_policy_custom_mult == RUMBLE_CUSTOM_MULT_MAX
 
     def test_policy_auto(self) -> None:
         server, cfg = self._make_server()

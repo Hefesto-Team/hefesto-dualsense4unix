@@ -158,6 +158,13 @@ if _GTK_DISPONIVEL:
                 cy - ext.height / 2 - ext.y_bearing,
             )
             ctx.show_text(self._label)  # type: ignore[attr-defined]
+            # `show_text` deixa um PONTO CORRENTE no fim do glifo, na baseline.
+            # O próximo `ctx.arc` da borda encontraria esse ponto e o Cairo o
+            # LIGARIA ao início do arco com um segmento de reta — o `stroke`
+            # seguinte pintava essa "barra quebrada" atravessando o círculo,
+            # com a cor e a espessura do anel. Quem suja o caminho é quem
+            # limpa: o estado do contexto sai daqui como entrou.
+            ctx.new_path()  # type: ignore[attr-defined]
 
         def _on_draw(self, _widget: Gtk.DrawingArea, ctx: object) -> bool:
             """Callback de desenho cairo."""
