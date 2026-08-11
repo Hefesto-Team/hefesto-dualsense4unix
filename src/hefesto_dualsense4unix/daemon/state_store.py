@@ -180,6 +180,23 @@ class StateStore:
         # `Sackboy` medidos em 08/08), então NÃO se force o restore: o que falta
         # é dizer a verdade enquanto a espera dura.
         self._perfil_adiado_por_janela: str | None = None
+        # ABA-DO-JOGO-01 (10/08/2026): há jogo da Steam aberto AGORA, e qual.
+        # Pedido dela, literal: *"essa aba no jogo só deveria aparecer quando
+        # efetivamente eu tivesse com um jogo steam aberto"*.
+        #
+        # O par é um TRI-ESTADO de propósito, e o `_lido` é a peça que não pode
+        # ser cortada por parecer redundante: "ainda não perguntei" e "perguntei
+        # e não há jogo" respondem a MESMA pergunta com o mesmo `appid=None`, e
+        # quem lê precisa contar a diferença. Sem ele a janela esconderia a aba
+        # no instante em que o daemon sobe — inclusive com o jogo dela aberto —
+        # e a devolveria dois segundos depois, na primeira sonda: a aba piscando
+        # a cada restart do daemon, que é ruído nascido de uma cura.
+        #
+        # Nada de sticky: `set_steam_jogo_appid` é o dono único das duas linhas,
+        # e uma leitura que FALHA não escreve nada (ver `lifecycle`) — o último
+        # fato conhecido vale até a próxima resposta, nunca até o próximo susto.
+        self._steam_jogo_appid: int | None = None
+        self._steam_jogo_lido: bool = False
 
     # --- escritas ------------------------------------------------------
 
@@ -216,6 +233,26 @@ class StateStore:
         """
         with self._lock:
             self._perfil_adiado_por_janela = name or None
+
+    def set_steam_jogo_appid(self, appid: int | None) -> None:
+        """Publica o resultado de UMA sonda por jogo da Steam aberto.
+
+        ABA-DO-JOGO-01. `appid` inteiro = há jogo, e é este; `None` = **sondei e
+        não há jogo**. Os dois marcam `_lido`, e é essa marcação que transforma o
+        `None` de "ainda não sei" em resposta — quem não conseguiu sondar
+        simplesmente NÃO chama isto (`lifecycle._sync_steam_jogo_aberto` engole a
+        falha), e o último fato conhecido continua valendo.
+
+        Molde do `set_perfil_adiado_por_janela` acima, e pela mesma razão: quem
+        escreve é o tique lento do daemon, quem lê é o `state_full` a 10 Hz —
+        duas threads que só se encontram pelo store, então a escrita é sob lock.
+        """
+        with self._lock:
+            self._steam_jogo_appid = (
+                int(appid) if isinstance(appid, int) and not isinstance(appid, bool)
+                else None
+            )
+            self._steam_jogo_lido = True
 
     def bump(self, counter: str, delta: int = 1) -> int:
         with self._lock:
@@ -476,6 +513,27 @@ class StateStore:
         """
         with self._lock:
             return self._perfil_adiado_por_janela
+
+    @property
+    def steam_jogo_appid(self) -> int | None:
+        """Appid do jogo da Steam aberto AGORA. Só vale com `steam_jogo_lido`.
+
+        ABA-DO-JOGO-01. Ler este sozinho é o erro que o par existe para impedir:
+        `None` aqui é "não há jogo" OU "ninguém sondou ainda", e as duas mandam
+        a janela fazer coisas opostas.
+        """
+        with self._lock:
+            return self._steam_jogo_appid
+
+    @property
+    def steam_jogo_lido(self) -> bool:
+        """True depois da PRIMEIRA sonda bem-sucedida por jogo da Steam.
+
+        ABA-DO-JOGO-01. Não volta para False: uma sonda que falha não apaga o
+        que já se sabia (ver `set_steam_jogo_appid`).
+        """
+        with self._lock:
+            return self._steam_jogo_lido
 
     @property
     def last_battery_pct(self) -> int | None:

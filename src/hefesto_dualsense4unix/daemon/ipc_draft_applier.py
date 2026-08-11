@@ -312,6 +312,113 @@ class DraftApplier:
             reset(specs or None)
         for uniq, spec in specs.items():
             self.controller.apply_output_for(uniq, spec)
+        # POR-UNIDADE-01 (10/08/2026): vibração e som da PEÇA. Ficam FORA do
+        # `OutputSpec` de propósito — não são output persistente do controle
+        # (o rumble é transitório; o áudio tem posse própria), e empurrá-los
+        # para dentro do spec faria o reassert de hotplug re-vibrar o que já
+        # passou. Cada um segue a sua rota por-uniq, que já existia.
+        self._publicar_escalas_de_vibracao(raw)
+        self._escrever_alto_falantes_por_unidade(raw)
+
+    def _publicar_escalas_de_vibracao(self, raw: dict[str, Any]) -> None:
+        """Publica a escala de vibração por peça no backend (POR-UNIDADE-01).
+
+        SUBSTITUI o mapa inteiro, como o ``reset_output_overrides`` acima e
+        pela mesma razão: intensidade que ela TIROU de um controle na janela
+        (a peça voltou ao global e sumiu do payload) tem de sumir do backend
+        no mesmo "Aplicar", senão continuaria valendo até a próxima troca de
+        perfil e a tela mentiria.
+
+        O fator é RELATIVO à política global vigente no daemon — o mesmo
+        denominador que ``_controllers_to_rumble_scales`` usa na ativação,
+        porque o valor que chega ao ``set_rumble`` já vem escalado por ela
+        (``apply_rumble_policy``). Sem daemon (CLI/testes), o denominador é o
+        ``balanceado`` padrão.
+        """
+        from hefesto_dualsense4unix.profiles.manager import (
+            _RUMBLE_POLICY_PADRAO,
+            _mult_da_politica,
+        )
+
+        escalar = getattr(self.controller, "set_rumble_scales", None)
+        if not callable(escalar):
+            return
+        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        policy_global = (
+            getattr(daemon_cfg, "rumble_policy", None) or _RUMBLE_POLICY_PADRAO
+        )
+        base = _mult_da_politica(
+            policy_global, getattr(daemon_cfg, "rumble_policy_custom_mult", None)
+        )
+        escalas: dict[str, float] = {}
+        for uniq, entry in raw.items():
+            rumble_raw = entry.get("rumble") if isinstance(entry, dict) else None
+            if not isinstance(rumble_raw, dict):
+                continue
+            mult = _mult_da_politica(
+                rumble_raw.get("policy"), rumble_raw.get("custom_mult")
+            )
+            if mult is None or base is None or base <= 0.0:
+                # Global em `auto` (denominador móvel) ou política que não vira
+                # número: a peça fica com o global. Ver a docstring do irmão em
+                # `profiles/manager.py` — prometer um fator contra denominador
+                # móvel seria pior do que não entregar.
+                continue
+            fator = mult / base
+            if fator != 1.0:
+                escalas[str(uniq)] = fator
+        escalar(escalas or None)
+
+    def _escrever_alto_falantes_por_unidade(self, raw: dict[str, Any]) -> None:
+        """Aplica o alto-falante de cada peça (POR-UNIDADE-01).
+
+        Rota por-``uniq`` que já existia e nunca fora ligada pelo perfil:
+        ``set_speaker_volume(volume, muted=..., uniq=..., rota=...)``. Fala
+        DIRETO com o backend, e não pelo ``speaker.set`` do IPC, pela mesma
+        razão de ``lifecycle.apply_profile_speaker``: aquele handler arma a
+        trava manual da categoria ``"audio"``, e um "Aplicar" que a armasse
+        faria todo "Aplicar" seguinte ser descartado em silêncio.
+
+        Sem broadcast e sem ``None``: seção ausente é ausência de opinião, e
+        nunca escrever é o que impede tomar a posse dos bytes de áudio de uma
+        peça que ninguém pediu (SOM-02, armadilha 1).
+        """
+        setter = getattr(self.controller, "set_speaker_volume", None)
+        if not callable(setter):
+            return
+        for uniq, entry in raw.items():
+            speaker_raw = entry.get("speaker") if isinstance(entry, dict) else None
+            if not isinstance(speaker_raw, dict):
+                continue
+            volume = speaker_raw.get("volume")
+            if not isinstance(volume, int) or isinstance(volume, bool):
+                raise ValueError(
+                    f"controllers[{uniq!r}].speaker.volume precisa ser int 0-255"
+                )
+            if not (0 <= volume <= 255):
+                raise ValueError(
+                    f"controllers[{uniq!r}].speaker.volume fora de 0-255"
+                )
+            muted = speaker_raw.get("muted", False)
+            if not isinstance(muted, bool):
+                raise ValueError(
+                    f"controllers[{uniq!r}].speaker.muted precisa ser booleano"
+                )
+            rota = speaker_raw.get("rota")
+            if rota is not None and (
+                not isinstance(rota, int) or isinstance(rota, bool) or not (0 <= rota <= 3)
+            ):
+                raise ValueError(
+                    f"controllers[{uniq!r}].speaker.rota precisa ser int 0-3"
+                )
+            try:
+                setter(volume, muted=muted, uniq=str(uniq), rota=rota)
+            except Exception as exc:
+                logger.warning(
+                    "apply_draft_speaker_por_unidade_falhou",
+                    uniq=str(uniq),
+                    erro=str(exc),
+                )
 
     def _controller_override_spec(
         self, entry: dict[str, Any], uniq: str

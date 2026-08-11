@@ -194,7 +194,8 @@ A segunda pergunta que a janela responde tem aba própria desde 10/08/2026: a
 **No jogo** mostra, recurso por recurso e com a linha sempre na mesma posição,
 o que está atravessando para o jogo — giroscópio, vibração, gatilho, luz,
 clique do touchpad e som do controle. A **Status** responde pelo controle
-**físico**; a **No jogo**, pelo que o jogo recebe.
+**físico**; a **No jogo**, pelo que o jogo recebe. Ela **só aparece com um jogo
+da Steam aberto**: entra na tira quando o jogo abre e sai quando ele fecha.
 
 As outras oito abas — Status, Gatilhos, Lightbar, Rumble, Perfis, Sistema,
 Emulação e Navegação — estão descritas uma a uma em

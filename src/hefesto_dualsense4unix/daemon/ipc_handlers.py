@@ -1766,6 +1766,28 @@ class IpcHandlersMixin:
             ),
         }
 
+    def _jogo_steam_payload(self) -> dict[str, Any]:
+        """Bloco `jogo_steam` do `state_full` — o TRI-ESTADO, inteiro.
+
+        ABA-DO-JOGO-01. `lido` é a peça que não pode faltar: sem ela, `appid:
+        null` responderia "não há jogo" e "o daemon acabou de subir e ainda não
+        perguntou" com a mesma palavra, e a aba "No jogo" piscaria a cada
+        restart do daemon (ver `StateStore.set_steam_jogo_appid`).
+
+        Coerção defensiva nos dois campos, e ela é o de sempre nesta função:
+        store dublado por `MagicMock` devolve um mock para qualquer atributo, e
+        um mock no `result` estoura na serialização JSON do IPC — não aqui, mas
+        no cliente, que é onde o defeito fica caro de achar.
+        """
+        lido = getattr(self.store, "steam_jogo_lido", None) is True
+        appid_raw = getattr(self.store, "steam_jogo_appid", None)
+        appid = (
+            int(appid_raw)
+            if isinstance(appid_raw, int) and not isinstance(appid_raw, bool)
+            else None
+        )
+        return {"lido": lido, "appid": appid if lido else None}
+
     def _window_detect_payload(self) -> dict[str, Any]:
         """Bloco `window_detect_*` publicado por `state_full` e `daemon.status`.
 
@@ -1989,6 +2011,18 @@ class IpcHandlersMixin:
         # a mesma leitura que o `defend_display`/merge-gate do backend usam,
         # SÓ exposição (nunca decide nada aqui).
         result["game_signal"] = self._game_signal_snapshot()
+
+        # ABA-DO-JOGO-01 (10/08/2026): há jogo da Steam aberto AGORA, e qual.
+        # Vem do store (sonda de 0,5 Hz do poll loop), NUNCA de um `pgrep` daqui
+        # — este handler roda a 10 Hz e um subprocesso por chamada seria o poller
+        # cego que esta casa já pagou uma vez.
+        #
+        # As duas chaves são o TRI-ESTADO inteiro, e viajam juntas de propósito
+        # (ver `StateStore.set_steam_jogo_appid`): `lido=false` é "o daemon ainda
+        # não perguntou", e é diferente de `lido=true, appid=null`, que é "não há
+        # jogo". Quem consome — a visibilidade da aba "No jogo" — faz coisas
+        # opostas nos dois casos.
+        result["jogo_steam"] = self._jogo_steam_payload()
 
         # FEAT-DSX-MULTI-CONTROLLER-01: lista de controles conectados (uma entrada
         # por controle físico, com transporte e qual é o primário) para a GUI, o
@@ -3761,7 +3795,12 @@ class IpcHandlersMixin:
 
         Params:
             enabled: bool (obrigatório)
-            flavor: "dualsense" | "xbox" (opcional; mantém o atual se ausente)
+            flavor: "dualsense" | "xbox" e os sinônimos de
+                `uinput_gamepad.FLAVOR_SINONIMOS` ("sony", "ps5", "ps",
+                "playstation", "ds", "xbox360", "x360", "xinput") — opcional;
+                ausente mantém a máscara atual. Nome fora dessa lista é
+                **recusado** (`ValueError` → `invalid params`), nunca convertido
+                em xbox por default (ver o comentário no corpo).
 
         Achado Onda S #6 — decisão registrada (desenho §9): o setter continua
         sendo chamado direto (síncrono) porque a parte BLOQUEANTE da cadeia —
@@ -3779,6 +3818,39 @@ class IpcHandlersMixin:
         flavor = params.get("flavor")
         if flavor is not None and not isinstance(flavor, str):
             raise ValueError("gamepad.emulation.set: 'flavor' precisa ser string")
+        if flavor is not None:
+            # NOME DESCONHECIDO É ERRO, NÃO DEFAULT (10/08/2026).
+            #
+            # Aqui embaixo o `normalize_flavor` é TOLERANTE: o que ele não
+            # reconhece vira `DEFAULT_FLAVOR` == "xbox". Medido em runtime:
+            # `--flavor sony` (a palavra dela) e `--flavor nintendo` chegavam ao
+            # vpad como Xbox — a máscara OPOSTA à pedida no primeiro caso —, o
+            # daemon respondia `status: "ok"` e devolvia `flavor: "xbox"` como se
+            # fosse o pedido atendido. "sony"/"ps5" viraram sinônimos legítimos
+            # (`FLAVOR_SINONIMOS`); o resto tem de RECUSAR em voz alta, senão a
+            # tolerância do normalizador segue transformando erro de digitação em
+            # troca silenciosa de máscara. Mesma lição do `or "xbox"` do editor de
+            # perfis (ESCOLHE-DELA-VENCE-01, E1) e da `normalizar_mascara`
+            # estrita do `external_mask`.
+            #
+            # A recusa vive AQUI, no portão de entrada de gente (GUI/CLI/applet
+            # falam por este método), e não dentro do `normalize_flavor`: os
+            # chamadores internos DEPENDEM do fallback — `uhid_gamepad.for_flavor`
+            # lê "não é dualsense, logo não é meu" do default xbox, e
+            # `coop`/`gamepad`/`virtual_pad` precisam de uma máscara sempre, até
+            # com config de disco corrompida. Endurecer o normalizador quebraria
+            # esses caminhos; endurecer o portão não toca em nenhum.
+            from hefesto_dualsense4unix.integrations.uinput_gamepad import (
+                nomes_de_flavor_aceitos,
+                resolver_flavor,
+            )
+
+            if resolver_flavor(flavor) is None:
+                aceitos = ", ".join(nomes_de_flavor_aceitos())
+                raise ValueError(
+                    f"gamepad.emulation.set: máscara desconhecida {flavor!r} — "
+                    f"aceito: {aceitos}"
+                )
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar o gamepad virtual")
 
