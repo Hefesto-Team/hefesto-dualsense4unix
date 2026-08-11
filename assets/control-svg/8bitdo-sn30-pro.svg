@@ -239,6 +239,24 @@
       <title>ZR (face traseira)</title>
   </g>
 
+  <!-- LOCALIZADO em 11/08/2026, por FOTO DELA do próprio aparelho. Este grupo
+       NÃO EXISTIA: o desenho não tinha peça nenhuma para os LED de jogador do
+       SN30, e o mapa por isso nem sabia perguntar por eles. A foto mostra
+       quatro LED numa faixa recuada na aresta frontal, entre os grips, com
+       três acesos e um apagado.
+       Geometria tirada dos marcos do próprio desenho, não de chute: o ombro L
+       ocupa x 55..163 e o R ocupa x 337..445, deixando o vão em x 163..337
+       (centro 250); a aresta superior do corpo está em y 75. Coordenadas em
+       espaço de viewBox, como os grupos vizinhos (o translate da raiz fecha
+       antes daqui). -->
+  <g id="led-jogador" data-feature="led-jogador" data-posicao="aresta-frontal-centro">
+      <title>Indicador de jogador (quatro LED, aresta frontal, entre os grips)</title>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="2.5" x="219" y="80" width="11" height="8" rx="1.5"/>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="2.5" x="236" y="80" width="11" height="8" rx="1.5"/>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="2.5" x="253" y="80" width="11" height="8" rx="1.5"/>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="2.5" x="270" y="80" width="11" height="8" rx="1.5"/>
+  </g>
+
   <g id="feat-rumble" class="oculta" data-feature="rumble">
       <title>Vibração</title>
       <ellipse cx="120" cy="200" rx="40" ry="40" fill="none" stroke="#bd93f9" stroke-width="3.9" stroke-dasharray="9 7"/>
