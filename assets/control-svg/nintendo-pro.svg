@@ -123,13 +123,23 @@
       <title>D-pad Direita</title><rect class="regiao" x="36.54" y="47.67" width="5.18" height="5.18"/>
   </g>
 
-  <!-- POSIÇÃO NÃO LOCALIZADA: que os quatro LED de jogador existem no plástico
-       está registrado (observação dela, externos-referencia-canonica.md:751);
-       ONDE ficam não está escrito em lugar nenhum do repositório. O grupo
-       existe para o mapa saber que a feature existe; não desenho posição
-       inventada, porque mapa serve para orientar. Uma foto dela fecha isto. -->
-  <g id="led-jogador" data-feature="led-jogador" data-posicao="nao-localizada">
-      <title>Indicador de jogador (posição a confirmar)</title>
+  <!-- POSIÇÃO LOCALIZADA em 11/08/2026, por FOTO DELA do próprio aparelho:
+       quatro LED numa faixa recuada na aresta frontal, entre os grips, no vão
+       que os ombros deixam. Na foto, os dois da esquerda acesos e os dois da
+       direita apagados — o padrão de jogador 2.
+       A geometria não é chute: ZL/L ocupam x 19..39 e ZR/R ocupam x 61..81, o
+       que deixa o vão em x 39..61 (centro 50); a aresta superior do corpo, no
+       trecho horizontal, está em y 20.5. Os quatro cabem centrados nisso.
+       Ela descreveu como "parte de baixo" porque no aparelho na mão a faixa
+       fica na aba inferior da aresta frontal; numa vista de cima, que é esta,
+       a mesma aba projeta no topo, entre os ombros. As duas leituras concordam
+       sobre QUAL extremidade — e é a extremidade que importa para o mapa. -->
+  <g id="led-jogador" data-feature="led-jogador" data-posicao="aresta-frontal-centro">
+      <title>Indicador de jogador (quatro LED, aresta frontal, entre os grips)</title>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.4" x="43.8" y="22.2" width="2.2" height="1.5" rx="0.3"/>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.4" x="47.2" y="22.2" width="2.2" height="1.5" rx="0.3"/>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.4" x="50.6" y="22.2" width="2.2" height="1.5" rx="0.3"/>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.4" x="54.0" y="22.2" width="2.2" height="1.5" rx="0.3"/>
   </g>
 
   <g id="feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo">
