@@ -298,8 +298,9 @@ hefesto-dualsense4unix gamepad status
   jogador). O `on` reconcilia os jogadores agora; o `status` conta quantos há.
   **`coop off` não desliga mais** (06/08/2026): ele explica por quê e sai com
   código 2. Cada controle conectado é um jogador, sempre — quem quer um controle
-  de reserva o deixa desconectado. O co-op ainda sai de cena sozinho nos jogos
-  com exceção de Steam Input, e volta quando o jogo fecha.
+  de reserva o deixa desconectado. Nos jogos com exceção de Steam Input o co-op
+  **continua de pé**: desde 09/08/2026 a exceção esconde o controle físico e
+  mantém os virtuais, então o jogador 2 não cai.
 
   > **NOTA DATADA — 06/08/2026: "cada controle = um jogador" vale para
   > DualSense.** A frase fica registrada porque decisão medida não se apaga.

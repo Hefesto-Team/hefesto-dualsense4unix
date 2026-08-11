@@ -336,7 +336,10 @@ identidades e níveis de prova em
 **A validação em hardware é de uma máquina só.** Pop!\_OS 24.04 com COSMIC é o
 ambiente onde tudo é medido. Ubuntu tem cobertura de integração contínua, sem
 hardware. Fedora, Arch, Debian e Mint têm pacotes mantidos, mas **nenhum foi
-rodado com controle real** nesta linha.
+rodado com controle real** nesta linha. A versão exata de cada peça dessa
+bancada — kernel, Python, BlueZ, GTK —, a faixa que o produto confere sozinho e
+o que **não** foi testado estão em
+[as versões em que isto funciona](docs/usage/versoes-validadas.md).
 
 **A troca automática de perfil não vê janelas Wayland nativas.** No COSMIC, o
 portal ainda não expõe a janela ativa, então o reconhecimento cobre o que roda
@@ -372,6 +375,8 @@ prática, subir as métricas exige mexer no código. Ver
 
 - **Primeiros passos:** [docs/usage/quickstart.md](docs/usage/quickstart.md)
 - **Instalação em detalhe:** [docs/usage/instalacao.md](docs/usage/instalacao.md)
+- **As versões em que isto funciona:**
+  [docs/usage/versoes-validadas.md](docs/usage/versoes-validadas.md)
 - **A janela, aba por aba:** [docs/usage/interface.md](docs/usage/interface.md)
 - **Os três modos e a máscara:** [docs/usage/modos.md](docs/usage/modos.md)
 - **Perfis:** [docs/usage/creating-profiles.md](docs/usage/creating-profiles.md)

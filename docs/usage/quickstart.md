@@ -7,9 +7,16 @@ está nas páginas apontadas no fim de cada seção.
 
 ## 1. Antes de começar
 
-- **Linux com `systemd-logind`** (Pop!_OS, Ubuntu, Fedora, Arch, Debian, Mint).
+- **Linux com `systemd-logind`.** O caminho deste guia — o `install.sh` na forma
+  `native` — instala dependências **só por `apt`**: família Debian, e é ela que
+  este guia cobre (Pop!\_OS, Ubuntu, Debian, Mint). Em Fedora, Arch ou Nix há
+  pacote da distro, e **nenhum foi rodado com controle real**; o instalador
+  avisa isso logo no passo 1 e não aborta.
 - **Python 3.10 ou maior**.
 - **DualSense** (PS5) ou **DualSense Edge**, por USB ou Bluetooth.
+
+O que rodou de verdade, e em que versão de cada peça, está em
+[as versões em que isto funciona](versoes-validadas.md).
 
 Bibliotecas do sistema (uma vez):
 
