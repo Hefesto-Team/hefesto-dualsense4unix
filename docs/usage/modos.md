@@ -108,9 +108,44 @@ físico e espelhado no virtual, para o jogo receber a mira por movimento.
 > fecha.
 >
 > **A vibração é a exceção, e nela você vence:** com uma vibração fixada por
-> você, o Hefesto **ignora** a do jogo; sem ela, a do jogo passa pelo seu
-> controle deslizante de intensidade. Registro em
+> você, o Hefesto **ignora** a do jogo. Registro em
 > [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
+
+A **intensidade** da aba Rumble vale para as duas vibrações, e não só para a do
+jogo — este texto dizia que ela só valia sem vibração fixada, e o rodapé da
+própria aba dizia o contrário (*"os valores acima ainda passam pela intensidade
+escolhida ali em cima"*). Quem tem razão é o rodapé, e são três caminhos no
+código, todos com a mesma conta `bruto × intensidade`, saturando em 255:
+
+| o que vibra | onde a intensidade entra |
+|---|---|
+| o que o **jogo** pede | `daemon/subsystems/gamepad.py`, `apply_game_rumble` |
+| o que **você fixa** em "Testar motores" | `daemon/ipc_handlers.py`, `_handle_rumble_set` |
+| o mesmo, re-afirmado a cada 200 ms | `daemon/subsystems/rumble.py`, `reassert_rumble` |
+
+A diferença entre eles é outra, e é a que importa aqui: **o do jogo só existe
+quando existe controle virtual.** Ele mora no caminho de saída do gamepad
+virtual; na Conexão Nativa (Sony) não há gamepad virtual nenhum, e a intensidade
+não alcança a vibração do jogo — que sai direto do DualSense, sem nós no meio.
+Nesses casos a aba Rumble avisa em cima dos quatro botões, em vez de deixar você
+mexer num controle deslizante que não está ligado a nada.
+
+> **NOTA DATADA — 11/08/2026: nesse mesmo estado a vibração do jogo não só
+> escapava da intensidade — ela MORRIA.** Sem controle virtual e fora da Conexão
+> Nativa, o jogo escreve a vibração no DualSense físico, e o Hefesto
+> reconfirmava o estado daquele controle a cada meio segundo **zerando os
+> motores** que o jogo tinha acabado de ligar. **GRAU: MEDIDO** com quatro
+> DualSense na mesa, dois no cabo e dois no rádio: com o serviço vivo, 40 s de
+> vibração produziram nada no cabo e um único tranco no rádio; com o serviço
+> parado, os mesmos 40 s foram contínuos nos dois. E a causa fechou **com
+> número** — subindo o intervalo da reconfirmação de 0,5 s para 8,0 s, a
+> vibração passou a durar **oito segundos exatos**.
+>
+> **Corrigido:** a reconfirmação deixou de ser eterna e passou a valer só na
+> janela logo depois de uma mudança de verdade. Na **Conexão Nativa (Sony)** o
+> defeito nunca existiu, porque ali o Hefesto já não escrevia nada no controle —
+> e é por isso que ele parecia intermitente. Sintoma, confirmação e o que fazer
+> se voltar: [`troubleshooting.md`](troubleshooting.md#19-a-vibração-do-jogo-dura-um-instante-e-morre).
 
 A máscara Xbox 360 é o piso de compatibilidade — para jogos que só aceitam
 gamepad da Microsoft. Ela carrega botões, eixos e vibração, e nada mais: você

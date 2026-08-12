@@ -1,9 +1,16 @@
 # Bluetooth
 
 O Hefesto trata USB e Bluetooth do mesmo jeito — o backend é agnóstico ao
-transporte. Lightbar, gatilhos adaptativos, vibração, LED de microfone e LEDs de
-jogador funcionam nos dois. A diferença é o pareamento inicial, que ainda é
-manual: não há tela dedicada na janela.
+transporte. Gatilhos adaptativos, vibração, LED de microfone e LEDs de jogador
+funcionam nos dois. A diferença é o pareamento inicial, que ainda é manual: não
+há tela dedicada na janela.
+
+**A cor da barra de luz tem uma exceção por Bluetooth, e ela foi medida em
+12/08/2026:** se a **Steam já estiver aberta** no momento em que você liga o
+controle, a barra costuma nascer apagada e **não aceita a sua cor** enquanto
+aquela conexão durar. Não é avaria do controle nem do pareamento — é a Steam
+pintando a barra de todos os DualSense a cada conexão nova. O que fazer está em
+[Solução de problemas, seção 20](troubleshooting.md#20-a-barra-de-luz-não-pega-a-cor-por-bluetooth).
 
 ## Parear um DualSense
 

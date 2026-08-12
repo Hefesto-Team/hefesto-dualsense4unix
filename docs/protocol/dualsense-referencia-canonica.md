@@ -71,6 +71,14 @@ pagar um custo já pago.
 | §6 | *"o gamepad virtual nunca escreve o byte 53"* | **CADUCOU** — escreve desde 09/08, e a conclusão que se tirava dali estava **invertida** |
 | §6 | byte 52 = `ucBatteryLevel` | **INCOMPLETO** — o nibble ALTO é estado de carga, e o código o decodifica em cinco casos |
 
+**E uma nona, medida na bancada de 11→12/08/2026, que é a mais cara das nove:**
+a coluna *"validado por"* da tabela do §2 descreve o que o report **declara**,
+não o que o firmware **exige**. Para os dois bytes de motor os dois divergem —
+o aparelho obedeceu a `common[2]`/`common[3]` **com os bits de vibração
+desligados**, e essa diferença derrubou a premissa de uma cura inteira que já
+estava escrita nesta árvore. A medição, com a fala dela e a ressalva de escopo,
+está no §2, em *"Os BITS de vibração não são porteiro dos BYTES de motor"*.
+
 **Documento irmão:**
 [os externos — Pro Controller e 8BitDo](externos-referencia-canonica.md). Esta
 página vale **só para o DualSense**. Os controles das outras linhagens têm
@@ -238,6 +246,62 @@ promovidos a ALTA; o byte 4 (fone) segue MÉDIA.
 > forma nenhuma, então nenhuma leitura de fonte pode promovê-lo — quem quiser
 > grau MEDIDO AQUI para ele precisa do ensaio da lista final desta página, com
 > headset no jack.
+
+### Os BITS de vibração não são porteiro dos BYTES de motor
+
+**Grau: MEDIDO AQUI**, na bancada de 11→12/08/2026, com o olho dela como
+aceite. Ensaio `keepalive-premissa-troca-de-lado`
+(`docs/data/ensaios.csv:24`), instrumento
+`scripts/ensaio_o_keepalive_mata_o_rumble.py`, report montado pelo
+`_build_common` do próprio produto.
+
+A tabela acima diz que `motor_right`/`motor_left` são *"validados por flag0
+bit0/bit1"*. Isso descreve o que o report **declara** — e esta casa leu ali,
+por meses, uma promessa que o firmware não faz: a de que **sem os bits o
+aparelho ignora os bytes**.
+
+**O ensaio, desenhado para não pedir cronômetro à mão dela.** Com o daemon
+parado, um `EV_FF` pelo evdev ligou o motor **esquerdo**. Em seguida saiu **um
+único** report com os bits de vibração **desligados** (`flag0` `0x01|0x02`, a
+atenuação `0x40` do `flag1` e o `0x04` do `flag2`) pedindo `common[2] = 200`
+(direito) e `common[3] = 0` (esquerdo). Literal dela: *"esquerda e senti que
+foi pra direita e lá morreu"*.
+
+**O tremor trocou de lado.** Logo o report agiu, e agiu **pelos bytes**. O lado
+que estava parado começou a vibrar e o que estava vibrando parou, sem que
+nenhum bit de autorização estivesse ligado naquele report.
+
+**A dose-resposta que fechou a conta pelo outro lado** (ensaios
+`keepalive-dose-cabo` e `keepalive-dose-radio`, `docs/data/ensaios.csv:22-23`):
+subindo a constante de keepalive do produto de **0,5 s para 8,0 s**, a vibração
+de terceiros passou a durar **oito segundos exatos** nos dois transportes.
+Literal dela: *"cibrou ambos por 8 segundos"*. A duração seguiu o valor da
+constante — isso é relação causal, não vizinhança.
+
+**O escopo, dito com todas as letras, porque a generalização aqui é tentadora:**
+
+- **o que está medido** é que, com a vibração **já autorizada por um report
+  anterior de outro escritor** (o driver do kernel, no caminho do `EV_FF`), os
+  reports seguintes agem sobre `common[2]`/`common[3]` **independentemente dos
+  próprios bits**;
+- **o que NÃO está medido** é o aparelho recém-ligado: se um report com os bits
+  nunca ligados desde o *power-on* põe um motor para girar do silêncio, ninguém
+  aqui viu;
+- **o que NÃO está medido para nenhum outro bloco.** Os blocos de gatilho
+  (`common[10..20]` e `common[21..31]`), os de LED e os de áudio também saem em
+  **todo** report, fora de qualquer condicional. A previsão de que se
+  comportassem como os motores foi **medida para o gatilho e caiu** (ver §4, e
+  `docs/data/ensaios.csv:29-30,37`); para LED e áudio continua sem ensaio.
+
+**A consequência para quem escreve neste aparelho**, e é a razão de esta
+subseção existir: **não há valor neutro para `common[2]`/`common[3]`**. O
+report é atômico, os dois bytes viajam em todo write, e o aparelho não devolve
+o que o outro escritor pediu — então "carregar o último valor conhecido" seria
+carregar o **nosso** zero com outro nome. Quem quiser preservar a vibração de
+outro dono só tem uma saída: **o write que não acontece**. Foi essa a cura
+aplicada aqui (`RUMBLE-SEM-DONO-01`, em
+`core/backend_pydualsense.py`: o keepalive deixou de ser perpétuo e passou a
+valer só na janela de confirmação depois de cada mudança real).
 
 ---
 
@@ -412,6 +476,46 @@ dez zonas ativas, força 255) endurece o L2 — *"duro"*; `Off` (`0x00`) o solta
 `MODE_OFF`; o `0x00` é honrado pelo firmware do mesmo jeito, e é o que esta
 árvore usa em produção desde sempre. Quem for unificar num só: é troca de
 higiene, **não** correção de defeito — e a decisão está medida, não suposta.
+
+### O lado, confirmado no aparelho — MEDIDO AQUI em 11/08/2026
+
+**Grau: MEDIDO AQUI.** Ensaio `gatilho-lado-nao-esta-invertido`
+(`docs/data/ensaios.csv:36`), com o controle na mão dela.
+
+A tabela do §2 põe `right_trigger_motor_mode` em `common[10]` (autorizado por
+`flag0 0x04`) e `left_trigger_motor_mode` em `common[21]` (`flag0 0x08`). Isso
+era leitura de fonte; agora tem aceite no plástico. Autorizando **só** o
+direito, o R2 endureceu e o L2 ficou solto — literal dela: *"r2 duro, l2
+solto"*. A suspeita de que o mapeamento de lado estivesse invertido nasceu numa
+rodada anterior e foi **eliminada na mesma sessão**.
+
+**A ressalva de método, e ela vale mais que o resultado:** numa das rodadas o
+lado que **não** foi autorizado ficou solto, e isso foi registrado, por engano,
+como prova de que ele obedece. Não é. Um gatilho solto prova que o comando
+**não vazou de lado** — é controle negativo, não obediência. Ela pegou o erro.
+
+### O keepalive apaga o rumble de terceiros, mas NÃO o gatilho
+
+**Grau: MEDIDO AQUI**, ensaios `gatilho-keepalive-8s`, `gatilho-keepalive-30s`
+e `gatilho-quem-apaga-nao-e-o-keepalive` (`docs/data/ensaios.csv:29-30,37`).
+
+Da medição do §2 (*"os bits não são porteiro dos bytes"*) veio uma previsão
+natural: como os blocos de gatilho também saem em **todo** report, o keepalive
+apagaria o efeito de gatilho de outro escritor pelo mesmo mecanismo com que
+apagava o rumble. **A previsão foi medida e caiu.**
+
+Um `Rigid` (posição 3, força 8) escrito por report cru **por fora** do daemon,
+com o daemon **vivo** e o keepalive em 0,5 s, sobreviveu a 8 s e a 30 s — o L2
+duro nas duas leituras, o R2 solto. O rumble, sob exatamente o mesmo keepalive,
+morria em menos de meio segundo. **São mecanismos diferentes**, e o keepalive
+está inocentado para o gatilho.
+
+**O que ficou aberto, e é fenômeno sem suspeito:** aos **120 s** a leitura se
+inverteu — o L2 solto e o R2 *"vivo"*, literal dela. O resultado **não é
+monotônico**, então não é decaimento. A leitura provável (e é **inferência**,
+não medição) é que algo reaplicou o perfil ativo naquele intervalo, apagando o
+efeito de terceiro no esquerdo e ligando o do perfil no direito. **Quem
+reaplica, e com que período, não foi medido.**
 
 ### O empacotamento dos 11 bytes — e o erro que ele revela
 
@@ -631,6 +735,19 @@ O lado do **aparelho** está medido acima; o lado do **SDL** não.
 **Lightbar — ALTA.** `lightbar_setup` bit1 é literalmente o **fade out**
 (confirma a armadilha `LIGHTBAR-BT-KEEPALIVE-01` desta casa). `led_brightness`
 tem 3 níveis.
+
+**O firmware GUARDA a cor entre conexões — MEDIDO AQUI em 12/08/2026.** Ensaio
+`lightbar-firmware-guarda-a-cor` (`docs/data/ensaios.csv:48`): um controle voltou
+de uma **desconexão completa** exibindo o **magenta** que tinha sido escrito por
+`hidraw` cru vários minutos antes, atravessando um `Disconnect` pelo BlueZ e uma
+reconexão inteira. Literal dela: *"azul player 4 cor magenta"*.
+
+**A consequência muda o que se lê de uma barra apagada:** ela **não** é o
+aparelho esquecendo a cor. É alguém mandando apagar, ou escrevendo preto. A
+pergunta certa deixa de ser *"por que o controle perdeu a cor?"* e passa a ser
+**quem escreveu, e com que report** — e em 12/08 essa pergunta ganhou um nome
+com medição no fio: ver
+[a pilha do Steam Input](pilha-steam-input-xpad-sdl.md), seção 6-bis.
 
 **Os padrões de player LED — FONTE DESTA MÁQUINA.** A tabela sai do driver, em
 `assets/dkms/hid-playstation/hid-playstation.c:1836-1842`, e o comentário logo
@@ -857,6 +974,20 @@ O discriminador que separa os dois casos é limpo:
 - **report de gatilho:** `valid_flag0 & 0x0C ≠ 0`;
 - **report de lightbar/player:** `valid_flag1 & 0x14 ≠ 0`.
 
+> **NOTA DATADA — 12/08/2026: por que a parada do SDL funciona no APARELHO, e o
+> que isso explica.** O achado do §2 (*os bits de vibração não são porteiro dos
+> bytes de motor*) fecha esta seção pelo outro lado: um report com
+> `valid_flag0 == 0` e motores zerados **para o motor de verdade** no DualSense
+> físico, e é por isso que o SDL pode desligar a vibração assim. Quem descartava
+> aquele report era o **nosso** parser de vpad, não o firmware.
+>
+> **GRAU: MEDIDO AQUI** para o mecanismo (§2, ensaio
+> `keepalive-premissa-troca-de-lado`); **INFERIDO** para a atribuição de
+> intenção ao SDL — ninguém aqui perguntou aos autores dele por que a parada tem
+> essa forma. A hipótese explica o que **já** funcionava, que é a régua desta
+> casa: a parada do SDL sempre funcionou no controle físico, e agora se sabe por
+> quê.
+
 ---
 
 ## O que continua em aberto por falta de medição — 11/08/2026
@@ -864,6 +995,19 @@ O discriminador que separa os dois casos é limpo:
 Estas cinco linhas **não** foram resolvidas na conferência de 11/08, e nenhuma
 delas se resolve lendo código: cada uma precisa do controle na mão. Estão aqui
 juntas porque é assim que se ataca uma de cada vez, com variável única.
+
+**Três perguntas entraram nesta lista em 12/08**, saídas da bancada de 11→12/08
+e escritas aqui porque nenhuma delas se responde lendo arquivo:
+
+| # | pergunta em aberto | o ensaio que a fecha | onde |
+|---|---|---|---|
+| 6 | de **quantos** bits de autorização o firmware precisa para vibrar? Sabe-se que o conjunto inteiro funciona e que os bytes agem sem os bits; não se sabe qual bit ainda compra alguma coisa | bancada, **um bit por vez**, com a vibração em curso e o controle na mão dela | §2 |
+| 7 | os bits são porteiro dos blocos de **LED** e de **áudio**? | o mesmo desenho de troca-de-lado do §2, aplicado a cor e a volume — mudar o valor com o bit desligado e ver se muda | §2 |
+| 8 | **quem** reaplica o efeito de gatilho com período de minutos? | reproduzir a rodada de 120 s do §4 com o daemon parado, e depois com ele vivo | §4 |
+
+A **6** é a que dá lucro, porque ela é a poda — todo bit que se mostrar
+dispensável pode parar de ser escrito, e foi assim que a lightbar encolheu de
+cinco canais para um.
 
 | # | pergunta em aberto | o ensaio que a fecha | onde |
 |---|---|---|---|

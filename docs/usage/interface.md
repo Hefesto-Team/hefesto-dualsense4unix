@@ -159,13 +159,53 @@ Os cinco LEDs de jogador seguem o desenho oficial do PS5 — Player 1 acende só
 LED central, Player 2 os dois vizinhos, e assim por diante. Não é bug: é o padrão
 do console.
 
+> **Se a barra não pegar a cor por Bluetooth, o problema não é esta aba**
+> (medido em 12/08/2026). Com a **Steam aberta** no momento em que o controle
+> liga, ela repinta a barra de todos os DualSense, e a sua cor não fica.
+> Ligar os controles **antes** de abrir a Steam foi o gesto que funcionou nos
+> três de três. O caminho inteiro, com o que fazer e o que não adianta, está em
+> [Solução de problemas, seção 20](troubleshooting.md#20-a-barra-de-luz-não-pega-a-cor-por-bluetooth).
+
 ## Rumble
 
 ![Aba Rumble](assets/readme_rumble.png)
 
-A intensidade da vibração dos jogos: **Economia** (0,3×), **Balanceado** (0,7×),
-**Máximo** (1,0×) ou **Auto** (suaviza quando a bateria cai). O multiplicador
-vale para o que o jogo pede, antes de chegar ao hardware.
+A intensidade da vibração dos jogos, em três degraus e um automático:
+
+| botão | quanto sai | o que isso quer dizer |
+|---|---|---|
+| **Economia** | 30% | vibração fraca em tudo: poupa bateria e faz menos barulho |
+| **Balanceado** | 100% | exatamente o que o jogo pediu — é o padrão |
+| **Máximo** | 150% | aumenta pela metade o que o jogo pediu; só as cenas mais fortes batem no limite do controle e ficam parecidas entre si |
+| **Auto** | 100% / 70% / 30% | escolhe pela bateria (acima de 50%, entre 20% e 50%, abaixo de 20%). **Nunca passa de 100%**: ele existe para poupar bateria |
+
+O controle deslizante **Intensidade global** vai de 0 a 200 e aceita qualquer
+valor entre os degraus; mover para fora deles apaga os quatro botões, e a barra
+de estado diz qual porcentagem ficou valendo.
+
+Repare que o deslizador **vai mais longe que o botão Máximo**, e isso é de
+propósito: os quatro botões são atalhos seguros, e o deslizador é para quem quer
+ir além sabendo o preço. O preço é medido — de **170** para cima o controle
+chega ao limite dele em um terço das forças que o jogo pede, e essas cenas
+passam a sair todas iguais. É por isso que o **Máximo** para em 150%, e não em
+200%: acima disso metade da variação da vibração desaparece.
+
+A intensidade multiplica **as duas** vibrações: a que o jogo pede e a que você
+fixa aqui embaixo. Só que a do jogo passa pelo controle virtual — na **Conexão
+Nativa (Sony)**, ou sem controle virtual nenhum, ela não alcança o jogo, e a aba
+avisa em cima dos botões quando é esse o caso.
+
+**O aviso diz duas coisas diferentes, e a diferença importa:** na Conexão Nativa
+ele só explica que o jogo fala direto com o controle — é o modo funcionando como
+deve, e não há nada a consertar. Sem controle virtual **nenhum** ele aponta o
+gesto: ligar **"Jogar pelo Hefesto"** na aba Início. Nos dois casos a frase
+termina lembrando que a intensidade **continua valendo** para a vibração que
+você fixa em "Testar motores".
+
+> Esse mesmo estado — sem controle virtual e fora da Conexão Nativa — foi onde a
+> vibração dos jogos **morria logo no começo** até 11/08/2026. A causa foi
+> medida e corrigida; o relato e como confirmar estão em
+> [Solução de problemas, seção 19](troubleshooting.md#19-a-vibração-do-jogo-dura-um-instante-e-morre).
 
 Abaixo, o teste dos motores: vibração leve, vibração forte, **Testar por 500 ms**.
 **Parar** trava o controle em silêncio — inclusive no jogo; **Deixar o jogo

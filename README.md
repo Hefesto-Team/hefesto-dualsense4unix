@@ -76,8 +76,9 @@ Bluetooth) entram como jogadores adicionais.
   cadeado para quando você não quiser que troquem.
 - **Luzes** — cor da lightbar por controle (com cores automáticas de jogador) e
   os cinco LEDs de jogador no padrão oficial do PS5.
-- **Vibração com política** — Economia, Balanceado, Máximo ou Auto por bateria,
-  aplicada ao que o jogo pede antes de chegar ao motor.
+- **Vibração com política** — Economia (30%), Balanceado (100%), Máximo (150%)
+  ou Auto por bateria, aplicada ao que o jogo pede antes de chegar ao motor. Um
+  controle deslizante vai de 0 a 200 para quem quiser sair dos quatro degraus.
 - **Protocolo do DSX, parcialmente** — servidor UDP em `127.0.0.1:6969` que
   aceita o envelope do DualSenseX e as seis instruções principais
   (`TriggerUpdate`, `TriggerThreshold`, `RGBUpdate`, `PlayerLED`, `MicLED`,
@@ -332,6 +333,19 @@ identidades e níveis de prova em
 > respondeu **"jogadores ativos: 1"**. Os dois externos entram na fila e recebem
 > luz; **na contagem de jogadores, não**. Detalhe na
 > [LUGAR-À-MESA-01](docs/process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
+
+**A cor da barra de luz por Bluetooth perde para a Steam, quando a Steam já está
+aberta.** Ela mantém uma via de escrita para cada DualSense e **repinta a barra
+de todos eles a cada conexão nova**; se o controle sobe nessa janela, a barra
+costuma nascer apagada e a sua cor não fica — e clicar em "Aplicar no controle"
+de novo não resolve, porque por rádio a cor sai pelo caminho que perde essa
+disputa. **GRAU: MEDIDO** em 12/08/2026, com três controles: com a Steam viva no
+momento da conexão, **um em três** aceitou a cor; com ninguém disputando antes
+de conectar, **três em três**. No **cabo** o problema não aparece. O contorno de
+hoje é ligar os controles **antes** de abrir a Steam; a cura está desenhada e
+medida, e ainda não chegou ao produto instalado. Detalhe, contornos e a medição
+no fio em
+[docs/usage/troubleshooting.md](docs/usage/troubleshooting.md#20-a-barra-de-luz-não-pega-a-cor-por-bluetooth).
 
 **A validação em hardware é de uma máquina só.** Pop!\_OS 24.04 com COSMIC é o
 ambiente onde tudo é medido. Ubuntu tem cobertura de integração contínua, sem

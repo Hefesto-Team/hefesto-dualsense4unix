@@ -11,10 +11,12 @@ DEPOIS que ele sai do driver e ANTES de o jogo lê-lo.**
   e o SDL —, e é justamente aí que moram as regressões que voltam: o controle
   dobrado, o terceiro controle fantasma, a vibração que não chega, a taxa de
   giroscópio que ninguém confere.
-- **Leitura pura.** Nada foi escrito, nenhum serviço reiniciado, nenhum controle
-  derrubado. As medições desta página são `strings(1)`, `grep` e leitura de
-  arquivo — a Steam estava **fechada** durante o levantamento, e há um item
-  explícito na seção 7 que só se fecha com ela aberta.
+- **Leitura pura — nas seções 0 a 6.** Ali nada foi escrito, nenhum serviço
+  reiniciado, nenhum controle derrubado: as medições são `strings(1)`, `grep` e
+  leitura de arquivo, com a Steam **fechada**.
+  **A seção 6-bis é de outra natureza, e foi acrescentada em 12/08/2026:** ela é
+  bancada, com a Steam **aberta**, escrita no `hidraw`, `btmon` no ar e o olho
+  dela como aceite. Cada linha de lá tem ensaio em `docs/data/ensaios.csv`.
 - **Documentos irmãos:** a
   [referência canônica do DualSense](dualsense-referencia-canonica.md) (o
   aparelho da Sony), a
@@ -980,6 +982,135 @@ Segue esperando a sessão.
 
 ---
 
+## 6-bis. A Steam ESCREVE no controle físico — a lightbar, medida no fio
+
+**Acrescentado em 12/08/2026, e é o achado que fechou dezesseis dias de
+investigação da lightbar por Bluetooth.** Esta página descrevia a Steam como
+**leitora** que cria espelhos. Ela também é **escritora**, no `hidraw` de cada
+DualSense, e o que ela escreve pinta a barra de luz.
+
+Toda esta seção é `MEDIDO AQUI` na bancada de 11→12/08. O aceite do que a
+**barra fez** é o olho dela, com fala literal em cada linha; a **contagem de
+pacotes e os `timestamps`** são leitura do instrumento (`btmon`) — e a linha da
+rajada de 6-bis.3 é a única do bloco cujo `observado_por` é `bancada`, e não
+`olho-dela`, justamente por isso. As linhas de ensaio são
+`lightbar-steam-nunca-foi-suspeito`,
+`lightbar-probe-limpa`, `lightbar-probe-suja-steam`, `cor-rota-sysfs-com-steam`,
+`cor-rota-hidraw-com-steam`, `steam-pinta-e-nao-apaga`, `btmon-probe-suja`,
+`btmon-probe-limpa` e `btmon-a-rajada-tem-hora`
+(`docs/data/ensaios.csv:41-51`).
+
+### 6-bis.1 Ela tem o `hidraw` aberto, e com permissão de ESCRITA
+
+Com o daemon **parado**, `readlink` sobre `/proc/*/fd` mostrou o processo
+`steam` com quatro `hidraw` abertos, e o `/proc/PID/fdinfo` deu o modo:
+
+| descritor | dispositivo | `flags` em `fdinfo` |
+|---|---|---|
+| 105 | `/dev/hidraw4` | `02000002` |
+| 106 | `/dev/hidraw5` | `02000002` |
+| 150 | `/dev/hidraw6` | `02000002` |
+| 91 | `/dev/hidraw7` | `02000002` |
+
+Os dois bits baixos de `02000002` são `O_RDWR`. **Não é um leitor curioso: é um
+escritor** — e um escritor por controle, não um só.
+
+### 6-bis.2 O que sai no fio: 98 pacotes contra 6
+
+**Instrumento: `btmon`**, duas capturas de 45 s, uma por braço, os mesmos três
+controles, a mesma janela. Contagem de pacotes de saída (ACL Data TX do tamanho
+de um output report):
+
+| braço | quem tinha o `hidraw` na probe | pacotes de saída | as barras nasceram |
+|---|---|---|---|
+| sujo | a Steam, viva | **98** | **apagadas** — *"todos ligados e todos apagados"* |
+| limpo | ninguém | **6** | **acesas** — *"os 3 ligaram e os três azuis"* |
+
+Os 6 do braço limpo são **dois por controle**: é o que o `hid-playstation`
+manda sozinho na probe (o reset de LED e a cor padrão). **Dezesseis vezes menos
+escrita, e o resultado inverso.**
+
+**O limite desta medição, dito porque não foi medido:** contaram-se os pacotes,
+**não** se decodificou o conteúdo. Não se sabe **que** report a Steam manda, nem
+se algum deles pede a barra apagada. As capturas ficaram em
+`/tmp/hefesto-probe-lightbar/` para quem continuar.
+
+### 6-bis.3 A escrita é em RAJADA, e a rajada tem hora
+
+A pergunta foi dela — *"se medimos quando a steam pinta o lightbar e o player
+led então sabemos quando sobrescrever o input da steam não?"* — e os
+*timestamps* das mesmas capturas respondem:
+
+| braço | quando os pacotes saíram |
+|---|---|
+| limpo | os 6, todos nos primeiros **3,9 s**; depois, silêncio |
+| sujo | **duas rajadas**: `t+0` a `t+3 s` (58 pacotes) e `t+15` a `t+18 s` (40), com silêncio total entre `t+4` e `t+14` |
+
+As rajadas casam com as probes dos controles, que ela acordou um a um. **A Steam
+bombardeia durante a probe e depois cala.** Não é disputa permanente: é uma
+janela.
+
+**E a rajada não é por controle — é por EVENTO.** Um protótipo que escrevia
+1,5 s depois de **cada** conexão nova perdeu dois dos três: só o último ficou
+com a cor pedida (*"só o player 4 que é o controle azul o resto tá no padrão da
+steam"*). **Cada conexão nova faz a Steam repintar todos os controles**, não só
+o que chegou.
+
+### 6-bis.4 Em regime ela repinta, não apaga
+
+Correção de leitura, e ela importa: abrindo a Steam com as três barras **já
+acesas** de uma probe limpa, elas **mudaram para as cores padrão da Steam e
+continuaram acesas** — *"fizeram a migração de cores padrão da steam. ainda
+ligados"*. A barra estava obedecendo; só que **a ela**.
+
+**O que a Steam estraga é a PROBE.** Em regime ela é mais um escritor, e perde
+para quem escrever depois.
+
+### 6-bis.5 A rota decide quem vence: `hidraw` ganha, `sysfs` perde
+
+Com a Steam **aberta**, viva e pintando as cores dela, e o daemon parado:
+
+| rota da escrita | o que aconteceu |
+|---|---|
+| `sysfs` (`multi_intensity` + `brightness`) | **nada** — a barra não mudou. Foi assim a noite inteira |
+| `hidraw` cru (report `0x31` montado por `ds_output_report.build_bt_report`, `valid_flag1 = LIGHTBAR_CONTROL_ENABLE`, `common[44..46] = R,G,B`) | **pintou os três** de magenta: *"todos tão magenta"* |
+
+**A consequência para este produto é grande, e é o motivo de esta seção morar
+aqui e não numa sprint:** por Bluetooth o Hefesto **suprime** a rota `hidraw` de
+forma incondicional (`LIGHTBAR-BT-NEVER-01`, em `core/backend_pydualsense.py`),
+e por rádio o `sysfs` é a **única** rota que sobra — justamente a que perde para
+a Steam.
+
+**E a vitória não encerra a disputa.** O magenta pegou nos três no instante, mas
+**não durou nos três**: *"dois dos controles ficaram magenta e o branco tá
+vermelho no player 2"* — vermelho é a cor de jogador 2 da Steam, ou seja, ela
+repintou **um** e não os outros dois. **O que decide qual controle a Steam
+repinta não foi medido.**
+
+### 6-bis.6 O que isto compra, e a ressalva dela
+
+O desenho que sai daqui é o que ela formulou — *"não podemos colocar um gatilho
+pra sempre que a steam aloprar em sequência algo ativa a sobrescrição
+automática?"* — e ele **arma a cada conexão e só dispara quando o rádio
+sossega**, escrevendo então em **todos** os controles pela rota `hidraw`. Com a
+sequência de conexões encerrada havia cerca de um minuto, uma escrita em cada um
+pintou os três, e o aceite dela foi *"perfeito"*.
+
+**A ressalva é dela, e fica escrita porque é a que impede a reincidência:** esta
+é a **segunda** vez que a rota de escrita é apontada como causa nesta casa, não
+a primeira. *"Reconectar cura"* já foi concluído e derrubado **quatro vezes
+desde 17/07**. Quem for mexer aqui responde antes o que derrubou a conclusão
+anterior — senão é o mesmo erro das quatro vezes passadas, com data nova.
+
+**E há uma regra de produto, também dela, que decide QUANDO esse gatilho pode
+agir** (12/08/2026): *"no modo nativo devolvemos o controle pra steam e no modo
+conexão também, todo o resto é o hefesto"*. Em **Conexão Nativa (Sony)** e no
+modo em que a entrada é da Steam, o controle é de quem está jogando e o Hefesto
+**não** repinta; em todo o resto, quem manda é o Hefesto. É a mesma cerca do
+`FEAT-NATIVE-OUTPUT-MUTE-01`, agora aplicada à cor.
+
+---
+
 ## 7. O que continua em aberto por falta de medição
 
 Uma variável por linha, que é como se ataca isto.
@@ -992,9 +1123,20 @@ Uma variável por linha, que é como se ataca isto.
 | 4 | de quantos bits de autorização o firmware precisa para vibrar? | bancada, um bit por vez, com o controle na mão dela | 6.5 |
 | 5 | o pedido de rumble do jogo chega ao vpad numa sessão com Steam Input? | o anel de pedidos crus, sessão de jogo real | 6.5 |
 | 6 | em que valor a Steam deixa `SDL_HINT_JOYSTICK_ENHANCED_REPORTS`? | mesmo comando de (1) | 6.5 |
+| 7 | **que report** a Steam manda nos 98 pacotes da rajada, e algum deles pede a barra apagada? | decodificar o payload das capturas em `/tmp/hefesto-probe-lightbar/` — o parser escrito em 12/08 não venceu o formato do `btmon` | 6-bis.2 |
+| 8 | **o que decide qual controle** a Steam repinta depois de perder a cor? | repetir a escrita por `hidraw` nos três e observar qual volta ao padrão dela | 6-bis.5 |
+| 9 | a **volta** do ensaio da lightbar: subir os controles com a Steam viva na probe, **de propósito**, e ver o defeito voltar | o mesmo desenho de 6-bis.2, com o braço sujo provocado | 6-bis |
 
 Os itens 1, 2 e 6 saem **do mesmo comando**, custam trinta segundos e fecham
 três linhas de uma vez. É o melhor negócio desta tabela.
+
+**O item 9 é o que falta para o suspeito fechar, e ele não é formalidade.** O
+método desta casa pede ida **e** volta: tirar o suspeito e ver curar, devolver e
+ver o defeito voltar. A ida está feita (mesa vazia → três de três obedeceram);
+a volta **estava em curso quando dois controles caíram sozinhos do rádio** e a
+bancada acabou ali. Enquanto ela não existir, o caderno
+(`scripts/eliminacao.py`) devolve **CONFUSO** para este suspeito, e está certo
+em devolver.
 
 ---
 
