@@ -15,9 +15,16 @@ import pytest
 
 from hefesto_dualsense4unix.core.rumble import _effective_mult
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+    RUMBLE_POLICY_MULT,
     RumbleSubsystem,
     reassert_rumble,
 )
+
+# 11/08/2026: os degraus eram literais aqui (0.7 / 1.0). Quando a escada
+# mudou para 30/100/150 por decisão dela, estes testes reprovaram sem que
+# nada do produto estivesse errado — fixavam o VALOR em vez da REGRA.
+# Derivando do dono único, provam o que devem: que a política escolhida é a
+# que chega ao motor.
 
 # AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01: _effective_mult_inline deletado;
 # alias local para preservar leitura dos asserts sem mudar semântica.
@@ -38,11 +45,11 @@ class TestEffectiveMultInline:
 
     def test_balanceado(self) -> None:
         mult, _, _ = _effective_mult_inline(_cfg("balanceado"), 80, 1.0, 0.7, 0.0)
-        assert mult == pytest.approx(0.7)
+        assert mult == pytest.approx(RUMBLE_POLICY_MULT["balanceado"])
 
     def test_max(self) -> None:
         mult, _, _ = _effective_mult_inline(_cfg("max"), 80, 1.0, 0.7, 0.0)
-        assert mult == pytest.approx(1.0)
+        assert mult == pytest.approx(RUMBLE_POLICY_MULT["max"])
 
     def test_custom(self) -> None:
         mult, _, _ = _effective_mult_inline(_cfg("custom", 0.5), 80, 1.0, 0.7, 0.0)
@@ -58,7 +65,8 @@ class TestEffectiveMultInline:
 
     def test_fallback_desconhecido(self) -> None:
         mult, _, _ = _effective_mult_inline(_cfg("desconhecido"), 50, 1.0, 0.7, 0.0)
-        assert mult == pytest.approx(0.7)
+        # Política que não existe cai no BALANCEADO — a regra, não o número.
+        assert mult == pytest.approx(RUMBLE_POLICY_MULT["balanceado"])
 
 
 class TestReassertRumble:
@@ -87,9 +95,17 @@ class TestReassertRumble:
         daemon.controller.set_rumble.assert_not_called()
 
     def test_chama_set_rumble_com_valores_escalados(self) -> None:
+        """No "Máximo" o rumble FIXADO também é amplificado — e saturado.
+
+        Enquanto o máximo valia 1,0 este teste passava com (100, 200)
+        intactos, e não distinguia escalar de não escalar. Com 1,5 ele
+        finalmente morde os dois lados: a conta e o recorte em 255."""
         daemon = self._make_daemon(rumble_active=(100, 200), policy="max")
         reassert_rumble(daemon, 1.0)
-        daemon.controller.set_rumble.assert_called_once_with(weak=100, strong=200)
+        mult = RUMBLE_POLICY_MULT["max"]
+        daemon.controller.set_rumble.assert_called_once_with(
+            weak=min(255, round(100 * mult)), strong=min(255, round(200 * mult))
+        )
 
     def test_aplica_politica_economia(self) -> None:
         daemon = self._make_daemon(rumble_active=(100, 200), policy="economia")

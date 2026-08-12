@@ -533,6 +533,12 @@ class CoopManager:
                 evdev=path,
                 player=player.player_index,
             )
+            # IGNORE-NO-FIM-DA-SEQUENCIA-01: este é o ramo que não materializa
+            # nada — e é o ramo em que a mesa fica desequilibrada (mais um
+            # físico, nenhum vpad novo). Armar o sossego é o que faz a cobertura
+            # ser reavaliada quando a promoção acontecer, ou quando ficar claro
+            # que ela não vai acontecer.
+            self._armar_sossego_do_launch_env("jogador de co-op aguardando grab")
 
     def _promote_pending(self) -> None:
         """Promove jogadores "aguardando grab": cria o vpad quando "held".
@@ -983,13 +989,39 @@ class CoopManager:
             broker_call_nonblocking(self._daemon, lambda: client.restore(node))
 
     def _materialize_launch_env(self) -> None:
-        """Regrava as envs do wrapper hefesto-launch (best-effort, DEDUP-04)."""
+        """Regrava as envs do wrapper hefesto-launch (best-effort, DEDUP-04).
+
+        IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026): escreve AGORA e **arma o
+        relógio do sossego**. O spawn de cada jogador é uma borda da rajada; a
+        decisão sobre o IGNORE tem de valer para a mesa que sobrar no FIM dela,
+        não para a foto de um jogador no meio.
+        """
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.daemon.launch_env import (
+                armar_rematerializacao,
                 materialize_launch_env,
             )
 
             materialize_launch_env(self._daemon)
+            armar_rematerializacao(self._daemon, motivo="borda de jogador de co-op")
+
+    def _armar_sossego_do_launch_env(self, motivo: str) -> None:
+        """Arma o sossego SEM escrever — para a borda que não materializa.
+
+        O `_spawn_player` com grab pendente registra um jogador que ainda não
+        tem vpad: nada muda nos backends, então materializar seria reescrever
+        cinco arquivos idênticos. Mas o FÍSICO daquele jogador já conta na mesa,
+        e é exatamente esse o desequilíbrio que o IGNORE não pode congelar —
+        `fisicos=4 vpads=1` ficou dez segundos de pé no journal dela em 12/08
+        sem que nada tivesse motivo para reavaliar. Armar aqui custa um float e
+        garante que o vigia olhe a mesa quando ela parar de se mexer.
+        """
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.launch_env import (
+                armar_rematerializacao,
+            )
+
+            armar_rematerializacao(self._daemon, motivo=motivo)
 
     def _teardown_player(self, identity: str) -> None:
         player = self._players.pop(identity, None)

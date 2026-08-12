@@ -70,9 +70,14 @@ async def server_and_controller(
     fake_daemon = MagicMock()
     fake_daemon.set_mouse_emulation.return_value = True
     fake_daemon.config = DaemonConfig()
-    # Política "max" garante passthrough 1:1 dos valores brutos nos testes
-    # que comparam set_rumble contra o payload declarado.
-    fake_daemon.config.rumble_policy = "max"  # type: ignore[assignment]
+    # Política NEUTRA para os testes que comparam set_rumble contra o payload
+    # declarado: eles falam do caminho do apply_draft, não do multiplicador.
+    #
+    # 11/08/2026: era "max", e funcionava por ACIDENTE — enquanto o Máximo valia
+    # 1,0, ele era o degrau neutro. Por decisão dela o Máximo passou a amplificar
+    # (1,5) e o passe deixou de ser 1:1. Quem é neutro POR DEFINIÇÃO é o
+    # balanceado: 1,0 = "o que o jogo pediu, sem aumentar nem diminuir".
+    fake_daemon.config.rumble_policy = "balanceado"  # type: ignore[assignment]
     fake_daemon._rumble_engine = None
 
     server = IpcServer(

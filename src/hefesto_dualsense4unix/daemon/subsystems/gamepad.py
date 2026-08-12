@@ -142,11 +142,22 @@ def _materialize_launch_env(daemon: DaemonProtocol) -> None:
     Chamado nas bordas de transição do vpad (start/stop cobrem troca de
     máscara, promoção uhid<->uinput e liga/desliga por perfil). NUNCA pode
     derrubar a emulação: a falha vira log e o wrapper degrada sozinho.
+
+    IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026): escrever AGORA continua sendo
+    certo — o arquivo tem de descrever a mesa deste instante, e deixá-lo velho
+    durante a subida faria um jogo lançado no meio dela ler o estado de outra
+    sessão. O que faltava era a outra metade: **armar o relógio do sossego**,
+    para que a decisão seja reavaliada depois do ÚLTIMO evento da rajada, e não
+    só durante ela. A borda escreve; o sossego confere.
     """
     with contextlib.suppress(Exception):
-        from hefesto_dualsense4unix.daemon.launch_env import materialize_launch_env
+        from hefesto_dualsense4unix.daemon.launch_env import (
+            armar_rematerializacao,
+            materialize_launch_env,
+        )
 
         materialize_launch_env(daemon)
+        armar_rematerializacao(daemon, motivo="borda de vpad do P1")
 
 
 def _set_evdev_grab(daemon: DaemonProtocol, grab: bool) -> None:
@@ -1277,6 +1288,19 @@ def _reconciliar_launch(daemon: DaemonProtocol) -> None:
        epoch)`;
     2. `sync_steam_input_exception` — liga/desliga a exceção por appid (R-06).
 
+    IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026) acrescentou a terceira, que é o
+    lado "disparar quando sossega" do padrão: `vigiar_a_mesa` arma o relógio
+    quando a mesa mudou sem borda que materializasse (o caso medido: três
+    jogadores registrados com o grab pendente, físicos=4 e vpads=1 por dez
+    segundos), e `rematerializar_se_sossegou` reavalia a cobertura e regrava
+    quando a rajada termina.
+
+    **Ressalva honesta:** esta reconciliação é chamada do `dispatch_gamepad`, ou
+    seja, do poll loop. No journal de 12/08 o poll loop ficou MUDO das 00:15:32
+    às 00:15:41 — e um vigia que anda no relógio do loop não anda quando o loop
+    não anda. O sossego cura a decisão tomada cedo demais; não cura loop parado,
+    que é defeito de outro dono e continua aberto.
+
     Decisão registrada: o lugar canônico deste par é a cadência do `_poll_loop`
     (`lifecycle.py`), junto de `_drenar_modo_pendente`. Ele mora aqui porque é
     o ponto de 1 Hz alcançável a partir deste subsystem; a semântica é a mesma
@@ -1302,6 +1326,18 @@ def _reconciliar_launch(daemon: DaemonProtocol) -> None:
         arm_launch_profile(daemon)
     with contextlib.suppress(Exception):
         sync_steam_input_exception(daemon)
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.daemon.launch_env import (
+            rematerializar_se_sossegou,
+            vigiar_a_mesa,
+        )
+
+        # Ordem deliberada: vigiar ANTES de disparar. Um relógio armado neste
+        # mesmo tique não vence agora (a janela é de 0,6 s e o tique é de 1 s),
+        # então o disparo acontece no PRÓXIMO — nunca no mesmo instante em que
+        # a mudança foi notada, que seria decidir durante a sequência de novo.
+        vigiar_a_mesa(daemon)
+        rematerializar_se_sossegou(daemon)
 
 
 def _rebackend_em_cooldown(daemon: DaemonProtocol, now: float) -> bool:

@@ -17,13 +17,29 @@
        RUMBLE_CUSTOM_MULT_MAX` (2.0). Eram três: 2.0 no schema, 1.0 no handler
        `rumble.policy_custom` e 200% aqui; de 101% em diante a usuária levava um
        erro de validação que a aba reportava como "daemon offline?". Mexeu no
-       teto? Mexa no schema — este slider é `mult * 100`. -->
+       teto? Mexa no schema — este slider é `mult * 100`.
+
+       DECISÃO DELA, 11/08/2026: `upper` volta a 200 e o `value` de partida
+       passa de 70 para 100. Os dois números vinham do Balanceado antigo (0,7),
+       que virou 1,0 — deixar o 70 aqui seria âncora morta, um valor de partida
+       que não é degrau de nada. O tooltip logo abaixo promete "acima de 100 sai
+       mais forte" desde sempre; com `upper=100` isso era mentira que a própria
+       tela contava. Este XML não importa nada de ninguém: o 200 é cópia, e quem
+       o segura é o portão `tests/unit/test_rumble_mult_um_dono.py`, que compara
+       com `RUMBLE_CUSTOM_MULT_MAX * 100`.
+
+       ESTE 200 É MAIOR QUE O BOTÃO "Máximo" (150%), e de propósito: os quatro
+       botões são presets SEGUROS e o deslizador é o ajuste livre de quem aceita
+       o preço. O preço está medido — de 170 para cima a conta satura em 255 e
+       um terço da faixa que o jogo pede vira força constante. O porquê inteiro
+       está em `profiles/schema.py` (RUMBLE_CUSTOM_MULT_MAX) e na tabela da
+       escada em `daemon/subsystems/rumble.py`. -->
   <object class="GtkAdjustment" id="rumble_policy_adj">
     <property name="lower">0</property>
-    <property name="upper">100</property>
+    <property name="upper">200</property>
     <property name="step-increment">1</property>
     <property name="page-increment">10</property>
-    <property name="value">70</property>
+    <property name="value">100</property>
   </object>
 
   <object class="GtkAdjustment" id="rumble_weak_adj">
@@ -1511,7 +1527,7 @@
 
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_economia">
-                                <property name="tooltip-text" translatable="yes">Vibração fraca em todos os jogos: poupa bateria e faz menos barulho.</property>
+                                <property name="tooltip-text" translatable="yes">30% do que o jogo pede: vibração fraca em todos os jogos, poupa bateria e faz menos barulho.</property>
                                 <property name="label" translatable="yes">Economia</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_economia"/>
@@ -1519,7 +1535,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_balanceado">
-                                <property name="tooltip-text" translatable="yes">Vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão.</property>
+                                <property name="tooltip-text" translatable="yes">100%: vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão.</property>
                                 <property name="label" translatable="yes">Balanceado</property>
                                 <property name="active">True</property>
                                 <signal name="toggled" handler="on_rumble_policy_balanceado"/>
@@ -1527,7 +1543,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_max">
-                                <property name="tooltip-text" translatable="yes">Vibração no máximo que o controle aguenta. Gasta bateria bem mais depressa.</property>
+                                <property name="tooltip-text" translatable="yes">150%: aumenta pela metade a vibração que o jogo pede. Só as cenas mais fortes batem no limite do controle e ficam parecidas entre si. Gasta bateria bem mais depressa.</property>
                                 <property name="label" translatable="yes">Máximo</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_max"/>
@@ -1535,7 +1551,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_auto">
-                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle e o jogo aberto.</property>
+                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle. Nunca aumenta a vibração além do que o jogo pediu: ele existe para poupar bateria.</property>
                                 <property name="label" translatable="yes">Auto</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_auto"/>
@@ -1603,7 +1619,7 @@
                               <object class="GtkScale" id="rumble_policy_slider">
                                 <property name="halign">start</property>
                                 <property name="width-request">400</property>
-                                <property name="tooltip-text" translatable="yes">Multiplica a vibração que o jogo pede: abaixo de 100 sai mais fraca, acima de 100 sai mais forte.</property>
+                                <property name="tooltip-text" translatable="yes">Multiplica a vibração que o jogo pede: abaixo de 100 sai mais fraca, acima de 100 sai mais forte. Vai além dos quatro botões — mas de 170 para cima metade das cenas fortes bate no limite do controle e fica tudo parecido.</property>
                                 <property name="hexpand">True</property>
                                 <property name="draw-value">True</property>
                                 <property name="digits">0</property>
@@ -1620,9 +1636,51 @@
                         <!-- Label educativo do modo Auto (oculto por padrão) -->
                         <child>
                           <object class="GtkLabel" id="rumble_policy_auto_label">
-                            <property name="label" translatable="yes">Modo Auto: ajusta intensidade conforme a bateria do controle.
-Bateria &gt;50%: 100% (Máximo).  20-50%: 70% (Balanceado).  &lt;20%: 30% (Economia).
-Transições com debounce de 5 segundos para evitar oscilação.</property>
+                            <!-- DECISÃO, 11/08/2026: o Auto NUNCA amplifica — ele
+                                 existe para poupar bateria, e amplificar sozinho
+                                 seria o oposto do que ele promete. A escada dele
+                                 é PRÓPRIA (1,0 / 0,7 / 0,3) e não é mais a dos
+                                 quatro botões: desde que "Máximo" passou a valer
+                                 150%, chamar o degrau de cima de "Máximo" e o do
+                                 meio de "Balanceado" virou mentira, e é o que
+                                 este texto dizia. "Debounce" também saiu: é
+                                 jargão, e ela nunca vê jargão. A escada viva está
+                                 em `core.rumble._effective_mult`. -->
+                            <property name="label" translatable="yes">Modo Auto: ajusta a força sozinho, conforme a bateria do controle.
+Bateria acima de 50%: 100%, o que o jogo pediu.  Entre 20% e 50%: 70%.  Abaixo de 20%: 30%.
+O Auto nunca passa de 100%: ele existe para poupar bateria, não para aumentar a vibração.
+Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- A INTENSIDADE QUE NÃO ALCANÇA (11/08/2026).
+                             Medido no journal da máquina dela:
+                             `launch_env_materializado ... backends=[]
+                             emulacao=False mascara=dualsense native=False` —
+                             sem gamepad virtual E sem Conexão Nativa ao mesmo
+                             tempo. Nesse estado o multiplicador destes quatro
+                             botões NÃO age sobre a vibração do jogo: ele mora
+                             no caminho de saída do gamepad virtual
+                             (`daemon.subsystems.gamepad.apply_game_rumble`, que
+                             só roda a partir do sink criado em
+                             `make_primary_rumble_sink`), e sem gamepad virtual
+                             esse caminho não existe. A tela seguia mostrando
+                             Economia/Balanceado/Máximo como se valessem.
+
+                             Escondido por padrão e preenchido em código
+                             (`rumble_actions.texto_do_alcance_da_intensidade`),
+                             pela mesma disciplina do `rumble_state_label`: sem
+                             o dado do daemon a linha não afirma nada — "não
+                             sei" e "não alcança" mandam caçar em lugares
+                             diferentes. -->
+                        <child>
+                          <object class="GtkLabel" id="rumble_policy_aviso">
+                            <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
                             <property name="visible">False</property>

@@ -331,6 +331,26 @@ WRAPPER_MARKER_WINDOW_SEC = 900.0
 #: carregamento) sem virar "arming retroativo".
 LAUNCH_ARM_WINDOW_SEC = 60.0
 
+#: IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026): quanto tempo a mesa precisa ficar
+#: QUIETA antes de a cobertura ser reavaliada e o `launch_env/` regravado.
+#:
+#: A forma do defeito, medida no journal dela em 12/08 às 00h15: o produto
+#: decidia o `SDL_GAMECONTROLLER_IGNORE_DEVICES` **durante** a subida dos vpads,
+#: uma vez por borda, e nada reavaliava a decisão quando a subida terminava. É o
+#: terceiro defeito de tempo do mesmo dia e da mesma família (o keepalive que
+#: zerava rumble de terceiro e a cor da lightbar perdida dentro da rajada da
+#: Steam). A cura desenhada por ela e validada no aparelho é sempre a mesma:
+#: **armar a cada evento, disparar quando sossega, agir sobre tudo.**
+#:
+#: O número: a rajada medida de P2→P3→P4 durou **183 ms** (00:15:42.218 →
+#: 00:15:42.401). 0,6 s é mais de três vezes isso — colapsa a rajada inteira num
+#: disparo só — e fica ABAIXO da cadência de 1 Hz que consome o vencimento
+#: (`LAUNCH_RECONCILE_INTERVAL_SEC`), então quem espera nunca espera mais que um
+#: tique além da janela. Subir esta janela não compra nada: o intervalo que
+#: importava naquele journal (11 s entre o 1º e o 2º vpad) NÃO é rajada — é o
+#: poll loop parado, e nenhum debounce cura loop parado.
+JANELA_DE_SOSSEGO_SEC = 0.6
+
 #: JOGO-01: rótulo do `estado:` gravado no `steam_app_<appid>.env` dos jogos da
 #: allowlist. O texto antigo ("allowlist Steam Input (sem dedup)") descrevia com
 #: precisão o que o ramo fazia — e era exatamente o defeito: "sem dedup" com o
@@ -890,6 +910,26 @@ def arm_launch_profile(
     }
 
 
+def cobertura_total(*, backends: Sequence[str], fisicos: int) -> bool:
+    """Existe um vpad vivo para CADA DualSense físico da mesa?
+
+    WRAPPER-EM-TODOS-01 (03/08/2026) escreveu esta conta dentro do
+    `compose_env`; a IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026) a tirou para
+    fora porque agora existe um segundo leitor dela — o vigia que compara a
+    mesa de agora com a que foi materializada da última vez
+    (`_assinatura_da_mesa`). Duas cópias da mesma conta é como esta casa
+    reintroduz um defeito já pago; uma função com nome é o preço de não repetir.
+
+    ``fisicos <= 0`` significa **"NÃO SEI"**, nunca "nenhum": o
+    `_fisicos_na_mesa` devolve 0 quando o backend não expõe
+    `describe_controllers` (`FakeController`, dublê de teste, backend legado).
+    Nesse caso a resposta é True — o comportamento HISTÓRICO, decidir pelo TIPO
+    do vpad. Apertar sem informação removeria o dedup de quem sempre o teve, que
+    é regressão, não cura.
+    """
+    return fisicos <= 0 or len(backends) >= fisicos
+
+
 def compose_env(
     *,
     native_mode: bool,
@@ -950,20 +990,20 @@ def compose_env(
     # o comportamento histórico (decidir pelo TIPO do vpad) — apertar sem
     # informação removeria o dedup de quem sempre o teve, que é regressão, não
     # cura. Só se exige cobertura quando se SABE quantos físicos há.
-    cobertura_total = fisicos <= 0 or len(backends) >= fisicos
+    tem_cobertura = cobertura_total(backends=backends, fisicos=fisicos)
     # Modo Nativo: expõe o físico — sem DISABLE, sem IGNORE (whitelist default).
     if not native_mode and emulation_enabled and backends:
         if flavor == "xbox":
             env["SDL_JOYSTICK_HIDAPI"] = "0"
             env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
-            if cobertura_total:
+            if tem_cobertura:
                 env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
         elif flavor == "dualsense" and all(b == "uhid" for b in backends):
             env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
-            if cobertura_total:
+            if tem_cobertura:
                 env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
         # dualsense degradado (algum uinput) => sem IGNORE, de propósito.
-        if not cobertura_total:
+        if not tem_cobertura:
             logger.info(
                 "launch_env_ignore_omitido_sem_cobertura",
                 fisicos=fisicos,
@@ -1036,6 +1076,164 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
             if vpad is not None:
                 backends.append(str(getattr(vpad, "backend", "") or ""))
     return native, enabled, flavor, backends, _fisicos_na_mesa(daemon)
+
+
+#: Assinatura da mesa: tudo de que a decisão do IGNORE depende, e nada mais.
+#: `(native, emulação ligada, máscara, backends dos vpads, físicos na mesa)`.
+AssinaturaDaMesa = tuple[bool, bool, str, tuple[str, ...], int]
+
+
+def _assinatura_da_mesa(daemon: DaemonProtocol) -> AssinaturaDaMesa:
+    """O estado que decide a env, em forma comparável (hashable).
+
+    IGNORE-NO-FIM-DA-SEQUENCIA-01. O `_snapshot` já produz exatamente estes
+    cinco campos; aqui eles viram uma tupla para responder à única pergunta que
+    o vigia faz: **mudou alguma coisa desde a última materialização?** Sem esta
+    comparação, "reavaliar quando sossega" viraria "regravar cinco arquivos a
+    cada segundo para sempre", que é churn, não cura.
+    """
+    native, enabled, flavor, backends, fisicos = _snapshot(daemon)
+    return native, enabled, flavor, tuple(backends), fisicos
+
+
+def armar_rematerializacao(
+    daemon: Any, *, motivo: str, agora: float | None = None
+) -> None:
+    """ARMA o relógio do sossego. Não escreve nada — só adia a decisão.
+
+    A metade "armar a cada evento" do padrão. Cada borda de vpad (start/stop do
+    P1, promoção/teardown de um jogador de co-op, jogador registrado com o grab
+    ainda pendente) chama isto DEPOIS de fazer o que sempre fez. Rearmar é o
+    comportamento correto e deliberado: numa rajada, o relógio anda para a
+    frente a cada evento, e o disparo cai depois do ÚLTIMO — que é a definição
+    de "agir sobre tudo".
+
+    Best-effort integral: um daemon dublado que recuse `setattr` fica sem o
+    vigia e mantém exatamente o comportamento anterior (materialização por
+    borda). O `launch_env` nunca pode derrubar quem o chama.
+    """
+    momento = agora if agora is not None else time.monotonic()
+    with contextlib.suppress(Exception):
+        daemon._launch_env_sossego_em = momento + JANELA_DE_SOSSEGO_SEC
+        logger.debug("launch_env_sossego_armado", motivo=motivo)
+
+
+def vigiar_a_mesa(daemon: Any, *, agora: float | None = None) -> None:
+    """Arma o sossego quando a mesa mudou SEM borda que materializasse.
+
+    O buraco que esta função tapa é real e está no journal dela de 12/08: às
+    00:15:32.047 os três controles secundários foram registrados com
+    `coop_player_grab_pending` — **o `_spawn_player` com grab pendente não
+    materializa nada** — e a promoção deles só veio dez segundos depois. Nesses
+    dez segundos a mesa tinha QUATRO físicos e UM vpad, e nenhum caminho do
+    produto tinha motivo para reavaliar a env.
+
+    A família inteira do buraco: o número de FÍSICOS muda sem passar por borda
+    nenhuma de vpad — um quinto controle que conecta e o co-op não adota, um
+    controle que sai enquanto o co-op está desligado, um jogador preso em
+    "aguardando grab". Em todos, o arquivo continua afirmando uma cobertura que
+    a mesa não tem mais, e o próximo jogo a abrir congela a afirmação.
+
+    Só arma se ainda NÃO houver relógio andando: rearmar a cada tique de 1 Hz
+    empurraria o vencimento para sempre e o disparo nunca aconteceria. Numa
+    rajada de verdade quem rearma são as bordas, que é o lugar certo.
+    """
+    with contextlib.suppress(Exception):
+        if getattr(daemon, "_launch_env_sossego_em", None) is not None:
+            return
+        if _assinatura_da_mesa(daemon) == getattr(
+            daemon, "_launch_env_assinatura", None
+        ):
+            return
+        armar_rematerializacao(daemon, motivo="a mesa mudou sem borda", agora=agora)
+
+
+def rematerializar_se_sossegou(daemon: Any, *, agora: float | None = None) -> bool:
+    """DISPARA quando a mesa sossegou: reavalia a cobertura e regrava se mudou.
+
+    A metade "disparar quando sossega, agir sobre tudo". Devolve True quando
+    regravou. Chamada da reconciliação de 1 Hz
+    (`subsystems.gamepad._reconciliar_launch`), que é o único ponto de cadência
+    fixa alcançável a partir daqui.
+
+    **O que ela NÃO conserta, e é preciso dizer** (IGNORE-NO-FIM-DA-SEQUENCIA-01,
+    12/08/2026): o jogo lê estas variáveis UMA vez, no `exec env "$@"` do
+    `assets/hefesto-launch.sh`. Depois disso o ambiente dele está congelado, e
+    **regravar o arquivo não alcança processo nenhum que já subiu** — não existe
+    chamada de sistema para trocar o `environ` de outro processo. Por isso o
+    disparo avisa no journal quando a cobertura mudou com um jogo do wrapper
+    ainda rodando (`launch_env_mudou_depois_do_exec`): o arquivo passa a estar
+    certo para o PRÓXIMO lançamento, e a sessão em curso segue com a afirmação
+    velha. Fingir que a regravação curou a sessão aberta seria a mentira mais
+    cara desta casa com outra roupa.
+    """
+    try:
+        prazo = getattr(daemon, "_launch_env_sossego_em", None)
+        if prazo is None:
+            return False
+        momento = agora if agora is not None else time.monotonic()
+        if momento < float(prazo):
+            return False
+        # Desarma ANTES de decidir: se a materialização falhar, o vigia rearma
+        # sozinho no tique seguinte (a assinatura gravada não terá mudado) em
+        # vez de o relógio ficar vencido disparando a cada tique.
+        daemon._launch_env_sossego_em = None
+        assinatura = _assinatura_da_mesa(daemon)
+        anterior = getattr(daemon, "_launch_env_assinatura", None)
+        if assinatura == anterior:
+            return False
+    except Exception:
+        logger.debug("launch_env_sossego_indisponivel", exc_info=True)
+        return False
+    logger.info(
+        "launch_env_rematerializado_no_sossego",
+        vpads=len(assinatura[3]),
+        fisicos=assinatura[4],
+        cobertura=cobertura_total(
+            backends=list(assinatura[3]), fisicos=assinatura[4]
+        ),
+    )
+    _avisar_se_o_jogo_ja_congelou(daemon, anterior, assinatura)
+    materialize_launch_env(daemon)
+    return True
+
+
+def _avisar_se_o_jogo_ja_congelou(
+    daemon: Any,
+    anterior: AssinaturaDaMesa | None,
+    atual: AssinaturaDaMesa,
+) -> None:
+    """Grita no journal quando a cobertura mudou com um jogo já de pé.
+
+    A honestidade que o item 3 da IGNORE-NO-FIM-DA-SEQUENCIA-01 exige. Este é o
+    quadrante em que o produto NÃO tem cura: a env do jogo em curso está
+    congelada desde o `exec`, e a única saída real seria ele ser relançado. Sem
+    esta linha, a próxima pessoa a ler o journal veria a regravação e concluiria
+    que o problema foi resolvido — que é exatamente o erro que custou o dia de
+    12/08.
+    """
+    with contextlib.suppress(Exception):
+        if anterior is None:
+            return
+        antes = cobertura_total(backends=list(anterior[3]), fisicos=anterior[4])
+        agora_tem = cobertura_total(backends=list(atual[3]), fisicos=atual[4])
+        if antes == agora_tem:
+            return
+        appid = launch_session_appid()
+        if appid is None:
+            return
+        logger.warning(
+            "launch_env_mudou_depois_do_exec",
+            appid=appid,
+            cobertura_no_arquivo_antigo=antes,
+            cobertura_agora=agora_tem,
+            vpads=len(atual[3]),
+            fisicos=atual[4],
+            motivo=(
+                "o jogo congelou a env no exec do wrapper; a regravação vale "
+                "para o PRÓXIMO lançamento, não para esta sessão"
+            ),
+        )
 
 
 def _load_profiles(daemon: DaemonProtocol) -> list[Any]:
@@ -1119,6 +1317,7 @@ def _env_for_profile(
     flavor_atual: str,
     backends: list[str],
     permite_uhid: bool = False,
+    fisicos: int = 0,
 ) -> tuple[dict[str, str], str] | None:
     """(env, motivo) antecipando o modo que o perfil impõe; None = sem opinião.
 
@@ -1126,6 +1325,33 @@ def _env_for_profile(
     `default.env`. `kind=gamepad` com máscara dualsense usa os backends
     REAIS atuais (se a emulação está desligada agora, não dá para garantir
     uhid no futuro => conservador, sem IGNORE).
+
+    IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026) — `fisicos` entrou aqui, e o
+    motivo é um buraco medido no disco dela: **a cobertura por físico nunca
+    valeu para o arquivo por appid.** O `materialize_launch_env` chamava esta
+    função sem `fisicos`, o default 0 significa "NÃO SEI" e "não sei" autoriza
+    o IGNORE — logo o `steam_app_<appid>.env`, que é justamente o arquivo que um
+    jogo COM perfil lê (o caso dela: Sackboy, appid 1599660), saía com o IGNORE
+    em mesas onde o `default.env` do MESMO instante o omitia por falta de vpad.
+    Às 00:15:42.219 de 12/08 o journal registra os dois lados ao mesmo tempo:
+    `launch_env_ignore_omitido_sem_cobertura fisicos=4 vpads=2` para o default,
+    e o arquivo do Sackboy gravado com o IGNORE no mesmo `materialize`.
+
+    O comentário do callsite afirmava o contrário — *"os demais ... ficam no
+    default 0, que é o conservador — sem cobertura provada, sem IGNORE"* — e
+    isso nunca foi verdade em código: `fisicos=0` é o ramo PERMISSIVO. Fato
+    errado se substitui.
+
+    **A correção só vale onde há contagem de verdade.** Nos ramos de
+    PROGNÓSTICO a lista de backends é um símbolo de TIPO (`["uhid"]`,
+    `["uinput"]`), não um censo de vpads: comparar `len(["uhid"]) >= 4` diria
+    "sem cobertura" sobre uma mesa que ainda nem existe e reabriria o R-05 —
+    o arquivo por appid voltaria a ficar PIOR que o `default.env`, que é o
+    defeito que o prognóstico foi escrito para curar. Ali `fisicos` continua 0,
+    e continua sendo uma promessa sobre o futuro. O preço dessa promessa está
+    declarado no relatório da sprint, porque é decisão dela: **o jogo lê a
+    promessa no instante do `exec`, e a mesa que a cumpre pode levar um minuto
+    para existir.**
     """
     mode = getattr(profile, "mode", None)
     if mode is None:
@@ -1178,12 +1404,17 @@ def _env_for_profile(
         # (`0x054c/0x0ce6`) — o pior caso é mapeamento SDL menos validado, nunca
         # "zero controles".
         backends_efetivos = backends
+        # Os backends REAIS são um censo de vpads: aqui a cobertura por físico
+        # vale, exatamente como vale para o `default.env` do mesmo instante.
+        fisicos_efetivos = fisicos
         motivo = "perfil gamepad dualsense (backends reais)"
         if flavor != flavor_atual or not backends:
             from hefesto_dualsense4unix.integrations.uhid_gamepad import uhid_available
 
             prognostico_uhid = uhid_available() and permite_uhid
             backends_efetivos = ["uhid"] if prognostico_uhid else backends
+            # Prognóstico: a lista acima é TIPO, não contagem — ver docstring.
+            fisicos_efetivos = 0
             motivo = (
                 "perfil gamepad dualsense (prognóstico uhid)"
                 if prognostico_uhid
@@ -1193,6 +1424,7 @@ def _env_for_profile(
             compose_env(
                 native_mode=False, emulation_enabled=True,
                 flavor=flavor, backends=backends_efetivos,
+                fisicos=fisicos_efetivos,
             ),
             motivo,
         )
@@ -1241,15 +1473,38 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
             and any(b != "uhid" for b in backends)
         ):
             logger.warning("dedup_broken", motivo="vpad_uinput", backends=backends)
+        # RUMBLE-SEM-DONO-01 (11/08/2026): o mesmo raciocínio do `dedup_broken`
+        # acima — o aviso mora na BORDA de materialização, que é o único ponto
+        # com o estado real da mesa, e não no state_full de 20 Hz. Sem vpad e
+        # sem Modo Nativo, a vibração do jogo não passa por nós (o
+        # multiplicador da GUI é do sink do vpad) e ainda assim escrevemos no
+        # mesmo controle. Era o quadrante que o journal dela mostrava e que o
+        # produto não contava a ninguém.
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            sem_dono_do_rumble,
+        )
+
+        if sem_dono_do_rumble(native=native, backends=backends):
+            logger.warning(
+                "rumble_sem_dono",
+                motivo="sem_vpad_e_sem_modo_nativo",
+                native=native,
+                emulacao=enabled,
+                backends=backends,
+            )
         default_env = compose_env(
             native_mode=native,
             emulation_enabled=enabled,
             flavor=flavor,
             backends=backends,
             # WRAPPER-EM-TODOS-01: este é o ÚNICO chamador com o estado real da
-            # mesa; os demais montam prognóstico de perfil (backends
-            # antecipados, sem controle na mão) e ficam no default 0, que é
-            # o conservador — sem cobertura provada, sem IGNORE.
+            # mesa. NOTA DATADA — 12/08/2026 (IGNORE-NO-FIM-DA-SEQUENCIA-01):
+            # aqui dizia que os demais chamadores "ficam no default 0, que é o
+            # conservador — sem cobertura provada, sem IGNORE". O código sempre
+            # fez o oposto: `fisicos=0` é "NÃO SEI" e "não sei" AUTORIZA o
+            # IGNORE (ver `cobertura_total`). O `_env_for_profile` logo abaixo
+            # passou a receber o número de verdade no ramo dos backends reais;
+            # nos ramos de prognóstico o 0 fica, e agora está escrito lá por quê.
             fisicos=fisicos,
         )
         if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in default_env:
@@ -1276,6 +1531,10 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
                 # factory usa (VPAD-08 — o modo fake não pode plantar um Edge
                 # real no kernel).
                 permite_uhid=_permite_uhid(daemon),
+                # IGNORE-NO-FIM-DA-SEQUENCIA-01: a mesa REAL também chega aqui.
+                # Sem ela, o arquivo por appid era o único caminho do produto em
+                # que a cobertura por físico nunca valeu.
+                fisicos=fisicos,
             )
             if per_profile is None:
                 continue
@@ -1324,6 +1583,15 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
             if stale.name not in desired:
                 with contextlib.suppress(OSError):
                     stale.unlink()
+        # IGNORE-NO-FIM-DA-SEQUENCIA-01: o recibo do que ficou GRAVADO. É contra
+        # ele que o vigia compara a mesa de agora — e é por isso que ele é
+        # carimbado no FIM, depois de os arquivos existirem: carimbar antes
+        # faria uma escrita que falhou passar por escrita feita, e o vigia
+        # calaria para sempre sobre a divergência.
+        with contextlib.suppress(Exception):
+            daemon._launch_env_assinatura = (  # type: ignore[attr-defined]
+                native, enabled, flavor, tuple(backends), fisicos,
+            )
         logger.info(
             "launch_env_materializado",
             native=native,
@@ -1339,10 +1607,13 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
 __all__ = [
     "ENV_ALLOWLIST",
     "ESTADO_ALLOWLIST_STEAM_INPUT",
+    "JANELA_DE_SOSSEGO_SEC",
     "LAUNCH_ARM_WINDOW_SEC",
     "PAR_DUALSENSE_FISICO",
     "WRAPPER_MARKER_WINDOW_SEC",
     "arm_launch_profile",
+    "armar_rematerializacao",
+    "cobertura_total",
     "compor_lista_vidpid",
     "compose_env",
     "launch_session_appid",
@@ -1352,11 +1623,13 @@ __all__ = [
     "read_last_exit_pid",
     "read_last_run_marker",
     "read_last_run_pid",
+    "rematerializar_se_sossegou",
     "steam_appid_from_wm_class",
     "steam_input_appids",
     "steam_input_exception_appid",
     "valor_disable_hidraw",
     "valor_ignore_devices",
+    "vigiar_a_mesa",
     "wrapper_game_running",
     "wrapper_used_state",
 ]

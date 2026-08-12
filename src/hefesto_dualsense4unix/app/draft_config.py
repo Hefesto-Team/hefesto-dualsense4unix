@@ -21,6 +21,14 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# HARM-19 / 11/08/2026: o teto do multiplicador tem UM dono, e este arquivo era
+# a ponta que o repetia à mão (`le=2.0`) — quando o esquema baixou para 1.0, o
+# rascunho da GUI continuou aceitando 2.0 e a divergência só aparecia no
+# "Salvar Perfil", com erro de validação. Import em tempo de execução (e não sob
+# TYPE_CHECKING como o `Profile` abaixo) porque o pydantic precisa do valor na
+# hora de construir a classe.
+from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
+
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -83,7 +91,9 @@ class RumbleDraft(BaseModel):
     (FEAT-RUMBLE-POLICY-PROFILE-01). ``policy=None`` = perfil sem opinião
     (ativar não mexe na política global do daemon). A aba Rumble grava aqui
     cada escolha da usuária, para o "Salvar Perfil" do rodapé persistir o que
-    ela vê; ``custom_mult`` (0.0-2.0) só acompanha ``policy="custom"``.
+    ela vê; ``custom_mult`` só acompanha ``policy="custom"``, e a faixa dele é
+    a do esquema do perfil (``RUMBLE_CUSTOM_MULT_MAX``), nunca um número
+    escrito aqui.
 
     ``passthrough``: preserva o campo v1 do perfil no round-trip
     (não editável pela GUI nesta sprint).
@@ -94,7 +104,7 @@ class RumbleDraft(BaseModel):
     weak: int = Field(default=0, ge=0, le=255)
     strong: int = Field(default=0, ge=0, le=255)
     policy: Literal["economia", "balanceado", "max", "auto", "custom"] | None = None
-    custom_mult: float | None = Field(default=None, ge=0.0, le=2.0)
+    custom_mult: float | None = Field(default=None, ge=0.0, le=RUMBLE_CUSTOM_MULT_MAX)
     passthrough: bool = True
 
 

@@ -446,7 +446,12 @@ def rumble_policy_set(policy: str) -> bool:
 def rumble_policy_custom(mult: float) -> bool:
     """Define política "custom" com multiplicador explícito (FEAT-RUMBLE-POLICY-01).
 
-    ``mult`` deve ser float em [0.0, 1.0].
+    ``mult`` deve ser float em ``[0.0, RUMBLE_CUSTOM_MULT_MAX]`` — a faixa mora
+    em ``profiles.schema`` e o handler do daemon recusa fora dela (HARM-19).
+    Este texto dizia ``[0.0, 1.0]`` à mão e ficou mentindo de 11/08/2026, quando
+    o teto voltou a 2.0 por decisão dela: acima de 1.0 o multiplicador
+    AMPLIFICA o que o jogo pediu.
+
     Retorna True se o daemon confirmou; False se offline ou parâmetro inválido.
     """
     ok, _ = _safe_call("rumble.policy_custom", {"mult": float(mult)})

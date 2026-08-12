@@ -406,6 +406,53 @@ else
     fi
 fi
 
+# GATILHO-DA-COR-INSTALA-01 (12/08/2026): o trigger de `hidraw` dos instaladores
+# tem de poder CASAR alguma coisa.
+#
+# Os dois instaladores traziam
+# `udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=054c`, que
+# casa ZERO dispositivos em toda máquina: o `--attr-match` só olha os sysattrs
+# do PRÓPRIO nó, e um `hidraw` não tem `idVendor` — ele mora no pai USB, e no
+# Bluetooth não existe pai USB (o BlueZ cria o HID por `uhid`). Medido na
+# máquina dela em 12/08: 8 dispositivos sem o filtro, 0 com ele.
+#
+# O que isso custava: numa instalação limpa com o DualSense já conectado no
+# rádio, a regra 70 (MODE 0660 + TAG uaccess) não era reaplicada ao nó que já
+# existia. O daemon subia sem poder ESCREVER no hidraw daquele controle, e a
+# lightbar por Bluetooth — inclusive o gatilho da cor de
+# `core/lightbar_gatilho.py` — nascia morta até alguém reconectar o controle
+# à mão. É a regra da casa de 08/08 ("nada à mão, nada opt-in") furada por uma
+# linha que parecia certa.
+#
+# Este portão é cego a QUAL trigger se usa: ele cobra só que nenhum trigger de
+# hidraw venha casado com um `--attr-match`. A PRESENÇA do trigger é cobrada do
+# lado do pytest (tests/unit/test_install_curas_de_12_08_lightbar_por_bluetooth.py),
+# que roda contra os arquivos REAIS — aqui o repo pode ser o fixture mínimo dos
+# testes deste próprio portão, que não tem controle nenhum a redisparar.
+# Mordida: devolver a linha antiga reprova aqui.
+echo "== trigger de hidraw dos instaladores (tem de casar dispositivo de verdade) =="
+_hidraw_falhas=()
+for _hid_inst in scripts/install_udev.sh scripts/install-host-udev.sh; do
+    [[ -f "${_hid_inst}" ]] || continue
+    _hid_linhas="$(grep -h 'udevadm trigger' "${_hid_inst}" 2>/dev/null \
+        | grep -F 'subsystem-match=hidraw' || true)"
+    [[ -n "${_hid_linhas}" ]] || continue
+    if grep -qF 'attr-match' <<<"${_hid_linhas}"; then
+        _hidraw_falhas+=("${_hid_inst}: trigger de hidraw filtrado por --attr-match — um nó hidraw NÃO tem sysattr próprio (idVendor mora no pai USB, e no Bluetooth não há pai USB): o filtro casa ZERO dispositivos, sempre")
+    fi
+done
+if [[ "${#_hidraw_falhas[@]}" -eq 0 ]]; then
+    echo "[ OK ] os dois instaladores redisparam hidraw sem filtro impossível"
+else
+    for _hid_f in "${_hidraw_falhas[@]}"; do
+        echo "[FAIL] ${_hid_f}"
+    done
+    echo "       o certo é 'udevadm trigger --action=change --subsystem-match=hidraw':"
+    echo "       reaplica MODE/OWNER e faz a 73-seat-late.rules virar a TAG uaccess"
+    echo "       em ACL, sem re-executar os RUN+= presos a ACTION==\"add\"."
+    rc=1
+fi
+
 # M11 (auditoria): a cura de RAIZ do storm (assets/modprobe/*.conf) precisa ser
 # empacotada por TODOS os caminhos, senão o install-host-udev.sh pula a cura em
 # silêncio (SNDQUIRK_SRC=""). O glob de regras acima só pega *.rules — este bloco
