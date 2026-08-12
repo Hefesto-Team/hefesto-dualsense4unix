@@ -767,6 +767,100 @@ janela sempre vence um "Vale sempre", por mais alta que seja a prioridade deste.
 
 ---
 
+## 19. A vibração do jogo dura um instante e morre
+
+**Sintoma.** O jogo vibra o controle e a vibração **morre logo no começo** — um
+tranco e silêncio, ou nada. Não é vibração fraca nem intermitente: é
+cancelamento. Acontece com o controle no cabo **e** no rádio.
+
+**Onde isso aparece:** quando o jogo está falando com o **DualSense físico** em
+vez de com o controle virtual do Hefesto — ou seja, com **"Jogar pelo Hefesto"
+desligado** e sem estar na **Conexão Nativa (Sony)**. Nos outros casos uma das
+duas coisas protegia, e por isso o defeito parecia intermitente.
+
+**Como confirmar em dez segundos:** abra a aba **Rumble**. Se a linha em cima
+dos quatro botões disser *"A intensidade acima não está chegando a jogo nenhum:
+não há gamepad virtual, e é por ele que ela passa"*, você está exatamente nesse
+estado.
+
+**A causa, medida em 11/08/2026** com quatro DualSense na mesa, dois no cabo e
+dois no rádio: o Hefesto reconfirmava o estado do controle a cada meio segundo,
+e essa reconfirmação **zerava os motores** que o jogo tinha acabado de ligar. A
+prova não foi por argumento — subindo o intervalo de 0,5 s para 8,0 s, a
+vibração passou a durar **oito segundos exatos**, e a duração seguiu o número.
+
+**Corrigido**: a reconfirmação deixou de ser eterna. Ela agora só acontece na
+janela logo depois de uma mudança de verdade, que é para o que ela servia
+(garantir que a mudança chegou); passado isso, o Hefesto **cala** e não pisa mais
+no motor de quem está tocando.
+
+**Se o sintoma continuar depois de atualizar:** o serviço em memória pode ser
+mais velho que o código no disco. Aba **Sistema** → **Reiniciar**, ou:
+
+```bash
+systemctl --user restart hefesto-dualsense4unix.service
+```
+
+**O que ainda não está resolvido, dito com todas as letras:** com **quatro**
+controles vibrando ao mesmo tempo e o serviço no estado antigo, os quatro
+vibravam *"por duração diferente"* em vez de nenhum vibrar. Esse contraste foi
+registrado e **não foi explicado**.
+
+---
+
+## 20. A barra de luz não pega a cor por Bluetooth
+
+**Sintoma.** O controle conecta por Bluetooth, a barra de luz **nasce apagada**
+(ou com uma cor que não é a sua), e **"Aplicar no controle"** na aba Lightbar não
+muda nada. O mesmo controle, no cabo, obedece na hora.
+
+**A causa, medida em 12/08/2026 e conferida no ar:** com a **Steam aberta**, ela
+mantém uma via de escrita para **cada** DualSense e **repinta a barra de todos
+eles a cada conexão nova** — uma rajada de alguns segundos, que se repete a cada
+controle que você liga. A cor que o Hefesto pinta chega junto com a dela, e a
+última palavra fica sendo a da Steam.
+
+Passada a rajada, ela **cala** — e em regime **não apaga** a barra: abrindo a
+Steam com as barras já acesas, elas mudaram para as cores dela e continuaram
+acesas. O que a Steam estraga é o **começo** da conexão.
+
+Os números, para quem quiser conferir: com a Steam viva no momento da conexão,
+**um em três** controles aceitou a cor; com **ninguém** disputando antes da
+conexão, **três em três** aceitaram — e no fio saíram **98** escritas contra
+**6**. A medição inteira está em
+[a pilha do Steam Input](../protocol/pilha-steam-input-xpad-sdl.md), seção
+6-bis.
+
+**O que fazer hoje:**
+
+1. **Ligue os controles ANTES de abrir a Steam.** É o único gesto com medição
+   limpa atrás: os três nasceram acesos e os três aceitaram a cor escolhida.
+2. **Se já ligou com a Steam aberta:** feche a Steam, desligue o controle
+   (segure o botão PS até a barra apagar) e ligue de novo. **Reconectar com a
+   Steam ainda aberta às vezes funciona e às vezes não** — foi um em três nos
+   ensaios —, e a diferença não é preciosismo: o que decide não é a reconexão, é
+   **quem está disputando a barra no instante em que o controle sobe**.
+   *"Reconectar cura"* já foi concluído e derrubado quatro vezes neste projeto
+   justamente por isso.
+3. **No cabo o problema não aparece.** No ensaio de 11/08 em que os dois
+   controles do rádio **não** aceitaram a cor, os dois do cabo aceitaram **no
+   mesmo instante** — e a Steam estava aberta.
+
+**O que NÃO adianta:** insistir em **Aplicar no controle**. Por Bluetooth a cor
+sai por um caminho que perde essa disputa, e clicar de novo escreve pelo mesmo
+caminho.
+
+**O que ainda não medimos, e vale registro se você testar:** se desligar o
+*PlayStation Controller Support* da Steam (a [seção 15](#15-steam-input-intercepta-o-dualsense-touchpad-vira-mouse-mic-spam-botões-em-janela-em-background)
+desta página) evita a repintura. Ninguém aqui rodou esse ensaio.
+
+**A cura está desenhada e medida** — escrever a cor depois que a sequência de
+conexões sossega, e escrevê-la em todos os controles, não só no que chegou —, e
+o aceite dela na bancada foi *"perfeito"*. Enquanto ela não estiver no produto
+instalado, valem os três contornos acima.
+
+---
+
 ## Recursos
 
 - [README principal](../../README.md) — instalação e uso

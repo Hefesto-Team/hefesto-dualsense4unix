@@ -43,16 +43,44 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 
 | recurso | hardware suporta? | projeto implementa? | ligado por padrão? | grau |
 |---|---|---|---|---|
-| **Lightbar** | sim (via kernel/sysfs) | sim — a cor sai por `core/sysfs_leds.py`; por BT a escrita da pydualsense é suprimida (`LIGHTBAR-BT-NEVER-01`) | sim | **MEDIDO AO VIVO** (03/08) |
+| **Lightbar** | sim (via kernel/sysfs) | sim — a cor sai por `core/sysfs_leds.py`; por BT a escrita da pydualsense é suprimida (`LIGHTBAR-BT-NEVER-01`) | sim | **MEDIDO AO VIVO** (03/08) — **e com uma condição medida em 12/08: ver a nota logo abaixo da tabela** |
 | **Player-LEDs** | sim | sim, pelo mesmo caminho | sim | **MEDIDO AO VIVO** |
 | **Gatilhos adaptativos** | sim | sim, **sem ramo de transporte** — o `common` é idêntico nos dois envelopes | com preset aplicado | **MEDIDO AO VIVO** (*"l2 funciona"*, 03/08) |
-| **Rumble** | sim (kernel implementa rumble + CRC-32 do BT) | sim, **zero gate de transporte** | exige o vpad | **MEDIDO AO VIVO** (03/08 — vibrou e parou) |
+| **Rumble** | sim (kernel implementa rumble + CRC-32 do BT) | sim, **zero gate de transporte** | exige o vpad | **MEDIDO AO VIVO** (03/08 — vibrou e parou); os dois motores separados e o zero que para de verdade, **medidos no rádio em 10/08**; a vibração que o **jogo** manda ao nó físico, **medida nos dois transportes em 11/08** — ver a nota |
 | **Giroscópio / acelerômetro** | sim | sim, cópia byte a byte da janela de motion | sim, com o vpad uhid | **taxa do aparelho MEDIDA em 11/08:** cabo 250,0 Hz exatos, rádio variável em rajadas (ver abaixo). Chegada ao **jogo**: continua não medida, nos dois transportes |
 | **Touchpad (dedo e clique)** | sim | sim, mesma janela + `payload[9] & 0x02` | sim | **IMPLEMENTADO, NÃO MEDIDO** em jogo |
 | **Microfone** | **sim** — Opus em HID | **sim, inteiro** (`integrations/dualsense_bt_audio.py`) | **não** — opt-in por privacidade e banda | **MEDIDO AO VIVO** (WAV em 25/07 e em 03/08) |
 | **Alto-falante — volume/rota/pré-amp** | sim (são registradores no `common`) | sim, sem gate de transporte | só depois do primeiro `speaker.set` | **IMPLEMENTADO, NÃO MEDIDO** |
 | **Alto-falante — som saindo** | não confirmado | **NÃO** — `BLOCO_SPEAKER = 0x13` declarado e **sem uso** | — | **NÃO IMPLEMENTADO** |
 | **Áudio de sistema (card/sink no PipeWire)** | **impossível** — sem A2DP/HFP/HSP | — | — | **MEDIDO**: zero cards com o controle no rádio |
+
+> **NOTA DATADA — 12/08/2026: duas linhas da tabela ganharam condição, e as duas
+> condições foram medidas com quatro DualSense na mesa dela (dois no cabo, dois
+> no rádio).** Nenhuma das duas é diferença **de transporte** — e é por isso que
+> elas moram numa nota e não viraram coluna nova.
+>
+> **1. A lightbar por rádio depende de QUEM tinha o `hidraw` aberto na probe.**
+> Com a Steam viva no instante em que o controle sobe, a cor escrita pela rota
+> `sysfs` — a **única** que o produto usa por Bluetooth — **não pega**: um em
+> três obedeceu. Com ninguém no `hidraw` antes da conexão, **três em três**
+> obedeceram a verde puro. **No cabo a assimetria é gritante e foi medida no
+> mesmo instante:** em 11/08, com a Steam aberta e o daemon parado, a mesma
+> escrita acendeu os **dois** controles do cabo e **nenhum** dos dois do rádio
+> (`docs/data/ensaios.csv:26-27`, literal dela: *"só os cabo ficaram branco e o
+> do bt não"*). A medição no fio, o contraste de 98 contra 6 pacotes de
+> saída e a rota que vence (`hidraw` cru) estão em
+> [a pilha do Steam Input](pilha-steam-input-xpad-sdl.md), seção 6-bis; os
+> ensaios são `docs/data/ensaios.csv:41-51`, todos com o olho dela.
+>
+> **2. A vibração que o JOGO manda ao nó físico era cancelada pelo produto, nos
+> dois transportes.** Quando o jogo escreve força-feedback pelo `evdev` do
+> DualSense físico — o que acontece quando não há gamepad virtual e não é
+> Conexão Nativa —, o keepalive do daemon reescrevia `common[2]`/`common[3]`
+> zerados a cada 0,5 s e apagava o motor. **A causa foi isolada com número**
+> (a constante em 8,0 s produziu **oito segundos exatos** de vibração) e a cura
+> é `RUMBLE-SEM-DONO-01`: o keepalive deixou de ser perpétuo. **O defeito não
+> distinguia cabo de rádio** — foi medido igual nos dois
+> (`docs/data/ensaios.csv:16-24`).
 
 ---
 

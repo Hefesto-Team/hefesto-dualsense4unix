@@ -259,6 +259,16 @@ escreve em `common` sem saber por onde vai sair.
 A coluna que importa é a última: **quantas vezes o símbolo aparece no arquivo
 inteiro**. Uma ocorrência significa que ele foi definido e **nunca usado**.
 
+> **A coluna "autoriza" diz o que o report DECLARA, não o que o firmware
+> EXIGE** (acrescentado em 12/08/2026). Os nomes abaixo são os do driver, e o
+> driver descreve a intenção do protocolo. **Onde alguém já perguntou ao
+> aparelho, a resposta divergiu:** os bytes de motor foram obedecidos com os
+> bits `0x01` e `0x02` **desligados** — medido na bancada de 11/08 com o olho
+> dela, e registrado na
+> [canônica do DualSense](dualsense-referencia-canonica.md), §2. Para todos os
+> outros bits desta seção **ninguém perguntou**, e ler esta tabela como
+> porteiro é justamente o erro que já custou uma cura inteira aqui.
+
 ### `valid_flag0` (offset 0 do `common`)
 
 | bit | valor | nome no fonte | autoriza | usos |
@@ -329,8 +339,21 @@ estado do jack (`:1489-1533`). Se um evento de jack coincidir com um rumble
 pendente, a linha 1491 **apaga** os bits de vibração que as linhas 1460-1464
 acabaram de ligar; se coincidir com uma atualização de lightbar ou de player
 LEDs, a linha 1520 apaga os bits das linhas 1471 e 1480. Os campos de dado
-continuam preenchidos, mas sem o bit de validação o aparelho os ignora — e o
-driver já limpou os `update_*`, então **a atualização é perdida, não adiada**.
+continuam preenchidos — e o driver já limpou os `update_*`, então, **se o bit
+fizer falta, a atualização é perdida e não adiada**.
+
+**O "se" acima é novo, e ele encolhe metade desta armadilha.** Até 11/08/2026
+esta página afirmava, sem ressalva, que *"sem o bit de validação o aparelho
+ignora os campos"*. **Para os dois bytes de motor isso é falso, e está medido no
+aparelho** — ver a
+[canônica do DualSense](dualsense-referencia-canonica.md), §2, *"Os BITS de
+vibração não são porteiro dos BYTES de motor"* (ensaio
+`keepalive-premissa-troca-de-lado`, com o olho dela). Logo:
+
+| bloco apagado pela atribuição | o que se espera hoje |
+|---|---|
+| **vibração** (`common[2]`, `common[3]`) | **não se perde** — o firmware obedeceu aos bytes com os bits desligados. GRAU: MEDIDO AQUI para o mecanismo, **INFERIDO** para este caminho específico do jack, que ninguém provocou |
+| **lightbar e player LEDs** | **sem medição.** Ninguém repetiu o ensaio de troca-de-lado para cor nem para as cinco lâmpadas; enquanto isso, a leitura conservadora (o bit faz falta) é a que fica |
 
 Isso só ocorre **sob USB** (o caminho de jack é USB-only, `:1648`) e só na
 transição de plugar ou desplugar fone. É estreito, e é real. Não medimos.
@@ -338,7 +361,8 @@ transição de plugar ou desplugar fone. É estreito, e é real. Não medimos.
 
 **O ensaio que resolve:** plugar um fone no controle no cabo enquanto um rumble
 está em curso, e ver se o rumble morre no ato. Variável única, custo de um
-minuto.
+minuto — e agora ele tem uma previsão a derrubar: **pela medição de 11/08, o
+rumble NÃO deve morrer**, e o bloco a vigiar é o da cor.
 
 ## 3. A rota sysfs — e a pergunta que decide
 
