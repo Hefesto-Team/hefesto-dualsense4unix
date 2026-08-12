@@ -1009,7 +1009,13 @@ _reconhecimento() {
         achou_algo=1
     fi
 
-    [[ "${achou_algo}" -eq 0 ]] && info "distro, bluez e Secure Boot: nada que atrapalhe"
+    # `info` NUNCA foi função deste script — só existem step/ok/warn/die (l. 323-326).
+    # O shell caía no /usr/bin/info do sistema (o leitor de documentação GNU), que
+    # sai com erro, e o `set -e` derrubava a instalação no passo 1. E a linha só
+    # executa quando NADA atrapalha — ou seja, quebrava exatamente na máquina limpa,
+    # que é a primeira coisa que um PC novo faz. Medido no ciclo uninstall→install
+    # de 12/08/2026: zero regras udev, daemon inativo, produto ausente.
+    [[ "${achou_algo}" -eq 0 ]] && printf '      distro, bluez e Secure Boot: nada que atrapalha\n'
     return 0
 }
 _reconhecimento
