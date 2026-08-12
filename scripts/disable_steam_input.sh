@@ -163,8 +163,24 @@ steam_running() {
 # O `pgrep -f` é seguro aqui: a string `SteamLaunch AppId=` só aparece em
 # cmdline de launch REAL da Steam. O falso-positivo histórico
 # (BUG-STEAM-DETECT-EARLYOOM-FALSE-POSITIVE-01) era com NOMES de processo.
+#
+# 12/08/2026 — o `[ ]` e o `[0-9]` NÃO são enfeite, e a frase acima só é
+# verdadeira com eles. Duas razões, ambas medidas:
+#
+#  1. `pgrep -f` compara a regex contra a cmdline de TODO processo, e a cmdline
+#     do próprio `pgrep` contém o padrão procurado. Ele exclui o próprio pid —
+#     mas não o de OUTRO `pgrep` caçando o mesmo texto, e há um rodando a cada
+#     15 s nesta máquina (`~/.local/bin/aurora-game-watch-daemon.sh`). Dois
+#     desses se enxergam e ambos respondem "há jogo" com zero jogos abertos.
+#  2. Esta linha também virava ISCA para quem procura a mesma agulha: o daemon
+#     varre `/proc/*/cmdline` atrás de `SteamLaunch AppId=` e encontrava ESTE
+#     `pgrep`, devolvendo uma cmdline sem appid nenhum — o que fazia
+#     `steam_game_running_appid()` responder None com o jogo aberto.
+#
+# `[ ]` casa um espaço literal sem que a regex o contenha; `[0-9]` exige um
+# appid de verdade depois do `=`. É o idioma do `ps aux | grep [p]attern`.
 steam_game_running() {
-    pgrep -f 'SteamLaunch AppId=' >/dev/null 2>&1
+    pgrep -f 'SteamLaunch[ ]AppId=[0-9]' >/dev/null 2>&1
 }
 
 stop_steam() {

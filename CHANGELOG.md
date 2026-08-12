@@ -5,6 +5,94 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### O daemon varria a tabela de processos inteira, duas vezes por segundo
+
+Caçando stuttering em jogos, o `strace -c -f` no daemon vivo devolveu um número
+que não tinha explicação inocente: **1.287 `openat` por segundo**, com a máquina
+parada. O rastro com nomes contou o resto — a cada **2,003 s cravados** o daemon
+forkava `pgrep -af "SteamLaunch AppId="`, e o `pgrep` lê **cinco** arquivos por
+processo (`status`, `stat`, `cmdline`, `cgroup`, `ctty`) mais um `/proc/uptime`,
+vezes ~425 pids. Em 10 s: 2.046 `cmdline`, 2.046 `status`, 2.051 `uptime`.
+
+De brinde, 10 `execve` desperdiçados a cada 5 s: o `PATH` erra cinco vezes
+(`~/.cargo/bin`, `~/.local/bin`, `/usr/local/sbin`, `/usr/local/bin`,
+`/usr/sbin`) antes de achar o `pgrep` em `/usr/bin`.
+
+Quem paga essa conta é `steam_game_running_appid()`, chamada pelo poll loop em
+`lifecycle._sync_game_signal`. E o mecanismo pelo qual isso morde um jogo é ler
+`/proc/<pid>/cmdline` de **todo** processo: cada leitura toma o `mmap_read_lock`
+do alvo, inclusive o do jogo.
+
+**A honestidade sobre a evidência:** o teste de causalidade (SIGSTOP no daemon,
+12 s, SIGCONT) **não** condenou o daemon — 32.320 → 32.401 → 31.822 ctxt/s no
+sistema, tudo dentro do ruído. Mas rodou **sem jogo aberto**, então também não o
+absolve. O que segue é redução de custo com semântica idêntica, não a cura de um
+bug provado.
+
+A varredura foi para uma helper nova, `_steam_launch_cmdline()`, com duas
+camadas. A primeira é o **marker que o próprio wrapper já grava**: o
+`hefesto-launch` escreve `appid` e `pid` em `launch_env/last_run` exatamente para
+isto. Confirmamos lendo a cmdline desse pid — se casa a agulha E o appid, acabou
+em 2 `open`. É a confirmação que elimina o "pid reuse" do NUMA-01: não
+confiamos no pid sozinho, então nem precisamos do `last_exit` aqui. A segunda é
+a varredura de `/proc` em Python puro, para quando o marker falta (jogo lançado
+fora do wrapper, atalho não-Steam, marker de um launch morto): **um** arquivo por
+pid em vez de cinco, e sem `fork`/`execve`.
+
+Medido, mesma máquina: **10,76 ms → 1,85 ms por chamada** (5,8×), `execve` de 6
+para 0. Caso comum com jogo aberto pelo wrapper: de ~1.287 para **2** `openat`
+por tique.
+
+`steam_game_running()` e `steam_game_running_appid()` mantêm assinatura e
+semântica; os 266 testes que as cobrem passam sem alteração.
+
+#### O que a auditoria adversarial encontrou depois — e que virou parte da cura
+
+Uma segunda leitura, adversarial, achou um defeito **grave** na primeira versão
+desta mudança. Ele fica registrado porque a lição é reaproveitável.
+
+A varredura devolve **uma** cmdline: a primeira em ordem de pid. E existem, vivos
+nesta máquina, processos cuja cmdline **contém a agulha porque estão procurando
+por ela** — `pgrep -f 'reaper SteamLaunch AppId='` do `aurora-game-watch-daemon.sh`
+(a cada 15 s) e do nosso próprio `scripts/disable_steam_input.sh` (a cada 30 min).
+O `pgrep` exclui o próprio pid, nunca o do vizinho.
+
+Com a agulha como substring solta, uma dessas iscas com pid **menor** que o do
+jogo fazia `steam_game_running()` dizer `True` e `steam_game_running_appid()`
+dizer `None`, ao mesmo tempo. Duas consequências reais:
+
+- `app/actions/base.py` — o botão "Fechar o jogo e abrir de novo" pega o appid
+  ANTES de fechar e só reabre `if appid is not None`. Com `None`: **fechava e não
+  reabria** — exatamente o defeito que a RELANCAR-AGORA-01 existe para curar.
+- `daemon/lifecycle.py` (tique de 2 s) — `set_steam_jogo_appid(None)` sumia com a
+  aba "No jogo" no meio da partida.
+
+Correção: a agulha virou `re.compile(r"SteamLaunch AppId=\d")`. Exigir um dígito
+derruba as iscas (elas terminam no `=`) e torna `running()`/`appid()` consistentes
+por construção — se casou, há appid para extrair. O `disable_steam_input.sh`
+ganhou o idioma `'SteamLaunch[ ]AppId=[0-9]'` para deixar de ser isca ele mesmo.
+
+Ainda da auditoria, três acertos menores: a confirmação do marker ganhou `\b`
+(um marker de appid `159` confirmava por prefixo contra um jogo `1599660`); o
+`except Exception` do import tardio virou `except (ImportError, OSError)`, para
+que um rename futuro em `read_last_run_*` não degrade em silêncio para a
+varredura completa; e o comentário que alegava import circular foi corrigido —
+`daemon/launch_env` não importa nada deste módulo, a razão do import tardio é
+que este arquivo é stdlib puro para o `uninstall.sh` poder rodá-lo sem `.venv`.
+
+Os números do docstring também foram corrigidos: os ~3 `openat` por tique valem
+**enquanto o jogo lançado pelo wrapper está vivo**. Com o jogo fechado — que é o
+estado permanente de um daemon 24/7 — o marker aponta para um pid morto e caímos
+na varredura: **400 `openat`, 4,2 ms**. Contra os ~2.100 do `pgrep`, ainda ~5x
+menos e sem `fork`/`execve`, mas não é a mesma frase.
+
+E o buraco de cobertura foi fechado: `tests/unit/test_steam_launch_scan.py`, 11
+testes com `/proc` sintético (isca sozinha, isca antes e depois do jogo em ambas
+as ordens, ExecCondition das units, cmdline vazia, `listdir` falhando, marker
+válido/morto/de-outro-appid, import sem venv). A auditoria mostrou que a suíte
+antiga **passaria idêntica se a função devolvesse sempre `None`** — verde não era
+evidência. Estes falham: com a regex antiga restaurada, 3 deles quebram.
+
 ## [0.9.4] — 2026-08-12
 
 ### Uma noite de bancada com quatro controles, e três defeitos com a mesma forma
