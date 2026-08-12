@@ -227,6 +227,17 @@ REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
 #: cobre perda de report e glitch de link sem martelar o USB.
 OUT_REPORT_KEEPALIVE_SEC: float = 0.5
 
+#: RUMBLE-SEM-DONO-01 (11/08/2026): por quanto tempo, DEPOIS de uma mudança
+#: real, o keepalive continua reconfirmando o MESMO report quando o rumble não é
+#: nosso. Ver o bloco de comentário em `sendReport`: o keepalive perpétuo apaga o
+#: motor de outro dono a cada `OUT_REPORT_KEEPALIVE_SEC`, e o que ele realmente
+#: cura — *"perda de report e glitch de link"*, a linha acima, escrita em
+#: PERF-MULTI-CONTROLLER-01 — é a MUDANÇA que não chegou, coisa que quatro
+#: repetições resolvem e repetição eterna não melhora. Dois segundos são ~4
+#: reconfirmações a 0,5 s: folga de sobra para um glitch de link, e teto do
+#: estrago quando alguém está vibrando por fora.
+OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC: float = 2.0
+
 # QUEDA-QUE-PENDURA-01: teto do join da report_thread no `close()`. Meio
 # segundo é uma eternidade para um laço que gira a ~100 Hz e ainda assim
 # é imperceptível no desligamento — contra os 90 s do SIGKILL do systemd.
@@ -435,6 +446,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self._throttle_sec = REPORT_THREAD_THROTTLE_SEC
         self._last_out_report: list[int] | None = None
         self._last_write_at = 0.0
+        # RUMBLE-SEM-DONO-01: quando o report MUDOU pela última vez. Nasce em
+        # `-inf` (e não em 0.0) para que a janela de confirmação esteja FECHADA
+        # antes do primeiro report — com 0.0 o relógio monotônico de uma máquina
+        # recém-ligada cairia dentro da janela por acidente.
+        self._last_change_at = float("-inf")
         # FEAT-NATIVE-OUTPUT-MUTE-01: em Modo Nativo o JOGO escreve no hidraw
         # (rumble/gatilhos/LED nativos); QUALQUER write nosso — até o keepalive
         # de 0.5s — pisoteia o que o jogo mandou (rumble zerado a cada meio
@@ -448,6 +464,13 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # quando há rumble NOSSO ativo (`_rumble_active`) ou na transição
         # ativa→0 (`_rumble_stop_pending`: UM report com flags ligados e
         # motores 0 para parar o motor de verdade; depois volta ao neutro).
+        #
+        # ATENÇÃO — desligar os bits NÃO BASTA, medido em 11/08/2026
+        # (`keepalive-premissa-troca-de-lado`): o firmware obedece aos BYTES de
+        # motor mesmo com os bits de autorização desligados. Estes dois campos
+        # continuam valendo — são eles que dizem quem é o dono do rumble —, mas
+        # quem protege o motor alheio é a janela de confirmação do keepalive em
+        # `sendReport` (RUMBLE-SEM-DONO-01), não a neutralidade dos bits.
         self._rumble_active = False
         self._rumble_stop_pending = False
         # BTREPORT-02: contador de sequência do report 0x31 (wrap 0-15, como o
@@ -522,6 +545,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 # FEAT-NATIVE-OUTPUT-MUTE-01: mutado (Modo Nativo) = NENHUM
                 # write; o jogo é o dono do output deste controle.
                 if not self._output_muted:
+                    # RUMBLE-SEM-DONO-01: lido ANTES do `prepareReport`, que
+                    # CONSOME o `_rumble_stop_pending` ao montar o report.
+                    dono_do_rumble = self._rumble_active or self._rumble_stop_pending
                     out = self.prepareReport()
                     now = time.monotonic()
                     # PERF-MULTI-CONTROLLER-01: write OUT só quando o report
@@ -531,10 +557,53 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                     # mudança real (rumble do jogo, trigger novo, LED). Report
                     # idêntico reescrito a ~100Hz era pura pressão de barramento
                     # com 2+ controles.
-                    if (
-                        out != self._last_out_report
-                        or (now - self._last_write_at) >= OUT_REPORT_KEEPALIVE_SEC
-                    ):
+                    mudou = out != self._last_out_report
+                    if mudou:
+                        self._last_change_at = now
+                    # RUMBLE-SEM-DONO-01 — MEDIDO em 11/08/2026, com quatro
+                    # DualSense na mesa dela (dois no cabo, dois no rádio) e o
+                    # olho dela como aceite. Ensaios `keepalive-dose-cabo`,
+                    # `keepalive-dose-radio` e `keepalive-premissa-troca-de-lado`
+                    # em `docs/data/ensaios.csv`.
+                    #
+                    # O QUE CAIU. A cura `keepalive neutro` (GUERRA-01 item 2,
+                    # em `_build_common`) apostava que DESLIGAR os bits de
+                    # autorização de vibração bastava para o firmware conservar
+                    # o motor de outro dono. Não basta: com o daemon parado, o
+                    # EV_FF ligou o motor ESQUERDO, e UM único report com os
+                    # bits de vibração DESLIGADOS pedindo `common[2]=200`
+                    # (direito) e `common[3]=0` (esquerdo) fez o tremor TROCAR
+                    # DE LADO na mão dela. O firmware obedece aos BYTES de motor
+                    # e ignora os bits para esse fim — e os bytes saem SEMPRE,
+                    # em `_build_common`, fora do `if not rumble_asserted`.
+                    #
+                    # A DOSE-RESPOSTA que fechou a conta: subindo
+                    # `OUT_REPORT_KEEPALIVE_SEC` de 0,5 s para 8,0 s, a vibração
+                    # de terceiros passou a durar OITO SEGUNDOS EXATOS nos dois
+                    # transportes. O keepalive não é vizinho do defeito: ele é o
+                    # cronômetro do defeito.
+                    #
+                    # POR QUE A CURA É ESTA E NÃO OUTRA. O report é atômico:
+                    # `common[2]`/`common[3]` viajam em TODO write, e não existe
+                    # valor neutro para eles (não há report de entrada nem
+                    # feature que devolva o que o outro dono pediu, então
+                    # "carregar o último valor conhecido" seria carregar o NOSSO
+                    # zero com outro nome). Logo, o único write não-destrutivo é
+                    # o write que NÃO acontece. Mas calar o keepalive para
+                    # sempre perderia o que ele já curava, e a regra da casa é
+                    # que hipótese tem de explicar o que JÁ funcionava — então
+                    # ele não some: fica LIMITADO à janela de confirmação depois
+                    # de cada mudança, que é onde mora a função dele (garantir
+                    # que a mudança chegou). Passada a janela, o report idêntico
+                    # não carrega informação nenhuma e só apaga motor alheio.
+                    #
+                    # Com rumble NOSSO (`dono_do_rumble`) nada muda: ali o
+                    # keepalive é o que faz a vibração dela persistir.
+                    confirmando = (
+                        now - self._last_change_at
+                    ) < OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC
+                    vencido = (now - self._last_write_at) >= OUT_REPORT_KEEPALIVE_SEC
+                    if mudou or (vencido and (dono_do_rumble or confirmando)):
                         self.writeReport(out)
                         self._last_out_report = out
                         self._last_write_at = now
@@ -717,8 +786,14 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
         - keepalive neutro (GUERRA-01 item 2): sem rumble nosso ativo, os bits
           de vibração (flag0 0x01|0x02, atenuação 0x40 do flag1 e a vibração
-          v2 0x04 do flag2) saem DESLIGADOS — o firmware mantém o estado
-          anterior e o rumble de terceiros sobrevive ao nosso keepalive;
+          v2 0x04 do flag2) saem DESLIGADOS — o report não PEDE vibração.
+          **A premissa de que isso bastava caiu em 11/08/2026** (ensaio
+          `keepalive-premissa-troca-de-lado`): o firmware obedece aos BYTES
+          `common[2]`/`common[3]`, que são escritos SEMPRE logo abaixo, fora
+          deste ramo. Quem faz o rumble de terceiros sobreviver é o keepalive
+          limitado de `sendReport` (RUMBLE-SEM-DONO-01) — este bloco continua
+          por não pedir vibração que ninguém pediu, e porque o report de STOP
+          depende de ele saber ligar os bits de volta;
         - supressão de LED (FEAT-DSX-LIGHTBAR-SYSFS-01): `_suppress_leds`
           limpa lightbar 0x04 + player 0x10 do flag1 (o kernel é o dono).
         - LIGHTBAR-BT-KEEPALIVE-01 (22/07, forense da captura): sob supressão,
@@ -1016,6 +1091,14 @@ class PyDualSenseController(IController):
         # (Modo Nativo) — aplicado a todo handle atual E aos que abrirem
         # durante o mute (hotplug com o jogo aberto).
         self._output_mute = False
+        # GATILHO-DA-COR-01: quantas conexões NOVAS de DualSense no RÁDIO o
+        # `connect()` abriu desde a última leitura. É o SINAL do gatilho da cor
+        # (`core/lightbar_gatilho.py`), e ele mora aqui — e não num vigia
+        # próprio — porque o `connect()` já é o tick de hotplug do produto: o
+        # `reconnect_loop` o chama a cada `backend_hotplug_reconcile`, e o
+        # `reconnect()` do poll loop também. Contador, não flag: duas conexões
+        # entre duas leituras não podem virar uma.
+        self._conexoes_bt_novas = 0
         # Protege a mutação de `_handles`/`_primary_key` contra o fan-out de
         # escrita: o daemon roda `connect`/`read_state`/setters em executor
         # multi-thread (max_workers=2). RLock pois um caminho pode reentrar.
@@ -1581,6 +1664,22 @@ class PyDualSenseController(IController):
                     # FEAT-NATIVE-OUTPUT-MUTE-01: handle novo aberto durante o
                     # Modo Nativo herda o mute (hotplug com jogo em foco).
                     handle._output_muted = self._output_mute
+        # GATILHO-DA-COR-01: conta as conexões NOVAS pelo RÁDIO. Só o rádio
+        # porque só ele tem o defeito: pelo cabo a barra obedece (ensaio
+        # `lightbar-usb-1`, 03/08, e os dois do cabo brancos em 11/08 com o
+        # daemon parado). Contado aqui, no fim do tick de hotplug, e NUNCA
+        # consumido aqui — quem consome é o `reconnect_loop`, que é quem sabe
+        # esperar. Falha de leitura de transporte não pode derrubar o
+        # `connect()`: sem o número o gatilho apenas não arma, que é o
+        # comportamento de antes desta feature.
+        novas_bt = 0
+        for _key, handle in new_handles:
+            with contextlib.suppress(Exception):
+                if self._detect_transport(handle) == "bt":
+                    novas_bt += 1
+        if novas_bt:
+            with self._io_lock:
+                self._conexoes_bt_novas += novas_bt
         # LIGHTBAR-BT-RESET-01: a adoção (feature reads do init da pydualsense)
         # derruba o claim da lightbar no FIRMWARE do DualSense por BT — a
         # lightbar apaga e passa a ignorar as escritas de cor do kernel até um
@@ -2242,6 +2341,129 @@ class PyDualSenseController(IController):
                 invalidar()
         return resultado
 
+    def consumir_conexoes_bt_novas(self) -> int:
+        """Quantas conexões novas pelo RÁDIO desde a última leitura, e zera.
+
+        GATILHO-DA-COR-01 — o sinal do gatilho da cor. Consome de propósito: o
+        chamador (`daemon/connection.py`) ARMA o debounce com o número, e uma
+        conexão contada duas vezes viraria uma sequência que nunca fecha.
+        """
+        with self._io_lock:
+            n = self._conexoes_bt_novas
+            self._conexoes_bt_novas = 0
+            return n
+
+    def reescrever_lightbar_por_hidraw(self) -> dict[str, bool]:
+        """Repinta cor E número de jogador em TODOS os DualSense do rádio.
+
+        GATILHO-DA-COR-01, medido na bancada de 11-12/08/2026 com o olho dela.
+        O porquê inteiro está em `core/lightbar_gatilho.py`; aqui ficam as três
+        decisões que são DESTE arquivo.
+
+        **1. Por que hidraw, e por que isto NÃO afrouxa o
+        `LIGHTBAR-BT-NEVER-01`.** Aquela política (`_refresh_sysfs_leds`, o
+        `handle._suppress_leds`) governa o FLUXO do `report_thread`: o report
+        que sai a ~2-60 Hz não pode carregar bits de LED por Bluetooth, porque
+        reengatar a máquina de estados da lightbar em regime trava a exibição
+        no firmware (LIGHTBAR-BT-KEEPALIVE-01, 22/07) e porque o 0x31 da
+        pydualsense 0.7.5 era malformado. Nada disso descreve **uma escrita
+        avulsa, fora do fluxo, com report montado por nós**. Este método é
+        irmão do `enviar_release_leds` logo acima, que já escreve um 0x31 cru
+        por Bluetooth desde 08/08 sem tocar naquele flag — e o report daqui é
+        mais estreito ainda: sem `RELEASE_LEDS`, sem os bits de SETUP/BRILHO do
+        flag2, sem vibração, sem áudio. **`_suppress_leds` continua True para
+        todo handle BT, e o keepalive continua LED-neutro.**
+
+        **2. Por que em TODOS, e não só no que chegou.** Porque a rajada da
+        Steam não é por controle: cada conexão nova faz ela repintar todo mundo
+        que enxerga. A versão que escrevia só no controle recém-chegado deixou
+        dois dos três no padrão da Steam (ensaio `gatilho-1500ms-por-controle`).
+
+        **3. Por que o Modo Nativo é no-op.** Regra dela, literal: *"no modo
+        nativo devolvemos o controle pra steam e no modo conexão também, todo o
+        resto é o hefesto"*. O portão é o `_output_mute` que já existe — o
+        mesmo que o `reassert_resolved_outputs` e o `defend_display` usam; em
+        Modo Nativo / Conexão Nativa (Sony) o dono do hidraw é o jogo, e um
+        report nosso por baixo dele violaria o contrato de zero write.
+
+        **4. Por que a escrita é INCONDICIONAL — sem cache, sem dedup.**
+        MEDIDO em 12/08/2026: com as três barras apagadas pela Steam, um
+        restart do daemon registrou três vezes
+        ``lightbar_reassert_skip_cache`` (`core/sysfs_leds.py:198`) e não
+        reescreveu nada; as três barras continuaram apagadas, e ela confirmou
+        *"todas apagadas mas em nenhum momento os controles desligaram"*. A
+        razão está admitida no próprio código: o ``multi_intensity`` mostra o
+        valor PEDIDO, nunca o ACESO (`core/sysfs_leds.py:92-104`), e escrita
+        por hidraw — que é justamente o que a Steam faz — não o atualiza.
+        Qualquer decisão de "já está nessa cor" tomada a partir dele erra, e
+        erra silenciando a cura. Por isso este caminho **não** consulta o nó,
+        **não** compara com estado lido e **não** passa pelo dedup
+        `_last_out_report` do `sendReport`: ele monta o report e escreve.
+        Ressalva honesta, para o caderno não mentir: o `skip_cache` NÃO é a
+        causa do defeito (ele foi eliminado com o daemon parado, ensaio
+        `lightbar-daemon-fora-radio`) — é agravante, e o que ele impede é a
+        cura agir.
+
+        A cor e o número não são inventados aqui: saem do
+        `_merged_desired_for_key`, que é o MESMO merge de cinco camadas que o
+        priming e o reassert usam (e é por ele que a posição na mesa calculada
+        em `daemon/subsystems/identity.py` chega até aqui). Sem cor resolvida,
+        o azul-default do kernel — a mesma escolha do priming, para o controle
+        virgem nascer aceso em vez de nascer apagado.
+
+        Devolve ``{key: escreveu?}``. Vazio significa "nenhum DualSense no
+        rádio" ou "Modo Nativo" — resposta, não erro; best-effort por handle,
+        e a falha de um nunca aborta os outros.
+        """
+        from hefesto_dualsense4unix.core.lightbar_gatilho import (
+            build_bt_lightbar_report,
+        )
+
+        with self._io_lock:
+            if self._output_mute:
+                logger.info("gatilho_da_cor_no_op_modo_nativo")
+                return {}
+            pode_player = self._pode_escrever_player_leds()
+            alvos = [
+                (key, handle, self._merged_desired_for_key(key))
+                for key, handle in self._handles.items()
+                if self._detect_transport(handle) == "bt"
+            ]
+        resultado: dict[str, bool] = {}
+        for key, handle, desired in alvos:
+            cor = desired.led if desired.led is not None else KERNEL_DEFAULT_BLUE
+            # LIGHTBAR-ISOLAR-OS-PLAYERS-01: o instrumento de eliminação dela
+            # vale AQUI também — se ele está ligado, o número não sai, e o
+            # report vai só com a cor (o bit do jogador nem é autorizado).
+            players = desired.player_leds if pode_player else None
+            ok = False
+            try:
+                report = build_bt_lightbar_report(cor, players)
+                # LIGHTBAR-BT-RESET-03: pelo `writeReport` do handle, que
+                # carimba o `seq` do FLUXO daquele handle e recalcula o CRC.
+                # Escrever cru no `device` com seq 0 já matou uma cura desta
+                # casa uma vez — o firmware descarta o report fora de sequência
+                # e o log diz "escrito" com a barra apagada.
+                escritor = getattr(handle, "writeReport", None)
+                if callable(escritor):
+                    escritor(list(report))
+                    ok = True
+                else:
+                    device = getattr(handle, "device", handle)
+                    escrito = device.write(report)
+                    ok = escrito is None or int(escrito) == len(report)
+            except Exception as exc:
+                logger.warning("gatilho_da_cor_falhou", key=key, err=str(exc))
+            resultado[key] = ok
+            logger.info(
+                "gatilho_da_cor_escrito",
+                key=key,
+                cor=cor,
+                players=players,
+                enviado=ok,
+            )
+        return resultado
+
     def _for_each_led(
         self,
         *,
@@ -2472,11 +2694,13 @@ class PyDualSenseController(IController):
     def force_rumble_stop(self) -> None:
         """Para os motores de TODOS os controles com um report de stop (HARM-16).
 
-        GUERRA-01 item 2 mudou o keepalive para NEUTRO: `set_rumble(0, 0)` com
-        os nossos motores JÁ em 0 (0→0) não emite mais report com flags de
-        vibração — de propósito (é o que parava de zerar rumble de terceiros).
-        Mas a saída de um modo (Nativo/gamepad) precisa parar um motor que o
-        JOGO deixou vibrando por fora (hidraw direto/FF) — aqui forçamos o
+        `set_rumble(0, 0)` com os nossos motores JÁ em 0 (0→0) não muda o
+        report — e report que não muda não é escrito (dedup do `sendReport`), de
+        propósito: sem dono do rumble o keepalive fica calado depois da janela
+        de confirmação, que é o que deixa o motor de terceiros em paz
+        (RUMBLE-SEM-DONO-01). Mas a saída de um modo (Nativo/gamepad) precisa
+        parar um motor que o JOGO deixou vibrando por fora (hidraw direto/FF)
+        — aqui forçamos o
         `_rumble_stop_pending` em cada handle: UM report com flags ligados e
         motores 0, e o ciclo seguinte volta ao neutro. Broadcast deliberado
         (ignora o seletor de alvo): sair de modo para TODO mundo.

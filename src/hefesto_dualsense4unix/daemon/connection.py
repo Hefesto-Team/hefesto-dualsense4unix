@@ -8,9 +8,20 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import time
 
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.core.gatilho_fim_de_sequencia import (
+    RegistroDeGatilhos,
+    Tarefa,
+)
+from hefesto_dualsense4unix.core.lightbar_gatilho import (
+    ATRASO_APOS_A_ULTIMA_CONEXAO_S,
+)
+from hefesto_dualsense4unix.core.lightbar_gatilho import (
+    NOME_DO_GATILHO as NOME_DO_GATILHO_DA_LIGHTBAR,
+)
 from hefesto_dualsense4unix.daemon.battery_journal import registrar_queda_da_bateria
 from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -39,6 +50,18 @@ RECONNECT_ONLINE_CHECK_INTERVAL_SEC: float = 30.0
 #: DualSense novo passa de "até 30s" para ~2s até o backend abrir o handle
 #: (describe_controllers/LED/rumble/trigger + throttle adaptativo recalculado).
 RECONNECT_HOTPLUG_POLL_INTERVAL_SEC: float = 2.0
+
+#: GATILHO-DA-COR-01: fatia curta usada SÓ enquanto o gatilho da cor está
+#: armado — ou seja, na janela de ~1,5 s que se abre depois de uma conexão nova
+#: pelo rádio, e em mais nenhum outro instante.
+#:
+#: Ela existe porque a espera normal deste laço é de até 30 s: sem a fatia
+#: curta, uma conexão que não mudasse mais nada em `/dev/input` só seria
+#: repintada meia dessas 30 s depois — atrasada demais para o gesto dela ter
+#: resposta. Com ela, o disparo cai a até 0,25 s do 1,5 s medido. Isto NÃO é
+#: laço apertado: fora da janela armada nada muda, e dentro dela são ~6 fatias
+#: de `asyncio.sleep` antes de UMA escrita.
+PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC: float = 0.25
 
 
 async def connect_with_retry(daemon: DaemonProtocol) -> None:
@@ -394,12 +417,20 @@ async def reconnect_loop(
     `connect()` é idempotente e tem a guarda `_opening` sob `_io_lock` no
     backend — um `reconnect()` concorrente do poll loop não duplica abertura.
     `input_watch` é injetável para testes; None cria o watch real.
+
+    GATILHO-DA-COR-01: este laço é também o RELÓGIO ÚNICO do mecanismo de
+    reafirmação no fim de sequência (`core/gatilho_fim_de_sequencia.py`),
+    porque é aqui que o produto já enxerga conexão nova. A cada volta ele ARMA
+    o gatilho da lightbar com o que o `connect()` contou, e a espera online
+    avalia o DISPARO de TODOS os gatilhos registrados entre as fatias — o do
+    co-op inclusive, quando ele existir.
     """
     from hefesto_dualsense4unix.daemon.connection import (
         restore_last_profile as _restore_last_profile,
     )
 
     watch = input_watch if input_watch is not None else InputDirWatch()
+    registrar_gatilho_da_lightbar(daemon)
     # Baseline do watch: a 1ª chamada de poll() devolve True por construção
     # (não havia snapshot anterior). Consumimos aqui para que só mudança REAL
     # de /dev/input dispare reconciliação antecipada — o connect() do boot já
@@ -425,6 +456,14 @@ async def reconnect_loop(
             await _restore_hidden_before_reopen(daemon)
             await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
             continue
+
+        # GATILHO-DA-COR-01: logo depois do tick de hotplug, e ANTES de
+        # qualquer transição — as conexões que o `connect()` acabou de abrir
+        # são o sinal, e cada uma re-adia o disparo. Fica fora do ramo
+        # `offline→online` de propósito: a rajada da Steam que apaga as barras
+        # acontece justamente quando um SEGUNDO controle chega com o primeiro
+        # já online, e ali não há transição nenhuma para pendurar o gancho.
+        armar_gatilho_da_cor(daemon)
 
         is_connected = bool(daemon.controller.is_connected())
         if is_connected and not was_connected:
@@ -543,7 +582,188 @@ async def reconnect_loop(
         else:
             # Offline o probe já é curto (5s) e cada iteração reconcilia —
             # o watch não acrescentaria nada aqui.
+            # GATILHO-DA-COR-01: offline não há barra para pintar; uma sequência
+            # que ficasse armada dispararia numa mesa vazia (no-op caro) ou, pior,
+            # no primeiro controle da PRÓXIMA rajada, adiantada.
+            # Desarma SÓ o gatilho da lightbar, e por nome: "não há controle" é
+            # um motivo DELE, não do mecanismo. Quem registrar outro gatilho
+            # decide se a mesa vazia invalida a sequência dele — presumir que
+            # sim seria uma regra escondida no laço de outra pessoa.
+            gatilho_lightbar = registro_de_gatilhos_de(daemon).obter(
+                NOME_DO_GATILHO_DA_LIGHTBAR
+            )
+            if gatilho_lightbar is not None:
+                gatilho_lightbar.desarmar()
             await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
+
+
+def registro_de_gatilhos_de(daemon: DaemonProtocol) -> RegistroDeGatilhos:
+    """O `RegistroDeGatilhos` DESTE daemon, criado na primeira consulta.
+
+    Ele é ÚNICO por daemon porque o mecanismo tem MUITOS armadores e UM SÓ
+    relógio: quem arma o gatilho da lightbar é o tick de hotplug daqui **e** a
+    transição do sinal de jogo (`lifecycle._sync_game_signal`); quem conta o
+    tempo e chama as ações é a espera deste laço. Dois registros dariam duas
+    sequências para o mesmo silêncio.
+
+    É também a porta pela qual o SEGUNDO e o TERCEIRO usuários do mecanismo
+    entram sem copiar nada — ver `core/gatilho_fim_de_sequencia.py`.
+    """
+    registro = getattr(daemon, "_registro_de_gatilhos", None)
+    if isinstance(registro, RegistroDeGatilhos):
+        return registro
+    registro = RegistroDeGatilhos()
+    with contextlib.suppress(Exception):
+        daemon._registro_de_gatilhos = registro
+    return registro
+
+
+def registrar_gatilho(
+    daemon: DaemonProtocol,
+    nome: str,
+    tarefa: Tarefa,
+    *,
+    atraso_s: float | None = None,
+) -> None:
+    """Registra (ou re-registra) a ``tarefa`` nomeada a reafirmar no silêncio.
+
+    É a API pública do mecanismo para outros subsistemas — o caso do `IGNORE`
+    do co-op (ensaio `coop-ignore-avaliado-cedo`) entra por aqui. Tolerante a
+    ordem: pode ser chamada a qualquer momento, e re-registrar não perde a
+    sequência já armada.
+
+    ``atraso_s`` é **obrigatório na primeira vez** e é o SEU número medido: o
+    1,5 s da rajada da Steam não tem nada a ver com os 11 s que a subida dos
+    quatro vpads levou.
+
+    Best-effort: falha de registro nunca derruba quem chamou — o pior que
+    acontece é aquele nome não reafirmar nada.
+    """
+    with contextlib.suppress(Exception):
+        registro_de_gatilhos_de(daemon).registrar(nome, tarefa, atraso_s=atraso_s)
+
+
+def armar_gatilho(daemon: DaemonProtocol, nome: str, *, evento: str, quantos: int = 1) -> bool:
+    """Arma o gatilho ``nome`` por um evento conhecido. RE-ADIA se já armado.
+
+    A outra metade da API pública do mecanismo. Chame a CADA evento que você já
+    detecta — a rajada é do evento, e é o re-adiamento que faz a reafirmação
+    cair no silêncio em vez de no meio dela.
+
+    Devolve ``False`` (sem levantar) quando ninguém registrou aquele nome
+    ainda: um subsistema que arma antes de registrar não pode derrubar o
+    caminho que o chamou.
+    """
+    registro = registro_de_gatilhos_de(daemon)
+    if not registro.armar(nome, time.monotonic(), quantos=quantos):
+        logger.debug("gatilho_armar_sem_registro", nome=nome, evento=evento)
+        return False
+    gatilho = registro.obter(nome)
+    logger.info(
+        "gatilho_armado",
+        nome=nome,
+        evento=evento,
+        quantos=quantos,
+        na_sequencia=gatilho.eventos_armados if gatilho else quantos,
+        atraso_s=gatilho.atraso_s if gatilho else None,
+    )
+    return True
+
+
+def registrar_gatilho_da_lightbar(daemon: DaemonProtocol) -> None:
+    """Fia o caso da LIGHTBAR no mecanismo genérico (GATILHO-DA-COR-01).
+
+    A tarefa resolve o conteúdo NA HORA DE AGIR, e isso é requisito medido: o
+    autoswitch troca de perfil quando o jogo abre (12/08 — o perfil `Sackboy`
+    tem cor própria `[80,60,220]` e foi aplicado no meio do ensaio), então
+    guardar a cor no momento de armar reafirmaria o que o produto queria ANTES
+    e brigaria com o próprio produto. Por isso a tarefa é um `getattr` no
+    controller, resolvido a cada disparo, e a cor sai do merge de cinco camadas
+    lá dentro.
+    """
+
+    def _reafirmar() -> object:
+        escrever = getattr(daemon.controller, "reescrever_lightbar_por_hidraw", None)
+        if not callable(escrever):
+            return None
+        return escrever()
+
+    registrar_gatilho(
+        daemon,
+        NOME_DO_GATILHO_DA_LIGHTBAR,
+        _reafirmar,
+        atraso_s=ATRASO_APOS_A_ULTIMA_CONEXAO_S,
+    )
+
+
+def armar_gatilho_da_cor_por_evento(daemon: DaemonProtocol, evento: str) -> None:
+    """Arma o gatilho da lightbar por um evento que NÃO é conexão nova.
+
+    GATILHO-DA-COR-01, escolha dela de 12/08. A rajada de repintura da Steam é
+    disparada por EVENTO, e a conexão é só o evento mais visível: abrir e
+    fechar jogo também a provoca, e o produto já detecta isso (a transição de
+    autoridade do `game_signal`, que é o mesmo sinal que governa o
+    `launch_env`).
+
+    O debounce é o MESMO — este evento entra na mesma sequência que as
+    conexões. Se um jogo fecha no meio de uma rajada de conexões, há UMA
+    repintura no fim, não duas.
+    """
+    registrar_gatilho_da_lightbar(daemon)
+    armar_gatilho(daemon, NOME_DO_GATILHO_DA_LIGHTBAR, evento=evento)
+
+
+def armar_gatilho_da_cor(daemon: DaemonProtocol) -> int:
+    """Arma o gatilho da lightbar com as conexões novas que o backend contou.
+
+    GATILHO-DA-COR-01. O sinal vem do hotplug que JÁ existe — o
+    `controller.connect()` deste laço (o `backend_hotplug_reconcile`) conta as
+    conexões novas pelo rádio e as guarda; aqui só se consome o número. Nenhum
+    vigia próprio: um segundo observador de `/sys` ou de `/dev` seria uma
+    segunda verdade sobre quem está na mesa.
+
+    Best-effort: um controller enxuto (FakeController, dublês da suíte) sem o
+    contador simplesmente nunca arma, e o laço segue idêntico ao de antes.
+    """
+    consumir = getattr(daemon.controller, "consumir_conexoes_bt_novas", None)
+    if not callable(consumir):
+        return 0
+    try:
+        novas = int(consumir() or 0)
+    except Exception as exc:
+        logger.debug("gatilho_da_cor_sinal_falhou", err=str(exc))
+        return 0
+    if novas <= 0:
+        return 0
+    armar_gatilho(
+        daemon, NOME_DO_GATILHO_DA_LIGHTBAR, evento="conexao_bt_nova", quantos=novas
+    )
+    return novas
+
+
+async def disparar_gatilhos_devidos(daemon: DaemonProtocol) -> int:
+    """Chama a tarefa de todo gatilho cuja sequência sossegou. Devolve quantos.
+
+    O RELÓGIO ÚNICO do mecanismo. `devidos` já consome — nenhuma sequência
+    dispara duas vezes. Cada tarefa vai pelo executor (`_run_blocking`), porque
+    elas fazem I/O (hidraw, arquivo de ambiente), e falha de uma nunca impede
+    a outra: são subsistemas diferentes reafirmando coisas diferentes.
+    """
+    registro = registro_de_gatilhos_de(daemon)
+    prontos = registro.devidos(time.monotonic())
+    for gatilho, eventos in prontos:
+        try:
+            resultado = await daemon._run_blocking(gatilho.tarefa)
+        except Exception as exc:
+            logger.warning("gatilho_disparo_falhou", nome=gatilho.nome, err=str(exc))
+            continue
+        logger.info(
+            "gatilho_disparou",
+            nome=gatilho.nome,
+            eventos_na_sequencia=eventos,
+            resultado=resultado,
+        )
+    return len(prontos)
 
 
 async def _wait_online_or_hotplug(
@@ -559,6 +779,12 @@ async def _wait_online_or_hotplug(
       - False → o fallback `RECONNECT_ONLINE_CHECK_INTERVAL_SEC` expirou sem
                 mudança (reconciliação periódica normal) ou o daemon está
                 parando.
+
+    GATILHO-DA-COR-01: com ALGUM gatilho armado a fatia encurta para
+    `PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC` e os disparos devidos são
+    avaliados entre as fatias. A espera não termina por causa de um disparo —
+    reafirmar uma cor não é motivo para reconciliar hotplug, e devolver True
+    aqui faria o chamador logar uma mudança de `/dev/input` que não houve.
     """
     elapsed = 0.0
     while elapsed < RECONNECT_ONLINE_CHECK_INTERVAL_SEC:
@@ -566,10 +792,13 @@ async def _wait_online_or_hotplug(
             RECONNECT_HOTPLUG_POLL_INTERVAL_SEC,
             RECONNECT_ONLINE_CHECK_INTERVAL_SEC - elapsed,
         )
+        if registro_de_gatilhos_de(daemon).algum_armado():
+            step = min(step, PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC)
         await _wait_or_stop(daemon, step)
         if daemon._is_stopping():
             return False
         elapsed += step
+        await disparar_gatilhos_devidos(daemon)
         if watch.poll():
             return True
     return False
@@ -693,13 +922,22 @@ async def shutdown(daemon: DaemonProtocol) -> None:
 
 __all__ = [
     "BACKOFF_MAX_SEC",
+    "PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC",
     "RECONNECT_HOTPLUG_POLL_INTERVAL_SEC",
     "RECONNECT_ONLINE_CHECK_INTERVAL_SEC",
     "RECONNECT_PROBE_INTERVAL_SEC",
+    "Tarefa",
+    "armar_gatilho",
+    "armar_gatilho_da_cor",
+    "armar_gatilho_da_cor_por_evento",
     "connect_with_retry",
+    "disparar_gatilhos_devidos",
     "reapply_speaker_after_connect",
     "reconnect",
     "reconnect_loop",
+    "registrar_gatilho",
+    "registrar_gatilho_da_lightbar",
+    "registro_de_gatilhos_de",
     "restore_last_profile",
     "shutdown",
 ]

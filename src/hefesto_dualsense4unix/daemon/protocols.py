@@ -102,6 +102,9 @@ class DaemonProtocol(Protocol):
     _failed_subsystems: dict[str, str]
     # BT-MIC-REGISTRY-01: ponte de microfone por Bluetooth (opt-in) ou None.
     _bt_mic_subsystem: Any
+    # GATILHO-DA-COR-01: `core.gatilho_fim_de_sequencia.RegistroDeGatilhos` —
+    # as reafirmações "no fim da sequência" por nome — ou None até o 1º uso.
+    _registro_de_gatilhos: Any
 
     # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.
