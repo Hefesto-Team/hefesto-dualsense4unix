@@ -592,26 +592,160 @@ def steam_running() -> bool:
     return False
 
 
+#: Agulha que identifica a cmdline de launch da Steam. `reaper SteamLaunch
+#: AppId=<id>` embrulha todo jogo lançado pela Steam (Proton E nativo).
+#:
+#: **O `\d` final não é enfeite — é o que separa o jogo das ISCAS.** Auditoria de
+#: 12/08/2026: a substring solta `"SteamLaunch AppId="` casa a cmdline de quem
+#: está PROCURANDO por ela, e há dois desses vivos nesta máquina, sem o truque
+#: do `[ ]`:
+#:
+#:   - `~/.local/bin/aurora-game-watch-daemon.sh:16` — `pgrep -f 'reaper
+#:     SteamLaunch AppId='`, a cada 15 s, com o serviço active/running;
+#:   - `scripts/disable_steam_input.sh:167` — idem, a cada 30 min.
+#:
+#: (`pgrep` exclui o próprio pid, nunca o do vizinho.) Como a varredura devolve
+#: UMA cmdline — a primeira em ordem de pid —, uma isca com pid menor que o do
+#: jogo fazia `steam_game_running()` dizer True e `steam_game_running_appid()`
+#: dizer None, ao mesmo tempo. Consequências medidas: o botão "Fechar o jogo e
+#: abrir de novo" (`app/actions/base.py`) FECHAVA E NÃO REABRIA, que é
+#: literalmente o defeito que a RELANCAR-AGORA-01 existe para curar; e o tique
+#: de 2 s do daemon chamava `set_steam_jogo_appid(None)`, sumindo com a aba "No
+#: jogo" no meio da partida.
+#:
+#: Exigir um dígito depois do `=` derruba as duas iscas (elas terminam a string
+#: no `=`) e torna `running()`/`appid()` consistentes por construção: se casou,
+#: há appid para extrair.
+#:
+#: Risco residual, idêntico ao do `pgrep -f` que isto substituiu e não removível
+#: por regex: qualquer cmdline que apenas MENCIONE `SteamLaunch AppId=<dígito>`
+#: casa. É o mesmo contrato de antes, não uma regressão.
+_STEAM_LAUNCH_RE = re.compile(r"SteamLaunch AppId=\d")
+
+
+def _cmdline_of(pid: str | int) -> str:
+    """Cmdline de um pid, com os NUL virando espaço. `""` se não der para ler.
+
+    Nunca levanta: pid que morreu entre o `listdir` e o `open` é o caso comum,
+    não a exceção, e um processo de outro usuário devolve EACCES.
+    """
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as fh:
+            return fh.read().decode("utf-8", "replace").replace("\0", " ")
+    except OSError:
+        return ""
+
+
+def _steam_launch_cmdline() -> str | None:
+    """A cmdline do launch da Steam em curso, ou None. Sem forkar nada.
+
+    PERF-PROC-SCAN-01 (12/08/2026). Isto substitui um `pgrep -f` que o daemon
+    forkava **a cada 2 segundos, para sempre**. O custo medido do jeito antigo,
+    com `strace -c -f` no daemon vivo:
+
+      - 1.287 `openat`/s — o `pgrep` lê CINCO arquivos por processo
+        (`status`, `stat`, `cmdline`, `cgroup`, `ctty`) mais um `/proc/uptime`,
+        vezes ~425 pids, duas vezes por segundo;
+      - 12 `execve` em 5 s, dos quais 10 são LIXO: o `PATH` erra cinco vezes
+        (`~/.cargo/bin`, `~/.local/bin`, `/usr/local/sbin`, `/usr/local/bin`,
+        `/usr/sbin`) antes de achar o `pgrep` em `/usr/bin`;
+      - 912 contextos voluntários/s — mesma ordem de grandeza do applet
+        eyedropper que o "Guia — Diagnóstico de lentidão" condenou (1.148/s).
+
+    O mecanismo pelo qual isso morde um jogo é ler `/proc/<pid>/cmdline` de
+    TODO processo: cada leitura toma o `mmap_read_lock` do alvo, inclusive o do
+    jogo. Honestidade sobre a evidência: o teste de causalidade (SIGSTOP no
+    daemon, 12 s, SIGCONT) **não** condenou o daemon — mas rodou sem jogo
+    aberto, então ele não absolve também. O que segue é redução de custo com
+    semântica idêntica, não uma cura de bug provado.
+
+    Duas camadas, nesta ordem:
+
+    1. **Marker do wrapper** — o `hefesto-launch` já grava `appid` e `pid` em
+       `launch_env/last_run` justamente para isto. Confirmamos lendo a cmdline
+       DESSE pid: se ela casa a agulha E o appid, acabou em 3 `open` (dois do
+       marker, um da cmdline). A confirmação é o que elimina o "pid reuse" que o
+       NUMA-01 documenta — aqui não precisamos do `last_exit`, porque não
+       confiamos no pid sozinho.
+    2. **Varredura em Python** — quando o marker falta (jogo lançado fora do
+       wrapper, atalho não-Steam, marker de um launch já morto), varremos
+       `/proc` lendo UM arquivo por pid em vez de cinco, e sem `fork`/`execve`.
+
+    Números honestos, medidos nesta máquina (auditoria de 12/08/2026 corrigiu a
+    versão anterior desta frase, que anunciava o melhor caso como se fosse o
+    comum):
+
+      - **Jogo aberto pelo wrapper**: ~3 `openat` por tique (era ~1.287).
+      - **Estado permanente de um daemon 24/7, ou seja jogo FECHADO**: o marker
+        é global e sobrevive ao jogo, então o pid dele está morto, o caminho
+        rápido falha e caímos na varredura — **400 `openat`, 4,2 ms por tique**.
+        Contra os ~2.100 do `pgrep`, ainda é ~5x menos, e sem `fork`/`execve`.
+
+    O retorno é a cmdline crua para o chamador extrair o que quiser — é o que
+    permite `steam_game_running` e `steam_game_running_appid` compartilharem uma
+    varredura só, e é por isso que ambas enxergam exatamente o mesmo processo.
+    """
+    # 1) Caminho rápido: o marker que o próprio wrapper grava no launch.
+    #
+    #    Import TARDIO porque este módulo é stdlib puro de propósito (ver o
+    #    cabeçalho do arquivo): o `uninstall.sh` o executa avulso DEPOIS de
+    #    apagar o `.venv`, e um import de `hefesto_dualsense4unix.daemon` no
+    #    topo quebraria esse uso. [Correção de 12/08/2026: a versão anterior
+    #    deste comentário alegava import circular. É falso — `daemon/launch_env`
+    #    não importa nada deste módulo. A razão é o modo avulso.]
+    #
+    #    `ImportError` é o caminho ESPERADO (rodando sem venv). `OSError` cobre
+    #    marker ilegível. Qualquer outra exceção sobe: engolir tudo aqui faria
+    #    um rename futuro em `read_last_run_*` degradar em silêncio para a
+    #    varredura completa, para sempre, sem uma linha de log.
+    try:
+        from hefesto_dualsense4unix.daemon.launch_env import (
+            read_last_run_marker,
+            read_last_run_pid,
+        )
+
+        marker = read_last_run_marker()
+        pid = read_last_run_pid()
+    except (ImportError, OSError):
+        marker = None
+        pid = None
+
+    if marker is not None and pid is not None:
+        appid = marker[0]
+        cmd = _cmdline_of(pid)
+        # `AppId={appid} ` com a fronteira à direita: sem ela, um marker de
+        # appid 159 confirmaria contra um jogo 1599660 (casamento por prefixo).
+        # Inofensivo na prática, porque o appid devolvido é reextraído da
+        # cmdline logo abaixo — mas confirmar coisa errada não se deixa passar.
+        if _STEAM_LAUNCH_RE.search(cmd) and re.search(rf"AppId={appid}\b", cmd):
+            return cmd
+
+    # 2) Varredura direta, sem forkar. Um `open` por pid.
+    try:
+        entries = os.listdir("/proc")
+    except OSError:
+        return None
+    for entry in entries:
+        if not entry.isdigit():
+            continue
+        cmd = _cmdline_of(entry)
+        if _STEAM_LAUNCH_RE.search(cmd):
+            return cmd
+    return None
+
+
 def steam_game_running() -> bool:
     """True quando há um JOGO da Steam em execução (não só a Steam).
 
     DEDUP-05, exigência 2 da revisão: `steam -shutdown` com jogo aberto MATA o
     jogo (progresso não salvo perdido) — o fluxo de migrate/strip RECUSA em vez
     de derrubar. Detecção pelo processo lançador `reaper SteamLaunch AppId=<id>`
-    que embrulha todo jogo lançado pela Steam (Proton E nativo). O `pgrep -f`
-    aqui é seguro: a string `SteamLaunch AppId=` só existe em cmdline de launch
-    real — o falso-positivo histórico (earlyoom) era com NOMES de processo.
+    que embrulha todo jogo lançado pela Steam (Proton E nativo).
+
+    A detecção em si mora em `_steam_launch_cmdline` desde PERF-PROC-SCAN-01
+    (12/08/2026) — mesma semântica de antes, sem forkar `pgrep`.
     """
-    try:
-        proc = subprocess.run(
-            ["pgrep", "-f", "SteamLaunch AppId="],
-            capture_output=True,
-            timeout=5,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return False
-    return proc.returncode == 0
+    return _steam_launch_cmdline() is not None
 
 
 
@@ -631,20 +765,17 @@ def steam_game_running_appid() -> int | None:
     arbitrária, e é aceitável: o diálogo que consome isto nasce de um gesto dela
     sobre o jogo que está na frente, e a alternativa — recusar quando há dois —
     tiraria a cura no caso comum por causa do raro.
+
+    PERF-PROC-SCAN-01 (12/08/2026): esta é a função que o poll loop do daemon
+    chama a cada 2 s (`lifecycle._sync_game_signal`), e por isso era ela que
+    pagava o `pgrep -af` — 1.287 `openat`/s varrendo `/proc` inteiro. A
+    varredura foi para `_steam_launch_cmdline`, que resolve pelo marker do
+    wrapper quando ele existe. Semântica de retorno intacta.
     """
-    try:
-        proc = subprocess.run(
-            ["pgrep", "-af", "SteamLaunch AppId="],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
+    cmd = _steam_launch_cmdline()
+    if cmd is None:
         return None
-    if proc.returncode != 0:
-        return None
-    achado = re.search(r"SteamLaunch AppId=(\d+)", proc.stdout or "")
+    achado = re.search(r"SteamLaunch AppId=(\d+)", cmd)
     return int(achado.group(1)) if achado else None
 
 
