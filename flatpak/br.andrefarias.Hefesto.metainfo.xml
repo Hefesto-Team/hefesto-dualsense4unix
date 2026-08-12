@@ -24,6 +24,25 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
+    <release version="0.9.4" date="2026-08-12">
+      <description>
+        <p>
+          A vibracao que um jogo manda parava quase na hora: o proprio Hefesto
+          escrevia por cima meio segundo depois e apagava o motor. Agora ele so
+          reconfirma o que pediu, e a vibracao do jogo sobrevive.
+        </p>
+        <p>
+          A barra de luz nao pegava a cor por Bluetooth quando a Steam estava
+          aberta. O Hefesto passa a escrever a cor e o numero de jogador depois
+          que os controles terminam de conectar, em vez de no meio.
+        </p>
+        <p>
+          A intensidade da vibracao passou a fazer o que o nome diz: Balanceado
+          entrega o que o jogo pediu, Maximo amplifica, e a tela avisa quando a
+          escolha nao esta chegando a jogo nenhum.
+        </p>
+      </description>
+    </release>
     <release version="0.9.3" date="2026-08-10">
       <description>
         <p>

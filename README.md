@@ -9,7 +9,7 @@
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT%20%2B%20GPL--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.9.3%20alfa-6a3fb4.svg)](CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.9.4%20alfa-6a3fb4.svg)](CHANGELOG.md)
 [![Testes](https://img.shields.io/badge/testes-mais%20de%205000-brightgreen.svg)](tests/)
 [![CI](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml)
 
@@ -18,7 +18,7 @@
 ---
 
 ```
-Versão: 0.9.3 (alfa)
+Versão: 0.9.4 (alfa)
 Alvo:   Linux com systemd-logind · Python 3.10+
 Licença: MIT, exceto `assets/dkms/*` (GPL-2.0) — ver LICENSE e NOTICE
 ```
@@ -103,7 +103,7 @@ Bluetooth) entram como jogadores adicionais.
 ## Instalação
 
 > **Onde esta versão mora — instale pela tag, não por branch nenhuma.** O ponto
-> recomendado é a tag da versão corrente, hoje a **`v0.9.3`**. Duas ressalvas
+> recomendado é a tag da versão corrente, hoje a **`v0.9.4`**. Duas ressalvas
 > antes de clonar:
 >
 > - **Não clone por branch.** As páginas de uso já mandaram, no passado, clonar
@@ -117,18 +117,18 @@ Bluetooth) entram como jogadores adicionais.
 > Conferido em 30/07/2026 contra o `pyproject.toml`.
 >
 > **NOTA DATADA — 10/08/2026: esta caixa dizia `v0.7.0` e o comando abaixo
-> mandava `git checkout v0.7.0`.** Caducou em 02/08/2026, quando a 0.9.3 saiu:
+> mandava `git checkout v0.7.0`.** Caducou em 02/08/2026, quando a 0.9.4 saiu:
 > **GRAU: MEDIDO** hoje, `scripts/check_version_consistency.py` responde *"11
-> alvo(s) versionado(s) em 0.9.3"* e o `pyproject.toml` traz `version =
-> "0.9.3"`. As páginas de uso ([`quickstart.md`](docs/usage/quickstart.md) e
-> [`instalacao.md`](docs/usage/instalacao.md)) já diziam `v0.9.3` — era esta
+> alvo(s) versionado(s) em 0.9.4"* e o `pyproject.toml` traz `version =
+> "0.9.4"`. As páginas de uso ([`quickstart.md`](docs/usage/quickstart.md) e
+> [`instalacao.md`](docs/usage/instalacao.md)) já diziam `v0.9.4` — era esta
 > capa que estava atrás, e quem seguiu o comando daqui instalou **um
 > lançamento a menos** por oito dias.
 
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.9.3
+git checkout v0.9.4
 ./install.sh
 ```
 

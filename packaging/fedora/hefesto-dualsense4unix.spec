@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.9.3
+Version:        0.9.4
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -392,6 +392,12 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Wed Aug 12 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4-1
+- Rumble: o keepalive parou de zerar a vibracao que um jogo manda por EV_FF
+- Lightbar: gatilho que reescreve cor e numero quando a sequencia de eventos sossega
+- Co-op: a cobertura de vpads passou a valer no ambiente por appid
+- Instalador: o udevadm trigger de hidraw casava zero dispositivos
+
 * Sun Aug 02 2026 Vitoria Maria <[REDACTED]> - 1:0.9.3-1
 - Sete presets de gatilho nao faziam nada: tres mandavam o modo que vale OFF
   no firmware e quatro mandavam modo oficial sem o bitmask de zonas ativas
