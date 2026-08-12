@@ -577,6 +577,13 @@ class Daemon:
     # provider`) é gateada por `hasattr` — sem o método, o backend fica
     # byte-idêntico ao HEAD (fail-safe da síntese da Onda N).
     _game_signal: Any = None
+    # GATILHO-DA-COR-01: o `core.gatilho_fim_de_sequencia.RegistroDeGatilhos`
+    # deste daemon — as reafirmações "no fim da sequência" por nome —, ou None
+    # até a primeira consulta. Mora no daemon, e não no `reconnect_loop`,
+    # porque cada gatilho tem VÁRIOS armadores (o tick de hotplug, a transição
+    # do sinal de jogo, e o co-op quando ele entrar) e UM SÓ relógio. Criado
+    # sob demanda por `connection.registro_de_gatilhos_de`.
+    _registro_de_gatilhos: Any = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -3630,6 +3637,22 @@ class Daemon:
         novo = signal.authority
         if novo == anterior:
             return
+        # GATILHO-DA-COR-01 (escolha dela, 12/08): a rajada de repintura da
+        # Steam é por EVENTO, e a conexão é só o evento mais visível — abrir e
+        # fechar jogo também a provoca. Esta transição É o "jogo abrindo/
+        # fechando" que o produto já detecta (o mesmo sinal que governa o
+        # `launch_env`), então é aqui que se ARMA. Quem espera a sequência
+        # sossegar e escreve é o `reconnect_loop`, com o MESMO debounce das
+        # conexões — um só gatilho, uma só repintura por rajada.
+        # Sem gate próprio de Modo Nativo: o portão mora na escrita
+        # (`reescrever_lightbar_por_hidraw` é no-op sob `_output_mute`), que é
+        # o único lugar onde ele não pode ser esquecido.
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.connection import (
+                armar_gatilho_da_cor_por_evento,
+            )
+
+            armar_gatilho_da_cor_por_evento(self, f"game_signal:{anterior}->{novo}")
         if novo == "daemon":
             with contextlib.suppress(Exception):
                 defend = getattr(self.controller, "defend_display", None)

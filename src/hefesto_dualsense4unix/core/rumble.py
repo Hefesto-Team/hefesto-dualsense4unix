@@ -70,11 +70,21 @@ def _effective_mult(
     default 0.7 — ao vivo, policy=max reportava `rumble_mult_applied=0.7` e
     parecia atenuação real do rumble do jogo (o hardware recebia 1.0).
 
-    Modo "auto":
-      - bateria >50% -> mult 1.0 (Máximo)
-      - bateria 20-50% -> mult 0.7 (Balanceado)
-      - bateria <20% -> mult 0.3 (Economia)
+    Modo "auto" — a escada dele é PRÓPRIA, e nunca amplifica:
+      - bateria >50% -> mult 1.0 (o que o jogo pediu, sem aumentar)
+      - bateria 20-50% -> mult 0.7
+      - bateria <20% -> mult 0.3
       Com debounce de `auto_debounce_sec` para evitar oscilação.
+
+    **Por que o teto do auto é 1.0 e não o do "Máximo"** (11/08/2026): o auto
+    existe para POUPAR bateria — amplificar seria fazer o oposto do que ele
+    promete, e ainda por cima sozinho, sem ela ter pedido. Os três degraus
+    acima não são os de `RUMBLE_POLICY_MULT`: desde que "Máximo" passou a
+    valer 2.0, o degrau de cima do auto (1.0) coincide com o "Balanceado", e é
+    isso mesmo. Quem mexer nesta escada mexe no texto que a promete na tela: o
+    `rumble_policy_auto_label` do `gui/main.glade`, que é o dono único da frase
+    desde 11/08/2026 (havia uma cópia morta em `app.actions.rumble_actions`,
+    nunca usada por ninguém e já desatualizada).
     """
     from hefesto_dualsense4unix.daemon.lifecycle import RUMBLE_POLICY_MULT
 
@@ -115,8 +125,14 @@ def _effective_mult(
 
     # Política desconhecida: fallback para balanceado (estado observável
     # acompanha — mesma regra das políticas fixas acima).
+    #
+    # 11/08/2026: era o literal `0.7`, que ERA o balanceado. Quando o
+    # balanceado virou 1.0 este número ficou sendo um degrau que não existe
+    # mais em lugar nenhum — âncora morta. Derivar da tabela mantém a promessa
+    # do comentário ("fallback para balanceado") verdadeira sozinha.
+    fallback = RUMBLE_POLICY_MULT["balanceado"]
     logger.warning("rumble_policy_desconhecida", policy=policy)
-    return 0.7, 0.7, last_auto_change_at
+    return fallback, fallback, last_auto_change_at
 
 
 class RumbleEngine:

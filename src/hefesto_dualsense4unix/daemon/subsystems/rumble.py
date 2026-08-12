@@ -12,6 +12,7 @@ O estado de debounce da política "auto" (_last_auto_mult, _last_auto_change_at)
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -24,11 +25,110 @@ logger = get_logger(__name__)
 
 # FEAT-RUMBLE-POLICY-01
 AUTO_DEBOUNCE_SEC = 5.0
+
+#: A escada da intensidade, e o dono único dos três números.
+#:
+#: DECISÃO DELA — 11/08/2026, depois de o preço de cada opção ir para a mesa.
+#: A escada da tela passa a ser **30% / 100% / 150%**.
+#:
+#: * ``balanceado`` era **0,7**, e o tooltip da tela sempre prometeu *"do jeito
+#:   que o jogo pediu, sem aumentar nem diminuir"*. Eram duas afirmações e uma
+#:   mentira; quem sai é o número. Em **1,0** o botão entrega o que promete.
+#: * ``max`` era **1,0** — exatamente o mesmo que não mexer em nada. Um botão
+#:   chamado "Máximo" que não aumentava coisa alguma não tinha razão de existir.
+#:   Em **1,5** ele AMPLIFICA, acima do que o jogo pediu.
+#:
+#: **A amplificação está MEDIDA no aparelho** (11/08/2026): um report com
+#: ``common[2]=200``, com o daemon parado, fez o motor obedecer, e ela conferiu
+#: de olho. Os bytes de motor são 0-255 e o firmware honra o valor.
+#:
+#: **Quem multiplica satura em 255**, e isso não é detalhe: um valor acima de
+#: 255 truncado em byte viraria lixo (256 → 0, o motor PARARIA no pico). A
+#: conta é ``max(0, min(255, round(bruto * mult)))`` e ela vive em três lugares,
+#: todos com o mesmo recorte — ``reassert_rumble`` logo abaixo (rumble fixado),
+#: ``daemon.ipc_rumble_policy.apply_rumble_policy`` (o ``rumble.set`` da aba e o
+#: "Aplicar" do rodapé) e ``daemon.subsystems.gamepad.apply_game_rumble`` (o
+#: rumble do JOGO). ``core.rumble._clamp`` faz o mesmo no ``RumbleEngine``.
+#:
+#: **O 2,0 FOI CONSIDERADO E DESCARTADO POR ELA**, no mesmo 11/08, e o motivo é
+#: a medição da nota SATURA-01 — que não caducou: ela VENCEU EM PARTE. Rodando
+#: a conta exata acima sobre os 256 valores que o jogo pode pedir:
+#:
+#:     mult 1,0 → nenhum valor satura
+#:     mult 1,5 → satura a partir de 170: 33% da faixa vira 255
+#:     mult 2,0 → satura a partir de 128: METADE da faixa vira 255
+#:
+#: A 2,0 o jogo manda 128, 180 e 255 e o controle recebe 255 nas três: naquela
+#: metade a variação da vibração some, e o que se sente é força CONSTANTE, não
+#: força maior. Foi o que ela relatou em 10/08 — *"vibra muito mais do que o
+#: normal a ponto de não parar"*. Amplificar sem nuance não é amplificar: é
+#: achatar.
+#:
+#: **O que o 1,5 compra:** amplificação de verdade com dois terços da faixa
+#: ainda variando (satura só a partir de 170). É o ponto em que o botão faz o
+#: que o nome dele diz sem achatar a metade forte das cenas — o preço aceito é
+#: um terço, não a metade.
+#:
+#: **Por que o DESLIZADOR ainda vai até 200** (``RUMBLE_CUSTOM_MULT_MAX``, em
+#: ``profiles.schema``) — e isto NÃO é incoerência, é a divisão de papéis:
+#: os quatro botões são **presets seguros**, escolhidos por ela para quem só
+#: quer clicar; o deslizador é o **ajuste livre** de quem quer ir além e aceita
+#: o preço, que agora está escrito no tooltip. Um preset que achata metade da
+#: faixa é armadilha; um número que a pessoa arrasta até 200 de propósito é
+#: escolha dela.
+#:
+#: O caminho para amplificar SEM achatar continua sendo comprimir (uma curva)
+#: em vez de cortar, e continua por fazer.
 RUMBLE_POLICY_MULT: dict[str, float] = {
     "economia": 0.3,
-    "balanceado": 0.7,
-    "max": 1.0,
+    "balanceado": 1.0,
+    "max": 1.5,
 }
+
+
+def sem_dono_do_rumble(*, native: bool, backends: Sequence[str]) -> bool:
+    """RUMBLE-SEM-DONO-01: o quadrante em que a vibração não passa por nós.
+
+    MEDIDO na máquina dela em 11/08/2026 — o journal do daemon registrava
+    `launch_env_materializado ... backends=[] emulacao=False ... native=False`,
+    e é esse par que define o buraco:
+
+    - **sem gamepad virtual** (`backends` vazio) o multiplicador de intensidade
+      da GUI não age, porque ele mora no `rumble_sink` do vpad
+      (`subsystems/gamepad.make_primary_rumble_sink` → `apply_game_rumble`).
+      Sem vpad, o sink não existe e o EV_FF do jogo vai direto ao nó físico:
+      o slider dela deixa de valer sem avisar;
+    - **sem Modo Nativo** o output do daemon não é mutado
+      (`lifecycle._release_controller_to_game`), então continuamos escrevendo
+      no mesmo controle que o jogo está dirigindo.
+
+    Nos outros três quadrantes uma das duas coisas protege — por isso o defeito
+    parecia intermitente.
+
+    **DOIS CHAMADORES, UM CRITÉRIO SÓ** (11/08/2026). Quando esta função nasceu,
+    o produto não contava o quadrante em tela nenhuma e o journal era o mínimo
+    honesto; a decisão de mostrá-lo era dela, e ela a tomou no mesmo dia. Hoje:
+
+    - ``daemon.launch_env.materialize_launch_env`` emite ``rumble_sem_dono`` no
+      journal — a borda com o estado REAL da mesa;
+    - ``app.actions.rumble_actions.texto_do_alcance_da_intensidade`` acende o
+      aviso na aba Rumble, em cima dos quatro botões de intensidade.
+
+    Os dois passam por AQUI de propósito. Chegaram a ter critérios paralelos por
+    algumas horas (a borda olhava ``backends``, a tela olhava
+    ``rumble_ff.vpads`` do ``state_full``), e dois critérios para o mesmo
+    quadrante divergem na primeira mudança — a classe de defeito que o HARM-19
+    já pagou no teto do multiplicador. A tela traduz a contagem de gamepads
+    virtuais numa sequência antes de perguntar; o predicado só olha a
+    verdade/falsidade de ``backends`` ("há gamepad virtual?"), então contagem e
+    lista respondem a mesma pergunta.
+
+    **O que a tela diz A MAIS, e não cabe aqui:** no Modo Nativo a intensidade
+    também não alcança a vibração do jogo, mas isso é o modo funcionando como
+    deve — não é defeito, e por isso não é este quadrante. A frase de lá é
+    outra, e não manda ninguém consertar nada.
+    """
+    return not native and not backends
 
 
 def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
@@ -95,9 +195,10 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
     if daemon.config.rumble_active is not None:
         return
     try:
-        # GUERRA-01 (keepalive neutro): `set_rumble(0, 0)` com os motores do
-        # backend JÁ em 0 vira report neutro — que NÃO para um motor que o
-        # jogo deixou girando por fora (hidraw direto). O backend pydualsense
+        # RUMBLE-SEM-DONO-01: `set_rumble(0, 0)` com os motores do backend JÁ
+        # em 0 não MUDA o report, e report que não muda não vai ao fio (dedup
+        # do `sendReport`) — logo nada para o motor que o jogo deixou girando
+        # por fora (hidraw direto). O backend pydualsense
         # expõe `force_rumble_stop()` (um report de stop de verdade); os
         # demais backends/fakes seguem no zero clássico.
         force = getattr(daemon.controller, "force_rumble_stop", None)
@@ -137,5 +238,6 @@ __all__ = [
     "RUMBLE_POLICY_MULT",
     "RumbleSubsystem",
     "reassert_rumble",
+    "sem_dono_do_rumble",
     "zero_motors_on_mode_exit",
 ]
