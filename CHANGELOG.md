@@ -5,6 +5,51 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.9.4] — 2026-08-12
+
+### Uma noite de bancada com quatro controles, e três defeitos com a mesma forma
+
+Ela pôs quatro DualSense na mesa — dois no cabo, dois no rádio — e mediu com o
+olho dela em cada passo. O caderno de eliminação saiu de 14 para 58 ensaios, e
+cinco linhas do mapa de canais chegaram ao grau que significa **o aparelho
+obedeceu, e alguém viu**.
+
+Os três defeitos que fecharam têm a mesma raiz: **o produto decidia durante uma
+sequência de eventos, em vez de esperar ela sossegar.**
+
+**A vibração que um jogo manda parava quase na hora.** O keepalive do daemon
+escrevia com os bytes de motor em zero meio segundo depois, e o motor morria.
+Isolado por dose-resposta: com a constante em 8 s, a vibração passou a durar oito
+segundos exatos. Agora o keepalive se limita a uma janela de confirmação após
+cada mudança real — reconfirmar cobre report perdido, reconfirmar para sempre só
+apaga vibração alheia.
+
+**A barra do controle não pegava a cor por Bluetooth.** Dezesseis dias de
+investigação fecharam. A Steam mantém o `hidraw` de cada DualSense aberto e
+repinta a barra em rajada a cada conexão — 98 escritas no fio contra 6 sem ela —
+e o produto pintava dentro da rajada, pela rota que perde. Agora existe um
+gatilho que arma a cada evento, rearma enquanto eles chegam, e escreve cor **e**
+número de jogador quando tudo sossega.
+
+**Em co-op, só um controle virava jogador.** O ambiente que esconde os controles
+físicos do jogo exige um gamepad virtual por controle, e era decidido enquanto
+eles ainda subiam — o quarto ficou pronto onze segundos depois do primeiro.
+
+### A intensidade da vibração passou a fazer o que o nome diz
+
+Decisão dela: **Economia 0,3× · Balanceado 1,0× · Máximo 1,5×**. "Balanceado"
+prometia entregar o que o jogo pediu e entregava 70%; agora entrega. "Máximo"
+amplifica de verdade, e o deslizador vai até 200% para quem aceita o preço de
+achatar as cenas fortes. E o produto passou a avisar quando não há gamepad
+virtual nem Conexão Nativa — o estado em que a intensidade não age.
+
+### Corrigido
+
+- O `udevadm trigger` dos instaladores não casava dispositivo nenhum: um nó
+  `hidraw` não tem `idVendor`, e no Bluetooth não existe pai USB. Numa instalação
+  com o controle já conectado, a permissão nunca era reaplicada.
+- O ambiente por jogo não aplicava a cobertura de gamepads virtuais.
+
 ## [0.9.3] — 2026-08-10
 
 ### O produto ficava inerte por uma decisão de ontem, e a tela não dizia
