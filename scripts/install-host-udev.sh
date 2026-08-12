@@ -392,7 +392,15 @@ _build_install_cmd() {
     # Recarrega udev e re-dispara eventos para dispositivos PS5 já presentes,
     # cobrindo BT (subsystem=hidraw) + USB (subsystem=usb).
     cmd+="udevadm control --reload-rules; "
-    cmd+="udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=054c 2>/dev/null || true; "
+    # GATILHO-DA-COR-INSTALA-01 (12/08/2026): era
+    # `--subsystem-match=hidraw --attr-match=idVendor=054c`, que casa ZERO
+    # dispositivos — o `--attr-match` só olha os sysattrs do PRÓPRIO nó, e um
+    # `hidraw` não tem `idVendor` (ele mora no pai USB, e no Bluetooth não há
+    # pai USB nenhum). Aqui o `udevadm trigger` global da última linha
+    # compensava por acaso; no `scripts/install_udev.sh` não havia global, e o
+    # controle já conectado no rádio ficava sem a regra 70 até reconectar.
+    # A justificativa completa, com a medição, está no install_udev.sh.
+    cmd+="udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true; "
     # input: reavalia 76 (touchpad-ignore), 78 (ID_INPUT_*) e 80 (js de Motion

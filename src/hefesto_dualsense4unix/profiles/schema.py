@@ -29,26 +29,51 @@ from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 #: em diante a usuária levava um erro de validação que a aba reportava como
 #: "daemon offline?". Quem mudar o teto muda AQUI e os três seguem juntos.
 #:
-#: SATURA-01 (11/08/2026) — o teto VOLTOU a 1.0, e é medição que manda.
-#: O 2.0 entrou em 13/07 (646cadf) dentro de uma leva de 17 correções, com uma
-#: linha de mensagem ("slider custom ate 200%") e NENHUMA medição. Rodando a
-#: conta exata do produto — `max(0, min(255, round(bruto * mult)))` — sobre os
-#: 256 valores que o jogo pode pedir:
+#: NOTA DATADA — 11/08/2026: o teto foi a 1.0 de manhã (nota SATURA-01) e
+#: DECISÃO DELA o devolveu a 2.0 no mesmo dia, com o preço na mesa. As duas
+#: metades ficam registradas porque a medição de baixo continua verdadeira; o
+#: que mudou foi o que se aceita pagar por ela.
+#:
+#: **O que ela decidiu:** o deslizador "Intensidade global" vai até 200, e este
+#: teto o acompanha. O tooltip do deslizador já prometia *"acima de 100 sai mais
+#: forte"* desde sempre, contra um teto de 100 que impedia a usuária de chegar
+#: lá. A amplificação está MEDIDA no aparelho (11/08): um report com
+#: ``common[2]=200``, daemon parado, fez o motor obedecer, e ela confirmou de
+#: olho.
+#:
+#: **ESTE TETO NÃO É O DO BOTÃO "Máximo", e a diferença é deliberada.** O botão
+#: vale **1,5** (`daemon.subsystems.rumble.RUMBLE_POLICY_MULT`, que é o dono da
+#: escada); este 2.0 é o fim do curso do deslizador. A divisão de papéis:
+#:
+#: * os quatro botões são **presets seguros** — quem só quer clicar não pode
+#:   cair numa armadilha;
+#: * o deslizador é o **ajuste livre** de quem quer ir além e aceita o preço,
+#:   que está escrito no tooltip.
+#:
+#: **O preço, medido** (é a nota SATURA-01, de 11/08/2026, e ela continua
+#: valendo — foi por causa dela que o BOTÃO parou em 1,5). Rodando a conta exata
+#: do produto — `max(0, min(255, round(bruto * mult)))` — sobre os 256 valores
+#: que o jogo pode pedir:
 #:
 #:     mult 1.0 → nenhum valor satura
 #:     mult 1.5 → satura a partir de 170: 33% da faixa vira 255
 #:     mult 2.0 → satura a partir de 128: METADE da faixa vira 255
 #:
-#: A 2.0 o jogo manda 128, 180 e 255 e o controle recebe 255 nas três — a
-#: variação da vibração some, e o que ela sentiu foi força constante, não força
-#: maior ("vibra muito mais do que o normal a ponto de não parar", 10/08).
-#: Amplificar sem nuance não é amplificar: é achatar.
+#: A 2.0 o jogo manda 128, 180 e 255 e o controle recebe 255 nas três — naquela
+#: metade a variação da vibração some, e o que se sente é força CONSTANTE, não
+#: força maior. Foi o que ela relatou em 10/08: *"vibra muito mais do que o
+#: normal a ponto de não parar"*. Amplificar sem nuance não é amplificar: é
+#: achatar.
 #:
-#: O que se perde ao baixar: nada que estivesse medido. O que se ganha: a curva
-#: inteira do jogo chega ao motor. Se um dia alguém quiser passar de 1.0, o
-#: caminho honesto é comprimir (uma curva) em vez de cortar — e aí muda-se AQUI,
+#: **O que continua por fazer:** amplificar SEM achatar exige comprimir (uma
+#: curva) em vez de cortar. Quem for fazer isso mexe AQUI e na tabela da escada,
 #: com a medição na mão.
-RUMBLE_CUSTOM_MULT_MAX = 1.0
+#:
+#: HARM-19 continua valendo: o teto tem um dono só. O handler
+#: `rumble.policy_custom`, o `RumbleDraft.custom_mult` da GUI e o slider do
+#: glade derivam deste número — e há portão (`test_rumble_mult_um_dono.py`) que
+#: reprova quem escrever o número à mão de novo.
+RUMBLE_CUSTOM_MULT_MAX = 2.0
 
 
 def _casa_sem_caixa(valor: object, aceitos: list[str]) -> bool:

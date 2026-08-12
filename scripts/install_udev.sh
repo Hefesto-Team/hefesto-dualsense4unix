@@ -176,9 +176,41 @@ sudo modprobe uinput 2>/dev/null || echo "  aviso: modprobe uinput falhou (kerne
 # o daemon cai no uinput (sem vibração na máscara DualSense), então é aviso, não erro.
 sudo modprobe uhid 2>/dev/null || echo "  aviso: modprobe uhid falhou (kernel sem CONFIG_UHID?)"
 sudo udevadm control --reload-rules
-# Trigger seletivo para PS5 (vendor 054c). O trigger global no fim cobre
-# devices que estavam quietos antes do reload (ex: BT pareado e idle).
-sudo udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=054c 2>/dev/null || true
+# hidraw: reaplica a 70 (MODE 0660 + TAG uaccess) nos nós que JÁ EXISTEM —
+# inclusive no DualSense que está no rádio neste instante.
+#
+# GATILHO-DA-COR-INSTALA-01 (12/08/2026). A linha que morava aqui era
+# `--subsystem-match=hidraw --attr-match=idVendor=054c`, e ela casava ZERO
+# dispositivos — sempre, em toda máquina. O `--attr-match` só olha os sysattrs
+# do PRÓPRIO nó, e um `hidraw` não tem `idVendor`: esse atributo mora no pai
+# USB, e no Bluetooth não existe nem pai USB (o BlueZ cria o HID por `uhid`, em
+# /sys/devices/virtual/misc/uhid/). Medido na máquina dela em 12/08 com três
+# DualSense no rádio e um no cabo:
+#
+#     udevadm trigger --dry-run --verbose --subsystem-match=hidraw
+#         -> 8 dispositivos
+#     ... o mesmo + --attr-match=idVendor=054c
+#         -> 0 dispositivos
+#
+# O preço era o `hidraw` do controle já conectado ficar SEM a regra até alguém
+# desconectar e reconectar — e o `install_udev.sh` é o único caminho que não
+# tinha um trigger global no fim para compensar (o `install-host-udev.sh`, do
+# .deb/flatpak, tinha). Numa instalação limpa com o controle no rádio, o daemon
+# subia (passo 7a) sem poder ESCREVER no hidraw: sem lightbar, sem o gatilho da
+# cor (`core/lightbar_gatilho.py`), sem política de vibração.
+#
+# `--action=change` e não `add`: é o bastante para o udev reaplicar MODE/OWNER
+# e para a 73-seat-late.rules converter a TAG uaccess em ACL — conferido com
+# `udevadm test --action=change /sys/class/hidraw/hidraw4` no DualSense dela no
+# rádio, que resolveu `70-ps5-controller.rules:10 MODE 0660` e
+# `73-seat-late.rules:16 RUN 'uaccess'`. E `change` não re-executa os `RUN+=`
+# que outras regras da casa condicionam a `ACTION=="add"`.
+#
+# É palavra por palavra a linha que o `uninstall.sh` já usava no bloco dele de
+# `udevadm trigger`: a metade que DESFAZ sabia alcançar o hidraw e a metade que
+# INSTALA não — a mesma família de assimetria do
+# BUG-INSTALL-NAO-INSTALA-A-UNIT-DO-DAEMON-01.
+sudo udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
 sudo udevadm trigger --subsystem-match=usb    --attr-match=idVendor=054c 2>/dev/null || true
 sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
 # input: faz a 76 (LIBINPUT_IGNORE_DEVICE no touchpad), a 78 (ID_INPUT_*) e a 80

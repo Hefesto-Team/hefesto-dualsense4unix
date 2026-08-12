@@ -467,8 +467,24 @@ def _daemon_de_rumble(*, policy: str = "max", mult: float = 1.0) -> Any:
 
 class TestARumbleQueChegaAosMotores:
     def test_apply_game_rumble_devolve_o_par_efetivo(self) -> None:
+        """O par que VOLTA é o que foi ao motor, já com a política aplicada.
+
+        11/08/2026: o assert era `== (100, 200)`, os mesmos números que
+        entraram — e passava porque o "Máximo" valia 1,0. Com um degrau neutro,
+        "devolve o par efetivo" e "devolve o par cru" são indistinguíveis, e o
+        teste não provava o próprio nome. Agora o Máximo amplifica (1,5) e o
+        200 satura em 255: os dois lados da conta ficam visíveis.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            RUMBLE_POLICY_MULT,
+        )
+
+        mult = RUMBLE_POLICY_MULT["max"]
         daemon = _daemon_de_rumble(policy="max")
-        assert apply_game_rumble(daemon, 100, 200) == (100, 200)
+        assert apply_game_rumble(daemon, 100, 200) == (
+            min(255, round(100 * mult)),
+            min(255, round(200 * mult)),
+        )
 
     def test_a_politica_aparece_no_par_devolvido(self) -> None:
         """É a multiplicação invisível: 20 pedido vira 6 no motor em economia.

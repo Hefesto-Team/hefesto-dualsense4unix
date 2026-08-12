@@ -185,9 +185,15 @@ def test_a_escala_e_relativa_a_politica_global_do_perfil() -> None:
         {PRETO: ControllerOverrides(rumble=ControllerRumbleOverride(policy="max"))},
         RumbleConfig(policy="economia"),
     )
-    # max = 1.0, economia = 0.3 -> a peça precisa de 3.33x o que o global já deu.
+    # A peça precisa do que falta entre os dois degraus — a RAZÃO, nunca o
+    # absoluto. Derivada da escada: os números mudaram em 11/08/2026 (decisão
+    # dela) e um literal aqui reprovaria sem nada estar errado.
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
     assert PRETO in escalas
-    assert escalas[PRETO] == pytest.approx(1.0 / 0.3)
+    assert escalas[PRETO] == pytest.approx(
+        RUMBLE_POLICY_MULT["max"] / RUMBLE_POLICY_MULT["economia"]
+    )
 
 
 def test_a_peca_que_concorda_com_o_global_nao_entra_no_mapa() -> None:
