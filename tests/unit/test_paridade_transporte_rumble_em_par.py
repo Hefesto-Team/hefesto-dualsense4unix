@@ -25,6 +25,20 @@ medir na bancada, e enquanto isso a cura fica presa por teste.
 
 MORDE? Arranque o bloco `if not rumble_asserted:` de `_build_common` e estes
 testes reprovam nos dois transportes.
+
+MORDIDA PROVADA (13/08/2026, com o `src/` COPIADO para fora da árvore e o
+`PYTHONPATH` apontado para a cópia — a árvore de trabalho nunca foi mutada):
+
+- arrancando o bloco `if not rumble_asserted:` inteiro de `_build_common`
+  (`core/backend_pydualsense.py`), este arquivo reprova **3 de 4**: o
+  `test_sem_rumble_nosso_o_keepalive_nao_autoriza_vibracao` e as DUAS
+  parametrizações do caso de envelope, `[cabo]` e `[radio]`. A mensagem nomeia
+  o transporte e o bit — `no envelope de radio o flag0 bit 0x01 saiu LIGADO`;
+- na família inteira de paridade (os sete arquivos, 120 nós), a mesma morte
+  reprova **7**: os 3 daqui e mais 4 de `test_paridade_transporte_rumble.py`,
+  `[usb]` e `[bt]` em ambos. Nenhum outro arquivo de paridade a sente — é por
+  isso que a linha `combinacao.rumble_simultaneo` aponta para ESTE nó;
+- com a cura devolvida, `4 passed in 0.16s`.
 """
 
 from __future__ import annotations

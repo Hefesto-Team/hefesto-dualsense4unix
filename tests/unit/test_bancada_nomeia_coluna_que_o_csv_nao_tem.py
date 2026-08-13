@@ -27,9 +27,37 @@ colhe TODO nome de coluna que ela pronuncia, e cruza com o cabeçalho real dos
 dois CSV. Por ler o código em vez de uma lista copiada, ele pega a PRÓXIMA
 renomeação, não só esta.
 
+O SEGUNDO DEFEITO, DA MESMA FAMÍLIA (BANCADA-ESTADOS-01, 13/08/2026)
+--------------------------------------------------------------------
+Nomear a coluna certa não basta: o VALOR também tem de caber. As colunas de
+vocabulário da grade são `SelectboxColumn`, e um `SelectboxColumn` oferece
+apenas os seus `options`. As quatro estão em `EDITAVEIS`, e o botão "Gravar no
+CSV" regrava toda coluna editável de toda linha visível com o que voltou da
+grade (`bancada.py`, `base.loc[editado.index, col] = editado[col]`) — de modo
+que um valor que a lista não oferece não tem por onde sobreviver ao passeio.
+
+Era o caso de `estado_hoje`: das 293 linhas do mapa, duas a têm preenchida, com
+as prosas da dose-resposta do keepalive de 11/08/2026 — e a lista `ESTADOS` não
+continha NENHUMA das duas. A casa já tinha visto e curado este caso exato uma
+linha acima, em `provado_por`, e escrito a razão em `bancada.py`; ninguém a
+tinha aplicado a `ESTADOS`.
+
+Uma ressalva de honestidade, porque ela muda o tamanho do dano e não a cura: que
+o `SelectboxColumn` COAJA o valor fora da lista (em vez de deixá-lo passar) é
+INFERIDO — `streamlit` não é dependência do produto e não estava instalado em
+13/08/2026, então isso não foi visto rodar. O que está LIDO no código é a rota
+de gravação acima; o que está MEDIDO é que o seletor não oferecia nenhum dos
+dois valores existentes.
+
+Este arquivo passa a cruzar as `options` de TODO `SelectboxColumn` da grade
+contra os valores que a coluna REALMENTE tem no CSV. Por ler o `column_config`
+em vez de uma lista copiada, ele vale para o seletor que ainda não existe.
+
 MORDE? Troque `cabo_grau`/`radio_grau` de volta por `grau` em `EDITAVEIS`, ou
 tire `cabo_ressalva` do CSV, ou renomeie qualquer coluna que a bancada leia por
-atributo: os testes daqui reprovam nomeando a coluna que sumiu.
+atributo: os testes daqui reprovam nomeando a coluna que sumiu. Tire um valor de
+`ESTADOS`, ou troque `QUEM` por uma lista sem `fonte-do-driver`: o teste dos
+seletores reprova nomeando a coluna, a lista e o valor que seria apagado.
 """
 
 from __future__ import annotations
@@ -69,8 +97,32 @@ def _cabecalho(caminho: Path) -> list[str]:
         return next(csv.reader(fh))
 
 
+def _constantes_de_texto() -> dict[str, str]:
+    """As strings atribuídas no topo do módulo, por nome.
+
+    Existem porque um valor longo demais para caber numa lista legível vira uma
+    constante citada por nome — é o caso das duas prosas de `estado_hoje`, que
+    têm 409 e 350 caracteres. Sem isto, `_lista_literal` reprovaria a lista
+    inteira por não ser "literal", e a régua morreria justamente no caso que ela
+    existe para vigiar.
+    """
+    achados: dict[str, str] = {}
+    for no in _arvore().body:
+        if not isinstance(no, ast.Assign):
+            continue
+        if isinstance(no.value, ast.Constant) and isinstance(no.value.value, str):
+            for a in no.targets:
+                if isinstance(a, ast.Name):
+                    achados[a.id] = no.value.value
+    return achados
+
+
 def _lista_literal(nome: str) -> list[str]:
-    """A lista de strings atribuída a `nome`, com `*OUTRA_LISTA` já expandido."""
+    """A lista de strings atribuída a `nome`.
+
+    Resolve `*OUTRA_LISTA` e também o nome de uma constante de texto do módulo.
+    """
+    constantes = _constantes_de_texto()
     for no in ast.walk(_arvore()):
         if not isinstance(no, ast.Assign):
             continue
@@ -84,6 +136,8 @@ def _lista_literal(nome: str) -> list[str]:
                 colunas.extend(_lista_literal(item.value.id))
             elif isinstance(item, ast.Constant) and isinstance(item.value, str):
                 colunas.append(item.value)
+            elif isinstance(item, ast.Name) and item.id in constantes:
+                colunas.append(constantes[item.id])
             else:
                 pytest.fail(
                     f"`{nome}` em bancada.py deixou de ser uma lista de nomes "
@@ -113,7 +167,7 @@ def _colunas_por_atributo() -> set[str]:
     return lidos - API_DO_PANDAS
 
 
-def _chaves_do_column_config() -> list[str]:
+def _dict_do_column_config() -> ast.Dict:
     for no in ast.walk(_arvore()):
         if not isinstance(no, ast.Call):
             continue
@@ -122,12 +176,57 @@ def _chaves_do_column_config() -> list[str]:
             continue
         for kw in no.keywords:
             if kw.arg == "column_config" and isinstance(kw.value, ast.Dict):
-                return [
-                    c.value
-                    for c in kw.value.keys
-                    if isinstance(c, ast.Constant) and isinstance(c.value, str)
-                ]
+                return kw.value
     pytest.fail("não achei o `column_config` do `st.data_editor` em bancada.py")
+
+
+def _chaves_do_column_config() -> list[str]:
+    return [
+        c.value
+        for c in _dict_do_column_config().keys
+        if isinstance(c, ast.Constant) and isinstance(c.value, str)
+    ]
+
+
+def _options_por_coluna() -> dict[str, str]:
+    """Para cada coluna com `SelectboxColumn`, o NOME da lista passada em `options`."""
+    achados: dict[str, str] = {}
+    conf = _dict_do_column_config()
+    for chave, valor in zip(conf.keys, conf.values, strict=True):
+        if not (isinstance(chave, ast.Constant) and isinstance(chave.value, str)):
+            continue
+        if not (isinstance(valor, ast.Call) and isinstance(valor.func, ast.Attribute)):
+            continue
+        if valor.func.attr != "SelectboxColumn":
+            continue
+        nomes = [
+            kw.value.id
+            for kw in valor.keywords
+            if kw.arg == "options" and isinstance(kw.value, ast.Name)
+        ]
+        if not nomes:
+            pytest.fail(
+                f"o `SelectboxColumn` de `{chave.value}` não recebe `options` como o "
+                "nome de uma lista do módulo; esta régua deixaria de conferi-lo em "
+                "silêncio, que é exatamente o defeito que ela guarda"
+            )
+        achados[chave.value] = nomes[0]
+    return achados
+
+
+def _valores_da_coluna(caminho: Path, coluna: str) -> list[str]:
+    """Os valores não vazios que a coluna REALMENTE tem, na ordem em que aparecem."""
+    with open(caminho, encoding="utf-8", newline="") as fh:
+        vistos: dict[str, None] = {}
+        for linha in csv.DictReader(fh):
+            valor = linha[coluna]
+            if valor.strip():
+                vistos.setdefault(valor, None)
+        return list(vistos)
+
+
+def _curto(valor: str, teto: int = 96) -> str:
+    return valor if len(valor) <= teto else f"{valor[:teto]}… (+{len(valor) - teto} car.)"
 
 
 def _campos_do_ensaio() -> list[str]:
@@ -202,6 +301,47 @@ def test_o_column_config_so_configura_coluna_que_a_grade_mostra() -> None:
     assert not orfas, (
         f"o `column_config` configura {orfas}, que não estão em `vis`: o "
         "selectbox de vocabulário simplesmente não aparece"
+    )
+
+
+def test_todo_selectbox_da_grade_oferece_os_valores_que_o_mapa_ja_tem() -> None:
+    """Um seletor cego ao dado não consegue devolver o dado que já estava lá.
+
+    `estado_hoje`, `provado_por` e os dois `*_grau` estão em `EDITAVEIS`, e o
+    botão "Gravar no CSV" regrava TODA coluna editável de toda linha visível com
+    o que voltou da grade — isso está LIDO no código, não inferido. Que o
+    `SelectboxColumn` coaja um valor fora de `options` em vez de deixá-lo passar
+    é INFERIDO: `streamlit` não é dependência do produto e não estava instalado
+    quando isto foi escrito (13/08/2026), então a coerção não foi vista rodar.
+
+    O teste não depende dessa inferência para valer a pena. Mesmo no melhor caso,
+    um valor ausente de `options` é um valor que ela não consegue mais escolher —
+    e o pior caso é a medição sumir sem aviso na primeira gravação. Manter a
+    lista alinhada ao CSV custa uma linha; descobrir qual dos dois casos é custa
+    uma medição perdida.
+    """
+    orfaos: list[str] = []
+    for coluna, lista in sorted(_options_por_coluna().items()):
+        oferecidos = set(_lista_literal(lista))
+        for valor in _valores_da_coluna(MAPA, coluna):
+            if valor not in oferecidos:
+                orfaos.append(f"  · `{coluna}` (options=`{lista}`): {_curto(valor)}")
+    assert not orfaos, (
+        "o mapa de canais tem valores que o seletor da bancada não oferece, e a "
+        "gravação regrava a coluna com o que voltou da grade — o que não está em "
+        "`options` não tem como voltar:\n"
+        + "\n".join(orfaos)
+        + f"\n\nsome cada valor à lista citada em bancada.py — como {MAPA.name} é "
+        "quem manda, é a lista que se ajusta ao dado, nunca o contrário"
+    )
+
+
+def test_a_regua_dos_selectbox_ainda_alcanca_a_grade() -> None:
+    """Régua que se desliga sozinha é pior que régua nenhuma — como a de quadros."""
+    assert _options_por_coluna(), (
+        "nenhuma coluna da grade usa `SelectboxColumn` com `options`: ou a bancada "
+        "trocou de mecanismo, e então o teste acima virou decoração, ou a régua "
+        "deixou de enxergar o `column_config`"
     )
 
 

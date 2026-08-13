@@ -16,14 +16,36 @@ conexão TRAVOU a barra em todos. E a mesma sprint registra um controle negativo
 que a contradiz — o 0x08 num controle conectado havia dez minutos **não travou**.
 
 Em 08/08 mediu-se o outro lado: cinco dias e vinte adoções por Bluetooth **sem
-nenhum 0x08**, e a barra continuou morta. Arrancou-se a causa alegada e o efeito
-ficou.
+nenhum 0x08**. Arrancou-se a causa alegada — e o que se escreveu aqui sobre o
+efeito estava ERRADO.
 
-As três medições cabem numa hipótese só, e é ela que este comando torna
-falsificável:
+CORREÇÃO DATADA (11/08/2026), porque a afirmação abaixo era falsa
+-----------------------------------------------------------------
+Este docstring dizia que, nesses cinco dias sem 0x08, "a barra continuou morta".
+**Não continuou.** A escavação do journal do daemon e dos transcritos achou a
+barra **ACESA** no rádio DENTRO daqueles cinco dias, quatro vezes, três delas
+com fala literal dela: 08/08 16:39, 08/08 21:35, 08/08 23:48 e 11/08 11:40
+(ensaios ``lightbar-bt-aceso-*`` em ``docs/data/ensaios.csv``; a correção está
+registrada no ensaio ``lightbar-bt-sem-0x08-cinco-dias``).
+
+O erro de método é o que importa guardar: eu registrei como MEDIÇÃO uma frase
+que só existia neste docstring. É a armadilha ``A-12`` de
+``docs/process/METODO-DE-ISOLAMENTO.md`` — o caderno envelhecer sem que ninguém
+note.
+
+O suspeito 0x08 **continua ausente e a barra OBEDECEU** — o que mantém o 0x08
+fora do banco dos réus, mas pela razão OPOSTA à que estava escrita aqui.
+
+A hipótese que este comando torna falsificável segue de pé, e segue sem ensaio
+que a feche:
 
     o 0x08 DEVOLVE o claim — e só o derruba quando mandado dentro da janela
     de ~3,4 s pós-conexão.
+
+O que 12/08 acrescentou, e que nenhuma das medições acima tinha: a variável que
+separava "obedeceu" de "não obedeceu" era **quem estava com o hidraw aberto no
+instante da probe** — e era o Steam. Ver o terceiro gabarito em
+``docs/process/METODO-DE-ISOLAMENTO.md``.
 
 POR QUE PELO DAEMON, E NÃO POR UM SCRIPT
 ========================================

@@ -21,8 +21,15 @@ enumeráveis por varredura:
   ``install.sh``, uma unit de ``assets/``, um empacotamento, ou a janela.
   **Basta UMA**, nunca a conjunção;
 - **P3b — SÍMBOLO**: uma função ou classe pública de módulo em ``src/``. O
-  produto promete que isto FAZ algo. O caminho é qualquer chamador em ``src/``
-  (ou em ``scripts/``, que o instalador roda).
+  produto promete que isto FAZ algo. O caminho é qualquer chamador em ``src/``,
+  em ``scripts/`` (que o instalador roda), ou no **Python embutido em heredoc**
+  do ``install.sh``/``uninstall.sh``.
+
+  Essa terceira porta nasceu em 13/08/2026, e nasceu de o portão ter errado: a
+  varredura só lia ``*.py`` e por isso acusava de órfã a ``strip_quirks_token``,
+  que o ``uninstall.sh``:1166 chama desde julho, dentro de um
+  ``python3 - "${ROOT_DIR}" <<'PYEOF'``. Um portão que acusa de dívida quem está
+  certo é pior que portão nenhum: ensina a próxima pessoa a não acreditar nele.
 
 ``tests/`` NUNCA conta como caminho, e é essa linha que separa as curas soltas
 do resto da árvore: 30 dos 33 símbolos que este portão acusa hoje têm chamador
@@ -117,6 +124,7 @@ import ast
 import functools
 import re
 import shutil
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -133,6 +141,27 @@ _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 #: chamador em ``scripts/`` — e é de propósito: a porta existe para o portão
 #: não passar a mentir no dia em que alguém use uma delas de lá.
 _TERRITORIOS_DE_PRODUCAO = ("scripts",)
+
+#: Roteiros de shell que EMBUTEM Python de produção. Não é caso de borda nem
+#: gambiarra: é a política desta casa — *"quem DECIDE é o módulo puro
+#: integrations/kernel_cmdline.py (100% stdlib, testável); aqui só traduzimos o
+#: plano"* (install.sh:1592-1593). O instalador e o desinstalador abrem um
+#: ``python3 - "${ROOT_DIR}" <<'PYEOF'`` (install.sh:1596, uninstall.sh:1150)
+#: que importa o módulo e chama as funções dele.
+#:
+#: Esse Python É produção: roda na máquina dela, com ``sudo``, mexendo na linha
+#: de comando do kernel. A varredura só olhava ``*.py`` (``_modulos``) e por
+#: isso acusava de órfã a ``strip_quirks_token``, que o desinstalar chama.
+#: MEDIDO em 13/08/2026.
+_ROTEIROS_DE_PRODUCAO = ("install.sh", "uninstall.sh")
+
+#: Abertura de heredoc alimentando um interpretador Python — ``python3 - <<'EOF'``,
+#: ``python <<EOF``, ``sudo python3 - "$X" <<-'PY'``. O delimitador é CAPTURADO
+#: para que o fechamento procurado seja o do próprio heredoc, e não o primeiro
+#: ``EOF`` que aparecer no roteiro (um script tem vários, de coisas diferentes).
+_HEREDOC_PYTHON = re.compile(
+    r"""\bpython3?\b[^\n<]*<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1\s*$"""
+)
 
 #: Portas capazes de LIGAR um interruptor de ambiente. Basta UMA.
 _PORTAS_DE_AMBIENTE: dict[str, tuple[str, ...]] = {
@@ -482,11 +511,14 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "sistema nenhum`. Quem de fato escreve a linha de comando do kernel é "
         "o instalador, em shell; esta função existe para prever o resultado."
     ),
-    "integrations/kernel_cmdline.py::forbidden_reintroductions": (
-        "MEDIDO em 12/08/2026. Instrumento: o docstring diz `Guarda de teste (e "
-        "a wiring pode re-checar)`. É a conferência da regra 'nunca "
-        "reintroduzir' sobre um plano — mede o plano, não o sistema."
-    ),
+    # `integrations/kernel_cmdline.py::forbidden_reintroductions` MOROU AQUI, e
+    # saiu em 13/08/2026 porque a classificação estava ERRADA, não porque o
+    # símbolo mudou. A razão dizia "instrumento: o docstring diz `Guarda de
+    # teste`" — e o instalador a chama em produção, dentro do heredoc de
+    # install.sh:1633 (`violations = kc.forbidden_reintroductions(actions)`),
+    # para ABORTAR o passo do cmdline quando a guarda anti-reintrodução dispara.
+    # Ela só parecia instrumento porque a varredura era cega a heredoc. O portão
+    # cobrou o apagamento sozinho, que é exatamente o que ele existe para fazer.
     "daemon/subsystems/gamepad.py::suspend_vpads_for_steam_input": (
         "MEDIDO em 12/08/2026. LÁPIDE COM NOTA DATADA, e a nota está no próprio "
         "corpo: `NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01): fora do "
@@ -497,6 +529,35 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "com uma suspensão de pé, cuja saída (`resume_vpads_after_steam_input`, "
         "essa sim viva em gamepad.py:332) é o caminho de volta dele. Não deve "
         "chamador: ela deve continuar não sendo chamada."
+    ),
+    "core/led_control.py::apply_led_settings": (
+        "MEDIDO em 13/08/2026, e esta entrada é a CORREÇÃO de uma que dizia o "
+        "contrário. Ela morava em `_SEM_CAMINHO_HOJE` porque o docstring da "
+        "função afirmava que sem ela `os bits nunca chegam ao controle` — e o "
+        "portão tomou o sintoma descrito pelo estado da árvore. Os bits chegam: "
+        "`ProfileManager.apply` emite `player_leds` no `OutputSpec` de "
+        "`apply_output_defaults` (profiles/manager.py:392) e o backend converte "
+        "em `_write_partial_output` (backend_pydualsense.py:2801). É LÁPIDE COM "
+        "NOTA DATADA: a nota está no próprio docstring, que hoje diz o endereço "
+        "do caminho vivo em vez do sintoma; a função é a forma `aplicar um "
+        "LedSettings inteiro`, correta e pública, e não deve chamador porque "
+        "quem manda no aparelho é o `OutputSpec` — o único que sabe dizer `não "
+        "mexe neste campo` com `None`, de que a trava manual por categoria "
+        "depende. A PODA É DELA: símbolo público não se apaga por conta "
+        "própria. A ligação perfil→bitmask é conferida em "
+        "`tests/unit/test_perfil_acende_os_pontinhos_do_jogador.py`."
+    ),
+    "core/led_control.py::player_bitmask": (
+        "MEDIDO em 13/08/2026. Cai junto com `apply_led_settings`, pela mesma "
+        "correção: é a conversão que o aplicador usa, e o caminho vivo faz a "
+        "MESMA conversão inline em backend_pydualsense.py:2801 (`sum(1 << i for "
+        "i, b in enumerate(out.player_leds) if b)`). A pergunta que a entrada "
+        "antiga deixava em aberto era se os dois layouts divergem — não "
+        "divergem, e isso deixou de ser leitura e virou teste: "
+        "`test_a_conversao_do_backend_e_a_de_led_control_sao_a_mesma` compara os "
+        "32 padrões possíveis. Não é dívida: é a mesma regra escrita duas vezes, "
+        "com guarda contra as duas se separarem. Apagar uma delas é decisão "
+        "DELA, não deste portão."
     ),
     "utils/session.py::load_coop_enabled": (
         "MEDIDO em 12/08/2026. LÁPIDE COM NOTA DATADA — `COOP-SEM-INTERRUPTOR-01`, "
@@ -606,30 +667,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "O QUE A FECHA: a mesma borda da entrada anterior, na mesma leva; as "
         "duas juntas ou nenhuma, porque metade da cura é pior que nenhuma aqui."
     ),
-    # --- lightbar e player LEDs --------------------------------------------
-    "core/led_control.py::apply_led_settings": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama; em `src/` só há citações em "
-        "docstring (led_control.py:8, :17-18, :38, e profiles/manager.py:289). O "
-        "docstring dela declara que sem esta propagação `perfis que definem "
-        "player_leds no JSON são carregados pelo ProfileManager e salvos no "
-        "draft, mas os bits nunca chegam ao controle` — o próprio arquivo "
-        "descreve o sintoma de estar desligado, que é o BUG-PLAYER-LEDS-APPLY-01. "
-        "O QUE A FECHA: descobrir por onde os LEDs chegam ao aparelho HOJE. Se "
-        "chegam por outro caminho, esta função é resto e o docstring que "
-        "descreve o sintoma se substitui pela informação certa; se não chegam, é "
-        "dívida aberta e o sintoma é observável com o aparelho na mão — trocar "
-        "de perfil e olhar os cinco pontinhos. Esta é a lacuna mais barata de "
-        "MEDIR desta lista, e a única que não precisa de código para decidir."
-    ),
-    "core/led_control.py::player_bitmask": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Converte as 5 flags de "
-        "player LED no bitmask 0-31 do protocolo. Cai junto com "
-        "`apply_led_settings`: é a conversão que o aplicador usaria. "
-        "O QUE A FECHA: a mesma medição da entrada anterior. Se os LEDs chegam "
-        "ao aparelho por outro caminho, este bitmask é resto — e nesse caso "
-        "vale conferir se o OUTRO caminho usa o mesmo layout, porque duas "
-        "conversões que divergem é pior que uma desligada."
-    ),
+    # `core/led_control.py::apply_led_settings` e `::player_bitmask` MORARAM
+    # AQUI e foram RECLASSIFICADOS em 13/08/2026 para `_NAO_E_PROMESSA`. A
+    # pergunta que as duas entradas faziam — "descobrir por onde os LEDs chegam
+    # ao aparelho HOJE" — foi respondida lendo, e a resposta é que chegam: pelo
+    # `OutputSpec` de `profiles/manager.py:392`. Não eram dívida; eram uma
+    # afirmação errada citada como prova. Ver as razões novas lá em cima.
     # --- a janela pedindo ao daemon ----------------------------------------
     "app/ipc_bridge.py::apply_draft": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. Quem a janela usa é a irmã "
@@ -731,27 +774,24 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "o desinstalar não sabe o que é dele e a escolha vira 'remover o que "
         "talvez não seja nosso' ou 'deixar lixo' — as duas ruins."
     ),
-    "integrations/kernel_cmdline.py::strip_quirks_token": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. É o INVERSO do merge, "
-        "escrito para o UNINSTALL de um token compartilhado, e com a regra fina "
-        "já resolvida no corpo: remove só as entradas EXATAMENTE iguais às "
-        "nossas, porque se alguém alterou as flags depois, a entrada deixou de "
-        "ser nossa. Esse cuidado está escrito e nunca roda. "
-        "O QUE A FECHA: o `uninstall.sh` chamar este caminho em vez de resolver "
-        "o token em shell. Mesmo dono das duas entradas anteriores."
-    ),
+    # `integrations/kernel_cmdline.py::strip_quirks_token` MOROU AQUI, e a
+    # entrada afirmava "esse cuidado está escrito e nunca roda", pedindo como
+    # cura que "o `uninstall.sh` chamar este caminho". SUBSTITUÍDO em
+    # 13/08/2026, porque o fato era falso e não decisão a preservar: o
+    # `uninstall.sh` já chama, em uninstall.sh:1166 (`rest, changed =
+    # kc.strip_quirks_token(tok)`), dentro do heredoc que importa o módulo. Era
+    # o PORTÃO que não enxergava — ver `_ROTEIROS_DE_PRODUCAO`. A entrada saiu
+    # porque a varredura passou a alcançá-la, e não porque alguém a apagou à
+    # mão: é o que `test_nenhuma_lapide_sobreviveu_a_propria_cura` cobra.
     # --- relatórios que ninguém pede ---------------------------------------
-    "profiles/curva_propria.py::gerar_tabela_markdown": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama, e nada em `scripts/` "
-        "tampouco. O docstring é explícito sobre a promessa: a tabela de "
-        "`docs/protocol/curvas-proprias.md` é `gerada a partir dos perfis, não "
-        "escrita à mão`, porque `registro mantido à mão desatualiza, e registro "
-        "desatualizado não defende ninguém`. Ninguém a gera — então a tabela do "
-        "documento É mantida à mão, que é exatamente o que a CR-02 proibiu. "
-        "O QUE A FECHA: um passo em `scripts/gerar-mapa.py` ou um script irmão "
-        "que escreva o arquivo, mais o `--check` correspondente. Enquanto isso "
-        "não existe, a regra da CR-02 está escrita e não vale."
-    ),
+    # `profiles/curva_propria.py::gerar_tabela_markdown` FECHOU em 13/08/2026 e
+    # a lápide saiu daqui pela porta certa: a cura que ela mesma prescrevia
+    # ("um passo em `scripts/gerar-mapa.py` ou um script irmão que escreva o
+    # arquivo, mais o `--check` correspondente") nasceu como
+    # `scripts/gerar-tabela-de-curvas.py`, que a chama em `:83`. Quem apagou
+    # esta entrada não foi a mão de ninguém: foi
+    # `test_nenhuma_lapide_sobreviveu_a_propria_cura` reprovando — o portão
+    # pegou a leva que o curou, que é exatamente o que ele existe para fazer.
     "profiles/sanidade.py::verificar_perfis_do_disco": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. É a conveniência que junta "
         "as duas metades que já existem e funcionam — carrega os perfis do XDG "
@@ -821,6 +861,39 @@ def _arvore(caminho: Path) -> ast.Module:
 
 def _modulos(raiz: Path) -> list[Path]:
     return sorted(p for p in raiz.rglob("*.py") if "__pycache__" not in p.parts)
+
+
+def trechos_python_embutidos(roteiro: Path) -> list[str]:
+    """Os corpos de heredoc que um roteiro de shell entrega ao Python.
+
+    A varredura anterior era CEGA a isto, e a cegueira tinha consequência
+    escrita: uma função chamada pelo desinstalar desde julho aparecia na lista
+    de dívida. Ler o shell como texto solto não serve — o nome também aparece
+    nos comentários em prosa do próprio roteiro (uninstall.sh:1125 cita
+    ``strip_quirks_token`` numa linha ``#``), e comentário não é chamada. O que
+    vale é o corpo do heredoc, e ele é Python de verdade: sai daqui e entra em
+    ``ast.parse``, pela MESMA régua que mede ``src/``.
+    """
+    try:
+        texto = roteiro.read_text(encoding="utf-8", errors="ignore")
+    except OSError:  # pragma: no cover — roteiro ilegível é problema dele
+        return []
+    linhas = texto.splitlines()
+    trechos: list[str] = []
+    indice = 0
+    while indice < len(linhas):
+        abertura = _HEREDOC_PYTHON.search(linhas[indice])
+        indice += 1
+        if abertura is None:
+            continue
+        delimitador = abertura.group(2)
+        corpo: list[str] = []
+        while indice < len(linhas) and linhas[indice].strip() != delimitador:
+            corpo.append(linhas[indice])
+            indice += 1
+        indice += 1  # pula o próprio delimitador de fechamento
+        trechos.append(textwrap.dedent("\n".join(corpo)))
+    return trechos
 
 
 class _Referencias(ast.NodeVisitor):
@@ -958,15 +1031,26 @@ def promessas_sem_caminho(raiz: Path | None = None) -> dict[str, Promessa]:
                 )
             )
 
+    raiz_do_projeto = _RAIZ if raiz is None else raiz.parents[1]
+
     alcancados_fora: set[str] = set()
     for territorio in _TERRITORIOS_DE_PRODUCAO:
-        base = (_RAIZ if raiz is None else raiz.parents[1]) / territorio
+        base = raiz_do_projeto / territorio
         if not base.is_dir():
             continue
         for caminho in _modulos(base):
             try:
                 alcancados_fora |= _refs(_arvore(caminho))
             except SyntaxError:  # pragma: no cover — script quebrado é problema dele
+                continue
+    for roteiro in _ROTEIROS_DE_PRODUCAO:
+        caminho = raiz_do_projeto / roteiro
+        if not caminho.is_file():
+            continue
+        for trecho in trechos_python_embutidos(caminho):
+            try:
+                alcancados_fora |= _refs(ast.parse(trecho))
+            except SyntaxError:  # pragma: no cover — heredoc quebrado é do roteiro
                 continue
 
     orfas: dict[str, Promessa] = {}
@@ -1040,19 +1124,60 @@ def _texto_sem_comentario(arquivo: Path) -> str | None:
         return None
 
 
-def portas_que_ligam(env: str) -> list[str]:
-    """Quais portas ESCREVEM este interruptor. Basta uma para a promessa valer."""
+#: Pastas de ARTEFATO DE BUILD — o que o compilador deixou, nunca o que alguém
+#: escreveu. Elas não são porta, e lê-las custa caro nas duas pontas:
+#:
+#: - TEMPO, e este é o custo que JÁ se paga: MEDIDO em 13/08/2026 na árvore
+#:   dela, `packaging/cosmic-applet/target` tem **18G em 42.738 arquivos**. O
+#:   laço abaixo abria e lia cada um deles inteiro, como texto;
+#: - VERDADE, e este é o custo que AINDA NÃO se paga — é o que torna a exclusão
+#:   preventiva e não cosmética. O binário que o `cargo` produz CONTÉM as
+#:   strings do fonte, inclusive os nomes de env que o applet apenas LÊ. Um
+#:   `HEFESTO_…=` caindo no começo de uma linha dentro de um `.rlib`
+#:   transformaria lacuna real em "tem porta", e a dívida sumiria sozinha do
+#:   relatório — o pior desfecho possível para um portão, e o mesmo engano que
+#:   `test_o_detector_de_ambiente_nao_confunde_citacao_com_escrita` já impede do
+#:   lado do texto. MEDIDO em 13/08/2026: hoje nenhum arquivo sob `target/`
+#:   dispara (`grep -rlE '^HEFESTO_[A-Z0-9_]+=' …` não devolve nada). O
+#:   mecanismo é real e está provado em
+#:   `test_o_que_o_build_deixou_nao_e_porta`; o disparo é questão de qual
+#:   binário o próximo `cargo build` deixa lá.
+#:
+#: É poda por NOME de pasta, e não `git ls-files`: um portão da suíte tem de
+#: valer também num sdist desempacotado, onde não há repositório nem `git` — e
+#: chamar subprocesso para responder "isto é fonte?" paga um preço que a poda
+#: já paga de graça.
+_PASTAS_DE_ARTEFATO = frozenset(
+    {"target", "build", "dist", "node_modules", ".git", "__pycache__", ".venv"}
+)
+
+
+def _arquivos_de_porta(caminho: Path) -> list[Path]:
+    """Os arquivos de FONTE de uma porta — sem o que o build deixou para trás."""
+    if caminho.is_file():
+        return [caminho]
+    if not caminho.is_dir():
+        return []
+    return [
+        p
+        for p in caminho.rglob("*")
+        if p.is_file() and not (_PASTAS_DE_ARTEFATO & set(p.relative_to(caminho).parts))
+    ]
+
+
+def portas_que_ligam(env: str, raiz: Path | None = None) -> list[str]:
+    """Quais portas ESCREVEM este interruptor. Basta uma para a promessa valer.
+
+    ``raiz`` existe pela mesma razão que em ``promessas_sem_caminho``: para a
+    mordida poder plantar um artefato de build numa árvore FABRICADA em vez de
+    sujar a que está sendo medida ao lado (``ARVORE-CONGELADA-01``).
+    """
+    base_do_projeto = _RAIZ if raiz is None else raiz
     encontradas: list[str] = []
     for porta, lugares in _PORTAS_DE_AMBIENTE.items():
         for lugar in lugares:
-            caminho = _RAIZ / lugar
-            arquivos = (
-                [caminho]
-                if caminho.is_file()
-                else [p for p in caminho.rglob("*") if p.is_file()]
-                if caminho.is_dir()
-                else []
-            )
+            caminho = base_do_projeto / lugar
+            arquivos = _arquivos_de_porta(caminho)
             for arquivo in arquivos:
                 texto = _texto_sem_comentario(arquivo)
                 if texto is None:  # pragma: no cover — binário ilegível
@@ -1282,7 +1407,8 @@ class TestTodaPromessaPublicaTemCaminho:
             "disse o que elas são:\n  "
             + "\n  ".join(novas)
             + "\n"
-            "Nenhum chamador em `src/` nem em `scripts/`. `tests/` NÃO conta — "
+            "Nenhum chamador em `src/`, em `scripts/`, nem no Python embutido "
+            "nos heredocs de `install.sh`/`uninstall.sh`. `tests/` NÃO conta — "
             "foi assim que trinta e três curas ficaram parecendo entregues.\n"
             "FAÇA UMA das quatro:\n"
             "  1. FIE — chame de onde o produto passa, e o defeito acaba;\n"
@@ -1366,6 +1492,15 @@ def _copia_de_src(destino: Path) -> Path:
     shutil.copytree(
         _SRC, copia, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
     )
+    # Os roteiros de shell vão junto desde 13/08/2026: o Python embutido neles é
+    # caminho de produção (ver `_ROTEIROS_DE_PRODUCAO`), e uma cópia sem eles
+    # mediria uma árvore onde o `uninstall.sh` não existe. A mordida do heredoc
+    # passaria por AUSÊNCIA em vez de por medição — o modo mais silencioso de um
+    # teste deixar de morder.
+    for roteiro in _ROTEIROS_DE_PRODUCAO:
+        origem = _RAIZ / roteiro
+        if origem.is_file():
+            shutil.copy2(origem, destino / roteiro)
     return copia
 
 
@@ -1602,10 +1737,123 @@ class TestOPortaoMorde:
             "a árvore de verdade foi contaminada pela mordida"
         )
 
+    def test_comentar_a_chamada_do_desinstalar_devolve_a_acusacao(
+        self, tmp_path: Path
+    ) -> None:
+        """A mordida do heredoc, sobre a árvore de verdade.
+
+        Ela prova as DUAS metades de uma vez, e é por isso que ela vale mais que
+        conferir a lista à mão: com o `uninstall.sh` inteiro, o portão CALA
+        sobre `strip_quirks_token`; arrancada a chamada da CÓPIA, ele VOLTA a
+        acusar. Se alguém tivesse "curado" a lacuna apagando a entrada do
+        registro, a segunda metade continuaria calada — e este caso reprovaria.
+        """
+        copia = _copia_de_src(tmp_path)
+        chave = "integrations/kernel_cmdline.py::strip_quirks_token"
+        assert chave not in promessas_sem_caminho(copia), (
+            "com o `uninstall.sh` inteiro o portão AINDA acusa "
+            f"{chave!r} — a varredura continua cega ao Python embutido em "
+            "heredoc, e a lista de dívida segue cobrando de quem está certo"
+        )
+
+        roteiro = tmp_path / "uninstall.sh"
+        texto = roteiro.read_text(encoding="utf-8")
+        chamada = "rest, changed = kc.strip_quirks_token(tok)"
+        assert chamada in texto, (
+            "a chamada mudou de forma no `uninstall.sh` — esta mordida precisa "
+            "de outro alvo, senão ela deixa de morder em silêncio"
+        )
+        roteiro.write_text(
+            texto.replace(chamada, "rest, changed = None, False"), encoding="utf-8"
+        )
+
+        assert chave in promessas_sem_caminho(copia), (
+            "arrancada a chamada do heredoc, o portão NÃO voltou a acusar "
+            f"{chave!r}. Ou ele está lendo o roteiro como texto solto (e o "
+            "COMENTÁRIO de uninstall.sh:1125 o satisfaz), ou ele parou de "
+            "olhar o roteiro da CÓPIA e está medindo a árvore viva"
+        )
+        assert chave not in promessas_sem_caminho(), (
+            "a árvore de verdade foi contaminada pela mordida"
+        )
+
+    def test_o_comentario_do_roteiro_nao_conta_como_chamada(self) -> None:
+        """Citar não é chamar — a mesma linha que separa o P3a inteiro.
+
+        O `uninstall.sh` cita `strip_quirks_token` DUAS vezes: numa linha `#` de
+        prosa (:1125) e na chamada dentro do heredoc (:1166). Um portão que
+        lesse o roteiro como texto solto ficaria verde pelo comentário, e a
+        mordida acima passaria a medir nada.
+        """
+        embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
+        assert "kc.strip_quirks_token(tok)" in embutido, (
+            "o extrator não achou a chamada dentro do heredoc de "
+            "uninstall.sh:1150 — o delimitador ou a linha de abertura mudaram"
+        )
+        assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
+            "o extrator engoliu o COMENTÁRIO de uninstall.sh:1125 junto com o "
+            "heredoc — ele está pegando texto demais, e menção viraria prova"
+        )
+
     def test_uma_chave_de_ambiente_inventada_aparece_sem_mao(self) -> None:
         """Se ``portas_que_ligam`` devolvesse algo para qualquer coisa, a
         metade P3a estaria verde por construção."""
         assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_CHAVE_QUE_NAO_EXISTE")
+
+    def test_o_que_o_build_deixou_nao_e_porta(self, tmp_path: Path) -> None:
+        """Um `.rlib` não liga interruptor nenhum — e reprova nos dois sentidos.
+
+        O laço lê cada arquivo como TEXTO. O binário que o `cargo` deixa em
+        `packaging/cosmic-applet/target` (18G em 42.738 arquivos, MEDIDO em
+        13/08/2026) carrega as strings do fonte, e basta uma delas parecer
+        escrita de ambiente para uma lacuna real virar "tem porta" — a dívida
+        sumindo sozinha do relatório. Hoje nenhuma dispara; este caso existe
+        para que o dia em que uma disparar não seja um dia de silêncio.
+
+        As duas metades estão aqui de propósito: sem a segunda, a poda poderia
+        ter cegado o detector inteiro e este caso ficaria verde por não achar
+        NADA, que é o modo mais comum de uma exclusão passar despercebida.
+        """
+        env = "HEFESTO_DUALSENSE4UNIX_CHAVE_QUE_NAO_EXISTE"
+        applet = tmp_path / "packaging" / "cosmic-applet"
+        artefato = applet / "target" / "debug"
+        artefato.mkdir(parents=True)
+        # O formato importa: o que engana o detector é a string do fonte caindo
+        # LOGO DEPOIS de um byte de quebra de linha dentro do blob — e é assim
+        # que ela cai, porque o `cargo` empacota as strings uma por linha na
+        # seção de dados. Um blob onde o nome não começa linha não engana
+        # ninguém, e um caso montado assim ficaria verde sem medir a poda.
+        (artefato / "libhefesto_applet.rlib").write_text(
+            f"\x7fELF\x00\x00\n{env}=1\n\x00", encoding="utf-8"
+        )
+        assert not portas_que_ligam(env, tmp_path), (
+            "um artefato sob `target/` foi aceito como porta — o portão passou "
+            "a acreditar no que o compilador deixou, e a dívida some sozinha"
+        )
+
+        # A outra metade: o MESMO texto, uma pasta acima, CONTINUA sendo porta.
+        (applet / "hefesto-applet.service").write_text(
+            f"[Service]\nEnvironment={env}=1\n", encoding="utf-8"
+        )
+        assert portas_que_ligam(env, tmp_path) == ["empacotamento"], (
+            "a poda cegou o detector para uma porta de VERDADE em "
+            "`packaging/` — a exclusão levou junto o que ela devia preservar"
+        )
+
+    def test_a_unica_porta_real_da_arvore_sobrevive_a_poda(self) -> None:
+        """A poda medida contra a árvore viva, e não contra a plausibilidade.
+
+        `_PASTAS_DE_ARTEFATO` é uma EXCLUSÃO, e toda exclusão pode levar junto o
+        que devia preservar. A conferência barata é a testemunha que já existe:
+        a única escrita de ambiente real desta árvore mora em `assets/`, e ela
+        tem de continuar sendo achada depois da poda. Se um dia uma porta
+        legítima nascer sob um dos nomes podados (um `packaging/*/build/`
+        versionado), é aqui que a conta não vai fechar.
+        """
+        assert portas_que_ligam("HEFESTO_BROKER_ALLOWED_UID") == ["unit"], (
+            "a poda de `_PASTAS_DE_ARTEFATO` levou junto a única porta de "
+            "verdade da árvore — a exclusão ficou larga demais"
+        )
 
     def test_a_razao_curta_demais_reprova(self) -> None:
         """A guarda das razões, apontada para si mesma.

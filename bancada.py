@@ -76,8 +76,53 @@ GRAUS = ["", "MONTOU", "SAIU NO FIO", "O APARELHO OBEDECEU"]
 #: fica é decisão dela.
 QUEM = ["", "ci", "bancada", "olho-dela",
         "aparelho", "fonte-do-driver", "descritor"]
+#: BANCADA-ESTADOS-01 (13/08/2026): as duas prosas abaixo NÃO são vocabulário —
+#: são o texto que o mapa JÁ tem em `estado_hoje`, nas duas únicas das 293 linhas
+#: em que a coluna está preenchida: `combinacao.rumble_simultaneo@dualsense` e
+#: `vibracao.rumble.ff@dualsense`, a dose-resposta do keepalive medida em
+#: 11/08/2026. Estão aqui pela razão já escrita acima para `provado_por`, e que
+#: ninguém tinha aplicado a esta lista.
+#:
+#: Com os graus de confiança separados, porque eles diferem:
+#: - MEDIDO (13/08/2026, `csv.DictReader` sobre as 293 linhas): `estado_hoje` tem
+#:   2 valores não vazios, e o `ESTADOS` de antes desta linha não continha
+#:   NENHUM dos dois. O seletor estava cego a 100% do dado da coluna.
+#: - LIDO NO CÓDIGO: `estado_hoje` está em `EDITAVEIS`, e o botão "Gravar no CSV"
+#:   (logo abaixo) regrava TODA coluna editável de toda linha visível, com o que
+#:   voltou da grade — não há caminho que preserve o valor original.
+#: - INFERIDO: que o `SelectboxColumn` COAJA um valor fora de `options` em vez de
+#:   deixá-lo passar. Não foi possível medir: `streamlit` não está instalado
+#:   nesta máquina (conferido em 13/08/2026), e ele não é dependência do produto.
+#:   É a única parte da cadeia que não foi vista rodar.
+#:
+#: Somar em vez de escolher é o mesmo gesto do `provado_por`: enquanto a inferência
+#: não for derrubada, o lado barato do erro é oferecer o valor que já existe.
+#: Transcritas byte a byte, com os acentos que faltam no original: o valor tem de
+#: casar com o CSV, e "corrigir" o texto aqui traria de volta a perda que este
+#: bloco existe para impedir. O
+#: `tests/unit/test_bancada_nomeia_coluna_que_o_csv_nao_tem.py` cruza as opções
+#: de todo `SelectboxColumn` com os valores que o CSV realmente tem, e reprova
+#: nomeando a coluna e o valor que ficaria órfão — inclusive se a transcrição
+#: abaixo divergir de uma letra.
+#: Se `estado_hoje` fica sendo vocabulário curto ou texto livre é decisão dela;
+#: até ela decidir, o dado não some por omissão.
+_ESTADO_RUMBLE_SIMULTANEO = (
+    "RESPONDIDA em 11/08/2026 com a mesa cheia, e a causa do estorvo esta ISOLADA: quatro"
+    " controles vibram ao mesmo tempo nos dois transportes; o que os cancelava era o "
+    "keepalive do daemon, provado por dose-resposta. Fica ABERTA a cura — o keepalive não"
+    " pode escrever zero nos bytes de motor sem saber se ha um dono de fora — e fica "
+    "aberto por que o cancelamento e total com dois alvos e apenas parcial com quatro."
+)
+_ESTADO_RUMBLE_FF = (
+    "MEDIDO nos dois transportes em 11/08/2026 com quatro controles na mesa, e a causa "
+    "esta FECHADA: o keepalive do daemon cancela o rumble alheio, e o faz pelos BYTES de "
+    "motor, não pelos bits — provado por dose-resposta (0,5s -> pulso; 8,0s -> oito "
+    "segundos) e por troca de lado (bits desligados trocaram o motor que vibra). A cura "
+    "ainda NAO foi escrita."
+)
 ESTADOS = ["", "funciona", "regrediu", "nunca funcionou",
-           "não implementado", "impossível"]
+           "não implementado", "impossível",
+           _ESTADO_RUMBLE_SIMULTANEO, _ESTADO_RUMBLE_FF]
 LADOS = {"cabo": "cabo_", "rádio": "radio_"}
 
 st.set_page_config(page_title="Hefesto · bancada de medição", layout="wide")
@@ -240,6 +285,19 @@ else:
         c3, c4 = st.columns(2)
         resultado = c3.text_input("Resultado", placeholder="obedece / não obedece / acendeu / mudo")
         quem = c4.selectbox("Observado por", ["olho-dela", "bancada", "ci"])
+        # PECA da cura de 13/08/2026: o `Resultado` acima responde pelo SUSPEITO
+        # da linha, e há ensaio em que as duas respostas são OPOSTAS sem que
+        # nenhuma esteja errada — o `gatilho-lado-nao-esta-invertido` eliminou o
+        # suspeito ("não obedece") na mesma rodada em que o R2 endureceu. Vazio é
+        # o padrão e quer dizer "o Resultado também responde pela feature"; é
+        # assim que 76 dos 77 ensaios continuam válidos sem ninguém tocá-los.
+        feature = st.selectbox(
+            "E a FEATURE, obedeceu? (só se for diferente do Resultado)",
+            ["", "obedece", "não obedece", "parcial", "inconclusivo"],
+            help="Preencha quando o `Resultado` acima estiver falando do "
+                 "SUSPEITO e não do que o aparelho fez. Divergir dos dois "
+                 "EXIGE nota — é o que o portão cobra (regra 12).",
+        )
         nota = st.text_input("Nota", placeholder="o que mais estava valendo neste ensaio")
 
         if st.form_submit_button("Gravar ensaio", type="primary"):
@@ -258,6 +316,7 @@ else:
                     "suspeito": susp,
                     "presente": "sim" if presente == "COM" else "não",
                     "resultado": resultado.strip(),
+                    "resultado_da_feature": feature,
                     "observado_por": quem,
                     "fonte": "bancada",
                     "nota": nota.strip(),

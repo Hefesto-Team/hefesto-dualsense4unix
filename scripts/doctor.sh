@@ -476,6 +476,16 @@ check_hid_playstation_probe_abortado() {
 # este check NUNCA escreve no nó. O vpad uhid do daemon também cria um nó
 # rgb:indicator, mas o realpath do device dele vive em /devices/virtual/ e NÃO
 # serve de alvo (filtrado). Sem DualSense físico conectado: pula sem falhar.
+#
+# LED-QUE-NÃO-AFIRMA-01 (13/08/2026): o `pass` daqui dizia "cor por-controle via
+# sysfs OK (regra 77 valendo)" — e isso é uma afirmação de EFEITO que este check
+# não tem como fazer, porque ele nunca escreveu no nó (o comentário três linhas
+# acima já dizia isso). Ela lê o doctor justamente quando a cor NÃO está saindo:
+# um `[ OK ]` afirmando que a cor funciona manda procurar no lugar errado. O
+# texto passou a dizer o que foi medido — permissão de escrita — e `test -w` só
+# derruba a hipótese "falta permissão"; a cor pode continuar sem sair por hidraw
+# em EIO, por lightbar_source=="desired", ou por driver ausente. Há teste que
+# reprova se a afirmação de efeito voltar: tests/unit/test_doctor_nao_afirma_efeito.py
 check_led_sysfs_gravavel() {
     local node dev_real nome ok_nodes="" bad_nodes=""
     for node in /sys/class/leds/*rgb:indicator*; do
@@ -494,7 +504,7 @@ check_led_sysfs_gravavel() {
     if [[ -n "${bad_nodes}" ]]; then
         warn "nó de LED do DualSense físico SEM escrita p/ o seu usuário:${bad_nodes} — a cor por-controle (sobretudo em BT) depende do sysfs; a regra 77 dá a permissão: sudo bash scripts/install_udev.sh (e reconecte o controle)"
     elif [[ -n "${ok_nodes}" ]]; then
-        pass "nó de LED do DualSense físico gravável pelo usuário (${ok_nodes# }) — cor por-controle via sysfs OK (regra 77 valendo)"
+        pass "nó de LED do DualSense físico GRAVÁVEL pelo usuário (${ok_nodes# }) — a regra 77 está valendo. Só \`test -w\`: este check NUNCA escreve no nó, então isto é PERMISSÃO, não prova de que a cor sai"
     else
         info "sem DualSense físico com nó de LED agora (só o controle virtual, ou nenhum) — pulo o teste de gravabilidade; conecte o controle p/ validar a regra 77"
     fi

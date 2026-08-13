@@ -59,6 +59,23 @@ AS DUAS ARMADILHAS DA RÉGUA, e como cada uma é tratada:
    disso — se não soubesse, gritaria falso na primeira função que alguém
    movesse para lá, que é justamente o conserto que este portão recomenda.
 
+A RÉGUA ESTAVA CEGA A CINCO CHAMADAS VIVAS (medido em 13/08/2026,
+P2-ABERTURAS-01). A lista de aberturas de `chamadas_diretas` tinha `then`,
+`else` e `do` — os CORPOS do `if` e do `while` — e não tinha as palavras que
+os abrem. No `install.sh` de hoje isso escondia:
+
+  - `install.sh:593`   `elif ! _render_broker_units` (com continuação de linha,
+    dentro de `install_broker_host`)
+  - `install.sh:1052`, `:1266`, `:1902`, `:2138`  `if run_apt ...`
+
+Nenhuma delas é `*_host`, então NENHUM veredito de hoje muda com a correção —
+conferido comparando os três conjuntos de alcance antes e depois, e a única
+diferença são esses dois nomes. Mas a direção do erro importa: aresta que falta
+no grafo só tira alcance, então a cegueira só sabia produzir ACUSAÇÃO FALSA.
+Bastava alguém escrever `if install_osk_host; then` — a forma idiomática de
+usar o código de saída de uma função — para o portão cobrar uma dívida que não
+existe. Portão que grita falso é portão que se desliga.
+
 PROVA DE QUE MORDE (12/08/2026) — arrancada do `install.sh` a chamada
 `install_broker_host` do lado NATIVE (linha 1944), trocada por um `true`.
 Reprovou `test_toda_cura_de_host_alcanca_os_dois_lados`, com a mensagem
@@ -176,25 +193,46 @@ def sem_comentario(linhas: list[str]) -> str:
     return "\n".join(linha for linha in linhas if not linha.strip().startswith("#"))
 
 
+#: O que pode vir ANTES de uma chamada para que ela esteja em posição de
+#: comando. A lista foi montada caso a caso e ficou incompleta, e isso tem
+#: preço conhecido: uma abertura que falta faz a chamada VIVA parecer
+#: inexistente, e o portão acusa de dívida quem está em dia.
+#:
+#: P2-ABERTURAS-01 (13/08/2026): entraram `if`, `elif`, `while`, `until` e o
+#: `!` de negação. Sem eles a forma mais idiomática que o bash tem de usar o
+#: código de saída de uma função — `if install_osk_host; then` — era invisível
+#: para a régua, e `if ! install_osk_host; then` também. O `)` já estava ali,
+#: pelo `case` que despacha o formato (`flatpak)  format_flatpak ;;`): sem ele
+#: o fecho do lado dos formatos parava no `case`.
+#:
+#: Isto é o oposto de afrouxar: reconhecer MAIS aberturas só acrescenta
+#: chamadas ao grafo de alcance, e o teste que consome o grafo cobra que a cura
+#: chegue aos DOIS lados. Quem afrouxaria seria o contrário — deixar de
+#: reconhecer.
+_ABERTURA_DE_COMANDO = (
+    r"(?:^|[;&|()]|\b(?:then|else|elif|do|if|while|until)\b|\{)"
+    r"\s*(?:!\s*)*(?:sudo\s+(?:-n\s+)?)?"
+)
+
+
 def chamadas_diretas(linhas: list[str], conhecidas: set[str]) -> set[str]:
     """As funções conhecidas invocadas em POSIÇÃO DE COMANDO nestas linhas.
 
     Posição de comando, e não "o nome aparece": o nome citado dentro de uma
     string de aviso (`warn "rode install_udev_host"`) não instala coisa nenhuma.
 
-    O `)` entra na lista de aberturas por causa do `case` que despacha o
-    formato (`flatpak)  format_flatpak ;;`) — sem ele o fecho do lado dos
-    formatos pararia no `case` e o portão gritaria falso em toda cura que só
-    chega por lá.
+    A busca é ANCORADA NA LINHA DA CHAMADA, uma linha por vez. O `\\s*` do
+    padrão casa `\\n` também, então alargar a lista de aberturas alargaria junto
+    o ALCANCE de cada uma: um `if` no fim de uma linha passaria a valer como
+    abertura de um nome que aparece linhas abaixo. Casar linha a linha corta
+    isso na raiz — e não muda veredito nenhum de hoje, porque o `^` do padrão
+    já era por linha.
     """
-    texto = sem_comentario(linhas)
     achadas = set()
+    linhas_uteis = sem_comentario(linhas).split("\n")
     for nome in conhecidas:
-        padrao = (
-            r"(?:^|[;&|()]|\bthen\b|\belse\b|\bdo\b|\{)\s*"
-            r"(?:sudo\s+(?:-n\s+)?)?" + re.escape(nome) + r"(?![\w.-])"
-        )
-        if re.search(padrao, texto, re.MULTILINE):
+        padrao = _ABERTURA_DE_COMANDO + re.escape(nome) + r"(?![\w.-])"
+        if any(re.search(padrao, linha) for linha in linhas_uteis):
             achadas.add(nome)
     return achadas
 
@@ -323,3 +361,87 @@ def test_a_lista_de_lacunas_nao_envelhece_calada() -> None:
             f"a lacuna {chave!r} não tem data. Sem data ninguém sabe se ela "
             "envelheceu — e uma lacuna sem idade vira paisagem."
         )
+
+
+# ---------------------------------------------------------------------------
+# P2-ABERTURAS-01 (13/08/2026) — a régua tem de enxergar `if minha_cura; then`
+#
+# `chamadas_diretas` é a lente por onde TODO o resto deste arquivo enxerga o
+# `install.sh`: o fecho transitivo, o alcance de cada região e o veredito final
+# saem dela. Uma abertura que falta na lista não deixa o portão frouxo — deixa
+# o portão MENTIROSO na direção pior de todas, a de acusar de dívida quem está
+# em dia, e portão que grita falso é portão que se desliga.
+#
+# Os testes abaixo exercitam a lente diretamente, com linhas plantadas. Não
+# tocam o `install.sh` de verdade: mexer no arquivo que a suíte inteira lê para
+# provar um detalhe da régua trocaria uma medição por um susto.
+# ---------------------------------------------------------------------------
+
+CURA_DE_MENTIRA = "install_exemplo_host"
+
+
+def test_a_regua_enxerga_a_chamada_dentro_de_um_if() -> None:
+    """`if minha_cura; then` é a forma idiomática, e era invisível.
+
+    O bash usa o código de saída da função para decidir; escrever assim é o
+    normal, não a exceção. Antes desta correção a lista de aberturas tinha
+    `then`, `else` e `do` — os CORPOS do `if` e do `while` — e não tinha as
+    palavras que os abrem.
+    """
+    linhas = [f"    if {CURA_DE_MENTIRA}; then", '        ok "instalado"', "    fi"]
+    assert chamadas_diretas(linhas, {CURA_DE_MENTIRA}) == {CURA_DE_MENTIRA}
+
+
+def test_a_regua_enxerga_a_chamada_negada_e_nos_lacos() -> None:
+    """As outras quatro formas que faltavam: `if !`, `elif`, `while`, `until`."""
+    for linha in (
+        f"    if ! {CURA_DE_MENTIRA}; then",
+        f"    elif {CURA_DE_MENTIRA}; then",
+        f"    while {CURA_DE_MENTIRA}; do",
+        f"    until {CURA_DE_MENTIRA}; do",
+        f"    ! {CURA_DE_MENTIRA}",
+        f"    if ! sudo {CURA_DE_MENTIRA}; then",
+    ):
+        assert chamadas_diretas([linha], {CURA_DE_MENTIRA}) == {CURA_DE_MENTIRA}, (
+            f"a régua não enxergou a chamada em {linha!r} — a lista de "
+            "aberturas de `_ABERTURA_DE_COMANDO` voltou a ficar incompleta."
+        )
+
+
+def test_a_regua_continua_cega_ao_nome_que_e_so_texto() -> None:
+    """O outro lado: alargar a lista não pode virar "o nome aparece".
+
+    Sem este teste, a correção acima seria indistinguível de aceitar qualquer
+    citação — e aí bastaria um aviso mencionando a função para o portão dar
+    a cura por servida. É a mesma armadilha do bloco do teclado na tela: um
+    texto que EXPLICA a regra satisfazendo a regra.
+    """
+    for linha in (
+        f'    warn "se falhar, rode {CURA_DE_MENTIRA} à mão"',
+        f"    # se falhar, rode {CURA_DE_MENTIRA}",
+        f'    echo "pulei o {CURA_DE_MENTIRA}"',
+        f"    local doc={CURA_DE_MENTIRA}_doc",
+    ):
+        assert chamadas_diretas([linha], {CURA_DE_MENTIRA}) == set(), (
+            f"a régua deu por chamada o que é só texto em {linha!r}."
+        )
+
+
+def test_a_regua_nao_inventa_chamada_onde_nao_ha() -> None:
+    """Arrancada a chamada, a régua tem de dizer que não há. O caso de vacuidade."""
+    linhas = ["    if true; then", '        ok "nada instalado"', "    fi"]
+    assert chamadas_diretas(linhas, {CURA_DE_MENTIRA}) == set()
+
+
+def test_a_abertura_nao_atravessa_a_quebra_de_linha() -> None:
+    """A âncora por linha: um `if` lá em cima não abre um nome cá embaixo.
+
+    O `\\s*` do padrão casa `\\n`, então sem a âncora as aberturas novas
+    passariam a valer para linhas seguintes — que é justamente como uma
+    correção vira afrouxamento sem ninguém perceber.
+    """
+    linhas = [
+        '    warn "leia o manual e decida se",',
+        f'          "{CURA_DE_MENTIRA} é o que você quer"',
+    ]
+    assert chamadas_diretas(linhas, {CURA_DE_MENTIRA}) == set()

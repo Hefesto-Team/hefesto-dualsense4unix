@@ -145,6 +145,61 @@ def caderno_de(ens: list[dict]) -> dict:
     }
 
 
+def pecas_orfas(linhas: list[dict]) -> list[tuple[str, str, list[str]]]:
+    """As peças que o CSV cita e o desenho não tem mais. UMA régua, dois donos.
+
+    Devolve `(controle, chave, ids que sumiram)`. Quem chama são `le_csv` (para
+    dizer em stderr) e `main` (para REPROVAR) — de propósito a mesma função, e
+    não duas contagens parecidas: nesta casa duas réguas para o mesmo dado é a
+    forma como uma delas envelhece calada.
+
+    O que uma órfã significa: a peça é o alvo que o `specs.html` acende no
+    desenho quando a pessoa clica na linha. Um id que sumiu do SVG não acende
+    nada, e não acende EM SILÊNCIO — foi assim que 67 alvos apontaram para ids
+    inexistentes na versão anterior do mapa sem um único erro visível.
+    """
+    presentes = {c: ids_do_svg(p) for c, p in SVGS.items()}
+    orfas = []
+    for lin in linhas:
+        tem = presentes.get(lin["controle"], set())
+        faltando = [i for i in lin["peca"].split() if i not in tem]
+        if faltando:
+            orfas.append((lin["controle"], lin["chave"], faltando))
+    return orfas
+
+
+def reclama_das_orfas(orfas: list[tuple[str, str, list[str]]]) -> None:
+    """Diz, uma por linha, qual peça sumiu de qual desenho."""
+    print(f"  {len(orfas)} linha(s) com peça que sumiu do desenho:", file=sys.stderr)
+    for c, ch, faltando in orfas:
+        print(f"    {c}: {ch} pede {' '.join(faltando)}", file=sys.stderr)
+
+
+def reprova_por_orfas(orfas: list[tuple[str, str, list[str]]]) -> bool:
+    """PECA-ORFA-01 (13/08/2026) — a órfã deixa de ser aviso e vira reprovação.
+
+    Até 13/08 as órfãs eram acumuladas, impressas em stderr como "aviso", e o
+    processo devolvia 0 — inclusive no `--check`, que é o passo do pre-commit e
+    do CI. Ou seja: a única régua que confere o CSV contra os desenhos não
+    reprovava nada, e um id que sumisse do SVG passaria por ela em silêncio.
+
+    Medido na árvore em 13/08/2026: ZERO linhas órfãs nas 293 do mapa. Ligar a
+    reprovação custou zero reprovações — o dia mais barato que existe para ligar.
+
+    Devolve True quando há órfã (e então já disse por quê em stderr).
+    """
+    if not orfas:
+        return False
+    print("specs.html: PEÇA ÓRFÃ — o CSV cita id de desenho que sumiu do SVG",
+          file=sys.stderr)
+    reclama_das_orfas(orfas)
+    print("conserte a coluna `peca` em docs/data/mapa-controles.csv, ou devolva "
+          "o id ao desenho em " + ", ".join(sorted(str(p.relative_to(RAIZ))
+                                                   for p in SVGS.values())),
+          file=sys.stderr)
+    return True
+
+
 def le_csv(reclamar: bool = False) -> list[dict]:
     """Lê o CSV do v2 e confere a coluna `peca` contra os ids reais do desenho.
 
@@ -158,22 +213,15 @@ def le_csv(reclamar: bool = False) -> list[dict]:
     cadernos = eliminacao.carrega_por_lado()
     with open(CSV, encoding="utf-8", newline="") as fh:
         linhas = list(csv.DictReader(fh))
-    orfas = []
     for lin in linhas:
         tem = presentes.get(lin["controle"], set())
-        pedidos = lin["peca"].split()
-        bons = [i for i in pedidos if i in tem]
-        lin["alvo"] = " ".join(bons)
-        if pedidos and len(bons) != len(pedidos):
-            orfas.append((lin["controle"], lin["chave"],
-                          [i for i in pedidos if i not in tem]))
+        lin["alvo"] = " ".join(i for i in lin["peca"].split() if i in tem)
         for lado, _ in LADOS:
             lin[f"elim_{lado}"] = caderno_de(cadernos.get((lin["id"], lado), []))
-    if reclamar and orfas:
-        print(f"  aviso: {len(orfas)} linha(s) com peça que sumiu do desenho:",
-              file=sys.stderr)
-        for c, ch, faltando in orfas:
-            print(f"    {c}: {ch} pede {' '.join(faltando)}", file=sys.stderr)
+    if reclamar:
+        orfas = pecas_orfas(linhas)
+        if orfas:
+            reclama_das_orfas(orfas)
     return linhas
 
 
@@ -969,6 +1017,12 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.check:
+        # PECA-ORFA-01 (13/08/2026), e vem ANTES da comparação de conteúdo de
+        # propósito: órfã é defeito de DADO, e regerar não conserta. Dizer
+        # "DESATUALIZADO" mandaria a pessoa rodar o gerador, que devolveria a
+        # mesma órfã — e o erro apontaria para o remédio errado.
+        if reprova_por_orfas(pecas_orfas(le_csv())):
+            return 1
         if not SAIDA.exists():
             print("specs.html: NAO EXISTE — rode scripts/gerar-mapa.py", file=sys.stderr)
             return 1
@@ -991,8 +1045,13 @@ def main() -> int:
 
     SAIDA.write_text(monta(), encoding="utf-8")
     kb = SAIDA.stat().st_size / 1024
-    print(f"{SAIDA.relative_to(RAIZ)}: {kb:.0f} KB, {len(le_csv())} linhas")
-    return 0
+    linhas = le_csv()
+    print(f"{SAIDA.relative_to(RAIZ)}: {kb:.0f} KB, {len(linhas)} linhas")
+    # A página é ESCRITA antes de reprovar, e essa ordem é decisão: quem acabou
+    # de mexer no CSV quer ver o estado quebrado no desenho para consertá-lo. O
+    # que não pode é sair 0 — foi assim que 67 alvos apontaram para ids
+    # inexistentes na versão anterior do mapa sem um único erro visível.
+    return 1 if reprova_por_orfas(pecas_orfas(linhas)) else 0
 
 
 if __name__ == "__main__":

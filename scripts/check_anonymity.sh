@@ -64,9 +64,57 @@ EXCLUDE_PATHSPECS=(
     ':!.github/workflows/anonymity-check.yml'
 )
 
-# Usa git grep se estivermos em repo (respeita .gitignore + pathspec).
-# Cai pra grep manual se repo ainda não inicializado (W0.1 pré-git init).
+# Usa a LISTA do git + grep se estivermos em repo (respeita .gitignore +
+# pathspec). Cai pra grep manual se repo ainda não inicializado (W0.1 pré-git
+# init).
 if git rev-parse --git-dir >/dev/null 2>&1; then
+    # ANONIMATO-CEGO-A-ARQUIVO-NOVO-01 (13/08/2026): aqui era `git grep`, e
+    # `git grep` só enxerga o que está no ÍNDICE. Arquivo recém-escrito, ainda
+    # sem `git add`, passava VERDE — o portão calava exatamente no arquivo que
+    # ninguém tinha revisado, que é quando o deslize entra. O comentário da
+    # ANONIMATO-FRONTEIRA-DE-PALAVRA-01, lá em cima, já registrava a cegueira
+    # ("o defeito só aparecia DEPOIS do `git add`, porque o gate usa `git grep`
+    # e é cego a arquivo não rastreado; o commit f319c6f entrou vermelho por
+    # causa disso") e ninguém a tinha curado: este era o ÚLTIMO portão cego da
+    # casa. `validar-acentuacao.py` (listar_arquivos_git) e `validar-glifos.py`
+    # (idem) já fazem o mesmo desde a PORTÃO-VIVO-01 Bloco A.
+    #
+    # A cura é trocar a BUSCA pela LISTA: `git ls-files --cached --others
+    # --exclude-standard` traz o rastreado E o novo, sem trazer o ignorado, e o
+    # grep varre a lista. Os pathspecs de exclusão continuam valendo letra por
+    # letra — `git ls-files` lê a mesma sintaxe `:!` do `git grep`.
+    #
+    # MEDIDO em 13/08/2026, num repo de mentira: com o `git grep`, um
+    # `src/.../novo.py` contendo "# by claude" e NUNCA adicionado devolvia
+    # "OK: anonimato preservado." e exit 0.
+    #
+    # ANONIMATO-MAIUSCULA-01 (13/08/2026) — ACHADO, MEDIDO, E DEIXADO DE PÉ,
+    # porque consertá-lo é decisão dela e não do portão:
+    #
+    # o grep daqui NÃO leva `-i`, e a regex acima é toda minúscula. Logo, no
+    # ramo do git, maiúscula é esconderijo: um arquivo RASTREADO com "escrito
+    # com Claude Opus" passa verde (medido num repo de mentira em 13/08/2026).
+    # O `-i` existia (`git grep -niE`, commit 9cbfcc0) e sumiu em c51c902,
+    # quando o `-I` do parágrafo abaixo entrou NO LUGAR do `i` em vez de ao
+    # lado dele. A suíte não viu porque o teste que cobre esse caso
+    # (`test_ainda_pega_o_modelo_composto`) exercita o ramo de FALLBACK, que
+    # nunca perdeu o `-i`.
+    #
+    # O PREÇO DE DEVOLVER O `-i`, medido na árvore de 13/08/2026: 25
+    # reprovações em 7 arquivos, e TODAS são a mesma coisa — o nome do arquivo
+    # `CLAUDE.md`, citado por quem escreve sobre as regras da casa
+    # (test_portoes_da_casa_estao_ligados_no_ci.py sozinho responde por 19).
+    # ZERO são violação de verdade. Devolver o `-i` sem antes decidir o que
+    # fazer com esse nome transformaria o portão num gerador de ruído, e a
+    # regra da casa é que portão que grita falso é portão que se desliga.
+    #
+    # A decisão é dela porque é a MESMA decisão do `CLAUDE.md`: o arquivo é
+    # proibido de ser versionado por .github/workflows/anonymity-check.yml, e
+    # é ela quem escolhe se o NOME dele vira exceção explícita do regex, se o
+    # texto passa a citá-lo de outro jeito, ou se o ramo do git segue sensível
+    # a maiúscula de propósito. Enquanto não escolher, fica registrado aqui:
+    # este ramo NÃO pega o nome de modelo capitalizado.
+    #
     # ANONIMATO-BINARIO-FALSO-POSITIVO-01 (01/08/2026): o `-I` NÃO é opcional.
     # Sem ele o `git grep` varre os PNGs de `docs/usage/assets/` e um deles
     # casou o regex POR ACASO, nos bytes comprimidos — a saída era um
@@ -79,7 +127,24 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
     # avisa que os portões de anonimato NÃO varrem imagens, e que a foto da
     # aba Sistema teve de ser borrada à mão. O `-I` só faz o script parar de
     # fingir que varre.
-    HITS=$(git grep -nIE "$FORBIDDEN" -- "${EXCLUDE_PATHSPECS[@]}" 2>/dev/null || true)
+    #
+    # A lista entra num array por `read -d ''`, e NÃO por `git ls-files | grep`:
+    # é a mesma lição da CORRIDA-DO-PIPEFAIL-01 do check_packaging_parity.sh —
+    # produtor num pipe cujo consumidor pode sair antes é corrida, e o
+    # `pipefail` do `set -euo pipefail` do topo transformaria o SIGPIPE em
+    # veredito.
+    ARQUIVOS=()
+    while IFS= read -r -d '' _arquivo; do
+        ARQUIVOS+=("${_arquivo}")
+    done < <(git ls-files -z --cached --others --exclude-standard \
+        -- "${EXCLUDE_PATHSPECS[@]}" 2>/dev/null)
+    if [[ "${#ARQUIVOS[@]}" -gt 0 ]]; then
+        # `2>/dev/null` cobre o caso do arquivo apagado do disco mas ainda no
+        # índice, que o `--cached` lista e o grep não acha.
+        HITS=$(grep -HnIE "$FORBIDDEN" -- "${ARQUIVOS[@]}" 2>/dev/null || true)
+    else
+        HITS=""
+    fi
 else
     # Fallback: grep -r. Limitação: --exclude-dir só aceita basename, então
     # dirs com nome 'process'/'history'/'fixtures' em qualquer nível são excluídos.

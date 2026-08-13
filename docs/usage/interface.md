@@ -370,5 +370,23 @@ jogo, sem aviso — por isso ele nasce bloqueado, com a razão escrita em texto.
 
 ## O rodapé
 
-Vale para qualquer aba: **Aplicar**, **Salvar Perfil**, **Importar** e **Restaurar
-Default** persistem o que está editado para o perfil corrente.
+Vale para qualquer aba — e os quatro botões **não** fazem a mesma coisa:
+
+| botão | o que ele faz | o trabalho fica salvo? |
+|---|---|---|
+| **Aplicar** | manda o rascunho inteiro ao daemon e o controle obedece **agora** | **não.** Nada é escrito em disco |
+| **Salvar Perfil** | pergunta o nome e grava `<nome>.json` na pasta de perfis | **sim** |
+| **Importar** | lê um `.json` de fora, valida e copia para a pasta de perfis | **sim** |
+| **Restaurar Default** | devolve o `meu_perfil` ao estado de fábrica e regrava o arquivo | **sim** (e sobrescreve o que havia) |
+
+**A distinção custa um perfil, e por isso está aqui.** O **Aplicar** despacha
+`profile.apply_draft` pelo IPC (`on_apply_draft`, em
+`src/hefesto_dualsense4unix/app/actions/footer_actions.py`) e não abre arquivo
+nenhum: o efeito é no aparelho, e some no
+próximo perfil que entrar — por troca de janela, por jogo, ou por reinício do
+daemon. Quem escreve no disco é o **Salvar Perfil**, e só ele conserva o que
+você acabou de ajustar.
+
+*Correção datada de 13/08/2026: esta seção dizia que os quatro "persistem o que
+está editado para o perfil corrente". Era falso para o **Aplicar**, que é o
+botão mais usado — e o texto que dizia a ela onde o trabalho fica salvo.*

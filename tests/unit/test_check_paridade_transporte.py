@@ -14,6 +14,7 @@ arrancamento derrubou está escrito na docstring do teste correspondente.
 """
 from __future__ import annotations
 
+import ast
 import csv
 import importlib.util
 import subprocess
@@ -548,3 +549,274 @@ def test_o_censo_conta_o_mesmo_que_uma_regua_independente() -> None:
         f"a régua achou {achadas} afirmação(ões) forte(s) sem rede e a contagem "
         f"independente achou {esperado}"
     )
+
+
+# --------------------------------------------------------------------------
+# REGRA 9 + REGRA 12 — o veredicto da FEATURE, separado do veredicto do SUSPEITO
+#
+# A cura de 13/08/2026: `resultado` responde pelo SUSPEITO da linha, e há
+# ensaio em que as duas respostas são OPOSTAS sem que nenhuma esteja errada.
+# Estes casos existem para provar as DUAS metades do contrato — que a coluna
+# nova é lida, e que ela não é o botão de desligar a regra 9.
+# --------------------------------------------------------------------------
+#: Cabeçalho do caderno de bancada, com a coluna de 13/08/2026 no lugar dela:
+#: logo depois de `resultado`, que é o par que ela desambigua.
+CABECALHO_DO_CADERNO = [
+    "id",
+    "linha_id",
+    "transporte",
+    "quando",
+    "suspeito",
+    "presente",
+    "resultado",
+    "resultado_da_feature",
+    "observado_por",
+    "fonte",
+    "nota",
+]
+
+
+def escreve_caderno(raiz: Path, ensaios: list[dict[str, str]]) -> None:
+    """O caderno de mentira. Sem ele as regras 6, 9, 10 e 12 se desligam."""
+    caminho = raiz / "docs" / "data" / "ensaios.csv"
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    with caminho.open("w", encoding="utf-8", newline="") as arquivo:
+        escritor = csv.DictWriter(arquivo, fieldnames=CABECALHO_DO_CADERNO)
+        escritor.writeheader()
+        for ensaio in ensaios:
+            escritor.writerow({c: ensaio.get(c, "") for c in CABECALHO_DO_CADERNO})
+
+
+def ensaio_do_cabo(**mudancas: str) -> dict[str, str]:
+    """Um ensaio de cabo da linha que `linha_forte()` descreve."""
+    base = {
+        "id": "ensaio-de-mentira",
+        "linha_id": "luz.lightbar.cor@dualsense",
+        "transporte": "cabo",
+        "quando": "2026-08-13T10:00:00",
+        "suspeito": "um suspeito qualquer",
+        "presente": "sim",
+        "resultado": "obedece",
+        "observado_por": "olho-dela",
+        "nota": "",
+    }
+    base.update(mudancas)
+    return base
+
+
+def linha_que_obedeceu(**mudancas: str) -> dict[str, str]:
+    """A linha forte com o degrau mais alto no cabo — o que pede o caderno."""
+    return linha_forte(cabo_grau="O APARELHO OBEDECEU", **mudancas)
+
+
+def test_resultado_do_suspeito_sozinho_ainda_avisa(tmp_path: Path) -> None:
+    """O estado ANTES da cura: `resultado` nega e não há coluna que o desminta.
+
+    Este é o contrapeso do teste seguinte. Sem ele, um `resultado_da_feature`
+    lido de qualquer jeito passaria despercebido, porque nada afirmaria que a
+    régua ainda enxerga a negação quando ela é a única coisa escrita.
+    """
+    caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
+    escreve_caderno(tmp_path, [ensaio_do_cabo(resultado="não obedece")])
+    processo = rodar(caminho, tmp_path)
+    assert "grau-sem-ensaio-que-obedeca" in processo.stdout, processo.stdout
+
+
+def test_a_coluna_da_feature_desmente_o_resultado_do_suspeito(tmp_path: Path) -> None:
+    """A cura: o `resultado` é do SUSPEITO, e a coluna nova diz o que a feature fez.
+
+    MORDE? Trocar `veredicto_da_feature(ensaio)` de volta por
+    `(ensaio.get("resultado") or "").strip()` em `_regra_do_caderno` faz este
+    teste reprovar — o aviso volta a sair para um ensaio em que o aparelho
+    obedeceu, que é o defeito que a cura de 13/08/2026 tirou do portão.
+    """
+    caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
+    escreve_caderno(
+        tmp_path,
+        [
+            ensaio_do_cabo(
+                resultado="não obedece",
+                resultado_da_feature="obedece",
+                nota="o suspeito caiu na mesma rodada; o R2 endureceu",
+            )
+        ],
+    )
+    processo = rodar(caminho, tmp_path)
+    assert "grau-sem-ensaio-que-obedeca" not in processo.stdout, processo.stdout
+
+
+def test_a_feature_que_de_fato_nao_obedeceu_continua_avisando(tmp_path: Path) -> None:
+    """A GUARDA: a cura não pode ter virado "desligar a regra 9".
+
+    O ensaio aqui é genuinamente contraditório — a linha jura `O APARELHO
+    OBEDECEU` e o caderno diz, na coluna da FEATURE, que ela não obedeceu. Se
+    este aviso sumir, o portão parou de fazer a única pergunta que ele existe
+    para fazer, e a coluna nova virou a saída em vez da régua.
+    """
+    caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
+    escreve_caderno(
+        tmp_path,
+        [
+            ensaio_do_cabo(
+                resultado="obedece",
+                resultado_da_feature="não obedece",
+                nota="o suspeito se sustentou, mas o aparelho não fez nada",
+            )
+        ],
+    )
+    processo = rodar(caminho, tmp_path)
+    assert "grau-sem-ensaio-que-obedeca" in processo.stdout, processo.stdout
+    assert "'não obedece'" in processo.stdout, processo.stdout
+
+
+def test_veredicto_da_feature_fora_do_vocabulario_reprova(tmp_path: Path) -> None:
+    """Regra 12, primeira metade: valor novo na coluna nova é FALHA, não silêncio.
+
+    Sem isto, `resultado_da_feature = talvez` desligaria a regra 9 sem dizer
+    nada — o `talvez` não está em `RESULTADOS_QUE_SUSTENTAM`, mas também não
+    está em lugar nenhum que alguém leia.
+    """
+    caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
+    escreve_caderno(
+        tmp_path,
+        [
+            ensaio_do_cabo(
+                resultado="obedece",
+                resultado_da_feature="talvez",
+                nota="uma nota qualquer",
+            )
+        ],
+    )
+    processo = rodar(caminho, tmp_path)
+    assert processo.returncode == 1, processo.stdout
+    assert "FALHA veredicto-da-feature-mal-declarado" in processo.stdout
+    assert "vocabulário do caderno" in processo.stdout
+
+
+def test_veredicto_da_feature_que_diverge_sem_nota_reprova(tmp_path: Path) -> None:
+    """Regra 12, segunda metade: divergir sem explicar é o botão de desligar.
+
+    É esta metade que faz a coluna ser CARA. Quem quiser calar a regra 9 tem de
+    escrever no caderno, na mesma linha, o que o aparelho fez — que é o preço
+    que a casa cobra em toda parte.
+    """
+    caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
+    escreve_caderno(
+        tmp_path,
+        [
+            ensaio_do_cabo(
+                resultado="não obedece",
+                resultado_da_feature="obedece",
+                nota="",
+            )
+        ],
+    )
+    processo = rodar(caminho, tmp_path)
+    assert processo.returncode == 1, processo.stdout
+    assert "FALHA veredicto-da-feature-mal-declarado" in processo.stdout
+    assert "`nota` está vazia" in processo.stdout
+
+
+def test_caderno_sem_a_coluna_nova_segue_lendo_o_resultado(tmp_path: Path) -> None:
+    """Compatibilidade: 76 dos 77 ensaios reais não têm a coluna preenchida.
+
+    Um caderno SEM a coluna no cabeçalho — que é o de qualquer árvore anterior a
+    13/08/2026 — tem de continuar sendo lido por `resultado`, sem estourar e sem
+    mudar de veredicto. Coluna nova que quebra o dado velho não é cura.
+    """
+    caminho = monta_arvore(tmp_path, [linha_que_obedeceu()])
+    caderno = tmp_path / "docs" / "data" / "ensaios.csv"
+    caderno.parent.mkdir(parents=True, exist_ok=True)
+    antigas = [c for c in CABECALHO_DO_CADERNO if c != "resultado_da_feature"]
+    with caderno.open("w", encoding="utf-8", newline="") as arquivo:
+        escritor = csv.DictWriter(arquivo, fieldnames=antigas)
+        escritor.writeheader()
+        escritor.writerow(
+            {c: ensaio_do_cabo(resultado="não obedece").get(c, "") for c in antigas}
+        )
+    processo = rodar(caminho, tmp_path)
+    assert "grau-sem-ensaio-que-obedeca" in processo.stdout, processo.stdout
+    assert "veredicto-da-feature" not in processo.stdout, processo.stdout
+
+
+def test_o_caderno_real_declara_a_coluna_da_feature() -> None:
+    """Contra a ÁRVORE REAL: a coluna existe, e quem a preenche explica por quê.
+
+    Sem este caso, alguém poderia apagar a coluna do `docs/data/ensaios.csv` e
+    os testes acima — todos contra caderno de mentira — continuariam verdes,
+    enquanto o portão real voltaria a ler o veredicto do SUSPEITO como se fosse
+    o da feature. Nenhuma contagem fica escrita aqui: tudo é medido na hora.
+    """
+    caderno_real = RAIZ_REAL / "docs" / "data" / "ensaios.csv"
+    with caderno_real.open(encoding="utf-8", newline="") as arquivo:
+        ensaios = list(csv.DictReader(arquivo))
+    assert ensaios and "resultado_da_feature" in ensaios[0]
+
+    declarados = [e for e in ensaios if (e.get("resultado_da_feature") or "").strip()]
+    for ensaio in declarados:
+        veredicto = ensaio["resultado_da_feature"].strip()
+        assert veredicto in {"obedece", "não obedece", "parcial", "inconclusivo"}, (
+            f"o ensaio `{ensaio['id']}` usa um veredicto fora do vocabulário "
+            f"do caderno: {veredicto!r}"
+        )
+        if veredicto != (ensaio.get("resultado") or "").strip():
+            assert (ensaio.get("nota") or "").strip(), (
+                f"o ensaio `{ensaio['id']}` diverge de `resultado` e não explica "
+                "na `nota` — é exatamente o que a regra 12 cobra"
+            )
+
+
+#: Quem, além da bancada, ESCREVE no caderno com a lista de colunas na mão. A
+#: bancada já tem o seu par em `test_bancada_nomeia_coluna_que_o_csv_nao_tem.py`;
+#: estes dois não tinham nenhum, e foi assim que a coluna de 13/08/2026 quase
+#: passou deixando os dois desalinhados EM SILÊNCIO — o `csv.writer` do
+#: `ensaio_rumble_um_bit_por_vez.py` escreve por POSIÇÃO, então uma coluna a
+#: menos não estoura: ela empurra `fonte` para dentro de `observado_por`.
+ESCRITORES_DO_CADERNO = (
+    "scripts/ensaio_rumble_um_bit_por_vez.py",
+    "scripts/migrar-mapa-v2.py",
+)
+
+
+def _listas_literais_de_colunas(fonte: Path) -> list[list[str]]:
+    """Toda lista literal de strings do arquivo que tenha cara de cabeçalho.
+
+    Por AST, não por texto: uma expressão regular acharia a lista dentro de um
+    comentário ou de uma docstring e passaria a medir prosa.
+    """
+    achadas = []
+    for no in ast.walk(ast.parse(fonte.read_text(encoding="utf-8"))):
+        if not isinstance(no, ast.List):
+            continue
+        valores = [
+            item.value for item in no.elts
+            if isinstance(item, ast.Constant) and isinstance(item.value, str)
+        ]
+        if len(valores) == len(no.elts) and {"linha_id", "observado_por"} <= set(valores):
+            achadas.append(valores)
+    return achadas
+
+
+@pytest.mark.parametrize("relativo", ESCRITORES_DO_CADERNO)
+def test_quem_escreve_no_caderno_conhece_todas_as_colunas(relativo: str) -> None:
+    """Escritor que não conhece uma coluna desalinha o caderno inteiro, calado.
+
+    A régua é o cabeçalho REAL de `docs/data/ensaios.csv`, lido na hora — nunca
+    uma lista escrita aqui, que envelheceria junto com as que ela vigia.
+    """
+    with (RAIZ_REAL / "docs" / "data" / "ensaios.csv").open(
+        encoding="utf-8", newline=""
+    ) as arquivo:
+        cabecalho = next(csv.reader(arquivo))
+
+    listas = _listas_literais_de_colunas(RAIZ_REAL / relativo)
+    assert listas, (
+        f"{relativo} não tem mais nenhuma lista de colunas do caderno: ou ele "
+        "parou de escrever nele, e sai desta lista, ou este teste ficou cego"
+    )
+    for lista in listas:
+        assert lista == cabecalho, (
+            f"{relativo} escreve o caderno com as colunas {lista}, e o cabeçalho "
+            f"de docs/data/ensaios.csv é {cabecalho}. O `csv.writer` grava por "
+            "POSIÇÃO: uma coluna faltando não estoura, ela empurra todo o resto"
+        )

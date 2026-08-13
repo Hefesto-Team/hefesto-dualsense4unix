@@ -118,8 +118,10 @@ def faixas_de_eixo(caps: Any, ev_abs: int) -> dict[int, EixoAbsoluto]:
 
     Uma leitura só: o `capabilities()` do python-evdev já traz o `absinfo`
     junto (default `absinfo=True`), então não custa um ioctl por eixo. Ler isto
-    DENTRO do `_handle_event` custaria um ioctl por evento, a 250-765 Hz — é o
-    mesmo motivo pelo qual o `MotionSensorReader` lê a resolução no open.
+    DENTRO do `_handle_event` custaria um ioctl por evento, a 250 Hz no cabo e
+    a até ~797 Hz no pico da rajada de BT (medido 11/08/2026,
+    `docs/protocol/driver-hid-playstation.md:757-758`) — é o mesmo motivo pelo
+    qual o `MotionSensorReader` lê a resolução no open.
 
     Tolerante por contrato: `capabilities()` ilegível, entrada em formato
     inesperado ou valor não-inteiro deixa o eixo FORA do mapa, e quem consome
@@ -878,7 +880,8 @@ class _EvdevReconnectLoop:
         `MotionSensorReader` lê aqui a `resolution` do absinfo (é ela que
         converte o valor cru em graus/s, e ela muda quando o kernel recria
         o node). Ler isso de dentro de `_handle_event` custaria um ioctl
-        por evento a 250-765 Hz; ler no open custa um por conexão.
+        por evento a 250 Hz no cabo e a até ~797 Hz no pico da rajada de BT
+        (medido 11/08/2026); ler no open custa um por conexão.
         """
 
     def _log_prefix(self) -> str:  # pragma: no cover - abstract

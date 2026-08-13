@@ -660,6 +660,13 @@ def linhas_de_caderno(
                 suspeito,
                 "sim" if presente else "não",
                 resultado,
+                # `resultado_da_feature`, vazia (13/08/2026): aqui o `resultado`
+                # JÁ é o que a feature fez — o motor girou ou não —, e vazio
+                # quer dizer exatamente isso. A coluna existe para o caso em que
+                # o `resultado` fala do SUSPEITO, que não é o deste ensaio.
+                # Ela é POSICIONAL neste escritor: o lugar dela é entre
+                # `resultado` e `observado_por`, como no cabeçalho.
+                "",
                 "olho-dela",
                 fonte,
                 nota,
@@ -676,7 +683,8 @@ def gravar_no_caderno(linhas: list[list[str]]) -> None:
         if novo:
             escritor.writerow(
                 ["id", "linha_id", "transporte", "quando", "suspeito", "presente",
-                 "resultado", "observado_por", "fonte", "nota", "linha_id_v1"]
+                 "resultado", "resultado_da_feature", "observado_por", "fonte",
+                 "nota", "linha_id_v1"]
             )
         escritor.writerows(linhas)
 

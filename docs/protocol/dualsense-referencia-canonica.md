@@ -357,9 +357,16 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 >
 > | campo | onde é escrito | grau |
 > |---|---|---|
-> | volume, `common[5]` | `core/backend_pydualsense.py:780-782` — o laço dos quatro bytes de áudio | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:783-790`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:789`; o valor padrão `0x2` sai de `:2695` | **ALTA** — lido no código |
+> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:930-932` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:935-940`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:937`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
 > | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:259-287` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
+>
+> *(Os endereços das duas primeiras linhas foram REAPONTADOS em 13/08/2026: eles
+> apontavam para `:780-782`, `:783-790`/`:789` e `:2695`, que a refatoração do
+> `_build_common` mudou de lugar — `:789` caiu no meio de um docstring e o flag
+> passou a viver em `:937`. As afirmações não mudaram; só o endereço estava
+> podre. Desde então `scripts/validar-citacoes-de-linha.py` abre cada endereço
+> deste documento e reprova quando ele não contém o que promete.)*
 >
 > **E a medição da curva caducou junto, que é o efeito mais caro deste
 > parágrafo.** O *"mudo até 38, satura em 102"* foi levantado **sem** o
@@ -890,9 +897,9 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > | etapa | onde | grau |
 > |---|---|---|
-> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:347` (`extract_jack_status`), offset em `:142` | **ALTA** — lido no código |
-> | entrega ao vpad na borda | `core/physical_report_reader.py:854-865` (`_observe_jack`) | **ALTA** |
-> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1744` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:536` | **ALTA** |
+> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:392` (`extract_jack_status`), offset em `:142` | **ALTA** — lido no código |
+> | entrega ao vpad na borda | `core/physical_report_reader.py:884-912` (`_observe_jack`) | **ALTA** |
+> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1747` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:536` | **ALTA** |
 > | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1729`, offset `_STATUS1_OFFSET = 53` em `:526` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos

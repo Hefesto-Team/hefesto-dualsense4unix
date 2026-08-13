@@ -16,6 +16,21 @@ o par (weak, strong) entregue ao `rumble_sink`, que vibra o controle físico.
 
 O device é substituído por um fd falso (`os.write`/`os.read` monkeypatchados), então
 o teste roda em CI sem /dev/uhid e sem hardware.
+
+MORDIDA PROVADA (13/08/2026, com o `src/` COPIADO para fora da árvore e o
+`PYTHONPATH` apontado para a cópia — a árvore de trabalho nunca foi mutada):
+
+- arrancando o repasse do FF ao físico — a chamada `self.rumble_sink(weak,
+  strong)` dentro de `_emit_rumble` (`integrations/uhid_gamepad.py`), trocada
+  por um `pass` para que só o REPASSE morresse e nada mais —, este arquivo
+  reprova **6 de 128**: `test_rumble_do_jogo_chega_ao_controle_fisico`,
+  `test_valor_repetido_nao_reenvia`, as três parametrizações de
+  `test_rumble_chega_em_qualquer_firmware` e
+  `test_report_sem_a_flag_de_vibracao_nao_zera_o_rumble`;
+- o nó que o mapa aponta reprova sozinho, e a mensagem diz o que sumiu:
+  `assert [] == [(200, 100), (0, 255), (0, 0)]`. Ou seja, o jogo pediu três
+  pares e NENHUM chegou ao controle físico;
+- com a cura devolvida, `128 passed in 0.39s`.
 """
 from __future__ import annotations
 

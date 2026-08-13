@@ -419,6 +419,14 @@ def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNa
     stub._mostrar_caixa_do_steam_input = MethodType(  # type: ignore[attr-defined]
         ProfilesActionsMixin._mostrar_caixa_do_steam_input, stub
     )
+    # JOGO-QUE-SE-DIZ-01 (13/08/2026): o handler passou a atualizar também o
+    # rótulo com o NOME do jogo ao lado do número. Amarrado pela mesma razão do
+    # de cima — sem o widget no `_get`, o método real sai pela porta que já
+    # existe para glade desatualizado, e este arquivo continua exercitando o
+    # `_on_aplica_a_changed` de produção inteiro em vez de uma versão podada.
+    stub._atualizar_frase_do_jogo = MethodType(  # type: ignore[attr-defined]
+        ProfilesActionsMixin._atualizar_frase_do_jogo, stub
+    )
     return stub
 
 

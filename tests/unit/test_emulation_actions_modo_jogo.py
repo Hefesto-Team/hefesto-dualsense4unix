@@ -8,6 +8,14 @@ controle morria. Stubs de gi como em test_rumble_actions.py (armadilha A-12).
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01 (TESTE-HONESTO-01/E1, lote A): a guarda vem ANTES de
+# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
+# widgets que são `object` — e nunca entrava no job `gtk-real`, que seleciona
+# por `grep exigir_gi_real|skip_sem_gi_real`. Agora ele pula honestamente.
+exigir_gi_real("emulação: os botões do modo jogo")
+
 import sys
 import types
 

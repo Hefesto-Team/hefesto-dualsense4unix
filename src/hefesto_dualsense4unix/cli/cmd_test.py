@@ -33,13 +33,23 @@ def _parse_params(raw: str | None) -> list[int]:
 
 #: Mensagem da recusa do `--raw` com o daemon vivo (TRIGGER-CANON-01/E4).
 #: Constante e não literal porque um teste a compara — o texto É a entrega.
+#: MSG-RAW-01 (13/08/2026): esse teste era imaginário — a linha acima o anunciava
+#: desde 01/08 e `grep -rn MSG_RAW_COM_DAEMON tests/` devolvia ZERO. Por isso o
+#: parágrafo do mecanismo pôde envelhecer sem ninguém ver. O teste existe agora,
+#: em `tests/unit/test_msg_raw_com_daemon_e_o_texto_certo.py`.
 MSG_RAW_COM_DAEMON = (
     "o daemon está no ar, e o --raw abriria um SEGUNDO controlador para "
     "disputar o mesmo /dev/hidraw com ele.\n\n"
-    "Medido em 01/08/2026: o report_thread do daemon sobrescreve o efeito em "
-    "menos de 0,5 s (é o keepalive dele), e este comando imprimia "
-    "\"trigger aplicado\" mesmo assim — o instrumento brigando com o produto "
-    "e anunciando sucesso.\n\n"
+    "Medido em 01/08/2026: o report_thread do daemon sobrescrevia o efeito em "
+    "menos de 0,5 s, e este comando imprimia \"trigger aplicado\" mesmo assim "
+    "— o instrumento brigando com o produto e anunciando sucesso.\n\n"
+    "Corrigido em 11/08/2026 (RUMBLE-SEM-DONO-01): o keepalive PERPÉTUO "
+    "acabou. Hoje o daemon só reconfirma o mesmo report na janela de "
+    "confirmação que segue cada mudança real — não mais para sempre. Mudou o "
+    "prazo, não a recusa: o report OUT do DualSense é ATÔMICO (gatilho, "
+    "vibração e luz saem no mesmo buffer), então o primeiro write do daemon "
+    "depois do seu leva o seu efeito cru junto, e nada avisa quando isso "
+    "acontece.\n\n"
     "Saídas, em ordem de preferência:\n"
     "  1. use a aba Gatilhos da janela, que passa pelo daemon;\n"
     "  2. use --mode com NOME de preset (sem --raw), que também passa;\n"

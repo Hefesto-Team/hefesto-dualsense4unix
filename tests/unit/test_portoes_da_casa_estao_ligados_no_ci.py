@@ -42,11 +42,32 @@ e `pre-commit` sem guarda de existência. `mapa-de-canais` já tem a sua, no
 arquivo irmão. Uma lista longa que ninguém mantém é pior que uma curta que
 morde — e esta se mantém sozinha, porque deriva.
 
-O que esta guarda NÃO policia: um `if:` no passo. Nenhum dos sete tem `if:`
-hoje, e nenhum defeito desta casa nasceu daí — a regra da casa é que cada
-portão nasce de um defeito real, e inventar uma regra sem defeito é o começo de
-um portão que grita falso. Fica registrado como buraco conhecido: `if: false`
-num passo desliga o portão sem que este arquivo perceba.
+O que esta guarda NÃO policiava, e por quê (nota de 12/08/2026): um `if:` no
+passo. O argumento da época era que nenhum dos sete tinha `if:` e que inventar
+regra sem defeito é o começo de um portão que grita falso. O buraco ficou
+escrito ali mesmo: "`if: false` num passo desliga o portão sem que este arquivo
+perceba".
+
+CADUCOU EM 13/08/2026 (P0-FUROS-01). A régua da guarda era um `in` de
+substring sobre o `run` inteiro colapsado em espaços, e MEDIDO nesta árvore ela
+aprovava QUATRO formas distintas de desligar o `check_anonymity.sh` — as quatro
+com os cinco testes deste arquivo verdes:
+
+  1. `run: echo 'era bash scripts/check_anonymity.sh'` — o script vira TEXTO de
+     um echo. Nada o executa, e a substring está lá;
+  2. o comando dentro de um comentário de shell, no corpo de um `run: |`. O
+     docstring de `passos_que_rodam` dizia que o `safe_load` protege disso, e
+     essa frase estava ERRADA: o `safe_load` descarta o comentário do YAML, mas
+     o corpo de um bloco literal é uma STRING — um `#` ali chega inteiro ao
+     valor, e a substring casa;
+  3. `run: bash scripts/check_anonymity.sh || true` — roda, reprova, e o shell
+     engole. O passo fica verde;
+  4. `if: false` no passo — o buraco declarado acima.
+
+O argumento "não há defeito" não vale mais depois de a medição mostrar o
+defeito. Hoje a régua exige o script em POSIÇÃO DE COMANDO, numa linha que o
+shell executa, sem engolidor de código de saída e num passo (e num job) que não
+está desligado por `if`.
 
 PROVA DE QUE MORDE (12/08/2026) — arrancado do `ci.yml` o passo
 `run: bash scripts/check_packaging_parity.sh` do job `packaging-parity`,
@@ -58,6 +79,16 @@ posto `continue-on-error: true` no MESMO passo — reprovou
 reprovou o mesmo teste, agora pela outra asserção ("o passo parece duro e o job
 o perdoa"). Os três arrancamentos foram devolvidos do `ci.yml` original guardado
 fora da árvore, com md5 conferido, e a rodada de controle voltou verde.
+
+PROVA DE QUE MORDE (13/08/2026, P0-FUROS-01) — as QUATRO formas listadas acima,
+aplicadas uma a uma sobre o passo `- run: bash scripts/check_anonymity.sh` do
+job `anonymity`. Antes desta leva: `exit=0, 5 passed` nas quatro. Depois:
+reprova nas quatro, e cada uma pelo teste que lhe cabe — 1 e 2 por
+`test_todo_portao_da_casa_e_invocado_no_ci` (o portão deixou de ser INVOCADO),
+3 por `test_nenhum_portao_da_casa_tem_a_reprovacao_engolida`, 4 por
+`test_nenhum_portao_da_casa_esta_desligado_por_if`. Devolvido do `ci.yml`
+guardado fora da árvore, com md5 conferido, e a rodada de controle voltou
+verde.
 """
 from __future__ import annotations
 
@@ -156,18 +187,104 @@ def passos_do_ci() -> list[dict]:
     return passos
 
 
-def passos_que_rodam(agulha: str) -> list[dict]:
-    """Os passos cujo `run` contém o comando. Comentário do YAML não conta.
+#: Tokens que podem PRECEDER o script sem tirá-lo da posição de comando: o
+#: interpretador que o executa. Derivado do que o `ci.yml` usa hoje
+#: (`bash scripts/...`, `python3 scripts/...`, `python scripts/...`) mais as
+#: formas que a casa escreve no `CLAUDE.md` (`.venv/bin/python`).
+INTERPRETADORES = frozenset(
+    {
+        "bash",
+        "sh",
+        "env",
+        "sudo",
+        "python",
+        "python3",
+        "python3.10",
+        "python3.11",
+        "python3.12",
+        ".venv/bin/python",
+        "./.venv/bin/python",
+    }
+)
 
-    O `yaml.safe_load` já descarta comentário, e é por isso que ele está aqui em
-    vez de um `in` no texto cru: comentar o passo é a forma mais barata de
-    desligar um portão sem parecer que desligou.
+#: Uma atribuição de variável antes do comando (`FOO=1 bash x.sh`) também não
+#: tira o script da posição de comando.
+_ATRIBUICAO = re.compile(r"[A-Za-z_][A-Za-z_0-9]*=.*")
+
+#: O que engole o código de saída do portão: ele roda, reprova, e o passo fica
+#: verde. Medido como forma 3 dos quatro furos de 13/08/2026.
+_ENGOLIDOR = re.compile(r"\|\|\s*(true|:|/bin/true|exit\s+0)\b")
+
+#: `if:` que nunca é verdadeiro. Estreito de propósito: cobre a forma que a
+#: medição de 13/08/2026 exercitou (`if: false`, que o YAML entrega como o
+#: booleano `False`) e as duas grafias equivalentes que o GitHub aceita.
+_IF_MORTO = re.compile(r"(?:\$\{\{\s*)?(?:false|0)(?:\s*\}\})?", re.IGNORECASE)
+
+
+def linhas_de_comando(run: object) -> list[str]:
+    """As linhas do `run` que o shell EXECUTA — comentário de shell fora.
+
+    O `yaml.safe_load` descarta o comentário do YAML, e até 13/08/2026 este
+    arquivo afirmava que isso bastava. Não bastava: o corpo de um `run: |` é um
+    bloco literal, ou seja, uma STRING — um `#` ali dentro não é comentário de
+    YAML nenhum, chega inteiro ao valor, e uma busca por substring casava com
+    ele. Comentar o portão continuava sendo a forma mais barata de desligá-lo,
+    só que pelo outro lado.
     """
+    limpas: list[str] = []
+    for linha in str(run).splitlines():
+        nua = linha.strip()
+        if nua and not nua.startswith("#"):
+            limpas.append(nua)
+    return limpas
+
+
+def comandos(linha: str) -> list[str]:
+    """A linha quebrada nos operadores que começam um comando NOVO."""
+    return [pedaco.strip() for pedaco in re.split(r"\|\||&&|[;|&]", linha) if pedaco.strip()]
+
+
+def em_posicao_de_comando(comando: str, portao: str) -> bool:
+    """O script é EXECUTADO neste comando, ou só aparece escrito nele?
+
+    Esta é a pergunta que a régua antiga não fazia. `echo 'era bash
+    scripts/check_anonymity.sh'` contém a substring e não roda portão nenhum —
+    forma 1 dos quatro furos.
+    """
+    tokens = comando.split()
+    if portao not in tokens:
+        return False
+    antes = tokens[: tokens.index(portao)]
+    return all(t in INTERPRETADORES or _ATRIBUICAO.fullmatch(t) for t in antes)
+
+
+def linhas_que_rodam(passo: dict, portao: str) -> list[str]:
+    """As linhas do passo em que o portão é de fato executado."""
     return [
-        passo
-        for passo in passos_do_ci()
-        if agulha in " ".join(str(passo.get("run", "")).split())
+        linha
+        for linha in linhas_de_comando(passo.get("run", ""))
+        if any(em_posicao_de_comando(comando, portao) for comando in comandos(linha))
     ]
+
+
+def desligado_por_if(valor: object) -> bool:
+    """O `if:` deste passo (ou deste job) nunca é verdadeiro?"""
+    if valor is None:
+        return False
+    if isinstance(valor, bool):
+        return not valor
+    return bool(_IF_MORTO.fullmatch(" ".join(str(valor).split())))
+
+
+def passos_que_rodam(agulha: str) -> list[dict]:
+    """Os passos que EXECUTAM o comando — não os que o mencionam.
+
+    Três exigências, uma por furo medido em 13/08/2026: a linha não pode ser
+    comentário de shell; o script tem de estar em posição de comando (só um
+    interpretador ou uma atribuição pode vir antes); e a comparação é por
+    TOKEN, não por substring.
+    """
+    return [passo for passo in passos_do_ci() if linhas_que_rodam(passo, agulha)]
 
 
 def test_a_ancora_do_claude_md_continua_de_pe() -> None:
@@ -220,6 +337,42 @@ def test_nenhum_portao_da_casa_virou_aviso() -> None:
                 "um job duro. Desligar pelo nível do job é a rota mais barata "
                 "de todas — não apaga linha nenhuma e não aparece no diff do "
                 "passo."
+            )
+
+
+def test_nenhum_portao_da_casa_tem_a_reprovacao_engolida() -> None:
+    """`|| true` roda o portão, ouve o "não", e responde "sim" mesmo assim."""
+    for portao in portoes_da_casa():
+        for passo in passos_que_rodam(portao):
+            onde = passo.get("name", passo["__job__"])
+            for linha in linhas_que_rodam(passo, portao):
+                engolidor = _ENGOLIDOR.search(linha)
+                assert not engolidor, (
+                    f"o passo '{onde}' roda `{portao}` e engole a reprovação "
+                    f"com `{engolidor.group(0)}`:\n    {linha}\n"
+                    "TIRE o engolidor. O portão executa, reprova, e o passo "
+                    "fica verde — é `continue-on-error` escrito em shell, e "
+                    "sem a palavra `continue-on-error` para o diff denunciar."
+                )
+
+
+def test_nenhum_portao_da_casa_esta_desligado_por_if() -> None:
+    """`if: false` desliga o portão sem apagar uma linha sequer do `run`."""
+    for portao in portoes_da_casa():
+        for passo in passos_que_rodam(portao):
+            onde = passo.get("name", passo["__job__"])
+            assert not desligado_por_if(passo.get("if")), (
+                f"o passo '{onde}' roda `{portao}` sob `if: {passo.get('if')!r}`, "
+                "que nunca é verdadeiro: o passo aparece PULADO no relatório e "
+                "ninguém lê pulo.\n"
+                "TIRE o `if`, ou mova o portão para um passo que sempre roda."
+            )
+            assert not desligado_por_if(passo["__do_job__"].get("if")), (
+                f"o JOB '{passo['__job__']}' roda `{portao}` e o job inteiro "
+                f"está sob `if: {passo['__do_job__'].get('if')!r}`, que nunca é "
+                "verdadeiro.\n"
+                "TIRE o `if` do job, ou mova este portão para um job que roda. "
+                "Desligar pelo nível do job não aparece no diff do passo."
             )
 
 
