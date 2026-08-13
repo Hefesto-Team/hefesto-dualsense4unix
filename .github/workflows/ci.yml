@@ -510,6 +510,7 @@ jobs:
         # `bash scripts/...` e `ruff` do PATH. O pin do ruff é o mesmo do
         # pyproject (CHORE-CI-PIN-RUFF-01) para o hook e o job `lint-test`
         # nunca divergirem de versão.
+        run: pip install pre-commit "ruff==0.15.20"
       # RSVG-NO-PRE-COMMIT-01 (13/08/2026): o hook `icones-refletem-o-svg` roda
       # `scripts/gerar_icones.sh --check`, que exige `rsvg-convert`. O job
       # `icones` já o instala para rodar o MESMO script; aqui faltava, e o
@@ -520,7 +521,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y librsvg2-bin
-        run: pip install pre-commit "ruff==0.15.20"
       - name: Rodar todos os hooks em todos os arquivos
         run: pre-commit run --all-files --show-diff-on-failure
 
