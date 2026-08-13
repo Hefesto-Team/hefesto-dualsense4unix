@@ -494,6 +494,32 @@ lado que **não** foi autorizado ficou solto, e isso foi registrado, por engano,
 como prova de que ele obedece. Não é. Um gatilho solto prova que o comando
 **não vazou de lado** — é controle negativo, não obediência. Ela pegou o erro.
 
+### O gatilho chega pelo RÁDIO, e o alvo por MAC é respeitado lá — MEDIDO AQUI em 12/08/2026
+
+**Grau: MEDIDO AQUI**, ensaios `gatilho-esq-radio-1216` e `gatilho-esq-cabo-1216`
+(`docs/data/ensaios.csv:63-64`) e `gatilho-dir-radio-isolado-2221`
+(`ensaios.csv:67`), com quatro DualSense na mesa — dois no cabo, dois no rádio —
+e o olho dela em cada um.
+
+Até 12/08 **nenhum** ensaio sustentava o efeito adaptativo por Bluetooth: a
+afirmação vinha de leitura de código, e foi o portão `grau-sem-ensaio` (12/08)
+que flagrou a falta. Agora tem plástico atrás:
+
+- **`Rigid[0,8]` aplicado só no L2**, às 22:16:53, nos quatro controles: **L2
+  duro em todos os quatro**, cabo e rádio. O **R2 intocado** é o controle
+  negativo do próprio ensaio — solto nos quatro —, e é ele que separa
+  *"obedeceu"* de *"achei que estava diferente"*.
+- **`Rigid[0,8]` só no R2 de UM controle do rádio**, mirado por `uniq` (o MAC),
+  às 22:21:06: **só o mirado endureceu**; nos outros três o R2 seguiu solto.
+  O ensaio prova duas coisas na mesma janela — o gatilho **direito** obedece por
+  rádio, e o endereçamento por MAC é respeitado **no Bluetooth**. Sem o controle
+  negativo dos três soltos, um `uniq` ignorado viraria broadcast e o isolamento
+  seria ilusão.
+
+**O que estes ensaios NÃO fecham:** continua valendo o que a lista de abertos diz
+— só o modo `Rigid` foi exercitado, com **um** jogo de parâmetros, e o elemento
+específico de que o efeito depende segue sem isolamento.
+
 ### O keepalive apaga o rumble de terceiros, mas NÃO o gatilho
 
 **Grau: MEDIDO AQUI**, ensaios `gatilho-keepalive-8s`, `gatilho-keepalive-30s`
@@ -741,6 +767,29 @@ tem 3 níveis.
 de uma **desconexão completa** exibindo o **magenta** que tinha sido escrito por
 `hidraw` cru vários minutos antes, atravessando um `Disconnect` pelo BlueZ e uma
 reconexão inteira. Literal dela: *"azul player 4 cor magenta"*.
+
+**E o firmware guarda a cor SEM REFORÇO NENHUM: 136 s cronometrados — MEDIDO
+AQUI em 12/08/2026, à noite.** Ensaio `cor-rota-hidraw-sem-steam-2235`
+(`docs/data/ensaios.csv:71`), com o **daemon parado** às 22:34:53 e a **Steam
+fechada** — ou seja, sem escritor nenhum na máquina. Magenta (255,0,255) escrito
+por report `0x31` nos **dois** controles do rádio às 22:35:02; às 22:37:18 as
+duas barras continuavam magenta, **o dobro do prazo de 60 s que o ensaio
+pedia**. Literal dela: *"dois bt tão magenta... seguem iguais, nenhum mudou"*.
+
+**Uma cor escrita não precisa de keepalive para ficar de pé — QUANDO NÃO HÁ
+OUTRO ESCRITOR.** A condição não é detalhe: é o que o ensaio de fato mediu
+(daemon parado, Steam fechada), e sem ela a frase vira prescrição sem prova.
+Com escritor concorrente a conta se inverte, e a mesma bancada mediu isso: a
+Steam repinta na probe (`lightbar-probe-suja-steam`) e a reafirmação passa a ser
+justamente o instrumento com que o produto disputa a barra. O que o ensaio
+autoriza afirmar é sobre o FIRMWARE, não sobre a política de escrita do produto.
+O custo de reafirmar por hábito já foi medido noutro lugar, e ali é real: no
+rumble, a reafirmação perpétua **apagava motor alheio** (§2, *Os BITS de
+vibração não são porteiro dos BYTES de motor*). O ensaio de controle na mesma bancada
+(`cor-rota-sysfs-sem-steam-2237`, `ensaios.csv:72`) fecha o par: sem outro
+escritor, **as duas rotas obedecem** — as mesmas barras saíram do magenta escrito
+por `0x31` e viraram verde escrito por `sysfs`. A rota `sysfs` **não** é rota
+morta; o que a derrubava era a disputa na probe, não a rota.
 
 **A consequência muda o que se lê de uma barra apagada:** ela **não** é o
 aparelho esquecendo a cor. É alguém mandando apagar, ou escrevendo preto. A

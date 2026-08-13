@@ -319,9 +319,35 @@ def test_is_virtual_evdev_bluez_uhid_fisico_nao_e_virtual(
         "físico BT via bluetoothd-uhid filtrado como vpad — BLUEZ-UHID-01"
     )
 
-    # O NOSSO vpad segue virtual (phys do blueprint decide).
+    # O NOSSO vpad segue virtual.
+    #
+    # PERNA-MORTA-PHYS-01 (12/08/2026): este caso dizia "phys do blueprint
+    # decide", e era falso — o `phys` do NÓ DE ENTRADA vem VAZIO em tudo que
+    # passa pelo `hid_playstation`, porque o `ps_allocate_input_dev` não copia
+    # `hdev->phys` (hid-playstation.c:691-718). O caso passava porque o mock
+    # alimentava um valor que o kernel nunca produz — e foi por isso que a
+    # perna morta ficou anos invisível. Quem decide na máquina viva é o `uniq`.
     attrs = {"phys": "hefesto-vpad", "uniq": "02:fe:00:00:00:01"}
     assert er._is_virtual_evdev("/dev/input/event96") is True
+
+    # A FORMA REAL, medida na mesa de 12/08 nos 22 nós com pai
+    # `DRIVER=playstation`: `phys` vazio, `uniq` com o MAC forjado. É este caso,
+    # e não o de cima, que reproduz o que o kernel entrega.
+    attrs = {"phys": "", "uniq": "02:fe:00:00:00:01"}
+    assert er._is_virtual_evdev("/dev/input/event96") is True, (
+        "com o `phys` vazio que o hid_playstation de fato produz, quem tem de "
+        "segurar o vpad é o `uniq` — se este caso cair, o daemon adota a "
+        "própria saída"
+    )
+
+    # E o espelho do caso: `phys` vazio com MAC de aparelho de VERDADE não pode
+    # virar "virtual". É a regressão BLUEZ-UHID-01, que na mesa viva de 12/08
+    # atinge os dois controles de rádio (6 nós).
+    attrs = {"phys": "", "uniq": "aa:bb:cc:00:00:65"}
+    assert er._is_virtual_evdev("/dev/input/event96") is False, (
+        "o controle de rádio tem `phys` vazio igual ao vpad — quem os separa é "
+        "só o `uniq`, e não há segunda perna"
+    )
 
     # Atributos ilegíveis sob o subtree uhid: na dúvida, virtual (anti-loop).
     attrs = {}

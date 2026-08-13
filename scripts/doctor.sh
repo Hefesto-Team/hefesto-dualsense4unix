@@ -4324,13 +4324,52 @@ watch_dropout() {
       && printf '\n[WATCH] primeiro sinal de dropout capturado acima.\n'
 }
 
+# IRMAO-SEM-CARONA-01 (12/08/2026) — quem reaplica as regras udev depende do
+# layout em que ESTE doctor está rodando, e até aqui só um dos dois existia no
+# código.
+#
+# MEDIDO: `scripts/build_deb.sh:216` leva o `doctor.sh` para dentro do pacote
+# (`/usr/share/hefesto-dualsense4unix/scripts/`), e o `ROOT_DIR` deste arquivo
+# é derivado do lugar dele (:60) — no .deb, portanto,
+# `${ROOT_DIR}/scripts/install_udev.sh` NÃO EXISTE: aquele laço leva cinco
+# scripts, e o `install_udev.sh` não é um deles. O que o pacote leva, e leva de
+# propósito para este exato serviço, é o `install-host-udev.sh` (a forma 3 do
+# cabeçalho dele: "Direto de um .deb instalado"). O resultado na máquina de
+# quem instalou pelo pacote era `hefesto-dualsense4unix doctor --fix` dizendo
+# "falha ao reaplicar udev" — cura prometida, caminho inexistente.
+#
+# A escolha é por EXISTÊNCIA, não por adivinhar o layout: o checkout tem os
+# dois e o `install_udev.sh` vem primeiro porque é o dono nativo (conjunto
+# canônico das regras); o pacote tem só o `install-host-udev.sh`, que resolve
+# as regras em `/usr/share/hefesto-dualsense4unix/udev-rules/`. Se nenhum dos
+# dois estiver aqui, o recado diz qual arquivo faltou — em vez do "falha ao
+# reaplicar" mudo, que não distingue script ausente de script que reprovou.
+#
+# Portão: a seção "irmão sem carona" de `scripts/check_packaging_parity.sh`, e
+# `tests/unit/test_portao_reprova_irmao_sem_carona.py`.
+_dono_das_regras_udev() {
+    if [[ -f "${ROOT_DIR}/scripts/install_udev.sh" ]]; then
+        printf '%s' "${ROOT_DIR}/scripts/install_udev.sh"
+        return 0
+    fi
+    if [[ -f "${ROOT_DIR}/scripts/install-host-udev.sh" ]]; then
+        printf '%s' "${ROOT_DIR}/scripts/install-host-udev.sh"
+        return 0
+    fi
+    return 1
+}
+
 apply_fixes() {
     hdr "aplicando correções (--fix)"
-    if command -v sudo >/dev/null 2>&1; then
-        if sudo bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
-            pass "regras udev reaplicadas"
+    local _udev_dono=""
+    _udev_dono="$(_dono_das_regras_udev || true)"
+    if [[ -z "${_udev_dono}" ]]; then
+        warn "nem install_udev.sh nem install-host-udev.sh estão em ${ROOT_DIR}/scripts — não reapliquei udev"
+    elif command -v sudo >/dev/null 2>&1; then
+        if sudo bash "${_udev_dono}" >/dev/null 2>&1; then
+            pass "regras udev reaplicadas ($(basename "${_udev_dono}"))"
         else
-            warn "falha ao reaplicar udev"
+            warn "falha ao reaplicar udev ($(basename "${_udev_dono}"))"
         fi
     else
         warn "sudo ausente — não reapliquei udev"

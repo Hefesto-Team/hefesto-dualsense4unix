@@ -49,10 +49,14 @@ FALHA
   4. `integridade`      — coluna do cabeçalho que sumiu, `id` vazio ou
                           duplicado, valor fora do domínio declarado abaixo.
   5. `mapa-nao-publicado` — linha do CSV cujo `id` não aparece no `specs.html`
-                          publicado. Ver a nota sobre o mtime, logo abaixo.
+                          publicado. Ver a nota sobre ela, logo abaixo.
+  6. `grau-sem-ensaio`  — célula que declara `grau = SAIU NO FIO` ou
+                          `grau = O APARELHO OBEDECEU` e NÃO tem ensaio nenhum
+                          em `docs/data/ensaios.csv` para aquele `id` NAQUELE
+                          transporte. Ver "o buraco de 12/08", logo abaixo.
 
 AVISO (não derruba o CI hoje)
-  6. `assimetria-nao-declarada` — `cabo_aciona` e `radio_aciona` divergem (ou um
+  7. `assimetria-nao-declarada` — `cabo_aciona` e `radio_aciona` divergem (ou um
                           dos dois nem foi respondido) e `assimetria_declarada`
                           está vazia. Começa como AVISO PORQUE O CSV AINDA ESTÁ
                           SENDO PREENCHIDO: hoje a divergência mais comum é
@@ -60,23 +64,78 @@ AVISO (não derruba o CI hoje)
                           não mentira do mapa. Promover para FALHA é trocar
                           `ASSIMETRIA_REPROVA` para True — uma linha, no topo
                           deste arquivo — quando as colunas estiverem fechadas.
-  7. `validade-sem-data` — `validade_dias` preenchido com `provado_em` vazio:
+  8. `validade-sem-data` — `validade_dias` preenchido com `provado_em` vazio:
                           prazo que não se consegue contar.
+  9. `grau-sem-ensaio-que-obedeca` — `grau = O APARELHO OBEDECEU` com ensaios
+                          naquele lado, mas nenhum deles com `resultado` dizendo
+                          que o aparelho obedeceu. É AVISO e não FALHA porque
+                          `resultado` é texto livre e a semântica dele é do
+                          SUSPEITO, não da feature (ver "o preço do `resultado`"
+                          abaixo). Promoção por `RESULTADO_REPROVA`.
+ 10. `grau-sem-olho-dela` — o ensaio que sustenta o `O APARELHO OBEDECEU` existe
+                          e diz que obedeceu, mas ninguém do `olho-dela` viu.
+                          `docs/process/METODO-DE-ISOLAMENTO.md` (seção "o que
+                          registrar em cada linha do mapa") diz que só o olho
+                          dela sustenta esse degrau. Promoção por
+                          `OLHO_DELA_REPROVA`.
+ 11. `mordida-nao-provada` — linha com grau forte e `teste_que_morde` preenchido
+                          cuja `mordida_provada_em` está vazia: ninguém arrancou
+                          a cura e viu reprovar. Medido em 12/08/2026: a coluna
+                          está vazia em 293 de 293 linhas e nenhuma regra a lia.
 
-Por que a regra 5 existe, se `gerar-mapa.py --check` já compara datas
----------------------------------------------------------------------
-Porque aquele `--check` compara MTIME, e mtime no CI é ordem de checkout, não
-histórico de edição: o `actions/checkout` escreve os arquivos em ordem de
-caminho, e `specs.html` (raiz, "sp") sai depois de `docs/` e de `scripts/` —
-então ele nasce sempre "mais novo" que as fontes e o `--check` passa SEMPRE,
-independente do conteúdo. Ele continua valendo, e vale muito, no caminho onde
-mtime é informação de verdade: a máquina de quem edita (por isso ele entrou
-também no `.pre-commit-config.yaml`). No CI quem morde de fato é esta regra 5,
-que compara CONTEÚDO: todo `id` do CSV tem de estar dentro do `specs.html`.
+O buraco de 12/08/2026, e por que a regra 6 nasceu
+--------------------------------------------------
+Um agente escreveu numa cópia da árvore a afirmação mais forte que o vocabulário
+da casa permite — `cabo_grau = radio_grau = O APARELHO OBEDECEU`, `provado_por =
+olho-dela` — numa linha com ZERO ensaios no caderno de bancada, e o portão
+devolveu exatamente o mesmo número de reprovações de antes: quinze. A mentira
+passou inteira, e por três motivos que este arquivo tinha por escrito:
+
+  - `docs/data/ensaios.csv` não era citado aqui uma única vez. O caderno de
+    bancada — o arquivo onde mora o que o aparelho FEZ — não era fonte de
+    verdade de portão nenhum;
+  - as colunas `cabo_grau`/`radio_grau` não entravam em domínio nenhum, então
+    `O APARELHO OBEDECEU` era escrevível em qualquer linha, de graça;
+  - `mordida_provada_em` estava vazia em todas as linhas e ninguém a lia.
+
+A regra que ela aprovou é uma frase: **grau forte exige ensaio correspondente**.
+O casamento é por `linha_id` == `id` E por transporte, porque `SAIU NO FIO` no
+cabo não se sustenta com ensaio de rádio — foi a assimetria cabo/rádio que fez
+este mapa existir. Quem casa os dois é `scripts/eliminacao.py`, reusado aqui em
+vez de reimplementado: uma segunda leitura do caderno seria uma segunda régua
+para o mesmo dado, e nesta casa o instrumento já mentiu mais que o produto.
+
+O preço do `resultado`, dito na cara
+------------------------------------
+`resultado` é texto livre. Os quatro valores que o caderno usa hoje (12/08/2026)
+foram LIDOS dele, não inventados aqui: `obedece`, `não obedece`, `parcial`,
+`inconclusivo`. E a semântica deles é do SUSPEITO da linha, não da feature: o
+ensaio `gatilho-lado-nao-esta-invertido` está gravado como `não obedece` — o
+suspeito "o mapeamento está invertido" foi eliminado — enquanto a nota do mesmo
+ensaio diz que o R2 endureceu, isto é, que o aparelho obedeceu. Cobrar
+`resultado` como FALHA seria reprovar uma afirmação verdadeira por causa de uma
+coluna que responde outra pergunta. Por isso a regra 6 (dura) cobra a EXISTÊNCIA
+do ensaio, e a 9 (aviso) é que olha o resultado.
+
+Por que a regra 5 nasceu, e o que ela ainda faz
+-----------------------------------------------
+Ela nasceu porque o `--check` do `gerar-mapa.py` comparava MTIME, e mtime no CI
+é ordem de checkout, não histórico de edição: o `actions/checkout` escreve os
+arquivos em ordem de caminho, e `specs.html` (raiz, "sp") sai depois de `docs/`
+e de `scripts/` — então ele nascia sempre "mais novo" que as fontes e passava
+SEMPRE, independente do conteúdo. Este censo era o único que mordia por
+conteúdo no runner.
+
+Desde a MAPA-CONTEUDO-01 (12/08/2026) aquele `--check` regenera a página em
+memória e compara o CONTEÚDO inteiro, então ele morde no CI também — e morde
+mais fundo que esta regra, que só pergunta pelo `id`. A regra 5 continua por
+duas razões: ela roda sem depender do gerador (se ele quebrar, o censo ainda
+responde) e ela aponta a LINHA do CSV que ficou de fora, enquanto o `--check`
+manda regerar a página inteira.
 
 Limite honesto da regra 5: ela pega a linha NOVA que ninguém publicou. Linha
-REMOVIDA do CSV e ainda publicada no HTML ela não vê — para isso o mtime local
-continua sendo a rede.
+REMOVIDA do CSV e ainda publicada no HTML ela não vê — quem vê isso é o
+`--check` por conteúdo.
 
 Uso:
     python3 scripts/check_paridade_transporte.py
@@ -94,7 +153,17 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-#: PROMOÇÃO DA REGRA 6. Trocar para True faz a assimetria não declarada
+#: `scripts/` não é pacote, e este portão precisa do `eliminacao.py`, que já sabe
+#: casar `linha_id` do ensaio com `id` do mapa SEPARANDO cabo de rádio. O
+#: `append` (e não `insert(0, …)`) é para um arquivo homônimo em `scripts/` nunca
+#: sombrear módulo da biblioteca padrão. O `eliminacao.py` só importa `csv`,
+#: `collections`, `dataclasses` e `pathlib`, então o portão continua rodando num
+#: runner pelado, sem as dependências do projeto.
+sys.path.append(str(Path(__file__).resolve().parent))
+
+from eliminacao import carrega_por_lado  # noqa: E402
+
+#: PROMOÇÃO DA REGRA 7. Trocar para True faz a assimetria não declarada
 #: REPROVAR em vez de avisar. Fica False enquanto as colunas `cabo_*`/`radio_*`
 #: estiverem sendo preenchidas: hoje a maior parte das divergências é ausência
 #: de resposta, e reprovar ausência de resposta aqui seria cobrar duas vezes o
@@ -111,7 +180,23 @@ LADOS = ("cabo", "radio")
 #: identificador), mas o texto que a pessoa lê, sim.
 ROTULO_DO_LADO = {"cabo": "cabo", "radio": "rádio"}
 
+#: PROMOÇÃO DA REGRA 9. Trocar para True faz o `O APARELHO OBEDECEU` sustentado
+#: só por ensaios que NEGAM reprovar em vez de avisar. Fica False enquanto
+#: `resultado` for texto livre com semântica de suspeito (ver o cabeçalho): o
+#: dia de promover isto é o dia em que o caderno ganhar uma coluna que diga o
+#: que a FEATURE fez, separada do que o SUSPEITO provou.
+RESULTADO_REPROVA = False
+
+#: PROMOÇÃO DA REGRA 10. Trocar para True faz o degrau mais alto exigir que
+#: alguém do `olho-dela` tenha visto. Fica False porque ela aprovou uma frase —
+#: "grau forte exige ensaio correspondente" — e cobrar QUEM observou é uma
+#: segunda regra, que ninguém pediu. Medido em 12/08/2026: promovê-la hoje
+#: custaria ZERO reprovações novas, então o preço de deixá-la avisando é só o
+#: futuro.
+OLHO_DELA_REPROVA = False
+
 CSV_RELATIVO = "docs/data/mapa-controles.csv"
+ENSAIOS_RELATIVO = "docs/data/ensaios.csv"
 SPECS_RELATIVO = "specs.html"
 PASTA_DE_TESTES = "tests"
 
@@ -130,7 +215,13 @@ COLUNAS_EXIGIDAS = (
 
 #: Sufixos de par `cabo_X`/`radio_X` que as regras usam. Se um deles sumir do
 #: cabeçalho, a regra que depende dele morre — por isso a ausência reprova.
-SUFIXOS_EXIGIDOS = ("aciona", "confianca", "canal")
+#:
+#: `grau` entra aqui, e a distinção com as colunas que apenas DESLIGAM a regra
+#: (o `tests/`, o `specs.html`, o próprio caderno de ensaios) é esta: regra dura
+#: não se desliga em silêncio. `cabo_grau` é onde mora a afirmação mais forte
+#: que este mapa sabe fazer; perder a coluna é perder a régua da regra 6, e o
+#: portão tem de gritar em vez de passar.
+SUFIXOS_EXIGIDOS = ("aciona", "confianca", "canal", "grau")
 
 #: Domínio de cada coluna. Vazio é SEMPRE aceito, e isso é decisão de desenho:
 #: o próprio `specs.html` declara no rodapé que "vazio aqui é pergunta aberta,
@@ -139,8 +230,13 @@ SUFIXOS_EXIGIDOS = ("aciona", "confianca", "canal")
 #: régua passa a aprovar o que não sabe ler.
 #:
 #: `aciona`/`aceita` entram aqui embora o pedido só citasse canal/confiança/
-#: existe: a regra 1 e a 6 leem `aciona`, e um valor novo ali (um "sim?" com
+#: existe: a regra 1 e a 7 leem `aciona`, e um valor novo ali (um "sim?" com
 #: interrogação, por exemplo) desligaria as duas EM SILÊNCIO.
+#:
+#: `grau` entrou em 12/08/2026 pelo mesmo motivo, e ele custou caro: sem domínio,
+#: `O APARELHO OBEDECEU` era escrevível de graça em qualquer linha, e um degrau
+#: escrito com outra tipografia (`o aparelho obedeceu`, minúsculo) passaria pela
+#: regra 6 sem ser visto — a mentira sairia pela porta que a régua não olha.
 DOMINIO_POR_SUFIXO = {
     "aciona": frozenset({"", "sim", "não", "parcial", "desconhecido"}),
     "aceita": frozenset({"", "sim", "não", "parcial", "desconhecido"}),
@@ -150,6 +246,7 @@ DOMINIO_POR_SUFIXO = {
     "confianca": frozenset(
         {"", "medido", "inferido-do-codigo", "afirmado-no-doc", "incerto"}
     ),
+    "grau": frozenset({"", "MONTOU", "SAIU NO FIO", "O APARELHO OBEDECEU"}),
 }
 DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 
@@ -158,6 +255,29 @@ DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 #: sprint quer a rede primeiro onde a promessa é inteira.
 ACIONA_FORTE = "sim"
 CONFIANCA_FORTE = "medido"
+
+#: A escada de grau, tal como `docs/process/METODO-DE-ISOLAMENTO.md` a define:
+#: MONTOU (montou o report) -> SAIU NO FIO (o byte saiu, algo voltou) ->
+#: O APARELHO OBEDECEU (acendeu, girou, saiu som).
+GRAU_MONTOU = "MONTOU"
+GRAU_SAIU_NO_FIO = "SAIU NO FIO"
+GRAU_OBEDECEU = "O APARELHO OBEDECEU"
+
+#: Os dois degraus que só a bancada sustenta — e por isso os dois que a regra 6
+#: cobra no caderno. `MONTOU` fica de fora de propósito: montar o report é o que
+#: a suíte prova sozinha, sem aparelho, e cobrar ensaio dele seria pedir bancada
+#: para algo que o pytest já morde.
+GRAUS_QUE_EXIGEM_ENSAIO = (GRAU_SAIU_NO_FIO, GRAU_OBEDECEU)
+
+#: O que, em `resultado`, conta como "o aparelho obedeceu". LIDO do caderno em
+#: 12/08/2026 (`obedece`, `não obedece`, `parcial`, `inconclusivo`), não
+#: inventado aqui — e por isso a regra que o usa é AVISO: um valor novo no
+#: caderno não pode virar reprovação sem alguém ter dito o que ele significa.
+RESULTADOS_QUE_SUSTENTAM = frozenset({"obedece"})
+
+#: Quem, em `observado_por`, sustenta o degrau mais alto. A régua é do
+#: METODO-DE-ISOLAMENTO: "só `olho-dela` sustenta *O APARELHO OBEDECEU*".
+OBSERVADOR_QUE_SUSTENTA = "olho-dela"
 
 #: Convenção de coleta do pytest (não há `python_files`/`python_functions`
 #: customizados no pyproject.toml desta árvore).
@@ -221,6 +341,9 @@ class Resumo:
     linhas_mudas_dos_dois_lados: int = 0
     assimetrias_nao_declaradas: int = 0
     alvos_de_teste: int = 0
+    graus_fortes: int = 0
+    graus_fortes_sem_ensaio: int = 0
+    ensaios_no_caderno: int = 0
 
 
 def e_arquivo_que_pytest_coleta(nome: str) -> bool:
@@ -373,6 +496,40 @@ def ids_publicados(specs: Path) -> str | None:
         return None
 
 
+def caderno_de_ensaios(raiz: Path) -> tuple[dict[tuple[str, str], list[dict]] | None, str]:
+    """O caderno de bancada indexado por (`linha_id`, transporte), ou None.
+
+    Devolve `(índice, motivo)`: com `None` no índice, `motivo` diz por que a
+    regra 6 não tem o que ler. A leitura é a do `scripts/eliminacao.py` — reuso
+    deliberado, porque é ele quem já separa cabo de rádio e é ele que o resto da
+    casa usa para julgar suspeito. Duas leituras do mesmo caderno seriam duas
+    réguas para o mesmo dado, e uma delas envelheceria calada.
+
+    Caderno ausente (ou sem as colunas que o casamento exige) DESLIGA a regra em
+    vez de acusar todo mundo: é a mesma decisão do índice de testes por AST logo
+    acima. O desligamento é DITO no resumo, nunca calado.
+    """
+    caminho = raiz / ENSAIOS_RELATIVO
+    if not caminho.is_file():
+        return None, (
+            f"grau-sem-ensaio ({ENSAIOS_RELATIVO} ausente — sem o caderno de "
+            "bancada não há o que casar com o grau)"
+        )
+    try:
+        return carrega_por_lado(caminho), ""
+    except (OSError, UnicodeDecodeError, KeyError, csv.Error) as erro:
+        # `csv.Error` entra na lista porque sem ele um caderno MALFORMADO (aspas
+        # abertas, campo gigante) derrubava o portão inteiro com traceback — o
+        # oposto do que esta função promete duas linhas acima, que é desligar a
+        # regra EM VOZ ALTA. Um portão que morre calado por causa do dado que
+        # veio medir é a armadilha da casa: o instrumento mente mais que o
+        # produto.
+        return None, (
+            f"grau-sem-ensaio ({ENSAIOS_RELATIVO} ilegível para o casamento: "
+            f"{erro!r} — o caderno precisa das colunas `linha_id` e `transporte`)"
+        )
+
+
 def censo(
     caminho_csv: Path, raiz: Path, hoje: date
 ) -> tuple[list[Achado], Resumo, list[str]]:
@@ -419,6 +576,22 @@ def censo(
         desligadas.append(
             f"mapa-nao-publicado ({SPECS_RELATIVO} ausente — quem cobra a "
             "existência dele é scripts/gerar-mapa.py)"
+        )
+
+    ensaios_por_lado, motivo_sem_caderno = caderno_de_ensaios(raiz)
+    if ensaios_por_lado is None:
+        desligadas.append(motivo_sem_caderno)
+    else:
+        resumo.ensaios_no_caderno = sum(len(lista) for lista in ensaios_por_lado.values())
+
+    #: A regra 11 é AVISO, e regra mole se DESLIGA quando falta a coluna (a dura
+    #: reprova — ver SUFIXOS_EXIGIDOS). Cobrar `mordida_provada_em` no cabeçalho
+    #: derrubaria toda árvore que ainda não a tem por causa de um aviso.
+    tem_coluna_da_mordida = "mordida_provada_em" in cabecalho
+    if not tem_coluna_da_mordida:
+        desligadas.append(
+            "mordida-nao-provada (a coluna `mordida_provada_em` não está no "
+            "cabeçalho deste CSV)"
         )
 
     vistos: dict[str, int] = {}
@@ -497,6 +670,7 @@ def censo(
 
         # --- as duas células de transporte da linha -------------------------
         mudas_nesta_linha = 0
+        graus_fortes_nesta_linha: list[str] = []
         for lado in LADOS:
             resumo.celulas += 1
             aciona = (linha[f"{lado}_aciona"] or "").strip()
@@ -546,8 +720,27 @@ def censo(
                         )
                     )
 
+            grau = (linha[f"{lado}_grau"] or "").strip()
+            if grau in GRAUS_QUE_EXIGEM_ENSAIO:
+                resumo.graus_fortes += 1
+                graus_fortes_nesta_linha.append(grau)
+                if ensaios_por_lado is not None:
+                    achados.extend(
+                        _regra_do_caderno(
+                            grau,
+                            ensaios_por_lado.get((ident, lado), []),
+                            numero,
+                            ident,
+                            lado,
+                            resumo,
+                        )
+                    )
+
         if mudas_nesta_linha == len(LADOS):
             resumo.linhas_mudas_dos_dois_lados += 1
+
+        if graus_fortes_nesta_linha and tem_coluna_da_mordida:
+            achados.extend(_regra_da_mordida_nao_provada(linha, numero, ident))
 
         achados.extend(_regra_da_validade(linha, numero, ident, hoje))
         achados.extend(_regra_da_assimetria(linha, numero, ident, resumo))
@@ -577,7 +770,7 @@ def censo(
 def _regra_da_validade(
     linha: dict[str, str], numero: int, ident: str, hoje: date
 ) -> list[Achado]:
-    """Regra 3 e regra 7. Silenciosa quando as duas colunas estão vazias."""
+    """Regra 3 e regra 8. Silenciosa quando as duas colunas estão vazias."""
     provado = (linha.get("provado_em") or "").strip()
     validade = (linha.get("validade_dias") or "").strip()
 
@@ -658,7 +851,7 @@ def _regra_da_validade(
 def _regra_da_assimetria(
     linha: dict[str, str], numero: int, ident: str, resumo: Resumo
 ) -> list[Achado]:
-    """Regra 6 — o caso que ela descreveu: consolidado no cabo, morto no rádio."""
+    """Regra 7 — o caso que ela descreveu: consolidado no cabo, morto no rádio."""
     cabo = (linha[f"{LADOS[0]}_aciona"] or "").strip()
     radio = (linha[f"{LADOS[1]}_aciona"] or "").strip()
     if cabo == radio:
@@ -682,6 +875,113 @@ def _regra_da_assimetria(
         )
     nivel = FALHA if ASSIMETRIA_REPROVA else AVISO
     return [Achado(nivel, "assimetria-nao-declarada", numero, ident, "", texto)]
+
+
+def _regra_do_caderno(
+    grau: str,
+    ensaios: list[dict],
+    numero: int,
+    ident: str,
+    lado: str,
+    resumo: Resumo,
+) -> list[Achado]:
+    """Regras 6, 9 e 10 — o grau forte contra o caderno de bancada.
+
+    `ensaios` já chega casado por (`linha_id`, transporte): quem casou foi o
+    `eliminacao.carrega_por_lado`, e o transporte importa tanto quanto o `id`.
+    Ensaio de rádio não sustenta afirmação de cabo — a assimetria entre os dois
+    é a regressão que este mapa inteiro existe para pegar, e aceitar um lado
+    pelo outro seria justamente apagá-la.
+    """
+    rotulo = ROTULO_DO_LADO[lado]
+    if not ensaios:
+        resumo.graus_fortes_sem_ensaio += 1
+        return [
+            Achado(
+                FALHA,
+                "grau-sem-ensaio",
+                numero,
+                ident,
+                lado,
+                f"declara `{lado}_grau = {grau}` e não há UM ensaio de {rotulo} "
+                f"para `{ident}` em {ENSAIOS_RELATIVO}. Registre o ensaio que "
+                "você fez (uma linha: `linha_id`, `transporte`, `suspeito`, "
+                f"`presente`, `resultado`, `observado_por`) ou baixe o grau para "
+                f"`{GRAU_MONTOU}`, que é o que a suíte sozinha sustenta",
+            )
+        ]
+
+    if grau != GRAU_OBEDECEU:
+        return []
+
+    sustentam = [
+        ensaio
+        for ensaio in ensaios
+        if (ensaio.get("resultado") or "").strip() in RESULTADOS_QUE_SUSTENTAM
+    ]
+    if not sustentam:
+        vistos = sorted({(e.get("resultado") or "").strip() for e in ensaios})
+        return [
+            Achado(
+                FALHA if RESULTADO_REPROVA else AVISO,
+                "grau-sem-ensaio-que-obedeca",
+                numero,
+                ident,
+                lado,
+                f"declara `{lado}_grau = {GRAU_OBEDECEU}` e os {len(ensaios)} "
+                f"ensaio(s) de {rotulo} desta linha dizem {vistos}. Ou o degrau "
+                f"está alto demais, ou o ensaio foi gravado com o `resultado` do "
+                "SUSPEITO em vez do que a FEATURE fez — se for o segundo, a nota "
+                "do ensaio é o lugar de dizer isso",
+            )
+        ]
+
+    if not any(
+        (e.get("observado_por") or "").strip() == OBSERVADOR_QUE_SUSTENTA for e in sustentam
+    ):
+        observadores = sorted({(e.get("observado_por") or "").strip() for e in sustentam})
+        return [
+            Achado(
+                FALHA if OLHO_DELA_REPROVA else AVISO,
+                "grau-sem-olho-dela",
+                numero,
+                ident,
+                lado,
+                f"o ensaio que sustenta `{GRAU_OBEDECEU}` no {rotulo} foi "
+                f"observado por {observadores}, e o METODO-DE-ISOLAMENTO diz que "
+                f"só `{OBSERVADOR_QUE_SUSTENTA}` sustenta esse degrau: peça o "
+                "olho dela, ou desça para `SAIU NO FIO`",
+            )
+        ]
+    return []
+
+
+def _regra_da_mordida_nao_provada(
+    linha: dict[str, str], numero: int, ident: str
+) -> list[Achado]:
+    """Regra 11 — a coluna que existia e ninguém lia.
+
+    Só cobra onde a promessa é máxima (grau forte) E há teste apontado: cobrar
+    das 293 linhas seria enterrar o relatório em aviso, e a regra da casa é
+    "teste tem de MORDER" — o lugar onde não ter arrancado a cura custa mais
+    caro é justamente embaixo do degrau mais alto.
+    """
+    if not (linha.get("teste_que_morde") or "").strip():
+        return []
+    if (linha.get("mordida_provada_em") or "").strip():
+        return []
+    return [
+        Achado(
+            AVISO,
+            "mordida-nao-provada",
+            numero,
+            ident,
+            "",
+            "tem grau forte e `teste_que_morde`, mas `mordida_provada_em` está "
+            "vazia: ninguém registrou ter arrancado a cura e visto reprovar. "
+            "Arranque, veja reprovar, devolva — e ponha a data aqui",
+        )
+    ]
 
 
 def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
@@ -708,6 +1008,12 @@ def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
         ("linhas com teste que morde", resumo.linhas_com_mordida),
         ("alvos de pytest apontados pelo mapa", resumo.alvos_de_teste),
         ("assimetrias não declaradas", resumo.assimetrias_nao_declaradas),
+        (
+            f"graus fortes (`{GRAU_SAIU_NO_FIO}` ou `{GRAU_OBEDECEU}`)",
+            resumo.graus_fortes,
+        ),
+        ("     desses, SEM ensaio no caderno", resumo.graus_fortes_sem_ensaio),
+        ("ensaios lidos do caderno de bancada", resumo.ensaios_no_caderno),
     ]
     largura = max(len(rotulo) for rotulo, _ in linhas)
     for rotulo, valor in linhas:
@@ -779,6 +1085,11 @@ def main(argv: list[str] | None = None) -> int:
         print("quando aquela feature quebrar NAQUELE transporte, ou baixe a")
         print("confiança da célula para o que ela de fato é. Vazio é pergunta")
         print("aberta e não reprova; `medido` sem teste, sim.")
+        print("")
+        print(f"E o grau é a MESMA conta na bancada: `{GRAU_SAIU_NO_FIO}` e")
+        print(f"`{GRAU_OBEDECEU}` pedem ensaio do MESMO transporte em")
+        print(f"{ENSAIOS_RELATIVO}. Sem ensaio, o degrau honesto é")
+        print(f"`{GRAU_MONTOU}` — que já é o que a suíte prova sem aparelho.")
         return 1
 
     print(f"OK: nenhuma afirmação forte sem rede em {caminho_csv.name}.")

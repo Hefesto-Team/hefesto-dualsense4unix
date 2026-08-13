@@ -255,6 +255,7 @@ _INPUT_AUDIO_STATUS_IDX = 54
 _AUDIO_FLAG0_BITS = (0x10, 0x20, 0x40, 0x80)
 _AUDIO_COMMON_OFFSETS = (4, 5, 6, 7)
 
+
 #: SOM-ROTA-01: os TETOS de cada um, na mesma ordem. Eles não são 255 — o fone
 #: vai até 0x7F e o microfone até 0x40, e mandar mais é mandar lixo num campo
 #: que o firmware interpreta. O roteamento (`common[7]`) é um byte de bits e
@@ -265,6 +266,22 @@ _AUDIO_TETOS = (
     rep.TETO_MIC_VOLUME,
     0xFF,
 )
+
+
+def _escrever_led_do_mic(handle: pydualsense, aceso: bool) -> None:
+    """Acende/apaga o LED do mudo TOMANDO A POSSE do byte (AUDIO-OWNER-01).
+
+    Existe uma função em vez de uma chamada direta porque há dois caminhos de
+    escrita (`set_mic_led` e o `_write_partial_output` do perfil/hotplug) e
+    porque nem todo handle é um `_PinnedPyDualSense`: os dublês da suíte têm
+    `audio.setMicrophoneLED` e não têm a posse. Sem a posse, o byte seria
+    escrito e o bit de autorização nunca ligaria — o LED não acenderia.
+    """
+    tomar = getattr(handle, "set_microphone_led", None)
+    if callable(tomar):
+        tomar(bool(aceso))
+        return
+    handle.audio.setMicrophoneLED(bool(aceso))
 
 
 def _byte_da_rota(handle: Any, rota: int | None) -> int | None:
@@ -502,6 +519,28 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # `_volumes_audio` (common[4..7], flag0 0x10..0x80): idem, mandando
         # volume ZERO em todo report. Ver `set_audio_volumes`.
         self._mic_mute_desejado: bool | None = None
+        #: AUDIO-OWNER-01, o TERCEIRO campo — e o que MENTE PARA O OLHO DELA
+        #: (12/08/2026). `common[8]` é o `mute_button_led` do
+        #: `dualsense_output_report_common`, e o dono dele no Linux é o MESMO
+        #: dono do mudo: o kernel. `assets/dkms/hid-playstation/
+        #: hid-playstation.c:1538-1540` liga
+        #: `VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE` e escreve
+        #: `common->mute_button_led = ds->mic_muted` — uma vez, na BORDA do
+        #: botão (`:1631-1637`).
+        #:
+        #: Nós autorizávamos o mesmo byte em TODO report (o `0x01` estava fixo
+        #: no `flag1` do `_build_common`) escrevendo `microphone_led`, que a
+        #: pydualsense inicializa em 0. Consequência lida no código e visível
+        #: na mão dela: ela aperta o mudo, o kernel acende o LED e MUTA o mic
+        #: no firmware, e o PRÓXIMO report nosso (≤ 0,5 s) apaga o LED sem
+        #: desmutar — o mic segue mudo com a luz apagada. O produto mente
+        #: sobre o estado do microfone dela.
+        #:
+        #: Mesma disciplina dos outros dois: `None` = não somos donos, o bit
+        #: `0x01` sai APAGADO e o byte fica inerte; só quem chamou
+        #: `set_microphone_led` assume o campo. Não escrever é o único write
+        #: não-destrutivo, porque este registrador não tem leitura.
+        self._mic_led_desejado: bool | None = None
         #: 4 posições (fone, alto-falante, mic, roteamento). Cada uma é
         #: independente: `None` = não somos donos DAQUELE byte e o bit de
         #: validação dele sai apagado. Isso importa no byte 7 (roteamento de
@@ -710,6 +749,28 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         """
         self._mic_mute_desejado = None if muted is None else bool(muted)
 
+    def set_microphone_led(self, aceso: bool | None) -> None:
+        """Assume (ou devolve) a POSSE do LED do botão de mudo (`common[8]`).
+
+        Irmão exato do `set_microphone_mute` acima, e pelo MESMO motivo: o
+        registrador não tem caminho de leitura, então "não somos donos" só
+        pode ser representado por `None` — `False` é uma ORDEM ("apaga"), e
+        mandar essa ordem a cada report é justamente o defeito.
+
+        `True`/`False` = o hefesto autoriza `MIC_MUTE_LED_CONTROL_ENABLE`
+        (flag1 0x01) e escreve o byte. `None` (default de fábrica) = devolve o
+        campo ao kernel, que o escreve na borda do botão de mudo
+        (`hid-playstation.c:1538-1540`) e é quem sabe se o mic está mudo.
+
+        O espelho em `self.audio.microphone_led` é mantido de propósito: ele é
+        o estado que a pydualsense (e a suíte) leem, e quem lê o handle tem de
+        ver o que foi pedido.
+        """
+        self._mic_led_desejado = None if aceso is None else bool(aceso)
+        if aceso is not None:
+            with contextlib.suppress(Exception):
+                self.audio.setMicrophoneLED(bool(aceso))
+
     def set_audio_volumes(
         self,
         *,
@@ -815,6 +876,14 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
           dois blocos só ganham autorização quando ALGUÉM deste projeto
           escreveu um valor (`set_audio_volumes` / `set_microphone_mute`);
           sem dono, os bits saem zerados e o firmware conserva o que tinha.
+        - AUDIO-OWNER-01, o TERCEIRO campo (12/08/2026): o `mute_button_led`
+          (`common[8]`, flag1 0x01) faltava na conta de 25/07 — e é o que
+          MENTE PARA O OLHO DELA. O `0x01` estava fixo no `flag1` e o byte
+          saía de `audio.microphone_led`, que nasce 0: ela apertava o mudo, o
+          kernel acendia o LED e mutava o mic no firmware
+          (`hid-playstation.c:1538-1540`, uma escrita na BORDA do botão), e o
+          nosso report seguinte APAGAVA o LED sem desmutar. Agora o campo
+          segue a mesma posse por byte (`set_microphone_led`).
         """
         from hefesto_dualsense4unix.core import ds_output_report as rep
 
@@ -822,6 +891,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         suppress_leds = bool(getattr(self, "_suppress_leds", False))
         volumes = getattr(self, "_volumes_audio", None) or [None, None, None, None]
         mic_mute = getattr(self, "_mic_mute_desejado", None)
+        mic_led = getattr(self, "_mic_led_desejado", None)
         flag0 = 0xFF  # upstream: vibração+gatilhos+áudio sempre autorizados
         flag1 = 0x01 | 0x02 | 0x04 | 0x10 | 0x40  # upstream: mic+LED+atenuação
         flag2 = int(self.light.ledOption.value)
@@ -833,6 +903,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 flag0 |= bit
         if mic_mute is None:
             flag1 &= ~rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
+        # AUDIO-OWNER-01 (12/08/2026), o LED do botão de mudo: sem dono, o
+        # `0x01` cai e `common[8]` fica inerte — o kernel, que acende o LED na
+        # borda do botão, deixa de ser desfeito pelo nosso próximo report.
+        if mic_led is None:
+            flag1 &= ~rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
         if not rumble_asserted:
             flag0 &= ~(
                 rep.VALID_FLAG0_COMPATIBLE_VIBRATION | rep.VALID_FLAG0_HAPTICS_SELECT
@@ -865,7 +940,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             common[rep.COMMON_AUDIO_CONTROL2] = int(preamp) & rep.SP_PREAMP_GAIN_MASK
         common[0] = flag0
         common[1] = flag1
-        common[8] = int(self.audio.microphone_led) & 0xFF
+        if mic_led is not None:
+            common[8] = 1 if mic_led else 0
         # `audio.microphone_mute` da pydualsense continua sendo o valor de
         # fato mandado — mas só quando temos a posse (ver AUDIO-OWNER-01).
         if mic_mute is not None:
@@ -1984,15 +2060,37 @@ class PyDualSenseController(IController):
 
         # Marca supressão de LED no report_thread. Coberto pelo sysfs => o
         # kernel é o dono (design original).
-        # LIGHTBAR-BT-NEVER-01 (política, estudo 2026-07-18): por BLUETOOTH a
-        # pydualsense fica SEMPRE suprimida, coberta ou não — o report BT dela
-        # (0.7.5) é MALFORMADO (layout off-by-one, sem o tag 0x10 obrigatório)
-        # e um write com flags de LED dentro da janela da máquina de estados da
-        # lightbar LATCHEIA a lightbar apagada até o power-off do controle
-        # (provado ao vivo: nó de LED atrasado na reconexão BT rebaixava a
-        # supressão por 1 tick e re-envenenava). Não há regressão: a cor via
-        # pydualsense NUNCA funcionou por BT ("não obedecia por BT" — o motivo
-        # de a rota sysfs existir, a36a2e5). Em USB o fallback histórico segue.
+        # LIGHTBAR-BT-NEVER-01 (política, estudo 2026-07-18): por BLUETOOTH o
+        # FLUXO do `report_thread` fica SEMPRE LED-neutro, coberto ou não. Em
+        # USB o fallback histórico segue.
+        #
+        # DUAS DAS TRÊS RAZÕES ORIGINAIS CADUCARAM, e ficam registradas aqui
+        # em vez de sobreviverem como fato (regra dela, 11/08: fato errado se
+        # SUBSTITUI; o que se preserva é o custo já pago, não o número):
+        #
+        #  1. *"o report BT da pydualsense 0.7.5 é MALFORMADO"* — verdade em
+        #     18/07, IRRELEVANTE desde 19/07: o `prepareReport` daqui não usa
+        #     mais o report dela. O BTREPORT-02 monta o 0x31 do kernel (tag
+        #     0x10, seq por handle, CRC-32) em `core/ds_output_report.py`;
+        #  2. *"a cor via pydualsense NUNCA funcionou por BT"* — consequência
+        #     de (1), e derrubada por MEDIÇÃO em 12/08: o 0x31 bem-formado
+        #     escrito no `hidraw` pintou os três controles do rádio com a
+        #     Steam viva (ensaio `cor-rota-hidraw-com-steam`), no mesmo
+        #     instante em que o sysfs não pintava nenhum;
+        #  3. *"um write com flags de LED dentro da janela LATCHEIA a barra"* —
+        #     esta ERROU O CULPADO, e quem provou foi esta casa: o
+        #     LIGHTBAR-BT-CULPADO-01 (03/08) correlacionou 7 de 7 o latch com o
+        #     `0x08` (RELEASE_LEDS) que NÓS mandávamos na janela, e ele saiu do
+        #     código em `108b711` (04/08). Julho acertou a janela e errou o
+        #     report.
+        #
+        # O QUE SUSTENTA A POLÍTICA HOJE, e é medido: o LIGHTBAR-BT-KEEPALIVE-01
+        # (22/07) — reengatar a máquina de estados da lightbar EM REGIME trava a
+        # exibição no firmware (o registrador aceita a cor, o sysfs mostra, a
+        # barra fica apagada). É uma afirmação sobre o FLUXO a 2-60 Hz, não
+        # sobre o transporte: por isso a supressão continua, e a rota que
+        # voltou a existir por rádio é a escrita AVULSA e estreita, fora do
+        # fluxo (`_pintar_por_hidraw_bt` / `reescrever_lightbar_por_hidraw`).
         for key, handle in handles.items():
             with contextlib.suppress(Exception):
                 # `_suppress_leds` existe no _PinnedPyDualSense (handles de teste
@@ -2472,6 +2570,8 @@ class PyDualSenseController(IController):
         what: str,
         broadcast: bool = False,
         record: dict[str, Any] | None = None,
+        rgb: tuple[int, int, int] | None = None,
+        players: tuple[bool, bool, bool, bool, bool] | None = None,
     ) -> None:
         """Aplica um output de LED ao ALVO, preferindo a rota sysfs do kernel.
 
@@ -2483,6 +2583,11 @@ class PyDualSenseController(IController):
 
         PERFIL-01: `broadcast`/`record` idênticos ao `_for_each` — alvo e
         registro do estado desejado resolvidos juntos, sob o mesmo lock.
+
+        ROTA-BT-EM-REGIME-01: `rgb`/`players` são o MESMO valor que o
+        `sysfs_op` escreveria, em forma de dado — é o que permite acrescentar
+        a rota hidraw por Bluetooth (`_pintar_por_hidraw_bt`) sem desmontar as
+        closures. Omitidos = comportamento histórico byte-idêntico.
         """
         with self._io_lock:
             target = self._output_target_key
@@ -2508,14 +2613,23 @@ class PyDualSenseController(IController):
             # re-aplica ao sysfs — aqui só evitamos tocar o hardware. O pydual_op
             # abaixo apenas atualiza o estado interno (o report_thread mutado não
             # escreve), mantendo o handle coerente para o próximo unmute.
+            escreveu_sysfs = False
             if node is not None and not muted:
                 try:
-                    if sysfs_op(node):
-                        continue
+                    escreveu_sysfs = bool(sysfs_op(node))
                 except Exception as exc:
                     logger.debug(
                         "sysfs_led_falhou_fallback_pydual", op=what, key=key, err=str(exc)
                     )
+            # ROTA-BT-EM-REGIME-01: por rádio a rota sysfs NÃO basta, e isso é
+            # medido — ver `_pintar_por_hidraw_bt`. O report vai junto, tenha
+            # o sysfs escrito ou não; em Modo Nativo (`muted`) é no-op.
+            if not muted:
+                self._pintar_por_hidraw_bt(
+                    key, handle, rgb=rgb, players=players, what=what
+                )
+            if escreveu_sysfs:
+                continue
             try:
                 pydual_op(handle)
             except Exception as exc:
@@ -2558,6 +2672,85 @@ class PyDualSenseController(IController):
             handle, node, muted, desired, what="reapply_perfil_no_hotplug"
         )
 
+    def _pintar_por_hidraw_bt(
+        self,
+        key: str | None,
+        handle: pydualsense,
+        *,
+        rgb: tuple[int, int, int] | None,
+        players: tuple[bool, bool, bool, bool, bool] | None,
+        what: str,
+    ) -> bool:
+        """A SEGUNDA rota da lightbar por rádio, em regime. ROTA-BT-EM-REGIME-01.
+
+        **O defeito, medido na bancada dela em 12/08/2026.** Por Bluetooth, o
+        produto tinha UMA rota de LED em regime — o `sysfs` — e é justamente a
+        que perde: com a Steam viva, escrever `multi_intensity` NÃO muda a
+        barra (ensaio ``cor-rota-sysfs-com-steam``), enquanto o report `0x31`
+        escrito no `hidraw` PINTOU os três controles no mesmo instante
+        (``cor-rota-hidraw-com-steam``; literal dela: *"todos tão magenta"*).
+        O caderno de eliminação já julga a ROTA como **e-a-causa** nesta linha
+        (`scripts/eliminacao.py`, ``luz.lightbar.cor@dualsense [radio]``).
+
+        **Por que a segunda rota não existia.** O fallback pydualsense que o
+        `_for_each_led` e o `_write_partial_output` carregam é CÓDIGO MORTO por
+        rádio: `_suppress_leds` é True para todo handle BT
+        (`LIGHTBAR-BT-NEVER-01`), então `handle.light.setColorI(...)` atualiza
+        o estado interno e o `report_thread` remove os bits de LED do report.
+        Por rádio era sysfs ou nada.
+
+        **Por que ESTE report e não religar o fluxo.** O que a bancada mediu foi
+        uma escrita AVULSA, estreita e fora do fluxo — o mesmo
+        `build_bt_lightbar_report` que o `reescrever_lightbar_por_hidraw`
+        (GATILHO-DA-COR-01) já manda por rádio desde 12/08: sem `RELEASE_LEDS`
+        (0x08), sem os bits de SETUP/BRILHO do flag2, sem vibração e sem
+        áudio. Religar a escrita de LED no `report_thread` seria outra coisa e
+        continua PROIBIDO: o `LIGHTBAR-BT-KEEPALIVE-01` (22/07) mediu que
+        reengatar a máquina de estados da lightbar em REGIME trava a exibição
+        no firmware. Por isso `_suppress_leds` não muda aqui — o que muda é
+        que a rota fora do fluxo passa a ser alcançável a partir dos caminhos
+        que a GUI e o perfil usam, e não só do gatilho de conexão.
+
+        **E explica o que JÁ funcionava**, que é a regra da casa: por CABO
+        nada muda (o report `0x02` não tem janela nem máquina de estados, e o
+        fallback pydualsense do cabo nunca foi suprimido); e por rádio o
+        `sysfs` continua sendo escrito antes — ele funciona quando ninguém
+        mais tem o `hidraw` aberto (ensaio ``lightbar-probe-limpa``: mesa
+        vazia, os três obedeceram ao verde por sysfs). A segunda rota é o que
+        faltava para o caso em que existe outro escritor.
+
+        Devolve True quando escreveu. No-op (False) fora do rádio, sem valor
+        para escrever, ou quando o handle não sabe carimbar o `seq`.
+        """
+        if rgb is None and players is None:
+            return False
+        if self._detect_transport(handle) != "bt":
+            return False
+        # LIGHTBAR-BT-RESET-03: pelo `writeReport` do handle, que carimba o
+        # `seq` do FLUXO daquele handle e recalcula o CRC. Um 0x31 escrito cru
+        # com seq 0 é descartado pelo firmware, e o sintoma é o pior de todos:
+        # o log diz "escrito" e a barra não muda.
+        escritor = getattr(handle, "writeReport", None)
+        if not callable(escritor):
+            return False
+        from hefesto_dualsense4unix.core.lightbar_gatilho import (
+            build_bt_lightbar_report,
+        )
+
+        try:
+            escritor(list(build_bt_lightbar_report(rgb, players)))
+        except Exception as exc:
+            logger.debug("lightbar_hidraw_bt_falhou", op=what, key=key, err=str(exc))
+            return False
+        logger.debug(
+            "lightbar_hidraw_bt_escrito",
+            op=what,
+            key=key,
+            cor=rgb,
+            player=players,
+        )
+        return True
+
     def _write_partial_output(
         self,
         handle: pydualsense,
@@ -2578,6 +2771,12 @@ class PyDualSenseController(IController):
         fallback: sem sysfs disponível, o LED cai em handle.light — mas o
         report_thread também está mutado, então nada chega ao hardware; o
         estado interno fica coerente para o unmute re-aplicar.
+
+        ROTA-BT-EM-REGIME-01: por rádio, cor e número saem TAMBÉM pelo report
+        `0x31` avulso (`_pintar_por_hidraw_bt`) — é este o caminho do perfil e
+        do hotplug, e por rádio o `sysfs` sozinho perde para quem tem o
+        `hidraw` aberto. Uma escrita por ação, nunca no fluxo do
+        `report_thread`.
         """
         from pydualsense.enums import PlayerID
 
@@ -2602,7 +2801,19 @@ class PyDualSenseController(IController):
                 mask = sum(1 << i for i, b in enumerate(out.player_leds) if b)
                 handle.light.playerNumber = PlayerID(mask)
             if out.mic_led is not None:
-                handle.audio.setMicrophoneLED(out.mic_led)
+                _escrever_led_do_mic(handle, out.mic_led)
+            if not muted:
+                self._pintar_por_hidraw_bt(
+                    None,
+                    handle,
+                    rgb=out.led,
+                    players=(
+                        out.player_leds
+                        if self._pode_escrever_player_leds()
+                        else None
+                    ),
+                    what=what,
+                )
         except Exception as exc:
             logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
 
@@ -2626,6 +2837,9 @@ class PyDualSenseController(IController):
             pydual_op=lambda h: h.light.setColorI(r, g, b),
             what="set_led",
             record={"led": color},
+            # ROTA-BT-EM-REGIME-01: por rádio, a cor sai TAMBÉM pelo 0x31
+            # avulso — a rota que venceu a Steam na mesa dela em 12/08.
+            rgb=(r, g, b),
         )
 
     def set_rumble(self, weak: int, strong: int) -> None:
@@ -2723,10 +2937,16 @@ class PyDualSenseController(IController):
 
         Delega para `ds.audio.setMicrophoneLED(bool)`. A pydualsense cuida da
         diferença USB/BT em `prepareReport` (outReport[9] USB / outReport[10] BT).
+
+        AUDIO-OWNER-01 (12/08/2026): a chamada passou a TOMAR A POSSE de
+        `common[8]` (`_escrever_led_do_mic`). Antes a posse era implícita — o
+        bit `0x01` do flag1 estava sempre ligado —, e o preço era o produto
+        apagar, no report seguinte, o LED que o kernel acendeu quando ela
+        aperta o botão de mudo. Quem NÃO chama isto não é mais dono do byte.
         """
         flag = bool(muted)
         self._for_each(
-            lambda h: h.audio.setMicrophoneLED(flag),
+            lambda h: _escrever_led_do_mic(h, flag),
             what="set_mic_led",
             record={"mic_led": flag},
         )
@@ -3094,6 +3314,9 @@ class PyDualSenseController(IController):
             pydual_op=lambda h: setattr(h.light, "playerNumber", PlayerID(bitmask)),
             what="set_player_leds",
             record={"player_leds": bits},
+            # ROTA-BT-EM-REGIME-01: são DUAS luzes, e a Steam repinta as duas
+            # (o mesmo motivo do GATILHO-DA-COR-01) — o número acompanha a cor.
+            players=bits,
         )
         logger.debug("player_leds_aplicados bits=%s bitmask=%s", list(bits), bitmask)
 

@@ -25,14 +25,39 @@ Duas coisas que este arquivo deixou de fazer, porque agora são DADO:
   realmente tem;
 - o código evdev virou a coluna `evdev`, lida do `data-evdev` dos desenhos.
 
+O `--check` PERGUNTA PELO CONTEÚDO, NÃO PELO RELÓGIO
+----------------------------------------------------
+Ele regenera a página em memória e compara com o `specs.html` em disco. A
+versão anterior comparava MTIME, e mtime deu verde falso das duas maneiras
+possíveis (medido em 12/08/2026):
+
+- por OMISSÃO: a lista de fontes trazia o CSV, os três desenhos e este
+  arquivo — e não trazia `docs/data/ensaios.csv`, que alimenta o HTML desde o
+  caderno de eliminação. Editar o caderno nunca fazia o `--check` reclamar, e
+  o `specs.html` publicado mostrava a lightbar como "os ensaios se
+  contradizem" enquanto o caderno do mesmo commit já tinha o culpado isolado;
+- por RELÓGIO: qualquer ferramenta que TOQUE o HTML depois da geração o deixa
+  "mais novo" que as fontes (o `--fix` do `scripts/validar-acentuacao.py`
+  reescreve arquivos), e no CI o `actions/checkout` escreve a árvore em ordem
+  de caminho — `specs.html` (raiz) nasce depois de `docs/` e de `scripts/`, e
+  o `--check` passava SEMPRE, qualquer que fosse o conteúdo.
+
+Comparar conteúdo responde a pergunta certa — *a página publicada é a que
+estas fontes produzem?* — e vale igual na máquina de quem edita e no runner.
+Duas coisas são normalizadas antes da comparação, e só duas: o espaço no FIM
+da linha (a saída do gerador tem ~20 linhas com espaço sobrando dentro dos
+`<style>` herdados dos SVG, que alguma ferramenta apara depois) e a hora da
+geração no selo do rodapé, que é a única parte da página que não vem do dado.
+
 Uso:
     python3 scripts/gerar-mapa.py            # escreve specs.html na raiz
-    python3 scripts/gerar-mapa.py --check    # só verifica se está atualizado
+    python3 scripts/gerar-mapa.py --check    # o publicado bate com as fontes?
 """
 from __future__ import annotations
 
 import argparse
 import csv
+import difflib
 import html
 import json
 import re
@@ -62,6 +87,13 @@ MODELO = {
     "sn30": "8BitDo · 057e:2009 (modo Switch)",
 }
 LADOS = (("cabo", "cabo_"), ("radio", "radio_"))
+
+#: TUDO o que entra na página. O caderno de ensaios está aqui porque ELE ENTRA
+#: (`le_csv` o lê via `eliminacao.carrega_por_lado`) — a lista anterior o
+#: esquecia, e essa omissão é metade do verde falso que o `--check` dava. Hoje
+#: a lista não decide nada sozinha (quem decide é a comparação de conteúdo):
+#: ela é o que o erro mostra a quem precisa saber o que regerar.
+FONTES = (CSV, eliminacao.ENSAIOS, *SVGS.values())
 
 
 def svg_inline(caminho: Path, controle: str) -> str:
@@ -883,24 +915,78 @@ def monta() -> str:
 """
 
 
+#: O selo do rodapé, a ÚNICA parte da página que não sai das fontes. Ignorá-lo
+#: é o que torna a comparação possível: com ele, todo `--check` reprovaria pelo
+#: relógio, que é exatamente o defeito de onde estamos saindo.
+SELO = re.compile(r"gerado em \d{2}/\d{2}/\d{4} \d{2}:\d{2} a partir de")
+
+#: Quantas linhas de divergência o erro imprime. O corte não é frescura: uma
+#: das linhas da página é o JSON inteiro do mapa, com quase um megabyte.
+LIMITE_DIFF = 24
+LARGURA_DIFF = 200
+
+
+def normaliza(pagina: str) -> list[str]:
+    """A página em linhas, sem o que não é dado.
+
+    Duas normalizações, cada uma com um defeito medido atrás:
+
+    - `rstrip()`: a saída do gerador tem ~20 linhas com espaço sobrando dentro
+      dos `<style>` herdados dos SVG, e o arquivo commitado não tem — alguma
+      ferramenta da casa as apara depois. Um comparador byte a byte reprovaria
+      sempre, e um portão que reprova sempre é desligado na semana seguinte.
+    - o selo: a hora da geração muda a cada execução. Comparar relógio já é o
+      erro do qual este `--check` está saindo.
+    """
+    return [SELO.sub("gerado em <momento> a partir de", linha).rstrip()
+            for linha in pagina.splitlines()]
+
+
+def recorta(linha: str) -> str:
+    """Uma linha do relatório, cortada — e DIZENDO que cortou.
+
+    Sem o aviso, as duas metades do JSON do mapa aparecem idênticas nos
+    primeiros 200 caracteres e o relatório parece acusar linha igual.
+    """
+    if len(linha) <= LARGURA_DIFF:
+        return linha
+    return f"{linha[:LARGURA_DIFF]}… (+{len(linha) - LARGURA_DIFF} caracteres)"
+
+
+def divergencias(publicado: str, regerado: str) -> list[str]:
+    """As linhas em que a página publicada difere da que as fontes produzem."""
+    return list(difflib.unified_diff(
+        normaliza(publicado), normaliza(regerado),
+        fromfile="specs.html publicado", tofile="o que as fontes produzem hoje",
+        lineterm="", n=0,
+    ))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
-                    help="reprova se specs.html estiver mais velho que as fontes")
+                    help="reprova se specs.html não for a página que as fontes produzem")
     args = ap.parse_args()
 
-    fontes = [CSV, *SVGS.values(), Path(__file__)]
     if args.check:
         if not SAIDA.exists():
             print("specs.html: NAO EXISTE — rode scripts/gerar-mapa.py", file=sys.stderr)
             return 1
-        velhos = [f for f in fontes if f.stat().st_mtime > SAIDA.stat().st_mtime]
-        if velhos:
-            for f in velhos:
-                print(f"specs.html esta mais velho que {f.relative_to(RAIZ)}", file=sys.stderr)
+        difs = divergencias(SAIDA.read_text(encoding="utf-8"), monta())
+        if difs:
+            print("specs.html: DESATUALIZADO — a página publicada não é a que estas "
+                  "fontes produzem", file=sys.stderr)
+            for linha in difs[:LIMITE_DIFF]:
+                print(f"  {recorta(linha)}", file=sys.stderr)
+            if len(difs) > LIMITE_DIFF:
+                print(f"  … e mais {len(difs) - LIMITE_DIFF} linha(s) de divergência",
+                      file=sys.stderr)
+            print("as fontes são: " + ", ".join(str(f.relative_to(RAIZ)) for f in FONTES),
+                  file=sys.stderr)
             print("rode: python3 scripts/gerar-mapa.py", file=sys.stderr)
             return 1
-        print("specs.html: atualizado")
+        print("specs.html: atualizado (confere com o CSV, com o caderno de ensaios "
+              "e com os três desenhos)")
         return 0
 
     SAIDA.write_text(monta(), encoding="utf-8")

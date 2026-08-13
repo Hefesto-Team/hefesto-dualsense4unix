@@ -2288,6 +2288,27 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
+
+                            <!-- PROCESSO-CEGO-01: o aviso de que "process_name"
+                                 não casa NESTE ambiente. Nasce invisível e só
+                                 aparece quando o daemon disse qual backend está
+                                 lendo a janela
+                                 (`profiles_actions.texto_do_processo_que_nao_casa`),
+                                 pela mesma disciplina do `rumble_policy_aviso`:
+                                 sem o dado do daemon a linha não afirma nada —
+                                 "não sei" e "não casa" mandam caçar em lugares
+                                 diferentes. -->
+                            <child>
+                              <object class="GtkLabel" id="profile_process_name_aviso">
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                                <property name="visible">False</property>
+                                <property name="no-show-all">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
                             <child>
                               <object class="GtkLabel" id="profile_editor_hint">
                                 <property name="label" translatable="yes">&lt;i&gt;AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são ignorados.&lt;/i&gt;</property>

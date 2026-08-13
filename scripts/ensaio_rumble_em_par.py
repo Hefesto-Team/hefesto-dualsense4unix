@@ -33,8 +33,41 @@ O ALVO E EXPLICITO, SEMPRE
 não ha descoberta automática de "o controle". Cada alvo entra pelo caminho do
 no, e o programa imprime jogador e transporte de cada um antes de vibrar, para
 que ninguem confunda qual aparelho respondeu. Ele RECUSA mirar no que não for
-DualSense físico: os espelhos `Microsoft X-Box 360 pad` (28de:11ff, Valve) e os
-gamepads virtuais tem FF e aceitariam o efeito sem que aparelho nenhum vibrasse.
+DualSense físico: os espelhos `Microsoft X-Box 360 pad` (28de:11ff, Valve), os
+gamepads virtuais de uinput e — desde 12/08/2026 — **os vpads do próprio
+Hefesto**, que têm FF e aceitariam o efeito sem que aparelho nenhum vibrasse.
+
+VPAD-NO-ESPELHO-01 (12/08/2026): por que o vpad do produto escapava
+-------------------------------------------------------------------
+Com quatro controles na mesa, o `--listar` marcava `mirar? SIM` nos QUATRO
+vpads do Hefesto, rotulados como transporte `cabo` — a mesma frase acima já
+prometia recusá-los, e não recusava::
+
+    /dev/input/event21   cabo   P1  054c:0df2  SIM  DualSense … (Hefesto P1)
+    /dev/input/event261  cabo   P4  054c:0df2  SIM  DualSense … (Hefesto P2)
+
+A régua antiga era `vid == 054c and pid in DUALSENSE_PIDS and barramento in
+TRANSPORTE_POR_BARRAMENTO`, e o vpad passa nos TRÊS: ele existe justamente
+para se passar por aparelho de verdade. Ele forja `054c:0df2` (DualSense Edge,
+que está em `DUALSENSE_PIDS` porque o Edge real existe) e declara `BUS_USB`
+no `UHID_CREATE2` — logo, barramento `0003`. Quem escapava era só o gamepad de
+uinput puro, que não tem `HID_ID` nenhum.
+
+A régua nova pergunta antes **de quem é o device**, e só depois o que ele diz
+ser. O critério é o que o PRODUTO carimba de propósito no `UHID_CREATE2`
+(`integrations/uhid_gamepad.py::_create2_event`) e que o kernel republica no
+`uevent` do device HID pai — o MESMO arquivo que este instrumento já abre para
+achar o barramento::
+
+    DRIVER=playstation                       DRIVER=playstation
+    HID_ID=0003:0000054C:00000DF2            HID_ID=0005:0000054C:00000CE6
+    HID_NAME=DualSense … (Hefesto P1)        HID_NAME=DualSense Wireless Controller
+    HID_PHYS=hefesto-vpad          <-- nós    HID_PHYS=<MAC do adaptador>
+    HID_UNIQ=02:fe:00:00:00:01     <-- nós    HID_UNIQ=<MAC do controle>
+
+E ela NÃO usa "é virtual", que reintroduziria a armadilha paga em 11/08 (ver
+`inventario`): os dois controles do rádio também moram sob
+`/sys/devices/virtual/misc/uhid/`, e recusá-los seria recusar metade da mesa.
 
 Uso:
     ensaio_rumble_em_par.py --listar
@@ -50,6 +83,9 @@ import glob
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import identidade_do_vpad  # noqa: E402  — a régua única do vpad
 import time
 
 BIBLIOTECA = "python-evdev"
@@ -76,6 +112,36 @@ VALVE_VID = 0x28DE
 DUALSENSE_VID = 0x054C
 DUALSENSE_PIDS = (0x0CE6, 0x0DF2)
 
+#: Onde este instrumento enumera os nós de entrada. É parâmetro só para o teste
+#: poder montar uma mesa de mentira em `tmp_path` — a medição de verdade não
+#: tem por que apontar para outro lugar.
+RAIZ_SYSFS_INPUT = "/sys/class/input"
+
+# --- VPAD-NO-ESPELHO-01: as marcas que o PRODUTO carimba no próprio vpad ----
+#
+# Contrato de fio replicado aqui de propósito, e não importado: este é um
+# instrumento avulso, que tem de rodar mesmo com o pacote quebrado ou fora do
+# venv. A mesma decisão que `app/actions/emulation_actions.py` já tomou, e pela
+# mesma razão. Quem trava as duas pontas é
+# `tests/unit/test_ensaio_em_par_recusa_o_vpad_do_proprio_produto.py`, que
+# compara estas constantes com o que o `uhid_gamepad` de fato emite.
+
+#: RÉGUA ÚNICA (12/08/2026): as três marcas e a função que as lê moram em
+#: `scripts/identidade_do_vpad.py`, importado também pelos outros dois ensaios.
+#: Antes cada instrumento tinha a sua cópia, e a cópia deste era a única que
+#: separava o vpad de verdade — os outros dois escapavam POR ACIDENTE, só
+#: porque aceitam apenas o PID `0CE6` e o vpad se apresenta como `0DF2`
+#: (DualSense Edge). O Edge real existe: no dia em que alguém acrescentar o PID
+#: dele, a imunidade por acidente evapora. Reusar em vez de reimplementar é
+#: regra desta casa — duas leituras do mesmo dado são duas réguas, e uma delas
+#: envelhece calada.
+#: Os nomes ficam reexportados porque
+#: `tests/unit/test_ensaio_em_par_recusa_o_vpad_do_proprio_produto.py` os le
+#: daqui e trava o contrato com o `uhid_gamepad`.
+VPAD_HID_PHYS = identidade_do_vpad.VPAD_HID_PHYS
+VPAD_UNIQ_PREFIXO = identidade_do_vpad.VPAD_UNIQ_PREFIXO
+VPAD_MARCA_NO_NOME = identidade_do_vpad.VPAD_MARCA_NO_NOME
+
 
 def _ler(caminho: str) -> str:
     try:
@@ -85,17 +151,43 @@ def _ler(caminho: str) -> str:
         return ""
 
 
-def _hid_pai(caminho_device: str) -> tuple[str, str]:
-    """Sobe a arvore ate achar o `uevent` com HID_ID; devolve (barramento, dir)."""
+def _hid_pai(caminho_device: str) -> tuple[str, str, dict[str, str]]:
+    """Sobe a arvore ate o `uevent` com HID_ID; devolve (barramento, dir, campos).
+
+    `campos` são as linhas `CHAVE=valor` desse mesmo `uevent` — de onde saem o
+    `HID_PHYS` e o `HID_UNIQ` que separam o vpad do aparelho (ver as constantes
+    `VPAD_*`). Ler o arquivo uma vez só e devolver tudo evita que a régua de
+    identidade abra um arquivo DIFERENTE do que decidiu o barramento: seriam
+    duas fontes podendo discordar sobre o mesmo device.
+    """
     atual = caminho_device
     for _ in range(6):
         atual = os.path.dirname(os.path.realpath(atual))
         uevent = os.path.join(atual, "uevent")
         if os.path.exists(uevent):
-            achado = re.search(r"HID_ID=(\w+):", _ler(uevent))
+            texto = _ler(uevent)
+            achado = re.search(r"HID_ID=(\w+):", texto)
             if achado:
-                return achado.group(1), atual
-    return "", ""
+                campos = dict(
+                    linha.split("=", 1) for linha in texto.splitlines() if "=" in linha
+                )
+                return achado.group(1), atual, campos
+    return "", "", {}
+
+
+def _e_vpad_do_hefesto(campos: dict[str, str], dir_device: str, nome: str) -> bool:
+    """True quando o nó é um gamepad virtual DESTE produto (VPAD-NO-ESPELHO-01).
+
+    Delega para `identidade_do_vpad.e_vpad_do_hefesto`, a régua única dos três
+    ensaios. A assinatura local sobrevive porque quem chama já tem o diretório
+    do nó em mãos e lê o `uniq` dele de graça; o módulo comum aceita esse valor
+    em vez de reabrir o arquivo.
+    """
+    return identidade_do_vpad.e_vpad_do_hefesto(
+        campos,
+        uniq_do_no=identidade_do_vpad.uniq_do_no_de_entrada(dir_device),
+        nome=nome,
+    )
 
 
 def _padrao_do_jogador(dir_hid: str) -> str:
@@ -113,10 +205,10 @@ def _tem_ff(dir_device: str) -> bool:
     return bool(bits) and bits.strip("0 ") != ""
 
 
-def inventario() -> list[dict[str, object]]:
+def inventario(raiz: str = RAIZ_SYSFS_INPUT) -> list[dict[str, object]]:
     """Todos os nos de input com forca-feedback, rotulados e classificados."""
     achados: list[dict[str, object]] = []
-    nos = glob.glob("/sys/class/input/event*")
+    nos = glob.glob(os.path.join(raiz, "event*"))
     for no in sorted(nos, key=lambda p: int(re.sub(r"\D", "", os.path.basename(p)))):
         dir_device = os.path.join(no, "device")
         nome = _ler(os.path.join(dir_device, "name"))
@@ -125,26 +217,45 @@ def inventario() -> list[dict[str, object]]:
         vid = int(_ler(os.path.join(dir_device, "id", "vendor")) or "0", 16)
         pid = int(_ler(os.path.join(dir_device, "id", "product")) or "0", 16)
         virtual = "/devices/virtual/" in os.path.realpath(no)
-        barramento, dir_hid = _hid_pai(dir_device)
+        barramento, dir_hid, campos = _hid_pai(dir_device)
         # ARMADILHA, paga em 11/08/2026: um DualSense POR BLUETOOTH vive sob
         # `/sys/devices/virtual/misc/uhid/`, porque o BlueZ cria o dispositivo
         # HID por uhid. Filtrar por "não e virtual" recusa METADE da mesa —
         # exatamente os dois controles do radio, que sao o ensaio. O que separa
         # aparelho de espelho e ter HID_ID de barramento conhecido: os espelhos
         # da Steam sao uinput puro e não tem HID_ID nenhum.
+        #
+        # VPAD-NO-ESPELHO-01, 12/08/2026: o barramento é condição NECESSÁRIA e
+        # não suficiente. O vpad deste produto também nasce por uhid, e declara
+        # `BUS_USB` — ele é feito para se passar por aparelho. Por isso a
+        # identidade do vpad é perguntada ANTES, e com as marcas que o produto
+        # carimba (`_e_vpad_do_hefesto`), nunca com "é virtual".
+        eh_vpad = _e_vpad_do_hefesto(campos, dir_device, nome)
         eh_fisico = (
-            vid == DUALSENSE_VID
+            not eh_vpad
+            and vid == DUALSENSE_VID
             and pid in DUALSENSE_PIDS
             and barramento in TRANSPORTE_POR_BARRAMENTO
         )
+        # O rótulo de transporte do vpad NÃO é `cabo`. "cabo" e "radio" respondem
+        # "por onde o report viaja até o aparelho", e do outro lado do vpad não
+        # há aparelho nenhum: o `0003` dele é parte do disfarce, e imprimi-lo
+        # como cabo é repetir o disfarce para quem está lendo a mesa.
+        if eh_vpad:
+            transporte = "vpad"
+        else:
+            transporte = TRANSPORTE_POR_BARRAMENTO.get(
+                barramento, "virtual" if virtual else "?"
+            )
         achados.append(
             {
                 "no": f"/dev/input/{os.path.basename(no)}",
                 "nome": nome,
                 "vid_pid": f"{vid:04x}:{pid:04x}",
-                "transporte": TRANSPORTE_POR_BARRAMENTO.get(barramento, "virtual" if virtual else "?"),
+                "transporte": transporte,
                 "jogador": _padrao_do_jogador(dir_hid),
                 "dualsense_fisico": eh_fisico,
+                "vpad_do_hefesto": eh_vpad,
                 "espelho_da_steam": vid == VALVE_VID,
             }
         )
@@ -158,6 +269,8 @@ def imprimir_inventario(itens: list[dict[str, object]]) -> None:
     for item in itens:
         if item["dualsense_fisico"]:
             veredito = "SIM"
+        elif item["vpad_do_hefesto"]:
+            veredito = "NAO/vpad"
         elif item["espelho_da_steam"]:
             veredito = "NAO/steam"
         else:
@@ -178,6 +291,15 @@ def _abrir(caminho: str, itens: list[dict[str, object]]):
         raise SystemExit(
             f"RECUSO mirar {caminho}: e o espelho que a Steam cria ({achado['vid_pid']}, Valve).\n"
             "Ele aceita o efeito e nenhum aparelho vibra — seria medicao falsa. Use --listar."
+        )
+    if achado["vpad_do_hefesto"]:
+        raise SystemExit(
+            f"RECUSO mirar {caminho}: e um gamepad VIRTUAL do próprio Hefesto "
+            f"({achado['vid_pid']}, {achado['nome']}).\n"
+            "Ele anuncia 054c:0df2 no barramento do cabo porque foi feito para se "
+            "passar por aparelho, mas do outro lado dele não há motor nenhum: o efeito\n"
+            "seria aceito em silêncio e a medição sairia falsa. O controle FÍSICO deste "
+            "jogador está noutro nó — use --listar e mire nos de `mirar? SIM`."
         )
     if not achado["dualsense_fisico"]:
         raise SystemExit(

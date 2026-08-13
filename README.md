@@ -10,7 +10,7 @@
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Versão](https://img.shields.io/badge/vers%C3%A3o-0.9.4%20alfa-6a3fb4.svg)](CHANGELOG.md)
-[![Testes](https://img.shields.io/badge/testes-mais%20de%205000-brightgreen.svg)](tests/)
+[![Testes](https://img.shields.io/badge/testes-mais%20de%207000-brightgreen.svg)](tests/)
 [![CI](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml)
 
 </div>
@@ -338,13 +338,15 @@ identidades e níveis de prova em
 aberta.** Ela mantém uma via de escrita para cada DualSense e **repinta a barra
 de todos eles a cada conexão nova**; se o controle sobe nessa janela, a barra
 costuma nascer apagada e a sua cor não fica — e clicar em "Aplicar no controle"
-de novo não resolve, porque por rádio a cor sai pelo caminho que perde essa
-disputa. **GRAU: MEDIDO** em 12/08/2026, com três controles: com a Steam viva no
+de novo não resolve, porque a disputa é na **conexão** e não no clique.
+**GRAU: MEDIDO** em 12/08/2026, com três controles: com a Steam viva no
 momento da conexão, **um em três** aceitou a cor; com ninguém disputando antes
-de conectar, **três em três**. No **cabo** o problema não aparece. O contorno de
-hoje é ligar os controles **antes** de abrir a Steam; a cura está desenhada e
-medida, e ainda não chegou ao produto instalado. Detalhe, contornos e a medição
-no fio em
+de conectar, **três em três**. No **cabo** o problema não aparece. **A culpa
+não é da rota:** na mesma noite, sem escritor concorrente, os dois caminhos de
+escrita pintaram os controles do rádio, e a cor ficou de pé **136 s** sem
+ninguém reforçar nada. O contorno de hoje é ligar os controles **antes** de
+abrir a Steam; a cura **entrou no produto**, e o que falta é vê-la vencer a
+disputa no aparelho. Detalhe, contornos e a medição no fio em
 [docs/usage/troubleshooting.md](docs/usage/troubleshooting.md#20-a-barra-de-luz-não-pega-a-cor-por-bluetooth).
 
 **A validação em hardware é de uma máquina só.** Pop!\_OS 24.04 com COSMIC é o

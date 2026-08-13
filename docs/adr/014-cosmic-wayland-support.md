@@ -185,3 +185,38 @@ Para leitura pontual (CLI, `doctor`), `window_detect.get_active_window_info()`
 mantém a assinatura do antigo `xlib_window.get_active_window_info`.
 
 O resto da ADR não foi reconferido nesta passagem — a nota cobre só a lápide.
+
+---
+
+## Nota de verificação — 2026-08-12 (PROCESSO-CEGO-01)
+
+Conferidos contra o código o item 1 da Camada 1, a Camada 2.1 e a frase "API
+legada preservada". Um achado que a ADR não dizia, e que custou caro:
+
+**"O mesmo dict" NÃO é o mesmo conteúdo.** A ADR promete que os backends
+devolvem `wm_class`/`wm_name`/`pid`/`exe_basename` — e devolvem, com as MESMAS
+chaves. Só que `exe_basename` chega **sempre vazio** fora do `xlib`:
+
+| Backend | `exe_basename` | Onde, no fonte |
+|---|---|---|
+| `xlib` | resolvido | `window_backends/xlib.py`, `_exe_basename_from_pid` → `os.readlink("/proc/<pid>/exe")` |
+| `portal` | `""` literal | `window_backends/wayland_portal.py`, `_parse_portal_result` — **mesmo tendo o `pid`** do portal em mãos |
+| `wlrctl` | `""` literal | `window_backends/wlr_toplevel.py`, fim de `get_active_window_info` (o `wlrctl` não devolve pid) |
+| `null` | não devolve janela | `window_backends/null.py` |
+
+Isso importa porque `MatchCriteria.matches` é um **E** entre os campos
+preenchidos e "alvo vazio nunca casa": um perfil com `process_name` num backend
+de Wayland **não entra nunca**, e leva junto a `window_class` que casaria
+sozinha. Foi a causa medida de cinco perfis de gênero da mantenedora jamais
+ativarem em 30 dias de journal (PERFIL-MUDO-01, 10/08/2026) — o mesmo defeito
+que o ADR-007 recomendava como *workaround* de Wayland (ver a correção lá).
+
+O fato virou código verificável em
+`integrations/window_detect.backend_ve_nome_do_processo`, com
+`BACKENDS_QUE_VEEM_O_PROCESSO`/`BACKENDS_CEGOS_AO_PROCESSO` ao lado; o teste
+`tests/unit/test_o_nome_do_processo_que_nao_casa.py` confere a tabela contra o
+que cada backend REALMENTE devolve, para ela não envelhecer em silêncio.
+
+Nada mais desta ADR foi contrariado pelo código nesta passagem: a factory de
+`window_detect.py` decide pelos quatro ramos de ambiente descritos, e a cascata
+`portal → wlrctl → null` está onde a Camada 2.1 diz.

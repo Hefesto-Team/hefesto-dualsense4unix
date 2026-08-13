@@ -600,6 +600,83 @@ def texto_da_marca_do_steam_input(
     )
 
 
+#: PROCESSO-CEGO-01: como cada backend cego se chama NA TELA. O nome interno
+#: ("portal", "wlrctl") não diz nada a quem lê a aba, e um aviso que nomeia um
+#: componente que ela não tem como identificar é ruído com aparência de ajuda.
+_BACKEND_NA_TELA = {
+    "portal": "pelo portal do sistema (Wayland)",
+    "wlrctl": "pelo wlrctl (Wayland)",
+}
+
+
+def texto_do_processo_que_nao_casa(state: dict[str, Any] | None) -> str | None:
+    """O aviso de que o campo ``process_name`` NÃO casa neste ambiente.
+
+    ``None`` = ele casa, ou não se sabe — e nos dois casos a linha não aparece.
+
+    **O defeito**, medido no journal da máquina dela em 30 dias
+    (PERFIL-MUDO-01, 10/08/2026): os cinco perfis de gênero dela (``FPS``,
+    ``Ação``, ``Aventura``, ``Corrida``, ``Esportes``) trazem título **e**
+    ``process_name``, e **nunca apareceram, nenhuma vez**. A causa não é o
+    critério estar errado: é que em Wayland puro os dois backends devolvem
+    ``exe_basename=""`` por construção, e `MatchCriteria` é um **E** entre os
+    campos preenchidos — um campo que não casa derruba o perfil inteiro,
+    inclusive a ``window_class`` que casaria sozinha.
+
+    A aba "No jogo" já conta isso **depois** (``profiles.porque_nao_entrou``,
+    quando o jogo já abriu sem o perfil). Falta contar **antes**, na tela em
+    que alguém digita o campo — que é aqui.
+
+    **QUEM DECIDE SE O BACKEND É CEGO NÃO É ESTA FUNÇÃO** — é
+    ``integrations.window_detect.backend_ve_nome_do_processo``, que mora ao lado
+    dos backends que produzem o fato. Dois critérios para a mesma pergunta
+    divergem na primeira mudança, e esta casa já pagou por isso; aqui só se
+    escolhe a frase.
+
+    A ordem das perguntas, no molde de ``texto_do_alcance_da_intensidade``:
+
+    1. **O dado veio?** ``state`` que não é dicionário, ou
+       ``window_detect_backend`` ausente/desconhecido: silêncio. Afirmar "não
+       casa" com o campo ausente seria inventar um defeito — e daemon mais
+       velho que o código é rotina nesta casa;
+    2. **O backend vê o processo?** Então nada a dizer;
+    3. **É o ``null``?** Aí não é o ``process_name`` que está sozinho no
+       problema: o detector não está lendo janela nenhuma, e **nenhum** dos
+       três campos casa. Dizer só do ``process_name`` mandaria trocar de campo
+       para cair no mesmo silêncio;
+    4. **Sobrou** o Wayland puro: o campo não casa e os outros dois casam.
+
+    A frase **não manda apagar nada** e não chama a configuração dela de
+    errada, pelo mesmo motivo do `porque_nao_entrou`: quem escreveu o critério
+    foi ela, *"a vontade da GUI prevalece"*. Ela diz o que o campo faz aqui e
+    quais campos funcionam — a decisão continua sendo dela.
+    """
+    from hefesto_dualsense4unix.integrations.window_detect import (
+        backend_ve_nome_do_processo,
+    )
+
+    if not isinstance(state, dict):
+        return None
+    backend = state.get("window_detect_backend")
+    ve = backend_ve_nome_do_processo(backend if isinstance(backend, str) else None)
+    if ve is not False:
+        return None
+    if backend == "null":
+        return (
+            "O Hefesto não está enxergando janela nenhuma nesta sessão: nenhum "
+            "dos três campos casa, e nenhum perfil entra sozinho — inclusive "
+            "por “process_name”. Ative este perfil pelo botão Ativar."
+        )
+    onde = _BACKEND_NA_TELA.get(str(backend), "por um backend de Wayland")
+    return (
+        f"O campo “process_name” não casa aqui: o Hefesto lê a janela {onde}, "
+        "e esse caminho não entrega o nome do executável. Como os campos "
+        "preenchidos são um E, preencher este faz o perfil não entrar nunca — "
+        "nem com o “window_class” certo. “window_class” e “title_regex” casam "
+        "normalmente nesta sessão."
+    )
+
+
 #: R-10: respostas do diálogo de rename (ids positivos não colidem com os
 #: `Gtk.ResponseType` nativos, que são negativos — mesmo padrão do
 #: `launch_wrapper_dialog`).
@@ -879,6 +956,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         finally:
             self._suppress_advanced_toggle = False
         self._apply_editor_mode()
+        # PROCESSO-CEGO-01: com a preferência do avançado já LIGADA em disco, o
+        # handler do switch nunca roda (o `set_active` acima é programático e o
+        # guard o descarta) — sem esta linha o aviso só apareceria se ela
+        # desligasse e religasse o switch, que é justamente o gesto que quem já
+        # usa o avançado não faz.
+        if self._mode_advanced:
+            self._atualizar_aviso_do_processo()
 
         self._profiles_cache = []
         # PERFIL-ATUAL-01: a lista já nasce sabendo qual perfil é o DELA. Sem
@@ -1307,9 +1391,59 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._mode_advanced = state
         if state:
             self._mostrar_a_regra_nos_campos_crus()
+            # PROCESSO-CEGO-01: a página avançada é a única porta para o campo
+            # `process_name`, então é ao abri-la que a pergunta "ele casa aqui?"
+            # tem de ser refeita — o backend da cascata Wayland MIGRA em runtime
+            # (portal → wlrctl → null), e uma resposta do boot da janela pode
+            # estar velha quando ela finalmente liga o avançado.
+            self._atualizar_aviso_do_processo()
         self._apply_editor_mode()
         set_pref("advanced_editor", state)
         return False  # retorno False = deixa o GTK atualizar o estado visual
+
+    def _atualizar_aviso_do_processo(self) -> None:
+        """Mostra/esconde o aviso de que ``process_name`` não casa (PROCESSO-CEGO-01).
+
+        Best-effort e assíncrono, no mesmo molde do `_prefill_steam_appid`:
+        daemon desligado é **silêncio**, não alarme. A decisão da frase é da
+        função pura `texto_do_processo_que_nao_casa`; aqui só a costura.
+
+        Escondido quando ela devolve ``None`` — e isso cobre dois casos que a
+        tela não pode confundir: "o campo casa" e "não sei se casa". Nos dois,
+        uma linha de alerta seria pior que nenhuma.
+        """
+        aviso = self._get("profile_process_name_aviso")
+        if aviso is None:
+            return
+
+        def _on_state(result: Any) -> bool:
+            try:
+                texto = texto_do_processo_que_nao_casa(
+                    result if isinstance(result, dict) else None
+                )
+                alvo = self._get("profile_process_name_aviso")
+                if alvo is None:
+                    return False
+                if texto is None:
+                    alvo.set_visible(False)
+                else:
+                    # As frases da função não levam `<`, `&` nem aspas retas —
+                    # as aspas são as tipográficas “ ”, que o Pango passa
+                    # inteiras. Mesma costura do `rumble_policy_aviso`, e
+                    # `#ffb86c` é o token de ALERTA da casa.
+                    alvo.set_markup(f'<span foreground="#ffb86c">{texto}</span>')
+                    alvo.set_visible(True)
+            except Exception as exc:
+                logger.debug("aviso_do_processo_falhou", err=str(exc))
+            return False
+
+        call_async(
+            method="daemon.state_full",
+            params=None,
+            on_success=_on_state,
+            on_failure=lambda _exc: False,
+            timeout_s=0.5,
+        )
 
     def _on_aplica_a_changed(self, combo: Any) -> None:
         """Mostra o campo livre nas escolhas que exigem alvo ("game"/"steam_game").

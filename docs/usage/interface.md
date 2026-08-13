@@ -143,6 +143,19 @@ os demais), um **efeito pronto** com a intensidade, **Aplicar** e **Desligar**.
 Referência dos modos e dos parâmetros brutos em
 [`../protocol/trigger-modes.md`](../protocol/trigger-modes.md).
 
+> **Isto foi conferido no aparelho em 12/08/2026** — grau *o aparelho obedeceu*,
+> com quatro DualSense na mesa, dois no cabo e dois no rádio, e o olho dela em
+> cada um. Um `Rigid` aplicado **só no L2** deixou o L2 duro nos quatro,
+> **inclusive nos do Bluetooth**, com o R2 solto nos quatro — o R2 intocado é o
+> que separa *"obedeceu"* de *"achei que estava diferente"*. Aplicando **só num
+> controle**, só ele endureceu. Ensaios `gatilho-esq-radio-1216`,
+> `gatilho-esq-cabo-1216` e `gatilho-dir-radio-isolado-2221`
+> ([`../data/ensaios.csv`](../data/ensaios.csv), linhas 63-64 e 67).
+>
+> **O que ainda não foi medido:** só o modo **Rigid** foi exercitado no plástico,
+> com um jogo de parâmetros. Os outros dezoito modos estão lidos no protocolo,
+> não sentidos no dedo.
+
 ## Lightbar
 
 ![Aba Lightbar](assets/readme_lightbar.png)
@@ -165,6 +178,15 @@ do console.
 > Ligar os controles **antes** de abrir a Steam foi o gesto que funcionou nos
 > três de três. O caminho inteiro, com o que fazer e o que não adianta, está em
 > [Solução de problemas, seção 20](troubleshooting.md#20-a-barra-de-luz-não-pega-a-cor-por-bluetooth).
+>
+> **Duas coisas que a bancada da noite de 12/08 mediu e que mudam o que esperar
+> desta aba** — grau *o aparelho obedeceu*, ensaios `lightbar-cabo-isolado-2229`
+> e `cor-rota-hidraw-sem-steam-2235`
+> ([`../data/ensaios.csv`](../data/ensaios.csv), linhas 70-71): **Aplicar no
+> controle mira um controle só de verdade** (com quatro na mesa, o verde pintou
+> só o escolhido e os outros três ficaram com a cor de antes), e **a cor não
+> precisa ser reforçada** — ela ficou de pé **136 s** sem ninguém reescrever
+> nada. Barra apagada não é o controle esquecendo; é alguém mandando apagar.
 
 ## Rumble
 
@@ -206,6 +228,16 @@ você fixa em "Testar motores".
 > vibração dos jogos **morria logo no começo** até 11/08/2026. A causa foi
 > medida e corrigida; o relato e como confirmar estão em
 > [Solução de problemas, seção 19](troubleshooting.md#19-a-vibração-do-jogo-dura-um-instante-e-morre).
+>
+> **A cura foi conferida no aparelho em 12/08/2026, com o serviço ligado** —
+> grau *o aparelho obedeceu*: **8,26 s** contínuos num controle do cabo e
+> **8,28 s** no cabo e no rádio disparados juntos, numa janela de 8 s pedida.
+> Foi a **primeira** vez que a vibração por rádio durou a janela inteira com o
+> serviço vivo. E com os **quatro** controles vibrando ao mesmo tempo, em duas
+> rodadas, a duração ficou **igual** — o que em 11/08 saía *"por duração
+> diferente"*. Ensaios `rumble-ff-cura-cabo-so`, `rumble-ff-cura-cabo-par`,
+> `rumble-ff-cura-radio-par` e `rumble-quatro-duracao-igual-r1`/`-r2`
+> ([`../data/ensaios.csv`](../data/ensaios.csv), linhas 59-61 e 68-69).
 
 Abaixo, o teste dos motores: vibração leve, vibração forte, **Testar por 500 ms**.
 **Parar** trava o controle em silêncio — inclusive no jogo; **Deixar o jogo

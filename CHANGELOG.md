@@ -5,6 +5,123 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### A bancada de 12/08 à noite: quatro controles na mesa, e o que passou a estar PROVADO
+
+Quatro DualSense — **dois no cabo e dois no rádio** —, com o olho dela em cada
+leitura. É a bancada que converte as curas da véspera de *"montou"* para **o
+aparelho obedeceu**, que é a única afirmação que esta casa aceita como forte.
+
+| o que foi medido | o que o aparelho respondeu |
+|---|---|
+| Vibração que o jogo manda, **serviço vivo**, cabo e rádio | **contínua**: 8,26 s num controle do cabo e 8,28 s no cabo e no rádio disparados juntos, numa janela de 8 s. **Primeira vez** que o rádio dura a janela inteira — em 11/08 dava um tranco e morria |
+| Os **quatro** vibrando sob carga, duas rodadas | **duração igual** nas duas. Em 11/08, com o keepalive perpétuo, saía *"por duração diferente"* |
+| Gatilho `Rigid` só no L2, nos quatro | **L2 duro nos quatro**, cabo e rádio, com o R2 solto como controle negativo |
+| Gatilho só no R2 de **um** controle do rádio, mirado por MAC | **só o mirado endureceu** — o endereçamento por MAC é respeitado no Bluetooth |
+| Cor mirada por MAC num controle do cabo | **só ele ficou verde**; os outros três com a cor de antes |
+| Cor por report cru, **sem serviço e sem Steam** | pintou os dois do rádio **e durou 136 s** sem reforço nenhum |
+| Cor pelo caminho do sistema, mesmas condições | **também obedece** — a rota não é morta; o que a derruba é a disputa na conexão |
+| Numeração de jogador quando um controle cai | **renumera** os que ficam (P4 → P3) e **devolve** o número quando ele volta |
+
+**A hipótese grande da véspera não se confirmou, e isso vale mais que uma cura.**
+Estava escrito que a rota `hidraw` suprimida por Bluetooth seria a causa-raiz
+compartilhada de rumble, gatilho e luz. **É falso:** a supressão limpa **só** os
+bits de LED — rumble e gatilho **sempre** saíram por `hidraw` no rádio, e a
+bancada provou isso ao vê-los funcionar lá. A hipótese vale para a **lightbar** e
+o **número de jogador**, e só.
+
+O caderno de ensaios saiu de 57 para **77** linhas, e o mapa de canais passou a
+ter **15** células no grau mais forte — nenhuma delas sem ensaio que a sustente.
+
+### Os instrumentos de medir estavam mentindo — cinco curas, e nenhuma no produto
+
+Não se conserta um produto com uma régua torta. Estas cinco não mudam uma linha
+do que roda na máquina dela; mudam o que a casa é capaz de **saber**.
+
+**A guarda da árvore congelada confundia bytecode com produto.** A
+`ARVORE-CONGELADA-01` fotografa a árvore no início da sessão e acusa mudança no
+fim. Medido em 12/08: cinco testes verdes e o `pytest` **saindo com código 1**,
+acusando o `APAGADO` de um `.pyc` que o próprio teste tinha acabado de criar
+dentro da cópia congelada — ele importa um script de lá por `importlib`, e o
+CPython escreve o bytecode ao lado do fonte. O job `lint-test` do CI estava
+nesse estado **desde 11/08**, e *"a suíte passou"* tinha deixado de ser
+verificável nesta casa. A cura é a **simetria**: o filtro que a foto usa passa a
+valer também na comparação. Nada de desligar a guarda — e há um caso que passa
+nos dois estados, de propósito, para impedir que a cura vire isso.
+
+**A bancada não abria desde a migração v2.** `bancada.py` estourava `KeyError`
+em `grau` e `ressalva` — colunas que a versão 2 do mapa renomeou por transporte
+(`cabo_grau`/`radio_grau`). O painel de bancada existia e ninguém conseguia
+olhar por ele.
+
+**O `--check` do mapa de canais dava verde falso.** Ele comparava **mtime**, e
+mtime num runner é ordem de checkout, não histórico de edição: o `specs.html`
+(raiz) nasce sempre *"mais novo"* que `docs/` e `scripts/`, então o passo passava
+**sempre**, qualquer que fosse o conteúdo. Agora regenera a página em memória e
+compara o **conteúdo** — morde igual no runner e na máquina de quem edita.
+
+**Grau forte sem ensaio passa a reprovar.** Medido por mutação numa cópia da
+árvore: um agente escreveu a afirmação mais forte do vocabulário da casa
+(`O APARELHO OBEDECEU`, `provado_por = olho-dela`, data de hoje) numa linha com
+**zero** ensaios no caderno, e o portão devolveu exatamente o mesmo número de
+reprovações de antes. A mentira passava inteira, porque o portão não mencionava o
+caderno uma única vez. Agora exige ensaio — e o caso simétrico (grau forte **com**
+ensaio passa) impede a regra de virar *"grau é proibido"*.
+
+**Os ensaios recusam o vpad do próprio produto — `VPAD-NO-ESPELHO-01`.** A
+pergunta *"este nó é um gamepad virtual do Hefesto?"* estava escrita **três
+vezes**, uma por instrumento, e respondia coisas diferentes: um aceitava mirar
+nos quatro vpads do co-op rotulados como `cabo` — defeito medido na mesa —, e os
+outros dois acertavam **por acidente**, imunes só porque filtram PID. Como o
+DualSense Edge **existe de verdade**, acrescentar o PID dele à lista é uma coisa
+razoável de se querer fazer, e no dia em que alguém fizesse os três estariam
+medindo o espelho. Agora a régua é uma só, em `scripts/identidade_do_vpad.py`.
+
+### Portões: quem guarda os guardas
+
+**Os portões que o `CLAUDE.md` manda rodar continuam ligados no CI**, e agora
+isso é verificado. Medido em 12/08: um único teste da suíte inteira abria o
+`ci.yml`, e ele só olhava os dois comandos do mapa. O job `packaging-parity`
+podia ser apagado — ou ganhar `continue-on-error` — e **nada** reprovaria; ele é
+justamente o portão que cobra *"a cura chegou ao instalador"*. O guarda do
+instalador não tinha guarda. A lista é **derivada** do próprio `CLAUDE.md`, nunca
+digitada: portão novo entra sozinho, no mesmo commit.
+
+**Artefato de sistema sem dono passa a reprovar no portão de paridade.** Das
+dezessete seções daquele portão, só duas eram genéricas; as treze unidades
+`systemd` de `assets/` não tinham laço nenhum. Uma unit nova entrava na árvore e
+instalador nenhum era cobrado por ela.
+
+**As funções `*_host` do instalador alcançam os dois lados do `exit 0`** — o
+buraco em que uma cura escrita depois da saída antecipada nunca chegava a rodar.
+
+**`A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01`: promessa sem caminho.** É o defeito mais
+caro desta casa — a cura escrita e nunca ligada — e agora tem portão próprio, em
+`tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`. Ele mora **fora** da
+varredura padrão do `pytest` (sem o prefixo `test_`) por causa do custo, e roda
+no job `promessa-sem-caminho` do CI.
+
+### Produto: a rota do rádio em regime, o LED do mudo e as métricas ao desligar
+
+**`ROTA-BT-EM-REGIME-01` — por rádio, cor e número de jogador saem TAMBÉM pelo
+report `0x31`.** Até aqui o rádio tinha **uma** rota só, a do sistema, e é
+justamente a que perde a disputa com a Steam na conexão. A bancada mediu as duas
+rotas sem escritor concorrente e as **duas** obedecem; com a Steam viva, só a
+crua pinta. São **duas** luzes, e a Steam repinta as duas — por isso a cor e o
+número saem no mesmo report.
+
+**`AUDIO-OWNER-01`, o terceiro campo: o LED do mudo que o produto apagava.** O
+`common[8]` é o LED do botão de microfone, e o kernel o escreve **uma vez**, na
+borda do botão, junto com o mudo de verdade no firmware. Nós autorizávamos o
+mesmo byte em **todo** report, escrevendo um valor que ninguém tinha definido: ela
+apertava o mudo, o kernel acendia a luz e mutava o microfone, e o report seguinte
+**apagava a luz sem desmutar**. O microfone seguia mudo com a luz apagada — o
+produto mentia sobre o estado do microfone dela. A cura é posse por byte: sem
+dono, o bit sai apagado e o byte fica inerte. Este registrador não tem caminho de
+leitura, então **não escrever é o único write não-destrutivo**.
+
+**As métricas passam a ser encerradas no desligamento** — o `_stop_metrics`
+existia e não era chamado no caminho de shutdown.
+
 ### O daemon varria a tabela de processos inteira, duas vezes por segundo
 
 Caçando stuttering em jogos, o `strace -c -f` no daemon vivo devolveu um número

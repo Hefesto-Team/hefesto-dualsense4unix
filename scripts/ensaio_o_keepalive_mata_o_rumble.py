@@ -52,6 +52,10 @@ import os
 import re
 import sys
 import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import identidade_do_vpad  # a régua única do vpad (VPAD-NO-ESPELHO-01)
 
 BIBLIOTECA = "python-evdev (EV_FF) + hidraw cru"
 MONTAGEM = "_build_common do produto + ds_output_report.build_{usb,bt}_report"
@@ -65,6 +69,11 @@ PADRAO_DO_JOGADOR = {
 }
 TRANSPORTE_POR_BARRAMENTO = {"0003": "cabo", "0005": "radio"}
 DUALSENSE = (0x054C, 0x0CE6)
+
+#: Onde este instrumento enumera os devices HID. É parâmetro só para o teste
+#: poder montar uma mesa de mentira em `tmp_path` — a medição de verdade não
+#: tem por que apontar para outro lugar.
+RAIZ_SYSFS_HID = "/sys/bus/hid/devices"
 
 
 def _ler(caminho: str) -> str:
@@ -83,16 +92,29 @@ def _padrao(dir_hid: str) -> str:
     return PADRAO_DO_JOGADOR.get(desenho, desenho)
 
 
-def inventario() -> list[dict[str, str]]:
-    """Casa jogador -> (nó hidraw, nó evdev, transporte), pelo mesmo device HID."""
+def inventario(raiz: str = RAIZ_SYSFS_HID) -> list[dict[str, str]]:
+    """Casa jogador -> (nó hidraw, nó evdev, transporte), pelo mesmo device HID.
+
+    VPAD-NO-ESPELHO-01 (12/08/2026): o vpad do PRÓPRIO produto é recusado
+    explicitamente, por `identidade_do_vpad`. Hoje ele já não entrava, mas por
+    acidente e não por régua: o `DUALSENSE` daqui só aceita `0CE6`, e o vpad se
+    apresenta como `0DF2` (DualSense Edge). O Edge REAL existe, e acrescentar o
+    PID dele é uma coisa razoável de se querer fazer — no dia em que alguém
+    fizer, sem esta linha o inventário passaria a listar os vpads como se
+    fossem aparelho, e o ensaio mediria um motor que não existe.
+    """
     achados: list[dict[str, str]] = []
-    for dir_hid in sorted(glob.glob("/sys/bus/hid/devices/*")):
+    for dir_hid in sorted(glob.glob(os.path.join(raiz, "*"))):
         uevent = _ler(os.path.join(dir_hid, "uevent"))
         casado = re.search(r"HID_ID=(\w+):(\w+):(\w+)", uevent)
         if not casado:
             continue
         barramento, vid, pid = casado.groups()
         if (int(vid, 16), int(pid, 16)) != DUALSENSE:
+            continue
+        if identidade_do_vpad.e_vpad_do_hefesto(
+            identidade_do_vpad.campos_do_uevent(uevent)
+        ):
             continue
         hidraws = os.listdir(os.path.join(dir_hid, "hidraw")) if os.path.isdir(
             os.path.join(dir_hid, "hidraw")

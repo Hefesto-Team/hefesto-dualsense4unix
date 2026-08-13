@@ -1012,6 +1012,392 @@ else
     fi
 fi
 
+# ---------------------------------------------------------------------------
+# A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01 / ARTEFATO SEM DONO (12/08/2026)
+#
+# MEDIDO antes desta seção existir: das dezessete seções deste portão, só DUAS
+# são genéricas — o laço das regras udev (:266) e o das confs de modprobe
+# (:464). As outras quinze são blocos escritos à mão, um por cura já paga. A
+# consequência é o furo que esta seção fecha: as TREZE unidades systemd de
+# `assets/` e `assets/systemd/` não tinham laço nenhum — só o broker era citado,
+# à mão, em duas linhas (:647 e :684). Uma unit nova entrava na árvore e
+# instalador nenhum era cobrado por ela. Mesmo furo em `assets/wireplumber/`,
+# `assets/NetworkManager/`, `assets/bluetooth/` e `assets/appimage/`.
+#
+# A ÂNCORA É O ARTEFATO, e aqui isso é o certo (ao contrário da seção do teclado
+# na tela, onde a âncora tem de ser a promessa): o arquivo versionado em
+# `assets/` É a promessa — o produto promete pôr isto na máquina dela. Se ele
+# sair da árvore, não há promessa, e o silêncio é justo.
+#
+# O QUE CONTA COMO ARTEFATO DE SISTEMA, e a régua para quem acrescentar um tipo
+# novo amanhã: é artefato de sistema o arquivo que o produto INSTALA num lugar
+# do sistema ou da sessão dela e que um programa de fora do Hefesto lê —
+# `.rules` (udev), `.service .timer .path .socket` (systemd), `.conf` (modprobe,
+# wireplumber, NetworkManager, BlueZ, DKMS), `.desktop` (lançador) e `.policy`
+# (polkit). NÃO são: `.svg`/`.png` (arte — o portão de ícones acima já os cobra
+# pelo NOME que cada formato instala), `.patch`/`.c`/`.h`/`Makefile`/`BASELINE`
+# (fonte de DKMS, que chega pela cópia do diretório e é cobrada pelos três
+# blocos de DKMS), os `.json` de `assets/profiles_default/` (dado que viaja
+# dentro do pacote, sem lugar no sistema) e os `.sh` (código executável: o dono
+# de um `.sh` é quem o CHAMA — unit, install ou outro script —, pergunta
+# diferente da desta seção, e misturar as duas daria uma resposta fraca às duas).
+#
+# O ALCANCE CONTA TRÊS CAMINHOS, porque MEDIDO: contar só o nome no `install.sh`
+# produziria ruído garantido — `assets/wireplumber/5{1,2,3}-*.conf` quem instala
+# é `scripts/fix_wireplumber_default_source.sh` (chamado em install.sh:1139 e
+# :1143), e as fontes de `assets/dkms/*/` chegam por cópia de DIRETÓRIO.
+#
+# E A REMOÇÃO NÃO É COBRADA AQUI, contra o primeiro desenho desta seção: cobrar
+# `uninstall.sh` pelo NOME do asset dá DOIS falsos, medidos —
+# `bluetooth-dropin-10-hefesto-resilience.conf` é removido pelo nome de DESTINO
+# (`/etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf`,
+# uninstall.sh:675) e o `proton-pin.conf` é desfeito pelo `proton_pin.py
+# --unlock` (uninstall.sh:1367), que não cita arquivo nenhum. O nome no disco
+# dela não é o nome no repositório, e um portão que finge o contrário reprova
+# quem está certo. A remoção continua cobrada por família, onde o nome de
+# destino é conhecido (udev, modprobe, DKMS, broker, BlueZ, teclado na tela).
+# O CHECKOUT TEM DE TER UM INSTALADOR para ser julgado por esta régua. Mesmo
+# critério de "gateado pelo asset" das seções acima (:246, :647, :712), do lado
+# do dono em vez do lado do artefato: os repositórios sintéticos dos testes deste
+# próprio portão trazem só `assets/` e `scripts/`, e cobrar deles a instalação de
+# um asset de mentira seria o portão acusando o instrumento, não o produto.
+echo "== artefato de sistema sem dono (assets/ × os caminhos de instalação) =="
+if [[ ! -f install.sh ]]; then
+    echo "[ OK ] artefatos de sistema: sem install.sh neste checkout — nada a checar"
+else
+    #: Os arquivos de produção que podem SER dono. Qualquer UM basta: a pergunta
+    #: desta seção é "alguém instala isto?", não "todo formato instala isto?" —
+    #: essa é a pergunta das seções de paridade, e cada família que a merece já tem
+    #: a sua. Aqui é o piso: artefato que NINGUÉM instala.
+    _dono_arquivos=()
+    for _dono_cand in install.sh \
+                      scripts/install_udev.sh scripts/install-host-udev.sh \
+                      scripts/build_deb.sh \
+                      scripts/build_appimage.sh scripts/build_appimage_gui.sh \
+                      packaging/arch/PKGBUILD \
+                      packaging/fedora/hefesto-dualsense4unix.spec \
+                      packaging/nix/package.nix \
+                      flatpak/*.yml; do
+        [[ -f "${_dono_cand}" ]] && _dono_arquivos+=("${_dono_cand}")
+    done
+
+    # Só linha de CÓDIGO conta. É a mesma armadilha do bloco do BlueZ (:812) e do
+    # teclado na tela (:892): um comentário — ou a prosa de um `Description:` —
+    # citando o arquivo satisfaria um grep ingênuo, e o portão viraria decoração
+    # exatamente no dia em que a instalação fosse arrancada e o comentário ficasse.
+    _dono_codigo=""
+    if [[ "${#_dono_arquivos[@]}" -gt 0 ]]; then
+        _dono_codigo="$(grep -hv '^[[:space:]]*#' "${_dono_arquivos[@]}" 2>/dev/null || true)"
+    fi
+
+    # Caminho 3, montado antes do laço: helper de `scripts/` que algum dono CHAMA.
+    # Uma indireção só — é a que o produto usa (install.sh -> helper -> asset), e
+    # duas já seriam alcance por parentesco distante, que não instala nada.
+    _helper_codigo=""
+    while IFS= read -r _helper; do
+        [[ -f "${_helper}" ]] || continue
+        grep -qF -- "$(basename "${_helper}")" <<<"${_dono_codigo}" || continue
+        _helper_codigo+="$(grep -v '^[[:space:]]*#' "${_helper}" 2>/dev/null || true)"$'\n'
+    done < <(find scripts -maxdepth 1 -name '*.sh' -type f 2>/dev/null | sort)
+
+    # Caminho 2 — cópia de DIRETÓRIO e GLOB, resolvidos de verdade contra o disco.
+    # Não basta procurar o nome do diretório: `assets/` aparece no install como raiz
+    # (install.sh:193) e `assets/systemd/${_btres_u}` aparece com o nome vindo de uma
+    # variável — os dois casariam um `grep` de prefixo e dariam alcance de graça a
+    # TODO arquivo daquele diretório, que é o vácuo que esta seção não pode ter.
+    # Então: as expansões de variável são apagadas (o token que sobra terminado em
+    # `/` é DESCARTADO, porque o que dizia qual arquivo era a variável), e o que
+    # resta é resolvido como caminho — diretório existente cobre o que está sob ele,
+    # e glob cobre o que ele casa.
+    #
+    # A ASPA É APAGADA, não trocada por espaço, e isto foi MEDIDO: o install escreve
+    # o glob das regras como `"${ROOT_DIR}/assets/"[0-9][0-9]-*.rules` (:1329), com a
+    # aspa NO MEIO do caminho. Trocá-la por espaço partia o token em `assets/` (que o
+    # descarte acima come, e ainda bem) mais um resto sem prefixo — e o laço por glob
+    # não cobria nada, silenciosamente.
+    _cobertos=""
+    _dono_tokens="$(printf '%s\n%s\n' "${_dono_codigo}" "${_helper_codigo}" \
+        | sed -e 's/\${[^}]*}/ /g' -e 's/\$[A-Za-z_][A-Za-z0-9_]*/ /g' -e "s/[\"']//g" \
+        | grep -oE 'assets/[]A-Za-z0-9_./*?[-]*' \
+        | sort -u || true)"
+    while IFS= read -r _tok; do
+        [[ -n "${_tok}" ]] || continue
+        [[ "${_tok}" == */ ]] && continue
+        if [[ -d "${_tok}" ]]; then
+            _cobertos+="$(find "${_tok}" -type f 2>/dev/null || true)"$'\n'
+            continue
+        fi
+        # Glob resolvido pelo shell, em subshell para não vazar o `nullglob`.
+        # O `${_tok}` SEM aspas é o mecanismo, não descuido: é a expansão do
+        # glob que responde "quais arquivos este laço do install cobre?". Com
+        # aspas, `assets/systemd/*.service` viraria um nome literal, casaria
+        # zero, e o caminho 2 do alcance calaria inteiro — o portão passaria a
+        # acusar quem está instalado por laço.
+        # shellcheck disable=SC2086
+        _cobertos+="$(shopt -s nullglob; printf '%s\n' ${_tok})"$'\n'
+    done <<<"${_dono_tokens}"
+
+    #: A DÍVIDA DECLARADA — `arquivo:razão com data`. Molde de
+    #: `INSTALL_OPTIONAL_RULES` acima e de `_SEM_ESCRITOR_HOJE`
+    #: (tests/unit/test_perfil_salva_tudo_cobertura_das_secoes.py:129): declarar é
+    #: honesto, e este portão não castiga honestidade — só não deixa a lápide
+    #: envelhecer calada (a conferência está logo abaixo do laço, e uma entrada que
+    #: já ganhou dono REPROVA até alguém apagá-la).
+    #:
+    #: VAZIA em 12/08/2026, e não por sorte: os 46 artefatos de sistema desta árvore
+    #: têm dono, medidos um a um com a régua dos três caminhos. Esta seção não cobra
+    #: dívida velha — ela impede a próxima.
+    _ARTEFATO_SEM_DONO_HOJE=()
+
+    _art_orfaos=()
+    _art_contados=0
+    _art_delegados=0
+    while IFS= read -r _art; do
+        [[ -n "${_art}" ]] || continue
+        _art_nome="$(basename "${_art}")"
+
+        # Sem contar duas vezes: os dois laços GENÉRICOS que já existem neste
+        # arquivo cobrem estas duas famílias arquivo por arquivo, e com uma régua
+        # mais dura (paridade em TODO instalador, não "alguém instala"). Repeti-las
+        # aqui daria duas linhas de saída para o mesmo arquivo e — pior — dois
+        # veredictos diferentes sobre ele: a `75-*.rules` é opt-in por decisão
+        # registrada (INSTALL_OPTIONAL_RULES, :211) e aqui apareceria como coberta,
+        # o que ensinaria a ler o portão errado.
+        case "${_art}" in
+            assets/[0-9][0-9]-*.rules|assets/modprobe/*.conf|assets/modprobe.d/*.conf)
+                _art_delegados=$(( _art_delegados + 1 ))
+                continue
+                ;;
+        esac
+
+        _art_contados=$(( _art_contados + 1 ))
+        # 1) pelo nome, no código de algum dono.
+        grep -qF -- "${_art_nome}" <<<"${_dono_codigo}" && continue
+        # 2) por diretório copiado inteiro ou por glob resolvido acima.
+        grep -qxF -- "${_art}" <<<"${_cobertos}" && continue
+        # 3) por helper de `scripts/` que algum dono chama.
+        grep -qF -- "${_art_nome}" <<<"${_helper_codigo}" && continue
+        _art_orfaos+=("${_art}")
+    done < <(find assets -type f \
+        \( -name '*.rules' -o -name '*.service' -o -name '*.timer' -o -name '*.path' \
+           -o -name '*.socket' -o -name '*.conf' -o -name '*.desktop' -o -name '*.policy' \) \
+        2>/dev/null | sort)
+
+    # A lápide não envelhece calada: entrada declarada que já não vale REPROVA, para
+    # que a lista encolha sozinha quando alguém pagar a dívida ou apagar o resto.
+    _art_lacunas_mortas=()
+    for _art_lac in ${_ARTEFATO_SEM_DONO_HOJE[@]+"${_ARTEFATO_SEM_DONO_HOJE[@]}"}; do
+        _art_lac_arq="${_art_lac%%:*}"
+        if [[ ! -f "${_art_lac_arq}" ]]; then
+            [[ "${#_art_orfaos[@]}" -eq 0 && "${_art_contados}" -eq 0 ]] && continue
+            _art_lacunas_mortas+=("${_art_lac_arq} (não existe mais na árvore)")
+            continue
+        fi
+        _art_ainda_orfao=0
+        for _art_o in ${_art_orfaos[@]+"${_art_orfaos[@]}"}; do
+            [[ "${_art_o}" == "${_art_lac_arq}" ]] && _art_ainda_orfao=1
+        done
+        [[ "${_art_ainda_orfao}" -eq 1 ]] \
+            || _art_lacunas_mortas+=("${_art_lac_arq} (ganhou dono — a dívida foi paga)")
+    done
+
+    _art_restantes=()
+    for _art_o in ${_art_orfaos[@]+"${_art_orfaos[@]}"}; do
+        _art_declarado=0
+        for _art_lac in ${_ARTEFATO_SEM_DONO_HOJE[@]+"${_ARTEFATO_SEM_DONO_HOJE[@]}"}; do
+            [[ "${_art_o}" == "${_art_lac%%:*}" ]] && _art_declarado=1
+        done
+        [[ "${_art_declarado}" -eq 1 ]] || _art_restantes+=("${_art_o}")
+    done
+
+    if [[ "${#_art_restantes[@]}" -gt 0 ]]; then
+        for _art_o in "${_art_restantes[@]}"; do
+            echo "[FAIL] ${_art_o}: artefato de sistema que nenhum caminho de instalação alcança"
+        done
+        echo "       ESCREVA a instalação dele em UM caminho de produção: cite o arquivo"
+        echo "       em install.sh (ou no build_deb.sh/PKGBUILD/spec/package.nix/flatpak),"
+        echo "       copie o DIRETÓRIO que o contém, ou chame de lá o helper de scripts/"
+        echo "       que o instala. Se ele é resto de uma cura que outro caminho já"
+        echo "       substituiu, APAGUE o arquivo — artefato versionado que ninguém"
+        echo "       instala é promessa que a máquina dela nunca recebe."
+        echo "       Se ainda não é hora, declare em _ARTEFATO_SEM_DONO_HOJE deste"
+        echo "       script, com a data e o endereço de onde o caminho se perde."
+        rc=1
+    fi
+    if [[ "${#_art_lacunas_mortas[@]}" -gt 0 ]]; then
+        for _art_m in "${_art_lacunas_mortas[@]}"; do
+            echo "[FAIL] lacuna declarada que já não vale: ${_art_m}"
+        done
+        echo "       APAGUE a entrada de _ARTEFATO_SEM_DONO_HOJE. Lacuna que sobrevive"
+        echo "       ao próprio defeito vira paisagem, e a próxima pessoa lê a lista"
+        echo "       como se fosse a dívida de hoje."
+        rc=1
+    fi
+    if [[ "${#_art_restantes[@]}" -eq 0 && "${#_art_lacunas_mortas[@]}" -eq 0 ]]; then
+        echo "[ OK ] artefatos de sistema: ${_art_contados} com dono (+${_art_delegados} nos laços de udev/modprobe acima, ${#_ARTEFATO_SEM_DONO_HOJE[@]} lacuna(s) declarada(s))"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# IRMAO-SEM-CARONA-01 (12/08/2026) — a outra metade da seção acima
+#
+# A seção "artefato de sistema sem dono" recusa explicitamente os `.sh`, e com
+# razão declarada ali mesmo: *"o dono de um `.sh` é quem o CHAMA — unit, install
+# ou outro script —, pergunta diferente da desta seção"*. Esta é aquela outra
+# pergunta, e ela é o inverso da primeira: não "quem instala este arquivo?", mas
+# **"o que este arquivo instalado chama, e isso foi junto?"**.
+#
+# O DEFEITO QUE A FEZ EXISTIR, MEDIDO em 12/08/2026: `scripts/build_deb.sh:216`
+# leva cinco scripts para dentro do pacote — `doctor.sh`, `bluez_config.sh`,
+# `disable_steam_input.sh`, `fix_wireplumber_default_source.sh`, `dsx_recover.sh`
+# — e o `doctor.sh` chamava, em `apply_fixes`, um SEXTO que ninguém levou:
+# `sudo bash "${ROOT_DIR}/scripts/install_udev.sh"`. Como o `ROOT_DIR` do doctor
+# é derivado do lugar do próprio arquivo (`scripts/doctor.sh:60`), no layout do
+# .deb aquilo apontava para `/usr/share/hefesto-dualsense4unix/scripts/
+# install_udev.sh`, que não existe — e `hefesto-dualsense4unix doctor --fix`
+# (que ACHA o doctor no .deb, `cli/cmd_doctor.py:26`) respondia "falha ao
+# reaplicar udev" na máquina de quem instalou pelo pacote. O irmão certo para
+# aquele layout já viajava no mesmo pacote: `install-host-udev.sh`, cuja forma 3
+# no cabeçalho é literalmente "Direto de um .deb instalado".
+#
+# A ÂNCORA É A CHAMADA, não o arquivo: só é cobrado o script que algum
+# instalador COPIA para fora do checkout. Script que só roda do repositório
+# clonado tem todos os irmãos ao lado por construção, e cobrá-lo seria inventar
+# defeito — é por isso que `scripts/eliminacao.py` e `scripts/identidade_do_vpad.py`
+# não aparecem aqui: quem os importa (`gerar-mapa.py`, os três ensaios de
+# bancada) é instrumento de bancada, e instrumento de bancada nenhum instalador
+# distribui. No dia em que um deles for distribuído, esta seção cobra o módulo
+# junto — que é exatamente a resposta à pergunta "o `identidade_do_vpad.py` é
+# instalado?": não, e o portão passa a cobrar se a premissa mudar.
+#
+# O QUE CONTA COMO CHAMADA, e por que a régua é estreita de propósito: só
+# posição de COMANDO com nome literal (`bash "${ROOT_DIR}/scripts/X"`) e o
+# caminho absoluto de runtime (`/usr/local/lib/hefesto-dualsense4unix/X`, que só
+# existe porque o install o cria). Linha de recado é descartada pelo PRIMEIRO
+# comando dela (`fail`/`warn`/`info`/`echo`/`printf`/...), e isto foi MEDIDO:
+# sem esse descarte, `doctor.sh:461` — um `info` que ENSINA a rodar o rebind à
+# mão — virava chamada, e o portão acusava seis falsos só no doctor. Recado
+# pode citar script ausente; é o ofício dele.
+#
+# A GUARDA DE EXISTÊNCIA É A SAÍDA DECLARADA, e ela já era o idioma da casa
+# antes desta seção: `doctor.sh:4343` testa `[[ -x "${ROOT_DIR}/scripts/
+# disable_steam_input.sh" ]]` antes de chamar, e `bt_health_watchdog.sh:215`
+# testa `[[ -x "${_ACTIVE}" ]]`. Quem escreve a guarda está dizendo "sei que
+# pode não estar aqui, e tratei" — e o portão acredita. Quem chama sem guarda
+# está prometendo que o arquivo existe naquele layout, e essa promessa é o que
+# se cobra.
+#
+# O LIMITE, dito de frente: chamada por variável (`bash "${_dono}"`) não é
+# vista, porque o nome não está na linha. Não é buraco por descuido — é a mesma
+# escolha da guarda: quem monta o caminho em variável está escolhendo o alvo em
+# tempo de execução, e o portão não adivinha shell. O que ele impede é a
+# regressão silenciosa: o nome literal de um irmão que ficou para trás.
+echo "== irmão sem carona (script distribuído × o irmão que ele chama) =="
+_carona_instaladores=()
+for _carona_cand in install.sh \
+                    scripts/build_deb.sh \
+                    scripts/build_appimage.sh scripts/build_appimage_gui.sh \
+                    packaging/arch/PKGBUILD \
+                    packaging/fedora/hefesto-dualsense4unix.spec \
+                    packaging/nix/package.nix \
+                    flatpak/*.yml; do
+    [[ -f "${_carona_cand}" ]] && _carona_instaladores+=("${_carona_cand}")
+done
+
+if [[ "${#_carona_instaladores[@]}" -eq 0 || ! -d scripts ]]; then
+    echo "[ OK ] irmão sem carona: sem instalador (ou sem scripts/) neste checkout — nada a checar"
+else
+    #: Os nomes que existem em `scripts/`. Um nome citado que NÃO está aqui não é
+    #: irmão — é comando do sistema ou arquivo de outro projeto, e cobrar por ele
+    #: seria o portão inventando parentesco.
+    _carona_existentes="$(find scripts -maxdepth 1 -type f \( -name '*.sh' -o -name '*.py' \) \
+        -printf '%f\n' 2>/dev/null | sort)"
+
+    #: O que UM instalador copia de `scripts/` para fora do checkout. Duas formas,
+    #: porque as duas existem na árvore: o nome literal na linha de cópia
+    #: (`build_deb.sh:193`) e o laço com variável (`install.sh:1720` e
+    #: `build_deb.sh:216`), que o grep literal não vê. O laço só conta quando a
+    #: MESMA variável aparece numa linha de cópia — senão qualquer `for x in ...`
+    #: do arquivo daria carona de graça.
+    _carona_copiados_de() {
+        local _arq="$1" _codigo _copias _var _lista
+        _codigo="$(grep -vE '^[[:space:]]*#' "${_arq}" 2>/dev/null || true)"
+        _copias="$(grep -E '(install[[:space:]]+-D|(^|[[:space:]])cp([[:space:]]|$))' <<<"${_codigo}" || true)"
+        grep -oE 'scripts/[A-Za-z0-9_.-]+\.(sh|py)' <<<"${_copias}" | sed 's|^scripts/||' || true
+        while IFS= read -r _var; do
+            [[ -n "${_var}" ]] || continue
+            grep -qE "scripts/\\\$\\{?${_var}\\}?" <<<"${_copias}" || continue
+            _lista="$(grep -oE "for[[:space:]]+${_var}[[:space:]]+in[[:space:]][^;]*" "${_arq}" \
+                | sed -E "s/^for[[:space:]]+${_var}[[:space:]]+in[[:space:]]//" || true)"
+            tr ' \t' '\n\n' <<<"${_lista}"
+        done < <(grep -oE 'for[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+in' "${_arq}" 2>/dev/null \
+            | awk '{print $2}' | sort -u)
+    }
+
+    #: O que UM script chama. Ver a régua estreita explicada no cabeçalho: posição
+    #: de comando com nome literal, mais o caminho absoluto de runtime; linha de
+    #: recado fora. Em Python a pergunta é o `import` de módulo irmão — e ali não
+    #: existe guarda: import é incondicional, e é justo que seja cobrado sempre.
+    _carona_chamados_de() {
+        local _s="scripts/$1" _codigo
+        [[ -f "${_s}" ]] || return 0
+        if [[ "$1" == *.py ]]; then
+            grep -E '^[[:space:]]*import[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(#|$)' "${_s}" \
+                | awk '{print $2 ".py"}' || true
+            return 0
+        fi
+        _codigo="$(grep -vE '^[[:space:]]*#' "${_s}" 2>/dev/null \
+            | grep -vE '^[[:space:]]*(sudo[[:space:]]+)?(fail|warn|info|pass|note|hdr|step|die|echo|printf)[[:space:]]' || true)"
+        grep -oE '(^|[;&|(){}]|&&|\||then|do|if|else|exec)[[:space:]]*(sudo[[:space:]]+(-n[[:space:]]+)?)?(bash|sh|source|\.)[[:space:]]+("?[^"[:space:]]*/)?[A-Za-z0-9_.-]+\.(sh|py)' \
+            <<<"${_codigo}" | grep -oE '[A-Za-z0-9_.-]+\.(sh|py)$' || true
+        grep -oE '/usr/(local/lib|share)/hefesto-dualsense4unix/(scripts/)?[A-Za-z0-9_.-]+\.(sh|py)' \
+            <<<"${_codigo}" | grep -oE '[A-Za-z0-9_.-]+\.(sh|py)$' || true
+    }
+
+    #: A guarda de existência, procurada pelo NOME literal numa linha de teste de
+    #: arquivo. É por isso que `scripts/doctor.sh::_dono_das_regras_udev` escreve
+    #: os dois nomes por extenso, um `[[ -f ]]` cada, em vez de varrer uma lista
+    #: numa variável: o que não está escrito, portão nenhum lê.
+    _carona_tem_guarda() {
+        grep -qE "\[\[?[^]]*-(x|f|e|r)[[:space:]][^]]*$(sed 's/[.[\*^$]/\\&/g' <<<"$2")" "scripts/$1"
+    }
+
+    _carona_faltas=()
+    _carona_pares=0
+    for _carona_inst in "${_carona_instaladores[@]}"; do
+        _carona_set="$(_carona_copiados_de "${_carona_inst}" | sort -u)"
+        [[ -n "${_carona_set}" ]] || continue
+        while IFS= read -r _carona_s; do
+            [[ -n "${_carona_s}" ]] || continue
+            grep -qxF -- "${_carona_s}" <<<"${_carona_existentes}" || continue
+            while IFS= read -r _carona_irmao; do
+                [[ -n "${_carona_irmao}" ]] || continue
+                [[ "${_carona_irmao}" == "${_carona_s}" ]] && continue
+                grep -qxF -- "${_carona_irmao}" <<<"${_carona_existentes}" || continue
+                _carona_pares=$(( _carona_pares + 1 ))
+                grep -qxF -- "${_carona_irmao}" <<<"${_carona_set}" && continue
+                _carona_tem_guarda "${_carona_s}" "${_carona_irmao}" && continue
+                _carona_faltas+=("${_carona_inst} leva ${_carona_s}, que chama ${_carona_irmao} sem levar")
+            done < <(_carona_chamados_de "${_carona_s}" | sort -u)
+        done <<<"${_carona_set}"
+    done
+
+    if [[ "${#_carona_faltas[@]}" -gt 0 ]]; then
+        for _carona_f in "${_carona_faltas[@]}"; do
+            echo "[FAIL] ${_carona_f}"
+        done
+        echo "       Na máquina de quem instalou por esse caminho, a chamada aponta"
+        echo "       para um arquivo que não está lá — e a cura prometida vira um"
+        echo "       aviso de falha. Três saídas, e QUALQUER UMA basta: copie o irmão"
+        echo "       no mesmo instalador; chame o irmão que aquele layout JÁ tem; ou"
+        echo "       escreva a guarda de existência (\`[[ -x .../nome ]]\`, com o NOME"
+        echo "       literal) e trate a ausência."
+        rc=1
+    else
+        echo "[ OK ] irmão sem carona: ${_carona_pares} chamada(s) de irmão em script distribuído, todas com carona ou guarda"
+    fi
+fi
+
 echo "─────────────────────────────────────────"
 if [[ "${rc}" -eq 0 ]]; then
     echo "paridade de empacotamento OK"
