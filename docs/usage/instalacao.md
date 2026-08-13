@@ -52,7 +52,7 @@ no [`README.md`](../../README.md).
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.9.4
+git checkout v9.3.2
 ./install.sh
 ```
 

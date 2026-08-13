@@ -24,7 +24,7 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
-    <release version="0.9.4" date="2026-08-12">
+    <release version="9.3.2" date="2026-08-13">
       <description>
         <p>
           A vibracao que um jogo manda parava quase na hora: o proprio Hefesto

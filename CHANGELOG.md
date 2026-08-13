@@ -5,6 +5,8 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [9.3.2] — 2026-08-13
+
 ### A bancada de 12/08 à noite: quatro controles na mesa, e o que passou a estar PROVADO
 
 Quatro DualSense — **dois no cabo e dois no rádio** —, com o olho dela em cada
