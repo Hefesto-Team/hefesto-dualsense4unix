@@ -161,7 +161,7 @@ from pathlib import Path
 #: runner pelado, sem as dependências do projeto.
 sys.path.append(str(Path(__file__).resolve().parent))
 
-from eliminacao import carrega_por_lado  # noqa: E402
+from eliminacao import carrega_por_lado
 
 #: PROMOÇÃO DA REGRA 7. Trocar para True faz a assimetria não declarada
 #: REPROVAR em vez de avisar. Fica False enquanto as colunas `cabo_*`/`radio_*`

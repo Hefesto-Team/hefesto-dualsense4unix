@@ -24,7 +24,12 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
-    <release version="9.3.2" date="2026-08-13">
+    <release version="0.9.4.2" date="2026-08-13">
+      <description>
+        <p>Os instrumentos de medição desta casa passaram a morder: a guarda que confundia bytecode com produto, a bancada que não abria, o --check que comparava relógio em vez de conteúdo, e o portão do mapa que não ligava afirmação a ensaio. Quatro portões novos e três curas de produto — o LED do botão de mudo deixou de mentir sobre o microfone.</p>
+      </description>
+    </release>
+    <release version="0.9.4" date="2026-08-12">
       <description>
         <p>
           A vibracao que um jogo manda parava quase na hora: o proprio Hefesto

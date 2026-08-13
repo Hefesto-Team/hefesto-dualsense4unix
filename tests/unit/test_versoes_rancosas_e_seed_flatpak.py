@@ -214,7 +214,14 @@ def test_deb_sugerido_pelo_banner_casa_o_nome_que_o_build_deb_gera() -> None:
 def test_fallback_do_banner_e_o_unico_literal_de_versao() -> None:
     texto = (REPO / ENTRYPOINT_REL).read_text(encoding="utf-8")
     esperado = _versao_canonica()
-    literais = re.findall(r'"(\d+\.\d+\.\d+)"', texto)
+    # QUATRO-COMPONENTES-01 (13/08/2026): a versão canônica passou a ter
+    # QUATRO componentes (0.9.4.2) por decisão dela — a série 0.9.4.x marca
+    # o avanço do mapeamento dentro da mesma alfa. O regex de três casava
+    # ZERO literais aqui e a asserção reprovava dizendo que o fallback
+    # sumira, quando ele estava na linha 26, intacto. O `{1,2}` aceita as
+    # duas formas sem afrouxar o que a regra cobra: continua sendo UM
+    # literal, e continua tendo de ser o canônico.
+    literais = re.findall(r'"(\d+\.\d+\.\d+(?:\.\d+)?)"', texto)
     assert literais == [esperado], (
         f"literais de versão em {ENTRYPOINT_REL}: {literais} "
         f"(esperado apenas o fallback {esperado})"

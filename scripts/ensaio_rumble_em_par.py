@@ -79,14 +79,16 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import glob
 import os
 import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import identidade_do_vpad  # noqa: E402  — a régua única do vpad
 import time
+
+import identidade_do_vpad
 
 BIBLIOTECA = "python-evdev"
 ROTA = "evdev FF (EVIOCSFF) -> hid_playstation -> report de saida"
@@ -320,13 +322,13 @@ def disparar(alvos: list[str], forte: int, fraco: int, segundos: float) -> int:
 
     print(f"instrumento: {BIBLIOTECA} | rota: {ROTA}")
     print(f"efeito: forte(esquerdo)={forte}  fraco(direito)={fraco}  por {segundos}s\n")
-    for dispositivo, meta in abertos:
+    for _dispositivo, meta in abertos:
         print(f"  ALVO {meta['no']:22} {meta['jogador']:4} {meta['transporte']:6} {meta['nome']}")
     print()
 
     efeitos: list[tuple[object, int]] = []
     try:
-        for dispositivo, meta in abertos:
+        for dispositivo, _meta in abertos:
             efeito = evdev.ff.Effect(
                 ecodes.FF_RUMBLE,
                 -1,
@@ -349,16 +351,12 @@ def disparar(alvos: list[str], forte: int, fraco: int, segundos: float) -> int:
     finally:
         # Nunca deixar motor preso. A casa ja pagou por isso.
         for dispositivo, identificador in efeitos:
-            try:
+            with contextlib.suppress(OSError):
                 dispositivo.write(ecodes.EV_FF, identificador, 0)
                 dispositivo.erase_effect(identificador)
-            except OSError:
-                pass
         for dispositivo, _ in abertos:
-            try:
+            with contextlib.suppress(OSError):
                 dispositivo.close()
-            except OSError:
-                pass
     print("\nparado. Diga o que sentiu em CADA controle, um por um.")
     return 0
 

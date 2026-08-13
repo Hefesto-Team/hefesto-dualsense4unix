@@ -127,7 +127,7 @@ sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ))
 os.environ.setdefault("GDK_BACKEND", "x11")
 
-import gi
+import gi  # noqa: E402 — depois de gi.require_version, obrigatoriamente
 
 gi.require_version("Gtk", "3.0")
 # O `Gdk` precisa de versão EXPLÍCITA: importado antes do `Gtk` (a ordem

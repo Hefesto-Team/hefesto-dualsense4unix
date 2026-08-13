@@ -27,10 +27,16 @@ Trocado o piso do BlueZ de 5.79 para 5.80 só na página,
 from __future__ import annotations
 
 import re
-import tomllib
 from pathlib import Path
 
 import pytest
+
+# PY310-TOMLLIB-01 (13/08/2026): `tomllib` entrou na biblioteca padrão no
+# Python 3.11, e o `pyproject.toml` desta casa declara `py310`. O `ci.yml`
+# roda a matriz 3.10/3.11/3.12 — no 3.10 este import derrubava a COLETA do
+# módulo inteiro, e o censo do CI reprovava a leva. `pytest.importorskip`
+# pula com a razão dita em voz alta, em vez de explodir calado.
+tomllib = pytest.importorskip("tomllib", reason="tomllib exige Python 3.11+")
 
 from tests.conftest import arvore_congelada
 

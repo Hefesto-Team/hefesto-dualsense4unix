@@ -66,6 +66,10 @@ Uso:
     .venv/bin/python scripts/migrar-mapa-v2.py           # migra e prova
     .venv/bin/python scripts/migrar-mapa-v2.py --provar  # só reprova a prova
 """
+# ruff: noqa: RUF001 — o MINUS SIGN (U+2212) é deliberado: este arquivo
+# imprime intervalos e diferenças em PROSA para quem lê a migração, e o
+# sinal tipográfico é o certo ali. Trocar por hífen-menos empobrece o
+# texto sem ganhar nada, e a casa exige português bem escrito.
 from __future__ import annotations
 
 import argparse

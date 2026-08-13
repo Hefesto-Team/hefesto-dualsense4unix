@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hefesto-dualsense4unix"
-version = "9.3.2"
+version = "0.9.4.2"
 description = "Hefesto - Dualsense4Unix: Linux adaptive trigger daemon for DualSense controllers"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -105,6 +105,13 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 # A exceção vale só para os testes; em `src/` as duas regras seguem valendo.
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["E402", "I001"]
+# CSS-EM-STRING-01 (13/08/2026): o `gerar-mapa.py` embute a folha de estilo do
+# `specs.html` como string literal, e regras CSS de uma linha passam de 100
+# colunas. Quebrar a regra piora a leitura de quem edita o estilo, e `# noqa`
+# NÃO funciona ali — dentro da string ele vira texto CSS e sai impresso na
+# página (tentado e revertido no mesmo dia). A exceção é do arquivo, não do
+# projeto: o limite continua valendo em todo o resto.
+"scripts/gerar-mapa.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.10"
