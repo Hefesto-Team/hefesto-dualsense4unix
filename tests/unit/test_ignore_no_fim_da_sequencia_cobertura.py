@@ -166,7 +166,9 @@ class TestCoberturaIncompletaDuranteASubida:
         # do físico e não esconde nada do SDL (GUERRA-01, defeito já pago).
         assert DISABLE in por_appid
 
-    def test_o_prognostico_de_outra_mascara_segue_intacto(self, mesa: Path) -> None:
+    def test_o_prognostico_de_outra_mascara_segue_intacto(
+        self, mesa: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """R-05 não pode ser reaberto pela cura.
 
         Quando o perfil pede máscara DIFERENTE da vigente, a lista de backends é
@@ -175,6 +177,19 @@ class TestCoberturaIncompletaDuranteASubida:
         o arquivo por appid voltaria a ficar PIOR que o `default.env` — o
         defeito que o prognóstico foi escrito para curar.
         """
+        # UHID-DO-RUNNER-01 (13/08/2026): `permite_uhid=True` é METADE da
+        # condição — `launch_env.py:1414` faz
+        # `prognostico_uhid = uhid_available() and permite_uhid`, e o
+        # `uhid_available()` pergunta ao SISTEMA. Na máquina dela `/dev/uhid`
+        # existe e o teste passava; no runner do CI não existe, a função
+        # devolvia `None` e o `unpack` estourava nas três versões de Python.
+        # O teste quer exercitar a lógica do prognóstico, não o hardware de
+        # quem o roda — então a condição entra declarada, e o `monkeypatch`
+        # some junto com o teste.
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.integrations.uhid_gamepad.uhid_available",
+            lambda: True,
+        )
         env, motivo = le._env_for_profile(
             _perfil_do_jogo("dualsense"),
             flavor_atual="xbox",
