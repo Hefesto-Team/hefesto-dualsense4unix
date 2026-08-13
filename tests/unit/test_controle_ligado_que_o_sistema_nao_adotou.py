@@ -39,6 +39,14 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+# GI-REAL-01: este módulo importa `app/`, que sobe PyGObject no import.
+# Sem esta guarda ele não COLETA num runner sem GTK, e o censo de coleta
+# do `ci.yml` reprova a leva inteira. Medido em 13/08/2026: era um dos
+# três módulos que derrubavam o `lint-test` nas três versões de Python.
+exigir_gi_real("controle ligado que o sistema não adotou (importa app.actions.status_actions)")
+
 from hefesto_dualsense4unix.app.actions.status_actions import (
     MINUTOS_ENTRE_TENTATIVAS,
     POSICAO_DO_BANNER_NAO_ADOTADO,

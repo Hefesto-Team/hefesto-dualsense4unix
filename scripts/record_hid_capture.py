@@ -319,11 +319,10 @@ def daemon_esta_vivo() -> bool:
         return False
 
     caminho = str(ipc_socket_path())
-    with contextlib.suppress(OSError):
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-            s.settimeout(0.5)
-            s.connect(caminho)
-            return True
+    with contextlib.suppress(OSError), socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        s.connect(caminho)
+        return True
     return False
 
 

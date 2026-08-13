@@ -45,6 +45,14 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+# GI-REAL-01: este módulo importa `app/`, que sobe PyGObject no import.
+# Sem esta guarda ele não COLETA num runner sem GTK, e o censo de coleta
+# do `ci.yml` reprova a leva inteira. Medido em 13/08/2026: era um dos
+# três módulos que derrubavam o `lint-test` nas três versões de Python.
+exigir_gi_real("aba No jogo só com jogo aberto (importa app.widgets.painel_no_jogo)")
+
 from hefesto_dualsense4unix.app.widgets.painel_no_jogo import jogo_steam_aberto
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer

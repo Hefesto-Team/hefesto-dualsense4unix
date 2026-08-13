@@ -27,6 +27,26 @@
 # Rodável local e em CI. CHORE-PACKAGING-PARITY-ALL-FORMS-01.
 
 set -uo pipefail
+
+# CORRIDA-DO-PIPEFAIL-01 (13/08/2026) — cuidado com `produtor | grep -q`:
+#
+# `grep -q` SAI no primeiro casamento. O produtor a montante (awk, printf,
+# find) morre então com SIGPIPE, status 141, e o `pipefail` desta linha faz o
+# PIPE INTEIRO devolver 141 — mesmo tendo o grep achado o que procurava. O
+# `|| missing+=(...)` dispara e o portão acusa um defeito que NÃO existe.
+#
+# É CORRIDA, e por isso enganou por dois dias: quem produz pouco costuma
+# terminar antes de o grep sair, e a máquina dela ganhou 200 vezes em 200. O
+# runner do CI, mais lento, perdeu — e o `ci.yml` acusou "doctor.sh define
+# check_teclado_na_tela e NÃO a chama em main()" com a chamada VIVA na linha
+# 4493, deixando no log a assinatura do crime: `printf: write error: Broken
+# pipe`.
+#
+# A cura é não construir o pipe: o produtor entra numa variável e o `grep` lê
+# dela por here-string. As duas travessias de `main()` do doctor já estão
+# curadas assim. As outras nove ocorrências de `| grep -q` deste arquivo
+# continuam vulneráveis por construção — produzem pouco e não deram problema
+# até hoje, mas são a mesma armadilha esperando uma máquina mais lenta.
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 rc=0
@@ -799,9 +819,9 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
     # DENTRO da função morta. ENTREGA-QUE-NAO-LIGOU-01 literal. O `awk` recorta
     # o CORPO de `main()` (a definição da função fica de fora por construção) e
     # exige a chamada lá dentro.
-    awk '/^main\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
-        scripts/doctor.sh 2>/dev/null \
-        | grep -qE '^[[:space:]]*check_bluez_justworks_repairing[[:space:]]*$' \
+    _corpo_main="$(awk '/^main\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
+        scripts/doctor.sh 2>/dev/null || true)"
+    grep -qE '^[[:space:]]*check_bluez_justworks_repairing[[:space:]]*$' <<< "${_corpo_main}" \
         || missing+=("scripts/doctor.sh define check_bluez_justworks_repairing e NÃO a chama em main()")
     # A REGRA DE PAR do empacotamento: quem leva o doctor.sh leva o dono único.
     # Sem ela o detector empacotado é CEGO (cai no ramo "o dono único da config
@@ -942,9 +962,9 @@ else
     #    seção do BlueZ já faz por este motivo.
     grep -qE '^check_teclado_na_tela\(\) \{' scripts/doctor.sh 2>/dev/null \
         || missing+=("scripts/doctor.sh não define check_teclado_na_tela")
-    awk '/^main\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
-        scripts/doctor.sh 2>/dev/null \
-        | grep -qE '^[[:space:]]*check_teclado_na_tela[[:space:]]*$' \
+    _corpo_main="$(awk '/^main\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
+        scripts/doctor.sh 2>/dev/null || true)"
+    grep -qE '^[[:space:]]*check_teclado_na_tela[[:space:]]*$' <<< "${_corpo_main}" \
         || missing+=("scripts/doctor.sh define check_teclado_na_tela e NÃO a chama em main()")
 
     # 4) O doctor CONFERE E NÃO CURA (regra da casa). Nenhuma das rotas de cura

@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        9.3.2
+Version:        0.9.4.2
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -392,6 +392,15 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Thu Aug 13 2026 Vitoria Maria <andre.dsbf@gmail.com> - 1:0.9.4.2-1
+- Instrumentos: a guarda de arvore congelada parou de confundir bytecode com produto
+- Instrumentos: a bancada voltou a abrir (colunas cabo_/radio_ da migracao v2)
+- Mapa: o --check compara CONTEUDO, nao mtime; e grau forte passou a exigir ensaio
+- Portoes: quatro novos (portoes ligados no CI, artefato sem dono, os dois lados
+  do install, e promessa sem caminho de producao)
+- Audio: o LED do botao de mudo deixou de apagar a luz que o kernel acendeu
+- Radio: cor e numero de jogador saem tambem pelo report 0x31
+
 * Wed Aug 12 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4-1
 - Rumble: o keepalive parou de zerar a vibracao que um jogo manda por EV_FF
 - Lightbar: gatilho que reescreve cor e numero quando a sequencia de eventos sossega

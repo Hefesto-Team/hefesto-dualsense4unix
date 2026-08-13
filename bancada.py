@@ -202,12 +202,18 @@ else:
     # vocabulário visual não se parte entre as duas superfícies.
     CORES = {"culpado": "\u25cf", "inconclusivo": "\u25d0", "confuso": "\u25d1",
              "inocente": "\u25cb", "nunca-investigado": "\u25cc"}
-    st.markdown(f"### {CORES.get(estado, "\u25cc")} {estado.upper()}")
+    #: PY310-FSTRING-01 (13/08/2026): o glifo de fallback sai para uma constante
+    #: porque reaproveitar a aspa de fora DENTRO da f-string só é sintaxe válida
+    #: a partir do Python 3.12, e o `pyproject.toml` desta casa declara `py310`.
+    #: O `ruff` do pre-commit acusou `invalid-syntax` em 3.10 e 3.11 — ou seja, a
+    #: bancada não COMPILAVA nas duas versões que o `ci.yml` testa.
+    _SEM_COR = "\u25cc"
+    st.markdown(f"### {CORES.get(estado, _SEM_COR)} {estado.upper()}")
     st.caption(agora)
 
     for j in eliminacao.julga_linha(ens):
         with st.container(border=True):
-            st.markdown(f"**{CORES.get(j.veredicto, "\u25cc")} {j.suspeito}**")
+            st.markdown(f"**{CORES.get(j.veredicto, _SEM_COR)} {j.suspeito}**")
             st.caption(
                 f"{j.ensaios} ensaio(s) · com: {', '.join(j.com) or '—'} "
                 f"· sem: {', '.join(j.sem) or '—'}"
@@ -225,7 +231,7 @@ else:
         st.markdown("**Registrar um ensaio**")
         sugeridos = sorted({e["suspeito"] for e in ens})
         c1, c2 = st.columns([3, 1])
-        susp_ant = c1.selectbox("Suspeito já levantado", ["— novo suspeito —"] + sugeridos)
+        susp_ant = c1.selectbox("Suspeito já levantado", ["— novo suspeito —", *sugeridos])
         presente = c2.radio("O suspeito estava", ["COM", "SEM"], horizontal=True)
         susp_novo = st.text_input(
             "Suspeito novo",
@@ -239,7 +245,8 @@ else:
         if st.form_submit_button("Gravar ensaio", type="primary"):
             susp = susp_novo.strip() or (susp_ant if susp_ant != "— novo suspeito —" else "")
             if not susp or not resultado.strip():
-                st.error("suspeito e resultado são obrigatórios — ensaio sem os dois não julga nada")
+                st.error("suspeito e resultado são obrigatórios — "
+                         "ensaio sem os dois não julga nada")
             else:
                 novo = {
                     "id": f"{linha_id.split('.')[0]}-{lado}-"
