@@ -155,21 +155,43 @@ def test_o_dialogo_nasce_visivel_focado_e_com_pai_transiente(
     """
     marcas = _sob_xvfb(
         """
+# FOTO-QUE-ESPERA-01 (13/08/2026): a foto era tirada UMA vez, 120 ms depois de
+# o diálogo nascer. Sob Xvfb não há gerenciador de janelas, e o foco de teclado
+# chega quando chega: a MESMA SHA rodou duas vezes no CI e deu success às 05:00
+# e failure às 05:11, com `tem_foco` False. Era corrida do instrumento, não
+# defeito do produto — e ela barrou o release inteiro na guarda do ci.yml.
+#
+# A asserção NÃO afrouxou: o diálogo continua tendo de ficar visível, focado,
+# transiente e modal. O que mudou é que a foto espera a condição em vez de
+# medir num instante arbitrário — até 3 s, olhando a cada 60 ms. Se o foco não
+# vier nesse teto, `tem_foco` sai False e o teste reprova como antes.
+_ESPERA_MAX_MS = 3000
+_tentativas = {"gastas": 0}
+
+
 def _olhar():
     d = _o_dialogo()
     if d is None:
         marcas["erro"] = "nenhum Gtk.MessageDialog entre os toplevels"
         return False
+
+    _tentativas["gastas"] += 60
+    visivel = bool(d.get_window() and d.get_window().is_visible())
+    focado = bool(d.is_active())
+    if not (visivel and focado) and _tentativas["gastas"] < _ESPERA_MAX_MS:
+        return True  # re-agenda: o compositor ainda não entregou o foco
+
     marcas["transiente_e_o_pai"] = d.get_transient_for() is pai
-    marcas["gdk_visivel"] = bool(d.get_window() and d.get_window().is_visible())
-    marcas["tem_foco"] = bool(d.is_active())
+    marcas["gdk_visivel"] = visivel
+    marcas["tem_foco"] = focado
+    marcas["esperou_ms"] = _tentativas["gastas"]
     marcas["alcancavel"] = bool(gui_dialogs.dialogo_alcancavel(d))
     marcas["modal"] = bool(d.get_modal())
     d.response(Gtk.ResponseType.CANCEL)
     return False
 
 
-GLib.timeout_add(120, _olhar)
+GLib.timeout_add(60, _olhar)
 marcas["retorno"] = bool(
     gui_dialogs.confirm_downgrade_priority(pai, name="Vitoria", de=78, para=0)
 )
