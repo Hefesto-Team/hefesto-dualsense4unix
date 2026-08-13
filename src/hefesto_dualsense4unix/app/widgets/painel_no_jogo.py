@@ -83,6 +83,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     estado_do_recurso,
     titulo_do_card,
 )
+from hefesto_dualsense4unix.utils.markup import escapar_markup
 
 #: Os recursos, na ordem em que a aba os lista. Vem da lista-dona do card.
 RECURSOS: Final[tuple[str, ...]] = tuple(nome for nome, _rot in _NOME_NA_FRASE)
@@ -612,7 +613,7 @@ if _GTK_DISPONIVEL:
                     contexto.remove_class("dim-label")
                     valor.set_markup(
                         f'<span foreground="{cor}">'
-                        f"{GLib.markup_escape_text(linha.texto)}</span>"
+                        f"{escapar_markup(linha.texto)}</span>"
                     )
 
 else:

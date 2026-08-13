@@ -85,6 +85,7 @@ from hefesto_dualsense4unix.app.widgets.painel_no_jogo import (
 )
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.markup import escapar_markup
 
 logger = get_logger(__name__)
 
@@ -807,7 +808,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         if aviso is not None:
             self._no_jogo_perfil.set_markup(
                 f'<span foreground="{COR_DO_AVISO_DE_PERFIL}">'
-                f"{GLib.markup_escape_text(aviso)}</span>"
+                f"{escapar_markup(aviso)}</span>"
             )
         else:
             self._no_jogo_perfil.set_text("")

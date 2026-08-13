@@ -55,6 +55,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (
 )
 from hefesto_dualsense4unix.profiles.slug import find_by_slug, mesmo_slug
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.markup import escapar_markup
 
 logger = get_logger(__name__)
 
@@ -1570,10 +1571,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         regra = self._regra_do_disco
         texto = exigencia_invisivel(regra) if regra is not None else ""
         if texto:
-            from gi.repository import GLib
 
             rotulo.set_markup(
-                f'<span foreground="#f1fa8c">{GLib.markup_escape_text(texto)}</span>'
+                f'<span foreground="#f1fa8c">{escapar_markup(texto)}</span>'
             )
             with contextlib.suppress(Exception):
                 rotulo.set_no_show_all(False)
