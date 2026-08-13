@@ -3,7 +3,14 @@ name: Release
 on:
   push:
     tags:
+      # QUATRO-COMPONENTES-01 (13/08/2026): a versão canônica passou a ter
+      # quatro componentes (0.9.4.2) — a série 0.9.4.x marca o avanço do
+      # mapeamento dentro da mesma alfa. O padrão de três NÃO casa `v0.9.4.2`,
+      # e a tag subiu sem disparar release nenhum: nem erro, nem run, silêncio.
+      # Os dois padrões convivem porque as tags antigas (v0.1.0 … v4.0.0) são
+      # de três e continuam válidas para republicação por `workflow_dispatch`.
       - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
       tag:
