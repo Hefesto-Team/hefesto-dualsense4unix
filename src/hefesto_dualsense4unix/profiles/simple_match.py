@@ -12,14 +12,11 @@ do launch_env. Daí a opção "steam_game".
 """
 from __future__ import annotations
 
-import re
-
 from hefesto_dualsense4unix.profiles.schema import Match, MatchAny, MatchCriteria
-from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
-
-#: Aceita o que a usuária tem em mãos: o número puro da URL da loja
-#: (``1599660``) ou a wm_class inteira, copiada de um doctor/journal.
-_APPID_RE = re.compile(r"^\s*(?:steam_app_)?(\d+)\s*$", re.IGNORECASE)
+from hefesto_dualsense4unix.profiles.steam_app import (
+    steam_appid_de_texto,
+    steam_appid_from_wm_class,
+)
 
 # R-12 item 2 (auditoria 23/07): campo obrigatório em branco NÃO degrada em
 # silêncio. Antes, "Jogo específico" sem nome devolvia `MatchAny()` — o perfil
@@ -36,8 +33,8 @@ MSG_STEAM_SEM_APPID = (
     "campo é preenchido sozinho."
 )
 MSG_STEAM_APPID_INVALIDO = (
-    "O número do jogo na Steam é só dígitos (ex.: 1599660) — é o número que "
-    "aparece na URL da loja."
+    "O número do jogo na Steam é só dígitos (ex.: 1599660). Cole o endereço "
+    "da página do jogo na loja e o número sai dele sozinho."
 )
 
 #: Frases que a GUI pode mostrar CRUAS para a usuária (ver `_humanize_profile_error`).
@@ -64,11 +61,16 @@ def normalize_appid(raw: str | None) -> str | None:
 
     Devolve ``None`` quando não há nada aproveitável — quem decide se isso é
     erro é o chamador (o editor levanta; a detecção do round-trip só ignora).
+
+    13/08/2026: passou a aceitar também o ENDEREÇO da loja e o
+    ``steam://rungameid/<id>``, delegando a `steam_app.steam_appid_de_texto`.
+    Delegar, e não repetir o regex aqui, é o que faz o caminho do **Salvar**
+    aceitar o endereço mesmo quando a janela não chegou a reescrever o campo —
+    e é a disciplina que UNIFICA-PREDICADO-01 deixou escrita: a pergunta "que
+    appid é este texto?" tem um dono só.
     """
-    if not raw:
-        return None
-    m = _APPID_RE.match(raw)
-    return m.group(1) if m else None
+    appid = steam_appid_de_texto(raw)
+    return None if appid is None else str(appid)
 
 
 def from_simple_choice(

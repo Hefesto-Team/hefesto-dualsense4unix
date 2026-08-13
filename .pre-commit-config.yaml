@@ -61,6 +61,23 @@ repos:
         entry: python3 scripts/validar-referencias-docs.py --all
         language: system
         pass_filenames: false
+      # PALAVRA-01 / E5 (13/08/2026): a sprint pedia "um gate, para não voltar"
+      # e ele nunca foi escrito — a seção E5 estava aberta desde 27/07. O
+      # portão varre o `main.glade` e reprova rótulo que começa em minúscula
+      # (fora de uma lista de exceções com razão e data) e rótulo que carrega
+      # jargão aposentado pela E3.
+      #
+      # `pass_filenames: false` e `always_run: true` pelo mesmo motivo dos dois
+      # hooks acima: o portão também confere que a lista de exceções e a de
+      # dívida não envelheceram — e essa pergunta é sobre o arquivo INTEIRO,
+      # não sobre o que está staged. Filtrar por arquivo deixaria a lista
+      # apodrecer calada, que é o defeito que ela existe para não ter.
+      - id: palavra-de-tela
+        name: Palavra de tela (maiúscula no rótulo, jargão aposentado fora)
+        entry: python3 scripts/validar-palavra-de-tela.py --all
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: ruff-check
         name: Ruff check
         entry: ruff check
@@ -105,6 +122,33 @@ repos:
       - id: mapa-de-canais-publicado
         name: specs.html reflete o CSV e os desenhos (rode scripts/gerar-mapa.py)
         entry: python3 scripts/gerar-mapa.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+      # IPC-DOC-GERADO-01 (13/08): mesma forma, mesmo motivo. A divergência
+      # nasce num arquivo (`daemon/ipc_server.py`) e se manifesta em OUTRO
+      # (`docs/protocol/ipc-unix-socket.md`), então filtrar por arquivo staged
+      # deixaria passar exatamente o caso que motivou o hook — o método novo
+      # registrado no dispatcher sem uma linha de contrato.
+      #
+      # A tabela de curvas próprias (`scripts/gerar-tabela-de-curvas.py`) NÃO
+      # está aqui, e é decisão, não esquecimento: ela importa um módulo pydantic
+      # e o `language: system` roda o Python pelado de quem commita. Um hook que
+      # explode no import é um hook desligado na semana seguinte. Ela vive no job
+      # `lint-test` do CI, que instala as dependências, e no teste que a suíte
+      # roda sempre.
+      - id: contrato-ipc-publicado
+        name: o contrato IPC reflete o dispatcher (rode scripts/gerar-contrato-ipc.py)
+        entry: python3 scripts/gerar-contrato-ipc.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+      # CITACOES-DERIVADAS-01 (13/08): o irmão de linha do
+      # `validar-referencias-docs`. Aqui ele pega o endereço podre no mesmo
+      # commit que o produziu, que é quando o conserto custa um minuto.
+      - id: citacoes-de-linha-abrem
+        name: toda citação `arquivo:linha` de docs/protocol/ abre no que promete
+        entry: python3 scripts/validar-citacoes-de-linha.py --all
         language: system
         pass_filenames: false
         always_run: true

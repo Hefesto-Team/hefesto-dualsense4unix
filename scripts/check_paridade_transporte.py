@@ -67,11 +67,15 @@ AVISO (não derruba o CI hoje)
   8. `validade-sem-data` — `validade_dias` preenchido com `provado_em` vazio:
                           prazo que não se consegue contar.
   9. `grau-sem-ensaio-que-obedeca` — `grau = O APARELHO OBEDECEU` com ensaios
-                          naquele lado, mas nenhum deles com `resultado` dizendo
-                          que o aparelho obedeceu. É AVISO e não FALHA porque
-                          `resultado` é texto livre e a semântica dele é do
-                          SUSPEITO, não da feature (ver "o preço do `resultado`"
-                          abaixo). Promoção por `RESULTADO_REPROVA`.
+                          naquele lado, mas nenhum deles dizendo que a FEATURE
+                          obedeceu. Desde 13/08/2026 quem responde isso é
+                          `resultado_da_feature` quando ela está preenchida, e
+                          `resultado` quando não (ver "o preço do `resultado`"
+                          abaixo). Segue AVISO e não FALHA porque a coluna nova
+                          está preenchida em 1 dos 77 ensaios: enquanto os
+                          outros 76 responderem por `resultado`, que é texto
+                          livre com semântica de suspeito, promover reprovaria
+                          afirmação verdadeira. Promoção por `RESULTADO_REPROVA`.
  10. `grau-sem-olho-dela` — o ensaio que sustenta o `O APARELHO OBEDECEU` existe
                           e diz que obedeceu, mas ninguém do `olho-dela` viu.
                           `docs/process/METODO-DE-ISOLAMENTO.md` (seção "o que
@@ -82,6 +86,15 @@ AVISO (não derruba o CI hoje)
                           cuja `mordida_provada_em` está vazia: ninguém arrancou
                           a cura e viu reprovar. Medido em 12/08/2026: a coluna
                           está vazia em 293 de 293 linhas e nenhuma regra a lia.
+ 12. `veredicto-da-feature-mal-declarado` — a guarda da coluna nova, e a razão
+                          de ela não ser um afrouxamento. DURA, em duas metades:
+                          `resultado_da_feature` fora do vocabulário do caderno
+                          reprova, e `resultado_da_feature` que DIVERGE de
+                          `resultado` com a `nota` do ensaio vazia reprova
+                          também. Quem quiser calar a regra 9 escrevendo
+                          `obedece` nesta coluna tem de escrever no caderno, na
+                          mesma linha, o que o aparelho fez — que é exatamente o
+                          que a casa cobra em toda parte.
 
 O buraco de 12/08/2026, e por que a regra 6 nasceu
 --------------------------------------------------
@@ -116,6 +129,32 @@ ensaio diz que o R2 endureceu, isto é, que o aparelho obedeceu. Cobrar
 `resultado` como FALHA seria reprovar uma afirmação verdadeira por causa de uma
 coluna que responde outra pergunta. Por isso a regra 6 (dura) cobra a EXISTÊNCIA
 do ensaio, e a 9 (aviso) é que olha o resultado.
+
+A coluna que a casa já tinha encomendado (13/08/2026)
+-----------------------------------------------------
+A constante `RESULTADO_REPROVA` trazia a encomenda por escrito desde 12/08: "o
+dia de promover isto é o dia em que o caderno ganhar uma coluna que diga o que a
+FEATURE fez, separada do que o SUSPEITO provou". A coluna chegou, e chama-se
+`resultado_da_feature` — o nome sai da frase da própria regra 9, que já dizia
+"o `resultado` do SUSPEITO em vez do que a FEATURE fez".
+
+Como ela funciona, e por que não é um afrouxamento:
+
+  - VAZIA é o padrão, e vazia quer dizer "`resultado` também responde pela
+    feature". Foi assim que 76 dos 77 ensaios ficaram intocados: nenhuma
+    medição dela foi reescrita, que era a condição do pedido;
+  - PREENCHIDA, ela responde pelas regras 9 e 10 no lugar de `resultado` — e só
+    por elas. `scripts/eliminacao.py` continua julgando o suspeito por
+    `resultado`, porque é o suspeito que ele julga. Uma coluna, duas perguntas,
+    nenhuma régua nova;
+  - e ela é CARA de preencher, pela regra 12: o valor tem de estar no
+    vocabulário do caderno, e divergir de `resultado` exige `nota` escrita. É o
+    que separa "corrigir a leitura de uma coluna" de "desligar a guarda".
+
+O ensaio que motivou tudo isso é um só, e ele tem o par que o confirma: a MESMA
+linha (`gatilho.direito.adaptativo@dualsense`) tem `gatilho-dir-radio-isolado-2221`
+por rádio com `resultado = obedece`. O degrau estava certo; a coluna é que
+estava sendo lida errado.
 
 Por que a regra 5 nasceu, e o que ela ainda faz
 -----------------------------------------------
@@ -181,10 +220,17 @@ LADOS = ("cabo", "radio")
 ROTULO_DO_LADO = {"cabo": "cabo", "radio": "rádio"}
 
 #: PROMOÇÃO DA REGRA 9. Trocar para True faz o `O APARELHO OBEDECEU` sustentado
-#: só por ensaios que NEGAM reprovar em vez de avisar. Fica False enquanto
-#: `resultado` for texto livre com semântica de suspeito (ver o cabeçalho): o
-#: dia de promover isto é o dia em que o caderno ganhar uma coluna que diga o
-#: que a FEATURE fez, separada do que o SUSPEITO provou.
+#: só por ensaios que NEGAM reprovar em vez de avisar.
+#:
+#: A coluna encomendada aqui em 12/08 — "o dia de promover isto é o dia em que o
+#: caderno ganhar uma coluna que diga o que a FEATURE fez, separada do que o
+#: SUSPEITO provou" — chegou em 13/08/2026: é `resultado_da_feature`. Mas
+#: continua False, e o motivo é uma contagem, não teimosia: ela está preenchida
+#: em 1 dos 77 ensaios. Nos outros 76 quem responde ainda é `resultado`, que
+#: segue sendo texto livre com semântica de suspeito — promover hoje reprovaria
+#: exatamente as afirmações verdadeiras que este arquivo passou uma seção
+#: inteira explicando por que não se deve reprovar. O dia de promover é o dia em
+#: que nenhum grau forte depender mais de `resultado` para ser lido.
 RESULTADO_REPROVA = False
 
 #: PROMOÇÃO DA REGRA 10. Trocar para True faz o degrau mais alto exigir que
@@ -274,6 +320,20 @@ GRAUS_QUE_EXIGEM_ENSAIO = (GRAU_SAIU_NO_FIO, GRAU_OBEDECEU)
 #: inventado aqui — e por isso a regra que o usa é AVISO: um valor novo no
 #: caderno não pode virar reprovação sem alguém ter dito o que ele significa.
 RESULTADOS_QUE_SUSTENTAM = frozenset({"obedece"})
+
+#: A coluna do caderno que diz o que a FEATURE fez, quando `resultado` está
+#: respondendo pelo SUSPEITO. Vazia é o padrão e quer dizer "`resultado` também
+#: responde pela feature" — por isso acrescentá-la não mexeu em ensaio nenhum.
+COLUNA_DO_VEREDICTO_DA_FEATURE = "resultado_da_feature"
+
+#: O vocabulário inteiro do caderno, LIDO dele em 12/08/2026 e recontado em
+#: 13/08 (47 `obedece`, 24 `não obedece`, 5 `parcial`, 1 `inconclusivo`, em 77
+#: ensaios). É o domínio da coluna nova: ela responde a MESMA pergunta que
+#: `resultado`, só que sobre a feature, então inventar valor novo ali seria
+#: inventar um segundo vocabulário para a mesma escala.
+RESULTADOS_DO_CADERNO = frozenset(
+    {"obedece", "não obedece", "parcial", "inconclusivo"}
+)
 
 #: Quem, em `observado_por`, sustenta o degrau mais alto. A régua é do
 #: METODO-DE-ISOLAMENTO: "só `olho-dela` sustenta *O APARELHO OBEDECEU*".
@@ -877,6 +937,79 @@ def _regra_da_assimetria(
     return [Achado(nivel, "assimetria-nao-declarada", numero, ident, "", texto)]
 
 
+def veredicto_da_feature(ensaio: dict) -> str:
+    """O que a FEATURE fez neste ensaio — a pergunta das regras 9 e 10.
+
+    `resultado_da_feature` quando preenchida; `resultado` quando não. A ordem
+    importa e é o coração da cura de 13/08/2026: `resultado` responde pelo
+    SUSPEITO da linha, e há ensaio em que as duas respostas são OPOSTAS sem que
+    nenhuma delas esteja errada — o `gatilho-lado-nao-esta-invertido` eliminou o
+    suspeito (`não obedece`) na mesma rodada em que o R2 endureceu no aparelho.
+
+    Quem julga o suspeito é `scripts/eliminacao.py`, e ele segue lendo
+    `resultado`: esta função não é uma segunda régua para o mesmo dado, é a
+    régua da OUTRA pergunta.
+    """
+    declarado = (ensaio.get(COLUNA_DO_VEREDICTO_DA_FEATURE) or "").strip()
+    return declarado or (ensaio.get("resultado") or "").strip()
+
+
+def _regra_do_veredicto_da_feature(
+    ensaios: list[dict], numero: int, ident: str, lado: str
+) -> list[Achado]:
+    """Regra 12 — a guarda da coluna nova, e o que a impede de ser uma saída.
+
+    Uma coluna que sobrepõe `resultado` é, sem guarda, o botão de desligar a
+    regra 9: bastaria escrever `obedece` nela. As duas metades desta regra são o
+    preço de apertar esse botão, e as duas são DURAS de propósito — a regra 9 é
+    aviso porque o dado dela é ambíguo; esta é sobre o dado NOVO, que nasce com
+    o significado definido, e aí ambiguidade é defeito.
+    """
+    achados: list[Achado] = []
+    for ensaio in ensaios:
+        declarado = (ensaio.get(COLUNA_DO_VEREDICTO_DA_FEATURE) or "").strip()
+        if not declarado:
+            continue
+        id_do_ensaio = (ensaio.get("id") or "").strip() or "(ensaio sem id)"
+        if declarado not in RESULTADOS_DO_CADERNO:
+            achados.append(
+                Achado(
+                    FALHA,
+                    "veredicto-da-feature-mal-declarado",
+                    numero,
+                    ident,
+                    lado,
+                    f"o ensaio `{id_do_ensaio}` tem "
+                    f"`{COLUNA_DO_VEREDICTO_DA_FEATURE} = {declarado!r}`, que não "
+                    f"está no vocabulário do caderno "
+                    f"({', '.join(sorted(RESULTADOS_DO_CADERNO))}). A coluna "
+                    "responde a MESMA pergunta que `resultado`, só que sobre a "
+                    "feature: valor novo aqui é vocabulário novo, e vocabulário "
+                    "novo se declara em RESULTADOS_DO_CADERNO no mesmo gesto",
+                )
+            )
+            continue
+        if declarado == (ensaio.get("resultado") or "").strip():
+            continue
+        if not (ensaio.get("nota") or "").strip():
+            achados.append(
+                Achado(
+                    FALHA,
+                    "veredicto-da-feature-mal-declarado",
+                    numero,
+                    ident,
+                    lado,
+                    f"o ensaio `{id_do_ensaio}` diz que a feature "
+                    f"`{declarado}` enquanto o `resultado` diz "
+                    f"`{(ensaio.get('resultado') or '').strip()}`, e a `nota` "
+                    "está vazia. Divergir das duas colunas é dizer que o "
+                    "`resultado` fala do SUSPEITO — e isso se escreve no "
+                    "caderno, na mesma linha, ou não vale",
+                )
+            )
+    return achados
+
+
 def _regra_do_caderno(
     grau: str,
     ensaios: list[dict],
@@ -885,13 +1018,17 @@ def _regra_do_caderno(
     lado: str,
     resumo: Resumo,
 ) -> list[Achado]:
-    """Regras 6, 9 e 10 — o grau forte contra o caderno de bancada.
+    """Regras 6, 9, 10 e 12 — o grau forte contra o caderno de bancada.
 
     `ensaios` já chega casado por (`linha_id`, transporte): quem casou foi o
     `eliminacao.carrega_por_lado`, e o transporte importa tanto quanto o `id`.
     Ensaio de rádio não sustenta afirmação de cabo — a assimetria entre os dois
     é a regressão que este mapa inteiro existe para pegar, e aceitar um lado
     pelo outro seria justamente apagá-la.
+
+    Quem responde "a feature obedeceu?" é `veredicto_da_feature`, não a coluna
+    `resultado` crua: ver a seção "A coluna que a casa já tinha encomendado" no
+    cabeçalho deste arquivo.
     """
     rotulo = ROTULO_DO_LADO[lado]
     if not ensaios:
@@ -911,17 +1048,20 @@ def _regra_do_caderno(
             )
         ]
 
+    guarda = _regra_do_veredicto_da_feature(ensaios, numero, ident, lado)
+
     if grau != GRAU_OBEDECEU:
-        return []
+        return guarda
 
     sustentam = [
         ensaio
         for ensaio in ensaios
-        if (ensaio.get("resultado") or "").strip() in RESULTADOS_QUE_SUSTENTAM
+        if veredicto_da_feature(ensaio) in RESULTADOS_QUE_SUSTENTAM
     ]
     if not sustentam:
-        vistos = sorted({(e.get("resultado") or "").strip() for e in ensaios})
+        vistos = sorted({veredicto_da_feature(e) for e in ensaios})
         return [
+            *guarda,
             Achado(
                 FALHA if RESULTADO_REPROVA else AVISO,
                 "grau-sem-ensaio-que-obedeca",
@@ -931,8 +1071,10 @@ def _regra_do_caderno(
                 f"declara `{lado}_grau = {GRAU_OBEDECEU}` e os {len(ensaios)} "
                 f"ensaio(s) de {rotulo} desta linha dizem {vistos}. Ou o degrau "
                 f"está alto demais, ou o ensaio foi gravado com o `resultado` do "
-                "SUSPEITO em vez do que a FEATURE fez — se for o segundo, a nota "
-                "do ensaio é o lugar de dizer isso",
+                "SUSPEITO em vez do que a FEATURE fez — se for o segundo, "
+                f"`{COLUNA_DO_VEREDICTO_DA_FEATURE}` é a coluna onde se diz o "
+                "que a feature fez, e a `nota` do ensaio é onde se explica por "
+                "que as duas divergem",
             )
         ]
 
@@ -941,6 +1083,7 @@ def _regra_do_caderno(
     ):
         observadores = sorted({(e.get("observado_por") or "").strip() for e in sustentam})
         return [
+            *guarda,
             Achado(
                 FALHA if OLHO_DELA_REPROVA else AVISO,
                 "grau-sem-olho-dela",
@@ -953,7 +1096,7 @@ def _regra_do_caderno(
                 "olho dela, ou desça para `SAIU NO FIO`",
             )
         ]
-    return []
+    return guarda
 
 
 def _regra_da_mordida_nao_provada(

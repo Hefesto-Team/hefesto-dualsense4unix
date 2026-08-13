@@ -11,10 +11,12 @@ do tamanho da tela maximizada dela e salva um PNG por aba.
     scripts/gui-captura/retratar_abas.py /tmp/olhar      # só olhar, sem tocar
                                                          # no repositório
 
-POR QUE ELE EXISTE, e por que é ele o certo entre os três desta pasta
---------------------------------------------------------------------
+POR QUE ELE EXISTE, e por que é ele o certo para a JANELA
+---------------------------------------------------------
 
-Esta pasta tem outros dois, e os dois têm limite conhecido:
+Esta pasta tem outros quatro. Dois deles fotografam a janela também, e os dois
+têm limite conhecido (os outros dois são o `retratar_dialogos.py`, que
+fotografa DIÁLOGO e não aba, e o `aba_ativa.sh`, que é sensor e não câmera):
 
 * ``capturar_verificado.sh`` percorre as abas por teclado e fotografa a tela
   DE VERDADE. Precisa da janela aberta, maximizada e em foco — e o COSMIC
@@ -25,8 +27,8 @@ Esta pasta tem outros dois, e os dois têm limite conhecido:
   e — o pior — a aba Status sem o card do controle, que é montado em código e
   é justamente a aba mais densa da janela.
 
-Este aqui monta o glade E injeta o card do controle com dados de verdade. É a
-única das três que produz uma foto onde dá para entender a tela.
+Este aqui monta o glade E injeta o card do controle com dados de verdade. É o
+único dos três que produz uma foto onde dá para entender a tela.
 
 O QUE ELE **NÃO** É
 -------------------
@@ -73,6 +75,25 @@ sai vazio porque não há daemon do outro lado.
 Se algum dia isto mudar, **a foto passa a precisar de revisão humana antes de
 ir para o repositório** — e aí o script deixa de poder gravar direto em
 `docs/`.
+
+O QUE A ABA PERFIS PASSOU A LER DO DISCO (13/08/2026)
+-----------------------------------------------------
+
+`install_profiles_tab` agora monta a lista de jogos do campo "Nome do jogo:" a
+partir de `integrations/jogos_locais.py`, que lê `~/.steam/.../*.acf` e os
+`.desktop` de `~/.local/share/applications`. Isso é DISCO, não daemon — a
+promessa acima continua de pé —, mas é a primeira vez que uma foto desta pasta
+roda código que abre arquivo da máquina dela.
+
+**Nada disso aparece na foto**, e é medido: a lista mora numa
+`Gtk.EntryCompletion`, cujo popup é um toplevel próprio que só existe enquanto
+ela digita — a `OffscreenWindow` não o alcança. A aba é fotografada com "Aplica
+a: Qualquer", e nesse estado a linha do jogo nem é mostrada.
+
+**O que tornaria inseguro:** fotografar a aba com "Jogo da Steam" escolhido E
+texto digitado no campo. Aí a lista de jogos DELA entraria na imagem, e o
+portão de anonimato não varre imagem. Se um dia for preciso essa foto, ela vai
+para fora de `docs/`.
 """
 from __future__ import annotations
 
@@ -376,6 +397,150 @@ def _montar_aba_no_jogo(builder) -> str:  # type: ignore[no-untyped-def]
     return 'aba "No jogo" montada (2 jogadores, as três situações na tela)'
 
 
+#: Os perfis que aparecem na foto da aba Perfis.
+#:
+#: São INVENTADOS de propósito, e não lidos do disco: `load_all_profiles()`
+#: traria os perfis DELA — nome de jogo, nome de janela, nome de processo — para
+#: dentro de uma imagem versionada, que é exatamente o risco que a seção de
+#: privacidade deste arquivo manda não correr (os portões de anonimato não
+#: varrem imagens). O jogo é o mesmo "Pragmata" que a aba "No jogo" já mostra,
+#: para as duas fotos contarem a mesma história.
+_PERFIS_DA_FOTO = (
+    {
+        "name": "Pragmata",
+        "priority": 120,
+        "process_name": ["PRAGMATA.exe"],
+        "kind": "gamepad",
+    },
+    {
+        "name": "Mesa de dois",
+        "priority": 60,
+        "process_name": ["portal2_linux"],
+        "kind": "gamepad",
+    },
+    {
+        "name": "Fora do jogo",
+        "priority": 0,
+        "process_name": [],
+        "kind": "desktop",
+    },
+)
+
+
+def _montar_aba_perfis(builder) -> str:  # type: ignore[no-untyped-def]
+    """Monta a aba Perfis — a mais editada da janela, e a que saía como casca.
+
+    PERFIS-NA-FOTO-01 (13/08/2026). Até aqui a foto desta aba mostrava
+    "Aplica a:" **sem um botão** e o frame "Modo (o que este perfil liga ao
+    ativar)" **vazio**, porque os dois são montados em CÓDIGO
+    (`install_profiles_tab` e `_install_mode_section`) e este script montava só
+    o glade. É literalmente o defeito de que o docstring lá em cima acusa o
+    `retrato_offscreen.py` — "mostra a janela VAZIA: combos sem itens" —
+    reproduzido no script que existe para ser a cura dele.
+
+    Mesmo desenho do card do Status, da aba Início e da "No jogo": host mínimo
+    com um `_get` que resolve ids do builder, nada de IPC e nada de tique. O
+    método é o de PRODUÇÃO (`install_profiles_tab`), e não uma cópia da
+    montagem — uma cópia seria um segundo dono do desenho e a foto passaria a
+    mentir no dia em que a `profiles_actions` mudasse.
+
+    O QUE É DESVIADO, E POR QUÊ
+    ---------------------------
+
+    Três coisas dentro do `install_profiles_tab` leem o DISCO DELA, e as três
+    são desviadas aqui — não por conveniência, por privacidade e por
+    reprodutibilidade:
+
+    * ``_reload_profiles_store`` chamaria `load_all_profiles()` e poria os
+      perfis dela na imagem versionada. É sobrescrito no host, e ainda de
+      quebra vira SÍNCRONO: o de produção roda numa thread e o `main` já teria
+      fotografado antes de a lista chegar;
+    * ``load_gui_prefs()`` decide se o editor abre no modo simples ou no
+      avançado. Lido do disco, a foto mudaria conforme o switch que ela deixou
+      ligado da última vez;
+    * ``perfil_que_ela_ativou()`` devolve o nome do perfil ATIVO dela, que a
+      lista imprime em negrito e colorido na primeira linha.
+
+    As duas últimas são funções de módulo — o desvio é no módulo, com
+    `try/finally` para o processo não ficar com a `profiles_actions` remendada
+    depois desta função.
+
+    E uma quarta, que é a mais grave e não é disco: o `on_done` de produção é
+    ``_sync_selection_with_active_profile``, que **FALA COM O DAEMON VIVO**
+    (`call_async("daemon.status")`). Medido em 13/08/2026 na primeira rodada
+    desta função, antes deste desvio existir: o log saiu com
+    `perfis_selecao_automatica_recusada pedido=<perfil real dela>` — o nome
+    veio da máquina, não daqui. Um script de fotografia que consulta o daemon
+    quebra a promessa escrita lá em cima ("ele **nunca** fala com o daemon") e
+    põe estado real a um passo da imagem versionada. É no-op no host.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions import profiles_actions as _pa
+        from hefesto_dualsense4unix.profiles.schema import (
+            MatchCriteria,
+            Profile,
+            ProfileModeConfig,
+        )
+    except Exception as exc:
+        return f"aba Perfis não montada ({exc})"
+
+    try:
+        perfis = [
+            Profile(
+                name=dados["name"],
+                priority=dados["priority"],
+                match=MatchCriteria(process_name=list(dados["process_name"])),
+                mode=ProfileModeConfig(kind=dados["kind"]),
+            )
+            for dados in _PERFIS_DA_FOTO
+        ]
+    except Exception as exc:
+        return f"aba Perfis não montada ({exc})"
+
+    class _Host(_pa.ProfilesActionsMixin):  # type: ignore[misc, name-defined]
+        def __init__(self) -> None:
+            self.builder = builder
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+        def _status_toast(self, _contexto: str, _msg: str) -> None:
+            return None
+
+        def _reload_profiles_store(  # type: ignore[override]
+            self, select_name: str | None = None, on_done=None
+        ) -> None:
+            self._profiles_cache = list(perfis)
+            self._populate_profiles_store(list(perfis), select_name)
+            if on_done is not None:
+                on_done()
+
+        def _sync_selection_with_active_profile(self) -> None:  # type: ignore[override]
+            # O de produção pergunta ao daemon VIVO. Aqui, nunca.
+            return None
+
+    prefs_de_verdade = _pa.load_gui_prefs
+    ativo_de_verdade = _pa.perfil_que_ela_ativou
+    _pa.load_gui_prefs = lambda: {"advanced_editor": False}
+    _pa.perfil_que_ela_ativou = lambda: perfis[0].name
+    try:
+        host = _Host()
+        host.install_profiles_tab()
+    except Exception as exc:
+        return f"aba Perfis não montada ({exc})"
+    finally:
+        _pa.load_gui_prefs = prefs_de_verdade
+        _pa.perfil_que_ela_ativou = ativo_de_verdade
+
+    caixa = builder.get_object("profiles_paned")
+    if caixa is not None:
+        caixa.show_all()
+    return (
+        f"aba Perfis montada ({len(perfis)} perfis inventados, "
+        '"Aplica a" e "Modo" com botões)'
+    )
+
+
 def _injetar_modos_de_gatilho(builder) -> str:  # type: ignore[no-untyped-def]
     """Põe os 19 modos de gatilho na aba Gatilhos.
 
@@ -506,6 +671,7 @@ def main(destino: str | None = None) -> int:
     print(f"  {_injetar_modos_de_gatilho(builder)}")
     print(f"  {_montar_aba_inicio(builder)}")
     print(f"  {_montar_aba_no_jogo(builder)}")
+    print(f"  {_montar_aba_perfis(builder)}")
     _assentar()
 
     total = notebook.get_n_pages()

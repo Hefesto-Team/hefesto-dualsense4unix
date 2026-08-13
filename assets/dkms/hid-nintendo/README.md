@@ -201,7 +201,12 @@ B=$(mktemp -d) && cp assets/dkms/hid-nintendo/{hid-nintendo.c,hid-ids.h,Makefile
 make -C /lib/modules/$(uname -r)/build M="$B" modules && rm -rf "$B"
 
 # 2) instalar de fato: source novo p/ DKMS + modprobe.d novo
-sudo bash install.sh          # DEFAULT já cobre DKMS + modprobe.d + udev
+#    SEM sudo — o install.sh pede a senha sozinho no passo que precisa dela.
+#    Rodado com sudo, o HOME vira /root: o .venv nasce root-owned, os symlinks
+#    vão para /root/.local/bin e as units de usuário para
+#    /root/.config/systemd/user — instalação que "deu certo" e não existe para
+#    o seu usuário. Use --yes quando não houver terminal interativo.
+./install.sh --yes            # DEFAULT já cobre DKMS + modprobe.d + udev
 sudo udevadm control --reload-rules
 
 # 3) ativar. NÃO faça modprobe -r com BT vivo. Duas rotas:

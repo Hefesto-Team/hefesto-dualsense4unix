@@ -41,7 +41,18 @@ da tabela inteira, pela regra que o próprio processo escreveu.
 
 ## Efeitos
 
+A tabela abaixo é **gerada** do catálogo (`docs/data/curvas-proprias.json`) por
+`scripts/gerar-tabela-de-curvas.py`, que chama `gerar_tabela_markdown` — a
+função que a CR-02 escreveu para este fim e que, MEDIDO em 12/08/2026, ninguém
+chamava. O `--check` do gerador reprova quando o publicado deixa de ser o que o
+catálogo produz. Não a edite à mão: essa foi a proibição da CR-02, e ela só
+passou a valer no dia em que este chamador nasceu.
+
+<!-- BLOCO GERADO por scripts/gerar-tabela-de-curvas.py — não edite à mão -->
+
 _(nenhum ainda — ver CR-04)_
+
+<!-- FIM DO BLOCO GERADO -->
 
 ## Sob que licença estas curvas saem
 

@@ -1023,3 +1023,143 @@ def test_simbolico_do_applet_divergente_falha(fake_repo: Path) -> None:
     result = run_check(fake_repo)
     assert result.returncode == 1
     assert "DIVERGIRAM" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# CORRIDA-DO-PIPEFAIL-01 (13/08/2026) — `produtor | grep -q` sob `pipefail`
+#
+# O comentário no topo do `check_packaging_parity.sh` já contava a história: o
+# `grep -q` SAI no primeiro casamento, o produtor a montante morre de SIGPIPE,
+# e o `pipefail` faz o pipe INTEIRO devolver 141 mesmo tendo o grep achado o
+# que procurava. O veredito pendurado nesse status inverte.
+#
+# É CORRIDA — e por isso os testes abaixo não torcem por ela: eles a FORÇAM,
+# dando ao produtor mais bytes do que cabem no buffer do pipe. Com o produtor
+# obrigado a escrever depois da saída do grep, o SIGPIPE deixa de ser sorte e
+# vira certeza, na máquina dela como no runner.
+# ---------------------------------------------------------------------------
+
+#: Nomes bastantes para estourar com folga o buffer do pipe (4 KiB nesta
+#: máquina, 64 KiB no Linux por padrão desde 2.6.11).
+_PRODUTOR_LONGO = 4000
+
+
+def _fake_repo_minimo(tmp_path: Path) -> Path:
+    """Repo de mentira só com o script — as seções sem asset ficam quietas."""
+    (tmp_path / "scripts").mkdir()
+    shutil.copy2(
+        Path(__file__).resolve().parents[2] / SCRIPT_REL_PATH,
+        tmp_path / SCRIPT_REL_PATH,
+    )
+    (tmp_path / SCRIPT_REL_PATH).chmod(0o755)
+    return tmp_path
+
+
+def test_icone_de_applet_com_muitos_arquivos_nao_e_acusado_de_faltar(
+    tmp_path: Path,
+) -> None:
+    """O ícone EXISTE; o portão não pode dizer que falta porque o find era longo.
+
+    Sítio curado: o `find ... | grep -q .` da seção de Icon dos applets. O
+    veredito está num `if`, então o 141 do pipe cai no `else` e o portão
+    imprime "[FAIL] ...: Icon=... sem arquivo de ícone" sobre um diretório que
+    tem o ícone milhares de vezes.
+    """
+    repo = _fake_repo_minimo(tmp_path)
+    applet = repo / "packaging" / "corrida-applet"
+    apps = applet / "data" / "icons" / "hicolor" / "scalable" / "apps"
+    apps.mkdir(parents=True)
+    (applet / "corrida.desktop").write_text(
+        "[Desktop Entry]\n"
+        "X-CosmicApplet=true\n"
+        "Icon=hefesto-corrida-do-pipefail\n",
+        encoding="utf-8",
+    )
+    for n in range(_PRODUTOR_LONGO):
+        (apps / f"hefesto-corrida-do-pipefail.{n:05d}.svg").write_text("<svg/>\n")
+
+    result = run_check(repo)
+    assert "sem arquivo de ícone" not in result.stdout, (
+        "o portão acusou um ícone que existe 4000 vezes: o `find` voltou para "
+        f"dentro de um pipe com `grep -q`.\nsaída:\n{result.stdout}"
+    )
+    assert "Icon=hefesto-corrida-do-pipefail tem arquivo versionado" in result.stdout
+
+
+def test_bluez_com_empacotador_longo_nao_acusa_par_desfeito(tmp_path: Path) -> None:
+    """Controle: com o par inteiro, o portão cala — antes e depois da cura.
+
+    MEDIDO em 13/08/2026, e a medição corrigiu a expectativa: neste sítio a
+    corrida NÃO produz falso positivo. O primeiro `grep -qF` da dupla termina
+    em `|| continue`, então o 141 do pipe faz o laço PULAR o empacotador
+    inteiro — a checagem do par nunca chega a rodar. Silêncio, não alarme.
+
+    Por isso este teste é o controle e não a mordida: ele passa dos dois lados.
+    Quem morde é o gêmeo logo abaixo, que exige a acusação quando ela é devida.
+    """
+    repo = _fake_repo_minimo(tmp_path)
+    (repo / "assets" / "bluetooth").mkdir(parents=True)
+    (repo / "assets" / "bluetooth" / "hefesto-bt.block").write_text("bloco\n")
+    enchimento = "\n".join(
+        f"echo linha-de-enchimento-numero-{n:05d}" for n in range(_PRODUTOR_LONGO)
+    )
+    (repo / "scripts" / "build_deb.sh").write_text(
+        "bash scripts/doctor.sh\n"
+        "bash scripts/bluez_config.sh aplicar\n" + enchimento + "\n",
+        encoding="utf-8",
+    )
+
+    result = run_check(repo)
+    assert "deixa bluez_config.sh para trás" not in result.stdout, (
+        "o portão acusou o empacotador de esquecer o bluez_config.sh, que está "
+        f"na segunda linha dele.\nsaída:\n{result.stdout}"
+    )
+
+
+def test_bluez_empacotador_longo_que_esquece_o_dono_continua_reprovando(
+    tmp_path: Path,
+) -> None:
+    """O outro lado da régua: sem o `bluez_config.sh`, a acusação tem de vir.
+
+    Sem este teste a cura acima seria indistinguível de desligar a checagem —
+    um portão que nunca acusa também "não dá falso positivo".
+    """
+    repo = _fake_repo_minimo(tmp_path)
+    (repo / "assets" / "bluetooth").mkdir(parents=True)
+    (repo / "assets" / "bluetooth" / "hefesto-bt.block").write_text("bloco\n")
+    enchimento = "\n".join(
+        f"echo linha-de-enchimento-numero-{n:05d}" for n in range(_PRODUTOR_LONGO)
+    )
+    (repo / "scripts" / "build_deb.sh").write_text(
+        "bash scripts/doctor.sh\n" + enchimento + "\n", encoding="utf-8"
+    )
+
+    result = run_check(repo)
+    assert "deixa bluez_config.sh para trás" in result.stdout, (
+        "o empacotador leva o doctor.sh e NÃO leva o bluez_config.sh, e o "
+        f"portão calou.\nsaída:\n{result.stdout}"
+    )
+
+
+def test_nenhum_produtor_entra_num_pipe_com_grep_q() -> None:
+    """A contagem que o comentário do topo promete: ZERO `| grep -q` no código.
+
+    Estrutural de propósito. Os dois testes acima forçam a corrida em DOIS dos
+    onze sítios; forçá-la nos onze exigiria montar onze repos de mentira, e o
+    que importa é a FORMA — `| grep -q` é a armadilha, esteja ela onde estiver.
+    Comentário citando a forma não conta: o portão não pode reprovar a própria
+    explicação de por que ela é proibida.
+    """
+    alvo = Path(__file__).resolve().parents[2] / SCRIPT_REL_PATH
+    culpadas = [
+        (n, linha)
+        for n, linha in enumerate(alvo.read_text(encoding="utf-8").splitlines(), 1)
+        if "| grep -q" in linha and not linha.lstrip().startswith("#")
+    ]
+    assert not culpadas, (
+        "voltou `produtor | grep -q` ao check_packaging_parity.sh:\n"
+        + "".join(f"  :{n}  {linha.strip()}\n" for n, linha in culpadas)
+        + "Use here-string: guarde o produtor numa variável e faça "
+        "`grep -q ... <<< \"${var}\"`. O porquê está no comentário "
+        "CORRIDA-DO-PIPEFAIL-01, no topo do arquivo."
+    )

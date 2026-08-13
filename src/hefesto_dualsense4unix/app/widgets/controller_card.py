@@ -1018,6 +1018,19 @@ ATIVIDADE_FRESCA_S: Final[float] = 3.0
 #: `halign=start` junto, e é assim que ele é usado.
 _VERDADE_MAX_CHARS: Final[int] = 110
 
+#: O Hz mais largo que a linha da verdade pode imprimir, para MEDIR a régua.
+#:
+#: NAO-DANCA-01. Não é teto de nada e não entra em tela nenhuma: serve só para
+#: :func:`frase_mais_longa_do_que_chega_ao_jogo` montar o pior caso. Quatro
+#: dígitos porque o `motion_hz` é medido, não declarado — o DualSense entrega
+#: IMU a algumas centenas de hertz, e um pico de quatro dígitos num payload é
+#: barato de acomodar aqui e caro de descobrir na tela dela.
+_HZ_MAIS_LARGO: Final[str] = "1000"
+
+#: E o maior valor de motor, pela mesma razão. 255 é o teto de um byte, que é
+#: o que o par `rumble_no_fisico` carrega (`uhid_gamepad`).
+_MOTOR_MAIS_LARGO: Final[str] = "255"
+
 #: As quatro situações que um recurso pode estar, e o que cada uma significa.
 #: `NUNCA` e `PARADO` são separadas de propósito: "o jogo ainda não pediu" e
 #: "o jogo pediu e parou" levam a ações diferentes de quem lê.
@@ -1381,6 +1394,54 @@ def resumo_do_que_chega_ao_jogo(
     # maiúscula no meio dela.
     texto = " · ".join(partes) + "."
     return texto[0].upper() + texto[1:]
+
+
+def frase_mais_longa_do_que_chega_ao_jogo() -> str:
+    """A MAIOR frase que :func:`resumo_do_que_chega_ao_jogo` sabe montar.
+
+    NAO-DANCA-01 (13/08/2026). Ela não é para ser mostrada a ninguém: é a
+    régua que reserva a altura da linha da verdade no card, para que a frase
+    encolher ou crescer não mova mais nada — o defeito que ela relatou assim:
+    *"não sei se dá pra ver mas o layout fica sambando aqui na interface"*.
+
+    **Por que a maior frase, e não um número de linhas escrito à mão.** A
+    altura que se reserva tem de ser a altura MÁXIMA que a frase pode pedir,
+    e essa altura depende da largura que o card recebeu e da escala de fonte
+    dela — as duas mudam. Um "2" cravado no código seria um número inventado
+    que envelhece calado no dia em que um recurso ganhar nome mais longo.
+
+    O que torna esta frase a maior, item por item:
+
+    * **os TRÊS grupos aparecem**. Os seis recursos estão sempre na frase; o
+      que muda é como se repartem. Com os três prefixos na tela ("No jogo
+      agora: ", "pararam: ", "sem pedido ainda: ") e os dois " · " que os
+      separam, o texto fixo é o mais longo possível — e o número de ", " entre
+      nomes é o mesmo em qualquer repartição (seis nomes menos três grupos);
+    * **os dois detalhes numéricos entram**, e os dois só existem na situação
+      "chegando" (o `(~N Hz)` do giroscópio e o `(motores: a/b)` da vibração),
+      então os dois moram no primeiro grupo;
+    * **os números vão no maior tamanho que podem ter**: o Hz com quatro
+      dígitos e os motores com os três de 255, que é o teto de um byte.
+
+    Deriva de :data:`_NOME_NA_FRASE` de propósito: ela é a lista-dona dos
+    recursos, e uma cópia dos nomes aqui viraria mentira no primeiro rename.
+    """
+    nomes = dict(_NOME_NA_FRASE)
+    com_detalhe = ("giroscopio", "vibracao")
+    chegando = [
+        f"{nomes['giroscopio']} (~{_HZ_MAIS_LARGO} Hz)",
+        f"{nomes['vibracao']} (motores: {_MOTOR_MAIS_LARGO}/{_MOTOR_MAIS_LARGO})",
+    ]
+    restantes = [
+        nome for recurso, nome in _NOME_NA_FRASE if recurso not in com_detalhe
+    ]
+    meio = len(restantes) // 2
+    partes = [
+        "No jogo agora: " + ", ".join(chegando),
+        "pararam: " + ", ".join(restantes[:meio]),
+        "sem pedido ainda: " + ", ".join(restantes[meio:]),
+    ]
+    return " · ".join(partes) + "."
 
 
 def _mascara_e_xbox(state_global: dict[str, Any]) -> bool:
@@ -2264,7 +2325,10 @@ if _GTK_DISPONIVEL:
             # `max-width-chars` sozinho limita a largura NATURAL (o que o
             # widget PEDE) e o pai continua livre para alocar mais; um
             # parágrafo de 1869px ficou intacto até o `halign=start` entrar.
-            verdade = Gtk.Label()
+            # NAO-DANCA-01: não é uma `Gtk.Label` — é a que RESERVA a altura da
+            # maior frase que ela pode receber, para encolher e crescer não
+            # mexerem em nada abaixo. O porquê está na classe.
+            verdade = RotuloDeAlturaReservada()
             verdade.set_xalign(0.0)
             verdade.set_halign(Gtk.Align.START)
             verdade.set_line_wrap(True)
@@ -4470,6 +4534,129 @@ if _GTK_DISPONIVEL:
                 allocation = cortado
             Gtk.Bin.do_size_allocate(self, allocation)
 
+    class RotuloDeAlturaReservada(Gtk.Label):  # type: ignore[misc]
+        """Um rótulo que pede a altura da MAIOR frase que pode receber.
+
+        NAO-DANCA-01 (13/08/2026). É a cura do que ela relatou assim: *"não
+        sei se dá pra ver mas o layout fica sambando aqui na interface"*.
+
+        O MECANISMO DO DEFEITO, medido antes desta classe existir
+        --------------------------------------------------------
+
+        A linha da verdade mora numa `Gtk.Label` com quebra de linha, e a
+        altura dela governa a altura da faixa inteira (a frase à esquerda, a
+        bateria à direita) — o primeiro bloco do corpo do card. Com o card na
+        largura da tela dela, a frase **recebe 904px e pede 905px** de largura
+        natural: um pixel de folga negativa. Nessa lâmina, um único dígito do
+        `(~N Hz)` decide se a frase cabe em uma linha ou quebra em duas. Com as
+        três frases das fotos dela: ~160 Hz e ~190 Hz quebram, ~193 Hz não, e
+        **tudo o que vem abaixo sobe e desce 18px**, duas vezes por segundo.
+
+        POR QUE RESERVAR A ALTURA, E NÃO AS OUTRAS DUAS SAÍDAS
+        -----------------------------------------------------
+
+        * **estabilizar o número** (largura fixa para o Hz) curaria só o
+          tremor de 2 Hz e deixaria de pé o salto maior, o de quando um
+          recurso muda de grupo e a frase muda de tamanho de verdade. E aqui
+          nem haveria o que estabilizar: medido nesta fonte, `'160'` e `'193'`
+          têm a MESMA largura em pixel inteiro — o que os separa é fração de
+          pixel, e é a folga de 1px que a transforma em quebra de linha;
+        * **tirar a bateria da disputa** curaria a bateria e mais nada: a
+          frase continuaria governando a altura da faixa, e o Touchpad, os
+          analógicos, o Microfone e o teclado de botões continuariam subindo
+          e descendo juntos;
+        * **dar mais largura à frase** (mexer no teto de caracteres ou
+          estreitar a barra da bateria) é cura de sintoma: vale para a frase
+          de hoje e cai na primeira frase mais longa.
+
+        POR QUE UMA SUBCLASSE, E NÃO UM `set_size_request`
+        -------------------------------------------------
+
+        Foi a primeira tentativa, e a medição a reprovou: quem calcula a
+        reserva de fora só sabe a largura DEPOIS da primeira alocação (antes
+        dela um widget mede 1x1, e um rótulo vazio pede largura natural ZERO),
+        então o card nascia com a altura errada e se corrigia no tique
+        seguinte — um pulo de 18px meio segundo depois de abrir a janela, que
+        é o mesmo defeito com outro relógio.
+
+        Respondendo à PERGUNTA da altura, não há esse instante: o GTK pergunta
+        "de que altura você precisa NESTA largura?" e a resposta já é a do
+        pior caso, na primeira alocação e em todas as seguintes. De quebra,
+        acompanha de graça o que a régua de fora teria de vigiar — a janela
+        mudar de tamanho e a escala de fonte dela mudar (`app/theme.py`).
+        """
+
+        def __init__(self) -> None:
+            super().__init__()
+            #: Cache por largura: a mesma pergunta chega várias vezes por
+            #: negociação, e montar o layout do Pango a cada uma seria trabalho
+            #: repetido num caminho que roda a 2 Hz. Some quando a fonte muda.
+            self._alturas: dict[int, int] = {}
+            self.connect("style-updated", self._esquecer_alturas)
+
+        def _esquecer_alturas(self, *_args: Any) -> None:
+            """A fonte mudou: a altura de uma linha mudou junto."""
+            self._alturas.clear()
+
+        def altura_reservada(self, largura_perguntada: int = 0) -> int:
+            """A altura da frase mais longa possível, em px, na largura REAL.
+
+            A largura em que se mede é a que o rótulo TEM — a alocada —, e a
+            perguntada só entra antes da primeira alocação. A diferença foi
+            medida, e é a segunda metade desta cura:
+
+            o GTK responde "de que altura você precisa?" (sem largura)
+            calculando a largura NATURAL do rótulo e perguntando a altura
+            nela. Só que a largura natural de um rótulo que quebra linha
+            depende do TEXTO: 618px com a frase curta, 1060px com a mais
+            longa. Medir a reserva em cima dela devolveria a dança pela porta
+            dos fundos — 40px de reserva num caso e 20px no outro, e a altura
+            que o CARD pede oscilando 18px com o texto, que é exatamente o
+            defeito, um nível acima. O teste
+            `test_a_frase_curta_e_a_mais_longa_nao_movem_nada` reprova por
+            isto.
+
+            O preço, dito na mesa: ao ARRASTAR a janela para outra largura, a
+            reserva fica um ciclo de negociação atrás (ela mede na largura
+            anterior). O GTK renegocia assim que a alocação muda, então o erro
+            dura um quadro, só cresce (nunca corta texto) e acontece durante
+            um gesto dela — não duas vezes por segundo, sozinho, que é o que
+            ela relatou.
+            """
+            largura = self.get_allocated_width()
+            if largura <= 1:
+                largura = largura_perguntada
+            if largura <= 0:
+                return 0
+            em_cache = self._alturas.get(largura)
+            if em_cache is not None:
+                return em_cache
+            layout = self.create_pango_layout(
+                frase_mais_longa_do_que_chega_ao_jogo()
+            )
+            layout.set_wrap(self.get_line_wrap_mode())
+            layout.set_width(largura * Pango.SCALE)
+            altura = int(layout.get_pixel_size()[1])
+            self._alturas[largura] = altura
+            return altura
+
+        def do_get_preferred_height_for_width(
+            self, largura: int
+        ) -> tuple[int, int]:
+            minimo, natural = Gtk.Label.do_get_preferred_height_for_width(
+                self, largura
+            )
+            reserva = self.altura_reservada(largura)
+            return max(minimo, reserva), max(natural, reserva)
+
+        def do_get_preferred_height(self) -> tuple[int, int]:
+            # O caminho sem largura. Num rótulo que quebra linha o GTK nem
+            # costuma passar por aqui (ele resolve por height-for-width na
+            # largura natural), mas quem passar tem de ver a mesma reserva.
+            minimo, natural = Gtk.Label.do_get_preferred_height(self)
+            reserva = self.altura_reservada()
+            return max(minimo, reserva), max(natural, reserva)
+
 
 else:
 
@@ -4617,6 +4804,7 @@ __all__ = [
     "acao_speaker_devolucao",
     "acao_speaker_mudo",
     "accent_do_card",
+    "frase_mais_longa_do_que_chega_ao_jogo",
     "glyph_size",
     "glyph_size_unico",
     "gyro_do_inputs",

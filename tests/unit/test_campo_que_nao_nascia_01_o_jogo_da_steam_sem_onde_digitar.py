@@ -336,7 +336,14 @@ def test_jogo_da_steam_traz_a_dica_do_appid_junto_com_o_campo(
     editor.escolher("steam_game")
 
     assert janela.entry().get_visible() is True
-    assert janela.entry().get_placeholder_text() == f"ex.: {APPID_DELA}"
+    # JOGO-QUE-SE-DIZ-01 (13/08/2026): a dica deixou de ser só `ex.: <appid>`,
+    # porque o campo deixou de aceitar só o appid — ele passou a entender o
+    # endereço da loja e o nome do jogo. O que este teste guarda continua sendo
+    # o mesmo: a dica da Steam fala do NÚMERO, e a de "Jogo específico" fala do
+    # programa. Por isso a asserção virou "contém", e não "é igual".
+    dica = janela.entry().get_placeholder_text()
+    assert APPID_DELA in dica, dica
+    assert "endereço da loja" in dica, dica
 
 
 def test_jogo_especifico_tambem_faz_o_campo_nascer(sem_daemon: None) -> None:

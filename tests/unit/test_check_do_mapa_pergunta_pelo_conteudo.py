@@ -240,3 +240,115 @@ def test_a_hora_da_geracao_nao_derruba_o_check(arvore: Path) -> None:
 def test_o_gerador_existe_onde_os_portoes_o_chamam() -> None:
     """Portão que chama script inexistente reprova por engano."""
     assert GERADOR.is_file()
+
+
+# --------------------------------------------------------------------------
+# PECA-ORFA-01 (13/08/2026) — o id de desenho que sumiu do SVG
+#
+# A peça é o alvo que a página acende no desenho quando alguém clica na linha.
+# Até 13/08 a órfã era acumulada, impressa em stderr como "aviso" e o processo
+# devolvia 0 — inclusive no `--check`, que é o passo do pre-commit e do CI.
+# --------------------------------------------------------------------------
+def orfana_a_primeira_peca(arvore: Path) -> str:
+    """Troca a `peca` da primeira linha por um id que nenhum desenho tem.
+
+    Devolve o id inventado. Ele carrega `ERRADO` no nome de propósito: se algum
+    dia um desenho ganhar essa peça, o teste morre com uma mensagem que se lê.
+    """
+    mapa = arvore / "docs" / "data" / "mapa-controles.csv"
+    with open(mapa, encoding="utf-8", newline="") as fh:
+        linhas = list(csv.reader(fh))
+    coluna = linhas[0].index("peca")
+    inventado = "dpad_up_ERRADO"
+    for desenho in (arvore / "assets" / "control-svg").glob("*.svg"):
+        assert inventado not in desenho.read_text(encoding="utf-8"), (
+            f"o id {inventado!r} passou a existir em {desenho.name}: este teste "
+            "perdeu o objeto e precisa de outro id inventado")
+    linhas[1][coluna] = inventado
+    with open(mapa, "w", encoding="utf-8", newline="") as fh:
+        csv.writer(fh, lineterminator="\n").writerows(linhas)
+    return inventado
+
+
+def test_peca_orfa_faz_o_check_reprovar(arvore: Path) -> None:
+    """A cura: `--check` sai 1 quando o CSV cita peça que sumiu do desenho.
+
+    MORDE? Arrancar o `return 1` do bloco `if orfas:` em `main()` faz este teste
+    reprovar com `saiu 0` — que é literalmente o estado da árvore antes de
+    13/08/2026. Medido: com a órfã publicada e o `return 1` fora, o `--check`
+    imprimia as duas linhas de aviso em stderr e devolvia EXIT=0.
+    """
+    inventado = orfana_a_primeira_peca(arvore)
+    # A página é regerada COM a órfã, para que sobre UMA variável só: sem isto o
+    # `--check` reprovaria por `DESATUALIZADO` mesmo com a cura arrancada, e o
+    # teste passaria sem medir nada. O gerador escreve a página e SÓ ENTÃO
+    # reprova — é por isso que aqui se ignora o código de saída dele.
+    roda(arvore)
+    assert inventado in pagina(arvore).read_text(encoding="utf-8"), (
+        "o gerador reprovou ANTES de escrever a página: a órfã não chegou ao "
+        "specs.html, e este teste voltaria a medir a divergência de conteúdo")
+
+    saida = confere(arvore)
+    assert saida.returncode == 1, (
+        "o CSV cita uma peça que nenhum desenho tem e o `--check` passou — é o "
+        f"aviso em stderr que ninguém lê. Disse: {saida.stdout!r}")
+    assert "PEÇA ÓRFÃ" in saida.stderr
+    assert inventado in saida.stderr, "o erro não diz QUAL peça sumiu"
+
+
+def test_peca_orfa_reprova_tambem_na_geracao(arvore: Path) -> None:
+    """O outro modo, pela mesma razão: dado quebrado não devolve 0.
+
+    Regerar não conserta uma órfã — ela é defeito do CSV, não da página. Um
+    gerador que dissesse "952 KB, 293 linhas" e saísse 0 mandaria a pessoa
+    embora achando que estava tudo certo.
+    """
+    orfana_a_primeira_peca(arvore)
+    saida = roda(arvore)
+    assert saida.returncode == 1, (
+        f"o gerador devolveu 0 sobre um CSV com peça órfã: {saida.stdout!r}")
+    assert "PEÇA ÓRFÃ" in saida.stderr
+
+
+def test_sem_orfa_o_gerador_e_o_check_seguem_saindo_zero(arvore: Path) -> None:
+    """O contrapeso. Portão que reprova sempre é portão desligado.
+
+    Medido na árvore REAL em 13/08/2026, antes de ligar a reprovação: ZERO
+    linhas órfãs nas 293 do mapa. Ligar isto custou zero reprovações.
+    """
+    assert roda(arvore).returncode == 0
+    assert confere(arvore).returncode == 0
+
+
+def test_o_mapa_real_nao_tem_peca_orfa() -> None:
+    """Contra a ÁRVORE REAL, com régua independente da do gerador.
+
+    O teste relê os ids de cada SVG por conta própria em vez de importar
+    `pecas_orfas`: se a régua do gerador começar a enxergar de menos — uma
+    expressão regular que perca um id, um `strip()` que suma —, os dois lados
+    divergem aqui em vez de daqui a três levas. Nesta casa o instrumento já
+    mentiu mais que o produto.
+    """
+    desenhos = {
+        "dualsense": "dualsense.svg",
+        "pro": "nintendo-pro.svg",
+        "sn30": "8bitdo-sn30-pro.svg",
+    }
+    ids = {
+        controle: set(re.findall(
+            r'\bid="([^"]+)"',
+            (RAIZ / "assets" / "control-svg" / nome).read_text(encoding="utf-8")))
+        for controle, nome in desenhos.items()
+    }
+    with open(RAIZ / "docs" / "data" / "mapa-controles.csv", encoding="utf-8",
+              newline="") as fh:
+        linhas = list(csv.DictReader(fh))
+    orfas = [
+        (lin["controle"], lin["chave"], peca)
+        for lin in linhas
+        for peca in lin["peca"].split()
+        if peca not in ids.get(lin["controle"], set())
+    ]
+    assert not orfas, (
+        "o mapa cita peça(s) que sumiram dos desenhos: "
+        + "; ".join(f"{c}: {ch} pede {p}" for c, ch, p in orfas))

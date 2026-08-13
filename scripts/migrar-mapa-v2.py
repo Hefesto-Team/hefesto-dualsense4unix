@@ -821,8 +821,14 @@ def migra_ensaios(v1: list[dict]) -> tuple[list[dict], list[str]]:
     return novos, perdidos
 
 
+#: `resultado_da_feature` entrou em 13/08/2026, entre `resultado` e
+#: `observado_por`: o `resultado` responde pelo SUSPEITO da linha, e há ensaio
+#: em que as duas respostas são opostas sem que nenhuma esteja errada. Vazia
+#: quer dizer "o `resultado` também responde pela feature", que é o caso de 76
+#: dos 77 ensaios — por isso acrescentá-la não reescreveu medição nenhuma.
 CABECALHO_ENSAIOS = ["id", "linha_id", "transporte", "quando", "suspeito", "presente",
-                     "resultado", "observado_por", "fonte", "nota", "linha_id_v1"]
+                     "resultado", "resultado_da_feature", "observado_por", "fonte",
+                     "nota", "linha_id_v1"]
 
 
 def escreve(caminho: Path, cabecalho: list[str], linhas: list[dict]) -> None:

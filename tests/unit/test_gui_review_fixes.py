@@ -11,6 +11,8 @@ multi-dimensional da interface:
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from tests.conftest import skip_sem_gi_real
@@ -114,14 +116,55 @@ def test_gui_dialogs_confirm_delete_profile_exportado() -> None:
 
 
 @skip_sem_gi_real
-def test_restore_dialog_nao_cita_navegacao() -> None:
-    # BUG-RESTORE-DIALOG-WRONG-PROFILE-01: o texto EXIBIDO não deve citar o asset
-    # errado ('Navegação'). Checa a string passada a format_secondary_text.
-    import inspect
+def test_restore_dialog_nao_cita_navegacao(monkeypatch: pytest.MonkeyPatch) -> None:
+    """BUG-RESTORE-DIALOG-WRONG-PROFILE-01: o texto EXIBIDO não cita 'Navegação'.
 
+    TESTE-HONESTO-01/E3 (13/08/2026): a medida era um assert de substring sobre
+    o TEXTO-FONTE da função, e isso mede o ARQUIVO, não a tela — a frase certa
+    podia estar escrita ali e o diálogo passar outra string ao
+    `format_secondary_text` sem ninguém reprovar (provado por mutação em
+    13/08/2026: o assert antigo passa com o diálogo exibindo o texto do
+    diálogo de REMOVER). Agora o diálogo é EXECUTADO contra um dublê que
+    grava o que foi exibido.
+    """
     from hefesto_dualsense4unix.app import gui_dialogs
 
-    src = inspect.getsource(gui_dialogs.confirm_restore_default)
-    # A frase enganosa antiga sumiu e a correta está presente.
-    assert "cópia original (Navegação)" not in src
-    assert "aplica-se a todos os apps" in src
+    exibidos: list[str] = []
+
+    class _DialogoFalso:
+        def __init__(self, **kwargs: object) -> None:
+            self.kwargs = kwargs
+
+        def format_secondary_text(self, texto: str) -> None:
+            exibidos.append(texto)
+
+        def add_button(self, *_args: object) -> None:
+            pass
+
+        def set_default_response(self, *_args: object) -> None:
+            pass
+
+        def run(self) -> object:
+            return gui_dialogs.Gtk.ResponseType.CANCEL
+
+        def destroy(self) -> None:
+            pass
+
+    # Só o `MessageDialog` é de mentira; os enums continuam sendo os do GTK
+    # real, senão o "Cancelar" do dublê não teria como ser o mesmo "Cancelar"
+    # que a função compara.
+    gtk_falso = SimpleNamespace(
+        MessageDialog=_DialogoFalso,
+        MessageType=gui_dialogs.Gtk.MessageType,
+        ButtonsType=gui_dialogs.Gtk.ButtonsType,
+        ResponseType=gui_dialogs.Gtk.ResponseType,
+    )
+    monkeypatch.setattr(gui_dialogs, "Gtk", gtk_falso)
+
+    assert gui_dialogs.confirm_restore_default(None) is False
+
+    (secundario,) = exibidos
+    # A frase enganosa antiga sumiu, e a correta está na TELA.
+    assert "Navegação" not in secundario
+    assert "meu_perfil" in secundario
+    assert "aplica-se a todos os apps" in secundario

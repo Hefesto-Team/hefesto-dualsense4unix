@@ -32,6 +32,13 @@ from hefesto_dualsense4unix.app.ipc_bridge import (
     run_in_thread,
 )
 from hefesto_dualsense4unix.app.widgets import SegmentedSelector
+from hefesto_dualsense4unix.integrations.jogos_locais import (
+    JogoLocal,
+    casa_com_o_que_ela_digitou,
+    catalogo_de_jogos,
+    frase_do_campo_do_jogo,
+    nomes_por_appid,
+)
 from hefesto_dualsense4unix.profiles import schema as _schema
 from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
@@ -51,6 +58,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (
     MENSAGENS_DE_GENTE,
     detect_simple_preset,
     from_simple_choice,
+    normalize_appid,
     simple_extra,
 )
 from hefesto_dualsense4unix.profiles.slug import find_by_slug, mesmo_slug
@@ -97,10 +105,15 @@ _CAMPO_LIVRE_DICAS: dict[str, tuple[str, str]] = {
         "Em jogo da Steam/Proton isso costuma ser o binário do wine — nesse "
         "caso use \"Jogo da Steam\".",
     ),
+    # JOGO-QUE-SE-DIZ-01 (13/08/2026): o placeholder passou a dizer as TRÊS
+    # formas que o campo entende, porque agora são três. Antes ele pedia o
+    # número cru — o único dado que ninguém tem em mãos.
     "steam_game": (
-        "ex.: 1599660",
-        "Número do jogo na Steam (o da URL da loja). Com o jogo aberto, o "
-        "campo é preenchido sozinho.",
+        "nome do jogo, endereço da loja, ou o número (ex.: 1599660)",
+        "Digite o nome do jogo e escolha na lista dos que estão nesta máquina, "
+        "cole o endereço da página do jogo na loja da Steam "
+        "(store.steampowered.com/app/…), ou escreva o número direto. Com o "
+        "jogo aberto, o campo é preenchido sozinho.",
     ),
 }
 
@@ -932,6 +945,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             # isto ela continuaria mostrando a marca do appid ANTERIOR.
             with contextlib.suppress(Exception):
                 campo_do_jogo.connect("changed", self._on_campo_do_jogo_mudou)
+        # JOGO-QUE-SE-DIZ-01: a lista dos jogos DESTA máquina no próprio campo.
+        self._instalar_lista_de_jogos_do_pc()
 
         # SALVAR-NAO-REBAIXA-01: o gesto dela sobre a escala de prioridade. O
         # `_populate_editor` zera a marca DEPOIS de posicionar os widgets, então
@@ -1509,6 +1524,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         if active_id == "steam_game":
             self._prefill_steam_appid()
         self._mostrar_caixa_do_steam_input(active_id == "steam_game")
+        # JOGO-QUE-SE-DIZ-01: o nome do jogo ao lado do número acompanha a
+        # escolha — em "Jogo específico" o campo guarda o basename do programa,
+        # e um nome de jogo da Steam ali seria a tela afirmando outra regra.
+        self._atualizar_frase_do_jogo()
 
     # --- A caixinha que TIRA um jogo do Steam Input ------------------------
     # DECISÃO DELA, 07/08/2026: "no editor do perfil, logo abaixo do jogo
@@ -1639,9 +1658,207 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         return texto if texto.isdigit() else None
 
     def _on_campo_do_jogo_mudou(self, _entry: object = None) -> None:
-        """Digitar outro appid muda de qual jogo a caixinha está falando."""
-        if self._selected_simple_choice() == "steam_game":
-            self._sincronizar_caixa_do_steam_input()
+        """Digitar outro appid muda de qual jogo a caixinha está falando.
+
+        JOGO-QUE-SE-DIZ-01 acrescentou dois trabalhos ao mesmo sinal, nesta
+        ordem, que não é arbitrária: **primeiro** o endereço colado vira o
+        número (e isso reentra por este mesmo handler, com o campo já
+        normalizado), **depois** a caixinha do Steam Input e a frase do jogo
+        leem um campo que já é um appid.
+        """
+        if self._selected_simple_choice() != "steam_game":
+            self._atualizar_frase_do_jogo()
+            return
+        if self._colar_virou_numero():
+            return
+        self._sincronizar_caixa_do_steam_input()
+        self._atualizar_frase_do_jogo()
+
+    # --- O campo que entende o endereço e conhece os jogos daqui ------------
+    # JOGO-QUE-SE-DIZ-01 (13/08/2026), pedido dela: *"ou aplicamos um regex
+    # automático só de colar o link da loja do jogo e ele pega o id, ou ele
+    # pré-apresenta os nomes dos jogos em .desktop localmente instalados no pc,
+    # dessa forma ao digitar o nome do jogo ele apareceria ali."*
+    #
+    # Os dois, porque são complementares: o endereço cobre o jogo que ela ainda
+    # não instalou, e a lista cobre o que já está aqui. O rótulo continua sendo
+    # "Nome do jogo:" — nome novo para um campo que já tem nome seria conceito
+    # errado, e este rótulo já carrega dois significados (ver
+    # `_CAMPO_LIVRE_DICAS`), que é o motivo de a dica trocar por escolha.
+
+    def _instalar_lista_de_jogos_do_pc(self) -> None:
+        """Liga a completação do campo do jogo, com o catálogo lido em thread.
+
+        A leitura do disco vai para fora da thread GTK por disciplina, não por
+        medida de dor: nesta máquina o catálogo inteiro (33 `.acf` em duas
+        bibliotecas + 150 `.desktop`) sai em **10 ms**. Numa biblioteca de
+        centenas de jogos, num HD que dormiu, o número é outro — e travar a
+        janela para montar uma sugestão seria trocar um alívio por um defeito.
+
+        Tudo aqui é best-effort: sem Steam, sem `.acf`, sem permissão ou sem
+        `Gtk.EntryCompletion` (dublê de teste), a lista fica vazia e o campo
+        segue aceitando o que ela digitar. Degradar em silêncio é requisito.
+        """
+        self._jogos_do_pc: list[JogoLocal] = []
+        self._nomes_dos_jogos: dict[str, str] = {}
+        self._jogos_store = None
+        entry = self._get("profile_simple_custom_name")
+        if entry is None:
+            return
+        try:
+            store = Gtk.ListStore(GObject.TYPE_STRING, GObject.TYPE_STRING)
+            completion = Gtk.EntryCompletion()
+            completion.set_model(store)
+            # Coluna 0 = o rótulo que ela LÊ ("Sea of Stars (appid 851100)").
+            # Coluna 1 = o appid, que é o que o campo GRAVA — por isso o
+            # "match-selected" é interceptado: o comportamento de fábrica
+            # escreveria o rótulo inteiro no campo, e o perfil nasceria com um
+            # `steam_app_Sea of Stars` que nunca casa com janela nenhuma.
+            completion.set_text_column(0)
+            completion.set_minimum_key_length(1)
+            completion.set_popup_completion(True)
+            completion.set_inline_completion(False)
+            completion.set_match_func(self._jogo_casa_com_o_texto, None)
+            completion.connect("match-selected", self._on_jogo_escolhido_na_lista)
+            entry.set_completion(completion)
+        except Exception as exc:
+            logger.debug("lista_de_jogos_sem_completacao", err=str(exc))
+            return
+        self._jogos_store = store
+        run_in_thread(
+            catalogo_de_jogos,
+            on_success=self._guardar_jogos_do_pc,
+            on_failure=lambda exc: bool(
+                logger.debug("catalogo_de_jogos_falhou", err=str(exc))
+            ),
+        )
+
+    def _guardar_jogos_do_pc(self, jogos: Any) -> bool:
+        """Recebe o catálogo lido na thread e enche a lista suspensa.
+
+        Método, e não closure, para que o teste possa entregar uma biblioteca
+        de mentira sem GLib nem thread — e para que a leitura do disco DELA
+        nunca precise acontecer num teste.
+        """
+        try:
+            self._jogos_do_pc = list(jogos or [])
+            self._nomes_dos_jogos = nomes_por_appid(self._jogos_do_pc)
+            alvo = getattr(self, "_jogos_store", None)
+            if alvo is not None:
+                alvo.clear()
+                for jogo in self._jogos_do_pc:
+                    alvo.append([jogo.rotulo, jogo.appid])
+            logger.info("jogos_do_pc_lidos", quantos=len(self._jogos_do_pc))
+            # O perfil já aberto pode estar mostrando um número mudo.
+            self._atualizar_frase_do_jogo()
+        except Exception as exc:
+            logger.debug("lista_de_jogos_nao_montou", err=str(exc))
+        return False
+
+    def _jogo_casa_com_o_texto(
+        self, _completion: Any, chave: str, iterador: Any, _dados: Any = None
+    ) -> bool:
+        """A linha entra na lista suspensa para o que ela digitou até agora?
+
+        O GTK entrega a `chave` já achatada; a comparação de verdade — sem
+        acento, por pedaço do nome e por começo do número — é da função pura
+        `jogos_locais.casa_com_o_que_ela_digitou`, que o teste exercita sem GTK.
+        """
+        try:
+            store = getattr(self, "_jogos_store", None)
+            if store is None:
+                return False
+            appid = store.get_value(iterador, 1)
+            for jogo in getattr(self, "_jogos_do_pc", []):
+                if jogo.appid == appid:
+                    return casa_com_o_que_ela_digitou(jogo, chave)
+        except Exception:
+            return False
+        return False
+
+    def _on_jogo_escolhido_na_lista(
+        self, _completion: Any, model: Any, iterador: Any
+    ) -> bool:
+        """Ela escolheu um jogo: o campo fica com o APPID, não com o rótulo.
+
+        Devolve ``True`` para impedir o comportamento de fábrica, que escreveria
+        o rótulo lido no campo gravado.
+        """
+        with contextlib.suppress(Exception):
+            appid = model.get_value(iterador, 1)
+            entry = self._get("profile_simple_custom_name")
+            if entry is not None and appid:
+                entry.set_text(str(appid))
+                with contextlib.suppress(Exception):
+                    entry.set_position(-1)
+        return True
+
+    def _colar_virou_numero(self) -> bool:
+        """Endereço colado no campo vira o appid. ``True`` = o campo foi reescrito.
+
+        Só reescreve quando o texto NÃO é já o número: sem essa guarda o
+        ``set_text`` reentraria neste mesmo handler para sempre.
+        """
+        if getattr(self, "_reescrevendo_o_campo_do_jogo", False):
+            return False
+        entry = self._get("profile_simple_custom_name")
+        if entry is None:
+            return False
+        try:
+            bruto = (entry.get_text() or "").strip()
+        except Exception:
+            return False
+        appid = normalize_appid(bruto)
+        if appid is None or appid == bruto:
+            return False
+        self._reescrevendo_o_campo_do_jogo = True
+        try:
+            entry.set_text(appid)
+            with contextlib.suppress(Exception):
+                entry.set_position(-1)
+        except Exception:
+            return False
+        finally:
+            self._reescrevendo_o_campo_do_jogo = False
+        # O `set_text` já reentrou aqui com o campo normalizado e fez o resto.
+        return True
+
+    def _atualizar_frase_do_jogo(self) -> None:
+        """Escreve (ou apaga) o rótulo que fica ao lado do campo do jogo.
+
+        A decisão é da função pura `jogos_locais.frase_do_campo_do_jogo`; aqui
+        só a costura e a cor. `#ffb86c` é o token de ALERTA da casa, o mesmo do
+        `profile_process_name_aviso`, e `set_markup` em vez de classe CSS pela
+        razão já medida: classe não pinta rótulo nesta janela.
+        """
+        rotulo = self._get("profile_jogo_reconhecido")
+        if rotulo is None:
+            return
+        try:
+            if self._selected_simple_choice() != "steam_game":
+                rotulo.set_text("")
+                rotulo.set_visible(False)
+                return
+            entry = self._get("profile_simple_custom_name")
+            texto = (entry.get_text() or "") if entry is not None else ""
+            nomes = getattr(self, "_nomes_dos_jogos", {})
+            decisao = frase_do_campo_do_jogo(texto, nomes)
+            if decisao is None:
+                rotulo.set_text("")
+                rotulo.set_visible(False)
+                return
+            frase, e_alerta = decisao
+            # `#ffb86c` é o ALERTA da casa; `#8be9fd` é o `cyan` do
+            # `theme.css:25`, cujo comentário o define como "info, valores
+            # numéricos" — que é exatamente o que o nome do jogo é aqui: a
+            # leitura humana do número que está no campo ao lado.
+            cor = "#ffb86c" if e_alerta else "#8be9fd"
+            rotulo.set_markup(f'<span foreground="{cor}">{escapar_markup(frase)}</span>')
+            with contextlib.suppress(Exception):
+                rotulo.set_tooltip_text(frase)
+            rotulo.set_visible(True)
+        except Exception as exc:
+            logger.debug("frase_do_jogo_falhou", err=str(exc))
 
     def on_profile_steam_input_toggled(self, check: Any = None) -> None:
         """Marca/desmarca ESTE jogo na allowlist do Steam Input.

@@ -43,10 +43,27 @@ set -uo pipefail
 # pipe`.
 #
 # A cura é não construir o pipe: o produtor entra numa variável e o `grep` lê
-# dela por here-string. As duas travessias de `main()` do doctor já estão
-# curadas assim. As outras nove ocorrências de `| grep -q` deste arquivo
-# continuam vulneráveis por construção — produzem pouco e não deram problema
-# até hoje, mas são a mesma armadilha esperando uma máquina mais lenta.
+# dela por here-string. As duas travessias de `main()` do doctor foram as
+# primeiras curadas assim; as outras NOVE ocorrências de `| grep -q` deste
+# arquivo foram curadas do mesmo jeito em 13/08/2026, e o arquivo passou a ter
+# ZERO. É essa contagem que
+# tests/unit/test_check_packaging_parity.py::test_nenhum_produtor_entra_num_pipe_com_grep_q
+# fixa: `| grep -q` novo neste arquivo reprova a suíte.
+#
+# A direção do erro depende do que está pendurado no status, e MEDIR isso em
+# 13/08/2026 desmentiu a leitura fácil de que "com `||` sempre dá alarme":
+#   - `|| missing+=(...)` ACUSA um defeito que não existe — o caso do CI acima;
+#   - `|| continue` (linha do `doctor.sh` na seção do BlueZ) PULA o item, e a
+#     checagem seguinte nunca roda: silêncio, não alarme;
+#   - `&& missing+=(...)` CALA sobre um defeito que existe — havia duas assim
+#     (o doctor que cura, e o uninstall que remove o pacote).
+# Duas das três direções erram para o lado de APROVAR.
+#
+# Fica de fora, de propósito, um caso que PARECE o mesmo e não é: o
+# `printf ... | awk '... exit'` que recorta os blocos do `install.sh`. O awk
+# também sai cedo, mas ninguém lê o status daquela substituição, e o texto que
+# ele já escreveu é o texto completo do bloco. Sem veredito pendurado no
+# código de saída, não há defeito a curar.
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 rc=0
@@ -75,7 +92,11 @@ while IFS= read -r desk; do
         continue
     fi
     dir="$(dirname "${desk}")"
-    if find "${dir}" -path "*apps/${icon}.*" 2>/dev/null | grep -q .; then
+    # CORRIDA-DO-PIPEFAIL-01: era `find ... | grep -q .`. Um diretório de
+    # ícones grande faz o `find` ainda estar escrevendo quando o `grep -q` sai
+    # no primeiro nome — e aí o ícone EXISTE e o portão diz que falta.
+    _icone_achado="$(find "${dir}" -path "*apps/${icon}.*" 2>/dev/null || true)"
+    if grep -q . <<< "${_icone_achado}"; then
         echo "[ OK ] $(basename "${desk}"): Icon=${icon} tem arquivo versionado"
     else
         echo "[FAIL] $(basename "${desk}"): Icon=${icon} sem arquivo de ícone em ${dir}"
@@ -853,8 +874,13 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
                    packaging/arch/PKGBUILD packaging/nix/package.nix; do
         [[ -f "${_bt_pkg}" ]] || continue
         _bt_codigo="$(grep -v '^[[:space:]]*#' "${_bt_pkg}" 2>/dev/null || true)"
-        printf '%s\n' "${_bt_codigo}" | grep -qF 'doctor.sh' || continue
-        printf '%s\n' "${_bt_codigo}" | grep -qF 'bluez_config.sh' \
+        # CORRIDA-DO-PIPEFAIL-01: here-string, nunca `printf | grep -q`. Este
+        # `|| continue` era o mais traiçoeiro dos nove — sob SIGPIPE ele PULA o
+        # empacotador em silêncio, e a regra de PAR da linha seguinte nunca é
+        # aplicada. Medido em 13/08/2026: com o pipe de volta, um build_deb.sh
+        # que leva o doctor.sh e ESQUECE o bluez_config.sh passa [ OK ].
+        grep -qF 'doctor.sh' <<< "${_bt_codigo}" || continue
+        grep -qF 'bluez_config.sh' <<< "${_bt_codigo}" \
             || missing+=("${_bt_pkg} empacota doctor.sh e deixa bluez_config.sh para trás (detector CEGO no pacote: cai em 'o dono único da config do BlueZ não está aqui')")
     done
     if [[ "${#missing[@]}" -eq 0 ]]; then
@@ -919,9 +945,12 @@ else
         /^if \[\[ "\$\{FORMAT\}" != "native" \]\]; then$/ { dentro = 1 }
         dentro && /^fi$/ { depois = 1; next }
         depois { print }')"
-    printf '%s\n' "${_osk_bloco_formatos}" | grep -qE '^[[:space:]]*install_osk_host[[:space:]]*$' \
+    # CORRIDA-DO-PIPEFAIL-01: here-string. O `install.sh` é o maior produtor
+    # desta seção — é aqui que a corrida tem mais chance de ser perdida, e o
+    # veredito seria "o install não chama install_osk_host" com a chamada viva.
+    grep -qE '^[[:space:]]*install_osk_host[[:space:]]*$' <<< "${_osk_bloco_formatos}" \
         || missing+=("install.sh NÃO instala o teclado na tela nos formatos de pacote (flatpak/appimage/deb saem pelo 'exit 0' sem ele)")
-    printf '%s\n' "${_osk_bloco_native}" | grep -qE '^[[:space:]]*install_osk_host[[:space:]]*$' \
+    grep -qE '^[[:space:]]*install_osk_host[[:space:]]*$' <<< "${_osk_bloco_native}" \
         || missing+=("install.sh NÃO instala o teclado na tela no fluxo native")
 
     # 2) Todo empacotamento DECLARA o teclado na tela. O .deb/.rpm/PKGBUILD
@@ -950,8 +979,12 @@ else
         _osk_decl="${_osk_item%%:*}"
         _osk_padrao="${_osk_item#*:}"
         [[ -f "${_osk_decl}" ]] || continue
-        grep -v '^[[:space:]]*#' "${_osk_decl}" 2>/dev/null \
-            | grep -qE "${_osk_padrao}" \
+        # CORRIDA-DO-PIPEFAIL-01: o produtor lê um ARQUIVO, e o casamento de
+        # todos estes padrões está no começo dele — o `grep -qE` sai enquanto o
+        # `grep -v` ainda tem o resto do arquivo para escrever. Este é o mais
+        # exposto dos nove, porque o tamanho do produtor não é escolha nossa.
+        _osk_decl_codigo="$(grep -v '^[[:space:]]*#' "${_osk_decl}" 2>/dev/null || true)"
+        grep -qE "${_osk_padrao}" <<< "${_osk_decl_codigo}" \
             || missing+=("${_osk_decl} não DECLARA o teclado na tela no campo que o gerenciador lê (padrão: ${_osk_padrao})")
     done
 
@@ -971,9 +1004,12 @@ else
     #    pode instalar pacote: `apply_fixes` e `fix_mic_dualsense` rodam sem ela
     #    pedir, e instalar software de sistema por baixo de um diagnóstico é
     #    exatamente o tipo de surpresa que esta casa não entrega.
-    awk '/^apply_fixes\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
-        scripts/doctor.sh 2>/dev/null \
-        | grep -qE 'apt|dnf|pacman|install_osk' \
+    #    CORRIDA-DO-PIPEFAIL-01, e aqui ela erra para o lado de APROVAR: o
+    #    veredito está num `&&`, então o 141 do pipe faz o `missing+=` NÃO
+    #    disparar. O doctor curaria o teclado na tela e o portão diria [ OK ].
+    _osk_apply_fixes="$(awk '/^apply_fixes\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
+        scripts/doctor.sh 2>/dev/null || true)"
+    grep -qE 'apt|dnf|pacman|install_osk' <<< "${_osk_apply_fixes}" \
         && missing+=("scripts/doctor.sh CURA o teclado na tela dentro de apply_fixes — o doctor confere e não cura")
 
     # 5) O uninstall NÃO remove o pacote (é do sistema, e pode servir a outra
@@ -981,10 +1017,12 @@ else
     #    sentinela (essa é nossa). Sem apagar a sentinela, o doctor leria uma
     #    máquina já desinstalada como "o pacote sumiu depois do install".
     _osk_uninstall_codigo="$(grep -v '^[[:space:]]*#' uninstall.sh 2>/dev/null || true)"
-    printf '%s\n' "${_osk_uninstall_codigo}" \
-        | grep -qE '(apt-get|apt|dnf|pacman|rpm)[^|]*(remove|purge|erase|-R)[^|]*(wvkbd|onboard)' \
+    # CORRIDA-DO-PIPEFAIL-01 nas duas: here-string. O `uninstall.sh` tem mais
+    # de mil linhas, e a sentinela é citada perto do começo.
+    grep -qE '(apt-get|apt|dnf|pacman|rpm)[^|]*(remove|purge|erase|-R)[^|]*(wvkbd|onboard)' \
+        <<< "${_osk_uninstall_codigo}" \
         && missing+=("uninstall.sh REMOVE o pacote do teclado na tela — pacote de sistema não é nosso para desinstalar")
-    printf '%s\n' "${_osk_uninstall_codigo}" | grep -qF 'teclado-na-tela.conf' \
+    grep -qF 'teclado-na-tela.conf' <<< "${_osk_uninstall_codigo}" \
         || missing+=("uninstall.sh não apaga a sentinela teclado-na-tela.conf (o doctor passaria a acusar remoção de um produto que já saiu)")
 
     # 6) O CONTRATO DE NOMES entre os três que precisam concordar: quem instala

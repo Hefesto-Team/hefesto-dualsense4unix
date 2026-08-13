@@ -5,8 +5,9 @@ Por que este módulo existe
 O vpad uhid (máscara DualSense Edge) monta o report 0x01 a partir do evdev do
 físico — sticks/botões/d-pad — e deixava a janela de motion (bytes 15..39 do
 payload: gyro, accel, sensor_timestamp e os 2 pontos de toque) NEUTRA. Medido
-ao vivo (2026-07-19): o físico emite gyro a 250 Hz (USB) / ~765 Hz (BT) e o nó
-Motion do vpad emite ZERO — gyro aiming morto para quem joga pelo hefesto.
+ao vivo (2026-07-19): o físico emite gyro a 250 Hz no USB e, no BT, em RAJADA
+(veja "A taxa do rádio é RAJADA", abaixo) — e o nó Motion do vpad emite ZERO:
+gyro aiming morto para quem joga pelo hefesto.
 
 A cura é um espelho de report PARCIAL (ARCH-1 do estudo
 `docs/process/estudos/2026-07-18-estudo-imu-touchpad-vpad.md`): uma thread
@@ -23,13 +24,38 @@ sai na taxa do físico, com throttle. Ao perder o device (hotplug, BT caiu,
 retarget) desliga o streaming: o vpad volta ao delta de 60 Hz com IMU neutra —
 fail-safe por construção, nunca um gyro congelado.
 
-Throttle (obrigatório, não otimização): o BT desta máquina entrega ~765 Hz por
-controle; sem cap, 4 vpads em co-op seriam ~3000 writes/s no /dev/uhid. A
-emissão é capada em `MOTION_EMIT_MAX_HZ` (250 Hz — a taxa nativa USB, e a
-mesma faixa do rate-limit do REPLICA-03) com dedup por valor e COALESCÊNCIA:
-janela retida é sobrescrita pela mais nova e a última nunca se perde (flush no
-timeout do select). Jogos integram gyro bem em 250 Hz; o timestamp do sensor
-segue exato em cada janela entregue.
+Throttle (obrigatório, não otimização): o BT desta máquina entrega em rajada,
+com PICO de ~797 Hz por controle; sem cap, 4 vpads em co-op seriam ~3200
+writes/s no /dev/uhid. A emissão é capada em `MOTION_EMIT_MAX_HZ` (250 Hz — a
+taxa nativa USB, e a mesma faixa do rate-limit do REPLICA-03) com dedup por
+valor e COALESCÊNCIA: janela retida é sobrescrita pela mais nova e a última
+nunca se perde (flush no timeout do select). Jogos integram gyro bem em
+250 Hz; o timestamp do sensor segue exato em cada janela entregue.
+
+A taxa do rádio é RAJADA, não uma taxa (medido em 11/08/2026)
+-------------------------------------------------------------
+Este módulo dizia "~765 Hz" para o BT. Aquilo era a média de UMA janela curta,
+e a remedição de 11/08/2026 — cinco janelas de 8 a 10 s no mesmo controle, por
+duas réguas (o relógio do host e o `sensor_timestamp` do próprio controle) —
+mostrou que o rádio não tem "uma taxa". Fonte:
+`docs/protocol/driver-hid-playstation.md`, seção "Rádio: variável, em rajadas,
+e longe de 1000 Hz" (:740-761 e :902):
+
+* **PICO, dentro da rajada:** o p05 do intervalo é teimosamente 1255 us —
+  ~797 Hz instantâneos (:757-758). É este o número que dimensiona o
+  /dev/uhid, porque é a taxa que chega quando chega.
+* **SUSTENTADO:** não é estável. Caiu de ~334 Hz para ~55 Hz entre duas
+  janelas consecutivas de 8 s, sem nada ter mudado; o p95 do intervalo chega
+  a 187 ms. A faixa registrada é "entre ~55 e ~392 Hz" (:902).
+* **Divergência de RÉGUA, registrada e não resolvida:**
+  `docs/protocol/pilha-steam-input-xpad-sdl.md:753` escreve o piso como
+  38 Hz — é a régua do controle (janela 4, 38,3 Hz); a de :902 é a do host
+  (55,4 Hz na mesma janela). O teto (~392 Hz) é o mesmo nas duas. Quem citar
+  um piso, cite junto de qual régua ele veio.
+
+Isto NÃO é licença para afrouxar o teto de emissão — veja a nota do
+`MOTION_EMIT_MAX_HZ`, mais abaixo. Nenhuma constante mudou por causa desta
+remedição: o que estava errado era o número que as justificava, não elas.
 
 Leitura NÃO reabre a guerra de escritores: a guerra (2026-07-18) é sobre
 WRITERS no hidraw; o kernel replica cada input report para TODOS os fds
@@ -173,7 +199,23 @@ _CARGA_CHEIO = 0x2
 
 #: Cap da taxa de emissão ao vpad. 250 Hz = taxa nativa do físico em USB (nada
 #: é jogado fora no cabo) e o mesmo teto do rate-limit do REPLICA-03; em BT
-#: (~765 Hz) vira downsample com coalescência — o estudo aceita 250-500 Hz.
+#: (rajada, pico de ~797 Hz) vira downsample com coalescência — o estudo
+#: aceita 250-500 Hz.
+#:
+#: TETO-DE-EMISSÃO-01 (13/08/2026) — POR QUE O TETO FICA. A remedição de
+#: 11/08/2026 (veja o bloco "A taxa do rádio é RAJADA", no topo do módulo)
+#: registra o rádio sustentando "entre ~55 e ~392 Hz"
+#: (`docs/protocol/driver-hid-playstation.md:902`). Ler isso como "o rádio é
+#: mais lento que 250 Hz, logo o cap sobrou" é a leitura ERRADA, e é o motivo
+#: desta nota existir: o que o /dev/uhid tem de aguentar não é a média, é o
+#: PICO DENTRO da rajada — p05 do intervalo em 1255 us, ~797 Hz (:757-758).
+#: Sem teto, quatro vpads em co-op fariam ~3200 writes/s no /dev/uhid.
+#:
+#: O valor 250.0 NÃO muda: é decisão medida (a taxa nativa do cabo, onde
+#: nada se perde) e o estudo do IMU a aceita. O que a remedição corrigiu foi
+#: o número que a justificava, não ela. `tests/unit/test_teto_de_emissao.py`
+#: reprova se esta constante sumir, subir, ou deixar de ser o default do
+#: `PhysicalReportReader`.
 MOTION_EMIT_MAX_HZ = 250.0
 
 #: Tamanho de leitura: cobre 64 (USB) e 78 (BT) com folga.
@@ -188,8 +230,11 @@ _SELECT_TIMEOUT_S = 0.25
 #: (o provider aponta o primário ATUAL).
 #:
 #: GYRO-BT-SILENCIO-01: o teto é POR TRANSPORTE porque a premissa "um
-#: DualSense vivo emite SEMPRE (250-765 Hz)" só vale NO CABO. Em Bluetooth o
-#: firmware emudece quando o controle está em repouso — o mesmo fato que o
+#: DualSense vivo emite SEMPRE" só vale NO CABO, onde os 250 Hz são
+#: constantes. No rádio ele emite em RAJADA — o p95 do intervalo chega a
+#: 187 ms mesmo com o enlace vivo (11/08/2026,
+#: `docs/protocol/driver-hid-playstation.md:757-758`) — e o
+#: firmware emudece quando o controle está em repouso: o mesmo fato que o
 #: projeto já tinha medido em outro contexto ("firmware BT ocioso emudece",
 #: achado do veneno do launch option). Com 1 s valendo para os dois, um
 #: DualSense parado em BT caía num ciclo eterno a ~1 Hz: silêncio -> larga o
@@ -800,9 +845,10 @@ class PhysicalReportReader:
     def _observe_touchpad_click(self, report: bytes) -> None:
         """Entrega ao vpad a BORDA do clique do touchpad deste report cru.
 
-        Só borda: o report vem a 250-765 Hz e repetir "ainda apertado" em cada
-        um seria um write no /dev/uhid por report, justamente o que o throttle
-        do motion existe para evitar.
+        Só borda: o report vem a 250 Hz no cabo e em rajada no rádio (pico de
+        ~797 Hz, 11/08/2026), e repetir "ainda apertado" em cada um seria um
+        write no /dev/uhid por report, justamente o que o throttle do motion
+        existe para evitar.
 
         `None` do extrator (report de outro id, curto, ou CRC de BT ruim) é
         "não sei" e NÃO mexe no estado — nem entrega, nem solta. Vpad sem o
@@ -839,8 +885,9 @@ class PhysicalReportReader:
         """Entrega ao vpad a MUDANÇA de fone/microfone deste report cru.
 
         Irmão exato do `_observe_touchpad_click`, e as três defesas dele valem
-        aqui pelas mesmas razões: só borda (o report vem a 250-765 Hz e
-        reafirmar o mesmo byte seria um write no /dev/uhid por report),
+        aqui pelas mesmas razões: só borda (o report vem a 250 Hz no cabo e em
+        rajada no rádio, pico de ~797 Hz, e reafirmar o mesmo byte seria um
+        write no /dev/uhid por report),
         ``None`` do extrator não mexe no estado (CRC ruim não despluga fone), e
         vpad sem o método degrada calado (uinput e dublês de teste — mesmo
         contrato duck-typed do `forward_motion`).

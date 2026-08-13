@@ -233,7 +233,13 @@ class TestSeletorAplicaA:
         ed._aplica_a.set_active_id("steam_game")
         assert ed._get("profile_game_entry_box").visivel
         entry = ed._get("profile_simple_custom_name")
-        assert entry.placeholder == "ex.: 1599660"
+        # JOGO-QUE-SE-DIZ-01 (13/08/2026): a dica passou a listar as TRÊS
+        # formas que o campo entende (nome, endereço da loja, número). O que
+        # este teste guarda é o mesmo de antes — a dica da Steam fala do
+        # NÚMERO, a de "Jogo específico" fala do programa — e por isso a
+        # asserção virou "contém".
+        assert "1599660" in entry.placeholder, entry.placeholder
+        assert "endereço da loja" in entry.placeholder, entry.placeholder
         assert "Steam" in entry.tooltip
         assert ed.prefills == 1, "o appid tem de vir do jogo em foco"
 

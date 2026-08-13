@@ -11,10 +11,18 @@ O defeito medido (onda 2, 30/07): dezessete arquivos de `tests/unit` plantam um
   interface" do CI é justamente `grep -rlE 'exigir_gi_real|skip_sem_gi_real'`.
 
 Resultado: centenas de testes de interface que nunca, em lugar nenhum, tocam um
-GTK de verdade. Este arquivo não conserta os dezessete (são de outros donos e
-valem centenas de testes) — ele CONGELA a dívida: o estado de hoje está na
-allowlist abaixo, nome por nome, e qualquer arquivo NOVO que entre nesse estado
-reprova aqui.
+GTK de verdade. Este arquivo não conserta os dezessete de uma vez (são de outros
+donos e valem centenas de testes) — ele CONGELA a dívida: o estado de hoje está
+na allowlist abaixo, nome por nome, e qualquer arquivo NOVO que entre nesse
+estado reprova aqui.
+
+AMORTIZAÇÃO — lote A pago em 13/08/2026 (TESTE-HONESTO-01/E1, `:227-232`). Seis
+arquivos ganharam ``exigir_gi_real()`` no topo e saíram da allowlist:
+``test_emulation_actions_modo_jogo``, ``test_daemon_status_initial``,
+``test_lightbar_persist``, ``test_daemon_autostart``, ``test_compact_window`` e
+``test_emulation_mic_quirk``. Restam **onze**. A partir daqui a dívida tem
+``TETO_DA_DIVIDA``, e ele **só desce** — é o que impede que alguém devolva um
+nome à lista para calar o portão.
 
 A allowlist é DÍVIDA A PAGAR, não permissão. Cada nome ali é um arquivo de
 interface que precisa ganhar `exigir_gi_real()` no TOPO (antes do bloco de
@@ -41,22 +49,16 @@ ESTE_ARQUIVO = Path(__file__).resolve().name
 # ---------------------------------------------------------------------------
 # DÍVIDA A PAGAR — NÃO É PERMISSÃO.
 #
-# Os dezessete arquivos que, em 30/07/2026, plantavam `gi` falso sem a guarda.
-# Medido com o detector deste módulo (e conferido com o grep da sprint).
+# Eram dezessete em 30/07/2026 (medido com o detector deste módulo, conferido
+# com o grep da sprint). O lote A saiu em 13/08/2026 e restaram estes onze.
 # Tirar um nome daqui = aquele arquivo ganhou `exigir_gi_real()` e passou a
 # rodar também contra o GTK real. Acrescentar um nome aqui = o portão foi
-# desligado; não faça.
+# desligado; não faça — e o `TETO_DA_DIVIDA` abaixo reprova quem tentar.
 # ---------------------------------------------------------------------------
 DIVIDA_GI_FALSO: frozenset[str] = frozenset(
     {
         "test_auto01_um_clique_em_vez_de_dez.py",
-        "test_compact_window.py",
-        "test_daemon_autostart.py",
-        "test_daemon_status_initial.py",
         "test_daemon_status_matrix.py",
-        "test_emulation_actions_modo_jogo.py",
-        "test_emulation_mic_quirk.py",
-        "test_lightbar_persist.py",
         "test_mode_transition_um_dono.py",
         "test_modo01_o_modo_jogo_liga_sozinho.py",
         "test_profiles_editor_mode.py",
@@ -68,6 +70,14 @@ DIVIDA_GI_FALSO: frozenset[str] = frozenset(
         "test_vpad_degradation_banner.py",
     }
 )
+
+#: TETO DA DÍVIDA — o número de nomes que a allowlist ainda pode ter. **Só
+#: desce.** Sem ele, a allowlist é uma lista que só cresce por descuido: bastava
+#: alguém acrescentar um nome para o portão calar, e a mensagem "NÃO acrescente"
+#: era só um pedido educado. Cada lote pago baixa este número junto.
+#:
+#: 17 em 30/07/2026 (medição original) → 11 em 13/08/2026 (lote A da E1).
+TETO_DA_DIVIDA = 11
 
 #: Nomes de guarda aceitos: a função do `tests/conftest.py` ou o marcador irmão.
 GUARDAS_ACEITAS = ("exigir_gi_real", "skip_sem_gi_real")
@@ -190,6 +200,30 @@ class TestPortaoDoGiFalso:
             "instalar_stubs_gi(monkeypatch) do tests/conftest.py.\n"
             "NÃO acrescente o nome à allowlist DIVIDA_GI_FALSO: ela é dívida "
             "medida em 30/07, não permissão para dívida nova."
+        )
+
+    def test_a_divida_so_encolhe(self) -> None:
+        # A allowlist sozinha não é portão: ela cala qualquer arquivo cujo nome
+        # esteja nela. O teto é o que a torna dívida — quem quiser silenciar um
+        # arquivo novo acrescentando o nome tem de MEXER neste número, à vista.
+        assert len(DIVIDA_GI_FALSO) <= TETO_DA_DIVIDA, (
+            f"a dívida do GTK de mentira CRESCEU: {len(DIVIDA_GI_FALSO)} nomes "
+            f"na DIVIDA_GI_FALSO, teto {TETO_DA_DIVIDA}.\n"
+            "Nome novo na allowlist é o portão sendo desligado, não dívida "
+            "nova legítima. Cure o arquivo com exigir_gi_real() (ou troque o "
+            "stub cru pelo instalar_stubs_gi do tests/conftest.py) em vez de "
+            "subir o teto — ele só desce (17 em 30/07, 11 em 13/08)."
+        )
+
+    def test_allowlist_nao_guarda_arquivo_ja_pago(self) -> None:
+        # Nome que já ganhou a guarda e ficou na lista é permissão pendurada:
+        # se alguém arrancar o `exigir_gi_real()` daquele arquivo depois, ele
+        # volta a plantar `gi` falso em silêncio, coberto pela própria isenção.
+        pagos = sorted(DIVIDA_GI_FALSO - set(arquivos_em_falta()))
+        assert not pagos, (
+            f"nomes na allowlist que JÁ têm a guarda: {pagos} — tire-os da "
+            "DIVIDA_GI_FALSO e baixe o TETO_DA_DIVIDA no mesmo commit. "
+            "Isenção que sobrevive à cura vira permissão para a recaída."
         )
 
     def test_allowlist_nao_tem_nome_fantasma(self) -> None:

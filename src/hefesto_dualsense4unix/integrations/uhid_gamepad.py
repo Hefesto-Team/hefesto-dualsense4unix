@@ -946,7 +946,9 @@ class UhidDualSense:
     #: True enquanto um reader é o RELÓGIO da emissão: `forward_analog`/
     #: `forward_buttons`/`forward_battery` só atualizam o cache e quem emite é
     #: `forward_motion` (evita emissão dupla e destrava o ritmo dos 60 Hz do
-    #: poll loop — o físico entrega 250 Hz USB / ~765 Hz BT).
+    #: poll loop — o físico entrega 250 Hz no USB e, no BT, RAJADAS com pico de
+    #: ~797 Hz e sustentado variável; medido 11/08/2026,
+    #: `docs/protocol/driver-hid-playstation.md:740-761`).
     _motion_streaming: bool = False
     #: Nº de janelas de motion EMITIDAS (telemetria GYRO-03: "o gyro flui?").
     _motion_count: int = 0
@@ -959,7 +961,8 @@ class UhidDualSense:
     #: Nº de PRESSIONADAS entregues ao jogo (telemetria/teste: "o clique flui?").
     _touchpad_click_count: int = 0
     #: Anti-flood: janela de tamanho errado loga warning UMA vez por instância
-    #: (o reader roda a até ~765 Hz — um bug de chamador viraria flood).
+    #: (o reader roda a até ~797 Hz no pico da rajada de BT, medido
+    #: 11/08/2026 — um bug de chamador viraria flood).
     _motion_invalid_logged: bool = False
     #: Último payload EMITIDO, com o seq zerado — é a chave do delta. Comparar o
     #: payload (e não o (axes, buttons) cru) mata os falsos "mudou": trocar
