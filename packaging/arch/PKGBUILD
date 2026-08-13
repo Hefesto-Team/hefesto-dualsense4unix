@@ -11,7 +11,7 @@
 # `yay -S hefesto-dualsense4unix` se o pacote for submetido ao AUR.
 
 pkgname=hefesto-dualsense4unix
-pkgver=0.9.4
+pkgver=9.3.2
 pkgrel=1
 # PACKAGING-EPOCH-DOWNGRADE-01: a numeração voltou de 4.0.0 para 0.1.0 em
 # 2026-07-24. Para o pacman (vercmp) 0.3.0 é DOWNGRADE de qualquer 3.x/4.0 já
