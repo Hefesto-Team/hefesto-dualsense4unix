@@ -794,6 +794,17 @@ janela logo depois de uma mudança de verdade, que é para o que ela servia
 (garantir que a mudança chegou); passado isso, o Hefesto **cala** e não pisa mais
 no motor de quem está tocando.
 
+**A cura foi conferida no aparelho em 12/08/2026, com o serviço LIGADO** — grau
+*o aparelho obedeceu*, ensaios `rumble-ff-cura-cabo-so`, `rumble-ff-cura-cabo-par`
+e `rumble-ff-cura-radio-par` (`../data/ensaios.csv:59-61`), com o olho dela:
+
+- **no cabo**, um controle sozinho vibrou **8,26 s** contínuos numa janela de
+  8 s pedida — *"contínuo os 8 segundos"*, e a barra de luz não apagou junto;
+- **no cabo e no rádio disparados na mesma janela** (0,0 ms de diferença),
+  **8,28 s** nos dois: *"funcionou em ambos, aparentemente iguais"*. É a
+  **primeira** vez que a vibração por **rádio** dura a janela inteira com o
+  serviço vivo — em 11/08, o mesmo ensaio dava **um tranco** e morria.
+
 **Se o sintoma continuar depois de atualizar:** o serviço em memória pode ser
 mais velho que o código no disco. Aba **Sistema** → **Reiniciar**, ou:
 
@@ -801,10 +812,15 @@ mais velho que o código no disco. Aba **Sistema** → **Reiniciar**, ou:
 systemctl --user restart hefesto-dualsense4unix.service
 ```
 
-**O que ainda não está resolvido, dito com todas as letras:** com **quatro**
-controles vibrando ao mesmo tempo e o serviço no estado antigo, os quatro
-vibravam *"por duração diferente"* em vez de nenhum vibrar. Esse contraste foi
-registrado e **não foi explicado**.
+**Os quatro ao mesmo tempo: a duração ficou IGUAL** (medido em 12/08/2026,
+ensaios `rumble-quatro-duracao-igual-r1` e `-r2`, `../data/ensaios.csv:68-69`).
+Este parágrafo dizia, até 12/08, que o caso de quatro controles **não estava
+explicado**: com o serviço no estado antigo eles vibravam *"por duração
+diferente"* em vez de nenhum vibrar, e o contraste ficou sem dono. Com a cura
+ligada, os quatro receberam o efeito e ela comparou **dois por vez, um em cada
+mão** — um do cabo e um do rádio, porque duas mãos é comparação inequívoca e
+olhar quatro na mesa não é. **Duas rodadas, as duas iguais.** A observação de
+11/08 continua valendo como o que era: o retrato do defeito **antes** da cura.
 
 ---
 
@@ -846,18 +862,41 @@ conexão, **três em três** aceitaram — e no fio saíram **98** escritas cont
    controles do rádio **não** aceitaram a cor, os dois do cabo aceitaram **no
    mesmo instante** — e a Steam estava aberta.
 
-**O que NÃO adianta:** insistir em **Aplicar no controle**. Por Bluetooth a cor
-sai por um caminho que perde essa disputa, e clicar de novo escreve pelo mesmo
-caminho.
+**Insistir em "Aplicar no controle" adianta menos do que parece — mas não pelo
+motivo que esta página dava até 12/08.** Estava escrito aqui que *"por Bluetooth
+a cor sai por um caminho que perde essa disputa"*, como se a rota fosse ruim.
+**Não é a rota.** Na bancada de 12/08 à noite, com a **Steam fechada** e o
+serviço parado, as duas rotas obedeceram nos mesmos controles do rádio: magenta
+escrito pelo caminho cru e, logo depois, verde escrito pelo caminho do sistema —
+*"todos os controles estão verdes"* (ensaios `cor-rota-hidraw-sem-steam-2235` e
+`cor-rota-sysfs-sem-steam-2237`, `../data/ensaios.csv:71-72`). O que derruba a
+cor é **quem mais está escrevendo na hora**, e a hora é a **conexão**.
+
+**O controle não esquece a cor — 136 s cronometrados.** Ainda na mesma bancada,
+sem serviço e sem Steam, a cor escrita ficou de pé por **dois minutos e dezesseis
+segundos** sem ninguém reforçar nada, o dobro do prazo que o ensaio pedia. Uma
+barra apagada, portanto, **não** é o controle esquecendo: é alguém mandando
+apagar. Não adianta clicar de novo para *"segurar"* a cor.
+
+**Mirar UM controle funciona, e isso foi conferido:** com quatro na mesa, o verde
+aplicado só no controle do cabo pintou **só ele** — *"verde inequívoco, os demais
+mostrando a cor de antes"* (ensaio `lightbar-cabo-isolado-2229`,
+`../data/ensaios.csv:70`). Os outros três são o controle negativo do ensaio.
 
 **O que ainda não medimos, e vale registro se você testar:** se desligar o
 *PlayStation Controller Support* da Steam (a [seção 15](#15-steam-input-intercepta-o-dualsense-touchpad-vira-mouse-mic-spam-botões-em-janela-em-background)
 desta página) evita a repintura. Ninguém aqui rodou esse ensaio.
 
-**A cura está desenhada e medida** — escrever a cor depois que a sequência de
-conexões sossega, e escrevê-la em todos os controles, não só no que chegou —, e
-o aceite dela na bancada foi *"perfeito"*. Enquanto ela não estiver no produto
-instalado, valem os três contornos acima.
+**A cura ENTROU no produto em 12/08/2026** — escrever a cor depois que a sequência
+de conexões sossega, e escrevê-la em **todos** os controles, não só no que
+chegou, pelo caminho que vence a disputa. O aceite dela na bancada, quando o
+desenho foi mostrado, foi *"perfeito"*.
+
+> **A ressalva, dita porque a casa não confunde as duas coisas:** o que está
+> provado é que **o comando certo sai pelo caminho certo na hora certa** — isso
+> tem teste. **Ninguém viu ainda a barra acender pelo produto com a Steam viva
+> na conexão**, que é o ensaio de um minuto que falta. Até essa volta acontecer,
+> os três contornos acima continuam sendo o que se recomenda.
 
 ---
 

@@ -10,6 +10,7 @@ que cobertura ausente. Ver ``exigir_gi_real`` e ``pytest_collectstart`` abaixo.
 """
 
 import contextlib
+import fnmatch
 import hashlib
 import os
 import shutil
@@ -979,6 +980,34 @@ _CONGELAR: tuple[str, ...] = (
 #: Lixo de build que nunca é produto.
 _CONGELAR_IGNORAR = ("__pycache__", "target", ".flatpak-builder", "build", "*.pyc")
 
+
+def _e_lixo_de_build(relativo: Path) -> bool:
+    """O caminho cai em `_CONGELAR_IGNORAR`? Então não é produto, nos DOIS lados.
+
+    Existe porque a foto e a comparação precisam concordar sobre o que é
+    produto. Medido em 12/08/2026: a cópia congelada nasce sem um único
+    `.pyc` (o `copytree` já ignora), mas quem IMPORTA um script de dentro
+    dela — `tests/unit/test_gravador_recusa_com_daemon_vivo.py` faz isso pelo
+    `importlib`, e é o comportamento normal do CPython — deixa o bytecode
+    nascer LÁ DENTRO, depois da foto. Na comparação final esse `.pyc` não
+    tinha par na árvore viva e a guarda o relatava como
+    `APAGADO scripts/__pycache__/record_hid_capture.cpython-312.pyc`,
+    reprovando com código 1 uma sessão de cinco testes verdes — inclusive o
+    job `lint-test` do CI, desde 11/08/2026.
+
+    Isto explica o que JÁ funcionava: a guarda passou dias correta porque
+    nenhuma bancada importava de dentro do congelado, só executava por
+    `subprocess` (o `__main__` de um script não gera `__pycache__`).
+
+    A cura NÃO é afrouxar a guarda: o filtro é exatamente a mesma lista que a
+    foto usou. Um arquivo de produto de verdade continua sendo acusado.
+    """
+    return any(
+        fnmatch.fnmatch(parte, padrao)
+        for parte in relativo.parts
+        for padrao in _CONGELAR_IGNORAR
+    )
+
 #: Preenchido na primeira chamada e nunca mais — a foto é da SESSÃO.
 _ARVORE_CONGELADA: list[Path] = []
 
@@ -1052,6 +1081,10 @@ def _deltas_do_congelado() -> list[str]:
         if not copia.is_file():
             continue
         relativo = copia.relative_to(congelada)
+        # Bytecode que NASCEU dentro do congelado (um `importlib` de bancada)
+        # não é produto e não tem par na árvore viva. Ver `_e_lixo_de_build`.
+        if _e_lixo_de_build(relativo):
+            continue
         atual = viva / relativo
         if not atual.is_file():
             deltas.append(f"APAGADO  {relativo}")

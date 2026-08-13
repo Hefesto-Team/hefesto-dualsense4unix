@@ -102,12 +102,19 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import identidade_do_vpad  # noqa: E402  — a régua única do vpad
 
 SERVICO = "hefesto-dualsense4unix.service"
 CADERNO = RAIZ / "docs" / "data" / "ensaios.csv"
 
 VID_SONY = "0000054C"
 PID_DUALSENSE = "00000CE6"
+
+#: Onde este instrumento enumera os nós hidraw. É parâmetro só para o teste
+#: poder montar uma mesa de mentira em `tmp_path` — a medição de verdade não
+#: tem por que apontar para outro lugar.
+RAIZ_SYSFS_HIDRAW = "/sys/class/hidraw"
 
 
 # --------------------------------------------------------------------------
@@ -309,13 +316,22 @@ class Fisico:
     transporte: str  # "bluetooth" | "cabo" | outro
 
 
-def achar_fisico() -> Fisico | None:
+def achar_fisico(raiz: str = RAIZ_SYSFS_HIDRAW) -> Fisico | None:
     """Acha o DualSense e DECLARA o transporte lendo o uevent, não a memória.
 
     `HID_ID=0005:...` é Bluetooth; `0003:...` é cabo. O MAC do uevent NÃO é
     lido nem impresso — regra da casa, nada de endereço real na saída.
+
+    VPAD-NO-ESPELHO-01 (12/08/2026): o vpad do PRÓPRIO produto é recusado
+    explicitamente, por `identidade_do_vpad`. Hoje ele já não chegava aqui, mas
+    por acidente e não por régua: o filtro de `PID_DUALSENSE` só aceita `0CE6`,
+    e o vpad se apresenta como `0DF2` (DualSense Edge). O Edge REAL existe, e
+    acrescentar o PID dele a este instrumento é uma coisa razoável de se querer
+    fazer — no dia em que alguém fizer, sem esta linha o ensaio passaria a
+    mirar no vpad, que tem força-feedback e aceita o efeito calado, sem que
+    motor nenhum gire. A medição sairia falsa sem avisar.
     """
-    for caminho in sorted(glob.glob("/sys/class/hidraw/hidraw*")):
+    for caminho in sorted(glob.glob(os.path.join(raiz, "hidraw*"))):
         uevent = os.path.join(caminho, "device", "uevent")
         try:
             with open(uevent, encoding="utf-8", errors="replace") as fh:
@@ -323,6 +339,10 @@ def achar_fisico() -> Fisico | None:
         except OSError:
             continue
         if VID_SONY not in texto.upper() or PID_DUALSENSE not in texto.upper():
+            continue
+        if identidade_do_vpad.e_vpad_do_hefesto(
+            identidade_do_vpad.campos_do_uevent(texto)
+        ):
             continue
         transporte = "desconhecido"
         for linha in texto.splitlines():

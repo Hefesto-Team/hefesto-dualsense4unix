@@ -48,6 +48,56 @@ MOTIVO_CASCATA_SEM_LEITURA = "cascata_wayland_sem_leitura"
 MOTIVO_JANELA_SEM_CLASSE = "janela_sem_classe"
 MOTIVO_BACKEND_SEM_MOTIVO = "backend_sem_motivo"
 
+#: PROCESSO-CEGO-01 (12/08/2026): quais backends entregam `exe_basename` — o
+#: ÚNICO campo que o matcher `process_name` consulta
+#: (`MatchCriteria.matches`, ramo `process_name`).
+#:
+#: Isto não é opinião sobre ambiente: é o que os arquivos DIZEM, e o teste
+#: `test_o_nome_do_processo_que_nao_casa` confere linha a linha contra eles.
+#: Só `window_backends/xlib.py` resolve o executável, em
+#: `_exe_basename_from_pid` (`os.readlink("/proc/<pid>/exe")`).
+#: `wayland_portal.py` e `wlr_toplevel.py` constroem o `WindowInfo` com
+#: `exe_basename=""` LITERAL — o portal até recebe o `pid`, e mesmo assim não
+#: resolve o executável —, e `null.py` não devolve janela nenhuma.
+BACKENDS_QUE_VEEM_O_PROCESSO = frozenset({"xlib"})
+BACKENDS_CEGOS_AO_PROCESSO = frozenset({"portal", "wlrctl", "null"})
+
+
+def backend_ve_nome_do_processo(backend: str | None) -> bool | None:
+    """O backend entrega ``exe_basename``? ``None`` = **não dá para saber**.
+
+    PROCESSO-CEGO-01. A pergunta existe porque o preço de errar é alto e
+    silencioso: `MatchCriteria` é um **E** entre os campos preenchidos, então
+    um perfil com `process_name` num backend cego não deixa de casar só por
+    aquele campo — ele **não entra nunca**, nem com a `window_class` certa.
+    Foi a causa medida de cinco perfis dela (`FPS`, `Ação`, `Aventura`,
+    `Corrida`, `Esportes`) jamais aparecerem no autoswitch em 30 dias de
+    journal (PERFIL-MUDO-01, 10/08/2026).
+
+    Os três valores, e o ``None`` é tão resposta quanto os outros dois:
+
+    * ``True``  — backend que resolve o executável (hoje só o ``xlib``);
+    * ``False`` — backend que devolve ``exe_basename`` vazio por construção;
+    * ``None``  — nome vazio/ausente (o detector ainda não foi semeado, ou o
+      daemon vivo é mais velho que esta versão), ou um nome que este módulo
+      não conhece (backend de terceiro, dublê de teste).
+
+    O ``None`` é o que impede a tela de inventar defeito: *"não sei"* e *"não
+    casa"* mandam caçar em lugares opostos, e nesta casa "o daemon vivo é mais
+    velho que o código" é rotina.
+
+    Nome desconhecido responde ``None`` de propósito, e não ``False``: um
+    backend que apareça depois desta linha ser escrita não pode herdar uma
+    acusação que ninguém mediu sobre ele.
+    """
+    if not isinstance(backend, str) or not backend:
+        return None
+    if backend in BACKENDS_QUE_VEEM_O_PROCESSO:
+        return True
+    if backend in BACKENDS_CEGOS_AO_PROCESSO:
+        return False
+    return None
+
 
 class _WaylandCascadeBackend:
     """Cascade: portal XDG → wlrctl → None.
@@ -301,10 +351,13 @@ def build_window_reader() -> WindowReaderDiag:
 
 
 __all__ = [
+    "BACKENDS_CEGOS_AO_PROCESSO",
+    "BACKENDS_QUE_VEEM_O_PROCESSO",
     "MOTIVO_BACKEND_SEM_MOTIVO",
     "MOTIVO_CASCATA_SEM_LEITURA",
     "MOTIVO_JANELA_SEM_CLASSE",
     "WindowReaderDiag",
+    "backend_ve_nome_do_processo",
     "build_window_reader",
     "detect_window_backend",
     "get_active_window_info",

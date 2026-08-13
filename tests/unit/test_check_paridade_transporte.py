@@ -40,6 +40,13 @@ CABECALHO = [
     "radio_confianca",
     "cabo_canal",
     "radio_canal",
+    # O par `grau` entrou em 12/08/2026, quando a regra 6 (`grau-sem-ensaio`)
+    # passou a exigir ensaio no caderno de bancada para os dois degraus altos.
+    # Ele é EXIGIDO no cabeçalho, e não apenas lido: sem a coluna, a régua da
+    # regra dura morreria em silêncio. Vazio aqui, que é o que estes casos
+    # querem — nenhum deles fala de grau.
+    "cabo_grau",
+    "radio_grau",
     "teste_que_morde",
     "provado_em",
     "validade_dias",

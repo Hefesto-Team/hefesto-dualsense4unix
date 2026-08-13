@@ -126,8 +126,36 @@ Casos medidos nesta máquina: **Sackboy: A Big Adventure**, **Pragmata**,
 
 ## Não repetir a escolha toda vez
 
-Salve um **perfil** (aba Perfis) com a máscara certa e preencha `process_name`
-com o executável do jogo. Ele passa a trocar sozinho quando o jogo abre.
+Salve um **perfil** (aba Perfis) com a máscara certa e diga **como reconhecer o
+jogo**. Ele passa a trocar sozinho quando o jogo abre.
+
+Qual campo reconhece depende de **como o Hefesto enxerga a janela nesta
+máquina**, e isso não é detalhe de implementação: os campos preenchidos são um
+**E**, então um campo que não casa não falha sozinho — ele **derruba o perfil
+inteiro**.
+
+| Campo do perfil | X11 / XWayland | Wayland puro (COSMIC, GNOME sem XWayland) |
+|---|---|---|
+| `window_class` — a Steam carimba `steam_app_<id>` | casa | casa (vem do `app_id` da janela) |
+| `title_regex` — trecho do título | casa | casa |
+| `process_name` — o executável | casa, com a ressalva do Proton abaixo | **não casa nunca** |
+
+**Use `window_class`.** É o único campo que casa nos dois mundos, e é por ele
+que **todos** os perfis que o Hefesto já elegeu sozinho nesta máquina foram
+identificados — medido em 30 dias de journal em 10/08/2026
+([PERFIL-MUDO-01](../process/sprints/2026-08-10-PERFIL-MUDO-01-o-perfil-do-jogo-que-nao-entrou.md)).
+
+**Por que o `process_name` não casa em Wayland puro, medido:** o campo é
+comparado com o nome do executável da janela em foco, e os dois backends de
+Wayland (`portal` e `wlrctl`) devolvem esse nome **vazio, por construção** — o
+portal recebe até o número do processo e ainda assim não o resolve. Um perfil
+com esse campo preenchido não entra, e não entra **nem com o `window_class`
+certo**: foi essa a causa dos cinco perfis de gênero (`FPS`, `Ação`,
+`Aventura`, `Corrida`, `Esportes`) nunca ativarem. O editor avançado da aba
+Perfis avisa isso na tela quando o ambiente é esse.
+
+**E mesmo em X11 ele engana com jogo Proton:** o executável lido é o do processo
+dono da janela, e sob Proton isso é `wine64-preloader` — não o `.exe` do jogo.
 
 Se você **não** quiser que troque, existe o cadeado *"Não trocar de perfil
 sozinho ao abrir um jogo"* na aba Início — o perfil que estiver ativo continua

@@ -835,6 +835,19 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             await daemon._plugins_subsystem.stop()
         daemon._plugins_subsystem = None
+    # A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01: o `_stop_metrics` existia, tinha teste
+    # e NENHUM chamador em produção — o servidor HTTP do Prometheus só morria
+    # porque a thread é daemon, isto é, por acidente do interpretador e não por
+    # decisão do produto. Morrer por acidente basta no `SIGTERM` e não basta em
+    # nada mais: um `shutdown()` sem `exit` (recarga, teste de integração, o
+    # daemon que se desmonta para remontar) deixava a porta ATENDENDO estado de
+    # um daemon já desmontado. Cai logo depois dos plugins e antes dos
+    # dispositivos, pela mesma razão que os plugins caem cedo: o que EXPÕE
+    # estado morre antes do que produz estado.
+    parar_metrics = getattr(daemon, "_stop_metrics", None)
+    if getattr(daemon, "_metrics_subsystem", None) is not None and callable(parar_metrics):
+        with contextlib.suppress(Exception):
+            await parar_metrics()
     daemon._hotkey_manager = None
     daemon._audio = None
     # FEAT-DSX-COOP-LOCAL-01: desmonta os jogadores secundários (solta o grab e

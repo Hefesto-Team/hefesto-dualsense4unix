@@ -175,9 +175,39 @@ def _is_virtual_evdev(event_path: str) -> bool:
     BLUEZ-UHID-01 (2026-07-19): a subárvore `/devices/virtual/misc/uhid/` deixou
     de implicar "nosso vpad" — com BlueZ ≥5.73 (UserspaceHID default) o
     bluetoothd cria os HIDs dos controles BT FÍSICOS via /dev/uhid, no mesmo
-    lugar. Nela, quem decide é a IDENTIDADE do vpad: phys `hefesto-vpad`
-    (blueprint) ou uniq com o prefixo do MAC forjado 02:fe. Atributos ilegíveis
-    → True (na dúvida, o risco maior é o feedback loop de auto-adoção).
+    lugar. Nela, quem decide é a IDENTIDADE do vpad: uniq com o prefixo do MAC
+    forjado 02:fe. Atributos ilegíveis → True (na dúvida, o risco maior é o
+    feedback loop de auto-adoção).
+
+    PERNA-MORTA-PHYS-01 (2026-08-12) — **a perna do `phys` não decide nada
+    aqui, e isto é MEDIDO**. Este texto dizia "phys `hefesto-vpad` (blueprint)
+    **ou** uniq 02:fe", como se fossem dois sinais independentes. São um só: o
+    `ps_allocate_input_dev` do `hid_playstation` copia `bustype`, `vendor`,
+    `product`, `version`, `uniq` e `name` para o `input_dev`, e **não copia
+    `phys`** (`assets/dkms/hid-playstation/hid-playstation.c:691-718`; a cópia
+    do `uniq` está na 704, e não existe linha equivalente para `phys` — fonte
+    conferido contra o `srcversion` do módulo carregado). Na mesa de 12/08, os
+    22 nós de entrada com pai `DRIVER=playstation` (vpads, cabo e rádio) traziam
+    `phys` VAZIO, contra 10 nós de `DRIVER=hid-generic` da mesma máquina com o
+    `phys` preenchido — o `hidinput_allocate` genérico faz a cópia que o
+    `hid_playstation` não faz.
+
+    Arrancar a perna do `phys` das duas linhas abaixo não muda **nenhum** dos 55
+    vereditos desta máquina; arrancar a do `uniq` muda 6, e todos para pior (os
+    dois DualSense de rádio viram "virtual" e somem do daemon — a regressão
+    BLUEZ-UHID-01 de volta). A linha fica de propósito, e por uma razão que não
+    é hid_playstation: sem o driver DKMS carregado, o vpad cai no `hid-generic`,
+    que preenche `phys` — e aí ela volta a valer. Ela é rede de outro cenário,
+    não a segunda perna deste.
+
+    **O que isto custa, e é dela decidir:** a redundância que o texto prometia
+    não existe hoje. Se o `player_mac` mudasse de prefixo, ou se um controle de
+    rádio chegasse com `uniq` ilegível, não há segunda perna — o produto
+    classificaria um aparelho de VERDADE como virtual. Restaurá-la é trivial e
+    já tem molde nesta casa: ler `HID_PHYS` do `uevent` do HID **pai**, que vem
+    preenchido, como `core/backend_pydualsense.py:187` e
+    `broker/hidraw_broker.py:272` já fazem. Não foi feito aqui porque mudaria
+    comportamento sem que ninguém tenha pedido.
     """
     import os
 
@@ -454,9 +484,18 @@ def _evdev_owner_dir(event_path: str) -> str | None:
       touchpad e headset jack são todos filhos da mesma instância HID. É isso que
       mantém a deduplicação colapsando um controle numa entrada só.
 
-    Deliberadamente NÃO usamos `phys` para este papel: nos controles por
-    Bluetooth (que o BlueZ cria via /dev/uhid) ele vem VAZIO — e é justamente aí
-    que costuma haver mais de um aparelho ao mesmo tempo.
+    Deliberadamente NÃO usamos `phys` para este papel: ele vem VAZIO em TODO
+    aparelho da classe DualSense, porque o `ps_allocate_input_dev` do
+    `hid_playstation` não copia `hdev->phys` para o `input_dev`
+    (`assets/dkms/hid-playstation/hid-playstation.c:691-718`).
+
+    PERNA-MORTA-PHYS-01 (2026-08-12): este texto dizia "nos controles por
+    Bluetooth (que o BlueZ cria via /dev/uhid) ele vem VAZIO", atribuindo a
+    ausência ao TRANSPORTE. Medido na mesa de 12/08: o `phys` vem vazio também
+    nos DualSense por CABO, que nem passam por uhid — nos 22 nós com pai
+    `DRIVER=playstation` sem exceção. A causa é o driver, não o transporte, e a
+    diferença importa: quem lesse o texto velho poderia concluir que `phys`
+    serve de identidade no cabo. Não serve em lugar nenhum desta classe.
     """
     import os
 

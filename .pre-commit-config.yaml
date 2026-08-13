@@ -97,10 +97,11 @@ repos:
       # motivou o hook. Confere, nunca gera — regenerar poria centenas de KB de
       # HTML no commit sem ninguém ver.
       #
-      # É AQUI que este `--check` vale mais que no CI: ele compara mtime, e
-      # mtime só é informação na máquina de quem edita. No runner, o checkout
-      # reescreve tudo em ordem de caminho e o `specs.html` sai por último —
-      # lá quem morde por conteúdo é o `check_paridade_transporte.py`.
+      # MAPA-CONTEUDO-01 (12/08): ele comparava MTIME, e mtime dava verde falso
+      # aqui também — basta uma ferramenta TOCAR o specs.html depois da geração
+      # (o `--fix` do validar-acentuacao reescreve arquivos) para ele nascer
+      # "mais novo" que as fontes. Hoje regenera em memória e compara o
+      # CONTEÚDO, então vale igual aqui e no runner.
       - id: mapa-de-canais-publicado
         name: specs.html reflete o CSV e os desenhos (rode scripts/gerar-mapa.py)
         entry: python3 scripts/gerar-mapa.py --check

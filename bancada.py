@@ -50,12 +50,32 @@ import eliminacao  # noqa: E402
 #: Só estas colunas se escrevem daqui. As outras vieram da escavação e mudam
 #: por auditoria, não por digitação — é o que impede a bancada de virar um
 #: editor de fatos.
-EDITAVEIS = ["grau", "provado_em", "provado_por", "validade_dias",
-             "estado_hoje", "teste_que_morde", "mordida", "mordida_provada_em",
-             "assimetria_declarada", "ressalva"]
+#:
+#: O grau e a ressalva vêm EM PAR desde a migração v2 (`cabo_*` / `radio_*`),
+#: pela mesma razão que `aceita` e `aciona` vêm: uma feature é UMA linha, e o
+#: que muda entre os transportes fica lado a lado na mesma linha. Editar só o
+#: lado selecionado seria inventar aqui o modo do caderno de eliminação — que
+#: separa os dois de propósito, e cuja razão está na docstring lá em cima.
+EDITAVEIS = ["cabo_grau", "radio_grau", "provado_em", "provado_por",
+             "validade_dias", "estado_hoje", "teste_que_morde", "mordida",
+             "mordida_provada_em", "assimetria_declarada",
+             "cabo_ressalva", "radio_ressalva"]
 
 GRAUS = ["", "MONTOU", "SAIU NO FIO", "O APARELHO OBEDECEU"]
-QUEM = ["", "ci", "bancada", "olho-dela"]
+#: O vocabulário de `provado_por` DIVERGE do que o método declara, e a lista
+#: abaixo é a soma dos dois — medido em 12/08/2026, com o CSV na mão:
+#: o `METODO-DE-ISOLAMENTO.md` prevê `ci`/`bancada`/`olho-dela`, e o mapa usa
+#: `aparelho` (19), `fonte-do-driver` (12) e `descritor` (2). `olho-dela` NÃO
+#: aparece em nenhuma das 293 linhas. São duas perguntas diferentes que caíram
+#: na mesma coluna: o método pergunta QUEM viu, o mapa responde DE ONDE veio a
+#: afirmação. Quem sustenta o degrau `O APARELHO OBEDECEU` é o `observado_por`
+#: do CADERNO (`docs/data/ensaios.csv`, `olho-dela` em 53 dos 57), e é lá que o
+#: portão foi cobrar (regra 10 do `check_paridade_transporte.py`).
+#: Somar em vez de escolher é deliberado: um seletor que não contém nenhum dos
+#: 33 valores existentes apaga medição na primeira gravação. Qual vocabulário
+#: fica é decisão dela.
+QUEM = ["", "ci", "bancada", "olho-dela",
+        "aparelho", "fonte-do-driver", "descritor"]
 ESTADOS = ["", "funciona", "regrediu", "nunca funcionou",
            "não implementado", "impossível"]
 LADOS = {"cabo": "cabo_", "rádio": "radio_"}
@@ -72,7 +92,8 @@ df = carrega(CSV_.stat().st_mtime)
 
 st.title("Bancada de medição")
 st.caption(
-    f"{len(df)} linhas · a régua é `grau`: **MONTOU** (o produto montou o report) "
+    f"{len(df)} linhas · a régua é o grau de cada lado (`cabo_grau` / `radio_grau`): "
+    "**MONTOU** (o produto montou o report) "
     "→ **SAIU NO FIO** (o byte saiu e algo voltou) → **O APARELHO OBEDECEU** "
     "(acendeu, girou, endureceu, saiu som). Tratar *montou* como *funciona* é a "
     "mentira mais cara desta casa."
@@ -127,7 +148,8 @@ editado = st.data_editor(
     hide_index=True,
     disabled=[c for c in vis if c not in EDITAVEIS],
     column_config={
-        "grau": st.column_config.SelectboxColumn("grau", options=GRAUS),
+        "cabo_grau": st.column_config.SelectboxColumn("cabo_grau", options=GRAUS),
+        "radio_grau": st.column_config.SelectboxColumn("radio_grau", options=GRAUS),
         "provado_por": st.column_config.SelectboxColumn("provado_por", options=QUEM),
         "estado_hoje": st.column_config.SelectboxColumn("estado_hoje", options=ESTADOS),
         "provado_em": st.column_config.TextColumn("provado_em", help="AAAA-MM-DD"),
@@ -247,6 +269,7 @@ else:
 
 st.divider()
 st.caption(
-    f"hoje é {date.today():%Y-%m-%d} · uma prova sem data é folclore, e uma linha "
-    "com `grau=O APARELHO OBEDECEU` só vale com `provado_por=olho-dela`."
+    f"hoje é {date.today():%Y-%m-%d} · uma prova sem data é folclore, e um lado "
+    "com `O APARELHO OBEDECEU` só vale com ensaio no caderno cujo "
+    "`observado_por` seja `olho-dela` — é o que o portão cobra."
 )

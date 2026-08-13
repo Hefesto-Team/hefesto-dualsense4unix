@@ -101,12 +101,14 @@ def test_os_dois_comandos_apontam_para_arquivos_que_existem() -> None:
 
 
 def test_o_hook_de_pre_commit_confere_o_mapa_publicado() -> None:
-    """O `--check` também vive no pre-commit — e é LÁ que ele vale mais.
+    """O `--check` também vive no pre-commit, e ali ele pega a divergência cedo.
 
-    Ele compara mtime, e mtime só é informação na máquina de quem edita: no
-    runner, o checkout reescreve a árvore inteira em ordem de caminho e o
-    `specs.html` (raiz) sai depois de `docs/` e de `scripts/`, nascendo sempre
-    "mais novo" que as fontes. Quem morde por conteúdo no CI é o censo.
+    Ele comparava mtime, e mtime dava verde falso nos dois caminhos: no runner o
+    checkout reescreve a árvore em ordem de caminho e o `specs.html` (raiz) sai
+    depois de `docs/` e de `scripts/`, nascendo sempre "mais novo" que as
+    fontes; na máquina de quem edita basta uma ferramenta TOCAR o HTML depois da
+    geração. Desde a MAPA-CONTEUDO-01 (12/08) ele compara CONTEÚDO — a mordida
+    está em `test_check_do_mapa_pergunta_pelo_conteudo.py`.
     """
     dados = yaml.safe_load(PRE_COMMIT.read_text(encoding="utf-8"))
     entradas = [

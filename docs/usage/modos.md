@@ -170,6 +170,20 @@ Com dois ou mais controles no modo "Jogar pelo Hefesto", cada controle vira um
 jogador: um controle virtual por pessoa, LED de jogador de 1 a 4, numeração
 estável por endereço MAC (replugar recupera o mesmo número).
 
+> **NOTA DATADA — 12/08/2026: o número é estável para QUEM VOLTA, e não para
+> quem ficou.** Grau *o aparelho obedeceu*, com resultado **parcial** — ensaio
+> `comb-slot-jogador-2200` ([`../data/ensaios.csv`](../data/ensaios.csv), linha
+> 78), observado com quatro DualSense na mesa quando um deles caiu sozinho.
+>
+> Quando o controle caiu, o Hefesto **renumerou os que ficaram**: quem era
+> **jogador 4 virou jogador 3**. Quando o controle voltou, o mesmo controle
+> voltou a ser jogador 4. Ou seja: a recuperação é **reversível e simétrica**, e
+> a frase acima continua verdadeira **para o controle que sai e volta** — mas o
+> número dos **outros** se mexe no meio do caminho.
+>
+> **Se isso é o desejado é DECISÃO DELA**, e está registrada como aberta: num
+> co-op em andamento, o jogador 4 virar 3 troca quem é quem no meio da partida.
+
 Controles externos (Nintendo Pro; 8BitDo em modo Switch no cabo ou em modo
 DirectInput/PS4 por Bluetooth — ver
 [`troubleshooting-8bitdo.md`](troubleshooting-8bitdo.md)) entram na contagem como
