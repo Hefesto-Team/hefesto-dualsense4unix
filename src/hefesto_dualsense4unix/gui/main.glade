@@ -820,14 +820,14 @@
                                  :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="trigger_left_apply">
-                                <property name="tooltip-text" translatable="yes">Envia ao controle o modo e os ajustes escolhidos aqui, no gatilho L2 (o de cima, do lado esquerdo).</property>
+                                <property name="tooltip-text" translatable="yes">Envia ao controle selecionado o modo e os ajustes escolhidos aqui, no gatilho L2 (o de cima, do lado esquerdo).</property>
                                 <style><class name="btn-trigger-apply"/></style>
                                 <property name="label" translatable="yes">Aplicar em L2</property>
                                 <signal name="clicked" handler="on_trigger_left_apply"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Aplicar gatilho adaptativo no L2</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho esquerdo ao controle</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho esquerdo ao controle selecionado</property>
                                 </object>
                               </child>
                               </object>
@@ -972,14 +972,14 @@
                                  :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="trigger_right_apply">
-                                <property name="tooltip-text" translatable="yes">Envia ao controle o modo e os ajustes escolhidos aqui, no gatilho R2 (o de cima, do lado direito).</property>
+                                <property name="tooltip-text" translatable="yes">Envia ao controle selecionado o modo e os ajustes escolhidos aqui, no gatilho R2 (o de cima, do lado direito).</property>
                                 <style><class name="btn-trigger-apply"/></style>
                                 <property name="label" translatable="yes">Aplicar em R2</property>
                                 <signal name="clicked" handler="on_trigger_right_apply"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Aplicar gatilho adaptativo no R2</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho direito ao controle</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho direito ao controle selecionado</property>
                                 </object>
                               </child>
                               </object>
@@ -1122,7 +1122,7 @@
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Aplicar cor na lightbar</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Envia cor selecionada para a barra de LED do controle</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Envia cor selecionada para a barra de LED do controle selecionado</property>
                                 </object>
                               </child>
                               </object>
@@ -1135,7 +1135,7 @@
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Apagar lightbar</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Desliga a barra de LED do controle</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Desliga a barra de LED do controle selecionado</property>
                                 </object>
                               </child>
                               </object>
@@ -1377,7 +1377,7 @@
                             <child>
                               <object class="GtkButton" id="player_leds_preset_none">
                                 <property name="label" translatable="yes">Todas apagadas</property>
-                                <property name="tooltip_text" translatable="yes">Apaga as 5 luzes deste controle. Sem escolha sua, volta a valer o desenho do número do controle.</property>
+                                <property name="tooltip_text" translatable="yes">Apaga as 5 luzes deste controle. Sem escolha sua, volta a valer o desenho do número deste controle.</property>
                                 <signal name="clicked" handler="on_player_leds_preset_none"/>
                               </object>
                               <packing><property name="expand">False</property></packing>
@@ -1403,12 +1403,12 @@
                                      O texto novo fala do que está à vista: os
                                      botões de desenho logo acima e o momento
                                      em que reenviar é útil. -->
-                                <property name="tooltip-text" translatable="yes">Reenvia ao controle o desenho escolhido nos botões acima. Útil quando o controle se reconectou ou você trocou de perfil e quer ver as luzes voltarem ao desenho que está aqui. Não muda o número do controle.</property>
+                                <property name="tooltip-text" translatable="yes">Reenvia ao controle selecionado o desenho escolhido nos botões acima. Útil quando ele se reconectou ou você trocou de perfil e quer ver as luzes voltarem ao desenho que está aqui. Não muda o número do jogador.</property>
                                 <signal name="clicked" handler="on_player_leds_apply"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Aplicar o desenho das luzes</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Reenvia ao controle o desenho das 5 luzes escolhido acima</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Reenvia ao controle selecionado o desenho das 5 luzes escolhido acima</property>
                                 </object>
                               </child>
                               </object>
@@ -1448,7 +1448,7 @@
                              a numeração deixou de morar nela. -->
                         <child>
                           <object class="GtkLabel" id="player_leds_note">
-                            <property name="label" translatable="yes">&lt;i&gt;Cada botão de desenho envia na hora ao controle e fica salvo no perfil ativo. &quot;Aplicar o desenho&quot; só reenvia o que já está escolhido — útil depois de reconectar o controle ou trocar de perfil.&lt;/i&gt;</property>
+                            <property name="label" translatable="yes">&lt;i&gt;Cada botão de desenho envia na hora ao controle selecionado e fica salvo no perfil ativo. &quot;Aplicar o desenho&quot; só reenvia o que já está escolhido — útil depois de reconectar o controle selecionado ou trocar de perfil.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
@@ -1468,7 +1468,7 @@
 
                         <child>
                           <object class="GtkLabel" id="player_leds_auto_note">
-                            <property name="label" translatable="yes">&lt;i&gt;O desenho que você escolhe aqui vence o automático neste controle, mesmo com as cores automáticas ligadas. Sem escolha sua, vale o desenho do número do controle. Com o co-op ligado, quem manda no desenho é o co-op.&lt;/i&gt;</property>
+                            <property name="label" translatable="yes">&lt;i&gt;O desenho que você escolhe aqui vence o automático neste controle, mesmo com as cores automáticas ligadas. Sem escolha sua, vale o desenho do número deste controle. Com o co-op ligado, quem manda no desenho é o co-op.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
@@ -1778,14 +1778,14 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                             <property name="spacing">8</property>
                             <child>
                               <object class="GtkButton" id="rumble_test_500ms">
-                                <property name="tooltip-text" translatable="yes">Faz o controle vibrar por meio segundo com os valores acima, para você sentir antes de aplicar.</property>
+                                <property name="tooltip-text" translatable="yes">Faz o controle selecionado vibrar por meio segundo com os valores acima, para você sentir antes de aplicar.</property>
                                 <property name="label" translatable="yes">Testar por 500 ms</property>
                                 <signal name="clicked" handler="on_rumble_test_500ms"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="rumble_apply">
-                                <property name="tooltip-text" translatable="yes">Envia ao controle a vibração escolhida; passa a valer até você mudar de novo.</property>
+                                <property name="tooltip-text" translatable="yes">Envia ao controle selecionado a vibração escolhida; passa a valer até você mudar de novo.</property>
                                 <property name="label" translatable="yes">Aplicar</property>
                                 <signal name="clicked" handler="on_rumble_apply"/>
                               </object>
@@ -1793,7 +1793,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                             <child>
                               <object class="GtkButton" id="rumble_passthrough">
                                 <property name="label" translatable="yes">Deixar o jogo controlar a vibração</property>
-                                <property name="tooltip-text" translatable="yes">Devolve a vibração ao jogo. Use depois de 'Parar' para o jogo voltar a fazer o controle vibrar.</property>
+                                <property name="tooltip-text" translatable="yes">Devolve a vibração ao jogo. Use depois de 'Parar' para o jogo voltar a fazer os controles vibrarem.</property>
                                 <signal name="clicked" handler="on_rumble_passthrough"/>
                               </object>
                             </child>
@@ -1829,7 +1829,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                               <object class="GtkButton" id="rumble_stop">
                                 <style><class name="btn-rumble-stop"/></style>
                                 <property name="label" translatable="yes">Parar</property>
-                                <property name="tooltip-text" translatable="yes">Trava o controle em silêncio: nada vibra, nem no jogo. Para o jogo voltar a comandar, clique em 'Deixar o jogo controlar a vibração'.</property>
+                                <property name="tooltip-text" translatable="yes">Trava o controle selecionado em silêncio: nada vibra, nem no jogo. Para o jogo voltar a comandar, clique em 'Deixar o jogo controlar a vibração'.</property>
                                 <signal name="clicked" handler="on_rumble_stop"/>
                               </object>
                             </child>
@@ -1972,7 +1972,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_activate_button">
-                            <property name="tooltip-text" translatable="yes">Passa a usar o perfil selecionado agora: os gatilhos, a cor e a vibração dele vão para o controle.</property>
+                            <property name="tooltip-text" translatable="yes">Passa a usar o perfil selecionado agora: os gatilhos, a cor e a vibração dele vão para os controles.</property>
                             <property name="label" translatable="yes">Ativar</property>
                             <signal name="clicked" handler="on_profile_activate"/>
                           <child internal-child="accessible">
@@ -2212,12 +2212,12 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                                 <property name="no-show-all">True</property>
                                 <child>
                                   <object class="GtkCheckButton" id="profile_steam_input_check">
-                                    <property name="label" translatable="yes">Esconder o controle físico neste jogo</property>
-                                    <property name="tooltip-text" translatable="yes">Para jogos que mostram o seu controle DOBRADO — um Xbox e um Sony. Marcado: o jogo vê só o controle do Hefesto, e a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Desmarcado: o jogo volta a enxergar também o controle físico. Feche e abra o jogo para valer.</property>
+                                    <property name="label" translatable="yes">Esconder os controles físicos neste jogo</property>
+                                    <property name="tooltip-text" translatable="yes">Para jogos que mostram os seus controles DOBRADOS — um Xbox e um Sony para cada um. Marcado: o jogo vê só os controles do Hefesto, e a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Desmarcado: o jogo volta a enxergar também os controles físicos. Feche e abra o jogo para valer.</property>
                                   <child internal-child="accessible">
                                     <object class="AtkObject">
-                                      <property name="AtkObject::accessible-name" translatable="yes">Esconder o controle físico neste jogo</property>
-                                      <property name="AtkObject::accessible-description" translatable="yes">Para jogos que mostram o seu controle dobrado, um Xbox e um Sony. Marcado, o jogo vê só o controle do Hefesto, e a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Feche e abra o jogo para a marca valer</property>
+                                      <property name="AtkObject::accessible-name" translatable="yes">Esconder os controles físicos neste jogo</property>
+                                      <property name="AtkObject::accessible-description" translatable="yes">Para jogos que mostram os seus controles dobrados, um Xbox e um Sony para cada um. Marcado, o jogo vê só os controles do Hefesto, e a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Feche e abra o jogo para a marca valer</property>
                                     </object>
                                   </child>
                                   </object>
@@ -2225,7 +2225,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                                 </child>
                                 <child>
                                   <object class="GtkLabel" id="profile_steam_input_hint">
-                                    <property name="label" translatable="yes">&lt;i&gt;Marque quando o jogo mostrar dois controles. A marca vale para o jogo inteiro, não só para este perfil.&lt;/i&gt;</property>
+                                    <property name="label" translatable="yes">&lt;i&gt;Marque quando o jogo mostrar os seus controles dobrados. A marca vale para o jogo inteiro, não só para este perfil.&lt;/i&gt;</property>
                                     <property name="use-markup">True</property>
                                     <property name="xalign">0</property>
                                     <property name="wrap">True</property>
@@ -2481,20 +2481,20 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_stop_button">
-                        <property name="tooltip-text" translatable="yes">Desliga o Hefesto: o controle continua jogando, mas sem luzes, gatilhos nem os seus ajustes.</property>
+                        <property name="tooltip-text" translatable="yes">Desliga o Hefesto: os controles continuam jogando, mas sem luzes, gatilhos nem os seus ajustes.</property>
                         <property name="label" translatable="yes">Desligar o Hefesto</property>
                         <signal name="clicked" handler="on_daemon_stop"/>
                       <child internal-child="accessible">
                         <object class="AtkObject">
                           <property name="AtkObject::accessible-name" translatable="yes">Desligar o Hefesto</property>
-                          <property name="AtkObject::accessible-description" translatable="yes">Desliga o Hefesto: o controle continua funcionando, mas sem luzes, gatilhos nem seus ajustes</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Desliga o Hefesto: os controles continuam funcionando, mas sem luzes, gatilhos nem seus ajustes</property>
                         </object>
                       </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_refresh_button">
-                        <property name="tooltip-text" translatable="yes">Relê o estado do Hefesto e atualiza o que esta aba mostra. Não muda nada no controle.</property>
+                        <property name="tooltip-text" translatable="yes">Relê o estado do Hefesto e atualiza o que esta aba mostra. Não muda nada nos controles.</property>
                         <property name="label" translatable="yes">Atualizar</property>
                         <signal name="clicked" handler="on_daemon_refresh"/>
                       </object>
@@ -2604,11 +2604,11 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                         <child>
                           <object class="GtkButton" id="btn_steam_ready">
                             <property name="label" translatable="yes">Deixar tudo pronto</property>
-                            <property name="tooltip-text" translatable="yes">Ajusta de uma vez tudo que costuma brigar com o controle nos jogos da Steam. Se a Steam estiver aberta, eu peço sua permissão antes de fechá-la por uns 20 segundos (e abro de novo). Com um jogo aberto, não faço nada.</property>
+                            <property name="tooltip-text" translatable="yes">Ajusta de uma vez tudo que costuma brigar com os controles nos jogos da Steam. Se a Steam estiver aberta, eu peço sua permissão antes de fechá-la por uns 20 segundos (e abro de novo). Com um jogo aberto, não faço nada.</property>
                           <child internal-child="accessible">
                             <object class="AtkObject">
                               <property name="AtkObject::accessible-name" translatable="yes">Deixar tudo pronto</property>
-                              <property name="AtkObject::accessible-description" translatable="yes">Prepara todos os jogos da Steam para funcionarem com o controle, sem você precisar escolher como</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Prepara todos os jogos da Steam para funcionarem com os controles, sem você precisar escolher como</property>
                             </object>
                           </child>
                           </object>
@@ -2652,11 +2652,11 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                                08/08. -->
                           <object class="GtkButton" id="btn_steam_game_broken">
                             <property name="label" translatable="yes">Este jogo não funciona</property>
-                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele o controle físico fica escondido, o jogo deixa de mostrar o controle dobrado e passa a ver só o controle do Hefesto — a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Use quando um jogo específico ignora o controle. Não fecha a Steam. Feche e abra o jogo para valer. Para tirar a marca: aba Perfis, no editor do perfil, logo abaixo do jogo escolhido.</property>
+                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele os controles físicos ficam escondidos, o jogo deixa de mostrá-los dobrados e passa a ver só os controles do Hefesto — a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Use quando um jogo específico ignora os controles. Não fecha a Steam. Feche e abra o jogo para valer. Para tirar a marca: aba Perfis, no editor do perfil, logo abaixo do jogo escolhido.</property>
                           <child internal-child="accessible">
                             <object class="AtkObject">
                               <property name="AtkObject::accessible-name" translatable="yes">Este jogo não funciona</property>
-                              <property name="AtkObject::accessible-description" translatable="yes">Esconde o controle físico no último jogo aberto: o jogo passa a ver só o controle do Hefesto. Para tirar a marca, use a caixinha no editor do perfil, na aba Perfis</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Esconde os controles físicos no último jogo aberto: o jogo passa a ver só os controles do Hefesto. Para tirar a marca, use a caixinha no editor do perfil, na aba Perfis</property>
                             </object>
                           </child>
                           </object>
@@ -2685,7 +2685,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                         <child>
                           <object class="GtkButton" id="btn_storm_copy_launch">
                             <property name="label" translatable="yes">Copiar opções para os jogos</property>
-                            <property name="tooltip-text" translatable="yes">Copia a Opção de Inicialização da Steam (sempre a mesma linha): o launcher do Hefesto decide na hora do jogo se esconde o controle físico — se o Hefesto estiver desligado, o jogo abre normal. Cole em: jogo → Propriedades → Opções de inicialização.</property>
+                            <property name="tooltip-text" translatable="yes">Copia a Opção de Inicialização da Steam (sempre a mesma linha): o launcher do Hefesto decide na hora do jogo se esconde os controles físicos — se o Hefesto estiver desligado, o jogo abre normal. Cole em: jogo → Propriedades → Opções de inicialização.</property>
                             <signal name="clicked" handler="on_storm_copy_launch"/>
                           </object>
                         </child>
@@ -2886,8 +2886,19 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                            outras fontes e já pediu 431px onde esta máquina pedia
                            357. Quem quiser essa troca precisa da medição da CI,
                            não desta. -->
+                      <!-- MESA-CHEIA-11/E4 (14/08/2026): o combo é do controle
+                           que comanda o PC — existe UM `EvdevReader`, atrelado
+                           ao primário ("single-controller por construção",
+                           `core/backend_pydualsense.py:read_state`), e P2, P3 e
+                           P4 apertam PS + Options sem que nada aconteça, sem
+                           erro e sem aviso. O sujeito NÃO cabe no rótulo: ele
+                           tem teto de 78 caracteres visíveis (o parágrafo
+                           acima), e hoje usa 77. Então ele entra na DICA, que
+                           não custa pixel nenhum — a sprint prometeu zero pixel
+                           novo, e o teto medido é anterior a esta entrega. -->
                       <object class="GtkLabel">
                         <property name="label" translatable="yes">&lt;b&gt;Modo jogo&lt;/b&gt;: PS + Options suspende mouse e teclado. Segurar o PS vem desligado.</property>
+                        <property name="tooltip-text" translatable="yes">Quem faz o combo é o controle que comanda o PC — mouse e teclado são de um controle só, porque o PC tem um cursor e um foco de teclado. Nos outros controles, PS + Options não faz nada.</property>
                         <property name="use-markup">True</property>
                         <property name="halign">start</property>
                       </object>
@@ -2966,7 +2977,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_refresh_button">
-                        <property name="tooltip-text" translatable="yes">Relê o estado da emulação e atualiza o que esta aba mostra. Não muda nada no controle.</property>
+                        <property name="tooltip-text" translatable="yes">Relê o estado da emulação e atualiza o que esta aba mostra. Não muda nada nos controles.</property>
                         <property name="label" translatable="yes">Atualizar</property>
                         <signal name="clicked" handler="on_emulation_refresh"/>
                       </object>
@@ -3044,21 +3055,21 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_off_button">
                         <property name="label" translatable="yes">Desligado</property>
-                        <property name="tooltip-text" translatable="yes">Volta o controle a controlar o PC (mouse/teclado) — o mesmo que "Controlar o PC" na aba Início. Desliga o gamepad virtual e também sai da "Conexão Nativa (Sony)".</property>
+                        <property name="tooltip-text" translatable="yes">Volta ao Controlar o PC: o mouse e o teclado ficam com o controle que comanda o PC — o mesmo que "Controlar o PC" na aba Início. Desliga o gamepad virtual e também sai da "Conexão Nativa (Sony)".</property>
                         <signal name="clicked" handler="on_emulation_gamepad_off"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_dualsense_button">
                         <property name="label" translatable="yes">DualSense (PS)</property>
-                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções para os jogos' (aba Sistema) o controle também não aparece duplicado — layout PS sem o controle dobrado. Atenção: jogos que só entendem controle de Xbox ignoram esta máscara — neles use "Xbox 360".</property>
+                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções para os jogos' (aba Sistema) os controles também não aparecem duplicados — layout PS sem o controle dobrado. Atenção: jogos que só entendem controle de Xbox ignoram esta máscara — neles use "Xbox 360".</property>
                         <signal name="clicked" handler="on_emulation_gamepad_dualsense"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_xbox_button">
                         <property name="label" translatable="yes">Xbox 360</property>
-                        <property name="tooltip-text" translatable="yes">Máscara Xbox 360: a vibração funciona em jogo e o controle não aparece duplicado. Os jogos mostram prompts de Xbox (A/B/X/Y). É a única máscara que jogos XInput-only entendem; nessa API não existe giroscópio.</property>
+                        <property name="tooltip-text" translatable="yes">Máscara Xbox 360: a vibração funciona em jogo e os controles não aparecem duplicados. Os jogos mostram prompts de Xbox (A/B/X/Y). É a única máscara que jogos XInput-only entendem; nessa API não existe giroscópio.</property>
                         <signal name="clicked" handler="on_emulation_gamepad_xbox"/>
                       </object>
                     </child>
@@ -3067,7 +3078,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_gamepad_hint_label">
-                    <property name="label" translatable="yes">Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, Pragmata, Mad King Redemption, Mullet Mad Jack) funcionam completos com "DualSense (PS)": vibração, giroscópio e lightbar. Jogos que só entendem controle de Xbox ignoram a máscara DualSense — neles escolha "Xbox 360" (vibração funciona; giroscópio não existe nessa API). Sinal típico de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do jogo. Quando o suporte a DualSense do jogo vem PELA Steam (é o caso do Mullet Mad Jack), o jogo precisa enxergar o controle físico: use a exceção por jogo em "Steam Input" na aba Emulação. Guia completo: docs/usage/jogos-e-mascaras.md</property>
+                    <property name="label" translatable="yes">Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, Pragmata, Mad King Redemption, Mullet Mad Jack) funcionam completos com "DualSense (PS)": vibração, giroscópio e lightbar. Jogos que só entendem controle de Xbox ignoram a máscara DualSense — neles escolha "Xbox 360" (vibração funciona; giroscópio não existe nessa API). Sinal típico de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do jogo. Quando o suporte a DualSense do jogo vem PELA Steam (é o caso do Mullet Mad Jack), o jogo precisa enxergar os controles físicos: use a exceção por jogo em "Steam Input" na aba Emulação. Guia completo: docs/usage/jogos-e-mascaras.md</property>
                     <property name="wrap">True</property>
                     <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
                          este paragrafo estica ate a largura da aba (medido: 1869px na
@@ -3136,7 +3147,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                            partiria a frase no meio. -->
                       <object class="GtkButton" id="emulation_pause_button">
                         <property name="label" translatable="yes">Suspender mouse e teclado</property>
-                        <property name="tooltip-text" translatable="yes">Suspende a emulação de mouse/teclado (igual ao combo PS+Options). Só faz sentido jogando: em "Controlar o PC" o controle ficaria sem função nenhuma, por isso fica desabilitado nesse modo. Transitório — não sobrevive ao reboot.</property>
+                        <property name="tooltip-text" translatable="yes">Suspende a emulação de mouse/teclado (igual ao combo PS+Options). Só faz sentido jogando: em "Controlar o PC" o controle que comanda o PC ficaria sem função nenhuma, por isso fica desabilitado nesse modo. Transitório — não sobrevive ao reboot.</property>
                         <signal name="clicked" handler="on_emulation_pause"/>
                       <child internal-child="accessible">
                         <object class="AtkObject">
@@ -3200,7 +3211,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                     <child>
                       <object class="GtkButton" id="emulation_steam_input_disable_button">
                         <property name="label" translatable="yes">Desligar Steam Input</property>
-                        <property name="tooltip-text" translatable="yes">Desliga o Steam Input, que sequestra o controle e briga com o Hefesto. Se a Steam estiver aberta, eu PEÇO sua permissão antes de fechá-la por uns 20 segundos — e abro de novo depois. Com um jogo aberto, não faço nada.</property>
+                        <property name="tooltip-text" translatable="yes">Desliga o Steam Input, que sequestra os controles e briga com o Hefesto. Se a Steam estiver aberta, eu PEÇO sua permissão antes de fechá-la por uns 20 segundos — e abro de novo depois. Com um jogo aberto, não faço nada.</property>
                         <signal name="clicked" handler="on_emulation_steam_input_disable"/>
                       </object>
                     </child>
@@ -3252,7 +3263,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_hint">
-                    <property name="label" translatable="yes">&lt;i&gt;Como o jogo vê o controle: &lt;b&gt;DualSense&lt;/b&gt; mostra os botões de PlayStation e vibra. &lt;b&gt;Xbox 360&lt;/b&gt; serve para jogos que só entendem controle de Xbox. Enquanto isso, o Hefesto é quem fala com o controle.&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Como o jogo vê o controle: &lt;b&gt;DualSense&lt;/b&gt; mostra os botões de PlayStation e vibra. &lt;b&gt;Xbox 360&lt;/b&gt; serve para jogos que só entendem controle de Xbox. Enquanto isso, o Hefesto é quem fala com os controles.&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
@@ -3334,7 +3345,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                     </child>
                     <child>
                       <object class="GtkSwitch" id="mouse_emulation_toggle">
-                        <property name="tooltip-text" translatable="yes">Liga o controle como mouse do computador: cursor, cliques e rolagem. O teclado tem interruptor próprio, na coluna ao lado. Só funciona no modo Controlar o PC.</property>
+                        <property name="tooltip-text" translatable="yes">Liga o controle que comanda o PC como mouse do computador: cursor, cliques e rolagem. O PC tem um cursor só, então quem move o mouse é sempre um controle — os outros seguem jogando. O teclado tem interruptor próprio, na coluna ao lado. Só funciona no modo Controlar o PC.</property>
                         <property name="active">False</property>
                         <!-- HARM-05: nasce fechado e só abre quando o daemon
                              confirmar o modo "Controlar o PC" (o refresh da aba
@@ -3621,14 +3632,14 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                     </child>
                     <child>
                       <object class="GtkSwitch" id="keyboard_emulation_toggle">
-                        <property name="tooltip-text" translatable="yes">Liga o controle como teclado do computador. Desligar tira TUDO o que o controle digita: os atalhos da lista abaixo, o teclado na tela em L3/R3 e as três regiões do touchpad (Backspace, Enter e Delete).</property>
+                        <property name="tooltip-text" translatable="yes">Liga o controle que comanda o PC como teclado do computador. Desligar tira TUDO o que esse controle digita: os atalhos da lista abaixo, o teclado na tela em L3/R3 e as três regiões do touchpad (Backspace, Enter e Delete).</property>
                         <property name="active">True</property>
                         <property name="sensitive">False</property>
                         <signal name="state-set" handler="on_keyboard_toggle_set"/>
                       <child internal-child="accessible">
                         <object class="AtkObject">
                           <property name="AtkObject::accessible-name" translatable="yes">Emular teclado</property>
-                          <property name="AtkObject::accessible-description" translatable="yes">Liga ou desliga o controle como teclado do computador; desligar tira também o teclado na tela em L3 ou R3 e as três regiões do touchpad</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Liga ou desliga o controle que comanda o PC como teclado do computador; desligar tira também o teclado na tela em L3 ou R3 e as três regiões do touchpad</property>
                         </object>
                       </child>
                       </object>
@@ -3777,13 +3788,13 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 <child>
                   <object class="GtkButton" id="btn_footer_apply">
                     <property name="label" translatable="yes">Aplicar</property>
-                    <property name="tooltip-text" translatable="yes">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) ao controle</property>
+                    <property name="tooltip-text" translatable="yes">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) aos controles</property>
                     <signal name="clicked" handler="on_apply_draft"/>
                     <style><class name="btn-apply"/></style>
                   <child internal-child="accessible">
                     <object class="AtkObject">
                       <property name="AtkObject::accessible-name" translatable="yes">Aplicar todas as configuracoes</property>
-                      <property name="AtkObject::accessible-description" translatable="yes">Envia gatilhos LEDs rumble e mouse ao controle</property>
+                      <property name="AtkObject::accessible-description" translatable="yes">Envia gatilhos LEDs rumble e mouse aos controles</property>
                     </object>
                   </child>
                   </object>

@@ -173,9 +173,16 @@ def test_a_rota_do_rascunho_diz_enviada_e_nao_aplicada(
 def test_a_rota_do_controle_selecionado_diz_enviada_e_nao_aplicada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com um controle no seletor, o MAC viaja no pedido (PERFIL-05)."""
+    """Com um controle no seletor, o MAC viaja no pedido (PERFIL-05).
+
+    CONSERTO 1.5: o ``conectados`` passou a ser obrigatório neste host. O
+    padrão do ``_HostLightbar`` é o mapa VAZIO, e mapa vazio com um alvo de pé
+    significa, no produto, "nenhum DualSense na mesa" — a escrita fica
+    *guardada* e o toast diz isso. O que este teste julga é a palavra "enviada"
+    contra "aplicada" na rota por-MAC, e para isso o alvo tem de estar NA MESA.
+    """
     _selar_led_set(monkeypatch)
-    host = _HostLightbar(_draft(), uniq=UNIQ_1)
+    host = _HostLightbar(_draft(), uniq=UNIQ_1, conectados={0: UNIQ_1})
     host._current_brightness = 0.25
 
     host.on_lightbar_apply(None)
@@ -193,13 +200,18 @@ def test_nenhuma_rota_de_sucesso_afirma_que_a_barra_acendeu(
     efeito que o produto não mediu. A única leitura de volta que existe é o nó
     sysfs ``multi_intensity``, e ele é o eco do nosso pedido, não a lâmpada
     (``core/sysfs_leds.get_rgb``).
+
+    CONSERTO 1.5: as três rotas aqui são as do CAMINHO FELIZ, e por isso o
+    terceiro host (alvo no seletor) ganhou o mapa de conectados. Sem ele o
+    alvo está fora da mesa — a escrita fica *guardada*, e a frase honesta
+    daquele caso não tem por que dizer "enviada".
     """
     _selar_led_set(monkeypatch)
     _selar_apply_draft(monkeypatch)
     hosts = (
         _HostLightbar(_draft(), conectados={0: UNIQ_1}),
         _HostLightbar(_draft()),
-        _HostLightbar(_draft(), uniq=UNIQ_1),
+        _HostLightbar(_draft(), uniq=UNIQ_1, conectados={0: UNIQ_1}),
     )
 
     for host in hosts:

@@ -716,6 +716,42 @@ DICA_BLOCO_SPEAKER: Final[str] = (
     "deslizante passa a mandá-lo"
 )
 
+# -- GUARDA-SEM-ENDEREÇO-01: o card sem MAC não comanda o som de ninguém ----
+#
+# O vocabulário desta guarda fica AQUI, nas duas constantes abaixo, e em lugar
+# nenhum além: trocá-lo tem de ser uma linha, e não uma caçada por strings
+# (regra de execução da D-9, 14/08/2026).
+#
+# O defeito que ela cura: TODA saída de som do card viaja com `self._uniq`
+# (`mic.set`, `speaker.set` e a ponte por rádio), e o daemon, sem endereço,
+# cai no controle **PRIMÁRIO** — que pode ser qualquer um. Num card sem
+# `uniq` isso é a pior forma da mentira: ela clica no bloco do Controle 3,
+# lê "Controle 3 — BT" no título, e quem muda de volume é o Controle 1.
+#
+# `uniq` ausente NÃO é hipótese: o `_key_to_uniq` do backend devolve `None`
+# sempre que a key do handle é um caminho (`/dev/hidrawN`), o que acontece
+# quando o MAC não pôde ser lido do sysfs — e ele devolve `None` de propósito,
+# porque a alternativa era publicar um pseudo-MAC.
+
+#: O aviso VISÍVEL, no topo da coluna do som. Ele existe porque bloco
+#: desabilitado sem explicação é um defeito do mesmo tamanho do que a guarda
+#: cura: ela leria "o produto quebrou". O rótulo diz QUE, a dica diz POR QUÊ —
+#: a mesma divisão que o selo do som já usa neste bloco.
+TEXTO_AUDIO_SEM_ENDERECO: Final[str] = (
+    "Som desligado: este controle está sem endereço"
+)
+
+#: O POR QUÊ, na dica dos DOIS blocos de som (microfone e alto-falante). Ela
+#: vai na moldura, e não nas peças: no GTK3 um widget insensível não recebe
+#: evento e por isso não mostra dica própria — a explicação ficaria invisível
+#: exatamente no estado em que ela é necessária (o mesmo desenho de
+#: `DICA_SPEAKER_SEM_DADO` no bloco do alto-falante).
+DICA_AUDIO_SEM_ENDERECO: Final[str] = (
+    "Este controle não publicou endereço, e sem ele todo comando de som iria "
+    "para o controle PRIMÁRIO — outro controle, com o título deste na frente. "
+    "O som volta sozinho quando o endereço aparecer."
+)
+
 #: Selo da CAMADA 1 (SENSOR-VIVO-01/E5): com o sink do controle mudo no
 #: PipeWire, mover o volume do registrador HID não produz som nenhum. O selo é
 #: o que impede o bloco de parecer mentiroso — e ele só aparece quando a
@@ -1831,6 +1867,34 @@ def saida_muda_do_entry(entry: Any, mic: Any = None) -> bool | None:
     return valor if isinstance(valor, bool) else None
 
 
+def uniq_do_entry(entry: Any) -> str | None:
+    """O endereço DESTE controle, ou ``None`` — a regra, num lugar só.
+
+    GUARDA-SEM-ENDEREÇO-01. A regra estava escrita duas vezes com as mesmas
+    palavras (no ``update`` do widget e no do stub), e uma terceira cópia
+    nasceria com a guarda do som. Uma regra de identidade com três donos é
+    como as duas afirmações se afastam sem ninguém perceber.
+
+    ``""`` e ``"   "`` valem ``None`` de propósito: um endereço em branco
+    viajaria no IPC como "sem alvo" e o daemon cairia no primário — que é
+    exatamente o defeito que a guarda existe para impedir.
+    """
+    uniq = entry.get("uniq") if isinstance(entry, dict) else None
+    if isinstance(uniq, str) and uniq.strip():
+        return uniq
+    return None
+
+
+def audio_sem_endereco(entry: Any) -> bool:
+    """O bloco de som deste card tem de ficar DESLIGADO? (função pura)
+
+    GUARDA-SEM-ENDEREÇO-01. É a pergunta inteira: sem endereço, `mic.set`,
+    `speaker.set` e a ponte por rádio caem no controle PRIMÁRIO, e o card
+    aplicaria no controle de outra pessoa mostrando o título deste.
+    """
+    return uniq_do_entry(entry) is None
+
+
 def accent_do_card(entry: dict[str, Any], state_global: dict[str, Any]) -> RGB:
     """Cor AJUSTADA dos traços do card (contraste mínimo garantido).
 
@@ -1959,6 +2023,11 @@ if _GTK_DISPONIVEL:
             # sem ele o daemon aplicaria no primário, e com quatro controles
             # isso mutaria o microfone de outra pessoa.
             self._uniq: str | None = None
+            #: GUARDA-SEM-ENDEREÇO-01: o último estado da guarda do som.
+            #: `None` = nunca aplicada, e é o que força a primeira pintura —
+            #: um `False` inicial faria o card nascer com a guarda "já
+            #: devolvida" e pularia a devolução do primeiro `update`.
+            self._audio_sem_endereco: bool | None = None
             self._mic_acao: AcaoMic | None = None
             # MIC-BT-01 — a ponte de mic por BT DESTE controle. `None` = não há
             # ponte de pé; o interruptor mostra a ponte, nunca o pedido.
@@ -2046,8 +2115,7 @@ if _GTK_DISPONIVEL:
             está visível. ``None`` = sem microfone atribuível a este controle,
             e o módulo some.
             """
-            uniq = entry.get("uniq")
-            self._uniq = uniq if isinstance(uniq, str) and uniq else None
+            self._uniq = uniq_do_entry(entry)
             self._update_titulo(entry)
             self._update_bateria(entry)
             self._update_lightbar(entry, state_global)
@@ -2061,6 +2129,12 @@ if _GTK_DISPONIVEL:
             self._update_mic_botao(entry)
             self._update_ponte_bt(entry)
             self._update_speaker(entry, mic)
+            # GUARDA-SEM-ENDEREÇO-01: por ÚLTIMO, e não é ordem de gosto. Os
+            # três `_update_` acima acabam de decidir a sensibilidade das peças
+            # de som a partir do que o daemon publicou; a guarda é a palavra
+            # final sobre elas, porque nenhum daqueles estados sabe que o card
+            # não tem para onde mandar o gesto.
+            self._update_guarda_de_audio()
 
         def reset_inputs(self) -> None:
             """IPC sem resposta: mostra "—" — nunca o último valor como vivo."""
@@ -2207,6 +2281,31 @@ if _GTK_DISPONIVEL:
             badge.hide()
             self._degradacao_badge = badge
             corpo.pack_start(badge, False, False, 0)
+
+            # GUARDA-SEM-ENDEREÇO-01 — o aviso VISÍVEL do som desligado, ao
+            # lado do badge de degradação e com o mesmo desenho: nasce apagado
+            # com `no_show_all`, então o `show_all()` do card não o revela e um
+            # filho escondido não entra no pedido de tamanho de um `GtkBox`.
+            # No caso normal ele custa ZERO.
+            #
+            # Ele fica no CORPO, e não na coluna do som que explica, e isso é
+            # medido: na coluna (194px no card de um controle, 94 no compacto)
+            # a frase quebra em três linhas e custa +42px de altura no card
+            # único e +72 no compacto — contra uma faixa que já pede 463 dos
+            # 467 que a aba dá. No corpo, que tem a largura inteira do card,
+            # ela cabe em UMA linha: **+23px de altura e ZERO de largura**,
+            # e só no card que está sem endereço. Quem amarra o aviso ao bloco
+            # certo é a dica das duas molduras, que não custa pixel nenhum.
+            aviso = Gtk.Label(label=TEXTO_AUDIO_SEM_ENDERECO)
+            aviso.set_xalign(0.0)
+            aviso.set_line_wrap(True)
+            aviso.get_style_context().add_class(
+                "hefesto-dualsense4unix-status-warn"
+            )
+            aviso.set_no_show_all(True)
+            aviso.hide()
+            self._audio_aviso = aviso
+            corpo.pack_start(aviso, False, False, 0)
 
             # GYRO-03: linha discreta do giroscópio espelhado — inline
             # (dim-label), nunca popup (veto cosmic-comp). Só aparece com o
@@ -2924,6 +3023,12 @@ if _GTK_DISPONIVEL:
             """
             if self._ponte_bt_pintando:
                 return False
+            if self._som_sem_alvo() and ligar:
+                # Sem endereço a ponte pegaria o PRIMEIRO nó de rádio que
+                # achasse (`ligar_ponte_bt` sem `uniq` não filtra) — o
+                # microfone de outra pessoa, sob o título deste card.
+                # Desligar continua valendo: derruba a ponte DESTE card.
+                return True
             uniq = self._uniq
 
             def _trabalho() -> tuple[Any, str]:
@@ -2962,7 +3067,7 @@ if _GTK_DISPONIVEL:
             tela parecer mentirosa quando ela nunca mentiu.
             """
             acao = self._mic_acao
-            if acao is None or not acao.sensivel:
+            if acao is None or not acao.sensivel or self._som_sem_alvo():
                 return
             valor = acao.valor
             uniq = self._uniq
@@ -3445,6 +3550,11 @@ if _GTK_DISPONIVEL:
               no dia em que o daemon recusasse o pedido.
             """
             self._cancelar_repouso_do_volume()
+            if self._som_sem_alvo():
+                # Sem endereço, `speaker.set` toma a posse do volume do
+                # PRIMÁRIO. O repouso já podia estar armado quando o endereço
+                # sumiu, e é por isso que a tranca é aqui e não só no gesto.
+                return
             volume = volume_do_percentual(self._speaker_escala.get_value())
             if volume == self._speaker_volume_enviado:
                 # Repouso disparando logo depois do fim do arrasto: o mesmo
@@ -3491,6 +3601,11 @@ if _GTK_DISPONIVEL:
             """
             canal = seletor.get_active_id()
             if canal is None or self._speaker_canal_pintando:
+                return
+            if self._som_sem_alvo():
+                # A cura de 04/08 pôs o `uniq` nesta chamada exatamente para
+                # ela não escrever no primário. Sem endereço não há `uniq` a
+                # pôr, e o pedido volta a ser o defeito que aquela cura matou.
                 return
             rota = ROTA_DO_CANAL.get(canal)
             if rota is None:
@@ -3667,6 +3782,8 @@ if _GTK_DISPONIVEL:
             acao = self._speaker_acao_mudo
             if acao is None or not acao.sensivel or acao.muted is None:
                 return
+            if self._som_sem_alvo():
+                return
             muted = acao.muted
             uniq = self._uniq
 
@@ -3689,6 +3806,8 @@ if _GTK_DISPONIVEL:
             """Devolver a posse dos bytes de volume (SOM-02, entrega 3)."""
             acao = self._speaker_acao_devolucao
             if acao is None or not acao.sensivel or not acao.release:
+                return
+            if self._som_sem_alvo():
                 return
             uniq = self._uniq
 
@@ -4304,6 +4423,87 @@ if _GTK_DISPONIVEL:
             )
 
         # ------------------------------------------------------------------
+        # GUARDA-SEM-ENDEREÇO-01 — sem MAC, o som deste card não manda em nada
+        # ------------------------------------------------------------------
+
+        def _pecas_que_escrevem_som(self) -> tuple[Any, ...]:
+            """As peças de COMANDO do som — as que viajam com o ``uniq``.
+
+            A leitura fica de fora de propósito (a barra, o medidor, os
+            rótulos): ela conta o que o daemon publicou sobre ESTE controle e
+            continua verdadeira sem endereço nenhum. Quem mente sem endereço é
+            o comando, e é só ele que a guarda desliga.
+            """
+            pecas: list[Any] = [
+                self._mic_botao,
+                self._mic_bt_switch,
+                self._speaker_escala,
+                self._speaker_botao_mudo,
+                self._speaker_botao_devolver,
+            ]
+            # O seletor de canal só existe no card de UM controle (no compacto
+            # a linha não cabe), e por isso é buscado e não assumido.
+            canal = getattr(self, "_speaker_canal", None)
+            if canal is not None:
+                pecas.append(canal)
+            return tuple(pecas)
+
+        def _update_guarda_de_audio(self) -> None:
+            """Desliga (ou devolve) o som do card conforme haja endereço.
+
+            **O estado ligado é reaplicado a cada tique, e isso não é
+            desperdício.** Os `_update_` do som são diffados: qualquer mudança
+            no que o daemon publica sobre este controle os faz repintar a
+            sensibilidade das peças, e sem a reaplicação um `speaker` que
+            aparecesse no meio da sessão devolveria os botões por baixo da
+            guarda. `set_sensitive` com o mesmo valor é no-op no GTK.
+
+            **A volta é diffada**, porque é ela que precisa acontecer UMA vez:
+            quem sabe o estado certo de cada peça são as ações já calculadas
+            (`_aplicar_acao_mic`, `_aplicar_acao_ponte_bt`,
+            `_aplicar_acoes_speaker`), e reaplicá-las é a única forma de
+            devolver a sensibilidade sem a guarda ter de adivinhá-la.
+            """
+            if self._uniq is None:
+                for peca in self._pecas_que_escrevem_som():
+                    peca.set_sensitive(False)
+                # A dica vai na MOLDURA dos dois blocos: peça insensível não
+                # recebe evento no GTK3, e a dica dela não apareceria.
+                self._mic_box.set_tooltip_text(DICA_AUDIO_SEM_ENDERECO)
+                self._speaker_box.set_tooltip_text(DICA_AUDIO_SEM_ENDERECO)
+                self._audio_aviso.show()
+                self._audio_sem_endereco = True
+                return
+            if self._audio_sem_endereco is False:
+                return
+            self._audio_sem_endereco = False
+            self._audio_aviso.hide()
+            self._mic_box.set_tooltip_text(None)
+            self._aplicar_acao_mic(self._mic_acao or acao_mic(None))
+            self._aplicar_acao_ponte_bt(
+                self._ponte_bt_acao or acao_ponte_bt(None)
+            )
+            self._speaker_escala.set_sensitive(True)
+            canal = getattr(self, "_speaker_canal", None)
+            if canal is not None:
+                canal.set_sensitive(True)
+            self._aplicar_acoes_speaker(
+                self._speaker_acao_mudo or acao_speaker_mudo(None),
+                self._speaker_acao_devolucao or acao_speaker_devolucao(None),
+            )
+
+        def _som_sem_alvo(self) -> bool:
+            """A guarda vista de DENTRO do gesto — a segunda tranca.
+
+            Peça insensível não recebe clique **da mão dela**, e isso basta
+            para a tela. Não basta para o código: um `set_active` de teste, um
+            gesto que chegou antes do `update` e um repouso de volume já
+            armado passam por cima da sensibilidade e chegam ao IPC do mesmo
+            jeito. Aqui o pedido morre antes de virar byte no controle errado.
+            """
+            return self._uniq is None
+
+        # ------------------------------------------------------------------
         # Inputs ao vivo (a 10 Hz — tudo diffado)
         # ------------------------------------------------------------------
 
@@ -4691,6 +4891,10 @@ else:
             self.mic_nivel: float | None = None
             self.mic_acao: AcaoMic = acao_mic(None)
             self.uniq: str | None = None
+            #: GUARDA-SEM-ENDEREÇO-01: o som deste card está desligado? No
+            #: stub isso é o estado inteiro — ele não tem peça para dessensibi-
+            #: lizar, mas quem o lê precisa da MESMA resposta do widget real.
+            self.audio_sem_endereco: bool = True
             self.speaker: tuple[int, bool | None] | None = None
             self.speaker_acao_mudo: AcaoSpeaker = acao_speaker_mudo(None)
             self.speaker_acao_devolucao: AcaoSpeaker = acao_speaker_devolucao(None)
@@ -4734,8 +4938,8 @@ else:
                 getattr(mic, "muted", None) if mic is not None else None
             )
             self.mic_acao = acao_mic(entry)
-            uniq = entry.get("uniq")
-            self.uniq = uniq if isinstance(uniq, str) and uniq else None
+            self.uniq = uniq_do_entry(entry)
+            self.audio_sem_endereco = audio_sem_endereco(entry)
             self.speaker = speaker_do_entry(entry)
             self.speaker_acao_mudo = acao_speaker_mudo(entry)
             self.speaker_acao_devolucao = acao_speaker_devolucao(entry)
@@ -4754,6 +4958,7 @@ else:
 
 __all__ = [
     "ALL_BUTTONS",
+    "DICA_AUDIO_SEM_ENDERECO",
     "DICA_BLOCO_SPEAKER",
     "DICA_MIC_ATIVAR",
     "DICA_MIC_DEVOLVER",
@@ -4783,6 +4988,7 @@ __all__ = [
     "ROTULO_STICK_ESQ",
     "STICK_SIZE_COMPACT",
     "STICK_SIZE_SINGLE",
+    "TEXTO_AUDIO_SEM_ENDERECO",
     "TEXTO_BOTAO_MIC_ATIVAR",
     "TEXTO_BOTAO_MIC_DEVOLVER",
     "TEXTO_BOTAO_MIC_SEM_LEITURA",
@@ -4804,6 +5010,7 @@ __all__ = [
     "acao_speaker_devolucao",
     "acao_speaker_mudo",
     "accent_do_card",
+    "audio_sem_endereco",
     "frase_mais_longa_do_que_chega_ao_jogo",
     "glyph_size",
     "glyph_size_unico",
@@ -4815,4 +5022,5 @@ __all__ = [
     "texto_motion",
     "titulo_do_card",
     "touchpad_do_inputs",
+    "uniq_do_entry",
 ]

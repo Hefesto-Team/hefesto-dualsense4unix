@@ -734,7 +734,20 @@ class DaemonActionsMixin(WidgetAccessMixin):
             try:
                 from hefesto_dualsense4unix.integrations import storm_doctor
 
-                rows = storm_doctor.storm_report()
+                # MESA-CHEIA-11/E3: o check de áudio agora CONTA, e o
+                # denominador é quantos controles estão no cabo AGORA — sem
+                # ele, um DualSense com áudio responderia pelos quatro. O
+                # state_full é best-effort: daemon offline devolve None e o
+                # check volta a responder presente/ausente (nunca alarme falso
+                # por payload ausente).
+                no_cabo: int | None = None
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.app.ipc_bridge import (
+                        daemon_state_full,
+                    )
+
+                    no_cabo = storm_doctor.controles_no_cabo(daemon_state_full())
+                rows = storm_doctor.storm_report(controles_no_cabo=no_cabo)
             except Exception as exc:
                 logger.warning("storm_diag_falhou", erro=str(exc))
                 return
