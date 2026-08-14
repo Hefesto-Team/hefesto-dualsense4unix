@@ -193,6 +193,43 @@ class DaemonConfig:
     ps_long_press_ms: int = 0
     # BUG-RUMBLE-APPLY-IGNORED-01
     rumble_active: tuple[int, int] | None = None
+    #: MESA-CHEIA-05 (E0) — o DONO do par acima: o MAC do controle em que ele
+    #: foi fixado, ou None para "a mesa inteira" (o alvo era "Todos", ou o
+    #: alvo não tem MAC estável).
+    #:
+    #: **Por que o par não bastava.** `rumble_active` é um valor só para o
+    #: daemon inteiro e o destino dele era o `_output_target_key` do backend —
+    #: um ponteiro MUTÁVEL. Ela fixava 160/220 no Controle 2, trocava o seletor
+    #: para o 3 por outro motivo qualquer e, 200 ms depois, o `reassert_rumble`
+    #: marretava o Controle 3 com o valor do 2: o par fixado MIGRAVA de dono
+    #: por um gesto que não fala de vibração.
+    #:
+    #: Guardar o endereço junto do valor é o que faz o reassert reescrever
+    #: NAQUELE controle (via `set_rumble_for`, a rota por MAC que já existia e
+    #: só o co-op e o force-feedback usavam). Isto NÃO é a D-4: a intensidade
+    #: continua sendo uma só para a máquina — o que deixa de acontecer é a
+    #: migração de dono.
+    rumble_active_uniq: str | None = None
+    #: MESA-CHEIA-05 (E0, terceira rodada) — o controle que está vibrando POR
+    #: NOSSA CONTA neste instante, ou None quando nenhum está.
+    #:
+    #: **Por que o dono não bastava.** Guardar o endereço fez o par parar de
+    #: migrar — mas a mudança de dono passou a ABANDONAR quem vibrava. Medido
+    #: em 14/08 contra `git archive HEAD`, com os quatro controles: ela fixa
+    #: 160/220 no Controle 2, move o seletor para o 3 e clica «Parar» (ou
+    #: aplica outro par). Nos dois mundos os zeros vão para o 3 e o 2 continua
+    #: em 220/160 — mas no HEAD o reassert seguia o seletor, e **voltar o
+    #: seletor ao 2 o silenciava**; com o dono congelado, voltar o seletor
+    #: deixou de significar coisa alguma e o 2 vibra para sempre.
+    #:
+    #: Este campo é a rota de volta: o `reassert_rumble` compara quem vibra
+    #: com o dono de agora e, quando o par troca de controle, **zera o
+    #: abandonado antes de escrever no novo**. A §5 da sprint, pelo nome: *"a
+    #: volta ao neutro vale tanto quanto a ida"*.
+    #:
+    #: Transitório como o par: não é lido nem escrito em disco, e vale só
+    #: enquanto o daemon vive.
+    rumble_dono_vibrando: str | None = None
     # FEAT-RUMBLE-POLICY-01
     rumble_policy: RumblePolicy = "balanceado"
     rumble_policy_custom_mult: float = 0.7
@@ -982,6 +1019,7 @@ class Daemon:
             self.controller.set_trigger("right", off)
         # Rumble passthrough: reassert_rumble pula quando rumble_active é None.
         self.config.rumble_active = None
+        self.config.rumble_active_uniq = None
         # Emulação off: libera grab de evdev / device uinput. origin="profile"
         # de propósito: desligar a emulação no release NÃO é um gesto manual da
         # usuária — se carimbasse `_emu_manual_ts`, o lock de 30s BLOQUEARIA o
@@ -2701,6 +2739,7 @@ class Daemon:
             # Silêncio deliberado (botão "Parar") — preserva; não religa o jogo.
             return
         self.config.rumble_active = None
+        self.config.rumble_active_uniq = None
         with contextlib.suppress(Exception):
             self.controller.set_rumble(weak=0, strong=0)
         logger.info("profile_rumble_passthrough_released")
@@ -2846,10 +2885,21 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
             apply_rumble_policy,
         )
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            escrever_rumble_no_dono,
+        )
 
         with contextlib.suppress(Exception):
             eff_weak, eff_strong = apply_rumble_policy(self, active[0], active[1])
-            self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
+            # MESA-CHEIA-05 (E0): o par tem dono, e trocar a POLÍTICA não é
+            # gesto de trocar de controle — escreve em quem o par é, não em
+            # quem está no seletor agora.
+            escrever_rumble_no_dono(
+                self.controller,
+                self.config.rumble_active_uniq,
+                eff_weak,
+                eff_strong,
+            )
 
     def _flush_emulation_devices(self) -> None:
         """Solta todas as teclas/botões dos devices virtuais (mouse+teclado).

@@ -22,7 +22,10 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.core.trigger_effects import off as trigger_off
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
+from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
+    apply_rumble_policy,
+    uniq_do_alvo_de_output,
+)
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -452,6 +455,63 @@ def _rgb_or_none(value: Any) -> tuple[int, int, int] | None:
         return None
 
 
+def _numero_de_exibicao(entry: dict[str, Any]) -> int:
+    """Número "Controle N" de UMA entrada de ``controllers``.
+
+    MESA-CHEIA-11/E1. É a MESMA regra de
+    `app/actions/base.numero_do_controle` (slot de sessão; sem slot, posição
+    1-based): o slot é a identidade estável, e é o número que a janela imprime
+    no título do card. A regra mora lá porque é da interface — e `base.py`
+    importa `gi`, que o daemon não pode importar. Para que as duas cópias não
+    divirjam existe portão: `test_mesa_cheia_11_a_janela_conta_quatro.py`
+    compara as duas sobre o payload REAL de quatro controles, onde `player_slot`
+    e `player` são listas DIFERENTES ([4,1,3,2] contra [1,2,3,4]) — foi essa
+    medição que mostrou que a escolha do número importa.
+    """
+    slot = entry.get("player_slot")
+    if isinstance(slot, int) and not isinstance(slot, bool):
+        return slot
+    indice = entry.get("index")
+    if isinstance(indice, int) and not isinstance(indice, bool):
+        return indice + 1
+    return 1
+
+
+def controles_bt_frageis(controllers: Any, *, native_mode: bool) -> list[int]:
+    """Números dos controles frágeis por BT no Modo Nativo — função pura.
+
+    MESA-CHEIA-11/E1, e o defeito que ela corrige é FALSO NEGATIVO: a flag
+    olhava só o `transport` do PRIMÁRIO, então com o Controle 1 no cabo e os
+    outros três no rádio o aviso **calava justamente para os três frágeis** —
+    a situação de co-op mais comum, porque o primeiro plugado é o dela.
+
+    Frágil é cada controle CONECTADO em ``transport == "bt"`` enquanto o Modo
+    Nativo está ligado (fora do Modo Nativo não há fragilidade a avisar: o
+    jogo vê o gamepad virtual, não o físico). Os números saem CRESCENTES, e
+    não na ordem dos handles: quem lê a frase procura o card pelo número, e
+    "Controles 3 e 2" faria ela varrer a fileira duas vezes.
+
+    Devolve `[]` — e não levanta — para `controllers` ausente ou dublado: o
+    handler roda com backends de teste e com o `describe_controllers` de um
+    MagicMock, e um aviso de tela nunca pode derrubar o `state_full`.
+    """
+    if not native_mode or not isinstance(controllers, list):
+        return []
+    numeros: list[int] = []
+    for entry in controllers:
+        if not isinstance(entry, dict):
+            continue
+        if not entry.get("connected"):
+            continue
+        transporte = entry.get("transport")
+        if not isinstance(transporte, str) or transporte.lower() != "bt":
+            continue
+        numero = _numero_de_exibicao(entry)
+        if numero not in numeros:
+            numeros.append(numero)
+    return sorted(numeros)
+
+
 # --- 8BIT-01: inventário de gamepads externos (opt-in do controller.list) ----
 
 #: Orçamentos da sonda "quem segura o hidraw" (opcional e degradável): pgrep
@@ -818,26 +878,76 @@ class IpcHandlersMixin:
 
     # --- triggers --------------------------------------------------------
 
-    def _apply_por_uniq(self, params: dict[str, Any], **campos: Any) -> bool:
+    def _apply_por_uniq(self, params: dict[str, Any], **campos: Any) -> str | None:
         """Aplica ``campos`` SÓ no controle do MAC ``params["uniq"]``, se houver.
 
         PERFIL-05 (22/07): alinha o eixo da escrita VIVA com o da persistência
         (ambos por MAC, via ``apply_output_for`` — que registra o override
-        por-uniq e escreve só naquele controle). Retorna True quando aplicou;
-        False quando não há ``uniq`` no pedido ou o backend não expõe
-        ``apply_output_for`` (FakeController de teste) — nesse caso o chamador
-        segue o caminho clássico por índice/broadcast, intacto.
+        por-uniq e escreve só naquele controle).
+
+        MESA-CHEIA-09 (E1/E2): devolve **o que o backend fez** — uma palavra de
+        ``core.controller.ResultadoDeSaida`` — em vez de um booleano que só
+        dizia "esta rota foi usada". ``None`` continua querendo dizer "esta
+        rota NÃO se aplica" (sem ``uniq`` no pedido, ou backend sem
+        ``apply_output_for``), e o chamador segue o caminho clássico por
+        índice/broadcast, intacto.
+
+        **Backend que não sabe dizer** (dublê antigo que devolve ``None``)
+        vira ``"escreveu"``: é a resposta histórica, e trocá-la por "guardado"
+        faria a tela dizer que ficou pendente um ajuste que o dublê aplicou.
+        Quem quiser a verdade implementa o retorno.
         """
         alvo = params.get("uniq")
         if not isinstance(alvo, str) or not alvo:
-            return False
+            return None
         apply_for = getattr(self.controller, "apply_output_for", None)
         if not callable(apply_for):
-            return False
+            return None
         from hefesto_dualsense4unix.core.controller import OutputSpec
 
-        apply_for(alvo, OutputSpec(**campos))
-        return True
+        resultado = apply_for(alvo, OutputSpec(**campos))
+        return resultado if isinstance(resultado, str) and resultado else "escreveu"
+
+    @staticmethod
+    def _destinos_por_uniq(resultado: str | None, uniq: str) -> tuple[list[str], list[str]]:
+        """``(aplicado_em, guardado_em)`` a partir do que o backend fez.
+
+        MESA-CHEIA-09 (E1/E2). ``aplicado_em`` passa a significar **o byte
+        saiu** — a mesma coisa que já significava no ramo broadcast, onde a
+        lista só tem quem está CONECTADO. Antes, no ramo por-``uniq``, ele era
+        ``[uniq]`` sempre: com o controle fora da mesa a resposta afirmava
+        escrita onde só houve registro, e a janela repetia a afirmação.
+
+        ``guardado_em`` é o campo novo, e existe porque "não escreveu" tem
+        DUAS causas com destinos opostos na tela: o override que ficou
+        guardado e pega no hotplug (D-9 — *"Guardado — vai valer quando o
+        Controle N voltar"*) e o pedido que não guardou nada (sem MAC
+        estável). Sem o segundo campo, a tela teria de escolher entre chamar
+        de "guardado" o que se perdeu ou de "falhou" o que ficou.
+
+        Conserto 1.3: ``"registrado"`` passou a cobrir também o **Modo Nativo**
+        (o backend guarda e o desmute aplica), e por isso a aba Gatilhos parou
+        de dizer "aplicado" ali sem que nada mude aqui — este mapa já dava o
+        destino certo. E ``"falhou"`` (escrita que levantou) entra nas duas
+        listas VAZIAS: não escreveu, e prometer "guardado" seria mandá-la
+        esperar um evento que pode nunca vir.
+
+        Conserto 1.4: o default deixou de ser OTIMISTA. Era ``[uniq], []`` para
+        QUALQUER palavra fora das listas — a sexta palavra que o backend
+        aprendesse a dizer entraria calada como "aplicado", que é a mentira que
+        esta sprint existe para matar. Agora só ``"escreveu"`` afirma; palavra
+        desconhecida não afirma nem promete, e sai no log.
+        """
+        if resultado == "escreveu":
+            return [uniq], []
+        if resultado == "registrado":
+            return [], [uniq]
+        if resultado in (None, "sem_alvo", "nada_a_fazer", "falhou"):
+            return [], []
+        logger.warning(
+            "destino_por_uniq_palavra_desconhecida", resultado=resultado, uniq=uniq
+        )
+        return [], []
 
     def _uniqs_conectados(self) -> list[str]:
         """MACs dos controles CONECTADOS, na ordem do backend.
@@ -933,6 +1043,68 @@ class IpcHandlersMixin:
             aplicados.append(alvo)
         return aplicados
 
+    def _destinos_do_broadcast(self) -> tuple[list[str], list[str]]:
+        """``(aplicado_em, guardado_em)`` da rota CLÁSSICA — o pedido SEM ``uniq``.
+
+        Conserto 1.4. O ``trigger.set``/``trigger.reset`` sem ``uniq`` devolvia
+        as duas listas vazias **mesmo tendo escrito**, enquanto a rota irmã
+        ``led.set`` respondia ``aplicado_em`` com a mesa inteira — duas rotas
+        irmãs, respostas opostas, e a tela lê as duas ("Todos" no seletor da
+        aba Gatilhos manda o pedido sem ``uniq``). Aqui a rota do gatilho passa
+        a dizer em QUEM pegou, com o mesmo teto de verdade do ramo por-``uniq``.
+
+        O que este método **não** faz, e cada "não" é medido, não suposto:
+
+        * **Não** registra nada por controle. O espelho LITERAL do ``led.set``
+          seria chamar ``_registrar_em_todos``, e isso mudaria a ESCRITA, não a
+          resposta: ``_record_desired_locked(None, ...)`` limpa o campo em todos
+          os overrides por-uniq e SOLTA o carimbo de dono, porque "Todos" é
+          gesto de NIVELAR. Medido (14/08): depois de ``apply_output_for`` o
+          campo fica com dono ``usuaria``; depois de um ``set_trigger``
+          broadcast o override some e o dono vira ``None``. Re-registrar por
+          controle desfaria o nivelamento que a própria rota promete.
+        * **Não** promete ``guardado_em`` — pelo mesmo nivelamento não há
+          promessa por-controle a publicar: o valor foi para o default, sem
+          endereço. Publicar um MAC aqui seria mandar a usuária esperar por um
+          controle que não é o dono do que ela pediu.
+        * **Não** afirma nada em **Modo Nativo**: o ``report_thread`` está mudo
+          e nenhum byte sai (CONSERTO 1.3). É onde a rota irmã ainda mente —
+          medido em 14/08, ``led.set`` sem ``uniq`` com o output mutado responde
+          ``aplicado_em`` com os dois MACs e ZERO byte no fio, porque
+          ``_registrar_em_todos`` ignora a palavra que o backend devolve.
+        * **Não** afirma quando não sabe: mesa vazia, backend que não diz quem
+          está nela nem onde o seletor está, ou alvo do seletor sem MAC estável
+          (key por path) devolvem as duas listas vazias — o "não sei dizer em
+          quem" que o comentário do ``led.set`` já fixou.
+
+        O teto de verdade é o MESMO do ramo por-``uniq``: ``_apply_trigger`` só
+        arma o estado no handle (``trigger.mode``/``setForce``, sem I/O nenhum)
+        e quem escreve no fio é o ``report_thread``. "Aplicado" aqui quer dizer,
+        como lá, que o desejado está armado e o fio não está mudo.
+        """
+        alvos = self._uniqs_conectados()
+        if not alvos:
+            return [], []
+        if self.daemon is not None and self.daemon.is_native_mode():
+            return [], []
+        onde_mira = getattr(self.controller, "get_output_target_index", None)
+        if not callable(onde_mira):
+            return [], []
+        try:
+            indice = onde_mira()
+        except Exception as exc:  # observabilidade > silêncio
+            logger.debug("destinos_do_broadcast_falhou", err=str(exc))
+            return [], []
+        if indice is None:
+            return alvos, []
+        # Seletor mirando UM controle: o `_for_each` do backend escreve só nele,
+        # e afirmar a mesa inteira aqui seria a mentira antiga com outro nome.
+        nomear = getattr(self.controller, "get_output_target_uniq", None)
+        alvo = nomear() if callable(nomear) else None
+        if not isinstance(alvo, str) or not alvo:
+            return [], []
+        return [alvo], []
+
     async def _handle_trigger_set(self, params: dict[str, Any]) -> dict[str, Any]:
         side = params.get("side")
         mode = params.get("mode")
@@ -949,13 +1121,38 @@ class IpcHandlersMixin:
         campos = (
             {"trigger_left": effect} if side == "left" else {"trigger_right": effect}
         )
-        if not self._apply_por_uniq(params, **campos):
+        resultado = self._apply_por_uniq(params, **campos)
+        if resultado is None:
             self.controller.set_trigger(side, effect)
+            # Conserto 1.4: a rota clássica (sem `uniq`) respondia as duas
+            # listas vazias MESMO TENDO ESCRITO — a rota irmã `led.set` dizia a
+            # mesa inteira, e a tela lê as duas. Agora ela diz em quem pegou, e
+            # só quando sabe; ver `_destinos_do_broadcast` para o que ela se
+            # recusa a afirmar (Modo Nativo, mesa vazia, alvo sem MAC) e por que
+            # `guardado_em` fica sempre vazio aqui.
+            aplicado_em, guardado_em = self._destinos_do_broadcast()
+        else:
+            aplicado_em, guardado_em = self._destinos_por_uniq(
+                resultado, str(params["uniq"])
+            )
         # BUG-MOUSE-TRIGGERS-01: usuário aplicou trigger manual via GUI/IPC.
         # Marca override para o autoswitch não sobrescrever (especialmente
         # ao ligar emulação de mouse, cujo movimento muda foco de janela).
         self.store.mark_manual_trigger_active("trigger")
-        return {"status": "ok"}
+        # MESA-CHEIA-09 (E2): espelho do `led.set` — mesmo nome de campo, mesma
+        # semântica de vazio. Era o único comando de saída que respondia
+        # `{"status": "ok"}` seco, e a aba Gatilhos dizia "aplicado" em três
+        # casos sem byte nenhum. Conserto 1.4 — os três da sprint são: alvo
+        # DESCONECTADO, alvo SEM MAC estável, e MODO NATIVO com output mutado.
+        # O comentário antigo trocava o Modo Nativo por "mesa vazia" e escondia
+        # justamente o caso que só morreu no conserto 1.3 (quando
+        # `apply_output_for` passou a devolver «registrado» sob o mute). Mesa
+        # vazia é caso da rota CLÁSSICA, e mora em `_destinos_do_broadcast`.
+        return {
+            "status": "ok",
+            "aplicado_em": aplicado_em,
+            "guardado_em": guardado_em,
+        }
 
     async def _handle_trigger_reset(self, params: dict[str, Any]) -> dict[str, Any]:
         """Devolve o gatilho ao perfil e LIBERA a trava manual dele (R-19).
@@ -987,12 +1184,26 @@ class IpcHandlersMixin:
             campos["trigger_left"] = trigger_off()
         if target in ("right", "both"):
             campos["trigger_right"] = trigger_off()
-        if not self._apply_por_uniq(params, **campos):
+        resultado = self._apply_por_uniq(params, **campos)
+        if resultado is None:
             for lado in ("left", "right"):
                 if f"trigger_{lado}" in campos:
                     self.controller.set_trigger(lado, campos[f"trigger_{lado}"])
+            # Conserto 1.4: mesma rota clássica do `trigger.set` — "Desligar"
+            # com "Todos" no seletor também escreve, e também dizia `[]`.
+            aplicado_em, guardado_em = self._destinos_do_broadcast()
+        else:
+            aplicado_em, guardado_em = self._destinos_por_uniq(
+                resultado, str(params["uniq"])
+            )
         self.store.clear_manual_trigger_active("trigger")
-        return {"status": "ok"}
+        # MESA-CHEIA-09 (E2): mesmo contrato do `trigger.set` — "Desligar" num
+        # controle fora da mesa é GUARDADO, não aplicado.
+        return {
+            "status": "ok",
+            "aplicado_em": aplicado_em,
+            "guardado_em": guardado_em,
+        }
 
     # --- leds ------------------------------------------------------------
 
@@ -1023,8 +1234,14 @@ class IpcHandlersMixin:
         # a hotplug) e escreve SÓ naquele controle. Antes, o caminho vivo por
         # índice (`_output_target_key`) caía em BROADCAST quando o alvo
         # desalinhava — "configurei o controle 2 e mudou todos".
-        if self._apply_por_uniq(params, led=(r, g, b)):
-            aplicado_em = [str(params["uniq"])]
+        resultado = self._apply_por_uniq(params, led=(r, g, b))
+        guardado_em: list[str] = []
+        if resultado is not None:
+            # MESA-CHEIA-09 (E1): era `[uniq]` SEMPRE — com o controle fora da
+            # mesa, o campo criado para o daemon parar de mentir mentia.
+            aplicado_em, guardado_em = self._destinos_por_uniq(
+                resultado, str(params["uniq"])
+            )
         else:
             self.controller.set_led((r, g, b))
             # BROADCAST-QUE-NAO-MENTE-01 (02/08): a escrita acima grava o
@@ -1058,7 +1275,11 @@ class IpcHandlersMixin:
         # "escrita global sem registro por controle" (backend sem a API
         # por-uniq, ou mesa vazia), que era justamente o caso em que o "ok"
         # mentia.
-        return {"status": "ok", "aplicado_em": aplicado_em}
+        return {
+            "status": "ok",
+            "aplicado_em": aplicado_em,
+            "guardado_em": guardado_em,
+        }
 
     async def _handle_led_player_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Aplica bitmask de 5 LEDs de player no controle.
@@ -1077,8 +1298,12 @@ class IpcHandlersMixin:
         )
         # PERFIL-05: mesmo contrato do led.set — `uniq` presente = escrita
         # por-MAC via apply_output_for (só naquele controle).
-        if self._apply_por_uniq(params, player_leds=bits):
-            aplicado_em = [str(params["uniq"])]
+        resultado = self._apply_por_uniq(params, player_leds=bits)
+        guardado_em: list[str] = []
+        if resultado is not None:
+            aplicado_em, guardado_em = self._destinos_por_uniq(
+                resultado, str(params["uniq"])
+            )
         else:
             self.controller.set_player_leds(bits)
             # BROADCAST-QUE-NAO-MENTE-01: MESMO defeito do `led.set` e pela
@@ -1101,7 +1326,12 @@ class IpcHandlersMixin:
         self.store.mark_manual_trigger_active("led")
         # APLICAR-VERDADE-01, mesma decisão do `led.set`: `aplicado_em` é
         # aditivo e `bits` (contrato de quem já lê a resposta) fica intacto.
-        return {"status": "ok", "bits": list(bits), "aplicado_em": aplicado_em}
+        return {
+            "status": "ok",
+            "bits": list(bits),
+            "aplicado_em": aplicado_em,
+            "guardado_em": guardado_em,
+        }
 
     # --- identidade (numeração) -------------------------------------------
 
@@ -1998,15 +2228,6 @@ class IpcHandlersMixin:
             # `_window_detect_payload`.
             **self._window_detect_payload(),
         }
-        # DEDUP-06 (achado NOVO da revisão): físico primário em BT + Modo
-        # Nativo é estruturalmente frágil — o SDL pode não enxergar o DualSense
-        # BT nem SEM launch option (o backend evdev deferencia ao HIDAPI por
-        # VID/PID e o HIDAPI não lê o hidraw BT). Fora do alcance do wrapper;
-        # a GUI e o doctor avisam a partir DESTA flag.
-        result["native_bt_fragil"] = bool(
-            result["native_mode"] and result["transport"] == "bt"
-        )
-
         # NUMA-05: sinal de autoridade de exibição (NUMA-01) para GUI/doctor —
         # a mesma leitura que o `defend_display`/merge-gate do backend usam,
         # SÓ exposição (nunca decide nada aqui).
@@ -2062,6 +2283,37 @@ class IpcHandlersMixin:
                     self._enrich_controllers_per_controller(
                         [c for c in controllers if isinstance(c, dict)], state
                     )
+
+        # DEDUP-06 (achado NOVO da revisão): físico em BT + Modo Nativo é
+        # estruturalmente frágil — o SDL pode não enxergar o DualSense BT nem
+        # SEM launch option (o backend evdev deferencia ao HIDAPI por VID/PID e
+        # o HIDAPI não lê o hidraw BT). Fora do alcance do wrapper; a GUI e o
+        # doctor avisam a partir DESTA flag.
+        #
+        # MESA-CHEIA-11/E1 (14/08/2026) — por que este bloco MUDOU DE LUGAR:
+        # ele olhava só `result["transport"]`, que é o do PRIMÁRIO, e por isso
+        # calava com o Controle 1 no cabo e os outros três no rádio (falso
+        # negativo). Agora ele responde POR CONTROLE, e para isso precisa da
+        # lista `controllers` já montada e já enriquecida com o `player_slot` —
+        # daí ter descido para depois do bloco acima.
+        entradas_de_controle = result.get("controllers")
+        frageis = controles_bt_frageis(
+            entradas_de_controle, native_mode=result["native_mode"]
+        )
+        # A mesa é conhecida quando a lista existe e traz alguém conectado.
+        # Backend sem `describe_controllers` (fakes, MagicMock) não sabe QUEM
+        # está na mesa: aí a flag antiga — o primário — continua valendo, e a
+        # lista sai VAZIA de propósito, para a janela cair no texto genérico em
+        # vez de nomear um controle que ela não sabe qual é.
+        conhece_a_mesa = isinstance(entradas_de_controle, list) and any(
+            isinstance(e, dict) and e.get("connected") for e in entradas_de_controle
+        )
+        result["native_bt_fragil_controles"] = frageis
+        result["native_bt_fragil"] = bool(
+            frageis
+            if conhece_a_mesa
+            else (result["native_mode"] and result["transport"] == "bt")
+        )
 
         # CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026): fica AO LADO do bloco
         # `controllers` de propósito — é a resposta à pergunta que aquele bloco
@@ -3235,6 +3487,11 @@ class IpcHandlersMixin:
         o poll loop continue re-afirmando via _reassert_rumble. O multiplicador
         de política é aplicado antes de enviar ao hardware — tanto aqui quanto
         em _reassert_rumble.
+
+        MESA-CHEIA-05 (E0): junto do par vai o DONO dele
+        (`rumble_active_uniq`), congelado agora. Sem isso o reassert do poll
+        loop reescrevia no alvo DE AGORA, e trocar o seletor levava o valor de
+        um controle para outro.
         """
         weak = params.get("weak")
         strong = params.get("strong")
@@ -3246,6 +3503,7 @@ class IpcHandlersMixin:
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (weak, strong)
+            daemon_cfg.rumble_active_uniq = uniq_do_alvo_de_output(self.controller)
         # Aplica política antes de enviar ao hardware.
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
@@ -3262,10 +3520,48 @@ class IpcHandlersMixin:
         (0, 0) de forma que o poll loop re-afirme o silêncio, evitando que outro
         write HID re-ative motores inadvertidamente. Use rumble.passthrough para
         liberar controle completo ao jogo.
+
+        MESA-CHEIA-05 (E0): o silêncio deliberado também tem dono — quem
+        mandou calar UM controle não mandou calar o que entrar no seletor
+        depois.
+
+        MESA-CHEIA-05 (E0, terceira rodada) — **e cala quem está vibrando, não
+        só quem está no seletor.** Medido em 14/08 contra `git archive HEAD`,
+        com os quatro controles: ela fixa 160/220 no Controle 2, move o seletor
+        para o 3 e clica «Parar». Os zeros iam para o 3 e o **2 continuava em
+        220/160**; antes de o par ter dono, voltar o seletor ao 2 o silenciava,
+        e com o dono congelado voltar o seletor deixou de significar coisa
+        alguma — o gesto criava um beco sem saída. «Parar» quer dizer *cale o
+        que está vibrando*, então o dono anterior leva os zeros ANTES de o
+        endereço passar para o seletor de agora. A §5 da sprint, pelo nome: *"a
+        volta ao neutro vale tanto quanto a ida"*.
         """
+        # Import local, e o motivo foi MEDIDO em 14/08 (não é o ciclo do
+        # reassert — no topo importa sem ciclo nenhum, nas cinco ordens de
+        # entrada que testei): hoje `import ...daemon.ipc_handlers` carrega
+        # ZERO módulos de `daemon.subsystems`, e puxar um deles executa o
+        # `subsystems/__init__.py`, que importa TODOS — bt_mic, metrics,
+        # plugins, udp, gamepad. Um handler de rumble não paga essa conta no
+        # import de quem só quer falar IPC.
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            silenciar_dono_abandonado,
+        )
+
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        dono_de_agora = uniq_do_alvo_de_output(self.controller)
         if daemon_cfg is not None:
+            par_velho = getattr(daemon_cfg, "rumble_active", None)
+            dono_velho = getattr(daemon_cfg, "rumble_active_uniq", None)
             daemon_cfg.rumble_active = (0, 0)
+            daemon_cfg.rumble_active_uniq = dono_de_agora
+            # Só quem vibrava por NOSSA conta é resgatado: par nenhum (o jogo
+            # dirige) ou par (0,0) (já calado) não abandonam ninguém.
+            if par_velho is not None and any(par_velho):
+                silenciar_dono_abandonado(self.controller, dono_velho, dono_de_agora)
+            # O par de agora é (0,0): ninguém mais vibra por nossa conta, e a
+            # anotação do poll loop não pode ficar rançosa cobrando um resgate
+            # que este gesto já pagou.
+            daemon_cfg.rumble_dono_vibrando = None
         self.controller.set_rumble(weak=0, strong=0)
         # ONDA-U (Causa A): mesma trava de trigger.set (U11), categoria
         # "rumble".
@@ -3304,6 +3600,8 @@ class IpcHandlersMixin:
             daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
             if daemon_cfg is not None:
                 daemon_cfg.rumble_active = None
+                # MESA-CHEIA-05 (E0): sem par fixado não há dono a lembrar.
+                daemon_cfg.rumble_active_uniq = None
             # F1 (auditoria 21/07): limpa SÓ a categoria "rumble" — o fim do
             # "Testar motores" não pode apagar um LED/gatilho deliberado
             # aplicado em outra aba (a trava era booleano único e o clear

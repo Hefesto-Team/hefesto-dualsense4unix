@@ -6,8 +6,8 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     profile.list         {}          -> {profiles: [{name, priority, match_type}]}
     profile.apply_draft  {triggers?, leds?, rumble?, mouse?}
                          -> {status, applied: [str], failed: {str: str}}
-    trigger.set          {side, mode, params} -> {status}
-    trigger.reset        {side?, uniq?}        -> {status}
+    trigger.set    {side, mode, params, uniq?} -> {status, aplicado_em, guardado_em}
+    trigger.reset  {side?, uniq?}              -> {status, aplicado_em, guardado_em}
     led.set              {rgb}                 -> {status}
     led.player_set       {bits: [bool]*5}      -> {status, bits}
     identity.renumber    {}          -> {ok, renumbered: {uniq: slot}} | {ok: false, reason}
