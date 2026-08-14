@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -71,12 +72,26 @@ def _run_script(relpath: str, *args: str, confirm: str | None = None) -> int:
     return subprocess.run(["bash", str(script), *args], check=False).returncode
 
 
+async def _state_full_ou_none() -> dict[str, Any] | None:
+    """`daemon.state_full` via IPC; ``None`` com o daemon offline (best-effort)."""
+    try:
+        async with IpcClient.connect() as client:
+            estado = await client.call("daemon.state_full")
+            return estado if isinstance(estado, dict) else None
+    except (FileNotFoundError, ConnectionError, IpcError, OSError):
+        return None
+
+
 def _print_storm_block() -> None:
     """Diagnóstico storm (FEAT-DSX-UNIFY-01) — read-only, sem sudo."""
     from hefesto_dualsense4unix.integrations import storm_doctor
 
+    # MESA-CHEIA-11/E3: o check de áudio conta as placas DualSense contra os
+    # controles NO CABO. O denominador vem do daemon; sem daemon ele é None e o
+    # check volta a responder presente/ausente, sem inventar fração.
+    no_cabo = storm_doctor.controles_no_cabo(asyncio.run(_state_full_ou_none()))
     console.print("\n== anti-storm / sistema ==")
-    for tag, message in storm_doctor.storm_report():
+    for tag, message in storm_doctor.storm_report(controles_no_cabo=no_cabo):
         console.print(f"{tag} {message}")
 
 

@@ -1595,18 +1595,53 @@ print(f"enabled={ge.get('enabled')}")
 print(f"dedup_ok={ge.get('dedup_ok')}")
 print(f"dedup_motivo={ge.get('dedup_motivo') or ''}")
 print(f"native_bt={res.get('native_bt_fragil')}")
+# MESA-CHEIA-11/E1: QUAIS controles estão frágeis (a flag acima virou "algum").
+# Lista vazia = daemon antigo, ou mesa desconhecida — o aviso sai sem nomes.
+frageis = res.get("native_bt_fragil_controles")
+nums = (
+    [n for n in frageis if isinstance(n, int) and not isinstance(n, bool)]
+    if isinstance(frageis, list)
+    else []
+)
+# CONSERTO 1.7: "2, 3 e 4", a MESMA grafia da janela (`juntar_rotulos`) — a
+# mesma mesa não pode sair escrita de dois jeitos em duas telas da mesma casa.
+if len(nums) > 1:
+    quais = ", ".join(str(n) for n in nums[:-1]) + " e " + str(nums[-1])
+else:
+    quais = "".join(str(n) for n in nums)
+print("native_bt_quais=" + quais)
+# ...e QUANTOS, porque o shell não sabe contar uma frase: com UM frágil o texto
+# dizia "com os Controles 3 ... esses controles" (plural para um), e a janela,
+# no mesmo estado, acertava. O número é que escolhe o molde.
+print(f"native_bt_quantos={len(nums)}")
 PYEOF
 )"; then
         warn "IPC não respondeu — estado de dedup indisponível (daemon travado?)"
         return
     fi
-    local enabled dedup_ok motivo native_bt
+    local enabled dedup_ok motivo native_bt native_bt_quais native_bt_quantos
     enabled="$(sed -n 's/^enabled=//p' <<<"${out}")"
     dedup_ok="$(sed -n 's/^dedup_ok=//p' <<<"${out}")"
     motivo="$(sed -n 's/^dedup_motivo=//p' <<<"${out}")"
     native_bt="$(sed -n 's/^native_bt=//p' <<<"${out}")"
+    native_bt_quais="$(sed -n 's/^native_bt_quais=//p' <<<"${out}")"
+    native_bt_quantos="$(sed -n 's/^native_bt_quantos=//p' <<<"${out}")"
     if [[ "${native_bt}" == "True" ]]; then
-        warn "Modo Nativo com o controle em BLUETOOTH — o SDL pode não enxergar o físico BT (limite do HIDAPI); se o jogo não vir o controle, use cabo USB ou a emulação"
+        # MESA-CHEIA-11/E1: com quatro na mesa a pergunta seguinte é "quais?" —
+        # e a resposta agora vem do daemon, que olha CADA controle em vez de só
+        # o primário (com o Controle 1 no cabo, este aviso calava para os três
+        # no rádio).
+        #
+        # CONSERTO 1.7: e são DOIS moldes, como na janela. Quem tem um controle
+        # só no rádio — exatamente quem este aviso nasceu para socorrer — lia
+        # "com os Controles 3 ... se o jogo não vir esses controles".
+        if [[ "${native_bt_quantos}" == "1" && -n "${native_bt_quais}" ]]; then
+            warn "Modo Nativo com o Controle ${native_bt_quais} em BLUETOOTH — o SDL pode não enxergar o físico BT (limite do HIDAPI); se o jogo não vir esse controle, use cabo USB ou a emulação"
+        elif [[ -n "${native_bt_quais}" ]]; then
+            warn "Modo Nativo com os Controles ${native_bt_quais} em BLUETOOTH — o SDL pode não enxergar o físico BT (limite do HIDAPI); se o jogo não vir esses controles, use cabo USB ou a emulação"
+        else
+            warn "Modo Nativo com o controle em BLUETOOTH — o SDL pode não enxergar o físico BT (limite do HIDAPI); se o jogo não vir o controle, use cabo USB ou a emulação"
+        fi
     fi
     if [[ "${enabled}" != "True" ]]; then
         info "emulação de gamepad desligada — dedup por vpad não se aplica agora"
