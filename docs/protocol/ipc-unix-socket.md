@@ -47,43 +47,43 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 
 | Método | Handler | O que o handler diz de si | Contrato em prosa |
 |---|---|---|---|
-| `profile.switch` | `daemon/ipc_handlers.py:658` (`_handle_profile_switch`) | Aplica perfil escolhido pelo usuário (entrada manual via IPC). | sim |
-| `profile.list` | `daemon/ipc_handlers.py:778` (`_handle_profile_list`) | _(o handler não tem docstring)_ | sim |
-| `profile.apply_draft` | `daemon/ipc_handlers.py:795` (`_handle_profile_apply_draft`) | Aplica draft completo em ordem canonica: leds -> triggers -> rumble -> mouse. | **não** |
-| `trigger.set` | `daemon/ipc_handlers.py:936` (`_handle_trigger_set`) | _(o handler não tem docstring)_ | sim |
-| `trigger.reset` | `daemon/ipc_handlers.py:960` (`_handle_trigger_reset`) | Devolve o gatilho ao perfil e LIBERA a trava manual dele (R-19). | sim |
-| `led.set` | `daemon/ipc_handlers.py:999` (`_handle_led_set`) | _(o handler não tem docstring)_ | sim |
-| `rumble.set` | `daemon/ipc_handlers.py:3231` (`_handle_rumble_set`) | Aplica rumble com política de intensidade (FEAT-RUMBLE-POLICY-01). | **não** |
-| `rumble.stop` | `daemon/ipc_handlers.py:3258` (`_handle_rumble_stop`) | Para rumble e persiste estado (0, 0) (BUG-RUMBLE-APPLY-IGNORED-01). | **não** |
-| `rumble.passthrough` | `daemon/ipc_handlers.py:3275` (`_handle_rumble_passthrough`) | Libera controle de rumble para jogo/UDP (BUG-RUMBLE-APPLY-IGNORED-01). | **não** |
-| `rumble.policy_set` | `daemon/ipc_handlers.py:3314` (`_handle_rumble_policy_set`) | Altera política global de intensidade de rumble (FEAT-RUMBLE-POLICY-01). | **não** |
-| `rumble.policy_custom` | `daemon/ipc_handlers.py:3337` (`_handle_rumble_policy_custom`) | Define política "custom" com multiplicador explícito (FEAT-RUMBLE-POLICY-01). | **não** |
-| `daemon.status` | `daemon/ipc_handlers.py:1623` (`_handle_daemon_status`) | _(o handler não tem docstring)_ | sim |
-| `daemon.state_full` | `daemon/ipc_handlers.py:1891` (`_handle_daemon_state_full`) | Estado completo pra GUI consumir a 20Hz. | sim |
-| `daemon.pause` | `daemon/ipc_handlers.py:1842` (`_handle_daemon_pause`) | Pausa o despacho de input sem matar o daemon (FEAT-DAEMON-PAUSE-RESUME-01). | **não** |
-| `daemon.resume` | `daemon/ipc_handlers.py:1847` (`_handle_daemon_resume`) | Retoma o despacho de input (FEAT-DAEMON-PAUSE-RESUME-01). | **não** |
-| `autoswitch.lock` | `daemon/ipc_handlers.py:1852` (`_handle_autoswitch_lock`) | Congela/descongela a troca AUTOMÁTICA de perfil (FEAT-AUTOSWITCH-LOCK-01). | **não** |
-| `native.mode.set` | `daemon/ipc_handlers.py:1872` (`_handle_native_mode_set`) | Liga/desliga o Modo Nativo — "release total" do controle (FEAT-NATIVE-MODE-01). | sim |
-| `controller.list` | `daemon/ipc_handlers.py:3090` (`_handle_controller_list`) | Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01. | sim |
-| `controller.target.set` | `daemon/ipc_handlers.py:3152` (`_handle_controller_target_set`) | Define o ALVO das ações de output (FEAT-DSX-CONTROLLER-SELECTOR-01). | **não** |
-| `daemon.reload` | `daemon/ipc_handlers.py:3385` (`_handle_daemon_reload`) | Aplica overrides parciais de config em runtime (REFACTOR-DAEMON-RELOAD-01). | sim |
-| `launch_env.refresh` | `daemon/ipc_handlers.py:3429` (`_handle_launch_env_refresh`) | Rematerializa as envs de launch do wrapper (DEDUP-04) sob demanda. | **não** |
-| `lightbar.reset` | `daemon/ipc_handlers.py:3182` (`_handle_lightbar_reset`) | Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição. | **não** |
-| `debug.player_leds` | `daemon/ipc_handlers.py:3210` (`_handle_debug_player_leds`) | Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação. | **não** |
-| `speaker.set` | `daemon/ipc_handlers.py:3451` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante (D4 + SOM-02). | sim |
-| `mic.set` | `daemon/ipc_handlers.py:3617` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle (MIC-USB-01). | sim |
-| `mouse.emulation.set` | `daemon/ipc_handlers.py:3690` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01). | sim |
-| `mouse.emulation.restore` | `daemon/ipc_handlers.py:3734` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida (HARM-06). | **não** |
-| `keyboard.emulation.set` | `daemon/ipc_handlers.py:3755` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01). | **não** |
-| `gamepad.emulation.set` | `daemon/ipc_handlers.py:3791` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01). | **não** |
-| `coop.set` | `daemon/ipc_handlers.py:3867` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01). | sim |
-| `coop.sync` | `daemon/ipc_handlers.py:3921` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
-| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:3958` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
-| `led.player_set` | `daemon/ipc_handlers.py:1063` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
-| `identity.renumber` | `daemon/ipc_handlers.py:1108` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos) — ONDA-U/NUM-01. | sim |
-| `identity.number.set` | `daemon/ipc_handlers.py:1261` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07). | sim |
-| `plugin.list` | `daemon/ipc_handlers.py:3975` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
-| `plugin.reload` | `daemon/ipc_handlers.py:3987` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
+| `profile.switch` | `daemon/ipc_handlers.py:718` (`_handle_profile_switch`) | Aplica perfil escolhido pelo usuário (entrada manual via IPC). | sim |
+| `profile.list` | `daemon/ipc_handlers.py:838` (`_handle_profile_list`) | _(o handler não tem docstring)_ | sim |
+| `profile.apply_draft` | `daemon/ipc_handlers.py:855` (`_handle_profile_apply_draft`) | Aplica draft completo em ordem canonica: leds -> triggers -> rumble -> mouse. | **não** |
+| `trigger.set` | `daemon/ipc_handlers.py:1108` (`_handle_trigger_set`) | _(o handler não tem docstring)_ | sim |
+| `trigger.reset` | `daemon/ipc_handlers.py:1157` (`_handle_trigger_reset`) | Devolve o gatilho ao perfil e LIBERA a trava manual dele (R-19). | sim |
+| `led.set` | `daemon/ipc_handlers.py:1210` (`_handle_led_set`) | _(o handler não tem docstring)_ | sim |
+| `rumble.set` | `daemon/ipc_handlers.py:3483` (`_handle_rumble_set`) | Aplica rumble com política de intensidade (FEAT-RUMBLE-POLICY-01). | **não** |
+| `rumble.stop` | `daemon/ipc_handlers.py:3516` (`_handle_rumble_stop`) | Para rumble e persiste estado (0, 0) (BUG-RUMBLE-APPLY-IGNORED-01). | **não** |
+| `rumble.passthrough` | `daemon/ipc_handlers.py:3571` (`_handle_rumble_passthrough`) | Libera controle de rumble para jogo/UDP (BUG-RUMBLE-APPLY-IGNORED-01). | **não** |
+| `rumble.policy_set` | `daemon/ipc_handlers.py:3612` (`_handle_rumble_policy_set`) | Altera política global de intensidade de rumble (FEAT-RUMBLE-POLICY-01). | **não** |
+| `rumble.policy_custom` | `daemon/ipc_handlers.py:3635` (`_handle_rumble_policy_custom`) | Define política "custom" com multiplicador explícito (FEAT-RUMBLE-POLICY-01). | **não** |
+| `daemon.status` | `daemon/ipc_handlers.py:1853` (`_handle_daemon_status`) | _(o handler não tem docstring)_ | sim |
+| `daemon.state_full` | `daemon/ipc_handlers.py:2121` (`_handle_daemon_state_full`) | Estado completo pra GUI consumir a 20Hz. | sim |
+| `daemon.pause` | `daemon/ipc_handlers.py:2072` (`_handle_daemon_pause`) | Pausa o despacho de input sem matar o daemon (FEAT-DAEMON-PAUSE-RESUME-01). | **não** |
+| `daemon.resume` | `daemon/ipc_handlers.py:2077` (`_handle_daemon_resume`) | Retoma o despacho de input (FEAT-DAEMON-PAUSE-RESUME-01). | **não** |
+| `autoswitch.lock` | `daemon/ipc_handlers.py:2082` (`_handle_autoswitch_lock`) | Congela/descongela a troca AUTOMÁTICA de perfil (FEAT-AUTOSWITCH-LOCK-01). | **não** |
+| `native.mode.set` | `daemon/ipc_handlers.py:2102` (`_handle_native_mode_set`) | Liga/desliga o Modo Nativo — "release total" do controle (FEAT-NATIVE-MODE-01). | sim |
+| `controller.list` | `daemon/ipc_handlers.py:3342` (`_handle_controller_list`) | Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01. | sim |
+| `controller.target.set` | `daemon/ipc_handlers.py:3404` (`_handle_controller_target_set`) | Define o ALVO das ações de output (FEAT-DSX-CONTROLLER-SELECTOR-01). | **não** |
+| `daemon.reload` | `daemon/ipc_handlers.py:3683` (`_handle_daemon_reload`) | Aplica overrides parciais de config em runtime (REFACTOR-DAEMON-RELOAD-01). | sim |
+| `launch_env.refresh` | `daemon/ipc_handlers.py:3727` (`_handle_launch_env_refresh`) | Rematerializa as envs de launch do wrapper (DEDUP-04) sob demanda. | **não** |
+| `lightbar.reset` | `daemon/ipc_handlers.py:3434` (`_handle_lightbar_reset`) | Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição. | **não** |
+| `debug.player_leds` | `daemon/ipc_handlers.py:3462` (`_handle_debug_player_leds`) | Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação. | **não** |
+| `speaker.set` | `daemon/ipc_handlers.py:3749` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante (D4 + SOM-02). | sim |
+| `mic.set` | `daemon/ipc_handlers.py:3915` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle (MIC-USB-01). | sim |
+| `mouse.emulation.set` | `daemon/ipc_handlers.py:3988` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01). | sim |
+| `mouse.emulation.restore` | `daemon/ipc_handlers.py:4032` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida (HARM-06). | **não** |
+| `keyboard.emulation.set` | `daemon/ipc_handlers.py:4053` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01). | **não** |
+| `gamepad.emulation.set` | `daemon/ipc_handlers.py:4089` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01). | **não** |
+| `coop.set` | `daemon/ipc_handlers.py:4165` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01). | sim |
+| `coop.sync` | `daemon/ipc_handlers.py:4219` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
+| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:4256` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
+| `led.player_set` | `daemon/ipc_handlers.py:1284` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
+| `identity.renumber` | `daemon/ipc_handlers.py:1338` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos) — ONDA-U/NUM-01. | sim |
+| `identity.number.set` | `daemon/ipc_handlers.py:1491` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07). | sim |
+| `plugin.list` | `daemon/ipc_handlers.py:4273` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
+| `plugin.reload` | `daemon/ipc_handlers.py:4285` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -96,9 +96,9 @@ dispatcher. Ela cobre o subconjunto v1 — a lista COMPLETA é a de cima.
 |---------------------|-----------------------------------------------|----------------------------------------|
 | `profile.switch`    | `{name: str}`                                 | `{status: "ok", active_profile: str}`  |
 | `profile.list`      | `{}`                                          | `{profiles: [{name, priority, match}]}` |
-| `trigger.set`       | `{side, mode, params: [int]}`                 | `{status}`                             |
-| `trigger.reset`     | `{side?: "left"\|"right"\|"both"}`            | `{status}`                             |
-| `led.set`           | `{rgb: [r,g,b], player_leds?: [bool]*5}`      | `{status}`                             |
+| `trigger.set`       | `{side, mode, params: [int]}`                 | `{status, aplicado_em, guardado_em}`   |
+| `trigger.reset`     | `{side?: "left"\|"right"\|"both"}`            | `{status, aplicado_em, guardado_em}`   |
+| `led.set`           | `{rgb: [r,g,b], player_leds?: [bool]*5}`      | `{status, aplicado_em, guardado_em}`   |
 | `daemon.status`     | `{}`                                          | `{connected, battery_pct, transport, active_profile}` |
 | `controller.list`   | `{}`                                          | `{controllers: [{vid, pid, transport}]}` |
 | `daemon.reload`     | `{}`                                          | `{status}`                             |
@@ -123,6 +123,41 @@ mora num handle só (`_handle_for`), não numa lista, então nunca houve o risco
 lado mandava para um só. Ele também é o único que LIBERA a trava manual de 30 s,
 e libera apenas a categoria `trigger` (ABAS-05): desligar um gatilho não pode
 destravar o LED nem a vibração que ela ajustou em outra aba.
+
+### `aplicado_em` e `guardado_em` — o que a resposta AFIRMA (MESA-CHEIA-09)
+
+Os quatro comandos de saída por-MAC (`trigger.set`, `trigger.reset`, `led.set`,
+`led.player_set`) devolvem **duas listas de MAC**, e a diferença entre elas é a
+diferença que a janela precisava para parar de mentir:
+
+| campo | quer dizer | a tela diz |
+|---|---|---|
+| `aplicado_em` | **o byte saiu** para aquele controle | *aplicado* |
+| `guardado_em` | o override ficou REGISTRADO e vale DEPOIS: quando o controle voltar (hotplug) **ou** quando o Modo Nativo sair (desmute) | *guardado* (D-9) |
+| as duas VAZIAS | escrita global sem registro por controle (pedido sem `uniq`, backend sem a API por-MAC); **ou** a escrita levantou (`falhou`) | o texto histórico |
+
+**O que mudou em 14/08:** no ramo por-`uniq`, `aplicado_em` era `[uniq]`
+SEMPRE — inclusive com o controle desconectado, em que nenhum byte sai e o
+override só fica guardado (`core/backend_pydualsense.apply_output_for`). O
+campo criado para o daemon parar de mentir mentia nesse caso, e a tela repetia
+a afirmação. Agora `aplicado_em` significa a mesma coisa nos dois ramos — o do
+broadcast já listava só quem está conectado.
+
+**Por que duas listas e não uma:** "não escreveu" tem duas causas com destinos
+opostos na tela — o que ficou guardado e vai valer, e o que não guardou nada
+(sem MAC estável). Uma lista só obrigaria a chamar uma das duas pelo nome da
+outra.
+
+**O conserto de 14/08 (à tarde):** a primeira leva matou DUAS das três
+condições da tabela de mentiras da sprint e deixou a terceira — **Modo Nativo
+com o output mutado** — respondendo `aplicado_em`. Mutado, a rota sysfs do LED
+está desabilitada, o report `0x31` avulso é pulado e o `report_thread` não
+escreve nada: nenhum byte sai, e o desejado é re-escrito no desmute. Isso é
+`guardado_em`, pela mesma definição do controle fora da mesa — o que muda é o
+evento que o libera. Na mesma leva, a escrita que LEVANTA (o `hidraw` que some
+debaixo dela) deixou de contar como aplicada: o backend devolve `falhou` e as
+duas listas saem vazias, porque prometer "guardado" ali seria mandá-la esperar
+um evento que pode nunca vir.
 
 ### `mic.set` / `speaker.set` — o áudio do controle (D4 / MIC-USB-01)
 
