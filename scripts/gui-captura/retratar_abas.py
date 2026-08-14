@@ -10,6 +10,8 @@ do tamanho da tela maximizada dela e salva um PNG por aba.
                                                          # da documentação
     scripts/gui-captura/retratar_abas.py /tmp/olhar      # só olhar, sem tocar
                                                          # no repositório
+    scripts/gui-captura/retratar_abas.py --mesa-cheia    # os QUATRO controles,
+                                                         # em outra pasta
 
 POR QUE ELE EXISTE, e por que é ele o certo para a JANELA
 ---------------------------------------------------------
@@ -70,11 +72,63 @@ sai vazio porque não há daemon do outro lado.
 * pedir estado ao daemon vivo (`daemon.state_full`) para "deixar a foto mais
   real" — traria MAC, nome de rede e caminho de arquivo da máquina dela;
 * fotografar a janela de verdade em vez de montar uma offscreen;
-* alimentar o card com um payload copiado de uma sessão real.
+* alimentar o card com um payload copiado de uma sessão real **e não
+  anonimizado**.
 
 Se algum dia isto mudar, **a foto passa a precisar de revisão humana antes de
 ir para o repositório** — e aí o script deixa de poder gravar direto em
 `docs/`.
+
+O MODO MESA CHEIA, E POR QUE ELE **NÃO** ENFRAQUECE NADA (14/08/2026)
+---------------------------------------------------------------------
+
+`--mesa-cheia` fotografa as mesmas dez abas com **quatro** controles em vez
+dos dublês de dois. A promessa acima continua **literalmente** de pé: este
+script **nunca fala com o daemon**, nem neste modo.
+
+A diferença entre os dois modos é só a FONTE do dublê:
+
+* modo padrão — dublês escritos à mão neste arquivo e na suíte;
+* `--mesa-cheia` — `tests/fixtures/state_full_quatro_controles.json`, um
+  arquivo **versionado**, lido do DISCO como qualquer outro fixture da suíte.
+
+O fixture é payload real de 14/08, mas ele **já passou pelos portões de
+`tests/`**, que são mais severos que a máscara de `docs/`: o
+`test_anonimato_de_fixtures.py` é allowlist de PREFIXO e reprova até OUI de
+fabricante de verdade, então cada `uniq` ali é `aabbcc0000NN`. E o payload
+inteiro não tem **uma** string livre — nem nome de perfil, nem caminho, nem
+título de janela; só enumerações (`usb`, `bt`, `uhid`, `sysfs`) e números. Isso
+foi conferido, não suposto.
+
+**Ler um arquivo do repositório não é falar com o daemon**, e a distinção é a
+mesma que a nota da aba Perfis já faz para o disco: o que a garantia proíbe é
+estado VIVO entrar na foto sem revisão. Aqui o dado entrou no repositório por
+um commit, que é a revisão.
+
+**O que continuaria inseguro:** trocar o fixture por uma captura nova sem
+passar pelos portões de `tests/`, ou apontar o `--mesa-cheia` para
+`docs/usage/assets/` — as fotos da mesa cheia têm pasta própria, fora das
+imagens do README, e é assim que o modo continua ADICIONAL em vez de
+substituir o que a documentação publica.
+
+POR QUE AS ANIMAÇÕES DO GTK FICAM DESLIGADAS (14/08/2026)
+----------------------------------------------------------
+
+`readme_inicio.png` saía DIFERENTE a cada execução — ~3 mil pixels, delta 1 a
+2, sempre nas bordas dos dois botões segmentados SELECIONADOS. O `git status`
+ficava sujo depois de toda foto, e o `CLAUDE.md` manda rodar este script antes
+de commitar: o ruído chegava a toda leva.
+
+A causa não é ruído de gradiente, é **transição de CSS**: um `Gtk.RadioButton`
+que acaba de ser marcado anima a mudança de estado (o tema do sistema traz
+`transition` em `button:checked`), e a foto sai no meio da animação — em que
+ponto dela depende do relógio, não do desenho. A aba Início é a primeira a ser
+fotografada, e por isso era a única que não tinha tempo de assentar.
+
+`gtk-enable-animations = False` faz o GTK pintar o estado FINAL na hora. As
+outras nove fotos saem byte a byte idênticas com ou sem a chave (medido); a da
+Início passa a sair sempre igual, e na cor que a transição estava tentando
+alcançar — ou seja, mais fiel ao que ela vê, não menos.
 
 O QUE A ABA PERFIS PASSOU A LER DO DISCO (13/08/2026)
 -----------------------------------------------------
@@ -97,8 +151,10 @@ para fora de `docs/`.
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
+import time
 from pathlib import Path
 
 RAIZ = Path(os.environ.get("HEFESTO_RAIZ", Path(__file__).resolve().parents[2]))
@@ -117,6 +173,33 @@ GLADE = RAIZ / "src/hefesto_dualsense4unix/gui/main.glade"
 #: ATUALIZA as imagens do README e do guia da interface — é o comportamento
 #: pedido: uma execução e a documentação deixa de mentir.
 DESTINO_DOC = RAIZ / "docs/usage/assets"
+
+#: O destino do modo `--mesa-cheia`. FORA de `docs/usage/assets` de propósito,
+#: e por duas razões:
+#:
+#: * essas dez imagens são as do README e do guia da interface, e a mesa cheia
+#:   é MEDIÇÃO, não o retrato da interface que a documentação publica;
+#: * `tests/unit/test_as_fotos_acompanham_a_versao.py` mede a PROCEDÊNCIA das
+#:   fotos pelo último commit que tocou `docs/usage/assets` — commitar foto de
+#:   mesa cheia lá dentro faria o portão dar as fotos do README por conferidas
+#:   sem ninguém as ter regerado.
+#:
+#: A pasta segue a convenção das medições desta casa
+#: (`docs/process/estudos/assets/`), mas SEM data no nome: as outras são
+#: instantâneas de um dia, esta é um modo do instrumento, que se roda de novo
+#: e sobrescreve.
+DESTINO_MESA_CHEIA = RAIZ / "docs/process/estudos/assets/mesa-cheia"
+
+#: O payload dos quatro controles. É arquivo VERSIONADO e anonimizado pelos
+#: portões de `tests/` — ver a seção de privacidade lá em cima. Ler daqui é ler
+#: o repositório, não o daemon.
+FIXTURE_MESA_CHEIA = RAIZ / "tests/fixtures/state_full_quatro_controles.json"
+
+#: Quantos controles a mesa cheia tem de mostrar. Não é número decorativo: é o
+#: teto do co-op e o que a leva "mesa cheia" existe para provar. O modo RECUSA
+#: rodar com menos — uma foto de mesa cheia com dois controles seria a mentira
+#: mais cara possível aqui, porque parece certa.
+CONTROLES_DA_MESA_CHEIA = 4
 
 #: A tela dela maximizada. Não é número inventado: é a resolução em que as
 #: bancadas de layout desta casa medem, e a mesma do `retrato_offscreen.py`.
@@ -138,6 +221,13 @@ NOMES = (
     "readme_navegacao_dsx",
 )
 
+#: Os nomes do modo mesa cheia. Prefixo próprio para que nenhuma delas possa
+#: ser confundida com — nem sobrescrever — uma imagem do README, mesmo que
+#: alguém aponte o modo para a pasta da documentação.
+NOMES_MESA_CHEIA = tuple(
+    nome.replace("readme_", "mesa_cheia_", 1) for nome in NOMES
+)
+
 
 def _assentar(vezes: int = 8) -> None:
     """Drena o laço de eventos até o GTK parar de ter o que fazer.
@@ -149,6 +239,81 @@ def _assentar(vezes: int = 8) -> None:
     for _ in range(vezes):
         while Gtk.events_pending():
             Gtk.main_iteration()
+
+
+#: Quanto tempo de RELÓGIO esperar por um redimensionamento da janela
+#: offscreen. É a única espera de parede deste script, e ela é necessária:
+#: `_assentar()` drena eventos PENDENTES, e a superfície offscreen só é
+#: recriada no tique do frame clock, que é um temporizador — sem tempo passar,
+#: `Gtk.events_pending()` devolve falso e o pixbuf sai no tamanho ANTIGO
+#: (medido: 1080 px numa janela já pedida com 2055). Não reintroduz o ruído das
+#: animações: aqui o que se espera é uma geometria, que converge e para.
+ESPERA_DO_REDIMENSIONAMENTO_S = 1.0
+
+
+def _esperar_o_redimensionamento(
+    segundos: float = ESPERA_DO_REDIMENSIONAMENTO_S,
+) -> None:
+    """Drena o laço deixando o relógio andar, para o resize chegar."""
+    fim = time.monotonic() + segundos
+    while time.monotonic() < fim:
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+        time.sleep(0.01)
+
+
+def _desligar_animacoes() -> str:
+    """Tira o relógio de dentro da foto (ver a seção do cabeçalho).
+
+    Com as animações ligadas, um botão recém-marcado é fotografado NO MEIO da
+    transição de CSS, e o ponto da transição depende de quanto tempo de parede
+    passou — a mesma tela produzia PNGs diferentes a cada execução. Desligadas,
+    o GTK pinta o estado final imediatamente.
+
+    Falha aqui não impede a foto: sem `Gtk.Settings` (display incomum) o script
+    volta ao comportamento antigo, que é ruidoso mas correto.
+    """
+    try:
+        ajustes = Gtk.Settings.get_default()
+        if ajustes is None:
+            return "animações não desligadas (sem Gtk.Settings)"
+        ajustes.set_property("gtk-enable-animations", False)
+    except Exception as exc:
+        return f"animações não desligadas ({exc})"
+    return "animações desligadas (a foto não depende do relógio)"
+
+
+def _estado_da_mesa_cheia() -> dict:
+    """Lê o fixture VERSIONADO dos quatro controles.
+
+    Isto é leitura de arquivo do repositório, e não conversa com o daemon — a
+    seção de privacidade do cabeçalho explica por que a distinção é a que
+    importa, e o `tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py` a
+    trava dos dois lados.
+
+    A conferência de que há QUATRO controles conectados é dura de propósito: o
+    modo existe para provar a mesa cheia, e um fixture truncado produziria uma
+    foto que parece certa e não é.
+    """
+    if not FIXTURE_MESA_CHEIA.is_file():
+        raise SystemExit(
+            f"ERRO: {FIXTURE_MESA_CHEIA} não existe. O modo --mesa-cheia "
+            "depende desse arquivo versionado; ele NÃO pergunta ao daemon."
+        )
+    estado = json.loads(FIXTURE_MESA_CHEIA.read_text(encoding="utf-8"))
+    controles = [
+        c
+        for c in estado.get("controllers", [])
+        if isinstance(c, dict) and c.get("connected")
+    ]
+    if len(controles) < CONTROLES_DA_MESA_CHEIA:
+        raise SystemExit(
+            f"ERRO: {FIXTURE_MESA_CHEIA.name} tem {len(controles)} controle(s) "
+            f"conectado(s), e a mesa cheia são {CONTROLES_DA_MESA_CHEIA}. "
+            "Uma foto de mesa cheia com menos que isso é pior que nenhuma: "
+            "ela parece certa."
+        )
+    return estado
 
 
 def _aplicar_tema(janela) -> str:  # type: ignore[no-untyped-def]
@@ -196,7 +361,7 @@ def _aplicar_regras_de_runtime(builder, card) -> None:  # type: ignore[no-untype
     card.definir_estado_global("Nenhum", "Ligado")
 
 
-def _montar_aba_inicio(builder) -> str:  # type: ignore[no-untyped-def]
+def _montar_aba_inicio(builder, estado=None) -> str:  # type: ignore[no-untyped-def]
     """Monta a aba Início e a preenche com um estado plausível do daemon.
 
     COOP-SEM-INTERRUPTOR-01 (06/08/2026) — a cura que a `PEDIDOS-DELA-01`
@@ -208,8 +373,13 @@ def _montar_aba_inicio(builder) -> str:  # type: ignore[no-untyped-def]
 
     Mesmo desenho do card do Status e dos modos de gatilho: host mínimo com um
     `_get` que resolve ids do builder, nada de IPC e nada de tique. O
-    `_render_home` recebe um `state_full` de mesa cheia — dois controles, dois
+    `_render_home` recebe um `state_full` de mesa — dois controles, dois
     jogadores — porque é ele que a aba existe para responder.
+
+    Com `estado`, o dublê de dois cede lugar ao que o chamador trouxer (o modo
+    `--mesa-cheia` traz o fixture dos quatro). Sem ele, nada muda: o padrão
+    continua produzindo o MESMO pixel de sempre, que é o que a documentação
+    publica.
     """
     try:
         from hefesto_dualsense4unix.app.actions.home_actions import (
@@ -241,14 +411,18 @@ def _montar_aba_inicio(builder) -> str:  # type: ignore[no-untyped-def]
             "battery_pct": 87 if primario else 64,
         }
 
-    estado = {
-        "connected": True,
-        "native_mode": False,
-        "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
-        "coop": {"enabled": True, "players": 2},
-        "controllers": [_controle(0, 1, primario=True), _controle(1, 2, primario=False)],
-        "active_profile": "coop_local",
-    }
+    if estado is None:
+        estado = {
+            "connected": True,
+            "native_mode": False,
+            "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
+            "coop": {"enabled": True, "players": 2},
+            "controllers": [
+                _controle(0, 1, primario=True),
+                _controle(1, 2, primario=False),
+            ],
+            "active_profile": "coop_local",
+        }
     try:
         host = _Host()
         host.install_home_tab()
@@ -258,7 +432,9 @@ def _montar_aba_inicio(builder) -> str:  # type: ignore[no-untyped-def]
     caixa = builder.get_object("tab_home_box")
     if caixa is not None:
         caixa.show_all()
-    return "aba Início montada (2 controles = 2 jogadores)"
+    quantos = len(estado.get("controllers", []))
+    jogadores = (estado.get("coop") or {}).get("players", quantos)
+    return f"aba Início montada ({quantos} controles = {jogadores} jogadores)"
 
 
 #: Os dois controles da aba "No jogo", e o vpad de cada um.
@@ -347,7 +523,7 @@ _NO_JOGO_ESTADO = {
 }
 
 
-def _montar_aba_no_jogo(builder) -> str:  # type: ignore[no-untyped-def]
+def _montar_aba_no_jogo(builder, estado=None) -> str:  # type: ignore[no-untyped-def]
     """Monta a aba "No jogo" e a preenche com uma mesa de dois jogadores.
 
     Mesmo desenho do card do Status e da aba Início: host mínimo com um `_get`
@@ -385,16 +561,22 @@ def _montar_aba_no_jogo(builder) -> str:  # type: ignore[no-untyped-def]
                 return None
             return self.builder.get_object(nome)
 
+    if estado is None:
+        estado = _NO_JOGO_ESTADO
+        recado = "2 jogadores, as três situações na tela"
+    else:
+        vpads = (estado.get("rumble_ff") or {}).get("per_vpad") or []
+        recado = f"{len(vpads)} espelhos, do fixture da mesa cheia"
     try:
         host = _Host()
         host.install_no_jogo_tab()
-        host._sync_paineis_no_jogo(dict(_NO_JOGO_ESTADO))
+        host._sync_paineis_no_jogo(dict(estado))
     except Exception as exc:
         return f'aba "No jogo" não montada ({exc})'
     caixa = builder.get_object("tab_no_jogo_box")
     if caixa is not None:
         caixa.show_all()
-    return 'aba "No jogo" montada (2 jogadores, as três situações na tela)'
+    return f'aba "No jogo" montada ({recado})'
 
 
 #: Os perfis que aparecem na foto da aba Perfis.
@@ -647,8 +829,203 @@ def _injetar_card(builder) -> str:  # type: ignore[no-untyped-def]
     return "card do controle injetado na aba Status"
 
 
-def main(destino: str | None = None) -> int:
-    saida = Path(destino) if destino else DESTINO_DOC
+def _host_da_aba_status(builder):  # type: ignore[no-untyped-def]
+    """O host mínimo da aba Status, com os DOIS desvios que a foto exige.
+
+    Sai daqui e não de dentro de cada função porque duas fotos precisam dele —
+    a dos cards e a do cabeçalho —, e um segundo host copiado seria a chance de
+    um deles perder um desvio. O que os desvios protegem está escrito no
+    `_injetar_cards_da_mesa_cheia`.
+    """
+    from hefesto_dualsense4unix.app.actions.status_actions import (
+        StatusActionsMixin,
+    )
+
+    class _Host(StatusActionsMixin):  # type: ignore[misc]
+        def __init__(self) -> None:
+            self.builder = builder
+            self._status_cards = {}
+            self._status_card_keys = []
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            if nome == "main_notebook":
+                return None
+            return self.builder.get_object(nome)
+
+        def _status_toast(self, _contexto: str, _msg: str) -> None:
+            return None
+
+        def _maybe_fetch_externals(self) -> None:  # type: ignore[override]
+            # O de produção pergunta ao daemon VIVO. Aqui, nunca.
+            return None
+
+    return _Host()
+
+
+def _injetar_cards_da_mesa_cheia(builder, estado) -> str:  # type: ignore[no-untyped-def]
+    """Põe os QUATRO cards na aba Status, pelo caminho de PRODUÇÃO.
+
+    O `_injetar_card` acima monta UM card à mão porque o dublê da suíte é uma
+    entrada de controle, não um `state_full`. Aqui há um `state_full` inteiro —
+    então quem monta é `_sync_status_cards`, o mesmo método que a janela dela
+    roda a cada tique. Repetir a montagem aqui seria um segundo dono do
+    desenho, e a foto passaria a mentir no dia em que a `status_actions`
+    mudasse.
+
+    Ganha-se, de graça, tudo o que só aparece com 2+ controles e que NENHUMA
+    foto desta casa já mostrou: o empilhamento de um card por linha
+    (EMPILHA-01), o frame "Estado" que volta à tela (CARD-ÚNICO-01) e a
+    diferença entre o `player_slot` — que manda na cor — e o `player` do co-op.
+
+    Nada de IPC, nada de tique: `_mic_monitor` fica `None` (é atributo de
+    classe), e sem monitor o `_sync_status_cards` não consulta nem o PipeWire.
+
+    O QUE É DESVIADO, E POR QUÊ
+    ---------------------------
+
+    Quem preenche a aba inteira — a linha "Conectado (4 controles)", a fita de
+    chips, a faixa de números, os banners — é o `_render_slow_state`, o tique
+    de 2 Hz da janela dela. Ele é chamado aqui inteiro, e não copiado, pela
+    razão de sempre: uma cópia seria um segundo dono do desenho. Duas coisas
+    dentro dele são desviadas, no mesmo molde do que a aba Perfis já faz:
+
+    * ``_maybe_fetch_externals`` **FALA COM O DAEMON VIVO**
+      (`controller.list {external: true}`). É no-op no host. Sem isto, o
+      script quebraria a garantia de privacidade do cabeçalho no primeiro
+      `--mesa-cheia` — e, pior, calado: o inventário de externos volta por
+      callback, depois de a foto já ter sido salva;
+    * ``_get("main_notebook")`` devolve `None`, pelo mesmo motivo que o host
+      da aba "No jogo" já documenta: com o notebook de verdade na mão, o gate
+      de EXISTÊNCIA da aba poderia TIRÁ-LA da tira, e a foto dela sumiria.
+    """
+    try:
+        host = _host_da_aba_status(builder)
+        host._init_controller_target_combo()
+        host._render_slow_state(estado)
+    except Exception as exc:
+        return f"cards não injetados ({exc}) — a aba Status sai vazia"
+
+    quantos = len(host._status_cards)
+    if quantos < CONTROLES_DA_MESA_CHEIA:
+        return (
+            f"ATENÇÃO: só {quantos} card(s) na aba Status — a mesa cheia "
+            f"são {CONTROLES_DA_MESA_CHEIA}"
+        )
+    return f"{quantos} cards de controle injetados na aba Status"
+
+
+#: A aba que a mesa cheia estoura, e o nome da foto que mostra o estouro
+#: inteiro. É a Status: quatro cards empilhados (EMPILHA-01, decisão dela de
+#: 02/08) pedem mais que o dobro da altura da tela dela.
+ABA_QUE_ESTOURA = "mesa_cheia_status"
+
+#: Teto da foto esticada, em px. Não é medo do arquivo grande: é o sinal de que
+#: alguma coisa cresceu sem limite e a foto viraria uma tira ilegível.
+ALTURA_MAXIMA_ESTICADA = 4000
+
+#: A foto do cabeçalho — ver `_fotografar_o_cabecalho`. Ela existe só no modo
+#: mesa cheia porque é lá que a fita do alvo tem o que mostrar: com um controle
+#: só, o seletor não aparece.
+NOME_DO_CABECALHO = "mesa_cheia_cabecalho"
+
+
+def _fotografar_a_aba_inteira(janela, notebook, saida, indice, nome) -> str:  # type: ignore[no-untyped-def]
+    """Fotografa UMA aba na altura que ela PEDE, não na que ela recebe.
+
+    A foto de 1920x1080 é a verdade sobre o que ela vê — e é por isso que a da
+    mesa cheia mostra dois cards e meio. Esta aqui responde a outra pergunta,
+    que a leva também faz: *o que existe abaixo da dobra?*
+
+    As duas juntas são a medida do problema da entrega 2.13 (empilhar os
+    cards): a altura pedida ao lado da altura disponível, com a mesma régua.
+    """
+    notebook.set_current_page(indice)
+    _assentar()
+    _, natural = notebook.get_preferred_height()
+    altura = min(max(natural, ALTURA), ALTURA_MAXIMA_ESTICADA)
+    janela.set_size_request(LARGURA, altura)
+    _esperar_o_redimensionamento()
+    arquivo = saida / f"{nome}_inteira.png"
+    pixbuf = janela.get_pixbuf()
+    pixbuf.savev(str(arquivo), "png", [], [])
+    saiu = pixbuf.get_height()
+    janela.set_size_request(LARGURA, ALTURA)
+    _esperar_o_redimensionamento()
+    if saiu != altura:
+        return (
+            f"  AVISO: {arquivo.name} saiu com {saiu} px e não com {altura} — "
+            "o redimensionamento não chegou a tempo, e a foto esticada está "
+            "cortada. Aumente ESPERA_DO_REDIMENSIONAMENTO_S."
+        )
+    return (
+        f"  {arquivo.name}: a aba pede {natural} px de altura e recebe "
+        f"{ALTURA} — a foto esticada mostra o que fica abaixo da dobra"
+    )
+
+
+def _fotografar_o_cabecalho(builder, estado, saida, nome) -> str:  # type: ignore[no-untyped-def]
+    """Fotografa o `header_bar` — a fita do alvo, que NENHUMA foto mostrava.
+
+    Achado de 14/08/2026, e ele é do tipo que só aparece quando alguém procura:
+    o `main` deste script arranca o `main_notebook` do `root_box` e fotografa a
+    janela pelo NOTEBOOK. O `header_bar` fica de fora das dez fotos por
+    construção do recorte — não porque não esteja na tela dela.
+
+    Isso importa porque a fita "Ajustes vão para: …" e o selo "Editando: …"
+    moram lá, e são o assunto de duas entregas da leva da mesa cheia. A
+    PROVA-DE-TELA-01 exige foto antes e depois; sem esta função, essa foto não
+    existia.
+
+    A ORDEM AQUI É A CURA DE UMA MENTIRA POSSÍVEL
+    ---------------------------------------------
+
+    `show_all()` acende TUDO — inclusive os avisos que o produto esconde (o
+    badge de vibração travada, o selo de edição, a faixa de números). Uma foto
+    tirada logo depois dele mostraria uma tela que nunca existe.
+
+    Por isso o `_render_slow_state` roda DE NOVO, depois do `show_all()`: quem
+    decide o que fica escondido é a produção, não este script.
+    """
+    cabecalho = builder.get_object("header_bar")
+    if cabecalho is None:
+        return "  cabeçalho não fotografado (`header_bar` ausente no glade)"
+    try:
+        pai = cabecalho.get_parent()
+        if pai is not None:
+            pai.remove(cabecalho)
+        janela = Gtk.OffscreenWindow()
+        janela.add(cabecalho)
+        janela.set_size_request(LARGURA, -1)
+        _aplicar_tema(janela)
+        janela.show_all()
+        host = _host_da_aba_status(builder)
+        # `_render_online` é quem escreve a linha da direita ("Conectado (4
+        # controles) · USB + USB + BT + BT"). Ela NÃO sai do `_render_slow_state`
+        # — na janela dela quem a escreve é a máquina de reconexão, a 0,5 Hz —,
+        # e sem esta chamada a foto sairia com o default do glade, "Controle
+        # Desconectado" em vermelho, ao lado de quatro chips de controle.
+        host._render_online(estado)
+        host._render_slow_state(estado)
+        _esperar_o_redimensionamento()
+        arquivo = saida / f"{nome}.png"
+        pixbuf = janela.get_pixbuf()
+        pixbuf.savev(str(arquivo), "png", [], [])
+    except Exception as exc:
+        return f"  cabeçalho não fotografado ({exc})"
+    return (
+        f"  {arquivo.name}: o cabeçalho com {pixbuf.get_height()} px de "
+        "altura — a fita do alvo, que não cabe em nenhuma foto de aba"
+    )
+
+
+def main(destino: str | None = None, *, mesa_cheia: bool = False) -> int:
+    padrao = DESTINO_MESA_CHEIA if mesa_cheia else DESTINO_DOC
+    saida = Path(destino) if destino else padrao
+    nomes = NOMES_MESA_CHEIA if mesa_cheia else NOMES
+    # O fixture é lido ANTES de o GTK montar coisa alguma: se ele não estiver
+    # onde deveria, ninguém perde tempo montando uma janela para descobrir isso
+    # dez segundos depois.
+    estado_da_mesa = _estado_da_mesa_cheia() if mesa_cheia else None
     saida.mkdir(parents=True, exist_ok=True)
 
     builder = Gtk.Builder()
@@ -664,21 +1041,26 @@ def main(destino: str | None = None) -> int:
         pai.remove(notebook)
     janela.add(notebook)
     janela.set_size_request(LARGURA, ALTURA)
+    print(f"  {_desligar_animacoes()}")
     print(f"  {_aplicar_tema(janela)}")
     janela.show_all()
     _assentar()
-    print(f"  {_injetar_card(builder)}")
+    if estado_da_mesa is None:
+        print(f"  {_injetar_card(builder)}")
+    else:
+        print(f"  fixture lido: {FIXTURE_MESA_CHEIA.relative_to(RAIZ)}")
+        print(f"  {_injetar_cards_da_mesa_cheia(builder, estado_da_mesa)}")
     print(f"  {_injetar_modos_de_gatilho(builder)}")
-    print(f"  {_montar_aba_inicio(builder)}")
-    print(f"  {_montar_aba_no_jogo(builder)}")
+    print(f"  {_montar_aba_inicio(builder, estado_da_mesa)}")
+    print(f"  {_montar_aba_no_jogo(builder, estado_da_mesa)}")
     print(f"  {_montar_aba_perfis(builder)}")
     _assentar()
 
     total = notebook.get_n_pages()
-    if total != len(NOMES):
+    if total != len(nomes):
         print(
             f"AVISO: o notebook tem {total} abas e este script conhece "
-            f"{len(NOMES)} nomes. A documentação cita os nomes de "
+            f"{len(nomes)} nomes. A documentação cita os nomes de "
             "`NOMES` — acrescente o da aba nova ali, ou a foto dela ficará "
             "sem lugar.",
             file=sys.stderr,
@@ -691,17 +1073,74 @@ def main(destino: str | None = None) -> int:
         _assentar()
         pagina = notebook.get_nth_page(indice)
         rotulo = notebook.get_tab_label_text(pagina) or f"aba {indice}"
-        nome = NOMES[indice] if indice < len(NOMES) else f"aba_{indice:02d}"
+        nome = nomes[indice] if indice < len(nomes) else f"aba_{indice:02d}"
         arquivo = saida / f"{nome}.png"
         janela.get_pixbuf().savev(str(arquivo), "png", [], [])
         kb = arquivo.stat().st_size // 1024
         print(f"  {rotulo:<22} {arquivo.name:<26} {kb:>4} KB")
 
+    if mesa_cheia and ABA_QUE_ESTOURA in nomes:
+        print(
+            _fotografar_a_aba_inteira(
+                janela,
+                notebook,
+                saida,
+                nomes.index(ABA_QUE_ESTOURA),
+                ABA_QUE_ESTOURA,
+            )
+        )
+    if mesa_cheia and estado_da_mesa is not None:
+        print(
+            _fotografar_o_cabecalho(
+                builder, estado_da_mesa, saida, NOME_DO_CABECALHO
+            )
+        )
+
     print(f"\n  {total} aba(s) em {saida}")
     if saida == DESTINO_DOC:
         print("  as imagens do README e de docs/usage/interface.md estão em dia.")
+    if mesa_cheia:
+        print(
+            "  mesa cheia: quatro controles do fixture versionado. Estas NÃO "
+            "são as imagens do README."
+        )
     return 0
 
 
+#: O que sai quando alguém erra a linha de comando. Em português, como o resto.
+USO = (
+    "uso: retratar_abas.py [DESTINO] [--mesa-cheia]\n"
+    "\n"
+    "  sem argumento   atualiza as imagens da documentação\n"
+    f"                  ({DESTINO_DOC.relative_to(RAIZ)})\n"
+    "  DESTINO         grava nessa pasta e não toca no repositório\n"
+    "  --mesa-cheia    fotografa com os QUATRO controles do fixture\n"
+    f"                  versionado; destino padrão "
+    f"{DESTINO_MESA_CHEIA.relative_to(RAIZ)}\n"
+)
+
+
+def _ler_argumentos(argv: list[str]) -> tuple[str | None, bool]:
+    """Lê `[DESTINO] [--mesa-cheia]`, em qualquer ordem.
+
+    À mão e não com `argparse` de propósito: o `argparse` imprime "usage:" e
+    "positional arguments" em inglês, e esta casa escreve em português — há
+    portão que reprova.
+    """
+    destino: str | None = None
+    mesa_cheia = False
+    for arg in argv:
+        if arg == "--mesa-cheia":
+            mesa_cheia = True
+        elif arg.startswith("-"):
+            raise SystemExit(f"argumento desconhecido: {arg}\n\n{USO}")
+        elif destino is None:
+            destino = arg
+        else:
+            raise SystemExit(f"destino demais: {arg}\n\n{USO}")
+    return destino, mesa_cheia
+
+
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1] if len(sys.argv) > 1 else None))
+    _destino, _mesa_cheia = _ler_argumentos(sys.argv[1:])
+    raise SystemExit(main(_destino, mesa_cheia=_mesa_cheia))

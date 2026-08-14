@@ -24,11 +24,26 @@ commitadas — os três commits acima não mudaram um pixel de aba nenhuma. A
 defasagem era real e o dano, nenhum. Mas isso só se sabe **depois** de rodar o
 script, que é exatamente o gesto que este teste cobra.
 
-Comparar o conteúdo em vez da procedência não serve como portão: a `readme_inicio.png`
-sai com ~45 mil pixels diferentes entre DUAS execuções seguidas do mesmo
-script, no mesmo processo e no mesmo tema (ruído de gradiente nos botões
-segmentados, invisível a olho). Um portão sobre bytes de PNG seria vermelho
-sem defeito.
+Comparar o conteúdo em vez da procedência não serve como portão, e a razão
+original está corrigida abaixo — mas a conclusão não mudou. O que um portão de
+bytes mediria é o RENDER (fonte, tema, versão do GTK da máquina de quem rodar),
+e não a pergunta que este arquivo faz, que é *"alguém conferiu depois da última
+mexida na interface?"*.
+
+**O número e a causa que estavam aqui eram errados, e foram medidos em
+14/08/2026** (fato errado se substitui): dizia-se que a `readme_inicio.png` saía
+com ~45 mil pixels diferentes entre duas execuções seguidas por *"ruído de
+gradiente nos botões segmentados"*. A diferença real entre duas execuções eram
+**~3 mil pixels, delta 1 a 2**, e a causa não é gradiente: é a **transição de
+CSS** do estado `:checked` dos dois botões segmentados selecionados, que a foto
+pegava no meio — em que ponto dela dependia do relógio. Os ~45 mil pixels são a
+distância entre a foto no meio da animação e a foto ASSENTADA, que é a que o
+script passou a produzir.
+
+Desde `retratar_abas.py` desligar as animações do GTK
+(`gtk-enable-animations = False`), duas execuções seguidas saem **byte a byte
+idênticas** nas dez abas. O portão continua sendo de procedência mesmo assim,
+pelo motivo do parágrafo acima.
 
 A MORDIDA
 ---------
