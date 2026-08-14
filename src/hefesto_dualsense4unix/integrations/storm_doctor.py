@@ -22,6 +22,10 @@ _QUIRK_RE = re.compile(r"054c:0ce6")
 # SPRINT-GAME-RUMBLE-01: a cura de raiz é o quirk_flags do snd_usb_audio para o
 # DualSense COM ignore_ctl_error (o que ataca o mixer que martela o EP0).
 _SND_QUIRK_RE = re.compile(r"054c:0ce6:.*ignore_ctl_error")
+# MESA-CHEIA-11/E3: linha de CABEÇALHO de placa no /proc/asound/cards
+# (" 1 [Controller     ]: USB-Audio - ..."). A segunda linha de cada placa é a
+# descrição, e repete o nome — contar a palavra daria o dobro.
+_CARD_HEADER_RE = re.compile(r"^\s*\d+\s*\[")
 _STEAM_INPUT_RE = re.compile(
     r'"(SteamController_PSSupport|UseSteamControllerConfig)"\s+"[12]"'
 )
@@ -276,7 +280,9 @@ def check_snd_quirk(
     if active:
         return OK, "cura do travamento do USB ATIVA (mic e fone do controle preservados)"
     if persisted:
-        return INFO, "cura do travamento agendada (reconecte o controle p/ ativar)"
+        # MESA-CHEIA-11/E4: são os QUATRO a reconectar — o quirk pega no replug
+        # de cada controle, não no primeiro que voltar.
+        return INFO, "cura do travamento agendada (reconecte os controles p/ ativar)"
     # STEAM-INPUT-01 (entrega 9), com reenquadramento: a sprint mandou trocar o
     # rótulo morto ('Reaplicar fixes seguros') pelo nome do botão real, e aqui
     # isso seria uma mentira NOVA. O "Aplicar correções" (`on_storm_fix_safe`,
@@ -290,19 +296,136 @@ def check_snd_quirk(
     # próximo replug do controle. É esse o ponteiro honesto.
     return (
         WARN,
-        "cura do travamento do USB AUSENTE — rode ./install.sh e reconecte o "
-        "controle (o botão 'Aplicar correções' não instala esta cura; sem ela "
-        "o controle pode desconectar no meio do jogo)",
+        "cura do travamento do USB AUSENTE — rode ./install.sh e reconecte os "
+        "controles (o botão 'Aplicar correções' não instala esta cura; sem ela "
+        "os controles podem desconectar no meio do jogo)",
     )
 
 
-def check_snd_audio_healthy(cards_text: str | None = None) -> tuple[str, str]:
-    """O áudio do controle (mic+fone) está presente? Prova que a cura não o quebrou."""
+def contar_placas_dualsense(cards_text: str | None) -> int:
+    """Quantas PLACAS de áudio DualSense o `/proc/asound/cards` traz — função pura.
+
+    MESA-CHEIA-11/E3 (14/08/2026). A régua vem antes do veredito, e esta erra
+    fácil: cada placa ocupa DUAS linhas no arquivo, e o nome "DualSense" aparece
+    nas duas — contar ocorrências da palavra dá o DOBRO das placas. O que
+    identifica uma placa é a linha de cabeçalho, que começa com o índice dela::
+
+         1 [Controller     ]: USB-Audio - DualSense Wireless Controller
+                              Sony ... DualSense Wireless Controller at usb-...
+
+    Então só as linhas `^<n> [` contam.
+    """
+    total = 0
+    for linha in (cards_text or "").splitlines():
+        if _CARD_HEADER_RE.match(linha) and "dualsense" in linha.lower():
+            total += 1
+    return total
+
+
+def controles_no_cabo(state: object) -> int | None:
+    """Quantos controles do `state_full` estão no CABO; ``None`` = não dá pra saber.
+
+    MESA-CHEIA-11/E3 — este é o denominador honesto, e ele NÃO é "quantos
+    controles há". Medido na mesa dela em 14/08/2026 com quatro controles (dois
+    USB e dois BT): o `/proc/asound/cards` trazia DUAS placas DualSense. O
+    áudio USB do controle só existe no cabo — no rádio o mic e o fone não
+    passam por placa ALSA. Cobrar quatro placas de uma mesa com dois no rádio
+    seria alarme falso permanente.
+
+    ``None`` (state ausente, daemon offline, payload sem `controllers`) é
+    diferente de ``0``: sem denominador o check volta a responder só
+    presente/ausente, em vez de inventar uma fração.
+    """
+    if not isinstance(state, dict):
+        return None
+    controles = state.get("controllers")
+    if not isinstance(controles, list):
+        return None
+    total = 0
+    for entrada in controles:
+        if not isinstance(entrada, dict):
+            continue
+        if entrada.get("connected") is False:
+            continue
+        if str(entrada.get("transport", "")).lower() == "usb":
+            total += 1
+    return total
+
+
+def _frase_do_cabo(quantos: int) -> str:
+    """"no único controle no cabo" ou "nos N controles no cabo".
+
+    MESA-CHEIA-11/E3 (conserto de 14/08/2026): a primeira versão interpolava
+    sempre no plural e o caso MAIS COMUM do produto — UM controle no cabo —
+    saía como "nos 1 controles no cabo", verbatim na tela (cartão anti-storm) e
+    no `doctor`. O ramo vizinho desta mesma função já lembrava do plural; aqui
+    ele tinha sido esquecido.
+    """
+    if quantos == 1:
+        return "no único controle no cabo"
+    return f"nos {quantos} controles no cabo"
+
+
+def _frase_das_placas(quantas: int) -> str:
+    """"1 placa DualSense" ou "N placas DualSense" — sem o "(s)" de formulário."""
+    if quantas == 1:
+        return "1 placa DualSense"
+    return f"{quantas} placas DualSense"
+
+
+def check_snd_audio_healthy(
+    cards_text: str | None = None, *, controles_no_cabo: int | None = None
+) -> tuple[str, str]:
+    """O áudio do controle (mic+fone) está presente? Prova que a cura não o quebrou.
+
+    MESA-CHEIA-11/E3: era um `re.search(r"DualSense")` no texto INTEIRO — com a
+    mesa cheia, UM controle com áudio respondia "presente" pelos quatro, e o
+    check existe justamente para provar que a cura do storm não comeu o áudio
+    de alguém. Agora ele CONTA, e o veredito muda quando falta.
+
+    ``controles_no_cabo`` é o denominador (ver a função de mesmo nome). Sem ele
+    — daemon offline, chamada antiga — a resposta continua sendo presente/
+    ausente, sem fração inventada.
+    """
     if cards_text is None:
         cards_text = _safe_read(Path("/proc/asound/cards"))
-    if re.search(r"DualSense", cards_text or "", re.IGNORECASE):
-        return OK, "áudio do controle presente (mic+fone do DualSense ativos)"
-    return INFO, "áudio do controle ausente (controle desconectado? — ou áudio-off)"
+    placas = contar_placas_dualsense(cards_text)
+    esperados = controles_no_cabo
+    if esperados is None:
+        if placas:
+            return OK, "áudio do controle presente (mic+fone do DualSense ativos)"
+        return INFO, "áudio do controle ausente (controle desconectado? — ou áudio-off)"
+    if esperados == 0:
+        if placas:
+            return (
+                OK,
+                f"áudio presente em {_frase_das_placas(placas)} (nenhum no cabo)",
+            )
+        return (
+            INFO,
+            "nenhum controle no cabo — o áudio USB não se aplica (no rádio o "
+            "mic e o fone não passam por placa de som)",
+        )
+    if placas >= esperados:
+        return (
+            OK,
+            f"áudio presente {_frase_do_cabo(esperados)} "
+            "(mic+fone do DualSense ativos)",
+        )
+    if placas == 0:
+        return (
+            INFO,
+            f"áudio ausente {_frase_do_cabo(esperados)} "
+            "(áudio-off ligado? — ou a placa ainda subindo)",
+        )
+    # Aqui `esperados >= 2` sempre (0 < placas < esperados), então o denominador
+    # é plural de verdade; o que varia é quantos ficaram de fora.
+    faltam = "o outro está" if esperados - placas == 1 else "os demais estão"
+    return (
+        WARN,
+        f"áudio presente em {placas} de {esperados} controles no cabo — "
+        f"{faltam} sem mic nem fone",
+    )
 
 
 def storm_report(
@@ -314,12 +437,18 @@ def storm_report(
     snd_quirk_text: str | None = None,
     snd_conf_path: Path | None = None,
     cards_text: str | None = None,
+    controles_no_cabo: int | None = None,
 ) -> list[tuple[str, str]]:
-    """Bloco de diagnóstico storm para o `doctor` (read-only)."""
+    """Bloco de diagnóstico storm para o `doctor` (read-only).
+
+    ``controles_no_cabo`` (MESA-CHEIA-11/E3) é o denominador do check de áudio;
+    quem tem o `state_full` à mão o calcula com a função de mesmo nome. ``None``
+    = sem daemon, e aí o check volta a responder só presente/ausente.
+    """
     home = home or Path.home()
     return [
         check_snd_quirk(snd_quirk_text, snd_conf_path),
-        check_snd_audio_healthy(cards_text),
+        check_snd_audio_healthy(cards_text, controles_no_cabo=controles_no_cabo),
         check_quirk(quirks_text),
         check_steam_input(home),
         check_wireplumber(dropin_dir),
@@ -341,6 +470,8 @@ __all__ = [
     "check_snd_quirk",
     "check_steam_input",
     "check_wireplumber",
+    "contar_placas_dualsense",
+    "controles_no_cabo",
     "find_localconfig_vdfs",
     "steam_input_allowlist",
     "steam_input_fora_da_allowlist",
