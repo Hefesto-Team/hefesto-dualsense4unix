@@ -9,7 +9,7 @@ com o event loop.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
@@ -17,6 +17,38 @@ if TYPE_CHECKING:
 
 Transport = Literal["usb", "bt"]
 Side = Literal["left", "right"]
+
+#: MESA-CHEIA-09 (E1) — o que uma escrita por-MAC FEZ, em cinco palavras.
+#:
+#: `apply_output_for` era a porta da camada da usuária e devolvia ``None`` nos
+#: quatro caminhos: spec vazio, sem MAC estável, controle desconectado (o
+#: override fica REGISTRADO e o hotplug o aplica) e escrita de verdade. Os
+#: quatro eram indistinguíveis de fora, e é daí que descem as quatro mentiras
+#: de "aplicado" da janela — quem chamou não tinha como saber se algum byte
+#: saiu.
+#:
+#: * ``"escreveu"``      — o byte saiu para o aparelho;
+#: * ``"registrado"``    — o override ficou no mapa e vale DEPOIS, quando o
+#:   evento que o segura passar: o hotplug (controle fora da mesa) ou o
+#:   desmute (Modo Nativo). É o que a tela chama de **guardado** (D-9);
+#: * ``"falhou"``        — havia alvo e havia escrita a fazer, e ela LEVANTOU:
+#:   nenhuma garantia de que byte nenhum saiu;
+#: * ``"sem_alvo"``      — não há MAC 12-hex (receiver 2.4G, key por path);
+#:   nada foi guardado;
+#: * ``"nada_a_fazer"``  — o spec não pedia campo nenhum.
+#:
+#: A sprint previa TRÊS palavras. A quarta entrou porque spec vazio não é
+#: "sem alvo": chamar as duas de "sem_alvo" recriaria, um andar acima, a
+#: mesma indistinção que esta entrega existe para acabar.
+#:
+#: A QUINTA (``"falhou"``) entrou no conserto 1.3, e pelo mesmo motivo: o
+#: ``_write_partial_output`` engole a exceção da escrita (loga e segue), e o
+#: caminho terminava em "escreveu" mesmo quando o `hidraw` sumia debaixo da
+#: escrita. "Não sei se saiu" não pode usar a palavra de "saiu" — e também não
+#: pode usar a de "guardado", que PROMETE que vale depois.
+ResultadoDeSaida = Literal[
+    "escreveu", "registrado", "falhou", "sem_alvo", "nada_a_fazer"
+]
 
 
 @dataclass(frozen=True)
@@ -190,7 +222,7 @@ class IController(ABC):
         if spec.mic_led is not None:
             self.set_mic_led(spec.mic_led)
 
-    def apply_output_for(self, uniq: str, spec: OutputSpec) -> None:
+    def apply_output_for(self, uniq: str, spec: OutputSpec) -> ResultadoDeSaida:
         """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override.
 
         O alvo é o PARÂMETRO (resolvido na borda pelo chamador) — nunca o
@@ -198,8 +230,19 @@ class IController(ABC):
         identidade por-controle não tem onde registrar. No backend real, um
         controle DESCONECTADO fica registrado no mapa em memória e recebe o
         override quando o hotplug o trouxer de volta.
+
+        MESA-CHEIA-09 (E1): devolve o que FEZ (`ResultadoDeSaida`). A base
+        devolve ``"sem_alvo"`` porque é a verdade dela: sem identidade
+        por-controle nada foi escrito e nada ficou guardado.
+
+        Conserto 1.3: spec VAZIO devolve ``"nada_a_fazer"`` também aqui. A base
+        juntava numa palavra só as duas coisas que o vocabulário existe para
+        separar — "não havia onde escrever" e "não havia o que escrever" —,
+        divergindo da subclasse no mesmo pedido.
         """
-        return
+        if all(getattr(spec, campo.name) is None for campo in fields(spec)):
+            return "nada_a_fazer"
+        return "sem_alvo"
 
     def reset_output_overrides(
         self, overrides: Mapping[str, OutputSpec] | None = None
@@ -232,6 +275,7 @@ __all__ = [
     "ControllerState",
     "IController",
     "OutputSpec",
+    "ResultadoDeSaida",
     "Side",
     "Transport",
     "TriggerEffect",

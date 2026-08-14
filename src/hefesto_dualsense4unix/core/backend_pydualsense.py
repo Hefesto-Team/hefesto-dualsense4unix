@@ -40,6 +40,7 @@ from hefesto_dualsense4unix.core.controller import (
     ControllerState,
     IController,
     OutputSpec,
+    ResultadoDeSaida,
     Side,
     Transport,
     TriggerEffect,
@@ -2759,8 +2760,8 @@ class PyDualSenseController(IController):
         out: _DesiredOutput,
         *,
         what: str,
-    ) -> None:
-        """Escreve os campos NÃO-None de `out` em UM handle.
+    ) -> bool:
+        """Escreve os campos NÃO-None de `out` em UM handle. Devolve se DEU CERTO.
 
         Gatilhos e LED do mic vão sempre por pydualsense (o kernel não os expõe).
         Lightbar e player-LED vão pelo nó sysfs do kernel quando o controle está
@@ -2777,6 +2778,12 @@ class PyDualSenseController(IController):
         do hotplug, e por rádio o `sysfs` sozinho perde para quem tem o
         `hidraw` aberto. Uma escrita por ação, nunca no fluxo do
         `report_thread`.
+
+        **Conserto 1.3 — o retorno.** A captura de exceção continua a mesma (a
+        falha de um controle não pode abortar o laço de quem chama em cima de
+        vários), mas ela deixa de ser INVISÍVEL: quem chama recebe ``False`` e
+        pode dizer a verdade. O `apply_output_for` respondia "escreveu" a uma
+        escrita que levantou `OSError` porque só o log sabia da falha.
         """
         from pydualsense.enums import PlayerID
 
@@ -2816,6 +2823,8 @@ class PyDualSenseController(IController):
                 )
         except Exception as exc:
             logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
+            return False
+        return True
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
         # PERFIL-01: o registro no estado desejado vai para o ESCOPO do alvo
@@ -3381,7 +3390,7 @@ class PyDualSenseController(IController):
                 broadcast=True,
             )
 
-    def apply_output_for(self, uniq: str, spec: OutputSpec) -> None:
+    def apply_output_for(self, uniq: str, spec: OutputSpec) -> ResultadoDeSaida:
         """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override dele.
 
         PERFIL-01: NÃO passa pelo `_output_target_key` — o alvo é o parâmetro,
@@ -3395,16 +3404,41 @@ class PyDualSenseController(IController):
         `led.set`/`trigger.set`/`player.set` com `uniq` (gesto na GUI) e o
         "Aplicar" do rodapé. A ativação de perfil tem porta própria
         (`reset_profile_overrides`), justamente para que ela não pise aqui.
+
+        MESA-CHEIA-09 (E1): **devolve o que fez**, e é a raiz das quatro
+        mentiras de "aplicado" da janela. Os quatro caminhos abaixo eram
+        indistinguíveis de fora — todos `return` seco —, então nem o IPC nem a
+        tela tinham como saber se algum byte saiu. Ver `ResultadoDeSaida`.
+
+        **Conserto 1.3 — os dois estados que ainda diziam "escreveu" sem byte
+        nenhum**, e o primeiro é a TERCEIRA linha da tabela de mentiras da
+        sprint (*"Modo Nativo com output mutado"*), que a entrega original
+        deixou passar com afirmação POSITIVA:
+
+        * **Modo Nativo** (``_output_mute``): a rota sysfs de LED está
+          desabilitada por `not muted`, o `_pintar_por_hidraw_bt` é pulado, e o
+          `report_thread` não escreve NADA (`set_output_mute`). O que a escrita
+          faz aqui é só deixar o estado interno pronto — e, ao desmutar, o
+          `set_output_mute` limpa o dirty-flag e re-aplica o desejado pelo
+          sysfs. Isso é, palavra por palavra, o que ``"registrado"`` já
+          significa: **fica guardado e vale quando o evento que o segura
+          passar** — hotplug num caso, desmute no outro. Por isso é a mesma
+          palavra, e não uma sexta.
+        * **escrita que LEVANTOU**: `_write_partial_output` engole a exceção
+          (log `reapply_perfil_no_hotplug_falhou`), e o caminho seguia para
+          "escreveu". Agora ela devolve ``False`` e isto vira ``"falhou"`` —
+          que não é "guardado", porque não há promessa a fazer: o override
+          está no mapa, mas nada garante que a próxima tentativa exista.
         """
         fields = _spec_fields(spec)
         if not fields:
-            return
+            return "nada_a_fazer"
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
             # Sem MAC 12-hex não há identidade estável (receiver 2.4G, key por
             # path) — fora do mapa, com log em vez de silêncio (regra do sprint).
             logger.warning("apply_output_for_sem_mac_ignorado", uniq=uniq)
-            return
+            return "sem_alvo"
         with self._io_lock:
             override = self._desired_by_uniq.setdefault(alvo, _DesiredOutput())
             for name, value in fields.items():
@@ -3420,10 +3454,20 @@ class PyDualSenseController(IController):
                 uniq=alvo,
                 campos=sorted(fields),
             )
-            return
-        self._write_partial_output(
+            return "registrado"
+        escreveu = self._write_partial_output(
             handle, node, muted, _DesiredOutput(**fields), what="apply_output_for"
         )
+        if not escreveu:
+            return "falhou"
+        if muted:
+            logger.debug(
+                "apply_output_for_modo_nativo_registrado",
+                uniq=alvo,
+                campos=sorted(fields),
+            )
+            return "registrado"
+        return "escreveu"
 
     def reset_output_overrides(
         self, overrides: Mapping[str, OutputSpec] | None = None
@@ -4164,6 +4208,25 @@ class PyDualSenseController(IController):
             if key is None or key not in self._handles:
                 return None
             return list(self._handles).index(key)
+
+    def get_output_target_uniq(self) -> str | None:
+        """MAC do alvo de output de AGORA, ou None quando o alvo é "todos".
+
+        MESA-CHEIA-05 (E0): o índice não serve para GUARDAR um alvo — ele é
+        posição em `list(self._handles)` e muda quando alguém pluga, despluga
+        ou o alvo some. Quem precisa lembrar *em quem* um valor transitório foi
+        fixado (o rumble do poll loop) precisa do endereço estável, que é o
+        mesmo que `set_rumble_for` aceita.
+
+        Devolve None também quando o alvo não tem MAC 12-hex (key por path —
+        receiver 2.4G): sem endereço estável não há o que guardar, e o chamador
+        cai no comportamento histórico.
+        """
+        with self._io_lock:
+            key = self._output_target_key
+            if key is None or key not in self._handles:
+                return None
+        return self._key_to_uniq(key)
 
     def get_battery(self) -> int:
         ds = self._ds

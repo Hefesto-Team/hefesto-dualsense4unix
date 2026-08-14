@@ -131,6 +131,100 @@ def sem_dono_do_rumble(*, native: bool, backends: Sequence[str]) -> bool:
     return not native and not backends
 
 
+def escrever_rumble_no_dono(
+    controller: Any, dono: str | None, weak: int, strong: int
+) -> None:
+    """Escreve o par no DONO dele; broadcast só quando dono nenhum foi fixado.
+
+    MESA-CHEIA-05 (E0), e é o único lugar que sabe desviar do seletor global:
+    quem tem `dono` (um MAC) escreve por `set_rumble_for` — a rota por MAC que
+    já existia e não toca o ponteiro `_output_target_key`. Quem não tem cai no
+    `set_rumble` de sempre.
+
+    **Dono ausente da mesa é NO-OP, não broadcast.** `set_rumble_for` devolve
+    False quando o MAC não casa com handle nenhum; cair no broadcast ali
+    levaria o valor de um controle que saiu para todos os que ficaram — o
+    mesmo defeito de migração, pela outra porta.
+
+    Backend sem `set_rumble_for` (dublês, single-instance) cai no caminho
+    histórico — a mesma tolerância por `getattr` que o force-feedback do jogo
+    já usa (`subsystems/gamepad.py`).
+    """
+    # `isinstance(str)`: só um MAC endereça alguém. Dublê de config que devolve
+    # um objeto qualquer para qualquer atributo não vira alvo por acidente.
+    if isinstance(dono, str) and dono:
+        mirar = getattr(controller, "set_rumble_for", None)
+        if callable(mirar):
+            if not mirar(dono, weak, strong):
+                logger.debug("rumble_dono_fora_da_mesa", uniq=dono)
+            return
+    controller.set_rumble(weak=weak, strong=strong)
+
+
+def _lembrar_dono_vibrando(cfg: Any, uniq: str | None) -> None:
+    """Anota quem está vibrando por nossa conta — ou apaga a anotação.
+
+    Tolerante de propósito: configs-dublê (`SimpleNamespace`, `MagicMock`) e
+    daemons antigos vivos em `install --editable` não têm o campo, e uma anotação
+    que não pode ser gravada só custa o resgate — nunca o tick.
+    """
+    try:
+        cfg.rumble_dono_vibrando = uniq
+    except Exception:  # pragma: no cover — config imutável/exótica
+        logger.debug("rumble_dono_vibrando_nao_gravado", exc_info=True)
+
+
+def silenciar_dono_abandonado(
+    controller: Any, abandonado: str | None, dono_de_agora: str | None
+) -> bool:
+    """Zera o controle que vibrava quando o par TROCA de dono. Devolve se zerou.
+
+    **MESA-CHEIA-05 (E0), terceira rodada — a rota de volta.** Congelar o dono
+    matou a migração do par, mas criou o abandono: ela fixa 160/220 no Controle
+    2, move o seletor para o 3 e clica «Parar» (ou aplica outro par). Os zeros
+    vão para o 3, o dono passa a ser o 3, e o **Controle 2 fica em 220/160 sem
+    receber mais escrita nenhuma**. Antes de haver dono, o reassert seguia o
+    seletor e voltar o seletor ao 2 o silenciava; com o dono congelado, voltar o
+    seletor deixou de significar coisa alguma. Medido nos dois mundos em 14/08,
+    contra `git archive HEAD` — é a §5 da sprint: *"a volta ao neutro vale tanto
+    quanto a ida"*.
+
+    **O abandono não é só do «Parar», e por isso há DOIS chamadores.** As mesmas
+    duas medições mostram `rumble.set` mirado no 3 deixando o 2 em 220/160 para
+    sempre, e o «Aplicar» do rodapé faz o mesmo pela terceira porta. Então:
+
+    * o `«Parar»` (`ipc_handlers._handle_rumble_stop`) chama AQUI na hora, sem
+      esperar tick nenhum — parar é o gesto que quer dizer *cale o que está
+      vibrando*, e quem vibra pode não ser o do seletor;
+    * o `reassert_rumble` chama a cada tick do poll loop, comparando a anotação
+      `config.rumble_dono_vibrando` com o dono de agora. É a rede que apanha
+      TODAS as outras portas — inclusive as que nenhum chamador conhece.
+
+    Três no-ops deliberados:
+
+    * **sem abandonado** (`None`, ou config-dublê sem o campo) — não há a quem
+      voltar;
+    * **dono de agora é o mesmo** — o próprio par já reescreve nele;
+    * **par de agora é broadcast** (`dono_de_agora is None`, alvo «Todos») — a
+      escrita alcança o abandonado junto com todo mundo, e zerar antes só
+      piscaria o motor dele.
+
+    Com o abandonado fora da mesa, `escrever_rumble_no_dono` já é no-op por
+    `set_rumble_for` devolvendo False: quem saiu levou os motores dele.
+    """
+    if not isinstance(abandonado, str) or not abandonado:
+        return False
+    if not isinstance(dono_de_agora, str) or not dono_de_agora:
+        return False
+    if abandonado == dono_de_agora:
+        return False
+    escrever_rumble_no_dono(controller, abandonado, 0, 0)
+    logger.info(
+        "rumble_dono_abandonado_silenciado", anterior=abandonado, agora=dono_de_agora
+    )
+    return True
+
+
 def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     """Re-aplica rumble_active no hardware a cada ~200ms com política.
 
@@ -141,6 +235,29 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     Pula silenciosamente se:
     - rumble_active is None (passthrough — jogo/UDP controla).
     - Controle não está conectado.
+
+    **MESA-CHEIA-05 (E0) — o par fixado NÃO migra de dono.** Enquanto isto
+    chamava `set_rumble` seco, o destino era o `_output_target_key` do backend
+    — um ponteiro mutável: ela fixava 160/220 no Controle 2, trocava o seletor
+    para o 3 por outro motivo, e 200 ms depois o 3 recebia o valor do 2. Agora
+    o par carrega o dono (`config.rumble_active_uniq`, congelado no gesto que
+    fixou) e o reassert reescreve NAQUELE controle, pela rota por MAC que já
+    existia (`set_rumble_for`) e só o co-op e o force-feedback usavam.
+
+    Com o dono fora da mesa, `set_rumble_for` devolve False e o tick é no-op —
+    de propósito: cair no broadcast levaria o valor de um controle ausente
+    para todos os presentes, que é o defeito de volta pela outra porta. Quando
+    ele voltar, o próximo tick o reencontra.
+
+    Sem dono (`rumble_active_uniq is None` — o alvo era "Todos", ou o backend
+    não sabe endereçar) segue o caminho histórico: `set_rumble`, que é
+    broadcast quando não há alvo.
+
+    **E o dono TROCA sem ninguém avisar o abandonado** (terceira rodada, 14/08):
+    por isso cada tick passa por `silenciar_dono_abandonado` antes de escrever —
+    ver a prosa dele. Em passthrough a anotação é APAGADA em vez de resgatada:
+    ali quem dirige os motores é o jogo, e um zero nosso atravessaria a vibração
+    dele. Isso mantém a saída do passthrough idêntica ao que sempre foi.
     """
     # Import local: core/rumble.py -> daemon/lifecycle.py (TYPE_CHECKING) ->
     # daemon/subsystems/rumble.py. Import no topo criaria ciclo em runtime.
@@ -149,6 +266,7 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     cfg = daemon.config
     active = cfg.rumble_active
     if active is None:
+        _lembrar_dono_vibrando(cfg, None)
         return
     weak_raw, strong_raw = active
 
@@ -172,10 +290,18 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     weak = max(0, min(255, round(weak_raw * mult)))
     strong = max(0, min(255, round(strong_raw * mult)))
 
+    dono = getattr(cfg, "rumble_active_uniq", None)
     try:
-        daemon.controller.set_rumble(weak=weak, strong=strong)
+        silenciar_dono_abandonado(
+            daemon.controller, getattr(cfg, "rumble_dono_vibrando", None), dono
+        )
+        escrever_rumble_no_dono(daemon.controller, dono, weak, strong)
     except Exception as exc:
         logger.warning("rumble_reassert_failed", err=str(exc), exc_info=True)
+    # Só quem recebeu um par NÃO-NULO fica na anotação: zero não abandona
+    # ninguém, e um endereço rançoso aqui custaria uma escrita a mais no
+    # próximo dono.
+    _lembrar_dono_vibrando(cfg, dono if (weak or strong) else None)
 
 
 def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
@@ -237,7 +363,9 @@ __all__ = [
     "AUTO_DEBOUNCE_SEC",
     "RUMBLE_POLICY_MULT",
     "RumbleSubsystem",
+    "escrever_rumble_no_dono",
     "reassert_rumble",
     "sem_dono_do_rumble",
+    "silenciar_dono_abandonado",
     "zero_motors_on_mode_exit",
 ]

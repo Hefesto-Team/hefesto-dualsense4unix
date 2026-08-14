@@ -22,7 +22,10 @@ from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core.controller import OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
-from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
+from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
+    apply_rumble_policy,
+    uniq_do_alvo_de_output,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -475,6 +478,8 @@ class DraftApplier:
         if weak == 0 and strong == 0:
             if daemon_cfg is not None:
                 daemon_cfg.rumble_active = None
+                # MESA-CHEIA-05 (E0): sem par fixado não há dono a lembrar.
+                daemon_cfg.rumble_active_uniq = None
             self.controller.set_rumble(weak=0, strong=0)
             return
         # AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01:
@@ -484,6 +489,10 @@ class DraftApplier:
         # canônico de _handle_rumble_set.
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (weak, strong)
+            # MESA-CHEIA-05 (E0): o "Aplicar" do rodapé mira o alvo do seletor
+            # tanto quanto a aba Rumble — então congela o dono junto do par,
+            # senão o valor migra para quem entrar no seletor depois.
+            daemon_cfg.rumble_active_uniq = uniq_do_alvo_de_output(self.controller)
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
 
