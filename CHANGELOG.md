@@ -5,6 +5,65 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Corrigido
+
+#### O portão do `sudo` reprovava o registro do próprio conserto
+
+A suíte estava **vermelha desde 13/08** (9334 verdes, 1 falha) e a falha era um
+falso positivo: o índice das doze levas, na linha da leva 9, registra que o
+README do DKMS **parou de ensinar** a invocação com `sudo` — e cita a forma
+removida para poder dizer que a removeu. O portão casa a forma proibida e é cego
+a contexto: não distingue **ensinar** de **contar que parou de ensinar**.
+
+(Esta seção não reproduz o comando de propósito. Escrevê-lo aqui reprova o
+portão — como reprovou na primeira versão deste texto, que o citava literal.
+O CHANGELOG não precisa da forma exata; os documentos dispensados já a
+guardam.)
+
+A docstring do próprio teste já declarava a regra (*"o que o portão proíbe é a
+instrução, não a menção"*) e a casa já tinha o mecanismo: `DISPENSAS`, com razão
+escrita por linha, usada três vezes para o mesmo caso. A quarta entrou no mesmo
+formato.
+
+E a dispensa deixou de ser barata. Ela vale por **arquivo inteiro**, então
+dispensar preventivamente desligaria o portão para tudo que fosse escrito
+naquele arquivo depois — a forma clássica de um portão verde deixar de valer.
+O teste novo exige de cada linha que o arquivo exista, seja rastreado e
+**contenha de fato** a forma proibida hoje; dispensa que sobrevive ao texto que
+a justificava reprova como rançosa.
+
+#### QUATRO-COMPONENTES-02 — o portão exigia do Cargo uma versão que o Cargo recusa
+
+O applet COSMIC parou de compilar quando a canônica passou a ter quatro
+componentes (13/08, série `0.9.4.x`). O `check_version_consistency.py` compara
+por **igualdade de string**, então a menor edição que o deixava verde era
+escrever `0.9.4.2` no `Cargo.toml` — e o Cargo não aceita quatro componentes:
+
+```
+error: unexpected character '.' after patch version number
+```
+
+O estrago era **silencioso**: o passo do `install.sh` avisa
+`build/instalacao do applet falhou` e segue. Quem instalasse ficava sem applet
+sem que nada reprovasse. É a régua desenhando o conserto errado — a mesma
+família do PORTAO-VIVO-01, com outra roupa.
+
+A quarta casa passa a entrar como **build metadata** (`0.9.4+2`), traduzida por
+`versao_para_cargo()` no portão. `+W` e não `-W`: metadata não conta na
+precedência SemVer, então `0.9.4+2` ordena **igual** a `0.9.4` — que é o que a
+série `0.9.4.x` significa. `0.9.4-2` também compilaria e estaria errado: é
+pre-release, ordenaria **antes** da `0.9.4` e inverteria a história.
+
+O `Cargo.lock` virou alvo do mesmo portão. Ele estava em **`9.3.2`** — nem a
+canônica, nem versão que este projeto já teve. O comentário do `Cargo.toml`
+*pedia* para subir os dois juntos, e pedir não é portão: só o `cargo build`
+corrigia, sujando a árvore no meio do release.
+
+Sete testes novos, e a mordida conferida arrancando a cura: com `0.9.4.2` de
+volta no `Cargo.toml`, quatro testes reprovam e o portão sai com `rc=1`. Um
+deles chama o **`cargo verify-project` de verdade** — quem julga o manifesto é o
+Cargo, não o nosso regex, que foi exatamente o buraco por onde isto passou.
+
 ## [0.9.4.2] — 2026-08-13
 
 ### A bancada de 12/08 à noite: quatro controles na mesa, e o que passou a estar PROVADO
