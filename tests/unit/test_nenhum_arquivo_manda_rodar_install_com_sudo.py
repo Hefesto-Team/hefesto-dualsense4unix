@@ -66,6 +66,15 @@ DISPENSAS: dict[str, str] = {
         "mede o buraco que SOBRA — o install.sh sem guarda de EUID==0; "
         "a citação é a prova, não a instrução"
     ),
+    # 13/08/2026: o índice das doze levas registra, na linha da leva 9, que o
+    # README do DKMS **parou de ensinar** a forma errada. A frase cita o que foi
+    # removido para poder dizer que foi removido — é o registro do conserto, o
+    # oposto de uma instrução. Sem a citação, a leva vira "mexeu no README" e
+    # ninguém sabe o que mudou.
+    "docs/process/sprints/2026-08-13-DOZE-LEVAS-01-o-que-ja-foi-feito-hoje-e-nao-se-refaz.md": (
+        "registra que o README PAROU de ensinar a forma errada; a citação é o "
+        "registro do conserto, não a instrução"
+    ),
 }
 
 
@@ -129,6 +138,35 @@ def test_nenhum_arquivo_versionado_manda_instalar_com_sudo() -> None:
         "`./install.sh --yes` sem terminal interativo): o script pede a senha "
         "sozinho no passo que precisa dela.\n  " + "\n  ".join(violacoes)
     )
+
+
+def test_toda_dispensa_e_um_arquivo_que_de_fato_cita_a_forma_proibida() -> None:
+    """A dispensa vale por ARQUIVO INTEIRO — então ela não pode ser barata.
+
+    Sem esta trava, a lista viraria a saída fácil: dispensar um arquivo
+    preventivamente (sem citação nenhuma) desliga o portão para tudo que for
+    escrito nele DEPOIS, e ninguém repara — que é a forma clássica de um portão
+    verde deixar de valer.
+
+    Exige duas coisas de cada linha: que o arquivo exista e seja rastreado (o
+    portão só varre rastreados), e que ele REALMENTE contenha a forma proibida
+    hoje. Dispensa que sobrevive ao texto que a justificava é dispensa rançosa,
+    e sai.
+    """
+    rastreados = {
+        c.relative_to(REPO_ROOT).as_posix() for c in _arquivos_rastreados()
+    }
+    for rel, razao in DISPENSAS.items():
+        assert rel in rastreados, (
+            f"dispensa aponta para arquivo que o git não rastreia: {rel} — "
+            "o portão nem o varreria, então a linha só engorda a lista"
+        )
+        texto = (REPO_ROOT / rel).read_text(encoding="utf-8", errors="ignore")
+        assert SUDO_INSTALL_RE.search(texto), (
+            f"dispensa RANÇOSA: {rel} já não cita a forma proibida ({razao!r}). "
+            "Apague a linha — enquanto ela existir, o portão está desligado "
+            "para esse arquivo inteiro sem que nada o justifique"
+        )
 
 
 def test_o_readme_do_dkms_ensina_a_forma_certa() -> None:

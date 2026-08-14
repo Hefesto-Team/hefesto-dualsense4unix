@@ -52,6 +52,7 @@ from __future__ import annotations
 
 import re
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 try:
@@ -93,8 +94,17 @@ _TARGETS: list[tuple[str, str, str]] = [
      r'<release\s+version="([^"]+)"'),
     # Cargo: `^version` ancorado no início da linha é obrigatório — sem a âncora
     # o regex casaria o `version = "1"` do tokio dentro de [dependencies].
+    # A versão esperada aqui NÃO é a canônica literal: ver `versao_para_cargo`.
     ("Cargo applet COSMIC", "packaging/cosmic-applet/Cargo.toml",
      r'^version\s*=\s*"([^"]+)"'),
+    # QUATRO-COMPONENTES-02 (14/08): o Cargo.lock estava em `9.3.2` — nem a
+    # canônica, nem qualquer versão que este projeto já teve. O comentário do
+    # Cargo.toml PEDIA para subir os dois juntos, e pedir não é portão: só o
+    # `cargo build` corrigia, deixando a árvore suja no meio do release. Aqui o
+    # regex casa a entrada do NOSSO pacote (o lock tem centenas de `version =`,
+    # uma por dependência), ancorando pelo `name` na linha de cima.
+    ("Cargo.lock do applet", "packaging/cosmic-applet/Cargo.lock",
+     r'^name = "hefesto-dualsense4unix-applet"\nversion = "([^"]+)"'),
     # Página canônica de instalação: o alvo é a TAG do comando de clone, que é
     # o que alguém copia e executa. A frase em prosa da mesma página cita a
     # versão de novo e não cabe nesta régua (um regex por alvo); ela é conferida
@@ -102,6 +112,38 @@ _TARGETS: list[tuple[str, str, str]] = [
     ("página de instalação (git checkout)", "docs/usage/instalacao.md",
      r"^git checkout v(\S+)"),
 ]
+
+def versao_para_cargo(canonica: str) -> str:
+    """A canônica na forma que o Cargo aceita — `X.Y.Z.W` vira `X.Y.Z+W`.
+
+    O Cargo exige SemVer, e SemVer tem TRÊS componentes; a canônica desta casa
+    passou a ter quatro em 13/08/2026 (a série `0.9.4.x`, que marca o avanço do
+    mapeamento dentro da mesma alfa). Escrever `0.9.4.2` no Cargo.toml para
+    satisfazer este portão fez o applet parar de compilar, em silêncio::
+
+        error: unexpected character '.' after patch version number
+
+    A quarta casa entra como BUILD METADATA (`+W`) e não como pre-release
+    (`-W`): metadata não conta na precedência, então `0.9.4+2` ordena IGUAL a
+    `0.9.4`, enquanto `0.9.4-2` ordenaria ANTES — inverteria a história.
+
+    Versão de três componentes atravessa intacta, então isto é no-op quando a
+    canônica voltar a ser `X.Y.Z`.
+    """
+    partes = canonica.split(".")
+    if len(partes) <= 3:
+        return canonica
+    return ".".join(partes[:3]) + "+" + ".".join(partes[3:])
+
+
+#: Alvos cuja sintaxe não comporta a canônica literal: `relpath -> tradutor`.
+#: Sem isto o portão exigiria de todo alvo uma string que nem todo formato
+#: aceita — e quem paga é o formato mais estrito, não o portão.
+_TRADUTORES: dict[str, Callable[[str], str]] = {
+    "packaging/cosmic-applet/Cargo.toml": versao_para_cargo,
+    "packaging/cosmic-applet/Cargo.lock": versao_para_cargo,
+}
+
 
 #: Conferência de data: a primeira <release> do metainfo contra a seção
 #: correspondente do CHANGELOG.md.
@@ -179,8 +221,11 @@ def main() -> int:
         match = re.search(pattern, text, re.MULTILINE)
         actual = match.group(1) if match else None
         checked += 1
-        if actual != expected:
-            failures.append(f"  {label} ({relpath}): '{actual}' != '{expected}'")
+        alvo_esperado = _TRADUTORES.get(relpath, lambda v: v)(expected)
+        if actual != alvo_esperado:
+            failures.append(
+                f"  {label} ({relpath}): '{actual}' != '{alvo_esperado}'"
+            )
 
     conferiu_data, falhas_de_data = _conferir_data_da_release(ROOT)
     failures.extend(falhas_de_data)
