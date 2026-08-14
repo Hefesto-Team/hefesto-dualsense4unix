@@ -358,8 +358,8 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:930-932` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:935-940`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:937`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
-> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:259-287` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:936-941`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:938`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
+> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:286-316` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
 >
 > *(Os endereços das duas primeiras linhas foram REAPONTADOS em 13/08/2026: eles
 > apontavam para `:780-782`, `:783-790`/`:789` e `:2695`, que a refatoração do
@@ -367,6 +367,12 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > passou a viver em `:937`. As afirmações não mudaram; só o endereço estava
 > podre. Desde então `scripts/validar-citacoes-de-linha.py` abre cada endereço
 > deste documento e reprova quando ele não contém o que promete.)*
+>
+> *(REAPONTADOS de novo em 14/08/2026, e o motivo é o mesmo de sempre: a
+> MESA-CHEIA-09 acrescentou um import no topo de `backend_pydualsense.py` e
+> **empurrou o arquivo inteiro uma linha para baixo**. `:937` virou `:938` e a
+> faixa do `_byte_da_rota` virou `:286-316`. Endereço podre é fato errado, e
+> fato errado se substitui — a afirmação continua a mesma.)*
 >
 > **E a medição da curva caducou junto, que é o efeito mais caro deste
 > parágrafo.** O *"mudo até 38, satura em 102"* foi levantado **sem** o
