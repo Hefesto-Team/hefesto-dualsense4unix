@@ -94,6 +94,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     VPAD_COOP_DEGRADED_TEXT,
     VPAD_DEGRADED_TEXT,
     HomeActionsMixin,
+    texto_coop_degradado,
     vpad_degradation_text,
 )
 from hefesto_dualsense4unix.app.actions.status_actions import (
@@ -186,7 +187,25 @@ class TestGuardDedup06NoBanner:
         return state
 
     def test_jogador_do_coop_degradado_acende_mesmo_com_p1_saudavel(self) -> None:
+        # MESA-CHEIA-11/E2 (14/08/2026): o banner passou a NOMEAR o jogador —
+        # até aqui ele dizia "um dos jogadores" com o número em mãos. O texto
+        # genérico continua existindo, e o teste dele é o do rótulo sem número.
+        #
+        # A asserção contra `texto_coop_degradado([2])` sozinha seria
+        # implementação contra implementação: se o molde degenerasse para o
+        # genérico, os dois lados empatariam e o teste ficaria vazio (dois
+        # céticos mediram isso em 14/08 — esvaziaram a função e este teste
+        # continuou verde). Por isso o literal vem antes da igualdade.
         state = self._com_dedup(dedup_ok=False, motivo="jogador_2_uinput")
+        texto = vpad_degradation_text(state)
+        assert texto is not None
+        assert "Jogador 2" in texto
+        assert "um dos jogadores" not in texto
+        assert texto == texto_coop_degradado([2])
+
+    def test_jogador_sem_numero_cai_no_texto_generico(self) -> None:
+        """`jogador_?_uinput` é real: o co-op sem `player_index` emite o `?`."""
+        state = self._com_dedup(dedup_ok=False, motivo="jogador_?_uinput")
         assert vpad_degradation_text(state) == VPAD_COOP_DEGRADED_TEXT
 
     def test_dedup_ok_true_nao_acende(self) -> None:

@@ -23,7 +23,9 @@ container) — padrão dos widgets dinâmicos, imune ao bug de popup do cosmic-c
 from __future__ import annotations
 
 import contextlib
+import re
 import time
+from collections.abc import Sequence
 from typing import Any, Final
 
 from hefesto_dualsense4unix.app.actions.base import (
@@ -50,6 +52,7 @@ from hefesto_dualsense4unix.app.actions.relancar import (
 )
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
+from hefesto_dualsense4unix.integrations.steam_launch_options import juntar_rotulos
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -297,11 +300,81 @@ VPAD_DEGRADED_TEXT = (
 # IGNORE congelado é AQUELE jogador com zero controle — o banner do primário
 # não o cobria (a dedup quebrada voltava a ser silenciosa, o que o item P0
 # proíbe). Sempre banner inline, nunca popover (cosmic-epoch#2497).
+#
+# MESA-CHEIA-11/E2 (14/08/2026): este texto é o FALLBACK, não a regra. O daemon
+# sempre soube QUAL jogador caiu (`jogador_<N>_uinput`, em
+# `daemon/subsystems/gamepad.py:dedup_status`) e a janela jogava o número fora —
+# com a mesa cheia ela mandava a usuária testar quatro controles um por um para
+# reencontrar o que o payload já dizia. Esta frase só sobra quando o rótulo veio
+# sem número (`jogador_?_uinput`: o co-op sem `player_index`).
 VPAD_COOP_DEGRADED_TEXT = (
     "O gamepad virtual de um dos jogadores do co-op subiu no modo simples: "
     "aquele jogador pode ficar sem vibração — e sem controle, se o jogo foi "
     "aberto com a desduplicação ligada. Reinicie o Hefesto na aba Sistema."
 )
+
+#: MESA-CHEIA-11/E2: o consertado do banner do co-op fica NUM LUGAR SÓ (a regra
+#: de execução da D-9), para que trocar a palavra seja uma linha e não uma
+#: caçada por strings. `{quem}` é só a LISTA de números ("3", "2 e 3") — a
+#: palavra "Jogador"/"Jogadores" já está no molde, e é o que se troca aqui.
+_COOP_DEGRADED_UM = (
+    "O gamepad virtual do Jogador {quem} subiu no modo simples: esse jogador "
+    "pode ficar sem vibração — e sem controle, se o jogo foi aberto com a "
+    "desduplicação ligada. Reinicie o Hefesto na aba Sistema."
+)
+_COOP_DEGRADED_VARIOS = (
+    "Os gamepads virtuais dos Jogadores {quem} subiram no modo simples: esses "
+    "jogadores podem ficar sem vibração — e sem controle, se o jogo foi aberto "
+    "com a desduplicação ligada. Reinicie o Hefesto na aba Sistema."
+)
+
+#: Rótulo que o daemon emite por jogador degradado. O `?` é real e previsto:
+#: `dedup_status` usa `str(indice) if isinstance(indice, int) else "?"`.
+_JOGADOR_DEGRADADO_RE = re.compile(r"\bjogador_(\d+)_uinput\b")
+
+
+def jogadores_degradados(motivo: object) -> list[int]:
+    """Números dos jogadores citados no ``dedup_motivo`` — função pura.
+
+    O campo chega como lista separada por vírgula (`", ".join(motivos)` em
+    `daemon/ipc_handlers.py`), e pode misturar motivos do primário
+    (`sem_uhid`), do wrapper (`jogo_sem_wrapper`) e dos jogadores do co-op.
+    Devolve só os números, sem repetição; entrada que não for texto, ou sem
+    nenhum `jogador_<N>_uinput`, devolve lista vazia — e é isso que faz o
+    chamador cair no texto genérico em vez de inventar um número.
+
+    Os números saem **CRESCENTES**, e não na ordem de chegada, pela mesma regra
+    que a entrega irmã desta sprint escreveu na função de banner ao lado
+    (`daemon/ipc_handlers.controles_bt_frageis`, MESA-CHEIA-11/E1): quem lê a
+    frase procura o card pelo número, e uma lista fora de ordem a faria varrer a
+    fileira duas vezes. E a ordem de chegada FICA fora de ordem sozinha: o
+    `dedup_status` itera `players.values()` (ordem de entrada no dict) e o
+    `CoopManager._next_player_index` REUSA o índice de quem saiu, então o
+    jogador que entra no lugar do P2 leva o "2" para o FIM da frase
+    ("Jogadores 3, 4 e 2"). O custo é só este: a frase deixa de contar a ordem
+    em que os jogadores caíram — que é dado que ela não usa para achar o card.
+    """
+    if not isinstance(motivo, str):
+        return []
+    vistos: set[int] = set()
+    for achado in _JOGADOR_DEGRADADO_RE.finditer(motivo):
+        vistos.add(int(achado.group(1)))
+    return sorted(vistos)
+
+
+def texto_coop_degradado(jogadores: Sequence[int]) -> str:
+    """Banner do co-op NOMEANDO quem caiu; genérico quando não há número.
+
+    MESA-CHEIA-11/E2 — a entrega mais barata da onda: o dado já viajava no
+    `state_full`, e a janela dizia "um dos jogadores" para uma mesa de quatro.
+    """
+    numeros = [n for n in jogadores if isinstance(n, int) and not isinstance(n, bool)]
+    if not numeros:
+        return VPAD_COOP_DEGRADED_TEXT
+    quem = juntar_rotulos([str(n) for n in numeros])
+    molde = _COOP_DEGRADED_UM if len(numeros) == 1 else _COOP_DEGRADED_VARIOS
+    return molde.format(quem=quem)
+
 
 # DEDUP-06 (achado novo da revisão): Modo Nativo com o físico em Bluetooth é
 # estruturalmente frágil — o SDL pode não enxergar o DualSense BT nem sem
@@ -311,6 +384,62 @@ NATIVE_BT_FRAGIL_TEXT = (
     "DualSense por BT (limite do SDL). Se o jogo não vir o controle, use o "
     "cabo USB ou volte para a emulação de gamepad."
 )
+
+_NATIVE_BT_FRAGIL_UM = (
+    "Modo Nativo com o Controle {quem} em Bluetooth: alguns jogos não o "
+    "enxergam (limite do SDL). Se o jogo não vir esse controle, ligue-o no "
+    "cabo USB ou volte para a emulação de gamepad."
+)
+_NATIVE_BT_FRAGIL_VARIOS = (
+    "Modo Nativo com os Controles {quem} em Bluetooth: alguns jogos não os "
+    "enxergam (limite do SDL). Se o jogo não vir esses controles, ligue-os no "
+    "cabo USB ou volte para a emulação de gamepad."
+)
+
+
+def controles_bt_frageis(state: dict[str, Any] | None) -> list[int]:
+    """Números dos controles frágeis por BT no Modo Nativo, do ``state_full``.
+
+    MESA-CHEIA-11/E1. Quem decide QUAIS é o daemon
+    (`daemon/ipc_handlers.controles_bt_frageis`), porque é ele que enxerga a
+    mesa inteira; aqui só se lê a lista publicada, com a mesma defesa dos
+    outros leitores de payload.
+
+    **Lista vazia não quer dizer "nenhum frágil"** — quer dizer "não sei quais",
+    e é o que um daemon antigo (sem a chave) ou um backend sem
+    `describe_controllers` devolve. Por isso quem chama continua olhando também
+    o booleano `native_bt_fragil`: o aviso acende, só que sem nomes.
+
+    Ordena de novo o que o daemon já ordenou (`sorted(numeros)`, no fim do
+    `daemon/ipc_handlers.controles_bt_frageis`). Não é desconfiança do daemon: é
+    que esta é a ÚLTIMA parada antes do olho dela, e a regra "os números saem
+    crescentes" tem de valer mesmo quando quem publicou o payload for um daemon
+    diferente do que está no fonte de hoje (install editable: o daemon vivo é
+    mais velho que o código). Custo: uma ordenação de no máximo quatro números.
+    """
+    if not isinstance(state, dict):
+        return []
+    numeros = state.get("native_bt_fragil_controles")
+    if not isinstance(numeros, list):
+        return []
+    return sorted(n for n in numeros if isinstance(n, int) and not isinstance(n, bool))
+
+
+def texto_native_bt_fragil(numeros: Sequence[int]) -> str:
+    """Banner do BT frágil NOMEANDO os controles; genérico sem número.
+
+    MESA-CHEIA-11/E1 — o número é o do CONTROLE (`numero_do_controle`: o slot
+    de sessão), que é como o card se identifica no título e como o cabeçalho
+    lista o alvo. Não é o número do JOGADOR: no payload real de 14/08 os dois
+    divergem (slots [4, 1, 3, 2] contra jogadores [1, 2, 3, 4]), e quem ela
+    precisa achar para trocar o cabo é o card, não o slot do jogo.
+    """
+    validos = [n for n in numeros if isinstance(n, int) and not isinstance(n, bool)]
+    if not validos:
+        return NATIVE_BT_FRAGIL_TEXT
+    quem = juntar_rotulos([str(n) for n in validos])
+    molde = _NATIVE_BT_FRAGIL_UM if len(validos) == 1 else _NATIVE_BT_FRAGIL_VARIOS
+    return molde.format(quem=quem)
 
 
 # GUI-05 item 3 (honestidade do dedup): texto do banner "jogo sem wrapper".
@@ -359,7 +488,8 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
     DEDUP-06 (o guard anti-veneno): o banner também fala pelos jogadores do
     co-op — `dedup_ok=False` com motivo `jogador_N_uinput` acende o aviso
     mesmo com o vpad primário saudável — e pelo estado BT+Nativo
-    (`native_bt_fragil` do state_full), que tem aviso próprio.
+    (`native_bt_fragil` do state_full, hoje acompanhado da lista
+    `native_bt_fragil_controles`), que tem aviso próprio e NOMEIA quais.
 
     Sem alarme falso: backend ausente/"" é transitório real (vpad subindo, o
     `_gamepad_device` ainda None — o `ipc_handlers` só emite a chave com device
@@ -369,8 +499,13 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
     """
     if not isinstance(state, dict):
         return None
-    if state.get("native_bt_fragil") is True:
-        return NATIVE_BT_FRAGIL_TEXT
+    frageis = controles_bt_frageis(state)
+    if frageis or state.get("native_bt_fragil") is True:
+        # MESA-CHEIA-11/E1: a lista manda quando existe (nomeia quem está
+        # frágil); o booleano continua acendendo o aviso genérico, que é o que
+        # um daemon mais VELHO que esta janela sabe dizer — install editable
+        # deixa os dois convivendo até o próximo start.
+        return texto_native_bt_fragil(frageis)
     if mode_of_state(state) != MODE_GAMEPAD:
         return None
     gamepad = state.get("gamepad_emulation")
@@ -386,7 +521,10 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
         and isinstance(motivo, str)
         and "jogador" in motivo
     ):
-        return VPAD_COOP_DEGRADED_TEXT
+        # MESA-CHEIA-11/E2: o gatilho continua sendo o mesmo ("jogador" no
+        # motivo, o que cobre o `jogador_?_uinput` sem número); o que mudou é
+        # que o texto passa a dizer QUAL, quando o daemon disse.
+        return texto_coop_degradado(jogadores_degradados(motivo))
     return None
 
 
@@ -1951,10 +2089,14 @@ __all__ = [
     "VPAD_DEGRADED_TEXT",
     "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",
+    "controles_bt_frageis",
     "id_da_pagina",
     "id_da_pagina_corrente",
+    "jogadores_degradados",
     "reconciliar_toast",
+    "texto_coop_degradado",
     "texto_do_desktop_sem_emulacao",
+    "texto_native_bt_fragil",
     "vpad_degradation_text",
     "wrapper_banner_text",
 ]

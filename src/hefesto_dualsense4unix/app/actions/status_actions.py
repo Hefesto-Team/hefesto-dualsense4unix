@@ -451,6 +451,12 @@ class StatusActionsMixin(WidgetAccessMixin):
     #: luzes, ACIMA da escolha manual. Lido do `state_full` aqui e consumido
     #: pela aba Lightbar (que não tem poller próprio).
     _coop_ligado: bool = False
+    #: MESA-CHEIA-09 (conserto 1.3): Modo Nativo ligado = o JOGO é dono do
+    #: `hidraw` e o backend muta TODA escrita de output — o que a aba manda
+    #: fica guardado até o modo sair. Lido do `state_full` aqui (mesmo tique do
+    #: co-op) e consumido pelos toasts das abas Gatilhos e Lightbar, que não
+    #: têm poller próprio.
+    _modo_nativo_ligado: bool = False
     #: Badge do banner que denuncia rumble travado em silêncio.
     _rumble_badge: Any = None
     # S2: monitor do microfone (nível + mute). Lazy e DESLIGADO por padrão —
@@ -1986,6 +1992,19 @@ class StatusActionsMixin(WidgetAccessMixin):
             with contextlib.suppress(Exception):
                 refresh()
 
+    def _sync_modo_nativo_manda_no_output(self, state: dict[str, Any]) -> None:
+        """Publica ``_modo_nativo_ligado`` para as abas Gatilhos e Lightbar.
+
+        MESA-CHEIA-09 (conserto 1.3). Em Modo Nativo o backend muta toda
+        escrita de output (`_output_mute`) — a rota sysfs do LED é desabilitada,
+        o `0x31` avulso é pulado e o `report_thread` não escreve nada. O ajuste
+        fica GUARDADO e vale no desmute, e é isso que os toasts precisam dizer.
+
+        Só guarda o flag: ao contrário do co-op, nenhuma moldura muda de
+        desenho por causa dele, e repintar a aba a 0,5 Hz custaria sem motivo.
+        """
+        self._modo_nativo_ligado = bool(state.get("native_mode"))
+
     def _update_rumble_badge(self, state: dict[str, Any]) -> None:
         """Denuncia no banner que a vibração está travada pela GUI.
 
@@ -2560,6 +2579,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._update_rumble_badge(state)
         self._update_coop_badge(state)
         self._sync_coop_governa_luzes(state)
+        self._sync_modo_nativo_manda_no_output(state)
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
         battery = state.get("battery_pct")

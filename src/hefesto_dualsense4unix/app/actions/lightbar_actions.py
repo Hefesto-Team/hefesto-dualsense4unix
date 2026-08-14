@@ -13,6 +13,12 @@ from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions import footer_actions
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.ipc_bridge import led_set, player_leds_set
+from hefesto_dualsense4unix.app.textos_de_aplicacao import (
+    alvo_fora_da_mesa,
+    coop_manda_nas_luzes,
+    frase_de_guardado,
+    modo_nativo_manda_no_output,
+)
 from hefesto_dualsense4unix.utils.i18n import _
 
 #: APLICAR-VERDADE-01/E2: a frase de quando NÃO HOUVE RESPOSTA do daemon. Ela
@@ -52,6 +58,29 @@ _AVISO_HEFESTO_DESLIGADO = (
 #: controle". O "(N% de brilho)" fica: o brilho é o que foi ENVIADO, e é a
 #: informação que ela usa para saber que o seletor viajou junto.
 _TOAST_COR_ENVIADA = "Cor enviada ao controle ({pct}% de brilho)"
+
+#: O mesmo assunto, quando a frase que o segue é a do GUARDADO (D-9). O brilho
+#: continua ali pelo motivo de sempre: é o que ela usa para saber que o seletor
+#: viajou junto — e num ajuste guardado saber O QUE ficou guardado importa mais
+#: ainda, porque ela só vai ver o efeito quando o controle voltar.
+_ASSUNTO_COR = "Cor ({pct}% de brilho)"
+
+#: A frase seca do "Apagar", e o assunto dela quando o que segue é o GUARDADO.
+#:
+#: Conserto 1.5: este era o QUINTO gesto de saída da aba Lightbar e o único que
+#: continuava afirmando fato consumado — "Lightbar apagada" — com o alvo fora
+#: da mesa ou em Modo Nativo, onde nenhum byte sai. Ele escreve pela MESMA rota
+#: por-MAC do "Aplicar no controle" logo ao lado (`led_set((0, 0, 0),
+#: uniq=self._edit_uniq())` -> `led.set` -> `apply_output_for` -> "registrado"
+#: -> `guardado_em: [uniq]`), então mentia pelo mesmo motivo — e o comentário
+#: dentro do próprio método já registrava isso desde a APLICAR-VERDADE-01.
+#:
+#: O assunto vira INFINITIVO ("Apagar a lightbar") porque a frase do guardado
+#: fala do que ainda VAI acontecer; "Lightbar apagada — guardado" seria a
+#: afirmação e a ressalva se contradizendo dentro da mesma linha. A palavra é a
+#: do botão que o dispara ("Apagar", `lightbar_off` no `main.glade`).
+_TOAST_LIGHTBAR_APAGADA = "Lightbar apagada"
+_ASSUNTO_APAGAR = "Apagar a lightbar"
 
 #: Aviso D4 (sprint cores-e-led-automaticos): cor única em "Todos" com o
 #: automático ligado seria INVISÍVEL (a paleta vence o global no merge do
@@ -662,11 +691,32 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 brightness=self._current_brightness,
                 uniq=self._edit_uniq(),
             )
-        msg = (
-            _TOAST_COR_ENVIADA.format(pct=pct)
-            if ok
-            else (mensagem_de_secao_fora(resposta) or _AVISO_HEFESTO_DESLIGADO)
-        )
+        if not ok:
+            msg = mensagem_de_secao_fora(resposta) or _AVISO_HEFESTO_DESLIGADO
+        else:
+            # MESA-CHEIA-09/E3 + D-9: com o alvo FORA da mesa, o daemon
+            # registra o override e o hotplug o aplica quando ele voltar —
+            # nenhum byte saiu agora. A frase antiga ("Cor enviada ao
+            # controle") era a mesma para os dois casos.
+            #
+            # Conserto 1.3: em Modo Nativo a cor também não sai — a rota sysfs
+            # está desabilitada sob mute e o `0x31` avulso é pulado.
+            #
+            # Conserto 1.5: as duas podem valer JUNTAS (Modo Nativo ligado com
+            # o alvo fora da mesa), e a cadeia if/elif escolhia uma e prometia
+            # a liberação errada. Quem decide a ordem — e quem soma — é o
+            # módulo do vocabulário, num lugar só.
+            #
+            # `coop` fica de fora aqui de propósito, e é medido: a camada do
+            # co-op tem vocabulário de um campo só
+            # (`backend_pydualsense._COOP_LAYER_FIELDS = ("player_leds",)`),
+            # então ela não governa a COR.
+            assunto = _ASSUNTO_COR.format(pct=pct)
+            msg = frase_de_guardado(
+                assunto,
+                alvo_ausente=alvo_fora_da_mesa(self),
+                nativo=modo_nativo_manda_no_output(self),
+            ) or _TOAST_COR_ENVIADA.format(pct=pct)
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
         self._toast_light(msg)
@@ -749,13 +799,20 @@ class LightbarActionsMixin(WidgetAccessMixin):
             # pediu para apagar a de UM, e ainda derrubava o override por-MAC
             # dos outros.
             ok = led_set((0, 0, 0), uniq=self._edit_uniq())
-        msg = (
-            "Lightbar apagada"
-            if ok
+        if not ok:
             # E2: o "Falha (daemon offline?)" continua palavra por palavra para
             # o daemon REALMENTE offline; com ele vivo, quem fala é a seção.
-            else (mensagem_de_secao_fora(resposta) or "Falha (daemon offline?)")
-        )
+            msg = mensagem_de_secao_fora(resposta) or "Falha (daemon offline?)"
+        else:
+            # Conserto 1.5: o quinto gesto entra no mesmo vocabulário dos
+            # outros quatro (ver `_ASSUNTO_APAGAR`). `coop` fica de fora pelo
+            # mesmo motivo medido do "Aplicar": a camada do co-op só governa
+            # `player_leds`, nunca a cor.
+            msg = frase_de_guardado(
+                _ASSUNTO_APAGAR,
+                alvo_ausente=alvo_fora_da_mesa(self),
+                nativo=modo_nativo_manda_no_output(self),
+            ) or _TOAST_LIGHTBAR_APAGADA
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
         self._toast_light(msg)
@@ -982,12 +1039,8 @@ class LightbarActionsMixin(WidgetAccessMixin):
         d4_disparou = self._persist_leds_update({"player_leds": bits})
         ok, motivo = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(bits)
-        msg = (
-            f"Desenho das luzes aplicado — {descricao}"
-            if ok
-            else motivo
-            or "Não consegui aplicar o desenho das luzes — o Hefesto pode "
-            "estar desligado (ligue na aba Sistema)"
+        msg = self._msg_do_desenho(
+            ok=ok, motivo=motivo, descricao=descricao, feito="aplicado", fazer="aplicar"
         )
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
@@ -1010,12 +1063,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         d4_disparou = self._persist_leds_update({"player_leds": bits})
         ok, motivo = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(bits)
-        msg = (
-            f"Desenho das luzes atualizado — {descricao}"
-            if ok
-            else motivo
-            or "Não consegui atualizar o desenho das luzes — o Hefesto pode "
-            "estar desligado (ligue na aba Sistema)"
+        msg = self._msg_do_desenho(
+            ok=ok,
+            motivo=motivo,
+            descricao=descricao,
+            feito="atualizado",
+            fazer="atualizar",
         )
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
@@ -1046,12 +1099,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         d4_disparou = self._persist_leds_update({"player_leds": bits})
         ok, motivo = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(pattern)
-        msg = (
-            f"Desenho das luzes atualizado — {descricao}"
-            if ok
-            else motivo
-            or "Não consegui atualizar o desenho das luzes — o Hefesto pode "
-            "estar desligado (ligue na aba Sistema)"
+        msg = self._msg_do_desenho(
+            ok=ok,
+            motivo=motivo,
+            descricao=descricao,
+            feito="atualizado",
+            fazer="atualizar",
         )
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
@@ -1067,6 +1120,47 @@ class LightbarActionsMixin(WidgetAccessMixin):
             checkbox: Gtk.CheckButton = self._get(f"player_led_{i}")
             states.append(bool(checkbox.get_active()) if checkbox is not None else False)
         return (states[0], states[1], states[2], states[3], states[4])
+
+    def _msg_do_desenho(
+        self, *, ok: bool, motivo: str | None, descricao: str, feito: str, fazer: str
+    ) -> str:
+        """A frase do desenho das 5 luzes — UMA, para os três gestos.
+
+        MESA-CHEIA-09/E3. Os três caminhos ("Aplicar LEDs", marcar uma caixa e
+        os presets) compunham a frase cada um por si, e os três diziam
+        *aplicado* em dois casos em que nenhum byte pegou:
+
+        * **co-op ligado** — a camada do co-op vence a escolha manual, e a
+          MESMA aba já dizia isso no rótulo de leitura de volta
+          (``texto_do_desenho_aceso``). O toast contradizia o rótulo três
+          centímetros acima dele;
+        * **alvo fora da mesa** — o override fica guardado e o hotplug o
+          aplica quando o controle voltar (D-9);
+        * **Modo Nativo** (conserto 1.3) — o backend muta TODA escrita de
+          output e re-escreve o desejado no desmute.
+
+        A ordem importa: os donos de AGORA (co-op, Modo Nativo) vêm primeiro
+        porque valem mesmo com o controle na mesa — não são pendência.
+
+        **Conserto 1.5: as três SOMAM.** Este método parava na primeira
+        condição verdadeira, e com co-op ligado E o alvo fora da mesa — o
+        estado normal da mesa dela, porque a R-16 mantém o alvo justamente
+        quando o controle cai — o toast prometia *"Vale quando o co-op sair"*,
+        e sair do co-op não faz valer nada: o controle continua fora. A ordem
+        (e a soma) mora agora em `textos_de_aplicacao.frase_de_guardado`.
+        """
+        if not ok:
+            return motivo or (
+                f"Não consegui {fazer} o desenho das luzes — o Hefesto pode "
+                "estar desligado (ligue na aba Sistema)"
+            )
+        assunto = f"Desenho das luzes ({descricao})"
+        return frase_de_guardado(
+            assunto,
+            alvo_ausente=alvo_fora_da_mesa(self),
+            coop=coop_manda_nas_luzes(self),
+            nativo=modo_nativo_manda_no_output(self),
+        ) or f"Desenho das luzes {feito} — {descricao}"
 
     @staticmethod
     def _descreve_player_leds(bits: list[bool] | tuple[bool, ...]) -> str:
