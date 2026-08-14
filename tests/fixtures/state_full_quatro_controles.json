@@ -1,0 +1,520 @@
+{
+  "active_profile": null,
+  "autoswitch_locked": false,
+  "battery_pct": 100,
+  "bt_mic": {
+    "enabled": false,
+    "running": false
+  },
+  "buttons": [],
+  "connected": true,
+  "controles_sem_driver": {
+    "ids": [],
+    "quantidade": 0
+  },
+  "controllers": [
+    {
+      "audio": {
+        "fone_plugado": false,
+        "mic_externo": false,
+        "mic_mudo": false,
+        "mic_mudo_desejado": null
+      },
+      "battery_pct": 100,
+      "connected": true,
+      "index": 0,
+      "inputs": {
+        "buttons": [],
+        "gyro": {
+          "x": 1.1,
+          "y": 0.0,
+          "z": -0.73
+        },
+        "l2_raw": 0,
+        "lx": 128,
+        "ly": 127,
+        "r2_raw": 0,
+        "rx": 129,
+        "ry": 126,
+        "touchpad": {
+          "height": 1080,
+          "touching": false,
+          "width": 1920,
+          "x": 960,
+          "y": 540
+        }
+      },
+      "is_primary": true,
+      "lightbar_on": true,
+      "lightbar_rgb": [
+        255,
+        0,
+        128
+      ],
+      "lightbar_source": "sysfs",
+      "player": 1,
+      "player_slot": 4,
+      "transport": "usb",
+      "uniq": "aabbcc0000d8",
+      "vpad_backend": "uhid",
+      "vpad_motivo": null
+    },
+    {
+      "audio": {
+        "fone_plugado": false,
+        "mic_externo": false,
+        "mic_mudo": false,
+        "mic_mudo_desejado": null
+      },
+      "battery_pct": 95,
+      "connected": true,
+      "index": 1,
+      "inputs": {
+        "buttons": [],
+        "gyro": {
+          "x": 0.43,
+          "y": 0.73,
+          "z": -0.24
+        },
+        "l2_raw": 0,
+        "lx": 129,
+        "ly": 126,
+        "r2_raw": 0,
+        "rx": 130,
+        "ry": 129,
+        "touchpad": {
+          "height": 1080,
+          "touching": false,
+          "width": 1920,
+          "x": 960,
+          "y": 540
+        }
+      },
+      "is_primary": false,
+      "lightbar_on": true,
+      "lightbar_rgb": [
+        0,
+        0,
+        255
+      ],
+      "lightbar_source": "sysfs",
+      "player": 2,
+      "player_slot": 1,
+      "transport": "usb",
+      "uniq": "aabbcc000003",
+      "vpad_backend": "uhid",
+      "vpad_motivo": null
+    },
+    {
+      "audio": {
+        "fone_plugado": false,
+        "mic_externo": false,
+        "mic_mudo": false,
+        "mic_mudo_desejado": null
+      },
+      "battery_pct": 100,
+      "connected": true,
+      "index": 2,
+      "inputs": {
+        "buttons": [],
+        "gyro": {
+          "x": 1.1,
+          "y": -0.49,
+          "z": -0.18
+        },
+        "l2_raw": 0,
+        "lx": 128,
+        "ly": 128,
+        "r2_raw": 0,
+        "rx": 131,
+        "ry": 125,
+        "touchpad": {
+          "height": 1080,
+          "touching": false,
+          "width": 1920,
+          "x": 960,
+          "y": 540
+        }
+      },
+      "is_primary": false,
+      "lightbar_on": true,
+      "lightbar_rgb": [
+        0,
+        255,
+        0
+      ],
+      "lightbar_source": "sysfs",
+      "player": 3,
+      "player_slot": 3,
+      "transport": "bt",
+      "uniq": "aabbcc0000f0",
+      "vpad_backend": "uhid",
+      "vpad_motivo": null
+    },
+    {
+      "audio": {
+        "fone_plugado": false,
+        "mic_externo": false,
+        "mic_mudo": false,
+        "mic_mudo_desejado": null
+      },
+      "battery_pct": 100,
+      "connected": true,
+      "index": 3,
+      "inputs": {
+        "buttons": [],
+        "gyro": {
+          "x": -0.24,
+          "y": -0.06,
+          "z": -0.06
+        },
+        "l2_raw": 0,
+        "lx": 128,
+        "ly": 128,
+        "r2_raw": 0,
+        "rx": 128,
+        "ry": 128,
+        "touchpad": {
+          "height": 1080,
+          "touching": false,
+          "width": 1920,
+          "x": 960,
+          "y": 540
+        }
+      },
+      "is_primary": false,
+      "lightbar_on": true,
+      "lightbar_rgb": [
+        255,
+        0,
+        0
+      ],
+      "lightbar_source": "sysfs",
+      "player": 4,
+      "player_slot": 2,
+      "transport": "bt",
+      "uniq": "aabbcc0000ab",
+      "vpad_backend": "uhid",
+      "vpad_motivo": null
+    }
+  ],
+  "coop": {
+    "derrubado_por_steam_input": false,
+    "enabled": true,
+    "externals": 0,
+    "players": 4,
+    "secundarios_derrubados": 0
+  },
+  "counters": {
+    "battery.change.emitted": 1919,
+    "battery.journal.sample": 15,
+    "input.settling.tick": 1,
+    "poll.tick": 555474,
+    "state_full.stale_neutral": 1
+  },
+  "emulation_suppressed": false,
+  "game_signal": {
+    "authority": "daemon",
+    "degradado": false,
+    "desde": null,
+    "evidencia": null,
+    "motivo": null
+  },
+  "gamepad_emulation": {
+    "backend": "uhid",
+    "dedup_ok": true,
+    "degraded": false,
+    "enabled": true,
+    "ff_supported": true,
+    "flavor": "dualsense",
+    "wrapper_used": null
+  },
+  "hotkey": {
+    "buffer_ms": 150,
+    "passthrough_in_emulation": false
+  },
+  "jogo_steam": {
+    "appid": null,
+    "lido": true
+  },
+  "keyboard_emulation": {
+    "bloqueio": "desligada",
+    "despachando": false,
+    "device_ativo": false,
+    "enabled": false,
+    "osk_disponivel": true
+  },
+  "l2_raw": 0,
+  "lx": 128,
+  "ly": 127,
+  "mic_button_toggles_system": true,
+  "mode_from_profile": null,
+  "mouse_emulation": {
+    "enabled": false,
+    "scroll_speed": 4,
+    "speed": 9
+  },
+  "native_bt_fragil": false,
+  "native_mode": false,
+  "native_mode_origin": null,
+  "output_target_index": null,
+  "paused": false,
+  "perfil_do_jogo_que_nao_entrou": [],
+  "primary_grab_state": "held",
+  "r2_raw": 0,
+  "rumble_active": null,
+  "rumble_ff": {
+    "descartados": 0,
+    "estranhos": 0,
+    "last_strong": 0,
+    "last_weak": 0,
+    "nao_nulos": 0,
+    "paradas": 4,
+    "per_vpad": [
+      {
+        "audio_do_jogo_amostra": {
+          "alto_falante": 100,
+          "flag0": 160,
+          "fone": 0,
+          "microfone": 0,
+          "rota": 48
+        },
+        "backend": "uhid",
+        "bateria_no_jogo": {
+          "carregando": true,
+          "pct": 100
+        },
+        "battery_forwards": 1,
+        "ff_descartado_amostra": null,
+        "ff_descartado_count": 0,
+        "ff_maior_pedido": [
+          0,
+          0
+        ],
+        "ff_nao_nulo_count": 0,
+        "ff_parada_sdl_count": 1,
+        "ff_play_count": 0,
+        "ff_report_estranho_amostra": null,
+        "ff_report_estranho_count": 0,
+        "ff_ultimos_reports": [
+          {
+            "flag0": 0,
+            "flag1": 0,
+            "flag2": 2,
+            "ha_s": 9608.3,
+            "ramo": "parada_sdl",
+            "strong": 0,
+            "weak": 0
+          }
+        ],
+        "ff_v2_count": 0,
+        "jack": {
+          "fone": false,
+          "microfone": false,
+          "mudo": false
+        },
+        "jack_forwards": 0,
+        "lightbar_replicas": 0,
+        "motion_forwards": 1559897,
+        "motion_hz": 162.7,
+        "motion_streaming": true,
+        "output_count": 3,
+        "player": 1,
+        "player_led_replicas": 0,
+        "rumble_no_fisico": null,
+        "rumble_no_fisico_ha_s": null,
+        "touchpad_clicks": 0,
+        "touchpad_pressionado": false,
+        "trigger_replicas": 0,
+        "visto_ha_s": {
+          "audio_do_jogo": 9607.3,
+          "output": 9607.3,
+          "rumble": 9608.3
+        }
+      },
+      {
+        "audio_do_jogo_amostra": null,
+        "backend": "uhid",
+        "bateria_no_jogo": {
+          "carregando": true,
+          "pct": 100
+        },
+        "battery_forwards": 1,
+        "ff_descartado_amostra": null,
+        "ff_descartado_count": 0,
+        "ff_maior_pedido": [
+          0,
+          0
+        ],
+        "ff_nao_nulo_count": 0,
+        "ff_parada_sdl_count": 1,
+        "ff_play_count": 0,
+        "ff_report_estranho_amostra": null,
+        "ff_report_estranho_count": 0,
+        "ff_ultimos_reports": [
+          {
+            "flag0": 0,
+            "flag1": 0,
+            "flag2": 2,
+            "ha_s": 9605.7,
+            "ramo": "parada_sdl",
+            "strong": 0,
+            "weak": 0
+          }
+        ],
+        "ff_v2_count": 0,
+        "jack": {
+          "fone": false,
+          "microfone": false,
+          "mudo": false
+        },
+        "jack_forwards": 0,
+        "lightbar_replicas": 0,
+        "motion_forwards": 1542376,
+        "motion_hz": 184.3,
+        "motion_streaming": true,
+        "output_count": 3,
+        "player": 2,
+        "player_led_replicas": 0,
+        "rumble_no_fisico": null,
+        "rumble_no_fisico_ha_s": null,
+        "touchpad_clicks": 0,
+        "touchpad_pressionado": false,
+        "trigger_replicas": 0,
+        "visto_ha_s": {
+          "output": 9605.7,
+          "rumble": 9605.7
+        }
+      },
+      {
+        "audio_do_jogo_amostra": null,
+        "backend": "uhid",
+        "bateria_no_jogo": {
+          "carregando": false,
+          "pct": null
+        },
+        "battery_forwards": 0,
+        "ff_descartado_amostra": null,
+        "ff_descartado_count": 0,
+        "ff_maior_pedido": [
+          0,
+          0
+        ],
+        "ff_nao_nulo_count": 0,
+        "ff_parada_sdl_count": 1,
+        "ff_play_count": 0,
+        "ff_report_estranho_amostra": null,
+        "ff_report_estranho_count": 0,
+        "ff_ultimos_reports": [
+          {
+            "flag0": 0,
+            "flag1": 0,
+            "flag2": 2,
+            "ha_s": 151.5,
+            "ramo": "parada_sdl",
+            "strong": 0,
+            "weak": 0
+          }
+        ],
+        "ff_v2_count": 0,
+        "jack": {
+          "fone": false,
+          "microfone": false,
+          "mudo": false
+        },
+        "jack_forwards": 0,
+        "lightbar_replicas": 0,
+        "motion_forwards": 0,
+        "motion_hz": 0.0,
+        "motion_streaming": false,
+        "output_count": 3,
+        "player": 3,
+        "player_led_replicas": 0,
+        "rumble_no_fisico": null,
+        "rumble_no_fisico_ha_s": null,
+        "touchpad_clicks": 0,
+        "touchpad_pressionado": false,
+        "trigger_replicas": 0,
+        "visto_ha_s": {
+          "output": 151.5,
+          "rumble": 151.5
+        }
+      },
+      {
+        "audio_do_jogo_amostra": null,
+        "backend": "uhid",
+        "bateria_no_jogo": {
+          "carregando": false,
+          "pct": null
+        },
+        "battery_forwards": 0,
+        "ff_descartado_amostra": null,
+        "ff_descartado_count": 0,
+        "ff_maior_pedido": [
+          0,
+          0
+        ],
+        "ff_nao_nulo_count": 0,
+        "ff_parada_sdl_count": 1,
+        "ff_play_count": 0,
+        "ff_report_estranho_amostra": null,
+        "ff_report_estranho_count": 0,
+        "ff_ultimos_reports": [
+          {
+            "flag0": 0,
+            "flag1": 0,
+            "flag2": 2,
+            "ha_s": 143.5,
+            "ramo": "parada_sdl",
+            "strong": 0,
+            "weak": 0
+          }
+        ],
+        "ff_v2_count": 0,
+        "jack": {
+          "fone": false,
+          "microfone": false,
+          "mudo": false
+        },
+        "jack_forwards": 0,
+        "lightbar_replicas": 0,
+        "motion_forwards": 0,
+        "motion_hz": 0.0,
+        "motion_streaming": false,
+        "output_count": 3,
+        "player": 4,
+        "player_led_replicas": 0,
+        "rumble_no_fisico": null,
+        "rumble_no_fisico_ha_s": null,
+        "touchpad_clicks": 0,
+        "touchpad_pressionado": false,
+        "trigger_replicas": 0,
+        "visto_ha_s": {
+          "output": 143.5,
+          "rumble": 143.5
+        }
+      }
+    ],
+    "plays": 0,
+    "v2": 0,
+    "vpads": 4
+  },
+  "rumble_mult_applied": 0.7,
+  "rumble_passthrough": true,
+  "rumble_policy": "balanceado",
+  "rumble_policy_custom_mult": 0.7,
+  "rx": 129,
+  "ry": 126,
+  "steam_input": {
+    "excecao_ativa": false,
+    "vpad_suspenso": false
+  },
+  "transport": "usb",
+  "window_detect_backend": "xlib",
+  "window_detect_current_class": "unknown",
+  "window_detect_healthy": true,
+  "window_detect_last_class": null,
+  "window_detect_reason": "sem_foco_x",
+  "window_detect_seeing": false,
+  "window_detect_useful_age_sec": null
+}
