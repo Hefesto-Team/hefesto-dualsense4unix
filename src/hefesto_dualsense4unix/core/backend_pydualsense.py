@@ -1620,26 +1620,88 @@ class PyDualSenseController(IController):
         o open ("No device detected") ou se o `init()` estourou o timeout
         (BUG-BACKEND-PYDUALSENSE-DSTATE-01). Demais exceções (permissão hidraw,
         USB transitório) propagam para o chamador fazer backoff.
+
+        FD-ZUMBI-DO-INIT-TIMEOUT-01 (15/08/2026, visto ao vivo em
+        `/proc/<pid>/fd` da máquina dela). Quem abre o fd do nó hidraw é o
+        `hidapi.Device(path=...)` do `_pydualsense__find_device` — ou seja,
+        DENTRO do `init()`, dentro da thread que pode pendurar. Quando o join
+        estourava, esta função devolvia None e mais ninguém tinha o `ds` na mão:
+        o handle ficava órfão, e com ele o fd. Dois desfechos, ambos ruins:
+
+        - `init()` termina com ERRO depois do timeout: o fd só volta quando o
+          coletor do Python destrói o `ds` (`hidapi.Device.__del__`), o que
+          demora o que o kernel demorar para destravar. Foi o que se mediu: um
+          descritor para `/dev/hidraw8 (deleted)` aberto às 06:29:45 e ainda
+          aberto mais de uma hora depois, num daemon com teto de 1024 fds.
+        - `init()` termina BEM depois do timeout: pior. O upstream sobe o
+          `report_thread` na última linha do `init()`, e essa thread segura o
+          `ds` vivo para sempre (`while self.ds_thread`). Nasce um ZUMBI que
+          escreve report de output num controle que o backend nem sabe que
+          abriu — o mesmo zumbi que o `_suppress_leds` já citava por nome, e
+          que nenhum `_refresh_sysfs_leds` nem o mute de Modo Nativo alcança,
+          porque ambos só varrem `self._handles`.
+
+        A cura é um HANDOFF ATÔMICO: caller e runner decidem sob o MESMO lock
+        de quem é o handle. Quem perde, fecha. Não dá para decidir por
+        `t.is_alive()` — entre o `is_alive()` e o `return None` cabe o runner
+        terminar, e o zumbi escapava pela fresta.
+
+        Por que fechar aqui não pode tirar o hidraw do produto: este `ds` é
+        local e só chega ao `self._handles` pelo `connect()` DEPOIS que esta
+        função retorna o handle. No ramo do timeout ela retorna None — o handle
+        que a thread fecha nunca foi visto por ninguém. E cada `hidapi.Device`
+        faz o SEU `open()` do nó, então o fd fechado é o desta tentativa, não o
+        de um handle vivo que por acaso aponte para o mesmo `/dev/hidrawN`.
+
+        Por que o `close()` roda na thread do runner e não aqui: fechar o
+        `hid_device` por cima de um `hid_read` em curso é puxar a estrutura
+        debaixo de quem está lendo. Na thread do runner, o `close()` só acontece
+        depois que o `init()` voltou.
         """
         ds = _PinnedPyDualSense(path, is_edge=is_edge)
         # Roda `ds.init()` numa thread daemon com timeout. Se a chamada entrar
         # em D-state (kernel HID bloqueado, hidraw órfão, hub em low-power), o
-        # daemon principal não trava: a thread é abandonada (daemon=True → morre
+        # daemon principal não trava: a thread segue sozinha (daemon=True → morre
         # com o processo) e devolvemos None. O probe periódico retenta. Não
         # usamos ThreadPoolExecutor porque seu __exit__ join-aria a thread morta.
         result: list[Exception | None] = []
+        # O handoff. Tudo aqui dentro só se lê e se escreve sob `entrega`:
+        # `terminou` = o runner acabou a tempo e o handle é do caller;
+        # `desistido` = o caller já foi embora e o handle é do runner (fechar).
+        entrega = threading.Lock()
+        estado = {"terminou": False, "desistido": False}
 
         def _runner() -> None:
+            erro: Exception | None = None
             try:
                 ds.init()
-                result.append(None)
             except Exception as exc:  # propagamos para o caller via result
-                result.append(exc)
+                erro = exc
+            with entrega:
+                orfao = estado["desistido"]
+                if not orfao:
+                    estado["terminou"] = True
+                    result.append(erro)
+            if orfao:
+                # O caller já desistiu deste handle: ele é lixo, e é aqui que o
+                # fd do hidraw volta. O `close()` da subclasse também derruba o
+                # `report_thread` que o `init()` possa ter subido tarde demais.
+                with contextlib.suppress(Exception):
+                    ds.close()
+                logger.warning(
+                    "pydualsense_init_orfao_fechado — o handle do init que "
+                    "estourou o timeout foi fechado pela própria thread",
+                    path=path,
+                )
 
         t = threading.Thread(target=_runner, daemon=True, name="hefesto-ds-init")
         t.start()
         t.join(timeout=INIT_TIMEOUT_SEC)
-        if t.is_alive():
+        with entrega:
+            desistiu = not estado["terminou"]
+            if desistiu:
+                estado["desistido"] = True
+        if desistiu:
             logger.warning(
                 "pydualsense_init_timeout — kernel pode estar bloqueado em "
                 "hidraw (hid_playstation conflict)",
