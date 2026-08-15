@@ -1,0 +1,9 @@
+no,aparelho,transporte,porta,motivo_da_porta,relatorios,segundos,hz,bytes_min,bytes_max,report_ids,crc_confere,crc_difere,crc_sem_trailer,crc_veredito,t0_parede,t1_parede,erro
+hidraw4,d4:2f:4b:00:00:d8,cabo,broker (SCM_RIGHTS),o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock,5000,20.000,250.00,64,64,0x01x5000,0,0,0,-,2026-08-15 07:43:56.684,2026-08-15 07:44:16.684,
+hidraw5,a0:fa:9c:00:00:f0,cabo,broker (SCM_RIGHTS),o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock,5001,20.000,250.05,64,64,0x01x5001,0,0,0,-,2026-08-15 07:43:56.684,2026-08-15 07:44:16.684,
+hidraw6,vpad P1,vpad (sem transporte),open() direto,o broker recusou: reject_not_physical_dualsense — caí no open() por caminho,3188,20.000,159.40,64,64,0x01x3188,0,0,0,-,2026-08-15 07:43:56.684,2026-08-15 07:44:16.684,
+hidraw7,vpad P2,vpad (sem transporte),open() direto,o broker recusou: reject_not_physical_dualsense — caí no open() por caminho,3169,20.000,158.45,64,64,0x01x3169,0,0,0,-,2026-08-15 07:43:56.684,2026-08-15 07:44:16.684,
+hidraw9,44:46:48:00:00:03,rádio,broker (SCM_RIGHTS),o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock,7631,20.000,381.54,78,78,0x31x7631,0,0,0,-,2026-08-15 07:43:56.684,2026-08-15 07:44:16.684,
+hidraw10,vpad P3,vpad (sem transporte),open() direto,o broker recusou: reject_not_physical_dualsense — caí no open() por caminho,3484,20.000,174.20,64,64,0x01x3484,0,0,0,-,2026-08-15 07:43:56.684,2026-08-15 07:44:16.684,
+hidraw11,14:3a:9a:00:00:ab,rádio,broker (SCM_RIGHTS),o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock,3828,20.000,191.40,78,78,0x31x3828,0,0,0,-,2026-08-15 07:43:56.684,2026-08-15 07:44:16.684,
+hidraw12,vpad P4,vpad (sem transporte),open() direto,o broker recusou: reject_not_physical_dualsense — caí no open() por caminho,520,20.000,26.00,64,64,0x01x520,0,0,0,-,2026-08-15 07:43:56.684,2026-08-15 07:44:16.684,

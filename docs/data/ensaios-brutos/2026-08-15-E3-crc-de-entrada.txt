@@ -1,0 +1,99 @@
+T0 do envelope (parede): 2026-08-15 07:47:50.882
+captura de áudio concorrente em T0: 0 processo(s) — arecord/pw-record/parec
+
+2026-08-15T07:47:51.010563 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:47:51.245533 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:47:51.245949 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T07:47:51.246029 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:47:51.246290 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T07:47:51.246350 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:47:51.246591 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:47:51.246793 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:47:51.247006 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T07:47:51.247049 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:47:51.247224 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:47:51.247430 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw11 state=hidden
+2026-08-15T07:47:51.247475 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+==============================================================================
+  taxa_no_hidraw.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... quantos relatórios por segundo cada nó entrega, todos na mesma janela?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... os                     de /usr/lib/python3.12/os.py
+  biblioteca ....... selectors              de /usr/lib/python3.12/selectors.py
+  biblioteca ....... time                   de embutido no interpretador (stdlib estática)
+  biblioteca ....... zlib                   de embutido no interpretador (stdlib estática)
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  grab do evdev .... /dev/input/event21: PEGO por outro processo (EVIOCGRAB exclusivo)
+  grab do evdev .... /dev/input/event25: PEGO por outro processo (EVIOCGRAB exclusivo)
+  grab do evdev .... /dev/input/event29: livre
+  grab do evdev .... /dev/input/event261: livre
+  grab do evdev .... /dev/input/event265: PEGO por outro processo (EVIOCGRAB exclusivo)
+  grab do evdev .... /dev/input/event268: livre
+  grab do evdev .... /dev/input/event272: PEGO por outro processo (EVIOCGRAB exclusivo)
+  grab do evdev .... /dev/input/event275: livre
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+  régua ............ 1 relatório = 1 read() que retornou no hidraw (o quadro do TRANSPORTE),
+                     NÃO um SYN_REPORT do evdev — as duas contas medem coisas diferentes.
+  o grab acima ..... é do EVDEV, e NÃO alcança o hidraw: cada open() de hidraw tem
+                     fila própria no kernel. Por isso aqui não sai zero onde o
+                     taxa_de_entrada.py sai MUDO.
+  CRC .............. semente 0xA1 sobre o relatório 0x31, de hefesto_dualsense4unix.core.ds_output_report.
+                     Só o RÁDIO carrega trailer; no cabo os quatro últimos bytes são
+                     payload, e a coluna diz `sem trailer`, nunca `0 falhas`.
+==============================================================================
+
+  mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+  medindo 8 nó(s) por 60 s, numa janela só.
+  >> NÃO é preciso mexer em nada: o DualSense parado na mesa já transmite.
+
+  T0 (hora de parede) .. 2026-08-15 07:47:51.247
+  T1 (hora de parede) .. 2026-08-15 07:48:51.248
+  janela ............... 60.001 s de relógio monotônico
+
+  OS CONTROLES FÍSICOS — o que o APARELHO entrega no fio
+
+aparelho           transporte  nó        porta                relatórios  Hz     bytes   report ids  CRC de entrada
+-----------------  ----------  --------  -------------------  ----------  -----  ------  ----------  ----------------------------------------------------
+d4:2f:4b:00:00:d8  cabo        hidraw4   broker (SCM_RIGHTS)  15000       250.0  64..64  0x01x15000  sem trailer (no cabo os 4 últimos bytes são payload)
+a0:fa:9c:00:00:f0  cabo        hidraw5   broker (SCM_RIGHTS)  15000       250.0  64..64  0x01x15000  sem trailer (no cabo os 4 últimos bytes são payload)
+44:46:48:00:00:03  rádio       hidraw9   broker (SCM_RIGHTS)  24176       402.9  78..78  0x31x24176  24176 conferem / 0 DIFEREM
+14:3a:9a:00:00:ab  rádio       hidraw11  broker (SCM_RIGHTS)  11175       186.2  78..78  0x31x11175  11175 conferem / 0 DIFEREM
+
+  OS VPADS — a saída do produto, e o controle negativo desta janela
+
+aparelho  transporte             nó        porta          relatórios  Hz     bytes   report ids  CRC de entrada
+--------  ---------------------  --------  -------------  ----------  -----  ------  ----------  -------------------------------------
+vpad P1   vpad (sem transporte)  hidraw6   open() direto  9585        159.7  64..64  0x01x9585   sem trailer (o vpad não é transporte)
+vpad P2   vpad (sem transporte)  hidraw7   open() direto  9576        159.6  64..64  0x01x9576   sem trailer (o vpad não é transporte)
+vpad P3   vpad (sem transporte)  hidraw10  open() direto  10981       183.0  64..64  0x01x10981  sem trailer (o vpad não é transporte)
+vpad P4   vpad (sem transporte)  hidraw12  open() direto  1556        25.9   64..64  0x01x1556   sem trailer (o vpad não é transporte)
+
+  ATENÇÃO (controle negativo): d4:2f:4b:00:00:d8 (hidraw4) e a0:fa:9c:00:00:f0 (hidraw5) contaram o MESMO número de relatórios (15000) — confira se não é o mesmo nó lido duas vezes. Apelidos e nós distintos acima = o empate é do produto, não do instrumento.
+
+  CONTROLE POSITIVO: 35351 quadros com CRC conferido — o instrumento sabe conferir.
+  Falhas de CRC no rádio: 0.
+
+  CSV escrito em docs/data/ensaios-brutos/2026-08-15-E3-crc-de-entrada.csv
+
+------------------------------------------------------------------------------
+RESUMO: cada braço entregou — cabo: 250.0 Hz (n=2); rádio: 294.6 Hz (n=2); vpads: 132.1 Hz. Régua: relatório de hidraw, não SYN_REPORT.
+------------------------------------------------------------------------------
+
+captura de áudio concorrente em T1: 0 processo(s)
+T1 do envelope (parede): 2026-08-15 07:48:51.280
+
+==============================================================================
+  A MORDIDA DA CONFERÊNCIA DE CRC — arrancar a cura e ver reprovar
+  (quadros SINTÉTICOS, em memória; nenhum byte lido de aparelho nenhum)
+==============================================================================
+quadro íntegro ...... confere=1 difere=0
+1 bit trocado ........ confere=0 difere=1
+trailer corrompido ... confere=0 difere=1
+VEREDITO: a conferência MORDE
