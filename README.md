@@ -67,15 +67,19 @@ Bluetooth) entram como jogadores adicionais.
 
 ### O que ele entrega
 
-- **Gatilhos adaptativos** — 19 modos (Rigid, Pulse, Galloping, Machine, Bow,
-  Automatic Gun e os demais), ajustáveis por gatilho e salvos no perfil.
+- **Gatilhos adaptativos** — 19 modos numa grade (Rígido, Pulso, Galope,
+  Metralhadora, Arco de flecha, Arma automática e os demais), ajustáveis por
+  gatilho e salvos no perfil. Os nomes em inglês (`Rigid`, `Galloping`, …)
+  continuam sendo os do perfil em disco e os do protocolo.
 - **Um controle virtual por jogador** — o jogo vê um DualSense completo (com
   vibração, gatilhos, luz e giroscópio) ou um Xbox 360, conforme a máscara que
   você escolher. Ver [os três modos](docs/usage/modos.md).
 - **Perfis por jogo** — trocam sozinhos quando você abre a janela do jogo, com um
   cadeado para quando você não quiser que troquem.
 - **Luzes** — cor da lightbar por controle (com cores automáticas de jogador) e
-  os cinco LEDs de jogador no padrão oficial do PS5.
+  o **desenho das 5 luzes** de jogador, com os presets do P1 ao P4, todas acesas
+  e todas apagadas, no padrão oficial do PS5. O desenho é aparência: o número do
+  controle continua sendo o do cabeçalho.
 - **Vibração com política** — Economia (30%), Balanceado (100%), Máximo (150%)
   ou Auto por bateria, aplicada ao que o jogo pede antes de chegar ao motor. Um
   controle deslizante vai de 0 a 200 para quem quiser sair dos quatro degraus.

@@ -36,8 +36,8 @@ FEEDBACK_POSITION_PRESETS: dict[str, list[int]] = {
 }
 
 # ---------------------------------------------------------------------------
-# Presets para Vibracao por posicao (MultiPositionVibration)
-# Mesmo shape: 10 posicoes, range 0-8.
+# Presets para Vibração por posição (MultiPositionVibration)
+# Mesmo shape: 10 posições, range 0-8.
 # ---------------------------------------------------------------------------
 
 VIBRATION_POSITION_PRESETS: dict[str, list[int]] = {
@@ -49,7 +49,7 @@ VIBRATION_POSITION_PRESETS: dict[str, list[int]] = {
 }
 
 # ---------------------------------------------------------------------------
-# Labels PT-BR para os dropdowns (inclui "custom" que não esta nos dicts acima)
+# Labels PT-BR para os dropdowns (inclui "custom", que não está nos dicts acima)
 # ---------------------------------------------------------------------------
 
 FEEDBACK_POSITION_LABELS: dict[str, str] = {
@@ -67,12 +67,12 @@ VIBRATION_POSITION_LABELS: dict[str, str] = {
     "machine_gun":     "Machine gun",
     "galope":          "Galope",
     "senoide":         "Senoide",
-    "vibracao_final":  "Vibracao final",
+    "vibracao_final":  "Vibração final",
     "custom":          "Personalizar",
 }
 
 # ---------------------------------------------------------------------------
-# Tipos Literal para type-checkers (exclui "custom" — não e resolvivel)
+# Tipos Literal para type-checkers (exclui "custom" — não é resolvível)
 # ---------------------------------------------------------------------------
 
 FeedbackPositionPreset = Literal[

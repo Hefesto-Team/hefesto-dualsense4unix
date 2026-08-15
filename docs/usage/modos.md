@@ -251,8 +251,10 @@ antigos.
 
 Se um jogo novo aparecer com o controle duplicado:
 
-1. Aba **Sistema** → **"Aplicar aos jogos da Steam"**, com a Steam fechada.
-2. Como recurso manual, o botão **"Copiar opções p/ jogos"** copia a linha certa
+1. Aba **Sistema** → bloco **Avançado** → **"Aplicar aos jogos da Steam"**, com
+   a Steam fechada. (Quem não quiser escolher cada passo usa **"Deixar tudo
+   pronto"**, logo acima, que faz este e o resto com um consentimento só.)
+2. Como recurso manual, o botão **"Copiar opções para os jogos"** copia a linha certa
    para você colar em Steam → jogo → Propriedades → Opções de inicialização.
 
 O `hefesto-launch` decide na hora o que cada jogo precisa. Com o Hefesto desligado
