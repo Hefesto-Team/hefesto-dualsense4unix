@@ -51,12 +51,12 @@ import eliminacao  # noqa: E402
 #: por auditoria, não por digitação — é o que impede a bancada de virar um
 #: editor de fatos.
 #:
-#: O grau e a ressalva vêm EM PAR desde a migração v2 (`cabo_*` / `radio_*`),
+#: O degrau (`ate_onde_foi`) e a ressalva vêm EM PAR desde a migração v2
 #: pela mesma razão que `aceita` e `aciona` vêm: uma feature é UMA linha, e o
 #: que muda entre os transportes fica lado a lado na mesma linha. Editar só o
 #: lado selecionado seria inventar aqui o modo do caderno de eliminação — que
 #: separa os dois de propósito, e cuja razão está na docstring lá em cima.
-EDITAVEIS = ["cabo_grau", "radio_grau", "provado_em", "provado_por",
+EDITAVEIS = ["cabo_ate_onde_foi", "radio_ate_onde_foi", "provado_em", "provado_por",
              "validade_dias", "estado_hoje", "teste_que_morde", "mordida",
              "mordida_provada_em", "assimetria_declarada",
              "cabo_ressalva", "radio_ressalva"]
@@ -137,7 +137,8 @@ df = carrega(CSV_.stat().st_mtime)
 
 st.title("Bancada de medição")
 st.caption(
-    f"{len(df)} linhas · a régua é o grau de cada lado (`cabo_grau` / `radio_grau`): "
+    f"{len(df)} linhas · a régua é o degrau de cada lado "
+    "(`cabo_ate_onde_foi` / `radio_ate_onde_foi`): "
     "**MONTOU** (o produto montou o report) "
     "→ **SAIU NO FIO** (o byte saiu e algo voltou) → **O APARELHO OBEDECEU** "
     "(acendeu, girou, endureceu, saiu som). Tratar *montou* como *funciona* é a "
@@ -193,8 +194,10 @@ editado = st.data_editor(
     hide_index=True,
     disabled=[c for c in vis if c not in EDITAVEIS],
     column_config={
-        "cabo_grau": st.column_config.SelectboxColumn("cabo_grau", options=GRAUS),
-        "radio_grau": st.column_config.SelectboxColumn("radio_grau", options=GRAUS),
+        "cabo_ate_onde_foi":
+            st.column_config.SelectboxColumn("cabo_ate_onde_foi", options=GRAUS),
+        "radio_ate_onde_foi":
+            st.column_config.SelectboxColumn("radio_ate_onde_foi", options=GRAUS),
         "provado_por": st.column_config.SelectboxColumn("provado_por", options=QUEM),
         "estado_hoje": st.column_config.SelectboxColumn("estado_hoje", options=ESTADOS),
         "provado_em": st.column_config.TextColumn("provado_em", help="AAAA-MM-DD"),

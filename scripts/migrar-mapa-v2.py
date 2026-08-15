@@ -54,7 +54,7 @@ Seis foram julgados um a um por agentes independentes, todos com veredicto
 têm exatamente a mesma forma — rótulo idêntico fora do parêntese — e o
 julgamento do par de áudio do Pro cita dois deles pelo nome como o mesmo padrão.
 Casar a CHAVE nunca funde as EVIDÊNCIAS: cada transporte continua com o seu
-``aceita``, a sua ``confianca``, a sua ``evidencia`` e a sua ``ressalva``.
+``aceita``, o seu ``de_onde_sei``, a sua ``evidencia`` e a sua ``ressalva``.
 
 NADA SE PERDE
 -------------
@@ -507,12 +507,12 @@ CABECALHO_V2 = [
     "cabo_report_id", "radio_report_id",
     "cabo_offset", "radio_offset",
     "cabo_comando", "radio_comando",
-    "cabo_confianca", "radio_confianca",
+    "cabo_de_onde_sei", "radio_de_onde_sei",
     "cabo_evidencia", "radio_evidencia",
     "cabo_codigo_ref", "radio_codigo_ref",
     "cabo_detalhe", "radio_detalhe",
     "cabo_ressalva", "radio_ressalva",
-    "cabo_grau", "radio_grau",
+    "cabo_ate_onde_foi", "radio_ate_onde_foi",
     "cabo_feature_v1", "radio_feature_v1",
     "teste_que_morde", "mordida", "mordida_provada_em",
     "provado_em", "provado_por", "validade_dias",
@@ -530,12 +530,12 @@ PARES_V1_V2 = {
     "report_id": ("cabo_report_id", "radio_report_id"),
     "offset": ("cabo_offset", "radio_offset"),
     "comando": ("cabo_comando", "radio_comando"),
-    "aparelho_confianca": ("cabo_confianca", "radio_confianca"),
+    "aparelho_confianca": ("cabo_de_onde_sei", "radio_de_onde_sei"),
     "aparelho_evidencia": ("cabo_evidencia", "radio_evidencia"),
     "codigo_ref": ("cabo_codigo_ref", "radio_codigo_ref"),
     "detalhe": ("cabo_detalhe", "radio_detalhe"),
     "ressalva": ("cabo_ressalva", "radio_ressalva"),
-    "grau": ("cabo_grau", "radio_grau"),
+    "grau": ("cabo_ate_onde_foi", "radio_ate_onde_foi"),
     "feature": ("cabo_feature_v1", "radio_feature_v1"),
 }
 UNICOS_V1_V2 = ["teste_que_morde", "mordida", "mordida_provada_em", "provado_em",

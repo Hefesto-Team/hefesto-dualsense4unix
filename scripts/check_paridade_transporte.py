@@ -30,7 +30,7 @@ As regras
 ---------
 FALHA
   1. `sem-mordida`      — célula que afirma `aciona = sim` com
-                          `confianca = medido` e `teste_que_morde` vazio.
+                          `de_onde_sei = medido` e `teste_que_morde` vazio.
                           Afirmação forte sem rede é o defeito-mãe da sprint.
   2. `mordida-fantasma` — `teste_que_morde` que aponta para algo que o pytest
                           NÃO coleta (arquivo, classe ou função que não existe,
@@ -50,10 +50,10 @@ FALHA
                           duplicado, valor fora do domínio declarado abaixo.
   5. `mapa-nao-publicado` — linha do CSV cujo `id` não aparece no `specs.html`
                           publicado. Ver a nota sobre ela, logo abaixo.
-  6. `grau-sem-ensaio`  — célula que declara `grau = SAIU NO FIO` ou
-                          `grau = O APARELHO OBEDECEU` e NÃO tem ensaio nenhum
-                          em `docs/data/ensaios.csv` para aquele `id` NAQUELE
-                          transporte. Ver "o buraco de 12/08", logo abaixo.
+  6. `grau-sem-ensaio`  — célula que declara `ate_onde_foi = SAIU NO FIO` ou
+                          `ate_onde_foi = O APARELHO OBEDECEU` e NÃO tem ensaio
+                          nenhum em `docs/data/ensaios.csv` para aquele `id`
+                          NAQUELE transporte. Ver "o buraco de 12/08" abaixo.
 
 AVISO (não derruba o CI hoje)
   7. `assimetria-nao-declarada` — `cabo_aciona` e `radio_aciona` divergem (ou um
@@ -66,8 +66,8 @@ AVISO (não derruba o CI hoje)
                           deste arquivo — quando as colunas estiverem fechadas.
   8. `validade-sem-data` — `validade_dias` preenchido com `provado_em` vazio:
                           prazo que não se consegue contar.
-  9. `grau-sem-ensaio-que-obedeca` — `grau = O APARELHO OBEDECEU` com ensaios
-                          naquele lado, mas nenhum deles dizendo que a FEATURE
+  9. `grau-sem-ensaio-que-obedeca` — `ate_onde_foi = O APARELHO OBEDECEU` com
+                          ensaios naquele lado, mas nenhum deles dizendo que a FEATURE
                           obedeceu. Desde 13/08/2026 quem responde isso é
                           `resultado_da_feature` quando ela está preenchida, e
                           `resultado` quando não (ver "o preço do `resultado`"
@@ -99,16 +99,17 @@ AVISO (não derruba o CI hoje)
 O buraco de 12/08/2026, e por que a regra 6 nasceu
 --------------------------------------------------
 Um agente escreveu numa cópia da árvore a afirmação mais forte que o vocabulário
-da casa permite — `cabo_grau = radio_grau = O APARELHO OBEDECEU`, `provado_por =
-olho-dela` — numa linha com ZERO ensaios no caderno de bancada, e o portão
+da casa permite — `cabo_ate_onde_foi = radio_ate_onde_foi = O APARELHO OBEDECEU`,
+`provado_por = olho-dela` — numa linha com ZERO ensaios no caderno, e o portão
 devolveu exatamente o mesmo número de reprovações de antes: quinze. A mentira
 passou inteira, e por três motivos que este arquivo tinha por escrito:
 
   - `docs/data/ensaios.csv` não era citado aqui uma única vez. O caderno de
     bancada — o arquivo onde mora o que o aparelho FEZ — não era fonte de
     verdade de portão nenhum;
-  - as colunas `cabo_grau`/`radio_grau` não entravam em domínio nenhum, então
-    `O APARELHO OBEDECEU` era escrevível em qualquer linha, de graça;
+  - as colunas do degrau (hoje `cabo_ate_onde_foi`/`radio_ate_onde_foi`) não
+    entravam em domínio nenhum, então `O APARELHO OBEDECEU` era escrevível em
+    qualquer linha, de graça;
   - `mordida_provada_em` estava vazia em todas as linhas e ninguém a lia.
 
 A regra que ela aprovou é uma frase: **grau forte exige ensaio correspondente**.
@@ -262,12 +263,23 @@ COLUNAS_EXIGIDAS = (
 #: Sufixos de par `cabo_X`/`radio_X` que as regras usam. Se um deles sumir do
 #: cabeçalho, a regra que depende dele morre — por isso a ausência reprova.
 #:
-#: `grau` entra aqui, e a distinção com as colunas que apenas DESLIGAM a regra
-#: (o `tests/`, o `specs.html`, o próprio caderno de ensaios) é esta: regra dura
-#: não se desliga em silêncio. `cabo_grau` é onde mora a afirmação mais forte
-#: que este mapa sabe fazer; perder a coluna é perder a régua da regra 6, e o
-#: portão tem de gritar em vez de passar.
-SUFIXOS_EXIGIDOS = ("aciona", "confianca", "canal", "grau")
+#: D-13 (15/08/2026), decisão dela: `confianca` virou `de_onde_sei` e `grau`
+#: virou `ate_onde_foi`. O problema nunca foi a QUANTIDADE de colunas — era que
+#: os dois nomes não diziam o que mediam, e por isso se confundiam. Os domínios
+#: não mudaram uma vírgula. NÃO existe alias: quem escrever o nome velho leva
+#: `integridade` no cabeçalho, que é o que se quer.
+#:
+#:   `de_onde_sei`  — DE ONDE vem a informação (medido, inferido-do-codigo,
+#:                    afirmado-no-doc, incerto);
+#:   `ate_onde_foi` — ATÉ ONDE a prova chegou (MONTOU, SAIU NO FIO,
+#:                    O APARELHO OBEDECEU).
+#:
+#: `ate_onde_foi` entra aqui, e a distinção com as colunas que apenas DESLIGAM a
+#: regra (o `tests/`, o `specs.html`, o próprio caderno de ensaios) é esta: regra
+#: dura não se desliga em silêncio. `cabo_ate_onde_foi` é onde mora a afirmação
+#: mais forte que este mapa sabe fazer; perder a coluna é perder a régua da regra
+#: 6, e o portão tem de gritar em vez de passar.
+SUFIXOS_EXIGIDOS = ("aciona", "de_onde_sei", "canal", "ate_onde_foi")
 
 #: Domínio de cada coluna. Vazio é SEMPRE aceito, e isso é decisão de desenho:
 #: o próprio `specs.html` declara no rodapé que "vazio aqui é pergunta aberta,
@@ -275,24 +287,24 @@ SUFIXOS_EXIGIDOS = ("aciona", "confianca", "canal", "grau")
 #: Acrescentar um valor ao mapa é acrescentá-lo aqui, no mesmo gesto, senão a
 #: régua passa a aprovar o que não sabe ler.
 #:
-#: `aciona`/`aceita` entram aqui embora o pedido só citasse canal/confiança/
+#: `aciona`/`aceita` entram aqui embora o pedido só citasse canal/de_onde_sei/
 #: existe: a regra 1 e a 7 leem `aciona`, e um valor novo ali (um "sim?" com
 #: interrogação, por exemplo) desligaria as duas EM SILÊNCIO.
 #:
-#: `grau` entrou em 12/08/2026 pelo mesmo motivo, e ele custou caro: sem domínio,
-#: `O APARELHO OBEDECEU` era escrevível de graça em qualquer linha, e um degrau
-#: escrito com outra tipografia (`o aparelho obedeceu`, minúsculo) passaria pela
-#: regra 6 sem ser visto — a mentira sairia pela porta que a régua não olha.
+#: `ate_onde_foi` entrou em 12/08/2026 pelo mesmo motivo, e ele custou caro: sem
+#: domínio, `O APARELHO OBEDECEU` era escrevível de graça em qualquer linha, e um
+#: degrau escrito com outra tipografia (`o aparelho obedeceu`, minúsculo) passaria
+#: pela regra 6 sem ser visto — a mentira sairia pela porta que a régua não olha.
 DOMINIO_POR_SUFIXO = {
     "aciona": frozenset({"", "sim", "não", "parcial", "desconhecido"}),
     "aceita": frozenset({"", "sim", "não", "parcial", "desconhecido"}),
     "canal": frozenset(
         {"", "hidraw", "uhid", "evdev", "sysfs", "dbus", "alsa-pipewire", "outro"}
     ),
-    "confianca": frozenset(
+    "de_onde_sei": frozenset(
         {"", "medido", "inferido-do-codigo", "afirmado-no-doc", "incerto"}
     ),
-    "grau": frozenset({"", "MONTOU", "SAIU NO FIO", "O APARELHO OBEDECEU"}),
+    "ate_onde_foi": frozenset({"", "MONTOU", "SAIU NO FIO", "O APARELHO OBEDECEU"}),
 }
 DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 
@@ -300,7 +312,7 @@ DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 #: `parcial` fica de fora de propósito — é uma afirmação com ressalva, e a
 #: sprint quer a rede primeiro onde a promessa é inteira.
 ACIONA_FORTE = "sim"
-CONFIANCA_FORTE = "medido"
+DE_ONDE_SEI_FORTE = "medido"
 
 #: A escada de grau, tal como `docs/process/METODO-DE-ISOLAMENTO.md` a define:
 #: MONTOU (montou o report) -> SAIU NO FIO (o byte saiu, algo voltou) ->
@@ -734,7 +746,7 @@ def censo(
         for lado in LADOS:
             resumo.celulas += 1
             aciona = (linha[f"{lado}_aciona"] or "").strip()
-            confianca = (linha[f"{lado}_confianca"] or "").strip()
+            de_onde_sei = (linha[f"{lado}_de_onde_sei"] or "").strip()
 
             for sufixo, (coluna_cabo, coluna_radio) in pares.items():
                 dominio = DOMINIO_POR_SUFIXO.get(sufixo)
@@ -759,10 +771,10 @@ def censo(
                 mudas_nesta_linha += 1
             if aciona in {"sim", "parcial"}:
                 resumo.celulas_que_afirmam += 1
-            if confianca == CONFIANCA_FORTE:
+            if de_onde_sei == DE_ONDE_SEI_FORTE:
                 resumo.celulas_medidas += 1
 
-            if aciona == ACIONA_FORTE and confianca == CONFIANCA_FORTE:
+            if aciona == ACIONA_FORTE and de_onde_sei == DE_ONDE_SEI_FORTE:
                 resumo.afirmacoes_fortes += 1
                 if not mordidas:
                     resumo.afirmacoes_fortes_sem_rede += 1
@@ -774,13 +786,13 @@ def censo(
                             ident,
                             lado,
                             f"afirma `{lado}_aciona = {ACIONA_FORTE}` com "
-                            f"`{lado}_confianca = {CONFIANCA_FORTE}` e "
+                            f"`{lado}_de_onde_sei = {DE_ONDE_SEI_FORTE}` e "
                             "`teste_que_morde` está vazio: se isso quebrar, a "
                             "suíte inteira continua verde",
                         )
                     )
 
-            grau = (linha[f"{lado}_grau"] or "").strip()
+            grau = (linha[f"{lado}_ate_onde_foi"] or "").strip()
             if grau in GRAUS_QUE_EXIGEM_ENSAIO:
                 resumo.graus_fortes += 1
                 graus_fortes_nesta_linha.append(grau)
@@ -1040,7 +1052,7 @@ def _regra_do_caderno(
                 numero,
                 ident,
                 lado,
-                f"declara `{lado}_grau = {grau}` e não há UM ensaio de {rotulo} "
+                f"declara `{lado}_ate_onde_foi = {grau}` e não há UM ensaio de {rotulo} "
                 f"para `{ident}` em {ENSAIOS_RELATIVO}. Registre o ensaio que "
                 "você fez (uma linha: `linha_id`, `transporte`, `suspeito`, "
                 f"`presente`, `resultado`, `observado_por`) ou baixe o grau para "
@@ -1068,7 +1080,7 @@ def _regra_do_caderno(
                 numero,
                 ident,
                 lado,
-                f"declara `{lado}_grau = {GRAU_OBEDECEU}` e os {len(ensaios)} "
+                f"declara `{lado}_ate_onde_foi = {GRAU_OBEDECEU}` e os {len(ensaios)} "
                 f"ensaio(s) de {rotulo} desta linha dizem {vistos}. Ou o degrau "
                 f"está alto demais, ou o ensaio foi gravado com o `resultado` do "
                 "SUSPEITO em vez do que a FEATURE fez — se for o segundo, "
@@ -1142,9 +1154,9 @@ def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
         ("células mudas (ninguém respondeu se aciona)", resumo.celulas_mudas),
         ("linhas mudas nos DOIS lados", resumo.linhas_mudas_dos_dois_lados),
         ("células que afirmam acionar (sim ou parcial)", resumo.celulas_que_afirmam),
-        (f"células com confiança `{CONFIANCA_FORTE}`", resumo.celulas_medidas),
+        (f"células com `de_onde_sei` = `{DE_ONDE_SEI_FORTE}`", resumo.celulas_medidas),
         (
-            f"afirmações fortes (`{ACIONA_FORTE}` + `{CONFIANCA_FORTE}`)",
+            f"afirmações fortes (`{ACIONA_FORTE}` + `{DE_ONDE_SEI_FORTE}`)",
             resumo.afirmacoes_fortes,
         ),
         ("     dessas, SEM teste que morda", resumo.afirmacoes_fortes_sem_rede),
@@ -1226,7 +1238,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Cada linha acima é uma afirmação do mapa sem rede que a sustente.")
         print("Preencha `teste_que_morde` com o id do nó do pytest que reprova")
         print("quando aquela feature quebrar NAQUELE transporte, ou baixe a")
-        print("confiança da célula para o que ela de fato é. Vazio é pergunta")
+        print("`de_onde_sei` da célula para o que ela de fato é. Vazio é pergunta")
         print("aberta e não reprova; `medido` sem teste, sim.")
         print("")
         print(f"E o grau é a MESMA conta na bancada: `{GRAU_SAIU_NO_FIO}` e")
