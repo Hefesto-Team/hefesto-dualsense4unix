@@ -1207,9 +1207,9 @@ class CoopManager:
           livre ≥2, na ordem em que o co-op promoveu cada secundário).
 
         As duas ordens só coincidem por sorte: a do co-op é a ordem em que o
-        grab confirmou nesta sessão, a da fila é a ordem de primeira aparição
-        na casa. Um replug basta para separá-las — e nesta mesa elas estavam
-        separadas nos três secundários.
+        grab confirmou nesta sessão, a da fila é a do registro de identidade.
+        Um replug basta para separá-las — e nesta mesa elas estavam separadas
+        nos três secundários.
 
         A verdade única é a FILA DE CHEGADA, por decisão dela (sprint
         `2026-08-14-INDICE-a-cor-do-controle-e-o-som-de-cada-jogador`: *"a
@@ -1218,6 +1218,14 @@ class CoopManager:
         (`identity.make_identity_output_provider`); a partir daqui governa
         também o número PUBLICADO — a lâmpada e o rótulo passam a ser a mesma
         função do mesmo MAC, sempre, por construção.
+
+        D-30 / ORDEM-DE-CHEGADA-01 (15/08, 03:54) respondeu QUAL fila é essa,
+        e a resposta mudou o dono do inteiro sem mudar uma linha daqui: o
+        `slot_for` do registro passou a ordenar pela ordem de conexão DAQUELE
+        MOMENTO (o gravado desempata quem chegou junto). A união que a
+        MESA-CHEIA-12 fez continua intacta e é o que torna isso barato —
+        lâmpada e rótulo são a MESMA função, então trocar a fonte de um
+        trocou a do outro, sem chance de voltarem a divergir.
 
         Sem registro (FakeController, backend legado, dublê de teste) cada um
         cai no seu `fallback` histórico — primário 1, secundários pelo
