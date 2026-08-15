@@ -63,6 +63,19 @@ from pathlib import Path
 #: NOTA DATADA — 06/08/2026: entrou `14:3a:9a`, o OUI do SEGUNDO DualSense da
 #: bancada. A ausência dele estava registrada como buraco desde 29/07 e o
 #: endereço daquele controle circulou no repositório esse tempo todo.
+#:
+#: NOTA DATADA — 15/08/2026. **GRAU: MEDIDO.** Entraram `d4:2f:4b` e
+#: `44:46:48`, o TERCEIRO e o QUARTO DualSense — os dois que chegaram na mesa
+#: 2+2 e que esta lista nunca conheceu. Medido na árvore de 15/08: **17**
+#: documentos versionados citam `d4:2f:4b` e **18** citam `44:46:48`, todos com
+#: a máscara da casa, aplicada À MÃO. Enquanto os OUIs faltavam aqui, essa
+#: máscara era disciplina de quem escrevia, não portão: um dos dois voltando
+#: CRU — do `controllers.json`, do journal ou de um dump de `sysfs` colado sem
+#: revisar — deixava o teste VERDE. É a mesma família do BURACO-DO-PORTAO-01
+#: (06/08), que entrou pelo mesmo motivo: o portão só reprova o que ele lista.
+#:
+#: A regra que evita a terceira vez: **controle novo na bancada, OUI novo
+#: aqui, no mesmo commit** — antes de o endereço dele aparecer em documento.
 _OUIS_REAIS_OCTETOS = (
     ("d8", "44", "89"),
     ("a0", "fa", "9c"),
@@ -70,6 +83,8 @@ _OUIS_REAIS_OCTETOS = (
     ("e0", "f6", "b5"),
     ("48", "b2", "5d"),
     ("14", "3a", "9a"),
+    ("d4", "2f", "4b"),
+    ("44", "46", "48"),
 )
 
 #: Compatibilidade: a forma com separador, que é como os documentos citam.

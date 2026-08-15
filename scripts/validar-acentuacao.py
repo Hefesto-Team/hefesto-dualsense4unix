@@ -453,7 +453,7 @@ EXTENSOES_ALVO = (
 # 15 para 368 reprovações de integridade. Valor de domínio é chave, não texto:
 # ele nunca leva acento. Quem for acentuar em massa um `.csv` deste projeto
 # corrige a PROSA e deixa as colunas de enumeração em paz
-# (`existe`, `*_aceita`, `*_aciona`, `*_canal`, `*_confianca`, `*_grau`).
+# (`existe`, `*_aceita`, `*_aciona`, `*_canal`, `*_de_onde_sei`, `*_ate_onde_foi`).
 
 
 def is_whitelisted(rel_path: str) -> bool:
