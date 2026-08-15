@@ -1704,8 +1704,14 @@ fi
 #      bluetoothd dela com SIGABRT em 08/08, levando os quatro pareamentos)
 #      + snapshot de bonds a cada parada;
 #   3. timer de snapshot (15min, deduplicado por conteúdo, NUNCA fotografa
-#      estado vazio) — restauração é MANUAL (bt_bonds_restore.sh; automática
-#      poderia restaurar chave que o controle rotacionou → loop de auth);
+#      estado vazio, e a poda nunca joga fora o MELHOR snapshot) + a VOLTA
+#      automática (bt_bonds_autorestore.sh no ExecStopPost do drop-in), que é a
+#      decisão dela de 08/08: "restauro de bonds tem de ser automático; manual
+#      com sudo não é produto". A volta só corre quando o daemon MORREU
+#      (SERVICE_RESULT != success), é ADITIVA (nunca escreve por cima de uma
+#      [LinkKey] viva — é assim que a chave rotacionada deixa de ser risco) e
+#      tem quarentena por boot. O bt_bonds_restore.sh continua existindo para o
+#      restauro completo decidido à mão;
 #   4. timer do watchdog (2min): estado doente → restart rate-limitado (só com
 #      0 devices conectados); bond Paired-sem-Bonded (temporário, evapora no
 #      disconnect — medido 22/07) → promoção via Pair() explícito 1x/boot.
@@ -1717,7 +1723,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         warn "sudo recusado — resiliência do bluetoothd pulada (re-execute ./install.sh)"
     else
         _btres_ok=1
-        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh bt_nosniff_now.sh bt_rebind_orphans.sh; do
+        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_bonds_autorestore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh bt_nosniff_now.sh bt_rebind_orphans.sh; do
             sudo install -Dm755 "${ROOT_DIR}/scripts/${_btres_s}" \
                 "/usr/local/lib/hefesto-dualsense4unix/${_btres_s}" 2>/dev/null || _btres_ok=0
         done
@@ -1744,6 +1750,9 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         fi
         if [[ "${_btres_ok}" -eq 1 ]]; then
             printf '      drop-in de resiliência instalado (Restart reafirmado + WatchdogSec=0 + snapshot na parada)\n'
+            printf '      restauro AUTOMÁTICO de bonds armado: se o bluetoothd morrer, os bonds que\n'
+            printf '        ele comeu voltam sozinhos antes do próximo start (aditivo; nunca por cima\n'
+            printf '        de chave viva). Nada a digitar, nenhum sudo.\n'
             printf '      vale no próximo restart do bluetoothd; captura forense é OPT-IN: bt_crash_capture.sh --on\n'
         else
             warn "resiliência do bluetoothd instalada PARCIALMENTE — confira as mensagens acima"
