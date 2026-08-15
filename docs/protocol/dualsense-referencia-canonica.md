@@ -79,6 +79,15 @@ desligados**, e essa diferença derrubou a premissa de uma cura inteira que já
 estava escrita nesta árvore. A medição, com a fala dela e a ressalva de escopo,
 está no §2, em *"Os BITS de vibração não são porteiro dos BYTES de motor"*.
 
+**E uma décima, de 15/08/2026, que é de escopo e não de byte:** esta página
+descrevia **três** feature reports, e o descritor declara **dezessete**. Os
+dezessete foram lidos nos quatro DualSense dela, por rádio, e o resultado está
+em *"Os feature reports — o censo dos dezessete"*, mais abaixo. Duas coisas
+saem de lá e valem para quem for medir qualquer feature: **por rádio se repete
+a leitura** (o timeout de 3 s do BlueZ custa 3,2-3,7 s por falha, e um dos
+quatro só respondeu na quinta tentativa) e **se valida `buf[0] == report_id`**
+(um dos quatro devolveu `0x80` no lugar do `0x20` pedido).
+
 **Documento irmão:**
 [os externos — Pro Controller e 8BitDo](externos-referencia-canonica.md). Esta
 página vale **só para o DualSense**. Os controles das outras linhagens têm
@@ -1049,6 +1058,222 @@ O discriminador que separa os dois casos é limpo:
 > essa forma. A hipótese explica o que **já** funcionava, que é a régua desta
 > casa: a parada do SDL sempre funcionou no controle físico, e agora se sabe por
 > quê.
+
+---
+
+## Os feature reports — o censo dos dezessete, lido nos quatro em 15/08/2026
+
+Até 14/08/2026 esta página descrevia **três** feature reports (`0x05`, `0x09` e
+`0x20`), que são os três que o driver conhece, e o índice daquele dia registrava
+como pendente *"catorze reports que o aparelho declara e ninguém leu"*.
+
+**Essa linha caducou em 15/08/2026:** os **dezessete** que o descritor declara
+foram lidos, **nos quatro** DualSense dela, **por rádio**, com retry e com
+validação de id. O que segue é o resultado, e nenhum byte foi escrito em
+controle nenhum para obtê-lo.
+
+### O instrumento, declarado — porque instrumento mente mais que produto
+
+- **Transporte:** Bluetooth nos quatro. Os quatro tinham sido re-pareados do zero
+  no mesmo dia, depois de reset de fábrica.
+- **Caminho:** `GET_FEATURE` no nó `/dev/hidrawN` de cada unidade. **Sem SDL,
+  sem `pydualsense`, sem `dualsensectl` no meio** — o que se lê é o que o
+  aparelho devolve.
+- **Tamanho do buffer:** o declarado pelo **próprio `report_descriptor` daquela
+  unidade**, extraído por leitura do descritor. Não é chute, e não é constante
+  copiada de outro projeto. É por isso que a coluna de tamanho abaixo é dado, e
+  não literatura.
+- **Daemon:** **leitura** pode conviver com o daemon vivo — cada `fd` tem a
+  própria fila de entrada. **Escrita, não:** quem for escrever para o daemon ou
+  passa pelo broker, sob pena de virar um segundo dono do nó.
+
+### Os dezessete IDs, com o tamanho que o descritor declara
+
+O tamanho é **payload + 1 byte de id**, que é como o `hidraw` conta.
+
+| id | tamanho | o que trouxe nos quatro, em 15/08/2026 |
+|---|---|---|
+| `0x05` | 41 | calibração da IMU, pura. **Per-unidade** — é o que esta página já mandava cachear por MAC (§5) |
+| `0x08` | 48 | **todo zero**, byte a byte, e **idêntico nos quatro** |
+| `0x09` | 20 | MAC da unidade, `08 25 00`, e o MAC do host pareado. Constante |
+| `0x0b` | 42 | MAC da unidade mais a lista de pareamento |
+| `0x20` | 64 | metadata de firmware — o layout byte a byte está abaixo |
+| `0x22` | 64 | **o layout muda por série de software** — ver a nota abaixo |
+| `0x80` | 64 | zeros/constantes, **idêntico nos quatro**, *sem comando prévio* |
+| `0x81` | 64 | idem |
+| `0x82` | 10 | idem |
+| `0x83` | 64 | idem |
+| `0xf0` | 64 | idem |
+| `0xf1` | 64 | idem |
+| `0xf2` | 16 | idem |
+| `0xf4` | 64 | idem — **é o canal de dados de firmware**; ler é inócuo, escrever não |
+| `0xf5` | 8 | idem — **é o canal de status de firmware** |
+| `0xf6` | 547 | **vazio**: só o byte de id não é zero |
+| `0xf7` | 8 | zeros/constantes, idêntico nos quatro |
+
+**GRAU: MEDIDO AQUI** para tudo nesta tabela.
+
+**A linha que mais ensina é a dos `0x80`-`0x83` e `0xf0`-`0xf7`:** lidos **sem
+comando prévio**, eles devolvem a mesma coisa nos quatro aparelhos. Não é que
+não carreguem nada — é que **esta família responde ao que foi pedido antes**, e
+sem pedido não há o que responder. É exatamente por isso que o caminho da cor,
+mais abaixo, exige uma **escrita** antes da leitura.
+
+**O `0x22` não é código de cor.** Nos dois aparelhos com `sw_series = 11` o
+offset 45-51 traz ASCII legível (`AP4Y490` e `AP51877`); nos outros dois, no
+mesmo offset, há binário. **O que muda é a série de software, não a cor** — dois
+controles de cores diferentes com a mesma série trazem o mesmo formato.
+
+**O CRC confere, e é a prova de que os dados são reais.** Nos 12 reports
+capturados com CRC (`0x09`, `0x20` e `0x22` dos quatro), o CRC-32 de semente
+`0xA3` — a semente de feature por Bluetooth da tabela do §7 — bate. Um dado que
+fecha o CRC não é lixo de buffer.
+
+### O layout REAL do feature `0x20` — 64 bytes, byte a byte
+
+**GRAU: ALTA.** Conferido contra o driver **e** contra quatro capturas
+independentes que concordam. Substitui o desenho que estava em
+[`docs/research/firmware-dualsense-2026-04-survey.md`](../research/firmware-dualsense-2026-04-survey.md),
+que **estava na ordem errada e tipava dois `uint16_t` como `uint8_t`** — quem
+implementou por aquele desenho entre abril e 15/08/2026 leu lixo com convicção.
+
+| offset | tamanho | campo | o que é |
+|---|---|---|---|
+| 0 | 1 | `report_id` | `0x20`. **Validar** — ver a regra de rádio abaixo |
+| 1 | 11 | `build_date[11]` | ASCII, ex. `Jul  4 2025` |
+| 12 | 8 | `build_time[8]` | ASCII, ex. `10:10:32` |
+| 20 | 2 | `fw_type` (`uint16`) | tipo de firmware |
+| 22 | 2 | `sw_series` (`uint16`) | série de software — é ela que muda o layout do `0x22` |
+| 24 | 4 | `hardware_info` (`uint32`) | a revisão de placa; ver a nota do `hardware_version` abaixo |
+| 28 | 4 | `firmware_version` (`uint32`) | `0xAABBCCCC` = AA.BB.CCCC |
+| 32 | 12 | `device_info[12]` | **difere por unidade e ninguém no mundo decifrou** — ver abaixo |
+| 44 | 2 | `update_version` (`uint16`) | ex. `0x0630`. É a "versão nos bytes 44-45" do checklist do §7 |
+| 46 | 2 | `update_image_info` (`uint16`) | 2 bytes, forçados pela aritmética do total de 64 |
+| 48 | 4 | `sbl` (`uint32`) | versão do *secondary bootloader* |
+| 52 | 4 | `venom` (`uint32`) | versão de subprocessador |
+| 56 | 4 | `spider` (`uint32`) | versão de subprocessador |
+| 60 | 4 | `crc32` | CRC-32, semente `0xA3` por Bluetooth (§7) |
+
+Os offsets fecham 64 bytes exatos, sem buraco e sem sobreposição — e essa
+aritmética é parte da conferência.
+
+**`device_info[12]`, offsets 32 a 43: difere por unidade, e não se sabe o que
+é.** O `dualsensectl` traz o `printf` desses bytes **comentado desde 2023**,
+justamente porque ninguém decifrou. **GRAU: MEDIDO AQUI** para *"difere por
+unidade"* (quatro unidades, quatro valores); **NADA** para o significado.
+Quem for atrás da cor por aqui: é um candidato, não uma resposta.
+
+### A regra de leitura por rádio — retry e validação de id
+
+**GRAU: MEDIDO AQUI, 15/08/2026.** Esta é a parte que mais custou, e ela derruba
+uma hipótese que já esteve escrita nesta casa.
+
+**O tamanho do buffer não era o problema. O transporte era.** Por rádio o
+`GET_REPORT` sai pelo canal de controle L2CAP e bate no `REPORT_REQ_TIMEOUT` de
+**3 s** do BlueZ. Cada falha custa **3,2 a 3,7 s** de relógio de parede — e essa
+assinatura de tempo é o que identifica o caso: se a leitura demorou três
+segundos e voltou vazia, foi timeout de transporte, **não** é feature ausente.
+
+Daí as duas regras, e nenhuma delas é opcional:
+
+1. **REPETIR.** Dos quatro aparelhos, **dois responderam na primeira tentativa e
+   um só respondeu na quinta**. Ler uma vez e concluir *"o aparelho não tem esse
+   report"* é a FALÁCIA DO PERFIL AUSENTE com nome e endereço. É a mesma medição
+   que já justifica o `feature_retries` do DKMS desta árvore.
+2. **VALIDAR `buf[0] == report_id`.** Um dos quatro devolveu um report com id
+   `0x80` **no lugar do `0x20` pedido**. Não é erro do aparelho nem buffer
+   corrompido: é **resposta trocada**, e o id está lá para ser conferido. Quem
+   não confere parseia o report errado com o layout certo e escreve o número
+   errado na documentação — com convicção, porque o tamanho bate.
+
+### O caminho da cor do plástico — CAMINHO IDENTIFICADO, NÃO MEDIDO por nós
+
+**GRAU: nem MEDIDO AQUI, nem ALTA. É `identificado-em-fonte-externa`**, e a
+distinção é o ponto desta subseção. Registrado em 15/08/2026; achado original
+desta casa em **10/08/2026**, que ficou enterrado num transcrito de subagente e
+nunca virou página — este parágrafo existe para que isso não se repita.
+
+O colorway de fábrica está no **serial impresso na traseira**, de 17 caracteres,
+nos **caracteres 5 e 6** (índices 4 e 5). O serial não é campo de leitura livre:
+sai por um comando da família de fábrica.
+
+```
+SET_FEATURE 0x80, payload [0x01, 0x13]        (base = 1, num = 19)
+GET_FEATURE 0x81 -> 64 bytes
+    buf[1] == 1  e  buf[2] == 19  e  buf[3] == 2     (senão é erro, não dado)
+    buf[4..20]  = 17 caracteres ASCII = o serial impresso na traseira
+    cor = serial[4:6]
+```
+
+| código | colorway | | código | colorway |
+|---|---|---|---|---|
+| `00` | White | | `07` | Volcanic Red |
+| `01` | Midnight Black | | `08` | Sterling Silver |
+| `02` | Cosmic Red | | `09` | Cobalt Blue |
+| `03` | Nova Pink | | `10` | Chroma Teal |
+| `04` | Galactic Purple | | `11` | Chroma Indigo |
+| `05` | Starlight Blue | | `12` | Chroma Pearl |
+| `06` | Grey Camouflage | | `30` | 30th Anniversary |
+
+Mais os códigos `Z1` a `ZB`, que são edições especiais.
+
+**As fontes, e por que o grau não é BAIXA:** `dualshock-tools.github.io`,
+`js/controllers/ds5-controller.js:196-226` e `:404-414`, com o mantenedor
+confirmando na issue #210; e **duas implementações independentes que concordam**
+(`nsfm/dualsense-ts` e `TechAntohere/Senshi`). Três fontes que fecham entre si é
+mais do que esta página costuma exigir para MÉDIA.
+
+**E por que, ainda assim, não é MEDIDO:**
+
+1. **Ninguém aqui rodou isto em aparelho nenhum.** A leitura exige uma
+   **ESCRITA** (`SET_FEATURE 0x80`), e escrita em controle dela é decisão dela,
+   não do agente.
+2. **A escrita é da família de comandos de FÁBRICA.** É a mesma família em que
+   `[1, 1]` **reseta o controle** e `[12, 1, ...]` **grava calibração na NVS**.
+   O par `[1, 19]` é leitura pura — mas **byte errado no payload escreve onde
+   não devia**, e não há desfazer.
+3. **Só está demonstrado POR CABO.** O `dualshock-tools` **recusa Bluetooth de
+   saída**, e ninguém publicou este caminho funcionando por rádio. Por rádio é
+   território não demonstrado — o que **não** é o mesmo que impossível.
+
+**O que já foi DESCARTADO como fonte de cor, com o que descartou** (15/08/2026,
+quatro unidades de quatro cores diferentes):
+
+| candidato | veredito | como se descartou |
+|---|---|---|
+| `HID_ID` / PID | idêntico nos quatro (`054C:0CE6`) | `uevent` |
+| `info` do BlueZ | **byte a byte idêntico** (Vendor=1356 Product=3302 Version=256) | `/var/lib/bluetooth/.../info` |
+| `iSerialNumber` USB | **não é o serial do produto** — é o MAC em 12 hex | `SDL_hidapi_ps5.c:391-403` |
+| part number (`CFI-ZCT1W` e afins) | **não existe em report nenhum** | o censo dos dezessete, acima |
+| prefixo de MAC | fornecedor de rádio / lote; **nenhuma fonte liga isso à cor** | — |
+| `0x22`, offsets 45-51 | muda por `sw_series`, não por cor | o censo, acima |
+
+Escrever *"a cor não existe no aparelho"* seria falso. O que se pode escrever,
+com data e tamanho de amostra, é: **o caminho existe, está identificado, e não
+foi percorrido aqui.**
+
+### O `hardware_version` do sysfs distingue as unidades, e NÃO é a cor
+
+**GRAU: MEDIDO AQUI, 15/08/2026** para os números; **BAIXA** para o nome dos
+campos, que vem da struct da comunidade.
+
+O `hid_playstation` publica
+`/sys/class/hidraw/hidrawN/device/hardware_version` — de graça, sem abrir o
+hidraw. Nos quatro aparelhos dela os quatro valores são **diferentes**:
+
+| MAC (mascarado) | `hardware_version` | placa |
+|---|---|---|
+| `14:3a:9a:00:00:ab` | `0x00000711` | BDM-050 |
+| `44:46:48:00:00:03` | `0x00000811` | BDM-050 |
+| `a0:fa:9c:00:00:f0` | `0x00000710` | BDM-050 |
+| `d4:2f:4b:00:00:d8` | `0x00001111` | BDM-060M |
+
+**E é aqui que se erra fácil:** o byte `(hw >> 16) & 0xFF` — o que a struct da
+comunidade chama de *Variation* — é `0x00` nos quatro. O que varia é a
+*Generation*, que é **revisão de placa**. Hoje ele separa os quatro **por acaso
+de lote**; **dois controles da mesma cor comprados juntos teriam o mesmo
+valor**. Serve como **chave de diagnóstico** e não serve como fonte de cor nem
+como identidade estável de unidade.
 
 ---
 
