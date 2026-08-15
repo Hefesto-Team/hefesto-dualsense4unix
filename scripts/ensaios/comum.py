@@ -22,6 +22,21 @@ da primeira linha de medição, de qual arquivo veio cada biblioteca que ele usa
 Não o nome: o **caminho**. O `python3` do sistema e o `.venv/bin/python` deste
 projeto não têm o mesmo `evdev`, e a diferença já enganou gente.
 
+A PORTA, DECLARADA (A-PORTA-QUE-A-CASA-CONSTRUIU-01, 15/08/2026)
+-----------------------------------------------------------------
+O mesmo raciocínio vale para **por onde** se mediu. Com a mesa 2+2 montada e o
+co-op ligado, nenhum dos DualSense físicos abre por `open()`: o próprio Hefesto
+os esconde do jogo (`broker/hidraw_broker.py`, `chmod 0600` + ACL removida).
+Quem bate ali mede `EACCES`; quem bate na porta certa — o `cmd open` do broker,
+que devolve o fd por SCM_RIGHTS — mede o aparelho. As duas coisas produzem
+relatório, e só uma delas produz medição. **Por isso a porta usada vai no
+cabeçalho, ao lado da biblioteca.**
+
+E um andar abaixo, o mesmo modo de falha: o co-op faz `EVIOCGRAB` no evdev
+físico, e um instrumento ingênuo lê zero evento e conclui que o aparelho está
+calado. *"O controle não emitiu"* e *"eu não posso ler"* têm de sair diferentes
+na tela — é o que `estado_do_grab` e `leitura_de_zero` existem para garantir.
+
 O QUE ESTES INSTRUMENTOS NUNCA FAZEM
 -------------------------------------
 **Não escrevem no aparelho.** Nenhum deles. Leitura pura: `GET_FEATURE` por
@@ -42,10 +57,44 @@ from dataclasses import dataclass, field
 
 _AQUI = os.path.dirname(os.path.abspath(__file__))
 _SCRIPTS = os.path.dirname(_AQUI)
+_SRC = os.path.join(os.path.dirname(_SCRIPTS), "src")
 if _SCRIPTS not in sys.path:
     sys.path.insert(0, _SCRIPTS)
+if os.path.isdir(_SRC) and _SRC not in sys.path:
+    # Para o checkout sem instalação: o cliente do broker mora no pacote, e é
+    # ele — um só, nunca uma cópia — que abre hidraw para todo instrumento.
+    sys.path.insert(0, _SRC)
 
 from identidade_do_vpad import campos_do_uevent, e_vpad_do_hefesto  # noqa: E402
+
+#: Por que o import da porta é tolerante: `quem_e_quem.py` e
+#: `audio_por_transporte.py` não abrem hidraw nenhum, e não seria razoável que
+#: eles morressem por falta de uma dependência que não usam. Quem PRECISA da
+#: porta chama `abrir_no_hidraw`, e ali a falta vira erro barulhento — nunca um
+#: `open()` direto de contrabando, que é o defeito que esta leva fechou.
+#: Os nomes REEXPORTADOS aqui existem para que nenhum instrumento precise
+#: conhecer o caminho do cliente: `from comum import abrir_no_hidraw,
+#: estado_do_grab, leitura_de_zero` e pronto. Um só cliente, um só import.
+try:
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+        GRAB_DE_TERCEIRO,  # noqa: F401 - reexportado para os instrumentos
+        GRAB_LIVRE,  # noqa: F401 - reexportado para os instrumentos
+        GRAB_SEM_NO,  # noqa: F401 - reexportado para os instrumentos
+        GRAB_SEM_PERMISSAO,  # noqa: F401 - reexportado para os instrumentos
+        PORTA_DIRETA,  # noqa: F401 - reexportado para os instrumentos
+        NoAberto,
+        PortaFechadaError,  # noqa: F401 - reexportado para os instrumentos
+        abrir_hidraw,
+        estado_do_grab,
+        leitura_de_zero,  # noqa: F401 - reexportado para os instrumentos
+        linha_da_porta,
+        linha_do_grab,
+        porta_provavel,
+    )
+
+    PORTA_IMPORTAVEL = ""
+except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
+    PORTA_IMPORTAVEL = str(_erro)
 
 VERSAO_DOS_INSTRUMENTOS = "2026-08-15"
 
@@ -343,10 +392,33 @@ def diagnostico_de_acesso(caminho: str) -> str:
         if modo == 0o600:
             return (
                 f"sem permissão (modo {modo:04o}, root:root) — assinatura do "
-                "broker do Hefesto ESCONDENDO o físico"
+                "broker do Hefesto ESCONDENDO o físico; a porta é o broker"
             )
         return f"sem permissão (modo {modo:04o})"
     return "acessível"
+
+
+def abrir_no_hidraw(caminho: str, *, escrita: bool = True) -> NoAberto:
+    """Abre um hidraw pela porta do broker, com queda declarada para `open()`.
+
+    **É o ÚNICO jeito de um instrumento desta casa abrir hidraw.** Não há
+    segunda rota, e é de propósito: a rota que existia — `os.open` direto —
+    colhia `EACCES` na mesa 2+2 e mandava a próxima pessoa consertar a regra
+    udev, que estava certa o tempo todo.
+
+    Devolve um `NoAberto`, que carrega o fd E a porta usada. Quem imprime
+    relatório imprime `no.linha_de_relatorio`; quem só mede usa `no.fd`.
+    """
+    if PORTA_IMPORTAVEL:
+        raise SystemExit(
+            "ERRO: o cliente do broker não é importável neste interpretador "
+            f"({PORTA_IMPORTAVEL}).\n"
+            "Sem ele eu só saberia abrir o hidraw por `open()` direto, que na "
+            "mesa com o co-op ligado mede EACCES e não o aparelho.\n"
+            "Rode com o interpretador do projeto:\n"
+            "    .venv/bin/python scripts/ensaios/<instrumento>.py"
+        )
+    return abrir_hidraw(caminho, escrita=escrita)
 
 
 # ---------------------------------------------------------------------------
@@ -394,6 +466,21 @@ def _procedencia(modulo_nome: str) -> str:
     return "sem __file__ (extensão da stdlib)"
 
 
+def declaracao_da_porta() -> str:
+    """A linha `porta ...` do cabeçalho — a mesma frase em toda a casa.
+
+    Sem cliente importável ela NÃO some: vira a confissão de que este
+    instrumento não pôde nem perguntar por onde mediria. Um cabeçalho calado
+    sobre a porta é exatamente o que a mordida 2 existe para impedir.
+    """
+    if PORTA_IMPORTAVEL:
+        return (
+            "porta ............ NÃO SEI — o cliente do broker não é importável "
+            f"neste interpretador ({PORTA_IMPORTAVEL})"
+        )
+    return linha_da_porta(*porta_provavel())
+
+
 def cabecalho_do_instrumento(
     nome: str,
     pergunta: str,
@@ -401,12 +488,18 @@ def cabecalho_do_instrumento(
     bibliotecas: list[str],
     escreve_no_aparelho: bool = False,
     daemon_precisa_parar: bool = False,
+    nos_evdev: list[str] | None = None,
 ) -> str:
     """O bloco que todo instrumento desta pasta imprime ANTES de medir.
 
-    Ele responde, sem que ninguém precise perguntar, as quatro coisas que já
+    Ele responde, sem que ninguém precise perguntar, as coisas que já
     produziram medição falsa nesta casa: qual biblioteca, de qual arquivo, se o
-    daemon está no caminho, e se algo foi escrito no aparelho.
+    daemon está no caminho, se algo foi escrito no aparelho — e, desde
+    15/08/2026, **por qual porta** se mede e **se o evdev está grabado**.
+
+    `nos_evdev` é a lista de `/dev/input/eventN` que o instrumento vai ler. Só
+    quem lê evdev passa: para os outros, o grab não é uma pergunta, e inventar
+    uma resposta seria ruído.
     """
     estado = estado_do_daemon()
     linhas = [
@@ -418,6 +511,12 @@ def cabecalho_do_instrumento(
     ]
     for lib in bibliotecas:
         linhas.append(f"  biblioteca ....... {lib:<22} de {_procedencia(lib)}")
+    linhas.append("  " + declaracao_da_porta())
+    for caminho in nos_evdev or []:
+        if PORTA_IMPORTAVEL:
+            linhas.append(f"  grab do evdev .... {caminho}: NÃO SEI (cliente não importável)")
+            continue
+        linhas.append("  " + linha_do_grab(caminho, estado_do_grab(caminho)))
     linhas.append(
         "  escreve no aparelho? .. "
         + ("SIM" if escreve_no_aparelho else "NÃO — leitura pura, nesta rodada")

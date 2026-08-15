@@ -39,9 +39,16 @@ evento nenhum saiu dos MACs físicos — só dos vpads. Isso é comportamento
 CORRETO (é assim que o Hefesto esconde o controle do jogo), mas nunca tinha sido
 medido, e explica por que um instrumento ingênuo mede zero e conclui besteira.
 
-Por isso este instrumento, ao ver zero num nó físico com o daemon vivo, **não
-escreve "0 Hz"**: escreve `MUDO (EVIOCGRAB)`. A diferença entre as duas frases é
-a diferença entre uma medição e uma calúnia contra o aparelho.
+Por isso este instrumento, ao ver zero, **PERGUNTA ao nó se o grab está livre**
+(`estado_do_grab`, a única prova que o kernel oferece: tentar, e devolver na
+hora) antes de escrever a célula. Grab de terceiro sai `MUDO (EVIOCGRAB de
+terceiro)`; grab livre sai `0 (o controle não emitiu)`. A diferença entre as
+duas frases é a diferença entre uma medição e uma calúnia contra o aparelho.
+
+Até 15/08/2026 ele decidia isso por INFERÊNCIA — zero, nó físico, daemon vivo —
+e os três indícios andam juntos com o grab sem serem o grab: com o co-op
+desligado, um controle parado saía como `MUDO (EVIOCGRAB)` sem ninguém ter
+grabado nada.
 
 Com o daemon vivo, portanto, o que se mede de verdade é o **vpad** — que é o que
 o jogo vê, e é medida legítima, só que de outra coisa. As duas leituras estão na
@@ -72,11 +79,13 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from comum import (
+    GRAB_DE_TERCEIRO,
     Aparelho,
     cabecalho_do_instrumento,
     censo_da_mesa,
     descobrir_aparelhos,
-    estado_do_daemon,
+    estado_do_grab,
+    leitura_de_zero,
     ler_texto,
     resumo,
     tabela,
@@ -188,9 +197,19 @@ def medir(contagens: list[Contagem], segundos: float) -> list[str]:
     return falhas
 
 
-def _valor(contagem: Contagem, quantos: int, mudo: bool) -> str:
+def _valor(contagem: Contagem, quantos: int, grab: str) -> str:
+    """O texto de uma célula — e o zero DEPENDE do grab, medido, não inferido.
+
+    Até 15/08/2026 este instrumento decidia "MUDO" por INFERÊNCIA: zero, nó
+    físico, daemon rodando. Três indícios que costumam andar juntos com o
+    `EVIOCGRAB`, mas nenhum deles É o grab — com o daemon rodando e o co-op
+    desligado, um controle parado saía como "MUDO (EVIOCGRAB)" sem que
+    ninguém tivesse grabado coisa alguma, que é a calúnia ao contrário.
+    Agora o grab é PERGUNTADO ao nó (`estado_do_grab`), e a frase vem de
+    `leitura_de_zero`, uma só, compartilhada por todo instrumento da casa.
+    """
     if quantos == 0:
-        return "MUDO (EVIOCGRAB)" if mudo else "0"
+        return leitura_de_zero(grab)
     return f"{contagem.hz(quantos):.1f} Hz"
 
 
@@ -203,6 +222,22 @@ def main() -> int:
     analisador.add_argument("--so-vpads", action="store_true", help="ignorar os físicos")
     argumentos = analisador.parse_args()
 
+    # A descoberta vem ANTES do cabeçalho de propósito: ela é silenciosa, e o
+    # cabeçalho precisa saber quais nós vai ler para poder declarar o grab de
+    # cada um — que é a metade do E3 sem a qual "zero eventos" é ambíguo.
+    aparelhos = descobrir_aparelhos()
+    escolhidos = [
+        a
+        for a in aparelhos
+        if not (argumentos.so_fisicos and a.e_vpad) and not (argumentos.so_vpads and not a.e_vpad)
+    ]
+    contagens: list[Contagem] = []
+    for aparelho in escolhidos:
+        for caminho, nome in _nos_de_entrada(aparelho):
+            if "Touchpad" in nome or "Headset" in nome:
+                continue
+            contagens.append(Contagem(caminho, nome, aparelho))
+
     print(
         cabecalho_do_instrumento(
             "taxa_de_entrada.py",
@@ -210,28 +245,15 @@ def main() -> int:
             bibliotecas=["evdev", "selectors"],
             escreve_no_aparelho=False,
             daemon_precisa_parar=False,
+            nos_evdev=[c.caminho for c in contagens],
         )
     )
 
-    daemon = estado_do_daemon()
-    aparelhos = descobrir_aparelhos()
     print(f"\n  {censo_da_mesa(aparelhos)}")
 
-    escolhidos = [
-        a
-        for a in aparelhos
-        if not (argumentos.so_fisicos and a.e_vpad) and not (argumentos.so_vpads and not a.e_vpad)
-    ]
     if not escolhidos:
         print(resumo("nenhum aparelho selecionado — nada medido."))
         return 1
-
-    contagens: list[Contagem] = []
-    for aparelho in escolhidos:
-        for caminho, nome in _nos_de_entrada(aparelho):
-            if "Touchpad" in nome or "Headset" in nome:
-                continue
-            contagens.append(Contagem(caminho, nome, aparelho))
 
     if not contagens:
         print(resumo("nenhum nó de entrada encontrado sob os aparelhos — nada medido."))
@@ -243,23 +265,27 @@ def main() -> int:
     print()
     falhas = medir(contagens, argumentos.segundos)
 
+    # O grab é PERGUNTADO a cada nó, depois de medir. Antes, e não depois,
+    # seria pior: a tentativa de grab (a única prova que o kernel oferece) tira
+    # o nó de quem o segura por microssegundos, e fazer isso no meio da janela
+    # de contagem contaminaria a própria medida.
     cabecalho = ["aparelho", "transporte", "nó", "entrada", "giro", "acelerômetro", "botões"]
     linhas: list[list[str]] = []
     mudos: list[str] = []
     for contagem in contagens:
-        vazio = contagem.sincronismos == 0
-        mudo = vazio and not contagem.dono.e_vpad and daemon.rodando
-        if mudo:
+        grab = estado_do_grab(contagem.caminho)
+        preso = grab == GRAB_DE_TERCEIRO
+        if preso:
             mudos.append(contagem.dono.apelido)
         linhas.append(
             [
                 contagem.dono.apelido,
                 contagem.dono.transporte,
                 "movimento" if contagem.e_motion else "principal",
-                _valor(contagem, contagem.sincronismos, mudo),
-                _valor(contagem, contagem.giro, mudo) if contagem.e_motion else "-",
-                _valor(contagem, contagem.acelerometro, mudo) if contagem.e_motion else "-",
-                str(contagem.botoes) if not mudo else "-",
+                _valor(contagem, contagem.sincronismos, grab),
+                _valor(contagem, contagem.giro, grab) if contagem.e_motion else "-",
+                _valor(contagem, contagem.acelerometro, grab) if contagem.e_motion else "-",
+                str(contagem.botoes) if not preso else "-",
             ]
         )
     print(tabela(cabecalho, linhas))

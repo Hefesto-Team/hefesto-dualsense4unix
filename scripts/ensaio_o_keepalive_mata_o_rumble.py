@@ -55,7 +55,15 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "ensaios"))
 import identidade_do_vpad  # a régua única do vpad (VPAD-NO-ESPELHO-01)
+from comum import (  # o chão dos instrumentos: uma porta só, um grab só
+    PortaFechadaError,
+    abrir_no_hidraw,
+    declaracao_da_porta,
+    estado_do_grab,
+    linha_do_grab,
+)
 
 BIBLIOTECA = "python-evdev (EV_FF) + hidraw cru"
 MONTAGEM = "_build_common do produto + ds_output_report.build_{usb,bt}_report"
@@ -263,11 +271,15 @@ def main(argv: list[str] | None = None) -> int:
 
     itens = inventario()
     if args.listar:
-        print(f"instrumento: {BIBLIOTECA}\nmontagem   : {MONTAGEM}\n")
-        print(f"{'jogador':9} {'transporte':11} {'hidraw':16} evdev")
-        print("-" * 62)
+        print(f"instrumento: {BIBLIOTECA}\nmontagem   : {MONTAGEM}")
+        print(declaracao_da_porta() + "\n")
+        print(f"{'jogador':9} {'transporte':11} {'hidraw':16} {'evdev':17} grab")
+        print("-" * 90)
         for i in itens:
-            print(f"{i['jogador']:9} {i['transporte']:11} {i['hidraw']:16} {i['evdev']}")
+            print(
+                f"{i['jogador']:9} {i['transporte']:11} {i['hidraw']:16} "
+                f"{i['evdev']:17} {estado_do_grab(i['evdev'])}"
+            )
         return 0
 
     if not args.alvo:
@@ -311,8 +323,16 @@ def main(argv: list[str] | None = None) -> int:
               f"bloco common[{base}..{base+9}], flag0 {bit}")
         print(f"report     : {len(report)} B, id 0x{report[0]:02x}\n")
         try:
-            with open(alvo["hidraw"], "wb", buffering=0) as fio:
-                fio.write(report)
+            try:
+                escrita = abrir_no_hidraw(alvo["hidraw"], escrita=True)
+            except PortaFechadaError as erro:
+                print(f"  {erro}", file=sys.stderr)
+                return 4
+            print(f"  {escrita.linha_de_relatorio}")
+            try:
+                os.write(escrita.fd, report)
+            finally:
+                escrita.fechar()
             print(f"  efeito de gatilho ESCRITO. Esperando {args.depois}s antes de você apertar")
             print("  (a espera é de propósito: dá tempo do keepalive agir, se ele agir)")
             time.sleep(args.depois)
@@ -346,6 +366,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"instrumento: {BIBLIOTECA}")
     print(f"montagem   : {MONTAGEM}")
     print(f"alvo       : {alvo['jogador']} {alvo['transporte']} {alvo['hidraw']} {alvo['evdev']}")
+    print(declaracao_da_porta())
+    # O grab importa AQUI mais que em qualquer outro lugar: se outro processo
+    # segurar o evdev, o `upload_effect` abaixo pode subir e o motor não girar,
+    # e "não vibrou" seria a resposta errada à pergunta deste ensaio.
+    print(linha_do_grab(alvo["evdev"], estado_do_grab(alvo["evdev"])))
     print(f"fase       : {args.fase}  (report neutro com common[2]={weak}, common[3]={strong})")
     print(f"report     : {len(report)} B, id 0x{report[0]:02x}\n")
 
@@ -364,8 +389,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  motor LIGADO por EV_FF; o report neutro sai em {args.antes}s...")
         time.sleep(args.antes)
 
-        with open(alvo["hidraw"], "wb", buffering=0) as fio:
-            fio.write(report)
+        escrita = abrir_no_hidraw(alvo["hidraw"], escrita=True)
+        print(f"  {escrita.linha_de_relatorio}")
+        try:
+            os.write(escrita.fd, report)
+        finally:
+            escrita.fechar()
         print(f"  >>> REPORT NEUTRO ESCRITO agora <<<  (mais {args.depois}s de observação)")
         time.sleep(args.depois)
     finally:

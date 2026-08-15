@@ -36,6 +36,16 @@ Por isso o gravador agora RECUSA rodar com o daemon de pé, e diz o comando de
 parar e o de trazer de volta. `--com-o-daemon-vivo` desarma a recusa para quem
 tiver razão para isso, e carimba o header da captura com a ressalva, para que
 nenhuma medição futura acredite nela sem saber.
+
+A PORTA, DECLARADA — 15/08/2026 (A-PORTA-QUE-A-CASA-CONSTRUIU-01)
+=================================================================
+Este gravador **não abre `/dev/hidraw*` por conta própria**: quem abre é o
+`PyDualSenseController` do produto, pela hidapi. Isso significa que ele entra
+por `open()` direto, e não pelo broker — e com o co-op ligado o físico está
+escondido (`0600`, sem ACL), então o `connect()` falha por permissão e não por
+falta de controle. O gravador declara a porta ANTES de tentar, e carimba o
+header da captura com ela: uma fixture que não diz por onde foi gravada não
+pode ser comparada com outra.
 """
 from __future__ import annotations
 
@@ -43,12 +53,17 @@ import argparse
 import contextlib
 import gzip
 import json
+import os
 import socket
 import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "ensaios"))
+
+from comum import PORTA_DIRETA, declaracao_da_porta, porta_provavel
 
 DEFAULT_SAMPLE_HZ = 30
 STEP_TIMEOUT_SEC = 12.0      # tempo máximo pra cada passo do modo guiado
@@ -398,6 +413,22 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 5
 
+    # A DECLARAÇÃO ANTES DA MEDIÇÃO. A porta deste instrumento é sempre o
+    # `open()` da hidapi (é o backend do produto que abre, não ele), mas se o
+    # broker está de pé isso quer dizer que o físico PODE estar escondido — e
+    # aí o erro que vem a seguir é de permissão, não de aparelho ausente.
+    porta_do_broker, motivo_do_broker = porta_provavel()
+    print("biblioteca ....... pydualsense/hidapi (PyDualSenseController do produto)")
+    print(f"porta ............ {PORTA_DIRETA} — quem abre é o backend do produto, pela hidapi")
+    print(f"  {declaracao_da_porta()}")
+    if porta_do_broker != PORTA_DIRETA:
+        print(
+            "  ATENÇÃO: o broker está de pé, então os hidraw dos FÍSICOS podem estar\n"
+            "  escondidos (0600, sem ACL) — é o Hefesto tirando o controle do jogo.\n"
+            "  Se o connect() abaixo falhar por permissão, NÃO é a regra udev:\n"
+            "    systemctl --user stop hefesto-dualsense4unix"
+        )
+
     try:
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
     except ImportError as exc:
@@ -451,6 +482,11 @@ def main(argv: list[str] | None = None) -> int:
         # Viaja com a captura de propósito: quem replayar isto daqui a meses
         # precisa saber se havia um segundo dono do hidraw na hora da gravação.
         "daemon_vivo_na_gravacao": daemon_vivo,
+        # E por qual PORTA se gravou. Duas fixtures do mesmo controle gravadas
+        # por portas diferentes não são comparáveis, e sem este campo ninguém
+        # descobriria isso meses depois.
+        "porta_da_gravacao": PORTA_DIRETA,
+        "broker_no_caminho": motivo_do_broker,
     }
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -103,7 +103,9 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "ensaios"))
 import identidade_do_vpad  # noqa: E402  — a régua única do vpad
+from comum import PortaFechadaError, abrir_no_hidraw, declaracao_da_porta  # noqa: E402
 
 SERVICO = "hefesto-dualsense4unix.service"
 CADERNO = RAIZ / "docs" / "data" / "ensaios.csv"
@@ -494,6 +496,9 @@ class Bancada:
     seco: bool = False
     keepalive: bool = True
     fd: int | None = None
+    #: Por onde o hidraw foi aberto, já na frase do relatório. Nasce vazia e é
+    #: preenchida no `abrir`; o modo seco nunca abre nada e a mantém vazia.
+    porta: str = ""
     seq: int = 0
     escritas: int = 0
     # RLock, e não Lock, de propósito: o Ctrl+C pode chegar com o laço do pulso
@@ -539,9 +544,21 @@ class Bancada:
     # -- escrita ----------------------------------------------------------
 
     def abrir(self) -> None:
+        """Abre o hidraw PELA PORTA DO BROKER — e guarda por onde entrou.
+
+        O `os.open` que estava aqui colhia `EACCES` em toda mesa com o co-op
+        ligado (A-PORTA-QUE-A-CASA-CONSTRUIU-01): o Hefesto esconde o físico
+        do jogo de propósito, e este instrumento é, para o kernel, mais um
+        processo da sessão. O `O_NONBLOCK` vira `set_blocking(False)` porque o
+        fd pode ter vindo do broker, já aberto — a flag se põe depois, e o
+        efeito é o mesmo.
+        """
         if self.seco:
             return
-        self.fd = os.open(self.fisico.hidraw, os.O_RDWR | os.O_NONBLOCK)
+        aberto = abrir_no_hidraw(self.fisico.hidraw, escrita=True)
+        self.fd = aberto.fd
+        self.porta = aberto.linha_de_relatorio
+        os.set_blocking(self.fd, False)
         atexit.register(self.parar, "atexit")
         if self.keepalive and self.fisico.transporte == "bluetooth":
             self._thread = threading.Thread(target=self._laco_keepalive, daemon=True)
@@ -701,6 +718,10 @@ def cabecalho(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> None
     print("=" * 78)
     print(f"  hidraw ............ {fisico.hidraw}")
     print(f"  transporte ........ {fisico.transporte} (lido do uevent, não da memória)")
+    # A porta vai ao lado da biblioteca pelo mesmo motivo que ela: medir no nó
+    # escondido produz zero convincente e falso, como medir contra a biblioteca
+    # errada produz alarme convincente e falso.
+    print(f"  {declaracao_da_porta()}")
     print(f"  daemon ............ {'ATIVO' if daemon_ativo() else 'parado'}")
     print(f"  idade ............. {idade_do_daemon()}")
     print(f"  supressão de LED .. {'ligada' if args.suprimir_leds else 'DESLIGADA'} "
@@ -773,7 +794,11 @@ def modo_parar(fisico: Fisico, base: bytearray) -> int:
     bancada = Bancada(fisico=fisico, base=base)
     try:
         bancada.abrir()
+        print(f"  {bancada.porta}")
         bancada.parar("pânico")
+    except PortaFechadaError as erro:
+        print(f"  {erro}")
+        return 4
     finally:
         bancada.fechar()
     print("  Sequência de parada mandada. Confirme com ela que o controle está mudo.")
@@ -829,7 +854,14 @@ def modo_ensaio(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> in
     signal.signal(signal.SIGTERM, _sinal)
 
     try:
-        bancada.abrir()
+        try:
+            bancada.abrir()
+        except PortaFechadaError as erro:
+            print(f"  {erro}")
+            return 4
+        # A porta REALMENTE usada, depois de aberta — o cabeçalho declarou a
+        # provável; esta é a que valeu para este nó.
+        print(f"  {bancada.porta}\n")
         for condicao in condicoes:
             flags = imprimir_condicao(condicao, base)
             input("    [enter] para disparar ")
