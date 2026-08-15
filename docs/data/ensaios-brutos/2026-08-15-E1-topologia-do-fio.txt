@@ -1,0 +1,63 @@
+==============================================================================
+  E-1 — A TOPOLOGIA DO FIO: cabo e rádio dividem o controlador USB?
+  (PLANO DA MESA 2+2, seção 4, ensaio E-1)
+==============================================================================
+  porta ............ NENHUMA — não se abre hidraw nenhum neste ensaio
+  biblioteca ....... NENHUMA — `readlink -f` e `lsusb` do shell, e essa é a graça
+  EVIOCGRAB ........ não se aplica: nenhum evdev é aberto aqui
+  escreve no aparelho? .. NÃO — sysfs puro, leitura de arquivo
+  régua ............ o "controlador" é o NÓ PCI DO xHCI, e não o número de "Bus"
+                     do lsusb nem o hub intermediário. A comparação é TEXTUAL
+                     sobre o caminho inteiro que o `readlink -f` devolve.
+==============================================================================
+
+T0 (hora de parede): 2026-08-15 07:21:15.170
+
+== adaptador de rádio ==
+/sys/devices/pci0000:00/0000:00:08.1/0000:0c:00.3/usb3/3-4/3-4:1.0/bluetooth/hci0
+
+== controles do cabo ==
+hidraw4 -> /sys/devices/pci0000:00/0000:00:08.1/0000:0c:00.3/usb3/3-2/3-2:1.3/0003:054C:0CE6.0005
+hidraw5 -> /sys/devices/pci0000:00/0000:00:08.1/0000:0c:00.3/usb3/3-3/3-3:1.3/0003:054C:0CE6.0006
+
+== controles do rádio (contraste: BlueZ >= 5.73 os põe sob uhid) ==
+hidraw9 -> /sys/devices/virtual/misc/uhid/0005:054C:0CE6.000B
+hidraw11 -> /sys/devices/virtual/misc/uhid/0005:054C:0CE6.000D
+
+== a árvore, com velocidade ==
+/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/10p, 480M
+    |__ Port 003: Dev 002, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 003: Dev 002, If 1, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 004: Dev 003, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 004: Dev 003, If 1, Class=Human Interface Device, Driver=usbhid, 12M
+/:  Bus 002.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/4p, 10000M
+/:  Bus 003.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/4p, 480M
+    |__ Port 002: Dev 002, If 0, Class=Audio, Driver=snd-usb-audio, 480M
+    |__ Port 002: Dev 002, If 1, Class=Audio, Driver=snd-usb-audio, 480M
+    |__ Port 002: Dev 002, If 2, Class=Audio, Driver=snd-usb-audio, 480M
+    |__ Port 002: Dev 002, If 3, Class=Human Interface Device, Driver=usbhid, 480M
+    |__ Port 003: Dev 003, If 0, Class=Audio, Driver=snd-usb-audio, 480M
+    |__ Port 003: Dev 003, If 1, Class=Audio, Driver=snd-usb-audio, 480M
+    |__ Port 003: Dev 003, If 2, Class=Audio, Driver=snd-usb-audio, 480M
+    |__ Port 003: Dev 003, If 3, Class=Human Interface Device, Driver=usbhid, 480M
+    |__ Port 004: Dev 004, If 0, Class=Wireless, Driver=btusb, 12M
+    |__ Port 004: Dev 004, If 1, Class=Wireless, Driver=btusb, 12M
+/:  Bus 004.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/4p, 10000M
+    |__ Port 001: Dev 002, If 0, Class=Vendor Specific Class, Driver=rtw88_8822bu, 5000M
+
+== os endpoints, que são a RÉGUA INDEPENDENTE do braço do cabo ==
+-- 3-2 (speed 480M) --
+   ep_82  type=Isoc  interval=1ms  wMaxPacketSize=00c4
+   ep_03  type=Interrupt  interval=4ms  wMaxPacketSize=0040
+   ep_84  type=Interrupt  interval=4ms  wMaxPacketSize=0040
+-- 3-3 (speed 480M) --
+   ep_03  type=Interrupt  interval=4ms  wMaxPacketSize=0040
+   ep_84  type=Interrupt  interval=4ms  wMaxPacketSize=0040
+-- 3-4 (speed 12M) --
+   ep_02  type=Bulk  interval=0ms  wMaxPacketSize=0040
+   ep_81  type=Interrupt  interval=1ms  wMaxPacketSize=0010
+   ep_82  type=Bulk  interval=0ms  wMaxPacketSize=0040
+   ep_03  type=Isoc  interval=1ms  wMaxPacketSize=0000
+   ep_83  type=Isoc  interval=1ms  wMaxPacketSize=0000
+
+T1 (hora de parede): 2026-08-15 07:21:15.195

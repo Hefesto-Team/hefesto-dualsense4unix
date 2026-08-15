@@ -1,0 +1,5 @@
+quando,mac_mascarado,transporte,hidraw,porta,report_id,offset_accel,offset_gyro,reports_aproveitados,segundos,taxa_hz,modulo_g_mediano,desvio_g,accel_x_g,accel_y_g,accel_z_g,giro_x_dps,giro_y_dps,giro_z_dps,regua_lsb_por_g,regua_do_kernel,erro
+2026-08-15T07:27:28.438,d4:2f:4b:00:00:d8,cabo,hidraw4,broker (SCM_RIGHTS),0x01,22,16,5000,20.000,250.0,1.0095,0.0139,0.0094,0.9958,0.1659,0.020,0.000,-0.014,8192,8192,
+2026-08-15T07:27:28.438,a0:fa:9c:00:00:f0,cabo,hidraw5,broker (SCM_RIGHTS),0x01,22,16,5001,20.000,250.0,0.9777,0.0140,-0.0210,0.9612,0.1790,0.018,-0.008,-0.003,8192,8192,
+2026-08-15T07:27:28.438,44:46:48:00:00:03,rádio,hidraw9,broker (SCM_RIGHTS),0x31,23,17,7512,20.000,375.6,0.9899,0.0012,0.0095,0.3312,-0.9328,0.007,0.013,-0.002,8192,8192,
+2026-08-15T07:27:28.438,14:3a:9a:00:00:ab,rádio,hidraw11,broker (SCM_RIGHTS),0x31,23,17,3929,20.000,196.4,0.9777,0.0015,-0.0007,0.3144,-0.9258,-0.002,-0.002,-0.001,8192,8192,
