@@ -682,6 +682,7 @@ if sudo -n true 2>/dev/null; then
         sudo sysctl --system >/dev/null 2>&1 || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh \
+        /usr/local/lib/hefesto-dualsense4unix/bt_bonds_autorestore.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_health_watchdog.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh \
