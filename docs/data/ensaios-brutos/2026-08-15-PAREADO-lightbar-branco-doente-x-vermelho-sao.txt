@@ -1,0 +1,194 @@
+=== COMPARAÇÃO PAREADA — a lightbar do BRANCO ignora, a do VERMELHO obedece ===
+
+Data ............. 15/08/2026, entre 14h31 e 14h45
+Pergunta ......... o que difere entre o controle DOENTE e o SÃO, estando os
+                   dois no MESMO transporte (rádio), no MESMO host, na MESMA
+                   sessão do daemon, no MESMO instante?
+Por que é inédito  toda medição anterior desta frente tinha SÓ o lado doente.
+                   Esta tem doente e são lado a lado. É comparação pareada.
+
+A PROCEDÊNCIA DECLARADA (regra da casa)
+---------------------------------------
+  leitura de sysfs .. sem root, sem abrir aparelho, sem escrever
+  btmon ............. `sudo btmon -w`, SNIFFER passivo do HCI — não injeta nada
+  bibliotecas ....... nenhuma; só coreutils, `hcitool`, `btmon` e `diff`
+  daemon ............ RODANDO o tempo todo. NÃO foi parado, NÃO foi reiniciado.
+  bluetooth.service . NÃO foi tocado.
+  power-off ......... NENHUM controle foi desligado. A evidência está viva.
+
+  ESCRITA FEITA, e é a única: `echo "0 255 0" > .../multi_intensity` nos DOIS
+  nós de lightbar, uma vez em cada, às 14:36:17 (vermelho) e 14:36:19 (branco).
+  Valor IDÊNTICO ao que já estava lá — nada mudou de estado. Foi o mínimo
+  necessário para pôr a escrita ignorada no ar e fotografá-la no `btmon`.
+
+QUEM É QUEM (não pelo LED — pelo `HID_UNIQ` cruzado com o journal)
+------------------------------------------------------------------
+  papel      MAC (mascarado)     nó HID                    hidraw  leds       handle ACL
+  ---------  ------------------  ------------------------  ------  ---------  ----------
+  VERMELHO   44:46:48:00:00:03   0005:054C:0CE6.0019       hidraw8 input285   5
+  (SÃO)      journal 14:17:00 `coop_player_added player=3`
+  BRANCO     14:3a:9a:00:00:ab   0005:054C:0CE6.001A       hidraw9 input288   6
+  (DOENTE)   journal 14:17:00 `coop_player_added player=4`
+
+  RESSALVA HONESTA sobre a rotulagem de COR: o par MAC->cor vem da tabela do
+  estudo `2026-08-15-A-ESCADA-QUE-RESPONDE...md:28-29`, que foi conferida com o
+  olho dela naquele ensaio. O firmware NÃO foi perguntado aqui (o `E7` fez a
+  rodada de rádio SECA). Se a cor do plástico for lida do aparelho, confira
+  contra esta tabela antes de acreditar em qualquer conclusão que dependa dela.
+
+
+== 1. O DIFF EXAUSTIVO DE SYSFS ==============================================
+
+306 atributos legíveis lidos em CADA aparelho, sob
+`/sys/bus/hid/devices/0005:054C:0CE6.00{19,1A}/` (inclui `leds/`, `input/`,
+`hidraw/`, `power/`, `power_supply/`), normalizados os números de nó
+(hidrawN, inputN, eventN, jsN, mouseN, hwmonN, wakeupN) e os MACs.
+
+RESULTADO: 306 de 306 iguais, EXCETO TRÊS coisas.
+
+  (a) hardware_version   VERMELHO 0x00000811   BRANCO 0x00000711
+  (b) bateria            VERMELHO status=Full,        capacity=100
+                         BRANCO   status=Discharging, capacity=95
+  (c) player-LED         VERMELHO padrão de player 3; BRANCO padrão de player 4
+                         (esperado — é a numeração do co-op, não defeito)
+
+O QUE É IDÊNTICO, e vale tanto quanto o que difere:
+  - `report_descriptor`: `cmp` passou, byte a byte, 320 B nos dois
+  - `rdesc` do debugfs (`/sys/kernel/debug/hid/`): idêntico
+  - `firmware_version`: 0x0110002a nos DOIS
+  - `country`, `modalias`, `HID_ID`, `HID_NAME`, `HID_PHYS`, `DRIVER=playstation`
+  - `input/*/capabilities/{ev,key,abs,rel,ff,led,msc,snd,sw}`: idênticos
+  - `id/{bustype,product,vendor,version}` = 0005 / 0ce6 / 054c / 8100 nos dois
+  - `power/*`: control=auto, runtime_status=unsupported nos dois
+  - **os nós de LED**: `brightness=255`, `max_brightness=255`,
+    `multi_index=red green blue`, `multi_intensity=0 255 0`, `trigger=[none]`
+    IDÊNTICOS. O sysfs do BRANCO aceitou o verde e o guarda. A barra está apagada.
+
+
+== 2. BLUEZ E O ENLACE =======================================================
+
+  /var/lib/bluetooth/d8:44:89:00:00:c4/<MAC>/info — IDÊNTICOS nos dois,
+  campo a campo, exceto a chave de enlace (não transcrita) e o horário de
+  pareamento (06:29 x 06:30):
+      Class=0x002508 · SupportedTechnologies=BR/EDR · Trusted=true
+      Blocked=false · CablePairing=false · WakeAllowed=true
+      Services=...1124 (HID) e ...1200 (PnP)
+      DeviceID: Source=2 Vendor=1356 Product=3302 Version=256
+
+  hcitool con:
+      ACL 44:46:48:00:00:03 handle 5 state 1 lm CENTRAL AUTH ENCRYPT
+      ACL 14:3a:9a:00:00:ab handle 6 state 1 lm CENTRAL AUTH ENCRYPT
+    Mesmo papel (CENTRAL), mesma autenticação, mesma cifra.
+
+  Por conexão, IDÊNTICOS nos dois:
+      link policy ......... RSWITCH HOLD SNIFF PARK
+      supervision timeout . 32000 slots (20000,00 ms)
+      AFH map ............. 0xfeffffffffff1f00007f
+      transmit power ...... 0
+      link quality ........ 0
+    Só o RSSI difere, e por nada: -28 (vermelho) x -25 (branco).
+    NENHUM dos dois está em sniff que os distinga. Sniff/role: DESCARTADO.
+
+
+== 3. QUEM TEM O NÓ ABERTO ===================================================
+
+  fuser -v /dev/hidraw8 /dev/hidraw9:
+      /dev/hidraw8: steam(610430) · hefesto-dualsen(615228)
+      /dev/hidraw9: steam(610430) · hefesto-dualsen(615228)
+    OS MESMOS DOIS PROCESSOS, nos dois nós. Simétrico.
+    (Coerente com "já superamos a Steam": ela está nos dois, e um obedece.)
+
+  Os quatro nós físicos estão 0600 root:root — o broker do Hefesto escondendo
+  o físico do jogo. Esta medição não fez nenhum `open()` direto.
+
+
+== 4. O ACHADO CENTRAL: A ESCRITA SAI IDÊNTICA NO AR ==========================
+
+`btmon` passivo durante as duas escritas de `0 255 0`. UM único
+`ACL Data TX` por controle, e o pacote é o MESMO:
+
+  VERMELHO (handle 5, SÃO) — #603, t=2.448113
+    a2 31 b0 10 00 04 00 00 00 00 00 00 00 00 00 00
+    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    00 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    00 00 00 00 00 00 00 00 00 00 00 1e 40 ce 70
+
+  BRANCO (handle 6, DOENTE) — #1216, t=4.449787
+    a2 31 90 10 00 04 00 00 00 00 00 00 00 00 00 00
+    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    00 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    00 00 00 00 00 00 00 00 00 00 00 4c a9 b7 88
+
+  BYTE A BYTE IGUAIS, com exatamente duas exceções obrigatórias:
+    [2] = seq<<4 ...... 0xb0 (seq 11) x 0x90 (seq 9) — contador do driver
+    [75..78] = CRC-32 . consequência do seq
+
+  Leitura do envelope: [1]=0x31 · [3]=0x10 tag · [4]=valid_flag0=0x00 ·
+  [5]=valid_flag1=0x04 (LIGHTBAR_CONTROL_ENABLE) · RGB em [48..50] = 00 ff 00.
+  É o verde pedido, e ele está no ar nos dois.
+
+  E O BRANCO CONFIRMA A ENTREGA NO ENLACE:
+      > HCI Event: Number of Completed Packets, Handle 6, Count 1   (#1217)
+      > ACL Data RX: Handle 6 dlen 83                               (#1218)
+  O aparelho recebeu, o controlador de enlace confirmou, e o branco seguiu
+  mandando reports de entrada 0x31 normalmente. A barra continuou apagada.
+
+  CONCLUSÃO DESTA SEÇÃO, e é dura:
+  o kernel monta certo, o CRC está certo, o rádio entrega, o aparelho ACK-a.
+  O que ignora a cor está DENTRO DO FIRMWARE DO BRANCO.
+  Ficam DESCARTADOS, com medição: rota de escrita, CRC, tamanho, seq
+  desalinhado a ponto de derrubar o pacote, supressão do produto, disputa de
+  hidraw, transporte, sniff, papel de enlace, política de enlace, BlueZ,
+  e o descritor.
+
+
+== 5. O BYTE DE STATUS NO REPORT DE ENTRADA ==================================
+
+Mesma captura, reports de entrada 0x31 (`a1 31 ...`), byte de `status`
+(offset 55 absoluto = common[52]):
+
+  VERMELHO  status = 0x29  ->  nível 9, power_state 0x2 = CARGA COMPLETA
+  BRANCO    status = 0x09  ->  nível 9, power_state 0x0 = DESCARREGANDO
+
+  Confere com o `power_supply` do sysfs, e é ESTÁVEL: três amostras em 10 s
+  deram Full/Discharging as três vezes.
+
+  Os DOIS estão com o mesmo nível de bateria (nibble 9). O que difere é o
+  ESTADO DE ENERGIA: o são se diz alimentado e completo; o doente, na bateria.
+
+
+== 6. O QUE MAIS FOI CONFERIDO E NÃO SEPAROU OS DOIS =========================
+
+  - `dmesg`/journal: os dois adotados no mesmo segundo (14:16:57 e 14:16:58),
+    o mesmo `Registered DualSense controller ... fw_version=0x0110002a`
+  - erros `DualSense input CRC's check failed`: acontecem nos DOIS
+    (0019 às 14:26:24, 14:27:26, 14:28:44; 001A às 14:27:46, 14:33:12).
+    É ruído de rádio, e o SÃO tem MAIS que o doente.
+  - `hid_playstation` (DKMS, kernel 7.0.11-76070011-generic), parâmetros:
+    ds4_short_pairing_info=Y · ds4_synthetic_mac=Y · feature_retries=2.
+    São de módulo, valem para os dois igualmente.
+  - o daemon mandou `(0, 255, 0)` para os QUATRO nós às 14:24:06 e às 14:27:34,
+    e `lightbar_reset_sob_demanda enviado=True` para as QUATRO chaves às
+    14:27:33. Tratamento simétrico, resultado assimétrico.
+  - o ensaio `E7` (cor do plástico) fez rodada SECA nos dois de rádio —
+    nada foi ao fio. NÃO é candidato.
+
+
+== 7. O QUE ESTA MEDIÇÃO NÃO SEPAROU ========================================
+
+Sobraram DUAS diferenças de estado, e elas estão confundidas 1:1 com o
+aparelho — há um exemplar de cada:
+
+  (a) power_state: alimentado/completo (são) x descarregando (doente)
+  (b) hardware_version: 0x0811 (são) x 0x0711 (doente)
+
+Não há, nesta mesa, um segundo aparelho de cada revisão para desconfundir.
+O ensaio que separa está no estudo que acompanha este arquivo.
+
+
+MÁSCARAS APLICADAS NESTE ARQUIVO
+--------------------------------
+  MAC ......... octetos 4 e 5 zerados (máscara da casa), inclusive o adaptador
+  chave de enlace do BlueZ ... NÃO transcrita, nem parcialmente
