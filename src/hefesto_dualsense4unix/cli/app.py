@@ -144,11 +144,16 @@ def lightbar_reset(
     comando manda o report que devolve o claim, pelo handle que o daemon já tem
     aberto — sem disputar o hidraw com ele.
 
-    Ele existe para tornar falsificável uma contradição entre duas medições da
-    casa: o 0x08 dentro da janela de ~3,4 s pós-conexão travou a barra (7/7 em
-    03/08), e sem 0x08 nenhum a barra ficou morta por 5 dias (08/08). A
-    hipótese que as concilia — ele cura FORA da janela — se testa aqui, com o
-    olho de quem está com o controle na mão.
+    Ele existe para tornar falsificável o que sobrou de pé sobre o 0x08: dentro
+    da janela de ~3,4 s pós-conexão ele travou a barra (7/7 em 03/08), e FORA
+    dela não travou (controle negativo da mesma sprint). A hipótese que as
+    concilia — ele cura FORA da janela — se testa aqui, com o olho de quem está
+    com o controle na mão.
+
+    Aqui se lia também que "sem 0x08 nenhum a barra ficou morta por 5 dias
+    (08/08)". Era FALSO, e caiu em 11/08: sem 0x08 a barra ACENDEU no rádio
+    quatro vezes nesses cinco dias. A correção inteira, com endereço de ensaio,
+    está no docstring de `cli/cmd_lightbar_reset.py`.
 
     Exige o daemon vivo: é ele que tem o handle.
     """

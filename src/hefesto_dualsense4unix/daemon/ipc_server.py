@@ -129,9 +129,14 @@ class IpcServer(IpcHandlersMixin):
             # medição, não caminho automático. Manda o Reset LED state
             # (0x08) sob demanda pelo handle que o daemon já tem aberto —
             # é o que separa "o 0x08 trava a barra" de "o 0x08 trava a
-            # barra QUANDO mandado em cima da conexão", que é a
-            # contradição aberta entre a LIGHTBAR-BT-CULPADO-01 (03/08) e
-            # a medição de 08/08 (5 dias sem 0x08, barra morta).
+            # barra QUANDO mandado em cima da conexão" — o que a
+            # LIGHTBAR-BT-CULPADO-01 (03/08) mediu: 7/7 dentro da janela
+            # de ~3,4 s, e o controle negativo, fora dela, não travou.
+            # Aqui se lia também "a medição de 08/08 (5 dias sem 0x08,
+            # barra morta)": era FALSA e caiu em 11/08 — sem 0x08 a barra
+            # ACENDEU no rádio quatro vezes nesses cinco dias (ensaios
+            # `lightbar-bt-aceso-*` em `docs/data/ensaios.csv`; correção
+            # inteira no docstring de `cli/cmd_lightbar_reset.py`).
             "lightbar.reset": self._handle_lightbar_reset,
             # LIGHTBAR-ISOLAR-OS-PLAYERS-01: o outro instrumento da mesma
             # medição — desliga a escrita do LED de JOGADOR ao vivo, para

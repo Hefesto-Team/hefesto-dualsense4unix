@@ -4,7 +4,7 @@
 AS DUAS PERGUNTAS, E POR QUE ELAS MORAM NO MESMO INSTRUMENTO
 -------------------------------------------------------------
 **E-5:** *o microfone do controle NO CABO capta de verdade?* A célula
-`audio.microfone@dualsense`, coluna `cabo_confianca`, está em
+`audio.microfone@dualsense`, coluna `cabo_de_onde_sei`, está em
 `inferido-do-codigo`, e a evidência de hoje é **o arquivo do WirePlumber** — o
 que é medir a configuração, não o aparelho. O braço do rádio já é `medido` de
 verdade desde 25/07 (protocolo byte a byte, Opus decodificado).

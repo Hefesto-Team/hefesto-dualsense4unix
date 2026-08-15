@@ -4,7 +4,7 @@
 A PERGUNTA QUE ELE RESPONDE
 ----------------------------
 *O acelerômetro do controle NO CABO entrega número calibrado?* A célula
-`movimento.acelerometro@dualsense`, coluna `cabo_confianca`, está em
+`movimento.acelerometro@dualsense`, coluna `cabo_de_onde_sei`, está em
 `inferido-do-codigo` desde que o mapa nasceu, e o motivo estava escrito:
 **nunca houve controle no cabo para medir**. A mesa 2+2 de 15/08/2026 pôs dois,
 e o braço do rádio já foi medido em 14/08 (0,9945 g e 0,9823 g) — então dá para
@@ -672,7 +672,7 @@ def main() -> int:
         elif not do_cabo:
             veredito = (
                 "o rádio reproduziu 14/08, mas nenhum controle do CABO produziu amostra. "
-                "A célula `cabo_confianca` continua sem medição."
+                "A célula `cabo_de_onde_sei` continua sem medição."
             )
         else:
             cabo_txt = "; ".join(f"{m.modulo_mediano:.4f} g" for m in do_cabo)
