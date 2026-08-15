@@ -40,6 +40,11 @@ UNITS = [
 SCRIPTS = [
     REPO_ROOT / "scripts" / "bt_bonds_snapshot.sh",
     REPO_ROOT / "scripts" / "bt_bonds_restore.sh",
+    # BONDS-QUE-SOBREVIVEM-01 (15/08/2026): a VOLTA automática, armada no
+    # ExecStopPost do drop-in. Entra aqui para herdar a simetria
+    # install/uninstall e o `bash -n`; as invariantes dele têm portão próprio em
+    # tests/unit/test_bonds_que_sobrevivem_01_o_gatilho_da_volta.py.
+    REPO_ROOT / "scripts" / "bt_bonds_autorestore.sh",
     REPO_ROOT / "scripts" / "bt_health_watchdog.sh",
     REPO_ROOT / "scripts" / "bt_crash_capture.sh",
     REPO_ROOT / "scripts" / "bt_active_mode.sh",
