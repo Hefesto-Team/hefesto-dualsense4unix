@@ -239,6 +239,17 @@ OUT_REPORT_KEEPALIVE_SEC: float = 0.5
 #: estrago quando alguém está vibrando por fora.
 OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC: float = 2.0
 
+#: LACO-DE-ESCRITA-02 (15/08/2026): por quanto tempo a ENTRADA de um controle
+#: pode ficar muda antes de virar UMA linha de aviso no journal. O handle é
+#: aberto sem `blocking=True`, então `hidapi.Device.read` devolve `None` na hora
+#: quando não há dado — e isso NÃO é erro, é o contrato da leitura
+#: não-bloqueante. Mas a fila do `hidraw` vive cheia (o laço consome ~31
+#: reports/s de um fluxo de 200-360/s com a mesa cheia), então para o `read`
+#: devolver `None` o aparelho precisa ter parado por tempo suficiente para
+#: drenar a fila inteira — ordem de segundos. Um segundo já é MUITO acima do
+#: normal e ainda assim rende, no máximo, uma linha por episódio.
+LEITURA_VAZIA_AVISO_SEC: float = 1.0
+
 # QUEDA-QUE-PENDURA-01: teto do join da report_thread no `close()`. Meio
 # segundo é uma eternidade para um laço que gira a ~100 Hz e ainda assim
 # é imperceptível no desligamento — contra os 90 s do SIGKILL do systemd.
@@ -429,10 +440,39 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     instâncias, cada uma falando com um controle distinto.
     """
 
+    # --- defaults de CLASSE, e a razão de existirem ---------------------
+    #
+    # Os três campos abaixo têm valor de classe porque nem todo
+    # `_PinnedPyDualSense` passa pelo `__init__`: a suíte constrói dublês com
+    # `__new__` (nove arquivos em `tests/unit/`) e só preenche o que o trecho
+    # sob teste usa. Um `getattr` defensivo em cada leitura resolveria, mas
+    # esconderia o campo; o default de classe deixa o nome VISÍVEL aqui e faz o
+    # dublê funcionar sem que ninguém precise lembrar de inicializá-lo.
+
+    #: LACO-DE-ESCRITA-02 (15/08/2026) — serializa o fluxo de escrita DESTE
+    #: handle. O default de classe é um lock COMPARTILHADO, e ele é seguro
+    #: justamente porque nenhum handle de produção o usa: `__init__` dá a cada
+    #: instância o seu. Se algum dia um handle de produção nascer sem `__init__`,
+    #: o pior desfecho é escrita serializada demais — nunca escrita corrompida.
+    _write_lock: threading.Lock = threading.Lock()
+
+    #: LACO-DE-ESCRITA-02 — `time.monotonic()` do início do silêncio atual da
+    #: entrada (`read` devolvendo `None`), ou `None` quando a entrada está
+    #: falando. Ver `sendReport`.
+    _leitura_vazia_desde: float | None = None
+
+    #: LACO-DE-ESCRITA-02 — se o silêncio ATUAL já rendeu a sua linha de aviso.
+    #: Um aviso por episódio, não um por ciclo.
+    _leitura_vazia_avisada: bool = False
+
     def __init__(self, path: bytes, *, is_edge: bool) -> None:
         super().__init__()
         self._pinned_path = path
         self._pinned_is_edge = is_edge
+        # LACO-DE-ESCRITA-02: o lock DESTE handle (ver `writeReport`). Por
+        # instância, nunca compartilhado entre controles — um `hid_write` que
+        # pendure num controle não pode calar os outros três da mesa.
+        self._write_lock = threading.Lock()
         # FEAT-DSX-LIGHTBAR-SYSFS-01: quando a lightbar/player-LED deste controle
         # estão sendo controlados pela rota sysfs do kernel (cor funciona em
         # USB E BT), suprimimos a escrita desses LEDs no report_thread para NÃO
@@ -576,12 +616,44 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         real vem do evdev, aqui só precisamos do flush de OUTPUT e da leitura
         esparsa de bateria/transporte — então pausamos `REPORT_THREAD_THROTTLE_SEC`
         por ciclo. BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01.
+
+        LACO-DE-ESCRITA-02 (15/08/2026) — A LEITURA VAZIA NÃO PODE MATAR A SAÍDA.
+
+        O handle é aberto por `_pydualsense__find_device` com `hidapi.Device(
+        path=...)` — SEM `blocking=True` —, e o construtor do hidapi chama
+        `hid_set_nonblocking(...)` sempre que `blocking` é falso. Logo o `read`
+        pode devolver `None` (rv == 0, "não havia dado"), e `None` é resposta
+        legítima, não erro.
+
+        O `readInput` do upstream começa com `list(inReport)`. Com `None` isso
+        levanta `TypeError` — que este laço NÃO capturava (só `OSError` e
+        `AttributeError`). A thread morria, e com ela toda a saída daquele
+        controle: sem rumble, sem lightbar, sem gatilho, para sempre, porque o
+        `connect()` do `reconnect_loop` não reabre handle de controle que
+        continua enumerado. Pior: morria sem `connected = False`, então nem a
+        tela dela sabia.
+
+        **A cura não é capturar o `TypeError`** — capturar trocaria uma morte
+        calada por um laço calado, e continuaria tratando como acidente uma
+        resposta que a API promete. A cura é PARAR DE PASSAR `None` adiante: sem
+        dado, não há o que interpretar, e o ciclo segue direto para a metade de
+        SAÍDA, que é a metade que importa aqui (o INPUT vem do evdev). O
+        controle continua tendo saída durante o silêncio, que é o desfecho certo.
+
+        E o silêncio deixa RASTRO: uma linha de aviso por episódio quando ele
+        passa de `LEITURA_VAZIA_AVISO_SEC`, e uma de volta quando a entrada
+        fala de novo — porque um controle mudo por segundos é notícia, e a
+        ausência de dado é justamente o sintoma que esta casa mais demora a ver.
         """
         while self.ds_thread:
             try:
                 in_report = self.device.read(self.input_report_length)
-                self.readInput(in_report)
-                self._captura_status_audio()
+                if in_report is None:
+                    self._registrar_leitura_vazia()
+                else:
+                    self._registrar_leitura_viva()
+                    self.readInput(in_report)
+                    self._captura_status_audio()
                 # FEAT-NATIVE-OUTPUT-MUTE-01: mutado (Modo Nativo) = NENHUM
                 # write; o jogo é o dono do output deste controle.
                 if not self._output_muted:
@@ -656,6 +728,66 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             except AttributeError:
                 self.connected = False
                 break
+            except Exception as exc:
+                # LACO-DE-ESCRITA-02 — a REDE, e ela não engole nada.
+                #
+                # O `TypeError` do `read` vazio foi curado na raiz acima; esta
+                # cláusula existe para a categoria dele, não para ele. Sem ela,
+                # qualquer exceção nova neste laço mata a `report_thread` com
+                # nada além de um traceback solto no stderr: sem linha
+                # estruturada, sem `connected = False`, e com a tela dela ainda
+                # jurando que o controle está conectado.
+                #
+                # O desfecho é o MESMO do `OSError` (fim de vida do handle) — e
+                # de propósito: seguir o laço depois de uma exceção que não se
+                # sabe nomear é girar sem saber em quê, e este laço escreve no
+                # aparelho dela. O que muda é que agora fica escrito.
+                self.connected = False
+                logger.error(
+                    "report_thread_morreu_por_excecao",
+                    path=getattr(self, "_pinned_path", None),
+                    tipo=type(exc).__name__,
+                    err=str(exc),
+                )
+                break
+
+    def _registrar_leitura_vazia(self) -> None:
+        """Contabiliza um `read` sem dado (LACO-DE-ESCRITA-02).
+
+        Um aviso por EPISÓDIO de silêncio, nunca um por ciclo: com o throttle
+        da mesa cheia são ~31 ciclos por segundo, e um aviso por ciclo afogaria
+        o journal exatamente no momento em que ele mais precisa ser lido.
+        """
+        agora = time.monotonic()
+        if self._leitura_vazia_desde is None:
+            self._leitura_vazia_desde = agora
+            return
+        if self._leitura_vazia_avisada:
+            return
+        mudo_ha = agora - self._leitura_vazia_desde
+        if mudo_ha >= LEITURA_VAZIA_AVISO_SEC:
+            self._leitura_vazia_avisada = True
+            logger.warning(
+                "report_thread_entrada_muda",
+                path=getattr(self, "_pinned_path", None),
+                segundos=round(mudo_ha, 3),
+                detalhe="o aparelho parou de entregar report; a SAÍDA segue viva",
+            )
+
+    def _registrar_leitura_viva(self) -> None:
+        """Fecha o episódio de silêncio, se houver um aberto (LACO-DE-ESCRITA-02)."""
+        if self._leitura_vazia_desde is None:
+            return
+        mudo_por = time.monotonic() - self._leitura_vazia_desde
+        avisado = self._leitura_vazia_avisada
+        self._leitura_vazia_desde = None
+        self._leitura_vazia_avisada = False
+        if avisado:
+            logger.info(
+                "report_thread_entrada_voltou",
+                path=getattr(self, "_pinned_path", None),
+                segundos=round(mudo_por, 3),
+            )
 
     # QUEDA-QUE-PENDURA-01, 04/08/2026 — MEDIDO no journal dela.
     #
@@ -1016,21 +1148,57 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             return fallback
 
     def writeReport(self, outReport: list[int]) -> None:  # noqa: N802,N803 - upstream
-        """Write com carimbo de sequência BT (BTREPORT-02).
+        """Write com carimbo de sequência BT (BTREPORT-02), SERIALIZADO.
 
         Reports 0x31 ganham o contador por handle (wrap 0-15) + CRC recalculado
         NUMA CÓPIA — o buffer original (que `sendReport` guarda em
         `_last_out_report`) permanece com seq 0, mantendo o dedup funcional.
-        """
-        if len(outReport) == 78 and outReport[0] == 0x31:
-            from hefesto_dualsense4unix.core import ds_output_report as rep
 
-            stamped = list(outReport)
-            rep.stamp_bt_seq(stamped, self._bt_seq)
-            self._bt_seq = (self._bt_seq + 1) & 0x0F
-            self.device.write(bytes(stamped))
-            return
-        self.device.write(bytes(outReport))
+        LACO-DE-ESCRITA-02 (15/08/2026) — POR QUE HÁ UM LOCK AQUI.
+
+        Este método é chamado de MAIS DE UMA THREAD no mesmo handle:
+
+        - a `report_thread` daquele handle, em regime (`sendReport`);
+        - a thread do chamador (IPC / executor do poll loop) em
+          `reescrever_lightbar_por_hidraw`, `_pintar_por_hidraw_bt` e
+          `core/lightbar_reset.py` — todas escritas AVULSAS, todas só no rádio.
+
+        E o corpo era um *read-modify-write* sem exclusão: ler `_bt_seq`,
+        carimbar, incrementar, escrever. Duas threads podiam ler o MESMO valor e
+        carimbar o MESMO `seq` em dois quadros. **O firmware descarta o segundo,
+        e o nosso log diz "escrito".** Esse preço já foi pago uma vez por esta
+        casa e está escrito por extenso em `reescrever_lightbar_por_hidraw`:
+        *"o firmware descarta o report fora de sequência e o log diz 'escrito'
+        com a barra apagada"*. É defeito só do RÁDIO — o `0x02` do cabo não tem
+        `seq` nem CRC no envelope.
+
+        **O `write` fica DENTRO do lock, e não só o contador.** Serializar
+        apenas o incremento produziria `seq` distintos entregues FORA DE ORDEM
+        (a thread que carimbou 5 podendo chegar ao fio depois da que carimbou 6),
+        e report fora de sequência é exatamente o que o firmware joga fora. O
+        que precisa ser atômico é o par carimbo+entrega, não o contador.
+
+        **Por que isto não trava o daemon.** O lock é POR HANDLE e o corpo dele
+        não chama mais nada do backend: não toma `_io_lock`, não chama de volta
+        para `PyDualSenseController`, não é reentrante. Não existe caminho que
+        pegue `_write_lock` e depois `_io_lock`, então não há ciclo — a única
+        ordem possível é `_io_lock` → `_write_lock`, e mesmo essa não acontece
+        hoje (os três chamadores avulsos soltam o `_io_lock` ANTES do I/O, de
+        propósito). O tempo de posse é o de um `hid_write`, que já era
+        serializado pelo kernel no mesmo descritor — o lock só antecipa a espera
+        para o espaço do usuário. E um `hid_write` pendurado num controle não
+        alcança os outros: cada handle tem o seu lock.
+        """
+        with self._write_lock:
+            if len(outReport) == 78 and outReport[0] == 0x31:
+                from hefesto_dualsense4unix.core import ds_output_report as rep
+
+                stamped = list(outReport)
+                rep.stamp_bt_seq(stamped, self._bt_seq)
+                self._bt_seq = (self._bt_seq + 1) & 0x0F
+                self.device.write(bytes(stamped))
+                return
+            self.device.write(bytes(outReport))
 
 
 class PyDualSenseController(IController):
