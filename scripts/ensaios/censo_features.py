@@ -82,6 +82,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from comum import (
     RADIO,
     Aparelho,
+    PortaFechadaError,
+    abrir_no_hidraw,
     cabecalho_do_instrumento,
     censo_da_mesa,
     descobrir_aparelhos,
@@ -136,10 +138,34 @@ class Leitura:
         self.crc: str = "-"
         self.definitivo = False
         self.sumiu = False
+        #: Por qual porta o nó foi aberto (broker ou `open()` direto). Fica na
+        #: leitura, e não só no cabeçalho, porque numa mesa 2+2 os dois braços
+        #: podem entrar por portas diferentes — o vpad é recusado pelo broker
+        #: de propósito, e cai no `open()`.
+        self.porta = ""
 
     @property
     def ok(self) -> bool:
         return bool(self.dados) and not self.erro
+
+
+def como_abre(caminho: str) -> tuple[str, str]:
+    """`(porta, motivo)` de um nó ESPECÍFICO — abrindo e fechando de verdade.
+
+    Existe porque a pergunta "este nó abre?" mudou de resposta em 15/08/2026.
+    Antes, `os.access()` bastava: quem não podia `open()` não media. Agora o
+    broker abre o que a permissão do fs nega, e um instrumento que decidisse
+    por `os.access` desistiria de medir um aparelho perfeitamente legível —
+    imprimindo "0 de 4 controles legíveis" com os quatro ao alcance da mão.
+    """
+    try:
+        no = abrir_no_hidraw(caminho, escrita=False)
+    except PortaFechadaError as erro:
+        return ("FECHADA", str(erro))
+    try:
+        return (no.porta, no.motivo)
+    finally:
+        no.fechar()
 
 
 def ler_feature(
@@ -166,16 +192,22 @@ def ler_feature(
     """
     leitura = Leitura(report_id, tamanho)
     inicio = time.monotonic()
-    fd = -1
+    # A PORTA (A-PORTA-QUE-A-CASA-CONSTRUIU-01): broker primeiro, `open()`
+    # depois, e a que foi usada fica gravada na leitura. O `os.open` que estava
+    # aqui colhia `EACCES` em toda a mesa com o co-op ligado — o produto
+    # escondendo o físico do jogo, funcionando como promete.
     try:
+        no = abrir_no_hidraw(caminho, escrita=True)
+    except PortaFechadaError:
         try:
-            fd = os.open(caminho, os.O_RDWR)
-        except PermissionError:
-            fd = os.open(caminho, os.O_RDONLY)
-    except OSError as erro:
-        leitura.erro = f"{type(erro).__name__}: {diagnostico_de_acesso(caminho)}"
-        leitura.segundos = time.monotonic() - inicio
-        return leitura
+            no = abrir_no_hidraw(caminho, escrita=False)
+        except PortaFechadaError as erro:
+            leitura.porta = "FECHADA"
+            leitura.erro = f"{diagnostico_de_acesso(caminho)} | {erro}"
+            leitura.segundos = time.monotonic() - inicio
+            return leitura
+    leitura.porta = no.porta
+    fd = no.fd
 
     try:
         for numero in range(1, tentativas + 1):
@@ -216,7 +248,7 @@ def ler_feature(
             leitura.erro = ""
             break
     finally:
-        os.close(fd)
+        no.fechar()
 
     leitura.segundos = time.monotonic() - inicio
     # O CRC-32 de semente 0xA3 é o enquadramento do BLUETOOTH. No cabo os quatro
@@ -512,20 +544,38 @@ def main() -> int:
         print(resumo("nenhum DualSense físico encontrado — nada medido."))
         return 1
 
-    cabecalho = ["aparelho", "hidraw", "transporte", "acesso"]
+    # A coluna "porta" nasceu em 15/08/2026 no lugar de uma coluna "acesso" que
+    # só sabia dizer `os.access`. Ela é o par da linha de biblioteca: quem lê a
+    # tabela precisa saber por onde cada aparelho foi alcançado, porque cabo e
+    # rádio podem entrar por portas diferentes, e comparar dois braços que
+    # entraram por portas diferentes sem dizer isso é o erro que o 2+2 evita.
+    cabecalho = ["aparelho", "hidraw", "transporte", "permissão do fs", "porta"]
+    portas = {a.hidraw: como_abre(a.caminho_hidraw) for a in alvos}
     linhas = [
-        [a.apelido, a.hidraw, a.transporte, diagnostico_de_acesso(a.caminho_hidraw)] for a in alvos
+        [
+            a.apelido,
+            a.hidraw,
+            a.transporte,
+            diagnostico_de_acesso(a.caminho_hidraw),
+            portas[a.hidraw][0],
+        ]
+        for a in alvos
     ]
     print()
     print(tabela(cabecalho, linhas))
 
-    bloqueados = [a for a in alvos if diagnostico_de_acesso(a.caminho_hidraw) != "acessível"]
+    bloqueados = [a for a in alvos if portas[a.hidraw][0] == "FECHADA"]
     if len(bloqueados) == len(alvos):
         print()
-        print("  NENHUM hidraw físico abre. Isto NÃO é o controle não responder —")
-        print("  é o broker do Hefesto escondendo o aparelho do jogo, como ele promete.")
-        print("  Para medir, pare o daemon:  systemctl --user stop hefesto-dualsense4unix")
-        print(resumo(f"0 de {len(alvos)} controles legíveis: broker no caminho. Nada medido."))
+        print("  NENHUM hidraw físico abre, e nem pelo broker — que é a porta que a")
+        print("  casa construiu justamente para isto. Se o broker estivesse de pé, o")
+        print("  nó escondido abriria mesmo em 0600. Confira o serviço:")
+        print("    systemctl status hefesto-hidraw-broker.socket")
+        print("  Ou pare o daemon para o físico voltar a 0660 + ACL:")
+        print("    systemctl --user stop hefesto-dualsense4unix")
+        for a in bloqueados:
+            print(f"    - {a.hidraw}: {portas[a.hidraw][1]}")
+        print(resumo(f"0 de {len(alvos)} controles abertos, nem pelo broker. Nada medido."))
         return 2
 
     imprimir_o_que_cada_transporte_declara(alvos)

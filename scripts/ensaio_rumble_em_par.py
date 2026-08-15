@@ -86,9 +86,11 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "ensaios"))
 import time
 
 import identidade_do_vpad
+from comum import declaracao_da_porta, estado_do_grab, linha_do_grab
 
 BIBLIOTECA = "python-evdev"
 ROTA = "evdev FF (EVIOCSFF) -> hid_playstation -> report de saida"
@@ -321,9 +323,14 @@ def disparar(alvos: list[str], forte: int, fraco: int, segundos: float) -> int:
         abertos.append(_abrir(caminho, itens))
 
     print(f"instrumento: {BIBLIOTECA} | rota: {ROTA}")
+    print(declaracao_da_porta())
     print(f"efeito: forte(esquerdo)={forte}  fraco(direito)={fraco}  por {segundos}s\n")
     for _dispositivo, meta in abertos:
         print(f"  ALVO {meta['no']:22} {meta['jogador']:4} {meta['transporte']:6} {meta['nome']}")
+        # O grab do evdev, declarado por alvo: um nó grabado por terceiro pode
+        # aceitar o `upload_effect` e não vibrar, e "não vibrou" seria então a
+        # resposta errada — não sobre o aparelho, mas sobre quem estava lendo.
+        print(f"       {linha_do_grab(str(meta['no']), estado_do_grab(str(meta['no'])))}")
     print()
 
     efeitos: list[tuple[object, int]] = []

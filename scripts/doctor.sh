@@ -2985,6 +2985,13 @@ PYEOF
     case "${open_res}" in
         ok)
             pass "cmd open serviu fd real via SCM_RIGHTS (${open_det}) — fd-injection do giroscópio operante"
+            # A PORTA, DECLARADA (A-PORTA-QUE-A-CASA-CONSTRUIU-01, 15/08/2026).
+            # Este diagnóstico NUNCA abre /dev/hidraw* por conta própria: ele
+            # pede o fd ao broker, que é a porta que a casa construiu para o nó
+            # escondido. Dizer isso na tela importa porque quem lê o doctor
+            # decide, a seguir, por onde o PRÓXIMO instrumento vai medir — e a
+            # sessão de 15/08 se perdeu justamente batendo na porta errada.
+            info "porta: broker (SCM_RIGHTS) via /run/hefesto-hidraw-broker/broker.sock — nenhum open() direto de /dev/hidraw* neste diagnóstico"
             ;;
         fail)
             fail "cmd open do broker FALHOU (${open_det}) — o giroscópio morre sob o hide; confira DeviceAllow=char-hidraw rw e CapabilityBoundingSet (CAP_DAC_OVERRIDE) em /etc/systemd/system/hefesto-hidraw-broker.service e rode: sudo systemctl restart hefesto-hidraw-broker.service"
@@ -3380,6 +3387,10 @@ check_steam_input_allowlist() {
 }
 
 check_controller() {
+    # As duas linhas abaixo LISTAM nós, e nunca abrem nenhum: `[[ -e ]]` e `ls`
+    # não fazem `open(2)`. É a exceção declarada no portão da porta
+    # (tests/unit/test_a_porta_que_a_casa_construiu_01.py) — quem precisa de um
+    # fd de hidraw neste arquivo pede ao broker, em `check_hidraw_broker`.
     local h hidraw=0
     for h in /dev/hidraw*; do [[ -e "$h" ]] && hidraw=1; done
     [[ "${hidraw}" -eq 1 ]] && info "nós hidraw: $(ls /dev/hidraw* 2>/dev/null | tr '\n' ' ')"

@@ -17,6 +17,14 @@
 # o hidraw do controle Switch do mesmo jeito e o mesmo conflito com o daemon
 # se aplica. Tratado JUNTO do PSSupport (mesmo grep/sed/status) desde então.
 #
+# A PORTA (A-PORTA-QUE-A-CASA-CONSTRUIU-01, 15/08/2026):
+# este script NÃO ABRE /dev/hidraw*, nem precisa — ele edita arquivos `.vdf`
+# da Steam, e as menções a hidraw acima descrevem o que a STEAM faz com o nó.
+# Fica registrado porque o portão da porta (tests/unit/
+# test_a_porta_que_a_casa_construiu_01.py) varre `scripts/` atrás de quem abre
+# hidraw por conta própria, e um arquivo que fala de hidraw sem abrir nenhum
+# precisa dizer isso por escrito em vez de deixar a próxima pessoa averiguar.
+#
 # As keys ficam em `localconfig.vdf` per-user em Steam moderno (não no
 # config.vdf global como nas versões antigas). Por padrão este script
 # itera por TODOS os installs de Steam conhecidos (.deb, Flatpak, Snap,
