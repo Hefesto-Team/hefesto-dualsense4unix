@@ -136,10 +136,17 @@ _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 #: Territórios onde um chamador de produção pode morar. ``scripts/`` entra
 #: porque o instalador roda os helpers de lá (``install.sh`` chama
 #: ``scripts/fix_wireplumber_default_source.sh``, por exemplo): um símbolo
-#: alcançado só por um helper de ``scripts/`` ESTÁ alcançado. Hoje isso não
-#: perdoa ninguém — conferido em 12/08/2026, nenhuma das 33 acusações tem
-#: chamador em ``scripts/`` — e é de propósito: a porta existe para o portão
-#: não passar a mentir no dia em que alguém use uma delas de lá.
+#: alcançado só por um helper de ``scripts/`` ESTÁ alcançado.
+#:
+#: Em 12/08/2026 esta porta não perdoava ninguém, e a nota daqui dizia isso. O
+#: fato MUDOU em 13/08/2026 e a frase foi SUBSTITUÍDA em 15/08/2026: hoje ela
+#: perdoa ``profiles/curva_propria.py::gerar_tabela_markdown``, que
+#: ``scripts/gerar-tabela-de-curvas.py``:83 chama — e o ``--check`` desse mesmo
+#: gerador roda no CI (``.github/workflows/ci.yml``, passo
+#: ``gerar-tabela-de-curvas.py --check``). A porta deixou de ser
+#: preventiva e passou a segurar peso, e é por isso que ela ganhou mordida
+#: própria em ``test_o_chamador_em_scripts_e_caminho_de_producao``: uma porta que
+#: segura peso sem mordida cai calada.
 _TERRITORIOS_DE_PRODUCAO = ("scripts",)
 
 #: Roteiros de shell que EMBUTEM Python de produção. Não é caso de borda nem
@@ -638,14 +645,29 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "e é a primeira coisa a medir com o aparelho na mão."
     ),
     "daemon/subsystems/external_mask.py::ExternalMaskRegistry": (
-        "MEDIDO em 12/08/2026: o módulo inteiro (MÁSCARA-01/E1) não tem chamador "
-        "em `src/` — as duas únicas ocorrências de `external_mask` fora dele são "
-        "COMENTÁRIOS (integrations/uinput_gamepad.py:146, "
-        "daemon/ipc_handlers.py:3834). É a maior lacuna desta lista. "
-        "O QUE A FECHA: a GUI, e não o install — a máscara é escolha POR "
-        "APARELHO e o registro grava em `config_dir()`, dentro do pacote, sem "
-        "artefato de sistema nenhum. O desenho da tela é DECISÃO DELA e está "
-        "pendente. QUANDO A TELA NASCER, apague esta entrada."
+        "MEDIDO em 12/08/2026, RECONFERIDO em 15/08/2026: o módulo inteiro "
+        "(MÁSCARA-01/E1) não tem chamador em `src/` — as duas únicas ocorrências "
+        "de `external_mask` fora dele são COMENTÁRIOS "
+        "(integrations/uinput_gamepad.py:146, daemon/ipc_handlers.py:4162-4163). "
+        "É a maior lacuna desta lista. "
+        "NÃO É CASO DE `SUBSYSTEM_REGISTRY`, e quem chegar por uma varredura de "
+        "importadores vai achar que é: a classe não implementa o protocolo de "
+        "`subsystems/base.py` (não tem `name`, `start` nem `stop`) e mora em "
+        "`daemon/subsystems/` só por vizinhança. Além disso o próprio docstring "
+        "de `subsystems/__init__.py`:13 avisa que a lista NÃO é iterada em "
+        "produção — pôr a classe lá não a ligaria (BT-MIC-REGISTRY-01). "
+        "A FRASE ANTERIOR DESTA ENTRADA — *'o desenho da tela é DECISÃO DELA e "
+        "está pendente'* — foi SUBSTITUÍDA porque caducou: ela RESPONDEU em "
+        "14/08/2026, na D-5 de "
+        "`docs/process/2026-08-14-DECISOES-DE-PO-as-onze-respostas-da-mesa-cheia.md`"
+        " — *máscara do JOGADOR, com a do jogo como padrão herdado*, ≈480 min. "
+        "O QUE A FECHA HOJE não é mais uma decisão de tela: é a CONTRADIÇÃO "
+        "entre essa resposta e a decisão dela de 10/08/2026 escrita em "
+        "`profiles/schema.py`:637 (*'`mode` e a máscara do gamepad são da "
+        "SESSÃO, não da peça'*), que a própria D-5 manda devolver a ela em vez "
+        "de contornar. O caso está escrito em `docs/process/sprints/`, na "
+        "`2026-08-15-MASCARA-POR-JOGADOR-01-a-decisao-de-14-08-esbarra-na-de-"
+        "10-08.md`. QUANDO A MÁSCARA GANHAR CHAMADOR, apague esta entrada."
     ),
     # --- as duas metades das notificações ----------------------------------
     "integrations/desktop_notifications.py::notify_battery_low": (
@@ -767,12 +789,34 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "MEDIDO em 12/08/2026: só `tests/` a chama. Produz o registro de dono "
         "`{'cmdline.<param>': '<dono>'}` para o estado local — o dado que diz se "
         "fomos NÓS que pusemos um parâmetro na linha de comando do kernel, e "
-        "portanto se podemos removê-lo no desinstalar. Sem chamador, ninguém "
-        "grava esse registro. "
-        "O QUE A FECHA: o mesmo dono da entrada anterior. Esta é a de "
-        "consequência mais concreta das quatro do módulo: sem registro de dono, "
-        "o desinstalar não sabe o que é dele e a escolha vira 'remover o que "
-        "talvez não seja nosso' ou 'deixar lixo' — as duas ruins."
+        "portanto se podemos removê-lo no desinstalar. "
+        "DUAS FRASES DESTA ENTRADA FORAM SUBSTITUÍDAS em 15/08/2026 porque eram "
+        "FALSAS, não decisão a preservar: ela dizia *'sem chamador, ninguém "
+        "grava esse registro'* e *'o desinstalar não sabe o que é dele'*. O "
+        "registro É GRAVADO, em produção, na MESMA forma de chave: o heredoc do "
+        "passo `3e` do install imprime o `a.owner` de cada ação do plano, e o "
+        "shell o repassa às DUAS chamadas de `_register_cmdline_owner "
+        "cmdline.<param> <dono>` desse mesmo passo. A função (definida logo "
+        "abaixo de `CMDLINE_OWNERS_FILE`, no install.sh) escreve "
+        "`cmdline.<param>=<dono>` em "
+        "`~/.local/state/hefesto-dualsense4unix/cmdline-owners.conf`, e o "
+        "`uninstall.sh` LÊ esse mesmo arquivo — ele define o próprio "
+        "`CMDLINE_OWNERS_FILE` para reverter só o que é nosso. Quem estava "
+        "errado era esta razão, não a árvore. "
+        "O QUE SOBRA DE VERDADE, e é o mesmo dono da entrada anterior: a regra "
+        "do dono está escrita DUAS vezes, aqui em Python e no shell, e as duas "
+        "JÁ divergem — o shell preserva um dono anterior 'hefesto'/"
+        "'compartilhado' quando o plano novo diz 'terceiro', dentro do próprio "
+        "`_register_cmdline_owner`, e esta função não tem essa lógica. A "
+        "divergência é DELIBERADA e está "
+        "declarada no docstring do módulo (*'o dono reportado pelo plano vale "
+        "para a PRIMEIRA instalação: a lane de wiring preserva o registro "
+        "anterior'*), o que faz desta função a forma de primeira instalação e "
+        "não uma cura desligada. "
+        "O QUE A FECHA: decidir de quem é o planejamento, exatamente como na "
+        "entrada de `plan_cmdline`. NÃO fecho por conta própria porque fechar "
+        "aqui é mexer no `install.sh`, e todo passo dele tem de ser provado por "
+        "ciclo uninstall→install."
     ),
     # `integrations/kernel_cmdline.py::strip_quirks_token` MOROU AQUI, e a
     # entrada afirmava "esse cuidado está escrito e nunca roda", pedindo como
@@ -1501,6 +1545,21 @@ def _copia_de_src(destino: Path) -> Path:
         origem = _RAIZ / roteiro
         if origem.is_file():
             shutil.copy2(origem, destino / roteiro)
+    # `scripts/` vai junto desde 15/08/2026, pela MESMA razão que os roteiros
+    # foram em 13/08: ele é `_TERRITORIOS_DE_PRODUCAO`, e uma cópia sem ele
+    # mediria uma árvore onde a porta não existe. Enquanto a porta não perdoava
+    # ninguém isso não tinha consequência; desde que ela segura
+    # `gerar_tabela_markdown`, uma cópia sem `scripts/` faz a mordida do
+    # território passar por AUSÊNCIA — o modo mais silencioso de um teste deixar
+    # de medir. Custo MEDIDO em 15/08/2026: 1,7 MB em 81 arquivos.
+    for territorio in _TERRITORIOS_DE_PRODUCAO:
+        origem = _RAIZ / territorio
+        if origem.is_dir():
+            shutil.copytree(
+                origem,
+                destino / territorio,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+            )
     return copia
 
 
@@ -1772,6 +1831,58 @@ class TestOPortaoMorde:
             f"{chave!r}. Ou ele está lendo o roteiro como texto solto (e o "
             "COMENTÁRIO de uninstall.sh:1125 o satisfaz), ou ele parou de "
             "olhar o roteiro da CÓPIA e está medindo a árvore viva"
+        )
+        assert chave not in promessas_sem_caminho(), (
+            "a árvore de verdade foi contaminada pela mordida"
+        )
+
+    def test_o_chamador_em_scripts_e_caminho_de_producao(
+        self, tmp_path: Path
+    ) -> None:
+        """A mordida da porta de ``scripts/``, sobre a árvore de verdade.
+
+        Ela prova as DUAS metades, como a do heredoc: com o gerador inteiro o
+        portão CALA sobre ``gerar_tabela_markdown``; arrancada a chamada da
+        CÓPIA, ele VOLTA a acusar.
+
+        Por que ela precisou nascer (15/08/2026): esta porta passou três dias
+        sem segurar peso — a nota de ``_TERRITORIOS_DE_PRODUCAO`` registrava, em
+        12/08, que nenhuma das 33 acusações tinha chamador em ``scripts/``. Em
+        13/08 ``scripts/gerar-tabela-de-curvas.py`` nasceu e a lápide de
+        ``gerar_tabela_markdown`` foi apagada por este portão. Desde esse dia a
+        porta é a ÚNICA coisa entre um símbolo fiado e a lista de dívida, e não
+        havia nada medindo se ela ainda abre. Se ``_TERRITORIOS_DE_PRODUCAO``
+        esvaziar, o portão passa a cobrar de quem está certo — que é o defeito
+        que ``strip_quirks_token`` já custou uma vez.
+        """
+        copia = _copia_de_src(tmp_path)
+        chave = "profiles/curva_propria.py::gerar_tabela_markdown"
+        assert chave not in promessas_sem_caminho(copia), (
+            f"com `scripts/` inteiro o portão AINDA acusa {chave!r} — a porta "
+            "de `_TERRITORIOS_DE_PRODUCAO` não abre, e a dívida volta a cobrar "
+            "de um símbolo que o CI já exercita "
+            "(`.github/workflows/ci.yml`, passo `--check` do gerador)"
+        )
+
+        # O alvo da mordida é o ARQUIVO inteiro, e não só a linha da chamada: o
+        # gerador IMPORTA o símbolo no topo (`gerar-tabela-de-curvas.py`:52-54)
+        # e `_Referencias.visit_alias` conta o `import` como referência. Trocar
+        # só a chamada deixaria o import satisfazendo a promessa sozinho, e esta
+        # mordida ficaria verde sem medir nada — que é o defeito que ela existe
+        # para pegar em outros. Conferido em 15/08/2026: nenhum outro arquivo de
+        # `scripts/` cita `gerar_tabela_markdown`.
+        gerador = tmp_path / "scripts" / "gerar-tabela-de-curvas.py"
+        assert "gerar_tabela_markdown" in gerador.read_text(encoding="utf-8"), (
+            "`scripts/gerar-tabela-de-curvas.py` não cita mais o símbolo — esta "
+            "mordida precisa de outro alvo, senão ela deixa de morder em "
+            "silêncio"
+        )
+        gerador.write_text("print('gerador de mentira')\n", encoding="utf-8")
+
+        assert chave in promessas_sem_caminho(copia), (
+            "arrancado o único chamador de `scripts/`, o portão NÃO voltou a "
+            f"acusar {chave!r} — ele parou de ler o território da CÓPIA, ou "
+            "está medindo a árvore viva em vez dela"
         )
         assert chave not in promessas_sem_caminho(), (
             "a árvore de verdade foi contaminada pela mordida"
