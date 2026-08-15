@@ -71,6 +71,13 @@ INPUT_GRACE_SEC: float = 0.3
 #: controle logo após uma re-enumeração (storm -71 / replug).
 EVDEV_WATCHDOG_SEC: float = 2.0
 
+#: GRAB-DOBRADO-01: intervalo entre retomadas do `EVIOCGRAB` do primário quando
+#: ele está `failed`. Mesmo ritmo do `coop.sync` — que é quem já dava esse
+#: retry aos jogadores SECUNDÁRIOS e nunca ao P1 —, e pela mesma razão: dois
+#: segundos de input dobrado é o que o co-op já aceitava como teto, e o custo
+#: por tick sem falha é uma comparação de float mais uma de string.
+GRAB_RECONCILE_SEC: float = 2.0
+
 #: HANG-01 (Sprint 2026-07-19): teto de espera do tick de LED dos externos
 #: (`ExternalLedSync.tick`, executado no pool DEDICADO `hefesto-ext`, ver
 #: `_external_executor`). Medido ao vivo (16:08:56, PID 2835): uma
@@ -3782,6 +3789,11 @@ class Daemon:
         loop = asyncio.get_running_loop()
         next_rumble_assert_at: float = 0.0
         evdev_watchdog_next_at: float = 0.0
+        # GRAB-DOBRADO-01: retomada do `EVIOCGRAB` do primário, no mesmo ritmo
+        # do retry que o co-op já dava aos secundários (~2 s). Sem ela, uma
+        # recusa transitória (troca de primário, Steam Input, replug) deixava o
+        # P1 DOBRADO no jogo até o próximo replug ou restart do daemon.
+        grab_reconcile_next_at: float = 0.0
         # FEAT-DSX-COOP-LOCAL-01: reconcilia os jogadores secundários (P2+) a cada
         # ~2s (enumerar evdevs todo tick é caro); o forward roda todo tick.
         coop_sync_next_at: float = 0.0
@@ -3966,6 +3978,21 @@ class Daemon:
                     with contextlib.suppress(Exception):
                         if await self._run_blocking(heal):
                             self.store.bump("evdev.watchdog.reopen")
+
+            # GRAB-DOBRADO-01: irmão do watchdog acima, e do retry que o co-op
+            # já dava aos secundários. O watchdog cura o node OBSOLETO (troca de
+            # nó); este cura o node CERTO com o `EVIOCGRAB` RECUSADO — o estado
+            # que ficava `failed` para sempre porque `_reapply_grab` só roda no
+            # (re)open e `_set_controller_grab` só no start da emulação. Sem
+            # reabrir nada: uma comparação de string quando está tudo bem.
+            if tick_started >= grab_reconcile_next_at:
+                grab_reconcile_next_at = tick_started + GRAB_RECONCILE_SEC
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                        reconciliar_grab_do_primario,
+                    )
+
+                    reconciliar_grab_do_primario(self)
 
             buttons_pressed = self._evdev_buttons_once()
             current_buttons = state.buttons_pressed
