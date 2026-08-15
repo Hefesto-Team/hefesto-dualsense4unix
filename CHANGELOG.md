@@ -3,6 +3,41 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## Versionamento — o que cada número exige
+
+Esta seção é a **fonte canônica do critério de release**. A versão em si mora no
+`pyproject.toml` (`[project].version`), e `scripts/check_version_consistency.py`
+é quem a espalha pelos doze alvos versionados; o que está escrito aqui é o que
+autoriza subir de série, não onde o número é editado.
+
+O critério é **dela**, respondido em 15/08/2026 (decisão **V-A** de
+[`docs/process/2026-08-15-AS-DECISOES-RESPONDIDAS.md`](docs/process/2026-08-15-AS-DECISOES-RESPONDIDAS.md)),
+literal:
+
+> *"vira 0.9.5 quando mapearmos tudo, construirmos todos os canais e concluirmos
+> todas as sprints em aberto. após isso vamos ir jogando e ajustando os
+> probleminhas de layout que surgirem. com duas semanas sem novas sprints
+> teremos a versão 1.0. até lá vamos lançando 0.9.x.x"*
+
+| marco | o que exige para ser publicado |
+|---|---|
+| `0.9.x.x` | lançamentos contínuos no caminho — é a série de hoje |
+| `0.9.5` | mapa de canais completo **+** todos os canais construídos **+** nenhuma sprint aberta |
+| `1.0.0` | **duas semanas sem sprint nova**, contadas depois da `0.9.5`, jogando e ajustando layout |
+
+O critério anterior — *"ver funcionando num PC novo"* — **não vale mais**. Ele
+foi substituído, não contrariado: *"nenhuma sprint aberta"* e *"duas semanas sem
+sprint nova"* são contáveis nos índices de `docs/process/sprints/`; *"PC novo"*
+não era, e por isso nunca fechava.
+
+**A quarta casa.** A série `0.9.4.x` tem quatro componentes, que o SemVer não
+tem. A canônica é a de quatro (`0.9.4.2`); quem precisa de SemVer estrito recebe
+a tradução `0.9.4+2` — *build metadata*, que **não conta na precedência** e por
+isso ordena igual à `0.9.4`, que é o que a série significa. `-2` seria
+*pre-release*, ordenaria **antes** da `0.9.4` e inverteria a história. A régua é
+`versao_para_cargo()`, em `scripts/check_version_consistency.py`; o defeito que a
+fez nascer está na `QUATRO-COMPONENTES-02`, logo abaixo.
+
 ## [Unreleased]
 
 ### Corrigido
