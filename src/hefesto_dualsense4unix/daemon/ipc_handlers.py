@@ -2505,26 +2505,57 @@ class IpcHandlersMixin:
             # REPLICA-03: além do agregado (compat), expõe contadores POR VPAD
             # (`per_vpad`) — o agregado escondia QUAL vpad recebeu o quê
             # (telemetria cega do estudo 2026-07-18). `player` é o número do
-            # jogador (1 = P1; secundários usam o player_index do co-op).
+            # JOGADOR dono deste vpad — ver o bloco MESA-CHEIA-12 logo abaixo.
             # GYRO-03: cada vpad viaja com o SEU espelho de motion (o
             # `PhysicalReportReader` do P1 mora em `daemon._motion_reader`;
             # o de cada jogador do co-op, em `player.motion_reader`) — é dele
             # que sai o `motion_hz` (taxa REAL de entrega ao /dev/uhid).
             vpads: list[tuple[int, Any, Any]] = []
+            coop_mgr = getattr(self.daemon, "_coop_manager", None)
+            # MESA-CHEIA-12 (15/08/2026): o `player` de cada bloco é o número do
+            # CONTROLE que alimenta este vpad, e tem de sair da MESMA função que
+            # produziu `controllers[].player` — é por esse inteiro que a GUI casa
+            # card↔vpad (`controller_card._bloco_do_vpad`, dono único do
+            # casamento). Enquanto o número publicado era o `player_index` cru,
+            # os dois lados coincidiam por construção; agora que ele é a fila de
+            # chegada, ler `player_index` aqui cruzaria os fios — o card de um
+            # controle mostraria a telemetria do vpad de OUTRO. As condições
+            # espelham `resolve_player_numbers`: sem co-op existe um vpad só e
+            # ele é o jogador 1.
+            numeros_por_mac: dict[str, int] = {}
+            if (
+                bool(getattr(getattr(self.daemon, "config", None), "coop_enabled", False))
+                and coop_mgr is not None
+            ):
+                with contextlib.suppress(Exception):
+                    numeros_por_mac = dict(coop_mgr.player_indexes())
             gp_device = getattr(self.daemon, "_gamepad_device", None)
             if gp_device is not None:
-                vpads.append((1, gp_device, getattr(self.daemon, "_motion_reader", None)))
-            coop_mgr = getattr(self.daemon, "_coop_manager", None)
+                primario = _as_str_or_none(
+                    getattr(self.controller, "primary_uniq", None)
+                )
+                vpads.append(
+                    (
+                        int(numeros_por_mac.get(primario or "", 1) or 1),
+                        gp_device,
+                        getattr(self.daemon, "_motion_reader", None),
+                    )
+                )
             if coop_mgr is not None:
                 players = getattr(coop_mgr, "_players", {})
                 if isinstance(players, dict):
                     vpads.extend(
                         (
-                            int(getattr(p, "player_index", 0) or 0),
+                            int(
+                                numeros_por_mac.get(
+                                    mac, getattr(p, "player_index", 0) or 0
+                                )
+                                or 0
+                            ),
                             p.vpad,
                             getattr(p, "motion_reader", None),
                         )
-                        for p in players.values()
+                        for mac, p in players.items()
                         if getattr(p, "vpad", None) is not None
                     )
             ff_plays = 0
