@@ -147,11 +147,16 @@ _BYTES_POR_LEITURA = 256
 
 
 def mascarar(mac: str) -> str:
-    """`d4:2f:4b:00:00:d8` -> `d4:2f:4b:00:00:d8` — a máscara da casa.
+    """`aa:bb:cc:dd:ee:ff` -> `aa:bb:cc:00:00:ff` — a máscara da casa.
 
     Octetos 4 e 5 zerados: preserva o fabricante (que é informação técnica útil)
     e apaga o aparelho dela. Há portão que reprova MAC real em arquivo
     versionado, e a saída bruta deste ensaio É versionada.
+
+    O exemplo acima é forjado de propósito. Ele já foi escrito com o endereço
+    REAL de um dos controles da bancada — a docstring da função que mascara era,
+    ela mesma, o vazamento, e passou verde porque o portão não conhecia aquele
+    OUI (15/08/2026; ver a nota datada em `tests/unit/test_docs_mac_anonimato.py`).
     """
     partes = mac.split(":")
     if len(partes) != 6:
