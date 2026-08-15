@@ -239,7 +239,7 @@ def placar(linhas: list[dict], controle: str) -> dict:
     return {
         "linhas": len(ls),
         "existe": sum(1 for lin in ls if lin["existe"] == "tem"),
-        "medidas": sum(1 for lin in ls if qualquer(lin, "confianca", "medido")),
+        "medidas": sum(1 for lin in ls if qualquer(lin, "de_onde_sei", "medido")),
         "aciona": sum(1 for lin in ls if qualquer(lin, "aciona", "sim")),
         "lacuna": sum(1 for lin in ls if lin["existe"] == "tem"
                       and not qualquer(lin, "aciona", "sim")),
@@ -411,6 +411,12 @@ svg g.oculta.acesa { opacity: .95; }
 .sim { font-family: var(--font-dado); font-size: var(--text-lg); line-height: 1; }
 .s-ok { color: var(--color-ok); } .s-lac { color: var(--color-lacuna); }
 .s-nulo { color: var(--color-nulo); } .s-mudo { color: var(--color-rule); }
+
+/* ── as duas perguntas (D-13, 15/08/2026) ────────────────────── */
+.duas { padding: var(--space-sm) 0 0; font-size: var(--text-sm);
+        color: var(--color-ink-quiet); max-width: 84ch; }
+.duas p { margin: 0 0 var(--space-3xs); }
+.duas code { font-family: var(--font-dado); color: var(--color-ink); }
 
 /* ── filtros ─────────────────────────────────────────────────── */
 .filtros { display: flex; flex-wrap: wrap; gap: var(--space-2xs);
@@ -717,7 +723,8 @@ SCRIPT = """
         ${campo('Report', l[p + 'report_id'], '\\u2014')}
         ${campo('Offset / bit', l[p + 'offset'], '\\u2014')}
         ${campo('Comando', l[p + 'comando'], '\\u2014')}
-        ${campo('Confian\\u00e7a', l[p + 'confianca'], '\\u2014')}
+        ${campo('De onde sei', l[p + 'de_onde_sei'], '\\u2014')}
+        ${campo('At\\u00e9 onde foi', l[p + 'ate_onde_foi'], '\\u2014')}
         ${campo('Evid\\u00eancia do aparelho', l[p + 'evidencia'], 'sem evid\\u00eancia registrada')}
         ${campo('Refer\\u00eancia no c\\u00f3digo', l[p + 'codigo_ref'], 'n\\u00e3o localizada')}
         ${campo('Detalhe', l[p + 'detalhe'], '\\u2014')}
@@ -891,6 +898,19 @@ def monta() -> str:
     <span><i class="sim s-nulo">○</i> o aparelho não aceita por aquele transporte</span>
     <span><i class="sim s-mudo">◌</i> ninguém respondeu por aquele transporte</span>
     <span><i class="assim">≠</i> cabo e rádio divergem</span>
+  </div>
+
+  <div class="duas">
+    <p><code>de_onde_sei</code> — <strong>de onde vem a informação</strong>:
+       <em>medido</em> no aparelho · <em>inferido-do-codigo</em> (alguém leu a
+       fonte) · <em>afirmado-no-doc</em> · <em>incerto</em>.</p>
+    <p><code>ate_onde_foi</code> — <strong>até onde a prova chegou</strong>:
+       <em>MONTOU</em> (o produto montou o report) · <em>SAIU NO FIO</em> (o byte
+       saiu e algo voltou) · <em>O APARELHO OBEDECEU</em> (acendeu, girou, saiu
+       som).</p>
+    <p>Duas perguntas diferentes, e por isso duas colunas. Até 15/08/2026 elas se
+       chamavam <em>confianca</em> e <em>grau</em> — nomes que não diziam o que
+       mediam, e que por isso se confundiam. Os domínios não mudaram.</p>
   </div>
 
   <div class="filtros">

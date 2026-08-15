@@ -644,30 +644,37 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "FEAT-RUMBLE-POLICY-01). Essa diferença está fora do que grep responde, "
         "e é a primeira coisa a medir com o aparelho na mão."
     ),
-    "daemon/subsystems/external_mask.py::ExternalMaskRegistry": (
-        "MEDIDO em 12/08/2026, RECONFERIDO em 15/08/2026: o módulo inteiro "
-        "(MÁSCARA-01/E1) não tem chamador em `src/` — as duas únicas ocorrências "
-        "de `external_mask` fora dele são COMENTÁRIOS "
-        "(integrations/uinput_gamepad.py:146, daemon/ipc_handlers.py:4162-4163). "
-        "É a maior lacuna desta lista. "
-        "NÃO É CASO DE `SUBSYSTEM_REGISTRY`, e quem chegar por uma varredura de "
-        "importadores vai achar que é: a classe não implementa o protocolo de "
-        "`subsystems/base.py` (não tem `name`, `start` nem `stop`) e mora em "
-        "`daemon/subsystems/` só por vizinhança. Além disso o próprio docstring "
-        "de `subsystems/__init__.py`:13 avisa que a lista NÃO é iterada em "
-        "produção — pôr a classe lá não a ligaria (BT-MIC-REGISTRY-01). "
-        "A FRASE ANTERIOR DESTA ENTRADA — *'o desenho da tela é DECISÃO DELA e "
-        "está pendente'* — foi SUBSTITUÍDA porque caducou: ela RESPONDEU em "
-        "14/08/2026, na D-5 de "
-        "`docs/process/2026-08-14-DECISOES-DE-PO-as-onze-respostas-da-mesa-cheia.md`"
-        " — *máscara do JOGADOR, com a do jogo como padrão herdado*, ≈480 min. "
-        "O QUE A FECHA HOJE não é mais uma decisão de tela: é a CONTRADIÇÃO "
-        "entre essa resposta e a decisão dela de 10/08/2026 escrita em "
-        "`profiles/schema.py`:637 (*'`mode` e a máscara do gamepad são da "
-        "SESSÃO, não da peça'*), que a própria D-5 manda devolver a ela em vez "
-        "de contornar. O caso está escrito em `docs/process/sprints/`, na "
-        "`2026-08-15-MASCARA-POR-JOGADOR-01-a-decisao-de-14-08-esbarra-na-de-"
-        "10-08.md`. QUANDO A MÁSCARA GANHAR CHAMADOR, apague esta entrada."
+    # `daemon/subsystems/external_mask.py::ExternalMaskRegistry` MOROU AQUI e
+    # foi APAGADA em 15/08/2026, pelo motivo que a própria entrada mandava:
+    # A MÁSCARA GANHOU CHAMADOR. Ela respondeu a contradição que a entrada
+    # descrevia (a frase de 10/08 em `profiles/schema.py` passa a valer só para
+    # o `mode`), e a máscara por jogador virou código: `registro_de_mascaras()`
+    # e `mascara_efetiva()` são consultados na criação de TODO gamepad virtual
+    # (`integrations/uinput_gamepad.py` e `integrations/uhid_gamepad.py`,
+    # métodos `for_flavor`). O degrau que ainda falta é o de baixo — passar a
+    # IDENTIDADE do jogador — e ele tem lápide própria, logo abaixo, em
+    # `::vpad_ficou_para_tras`. Não se guarda a entrada velha ao lado da nova:
+    # ela mandaria a próxima pessoa procurar um chamador que já existe.
+    "daemon/subsystems/external_mask.py::vpad_ficou_para_tras": (
+        "MEDIDO em 15/08/2026, no dia em que nasceu: é a função que separa a "
+        "DIVERGÊNCIA ESCOLHIDA (o jogador pediu outra máscara e o vpad dele "
+        "sobrevive destoando) do FLAVOR QUE FICOU PARA TRÁS (a máscara mudou e "
+        "o vpad nasceu na antiga, logo é recriado) — a cura da "
+        "SPRINT-GAME-RUMBLE-01 contra `P2+ presos no flavor antigo, rumble "
+        "morto`. O chamador dela é UM só e mora em "
+        "`daemon/subsystems/coop.py`:417-424, no laço que hoje compara "
+        "`player.vpad.flavor` com um `desired_flavor` GLOBAL "
+        "(`coop.py`:394 → `_flavor()`:481-485, que lê um único "
+        "`config.gamepad_flavor`). "
+        "O QUE A FECHA: `desired_flavor` deixar de ser um valor e passar a ser "
+        "função do MAC — `vpad_ficou_para_tras(getattr(p.vpad, 'flavor', None), "
+        "mac, self._flavor())` no lugar da comparação. São as mesmas duas "
+        "linhas que fazem `_promote_player` passar `identity=mac` ao "
+        "`make_virtual_pad`. Não foi feito nesta leva porque `coop.py` estava "
+        "sob edição de outra frente no mesmo dia, e derrubar aquela cura por "
+        "descuido reintroduz um defeito MEDIDO. O caso inteiro está em "
+        "`docs/process/sprints/2026-08-15-MASCARA-POR-JOGADOR-01-a-decisao-de-"
+        "14-08-esbarra-na-de-10-08.md`."
     ),
     # --- as duas metades das notificações ----------------------------------
     "integrations/desktop_notifications.py::notify_battery_low": (

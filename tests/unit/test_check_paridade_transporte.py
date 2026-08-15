@@ -37,17 +37,17 @@ CABECALHO = [
     "existe",
     "cabo_aciona",
     "radio_aciona",
-    "cabo_confianca",
-    "radio_confianca",
+    "cabo_de_onde_sei",
+    "radio_de_onde_sei",
     "cabo_canal",
     "radio_canal",
-    # O par `grau` entrou em 12/08/2026, quando a regra 6 (`grau-sem-ensaio`)
+    # O par do degrau entrou em 12/08/2026, quando a regra 6 (`grau-sem-ensaio`)
     # passou a exigir ensaio no caderno de bancada para os dois degraus altos.
     # Ele é EXIGIDO no cabeçalho, e não apenas lido: sem a coluna, a régua da
     # regra dura morreria em silêncio. Vazio aqui, que é o que estes casos
     # querem — nenhum deles fala de grau.
-    "cabo_grau",
-    "radio_grau",
+    "cabo_ate_onde_foi",
+    "radio_ate_onde_foi",
     "teste_que_morde",
     "provado_em",
     "validade_dias",
@@ -153,8 +153,8 @@ def linha_forte(**mudancas: str) -> dict[str, str]:
         "existe": "tem",
         "cabo_aciona": "sim",
         "radio_aciona": "sim",
-        "cabo_confianca": "medido",
-        "radio_confianca": "medido",
+        "cabo_de_onde_sei": "medido",
+        "radio_de_onde_sei": "medido",
         "cabo_canal": "hidraw",
         "radio_canal": "hidraw",
         "teste_que_morde": "tests/unit/test_exemplo.py::test_a_lightbar_acende",
@@ -200,8 +200,8 @@ def test_afirmacao_fraca_sem_teste_nao_reprova(tmp_path: Path) -> None:
         [
             linha_forte(
                 teste_que_morde="",
-                cabo_confianca="inferido-do-codigo",
-                radio_confianca="inferido-do-codigo",
+                cabo_de_onde_sei="inferido-do-codigo",
+                radio_de_onde_sei="inferido-do-codigo",
             )
         ],
     )
@@ -367,7 +367,7 @@ def test_assimetria_nao_declarada_avisa_e_nao_derruba(tmp_path: Path) -> None:
 def test_lado_mudo_conta_como_assimetria(tmp_path: Path) -> None:
     """É a forma exata da regressão dela: consolidado no cabo, ninguém olhou o rádio."""
     caminho = monta_arvore(
-        tmp_path, [linha_forte(radio_aciona="", radio_confianca="", teste_que_morde="")]
+        tmp_path, [linha_forte(radio_aciona="", radio_de_onde_sei="", teste_que_morde="")]
     )
     processo = rodar(caminho, tmp_path)
     assert "AVISO assimetria-nao-declarada" in processo.stdout
@@ -462,14 +462,14 @@ def test_id_vazio_reprova(tmp_path: Path) -> None:
     [
         ("existe", "talvez"),
         ("cabo_canal", "usb-magico"),
-        ("radio_confianca", "quase-medido"),
+        ("radio_de_onde_sei", "quase-medido"),
         ("cabo_aciona", "sim?"),
     ],
 )
 def test_valor_fora_do_dominio_reprova(tmp_path: Path, coluna: str, valor: str) -> None:
     """MORDIDA MEDIDA: desligado o `if valor not in dominio:` do laço que
     confere `DOMINIO_POR_SUFIXO`. Reprovaram os TRÊS casos de coluna com sufixo
-    (`cabo_canal`, `radio_confianca`, `cabo_aciona`) e o caso de `existe`
+    (`cabo_canal`, `radio_de_onde_sei`, `cabo_aciona`) e o caso de `existe`
     continuou VERDE — prova de que as duas conferências são independentes.
     Desligando a de `existe` (`if existe not in DOMINIO_EXISTE:`), acontece o
     inverso: cai só o caso de `existe`. Curas devolvidas.
@@ -516,7 +516,7 @@ def test_o_censo_conta_o_mesmo_que_uma_regua_independente() -> None:
     """O instrumento mente mais que o produto: esta é a contraprova dele.
 
     O teste recalcula, com um `csv.DictReader` próprio, quantas células do mapa
-    REAL afirmam `aciona = sim` com `confianca = medido` sem `teste_que_morde`,
+    REAL afirmam `aciona = sim` com `de_onde_sei = medido` sem `teste_que_morde`,
     e exige que o script tenha reprovado exatamente esse número de vezes por
     `sem-mordida`. Se a régua começar a enxergar de menos — um sufixo que ela
     deixe de descobrir, um `strip()` que suma — os dois números divergem aqui,
@@ -541,7 +541,7 @@ def test_o_censo_conta_o_mesmo_que_uma_regua_independente() -> None:
         for linha in linhas
         for lado in ("cabo", "radio")
         if (linha[f"{lado}_aciona"] or "").strip() == "sim"
-        and (linha[f"{lado}_confianca"] or "").strip() == "medido"
+        and (linha[f"{lado}_de_onde_sei"] or "").strip() == "medido"
         and not (linha["teste_que_morde"] or "").strip()
     )
     achadas = processo.stdout.count("FALHA sem-mordida:")
@@ -606,7 +606,7 @@ def ensaio_do_cabo(**mudancas: str) -> dict[str, str]:
 
 def linha_que_obedeceu(**mudancas: str) -> dict[str, str]:
     """A linha forte com o degrau mais alto no cabo — o que pede o caderno."""
-    return linha_forte(cabo_grau="O APARELHO OBEDECEU", **mudancas)
+    return linha_forte(cabo_ate_onde_foi="O APARELHO OBEDECEU", **mudancas)
 
 
 def test_resultado_do_suspeito_sozinho_ainda_avisa(tmp_path: Path) -> None:

@@ -3,7 +3,8 @@
 O DEFEITO QUE ESTE ARQUIVO GUARDA
 ---------------------------------
 A migração v2 do mapa de canais desdobrou por transporte as colunas que antes
-eram únicas: `grau` virou `cabo_grau`/`radio_grau`, `ressalva` virou
+eram únicas: `grau` virou o par por transporte (hoje
+`cabo_ate_onde_foi`/`radio_ate_onde_foi`), `ressalva` virou
 `cabo_ressalva`/`radio_ressalva`. A `bancada.py` continuou pedindo os nomes
 velhos, e o `df[vis]` da linha da grade passou a levantar
 
@@ -53,7 +54,8 @@ Este arquivo passa a cruzar as `options` de TODO `SelectboxColumn` da grade
 contra os valores que a coluna REALMENTE tem no CSV. Por ler o `column_config`
 em vez de uma lista copiada, ele vale para o seletor que ainda não existe.
 
-MORDE? Troque `cabo_grau`/`radio_grau` de volta por `grau` em `EDITAVEIS`, ou
+MORDE? Troque `cabo_ate_onde_foi`/`radio_ate_onde_foi` de volta por `grau` em
+`EDITAVEIS`, ou
 tire `cabo_ressalva` do CSV, ou renomeie qualquer coluna que a bancada leia por
 atributo: os testes daqui reprovam nomeando a coluna que sumiu. Tire um valor de
 `ESTADOS`, ou troque `QUEM` por uma lista sem `fonte-do-driver`: o teste dos
@@ -287,7 +289,7 @@ def test_os_nomes_de_quadro_declarados_ainda_existem_na_bancada() -> None:
 def test_o_grau_e_a_ressalva_sao_editados_nos_dois_transportes() -> None:
     """Desde a v2 o que é por transporte vem EM PAR — como `aceita` e `aciona`."""
     editaveis = _lista_literal("EDITAVEIS")
-    for sufixo in ("grau", "ressalva"):
+    for sufixo in ("ate_onde_foi", "ressalva"):
         assert f"cabo_{sufixo}" in editaveis and f"radio_{sufixo}" in editaveis, (
             f"a bancada edita só um lado de `{sufixo}`: um lado editável e o "
             "outro não é a assimetria que a v2 existe para não deixar acontecer"
@@ -307,7 +309,7 @@ def test_o_column_config_so_configura_coluna_que_a_grade_mostra() -> None:
 def test_todo_selectbox_da_grade_oferece_os_valores_que_o_mapa_ja_tem() -> None:
     """Um seletor cego ao dado não consegue devolver o dado que já estava lá.
 
-    `estado_hoje`, `provado_por` e os dois `*_grau` estão em `EDITAVEIS`, e o
+    `estado_hoje`, `provado_por` e os dois `*_ate_onde_foi` estão em `EDITAVEIS`, e o
     botão "Gravar no CSV" regrava TODA coluna editável de toda linha visível com
     o que voltou da grade — isso está LIDO no código, não inferido. Que o
     `SelectboxColumn` coaja um valor fora de `options` em vez de deixá-lo passar

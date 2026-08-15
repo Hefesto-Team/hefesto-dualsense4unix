@@ -2,7 +2,8 @@
 
 O DEFEITO QUE ORIGINOU ESTE ARQUIVO, medido em 12/08/2026 por mutação numa cópia
 da árvore: um agente escreveu a afirmação mais forte que o vocabulário da casa
-permite — `cabo_grau = radio_grau = O APARELHO OBEDECEU`, `provado_por =
+permite — `cabo_ate_onde_foi = radio_ate_onde_foi = O APARELHO OBEDECEU`,
+`provado_por =
 olho-dela`, `provado_em` de hoje — numa linha com ZERO ensaios em
 `docs/data/ensaios.csv`, e `scripts/check_paridade_transporte.py` devolveu
 exatamente o mesmo número de reprovações de antes. A mentira passou inteira,
@@ -97,12 +98,12 @@ def linha_com_grau(**mudancas: str) -> dict[str, str]:
         "existe": "tem",
         "cabo_aciona": "sim",
         "radio_aciona": "sim",
-        "cabo_confianca": "medido",
-        "radio_confianca": "medido",
+        "cabo_de_onde_sei": "medido",
+        "radio_de_onde_sei": "medido",
         "cabo_canal": "hidraw",
         "radio_canal": "hidraw",
-        "cabo_grau": "O APARELHO OBEDECEU",
-        "radio_grau": "O APARELHO OBEDECEU",
+        "cabo_ate_onde_foi": "O APARELHO OBEDECEU",
+        "radio_ate_onde_foi": "O APARELHO OBEDECEU",
         "teste_que_morde": "tests/unit/test_exemplo.py::test_a_lightbar_acende",
         "provado_em": "2026-08-12",
         "id": "audio.jack.deteccao@pro",
@@ -233,7 +234,7 @@ def test_saiu_no_fio_se_sustenta_com_ensaio_que_nega(tmp_path: Path) -> None:
     """
     caminho = monta_arvore(
         tmp_path,
-        [linha_com_grau(cabo_grau="SAIU NO FIO", radio_grau="SAIU NO FIO")],
+        [linha_com_grau(cabo_ate_onde_foi="SAIU NO FIO", radio_ate_onde_foi="SAIU NO FIO")],
         [
             ensaio("audio.jack.deteccao@pro", "cabo", resultado="não obedece"),
             ensaio(
@@ -253,7 +254,7 @@ def test_montou_nao_pede_ensaio_nenhum(tmp_path: Path) -> None:
     aparelho por algo que o pytest já morde."""
     caminho = monta_arvore(
         tmp_path,
-        [linha_com_grau(cabo_grau="MONTOU", radio_grau="MONTOU")],
+        [linha_com_grau(cabo_ate_onde_foi="MONTOU", radio_ate_onde_foi="MONTOU")],
         [],
     )
     processo = rodar(caminho, tmp_path)
@@ -277,7 +278,7 @@ def test_sem_caderno_a_regra_se_desliga_em_vez_de_acusar_tudo(tmp_path: Path) ->
 # REGRA 4 — o domínio do grau, que é a porta lateral da mentira
 # --------------------------------------------------------------------------
 def test_grau_fora_da_escada_reprova(tmp_path: Path) -> None:
-    """MORDIDA MEDIDA: apagada a entrada `"grau"` de `DOMINIO_POR_SUFIXO`.
+    """MORDIDA MEDIDA: apagada a entrada `"ate_onde_foi"` de `DOMINIO_POR_SUFIXO`.
     Reprovaram os dois casos deste teste, e mais nenhum. Cura devolvida.
 
     O caso minúsculo é o que importa: sem domínio, `o aparelho obedeceu` escrito
@@ -287,23 +288,23 @@ def test_grau_fora_da_escada_reprova(tmp_path: Path) -> None:
     for valor in ("FUNCIONA", "o aparelho obedeceu"):
         caminho = monta_arvore(
             tmp_path,
-            [linha_com_grau(cabo_grau=valor, radio_grau="MONTOU")],
+            [linha_com_grau(cabo_ate_onde_foi=valor, radio_ate_onde_foi="MONTOU")],
             [],
         )
         processo = rodar(caminho, tmp_path)
         assert processo.returncode == 1, f"{valor}\n{processo.stdout}"
         assert "fora do domínio" in processo.stdout
-        assert "cabo_grau" in processo.stdout
+        assert "cabo_ate_onde_foi" in processo.stdout
 
 
 def test_a_coluna_de_grau_que_some_do_cabecalho_reprova(tmp_path: Path) -> None:
     """Regra dura não se desliga em silêncio: sem a coluna, não há régua."""
-    cabecalho = [coluna for coluna in CABECALHO if coluna != "radio_grau"]
+    cabecalho = [coluna for coluna in CABECALHO if coluna != "radio_ate_onde_foi"]
     caminho = monta_arvore(tmp_path, [linha_com_grau()], [], cabecalho=cabecalho)
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 1, processo.stdout
     assert "integridade" in processo.stdout
-    assert "radio_grau" in processo.stdout
+    assert "radio_ate_onde_foi" in processo.stdout
 
 
 # --------------------------------------------------------------------------
@@ -323,7 +324,7 @@ def test_obedeceu_sustentado_so_por_ensaio_que_nega_avisa_e_nao_derruba(
     """
     caminho = monta_arvore(
         tmp_path,
-        [linha_com_grau(radio_grau="MONTOU")],
+        [linha_com_grau(radio_ate_onde_foi="MONTOU")],
         [ensaio("audio.jack.deteccao@pro", "cabo", resultado="não obedece")],
     )
     processo = rodar(caminho, tmp_path)
@@ -341,7 +342,7 @@ def test_a_promocao_do_resultado_e_uma_constante_que_funciona(tmp_path: Path) ->
     censo = modulo_do_censo()
     caminho = monta_arvore(
         tmp_path,
-        [linha_com_grau(radio_grau="MONTOU")],
+        [linha_com_grau(radio_ate_onde_foi="MONTOU")],
         [ensaio("audio.jack.deteccao@pro", "cabo", resultado="não obedece")],
     )
     censo.RESULTADO_REPROVA = True
@@ -361,7 +362,7 @@ def test_ensaio_sem_o_olho_dela_avisa_e_nao_derruba(tmp_path: Path) -> None:
     """
     caminho = monta_arvore(
         tmp_path,
-        [linha_com_grau(radio_grau="MONTOU")],
+        [linha_com_grau(radio_ate_onde_foi="MONTOU")],
         [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="bancada")],
     )
     processo = rodar(caminho, tmp_path)
@@ -373,7 +374,7 @@ def test_a_promocao_do_olho_dela_e_uma_constante_que_funciona(tmp_path: Path) ->
     censo = modulo_do_censo()
     caminho = monta_arvore(
         tmp_path,
-        [linha_com_grau(radio_grau="MONTOU")],
+        [linha_com_grau(radio_ate_onde_foi="MONTOU")],
         [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="bancada")],
     )
     censo.OLHO_DELA_REPROVA = True
@@ -477,7 +478,8 @@ def test_o_censo_conta_o_mesmo_que_uma_regua_independente_de_grau() -> None:
         1
         for linha in linhas
         for lado in ("cabo", "radio")
-        if (linha[f"{lado}_grau"] or "").strip() in ("SAIU NO FIO", "O APARELHO OBEDECEU")
+        if (linha[f"{lado}_ate_onde_foi"] or "").strip()
+        in ("SAIU NO FIO", "O APARELHO OBEDECEU")
         and ((linha["id"] or "").strip(), lado) not in lados_com_ensaio
     )
     achadas = processo.stdout.count("FALHA grau-sem-ensaio:")
