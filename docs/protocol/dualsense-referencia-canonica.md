@@ -389,11 +389,12 @@ declaram, não o que alguém supõe que eles façam.
 Três leituras, e as três são aritmética, não interpretação:
 
 1. **O cabo tem UM output; o rádio tem NOVE.** De `0x31` a `0x39`.
-2. **A escada sobe de +64 bytes por degrau, e o último degrau é curto.** 77,
-   141, 205, 269, 333, 397, 461, 525 — oito valores em progressão exata de 64.
-   O `0x39` seria 589 se a progressão continuasse, e é **546**. O que isso
-   significa **não foi medido**; o que se pode escrever é que o `0x39` é o teto,
-   não o nono degrau da mesma régua.
+2. **A escada sobe de +64 bytes por degrau, e o último degrau é curto.** De
+   `0x31` a `0x38`: 77, 141, 205, 269, 333, 397, 461, 525 — **oito valores,
+   sete degraus de exatamente 64** (525 - 77 = 448 = 7 x 64). O `0x39` seria
+   589 se a progressão continuasse, e é **546**. O que isso significa **não foi
+   medido**; o que se pode escrever é que o `0x39` é o **teto**, não o oitavo
+   degrau da mesma régua.
 3. **O `0xF6` só existe por rádio, e é FEATURE, não OUTPUT** — 546 bytes, o
    mesmo tamanho de payload do `0x39`. A coincidência de tamanho é **observação**,
    não conclusão.
@@ -425,8 +426,10 @@ outras duas colunas servindo de conferência.
 ```
 
 Os quatro fecham em `+5` sobre o tamanho do report — os cabeçalhos L2CAP e
-HIDP. **O enlace Bluetooth não é o limite:** ele carregou 547 bytes de report
-num único ACL, e isso está no rastro, não na expectativa.
+HIDP. **O enlace Bluetooth não é o limite:** ele carregou os 547 bytes do `0x39`
+num **único** `ACL Data TX`, e isso está no rastro, não na expectativa. Quem
+suspeitar que "o rádio não daria conta de um pacote desse tamanho" tem aqui a
+captura que responde.
 
 ### O firmware EXECUTA os degraus — MEDIDO NO APARELHO
 
@@ -452,6 +455,20 @@ saída de 142 e de 547 bytes por rádio, e processa neles **o mesmo `common` de 
 bytes** que processa no `0x31`. Os degraus não são declaração vazia no
 descritor: são reports vivos. **GRAU: MEDIDO NO APARELHO.**
 
+**Os dois limites deste ensaio, e eles são parte do resultado — não rodapé:**
+
+1. **Foram tentados TRÊS ids: `0x31`, `0x32` e `0x39`.** Os degraus `0x33` a
+   `0x38` **nunca foram tentados**. Que eles executem é expectativa razoável
+   pela forma da escada, e expectativa não é medição — o título desta subseção
+   diz *"os degraus"* e o que ela mediu foram dois deles, acima do `0x31`.
+2. **Foi UM aparelho: o branco** (`hw 0x0711`, BDM-050), por rádio. O outro
+   controle que estava no rádio na mesma mesa — o vermelho, `hw 0x0811` — não
+   foi tentado. Esta página já mediu, no *censo dos dezessete*, que **o layout
+   de um feature muda com a série de software** do mesmo modelo; N=1 é o
+   bastante para derrubar um "impossível", e não é o bastante para escrever
+   "o DualSense faz". Repetir os seis passos no segundo aparelho é o ensaio mais
+   barato que esta frente tem.
+
 O apagar entre um degrau e o outro não é cerimônia: sem ele, uma cor que
 sobrevivesse do passo anterior seria lida como obediência do passo seguinte — e
 esta página já mediu que **o firmware guarda a cor sem reforço nenhum**, por 136
@@ -459,9 +476,17 @@ segundos cronometrados (§5). Era exatamente a armadilha deste ensaio.
 
 ### O envelope BT completo — a receita que funciona, medida
 
-Isto estava **só no código** desta árvore, e é o que faz um report de saída ser
-**aceito** por rádio. Sem os três primeiros bytes e sem o CRC, o aparelho não
-faz nada, e a escrita ainda assim "dá certo" para quem só olha o retorno.
+Isto estava **só no código** desta árvore, nunca nesta página. É a forma com que
+os reports acima foram montados, e é a única forma que **se sabe funcionar** por
+rádio.
+
+**A ressalva de escopo, e ela é do mesmo tamanho do achado:** o que está medido é
+que **este envelope inteiro funciona**. **Ninguém aqui removeu uma peça de cada
+vez** para ver qual delas o firmware exige — nem o tag, nem o número de
+sequência, nem o CRC. Que o tag seja obrigatório vem do **comentário do driver da
+Sony**, não de ensaio desta casa. E a armadilha de fazer esse ensaio já está
+nomeada logo abaixo: uma escrita malformada **"dá certo"** para quem olha o valor
+de retorno.
 
 ```
 [0]      = report id          (0x31, 0x32, ... 0x39)
@@ -534,8 +559,19 @@ rádio. **HIPÓTESE:** negociação — dizer ao controle qual codec e qual taxa
 a seguir. O que sustenta a suspeita é que o **microfone** por rádio já atravessa
 em Opus dentro do input `0x31` (§3); se a entrada é Opus, a saída provavelmente
 também. **Nada disso está medido**, e o censo dos dezessete registra que o
-`0xF6` lido **sem comando prévio** volta vazio — o que é a assinatura da família
-que *"responde ao que foi pedido antes"*, não a de um report morto.
+`0xF6` lido **sem comando prévio** volta vazio.
+
+**E vazio não decide nada** — nem a favor, nem contra. Esta página chegou a
+escrever que o vazio era *"a assinatura da família que responde ao que foi
+pedido antes, não a de um report morto"*, e a frase saiu em 15/08/2026, no
+mesmo dia em que foi escrita: **um resultado nulo é compatível com as duas
+leituras**, e um report que nunca responde a nada devolve exatamente a mesma
+coisa. A ideia de que a família `0x80`-`0x83` e `0xF0`-`0xF7` *"responde ao que
+foi pedido antes"* vem do caminho da cor, que esta página marca como **caminho
+identificado e NÃO medido por nós**; e **ninguém provocou o `0xF6`** com escrita
+nenhuma. Concluir que ele está vivo porque veio vazio é a **falácia
+do canal que responde** de cabeça para baixo — e ela morde de novo aqui se a
+deixarmos.
 
 ### O crédito, que não é de quem escreveu esta seção
 
@@ -1387,10 +1423,17 @@ O tamanho é **payload + 1 byte de id**, que é como o `hidraw` conta.
 **GRAU: MEDIDO AQUI** para tudo nesta tabela.
 
 **A linha que mais ensina é a dos `0x80`-`0x83` e `0xf0`-`0xf7`:** lidos **sem
-comando prévio**, eles devolvem a mesma coisa nos quatro aparelhos. Não é que
-não carreguem nada — é que **esta família responde ao que foi pedido antes**, e
-sem pedido não há o que responder. É exatamente por isso que o caminho da cor,
-mais abaixo, exige uma **escrita** antes da leitura.
+comando prévio**, eles devolvem a mesma coisa nos quatro aparelhos.
+
+**O que está medido é o vazio, e nada além dele.** Esta seção chegou a escrever
+que *"não é que não carreguem nada — é que esta família responde ao que foi
+pedido antes"*, e a frase foi **enfraquecida em 15/08/2026**, no mesmo dia:
+resultado nulo é compatível com as duas leituras — *"responde só depois de um
+pedido"* e *"não responde nunca"* devolvem o mesmo buffer de zeros. A leitura
+de *"responde ao que foi pedido antes"* vem do **caminho da cor**, mais abaixo,
+que esta casa marca como **CAMINHO IDENTIFICADO, NÃO MEDIDO por nós** — ele é a
+razão de a suspeita existir, e não pode ser a prova dela. Quem quiser decidir
+faz o par: escreve, lê, e compara com a leitura sem escrita.
 
 **O `0x22` não é código de cor.** Nos dois aparelhos com `sw_series = 11` o
 offset 45-51 traz ASCII legível (`AP4Y490` e `AP51877`); nos outros dois, no
