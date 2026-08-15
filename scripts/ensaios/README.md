@@ -69,22 +69,47 @@ são curas diferentes, em lugares diferentes.
 
 **Pergunta:** cada feature report é o mesmo byte a byte no cabo e no rádio?
 
-Lê os 17 feature reports de cada controle e imprime, por report: quantas
-tentativas precisou, se o CRC-32 confere, e se o valor **difere entre cabo e
-rádio**. Os tamanhos saem do próprio `report_descriptor` do aparelho, nunca de
-chute.
+Lê os feature reports de cada controle e imprime, por report: quantas tentativas
+precisou, se o CRC-32 confere, e se o valor **difere entre cabo e rádio**. Os
+tamanhos saem do próprio `report_descriptor` do aparelho, nunca de chute.
 
-Ele carrega três coisas que custaram caro:
+> **Não existe "a lista dos feature reports do DualSense".** Existe **uma por
+> transporte**, e nenhuma é subconjunto da outra — medido em 15/08/2026, com o
+> mesmo controle: **17 por rádio, 22 no cabo**. Só o rádio declara `0xf6`
+> (547 B) e `0xf7`; só o cabo declara `0x0a`, `0x0c`, `0x21`, `0x84`, `0x85`,
+> `0xa0`, `0xe0`. Até um id comum muda de tamanho: `0xf5` são 8 B no rádio e
+> 4 B no cabo.
+>
+> A primeira versão deste instrumento tirava a lista do **primeiro** aparelho e
+> a aplicava a todos — e assim nunca pedia os reports exclusivos do outro
+> transporte. O erro **só aparece com os dois transportes na mesa ao mesmo
+> tempo**, que é exatamente o que o ensaio 2+2 existe para pegar. Hoje ele usa a
+> união dos descritores e imprime quem declara o quê antes de ler qualquer coisa.
+
+Ele carrega quatro coisas que custaram caro:
 
 - **Por rádio o `GET_FEATURE` falha por TIMEOUT, não por erro.** O pedido sai
   pelo canal de controle L2CAP e bate no `REPORT_REQ_TIMEOUT` de 3 s do BlueZ;
   cada falha custa ~3,2–3,7 s, e essa é a assinatura. **A cura é repetir** —
   em 15/08/2026, dois controles responderam de primeira e um precisou de 5.
+- **Nem toda falha merece retry.** Um report que o descritor declara mas o
+  firmware não implementa devolve `EPIPE` (stall) na hora, sempre. Isso é
+  resposta **definitiva** do aparelho, categoria diferente do timeout, e
+  repeti-la seis vezes só faz o censo demorar seis vezes mais. E se as falhas
+  voltam em ~0,01 s, o controle **desconectou no meio do ensaio** (`ENODEV`) —
+  o instrumento avisa alto, porque isso não é recusa do aparelho: o aparelho
+  não está mais lá.
 - **O aparelho pode devolver o report errado.** Um respondeu `0x80` a um pedido
   de `0x20` — resposta trocada, não erro, com o ioctl retornando sucesso. Por
   isso `buf[0] == report_id` é validado sempre.
 - **A cor de fábrica não sai daqui.** Ela exige um `SET_FEATURE 0x80` antes, que
   é **escrita**. `--mostrar-comando-da-cor` imprime o comando exato e para.
+
+**O CRC-32 de semente `0xA3` é o enquadramento do Bluetooth**, e só é conferido
+no rádio: no cabo os quatro últimos bytes são payload como outro qualquer, e
+checá-los ali produzia "difere" em *todos* os reports — alarme convincente e
+inteiramente falso. Trailer zerado também não é CRC quebrado: é report que não
+carrega CRC, e a coluna diz `sem trailer`.
 
 > **Este é o único instrumento que exige o daemon PARADO** — veja a seção
 > seguinte, que é o achado mais importante desta pasta.
@@ -221,7 +246,10 @@ data e quem mediu.
 |---|---|---|
 | a escada OUTPUT `0x32`–`0x39` (até 547 B) existe **só no rádio**; no cabo o descritor declara só `0x02` (48 B) | **medido** 15/08 | `audio_por_transporte.py`, descritor dos 4 |
 | no cabo o controle expõe placa USB Audio `054c:0ce6`; no rádio, nenhuma | **medido** 15/08 | idem |
-| os 17 feature reports são lidos por rádio com retry + validação de id | **medido** 15/08 | `censo_features.py` |
+| cabo e rádio declaram conjuntos **diferentes** de feature report (22 x 17), nenhum subconjunto do outro | **medido** 15/08 | `censo_features.py`, descritor |
+| os feature reports são lidos por rádio com retry + validação de id; o CRC-32 confere em todos os que trazem trailer | **medido** 15/08 | `censo_features.py` |
+| o rádio entrega movimento a taxa **maior** que o cabo — ~414 Hz contra 250,0 Hz cravados no cabo | **medido** 15/08, janela de 5 s | `taxa_de_entrada.py`, daemon parado |
+| reports que o descritor declara e o firmware não implementa devolvem `EPIPE` na hora (10 deles no cabo) | **medido** 15/08 | `censo_features.py` |
 | a cor de fábrica está nos caracteres 5–6 do serial, via `SET 0x80` + `GET 0x81` | **caminho identificado, NÃO medido** | fonte de terceiros; exige escrita não autorizada, e por rádio ninguém demonstrou |
 | a escada `0x32`–`0x39` carrega áudio | **hipótese viva** | o canal existe; provar exige escrever |
 | `hardware_version` distingue os quatro controles | **medido** 15/08, mas **não é a cor** | o byte *Variation* é `0x00` nos quatro; o que varia é a revisão de placa. Dois controles da mesma cor comprados juntos teriam o mesmo valor — é chave de diagnóstico, não fonte de cor |

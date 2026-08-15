@@ -226,8 +226,15 @@ def ler_feature(
     # no rádio; no cabo a coluna diz que não se aplica, em vez de inventar.
     if leitura.ok and e_radio and len(leitura.dados) >= 5:
         esperado = int.from_bytes(leitura.dados[-4:], "little")
-        calculado = _crc32_dualsense(bytes([SEMENTE_CRC]) + leitura.dados[:-4])
-        leitura.crc = "confere" if esperado == calculado else "difere"
+        if esperado == 0:
+            # Trailer zerado: este report não CARREGA CRC. Chamar isso de
+            # "difere" seria alarme falso — e alarme falso convincente é o
+            # defeito mais caro desta casa. Um report todo zero tem os quatro
+            # últimos bytes zero por ser todo zero, não por estar corrompido.
+            leitura.crc = "sem trailer"
+        else:
+            calculado = _crc32_dualsense(bytes([SEMENTE_CRC]) + leitura.dados[:-4])
+            leitura.crc = "confere" if esperado == calculado else "DIFERE"
     elif leitura.ok:
         leitura.crc = "n/a (cabo)"
     return leitura
@@ -355,7 +362,10 @@ def imprimir_tabela_cabo_x_radio(
             continue
 
         pior = max(x.tentativas for x in boas)
-        crcs = {x.crc for x in boas}
+        # O CRC só existe no rádio, então só o veredito do rádio entra na coluna.
+        # Misturar o "n/a (cabo)" ali produzia células como "confere/n/a (cabo)",
+        # que obrigam quem lê a decidir qual metade vale.
+        crcs = {x.crc for x in boas if x.crc != "n/a (cabo)"} or {"n/a (cabo)"}
         conteudo = _classificar(boas[0].dados)
 
         def _bytes_de(grupo: list[Aparelho], rid: int = report_id) -> set[bytes]:
