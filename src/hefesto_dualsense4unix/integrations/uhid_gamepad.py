@@ -986,6 +986,7 @@ class UhidDualSense:
         player: int = 1,
         blueprint: dict[str, Any] | None = None,
         calibration_0x05: bytes | None = None,
+        identity: str | None = None,
     ) -> UhidDualSense | None:
         """Vpad uhid para o flavor pedido, ou **None** = "use o UinputGamepad".
 
@@ -1001,10 +1002,25 @@ class UhidDualSense:
         propósito NÃO passa pelo `normalize_flavor`, cujo default é xbox: quem
         chega aqui já escolheu o backend uhid, e herdar aquele default desligaria
         o uhid em silêncio justo no caso comum.
+
+        `identity` (MÁSCARA-POR-JOGADOR-01, 15/08/2026) é o MAC canônico do
+        controle FÍSICO deste jogador. Quando ESTE aparelho tem máscara escolhida
+        no `external_mask`, é ela que decide — inclusive para dizer **não**: um
+        controle marcado como `xbox` devolve None aqui e segue para o
+        `UinputGamepad`, mesmo que a máscara do jogo seja dualsense. Sem escolha
+        registrada, a regra do `flavor` acima vale intacta, com o `None` a
+        significar dualsense como sempre significou.
         """
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            registro_de_mascaras,
+        )
         from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
 
-        if flavor is not None and normalize_flavor(flavor) != "dualsense":
+        escolhida = registro_de_mascaras().mask_for(identity)
+        if escolhida is not None:
+            if escolhida != "dualsense":
+                return None
+        elif flavor is not None and normalize_flavor(flavor) != "dualsense":
             return None
         return cls(
             player=player,

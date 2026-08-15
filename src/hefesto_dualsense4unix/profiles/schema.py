@@ -632,11 +632,35 @@ class ControllerOverrides(BaseModel):
 
     Fora porque NÃO TÊM RESPOSTA HONESTA por unidade — a nota datada de
     10/08/2026, para não se reaprender (ver
-    ``docs/process/sprints/2026-08-10-POR-UNIDADE-01-*``):
+    ``docs/process/sprints/2026-08-10-POR-UNIDADE-01-*``). A máscara do gamepad
+    saiu desta lista em 15/08/2026: ela TEM resposta por unidade, só que a
+    resposta mora fora do perfil (ver a nota datada no primeiro item):
 
-    - ``mode`` e a máscara do gamepad são da SESSÃO, não da peça (decisão
-      dela, 10/08/2026): duas unidades pedindo modos diferentes no mesmo
-      perfil não têm resposta;
+    - ``mode`` é da SESSÃO, não da peça (decisão dela, 10/08/2026): duas
+      unidades pedindo modos diferentes no mesmo perfil não têm resposta,
+      porque o modo é estado do PROCESSO — existe um só, e o daemon não pode
+      estar em dois ao mesmo tempo;
+
+      **NOTA DATADA — 15/08/2026 (MÁSCARA-POR-JOGADOR-01).** Esta frase dizia
+      ``mode`` **e a máscara do gamepad**, e ficou LARGA DEMAIS. Ela a
+      reescreveu para valer só para o ``mode``. O que a medição separou (o
+      diagnóstico inteiro está em
+      ``docs/process/sprints/2026-08-15-MASCARA-POR-JOGADOR-01-*``): o ``mode``
+      é mesmo um só, mas a máscara **já tem um lugar por jogador** — o co-op
+      cria um gamepad virtual por controle e cada um carrega o próprio
+      ``flavor``. Onde não havia resposta por unidade, havia; o motivo de 10/08
+      valia para o ``mode`` e foi emprestado à máscara sem medição própria.
+      **A máscara passa a ser do JOGADOR, com a do jogo como padrão herdado**
+      (D-5 de 14/08, respondida em 15/08).
+
+      **E mesmo assim ela NÃO é um campo daqui** — por uma razão diferente, e
+      medida: trocar a máscara **derruba e recria o gamepad virtual**. Num
+      campo de perfil, cada troca automática de perfil (cada alt-tab) faria o
+      controle sumir e voltar no meio da partida. Por isso a escolha por
+      unidade mora em ``daemon/subsystems/external_mask.py``, chaveada pela
+      identidade do APARELHO e persistida em arquivo próprio — com a MESMA
+      semântica de override que este modelo usa: sem escolha registrada, o
+      jogador herda a máscara do jogo (MÁSCARA-01, *"Onde a máscara mora"*);
     - ``suppress_desktop_emulation`` (o "modo jogo") é irmão do ``mode`` pelo
       mesmo eixo — ele cala a emulação do DESKTOP, que é uma só;
     - ``mouse`` e ``key_bindings`` esbarram numa medição, não numa opinião:

@@ -1,4 +1,4 @@
-"""Máscara por APARELHO dos controles externos (MÁSCARA-01 / E1, 07/08/2026).
+"""Máscara por APARELHO — de CADA controle, externo ou DualSense (MÁSCARA-01/E1).
 
 *"Como este controle deve aparecer nos jogos?"* — a escolha é do **aparelho**,
 não da configuração de jogo. É verdade sobre o plástico e sobre os rótulos
@@ -9,10 +9,82 @@ e voltar no meio da partida (sprint
 ``docs/process/sprints/2026-07-25-MASCARA-01-como-este-controle-aparece-nos-jogos.md``,
 seção *"Onde a máscara mora"*).
 
-Este módulo é **só o registro**: onde a escolha mora, como ela sobrevive ao
-reboot e o que ela NÃO promete. Ele não adota externo, não cria gamepad virtual,
-não esconde ninguém do jogo e não desenha tela — isso é a `E2`/`E3`/`E4` da
-MÁSCARA-01 e a `E3` da LUGAR-À-MESA-01, que ela autorizou **depois** desta.
+Este módulo é **o registro e a regra de herança**: onde a escolha mora, como ela
+sobrevive ao reboot, o que ela NÃO promete, e — desde 15/08/2026 — qual máscara
+um jogador recebe quando não escolheu nenhuma. Ele não adota externo, não cria
+gamepad virtual, não esconde ninguém do jogo e não desenha tela — isso é a
+`E2`/`E3`/`E4` da MÁSCARA-01 e a `E3` da LUGAR-À-MESA-01, que ela autorizou
+**depois** desta.
+
+DE QUEM É A MÁSCARA — DO JOGADOR, DESDE 15/08/2026
+---------------------------------------------------
+
+**NOTA DATADA — 15/08/2026 (MÁSCARA-POR-JOGADOR-01).** Até aqui este registro
+não tinha chamador nenhum em ``src/``, e a razão estava escrita em
+``profiles/schema.py``: *"``mode`` e a máscara do gamepad são da SESSÃO, não da
+peça"* (decisão dela, 10/08/2026). **Ela reescreveu essa frase em 15/08/2026**:
+vale só para o ``mode``. A máscara passa a ser **do jogador**, com a máscara do
+jogo como **padrão herdado** — quem não escolheu nada segue o jogo, exatamente
+como um campo em branco de ``ControllerOverrides`` herda a seção global.
+
+A medição que separou os dois casos (documento
+``docs/process/sprints/2026-08-15-MASCARA-POR-JOGADOR-01-*``): o ``mode`` é
+estado do PROCESSO — existe um só e duas unidades pedindo modos diferentes não
+têm resposta. A máscara **já tem um lugar por jogador**: o co-op cria um gamepad
+virtual por controle e cada um carrega o próprio ``flavor``.
+
+**A chave serve ao DualSense também, e sempre serviu.** O módulo nasceu para os
+externos, mas :meth:`ExternalMaskRegistry._key` delega a
+``ExternalIdentityRegistry._canonical``, que canoniza **qualquer** MAC de
+hardware; e ``core.evdev_reader.discover_dualsense_evdevs`` — a função que o
+co-op usa para achar cada jogador — já devolve exatamente esse MAC normalizado.
+Nada precisou mudar no armazenamento: o que mudou foi **quem pergunta**.
+
+O QUE AINDA NÃO CHEGA AQUI (MEDIDO em 15/08/2026)
+--------------------------------------------------
+
+:func:`mascara_efetiva` é consultada na criação de todo gamepad virtual
+(``uinput_gamepad.UinputGamepad.for_flavor`` e
+``uhid_gamepad.UhidDualSense.for_flavor``), mas ela só tem o que responder
+quando recebe uma ``identity``. **Hoje ninguém a passa**: os três degraus que
+faltam moram fora deste módulo —
+``integrations/virtual_pad.make_virtual_pad`` (repassar o parâmetro),
+``daemon/subsystems/coop.py`` (o MAC do jogador na criação e o
+:func:`vpad_ficou_para_tras` no laço de recriação) e
+``daemon/subsystems/gamepad.py`` (o MAC do primário). Enquanto isso não chega,
+o comportamento é **idêntico ao de antes** — máscara única, a do jogo —, o que é
+de propósito: meia cura que muda comportamento é pior que nenhuma.
+
+**A armadilha do primeiro degrau, para quem for escrevê-lo:**
+``make_virtual_pad`` tem de resolver a máscara efetiva **ANTES** de escolher o
+backend, e passar o resultado ao ``_try_uhid``. O gate de lá (*"não é dualsense,
+logo não é meu"*) usa a máscara que recebe: se ele continuar recebendo a do
+JOGO, um jogador que escolheu ``dualsense`` numa sessão ``xbox`` tem o uhid
+vetado e cai no ``uinput`` com máscara DualSense — que é o par degradado onde a
+vibração do jogo morre (VPAD-05/SPRINT-GAME-RUMBLE-01). A resolução é
+idempotente (``mascara_efetiva`` de uma máscara já efetiva devolve ela mesma),
+então resolver na factory e repassar a ``identity`` aos dois backends é seguro.
+
+Falta também o **lado da escrita**: quem grava a escolha dela é a rota IPC
+(``daemon/ipc_handlers.py``), que ainda só conhece a máscara da sessão.
+
+RISCO NÃO MEDIDO — CONTROLES HETEROGÊNEOS NA MESMA SESSÃO
+----------------------------------------------------------
+
+**NINGUÉM MEDIU** se um jogo aceita dois vpads com máscaras diferentes ao mesmo
+tempo (dois vistos como Xbox 360 e dois como DualSense). É plausível que o jogo
+enxergue os quatro sem reclamar — são quatro devices distintos, como sempre
+foram —, e é igualmente plausível que a camada de entrada dele (Steam Input, o
+``gamecontrollerdb`` da SDL, ou um motor que escolhe UM esquema de prompts para
+a partida inteira) troque prompts, embaralhe a ordem dos jogadores ou ignore o
+que destoa. **Não prometa que funciona.**
+
+O que mediria, e cabe numa sessão com a mesa cheia: quatro controles, um jogo
+com Steam Input aberto, P1 em ``dualsense`` e P2 em ``xbox`` — e então olhar
+três coisas, nesta ordem: (1) os quatro jogadores continuam existindo no jogo;
+(2) os prompts de cada um saem na máscara dele, e não na do P1; (3) o rumble
+chega nos quatro. Qualquer resposta "não" transforma a escolha por jogador num
+recurso com aviso na tela, não num defeito a caçar no nosso lado.
 
 O ARQUIVO É PRÓPRIO, E NÃO É UM BUMP DO ``controllers.json``
 -----------------------------------------------------------
@@ -90,7 +162,10 @@ from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
     ExternalIdentityRegistry,
     identity_for_entry,
 )
-from hefesto_dualsense4unix.integrations.uinput_gamepad import FLAVORS
+from hefesto_dualsense4unix.integrations.uinput_gamepad import (
+    FLAVORS,
+    normalize_flavor,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -496,6 +571,104 @@ class ExternalMaskRegistry:
             raise
 
 
+#: MÁSCARA-POR-JOGADOR-01 (15/08/2026) — a ÚNICA instância viva no processo.
+#:
+#: Não é preguiça de injeção: é a peça que FALTAVA para a decisão dela poder ser
+#: cumprida. :meth:`ExternalMaskRegistry._load_locked` lê o disco **uma vez por
+#: instância** (``_loaded``) e nunca mais; duas instâncias no mesmo processo
+#: divergem na primeira escrita — a que gravou responde a máscara nova, a outra
+#: segue respondendo a antiga até morrer. E os consumidores são três, em threads
+#: diferentes: a criação do vpad (poll loop), a comparação que decide recriá-lo
+#: (tick do co-op) e a rota IPC que grava o gesto dela. Três instâncias seriam
+#: três respostas para *"qual é a máscara deste controle?"*, e o sintoma seria o
+#: pior possível: o vpad recriado num laço eterno porque quem cria e quem
+#: compara discordam.
+_REGISTRO: ExternalMaskRegistry | None = None
+
+#: Lock só da criação preguiçosa acima (o registro tem o próprio ``RLock``).
+_REGISTRO_LOCK = threading.Lock()
+
+
+def registro_de_mascaras() -> ExternalMaskRegistry:
+    """O registro de máscaras do processo — sempre o mesmo objeto.
+
+    Criado na primeira chamada e reusado para sempre. Ver :data:`_REGISTRO`
+    para o porquê de ser um só.
+    """
+    global _REGISTRO
+    if _REGISTRO is None:
+        with _REGISTRO_LOCK:
+            if _REGISTRO is None:
+                _REGISTRO = ExternalMaskRegistry()
+    return _REGISTRO
+
+
+def _zerar_registro_de_mascaras() -> None:
+    """Descarta a instância viva. **Só para teste** — nada em produção chama.
+
+    Existe porque o registro guarda estado de disco em memória e um teste que
+    troque o ``config_dir`` herdaria as máscaras do teste anterior.
+    """
+    global _REGISTRO
+    with _REGISTRO_LOCK:
+        _REGISTRO = None
+
+
+def mascara_efetiva(identity: str | None, flavor_do_jogo: object) -> str:
+    """A máscara DESTE aparelho: a que ele escolheu ou, sem escolha, a do jogo.
+
+    É a regra de herança da **D-5** (14/08/2026), respondida por ela em
+    15/08/2026: *máscara do JOGADOR, com a do jogo como padrão herdado*. Sem
+    entrada no registro não existe "sem máscara" — existe **a máscara do jogo**,
+    que é o valor que o produto sempre teve. Por isso ninguém precisa escolher
+    por jogador para nada mudar, e é isso que torna o recurso seguro diante do
+    risco não medido do cabeçalho deste módulo.
+
+    ``flavor_do_jogo`` passa pelo ``normalize_flavor``, que é TOLERANTE: este é
+    caminho interno (config de disco, tick do co-op), e um
+    caminho interno precisa de uma máscara sempre. Quem valida gesto de gente é
+    o portão do IPC, com o ``resolver_flavor`` estrito. A escolha do APARELHO,
+    essa, já chegou aqui validada — ``set_mask`` recusa o que
+    :func:`normalizar_mascara` não reconhece.
+    """
+    escolhida = registro_de_mascaras().mask_for(identity)
+    if escolhida is not None:
+        return escolhida
+    if isinstance(flavor_do_jogo, str):
+        return normalize_flavor(flavor_do_jogo)
+    return normalize_flavor(None)
+
+
+def vpad_ficou_para_tras(
+    flavor_do_vpad: object, identity: str | None, flavor_do_jogo: object
+) -> bool:
+    """O gamepad virtual deste jogador está com a máscara ERRADA? (recriá-lo)
+
+    Esta função existe para que a máscara por jogador **não atropele uma cura
+    medida**. O laço de ``daemon/subsystems/coop.py`` derruba e recria todo vpad
+    cujo ``flavor`` divirja do desejado, e isso não é descuido: sem ele, os
+    jogadores 2+ ficam **presos no flavor antigo** quando a máscara muda em
+    runtime — rumble morto e prompts divergentes do P1 (SPRINT-GAME-RUMBLE-01,
+    comentário de ``coop.py``).
+
+    A cura força a IGUALDADE; a decisão dela pede que a DIFERENÇA seja
+    respeitada. As duas cabem juntas porque o alvo da comparação deixa de ser um
+    valor e passa a ser uma **função do aparelho**:
+
+    - **divergência escolhida** — o registro tem máscara para esta identidade e
+      o vpad já está nela. ``mascara_efetiva`` devolve a escolhida, a comparação
+      dá igual, e o vpad **sobrevive** mesmo destoando de todos os outros;
+    - **flavor que ficou para trás** — a máscara deste aparelho mudou (a dele ou
+      a do jogo que ele herda) e o vpad nasceu na anterior. A comparação dá
+      diferente e o vpad é **recriado**, que é exatamente o que a cura fazia.
+
+    O que NÃO é caso desta função: um vpad sem ``flavor`` legível
+    (``None``/dublê) conta como ficado para trás, como já contava — a comparação
+    do co-op sempre foi contra ``getattr(vpad, "flavor", None)``.
+    """
+    return flavor_do_vpad != mascara_efetiva(identity, flavor_do_jogo)
+
+
 __all__ = [
     "FLAVOR_FIELD",
     "IDENTITY_FIELD",
@@ -504,6 +677,9 @@ __all__ = [
     "MASKS_SCHEMA_VERSION",
     "VERSION_FIELD",
     "ExternalMaskRegistry",
+    "mascara_efetiva",
     "mascaras_validas",
     "normalizar_mascara",
+    "registro_de_mascaras",
+    "vpad_ficou_para_tras",
 ]
