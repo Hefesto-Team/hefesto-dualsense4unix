@@ -270,7 +270,8 @@ Esta subseção existe por causa de uma medição de 15/08/2026 registrada na
 [canônica](dualsense-referencia-canonica.md), em *"Os reports de saída por
 transporte"*: **por rádio o DualSense declara nove reports de saída, `0x31` a
 `0x39`, mais um FEATURE `0xF6` de 546 bytes** — e o firmware executa o `common`
-de 47 bytes em pelo menos três deles. A pergunta que esta página tem de
+de 47 bytes em **três** deles, que são exatamente os três que foram tentados
+(`0x31`, `0x32` e `0x39`), num aparelho. A pergunta que esta página tem de
 responder, porque é a página do driver, é: **o driver sabe que eles existem?**
 
 **Não. Ele conhece seis IDs, e nenhum dos oito degraus acima do `0x31`.** A
@@ -305,10 +306,15 @@ nos quatro DualSense dela, por rádio. O silêncio é do driver, não do control
    nenhum**.
 
 **A consequência, e ela é a razão de esta subseção existir:** a escada
-`0x32`-`0x39` é **território inteiro do espaço de usuário**, e não por acidente
-nem por brecha. É a mesma omissão declarada que já entrega os gatilhos
-adaptativos a este projeto — a seção 7 desta página lista os dois lados. O
-driver não abre esses IDs, não os fecha, e não os vê.
+`0x32`-`0x39` é **território inteiro do espaço de usuário**. O driver não abre
+esses IDs, não os fecha, e não os vê.
+
+**A diferença para os gatilhos adaptativos, e ela importa:** os gatilhos ficaram
+de fora por **omissão declarada** — o autor escreveu na `linux-input` por que os
+deixou de fora, e a canônica §1.2 cita a frase. Para os oito degraus **não há
+declaração nenhuma**: há **silêncio**. Silêncio não é o mesmo que decisão
+documentada, e chamar os dois pelo mesmo nome seria emprestar a este achado uma
+autoridade que ele não tem.
 
 ATENÇÃO: **isso não é licença para escrever à vontade.** O que o driver não
 disputa é o **ID**; o que ele disputa, e o que qualquer outro escritor disputa, é
