@@ -23,6 +23,17 @@ tomou decisão errada por confundir "documentação de comunidade" com "fato".
 | **BAIXA** | inferência ou fonte única | os modos de gatilho "não oficiais" |
 | **MEDIDO AQUI** | conferido nesta máquina, nesta árvore | a curva do volume do alto-falante |
 | **FONTE DESTA MÁQUINA** | lido no fonte que compilou o módulo carregado agora, com `caminho:linha` | o padrão de player LED do jogador 4 |
+| **LIDO NO DESCRITOR** | o que o `report_descriptor` **daquela unidade, naquele transporte** declara. É dado do aparelho, e **não** é o que o firmware faz com ele | os nove reports de saída que o rádio declara |
+| **HIPÓTESE** | não medido, e marcado assim para que ninguém o cite como fato. Uma hipótese forte continua sendo hipótese | que os bytes além do `common` sejam áudio |
+
+**Três apelidos, acrescentados em 15/08/2026, e nenhum deles é grau novo** —
+são os mesmos graus ditos com o instrumento no nome, e é assim que a seção da
+escada `0x31`-`0x39` os escreve:
+
+| apelido | é o mesmo que |
+|---|---|
+| **MEDIDO NO APARELHO** | **MEDIDO AQUI** — o que ela viu no plástico, ou o que o `btmon` capturou no fio |
+| **LIDO NO FONTE** | **FONTE DESTA MÁQUINA** quando a fonte é o driver desta árvore; **ALTA** quando é o header da Sony |
 
 E a regra que a origina: **medir contra a ferramenta errada produz um resultado
 convincente e falso.** Em 01/08 mediu-se o gamepad virtual contra a `libSDL2`
@@ -64,7 +75,7 @@ pagar um custo já pago.
 |---|---|---|
 | §2 | `common[4..7]` é PROVÁVEL; o kernel os chama `reserved[4]` | **CADUCOU** — ALTA nos bytes 5, 6 e 7. O byte 4 se parte em dois: campo ALTA, **bit** de autorização MÉDIA |
 | §3 | *"Este projeto escreve só o volume"* | **CADUCOU** — o pré-amp e a rota são escritos desde 01-02/08 |
-| §3 | o áudio por Bluetooth sai no report `0x32` | **CONTRADIÇÃO EM ABERTO** com o `0x39` que o código descreve — **nenhum dos dois medido** |
+| §3 | o áudio por Bluetooth sai no report `0x32` | **A PERGUNTA ESTAVA MAL FEITA** — em 15/08 o descritor foi lido por rádio e há **nove** reports de saída, `0x31` a `0x39`. `0x32` **e** `0x39` aceitam e executam o `common`, os dois; qual deles carrega áudio **continua não identificado**. Ver *"Os reports de saída por transporte"* |
 | §4 | a decodificação dos modos está curada | `weapon()` e `vibration()` seguem mandando o modo ERRADO pela régua desta própria seção — **não medido** |
 | §5 | player LED do jogador 4 | **CORRIGIDO** — é `xx-xx`, pelo fonte do driver desta máquina. O padrão que estava escrito aqui é o de *slot fora da tabela* do código desta casa |
 | §5 | a taxa do giroscópio, *"nunca medida"* | **MEDIDA em 11/08** — cabo 250,0 Hz exatos, rádio variável em rajadas. O que continua aberto é o que o **SDL declara ao jogo**, não o que o aparelho entrega |
@@ -87,6 +98,16 @@ saem de lá e valem para quem for medir qualquer feature: **por rádio se repete
 a leitura** (o timeout de 3 s do BlueZ custa 3,2-3,7 s por falha, e um dos
 quatro só respondeu na quinta tentativa) e **se valida `buf[0] == report_id`**
 (um dos quatro devolveu `0x80` no lugar do `0x20` pedido).
+
+**E uma décima primeira, da mesma madrugada de 15/08/2026, que é a de maior
+alcance:** esta página descrevia o report de saída como se houvesse **um**, o
+`0x02`. Isso vale **só para o cabo**. Por rádio o aparelho declara **nove**
+reports de saída — `0x31` a `0x39`, em escada de +64 bytes até 525 — e o
+firmware **executa** o `common` de 47 bytes em pelo menos três deles, medido com
+a lightbar e o olho dela. A seção *"Os reports de saída por transporte — a
+escada `0x31`-`0x39` do rádio"*, logo depois do §2, traz a tabela, o método e o
+envelope. **O que ela NÃO diz** — e a distinção é o ponto — é o que os bytes
+além do `common` carregam: isso continua **não identificado**.
 
 **Documento irmão:**
 [os externos — Pro Controller e 8BitDo](externos-referencia-canonica.md). Esta
@@ -314,6 +335,228 @@ valer só na janela de confirmação depois de cada mudança real).
 
 ---
 
+## Os reports de saída por transporte — a escada `0x31`-`0x39` do rádio
+
+Até 14/08/2026 esta página tratava *"o DualSense"* como **um** aparelho, e o §2
+acima ainda se chama *"o report de saída `0x02`"*. **O `0x02` é o report do
+cabo.** Por rádio o aparelho declara outra coisa, e a diferença não é de
+detalhe: é de **quantos** reports de saída existem. Isso é estrutural, e é a
+razão de esta seção morar entre o §2 e o §3.
+
+Medido em **15/08/2026**, de madrugada, na máquina dela. A medição completa, com
+os MACs e o passo a passo, está em
+[a escada que responde](../process/estudos/2026-08-15-A-ESCADA-QUE-RESPONDE-o-audio-por-radio-deixou-de-ser-impossivel.md).
+
+### O instrumento, declarado — porque instrumento mente mais que produto
+
+- **A mesa é a medição.** Quatro DualSense, **dois no cabo e dois no rádio ao
+  mesmo tempo** — decisão **dela**. Sem essa mesa não há nada aqui: é ela que
+  garante que toda diferença observada seja do **transporte**, e não do
+  aparelho, do dia, do kernel ou da máquina. O mesmo instrumento, no mesmo
+  minuto, nos quatro.
+- **A leitura dos descritores é passiva:**
+  `/sys/class/hidraw/hidrawN/device/report_descriptor`. Nenhum byte foi escrito
+  em controle nenhum para levantar a tabela abaixo.
+- **A parte que escreve** — o degrau que a lightbar respondeu — usou `hidraw`
+  cru com o **daemon parado** e a autorização dela, e teve **controle positivo e
+  controle negativo** no mesmo desenho. Ver *"o instrumento que mentiu"*, mais
+  abaixo.
+- **O veredito é o olho dela.** Nenhuma linha desta seção se apoia no valor de
+  retorno de uma escrita.
+
+### O que cada transporte declara — LIDO NO DESCRITOR
+
+**Cabo: 289 bytes de descritor. Rádio: 320.** Do mesmo modelo de controle, no
+mesmo minuto.
+
+| id | CABO | RÁDIO |
+|---|---|---|
+| `0x02` | OUTPUT 47 B | — |
+| `0x31` | — | OUTPUT 77 B **e** INPUT 77 B |
+| `0x32` | — | OUTPUT 141 B |
+| `0x33` | — | OUTPUT 205 B |
+| `0x34` | — | OUTPUT 269 B |
+| `0x35` | — | OUTPUT 333 B |
+| `0x36` | — | OUTPUT 397 B |
+| `0x37` | — | OUTPUT 461 B |
+| `0x38` | — | OUTPUT 525 B |
+| `0x39` | — | OUTPUT 546 B |
+| `0xF6` | — | FEATURE 546 B |
+
+**GRAU: LIDO NO DESCRITOR** para a tabela inteira — é o que os quatro aparelhos
+declaram, não o que alguém supõe que eles façam.
+
+Três leituras, e as três são aritmética, não interpretação:
+
+1. **O cabo tem UM output; o rádio tem NOVE.** De `0x31` a `0x39`.
+2. **A escada sobe de +64 bytes por degrau, e o último degrau é curto.** 77,
+   141, 205, 269, 333, 397, 461, 525 — oito valores em progressão exata de 64.
+   O `0x39` seria 589 se a progressão continuasse, e é **546**. O que isso
+   significa **não foi medido**; o que se pode escrever é que o `0x39` é o teto,
+   não o nono degrau da mesma régua.
+3. **O `0xF6` só existe por rádio, e é FEATURE, não OUTPUT** — 546 bytes, o
+   mesmo tamanho de payload do `0x39`. A coincidência de tamanho é **observação**,
+   não conclusão.
+
+**O descritor confere com dois números que esta árvore já tinha, e essa é a
+melhor prova de que a leitura está certa.** O tamanho declarado é payload; o
+`hidraw` conta o byte de id junto:
+
+| declarado | `+1` do id | onde este número já estava |
+|---|---|---|
+| `0x31` 77 B | **78** | os dois tamanhos de `0x31` do driver desta máquina: `hid-playstation.c:143` (entrada) e `:147` (saída) |
+| `0x32` 141 B | **142** | os 142 bytes do `0x32` que esta casa mediu ao vivo em 25/07 (§3) |
+| `0x39` 546 B | **547** | — |
+| `0xF6` 546 B | **547** | a linha do `0xf6` no censo dos dezessete, mais abaixo |
+
+Duas medições feitas por caminhos independentes, em datas diferentes, caem no
+mesmo número. **GRAU: LIDO NO DESCRITOR** para a coluna da esquerda, com as
+outras duas colunas servindo de conferência.
+
+### O canal transporta os 552 bytes — MEDIDO NO APARELHO
+
+`btmon` durante as escritas, com os controles do rádio na mesa:
+
+```
+< ACL Data TX  Handle 3  dlen 83     (0x31 de  78 B + 5)
+< ACL Data TX  Handle 3  dlen 147    (0x32 de 142 B + 5)
+< ACL Data TX  Handle 3  dlen 105    (0x32 de 100 B + 5, o controle negativo)
+< ACL Data TX  Handle 3  dlen 552    (0x39 de 547 B + 5)
+```
+
+Os quatro fecham em `+5` sobre o tamanho do report — os cabeçalhos L2CAP e
+HIDP. **O enlace Bluetooth não é o limite:** ele carregou 547 bytes de report
+num único ACL, e isso está no rastro, não na expectativa.
+
+### O firmware EXECUTA os degraus — MEDIDO NO APARELHO
+
+Este é o achado, e o método importa mais que o resultado, porque é o método que
+permite refazer.
+
+**A variável única é o report ID.** O mesmo `common` de 47 bytes, pedindo cor de
+lightbar (`valid_flag1 = 0x04`, RGB em `common[44..46]`), com o envelope BT
+completo, foi mandado por **ids diferentes**. Ela olhando a lightbar do controle
+BRANCO, no rádio:
+
+| passo | report | pedido | **o que ela viu** | papel |
+|---|---|---|---|---|
+| 1 | `0x31` 78 B | vermelho | **vermelho** | **controle positivo** — a rota conhecida funciona |
+| 2 | `0x31` 78 B | apagar | apagou | volta ao zero, para o passo seguinte não herdar |
+| 3 | **`0x32` 142 B** | verde | **VERDE** | o degrau |
+| 4 | `0x31` 78 B | apagar | apagou | volta ao zero |
+| 5 | **`0x39` 547 B** | azul | **AZUL** | o teto da escada |
+| 6 | `0x31` 78 B | apagar | apagou | fecha |
+
+**O que está provado, e é só isto:** o firmware **lê e executa** reports de
+saída de 142 e de 547 bytes por rádio, e processa neles **o mesmo `common` de 47
+bytes** que processa no `0x31`. Os degraus não são declaração vazia no
+descritor: são reports vivos. **GRAU: MEDIDO NO APARELHO.**
+
+O apagar entre um degrau e o outro não é cerimônia: sem ele, uma cor que
+sobrevivesse do passo anterior seria lida como obediência do passo seguinte — e
+esta página já mediu que **o firmware guarda a cor sem reforço nenhum**, por 136
+segundos cronometrados (§5). Era exatamente a armadilha deste ensaio.
+
+### O envelope BT completo — a receita que funciona, medida
+
+Isto estava **só no código** desta árvore, e é o que faz um report de saída ser
+**aceito** por rádio. Sem os três primeiros bytes e sem o CRC, o aparelho não
+faz nada, e a escrita ainda assim "dá certo" para quem só olha o retorno.
+
+```
+[0]      = report id          (0x31, 0x32, ... 0x39)
+[1]      = seq << 4           numero de sequencia, rola em 16, nibble baixo zero
+[2]      = 0x10               tag magico OBRIGATORIO
+[3..49]  = o common de 47 bytes, identico ao do cabo
+[...]    = o resto ate o tamanho declarado daquele id
+[N-4..N] = CRC-32, semente 0xA2, sobre tudo que veio antes
+```
+
+| parte | grau | onde se confere |
+|---|---|---|
+| `[0]`, `[1]`, `[2]`, `[3..49]` | **LIDO NO FONTE** | a `struct dualsense_output_report_bt` em `hid-playstation.c:351-359`; o `DS_OUTPUT_TAG` em `:203`, sob o comentário *"Magic value required in tag field of Bluetooth output report"* de `:202`; o `seq_tag` montado em `:1386-1396` |
+| CRC-32 semente `0xA2` | **LIDO NO FONTE** | `PS_OUTPUT_CRC32_SEED` em `hid-playstation.c:137`, aplicado em `:1437`; as três sementes já estão no §7 |
+| **a receita inteira funcionando em `0x32` e `0x39`** | **MEDIDO NO APARELHO** | a tabela de seis passos acima |
+
+Sobre o `[2] = 0x10`, o comentário do próprio driver da Sony é honesto e continua
+valendo: *"Tag must be set. Exact meaning is unclear."* **Ele é obrigatório e
+ninguém sabe por quê** — inclusive quem o escreveu.
+
+**O `common` de 47 bytes vale igual nos três ids medidos.** Ou seja: tudo que o
+§2 desta página diz sobre `common[0..46]` continua valendo dentro de um `0x32`
+ou de um `0x39`. Não há um segundo mapa a aprender para os primeiros 47 bytes.
+
+### O instrumento que mentiu, e o controle negativo que o pegou
+
+**`os.write()` num `hidraw` devolve sucesso quando o KERNEL aceita a entrega.
+Ele não espera veredito do firmware.**
+
+A primeira tentativa deste ensaio concluiu *"aceitou"* para os quatro pacotes —
+**inclusive para o controle negativo**, um `0x32` de 100 bytes, tamanho errado
+de propósito, que tinha de ser recusado. O `btmon` mostra que o pacote errado
+**foi transmitido** (`dlen 105`, na captura acima): o kernel aceitou, o rádio
+carregou, e nada disso é o firmware concordando.
+
+Sem o controle negativo, esta seção teria afirmado o degrau **sem tê-lo medido**,
+com um instrumento que não aferia coisa nenhuma. É a regra da casa se pagando —
+*"o instrumento mente mais que o produto"* — e a consequência é regra, não
+anedota: **todo ensaio desta família nasce com controle positivo E negativo, e o
+veredito é o olho dela, nunca o valor de retorno da escrita.**
+
+### O que isto NÃO prova — e a falácia que começa aqui
+
+**A frase honesta, e é ela que deve ser copiada quando alguém citar esta
+seção:** *o canal existe, o firmware responde, e o conteúdo do payload ainda não
+foi identificado.* 15/08/2026.
+
+**HIPÓTESE, e só isso:** que os bytes além do `common` sejam áudio. Ela é
+**forte** — o controle já está inteiramente servido pelos 47 bytes; não há outra
+função de controle conhecida que precise de 469 bytes adicionais; e o PS5 manda
+som para este mesmo aparelho. Mas é hipótese, e escrever *"descobrimos o áudio
+por Bluetooth"* ou *"a ponte funciona"* seria falso nas duas metades: **não
+funciona, e não há ponte.** Há um canal que responde.
+
+ATENÇÃO: **FALÁCIA DO CANAL QUE RESPONDE** — batizada aqui em 15/08/2026, e é a
+gêmea da *falácia do perfil ausente*. A primeira conclui **impossibilidade** a
+partir de **ausência de achado**; esta conclui **função** a partir de
+**resposta**: *"o canal aceitou o que mandei, logo ele faz o que eu esperava
+dele"*. Um canal que executa um `common` de 47 bytes provou que executa um
+`common` de 47 bytes. Nada além.
+
+**O ensaio que decide, e ele é o próximo:** mandar o mesmo degrau com **conteúdo
+variado nos bytes extras** e observar se a cor ainda obedece. Se obedecer
+sempre, o excedente é ignorado naquela posição; se alguma variação quebrar a
+obediência, o excedente **tem estrutura** — e é onde o formato mora. Variável
+única, com o controle na mão dela.
+
+**O suspeito seguinte é o `0xF6`**, o FEATURE de 546 bytes que só existe por
+rádio. **HIPÓTESE:** negociação — dizer ao controle qual codec e qual taxa vêm
+a seguir. O que sustenta a suspeita é que o **microfone** por rádio já atravessa
+em Opus dentro do input `0x31` (§3); se a entrada é Opus, a saída provavelmente
+também. **Nada disso está medido**, e o censo dos dezessete registra que o
+`0xF6` lido **sem comando prévio** volta vazio — o que é a assinatura da família
+que *"responde ao que foi pedido antes"*, não a de um report morto.
+
+### O crédito, que não é de quem escreveu esta seção
+
+A palavra *"impossível"* caiu duas vezes no mesmo dia, e as duas vezes por causa
+dela. De manhã pelo argumento, literal:
+
+> *"se no PlayStation via BT tudo isso funciona e pq tem um meio físico pra isso
+> funcionar e ainda não descobrimos, pq a documentação oficial é focada no cabo.
+> mas muita coisa impossível de fazer acontecer nós fizemos já: lightbar no bt,
+> mic funcionando mesmo com processador AMD e kernel zuado. só falta mapear
+> cientificamente pra tirarmos os achismos nossos do projeto"*
+
+De madrugada pelo aparelho. E a mesa 2+2 — o instrumento sem o qual nenhuma
+linha desta seção existiria — **também foi decisão dela**.
+
+A regra que ela fixou no mesmo dia, *"tirar os achismos do projeto"*, é a que
+manda esta seção parar onde parou. A primeira chance de usá-la foi contra a
+nossa própria vontade de ter achado mais do que achamos.
+
+---
+
 ## 3. Áudio — o caso do alto-falante que a mantenedora descreveu
 
 Ela deu o exemplo: *"Zelda Skyward Sword: o speaker do controle faz os barulhos
@@ -439,6 +682,22 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > `0x39` no descritor, com tamanho compatível com dois blocos de 200 bytes, a
 > contradição fecha sem tocar no controle. É leitura pura, sem escrita, sem
 > risco.
+>
+> **O ensaio FOI FEITO em 15/08/2026, e a resposta é que a pergunta estava mal
+> feita.** O descritor por rádio foi lido nos quatro controles dela. Não há
+> `0x32` **ou** `0x39`: **há nove reports de saída, `0x31` a `0x39`**, e os dois
+> candidatos estão os dois lá — o `0x32` com 141 bytes de payload (142 com o id,
+> exatamente os 142 que esta casa mediu em 25/07) e o `0x39` com 546 (547 com o
+> id). A tabela inteira está em *"Os reports de saída por transporte"*, logo
+> acima do §3. **GRAU: LIDO NO DESCRITOR.**
+>
+> **O que o descritor fecha:** que os dois existem, com tamanho declarado, e que
+> o firmware **executa o `common` de 47 bytes nos dois** — medido com a lightbar
+> e o olho dela. **O que o descritor NÃO fecha, e continua exatamente como
+> estava:** qual deles carrega **os dados de áudio**. Nenhuma das duas fontes de
+> comunidade foi confirmada nem derrubada, e **ninguém aqui escreveu um byte de
+> áudio de saída por rádio.** Um id que aceita um `common` não é um id que toca
+> som: é a **falácia do canal que responde**, batizada na mesma seção.
 
 ### Microfone
 
@@ -1015,6 +1274,20 @@ Derivada do que o SDL exige no probe e do que os jogos procuram. **ALTA.**
 16. **Não suspenso** quando o jogo enumera — o Wine não enumera sink suspenso
 17. Só USB
 
+> **Acrescentado em 15/08/2026 — o item 17 ganhou medição, e ela é estreita de
+> propósito.** Com quatro DualSense na mesa, dois no cabo e dois no rádio,
+> `/proc/asound/cards` mostrou **duas** placas USB Audio: **exatamente os dois do
+> cabo**. Os dois do rádio não expõem placa nenhuma. **GRAU: MEDIDO NO
+> APARELHO.**
+>
+> **O que isto autoriza dizer:** que a **placa de áudio de 4 canais** — o
+> caminho por classe USB Audio, que é do que o item 17 fala — não existe por
+> rádio. **O que isto NÃO autoriza dizer:** que o aparelho não recebe som por
+> rádio. São coisas diferentes, e a diferença é o assunto inteiro de *"Os
+> reports de saída por transporte"*, acima do §3: o caminho por rádio, se
+> existir, é **HID**, não classe de áudio, e ele não apareceria em
+> `/proc/asound/cards` de jeito nenhum.
+
 ---
 
 ## 8. A causa-raiz do rumble preso — achado de 01/08
@@ -1298,7 +1571,8 @@ cinco canais para um.
 
 | # | pergunta em aberto | o ensaio que a fecha | onde |
 |---|---|---|---|
-| 1 | o áudio de saída por Bluetooth sai no `0x32` ou no `0x39`? | ler o *report descriptor* por BT e listar os IDs de output com o tamanho declarado — **leitura pura, sem escrita** | §3 |
+| 1 | **o que carregam os bytes ALÉM do `common`** nos degraus `0x32`-`0x39`? (a pergunta antiga — *"`0x32` ou `0x39`?"* — foi respondida em 15/08 e estava mal feita: existem **nove** outputs, e os dois candidatos são reais) | mandar o mesmo degrau com **conteúdo variado nos bytes extras** e ver se a cor ainda obedece. Obedecendo sempre, o excedente é ignorado ali; quebrando, ele tem estrutura | *"Os reports de saída por transporte"* |
+| 1-bis | o `0xF6` — FEATURE de 546 B **só no rádio** — é negociação de codec/taxa? | lê-lo **depois** de um comando da mesma família, já que sem pedido prévio ele volta vazio (censo dos dezessete) | *"Os reports de saída por transporte"* |
 | 2 | `weapon()` e `vibration()` fazem alguma coisa no gatilho? | aplicar os dois pela aba Gatilhos, daemon vivo, e perguntar o que o dedo sente | §4 |
 | 3 | a taxa que o **SDL declara** ao jogo para o vpad Edge: 250 ou 1000 Hz? | medir **contra a SDL3 que a Steam distribui** — nunca contra a `libSDL2` do sistema. A taxa do **aparelho** já está medida (§5) | §5 |
 | 4 | o bit `0x10` (autorização do volume do fone) existe neste firmware? | com headset no jack, variar `common[4]` com e sem o bit e ouvir | §2 |

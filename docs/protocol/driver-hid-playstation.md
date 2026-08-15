@@ -1,7 +1,10 @@
 # O driver `hid-playstation` — a referência do lado do kernel
 
 O que o **código C do driver** faz com o DualSense, campo a campo, e o que ele
-entrega ao espaço de usuário. Escrito em 11/08/2026.
+entrega ao espaço de usuário. Escrito em 11/08/2026; a **seção 1.4**, sobre os
+report IDs que o driver **não** conhece, entrou em 15/08/2026, quando a medição
+da mesa 2+2 mostrou que o rádio declara nove reports de saída e o driver fala de
+um.
 
 Esta página **não repete** a
 [referência canônica do protocolo](dualsense-referencia-canonica.md): aquela
@@ -22,6 +25,12 @@ mais que esta página usa muito:
 | **MÉDIA** | uma fonte de comunidade respeitada, sem contradição conhecida |
 | **BAIXA** | inferência ou fonte única |
 | **MEDIDO AQUI** | conferido nesta máquina, nesta árvore, com a régua declarada |
+| **LIDO NO DESCRITOR** | o que o `report_descriptor` daquela unidade, naquele transporte, declara. É dado do aparelho — **não** é o que o driver faz com ele, e é justamente o contraste que a seção 1.4 explora |
+
+**Dois apelidos, acrescentados em 15/08/2026, e nenhum deles é grau novo:**
+**LIDO NO FONTE** é o mesmo que **FONTE DESTA MÁQUINA**; **MEDIDO NO APARELHO**
+é o mesmo que **MEDIDO AQUI**, dito com o instrumento no nome. A canônica traz a
+mesma equivalência.
 
 ## A fonte, e por que ela vale mais que o mainline
 
@@ -251,6 +260,65 @@ DESTA MÁQUINA**.
 A struct `dualsense_output_report` (`:373-384`) é só um despachante: guarda
 `data`, `len`, e ponteiros `bt`, `usb` e `common`, de modo que o resto do driver
 escreve em `common` sem saber por onde vai sair.
+
+### 1.4. Os report IDs que o driver conhece — e os oito que ele ignora
+
+**GRAU: LIDO NO FONTE** (= FONTE DESTA MÁQUINA) para tudo desta subseção, mais
+uma linha **LIDO NO DESCRITOR** onde ela está marcada.
+
+Esta subseção existe por causa de uma medição de 15/08/2026 registrada na
+[canônica](dualsense-referencia-canonica.md), em *"Os reports de saída por
+transporte"*: **por rádio o DualSense declara nove reports de saída, `0x31` a
+`0x39`, mais um FEATURE `0xF6` de 546 bytes** — e o firmware executa o `common`
+de 47 bytes em pelo menos três deles. A pergunta que esta página tem de
+responder, porque é a página do driver, é: **o driver sabe que eles existem?**
+
+**Não. Ele conhece seis IDs, e nenhum dos oito degraus acima do `0x31`.** A
+lista inteira do DualSense está em `hid-playstation.c:140-154`:
+
+| sentido | ID | o driver | grau |
+|---|---|---|---|
+| entrada USB | `0x01` | conhece, 64 B | LIDO NO FONTE |
+| entrada BT | `0x31` | conhece, 78 B | LIDO NO FONTE |
+| saída USB | `0x02` | conhece, 63 B | LIDO NO FONTE |
+| saída BT | `0x31` | conhece, 78 B | LIDO NO FONTE |
+| feature | `0x05`, `0x09`, `0x20` | conhece — seção 5 | LIDO NO FONTE |
+| **saída BT** | **`0x32`, `0x33`, `0x34`, `0x35`, `0x36`, `0x37`, `0x38`, `0x39`** | **não existem no fonte, em forma nenhuma** | LIDO NO FONTE |
+| **feature** | **`0xF6`** | **não existe no fonte** | LIDO NO FONTE |
+
+Os oito degraus e o `0xF6` **são declarados pelo aparelho** — LIDO NO DESCRITOR,
+nos quatro DualSense dela, por rádio. O silêncio é do driver, não do controle.
+
+**O que o driver faz com um ID que não conhece, e são dois casos opostos:**
+
+1. **Na ENTRADA, ele recusa em voz alta.** O `dualsense_parse_report` despacha
+   por `(bus, report->id, size)` em `hid-playstation.c:1579-1596`, e o `else`
+   final (`:1593-1595`) escreve `Unhandled reportID=%d` no `dmesg` e devolve
+   `-1`. **É uma assinatura a vigiar**, não um evento observado: o descritor do
+   rádio declara INPUT só para o `0x31`, e ninguém aqui viu essa mensagem por
+   causa dos degraus.
+2. **Na SAÍDA, ele nem fica sabendo.** O `struct hid_driver ps_driver`
+   (`hid-playstation.c:3144-3153`) instala **três** ganchos e só três —
+   `.probe`, `.remove` e `.raw_event`. **Não há `.raw_request`, não há
+   `.output_report`, não há `.report_fixup`.** Uma escrita em `/dev/hidrawN`
+   desce pelo `ll_driver` do transporte e **não passa por este driver em momento
+   nenhum**.
+
+**A consequência, e ela é a razão de esta subseção existir:** a escada
+`0x32`-`0x39` é **território inteiro do espaço de usuário**, e não por acidente
+nem por brecha. É a mesma omissão declarada que já entrega os gatilhos
+adaptativos a este projeto — a seção 7 desta página lista os dois lados. O
+driver não abre esses IDs, não os fecha, e não os vê.
+
+ATENÇÃO: **isso não é licença para escrever à vontade.** O que o driver não
+disputa é o **ID**; o que ele disputa, e o que qualquer outro escritor disputa, é
+o **nó `hidraw`**. Duas coisas diferentes, e confundi-las é o defeito que a
+canônica registra em *"o instrumento pode estar brigando com o produto"*.
+
+**O que o driver NÃO diz sobre os degraus, e por isso esta página não pode
+dizer:** o que eles carregam. O driver não os menciona, logo não há fonte de
+kernel a favor nem contra a hipótese de áudio. Quem procurar aqui uma resposta
+sobre o conteúdo do payload está procurando no arquivo errado.
 
 ## 2. Os flags de validação, bit a bit
 
@@ -811,7 +879,14 @@ Consolidado, porque é aqui que este projeto tem de agir sozinho. Tudo
   vibração clássica **no lugar** dos haptics. Ver canônica §3 e §8.
 - **Áudio por Bluetooth.** Duas exclusões explícitas: o nó de jack só é criado
   sob USB (`:1954-1962`, "Bluetooth audio is currently not supported") e o parse
-  de estado de jack também (`:1648`).
+  de estado de jack também (`:1648`). **E uma terceira, silenciosa, mapeada em
+  15/08/2026:** os oito reports de saída que o rádio declara acima do `0x31` —
+  a escada `0x32`-`0x39` — e o FEATURE `0xF6` **não existem neste fonte em forma
+  nenhuma**. Ver a seção 1.4. O comentário do autor do driver diz *"Bluetooth
+  audio is currently not supported"*, e a leitura honesta é literal: **o driver
+  não suporta**. Isso não é o mesmo que *"o aparelho não faz"* — e a canônica já
+  registra o canal que responde, com o que está provado e o que continua
+  hipótese.
 - **Volume do microfone e do fone.** Os campos existem, os comentários do fonte
   dão as faixas (`0x0-0x7f` e `0x0-0x40`), e o `flag0` bit6 existe com nome —
   e nunca é ligado.
@@ -905,3 +980,9 @@ apagada; cada uma precisa da sua nota datada.
 3. **Canônica §1.2, o limite honesto.** "O fonte do `hid-playstation` não foi
    relido nesta passagem" deixou de valer: foi relido, é o desta máquina, e as
    citações têm número de linha.
+4. **Canônica, *"Os reports de saída por transporte"* (15/08/2026).** Aquela
+   seção mede o aparelho; a **seção 1.4** desta página fecha o outro lado, que é
+   o que o driver sabe disso — **seis IDs, e nenhum dos oito degraus**. Onde as
+   duas se tocam, a régua da casa vale: o driver vence sobre o que o **Linux**
+   manda, e o aparelho vence sobre o que o **firmware** faz. Aqui elas não
+   divergem; elas falam de coisas diferentes.
