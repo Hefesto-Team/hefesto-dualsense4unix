@@ -871,13 +871,38 @@ class CoopManager:
     def _start_player_motion_reader(self, player: _SecondaryPlayer) -> None:
         """Espelho de motion por jogador (GYRO-01 co-op): hidraw dele → vpad dele.
 
-        Gates (todos fail-safe — sem reader o vpad segue como hoje, IMU neutra):
+        Gates — todos ESTRUTURAIS, isto é, verdades que não mudam enquanto este
+        jogador existir (fail-safe: sem reader o vpad segue com a IMU neutra):
         - vpad em uhid (o uinput é evdev puro, sem `forward_motion`);
         - identidade com MAC (o hidraw por-uniq vem do backend pydualsense);
-        - `hidraw_path(identity)` resolvendo AGORA — controle externo
-          (8BitDo/Nintendo) não tem handle no backend e fica sem espelho POR
-          DESIGN: ele passa direto ao jogo com o gyro nativo dele (decisão da
-          mantenedora no estudo 2026-07-19 — dar-lhe vpad reverteria o 8BIT-02).
+        - backend que expõe `hidraw_path` (o `FakeController` não tem físico).
+
+        ESPELHO-QUE-NAO-NASCEU-01 (15/08/2026) — POR QUE NÃO SE OLHA O HANDLE
+        AQUI. Havia um quarto gate: `hidraw_path(identity) is None` reprovava na
+        hora, com a justificativa de que controle externo (8BitDo/Nintendo) não
+        tem handle no backend e fica sem espelho por design (8BIT-02, estudo
+        2026-07-19). **A decisão continua valendo; o gate é que olhava a coisa
+        errada.** Ele lia uma AMOSTRA INSTANTÂNEA de um valor que muda, e a lia
+        no pior instante possível: a promoção roda no tick do hotplug, enquanto
+        o `_open_one` do backend ainda está no ar para aquele MAC (até
+        `INIT_TIMEOUT_SEC` = 5 s por probe, e o BT chega a estourar esse teto).
+        Quem perdesse essa corrida ficava sem espelho PARA SEMPRE — este método
+        só é chamado uma vez, na promoção, e nada o reexecuta. Medido na mesa de
+        quatro em 15/08/2026: o vpad do jogador sem espelho entregava ~0,4 Hz ao
+        jogo (o poll loop de 60 Hz só emite no delta, e a janela 15..39 fica
+        congelada em `_MOTION_NEUTRAL`) contra 165-196 Hz dos outros três.
+
+        A garantia do 8BIT-02 não dependia deste gate e segue de pé sem ele: os
+        secundários saem de `discover_dualsense_evdevs()`, que é fechada em
+        `DUALSENSE_VENDOR`/`DUALSENSE_PIDS` — 8BitDo e Nintendo nunca chegam a
+        `_players`, e um DualSense sem MAC legível cai no gate `path:` acima.
+
+        O handle que ainda não abriu deixa de ser motivo de recusa porque o
+        `PhysicalReportReader` já sabe esperar: `_run` re-resolve o
+        `path_provider` a cada volta e faz backoff de 0,5 s a 5 s enquanto ele
+        devolve None, na thread dele, fora do event loop. É exatamente o que o
+        espelho do P1 (`subsystems/gamepad.start_motion_reader`) sempre fez — e
+        é por isso que o P1 nunca sofreu deste defeito.
         """
         vpad = player.vpad
         if getattr(vpad, "backend", None) != "uhid":
@@ -887,11 +912,6 @@ class CoopManager:
             return
         hidraw_fn = getattr(self._daemon.controller, "hidraw_path", None)
         if not callable(hidraw_fn):
-            return
-        try:
-            if hidraw_fn(identity) is None:
-                return  # externo/sem handle: gyro nativo, sem espelho
-        except Exception:
             return
         from hefesto_dualsense4unix.core.physical_report_reader import (
             PhysicalReportReader,
