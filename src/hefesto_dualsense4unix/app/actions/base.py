@@ -31,8 +31,13 @@ def numero_do_controle(entry: dict[str, Any]) -> int:
     cabeçalho, olhando o mesmo controle, dizia "Sony 3". Duas verdades na mesma
     janela sobre qual é o "Controle 1".
 
-    Não confundir com ``player``: aquele é o número do JOGADOR, vem do daemon, e
-    só existe em co-op — fora dele o jogo vê um controle só.
+    ``player`` (o número do JOGADOR, que vem do daemon) responde uma pergunta
+    diferente — "este controle está jogando agora, e como quem?" —, e por isso
+    é ``None`` fora do co-op. Mas desde a MESA-CHEIA-12 (15/08/2026) ele já não
+    é outro NÚMERO: `CoopManager.numeros_de_jogador()` o tira da mesma fila de
+    chegada que dá o ``player_slot``, e é a mesma fila que escolhe o desenho
+    aceso na barra do controle. Quando os dois existem, eles são iguais — antes
+    disso divergiam, e o card dizia "jogador 2" no controle que acendia 4.
     """
     slot = entry.get("player_slot")
     if isinstance(slot, int) and not isinstance(slot, bool):

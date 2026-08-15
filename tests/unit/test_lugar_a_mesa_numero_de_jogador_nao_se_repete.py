@@ -445,19 +445,28 @@ class TestOVpadEntraNaConta:
 #: A razão do `xfail` das duas classes abaixo, escrita uma vez só porque é a
 #: MESMA fresta vista de dois ângulos: o número da LÂMPADA sai da fila de
 #: identidade (ordem de primeira aparição, persistida em `controllers.json`) e
-#: o número do JOGO sai de `player_indexes()` (primário eleito pelo backend +
-#: `player_index` do co-op). Ninguém casa os dois espaços, e o vpad — que só
-#: existe no segundo — carrega o número no NOME.
+#: o vpad carrega no NOME o índice de ALOCAÇÃO do co-op, congelado no instante
+#: em que ele nasceu (`_next_player_index`).
+#:
+#: MESA-CHEIA-12 (15/08/2026) fechou METADE desta fresta, e só metade: o
+#: `player_indexes()` — o número que a GUI, a CLI e o `state_full` publicam —
+#: passou a sair da MESMA função da lâmpada (`numeros_de_jogador`), então a luz
+#: no plástico e o rótulo na tela não podem mais discordar. O que sobra, e é o
+#: que mantém estas duas classes vermelhas, é o NOME DO VPAD: ele é fixado na
+#: criação e a colocação na fila é dinâmica (conta só os presentes), de modo
+#: que um controle que entra ou sai da mesa renumera a lâmpada e não renumera
+#: o nome — casar os dois exigiria RECRIAR o vpad no meio da sessão, que o
+#: jogo enxerga como gamepad desconectando.
 #:
 #: Não se cura aqui por ordem expressa: a cura pode tocar a adoção dos
 #: externos, que ela ADIOU até a máscara por controle existir (decisão dela de
 #: 07/08/2026, resposta 3 — `docs/process/2026-08-07-DECISOES-DELA-as-onze-
 #: respostas-do-painel.md`). O teste fica VERMELHO e declarado.
 RAZAO_XFAIL = (
-    "LUGAR-À-MESA-01: a fila da lâmpada e o índice do jogo são espaços de "
-    "numeração independentes, e o vpad só vive no segundo. Cura NÃO "
-    "autorizada aqui (decisão dela de 07/08: os externos só ganham lugar "
-    "próprio depois da máscara por controle)."
+    "LUGAR-À-MESA-01: o NOME do vpad é congelado na criação e a colocação na "
+    "fila é dinâmica — casá-los exigiria recriar o vpad no meio da sessão. "
+    "Cura NÃO autorizada aqui (decisão dela de 07/08: os externos só ganham "
+    "lugar próprio depois da máscara por controle)."
 )
 
 
@@ -543,8 +552,15 @@ class TestPrimarioQueNaoEOPrimeiroDaFila:
     acende 1. É a queixa "nunca sei qual é qual" na forma mais cruel, porque
     as duas superfícies estão certas cada uma no seu espaço.
 
-    **GRAU: SUSPEITA COM MECANISMO** — o mecanismo é código lido; a divergência
-    não foi observada ao vivo nesta mesa.
+    **GRAU: MEDIDO** (era "suspeita com mecanismo" até 14/08). Em 15/08/2026,
+    01h00, com os quatro DualSense dela no rádio, o `state_full` publicava
+    `player` 1/2/3/4 e as barras acendiam 1/4/2/3 — a divergência ao vivo,
+    nesta mesa, exatamente pelo mecanismo descrito acima.
+
+    MESA-CHEIA-12 curou a metade que estava ao alcance: `player_indexes()`
+    passou a sair de `numeros_de_jogador()`, a MESMA função da lâmpada, e por
+    isso a linha `indices` abaixo mudou de valor. O que ainda derruba este
+    caso é o NOME do vpad — ver `RAZAO_XFAIL`.
     """
 
     def test_a_luz_e_o_nome_trocam_de_dono(self, raiz_leds: Path) -> None:
@@ -566,7 +582,9 @@ class TestPrimarioQueNaoEOPrimeiroDaFila:
             )
         }
         indices = mesa.coop.player_indexes()
-        assert indices == {DS_LIGADO: 1, DS_DESLIGADO: 2}
+        # MESA-CHEIA-12: o número PUBLICADO agora é o da fila — o primário
+        # eleito pelo hidapi é o segundo da fila e publica 2, não mais 1.
+        assert indices == {DS_LIGADO: 2, DS_DESLIGADO: 1}
         for nome, identidade, prefixo, jogador in (
             ("DualSense A", DS_DESLIGADO, "0005:054C:0CE6.0005", "jogador-2"),
             ("DualSense B", DS_LIGADO, "0005:054C:0CE6.0006", "jogador-1"),

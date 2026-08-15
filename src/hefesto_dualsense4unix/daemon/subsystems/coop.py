@@ -244,14 +244,22 @@ class CoopManager:
         Só entra quem o jogo enxerga: um secundário ainda aguardando o grab não
         tem vpad — reservou o índice, mas não é jogador nenhum até ser promovido.
         Identidade sem MAC ("path:") fica de fora (não há como casar o card).
+
+        MESA-CHEIA-12 (15/08/2026): o NÚMERO vem de `numeros_de_jogador()` — a
+        MESMA função que escolhe o desenho da lâmpada —, nunca mais do
+        `player_index` cru. Era daí que saía o retrato medido na mesa dela: o
+        card dizia "jogador 2" no controle que acendia o desenho do 4. Quem
+        ENTRA na lista continua sendo decidido aqui (vpad promovido, com MAC);
+        o que mudou é só de onde sai o inteiro.
         """
+        numeros = self.numeros_de_jogador()
         out: dict[str, int] = {}
         primary = self._primary_identity()
         if primary is not None and not primary.startswith("path:"):
-            out[primary] = 1
+            out[primary] = numeros.get(primary, 1)
         for mac, player in self._players.items():
             if player.vpad is not None and not mac.startswith("path:"):
-                out[mac] = player.player_index
+                out[mac] = numeros.get(mac, player.player_index)
         return out
 
     def live_snapshots(self) -> dict[str, EvdevSnapshot]:
@@ -1105,22 +1113,10 @@ class CoopManager:
             if self._camada_coop:
                 self._publicar_camada_coop({})
             return
-        targets: list[tuple[str, int]] = []
-        primary = self._primary_identity()
-        if primary is not None:
-            targets.append((primary, 1))
-        targets.extend((mac, p.player_index) for mac, p in self._players.items())
-        padroes: dict[str, tuple[bool, bool, bool, bool, bool]] = {}
-        usados: set[int] = set()
-        for mac, index in targets:
-            if mac.startswith("path:"):
-                # Sem MAC não há como casar o controle — segue com o padrão
-                # broadcast (não deveria acontecer com DualSense real).
-                logger.debug("coop_player_led_sem_mac", identity=mac, player=index)
-                continue
-            numero = self._numero_exibido(mac, index, usados)
-            usados.add(numero)
-            padroes[mac] = player_led_pattern(numero)
+        padroes = {
+            mac: player_led_pattern(numero)
+            for mac, numero in self.numeros_de_jogador().items()
+        }
         if self._publicar_camada_coop(padroes):
             return
         # Caminho sysfs cru (backend sem camadas): comportamento histórico.
@@ -1137,6 +1133,83 @@ class CoopManager:
                 logger.warning("coop_player_led_indisponivel", identity=mac)
                 continue
             self._leds_overridden = True
+
+    def _alvos_de_numeracao(self) -> list[tuple[str, int]]:
+        """Quem recebe número nesta mesa, e o `fallback` de cada um.
+
+        Ordem fixa e declarada — primário primeiro, depois os secundários na
+        ordem em que entraram —, porque é ela que decide quem fica com o
+        número em caso de empate dentro de `_numero_exibido`. Identidade sem
+        MAC (`path:`) fica de fora: não há como casar o controle.
+        """
+        alvos: list[tuple[str, int]] = []
+        primary = self._primary_identity()
+        if primary is not None and not primary.startswith("path:"):
+            alvos.append((primary, 1))
+        for mac, player in self._players.items():
+            if mac.startswith("path:"):
+                # Sem MAC não há como casar o controle — segue com o padrão
+                # broadcast (não deveria acontecer com DualSense real).
+                logger.debug(
+                    "coop_player_led_sem_mac",
+                    identity=mac,
+                    player=player.player_index,
+                )
+                continue
+            alvos.append((mac, player.player_index))
+        return alvos
+
+    def numeros_de_jogador(self) -> dict[str, int]:
+        """MAC -> número ÚNICO deste controle na mesa. FONTE ÚNICA (MESA-CHEIA-12).
+
+        Medição de 15/08/2026, 01h00, com os QUATRO DualSense dela no rádio: o
+        desenho aceso na barra de player NÃO era o número que o daemon
+        publicava. Do `state_full` e do `/sys/class/leds` ao mesmo tempo:
+
+        (os controles vão pelo LUGAR NA FILA; nenhum endereço real aqui)
+
+        | controle       | `player` publicado | `player_slot` | desenho aceso |
+        |----------------|--------------------|---------------|---------------|
+        | 1º da fila     | 1                  | 1             | 1             |
+        | 4º da fila     | 2                  | 4             | **4**         |
+        | 2º da fila     | 3                  | 2             | **2**         |
+        | 3º da fila     | 4                  | 3             | **3**         |
+
+        A lâmpada acertava 4 de 4 contra o `player_slot` e 1 de 4 contra o
+        `player` — porque eram DOIS espaços de numeração, cada um com o seu
+        dono, e nenhum dos dois errado no seu domínio:
+
+        - a lâmpada saía de `_numero_exibido` → `identity_registry.slot_for`,
+          a FILA DE CHEGADA (`controllers.json`), colocação entre os
+          presentes;
+        - o `player` publicado saía de `player_indexes()` → `player_index`,
+          o índice de ALOCAÇÃO do vpad do co-op (`_next_player_index`: menor
+          livre ≥2, na ordem em que o co-op promoveu cada secundário).
+
+        As duas ordens só coincidem por sorte: a do co-op é a ordem em que o
+        grab confirmou nesta sessão, a da fila é a ordem de primeira aparição
+        na casa. Um replug basta para separá-las — e nesta mesa elas estavam
+        separadas nos três secundários.
+
+        A verdade única é a FILA DE CHEGADA, por decisão dela (sprint
+        `2026-08-14-INDICE-a-cor-do-controle-e-o-som-de-cada-jogador`: *"a
+        ordem deve ser por ordem de conexão daquele momento"*, e essa ordem
+        prevalece). Ela já governava a lâmpada e a cor automática
+        (`identity.make_identity_output_provider`); a partir daqui governa
+        também o número PUBLICADO — a lâmpada e o rótulo passam a ser a mesma
+        função do mesmo MAC, sempre, por construção.
+
+        Sem registro (FakeController, backend legado, dublê de teste) cada um
+        cai no seu `fallback` histórico — primário 1, secundários pelo
+        `player_index` —, então nada muda para quem não tem fila.
+        """
+        numeros: dict[str, int] = {}
+        usados: set[int] = set()
+        for mac, fallback in self._alvos_de_numeracao():
+            numero = self._numero_exibido(mac, fallback, usados)
+            usados.add(numero)
+            numeros[mac] = numero
+        return numeros
 
     def _numero_exibido(self, identity: str, fallback: int, usados: set[int]) -> int:
         """Número que este controle ACENDE na barra de player (R-24).

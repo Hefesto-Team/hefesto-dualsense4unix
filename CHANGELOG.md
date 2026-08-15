@@ -7,6 +7,39 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+#### MESA-CHEIA-12 — o controle acendia um número e era chamado de outro
+
+Medido em **15/08/2026, 01h00**, com os quatro DualSense dela no rádio: o
+`daemon.state_full` publicava jogador 1/2/3/4 e as barras de LED acendiam
+1/4/2/3. Três dos quatro controles diziam uma coisa na tela e outra no
+plástico, e um `coop.sync` não corrigia — o daemon reescrevia o desenho certo
+ativamente; quem estava errado era o número publicado.
+
+Eram **dois espaços de numeração** disputando a mesma palavra "jogador":
+
+- a **barra de LED** (e a cor automática) sempre saíram da FILA DE CHEGADA —
+  `identity_registry.slot_for`, a ordem de primeira aparição gravada em
+  `controllers.json`, contada entre quem está presente;
+- o **número publicado** saía de `CoopManager.player_indexes()` →
+  `_SecondaryPlayer.player_index`, o índice de alocação do vpad do co-op, que
+  é a ordem em que o `EVIOCGRAB` de cada secundário confirmou na sessão.
+
+As duas ordens só coincidem por sorte, e um replug basta para separá-las.
+
+A verdade única é a ordem de chegada — decisão dela na sprint da cor e do som
+(*"a ordem deve ser por ordem de conexão daquele momento"*). `player_indexes()`
+passou a sair de `CoopManager.numeros_de_jogador()`, a MESMA função que escolhe
+o desenho da barra: a lâmpada e o rótulo não podem mais discordar, por
+construção. Sem registro de identidade (FakeController, backend legado) cada um
+cai no `fallback` histórico — nada muda para quem não tem fila.
+
+Fica de fora, declarado: o **nome do vpad** (`Hefesto P{n}`) é congelado quando
+o jogador nasce, e a colocação na fila é dinâmica — casar os dois exigiria
+recriar o vpad no meio da sessão, que o jogo enxerga como gamepad
+desconectando. É o que mantém `TestPrimarioQueNaoEOPrimeiroDaFila` vermelho e
+declarado em `test_lugar_a_mesa_numero_de_jogador_nao_se_repete.py`, cujo grau
+subiu de "suspeita com mecanismo" para **MEDIDO**.
+
 #### O portão do `sudo` reprovava o registro do próprio conserto
 
 A suíte estava **vermelha desde 13/08** (9334 verdes, 1 falha) e a falha era um
