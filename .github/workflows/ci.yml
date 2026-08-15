@@ -173,23 +173,29 @@ jobs:
           python-version: "3.12"
       - name: O specs.html publicado reflete o CSV e os desenhos
         run: python3 scripts/gerar-mapa.py --check
-      # O censo NASCE INFORMATIVO, e o motivo está medido, não suposto: contra o
-      # CSV de 11/08 ele reprova em toda célula que afirma `aciona = sim` com
-      # `confianca = medido` e não aponta teste nenhum. A coluna
-      # `teste_que_morde` nasceu INTEIRA VAZIA e começou a ser preenchida na
-      # mesma leva pela sprint SEGUINTE (PARIDADE-BYTE-01, que depende desta) —
-      # a dívida encolheu de uma medição para a outra, e o que sobra são as
-      # células cuja mordida ainda não foi escrita. É o mesmo caminho do
-      # `referencias-docs` e do `shellcheck` acima: entram informativos com a
-      # dívida escrita, e o `continue-on-error` sai no dia em que ela é paga.
+      # A DÍVIDA FOI PAGA EM 15/08/2026, e por isso este passo REPROVA.
       #
-      # Informativo NÃO é decorativo: o número aparece no log de todo run, e o
-      # dia em que ele chegar a zero esta linha some. Enquanto isso, as outras
-      # regras dele (mordida que aponta teste que o pytest não coleta, prova
-      # vencida, integridade do CSV, linha nova que ninguém publicou) já estão
-      # verdes — e é justamente por elas que o passo precisa estar aqui hoje.
+      # Ele nasceu informativo (`continue-on-error: true`) contra o CSV de
+      # 11/08, quando a coluna `teste_que_morde` estava INTEIRA VAZIA e toda
+      # célula que afirmava `aciona = sim` com `confianca = medido` reprovava.
+      # O comentário de então prometia, literalmente, que *"o
+      # `continue-on-error` sai no dia em que ela é paga"* — e o dia chegou:
+      # das 17 células sem rede que sobravam, 15 ganharam teste que morde e 2
+      # tiveram a confiança rebaixada para o que a evidência de fato
+      # sustentava (`luz.led_microfone@dualsense` no cabo, que era leitura de
+      # fonte e não medição; e `plataforma.vigia_zumbi@sn30` no rádio, onde o
+      # medido é o BURACO — a vigia pula todo aparelho com `[ServiceRecords]`
+      # no cache).
+      #
+      # Rebaixar não é derrota: é o portão fazendo o trabalho dele. As duas
+      # levaram nota datada, e nada foi apagado.
+      #
+      # O que este passo reprova, a partir de agora: afirmação forte sem teste
+      # que morda, mordida que aponta um nó que o pytest não coleta, prova
+      # vencida, integridade do CSV e linha do CSV que ninguém publicou no
+      # `specs.html`. Se ele voltar a ficar vermelho, o conserto é escrever a
+      # mordida ou baixar a confiança — NÃO devolver o `continue-on-error`.
       - name: Censo do mapa (afirmação forte sem teste que morda)
-        continue-on-error: true
         run: python3 scripts/check_paridade_transporte.py
 
   shellcheck:
@@ -372,52 +378,69 @@ jobs:
       # é uma trava de encolhimento, não uma meta: só sobe quando alguém quiser
       # subi-lo. Se cair abaixo, um módulo inteiro deixou de ser coletado.
       #
-      # PISO-DA-COLETA-01 (13/08/2026). "Só sobe quando alguém quiser subi-lo"
-      # é um convite que ninguém aceitou em dezesseis dias, e nesse tempo a
-      # suíte cresceu 51% enquanto o piso ficou parado. MEDIDO em 13/08 com o
-      # perfil DESTE job emulado (PyGObject bloqueado no `sys.meta_path`, que é
-      # o estado do runner — o `lint-test` não instala `python3-gi`), pela
-      # régua do próprio passo (`grep -cE '^tests/.+::'`), em Python 3.12.3:
+      # PISO-DA-COLETA-01 (13/08/2026) derrubou o "só sobe quando alguém quiser
+      # subi-lo" do parágrafo acima — é um convite que ninguém aceitou em
+      # dezesseis dias — e subiu o piso de 5100 para 7850, com a margem escrita.
+      # A lição que fica dela é mais dura: **o piso caduca sozinho**. Ninguém
+      # precisa mexer nele para que ele pare de guardar — basta a suíte crescer.
+      # Em 13/08 a folga era de 77 nós; dois dias depois, sem que uma linha
+      # deste arquivo mudasse, tinha virado 305, e o MAIOR módulo da árvore tem
+      # 128 testes: o passo voltou a contar sem guardar. O piso parado é o modo
+      # de falha desta régua, e é por isso que a conta abaixo vem DATADA.
       #
-      #   - em `cc768d4`, antes desta leva: 7911 coletados, 0 erro de coleta;
-      #   - nesta árvore, com os 16 testes que a leva acrescenta: 7927.
+      # PISO-DA-COLETA-02 (15/08/2026). MEDIDO hoje com o perfil DESTE job
+      # emulado (`gi` e `cairo` bloqueados no `sys.meta_path`: o `setup-python`
+      # não enxerga o `dist-packages` do sistema, e nem `PyGObject` nem
+      # `pycairo` estão em `[project.optional-dependencies].dev`), pela régua
+      # do próprio passo (`grep -cE '^tests/.+::'`), em Python 3.12.3:
       #
-      # Contra o piso 5100 a folga era de 2811 nós, 36% da suíte. O passo
-      # existe para reprovar quando "um módulo inteiro deixou de ser coletado",
-      # e o MAIOR módulo da árvore tem 128 testes: nenhum arquivo desta suíte
-      # era capaz de sumir sem que o passo passasse verde. Ele contava, e não
-      # guardava.
+      #   - **8155 coletados**, em 472 módulos;
+      #   - na máquina de desenvolvimento, com `PyGObject` e `pycairo` REAIS, a
+      #     mesma régua dá 9568. Os 1413 de diferença são os 84 módulos de
+      #     interface que PULAM neste job (ver o passo de instalação acima).
+      #     Calibrar contra 9568 deixaria o passo vermelho no primeiro run: o
+      #     número que vale AQUI é 8155, e quem for remedir tem de bloquear as
+      #     duas bibliotecas antes de contar;
+      #   - a medição roda com `--continue-on-collection-errors`, como o passo.
+      #     Módulo que erre na coleta no dia não entra nos 8155 — consertá-lo
+      #     só faz o total SUBIR, nunca descer.
       #
       # A MARGEM VAI ESCRITA — é ela que faz o piso não precisar de coragem
-      # para subir da próxima vez. 7927 - 7850 = 77 nós, 1,0%, e ela foi
-      # dimensionada contra o que o runner PODE perder por ambiente, contado
-      # módulo a módulo (todo `pytest.importorskip` em nível de módulo, que é o
-      # que tira um arquivo da coleta em silêncio):
+      # para subir da próxima vez. Ela é dimensionada contra o que o runner
+      # PODE perder por ambiente, contado módulo a módulo (todo
+      # `pytest.importorskip` em nível de módulo, que é o que tira um arquivo
+      # da coleta em silêncio), recontado hoje:
       #
       #   - `tomllib`: 8 testes, em
       #     `tests/unit/test_versoes_validadas_batem_com_o_codigo.py`, que abre
       #     com `importorskip("tomllib", reason="tomllib exige Python 3.11+")`.
-      #     É a única perda REAL da matriz, e só na perna 3.10: pior caso 7919;
+      #     Continua sendo a ÚNICA perda que depende da versão de Python, e só
+      #     na perna 3.10 — **pior caso da matriz: 8147**;
       #   - `yaml`: 19 testes em 2 módulos. Não conta como risco — `PyYAML` é
       #     dependência declarada em `[project.optional-dependencies].dev`, que
       #     é o que este job instala;
-      #   - `cairo`: 14 módulos, e 0 teste. Todos já saem antes, pelo `gi`.
+      #   - `gi` e `cairo`: já descontados, porque os 8155 foram medidos COM as
+      #     duas bloqueadas. Não descontam de novo;
+      #   - nenhum `pytest.skip(..., allow_module_level=True)` condicionado a
+      #     versão fora do `tests/conftest.py`.
       #
-      # Sobram 69 nós de folga contra o pior caso medido (7919) — mais de oito
-      # vezes a única variação que a medição encontrou.
+      # 8147 - 8100 = **47 nós de folga**, 0,58% da suíte — quase seis vezes a
+      # única variação que a medição encontrou.
       #
-      # O que a margem COMPRA: o passo volta a reprovar quando qualquer um dos
-      # CINCO maiores módulos da suíte sumir da coleta (128, 125, 121, 111 e 95
-      # testes) — um módulo precisa ter mais de 77 testes para o piso vê-lo.
-      # O que ela NÃO compra: um módulo mediano (a mediana é 12 testes, sobre
-      # 460 módulos) continua sumindo sem que esta régua veja. Fica escrito
-      # para que a próxima pessoa não confunda "piso apertado" com "cobertura
-      # de módulo" — são coisas diferentes, e só a primeira está resolvida
-      # aqui.
+      # O que a margem COMPRA: o passo reprova quando qualquer módulo com mais
+      # de 47 testes sumir da coleta. Hoje são **23 dos 472 módulos**, entre
+      # eles os cinco maiores (128, 125, 121, 111 e 95 testes) — contra 5
+      # módulos que o piso 7850 via em 13/08.
+      # O que ela NÃO compra: um módulo mediano continua sumindo sem que esta
+      # régua veja. A mediana é 12 testes por módulo, e 449 dos 472 estão
+      # abaixo do limiar. Fica escrito para que a próxima pessoa não confunda
+      # "piso apertado" com "cobertura de módulo" — são coisas diferentes, e só
+      # a primeira está resolvida aqui. A segunda pede um censo POR MÓDULO (uma
+      # lista de arquivos que têm de aparecer na coleta), que não existe.
       - name: Censo de coleta (nenhum módulo pode sumir calado)
         run: |
           set -uo pipefail
-          PISO=7850
+          PISO=8100
           pytest tests --collect-only -q --continue-on-collection-errors \
             > /tmp/coleta.txt 2>&1 || true
           TOTAL=$(grep -cE '^tests/.+::' /tmp/coleta.txt || true)

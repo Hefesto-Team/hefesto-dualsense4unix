@@ -25,20 +25,33 @@ O que estes testes travam:
 A mordida: colando uma gravação dentro do `on_apply_draft` — ou devolvendo a
 frase antiga ao `interface.md` — os testes reprovam nomeando o que quebrou.
 
-Nada aqui abre GTK, socket ou controle: é leitura do fonte com `inspect` e do
+Nada aqui abre GTK, socket ou controle: é leitura do fonte com `ast` e do
 documento.
+
+E a leitura é do ARQUIVO, não do módulo importado. A distinção não é estilo:
+`app/actions/footer_actions.py` puxa `app/gui_dialogs.py`, que faz `import gi`
+sem guarda (`gui_dialogs.py:16`). No perfil do CI — `setup-python`, que não
+enxerga o `dist-packages` onde moram `PyGObject` e `pycairo` — esse import
+derrubava a COLETA deste módulo, e os quatro testes daqui sumiam sem reprovar
+nada. Medido em 15/08/2026: era o `ERROS=1` do passo "Censo de coleta".
+
+O teste que analisa texto não precisa executar o texto — e esta docstring
+prometia isso desde o primeiro dia, enquanto a linha de import dizia o
+contrário.
 """
 
 from __future__ import annotations
 
-import inspect
+import ast
 import re
+from functools import lru_cache
 from pathlib import Path
-
-from hefesto_dualsense4unix.app.actions import footer_actions
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INTERFACE_MD = REPO_ROOT / "docs" / "usage" / "interface.md"
+FOOTER_ACTIONS_PY = (
+    REPO_ROOT / "src" / "hefesto_dualsense4unix" / "app" / "actions" / "footer_actions.py"
+)
 
 #: Toda forma de deixar bytes no disco que este módulo tem à mão. Se o
 #: `on_apply_draft` chamar qualquer uma, a linha "não persiste" caducou.
@@ -60,12 +73,35 @@ GRAVACOES = (
 CAMINHO_DO_APLICAR = ("on_apply_draft", "_aplicar_escolha_pendente", "_apply_draft_agora")
 
 
+#: A classe onde os quatro botões do rodapé moram.
+MIXIN = "FooterActionsMixin"
+
+
+@lru_cache(maxsize=1)
+def _classe_do_rodape() -> tuple[str, ast.ClassDef]:
+    """O texto do arquivo e o nó da classe — parseados uma vez só."""
+    texto = FOOTER_ACTIONS_PY.read_text(encoding="utf-8")
+    for no in ast.parse(texto).body:
+        if isinstance(no, ast.ClassDef) and no.name == MIXIN:
+            return texto, no
+    raise AssertionError(
+        f"`{MIXIN}` sumiu de {FOOTER_ACTIONS_PY.name} — se o rodapé mudou de casa, "
+        "estes testes precisam saber para onde, senão passam a não vigiar nada"
+    )
+
+
 def _fonte(nome: str) -> str:
     """Fonte do método SEM a docstring — senão a prosa satisfaz a asserção sozinha."""
-    metodo = getattr(footer_actions.FooterActionsMixin, nome)
-    fonte = inspect.getsource(metodo)
-    doc = metodo.__doc__
-    return fonte.replace(doc, "", 1) if doc else fonte
+    texto, classe = _classe_do_rodape()
+    for no in classe.body:
+        if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef) and no.name == nome:
+            fonte = ast.get_source_segment(texto, no) or ""
+            doc = ast.get_docstring(no)
+            return fonte.replace(doc, "", 1) if doc else fonte
+    raise AssertionError(
+        f"`{MIXIN}.{nome}` não existe mais — o caminho do botão mudou e ninguém "
+        "atualizou este teste, que a partir daqui vigiaria um método fantasma"
+    )
 
 
 def test_aplicar_nao_escreve_em_disco() -> None:
