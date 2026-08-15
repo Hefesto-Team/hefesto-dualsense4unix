@@ -20,7 +20,7 @@ nomes canônicos da casa. Duas peças, e as duas são cura:
 POR QUE ELE EXISTE, e o que ele NÃO prova
 -----------------------------------------
 A linha `entrada.botoes@pro` do mapa de canais afirma `radio_aciona = sim` com
-`radio_confianca = medido`: 536 relatórios em 6,0 s, TODOS `0x30`, TODOS de 49
+`radio_de_onde_sei = medido`: 536 relatórios em 6,0 s, TODOS `0x30`, TODOS de 49
 bytes (`docs/protocol/externos-referencia-canonica.md` §3.3, 07/08/2026). A
 mesma linha registra que **por rádio o envelope é IDÊNTICO ao do cabo** — o
 Bluetooth não muda o report do Pro, ao contrário do DualSense.

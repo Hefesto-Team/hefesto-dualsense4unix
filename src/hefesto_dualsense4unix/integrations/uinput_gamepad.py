@@ -359,13 +359,26 @@ class UinputGamepad:
         flavor: str | None = DEFAULT_FLAVOR,
         *,
         rumble_sink: Callable[[int, int], None] | None = None,
+        identity: str | None = None,
     ) -> UinputGamepad:
         """Constrói o gamepad com a máscara (VID/PID/nome) do flavor dado.
 
         `rumble_sink` (FEAT-VPAD-FF-PASSTHROUGH-01) recebe o rumble do jogo
         já em 0-255 (weak, strong); ver docstring do campo.
+
+        `identity` (MÁSCARA-POR-JOGADOR-01, 15/08/2026) é o MAC canônico do
+        controle FÍSICO deste jogador — o mesmo que `discover_dualsense_evdevs`
+        usa como chave. Quando ele vem, `flavor` deixa de ser a resposta e passa
+        a ser o **padrão herdado**: a máscara que este aparelho escolheu vence
+        (`external_mask.mascara_efetiva`), e sem escolha nada muda. `None` = o
+        chamador não sabe de quem é o vpad, e aí a máscara é a do jogo, como
+        sempre foi.
         """
-        key = normalize_flavor(flavor)
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            mascara_efetiva,
+        )
+
+        key = mascara_efetiva(identity, flavor)
         spec = FLAVORS[key]
         return cls(
             name=spec["name"],
