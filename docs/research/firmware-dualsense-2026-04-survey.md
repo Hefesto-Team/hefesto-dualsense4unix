@@ -93,23 +93,65 @@ Update version: 0630
 
 **Estrutura do report 0x20 (metadata do firmware atual no controle):**
 
+> ### CORREÇÃO — 15/08/2026: o desenho que estava aqui ESTAVA ERRADO
+>
+> **A versão anterior desta struct, escrita em 23/04/2026, punha os campos na
+> ordem errada e tipava `sw_series` e `fw_type` como `uint8_t` quando os dois
+> são `uint16_t`.** Não é detalhe de estilo: quem implementou por aquele
+> desenho entre abril e hoje **leu lixo em todos os campos a partir do offset
+> 20** — o deslocamento acumulado joga `hardware_info`, `firmware_version` e
+> `device_info` para fora do lugar, e a leitura ainda assim "funciona", porque o
+> tamanho total continua fechando 64 bytes. É a pior forma de erro: silenciosa.
+>
+> Por isso este bloco foi **substituído**, e não anotado ao lado do certo — a
+> regra desta casa é que **número errado sai** e medição cara ganha data. Esta
+> nota é a data.
+>
+> **Como o layout correto foi conferido, em 15/08/2026:** contra o driver **e**
+> contra **quatro capturas independentes** do report `0x20`, uma de cada
+> DualSense da bancada, lidas por Bluetooth com retry e com validação de
+> `buf[0] == report_id`. Os offsets fecham 64 bytes exatos, sem buraco e sem
+> sobreposição, e o CRC-32 de semente `0xA3` bate nas quatro capturas. A
+> conferência inteira, com a tabela de offsets e o que cada campo trouxe nos
+> quatro aparelhos, está em
+> [`docs/protocol/dualsense-referencia-canonica.md`](../protocol/dualsense-referencia-canonica.md),
+> seção *"Os feature reports — o censo dos dezessete"*, que é a página que
+> **vence** esta em caso de divergência.
+>
+> **Uma armadilha que veio junto, e que vale para qualquer leitura de feature
+> por rádio:** o `GET_REPORT` por Bluetooth sai pelo canal de controle L2CAP e
+> bate no `REPORT_REQ_TIMEOUT` de 3 s do BlueZ. Cada falha custa 3,2-3,7 s, e
+> um dos quatro aparelhos só respondeu na **quinta** tentativa. Ler uma vez e
+> concluir *"este controle não tem o report"* é conclusão falsa.
+
 ```c
+/* Layout REAL, conferido em 15/08/2026 contra o driver e contra quatro
+ * capturas independentes. Offsets explícitos porque foi a ordem — e não o
+ * tamanho — que estava errada na versão de abril. */
 struct dualsense_feature_report_firmware {
-    uint8_t  report_id;           // 0x20
-    char     build_date[11];      // string: "Jul  4 2025"
-    char     build_time[8];       // string: "10:10:32"
-    /* ... */
-    uint32_t firmware_version;    // 0xAABBCCCC = AA.BB.CCCC
-    char     device_info[12];
-    uint16_t update_version;      // 0x0630 na versão atual
-    uint32_t fw_version_1, fw_version_2, fw_version_3;
-    uint32_t hardware_info;       // 0x617 na unidade testada
-    uint8_t  sw_series;
-    uint8_t  fw_type;
-    /* ... */
+    uint8_t  report_id;           /* @0   0x20 — VALIDAR antes de parsear   */
+    char     build_date[11];      /* @1   ASCII: "Jul  4 2025"              */
+    char     build_time[8];       /* @12  ASCII: "10:10:32"                 */
+    uint16_t fw_type;             /* @20  era uint8_t na versão errada      */
+    uint16_t sw_series;           /* @22  era uint8_t na versão errada      */
+    uint32_t hardware_info;       /* @24  revisão de placa                  */
+    uint32_t firmware_version;    /* @28  0xAABBCCCC = AA.BB.CCCC           */
+    char     device_info[12];     /* @32  difere por unidade; NÃO decifrado  */
+    uint16_t update_version;      /* @44  0x0630 na unidade citada em 0.2   */
+    uint16_t update_image_info;   /* @46                                    */
+    uint32_t sbl;                 /* @48  secondary bootloader              */
+    uint32_t venom;               /* @52  subprocessador                    */
+    uint32_t spider;              /* @56  subprocessador                    */
+    uint32_t crc32;               /* @60  semente 0xA3 por Bluetooth        */
 };
 _Static_assert(sizeof(struct dualsense_feature_report_firmware) == 64);
 ```
+
+**Sobre `device_info[12]` (offsets 32 a 43):** difere de unidade para unidade —
+medido nos quatro aparelhos da bancada em 15/08/2026 — e **ninguém no mundo
+decifrou o conteúdo**. O `dualsensectl` traz o `printf` desses bytes
+**comentado desde 2023**, pelo mesmo motivo. Registrado aqui como candidato para
+quem for atrás de identidade de unidade; **não é resposta**.
 
 **Códigos de erro observados no status (report 0xF5):**
 
