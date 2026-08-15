@@ -12,6 +12,10 @@
 *.conf  text eol=lf
 
 *.bin   binary
+# Captura HCI crua (`btmon -w`). Sem esta linha, uma configuração de git com
+# conversão de fim de linha pode reescrever bytes e a captura deixa de ser a
+# captura. Ver docs/data/ensaios-brutos/*.btsnoop e scripts/mascarar_btsnoop.py.
+*.btsnoop binary
 *.png   binary
 *.jpg   binary
 *.svg   text eol=lf

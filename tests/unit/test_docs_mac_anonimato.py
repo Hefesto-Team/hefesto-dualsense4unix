@@ -6,8 +6,14 @@ todas as outras ondas seguiram — MAC de hardware real é citado com os 3
 últimos octetos mascarados (forma ``OUI:00:00:NN``; nenhum exemplo literal
 aqui de propósito — o irmão test_anonimato_de_fixtures proíbe MAC-forma em
 tests/ fora das faixas forjadas).
-O ``check_anonymity.sh`` é cego a MAC (só caça menções a provedores de IA e
-exclui ``docs/process/**``), então este teste é o gate que faltava.
+O ``check_anonymity.sh`` era cego a MAC (só caçava menções a provedores de IA,
+e exclui ``docs/process/**``), e por isso este teste nasceu como o gate que
+faltava. **Correção de fato — 15/08/2026:** ele deixou de ser inteiramente
+cego. Ganhou uma varredura de MAC em BINÁRIO, nas duas ordens de byte, quando a
+casa passou a versionar captura de rádio (ver o portão de bytes no fim deste
+arquivo). Em TEXTO ele segue cego a MAC, e é aqui que a regra mora: este
+arquivo continua sendo o portão autoritativo das três formas — separada,
+colada e binária.
 
 O contrato: qualquer MAC completo (6 octetos) cujo prefixo seja um OUI de
 hardware REAL desta bancada precisa ter os octetos 4 e 5 zerados (a máscara).
@@ -107,9 +113,36 @@ _OUIS_COLADOS = tuple("".join(o) for o in _OUIS_REAIS_OCTETOS)
 #
 # Os dois formatos passam a reprovar. A máscara continua sendo a mesma da casa —
 # octetos 4 e 5 zerados — nas duas grafias.
-_SEP = r"(?P<sep>[:_-])"
+# BURACO-DO-PORTAO-03 (15/08/2026) — MEDIDO, e é o `\b` das PONTAS:
+# o regex abria e fechava em `\b`, que exige que o vizinho NÃO seja caractere
+# de palavra. Só que a fonte mais rica de endereço cru desta casa é o `uevent`
+# do sysfs, e nele os campos vêm CONCATENADOS, sem separador nenhum:
+#
+#   HID_PHYS=d8:44:89:xx:xx:xxHID_UNIQ=44:46:48:xx:xx:xxMODALIAS=hid:...
+#
+# Depois do último octeto vem um `H` e um `M` — caractere de palavra dos dois
+# lados, logo `\b` não existe ali, logo os DOIS endereços passavam VERDES. O
+# mesmo vale para o nome do nó de bateria
+# (`...battery-44:46:48:xx:xx:xxPOWER_SUPPLY_TYPE=`), que é como o endereço
+# aparece 57 vezes num único dump de `sysfs`. Achado ao mascarar os brutos do
+# estudo PAREADO: o mascarador, que usava a mesma régua, deixou 4 endereços
+# crus por trás nos dois arquivos.
+#
+# A cura é trocar a fronteira de PALAVRA pela fronteira de HEXADECIMAL: o que
+# não pode encostar num MAC é outro dígito hexadecimal (senão o casamento seria
+# um pedaço de um número maior, como um sha256). Letra fora de `a-f`, `=`,
+# `/`, espaço — tudo isso pode encostar, e agora reprova.
+#
+# Medido na árvore de 15/08/2026: com a fronteira de hexadecimal, ZERO
+# reprovações novas em todos os arquivos rastreados e novos. A troca não custa
+# ruído; só fecha o buraco.
+#
+# Para arrancar e ver morder: devolva `\b` no lugar dos dois lookarounds e rode
+# `test_o_mac_colado_na_chave_seguinte_do_uevent_reprova`.
+_NAO_HEX_ANTES = r"(?<![0-9a-f])"
+_NAO_HEX_DEPOIS = r"(?![0-9a-f])"
 MAC_COMPLETO_RE = re.compile(
-    r"(?i)\b(?:"
+    r"(?i)" + _NAO_HEX_ANTES + r"(?:"
     # forma com separador: d8:44:89:xx:xx:xx
     r"(?P<oui_sep>" + "|".join(OUIS_REAIS) + r")"
     r"[:_-](?P<a>[0-9a-f]{2})[:_-](?P<b>[0-9a-f]{2})[:_-](?P<c>[0-9a-f]{2})"
@@ -117,7 +150,7 @@ MAC_COMPLETO_RE = re.compile(
     # forma colada: d84489xxxxxx
     r"(?P<oui_col>" + "|".join(_OUIS_COLADOS) + r")"
     r"(?P<a2>[0-9a-f]{2})(?P<b2>[0-9a-f]{2})(?P<c2>[0-9a-f]{2})"
-    r")\b"
+    r")" + _NAO_HEX_DEPOIS
 )
 
 
@@ -132,8 +165,21 @@ _SKIP_SUFFIXES = {".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg"}
 
 
 def _tracked_files(repo_root: Path) -> list[Path]:
+    """A LISTA do git: o rastreado E o novo, sem o ignorado.
+
+    ANONIMATO-CEGO-A-ARQUIVO-NOVO-02 (15/08/2026). Aqui era `git ls-files -z`
+    puro, que só enxerga o ÍNDICE — o mesmo defeito que o
+    ``check_anonymity.sh`` curou em 13/08 e que este portão herdou sem que
+    ninguém notasse. A regra da casa ("portões são cegos a arquivo novo: rode-os
+    depois do `git add`") existia justamente para contornar isto à mão, e
+    contorno à mão falha no dia em que alguém esquece — que é o dia em que um
+    dump de `sysfs` recém-colado entra sem revisão.
+
+    `--others --exclude-standard` traz o arquivo novo e continua respeitando o
+    `.gitignore`. Medido em 15/08 nesta árvore: nenhuma reprovação nova.
+    """
     out = subprocess.run(
-        ["git", "ls-files", "-z"],
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
         cwd=repo_root,
         capture_output=True,
         text=True,
@@ -216,3 +262,153 @@ def test_nenhum_sufixo_de_mac_real_com_o_oui_elidido() -> None:
     assert not violacoes, (
         "sufixo de MAC real exposto com o OUI omitido:\n" + "\n".join(violacoes)
     )
+
+
+# ===========================================================================
+# O PORTÃO DE BYTES — MAC-BINARIO-EM-LITTLE-ENDIAN-01 (15/08/2026)
+# ===========================================================================
+#
+# GRAU: MEDIDO. Os dois testes acima leem TEXTO: `read_text`, linha a linha,
+# procurando hexadecimal escrito. Um endereço de rádio que nunca vira texto
+# passa por eles sem tocá-los — e é exatamente essa a forma em que ele viaja
+# numa captura de HCI.
+#
+# O caso que abriu o buraco: a dona decidiu versionar o lastro BINÁRIO do
+# estudo PAREADO (`docs/data/ensaios-brutos/2026-08-15-PAREADO-hci.btsnoop`,
+# 238451 B). O `btmon` grava `BD_ADDR` como seis bytes crus e em ordem
+# INVERTIDA — `d8:44:89:xx:xx:xx` aparece no arquivo como
+# `xx xx xx 89 44 d8`. Medido naquele arquivo: DUAS ocorrências, ambas em
+# little-endian, nenhuma em big-endian, e nenhum portão desta casa as via.
+#
+# A régua que este portão impõe a si mesmo: **procurar nas DUAS ordens de
+# byte**. Procurar numa só produz um verde convincente e falso — foi o que
+# aconteceu duas vezes em 15/08, e é por isso que a busca big-endian fica aqui
+# mesmo tendo dado zero: o zero é resultado declarado, não busca esquecida.
+#
+# Por que ele NÃO importa nada de `scripts/mascarar_btsnoop.py`, que faz a
+# mesma varredura: portão não pode depender da ferramenta que ele fiscaliza —
+# um defeito na ferramenta apagaria o portão junto. As duas listas de OUI são
+# comparadas por `tests/unit/test_mascarar_btsnoop.py`, que reprova a
+# divergência.
+#
+# O que ele NÃO varre é o mesmo `_SKIP_SUFFIXES` dos irmãos: imagem e catálogo
+# `.mo` compilado. Não é frouxidão, é a lição da
+# ANONIMATO-BINARIO-FALSO-POSITIVO-01 (01/08) — três bytes casam por acaso em
+# dado comprimido, e um PNG que MUDA a cada `retratar_abas.py` produziria
+# reprovação intermitente e incorrigível. Medido em 15/08: com esse recorte, a
+# árvore inteira dá ZERO ocorrências acidentais.
+
+
+def _mac_de_seis_octetos(dados: bytes, inicio: int) -> bytes:
+    return dados[inicio : inicio + 6]
+
+
+def _ocorrencias_binarias(dados: bytes) -> list[tuple[int, str, str]]:
+    """(offset, ordem, mac) de todo MAC de OUI real CRU dentro de ``dados``.
+
+    Cru = octetos 4 e 5 fora da máscara da casa. Devolve as duas ordens de
+    byte, porque procurar numa só é o defeito que este portão existe para
+    impedir.
+    """
+    achados: list[tuple[int, str, str]] = []
+    for octetos in _OUIS_REAIS_OCTETOS:
+        oui_be = bytes(int(o, 16) for o in octetos)
+        oui_le = oui_be[::-1]
+
+        # BIG-ENDIAN: o OUI abre o campo; os octetos 4 e 5 vêm logo depois.
+        pos = dados.find(oui_be)
+        while pos != -1:
+            campo = _mac_de_seis_octetos(dados, pos)
+            if len(campo) == 6 and not (campo[3] == 0 and campo[4] == 0):
+                achados.append((pos, "big-endian", campo.hex(":")))
+            pos = dados.find(oui_be, pos + 1)
+
+        # LITTLE-ENDIAN: o OUI FECHA o campo; os octetos 4 e 5 são os dois
+        # bytes imediatamente anteriores a ele.
+        pos = dados.find(oui_le)
+        while pos != -1:
+            inicio = pos - 3
+            if inicio >= 0:
+                campo = _mac_de_seis_octetos(dados, inicio)
+                if not (campo[1] == 0 and campo[2] == 0):
+                    # Impresso na ordem HUMANA, que é a inversa da gravada.
+                    achados.append((inicio, "little-endian", campo[::-1].hex(":")))
+            pos = dados.find(oui_le, pos + 1)
+    return sorted(achados)
+
+
+def test_nenhum_mac_real_em_bytes_no_repo() -> None:
+    """Nenhum arquivo versionado carrega MAC real em BINÁRIO, em ordem nenhuma.
+
+    Para arrancar e ver morder: grave um `.btsnoop` (ou qualquer arquivo) com
+    os seis bytes de um endereço real em little-endian dentro de
+    `docs/data/ensaios-brutos/`. O teste
+    ``tests/unit/test_mascarar_btsnoop.py::test_o_portao_de_bytes_morde_o_mac_em_little_endian``
+    faz exatamente isso, num arquivo temporário, e confere a reprovação.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    violacoes: list[str] = []
+    for path in _tracked_files(repo_root):
+        try:
+            dados = path.read_bytes()
+        except (OSError, IsADirectoryError):  # deletado no working tree etc.
+            continue
+        for offset, ordem, mac in _ocorrencias_binarias(dados):
+            violacoes.append(
+                f"{path.relative_to(repo_root)}: offset {offset} ({ordem}): "
+                f"MAC real em bytes, sem máscara ({mac})"
+            )
+    assert not violacoes, (
+        "MAC de hardware REAL gravado em BINÁRIO. Nenhum portão de texto o vê. "
+        "Passe o arquivo por `scripts/mascarar_btsnoop.py` (captura HCI) ou "
+        "zere os octetos 4 e 5 dos seis bytes apontados:\n" + "\n".join(violacoes)
+    )
+
+
+def test_o_mac_colado_na_chave_seguinte_do_uevent_reprova() -> None:
+    """BURACO-DO-PORTAO-03: `\\b` não existe entre um octeto e uma letra.
+
+    O `uevent` do sysfs concatena os campos sem separador, e era assim que dois
+    endereços por linha escapavam. A régua agora é fronteira de HEXADECIMAL.
+
+    Para arrancar e ver morder: troque os dois lookarounds de
+    ``MAC_COMPLETO_RE`` de volta por ``\\b``.
+
+    Os endereços de exemplo são MONTADOS a partir de ``_OUIS_REAIS_OCTETOS``
+    com sufixo inventado (``11:22:33``), e nunca escritos por extenso: este
+    arquivo é varrido pelo próprio portão, e a regra da casa é que não há
+    exemplo literal de MAC real dentro de ``tests/``.
+    """
+    primeiro = ":".join(_OUIS_REAIS_OCTETOS[0])
+    segundo = ":".join(_OUIS_REAIS_OCTETOS[-1])
+    sufixo_cru = ":".join(("11", "22", "33"))
+    sufixo_mascarado = ":".join(("00", "00", "33"))
+    linha = (
+        "uevent|DRIVER=playstation"
+        f"HID_PHYS={primeiro}:{sufixo_cru}HID_UNIQ={segundo}:{sufixo_cru}"
+        "MODALIAS=hid:b0005g0000v0000054Cp00000CE6"
+    )
+    achados = [_partes(m) for m in MAC_COMPLETO_RE.finditer(linha)]
+    assert len(achados) == 2, (
+        "o portão tem de ver os DOIS endereços colados na mesma linha de "
+        f"uevent, e viu {len(achados)}: {achados}"
+    )
+    assert all(oct4 != "00" or oct5 != "00" for _, oct4, oct5 in achados)
+
+    # E a mesma linha, mascarada, tem de passar.
+    mascarada = linha.replace(sufixo_cru, sufixo_mascarado)
+    encontrados = [_partes(m) for m in MAC_COMPLETO_RE.finditer(mascarada)]
+    assert len(encontrados) == 2
+    assert all((oct4, oct5) == ("00", "00") for _, oct4, oct5 in encontrados)
+
+
+def test_o_regex_nao_confunde_pedaco_de_hexadecimal_maior() -> None:
+    """A fronteira de hexadecimal é fronteira nos DOIS sentidos.
+
+    Um sha256 que por acaso contenha um OUI real no meio não é um MAC, e
+    reprová-lo transformaria o portão em gerador de ruído — que é como portão
+    morre.
+    """
+    oui_colado = "".join(_OUIS_REAIS_OCTETOS[0])
+    sha_falso = "9f" + oui_colado + "112233" + "ab" * 24
+    assert not list(MAC_COMPLETO_RE.finditer(sha_falso))

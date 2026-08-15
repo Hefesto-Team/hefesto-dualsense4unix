@@ -175,5 +175,115 @@ if [[ -n "$HITS" ]]; then
     exit 1
 fi
 
+# ---------------------------------------------------------------------------
+# MAC-BINARIO-EM-LITTLE-ENDIAN-01 (15/08/2026). MEDIDO.
+# ---------------------------------------------------------------------------
+#
+# Tudo acima é TEXTO: `grep -I`, que por desenho PULA arquivo binário
+# (ANONIMATO-BINARIO-FALSO-POSITIVO-01, no comentário lá em cima — e aquela
+# decisão continua de pé, ela é sobre nome de modelo em PNG comprimido).
+#
+# Só que em 15/08 a casa passou a versionar captura de rádio BINÁRIA
+# (`docs/data/ensaios-brutos/*.btsnoop`), e o `btmon` grava o endereço do
+# adaptador como seis bytes crus em ordem INVERTIDA: `d8:44:89:xx:xx:xx` vira
+# `xx xx xx 89 44 d8`. Medido: nenhum portão desta casa via isso. Um `.btsnoop`
+# de 238 KB entrou verde carregando o endereço duas vezes.
+#
+# Daqui em diante o portão também lê BYTES, e procura nas DUAS ordens — a
+# big-endian dá zero nas capturas de hoje, e continua sendo procurada de
+# propósito: zero é resultado declarado, não busca esquecida.
+#
+# A varredura é em Python porque `grep` quebra a entrada em LINHAS, e um
+# endereço cujos octetos contenham 0x0a atravessaria a quebra sem ser visto.
+# Fail-CLOSED se não houver python3: a mesma polaridade do guarda de CI —
+# o que não dá para medir REPROVA.
+#
+# O portão AUTORITATIVO desta regra é `tests/unit/test_docs_mac_anonimato.py`
+# (varre texto E bytes, com os testes de mordida). Este bloco é a segunda
+# linha, para quem roda só o script.
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "ANONIMATO: python3 ausente — a varredura de MAC em BINÁRIO não pôde"
+    echo "rodar. Isto NÃO é 'limpo': é 'não medido'. Reprovando."
+    exit 1
+fi
+
+# A lista vai por PIPE, e não por variável: `$(...)` DESCARTA byte nulo (o bash
+# até avisa), e a lista é separada por nulo justamente para aguentar nome de
+# arquivo com espaço. Medido em 15/08: com a lista numa variável, o python
+# recebia um nome só, gigante, e a varredura devolvia verde sem ter aberto
+# arquivo nenhum. O consumidor lê a entrada INTEIRA, então não há a corrida de
+# SIGPIPE que o `pipefail` transformaria em veredito.
+_listar_para_varredura_binaria() {
+    if git rev-parse --git-dir >/dev/null 2>&1; then
+        git ls-files -z --cached --others --exclude-standard 2>/dev/null
+    else
+        find . -type f -not -path './.git/*' -print0 2>/dev/null
+    fi
+}
+
+MAC_BIN=$(_listar_para_varredura_binaria | python3 -c '
+import sys
+
+# ESPELHO de tests/unit/test_docs_mac_anonimato.py::_OUIS_REAIS_OCTETOS e de
+# scripts/mascarar_btsnoop.py. tests/unit/test_mascarar_btsnoop.py reprova a
+# divergência entre as três cópias.
+OUIS = ("d84489", "a0fa9c", "e417d8", "e0f6b5",
+        "48b25d", "143a9a", "d42f4b", "444648")
+# Imagem e catálogo compilado ficam de fora: três bytes casam por acaso em dado
+# comprimido, e PNG que muda a cada captura de tela geraria alarme intermitente.
+PULA = (".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
+
+achados = []
+for nome in sys.stdin.buffer.read().split(b"\0"):
+    if not nome:
+        continue
+    caminho = nome.decode("utf-8", "surrogateescape")
+    if caminho.lower().endswith(PULA):
+        continue
+    try:
+        with open(nome, "rb") as fh:
+            dados = fh.read()
+    except OSError:
+        continue
+    for oui in OUIS:
+        be = bytes.fromhex(oui)
+        le = be[::-1]
+        pos = dados.find(be)
+        while pos != -1:
+            campo = dados[pos:pos + 6]
+            if len(campo) == 6 and (campo[3] or campo[4]):
+                achados.append(
+                    "%s: offset %d (big-endian): %s" % (caminho, pos, campo.hex(":"))
+                )
+            pos = dados.find(be, pos + 1)
+        pos = dados.find(le)
+        while pos != -1:
+            inicio = pos - 3
+            if inicio >= 0:
+                campo = dados[inicio:inicio + 6]
+                if campo[1] or campo[2]:
+                    achados.append(
+                        "%s: offset %d (little-endian): %s"
+                        % (caminho, inicio, campo[::-1].hex(":"))
+                    )
+            pos = dados.find(le, pos + 1)
+for linha in sorted(achados):
+    print(linha)
+')
+
+if [[ -n "$MAC_BIN" ]]; then
+    echo "ANONIMATO VIOLADO — MAC de hardware REAL gravado em BINÁRIO:"
+    echo "------------------------------------------------"
+    echo "$MAC_BIN"
+    echo "------------------------------------------------"
+    echo ""
+    echo "Nenhum portão de TEXTO enxerga isto: numa captura HCI o endereço vai"
+    echo "em bytes crus e em ordem invertida (little-endian)."
+    echo "Cura: scripts/mascarar_btsnoop.py ENTRADA -o SAIDA (captura .btsnoop),"
+    echo "ou zere os octetos 4 e 5 dos seis bytes apontados. A máscara da casa"
+    echo "é OUI:00:00:NN, e o tamanho do arquivo não pode mudar."
+    exit 1
+fi
+
 echo "OK: anonimato preservado."
 exit 0
