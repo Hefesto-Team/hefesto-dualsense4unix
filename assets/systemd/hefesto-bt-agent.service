@@ -95,6 +95,39 @@ SendSIGKILL=yes
 # `inactive` (não `failed`), e o `Wants=`/`After=` do drop-in do BlueZ a religa
 # junto com o bluetoothd, como sempre fez.
 SuccessExitStatus=SIGKILL
+# AGENTE-FICA-FAILED-EM-TODO-STOP-01 (15/08/2026) — a QUARTA camada, e ela mede
+# o que as três anteriores não cobriam: `SuccessExitStatus=SIGKILL` resolve o
+# CÓDIGO DE SAÍDA, mas o systemd marca a unit `failed` por outro motivo, o
+# `Result: timeout` — que é o veredito do STOP, não do processo. As duas coisas
+# são independentes, e nenhuma linha acima toca na segunda.
+#
+# REPRODUZIDO na máquina dela, com a unit exatamente como estava (instalada ==
+# fonte, conferido por `diff`):
+#
+#     systemctl stop hefesto-bt-agent.service
+#     is-active -> failed   is-failed -> failed   Result -> timeout
+#
+# E a cura, medida no mesmo minuto com um drop-in em /run:
+#
+#     KillSignal=SIGKILL
+#     systemctl stop hefesto-bt-agent.service
+#     is-active -> inactive   is-failed -> inactive   Result -> success
+#
+# O QUE ISSO CUSTOU, e é o motivo de a cura valer uma linha: em 14/08/2026 o
+# `bt_bonds_restore.sh` parou o `bluetooth.service` para restaurar bonds; o
+# agente caiu junto (Requires=), ficou `failed`, e o restore religou o BlueZ
+# **sem religar o agente**. Das 16:17 às 00:31 a máquina dela ficou sem agente
+# de pareamento — e sem ele TODO bond novo nasce meio-salvo e some, que é
+# exatamente o "conectam sozinhos e desligam em sequência" que ela relatou.
+# Os bonds que o restore tinha acabado de devolver sumiram de novo em horas.
+#
+# Por que SIGKILL direto é seguro e não é violência: o `bt-agent` do bluez-tools
+# NÃO trata SIGTERM (medido: 36 de 36 quedas terminaram em SIGKILL desde 29/07),
+# não tem estado em disco, e o pareamento em curso — se houver — já falhou de
+# qualquer forma, porque quem o serve é o bluetoothd que está parando. Mandar o
+# sinal que funciona de primeira encurta a janela sem agente em ~1 s por ciclo E
+# tira a unit do estado `failed`, que era o dano permanente.
+KillSignal=SIGKILL
 
 # --- hardening LEVE (espelha um subconjunto do broker root do repo em
 #     docs/process/future-broker/systemd/hefesto-hidraw-broker.service; aqui

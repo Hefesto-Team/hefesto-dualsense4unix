@@ -205,7 +205,31 @@ printf '>>> se um controle recusar conexão depois: bluetoothctl remove <MAC> e 
 # storage sendo mexido por baixo dele. O mask --runtime fecha a janela: com a
 # unit mascarada a activation falha na hora e o stop conclui de verdade.
 systemctl mask --runtime bluetooth.service >/dev/null 2>&1 || true
-trap 'systemctl unmask --runtime bluetooth.service >/dev/null 2>&1 || true; systemctl start bluetooth.service' EXIT
+# AGENTE-QUE-NAO-VOLTA-01 (15/08/2026) — MEDIDO na máquina dela, e o preço foram
+# oito horas de Bluetooth inutilizável.
+#
+# O `hefesto-bt-agent.service` declara `Requires=bluetooth.service`, então parar o
+# BlueZ aqui o derruba junto. O trap religava só o `bluetooth.service` — e o
+# agente, que morre por SIGKILL (ele não trata SIGTERM), ficava em `failed` e
+# **não voltava sozinho**: `Restart=always` não cobre a morte durante um `stop`
+# pedido por outro serviço.
+#
+# Sem agente de pareamento registrado, o BlueZ recusa a confirmação e todo bond
+# novo nasce meio-salvo (`Paired: yes / Bonded: no`) e some — que é o
+# "conectam sozinhos e desligam em sequência" da queixa. Em 14/08 este script
+# restaurou dois bonds às 16:17 e os dois tinham sumido de novo às 00:29,
+# **por causa da própria restauração**.
+#
+# O `reset-failed` antes do start é obrigatório: sem ele o systemd recusa
+# reiniciar uma unit em `failed` que já bateu o `StartLimitBurst`. E o `|| true`
+# de sempre — o restore nunca pode morrer no caminho de volta, ou ela fica com o
+# BlueZ parado e a mask de runtime pendurada.
+trap '
+    systemctl unmask --runtime bluetooth.service >/dev/null 2>&1 || true
+    systemctl start bluetooth.service
+    systemctl reset-failed hefesto-bt-agent.service >/dev/null 2>&1 || true
+    systemctl start hefesto-bt-agent.service >/dev/null 2>&1 || true
+' EXIT
 systemctl stop --job-mode=replace-irreversibly bluetooth.service
 for _i in 1 2 3 4 5 6 7 8 9 10 11 12; do
     systemctl is-active --quiet bluetooth.service || break
