@@ -92,6 +92,17 @@ Para contribuir:
 5. Se tocar UI/TUI/GUI, anexe screenshot + sha256 + descrição multimodal.
 6. Se descobrir algo não-óbvio, registre: ADR em `docs/adr/` quando muda arquitetura, nota em `docs/research/` quando é medição.
 
+### A sprint é a unidade que segura a release
+
+O critério de release desta casa é contado **em sprints**, e por isso ele
+pertence a este fluxo: **sprint aberta segura a `0.9.5`**, e **sprint nova zera
+o relógio de duas semanas da `1.0.0`**. Abrir uma sprint não é de graça — é
+adiar a série, e é decisão dela.
+
+A tabela dos marcos, com a frase dela que a originou, é canônica no preâmbulo do
+[`CHANGELOG.md`](../CHANGELOG.md) (seção "Versionamento"). Não a copie para uma
+terceira página: duas cópias já divergem.
+
 ---
 
 ## Convenção de commit
