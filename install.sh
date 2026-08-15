@@ -1911,6 +1911,22 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
             if sudo install -Dm644 "${ROOT_DIR}/assets/systemd/hefesto-bt-agent.service" \
                     /etc/systemd/system/hefesto-bt-agent.service 2>/dev/null; then
                 sudo systemctl daemon-reload >/dev/null 2>&1 || true
+                # AGENTE-EM-FAILED-NAO-VOLTA-PELO-INSTALL-01 (15/08/2026) — MEDIDO.
+                #
+                # `enable --now` NÃO tira uma unit do estado `failed`: o systemd
+                # recusa iniciar quem bateu o `StartLimitBurst`, e o install
+                # terminava com "habilitado" no texto e o agente morto de fato.
+                #
+                # O preço disso foi medido em 14/08: o agente ficou `failed` das
+                # 16:17 às 00:31 e, sem ele, TODO bond novo nasce meio-salvo
+                # (`Paired: yes / Bonded: no`) e some — que é o "conectam sozinhos
+                # e desligam em sequência" que ela relatou. Reinstalar não
+                # resolveria; só um `reset-failed` explícito resolve.
+                #
+                # O `KillSignal=SIGKILL` da unit (mesma data) impede que ele
+                # ENTRE em `failed`. Esta linha cuida de quem JÁ está — as duas
+                # são necessárias, e nenhuma substitui a outra.
+                sudo systemctl reset-failed hefesto-bt-agent.service >/dev/null 2>&1 || true
                 if sudo systemctl enable --now hefesto-bt-agent.service >/dev/null 2>&1; then
                     printf '      hefesto-bt-agent.service habilitado (agente NoInputNoOutput persistente)\n'
                 else
