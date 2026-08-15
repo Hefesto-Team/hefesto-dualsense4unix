@@ -259,6 +259,134 @@ def _broker_sync_grab(daemon: DaemonProtocol, grab: bool) -> None:
             broker_call_nonblocking(daemon, client.restore_all)
 
 
+#: GRAB-DOBRADO-01: de quantas em quantas tentativas FALHADAS o journal repete
+#: que o primário continua dobrado. A reconciliação roda a cada ~2 s
+#: (`GRAB_RECONCILE_SEC` no poll loop), então 30 ≈ um aviso por minuto: o
+#: bastante para a linha do tempo do journal registrar a duração do estrago, e
+#: pouco o bastante para não afogar o journal dela numa partida inteira.
+GRAB_AVISO_A_CADA: int = 30
+
+
+def reconciliar_grab_do_primario(daemon: DaemonProtocol) -> bool:
+    """Retoma o `EVIOCGRAB` do primário quando ele ficou `failed`.
+
+    GRAB-DOBRADO-01 (15/08/2026) — o defeito, medido no journal dela
+    ----------------------------------------------------------------
+    Em 14/08 às 15:54:58 o primário trocou de controle (`evdev_reopen_requested
+    reason=retarget` → `controller_primary_bound transport=bt`) e o
+    `_reapply_grab` do reader levou `[Errno 16]` no nó novo. **O estado ficou
+    `failed` até o fim daquele daemon.** Com o vpad de pé isso é input DOBRADO
+    no jogo para o P1: o `EVIOCGRAB` é o que impede o evdev físico de chegar ao
+    jogo, o broker esconde só o `hidraw`, e o jogo passa a receber cada comando
+    duas vezes.
+
+    Por que só o PRIMÁRIO — e é isto que explica o que JÁ funcionava
+    ---------------------------------------------------------------
+    Um EBUSY transitório no evdev de um **secundário** se cura sozinho: o
+    `CoopManager.sync` procura `grab_state == "failed"` a cada ciclo, derruba o
+    jogador (`coop_player_grab_failed_retry`) e o respawna — e o vpad dele nem
+    chega a nascer sem grab confirmado (BUG-COOP-GRAB-PENDING-VPAD-01). O
+    primário não tinha nada disso: `_set_controller_grab(daemon, True)` só é
+    chamado no **start** da emulação, e o `_reapply_grab` só no **(re)open** do
+    node. Sem troca de node e sem toggle da emulação, ninguém tentava de novo —
+    e o vpad do P1, ao contrário do de um secundário, segue de pé com o grab
+    recusado. Mesma recusa transitória, dois destinos: o secundário se recupera
+    em um tique, o primário fica dobrado até o próximo replug ou restart. É a
+    razão de o restart "curar" e de o defeito parecer intermitente.
+
+    Esta função é o irmão que faltava do retry do co-op: idempotente, barata
+    (uma comparação de string quando está tudo bem) e **sem poder destrutivo** —
+    não derruba nem recria device nenhum, no molde de
+    `esconder_o_fisico_para_o_jogo` (`PARTIDA-PICOTADA-01`).
+
+    Os gates são os MESMOS do estado canônico
+    -----------------------------------------
+    Modo Nativo, emulação desligada ou vpad morto ⇒ **não pega nada**. O
+    invariante mais antigo da casa é *duplicado > zero controles*: grabar o
+    físico sem um virtual vivo para devolvê-lo ao jogo deixaria a mesa sem
+    controle nenhum, que é exatamente o estrago relatado ao vivo na GUERRA-01.
+
+    Retorna True **só** quando o grab foi retomado NESTA chamada.
+    """
+    # A DETECÇÃO é o gate da CURA, e de propósito: `grab_do_primario_dobrado`
+    # já é a conta das duas metades (grab recusado E vpad vivo), que são
+    # exatamente os gates canônicos do hide — emulação ligada e vpad VIVO.
+    # Escrever a mesma condição duas vezes seria a próxima divergência.
+    if not grab_do_primario_dobrado(daemon):
+        return False
+    evdev = getattr(getattr(daemon, "controller", None), "_evdev", None)
+    setter = getattr(evdev, "set_grab", None)
+    if not callable(setter):
+        return False
+    # O terceiro gate canônico, que não é da detecção: no Modo Nativo o
+    # dispositivo do jogo é o FÍSICO, por escolha dela. Lá o dobrado existe
+    # (e a detecção o diz, honestamente), mas a cura NÃO é grabar.
+    with contextlib.suppress(Exception):
+        if daemon.is_native_mode():
+            return False
+    with contextlib.suppress(Exception):
+        setter(True)
+    estado = getattr(evdev, "grab_state", None)
+    store = getattr(daemon, "store", None)
+    if estado == "held":
+        tentativas = _grab_falhas(daemon)
+        _grab_falhas_set(daemon, 0)
+        logger.info("gamepad_grab_recuperado", tentativas=tentativas)
+        if store is not None:
+            with contextlib.suppress(Exception):
+                store.bump("gamepad.grab.recovered")
+        return True
+    if estado == "pending":
+        # Device fechado (o loop do reader ainda não reabriu). Não há fd físico
+        # emitindo, logo não há duplicação AGORA — e o `_reapply_grab` do open
+        # é quem decide o próximo estado. Nada a avisar.
+        _grab_falhas_set(daemon, 0)
+        return False
+    falhas = _grab_falhas(daemon) + 1
+    _grab_falhas_set(daemon, falhas)
+    if store is not None:
+        with contextlib.suppress(Exception):
+            store.bump("gamepad.grab.retry_failed")
+    if falhas == 1 or falhas % GRAB_AVISO_A_CADA == 0:
+        # O journal tinha UMA linha, no instante da recusa, e depois silêncio —
+        # meia hora de input dobrado ficava indistinguível de meio segundo.
+        logger.warning(
+            "gamepad_grab_dobrado_persiste",
+            tentativas=falhas,
+            path=str(getattr(evdev, "_device_path", None)),
+            hint="EVIOCGRAB recusado por outro processo; o P1 chega DOBRADO no jogo",
+        )
+    return False
+
+
+def _grab_falhas(daemon: Any) -> int:
+    """Quantas retomadas seguidas do grab do primário já falharam."""
+    n = getattr(daemon, "_grab_retry_falhas", 0)
+    return n if isinstance(n, int) else 0
+
+
+def _grab_falhas_set(daemon: Any, n: int) -> None:
+    with contextlib.suppress(Exception):
+        daemon._grab_retry_falhas = n
+
+
+def grab_do_primario_dobrado(daemon: Any) -> bool:
+    """O P1 está chegando DOBRADO no jogo agora? (detecção, GRAB-DOBRADO-01)
+
+    True = há vpad vivo do P1 **e** o `EVIOCGRAB` do evdev físico dele foi
+    recusado — as duas metades do estrago juntas. Ler só `primary_grab_state`
+    não bastava para nenhuma superfície decidir: `failed` com a emulação
+    desligada é inofensivo (não há virtual concorrendo), e é por isso que a
+    aba Início já fazia esse `and` na mão. Aqui a conta tem um dono só.
+    """
+    evdev = getattr(getattr(daemon, "controller", None), "_evdev", None)
+    if getattr(evdev, "grab_state", None) != "failed":
+        return False
+    if not getattr(getattr(daemon, "config", None), "gamepad_emulation_enabled", False):
+        return False
+    return _vpad_vivo(daemon)
+
+
 def steam_input_excecao_ativa(daemon: Any) -> bool:
     """True enquanto a exceção de Steam Input por appid estiver valendo (R-06).
 
