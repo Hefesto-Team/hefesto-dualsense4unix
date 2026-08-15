@@ -10,13 +10,36 @@ TRÊS MEDIÇÕES QUE PRECISAM CABER JUNTAS
 2. o 0x08 mandado DENTRO da janela de ~3,4 s pós-conexão TRAVOU a barra, 7 de 7
    (`LIGHTBAR-BT-CULPADO-01`, 03/08) — e por isso ele foi removido em `108b711`;
 3. o 0x08 mandado FORA dessa janela **não travou** (controle negativo da MESMA
-   sprint), e sem 0x08 nenhum a barra ficou morta por 5 dias e 20 adoções.
+   sprint).
 
-A hipótese que as concilia: **o 0x08 devolve o claim, e só derruba quando é
-mandado em cima da conexão.** Este arquivo não prova a hipótese — hardware não
-cabe em teste unitário. Ele garante que o INSTRUMENTO usado para prová-la na
-mesa dela não minta, que é a armadilha nº 3 desta casa: *"o instrumento pode
-estar brigando com o produto"*.
+CORREÇÃO DATADA (11/08/2026), porque o item 3 tinha uma cauda FALSA
+==================================================================
+Colada ao item 3 lia-se aqui "e sem 0x08 nenhum a barra ficou morta por 5 dias
+e 20 adoções". Ela **nunca foi medição**: era uma frase que só existia em
+docstring — a armadilha `A-12` de `docs/process/METODO-DE-ISOLAMENTO.md`, *"o
+caderno envelhecer sem que ninguém note"*. A escavação do journal, em 11/08,
+achou a barra **ACESA** no rádio dentro daqueles cinco dias, quatro vezes
+(08/08 16:39, 08/08 21:35, 08/08 23:48 e 11/08 11:40 — ensaios
+`lightbar-bt-aceso-*` em `docs/data/ensaios.csv`; a correção está registrada no
+ensaio `lightbar-bt-sem-0x08-cinco-dias`).
+
+Esta era a ÚLTIMA cópia viva da frase: `cli/cmd_lightbar_reset.py` foi corrigido
+em 13/08 e serviu de molde, e `core/backend_pydualsense.py`, `cli/app.py` e
+`daemon/ipc_server.py` foram corrigidos em 15/08. A correção inteira, com todos
+os endereços de ensaio, está no docstring de `core/backend_pydualsense.py`
+(`enviar_release_leds`).
+
+Do que a frase afirmava, o que sobra de pé é o oposto do que ela dizia: nesses
+cinco dias sem 0x08 a barra **obedeceu**, o que mantém o 0x08 fora do banco dos
+réus — mas pela razão contrária. E a correlação de 03/08 (7/7 dentro da janela)
+segue de pé como correlação, tendo caído como causa SUFICIENTE no ensaio
+`lightbar-bt-sem-0x08-hoje-2300`.
+
+A hipótese que concilia o que restou, e que segue sem ensaio que a feche: **o
+0x08 devolve o claim, e só derruba quando é mandado em cima da conexão.** Este
+arquivo não prova a hipótese — hardware não cabe em teste unitário. Ele garante
+que o INSTRUMENTO usado para prová-la na mesa dela não minta, que é a armadilha
+nº 3 desta casa: *"o instrumento pode estar brigando com o produto"*.
 
 O QUE ESTES TESTES TRAVAM
 =========================
