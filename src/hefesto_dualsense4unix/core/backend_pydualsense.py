@@ -2622,7 +2622,7 @@ class PyDualSenseController(IController):
         produto"). Aqui não há disputa: quem escreve é o handle que o daemon
         **já tem aberto**.
 
-        As três medições a conciliar:
+        As medições a conciliar:
 
         1. a adoção do controle derruba o claim da lightbar no firmware
            (17-18/07, `core/lightbar_reset.py:1-11`);
@@ -2630,12 +2630,43 @@ class PyDualSenseController(IController):
            — 7 de 7 (`LIGHTBAR-BT-CULPADO-01`, 03/08), e foi por isso que ele
            foi removido em `108b711` (04/08);
         3. o 0x08 mandado FORA dessa janela **não trava** (controle negativo da
-           MESMA sprint) — e sem 0x08 nenhum a barra ficou morta por 5 dias e
-           20 adoções (medido 08/08).
+           MESMA sprint).
 
-        A hipótese que as três permitem: **o 0x08 devolve o claim, desde que
-        não seja mandado em cima da conexão.** Este método é o que torna isso
-        falsificável na mesa dela — uma variável, um gesto, um olho.
+        CORREÇÃO DATADA (11/08/2026), porque o item 3 tinha uma cauda FALSA
+        -------------------------------------------------------------------
+        Colada ao item 3 vinha a frase "e sem 0x08 nenhum a barra ficou morta
+        por 5 dias e 20 adoções (medido 08/08)". Ela **nunca foi medição**: era
+        uma frase que só existia em docstring e que eu registrei como se fosse
+        uma — a armadilha `A-12` de `docs/process/METODO-DE-ISOLAMENTO.md`, "o
+        caderno envelhecer sem que ninguém note".
+
+        A escavação do journal do daemon e dos transcritos, em 11/08, achou a
+        barra **ACESA** no rádio DENTRO daqueles cinco dias, quatro vezes, três
+        delas com fala literal dela: 08/08 16:39, 08/08 21:35, 08/08 23:48 e
+        11/08 11:40 (ensaios `lightbar-bt-aceso-*` em `docs/data/ensaios.csv`;
+        a correção está registrada no ensaio `lightbar-bt-sem-0x08-cinco-dias`,
+        e a nota datada em `docs/process/METODO-DE-ISOLAMENTO.md`, seção "O que
+        ficou aberto nesta sessão — e o que 12/08 fechou").
+
+        O que é VERDADE hoje sobre o 0x08:
+
+        - ele está fora do caminho automático desde 04/08, e continua fora;
+        - nesses cinco dias sem ele a barra **obedeceu**. Isso mantém o 0x08
+          fora do banco dos réus, mas pela razão OPOSTA à que estava escrita;
+        - a correlação de 03/08 segue de pé (7/7 dentro da janela), mas como
+          causa SUFICIENTE da barra travada ela caiu em 11/08: no ensaio
+          `lightbar-bt-sem-0x08-hoje-2300` (olho dela, daemon parado, escrita
+          direta, sem 0x08 havia sete dias) os dois do cabo acenderam e **os
+          dois do rádio não**;
+        - em 12/08 nomeou-se a variável que faltava, e nenhuma das medições
+          acima a tinha: **quem estava com o hidraw aberto no instante da
+          probe** — e era o Steam. Ver o terceiro gabarito em
+          `docs/process/METODO-DE-ISOLAMENTO.md`.
+
+        A hipótese que este método torna falsificável na mesa dela — uma
+        variável, um gesto, um olho —, e que segue sem ensaio que a feche:
+        **o 0x08 devolve o claim, desde que não seja mandado em cima da
+        conexão.**
 
         ``uniq`` restringe a um controle (o MAC/uniq do handle); ausente, manda
         a todos. Devolve ``{key: enviou?}`` — vazio significa nenhum handle

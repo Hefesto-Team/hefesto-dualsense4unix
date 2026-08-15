@@ -177,11 +177,13 @@ jobs:
       #
       # Ele nasceu informativo (`continue-on-error: true`) contra o CSV de
       # 11/08, quando a coluna `teste_que_morde` estava INTEIRA VAZIA e toda
-      # célula que afirmava `aciona = sim` com `confianca = medido` reprovava.
+      # célula que afirmava `aciona = sim` com `de_onde_sei = medido` reprovava.
+      # (A coluna se chamava `confianca` até a D-13 de 15/08/2026, que a
+      # renomeou sem mudar o domínio.)
       # O comentário de então prometia, literalmente, que *"o
       # `continue-on-error` sai no dia em que ela é paga"* — e o dia chegou:
       # das 17 células sem rede que sobravam, 15 ganharam teste que morde e 2
-      # tiveram a confiança rebaixada para o que a evidência de fato
+      # tiveram o `de_onde_sei` rebaixado para o que a evidência de fato
       # sustentava (`luz.led_microfone@dualsense` no cabo, que era leitura de
       # fonte e não medição; e `plataforma.vigia_zumbi@sn30` no rádio, onde o
       # medido é o BURACO — a vigia pula todo aparelho com `[ServiceRecords]`
@@ -194,7 +196,7 @@ jobs:
       # que morda, mordida que aponta um nó que o pytest não coleta, prova
       # vencida, integridade do CSV e linha do CSV que ninguém publicou no
       # `specs.html`. Se ele voltar a ficar vermelho, o conserto é escrever a
-      # mordida ou baixar a confiança — NÃO devolver o `continue-on-error`.
+      # mordida ou baixar o `de_onde_sei` — NÃO devolver o `continue-on-error`.
       - name: Censo do mapa (afirmação forte sem teste que morda)
         run: python3 scripts/check_paridade_transporte.py
 
