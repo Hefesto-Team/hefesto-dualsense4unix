@@ -12,9 +12,10 @@ Três invariantes, cada uma paga com um incidente conhecido:
 * **Nada de busy-loop.** A captura fica BLOQUEADA num `read()` do pipe do
   `parec` (o áudio é o relógio) e a supervisora dorme num `Event.wait`. Um
   laço apertado aqui repetiria os 104% de CPU da v3.8.1.
-* **Ausência é resposta.** Sem `pactl`, sem `parec`, sem source do controle
-  ou com dois controles no cabo que não dá para distinguir, a leitura é
-  `None` e o painel some. Nunca um medidor parado em zero fingindo silêncio.
+* **Ausência é resposta.** Sem `pactl`, sem `parec` ou sem source atribuível
+  ao controle — o caso do RÁDIO, que não publica placa de som nenhuma —, a
+  leitura é `None` e o painel some. Nunca um medidor parado em zero fingindo
+  silêncio.
 
 Por que `LC_ALL=C` em tudo: a saída do `pactl` é TRADUZIDA (nesta máquina o
 mute sai como "Mudo: não"). Parsear texto localizado é bug esperando idioma.
@@ -43,9 +44,14 @@ import shutil
 import subprocess
 import sys
 import threading
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Any, ClassVar
 
+from hefesto_dualsense4unix.app.usb_pai import (
+    nos_e_sysfs,
+    usb_pai_por_no,
+    usb_pai_por_uniq,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -115,9 +121,9 @@ class LeituraMic:
     (``app/audio_saida.py``) precisam mandar o áudio para o sink DO CONTROLE,
     explicitamente, e quem resolve "qual sink é de qual controle" já é este
     módulo. Publicar o nome aqui é o que evita um SEGUNDO leitor de PipeWire na
-    janela. ``""`` = não deu para casar com certeza — com dois DualSense no
-    cabo o ``escolher_sink`` recusa de propósito —, e quem recebe "" não toca e
-    não roteia, em vez de chutar.
+    janela. ``""`` = não deu para casar com certeza — o caso do controle no
+    RÁDIO, que não publica placa de som —, e quem recebe "" não toca e não
+    roteia, em vez de chutar.
     """
 
     nivel: float | None = 0.0
@@ -125,6 +131,63 @@ class LeituraMic:
     fonte: str = ""
     saida_muda: bool | None = None
     sink: str = ""
+
+
+@dataclass(frozen=True)
+class CasamentoUSB:
+    """Quem pendura em qual dispositivo USB — a identidade que o NOME não tem.
+
+    Dois mapas do mesmo fato, montados por :mod:`app.usb_pai`: o dispositivo
+    USB pai de cada controle (pelo hidraw) e o de cada nó de áudio (pelo
+    ``sysfs.path`` que o PipeWire publica). ``""`` de qualquer lado quer dizer
+    "não pendura em USB nenhum" — o caso do controle por rádio, que não tem
+    placa de som, e o de todo nó virtual, como a ponte de mic por Bluetooth.
+
+    Por que isto existe: com dois DualSense no cabo os nomes dos sinks são
+    ``...-00...`` e ``...-00.2...``, desempate posicional do PipeWire e não
+    número de série. A janela recusava atribuir sink a QUALQUER um deles, e o
+    botão "Ouvir no controle" nascia morto na mesa de quatro controles. O
+    dispositivo USB responde a pergunta sem olhar nome, MAC, ordem de conexão
+    nem quantidade de controles — vale igual para 1, 2, 4 ou 7.
+    """
+
+    por_uniq: dict[str, str] = field(default_factory=dict)
+    por_no: dict[str, str] = field(default_factory=dict)
+
+    def casar(self, nomes: list[str], uniq: str) -> str | None:
+        """O nó que pendura no MESMO dispositivo USB deste controle, ou None.
+
+        Sem dispositivo USB do lado do controle não há o que casar (rádio):
+        devolve None e deixa a decisão para as outras regras — nunca chuta o
+        primeiro nó da lista, que seria emprestar a placa do vizinho.
+
+        Empate (dois nós do mesmo controle, uma placa com dois perfis) resolve
+        pelo menor nome, e não é arbitrário: os dois nós SÃO daquele controle,
+        então qualquer um leva ao aparelho certo, e ordenar é o que faz a
+        janela mostrar o mesmo nó a cada ciclo em vez de piscar entre dois.
+        """
+        meu = self.por_uniq.get(uniq, "")
+        if not meu:
+            return None
+        candidatos = sorted(n for n in nomes if self.por_no.get(n, "") == meu)
+        return candidatos[0] if candidatos else None
+
+    def veta(self, nome: str, uniq: str) -> bool:
+        """True quando este nó NÃO pode ser deste controle. A guarda do 1-para-1.
+
+        A regra do "um nó, um controle, só pode ser ele" é boa aritmética e má
+        física: um controle no RÁDIO não tem placa de som (medido 15/08/2026 —
+        a placa segue o transporte), e se sobra na tela um nó de áudio USB de
+        outro aparelho, o um-para-um o entregaria a ele. Aqui o casamento por
+        USB é o que diz "este nó tem dono, e não é você".
+
+        Nó sem dispositivo USB não veta nada: é o caso da ponte de mic por
+        Bluetooth, que é virtual e legítima justamente para quem está no rádio.
+        """
+        do_no = self.por_no.get(nome, "")
+        if not do_no:
+            return False
+        return do_no != self.por_uniq.get(uniq, "")
 
 
 # ---------------------------------------------------------------------------
@@ -181,11 +244,14 @@ def sinks_dualsense(saida_pactl: str) -> list[str]:
 
 
 def escolher_fonte(
-    fontes: list[str], uniq: str, uniqs_com_audio: list[str]
+    fontes: list[str],
+    uniq: str,
+    uniqs_com_audio: list[str],
+    usb: CasamentoUSB | None = None,
 ) -> str | None:
     """Source atribuível ao controle `uniq` — ou None quando não dá para saber.
 
-    Três regras, nesta ordem:
+    Quatro regras, nesta ordem:
 
     1. **O nome carrega o MAC inteiro.** Sources de Bluetooth nascem como
        ``bluez_input.XX_XX_XX_XX_XX_XX``; ali o MAC está no nome e a
@@ -201,13 +267,27 @@ def escolher_fonte(
        de fallback, para nó sem ``HID_UNIQ``, em que ali vai o nome do nó
        (``hidraw3``) e não um MAC. Sem esta regra o medidor NUNCA aparecia
        por Bluetooth com dois controles ou mais.
-    3. **Um para um.** Uma única source de DualSense e um único controle
-       candidato: só pode ser ele.
+    3. **O MESMO DISPOSITIVO USB** (``usb``). A placa de som e o HID do mesmo
+       controle penduram no mesmo nó USB — a interface ``:1.0`` é o áudio, a
+       ``:1.3`` é o HID. É a única identidade que existe no cabo, porque o
+       nome do nó não tem nenhuma: o ``-00``/``-00.2`` é desempate posicional
+       do PipeWire, e o próprio ``/dev/snd/by-id`` só guarda um link para os
+       dois. Sem esta regra o mic e o botão de saída sumiam de TODOS os
+       controles assim que havia dois no cabo. Ver :mod:`app.usb_pai`.
+    4. **Um para um.** Uma única source de DualSense e um único controle
+       candidato: só pode ser ele — **desde que o casamento por USB não
+       desminta** (:meth:`CasamentoUSB.veta`). Um controle no rádio não tem
+       placa de som, e o um-para-um sozinho lhe daria a placa de outro
+       aparelho com a maior confiança do mundo.
 
-    Fora disso devolve None. Dois DualSense no cabo publicam sources cujo
-    nome não distingue um do outro (a string USB é a mesma), e exibir o mic
-    do controle errado é pior que não exibir nenhum — é a regra do "não
-    invente dado na interface".
+    Fora disso devolve None — e ``None`` é a resposta certa para o controle no
+    RÁDIO, que não publica placa nenhuma (medido 15/08/2026: a placa segue o
+    transporte). Exibir o mic do controle errado é pior que não exibir nenhum:
+    é a regra do "não invente dado na interface".
+
+    ``usb=None`` mantém o comportamento antigo, palavra por palavra. É o que
+    deixa a função utilizável sem ir ao sysfs — e o que faz o teste que arranca
+    a cura reprovar em vez de explodir.
     """
     alvo = _so_hex(uniq)
     if alvo:
@@ -218,32 +298,42 @@ def escolher_fonte(
             sufixo = sufixo_da_ponte_bt(fonte)
             if sufixo and alvo.endswith(sufixo):
                 return fonte
+    if usb is not None:
+        casada = usb.casar(fontes, uniq)
+        if casada is not None:
+            return casada
     if len(fontes) == 1 and len(uniqs_com_audio) == 1 and uniqs_com_audio[0] == uniq:
+        if usb is not None and usb.veta(fontes[0], uniq):
+            return None
         return fontes[0]
     return None
 
 
 def escolher_sink(
-    sinks: list[str], uniq: str, uniqs_com_audio: list[str]
+    sinks: list[str],
+    uniq: str,
+    uniqs_com_audio: list[str],
+    usb: CasamentoUSB | None = None,
 ) -> str | None:
     """Sink de SAÍDA atribuível ao controle `uniq` — None quando não dá para saber.
 
     Delega a :func:`escolher_fonte` porque o problema é literalmente o mesmo,
-    e a resposta conservadora dele é a que vale aqui também: dois DualSense no
-    cabo publicam sinks cujos nomes NÃO os distinguem. Medido nesta máquina em
-    01/08/2026, o nome do sink é
+    e as regras dele valem aqui inteiras. O nome do sink continua sem
+    identidade — medido nesta máquina, ele é
     ``alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00.analog-surround-40``
-    — o ``-00`` é o desempate posicional do PipeWire (a string USB de serial do
-    DualSense é a mesma em todos), não a identidade do controle. Acender "saída
-    muda" no card do controle errado é pior que não acender: seria a interface
-    culpando o PipeWire pelo silêncio do controle que está tocando.
+    e o ``-00`` é desempate posicional do PipeWire (a string USB de serial do
+    DualSense é a mesma em todos) —, mas desde 15/08/2026 a identidade não vem
+    mais do nome: vem do dispositivo USB em que a placa e o HID penduram
+    juntos. Acender "saída muda" no card do controle errado continua sendo
+    pior que não acender; a diferença é que agora dá para saber qual é o card
+    certo, em vez de recusar todos.
 
     A regra do prefixo da ponte BT (:func:`sufixo_da_ponte_bt`) vem junto e
     hoje é INERTE do lado da saída: a ponte publica uma source (o mic chega
     como Opus tunelado em HID) e nenhum sink começa com aquele prefixo. Fica
     porque é a regra certa se um dia houver um sink com identidade no nome.
     """
-    return escolher_fonte(sinks, uniq, uniqs_com_audio)
+    return escolher_fonte(sinks, uniq, uniqs_com_audio, usb)
 
 
 def sufixo_da_ponte_bt(fonte: str) -> str:
@@ -445,10 +535,14 @@ class MicMonitor:
         alto-falante continua lá).
 
         ``""`` sai em dois casos que valem a mesma recusa: o sistema não
-        publicou sink nenhum para este controle, ou há mais de um DualSense e o
-        ``escolher_sink`` recusou de propósito — o ``-00`` do nome é desempate
-        posicional do PipeWire, não identidade. Quem recebe "" não toca e não
-        roteia.
+        publicou sink nenhum para este controle — o caso do RÁDIO, em que o
+        DualSense não expõe placa de som (medido 15/08/2026: a placa segue o
+        transporte) —, ou o casamento por dispositivo USB não fechou. Quem
+        recebe "" não toca e não roteia.
+
+        Desde 15/08/2026 "mais de um DualSense no cabo" NÃO é mais um desses
+        casos: o ``escolher_sink`` casa cada placa com o seu controle pelo nó
+        USB em que os dois penduram, e devolve o sink certo para cada um.
         """
         with self._lock:
             return self._sinks.get(uniq, "")
@@ -503,9 +597,14 @@ class MicMonitor:
             return
 
         fontes = self._descobrir_fontes()
+        # Uma varredura de sysfs por ciclo, sem subprocesso: o dispositivo USB
+        # pai de cada controle serve aos DOIS lados (mic e saída) e não muda
+        # dentro do ciclo.
+        usb_por_uniq = usb_pai_por_uniq(controles)
+        casamento = self._casar_por_usb("sources", fontes, usb_por_uniq)
         alvos: dict[str, str] = {}
         for uniq in controles:
-            fonte = escolher_fonte(fontes, uniq, list(controles))
+            fonte = escolher_fonte(fontes, uniq, list(controles), casamento)
             if fonte is not None:
                 alvos[uniq] = fonte
         self._derrubar_capturas(set(alvos))
@@ -518,7 +617,7 @@ class MicMonitor:
         # Depois das capturas de propósito: o medidor não espera dois
         # subprocessos a mais para aparecer, e o mudo da saída muda por gesto
         # humano — 3 s de atraso ali é invisível.
-        saidas, nomes = self._descobrir_saidas(controles)
+        saidas, nomes = self._descobrir_saidas(controles, usb_por_uniq)
         with self._lock:
             self._saidas_mudas = saidas
             self._sinks = nomes
@@ -527,8 +626,32 @@ class MicMonitor:
         saida = self._runner(["pactl", "list", "sources", "short"])
         return fontes_dualsense(saida or "")
 
+    def _casar_por_usb(
+        self, tipo: str, nomes: list[str], usb_por_uniq: dict[str, str]
+    ) -> CasamentoUSB | None:
+        """Monta o casamento por dispositivo USB deste lado (sources ou sinks).
+
+        Um `pactl list <tipo>` LONGO por lado e por ciclo — o curto não traz o
+        ``sysfs.path``, que é o fio inteiro desta cura. É subprocesso, então
+        ele só sai quando há nó de DualSense na lista: sem candidato não há
+        casamento a fazer, e o ciclo fica exatamente tão caro quanto era.
+
+        ``None`` quando não deu para montar (sem `pactl`, sem candidato, saída
+        ilegível). Quem recebe ``None`` volta ao comportamento anterior à cura,
+        que é conservador e não inventa dado — degradar não pode virar chute.
+        """
+        if not nomes:
+            return None
+        longa = self._runner(["pactl", "list", tipo]) or ""
+        if not longa.strip():
+            return None
+        return CasamentoUSB(
+            por_uniq=dict(usb_por_uniq),
+            por_no=usb_pai_por_no(nos_e_sysfs(longa)),
+        )
+
     def _descobrir_saidas(
-        self, controles: tuple[str, ...]
+        self, controles: tuple[str, ...], usb_por_uniq: dict[str, str] | None = None
     ) -> tuple[dict[str, bool], dict[str, str]]:
         """Sink de saída de cada controle que dá para casar COM CERTEZA.
 
@@ -540,9 +663,9 @@ class MicMonitor:
         de uma leitura que ela não usa.
 
         Os mapas são SUBSTITUÍDOS inteiros a cada ciclo e nunca ganham entrada
-        por chute: controle sem sink atribuível (dois DualSense no cabo) ou sem
-        `pactl` na máquina fica DE FORA — e ficar de fora é exatamente o que
-        mantém o selo apagado e o botão de rota parado.
+        por chute: controle sem sink atribuível (o do RÁDIO, que não publica
+        placa) ou sem `pactl` na máquina fica DE FORA — e ficar de fora é
+        exatamente o que mantém o selo apagado e o botão de rota parado.
 
         Nenhuma escrita: `list sinks short` e `get-sink-mute` são leituras. O
         mudo persistido é escolha da usuária (ver o cabeçalho do módulo).
@@ -551,10 +674,13 @@ class MicMonitor:
         sinks = sinks_dualsense(saida or "")
         if not sinks:
             return {}, {}
+        if usb_por_uniq is None:
+            usb_por_uniq = usb_pai_por_uniq(controles)
+        casamento = self._casar_por_usb("sinks", sinks, usb_por_uniq)
         mudos: dict[str, bool] = {}
         nomes: dict[str, str] = {}
         for uniq in controles:
-            sink = escolher_sink(sinks, uniq, list(controles))
+            sink = escolher_sink(sinks, uniq, list(controles), casamento)
             if sink is None:
                 continue
             nomes[uniq] = sink
