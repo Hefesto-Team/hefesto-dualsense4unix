@@ -134,6 +134,11 @@ readonly WIREPLUMBER_DROPIN_DISABLE="${HOME}/.config/wireplumber/wireplumber.con
 # Variante --disable-output (53): gerada junto do 52 pelo --disable-source.
 # Removida incondicionalmente (simetria — o uninstall esquecia dela).
 readonly WIREPLUMBER_DROPIN_OUTPUT="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
+# SOM-QUE-NAO-DORME-01 (54): impede o WirePlumber de suspender o SINK do
+# controle. Artefato nosso, instalado SEM FLAG em todo formato — logo sai
+# incondicionalmente, como o 52 e o 53. Sem esta linha a máquina dela ficaria
+# com uma regra de áudio do Hefesto depois de desinstalar o Hefesto.
+readonly WIREPLUMBER_DROPIN_ACORDADO="${HOME}/.config/wireplumber/wireplumber.conf.d/54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
 # environment.d do modo-jogo (PS_LONG_PRESS_MS=0). Hoje redundante (o default do
 # código é 0), mas é artefato do hefesto — remove na desinstalação por simetria.
 readonly ENVIRONMENTD_GAMEMODE="${HOME}/.config/environment.d/91-hefesto-dualsense-gamemode.conf"
@@ -496,6 +501,15 @@ fi
 if [[ -f "${WIREPLUMBER_DROPIN_OUTPUT}" ]]; then
     log "removendo drop-in WirePlumber (disable-output): ${WIREPLUMBER_DROPIN_OUTPUT}"
     rm -f "${WIREPLUMBER_DROPIN_OUTPUT}"
+    systemctl --user restart wireplumber >/dev/null 2>&1 || true
+fi
+
+# SOM-QUE-NAO-DORME-01 (54): o sono do alto-falante volta a ser o do sistema
+# (5 s de ociosidade). Vai embora com o resto — o produto não deixa regra de
+# áudio para trás.
+if [[ -f "${WIREPLUMBER_DROPIN_ACORDADO}" ]]; then
+    log "removendo drop-in WirePlumber (nunca-dorme): ${WIREPLUMBER_DROPIN_ACORDADO}"
+    rm -f "${WIREPLUMBER_DROPIN_ACORDADO}"
     systemctl --user restart wireplumber >/dev/null 2>&1 || true
 fi
 

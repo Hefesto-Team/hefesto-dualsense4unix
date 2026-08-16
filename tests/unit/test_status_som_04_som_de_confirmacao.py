@@ -61,6 +61,7 @@ from hefesto_dualsense4unix.app.theme import (
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     _SELO_CHARS,
     DICA_BLOCO_SPEAKER,
+    DICA_SPEAKER_POSSE_NOSSA,
     TEXTO_SELO_SAIDA_MUDA,
     TEXTO_SELO_SEM_SOM,
     ControllerCard,
@@ -431,7 +432,15 @@ def test_o_som_que_sai_nao_deixa_recado_nenhum(pedidos: _Pedidos) -> None:
     pedidos.rodar()
 
     assert not card._speaker_selo_saida.get_visible(), "o recado sai quando resolve"
-    assert card._speaker_box.get_tooltip_text() == DICA_BLOCO_SPEAKER
+    # SOM-ACORDADO-01: a primeira linha da dica passou a depender da POSSE, e
+    # aqui há posse (`POSSE`). A `DICA_BLOCO_SPEAKER` descreve o estado SEM
+    # posse — *"o volume é do firmware do controle"* — e com o daemon mandando
+    # o volume ela mentiria justamente no estado que virou o normal. O que este
+    # teste afere continua sendo o mesmo: a dica é a linha-base e MAIS NADA.
+    assert card._speaker_box.get_tooltip_text() == DICA_SPEAKER_POSSE_NOSSA
+    assert _card(speaker=None)._speaker_box.get_tooltip_text().startswith(
+        DICA_BLOCO_SPEAKER
+    ), "e sem posse a linha-base continua sendo a de sempre"
 
 
 def test_a_saida_muda_tem_prioridade_sobre_o_recado_do_som(

@@ -27,6 +27,7 @@ Redesign STATUS-02 (aba Status vira 1 card por controle):
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -916,6 +917,21 @@ class StatusActionsMixin(WidgetAccessMixin):
     #: Sink do controle resolvido pelo `mic_monitor` no último tique rápido.
     #: "" = não dá para saber, e é o que deixa o botão parado.
     _rota_sink: str = ""
+    #: SOM-ACORDADO-01 — ``{nome do sink: acordado|dormindo}``, da última
+    #: leitura da rota (0,5 Hz, thread worker). Vem de carona porque a leitura
+    #: é a MESMA (`pactl list sinks short`): um leitor, um subprocesso, e o
+    #: estado de todos os canais para todos os cards. É o que torna isto
+    #: universal — 1 ou 7 controles custam a mesma leitura, e nada aqui depende
+    #: de MAC, de ordem de conexão nem de número mágico.
+    #:
+    #: Dicionário VAZIO é "ainda não li", e é o que mantém os cards calados
+    #: nos primeiros dois segundos em vez de afirmarem "acordado" por omissão.
+    _canais_de_som: Mapping[str, str] = {}
+    #: A regra do WirePlumber que impede o sono está instalada? Lida uma vez
+    #: por ciclo, junto da rota, porque é um `os.path.isfile` — barato, mas
+    #: ainda assim disco, e disco não vai na thread do GTK a 10 Hz.
+    #: ``None`` = ninguém perguntou ainda.
+    _regra_do_sono: bool | None = None
     #: CARD-ÚNICO-01 — o último "Perfil ativo"/"Hefesto" escrito, por id de
     #: widget. Ele existe para o card que NASCE depois da escrita receber o
     #: valor certo já na primeira pintura (ver
@@ -958,12 +974,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         é o leitor de PipeWire da janela — este método só ESCOLHE entre o que
         ele resolveu, e nunca vai ao sistema por conta própria.
 
-        Com mais de um controle o ``escolher_sink`` já devolve "" para todos,
-        de propósito: o nome do sink não carrega identidade (o ``-00`` é
-        desempate posicional do PipeWire, não número de série). A conferência
-        de que os nomes resolvidos são um só é cinto de segurança sobre isso —
-        dois sinks distintos aqui seria a janela tendo de escolher por ela, e
-        a resposta honesta é não escolher.
+        A conferência de que os nomes resolvidos são UM só é o coração do
+        método, e desde 15/08/2026 ela é a única coisa que segura o botão:
+        antes o ``escolher_sink`` devolvia "" para todo mundo assim que havia
+        dois controles, e o botão morria por falta de resposta; agora ele
+        responde certo por controle (casamento pelo dispositivo USB), e o que
+        sobra é a pergunta que a janela não pode responder sozinha — **em qual
+        dos controles ela quer ouvir**.
+
+        Este botão é UM, no cabeçalho da aba, e o alvo dele é global. Com dois
+        sinks distintos, escolher um seria a janela decidindo por ela; a
+        resposta honesta continua sendo não escolher, e a dica do botão
+        (``DICA_ROTA_SEM_SINK``) diz isso com todas as letras. Quem escolhe por
+        controle é o seletor "Todo o som do PC" DENTRO do card, que já recebe
+        o sink certo por :meth:`definir_sink_de_saida`.
         """
         if monitor is None:
             return ""
@@ -1003,17 +1027,33 @@ class StatusActionsMixin(WidgetAccessMixin):
         sink = self._rota_sink
 
         def _ler() -> Any:
-            return rota.estado(sink)
+            # SOM-ACORDADO-01: a regra do WirePlumber vai JUNTO, na mesma
+            # worker. É um `os.path.isfile`, mas disco na thread do GTK a 10 Hz
+            # é a mesma classe de defeito do subprocess — e aqui ele sai de
+            # graça, de carona numa leitura que já existe.
+            from hefesto_dualsense4unix.app.audio_saida import (
+                regra_nunca_dorme_instalada,
+            )
+
+            return (rota.estado(sink), regra_nunca_dorme_instalada())
 
         ipc_bridge.run_in_thread(
             _ler, self._on_rota_lida, self._on_rota_falhou
         )
 
-    def _on_rota_lida(self, estado: Any) -> bool:
+    def _on_rota_lida(self, leitura: Any) -> bool:
         """Aplica rótulo, sensibilidade e dica — já na thread do GTK."""
         self._rota_inflight = False
         from hefesto_dualsense4unix.app.audio_saida import acao_da_rota
 
+        estado, regra = leitura
+        # SOM-ACORDADO-01: guardado aqui e ENTREGUE aos cards pelo tique de
+        # 10 Hz (`_sync_status_cards`), que é o dono da fiação deles. Escrever
+        # nos cards daqui seria um segundo caminho até o mesmo widget, e o
+        # card pode nem existir quando esta leitura chega (a aba recria os
+        # cards a cada troca do conjunto de controles).
+        self._canais_de_som = dict(getattr(estado, "canais", {}) or {})
+        self._regra_do_sono = bool(regra)
         acao = acao_da_rota(estado)
         botao = self._get("btn_som_no_controle")
         if botao is not None and hasattr(botao, "set_sensitive"):
@@ -1190,9 +1230,24 @@ class StatusActionsMixin(WidgetAccessMixin):
             pedir = getattr(card, "definir_pedido_de_rota", None)
             if pedir is not None:
                 pedir(self._aplicar_rota_do_sistema)
+            sink_do_card = monitor.sink_de(uniq) if tem_uniq else ""
             definir_sink = getattr(card, "definir_sink_de_saida", None)
             if definir_sink is not None:
-                definir_sink(monitor.sink_de(uniq) if tem_uniq else "")
+                definir_sink(sink_do_card)
+            # SOM-ACORDADO-01, a metade "ligar isso a interface" da decisão
+            # dela. Consulta a DICIONÁRIO, como o alvo da rota logo acima:
+            # quem foi ao PipeWire foi a leitura de 0,5 Hz, e a este tique de
+            # 10 Hz só chega o resultado. Sem sink do card não há canal a
+            # descrever, e "" é o que mantém o rótulo da moldura calado — é o
+            # caso do rádio, em que o DualSense não publica placa de som.
+            definir_canal = getattr(card, "definir_estado_do_canal", None)
+            if definir_canal is not None:
+                definir_canal(
+                    self._canais_de_som.get(sink_do_card, "")
+                    if sink_do_card
+                    else "",
+                    regra_instalada=self._regra_do_sono,
+                )
             # SOM-02/E4: quem GUARDA o rascunho do perfil em edição. O bloco
             # "Alto-falante" registra nele o que ficou de pé DEPOIS de o daemon
             # confirmar — é isso que faz o "Salvar Perfil" persistir o volume
