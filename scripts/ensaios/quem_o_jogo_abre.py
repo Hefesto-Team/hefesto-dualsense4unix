@@ -150,10 +150,67 @@ def arvore_do_jogo(padrao: str) -> list[int]:
     return sorted(alvos)
 
 
+def processo_do_jogo(padrao: str) -> int | None:
+    """O PID de quem é o JOGO — não o `reaper` que o lançou.
+
+    **Isto já mentiu, e o falso negativo foi convincente.** A primeira versão
+    lia o ambiente do primeiro processo da árvore que tivesse `SteamAppId`, em
+    ordem de PID. Sob Proton esse primeiro é o `reaper` da Steam, que roda
+    ANTES do wrapper: no ambiente dele o `PROTON_DISABLE_HIDRAW` ainda não
+    existe, e o `SDL_GAMECONTROLLER_IGNORE_DEVICES` é o da Steam, com 756
+    caracteres.
+
+    Medido em 16/08/2026, com Duskfade e DON'T SCREAM abertos ao mesmo tempo: o
+    instrumento respondeu *"o WRAPPER rodou? NÃO"* para os dois, enquanto o
+    `/proc` do processo do jogo trazia `PROTON_DISABLE_HIDRAW=0x054C/0x0CE6` e
+    um IGNORE de duas entradas, que é o nosso. **Um instrumento que acusa a
+    própria cura de não existir manda a investigação para o lugar mais caro
+    possível.**
+
+    O critério aqui é ESTRUTURAL, não pelo conteúdo: entre os processos cujo
+    cmdline casa com o padrão, vale o mais fundo na cadeia — aproximado pelo
+    maior PID, porque cada elo nasce depois do anterior. Escolher pelo conteúdo
+    ("o que tiver a variável que eu quero medir") seria o instrumento
+    confirmando a si mesmo, que é a armadilha nº 1 desta casa.
+    """
+    rx = re.compile(padrao, re.IGNORECASE)
+    candidatos: list[int] = []
+    for p in Path("/proc").iterdir():
+        if not p.name.isdigit():
+            continue
+        try:
+            cmd = (p / "cmdline").read_bytes().replace(b"\0", b" ").decode(
+                "utf-8", "replace")
+            if not rx.search(cmd):
+                continue
+            bruto = (p / "environ").read_bytes()
+        except OSError:
+            continue
+        if b"SteamAppId=" in bruto:
+            candidatos.append(int(p.name))
+    return max(candidatos) if candidatos else None
+
+
+def ambiente_de(pid: int | None) -> dict[str, str]:
+    """O environ de um processo, como dicionário. Ilegível = vazio."""
+    if pid is None:
+        return {}
+    try:
+        bruto = (Path("/proc") / str(pid) / "environ").read_bytes()
+    except OSError:
+        return {}
+    return dict(
+        linha.split("=", 1)
+        for linha in bruto.decode("utf-8", "replace").split("\0")
+        if "=" in linha
+    )
+
+
 def retrato(padrao: str) -> dict:
     """O que a árvore do jogo abriu e recebeu, agora."""
     nomes = nos_de_entrada()
     pids = arvore_do_jogo(padrao)
+    pid_do_jogo = processo_do_jogo(padrao)
     eventos: dict[str, list[int]] = {}
     hidraws: dict[str, list[int]] = {}
     ambiente: dict[str, str] = {}
@@ -168,18 +225,8 @@ def retrato(padrao: str) -> dict:
                     .setdefault(m.group(1), []).append(pid)
         except OSError:
             pass
-        if not ambiente:
-            try:
-                bruto = (Path("/proc") / str(pid) / "environ").read_bytes()
-                amb = dict(
-                    linha.split("=", 1)
-                    for linha in bruto.decode("utf-8", "replace").split("\0")
-                    if "=" in linha
-                )
-                if "SteamAppId" in amb:
-                    ambiente = amb
-            except OSError:
-                pass
+        # O ambiente é lido depois do laço, do processo do JOGO — ver
+        # `processo_do_jogo`, e o falso negativo que obrigou a separar isto.
     ign = ambiente.get("SDL_GAMECONTROLLER_IGNORE_DEVICES", "")
     return {
         "padrao": padrao,  # noqa-acento: chave de dado, não prosa
