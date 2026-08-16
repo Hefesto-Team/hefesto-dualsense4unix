@@ -605,3 +605,298 @@ MASCARAS APLICADAS NESTE ARQUIVO (a tela mostrou o valor inteiro):
   MAC ..... octetos 4 e 5 zerados (máscara da casa)
   serial .. so os 6 primeiros caracteres; os demais viram '#', em texto E em hexadecimal.
             Os caracteres 5 e 6 — a COR, que e o objeto do ensaio — estao entre os preservados.
+
+
+##############################################################################
+##                                                                          ##
+##  SEGUNDA RODADA — 15/08/2026, 22h09, DEPOIS DA TROCA DE BRAÇOS DAS 19H   ##
+##                                                                          ##
+##############################################################################
+
+POR QUE ESTA RODADA EXISTE, E O QUE SÓ ELA PODIA DECIDIR
+--------------------------------------------------------
+A rodada de 14h47 (acima) leu a cor de DOIS controles — os dois que estavam no
+cabo naquela hora. Os outros dois estavam no rádio, e o rádio RECUSOU a escrita
+com EIO. A afirmação que se podia fazer era "a cor sai em 2 de 2", que é bem
+mais fraca do que ela parece.
+
+Às 19h ela TROCOU OS BRAÇOS. Os dois que nunca tinham sido medidos foram para o
+fio. Esta rodada os mede, e com isso a afirmação passa a valer em 4 de 4.
+
+  aparelho              hw            14h47      22h09
+  a0:fa:9c:00:00:f0     0x00000710    CABO       rádio  (medido na 1ª rodada)
+  d4:2f:4b:00:00:d8     0x00001111    CABO       rádio  (medido na 1ª rodada)
+  44:46:48:00:00:03     0x00000811    rádio      CABO   (medido AQUI)
+  14:3a:9a:00:00:ab     0x00000711    rádio      CABO   (medido AQUI)
+
+O SEGUNDO ACHADO, E ELE É DE GRAÇA — O EIO DO RÁDIO ESTÁ JULGADO
+-----------------------------------------------------------------
+O 44:46:48 é o MESMO aparelho que, às 14h47, recusou o SET_FEATURE 0x80 com EIO
+imediato nas duas tentativas (com CRC e sem CRC), por rádio. Às 22h09, no fio,
+ele ACEITOU o mesmíssimo comando e devolveu o serial.
+
+Isto é o ensaio dos DOIS LADOS que a lógica de `scripts/eliminacao.py` exige, e
+é o desenho mais forte que existe: o MESMO aparelho, o MESMO comando, o MESMO
+dia, e só o transporte mudando. O veredicto:
+
+  - a UNIDADE está INOCENTADA. Não é "aquele controle não sabe responder".
+  - o TRANSPORTE RÁDIO é a causa da recusa, e agora com prova causal, não com
+    correlação.
+
+O que continua NÃO decidido, e a honestidade importa: QUEM recusa — o firmware
+do controle, ou a pilha HIDP/L2CAP do BlueZ. `EIO` não distingue os dois, e
+nenhuma leitura desta rodada distingue tampouco. Nenhuma escrita nova foi
+enviada a controle nenhum por rádio: a autorização dela desta noite cobria os
+DOIS DO CABO, e só eles.
+
+A PROCEDÊNCIA, DE NOVO (a régua é declarada a cada rodada, não uma vez)
+-----------------------------------------------------------------------
+  porta .......... broker (SCM_RIGHTS), /run/hefesto-hidraw-broker/broker.sock
+  bibliotecas .... fcntl, array, select, zlib — embutidas no interpretador
+                   .venv/bin/python deste projeto
+  daemon ......... RODANDO durante toda a rodada. NÃO foi parado.
+  trava usada .... --exigir-mac em TODAS as execuções, incluindo as secas.
+                   Os nós renumeraram entre as duas rodadas (o hidraw8 de
+                   14h47 é o 44:46:48 por rádio; o hidraw8 de 22h09 é o
+                   14:3a:9a por cabo). Só o MAC atravessa as duas rodadas.
+  transporte ..... CONFERIDO no report de entrada, não suposto: os dois alvos
+                   emitiram `0x01` (relatório de USB). Na 1ª rodada os mesmos
+                   nós emitiam `0x31` (relatório de Bluetooth). Plugar o cabo
+                   pode não trocar o transporte — aqui trocou, e está medido.
+
+O COMANDO LITERAL QUE REFAZ ESTA RODADA
+----------------------------------------
+  .venv/bin/python scripts/ensaios/cor_do_plastico.py \
+      --alvo hidraw8  --exigir-mac 14:3a:9a:XX:XX:ab --escrever
+  .venv/bin/python scripts/ensaios/cor_do_plastico.py \
+      --alvo hidraw10 --exigir-mac 44:46:48:XX:XX:03 --escrever
+
+  (os octetos 4 e 5 estão mascarados AQUI, no arquivo versionado; quem refaz a
+   medição lê o valor inteiro no `HID_UNIQ` do `uevent` da própria máquina.)
+
+==============================================================================
+(2.1) 14:3a:9a:00:00:ab — hw 0x00000711 — CABO — o que ela chama de BRANCO
+==============================================================================
+==============================================================================
+  cor_do_plastico.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... de que cor é o plástico deste controle, perguntado a ELE?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... array                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... select                 de embutido no interpretador (stdlib estática)
+  biblioteca ....... zlib                   de embutido no interpretador (stdlib estática)
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  grab do evdev .... /dev/input/event264: PEGO por outro processo (EVIOCGRAB exclusivo)
+  grab do evdev .... /dev/input/event265: livre
+  grab do evdev .... /dev/input/event266: livre
+  grab do evdev .... /dev/input/event267: livre
+  escreve no aparelho? .. SIM
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+  (o grab acima é informativo: este instrumento fala hidraw por ioctl,
+   não evdev, e o EVIOCGRAB do co-op não afeta o que ele mede.)
+
+mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+no        transporte  MAC                hardware_version  acesso pelo fs
+--------  ----------  -----------------  ----------------  --------------------------------------------------------------------------------------------------------------
+hidraw4   rádio       a0:fa:9c:00:00:f0  0x00000710        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker
+hidraw5   rádio       d4:2f:4b:00:00:d8  0x00001111        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker
+hidraw8   cabo        14:3a:9a:00:00:ab  0x00000711        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker
+hidraw10  cabo        44:46:48:00:00:03  0x00000811        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !! ESCRITA AUTORIZADA nesta execução. A família 0x80 e a de FABRICA:
+  !!   [1,1] RESETA o controle
+  !!   [3,2] destrava a NVS para escrita
+  !!   [12,1] GRAVA calibração de stick na memória não-volátil
+  !! O nosso e [1,19], e a trava confere byte a byte.
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  ALVO ............. hidraw8 (cabo)
+  MAC (mascarado) .. 14:3a:9a:00:00:ab
+  tamanho do 0x80 .. 64 bytes (do descritor)
+  tamanho do 0x81 .. 64 bytes (do descritor)
+
+  O PAYLOAD QUE VAI (ou iria) NO FIO, em hexadecimal:
+    0000  80 01 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+    0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    0030  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+    byte 0 = 0x80   report id (SET_FEATURE de fábrica)
+    byte 1 = 1      base  — tinha de ser 1
+    byte 2 = 19     num   — tinha de ser 19
+    conferido byte a byte: É LEITURA PURA (base 1, num 19).
+
+  porta usada ...... broker (SCM_RIGHTS) — o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock
+
+  [1/3] PROVA DE VIDA, ANTES de escrever
+        feature 0x20 (8 primeiros) . 20 4a 75 6c 20 20 34 20
+        hardware_version ........... 0x00000711
+        reports de entrada lidos ... 3 (0x01x3)
+        lightbar (sysfs, só leitura) input541:rgb:indicator: brightness=255 multi_intensity=[0 255 0]
+
+  [2/3] ESCREVENDO SET_FEATURE 0x80 ...
+        aceito pelo aparelho (o ioctl voltou sem erro).
+        resposta 0x81, 64 bytes:
+    0000  81 01 13 02 46 35 34 38 30 30 23 23 23 23 23 23
+    0010  23 23 23 23 23 00 00 00 00 00 00 00 00 00 00 00
+        (os '#' são o número de série da unidade, mascarado)
+
+  [3/3] PROVA DE VIDA, DEPOIS de escrever
+        feature 0x20 (8 primeiros) . 20 4a 75 6c 20 20 34 20
+        hardware_version ........... 0x00000711
+        reports de entrada lidos ... 3 (0x01x3)
+        lightbar (sysfs, só leitura) input541:rgb:indicator: brightness=255 multi_intensity=[0 255 0]
+
+------------------------------------------------------------------------------
+  SERIAL ........... F54800###########
+  código da cor .... 00
+  COR DO PLÁSTICO .. White
+  CONTINUA SÃO? .... SIM — firmware 0x20 IGUAL, 3 reports depois da escrita
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+RESUMO: hidraw8 (cabo) é White, lido do próprio aparelho, e continua respondendo depois da escrita.
+------------------------------------------------------------------------------
+
+
+MASCARAS APLICADAS NESTE ARQUIVO (a tela mostrou o valor inteiro):
+  MAC ..... octetos 4 e 5 zerados (máscara da casa)
+  serial .. so os 6 primeiros caracteres; os demais viram '#', em texto E em hexadecimal.
+            Os caracteres 5 e 6 — a COR, que e o objeto do ensaio — estao entre os preservados.
+
+==============================================================================
+(2.2) 44:46:48:00:00:03 — hw 0x00000811 — CABO — o que ela chama de VERMELHO
+==============================================================================
+==============================================================================
+  cor_do_plastico.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... de que cor é o plástico deste controle, perguntado a ELE?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... array                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... select                 de embutido no interpretador (stdlib estática)
+  biblioteca ....... zlib                   de embutido no interpretador (stdlib estática)
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  grab do evdev .... /dev/input/event271: PEGO por outro processo (EVIOCGRAB exclusivo)
+  grab do evdev .... /dev/input/event272: livre
+  grab do evdev .... /dev/input/event273: livre
+  grab do evdev .... /dev/input/event274: livre
+  escreve no aparelho? .. SIM
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+  (o grab acima é informativo: este instrumento fala hidraw por ioctl,
+   não evdev, e o EVIOCGRAB do co-op não afeta o que ele mede.)
+
+mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+no        transporte  MAC                hardware_version  acesso pelo fs
+--------  ----------  -----------------  ----------------  --------------------------------------------------------------------------------------------------------------
+hidraw4   rádio       a0:fa:9c:00:00:f0  0x00000710        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker
+hidraw5   rádio       d4:2f:4b:00:00:d8  0x00001111        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker
+hidraw8   cabo        14:3a:9a:00:00:ab  0x00000711        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker
+hidraw10  cabo        44:46:48:00:00:03  0x00000811        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !! ESCRITA AUTORIZADA nesta execução. A família 0x80 e a de FABRICA:
+  !!   [1,1] RESETA o controle
+  !!   [3,2] destrava a NVS para escrita
+  !!   [12,1] GRAVA calibração de stick na memória não-volátil
+  !! O nosso e [1,19], e a trava confere byte a byte.
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  ALVO ............. hidraw10 (cabo)
+  MAC (mascarado) .. 44:46:48:00:00:03
+  tamanho do 0x80 .. 64 bytes (do descritor)
+  tamanho do 0x81 .. 64 bytes (do descritor)
+
+  O PAYLOAD QUE VAI (ou iria) NO FIO, em hexadecimal:
+    0000  80 01 13 00 00 00 00 00 00 00 00 00 00 00 00 00
+    0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    0030  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+    byte 0 = 0x80   report id (SET_FEATURE de fábrica)
+    byte 1 = 1      base  — tinha de ser 1
+    byte 2 = 19     num   — tinha de ser 19
+    conferido byte a byte: É LEITURA PURA (base 1, num 19).
+
+  porta usada ...... broker (SCM_RIGHTS) — o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock
+
+  [1/3] PROVA DE VIDA, ANTES de escrever
+        feature 0x20 (8 primeiros) . 20 4a 75 6c 20 20 34 20
+        hardware_version ........... 0x00000811
+        reports de entrada lidos ... 3 (0x01x3)
+        lightbar (sysfs, só leitura) input556:rgb:indicator: brightness=255 multi_intensity=[255 0 0]
+
+  [2/3] ESCREVENDO SET_FEATURE 0x80 ...
+        aceito pelo aparelho (o ioctl voltou sem erro).
+        resposta 0x81, 64 bytes:
+    0000  81 01 13 02 46 35 35 36 30 32 23 23 23 23 23 23
+    0010  23 23 23 23 23 00 00 00 00 00 00 00 00 00 00 00
+        (os '#' são o número de série da unidade, mascarado)
+
+  [3/3] PROVA DE VIDA, DEPOIS de escrever
+        feature 0x20 (8 primeiros) . 20 4a 75 6c 20 20 34 20
+        hardware_version ........... 0x00000811
+        reports de entrada lidos ... 3 (0x01x3)
+        lightbar (sysfs, só leitura) input556:rgb:indicator: brightness=255 multi_intensity=[255 0 0]
+
+------------------------------------------------------------------------------
+  SERIAL ........... F55602###########
+  código da cor .... 02
+  COR DO PLÁSTICO .. Cosmic Red
+  CONTINUA SÃO? .... SIM — firmware 0x20 IGUAL, 3 reports depois da escrita
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+RESUMO: hidraw10 (cabo) é Cosmic Red, lido do próprio aparelho, e continua respondendo depois da escrita.
+------------------------------------------------------------------------------
+
+
+MASCARAS APLICADAS NESTE ARQUIVO (a tela mostrou o valor inteiro):
+  MAC ..... octetos 4 e 5 zerados (máscara da casa)
+  serial .. so os 6 primeiros caracteres; os demais viram '#', em texto E em hexadecimal.
+            Os caracteres 5 e 6 — a COR, que e o objeto do ensaio — estao entre os preservados.
+
+==============================================================================
+O FECHAMENTO — 4 DE 4, E OS QUATRO CONCORDAM COM O NOME QUE ELA USA
+==============================================================================
+
+  aparelho              hw            código  o firmware diz     ela chama de
+  --------------------  ------------  ------  -----------------  ------------
+  14:3a:9a:00:00:ab     0x00000711    00      White              BRANCO
+  44:46:48:00:00:03     0x00000811    02      Cosmic Red         VERMELHO
+  a0:fa:9c:00:00:f0     0x00000710    04      Galactic Purple    (roxo)
+  d4:2f:4b:00:00:d8     0x00001111    05      Starlight Blue     (azul)
+
+Quatro unidades, quatro códigos DISTINTOS, e ZERO discordância com o nome que
+ela usa na bancada. A identificação por cor está fechada em 4 de 4 no CABO.
+
+O QUE ISTO **NÃO** AUTORIZA A DIZER, e é o cuidado que a universalidade pede
+-----------------------------------------------------------------------------
+1. **Não fecha por rádio.** No rádio a escrita foi recusada em 1 unidade, 2
+   tentativas. A cor é `medido` no CABO em 4 de 4, e `medido-negativo` no
+   RÁDIO em 1 de 1. São duas afirmações, e escrever "a cor funciona" sem o
+   transporte ao lado é a mentira mais fácil desta linha.
+2. **Quatro cores distintas é a amostra dela, não uma propriedade do produto.**
+   Duas unidades da MESMA cor devolvem o MESMO código — a cor é um RÓTULO
+   humano, não um identificador. Quem for usá-la para nomear jogador tem de
+   saber que ela colide no dia em que ela comprar um par igual. O que NÃO
+   colide está em `identidade.req_dev_info@dualsense`, e é o MAC.
+3. **`n = 4` é amostra.** Nenhuma linha acima diz "todo DualSense": elas dizem
+   quatro unidades, com o `hardware_version` de cada uma nomeado, para que a
+   próxima que discordar possa ser apontada pelo número da placa dela.
+
+MASCARAS APLICADAS NESTA SEGUNDA RODADA (a tela mostrou o valor inteiro):
+  MAC ..... octetos 4 e 5 zerados (máscara da casa)
+  serial .. só os 6 primeiros caracteres; os demais viram '#', em texto E em
+            hexadecimal. Os caracteres 5 e 6 — a COR, que é o objeto do ensaio
+            — estão entre os preservados.
