@@ -115,9 +115,29 @@ from comum import (
 #: em `_resolucao_do_kernel`.
 DS_ACC_RES_PER_G = 8192
 
-#: `DS_GYRO_RES_PER_DEG_S`. O giroscópio entra como acompanhante: parado na
-#: mesa ele tem de dar perto de ZERO graus/s, que é o negativo natural do
-#: acelerômetro (um controle imóvel não gira, mas continua sob gravidade).
+#: `DS_GYRO_RES_PER_DEG_S`, do `hid-playstation.c`.
+#:
+#: FATO ERRADO SUBSTITUÍDO em 15/08/2026 (E-8). Estava escrito aqui que o
+#: giroscópio "parado na mesa tem de dar perto de ZERO graus/s" dividindo o
+#: valor CRU por este número, e a coluna `giro_*_dps` do bruto
+#: `2026-08-15-E4-imu_no_cabo.csv` saiu assim. **Está errada por ~62x.**
+#:
+#: 1024 é a resolução DE SAÍDA — a escala do `ABS_RX/RY/RZ` que o kernel
+#: publica DEPOIS de calibrar. O número cru do fio está noutra escala: o driver
+#: converte por `cru * speed_2x / sens_denom`, com os dois lidos do feature
+#: report 0x05 de cada unidade (`hid-playstation.c:1196-1213`). Medido nos
+#: quatro aparelhos da mesa: `speed_2x = 1080`, `sens_denom ~ 17700`, ou seja
+#: **~16,4 LSB por grau/s no fio**, não 1024.
+#:
+#: Por que isso é grave e não é imprecisão: a régua errada **torna o controle
+#: negativo impossível de reprovar**. Com ela, um controle girando a 60 graus/s
+#: leria "0,96" e passaria por parado — o instrumento não conseguiria falhar.
+#:
+#: A régua certa, derivada do próprio aparelho, está em
+#: `scripts/ensaios/giro_e_buraco.py`, que é quem mede o giroscópio agora. Este
+#: número fica aqui porque é a constante do driver e o `giro_e_buraco.py` o
+#: importa daqui para IMPRIMIR o tamanho do erro ao lado da medida boa; o que
+#: saiu foi o uso dele como divisor do valor cru.
 DS_GYRO_RES_PER_DEG_S = 1024
 
 #: Report ID de entrada e o deslocamento do corpo, POR TRANSPORTE.
@@ -214,10 +234,19 @@ class Medida:
         return [s / self.aproveitados / DS_ACC_RES_PER_G for s in self.somas_acel]
 
     @property
-    def giro_em_graus_por_s(self) -> list[float]:
+    def giro_cru_medio_lsb(self) -> list[float]:
+        """A média por eixo do giroscópio, em LSB CRUS — sem converter nada.
+
+        Antes isto dividia por `DS_GYRO_RES_PER_DEG_S` e se chamava
+        `giro_em_graus_por_s`, o que errava por ~62x (ver a nota datada na
+        constante). Publicar o CRU é o que sobra de honesto num instrumento
+        que não lê a calibração da unidade: quem quer graus por segundo usa o
+        `giro_e_buraco.py`, que lê o feature 0x05 e deriva a régua de cada
+        aparelho.
+        """
         if not self.aproveitados:
             return [0.0, 0.0, 0.0]
-        return [s / self.aproveitados / DS_GYRO_RES_PER_DEG_S for s in self.somas_giro]
+        return [s / self.aproveitados for s in self.somas_giro]
 
     @property
     def taxa(self) -> float:
@@ -445,9 +474,9 @@ def _escrever_csv(caminho: str, medidas: list[Medida], quando: str) -> None:
                 "accel_x_g",
                 "accel_y_g",
                 "accel_z_g",
-                "giro_x_dps",
-                "giro_y_dps",
-                "giro_z_dps",
+                "giro_x_cru_lsb",
+                "giro_y_cru_lsb",
+                "giro_z_cru_lsb",
                 "regua_lsb_por_g",
                 "regua_do_kernel",
                 "erro",
@@ -457,7 +486,7 @@ def _escrever_csv(caminho: str, medidas: list[Medida], quando: str) -> None:
             perfil = PERFIL_DO_TRANSPORTE.get(medida.aparelho.transporte, {})
             corpo = perfil.get("corpo", 0)
             eixos = medida.eixos_em_g
-            giro = medida.giro_em_graus_por_s
+            giro = medida.giro_cru_medio_lsb
             escritor.writerow(
                 [
                     quando,
@@ -476,9 +505,9 @@ def _escrever_csv(caminho: str, medidas: list[Medida], quando: str) -> None:
                     f"{eixos[0]:.4f}",
                     f"{eixos[1]:.4f}",
                     f"{eixos[2]:.4f}",
-                    f"{giro[0]:.3f}",
-                    f"{giro[1]:.3f}",
-                    f"{giro[2]:.3f}",
+                    f"{giro[0]:.1f}",
+                    f"{giro[1]:.1f}",
+                    f"{giro[2]:.1f}",
                     DS_ACC_RES_PER_G,
                     medida.resolucao_do_kernel if medida.resolucao_do_kernel else "-",
                     medida.erro,
@@ -513,7 +542,10 @@ def main() -> int:
     print(f"  T0 (hora de parede) ... {quando_inicio}")
     print(f"  régua declarada ....... DS_ACC_RES_PER_G = {DS_ACC_RES_PER_G} LSB/g")
     print("                          de hid-playstation.c (faixa +-4 g), canônica §5")
-    print(f"  régua do giroscópio ... DS_GYRO_RES_PER_DEG_S = {DS_GYRO_RES_PER_DEG_S}")
+    print("  régua do giroscópio ... NENHUMA — este instrumento publica o CRU (LSB).")
+    print(f"                          {DS_GYRO_RES_PER_DEG_S} é a resolução de SAÍDA do")
+    print("                          driver e NÃO serve para dividir o cru (erra ~62x);")
+    print("                          quem mede giro em graus/s é o giro_e_buraco.py.")
 
     aparelhos = descobrir_aparelhos()
     alvos = fisicos(aparelhos)
@@ -624,16 +656,16 @@ def main() -> int:
             )
 
     print()
-    print("  O GIROSCÓPIO, COMO ACOMPANHANTE (parado tem de dar perto de zero)")
+    print("  O GIROSCÓPIO, COMO ACOMPANHANTE — em LSB CRUS, sem régua")
     print()
     print(
         tabela(
-            ["aparelho", "transporte", "giro médio (graus/s)", "taxa de report"],
+            ["aparelho", "transporte", "giro médio (LSB crus)", "taxa de report"],
             [
                 [
                     _nome(m, sem_mascara=argumentos.sem_mascara),
                     m.aparelho.transporte,
-                    ", ".join(f"{v:+.2f}" for v in m.giro_em_graus_por_s)
+                    ", ".join(f"{v:+.1f}" for v in m.giro_cru_medio_lsb)
                     if m.aproveitados
                     else "-",
                     f"{m.taxa:.1f} Hz" if m.aproveitados else "-",
