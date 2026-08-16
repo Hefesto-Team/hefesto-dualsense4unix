@@ -774,11 +774,102 @@ TEXTO_SELO_SAIDA_MUDA: Final[str] = "Saída muda"
 #: custando ZERO largura.
 TEXTO_SELO_SEM_SOM: Final[str] = "Sem som"
 
-#: Teto de largura do selo, em caracteres, medido pelo mais longo dos dois
+#: Selo do CANAL DORMINDO (SOM-ACORDADO-01, 16/08/2026). Terceiro informante
+#: desta mesma linha, pela mesma disciplina dos dois de cima: o selo diz QUE,
+#: a dica do bloco diz POR QUÊ, e ele só acende quando há defeito a denunciar.
+#:
+#: Ele é o par visível de :data:`SUFIXO_CANAL_DORMINDO` no rótulo da moldura.
+#: O rótulo é a leitura de relance e vale para os dois estados; o selo é o
+#: alarme, e por isso existe só no estado ruim — um selo que diz "acordado"
+#: em toda sessão normal gastaria os 19px de altura que ele custa
+#: (medido nesta bancada) para não informar nada.
+TEXTO_SELO_CANAL_DORMINDO: Final[str] = "Canal dormindo"
+
+#: Teto de largura do selo, em caracteres, medido pelo mais longo dos três
 #: textos acima. Sem ele, um texto novo amanhã volta a decidir a largura do
 #: bloco — e daí a da janela — sem ninguém perceber.
 _SELO_CHARS: Final[int] = max(
-    len(TEXTO_SELO_SAIDA_MUDA), len(TEXTO_SELO_SEM_SOM)
+    len(TEXTO_SELO_SAIDA_MUDA),
+    len(TEXTO_SELO_SEM_SOM),
+    len(TEXTO_SELO_CANAL_DORMINDO),
+)
+
+# ---------------------------------------------------------------------------
+# SOM-ACORDADO-01 (16/08/2026) — os DOIS estados do som na aba Status
+# ---------------------------------------------------------------------------
+#
+# Decisão dela, textual: *"precisamos setar o som sempre em todos os controles
+# no 100% e garantir que sempre fique acordado e ligar isso a interface na aba
+# de status (config default)"*.
+#
+# "config default" é a metade que decide o DESENHO: a tela **mostra o estado,
+# não oferece um interruptor**. Não há caixa para marcar aqui, e é de propósito
+# — quem põe o volume é o daemon e quem impede o sono é o drop-in 54 do
+# WirePlumber que o `install.sh` põe SEM FLAG (SOM-QUE-NAO-DORME-01). Um
+# interruptor na tela sugeriria que existe uma escolha a fazer, e não existe.
+#
+# ONDE ISTO APARECE, e por que aí: no **rótulo da moldura**, que já carrega o
+# volume desde a CARD-ÚNICO-01 (`Alto-falante · 71 %`). Medido nesta bancada,
+# com o card montado e alocado numa `Gtk.OffscreenWindow`:
+#
+#   =====================================  ============  =================
+#   desenho                                bloco mínimo  card mínimo
+#   =====================================  ============  =================
+#   hoje (`Alto-falante · 100 %`)          183 x 144     1040 x 429
+#   `... · acordado` no rótulo             186 x 144     1040 x 429
+#   `... · canal acordado` no rótulo       222 x 144     1040 x 429
+#   um rótulo NOVO, sempre visível         183 x 163     1040 x 448
+#   =====================================  ============  =================
+#
+# O rótulo da moldura custa **zero altura** e não move o mínimo do card. O
+# rótulo novo custa 19px de ALTURA — e a altura é justamente o que não há: o
+# `test_status_som_02_controle_de_volume` cobra que a coluna do som não passe
+# da maior coluna vizinha por mais de 12px, e 19 estoura isso. Foi o teste
+# desta casa que escolheu o desenho, não o gosto.
+
+#: O sufixo que entra no rótulo da moldura em cada estado. "" quando não há
+#: leitura — e "" é **não sei**, não "acordado": sem placa de som (o caso do
+#: rádio, medido em 15/08/2026) a janela não tem o que afirmar.
+SUFIXO_CANAL_ACORDADO: Final[str] = "acordado"
+SUFIXO_CANAL_DORMINDO: Final[str] = "dormindo"
+
+#: A frase da dica quando o canal está acordado. Ela diz as DUAS coisas que
+#: ela pediu: o estado, e que ele é o PADRÃO — ninguém precisa ligar nada.
+DICA_CANAL_ACORDADO: Final[str] = (
+    "O canal de áudio deste controle está acordado: o próximo som sai desde o "
+    "primeiro instante."
+)
+#: E a frase quando ele está dormindo. Cada afirmação aqui foi medida com a
+#: orelha dela em 15-16/08/2026, no cabo, com o mesmo arquivo, o mesmo volume e
+#: a mesma rota: o canal 1 sozinho no nó ocioso saiu "não saiu", e segundos
+#: depois, com o nó já acordado, saiu "tuuuuuuuu". Três leituras daquela
+#: rodada foram descartadas antes de alguém entender o que estava acontecendo.
+DICA_CANAL_DORMINDO: Final[str] = (
+    "O canal de áudio deste controle está SUSPENSO no PipeWire. Religar o "
+    "hardware come o começo do som — medido: o mesmo canal, no mesmo volume e "
+    "na mesma rota, não saiu com o nó ocioso e saiu inteiro com ele acordado. "
+    "Num jogo é o efeito sonoro sumindo na hora que importa."
+)
+#: E a linha que responde "por que eu não preciso ligar isso?". Ela só entra
+#: quando a regra ESTÁ no lugar: afirmar que é automático com a cura arrancada
+#: seria a tela dando por curado o que não está.
+DICA_CANAL_E_PADRAO: Final[str] = (
+    "É o padrão: o Hefesto instala a regra que impede o alto-falante de "
+    "dormir junto com o produto, para todo controle. Não há nada a ligar aqui."
+)
+#: A cura foi arrancada (ou nunca entrou). O sintoma no jogo é silencioso, e
+#: por isso a tela o denuncia em vez de calar.
+DICA_CANAL_SEM_A_REGRA: Final[str] = (
+    "A regra que impede o alto-falante de dormir NÃO está instalada nesta "
+    "máquina. Rode o install.sh de novo — ela entra sem flag nenhuma."
+)
+#: Quem manda no volume somos nós, e este é o número. A frase substitui a
+#: :data:`DICA_BLOCO_SPEAKER` quando há posse, porque aquela descreve o estado
+#: SEM posse ("o volume é do firmware do controle") e passaria a mentir.
+DICA_SPEAKER_POSSE_NOSSA: Final[str] = (
+    "Quem manda no volume do alto-falante agora é o Hefesto. O DualSense não "
+    "devolve esse valor: o número acima é o que NÓS mandamos, não uma leitura "
+    "do aparelho."
 )
 
 #: Repouso do controle deslizante antes de mandar o volume, em ms. Arrastar
@@ -897,6 +988,72 @@ def titulo_do_card(entry: dict[str, Any]) -> str:
     if jogador is not None:
         titulo += f" · Jogador {jogador}"
     return titulo
+
+
+#: QUEM-É-QUEM-01: o que a dica diz quando o físico já está na mesa mas
+#: o gamepad virtual dele ainda não nasceu (grab pendente, ou emulação
+#: desligada). Frase separada de propósito: "ainda não" e "não sei" são
+#: respostas diferentes, e o card já pagou caro por dizê-las igual.
+DICA_TITULO_SEM_VPAD: Final[str] = (
+    "Este controle ainda não alimenta gamepad virtual nenhum."
+)
+
+
+def dica_do_titulo(entry: dict[str, Any], state_global: dict[str, Any]) -> str | None:
+    """Dica do título: QUAL gamepad virtual este controle alimenta (função pura).
+
+    QUEM-É-QUEM-01 (15/08/2026). O título já diz *"Controle 2 — USB ·
+    Jogador 3"*; o que faltava era o outro lado do par — **qual vpad esse
+    jogador é**, com o endereço por onde `quem_e_quem.py` e o `/sys` o
+    enxergam. Sem isso, conferir se o produto ligou cada físico ao vpad certo
+    custava apertar botão em cada controle, um por um.
+
+    Por que uma DICA e não uma linha do card, e a escolha é deliberada:
+
+    * o endereço é **diagnóstico**, não vocabulário de interface — o alvo por
+      MAC foi derrubado por ela em 13/08/2026 como estratégia de produto, e
+      nada aqui o reabre: a dica não seleciona nada, não é rótulo e não muda
+      uma palavra do que o card já mostra;
+    * o corpo do card tem altura amarrada (ver o cabeçalho deste módulo, e a
+      LEGIBILIDADE-01), e uma linha nova empurraria os quatro cards da mesa
+      dela. A dica aparece sob o cursor, no lugar exato do que ela quer
+      conferir, e custa zero pixel.
+
+    ``None`` = sem nada a dizer (controle sem endereço, daemon antigo sem a
+    lista, ou controle que não está na mesa de jogadores) — a dica some, em
+    vez de o card inventar um par.
+    """
+    uniq = uniq_do_entry(entry)
+    if uniq is None:
+        return None
+    coop = state_global.get("coop")
+    mesa = coop.get("mesa") if isinstance(coop, dict) else None
+    if not isinstance(mesa, list):
+        return None
+    for item in mesa:
+        if not isinstance(item, dict) or item.get("uniq") != uniq:
+            continue
+        backend = item.get("vpad_backend")
+        if not isinstance(backend, str) or not backend:
+            return DICA_TITULO_SEM_VPAD
+        numero = _int_ou_none(item.get("player"))
+        alvo = f"do Jogador {numero}" if numero else "deste jogador"
+        vpad_uniq = item.get("vpad_uniq")
+        detalhe = (
+            f"{backend} · {vpad_uniq}"
+            if isinstance(vpad_uniq, str) and vpad_uniq
+            else backend
+        )
+        frase = f"Alimenta o gamepad virtual {alvo} ({detalhe})."
+        # E3 do QUEM-É-QUEM-01: o nome do vpad congela o índice de ALOCAÇÃO, e
+        # desde a MESA-CHEIA-12 ele pode não ser o número da fila. Quem estiver
+        # conferindo card↔dispositivo tem de ver o nome REAL, senão procura
+        # "Hefesto P2" e encontra "Hefesto P4" sem entender por quê.
+        nome = item.get("vpad_nome")
+        if item.get("nome_divergente") and isinstance(nome, str) and nome:
+            frase += f" No sistema ele se chama “{nome}”."
+        return frase
+    return None
 
 
 def rotulo_lightbar(
@@ -1990,6 +2147,7 @@ if _GTK_DISPONIVEL:
             )
             # Caches de diff (sentinela onde None é valor válido).
             self._last_titulo: str | None = None
+            self._last_dica_titulo: str | None = None
             self._last_battery: Any = _SENTINELA
             self._last_lightbar: Any = _SENTINELA
             self._last_degradacao: Any = _SENTINELA
@@ -2070,10 +2228,13 @@ if _GTK_DISPONIVEL:
             # mandamos. O som É a leitura que falta.
             #
             # `_speaker_sink` é o sink de SAÍDA deste controle, posto de fora
-            # por `definir_sink_de_saida`. "" = não dá para saber (nenhum sink
-            # publicado, ou mais de um DualSense — o `escolher_sink` recusa de
-            # propósito, porque o `-00` do nome é ordem de conexão e não número
-            # de série). Com "" não se toca: medido nesta bancada,
+            # por `definir_sink_de_saida`. "" = não dá para saber, e desde
+            # 15/08/2026 isso quer dizer sobretudo UMA coisa: o controle está
+            # no RÁDIO, onde o DualSense não publica placa de som nenhuma (a
+            # placa segue o transporte). No cabo o `escolher_sink` casa placa e
+            # controle pelo dispositivo USB em que os dois penduram, e devolve
+            # o sink certo mesmo com quatro controles. Com "" não se toca:
+            # medido nesta bancada,
             # `paplay --device=` vazio é ACEITO, sai com zero e cai no sink
             # PADRÃO, que na máquina dela é o HDMI.
             self._speaker_sink = ""
@@ -2084,6 +2245,13 @@ if _GTK_DISPONIVEL:
             # porque o selo do bloco passou a ter DOIS informantes e o
             # `_aplicar_selo_do_som` precisa dos dois para decidir a prioridade.
             self._speaker_saida_muda: bool | None = None
+            # SOM-ACORDADO-01: o canal deste controle está acordado ou
+            # dormindo, e a regra do WirePlumber que impede o sono está no
+            # lugar? Os dois entram de FORA (`definir_estado_do_canal`), pela
+            # `status_actions`, que já lê o PipeWire numa worker a 0,5 Hz —
+            # o card continua sem um leitor próprio de PipeWire.
+            self._speaker_canal_estado = ""
+            self._speaker_regra_do_sono: bool | None = None
             self._montar_ui()
             # Um repouso pendente segura uma referência ao card e dispararia
             # sobre um widget já destruído quando a aba recria os cards
@@ -2116,7 +2284,7 @@ if _GTK_DISPONIVEL:
             e o módulo some.
             """
             self._uniq = uniq_do_entry(entry)
-            self._update_titulo(entry)
+            self._update_titulo(entry, state_global)
             self._update_bateria(entry)
             self._update_lightbar(entry, state_global)
             self._update_degradacao(entry)
@@ -3837,11 +4005,56 @@ if _GTK_DISPONIVEL:
             por conta própria** — um segundo leitor de PipeWire aqui seria a
             mesma classe de defeito dos três escritores de perfil.
 
-            ``""`` é resposta legítima e frequente: com mais de um DualSense o
-            ``escolher_sink`` recusa de propósito (o ``-00`` do nome é ordem de
-            conexão, não número de série). Com "" não se toca.
+            ``""`` é resposta legítima e frequente: o controle está no RÁDIO,
+            onde o DualSense não publica placa de som (medido 15/08/2026 — a
+            placa segue o transporte). No cabo o ``escolher_sink`` casa placa e
+            controle pelo dispositivo USB em que os dois penduram, e responde
+            com o sink certo por card. Com "" não se toca.
             """
             self._speaker_sink = sink or ""
+
+        def definir_estado_do_canal(
+            self, estado: str, *, regra_instalada: bool | None = None
+        ) -> None:
+            """O canal deste controle está acordado ou dormindo (e é padrão?).
+
+            SOM-ACORDADO-01, e é a metade "ligar isso a interface" da decisão
+            dela. Dois fatos entram por aqui, os dois de fora:
+
+            * ``estado`` — ``"acordado"``, ``"dormindo"`` ou ``""``. O
+              vocabulário é o do ``audio_saida`` (:data:`CANAL_ACORDADO` e
+              irmãos) e ``""`` é **não sei**: pelo rádio o DualSense não
+              publica placa de som nenhuma (medido em 15/08/2026 — a placa
+              segue o transporte), e ali não há canal a descrever;
+            * ``regra_instalada`` — o drop-in 54 do WirePlumber está no lugar?
+              É o que separa "acordado agora, por acaso" de "acordado por
+              padrão". ``None`` = ninguém perguntou, e a dica não afirma nem
+              um nem outro.
+
+            **O card não vai ao sistema por conta própria**, aqui como no
+            ``definir_sink_de_saida``: quem lê o PipeWire é a ``status_actions``,
+            uma vez por ciclo, para todos os cards. Um `pactl` por card seria
+            quatro por ciclo na mesa dela — e um segundo leitor de PipeWire
+            nesta janela é a mesma classe de defeito dos três escritores de
+            perfil.
+
+            Só repinta quando algo MUDA: este método é chamado no tique de
+            10 Hz dos cards, e `set_text` a 10 Hz num rótulo de moldura é
+            trabalho de layout por nada.
+            """
+            estado = estado or ""
+            if (
+                estado == self._speaker_canal_estado
+                and regra_instalada == self._speaker_regra_do_sono
+            ):
+                return
+            self._speaker_canal_estado = estado
+            self._speaker_regra_do_sono = regra_instalada
+            # O rótulo da moldura é reescrito a partir do texto que o
+            # `_speaker_label` já guarda — ele é o dono do valor, e recompor
+            # daqui evita um segundo lugar decidindo o que a moldura diz.
+            self._escrever_valor_do_speaker(self._speaker_label.get_text())
+            self._aplicar_selo_do_som()
 
         def _confirmar_com_som(self) -> Any:
             """Toca a confirmação — JÁ na thread worker, nunca na do GTK.
@@ -3932,10 +4145,20 @@ if _GTK_DISPONIVEL:
             # deu para confirmar" continua sendo lido — ele entra na DICA do
             # bloco, logo abaixo, e é de lá que ela o lê quando quiser saber
             # por que o bipe não tocou.
+            #
+            # SOM-ACORDADO-01 acrescenta o TERCEIRO informante, e a prioridade
+            # continua sendo a mesma regra: ganha o fato que explica o
+            # silêncio ANTES do outro. Uma saída muda cala o som venha o canal
+            # de onde vier; um canal dormindo só come o começo. Dizer as duas
+            # coisas na mesma linha seria trocar um alarme por dois avisos.
             recado = self._speaker_recado_do_som
-            texto = (
-                TEXTO_SELO_SAIDA_MUDA if self._speaker_saida_muda is True else ""
-            )
+            dormindo = self._speaker_canal_estado == SUFIXO_CANAL_DORMINDO
+            if self._speaker_saida_muda is True:
+                texto = TEXTO_SELO_SAIDA_MUDA
+            elif dormindo:
+                texto = TEXTO_SELO_CANAL_DORMINDO
+            else:
+                texto = ""
             if texto:
                 self._speaker_selo_saida.set_text(texto)
                 self._speaker_selo_saida.show()
@@ -3945,12 +4168,51 @@ if _GTK_DISPONIVEL:
             # explicação da SOM-02/E5: o recado ENTRA embaixo dela, porque as
             # duas respondem a perguntas diferentes ("por que o normal aqui é
             # não ajustado" e "por que não deu para confirmar agora").
-            dica = DICA_BLOCO_SPEAKER
+            #
+            # SOM-ACORDADO-01: a primeira linha passou a depender da POSSE. A
+            # `DICA_BLOCO_SPEAKER` descreve o estado SEM posse — *"o volume é
+            # do firmware do controle"* —, e com o daemon mandando o volume ela
+            # passaria a mentir na tela justamente no estado que esta leva
+            # torna o normal.
+            partes = [
+                DICA_BLOCO_SPEAKER
+                if self._speaker_lido is None
+                else DICA_SPEAKER_POSSE_NOSSA
+            ]
+            partes.extend(self._frases_do_canal())
             if recado and self._speaker_saida_muda is not True:
-                dica = f"{DICA_BLOCO_SPEAKER}\n\n{recado}"
+                partes.append(recado)
             caixa = getattr(self, "_speaker_box", None)
             if caixa is not None:
-                caixa.set_tooltip_text(dica)
+                caixa.set_tooltip_text("\n\n".join(partes))
+
+        def _frases_do_canal(self) -> list[str]:
+            """As frases do canal na dica do bloco: o estado, e se é o padrão.
+
+            SOM-ACORDADO-01. Sem leitura do canal não sai frase nenhuma — o
+            silêncio da dica é a resposta honesta para o controle no rádio, que
+            não tem placa de som para acordar.
+
+            A frase do PADRÃO é condicionada à regra estar instalada, e a
+            condição é a metade que importa: um nó pode estar acordado por
+            acaso (alguém acabou de tocar algo) com o drop-in fora do lugar, e
+            chamar isso de "é o padrão" seria a tela dando por curado o que só
+            está momentaneamente de pé — mesma regra que o `texto_do_sono` do
+            `audio_saida` já aplica do lado da leitura.
+            """
+            estado = self._speaker_canal_estado
+            if not estado:
+                return []
+            frases = [
+                DICA_CANAL_DORMINDO
+                if estado == SUFIXO_CANAL_DORMINDO
+                else DICA_CANAL_ACORDADO
+            ]
+            if self._speaker_regra_do_sono is True:
+                frases.append(DICA_CANAL_E_PADRAO)
+            elif self._speaker_regra_do_sono is False:
+                frases.append(DICA_CANAL_SEM_A_REGRA)
+            return frases
 
         def _montar_capsula_stick(
             self, titulo: str, rotulo_stick: str, tamanho: int
@@ -4078,11 +4340,20 @@ if _GTK_DISPONIVEL:
         # Seções do update (cada uma com o próprio diff)
         # ------------------------------------------------------------------
 
-        def _update_titulo(self, entry: dict[str, Any]) -> None:
+        def _update_titulo(
+            self, entry: dict[str, Any], state_global: dict[str, Any]
+        ) -> None:
             titulo = titulo_do_card(entry)
             if titulo != self._last_titulo:
                 self._last_titulo = titulo
                 self._title_label.set_text(titulo)
+            # QUEM-É-QUEM-01: a dica tem diff PRÓPRIO — ela muda por
+            # motivo diferente do título (um jogador promovido não renomeia
+            # card nenhum), e pendurá-la no diff do título a deixaria velha.
+            dica = dica_do_titulo(entry, state_global)
+            if dica != self._last_dica_titulo:
+                self._last_dica_titulo = dica
+                self._title_label.set_tooltip_text(dica)
 
         def _update_bateria(self, entry: dict[str, Any]) -> None:
             bateria = _int_ou_none(entry.get("battery_pct"))
@@ -4385,10 +4656,33 @@ if _GTK_DISPONIVEL:
             self._speaker_label.set_text(texto)
             titulo = getattr(self, "_speaker_titulo", None)
             if titulo is not None and hasattr(titulo, "set_text"):
-                sem_dado = texto == TEXTO_SPEAKER_SEM_DADO
-                titulo.set_text(
-                    TITULO_SPEAKER if sem_dado else f"{TITULO_SPEAKER} · {texto}"
-                )
+                titulo.set_text(self._titulo_do_speaker(texto))
+
+        def _titulo_do_speaker(self, texto: str) -> str:
+            """O rótulo da moldura: nome · volume · estado do canal.
+
+            SOM-ACORDADO-01. Os dois sufixos entram do mesmo jeito e pela mesma
+            razão — são LEITURA, e o rótulo da moldura é o único lugar deste
+            bloco que custa zero pixel de altura (a medição está no bloco de
+            comentários de :data:`SUFIXO_CANAL_ACORDADO`).
+
+            Cada um some sozinho quando não há o que dizer, e os dois somem
+            juntos no card recém-nascido:
+
+            * sem posse do volume, o nome fica sozinho (CARD-ÚNICO-01, decisão
+              dela: *"remover o não ajustado"*);
+            * sem leitura do canal — o caso do rádio, em que não há placa de
+              som —, não entra sufixo nenhum. "" é **não sei**, e escrever
+              "acordado" a partir de ausência seria prometer que o som sai
+              inteiro num controle que não tem por onde tocá-lo.
+            """
+            partes = [TITULO_SPEAKER]
+            if texto != TEXTO_SPEAKER_SEM_DADO:
+                partes.append(texto)
+            estado = getattr(self, "_speaker_canal_estado", "")
+            if estado:
+                partes.append(estado)
+            return " · ".join(partes)
 
         def _pintar_escala_do_speaker(self, percentual: int) -> None:
             """Move o cursor SEM disparar pedido (e nunca durante o arrasto)."""
@@ -4877,6 +5171,7 @@ else:
         def __init__(self, *, compact: bool = False) -> None:
             self._compact = compact
             self.titulo: str | None = None
+            self.dica_titulo: str | None = None
             self.rotulo: str | None = None
             self.accent: RGB | None = None
             self.degradacao: str | None = None
@@ -4899,6 +5194,11 @@ else:
             self.speaker_acao_mudo: AcaoSpeaker = acao_speaker_mudo(None)
             self.speaker_acao_devolucao: AcaoSpeaker = acao_speaker_devolucao(None)
             self.speaker_saida_muda: bool | None = None
+            #: SOM-ACORDADO-01 — o canal e a regra que impede o sono. No stub
+            #: são só o que entrou pelo `definir_estado_do_canal`.
+            self.speaker_canal: str = ""
+            self.speaker_regra_do_sono: bool | None = None
+            self.speaker_sink: str = ""
             # CARD-ÚNICO-01 — o par global que o frame "Estado" deixou. No
             # stub eles são o que o widget real mostra ao nascer, e o card
             # compacto não os recebe (com 2+ controles quem responde por eles
@@ -4925,6 +5225,7 @@ else:
         ) -> None:
             """Aplica as funções puras (mesma semântica do widget real)."""
             self.titulo = titulo_do_card(entry)
+            self.dica_titulo = dica_do_titulo(entry, state_global)
             self.rotulo, _base = rotulo_lightbar(entry, state_global)
             self.accent = accent_do_card(entry, state_global)
             self.degradacao = texto_degradacao(entry)
@@ -4945,6 +5246,17 @@ else:
             self.speaker_acao_devolucao = acao_speaker_devolucao(entry)
             self.speaker_saida_muda = saida_muda_do_entry(entry, mic)
 
+        def definir_estado_do_canal(
+            self, estado: str, *, regra_instalada: bool | None = None
+        ) -> None:
+            """Guarda o estado do canal (mesmo contrato do widget real)."""
+            self.speaker_canal = estado or ""
+            self.speaker_regra_do_sono = regra_instalada
+
+        def definir_sink_de_saida(self, sink: str) -> None:
+            """Guarda o sink deste controle (mesmo contrato do widget real)."""
+            self.speaker_sink = sink or ""
+
         def reset_inputs(self) -> None:
             """IPC sem resposta → "—" (mesmo contrato do widget real)."""
             self.sem_leitor = True
@@ -4960,6 +5272,10 @@ __all__ = [
     "ALL_BUTTONS",
     "DICA_AUDIO_SEM_ENDERECO",
     "DICA_BLOCO_SPEAKER",
+    "DICA_CANAL_ACORDADO",
+    "DICA_CANAL_DORMINDO",
+    "DICA_CANAL_E_PADRAO",
+    "DICA_CANAL_SEM_A_REGRA",
     "DICA_MIC_ATIVAR",
     "DICA_MIC_DEVOLVER",
     "DICA_MIC_SEM_LEITURA",
@@ -4968,8 +5284,10 @@ __all__ = [
     "DICA_SPEAKER_DEVOLVER",
     "DICA_SPEAKER_DEVOLVER_SEM_POSSE",
     "DICA_SPEAKER_ESCALA",
+    "DICA_SPEAKER_POSSE_NOSSA",
     "DICA_SPEAKER_SEM_DADO",
     "DICA_SPEAKER_SILENCIAR",
+    "DICA_TITULO_SEM_VPAD",
     "GLYPH_ESPACO_COMPACTO",
     "GLYPH_ESPACO_UNICO",
     "GLYPH_FATOR_UNICO_OITAVOS",
@@ -4988,6 +5306,8 @@ __all__ = [
     "ROTULO_STICK_ESQ",
     "STICK_SIZE_COMPACT",
     "STICK_SIZE_SINGLE",
+    "SUFIXO_CANAL_ACORDADO",
+    "SUFIXO_CANAL_DORMINDO",
     "TEXTO_AUDIO_SEM_ENDERECO",
     "TEXTO_BOTAO_MIC_ATIVAR",
     "TEXTO_BOTAO_MIC_DEVOLVER",
@@ -4999,9 +5319,11 @@ __all__ = [
     "TEXTO_BOTAO_SPEAKER_SILENCIAR",
     "TEXTO_MIC_AUSENTE",
     "TEXTO_MIC_SEM_MUTE",
+    "TEXTO_SELO_CANAL_DORMINDO",
     "TEXTO_SELO_SAIDA_MUDA",
     "TEXTO_SELO_SEM_SOM",
     "TEXTO_SPEAKER_SEM_DADO",
+    "TITULO_SPEAKER",
     "AcaoMic",
     "AcaoSpeaker",
     "CaixaDeTetoElastico",
@@ -5011,6 +5333,7 @@ __all__ = [
     "acao_speaker_mudo",
     "accent_do_card",
     "audio_sem_endereco",
+    "dica_do_titulo",
     "frase_mais_longa_do_que_chega_ao_jogo",
     "glyph_size",
     "glyph_size_unico",
