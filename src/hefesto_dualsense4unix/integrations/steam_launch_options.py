@@ -314,18 +314,72 @@ def is_sandboxed_layout(vdf: Path) -> bool:
     return any(marker in text for marker in _SANDBOXED_MARKERS)
 
 
-def read_launch_options_by_appid(text: str) -> dict[str, str]:
-    """Mapeia appid → LaunchOptions (desescapado) de um localconfig.vdf.
+#: O caminho da ÚNICA árvore `apps` que a Steam lê para `LaunchOptions`, de
+#: dentro para fora. Ver `e_a_arvore_canonica` — e o defeito que a criou.
+_CAMINHO_CANONICO = ("apps", "steam", "valve", "software")
 
-    Leitura ESTRUTURAL e read-only para o lembrete do wrapper "1x por jogo"
-    (DEDUP-05, item 4): o `_LAUNCH_OPTIONS_RE` de migrate/strip enxerga
-    linhas soltas sem saber de QUAL jogo são; aqui um parser mínimo de
-    KeyValues (pilha de blocos por linha) liga cada LaunchOptions ao appid
-    do bloco pai. Só entram chaves NUMÉRICAS cujo pai imediato é `apps`
-    (case-insensitive — o caminho canônico é Software/Valve/Steam/apps).
-    Nunca escreve nada; conteúdo fora do padrão é ignorado em silêncio.
+
+def e_a_arvore_canonica(pilha: Sequence[str]) -> bool:
+    """A posição atual do parser é ``…/Software/Valve/Steam/apps/<appid>``?
+
+    ARVORE-ERRADA-01 (16/08/2026). O `localconfig.vdf` dela tem **três** blocos
+    chamados `apps`, e só um deles é o que a Steam consulta::
+
+        UserLocalConfigStore/Software/Valve/Steam/apps   63 jogos  <- este
+        UserLocalConfigStore/apps                        11 jogos
+        UserLocalConfigStore/WebStorage/apps              3 jogos
+
+    O leitor e o escritor deste módulo conferiam só o pai imediato
+    (``stack[-2] == "apps"``), então os três valiam. As consequências, as duas
+    medidas na mesma noite:
+
+    1. **O escritor sujou.** Os 11 blocos de ``UserLocalConfigStore/apps`` são
+       da Steam (guardam `UseSteamControllerConfig` e `SteamControllerRumble`);
+       recebendo um `LaunchOptions` nosso, ganharam uma chave que ninguém lê.
+       Inócuo, mas é escrever em arquivo de outro dono sem saber onde.
+    2. **O leitor MENTIU, e essa é a cara.** Um appid presente nas duas árvores
+       era lido duas vezes, e o dicionário guardava o ÚLTIMO — a árvore errada,
+       que vem depois no arquivo. O PRAGMATA estava assim: sem o wrapper na
+       árvore canônica (o ``VKD3D_CONFIG=no_upload_hvv`` dela o havia comido de
+       novo) e com o wrapper na outra. O `censo_do_wrapper` respondeu
+       **"faltantes: 0"** com o defeito vivo, e o jogo dela sem reconhecer o
+       controle no rádio.
+
+    É a família do `WRAPPER-EM-TODOS-01`: o portão que passa verde porque olha
+    para o lugar errado é pior que portão nenhum, porque encerra a busca.
+
+    A âncora é por SUFIXO, não pelo caminho inteiro, para não depender do nome
+    da raiz (`UserLocalConfigStore` aqui; outras contas de Steam já foram vistas
+    com outro) — o que se exige é que `apps` esteja pendurado em
+    `Software/Valve/Steam`.
     """
-    out: dict[str, str] = {}
+    if len(pilha) < len(_CAMINHO_CANONICO):
+        return False
+    return all(
+        pilha[-1 - i].lower() == esperado
+        for i, esperado in enumerate(_CAMINHO_CANONICO)
+    )
+
+
+def read_apps_by_appid(text: str) -> dict[str, str | None]:
+    """Mapeia appid → LaunchOptions de um localconfig.vdf, **incluindo os apps
+    que NÃO têm a linha** (valor ``None``).
+
+    Leitura ESTRUTURAL e read-only: o `_LAUNCH_OPTIONS_RE` de migrate/strip
+    enxerga linhas soltas sem saber de QUAL jogo são; aqui um parser mínimo de
+    KeyValues (pilha de blocos por linha) liga cada LaunchOptions ao appid do
+    bloco pai. Só entram chaves NUMÉRICAS penduradas na árvore CANÔNICA
+    ``Software/Valve/Steam/apps`` — ver `e_a_arvore_canonica`, e o defeito
+    ARVORE-ERRADA-01 que essa âncora fecha.
+    Nunca escreve nada; conteúdo fora do padrão é ignorado em silêncio.
+
+    **Por que o `None` importa** (SENTINELA-WRAPPER-01, 16/08/2026): a
+    `read_launch_options_by_appid` abaixo devolve só quem TEM a linha, e por
+    isso não sabe distinguir "este jogo não existe na biblioteca" de "a linha
+    deste jogo foi APAGADA". As duas coisas são a mesma ausência para ela, e a
+    segunda é justamente a regressão que o censo do wrapper precisa enxergar.
+    """
+    out: dict[str, str | None] = {}
     stack: list[str] = []
     pending: str | None = None
     for raw in text.splitlines():
@@ -335,6 +389,8 @@ def read_launch_options_by_appid(text: str) -> dict[str, str]:
         if line == "{":
             stack.append(pending if pending is not None else "")
             pending = None
+            if stack[-1].isdigit() and e_a_arvore_canonica(stack[:-1]):
+                out.setdefault(stack[-1], None)
             continue
         if line == "}":
             if stack:
@@ -346,7 +402,7 @@ def read_launch_options_by_appid(text: str) -> dict[str, str]:
             pending = None
             if _vdf_unescape(pair.group("key")).lower() != "launchoptions":
                 continue
-            if len(stack) < 2 or stack[-2].lower() != "apps":
+            if not stack or not e_a_arvore_canonica(stack[:-1]):
                 continue
             appid = stack[-1]
             if appid.isdigit():
@@ -358,8 +414,24 @@ def read_launch_options_by_appid(text: str) -> dict[str, str]:
     return out
 
 
-def apply_wrapper_vdf_text(text: str) -> tuple[str, list[str], list[tuple[str, str]]]:
-    """Aplica o wrapper a TODOS os jogos do bloco ``apps`` de UM vdf (puro).
+def read_launch_options_by_appid(text: str) -> dict[str, str]:
+    """Mapeia appid → LaunchOptions (desescapado) — só os apps que TÊM a linha.
+
+    Consumida pelo lembrete do wrapper "1x por jogo" (DEDUP-05, item 4). É o
+    filtro de `read_apps_by_appid`; a semântica é a de sempre.
+    """
+    return {a: v for a, v in read_apps_by_appid(text).items() if v is not None}
+
+
+def apply_wrapper_vdf_text(
+    text: str, *, excluir: Sequence[str] | None = None
+) -> tuple[str, list[str], list[tuple[str, str]]]:
+    """Aplica o wrapper a todos os jogos da árvore CANÔNICA de UM vdf (puro).
+
+    "Canônica" é literal e é âncora de caminho: só
+    ``…/Software/Valve/Steam/apps/<appid>``. As outras árvores `apps` do mesmo
+    arquivo pertencem à Steam e não são lidas para `LaunchOptions` — escrever
+    nelas é sujar arquivo de outro dono à toa. Ver `e_a_arvore_canonica`.
 
     PATH-06 item 2: a via em-massa consentida. Diferente de ``transform_vdf_text``
     (que só toca linhas já NOSSAS), aqui todo app do vdf entra:
@@ -371,10 +443,18 @@ def apply_wrapper_vdf_text(text: str) -> tuple[str, list[str], list[tuple[str, s
     - app SEM a linha LaunchOptions: insere ``"LaunchOptions" "<wrapper>"`` no
       fim do bloco do app, com a indentação dos vizinhos.
 
+    ``excluir``: appids que a USUÁRIA marcou como "não quero o wrapper neste
+    jogo" (SENTINELA-WRAPPER-01). Saem com o motivo ``opt_out_da_usuaria`` e
+    nada é escrito neles — o produto não briga com a dona da máquina. A lista
+    vem do `jogos_sem_wrapper.txt`; ``None`` significa "não excluir ninguém"
+    (o comportamento histórico), nunca "leia o arquivo real" — quem lê o
+    arquivo é o chamador, para esta função continuar pura.
+
     Retorna ``(texto_novo, appids_aplicados, [(appid, motivo_skip), ...])``.
     O parse de blocos é o MESMO do ``read_launch_options_by_appid`` (pilha por
     linha); conteúdo fora do padrão passa intacto byte a byte.
     """
+    fora = {str(a).strip() for a in (excluir or ())}
     lines = text.splitlines(keepends=True)
     applied: list[str] = []
     skipped: list[tuple[str, str]] = []
@@ -396,16 +476,17 @@ def apply_wrapper_vdf_text(text: str) -> tuple[str, list[str], list[tuple[str, s
             pending = None
             if (
                 frame is None
-                and len(stack) >= 2
                 and stack[-1].isdigit()
-                and stack[-2].lower() == "apps"
+                and e_a_arvore_canonica(stack[:-1])
             ):
                 frame = (stack[-1], len(stack), idx, None)
             continue
         if line == "}":
             if frame is not None and len(stack) == frame[1]:
                 appid, _, open_idx, lo_idx = frame
-                if lo_idx is None:
+                if lo_idx is None and appid in fora:
+                    skipped.append((appid, "opt_out_da_usuaria"))
+                elif lo_idx is None:
                     # App sem LaunchOptions: a linha nova entra no fim do
                     # bloco, indentada como o `{` de abertura + 1 tab.
                     body = lines[open_idx].rstrip("\r\n")
@@ -434,6 +515,11 @@ def apply_wrapper_vdf_text(text: str) -> tuple[str, list[str], list[tuple[str, s
             appid = frame[0]
             frame = (appid, frame[1], frame[2], idx)
             value = _vdf_unescape(pair.group("value"))
+            if appid in fora:
+                # A vontade dela vem ANTES de qualquer diagnóstico nosso: nem
+                # "já tem" nem "estendido" — ela disse que não quer, e ponto.
+                skipped.append((appid, "opt_out_da_usuaria"))
+                continue
             if has_extended_ignore(value):
                 skipped.append((appid, "ignore_estendido"))
                 continue
@@ -475,6 +561,7 @@ def apply_wrapper_to_all_games(
     vdfs: list[Path] | None = None,
     *,
     dry_run: bool = False,
+    excluir: Sequence[str] | None = None,
 ) -> dict[str, list[dict[str, str]]]:
     """Aplica o wrapper a todos os jogos dos localconfig.vdf elegíveis.
 
@@ -483,6 +570,11 @@ def apply_wrapper_to_all_games(
     migrate/strip — a Steam viva regrava o vdf ao sair e a edição seria
     perdida; com um JOGO aberto nem se cogita). vdf sandbox (Flatpak/Snap) é
     pulado inteiro: o wrapper do host é invisível lá dentro (DEDUP-04).
+
+    ``excluir``: os appids do `jogos_sem_wrapper.txt` (SENTINELA-WRAPPER-01).
+    O `main()` os lê e passa por default — inclusive no passo sem flag do
+    install —, para que "não quero o wrapper neste jogo" sobreviva ao próximo
+    `./install.sh` em vez de ser desfeito por ele.
 
     Retorna ``{"applied": [...], "skipped": [...], "errors": [...]}`` — cada
     item é ``{"vdf": ..., "appid": ..., "reason": ...}`` (``reason`` vazio nos
@@ -520,7 +612,7 @@ def apply_wrapper_to_all_games(
                 {"vdf": str(vdf), "appid": "", "reason": str(exc)}
             )
             continue
-        new_text, applied, skipped = apply_wrapper_vdf_text(original)
+        new_text, applied, skipped = apply_wrapper_vdf_text(original, excluir=excluir)
         for appid, reason in skipped:
             result["skipped"].append(
                 {"vdf": str(vdf), "appid": appid, "reason": reason}
@@ -993,11 +1085,41 @@ def pastas_steamapps(home: Path | None = None) -> list[Path]:
 
     Best-effort e read-only: biblioteca ilegível ou ausente é pulada em
     silêncio — traduzir appid em nome é conveniência, não pode derrubar nada.
+
+    **Sem pasta repetida, e a comparação é pelo diretório REAL** (16/08/2026).
+    Nesta máquina ``~/.steam/steam`` é um link para
+    ``~/.steam/debian-installation``, e o `libraryfolders.vdf` lista o segundo:
+    dois caminhos com texto diferente, um diretório só. O ``not in pastas``
+    comparava o texto, então a lista saía com a mesma `steamapps` duas vezes e
+    todo `.acf` dela era lido em dobro. Os dois consumidores de então
+    (`nome_do_appid`, que para no primeiro achado, e `jogos_da_biblioteca_steam`,
+    que faz `setdefault` por appid) não erravam a conta por sorte de forma — mas
+    um censo escrito depois contou 65 jogos onde havia 33, e essa é exatamente a
+    armadilha do `WRAPPER-EM-TODOS-01`: um número que parece cobertura.
+    O caminho devolvido continua sendo o PRIMEIRO visto, não o resolvido, porque
+    é ele que aparece nas mensagens de erro e no relatório.
     """
-    from hefesto_dualsense4unix.integrations.proton_pin import default_steam_root
+    # Import TARDIO e com fallback avulso, como o `proton_pin` faz com este
+    # módulo: o cabeçalho promete "100% stdlib, roda como script solto", e um
+    # `from hefesto_dualsense4unix…` cru quebrava essa promessa com
+    # ModuleNotFoundError. Latente até 16/08/2026, quando o `--relatorio` da
+    # sentinela — rodado pelo install e pelo doctor com o python3 do SISTEMA —
+    # passou a traduzir appid em nome de jogo por este caminho.
+    try:
+        from .proton_pin import default_steam_root
+    except ImportError:  # pragma: no cover - executado como script avulso
+        from proton_pin import default_steam_root  # type: ignore[no-redef]
+
+    def real(caminho: Path) -> Path:
+        """O diretório de verdade. Link ilegível vale por si mesmo."""
+        try:
+            return caminho.resolve()
+        except OSError:  # pragma: no cover - link quebrado ou permissão
+            return caminho
 
     raiz = default_steam_root(home) / "steamapps"
     pastas = [raiz]
+    vistas = {real(raiz)}
     with contextlib.suppress(OSError):
         texto = (raiz / "libraryfolders.vdf").read_text(encoding="utf-8", errors="replace")
         for linha in texto.splitlines():
@@ -1005,8 +1127,9 @@ def pastas_steamapps(home: Path | None = None) -> list[Path]:
             if par is None or par.group("chave").lower() != "path":
                 continue
             candidata = Path(_desescapar_acf(par.group("valor"))) / "steamapps"
-            if candidata.is_dir() and candidata not in pastas:
+            if candidata.is_dir() and real(candidata) not in vistas:
                 pastas.append(candidata)
+                vistas.add(real(candidata))
     return pastas
 
 
@@ -1060,6 +1183,7 @@ def add_appid_to_steam_input_allowlist(
     *,
     path: Path | None = None,
     nota: str = "",
+    cabecalho: str | None = None,
 ) -> str:
     """Acrescenta um appid à allowlist. Retorna o status para o toast.
 
@@ -1075,7 +1199,10 @@ def add_appid_to_steam_input_allowlist(
       então um appid comentado ("desliguei este") é RE-adicionado como linha
       viva em vez de ser considerado presente;
     - **cabeçalho**: preservado byte a byte num arquivo existente (só append);
-      escrito do zero apenas quando o arquivo não existe.
+      escrito do zero apenas quando o arquivo não existe. O parâmetro
+      `cabecalho` troca o texto desse cabeçalho — é o que deixa o
+      `jogos_sem_wrapper.txt` (SENTINELA-WRAPPER-01) reusar esta escrita, que
+      já tem as três armadilhas resolvidas, em vez de clonar o corpo dela.
     """
     alvo = str(appid).strip()
     if not alvo.isdigit():
@@ -1094,7 +1221,7 @@ def add_appid_to_steam_input_allowlist(
         corpo = (
             (atual if atual.endswith("\n") else atual + "\n")
             if atual
-            else _ALLOWLIST_HEADER
+            else (cabecalho if cabecalho is not None else _ALLOWLIST_HEADER)
         )
         if nota:
             corpo += f"# {nota}\n"
@@ -1182,6 +1309,96 @@ def remove_appid_from_steam_input_allowlist(
         return "removido"
     except OSError:
         return "erro"
+
+
+# --- "não quero o wrapper NESTE jogo" (SENTINELA-WRAPPER-01, 16/08/2026) ----
+# O censo do wrapper (integrations/sentinela_do_wrapper) sabe dizer quais jogos
+# perderam a chamada do `hefesto-launch`. Sabendo disso, ele PRECISA saber
+# também quando a ausência é vontade dela — senão o produto vira um assistente
+# que desfaz a escolha da dona da máquina a cada `./install.sh`.
+#
+# A regra, e ela é dura de propósito: **intenção nunca é inferida**. Uma linha
+# que sumiu é sempre tratada como estrago (a Steam guarda UMA linha por jogo e
+# a sobrescreve sem avisar — foi assim que o Pragmata perdeu o wrapper em
+# 15/08). O ÚNICO jeito de dizer "não quero" é este arquivo, que a GUI escreve
+# com um clique. Adivinhar seria escolher entre dois erros: ou desfazer a
+# escolha dela, ou deixar um jogo quebrado calado.
+#
+# Formato IDÊNTICO ao da allowlist do Steam Input (um appid por linha, `#`
+# comenta) porque é o formato que ela já conhece deste projeto — e o parser é
+# literalmente o mesmo (`parse_steam_input_allowlist`).
+
+#: Caminho relativo ao diretório de config XDG (mesma convenção da allowlist).
+SEM_WRAPPER_RELPATH = "hefesto-dualsense4unix/jogos_sem_wrapper.txt"
+
+_SEM_WRAPPER_HEADER = """\
+# hefesto-dualsense4unix — jogos que NÃO devem receber o wrapper de launch
+# (SENTINELA-WRAPPER-01)
+#
+# AppIDs listados aqui ficam de fora do "Aplicar aos jogos da Steam", do passo
+# sem flag do install e do reparo automático — e o aviso de "este jogo perdeu
+# as opções de inicialização" não aparece para eles.
+#
+# Um jogo sem o wrapper NÃO recebe as envs do Hefesto: no Bluetooth ele tende
+# a não enxergar controle nenhum, com o perfil e a luz seguindo acesos.
+# Uma linha por AppID; '#' comenta.
+"""
+
+
+def sem_wrapper_path(config_home: Path | None = None) -> Path:
+    """Caminho do `jogos_sem_wrapper.txt` (XDG), sem tocar no disco."""
+    if config_home is not None:
+        base = config_home
+    else:
+        env = os.environ.get("XDG_CONFIG_HOME")
+        base = Path(env) if env else Path.home() / ".config"
+    return base / SEM_WRAPPER_RELPATH
+
+
+def ler_jogos_sem_wrapper(path: Path | None = None) -> list[str]:
+    """AppIDs que ela marcou como "não quero o wrapper aqui". Nunca levanta.
+
+    Arquivo ausente/ilegível = lista vazia: o pior caso de uma leitura falha é
+    aplicar o wrapper num jogo que ela não queria, e isso é reversível com um
+    clique; o oposto (falhar aberto e deixar 60 jogos sem wrapper) não é.
+    """
+    destino = path if path is not None else sem_wrapper_path()
+    try:
+        return parse_steam_input_allowlist(destino.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def marcar_jogo_sem_wrapper(
+    appid: int | str, *, path: Path | None = None, nota: str = ""
+) -> str:
+    """"Não quero o wrapper neste jogo" — o botão de recusa da GUI.
+
+    Status: ``"adicionado"`` | ``"ja_estava"`` | ``"appid_invalido"`` |
+    ``"erro"``. Mesmas três armadilhas (e mesmas respostas) do
+    `add_appid_to_steam_input_allowlist`: duplicata não reescreve nada, appid
+    apenas COMENTADO é re-adicionado como linha viva, e o cabeçalho de um
+    arquivo existente é preservado byte a byte.
+    """
+    return add_appid_to_steam_input_allowlist(
+        appid,
+        path=path if path is not None else sem_wrapper_path(),
+        nota=nota,
+        cabecalho=_SEM_WRAPPER_HEADER,
+    )
+
+
+def desmarcar_jogo_sem_wrapper(appid: int | str, *, path: Path | None = None) -> str:
+    """"Pode pôr o wrapper de volta" — o avesso do `marcar_jogo_sem_wrapper`.
+
+    Status: ``"removido"`` | ``"nao_estava"`` | ``"appid_invalido"`` |
+    ``"erro"``. Reversível é requisito, não conveniência: um jogo marcado por
+    engano ficaria sem controle no Bluetooth para sempre, e o conserto não
+    pode exigir abrir um arquivo de configuração num editor de texto.
+    """
+    return remove_appid_from_steam_input_allowlist(
+        appid, path=path if path is not None else sem_wrapper_path()
+    )
 
 
 def process_vdf(vdf: Path, mode: str, *, dry_run: bool = False) -> tuple[int, str]:
@@ -1440,9 +1657,20 @@ def main(argv: list[str] | None = None) -> int:
         # de Steam/jogo aberto de `apply_wrapper_to_all_games` é a segunda
         # muralha: o `--stop-steam` acima pode ter dito que fechou sem ter
         # fechado, e aí nada é tocado.
+        # A recusa dela é lida AQUI (e não lá dentro) para a função continuar
+        # pura e testável: o passo sem flag do install passa por este `main`,
+        # então "não quero o wrapper neste jogo" sobrevive ao reinstall.
+        recusados = ler_jogos_sem_wrapper()
+        if recusados:
+            print(
+                "[launch-options] fora do wrapper por escolha dela "
+                f"(jogos_sem_wrapper.txt): {', '.join(recusados)}"
+            )
         try:
             return _report_apply(
-                apply_wrapper_to_all_games(vdfs=vdfs, dry_run=args.dry_run),
+                apply_wrapper_to_all_games(
+                    vdfs=vdfs, dry_run=args.dry_run, excluir=recusados
+                ),
                 dry_run=args.dry_run,
             )
         finally:

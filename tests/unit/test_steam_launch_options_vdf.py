@@ -362,7 +362,15 @@ def test_install_migra_fora_do_bloco_do_steam_input():
     assert 'step "11b"' in texto
     # ...e a migração vem DEPOIS do `fi` que fecha o bloco do Steam Input
     # (a habilitação do guard é a última coisa dentro do bloco).
-    pos_fim_bloco_steam_input = texto.index("guard do Steam Input habilitado")
+    #
+    # A âncora é a linha de CÓDIGO que habilita o guard, não a mensagem que ela
+    # lê. Em 16/08/2026 a mensagem mudou de texto (o guard passou a repor
+    # também o wrapper, CARONA-NO-GUARD-01) e este teste reprovou sem que nada
+    # de estrutural tivesse mudado — mensagem de tela é para ser reescrita, e
+    # um teste que a trava como âncora cobra pedágio por melhorar texto.
+    pos_fim_bloco_steam_input = texto.index(
+        "systemctl --user enable --now hefesto-steam-input-guard"
+    )
     pos_migrate = texto.index("--migrate --stop-steam")
     assert pos_migrate > pos_fim_bloco_steam_input
 
