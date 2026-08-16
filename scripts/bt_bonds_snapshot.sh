@@ -44,7 +44,23 @@ SRC="${HEFESTO_BT_SRC:-/var/lib/bluetooth}"
 DST_ROOT="${HEFESTO_BT_SNAP_ROOT:-/var/lib/hefesto-dualsense4unix/bt-bonds}"
 KEEP=12
 
-log() { [[ "${QUIET}" -eq 1 ]] || printf '%s\n' "$*"; logger -t hefesto-bt-bonds "$*" 2>/dev/null || true; }
+# DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): o destino do log é parametrizável pelo
+# mesmo motivo que as raízes acima são — a suíte roda este script DE VERDADE, e
+# sem isto ela grava no journal da máquina dela linhas que descrevem eventos que
+# nunca aconteceram. Vazio = journal (produção); caminho = arquivo; `none` =
+# nada. O motivo completo está no cabeçalho do bt_bonds_autorestore.sh.
+LOG_TAG=hefesto-bt-bonds
+LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
+_registrar() {
+    case "${LOG_DEST}" in
+        "")   logger -t "${LOG_TAG}" "$*" 2>/dev/null || true ;;
+        none) : ;;
+        *)    printf '%s %s: %s\n' "$(date -Is 2>/dev/null || true)" "${LOG_TAG}" "$*" \
+                  2>/dev/null >>"${LOG_DEST}" || true ;;
+    esac
+}
+
+log() { [[ "${QUIET}" -eq 1 ]] || printf '%s\n' "$*"; _registrar "$*"; }
 
 # Root só é exigido para a árvore REAL (/var/lib/bluetooth é 700 do root). Com
 # as raízes de teste apontando para outro lugar, root não acrescenta nada — e

@@ -123,9 +123,39 @@ for _arg in "$@"; do
     esac
 done
 
+# ---------------------------------------------------------------------------
+# DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026) — para ONDE vai a linha de log
+# ---------------------------------------------------------------------------
+# O log em produção é o que conta a história quando o bond volta DE VERDADE, e
+# não pode sumir. O que não pode existir é a linha que descreve um evento que
+# nunca houve: a suíte roda este script de verdade, e por isso gravava
+# "bluetooth.service morreu (SERVICE_RESULT=oom-kill)" no journal DELA — 36
+# vezes em 15/08, oito delas entre 18h29 e 21h38. Vinte minutos de caçada foram
+# atrás de uma morte que o `systemctl` desmentia (Result=success, ativo desde
+# as 14:14). Os DADOS do teste já eram isolados; o LOG não era.
+#
+# A cura é um DESTINO, não um interruptor:
+#   vazio    -> journal do sistema. É o default, e é o que produção usa: o
+#               ExecStopPost roda sem env nenhuma.
+#   caminho  -> a MESMA linha, num arquivo. É o que a suíte usa. Desviar em vez
+#               de emudecer preserva a asserção: o teste continua podendo
+#               conferir o que foi dito, e um log que se prova é um log que
+#               ninguém apaga por engano.
+#   none     -> não registra em lugar nenhum.
+LOG_TAG=hefesto-bt-autorestore
+LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
+_registrar() {
+    case "${LOG_DEST}" in
+        "")   logger -t "${LOG_TAG}" "$*" 2>/dev/null || true ;;
+        none) : ;;
+        *)    printf '%s %s: %s\n' "$(date -Is 2>/dev/null || true)" "${LOG_TAG}" "$*" \
+                  2>/dev/null >>"${LOG_DEST}" || true ;;
+    esac
+}
+
 log() {
     [[ "${QUIET}" -eq 1 ]] || printf '%s\n' "$*"
-    logger -t hefesto-bt-autorestore "$*" 2>/dev/null || true
+    _registrar "$*"
 }
 
 if [[ "${STATUS}" -eq 1 ]]; then

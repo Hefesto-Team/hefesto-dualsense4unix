@@ -51,7 +51,20 @@ STAMP_RESTART=/run/hefesto-bt-watchdog.restart-stamp
 STAMP_DIR=/run/hefesto-bt-watchdog
 LOG_TAG=hefesto-bt-watchdog
 
-log() { logger -t "${LOG_TAG}" "$*" 2>/dev/null || true; printf '%s\n' "$*"; }
+# DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): vazio = journal (produção); caminho =
+# arquivo; `none` = nada. Existe porque a suíte roda estes scripts DE VERDADE e
+# sem isto grava, no journal da máquina dela, linhas que descrevem eventos que
+# nunca aconteceram. Motivo completo no cabeçalho do bt_bonds_autorestore.sh.
+LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
+_registrar() {
+    case "${LOG_DEST}" in
+        "")   logger -t "${LOG_TAG}" "$*" 2>/dev/null || true ;;
+        none) : ;;
+        *)    printf '%s %s: %s\n' "$(date -Is 2>/dev/null || true)" "${LOG_TAG}" "$*" \
+                  2>/dev/null >>"${LOG_DEST}" || true ;;
+    esac
+}
+log() { _registrar "$*"; printf '%s\n' "$*"; }
 
 # COMPAT BLUEZ-586-CTL-01 + WATCHDOG-FP-01 (22/07): o bluetoothctl 5.86 é MUDO
 # no modo one-shot (regressão do cliente) e a função-sombra interativa também
