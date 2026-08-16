@@ -44,14 +44,20 @@ AS TRÊS COISAS QUE ESTE INSTRUMENTO SABE E QUE CUSTARAM CARO
    `comum.tamanhos_do_descritor` foi conferido contra os 17 valores conhecidos e
    bate item a item, `0xf6` de 547 bytes incluído.
 
-O DAEMON PRECISA ESTAR PARADO — e este é o ponto mais importante
------------------------------------------------------------------
-Sim. Com o daemon vivo, o `hefesto-hidraw-broker` deixa o hidraw do controle
-FÍSICO em `0600 root:root` de propósito, para esconder o aparelho do jogo. O
-instrumento então leva `PermissionError` e **não mede nada**. Isso não é defeito
-do controle nem do instrumento: é o produto funcionando. O que seria defeito é
-imprimir "o controle não respondeu", que é uma afirmação sobre o aparelho —
-então ele não imprime isso: ele nomeia o broker.
+O DAEMON NÃO PRECISA ESTAR PARADO (corrigido em 15/08/2026)
+------------------------------------------------------------
+Este bloco dizia o contrário, e era falso. Com o daemon vivo, o
+`hefesto-hidraw-broker` deixa mesmo o hidraw do controle FÍSICO em
+`0600 root:root`, de propósito, para esconder o aparelho do jogo — mas este
+instrumento não abre pelo `os.open`: ele pede o descritor ao broker
+(`comum.abrir_no_hidraw`, usado em `diagnostico_de_acesso` e na leitura), e o
+broker o empresta por SCM_RIGHTS. MEDIDO em 15/08/2026, 17h32: o censo rodou com
+o daemon VIVO e leu os quatro controles, os dois do cabo e os dois do rádio
+(bruto em `docs/data/ensaios-brutos/2026-08-15-D-32-familia-f0-f7.txt`).
+
+O que continua verdade é a parte que era sobre HONESTIDADE do instrumento: se a
+porta fechar mesmo, ele não imprime "o controle não respondeu" — que é uma
+afirmação sobre o aparelho —, ele nomeia o broker.
 
 A COR DO CONTROLE, E POR QUE ELA NÃO SAI DAQUI
 -----------------------------------------------
@@ -527,7 +533,12 @@ def main() -> int:
             "cada feature report é o mesmo byte a byte no cabo e no rádio?",
             bibliotecas=["fcntl", "array", "zlib"],
             escreve_no_aparelho=False,
-            daemon_precisa_parar=True,
+            # CORRIGIDO em 15/08/2026: era `True`, e o cabeçalho mandava parar o
+            # daemon antes de medir. Falso — a leitura entra por
+            # `comum.abrir_no_hidraw`, e o broker empresta o fd por SCM_RIGHTS.
+            # Medido às 17h32 com o daemon VIVO: os quatro controles responderam
+            # (docs/data/ensaios-brutos/2026-08-15-D-32-familia-f0-f7.txt).
+            daemon_precisa_parar=False,
         )
     )
 
