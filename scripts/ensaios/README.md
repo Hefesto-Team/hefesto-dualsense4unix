@@ -39,7 +39,49 @@ próprio produto. Essa armadilha custou uma sessão em 11/08/2026.
 
 ---
 
-## Os quatro instrumentos
+## Os instrumentos documentados aqui
+
+A pasta tem mais arquivos que esta lista: os instrumentos que nasceram para
+um ensaio só do PLANO-DA-MESA-2-2 (`imu_no_cabo.py`, `giro_e_buraco.py`,
+`microfone_no_cabo.py`, `taxa_no_hidraw.py`, `corpo_do_0x32.py`,
+`byte_no_fio.py`, `entrada_em_repouso.py`) se documentam na própria docstring,
+que é o que o plano manda ler antes de rodar. Os de baixo são os que servem a
+mais de uma pergunta.
+
+**Uma terceira régua, e ela responde a uma pergunta que a casa dava por
+impossível** (A-1, 15/08/2026, `entrada_em_repouso.py` — bruto em
+[`docs/data/ensaios-brutos/2026-08-15-A1-entrada-em-repouso.txt`](../../docs/data/ensaios-brutos/2026-08-15-A1-entrada-em-repouso.txt)):
+
+- **Qual vpad é alimentado por qual controle se resolve SEM apertar botão.**
+  O centro de repouso dos quatro sticks é impressão digital do silício daquela
+  unidade (nenhuma das quatro tem os quatro eixos em 128, e os desvios vão até
+  4 LSB), e a capacidade da bateria em `corpo[52]` é uma segunda régua, de
+  outro subsistema. Em 15/08 as duas casaram os quatro pares e concordaram em
+  todos. O método não olha MAC, nome, número de jogador nem ordem de conexão —
+  e por isso vale em qualquer PC. Empate sai como `AMBÍGUO`, nunca como
+  palpite.
+- **O produto NÃO deforma o repouso do analógico** — 15 dos 16 eixos chegam ao
+  vpad sem um bit de diferença, inclusive o chiado de 1 LSB. O décimo sexto é o
+  caso que importa: **eixo que nunca emitiu `EV_ABS` desde o open chega ao jogo
+  como 128**, porque o snapshot do `EvdevReader` nasce em 128 e o `absinfo` é
+  lido só para saber a faixa, nunca para semear a posição.
+
+**Duas réguas desta pasta que NÃO se adivinha, e que já custaram caro** (E-8,
+15/08/2026 — a história inteira está em
+[`docs/process/estudos/2026-08-15-E8-O-CONTADOR-QUE-O-DRIVER-JOGA-FORA-e-a-regua-que-errava-62-vezes.md`](../../docs/process/estudos/2026-08-15-E8-O-CONTADOR-QUE-O-DRIVER-JOGA-FORA-e-a-regua-que-errava-62-vezes.md)):
+
+- **Giroscópio.** `DS_GYRO_RES_PER_DEG_S = 1024` é a resolução **de SAÍDA**, do
+  `ABS_RX/RY/RZ` que o kernel publica **depois** de calibrar. Dividir o valor
+  **CRU** do fio por ela erra por **~62x**. A régua do cru sai do **feature
+  0x05 de cada unidade**: `cru * speed_2x / sens_denom` (~16,4 LSB por grau/s,
+  medido nas quatro). Quem precisa de graus/s usa o `giro_e_buraco.py`.
+- **Perda de report.** O `seq_number` de `corpo[6]` só anda **no cabo**; por
+  rádio ele fica constante. O contador que funciona nos **dois** transportes é
+  o `__le32` de `corpo[11..14]` — o campo que o driver chama de `reserved` e
+  nunca lê.
+
+As duas estão presas por `tests/unit/test_giro_e_buraco_a_regua_sai_do_aparelho.py`,
+com a mordida de cada uma registrada na docstring.
 
 ### `quem_e_quem.py` — comece por aqui
 
@@ -157,6 +199,41 @@ Concluir "não tem" a partir de "não achei" é a **falácia do perfil ausente**
 e microfone são feature de cabo e a interface tem de dizer isso. Se tem caminho e
 só falta implementar, é sprint.
 
+### `identidade_nos_dois_transportes.py`
+
+**Pergunta:** existe um identificador que (a) distingue as unidades, (b) é
+legível nos **dois** transportes e (c) **não exige escrita nenhuma**?
+
+É a pergunta dela de 15/08/2026 — *"nos 4 controles via cabo e bt vamos ter
+sempre identificado né?"* — traduzida para algo que uma máquina responde. Lê os
+candidatos (`0x05`, `0x09`, `0x0b`, `0x20`, `0x22`) em cada controle **duas
+vezes**, com intervalo, e julga cada um contra cinco critérios: legível nos dois
+transportes, distingue as unidades, estável entre leituras, ancorado no MAC, e
+sem escrita.
+
+**Ele não sabe escrever, e isso é estrutural:** não existe `HIDIOCSFEATURE`
+neste arquivo. A ausência é a trava — não há como mandar byte a aparelho nenhum,
+nem por engano de quem o editar depois.
+
+**Como ele escapa do confundimento braço/unidade sem trocar os braços** (Lei 4
+do PLANO-DA-MESA-2-2): usa **régua absoluta**, como o E-4 faz com 1 g. O
+`HID_UNIQ` do sysfs é a régua externa; se o conteúdo de um report contém o MAC
+da própria unidade que o emitiu, a conferência vale unidade por unidade, em
+qualquer transporte, sem comparar braço com braço.
+
+**O que muda com a resposta:** se existe crachá sem escrita, a cor vira luxo em
+vez de necessidade — e foi o que aconteceu. Ver
+[o estudo de 15/08](../../docs/process/estudos/2026-08-15-SEMPRE-IDENTIFICADO-a-resposta-e-o-MAC-e-onde-ela-falha.md).
+
+**A armadilha que ele já pisou, e que fica registrada:** a primeira versão
+procurava o MAC do adaptador do host em `/sys/class/bluetooth/hci0/device/address`,
+que **não existe** nesta versão do kernel. O caminho inexistente devolveu string
+vazia, a máscara ficou sem agulha, e o endereço do host saiu em hexadecimal num
+arquivo versionado — o `check_anonymity.sh` não pega MAC em hexadecimal. A cura
+não foi achar o caminho certo: foi **tirar o endereço do próprio buffer que se
+vai imprimir**. Uma máscara que se alimenta do que imprime não tem como ficar
+sem agulha.
+
 ---
 
 ## O achado que muda como se lê tudo isto
@@ -250,7 +327,8 @@ data e quem mediu.
 | os feature reports são lidos por rádio com retry + validação de id; o CRC-32 confere em todos os que trazem trailer | **medido** 15/08 | `censo_features.py` |
 | o rádio entrega movimento a taxa **maior** que o cabo — ~414 Hz contra 250,0 Hz cravados no cabo | **medido** 15/08, janela de 5 s | `taxa_de_entrada.py`, daemon parado |
 | reports que o descritor declara e o firmware não implementa devolvem `EPIPE` na hora (10 deles no cabo) | **medido** 15/08 | `censo_features.py` |
-| a cor de fábrica está nos caracteres 5–6 do serial, via `SET 0x80` + `GET 0x81` | **caminho identificado, NÃO medido** | fonte de terceiros; exige escrita não autorizada, e por rádio ninguém demonstrou |
+| a cor de fábrica está nos caracteres 5–6 do serial, via `SET 0x80` + `GET 0x81` | **medido** 15/08 **no CABO, em 4 de 4 unidades**; por rádio, **medido-negativo** | `cor_do_plastico.py`. Os quatro códigos batem com o nome que ela usa (00 White, 02 Cosmic Red, 04 Galactic Purple, 05 Starlight Blue). Por rádio o `SET 0x80` volta `EIO` imediato — e a causa é o TRANSPORTE, não a unidade: o mesmo aparelho aceitou o mesmo comando no fio |
+| existe crachá que distingue a unidade nos DOIS transportes **sem escrita**: é o **MAC** | **medido** 15/08, 4 unidades, os dois braços | `identidade_nos_dois_transportes.py`. Sai de graça no `HID_UNIQ` do sysfs; o feature `0x09` confirma. O `0x20` e o `hardware_version` **não** servem: agrupam por revisão de placa, e a data de compilação do firmware colide em PARES nos quatro controles dela |
 | a escada `0x32`–`0x39` carrega áudio | **hipótese viva** | o canal existe; provar exige escrever |
 | `hardware_version` distingue os quatro controles | **medido** 15/08, mas **não é a cor** | o byte *Variation* é `0x00` nos quatro; o que varia é a revisão de placa. Dois controles da mesma cor comprados juntos teriam o mesmo valor — é chave de diagnóstico, não fonte de cor |
 
