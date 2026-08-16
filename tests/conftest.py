@@ -1165,6 +1165,22 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # resolvesse o default esconderia/abriria hidraw DE VERDADE no meio da
     # suíte. Testes do próprio cliente passam o caminho explicitamente.
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))
+    # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026) — mesma classe do BROKER-01 acima, e
+    # medida ao vivo: vários testes rodam os scripts `bt_*.sh` DE VERDADE, e
+    # eles registram no journal. Os DADOS já eram isolados (raízes em tmp); o
+    # LOG não era. Em 15/08 a suíte escreveu 3.221 linhas no journal DELA (2.199
+    # do autorestore, 535 do snapshot, 422 do rebind, 65 da vigia) — 36 delas
+    # dizendo "bluetooth.service morreu (SERVICE_RESULT=oom-kill)" sobre
+    # um bluetoothd que nunca morreu (systemctl: Result=success, ativo desde as
+    # 14:14). Oito dessas linhas caíram entre 18h29 e 21h38 e custaram vinte
+    # minutos de caçada a um defeito inexistente.
+    #
+    # O default aqui DESVIA, não emudece: as linhas continuam sendo escritas,
+    # num arquivo por teste que o próprio teste pode ler. Um teste que precise
+    # do caminho de produção passa `HEFESTO_BT_LOG_DEST=""` explicitamente — e
+    # é isso que faz esta variável ser um portão e não um interruptor: quem
+    # quiser o journal tem de pedir por escrito.
+    monkeypatch.setenv("HEFESTO_BT_LOG_DEST", str(xdg_root / "bt-log.txt"))
 
 
 # ---------------------------------------------------------------------------

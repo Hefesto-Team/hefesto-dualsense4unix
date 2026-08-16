@@ -36,7 +36,10 @@ AS MORDIDAS (cada uma tem o "arranque" escrito no docstring do teste):
   4. a quarentena por boot (E4 da sprint de 04/08) — sem ela, um bond que não
      para de pé realimenta o laço de autenticação que o crash adora;
   5. a poda por VALOR do acervo (E2) — sem ela, uma fila de snapshots pobres
-     expulsa o rico e o gatilho acorda para um acervo cheio e inútil.
+     expulsa o rico e o gatilho acorda para um acervo cheio e inútil;
+  6. o destino do log (DIÁRIO-QUE-NAO-MENTE-01, 15/08) — sem ele, ESTE arquivo
+     de teste escreve no journal da máquina dela a linha "bluetooth.service
+     morreu", e a próxima pessoa a ler o journal caça um defeito que não houve.
 """
 from __future__ import annotations
 
@@ -45,6 +48,17 @@ import subprocess
 from pathlib import Path
 
 import pytest
+
+#: Os scripts da família `bt_*` que registram no journal. Todos passaram a
+#: escrever por `_registrar`, e é isso que o portão desta lista guarda.
+SCRIPTS_QUE_REGISTRAM = (
+    "bt_active_mode.sh",
+    "bt_bonds_autorestore.sh",
+    "bt_bonds_snapshot.sh",
+    "bt_health_watchdog.sh",
+    "bt_nosniff_now.sh",
+    "bt_rebind_orphans.sh",
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 AUTORESTORE = REPO_ROOT / "scripts" / "bt_bonds_autorestore.sh"
@@ -578,3 +592,215 @@ class TestFiacao:
             ["bash", "-n", str(AUTORESTORE)], capture_output=True, text=True
         )
         assert proc.returncode == 0, proc.stderr
+
+    def test_o_diario_nao_mente_e_o_portao_e_da_familia_inteira(self) -> None:
+        """DIÁRIO-QUE-NAO-MENTE-01: quem registra, registra por `_registrar`.
+
+        ARRANQUE: troque o `_registrar` de qualquer um dos seis por um
+        `logger -t ... "$*"` direto e este portão reprova.
+
+        O critério não é "o script tem uma variável": é que exista UM único
+        ponto de saída para o journal em cada script, e que ele seja
+        endereçável. Dois pontos de saída significam que um deles vai escapar —
+        foi assim no `bt_nosniff_now.sh`, que registrava em duas linhas soltas
+        no meio do fluxo, longe de qualquer função de log.
+        """
+        for nome in SCRIPTS_QUE_REGISTRAM:
+            texto = (REPO_ROOT / "scripts" / nome).read_text(encoding="utf-8")
+            codigo = [
+                ln for ln in texto.splitlines() if not ln.lstrip().startswith("#")
+            ]
+            chamadas = [ln for ln in codigo if "logger -t" in ln]
+            assert len(chamadas) == 1, (
+                f"{nome} tem {len(chamadas)} caminhos até o journal; tem de ter "
+                f"UM, dentro de `_registrar`: {chamadas}"
+            )
+            assert 'LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"' in texto, (
+                f"{nome} escreve no journal sem destino endereçável — a suíte "
+                f"volta a sujar o journal da máquina dela"
+            )
+            assert "_registrar()" in texto, f"{nome} não define `_registrar`"
+
+    def test_a_suite_inteira_nasce_com_o_log_desviado(self) -> None:
+        """O fail-safe: nenhum teste FUTURO precisa lembrar de desviar o log.
+
+        ARRANQUE: tire o `monkeypatch.setenv("HEFESTO_BT_LOG_DEST", ...)` do
+        `_hefesto_fake_env` (tests/conftest.py) e este teste reprova.
+
+        Curar só este arquivo deixaria o defeito à espreita: qualquer teste novo
+        que rode um `bt_*.sh` voltaria a escrever no journal DELA, e o sintoma
+        (uma linha convincente sobre uma morte que não houve) só aparece dias
+        depois, para quem está caçando outra coisa. A fixture é autouse, então
+        o desvio vale para o processo inteiro — inclusive para os subprocessos,
+        que herdam o `os.environ`.
+        """
+        destino = os.environ.get("HEFESTO_BT_LOG_DEST")
+        assert destino, (
+            "a suíte não desviou o log dos scripts bt_*: eles vão escrever no "
+            "journal do sistema durante o run"
+        )
+        assert destino != "", destino
+
+
+# ---------------------------------------------------------------------------
+# MORDIDA 6 — DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026).
+# ---------------------------------------------------------------------------
+# O log de produção é útil e não pode sumir: é ele que conta a história quando
+# o bond volta de verdade. O que não pode existir é a linha que descreve um
+# evento que NÃO aconteceu. Estes testes fixam as duas metades ao mesmo tempo:
+# o journal fica limpo sob teste, e continua escrito em produção.
+class TestOLogNaoMenteNoJournalDela:
+    @staticmethod
+    def _logger_falso(tmp_path: Path) -> tuple[Path, dict[str, str]]:
+        """Um `logger` de mentira na frente do PATH.
+
+        É a única régua honesta aqui: perguntar ao journal do sistema tornaria
+        o teste dependente da máquina, da retenção e da permissão de leitura —
+        e um teste que consulta o journal para provar que não sujou o journal
+        já falhou de propósito. O shim responde a pergunta exata: o script
+        CHAMOU o `logger`, sim ou não?
+        """
+        binario = tmp_path / "bin-falso"
+        binario.mkdir(exist_ok=True)
+        registro = tmp_path / "logger-foi-chamado.txt"
+        atalho = binario / "logger"
+        atalho.write_text(
+            "#!/usr/bin/env bash\n"
+            f'printf "%s\\n" "$*" >> "{registro}"\n',
+            encoding="utf-8",
+        )
+        atalho.chmod(0o755)
+        return registro, {"PATH": f"{binario}:{os.environ['PATH']}"}
+
+    def test_sob_teste_nenhuma_linha_chega_ao_journal(self, tmp_path: Path) -> None:
+        """ARRANQUE: volte o `log()` a chamar `logger -t ... "$*"` direto e reprova.
+
+        O defeito medido: em 15/08 esta suíte gravou 36 linhas dizendo
+        "bluetooth.service morreu (SERVICE_RESULT=oom-kill)" no journal DELA —
+        oito entre 18h29 e 21h38 — sobre um `bluetoothd` que nunca morreu
+        (`systemctl`: Result=success, NRestarts=2, ativo desde as 14:14:32).
+        Vinte minutos de investigação foram atrás desse defeito inexistente.
+        """
+        acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
+        _snapshot(acervo, "20260815-062901", {AZUL: "A1"})
+        registro, caminho = self._logger_falso(tmp_path)
+        diario = tmp_path / "diario.log"
+
+        proc = _rodar(
+            acervo,
+            destino,
+            service_result="oom-kill",
+            extra={"HEFESTO_BT_LOG_DEST": str(diario), **caminho},
+        )
+
+        assert proc.returncode == 0, proc.stderr
+        assert _bonds(destino) == {AZUL}, "o desvio do log mudou o que o script FAZ"
+        assert not registro.exists(), (
+            "o script chamou `logger` durante o teste: "
+            f"{registro.read_text(encoding='utf-8') if registro.exists() else ''}"
+        )
+
+    def test_o_desvio_registra_a_mesma_linha_em_vez_de_engolir(
+        self, tmp_path: Path
+    ) -> None:
+        """Desviar, não emudecer — senão a cura vira 'apagamos o log'.
+
+        ARRANQUE: troque o ramo do caminho por `:` (silêncio) e reprova. É esta
+        asserção que impede a cura preguiçosa: um `--quiet` global limparia o
+        journal e destruiria, junto, a única prova de que a restauração
+        aconteceu.
+        """
+        acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
+        _snapshot(acervo, "20260815-062901", {AZUL: "A1"})
+        diario = tmp_path / "diario.log"
+
+        _rodar(acervo, destino, extra={"HEFESTO_BT_LOG_DEST": str(diario)})
+
+        texto = diario.read_text(encoding="utf-8")
+        assert "hefesto-bt-autorestore" in texto, "o desvio perdeu a identidade do log"
+        assert "restaurado do snapshot" in texto, (
+            "a linha que conta a história do bond sumiu — o desvio virou mordaça"
+        )
+
+    def test_em_producao_a_linha_continua_indo_para_o_journal(
+        self, tmp_path: Path
+    ) -> None:
+        """O contrapeso: sem `HEFESTO_BT_LOG_DEST`, o journal recebe tudo.
+
+        Produção é exatamente isto: o `ExecStopPost` roda o script sem env
+        nenhuma. Se um dia alguém "simplificar" removendo o `logger`, este
+        teste é quem reclama.
+        """
+        acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
+        _snapshot(acervo, "20260815-062901", {AZUL: "A1"})
+        registro, caminho = self._logger_falso(tmp_path)
+
+        _rodar(
+            acervo,
+            destino,
+            service_result="core-dump",
+            extra={"HEFESTO_BT_LOG_DEST": "", **caminho},
+        )
+
+        assert registro.exists(), (
+            "sem HEFESTO_BT_LOG_DEST o script tem de registrar no journal — "
+            "é ele que conta a história quando o bond volta de verdade"
+        )
+        texto = registro.read_text(encoding="utf-8")
+        assert "-t hefesto-bt-autorestore" in texto
+        assert "bluetooth.service morreu" in texto
+
+    def test_none_nao_registra_em_lugar_nenhum(self, tmp_path: Path) -> None:
+        """O terceiro destino, para quem roda o script à mão sem querer rastro."""
+        acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
+        _snapshot(acervo, "20260815-062901", {AZUL: "A1"})
+        registro, caminho = self._logger_falso(tmp_path)
+
+        proc = _rodar(
+            acervo, destino, extra={"HEFESTO_BT_LOG_DEST": "none", **caminho}
+        )
+
+        assert proc.returncode == 0, proc.stderr
+        assert not registro.exists()
+        assert _bonds(destino) == {AZUL}
+        assert "restaurado" in proc.stdout, "o stdout NUNCA depende do destino do log"
+
+    def test_o_snapshot_irmao_tambem_desvia(self, tmp_path: Path) -> None:
+        """O `bt_bonds_snapshot.sh` roda neste MESMO arquivo (TestPodaPorValor).
+
+        Ele sozinho pôs 535 linhas no journal dela em 15/08. Curar só o
+        autorestore deixaria metade do defeito de pé.
+        """
+        fonte, acervo = tmp_path / "bluetooth", tmp_path / "acervo"
+        acervo.mkdir()
+        _poe_device(fonte, AZUL, "A1")
+        registro, caminho = self._logger_falso(tmp_path)
+        diario = tmp_path / "diario.log"
+
+        proc = subprocess.run(
+            ["bash", str(SNAPSHOT)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            env={
+                **os.environ,
+                "HEFESTO_BT_SRC": str(fonte),
+                "HEFESTO_BT_SNAP_ROOT": str(acervo),
+                "HEFESTO_BT_LOG_DEST": str(diario),
+                **caminho,
+            },
+        )
+
+        assert proc.returncode == 0, proc.stderr
+        assert not registro.exists(), "o bt_bonds_snapshot.sh ainda suja o journal"
+        assert "hefesto-bt-bonds" in diario.read_text(encoding="utf-8")
+
+    def test_a_familia_inteira_tem_sintaxe_valida(self) -> None:
+        """Seis scripts ganharam o `_registrar` no mesmo dia; seis são checados."""
+        for nome in SCRIPTS_QUE_REGISTRAM:
+            proc = subprocess.run(
+                ["bash", "-n", str(REPO_ROOT / "scripts" / nome)],
+                capture_output=True,
+                text=True,
+            )
+            assert proc.returncode == 0, f"{nome}: {proc.stderr}"
