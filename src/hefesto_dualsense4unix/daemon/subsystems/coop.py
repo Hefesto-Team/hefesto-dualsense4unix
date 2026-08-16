@@ -26,7 +26,11 @@ na ordem de criação), via a rota sysfs do kernel — a mesma da lightbar BT
 padrão do perfil ativo é restaurado (ver `_revert_player_leds`).
 
 Pré-requisitos (gate em `should_be_active`):
-  - `config.coop_enabled` ligado (default OFF — preserva o modo "1 player");
+  - `config.coop_enabled` ligado — **default ON** desde 06/08/2026, por decisão
+    dela (*"todos e tudo no Hefesto tem que tá com o permitir co-op ligado"*);
+    o piso é o dataclass de `daemon/lifecycle.py`, e quem quer controle de
+    reserva o deixa DESCONECTADO. (A linha dizia "default OFF" até 15/08/2026 —
+    fato errado, substituído.)
   - emulação de gamepad ativa (o P1 já é um gamepad virtual; os secundários
     seguem a mesma máscara/flavor);
   - 2+ controles físicos conectados.
@@ -111,6 +115,86 @@ def secundarios_fora_da_mesa(
         for mac in sentados
         if isinstance(mac, str) and not mac.startswith("path:") and mac not in vivos
     )
+
+
+def _texto_ou_none(valor: Any) -> str | None:
+    """`str` não-vazia, ou None — blindagem de serialização do `state_full`.
+
+    O payload roda a 10 Hz e termina em `json.dumps`; um vpad dublado por
+    `MagicMock` devolveria um mock em `backend`/`mac`/`name` e derrubaria o
+    servidor IPC. A mesma disciplina que o resto do `state_full` já aplica.
+    """
+    return valor if isinstance(valor, str) and valor else None
+
+
+def _inteiro_ou_none(valor: Any) -> int | None:
+    """`int` estrito (rejeita `bool` e mocks) — a mesma disciplina do texto."""
+    return valor if isinstance(valor, int) and not isinstance(valor, bool) else None
+
+
+def identidade_do_vpad(vpad: Any) -> dict[str, Any]:
+    """O que um gamepad virtual sabe sobre si e nunca publicava (E2 do QUEM-É-QUEM-01).
+
+    `{vpad_backend, vpad_uniq, vpad_nome, vpad_indice}`. Todas as leituras por
+    `getattr` tipado: nada aqui exige um backend específico, e um vpad dublado
+    por mock devolve `None` em vez de derrubar o `json.dumps` do `state_full`.
+
+    - ``vpad_uniq`` é o MAC FORJADO que o produto carimba no uhid
+      (`player_mac`, faixa localmente administrada `02:fe:00:00:00:0N`) e que
+      sai no `HID_UNIQ` do sysfs. É o único "nó" que um vpad uhid tem: ele
+      nasce por `/dev/uhid` e não guarda ponteiro para /dev nem para /sys.
+      ``None`` no uinput, que é evdev puro e não tem `uniq`.
+    - ``vpad_indice`` é o inteiro que está DENTRO do nome e do `uniq` — o
+      `player_index` de ALOCAÇÃO, congelado quando aquele vpad nasceu. Ele
+      existe aqui por um motivo só, e é o da §1.b da sprint: desde a
+      MESA-CHEIA-12 o número PUBLICADO é a fila de chegada, e os dois podem
+      divergir. Sem este campo, quem casasse `player == N` com `Hefesto P{N}`
+      leria o dispositivo de OUTRO jogador.
+    """
+    return {
+        "vpad_backend": _texto_ou_none(getattr(vpad, "backend", None)),
+        "vpad_uniq": _texto_ou_none(getattr(vpad, "mac", None)),
+        "vpad_nome": _texto_ou_none(getattr(vpad, "name", None)),
+        "vpad_indice": _inteiro_ou_none(getattr(vpad, "player", None)),
+    }
+
+
+def _item_da_mesa(
+    *,
+    player: Any,
+    uniq: str | None,
+    is_primary: bool,
+    vpad: Any,
+    aguardando_grab: bool,
+) -> dict[str, Any]:
+    """Um item de `CoopManager.mesa` — o contrato num lugar só.
+
+    QUEM-É-QUEM-01: o primário e os secundários vêm de estruturas diferentes
+    (`daemon._gamepad_device` contra `_SecondaryPlayer.vpad`), e montar o
+    dicionário duas vezes é como as duas metades da mesma tabela se afastam na
+    primeira mudança.
+
+    ``nome_divergente`` é a E3 da sprint, e é um ALARME, não uma afirmação
+    simétrica: só vai a ``True`` quando os DOIS inteiros são conhecidos e
+    diferem. Desconhecido (uinput, que não carrega número no nome; vpad
+    ausente; dublê) fica ``False`` — "nada a avisar" —, porque publicar o
+    alarme sem saber seria a medição confiante e errada que a armadilha nº 1
+    desta casa descreve.
+    """
+    numero = _inteiro_ou_none(player) or 0
+    identidade = identidade_do_vpad(vpad)
+    indice = identidade["vpad_indice"]
+    return {
+        # Os dois primeiros repetem o NOME que `controllers[]` já usa para o
+        # mesmo fato (`uniq`, `player`): fato igual, nome igual — é assim que
+        # quem lê casa as duas listas sem uma tabela de tradução.
+        "uniq": _texto_ou_none(uniq),
+        "player": numero,
+        "is_primary": bool(is_primary),
+        **identidade,
+        "aguardando_grab": bool(aguardando_grab),
+        "nome_divergente": bool(indice is not None and numero and indice != numero),
+    }
 
 
 def calibration_cache(daemon: Any) -> dict[str, bytes]:
@@ -286,6 +370,106 @@ class CoopManager:
             except Exception as exc:
                 logger.debug("coop_live_snapshot_falhou", identity=mac, err=str(exc))
         return out
+
+    def mesa(self) -> list[dict[str, Any]]:
+        """Um item por JOGADOR: QUAL controle físico alimenta QUAL vpad.
+
+        QUEM-É-QUEM-01, entrega **E1** (sprint
+        `docs/process/sprints/2026-08-15-QUEM-E-QUEM-01-o-estado-publicado-nao-diz-qual-vpad-e-de-qual-controle.md`).
+        Até aqui o estado publicado dizia `coop.players: 4` — um NÚMERO. A
+        pergunta dela às 04:05 de 15/08/2026 — *"o vpad e o físico correspondem
+        ao mesmo?"* — **não pôde ser lida do estado publicado**: foi paga
+        apertando X em cada controle, quatro vezes, à mão (é o buraco que
+        `scripts/ensaios/quem_e_quem.py` declara em voz alta: *"Nenhum arquivo
+        de /sys carrega essa ligação"*).
+
+        **A informação nunca precisou ser medida: ela existe aqui dentro por
+        construção.** É este manager que cria o vpad de cada secundário a
+        partir de um físico (`_spawn_player` → `_promote_player`), e o par
+        `identity ↔ vpad` fica guardado em `_SecondaryPlayer`. O que faltava
+        era publicá-lo — o defeito mais caro desta casa, "a casa sabe e o
+        produto não faz", na sua forma mais barata de curar.
+
+        **Isto é IDENTIFICAÇÃO INTERNA E DIAGNÓSTICO, não vocabulário de
+        interface e não seleção de alvo — a distinção é DELIBERADA.** O alvo
+        por MAC foi derrubado por ela em 13/08/2026 como estratégia de produto
+        (nenhuma aba escolhe controle por endereço, e nenhuma passa a
+        escolher). O que esta lista responde é outra pergunta, a de quem
+        depura: *o produto está mesmo ligando cada físico ao vpad que ele
+        pensa?* A tela consome isto como DICA (tooltip) do card que ela já lê,
+        nunca como rótulo nem como seletor.
+
+        O item, por jogador. Os dois primeiros campos repetem de propósito o
+        NOME que ``controllers[]`` já usa para o mesmo fato — fato igual, nome
+        igual, e quem lê casa as duas listas sem tabela de tradução:
+
+        - ``uniq`` — o MAC do físico que alimenta este vpad, ou ``None`` quando
+          a identidade é um fallback por path (não há como casar).
+        - ``player`` — o número ÚNICO da mesa, de `numeros_de_jogador()`, a
+          MESMA função que decide o desenho da lâmpada e o rótulo do card
+          (MESA-CHEIA-12). Ler `player_index` cru aqui cruzaria os fios: ele é
+          o índice de ALOCAÇÃO do vpad, e as duas ordens só coincidem por sorte.
+        - ``is_primary`` — este é o P1 (vpad `daemon._gamepad_device`). Mesmo
+          fato, mesmo nome que ``controllers[].is_primary``.
+        - ``vpad_backend`` / ``vpad_uniq`` / ``vpad_nome`` / ``vpad_indice`` —
+          a identidade do gamepad virtual, de `identidade_do_vpad` (a mesma
+          função que a E2 usa no ``per_vpad``, para que as duas listas nunca
+          descrevam o mesmo vpad de dois jeitos).
+        - ``aguardando_grab`` — jogador registrado SEM vpad, esperando o
+          EVIOCGRAB confirmar (BUG-COOP-GRAB-PENDING-VPAD-01). Sai na lista de
+          propósito: o físico já está na mesa, e o desequilíbrio é o fato.
+        - ``nome_divergente`` — a **E3**: `True` quando o ``player`` publicado
+          e o ``vpad_indice`` que está DENTRO do nome/`uniq` do vpad diferem.
+          Desde a MESA-CHEIA-12 eles podem divergir, e recriar o vpad para
+          renomeá-lo ficou de fora por decisão registrada (o jogo enxergaria um
+          gamepad desconectando). O que NÃO pode ficar de fora é o aviso: sem
+          ele, casar ``player == N`` com ``Hefesto P{N}`` lê o dispositivo de
+          outro jogador — medição confiante e errada, a armadilha nº 1 daqui.
+
+        PRIVACIDADE — o MAC do físico vai INTEIRO, e o porquê está escrito
+        aqui para não ser reaberto. (1) Não é exposição nova: o mesmo endereço
+        já viaja no `state_full` desde a FEAT-STATE-PER-CONTROLLER-01, em
+        ``controllers[].uniq``; publicar um MAC mascarado AQUI criaria um
+        segundo endereço, incapaz de casar com o primeiro, e a GUI (que casa
+        card↔vpad por `uniq`) não teria como usar a lista — a cura nasceria
+        morta. (2) O `state_full` só trafega no socket LOCAL dela
+        (`ipc_server`), sob permissão de usuário. (3) A regra dura da casa é
+        *"nada de MAC real em ARQUIVO VERSIONADO"*, e nenhum caminho leva
+        daqui a um: o que o repositório guarda são os ensaios e os testes, e
+        os dois só conhecem as faixas forjadas (`02:fe`, `aa:bb:cc`,
+        `e8:47:3a`) — `scripts/check_anonymity.sh` é o portão que reprova o
+        contrário. O ``vpad_uniq``, esse, é forjado por construção e não
+        identifica hardware nenhum.
+
+        Com o co-op DESLIGADO a lista tem um item só, e isso é a verdade e não
+        uma amputação: fora do co-op o INPUT vem só do primário (ver o
+        cabeçalho deste módulo), então nenhum outro físico alimenta vpad
+        nenhum. Um item por físico ali diria o contrário.
+        """
+        numeros = self.numeros_de_jogador()
+        itens: list[dict[str, Any]] = []
+        primary = self._primary_identity()
+        if primary is not None:
+            itens.append(
+                _item_da_mesa(
+                    player=numeros.get(primary, 1),
+                    uniq=None if primary.startswith("path:") else primary,
+                    is_primary=True,
+                    vpad=getattr(self._daemon, "_gamepad_device", None),
+                    aguardando_grab=False,
+                )
+            )
+        for mac, jogador in self._players.items():
+            itens.append(
+                _item_da_mesa(
+                    player=numeros.get(mac, jogador.player_index),
+                    uniq=None if mac.startswith("path:") else mac,
+                    is_primary=False,
+                    vpad=jogador.vpad,
+                    aguardando_grab=jogador.vpad is None,
+                )
+            )
+        return itens
 
     def _primary_evdev_path(self) -> str | None:
         ev = getattr(getattr(self._daemon, "controller", None), "_evdev", None)

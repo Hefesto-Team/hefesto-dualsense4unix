@@ -202,6 +202,52 @@
     "derrubado_por_steam_input": false,
     "enabled": true,
     "externals": 0,
+    "mesa": [
+      {
+        "uniq": "aabbcc0000d8",
+        "player": 1,
+        "is_primary": true,
+        "vpad_backend": "uhid",
+        "vpad_uniq": "02:fe:00:00:00:01",
+        "vpad_nome": "DualSense Wireless Controller (Hefesto P1)",
+        "vpad_indice": 1,
+        "aguardando_grab": false,
+        "nome_divergente": false
+      },
+      {
+        "uniq": "aabbcc000003",
+        "player": 2,
+        "is_primary": false,
+        "vpad_backend": "uhid",
+        "vpad_uniq": "02:fe:00:00:00:02",
+        "vpad_nome": "DualSense Wireless Controller (Hefesto P2)",
+        "vpad_indice": 2,
+        "aguardando_grab": false,
+        "nome_divergente": false
+      },
+      {
+        "uniq": "aabbcc0000f0",
+        "player": 3,
+        "is_primary": false,
+        "vpad_backend": "uhid",
+        "vpad_uniq": "02:fe:00:00:00:03",
+        "vpad_nome": "DualSense Wireless Controller (Hefesto P3)",
+        "vpad_indice": 3,
+        "aguardando_grab": false,
+        "nome_divergente": false
+      },
+      {
+        "uniq": "aabbcc0000ab",
+        "player": 4,
+        "is_primary": false,
+        "vpad_backend": "uhid",
+        "vpad_uniq": "02:fe:00:00:00:04",
+        "vpad_nome": "DualSense Wireless Controller (Hefesto P4)",
+        "vpad_indice": 4,
+        "aguardando_grab": false,
+        "nome_divergente": false
+      }
+    ],
     "players": 4,
     "secundarios_derrubados": 0
   },
@@ -330,7 +376,10 @@
           "audio_do_jogo": 9607.3,
           "output": 9607.3,
           "rumble": 9608.3
-        }
+        },
+        "vpad_uniq": "02:fe:00:00:00:01",
+        "vpad_nome": "DualSense Wireless Controller (Hefesto P1)",
+        "vpad_indice": 1
       },
       {
         "audio_do_jogo_amostra": null,
@@ -384,7 +433,10 @@
         "visto_ha_s": {
           "output": 9605.7,
           "rumble": 9605.7
-        }
+        },
+        "vpad_uniq": "02:fe:00:00:00:02",
+        "vpad_nome": "DualSense Wireless Controller (Hefesto P2)",
+        "vpad_indice": 2
       },
       {
         "audio_do_jogo_amostra": null,
@@ -438,7 +490,10 @@
         "visto_ha_s": {
           "output": 151.5,
           "rumble": 151.5
-        }
+        },
+        "vpad_uniq": "02:fe:00:00:00:03",
+        "vpad_nome": "DualSense Wireless Controller (Hefesto P3)",
+        "vpad_indice": 3
       },
       {
         "audio_do_jogo_amostra": null,
@@ -492,7 +547,10 @@
         "visto_ha_s": {
           "output": 143.5,
           "rumble": 143.5
-        }
+        },
+        "vpad_uniq": "02:fe:00:00:00:04",
+        "vpad_nome": "DualSense Wireless Controller (Hefesto P4)",
+        "vpad_indice": 4
       }
     ],
     "plays": 0,
