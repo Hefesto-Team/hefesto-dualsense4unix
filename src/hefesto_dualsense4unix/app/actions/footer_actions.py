@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.app import gui_dialogs, ipc_bridge
+from hefesto_dualsense4unix.app.actions.carona_do_wrapper import GESTO_APLICAR
 from hefesto_dualsense4unix.app.actions.profile_writer import ProfileWriterMixin
 from hefesto_dualsense4unix.profiles.loader import (
     _seed_source_file,
@@ -233,7 +234,15 @@ class FooterActionsMixin(ProfileWriterMixin):
         parágrafo virado função. A armadilha acima continua valendo palavra por
         palavra: quem for juntar modo e rascunho numa chamada só vai encontrar
         de novo o "ERRO ao aplicar" com o modo JÁ aplicado.
+
+        CARONA-DO-WRAPPER-01 (16/08/2026): este é o "aplicar o perfil" que mora
+        FORA da guia de perfis, e por isso ele também repõe a chamada do
+        `hefesto-launch` que a Steam apagou das Opções de Inicialização.
+        Primeira linha do handler, antes dos dois tempos: a carona corre numa
+        thread própria e o que ela decide não depende do resultado do
+        ``apply_draft`` — o wrapper é da Steam, não do daemon.
         """
+        self.pegar_carona_no_gesto(GESTO_APLICAR)
         pendente = getattr(self, "_escolha_pendente", None)
         if pendente:
             self._aplicar_escolha_pendente(dict(pendente))

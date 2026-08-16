@@ -1181,6 +1181,20 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # é isso que faz esta variável ser um portão e não um interruptor: quem
     # quiser o journal tem de pedir por escrito.
     monkeypatch.setenv("HEFESTO_BT_LOG_DEST", str(xdg_root / "bt-log.txt"))
+    # CARONA-DO-WRAPPER-01 (16/08/2026) — mesma classe do BROKER-01 acima, e o
+    # risco é maior: salvar ou aplicar um perfil passou a repor, de carona, a
+    # chamada do `hefesto-launch` nas Opções de Inicialização da Steam
+    # (`app/actions/carona_do_wrapper.py`). Isso varre o `localconfig.vdf` e,
+    # com a Steam fechada, ESCREVE nele. Dezenas de testes de GUI chamam
+    # "Salvar Perfil"; sem esta linha, uma suíte rodando na máquina dela
+    # reescreveria a biblioteca inteira dela em segundo plano — e o `HOME` NÃO
+    # é isolado nesta suíte (o `discover_vdfs` resolve `Path.home()`).
+    #
+    # Desligado em TODO teste, e quem quer exercitar a carona religa por
+    # escrito, com fixtures em `tmp_path` (é o que o
+    # `test_carona_do_wrapper_01_*.py` faz). Não é flag de produto: em produção
+    # a variável não existe e a carona está sempre ligada.
+    monkeypatch.setenv("HEFESTO_CARONA_WRAPPER", "0")
 
 
 # ---------------------------------------------------------------------------

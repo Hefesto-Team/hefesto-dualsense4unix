@@ -171,7 +171,9 @@ traduzisse os catálogos inteiros veria o esqueleto fixo mudar de idioma e o
 recado da janela continuar em português.
 
 **Grau: MEDIDO** em 07/08/2026, por leitura de AST dos 18 arquivos (**19**
-desde 08/08, com o `relancar.py` da `RELANCAR-01`): conta-se
+desde 08/08, com o `relancar.py` da `RELANCAR-01`; **20** desde 16/08, com o
+`carona_do_wrapper.py` da `CARONA-DO-WRAPPER-01` — a proporção é **17 de 20**,
+e o quadro segue o mesmo): conta-se
 quem importa `_` de `hefesto_dualsense4unix.utils.i18n` (ou `gettext`) e quem
 tem literal com caractere acentuado. Só `footer_actions.py`,
 `lightbar_actions.py` e `status_actions.py` importam. O portão que guarda esta

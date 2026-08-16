@@ -236,14 +236,21 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     # Os números sobem juntos de propósito: se um subir sozinho, alguém ligou (ou
     # desligou) o encanamento num módulo, e é isso que este teste existe para
     # acusar. As três páginas ganharam nota datada em vez de reescrita.
-    assert total == 19, (
-        f"`app/actions/` tem {total} módulos, não 19. A contagem citada em "
+    #
+    # CARONA-DO-WRAPPER-01 (16/08/2026): 19 viraram 20 com o
+    # `carona_do_wrapper.py`, e 16 viraram 17 — pela MESMA razão do
+    # `relancar.py`: a frase que ele põe no rodapé ("Reposta a Opção de
+    # Inicialização…") é português direto, sem passar pela função de tradução.
+    # Os dois números subiram juntos, que é o sinal de que nada mudou de
+    # natureza; as três páginas ganham nota datada, não reescrita.
+    assert total == 20, (
+        f"`app/actions/` tem {total} módulos, não 20. A contagem citada em "
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
         "`docs/usage/troubleshooting.md` precisa mudar junto."
     )
-    assert len(fora) == 16, (
+    assert len(fora) == 17, (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
-        f"tradução, não 16: {', '.join(sorted(fora))}. Se o número CAIU, é "
+        f"tradução, não 17: {', '.join(sorted(fora))}. Se o número CAIU, é "
         "trabalho bom — atualize as três páginas que o citam. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )

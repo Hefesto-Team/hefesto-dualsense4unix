@@ -354,6 +354,12 @@ Se já está em v3.2.0+ e o problema persiste, abra issue com o output de
 > **Nota datada — 08/08/2026:** são **19** módulos desde a `RELANCAR-01`, que
 > acrescentou `relancar.py`. Ele **não** importa a função de tradução, então a
 > proporção passou a **16 de 19** — o quadro não mudou de natureza.
+>
+> **Nota datada — 16/08/2026:** são **20** módulos desde a
+> `CARONA-DO-WRAPPER-01`, que acrescentou `carona_do_wrapper.py`. Ele
+> também **não** importa a função de tradução, então a proporção passou a
+> **17 de 20** — o quadro segue o mesmo.
+>
 > Se você chegou aqui esperando uma janela inteiramente em inglês, o problema
 > não é a sua instalação — é a promessa antiga, e ela foi retirada. Registro em
 > `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.

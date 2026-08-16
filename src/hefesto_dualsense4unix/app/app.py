@@ -26,6 +26,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, Gtk
 
+from hefesto_dualsense4unix.app.actions.carona_do_wrapper import GESTO_APLICAR
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
@@ -1210,12 +1211,35 @@ class HefestoApp(
             logger.debug("compact_state_fetch_failed", err=str(exc))
             return None
 
+    def _trocar_perfil_de_fora(self, name: str) -> bool:
+        """Trocar de perfil pela BANDEJA ou pela janela compacta.
+
+        CARONA-DO-WRAPPER-01: o pedido dela foi *"ao clicarmos em aplicar ou
+        salvar o perfil **seja dentro ou fora da guia de perfis**"*, e estes
+        dois menus são o "fora" que fica mais longe da guia — a bandeja é o
+        caminho de quem nem abriu a janela.
+
+        A carona vem DEPOIS da troca e não depende do resultado dela, pela
+        mesma razão do "Ativar" da aba: o wrapper que a Steam comeu continua
+        comido mesmo que o daemon esteja parado e a troca falhe.
+
+        Não há rodapé garantido aqui — a janela principal pode nem estar
+        montada. Isso custa a FRASE, nunca o REPARO: ``_carona_toast`` já cai
+        na statusbar e o degrau inteiro corre dentro do try do
+        ``_carona_ao_terminar``. Reparar calado é melhor que não reparar.
+        """
+        try:
+            trocou = profile_switch(name)
+        finally:
+            self.pegar_carona_no_gesto(GESTO_APLICAR)
+        return trocou
+
     def run(self, *, start_hidden: bool = False) -> None:
         self.tray = AppTray(
             on_show_window=self.show_window,
             on_quit=self.quit_app,
             on_list_profiles=profile_list,
-            on_switch_profile=profile_switch,
+            on_switch_profile=self._trocar_perfil_de_fora,
             # FEAT-DSX-MULTI-CONTROLLER-01: status item mostra "N controles".
             on_state=self._compact_state_snapshot,
         )
@@ -1231,7 +1255,7 @@ class HefestoApp(
                 on_show_window=self.show_window,
                 on_quit=self.quit_app,
                 on_list_profiles=profile_list,
-                on_switch_profile=profile_switch,
+                on_switch_profile=self._trocar_perfil_de_fora,
                 on_state=self._compact_state_snapshot,
             )
             if self.compact_window.start():
