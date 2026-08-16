@@ -91,13 +91,28 @@ estava escrita nesta árvore. A medição, com a fala dela e a ressalva de escop
 está no §2, em *"Os BITS de vibração não são porteiro dos BYTES de motor"*.
 
 **E uma décima, de 15/08/2026, que é de escopo e não de byte:** esta página
-descrevia **três** feature reports, e o descritor declara **dezessete**. Os
-dezessete foram lidos nos quatro DualSense dela, por rádio, e o resultado está
-em *"Os feature reports — o censo dos dezessete"*, mais abaixo. Duas coisas
-saem de lá e valem para quem for medir qualquer feature: **por rádio se repete
-a leitura** (o timeout de 3 s do BlueZ custa 3,2-3,7 s por falha, e um dos
-quatro só respondeu na quinta tentativa) e **se valida `buf[0] == report_id`**
-(um dos quatro devolveu `0x80` no lugar do `0x20` pedido).
+descrevia **três** feature reports, e o descritor **do rádio** declara
+**dezessete**. Os dezessete foram lidos nos quatro DualSense dela, por rádio, e
+o resultado está em *"Os feature reports — o censo dos dezessete"*, mais abaixo.
+Duas coisas saem de lá e valem para quem for medir qualquer feature: **por rádio
+se repete a leitura** — o retry é **seguro de vida, não pedágio** (o timeout de
+3 s do BlueZ custa 3,2-3,7 s **quando bate**, e naquela manhã um dos quatro só
+respondeu na quinta tentativa; o regime normal é outro, e está medido) — e **se
+valida `buf[0] == report_id`** (um dos quatro devolveu `0x80` no lugar do `0x20`
+pedido).
+
+> **SUBSTITUIÇÃO DE FATO — 15/08/2026, 19h, pela troca de braços.** Esta entrada
+> dizia, sem a ressalva do *"quando bate"*, que ler feature por rádio custava
+> 3,2-3,7 s. **O braço caro é o CABO, e por um fator de vinte:** com os mesmos
+> quatro aparelhos passando pelos dois transportes, 78 leituras deram **0,21 s
+> por leitura no cabo** (`min = max = 0,21` em 44 leituras de cabo, cara de
+> temporizador) contra **0,01-0,02 s no rádio**. Nenhum retry em 102 leituras
+> somando as duas corridas da tarde. A medição, a ressalva e a explicação de como
+> a crença nasceu estão em
+> [A TROCA DE BRAÇOS](../process/estudos/2026-08-15-A-TROCA-DE-BRACOS-o-que-so-a-inversao-podia-provar.md).
+> E o número **dezessete** é do descritor do **rádio**: o do cabo declara
+> **vinte e dois**, a união é **vinte e quatro**, e nenhum conjunto é
+> subconjunto do outro.
 
 **E uma décima primeira, da mesma madrugada de 15/08/2026, que é a de maior
 alcance:** esta página descrevia o report de saída como se houvesse **um**, o
@@ -645,9 +660,9 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 >
 > | campo | onde é escrito | grau |
 > |---|---|---|
-> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:1063-1065` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1066-1073`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1070`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
-> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:286-316` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
+> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:1102-1104` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1105-1112`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1109`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
+> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:338-368` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
 >
 > *(Os endereços das duas primeiras linhas foram REAPONTADOS em 13/08/2026: eles
 > apontavam para `:780-782`, `:783-790`/`:789` e `:2695`, que a refatoração do
@@ -667,6 +682,16 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > novas empurraram o `_build_common` para baixo. `:930-932` virou
 > `:1063-1065`, e `:936-941`/`:938` virou `:1066-1073`/`:1070`. As afirmações
 > continuam as mesmas.)*
+>
+> *(REAPONTADOS de novo em 16/08/2026, e desta vez o empurrão veio do próprio
+> áudio: a POSSE-DO-VOLUME-01 acrescentou ao `_PinnedPyDualSense` o volume que
+> nasce em 100% — as três faixas desceram ~39 linhas. `:1063-1065` virou
+> `:1102-1104`, `:1066-1073`/`:1070` virou `:1105-1112`/`:1109`, e o
+> `_byte_da_rota`, que estava em `:286-316`, virou `:338-368`. Quarto reaponte
+> em quatro dias, e nenhuma afirmação mudou em nenhum deles: é exatamente o
+> trabalho que `scripts/validar-citacoes-de-linha.py` existe para tornar
+> barato — sem ele o endereço apodrece calado, e o próximo a ler abre o arquivo
+> no lugar errado e conclui que a afirmação é falsa.)*
 >
 > **E a medição da curva caducou junto, que é o efeito mais caro deste
 > parágrafo.** O *"mudo até 38, satura em 102"* foi levantado **sem** o
@@ -1387,6 +1412,19 @@ foram lidos, **nos quatro** DualSense dela, **por rádio**, com retry e com
 validação de id. O que segue é o resultado, e nenhum byte foi escrito em
 controle nenhum para obtê-lo.
 
+> **ESCOPO, medido na troca de braços de 15/08/2026, 19h — e é o que impede de
+> citar "dezessete" como número do aparelho.** O **descritor é do TRANSPORTE**,
+> não da unidade: **o rádio declara 17, o cabo declara 22, a união é 24**, e
+> **nenhum conjunto é subconjunto do outro**. Sete só existem no cabo (`0x0a`,
+> `0x0c`, `0x21`, `0x84`, `0x85`, `0xa0`, `0xe0`) e dois só no rádio (`0xf6`,
+> `0xf7`). Isso foi medido com os **mesmos quatro aparelhos** nos **dois**
+> braços: as duas listas são as mesmas antes e depois da troca. **Não existe "a
+> lista dos feature reports do DualSense" — existe uma por transporte.** E dos
+> sete exclusivos do cabo, **cinco devolvem `EPIPE`** na leitura (`0x0a`,
+> `0x0c`, `0x21`, `0x84`, `0xa0`): o descritor promete, o firmware não entrega.
+> Ver
+> [A TROCA DE BRAÇOS](../process/estudos/2026-08-15-A-TROCA-DE-BRACOS-o-que-so-a-inversao-podia-provar.md).
+
 ### O instrumento, declarado — porque instrumento mente mais que produto
 
 - **Transporte:** Bluetooth nos quatro. Os quatro tinham sido re-pareados do zero
@@ -1495,6 +1533,21 @@ uma hipótese que já esteve escrita nesta casa.
 **3 s** do BlueZ. Cada falha custa **3,2 a 3,7 s** de relógio de parede — e essa
 assinatura de tempo é o que identifica o caso: se a leitura demorou três
 segundos e voltou vazia, foi timeout de transporte, **não** é feature ausente.
+
+> **SUBSTITUIÇÃO DE FATO — 15/08/2026, 19h.** Esta seção deixava entender que
+> 3,2-3,7 s era o **custo de ler por rádio**. É o custo **da falha**, e a falha
+> é a exceção. **Medido com os mesmos quatro aparelhos nos dois braços, 78
+> leituras: o cabo custa 0,21 s por leitura (`min = max = 0,21` em 44 leituras de cabo)
+> e o rádio custa 0,01-0,02 s — o rádio é ~20× MAIS RÁPIDO que o cabo para ler
+> feature.** Somando as 24 leituras da corrida das 17h32, são **102 leituras sem
+> um único retry**, e o 0,21 s do cabo **reproduz nas duas corridas com pares de
+> unidades diferentes no fio**. O timeout de 3 s **existe** e foi observado na manhã do
+> mesmo dia; o que caiu é que ele seja o regime normal. **O retry é seguro de
+> vida, não pedágio** — a regra 1 abaixo fica inteira, e o `feature_retries` do
+> DKMS desta árvore continua justificado. Quem **orçar** 3 s por leitura desenha
+> o ensaio em cima de um custo que não existe. A medição e a explicação de como
+> a crença nasceu estão em
+> [A TROCA DE BRAÇOS](../process/estudos/2026-08-15-A-TROCA-DE-BRACOS-o-que-so-a-inversao-podia-provar.md).
 
 Daí as duas regras, e nenhuma delas é opcional:
 
