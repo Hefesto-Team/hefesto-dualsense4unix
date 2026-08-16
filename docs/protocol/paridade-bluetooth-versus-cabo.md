@@ -47,7 +47,7 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 | **Player-LEDs** | sim | sim, pelo mesmo caminho | sim | **MEDIDO AO VIVO** |
 | **Gatilhos adaptativos** | sim | sim, **sem ramo de transporte** — o `common` é idêntico nos dois envelopes | com preset aplicado | **MEDIDO AO VIVO** (*"l2 funciona"*, 03/08) |
 | **Rumble** | sim (kernel implementa rumble + CRC-32 do BT) | sim, **zero gate de transporte** | exige o vpad | **MEDIDO AO VIVO** (03/08 — vibrou e parou); os dois motores separados e o zero que para de verdade, **medidos no rádio em 10/08**; a vibração que o **jogo** manda ao nó físico, **medida nos dois transportes em 11/08** — ver a nota |
-| **Giroscópio / acelerômetro** | sim | sim, cópia byte a byte da janela de motion | sim, com o vpad uhid | **taxa do aparelho MEDIDA em 11/08:** cabo 250,0 Hz exatos, rádio variável em rajadas (ver abaixo). Chegada ao **jogo**: continua não medida, nos dois transportes |
+| **Giroscópio / acelerômetro** | sim | sim, cópia byte a byte da janela de motion | sim, com o vpad uhid | **taxa do aparelho MEDIDA em 11/08 e DESCONFUNDIDA em 15/08:** cabo 250,0 Hz exatos, rádio variável em rajadas (ver abaixo, e a nota da troca de braços). Chegada ao **jogo**: continua não medida, nos dois transportes |
 | **Touchpad (dedo e clique)** | sim | sim, mesma janela + `payload[9] & 0x02` | sim | **IMPLEMENTADO, NÃO MEDIDO** em jogo |
 | **Microfone** | **sim** — Opus em HID | **sim, inteiro** (`integrations/dualsense_bt_audio.py`) | **não** — opt-in por privacidade e banda | **MEDIDO AO VIVO** (WAV em 25/07 e em 03/08) |
 | **Alto-falante — volume/rota/pré-amp** | sim (são registradores no `common`) | sim, sem gate de transporte | só depois do primeiro `speaker.set` | **IMPLEMENTADO, NÃO MEDIDO** |
@@ -87,6 +87,37 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 ## As três diferenças reais entre os transportes
 
 Tudo o mais é paridade. Estas três não são:
+
+> **NOTA DATADA — 15/08/2026, 19h: a TROCA DE BRAÇOS, e por que ela vale mais
+> que qualquer linha nova nesta página.** Até essa hora, **toda** comparação
+> cabo × rádio desta casa comparava **aparelhos diferentes** ao mesmo tempo que
+> comparava **transportes** — inclusive as medições que sustentam esta seção.
+> Ela desplugou os dois do cabo e religou por rádio, plugou os dois do rádio no
+> cabo, e os **mesmos quatro** aparelhos passaram pelos **dois** braços com
+> minutos de diferença. O que a inversão fixou, e antes só se podia atribuir a
+> *"um braço"*:
+>
+> - **os 250,0 Hz de entrada são do CABO** — quatro de quatro, 5000 relatórios
+>   `0x01` em 20 s, e a variabilidade (157,8 a 381,5 Hz, report `0x31`) é do
+>   **rádio**. Nenhum aparelho escapa de um nem do outro, e a variação **não**
+>   acompanha a unidade;
+> - **a placa de áudio USB segue o BRAÇO**, não a unidade — é o que fecha a
+>   diferença nº 1 abaixo contra a hipótese de que fossem *aquelas duas
+>   unidades* que tivessem placa;
+> - **o descritor HID inteiro segue o BRAÇO.** Sete feature reports só existem
+>   no cabo, dois só no rádio; cabo declara 22, rádio 17, união 24, e nenhum é
+>   subconjunto do outro. **Não existe "a lista dos feature reports do
+>   DualSense" — existe uma por transporte**;
+> - **o custo de `GET_FEATURE` INVERTEU o que esta casa acreditava:** o **cabo**
+>   custa 0,21 s por leitura (`min = max` em 44 leituras de cabo) e o **rádio**
+>   0,01-0,02 s — o rádio é **~20× mais rápido**. O timeout de 3 s do BlueZ
+>   existe e foi observado na manhã do mesmo dia, mas é a exceção: o retry é
+>   **seguro de vida, não pedágio**.
+>
+> O controle positivo é o `hardware_version`, que **não** mudou de aparelho — se
+> tivesse mudado, o instrumento estaria trocando rótulos e nada acima valeria.
+> A página inteira, com o que **não** fechou, está em
+> [A TROCA DE BRAÇOS](../process/estudos/2026-08-15-A-TROCA-DE-BRACOS-o-que-so-a-inversao-podia-provar.md).
 
 ### 1. O canal de áudio é outro — não é o mesmo degradado
 
