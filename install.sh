@@ -2788,18 +2788,23 @@ else
         warn "disable_steam_input.sh falhou — rode: bash scripts/disable_steam_input.sh --apply"
     fi
 
-    # Guard: path unit + timer que reaplicam PSSupport=OFF se a Steam reescrever
-    # o vdf (update/saída). FEAT-STEAM-INPUT-SELF-HEAL-01. Usa --apply-quiet
-    # (nunca fecha a Steam). Units --user, sem sudo.
+    # Guard: path unit + timer que desfazem o que a Steam reescreve no vdf
+    # (update/saída). FEAT-STEAM-INPUT-SELF-HEAL-01 (Steam Input OFF) e
+    # CARONA-NO-GUARD-01 (o wrapper hefesto-launch, na carona do mesmo gatilho:
+    # o instante em que a Steam grava o vdf é o instante em que ela acabou de
+    # sair, que é o ÚNICO em que a reposição sobrevive). Os dois passos adiam
+    # sozinhos se a Steam estiver viva. Units --user, sem sudo.
     USER_UNIT_DIR="${HOME}/.config/systemd/user"
     mkdir -p "${USER_UNIT_DIR}"
     install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.path"  "${USER_UNIT_DIR}/hefesto-steam-input-guard.path"
     install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.timer" "${USER_UNIT_DIR}/hefesto-steam-input-guard.timer"
-    sed "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
+    SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
+    sed -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
+        -e "s#__SENTINELA__#${SENTINELA_PY}#g" \
         "${ROOT_DIR}/assets/hefesto-steam-input-guard.service" > "${USER_UNIT_DIR}/hefesto-steam-input-guard.service"
     if systemctl --user daemon-reload 2>/dev/null \
        && systemctl --user enable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer 2>/dev/null; then
-        printf '      guard do Steam Input habilitado (path + timer 30min)\n'
+        printf '      guard do Steam Input + wrapper habilitado (path + timer 30min)\n'
     else
         warn "não consegui habilitar o guard --user (sessão systemd ausente?) — será pego no próximo login"
     fi
@@ -2877,6 +2882,80 @@ if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     fi
 else
     warn "steam_launch_options.py ausente ou sem python3 — wrapper NÃO aplicado; rode depois: python3 ${LAUNCH_MIGRATE_PY} --apply"
+fi
+
+# ---------------------------------------------------------------------------
+# 11b-ter. Sentinela do wrapper: REPOR quem perdeu, e anotar quem tem
+# ---------------------------------------------------------------------------
+# SENTINELA-WRAPPER-01 (16/08/2026), sem flag como todo o resto. O passo acima
+# põe o wrapper em todo mundo; este REPÕE onde a Steam o comeu depois e ANOTA
+# quem ficou com ele (~/.local/state/hefesto-dualsense4unix/wrapper-visto.json).
+#
+# Sem essa anotação, o produto não tem como distinguir "este jogo PERDEU o
+# wrapper" de "este jogo é novo na biblioteca" — e a diferença é a frase que
+# ela precisava ouvir em 15/08, quando o Pragmata teve a chamada do wrapper
+# SUBSTITUÍDA por `VKD3D_CONFIG=no_upload_hvv %command%` (a Steam guarda UMA
+# linha por jogo e a sobrescreve sem avisar). O daemon estava saudável, o
+# perfil aceso, a luz certa — e o jogo, no Bluetooth, sem controle nenhum.
+#
+# POR QUE REPARAR AQUI, e não só anotar (16/08, 05h)
+# --------------------------------------------------
+# Este passo rodava `--relatorio`, que só OLHA. Anotar um defeito e deixá-lo em
+# pé é o defeito mais caro desta casa ("a casa sabe e o produto não faz"), e o
+# install é o momento em que a cura é mais barata: a Steam costuma estar
+# fechada (o passo 11b acabou de escrever no vdf) e a pessoa está na frente da
+# tela, esperando. O vizinho de trinta linhas abaixo já faz assim há semanas —
+# o 11c não "relata" o Proton fora do pin, ele roda `--ensure` e `--lock`.
+#
+# O reparo PRESERVA o que já estava na linha (é o `migrate_value`, que
+# PREPENDE): o Pragmata volta com o wrapper E com o `VKD3D_CONFIG` que cura o
+# crash de 14/08. Trocar um defeito por outro não é conserto.
+#
+# Ele NUNCA fecha a Steam por conta própria: adia (rc=3) com um jogo aberto ou
+# com a Steam viva, porque a Steam regrava o vdf ao sair e engoliria a edição.
+# Adiar não é falha do install — é a resposta certa, e por isso sai como aviso
+# com o comando na mão, nunca como erro.
+#
+# Idempotente por construção (`WRAPPER_PREFIX in value` pula quem já tem), e o
+# que ela marcou em `jogos_sem_wrapper.txt` fica de fora: o produto não briga
+# com a dona da máquina.
+#
+# CICLO uninstall -> install: o `--strip` do uninstall tira o wrapper de todo
+# mundo, e por isso o uninstall também apaga o `wrapper-visto.json` — sem isso,
+# a instalação seguinte chamaria de REGRESSÃO ("este jogo perdeu o wrapper!")
+# exatamente a remoção que ela pediu. Sem a memória, toda ausência volta como
+# `novo`, o reparo repõe tudo do mesmo jeito, e a memória renasce aqui.
+#
+# O QUE ESTE PASSO NÃO ALCANÇA (medido em 16/08 05h07, e não é hipótese)
+# ----------------------------------------------------------------------
+# O censo lê os TRÊS blocos `apps` do localconfig.vdf como se fossem um só, e a
+# última leitura vence. Só `UserLocalConfigStore/Software/Valve/Steam/apps` é a
+# árvore que a Steam usa; as outras duas foram escritas por nós em 21/07 e são
+# invisíveis para ela. Com o Pragmata quebrado NA árvore viva e o wrapper
+# intacto NA secundária, o censo responde "nada a fazer" e este reparo passa
+# batido. O doctor no fim do install nomeia o jogo assim mesmo — a régua
+# independente está em `check_arvore_canonica_do_wrapper`, e a cura da fusão é
+# do dono de `steam_launch_options.py`.
+step "11b-ter" "Steam: repor o wrapper onde a Steam o apagou (sentinela)"
+LAUNCH_SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
+if [[ -f "${LAUNCH_SENTINELA_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    _sw_rc=0
+    python3 "${LAUNCH_SENTINELA_PY}" --reparar || _sw_rc=$?
+    case "${_sw_rc}" in
+        0)
+            printf '      se um jogo perder o wrapper depois, o doctor e a janela dizem QUAL\n'
+            ;;
+        3)
+            warn "reparo do wrapper ADIADO (Steam ou um jogo aberto) — feche a Steam e rode:"
+            warn "  python3 ${LAUNCH_SENTINELA_PY} --reparar"
+            ;;
+        *)
+            warn "reparo do wrapper falhou (rc=${_sw_rc}) — rode depois: python3 ${LAUNCH_SENTINELA_PY} --reparar"
+            ;;
+    esac
+    unset _sw_rc
+else
+    warn "sentinela_do_wrapper.py ausente ou sem python3 — sem memória de quem tem o wrapper; regressão futura apareceria como 'jogo novo'"
 fi
 
 # ---------------------------------------------------------------------------

@@ -1,10 +1,29 @@
 [Unit]
 # doc: docs/process/sprints/FEAT-STEAM-INPUT-SELF-HEAL-01.md
-Description=Hefesto — reaplica Steam Input PSSupport=OFF (disable_steam_input.sh --apply-quiet)
+# doc: docs/process/sprints/2026-08-16-CARONA-NO-GUARD-01-o-vigia-que-ja-acordava-na-hora-certa.md
+Description=Hefesto — desfaz o que a Steam reescreve no localconfig.vdf (Steam Input OFF, e o wrapper hefesto-launch)
 
 [Service]
 Type=oneshot
-# __SCRIPT__ é substituído pelo install.sh/dsx.sh com o caminho absoluto do repo.
-# --apply-quiet NUNCA fecha a Steam: se ela estiver viva, adia. A reescrita só
-# acontece quando a Steam já saiu (que é justamente quando ela grava o vdf).
+# __SCRIPT__ e __SENTINELA__ são substituídos pelo install.sh/dsx.sh com o
+# caminho absoluto do repo.
+#
+# 1) Steam Input: --apply-quiet NUNCA fecha a Steam: se ela estiver viva, adia.
+#    A reescrita só acontece quando a Steam já saiu (que é justamente quando
+#    ela grava o vdf).
 ExecStart=/usr/bin/env bash __SCRIPT__ --apply-quiet
+#
+# 2) O wrapper hefesto-launch, na carona do MESMO gatilho (CARONA-NO-GUARD-01,
+#    16/08/2026). A Steam guarda UMA linha de LaunchOptions por jogo, e
+#    qualquer coisa escrita nela SUBSTITUI o wrapper em silêncio — medido duas
+#    vezes no PRAGMATA, e o sintoma é traiçoeiro: funciona no cabo, quebra no
+#    rádio, o controle continua vivo e SÓ o jogo não enxerga.
+#
+#    Este é o instante certo para repor, e ele já existia: o momento em que a
+#    Steam reescreve o vdf é o momento em que ela ACABOU DE SAIR. Reparar com a
+#    Steam viva não adianta — ela regrava o arquivo ao fechar e engole a edição.
+#
+#    O `-` na frente é deliberado: `--reparar` devolve 3 quando ADIA (Steam ou
+#    jogo abertos), que é o caso comum e não é falha. Sem ele o guard inteiro
+#    entraria em `failed` toda vez que ela estivesse jogando.
+ExecStart=-/usr/bin/env python3 __SENTINELA__ --reparar
