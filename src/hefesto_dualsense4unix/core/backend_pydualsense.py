@@ -1383,6 +1383,14 @@ class PyDualSenseController(IController):
         # `reconnect()` do poll loop também. Contador, não flag: duas conexões
         # entre duas leituras não podem virar uma.
         self._conexoes_bt_novas = 0
+        # ESCRITOR-CRU-01: quantas vezes o produto PINTOU a barra pelo rádio
+        # desde a última leitura (o `_pintar_por_hidraw_bt`, que é por onde
+        # passam a GUI, a CLI, o perfil e o hotplug). É o segundo SINAL do
+        # gatilho da cor, e existe porque a medição de 16/08 é literal: *"a
+        # barra fica APAGADA depois de cada comando nosso"* — com a Steam
+        # aberta, quem escreve por ÚLTIMO ganha, e hoje quem escreve por
+        # último é ela. Contador, não flag, pela mesma razão do irmão acima.
+        self._pinturas_de_lightbar = 0
         # Protege a mutação de `_handles`/`_primary_key` contra o fan-out de
         # escrita: o daemon roda `connect`/`read_state`/setters em executor
         # multi-thread (max_workers=2). RLock pois um caminho pode reentrar.
@@ -2760,6 +2768,47 @@ class PyDualSenseController(IController):
             self._conexoes_bt_novas = 0
             return n
 
+    def consumir_pinturas_de_lightbar(self) -> int:
+        """Quantas vezes o produto pintou a barra pelo rádio, e zera.
+
+        ESCRITOR-CRU-01 — o segundo sinal do gatilho da cor, irmão do
+        `consumir_conexoes_bt_novas`. Consome pela MESMA razão: o chamador arma
+        o debounce com o número, e uma pintura contada duas vezes viraria uma
+        sequência que nunca fecha.
+
+        **Não conta a reafirmação do próprio gatilho**, e isso é requisito, não
+        detalhe: quem repinta no silêncio é o `reescrever_lightbar_por_hidraw`,
+        que não passa por aqui. Se passasse, cada disparo armaria o gatilho de
+        novo e a cura viraria o martelo que o GUERRA-01 tirou do produto.
+        """
+        with self._io_lock:
+            n = self._pinturas_de_lightbar
+            self._pinturas_de_lightbar = 0
+            return n
+
+    def nos_hidraw_por_uniq(self) -> dict[str, str]:
+        """`{uniq: /dev/hidrawN}` dos DualSense abertos AGORA (só leitura).
+
+        ESCRITOR-CRU-01: é o endereço com que a sonda de `/proc` pergunta
+        "quem mais segura este controle?", e é o mesmo `_pinned_path` que o
+        `hidraw_path` já devolve por controle — aqui em forma de mapa, para
+        que o vigia do daemon e a aba Status não façam N chamadas nem
+        re-enumerem nada. Handle sem MAC ou com path de libusb fica de fora
+        (não há como cruzar com o `/proc`, e inventar um nó seria pior que
+        não responder).
+        """
+        with self._io_lock:
+            keys = list(self._handles)
+        saida: dict[str, str] = {}
+        for key in keys:
+            uniq = self._key_to_uniq(key)
+            if uniq is None:
+                continue
+            no = self.hidraw_path(uniq)
+            if no:
+                saida[uniq] = no
+        return saida
+
     def reescrever_lightbar_por_hidraw(self) -> dict[str, bool]:
         """Repinta cor E número de jogador em TODOS os DualSense do rádio.
 
@@ -3051,6 +3100,11 @@ class PyDualSenseController(IController):
         except Exception as exc:
             logger.debug("lightbar_hidraw_bt_falhou", op=what, key=key, err=str(exc))
             return False
+        # ESCRITOR-CRU-01: este é o "comando nosso" da medição de 16/08. Só
+        # conta a escrita que SAIU (o `except` acima não chega aqui): armar o
+        # gatilho por uma escrita que falhou seria reafirmar em cima de nada.
+        with self._io_lock:
+            self._pinturas_de_lightbar += 1
         logger.debug(
             "lightbar_hidraw_bt_escrito",
             op=what,

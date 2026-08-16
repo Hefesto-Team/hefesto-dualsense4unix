@@ -1066,6 +1066,14 @@ def rotulo_lightbar(
     * ``native_mode`` global → "em Nativo o jogo é dono do LED"; o accent usa
       a última cor conhecida (ou o neutro, se nenhuma). O jogo escreve por
       hidraw e o daemon não pisa no LED — o card avisa em vez de mentir.
+    * ``lightbar_disputada`` (ESCRITOR-CRU-01) → "a Steam também escreve
+      nesta barra"; o accent segue a última cor NOSSA. Vem logo depois do
+      Nativo e antes de tudo o mais porque é um aviso sobre a CONFIANÇA no
+      valor, não sobre o valor: com a Steam segurando o hidraw, o que a
+      classe LED devolve é o que o Hefesto PEDIU — a madrugada de 16/08 leu
+      ``[0 255 0]`` com a barra apagada e ``[0 255 0]`` com ela verde. Dizer
+      "apagada" ou pintar a bolinha de verde sem ressalva seria, nos dois
+      casos, afirmar o que ninguém mediu.
     * ``lightbar_source == "desconhecida"`` (ou rgb ausente) → "Lightbar: cor
       desconhecida" + accent neutro. NUNCA "apagada": o 0,0,0 do sysfs sem
       escrita nossa pode ser o azul-kernel brilhando neste exato momento.
@@ -1079,6 +1087,8 @@ def rotulo_lightbar(
     rgb = _rgb3(entry.get("lightbar_rgb"))
     if bool(state_global.get("native_mode")):
         return ("Em Nativo o jogo é dono do LED", rgb)
+    if bool(entry.get("lightbar_disputada")):
+        return ("A Steam também escreve nesta barra", rgb)
     fonte = str(entry.get("lightbar_source") or "desconhecida")
     if fonte == "desconhecida" or rgb is None:
         return ("Lightbar: cor desconhecida", None)

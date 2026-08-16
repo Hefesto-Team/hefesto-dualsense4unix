@@ -105,6 +105,11 @@ class DaemonProtocol(Protocol):
     # GATILHO-DA-COR-01: `core.gatilho_fim_de_sequencia.RegistroDeGatilhos` —
     # as reafirmações "no fim da sequência" por nome — ou None até o 1º uso.
     _registro_de_gatilhos: Any
+    # ESCRITOR-CRU-01: `core.escritor_cru.SentinelaDeEscritorCru` — a última
+    # foto de quem segura o hidraw de cada controle (a Steam), ou None até o
+    # 1º uso. Único por daemon: é a MESMA foto que arma o gatilho da cor e que
+    # a aba Status mostra.
+    _sentinela_de_escritor_cru: Any
 
     # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.

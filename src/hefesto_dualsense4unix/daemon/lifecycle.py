@@ -628,6 +628,14 @@ class Daemon:
     # do sinal de jogo, e o co-op quando ele entrar) e UM SÓ relógio. Criado
     # sob demanda por `connection.registro_de_gatilhos_de`.
     _registro_de_gatilhos: Any = None
+    # ESCRITOR-CRU-01: o `core.escritor_cru.SentinelaDeEscritorCru` deste
+    # daemon — a última FOTO de quem mais segura o `hidraw` de cada controle
+    # (hoje só a Steam é reconhecida) —, ou None até a primeira consulta. Mora
+    # aqui pela mesma razão do registro acima: quem SONDA é o tique do
+    # `reconnect_loop` e quem LÊ é também a aba Status, e duas fotos dariam
+    # duas verdades sobre a mesma mesa. Criado sob demanda por
+    # `connection.sentinela_de_escritor_cru_de`.
+    _sentinela_de_escritor_cru: Any = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público

@@ -1433,6 +1433,16 @@ if [[ -d "${HOME}/.local/state/hefesto-dualsense4unix/launch_env" ]]; then
     log "removendo materialização de launch (~/.local/state/hefesto-dualsense4unix/launch_env)"
     rm -rf "${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
 fi
+# SENTINELA-WRAPPER-01: a memória de "quais jogos estão com o wrapper" é
+# estado NOSSO e sai junto — o `--strip` acima já tirou o wrapper do vdf, então
+# manter o registro faria a próxima instalação chamar de REGRESSÃO ("este jogo
+# perdeu o wrapper!") exatamente a remoção que o uninstall acabou de fazer.
+# O `jogos_sem_wrapper.txt` NÃO sai: é escolha DELA sobre a biblioteca dela, e
+# vale de novo no dia em que ela reinstalar.
+if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/wrapper-visto.json" ]]; then
+    log "removendo o registro do wrapper (~/.local/state/hefesto-dualsense4unix/wrapper-visto.json)"
+    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/wrapper-visto.json"
+fi
 # TECLADO-QUE-NAO-DIGITA-01: o PACOTE do teclado na tela (wvkbd / onboard) NÃO
 # sai daqui. É pacote de SISTEMA, instalado pelo gerenciador da distribuição, e
 # pode estar servindo a qualquer outra coisa da máquina dela — remover seria o
