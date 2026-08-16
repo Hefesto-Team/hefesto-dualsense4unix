@@ -821,11 +821,30 @@ def _injetar_card(builder) -> str:  # type: ignore[no-untyped-def]
     card.update(_ENTRY, estado, LeituraMic(nivel=0.6, muted=False))
     # Um volume conhecido, para o bloco do alto-falante não sair no estado
     # "sem dado" — que é o menos informativo dos possíveis.
+    #
+    # A chave vai na RAIZ do entry, e não dentro de `audio`. Até 16/08/2026 ela
+    # estava em `audio`, onde o `speaker_do_entry` não olha (ele aceita a raiz
+    # ou `inputs`) — e a foto vinha saindo com o bloco em "Alto-falante" seco,
+    # exatamente o estado que esta linha existe para evitar. Defeito do
+    # instrumento, não do produto, e o sintoma era a AUSÊNCIA de dado na foto.
+    #
+    # 255 é o volume que o produto passou a pôr sozinho em todo controle
+    # (decisão dela: *"setar o som sempre em todos os controles no 100%"*), e é
+    # o que a foto tem de mostrar — o padrão, não um número de exemplo.
     card.update(
-        {**_ENTRY, "audio": {"speaker": {"volume": 180, "muted": False}}},
+        {**_ENTRY, "speaker": {"volume": 255, "muted": False}},
         estado,
         LeituraMic(nivel=0.6, muted=False),
     )
+    # SOM-ACORDADO-01: o outro estado que a aba passou a mostrar. Na foto ele
+    # vem CRAVADO, e não lido do PipeWire desta máquina: este script nunca fala
+    # com o sistema vivo (ver "PRIVACIDADE", no cabeçalho), e um retrato que
+    # mudasse conforme o áudio de quem o roda não seria documentação.
+    definir_canal = getattr(card, "definir_estado_do_canal", None)
+    if definir_canal is not None:
+        from hefesto_dualsense4unix.app.audio_saida import CANAL_ACORDADO
+
+        definir_canal(CANAL_ACORDADO, regra_instalada=True)
     return "card do controle injetado na aba Status"
 
 
