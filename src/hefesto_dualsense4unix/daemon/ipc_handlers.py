@@ -2440,6 +2440,31 @@ class IpcHandlersMixin:
                 # player_count() devolver um mock não-serializável.
                 "players": players_raw if isinstance(players_raw, int) else 1,
             }
+            # QUEM-É-QUEM-01 (15/08/2026) — o número vira TABELA.
+            # `players: 4` responde "quantos"; nunca respondeu "quem". Com os
+            # quatro controles dela na mesa, "o vpad do jogador 2 é alimentado
+            # por qual controle?" só se respondia apertando botão em cada um,
+            # quatro vezes, à mão — e o daemon SABIA a resposta o tempo todo (é
+            # ele que cria cada vpad a partir de um físico). A lista sai de
+            # `CoopManager.mesa`, que documenta o contrato de cada campo, a
+            # decisão de privacidade do MAC e a E3 (`nome_divergente`).
+            #
+            # `players` FICA, e não é redundância: ele é lido pela CLI, pelo
+            # applet e por `status_actions` desde a FEAT-DSX-COOP-LOCAL-01, e
+            # continua sendo a contagem barata. O que muda é que agora existe
+            # a lista ao lado — a chave nova nunca substitui a velha.
+            #
+            # Lista SEMPRE presente (vazia no pior caso): shape estável para
+            # GUI/CLI/applet, que assim nunca precisam distinguir "daemon
+            # antigo" de "mesa vazia" — e uma lista vazia já diz a verdade.
+            result["coop"]["mesa"] = []
+            if coop_mgr is not None:
+                with contextlib.suppress(Exception):
+                    mesa = coop_mgr.mesa()
+                    if isinstance(mesa, list):
+                        result["coop"]["mesa"] = [
+                            item for item in mesa if isinstance(item, dict)
+                        ]
             # EXT-COUNT-01 (25/07): quantos controles EXTERNOS (Nintendo Pro,
             # 8BitDo…) o daemon numerou mas NÃO adota. `coop.players` conta só
             # quem tem vpad do hefesto — com 2 DualSense e 2 Pro vivos ele diz
@@ -2568,6 +2593,10 @@ class IpcHandlersMixin:
             ff_estranhos = 0
             ff_last: tuple[int, int] = (0, 0)
             per_vpad: list[dict[str, Any]] = []
+            from hefesto_dualsense4unix.daemon.subsystems.coop import (
+                identidade_do_vpad,
+            )
+
             for player_num, vp, motion_reader in vpads:
                 with contextlib.suppress(Exception):
                     ff_plays += int(getattr(vp, "ff_play_count", 0) or 0)
@@ -2596,9 +2625,24 @@ class IpcHandlersMixin:
                     # um MagicMock nunca vira True/taxa fantasma no payload.
                     streaming = getattr(vp, "motion_streaming", False)
                     hz_raw = getattr(motion_reader, "emit_hz", 0.0)
+                    # QUEM-É-QUEM-01 / E2: o bloco passa a carregar a IDENTIDADE
+                    # do nó — `vpad_uniq` (o `02:fe:…` que sai no `HID_UNIQ` do
+                    # sysfs), `vpad_nome` e `vpad_indice`. O objeto sempre soube
+                    # os três e nunca os publicava, e por isso `player` era a
+                    # única ponte entre esta lista e `controllers[]`: um inteiro
+                    # que não diz em que dispositivo do kernel olhar. Vem da
+                    # MESMA função que monta o `coop.mesa` — duas descrições do
+                    # mesmo vpad se afastariam na primeira mudança. O
+                    # `vpad_backend` dela é descartado aqui: `backend`, logo
+                    # abaixo, já é esse mesmo fato com o nome que esta lista
+                    # sempre usou.
+                    identidade = identidade_do_vpad(vp)
                     per_vpad.append(
                         {
                             "player": player_num,
+                            "vpad_uniq": identidade["vpad_uniq"],
+                            "vpad_nome": identidade["vpad_nome"],
+                            "vpad_indice": identidade["vpad_indice"],
                             "backend": backend if isinstance(backend, str) else None,
                             "ff_play_count": int(getattr(vp, "ff_play_count", 0) or 0),
                             # RUMBLE-QUE-NAO-SE-SENTE-01: `ff_play_count` sobe

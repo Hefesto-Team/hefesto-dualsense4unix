@@ -3,11 +3,19 @@
 
 A PERGUNTA QUE ELE RESPONDE
 ----------------------------
-*Qual controle físico é qual jogador?* Hoje isso **não é observável pelo estado
-publicado**: o `state_full` traz `coop.players` como um NÚMERO (4), não como uma
-lista, e não diz qual vpad corresponde a qual MAC. Foi por isso que, em
-15/08/2026, a pergunta "o vpad e o físico correspondem?" só pôde ser respondida
-apertando botão em cada controle — quatro vezes, à mão.
+*Qual controle físico é qual jogador?* Este instrumento nasceu em 15/08/2026
+porque isso **não era observável pelo estado publicado**: o `state_full` trazia
+`coop.players` como um NÚMERO (4), não como lista, e a pergunta "o vpad e o
+físico correspondem?" só pôde ser respondida apertando botão em cada controle —
+quatro vezes, à mão.
+
+FATO SUBSTITUÍDO (15/08/2026, QUEM-ALIMENTA-QUEM-01): o produto passou a
+publicar `coop.jogadores` — uma LISTA com, por jogador, o MAC do físico, o
+`vpad_uniq` (o MAC forjado `02:fe:…` que o `HID_UNIQ` do vpad carrega) e o
+backend. **Com um daemon novo, `hefesto coop status --json` responde a ligação
+vpad↔MAC sem apertar nada.** Este instrumento continua valendo por outra razão:
+ele mede o aparelho por FORA (sysfs, LED aceso), e é assim que se confere se o
+que o daemon PUBLICA bate com o que o kernel MOSTRA.
 
 Este instrumento resolve por sysfs **tudo o que sysfs resolve**, e diz com todas
 as letras o que sobra — em vez de deixar o buraco calado, que é o defeito que
@@ -39,9 +47,12 @@ escreve — o defeito medido em 15/08/2026, que outro agente está curando em
 
 O QUE SÓ SE RESOLVE APERTANDO BOTÃO — e por quê
 ------------------------------------------------
-**A ligação vpad ↔ MAC.** Nenhum arquivo de `/sys` a carrega: o vpad é criado
-pelo produto via `/dev/uhid` e não guarda ponteiro para o controle que o
-alimenta. E há um agravante medido: com o co-op ativo, o daemon faz `EVIOCGRAB`
+**A ligação vpad ↔ MAC, por SYSFS.** Nenhum arquivo de `/sys` a carrega: o vpad
+é criado pelo produto via `/dev/uhid` e não guarda ponteiro para o controle que
+o alimenta. (Quem a carrega agora é o daemon, em `coop.jogadores` — ver acima;
+o que segue vale para conferir o daemon por fora, ou com ele parado.)
+
+E há um agravante medido: com o co-op ativo, o daemon faz `EVIOCGRAB`
 nos nós FÍSICOS, então um leitor externo não vê botão nenhum vindo deles — só
 dos vpads. Logo:
 
@@ -370,10 +381,11 @@ def main() -> int:
         tabela_dos_vpads(saidas)
 
     print()
-    print("  O QUE ESTA TABELA NÃO RESOLVE, e é honesto dizer:")
+    print("  O QUE ESTA TABELA NÃO RESOLVE POR SYSFS, e é honesto dizer:")
     print("    - qual vpad é alimentado por qual MAC. Nenhum arquivo de /sys carrega")
-    print("      essa ligação, e o `state_full` publica `coop.players` como um NÚMERO,")
-    print("      não como lista. Use --apertar, ou torne o estado publicado mais rico.")
+    print("      essa ligação. Quem a carrega é o daemon, desde 15/08/2026:")
+    print("      `hefesto coop status --json` traz `coop.jogadores` (MAC do físico +")
+    print("      `vpad_uniq`). Aqui, use --apertar — ou compare com aquela lista.")
 
     if avisos:
         print()
@@ -392,7 +404,8 @@ def main() -> int:
         f"{len(alvos)} físico(s) e {len(saidas)} vpad(s) resolvidos por sysfs; "
         f"LED lido em {len(validos)}/{len(alvos)} ({', '.join(sorted(validos)) or '-'}) "
         f"contra vpads {', '.join(numeros_dos_vpads) or '-'}. "
-        "A ligação vpad↔MAC continua NÃO observável sem apertar botão."
+        "A ligação vpad↔MAC não sai do sysfs: use --apertar, ou "
+        "`hefesto coop status --json` (`coop.jogadores`, desde 15/08/2026)."
     )
     print(resumo(veredito))
     return 0
