@@ -64,8 +64,8 @@ import os
 import shutil
 import subprocess
 import threading
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from typing import Any, Final, NamedTuple
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -250,6 +250,129 @@ def sink_padrao_da_saida(saida_pactl: str) -> str:
     return ""
 
 
+#: O canal está aberto no PipeWire — o próximo som sai do primeiro
+#: milissegundo. Cobre `RUNNING` (há fluxo) e `IDLE` (não há fluxo, mas o nó
+#: continua aberto): nos dois o hardware NÃO precisa ser religado, e é o
+#: religar que come o começo do som.
+CANAL_ACORDADO: Final[str] = "acordado"
+#: `SUSPENDED` — o PipeWire soltou o hardware por ociosidade.
+CANAL_DORMINDO: Final[str] = "dormindo"
+#: Não há linha para este sink, ou a última coluna não é um estado conhecido.
+#: "" é **não sei**, e é o que mantém a tela calada em vez de chutar.
+CANAL_SEM_LEITURA: Final[str] = ""
+
+#: O vocabulário do `pactl`, traduzido para o desta casa. Os nomes vêm da
+#: última coluna de `pactl list sinks short`, que NÃO é traduzida (o runner
+#: força `LC_ALL=C` de todo jeito).
+_ESTADOS_DO_PACTL: Final[dict[str, str]] = {
+    "RUNNING": CANAL_ACORDADO,
+    "IDLE": CANAL_ACORDADO,
+    "SUSPENDED": CANAL_DORMINDO,
+}
+
+
+def estados_crus_dos_sinks(saida_pactl: str) -> dict[str, str]:
+    """``{nome do sink: ESTADO cru do pactl}``. **O único parser da coluna.**
+
+    Existe para não haver dois. Esta casa já pagou por leitores paralelos do
+    mesmo dado (os três escritores de perfil, os dois leitores de PipeWire), e
+    aqui a coluna de estado tem DOIS consumidores com necessidades diferentes:
+    :func:`estados_dos_sinks` quer o vocabulário da tela e
+    :func:`sono_dos_sinks_do_controle` quer o literal do `pactl` para decidir
+    se a regra do WirePlumber pegou. Um parser, duas vistas.
+
+    O formato é ``índice nome driver formato ESTADO``, separado por TAB e não
+    traduzido. Linha com menos de cinco campos é descartada: sem a quinta
+    coluna, o "último campo" seria o driver, e ``PipeWire`` lido como estado é
+    exatamente o tipo de leitura que produz alarme convincente e falso.
+    """
+    fora: dict[str, str] = {}
+    for linha in saida_pactl.splitlines():
+        partes = linha.split("\t")
+        if len(partes) < 5:
+            continue
+        nome = partes[1].strip()
+        if nome:
+            fora[nome] = partes[-1].strip().upper()
+    return fora
+
+
+def estados_dos_sinks(saida_pactl: str) -> dict[str, str]:
+    """``{nome do sink: acordado|dormindo}`` de `pactl list sinks short`.
+
+    SOM-ACORDADO-01, 15-16/08/2026 — a segunda medição da madrugada, e a que
+    ela transformou em pergunta de produto: *"como garantimos durante um jogo
+    que o som sempre saia?"*.
+
+    O que foi medido, com a orelha dela, no cabo, mesmo arquivo e mesma rota:
+
+    ==================================  ==========================
+    passada                             ela relatou
+    ==================================  ==========================
+    canal 1 sozinho, nó OCIOSO          "não saiu"
+    os quatro timbres logo depois       "saiu no controle"
+    canal 1 sozinho, nó já ACORDADO     "tuuuuuuuu"
+    ==================================  ==========================
+
+    Nada mais mudou entre as três. **O PipeWire suspende o nó ocioso, e o
+    religar do hardware come o começo do som** — três leituras da primeira
+    rodada foram descartadas por causa disto antes de alguém entender o que
+    estava acontecendo.
+
+    A leitura é a última coluna da lista curta::
+
+        35872<TAB>alsa_output.usb-...analog-surround-40<TAB>PipeWire<TAB>\
+s16le 4ch 48000Hz<TAB>SUSPENDED
+
+    **Só o que estiver no vocabulário conhecido conta.** Um nome de sink na
+    última coluna (linha curta, formato de outra versão do `pactl`) seria lido
+    como estado e viraria "não sei" — que é o certo. Inventar "acordado" a
+    partir de uma coluna que não reconhecemos seria a tela prometendo que o
+    som sai inteiro.
+    """
+    fora: dict[str, str] = {}
+    for nome, cru in estados_crus_dos_sinks(saida_pactl).items():
+        estado = _ESTADOS_DO_PACTL.get(cru, CANAL_SEM_LEITURA)
+        if estado:
+            fora[nome] = estado
+    return fora
+
+
+def estado_do_canal(saida_pactl: str, sink: str) -> str:
+    """Estado de UM sink; ``""`` quando não há linha dele ou não dá para ler."""
+    if not sink:
+        return CANAL_SEM_LEITURA
+    return estados_dos_sinks(saida_pactl).get(sink, CANAL_SEM_LEITURA)
+
+
+def acordar_sink(sink: str, *, runner: Callable[[list[str]], str] | None = None) -> bool:
+    """Tira o sink da suspensão ANTES de alguém tocar nele. Best-effort.
+
+    Devolve ``True`` quando o sink terminou **acordado** — conferido relendo a
+    lista, e não pela ausência de erro do `pactl`, que é a mesma disciplina do
+    :meth:`RotaDeSaida._trocar` (a janela que acredita na própria escrita é a
+    janela que mente na tela).
+
+    **Por que isto não atropela escolha dela.** `set-sink-suspend 0` não muda
+    volume, não muda rota, não muda o sink padrão e não desfaz mudo: ele só
+    impede que o PipeWire solte o hardware. Quem chega aqui é um gesto que
+    pede som NAQUELE controle — e a suspensão não é opinião sobre esse pedido,
+    é ociosidade.
+
+    **Por que ela é a cura certa para o bipe curto.** O som de confirmação
+    desta janela tem **67 ms** (`audio-volume-change.oga`, o mais curto dos
+    candidatos, escolhido de propósito para não atrapalhar quem ajusta o
+    volume). Num nó suspenso, "o começo do som" é o som inteiro.
+    """
+    if not sink:
+        return False
+    rodar = runner if runner is not None else rodar_leitura
+    rodar(["pactl", "set-sink-suspend", sink, "0"])
+    return estado_do_canal(
+        rodar(["pactl", "list", "sinks", "short"]), sink
+    ) == CANAL_ACORDADO
+
+
 def apelido_do_sink(nome: str) -> str:
     """Pedaço legível do nome de um sink, para caber numa dica.
 
@@ -393,10 +516,11 @@ def tocar_confirmacao(
 
     1. **desligado** pela chave dela: sai sem dizer nada;
     2. **ocupado**: já há um som tocando; o antirrajada;
-    3. **sem sink**: nome vazio. Com mais de um controle o
-       ``mic_monitor.escolher_sink`` devolve ``None`` de propósito (o ``-00``
-       do nome é desempate posicional do PipeWire, não identidade), e é isso
-       que chega aqui como "";
+    3. **sem sink**: nome vazio. É o que chega quando o
+       ``mic_monitor.escolher_sink`` não fecha o casamento — pelo RÁDIO o
+       DualSense não publica placa de som nenhuma (medido 15/08/2026: a placa
+       segue o transporte). No cabo ele fecha, mesmo com quatro controles, pelo
+       dispositivo USB em que a placa e o HID penduram juntos;
     4. **saída muda** (a camada 1): tocar aqui gastaria um processo para
        produzir silêncio e ela leria o silêncio como defeito do controle;
     5. **o sink não está na lista viva** — a guarda que o cabeçalho deste
@@ -408,6 +532,31 @@ def tocar_confirmacao(
 
     Nenhum caminho devolve "deu certo" sem ter tocado, e nenhum falha calado:
     todo motivo que não seja escolha dela carrega um recado para a tela.
+
+    REGRESSÃO-DO-BIPE-01, 16/08/2026 — *"hoje em dia na interface nem por cabo
+    esse bip tá saindo"*, tendo saído antes. **O passo 6.5 é a cura**: com o
+    sink DORMINDO, este som não tinha como sair.
+
+    Os degraus 1 a 7 conferiam tudo menos o único estado do sistema que
+    silencia um som de 67 ms — o nó suspenso. E os dois lados da conta são
+    medidos, cada um do seu lado:
+
+    * o arquivo escolhido tem **0,067 s** (ver :data:`_CANDIDATOS_DE_SOM`, e o
+      "mais curto dos candidatos" é escolha registrada, não acaso);
+    * o PipeWire suspende o nó ocioso, e **o religar do hardware come o começo
+      do som** — medido com a orelha dela em 15-16/08/2026, no cabo, mesmo
+      canal, mesmo volume e mesma rota: "não saiu" com o nó ocioso, "tuuuuuuuu"
+      com ele acordado (ver :func:`estados_dos_sinks`).
+
+    Num som de 67 ms, "o começo" é o som inteiro. E a suspensão é o estado
+    NORMAL entre dois gestos dela: os dois sinks de DualSense desta bancada
+    estavam `SUSPENDED` na leitura desta data, com os controles ligados no
+    cabo. Nada disto aparecia como falha — o `paplay` abria o fluxo, saía com
+    zero, e o tocador devolvia :data:`MOTIVO_TOCOU`.
+
+    O acordar entra DEPOIS das recusas baratas, de propósito: quem não vai
+    tocar não paga por ele. E ele só roda quando a lista viva — já lida no
+    degrau 5, sem subprocesso a mais — disser `SUSPENDED`.
     """
     if ligado is None:
         ligado = som_ligado()
@@ -421,7 +570,8 @@ def tocar_confirmacao(
         if saida_muda is True:
             return ResultadoDoSom.de(MOTIVO_SAIDA_MUDA, sink)
         ler = runner if runner is not None else rodar_leitura
-        if sink not in nomes_de_sinks(ler(["pactl", "list", "sinks", "short"])):
+        lista_viva = ler(["pactl", "list", "sinks", "short"])
+        if sink not in nomes_de_sinks(lista_viva):
             # A guarda-mãe deste módulo. Ver o cabeçalho: os dois tocadores
             # aceitam sink inexistente, saem com zero e tocam no PADRÃO.
             return ResultadoDoSom.de(MOTIVO_SEM_SINK, sink)
@@ -431,6 +581,11 @@ def tocar_confirmacao(
         argv = argv_do_tocador(sink, arquivo, achar=achar)
         if not argv:
             return ResultadoDoSom.de(MOTIVO_SEM_TOCADOR, sink)
+        # REGRESSÃO-DO-BIPE-01 — o degrau 6.5. A lista já está lida (degrau 5):
+        # o estado sai dela sem um subprocesso a mais, e o `set-sink-suspend`
+        # só roda no caso que precisa dele.
+        if estados_dos_sinks(lista_viva).get(sink) == CANAL_DORMINDO:
+            acordar_sink(sink, runner=ler)
         rodar = tocador if tocador is not None else _rodar_tocador
         if rodar(argv) != 0:
             return ResultadoDoSom.de(MOTIVO_FALHOU, sink)
@@ -466,9 +621,9 @@ TEXTO_ROTA_VOLTAR: Final[str] = "Voltar ao anterior"
 #: é uma cópia de :data:`DICA_ROTA_PARA_O_CONTROLE`: nos dois primeiros
 #: segundos a janela ainda não sabe onde o som está, e prometer "manda para o
 #: controle" ali seria afirmar a ação de um botão que pode nascer insensível
-#: (mais de um DualSense, ou som já no controle sem memória de quem o pôs lá).
-#: Assim que a leitura chega, `acao_da_rota` troca por uma das três dicas
-#: específicas.
+#: (mais de uma placa na mesa, controle no rádio, ou som já no controle sem
+#: memória de quem o pôs lá). Assim que a leitura chega, `acao_da_rota` troca
+#: por uma das três dicas específicas.
 DICA_ROTA_INICIAL: Final[str] = (
     "Manda o som do sistema para o alto-falante do controle, e desfaz. O "
     "rótulo do botão diz o que o próximo clique faz, e a dica muda junto com "
@@ -483,22 +638,32 @@ DICA_ROTA_PARA_O_CONTROLE: Final[str] = (
     "Manda o som do sistema INTEIRO para o alto-falante do controle: jogo, "
     "navegador, notificações, tudo. É a mesma troca de saída padrão que as "
     "configurações de som do sistema fazem, e ela continua valendo depois de "
-    "fechar esta janela. A janela guarda a saída de agora para o botão de "
-    "volta."
+    "fechar esta janela. Onde o som sai depois de chegar ao controle — "
+    "alto-falante ou fone — é o canal, no bloco Alto-falante. A janela guarda "
+    "a saída de agora para o botão de volta."
 )
 DICA_ROTA_VOLTAR: Final[str] = (
     "Devolve o som do sistema para {apelido}, que era a saída antes de a "
     "janela mandá-lo para o controle. O alto-falante do controle continua "
-    "existindo: ele só deixa de receber o áudio do sistema."
+    "existindo: ela só deixa de receber o áudio do sistema."
 )
-#: Sem sink atribuível. Com um controle só isso quer dizer que o sistema não
-#: publicou saída nenhuma para ele; com dois ou mais é a recusa DELIBERADA do
-#: `escolher_sink`, e a dica diz por quê em vez de deixar o botão morto e mudo.
+#: Sem alvo ÚNICO para este botão, que é um só e vale para a aba inteira.
+#: Dois motivos, e a dica nomeia os dois em vez de deixar o botão morto e mudo:
+#: o controle está no rádio e não publica placa de som nenhuma (medido em
+#: 15/08/2026 — a placa segue o transporte), ou há mais de uma placa na mesa e
+#: escolher uma seria a janela decidindo em que controle ela quer ouvir.
+#:
+#: O primeiro motivo é FATO NOVO desta data e SUBSTITUIU o texto anterior, que
+#: dizia que sinks de vários DualSense não se distinguem. Eles se distinguem
+#: desde a mesma data, pelo dispositivo USB em que a placa e o HID penduram
+#: juntos (`app/usb_pai.py`) — manter a frase velha faria a próxima pessoa
+#: procurar uma cura que já existe.
 DICA_ROTA_SEM_SINK: Final[str] = (
-    "Não há saída de áudio atribuível a este controle. Com mais de um "
-    "DualSense ligado o sistema publica sinks com o mesmo nome (o número no "
-    "fim é a ordem de conexão, não o número de série do controle) e mandar o "
-    "som para o controle errado é pior que não mandar."
+    "Não há uma saída de áudio única para mandar o som. Pelo rádio o "
+    "DualSense não publica placa de som nenhuma — ela só aparece no cabo. "
+    "Com mais de um controle no cabo há mais de uma placa, e este botão é um "
+    "só: escolher uma por você seria a janela decidindo em que controle o som "
+    "sai. Use o seletor Alto-falante do card do controle que você quer."
 )
 #: O som JÁ está no controle e não fomos nós. Não dá para desfazer o que não
 #: fizemos: qualquer sink que a janela escolhesse aqui seria chute sobre a
@@ -517,12 +682,21 @@ class EstadoDaRota:
     ``anterior`` só tem valor quando **a janela** foi quem mandou o som para o
     controle e o sink guardado ainda existe. É a diferença entre poder desfazer
     e poder chutar.
+
+    ``canais`` é o estado de TODOS os sinks da máquina — acordado ou dormindo —
+    e ele viaja junto porque a leitura é a mesma (SOM-ACORDADO-01). A aba já
+    lê a rota a 0,5 Hz numa thread worker; pendurar aqui o mapa de estados dá
+    o dado a cada card **sem um segundo leitor de PipeWire** e sem um
+    subprocesso por controle: é universal por construção, serve 1 ou 7
+    controles com a mesma leitura, e não depende de MAC, de ordem de conexão
+    nem de o daemon publicar nada.
     """
 
     sink_padrao: str = ""
     sink_do_controle: str = ""
     anterior: str = ""
     no_controle: bool = False
+    canais: Mapping[str, str] = field(default_factory=dict)
 
 
 class AcaoRota(NamedTuple):
@@ -616,23 +790,31 @@ class RotaDeSaida:
         guardado que sumiu (o monitor foi desligado, o dongle saiu) não pode
         virar destino de um clique — voltar para um sink inexistente é o
         `pactl` recusando em silêncio e a janela achando que desfez.
+
+        SOM-ACORDADO-01: a lista viva passou a ser lida SEMPRE, e não só
+        quando o som já está no controle. O custo é UM subprocesso a mais por
+        ciclo de 0,5 Hz, no pior caso — e o que ele compra é o estado de todos
+        os canais de uma vez, para todos os cards, com leitor único. Ler por
+        card seria um `pactl` por controle por ciclo, e a mesa dela tem quatro.
         """
         padrao = sink_padrao_da_saida(self._runner(["pactl", "get-default-sink"]))
         no_controle = bool(sink_do_controle) and padrao == sink_do_controle
+        lista_viva = self._runner(["pactl", "list", "sinks", "short"])
         anterior = ""
         if no_controle:
             guardado = self._ler_memoria()
-            if guardado and guardado != sink_do_controle:
-                vivos = nomes_de_sinks(
-                    self._runner(["pactl", "list", "sinks", "short"])
-                )
-                if guardado in vivos:
-                    anterior = guardado
+            if (
+                guardado
+                and guardado != sink_do_controle
+                and guardado in nomes_de_sinks(lista_viva)
+            ):
+                anterior = guardado
         return EstadoDaRota(
             sink_padrao=padrao,
             sink_do_controle=sink_do_controle,
             anterior=anterior,
             no_controle=no_controle,
+            canais=estados_dos_sinks(lista_viva),
         )
 
     def mandar_para_o_controle(self, sink_do_controle: str) -> bool:
@@ -785,13 +967,121 @@ def _gravar_anterior(sink: str) -> None:
     set_pref(CHAVE_PREF_ROTA_ANTERIOR, sink)
 
 
+# ---------------------------------------------------------------------------
+# SOM-QUE-NAO-DORME-01 — a leitura que a aba Status precisa para dizer se o
+# alto-falante do controle ainda pode dormir.
+#
+# A cura mora fora do Python: é o drop-in 54 do WirePlumber
+# (`assets/wireplumber/54-hefesto-dualsense-alto-falante-nunca-dorme.conf`), que
+# o `install.sh` põe SEM FLAG. O que falta aqui é o que esta casa mais erra —
+# **a casa saber e o produto não mostrar**. Estas funções são a ponte, e são
+# PURAS de propósito: quem lê o `pactl` é o runner de sempre, quem decide o
+# texto não toca em disco nem em processo, e o portão exercita as duas sem
+# hardware nenhum.
+# ---------------------------------------------------------------------------
+
+#: O nome do drop-in, em UM lugar só. O portão compara este literal com o
+#: arquivo que existe em `assets/wireplumber/` — se um for renomeado sem o
+#: outro, a tela passaria a afirmar "pode dormir" com a cura instalada.
+NOME_REGRA_NUNCA_DORME: Final[str] = "54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
+
+#: Estado que o `pactl list sinks short` mostra num nó que o WirePlumber pôs
+#: para dormir. É neste estado que o começo do som se perde (medido na orelha
+#: dela em 15/08/2026 23h45, ensaio `sfx-no-suspenso-come-o-comeco`).
+ESTADO_SUSPENSO: Final[str] = "SUSPENDED"
+
+#: A cura está no lugar e o controle está com a placa de som acordada.
+TEXTO_SONO_ACORDADO: Final[str] = "Alto-falante acordado — o som sai desde o primeiro instante"
+
+#: A cura está no lugar, mas o nó ainda está suspenso: ele nasceu ANTES de o
+#: WirePlumber reler a regra. Não é falha da cura, e o texto diz o que fazer.
+TEXTO_SONO_ATRASADO: Final[str] = (
+    "Alto-falante ainda dormindo — a regra entrou depois deste controle; "
+    "reconecte-o para valer"
+)
+
+#: Não há placa de som do controle na mesa. Não é defeito: por rádio o DualSense
+#: não publica placa ALSA nenhuma (medido em 15/08/2026 — a placa segue o
+#: transporte), e no cabo isto também aparece com o controle desligado.
+TEXTO_SONO_SEM_PLACA: Final[str] = "Sem placa de som do controle (no rádio não existe alto-falante)"
+
+#: A cura foi arrancada. É o estado que a tela TEM de denunciar, porque o
+#: sintoma no jogo é silencioso: o efeito sonoro simplesmente não sai.
+TEXTO_SONO_PODE_DORMIR: Final[str] = (
+    "Alto-falante pode dormir — o primeiro som depois do silêncio se perde"
+)
+
+
+def caminho_regra_nunca_dorme(home: str | None = None) -> str:
+    """Onde o drop-in 54 mora depois de instalado (não garante que exista)."""
+    base = home if home is not None else os.path.expanduser("~")
+    return os.path.join(
+        base, ".config", "wireplumber", "wireplumber.conf.d", NOME_REGRA_NUNCA_DORME
+    )
+
+
+def regra_nunca_dorme_instalada(home: str | None = None) -> bool:
+    """A regra que impede o sono do alto-falante está no lugar?"""
+    return os.path.isfile(caminho_regra_nunca_dorme(home))
+
+
+def sono_dos_sinks_do_controle(saida_pactl: str) -> dict[str, str]:
+    """``{nome do sink do controle: ESTADO}`` a partir de `pactl list sinks short`.
+
+    Quem decide "este sink é de um DualSense" continua sendo
+    ``mic_monitor.sinks_dualsense`` — o dono desse critério nesta janela. Aqui
+    só se acrescenta a coluna que faltava: o ESTADO, que quem lê é
+    :func:`estados_crus_dos_sinks`, o parser único da coluna (SOM-ACORDADO-01
+    juntou os dois que tinham nascido no mesmo dia).
+    """
+    from hefesto_dualsense4unix.app.mic_monitor import sinks_dualsense
+
+    do_controle = set(sinks_dualsense(saida_pactl))
+    return {
+        nome: cru
+        for nome, cru in estados_crus_dos_sinks(saida_pactl).items()
+        if nome in do_controle
+    }
+
+
+def texto_do_sono(instalada: bool, estados: dict[str, str]) -> str:
+    """O que a aba Status escreve, dados os dois fatos que ela consegue saber.
+
+    A ordem das perguntas não é arbitrária: **a cura arrancada vence tudo**. Um
+    nó pode estar acordado por acaso (alguém acabou de tocar algo) com a regra
+    fora do lugar, e chamar isso de "acordado" seria a tela dando por curado o
+    que só está momentaneamente de pé.
+    """
+    if not instalada:
+        return TEXTO_SONO_PODE_DORMIR
+    if not estados:
+        return TEXTO_SONO_SEM_PLACA
+    if any(estado == ESTADO_SUSPENSO for estado in estados.values()):
+        return TEXTO_SONO_ATRASADO
+    return TEXTO_SONO_ACORDADO
+
+
+def estado_do_sono(home: str | None = None) -> str:
+    """A leitura completa, pronta para a tela. BLOQUEIA — rode em worker.
+
+    Mesma disciplina do resto do módulo: nada de subprocess na thread do GTK
+    (use ``ipc_bridge.run_in_thread``, o padrão do card).
+    """
+    saida = rodar_leitura(["pactl", "list", "sinks", "short"])
+    return texto_do_sono(regra_nunca_dorme_instalada(home), sono_dos_sinks_do_controle(saida))
+
+
 __all__ = [
+    "CANAL_ACORDADO",
+    "CANAL_DORMINDO",
+    "CANAL_SEM_LEITURA",
     "CHAVE_PREF_ROTA_ANTERIOR",
     "CHAVE_PREF_SOM",
     "DICA_ROTA_PARA_O_CONTROLE",
     "DICA_ROTA_SEM_SINK",
     "DICA_ROTA_SEM_VOLTA",
     "DICA_ROTA_VOLTAR",
+    "ESTADO_SUSPENSO",
     "MOTIVO_DESLIGADO",
     "MOTIVO_FALHOU",
     "MOTIVO_OCUPADO",
@@ -800,20 +1090,34 @@ __all__ = [
     "MOTIVO_SEM_SINK",
     "MOTIVO_SEM_TOCADOR",
     "MOTIVO_TOCOU",
+    "NOME_REGRA_NUNCA_DORME",
     "RECADOS",
     "TEXTO_ROTA_PARA_O_CONTROLE",
     "TEXTO_ROTA_VOLTAR",
+    "TEXTO_SONO_ACORDADO",
+    "TEXTO_SONO_ATRASADO",
+    "TEXTO_SONO_PODE_DORMIR",
+    "TEXTO_SONO_SEM_PLACA",
     "AcaoRota",
     "EstadoDaRota",
     "ResultadoDoSom",
     "RotaDeSaida",
     "acao_da_rota",
+    "acordar_sink",
     "apelido_do_sink",
     "argv_do_tocador",
     "arquivo_de_confirmacao",
+    "caminho_regra_nunca_dorme",
+    "estado_do_canal",
+    "estado_do_sono",
+    "estados_crus_dos_sinks",
+    "estados_dos_sinks",
     "nomes_de_sinks",
+    "regra_nunca_dorme_instalada",
     "rodar_leitura",
     "sink_padrao_da_saida",
     "som_ligado",
+    "sono_dos_sinks_do_controle",
+    "texto_do_sono",
     "tocar_confirmacao",
 ]

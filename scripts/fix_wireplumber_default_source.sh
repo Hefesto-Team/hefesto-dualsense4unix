@@ -22,7 +22,17 @@
 #                       mais a cura das camadas 1 e 2 e a eleição de fato.
 #     --unmute-routes   SÓ tira o `"mute":true` persistido das rotas do DualSense
 #                       (camada 1) — sem mexer em drop-in nem em fonte padrão.
+#     --nunca-dorme     SOM-QUE-NAO-DORME-01: instala SÓ o 54, que impede o
+#                       WirePlumber de suspender o SINK (alto-falante) do
+#                       controle. Não fala do microfone, não é opt-in, e o
+#                       `install.sh` o chama em todo formato — inclusive com
+#                       `--keep-dualsense-mic`. Reinicia o WirePlumber apenas se
+#                       o arquivo mudou. Sai 0 sempre que o arquivo está no lugar.
 #     --status          mostra a fonte padrão atual e sai.
+#
+# O 54 (nunca-dorme) entra TAMBÉM em todos os outros modos que escrevem: o sono
+# da saída é ortogonal à política de entrada, e nenhuma escolha de microfone
+# implica querer perder o começo de cada som.
 #
 #   Env: HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1 faz --install/--disable
 #        virarem --enable-mic automaticamente (a usuária QUER o mic do DualSense).
@@ -86,6 +96,14 @@ readonly DROPIN_DISABLE_DST="${DROPIN_DIR}/${DROPIN_DISABLE_NAME}"
 readonly DROPIN_OUTPUT_NAME="53-hefesto-dualsense-disable-output.conf"
 readonly DROPIN_OUTPUT_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_OUTPUT_NAME}"
 readonly DROPIN_OUTPUT_DST="${DROPIN_DIR}/${DROPIN_OUTPUT_NAME}"
+# SOM-QUE-NAO-DORME-01 (16/08/2026): o 54 impede o WirePlumber de SUSPENDER o
+# sink do controle. Ele não é irmão dos três acima — aqueles decidem o
+# MICROFONE, este decide o SONO DO ALTO-FALANTE. Por isso ele entra em TODO
+# modo que escreve, inclusive quando a usuária pediu para não mexerem no mic
+# dela: sono de saída e eleição de entrada são perguntas diferentes.
+readonly DROPIN_ACORDADO_NAME="54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
+readonly DROPIN_ACORDADO_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_ACORDADO_NAME}"
+readonly DROPIN_ACORDADO_DST="${DROPIN_DIR}/${DROPIN_ACORDADO_NAME}"
 readonly STATE_FILE="${HOME}/.local/state/wireplumber/default-nodes"
 # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o doctor é o dono do critério de "fonte de
 # captura que se sustenta" (`_sources_com_porta_usavel` + `_melhor_source_de_captura`).
@@ -101,6 +119,7 @@ for arg in "$@"; do
         --enable-mic)     MODE="enable-mic" ;;
         --promote-source) MODE="promote" ;;
         --unmute-routes)  MODE="unmute-routes" ;;
+        --nunca-dorme)    MODE="nunca-dorme" ;;
         --status)         MODE="status" ;;
         *) printf '[wp-fix] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
@@ -197,6 +216,44 @@ install_dropin() {
     mkdir -p "${DROPIN_DIR}"
     cp -f "${DROPIN_SRC}" "${DROPIN_DST}"
     log "drop-in instalado: ${DROPIN_DST}"
+}
+
+# SOM-QUE-NAO-DORME-01 — o alto-falante do controle nunca dorme.
+#
+# MEDIDO na orelha dela em 15/08/2026 23h45 (ensaio
+# `sfx-no-suspenso-come-o-comeco`): com o nó SUSPENSO, o primeiro som depois do
+# silêncio se perde no religar do hardware. Num jogo é o SFX importante sumindo.
+# O drop-in 54 põe `session.suspend-timeout-seconds = 0` no sink do DualSense, e
+# o `suspend-node.lua` do WirePlumber 0.5 devolve sem agendar suspensão nenhuma.
+#
+# SEM FLAG: esta função é chamada em TODO modo que escreve (ver o despacho no
+# fim do arquivo) e pelo `install.sh` diretamente, via `--nunca-dorme`, ANTES de
+# qualquer decisão sobre o microfone — inclusive com `--keep-dualsense-mic`.
+#
+# SÓ ARQUIVOS: nenhum `systemctl`, `wpctl` ou `pactl` vive aqui. É o que permite
+# ao portão exercitar esta função DE VERDADE num HOME de mentira, sem tocar no
+# áudio de quem roda a suíte (mesmo molde de `_arma_dropins_do_mic`).
+#
+# Códigos de saída, e por que três:
+#   0 = instalado ou ATUALIZADO  -> quem chamou precisa reiniciar o WirePlumber
+#   3 = já estava igual          -> nada mudou, e reiniciar seria churn à toa
+#   1 = erro (asset ausente)
+install_dropin_acordado() {
+    if [[ ! -f "${DROPIN_ACORDADO_SRC}" ]]; then
+        log "ERRO: asset não encontrado: ${DROPIN_ACORDADO_SRC}"
+        return 1
+    fi
+    if [[ -f "${DROPIN_ACORDADO_DST}" ]] \
+        && cmp -s "${DROPIN_ACORDADO_SRC}" "${DROPIN_ACORDADO_DST}"; then
+        log "o alto-falante já está marcado para nunca dormir: ${DROPIN_ACORDADO_DST}"
+        return 3
+    fi
+    mkdir -p "${DROPIN_DIR}"
+    cp -f "${DROPIN_ACORDADO_SRC}" "${DROPIN_ACORDADO_DST}"
+    log "drop-in NUNCA-DORME instalado: ${DROPIN_ACORDADO_DST}"
+    log "  o sink do controle para de ser suspenso; o primeiro som depois do"
+    log "  silêncio sai inteiro (SOM-QUE-NAO-DORME-01)"
+    return 0
 }
 
 install_disable_dropin() {
@@ -638,9 +695,45 @@ promote_source_dualsense() {
 # A execução direta segue idêntica: MODE já foi resolvido acima.
 [[ "${BASH_SOURCE[0]}" == "${0}" ]] || return 0
 
+# SOM-QUE-NAO-DORME-01 — SEM FLAG, em todo modo que escreve.
+#
+# O sono do alto-falante não é assunto do microfone: seja qual for a política de
+# mic que a usuária escolheu (`--install`, `--disable-source`, `--enable-mic`,
+# `--promote-source`), o som que SAI do controle tem de sair inteiro. Por isso o
+# 54 entra aqui, antes do `case`, e não dentro de um ramo.
+#
+# `--status` é o único de fora: ele é leitura, e leitura não escreve.
+ACORDADO_MUDOU=1
+if [[ "${MODE}" != "status" ]]; then
+    rc_acordado=0
+    install_dropin_acordado || rc_acordado=$?
+    case "${rc_acordado}" in
+        0) ACORDADO_MUDOU=0 ;;
+        3) ACORDADO_MUDOU=1 ;;
+        *) log "AVISO: não consegui instalar o ${DROPIN_ACORDADO_NAME} — o sink do"
+           log "       controle vai continuar suspendendo, e o começo do som se perde" ;;
+    esac
+fi
+
 case "${MODE}" in
     status)
         show_status
+        ;;
+    nunca-dorme)
+        # Modo isolado: o `install.sh` o chama SEM FLAG, em todos os formatos,
+        # antes de qualquer decisão sobre o microfone. Só reinicia o WirePlumber
+        # se o arquivo REALMENTE mudou — reiniciar o áudio da sessão dela à toa,
+        # a cada instalação idempotente, seria custo sem cura.
+        #
+        # O `if` explícito (em vez de `[[ ... ]] && cmd`) é por causa do
+        # `set -e` do topo: uma lista `&&` que curto-circuita devolve 1, e o
+        # shell sairia com status de erro numa instalação que deu certo.
+        if [[ "${ACORDADO_MUDOU}" -eq 0 ]]; then
+            restart_wireplumber
+        else
+            log "nada a reiniciar — o WirePlumber já roda com a regra"
+        fi
+        exit 0
         ;;
     enable-mic)
         enable_mic_dualsense

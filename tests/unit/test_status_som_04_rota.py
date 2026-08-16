@@ -543,8 +543,15 @@ def test_clique_sem_alvo_nao_escreve_nada(
     adiados.rodar()
     assert pactl.chamadas == []
 
+    # SOM-ACORDADO-01: a leitura da rota passou a viajar em PAR com o
+    # "a regra do WirePlumber está instalada?" — a mesma worker, o mesmo ciclo.
     host._on_rota_lida(
-        EstadoDaRota(sink_padrao=SINK_CONTROLE, sink_do_controle="", no_controle=False)
+        (
+            EstadoDaRota(
+                sink_padrao=SINK_CONTROLE, sink_do_controle="", no_controle=False
+            ),
+            True,
+        )
     )
     pactl.chamadas.clear()
     host._on_rota_de_som_clicada()

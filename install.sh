@@ -1134,6 +1134,17 @@ if [[ "${FORMAT}" != "native" ]]; then
     # `--keep-dualsense-mic` continua sem ninguém mexendo no áudio, e
     # `--with-wireplumber-disable-mic` continua vencendo. O que muda é só a
     # posição no arquivo — a decisão é a dela, em qualquer formato.
+    # SOM-QUE-NAO-DORME-01 (16/08/2026) — SEM FLAG, e ANTES de qualquer decisão
+    # sobre o microfone, porque não é uma decisão sobre o microfone.
+    #
+    # Medido na orelha dela em 15/08 23h45: com o nó do PipeWire SUSPENSO, o
+    # primeiro som depois do silêncio se perde no religar do hardware — num jogo,
+    # é o SFX importante sumindo. Nenhuma das flags de mic
+    # (`--keep-dualsense-mic`, `--with-wireplumber-disable-mic`) diz nada sobre o
+    # sono do ALTO-FALANTE, então nenhuma delas pode decidir isto.
+    step "som" "áudio: o alto-falante do controle nunca dorme (SOM-QUE-NAO-DORME-01)"
+    bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --nunca-dorme \
+        || warn "nunca-dorme falhou — rode: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme"
     if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
         step "mic" "áudio: desabilitar o microfone do DualSense (--with-wireplumber-disable-mic)"
         bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source \
@@ -2635,6 +2646,28 @@ fi
 # ---------------------------------------------------------------------------
 # 10. WirePlumber: DualSense fora da fonte de áudio padrão — DEFAULT (opt-out: --keep-dualsense-mic)
 # ---------------------------------------------------------------------------
+# SOM-QUE-NAO-DORME-01 (16/08/2026) — SEM FLAG, e num passo PRÓPRIO, antes do
+# 10/11 (que decide o microfone).
+#
+# A decisão dela, textual: *"garantir que sempre fique acordado"*. O defeito foi
+# medido na orelha dela em 15/08 23h45 (ensaio `sfx-no-suspenso-come-o-comeco`):
+# o WirePlumber suspende o sink do controle depois de 5 s ociosos, e o religar do
+# hardware COME O COMEÇO DO SOM.
+#
+# Por que passo próprio, e não uma linha dentro do 10/11: os três ramos de lá
+# decidem o MICROFONE. Quem pediu `--keep-dualsense-mic` pediu para não
+# rebaixarem a entrada dele — não pediu para perder o começo de cada efeito
+# sonoro. São perguntas diferentes, e amarrar uma na outra deixaria a cura
+# opt-in por acidente de posição (foi o que MIC-EM-TODO-FORMATO-01 pagou em
+# 10/08). Separado também mantém o bloco do 10/11 do tamanho que o portão
+# `test_o_instalador_que_aprovou_o_monitor` lê.
+step "som" "áudio: o alto-falante do controle nunca dorme (SOM-QUE-NAO-DORME-01)"
+if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --nunca-dorme; then
+    : # a mensagem do próprio script já diz se instalou ou se já valia
+else
+    warn "nunca-dorme falhou — rode: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme"
+fi
+
 step "10/11" "audio: impedir o DualSense de virar o microfone padrão"
 if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
     [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]] && warn "--with-wireplumber-disable-mic vence --with-wireplumber-fix"
