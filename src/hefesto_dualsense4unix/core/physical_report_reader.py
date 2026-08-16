@@ -134,6 +134,14 @@ INPUT_REPORT_BT_SIZE = 78
 _USB_STRUCT_BASE = 1
 _BT_STRUCT_BASE = 2
 
+#: Bit 1 do byte 1 de um `0x31` de BT: **este report carrega ÁUDIO**, não
+#: estado de input. Mesmo id, mesmo tamanho, mesmo CRC válido — só este bit
+#: separa um do outro. Ver `_struct_base` e o PS-PRESO-01 de 16/08/2026.
+#: Espelha `integrations/dualsense_bt_audio.INPUT_FLAG_AUDIO`; os dois estão
+#: travados por teste, e a duplicação é para o caminho quente não importar
+#: ctypes/libopus.
+INPUT_FLAG_AUDIO = 0x02
+
 #: Janela de motion DENTRO do payload (offsets do `struct dualsense_input_
 #: report`): gyro[3] 15-20, accel[3] 21-26, sensor_timestamp 27-30, reserved2
 #: 31, touch points 32-39. Mesmos números do `_MOTION_WINDOW` do vpad
@@ -336,9 +344,33 @@ def _struct_base(report: bytes) -> int | None:
     meio da partida. Um portão, dois consumidores.
 
     - ``0x01`` (USB): payload em ``report[1:]``.
-    - ``0x31`` (BT): exige os 78 B exatos e CRC-32 válido (seed 0xA1 sobre os
-      74 primeiros bytes, LE nos 4 finais — `ps_check_crc32` do kernel).
+    - ``0x31`` (BT): exige os 78 B exatos, o bit de ÁUDIO **desligado** e
+      CRC-32 válido (seed 0xA1 sobre os 74 primeiros bytes, LE nos 4 finais —
+      `ps_check_crc32` do kernel).
     - Qualquer outro id/tamanho (0x05 de BT parcial, reports de feature) → None.
+
+    **O bit de áudio, e o estrago que ele causou** (PS-PRESO-01, 16/08/2026).
+    Com o microfone ligado, o DualSense manda áudio Opus **no mesmo report
+    `0x31`, com o mesmo tamanho de 78 bytes** — a ÚNICA diferença é o bit
+    ``0x02`` do byte 1. Sem conferir esse bit, este portão devolve base para um
+    report de áudio, e os bytes de Opus caem exatamente sobre os eixos e os
+    botões do `struct dualsense_input_report`.
+
+    Medido ao vivo na máquina dela: 3 minutos depois de a ponte do mic subir, os
+    botões **MIC e PS** (que moram no mesmo `buttons[2]`) ficaram presos, e cada
+    leitura disparava `ps_button_action_steam` — o daemon tentando abrir a Steam
+    dezenas de vezes por segundo. Ela descreveu como *"o teclado e o mouse com
+    vida própria"* e desligou o controle. Três segundos depois o controle caiu
+    inteiro.
+
+    O CRC **não** protegia disso: o report de áudio é legítimo e tem CRC válido.
+    Ele só não é estado de input.
+
+    `integrations/dualsense_bt_audio.py` conhecia esse bit desde sempre
+    (`INPUT_FLAG_AUDIO`, `eh_report_de_audio`) — e era o único módulo do projeto
+    que conhecia. A constante é redeclarada aqui de propósito: este arquivo é o
+    caminho quente da leitura e não pode importar o módulo de áudio (que carrega
+    ctypes/libopus). Os dois valores estão travados um no outro por teste.
     """
     if not report:
         return None
@@ -346,6 +378,9 @@ def _struct_base(report: bytes) -> int | None:
         return _USB_STRUCT_BASE
     if report[0] == INPUT_REPORT_BT:
         if len(report) != INPUT_REPORT_BT_SIZE:
+            return None
+        if report[1] & INPUT_FLAG_AUDIO:
+            # Áudio, não input. Descartar é o certo: o payload aqui é Opus.
             return None
         crc = int.from_bytes(report[-4:], "little")
         if bt_crc32(report[:-4], seed=BT_INPUT_CRC_SEED) != crc:
