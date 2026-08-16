@@ -1,0 +1,97 @@
+==============================================================================
+  giro_e_buraco.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... o giroscópio dá zero parado, e some report na janela? (E-8 da mesa 2+2)
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... os                     de /usr/lib/python3.12/os.py
+  biblioteca ....... struct                 de /usr/lib/python3.12/struct.py
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... selectors              de /usr/lib/python3.12/selectors.py
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  grab do evdev .... /dev/input/event22: livre
+  grab do evdev .... /dev/input/event26: livre
+  grab do evdev .... /dev/input/event265: livre
+  grab do evdev .... /dev/input/event272: livre
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+  T0 (hora de parede) ... 2026-08-15T22:19:38.675
+
+  mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+  OS CAMPOS QUE VOU LER, POR TRANSPORTE (offsets do fonte do driver)
+
+transporte  report id  corpo em  giro  acel  seq  contador le32  carimbo
+----------  ---------  --------  ----  ----  ---  -------------  -------
+cabo        0x01       data[1]   16    22    7    12             28
+rádio       0x31       data[2]   17    23    8    13             29
+
+  medindo 4 controle(s) por 60 s, na MESMA janela.
+  >> NÃO mexa nos controles: parado é a condição do ensaio, e a régua
+  >> do giroscópio é o ZERO — absoluta, sem comparar um braço com o outro.
+
+  A RÉGUA DO GIROSCÓPIO, LIDA DE CADA APARELHO (feature 0x05, GET_REPORT)
+  Lida AGORA, DEPOIS da janela, e nunca antes: um GET_REPORT por rádio é
+  tráfego no enlace, e este instrumento mede silêncio de enlace. Cutucar o
+  aparelho e depois perguntar se ele está quieto seria medir a mim mesmo.
+  A resolução 1024 do driver é a de SAÍDA, depois da calibração — o número
+  CRU do fio está noutra escala, e é esta tabela que diz qual.
+
+aparelho           transporte  speed_2x  sens_denom (x y z)  LSB por grau/s  de onde
+-----------------  ----------  --------  ------------------  --------------  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+a0:fa:9c:00:00:f0  rádio       0         0 0 0               -               GET_FEATURE 0x05 falhou: Input/output error
+d4:2f:4b:00:00:d8  rádio       0         0 0 0               -               não abriu: [Errno 2] /dev/hidraw5: as duas portas falharam. broker (SCM_RIGHTS): o broker não respondeu em /run/hefesto-hidraw-broker/broker.sock. open() direto: No such file or directory. Se o nó está 0600 sem ACL, é o Hefesto escondendo o físico do jogo (broker/hidraw_broker.py) — a regra udev NÃO está errada.
+14:3a:9a:00:00:ab  cabo        1080      17734 17577 17829   16.42           feature 0x05 lido por GET_REPORT (fd O_RDONLY)
+44:46:48:00:00:03  cabo        1080      17702 17678 17662   16.39           feature 0x05 lido por GET_REPORT (fd O_RDONLY)
+
+  >> a régua INGÊNUA (cru / 1024) encolheria a leitura por ~1024x.
+  O GIROSCÓPIO EM REPOUSO — três réguas na mesma janela
+
+aparelho           transporte  reports                                                                                                                                                                                                                                                                                                  |w| mediano  |w| máximo  eixos (graus/s)         kernel (evdev)  régua ingênua  NEGATIVO
+-----------------  ----------  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  -----------  ----------  ----------------------  --------------  -------------  --------
+a0:fa:9c:00:00:f0  rádio       1629                                                                                                                                                                                                                                                                                                     0.000        0.000       +0.000, +0.000, +0.000  1.311 (1586)    0.0210         0
+d4:2f:4b:00:00:d8  rádio       [Errno 13] /dev/hidraw5: as duas portas falharam. broker (SCM_RIGHTS): o broker não respondeu em /run/hefesto-hidraw-broker/broker.sock. open() direto: Permission denied. Se o nó está 0600 sem ACL, é o Hefesto escondendo o físico do jogo (broker/hidraw_broker.py) — a regra udev NÃO está errada.  0.000        0.000       +0.000, +0.000, +0.000  -               0.0000         0
+14:3a:9a:00:00:ab  cabo        [Errno 13] /dev/hidraw8: as duas portas falharam. broker (SCM_RIGHTS): o broker não respondeu em /run/hefesto-hidraw-broker/broker.sock. open() direto: Permission denied. Se o nó está 0600 sem ACL, é o Hefesto escondendo o físico do jogo (broker/hidraw_broker.py) — a regra udev NÃO está errada.  0.000        0.000       +0.000, +0.000, +0.000  -               0.0000         0
+44:46:48:00:00:03  cabo        15006                                                                                                                                                                                                                                                                                                    0.914        272.466     +0.608, +0.288, -0.140  0.913 (15000)   0.0146         492
+  |w| e eixos em graus/s pela régua do próprio aparelho. `régua ingênua` é o
+  MESMO dado dividido por 1024 — está aí para mostrar o tamanho do erro.
+  `NEGATIVO` é o acelerômetro lido COMO SE fosse giroscópio: tem de ser enorme.
+
+  CONTROLE POSITIVO 1 — o acelerômetro do MESMO report tem de dar 1 g
+
+aparelho           transporte  |v| mediano  veredito
+-----------------  ----------  -----------  -----------
+a0:fa:9c:00:00:f0  rádio       0.9923 g     CONFERE
+d4:2f:4b:00:00:d8  rádio       -            NÃO CONFERE
+14:3a:9a:00:00:ab  cabo        -            NÃO CONFERE
+44:46:48:00:00:03  cabo        0.9837 g     CONFERE
+
+  A PERDA — o contador de reports que o driver chama de `reserved`
+
+aparelho           transporte  energia       pares  saltos  reports perdidos  seq_number parado  taxa host  cadência do controle
+-----------------  ----------  ------------  -----  ------  ----------------  -----------------  ---------  --------------------
+a0:fa:9c:00:00:f0  rádio       Charging 95%  1628   1       2242              1628/1628          27.1 Hz    398.4 Hz
+d4:2f:4b:00:00:d8  rádio       ? ?%          0      0       0                 -                  0.0 Hz     0.0 Hz
+14:3a:9a:00:00:ab  cabo        Full 100%     0      0       0                 -                  0.0 Hz     0.0 Hz
+44:46:48:00:00:03  cabo        Charging 75%  15005  0       0                 0/15005            250.1 Hz   246.5 Hz
+  `seq_number parado` é o CONTRA-exemplo: no rádio o corpo[6] não anda, e
+  quem contasse perda por ele veria zero para sempre — inclusive perdendo.
+
+  O SILÊNCIO — e a parada do MEU laço, que é o negativo do instrumento
+
+aparelho           transporte  silêncio p95  silêncio máximo  host nos saltos
+-----------------  ----------  ------------  ---------------  ---------------
+a0:fa:9c:00:00:f0  rádio       7.00 ms       19.03 ms         2.5
+d4:2f:4b:00:00:d8  rádio       0.00 ms       0.00 ms          não houve salto
+14:3a:9a:00:00:ab  cabo        0.00 ms       0.00 ms          não houve salto
+44:46:48:00:00:03  cabo        4.01 ms       4.12 ms          não houve salto
+  maior parada do MEU laço na janela inteira: 4.12 ms
+
+  T1 (hora de parede) ... 2026-08-15T22:21:21.139
+  CSV ................... docs/data/ensaios-brutos/2026-08-15-E8-giro-e-buraco.csv
+
+------------------------------------------------------------------------------
+RESUMO: SEM RÉGUA em pelo menos uma unidade — o feature 0x05 não veio, e sem ele o giroscópio só teria a régua ingênua, que erra 62x. Nada vira célula `medido`. (a0:fa:9c:00:00:f0: GET_FEATURE 0x05 falhou: Input/output error)
+------------------------------------------------------------------------------
