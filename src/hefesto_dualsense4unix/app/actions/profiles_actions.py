@@ -19,7 +19,11 @@ from pydantic import ValidationError
 gi.require_version("Gtk", "3.0")
 from gi.repository import GObject, Gtk
 
-from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.carona_do_wrapper import (
+    GESTO_APLICAR,
+    GESTO_SALVAR,
+    CaronaDoWrapperMixin,
+)
 from hefesto_dualsense4unix.app.actions.home_actions import (
     texto_do_custo_da_mascara,
 )
@@ -767,8 +771,16 @@ def dialogo_renomear_ou_copiar(
     return None
 
 
-class ProfilesActionsMixin(WidgetAccessMixin):
-    """Controla a aba Perfis."""
+class ProfilesActionsMixin(CaronaDoWrapperMixin):
+    """Controla a aba Perfis.
+
+    CARONA-DO-WRAPPER-01 (16/08/2026): a base é o ``CaronaDoWrapperMixin``
+    (que estende o ``WidgetAccessMixin`` de antes) porque os dois gestos desta
+    aba — "Salvar este perfil" e "Ativar" — são metade do pedido dela: *"ao
+    clicarmos em aplicar ou salvar o perfil seja DENTRO ou fora da guia de
+    perfis"*. A outra metade entra pelo funil (``profile_writer``) e pelo botão
+    verde do rodapé.
+    """
 
     _profiles_store: Gtk.ListStore
     _mode_advanced: bool = False  # True = editor avançado ativo; default seguro sem GTK
@@ -2348,6 +2360,12 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             on_failure=self._on_profile_switch_failure,
             timeout_s=PROFILE_SWITCH_TIMEOUT_S,
         )
+        # CARONA-DO-WRAPPER-01: "aplicar o perfil" DENTRO da aba Perfis. Fica
+        # FORA do callback de sucesso de propósito — o wrapper da Steam não tem
+        # nada a ver com o daemon ter respondido ou não, e com o daemon parado
+        # (o caminho do `_on_profile_switch_failure`) o defeito continua lá,
+        # esperando o próximo jogo. O gesto dela aconteceu; a carona vai junto.
+        self.pegar_carona_no_gesto(GESTO_APLICAR)
 
     def _on_profile_switch_success(self, name: str, result: Any = None) -> bool:
         """Callback GTK do switch de perfil: toast + re-sincroniza a seleção."""
@@ -2652,6 +2670,12 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # daemon rematerializa a antecipação por appid do launch_env AGORA
         # (sem isso, o primeiro launch do jogo cairia no default.env rançoso).
         self._notify_launch_env_refresh()
+        # CARONA-DO-WRAPPER-01: e o env materializado acima só é LIDO se a
+        # linha das Opções de Inicialização ainda chamar o `hefesto-launch`.
+        # Rematerializar a antecipação e deixar o wrapper apagado é escrever um
+        # bilhete que ninguém vai abrir — foi exatamente esse o defeito do
+        # Pragmata em 16/08. As duas linhas andam juntas por isso.
+        self.pegar_carona_no_gesto(GESTO_SALVAR)
 
     # --- helpers internos ---
 

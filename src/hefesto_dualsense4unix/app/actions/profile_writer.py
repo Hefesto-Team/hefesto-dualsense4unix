@@ -42,7 +42,10 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.app import ipc_bridge
-from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.carona_do_wrapper import (
+    GESTO_SALVAR,
+    CaronaDoWrapperMixin,
+)
 from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.schema import Profile
 from hefesto_dualsense4unix.profiles.slug import mesmo_slug
@@ -51,12 +54,20 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-class ProfileWriterMixin(WidgetAccessMixin):
+class ProfileWriterMixin(CaronaDoWrapperMixin):
     """Funil de gravação de perfil compartilhado pelos mixins da janela.
 
     Herdar daqui (em vez de importar uma função solta) é o que dá ao funil
     acesso ao ``self.draft``, ao ``_active_profile_name`` e aos irmãos de mixin
     — os mesmos que o defeito atravessava.
+
+    CARONA-DO-WRAPPER-01 (16/08/2026): a base deixou de ser o
+    ``WidgetAccessMixin`` cru e passou a ser o ``CaronaDoWrapperMixin`` (que o
+    estende). Pelo mesmo argumento que criou este arquivo — *"lembrar de chamar
+    não é engenharia"* —, o pedido dela de que salvar um perfil reponha o
+    wrapper `hefesto-launch` que a Steam comeu é atendido **aqui dentro**, no
+    passo 9 do funil, e não em cada botão: quem escrever o quinto botão de
+    gravação ganha a carona sem saber que ela existe.
     """
 
     # Referência ao rascunho central (definida em HefestoApp.__init__).
@@ -92,7 +103,10 @@ class ProfileWriterMixin(WidgetAccessMixin):
         6. recarrega a lista de perfis e avisa o daemon
            (``launch_env.refresh``) **na janela**;
         7. ``depois_na_janela(profile, path, extra)``, opcional;
-        8. confere a invariante com um assert barato.
+        8. confere a invariante com um assert barato;
+        9. **pega a carona do wrapper** (CARONA-DO-WRAPPER-01) — repõe, se
+           precisar, a chamada do `hefesto-launch` que a Steam apagou das
+           Opções de Inicialização. Silencioso quando não há o que repor.
 
         ``adotar_como_ativo`` diz se ESTA gravação é a do rascunho:
 
@@ -148,6 +162,13 @@ class ProfileWriterMixin(WidgetAccessMixin):
             if depois_na_janela is not None:
                 depois_na_janela(profile, path, extra)
             self._conferir_invariante_de_gravacao(profile)
+            # CARONA-DO-WRAPPER-01: o passo 9, e ele é DELA — *"nem precisa ter
+            # um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar
+            # ou salvar o perfil"*. Por último de propósito: o perfil já está em
+            # disco e a janela já está coerente, então nada aqui pode custar a
+            # gravação. Fica silencioso quando não há nada para repor, que é o
+            # caso comum.
+            self.pegar_carona_no_gesto(GESTO_SALVAR)
             return False  # GLib.idle_add não repete
 
         def _ao_falhar(exc: Exception) -> bool:

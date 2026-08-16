@@ -151,6 +151,11 @@ ao autostart do ambiente gráfico.
 > **Nota datada — 08/08/2026:** são **19** módulos desde a `RELANCAR-01`, que
 > acrescentou `relancar.py`. Ele **não** importa a função de tradução, então a
 > proporção passou a **16 de 19** — o quadro não mudou de natureza.
+>
+> **Nota datada — 16/08/2026:** são **20** módulos desde a
+> `CARONA-DO-WRAPPER-01`, que acrescentou `carona_do_wrapper.py`. Ele
+> também **não** importa a função de tradução, então a proporção passou a
+> **17 de 20** — o quadro segue o mesmo.
 
 A partir da v3.4.0 o bundle Flatpak embarca **EN baseline** + **PT-BR
 identidade** em `/app/share/hefesto-dualsense4unix/locale/{en,pt_BR}/
