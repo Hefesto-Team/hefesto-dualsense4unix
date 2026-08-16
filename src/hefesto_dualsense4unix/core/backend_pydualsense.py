@@ -51,6 +51,12 @@ from hefesto_dualsense4unix.core.evdev_reader import (
     EvdevReader,
 )
 
+# SOM-SEMPRE-01: a régua ÚNICA de volume, no topo pela mesma razão do
+# `ds_output_report` logo acima — o default de adoção precisa ser resolvido em
+# tempo de módulo, e `core/speaker_scale.py` é Python puro (nenhum `gi`,
+# nenhum daemon, nenhum ciclo possível).
+from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
@@ -278,6 +284,39 @@ _AUDIO_TETOS = (
     rep.TETO_MIC_VOLUME,
     0xFF,
 )
+
+
+#: SOM-SEMPRE-01 (16/08/2026) — o volume com que TODO controle nasce, em
+#: unidades CRUAS do registrador. Decisão dela, textual: *"precisamos setar o
+#: som sempre em todos os controles no 100%"*.
+#:
+#: **Por que ele NÃO é 255, e nem 0x64.** O número sai da régua única
+#: (`core/speaker_scale.volume_do_percentual`), que é a MESMA conta da barra da
+#: aba Status e do `speaker volume` da linha de comando — se este default fosse
+#: um literal, a tela nasceria dizendo um número que ninguém conseguiria
+#: reproduzir pelo controle deslizante, e teríamos duas contas para a mesma
+#: grandeza (a classe de defeito que a SOM-03 já pagou).
+#:
+#: Os três candidatos e o dado que decide, medido nesta casa em 01/08 (tom de
+#: 1 kHz, o microfone do próprio DualSense como instrumento):
+#:
+#:   * **255** — `TETO_SPEAKER_VOLUME`, e é onde "100%" cairia numa régua
+#:     linear ingênua. A curva medida diz `102 -> 8759`, `128 -> 8488`,
+#:     `255 -> 8793`: de 102 para cima **nada muda**. Escrever 255 é escrever
+#:     um número fora da faixa que o firmware usa na prática (a documentação do
+#:     report 0x02 anota `0x3D..0x64`) para obter exatamente o mesmo som;
+#:   * **100 (0x64)** — o que o `hid-playstation` escreve, com o comentário
+#:     *"the accepted range seems to be [0x3d..0x64]"*. É defensável, mas fica
+#:     DOIS passos abaixo da saturação medida aqui e não é o topo de régua
+#:     nenhuma nossa: a tela leria 97%, não 100%;
+#:   * **102** — `volume_do_percentual(100)`, e é o mesmo 102 em que a curva
+#:     satura. O topo da régua e o topo do som são o MESMO ponto.
+#:
+#: Escolhido o terceiro. Ele é o único em que a decisão dela ("100%"), o que a
+#: aba Status mostra (100%) e o que o alto-falante entrega (o máximo audível)
+#: são a mesma coisa — e é o único que NÃO é um número mágico, porque muda
+#: sozinho se alguém repetir a medição e corrigir a borda em `speaker_scale`.
+VOLUME_PADRAO_DO_SOM: int = volume_do_percentual(100)
 
 
 def _escrever_led_do_mic(handle: pydualsense, aceso: bool) -> None:
@@ -2134,6 +2173,14 @@ class PyDualSenseController(IController):
         self._refresh_sysfs_leds()
         # re-aplica o perfil ativo nos controles recém-chegados.
         for key, handle in new_handles:
+            # SOM-SEMPRE-01: o volume nasce em 100% em TODO controle adotado,
+            # e nasce ANTES do perfil de propósito — quem tiver seção
+            # `speaker` sobrescreve isto logo em seguida
+            # (`reapply_speaker_after_connect`), e quem não tiver fica com o
+            # som ligado em vez de ficar com o mudo que a bancada mediu.
+            # Best-effort: nunca derruba a reaplicação do perfil.
+            with contextlib.suppress(Exception):
+                self.assumir_volume_padrao_na_adocao(key, handle)
             self._reapply_desired(key, handle)
         # COR-WAKE-01 (fix ao vivo 2026-07-17): re-resolve a cor/LED por-controle
         # em TODA reconciliação de hotplug/wake — não só nos handles/nós que
@@ -3205,8 +3252,17 @@ class PyDualSenseController(IController):
     def set_mic_led(self, muted: bool) -> None:
         """Acende/apaga o LED do microfone em TODOS os controles (INFRA-SET-MIC-LED-01).
 
-        Delega para `ds.audio.setMicrophoneLED(bool)`. A pydualsense cuida da
-        diferença USB/BT em `prepareReport` (outReport[9] USB / outReport[10] BT).
+        Delega para `ds.audio.setMicrophoneLED(bool)`, que só marca o estado; o
+        byte é o `common[8]`, e quem o embrulha é o `prepareReport` DESTA casa
+        (`_PinnedPyDualSense.prepareReport`, via `ds_output_report`), não o da
+        pydualsense. Onde o byte cai: `common[8]` = **report[9] no cabo**
+        (common em `[1..47]`) e **report[11] no rádio** (common em `[3..49]`).
+
+        CORRIGIDO em 15/08/2026: aqui se lia "outReport[9] USB / outReport[10]
+        BT". O `[10]` é o que a pydualsense 0.7.5 escreve no ramo BT dela
+        (`pydualsense.py:610`) — está errado por um, e não é o nosso caminho
+        desde a BTREPORT-02, que substituiu o `prepareReport` do upstream
+        justamente porque o 0x31 dele é malformado.
 
         AUDIO-OWNER-01 (12/08/2026): a chamada passou a TOMAR A POSSE de
         `common[8]` (`_escrever_led_do_mic`). Antes a posse era implícita — o
@@ -3339,83 +3395,108 @@ class PyDualSenseController(IController):
         Retorna True se algum handle recebeu o pedido.
         """
         alvo = self._handle_for(uniq)
-        handles = [alvo] if alvo is not None else []
-        if not handles:
+        if alvo is None:
             logger.debug("output_offline_noop", op="set_speaker_volume")
             return False
-        ok = False
-        for handle in handles:
-            try:
-                pref = getattr(handle, "_speaker_volume_pref", None)
-                if volume is not None:
-                    pref = max(0, min(255, int(volume)))
-                # SOM-02 (E3): `muted` é MODULAÇÃO de um volume conhecido, não
-                # uma primeira escrita. Sem volume nenhum na mão (nem no pedido
-                # nem na preferência), mandá-lo assumiria a posse e emudeceria o
-                # controle em ZERO — e o próprio "desmudo" não teria o que
-                # restaurar (armadilha 2, medida na sprint: o par mudo/desmudo
-                # tranca em `{'volume': 0, 'muted': True}` e não sai mais de
-                # lá). Recusar aqui é o que faz a DEVOLUÇÃO da posse valer: sem
-                # esta guarda, um `muted=False` depois do `release_speaker_volume`
-                # reabriria a posse sozinho.
-                if pref is None and muted is not None:
-                    logger.info(
-                        "speaker_mute_sem_volume_recusado", uniq=uniq, muted=muted
-                    )
-                    continue
-                if pref is None:
-                    # SOM-CANAL-01, GUARDA DE RAIZ (04/08/2026). "Não me
-                    # disseram" e "me disseram zero" eram o mesmo valor aqui, e
-                    # a diferença é a de um alto-falante mudo.
-                    #
-                    # Medido com ela: o seletor de canal do card chamava
-                    # `speaker_set(rota=...)` sem volume, caía nesta linha e
-                    # TRANCAVA o alto-falante em zero — enquanto tomava a posse
-                    # do registrador, de modo que nem o firmware o recuperava.
-                    # A regra já estava escrita na SOM-02 ("Armadilha 1") e num
-                    # validador de perfil (`profiles/schema.py` RECUSA seção de
-                    # alto-falante sem volume); faltava valer no caminho vivo.
-                    #
-                    # Sem volume pedido, herda-se o que JÁ está em vigor neste
-                    # handle. Só quando não há nada em vigor é que o zero
-                    # aparece — e aí ele é o estado real, não uma suposição.
-                    vigente = getattr(handle, "_speaker_volume_pref", None)
-                    pref = int(vigente) if isinstance(vigente, int) else 0
-                handle._speaker_volume_pref = pref
-                efetivo = 0 if muted else pref
-                # SOM-ROTA-01/E1 — o PRÉ-AMPLIFICADOR vai junto, e é ele que
-                # destrava o curso do controle deslizante.
-                #
-                # Ela mediu a curva em 01/08: mudo até 38, satura em 102 — 60%
-                # do curso inerte. A causa não é o usuário quebrando nada: é o
-                # registrador de volume lutando contra um ganho de entrada no
-                # valor padrão. O kernel 6.18, para fazer o alto-falante soar
-                # quando o fone sai, escreve TRÊS campos (rota, volume e
-                # pré-amp); esta árvore escrevia só o volume, e 64 passos úteis
-                # é a assinatura de mexer em um de três botões.
-                #
-                # O `SP_PREAMP_GAIN_PADRAO` é o mesmo `0x2` que o kernel
-                # escolhe. Ele entra na MESMA posse do volume: quem assume um
-                # assume o outro, e o `release` devolve os dois — meio
-                # devolvido seria pior que nada.
-                #
-                # `rota` fica em `None` por omissão e o `common[7]` NÃO é
-                # tocado: aquele byte carrega a rota (bits 4-5) E o caminho do
-                # microfone (o resto), e escrevê-lo pela metade muda a outra
-                # metade em silêncio.
-                handle.set_audio_volumes(
-                    headphone=efetivo,
-                    speaker=efetivo,
-                    preamp=rep.SP_PREAMP_GAIN_PADRAO,
-                    audio_path=_byte_da_rota(handle, rota),
-                )
-                ok = True
-            except Exception as exc:
-                logger.warning(
-                    "output_handle_failed", op="set_speaker_volume", err=str(exc)
-                )
+        ok = self._escrever_volume_no_handle(
+            alvo, volume=volume, muted=muted, rota=rota, op="set_speaker_volume"
+        )
         logger.info("speaker_volume_set", volume=volume, muted=bool(muted), ok=ok)
         return ok
+
+    def _escrever_volume_no_handle(
+        self,
+        handle: Any,
+        *,
+        volume: int | None,
+        muted: bool | None,
+        rota: int | None,
+        op: str,
+    ) -> bool:
+        """A escrita de volume num handle JÁ escolhido. A conta mora aqui, só aqui.
+
+        SOM-SEMPRE-01 (16/08/2026): extraída do corpo do `set_speaker_volume`
+        porque ela passou a ter DOIS chamadores — o pedido explícito (janela,
+        perfil, linha de comando) e a ADOÇÃO do controle, que agora assume o
+        volume padrão sem ninguém pedir. Duas cópias desta sequência (a
+        preferência, a guarda do mudo, o pré-amplificador, a rota) divergiriam
+        no primeiro conserto feito só de um lado — é o mesmo motivo pelo qual a
+        régua de porcentagem mora num módulo só.
+
+        Devolve True quando o handle recebeu a escrita. Nunca levanta: a falha
+        de um handle não pode derrubar quem varre vários.
+        """
+        try:
+            pref = getattr(handle, "_speaker_volume_pref", None)
+            if volume is not None:
+                pref = max(0, min(255, int(volume)))
+            # SOM-02 (E3): `muted` é MODULAÇÃO de um volume conhecido, não
+            # uma primeira escrita. Sem volume nenhum na mão (nem no pedido
+            # nem na preferência), mandá-lo assumiria a posse e emudeceria o
+            # controle em ZERO — e o próprio "desmudo" não teria o que
+            # restaurar (armadilha 2, medida na sprint: o par mudo/desmudo
+            # tranca em `{'volume': 0, 'muted': True}` e não sai mais de
+            # lá). Recusar aqui é o que faz a DEVOLUÇÃO da posse valer: sem
+            # esta guarda, um `muted=False` depois do `release_speaker_volume`
+            # reabriria a posse sozinho.
+            if pref is None and muted is not None:
+                logger.info("speaker_mute_sem_volume_recusado", op=op, muted=muted)
+                return False
+            if pref is None:
+                # SOM-CANAL-01, GUARDA DE RAIZ (04/08/2026). "Não me
+                # disseram" e "me disseram zero" eram o mesmo valor aqui, e
+                # a diferença é a de um alto-falante mudo.
+                #
+                # Medido com ela: o seletor de canal do card chamava
+                # `speaker_set(rota=...)` sem volume, caía nesta linha e
+                # TRANCAVA o alto-falante em zero — enquanto tomava a posse
+                # do registrador, de modo que nem o firmware o recuperava.
+                # A regra já estava escrita na SOM-02 ("Armadilha 1") e num
+                # validador de perfil (`profiles/schema.py` RECUSA seção de
+                # alto-falante sem volume); faltava valer no caminho vivo.
+                #
+                # Sem volume pedido, herda-se o que JÁ está em vigor neste
+                # handle. Só quando não há nada em vigor é que o zero
+                # aparece — e aí ele é o estado real, não uma suposição.
+                vigente = getattr(handle, "_speaker_volume_pref", None)
+                pref = int(vigente) if isinstance(vigente, int) else 0
+            handle._speaker_volume_pref = pref
+            efetivo = 0 if muted else pref
+            # SOM-ROTA-01/E1 — o PRÉ-AMPLIFICADOR vai junto, e é ele que
+            # destrava o curso do controle deslizante.
+            #
+            # Ela mediu a curva em 01/08: mudo até 38, satura em 102 — 60%
+            # do curso inerte. A causa não é o usuário quebrando nada: é o
+            # registrador de volume lutando contra um ganho de entrada no
+            # valor padrão. O kernel 6.18, para fazer o alto-falante soar
+            # quando o fone sai, escreve TRÊS campos (rota, volume e
+            # pré-amp); esta árvore escrevia só o volume, e 64 passos úteis
+            # é a assinatura de mexer em um de três botões.
+            #
+            # O `SP_PREAMP_GAIN_PADRAO` é o mesmo `0x2` que o kernel
+            # escolhe. Ele entra na MESMA posse do volume: quem assume um
+            # assume o outro, e o `release` devolve os dois — meio
+            # devolvido seria pior que nada.
+            #
+            # `rota` fica em `None` por omissão e o `common[7]` NÃO é
+            # tocado: aquele byte carrega a rota (bits 4-5) E o caminho do
+            # microfone (o resto), e escrevê-lo pela metade muda a outra
+            # metade em silêncio.
+            #
+            # SOM-SEMPRE-01: o volume do MICROFONE (`common[6]`) continua
+            # FORA da chamada, e isso é decisão, não esquecimento — o dono
+            # do microfone no Linux é o kernel (AUDIO-OWNER-01), e "o som"
+            # que ela pediu a 100% é o que SAI do controle.
+            handle.set_audio_volumes(
+                headphone=efetivo,
+                speaker=efetivo,
+                preamp=rep.SP_PREAMP_GAIN_PADRAO,
+                audio_path=_byte_da_rota(handle, rota),
+            )
+        except Exception as exc:
+            logger.warning("output_handle_failed", op=op, err=str(exc))
+            return False
+        return True
 
     def release_speaker_volume(self, *, uniq: str | None = None) -> bool:
         """DEVOLVE a posse dos bytes de volume — o irmão do `mic release`.
@@ -3458,6 +3539,80 @@ class PyDualSenseController(IController):
             )
         logger.info("speaker_volume_released", uniq=uniq, ok=ok)
         return ok
+
+    def assumir_volume_padrao_na_adocao(self, key: str, handle: Any) -> bool:
+        """Toma a posse do volume e o põe em 100% assim que o controle é ADOTADO.
+
+        SOM-SEMPRE-01 (16/08/2026). Decisão dela, textual: *"precisamos setar o
+        som sempre em todos os controles no 100%"*.
+
+        **O DEFEITO QUE ISTO FECHA, medido na bancada dela em 15-16/08 com o
+        controle na mão, no CABO, em teste CEGO** (`docs/data/ensaios.csv`,
+        `sfx-cabo-sem-posse` / `sfx-cabo-com-posse` / `sfx-cabo-volume-zero`)::
+
+            volume nunca escrito por nós ... ela: "nenhum"      MUDO
+            `speaker volume 85` ........... ela: "bep bep bep"  SOA
+            `speaker volume 0` ............ ela: "mudo"         MUDO
+
+        Nada mais mudou entre as três passadas. Enquanto ninguém tomava a posse
+        de `common[4..7]`, o alto-falante ficava mudo — e o comentário do
+        `_PinnedPyDualSense.__init__` já dizia *"idem, mandando volume ZERO em
+        todo report"* desde 25/07 sem que ninguém o tivesse ligado ao silêncio.
+        Mesma família do keepalive que cancelava o rumble pelos BYTES: a casa
+        sabia e o produto não fazia.
+
+        **Por que na ADOÇÃO e não num clique.** A posse morre com o handle
+        (`_volumes_audio` nasce vazio a cada `_open_one`), então "o som sempre
+        sai" só pode ser propriedade do momento em que o controle é adotado. É
+        também o único ponto UNIVERSAL: vale para o 1º e para o 7º controle,
+        no cabo e no rádio, no boot e no hotplug do meio da sessão — o gancho
+        de perfil `reapply_speaker_after_connect` só corre na TRANSIÇÃO
+        offline→online do daemon e só quando o perfil ativo tem seção
+        `speaker`, de modo que o segundo controle a chegar numa mesa já online
+        nunca era coberto por ele.
+
+        **O PREÇO, e ele é real.** Tomar a posse é irreversível até
+        `speaker release` ou até o controle desconectar: enquanto formos donos,
+        o firmware recebe o NOSSO valor em todo report e não há mais como ele
+        guardar outro. Ela aceitou este preço ao pedir 100% sempre, e a saída
+        continua existindo e continua sendo dela — `hefesto-dualsense4unix
+        speaker release` devolve o registrador. O que a devolução NÃO faz é
+        emudecer: com os bits de validação apagados o firmware CONSERVA o
+        último valor que mandamos, isto é, os 100% — quem devolve a posse fica
+        com o som ligado, não com o silêncio de antes desta cura.
+
+        **O que fica de fora, de propósito**: o volume do MICROFONE
+        (`common[6]`, do kernel) e a ROTA de saída (`common[7]`, que carrega o
+        caminho do microfone nos outros bits). Fone e alto-falante vão os DOIS
+        ao mesmo valor porque é UM volume só para quem segura o controle, e
+        porque o fone manda por cima da rota (ensaio `sfx-o-fone-manda-por-
+        cima`): deixar o fone em zero faria a cura silenciar justamente quem
+        plugasse um headset.
+
+        **Modo Nativo continua com contrato de zero escrita.** Isto aqui mexe
+        só no estado em memória do handle; quem põe bytes no fio é o
+        `report_thread`, e ele não manda NADA enquanto `_output_muted` estiver
+        ligado (FEAT-NATIVE-OUTPUT-MUTE-01, `sendReport`). Um controle adotado
+        com jogo em foco guarda os 100% e os aplica quando o mute sair — que é
+        o que se quer, e não uma escrita por baixo do jogo.
+
+        Best-effort, como todo o caminho de adoção: falhar aqui devolve False e
+        deixa o controle exatamente como ele ficava antes desta cura.
+        """
+        escreveu = self._escrever_volume_no_handle(
+            handle,
+            volume=VOLUME_PADRAO_DO_SOM,
+            muted=None,
+            rota=None,
+            op="volume_padrao_na_adocao",
+        )
+        logger.info(
+            "volume_padrao_na_adocao",
+            key=key,
+            volume=VOLUME_PADRAO_DO_SOM,
+            ok=escreveu,
+        )
+        return escreveu
 
     def set_microphone_mute(
         self, muted: bool | None, *, uniq: str | None = None
