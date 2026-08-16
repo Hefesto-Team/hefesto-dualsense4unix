@@ -155,6 +155,54 @@ def faixas_de_eixo(caps: Any, ev_abs: int) -> dict[int, EixoAbsoluto]:
     return faixas
 
 
+def posicoes_de_eixo(caps: Any, ev_abs: int) -> dict[int, int]:
+    """Mapa `código evdev -> valor CRU do eixo AGORA`, do mesmo `absinfo`.
+
+    SEMENTE-DO-REPOUSO-01 (medido 15/08/2026). O irmão do `faixas_de_eixo`: lá
+    se lê a FORMA do eixo (min/max/flat/fuzz), aqui se lê a POSIÇÃO que o
+    kernel já tem guardada. As duas vêm da mesma leitura, e é por isso que
+    descartar esta era barato de fazer e caro de perceber — o `EvdevSnapshot`
+    nascia com os sticks em 128 e só era corrigido por EVENTO, e **o evdev não
+    emite evento para valor que não muda**. Um eixo parado desde antes do open
+    chegava ao jogo como centro perfeito, fosse qual fosse a posição real.
+
+    O caso que mediu: numa janela de 20 s com quatro controles na mesa, o
+    `ABS_Y` de um DualSense no cabo ficou parado em **124** pelos 5001 quadros
+    — zero transições — e o vpad publicou **128**. Os outros 15 eixos da mesma
+    janela chegaram com erro ZERO, porque se mexeram e o evento veio. O
+    `EVIOCGABS` do MESMO nó, no mesmo instante, devolvia 124: o kernel sabia
+    (`docs/data/ensaios-brutos/2026-08-15-A1-entrada-em-repouso.txt`, seções 1
+    e 2; célula `entrada.stick@dualsense` do mapa de canais).
+
+    Fica em função separada de `EixoAbsoluto` de propósito: a faixa é
+    PROPRIEDADE DO NÓ e sobrevive à conexão inteira (`self._eixos` a guarda), a
+    posição é um INSTANTE e vale só no open. Guardá-las na mesma estrutura
+    convidaria alguém a ler mais tarde um valor congelado no open como se fosse
+    o estado de agora.
+
+    Tolerante pelo mesmo contrato do `faixas_de_eixo`: eixo sem `absinfo`
+    legível, ou com `value` que não converte para inteiro, fica FORA do mapa —
+    e quem consome não semeia aquele eixo, caindo no comportamento histórico.
+    """
+    posicoes: dict[int, int] = {}
+    try:
+        entradas = caps.get(ev_abs, ())
+    except Exception:
+        return posicoes
+    if not isinstance(entradas, (list, tuple)):
+        return posicoes
+    for entrada in entradas:
+        if not (isinstance(entrada, tuple) and len(entrada) == 2):
+            continue  # eixo listado sem absinfo: não há posição a ler
+        code, info = entrada
+        valor = getattr(info, "value", None)
+        if valor is None or isinstance(valor, bool):
+            continue
+        with contextlib.suppress(Exception):
+            posicoes[int(code)] = int(valor)
+    return posicoes
+
+
 def _read_input_attr(device_dir: str, attr: str) -> str:
     """Atributo (`phys`/`uniq`) do input device no sysfs ("" se ilegível)."""
     try:
@@ -1272,12 +1320,18 @@ class EvdevReader(_EvdevReconnectLoop):
         return self._locate()
 
     def _on_device_opened(self, dev: Any) -> None:
-        """Monta o normalizador DESTE aparelho a partir do `absinfo` do node.
+        """Monta o normalizador DESTE aparelho e SEMEIA a posição de repouso.
 
         Um ioctl por conexão, nunca por evento (mesmo motivo do
         `MotionSensorReader._on_device_opened`). Falha aqui não é fatal: o mapa
-        fica vazio e o `_handle_abs` volta ao `& 0xFF` de sempre — degradar
-        para o que já rodava é o único modo de falha aceitável aqui.
+        fica vazio, o `_handle_abs` volta ao `& 0xFF` de sempre e nada é
+        semeado — degradar para o que já rodava é o único modo de falha
+        aceitável aqui.
+
+        SEMENTE-DO-REPOUSO-01: as duas coisas saem da MESMA leitura. O
+        `capabilities()` do python-evdev devolve o `_rawcapabilities` colhido no
+        `InputDevice.__init__` — ou seja, o `absinfo` do INSTANTE DO OPEN, que é
+        exatamente o instante que interessa semear.
         """
         try:
             from evdev import ecodes
@@ -1286,7 +1340,9 @@ class EvdevReader(_EvdevReconnectLoop):
         caps: Any = {}
         with contextlib.suppress(Exception):
             caps = dev.capabilities()
-        eixos = faixas_de_eixo(caps, getattr(ecodes, "EV_ABS", 3))
+        ev_abs = getattr(ecodes, "EV_ABS", 3)
+        eixos = faixas_de_eixo(caps, ev_abs)
+        posicoes = posicoes_de_eixo(caps, ev_abs)
         z = getattr(ecodes, "ABS_Z", None)
         rz = getattr(ecodes, "ABS_RZ", None)
         with self._lock:
@@ -1296,6 +1352,74 @@ class EvdevReader(_EvdevReconnectLoop):
             # chutar "não tem" num DualSense mataria o gatilho analógico dele.
             self._sintetizar_l2 = bool(eixos) and z is not None and z not in eixos
             self._sintetizar_r2 = bool(eixos) and rz is not None and rz not in eixos
+            self._semear_posicao_de_repouso(posicoes, ecodes)
+
+    #: Os quatro eixos de STICK, e só eles, entram na recusa do "valor igual ao
+    #: mínimo" abaixo. A diferença com os gatilhos não é de estilo: num stick o
+    #: mínimo é um EXTREMO (talo à esquerda/para cima), num gatilho é o REPOUSO.
+    _CAMPOS_DE_STICK: ClassVar[frozenset[str]] = frozenset(
+        {"lx", "ly", "rx", "ry"}
+    )
+
+    def _semear_posicao_de_repouso(self, posicoes: dict[int, int], ecodes: Any) -> None:
+        """Escreve no snapshot a posição que o kernel já tinha no open.
+
+        Chamado com `self._lock` seguro. Sem isto, um eixo que não emitisse
+        nenhum `EV_ABS` depois do open ficaria no default do dataclass — 128
+        nos sticks — para sempre (SEMENTE-DO-REPOUSO-01, medido em 15/08/2026;
+        ver `posicoes_de_eixo`).
+
+        Três decisões, e cada uma existe por causa de um jeito de errar:
+
+        1. **Semeia pelo MESMO `normalizar_eixo` que os eventos usam**, e não
+           por um "centro" qualquer. É o que mantém a semente e o primeiro
+           evento com aquele mesmo valor produzindo o MESMO número — semear com
+           um centro fixo seria trocar o 128 errado do DualSense por um 128
+           errado no gatilho, que repousa em 0, e por um 128 errado em todo
+           aparelho cujo centro não seja 128 (nenhuma das quatro unidades da
+           mesa de 15/08 tem os quatro sticks em 128).
+        2. **Gatilho entra na semeadura.** Ali o `absinfo.value` de repouso é 0,
+           que é o default de hoje: semear não muda nada no caso comum, e
+           acerta o caso que hoje erra — o gatilho já apertado quando o daemon
+           sobe. Gatilho SINTETIZADO (Pro: sem `ABS_Z`/`ABS_RZ`) não aparece no
+           mapa de posições e continua vindo do botão.
+        3. **Stick com valor exatamente igual ao mínimo declarado NÃO é
+           semeado.** É o valor que um `input_dev` recém-criado tem antes do
+           primeiro report (memória zerada), e num DualSense — que declara
+           `0..255` — ele é indistinguível de "talo à esquerda". Publicar um
+           talo FANTASMA é o defeito que este módulo já descreve em
+           `normalizar_eixo`: o personagem anda sozinho para o canto e não para,
+           até alguém tocar o stick. Recusar deixa o 128 de hoje, que é
+           regressão zero. Errar para o lado de guardar. Num aparelho de faixa
+           com sinal (o Pro, `-32767..32767`) o mínimo é o talo de verdade e o
+           valor de memória zerada é `0`, que já é o centro: lá a recusa nunca
+           tem o que fazer.
+        """
+        campos: tuple[tuple[str, str], ...] = (
+            ("ABS_X", "lx"),
+            ("ABS_Y", "ly"),
+            ("ABS_RX", "rx"),
+            ("ABS_RY", "ry"),
+            ("ABS_Z", "l2_raw"),
+            ("ABS_RZ", "r2_raw"),
+        )
+        mudancas: dict[str, Any] = {}
+        for nome_evdev, campo in campos:
+            code = getattr(ecodes, nome_evdev, None)
+            if code is None or code not in posicoes:
+                continue
+            cru = posicoes[code]
+            faixa = self._eixos.get(code)
+            if (
+                campo in self._CAMPOS_DE_STICK
+                and faixa is not None
+                and cru == faixa.minimo
+            ):
+                continue
+            mudancas[campo] = normalizar_eixo(cru, faixa)
+        if mudancas:
+            self._snapshot = self._with(**mudancas)
+            logger.debug("evdev_posicao_semeada", **mudancas)
 
     def _reapply_grab(self, dev: Any) -> None:
         """Reaplica o grab pedido ao (re)abrir o device, com estado observável."""
