@@ -1,0 +1,243 @@
+==============================================================================
+  corpo_do_0x32.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... o corpo do output 0x32 é um contêiner TLV ou o `common` de 47 bytes?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... os                     de /usr/lib/python3.12/os.py
+  biblioteca ....... select                 de embutido no interpretador (stdlib estática)
+  biblioteca ....... subprocess             de /usr/lib/python3.12/subprocess.py
+  biblioteca ....... hefesto_dualsense4unix.integrations.dualsense_bt_audio de /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/src/hefesto_dualsense4unix/integrations/dualsense_bt_audio.py
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+
+  QUEM ESCREVE, e este instrumento NÃO é um deles:
+    /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic mute|unmute|release --uniq <mac>   (caminho 0x31, common[9] — o controle positivo e o ARMAR)
+    /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic bt                                  (a ponte: 0x32 LIGAR ao subir, 0x32 DESLIGAR ao parar)
+  constantes do report .... de /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/src/hefesto_dualsense4unix/integrations/dualsense_bt_audio.py
+  bit do veredito ......... report[55] & 0x04   (controle negativo: report[54], que não pode se mover junto)
+  confundimento ........... IMUNE — o veredito é um bit do próprio aparelho; não há comparação entre braços
+
+mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+  unidades que este ensaio PODE medir: 2 de 4 — só as que estão no rádio, porque o 0x32 não existe no cabo:
+    hidraw4   a0:fa:9c:00:00:f0 (hw 0x00000710)
+    hidraw5   d4:2f:4b:00:00:d8 (hw 0x00001111)
+
+  /dev/hidraw4: porta ............ broker (SCM_RIGHTS) — o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock
+  /dev/hidraw5: porta ............ broker (SCM_RIGHTS) — o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock
+
+
+A LINHA DO TEMPO — cada fase, o que o produto escreveu, e o que o aparelho passou a declarar
+janela (s)     fase                                                             unidade            reports  [55] no início  [55] no fim  [55] observados     [54] observados  reports de áudio
+-------------  ---------------------------------------------------------------  -----------------  -------  --------------  -----------  ------------------  ---------------  ----------------
+   0.0-  20.0  basal (nenhum comando)                                           a0:fa:9c:00:00:f0  7617     ativo           ativo        0x00x7617           0x07x7617        0
+   0.0-  20.0  basal (nenhum comando)                                           d4:2f:4b:00:00:d8  7441     ativo           ativo        0x00x7441           0x08x7441        0
+  20.2-  26.2  controle positivo: mute em a0:fa:9c:00:00:f0                     a0:fa:9c:00:00:f0  2214     MUDO            MUDO         0x04x2214           0x07x2214        0
+  20.2-  26.2  controle positivo: mute em a0:fa:9c:00:00:f0                     d4:2f:4b:00:00:d8  2356     ativo           ativo        0x00x2356           0x08x2356        0
+  26.4-  32.4  controle positivo: unmute em a0:fa:9c:00:00:f0                   a0:fa:9c:00:00:f0  2111     MUDO            ativo        0x00x2109 0x04x2    0x07x2111        0
+  26.4-  32.4  controle positivo: unmute em a0:fa:9c:00:00:f0                   d4:2f:4b:00:00:d8  2176     ativo           ativo        0x00x2176           0x08x2176        0
+  32.6-  34.6  devolve a posse: release em a0:fa:9c:00:00:f0                    a0:fa:9c:00:00:f0  765      ativo           ativo        0x00x765            0x07x765         0
+  32.6-  34.6  devolve a posse: release em a0:fa:9c:00:00:f0                    d4:2f:4b:00:00:d8  793      ativo           ativo        0x00x793            0x08x793         0
+  34.8-  40.8  controle positivo: mute em d4:2f:4b:00:00:d8                     a0:fa:9c:00:00:f0  2116     ativo           ativo        0x00x2116           0x07x2116        0
+  34.8-  40.8  controle positivo: mute em d4:2f:4b:00:00:d8                     d4:2f:4b:00:00:d8  2425     MUDO            MUDO         0x04x2425           0x08x2425        0
+  41.0-  47.0  controle positivo: unmute em d4:2f:4b:00:00:d8                   a0:fa:9c:00:00:f0  2215     ativo           ativo        0x00x2215           0x07x2215        0
+  41.0-  47.0  controle positivo: unmute em d4:2f:4b:00:00:d8                   d4:2f:4b:00:00:d8  2399     MUDO            ativo        0x00x2397 0x04x2    0x08x2399        0
+  47.2-  49.2  devolve a posse: release em d4:2f:4b:00:00:d8                    a0:fa:9c:00:00:f0  756      ativo           ativo        0x00x756            0x07x756         0
+  47.2-  49.2  devolve a posse: release em d4:2f:4b:00:00:d8                    d4:2f:4b:00:00:d8  757      ativo           ativo        0x00x757            0x08x757         0
+  49.4-  51.4  armar MUDO em a0:fa:9c:00:00:f0                                  a0:fa:9c:00:00:f0  757      MUDO            MUDO         0x04x757            0x07x757         0
+  49.4-  51.4  armar MUDO em a0:fa:9c:00:00:f0                                  d4:2f:4b:00:00:d8  752      ativo           ativo        0x00x752            0x08x752         0
+  51.7-  53.7  armar MUDO em d4:2f:4b:00:00:d8                                  a0:fa:9c:00:00:f0  765      MUDO            MUDO         0x04x765            0x07x765         0
+  51.7-  53.7  armar MUDO em d4:2f:4b:00:00:d8                                  d4:2f:4b:00:00:d8  787      ativo           MUDO         0x04x785 0x00x2     0x08x787         0
+  53.9-  55.9  soltar o registrador de a0:fa:9c:00:00:f0                        a0:fa:9c:00:00:f0  726      MUDO            MUDO         0x04x726            0x07x726         0
+  53.9-  55.9  soltar o registrador de a0:fa:9c:00:00:f0                        d4:2f:4b:00:00:d8  747      MUDO            MUDO         0x04x747            0x08x747         0
+  56.1-  58.1  soltar o registrador de d4:2f:4b:00:00:d8                        a0:fa:9c:00:00:f0  757      MUDO            MUDO         0x04x757            0x07x757         0
+  56.1-  58.1  soltar o registrador de d4:2f:4b:00:00:d8                        d4:2f:4b:00:00:d8  779      MUDO            MUDO         0x04x779            0x08x779         0
+  58.1-  64.1  BRAÇO A: ARMADO MUDO — o mudo sobrevive sem o daemon segurando?  a0:fa:9c:00:00:f0  2240     MUDO            MUDO         0x04x2240           0x07x2240        0
+  58.1-  64.1  BRAÇO A: ARMADO MUDO — o mudo sobrevive sem o daemon segurando?  d4:2f:4b:00:00:d8  2271     MUDO            MUDO         0x04x2271           0x08x2271        0
+  64.1-  74.1  BRAÇO A (armado MUDO): 0x32 de LIGAR (a ponte subiu)             a0:fa:9c:00:00:f0  2861     MUDO            MUDO         0x04x2861           0x07x2861        980
+  64.1-  74.1  BRAÇO A (armado MUDO): 0x32 de LIGAR (a ponte subiu)             d4:2f:4b:00:00:d8  2917     MUDO            MUDO         0x04x2917           0x08x2917        979
+  74.1-  86.1  BRAÇO A (armado MUDO): 0x32 de DESLIGAR (a ponte parou)          a0:fa:9c:00:00:f0  4585     MUDO            MUDO         0x04x4585           0x07x4585        0
+  74.1-  86.1  BRAÇO A (armado MUDO): 0x32 de DESLIGAR (a ponte parou)          d4:2f:4b:00:00:d8  4667     MUDO            MUDO         0x04x4667           0x08x4667        0
+  86.3-  88.3  armar ATIVO em a0:fa:9c:00:00:f0                                 a0:fa:9c:00:00:f0  714      ativo           ativo        0x00x714            0x07x714         0
+  86.3-  88.3  armar ATIVO em a0:fa:9c:00:00:f0                                 d4:2f:4b:00:00:d8  742      MUDO            MUDO         0x04x742            0x08x742         0
+  88.5-  90.5  armar ATIVO em d4:2f:4b:00:00:d8                                 a0:fa:9c:00:00:f0  774      ativo           ativo        0x00x774            0x07x774         0
+  88.5-  90.5  armar ATIVO em d4:2f:4b:00:00:d8                                 d4:2f:4b:00:00:d8  777      MUDO            ativo        0x00x773 0x04x4     0x08x777         0
+  90.7-  92.7  soltar o registrador de a0:fa:9c:00:00:f0                        a0:fa:9c:00:00:f0  747      ativo           ativo        0x00x747            0x07x747         0
+  90.7-  92.7  soltar o registrador de a0:fa:9c:00:00:f0                        d4:2f:4b:00:00:d8  782      ativo           ativo        0x00x782            0x08x782         0
+  92.9-  94.9  soltar o registrador de d4:2f:4b:00:00:d8                        a0:fa:9c:00:00:f0  754      ativo           ativo        0x00x754            0x07x754         0
+  92.9-  94.9  soltar o registrador de d4:2f:4b:00:00:d8                        d4:2f:4b:00:00:d8  779      ativo           ativo        0x00x779            0x08x779         0
+  94.9- 100.9  BRAÇO B: ARMADO ATIVO — o microfone está desmutado e sem dono?   a0:fa:9c:00:00:f0  2227     ativo           ativo        0x00x2227           0x07x2227        0
+  94.9- 100.9  BRAÇO B: ARMADO ATIVO — o microfone está desmutado e sem dono?   d4:2f:4b:00:00:d8  2302     ativo           ativo        0x00x2302           0x08x2302        0
+ 100.9- 110.9  BRAÇO B (armado ATIVO): 0x32 de LIGAR (a ponte subiu)            a0:fa:9c:00:00:f0  2724     ativo           MUDO         0x04x2585 0x00x139  0x07x2724        979
+ 100.9- 110.9  BRAÇO B (armado ATIVO): 0x32 de LIGAR (a ponte subiu)            d4:2f:4b:00:00:d8  2875     ativo           MUDO         0x04x2693 0x00x182  0x08x2875        979
+ 111.0- 123.0  BRAÇO B (armado ATIVO): 0x32 de DESLIGAR (a ponte parou)         a0:fa:9c:00:00:f0  4456     MUDO            MUDO         0x04x4456           0x07x4456        0
+ 111.0- 123.0  BRAÇO B (armado ATIVO): 0x32 de DESLIGAR (a ponte parou)         d4:2f:4b:00:00:d8  4654     MUDO            MUDO         0x04x4654           0x08x4654        0
+ 123.2- 124.7  restaurar: unmute em a0:fa:9c:00:00:f0                           a0:fa:9c:00:00:f0  493      MUDO            ativo        0x00x490 0x04x3     0x07x493         0
+ 123.2- 124.7  restaurar: unmute em a0:fa:9c:00:00:f0                           d4:2f:4b:00:00:d8  519      MUDO            MUDO         0x04x519            0x08x519         0
+ 124.9- 126.4  restaurar: unmute em d4:2f:4b:00:00:d8                           a0:fa:9c:00:00:f0  520      ativo           ativo        0x00x520            0x07x520         0
+ 124.9- 126.4  restaurar: unmute em d4:2f:4b:00:00:d8                           d4:2f:4b:00:00:d8  557      MUDO            ativo        0x00x555 0x04x2     0x08x557         0
+ 126.6- 128.1  restaurar: release em a0:fa:9c:00:00:f0                          a0:fa:9c:00:00:f0  527      ativo           ativo        0x00x527            0x07x527         0
+ 126.6- 128.1  restaurar: release em a0:fa:9c:00:00:f0                          d4:2f:4b:00:00:d8  565      ativo           ativo        0x00x565            0x08x565         0
+ 128.3- 129.8  restaurar: release em d4:2f:4b:00:00:d8                          a0:fa:9c:00:00:f0  554      ativo           ativo        0x00x554            0x07x554         0
+ 128.3- 129.8  restaurar: release em d4:2f:4b:00:00:d8                          d4:2f:4b:00:00:d8  582      ativo           ativo        0x00x582            0x08x582         0
+
+A SAÍDA DO PRODUTO, comando a comando (é ele quem escreve)
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic mute --uniq a0:fa:9c:00:00:f0
+      microfone do firmware .... MUDO
+        o controle declara ....... ativo
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq a0:fa:9c:00:00:f0
+      microfone do firmware .... ATIVO
+        o controle declara ....... MUDO
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+      seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq a0:fa:9c:00:00:f0
+      microfone do firmware .... posse devolvida ao kernel
+        o controle declara ....... ativo
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic mute --uniq d4:2f:4b:00:00:d8
+      microfone do firmware .... MUDO
+        o controle declara ....... ativo
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq d4:2f:4b:00:00:d8
+      microfone do firmware .... ATIVO
+        o controle declara ....... MUDO
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+      seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq d4:2f:4b:00:00:d8
+      microfone do firmware .... posse devolvida ao kernel
+        o controle declara ....... ativo
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic mute --uniq a0:fa:9c:00:00:f0
+      microfone do firmware .... MUDO
+        o controle declara ....... ativo
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic mute --uniq d4:2f:4b:00:00:d8
+      microfone do firmware .... MUDO
+        o controle declara ....... ativo
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq a0:fa:9c:00:00:f0
+      microfone do firmware .... posse devolvida ao kernel
+        o controle declara ....... MUDO
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+      seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq d4:2f:4b:00:00:d8
+      microfone do firmware .... posse devolvida ao kernel
+        o controle declara ....... MUDO
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+      seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic bt
+      (sem saída)
+  $ SIGTERM na ponte -> parar() -> 0x32 DESLIGAR
+      (sem saída)
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq a0:fa:9c:00:00:f0
+      microfone do firmware .... ATIVO
+        o controle declara ....... MUDO
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+      seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq d4:2f:4b:00:00:d8
+      microfone do firmware .... ATIVO
+        o controle declara ....... MUDO
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+      seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq a0:fa:9c:00:00:f0
+      microfone do firmware .... posse devolvida ao kernel
+        o controle declara ....... ativo
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq d4:2f:4b:00:00:d8
+      microfone do firmware .... posse devolvida ao kernel
+        o controle declara ....... ativo
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic bt
+      (sem saída)
+  $ SIGTERM na ponte -> parar() -> 0x32 DESLIGAR
+      (sem saída)
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq a0:fa:9c:00:00:f0
+      microfone do firmware .... ATIVO
+        o controle declara ....... MUDO
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+      seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq d4:2f:4b:00:00:d8
+      microfone do firmware .... ATIVO
+        o controle declara ....... MUDO
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+      seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq a0:fa:9c:00:00:f0
+      microfone do firmware .... posse devolvida ao kernel
+        o controle declara ....... ativo
+  $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq d4:2f:4b:00:00:d8
+      microfone do firmware .... posse devolvida ao kernel
+        o controle declara ....... ativo
+  $ (a ponte, do subir ao SIGTERM)
+      --- BRAÇO A ---
+      Microfone do DualSense por Bluetooth
+        libopus ............ libopus 1.4
+        pactl .............. ok
+        module-pipe-source . ok
+        broker de hidraw ... ok
+        controle BT ........ /dev/hidraw4  a0:fa:9c:00:00:f0
+        controle BT ........ /dev/hidraw5  d4:2f:4b:00:00:d8
+      
+        subindo a ponte… (Ctrl-C encerra e desliga o mic)
+      
+        sem-ouvinte = quadros descartados porque nenhum app está gravando (esperado)
+      
+      2026-08-15T21:36:19.791680 [info     ] bt_mic_pedido                  ligar=True no=/dev/hidraw4 seq=1
+      2026-08-15T21:36:19.800425 [info     ] bt_mic_pedido                  ligar=True no=/dev/hidraw5 seq=1
+        hefesto_dualsense_bt_c311f0  MUDO  quadros=0 entregues=0 sem-ouvinte=0 
+      invalidos=0 rearmes=0 mudo=100%
+        hefesto_dualsense_bt_4846d8  MUDO  quadros=0 entregues=0 sem-ouvinte=0 
+      invalidos=0 rearmes=0 mudo=100%
+        hefesto_dualsense_bt_c311f0  MUDO  quadros=500 entregues=8 sem-ouvinte=492 
+      invalidos=0 rearmes=0 mudo=100%
+        hefesto_dualsense_bt_4846d8  MUDO  quadros=499 entregues=8 sem-ouvinte=491 
+      invalidos=0 rearmes=0 mudo=100%
+      2026-08-15T21:36:29.604528 [info     ] bt_mic_pedido                  ligar=False no=/dev/hidraw4 seq=2
+      2026-08-15T21:36:29.614520 [info     ] bt_mic_pedido                  ligar=False no=/dev/hidraw5 seq=2
+      
+        ponte encerrada; microfone devolvido ao estado anterior.
+      
+      --- BRAÇO B ---
+      Microfone do DualSense por Bluetooth
+        libopus ............ libopus 1.4
+        pactl .............. ok
+        module-pipe-source . ok
+        broker de hidraw ... ok
+        controle BT ........ /dev/hidraw4  a0:fa:9c:00:00:f0
+        controle BT ........ /dev/hidraw5  d4:2f:4b:00:00:d8
+      
+        subindo a ponte… (Ctrl-C encerra e desliga o mic)
+      
+        sem-ouvinte = quadros descartados porque nenhum app está gravando (esperado)
+      
+      2026-08-15T21:36:56.664435 [info     ] bt_mic_pedido                  ligar=True no=/dev/hidraw4 seq=1
+      2026-08-15T21:36:56.674312 [info     ] bt_mic_pedido                  ligar=True no=/dev/hidraw5 seq=1
+        hefesto_dualsense_bt_c311f0  ativo  quadros=0 entregues=0 sem-ouvinte=0 
+      invalidos=0 rearmes=0 mudo=0%
+        hefesto_dualsense_bt_4846d8  ativo  quadros=0 entregues=0 sem-ouvinte=0 
+      invalidos=0 rearmes=0 mudo=0%
+        hefesto_dualsense_bt_c311f0  MUDO  quadros=500 entregues=8 sem-ouvinte=492 
+      invalidos=0 rearmes=0 mudo=95%
+        hefesto_dualsense_bt_4846d8  MUDO  quadros=499 entregues=8 sem-ouvinte=491 
+      invalidos=0 rearmes=0 mudo=93%
+      2026-08-15T21:37:06.474583 [info     ] bt_mic_pedido                  ligar=False no=/dev/hidraw4 seq=2
+      2026-08-15T21:37:06.479568 [info     ] bt_mic_pedido                  ligar=False no=/dev/hidraw5 seq=2
+      
+        ponte encerrada; microfone devolvido ao estado anterior.
+
+O VEREDITO, UNIDADE A UNIDADE
+unidade                            basal parada  [54] parado  controle positivo (0x31)  reports de áudio: basal -> LIGAR A/B  braço A armado MUDO  A: o 0x32 desmutou?  braço B armado ATIVO  B: o DESLIGAR mutou?
+---------------------------------  ------------  -----------  ------------------------  ------------------------------------  -------------------  -------------------  --------------------  --------------------
+a0:fa:9c:00:00:f0 (hw 0x00000710)  ok            ok           ok                        0 -> 980/979                          ok                   não desmutou         ok                    MUTOU
+d4:2f:4b:00:00:d8 (hw 0x00001111)  ok            ok           ok                        0 -> 979/979                          ok                   não desmutou         ok                    MUTOU
+
+  Como ler a coluna do áudio: a basal não tem comando nenhum e o aparelho não manda áudio; nas janelas de LIGAR ele manda centenas de reports com o bit de áudio. Esse é o CONTROLE POSITIVO DO PRÓPRIO 0x32 — a prova de que o report chegou e foi obedecido, sem a qual 'o mudo não mexeu' seria indistinguível de 'o pacote foi descartado'.
+  A previsão que o `common` faz, e que o braço A falsifica: sob essa leitura [4]=0b011 é valid_flag1=0x03 (MIC_MUTE_LED_CONTROL_ENABLE | POWER_SAVE_CONTROL_ENABLE) e [4]=0b010 é 0x02, os dois com common[9]=0x00 — que é o MESMO mecanismo pelo qual o `mic unmute` desmuta pelo 0x31, e que funcionou nesta mesma corrida.
+
+  a0:fa:9c:00:00:f0 (hw 0x00000710)
+      TLV — armado ATIVO, o 0x32 de DESLIGAR (0b010, bit0=0) MUTOU o microfone, e armado MUDO ele NÃO desmutou. O `common` está refutado nos dois braços. [2] é tag, [3] é comprimento, [4] é valor.
+  d4:2f:4b:00:00:d8 (hw 0x00001111)
+      TLV — armado ATIVO, o 0x32 de DESLIGAR (0b010, bit0=0) MUTOU o microfone, e armado MUDO ele NÃO desmutou. O `common` está refutado nos dois braços. [2] é tag, [3] é comprimento, [4] é valor.
+
+  em quantas unidades: 2 de 4 na mesa (as 2 unidades no rádio concordam). As outras estão no CABO, onde o 0x32 não existe.
+  reports curtos/ignorados na corrida: 0
+
+------------------------------------------------------------------------------
+RESUMO: TLV  ·  2/4 unidades, as 2 unidades no rádio concordam.
+------------------------------------------------------------------------------
