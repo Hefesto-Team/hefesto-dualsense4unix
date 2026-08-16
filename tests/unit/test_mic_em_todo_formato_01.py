@@ -51,12 +51,44 @@ def _linha_do_exit_da_bifurcacao() -> int:
     raise AssertionError("não achei o `exit 0` da bifurcação de formato")
 
 
+#: Os modos do dono que DECIDEM O MICROFONE — e só eles respondem às flags
+#: dela. A lista é a do `case` de `scripts/fix_wireplumber_default_source.sh`.
+#: `--status` não escreve nada; `--nunca-dorme` escreve, mas sobre o
+#: ALTO-FALANTE (ver `_MODOS_FORA_DO_MIC`).
+_MODOS_DO_MIC = (
+    "--install",
+    "--disable-source",
+    "--reset-only",
+    "--enable-mic",
+    "--promote-source",
+    "--unmute-routes",
+)
+
+#: SOM-QUE-NAO-DORME-01 (16/08/2026): modos do MESMO script que não são uma
+#: decisão sobre o microfone e por isso NÃO podem ficar sob flag de mic.
+#: `--nunca-dorme` instala o drop-in 54, que impede o WirePlumber de suspender
+#: o SINK do controle — medido na orelha dela em 15/08 23h45: com o nó
+#: suspenso, o religar do hardware come o começo do som. Quem pediu
+#: `--keep-dualsense-mic` pediu para não rebaixarem a ENTRADA dele; não pediu
+#: para perder o início de cada efeito sonoro.
+_MODOS_FORA_DO_MIC = ("--nunca-dorme",)
+
+
 def _linhas_que_chamam_o_dono() -> list[int]:
     return [
         i + 1
         for i, s in enumerate(_texto().splitlines())
         if DONO_DO_MIC in s and s.strip().startswith("bash ")
     ]
+
+
+def _modo_da_chamada(linha: int) -> str | None:
+    """O `--modo` passado na chamada da linha 1-indexada (None se não achar)."""
+    texto = _texto().splitlines()[linha - 1]
+    for modo in (*_MODOS_DO_MIC, *_MODOS_FORA_DO_MIC):
+        if modo in texto:
+            return modo
+    return None
 
 
 def test_o_mic_e_curado_antes_do_exit_dos_formatos_nao_nativos() -> None:
@@ -85,20 +117,86 @@ def test_o_ramo_nao_nativo_respeita_as_flags_dela() -> None:
     vontade na GUI prevalece sempre" vale também para a linha de comando.
 
     Morde ao trocar o `if` por uma chamada solta.
+
+    O ESCOPO ESTREITOU EM 16/08/2026, e o motivo é um fato novo, não uma
+    conveniência: até 15/08 toda chamada deste script era uma decisão sobre o
+    MICROFONE, e "chamada sob flag de mic" e "chamada legítima" eram a mesma
+    coisa. O `--nunca-dorme` desfez a coincidência — é o mesmo script agindo
+    sobre o ALTO-FALANTE. A regra que este teste guarda sempre foi *"a decisão
+    sobre o mic é dela"*, e não *"tudo que este script faz é sobre o mic"*;
+    quem passa a ser aferido é o conjunto explícito `_MODOS_DO_MIC`. O irmão
+    `test_a_cura_do_alto_falante_nao_fica_sob_flag_de_mic` fecha a outra ponta,
+    para que estreitar aqui não vire porta aberta.
     """
     linhas = _texto().splitlines()
     exit_linha = _linha_do_exit_da_bifurcacao()
     trecho = "\n".join(linhas[:exit_linha])
     assert "WITH_WIREPLUMBER_DISABLE_MIC" in trecho
     assert "WITH_WIREPLUMBER_FIX" in trecho
+    conferidas = 0
     for linha in _linhas_que_chamam_o_dono():
         if linha >= exit_linha:
+            continue
+        modo = _modo_da_chamada(linha)
+        assert modo is not None, (
+            f"a chamada da linha {linha} não passa nenhum modo conhecido de "
+            f"{DONO_DO_MIC} — modo novo entra em `_MODOS_DO_MIC` ou em "
+            "`_MODOS_FORA_DO_MIC`, com o porquê escrito, para não escapar "
+            "destas duas travas por omissão"
+        )
+        if modo in _MODOS_FORA_DO_MIC:
             continue
         # A chamada tem de estar sob um `if` de flag: procura para trás a
         # condição mais próxima, dentro de poucas linhas.
         antes = "\n".join(linhas[max(0, linha - 6) : linha])
         assert re.search(r"WITH_WIREPLUMBER_(FIX|DISABLE_MIC)", antes), (
-            f"a chamada da linha {linha} não está sob a flag dela"
+            f"a chamada da linha {linha} ({modo}) não está sob a flag dela"
+        )
+        conferidas += 1
+    assert conferidas, (
+        "nenhuma chamada de modo de MICROFONE antes do `exit 0` — se todas "
+        "sumiram, é o defeito do MIC-EM-TODO-FORMATO-01 de volta; se todas "
+        "viraram `_MODOS_FORA_DO_MIC`, este teste parou de aferir o que "
+        "promete"
+    )
+
+
+def test_a_cura_do_alto_falante_nao_fica_sob_flag_de_mic() -> None:
+    """SOM-QUE-NAO-DORME-01: sem flag, e nem de carona na flag de outro.
+
+    A regra da casa de 08/08 é *toda cura entra no install, SEM FLAG*, e o
+    MIC-EM-TODO-FORMATO-01 é justamente o que ela custou quando foi violada por
+    acidente de POSIÇÃO. O jeito de repetir o erro aqui é fácil e parece
+    arrumação: encostar a chamada do `--nunca-dorme` dentro do `if` do mic que
+    vive logo abaixo dela. Ninguém veria — o install continuaria verde para
+    quem não passa flag nenhuma — e quem pedisse `--keep-dualsense-mic`
+    perderia o começo de cada efeito sonoro sem nunca ter pedido isso.
+
+    Morde ao mover a chamada do `--nunca-dorme` para dentro do `if` de mic.
+    """
+    linhas = _texto().splitlines()
+    fora = [
+        linha
+        for linha in _linhas_que_chamam_o_dono()
+        if _modo_da_chamada(linha) in _MODOS_FORA_DO_MIC
+    ]
+    assert fora, (
+        "ninguém mais chama o `--nunca-dorme` no install — o sink do controle "
+        "volta a ser suspenso pelo WirePlumber a cada 5 s de ociosidade, e o "
+        "religar do hardware come o começo do som (medido em 15/08 23h45)"
+    )
+    exit_linha = _linha_do_exit_da_bifurcacao()
+    assert any(linha < exit_linha for linha in fora), (
+        "o `--nunca-dorme` só roda depois do `exit 0` da bifurcação — "
+        "flatpak/appimage/deb saem com o alto-falante dormindo. É a MESMA "
+        "forma do defeito que este arquivo inteiro existe para lembrar"
+    )
+    for linha in fora:
+        antes = "\n".join(linhas[max(0, linha - 6) : linha])
+        assert not re.search(r"WITH_WIREPLUMBER_(FIX|DISABLE_MIC)", antes), (
+            f"a chamada da linha {linha} caiu sob uma flag de MICROFONE — o "
+            "sono do alto-falante não é uma decisão sobre o microfone, e "
+            "nenhuma flag de mic pode decidir por ele"
         )
 
 
