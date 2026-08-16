@@ -285,5 +285,116 @@ if [[ -n "$MAC_BIN" ]]; then
     exit 1
 fi
 
+# ---------------------------------------------------------------------------
+# SERIAL-DE-FABRICA-01 (15/08/2026). MEDIDO.
+# ---------------------------------------------------------------------------
+#
+# Terceira vez da mesma família nesta casa: o portão só reprova a forma que ele
+# conhece. Foi assim no BURACO-DO-PORTAO-01 (06/08, o MAC colado) e no
+# MAC-BINARIO-EM-LITTLE-ENDIAN-01 (o bloco logo acima).
+#
+# Hoje um SERIAL DE FÁBRICA real, dos 17 caracteres, entrou na docstring de
+# `mascarar_serial()` em `scripts/ensaios/cor_do_plastico.py` — a função que
+# mascara serial vazou um — e ESTE script passou VERDE. Motivo: tudo acima caça
+# a forma de um MAC e menções a provedores de IA. Antes desta linha,
+# `grep -i serial scripts/check_anonymity.sh` devolvia ZERO.
+#
+# O serial identifica a unidade dela tão bem quanto o MAC: é o número da
+# etiqueta, o da garantia, o que liga o aparelho à compra. A máscara da casa
+# são os 6 primeiros caracteres e o resto em `#` — `A12B34###########`, num
+# prefixo FORJADO: nem exemplo mascarado precisa carregar o prefixo dela — e ela
+# preserva de propósito os caracteres 5 e 6, onde mora o código da COR, que é o
+# que o ensaio E7 mede.
+#
+# A FORMA é a MEDIDA nos dois aparelhos que responderam ao E7, e não a que
+# circulava de boca: o padrão `[A-Z]\d{2}[A-Z]\d{2}[A-Z]\d{10}` está ERRADO
+# porque o segundo serial da bancada tem DÍGITO no caractere 4 (ver
+# docs/data/ensaios-brutos/2026-08-15-E7-cor-do-plastico.csv, coluna
+# `serial_mascarado`), e aquele padrão não casaria com ele.
+#
+# FALSO POSITIVO, MEDIDO na árvore de 15/08 (rastreados + novos): `[A-Z0-9]{17}`
+# solto dá 12 reprovações em 8 arquivos, todas ruído (`INDEPENDENTEMENTE`,
+# `MICROCASSYVOLTAGE`, `REDIMENSIONAMENTO`, ... e os dois seriais forjados
+# legítimos). Exigir DÍGITO nas posições 2, 3, 5 e 6 leva o ruído a ZERO sem
+# perder a forma real — palavra não tem dígito, e os forjados não têm dígito
+# onde o serial verdadeiro tem.
+#
+# TRÊS FORMAS, porque duas já não bastaram: texto (inclusive dentro de
+# binário), hexdump em pares (o serial de 17 caracteres ATRAVESSA a quebra de
+# linha de um dump de 16 bytes) e corrida hexadecimal colada. A coluna de
+# offset do dump (`0000`) e um `0x00001111` ficam de fora sozinhos, pela
+# fronteira de hexadecimal dos pares.
+#
+# O portão AUTORITATIVO desta regra é `tests/unit/test_docs_mac_anonimato.py`
+# (mesmo padrão, com os testes de mordida das três formas, e com um teste que
+# reprova a divergência entre as duas cópias). Este bloco é a segunda linha,
+# para quem roda só o script. O python3 já foi exigido no bloco acima.
+#
+# A mensagem NÃO imprime o serial achado: saída de portão vai para log de CI, e
+# portão que republica o segredo para avisar do vazamento só mudou o vazamento
+# de lugar. Saem os 6 públicos e a máscara, que bastam para achar a linha.
+SERIAL_HITS=$(_listar_para_varredura_binaria | python3 -c '
+import re
+import sys
+
+# ESPELHO de tests/unit/test_docs_mac_anonimato.py::PADRAO_DE_SERIAL.
+# test_o_check_anonymity_usa_o_mesmo_padrao_de_serial reprova a divergência.
+PADRAO = (
+    r"(?<![A-Z0-9])"
+    r"[A-Z][0-9]{2}[A-Z0-9][0-9]{2}"
+    r"[A-Z0-9]{11}"
+    r"(?![A-Z0-9])"
+)
+SERIAL = re.compile(PADRAO)
+PAR_HEX = re.compile(rb"(?<![0-9A-Fa-f])([0-9A-Fa-f]{2})(?![0-9A-Fa-f])")
+HEX_COLADO = re.compile(rb"(?<![0-9A-Fa-f])((?:[0-9A-Fa-f]{2}){17,})(?![0-9A-Fa-f])")
+PULA = (".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
+PUBLICOS = 6
+
+
+def mascarar(achado):
+    return achado[:PUBLICOS] + "#" * (len(achado) - PUBLICOS)
+
+
+achados = []
+for nome in sys.stdin.buffer.read().split(b"\0"):
+    if not nome:
+        continue
+    caminho = nome.decode("utf-8", "surrogateescape")
+    if caminho.lower().endswith(PULA):
+        continue
+    try:
+        with open(nome, "rb") as fh:
+            dados = fh.read()
+    except OSError:
+        continue
+    for m in SERIAL.finditer(dados.decode("latin-1")):
+        achados.append("%s (texto): %s" % (caminho, mascarar(m.group(0))))
+    fluxo = bytes(int(p, 16) for p in PAR_HEX.findall(dados))
+    for m in SERIAL.finditer(fluxo.decode("latin-1")):
+        achados.append("%s (hexdump): %s" % (caminho, mascarar(m.group(0))))
+    for corrida in HEX_COLADO.finditer(dados):
+        bruto = bytes.fromhex(corrida.group(1).decode("ascii")).decode("latin-1")
+        for m in SERIAL.finditer(bruto):
+            achados.append("%s (hex colado): %s" % (caminho, mascarar(m.group(0))))
+for linha in sorted(set(achados)):
+    print(linha)
+')
+
+if [[ -n "$SERIAL_HITS" ]]; then
+    echo "ANONIMATO VIOLADO — SERIAL DE FÁBRICA real em arquivo versionado:"
+    echo "------------------------------------------------"
+    echo "$SERIAL_HITS"
+    echo "------------------------------------------------"
+    echo ""
+    echo "O serial de 17 caracteres identifica a unidade tão bem quanto o MAC:"
+    echo "é o número da etiqueta e o da garantia. Máscara da casa: os 6"
+    echo "primeiros caracteres e o resto em '#' (A12B34###########). Os"
+    echo "caracteres 5 e 6 — o código da COR — ficam preservados de propósito."
+    echo "Em instrumento, use mascarar_serial() de scripts/ensaios/cor_do_plastico.py."
+    echo "O achado acima já sai mascarado: o portão não republica o segredo."
+    exit 1
+fi
+
 echo "OK: anonimato preservado."
 exit 0

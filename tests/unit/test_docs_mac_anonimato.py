@@ -1,4 +1,12 @@
-"""Guarda de anonimato de hardware: MAC real NUNCA sai inteiro no repo.
+"""Guarda de anonimato de hardware: MAC e SERIAL reais NUNCA saem inteiros.
+
+**NOTA DATADA — 15/08/2026.** O nome do arquivo diz "mac" e o conteúdo já não
+diz só isso: no fim dele mora agora o PORTÃO DE SERIAL DE FÁBRICA
+(``SERIAL-DE-FABRICA-01``), que nasceu no dia em que um serial real de 17
+caracteres entrou na árvore com todos os portões verdes. O arquivo não foi
+renomeado de propósito — renomear portão quebra as referências que o CI, os
+índices de sprint e os outros testes fazem a ele. O que identifica um aparelho
+desta bancada, seja endereço de rádio ou número de etiqueta, é auditado AQUI.
 
 Corretor final (interação entre ondas, achado #4): o desenho da Onda S vazou
 os 6 octetos REAIS do adaptador BT e de um controle, quebrando a convenção que
@@ -412,3 +420,338 @@ def test_o_regex_nao_confunde_pedaco_de_hexadecimal_maior() -> None:
     oui_colado = "".join(_OUIS_REAIS_OCTETOS[0])
     sha_falso = "9f" + oui_colado + "112233" + "ab" * 24
     assert not list(MAC_COMPLETO_RE.finditer(sha_falso))
+
+
+# ===========================================================================
+# O PORTÃO DE SERIAL — SERIAL-DE-FABRICA-01 (15/08/2026)
+# ===========================================================================
+#
+# GRAU: MEDIDO. Terceira vez da MESMA família nesta casa, e a auditoria de hoje
+# escreveu a frase: *"senão a terceira vez acontece"*. As duas primeiras foram
+# o BURACO-DO-PORTAO-01 (06/08, a forma colada do MAC) e o
+# MAC-BINARIO-EM-LITTLE-ENDIAN-01 (15/08, os bytes crus). A família é sempre a
+# mesma: **o portão só reprova a forma que ele conhece.**
+#
+# O que aconteceu hoje: um SERIAL DE FÁBRICA real, dos 17 caracteres, entrou na
+# docstring de `mascarar_serial()` em `scripts/ensaios/cor_do_plastico.py` — a
+# própria função que mascara serial vazou um — e o arquivo foi para o índice com
+# `scripts/check_anonymity.sh` VERDE. Motivo, medido: aquele portão caça a forma
+# de um MAC e menções a provedores de IA; `grep -i serial` nele devolvia ZERO
+# linhas, e este arquivo aqui também nunca disse a palavra.
+#
+# O serial identifica a unidade dela tão bem quanto o MAC — melhor, até: é o
+# número impresso na etiqueta, o que a Sony usa para garantia e o que liga o
+# aparelho à compra. A regra desta casa é sobre ARQUIVO VERSIONADO, não sobre a
+# palavra "MAC".
+#
+# A MÁSCARA DA CASA PARA SERIAL: 6 caracteres públicos + 11 `#`
+# -------------------------------------------------------------
+# `A12B34###########` (prefixo FORJADO: nem exemplo mascarado precisa carregar
+# o prefixo de um aparelho dela). Ela nasceu em `mascarar_serial()`
+# (`CARACTERES_PUBLICOS_DO_SERIAL = 6`) e existia só como disciplina de quem
+# escreve. Preserva exatamente o que os ensaios precisam provar — os caracteres
+# 5 e 6, onde mora o CÓDIGO DA COR (é o que o ensaio E7 mede) — e apaga o resto.
+# Daqui em diante ela é portão.
+#
+# A FORMA, E A CORREÇÃO DE FATO QUE A MEDIÇÃO IMPÔS
+# --------------------------------------------------
+# A forma que circulava de boca era `[A-Z]\d{2}[A-Z]\d{2}[A-Z]\d{10}`. Ela está
+# ERRADA, e o lastro versionado prova: dos dois seriais que o E7 leu do
+# aparelho, `docs/data/ensaios-brutos/2026-08-15-E7-cor-do-plastico.csv` traz
+# `M65A05###########` (hidraw4, Starlight Blue) e `E55704###########` (hidraw5,
+# Galactic Purple). No segundo, o caractere 4 é o dígito `7`, e não uma letra —
+# aquele padrão NÃO casaria com ele. Um portão que não vê metade dos aparelhos
+# da bancada é pior que nenhum, porque devolve verde convincente.
+#
+# O que está MEDIDO, e é só isto, nos dois aparelhos que responderam:
+#
+#     caractere 1 ...... letra          (`M`, `E`)
+#     caracteres 2-3 ... dígitos        (`65`, `55`)
+#     caractere 4 ...... letra OU dígito (`A`, `7`)  <- o que derrubou o padrão
+#     caracteres 5-6 ... dígitos        (`05`, `04`) — o CÓDIGO DA COR
+#     caracteres 7-17 .. NÃO MEDIDOS: os 11 que a máscara come
+#
+# O regex abaixo exige exatamente isso e nada além: os 11 finais são
+# `[A-Z0-9]`, porque afirmar a forma deles seria inventar. A regra que evita a
+# quarta vez é a mesma da lista de OUIs lá em cima: **aparelho novo medido,
+# prefixo conferido AQUI, no mesmo commit.**
+#
+# O FALSO POSITIVO, MEDIDO ANTES DE ENTREGAR
+# -------------------------------------------
+# 17 alfanuméricos maiúsculos é forma barata: casa com hash, chave, id e
+# palavra comprida. Medido na árvore de 15/08 (rastreados + novos, imagens de
+# fora), varrendo os arquivos INTEIROS:
+#
+#   `[A-Z0-9]{17}` solto ............................. 12 reprovações, 8 arquivos
+#       (contadas ANTES desta seção existir; refazer a conta hoje dá 29 em 10,
+#       porque o texto abaixo cita as palavras de ruído por extenso — o número
+#       que importa é o da árvore que o portão herdou)
+#       e as 12 são ruído: `MICROCASSYVOLTAGE` e `MICROCASSYCURRENT` (os dois
+#       `hid-ids.h` do DKMS), `INDEPENDENTEMENTE` (mapa-controles.csv e
+#       specs.html), `PROGRAMATICAMENTE` (transcrito de agente),
+#       `REDIMENSIONAMENTO` x3 (retratar_abas.py), mais os DOIS forjados
+#       legítimos — `AB1C05D1234567890` (o exemplo da docstring de
+#       `mascarar_serial`) e `ZZ9Y02Q0000000000`
+#       (test_cor_do_plastico_recusa_o_alvo_errado.py).
+#   o regex desta seção ..................................... ZERO reprovações
+#
+# O que eliminou as 12: exigir DÍGITO nas posições 2, 3, 5 e 6. Nenhuma palavra
+# de língua nenhuma tem dígito, e os dois forjados também não têm dígito onde o
+# serial real tem — `AB1C05...` põe uma letra na posição 2, `ZZ9Y02Q...` põe
+# letra na 2 e na 3. Os dois passam, como têm de passar, e passam por MEDIDA da
+# forma, não por lista de exceção: lista de exceção é o que apodrece.
+#
+# Não há aqui a contrapartida das faixas forjadas do MAC (`aa:bb:cc`, `02:fe`):
+# serial não tem faixa reservada. Quem precisar de um exemplo forjado que se
+# pareça com o real tem de montá-lo por concatenação, como os testes de mordida
+# desta seção fazem — nunca escrevê-lo por extenso.
+
+#: Os 6 primeiros caracteres são o que a máscara da casa preserva.
+#: ESPELHO de `CARACTERES_PUBLICOS_DO_SERIAL` em scripts/ensaios/cor_do_plastico.py.
+CARACTERES_PUBLICOS_DO_SERIAL = 6
+
+#: A forma do serial de fábrica do DualSense, como MEDIDA nos aparelhos da
+#: bancada. ESPELHO do padrão embutido em `scripts/check_anonymity.sh`; o teste
+#: `test_o_check_anonymity_usa_o_mesmo_padrao_de_serial` reprova a divergência.
+PADRAO_DE_SERIAL = (
+    r"(?<![A-Z0-9])"
+    r"[A-Z][0-9]{2}[A-Z0-9][0-9]{2}"
+    r"[A-Z0-9]{11}"
+    r"(?![A-Z0-9])"
+)
+SERIAL_DE_FABRICA_RE = re.compile(PADRAO_DE_SERIAL)
+
+#: Um par hexadecimal SOLTO — o vizinho não pode ser outro dígito hexadecimal.
+#: É essa fronteira que faz a coluna de offset de um hexdump (`0000`, `0010`) e
+#: um `0x00001111` serem PULADOS sem precisar entender o formato do dump.
+_PAR_HEX_SOLTO = re.compile(rb"(?<![0-9A-Fa-f])([0-9A-Fa-f]{2})(?![0-9A-Fa-f])")
+
+#: Uma corrida hexadecimal COLADA, de 17 bytes para cima: os 34 dígitos
+#: hexadecimais do serial, sem separador nenhum entre eles. Nenhum exemplo
+#: literal aqui — o hexadecimal de um prefixo REAL tem 12 dígitos e casa a
+#: forma COLADA de um MAC, e foi assim que `test_anonimato_de_fixtures` me
+#: reprovou ao primeiro rascunho desta seção. O portão irmão estava certo.
+_CORRIDA_HEX_COLADA = re.compile(
+    rb"(?<![0-9A-Fa-f])((?:[0-9A-Fa-f]{2}){17,})(?![0-9A-Fa-f])"
+)
+
+
+def mascarar_para_relatorio(serial: str) -> str:
+    """A máscara da casa, aplicada à MENSAGEM DE ERRO do próprio portão.
+
+    O portão de MAC imprime o endereço que achou. Este NÃO imprime o serial:
+    a saída de portão vai para log de CI, que é público, e um portão que
+    republica o segredo para avisar que o segredo vazou não resolveu nada —
+    só mudou o vazamento de lugar. Os 6 públicos bastam para achar a linha.
+    """
+    if len(serial) <= CARACTERES_PUBLICOS_DO_SERIAL:
+        return serial
+    return serial[:CARACTERES_PUBLICOS_DO_SERIAL] + "#" * (
+        len(serial) - CARACTERES_PUBLICOS_DO_SERIAL
+    )
+
+
+def _fluxo_de_hexdump(dados: bytes) -> bytes:
+    """Remonta a carga de um hexdump: todo par hexadecimal solto, decodificado.
+
+    A SEGUNDA FORMA, e ela já cobrou o preço uma vez: em 15/08 dois seriais
+    reais escaparam de um `grep` porque estavam escritos como BYTES num
+    hexdump — pares hexadecimais separados por espaço, um byte ASCII por
+    caractere do serial. É a mesma família do resto deste arquivo: a régua
+    aplicada numa forma só.
+
+    Remontar o fluxo INTEIRO, e não linha a linha, não é capricho: num dump de
+    16 bytes por linha o serial de 17 caracteres ATRAVESSA a quebra, e é
+    exatamente o que acontece em
+    `docs/data/ensaios-brutos/2026-08-15-E7-cor-do-plastico.txt` (6 caracteres
+    numa linha, os 11 da máscara repartidos entre ela e a seguinte).
+    """
+    return bytes(int(par, 16) for par in _PAR_HEX_SOLTO.findall(dados))
+
+
+def _ocorrencias_de_serial(dados: bytes) -> list[tuple[str, str]]:
+    """(forma, serial mascarado) de todo serial de fábrica CRU em ``dados``.
+
+    Três formas, porque duas já não bastaram nesta casa:
+
+    * ``texto`` — o serial escrito como texto, inclusive dentro de arquivo
+      binário (a leitura é por BYTES, então não há binário cego aqui);
+    * ``hexdump`` — o serial em pares hexadecimais, atravessando linhas;
+    * ``hex colado`` — o serial numa corrida hexadecimal sem separador.
+    """
+    achados: list[tuple[str, str]] = []
+    texto = dados.decode("latin-1")
+    for m in SERIAL_DE_FABRICA_RE.finditer(texto):
+        achados.append(("texto", mascarar_para_relatorio(m.group(0))))
+    for m in SERIAL_DE_FABRICA_RE.finditer(
+        _fluxo_de_hexdump(dados).decode("latin-1")
+    ):
+        achados.append(("hexdump", mascarar_para_relatorio(m.group(0))))
+    for corrida in _CORRIDA_HEX_COLADA.finditer(dados):
+        bruto = bytes.fromhex(corrida.group(1).decode("ascii")).decode("latin-1")
+        for m in SERIAL_DE_FABRICA_RE.finditer(bruto):
+            achados.append(("hex colado", mascarar_para_relatorio(m.group(0))))
+    return achados
+
+
+def test_nenhum_serial_de_fabrica_real_no_repo() -> None:
+    """Nenhum arquivo versionado carrega serial de fábrica sem a máscara da casa.
+
+    Para arrancar e ver morder: escreva um serial na forma real (monte-o por
+    concatenação, nunca por extenso) em qualquer arquivo da árvore e rode este
+    teste.
+
+    E para ver o LADO OPOSTO — que o aperto contra falso positivo é o que
+    segura o portão de pé — afrouxe os quatro `[0-9]` do `PADRAO_DE_SERIAL`
+    para `[A-Z0-9]`: o padrão vira `[A-Z][A-Z0-9]{16}` e as palavras compridas
+    do repositório passam a reprovar. Afrouxar SÓ as posições 2-3 não basta
+    para produzi-las: as posições 5-6 sozinhas já barram toda palavra.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    violacoes: list[str] = []
+    for path in _tracked_files(repo_root):
+        try:
+            dados = path.read_bytes()
+        except (OSError, IsADirectoryError):
+            continue
+        for forma, mascarado in _ocorrencias_de_serial(dados):
+            violacoes.append(
+                f"{path.relative_to(repo_root)} ({forma}): "
+                f"SERIAL DE FÁBRICA real, sem máscara ({mascarado})"
+            )
+    assert not violacoes, (
+        "SERIAL DE FÁBRICA de aparelho REAL em arquivo versionado. Ele "
+        "identifica a unidade tão bem quanto o MAC. Máscara da casa: os "
+        f"{CARACTERES_PUBLICOS_DO_SERIAL} primeiros caracteres e o resto em "
+        "'#' (a COR, nos caracteres 5 e 6, fica preservada):\n"
+        + "\n".join(violacoes)
+    )
+
+
+def _serial_forjado_na_forma_real() -> str:
+    """Um serial FORJADO que tem a forma real — montado, nunca escrito.
+
+    Este arquivo é varrido pelo portão que ele mesmo define. Um exemplo na
+    forma real escrito por extenso aqui reprovaria a suíte inteira, e a saída
+    seria alguém afrouxar o regex para caber o exemplo — que é como portão
+    morre. O prefixo é inventado de propósito: NÃO é o de nenhum dos quatro
+    aparelhos da bancada.
+    """
+    return "Q" + "88" + "X" + "77" + "K" + "9876543210"
+
+
+def test_o_serial_de_fabrica_em_texto_reprova_e_a_mascara_passa() -> None:
+    """A mordida da forma 1: texto puro."""
+    forjado = _serial_forjado_na_forma_real()
+    assert len(forjado) == 17
+    achados = _ocorrencias_de_serial(f"  SERIAL ... {forjado}\n".encode())
+    assert achados == [("texto", "Q88X77###########")], achados
+
+    mascarado = forjado[:CARACTERES_PUBLICOS_DO_SERIAL] + "#" * 11
+    assert not _ocorrencias_de_serial(f"  SERIAL ... {mascarado}\n".encode())
+
+
+def _como_hexdump(carga: bytes) -> bytes:
+    """A carga escrita como o E7 a escreve: offset, 16 bytes por linha.
+
+    É o formato exato de
+    `docs/data/ensaios-brutos/2026-08-15-E7-cor-do-plastico.txt`, e é o que
+    faz o serial de 17 caracteres ATRAVESSAR a quebra de linha.
+    """
+    linhas = []
+    for offset in range(0, len(carga), 16):
+        pares = " ".join(f"{b:02x}" for b in carga[offset : offset + 16])
+        linhas.append(f"    {offset:04x}  {pares}")
+    return ("\n".join(linhas) + "\n").encode("ascii")
+
+
+def test_o_serial_de_fabrica_em_hexdump_reprova_atravessando_a_linha() -> None:
+    """A mordida da forma 2: bytes num hexdump, repartidos em duas linhas.
+
+    Reproduz o dump do E7 byte por byte — 16 bytes por linha, coluna de offset
+    na frente — com o serial forjado no lugar do real. Se a varredura fosse
+    linha a linha, ou se a coluna de offset entrasse no fluxo, isto passaria.
+
+    Para arrancar e ver morder: troque `_fluxo_de_hexdump` por uma varredura
+    que quebre a entrada em linhas.
+    """
+    forjado = _serial_forjado_na_forma_real().encode("ascii")
+    carga = bytes([0x81, 0x01, 0x13, 0x02]) + forjado
+
+    formas = [forma for forma, _ in _ocorrencias_de_serial(_como_hexdump(carga))]
+    assert "hexdump" in formas, (
+        "o serial em hexdump tem de reprovar; o portão viu " + repr(formas)
+    )
+
+    # E o mesmo dump, com a máscara aplicada EM HEXADECIMAL (0x23 = '#'),
+    # que é o que `cor_do_plastico.py` grava, tem de passar.
+    carga_mascarada = carga[: 4 + CARACTERES_PUBLICOS_DO_SERIAL] + b"#" * 11
+    assert not _ocorrencias_de_serial(_como_hexdump(carga_mascarada))
+
+
+def test_o_serial_de_fabrica_em_hexadecimal_colado_reprova() -> None:
+    """A mordida da forma 3: a corrida hexadecimal sem separador nenhum."""
+    forjado = _serial_forjado_na_forma_real().encode("ascii")
+    colado = ("payload=" + forjado.hex() + "\n").encode("ascii")
+    formas = [forma for forma, _ in _ocorrencias_de_serial(colado)]
+    assert "hex colado" in formas, formas
+
+
+def test_o_portao_de_serial_nao_reprova_palavra_comprida_nem_forjado() -> None:
+    """O aperto contra falso positivo, exercido nos casos que ele custou medir.
+
+    As 12 reprovações que `[A-Z0-9]{17}` solto produzia na árvore de 15/08,
+    reduzidas aos seus representantes. Enquanto as quatro posições de DÍGITO
+    (2, 3, 5 e 6) estiverem no padrão, nenhuma delas casa — MEDIDO: basta UMA
+    das quatro de pé para barrar toda palavra da lista, porque nenhuma tem
+    dígito em posição nenhuma. Este teste cai no dia em que alguém as afrouxar
+    todas, antes de o ruído chegar a quem roda o portão.
+    """
+    ruido = (
+        "MICROCASSYVOLTAGE",  # assets/dkms/*/hid-ids.h
+        "MICROCASSYCURRENT",
+        "INDEPENDENTEMENTE",  # docs/data/mapa-controles.csv, specs.html
+        "PROGRAMATICAMENTE",  # transcrito de agente
+        "REDIMENSIONAMENTO",  # scripts/gui-captura/retratar_abas.py
+        "AB1C05D1234567890",  # forjado da docstring de mascarar_serial()
+        "ZZ9Y02Q0000000000",  # forjado de test_cor_do_plastico_recusa_o_alvo_errado
+    )
+    for palavra in ruido:
+        assert len(palavra) == 17, palavra
+        assert not SERIAL_DE_FABRICA_RE.search(palavra), (
+            f"{palavra} não é serial de fábrica e o portão não pode reprová-la"
+        )
+
+    # E um sha256 maiúsculo que por acaso contenha a forma no meio: a fronteira
+    # alfanumérica das duas pontas é o que impede o portão de picotá-lo.
+    sha_falso = "AB" + _serial_forjado_na_forma_real() + "CD" * 20
+    assert not SERIAL_DE_FABRICA_RE.search(sha_falso)
+
+
+def test_o_check_anonymity_usa_o_mesmo_padrao_de_serial() -> None:
+    """As duas cópias do padrão têm de ser a MESMA — divergência é buraco.
+
+    `scripts/check_anonymity.sh` é a segunda linha, para quem roda só o script;
+    este arquivo é o portão autoritativo. Se as duas réguas divergirem, uma
+    delas devolve verde onde a outra reprova, e a próxima pessoa acredita na
+    que falou primeiro. Mesmo desenho de
+    `tests/unit/test_mascarar_btsnoop.py`, que compara as listas de OUI.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    script = (repo_root / "scripts" / "check_anonymity.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "SERIAL" in script, (
+        "o check_anonymity.sh voltou a ser cego a serial de fábrica"
+    )
+    # O padrão vive lá quebrado em pedaços, um por linha, como aqui. A
+    # comparação é entre os VALORES remontados, e não entre os textos: exigir
+    # a mesma quebra de linha nas duas cópias seria um portão sobre estilo.
+    bloco = re.search(r"^PADRAO = \((.*?)^\)$", script, re.S | re.M)
+    assert bloco, "não achei a atribuição `PADRAO = (...)` no check_anonymity.sh"
+    remontado = "".join(re.findall(r'r"([^"]*)"', bloco.group(1)))
+    assert remontado == PADRAO_DE_SERIAL, (
+        "o padrão de serial do script divergiu do deste arquivo.\n"
+        f"  script: {remontado}\n"
+        f"  aqui:   {PADRAO_DE_SERIAL}"
+    )
