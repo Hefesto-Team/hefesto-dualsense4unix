@@ -1502,23 +1502,234 @@ check_launch_wrapper() {
     if [[ -n "${stale_env}" ]]; then
         warn "launch_env com PROTON_ENABLE_HIDRAW (env morta nos Protons 10/11): ${stale_env} — materialização antiga; reinicie o daemon (systemctl --user restart hefesto-dualsense4unix) para regravar"
     fi
-    # PATH-06 item 3: quantos jogos já chamam o wrapper nas LaunchOptions. O
-    # caminho absoluto do wrapper só aparece no vdf dentro da string `sh -c`
-    # que nós escrevemos — contá-lo = contar jogos com o wrapper aplicado.
-    local vdf n_wrapper=0
-    shopt -s nullglob
-    for vdf in "${HOME}/.steam/steam/userdata/"*/config/localconfig.vdf \
-               "${HOME}/.local/share/Steam/userdata/"*/config/localconfig.vdf; do
-        [[ -f "${vdf}" ]] || continue
-        n_wrapper=$((n_wrapper + $(grep -o '.local/share/hefesto-dualsense4unix/bin/hefesto-launch' "${vdf}" 2>/dev/null | wc -l)))
-    done
-    shopt -u nullglob
-    if [[ "${n_wrapper}" -gt 0 ]]; then
-        pass "${n_wrapper} jogo(s) com o wrapper hefesto-launch aplicado nas LaunchOptions"
-    else
-        warn "NENHUM jogo com o wrapper nas LaunchOptions — o jogo roda SEM dedup (foi a causa-mãe da sessão de 2026-07-18); use 'Aplicar aos jogos da Steam' na GUI (com a Steam fechada)"
-    fi
+    # O CONTADOR SAIU (16/08/2026). Ele fazia `grep -o` do caminho do wrapper no
+    # vdf inteiro e imprimia "N jogo(s) com o wrapper aplicado" em VERDE. Dois
+    # defeitos numa linha só:
+    #
+    #   1. contava as TRÊS árvores `apps` do vdf, e a Steam só lê uma — medido
+    #      às 05h35: "[ OK ] 76 jogo(s)" onde a árvore viva tem 63;
+    #   2. contava sem NUNCA nomear quem faltava, que é a forma exata do
+    #      WRAPPER-EM-TODOS-01 — o portão que passou a noite verde com o
+    #      Pragmata quebrado.
+    #
+    # Nos últimos dias esse verde saía LOGO ACIMA do "[FAIL] PRAGMATA" do
+    # `check_sentinela_wrapper`. O dano não é errar um diagnóstico: é a tela
+    # ensinar que verde-e-vermelho juntos são normais por aqui, que é como um
+    # portão morre de descrédito.
+    #
+    # O veredito agora vem inteiro do `check_sentinela_wrapper` (que nomeia) e
+    # do `check_arvore_canonica_do_wrapper` (régua independente, ancorada no
+    # caminho). Nenhum dos dois conta sem dizer quem.
+    #
+    # O caso "NENHUM jogo tem o wrapper" — a causa-mãe da sessão de 2026-07-18 —
+    # continua coberto: sem wrapper em lugar nenhum, todo jogo cai em `novo` no
+    # censo, e o censo os nomeia.
     info "controle DOBRANDO no jogo? use o botão 'Copiar opções p/ jogos' da GUI (string constante do wrapper) ou 'Aplicar aos jogos da Steam' (aplica o wrapper aos jogos, preservando as opções existentes)."
+    check_sentinela_wrapper
+}
+
+# SENTINELA-WRAPPER-01 (16/08/2026): o contador acima diz QUANTOS jogos têm o
+# wrapper e nunca diz QUAL não tem — e foi exatamente esse buraco que custou
+# uma noite. Em 15/08 o Pragmata tinha `VKD3D_CONFIG=no_upload_hvv %command%`
+# no lugar da chamada do wrapper (a Steam guarda UMA linha por jogo e a
+# sobrescreve sem avisar); o contador dizia "60 jogos com o wrapper" e passava
+# em verde, enquanto o jogo dela ficava sem controle nenhum no Bluetooth.
+#
+# O censo é READ-ONLY e roda com a Steam ABERTA — só a escrita é que exige a
+# Steam fechada. `--censo` não anota nada em disco: o doctor diagnostica, quem
+# grava a memória é o install/GUI.
+check_sentinela_wrapper() {
+    local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
+    if [[ ! -f "${py}" ]] || ! command -v python3 >/dev/null 2>&1; then
+        return
+    fi
+    local resumo
+    resumo="$(python3 "${py}" --censo 2>/dev/null | python3 -c '
+import json
+import sys
+
+d = json.load(sys.stdin)
+falta = d.get("faltantes") or []
+def rot(m):
+    return "; ".join(j["rotulo"] for j in falta if j["motivo"] == m)
+print("regressao=" + rot("regressao"))
+print("novo=" + rot("novo"))
+print("estendido=" + rot("ignore_estendido"))
+print("recusados=" + ", ".join(d.get("recusados") or []))
+print("steam=" + ("1" if d.get("steam_aberta") else "0"))
+print("jogo=" + ("1" if d.get("jogo_aberto") else "0"))
+print("erros=" + str(len(d.get("erros") or [])))
+' 2>/dev/null)"
+    if [[ -z "${resumo}" ]]; then
+        info "censo do wrapper indisponível — rode: python3 ${py} --relatorio"
+        return
+    fi
+    local regressao novo estendido recusados steam jogo
+    regressao="$(sed -n 's/^regressao=//p' <<<"${resumo}")"
+    novo="$(sed -n 's/^novo=//p' <<<"${resumo}")"
+    estendido="$(sed -n 's/^estendido=//p' <<<"${resumo}")"
+    recusados="$(sed -n 's/^recusados=//p' <<<"${resumo}")"
+    steam="$(sed -n 's/^steam=//p' <<<"${resumo}")"
+    jogo="$(sed -n 's/^jogo=//p' <<<"${resumo}")"
+
+    # CARONA-NO-GUARD-01: desde 16/08/2026 ela não precisa rodar nada. O
+    # `hefesto-steam-input-guard` repõe sozinho quando a Steam grava o vdf —
+    # que é o instante em que a Steam acabou de sair, o único em que a
+    # reposição sobrevive. O comando fica escrito só para quem quiser não
+    # esperar.
+    local como="o Hefesto repõe sozinho assim que a Steam fechar; para não esperar: python3 ${py} --reparar"
+    if [[ "${jogo}" == "1" ]]; then
+        como="há um JOGO aberto — o reparo fica para quando a Steam fechar (fechá-la agora mataria o jogo)"
+    elif [[ "${steam}" == "1" ]]; then
+        como="a Steam está aberta — o Hefesto repõe assim que ela fechar (com ela viva a edição seria engolida na saída)"
+    fi
+
+    if [[ -n "${regressao}" ]]; then
+        fail "jogo(s) que PERDERAM as Opções de Inicialização do Hefesto: ${regressao} — no Bluetooth o jogo tende a não enxergar controle nenhum, com o controle vivo, a luz acesa e o perfil aplicado (foi o defeito do Pragmata em 15/08); ${como}"
+    elif [[ -n "${novo}" ]]; then
+        warn "jogo(s) sem as Opções de Inicialização do Hefesto: ${novo} — ${como}"
+    else
+        pass "nenhum jogo perdeu as Opções de Inicialização do Hefesto"
+    fi
+    [[ -n "${estendido}" ]] && warn "Opções com a lista de IGNORE ESTENDIDA à mão em ${estendido} — intocáveis de propósito (remover só o trecho do Hefesto deixaria um fragmento que impede o jogo de abrir); reparo manual"
+    [[ -n "${recusados}" ]] && info "fora do wrapper por escolha dela (jogos_sem_wrapper.txt): ${recusados}"
+    check_arvore_canonica_do_wrapper
+    return 0
+}
+
+# ARVORE-CANONICA-01 (16/08/2026) — a RÉGUA INDEPENDENTE do censo acima.
+#
+# O `localconfig.vdf` dela tem TRÊS árvores com blocos chamados `apps`, e as
+# três carregam `LaunchOptions` por appid (medido às 05h07 de 16/08):
+#
+#   UserLocalConfigStore/Software/Valve/Steam/apps/<appid>   63 linhas  ← a viva
+#   UserLocalConfigStore/apps/<appid>                        11 linhas
+#   UserLocalConfigStore/WebStorage/apps/<appid>              3 linhas
+#
+# Qual é a viva não é palpite: quando ela digitou `VKD3D_CONFIG=no_upload_hvv
+# %command%` nas Opções de Inicialização do Pragmata pela janela da Steam, foi
+# a PRIMEIRA que mudou, e só ela. As outras duas seguem com a linha antiga.
+#
+# E as outras duas nasceram de NÓS: nos backups de 13/06 e de 16/07 (antes da
+# primeira aplicação em massa) elas não existiam — zero `LaunchOptions` fora da
+# canônica. No backup de 21/07 20:26, o da primeira aplicação em massa, a
+# canônica salta de 6 para 55 linhas e as outras duas nascem juntas, com 9 e 2.
+# O parser em massa casa qualquer bloco cujo PAI se chame `apps`, sem ancorar o
+# caminho — então ele escreveu (e insere linha nova) em árvores que a Steam não
+# lê.
+#
+# O estrago não era a linha a mais: era que o censo LIA a própria sujeira de
+# volta. `read_apps_by_appid` fundia as três num dicionário só, por appid, e a
+# ÚLTIMA lida vencia — e a última é a secundária. Resultado medido às 05h07: o
+# censo jurava que o Pragmata tinha o wrapper, com a árvore viva dizendo
+# `VKD3D_CONFIG` sozinho. Instrumento que confirma a si mesmo, a armadilha nº 1
+# desta casa.
+#
+# CURADO às 05h45 do mesmo dia (ARVORE-ERRADA-01): `e_a_arvore_canonica` ancora
+# o caminho no leitor e no escritor, e o censo passou a nomear o Pragmata. Este
+# check CONTINUA valendo, e continua sendo escrito com um parser próprio, de
+# propósito: uma régua que não compartilha código com a que ela audita é o que
+# fez a contradição aparecer da primeira vez. Se as duas discordarem de novo, a
+# discordância é o achado.
+#
+# Este check por isso NÃO importa o parser sob suspeita: ele reimplementa a
+# pilha de blocos em vinte linhas e exige o caminho INTEIRO. Só o nome do jogo
+# vem emprestado (`rotulo_do_jogo` lê os `.acf`, não o vdf).
+check_arvore_canonica_do_wrapper() {
+    command -v python3 >/dev/null 2>&1 || return 0
+    local saida
+    saida="$(HEFESTO_SRC="${ROOT_DIR}/src" python3 - <<'PY' 2>/dev/null
+import os
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, os.environ.get("HEFESTO_SRC", ""))
+try:
+    from hefesto_dualsense4unix.integrations.steam_launch_options import (
+        WRAPPER_PREFIX,
+        discover_vdfs,
+        is_sandboxed_layout,
+        rotulo_do_jogo,
+    )
+except Exception:  # noqa: BLE001 - sem o pacote o check simplesmente cala
+    sys.exit(0)
+
+CANONICA = ("UserLocalConfigStore", "Software", "Valve", "Steam", "apps")
+CHAVE = re.compile(r'^"((?:\\.|[^"\\])*)"$')
+PAR = re.compile(r'^"LaunchOptions"\s+"(?P<v>(?:\\.|[^"\\])*)"$', re.IGNORECASE)
+
+canonicos: dict[str, str] = {}
+secundarios: dict[str, str] = {}
+lidos = 0
+for vdf in discover_vdfs():
+    if is_sandboxed_layout(vdf):
+        continue
+    try:
+        texto = vdf.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        continue
+    pilha: list[str] = []
+    pendente = None
+    visto = False
+    for bruta in texto.splitlines():
+        linha = bruta.strip()
+        if not linha:
+            continue
+        if linha == "{":
+            pilha.append(pendente or "")
+            pendente = None
+            continue
+        if linha == "}":
+            if pilha:
+                pilha.pop()
+            pendente = None
+            continue
+        chave = CHAVE.match(linha)
+        if chave is not None:
+            pendente = chave.group(1)
+            continue
+        pendente = None
+        par = PAR.match(linha)
+        if par is None or len(pilha) < 2 or not pilha[-1].isdigit():
+            continue
+        visto = True
+        appid = pilha[-1]
+        valor = par.group("v").replace('\\"', '"').replace("\\\\", "\\")
+        if tuple(pilha[:-1]) == CANONICA:
+            canonicos[appid] = valor
+        else:
+            secundarios.setdefault(appid, "/".join(pilha[:-1]))
+    lidos += 1 if visto else 0
+
+if not lidos:
+    sys.exit(0)
+sem = [a for a, v in canonicos.items() if WRAPPER_PREFIX not in v]
+orfaos = [a for a in secundarios if a not in canonicos]
+print("total=%d" % len(canonicos))
+print("sem=" + "; ".join(rotulo_do_jogo(a) for a in sorted(sem)))
+print("orfaos=" + "; ".join(rotulo_do_jogo(a) for a in sorted(orfaos)))
+print("poluidos=%d" % len(secundarios))
+PY
+)"
+    [[ -n "${saida}" ]] || return 0
+    local total sem orfaos poluidos
+    total="$(sed -n 's/^total=//p' <<<"${saida}")"
+    sem="$(sed -n 's/^sem=//p' <<<"${saida}")"
+    orfaos="$(sed -n 's/^orfaos=//p' <<<"${saida}")"
+    poluidos="$(sed -n 's/^poluidos=//p' <<<"${saida}")"
+
+    if [[ -n "${sem}" ]]; then
+        fail "na árvore que a Steam de fato lê (Software/Valve/Steam/apps), ESTE(S) jogo(s) NÃO chamam o wrapper: ${sem} — sem eles, no Bluetooth o jogo tende a não enxergar controle nenhum, mesmo com o controle vivo e o perfil aplicado. Reparo: o Hefesto repõe sozinho assim que a Steam fechar (é quando a reposição sobrevive), e também ao salvar ou aplicar um perfil"
+    else
+        pass "os ${total:-0} jogos da árvore viva (Software/Valve/Steam/apps) chamam o wrapper"
+    fi
+    if [[ -n "${orfaos}" ]]; then
+        warn "Opções de Inicialização escritas por nós FORA da árvore viva, para jogo(s) que nem existem nela: ${orfaos} — a Steam nunca lê essas linhas, e o censo as conta como cobertura; é falso conforto, não defeito no jogo"
+    elif [[ "${poluidos:-0}" -gt 0 ]]; then
+        info "${poluidos} bloco(s) de 'apps' fora da árvore viva também têm LaunchOptions (escritas por nós em 21/07) — inertes para a Steam, mas é delas que vem o falso conforto do censo"
+    fi
+    return 0
 }
 
 # UX-04: ACUSA (nunca recomenda) o veneno estático persistido nos
@@ -3343,10 +3554,34 @@ check_steam_input() {
 # (`steam_input_apps.txt`) era INERTE fora do guard de VDF — nada no caminho de
 # lançamento a consultava e o broker escondia o hidraw do físico do mesmo jeito,
 # então o jogo cujo DualSense vem PELA Steam (medido: Mullet Mad Jack, 2111190)
-# não achava controle nenhum. Este check separa as duas perguntas que viviam
-# coladas: a exceção está CONFIGURADA? e ela está EFETIVA (o .env por appid
-# nasceu sem dedup)? "Efetiva agora" no hidraw só faz sentido com o jogo aberto,
-# então aqui o veredito é sobre o que dá para afirmar sem o jogo rodando.
+# não achava controle nenhum.
+#
+# FATO SUBSTITUÍDO — 16/08/2026 (a regra dela de 11/08: número errado não vira
+# nota de rodapé, sai). Este check reprovava com [FAIL] quando o
+# `steam_app_<appid>.env` de um jogo da allowlist trazia
+# `SDL_GAMECONTROLLER_IGNORE_DEVICES`/`PROTON_DISABLE_HIDRAW` ("a exceção NÃO
+# vale"). **Isso deixou de ser verdade em 09/08**, com a decisão dela
+# ESCONDER-EM-VEZ-DE-SAIR-01: a marca passou a significar "esconda o controle
+# FÍSICO neste jogo", e a JOGO-01 escreveu o invariante que voltou a valer —
+# *"a allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS"*. O obituário
+# do ramo está no cabeçalho de `daemon/launch_env.py`: **o jogo marcado recebe
+# exatamente a mesma env de qualquer outro jogo**, dedup incluído. A nota datada
+# de `tests/unit/test_r06_allowlist_steam_input.py` diz o mesmo com outras
+# palavras: *"a env sem dedup virou a AUSÊNCIA de ramo"*.
+#
+# Ou seja: o [FAIL] passou 7 dias exigindo o estado que a decisão dela matou de
+# propósito, e o `.env` que ele acusava era o CERTO. Medido em 16/08 05h: os
+# dois jogos da allowlist com `.env` (Pragmata e Sackboy) reprovavam, e o
+# install termina imprimindo os [FAIL] do doctor — todo install dela acabava em
+# vermelho por causa de uma doutrina morta. O ramo sai; o que se observa
+# continua na tela, como `info`.
+#
+# O que este check pergunta HOJE, e por quê:
+#   1. QUAIS jogos estão na lista (nome, não appid) — nomear é o conserto do
+#      defeito nº 2 desta noite;
+#   2. o Steam Input está mesmo LIGADO na Steam para cada um? Entrar na lista
+#      não liga nada: o arquivo só IMPEDE o guard de desligar. Uma entrada
+#      posta depois de o guard já ter zerado o jogo é inerte para sempre.
 check_steam_input_allowlist() {
     local arquivo="${XDG_CONFIG_HOME:-$HOME/.config}/hefesto-dualsense4unix/steam_input_apps.txt"
     if [[ ! -f "${arquivo}" ]]; then
@@ -3354,36 +3589,117 @@ check_steam_input_allowlist() {
         return
     fi
     local appids
-    appids="$(sed 's/#.*$//' "${arquivo}" 2>/dev/null | tr -d '[:space:]' | grep -E '^[0-9]+$' || true)"
+    # `[:blank:]` (espaço e tab), NUNCA `[:space:]`. O `tr -d '[:space:]'` que
+    # estava aqui apagava também as QUEBRAS DE LINHA, e o `tr` trabalha sobre o
+    # fluxo inteiro: a allowlist de três appids virava UM appid de 21 dígitos
+    # ("211119033576501599660"), que nunca tem `.env`, e o check avisava
+    # "1/1 appid(s) sem .env materializado" para sempre — desde 23/07.
+    #
+    # O defeito sobreviveu 24 dias porque a mensagem CONTAVA em vez de NOMEAR:
+    # "1/1" é plausível, e ninguém desconfia de um número. Na primeira execução
+    # em que o check diz o NOME, o appid-monstro aparece na tela e o defeito
+    # dura um minuto. É a mesma lição do Pragmata, medida de novo em 16/08 —
+    # e é a razão de este arquivo ter passado a nomear em toda parte.
+    appids="$(sed 's/#.*$//' "${arquivo}" 2>/dev/null | tr -d '[:blank:]' | grep -E '^[0-9]+$' || true)"
     if [[ -z "${appids}" ]]; then
         info "allowlist per-app do Steam Input vazia (${arquivo})"
         return
     fi
-    local envdir="${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
-    local appid arquivo_env faltando=0 envenenado=0
-    while IFS= read -r appid; do
+    local appid rotulo valor nomes="" desligado="" ausente=""
+    for appid in ${appids}; do
         [[ -n "${appid}" ]] || continue
-        arquivo_env="${envdir}/steam_app_${appid}.env"
-        if [[ ! -f "${arquivo_env}" ]]; then
-            faltando=$((faltando + 1))
-            continue
-        fi
-        # A exceção só é EFETIVA se o .env daquele appid não carrega o dedup —
-        # com IGNORE/PROTON_DISABLE_HIDRAW o físico segue escondido do jogo e a
-        # allowlist volta a ser decorativa.
-        if grep -qE '^(SDL_GAMECONTROLLER_IGNORE_DEVICES|PROTON_DISABLE_HIDRAW)=' "${arquivo_env}" 2>/dev/null; then
-            envenenado=$((envenenado + 1))
-        fi
-    done <<< "${appids}"
-    local total
-    total="$(printf '%s\n' "${appids}" | grep -c . || true)"
-    if [[ "${envenenado}" -gt 0 ]]; then
-        fail "allowlist do Steam Input com ${envenenado} appid(s) cujo .env ainda esconde o físico (IGNORE/PROTON_DISABLE_HIDRAW) — a exceção NÃO vale; reinicie o daemon para regravar: systemctl --user restart hefesto-dualsense4unix"
-    elif [[ "${faltando}" -gt 0 ]]; then
-        warn "allowlist do Steam Input com ${faltando}/${total} appid(s) sem .env materializado — o jogo cai no default.env (com dedup) e a exceção não vale; reinicie o daemon para regravar"
-    else
-        pass "allowlist do Steam Input efetiva: ${total} appid(s) com .env próprio SEM dedup (o jogo enxerga o controle físico)"
+        # NOMEAR-EM-VEZ-DE-CONTAR-01 (16/08/2026): até hoje este check dizia
+        # "1/3 appid(s) sem .env" e nunca QUAL — a mesma cegueira que deixou o
+        # Pragmata quebrado a noite toda enquanto o contador do wrapper passava
+        # em verde. "1/3" não diz em que jogo ela vai esbarrar, e é justamente
+        # isso que ela precisa saber para decidir se abre o jogo hoje.
+        rotulo="$(_rotulo_do_appid "${appid}")"
+        nomes+="${nomes:+; }${rotulo}"
+        # Entrar na allowlist NÃO liga o Steam Input de jogo nenhum:
+        # `add_appid_to_steam_input_allowlist` escreve UMA linha no nosso `.txt`
+        # e nada mais. A única coisa que o arquivo faz é impedir o guard
+        # (`disable_steam_input.sh`) de ZERAR um `UseSteamControllerConfig` que
+        # JÁ estava em 1|2. Se o guard passou por ali antes de o appid entrar na
+        # lista, o valor foi a zero e não volta sozinho — a entrada fica lá para
+        # sempre, inerte, e a casa acha que cumpriu o pedido dela.
+        # Medido em 16/08: o Sackboy (1599660) está na allowlist com
+        # `UseSteamControllerConfig "0"` no vdf, marcado por ela no editor de
+        # perfil e desligado na Steam.
+        valor="$(_steam_input_do_appid "${appid}")"
+        case "${valor}" in
+            0) desligado+="${desligado:+; }${rotulo}" ;;
+            "") ausente+="${ausente:+; }${rotulo}" ;;
+        esac
+    done
+    pass "allowlist do Steam Input (o Hefesto não desliga o Steam Input destes): ${nomes}"
+    [[ -n "${desligado}" ]] && warn "jogo(s) na allowlist com o Steam Input DESLIGADO na Steam (UseSteamControllerConfig=0): ${desligado} — entrar na allowlist só IMPEDE o Hefesto de desligar, nunca LIGA; ligue na Steam (Propriedades → Controle → 'Ativar Entrada Steam'), ou tire o jogo da lista se a intenção mudou"
+    [[ -n "${ausente}" ]] && info "jogo(s) na allowlist sem a chave UseSteamControllerConfig no vdf (a Steam nunca gravou nada para eles): ${ausente} — vale o default da Steam, que esta casa não mediu; abrir Propriedades → Controle uma vez faz a Steam escrever a chave"
+    return 0
+}
+
+# O nome do jogo a partir do appid, para os checks que precisam NOMEAR. Sem o
+# pacote (python3 ausente, repo incompleto) cai no "appid N", que ainda é
+# melhor que um número solto no meio de uma frase.
+_rotulo_do_appid() {
+    local appid="$1"
+    if ! command -v python3 >/dev/null 2>&1; then
+        printf 'appid %s' "${appid}"
+        return 0
     fi
+    HEFESTO_SRC="${ROOT_DIR}/src" HEFESTO_APPID="${appid}" python3 - <<'PY' 2>/dev/null || printf 'appid %s' "${appid}"
+import os
+import sys
+
+sys.path.insert(0, os.environ.get("HEFESTO_SRC", ""))
+appid = os.environ.get("HEFESTO_APPID", "")
+try:
+    from hefesto_dualsense4unix.integrations.steam_launch_options import rotulo_do_jogo
+except Exception:  # noqa: BLE001
+    print("appid %s" % appid, end="")
+else:
+    print(rotulo_do_jogo(appid), end="")
+PY
+}
+
+# `UseSteamControllerConfig` do appid nos localconfig.vdf: "2"/"1" (ligado),
+# "0" (desligado) ou vazio (a chave não existe — a Steam nunca escreveu nada
+# para este jogo, e aí o que vale é o default dela, que não medimos).
+#
+# A chave NÃO mora na mesma árvore que o `LaunchOptions`: no vdf dela ela está
+# em `UserLocalConfigStore/apps/<appid>`, enquanto o `LaunchOptions` vivo está
+# em `UserLocalConfigStore/Software/Valve/Steam/apps/<appid>`. Por isso aqui a
+# busca é pelo BLOCO do appid, em qualquer árvore — é o mesmo critério do
+# `disable_steam_input.sh`, que é quem escreve esta chave.
+_steam_input_do_appid() {
+    local appid="$1" vdf linha
+    shopt -s nullglob
+    for vdf in "${HOME}/.steam/steam/userdata/"*/config/localconfig.vdf \
+               "${HOME}/.steam/debian-installation/userdata/"*/config/localconfig.vdf \
+               "${HOME}/.local/share/Steam/userdata/"*/config/localconfig.vdf; do
+        [[ -f "${vdf}" ]] || continue
+        linha="$(awk -v alvo="${appid}" '
+            /^[[:space:]]*"[^"]*"[[:space:]]*$/ { nome = $0; gsub(/^[[:space:]]*"|"[[:space:]]*$/, "", nome); pend = nome; next }
+            /^[[:space:]]*\{[[:space:]]*$/ { depth++; stack[depth] = pend; pend = ""; next }
+            /^[[:space:]]*\}[[:space:]]*$/ { if (depth > 0) { delete stack[depth]; depth-- } next }
+            /"UseSteamControllerConfig"/ {
+                if (depth > 0 && stack[depth] == alvo) {
+                    if (match($0, /"UseSteamControllerConfig"[^"]*"[^"]*"/)) {
+                        v = substr($0, RSTART, RLENGTH)
+                        sub(/.*"UseSteamControllerConfig"[^"]*"/, "", v)
+                        sub(/"$/, "", v)
+                        print v
+                    }
+                }
+            }
+        ' "${vdf}" 2>/dev/null | head -1)"
+        if [[ -n "${linha}" ]]; then
+            shopt -u nullglob
+            printf '%s' "${linha}"
+            return 0
+        fi
+    done
+    shopt -u nullglob
+    return 0
 }
 
 check_controller() {
