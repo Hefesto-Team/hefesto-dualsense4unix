@@ -116,6 +116,11 @@ class _BackendMinimo:
         self._output_target_key: str | None = None
         self._suprimir_player_leds = False
         self._desired = _DesiredOutput()
+        # ESCRITOR-CRU-01: o contador de pinturas que o `_pintar_por_hidraw_bt`
+        # incrementa. É o sinal com que o daemon arma a reafirmação quando há
+        # outro escritor segurando o `hidraw` — o dublê precisa dele porque
+        # empresta o método de verdade.
+        self._pinturas_de_lightbar = 0
 
     def _record_desired_locked(self, _alvo: str | None, _campos: dict) -> None:
         return None

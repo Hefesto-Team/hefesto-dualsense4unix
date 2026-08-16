@@ -19,6 +19,7 @@ from collections.abc import Callable
 from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+from hefesto_dualsense4unix.core import escritor_cru as _escritor_cru
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.core.trigger_effects import off as trigger_off
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
@@ -518,39 +519,29 @@ def controles_bt_frageis(controllers: Any, *, native_mode: bool) -> list[int]:
 #: com timeout curto e varredura de /proc/<pid>/fd com teto de tempo — o
 #: estudo mediu ~6 ms para ~4600 fds, então 0.5 s é folga patológica. A sonda
 #: roda na MESMA thread do inventário (nunca no event loop).
-_HOLDERS_PGREP_TIMEOUT_SEC = 1.0
-_HOLDERS_SCAN_BUDGET_SEC = 0.5
-_HOLDERS_MAX_STEAM_PIDS = 8
+#:
+#: ESCRITOR-CRU-01: os três números moram agora em `core/escritor_cru.py`
+#: (`PGREP_TIMEOUT_S`, `ORCAMENTO_DA_VARREDURA_S`, `MAX_PIDS_DA_STEAM`), junto
+#: com a sonda que os usa. Estes aliases ficam porque o número medido é o
+#: mesmo e quem lia daqui não precisa saber que a casa mudou.
+_HOLDERS_PGREP_TIMEOUT_SEC = _escritor_cru.PGREP_TIMEOUT_S
+_HOLDERS_SCAN_BUDGET_SEC = _escritor_cru.ORCAMENTO_DA_VARREDURA_S
+_HOLDERS_MAX_STEAM_PIDS = _escritor_cru.MAX_PIDS_DA_STEAM
 
 
 def _steam_pids() -> list[int]:
     """PIDs do processo Steam via pgrep — padrões do `steam_running` canônico.
 
-    Mesmos matches de `integrations/steam_launch_options.steam_running`
-    (`-f steamrt64/steam` pega o runtime pelo PATH; nunca `-f steam` solto —
-    o falso-positivo histórico do earlyoom), mais `-x steam` para instalações
-    fora do runtime. Best-effort: qualquer falha devolve o que juntou.
+    ESCRITOR-CRU-01: a implementação MUDOU DE CASA para
+    `core/escritor_cru.py`, e este nome ficou como porta (o inventário de
+    externos e a suíte o conhecem). A razão de ter uma casa só é a de sempre:
+    quando o vigia da lightbar passou a fazer a MESMA pergunta que o
+    inventário de externos já fazia, duas cópias seriam duas verdades sobre
+    quem segura o mesmo `/dev/hidrawN`.
     """
-    import subprocess
+    from hefesto_dualsense4unix.core.escritor_cru import pids_da_steam
 
-    pids: set[int] = set()
-    for args in (["pgrep", "-f", "steamrt64/steam"], ["pgrep", "-x", "steam"]):
-        try:
-            proc = subprocess.run(
-                args,
-                capture_output=True,
-                timeout=_HOLDERS_PGREP_TIMEOUT_SEC,
-                check=False,
-                text=True,
-            )
-        except (OSError, subprocess.SubprocessError):
-            continue
-        if proc.returncode != 0:
-            continue
-        for token in proc.stdout.split():
-            with contextlib.suppress(ValueError):
-                pids.add(int(token))
-    return sorted(pids)[:_HOLDERS_MAX_STEAM_PIDS]
+    return pids_da_steam()
 
 
 def _steam_hidraw_holders() -> dict[str, list[int]]:
@@ -563,28 +554,14 @@ def _steam_hidraw_holders() -> dict[str, list[int]]:
     ausência como "não sondado", NUNCA como "ninguém segura". Lembrete de
     honestidade do sprint: fd aberto pelo Steam é estado NORMAL, não
     assinatura de conflito.
-    """
-    import os
 
-    holders: dict[str, list[int]] = {}
-    deadline = time.monotonic() + _HOLDERS_SCAN_BUDGET_SEC
-    for pid in _steam_pids():
-        fd_dir = f"/proc/{pid}/fd"
-        try:
-            entries = os.listdir(fd_dir)
-        except OSError:
-            continue  # processo morreu / sem permissão: segue degradado
-        for fd in entries:
-            if time.monotonic() > deadline:
-                return holders
-            target = ""
-            with contextlib.suppress(OSError):
-                target = os.readlink(os.path.join(fd_dir, fd))
-            if target.startswith("/dev/hidraw"):
-                pids_do_no = holders.setdefault(target, [])
-                if pid not in pids_do_no:
-                    pids_do_no.append(pid)
-    return holders
+    ESCRITOR-CRU-01: o corpo mora em `core/escritor_cru.holders_de_hidraw`
+    (ver `_steam_pids` acima). Aqui sem filtro de nós — o inventário quer
+    TODOS os hidraw que a Steam segura, e é ele quem cruza com os seus.
+    """
+    from hefesto_dualsense4unix.core.escritor_cru import holders_de_hidraw
+
+    return holders_de_hidraw()
 
 
 def _external_inventory(
@@ -2862,6 +2839,14 @@ class IpcHandlersMixin:
           campo global ``native_mode`` (já no payload) é o aviso da GUI ("o
           jogo é dono do LED") — nenhuma flag nova por controle.
 
+        - ``lightbar_disputada`` (ESCRITOR-CRU-01): ``True`` quando outro
+          processo — hoje só a Steam é reconhecida — segura o ``hidraw``
+          DESTE controle. É o aviso de que ``lightbar_rgb`` acima é a cor
+          PEDIDA e pode não ser a acesa: escrita crua por hidraw não atualiza
+          a classe LED, e a madrugada de 16/08 mediu o mesmo ``[0 255 0]`` com
+          a barra apagada e com ela verde. Sai da FOTO do sentinela do daemon
+          (tique de 30 s) — este handler não toca ``/proc``.
+
           Contrato de cor (D8 — divergência fundamentada, decisão do
           orquestrador da onda): expõe-se UMA cor, a efetiva conhecida
           (pós-escala de brilho — o `_DesiredOutput.led` já é pós-escala; o
@@ -2908,6 +2893,16 @@ class IpcHandlersMixin:
                 if uniq is not None and rgb is not None:
                     written_by_uniq[uniq] = rgb
 
+        # ESCRITOR-CRU-01: o endereço com que se pergunta "quem mais segura
+        # este controle?". Leitura de atributo do backend (`_pinned_path`) —
+        # não re-enumera, não abre nada, não toca `/proc`: a FOTO de quem
+        # segura é do sentinela do daemon, tirada no tique do reconnect_loop.
+        nos_por_uniq: dict[str, str] = {}
+        mapear = getattr(self.controller, "nos_hidraw_por_uniq", None)
+        if callable(mapear):
+            with contextlib.suppress(Exception):
+                nos_por_uniq = dict(mapear() or {})
+
         snapshots = self._coop_live_snapshots()
         vpad_by_uniq = self._coop_vpads_by_uniq()
         gp_dev = (
@@ -2928,6 +2923,7 @@ class IpcHandlersMixin:
             entry["lightbar_rgb"] = list(rgb) if rgb is not None else None
             entry["lightbar_on"] = on
             entry["lightbar_source"] = source
+            entry["lightbar_disputada"] = self._lightbar_disputada(uniq, nos_por_uniq)
 
             if entry.get("is_primary") and state is not None:
                 entry["inputs"] = self._inputs_from_state(state)
@@ -3074,6 +3070,42 @@ class IpcHandlersMixin:
                 if rgb is not None:
                     return rgb, rgb != (0, 0, 0), "desired"
         return None, False, "desconhecida"
+
+    def _lightbar_disputada(
+        self, uniq: str | None, nos_por_uniq: dict[str, str]
+    ) -> bool:
+        """True quando OUTRO processo segura o hidraw DESTE controle.
+
+        ESCRITOR-CRU-01 — o campo existe porque a aba Status estava mentindo, e
+        a mentira era honesta: com nó gravável e escrita nossa registrada, ela
+        mostra a leitura de ``multi_intensity`` como "a cor efetiva". A
+        madrugada de 16/08 mediu que esse valor é o mesmo `[0 255 0]` com a
+        barra APAGADA e com ela VERDE — o sysfs guarda o PEDIDO, nunca o
+        aceso. Enquanto houver escritor cru, o que a tela pode afirmar é *"esta
+        é a cor que o Hefesto pediu"*, e é isso que este booleano diz à GUI.
+
+        Leitura PURA: sai da foto que o sentinela do daemon já tirou (o tique
+        de 30 s do `reconnect_loop`). O status é consultado a cada segundo pela
+        GUI — sondar `/proc` aqui seria um `pgrep` por segundo, e o defeito que
+        essa sonda existe para curar não vale esse preço.
+
+        ``False`` também é a resposta quando NADA foi sondado ainda. É
+        deliberado e é a disciplina desta casa: ausência de sonda não é prova
+        de que ninguém segura, e um aviso ligado por falta de dado treinaria a
+        usuária a ignorá-lo.
+        """
+        if uniq is None:
+            return False
+        no = nos_por_uniq.get(uniq)
+        if not no or self.daemon is None:
+            return False
+        sentinela = getattr(self.daemon, "_sentinela_de_escritor_cru", None)
+        # `isinstance`, e não pato: o daemon é MagicMock em boa parte da suíte,
+        # e `bool(mock.veredito.segurado(no))` é True — um aviso na tela dela
+        # nascido de um dublê de teste seria a pior estreia possível.
+        if not isinstance(sentinela, _escritor_cru.SentinelaDeEscritorCru):
+            return False
+        return bool(sentinela.veredito.segurado(no))
 
     def _lightbar_read_cached(
         self, node: Any

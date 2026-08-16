@@ -10,6 +10,10 @@ import contextlib
 import os
 import time
 
+from hefesto_dualsense4unix.core.escritor_cru import (
+    SentinelaDeEscritorCru,
+    Veredito,
+)
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.core.gatilho_fim_de_sequencia import (
@@ -464,6 +468,12 @@ async def reconnect_loop(
         # acontece justamente quando um SEGUNDO controle chega com o primeiro
         # já online, e ali não há transição nenhuma para pendurar o gancho.
         armar_gatilho_da_cor(daemon)
+        # ESCRITOR-CRU-01: e no mesmo tique, a pergunta que a classe LED não
+        # sabe responder — "quem mais segura estes controles?". `forcar=True`
+        # porque este é o único ponto do produto com orçamento para o `pgrep`
+        # (uma vez a cada 30 s), e é ele que enxerga a Steam SUBINDO sem que
+        # ninguém tenha mexido em nada.
+        await vigiar_escritor_cru(daemon, forcar=True)
 
         is_connected = bool(daemon.controller.is_connected())
         if is_connected and not was_connected:
@@ -741,6 +751,120 @@ def armar_gatilho_da_cor(daemon: DaemonProtocol) -> int:
     return novas
 
 
+def sentinela_de_escritor_cru_de(daemon: DaemonProtocol) -> SentinelaDeEscritorCru:
+    """O `SentinelaDeEscritorCru` DESTE daemon, criado na primeira consulta.
+
+    ESCRITOR-CRU-01. Único por daemon pela mesma razão do `RegistroDeGatilhos`:
+    o veredito é uma FOTO com validade, e duas fotos dariam duas verdades
+    sobre a mesma mesa — a do vigia (que arma o gatilho) e a da aba Status
+    (que conta à usuária o que está acontecendo). É ele que o
+    `_enrich_controllers_per_controller` lê, sem tocar em `/proc`.
+    """
+    sentinela = getattr(daemon, "_sentinela_de_escritor_cru", None)
+    if isinstance(sentinela, SentinelaDeEscritorCru):
+        return sentinela
+    sentinela = SentinelaDeEscritorCru()
+    with contextlib.suppress(Exception):
+        daemon._sentinela_de_escritor_cru = sentinela
+    return sentinela
+
+
+async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
+    """Sonda quem segura o hidraw e ARMA o gatilho da cor quando é o caso.
+
+    ESCRITOR-CRU-01 — a metade que faltava do GATILHO-DA-COR-01. O gatilho já
+    existia, já escrevia o report que venceu a Steam na bancada de 12/08, e já
+    esperava a rajada passar; o que ele **não** tinha era um evento para a
+    situação que a madrugada de 16/08 mediu. Dois eventos entram aqui, e cada
+    um responde a uma metade da medição:
+
+    - ``pintura_com_escritor_cru`` — *"a barra fica APAGADA depois de cada
+      comando nosso"*. O produto pintou (contador do `_pintar_por_hidraw_bt`) e
+      há um escritor cru segurando o nó: quem escrever por ÚLTIMO ganha, e
+      hoje é ela. O gatilho reafirma 1,5 s depois que a sequência de comandos
+      sossega — uma escrita por rajada, não uma por comando;
+    - ``escritor_cru_novo`` — *"o daemon NÃO reagiu em 60 s"*. Um nó que estava
+      livre passou a ser segurado: é a assinatura da Steam subindo, que é
+      exatamente quando ela repinta tudo o que enxerga (medido em 12/08:
+      98 reports de saída numa probe com ela viva, contra 6 sem ela).
+
+    **Modo Nativo é no-op TOTAL — nem sonda.** Regra dela, literal: *"no modo
+    nativo devolvemos o controle pra steam e no modo conexão também, todo o
+    resto é o hefesto"*. Ali o dono do hidraw é o jogo, e um escritor cru não
+    é intruso: é o dono. Sondar seria gastar `pgrep` para concluir que sim, o
+    jogo está lá.
+
+    ``forcar`` é o tique de 30 s do `reconnect_loop` (o único com orçamento
+    para o `pgrep`); sem ele, só sonda quando o produto acabou de pintar, e
+    ainda assim reaproveita a foto dentro da validade. Em mesa parada com a
+    Steam aberta o dia inteiro isto custa **duas sondas por minuto e ZERO
+    escritas** — o custo de não sondar seria a barra apagada dela.
+
+    Devolve quantos eventos armaram o gatilho (0 = nada a fazer). Best-effort:
+    nada aqui pode derrubar o laço de reconexão.
+
+    Preço declarado: a sonda vai pelo `_run_blocking` (executor de 2 threads,
+    o mesmo do `connect`/`read_state`) e o pior caso dela são os dois `pgrep`
+    com 1 s de timeout cada. É o mesmo custo que a sonda de holders do
+    inventário de externos já paga; fica registrado porque um `pgrep`
+    pendurado ocupa um worker, e este laço divide o executor com o poll loop.
+    """
+    with contextlib.suppress(Exception):
+        if daemon.is_native_mode():
+            return 0
+    consumir = getattr(daemon.controller, "consumir_pinturas_de_lightbar", None)
+    pinturas = 0
+    if callable(consumir):
+        with contextlib.suppress(Exception):
+            pinturas = int(consumir() or 0)
+    if not forcar and pinturas <= 0:
+        return 0
+    nos_por_uniq: dict[str, str] = {}
+    mapear = getattr(daemon.controller, "nos_hidraw_por_uniq", None)
+    if callable(mapear):
+        with contextlib.suppress(Exception):
+            nos_por_uniq = dict(mapear() or {})
+    if not nos_por_uniq:
+        return 0
+    sentinela = sentinela_de_escritor_cru_de(daemon)
+    nos = sorted(set(nos_por_uniq.values()))
+    agora = time.monotonic()
+
+    def _sondar() -> tuple[Veredito, tuple[str, ...]]:
+        return sentinela.sondar(nos, agora, forcar=forcar)
+
+    try:
+        veredito, novos = await daemon._run_blocking(_sondar)
+    except Exception as exc:
+        logger.debug("escritor_cru_vigia_falhou", err=str(exc))
+        return 0
+    armados = 0
+    if novos:
+        logger.info(
+            "lightbar_escritor_cru_detectado",
+            nos=list(novos),
+            pids=sorted({p for n in novos for p in veredito.pids(n)}),
+        )
+        registrar_gatilho_da_lightbar(daemon)
+        if armar_gatilho(
+            daemon,
+            NOME_DO_GATILHO_DA_LIGHTBAR,
+            evento="escritor_cru_novo",
+            quantos=len(novos),
+        ):
+            armados += 1
+    elif pinturas > 0 and veredito.algum:
+        registrar_gatilho_da_lightbar(daemon)
+        if armar_gatilho(
+            daemon,
+            NOME_DO_GATILHO_DA_LIGHTBAR,
+            evento="pintura_com_escritor_cru",
+            quantos=pinturas,
+        ):
+            armados += 1
+    return armados
+
+
 async def disparar_gatilhos_devidos(daemon: DaemonProtocol) -> int:
     """Chama a tarefa de todo gatilho cuja sequência sossegou. Devolve quantos.
 
@@ -798,6 +922,12 @@ async def _wait_online_or_hotplug(
         if daemon._is_stopping():
             return False
         elapsed += step
+        # ESCRITOR-CRU-01: `forcar=False` — a fatia NÃO sonda por si. Ela só
+        # olha o contador de pinturas do backend (uma leitura de inteiro sob
+        # lock) e, se o produto acabou de pintar, reaproveita a foto de até
+        # 5 s. Sem isto a reafirmação de um comando dela esperaria o tique de
+        # 30 s, que é tarde demais para um gesto ter resposta.
+        await vigiar_escritor_cru(daemon, forcar=False)
         await disparar_gatilhos_devidos(daemon)
         if watch.poll():
             return True
@@ -952,5 +1082,7 @@ __all__ = [
     "registrar_gatilho_da_lightbar",
     "registro_de_gatilhos_de",
     "restore_last_profile",
+    "sentinela_de_escritor_cru_de",
     "shutdown",
+    "vigiar_escritor_cru",
 ]
