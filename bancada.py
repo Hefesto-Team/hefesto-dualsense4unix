@@ -120,9 +120,46 @@ _ESTADO_RUMBLE_FF = (
     "segundos) e por troca de lado (bits desligados trocaram o motor que vibra). A cura "
     "ainda NAO foi escrita."
 )
+#: BANCADA-ESTADOS-02 (15/08/2026): mais TRÊS, e a lista cresceu por medição, não
+#: por gosto. O `estado_hoje` recebeu neste dia o bias do giroscópio em repouso, a
+#: busca que fechou o `imu.ligar` e o contador de reports do `imu.perda` — as três
+#: escritas por quem estava medindo, e as três reprovadas pelo portão, como tinha
+#: de ser. Transcritas aqui pela mesma razão de 13/08.
+#:
+#: A tentação, e por que ela foi DESCARTADA: derivar a lista do próprio CSV em
+#: tempo de execução acaba com a transcrição para sempre. Foi escrito, e o
+#: `test_a_regua_dos_selectbox_ainda_alcanca_a_grade` reprovou na hora — a régua
+#: lê `options` ESTATICAMENTE, pelo AST, e uma lista computada ela não consegue
+#: conferir contra o CSV. O incômodo da transcrição é o preço de a régua existir;
+#: trocá-lo por conveniência desligaria a guarda em silêncio, que é o defeito que
+#: ela guarda. Fica como está até ela decidir se `estado_hoje` é vocabulário curto.
+_ESTADO_GIROSCOPIO_BIAS = (
+    'Fechado nos dois transportes em 15/08/2026 pelo E-8. O número de repouso NÃO é zero: '
+    'as quatro unidades ficam entre 0,19 e 1,53 graus/s de bias de velocidade angular, '
+    'porque o driver zera o `bias` do giroscópio de propósito (`hid-playstation.c:1200, '
+    ':1206, :1212`) e só normaliza a escala. É bias de fábrica por unidade, não ruído e '
+    'não transporte — um jogo que integrar sem corrigir deriva de 0,2 a 1,5 grau por '
+    'segundo.'
+)
+_ESTADO_IMU_LIGAR = (
+    'PERGUNTA FECHADA POR BUSCA, 15/08/2026: NÃO existe, nesta árvore, código que tente '
+    'ligar a IMU do DualSense — logo não há nada a podar aqui. O `set_motion_streaming` é '
+    'flag DO VPAD (decide se o espelho emite) e o único Enable-IMU do projeto é o '
+    'subcomando 0x40 do protocolo Switch, em `core/external_leds.py:149`, que é do '
+    'Nintendo Pro REAL. Procurado por `git grep` em `imu`, `motion`, `enable_motion` e '
+    '`ligar` sobre `src/` e `app/`.'
+)
+_ESTADO_IMU_PERDA = (
+    'A assimetria "uma degradação de link no CABO é invisível para a telemetria" tem cura '
+    'medida e NÃO aplicada: o `__le32` de `corpo[11..14]` é contador de reports nos DOIS '
+    'transportes, e o produto hoje não o lê em transporte nenhum. Parseá-lo daria ao cabo '
+    'o contador que ele nunca teve e ao rádio um que mede perda de verdade, em vez do '
+    '`bt_drops`, que conta o que o PRODUTO descartou.'
+)
 ESTADOS = ["", "funciona", "regrediu", "nunca funcionou",
            "não implementado", "impossível",
-           _ESTADO_RUMBLE_SIMULTANEO, _ESTADO_RUMBLE_FF]
+           _ESTADO_RUMBLE_SIMULTANEO, _ESTADO_RUMBLE_FF,
+           _ESTADO_GIROSCOPIO_BIAS, _ESTADO_IMU_LIGAR, _ESTADO_IMU_PERDA]
 LADOS = {"cabo": "cabo_", "rádio": "radio_"}
 
 st.set_page_config(page_title="Hefesto · bancada de medição", layout="wide")
