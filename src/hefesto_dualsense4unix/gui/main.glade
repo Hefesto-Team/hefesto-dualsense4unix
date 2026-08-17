@@ -112,7 +112,13 @@
          flutuante. Sob tiling do COSMIC (que ignora min-size) o GtkFlowBox do
          rodapé + os ScrolledWindow das abas são a rede de segurança. BUG-FOOTER-CORTADO. -->
     <property name="width-request">760</property>
-    <property name="height-request">560</property>
+    <!-- JANELA-CORTADA-01 (17/08/2026): era 560, e era uma promessa falsa.
+             O conteúdo pede 822px (header 73 + notebook 697 + rodapé 52), e
+             abaixo disso o rodapé saía pela borda — medido, 72px fora em 750px
+             de janela. Agora o miolo rola (`scroll_tab_*`), então a janela PODE
+             encolher sem cortar nada; este piso existe só para ela não nascer
+             num tamanho inútil: 73 do cabeçalho + 52 do rodapé + 495 de miolo. -->
+        <property name="height-request">620</property>
     <signal name="delete-event" handler="on_window_delete_event"/>
     <child>
       <object class="GtkBox" id="root_box">
@@ -216,6 +222,24 @@
                  + cards por controle + desligar de verdade. Conteudo dinamico
                  montado em install_home_tab() (home_actions.py). -->
             <child>
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_tab_home_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
+            <child>
               <object class="GtkBox" id="tab_home_box">
                 <property name="orientation">vertical</property>
                 <property name="spacing">12</property>
@@ -240,6 +264,8 @@
                      A aba agora e 100% montada em codigo (install_home_tab). -->
               </object>
             </child>
+          </object>
+            </child>
             <child type="tab">
               <object class="GtkLabel" id="tab_home_label">
                 <property name="label" translatable="yes">Início</property>
@@ -247,6 +273,24 @@
             </child>
 
             <!-- ABA STATUS -->
+            <child>
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_tab_status_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
             <child>
               <object class="GtkBox" id="tab_status_box">
                 <property name="orientation">vertical</property>
@@ -654,6 +698,8 @@
                 </child>
               </object>
             </child>
+          </object>
+            </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label" translatable="yes">Status</property></object>
             </child>
@@ -675,11 +721,31 @@
                  `status_actions.py`), no molde da aba Início e dos cards do
                  Status: o glade só reserva a página e o berço. -->
             <child>
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_tab_no_jogo_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
+            <child>
               <object class="GtkBox" id="tab_no_jogo_box">
                 <property name="orientation">vertical</property>
                 <property name="spacing">12</property>
                 <property name="margin">12</property>
               </object>
+            </child>
+          </object>
             </child>
             <child type="tab">
               <object class="GtkLabel" id="tab_no_jogo_label">
@@ -688,6 +754,24 @@
             </child>
 
             <!-- ABA TRIGGERS -->
+            <child>
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_tab_triggers_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
             <child>
               <object class="GtkBox" id="tab_triggers_box">
                 <property name="orientation">horizontal</property>
@@ -1009,11 +1093,31 @@
 
               </object>
             </child>
+          </object>
+            </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label" translatable="yes">Gatilhos</property></object>
             </child>
 
             <!-- ABA LIGHTBAR + PLAYER LEDS -->
+            <child>
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_tab_lightbar_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
             <child>
               <object class="GtkBox" id="tab_lightbar_box">
                 <property name="orientation">horizontal</property>
@@ -1492,11 +1596,31 @@
                 </child>
               </object>
             </child>
+          </object>
+            </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label" translatable="yes">Lightbar</property></object>
             </child>
 
             <!-- ABA RUMBLE — FEAT-RUMBLE-POLICY-01 -->
+            <child>
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_tab_rumble_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
             <child>
               <object class="GtkBox" id="tab_rumble_box">
                 <property name="orientation">vertical</property>
@@ -1865,11 +1989,31 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
 
               </object>
             </child>
+          </object>
+            </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label" translatable="yes">Rumble</property></object>
             </child>
 
             <!-- Aba Perfis -->
+            <child>
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_profiles_paned">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
             <child>
               <object class="GtkBox" id="profiles_paned">
                 <property name="orientation">horizontal</property>
@@ -2413,6 +2557,8 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 </child>
               </object>
             </child>
+          </object>
+            </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label" translatable="yes">Perfis</property></object>
             </child>
@@ -2420,6 +2566,24 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
             <!-- Aba Sistema (LEIGO-03: era "Daemon"; o systemd não é assunto
                  de quem usa — a linha "Unit: hefesto-dualsense4unix.service"
                  saiu daqui e o id do serviço vive só no código/log) -->
+            <child>
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_daemon_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
             <child>
               <object class="GtkBox" id="daemon_box">
                 <property name="orientation">vertical</property>
@@ -2753,11 +2917,31 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 </child>
               </object>
             </child>
+          </object>
+            </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label" translatable="yes">Sistema</property></object>
             </child>
 
             <!-- Aba Emulação -->
+            <child>
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_emulation_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
             <child>
               <object class="GtkBox" id="emulation_box">
                 <property name="orientation">vertical</property>
@@ -3283,6 +3467,8 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 </child>
               </object>
             </child>
+          </object>
+            </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label" translatable="yes">Emulação</property></object>
             </child>
@@ -3305,6 +3491,24 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                    custava o dobro da coluna maior. Cada coluna volta a pedir o
                    próprio conteúdo; o `expand`/`fill` do empacotamento continua
                    dividindo a sobra em partes iguais quando ela existe. -->
+          <!-- JANELA-CORTADA-01 (17/08/2026): o MIOLO é quem cede, nunca o rodapé.
+               Medido forçando a alocação da raiz: com a janela em 750px o
+               `footer_box` era alocado em y=770 — 72px FORA da borda de baixo —
+               porque o notebook trava no mínimo dele (697px) e empurra o rodapé
+               para fora, inteiro, com os 52px dele. Daí o "cortado ao meio".
+               `propagate-natural-height` mantém o NATURAL igual ao do conteúdo
+               (o `retratar_abas.py` estica a foto de cada aba por ele, e sem isso
+               as dez imagens da documentação sairiam cortadas) e deixa só o
+               MÍNIMO ceder — que é exatamente o que faltava. -->
+          <object class="GtkScrolledWindow" id="scroll_tab_navegacao_dsx">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
+            <child>
               <object class="GtkBox" id="tab_navegacao_dsx">
                 <property name="orientation">horizontal</property>
                 <property name="margin">12</property>
@@ -3741,6 +3945,8 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
               <packing><property name="expand">True</property><property name="fill">True</property></packing>
             </child>
               </object>
+            </child>
+          </object>
             </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label" translatable="yes">Navegação</property></object>
