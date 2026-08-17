@@ -53,6 +53,16 @@ _SOURCES_COM_PONTE_BT = (
     "43\talsa_input.pci-0000_0c_00.4.analog-stereo\tPipeWire\ts32le 2ch\tRUNNING\n"
     "108048\thefesto_dualsense_bt_aabbcc\tPipeWire\ts16le 1ch 48000Hz\tRUNNING\n"
 )
+#: O cenário REAL do cabo, medido em 16/08/2026. Note o `.monitor` do sink do
+#: controle: todo sink ganha um de brinde, e ele casa com as MESMAS marcas que
+#: o microfone. Foi ele que a primeira versão da função devolveu.
+_SOURCES_COM_CABO_REAL = (
+    "19596\talsa_input.pci-0000_0c_00.4.analog-stereo\tPipeWire\ts32le 2ch\tRUNNING\n"
+    "121464\talsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
+    "Controller-00.analog-surround-40.monitor\tPipeWire\ts16le 4ch\tSUSPENDED\n"
+    "121465\talsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
+    "Controller-00.iec958-stereo\tPipeWire\ts16le 2ch\tSUSPENDED\n"
+)
 _SOURCES_SEM_CONTROLE = (
     "19595\talsa_output.pci-0000_0c_00.4.iec958-stereo.monitor\tPipeWire\ts32le\tSUSPENDED\n"
     "19596\talsa_input.pci-0000_0c_00.4.analog-stereo\tPipeWire\ts32le 2ch\tRUNNING\n"
@@ -106,6 +116,26 @@ class TestAchaAFonteNosDoisTransportes:
         achado = ac.fonte_de_captura_do_controle()
         assert achado is not None
         assert "Wireless_Controller" in achado
+
+    def test_o_monitor_do_alto_falante_nao_e_o_microfone(
+        self, rodado: _Rodado
+    ) -> None:
+        """A MORDIDA de um defeito REAL, medido ao vivo em 16/08/2026.
+
+        Com o controle no cabo, a primeira versão desta função devolveu
+        `alsa_output.usb-…DualSense…analog-surround-40.monitor` — o ECO DA
+        SAÍDA, não a captura. Todo sink do PulseAudio ganha um source
+        `.monitor` de brinde, e ele casa com QUALQUER marca que o sink casaria.
+
+        Um controle deslizante de microfone mexendo no monitor do alto-falante
+        é a tela fazendo outra coisa do que promete — e o pior tipo, porque
+        parece funcionar.
+        """
+        rodado.saidas["pactl list"] = _SOURCES_COM_CABO_REAL
+        achado = ac.fonte_de_captura_do_controle()
+        assert achado is not None
+        assert ".monitor" not in achado, "pegou o eco da saída, não o microfone"
+        assert achado.startswith("alsa_input."), achado
 
     def test_no_radio_acha_o_source_da_ponte(self, rodado: _Rodado) -> None:
         """No rádio não há placa: quem publica a fonte é a ponte de áudio."""

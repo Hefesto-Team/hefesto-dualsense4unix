@@ -249,6 +249,16 @@ def fonte_de_captura_do_controle() -> str | None:
             continue
         nome = partes[1].strip()
         alvo = nome.lower()
+        # O MONITOR não é microfone — e esta linha foi paga com um defeito
+        # real. Medido em 16/08/2026 com o controle no cabo: a primeira versão
+        # desta função devolveu
+        # `alsa_output.usb-…DualSense…analog-surround-40.monitor`, que é o ECO
+        # DA SAÍDA do controle, não a captura. Todo sink do PulseAudio ganha um
+        # source `.monitor` de brinde, e ele casa com qualquer marca que o sink
+        # casaria. Um controle deslizante de MICROFONE mexendo no monitor do
+        # ALTO-FALANTE é a tela fazendo outra coisa do que promete.
+        if alvo.endswith(".monitor") or alvo.startswith("alsa_output."):
+            continue
         if any(marca in alvo for marca in _MARCAS_DA_FONTE_DO_CONTROLE):
             return nome
     return None
