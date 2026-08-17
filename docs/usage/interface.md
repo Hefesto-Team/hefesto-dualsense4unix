@@ -94,7 +94,7 @@ Depois vêm os blocos, sempre nos mesmos lugares:
 | **Touchpad** | os pontos de toque, e quantos dedos ("1 toque") |
 | **Lightbar** | a cor que está valendo, como faixa, com o hex embaixo (`#ff79c6`) |
 | **Analógico esquerdo** / **direito** | os dois sticks, com X e Y |
-| **Microfone** | o selo **ATIVO** ou **MUDO**, o medidor de nível, **Silenciar** e o interruptor **Pelo rádio** |
+| **Microfone** | o selo **ATIVO** ou **MUDO**, o medidor de nível, o **volume da captura** e **Silenciar** |
 | **Alto-falante** | o volume, **Silenciar**, e o seletor de rota com **Sons do jogo** e **Todo o som do PC** |
 | a grade de botões | acende o botão que você pressiona |
 

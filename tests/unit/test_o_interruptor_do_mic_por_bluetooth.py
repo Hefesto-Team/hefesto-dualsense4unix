@@ -1,267 +1,207 @@
-"""O interruptor da ponte de microfone por Bluetooth — decisão dela de 07/08.
+"""O interruptor da ponte de mic por BT — o portão que o mantém FORA da janela.
 
-*"no card do controle, junto do medidor"* — resposta 7 do painel
-(`docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md`).
+Este arquivo mudou de lado em **16/08/2026**. Ele nasceu em 07/08 cobrando que
+o interruptor "Pelo rádio" existisse; hoje ele cobra que **não exista**, e a
+troca não é capricho de rótulo — é o que duas medições da bancada mandaram.
 
-O buraco que ele fecha, medido em 25/07 com os quatro controles por BT: por
-Bluetooth o DualSense **não expõe placa de áudio** (`pactl list sources` não tem
-uma linha de DualSense), porque o áudio dele trafega como Opus tunelado em
-reports HID. A ponte que decodifica isso existe há semanas
-(`integrations/dualsense_bt_audio.py`, validada ao vivo gravando WAV) e o
-subsystem sobe (`daemon/subsystems/bt_mic.py`) — mas a única forma de ligá-la
-era a variável de ambiente `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` ou o terminal.
-**Nenhuma linha dela no `main.glade`.** A janela não sabia que a ponte existia.
+## Por que o interruptor saiu
 
-O que este arquivo cobra, e por quê:
+**1. É o desenho dela.** Olhando a aba Status: *"esse botão de silenciar some.
+dá espaço a um slicer de microfone pra definir o volume do microfone real
+(independente de saber se tá via bt ou via cabo), o app deve ser inteligente
+pra saber qual caminho usar. Ali onde temos o botão por rádio trocamos por
+Silenciar"*. O interruptor punha na tela uma decisão TÉCNICA que é do
+aplicativo: no rádio o áudio vem em Opus dentro dos reports HID, no cabo vem
+por placa de som USB. É o mesmo microfone, e ela não deveria precisar saber
+disso para falar.
 
-1. **o estado** — função pura (`acao_ponte_bt`), sem GTK, sem sysfs, sem disco:
-   ela roda no tique de 10 Hz da aba e um `diagnosticar()` ali dentro custaria
-   uma varredura de sysfs por décimo de segundo;
-2. **a decisão de subir** (`ligar_ponte_bt`) com o mundo injetado — o caminho de
-   produção toca hidraw, libopus e PipeWire, e um teste que dependesse disso não
-   rodaria no CI nem diria nada sobre a decisão que este código toma;
-3. **o texto** — que ele NÃO promete mudar o padrão, e que o preço medido está à
-   vista. Continuar opt-in é o estado de hoje, e sair dele depende de uma
-   medição com os quatro no rádio que ela ainda não fez.
+**2. A ponte não é segura** — medido DUAS vezes em 16/08. Com ela de pé, o
+botão PS aparece pressionado em pulsos de ~17 ms (`held_ms=17.6 / 17.5 / 17.9`,
+um ciclo de leitura a 60 Hz) e o daemon tenta abrir a Steam em laço. A segunda
+rodada já tinha o filtro do bit de áudio no lugar e travou igual. Ela descreveu
+como *"o teclado e o mouse com vida própria"* e desligou o controle, com medo.
+Log e sequência inteira em
+`docs/process/estudos/2026-08-16-O-PS-PRESO-a-ponte-do-mic-e-o-laco-que-abria-a-steam-sozinho.md`.
+
+**Um interruptor que oferece um gesto perigoso é pior que interruptor nenhum.**
+
+## O que este arquivo cobra hoje, e por que vale travar
+
+1. **A janela não oferece a ponte.** É o invariante, e ele é de SEGURANÇA: uma
+   sessão futura que "reative o widget do mic BT" sem fechar a arbitragem do
+   hidraw refaz o susto dela. Este teste é o que a faz parar e ler o estudo.
+2. **A capacidade continua inteira.** O que saiu foi o BOTÃO, não a ponte: o
+   módulo, o subsystem, o `mic bt` da linha de comando e o gate
+   `HEFESTO_DUALSENSE4UNIX_BT_MIC` seguem de pé para quem quiser subi-la à mão.
+   Sem esta metade, "some o interruptor" viraria licença para apagar a ponte —
+   e ela FUNCIONA: publicou o source no PipeWire em 16/08.
+3. **O caminho de volta está escrito.** Cura removida sem a condição de retorno
+   anotada vira conhecimento perdido, que é a dívida mais cara desta casa.
+
+O irmão de GTK real (`test_o_interruptor_do_mic_no_card.py`) faz a mesma
+pergunta à árvore de widgets montada — porque um módulo pode não exportar nada
+e a janela ainda assim pendurar um `Gtk.Switch` no bloco do microfone.
 """
 
 from __future__ import annotations
 
-from typing import Any
+import inspect
+from pathlib import Path
 
 import pytest
 
-from hefesto_dualsense4unix.app.widgets.controller_card import (
-    DICA_MIC_BT_DESLIGAR,
-    DICA_MIC_BT_LIGAR,
-    DICA_MIC_BT_NO_CABO,
-    TEXTO_MIC_BT_ROTULO,
-    acao_ponte_bt,
-    desligar_ponte_bt,
-    ligar_ponte_bt,
+from hefesto_dualsense4unix.app.widgets import controller_card as cc
+
+#: O estudo que julgou a ponte. Se ele sumir, o motivo da remoção some junto —
+#: e a próxima sessão religa o interruptor achando que foi frescura.
+ESTUDO = Path("docs/process/estudos") / (
+    "2026-08-16-O-PS-PRESO-a-ponte-do-mic-e-o-laco-que-abria-a-steam-sozinho.md"
 )
 
-#: MAC da FAIXA SINTÉTICA que o portão de anonimato aceita (`aa:bb:cc`).
-#: A máscara da casa (octetos 4 e 5 zerados) não basta aqui: ela preserva o
-#: OUI, que é identidade de fabricante — e `test_anonimato_de_fixtures`
-#: reprova qualquer MAC de fixture fora de `02:fe`/`aa:bb:cc`/`e8:47:3a`.
-MAC = "aa:bb:cc:00:11:22"
-OUTRO_MAC = "aa:bb:cc:00:33:44"
-
-
-class _No:
-    """Um `NoDualSenseBT` de mentira — só o que o filtro por controle usa."""
-
-    def __init__(self, uniq: str, caminho: str = "/dev/hidraw9") -> None:
-        self.uniq = uniq
-        self.caminho = caminho
-
-
-class _Diag:
-    def __init__(self, impedimentos: list[str] | None = None) -> None:
-        self.impedimentos = impedimentos or []
-
-
-class _Gerenciador:
-    """Dublê do `GerenciadorMicBluetooth`: registra o que lhe pediram."""
-
-    ultimo: _Gerenciador | None = None
-
-    def __init__(self, *, sobe: bool = True) -> None:
-        self.pontes: dict[str, Any] = {}
-        self.reconciliados: list[list[Any]] = []
-        self.parou = 0
-        self._sobe = sobe
-        _Gerenciador.ultimo = self
-
-    def reconciliar(self, nos: list[Any] | None = None) -> None:
-        self.reconciliados.append(list(nos or []))
-        if self._sobe:
-            for no in nos or []:
-                self.pontes[no.caminho] = object()
-
-    def parar(self) -> None:
-        self.parou += 1
-        self.pontes.clear()
-
-
-# ---------------------------------------------------------------------------
-# O estado do interruptor (puro)
-# ---------------------------------------------------------------------------
-
-
-def test_no_cabo_o_interruptor_fica_apagado_e_diz_por_que() -> None:
-    """Apagado, e NUNCA escondido: sumir é indistinguível de "não tem mic".
-
-    É a mesma regra que a MIC-PRESENTE-01 cravou nesta coluna, e a queixa que a
-    originou foi dela: *"na aba status falta a presença permanente do
-    microfone (mesmo que não esteja funcionando no bt...)"*.
-    """
-    acao = acao_ponte_bt({"transport": "usb"})
-
-    assert acao.sensivel is False
-    assert acao.ativa is False
-    assert acao.dica == DICA_MIC_BT_NO_CABO
-    assert "no cabo" in acao.dica.lower()
-
-
-def test_no_radio_o_interruptor_liga_e_a_dica_diz_o_preco() -> None:
-    acao = acao_ponte_bt({"transport": "bt"})
-
-    assert acao.sensivel is True
-    assert acao.ativa is False
-    assert acao.dica == DICA_MIC_BT_LIGAR
-
-
-def test_com_a_ponte_de_pe_o_interruptor_mostra_ligado() -> None:
-    acao = acao_ponte_bt({"transport": "bt"}, ligada=True)
-
-    assert (acao.sensivel, acao.ativa) == (True, True)
-    assert acao.dica == DICA_MIC_BT_DESLIGAR
-
-
-def test_o_recado_de_uma_falha_manda_na_dica() -> None:
-    """O motivo medido na hora vale mais que a explicação genérica."""
-    acao = acao_ponte_bt({"transport": "bt"}, recado="libopus ausente")
-
-    assert acao.dica == "libopus ausente"
-    assert acao.ativa is False
-
-
-def test_entry_sem_transporte_nao_promete_nada() -> None:
-    """Sem saber o transporte, o interruptor fica apagado — não ligado no chute."""
-    assert acao_ponte_bt(None).sensivel is False
-    assert acao_ponte_bt({}).sensivel is False
-
-
-# ---------------------------------------------------------------------------
-# Subir a ponte — a decisão, com o mundo injetado
-# ---------------------------------------------------------------------------
-
-
-def test_sobe_a_ponte_so_do_controle_deste_card() -> None:
-    """A MORDIDA: sem o filtro por `uniq`, um clique sobe ponte para os QUATRO.
-
-    Ela clica no card de UM controle. `reconciliar()` sem lista varre o sysfs e
-    sobe ponte para todo DualSense no rádio — quatro microfones abertos por um
-    clique, e três deles sem ninguém ter pedido.
-    """
-    ger, recado = ligar_ponte_bt(
-        MAC,
-        diagnosticar=lambda: _Diag(),
-        nos=lambda: [_No(MAC, "/dev/hidraw3"), _No(OUTRO_MAC, "/dev/hidraw4")],
-        gerenciador=_Gerenciador,
-    )
-
-    assert recado == ""
-    assert ger is not None
-    assert [no.uniq for no in ger.reconciliados[0]] == [MAC], (
-        "a ponte subiu para outro controle além do que ela clicou"
-    )
-
-
-def test_controle_fora_do_radio_nao_sobe_ponte_nenhuma() -> None:
-    ger, recado = ligar_ponte_bt(
-        MAC,
-        diagnosticar=lambda: _Diag(),
-        nos=lambda: [_No(OUTRO_MAC)],
-        gerenciador=_Gerenciador,
-    )
-
-    assert ger is None
-    assert "não está no rádio" in recado
-
-
-def test_impedimento_da_maquina_vira_recado_e_nao_ponte_muda() -> None:
-    """Sem libopus a ponte não sobe — e o interruptor tem de DIZER isso.
-
-    Voltar sozinho sem explicação é o defeito que a MIC-BT-01 nomeia: "sumiu" é
-    indistinguível de "não existe".
-    """
-    ger, recado = ligar_ponte_bt(
-        MAC,
-        diagnosticar=lambda: _Diag(["libopus ausente — instale libopus0"]),
-        nos=lambda: [_No(MAC)],
-        gerenciador=_Gerenciador,
-    )
-
-    assert ger is None
-    assert "libopus" in recado
-
-
-def test_ponte_que_nao_sobe_nao_deixa_gerenciador_orfao() -> None:
-    """Ponte que não subiu tem de soltar o gerenciador — ele segura hidraw."""
-    ger, recado = ligar_ponte_bt(
-        MAC,
-        diagnosticar=lambda: _Diag(),
-        nos=lambda: [_No(MAC)],
-        gerenciador=lambda: _Gerenciador(sobe=False),
-    )
-
-    assert ger is None
-    assert "não subiu" in recado
-    assert _Gerenciador.ultimo is not None
-    assert _Gerenciador.ultimo.parou == 1, (
-        "o gerenciador ficou de pé depois de falhar: ele segura o hidraw e a "
-        "próxima tentativa disputaria o contador de sequência com ele"
-    )
-
-
-def test_desligar_e_idempotente_e_nunca_levanta() -> None:
-    ger = _Gerenciador()
-    ger.reconciliar([_No(MAC)])
-
-    desligar_ponte_bt(ger)
-    desligar_ponte_bt(ger)
-    desligar_ponte_bt(None)
-
-    assert ger.parou == 2
-    assert ger.pontes == {}
-
-
-class _GerenciadorQueExplode(_Gerenciador):
-    def parar(self) -> None:
-        raise RuntimeError("PipeWire sumiu no meio")
-
-
-def test_falha_ao_desligar_nao_derruba_a_janela() -> None:
-    """Fechar a janela não pode virar traceback por causa do servidor de som."""
-    desligar_ponte_bt(_GerenciadorQueExplode())
-
-
-# ---------------------------------------------------------------------------
-# O texto — o que ele promete, e o que ele NÃO promete
-# ---------------------------------------------------------------------------
-
-
-def test_a_dica_diz_que_o_padrao_nao_muda() -> None:
-    """Continuar opt-in é o estado de hoje, e a tela não pode sugerir outro.
-
-    Sair do opt-in depende de uma medição com os quatro controles no rádio que
-    ela ainda não fez — a ponte disputa o contador de sequência do report
-    `0x32` com o driver. Um texto que dissesse "agora o mic funciona sempre"
-    prometeria o que ninguém mediu.
-    """
-    assert "opt-in" in DICA_MIC_BT_LIGAR
-    assert "não muda o padrão" in DICA_MIC_BT_LIGAR
-    assert "quatro controles no rádio" in DICA_MIC_BT_LIGAR
-
-
-def test_a_dica_poe_o_preco_a_vista() -> None:
-    """Custo à vista é entrega da MIC-BT-01: ~260/s caem para ~170/s."""
-    assert "~260/s" in DICA_MIC_BT_LIGAR and "~170/s" in DICA_MIC_BT_LIGAR
-    assert "55-75%" in DICA_MIC_BT_LIGAR
-
-
-def test_o_rotulo_cabe_no_espaco_do_card() -> None:
-    """O rótulo é curto porque a coluna do som é o pixel mais disputado da aba."""
-    assert len(TEXTO_MIC_BT_ROTULO) <= 12
-
-
-@pytest.mark.parametrize(
-    "texto", [DICA_MIC_BT_LIGAR, DICA_MIC_BT_DESLIGAR, DICA_MIC_BT_NO_CABO]
+#: Tudo que o interruptor levava consigo. A lista é nominal de propósito: um
+#: `hasattr` genérico não diria QUAL peça voltou.
+PECAS_DO_INTERRUPTOR = (
+    "TEXTO_MIC_BT_ROTULO",
+    "DICA_MIC_BT_LIGAR",
+    "DICA_MIC_BT_DESLIGAR",
+    "DICA_MIC_BT_NO_CABO",
+    "DICA_MIC_BT_IMPEDIDA",
+    "AcaoPonteBt",
+    "acao_ponte_bt",
+    "ligar_ponte_bt",
+    "desligar_ponte_bt",
 )
-def test_nenhuma_dica_fala_de_variavel_de_ambiente(texto: str) -> None:
-    """Ela não abre terminal para ligar microfone — é o que esta entrega cura."""
-    assert "HEFESTO_DUALSENSE4UNIX_BT_MIC" not in texto
-    assert "export " not in texto
+
+
+def _raiz() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+# ---------------------------------------------------------------------------
+# O invariante: a janela não oferece a ponte
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("peca", PECAS_DO_INTERRUPTOR)
+def test_o_card_nao_carrega_mais_nenhuma_peca_do_interruptor(peca: str) -> None:
+    """A MORDIDA: devolva qualquer uma delas ao módulo e este teste reprova.
+
+    Elas não são cinco constantes e quatro funções soltas: juntas são a única
+    forma de a JANELA subir a ponte. Enquanto o dono do hidraw não for
+    arbitrado, o processo da janela não pode ter esse gesto ao alcance de um
+    clique — foi assim que o PS ficou preso, duas vezes.
+    """
+    assert not hasattr(cc, peca), (
+        f"`{peca}` voltou ao card: a ponte de mic por BT prende o botão PS em "
+        f"pulsos de ~17 ms e o daemon abre a Steam em laço. Antes de religar "
+        f"qualquer parte disto, leia {ESTUDO} e feche a arbitragem do hidraw."
+    )
+
+
+def test_o_card_nao_fala_com_o_modulo_da_ponte() -> None:
+    """Nem por importação indireta: o gesto tem de estar fora do processo.
+
+    Sem esta, alguém religa a ponte chamando `dualsense_bt_audio` direto de um
+    handler novo, sem recriar nenhum dos nomes de cima, e a suíte fica verde
+    com o defeito de volta.
+    """
+    fonte = inspect.getsource(cc)
+    linhas_de_codigo = [
+        linha
+        for linha in fonte.splitlines()
+        if "dualsense_bt_audio" in linha and not linha.lstrip().startswith("#")
+    ]
+
+    assert linhas_de_codigo == [], (
+        "o card voltou a falar com o módulo da ponte: "
+        f"{linhas_de_codigo}. A ponte é capacidade de linha de comando e de "
+        "daemon enquanto a posse do hidraw não for arbitrada."
+    )
+
+
+def test_a_tela_nao_diz_mais_pelo_radio() -> None:
+    """O rótulo era o convite; some o convite, some o gesto perigoso.
+
+    E é também o desenho dela: a tela não pergunta por onde o som anda, porque
+    a escolha do caminho é do aplicativo.
+    """
+    codigo = [
+        linha
+        for linha in inspect.getsource(cc).splitlines()
+        if "Pelo rádio" in linha and not linha.lstrip().startswith("#")
+    ]
+
+    assert codigo == [], (
+        f"a tela voltou a oferecer a ponte pelo rótulo 'Pelo rádio': {codigo}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# A outra metade: a CAPACIDADE não saiu junto
+# ---------------------------------------------------------------------------
+
+
+def test_a_ponte_continua_existindo_inteira() -> None:
+    """Saiu o botão, não a ponte — ela publicou o source no PipeWire em 16/08.
+
+    A MORDIDA desta metade: apague `integrations/dualsense_bt_audio.py` (ou o
+    subsystem) achando que "removemos o mic BT" e este teste reprova. É a
+    diferença entre tirar um gesto perigoso da janela e jogar fora semanas de
+    trabalho que funcionam.
+    """
+    from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
+
+    assert hasattr(bt, "GerenciadorMicBluetooth")
+    assert hasattr(bt, "nos_dualsense_bluetooth")
+    assert hasattr(bt, "diagnosticar")
+
+    from hefesto_dualsense4unix.daemon.subsystems import bt_mic
+
+    assert hasattr(bt_mic, "BtMicSubsystem")
+
+
+def test_o_gate_de_ambiente_continua_sendo_o_caminho_a_mao() -> None:
+    """`HEFESTO_DUALSENSE4UNIX_BT_MIC` é como a ponte sobe hoje, e só assim.
+
+    Ele não era o caminho bonito — o interruptor existia justamente para poupar
+    o terminal. Mas com a ponte julgada insegura, um gesto que exige uma
+    variável de ambiente é exatamente a fricção certa: ninguém o dá sem querer.
+    """
+    fonte = (
+        _raiz() / "src/hefesto_dualsense4unix/daemon/subsystems/bt_mic.py"
+    ).read_text(encoding="utf-8")
+
+    assert "HEFESTO_DUALSENSE4UNIX_BT_MIC" in fonte, (
+        "o gate sumiu: sem ele não há NENHUMA forma de subir a ponte, e aí a "
+        "remoção do interruptor virou remoção da capacidade"
+    )
+
+
+# ---------------------------------------------------------------------------
+# O caminho de volta, escrito
+# ---------------------------------------------------------------------------
+
+
+def test_o_estudo_que_derrubou_o_interruptor_esta_no_lugar() -> None:
+    """Sem o estudo, sobra "alguém tirou" — e a próxima sessão devolve."""
+    caminho = _raiz() / ESTUDO
+
+    assert caminho.is_file(), f"o estudo sumiu: {ESTUDO}"
+    texto = caminho.read_text(encoding="utf-8")
+    assert "held_ms=17.6" in texto, "o número que derrubou a hipótese do áudio saiu"
+    assert "Arbitrar o hidraw" in texto, "a condição de volta saiu do estudo"
+
+
+def test_o_card_diz_no_codigo_como_o_interruptor_volta() -> None:
+    """O comentário no lugar da remoção é o mapa, e ele tem de ter endereço.
+
+    A lição do próprio episódio: *"a casa tinha o aviso escrito, no comentário
+    do widget, e eu subi a ponte assim mesmo"*. Um aviso sem a condição
+    objetiva de retorno é só lamento — este teste exige as duas coisas, o
+    porquê e o quando.
+    """
+    fonte = inspect.getsource(cc)
+
+    assert "O-PS-PRESO" in fonte, "o comentário não aponta para o estudo"
+    assert "hidraw" in fonte, "o comentário não diz qual é a condição de volta"
+    assert "0x32" in fonte, "o comentário não nomeia a disputa do contador"

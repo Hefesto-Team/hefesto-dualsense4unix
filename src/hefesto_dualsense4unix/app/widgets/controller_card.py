@@ -503,57 +503,101 @@ DICA_MIC_SEM_LEITURA: Final[str] = (
     "se ele está mudo, mandar mutar ou desmutar seria chute."
 )
 
-# --- MIC-BT-01: o interruptor da ponte de microfone por Bluetooth -----------
+# --- MIC-BT-01: onde ficava o interruptor "Pelo rádio", e por que ele saiu ---
 #
-# DECISÃO DELA, 07/08/2026 (resposta 7 do painel): "no card do controle, junto
-# do medidor". É onde o efeito aparece — com quatro controles são quatro
-# interruptores, um por card, e cada um fala do SEU controle.
+# ELE EXISTIU aqui de 07/08 a 16/08/2026 (`TEXTO_MIC_BT_ROTULO = "Pelo rádio"`,
+# um `Gtk.Switch` na linha do botão de mudo, com `acao_ponte_bt`,
+# `ligar_ponte_bt` e `desligar_ponte_bt` neste mesmo módulo). SAIU por dois
+# motivos, e o segundo é o que manda:
 #
-# O que ele liga, medido em 25/07 com os quatro por BT: por Bluetooth o
-# DualSense NÃO expõe placa de áudio (o SDP traz só HID `1124` e PnP `1200`, e
-# isso está correto — confirmado pelo mantenedor do BlueZ). O áudio dele
-# trafega como Opus tunelado em reports HID (`0x31`/`0x32`), e é isso que a
-# ponte de `integrations/dualsense_bt_audio.py` decodifica e publica no
-# PipeWire. Sem ela, `pactl list sources` não tem uma linha de DualSense e o
-# medidor fica em "Sem sinal" para sempre — que era indistinguível de "este
-# controle não tem microfone".
+# 1. **É o desenho dela**, 16/08: *"dá espaço a um slicer de microfone pra
+#    definir o volume do microfone real (independente de saber se tá via bt ou
+#    via cabo), o app deve ser inteligente pra saber qual caminho usar. Ali
+#    onde temos o botão por rádio trocamos por Silenciar"*. O interruptor punha
+#    na tela uma decisão TÉCNICA que é do aplicativo: no rádio o áudio vem em
+#    Opus dentro dos reports HID, no cabo vem por placa de som USB — e é o
+#    MESMO microfone. Ela não deveria precisar saber disso para falar.
 #
-# O QUE ELE NÃO FAZ, e o texto tem de dizer: ele NÃO muda o padrão. A ponte
-# continua nascendo desligada (`HEFESTO_DUALSENSE4UNIX_BT_MIC`), e sair do
-# opt-in depende de uma medição com os QUATRO no rádio que ela ainda não fez —
-# a ponte disputa o contador de sequência do report `0x32` com o driver, e
-# ligá-la por padrão sem essa medição é o tipo de coisa que derruba a partida.
-TEXTO_MIC_BT_ROTULO: Final[str] = "Pelo rádio"
+# 2. **A ponte NÃO é segura**, medido DUAS vezes em 16/08/2026. Com ela de pé,
+#    o botão PS aparece pressionado em pulsos de ~17 ms (`held_ms=17.6 / 17.5
+#    / 17.9` — um ciclo de leitura a 60 Hz; mão nenhuma faz isso) e o daemon
+#    tenta abrir a Steam em laço. A segunda rodada já tinha o filtro do bit de
+#    áudio no lugar e travou igual. Ela descreveu como *"o teclado e o mouse
+#    com vida própria"* e desligou o controle, com medo.
+#    Estudo inteiro, com o log:
+#    `docs/process/estudos/2026-08-16-O-PS-PRESO-a-ponte-do-mic-e-o-laco-que-
+#    abria-a-steam-sozinho.md`.
+#
+#    **Um interruptor que oferece um gesto perigoso é pior que interruptor
+#    nenhum.** Oferecer é convidar, e o convite estava numa janela que ela usa
+#    para conferir o controle.
+#
+# O QUE NÃO SAIU: a CAPACIDADE. A ponte continua inteira e funcionando —
+# `integrations/dualsense_bt_audio.py` (publicou o source no PipeWire em
+# 16/08), o subsystem `daemon/subsystems/bt_mic.py`, o `mic bt` da linha de
+# comando, e o gate `HEFESTO_DUALSENSE4UNIX_BT_MIC` para quem quiser subi-la à
+# mão. O que saiu é o BOTÃO.
+#
+# COMO ELE VOLTA — a condição, escrita para não se perder:
+#
+#   (a) **Arbitrar a posse do hidraw.** A ponte lê o mesmo nó que o
+#       `motion_reader`, e o broker entrega o fd para quem pedir. O broker é o
+#       dono da posse: é ele que tem de recusar o segundo pedido, ou
+#       multiplexar.
+#   (b) **Um dono só para o contador de sequência do report `0x32`.** O log de
+#       16/08 mostra a ponte mandando `seq=1`, começando do zero, enquanto o
+#       daemon mantém a própria sequência por handle. Dois escritores, um
+#       contador. (Ainda é hipótese: não se mediu a sequência dos dois lados no
+#       mesmo instante. Mas é a única de pé, e tem endereço.)
+#   (c) **Debounce no PS**, para que botão preso nenhum vire enxurrada de
+#       janelas — a ponte foi o gatilho, o laço sem freio foi o estrago.
+#
+# Fechadas (a) e (b), o interruptor volta a ter lugar; o desenho dela de 16/08
+# continua valendo, então o que voltar não é este widget de novo, e sim uma
+# escolha que não obrigue ela a saber por onde o som anda.
+# O portão que o segura fora: `tests/unit/test_o_interruptor_do_mic_no_card.py`
+# e `tests/unit/test_o_interruptor_do_mic_por_bluetooth.py`.
 
-#: O preço, medido ao vivo em 25/07 nesta máquina. Ele vai no tooltip e não na
-#: documentação: "custo à vista" é entrega da MIC-BT-01, e custo escondido em
-#: página nenhuma é custo que ela paga sem ter escolhido.
-_PRECO_DA_PONTE: Final[str] = (
-    "Preço medido: os reports de entrada caem de ~260/s para ~170/s (o áudio "
-    "divide o rádio com o controle) e o firmware fica mudo em 55-75% do tempo. "
-    "Continua opt-in: isto liga a ponte agora, não muda o padrão — ligar por "
-    "padrão depende de uma medição com os quatro controles no rádio que ainda "
-    "não foi feita."
+# --- MIC-VOLUME-01 (16/08/2026): o controle deslizante do microfone ---------
+#
+# Pedido dela, olhando o bloco: *"esse botão de silenciar some. dá espaço a um
+# slicer de microfone pra definir o volume do microfone real (independente de
+# saber se tá via bt ou via cabo), o app deve ser inteligente pra saber qual
+# caminho usar"*.
+#
+# A SIMETRIA é o motivo, e ela apareceu na tela antes de aparecer no código: o
+# bloco do alto-falante tinha nível, volume e silenciar; o do microfone tinha
+# nível e silenciar. Faltava o do meio, e a falta não era só visual — o perfil
+# guardava `volume`/`muted`/`rota` do alto-falante e só um booleano do
+# microfone. Ver `profiles/schema.ProfileMicConfig`.
+#
+# O QUE ELE MEXE, e por que isso o torna universal: o volume da FONTE DE
+# CAPTURA no sistema (o source do PipeWire), nunca um registrador do controle.
+# O DualSense não expõe ganho de microfone — o que existe no firmware é o mudo,
+# e quem fala com ele é o botão ao lado. Como o volume é do caminho e não do
+# aparelho, ele funciona igual no cabo e no rádio sem que ela precise saber
+# qual está valendo. Era exatamente o "independente de saber se tá via bt ou
+# via cabo" do pedido.
+#
+# A escala é 0-100 (por cento), diferente da do alto-falante (0-255, porque
+# aquela escreve um byte do report). Pedir que ela pense em bytes seria vazar
+# o protocolo para a tela.
+TEXTO_MIC_VOLUME_TITULO: Final[str] = "Microfone"
+
+#: A dica do controle deslizante. Ela carrega o preço e o alcance — que é o que
+#: o rótulo curto não cabe, e o que separa este controle do botão ao lado.
+DICA_MIC_ESCALA: Final[str] = (
+    "Volume da captura do microfone, no sistema. Vale igual no cabo e no "
+    "rádio: o Hefesto escolhe o caminho sozinho. Este controle NÃO mexe no "
+    "mudo do firmware — quem faz isso é o botão ao lado, e só ele apaga a luz "
+    "vermelha do microfone. Salvar ou aplicar o perfil grava este valor."
 )
 
-DICA_MIC_BT_LIGAR: Final[str] = (
-    "Liga o microfone deste controle por Bluetooth. No rádio o DualSense não "
-    "tem placa de áudio: o som vem em pacotes de Opus dentro dos reports do "
-    "controle, e é essa ponte que os transforma numa entrada de som do "
-    f"sistema. {_PRECO_DA_PONTE}"
-)
-DICA_MIC_BT_DESLIGAR: Final[str] = (
-    "A ponte está de pé: o microfone deste controle aparece como entrada de "
-    "som e o medidor acima mostra o nível. Desligar devolve a banda do rádio "
-    "ao controle e o medidor volta para 'Sem sinal'."
-)
-DICA_MIC_BT_NO_CABO: Final[str] = (
-    "No cabo o microfone já funciona sozinho — o controle expõe placa de "
-    "áudio por USB. A ponte existe só para o Bluetooth, onde ele não expõe."
-)
-DICA_MIC_BT_IMPEDIDA: Final[str] = (
-    "Não dá para subir a ponte agora:"
-)
+#: Repouso do controle deslizante do microfone, em ms. Mesmo número do
+#: alto-falante e pela mesma razão: `value-changed` dispara por pixel de
+#: arrasto e o IPC é bloqueante, então quem manda é o fim do gesto ou o
+#: repouso — o que vier primeiro.
+_MIC_REPOUSO_MS: Final[int] = 180
 
 #: Alto-falante sem volume conhecido. O DualSense NÃO devolve o volume — não
 #: há report de input nem feature report que o leia, e o daemon só publica a
@@ -1801,115 +1845,6 @@ def acao_mic(entry: Any) -> AcaoMic:
     return AcaoMic(TEXTO_BOTAO_MIC_SILENCIAR, True, True, DICA_MIC_SILENCIAR)
 
 
-class AcaoPonteBt(NamedTuple):
-    """O que o interruptor da ponte de mic por Bluetooth mostra (MIC-BT-01)."""
-
-    sensivel: bool
-    ativa: bool
-    dica: str
-
-
-def acao_ponte_bt(
-    entry: Any, *, ligada: bool = False, recado: str = ""
-) -> AcaoPonteBt:
-    """Estado do interruptor a partir do transporte deste controle.
-
-    Pura e sem GTK, como as irmãs deste arquivo — e sem NENHUM toque em disco
-    ou sysfs, porque ela roda no tique de 10 Hz da aba. O diagnóstico caro
-    (`dualsense_bt_audio.diagnosticar`) só acontece quando ela MEXE no
-    interruptor, e o que ele descobrir volta para cá como ``recado``.
-
-    Regras:
-
-    * **no cabo o interruptor fica apagado**, e a dica diz por quê — o mic já
-      funciona por USB, e a ponte só existe para o rádio. Apagado, e não
-      escondido: sumir é indistinguível de "este controle não tem microfone",
-      que é o defeito que a MIC-PRESENTE-01 curou nesta mesma coluna;
-    * **ligada** só é verdade quando a ponte SUBIU — o interruptor mostra a
-      ponte de pé, nunca o pedido que fizemos;
-    * **um recado** (impedimento medido na hora, ou falha ao subir) manda na
-      dica: o motivo de não ter subido vale mais que a explicação genérica.
-    """
-    transporte = ""
-    if isinstance(entry, dict):
-        transporte = str(entry.get("transport") or "").strip().lower()
-    if recado:
-        return AcaoPonteBt(transporte == "bt", ligada, recado)
-    if transporte != "bt":
-        return AcaoPonteBt(False, False, DICA_MIC_BT_NO_CABO)
-    if ligada:
-        return AcaoPonteBt(True, True, DICA_MIC_BT_DESLIGAR)
-    return AcaoPonteBt(True, False, DICA_MIC_BT_LIGAR)
-
-
-def ligar_ponte_bt(
-    uniq: str | None,
-    *,
-    diagnosticar: Any = None,
-    nos: Any = None,
-    gerenciador: Any = None,
-) -> tuple[Any, str]:
-    """Sobe a ponte de mic por BT DESTE controle. Devolve (gerenciador, recado).
-
-    Recado vazio = subiu. As três injeções existem para o teste: o caminho de
-    produção toca sysfs, libopus e PipeWire, e um teste que dependesse disso
-    não rodaria no CI nem diria nada sobre a decisão que este código toma.
-
-    Por que a ponte roda no processo da JANELA, e não no daemon: é o mesmo
-    caminho que a linha de comando já usa (`mic bt` monta este mesmo
-    gerenciador), e o daemon só a sobe atrás da env de opt-in
-    (`HEFESTO_DUALSENSE4UNIX_BT_MIC`), que continua sendo o padrão e continua
-    desligada. Ligar aqui é o gesto dela, dura enquanto a janela durar, e não
-    reescreve configuração nenhuma — que é exatamente o que "continuar opt-in"
-    quer dizer.
-
-    O filtro por ``uniq`` é o que faz o interruptor deste card falar do
-    controle DESTE card: `reconciliar()` sem lista subiria ponte para os
-    quatro, e ela teria clicado em um.
-    """
-    from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
-
-    diagnosticar_fn = diagnosticar or bt.diagnosticar
-    nos_fn = nos or bt.nos_dualsense_bluetooth
-    gerenciador_fn = gerenciador or bt.GerenciadorMicBluetooth
-
-    diag = diagnosticar_fn()
-    impedimentos = list(getattr(diag, "impedimentos", []) or [])
-    alvos = [
-        no
-        for no in nos_fn()
-        if not uniq or str(getattr(no, "uniq", "")).lower() == uniq.lower()
-    ]
-    if not alvos:
-        faltas = impedimentos or ["este controle não está no rádio agora"]
-        return None, f"{DICA_MIC_BT_IMPEDIDA} " + "; ".join(faltas)
-    if impedimentos:
-        # Com o controle presente, o que sobrou é impedimento de máquina
-        # (libopus, pactl, module-pipe-source) — e cada um tem cura escrita.
-        return None, f"{DICA_MIC_BT_IMPEDIDA} " + "; ".join(impedimentos)
-    ger = gerenciador_fn()
-    try:
-        ger.reconciliar(alvos)
-    except Exception as exc:  # pragma: no cover - o gerenciador já engole erro
-        return None, f"{DICA_MIC_BT_IMPEDIDA} {exc}"
-    if not getattr(ger, "pontes", None):
-        with contextlib.suppress(Exception):
-            ger.parar()
-        return None, (
-            f"{DICA_MIC_BT_IMPEDIDA} a ponte não subiu — veja o "
-            "`hefesto-dualsense4unix mic bt-status`."
-        )
-    return ger, ""
-
-
-def desligar_ponte_bt(gerenciador: Any) -> None:
-    """Derruba a ponte deste card. Idempotente e nunca levanta."""
-    if gerenciador is None:
-        return
-    with contextlib.suppress(Exception):
-        gerenciador.parar()
-
-
 class AcaoSpeaker(NamedTuple):
     """O que um botão do alto-falante diz e o que ele manda quando clicado.
 
@@ -2197,12 +2132,11 @@ if _GTK_DISPONIVEL:
             #: devolvida" e pularia a devolução do primeiro `update`.
             self._audio_sem_endereco: bool | None = None
             self._mic_acao: AcaoMic | None = None
-            # MIC-BT-01 — a ponte de mic por BT DESTE controle. `None` = não há
-            # ponte de pé; o interruptor mostra a ponte, nunca o pedido.
-            self._ponte_bt: Any = None
-            self._ponte_bt_recado = ""
-            self._ponte_bt_acao: AcaoPonteBt | None = None
-            self._ponte_bt_pintando = False
+            # MIC-BT-01 — o card NÃO segura mais ponte de mic por BT nenhuma.
+            # Ela subia daqui pelo interruptor "Pelo rádio", que saiu em 16/08
+            # (o porquê e o caminho de volta estão no cabeçalho deste arquivo).
+            # Sem o interruptor não há estado de ponte a guardar, e é isso que
+            # tira o processo da JANELA de dentro da disputa pelo hidraw.
             # SOM-02 — o estado do COMANDO do alto-falante. Nenhum deles é
             # leitura: `_speaker_volume_enviado` existe só para a guarda
             # anti-rajada (o mesmo número duas vezes), e jamais é pintado.
@@ -2268,12 +2202,11 @@ if _GTK_DISPONIVEL:
             # (`_rebuild_status_cards` destrói e refaz a cada troca de
             # conjunto de controles).
             self.connect("destroy", lambda _w: self._cancelar_repouso_do_volume())
-            # MIC-BT-01: a ponte segura um hidraw e um módulo do PipeWire. O
-            # card é destruído e refeito a cada troca do conjunto de controles
-            # (`_rebuild_status_cards`); sem isto, cada troca deixaria uma ponte
-            # órfã lendo o rádio, e a próxima disputaria o contador de sequência
-            # com a anterior.
-            self.connect("destroy", lambda _w: self._encerrar_ponte_bt())
+            # O MESMO gancho para o repouso do microfone (MIC-VOLUME-01). Ele
+            # nasceu sem, na leva do controle deslizante, e o irmão acima é
+            # justamente a prova de que a falta importa: são dois `timeout_add`
+            # de um disparo só, e os dois seguram uma referência ao card.
+            self.connect("destroy", lambda _w: self._cancelar_repouso_do_mic())
 
         # ------------------------------------------------------------------
         # API pública
@@ -2305,7 +2238,6 @@ if _GTK_DISPONIVEL:
             self._update_touchpad(entry.get("inputs"))
             self._update_mic(mic, str(entry.get("transport") or ""))
             self._update_mic_botao(entry)
-            self._update_ponte_bt(entry)
             self._update_speaker(entry, mic)
             # GUARDA-SEM-ENDEREÇO-01: por ÚLTIMO, e não é ordem de gosto. Os
             # três `_update_` acima acabam de decidir a sensibilidade das peças
@@ -3100,47 +3032,65 @@ if _GTK_DISPONIVEL:
             # próprio (o `max_width_chars` do rótulo acima) e amarrá-lo aqui
             # faria o medidor e o selo herdarem a largura DELE — o oposto do
             # que este grupo existe para fazer.
-            # MIC-BT-01 — o interruptor da ponte por Bluetooth. DECISÃO DELA de
-            # 07/08: "no card do controle, junto do medidor".
+            # MIC-VOLUME-01 — o controle deslizante, em LINHA PRÓPRIA, pelo
+            # mesmo motivo medido do alto-falante (SOM-03): dividindo a linha
+            # com um botão, o `GtkBox` reparte pelo NATURAL de cada um e o
+            # controle fica com ~34px — "só a bolinha, sem trilho", nas palavras
+            # dela. Sozinho na linha, ele recebe a largura inteira da caixa.
             #
-            # Ele divide a LINHA com o botão de mudo, e isso é geometria medida,
-            # não estética: numa linha própria ele custava **30px de altura**
-            # (28 do interruptor + 2 de espaçamento) e punha a coluna do som em
-            # 292px contra os 246 da maior vizinha — o
-            # `test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa` reprovou, e
-            # estava certo. Na linha do botão o custo é ZERO: a linha já tem
-            # 34px por causa do botão, e o interruptor tem 28. De largura, os
-            # 66px da linha cabem inteiros nos 194px que a coluna já pede.
+            # E **sem `set_size_request`**: um piso de largura subiria direto
+            # para o mínimo do bloco e dali para o da janela, que é a restrição
+            # dura desta aba (o orçamento dos dois cards lado a lado é de 26px).
+            # Quem dá largura a ele é a linha própria, não um piso.
+            escala_mic = Gtk.Scale.new_with_range(
+                Gtk.Orientation.HORIZONTAL, 0, 100, 1
+            )
+            # O número não é desenhado aqui: o medidor acima já mostra o SINAL,
+            # e escrever o valor MANDADO ao lado do nível LIDO é a confusão que
+            # o bloco do alto-falante aprendeu a não criar.
+            escala_mic.set_draw_value(False)
+            escala_mic.set_valign(Gtk.Align.CENTER)
+            escala_mic.set_hexpand(True)
+            escala_mic.set_tooltip_text(DICA_MIC_ESCALA)
+            escala_mic.connect("value-changed", self._on_mic_escala_mudou)
+            escala_mic.connect("button-press-event", self._on_mic_escala_pega)
+            escala_mic.connect("button-release-event", self._on_mic_escala_solta)
+            escala_mic.connect("key-release-event", self._on_mic_escala_solta)
+            self._mic_escala = escala_mic
+            self._mic_arrastando = False
+            self._mic_pintando = False
+            self._mic_repouso_id: int | None = None
+
+            # A LINHA ÚNICA, e ela é o desenho dela: *"esse botão de silenciar
+            # some, dá espaço a um slicer de microfone (…) ali onde temos o
+            # botão por rádio trocamos por Silenciar"*. O controle deslizante
+            # ocupa o LUGAR do botão, e o botão vai para onde estava o
+            # interruptor da ponte. **Substituir, não somar.**
             #
-            # Ele fica FORA do `SizeGroup` do medidor/selo: amarrá-lo ali faria
-            # o medidor herdar a largura DELE, o oposto do que aquele grupo
-            # existe para fazer.
+            # E a geometria concorda, o que não é coincidência: numa primeira
+            # tentativa eu acrescentei o controle numa linha PRÓPRIA sem tirar
+            # nada, e o `test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa`
+            # reprovou na hora — a coluna do som foi a 292px contra os 258 de
+            # teto (246 da maior vizinha + 12 de folga). Os 34px eram
+            # exatamente a linha nova. Na linha única o custo é ZERO: ela já
+            # tem 34px por causa do botão.
+            #
+            # O controle entra com `expand=True` e o botão com o natural dele:
+            # é o que o bloco do alto-falante NÃO conseguiu fazer, porque lá a
+            # linha tinha DOIS botões (101 + 93px) e não sobrava trilho. Aqui
+            # sobra — um botão só.
+            #
+            # A LINHA TEM DUAS PEÇAS, e não três: até 16/08 havia aqui um
+            # terceiro morador, o interruptor "Pelo rádio" (com o rótulo dele
+            # no card largo). Ele saiu — o porquê e a condição de volta estão
+            # no cabeçalho deste arquivo, junto do MIC-BT-01 — e a largura que
+            # ele devolveu é o que faz o controle deslizante caber sem afrouxar
+            # número nenhum: com os dois na mesma linha, a aba pedia 1236px
+            # numa janela de 1180 e o card pedia 595px de 590.
             linha_mic = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-            linha_mic.pack_start(botao, True, True, 0)
-            rotulo_bt = Gtk.Label(label=TEXTO_MIC_BT_ROTULO)
-            rotulo_bt.set_halign(Gtk.Align.END)
-            rotulo_bt.set_valign(Gtk.Align.CENTER)
-            rotulo_bt.set_ellipsize(Pango.EllipsizeMode.END)
-            rotulo_bt.set_max_width_chars(len(TEXTO_MIC_BT_ROTULO))
-            rotulo_bt.get_style_context().add_class("dim-label")
-            interruptor = Gtk.Switch()
-            interruptor.set_halign(Gtk.Align.END)
-            interruptor.set_valign(Gtk.Align.CENTER)
-            linha_mic.pack_end(interruptor, False, False, 0)
-            # No card COMPACTO (2+ controles) o rótulo fica de fora, e o número
-            # que manda é o orçamento da aba: com ele, dois cards pedem 1188px
-            # numa janela de 1180 (`test_dois_cards_lado_a_lado_cabem_na_
-            # largura_da_janela`). Ali cada card soma DIRETO no mínimo da
-            # janela, sem rolagem horizontal para absorver. O interruptor fica
-            # — com quatro controles no rádio é exatamente quando ele importa —
-            # e quem explica passa a ser a dica, que não custa pixel nenhum.
-            if not self._compact:
-                linha_mic.pack_end(rotulo_bt, False, False, 0)
+            linha_mic.pack_start(escala_mic, True, True, 0)
+            linha_mic.pack_start(botao, False, False, 0)
             miolo.pack_start(linha_mic, False, False, 0)
-            self._mic_bt_rotulo = rotulo_bt
-            self._mic_bt_switch = interruptor
-            self._mic_bt_linha = linha_mic
-            interruptor.connect("state-set", self._on_ponte_bt_alternada)
             grupo = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
             grupo.add_widget(medidor)
             grupo.add_widget(selo)
@@ -3151,88 +3101,7 @@ if _GTK_DISPONIVEL:
             self._mic_box = mic
             self._aplicar_estado_mic(None, presente=False)
             self._aplicar_acao_mic(acao_mic(None))
-            self._aplicar_acao_ponte_bt(acao_ponte_bt(None))
             return mic
-
-        # -- MIC-BT-01: a ponte de microfone por Bluetooth ------------------
-
-        def _update_ponte_bt(self, entry: dict[str, Any]) -> None:
-            """Repinta o interruptor. Diffado como o resto (tique de 10 Hz)."""
-            transporte = str(entry.get("transport") or "").strip().lower()
-            if transporte != "bt" and self._ponte_bt is not None:
-                # Ela tirou o controle do rádio com a ponte de pé: a ponte
-                # perdeu o objeto de que falava, e mantê-la seria segurar um
-                # hidraw que não existe mais.
-                desligar_ponte_bt(self._ponte_bt)
-                self._ponte_bt = None
-                self._ponte_bt_recado = ""
-            acao = acao_ponte_bt(
-                entry,
-                ligada=self._ponte_bt is not None,
-                recado=self._ponte_bt_recado,
-            )
-            if acao == self._ponte_bt_acao:
-                return
-            self._aplicar_acao_ponte_bt(acao)
-
-        def _aplicar_acao_ponte_bt(self, acao: AcaoPonteBt) -> None:
-            self._ponte_bt_acao = acao
-            self._mic_bt_switch.set_sensitive(acao.sensivel)
-            self._mic_bt_linha.set_tooltip_text(acao.dica)
-            self._mic_bt_switch.set_tooltip_text(acao.dica)
-            # Pintar o interruptor NÃO pode disparar o gesto dela de volta —
-            # mesma guarda do controle deslizante do alto-falante.
-            self._ponte_bt_pintando = True
-            try:
-                self._mic_bt_switch.set_active(acao.ativa)
-                self._mic_bt_switch.set_state(acao.ativa)
-            finally:
-                self._ponte_bt_pintando = False
-
-        def _on_ponte_bt_alternada(self, interruptor: Any, ligar: bool) -> bool:
-            """Sobe ou derruba a ponte — FORA da thread GTK.
-
-            `iniciar()` abre hidraw, carrega a libopus e pede um módulo ao
-            PipeWire: segurar a thread da interface nisso é como esta janela já
-            congelou antes. Devolve ``True`` para o GTK NÃO mexer no estado
-            visual sozinho — quem o move é a resposta, e é assim que um
-            interruptor que falhou volta sozinho para o lugar em vez de mentir
-            que ligou.
-            """
-            if self._ponte_bt_pintando:
-                return False
-            if self._som_sem_alvo() and ligar:
-                # Sem endereço a ponte pegaria o PRIMEIRO nó de rádio que
-                # achasse (`ligar_ponte_bt` sem `uniq` não filtra) — o
-                # microfone de outra pessoa, sob o título deste card.
-                # Desligar continua valendo: derruba a ponte DESTE card.
-                return True
-            uniq = self._uniq
-
-            def _trabalho() -> tuple[Any, str]:
-                if not ligar:
-                    desligar_ponte_bt(self._ponte_bt)
-                    return None, ""
-                return ligar_ponte_bt(uniq)
-
-            def _de_volta(resultado: Any) -> bool:
-                ger, recado = resultado if isinstance(resultado, tuple) else (None, "")
-                self._ponte_bt = ger
-                self._ponte_bt_recado = recado
-                self._aplicar_acao_ponte_bt(
-                    acao_ponte_bt(
-                        {"transport": "bt"}, ligada=ger is not None, recado=recado
-                    )
-                )
-                return False
-
-            ipc_bridge.run_in_thread(_trabalho, _de_volta)
-            return True
-
-        def _encerrar_ponte_bt(self) -> None:
-            """Derruba a ponte quando o card morre. Idempotente."""
-            desligar_ponte_bt(self._ponte_bt)
-            self._ponte_bt = None
 
         def _on_mic_clicado(self, _botao: Any) -> None:
             """Manda o pedido de mudo ao firmware — fora da thread GTK.
@@ -3654,6 +3523,110 @@ if _GTK_DISPONIVEL:
         # ------------------------------------------------------------------
         # Alto-falante: os pedidos (SOM-02, entregas 1 a 3)
         # ------------------------------------------------------------------
+
+        # -- MIC-VOLUME-01: o controle deslizante do microfone --------------
+        #
+        # Os três handlers abaixo são gêmeos dos do alto-falante, e a repetição
+        # é deliberada: unificá-los pediria um parâmetro "de quem é o volume"
+        # atravessando tudo, e os dois lados têm estados próprios
+        # (`_mic_arrastando` x `_speaker_arrastando`) que se tocariam. Duas
+        # cópias curtas e óbvias valem mais que uma abstração que confunde de
+        # quem é o gesto.
+
+        def _on_mic_escala_pega(self, _escala: Any, _evento: Any) -> bool:
+            """A mão dela assumiu: o tique de 10 Hz para de mexer no cursor.
+
+            Sem isto, a releitura do estado brigaria com o arrasto e o controle
+            pularia para trás no meio do gesto.
+            """
+            self._mic_arrastando = True
+            return False
+
+        def _on_mic_escala_solta(self, _escala: Any, _evento: Any) -> bool:
+            """Fim do gesto: manda o volume agora, sem esperar o repouso."""
+            self._mic_arrastando = False
+            self._enviar_volume_do_mic()
+            return False
+
+        def _on_mic_escala_mudou(self, _escala: Any) -> None:
+            """Valor mudou: arma o repouso — nunca manda no ato.
+
+            A guarda do `_mic_pintando` é a parte que não pode cair: sem ela, o
+            tique que repinta o controle a partir do estado dispararia um pedido
+            de volta ao daemon — um laço de eco entre leitura e comando. Foi
+            assim que o volume do alto-falante já andou sozinho.
+            """
+            if self._mic_pintando:
+                return
+            self._cancelar_repouso_do_mic()
+            self._mic_repouso_id = GLib.timeout_add(
+                _MIC_REPOUSO_MS, self._on_mic_repouso
+            )
+
+        def _on_mic_repouso(self) -> bool:
+            """Passou o repouso sem novo movimento: manda."""
+            self._mic_repouso_id = None
+            if not self._mic_arrastando:
+                self._enviar_volume_do_mic()
+            return False
+
+        def _cancelar_repouso_do_mic(self) -> None:
+            """Desarma o disparo pendente, se houver."""
+            if self._mic_repouso_id is not None:
+                with contextlib.suppress(Exception):
+                    GLib.source_remove(self._mic_repouso_id)
+                self._mic_repouso_id = None
+
+        def _enviar_volume_do_mic(self) -> None:
+            """Manda o volume ao daemon, FORA da thread do GTK.
+
+            O IPC é bloqueante, e bloquear a thread do GTK num gesto é como
+            esta interface já congelou antes. Não pintamos nada de volta: quem
+            repinta é o tique relendo o estado. Guardar o valor MANDADO como se
+            fosse leitura é o hábito que fez a tela parecer mentirosa.
+            """
+            self._cancelar_repouso_do_mic()
+            escala = getattr(self, "_mic_escala", None)
+            if escala is None or self._som_sem_alvo():
+                # Sem endereço, o pedido cairia no PRIMÁRIO — e o repouso podia
+                # já estar armado quando o endereço sumiu. Mesma tranca do
+                # alto-falante, e pelo mesmo motivo.
+                return
+            volume = round(escala.get_value())
+            if volume == getattr(self, "_mic_volume_enviado", None):
+                # Repouso disparando logo depois do fim do arrasto: o mesmo
+                # número duas vezes é rajada, não pedido.
+                return
+            self._mic_volume_enviado = volume
+            uniq = self._uniq
+            # O `lambda _ok: False` não é enfeite de tipagem: `run_in_thread`
+            # reposta o `on_success` pelo laço ocioso do GLib SEMPRE, e um
+            # `None` ali estoura dentro da worker — o pedido saía, e o erro
+            # morria sem ninguém ver. É o mesmo callback vazio que o
+            # alto-falante usa. (Sem escrever o nome da função: há um portão
+            # que conta as ocorrências dela neste arquivo por texto cru —
+            # `test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline`.)
+            ipc_bridge.run_in_thread(
+                lambda: ipc_bridge.mic_volume_set(volume=volume, uniq=uniq),
+                lambda _ok: False,
+            )
+
+        def _pintar_volume_do_mic(self, volume: int | None) -> None:
+            """Repõe o cursor a partir do ESTADO — sem disparar novo pedido.
+
+            Respeita a mão dela: enquanto `_mic_arrastando`, não mexe. E o
+            `_mic_pintando` é o que impede o eco (ver `_on_mic_escala_mudou`).
+            """
+            escala = getattr(self, "_mic_escala", None)
+            if escala is None or volume is None or self._mic_arrastando:
+                return
+            if round(escala.get_value()) == int(volume):
+                return
+            self._mic_pintando = True
+            try:
+                escala.set_value(float(volume))
+            finally:
+                self._mic_pintando = False
 
         def _on_speaker_escala_pega(self, _escala: Any, _evento: Any) -> bool:
             """Botão do mouse APERTADO no controle: a mão dela assumiu.
@@ -4740,7 +4713,13 @@ if _GTK_DISPONIVEL:
             """
             pecas: list[Any] = [
                 self._mic_botao,
-                self._mic_bt_switch,
+                # MIC-VOLUME-01 — o controle deslizante do microfone ocupa aqui
+                # a vaga que era do interruptor "Pelo rádio" (saiu em 16/08), e
+                # ele PRECISA da vaga: `mic.volume.set` sem `uniq` cai no
+                # controle primário, que é o microfone de outra pessoa na mesa
+                # cheia. A tranca de dentro do gesto (`_enviar_volume_do_mic`)
+                # é a segunda; esta é a que ela VÊ.
+                self._mic_escala,
                 self._speaker_escala,
                 self._speaker_botao_mudo,
                 self._speaker_botao_devolver,
@@ -4764,9 +4743,10 @@ if _GTK_DISPONIVEL:
 
             **A volta é diffada**, porque é ela que precisa acontecer UMA vez:
             quem sabe o estado certo de cada peça são as ações já calculadas
-            (`_aplicar_acao_mic`, `_aplicar_acao_ponte_bt`,
-            `_aplicar_acoes_speaker`), e reaplicá-las é a única forma de
-            devolver a sensibilidade sem a guarda ter de adivinhá-la.
+            (`_aplicar_acao_mic`, `_aplicar_acoes_speaker`), e reaplicá-las é a
+            única forma de devolver a sensibilidade sem a guarda ter de
+            adivinhá-la. Os dois controles deslizantes não têm ação calculada —
+            eles só dependem do endereço, e por isso voltam direto.
             """
             if self._uniq is None:
                 for peca in self._pecas_que_escrevem_som():
@@ -4784,9 +4764,7 @@ if _GTK_DISPONIVEL:
             self._audio_aviso.hide()
             self._mic_box.set_tooltip_text(None)
             self._aplicar_acao_mic(self._mic_acao or acao_mic(None))
-            self._aplicar_acao_ponte_bt(
-                self._ponte_bt_acao or acao_ponte_bt(None)
-            )
+            self._mic_escala.set_sensitive(True)
             self._speaker_escala.set_sensitive(True)
             canal = getattr(self, "_speaker_canal", None)
             if canal is not None:

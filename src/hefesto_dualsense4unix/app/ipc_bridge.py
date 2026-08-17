@@ -638,6 +638,55 @@ def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
     return result.get("status") == "ok"
 
 
+def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
+    """Volume da CAPTURA do microfone, no sistema (MIC-VOLUME-01, 16/08/2026).
+
+    Pedido dela: *"um slicer de microfone pra definir o volume do microfone
+    real (independente de saber se tá via bt ou via cabo), o app deve ser
+    inteligente pra saber qual caminho usar"*.
+
+    **Não confundir com `mic_set`.** São camadas diferentes e não se substituem:
+
+    ===============  ====================================================
+    `mic_set`        o MUDO no firmware do controle (camada 3). É o único
+                     que apaga a luz vermelha do microfone, e enquanto
+                     vigorar o botão físico deixa de valer.
+    `mic_volume_set` o GANHO da fonte de captura no PipeWire (camada 1).
+                     Não toca no firmware, não tira o botão físico, e não
+                     apaga luz nenhuma.
+    ===============  ====================================================
+
+    **Por que ele é universal.** O DualSense não expõe registrador de ganho de
+    microfone — nem no cabo nem no rádio. O que existe nos dois casos é uma
+    FONTE no sistema, e é nela que este pedido mexe. Por isso o mesmo controle
+    deslizante vale nos dois transportes sem que ela precise saber qual está
+    valendo, que era exatamente o pedido.
+
+    **A ressalva honesta, e ela é do rádio.** Por Bluetooth o DualSense não
+    expõe placa de áudio (medido em 16/08: `pactl list cards` traz só as duas
+    placas da máquina). A fonte de captura no rádio só existe com a ponte de
+    `integrations/dualsense_bt_audio.py` de pé — e em 16/08 ela ainda **não é
+    segura** (ver o estudo `2026-08-16-O-PS-PRESO-*`). Sem fonte, o daemon
+    responde `sem_fonte` e o controle deslizante fica insensível com a dica
+    dizendo por quê. Um controle cinza não promete nada; um controle que aceita
+    o gesto e não faz nada é a tela mentindo.
+
+    `volume` é por cento (0-100), a escala do sistema — e não os 0-255 do
+    alto-falante, que escreve um byte do report.
+
+    Retorna True se o daemon confirmou; False se offline, sem controle ou sem
+    fonte de captura.
+    """
+    volume = max(0, min(100, int(volume)))
+    payload: dict[str, Any] = {"volume": volume}
+    if uniq:
+        payload["uniq"] = uniq
+    ok, result = _safe_call("mic.volume.set", payload)
+    if not ok or not isinstance(result, dict):
+        return False
+    return result.get("status") == "ok"
+
+
 def speaker_set(
     volume: int | None = None,
     muted: bool | None = None,

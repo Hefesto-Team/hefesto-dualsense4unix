@@ -154,6 +154,9 @@ class IpcServer(IpcHandlersMixin):
             # WirePlumber e moram no `doctor --fix`; esta é a única do
             # controle, e até 25/07 só o botão físico a alcançava.
             "mic.set": self._handle_mic_set,
+            # MIC-VOLUME-01: camada 1 (ganho da fonte no sistema),
+            # separada do `mic.set`, que é camada 3 (mudo do firmware).
+            "mic.volume.set": self._handle_mic_volume_set,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
             "mouse.emulation.restore": self._handle_mouse_emulation_restore,
             # EMULACAO-NO-JOGO-01: o interruptor que o teclado emulado nunca
