@@ -1003,7 +1003,20 @@ TEXTO_SONO_ATRASADO: Final[str] = (
 #: Não há placa de som do controle na mesa. Não é defeito: por rádio o DualSense
 #: não publica placa ALSA nenhuma (medido em 15/08/2026 — a placa segue o
 #: transporte), e no cabo isto também aparece com o controle desligado.
-TEXTO_SONO_SEM_PLACA: Final[str] = "Sem placa de som do controle (no rádio não existe alto-falante)"
+#:
+#: **A frase dizia "no rádio não existe alto-falante", e isso é FALSO** — trocado
+#: em 17/08/2026. O alto-falante existe no aparelho e ela o OUVIU: rota 3 medida
+#: com a orelha dela em 02/08/2026, com controle negativo. O que não existe no
+#: rádio é a PLACA ALSA — e a diferença não é sutil, é a diferença entre "o seu
+#: controle não tem isso" e "o caminho até ele não está montado agora".
+#:
+#: Ela já derrubou esta confusão uma vez, em 15/08, quando um texto medido foi
+#: enfraquecido de "alto-falante" para "placa de som": *"falso, no próprio
+#: projeto já fizemos isso, deveria tá mapeado inclusive no specs"*. O comentário
+#: acima sempre esteve certo; era a frase da TELA que contradizia a medição.
+TEXTO_SONO_SEM_PLACA: Final[str] = (
+    "Sem placa de som do controle (no rádio o DualSense não publica placa ALSA)"
+)
 
 #: A cura foi arrancada. É o estado que a tela TEM de denunciar, porque o
 #: sintoma no jogo é silencioso: o efeito sonoro simplesmente não sai.

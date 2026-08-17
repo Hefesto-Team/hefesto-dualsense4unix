@@ -44,9 +44,16 @@ import pytest
 from hefesto_dualsense4unix.integrations import audio_control as ac
 from hefesto_dualsense4unix.profiles.schema import ProfileMicConfig
 
+#: O nome REAL do source no cabo, lido ao vivo em 17/08/2026.
+#:
+#: A versão anterior deste dado era INVENTADA: eu escrevi
+#: `Sony_Interactive_Entertainment_Wireless_Controller`, sem "DualSense",
+#: porque tinha inferido que o descritor USB não traria a palavra. **Traz.**
+#: Um fixture construído sobre inferência valida o mundo errado — e este
+#: chegou a justificar uma marca a mais na lista de reconhecimento.
 _SOURCES_COM_CABO = (
-    "42\talsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller"
-    "-00.analog-stereo\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED\n"
+    "42\talsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
+    "Controller-00.analog-stereo\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED\n"
     "43\talsa_input.pci-0000_0c_00.4.analog-stereo\tPipeWire\ts32le 2ch\tRUNNING\n"
 )
 _SOURCES_COM_PONTE_BT = (
@@ -115,7 +122,7 @@ class TestAchaAFonteNosDoisTransportes:
         rodado.saidas["pactl list"] = _SOURCES_COM_CABO
         achado = ac.fonte_de_captura_do_controle()
         assert achado is not None
-        assert "Wireless_Controller" in achado
+        assert "DualSense_Wireless_Controller" in achado
 
     def test_o_monitor_do_alto_falante_nao_e_o_microfone(
         self, rodado: _Rodado
