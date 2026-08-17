@@ -185,37 +185,32 @@ class AudioControl:
 #: justamente isso que o controle deslizante do microfone existe para esconder
 #: dela (MIC-VOLUME-01):
 #:
-#: - no CABO o DualSense é uma placa de áudio USB de verdade, e o nome que o
-#:   ALSA/PipeWire lhe dá vem do descritor USB — que a Sony preenche como
-#:   **"Sony Interactive Entertainment Wireless Controller"**, sem a palavra
-#:   "DualSense" em lugar nenhum. Medido em 16/08/2026, no `HID_NAME` do
-#:   `hidraw` com o controle no cabo: ``Sony Interactive Entertainment
-#:   DualSense Wireless Controller`` — o nome do HID tem "DualSense", e o do
-#:   source de áudio pode não ter;
+#: - no CABO o DualSense é uma placa de áudio USB de verdade, e o source se
+#:   chama ``alsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_
+#:   Controller-00.analog-stereo`` — **medido em 17/08/2026, com o controle no
+#:   cabo**. Ele TEM a palavra "DualSense";
 #: - no RÁDIO ele **não expõe placa nenhuma** (medido no mesmo dia: `pactl
 #:   list cards` traz só as duas placas da máquina). O áudio trafega como Opus
 #:   tunelado em HID, e quem publica um source é a ponte de
 #:   `integrations/dualsense_bt_audio.py`, com o prefixo `hefesto_dualsense`.
 #:
-#: **Grau da lista, honesto:** `hefesto_dualsense` é MEDIDO (a ponte subiu em
-#: 16/08 e o source apareceu com esse nome). As outras duas são
-#: `inferido-do-codigo`/`incerto` — nesse dia ela estava no rádio e o nome do
-#: source no CABO não foi lido ao vivo. Por isso a lista é generosa: errar para
-#: o lado de achar a fonte é reversível (o volume vai para o source certo ou o
-#: `pactl` recusa); errar para o lado de não achar deixa o controle deslizante
-#: cinza sem motivo.
+#: **UMA marca basta, e chegar a essa conclusão custou duas correções.**
 #:
-#: `sony_interactive_entertainment` é específico o bastante para não colidir com
-#: outro aparelho da mesa — um 8BitDo ou um Xbox não carregam esse fabricante.
-#: `hefesto_dualsense` NÃO está na lista, e a ausência é deliberada: o source
-#: da ponte se chama `hefesto_dualsense_bt_<mac>`, que já contém `dualsense`.
-#: Ele estava aqui até o teste da mordida mostrar que tirá-lo não reprovava
-#: nada — marca redundante é ruído que finge cobertura.
-_MARCAS_DA_FONTE_DO_CONTROLE: tuple[str, ...] = (
-    "dualsense",
-    "sony_interactive_entertainment",
-
-)
+#: A lista teve três nomes. Os outros dois saíram, e os motivos são a mesma
+#: lição por dois caminhos:
+#:
+#: - `hefesto_dualsense` saiu quando o teste da mordida mostrou que arrancá-lo
+#:   não reprovava nada: o source da ponte se chama `hefesto_dualsense_bt_<mac>`
+#:   e já casa com `dualsense`;
+#: - `sony_interactive_entertainment` saiu em 17/08, quando o source do cabo foi
+#:   lido AO VIVO pela primeira vez. Eu o havia posto por INFERÊNCIA, escrevendo
+#:   que o nome no cabo "não teria a palavra DualSense". **Tem.** A medição
+#:   derrubou a inferência, e a marca que ela justificava caiu junto.
+#:
+#: Fica registrado porque é a regra que este dia produziu duas vezes: **marca
+#: redundante é ruído que finge cobertura** — e uma marca posta por palpite,
+#: mesmo prudente, é dívida até alguém medir.
+_MARCAS_DA_FONTE_DO_CONTROLE: tuple[str, ...] = ("dualsense",)
 
 
 def fonte_de_captura_do_controle() -> str | None:
