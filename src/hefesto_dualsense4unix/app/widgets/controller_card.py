@@ -2454,7 +2454,23 @@ if _GTK_DISPONIVEL:
                 )
                 slot_motion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
                 slot_motion.set_valign(Gtk.Align.CENTER)
-                slot_motion.pack_start(self._verdade_label, False, False, 0)
+                # SEM-BARRA-DA-VERDADE-01 (17/08/2026), pedido dela olhando a
+                # aba: *"remover guia dos status em tempo real"*.
+                #
+                # A linha ("No jogo agora: giroscópio (~199 Hz) · pararam:
+                # vibração, gatilho, luz, som do controle · sem pedido ainda:
+                # clique do touchpad") ocupava uma faixa inteira do card e
+                # mudava de texto a cada tique. O card já mostra CADA um desses
+                # canais no bloco próprio — a linha repetia em prosa o que os
+                # medidores dizem em desenho.
+                #
+                # **O rótulo continua existindo e continua sendo alimentado.**
+                # Só não é EMPACOTADO. Assim `_update_verdade` segue rodando
+                # sem `if` novo, o `RotuloDeAlturaReservada` e o
+                # `_VERDADE_MAX_CHARS` continuam cobertos pelos testes que os
+                # travam, e devolver a linha é uma linha de código — este
+                # `pack_start` de volta. Arrancar tudo custaria mais e
+                # apagaria o caminho de volta.
                 faixa.pack_start(slot_motion, True, True, 0)
                 faixa.pack_start(linha_bateria, False, False, 0)
                 corpo.pack_start(faixa, False, False, 0)
