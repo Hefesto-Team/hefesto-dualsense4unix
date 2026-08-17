@@ -394,11 +394,46 @@ class ProfileMicConfig(BaseModel):
     NÃO confundir com o mudo de microfone do FIRMWARE (`common[9]` do report
     de saída): esse é do kernel e o hefesto deixou de disputá-lo
     (AUDIO-OWNER-01).
+
+    O VOLUME E O MUDO (MIC-VOLUME-01, 16/08/2026)
+    ----------------------------------------------
+    Pedido dela, olhando a aba Status: *"dá espaço a um slider de microfone pra
+    definir o volume do microfone real (independente de saber se tá via bt ou
+    via cabo), o app deve ser inteligente pra saber qual caminho usar"* — e,
+    sobre gravar: *"ao clicarmos em salvar perfil ou aplicar no perfil ativo ele
+    de fato o faz e na próxima sessão lembra disso"*.
+
+    Até aqui esta seção guardava UM booleano, enquanto a do alto-falante
+    (`ProfileSpeakerConfig`) já guardava `volume`, `muted` e `rota`. A
+    assimetria aparecia na tela: o alto-falante tinha controle deslizante e
+    lembrança, o microfone tinha só um botão.
+
+    **Os dois campos são opcionais, e `None` é "sem opinião".** É o mesmo
+    contrato do `mouse` e do `speaker`, e ele importa aqui pelo motivo de
+    sempre: um perfil que não pediu nada não pode tomar a posse do volume do
+    microfone ao ser ativado. A queixa que originou essa regra — *"a config que
+    eu deixo nunca é respeitada"* — vale nos dois sentidos.
+
+    **`volume` é do CAMINHO, não do firmware.** Ele é o volume da fonte de
+    captura no sistema (o source do PipeWire), e por isso funciona igual no cabo
+    e no rádio — que é exatamente o "independente de saber se tá via bt ou via
+    cabo" do pedido dela. O DualSense não expõe um registrador de ganho de
+    microfone; o que existe no firmware é o MUDO, e é o `muted` que fala com ele.
+
+    A faixa é 0-100 (por cento), diferente do `volume` do alto-falante, que é
+    0-255 porque escreve um byte do report. Aqui o número é de sistema, e usar a
+    escala do report seria pedir que ela pensasse em bytes.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     button_toggles_system: bool
+    #: Volume da captura, em por cento. `None` = o perfil não tem opinião e
+    #: ativá-lo não toca no volume do microfone.
+    volume: int | None = Field(default=None, ge=0, le=100)
+    #: Mudo do microfone. `None` = sem opinião. Ver o bloco acima: quem
+    #: responde por ele é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho.
+    muted: bool | None = None
 
 
 class ProfileSpeakerConfig(BaseModel):

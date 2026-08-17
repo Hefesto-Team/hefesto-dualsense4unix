@@ -39,8 +39,46 @@ class TestSchema:
         assert perfil.mic.button_toggles_system is False
 
     def test_campo_desconhecido_e_rejeitado(self) -> None:
+        """`extra="forbid"`: um campo que não existe no schema é recusado.
+
+        O exemplo era `volume=3` até 16/08/2026, quando `volume` PASSOU a ser
+        campo de verdade (MIC-VOLUME-01) e este teste virou verde por engano —
+        ele afirmava que `volume` não existia. Trocado por um nome que não é
+        campo de nada: o que se trava aqui é a POLÍTICA de recusar
+        desconhecidos, e ela não pode depender de qual campo ainda não foi
+        criado.
+        """
         with pytest.raises(ValidationError):
-            ProfileMicConfig(button_toggles_system=True, volume=3)  # type: ignore[call-arg]
+            ProfileMicConfig(  # type: ignore[call-arg]
+                button_toggles_system=True, ganho_do_preamp=3
+            )
+
+    def test_o_volume_e_o_mudo_agora_sao_campos(self) -> None:
+        """MIC-VOLUME-01: o par que faltava para o mic ter a mesma gramática
+        do alto-falante — e ser LEMBRADO ao salvar o perfil, que foi o pedido
+        dela ("na próxima sessão lembra disso")."""
+        mic = ProfileMicConfig(button_toggles_system=True, volume=70, muted=False)
+        assert mic.volume == 70
+        assert mic.muted is False
+
+    def test_sem_opiniao_continua_sendo_o_default(self) -> None:
+        """Perfil que não pediu volume não pode tomar posse do microfone.
+
+        Mesmo contrato do `mouse` e do `speaker`. É a regra que nasceu da
+        queixa "a config que eu deixo nunca é respeitada" — e ela vale nos dois
+        sentidos: não respeitar o que ela pôs, e impor o que ela não pediu.
+        """
+        mic = ProfileMicConfig(button_toggles_system=True)
+        assert mic.volume is None
+        assert mic.muted is None
+
+    @pytest.mark.parametrize("fora", [-1, 101, 255])
+    def test_volume_fora_da_faixa_e_recusado(self, fora: int) -> None:
+        """0-100 por cento. O 255 entra de propósito: é a escala do
+        alto-falante (que escreve um byte do report), e confundir as duas
+        mandaria 255% ao sistema de som."""
+        with pytest.raises(ValidationError):
+            ProfileMicConfig(button_toggles_system=True, volume=fora)
 
 
 class TestDraft:
