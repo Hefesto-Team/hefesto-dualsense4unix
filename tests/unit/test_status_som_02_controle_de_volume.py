@@ -457,7 +457,11 @@ def test_a_dica_do_controle_diz_o_preco_antes_do_clique() -> None:
     assert dica == DICA_SPEAKER_ESCALA
     assert "fone" in dica, "a dica não diz que o fone vai junto (armadilha 3)"
     assert "não devolve" in dica, "a dica não diz que não existe leitura"
-    assert "Soltar" in dica, "a dica não diz como sair"
+    # Ancorado na CONSTANTE, não no texto: em 16/08 o rótulo virou
+    # "Liberar" (decisão dela) e este teste reprovou sem que nada de
+    # estrutural tivesse mudado. A dica tem de citar o botão que existe,
+    # qualquer que seja o nome dele.
+    assert TEXTO_BOTAO_SPEAKER_DEVOLVER in dica, "a dica não diz como sair"
 
 
 def test_o_volume_vai_sempre_explicito_e_fora_da_thread_do_gtk(
