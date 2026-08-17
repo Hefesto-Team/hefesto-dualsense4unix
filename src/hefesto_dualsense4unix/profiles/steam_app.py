@@ -40,6 +40,41 @@ import re
 _STEAM_APP_WC_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
 
 
+#: As `wm_class` do CLIENTE Steam — a loja, a biblioteca, o Big Picture. Não
+#: são jogo (não têm appid), e é justamente por isso que o
+#: `steam_appid_from_wm_class` é cego para elas.
+#:
+#: VPAD-NA-JANELA-DA-STEAM-01 (17/08/2026). Essa cegueira tinha endereço e
+#: preço: `lifecycle._janela_de_jogo_em_foco` protege a partida perguntando
+#: "a janela em foco é um jogo?", e a resposta para o cliente Steam era
+#: **não** — então alternar para a Steam no meio do jogo autorizava um perfil
+#: de desktop a reverter o modo e **destruir o vpad**. Medido com par fechado:
+#: ativar `Dont Scream` cria `/dev/hidraw4`, ativar `Navegação` (que casa com
+#: `steam`) o faz sumir, e o jogo fica com um descritor órfão.
+#:
+#: `steamwebhelper` entra porque a Steam moderna é CEF: a loja e partes da
+#: biblioteca se anunciam por ele, e do ponto de vista desta pergunta são a
+#: mesma janela.
+_WC_CLIENTE_STEAM = frozenset({"steam", "steamwebhelper"})
+
+
+def e_janela_do_cliente_steam(wm_class: str | None) -> bool:
+    """True se `wm_class` é o CLIENTE Steam (loja/biblioteca/Big Picture).
+
+    Irmã de `steam_appid_from_wm_class`, e mora ao lado dela pela razão que
+    fez este módulo nascer: a pergunta "que janela da Steam é esta?" já teve
+    cinco donos que discordavam entre si. Mesmo contrato — insensível a caixa
+    e tolerante a espaço em volta.
+
+    **Não substitui a irmã, complementa.** Jogo tem appid e é `steam_app_N`;
+    o cliente não tem. Quem precisa proteger a PARTIDA precisa das duas, e é
+    exatamente essa soma que faltava.
+    """
+    if not isinstance(wm_class, str):
+        return False
+    return wm_class.strip().lower() in _WC_CLIENTE_STEAM
+
+
 def steam_appid_from_wm_class(wm_class: str | None) -> int | None:
     """Appid do jogo a partir da wm_class (`steam_app_N`), ou None.
 
