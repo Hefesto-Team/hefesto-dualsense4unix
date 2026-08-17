@@ -850,6 +850,32 @@ class _EvdevReconnectLoop:
     #: `_SELECT_TIMEOUT_S`).
     _SELECT_TIMEOUT_S: ClassVar[float] = 0.5
 
+    #: VIGIA-DO-MUDO-01 (17/08/2026). De quanto em quanto tempo de SILÊNCIO
+    #: perguntar ao kernel se o nó ainda concorda com o nosso snapshot.
+    #:
+    #: O irmão `PhysicalReportReader` resolve o mesmo problema com um teto de
+    #: silêncio puro (`_SILENCE_REOPEN_USB_S = 1.0`), e **copiar aquilo aqui
+    #: seria defeito**: o hidraw entrega ~250 Hz mesmo com o controle parado
+    #: na mesa, então lá silêncio É link morto. O evdev só emite quando algo
+    #: MUDA — um controle em repouso fica legitimamente mudo para sempre, e um
+    #: teto de tempo o reabriria em laço.
+    #:
+    #: Por isso a régua aqui não é o relógio, é a DISCORDÂNCIA: o `EVIOCGABS`
+    #: do kernel contra o que publicamos. Controle parado, os dois concordam e
+    #: nada acontece; leitor mudo, o kernel andou e nós não.
+    _CONFERIR_MUDO_S: ClassVar[float] = 2.0
+
+    #: Conferências consecutivas em desacordo antes de largar o fd. Uma só
+    #: pode ser corrida benigna — o evento estava a caminho entre o `absinfo`
+    #: e a comparação. Duas, separadas por `_CONFERIR_MUDO_S` de silêncio,
+    #: não são: nesse intervalo qualquer evento vivo já teria chegado.
+    _CONFIRMAR_MUDO: ClassVar[int] = 2
+
+    #: Folga na escala canônica (0..255) para não chamar de mudo o ruído de
+    #: 1 LSB que todo stick tem em repouso — as quatro unidades da mesa de
+    #: 15/08 chiam nessa ordem de grandeza.
+    _TOLERANCIA_MUDO: ClassVar[int] = 2
+
     def __init__(self) -> None:
         """Self-pipe de wake (HANG-01, padrão GYRO-FD-01/PhysicalReportReader).
 
@@ -919,6 +945,18 @@ class _EvdevReconnectLoop:
 
     def _reapply_grab(self, dev: Any) -> None:
         """Hook de (re)aplicação de grab ao abrir o device. No-op na base."""
+
+    def _o_kernel_discorda(
+        self, dev: Any, ecodes: Any
+    ) -> dict[str, tuple[int, int]]:
+        """Hook "o kernel ainda concorda comigo?". No-op na base (VIGIA-DO-MUDO-01).
+
+        Devolve `{campo: (o_que_publico, o_que_o_kernel_diz)}` para cada campo
+        em desacordo, ou `{}` — que é tanto "concordamos" quanto "não sei
+        conferir". Os dois casos têm de sair iguais: uma subclasse que não
+        saiba se conferir não pode derrubar o próprio fd por não saber.
+        """
+        return {}
 
     def _on_device_opened(self, dev: Any) -> None:
         """Hook genérico "o device acabou de abrir". No-op na base.
@@ -1047,7 +1085,13 @@ class _EvdevReconnectLoop:
         tocar o fd (GYRO-FD-01/PhysicalReportReader) — quem fecha o device é
         sempre o `finally` de `_run`, na mesma thread deste método. Um ENODEV
         real (unplug) propaga a OSError normalmente; o chamador trata.
+
+        VIGIA-DO-MUDO-01: o quarto motivo de saída é `"mudo"` — o fd está vivo,
+        o select nunca acusa nada, e o kernel discorda do que publicamos. Ver
+        `_CONFERIR_MUDO_S`.
         """
+        silencio = 0.0
+        discordancias = 0
         while True:
             if self._stop_flag.is_set():
                 return "stop"
@@ -1059,7 +1103,31 @@ class _EvdevReconnectLoop:
                 self._drain_wake()
                 continue  # byte de wake atendido — reavalia as flags no topo
             if not ready:
-                continue  # timeout do select — reavalia as flags no topo
+                # Timeout do select. Silêncio no evdev é o estado NORMAL de um
+                # controle em repouso, então ele sozinho não decide nada: só
+                # abre a janela para perguntar ao kernel.
+                silencio += self._SELECT_TIMEOUT_S
+                if silencio < self._CONFERIR_MUDO_S:
+                    continue
+                silencio = 0.0
+                divergencia = self._o_kernel_discorda(dev, ecodes)
+                if not divergencia:
+                    discordancias = 0
+                    continue
+                discordancias += 1
+                if discordancias < self._CONFIRMAR_MUDO:
+                    continue
+                logger.warning(
+                    f"{self._log_prefix()}_mudo_reabrindo",
+                    campos={
+                        campo: f"publico={meu} kernel={dele}"
+                        for campo, (meu, dele) in sorted(divergencia.items())
+                    },
+                    conferencias=discordancias,
+                )
+                return "mudo"
+            silencio = 0.0
+            discordancias = 0
             for event in dev.read():
                 if self._stop_flag.is_set():
                     return "stop"
@@ -1125,8 +1193,14 @@ class _EvdevReconnectLoop:
                     # antes era um EBADF do close cross-thread, MISC-08 item
                     # 4) — nunca alarma como perda de device.
                     logger.debug(f"{prefix}_read_stopped", path=str(path))
-                else:  # "reopen"
-                    logger.debug(f"{prefix}_reopen_applied", path=str(path))
+                else:  # "reopen" ou "mudo" (VIGIA-DO-MUDO-01)
+                    # Os dois querem a MESMA coisa — largar este fd e deixar o
+                    # `_find_device()` re-resolver o nó canônico — e por isso
+                    # dividem o ramo. O que muda é só o log: "reopen" foi
+                    # pedido de fora, "mudo" foi o vigia que decidiu sozinho, e
+                    # confundir os dois no journal esconderia justamente o
+                    # defeito que ele existe para deixar visível.
+                    logger.debug(f"{prefix}_{reason}_applied", path=str(path))
                     self._reset_on_disconnect()
                     self._device_path = None
             finally:
@@ -1361,6 +1435,19 @@ class EvdevReader(_EvdevReconnectLoop):
         {"lx", "ly", "rx", "ry"}
     )
 
+    #: Os eixos que o `absinfo` sabe responder, e o campo do snapshot de cada
+    #: um. Uma lista só, usada pela SEMEADURA (no open) e pelo VIGIA-DO-MUDO
+    #: (durante o silêncio): as duas perguntam o mesmo ao kernel, e mantê-las
+    #: em listas separadas garantiria que um dia divergissem em silêncio.
+    _CAMPOS_DE_EIXO: ClassVar[tuple[tuple[str, str], ...]] = (
+        ("ABS_X", "lx"),
+        ("ABS_Y", "ly"),
+        ("ABS_RX", "rx"),
+        ("ABS_RY", "ry"),
+        ("ABS_Z", "l2_raw"),
+        ("ABS_RZ", "r2_raw"),
+    )
+
     def _semear_posicao_de_repouso(self, posicoes: dict[int, int], ecodes: Any) -> None:
         """Escreve no snapshot a posição que o kernel já tinha no open.
 
@@ -1395,16 +1482,8 @@ class EvdevReader(_EvdevReconnectLoop):
            valor de memória zerada é `0`, que já é o centro: lá a recusa nunca
            tem o que fazer.
         """
-        campos: tuple[tuple[str, str], ...] = (
-            ("ABS_X", "lx"),
-            ("ABS_Y", "ly"),
-            ("ABS_RX", "rx"),
-            ("ABS_RY", "ry"),
-            ("ABS_Z", "l2_raw"),
-            ("ABS_RZ", "r2_raw"),
-        )
         mudancas: dict[str, Any] = {}
-        for nome_evdev, campo in campos:
+        for nome_evdev, campo in self._CAMPOS_DE_EIXO:
             code = getattr(ecodes, nome_evdev, None)
             if code is None or code not in posicoes:
                 continue
@@ -1420,6 +1499,72 @@ class EvdevReader(_EvdevReconnectLoop):
         if mudancas:
             self._snapshot = self._with(**mudancas)
             logger.debug("evdev_posicao_semeada", **mudancas)
+
+    def _o_kernel_discorda(
+        self, dev: Any, ecodes: Any
+    ) -> dict[str, tuple[int, int]]:
+        """Os eixos em que o kernel e o nosso snapshot discordam AGORA.
+
+        VIGIA-DO-MUDO-01 (17/08/2026), e é a cura de um defeito medido duas
+        vezes: o leitor de evdev com o fd ABERTO, sem erro, sem `ENODEV`, sem
+        uma linha de log — e sem entregar um evento sequer. Sintoma publicado:
+        o vpad emitindo na cadência normal (1573 reports em 10 s pelo espelho
+        do hidraw, que é outro leitor e estava vivo) com os sticks parados. Só
+        `systemctl restart` curava.
+
+        **Por que o kernel pode ser perguntado, e a resposta é confiável.** O
+        `EVIOCGABS` lê o estado que o `input_dev` guarda, não a nossa fila de
+        eventos. A distinção é o ensaio inteiro: quando a fila para de chegar —
+        nó obsoleto que não deu `ENODEV`, ou grab tomado por outro processo — o
+        `absinfo` **continua andando**. Medido na bancada em 17/08, com o daemon
+        segurando o grab do `event25`: um segundo leitor sem grab recebe zero
+        eventos e mesmo assim vê o `absinfo` acompanhar o kernel.
+
+        E é o mesmo fato que a `posicoes_de_eixo` já registrava desde a
+        SEMENTE-DO-REPOUSO-01: *"o `EVIOCGABS` do MESMO nó, no mesmo instante,
+        devolvia 124 — o kernel sabia"*. Lá isso serviu para semear o open;
+        aqui serve para vigiar o resto da conexão. A casa já tinha a régua.
+
+        **Por que compara NORMALIZADO, e não cru.** O snapshot guarda o valor
+        na escala canônica da casa. Normalizar o cru do kernel pela mesma
+        `normalizar_eixo`, com a mesma faixa, é o que faz a comparação ser
+        entre duas leituras do mesmo eixo — e não entre duas unidades.
+
+        Vazio significa "concordamos" **ou** "não sei conferir" (sem `absinfo`
+        legível, faixa desconhecida, eixo ausente). Os dois têm de sair iguais:
+        não saber nunca pode derrubar o fd.
+        """
+        divergencia: dict[str, tuple[int, int]] = {}
+        with self._lock:
+            atual = self._snapshot
+            eixos = dict(self._eixos)
+        for nome_evdev, campo in self._CAMPOS_DE_EIXO:
+            code = getattr(ecodes, nome_evdev, None)
+            if code is None:
+                continue
+            try:
+                cru = int(dev.absinfo(int(code)).value)
+            except Exception:
+                continue  # eixo sem absinfo legível: "não sei", não "discorda"
+            faixa = eixos.get(int(code))
+            # Mesma recusa do talo fantasma da semeadura, pelo mesmo motivo:
+            # num stick, o valor igual ao mínimo declarado é indistinguível de
+            # `input_dev` recém-criado com memória zerada. Tratar isso como
+            # discordância faria o vigia reabrir o fd em laço num nó que
+            # acabou de nascer.
+            if (
+                campo in self._CAMPOS_DE_STICK
+                and faixa is not None
+                and cru == faixa.minimo
+            ):
+                continue
+            do_kernel = normalizar_eixo(cru, faixa)
+            publicado = getattr(atual, campo, None)
+            if publicado is None:
+                continue
+            if abs(do_kernel - int(publicado)) > self._TOLERANCIA_MUDO:
+                divergencia[campo] = (int(publicado), do_kernel)
+        return divergencia
 
     def _reapply_grab(self, dev: Any) -> None:
         """Reaplica o grab pedido ao (re)abrir o device, com estado observável."""
