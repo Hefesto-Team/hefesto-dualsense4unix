@@ -678,18 +678,29 @@ def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
     """Baseline da mixin: 2 periódicos em ms + 1 periódico em segundos +
     1 one-shot de 5 s (ambos via timeout_add_seconds) + 2 idle one-shot.
 
-    O card agenda UMA coisa, e só uma: o repouso do controle deslizante de
-    volume (SOM-02/E1), que é um disparo ÚNICO armado por gesto humano. Até a
-    SOM-02 este gate cobrava ZERO ocorrências no card — e a linha que ele
-    protege não é "zero timers", é "nada de laço no card": foi um
-    ``idle_add`` devolvendo True que rendeu os 104% de CPU da v3.8.1, e um
-    periódico novo aqui roda por CARD, multiplicado pelos quatro controles.
+    O card agenda DOIS repousos, e os dois são da mesma natureza: disparo
+    ÚNICO armado por gesto humano, desarmado ao disparar. Um é o do controle
+    deslizante do alto-falante (SOM-02/E1); o outro é o do microfone
+    (MIC-VOLUME-01, 16/08/2026), que nasceu quando ela pediu o controle que
+    faltava: *"dá espaço a um slicer de microfone pra definir o volume do
+    microfone real"*.
 
-    O que continua reprovando, e por isso o gate segue mordendo: um segundo
-    ``timeout_add``, qualquer ``timeout_add_seconds``, qualquer ``idle_add``, e
-    um repouso que se re-arme sozinho (o retorno ``False`` do disparo único é
-    aferido no comportamento, com o card real, em
-    ``test_status_som_02_controle_de_volume``).
+    **Por que o baseline sobe de 1 para 2, e por que isso não afrouxa o gate.**
+    A linha que ele protege nunca foi "zero timers" — é **"nada de laço no
+    card"**: foi um ``idle_add`` devolvendo True que rendeu os 104% de CPU da
+    v3.8.1, e um PERIÓDICO aqui roda por CARD, multiplicado pelos quatro
+    controles. Um disparo único por gesto não é laço: ele existe entre o
+    movimento da mão dela e o pedido, some depois, e sem gesto nenhum não há
+    timer nenhum.
+
+    O que o gate continua exigindo, e é o que importa: **todo `timeout_add` do
+    card tem de ser one-shot**. Subir este número sem que o novo timer devolva
+    ``False`` é o que reabriria o defeito — e isso é aferido no COMPORTAMENTO,
+    com o card real, em ``test_status_som_02_controle_de_volume``.
+
+    O que continua reprovando: qualquer ``timeout_add_seconds``, qualquer
+    ``idle_add``, e um terceiro ``timeout_add`` sem que alguém releia este
+    texto e decida de novo.
     """
     src_mixin = Path(sa_mod.__file__).read_text(encoding="utf-8")
     src_card = Path(cc_mod.__file__).read_text(encoding="utf-8")
@@ -698,7 +709,12 @@ def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
     assert len(re.findall(r"GLib\.timeout_add_seconds\(", src_mixin)) == 2
     assert len(re.findall(r"GLib\.idle_add\(", src_mixin)) == 2
 
-    assert len(re.findall(r"GLib\.timeout_add\(", src_card)) == 1
+    # Dois one-shot: o repouso do alto-falante e o do microfone.
+    assert len(re.findall(r"GLib\.timeout_add\(", src_card)) == 2
+    # E os DOIS têm de ser one-shot: um `return False` para cada, no corpo do
+    # disparo. É esta linha, e não a contagem, que segura o defeito de 104% de
+    # CPU — um `return True` aqui vira laço por card, vezes quatro controles.
+    assert len(re.findall(r"def _on_\w+_repouso\(self\)", src_card)) == 2
     assert re.search(r"GLib\.timeout_add_seconds\(", src_card) is None
     assert re.search(r"GLib\.idle_add\(", src_card) is None
 

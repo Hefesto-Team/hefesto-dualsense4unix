@@ -1,24 +1,37 @@
-"""O interruptor do mic por BT NO CARD — a metade que só o GTK real prova.
+"""O card NÃO oferece a ponte de mic por BT — lido da árvore de widgets real.
 
-O irmão puro deste arquivo (`test_o_interruptor_do_mic_por_bluetooth.py`) cobra
-a decisão e o texto. Aqui se cobra o que ele não alcança: que o interruptor
-existe **no card do controle, junto do medidor** (decisão dela, 07/08), que a
-tela reflete o transporte, e que mexer nele chega à ponte de verdade.
+Este arquivo trocou de lado em **16/08/2026**, junto com o irmão puro
+(`test_o_interruptor_do_mic_por_bluetooth.py`, que traz o motivo por extenso e o
+caminho de volta). Ele nasceu em 07/08 provando que o interruptor "Pelo rádio"
+estava pendurado no bloco do medidor; hoje prova que **não há interruptor
+nenhum ali**, e que o que ficou no lugar dele é o desenho dela.
 
-Por que GTK real: um dublê responderia "sim, estou no card" sobre um widget que
-ninguém pendurou. E a geometria desta coluna é o pixel mais disputado da aba —
-o interruptor divide a LINHA do botão de mudo justamente porque numa linha
-própria ele custava 30px de altura e reprovava o
-`test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa`.
+**Por que GTK real, e não o módulo:** o irmão puro cobra que o módulo não
+exporte mais nenhuma peça da ponte. Isso não basta. Um `Gtk.Switch` novo,
+montado inline no `_montar_mic` e ligado a um handler com outro nome, passaria
+por lá inteiro e reapareceria na tela dela. **A pergunta "o que está pendurado
+no bloco do microfone" só a árvore de widgets responde.**
+
+**O que se cobra aqui, e por que vale travar:**
+
+1. **nenhum `Gtk.Switch` no bloco do microfone** — o invariante de segurança. A
+   ponte prende o botão PS em pulsos de ~17 ms e o daemon abre a Steam em laço
+   (medido duas vezes em 16/08; ela desligou o controle com medo);
+2. **a linha do microfone tem DUAS peças** — o controle deslizante e o botão,
+   nessa ordem, que é literalmente o que ela desenhou: *"ali onde temos o botão
+   por rádio trocamos por Silenciar"*;
+3. **o controle deslizante recebeu a largura** que o interruptor devolveu. Sem
+   isto, "tirar o interruptor" poderia ter deixado o trilho de 34px que ela
+   chamou de *"só a bolinha, sem trilho"* no bloco do alto-falante.
 """
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("o interruptor do mic por bluetooth, no card")
+exigir_gi_real("o bloco do microfone, no card")
 
-from typing import Any, ClassVar
+from typing import Any
 
 import gi
 
@@ -28,8 +41,6 @@ import pytest
 
 from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app import ipc_bridge
-from hefesto_dualsense4unix.app.widgets import controller_card as cc
 from hefesto_dualsense4unix.app.widgets.controller_card import ControllerCard
 
 MAC = "aa:bb:cc:00:11:22"
@@ -64,8 +75,8 @@ def _entry(transporte: str) -> dict[str, Any]:
     }
 
 
-def _card(transporte: str = "bt") -> ControllerCard:
-    card = ControllerCard(compact=False)
+def _card(transporte: str = "bt", *, compacto: bool = False) -> ControllerCard:
+    card = ControllerCard(compact=compacto)
     janela = Gtk.OffscreenWindow()
     janela.add(card)
     janela.set_size_request(900, 600)
@@ -76,207 +87,124 @@ def _card(transporte: str = "bt") -> ControllerCard:
     return card
 
 
-@pytest.fixture
-def sincrono(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`run_in_thread` sem thread: o gesto e a resposta no mesmo instante.
+def _descendentes(raiz: Any) -> list[Any]:
+    """Todo widget abaixo de ``raiz``, ela inclusive."""
+    achados = [raiz]
+    if isinstance(raiz, Gtk.Container):
+        for filho in raiz.get_children():
+            achados.extend(_descendentes(filho))
+    return achados
 
-    Sem isto o callback voltaria por `GLib.idle_add` e morreria sem laço
-    principal — o teste veria o interruptor no meio do caminho e afirmaria
-    sobre um estado que a mantenedora nunca vê.
+
+# ---------------------------------------------------------------------------
+# O invariante — nada de ponte pendurada no bloco do microfone
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("transporte", ["bt", "usb"])
+@pytest.mark.parametrize("compacto", [False, True])
+def test_o_bloco_do_microfone_nao_tem_interruptor(
+    transporte: str, compacto: bool
+) -> None:
+    """A MORDIDA: devolva o `Gtk.Switch` ao `_montar_mic` e isto reprova.
+
+    Os quatro casos existem porque as duas variações já esconderam peças uma da
+    outra: o rótulo "Pelo rádio" ficava de fora do card compacto, e o
+    interruptor nascia insensível no cabo. "Insensível" e "fora do card largo"
+    não são "não existe" — um interruptor apagado continua sendo um convite,
+    basta o transporte mudar para ele acender.
+
+    O perigo que isto tranca está medido em
+    `docs/process/estudos/2026-08-16-O-PS-PRESO-...md`: com a ponte de pé, o
+    botão PS dispara em pulsos de ~17 ms e o daemon abre a Steam em laço.
     """
+    card = _card(transporte, compacto=compacto)
 
-    def _direto(fn: Any, on_success: Any, on_failure: Any = None) -> None:
-        try:
-            on_success(fn())
-        except Exception as exc:  # pragma: no cover - o teste falha melhor assim
-            if on_failure is not None:
-                on_failure(exc)
-            else:
-                raise
+    interruptores = [
+        peca for peca in _descendentes(card._mic_box) if isinstance(peca, Gtk.Switch)
+    ]
 
-    monkeypatch.setattr(ipc_bridge, "run_in_thread", _direto)
+    assert interruptores == [], (
+        "voltou um interruptor ao bloco do microfone. Enquanto a posse do "
+        "hidraw e a sequência do report 0x32 tiverem dois donos, a ponte não "
+        "tem lugar na janela — leia o estudo 2026-08-16-O-PS-PRESO antes de "
+        "religar isto"
+    )
+
+
+@pytest.mark.parametrize("compacto", [False, True])
+def test_nenhuma_peca_do_card_diz_pelo_radio(compacto: bool) -> None:
+    """O rótulo era o convite ao gesto — e, para ela, protocolo vazando na tela.
+
+    *"definir o volume do microfone real (independente de saber se tá via bt ou
+    via cabo), o app deve ser inteligente pra saber qual caminho usar"*. Um
+    rótulo que diz "Pelo rádio" obriga ela a saber por onde o som anda.
+    """
+    card = _card(compacto=compacto)
+
+    rotulos = [
+        peca.get_text()
+        for peca in _descendentes(card)
+        if isinstance(peca, Gtk.Label) and "rádio" in (peca.get_text() or "").lower()
+    ]
+
+    assert rotulos == [], f"a tela voltou a falar de transporte no som: {rotulos}"
 
 
 # ---------------------------------------------------------------------------
-# O LUGAR — "no card do controle, junto do medidor"
+# O que ficou no lugar — o desenho dela
 # ---------------------------------------------------------------------------
 
 
-def test_o_interruptor_esta_no_mesmo_bloco_do_medidor() -> None:
-    """A decisão dela, lida da árvore de widgets e não de um comentário."""
+def test_a_linha_do_microfone_tem_o_controle_e_o_botao_nessa_ordem() -> None:
+    """*"Ali onde temos o botão por rádio trocamos por Silenciar"* — na ordem.
+
+    Substituir, e não somar: o controle deslizante ocupa o lugar do botão, e o
+    botão vai para onde estava o interruptor. Uma terceira peça nesta linha é
+    exatamente o que estourou a largura da aba.
+    """
     card = _card()
 
-    bloco_do_medidor = card._mic_meter.get_parent()
-    ancestrais = []
-    no = card._mic_bt_switch
-    while no is not None:
-        ancestrais.append(no)
-        no = no.get_parent()
+    linha = card._mic_escala.get_parent()
+    filhos = linha.get_children()
 
-    assert bloco_do_medidor in ancestrais, (
-        "o interruptor não está no bloco do medidor: a decisão dela é 'no card "
-        "do controle, junto do medidor'"
+    assert filhos == [card._mic_escala, card._mic_botao], (
+        "a linha do microfone deixou de ser (controle deslizante, botão): "
+        f"{filhos}"
     )
-    assert card._mic_bt_switch.get_visible() is True
 
 
-def test_o_interruptor_divide_a_linha_com_o_botao_de_mudo() -> None:
-    """Geometria medida: linha própria custava 30px e reprovava o orçamento."""
+def test_o_controle_deslizante_ficou_com_o_trilho_que_sobrou() -> None:
+    """A largura devolvida pelo interruptor tinha de ir para o trilho.
+
+    Sem esta, tirar o interruptor deixaria um buraco à direita e o controle
+    continuaria estreito — o *"só a bolinha, sem trilho"* que ela reprovou no
+    bloco do alto-falante. O piso é folgado de propósito: o número exato da
+    largura é assunto dos testes de orçamento da aba, aqui só se cobra que o
+    trilho existe e que ele é a peça que cresce.
+    """
     card = _card()
 
-    linha = card._mic_bt_switch.get_parent()
-    assert card._mic_botao in linha.get_children(), (
-        "o interruptor saiu da linha do botão: numa linha própria ele põe a "
-        "coluna do som acima da maior vizinha da faixa"
+    assert card._mic_escala.get_hexpand() is True, (
+        "o controle deslizante parou de crescer: quem ganha o espaço livre da "
+        "linha tem de ser ele, não o botão"
+    )
+    largura = card._mic_escala.get_allocation().width
+    assert largura >= 80, (
+        f"o controle deslizante ficou com {largura}px de trilho — é a bolinha "
+        "sem trilho de novo"
     )
 
 
-# ---------------------------------------------------------------------------
-# O ESTADO — o transporte manda
-# ---------------------------------------------------------------------------
+def test_o_botao_de_silenciar_continua_de_pe_no_mesmo_bloco() -> None:
+    """Tirar o interruptor não pode ter levado o mudo junto.
 
-
-def test_no_cabo_o_interruptor_aparece_apagado() -> None:
-    """Apagado e VISÍVEL: sumir é indistinguível de "não tem microfone"."""
-    card = _card("usb")
-
-    assert card._mic_bt_switch.get_visible() is True
-    assert card._mic_bt_switch.get_sensitive() is False
-    assert "cabo" in (card._mic_bt_switch.get_tooltip_text() or "").lower()
-
-
-def test_no_radio_o_interruptor_fica_clicavel() -> None:
-    card = _card("bt")
-
-    assert card._mic_bt_switch.get_sensitive() is True
-    assert card._mic_bt_switch.get_active() is False
-
-
-# ---------------------------------------------------------------------------
-# O GESTO — e é aqui que mora a mordida
-# ---------------------------------------------------------------------------
-
-
-def test_ligar_o_interruptor_sobe_a_ponte_deste_controle(
-    sincrono: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A MORDIDA: com o handler desligado, o gesto dela não chega em ponte nenhuma.
-
-    Era o estado do produto até 07/08 — a ponte pronta, o subsystem de pé e
-    nenhuma linha da janela alcançando os dois.
+    O botão é a ÚNICA peça que fala com o registrador de mudo do firmware, e a
+    única que apaga a luz vermelha do microfone. O controle deslizante mexe no
+    volume da captura no sistema — são coisas diferentes, e ela usa as duas.
     """
-    pedidos: list[str | None] = []
+    card = _card()
 
-    class _Ger:
-        pontes: ClassVar[dict[str, Any]] = {"/dev/hidraw3": object()}
-
-        def parar(self) -> None:
-            return None
-
-    def _falso(uniq: str | None, **_kw: Any) -> tuple[Any, str]:
-        pedidos.append(uniq)
-        return _Ger(), ""
-
-    monkeypatch.setattr(cc, "ligar_ponte_bt", _falso)
-    card = _card("bt")
-
-    card._mic_bt_switch.set_active(True)
-    _assentar()
-
-    assert pedidos == [MAC], (
-        "mexer no interruptor não chamou a ponte com o controle DESTE card"
-    )
-    assert card._mic_bt_switch.get_active() is True
-    assert "Desligar" in (card._mic_bt_switch.get_tooltip_text() or "")
-
-
-def test_ponte_que_nao_sobe_devolve_o_interruptor_e_diz_o_motivo(
-    sincrono: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Interruptor que fica ligado sem ponte é a tela mentindo por omissão."""
-    monkeypatch.setattr(
-        cc, "ligar_ponte_bt", lambda _u, **_k: (None, "libopus ausente")
-    )
-    card = _card("bt")
-
-    card._mic_bt_switch.set_active(True)
-    _assentar()
-
-    assert card._mic_bt_switch.get_active() is False, (
-        "a ponte não subiu e o interruptor ficou ligado: ela veria 'ligado' "
-        "com o medidor em 'Sem sinal' para sempre"
-    )
-    assert "libopus" in (card._mic_bt_switch.get_tooltip_text() or "")
-
-
-def test_desligar_o_interruptor_derruba_a_ponte(
-    sincrono: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    parados: list[int] = []
-
-    class _Ger:
-        pontes: ClassVar[dict[str, Any]] = {"/dev/hidraw3": object()}
-
-        def parar(self) -> None:
-            parados.append(1)
-
-    monkeypatch.setattr(cc, "ligar_ponte_bt", lambda _u, **_k: (_Ger(), ""))
-    card = _card("bt")
-    card._mic_bt_switch.set_active(True)
-    _assentar()
-
-    card._mic_bt_switch.set_active(False)
-    _assentar()
-
-    assert parados == [1]
-    assert card._mic_bt_switch.get_active() is False
-
-
-def test_tirar_o_controle_do_radio_derruba_a_ponte(
-    sincrono: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Ponte de pé sobre um controle que voltou ao cabo segura hidraw à toa."""
-    parados: list[int] = []
-
-    class _Ger:
-        pontes: ClassVar[dict[str, Any]] = {"/dev/hidraw3": object()}
-
-        def parar(self) -> None:
-            parados.append(1)
-
-    monkeypatch.setattr(cc, "ligar_ponte_bt", lambda _u, **_k: (_Ger(), ""))
-    card = _card("bt")
-    card._mic_bt_switch.set_active(True)
-    _assentar()
-
-    card.update(_entry("usb"), {}, None)
-    _assentar()
-
-    assert parados == [1]
-    assert card._mic_bt_switch.get_sensitive() is False
-
-
-def test_destruir_o_card_derruba_a_ponte(
-    sincrono: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """`_rebuild_status_cards` destrói e refaz os cards a cada troca de mesa."""
-    parados: list[int] = []
-
-    class _Ger:
-        pontes: ClassVar[dict[str, Any]] = {"/dev/hidraw3": object()}
-
-        def parar(self) -> None:
-            parados.append(1)
-
-    monkeypatch.setattr(cc, "ligar_ponte_bt", lambda _u, **_k: (_Ger(), ""))
-    card = _card("bt")
-    card._mic_bt_switch.set_active(True)
-    _assentar()
-
-    card.destroy()
-    _assentar()
-
-    assert parados == [1], (
-        "o card morreu com a ponte de pé: ela ficaria lendo o rádio sem dono, "
-        "e a próxima disputaria o contador de sequência com ela"
-    )
+    assert card._mic_botao in _descendentes(card._mic_box)
+    assert card._mic_botao.get_visible() is True
+    assert card._mic_botao.get_sensitive() is True

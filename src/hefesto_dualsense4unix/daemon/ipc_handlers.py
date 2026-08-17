@@ -4092,6 +4092,71 @@ class IpcHandlersMixin:
             "mic_mudo_desejado": muted,
         }
 
+    async def _handle_mic_volume_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """`mic.volume.set` — volume da CAPTURA no sistema (MIC-VOLUME-01).
+
+        Params: ``{volume: int 0-100, uniq?: str}``.
+
+        **Camada diferente do `mic.set`, e por isso um método diferente.** O
+        `mic.set` mexe no MUDO do firmware (camada 3): é o único que apaga a luz
+        vermelha do microfone, e enquanto vigorar o botão físico do controle
+        deixa de valer. Este aqui mexe no ganho da FONTE no PipeWire (camada 1):
+        não toca no firmware, não tira o botão físico, não apaga luz nenhuma.
+        Somar os dois num método só faria a interface prometer uma coisa e
+        entregar outra.
+
+        **Por que ele é universal**, que era o pedido dela — *"independente de
+        saber se tá via bt ou via cabo, o app deve ser inteligente pra saber
+        qual caminho usar"*: o DualSense não expõe registrador de ganho de
+        microfone em transporte nenhum. O que existe nos dois casos é uma fonte
+        no sistema, e quem a encontra é
+        `integrations/audio_control.fonte_de_captura_do_controle` — no cabo, o
+        source ALSA do controle; no rádio, o source publicado pela ponte de
+        áudio. Quem chama não escolhe caminho.
+
+        **`sem_fonte` não é falha, é resposta.** Por Bluetooth, sem a ponte de
+        pé, não existe fonte de captura nenhuma (medido em 16/08/2026: `pactl
+        list cards` traz só as duas placas da máquina). A interface precisa
+        dessa resposta para deixar o controle deslizante INSENSÍVEL com a dica
+        explicando — um controle que aceita o gesto e não faz nada é a tela
+        mentindo, e um controle cinza não promete nada.
+
+        O `uniq` é aceito e hoje **não roteia**: há uma fonte de captura por
+        máquina para o controle, não uma por controle. Ele fica no contrato para
+        o dia em que a ponte publicar um source por aparelho — e está declarado
+        aqui em vez de silenciosamente ignorado.
+        """
+        if "volume" not in params:
+            raise ValueError("mic.volume.set: 'volume' é obrigatório (0-100)")
+        volume = params.get("volume")
+        if isinstance(volume, bool) or not isinstance(volume, int):
+            raise ValueError("mic.volume.set: 'volume' precisa ser inteiro")
+        if not (0 <= volume <= 100):
+            raise ValueError("mic.volume.set: 'volume' fora de 0-100")
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("mic.volume.set: 'uniq' precisa ser string ou omitido")
+
+        from hefesto_dualsense4unix.integrations.audio_control import (
+            definir_volume_da_captura,
+            fonte_de_captura_do_controle,
+            volume_da_captura,
+        )
+
+        fonte = fonte_de_captura_do_controle()
+        if not fonte:
+            return {"status": "sem_fonte", "fonte": None, "volume": None}
+        ok = definir_volume_da_captura(volume, fonte=fonte)
+        # O que volta é a LEITURA, não o que mandamos: guardar o valor mandado
+        # como se fosse leitura é o hábito que fez esta tela parecer mentirosa.
+        return {
+            "status": "ok" if ok else "erro",
+            "fonte": fonte,
+            "volume": volume_da_captura(fonte=fonte),
+        }
+
     async def _handle_mouse_emulation_set(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:

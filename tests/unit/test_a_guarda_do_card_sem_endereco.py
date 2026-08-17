@@ -43,6 +43,13 @@ regra "sem `uniq` = o primário" que causa o defeito, vista do lado da LEITURA.
 Por isso os gestos são disparados nos dois estados — sem posse e com posse —, e
 sempre pela mesma função (`_disparar_os_seis_gestos`), para que a lista dos seis
 não possa se afastar entre o caso sem endereço e o caso com endereço.
+
+**Continuam seis em 16/08/2026, mas um deles trocou.** O interruptor "Pelo
+rádio" saiu do card (ponte insegura — `test_o_interruptor_do_mic_por_bluetooth`)
+e o controle deslizante do microfone tomou o lugar dele, na lista e na tela. Não
+é substituição de conveniência: `mic.volume.set` sem `uniq` cai no controle
+PRIMÁRIO exatamente como os outros cinco, então a vaga na guarda tinha dono
+antes de estar vazia.
 """
 
 from __future__ import annotations
@@ -253,12 +260,15 @@ class TestNaTela:
     def _espiar_o_ipc(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, Any]]:
         """Troca as três saídas de som por espiões e devolve a lista de pedidos.
 
-        As três, e não duas: o `ligar_ponte_bt` é módulo, não `ipc_bridge`, e
-        sem ele o gesto da ponte abriria hidraw de verdade no caso COM
-        endereço — que é justamente onde ele passa da tranca.
+        As três são as três chamadas de `ipc_bridge` que escrevem som deste
+        card: o mudo do microfone, o volume do microfone e tudo do
+        alto-falante. Até 16/08 havia uma quarta, o `ligar_ponte_bt` do próprio
+        módulo — o interruptor "Pelo rádio" saiu do card (ver
+        `test_o_interruptor_do_mic_por_bluetooth.py`) e a vaga dele nesta lista
+        foi para o `mic.volume.set`, que é o gesto novo e corre o MESMO risco:
+        sem `uniq`, o daemon aplica no controle primário.
         """
         from hefesto_dualsense4unix.app import ipc_bridge
-        from hefesto_dualsense4unix.app.widgets import controller_card as cc
 
         pedidos: list[tuple[str, Any]] = []
 
@@ -279,9 +289,9 @@ class TestNaTela:
             lambda **kw: pedidos.append(("speaker.set", kw.get("uniq"))) or True,
         )
         monkeypatch.setattr(
-            cc,
-            "ligar_ponte_bt",
-            lambda uniq, **_kw: pedidos.append(("ponte_bt", uniq)) or (None, ""),
+            ipc_bridge,
+            "mic_volume_set",
+            lambda **kw: pedidos.append(("mic.volume.set", kw.get("uniq"))) or True,
         )
         return pedidos
 
@@ -302,7 +312,8 @@ class TestNaTela:
         from hefesto_dualsense4unix.app.widgets import controller_card as cc
 
         card._mic_botao.clicked()
-        card._mic_bt_switch.set_active(True)
+        card._mic_escala.set_value(70)
+        card._enviar_volume_do_mic()
         card._speaker_escala.set_value(70)
         card._enviar_volume_do_controle()
         card._speaker_botao_mudo.clicked()
@@ -385,7 +396,7 @@ class TestNaTela:
 
         assert [nome for nome, _ in pedidos] == [
             "mic.set",
-            "ponte_bt",
+            "mic.volume.set",
             "speaker.set",
             "speaker.set",
             "speaker.set",

@@ -11,6 +11,8 @@ Regras:
 """
 from __future__ import annotations
 
+import os
+import re
 import shutil
 import subprocess
 import time
@@ -177,4 +179,155 @@ class AudioControl:
         return "yes" in (result.stdout or "").lower()
 
 
-__all__ = ["DEBOUNCE_SEC", "SUBPROCESS_TIMEOUT_SEC", "AudioControl", "Backend"]
+#: Como se reconhece a fonte de captura DO CONTROLE entre as do sistema.
+#:
+#: São várias marcas porque são dois caminhos E dois vocabulários, e é
+#: justamente isso que o controle deslizante do microfone existe para esconder
+#: dela (MIC-VOLUME-01):
+#:
+#: - no CABO o DualSense é uma placa de áudio USB de verdade, e o nome que o
+#:   ALSA/PipeWire lhe dá vem do descritor USB — que a Sony preenche como
+#:   **"Sony Interactive Entertainment Wireless Controller"**, sem a palavra
+#:   "DualSense" em lugar nenhum. Medido em 16/08/2026, no `HID_NAME` do
+#:   `hidraw` com o controle no cabo: ``Sony Interactive Entertainment
+#:   DualSense Wireless Controller`` — o nome do HID tem "DualSense", e o do
+#:   source de áudio pode não ter;
+#: - no RÁDIO ele **não expõe placa nenhuma** (medido no mesmo dia: `pactl
+#:   list cards` traz só as duas placas da máquina). O áudio trafega como Opus
+#:   tunelado em HID, e quem publica um source é a ponte de
+#:   `integrations/dualsense_bt_audio.py`, com o prefixo `hefesto_dualsense`.
+#:
+#: **Grau da lista, honesto:** `hefesto_dualsense` é MEDIDO (a ponte subiu em
+#: 16/08 e o source apareceu com esse nome). As outras duas são
+#: `inferido-do-codigo`/`incerto` — nesse dia ela estava no rádio e o nome do
+#: source no CABO não foi lido ao vivo. Por isso a lista é generosa: errar para
+#: o lado de achar a fonte é reversível (o volume vai para o source certo ou o
+#: `pactl` recusa); errar para o lado de não achar deixa o controle deslizante
+#: cinza sem motivo.
+#:
+#: `sony_interactive_entertainment` é específico o bastante para não colidir com
+#: outro aparelho da mesa — um 8BitDo ou um Xbox não carregam esse fabricante.
+#: `hefesto_dualsense` NÃO está na lista, e a ausência é deliberada: o source
+#: da ponte se chama `hefesto_dualsense_bt_<mac>`, que já contém `dualsense`.
+#: Ele estava aqui até o teste da mordida mostrar que tirá-lo não reprovava
+#: nada — marca redundante é ruído que finge cobertura.
+_MARCAS_DA_FONTE_DO_CONTROLE: tuple[str, ...] = (
+    "dualsense",
+    "sony_interactive_entertainment",
+
+)
+
+
+def fonte_de_captura_do_controle() -> str | None:
+    """Nome do source de captura do DualSense, ou `None` se não houver.
+
+    `None` não é erro: por Bluetooth, sem a ponte de áudio de pé, **não existe
+    fonte** — e é isso que a interface precisa saber para deixar o controle
+    deslizante insensível em vez de aceitar um gesto que não faria nada.
+
+    Read-only: só lista. Nunca escreve.
+    """
+    try:
+        saida = subprocess.run(
+            ["pactl", "list", "short", "sources"],
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT_SEC,
+            check=False,
+            # `pactl` TRADUZ a saída, e uma versão desta função em português
+            # já respondeu "nenhum controle com placa de áudio" sobre um
+            # sistema que tinha um — a afirmação era sobre o idioma do shell,
+            # não sobre o aparelho (medido em 15/08/2026).
+            env={**os.environ, "LC_ALL": "C"},
+        ).stdout
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("audio_fonte_do_controle_falhou", err=str(exc))
+        return None
+    for linha in (saida or "").splitlines():
+        partes = linha.split("\t")
+        if len(partes) < 2:
+            continue
+        nome = partes[1].strip()
+        alvo = nome.lower()
+        if any(marca in alvo for marca in _MARCAS_DA_FONTE_DO_CONTROLE):
+            return nome
+    return None
+
+
+def definir_volume_da_captura(volume_pct: int, *, fonte: str | None = None) -> bool:
+    """Põe o volume da captura do controle em `volume_pct` (0-100).
+
+    MIC-VOLUME-01, pedido dela: *"um slicer de microfone pra definir o volume
+    do microfone real (independente de saber se tá via bt ou via cabo), o app
+    deve ser inteligente pra saber qual caminho usar"*. A "inteligência" mora
+    em `fonte_de_captura_do_controle`, acima: quem chama não escolhe caminho.
+
+    **Isto NÃO é o mudo do firmware.** Não apaga a luz vermelha do microfone e
+    não tira o botão físico do controle — quem faz as duas coisas é o
+    `mic.set`. São camadas diferentes e não se substituem.
+
+    Devolve False quando não há fonte (o caso do rádio sem ponte) ou quando o
+    `pactl` falha. Nunca levanta: volume de microfone não derruba daemon.
+    """
+    alvo = fonte if fonte is not None else fonte_de_captura_do_controle()
+    if not alvo:
+        return False
+    pct = max(0, min(100, int(volume_pct)))
+    try:
+        r = subprocess.run(
+            ["pactl", "set-source-volume", alvo, f"{pct}%"],
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT_SEC,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("audio_volume_captura_falhou", err=str(exc), fonte=alvo)
+        return False
+    if r.returncode != 0:
+        logger.warning(
+            "audio_volume_captura_recusado",
+            fonte=alvo,
+            rc=r.returncode,
+            err=(r.stderr or "").strip()[:120],
+        )
+        return False
+    return True
+
+
+def volume_da_captura(*, fonte: str | None = None) -> int | None:
+    """O volume ATUAL da captura do controle, em por cento, ou `None`.
+
+    Lê em vez de lembrar: guardar o valor mandado como se fosse leitura é o
+    hábito que já fez esta tela parecer mentirosa quando ela nunca mentiu.
+    """
+    alvo = fonte if fonte is not None else fonte_de_captura_do_controle()
+    if not alvo:
+        return None
+    try:
+        saida = subprocess.run(
+            ["pactl", "get-source-volume", alvo],
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT_SEC,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    # "Volume: front-left: 32768 /  50% / -18,06 dB, ..." — o primeiro por
+    # cento basta; os canais do nosso source são mono ou espelhados.
+    achado = re.search(r"(\d+)%", saida or "")
+    return int(achado.group(1)) if achado else None
+
+
+__all__ = [
+    "DEBOUNCE_SEC",
+    "SUBPROCESS_TIMEOUT_SEC",
+    "AudioControl",
+    "Backend",
+    "definir_volume_da_captura",
+    "fonte_de_captura_do_controle",
+    "volume_da_captura",
+]
