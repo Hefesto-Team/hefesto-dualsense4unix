@@ -211,6 +211,34 @@ def test_janela_cabe_sem_rolagem() -> None:
     )
 
 
+def _conteudo_da_pagina(page):  # type: ignore[no-untyped-def]
+    """O widget que de fato tem o conteúdo da aba, atravessando o scroller.
+
+    JANELA-CORTADA-01 (17/08/2026). Desde a cura do rodapé, cada página do
+    notebook é um `GtkScrolledWindow` (`scroll_tab_*`) com o conteúdo dentro.
+    Sem esta descida, `get_nth_page(i).get_preferred_height_for_width(...)`
+    passa a medir o MÍNIMO DO SCROLLER — que é pequeno de propósito, porque a
+    razão de ele existir é justamente poder encolher — e os dois testes de
+    orçamento viram carimbo: nunca reprovam, aconteça o que acontecer com o
+    conteúdo.
+
+    É o defeito de portão que esta casa mais paga caro (`O-QUE-FICOU-ABERTO-01`:
+    *"um portão verde encerra a busca"*), e ele quase entrou junto com a cura
+    que o criou. O orçamento continua sendo sobre o CONTEÚDO: a barra de
+    rolagem é a rede de segurança para a janela pequena, não licença para uma
+    aba crescer sem limite na janela de abertura.
+    """
+    if isinstance(page, Gtk.ScrolledWindow):
+        filho = page.get_child()
+        # Um ScrolledWindow pode ter um GtkViewport intermediário quando o
+        # filho não rola sozinho; descer só um nível deixaria de fora o
+        # conteúdo de verdade.
+        if isinstance(filho, Gtk.Viewport):
+            return filho.get_child() or filho
+        return filho or page
+    return page
+
+
 def test_nenhuma_aba_isolada_estoura_o_orcamento() -> None:
     """Aponta QUAL aba estourou — o teste acima só diz que a soma não cabe.
 
@@ -231,6 +259,13 @@ def test_nenhuma_aba_isolada_estoura_o_orcamento() -> None:
         builder.get_object(nome).get_preferred_height_for_width(LARGURA)[0]
         for nome in ("header_bar", "footer_box")
     )
+    # O cromo é uma SUBTRAÇÃO, e as duas parcelas têm de medir a mesma coisa.
+    # Aqui a parcela é a PÁGINA como o notebook a vê (o scroller), porque é
+    # dela que o notebook deriva o próprio mínimo. Usar o conteúdo aqui — que é
+    # o que o teto governa, logo abaixo — subtrai grandezas incomparáveis: com
+    # a aba gorda, o cromo vira negativo, o teto explode e o portão deixa de
+    # reprovar. Medido em 17/08: engordei a aba Rumble em 900px e os sete
+    # testes continuaram verdes.
     maior_pagina = max(
         notebook.get_nth_page(i).get_preferred_height_for_width(LARGURA - 20)[0]
         for i in range(notebook.get_n_pages())
@@ -244,7 +279,9 @@ def test_nenhuma_aba_isolada_estoura_o_orcamento() -> None:
     for i in range(notebook.get_n_pages()):
         page = notebook.get_nth_page(i)
         rotulo = notebook.get_tab_label_text(page) or f"#{i}"
-        altura, _ = page.get_preferred_height_for_width(LARGURA - 20)
+        altura, _ = _conteudo_da_pagina(page).get_preferred_height_for_width(
+            LARGURA - 20
+        )
         if altura > teto_por_aba:
             gordas.append(f"{rotulo} ({altura}px)")
 
@@ -278,7 +315,7 @@ def test_nenhuma_aba_estoura_a_largura_da_janela() -> None:
     for i in range(notebook.get_n_pages()):
         page = notebook.get_nth_page(i)
         rotulo = notebook.get_tab_label_text(page) or f"#{i}"
-        largura, _ = page.get_preferred_width()
+        largura, _ = _conteudo_da_pagina(page).get_preferred_width()
         if largura > LARGURA:
             largas.append(f"{rotulo} ({largura}px)")
 

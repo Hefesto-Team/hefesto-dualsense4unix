@@ -1944,12 +1944,21 @@ def saida_muda_do_entry(entry: Any, mic: Any = None) -> bool | None:
        for o ``app/mic_monitor.py``, que já é o leitor de PipeWire desta
        interface e já roda fora da thread GTK.
 
-    **Hoje nenhuma das duas existe** (medido em 01/08/2026: o daemon publica
-    ``audio`` e ``speaker`` sem nenhuma chave de camada 1, e o ``MicMonitor`` lê
-    SOURCES, não sinks). A função devolve ``None`` e o selo não aparece — que é
-    o comportamento correto para "não há como saber", e não um placeholder:
-    ela é o ponto de encaixe, e o dia em que qualquer um dos dois lados
-    publicar a leitura, o selo acende sem tocar no card.
+    **A posição 2 EXISTE desde então, e é por ela que o selo acende hoje.** O
+    ``MicMonitor`` ganhou a thread supervisora do sink (``_saidas_mudas``,
+    `app/mic_monitor.py:461`, preenchida em `:622` e servida em `:510`), e a
+    ``LeituraMic`` carrega o campo. A posição 1 (o daemon publicar
+    ``speaker.saida_muda``) continua não existindo, e continua sendo um encaixe
+    válido — quem a implementar não precisa tocar no card.
+
+    Isto **substitui** a afirmação anterior desta docstring ("hoje nenhuma das
+    duas existe", medida em 01/08/2026), que caducou sem que ninguém percebesse
+    e custou uma bancada: em 17/08 o JANELA-CORTADA-01 tentou revelar o selo
+    montando um card com ``speaker={"muted": True}`` e concluiu que ele "continua
+    escondido". Continua mesmo — ``muted`` é a camada 2 (o registrador HID) e
+    esta função lê a camada 1 (o sink do PipeWire). São chaves diferentes, de
+    camadas diferentes, e a docstring errada apontava para o lugar errado.
+    A chave que acende é ``speaker.saida_muda`` (ou ``audio.saida_muda``).
 
     Só ``True`` acende o selo. ``False`` (a saída está aberta) e ``None`` (não
     sabemos) mostram a mesma coisa — nada —, porque um selo "saída viva" seria
