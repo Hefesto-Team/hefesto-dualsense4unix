@@ -1968,7 +1968,7 @@ class Daemon:
         return getattr(profile, "e_catch_all", None) is True
 
     def _janela_de_jogo_em_foco(self) -> bool:
-        """True quando a janela em foco AGORA é de um jogo Steam.
+        """True quando a janela em foco AGORA é de um jogo Steam — ou da Steam.
 
         R-02, decisão 3 do plano: leitura CRUA da janela, deliberadamente
         diferente do `display_authority` (que é sticky por 30 s). Aqui a
@@ -1976,11 +1976,44 @@ class Daemon:
         sinal sticky congelaria a reversão legítima ao sair do jogo. O sinal
         sticky continua sendo o certo para operação DESTRUTIVA (recriar/parar
         vpad), onde fail-safe é não destruir.
-        """
-        from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
 
-        wm_class = getattr(self.store, "window_detect_current_class", None)
-        return steam_appid_from_wm_class(str(wm_class or "")) is not None
+        VPAD-NA-JANELA-DA-STEAM-01 (17/08/2026) — **o cliente Steam conta.**
+        Até aqui esta guarda só reconhecia `steam_app_<id>`, e a janela do
+        CLIENTE (`steam`) respondia `False`. Como o perfil de desktop dela casa
+        com `steam` no `window_class`, alternar para a Steam no meio da partida
+        autorizava a reversão de modo e **destruía o vpad**; o jogo, que já
+        tinha enumerado aquele nó, ficava com um descritor órfão e um controle
+        que não se mexe.
+
+        Medido em 17/08 com par fechado, mesma máquina, mesmo minuto::
+
+            profile activate "Dont Scream"  ->  /dev/hidraw4 NASCE
+            profile activate "Navegação"    ->  /dev/hidraw4 SOME
+
+        A pergunta desta guarda nunca foi "isto é um jogo?", e sim "reverter
+        para desktop AGORA seria absurdo?". Com um jogo aberto atrás dela, a
+        janela da Steam é o lugar mais comum de se estar durante a partida —
+        conferir um preço, ler uma conquista — e reverter ali é absurdo pelo
+        mesmo critério que já protegia o `steam_app_<id>`.
+
+        **O preço, e ela decidiu pagá-lo (17/08):** com a Steam em foco, o modo
+        vindo de PERFIL não reverte, mesmo sem jogo nenhum atrás. Na prática
+        isso mantém o vpad de pé enquanto ela navega na Steam, que é o estado
+        normal desta máquina. Fora da Steam (Firefox, terminal) a reversão
+        continua imediata, e é por isso que o teste que finca a política de
+        23/07 — `test_perfil_especifico_fora_de_jogo_reverte_normalmente`, que
+        usa `firefox` — continua verde: esta mudança fecha um buraco, não abre
+        a política.
+        """
+        from hefesto_dualsense4unix.profiles.steam_app import (
+            e_janela_do_cliente_steam,
+            steam_appid_from_wm_class,
+        )
+
+        wm_class = str(getattr(self.store, "window_detect_current_class", None) or "")
+        if steam_appid_from_wm_class(wm_class) is not None:
+            return True
+        return e_janela_do_cliente_steam(wm_class)
 
     def _jogo_no_controle_do_desktop(self) -> str | None:
         """Motivo para CALAR a emulação de desktop, ou None se ela pode falar.
