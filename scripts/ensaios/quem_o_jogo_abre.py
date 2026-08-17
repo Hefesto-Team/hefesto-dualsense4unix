@@ -225,11 +225,14 @@ def retrato(padrao: str) -> dict:
                     .setdefault(m.group(1), []).append(pid)
         except OSError:
             pass
-        # O ambiente é lido depois do laço, do processo do JOGO — ver
-        # `processo_do_jogo`, e o falso negativo que obrigou a separar isto.
+    # O ambiente vem do processo do JOGO, e SÓ dele — nunca do primeiro da
+    # árvore. Ver `processo_do_jogo` e o falso negativo que obrigou a separar
+    # isto: lendo o `reaper` da Steam, este instrumento respondeu "o WRAPPER
+    # rodou? NÃO" para dois jogos cujo `/proc` trazia a variável.
+    ambiente = ambiente_de(pid_do_jogo)
     ign = ambiente.get("SDL_GAMECONTROLLER_IGNORE_DEVICES", "")
     return {
-        "padrao": padrao,  # noqa-acento: chave de dado, não prosa
+        "padrao": padrao,  # (noqa-acento): chave de dado, não prosa
         "processos": len(pids),
         "eventos": {e: nomes.get(e, "?") for e in sorted(eventos)},
         "hidraws": sorted(hidraws),
