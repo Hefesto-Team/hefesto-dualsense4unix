@@ -28,6 +28,9 @@ set -euo pipefail
 SYSCTL_FILE=/etc/sysctl.d/99-hefesto-bt-coredump.conf
 DROPIN_DIR=/etc/systemd/system/bluetooth.service.d
 DROPIN_FILE="${DROPIN_DIR}/90-hefesto-debug.conf"
+#: RADIO-ABERTO-01/E8: unit transitória que fecha a janela sozinha. Nome fixo
+#: para ser idempotente — ligar duas vezes não acumula timers.
+AUTO_OFF_UNIT=hefesto-bt-crash-capture-off
 
 if [[ "$(id -u)" -ne 0 ]]; then
     printf 'bt_crash_capture.sh: requer root\n' >&2
@@ -59,14 +62,41 @@ Environment=MALLOC_CHECK_=3
 Environment=MALLOC_PERTURB_=165
 EOF
         systemctl daemon-reload
+        # RADIO-ABERTO-01/E8 (05/08/2026): a janela arma o PRÓPRIO desligamento.
+        # `core_pattern` é global do kernel, e até aqui o `--off` dependia só da
+        # memória de quem ligou — uma janela de diagnóstico esquecida aberta
+        # deixa a máquina gravando core de TODO processo que morrer, e um core
+        # do bluetoothd contém todas as LinkKeys, LTKs e IRKs residentes.
+        _HORAS="${HEFESTO_BT_CAPTURE_HORAS:-8}"
+        if command -v systemd-run >/dev/null 2>&1; then
+            systemctl stop "${AUTO_OFF_UNIT}.timer" >/dev/null 2>&1 || true
+            if systemd-run --on-active="${_HORAS}h" --unit="${AUTO_OFF_UNIT}" \
+                    --description="hefesto: fecha a janela de captura de core do bluetoothd" \
+                    "$(readlink -f "$0")" --off >/dev/null 2>&1; then
+                printf 'desligamento automático armado para daqui a %sh (unit %s).\n' \
+                    "${_HORAS}" "${AUTO_OFF_UNIT}"
+            else
+                printf 'AVISO: não consegui armar o desligamento automático — anote para rodar --off.\n' >&2
+            fi
+        else
+            printf 'AVISO: sem systemd-run; o --off depende de você lembrar.\n' >&2
+        fi
         printf 'captura LIGADA. Arma no próximo restart do bluetoothd (faça quando os controles estiverem desconectados):\n'
         printf '  sudo systemctl restart bluetooth.service\n'
-        printf 'depois do crash: coredumpctl list bluetoothd ; coredumpctl gdb bluetoothd\n'
+        printf 'depois do crash: coredumpctl list bluetoothd ; coredumpctl info bluetoothd\n'
         printf 'ao terminar a janela: sudo %s --off\n' "$0"
+        printf '\n'
+        printf 'POLÍTICA (RADIO-ABERTO-01/E7): o core do bluetoothd NUNCA sai desta máquina.\n'
+        printf 'Ele contém todas as LinkKeys, LTKs e IRKs residentes, mais os MACs e nomes\n'
+        printf 'de todos os aparelhos da casa. Para relatar upstream vai o BACKTRACE\n'
+        printf '(coredumpctl info), nunca o core. Ver docs/process/POLITICA-core-nunca-sai-da-maquina.md\n'
         ;;
     --off)
         rm -f "${SYSCTL_FILE}" "${DROPIN_FILE}"
         sysctl --system >/dev/null 2>&1 || true
+        # E8: desarma o timer se o --off veio antes da hora (gesto manual dela).
+        systemctl stop "${AUTO_OFF_UNIT}.timer" >/dev/null 2>&1 || true
+        systemctl reset-failed "${AUTO_OFF_UNIT}.service" >/dev/null 2>&1 || true
         systemctl daemon-reload
         printf 'captura DESLIGADA (core_pattern devolvido ao default do sistema via sysctl --system).\n'
         printf 'o MALLOC_CHECK_ sai do bluetoothd no próximo restart do serviço.\n'

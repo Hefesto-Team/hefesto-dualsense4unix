@@ -252,10 +252,17 @@ class _FakeComboBox:
 class _FakeSegmentedSelector:
     """Stub do SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01).
 
-    Espelha o subconjunto da API por-ID usado pela aba Triggers. Não dispara o
-    handler "changed" em set_active_id (os testes invocam os handlers à mão,
-    como faziam com o _FakeComboBox) — a semântica de emissão é coberta nos
-    testes do próprio SegmentedSelector.
+    Espelha o subconjunto da API por-ID usado pela aba Triggers — **inclusive
+    a EMISSÃO** de "changed" em ``set_active_id``, que é a semântica do widget
+    real (``app/widgets/segmented_selector.set_active_id``: emite quando o id
+    muda, no-op quando não muda).
+
+    MESA-CHEIA-08 (13/08): o corpo deste método era ``self._active_id = the_id``
+    e nada mais. Com ele mudo, o teste do "Desligar" logo abaixo passava com o
+    defeito de pé — o primeiro degrau da cadeia (o "changed" que agenda o
+    live-preview de 300 ms) simplesmente não existia no dublê. **Um teste que
+    passa com a cura arrancada não testa nada**, e este arquivo era o exemplo
+    dessa regra.
     """
 
     def __init__(self, wrap: bool = False) -> None:
@@ -272,7 +279,14 @@ class _FakeSegmentedSelector:
         return self._active_id
 
     def set_active_id(self, the_id: str) -> None:
+        if the_id == self._active_id:
+            return  # no-op: o widget real só emite quando o id MUDA
+        if all(iid != the_id for iid, _label in self._items):
+            return  # id inexistente é no-op no widget real
         self._active_id = the_id
+        for sinal, cb in list(self.handlers):
+            if sinal == "changed":
+                cb(self)
 
     def connect(self, signal: str, cb: Any) -> None:
         self.handlers.append((signal, cb))
@@ -285,6 +299,39 @@ class _FakeSegmentedSelector:
 
     def set_visible(self, v: bool) -> None:
         self._visible = bool(v)
+
+
+class _Relogio:
+    """O ``GLib.timeout_add`` que GUARDA o callback em vez de engoli-lo.
+
+    MESA-CHEIA-08, mordida 2: o dublê era ``lambda *_a, **_kw: 0``, e o
+    defeito do "Desligar" é TEMPORAL — acontece 300 ms depois do gesto, nunca
+    na chamada. Com o relógio engolido, o teste olhava só o instante
+    em que nada de errado acontece.
+
+    ``source_remove`` tira o pendente do mapa: é assim que se distingue
+    "cancelou o preview" de "o preview vai disparar e ninguém viu".
+    """
+
+    def __init__(self) -> None:
+        self.pendentes: dict[int, tuple[Any, tuple[Any, ...]]] = {}
+        self._ultimo = 0
+
+    def timeout_add(self, _ms: int, cb: Any, *args: Any) -> int:
+        self._ultimo += 1
+        self.pendentes[self._ultimo] = (cb, args)
+        return self._ultimo
+
+    def source_remove(self, ident: int) -> None:
+        self.pendentes.pop(ident, None)
+
+    def disparar_pendentes(self) -> int:
+        """Faz o tempo passar. Devolve quantos callbacks dispararam."""
+        pendentes = list(self.pendentes.items())
+        self.pendentes.clear()
+        for _ident, (cb, args) in pendentes:
+            cb(*args)
+        return len(pendentes)
 
 
 class _FakeStatusBar:
@@ -378,20 +425,41 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
             Label=_Label,
         ),
     )
+    relogio = _Relogio()
     monkeypatch.setattr(
         triggers_actions,
         "GLib",
         types.SimpleNamespace(
-            timeout_add=lambda *_a, **_kw: 0,
+            timeout_add=relogio.timeout_add,
             idle_add=lambda fn, *a, **kw: fn(*a, **kw),
-            source_remove=lambda *_a, **_kw: None,
+            source_remove=relogio.source_remove,
         ),
     )
 
     inst = _FakeTriggersMixin()
+    inst._relogio = relogio  # type: ignore[attr-defined]
     inst._trigger_set_calls = calls  # type: ignore[attr-defined]
     inst._trigger_reset_calls = resets  # type: ignore[attr-defined]
 
+    # Esta tupla é uma lista de nomes A MANTER À MÃO: o dublê copia UM A UM os
+    # métodos reais do mixin. Esquecer um nome aqui, ou renomear o método no
+    # fonte sem mexer aqui, quebra a suíte — e o modo de falha de cada descuido
+    # é DIFERENTE. Medido nesta árvore em 14/08/2026, porque três agentes já
+    # descreveram esta linha de três jeitos incompatíveis, cada um tendo rodado
+    # um experimento diferente sem saber do outro:
+    #
+    #   nome FORA da tupla, método no fonte -> AttributeError no primeiro uso,
+    #       dentro do código de produção (`triggers_actions.py`, no
+    #       `_reset_trigger`). `_FakeTriggersMixin` não tem `__getattr__` e
+    #       `_reset_trigger` não engole exceção: 6 failed, 26 passed.
+    #   método FORA do fonte, nome na tupla -> KeyError aqui embaixo, no
+    #       `__dict__[name]`, ainda na MONTAGEM do dublê — então cai todo teste
+    #       que chama `_build_mixin`: 29 failed, 3 passed.
+    #
+    # Nenhum dos dois é silencioso, e é por isso que esta tupla não precisa de
+    # portão próprio. A afirmação de que um descuido aqui "passaria por
+    # AttributeError silencioso" foi medida e é FALSA — fica escrito para a
+    # próxima pessoa não pagar a medição pela quarta vez.
     for name in (
         "install_triggers_tab",
         "_refresh_triggers_from_draft",
@@ -418,6 +486,8 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
         "_reset_trigger",
         "_toast_trigger",
         "_schedule_live_preview",
+        "_cancelar_live_preview",
+        "_adiantar_live_preview",
         "_fire_live_preview",
     ):
         setattr(
@@ -545,6 +615,215 @@ def test_reset_trigger_envia_off(monkeypatch: pytest.MonkeyPatch) -> None:
     assert mixin._trigger_set_calls == [], (
         "trigger.set aqui re-armaria a trava que o botão deveria soltar"
     )
+
+
+def test_o_desligar_nao_re_arma_a_trava_300ms_depois(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MESA-CHEIA-08 (13/08) — a R-19 estava DESFEITA, e por um caminho novo.
+
+    O "Desligar" solta a trava (`trigger.reset`) e, 300 ms depois, o
+    live-preview que o próprio gesto agendou mandava um `trigger.set` que a
+    RE-ARMAVA. Ela sente isso como *"a config que eu deixo não fica"*: o
+    perfil não volta a trocar sozinho depois do botão que promete "voltar ao
+    normal", e nada na tela diz por quê.
+
+    A cadeia inteira, com os dois degraus que o dublê antigo apagava:
+    `set_active_id("Off")` EMITE "changed" -> `_on_mode_changed` agenda
+    `_fire_live_preview` -> 300 ms -> `trigger.set`.
+    """
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+    combo = mixin._trigger_mode["left"]
+
+    # O caso que dói é o normal: aplicar "Rígido" e depois "Desligar".
+    combo.set_active_id("Rigid")
+    mixin._relogio.disparar_pendentes()  # o preview do "Rígido" aplica
+    assert mixin._trigger_set_calls, "o live-preview é feature pedida"
+    mixin._trigger_set_calls.clear()
+
+    mixin.on_trigger_left_reset(None)
+    assert mixin._trigger_reset_calls == [("left", None)]
+    # O tempo passa. É AQUI que o defeito acontecia.
+    disparados = mixin._relogio.disparar_pendentes()
+
+    assert disparados == 0, (
+        "o «Desligar» deixou um live-preview pendente — ele vira um "
+        "trigger.set 300 ms depois"
+    )
+    assert mixin._trigger_set_calls == [], (
+        "trigger.set depois do trigger.reset RE-ARMA a trava manual que o "
+        "botão existe para soltar"
+    )
+
+
+def test_trocar_de_modo_pelo_gesto_normal_continua_aplicando(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MORDIDA 3 — o caso que NÃO deve mudar.
+
+    Matar o live-preview inteiro "resolveria" o defeito acima e quebraria a
+    feature: hipótese tem de explicar o que JÁ funcionava.
+    """
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+    combo = mixin._trigger_mode["right"]
+
+    combo.set_active_id("Rigid")
+    assert mixin._relogio.disparar_pendentes() == 1
+    assert [modo for _lado, modo, _p in mixin._trigger_set_calls] == ["Rigid"]
+
+
+def _espiar_ordem(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[str]:
+    """Registra a ORDEM real entre `trigger.set` e `trigger.reset`.
+
+    As duas listas do `_build_mixin` são separadas, então "quem saiu antes"
+    não dá para ler nelas. Aqui embrulhamos os dois dublês já instalados —
+    o que se mede é a sequência que o daemon veria no socket.
+    """
+    ordem: list[str] = []
+    set_instalado = triggers_actions.trigger_set_checked
+    reset_instalado = triggers_actions.trigger_reset
+
+    def espia_set(*a: Any, **kw: Any) -> Any:
+        ordem.append("set")
+        return set_instalado(*a, **kw)
+
+    def espia_reset(*a: Any, **kw: Any) -> Any:
+        ordem.append("reset")
+        return reset_instalado(*a, **kw)
+
+    monkeypatch.setattr(triggers_actions, "trigger_set_checked", espia_set)
+    monkeypatch.setattr(triggers_actions, "trigger_reset", espia_reset)
+    return ordem
+
+
+def test_o_desligar_de_um_lado_nao_deixa_o_outro_re_armar_a_trava(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FURO RESIDUAL da MESA-CHEIA-08, medido no ceticismo e curado em 14/08.
+
+    `_cancelar_live_preview` mata só o lado do botão, mas a trava manual **não
+    tem lado**: `daemon/state_store.mark_manual_trigger_active` recebe uma
+    categoria só ("trigger") para os dois gatilhos. Então mexer no modo do
+    gatilho DIREITO e, dentro de 300 ms, clicar "Desligar" no ESQUERDO deixava
+    o `trigger.set` da direita cair DEPOIS do `trigger.reset` da esquerda — e
+    re-armar a trava que o botão existe para soltar. Medido antes da cura::
+
+        disparados: 1  trigger.set: [('right', 'Rigid', [5, 200])]
+
+    É o mesmo dano da sprint por uma janela mais estreita: dois gestos em
+    lados diferentes dentro dos 300 ms.
+
+    A cura ADIANTA o preview do outro lado em vez de cancelá-lo — o que este
+    teste mede é a ORDEM: o `set` da direita sai ANTES do `reset` da esquerda,
+    e nada sobra pendente para depois.
+    """
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+    ordem = _espiar_ordem(monkeypatch)
+
+    # A usuária mexe no gatilho DIREITO...
+    mixin._trigger_mode["right"].set_active_id("Rigid")
+    # ...e, antes dos 300 ms, clica "Desligar" no ESQUERDO.
+    mixin.on_trigger_left_reset(None)
+
+    assert mixin._trigger_reset_calls == [("left", None)]
+    assert ordem == ["set", "reset"], (
+        "o trigger.set do outro gatilho caiu DEPOIS do trigger.reset e "
+        "re-armou a trava manual, que é uma só para os dois lados"
+    )
+    assert mixin._relogio.disparar_pendentes() == 0, (
+        "sobrou live-preview pendente depois do «Desligar»"
+    )
+
+
+def test_o_desligar_de_um_lado_nao_engole_o_preview_do_outro(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O caso que NÃO deve mudar, do furo do outro lado (14/08).
+
+    Cancelar o preview do gatilho oposto "resolveria" o furo acima matando uma
+    aplicação que ela pediu, num gatilho que ela não mandou desligar — o mesmo
+    contorno que a mordida 3 da sprint já proíbe para o próprio lado. O
+    `trigger.set` da direita tem de acontecer, com os bytes que ela escolheu.
+    """
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+
+    mixin._trigger_mode["right"].set_active_id("Rigid")
+    mixin.on_trigger_left_reset(None)
+
+    assert [(lado, modo) for lado, modo, _p in mixin._trigger_set_calls] == [
+        ("right", "Rigid")
+    ], "o preview do gatilho que ela NÃO desligou foi engolido"
+    assert mixin._trigger_set_calls[0][2], (
+        "o preview adiantado tem de levar os mesmos params do preview atrasado"
+    )
+
+
+def test_o_desligado_do_seletor_ainda_manda_trigger_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RETRATO, não cura — o furo B da MESA-CHEIA-08, aberto para ela decidir.
+
+    A aba tem DOIS gestos que apagam o gatilho e parecem o mesmo: o botão
+    «Desligar» (`trigger.reset`, SOLTA a trava) e o botão «Desligado» do
+    seletor de modos (`app/actions/trigger_specs.py:83` — id "Off", rótulo
+    "Desligado"), que passa pelo live-preview e manda `trigger.set` "Off" —
+    e `trigger.set` ARMA a trava (`daemon/ipc_handlers._handle_trigger_set`).
+    Medido nesta árvore::
+
+        disparados: 1  trigger.set: [('left', 'Off', [])]  trigger.reset: []
+
+    **Isto não é bug declarado.** "Desligado" é um modo como os outros, e a
+    trava armada é coerente com "ela escolheu isto à mão"; o botão «Desligar»
+    é que existe para soltar (R-19). Mas os dois rótulos prometem a mesma
+    coisa na tela, e qual dos dois deve soltar a trava é decisão dela.
+
+    Registrado em `docs/process/sprints/2026-08-13-MESA-CHEIA-08-...md`,
+    seção 6. Este teste **não morde** — não há cura a arrancar. Ele fixa o
+    comportamento de hoje para que a mudança, quando ela decidir, seja
+    deliberada e não um efeito colateral.
+    """
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+    combo = mixin._trigger_mode["left"]
+
+    combo.set_active_id("Rigid")
+    mixin._relogio.disparar_pendentes()
+    mixin._trigger_set_calls.clear()
+
+    combo.set_active_id("Off")  # o botão «Desligado» do seletor segmentado
+
+    assert mixin._relogio.disparar_pendentes() == 1
+    assert mixin._trigger_set_calls == [("left", "Off", [])]
+    assert mixin._trigger_reset_calls == [], (
+        "o «Desligado» do seletor não passa pelo trigger.reset — é o furo B"
+    )
+
+
+def test_desligar_com_o_modo_ja_em_off_nao_muda_nada(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MORDIDA 4 — a ressalva honesta, registrada para ninguém "consertá-la".
+
+    Com o modo já em "Off" o `set_active_id` é no-op (o widget real só emite
+    quando o id MUDA), então não há "changed", não há timer e não havia
+    re-arme nem antes nem depois.
+    """
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+    combo = mixin._trigger_mode["left"]
+    assert combo.get_active_id() == "Off"
+
+    mixin.on_trigger_left_reset(None)
+
+    assert mixin._relogio.disparar_pendentes() == 0
+    assert mixin._trigger_set_calls == []
+    assert mixin._trigger_reset_calls == [("left", None)]
 
 
 def test_reset_trigger_leva_o_controle_escolhido(

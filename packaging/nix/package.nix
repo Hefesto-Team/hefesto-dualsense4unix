@@ -17,11 +17,17 @@
 , wrapGAppsHook
 , glib
 , makeWrapper
+# TECLADO-QUE-NAO-DIGITA-01: o teclado na tela que o L3 do controle abre. Vem
+# como argumento com default `null` de proposito — `callPackage` passa
+# `pkgs.wvkbd` quando o atributo existe (nixpkgs by-name/wv/wvkbd) e cai no
+# default quando nao existe, entao um nixpkgs mais velho nao QUEBRA a
+# derivacao por causa de um acessorio. O `null` e tratado abaixo.
+, wvkbd ? null
 }:
 
 python3Packages.buildPythonApplication rec {
   pname = "hefesto-dualsense4unix";
-  version = "0.5.0";
+  version = "0.9.4.2";
   pyproject = true;
 
   # Source local (clonado pelo flake). Em release tag, trocar por
@@ -100,6 +106,13 @@ python3Packages.buildPythonApplication rec {
         $out/lib/udev/rules.d/71-uhid.rules
     install -Dm644 assets/72-ps5-controller-autosuspend.rules \
         $out/lib/udev/rules.d/72-ps5-controller-autosuspend.rules
+    # 72-hefesto-touchpad-motion-uaccess: touchpad e sensores de movimento com
+    # ACL da sessão. A 70-uaccess.rules do sistema só cobre ID_INPUT_JOYSTICK, e
+    # o kernel classifica esses dois nós como touchpad/acelerômetro — sem esta
+    # regra ficam root:input e só funcionam para quem está no grupo `input` por
+    # fora do produto. OQ-6. O número precisa ser < 73.
+    install -Dm644 assets/72-hefesto-touchpad-motion-uaccess.rules \
+        $out/lib/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules
     # As 73/74 (GUI auto-spawn no hotplug) foram DESCONTINUADAS e REMOVIDAS do
     # repositorio em 2026-07-18 — este postInstall continuava instalando as
     # duas e o build quebrava aqui, antes mesmo do fakeSha256 do pydualsense.
@@ -148,6 +161,12 @@ python3Packages.buildPythonApplication rec {
         $out/share/icons/hicolor/256x256/apps/hefesto.png
     install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
         $out/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
+    # APPLET-MONOCROMÁTICO-01 (07/08/2026): o ícone SIMBÓLICO da bandeja. O
+    # código pede `hefesto-dualsense4unix-symbolic` (app/tray.py), e esse nome
+    # NÃO se satisfaz com PNG: PNG nunca é recolorido pelo tema, e o ícone
+    # ficaria o único cromático do painel. Destino `symbolic/apps/`.
+    install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
+        $out/share/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg
 
     # Catalogos i18n compilados.
     if [ -d locale ]; then
@@ -163,9 +182,24 @@ python3Packages.buildPythonApplication rec {
 
   # Wrappa o binario com GI_TYPELIB_PATH e LD_LIBRARY_PATH para o
   # libayatana-appindicator ser descoberto em runtime.
+  #
+  # E com o TECLADO NA TELA no PATH (TECLADO-QUE-NAO-DIGITA-01): o daemon
+  # resolve `wvkbd-mobintl` por `shutil.which` quando o L3 pede o teclado na
+  # tela, e sem ele o unico caminho do produto para ESCREVER TEXTO com o
+  # controle nao existe (nenhum dos nove atalhos de fabrica digita LETRA).
+  # `--suffix` e nao `--prefix` de proposito: um wvkbd que a usuaria ja tenha
+  # no ambiente vence o nosso.
+  #
+  # So o wvkbd, e nao o onboard: em NixOS a sessao e Wayland na esmagadora
+  # maioria, o wvkbd digita pelo zwp_virtual_keyboard_manager_v1 (nativo) e o
+  # onboard digita por XTEST — em Wayland ele abriria e nao digitaria fora do
+  # XWayland. Quem estiver em X11 instala o onboard no proprio perfil, e o
+  # scripts/doctor.sh diz isso com todas as letras.
   preFixup = ''
     gappsWrapperArgs+=(
       --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ libayatana-appindicator hidapi ]}"
+      ${lib.optionalString (wvkbd != null)
+        ''--suffix PATH : "${lib.makeBinPath [ wvkbd ]}"''}
     )
   '';
 

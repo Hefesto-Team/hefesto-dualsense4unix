@@ -8,17 +8,29 @@
 #
 # FastConnectable=true  — page scan agressivo: o botão PS reconecta mais rápido
 #   (PLAT-04 item 3; estudo 2026-07-18-estudo-bt-maximo.md).
-# JustWorksRepairing=always — aceita re-pareamento de device que já tem bond
-#   (Onda R; estudo 2026-07-19-estudo-bluez-backport-onda-r.md §4). ATENÇÃO
-#   (medido 22/07): o re-pair ENTRANTE aceito por esta opção pode viver só em
-#   memória (device temporário) — a persistência garantida do bond exige o
-#   Pair() explícito (bluetoothctl pair <MAC>); o hefesto-bt-health-watchdog
-#   vigia e promove quando possível.
+# JustWorksRepairing=confirm — aceita re-pareamento de device que já tem bond,
+#   mas SÓ com confirmação do agente (Onda R; estudo
+#   2026-07-19-estudo-bluez-backport-onda-r.md §4). ATENÇÃO (medido 22/07): o
+#   re-pair ENTRANTE aceito por esta opção pode viver só em memória (device
+#   temporário) — a persistência garantida do bond exige o Pair() explícito
+#   (bluetoothctl pair <MAC>); o hefesto-bt-health-watchdog vigia e promove
+#   quando possível.
+#
+#   ERA `always` ATÉ 05/08/2026 (RADIO-ABERTO-01). O `always` remove a ÚLTIMA
+#   recusa do BlueZ — a que existe justamente para dizer "não re-pareio por
+#   Just Works quem já tem bond". Combinado com o agente NoInputNoOutput
+#   (assets/systemd/hefesto-bt-agent.service) e com FastConnectable, um
+#   atacante ao alcance de rádio que clone o BD_ADDR de um controle bondado
+#   sobrescreve a LinkKey SEM interação humana — e o device que sobe depois
+#   escolhe o próprio descritor HID, que pode ser um TECLADO.
+#   A justificativa original cobria DOIS eventos pontuais (a janela de migração
+#   do backport) e entregava um regime PERMANENTE: autorização de migração que
+#   nunca expira deixou de ser migração.
 #
 # Vale no próximo start do bluetoothd — o install NUNCA reinicia o serviço por
 # causa deste bloco (derrubaria os controles BT conectados). Exceções: postinst
 # do próprio pacote bluez (backport) e o watchdog de estado doente.
 [General]
 FastConnectable=true
-JustWorksRepairing=always
+JustWorksRepairing=confirm
 # <<< hefesto bluetooth <<<

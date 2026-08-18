@@ -166,17 +166,34 @@ class TestLaunchEnvRefreshHandler:
     def test_gui_avisa_apos_save_delete_import_restore(self) -> None:
         """save/delete/import/restore de perfil notificam o daemon — sem isso
         o steam_app_<appid>.env fica rançoso na janela exata que ele existia
-        para fechar (primeira sessão do jogo com perfil novo)."""
+        para fechar (primeira sessão do jogo com perfil novo).
+
+        NOTA DATADA (04/08/2026, GRAVA-POR-UM-FUNIL-01): a contagem exigida no
+        rodapé era ``>= 3`` — uma chamada por botão que grava. Os três botões
+        passaram a gravar pelo MESMO funil
+        (``app/actions/profile_writer.py``), que avisa o daemon uma vez por
+        gravação; contar as chamadas no rodapé passou a medir a forma antiga do
+        código, não a garantia. A garantia continua igual e é o que se cobra
+        agora: o funil avisa, e os três botões passam pelo funil.
+        """
         from hefesto_dualsense4unix.app.actions import (
             footer_actions,
+            profile_writer,
             profiles_actions,
         )
 
         footer = Path(footer_actions.__file__).read_text(encoding="utf-8")
+        funil = Path(profile_writer.__file__).read_text(encoding="utf-8")
         perfis = Path(profiles_actions.__file__).read_text(encoding="utf-8")
-        assert footer.count("self._notify_launch_env_refresh()") >= 3
+        assert '"_notify_launch_env_refresh"' in funil, (
+            "o funil de gravação parou de avisar o daemon"
+        )
+        assert footer.count("self._gravar_perfil_async(") >= 3, (
+            "os três botões que gravam perfil (Salvar, Importar, Restaurar "
+            "Padrão) têm de passar pelo funil — é ele que avisa o daemon"
+        )
         assert perfis.count("self._notify_launch_env_refresh()") >= 2
-        for fonte in (footer, perfis):
+        for fonte in (footer, funil, perfis):
             assert '"launch_env.refresh"' in fonte or (
                 "launch_env.refresh" in fonte
             )

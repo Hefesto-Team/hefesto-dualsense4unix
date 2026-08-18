@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ícone SYMBOLIC do applet COSMIC — a BIGORNA da logo, em silhueta.
+
+  Symbolic no COSMIC/GNOME é MONOCROMÁTICO e recolorido pelo tema: não é o
+  colorido reduzido. Por isso aqui não há degradê, anel nem segunda cor — só
+  `currentColor`, que o tema troca (claro ou escuro) sem tocar no arquivo.
+  A logo cheia (assets/hefesto-logo.svg) a 16 px vira borrão; a bigorna é a
+  forma mais reconhecível da marca e sobrevive ao tamanho da barra.
+
+  Desenhado direto na grade 16x16 (padrão symbolic), com o chifre à DIREITA —
+  mesma orientação da bigorna em assets/hefesto-logo.svg. Coordenadas cruas,
+  sem `transform-origin` (CSS SVG2 que o librsvg — renderizador do GTK e do
+  COSMIC — ignora, jogando a forma para fora do viewBox).
+
+  Validado com `rsvg-convert -w N -h N` em 16, 24 e 48 px, no claro e no
+  escuro. Variante com martelo por cima foi testada e DESCARTADA: a 16 px o
+  cabo virava um risco diagonal colado no topo da bigorna.
+
+  NOTA DE 07/08/2026 — este arquivo virou a OPÇÃO B, e saiu do caminho de
+  instalação. Nada do que está escrito acima foi apagado, e o desenho é o
+  mesmo. O que mudou:
+
+  1. ELE NÃO É MAIS O INSTALADO. Em 07/08 ela pediu, olhando a própria barra:
+     "o applet do hefesto deve ficar em preto e branco, talvez só o círculo com
+     borda preta e a borda do martelo ao centro". O desenho que atende esse
+     pedido é `hefesto-dualsense4unix-symbolic.svg`, ao lado. Este continua
+     aqui porque **a escolha é dela**: a medição de 27/06 contra o martelo
+     (acima) é real e ela merece vê-la antes de escolher. Se ela preferir a
+     bigorna, o conserto é copiar este desenho para o arquivo instalado — o
+     encanamento (nome, diretório, portões) já está pronto e independe do
+     desenho.
+
+  2. A JUSTIFICATIVA DO `currentColor` CADUCOU, e isto foi MEDIDO em 07/08.
+     "recolorido pelo tema (...) sem tocar no arquivo" só vale DENTRO de quem
+     recolore. Renderizado sem contexto de cor (`rsvg-convert`, resvg), este
+     arquivo sai `srgb(0,0,0)` — preto, 1,59:1 sobre o `#2F2F3A` do painel
+     escuro dela. É um dos dois mecanismos candidatos ao "parecia sumir" de
+     27/06, e é o único dos dois que foi reproduzido. Por isso a cor aqui foi
+     trocada para `#bebebe` (a escola do vizinho Flatpak): dentro do painel ela
+     é substituída de qualquer forma, e fora dele ela é a diferença entre ver e
+     não ver. Os `path` são os mesmos, ponto por ponto.
+
+  3. O local mudou: era
+     `packaging/cosmic-applet/data/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg`,
+     instalado sob um nome que o código não pedia desde 27/06 — ícone sem
+     dono. Agora os dois desenhos moram juntos, em `assets/simbolico/`, e o
+     instalado é escolha explícita.
+
+  Sprint: `docs/process/sprints/2026-08-07-APPLET-MONOCROMATICO-01-o-icone-que-destoa-do-painel.md`
+-->
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hefesto - Dualsense4Unix">
+  <title>Bigorna</title>
+  <!-- Mesa da bigorna + chifre (a ponta que sai à direita). -->
+  <path fill="#bebebe" d="M1.0 2.9 L1.0 5.6 L11.6 5.6 L15.0 4.4 L15.0 3.35 L11.6 2.9 Z"/>
+  <!-- Cintura estreita descendo para a base alargada. -->
+  <path fill="#bebebe" d="M9.4 5.6 C9.7 7.7 10.2 9.5 11.0 10.6 L12.4 10.6 L12.8 13.4 L2.4 13.4 L2.8 10.6 L4.2 10.6 C5.0 9.5 5.5 7.7 5.8 5.6 Z"/>
+</svg>

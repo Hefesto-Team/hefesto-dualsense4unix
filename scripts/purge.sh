@@ -115,13 +115,16 @@ run_uninstall() {
 
 # 3) Reforço: rastros que versões antigas do uninstall.sh não removiam.
 reinforce_leftovers() {
-    local applet_bin applet_desktop applet_icon ghost
+    local applet_bin applet_desktop applet_icon applet_icon_symb ghost
     applet_bin="/usr/local/bin/hefesto-dualsense4unix-applet"
     applet_desktop="/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop"
+    # Caminho antigo (até 07/08/2026) e o de hoje — os dois, porque o purge
+    # existe justamente para instalação velha.
     applet_icon="/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
-    if [[ -e "${applet_bin}" || -e "${applet_desktop}" || -e "${applet_icon}" ]]; then
+    applet_icon_symb="/usr/share/icons/hicolor/symbolic/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
+    if [[ -e "${applet_bin}" || -e "${applet_desktop}" || -e "${applet_icon}" || -e "${applet_icon_symb}" ]]; then
         log "reforço: removendo applet COSMIC remanescente (sudo)"
-        run sudo rm -f "${applet_bin}" "${applet_desktop}" "${applet_icon}"
+        run sudo rm -f "${applet_bin}" "${applet_desktop}" "${applet_icon}" "${applet_icon_symb}"
         run sudo gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
         run sudo update-desktop-database -q /usr/share/applications 2>/dev/null || true
     fi

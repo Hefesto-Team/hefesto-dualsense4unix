@@ -3,9 +3,23 @@
 Valida o ciclo set-brightness → save → load: o valor do slider persiste
 no JSON do perfil e é recuperado ao recarregar o estado.
 
-Não depende de GTK real (usa stubs), portanto roda em CI sem display.
+CORREÇÃO DATADA (13/08/2026, TESTE-HONESTO-01/E1, lote A): a linha antiga
+dizia *"não depende de GTK real (usa stubs), portanto roda em CI sem display"*.
+Era falsa como promessa de cobertura: os mixins importados abaixo vêm de
+módulos que fazem ``import gi``, e o stub plantado aqui os deixava passar
+verdes contra ``Gtk.Box = object``. Hoje o módulo EXIGE o PyGObject real e
+pula honestamente onde ele não existe — os stubs abaixo ficam só para o
+``GLib.idle_add`` síncrono.
 """
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01 (TESTE-HONESTO-01/E1, lote A): a guarda vem ANTES de
+# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
+# widgets que são `object` — e nunca entrava no job `gtk-real`, que seleciona
+# por `grep exigir_gi_real|skip_sem_gi_real`. Agora ele pula honestamente.
+exigir_gi_real("lightbar: persistência do brilho no perfil")
 
 import sys
 import types

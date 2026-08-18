@@ -36,11 +36,17 @@ def _make_inst() -> bp._PinnedPyDualSense:
     inst.connected = True
     inst.ds_thread = True
     # Campos que o __init__ real inicializa (PERF-MULTI-CONTROLLER-01 +
-    # FEAT-NATIVE-OUTPUT-MUTE-01).
+    # FEAT-NATIVE-OUTPUT-MUTE-01 + RUMBLE-SEM-DONO-01).
     inst._throttle_sec = bp.REPORT_THREAD_THROTTLE_SEC
     inst._last_out_report = None
     inst._last_write_at = 0.0
+    inst._last_change_at = float("-inf")
     inst._output_muted = False
+    # RUMBLE-SEM-DONO-01: o laço lê quem é o dono do rumble ANTES de montar o
+    # report. Sem estes dois, o `sendReport` levanta AttributeError — que o
+    # próprio laço trata como "o aparelho sumiu" e engole em silêncio.
+    inst._rumble_active = False
+    inst._rumble_stop_pending = False
     return inst
 
 
@@ -88,7 +94,13 @@ def test_sendreport_keepalive_reescreve_report_identico(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Sem mudança no report, o write ainda acontece a cada
-    OUT_REPORT_KEEPALIVE_SEC (cobre perda de report/glitch de link)."""
+    OUT_REPORT_KEEPALIVE_SEC (cobre perda de report/glitch de link).
+
+    Os três ciclos deste teste cabem inteiros na janela de confirmação de
+    RUMBLE-SEM-DONO-01 (2 s), que é exatamente o trecho em que o keepalive
+    continua valendo mesmo sem rumble nosso. O que acontece DEPOIS da janela
+    está em `test_rumble_sem_dono_01.py`.
+    """
     inst = _make_inst()
 
     calls = {"write": 0, "sleep": 0}

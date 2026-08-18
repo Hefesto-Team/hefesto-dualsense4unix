@@ -9,12 +9,21 @@ Requisitos de segurança:
   - Se a porta estiver ocupada, loga warning e vira no-op (daemon não para).
   - Padrão desligado (metrics_enabled=False); opt-in explícito.
 
+Configuração (PROMESSA-NÃO-CUMPRIDA-01/C1, 01/08/2026):
+  - metrics_enabled (DaemonConfig): False por padrão. Opt-in explícito.
+  - HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED: "1" liga o endpoint.
+  - HEFESTO_DUALSENSE4UNIX_METRICS_PORT: sobrescreve a porta da config.
+Até 01/08/2026 nenhuma das duas existia, e o `DaemonConfig` era construído sem
+`metrics_enabled` — subir o endpoint exigia editar o código, apesar de a
+ADR-016 ter decidido "opt-in via config ou env".
+
 Não usa prometheus_client como dependência obrigatória. O formato text/plain
 é simples o suficiente para serialização manual neste nível (V1).
 """
 from __future__ import annotations
 
 import http.server
+import os
 import socketserver
 import threading
 from typing import TYPE_CHECKING, Any
@@ -30,8 +39,48 @@ logger = get_logger(__name__)
 # Endereço de bind fixo — alteração exige ADR nova.
 _BIND_HOST = "127.0.0.1"
 
+#: As duas chaves de usuário das métricas (PROMESSA-NÃO-CUMPRIDA-01/C1).
+#:
+#: Nomes constantes, e não literais espalhados, porque `docs/usage/hotkeys.md`
+#: é cobrada por um teste que lê os literais do código — quem renomear aqui
+#: precisa que o mesmo nome esteja no documento.
+ENV_METRICS_ENABLED = "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED"
+ENV_METRICS_PORT = "HEFESTO_DUALSENSE4UNIX_METRICS_PORT"
+
 # Tipo: lista de (dict_de_labels, valor)
 _LabeledSeries = list[tuple[dict[str, str], int | float]]
+
+
+def _porta_efetiva(porta_da_config: int) -> int:
+    """A porta do endpoint, com a variável de ambiente vencendo a config.
+
+    PROMESSA-NÃO-CUMPRIDA-01/C1, segunda metade. Ligar as métricas sem poder
+    escolher a porta seria meia-chave: `metrics_port` sofre exatamente do mesmo
+    mal que `metrics_enabled` sofria — é campo de `DaemonConfig` que nada de
+    fora do código alcança. Quem já tem 9090 ocupada (Prometheus local é o caso
+    óbvio) ligaria o endpoint e receberia `metrics_bind_failed` no log, sem ter
+    onde mexer.
+
+    Valor inválido NÃO derruba o daemon nem cai em silêncio: loga e usa a
+    porta da config. É a mesma postura do bind que falha — o daemon segue, as
+    métricas é que não sobem.
+    """
+    bruto = os.environ.get(ENV_METRICS_PORT)
+    if bruto is None:
+        return porta_da_config
+    try:
+        porta = int(bruto)
+    except ValueError:
+        logger.warning(
+            "metrics_port_env_invalida", valor=bruto, usando=porta_da_config
+        )
+        return porta_da_config
+    if not 1 <= porta <= 65535:
+        logger.warning(
+            "metrics_port_env_fora_da_faixa", valor=porta, usando=porta_da_config
+        )
+        return porta_da_config
+    return porta
 
 
 # ---------------------------------------------------------------------------
@@ -282,7 +331,7 @@ class MetricsSubsystem:
     async def start(self, ctx: DaemonContext) -> None:
         """Inicia o servidor HTTP de métricas em thread daemon."""
         cfg = ctx.config
-        port: int = getattr(cfg, "metrics_port", 9090)
+        port: int = _porta_efetiva(getattr(cfg, "metrics_port", 9090))
         collector = MetricsCollector(store=ctx.store, controller=ctx.controller)
         handler_cls = _make_handler(collector)
 
@@ -322,8 +371,22 @@ class MetricsSubsystem:
         logger.info("metrics_subsystem_stopped")
 
     def is_enabled(self, config: DaemonConfig) -> bool:
-        """Habilitado somente quando metrics_enabled=True na configuração."""
-        return bool(getattr(config, "metrics_enabled", False))
+        """Habilitado por ``metrics_enabled=True`` OU pela variável de ambiente.
+
+        PROMESSA-NÃO-CUMPRIDA-01/C1. A env var é a chave que faltava: até
+        01/08/2026 o campo `metrics_enabled` era inalcançável de fora do
+        código — nenhuma variável, flag ou arquivo o ligava, e o daemon
+        construía o `DaemonConfig` sem ele (`daemon/main.py`), então o default
+        `False` vencia sempre. A ADR-016 decidiu *"opt-in via config ou env"*;
+        a metade "env" nunca tinha sido escrita.
+
+        O formato é o mesmo dos plugins (`subsystems/plugins.py`), de
+        propósito: duas chaves opcionais do mesmo daemon não podem ter duas
+        gramáticas. Só `"1"` liga — qualquer outro valor, inclusive `"true"`,
+        deixa desligado, que é o comportamento do irmão.
+        """
+        env_force = os.environ.get(ENV_METRICS_ENABLED, "0") == "1"
+        return bool(getattr(config, "metrics_enabled", False)) or env_force
 
 
 __all__ = ["MetricsCollector", "MetricsSubsystem"]

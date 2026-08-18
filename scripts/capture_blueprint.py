@@ -14,7 +14,18 @@ Serve para:
       medido em BT: controle ocioso não responde features e cada GET_REPORT
       estoura o timeout de 5 s do hidp do kernel com EIO.
 
-Uso: python3 scripts/capture_blueprint.py hidraw2
+Uso: .venv/bin/python scripts/capture_blueprint.py hidraw2
+
+A PORTA (A-PORTA-QUE-A-CASA-CONSTRUIU-01, 15/08/2026)
+-----------------------------------------------------
+Este script falhava com `'/dev/hidraw8' inacessível ([Errno 13] Permission
+denied)` sempre que o co-op estava ligado — e a leitura fácil ("a regra udev
+não cobre o Bluetooth") mandava consertar o lugar errado. A regra está certa e
+pegou; quem tira a ACL é o **próprio Hefesto**, de propósito, para o jogo não
+enxergar o físico. A porta certa é o broker, e é por ela que se entra agora.
+O `open()` direto continua existindo como queda — e sai DECLARADO no relatório,
+porque uma medição que não diz por onde entrou não pode ser comparada com a do
+outro braço do ensaio.
 
 ANONIMATO: o 0x09 carrega o MAC do controle e o MAC do host pareado. O script
 imprime SEMPRE a versão sanitizada (bytes 1..6 e 10..15 zerados) — é a única
@@ -26,6 +37,14 @@ from __future__ import annotations
 import fcntl
 import os
 import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "ensaios"))
+
+from comum import (
+    PortaFechadaError,
+    abrir_no_hidraw,
+    declaracao_da_porta,
+)
 
 #: Features do probe do hid_playstation, com os tamanhos que o driver espera.
 FEATURE_SIZES: tuple[tuple[int, int], ...] = ((0x05, 41), (0x09, 20), (0x20, 64))
@@ -53,6 +72,9 @@ def sanitize_pairing_report(report: bytes) -> bytes:
 
 
 def main(node: str) -> int:
+    # A DECLARAÇÃO ANTES DA MEDIÇÃO: biblioteca (fcntl/ioctl, à mão) e porta.
+    print("biblioteca ....... fcntl.ioctl (HIDIOCGFEATURE montado à mão)")
+    print(f"  {declaracao_da_porta()}")
     try:
         with open(f"/sys/class/hidraw/{node}/device/report_descriptor", "rb") as handle:
             desc = handle.read()
@@ -65,10 +87,12 @@ def main(node: str) -> int:
         print("  atenção: descriptor de transporte BT — impróprio como blueprint de")
         print("  vpad BUS_USB (o canônico embutido usa o descriptor USB de 289 B).")
     try:
-        fd = os.open(f"/dev/{node}", os.O_RDWR)
-    except OSError as exc:
-        print(f"  /dev/{node} inacessível ({exc}) — regra udev/uaccess aplicada?")
+        aberto = abrir_no_hidraw(f"/dev/{node}", escrita=True)
+    except PortaFechadaError as exc:
+        print(f"  {exc}")
         return 1
+    fd = aberto.fd
+    print(f"  {aberto.linha_de_relatorio}")
     try:
         for rid, size in FEATURE_SIZES:
             try:
@@ -82,7 +106,7 @@ def main(node: str) -> int:
             else:
                 print(f"  feature {rid:#04x}: {len(data)} bytes = {data.hex()}")
     finally:
-        os.close(fd)
+        aberto.fechar()
     print(f"  descriptor_hex={desc.hex()}")
     return 0
 

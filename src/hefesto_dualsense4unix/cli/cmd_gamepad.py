@@ -71,6 +71,8 @@ def cmd_on(
     params: dict[str, Any] = {"enabled": True}
     if flavor is not None:
         params["flavor"] = flavor
+    # ORIGEM-QUE-MENTE-01: a CLI é ela digitando — gesto, não reconciliação.
+    params["origin"] = "manual"
     result = _call_sync("gamepad.emulation.set", params)
     ok = isinstance(result, dict) and bool(result.get("enabled"))
     active = result.get("flavor") if isinstance(result, dict) else None
@@ -86,7 +88,7 @@ def cmd_on(
 @app.command("off")
 def cmd_off() -> None:
     """Desliga o gamepad virtual no daemon (libera o grab do controle)."""
-    _call_sync("gamepad.emulation.set", {"enabled": False})
+    _call_sync("gamepad.emulation.set", {"enabled": False, "origin": "manual"})
     console.print("[green]gamepad virtual desligado[/green]")
 
 

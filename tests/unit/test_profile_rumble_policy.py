@@ -16,6 +16,7 @@ import pytest
 
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 from hefesto_dualsense4unix.profiles.schema import Profile, RumbleConfig
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
 
@@ -43,10 +44,10 @@ def daemon() -> Daemon:
 
 
 def test_schema_aceita_policy_e_custom_mult() -> None:
-    p = _profile({"policy": "custom", "custom_mult": 1.5})
+    p = _profile({"policy": "custom", "custom_mult": 0.75})
     assert isinstance(p.rumble, RumbleConfig)
     assert p.rumble.policy == "custom"
-    assert p.rumble.custom_mult == pytest.approx(1.5)
+    assert p.rumble.custom_mult == pytest.approx(0.75)
     # Perfil v1 (só passthrough) continua válido — aditivo, sem opinião.
     legado = _profile({"passthrough": False})
     assert legado.rumble.policy is None
@@ -196,18 +197,24 @@ def test_gesto_manual_ipc_carimba_lock_e_limpa_origem(daemon: Daemon) -> None:
 
 # ---------------------------------------------------------------------------
 # MISC-08 item 1 (2026-07-18) — policy=max reportava mult 0.7
+#
+# 11/08/2026: os três testes abaixo cravavam `1.0` porque era esse o valor
+# do Máximo. O defeito que eles guardam NÃO é o número — é o mult observável
+# ficar preso no default em vez de acompanhar a política. Com a escada nova
+# (30/100/150, decisão dela) eles reprovaram sem nada estar errado; agora
+# derivam do dono único e voltam a morder a regra, em qualquer escada.
 # ---------------------------------------------------------------------------
 
 
-def test_cenario_journal_policy_max_reporta_mult_efetivo_1_0(
+def test_cenario_journal_policy_max_reporta_o_mult_da_politica(
     daemon: Daemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Cenário exato do journal 2026-07-18 19:59:48: perfil `vitoria` com
     `rumble.policy=max` ativado em passthrough ocioso. O log dizia
     `profile_rumble_policy_applied mult=0.7 policy=max` (o campo carregava o
     custom_mult default) e o state_full expunha `rumble_mult_applied=0.7`
-    (`_last_auto_mult` nunca sincronizado em política fixa). Max = 1.0 nos
-    dois lugares."""
+    (`_last_auto_mult` nunca sincronizado em política fixa). O mult do Máximo
+    tem de aparecer nos dois lugares."""
     from unittest.mock import MagicMock
 
     from hefesto_dualsense4unix.daemon import lifecycle as lifecycle_mod
@@ -219,7 +226,7 @@ def test_cenario_journal_policy_max_reporta_mult_efetivo_1_0(
     daemon.apply_profile_rumble_policy("max", None)
 
     # Fonte do `rumble_mult_applied` do state_full.
-    assert daemon._last_auto_mult == pytest.approx(1.0)
+    assert daemon._last_auto_mult == pytest.approx(RUMBLE_POLICY_MULT["max"])
 
     aplicados = [
         c
@@ -228,10 +235,12 @@ def test_cenario_journal_policy_max_reporta_mult_efetivo_1_0(
     ]
     assert len(aplicados) == 1
     assert aplicados[0].kwargs["policy"] == "max"
-    assert aplicados[0].kwargs["mult"] == pytest.approx(1.0)
+    assert aplicados[0].kwargs["mult"] == pytest.approx(RUMBLE_POLICY_MULT["max"])
 
 
-def test_state_full_reporta_mult_1_0_com_policy_max(daemon: Daemon) -> None:
+def test_state_full_reporta_o_mult_da_politica_com_policy_max(
+    daemon: Daemon,
+) -> None:
     """A evidência do state_full ao vivo (`rumble_policy=max` +
     `rumble_mult_applied=0.7`) vira regressão de ponta a ponta."""
     from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
@@ -246,18 +255,20 @@ def test_state_full_reporta_mult_1_0_com_policy_max(daemon: Daemon) -> None:
     )
     result = asyncio.run(server._handle_daemon_state_full({}))
     assert result["rumble_policy"] == "max"
-    assert result["rumble_mult_applied"] == pytest.approx(1.0)
+    assert result["rumble_mult_applied"] == pytest.approx(
+        RUMBLE_POLICY_MULT["max"]
+    )
 
 
 def test_seed_observavel_custom_e_reversao(daemon: Daemon) -> None:
     """Custom seeda o mult observável com o custom_mult; perfil sem opinião
-    ressincroniza com a política revertida (balanceado = 0.7)."""
+    ressincroniza com a política revertida (o balanceado)."""
     daemon.apply_profile_rumble_policy("custom", 0.4)
     assert daemon._last_auto_mult == pytest.approx(0.4)
 
     daemon.apply_profile_rumble_policy(None, None)
     assert daemon.config.rumble_policy == "balanceado"
-    assert daemon._last_auto_mult == pytest.approx(0.7)
+    assert daemon._last_auto_mult == pytest.approx(RUMBLE_POLICY_MULT["balanceado"])
 
 
 # ---------------------------------------------------------------------------
@@ -270,17 +281,23 @@ def test_manager_repassa_politica_ao_applier() -> None:
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
     received: list[tuple[str | None, float | None]] = []
+    quem_mandou: list[str | None] = []
 
     def applier(
         policy: str | None,
         custom_mult: float | None,
         *,
+        profile: object | None = None,
         origin: str = "autoswitch",
     ) -> None:
         # R-03 (auditoria 23/07): o applier passou a receber a ORIGEM da
         # ativação — "manual" (profile.switch/hotkey) fura o lock de gesto
         # manual em vez de descartar a seção em silêncio.
+        # PERFIL-REESCRITO-NA-PARTIDA-01 (05/08): e o PERFIL, como os appliers
+        # de supressão e de modo já recebiam — é com ele que o daemon recusa a
+        # reversão pedida por um catch-all (R-02).
         received.append((policy, custom_mult))
+        quem_mandou.append(getattr(profile, "name", None))
 
     mgr = ProfileManager(
         controller=FakeController(),
@@ -293,6 +310,9 @@ def test_manager_repassa_politica_ao_applier() -> None:
     # O applier recebe SEMPRE o par — inclusive (None, None) do perfil sem
     # opinião, que é o gatilho da reversão no daemon.
     assert received == [("custom", 0.5), (None, None)]
+    # E SEMPRE junto de quem mandou (sem isso o daemon não distingue "o perfil
+    # deste jogo não quer política" de "caiu num catch-all").
+    assert quem_mandou == ["teste_rumble", "teste_rumble"]
 
 
 # ---------------------------------------------------------------------------

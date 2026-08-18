@@ -20,6 +20,19 @@ from hefesto_dualsense4unix.daemon.launch_env import (
 _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 _DISABLE = "PROTON_DISABLE_HIDRAW"
 
+#: Os pares que o IGNORE esconde do jogo, e por que são DOIS desde 10/08/2026
+#: (TRES-CONTROLES-01): o DualSense FÍSICO dela, e o espelho VIRTUAL que o Steam
+#: Input cria (`28de:11ff`, Valve). Sem o segundo, o jogo ficava com três
+#: controles — o nosso vpad e os DOIS espelhos que o Steam faz, um do físico e
+#: outro do nosso vpad. Medido com o Pragmata aberto: `event21`/`event23`,
+#: nascidos pelo processo `steam`, o `pad 0` no mesmo segundo do
+#: `steam_input_excecao_ativada appid=3357650`.
+#:
+#: Comparação por CONJUNTO, não por string: travar a ordem faria estes quatro
+#: testes reprovarem por um detalhe que nenhum consumidor lê (o SDL parte por
+#: vírgula e compara por substring sem caixa).
+_IGNORE_ESPERADO = {"0x054c/0x0ce6", "0x28de/0x11ff"}
+
 
 # --- compose_env (pura) — os estados do critério de aceite -------------------
 
@@ -31,7 +44,7 @@ def test_uhid_vivo_em_todos_os_vpads_desduplica_no_layout_ps():
         native_mode=False, emulation_enabled=True,
         flavor="dualsense", backends=["uhid"],
     )
-    assert env[_IGNORE] == "0x054c/0x0ce6"
+    assert set(env[_IGNORE].split(",")) == _IGNORE_ESPERADO
     assert env[_DISABLE] == "0x054C/0x0CE6"
     assert "PROTON_ENABLE_HIDRAW" not in env  # aposentada (Proton 10+)
     assert "SDL_JOYSTICK_HIDAPI" not in env  # HIDAPI ligado (driver PS5 no vpad)
@@ -77,7 +90,7 @@ def test_xbox_forca_evdev_e_esconde_o_fisico():
         flavor="xbox", backends=["uinput"],
     )
     assert env["SDL_JOYSTICK_HIDAPI"] == "0"
-    assert env[_IGNORE] == "0x054c/0x0ce6"
+    assert set(env[_IGNORE].split(",")) == _IGNORE_ESPERADO
     # GUERRA-01: o vazamento winebus-hidraw vale para QUALQUER máscara.
     assert env[_DISABLE] == "0x054C/0x0CE6"
 
@@ -169,7 +182,7 @@ def test_materialize_grava_default_env_com_o_estado_real(tmp_path, monkeypatch):
     monkeypatch.setattr(launch_env, "launch_env_dir", lambda ensure=False: tmp_path)
     materialize_launch_env(_fake_daemon(backend="uhid"))
     env = _env_do_arquivo(tmp_path / "default.env")
-    assert env[_IGNORE] == "0x054c/0x0ce6"
+    assert set(env[_IGNORE].split(",")) == _IGNORE_ESPERADO
     assert env[_DISABLE] == "0x054C/0x0CE6"
     assert "PROTON_ENABLE_HIDRAW" not in env
 
@@ -323,7 +336,7 @@ def test_default_env_mantem_ignore_quando_todos_os_nativos_tem_appid(
     )
     materialize_launch_env(_fake_daemon(backend="uhid"))
     env = _env_do_arquivo(tmp_path / "default.env")
-    assert env[_IGNORE] == "0x054c/0x0ce6"
+    assert set(env[_IGNORE].split(",")) == _IGNORE_ESPERADO
     # E o arquivo por-appid antecipa o modo nativo DAQUELE jogo (sem
     # IGNORE/DISABLE — o jogo fala com o hidraw do físico).
     env_jogo = _env_do_arquivo(tmp_path / "steam_app_1599660.env")

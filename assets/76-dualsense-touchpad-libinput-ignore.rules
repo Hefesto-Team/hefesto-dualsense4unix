@@ -1,18 +1,92 @@
-# FEAT-DUALSENSE-TOUCHPAD-IGNORE-01 (2026-06-26)
-# O kernel hid_playstation expõe o touchpad do DualSense como um touchpad
-# libinput separado que move o cursor SEMPRE (independente do hefesto),
-# brigando com a emulação analógica (cursor "engasgado"). Ignora-o como ponteiro
-# libinput — o hefesto vira a única fonte de cursor. O click do touchpad segue
-# lido pelo hefesto via evdev (bindings de tecla). Reverter: remover este arquivo.
+# FEAT-DUALSENSE-TOUCHPAD-IGNORE-01 (2026-06-26) — HISTÓRICO, ver a nota de
+# 2026-08-09 abaixo. O kernel hid_playstation expõe o touchpad do DualSense como
+# um touchpad libinput separado que move o cursor SEMPRE (independente do
+# hefesto), brigando com a emulação analógica (cursor "engasgado"). A cura da
+# época foi ignorá-lo como ponteiro libinput — o hefesto virava a única fonte de
+# cursor. O click do touchpad segue lido pelo hefesto via evdev (bindings de
+# tecla), e isso nunca dependeu desta flag.
 #
-# TOUCHPAD-76-BT-VPAD-01 (2026-07-21): o match exato por nome USB ("Sony
-# Interactive Entertainment ...") NUNCA pegava as outras encarnações do mesmo
-# touchpad — medido ao vivo (udevadm sem LIBINPUT_IGNORE_DEVICE):
+# TOUCHPAD-76-BT-VPAD-01 (2026-07-21) — HISTÓRICO: o match exato por nome USB
+# ("Sony Interactive Entertainment ...") NUNCA pegava as outras encarnações do
+# mesmo touchpad — medido ao vivo (udevadm sem LIBINPUT_IGNORE_DEVICE):
 #   - BT/uhid: o input chama só "DualSense Wireless Controller Touchpad"
 #     (o BlueZ nomeia sem o prefixo do fabricante);
 #   - vpad:    "Hefesto Virtual DualSense P1 Touchpad" (P1..P4) — e o espelho
 #     de report copia o touchpad físico pro vpad, então cada toque movia o
 #     cursor EM DOBRO dentro do jogo ("modo jogo" com mousepad vivo).
-# O wildcard cobre USB, BT, Edge e os vpads numa linha só; a flag continua
-# valendo só no (re)add do device — replug/reboot é o garantido.
-ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="*DualSense*Touchpad", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+# A resposta de então foi um curinga (`*DualSense*Touchpad`) que cobria USB, BT,
+# Edge e os vpads numa linha só.
+#
+# TOUCHPAD-DO-SISTEMA-01 (2026-08-09) — O CURINGA CADUCOU, e o pedido dela é o
+# que o derruba: *"quando eu conecto o controle DualSense no PC via BT ou cabo,
+# ANTES do Hefesto, o touchpad funciona como mouse. No Hefesto impedimos isso de
+# funcionar em todos os modos. A ideia do touchpad é ele voltar a funcionar
+# assim, seja no modo nativo ou dualsense."*
+#
+# O curinga apagava o touchpad FÍSICO em TODOS os modos e em TODOS os aparelhos
+# — inclusive onde não havia emulação nenhuma com que brigar (Conexão Nativa não
+# tem mouse do hefesto; "Jogar pelo Hefesto" não faz do analógico um mouse;
+# "Controlar o PC" pode ter a emulação de mouse DESLIGADA, e ela estava, medido
+# em 09/08/2026: `mouse_emulation.enabled=False` com o modo ativo). Confirmado no
+# nó vivo dela (`/run/udev/data/c13:68`): `ID_INPUT_TOUCHPAD=1` E
+# `LIBINPUT_IGNORE_DEVICE=1` — o dedo andava e o cursor não.
+#
+# AS DUAS BRIGAS MEDIDAS CONTINUAM CURADAS, cada uma pelo lado certo da cerca:
+#
+#   1. o TOQUE EM DOBRO (21/07) era libinput enxergando DOIS ponteiros
+#      alimentados por UM dedo: o nó do touchpad físico e o nó do touchpad do
+#      VPAD, que recebe os touch points copiados do report cru
+#      (`core/physical_report_reader.py`, janela de motion 15..39 — os touch
+#      points moram em 32..39). Tirar UM dos dois deixa exatamente um. Este
+#      arquivo tira o do VPAD, para sempre e em todos os modos: o vpad existe
+#      para o JOGO, e o jogo lê o touchpad pelo HID do vpad, nunca pelo ponteiro
+#      do libinput. Nada se perde e o dobro não volta;
+#
+#   2. o CURSOR ENGASGADO (26/06) era o hefesto e o libinput movendo o MESMO
+#      cursor a partir do MESMO dedo. A cura agora é de RUNTIME e mora no
+#      produto, não aqui: o `TouchpadReader` lê esta mesma flag no nó que abriu
+#      (`core/evdev_reader.py: libinput_ignora_device`) e, quando o SISTEMA é o
+#      ponteiro, não acumula movimento nem entrega região de clique ao teclado
+#      virtual. Um dono por vez, decidido pelo estado real do nó — e não por um
+#      modo que o udev não tem como conhecer no `add|change`.
+#
+# POR QUE NÃO REAVALIAR ESTA REGRA NA TROCA DE MODO: `LIBINPUT_IGNORE_DEVICE` só
+# é lida pelo libinput no (re)add do device, e reavaliá-la exigiria
+# `udevadm trigger` — que pede root. O daemon é de SESSÃO, roda como ela, e a
+# troca de modo é um clique. Uma cura que precisa de root a cada clique não é
+# produto. O gate de runtime acima não precisa de nada: é uma leitura de arquivo
+# quando o nó abre.
+#
+# COMO O VPAD É RECONHECIDO — duas âncoras, de propósito:
+#
+#   1. o NOME. O vpad se chama "DualSense Wireless Controller (Hefesto P1)"
+#      (`integrations/uhid_gamepad.py`, propriedade `name`), e o hid_playstation
+#      acrescenta o sufixo " Touchpad" ao nó auxiliar
+#      (`ps_allocate_input_dev`, assets/dkms/hid-playstation/hid-playstation.c).
+#      O curinga `*Hefesto*Touchpad` cobre esse nome E o legado
+#      "Hefesto Virtual DualSense P1 Touchpad", que rodou até 08/2026;
+#   2. o MAC FORJADO. O vpad nasce com `uniq` na faixa localmente administrada
+#      `02:fe:00:00:00:0N` (`integrations/uhid_gamepad.py: player_mac`) — por
+#      definição não colide com hardware real. Esta segunda linha é a rede: o
+#      nome do vpad JÁ mudou uma vez (BT-E-VPAD-01), e foi exatamente uma
+#      mudança de nome que furou o match exato de 26/06.
+#
+# `ATTRS{phys}` NÃO serve de âncora aqui: o `ps_allocate_input_dev` não copia o
+# `phys` do hid_device para o input_dev, e o atributo sai VAZIO nos quatro nós —
+# medido em 09/08/2026 em `/sys/class/input/input*/phys` com o controle dela
+# plugado. Quem discrimina no evdev (`core/evdev_reader.py: _is_virtual_evdev`)
+# lê o `phys` do hidraw, que é outro nó.
+#
+# Reverter para o comportamento de 21/07 (touchpad físico fora do libinput em
+# todos os modos): trocar as duas linhas abaixo por
+#   ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="*DualSense*Touchpad", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+# O produto continua correto nesse caso — o gate de runtime lê a flag e devolve
+# o cursor ao hefesto sozinho.
+#
+# A flag continua valendo só no (re)add do device: replug/reboot é o garantido,
+# e `udevadm trigger --action=change --subsystem-match=input` costuma bastar.
+
+# --- o touchpad do VPAD do hefesto, por nome (atual e legado) ---
+ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="*Hefesto*Touchpad", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+# --- o mesmo vpad, pelo MAC forjado: sobrevive à próxima renomeação ---
+ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{uniq}=="02:fe:*", ATTRS{name}=="*Touchpad", ENV{LIBINPUT_IGNORE_DEVICE}="1"

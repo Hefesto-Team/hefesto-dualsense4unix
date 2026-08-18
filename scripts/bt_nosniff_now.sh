@@ -38,6 +38,21 @@ fi
 #: (o clone 8BitDo se anuncia com os mesmos VID/PID do Pro).
 OUI_NINTENDO_REAL="E0:F6:B5"
 
+# DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): vazio = journal (produção); caminho =
+# arquivo; `none` = nada. Existe porque a suíte roda estes scripts DE VERDADE e
+# sem isto grava, no journal da máquina dela, linhas que descrevem eventos que
+# nunca aconteceram. Motivo completo no cabeçalho do bt_bonds_autorestore.sh.
+LOG_TAG=hefesto-bt
+LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
+_registrar() {
+    case "${LOG_DEST}" in
+        "")   logger -t "${LOG_TAG}" "$*" 2>/dev/null || true ;;
+        none) : ;;
+        *)    printf '%s %s: %s\n' "$(date -Is 2>/dev/null || true)" "${LOG_TAG}" "$*" \
+                  2>/dev/null >>"${LOG_DEST}" || true ;;
+    esac
+}
+
 if [[ "${MAC^^}" != "${OUI_NINTENDO_REAL}"* ]]; then
     exit 0  # não é o Pro genuíno: o sniff fica como está
 fi
@@ -49,13 +64,11 @@ command -v hcitool >/dev/null 2>&1 || exit 0
 # assim falhar, a vigia de 2 min aplica no próximo tick (degradação, não perda).
 for _ in 1 2 3; do
     if hcitool lp "${MAC}" RSWITCH >/dev/null 2>&1; then
-        command -v logger >/dev/null 2>&1 &&
-            logger -t hefesto-bt "no-sniff aplicado na borda de conexão de ${MAC} (Pro genuíno)"
+        _registrar "no-sniff aplicado na borda de conexão de ${MAC} (Pro genuíno)"
         exit 0
     fi
     sleep 0.2
 done
 
-command -v logger >/dev/null 2>&1 &&
-    logger -t hefesto-bt "no-sniff na borda falhou para ${MAC}; a vigia tenta no próximo tick"
+_registrar "no-sniff na borda falhou para ${MAC}; a vigia tenta no próximo tick"
 exit 0

@@ -153,6 +153,46 @@ VOLATILE_ABSENCE_LIMIT = 2
 #: matou o 8BitDo ao vivo.
 LED_MIN_INTERVAL_SEC = 2.0
 
+#: LUGAR-À-MESA-01 / E0 — **DECISÃO DELA, 07/08/2026: "calar a luz até a
+#: entrega existir"** (resposta 12 do painel, em
+#: ``docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md``).
+#: Enquanto o controle externo NÃO for jogador de verdade dentro do jogo, o
+#: Hefesto **não acende número de jogador nele**.
+#:
+#: **O que "calar" é, e por que não é "apagar".** Com este interruptor em
+#: ``False`` o tick faz ZERO escritas — não apaga a barra do Pro nem a lightbar
+#: do 8BitDo. O critério dela é *"o produto não pode AFIRMAR jogador"*, e apagar
+#: também é afirmar: seria a nossa mão, no mesmo nó, dizendo "este controle não
+#: tem jogador", destruindo o padrão que o firmware/kernel põe ali sozinho (na
+#: lightbar do 8BitDo em modo DS4, acesa é o sinal de "ligado"; apagá-la trocaria
+#: uma mentira por outra, "sem bateria"). Zero escritas deixa o plástico
+#: EXATAMENTE como ficaria com o Hefesto desinstalado — e isso é falseável:
+#: pare o daemon e a luz não muda. Três razões a mais: o rádio fica sem tráfego
+#: de LED na direção do firmware mais frágil da mesa (o clone do 8BitDo morre
+#: sob bombardeio — `daemon/ipc_handlers.py:286-291`); o precedente MEDIDO desta
+#: casa já traduz "parar de afirmar" como *"zero escritas, sem apagar
+#: ativamente"* (o gate ``auto_numbers`` logo abaixo, R-14/NUMA-03c), e ter duas
+#: doutrinas para a mesma frase é como se perde uma; e o custo de voltar é uma
+#: linha.
+#:
+#: **O caminho de volta é UMA LINHA: trocar para ``True``.** A capacidade não
+#: foi enterrada — ``core/external_leds.py`` continua inteiro e testado, e o
+#: gate limpa os caches ao passar, então o primeiro tick com a luz de volta
+#: reescreve todos os slots. A ATRIBUIÇÃO de slot NÃO é afetada (numerar é
+#: identidade; este interruptor governa só a APARÊNCIA).
+#:
+#: **Condição de volta, objetiva:** quando o externo virar jogador de verdade —
+#: a `E3` da LUGAR-À-MESA-01, que ela autorizou **só depois da MASCARA-01**.
+#: Não é "quando alguém achar que já dá".
+#:
+#: **Custo declarado (GRAU: SUSPEITA COM MECANISMO).** O nó de LED guarda o
+#: último valor escrito enquanto o device segue vinculado: num daemon que
+#: REINICIA com o controle já conectado, o número que a versão anterior acendeu
+#: FICA aceso — resíduo nosso, não afirmação nova. Reconectar o controle (ou
+#: religá-lo) devolve o padrão do firmware. Apagar uma vez na transição foi
+#: recusado de propósito: é exatamente a escrita que o critério dela proíbe.
+EXTERNAL_PLAYER_LED_ENABLED = False
+
 #: GYRO-02: OUI (6 hex, sem ``:``) do Nintendo Pro Controller GENUÍNO — o
 #: ÚNICO gatilho do enable-IMU. NÃO confundir com o 8BitDo em modo Switch
 #: (mesmo VID/PID 057e:2009, IMU nativa já viva — nada a fazer nele); a OUI
@@ -902,6 +942,15 @@ class ExternalImuEnabler:
 class ExternalLedSync:
     """Aplica o LED de posição dos externos no TICK do daemon (EXT-04, item 3).
 
+    **CALADO desde 07/08/2026** (E0 da LUGAR-À-MESA-01, DECISÃO DELA): o
+    interruptor de módulo :data:`EXTERNAL_PLAYER_LED_ENABLED` está ``False``, e
+    com ele o tick faz ZERO escritas de LED — enquanto o externo não for
+    jogador de verdade no jogo, o produto não acende número nele. **Tudo o que
+    esta docstring descreve abaixo continua implementado, testado e intacto**,
+    esperando a `E3`; é o gate que muda, e voltar é trocar aquela constante para
+    ``True``. A ATRIBUIÇÃO de slot, a reconciliação do registro e o enable-IMU
+    seguem rodando normalmente.
+
     ``tick()`` é BLOQUEANTE (enumeração evdev de 10-40 ms + sysfs) — o
     lifecycle a despacha via ``_run_blocking`` (executor), nunca no event
     loop. Disciplina de escrita, na ordem:
@@ -922,11 +971,13 @@ class ExternalLedSync:
     ``daemon.display_authority`` ('game'|'daemon'|'unknown'; atributo ausente
     = sem fiação = comportamento HEAD):
 
-    - ``daemon``: antes do skip por-valor, RE-LÊ o padrão físico via classe
+    - ``daemon``: antes do skip por-valor, RE-LÊ o padrão via classe LED
       (:func:`read_player_pattern` — memória do kernel, zero subcomando BT);
-      padrão ≠ slot = escritor estrangeiro ⇒ repinta DENTRO do rate-limit de
-      2s + log ``external_led_repintado`` (o cache por-VALOR sozinho era o
-      ponto cego S5: terceiro escrevia o LED e o daemon não repintava);
+      padrão ≠ slot ⇒ repinta DENTRO do rate-limit de 2s + log
+      ``external_led_repintado`` (o cache por-VALOR sozinho era o ponto cego
+      S5: terceiro escrevia o LED e o daemon não repintava). **O rótulo
+      "escritor estrangeiro" desta divergência CADUCOU — ver a nota datada no
+      fim deste docstring;**
     - ``game``/``unknown``: device já cacheado NÃO é corrigido (externos não
       são disputados em jogo), mas device NOVO sem cache ainda recebe a
       numeração 1x (atribuição ≠ disputa — 8BitDo chegando mid-game não
@@ -941,6 +992,28 @@ class ExternalLedSync:
     simétrico ao provider, que deixa de emitir ``player_leds``) + cache
     limpo; OFF→ON reescreve os slots. A ATRIBUIÇÃO de slot roda sempre,
     antes do gate.
+
+    .. warning::
+
+       **NOTA DATADA — 07/08/2026 21h04: ``external_led_repintado`` NÃO
+       significa "escritor estrangeiro".** Em **11 de 11** ocorrências do lado
+       A de 07/08, o "intruso" que este tick acusou era **a nossa própria
+       escrita anterior** — as repinturas são o daemon perseguindo o próprio
+       eco.
+
+       **O mecanismo:** :func:`read_player_pattern` lê o ``brightness`` da
+       classe LED, que é memória do valor **PEDIDO**; o kernel o grava antes de
+       tentar o hardware e nunca o reverte na falha. Uma escrita que morreu no
+       rádio (``-110``) continua sendo relida como o número pedido. Logo esta
+       comparação **não pode** distinguir firmware de terceiro: ela só enxerga
+       escrita de **outro processo** pelo mesmo ``sysfs`` (a Steam pintando
+       "player 1+3"), que é tudo o que ela sempre pôde enxergar.
+
+       **Quem for contar repinturas em qualquer janela do journal precisa ler
+       isto antes:** o número não mede disputa de LED. A medição, e a correção
+       de uma linha que devolveria o nome ao log (S3), estão em
+       ``docs/process/sprints/2026-08-07-A-LUZ-QUE-CUROU-01-calar-parou-o-bombardeio-e-voltar-tem-preco.md``,
+       seções 2.1 a 2.3 e 6. GRAU: MEDIDO.
     """
 
     def __init__(self, daemon: Any, registry: ExternalIdentityRegistry) -> None:
@@ -1168,6 +1241,26 @@ class ExternalLedSync:
                 self._last_write_at.clear()
             self._last_authority = autoridade
 
+            if not EXTERNAL_PLAYER_LED_ENABLED:
+                # E0 da LUGAR-À-MESA-01 — DECISÃO DELA de 07/08/2026: "calar a
+                # luz até a entrega existir". Enquanto o externo não for jogador
+                # dentro do jogo, o Hefesto não acende número nele: ZERO
+                # escritas, sem apagar (ver a docstring de
+                # `EXTERNAL_PLAYER_LED_ENABLED`, que diz por que apagar também
+                # seria afirmar). O caminho de volta é aquela constante.
+                #
+                # A leitura da constante mora AQUI, e não em `apply_player_number`,
+                # de propósito: a capacidade tem de continuar viva e testável no
+                # `core/external_leds.py` esperando a E3 — um "calar" que apagasse
+                # o código custaria a leva inteira para desfazer.
+                #
+                # Cache limpo pelo mesmo motivo do gate de automático abaixo:
+                # OFF→ON reescreve tudo no primeiro tick seguinte.
+                if self._last_value or self._last_write_at:
+                    self._last_value.clear()
+                    self._last_write_at.clear()
+                return
+
             if not self._auto_numbers_enabled():
                 # NUMA-03c: automático OFF ⇒ PARA DE AFIRMAR (zero escritas,
                 # sem apagar ativamente) + cache limpo — OFF->ON reescreve tudo
@@ -1193,9 +1286,12 @@ class ExternalLedSync:
 
                 intruso: int | None = None
                 if autoridade == "daemon" and ja_cacheado:
-                    # (a)/(c) daemon: re-lê o padrão físico ANTES do skip por-
-                    # valor — escritor estrangeiro é detectado por CLASSE LED
-                    # (zero subcomando BT), nunca por sonda.
+                    # (a)/(c) daemon: re-lê o padrão ANTES do skip por-valor,
+                    # por CLASSE LED (zero subcomando BT), nunca por sonda.
+                    # NOTA DATADA 07/08/2026: o que se detecta aqui NÃO é
+                    # "escritor estrangeiro" — é divergência no sysfs, e em 11
+                    # de 11 casos ela era a nossa própria escrita anterior.
+                    # Ver a nota datada no docstring do ExternalLedSync.
                     hid_instance = hid_instance_for_hidraw(hidraw)
                     if hid_instance:
                         padrao = read_player_pattern(hid_instance)
@@ -1234,6 +1330,7 @@ class ExternalLedSync:
 
 __all__ = [
     "EXTERNAL_IDENTITY_FIELD",
+    "EXTERNAL_PLAYER_LED_ENABLED",
     "IMU_ENABLE_BACKOFF_SEC",
     "IMU_ENABLE_MAX_ATTEMPTS",
     "LED_MIN_INTERVAL_SEC",

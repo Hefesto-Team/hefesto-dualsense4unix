@@ -15,7 +15,9 @@ class _FakeDaemon:
         self.calls: list[tuple[bool, str | None]] = []
         self.config = _FakeConfig()
 
-    def set_gamepad_emulation(self, enabled: bool, flavor: str | None = None) -> bool:
+    def set_gamepad_emulation(
+        self, enabled: bool, flavor: str | None = None, **_kw: object
+    ) -> bool:
         self.calls.append((enabled, flavor))
         if flavor:
             self.config.gamepad_flavor = flavor

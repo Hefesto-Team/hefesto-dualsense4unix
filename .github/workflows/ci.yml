@@ -79,8 +79,31 @@ jobs:
       - name: Varredura de glifos
         run: python3 scripts/validar-glifos.py --all
 
+  palavra-de-tela:
+    name: Palavra de tela (maiúscula no rótulo, jargão aposentado fora)
+    runs-on: ubuntu-latest
+    # PALAVRA-01 / E5 (13/08/2026). A sprint de 27/07 fecha com "E5. Um gate,
+    # para não voltar" e descreve exatamente o que ele reprova. Dezessete dias
+    # depois o script não existia — a seção era uma promessa sem caminho, que é
+    # a família de defeito que esta casa mais paga (A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01).
+    #
+    # Ele nasce VERDE e com a dívida ESCRITA: os quatro rótulos que ainda
+    # carregam jargão da tabela E3 estão declarados um a um dentro do script,
+    # com o que cada um vira. Isso não é perdão — é o que permite o portão
+    # entrar hoje, sem que a redação da tela (que é decisão dela) vire
+    # pré-requisito de um portão de CI. Rótulo NOVO com jargão reprova, que é
+    # literalmente o que a E5 pede: "reintroduzir `daemon offline` num rótulo
+    # tem de reprovar de novo".
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Varredura da palavra de tela
+        run: python3 scripts/validar-palavra-de-tela.py --all
+
   referencias-docs:
-    name: Documento que cita arquivo inexistente
+    name: Documento que cita arquivo, env ou método de IPC inexistente
     runs-on: ubuntu-latest
     # PORTÃO-VIVO-01 bloco F. Nasceu informativo (continue-on-error) porque
     # reprovava de propósito: a sprint exigiu que ele mordesse na árvore como
@@ -93,6 +116,17 @@ jobs:
     # passou a citar `scripts/validar-glifos.py`, que existe e faz o que o nome
     # imaginário prometia) e `--all` sai com código 0. O `continue-on-error`
     # saiu junto: a partir daqui o job PROTEGE, não relata.
+    #
+    # DOC-VERDADE-02 / E10 (01/08): o portão cobrava ARQUIVO, e só. Variável de
+    # ambiente e método de IPC não são arquivos, e foi por esse buraco que o
+    # ADR-017 sobreviveu meses ensinando `HEFESTO_PLUGINS_ENABLED` (a real é a
+    # longa) e o ADR-010 anunciando um socket em `$XDG_RUNTIME_DIR/hefesto/`.
+    # Duas regras novas entram aqui, restritas aos documentos que ENSINAM
+    # (`docs/usage/`, `docs/adr/`, `docs/protocol/`, `README.md`) e medidas
+    # contra a árvore ANTES de propostas: zero falso positivo. `docs/process/`
+    # fica fora por escrito — sprint propõe o que ainda não existe, e isso é o
+    # trabalho dela. O `README.md` passou a ser varrido: ficava de fora só por
+    # morar na raiz, sendo a página que mais gente copia e cola.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -100,6 +134,71 @@ jobs:
           python-version: "3.12"
       - name: Varredura de referências
         run: python3 scripts/validar-referencias-docs.py --all
+      # CITACOES-DERIVADAS-01 (13/08). O passo acima confere o ARQUIVO; este
+      # confere a LINHA, que é a metade que apodrece sozinha — nenhuma
+      # refatoração renomeia `core/backend_pydualsense.py`, e toda refatoração
+      # move o que estava na linha 789 dele. MEDIDO em 13/08 na árvore: dois
+      # endereços da canônica não abriam no que prometiam, e um deles sustentava
+      # um grau **ALTA — lido no código**.
+      - name: Citação de linha que não abre no que promete
+        run: python3 scripts/validar-citacoes-de-linha.py --all
+      # IPC-DOC-GERADO-01 (13/08): a lista de métodos IPC sai do dispatcher, não
+      # da mão. Sem este passo um método nasce sem contrato e ninguém percebe —
+      # que é como o documento chegou a ter dez linhas para 37 métodos.
+      - name: O contrato IPC publicado reflete o dispatcher
+        run: python3 scripts/gerar-contrato-ipc.py --check
+
+  mapa-de-canais:
+    name: Mapa de canais (o publicado bate com as fontes + o censo)
+    runs-on: ubuntu-latest
+    # PARIDADE-PORTAO-01 (11/08). O commit que criou o mapa afirma, na própria
+    # mensagem, que "o mapa de canais existe, e ele é portão — não
+    # documentação". MEDIDO em 11/08: não era. O `--check` do `gerar-mapa.py`
+    # existia e NINGUÉM o chamava — nem workflow, nem hook, nem teste. É a
+    # família exata do PORTÃO-VIVO-01 e do ÍCONE-VIVO-01: o gate que se anuncia
+    # no cabeçalho e não roda em lugar nenhum.
+    #
+    # MAPA-CONTEUDO-01 (12/08): até aqui o primeiro passo comparava MTIME, e
+    # mtime neste runner é ordem de checkout, não histórico de edição — o
+    # `actions/checkout` escreve em ordem de caminho e `specs.html` (raiz, "sp")
+    # sai depois de `docs/` e de `scripts/`, nascendo sempre "mais novo" que as
+    # fontes. O passo passava SEMPRE, qualquer que fosse o conteúdo. Hoje ele
+    # regenera a página em memória e compara o CONTEÚDO, e por isso morde igual
+    # no runner e na máquina de quem edita. O censo do passo seguinte continua,
+    # com outro alcance: ele confere o CSV linha a linha e o resto do mapa.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: O specs.html publicado reflete o CSV e os desenhos
+        run: python3 scripts/gerar-mapa.py --check
+      # A DÍVIDA FOI PAGA EM 15/08/2026, e por isso este passo REPROVA.
+      #
+      # Ele nasceu informativo (`continue-on-error: true`) contra o CSV de
+      # 11/08, quando a coluna `teste_que_morde` estava INTEIRA VAZIA e toda
+      # célula que afirmava `aciona = sim` com `de_onde_sei = medido` reprovava.
+      # (A coluna se chamava `confianca` até a D-13 de 15/08/2026, que a
+      # renomeou sem mudar o domínio.)
+      # O comentário de então prometia, literalmente, que *"o
+      # `continue-on-error` sai no dia em que ela é paga"* — e o dia chegou:
+      # das 17 células sem rede que sobravam, 15 ganharam teste que morde e 2
+      # tiveram o `de_onde_sei` rebaixado para o que a evidência de fato
+      # sustentava (`luz.led_microfone@dualsense` no cabo, que era leitura de
+      # fonte e não medição; e `plataforma.vigia_zumbi@sn30` no rádio, onde o
+      # medido é o BURACO — a vigia pula todo aparelho com `[ServiceRecords]`
+      # no cache).
+      #
+      # Rebaixar não é derrota: é o portão fazendo o trabalho dele. As duas
+      # levaram nota datada, e nada foi apagado.
+      #
+      # O que este passo reprova, a partir de agora: afirmação forte sem teste
+      # que morda, mordida que aponta um nó que o pytest não coleta, prova
+      # vencida, integridade do CSV e linha do CSV que ninguém publicou no
+      # `specs.html`. Se ele voltar a ficar vermelho, o conserto é escrever a
+      # mordida ou baixar o `de_onde_sei` — NÃO devolver o `continue-on-error`.
+      - name: Censo do mapa (afirmação forte sem teste que morda)
+        run: python3 scripts/check_paridade_transporte.py
 
   shellcheck:
     name: Shellcheck (severidade error)
@@ -124,6 +223,27 @@ jobs:
       - name: Varredura em severidade error
         run: shellcheck -S error scripts/*.sh install.sh uninstall.sh
 
+  icones:
+    name: Ícones derivados do SVG canônico
+    runs-on: ubuntu-latest
+    # ÍCONE-VIVO-01 (03/08): o `scripts/gerar_icones.sh` dizia no cabeçalho que
+    # o `--check` "é o que o CI roda" — e NENHUM job o chamava. A divergência
+    # entre o SVG e os PNGs só aparecia pelo `test_icones_refletem_o_svg` da
+    # suíte, que é uma rede legítima mas tardia e indireta.
+    #
+    # Este job é barato (um `rsvg-convert` por tamanho) e responde a pergunta
+    # que a suíte responde de lado: "os derivados refletem a fonte canônica?".
+    # `librsvg2-bin` é a única dependência — o mesmo `rsvg-convert` que o
+    # `gtk-real` já instala por outro motivo.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar rsvg-convert
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+      - name: Conferir que os PNGs refletem o SVG
+        run: bash scripts/gerar_icones.sh --check
+
   packaging-parity:
     name: Paridade de empacotamento
     runs-on: ubuntu-latest
@@ -135,6 +255,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash scripts/check_packaging_parity.sh
+
+  promessa-sem-caminho:
+    name: A casa sabe e o produto não faz
+    runs-on: ubuntu-latest
+    # A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01 (12/08/2026): o portão que reprova
+    # promessa exposta sem caminho de produção que a alcance — artefato em
+    # assets/ sem dono no install, interruptor que ninguém liga, símbolo
+    # público sem chamador (`tests/` NÃO conta como caminho).
+    #
+    # Job PRÓPRIO, e não dentro do `lint-test`, por custo MEDIDO em 12/08: o
+    # arquivo sozinho leva ~2 min, contra 4m43 da suíte inteira de 9113 testes.
+    # Dentro da varredura padrão ele fazia a suíte parecer travada. Por isso o
+    # arquivo também não se chama `test_*` — o pytest só o coleta quando
+    # apontado pelo caminho, que é o que esta linha faz.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: python -m pip install --upgrade pip && pip install pytest
+      - run: python -m pytest tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py -q
 
   version-check:
     runs-on: ubuntu-latest
@@ -222,6 +363,13 @@ jobs:
           fi
       - name: Ruff
         run: ruff check src/ tests/
+      # CURVA-TABELA-01 (13/08). Ele mora AQUI, e não no job dos documentos, por
+      # uma razão de dependência: o gerador chama `gerar_tabela_markdown`, que
+      # vive num módulo pydantic — e os jobs de documento rodam com o Python pelado
+      # do runner. Portão que tropeça no import vira "zero curvas" em silêncio, e
+      # gate silencioso é o defeito de que a PORTÃO-VIVO-01 nasceu.
+      - name: A tabela de curvas próprias reflete o catálogo
+        run: python3 scripts/gerar-tabela-de-curvas.py --check
       # GUARDA-GI-REAL-01: um módulo que some da coleta some CALADO. O `pytest`
       # aborta com "Interrupted: N errors during collection" no meio de
       # milhares de linhas de log, e um `6 skipped` na coleta não aparece em
@@ -231,10 +379,70 @@ jobs:
       # O piso 5100 foi MEDIDO (28/07, sem PyGObject: 5226 testes coletados) e
       # é uma trava de encolhimento, não uma meta: só sobe quando alguém quiser
       # subi-lo. Se cair abaixo, um módulo inteiro deixou de ser coletado.
+      #
+      # PISO-DA-COLETA-01 (13/08/2026) derrubou o "só sobe quando alguém quiser
+      # subi-lo" do parágrafo acima — é um convite que ninguém aceitou em
+      # dezesseis dias — e subiu o piso de 5100 para 7850, com a margem escrita.
+      # A lição que fica dela é mais dura: **o piso caduca sozinho**. Ninguém
+      # precisa mexer nele para que ele pare de guardar — basta a suíte crescer.
+      # Em 13/08 a folga era de 77 nós; dois dias depois, sem que uma linha
+      # deste arquivo mudasse, tinha virado 305, e o MAIOR módulo da árvore tem
+      # 128 testes: o passo voltou a contar sem guardar. O piso parado é o modo
+      # de falha desta régua, e é por isso que a conta abaixo vem DATADA.
+      #
+      # PISO-DA-COLETA-02 (15/08/2026). MEDIDO hoje com o perfil DESTE job
+      # emulado (`gi` e `cairo` bloqueados no `sys.meta_path`: o `setup-python`
+      # não enxerga o `dist-packages` do sistema, e nem `PyGObject` nem
+      # `pycairo` estão em `[project.optional-dependencies].dev`), pela régua
+      # do próprio passo (`grep -cE '^tests/.+::'`), em Python 3.12.3:
+      #
+      #   - **8155 coletados**, em 472 módulos;
+      #   - na máquina de desenvolvimento, com `PyGObject` e `pycairo` REAIS, a
+      #     mesma régua dá 9568. Os 1413 de diferença são os 84 módulos de
+      #     interface que PULAM neste job (ver o passo de instalação acima).
+      #     Calibrar contra 9568 deixaria o passo vermelho no primeiro run: o
+      #     número que vale AQUI é 8155, e quem for remedir tem de bloquear as
+      #     duas bibliotecas antes de contar;
+      #   - a medição roda com `--continue-on-collection-errors`, como o passo.
+      #     Módulo que erre na coleta no dia não entra nos 8155 — consertá-lo
+      #     só faz o total SUBIR, nunca descer.
+      #
+      # A MARGEM VAI ESCRITA — é ela que faz o piso não precisar de coragem
+      # para subir da próxima vez. Ela é dimensionada contra o que o runner
+      # PODE perder por ambiente, contado módulo a módulo (todo
+      # `pytest.importorskip` em nível de módulo, que é o que tira um arquivo
+      # da coleta em silêncio), recontado hoje:
+      #
+      #   - `tomllib`: 8 testes, em
+      #     `tests/unit/test_versoes_validadas_batem_com_o_codigo.py`, que abre
+      #     com `importorskip("tomllib", reason="tomllib exige Python 3.11+")`.
+      #     Continua sendo a ÚNICA perda que depende da versão de Python, e só
+      #     na perna 3.10 — **pior caso da matriz: 8147**;
+      #   - `yaml`: 19 testes em 2 módulos. Não conta como risco — `PyYAML` é
+      #     dependência declarada em `[project.optional-dependencies].dev`, que
+      #     é o que este job instala;
+      #   - `gi` e `cairo`: já descontados, porque os 8155 foram medidos COM as
+      #     duas bloqueadas. Não descontam de novo;
+      #   - nenhum `pytest.skip(..., allow_module_level=True)` condicionado a
+      #     versão fora do `tests/conftest.py`.
+      #
+      # 8147 - 8100 = **47 nós de folga**, 0,58% da suíte — quase seis vezes a
+      # única variação que a medição encontrou.
+      #
+      # O que a margem COMPRA: o passo reprova quando qualquer módulo com mais
+      # de 47 testes sumir da coleta. Hoje são **23 dos 472 módulos**, entre
+      # eles os cinco maiores (128, 125, 121, 111 e 95 testes) — contra 5
+      # módulos que o piso 7850 via em 13/08.
+      # O que ela NÃO compra: um módulo mediano continua sumindo sem que esta
+      # régua veja. A mediana é 12 testes por módulo, e 449 dos 472 estão
+      # abaixo do limiar. Fica escrito para que a próxima pessoa não confunda
+      # "piso apertado" com "cobertura de módulo" — são coisas diferentes, e só
+      # a primeira está resolvida aqui. A segunda pede um censo POR MÓDULO (uma
+      # lista de arquivos que têm de aparecer na coleta), que não existe.
       - name: Censo de coleta (nenhum módulo pode sumir calado)
         run: |
           set -uo pipefail
-          PISO=5100
+          PISO=8100
           pytest tests --collect-only -q --continue-on-collection-errors \
             > /tmp/coleta.txt 2>&1 || true
           TOTAL=$(grep -cE '^tests/.+::' /tmp/coleta.txt || true)
@@ -414,6 +622,16 @@ jobs:
         # pyproject (CHORE-CI-PIN-RUFF-01) para o hook e o job `lint-test`
         # nunca divergirem de versão.
         run: pip install pre-commit "ruff==0.15.20"
+      # RSVG-NO-PRE-COMMIT-01 (13/08/2026): o hook `icones-refletem-o-svg` roda
+      # `scripts/gerar_icones.sh --check`, que exige `rsvg-convert`. O job
+      # `icones` já o instala para rodar o MESMO script; aqui faltava, e o
+      # `pre-commit run --all-files` reprovava com "ERRO: rsvg-convert ausente"
+      # — falha de AMBIENTE do runner, não do repositório, e que escondia o
+      # resultado dos outros doze hooks atrás de um exit 1.
+      - name: Instalar rsvg-convert (o hook de ícones precisa dele)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
       - name: Rodar todos os hooks em todos os arquivos
         run: pre-commit run --all-files --show-diff-on-failure
 

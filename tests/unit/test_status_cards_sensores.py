@@ -65,6 +65,7 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     MIC_AMOSTRAS,
     cor_da_barra_do_mic,
     fracao_do_eixo,
+    fracao_do_volume,
     historico_deslizante,
     posicao_normalizada,
     texto_eixo,
@@ -187,7 +188,7 @@ def test_posicao_normalizada_grampeia_fora_de_faixa() -> None:
 
 
 @pytest.mark.parametrize(
-    ("n", "esperado"), [(0, "sem toque"), (1, "1 toque"), (2, "2 toques")]
+    ("n", "esperado"), [(0, "Sem toque"), (1, "1 toque"), (2, "2 toques")]
 )
 def test_texto_toques(n: int, esperado: str) -> None:
     assert texto_toques(n) == esperado
@@ -251,7 +252,7 @@ def test_touchpad_sem_dedo_apaga_o_ponto_mas_mantem_o_painel(card: Any) -> None:
 
     assert card._touch_box.get_visible() is True
     assert card._touch_view._toque is None
-    assert card._touch_label.get_text() == "sem toque"
+    assert card._touch_label.get_text() == "Sem toque"
 
 
 def test_mic_sem_leitura_fica_no_lugar_dizendo_sem_sinal(card: Any) -> None:
@@ -513,20 +514,41 @@ def test_bloco_do_speaker_fica_dizendo_que_ninguem_ajustou(card: Any) -> None:
 
 
 def test_bloco_do_speaker_acende_com_a_chave(card: Any) -> None:
+    """O bloco reage à chave — e reage com a grandeza que o OUVIDO mede.
+
+    Este teste travava ``_fracao == 128 / 255`` e o rótulo em "50 %". A
+    SOM-03 mediu o registrador no hardware (tom de 1 kHz, o microfone do
+    próprio DualSense como instrumento) e **refutou a régua**: 102, 128 e 255
+    devolvem a mesma magnitude (8759, 8488, 8793). Um registrador em 128 é o
+    volume MÁXIMO, e "50 %" era a interface dizendo que havia o dobro de
+    volume disponível quando não havia mais nada.
+
+    O teste não foi apagado nem afrouxado: ele continua cobrando exatamente o
+    que protegia — que a chave ACENDE o bloco e que barra e rótulo saem da
+    mesma conta, e não de duas — só que agora contra a régua medida. Por isso
+    o valor esperado é DERIVADO de `fracao_do_volume` em vez de escrito à mão:
+    um número cravado aqui voltaria a travar a régua, que foi o defeito.
+
+    A mordida: devolver ``fracao_do_volume`` a ``bruto / 255`` derruba as duas
+    asserções de uma vez — a fração cai para 0,50 e o rótulo para "50 %".
+    """
     card.update(
         _entry(speaker={"volume": 128, "muted": False}), _ESTADO, None
     )
 
     assert card._speaker_box.get_visible() is True
-    assert card._speaker_bar._fracao == pytest.approx(128 / 255)
-    assert card._speaker_label.get_text() == "50 %"
+    assert card._speaker_bar._fracao == pytest.approx(fracao_do_volume(128))
+    assert card._speaker_label.get_text() == "100 %"
+    # A borda medida: daqui para cima nada mais muda no ouvido, e a tela para
+    # de prometer curso que não existe.
+    assert fracao_do_volume(128) == fracao_do_volume(255) == 1.0
 
 
 def test_speaker_mudo_diz_mudo_em_vez_de_porcentagem(card: Any) -> None:
     card.update(_entry(speaker={"volume": 200, "muted": True}), _ESTADO, None)
 
     assert card._speaker_bar._muted is True
-    assert card._speaker_label.get_text() == "mudo"
+    assert card._speaker_label.get_text() == "Mudo"
 
 
 def test_texto_volume_sem_mute_lido_mostra_so_a_porcentagem() -> None:
@@ -555,15 +577,43 @@ def test_botoes_ficam_na_linha_de_baixo_mesmo_sem_mic_nem_touchpad(
 def test_gyro_oculto_nao_devolve_a_largura_toda_aos_gatilhos(card: Any) -> None:
     """O giroscópio nasce oculto e aparece quando há sensor. Num `Gtk.Box` os
     gatilhos pulariam para a largura inteira e voltariam para metade — reflow
-    visível. O grid homogêneo guarda a coluna pelo `_gyro_slot`, que fica
-    visível mesmo com o módulo escondido."""
+    visível a cada troca de controle.
+
+    **Este teste passou a medir o COMPORTAMENTO, e não o mecanismo.** Ele
+    afirmava `grid.get_column_homogeneous() is True`, que era o jeito de
+    guardar a coluna até 01/08. A ALINHA-DUAS-LINHAS-01 tirou o homogêneo —
+    ele dividia o card em duas metades IGUAIS, e as duas metades da faixa de
+    baixo não são iguais (698 contra 648 na tela dela), então as divisórias
+    das duas linhas nunca batiam. Agora quem guarda a coluna é o `SizeGroup`
+    que a amarra à metade direita da faixa, que existe sempre.
+
+    A propriedade que este teste protege é a mesma de antes, e continua
+    valendo: **os gatilhos não mudam de largura quando o giroscópio some.** É
+    isso que ele mede agora — arrancar o `SizeGroup` faz a largura pular e a
+    asserção cai, exatamente como caía ao arrancar o homogêneo.
+    """
+    card.update(_entry(inputs=_inputs(gyro=_GYRO)), _ESTADO, None)
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+    assert card._gyro_box.get_visible() is True, (
+        "premissa deste teste: com giroscópio no payload o módulo aparece"
+    )
+    com_gyro = card._l2_bar.get_parent().get_allocated_width()
+
     card.update(_entry(), _ESTADO, None)
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+    sem_gyro = card._l2_bar.get_parent().get_allocated_width()
 
     assert card._gyro_box.get_visible() is False
     assert card._gyro_slot.get_visible() is True
+    assert com_gyro == sem_gyro, (
+        f"os gatilhos mediam {com_gyro}px com o giroscópio à vista e "
+        f"{sem_gyro}px sem ele: a coluna deixou de ser guardada e a tela dá "
+        "um pulo a cada troca de controle"
+    )
 
     grid = card._gyro_slot.get_parent()
-    assert grid.get_column_homogeneous() is True
     assert grid.child_get_property(card._gyro_slot, "left-attach") == 1
     assert grid.child_get_property(card._l2_bar.get_parent(), "left-attach") == 0
 
@@ -698,10 +748,20 @@ def test_as_duas_legendas_de_analogico_tem_o_mesmo_numero_de_linhas(
         card._stick_left_title.get_allocated_height()
         == card._stick_right_title.get_allocated_height()
     )
-    # E a lateral não sumiu do card: ela desceu para a linha dos números, que
-    # é onde ela cabe sem inventar uma terceira linha para ninguém.
-    assert card._stick_left_xy.get_text().startswith(ROTULO_STICK_ESQ)
-    assert card._stick_right_xy.get_text().startswith(ROTULO_STICK_DIR)
+    # E a lateral não sumiu do card. Ela já esteve no título (onde mandava na
+    # quebra de linha e criou o defeito acima) e depois na linha dos números;
+    # desde a CARD-ÚNICO-01 ela é a MARCA D'ÁGUA desenhada dentro do círculo,
+    # a pedido dela: *"L3 e R3 saem do X: e vão ficar no centro do desenho do
+    # analógico com transparência 70% e grande ao fundo"*.
+    #
+    # O que este par de asserções trava é o COMPORTAMENTO, não o lugar: a
+    # lateral existe em algum lugar do bloco, e não em DOIS. Repetir "L3" na
+    # marca d'água e no número seria o mesmo defeito de duplicação que a
+    # bateria teve.
+    assert card._stick_left._label == ROTULO_STICK_ESQ
+    assert card._stick_right._label == ROTULO_STICK_DIR
+    assert ROTULO_STICK_ESQ not in card._stick_left_xy.get_text()
+    assert ROTULO_STICK_DIR not in card._stick_right_xy.get_text()
 
 
 def test_ordem_da_faixa_poe_o_microfone_a_direita_dos_analogicos() -> None:

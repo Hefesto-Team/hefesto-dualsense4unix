@@ -1,0 +1,193 @@
+D-32 — a família 0xF0-0xF7 lida nos quatro controles (2 no cabo, 2 no rádio).
+Corrida de 2026-08-15 17h32, com o DAEMON VIVO: a leitura entrou pelo broker
+(SCM_RIGHTS), e os quatro responderam. Os MAC estão mascarados na convenção da
+casa (octetos 4 e 5 zerados). Saída literal do `scripts/ensaios/censo_features.py`,
+sem edição além da máscara e deste cabeçalho.
+
+2026-08-15T17:33:17.337507 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:17.338753 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:17.339107 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T17:33:17.339168 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:17.339422 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T17:33:17.339476 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:17.339733 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T17:33:17.339776 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:17.340003 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T17:33:17.340717 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:17.340982 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T17:33:17.546540 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:17.546991 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T17:33:17.755531 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:17.755923 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T17:33:17.962535 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:17.963037 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T17:33:18.170538 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:18.170952 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T17:33:18.378644 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:18.379039 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T17:33:18.586532 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:18.587102 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T17:33:18.794535 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:18.795031 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T17:33:19.002532 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.002904 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T17:33:19.210528 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.210919 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T17:33:19.418633 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.419073 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T17:33:19.428499 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.428832 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T17:33:19.440490 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.440796 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T17:33:19.449479 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.449770 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T17:33:19.459468 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.459745 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T17:33:19.475495 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.475791 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T17:33:19.507521 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.507896 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T17:33:19.534636 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.535020 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T17:33:19.603499 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.603848 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T17:33:19.618487 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.618795 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T17:33:19.632501 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.632801 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T17:33:19.664507 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.664781 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T17:33:19.673495 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.673783 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T17:33:19.734518 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T17:33:19.734859 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+==============================================================================
+  censo_features.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... cada feature report é o mesmo byte a byte no cabo e no rádio?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... array                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... zlib                   de embutido no interpretador (stdlib estática)
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . SIM — pare o daemon antes, senão o broker esconde o hidraw do físico
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+
+  >> AVISO: este instrumento vai medir com o daemon no caminho.
+  >> Para a medição limpa, rode antes:
+  >>     systemctl --user stop hefesto-dualsense4unix
+==============================================================================
+
+  mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+aparelho           hidraw   transporte  permissão do fs                                                                                                 porta
+-----------------  -------  ----------  --------------------------------------------------------------------------------------------------------------  -------------------
+d4:2f:4b:00:00:d8  hidraw4  cabo        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+a0:fa:9c:00:00:f0  hidraw5  cabo        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+44:46:48:00:00:03  hidraw8  rádio       sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+14:3a:9a:00:00:ab  hidraw9  rádio       sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+
+  O QUE CADA TRANSPORTE DECLARA (do report_descriptor, sem ler nada)
+
+report  cabo  rádio
+------  ----  -----
+0x05    sim   sim
+0x08    sim   sim
+0x09    sim   sim
+0x0a    sim   —
+0x0b    sim   sim
+0x0c    sim   —
+0x20    sim   sim
+0x21    sim   —
+0x22    sim   sim
+0x80    sim   sim
+0x81    sim   sim
+0x82    sim   sim
+0x83    sim   sim
+0x84    sim   —
+0x85    sim   —
+0xa0    sim   —
+0xe0    sim   —
+0xf0    sim   sim
+0xf1    sim   sim
+0xf2    sim   sim
+0xf4    sim   sim
+0xf5    sim   sim
+0xf6    —     sim
+0xf7    —     sim
+
+    9 report(s) declarados por UM transporte só: 0x0a, 0x0c, 0x21, 0x84, 0x85, 0xa0, 0xe0, 0xf6, 0xf7
+    Um conjunto não é subconjunto do outro — não existe 'a lista
+    dos feature reports do DualSense'; existe uma por transporte.
+
+  8 feature reports na UNIÃO dos descritores da mesa.
+
+  lendo d4:2f:4b:00:00:d8 (hidraw4, cabo) …
+      0xf0   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0xf1   64B  ok      1 tentativa(s)   0.21s
+      0xf2   16B  ok      1 tentativa(s)   0.21s
+      0xf3    -   não declarado neste transporte
+      0xf4   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0xf5    4B  ok      1 tentativa(s)   0.21s
+      0xf6    -   não declarado neste transporte
+      0xf7    -   não declarado neste transporte
+
+  lendo a0:fa:9c:00:00:f0 (hidraw5, cabo) …
+      0xf0   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0xf1   64B  ok      1 tentativa(s)   0.21s
+      0xf2   16B  ok      1 tentativa(s)   0.21s
+      0xf3    -   não declarado neste transporte
+      0xf4   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0xf5    4B  ok      1 tentativa(s)   0.21s
+      0xf6    -   não declarado neste transporte
+      0xf7    -   não declarado neste transporte
+
+  lendo 44:46:48:00:00:03 (hidraw8, rádio) …
+      0xf0   64B  ok      1 tentativa(s)   0.01s
+      0xf1   64B  ok      1 tentativa(s)   0.01s
+      0xf2   16B  ok      1 tentativa(s)   0.01s
+      0xf3    -   não declarado neste transporte
+      0xf4   64B  ok      1 tentativa(s)   0.01s
+      0xf5    8B  ok      1 tentativa(s)   0.02s
+      0xf6  547B  ok      1 tentativa(s)   0.03s
+      0xf7    8B  ok      1 tentativa(s)   0.03s
+
+  lendo 14:3a:9a:00:00:ab (hidraw9, rádio) …
+      0xf0   64B  ok      1 tentativa(s)   0.07s
+      0xf1   64B  ok      1 tentativa(s)   0.01s
+      0xf2   16B  ok      1 tentativa(s)   0.01s
+      0xf3    -   não declarado neste transporte
+      0xf4   64B  ok      1 tentativa(s)   0.03s
+      0xf5    8B  ok      1 tentativa(s)   0.01s
+      0xf6  547B  ok      1 tentativa(s)   0.06s
+      0xf7    8B  ok      1 tentativa(s)   0.02s
+
+  OS FEATURE REPORTS, LADO A LADO
+
+report  bytes  tentativas  CRC          conteúdo   cabo x rádio
+------  -----  ----------  -----------  ---------  --------------------------
+0xf0    64     1           sem trailer  TODO ZERO  sem par (um transporte só)
+0xf1    64     1           confere      TODO ZERO  DIFERE
+0xf2    16     1           confere      com dado   DIFERE
+0xf4    64     1           sem trailer  TODO ZERO  sem par (um transporte só)
+0xf5    4      1           confere      TODO ZERO  DIFERE
+0xf6    547    1           sem trailer  TODO ZERO  sem par (um transporte só)
+0xf7    8      1           confere      com dado   sem par (um transporte só)
+
+  O QUE SEPARA UMA UNIDADE DA OUTRA
+
+report  difere entre unidades?  amostra do 1º aparelho
+------  ----------------------  -------------------------------------
+0xf0    não                     f0 00 00 00 00 00 00 00 00 00 00 00 …
+0xf1    SIM (3 valores em 4)    f1 00 00 00 00 00 00 00 00 00 00 00 …
+0xf2    SIM (3 valores em 4)    f2 00 00 10 00 00 00 00 00 00 00 00 …
+0xf4    não                     f4 00 00 00 00 00 00 00 00 00 00 00 …
+0xf5    SIM (2 valores em 4)    f5 00 00 00
+0xf6    não                     f6 00 00 00 00 00 00 00 00 00 00 00 …
+0xf7    não                     f7 00 00 00 45 3c 14 ea
+
+------------------------------------------------------------------------------
+RESUMO: 20/24 leituras ok; 0 reports idênticos entre transportes, 3 diferentes.
+------------------------------------------------------------------------------

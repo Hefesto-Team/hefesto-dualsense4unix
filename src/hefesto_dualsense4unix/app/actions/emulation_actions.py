@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import contextlib
 import glob
+import html
 import os
 import re
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -28,10 +30,8 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
 from hefesto_dualsense4unix.app.constants import ROOT_DIR
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor, call_async, run_in_thread
-from hefesto_dualsense4unix.integrations.hotkey_daemon import (
-    DEFAULT_BUFFER_MS,
-    DEFAULT_PS_LONG_PRESS_MS,
-)
+from hefesto_dualsense4unix.integrations.hotkey_daemon import DEFAULT_BUFFER_MS
+from hefesto_dualsense4unix.integrations.steam_launch_options import juntar_rotulos
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     DEVICE_NAME,
     DUALSENSE_EDGE_NAME,
@@ -40,7 +40,6 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     XBOX360_VENDOR,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
 logger = get_logger(__name__)
 
@@ -215,7 +214,7 @@ def rotulo_gamepads(fisicos: int, nossos: int, outros: int, nos: int) -> str:
             else f"{outros} gamepads virtuais de outros programas (Steam Input)"
         )
     if not partes:
-        partes.append("nenhum aparelho reconhecido")
+        partes.append("Nenhum aparelho reconhecido")
     return f"{', '.join(partes)} — {nos} nós em /dev/input/js*"
 
 
@@ -308,6 +307,61 @@ def format_steam_input_result(
     )
 
 
+def markup_status_steam_input(
+    on: bool | None,
+    jogos: Sequence[str],
+    excecoes: Sequence[int],
+    efetiva: bool | None,
+) -> str:
+    """Markup da linha "Steam Input" da aba Emulação — pura, testável sem GTK.
+
+    D-33 (05/08/2026): a linha dizia ``"Ligado — conflita com o Hefesto"``.
+    Ela não dizia de qual JOGO falava, e chamava de *conflito* uma escolha que
+    a usuária tinha tomado na janela da própria Steam ("não faço ideia de
+    quando é pra ativar os controles Steam e quando não"). O texto agora nomeia
+    o jogo e diz o que o Hefesto VAI fazer, e por quê — a palavra "conflito"
+    saiu porque não é conflito nenhum: é uma regra do Hefesto contra uma
+    escolha dela, e quem perde é sempre a escolha dela.
+
+    `jogos` são rótulos JÁ traduzidos (`rotulo_do_jogo`), porque traduzir lê o
+    disco e isto aqui roda no laço da interface. Lista vazia com ``on`` verdade
+    = a chave GLOBAL da Steam, que não pertence a jogo nenhum.
+    """
+    if on is None:
+        markup = '<span foreground="#8b8fa8">Steam não encontrado</span>'
+    elif on:
+        if jogos:
+            sujeito = (
+                "esse jogo não está" if len(jogos) == 1 else "esses jogos não estão"
+            )
+            corpo = (
+                f"Ligado para {juntar_rotulos(jogos)} — o Hefesto desliga no "
+                f"próximo ciclo, porque {sujeito} na sua lista de exceções"
+            )
+        else:
+            corpo = (
+                "Ligado no ajuste global da Steam — vale para todo jogo, e o "
+                "Hefesto desliga no próximo ciclo"
+            )
+        markup = f'<span foreground="#ffb86c">{html.escape(corpo)}</span>'
+    else:
+        markup = '<span foreground="#50fa7b">Desligado — tudo certo</span>'
+    if excecoes:
+        # R-06: a usuária precisa ver se o opt-in dela está VALENDO, não
+        # só se está escrito no arquivo.
+        if efetiva is None:
+            extra = "sem controle físico visível"
+        elif efetiva:
+            extra = "controle liberado agora"
+        else:
+            extra = "só valendo durante o jogo"
+        markup += (
+            f' <span foreground="#8b8fa8">· Exceção por jogo: '
+            f'{len(excecoes)} jogo(s) — {extra}</span>'
+        )
+    return markup
+
+
 #: EMULACAO-NO-JOGO-01/E1(c): tradução do vocabulário FECHADO de ``bloqueio``,
 #: publicado pelo daemon no bloco ``keyboard_emulation`` do ``daemon.status`` e
 #: do ``daemon.state_full`` (``daemon/ipc_handlers.py:_keyboard_emulation_payload``;
@@ -315,8 +369,16 @@ def format_steam_input_result(
 #:
 #: Invariante que o daemon deixou por escrito e que estas frases respeitam: nos
 #: dois casos de PAUSA (``modo_jogo`` e ``vpad_suspenso_pelo_steam_input``) o
-#: ``enabled`` continua TRUE. O teclado dela não foi desligado — ele saiu da
-#: frente. Nenhuma dessas duas frases pode dizer "desligado".
+#: ``enabled`` continua TRUE. O teclado dela não foi desligado — ele está em
+#: pausa. Nenhuma dessas duas frases pode dizer "desligado".
+#:
+#: NOTA DATADA — 07/08/2026, sobre a frase do ``vpad_suspenso_pelo_steam_input``.
+#: Ela abria com *"o jogo assumiu o controle"*, e isso está **refutado** para
+#: este caso pela medição dela de 06/08 (``CONTROLE-SONY-MEDIDO-01``, seção
+#: *A INVERSÃO*, grau MEDIDO): num jogo da lista de exceções o jogo assume a
+#: **entrada** — a luz e os gatilhos continuam dela. Quem "assume o controle"
+#: inteiro é o jogo que está **fora** da lista, e é justo o contrário do que a
+#: frase antiga fazia a pessoa concluir.
 BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     "desligada": (
         "Desligado: o controle não digita mais nada — nem os atalhos da lista "
@@ -331,8 +393,9 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
         "Ligado, em pausa agora: o modo jogo está suspendendo mouse e teclado."
     ),
     "vpad_suspenso_pelo_steam_input": (
-        "Ligado, em pausa agora: o jogo assumiu o controle. Não foi desligado — "
-        "volta sozinho quando você fechar o jogo."
+        "Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, "
+        "e o controle virtual foi recolhido. Não foi desligado — volta sozinho "
+        "quando você fechar o jogo."
     ),
 }
 
@@ -380,14 +443,31 @@ def descrever_teclado_emulado(bloco: object) -> tuple[bool | None, str]:
 # IPC, no clique dela; aqui só se anota o que ficou.
 
 
-#: Frase para o caso que este código RECUSA guardar. Ela precisa saber que o
-#: interruptor pegou AGORA e que o perfil não vai lembrar — silêncio aqui seria
-#: a janela mentindo a favor dela, que é o defeito-mãe desta sprint.
-MODO_JOGO_NAO_GUARDADO = (
-    "Modo jogo ligado — mouse e teclado suspensos agora. Não guardei no perfil: "
-    "ele vale para qualquer janela, e guardado ali suspenderia mouse e teclado "
-    "em toda ativação, até quando o Hefesto liga. Dê uma regra a ele na aba "
-    "Perfis."
+#: NOTA DATADA — 09/08/2026 (MODO-JOGO-VONTADE-DELA-01). Esta constante se
+#: chamava ``MODO_JOGO_NAO_GUARDADO`` e dizia *"Não guardei no perfil"*. A
+#: recusa que ela anunciava CAIU hoje, por decisão dela: **a vontade na GUI
+#: prevalece sempre**. Cinco dos perfis dela são catch-all, e para ela a recusa
+#: era literalmente *"liguei e não ficou salvo"*.
+#:
+#: O raciocínio antigo NÃO estava errado — ele está datado. Ele dizia que
+#: ``suppress: true`` num catch-all era alçapão de mão única, porque
+#: ``lifecycle.apply_profile_suppression`` ligava a supressão sem gate no ramo
+#: ``if desired:``. Isso valia quando foi escrito (30/07/2026). O gate nasceu em
+#: 05/08 (``PERFIL-REESCRITO-NA-PARTIDA-01``, item 2) e ninguém voltou aqui: a
+#: janela seguiu recusando por quatro dias apoiada num defeito já curado. O que
+#: permitiu a recusa cair é aquele gate, e só ele — por isso ele agora carrega
+#: uma nota que o declara CONDIÇÃO desta entrega, e por isso a mordida dele mora
+#: em ``tests/unit/test_modo_jogo_a_vontade_dela_prevalece.py``.
+#:
+#: A frase que sobra não é comemoração: num perfil "vale sempre" o modo jogo é
+#: guardado mas NÃO volta sozinho na próxima ativação, justamente porque o gate
+#: existe. Calar isso seria a janela mentindo a favor dela, que é o defeito-mãe
+#: desta sprint — só que ao contrário.
+MODO_JOGO_GUARDADO_SEM_REGRA = (
+    "Modo jogo ligado — mouse e teclado suspensos agora, e guardei no perfil. "
+    "Como ele vale para qualquer janela, o Hefesto não liga o modo jogo sozinho "
+    "na próxima ativação (senão o desktop acordaria sem mouse). Dê uma regra a "
+    "ele na aba Perfis para ele voltar ligado."
 )
 
 
@@ -396,8 +476,12 @@ def perfil_do_rascunho_tem_opiniao(draft: DraftConfig | None) -> bool:
 
     Pergunta o MESMO predicado do daemon (`Profile.e_catch_all`, dono único do
     R-01: `MatchAny` e `MatchCriteria` vazio contam igual) sondando o `match` que
-    a fotografia do rascunho guardou. Sem `match` legível responde False — o
-    fail-safe daqui é NÃO guardar.
+    a fotografia do rascunho guardou. Sem `match` legível responde False.
+
+    NOTA DATADA — 09/08/2026: este predicado deixou de decidir se GUARDA (agora
+    guarda sempre — ver `rascunho_com_modo_jogo`) e passou a decidir o que a
+    janela DIZ. O fail-safe mudou de lugar junto: na dúvida ela recebe o aviso,
+    porque prometer que volta ligado é o único erro que custa caro aqui.
     """
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -416,30 +500,64 @@ def rascunho_com_modo_jogo(
 ) -> tuple[DraftConfig | None, bool]:
     """(rascunho, guardei?) para o "modo jogo". Pura: NÃO aplica nada.
 
-    O ramo de DESLIGAR sempre entra no rascunho. É gesto dela e é seguro: `False`
-    é o default do esquema, e na ativação o applier só LIBERA quando a supressão
-    veio de perfil e o perfil tem opinião (R-02). Sem este ramo, salvar um perfil
-    que dizia `suppress: true` (o `sackboy_nativo` e o `coop_local` dela) ia
-    ressuscitar a supressão que ela acabou de desligar.
+    Os DOIS ramos entram no rascunho. É gesto dela, e o gesto dela é o que a
+    janela guarda — `guardei?` só responde `False` quando não há rascunho onde
+    escrever (janela sem perfil aberto), que não é recusa, é ausência de papel.
 
-    O ramo de LIGAR é RECUSADO em perfil catch-all, e isto foi MEDIDO em
-    `daemon/lifecycle.apply_profile_suppression`: o ramo ``if desired:`` liga sem
-    passar pelo `_perfil_tem_opiniao` — só o ramo de LIBERAR passa. Como os cinco
-    perfis "vale sempre" dela não têm opinião, um `suppress: true` gravado num
-    deles seria alçapão de mão única: liga em TODA ativação (inclusive no restauro
-    do último perfil no boot) e o caminho de volta está fechado justamente pelo
-    R-02 — mouse e teclado suspensos no desktop dela, sem ela pedir. Trocar a
-    perda de configuração por um desktop sem ponteiro não é cura.
+    O ramo de DESLIGAR sempre valeu: `False` é o default do esquema, e na
+    ativação o applier só LIBERA quando a supressão veio de perfil e o perfil tem
+    opinião (R-02). Sem ele, salvar um perfil que dizia `suppress: true` (o
+    `sackboy_nativo` e o `coop_local` dela) ressuscitaria a supressão que ela
+    acabou de desligar.
 
-    Quando o gate do daemon existir no ramo de ligar (ver o contrato relatado
-    nesta entrega), esta recusa pode cair — e o teste que a trava vai apontar
-    exatamente para cá.
+    NOTA DATADA — 09/08/2026 (MODO-JOGO-VONTADE-DELA-01). Até hoje o ramo de
+    LIGAR era RECUSADO em perfil catch-all. A recusa foi retirada por decisão
+    dela — *"a vontade na GUI prevalece sempre"* —, e o raciocínio que ela
+    carregava não é apagado porque não era capricho: ele dizia, com razão em
+    30/07/2026, que `daemon/lifecycle.apply_profile_suppression` ligava a
+    supressão no ramo ``if desired:`` SEM gate de catch-all, e que gravar
+    `suppress: true` num dos cinco perfis "vale sempre" dela seria alçapão de mão
+    única — liga em toda ativação (o restauro do boot inclusive) e o caminho de
+    volta fechado pelo R-02, isto é, mouse e teclado suspensos no desktop dela
+    sem ela pedir.
+
+    O que caducou foi a premissa, não o medo: o gate nasceu em 05/08
+    (`PERFIL-REESCRITO-NA-PARTIDA-01`, item 2, `_perfil_e_catch_all`) e esta
+    docstring não soube. A recusa continuou de pé por quatro dias defendendo
+    contra um defeito já curado, cobrando dela a configuração que ela pedia. A
+    verificação de que o alçapão SEGUE fechado — e não a palavra desta docstring
+    — é o que sustenta a retirada: `tests/unit/
+    test_modo_jogo_a_vontade_dela_prevalece.py`, com a mordida feita arrancando
+    o gate do daemon.
+
+    O preço que sobra é honesto e vai para a tela (`MODO_JOGO_GUARDADO_SEM_REGRA`):
+    num catch-all o valor fica guardado no arquivo, mas o daemon não o liga
+    sozinho na ativação seguinte — porque é exatamente isso que impede o desktop
+    de acordar sem ponteiro. Quem escolhe entre as duas coisas é ela, com o preço
+    na mesa, e não este `if`.
     """
     if draft is None:
         return draft, False
-    if ligado and not perfil_do_rascunho_tem_opiniao(draft):
-        return draft, False
     return draft.with_suppress(ligado), True
+
+
+def frase_do_modo_jogo(
+    padrao: str, *, ligado: bool, guardado: bool, tem_regra: bool
+) -> str:
+    """Toast do botão "Modo jogo" — pura, o miolo testável sem GTK.
+
+    Três casos, e nenhum deles pode afirmar mais do que aconteceu:
+
+    - DESLIGAR, ou perfil COM regra: a frase normal do gesto. Guardou, e na
+      próxima ativação o daemon liga de novo (é o ramo `if desired:` com opinião);
+    - LIGAR em perfil catch-all: guardou também (decisão dela de 09/08), mas o
+      daemon não liga sozinho depois — e é isso que a frase acrescenta;
+    - sem rascunho (janela sem perfil aberto): a frase normal. Não há perfil para
+      guardar nem promessa a desmentir; inventar aviso aqui seria ruído.
+    """
+    if ligado and guardado and not tem_regra:
+        return MODO_JOGO_GUARDADO_SEM_REGRA
+    return padrao
 
 
 def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
@@ -448,10 +566,13 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
     Função de MÓDULO pela mesma razão de `registrar_modo_no_rascunho` (dono
     único, e dublê parcial de teste não pode quebrar por causa da MRO).
 
-    O ``False`` não é erro: é a recusa deliberada de plantar `suppress: true`
-    num perfil catch-all (ver `rascunho_com_modo_jogo`). Quem chama usa a
-    resposta para dizer a VERDADE na barra de status — e o log fica, porque
-    "não guardei" precisa deixar rastro tanto quanto "guardei".
+    NOTA DATADA — 09/08/2026: o ``False`` já significou "recusei plantar
+    `suppress: true` num catch-all". Não significa mais (ver a nota em
+    `rascunho_com_modo_jogo`): hoje ele só diz que não havia rascunho onde
+    escrever. O log de "guardei num perfil que vale sempre" fica, porque é o
+    caso em que o arquivo dela passa a dizer uma coisa que a ativação seguinte
+    não vai fazer — e isso precisa de rastro no journal tanto quanto a recusa
+    precisava.
     """
     draft = getattr(janela, "draft", None)
     if draft is None:
@@ -459,9 +580,9 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
     novo, guardado = rascunho_com_modo_jogo(draft, ligado)
     if guardado and novo is not None:
         janela.draft = novo
-    elif ligado:
+    if ligado and guardado and not perfil_do_rascunho_tem_opiniao(draft):
         logger.info(
-            "modo_jogo_nao_guardado_no_perfil",
+            "modo_jogo_guardado_em_perfil_sem_regra",
             motivo="catch_all_sem_opiniao",
             perfil=getattr(draft, "source_name", None),
         )
@@ -621,36 +742,26 @@ class EmulationActionsMixin(WidgetAccessMixin):
             )
         self._refresh_emulation_view()
 
-    def on_emulation_open_toml(self, _btn: Gtk.Button) -> None:
-        # BUG-DAEMON-TOML-DEAD-01: o daemon NÃO lê daemon.toml (config vem de
-        # variáveis de ambiente + IPC daemon.reload). O arquivo é só referência;
-        # deixamos isso explícito no cabeçalho.
-        # Nota (25/07): a ressalva antiga sobre `next_profile`/`prev_profile`
-        # estarem `disabled_until_wired` ficou obsoleta — os combos PS+D-pad
-        # foram ligados em subsystems/hotkey.py (FEAT-HOTKEY-PROFILE-CYCLE-01).
-        # Eles seguem fora deste arquivo por serem fixos no daemon, não por
-        # estarem desligados.
-        path = config_dir(ensure=True) / "daemon.toml"
-        if not path.exists():
-            path.write_text(
-                "# REFERÊNCIA — o daemon NÃO lê este arquivo.\n"
-                "# Configuração efetiva: variáveis de ambiente + IPC daemon.reload.\n"
-                "[hotkey]\n"
-                f'buffer_ms = {DEFAULT_BUFFER_MS}\n'
-                f'ps_long_press_ms = {DEFAULT_PS_LONG_PRESS_MS}  # 0 = desliga o modo jogo\n'
-                "passthrough_in_emulation = false\n",
-                encoding="utf-8",
-            )
-        try:
-            subprocess.Popen(
-                ["xdg-open", str(path)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except FileNotFoundError:
-            self._toast_emulation("Não consegui abrir o arquivo de referência.")
-            return
-        self._toast_emulation("Abri o arquivo de referência no seu editor.")
+    # BOTÃO-QUE-NÃO-MENTE-01 (entregas 5 e 6): o `on_emulation_open_toml` SAIU.
+    #
+    # A entrega 3 tirou do glade o botão "Ver daemon.toml (referência)" e
+    # deixou a decisão sobre o Python escrita ali (`gui/main.glade:2564-2569`):
+    # *"quem cuida do Python nesta leva decide se o código sai junto"*. Ele
+    # ficou — handler vivo, registrado em `app/app.py`, sem nada que o
+    # chamasse. Isto é o que sai agora.
+    #
+    # Por que remover em vez de deixar dormindo: o método CRIAVA
+    # `~/.config/hefesto-dualsense4unix/daemon.toml` no disco dela, um arquivo
+    # com cara de configuração que o daemon não lê
+    # (`BUG-DAEMON-TOML-DEAD-01` — a configuração efetiva vem de variáveis de
+    # ambiente e do canal `daemon.reload`). Enquanto o código existisse, bastava
+    # alguém reconectar o nome no glade para o arquivo fantasma voltar a
+    # nascer: armadilha carregada, que é o mesmo padrão que a CÓDIGO-MORTO-01
+    # descreveu no `xlib_window`.
+    #
+    # Volta quando (e se) existir arquivo de configuração de verdade — proposto
+    # no bloco C da PROMESSA-NÃO-CUMPRIDA-01. Aí o botão e o handler nascem
+    # juntos, apontando para um arquivo que o daemon lê de fato.
 
     # --- helpers ---
 
@@ -729,11 +840,38 @@ class EmulationActionsMixin(WidgetAccessMixin):
     # (scripts/fix_wireplumber_default_source.sh). Mic ON = sem os drop-ins de
     # supressão 52/53; OFF = com eles. O quirk segura o storm com o mic ligado.
 
-    _WP_DROPIN_DIR = Path.home() / ".config" / "wireplumber" / "wireplumber.conf.d"
+    #: CANARIO-FS-01 (05/08/2026, decisão dela): isto ERA
+    #: `_WP_DROPIN_DIR = Path.home() / ...`, atributo de classe avaliado no
+    #: IMPORT — e este é DIRETÓRIO DE ESCRITA em produção. Congelado no import,
+    #: nenhum `monkeypatch` de `HOME` o alcançava, e um teste que exercitasse
+    #: este caminho escreveria na configuração real do WirePlumber da máquina.
+    #: Em método, `Path.home()` resolve na hora da chamada: a suíte volta a ser
+    #: isolável e produção não muda. Irmão de `storm_doctor._allowlist_path`.
+    @staticmethod
+    def _wp_dropin_dir() -> Path:
+        """Diretório dos drop-ins do WirePlumber, resolvido a cada chamada."""
+        return Path.home() / ".config" / "wireplumber" / "wireplumber.conf.d"
+
     _WP_DISABLE_DROPINS = (
         "52-hefesto-dualsense-disable-source.conf",
         "53-hefesto-dualsense-disable-output.conf",
     )
+
+    #: LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026): o 51 NÃO é supressão. Desde
+    #: MONITOR-QUE-VENCE-01 (08/08, commit 6c428cd) ele é o PROMOTOR — põe a
+    #: entrada do controle em `priority.session = 1500`, a faixa medida que fica
+    #: acima de qualquer monitor (1109) e abaixo de qualquer captura real (2009).
+    #: Sem ele a entrada volta ao 50 de fábrica e o monitor da saída vence: o que
+    #: qualquer aplicativo grava é o eco do que sai, não a voz dela.
+    _WP_PROMOTER_DROPIN = "51-hefesto-dualsense-no-default-source.conf"
+
+    #: Os três estados que os drop-ins sabem dizer. São três porque a diferença
+    #: entre eles importa para quem está olhando: "suprimido" é escolha, "sem
+    #: prioridade" é o mic livre porém desprotegido, e só o terceiro é o que a
+    #: tela pode chamar de Ligado sem mentir.
+    MIC_SUPRIMIDO = "suprimido"
+    MIC_SEM_PROMOTOR = "sem-promotor"
+    MIC_LIGADO = "ligado"
 
     def _mic_script(self) -> Path | None:
         for cand in (
@@ -748,11 +886,30 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 return cand
         return None
 
+    def _mic_state(self) -> str:
+        """O que os drop-ins do WirePlumber dizem sobre o mic, em três estados.
+
+        Só LÊ arquivo — é chamada a cada entrada na aba Emulação e não pode ter
+        efeito colateral nenhum (ver `_refresh_emulation_tab`).
+        """
+        dropins = self._wp_dropin_dir()
+        if any((dropins / name).exists() for name in self._WP_DISABLE_DROPINS):
+            return self.MIC_SUPRIMIDO
+        if not (dropins / self._WP_PROMOTER_DROPIN).exists():
+            return self.MIC_SEM_PROMOTOR
+        return self.MIC_LIGADO
+
     def _mic_is_on(self) -> bool:
-        """Mic ON quando nenhum drop-in de supressão (52/53) está presente."""
-        return not any(
-            (self._WP_DROPIN_DIR / name).exists() for name in self._WP_DISABLE_DROPINS
-        )
+        """Mic ligado DE VERDADE: sem supressão (52/53) **e** com o promotor (51).
+
+        LIGAR-QUE-APAGAVA-A-CURA-01: esta função perguntava só pelo 52/53, e o
+        próprio botão "Ligar" apagava o 51 — então a tela escrevia "Ligado" em
+        verde no exato instante em que a captura padrão voltava a poder cair no
+        monitor da saída. Sem o promotor o microfone existe, mas perde a eleição
+        para o eco do que sai; chamar isso de Ligado é afirmar o contrário do
+        que aconteceu.
+        """
+        return self._mic_state() == self.MIC_LIGADO
 
     # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB
     # (usbcore.quirks=054c:0ce6:gn) é o que segura o storm -71 COM o mic ligado.
@@ -777,21 +934,47 @@ class EmulationActionsMixin(WidgetAccessMixin):
                     return True
         return False
 
+    #: O texto curto de cada estado, e a explicação inteira que não cabe nele.
+    #: O rótulo tem `width-chars = 11` e quebra linha (VAO-01/E2): a frase longa
+    #: vai na dica de tooltip, onde não empurra a largura da aba.
+    _MIC_ROTULOS: ClassVar[dict[str, tuple[str, str, str]]] = {
+        MIC_LIGADO: (
+            "#50fa7b",
+            "Ligado",
+            "O microfone do controle está livre e com prioridade acima do eco "
+            "da saída.",
+        ),
+        MIC_SEM_PROMOTOR: (
+            "#ffb86c",
+            "Ligado sem prioridade",
+            "O microfone está livre, mas sem a prioridade que o mantém acima "
+            "do eco da saída — do jeito que está, o que os aplicativos gravam "
+            "pode ser o som do sistema em vez da sua voz. Clique em “Ligar” "
+            "para armar de novo.",
+        ),
+        MIC_SUPRIMIDO: (
+            "#ffb86c",
+            "Desligado (suprimido)",
+            "O microfone do controle está desligado por escolha — clique em "
+            "“Ligar” para liberá-lo.",
+        ),
+    }
+
     def _refresh_mic_status(self) -> None:
         label = self._get("emulation_mic_status_label")
         if label is None:
             return
-        if self._mic_is_on():
-            label.set_markup('<span foreground="#50fa7b">Ligado</span>')
-        else:
-            label.set_markup('<span foreground="#ffb86c">Desligado (suprimido)</span>')
+        cor, texto, dica = self._MIC_ROTULOS[self._mic_state()]
+        label.set_markup(f'<span foreground="{cor}">{texto}</span>')
+        with contextlib.suppress(Exception):
+            label.set_tooltip_text(dica)
 
     def _run_mic(self, flag: str, done_msg: str) -> None:
         script = self._mic_script()
         if script is None:
-            self._toast_emulation("script do WirePlumber não encontrado")
+            self._toast_emulation("Script do WirePlumber não encontrado")
             return
-        self._toast_emulation("aplicando no microfone...")
+        self._toast_emulation("Aplicando no microfone...")
 
         def _worker() -> None:
             with contextlib.suppress(OSError, subprocess.SubprocessError):
@@ -856,7 +1039,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         """HARM-03/EMU-07: "Modo jogo" só faz sentido "jogando pelo Hefesto".
 
         Em "Controlar o PC" o controle SÓ faz mouse/teclado — suspendê-los
-        deixava o controle sem função nenhuma. Em "Jogar direto (Sony)" o jogo
+        deixava o controle sem função nenhuma. Em "Conexão Nativa (Sony)" o jogo
         fala direto com o controle: não há mouse/teclado nem gamepad virtual
         para suspender, e o toast ainda afirmava "gamepad ativo". Nos dois casos
         o botão fica desabilitado com a razão em texto simples ao lado.
@@ -878,7 +1061,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             )
         elif mode == MODE_NATIVE:
             hint.set_text(
-                "Em \"Jogar direto (Sony)\" o jogo fala direto com o controle — "
+                "Em \"Conexão Nativa (Sony)\" o jogo fala direto com o controle — "
                 "não há mouse/teclado para suspender."
             )
         else:
@@ -892,13 +1075,13 @@ class EmulationActionsMixin(WidgetAccessMixin):
             gp_label = self._get("emulation_gamepad_status_label")
             # HARM-01: no Modo Nativo o vpad está desligado, mas dizer só
             # "desligado" (e realçar "Desligado") fazia esta aba contradizer a
-            # Início, que mostra "Jogar direto (Sony)". Nenhum dos três botões
+            # Início, que mostra "Conexão Nativa (Sony)". Nenhum dos três botões
             # é a verdade aqui — o realce sai e o label conta o modo real.
             if mode == MODE_NATIVE:
                 active_key = None
                 if gp_label is not None:
                     gp_label.set_markup(
-                        '<span foreground="#ffb86c">Jogar direto (Sony) — o jogo '
+                        '<span foreground="#ffb86c">Conexão Nativa (Sony) — o jogo '
                         'fala direto com o controle</span>'
                     )
             elif isinstance(gp, dict) and gp.get("enabled"):
@@ -974,7 +1157,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         Antes esta aba chamava `gamepad.emulation.set` cru, sem sair do Modo
         Nativo: nativo + gamepad ligados juntos = físico grabado pelo jogo +
         vpad congelado, ou seja, JOGO SEM CONTROLE NENHUM — e a Início ainda
-        exibia "Jogar direto (Sony)", escondendo o estado real. Delegar a
+        exibia "Conexão Nativa (Sony)", escondendo o estado real. Delegar a
         `mode_transition` mantém um dono só para a sequência e o timeout.
         """
         def _on_ok(_res: Any) -> bool:
@@ -1017,13 +1200,21 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def _set_suppress(self, suppressed: bool, msg: str) -> None:
         def _on_ok(_res: Any) -> bool:
             # PERFIL-SALVA-TUDO-01/E3: o "modo jogo" dela vira configuração do
-            # perfil — quando o perfil pode recebê-lo. A frase troca quando a
-            # resposta é "não guardei": a janela não pode ficar calada sobre o
-            # que ela vai perder no próximo boot.
+            # perfil. MODO-JOGO-VONTADE-DELA-01 (09/08): qualquer perfil o
+            # recebe — o que muda com o catch-all é a FRASE, não o que é
+            # guardado. A janela não pode ficar calada sobre o que o daemon vai
+            # (ou não vai) fazer com aquilo na próxima ativação.
             guardado = registrar_modo_jogo_no_rascunho(self, suppressed)
             self._refresh_gamepad_and_gamemode()
             self._toast_emulation(
-                msg if (guardado or not suppressed) else MODO_JOGO_NAO_GUARDADO
+                frase_do_modo_jogo(
+                    msg,
+                    ligado=suppressed,
+                    guardado=guardado,
+                    tem_regra=perfil_do_rascunho_tem_opiniao(
+                        getattr(self, "draft", None)
+                    ),
+                )
             )
             return False
 
@@ -1217,6 +1408,36 @@ class EmulationActionsMixin(WidgetAccessMixin):
         return False
 
     @staticmethod
+    def _steam_input_appids_ligados() -> list[str]:
+        """AppIDs com Steam Input per-app ligado FORA da allowlist, sem repetir.
+
+        D-33 (05/08/2026): o `_steam_input_is_on` responde SIM/NÃO, e era com
+        esse SIM que a aba escrevia "Ligado — conflita com o Hefesto". Ela
+        precisa saber DE QUAL JOGO se fala — o appid é o mínimo honesto, e o
+        nome vem junto quando a Steam tem o `appmanifest` em disco.
+
+        Só os JOGOS: a chave global (PSSupport/SwitchSupport) não pertence a
+        jogo nenhum e por isso não entra aqui.
+        """
+        from hefesto_dualsense4unix.integrations.storm_doctor import (
+            steam_input_allowlist,
+            steam_input_fora_da_allowlist,
+        )
+
+        vdfs = glob.glob(
+            str(Path.home() / ".steam" / "steam" / "userdata" / "*" / "config" / "localconfig.vdf")
+        )
+        allow = steam_input_allowlist()
+        achados: list[str] = []
+        for vdf in vdfs:
+            with contextlib.suppress(OSError):
+                texto = Path(vdf).read_text(encoding="utf-8", errors="ignore")
+                for appid in steam_input_fora_da_allowlist(texto, allow)[0]:
+                    if appid not in achados:
+                        achados.append(appid)
+        return achados
+
+    @staticmethod
     def _steam_input_excecao_status() -> tuple[list[int], bool | None]:
         """(appids da allowlist, exceção EFETIVA agora) — R-06 item 3.
 
@@ -1249,33 +1470,25 @@ class EmulationActionsMixin(WidgetAccessMixin):
         if label is None:
             return
 
-        def _check() -> tuple[bool | None, list[int], bool | None]:
-            return (self._steam_input_is_on(), *self._steam_input_excecao_status())
+        def _check() -> tuple[bool | None, list[str], list[int], bool | None]:
+            from hefesto_dualsense4unix.integrations.steam_launch_options import (
+                rotulo_do_jogo,
+            )
 
-        def _on_ok(dados: tuple[bool | None, list[int], bool | None]) -> bool:
-            on, appids, efetiva = dados
-            if on is None:
-                markup = '<span foreground="#8b8fa8">Steam não encontrado</span>'
-            elif on:
-                markup = (
-                    '<span foreground="#ffb86c">Ligado — conflita com o Hefesto</span>'
-                )
-            else:
-                markup = '<span foreground="#50fa7b">Desligado — tudo certo</span>'
-            if appids:
-                # R-06: a usuária precisa ver se o opt-in dela está VALENDO, não
-                # só se está escrito no arquivo.
-                if efetiva is None:
-                    extra = "sem controle físico visível"
-                elif efetiva:
-                    extra = "controle liberado agora"
-                else:
-                    extra = "só valendo durante o jogo"
-                markup += (
-                    f' <span foreground="#8b8fa8">· Exceção por jogo: '
-                    f'{len(appids)} jogo(s) — {extra}</span>'
-                )
-            label.set_markup(markup)
+            on = self._steam_input_is_on()
+            # A tradução appid -> nome LÊ O DISCO (appmanifest da Steam), e por
+            # isso acontece aqui, na thread — nunca no `_on_ok`, que roda no
+            # laço da interface. Só quando há algo ligado: sem isso, todo
+            # refresh pagaria a varredura das bibliotecas da Steam à toa.
+            jogos = (
+                [rotulo_do_jogo(a) for a in self._steam_input_appids_ligados()]
+                if on
+                else []
+            )
+            return (on, jogos, *self._steam_input_excecao_status())
+
+        def _on_ok(dados: tuple[bool | None, list[str], list[int], bool | None]) -> bool:
+            label.set_markup(markup_status_steam_input(*dados))
             return False
 
         run_in_thread(_check, on_success=_on_ok)
@@ -1315,7 +1528,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         if script is None:
             self._toast_emulation(format_steam_input_result(status="sem_script"))
             return
-        self._toast_emulation("verificando a Steam…")
+        self._toast_emulation("Verificando a Steam…")
 
         def _sondar() -> None:
             from hefesto_dualsense4unix.integrations import (
@@ -1338,7 +1551,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             self._toast_emulation(format_steam_input_result(status="jogo_aberto"))
             return False
         if not steam:
-            self._toast_emulation("desligando Steam Input…")
+            self._toast_emulation("Desligando Steam Input…")
             self._steam_input_apply_async(script, fechar_a_steam=False)
             return False
 
@@ -1355,7 +1568,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
                     format_steam_input_result(status="cancelado")
                 )
                 return
-            self._toast_emulation("fechando a Steam para desligar o Steam Input…")
+            self._toast_emulation("Fechando a Steam para desligar o Steam Input…")
             self._steam_input_apply_async(script, fechar_a_steam=True)
 
         build_steam_close_consent_dialog(

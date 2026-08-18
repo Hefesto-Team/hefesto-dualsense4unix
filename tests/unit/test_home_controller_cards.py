@@ -75,7 +75,7 @@ class TestLabelsDosToasts:
     def test_modo_vira_o_texto_do_botao(self) -> None:
         assert _mode_label("gamepad") == "Jogar pelo Hefesto"
         assert _mode_label("desktop") == "Controlar o PC"
-        assert _mode_label("native") == "Jogar direto (Sony)"
+        assert _mode_label("native") == "Conexão Nativa (Sony)"
 
     def test_aparencia_vira_o_texto_do_botao(self) -> None:
         assert _flavor_label("xbox") == "Xbox 360"

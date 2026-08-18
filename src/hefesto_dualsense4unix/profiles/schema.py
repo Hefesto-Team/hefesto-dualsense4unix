@@ -9,7 +9,17 @@ import os
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
+
+from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
 #: Teto do multiplicador de rumble da política "custom". Acima de 1.0 AMPLIFICA o
 #: que o jogo pediu — é a razão de existir da faixa (BUG-RUMBLE-CUSTOM-MULT-CAP-01).
@@ -18,6 +28,51 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 #: handler `rumble.policy_custom` e 200% no slider da GUI ao mesmo tempo — de 101%
 #: em diante a usuária levava um erro de validação que a aba reportava como
 #: "daemon offline?". Quem mudar o teto muda AQUI e os três seguem juntos.
+#:
+#: NOTA DATADA — 11/08/2026: o teto foi a 1.0 de manhã (nota SATURA-01) e
+#: DECISÃO DELA o devolveu a 2.0 no mesmo dia, com o preço na mesa. As duas
+#: metades ficam registradas porque a medição de baixo continua verdadeira; o
+#: que mudou foi o que se aceita pagar por ela.
+#:
+#: **O que ela decidiu:** o deslizador "Intensidade global" vai até 200, e este
+#: teto o acompanha. O tooltip do deslizador já prometia *"acima de 100 sai mais
+#: forte"* desde sempre, contra um teto de 100 que impedia a usuária de chegar
+#: lá. A amplificação está MEDIDA no aparelho (11/08): um report com
+#: ``common[2]=200``, daemon parado, fez o motor obedecer, e ela confirmou de
+#: olho.
+#:
+#: **ESTE TETO NÃO É O DO BOTÃO "Máximo", e a diferença é deliberada.** O botão
+#: vale **1,5** (`daemon.subsystems.rumble.RUMBLE_POLICY_MULT`, que é o dono da
+#: escada); este 2.0 é o fim do curso do deslizador. A divisão de papéis:
+#:
+#: * os quatro botões são **presets seguros** — quem só quer clicar não pode
+#:   cair numa armadilha;
+#: * o deslizador é o **ajuste livre** de quem quer ir além e aceita o preço,
+#:   que está escrito no tooltip.
+#:
+#: **O preço, medido** (é a nota SATURA-01, de 11/08/2026, e ela continua
+#: valendo — foi por causa dela que o BOTÃO parou em 1,5). Rodando a conta exata
+#: do produto — `max(0, min(255, round(bruto * mult)))` — sobre os 256 valores
+#: que o jogo pode pedir:
+#:
+#:     mult 1.0 → nenhum valor satura
+#:     mult 1.5 → satura a partir de 170: 33% da faixa vira 255
+#:     mult 2.0 → satura a partir de 128: METADE da faixa vira 255
+#:
+#: A 2.0 o jogo manda 128, 180 e 255 e o controle recebe 255 nas três — naquela
+#: metade a variação da vibração some, e o que se sente é força CONSTANTE, não
+#: força maior. Foi o que ela relatou em 10/08: *"vibra muito mais do que o
+#: normal a ponto de não parar"*. Amplificar sem nuance não é amplificar: é
+#: achatar.
+#:
+#: **O que continua por fazer:** amplificar SEM achatar exige comprimir (uma
+#: curva) em vez de cortar. Quem for fazer isso mexe AQUI e na tabela da escada,
+#: com a medição na mão.
+#:
+#: HARM-19 continua valendo: o teto tem um dono só. O handler
+#: `rumble.policy_custom`, o `RumbleDraft.custom_mult` da GUI e o slider do
+#: glade derivam deste número — e há portão (`test_rumble_mult_um_dono.py`) que
+#: reprova quem escrever o número à mão de novo.
 RUMBLE_CUSTOM_MULT_MAX = 2.0
 
 
@@ -346,6 +401,103 @@ class ProfileMicConfig(BaseModel):
     button_toggles_system: bool
 
 
+class ProfileSpeakerConfig(BaseModel):
+    """Seção opcional de ALTO-FALANTE por perfil (SOM-02/E4, 29/07).
+
+    Aditiva ao schema v1 (sem bump de versão), mesmo contrato do `mouse` e do
+    `mic`: perfil SEM a seção não tem opinião e ativá-lo **não toca no volume
+    e não toma a posse** dos bytes de áudio do report de saída. Tomar posse
+    por um perfil que não pediu nada é exatamente o hábito que produziu a
+    queixa "a config que eu deixo nunca é respeitada".
+
+    POR QUE ``volume`` É OBRIGATÓRIO (e ``muted`` sozinho é recusado aqui).
+    Medido na SOM-02 (armadilha 1) com o `set_speaker_volume` real: uma
+    chamada sem `volume` e sem preferência guardada faz o `pref` cair para
+    `0`, o efetivo ir a `0` e o estado publicado virar
+    ``{'volume': 0, 'muted': True}`` — a posse é tomada E o alto-falante
+    tranca em zero, sem que o próprio mudo consiga soltá-lo (armadilha 2:
+    `muted=False` restaura a preferência, e a preferência é `0`).
+
+    Um perfil que trouxesse só ``muted`` cairia direto nessa armadilha na
+    ativação. A recusa é na BORDA do esquema, e não no applier, pela mesma
+    razão do ``custom_mult`` do rumble: o arquivo inválido é rejeitado no
+    load, com mensagem que explica, em vez de virar um comportamento errado
+    silencioso meses depois. Quem quer "mudo" escreve o volume que quer de
+    volta ao clicar em Ativar — que é o que o par
+    ``{"volume": 180, "muted": true}`` diz.
+
+    ``muted=True`` manda 0 ao firmware e guarda os 180 como preferência; o
+    ``muted=False`` posterior devolve os 180 (medido na sprint).
+
+    A ROTA DE SAÍDA (``rota``), pedido DELA em 09/08/2026: *"tanto usar o mic
+    do controle quanto usar o canal de saída de som específico do DS"*. É o
+    ``OUTPUT_PATH_SEL`` (``audio_control``, bits 4-5) da referência canônica,
+    o mesmo número que o ``rota`` do ``speaker.set`` já carrega:
+
+    ==== ==========================================================
+    0    estéreo → fone
+    1    canal L → fone (mono)
+    2    L → fone, R → ALTO-FALANTE (o caso Zelda; "Sons do jogo")
+    3    canal R → alto-falante interno ("Todo o som do PC")
+    ==== ==========================================================
+
+    ADITIVO e sem bump de versão, como a seção inteira já é: perfil antigo sem
+    o campo carrega com ``rota=None``, que significa **não tocar no byte** — o
+    ``common[7]`` guarda a rota de saída E o caminho do microfone, e escrever
+    o byte inteiro apagaria o caminho do mic sem ninguém notar
+    (``_byte_da_rota``, SOM-ROTA-01). Sem opinião continua sendo silêncio.
+
+    A rota não pode vir SOZINHA porque a seção inteira exige ``volume``: quem
+    escreve o byte é o mesmo ``set_speaker_volume`` que escreve o volume, e é
+    a mesma posse. Na janela isso já é verdade — o seletor de canal do card
+    manda ``rota`` e ``volume`` juntos desde a cura de 04/08, justamente
+    porque mandar a rota sem volume trancava o alto-falante em zero.
+
+    LIMITE DECLARADO: a rota é a CAMADA 2 (o firmware). O estado "Todo o som
+    do PC" da janela também mexe na CAMADA 1 (o *default sink* do PipeWire),
+    que é um fato GLOBAL do sistema e não é campo de perfil — restaurá-lo na
+    ativação é decisão dela, não efeito colateral de trocar de janela.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    volume: int = Field(ge=0, le=255)
+    muted: bool = False
+    rota: int | None = Field(default=None, ge=0, le=3)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _volume_e_obrigatorio(cls, data: Any) -> Any:
+        """Mensagem que EXPLICA a armadilha 1 em vez do "field required" cru."""
+        if isinstance(data, dict) and "volume" not in data:
+            raise ValueError(
+                "speaker: 'volume' é obrigatório (0-255). Um perfil com "
+                "'muted' e sem 'volume' faria a ativação mandar volume ZERO "
+                "e tomar a posse do alto-falante — e o próprio mudo não "
+                "conseguiria soltá-lo (SOM-02, armadilhas 1 e 2)."
+            )
+        return data
+
+    @model_serializer(mode="wrap")
+    def _rota_sem_opiniao_nao_vai_para_o_disco(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Sem opinião de rota, a chave nem aparece no arquivo.
+
+        Não é faxina de estética: ``extra="forbid"`` faz um hefesto ANTIGO
+        RECUSAR o perfil inteiro ao ver uma chave que ele não conhece. Gravar
+        ``"rota": null`` em todo perfil salvo transformaria "voltar uma versão"
+        em "todos os perfis com som quebrados" — e daemon velho com janela nova
+        é combinação real nesta casa. Omitindo o campo quando ninguém opinou,
+        o perfil dela continua idêntico ao que era, byte a byte, e só quem de
+        fato escolheu um canal carrega a chave nova.
+        """
+        dados = handler(self)
+        if isinstance(dados, dict) and dados.get("rota") is None:
+            dados.pop("rota", None)
+        return dados
+
+
 class ProfileModeConfig(BaseModel):
     """Seção opcional de MODO do sistema por perfil (FEAT-PROFILE-MODE-01).
 
@@ -376,28 +528,161 @@ class ProfileModeConfig(BaseModel):
     # carregar `coop: false` e desligar o co-op ao ativar, pelas costas de quem
     # nunca pediu isso. Perfis já gravados são migrados em
     # `loader.migrate_profiles_coop_default`.
+    #
+    # COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o campo passou a ser
+    # ACEITO E IGNORADO. Nenhum perfil liga nem desliga o co-op
+    # (`lifecycle._apply_profile_mode` só o LÊ, e loga quando um perfil antigo
+    # pede `false`). Ele NÃO sai do modelo de propósito: `model_config` acima é
+    # `extra="forbid"`, então tirá-lo faria **todo perfil dela que traz `"coop"`
+    # falhar na validação** — inclusive dois presets de fábrica
+    # (`assets/profiles_default/coop_local.json` e `sackboy_nativo.json`).
+    # Remover o campo seria trocar um interruptor inútil por um perfil que não
+    # abre; a lápide é mais barata que a migração.
     coop: bool = True
+
+
+class ControllerRumbleOverride(BaseModel):
+    """A INTENSIDADE da vibração de UMA unidade física (POR-UNIDADE-01, 10/08).
+
+    Subconjunto DELIBERADO de ``RumbleConfig``: só ``policy`` e
+    ``custom_mult``, os dois campos que descrevem *o quanto* aquela peça de
+    plástico vibra. É o que ela pediu em 10/08/2026 — "uma guia específica do
+    perfil X pro controle branco e outra pro mesmo perfil pro controle preto".
+
+    ``passthrough`` FICA DE FORA, e a ausência é a entrega. Ele não descreve a
+    peça: descreve *quem manda na vibração agora* — soltar o rumble que a GUI
+    TRAVOU (``DaemonConfig.rumble_active``, um valor só para o daemon inteiro)
+    de volta para o jogo. Duas unidades pedindo passthrough diferente no mesmo
+    perfil não têm resposta honesta enquanto a trava for uma só, e a casa já
+    recusa campo aceito-e-ignorado na BORDA do esquema em vez de deixá-lo
+    virar comportamento errado silencioso meses depois (ver ``custom_mult``
+    fora de ``policy='custom'``, logo abaixo). ``extra="forbid"`` faz a recusa:
+    um override com ``passthrough`` é rejeitado no load, com mensagem.
+
+    ``auto`` também fica de fora, e pela mesma disciplina — mas por uma
+    MEDIÇÃO, não por uma opinião. O ``auto`` resolve o multiplicador pela
+    BATERIA, e quem a lê é ``core.rumble._effective_mult``, a partir do
+    ``store.snapshot().controller`` — o controle PRIMÁRIO, um só. Aceitar
+    ``auto`` por unidade guardaria no perfil dela uma promessa que o caminho
+    do rumble não sabe cumprir: as duas peças escalariam pela bateria da
+    mesma. Quando o dia do ``auto`` por peça chegar, o que falta é a bateria
+    POR UNIQ chegando ao ponto de escala — não este campo.
+
+    Campo não escrito = sem opinião: o merge POR CAMPO herda o global do
+    perfil, exatamente como em ``leds``/``triggers``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    policy: Literal["economia", "balanceado", "max", "custom"] | None = None
+    custom_mult: float | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _auto_nao_e_por_unidade(cls, data: Any) -> Any:
+        """Mensagem que EXPLICA a recusa do ``auto`` em vez do literal cru."""
+        if isinstance(data, dict) and data.get("policy") == "auto":
+            raise ValueError(
+                "controllers[...].rumble: 'auto' não vale por unidade — ele "
+                "escala pela BATERIA, e quem a lê é o controle PRIMÁRIO "
+                "(core.rumble._effective_mult). Guardar 'auto' aqui faria as "
+                "duas peças escalarem pela bateria da mesma. Use 'economia', "
+                "'balanceado', 'max' ou 'custom'; o 'auto' continua valendo "
+                "na seção GLOBAL do perfil."
+            )
+        return data
+
+    @model_validator(mode="after")
+    def _validate_custom_mult(self) -> ControllerRumbleOverride:
+        """MESMA regra do ``RumbleConfig`` — a borda recusa o par incoerente."""
+        if self.custom_mult is not None:
+            if not (0.0 <= self.custom_mult <= RUMBLE_CUSTOM_MULT_MAX):
+                raise ValueError(
+                    f"custom_mult fora de [0.0, {RUMBLE_CUSTOM_MULT_MAX}]: "
+                    f"{self.custom_mult}"
+                )
+            if self.policy != "custom":
+                raise ValueError(
+                    "custom_mult só é válido com policy='custom' "
+                    f"(policy={self.policy!r})"
+                )
+        return self
 
 
 class ControllerOverrides(BaseModel):
     """Overrides POR CONTROLE dentro do perfil (PERFIL-02, 2026-07-16).
 
     Subconjunto deliberado das seções do perfil que fazem sentido por
-    controle físico: ``leds`` (lightbar + player_leds + brilho) e
-    ``triggers``. Campo ``None`` = sem opinião — o controle herda a seção
+    controle físico. Campo ``None`` = sem opinião — o controle herda a seção
     GLOBAL do perfil (merge POR CAMPO na aplicação, PERFIL-01: override
     parcial nunca apaga a cor global no replug).
+
+    - ``leds`` (lightbar + player_leds + brilho) e ``triggers``, desde
+      PERFIL-02;
+    - ``rumble`` e ``speaker``, desde POR-UNIDADE-01 (10/08/2026) — a
+      intensidade da vibração e o alto-falante são da PEÇA: cada unidade tem
+      seus dois motores e seu alto-falante, e a fiação por-``uniq`` para os
+      dois já existia (``set_rumble_for``, ``apply_profile_speaker(uniq=...)``
+      e ``speaker.set``, todos com o alvo no parâmetro).
 
     Fora por decisão (revisão adversarial do sprint perfis-por-controle):
     - ``label`` — identidade visível é outra frente (4P-03);
     - ``mic_led`` — o mic jamais é colateral de troca de perfil
       (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01).
+
+    Fora porque NÃO TÊM RESPOSTA HONESTA por unidade — a nota datada de
+    10/08/2026, para não se reaprender (ver
+    ``docs/process/sprints/2026-08-10-POR-UNIDADE-01-*``). A máscara do gamepad
+    saiu desta lista em 15/08/2026: ela TEM resposta por unidade, só que a
+    resposta mora fora do perfil (ver a nota datada no primeiro item):
+
+    - ``mode`` é da SESSÃO, não da peça (decisão dela, 10/08/2026): duas
+      unidades pedindo modos diferentes no mesmo perfil não têm resposta,
+      porque o modo é estado do PROCESSO — existe um só, e o daemon não pode
+      estar em dois ao mesmo tempo;
+
+      **NOTA DATADA — 15/08/2026 (MÁSCARA-POR-JOGADOR-01).** Esta frase dizia
+      ``mode`` **e a máscara do gamepad**, e ficou LARGA DEMAIS. Ela a
+      reescreveu para valer só para o ``mode``. O que a medição separou (o
+      diagnóstico inteiro está em
+      ``docs/process/sprints/2026-08-15-MASCARA-POR-JOGADOR-01-*``): o ``mode``
+      é mesmo um só, mas a máscara **já tem um lugar por jogador** — o co-op
+      cria um gamepad virtual por controle e cada um carrega o próprio
+      ``flavor``. Onde não havia resposta por unidade, havia; o motivo de 10/08
+      valia para o ``mode`` e foi emprestado à máscara sem medição própria.
+      **A máscara passa a ser do JOGADOR, com a do jogo como padrão herdado**
+      (D-5 de 14/08, respondida em 15/08).
+
+      **E mesmo assim ela NÃO é um campo daqui** — por uma razão diferente, e
+      medida: trocar a máscara **derruba e recria o gamepad virtual**. Num
+      campo de perfil, cada troca automática de perfil (cada alt-tab) faria o
+      controle sumir e voltar no meio da partida. Por isso a escolha por
+      unidade mora em ``daemon/subsystems/external_mask.py``, chaveada pela
+      identidade do APARELHO e persistida em arquivo próprio — com a MESMA
+      semântica de override que este modelo usa: sem escolha registrada, o
+      jogador herda a máscara do jogo (MÁSCARA-01, *"Onde a máscara mora"*);
+    - ``suppress_desktop_emulation`` (o "modo jogo") é irmão do ``mode`` pelo
+      mesmo eixo — ele cala a emulação do DESKTOP, que é uma só;
+    - ``mouse`` e ``key_bindings`` esbarram numa medição, não numa opinião:
+      ``PyDualSenseController.read_state`` diz, em comentário de código, que
+      *"INPUT vem SEMPRE do controle PRIMÁRIO"* e que a emulação de
+      mouse/teclado/gamepad é **single-controller por construção**. Há UM
+      ``_mouse_device`` e UM ``_keyboard_device`` no daemon, alimentados por
+      um ``read_state()`` por tick. Guardar velocidade por unidade sem
+      pipeline por unidade seria guardar um número que ninguém lê;
+    - ``mic.button_toggles_system`` pelo mesmo motivo do lado do barramento: o
+      ``EventTopic.BUTTON_DOWN`` publica ``{"button", "pressed"}`` e **não
+      carrega uniq**, então o laço do mic não tem como saber de qual peça veio
+      o toque. Somado a isso, o alvo do gesto é o microfone PADRÃO DO SISTEMA,
+      que é um só.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
+    rumble: ControllerRumbleOverride | None = None
+    speaker: ProfileSpeakerConfig | None = None
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
@@ -406,6 +691,34 @@ class ControllerOverrides(BaseModel):
 #   delega ao subsystem de OSK em vez de emitir evento de tecla. Aqui aceitamos
 #   pelo regex mas não validamos contra ecodes — o schema não conhece a lista fechada.
 _KEY_BINDING_TOKEN_RE = re.compile(r"^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$")
+
+
+#: Faixa de `Profile.priority` que a JANELA oferece — o piso e o teto do
+#: `profile_priority_adj` do glade, e a faixa que o verificador semântico usa
+#: para dizer "este número NÃO veio do controle de prioridade".
+#:
+#: UNIFICA-CONSTANTE-01 (decisão dela, 05/08/2026: *"preciso que as constantes
+#: apontem pros arquivos reais do import"*). O 200 morava em três lugares —
+#: `app/actions/profiles_actions.py`, `profiles/sanidade.py` e o `upper` do
+#: glade — e só UM par tinha portão. Mora AQUI, na camada mais baixa, por dois
+#: motivos: é de onde `app/draft_config.py` já lê o DEFAULT de `priority`
+#: (`Profile.model_fields["priority"].default`), então quem manda na faixa e
+#: quem manda no default passam a morar juntos; e este módulo importa só
+#: stdlib + pydantic, o que permite `profiles/`, `app/` e o CLI lerem a faixa
+#: sem nenhum deles puxar GTK.
+#:
+#: Quem mudar o teto muda AQUI. O glade tem de acompanhar na mão (XML não
+#: importa nada), e há portão que reprova a divergência:
+#: `tests/unit/test_teto_da_prioridade_tem_uma_fonte_so.py`.
+#:
+#: Histórico do número: era 100 até PERFIL-NASCE-CERTO-01 (entrega 2, item 1),
+#: e o catch-all do disco dela estava EXATAMENTE em 100 — não existia número
+#: escolhível pela janela que fizesse o perfil de um jogo vencer o dela. O
+#: conserto de 26/07 exigiu escrever 110 direto no JSON, um valor que a janela
+#: não aceitava digitar. Subir o teto não mexe em perfil nenhum já salvo: é só
+#: a faixa que a escala oferece.
+PRIORIDADE_MINIMA = 0
+PRIORIDADE_MAXIMA = 200
 
 
 class Profile(BaseModel):
@@ -433,6 +746,14 @@ class Profile(BaseModel):
     # MIC-EXPOSE-01: comportamento do botão de mic por perfil. None = sem
     # opinião (ativar o perfil não mexe no `mic_button_toggles_system`).
     mic: ProfileMicConfig | None = None
+    # SOM-02/E4: volume do ALTO-FALANTE por perfil. None = sem opinião — a
+    # ativação não escreve áudio nenhum e NÃO toma a posse dos bytes de
+    # volume (armadilha 1 da sprint). Preenchida = a ativação manda
+    # `{volume, muted}` pelo `speaker_applier` injetado no ProfileManager.
+    # A serialização em `save_profile` OMITE a chave quando None, pelo mesmo
+    # requisito de compatibilidade do `controllers` (extra="forbid" acima
+    # rejeitaria TODO perfil num binário antigo, não só os que usam a seção).
+    speaker: ProfileSpeakerConfig | None = None
     # FEAT-PROFILE-MODE-01: modo do sistema por perfil (nativo/gamepad/desktop
     # + co-op). None = sem opinião (libera só modo vindo de outro perfil).
     mode: ProfileModeConfig | None = None
@@ -633,7 +954,16 @@ def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any])
     if not isinstance(match, MatchCriteria) or not match.window_class:
         return False
     wm_class = str(window_info.get("wm_class") or "")
-    if not wm_class.startswith("steam_app_"):
+    # UNIFICA-PREDICADO-01 (05/08/2026): era `wm_class.startswith("steam_app_")`
+    # — SENSÍVEL a caixa, uma linha acima de uma comparação INSENSÍVEL. A
+    # incoerência estava denunciada no próprio comentário abaixo e mesmo assim
+    # valia: com a janela se anunciando `STEAM_APP_2111190` (a `wm_class` chega
+    # com a grafia do toolkit e muda entre backends, ver `_casa_sem_caixa`), o
+    # perfil do jogo casava pelo matcher e saía daqui como "não é regra de
+    # jogo". Agora as duas linhas usam a MESMA noção de caixa. Portão:
+    # `tests/unit/test_match_sem_caixa_e_sentinel_manual.py::
+    # TestComparacaoSemCaixa::test_regra_de_jogo_com_a_janela_em_caixa_alta`.
+    if steam_appid_from_wm_class(wm_class) is None:
         return False
     # Mesma comparação de `MatchCriteria.matches` (R-12): sem ela, um
     # `steam_app_` digitado com maiúscula faria o perfil CASAR pelo matcher e
@@ -703,7 +1033,10 @@ def perfil_declara_modo_de_jogo(profile: Profile | None) -> bool:
 
 
 __all__ = [
+    "PRIORIDADE_MAXIMA",
+    "PRIORIDADE_MINIMA",
     "ControllerOverrides",
+    "ControllerRumbleOverride",
     "LedsConfig",
     "Match",
     "MatchAny",
@@ -712,6 +1045,7 @@ __all__ = [
     "Profile",
     "ProfileMicConfig",
     "ProfileMouseConfig",
+    "ProfileSpeakerConfig",
     "RumbleConfig",
     "TriggerConfig",
     "TriggersConfig",

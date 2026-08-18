@@ -45,7 +45,19 @@ WINDOW_DETECT_BLIND_AFTER_SEC: float = 300.0
 # ONDA-U F1/F2 (auditoria 21/07): categorias válidas do override manual —
 # a trava deixou de ser um booleano único para que limpar uma categoria
 # (ex.: fim do "Testar motores" → "rumble") não apague as demais.
-MANUAL_OVERRIDE_CATEGORIES: frozenset[str] = frozenset({"trigger", "led", "rumble"})
+#
+# SOM-02 (E3/E4, 29-31/07): entra a QUARTA categoria, `audio` — armada pelo
+# `speaker.set` (volume, mudo e devolução da posse). A razão, escrita aqui
+# porque é aqui que ela vale: é o padrão da casa contra o autoswitch pisar o
+# ajuste manual dela na troca de janela. A alternativa considerada — deixar o
+# áudio fora da trava e fazer o aplicador de perfil rodar SÓ em troca explícita
+# de perfil — deixaria o furo aberto em todo caminho que reaplica o perfil ativo
+# sem ser troca explícita, que é justamente a classe de defeito de "a config que
+# eu deixo nunca é respeitada". A trava é o mecanismo que já existe para isso, e
+# volume é ajuste manual como qualquer outro.
+MANUAL_OVERRIDE_CATEGORIES: frozenset[str] = frozenset(
+    {"trigger", "led", "rumble", "audio"}
+)
 
 
 @dataclass(frozen=True)
@@ -152,6 +164,39 @@ class StateStore:
         # 6969) e quem lê (o dispatch do gamepad virtual, a cada tick) são
         # dois mundos que só se encontram pelo store.
         self._udp_trigger_thresholds: dict[str, int] = {"left": 0, "right": 0}
+        # PERFIL-ADIADO-POR-JANELA-01 (09/08/2026): nome do perfil que o restore
+        # de boot RECUSOU restaurar de propósito por ser escopado a uma janela
+        # (RESTORE-ESCOPO-01, ver `daemon/connection.py`). None = nenhuma recusa
+        # pendente.
+        #
+        # Existe porque `active_profile=None` respondia a DUAS perguntas muito
+        # diferentes com a mesma palavra: "nenhum perfil foi configurado" e "o
+        # perfil dela existe, é válido, mas está esperando a janela do jogo".
+        # Medido na máquina dela: em TODO boot desde 31/07 o journal registra
+        # `last_profile_restore_pulado_perfil_de_janela` (name=Pragmata2, depois
+        # name=Sackboy) e o `daemon.state_full` responde `active_profile: None` —
+        # a recusa fica só no journal, e a janela não tem como contar a diferença.
+        # O perfil volta sozinho quando o jogo abre (16 `profile_autoswitch` para
+        # `Sackboy` medidos em 08/08), então NÃO se force o restore: o que falta
+        # é dizer a verdade enquanto a espera dura.
+        self._perfil_adiado_por_janela: str | None = None
+        # ABA-DO-JOGO-01 (10/08/2026): há jogo da Steam aberto AGORA, e qual.
+        # Pedido dela, literal: *"essa aba no jogo só deveria aparecer quando
+        # efetivamente eu tivesse com um jogo steam aberto"*.
+        #
+        # O par é um TRI-ESTADO de propósito, e o `_lido` é a peça que não pode
+        # ser cortada por parecer redundante: "ainda não perguntei" e "perguntei
+        # e não há jogo" respondem a MESMA pergunta com o mesmo `appid=None`, e
+        # quem lê precisa contar a diferença. Sem ele a janela esconderia a aba
+        # no instante em que o daemon sobe — inclusive com o jogo dela aberto —
+        # e a devolveria dois segundos depois, na primeira sonda: a aba piscando
+        # a cada restart do daemon, que é ruído nascido de uma cura.
+        #
+        # Nada de sticky: `set_steam_jogo_appid` é o dono único das duas linhas,
+        # e uma leitura que FALHA não escreve nada (ver `lifecycle`) — o último
+        # fato conhecido vale até a próxima resposta, nunca até o próximo susto.
+        self._steam_jogo_appid: int | None = None
+        self._steam_jogo_lido: bool = False
 
     # --- escritas ------------------------------------------------------
 
@@ -162,8 +207,52 @@ class StateStore:
                 self._last_battery_pct = state.battery_pct
 
     def set_active_profile(self, name: str | None) -> None:
+        """Publica o perfil ativo — e ENCERRA a espera do perfil adiado.
+
+        PERFIL-ADIADO-POR-JANELA-01: a limpeza mora aqui, e não no autoswitch,
+        porque este é o ponto de estrangulamento ÚNICO por onde toda ativação
+        passa (`ProfileManager.activate`, de qualquer origem: manual, autoswitch,
+        system). A espera termina quando um perfil entra de verdade — foi
+        exatamente o que aconteceu na máquina dela às 00:04:58, quando o
+        `profile.switch` manual para `Sackboy` apagou a pergunta.
+
+        Limpa também no `None` (o `delete()` do perfil ativo, `manager.py:188`):
+        preferimos perder a dica a exibi-la velha. O journal guarda o fato
+        original de qualquer jeito.
+        """
         with self._lock:
             self._active_profile = name
+            self._perfil_adiado_por_janela = None
+
+    def set_perfil_adiado_por_janela(self, name: str | None) -> None:
+        """Registra que o restore de boot adiou `name` por ser de janela.
+
+        PERFIL-ADIADO-POR-JANELA-01. Chamado por `restore_last_profile`
+        (`daemon/connection.py`) nos dois pontos em que ele desiste por escopo —
+        o nome resolvido e o fallback do session.json. `None` limpa.
+        """
+        with self._lock:
+            self._perfil_adiado_por_janela = name or None
+
+    def set_steam_jogo_appid(self, appid: int | None) -> None:
+        """Publica o resultado de UMA sonda por jogo da Steam aberto.
+
+        ABA-DO-JOGO-01. `appid` inteiro = há jogo, e é este; `None` = **sondei e
+        não há jogo**. Os dois marcam `_lido`, e é essa marcação que transforma o
+        `None` de "ainda não sei" em resposta — quem não conseguiu sondar
+        simplesmente NÃO chama isto (`lifecycle._sync_steam_jogo_aberto` engole a
+        falha), e o último fato conhecido continua valendo.
+
+        Molde do `set_perfil_adiado_por_janela` acima, e pela mesma razão: quem
+        escreve é o tique lento do daemon, quem lê é o `state_full` a 10 Hz —
+        duas threads que só se encontram pelo store, então a escrita é sob lock.
+        """
+        with self._lock:
+            self._steam_jogo_appid = (
+                int(appid) if isinstance(appid, int) and not isinstance(appid, bool)
+                else None
+            )
+            self._steam_jogo_lido = True
 
     def bump(self, counter: str, delta: int = 1) -> int:
         with self._lock:
@@ -206,13 +295,14 @@ class StateStore:
             return (atual["left"], atual["right"])
 
     def mark_manual_trigger_active(self, category: str = "trigger") -> None:
-        """Arma o override manual da `category` ("trigger" | "led" | "rumble").
+        """Arma o override manual (`"trigger"` | `"led"` | `"rumble"` | `"audio"`).
 
         Usado pelo `IpcServer` nos IPCs de aplicação (trigger.set → "trigger",
-        led.set/led.player_set → "led", rumble.set/stop → "rumble") e pelo
-        `DraftApplier` (categorias das seções aplicadas). Enquanto QUALQUER
-        categoria estiver armada, o `AutoSwitcher` NÃO reaplica o perfil
-        ativo por mudança de janela (respeita override do usuário).
+        led.set/led.player_set → "led", rumble.set/stop → "rumble",
+        speaker.set → "audio") e pelo `DraftApplier` (categorias das seções
+        aplicadas). Enquanto QUALQUER categoria estiver armada, o `AutoSwitcher`
+        NÃO reaplica o perfil ativo por mudança de janela (respeita override do
+        usuário).
         """
         if category not in MANUAL_OVERRIDE_CATEGORIES:
             raise ValueError(f"categoria de override desconhecida: {category!r}")
@@ -402,6 +492,48 @@ class StateStore:
     def active_profile(self) -> str | None:
         with self._lock:
             return self._active_profile
+
+    @property
+    def perfil_adiado_por_janela(self) -> str | None:
+        """Perfil que o boot recusou restaurar por ser escopado a uma janela.
+
+        PERFIL-ADIADO-POR-JANELA-01. Só tem valor enquanto `active_profile` é
+        `None`: é o par dos dois que carrega a informação inteira —
+
+          - `active_profile=None`, adiado=`None`   → não há perfil nenhum;
+          - `active_profile=None`, adiado=`"Sackboy"` → o perfil dela existe e
+            está esperando a janela do jogo (o autoswitch o ativa quando ela
+            abrir o Sackboy);
+          - `active_profile="Sackboy"`             → entrou; nada pendente.
+
+        Nunca é "erro": a recusa é o desenho do RESTORE-ESCOPO-01 (um perfil de
+        jogo que voltasse no boot pintaria a lightbar e suprimiria a paleta
+        automática com o jogo fechado). O que era defeito é ela não ter como
+        saber disso.
+        """
+        with self._lock:
+            return self._perfil_adiado_por_janela
+
+    @property
+    def steam_jogo_appid(self) -> int | None:
+        """Appid do jogo da Steam aberto AGORA. Só vale com `steam_jogo_lido`.
+
+        ABA-DO-JOGO-01. Ler este sozinho é o erro que o par existe para impedir:
+        `None` aqui é "não há jogo" OU "ninguém sondou ainda", e as duas mandam
+        a janela fazer coisas opostas.
+        """
+        with self._lock:
+            return self._steam_jogo_appid
+
+    @property
+    def steam_jogo_lido(self) -> bool:
+        """True depois da PRIMEIRA sonda bem-sucedida por jogo da Steam.
+
+        ABA-DO-JOGO-01. Não volta para False: uma sonda que falha não apaga o
+        que já se sabia (ver `set_steam_jogo_appid`).
+        """
+        with self._lock:
+            return self._steam_jogo_lido
 
     @property
     def last_battery_pct(self) -> int | None:

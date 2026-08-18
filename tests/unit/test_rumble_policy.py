@@ -17,6 +17,14 @@ import pytest
 
 from hefesto_dualsense4unix.core.rumble import RumbleEngine, _effective_mult
 from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+# 11/08/2026: os degraus eram números escritos à mão aqui (0.7 para o
+# balanceado, 1.0 para o máximo). No dia em que a escada mudou
+# (30/100/150, decisão dela), estes testes passaram a reprovar sem que nada
+# do produto estivesse errado — eles fixavam o VALOR, não a REGRA. Agora
+# derivam do dono único; o que eles provam é que `_effective_mult` entrega o
+# que a tabela diz, e isso vale em qualquer escada.
 
 # AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01: _effective_mult_inline foi deletado;
 # testes usam a função canônica _effective_mult. Alias local mantém os
@@ -49,12 +57,12 @@ class TestPresets:
     def test_balanceado(self) -> None:
         cfg = _config("balanceado")
         mult, _, _ = _effective_mult_inline(cfg, 100, 1.0, 0.7, 0.0)
-        assert mult == pytest.approx(0.7)
+        assert mult == pytest.approx(RUMBLE_POLICY_MULT["balanceado"])
 
     def test_max(self) -> None:
         cfg = _config("max")
         mult, _, _ = _effective_mult_inline(cfg, 100, 1.0, 0.7, 0.0)
-        assert mult == pytest.approx(1.0)
+        assert mult == pytest.approx(RUMBLE_POLICY_MULT["max"])
 
     def test_custom(self) -> None:
         cfg = _config("custom", custom_mult=0.45)
@@ -82,11 +90,12 @@ class TestMultEfetivoObservavel:
 
     def test_max_sincroniza_estado_observavel(self) -> None:
         """O cenário do journal: policy=max com estado herdado 0.7 tem que
-        devolver new_last=1.0 — não deixar o 0.7 fantasma para o state_full."""
+        devolver o mult DO MÁXIMO — não deixar o 0.7 fantasma para o
+        state_full."""
         cfg = _config("max")
         mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.7, 0.0)
-        assert mult == pytest.approx(1.0)
-        assert new_last == pytest.approx(1.0)
+        assert mult == pytest.approx(RUMBLE_POLICY_MULT["max"])
+        assert new_last == pytest.approx(RUMBLE_POLICY_MULT["max"])
 
     def test_economia_sincroniza_estado_observavel(self) -> None:
         cfg = _config("economia")
@@ -103,8 +112,10 @@ class TestMultEfetivoObservavel:
     def test_politica_desconhecida_sincroniza_fallback(self) -> None:
         cfg = _config("turbo")
         mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.3, 0.0)
-        assert mult == pytest.approx(0.7)
-        assert new_last == pytest.approx(0.7)
+        # O fallback é o BALANCEADO, e é a regra que importa: era o literal
+        # 0.7 aqui e no produto, e os dois viraram âncora morta juntos.
+        assert mult == pytest.approx(RUMBLE_POLICY_MULT["balanceado"])
+        assert new_last == pytest.approx(RUMBLE_POLICY_MULT["balanceado"])
 
     def test_politica_fixa_preserva_relogio_do_debounce_auto(self) -> None:
         """Política fixa não mexe no timestamp do debounce do auto — só no
@@ -230,7 +241,13 @@ class TestRumbleSetComPolitica:
         # 100 * 0.3 = 30, 200 * 0.3 = 60
         controller.set_rumble.assert_called_once_with(weak=30, strong=60)
 
-    def test_balanceado_aplica_mult_70(self) -> None:
+    def test_balanceado_entrega_o_que_o_jogo_pediu(self) -> None:
+        """Era `test_balanceado_aplica_mult_70`, com o 0.7 no NOME.
+
+        Em 11/08/2026 o balanceado virou 1,0 (decisão dela) e o nome do
+        teste passou a mentir antes mesmo do corpo. O que ele prova agora é
+        a promessa do tooltip: "sem aumentar nem diminuir".
+        """
         controller = MagicMock()
         engine = RumbleEngine(controller, time_fn=lambda: 1.0)
         cfg = _config("balanceado")
@@ -239,10 +256,16 @@ class TestRumbleSetComPolitica:
         engine.set(100, 100)
         engine.tick()
 
-        # 100 * 0.7 = 70
-        controller.set_rumble.assert_called_once_with(weak=70, strong=70)
+        esperado = round(100 * RUMBLE_POLICY_MULT["balanceado"])
+        controller.set_rumble.assert_called_once_with(
+            weak=esperado, strong=esperado
+        )
 
-    def test_max_sem_alteracao(self) -> None:
+    def test_max_amplifica(self) -> None:
+        """Era `test_max_sem_alteracao`, e o nome contava a história certa
+        do produto de então: o "Máximo" valia 1,0 e não alterava NADA. Em
+        11/08/2026 ele passou a amplificar, e o nome virou o oposto do que
+        o botão faz. Satura em 255 — é o que o `_clamp` garante."""
         controller = MagicMock()
         engine = RumbleEngine(controller, time_fn=lambda: 1.0)
         cfg = _config("max")
@@ -251,8 +274,11 @@ class TestRumbleSetComPolitica:
         engine.set(100, 200)
         engine.tick()
 
-        # 100 * 1.0 = 100, 200 * 1.0 = 200
-        controller.set_rumble.assert_called_once_with(weak=100, strong=200)
+        mult = RUMBLE_POLICY_MULT["max"]
+        controller.set_rumble.assert_called_once_with(
+            weak=min(255, round(100 * mult)), strong=min(255, round(200 * mult))
+        )
+        assert mult > 1.0, 'um botão chamado "Máximo" tem de aumentar'
 
     def test_clamp_resultado(self) -> None:
         """Resultado é clampado em [0, 255]."""
@@ -356,14 +382,27 @@ class TestIpcHandlers:
         with pytest.raises(ValueError, match="fora de"):
             asyncio.run(server._handle_rumble_policy_custom({"mult": 2.5}))
 
-    def test_policy_custom_amplificado_e_aceito(self) -> None:
-        """150% no slider = mult 1.5 — o que a UI oferece, o daemon aceita."""
+    def test_policy_custom_no_teto_e_aceito(self) -> None:
+        """O TOPO do slider é aceito pelo daemon — a invariante é essa.
+
+        SATURA-01 (11/08/2026): o teste chamava-se "amplificado" e travava o
+        1.5 como número literal, porque o slider ia a 200%. O teto voltou a
+        100% (medido: acima disso metade da faixa do jogo satura em 255 e a
+        vibração perde a variação), e o valor passou a sair do dono único —
+        `RUMBLE_CUSTOM_MULT_MAX` no esquema. Assim o teste continua provando o
+        que importa, "o que a UI oferece, o daemon aceita", e não precisa ser
+        reescrito na próxima vez que o teto mudar.
+        """
+        from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
+
         server, cfg = self._make_server()
 
-        result = asyncio.run(server._handle_rumble_policy_custom({"mult": 1.5}))
+        result = asyncio.run(
+            server._handle_rumble_policy_custom({"mult": RUMBLE_CUSTOM_MULT_MAX})
+        )
 
-        assert result["mult"] == 1.5
-        assert cfg.rumble_policy_custom_mult == 1.5
+        assert result["mult"] == RUMBLE_CUSTOM_MULT_MAX
+        assert cfg.rumble_policy_custom_mult == RUMBLE_CUSTOM_MULT_MAX
 
     def test_policy_auto(self) -> None:
         server, cfg = self._make_server()

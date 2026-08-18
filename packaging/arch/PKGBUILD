@@ -11,7 +11,7 @@
 # `yay -S hefesto-dualsense4unix` se o pacote for submetido ao AUR.
 
 pkgname=hefesto-dualsense4unix
-pkgver=0.5.0
+pkgver=0.9.4.2
 pkgrel=1
 # PACKAGING-EPOCH-DOWNGRADE-01: a numeração voltou de 4.0.0 para 0.1.0 em
 # 2026-07-24. Para o pacman (vercmp) 0.3.0 é DOWNGRADE de qualquer 3.x/4.0 já
@@ -53,6 +53,13 @@ makedepends=(
 )
 optdepends=(
     'wlrctl: backend Wayland (wlroots) para auto-switch de perfis'
+    # TECLADO-QUE-NAO-DIGITA-01: o teclado na tela que o L3 do controle abre —
+    # o ÚNICO caminho do produto para escrever texto (nenhum dos nove atalhos
+    # de fábrica digita letra). wvkbd digita pelo protocolo Wayland
+    # zwp_virtual_keyboard_manager_v1; onboard digita por XTEST e, numa sessão
+    # Wayland, só alcança janelas XWayland — abre e não digita.
+    'wvkbd: teclado na tela do L3 em sessão Wayland (cliente Wayland nativo)'
+    'onboard: teclado na tela do L3 em sessão X11 (injeta por XTEST)'
     'dkms: módulos patchados hid-nintendo (Onda T — probe BT Nintendo/8BitDo) e rtw88_usb (Onda W — fantasma USB do dongle WiFi)'
     'linux-headers: build dos módulos DKMS patchados (hid-nintendo, rtw88-usb)'
 )
@@ -108,6 +115,13 @@ package() {
     install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
         "$pkgdir/usr/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png"
 
+    # APPLET-MONOCROMÁTICO-01 (07/08/2026): o ícone SIMBÓLICO da bandeja. O
+    # código pede `hefesto-dualsense4unix-symbolic` (app/tray.py), e esse nome
+    # NÃO se satisfaz com PNG: PNG nunca é recolorido pelo tema, e o ícone
+    # ficaria o único cromático do painel. Destino `symbolic/apps/`.
+    install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
+        "$pkgdir/usr/share/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg"
+
     # Udev rules — conjunto CANÔNICO (M13): 70/71/72/76..84, alinhado a
     # scripts/install_udev.sh + install-host-udev.sh + build_deb.sh. As regras
     # 73/74 (GUI auto-spawn no hotplug) foram DESCONTINUADAS 2026-06-23 — abriam
@@ -119,6 +133,7 @@ package() {
         assets/71-uhid.rules \
         assets/71-uinput.rules \
         assets/72-ps5-controller-autosuspend.rules \
+        assets/72-hefesto-touchpad-motion-uaccess.rules \
         assets/76-dualsense-touchpad-libinput-ignore.rules \
         assets/77-dualsense-leds.rules \
         assets/78-dualsense-motion-not-joystick.rules \
@@ -167,6 +182,13 @@ package() {
     mkdir -p "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb"
     cp -a assets/dkms/rtw88-usb/. \
         "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/"
+    # CR-05 (07/08/2026): a GPL-2.0, seção 1, exige que a cópia do texto da
+    # licença viaje JUNTO com o fonte. Os três diretórios acima são GPL (o
+    # rtw88-usb é GPL-2.0 OR BSD-3-Clause, licença dupla), e até 07/08 nenhum
+    # texto os acompanhava. Procedência em LICENSES/README.md.
+    mkdir -p "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/LICENSES"
+    cp -a LICENSES/. \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/LICENSES/"
 
     # Systemd user units (M14): SÓ as que funcionam no contexto de pacote
     # (binário em /usr/bin, resolvido pelo sed). As demais de assets/ dependem de

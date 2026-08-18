@@ -13,6 +13,7 @@ Valida os 4 pontos canônicos das funções top-level
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Any, ClassVar
 from unittest.mock import MagicMock
 
@@ -194,12 +195,29 @@ async def test_poll_loop_chama_dispatch_keyboard_com_buttons_pressed(
     daemon._keyboard_device = mock_kbd
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.06)
+    # RELOGIO-NAO-E-ASSERCAO-01 (06/08/2026): este teste dormia 0,06 s fixo e
+    # exigia `ticks >= 8`. A 200 Hz isso são 12 ticks previstos — folga de 4.
+    # MEDIDO em 06/08: com a suíte inteira e a máquina sob carga, o laço perde a
+    # corrida e o teste reprova, enquanto passa sozinho e passa com a máquina
+    # quieta. Duas de quatro execuções completas reprovaram, e a mesma suíte no
+    # commit anterior passou — o que faz o teste acusar de REGRESSÃO quem só
+    # deixou a máquina mais ocupada.
+    #
+    # A invariante que este teste existe para provar é `dispatch` UMA vez por
+    # tick (A-09). Quantos ticks cabem em 60 ms não é asserção, é hardware. Logo
+    # esperamos os ticks acontecerem, com prazo generoso, em vez de apostar que
+    # cabem no relógio de parede.
+    prazo = time.monotonic() + 5.0
+    while daemon.store.counter("poll.tick") < n_ticks and time.monotonic() < prazo:
+        await asyncio.sleep(0.005)
     daemon.stop()
     await run_task
 
     ticks = daemon.store.counter("poll.tick")
-    assert ticks >= n_ticks
+    assert ticks >= n_ticks, (
+        f"o laço deu {ticks} ticks em 5 s — isso não é lentidão de máquina "
+        "ocupada, é o laço parado"
+    )
     assert len(dispatch_calls) == ticks, (
         f"dispatch_keyboard chamado {len(dispatch_calls)}x para {ticks} ticks"
     )

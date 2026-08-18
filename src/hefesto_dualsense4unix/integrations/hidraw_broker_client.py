@@ -35,6 +35,7 @@ import struct
 import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from typing import Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -100,6 +101,12 @@ class HidrawBrokerClient:
         self._lock = threading.Lock()
         self._sock: socket.socket | None = None
         self._indisponivel_logado = False
+        #: Último estado CONHECIDO por nó ("hidden"/"exposed"), para logar a
+        #: TRANSIÇÃO em vez da reafirmação (ver `_logar_transicao`). Lock
+        #: próprio: `_request` já toma `self._lock` por dentro, e reentrar
+        #: nele daqui travaria o cliente.
+        self._estado_por_no: dict[str, str] = {}
+        self._estado_lock = threading.Lock()
 
     # -- API pública -----------------------------------------------------
 
@@ -108,7 +115,7 @@ class HidrawBrokerClient:
         response = self._request({"cmd": "hide", "node": node})
         ok = bool(response is not None and response.get("ok"))
         if ok:
-            logger.info("hidraw_broker_hidden", node=node)
+            self._logar_transicao("hidraw_broker_hidden", node, "hidden")
         else:
             self._log_falha("hide", node, response)
         return ok
@@ -118,11 +125,8 @@ class HidrawBrokerClient:
         response = self._request({"cmd": "restore", "node": node})
         ok = bool(response is not None and response.get("ok"))
         if ok:
-            logger.info(
-                "hidraw_broker_restored",
-                node=node,
-                state=response.get("state") if response else None,
-            )
+            estado = str(response.get("state") or "exposed") if response else "exposed"
+            self._logar_transicao("hidraw_broker_restored", node, estado, state=estado)
         else:
             self._log_falha("restore", node, response)
         return ok
@@ -140,15 +144,17 @@ class HidrawBrokerClient:
             self._log_falha("restore_all", None, response)
         return ok
 
-    def open_fd(self, node: str) -> int | None:
-        """Pede ao broker um fd O_RDWR do nó. None = indisponível/recusado.
+    def abrir_no(self, node: str) -> tuple[int | None, str]:
+        """`(fd, motivo)` — o `open` do broker COM a razão dita em português.
 
-        O fd devolvido é do CHAMADOR (dono único; O_CLOEXEC garantido já na
-        recepção via MSG_CMSG_CLOEXEC). Funciona com o nó ESCONDIDO — o
-        broker é root, e é essa assimetria que o design explora. Nunca
-        levanta e nunca re-tenta sozinho (§1.3): broker velho sem o cmd
-        (`reject_unknown_cmd`), recusa, timeout ⇒ None, e o chamador
-        (`make_broker_opener`) cai no `os.open` por caminho.
+        A-PORTA-QUE-A-CASA-CONSTRUIU-01 (15/08/2026): `open_fd` devolve só
+        `int | None`, e "None" não distingue *broker ausente* de *broker que
+        recusou porque o nó é um vpad*. Para o daemon dá no mesmo — ele cai
+        no `os.open` nos dois casos. Para um INSTRUMENTO não dá: um relatório
+        que não diz por onde mediu é um relatório que não pode ser comparado
+        com o do outro braço do ensaio, e o desenho 2+2 existe justamente
+        para comparar dois braços. Toda a mecânica é a de `open_fd`; a única
+        novidade é o `motivo`, que nunca é vazio.
         """
         with self._lock:
             response, fds = self._request_with_fds({"cmd": "open", "node": node})
@@ -157,11 +163,10 @@ class HidrawBrokerClient:
             # levantar — um logger quebrado (stderr fechado num shutdown
             # malcronometrado, disco cheio no modo json) vazaria um fd REAL
             # do hidraw cedido pelo broker root, órfão até o processo morrer.
+            estado = response.get("state")
             with contextlib.suppress(Exception):
-                logger.info(
-                    "hidraw_broker_fd_recebido", node=node, state=response.get("state")
-                )
-            return fds[0]
+                logger.info("hidraw_broker_fd_recebido", node=node, state=estado)
+            return fds[0], f"o broker serviu o fd (nó {estado}) por {self._path}"
         # Qualquer outra combinação é anomalia: fecha TUDO que veio (mais de
         # um fd = protocolo violado; fd com ok:false = broker bugado). Nunca
         # sai daqui com fd órfão.
@@ -172,9 +177,23 @@ class HidrawBrokerClient:
             logger.warning(
                 "hidraw_broker_fd_count_invalido", node=node, count=len(fds)
             )
-        else:
-            self._log_falha("open", node, response)
-        return None
+            return None, f"o broker devolveu {len(fds)} fds — protocolo violado"
+        self._log_falha("open", node, response)
+        if response is None:
+            return None, f"o broker não respondeu em {self._path}"
+        return None, f"o broker recusou: {response.get('error')}"
+
+    def open_fd(self, node: str) -> int | None:
+        """Pede ao broker um fd O_RDWR do nó. None = indisponível/recusado.
+
+        O fd devolvido é do CHAMADOR (dono único; O_CLOEXEC garantido já na
+        recepção via MSG_CMSG_CLOEXEC). Funciona com o nó ESCONDIDO — o
+        broker é root, e é essa assimetria que o design explora. Nunca
+        levanta e nunca re-tenta sozinho (§1.3): broker velho sem o cmd
+        (`reject_unknown_cmd`), recusa, timeout ⇒ None, e o chamador
+        (`make_broker_opener`) cai no `os.open` por caminho.
+        """
+        return self.abrir_no(node)[0]
 
     def status(self) -> dict[str, Any] | None:
         """Resposta crua do `status` (nós escondidos) — para doctor/telemetria."""
@@ -324,6 +343,33 @@ class HidrawBrokerClient:
                 self._sock.close()
             self._sock = None
 
+    def _logar_transicao(
+        self, evento: str, node: str, estado: str, **campos: Any
+    ) -> None:
+        """`info` quando o nó MUDA de estado; `debug` quando só reafirma.
+
+        Medido em 15/08/2026 no journal da máquina dela: `hidraw_broker_hidden`
+        saiu **717 vezes em 2 h 51** — quatro nós físicos vezes um laço de
+        reconciliação a cada 30 s, sempre a mesma frase, sempre sobre nós que
+        já estavam escondidos desde o primeiro minuto. O
+        `daemon/battery_journal.py:55` já registrava o mesmo ruído em escala
+        maior (14.105 ocorrências em 7 dias) e a casa respondeu criando um
+        diário à parte, em vez de calar a origem.
+
+        Isto não muda o que o `hide`/`restore` FAZEM — muda só o que eles
+        registram. E importa porque este projeto diagnostica lendo o journal:
+        um journal em que 717 de ~1.700 linhas são a mesma reafirmação enterra
+        justamente o sinal raro (a transição, a falha, a porta declarada) que
+        se foi ler ali.
+        """
+        with self._estado_lock:
+            anterior = self._estado_por_no.get(node)
+            self._estado_por_no[node] = estado
+        if anterior == estado:
+            logger.debug(evento, node=node, reafirmacao=True, **campos)
+            return
+        logger.info(evento, node=node, **campos)
+
     def _log_falha(
         self, cmd: str, node: str | None, response: dict[str, Any] | None
     ) -> None:
@@ -464,12 +510,276 @@ def make_broker_opener(daemon: Any) -> Callable[[str], int]:
     return _open
 
 
+# ---------------------------------------------------------------------------
+# A PORTA, DECLARADA — o que os INSTRUMENTOS usam (A-PORTA-QUE-A-CASA-CONSTRUIU-01)
+# ---------------------------------------------------------------------------
+#
+# Defeito medido em 15/08/2026: com a mesa 2+2 montada, NENHUM dos quatro
+# DualSense físicos abre por `open()` — o próprio Hefesto os esconde de
+# propósito (`broker/hidraw_broker.py:416` — `setfacl -b` + `chmod 0600`), para
+# que o jogo veja só o vpad. Os instrumentos batiam nessa porta fechada e
+# imprimiam `[Errno 13] Permission denied` (ou, pior, silêncio), quando a casa
+# já tinha construído a porta certa: o `cmd open` do broker, que devolve um fd
+# `O_RDWR` do nó ESCONDIDO por SCM_RIGHTS.
+#
+# A regra desta casa é *"todo instrumento tem de declarar qual biblioteca está
+# usando"*, porque medir contra a biblioteca errada produz alarme convincente e
+# falso. **O mesmo vale para a porta:** medir no nó escondido produz zero
+# convincente e falso. Por isso `abrir_hidraw` nunca devolve só um fd — devolve
+# um `NoAberto`, que carrega por onde entrou e por quê.
+
+#: As duas portas, com o nome que aparece NO RELATÓRIO (é este texto que a
+#: mordida 2 procura — se o fallback ficar mudo, ele some da tela).
+PORTA_BROKER = "broker (SCM_RIGHTS)"
+PORTA_DIRETA = "open() direto"
+
+#: Estados do `EVIOCGRAB` de um nó evdev, na frase que vai ao relatório.
+#: "o controle não emitiu" e "eu não posso ler" são coisas diferentes, e hoje
+#: as duas saem como zero — é o que a mordida 3 cobra.
+GRAB_LIVRE = "livre"
+GRAB_DE_TERCEIRO = "PEGO por outro processo (EVIOCGRAB exclusivo)"
+GRAB_SEM_PERMISSAO = "não posso ler (sem permissão no nó)"
+GRAB_SEM_NO = "o nó não existe"
+GRAB_DESCONHECIDO = "não sei dizer"
+
+#: `EVIOCGRAB` = `_IOW('E', 0x90, int)`. O grab é EXCLUSIVO: se outro processo
+#: (o co-op do daemon) já o tem, o nosso volta `EBUSY` — e é exatamente esse
+#: `EBUSY` que separa "calado" de "escondido".
+_EVIOCGRAB = 0x40044590
+
+
+class PortaFechadaError(OSError):
+    """As DUAS portas falharam — e o erro diz o que cada uma respondeu.
+
+    Nunca é levantado no lugar de um fallback: o fallback acontece, e só
+    quando ele TAMBÉM falha é que isto sobe. A mensagem carrega as duas
+    tentativas porque um instrumento que só diz "Permission denied" manda a
+    próxima pessoa consertar a regra udev — que é o lugar errado, e foi o que
+    aconteceu em 15/08/2026.
+    """
+
+
+@dataclass(frozen=True)
+class NoAberto:
+    """Um hidraw aberto E a porta por onde ele entrou. Nunca uma coisa só."""
+
+    fd: int
+    no: str
+    porta: str
+    motivo: str
+    socket: str
+
+    def fechar(self) -> None:
+        with contextlib.suppress(OSError):
+            os.close(self.fd)
+
+    def __enter__(self) -> NoAberto:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self.fechar()
+
+    @property
+    def linha_de_relatorio(self) -> str:
+        """A linha que vai ao cabeçalho, ao lado da biblioteca declarada."""
+        return linha_da_porta(self.porta, self.motivo)
+
+
+def linha_da_porta(porta: str, motivo: str) -> str:
+    """O texto único da declaração de porta — um só formato em toda a casa."""
+    return f"porta ............ {porta} — {motivo}"
+
+
+def abrir_hidraw(
+    no: str,
+    *,
+    escrita: bool = True,
+    socket_path: str | None = None,
+    cliente: Any | None = None,
+) -> NoAberto:
+    """Abre `no` pelo BROKER; se ele não servir, por `open()` — e DIZ qual foi.
+
+    A ordem não é negociável: o broker primeiro, porque é o único caminho que
+    funciona com o nó escondido (o estado normal da mesa com o co-op ligado).
+    O `open()` direto é a queda para o caso em que o broker não existe (CI,
+    install antigo, máquina de quem só rodou o checkout) — e para o vpad, que
+    o broker recusa DE PROPÓSITO (`reject_not_physical_dualsense`: é por ele
+    que o jogo fala com o controle, e escondê-lo seria o defeito).
+
+    **Queda silenciosa é proibida.** O `motivo` nunca é vazio, nem no sucesso:
+    quem lê o relatório tem de poder dizer se os dois braços do ensaio 2+2
+    mediram pela mesma porta. Se as duas falharem, levanta `PortaFechadaError`
+    com as duas respostas — nunca um `EACCES` pelado, que já mandou gente
+    consertar a regra udev quando a regra estava certa.
+
+    `cliente` é o ponto de injeção dos testes (qualquer objeto com `abrir_no`
+    e `close`); `socket_path` aponta outro socket sem mexer no ambiente.
+    """
+    caminho_socket = (
+        socket_path
+        if socket_path is not None
+        else os.environ.get(SOCKET_PATH_ENV, DEFAULT_SOCKET_PATH)
+    )
+    fd: int | None = None
+    motivo_broker = "o cliente do broker não foi consultado"
+    proprio = cliente is None
+    alvo = cliente if cliente is not None else HidrawBrokerClient(caminho_socket)
+    try:
+        fd, motivo_broker = alvo.abrir_no(no)
+    except Exception as exc:  # o instrumento nunca morre por causa da porta
+        motivo_broker = f"o cliente do broker levantou {type(exc).__name__}: {exc}"
+    finally:
+        if proprio:
+            with contextlib.suppress(Exception):
+                alvo.close()
+    if fd is not None:
+        return NoAberto(
+            fd=fd, no=no, porta=PORTA_BROKER, motivo=motivo_broker, socket=caminho_socket
+        )
+
+    flags = (os.O_RDWR if escrita else os.O_RDONLY) | os.O_CLOEXEC
+    try:
+        fd = os.open(no, flags)
+    except OSError as exc:
+        raise PortaFechadaError(
+            exc.errno,
+            f"{no}: as duas portas falharam. "
+            f"{PORTA_BROKER}: {motivo_broker}. "
+            f"{PORTA_DIRETA}: {exc.strerror or exc}. "
+            "Se o nó está 0600 sem ACL, é o Hefesto escondendo o físico do jogo "
+            "(broker/hidraw_broker.py) — a regra udev NÃO está errada.",
+        ) from exc
+    return NoAberto(
+        fd=fd,
+        no=no,
+        porta=PORTA_DIRETA,
+        motivo=f"{motivo_broker} — caí no open() por caminho",
+        socket=caminho_socket,
+    )
+
+
+def porta_provavel(socket_path: str | None = None) -> tuple[str, str]:
+    """`(porta, motivo)` ANTES de abrir nada — para o cabeçalho do relatório.
+
+    Não abre nó nenhum: só pergunta se o socket do broker existe e responde.
+    Serve ao instrumento que precisa declarar a porta no cabeçalho, antes da
+    primeira linha de medição, e ao que nem chega a abrir hidraw (mas cuja
+    medição depende de o físico estar escondido ou não).
+    """
+    caminho = (
+        socket_path
+        if socket_path is not None
+        else os.environ.get(SOCKET_PATH_ENV, DEFAULT_SOCKET_PATH)
+    )
+    if not os.path.exists(caminho):
+        return (PORTA_DIRETA, f"não há socket de broker em {caminho}")
+    cliente = HidrawBrokerClient(caminho)
+    try:
+        vivo = cliente.ping()
+    except Exception as exc:  # diagnóstico nunca derruba instrumento
+        return (PORTA_DIRETA, f"o broker em {caminho} não respondeu ({exc})")
+    finally:
+        with contextlib.suppress(Exception):
+            cliente.close()
+    if vivo:
+        return (PORTA_BROKER, f"o broker responde em {caminho}")
+    return (PORTA_DIRETA, f"o socket {caminho} existe mas o broker não respondeu")
+
+
+def estado_do_grab(
+    caminho: str,
+    *,
+    abrir: Callable[..., int] = os.open,
+    ioctl: Callable[..., Any] | None = None,
+) -> str:
+    """O `EVIOCGRAB` de um nó evdev está LIVRE, ou outro processo o segura?
+
+    Existe porque *"o controle não emitiu"* e *"eu não posso ler"* saem os dois
+    como zero, e um instrumento que não os separa produz calúnia contra o
+    aparelho. Medido em 15/08/2026: com o co-op ativo, evento nenhum sai dos
+    nós físicos — o daemon faz `EVIOCGRAB` neles, que é exclusivo, e isso é o
+    produto FUNCIONANDO.
+
+    Não existe consulta de estado do grab no kernel: a única prova é tentar.
+    Então é isso que se faz — e o grab é **solto no mesmo instante**, dentro do
+    `finally`, para que a janela em que este instrumento tira o controle de
+    quem estava lendo seja de microssegundos. Se outro processo já o tem, a
+    tentativa falha com `EBUSY` e NADA é tirado de ninguém, que é o caso que
+    interessa.
+    """
+    real_ioctl = ioctl
+    if real_ioctl is None:
+        import fcntl  # local: nem todo instrumento que importa este módulo o usa
+
+        real_ioctl = fcntl.ioctl
+    if not os.path.exists(caminho):
+        return GRAB_SEM_NO
+    try:
+        fd = abrir(caminho, os.O_RDONLY | os.O_CLOEXEC)
+    except PermissionError:
+        return GRAB_SEM_PERMISSAO
+    except OSError:
+        return GRAB_DESCONHECIDO
+    try:
+        try:
+            real_ioctl(fd, _EVIOCGRAB, 1)
+        except OSError:
+            # EBUSY (o caso do co-op) e qualquer outra recusa: alguém segura o
+            # nó, ou o nó não aceita grab. Nos dois casos, o zero que este
+            # instrumento medisse ali NÃO seria sobre o aparelho.
+            return GRAB_DE_TERCEIRO
+        with contextlib.suppress(OSError):
+            real_ioctl(fd, _EVIOCGRAB, 0)  # devolve NA HORA o que se pegou
+        return GRAB_LIVRE
+    finally:
+        with contextlib.suppress(OSError):
+            os.close(fd)
+
+
+def linha_do_grab(caminho: str, estado: str) -> str:
+    """A linha de cabeçalho do grab, no mesmo formato da porta."""
+    return f"grab do evdev .... {caminho}: {estado}"
+
+
+def leitura_de_zero(estado_grab: str) -> str:
+    """O que escrever numa célula que contou ZERO — e isso DEPENDE do grab.
+
+    A frase muda porque o fato muda. Com o grab de terceiro, zero não é uma
+    medição do aparelho: é a marca de que este instrumento não estava lendo
+    coisa alguma. Chamar os dois de "0" é a calúnia que a mordida 3 impede.
+    """
+    if estado_grab == GRAB_DE_TERCEIRO:
+        return "MUDO (EVIOCGRAB de terceiro)"
+    if estado_grab == GRAB_SEM_PERMISSAO:
+        return "MUDO (sem permissão de leitura)"
+    if estado_grab == GRAB_SEM_NO:
+        return "MUDO (o nó sumiu)"
+    if estado_grab == GRAB_DESCONHECIDO:
+        return "0? (não sei dizer se pude ler)"
+    return "0 (o controle não emitiu)"
+
+
 __all__ = [
     "DEFAULT_SOCKET_PATH",
+    "GRAB_DESCONHECIDO",
+    "GRAB_DE_TERCEIRO",
+    "GRAB_LIVRE",
+    "GRAB_SEM_NO",
+    "GRAB_SEM_PERMISSAO",
+    "PORTA_BROKER",
+    "PORTA_DIRETA",
     "SOCKET_PATH_ENV",
     "HidrawBrokerClient",
+    "NoAberto",
+    "PortaFechadaError",
+    "abrir_hidraw",
     "broker_call_nonblocking",
     "broker_client_for",
     "broker_executor_for",
+    "estado_do_grab",
+    "leitura_de_zero",
+    "linha_da_porta",
+    "linha_do_grab",
     "make_broker_opener",
+    "porta_provavel",
 ]

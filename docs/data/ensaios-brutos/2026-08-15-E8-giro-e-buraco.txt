@@ -1,0 +1,88 @@
+==============================================================================
+  giro_e_buraco.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... o giroscópio dá zero parado, e some report na janela? (E-8 da mesa 2+2)
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... os                     de /usr/lib/python3.12/os.py
+  biblioteca ....... struct                 de /usr/lib/python3.12/struct.py
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... selectors              de /usr/lib/python3.12/selectors.py
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  grab do evdev .... /dev/input/event265: livre
+  grab do evdev .... /dev/input/event272: livre
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+  T0 (hora de parede) ... 2026-08-15T22:23:01.078
+
+  mesa com 2 controle(s): 2 no cabo. SÓ UM TRANSPORTE presente — isto NÃO é o ensaio 2+2, e nenhuma coluna cabo-x-rádio abaixo compara coisa alguma.
+
+  OS CAMPOS QUE VOU LER, POR TRANSPORTE (offsets do fonte do driver)
+
+transporte  report id  corpo em  giro  acel  seq  contador le32  carimbo
+----------  ---------  --------  ----  ----  ---  -------------  -------
+cabo        0x01       data[1]   16    22    7    12             28
+rádio       0x31       data[2]   17    23    8    13             29
+
+  medindo 2 controle(s) por 60 s, na MESMA janela.
+  >> NÃO mexa nos controles: parado é a condição do ensaio, e a régua
+  >> do giroscópio é o ZERO — absoluta, sem comparar um braço com o outro.
+
+  A RÉGUA DO GIROSCÓPIO, LIDA DE CADA APARELHO (feature 0x05, GET_REPORT)
+  Lida AGORA, DEPOIS da janela, e nunca antes: um GET_REPORT por rádio é
+  tráfego no enlace, e este instrumento mede silêncio de enlace. Cutucar o
+  aparelho e depois perguntar se ele está quieto seria medir a mim mesmo.
+  A resolução 1024 do driver é a de SAÍDA, depois da calibração — o número
+  CRU do fio está noutra escala, e é esta tabela que diz qual.
+
+aparelho           transporte  speed_2x  sens_denom (x y z)  LSB por grau/s  de onde
+-----------------  ----------  --------  ------------------  --------------  ----------------------------------------------
+14:3a:9a:00:00:ab  cabo        1080      17734 17577 17829   16.42           feature 0x05 lido por GET_REPORT (fd O_RDONLY)
+44:46:48:00:00:03  cabo        1080      17702 17678 17662   16.39           feature 0x05 lido por GET_REPORT (fd O_RDONLY)
+
+  >> a régua INGÊNUA (cru / 1024) encolheria a leitura por ~62x.
+  O GIROSCÓPIO EM REPOUSO — três réguas na mesma janela
+
+aparelho           transporte  reports  |w| mediano  |w| máximo  eixos (graus/s)         kernel (evdev)  régua ingênua  NEGATIVO
+-----------------  ----------  -------  -----------  ----------  ----------------------  --------------  -------------  --------
+14:3a:9a:00:00:ab  cabo        15013    1.620        3.272       -0.147, -0.191, -0.063  1.619 (15008)   0.0260         491
+44:46:48:00:00:03  cabo        15008    0.902        1.615       +0.481, +0.724, -0.176  0.901 (15000)   0.0144         492
+  |w| e eixos em graus/s pela régua do próprio aparelho. `régua ingênua` é o
+  MESMO dado dividido por 1024 — está aí para mostrar o tamanho do erro.
+  `NEGATIVO` é o acelerômetro lido COMO SE fosse giroscópio: tem de ser enorme.
+
+  CONTROLE POSITIVO 1 — o acelerômetro do MESMO report tem de dar 1 g
+
+aparelho           transporte  |v| mediano  veredito
+-----------------  ----------  -----------  --------
+14:3a:9a:00:00:ab  cabo        0.9763 g     CONFERE
+44:46:48:00:00:03  cabo        0.9837 g     CONFERE
+
+  A PERDA — o contador de reports que o driver chama de `reserved`
+
+aparelho           transporte  energia       pares  saltos  reports perdidos  seq_number parado  taxa host  cadência do controle
+-----------------  ----------  ------------  -----  ------  ----------------  -----------------  ---------  --------------------
+14:3a:9a:00:00:ab  cabo        Full 100%     15012  0       0                 0/15012            250.2 Hz   245.2 Hz
+44:46:48:00:00:03  cabo        Charging 75%  15007  0       0                 0/15007            250.1 Hz   246.5 Hz
+  `seq_number parado` é o CONTRA-exemplo: no rádio o corpo[6] não anda, e
+  quem contasse perda por ele veria zero para sempre — inclusive perdendo.
+
+  O SILÊNCIO — e a parada do MEU laço, que é o negativo do instrumento
+
+aparelho           transporte  silêncio p95  silêncio máximo  cauda muda  janela coberta  host nos saltos
+-----------------  ----------  ------------  ---------------  ----------  --------------  ---------------
+14:3a:9a:00:00:ab  cabo        4.01 ms       8.13 ms          3.17 ms     100%            não houve salto
+44:46:48:00:00:03  cabo        4.01 ms       11.94 ms         3.06 ms     100%            não houve salto
+  maior parada do MEU laço na janela inteira: 7.99 ms
+  `cauda muda` é do ÚLTIMO report ao fim da janela, e `janela coberta` é
+  quanto da janela tem intervalo medido: bem abaixo de 100% quer dizer que
+  o p95 acima é do pedaço em que o aparelho falou, não da janela toda.
+
+  T1 (hora de parede) ... 2026-08-15T22:24:01.591
+  CSV ................... docs/data/ensaios-brutos/2026-08-15-E8-giro-e-buraco.csv
+
+------------------------------------------------------------------------------
+RESUMO: os 2 que falaram estão PARADOS pela régua absoluta; SEM report perdido em nenhum deles. cabo: giro parado 1.62; 0.90 graus/s, perdidos 0/15012; 0/15007. Maior parada do MEU laço: 7.99 ms — comparar com o silêncio máximo de cada aparelho antes de culpar o enlace.
+------------------------------------------------------------------------------

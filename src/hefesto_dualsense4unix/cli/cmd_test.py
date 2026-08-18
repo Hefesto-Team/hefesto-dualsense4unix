@@ -31,6 +31,57 @@ def _parse_params(raw: str | None) -> list[int]:
         raise typer.BadParameter(f"params: inteiros separados por virgula. Erro: {exc}") from None
 
 
+#: Mensagem da recusa do `--raw` com o daemon vivo (TRIGGER-CANON-01/E4).
+#: Constante e não literal porque um teste a compara — o texto É a entrega.
+#: MSG-RAW-01 (13/08/2026): esse teste era imaginário — a linha acima o anunciava
+#: desde 01/08 e `grep -rn MSG_RAW_COM_DAEMON tests/` devolvia ZERO. Por isso o
+#: parágrafo do mecanismo pôde envelhecer sem ninguém ver. O teste existe agora,
+#: em `tests/unit/test_msg_raw_com_daemon_e_o_texto_certo.py`.
+MSG_RAW_COM_DAEMON = (
+    "o daemon está no ar, e o --raw abriria um SEGUNDO controlador para "
+    "disputar o mesmo /dev/hidraw com ele.\n\n"
+    "Medido em 01/08/2026: o report_thread do daemon sobrescrevia o efeito em "
+    "menos de 0,5 s, e este comando imprimia \"trigger aplicado\" mesmo assim "
+    "— o instrumento brigando com o produto e anunciando sucesso.\n\n"
+    "Corrigido em 11/08/2026 (RUMBLE-SEM-DONO-01): o keepalive PERPÉTUO "
+    "acabou. Hoje o daemon só reconfirma o mesmo report na janela de "
+    "confirmação que segue cada mudança real — não mais para sempre. Mudou o "
+    "prazo, não a recusa: o report OUT do DualSense é ATÔMICO (gatilho, "
+    "vibração e luz saem no mesmo buffer), então o primeiro write do daemon "
+    "depois do seu leva o seu efeito cru junto, e nada avisa quando isso "
+    "acontece.\n\n"
+    "Saídas, em ordem de preferência:\n"
+    "  1. use a aba Gatilhos da janela, que passa pelo daemon;\n"
+    "  2. use --mode com NOME de preset (sem --raw), que também passa;\n"
+    "  3. para bancada crua: systemctl --user stop hefesto-dualsense4unix, "
+    "rode o --raw, e religue depois."
+)
+
+
+def _recusar_raw_com_daemon_vivo() -> None:
+    """Recusa o `--raw` quando o daemon está no ar.
+
+    TRIGGER-CANON-01/E4. A alternativa era dar ao IPC um contrato para modo
+    cru, e a sprint a chamou de recomendada — mas o `--raw` é uma bancada de
+    depuração, e uma bancada que só funciona com o produto PARADO é honesta:
+    o que ela mede é o hardware sem intermediário. O que não podia continuar
+    é imprimir sucesso sem ter aplicado.
+
+    A checagem é a mesma que o resto da CLI já usa para decidir entre IPC e
+    hardware — nada de um segundo jeito de perguntar se o daemon está vivo.
+    """
+    from hefesto_dualsense4unix.app.ipc_bridge import daemon_status_basic
+
+    vivo = False
+    try:
+        vivo = daemon_status_basic() is not None
+    except Exception:
+        vivo = False  # sem socket, sem daemon: o --raw tem o hidraw só para ele
+    if vivo:
+        console.print(f"[red]--raw recusado:[/red] {MSG_RAW_COM_DAEMON}")
+        raise typer.Exit(code=1)
+
+
 @app.command("trigger")
 def cmd_trigger(
     side: str = typer.Option(..., help="left ou right"),
@@ -55,6 +106,7 @@ def cmd_trigger(
             raise typer.BadParameter("modo --raw exige inteiro em --mode") from None
         if len(params_list) != 7:
             raise typer.BadParameter("modo --raw exige 7 valores em --params")
+        _recusar_raw_com_daemon_vivo()
         effect = TriggerEffect(
             mode=mode_int,
             forces=(

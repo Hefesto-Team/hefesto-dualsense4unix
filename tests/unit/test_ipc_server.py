@@ -125,13 +125,19 @@ async def test_profile_switch_inexistente(running_server):
 async def test_trigger_set_e_reset(running_server):
     _server, socket_path, fc = running_server
     async with IpcClient.connect(socket_path) as client:
+        # MESA-CHEIA-09 (E2): a resposta deixou de ser `{"status": "ok"}` seca
+        # e passou a dizer O QUE FEZ, como o `led.set` do mesmo arquivo já
+        # dizia. Aqui o pedido é sem `uniq` (rota clássica, broadcast): as duas
+        # listas vazias querem dizer "escrita global sem registro por
+        # controle" — não "não escreveu".
+        esperado = {"status": "ok", "aplicado_em": [], "guardado_em": []}
         assert await client.call(
             "trigger.set",
             {"side": "right", "mode": "Rigid", "params": [5, 200]},
-        ) == {"status": "ok"}
+        ) == esperado
 
-        assert await client.call("trigger.reset", {"side": "right"}) == {"status": "ok"}
-        assert await client.call("trigger.reset") == {"status": "ok"}  # both
+        assert await client.call("trigger.reset", {"side": "right"}) == esperado
+        assert await client.call("trigger.reset") == esperado  # both
 
     triggers = [c for c in fc.commands if c.kind == "set_trigger"]
     assert len(triggers) >= 4  # 1 set + 1 reset + 2 reset both

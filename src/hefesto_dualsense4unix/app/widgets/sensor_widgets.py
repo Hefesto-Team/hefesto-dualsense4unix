@@ -144,27 +144,38 @@ def historico_deslizante(
     faltam = (tamanho - 1) - len(janela)
     return tuple([0.0] * faltam + janela + [valor])
 
-
-def fracao_do_volume(volume: int) -> float:
-    """Volume bruto 0-255 do alto-falante -> fração 0.0-1.0 da barra."""
-    return max(0.0, min(1.0, volume / 255))
+#: A régua de volume do alto-falante mora em `core/speaker_scale.py`, e não
+#: aqui. Ela é falada por TRÊS superfícies — a barra de leitura, o controle
+#: deslizante e o comando `speaker volume` da linha de comando — e enquanto
+#: viveu neste arquivo a linha de comando tinha uma cópia linear dela: os 60 %
+#: da janela e o `speaker volume 60` mandavam valores diferentes para o mesmo
+#: registrador. `app/widgets/` puxa GTK no import do pacote, então importá-la
+#: daqui fazia um comando de terminal carregar a interface inteira.
+#:
+#: Reexportado com os mesmos nomes para o código de tela continuar lendo como
+#: sempre leu. A curva medida, o método e as ressalvas estão lá.
+from hefesto_dualsense4unix.core.speaker_scale import (  # noqa: E402
+    fracao_do_volume,
+    percentual_do_volume,
+    volume_do_percentual,
+)
 
 
 def texto_volume(volume: int, muted: bool | None) -> str:
-    """Rótulo do alto-falante: "mudo" ou a porcentagem do volume.
+    """Rótulo do alto-falante: "Mudo" ou a porcentagem do volume.
 
     ``muted`` None = o daemon mandou volume mas não mandou mute; o rótulo
     mostra só a porcentagem em vez de cravar que o som está saindo.
     """
     if muted:
-        return "mudo"
-    return f"{round(fracao_do_volume(volume) * 100)} %"
+        return "Mudo"
+    return f"{percentual_do_volume(volume)} %"
 
 
 def texto_toques(quantidade: int) -> str:
-    """Rótulo do touchpad: "sem toque" ou "N toque"/"N toques"."""
+    """Rótulo do touchpad: "Sem toque" ou "N toque"/"N toques"."""
     if quantidade <= 0:
-        return "sem toque"
+        return "Sem toque"
     if quantidade == 1:
         return "1 toque"
     return f"{quantidade} toques"
@@ -315,8 +326,24 @@ if _GTK_DISPONIVEL:
             trilha = hex_para_rgb(COR_TRILHA)
             contorno = hex_para_rgb(COR_CONTORNO)
             fraco = hex_para_rgb(COR_TEXTO_FRACO)
-            inicio_barra = _ROTULO_GYRO_PX
-            fim_barra = max(inicio_barra + 10, largura - self._valor_px)
+            # ALINHA-DUAS-LINHAS-01 (01/08): o VALOR mudou de lado — ele agora
+            # fica logo depois da letra do eixo, e a barra ocupa todo o resto.
+            #
+            # Por quê: com o desenho esticando até a metade direita da faixa
+            # (640px na tela dela, contra 420 de antes), um valor ancorado na
+            # BORDA DIREITA ficaria a mais de meio card do "X" que o nomeia —
+            # a mesma queixa que `test_o_numero_do_giroscopio_fica_perto_do_
+            # nome_do_eixo` levantou quando a barra era larga demais. Aquele
+            # teste resolvia estreitando o desenho; isso deixou de ser opção
+            # quando ela pediu o desenho esticado, e a resposta certa era mover
+            # o número, não encolher a barra.
+            #
+            # Ganho de quebra: o par letra+número agora é uma coluna fixa à
+            # esquerda, então os três valores ficam alinhados entre si em
+            # qualquer largura — antes eles dançavam com o fim da barra.
+            inicio_valor = _ROTULO_GYRO_PX
+            inicio_barra = inicio_valor + self._valor_px
+            fim_barra = max(inicio_barra + 10, largura)
             meio = (inicio_barra + fim_barra) / 2
             metade = (fim_barra - inicio_barra) / 2
 
@@ -352,7 +379,7 @@ if _GTK_DISPONIVEL:
                     ctx.fill()
 
                 ctx.set_source_rgb(*fraco)
-                ctx.move_to(fim_barra + 4, centro_y + 3)
+                ctx.move_to(inicio_valor, centro_y + 3)
                 ctx.show_text(texto_eixo(self._valores[indice]))
             return False
 
@@ -638,9 +665,11 @@ __all__ = [
     "fracao_do_volume",
     "hex_para_rgb",
     "historico_deslizante",
+    "percentual_do_volume",
     "posicao_normalizada",
     "selo_mic",
     "texto_eixo",
     "texto_toques",
     "texto_volume",
+    "volume_do_percentual",
 ]

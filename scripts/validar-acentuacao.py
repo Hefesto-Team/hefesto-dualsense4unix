@@ -402,6 +402,13 @@ WHITELIST_PATTERNS: list[str] = [
     r"^tests/fixtures/.*",
     r"^docs/history/.*",
     r"^docs/research/.*",
+    # Saída BRUTA de agente (06/08/2026). Mesmo motivo das mensagens de tag mais
+    # abaixo: é o que foi dito, como foi dito. Corrigir a grafia de uma citação
+    # é falsificá-la, e o valor deste diretório está justamente em ele ser fiel.
+    # O que NÃO é isento ali é segurança — `tests/unit/test_saida_de_agente_
+    # sanitizada.py` varre MAC real e segredo, e o `validar-glifos.py` continua
+    # valendo (o sanitizador normaliza emoji para texto antes de entrar).
+    r"^docs/process/agentes/.*",
     r"^scripts/validar-acentuacao\.py$",
     r"^scripts/check_anonymity\.sh$",
     # O teste do validador usa fixtures com texto sem acento propositalmente.
@@ -432,8 +439,21 @@ _WHITELIST_RE = [re.compile(p) for p in WHITELIST_PATTERNS]
 EXTENSOES_ALVO = (
     ".py", ".sh", ".zsh", ".bash",
     ".md", ".yml", ".yaml", ".toml",
-    ".cfg", ".ini", ".txt",
+    ".cfg", ".ini", ".txt", ".csv",
 )
+
+# `.csv` entrou em 11/08/2026, e o motivo importa: `docs/data/mapa-controles.csv`
+# deixou de ser tabela de números e virou 291 linhas de PROSA em português —
+# evidências, ressalvas, notas de medição. O portão não o via, e as células
+# novas nasceram sem acento nenhum (69 violações na primeira varredura).
+#
+# ARMADILHA, paga na hora: uma substituição cega de `nao` por `não` também
+# reescreve os VALORES DE DOMÍNIO — `nao-tem` virou `não-tem` e
+# `inferido-do-codigo` virou `inferido-do-código`, e o censo do mapa saltou de
+# 15 para 368 reprovações de integridade. Valor de domínio é chave, não texto:
+# ele nunca leva acento. Quem for acentuar em massa um `.csv` deste projeto
+# corrige a PROSA e deixa as colunas de enumeração em paz
+# (`existe`, `*_aceita`, `*_aciona`, `*_canal`, `*_de_onde_sei`, `*_ate_onde_foi`).
 
 
 def is_whitelisted(rel_path: str) -> bool:

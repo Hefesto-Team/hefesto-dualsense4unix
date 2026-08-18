@@ -18,8 +18,11 @@ satisfaz os dois.
 
 from __future__ import annotations
 
+import contextlib
+import os
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -216,8 +219,28 @@ class TestACuraNaoEncostaNoQueJaFunciona:
         O dublê distingue `list sources short` de `list sources` — a primeira
         versão não distinguia, o nome da source saía vazio e a cura nem chegava
         ao ramo que o teste queria vigiar. Passava verde por não exercitar nada.
+
+        BERCO-DE-TMP-01, 07/08/2026: o registro era o caminho FIXO
+        ``/tmp/hefesto_teste_pactl_chamadas.txt``, e o retrato do disco o pegou
+        vivo em `/tmp` depois da suíte. Caminho fixo tem dois defeitos, não um:
+        fica para trás, e **colide entre sessões** — nesta máquina rodam várias
+        execuções de `pytest` ao mesmo tempo, e duas delas escreviam no mesmo
+        arquivo. Agora o nome vem do `tempfile` (que nasce dentro do berço da
+        sessão) e o teste o remove ele mesmo.
         """
-        registro = "/tmp/hefesto_teste_pactl_chamadas.txt"
+        descritor, registro = tempfile.mkstemp(
+            prefix="hefesto-pactl-", suffix=".txt"
+        )
+        os.close(descritor)
+        try:
+            return self._rodar_dubles(registro, ativo, curta, verbosa)
+        finally:
+            with contextlib.suppress(OSError):
+                os.unlink(registro)
+
+    def _rodar_dubles(
+        self, registro: str, ativo: str, curta: str, verbosa: str
+    ) -> str:
         script = f"""
 set -uo pipefail
 : > {registro}

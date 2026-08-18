@@ -37,7 +37,7 @@ def daemon(tmp_config: Any, monkeypatch: pytest.MonkeyPatch) -> Daemon:
 
 def test_native_on_neutraliza_e_gate(daemon: Daemon, tmp_config: Any) -> None:
     daemon.config.rumble_active = (100, 100)
-    assert daemon.set_native_mode(True) is True
+    assert daemon.set_native_mode(True, origin="manual") is True
     assert daemon.is_native_mode() is True
     assert daemon.store.native_mode_active is True
     # Rumble em passthrough (o hefesto não re-asserta).
@@ -57,22 +57,22 @@ def test_native_nao_usa_pause(daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
     # Pause manual anterior.
     daemon._paused = True
-    daemon.set_native_mode(True)
+    daemon.set_native_mode(True, origin="manual")
     assert daemon.is_paused() is True  # native não mexeu no pause
     # resume() durante native: o gate é o _native_mode, que continua ativo.
     daemon.resume()
     assert daemon.is_native_mode() is True  # continua solto para o jogo
-    daemon.set_native_mode(False)
+    daemon.set_native_mode(False, origin="manual")
     # Off não força pause nem resume — respeita o estado de pause pós-resume.
 
 
 def test_native_off_restaura_e_limpa(
     daemon: Daemon, monkeypatch: pytest.MonkeyPatch, tmp_config: Any
 ) -> None:
-    daemon.set_native_mode(True)
+    daemon.set_native_mode(True, origin="manual")
     reapplied: list[str] = []
     monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: reapplied.append("x"))
-    assert daemon.set_native_mode(False) is False
+    assert daemon.set_native_mode(False, origin="manual") is False
     assert daemon.is_native_mode() is False
     assert daemon.store.native_mode_active is False
     assert reapplied == ["x"]  # re-aplicou o último perfil
@@ -89,11 +89,11 @@ def test_native_restaura_gamepad_do_stash(
     # Sessão anterior: gamepad ligado (flavor xbox).
     session_mod.save_gamepad_emulation(True, "xbox")
     monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
-    daemon.set_native_mode(True)
+    daemon.set_native_mode(True, origin="manual")
     # O stash capturou o gamepad ligado.
     assert daemon._native_emu_stash["gamepad"] == [True, "xbox"]
     daemon.set_gamepad_emulation.reset_mock()  # type: ignore[attr-defined]
-    daemon.set_native_mode(False)
+    daemon.set_native_mode(False, origin="manual")
     # Restaurou o gamepad (precedência sobre mouse).
     daemon.set_gamepad_emulation.assert_called_with(True, "xbox", origin="profile")  # type: ignore[attr-defined]
 
@@ -116,10 +116,10 @@ def test_native_flag_stash_roundtrip_e_legado(tmp_config: Any) -> None:
 
 
 def test_native_idempotente(daemon: Daemon) -> None:
-    daemon.set_native_mode(True)
+    daemon.set_native_mode(True, origin="manual")
     daemon.set_mouse_emulation.reset_mock()  # type: ignore[attr-defined]
     # Ligar de novo é no-op (não re-neutraliza).
-    assert daemon.set_native_mode(True) is True
+    assert daemon.set_native_mode(True, origin="manual") is True
     daemon.set_mouse_emulation.assert_not_called()  # type: ignore[attr-defined]
 
 
@@ -141,7 +141,7 @@ def test_state_full_inclui_native_mode(daemon: Daemon) -> None:
         profile_manager=MagicMock(),
         daemon=daemon,
     )
-    daemon.set_native_mode(True)
+    daemon.set_native_mode(True, origin="manual")
     import asyncio
 
     state = asyncio.run(server._handle_daemon_state_full({}))
@@ -242,10 +242,10 @@ def test_gamepad_on_com_nativo_ligado_sai_do_nativo(
     onde TODAS as superfícies passam.
     """
     d = _daemon_com_vpad(monkeypatch)
-    d.set_native_mode(True)
+    d.set_native_mode(True, origin="manual")
     assert d.is_native_mode() is True
 
-    d.set_gamepad_emulation(True, flavor="xbox")
+    d.set_gamepad_emulation(True, flavor="xbox", origin="manual")
 
     assert d.is_native_mode() is False
     assert d.config.gamepad_emulation_enabled is True
@@ -262,10 +262,10 @@ def test_native_on_com_gamepad_ligado_derruba_o_vpad(
     não "gamepad sai do nativo".
     """
     d = _daemon_com_vpad(monkeypatch)
-    d.set_gamepad_emulation(True, flavor="xbox")
+    d.set_gamepad_emulation(True, flavor="xbox", origin="manual")
     assert d.config.gamepad_emulation_enabled is True
 
-    d.set_native_mode(True)
+    d.set_native_mode(True, origin="manual")
 
     assert d.is_native_mode() is True
     assert d.config.gamepad_emulation_enabled is False
@@ -283,7 +283,7 @@ def test_gamepad_on_sem_nativo_nao_mexe_no_modo(
         d, "_restore_emulation_from_stash", lambda: chamadas.append("restore")
     )
 
-    d.set_gamepad_emulation(True, flavor="xbox")
+    d.set_gamepad_emulation(True, flavor="xbox", origin="manual")
 
     assert chamadas == []
     assert d.config.gamepad_emulation_enabled is True
@@ -304,11 +304,11 @@ def test_native_off_zera_os_motores(
     o reassert do poll loop é no-op — e ninguém zerava o hardware: o controle
     vibrava para sempre e o jogo perdia a vibração."""
     monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
-    daemon.set_native_mode(True)
+    daemon.set_native_mode(True, origin="manual")
     controller: FakeController = daemon.controller  # type: ignore[assignment]
     controller.commands.clear()
 
-    daemon.set_native_mode(False)
+    daemon.set_native_mode(False, origin="manual")
 
     assert (0, 0) in _rumbles(controller)
 
@@ -326,10 +326,10 @@ def test_native_off_zera_depois_de_desmutar(
     daemon.controller.set_rumble = lambda weak, strong: ordem.append(  # type: ignore[method-assign]
         f"rumble={weak},{strong}"
     )
-    daemon.set_native_mode(True)
+    daemon.set_native_mode(True, origin="manual")
     ordem.clear()
 
-    daemon.set_native_mode(False)
+    daemon.set_native_mode(False, origin="manual")
 
     assert ordem[:2] == ["mute=False", "rumble=0,0"]
 
@@ -342,7 +342,7 @@ def test_gamepad_off_zera_os_motores(tmp_config: Any) -> None:
     controller: FakeController = d.controller  # type: ignore[assignment]
     controller.commands.clear()
 
-    d.set_gamepad_emulation(False)
+    d.set_gamepad_emulation(False, origin="manual")
 
     assert (0, 0) in _rumbles(controller)
 
@@ -352,7 +352,7 @@ def test_ligar_o_mouse_derruba_o_vpad_e_zera_os_motores(
 ) -> None:
     """O terceiro caminho de saída, que o HARM-16 não cobria.
 
-    `set_mouse_emulation(True)` derruba o gamepad pela exclusão mútua — o vpad
+    `set_mouse_emulation(True, origin="manual")` derruba o gamepad pela exclusão mútua — o vpad
     morre no meio de um FF do jogo exatamente como nos outros dois caminhos, mas
     passava pelo wrapper `_stop_gamepad_emulation`, que não zerava nada: o
     controle vibrava para sempre.
@@ -367,7 +367,7 @@ def test_ligar_o_mouse_derruba_o_vpad_e_zera_os_motores(
     controller: FakeController = d.controller  # type: ignore[assignment]
     controller.commands.clear()
 
-    d.set_mouse_emulation(True)
+    d.set_mouse_emulation(True, origin="manual")
 
     assert d._gamepad_device is None
     assert (0, 0) in _rumbles(controller)
@@ -398,11 +398,11 @@ def test_saida_de_modo_nao_desfaz_rumble_fixado_pela_usuaria(
     """Com rumble FIXADO (aba Rumble), o dono é a usuária: o reassert re-afirma
     o valor de qualquer jeito e zerar seria desfazer o gesto dela."""
     monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
-    daemon.set_native_mode(True)
+    daemon.set_native_mode(True, origin="manual")
     daemon.config.rumble_active = (120, 200)
     controller: FakeController = daemon.controller  # type: ignore[assignment]
     controller.commands.clear()
 
-    daemon.set_native_mode(False)
+    daemon.set_native_mode(False, origin="manual")
 
     assert _rumbles(controller) == []

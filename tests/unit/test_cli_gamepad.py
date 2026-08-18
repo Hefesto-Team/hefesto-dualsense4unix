@@ -49,7 +49,7 @@ def test_on_sem_flavor_nao_manda_o_campo(mock_ipc: dict[str, Any]) -> None:
     assert result.exit_code == 0
     (method, params), = mock_ipc["calls"]
     assert method == "gamepad.emulation.set"
-    assert params == {"enabled": True}
+    assert params == {"enabled": True, "origin": "manual"}
     assert "flavor" not in params
 
 
@@ -74,7 +74,7 @@ def test_on_com_flavor_explicito_manda_o_campo(
 
     assert result.exit_code == 0
     (_method, params), = mock_ipc["calls"]
-    assert params == {"enabled": True, "flavor": flavor}
+    assert params == {"enabled": True, "flavor": flavor, "origin": "manual"}
 
 
 def test_on_forma_curta_tambem_manda(mock_ipc: dict[str, Any]) -> None:
@@ -91,7 +91,7 @@ def test_off_nao_menciona_mascara(mock_ipc: dict[str, Any]) -> None:
 
     assert result.exit_code == 0
     (_method, params), = mock_ipc["calls"]
-    assert params == {"enabled": False}
+    assert params == {"enabled": False, "origin": "manual"}
 
 
 def test_daemon_sem_habilitar_falha_com_codigo(mock_ipc: dict[str, Any]) -> None:

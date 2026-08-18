@@ -21,8 +21,113 @@ StartLimitBurst=5
 [Service]
 Type=simple
 ExecStart=/usr/bin/bt-agent --capability=NoInputNoOutput
-Restart=on-failure
-RestartSec=5
+# AGENTE-QUE-SOME-01 (08/08/2026) — a terceira camada desta mesma história, e a
+# medição que faltava: quantas vezes o agente cai, e por quanto tempo ele fica
+# fora. MEDIDO no journal dela: **36 quedas e 36 SIGKILL desde 29/07** — cem por
+# cento, porque o `bt-agent` não trata SIGTERM e NUNCA sai sozinho. Cada ciclo
+# deixava de 3 a 5 s sem agente registrado.
+#
+# Por que esses segundos custam caro: com `JustWorksRepairing=confirm` no nosso
+# `/etc/bluetooth/main.conf`, repareamento SEM agente é RECUSADO — não há quem
+# confirme. A janela não é detalhe de ciclo de vida; é tempo em que o controle
+# dela não consegue voltar. E ela caiu justo às 00:56:26 de 08/08, quando a vigia
+# reiniciou o `bluetooth.service` e os quatro controles precisavam repare-ar.
+#
+# `always` em vez de `on-failure`: com o `SuccessExitStatus=SIGKILL` abaixo — que
+# existe por bom motivo, ver BT-AGENT-MORTO-FICA-MORTO-01 — a morte por SIGKILL
+# passou a ser saída LIMPA, e `on-failure` não religa saída limpa. As duas linhas
+# se anulavam. Para este serviço não há desfecho em que ficar fora seja correto:
+# sem ele, o pareamento dela não funciona.
+Restart=always
+# 5 s eram o grosso da janela medida. 250 ms é o menor valor que ainda evita laço
+# de reinício apertado, e o `StartLimitBurst=5/60s` do bloco [Unit] continua de
+# guarda contra o agente que morre em rajada (MEDIDO: esse limite nunca foi
+# atingido em 36 quedas).
+RestartSec=250ms
+# BT-AGENT-TRAVA-O-RESTART-01 (04/08/2026) — MEDIDO no crash de 03/08.
+#
+# O `bt-agent` do bluez-tools NÃO responde ao SIGTERM quando o bluetoothd morre
+# (fica preso numa chamada D-Bus que nunca volta). Com o `TimeoutStopSec` padrão
+# do systemd (90 s), ele segurava o restart do PRÓPRIO bluetooth.service, que
+# depende dele pela ordenação — e o Bluetooth dela ficava fora do ar por um
+# minuto e meio a cada crash do BlueZ:
+#
+#   23:58:10  Scheduled restart job, restart counter is at 1
+#   23:58:10  Stopping hefesto-bt-agent.service
+#   23:58:10  Stopped phomemo-m835-rfcomm.service      <- o vizinho parou NA HORA
+#   23:59:40  Stopped hefesto-bt-agent.service         <- 90 s = TimeoutStopSec
+#   23:59:40  Starting bluetooth.service               <- só então o BlueZ voltou
+#
+# Ela viu isso como "o BT caiu e está pedindo senha": o serviço demorou tanto
+# que ela clicou em "Ativar" na tela do sistema, e esse botão passa pelo polkit.
+#
+# 3 s e SIGKILL. É seguro: o `bt-agent` é um agente de pareamento sem estado em
+# disco — matá-lo não corrompe bond nenhum, e o pareamento em curso (se houver)
+# falha do mesmo jeito, porque o bluetoothd que o serve já morreu.
+# AGENTE-QUE-SOME-01: 3 s viraram 1 s. O processo não trata SIGTERM e nunca sai
+# sozinho — os 36 de 36 provam —, então esperar três segundos por uma saída limpa
+# que não vem só alonga a janela sem agente. O SIGKILL abaixo é o caminho NORMAL
+# deste serviço, não a exceção; 1 s é a margem para o caso raro de uma versão do
+# `bt-agent` que passe a tratar o sinal.
+TimeoutStopSec=1s
+SendSIGKILL=yes
+# BT-AGENT-MORTO-FICA-MORTO-01, 04/08/2026 — MEDIDO com ela, e é o defeito que a
+# linha acima INTRODUZIU.
+#
+# Com `SendSIGKILL=yes`, o systemd mata o agente ao fim dos 3 s — e então marca a
+# unit `failed (Result: timeout)`, porque morrer de SIGKILL não é saída limpa. Com
+# `Restart=on-failure` isso deveria trazê-la de volta, mas NÃO traz: `on-failure`
+# não cobre a morte durante um `stop` pedido por outro serviço (o
+# `bluetooth.service` reiniciando), e a unit fica parada em `failed`.
+#
+# Medido na máquina dela: `failed` desde 02:32:41, e o efeito é grave e silencioso
+# — SEM o agente de pareamento, conexão ENTRANTE de controle é recusada:
+#
+#     profiles/input/server.c:confirm_event_cb() Refusing connection from <MAC>
+#
+# ...que ela viu como "o 8BitDo fica conectando sozinho (e morre)". A cura de um
+# defeito (90 s de Bluetooth fora do ar) tinha criado outro, pior: o Bluetooth
+# volta rápido e não aceita mais ninguém.
+#
+# `SIGKILL` na lista de saídas bem-sucedidas diz ao systemd o que é verdade: para
+# ESTE serviço, ser morto no desligamento é o desfecho ESPERADO — ele é um agente
+# sem estado em disco, e nós escolhemos matá-lo de propósito. Assim a unit para
+# `inactive` (não `failed`), e o `Wants=`/`After=` do drop-in do BlueZ a religa
+# junto com o bluetoothd, como sempre fez.
+SuccessExitStatus=SIGKILL
+# AGENTE-FICA-FAILED-EM-TODO-STOP-01 (15/08/2026) — a QUARTA camada, e ela mede
+# o que as três anteriores não cobriam: `SuccessExitStatus=SIGKILL` resolve o
+# CÓDIGO DE SAÍDA, mas o systemd marca a unit `failed` por outro motivo, o
+# `Result: timeout` — que é o veredito do STOP, não do processo. As duas coisas
+# são independentes, e nenhuma linha acima toca na segunda.
+#
+# REPRODUZIDO na máquina dela, com a unit exatamente como estava (instalada ==
+# fonte, conferido por `diff`):
+#
+#     systemctl stop hefesto-bt-agent.service
+#     is-active -> failed   is-failed -> failed   Result -> timeout
+#
+# E a cura, medida no mesmo minuto com um drop-in em /run:
+#
+#     KillSignal=SIGKILL
+#     systemctl stop hefesto-bt-agent.service
+#     is-active -> inactive   is-failed -> inactive   Result -> success
+#
+# O QUE ISSO CUSTOU, e é o motivo de a cura valer uma linha: em 14/08/2026 o
+# `bt_bonds_restore.sh` parou o `bluetooth.service` para restaurar bonds; o
+# agente caiu junto (Requires=), ficou `failed`, e o restore religou o BlueZ
+# **sem religar o agente**. Das 16:17 às 00:31 a máquina dela ficou sem agente
+# de pareamento — e sem ele TODO bond novo nasce meio-salvo e some, que é
+# exatamente o "conectam sozinhos e desligam em sequência" que ela relatou.
+# Os bonds que o restore tinha acabado de devolver sumiram de novo em horas.
+#
+# Por que SIGKILL direto é seguro e não é violência: o `bt-agent` do bluez-tools
+# NÃO trata SIGTERM (medido: 36 de 36 quedas terminaram em SIGKILL desde 29/07),
+# não tem estado em disco, e o pareamento em curso — se houver — já falhou de
+# qualquer forma, porque quem o serve é o bluetoothd que está parando. Mandar o
+# sinal que funciona de primeira encurta a janela sem agente em ~1 s por ciclo E
+# tira a unit do estado `failed`, que era o dano permanente.
+KillSignal=SIGKILL
 
 # --- hardening LEVE (espelha um subconjunto do broker root do repo em
 #     docs/process/future-broker/systemd/hefesto-hidraw-broker.service; aqui

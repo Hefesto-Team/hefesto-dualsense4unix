@@ -173,10 +173,29 @@ def apply_led_settings(controller: IController, settings: LedSettings) -> None:
     Propaga os 5 Player LEDs via `controller.set_player_leds(settings.player_leds)`
     (BUG-PLAYER-LEDS-APPLY-01; armadilha A-06 fechada para player_leds).
 
-    Sem esta propagação, perfis que definem `player_leds` no JSON são carregados
-    pelo ProfileManager e salvos no draft, mas os bits nunca chegam ao controle:
-    o autoswitch e `profile.switch` exibem a marcação correta na GUI enquanto o
-    hardware segue com a configuração antiga do boot ou do último toggle manual.
+    CORREÇÃO DATADA (13/08/2026) — o parágrafo que morava aqui afirmava que,
+    sem esta propagação, perfis com `player_leds` no JSON eram carregados e
+    salvos no draft "mas os bits nunca chegam ao controle". Isso é FALSO, e era
+    o sintoma do BUG-PLAYER-LEDS-APPLY-01 descrito como se ele estivesse de pé.
+    Os bits CHEGAM — por outro caminho, e este é o endereço dele. O texto sai em
+    vez de ganhar nota ao lado porque um fato errado não é decisão medida:
+    mantê-lo obrigaria a próxima pessoa a escolher entre duas afirmações.
+
+    Quem acende os cinco pontinhos numa troca de perfil é `ProfileManager.apply`,
+    que emite `player_leds` dentro do `OutputSpec` de `apply_output_defaults`
+    (profiles/manager.py:392). O backend converte ali mesmo, em
+    `_write_partial_output`: `mask = sum(1 << i for i, b in
+    enumerate(out.player_leds) if b)` (core/backend_pydualsense.py:2801) — o
+    MESMO layout que `player_bitmask` calcula neste arquivo. As duas conversões
+    não divergem, e não divergirem é conferido por teste, não por leitura:
+    `tests/unit/test_perfil_acende_os_pontinhos_do_jogador.py` troca de perfil e
+    exige o bitmask na ponta.
+
+    O que isto muda para quem lê: esta função continua correta e continua
+    pública, mas NÃO é o caminho vivo. Ela é a forma "aplicar um `LedSettings`
+    inteiro de uma vez"; o perfil chega ao aparelho pelo `OutputSpec`, que sabe
+    dizer "não mexe neste campo" com `None` — e é dessa distinção que a trava
+    manual por categoria depende.
 
     **Mic LED é intencionalmente preservado**: `settings.mic_led` NÃO é aplicado
     (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01; A-06 variante "campo ausente em

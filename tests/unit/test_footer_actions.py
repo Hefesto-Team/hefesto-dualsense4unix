@@ -193,7 +193,8 @@ class TestOnSaveProfile:
         stub = _make_stub()
         salvo: list[str] = []
 
-        def fake_save(profile: Profile) -> Path:
+        def fake_save(profile: Profile, *, origem: str | None = None) -> Path:
+            # `origem` espelha a assinatura real de `save_profile`.
             salvo.append(profile.name)
             return Path(f"/tmp/{profile.name}.json")
 
@@ -204,7 +205,7 @@ class TestOnSaveProfile:
         with (
             patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
             patch("hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles", return_value=[]),  # noqa: E501
-            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile", side_effect=fake_save),  # noqa: E501
+            patch("hefesto_dualsense4unix.app.actions.profile_writer.save_profile", side_effect=fake_save),  # noqa: E501
         ):
             stub.on_save_profile()
 
@@ -219,7 +220,7 @@ class TestOnSaveProfile:
 
         with (
             patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
-            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile") as mock_save,
+            patch("hefesto_dualsense4unix.app.actions.profile_writer.save_profile") as mock_save,
         ):
             stub.on_save_profile()
             assert not mock_save.called
@@ -238,7 +239,7 @@ class TestOnSaveProfile:
                 "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
                 return_value=[perfil_existente],
             ),
-            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile") as mock_save,
+            patch("hefesto_dualsense4unix.app.actions.profile_writer.save_profile") as mock_save,
         ):
             stub.on_save_profile()
             assert not mock_save.called
@@ -246,7 +247,7 @@ class TestOnSaveProfile:
     def test_toast_confirmacao_exibido(self) -> None:
         stub = _make_stub()
 
-        def fake_save(profile: Profile) -> Path:
+        def fake_save(profile: Profile, *, origem: str | None = None) -> Path:
             return Path(f"/tmp/{profile.name}.json")
 
         mock_dialogs = MagicMock()
@@ -256,7 +257,7 @@ class TestOnSaveProfile:
         with (
             patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
             patch("hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles", return_value=[]),  # noqa: E501
-            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile", side_effect=fake_save),  # noqa: E501
+            patch("hefesto_dualsense4unix.app.actions.profile_writer.save_profile", side_effect=fake_save),  # noqa: E501
         ):
             stub.on_save_profile()
 
@@ -279,6 +280,12 @@ class TestSaveProfileConflitoPorSlug:
     recalculada, virando um catch-all a mais, que é a doença da
     AUTOMATISMO-MORTO-01. Cinco dos quinze perfis dela colidem por acento ou
     por caixa.
+
+    NOTA DATADA — 06/08/2026: o número caducou; a frase, não. São 13 arquivos
+    hoje e nove nomes cujo slug difere. E "colidir" aqui nunca significou perfil
+    contra perfil — significa que uma variante digitada cai em cima do arquivo
+    que já existe. A conta está na JANELA-FIEL-01. O que este teste mede não
+    mudou: o gate compara nome cru, e é isso que ele morde.
 
     MORDIDA: os testes de hoje só exercitavam nome IDÊNTICO ("existente" contra
     "existente"), que passa com a cura arrancada. Aqui o par é acentuado contra
@@ -315,7 +322,7 @@ class TestSaveProfileConflitoPorSlug:
                 "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
                 return_value=[_make_profile(em_disco)],
             ),
-            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile") as mock_save,
+            patch("hefesto_dualsense4unix.app.actions.profile_writer.save_profile") as mock_save,
         ):
             stub.on_save_profile()
 
@@ -336,7 +343,7 @@ class TestSaveProfileConflitoPorSlug:
                 "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
                 return_value=[_make_profile("Navegação")],
             ),
-            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile"),
+            patch("hefesto_dualsense4unix.app.actions.profile_writer.save_profile"),
         ):
             stub.on_save_profile()
 
@@ -350,7 +357,7 @@ class TestSaveProfileConflitoPorSlug:
         mock_dialogs = self._dialogos(True)
         mock_dialogs.prompt_profile_name.return_value = "Corrida"
 
-        def fake_save(profile: Profile) -> Path:
+        def fake_save(profile: Profile, *, origem: str | None = None) -> Path:
             salvos.append(profile.name)
             return Path(f"/tmp/{profile.name}.json")
 
@@ -360,7 +367,7 @@ class TestSaveProfileConflitoPorSlug:
                 "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
                 return_value=[_make_profile("Navegação")],
             ),
-            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile", side_effect=fake_save),  # noqa: E501
+            patch("hefesto_dualsense4unix.app.actions.profile_writer.save_profile", side_effect=fake_save),  # noqa: E501
         ):
             stub.on_save_profile()
 
@@ -373,7 +380,7 @@ class TestSaveProfileConflitoPorSlug:
         mock_dialogs = self._dialogos(True)
         mock_dialogs.prompt_profile_name.return_value = "Navegacao"
 
-        def fake_save(profile: Profile) -> Path:
+        def fake_save(profile: Profile, *, origem: str | None = None) -> Path:
             salvos.append(profile.name)
             return Path(f"/tmp/{profile.name}.json")
 
@@ -383,7 +390,7 @@ class TestSaveProfileConflitoPorSlug:
                 "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
                 return_value=[_make_profile("Navegação")],
             ),
-            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile", side_effect=fake_save),  # noqa: E501
+            patch("hefesto_dualsense4unix.app.actions.profile_writer.save_profile", side_effect=fake_save),  # noqa: E501
         ):
             stub.on_save_profile()
 

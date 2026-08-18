@@ -10,8 +10,12 @@
 # exibição do co-op (NUMA-05: quem manda em lightbar/numeração agora — jogo,
 # daemon ou "unknown" — e a CAUSA quando presa em unknown); reconhece também,
 # no journal do kernel, a assinatura de morte por Bluetooth do 8BitDo em modo
-# Switch (cascata do hid-nintendo — informativo, não gerenciamos o controle);
-# e (G2) o rádio/pareamento — versão do bluez vs. o piso 5.79, o
+# Switch (cascata do hid-nintendo — informativo, não gerenciamos o controle) e
+# a do DualSense que o driver do kernel ABORTOU no probe (PROBE-MORTO-PS-01 —
+# aborto cruzado com o estado de agora: órfão AGORA é FAIL com a cura pronta,
+# aborto que já recuperou é só informação);
+# e (G2) o rádio/pareamento — versão do bluez vs. a faixa aceita (piso 5.79,
+# teto 5.87: o UAF em dev_disconnected), o
 # hefesto-bt-agent.service, bond "meio-salvo" por dois ângulos (Connected sem
 # hidraw correspondente E Paired sem Bonded) e o sink de áudio padrão mudo;
 # e (BROKER-01, Onda S) o broker root hide-hidraw fd-injection — unit de
@@ -25,13 +29,20 @@
 # Saída PASS/FAIL/WARN por item.
 # Marcadores ASCII (compat sanitizer de anonimato).
 #
-# Uso: scripts/doctor.sh [--fix] [--fix-mic] [--quiet] [--watch-dropout] [--suggest-port]
+# Uso: scripts/doctor.sh [--fix] [--fix-mic] [--restaurar-hidraw-uaccess]
+#                        [--quiet] [--watch-dropout] [--suggest-port]
 #   --fix             aplica correções seguras: reaplica udev, instala/reseta o
 #                     fix de áudio do WirePlumber e cura as camadas 1 e 2 do
 #                     microfone mudo (MIC-USB-01: mute persistido por rota e
 #                     perfil da placa preso na entrada digital sem sinal).
 #   --fix-mic         SÓ o microfone (camadas 1 e 2) — cura, mostra o veredito
 #                     das duas e sai. Rota curta de quem quer o mic de volta.
+#   --restaurar-hidraw-uaccess
+#                     tira o bit de OUTROS dos nós /dev/hidraw* que estão
+#                     abertos a qualquer usuário local E que NENHUMA regra udev
+#                     explica (0666 -> 0660). Nunca roda sozinho: NÃO entra no
+#                     --fix e NÃO entra no install. Decisão dela, 07/08/2026
+#                     (resposta 16 do painel). Ver RESTAURO-SO-COM-SINTOMA-01.
 #   --quiet           só mostra FAIL/WARN.
 #   --watch-dropout   vigia o journal do kernel e bloqueia até o primeiro sintoma
 #                     de dropout USB (-71); imprime a linha e sai. (Ctrl-C para sair.)
@@ -56,10 +67,12 @@ QUIET=0
 WATCH_DROPOUT=0
 SUGGEST_PORT=0
 FIX_MIC=0
+RESTAURAR_HIDRAW=0
 for arg in "$@"; do
     case "$arg" in
         --fix)            DO_FIX=1 ;;
         --fix-mic)        FIX_MIC=1 ;;
+        --restaurar-hidraw-uaccess) RESTAURAR_HIDRAW=1 ;;
         --quiet)          QUIET=1 ;;
         --watch-dropout)  WATCH_DROPOUT=1 ;;
         --suggest-port)   SUGGEST_PORT=1 ;;
@@ -141,16 +154,36 @@ check_udev() {
     # (falso: é default desde o install) e ignorou 77/78 — sem a 77 o nó de LED
     # não é gravável e a cor por-controle degrada p/ hidraw em silêncio.
     # Regra da casa: um item no install = um check no doctor.
+    #
+    # NOTA DATADA 06/08/2026: a lista tinha caducado de novo, e a própria regra
+    # escrita acima é que apanhou. O `install_udev.sh` instala SEM FLAG também a
+    # 82 (nosniff do Pro), a 83 (snapshot de bonds na borda udev) e a 84
+    # (variante do clone 8BitDo) — linhas 132, 133 e 138 — e nenhuma das três era
+    # conferida aqui. Quem instalasse antes delas existirem ficava sem as três,
+    # em silêncio, e o doctor dava [OK]. As três entram na contagem.
+    #
+    # NOTA DATADA 09/08/2026 (OQ-6): entra a 72-hefesto-touchpad-motion-uaccess,
+    # que o `install_udev.sh` também põe SEM FLAG. Ela é a que dá ACL da sessão
+    # aos nós de ENTRADA do touchpad e dos sensores de movimento — a regra do
+    # sistema (70-uaccess.rules) só marca `ID_INPUT_JOYSTICK`, e esses dois nós
+    # são `ID_INPUT_TOUCHPAD`/`ID_INPUT_ACCELEROMETER`. A presença do ARQUIVO é
+    # o que se cobra aqui; o EFEITO (a ACL existir no nó vivo) é outra pergunta,
+    # e tem função própria — `check_input_uaccess`. As duas são necessárias:
+    # a regra pode estar no disco e não ter pegado (ver o comentário de lá).
     local r found=0 missing=""
     local rules=(70-ps5-controller.rules 71-uhid.rules 71-uinput.rules
                  72-ps5-controller-autosuspend.rules
+                 72-hefesto-touchpad-motion-uaccess.rules
                  76-dualsense-touchpad-libinput-ignore.rules
                  77-dualsense-leds.rules
                  78-dualsense-motion-not-joystick.rules
                  79-external-controller-leds.rules
                  80-motion-joydev-hide.rules
                  81-hefesto-usb-power.rules
-                 81-hefesto-usb-host-power.rules)
+                 81-hefesto-usb-host-power.rules
+                 82-nintendo-pro-nosniff.rules
+                 83-hefesto-bond-snapshot.rules
+                 84-nintendo-pro-variant.rules)
     local total=${#rules[@]}
     for r in "${rules[@]}"; do
         if [[ -e "/etc/udev/rules.d/${r}" || -e "/usr/lib/udev/rules.d/${r}" ]]; then
@@ -160,7 +193,7 @@ check_udev() {
         fi
     done
     if [[ "${found}" -eq "${total}" ]]; then
-        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72/76/77/78/79/80/81-power/81-host)"
+        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72-autosuspend/72-uaccess/76/77/78/79/80/81-power/81-host/82/83/84)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else
@@ -296,6 +329,146 @@ check_hid_playstation() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# PROBE-MORTO-PS-01 — o DualSense que o driver do kernel ABORTOU no probe.
+# ---------------------------------------------------------------------------
+# check_hid_playstation (acima) só conferia se o MÓDULO carregou. Módulo
+# carregado e controle invisível são compatíveis, e foi o que aconteceu 6x na
+# máquina dela em 08/08/2026: o controle conecta no Bluetooth, acende a luz do
+# PRÓPRIO firmware e não existe para o sistema — sem hidraw, sem input, sem nó
+# de LED, sem bateria. A dona tinha dois controles ligados, a janela mostrava
+# um, e nada em lugar nenhum do produto sabia dizer por quê.
+#
+# A assinatura no journal do kernel:
+#
+#   playstation 0005:054C:0CE6.0069: Failed to retrieve feature with reportID 32: -5
+#   playstation 0005:054C:0CE6.0069: Failed to retrieve DualSense firmware info: -5
+#   playstation 0005:054C:0CE6.0069: Failed to create dualsense.
+#   playstation 0005:054C:0CE6.0069: probe with driver playstation failed with error -5
+#
+# NÃO é hardware — tese vetada por escrito por ela depois de dias perdidos
+# nela. É CONTENÇÃO: dois DualSense subindo no mesmo adaptador com ~1 s de
+# diferença; o segundo perde o canal de controle L2CAP, o BlueZ estoura o teto
+# de 3 s (hidp_report_req_timeout) e o uhid achata o erro em -EIO (o -5 é
+# máscara). A cadeia está medida elo a elo em
+# assets/dkms/hid-playstation/README.md:62-114.
+#
+# Função PURA (stdin -> stdout), uma linha por instância hid que abortou:
+# "INSTANCIA n_probe n_feature". O gate é o ABORTO (probe >= 1); a falha de
+# feature é CORROBORAÇÃO da causa — contada e reportada, nunca exigida, porque
+# um aborto por outro motivo não pode ficar invisível. Falha de feature SEM
+# aborto é o transiente que o probe sobreviveu: sai vazio de propósito.
+_hid_playstation_probe_scan() {
+    sed -nE \
+        -e 's/^.*playstation ([0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4,}).*probe with driver playstation failed.*$/\1 probe/p' \
+        -e 's/^.*playstation ([0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4,}).*Failed to retrieve feature with reportID.*$/\1 feature/p' \
+      | awk '
+            $2 == "probe"   { p[$1]++ }
+            $2 == "feature" { f[$1]++ }
+            END {
+                for (i in p) printf "%s %d %d\n", i, p[i], (i in f ? f[i] : 0)
+            }
+        ' | sort
+}
+
+# O estado ATUAL, que é quem decide o veredito: DualSense por Bluetooth em
+# /sys/bus/hid/devices SEM o symlink `driver` — órfão é o que NÃO tem driver.
+# Mesmo escopo estreito do scripts/bt_rebind_orphans.sh, e pelas mesmas razões:
+# barramento 0005 (Bluetooth) é o único onde a contenção medida acontece, e
+# exclui por construção o vpad do próprio hefesto, que nasce por uhid no
+# barramento 0003; vendor 054C (Sony) é o dono do driver `playstation`. Só
+# leitura de sysfs. HEFESTO_HID_DEVICES_DIR é a MESMA costura de teste do
+# bt_rebind_orphans.sh — em produção nunca é definida.
+_hid_playstation_orfaos_agora() {
+    local raiz="${HEFESTO_HID_DEVICES_DIR:-/sys/bus/hid/devices}" dev id bus vid
+    for dev in "${raiz}"/*; do
+        [[ -d "${dev}" ]] || continue
+        [[ -e "${dev}/driver" ]] && continue   # tem driver: foi adotado
+        id="$(basename "${dev}")"
+        bus="${id%%:*}"
+        vid="${id#*:}"; vid="${vid%%:*}"
+        [[ "${bus}" == "0005" ]] || continue
+        [[ "${vid^^}" == "054C" ]] || continue
+        printf '%s\n' "${id}"
+    done
+}
+
+# O veredito. TRÊS casos, e a diferença entre eles é o que separa diagnóstico
+# de ruído: dos 6 abortos de 08/08, TODOS recuperaram sozinhos em 2 a 20 min.
+# Um FAIL por aborto que já passou ensina a ignorar o doctor — por isso o
+# aborto é cruzado com o estado de AGORA:
+#   1. controle órfão AGORA          -> FAIL (defeito ativo, cura pronta);
+#   2. aborto na janela, sem órfão   -> info (histórico, nada a fazer);
+#   3. nem uma coisa nem outra       -> pass.
+# O órfão é conferido ANTES do journal e vale sozinho: o journal pode estar
+# ilegível (sem grupo adm) e o sintoma continua sendo o sysfs.
+#
+# JANELA: `journalctl _TRANSPORT=kernel --since`, NUNCA `journalctl -k` — o -k
+# implica o boot atual, e uma janela que atravessa reboot devolveria ZERO,
+# indistinguível de "não houve nada". Esta casa já pagou quatro medições
+# falsas por essa armadilha (índice de 08/08, §8).
+#
+# O TAMANHO da janela foi MEDIDO na máquina dela em 09/08, e a primeira
+# escolha estava errada: com 24 h a mesma consulta via 1 dos 6 abortos de
+# 08/08 (o boot dela é mais velho que um dia), e com 3 dias via os 6. Como o
+# aborto recuperado é só `info`, uma janela larga custa pouco ruído e devolve
+# o contexto inteiro do episódio. HEFESTO_DOCTOR_PROBE_JANELA ajusta.
+#
+# READ-ONLY, como todo check: aponta a cura (scripts/bt_rebind_orphans.sh) e
+# a vigia que a chama de 2 em 2 min, e NÃO executa nenhuma das duas — o
+# doctor confere e não cura.
+check_hid_playstation_probe_abortado() {
+    local janela="${HEFESTO_DOCTOR_PROBE_JANELA:-3 days ago}"
+    local orfaos abortos tem_journal=0
+    orfaos="$(_hid_playstation_orfaos_agora)"
+    abortos=""
+    if command -v journalctl >/dev/null 2>&1; then
+        tem_journal=1
+        abortos="$(journalctl _TRANSPORT=kernel --since "${janela}" --no-pager 2>/dev/null \
+            | _hid_playstation_probe_scan)"
+    fi
+
+    if [[ -n "${orfaos}" ]]; then
+        local id detalhe
+        while read -r id; do
+            [[ -z "${id}" ]] && continue
+            detalhe=""
+            if [[ -n "${abortos}" ]]; then
+                detalhe="$(printf '%s\n' "${abortos}" \
+                    | awk -v alvo="${id}" '$1 == alvo { printf "%dx aborto e %dx falha de feature no journal", $2, $3 }')"
+            fi
+            fail "DualSense ÓRFÃO AGORA (${id}): o driver playstation abortou a probe e o controle NÃO existe para o sistema — sem hidraw, sem input, sem nó de LED, sem bateria; invisível para o daemon e para a janela, mesmo conectado e com a luz acesa pelo próprio firmware${detalhe:+ (${detalhe})}. Cura pronta, sem reboot e sem derrubar quem já funciona: sudo /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh (no checkout: sudo bash scripts/bt_rebind_orphans.sh)"
+        done <<<"${orfaos}"
+        local tw=""
+        if command -v systemctl >/dev/null 2>&1; then
+            tw="$(systemctl is-active hefesto-bt-health-watchdog.timer 2>/dev/null || true)"
+        fi
+        if [[ "${tw}" == "active" ]]; then
+            info "a vigia hefesto-bt-health-watchdog.timer está ativa e chama esse mesmo rebind de 2 em 2 minutos — se o controle voltar sozinho em até 2 min, foi ela"
+        else
+            warn "a vigia que chamaria o rebind sozinha (hefesto-bt-health-watchdog.timer) está ${tw:-ausente} — sem ela o controle órfão só volta à mão; ligue: sudo systemctl enable --now hefesto-bt-health-watchdog.timer"
+        fi
+        info "não é hardware (tese vetada por ela, por escrito, depois de dias perdidos nela): é contenção — dois DualSense subindo no mesmo adaptador com ~1 s de diferença; o segundo perde o canal de controle L2CAP e o BlueZ desiste no teto de 3 s (hidp_report_req_timeout). Cadeia medida: assets/dkms/hid-playstation/README.md:62-114"
+        return
+    fi
+
+    if [[ -n "${abortos}" ]]; then
+        local total_probe total_feature instancias
+        total_probe="$(printf '%s\n' "${abortos}" | awk '{s += $2} END {printf "%d", s + 0}')"
+        total_feature="$(printf '%s\n' "${abortos}" | awk '{s += $3} END {printf "%d", s + 0}')"
+        instancias="$(printf '%s\n' "${abortos}" | awk '{printf "%s%s", (NR > 1 ? ", " : ""), $1}')"
+        info "aborto de probe do hid-playstation na janela (${janela}), JÁ RECUPERADO: ${total_probe}x 'probe with driver playstation failed' em ${instancias} (${total_feature}x 'Failed to retrieve feature' antes) — nenhum DualSense está órfão AGORA, então não há o que fazer: é histórico, não defeito ativo (os 6 abortos de 08/08 voltaram sozinhos em 2 a 20 min, por reconexão)"
+        info "se acontecer de novo COM o controle sumindo, a cura é o rebind (sudo /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh) e a vigia hefesto-bt-health-watchdog.timer a chama de 2 em 2 minutos; a causa medida é contenção de dois controles no mesmo adaptador, não hardware (assets/dkms/hid-playstation/README.md:62-114)"
+        return
+    fi
+
+    if [[ "${tem_journal}" -eq 0 ]]; then
+        info "nenhum DualSense órfão agora (todo device HID Sony por Bluetooth tem driver) — sem journalctl não dá para olhar o histórico de abortos de probe"
+        return
+    fi
+    pass "nenhum DualSense órfão agora e nenhum aborto de probe do hid-playstation na janela (${janela})"
+}
+
 # COR-06/STATUS-07: probe READ-ONLY da gravabilidade do LED do DualSense FÍSICO.
 # A regra 77 (default no install) dá escrita ao usuário nos nós de LED do kernel;
 # sem ela o daemon só alcança a cor por hidraw — que em BT sofre EIO — e a cor
@@ -303,6 +476,16 @@ check_hid_playstation() {
 # este check NUNCA escreve no nó. O vpad uhid do daemon também cria um nó
 # rgb:indicator, mas o realpath do device dele vive em /devices/virtual/ e NÃO
 # serve de alvo (filtrado). Sem DualSense físico conectado: pula sem falhar.
+#
+# LED-QUE-NÃO-AFIRMA-01 (13/08/2026): o `pass` daqui dizia "cor por-controle via
+# sysfs OK (regra 77 valendo)" — e isso é uma afirmação de EFEITO que este check
+# não tem como fazer, porque ele nunca escreveu no nó (o comentário três linhas
+# acima já dizia isso). Ela lê o doctor justamente quando a cor NÃO está saindo:
+# um `[ OK ]` afirmando que a cor funciona manda procurar no lugar errado. O
+# texto passou a dizer o que foi medido — permissão de escrita — e `test -w` só
+# derruba a hipótese "falta permissão"; a cor pode continuar sem sair por hidraw
+# em EIO, por lightbar_source=="desired", ou por driver ausente. Há teste que
+# reprova se a afirmação de efeito voltar: tests/unit/test_doctor_nao_afirma_efeito.py
 check_led_sysfs_gravavel() {
     local node dev_real nome ok_nodes="" bad_nodes=""
     for node in /sys/class/leds/*rgb:indicator*; do
@@ -321,10 +504,123 @@ check_led_sysfs_gravavel() {
     if [[ -n "${bad_nodes}" ]]; then
         warn "nó de LED do DualSense físico SEM escrita p/ o seu usuário:${bad_nodes} — a cor por-controle (sobretudo em BT) depende do sysfs; a regra 77 dá a permissão: sudo bash scripts/install_udev.sh (e reconecte o controle)"
     elif [[ -n "${ok_nodes}" ]]; then
-        pass "nó de LED do DualSense físico gravável pelo usuário (${ok_nodes# }) — cor por-controle via sysfs OK (regra 77 valendo)"
+        pass "nó de LED do DualSense físico GRAVÁVEL pelo usuário (${ok_nodes# }) — a regra 77 está valendo. Só \`test -w\`: este check NUNCA escreve no nó, então isto é PERMISSÃO, não prova de que a cor sai"
     else
         info "sem DualSense físico com nó de LED agora (só o controle virtual, ou nenhum) — pulo o teste de gravabilidade; conecte o controle p/ validar a regra 77"
     fi
+}
+
+# ---------------------------------------------------------------------------
+# OQ-6 (09/08/2026) — o touchpad e o giroscópio funcionavam por ACIDENTE.
+# ---------------------------------------------------------------------------
+# A regra do SISTEMA que dá ACL aos nós de entrada
+# (/usr/lib/udev/rules.d/70-uaccess.rules) só marca ID_INPUT_JOYSTICK, e o
+# `input_id` do kernel classifica o nó de movimento como
+# ID_INPUT_ACCELEROMETER e o do touchpad como ID_INPUT_TOUCHPAD. Nenhum dos
+# dois casava, e regra nenhuma desta casa os cobria: o acesso vinha do grupo
+# `input`, em que a usuária desta máquina está POR FORA do produto (instalador
+# nenhum daqui toca esse grupo). Numa máquina nova, nada funciona — e o sintoma
+# é a AUSÊNCIA de dado: `core/evdev_reader.py:1396` engole a PermissionError
+# num `except Exception: continue`, o nó some do mapa e o daemon relata
+# "esse controle não tem sensor".
+#
+# A cura é `assets/72-hefesto-touchpad-motion-uaccess.rules`.
+#
+# POR QUE ESTA FUNÇÃO EXISTE SE `check_udev` JÁ CONFERE O ARQUIVO: porque as
+# duas perguntas são diferentes. `check_udev` responde "a regra está no disco?";
+# esta responde "a regra PEGOU?". Uma regra udev só age no (re)add do device —
+# um controle que já estava conectado quando a regra chegou continua sem ACL
+# até o replug. Arquivo presente e efeito ausente é exatamente o estado que
+# passa despercebido.
+#
+# CONFERE E NÃO CURA (regra da casa): diz o comando, nunca o executa. E
+# distingue os DOIS jeitos de o nó estar legível — a ACL da sessão (que a
+# regra entrega, e que existe em máquina limpa) e o grupo do nó (o acidente,
+# que não existe em máquina limpa). Só o primeiro é PASS.
+#
+# FÍSICO E VIRTUAL SÃO CONTADOS SEPARADAMENTE, e isso não é preciosismo — foi
+# um FALSO VERDE MEDIDO em 09/08/2026. Rodando a primeira versão desta função
+# nesta máquina ela imprimiu "[PASS] ... em 2 nó(s)", e os dois nós eram
+# `.../input/event259` e `event261`, ambos em
+# `/sys/devices/virtual/misc/uhid/0003:054C:0DF2.008F` — os nós auxiliares do
+# VPAD que o próprio daemon acabara de criar. Não havia DualSense físico
+# conectado. O instrumento deu verde sobre um device que nós mesmos fabricamos,
+# e ficou calado exatamente sobre o que a pergunta era (o controle dela).
+# `check_led_sysfs_gravavel` já resolvia isto do jeito certo, com
+# `[[ "${dev_real}" == */devices/virtual/* ]] && continue`.
+#
+# OS DOIS IMPORTAM, por motivos diferentes, e por isso nenhum é descartado:
+#   - o FÍSICO é o que alimenta a interface (o widget de giroscópio da aba
+#     Status, via `daemon/sensor_hub.py`) e o cursor/teclas do touchpad;
+#   - o VIRTUAL é o que o JOGO abre na máscara DualSense — sem ACL nele, o
+#     jogo não lê giroscópio nem touchpad do vpad.
+# O que não pode acontecer é um verde do virtual passar por resposta sobre o
+# físico. Quando não há físico agora, a função DIZ que não há.
+check_input_uaccess() {
+    local regra="72-hefesto-touchpad-motion-uaccess.rules"
+    if [[ ! -e "/etc/udev/rules.d/${regra}" && ! -e "/usr/lib/udev/rules.d/${regra}" ]]; then
+        fail "${regra} ausente — o touchpad e o giroscópio só funcionam para quem está no grupo 'input' por fora do produto (numa máquina nova, não funcionam). Rode: sudo bash scripts/install_udev.sh"
+        return
+    fi
+    local node base nome vid dev_real eu classe
+    local vistos_fis=0 vistos_virt=0
+    local sem_acesso=() so_pelo_grupo=() sem_acesso_virt=() so_grupo_virt=()
+    eu="$(id -un 2>/dev/null || true)"
+    for node in /dev/input/event*; do
+        [[ -e "${node}" ]] || continue
+        base="$(basename "${node}")"
+        # Âncora de FABRICANTE, igual à da regra — sem ela o check alarmaria
+        # sobre um touchpad de notebook cujo nome também termina em "Touchpad",
+        # que a regra nunca cobre. Instrumento e produto casam o MESMO conjunto.
+        vid="$(cat "/sys/class/input/${base}/device/id/vendor" 2>/dev/null || true)"
+        case "${vid}" in
+            054c|057e) ;;
+            *) continue ;;
+        esac
+        nome="$(cat "/sys/class/input/${base}/device/name" 2>/dev/null || true)"
+        case "${nome}" in
+            *"Motion Sensors"|*"Touchpad"|*"(IMU)") ;;
+            *) continue ;;
+        esac
+        dev_real="$(readlink -f "/sys/class/input/${base}/device" 2>/dev/null || true)"
+        if [[ "${dev_real}" == */devices/virtual/* ]]; then
+            classe="virt"
+            vistos_virt=$((vistos_virt + 1))
+        else
+            classe="fis"
+            vistos_fis=$((vistos_fis + 1))
+        fi
+        if [[ ! -r "${node}" ]]; then
+            [[ "${classe}" == "fis" ]] && sem_acesso+=("${base}") || sem_acesso_virt+=("${base}")
+        elif command -v getfacl >/dev/null 2>&1 && [[ -n "${eu}" ]] \
+             && ! getfacl -p "${node}" 2>/dev/null | grep -q "^user:${eu}:"; then
+            [[ "${classe}" == "fis" ]] && so_pelo_grupo+=("${base}") || so_grupo_virt+=("${base}")
+        fi
+    done
+    # O vpad primeiro e sempre em separado: ele é nosso, e um problema nele é
+    # problema do jogo, não da interface.
+    if [[ "${#sem_acesso_virt[@]}" -gt 0 ]]; then
+        fail "o gamepad VIRTUAL tem ${#sem_acesso_virt[@]} nó(s) de touchpad/movimento sem leitura (${sem_acesso_virt[*]}) — na máscara DualSense o jogo não lê giroscópio nem touchpad do vpad. Rode: sudo bash scripts/install_udev.sh"
+    elif [[ "${#so_grupo_virt[@]}" -gt 0 ]]; then
+        warn "o gamepad VIRTUAL tem ${#so_grupo_virt[@]} nó(s) legíveis só pelo GRUPO (${so_grupo_virt[*]}), sem ACL da sessão — funciona nesta máquina e não numa limpa"
+    fi
+    if [[ "${vistos_fis}" -eq 0 ]]; then
+        if [[ "${vistos_virt}" -gt 0 ]]; then
+            info "nenhum controle FÍSICO com nó de touchpad/movimento agora — os ${vistos_virt} nó(s) vistos são do gamepad virtual (/devices/virtual). Conecte o controle para validar o caso que importa."
+        else
+            info "nenhum nó de touchpad/movimento presente agora (controle desligado?) — nada a conferir"
+        fi
+        return
+    fi
+    if [[ "${#sem_acesso[@]}" -gt 0 ]]; then
+        fail "sem permissão de leitura em ${#sem_acesso[@]} de ${vistos_fis} nó(s) FÍSICOS de touchpad/movimento (${sem_acesso[*]}) — o daemon engole o EACCES e relata 'sem sensor'. A ACL nasce no (re)add do device: desconecte e reconecte o controle; se persistir, rode: sudo bash scripts/install_udev.sh"
+        return
+    fi
+    if [[ "${#so_pelo_grupo[@]}" -gt 0 ]]; then
+        warn "${#so_pelo_grupo[@]} de ${vistos_fis} nó(s) FÍSICOS de touchpad/movimento legíveis só pelo GRUPO do nó (${so_pelo_grupo[*]}), sem a ACL da sessão — funciona NESTA máquina (você está no grupo 'input') e NÃO funcionaria numa limpa. Reconecte o controle para a ${regra} pegar."
+        return
+    fi
+    pass "touchpad e giroscópio com ACL da sessão em ${vistos_fis} nó(s) do controle físico — sem depender do grupo 'input'"
 }
 
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5 (Opção D): o quirk de boot
@@ -459,6 +755,36 @@ check_wireplumber_source() {
             pass "microfone ativo é o DualSense (DUALSENSE_MIC_INTENDED=1 — desejado)"
             return ;;
     esac
+    # O-PRODUTO-PROMOVE-E-RECLAMA-01 (10/08/2026): o PROMOTOR no disco também é
+    # opt-in, e é o único que ela consegue dar.
+    #
+    # A incoerência foi medida no install dela, e terminava em `[FAIL]` na tela:
+    #
+    #   [FAIL] DualSense é o microfone ATIVO com outra fonte disponível
+    #   [ OK ] a fonte de captura padrão é uma entrada de verdade (alsa_input...DualSense...)
+    #
+    # Duas linhas seguidas, o mesmo aparelho, vereditos opostos — e as seis
+    # linhas seguintes todas OK. O motivo: em 08/08 (MONITOR-QUE-VENCE-01) o
+    # drop-in 51 deixou de SUPRIMIR e passou a PROMOVER a entrada do controle
+    # (`priority.session = 1500`), e ele entra por DEFAULT no install
+    # (`WITH_WIREPLUMBER_FIX=1`). O produto passou a criar a condição que este
+    # check continuou acusando. O nome do arquivo ainda diz "no-default-source",
+    # que é o fóssil da regra antiga.
+    #
+    # E o opt-in que existia era uma VARIÁVEL DE AMBIENTE. Pela regra desta casa
+    # (*"tudo tem que focar em funcionar na interface do app e no install"*),
+    # opt-in que só se alcança exportando env não é opt-in dela: é opt-in de
+    # quem lê o código. O promotor no disco, sim, é gesto dela — ele só existe
+    # se o install rodou sem `--keep-dualsense-mic` ou se ela clicou "Ligar" na
+    # aba Emulação.
+    #
+    # Continua ALARMANDO no caso que o check foi criado para pegar: promotor
+    # ausente e o DualSense virando padrão sozinho, que é o mic dela sequestrado
+    # sem ninguém pedir.
+    if [[ -f "${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf" ]]; then
+        pass "microfone ativo é o DualSense (o promotor está instalado — foi pedido)"
+        return
+    fi
     # ativo É o DualSense (não desejado) — distingue escassez (única fonte) de falha real.
     local has_other=""
     if command -v wpctl >/dev/null 2>&1; then
@@ -602,6 +928,27 @@ _melhor_source_de_captura() {
     ' "${2:--}"
 }
 
+# PURA: filtra um `pactl list sources short` (stdin) e deixa passar só as fontes
+# cuja porta ativa NÃO está explicitamente `not available`. `$1` = o texto de
+# `LC_ALL=C pactl list sources` (o longo), de onde sai a disponibilidade.
+#
+# Existe para que o CHECK e a CURA usem o mesmo critério. Enquanto cada um tinha
+# o seu, o doctor reprovava e mandava eleger a onboard, e o `--fix-mic` — que já
+# filtrava — se recusava a eleger a mesma onboard. Duas verdades no mesmo
+# programa, e a que ela lia na tela era a errada (RECEITA-ERRADA-01, 06/08/2026).
+_sources_com_porta_usavel() {
+    local longo="$1" linha nome
+    while IFS= read -r linha; do
+        [[ -n "${linha}" ]] || continue
+        nome="$(printf '%s\n' "${linha}" | awk '{print $2}')"
+        if [[ -n "${nome}" ]] \
+           && printf '%s\n' "${longo}" | _source_porta_ativa_indisponivel "${nome}"; then
+            continue
+        fi
+        printf '%s\n' "${linha}"
+    done
+}
+
 check_default_source_monitor() {
     command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo a fonte de captura padrão"; return; }
     local cur classe
@@ -632,14 +979,36 @@ check_default_source_monitor() {
         fi
         return
     fi
-    fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA, não a voz; rode: scripts/doctor.sh --fix-mic"
-    local prefere=0 alvo
+    # RECEITA-ERRADA-01 (06/08/2026) — a mensagem mandava rodar `--fix-mic` SEM
+    # saber se ele tem o que fazer, e o alvo que ela oferecia saía de uma lista
+    # SEM o filtro de porta que a cura aplica. Nesta máquina isso produziu as
+    # duas metades do mesmo defeito:
+    #
+    #   - MEDIDO em 06/08, sem webcam e sem controle no cabo: o check reprovava
+    #     e mandava rodar `--fix-mic`; o `--fix-mic` respondia "não há nenhuma
+    #     fonte de captura com porta usável para eleger" e não fazia nada. A
+    #     receita levava a um comando que não podia funcionar;
+    #   - MEDIDO em 29 e 30/07: o check oferecia `pactl set-default-source
+    #     <onboard>`, cujas três portas estão `not available` — o pactl aceita,
+    #     o WirePlumber não consegue honrar e REELEGE o monitor. A receita
+    #     levava ao lugar errado, e o defeito voltava sozinho.
+    #
+    # Agora o alvo sai do MESMO filtro que a cura usa, então check e cura não
+    # podem mais discordar; e quando não há alvo, o texto diz o que está
+    # acontecendo em vez de apontar para um comando impotente.
+    local prefere=0 alvo longo
     _prefere_mic_do_dualsense && prefere=1
-    alvo="$(LC_ALL=C pactl list sources short 2>/dev/null | _melhor_source_de_captura "${prefere}")"
+    longo="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+    alvo="$(LC_ALL=C pactl list sources short 2>/dev/null \
+            | _sources_com_porta_usavel "${longo}" \
+            | _melhor_source_de_captura "${prefere}")"
     if [[ -n "${alvo}" ]]; then
+        fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA, não a voz; rode: scripts/doctor.sh --fix-mic"
         info "  cura: pactl set-default-source ${alvo}"
     else
-        info "  não há nenhuma fonte de CAPTURA nesta máquina para eleger — conecte um mic/webcam ou o DualSense"
+        fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA do sistema, não a voz, e o medidor de nível ainda mostra sinal (parece funcionando)"
+        info "  o --fix-mic NÃO resolve este caso: ele só sabe ELEGER outra fonte de captura, e não há nenhuma com porta usável nesta máquina agora"
+        info "  o que resolve é hardware: conecte um mic, uma webcam com mic, ou o DualSense (no cabo, ou por Bluetooth com o mic ligado)"
     fi
     # O rastro que explica o sintoma: configurado num nó que não existe mais, o
     # WirePlumber cai na eleição automática e o monitor ganha do mic rebaixado.
@@ -684,25 +1053,30 @@ fix_default_source_monitor() {
     # ativa está explicitamente indisponível sai da disputa. `unknown` continua
     # valendo — é o caso da entrada do DualSense, que grava de verdade (medido:
     # pico 441 num quarto silencioso, contra pico 0 do silêncio digital).
-    local lista_curta lista_completa
+    #
+    # O filtro virou `_sources_com_porta_usavel` (06/08/2026) para que o CHECK
+    # ofereça exatamente o alvo que a CURA elegeria — antes cada um tinha o seu
+    # critério, e a tela dizia uma coisa e o `--fix-mic` fazia outra.
+    local lista_curta lista_completa _linha _nome
     lista_completa="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
-    lista_curta=""
+    lista_curta="$(LC_ALL=C pactl list sources short 2>/dev/null \
+                   | _sources_com_porta_usavel "${lista_completa}")"
     while IFS= read -r _linha; do
         [[ -n "${_linha}" ]] || continue
-        local _nome
         _nome="$(printf '%s\n' "${_linha}" | awk '{print $2}')"
-        if [[ -n "${_nome}" ]] \
-           && printf '%s\n' "${lista_completa}" \
-              | _source_porta_ativa_indisponivel "${_nome}"; then
-            info "  ${_nome}: porta de captura indisponível (nada plugado) — fora da disputa"
-            continue
-        fi
-        lista_curta+="${_linha}"$'\n'
+        [[ -n "${_nome}" ]] || continue
+        printf '%s\n' "${lista_curta}" | awk -v n="${_nome}" '$2 == n { achou = 1 } END { exit (achou ? 0 : 1) }' \
+            || info "  ${_nome}: porta de captura indisponível (nada plugado) — fora da disputa"
     done < <(LC_ALL=C pactl list sources short 2>/dev/null || true)
 
-    alvo="$(printf '%s' "${lista_curta}" | _melhor_source_de_captura "${prefere}")"
+    alvo="$(printf '%s\n' "${lista_curta}" | _melhor_source_de_captura "${prefere}")"
     if [[ -z "${alvo}" ]]; then
+        # RECEITA-ERRADA-01: dizer que não deu não basta. O estado em que ela
+        # fica é o defeito INTEIRO de pé — e ele não parece defeito, porque o
+        # medidor de nível mostra sinal (é o áudio de saída da máquina).
         warn "a fonte padrão é um MONITOR (${cur}) e não há nenhuma fonte de captura com porta usável para eleger"
+        info "  enquanto isso durar, TUDO o que qualquer aplicativo gravar é o áudio de SAÍDA do sistema, não a voz"
+        info "  esta cura só sabe eleger outra fonte de captura — sem nenhuma, o que resolve é conectar um mic, uma webcam com mic, ou o DualSense"
         return 0
     fi
     if pactl set-default-source "${alvo}" 2>/dev/null; then
@@ -1128,23 +1502,234 @@ check_launch_wrapper() {
     if [[ -n "${stale_env}" ]]; then
         warn "launch_env com PROTON_ENABLE_HIDRAW (env morta nos Protons 10/11): ${stale_env} — materialização antiga; reinicie o daemon (systemctl --user restart hefesto-dualsense4unix) para regravar"
     fi
-    # PATH-06 item 3: quantos jogos já chamam o wrapper nas LaunchOptions. O
-    # caminho absoluto do wrapper só aparece no vdf dentro da string `sh -c`
-    # que nós escrevemos — contá-lo = contar jogos com o wrapper aplicado.
-    local vdf n_wrapper=0
-    shopt -s nullglob
-    for vdf in "${HOME}/.steam/steam/userdata/"*/config/localconfig.vdf \
-               "${HOME}/.local/share/Steam/userdata/"*/config/localconfig.vdf; do
-        [[ -f "${vdf}" ]] || continue
-        n_wrapper=$((n_wrapper + $(grep -o '.local/share/hefesto-dualsense4unix/bin/hefesto-launch' "${vdf}" 2>/dev/null | wc -l)))
-    done
-    shopt -u nullglob
-    if [[ "${n_wrapper}" -gt 0 ]]; then
-        pass "${n_wrapper} jogo(s) com o wrapper hefesto-launch aplicado nas LaunchOptions"
-    else
-        warn "NENHUM jogo com o wrapper nas LaunchOptions — o jogo roda SEM dedup (foi a causa-mãe da sessão de 2026-07-18); use 'Aplicar aos jogos da Steam' na GUI (com a Steam fechada)"
-    fi
+    # O CONTADOR SAIU (16/08/2026). Ele fazia `grep -o` do caminho do wrapper no
+    # vdf inteiro e imprimia "N jogo(s) com o wrapper aplicado" em VERDE. Dois
+    # defeitos numa linha só:
+    #
+    #   1. contava as TRÊS árvores `apps` do vdf, e a Steam só lê uma — medido
+    #      às 05h35: "[ OK ] 76 jogo(s)" onde a árvore viva tem 63;
+    #   2. contava sem NUNCA nomear quem faltava, que é a forma exata do
+    #      WRAPPER-EM-TODOS-01 — o portão que passou a noite verde com o
+    #      Pragmata quebrado.
+    #
+    # Nos últimos dias esse verde saía LOGO ACIMA do "[FAIL] PRAGMATA" do
+    # `check_sentinela_wrapper`. O dano não é errar um diagnóstico: é a tela
+    # ensinar que verde-e-vermelho juntos são normais por aqui, que é como um
+    # portão morre de descrédito.
+    #
+    # O veredito agora vem inteiro do `check_sentinela_wrapper` (que nomeia) e
+    # do `check_arvore_canonica_do_wrapper` (régua independente, ancorada no
+    # caminho). Nenhum dos dois conta sem dizer quem.
+    #
+    # O caso "NENHUM jogo tem o wrapper" — a causa-mãe da sessão de 2026-07-18 —
+    # continua coberto: sem wrapper em lugar nenhum, todo jogo cai em `novo` no
+    # censo, e o censo os nomeia.
     info "controle DOBRANDO no jogo? use o botão 'Copiar opções p/ jogos' da GUI (string constante do wrapper) ou 'Aplicar aos jogos da Steam' (aplica o wrapper aos jogos, preservando as opções existentes)."
+    check_sentinela_wrapper
+}
+
+# SENTINELA-WRAPPER-01 (16/08/2026): o contador acima diz QUANTOS jogos têm o
+# wrapper e nunca diz QUAL não tem — e foi exatamente esse buraco que custou
+# uma noite. Em 15/08 o Pragmata tinha `VKD3D_CONFIG=no_upload_hvv %command%`
+# no lugar da chamada do wrapper (a Steam guarda UMA linha por jogo e a
+# sobrescreve sem avisar); o contador dizia "60 jogos com o wrapper" e passava
+# em verde, enquanto o jogo dela ficava sem controle nenhum no Bluetooth.
+#
+# O censo é READ-ONLY e roda com a Steam ABERTA — só a escrita é que exige a
+# Steam fechada. `--censo` não anota nada em disco: o doctor diagnostica, quem
+# grava a memória é o install/GUI.
+check_sentinela_wrapper() {
+    local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
+    if [[ ! -f "${py}" ]] || ! command -v python3 >/dev/null 2>&1; then
+        return
+    fi
+    local resumo
+    resumo="$(python3 "${py}" --censo 2>/dev/null | python3 -c '
+import json
+import sys
+
+d = json.load(sys.stdin)
+falta = d.get("faltantes") or []
+def rot(m):
+    return "; ".join(j["rotulo"] for j in falta if j["motivo"] == m)
+print("regressao=" + rot("regressao"))
+print("novo=" + rot("novo"))
+print("estendido=" + rot("ignore_estendido"))
+print("recusados=" + ", ".join(d.get("recusados") or []))
+print("steam=" + ("1" if d.get("steam_aberta") else "0"))
+print("jogo=" + ("1" if d.get("jogo_aberto") else "0"))
+print("erros=" + str(len(d.get("erros") or [])))
+' 2>/dev/null)"
+    if [[ -z "${resumo}" ]]; then
+        info "censo do wrapper indisponível — rode: python3 ${py} --relatorio"
+        return
+    fi
+    local regressao novo estendido recusados steam jogo
+    regressao="$(sed -n 's/^regressao=//p' <<<"${resumo}")"
+    novo="$(sed -n 's/^novo=//p' <<<"${resumo}")"
+    estendido="$(sed -n 's/^estendido=//p' <<<"${resumo}")"
+    recusados="$(sed -n 's/^recusados=//p' <<<"${resumo}")"
+    steam="$(sed -n 's/^steam=//p' <<<"${resumo}")"
+    jogo="$(sed -n 's/^jogo=//p' <<<"${resumo}")"
+
+    # CARONA-NO-GUARD-01: desde 16/08/2026 ela não precisa rodar nada. O
+    # `hefesto-steam-input-guard` repõe sozinho quando a Steam grava o vdf —
+    # que é o instante em que a Steam acabou de sair, o único em que a
+    # reposição sobrevive. O comando fica escrito só para quem quiser não
+    # esperar.
+    local como="o Hefesto repõe sozinho assim que a Steam fechar; para não esperar: python3 ${py} --reparar"
+    if [[ "${jogo}" == "1" ]]; then
+        como="há um JOGO aberto — o reparo fica para quando a Steam fechar (fechá-la agora mataria o jogo)"
+    elif [[ "${steam}" == "1" ]]; then
+        como="a Steam está aberta — o Hefesto repõe assim que ela fechar (com ela viva a edição seria engolida na saída)"
+    fi
+
+    if [[ -n "${regressao}" ]]; then
+        fail "jogo(s) que PERDERAM as Opções de Inicialização do Hefesto: ${regressao} — no Bluetooth o jogo tende a não enxergar controle nenhum, com o controle vivo, a luz acesa e o perfil aplicado (foi o defeito do Pragmata em 15/08); ${como}"
+    elif [[ -n "${novo}" ]]; then
+        warn "jogo(s) sem as Opções de Inicialização do Hefesto: ${novo} — ${como}"
+    else
+        pass "nenhum jogo perdeu as Opções de Inicialização do Hefesto"
+    fi
+    [[ -n "${estendido}" ]] && warn "Opções com a lista de IGNORE ESTENDIDA à mão em ${estendido} — intocáveis de propósito (remover só o trecho do Hefesto deixaria um fragmento que impede o jogo de abrir); reparo manual"
+    [[ -n "${recusados}" ]] && info "fora do wrapper por escolha dela (jogos_sem_wrapper.txt): ${recusados}"
+    check_arvore_canonica_do_wrapper
+    return 0
+}
+
+# ARVORE-CANONICA-01 (16/08/2026) — a RÉGUA INDEPENDENTE do censo acima.
+#
+# O `localconfig.vdf` dela tem TRÊS árvores com blocos chamados `apps`, e as
+# três carregam `LaunchOptions` por appid (medido às 05h07 de 16/08):
+#
+#   UserLocalConfigStore/Software/Valve/Steam/apps/<appid>   63 linhas  ← a viva
+#   UserLocalConfigStore/apps/<appid>                        11 linhas
+#   UserLocalConfigStore/WebStorage/apps/<appid>              3 linhas
+#
+# Qual é a viva não é palpite: quando ela digitou `VKD3D_CONFIG=no_upload_hvv
+# %command%` nas Opções de Inicialização do Pragmata pela janela da Steam, foi
+# a PRIMEIRA que mudou, e só ela. As outras duas seguem com a linha antiga.
+#
+# E as outras duas nasceram de NÓS: nos backups de 13/06 e de 16/07 (antes da
+# primeira aplicação em massa) elas não existiam — zero `LaunchOptions` fora da
+# canônica. No backup de 21/07 20:26, o da primeira aplicação em massa, a
+# canônica salta de 6 para 55 linhas e as outras duas nascem juntas, com 9 e 2.
+# O parser em massa casa qualquer bloco cujo PAI se chame `apps`, sem ancorar o
+# caminho — então ele escreveu (e insere linha nova) em árvores que a Steam não
+# lê.
+#
+# O estrago não era a linha a mais: era que o censo LIA a própria sujeira de
+# volta. `read_apps_by_appid` fundia as três num dicionário só, por appid, e a
+# ÚLTIMA lida vencia — e a última é a secundária. Resultado medido às 05h07: o
+# censo jurava que o Pragmata tinha o wrapper, com a árvore viva dizendo
+# `VKD3D_CONFIG` sozinho. Instrumento que confirma a si mesmo, a armadilha nº 1
+# desta casa.
+#
+# CURADO às 05h45 do mesmo dia (ARVORE-ERRADA-01): `e_a_arvore_canonica` ancora
+# o caminho no leitor e no escritor, e o censo passou a nomear o Pragmata. Este
+# check CONTINUA valendo, e continua sendo escrito com um parser próprio, de
+# propósito: uma régua que não compartilha código com a que ela audita é o que
+# fez a contradição aparecer da primeira vez. Se as duas discordarem de novo, a
+# discordância é o achado.
+#
+# Este check por isso NÃO importa o parser sob suspeita: ele reimplementa a
+# pilha de blocos em vinte linhas e exige o caminho INTEIRO. Só o nome do jogo
+# vem emprestado (`rotulo_do_jogo` lê os `.acf`, não o vdf).
+check_arvore_canonica_do_wrapper() {
+    command -v python3 >/dev/null 2>&1 || return 0
+    local saida
+    saida="$(HEFESTO_SRC="${ROOT_DIR}/src" python3 - <<'PY' 2>/dev/null
+import os
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, os.environ.get("HEFESTO_SRC", ""))
+try:
+    from hefesto_dualsense4unix.integrations.steam_launch_options import (
+        WRAPPER_PREFIX,
+        discover_vdfs,
+        is_sandboxed_layout,
+        rotulo_do_jogo,
+    )
+except Exception:  # noqa: BLE001 - sem o pacote o check simplesmente cala
+    sys.exit(0)
+
+CANONICA = ("UserLocalConfigStore", "Software", "Valve", "Steam", "apps")
+CHAVE = re.compile(r'^"((?:\\.|[^"\\])*)"$')
+PAR = re.compile(r'^"LaunchOptions"\s+"(?P<v>(?:\\.|[^"\\])*)"$', re.IGNORECASE)
+
+canonicos: dict[str, str] = {}
+secundarios: dict[str, str] = {}
+lidos = 0
+for vdf in discover_vdfs():
+    if is_sandboxed_layout(vdf):
+        continue
+    try:
+        texto = vdf.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        continue
+    pilha: list[str] = []
+    pendente = None
+    visto = False
+    for bruta in texto.splitlines():
+        linha = bruta.strip()
+        if not linha:
+            continue
+        if linha == "{":
+            pilha.append(pendente or "")
+            pendente = None
+            continue
+        if linha == "}":
+            if pilha:
+                pilha.pop()
+            pendente = None
+            continue
+        chave = CHAVE.match(linha)
+        if chave is not None:
+            pendente = chave.group(1)
+            continue
+        pendente = None
+        par = PAR.match(linha)
+        if par is None or len(pilha) < 2 or not pilha[-1].isdigit():
+            continue
+        visto = True
+        appid = pilha[-1]
+        valor = par.group("v").replace('\\"', '"').replace("\\\\", "\\")
+        if tuple(pilha[:-1]) == CANONICA:
+            canonicos[appid] = valor
+        else:
+            secundarios.setdefault(appid, "/".join(pilha[:-1]))
+    lidos += 1 if visto else 0
+
+if not lidos:
+    sys.exit(0)
+sem = [a for a, v in canonicos.items() if WRAPPER_PREFIX not in v]
+orfaos = [a for a in secundarios if a not in canonicos]
+print("total=%d" % len(canonicos))
+print("sem=" + "; ".join(rotulo_do_jogo(a) for a in sorted(sem)))
+print("orfaos=" + "; ".join(rotulo_do_jogo(a) for a in sorted(orfaos)))
+print("poluidos=%d" % len(secundarios))
+PY
+)"
+    [[ -n "${saida}" ]] || return 0
+    local total sem orfaos poluidos
+    total="$(sed -n 's/^total=//p' <<<"${saida}")"
+    sem="$(sed -n 's/^sem=//p' <<<"${saida}")"
+    orfaos="$(sed -n 's/^orfaos=//p' <<<"${saida}")"
+    poluidos="$(sed -n 's/^poluidos=//p' <<<"${saida}")"
+
+    if [[ -n "${sem}" ]]; then
+        fail "na árvore que a Steam de fato lê (Software/Valve/Steam/apps), ESTE(S) jogo(s) NÃO chamam o wrapper: ${sem} — sem eles, no Bluetooth o jogo tende a não enxergar controle nenhum, mesmo com o controle vivo e o perfil aplicado. Reparo: o Hefesto repõe sozinho assim que a Steam fechar (é quando a reposição sobrevive), e também ao salvar ou aplicar um perfil"
+    else
+        pass "os ${total:-0} jogos da árvore viva (Software/Valve/Steam/apps) chamam o wrapper"
+    fi
+    if [[ -n "${orfaos}" ]]; then
+        warn "Opções de Inicialização escritas por nós FORA da árvore viva, para jogo(s) que nem existem nela: ${orfaos} — a Steam nunca lê essas linhas, e o censo as conta como cobertura; é falso conforto, não defeito no jogo"
+    elif [[ "${poluidos:-0}" -gt 0 ]]; then
+        info "${poluidos} bloco(s) de 'apps' fora da árvore viva também têm LaunchOptions (escritas por nós em 21/07) — inertes para a Steam, mas é delas que vem o falso conforto do censo"
+    fi
+    return 0
 }
 
 # UX-04: ACUSA (nunca recomenda) o veneno estático persistido nos
@@ -1221,18 +1806,53 @@ print(f"enabled={ge.get('enabled')}")
 print(f"dedup_ok={ge.get('dedup_ok')}")
 print(f"dedup_motivo={ge.get('dedup_motivo') or ''}")
 print(f"native_bt={res.get('native_bt_fragil')}")
+# MESA-CHEIA-11/E1: QUAIS controles estão frágeis (a flag acima virou "algum").
+# Lista vazia = daemon antigo, ou mesa desconhecida — o aviso sai sem nomes.
+frageis = res.get("native_bt_fragil_controles")
+nums = (
+    [n for n in frageis if isinstance(n, int) and not isinstance(n, bool)]
+    if isinstance(frageis, list)
+    else []
+)
+# CONSERTO 1.7: "2, 3 e 4", a MESMA grafia da janela (`juntar_rotulos`) — a
+# mesma mesa não pode sair escrita de dois jeitos em duas telas da mesma casa.
+if len(nums) > 1:
+    quais = ", ".join(str(n) for n in nums[:-1]) + " e " + str(nums[-1])
+else:
+    quais = "".join(str(n) for n in nums)
+print("native_bt_quais=" + quais)
+# ...e QUANTOS, porque o shell não sabe contar uma frase: com UM frágil o texto
+# dizia "com os Controles 3 ... esses controles" (plural para um), e a janela,
+# no mesmo estado, acertava. O número é que escolhe o molde.
+print(f"native_bt_quantos={len(nums)}")
 PYEOF
 )"; then
         warn "IPC não respondeu — estado de dedup indisponível (daemon travado?)"
         return
     fi
-    local enabled dedup_ok motivo native_bt
+    local enabled dedup_ok motivo native_bt native_bt_quais native_bt_quantos
     enabled="$(sed -n 's/^enabled=//p' <<<"${out}")"
     dedup_ok="$(sed -n 's/^dedup_ok=//p' <<<"${out}")"
     motivo="$(sed -n 's/^dedup_motivo=//p' <<<"${out}")"
     native_bt="$(sed -n 's/^native_bt=//p' <<<"${out}")"
+    native_bt_quais="$(sed -n 's/^native_bt_quais=//p' <<<"${out}")"
+    native_bt_quantos="$(sed -n 's/^native_bt_quantos=//p' <<<"${out}")"
     if [[ "${native_bt}" == "True" ]]; then
-        warn "Modo Nativo com o controle em BLUETOOTH — o SDL pode não enxergar o físico BT (limite do HIDAPI); se o jogo não vir o controle, use cabo USB ou a emulação"
+        # MESA-CHEIA-11/E1: com quatro na mesa a pergunta seguinte é "quais?" —
+        # e a resposta agora vem do daemon, que olha CADA controle em vez de só
+        # o primário (com o Controle 1 no cabo, este aviso calava para os três
+        # no rádio).
+        #
+        # CONSERTO 1.7: e são DOIS moldes, como na janela. Quem tem um controle
+        # só no rádio — exatamente quem este aviso nasceu para socorrer — lia
+        # "com os Controles 3 ... se o jogo não vir esses controles".
+        if [[ "${native_bt_quantos}" == "1" && -n "${native_bt_quais}" ]]; then
+            warn "Modo Nativo com o Controle ${native_bt_quais} em BLUETOOTH — o SDL pode não enxergar o físico BT (limite do HIDAPI); se o jogo não vir esse controle, use cabo USB ou a emulação"
+        elif [[ -n "${native_bt_quais}" ]]; then
+            warn "Modo Nativo com os Controles ${native_bt_quais} em BLUETOOTH — o SDL pode não enxergar o físico BT (limite do HIDAPI); se o jogo não vir esses controles, use cabo USB ou a emulação"
+        else
+            warn "Modo Nativo com o controle em BLUETOOTH — o SDL pode não enxergar o físico BT (limite do HIDAPI); se o jogo não vir o controle, use cabo USB ou a emulação"
+        fi
     fi
     if [[ "${enabled}" != "True" ]]; then
         info "emulação de gamepad desligada — dedup por vpad não se aplica agora"
@@ -1665,12 +2285,20 @@ check_btusb_autosuspend() {
 }
 
 # PLAT-04 item 3: FastConnectable = reconexão entrante mais rápida (botão PS).
+#
+# RADIO-ABERTO-01/E1-bis (06/08/2026): esta função só conhecia a sentinela
+# LEGADA `# >>> hefesto FastConnectable >>>`, que o bloco unificado (escrito
+# por todo install desde 21/07) NÃO tem. Reproduzi a cadeia de ramos na máquina
+# dela: caía no ramo do grep genérico e imprimia "FastConnectable já
+# configurado por TERCEIRO no main.conf" — o doctor atribuía a um terceiro o
+# bloco que este projeto tinha acabado de escrever. O alternador cobre as três
+# sentinelas e o doctor volta a saber de quem é o bloco.
 check_bluez_fastconnectable() {
     local dropin=/etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf
     if [[ -f "${dropin}" ]]; then
         pass "FastConnectable do BlueZ instalado (drop-in main.conf.d) — botão PS reconecta mais rápido (vale desde o último start do bluetoothd)"
-    elif grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-        pass "FastConnectable do BlueZ instalado (bloco marcado no main.conf) — vale desde o último start do bluetoothd"
+    elif grep -qsE '^# >>> hefesto (bluetooth|FastConnectable) >>>' /etc/bluetooth/main.conf 2>/dev/null; then
+        pass "FastConnectable do BlueZ instalado (bloco marcado hefesto no main.conf) — vale desde o último start do bluetoothd"
     elif grep -qsE '^[[:space:]]*FastConnectable[[:space:]]*=[[:space:]]*true' /etc/bluetooth/main.conf 2>/dev/null; then
         pass "FastConnectable já configurado por terceiro no main.conf"
     elif [[ ! -e /etc/bluetooth/main.conf ]]; then
@@ -1678,6 +2306,162 @@ check_bluez_fastconnectable() {
     else
         warn "reconexão rápida BT (FastConnectable) não configurada — rode ./install.sh (entra por default, SEM restart do bluetoothd)"
     fi
+}
+
+# RADIO-ABERTO-01/E1-bis (06/08/2026) — O DETECTOR QUE NÃO EXISTIA.
+#
+# Até hoje o `doctor.sh` mencionava `JustWorksRepairing` ZERO vezes (grep fecha
+# a conta). Foi essa cegueira, somada ao check acima que mentia sobre a
+# autoria do bloco, que deixou `JustWorksRepairing=always` viver quatro dias em
+# /etc/bluetooth/main.conf DEPOIS de a sprint declarar a E1 "FEITA": o valor
+# seguro estava no repositório e ninguém tinha como ver que não estava no disco.
+#
+# `always` remove a ÚLTIMA recusa do BlueZ ao re-pareamento por Just Works de
+# quem já tem bond. Com o agente NoInputNoOutput e o FastConnectable, quem
+# clonar o BD_ADDR de um controle bondado sobrescreve a LinkKey sem interação
+# humana — e o device que sobe escolhe o próprio descritor HID, que pode ser um
+# TECLADO. Por isso o veredito aqui é `fail`, não `warn`.
+#
+# O segundo ramo é a contrapartida honesta da cura: `confirm` aceita SÓ se
+# houver agente registrado, enquanto `always` aceitava sem depender de ninguém.
+# A troca transfere peso para o `hefesto-bt-agent.service`, uma unit que já
+# falhou duas vezes em 04/08 (BT-AGENT-TRAVA-O-RESTART-01 e
+# BT-AGENT-MORTO-FICA-MORTO-01). Com o agente morto, o re-pareamento legítimo
+# dela para de funcionar — e é o doctor que tem de dizer isso antes que ela
+# descubra pelo controle que não conecta.
+#
+# QUEM LÊ O VALOR (06/08/2026): `scripts/bluez_config.sh verificar`, e só ele.
+# A primeira versão desta função REIMPLEMENTAVA aqui o mesmo `sed` do dono da
+# config — duas fontes para a mesma regra, que é exatamente a classe de defeito
+# que esta leva veio fechar (a lógica morava dentro do install.sh, ninguém
+# conseguia exercitá-la, e o `always` viveu quatro dias). O `verificar` é modo
+# de leitura pura, e aqui roda com `HEFESTO_BT_SUDO=""` de propósito: um
+# diagnóstico não pede senha. Se o arquivo estiver ilegível, ele diz
+# `ilegível` — e nós dizemos também, em vez de inventar "não declarado".
+#
+# POR QUE A RAIZ É VARIÁVEL AQUI (06/08/2026): a raiz vinha literal
+# (`/etc/bluetooth/main.conf`), e era isso que tornava esta função INTESTÁVEL —
+# nenhuma bancada pode exercitá-la contra o /etc de verdade, e por isso os dois
+# únicos testes que existiam eram grep de TEXTO no doctor.sh. MEDIDO: trocar o
+# `fail` do ramo `always` por `pass` deixava a suíte INTEIRA verde (138 passed),
+# e apagar a CHAMADA em `main()` também — o detector de segurança podia ser
+# invertido ou desligado sem uma linha vermelha. Com a raiz saindo de
+# `HEFESTO_BT_ETC` (o mesmo override que o dono único já usa; em produção fica
+# no padrão), `tests/unit/test_doctor_justworks_comportamento.py` roda os cinco
+# ramos DE VERDADE contra uma raiz falsa, e as duas mutações ficam vermelhas.
+check_bluez_justworks_repairing() {
+    local dono="${ROOT_DIR}/scripts/bluez_config.sh" valor state
+    local etc_bt="${HEFESTO_BT_ETC:-/etc/bluetooth}"
+    # "NÃO EXISTE" e "NÃO CONSIGO VER" são respostas diferentes, e o doctor
+    # dizia a primeira nos dois casos (achado de 06/08/2026).
+    #
+    # Dentro de um Flatpak sem `--filesystem=host` — que é o caso do nosso
+    # manifesto — `/etc/bluetooth` simplesmente NÃO EXISTE no sandbox: o /etc do
+    # host não é alcançável. O ramo abaixo caía no `info ... pulo o check`, que
+    # não é WARN nem FAIL, numa máquina cujo HOST tem `JustWorksRepairing=always`
+    # ativo. Pior que o caso do .deb, que ao menos avisava com WARN. Silêncio
+    # sobre injeção de teclas é o defeito que abriu esta sprint, de costas.
+    #
+    # O marcador é `/.flatpak-info`, que o próprio flatpak monta em todo
+    # sandbox; `FLATPAK_ID`, `SNAP` e `/run/.containerenv` cobrem os vizinhos.
+    # Os dois caminhos saem de variável para a bancada poder exercitá-los sem
+    # container nenhum — mesma escola do `HEFESTO_BT_ETC`.
+    local marca_flatpak="${HEFESTO_MARCA_SANDBOX:-/.flatpak-info}"
+    local marca_container="${HEFESTO_MARCA_CONTAINER:-/run/.containerenv}"
+    local em_sandbox=0
+    if [[ -e "${marca_flatpak}" || -e "${marca_container}" \
+          || -n "${FLATPAK_ID:-}" || -n "${SNAP:-}" ]]; then
+        em_sandbox=1
+    fi
+    if [[ ! -e "${etc_bt}/main.conf" && "${em_sandbox}" -eq 1 ]]; then
+        warn "NÃO SEI o valor de JustWorksRepairing nesta máquina: estou num sandbox (Flatpak/Snap/container) e o /etc do host não é alcançável daqui — ${etc_bt}/main.conf não existe DENTRO do sandbox, o que não diz nada sobre o host. Rode o doctor FORA do pacote: bash scripts/doctor.sh, ou sudo bash scripts/bluez_config.sh verificar"
+        return
+    fi
+    if [[ ! -e "${etc_bt}/main.conf" ]]; then
+        info "sem ${etc_bt}/main.conf (BlueZ ausente?) — pulo o check de JustWorksRepairing"
+        return
+    fi
+    if [[ ! -f "${dono}" ]]; then
+        warn "scripts/bluez_config.sh ausente — o dono único da config do BlueZ não está aqui, e não leio JustWorksRepairing por fora dele"
+        return
+    fi
+    valor="$(HEFESTO_BT_SUDO="" bash "${dono}" verificar 2>/dev/null \
+        | sed -n 's/^JustWorksRepairing: //p' || true)"
+    case "${valor}" in
+        confirm)
+            pass "JustWorksRepairing=confirm no main.conf — re-pareamento de quem já tem bond passa pelo agente (RADIO-ABERTO-01)"
+            # SELO-VERDE-CEDO-DEMAIS-01 (06/08/2026, achado de verificação
+            # adversarial): dizer só "confirm no main.conf" carimbava VERDE um
+            # rádio ainda ABERTO. O `bluez_config.sh` grava e NÃO reinicia o
+            # bluetoothd de propósito (derrubaria os controles conectados), e diz
+            # isso por escrito: "VALEM NO PRÓXIMO BOOT". Entre a cura e o próximo
+            # start, o daemon VIVO segue com `always` — e quem lesse este `[ OK ]`
+            # fecharia o terminal achando que a janela de Just Works fechou.
+            #
+            # Em vez de só ressalvar, MEDIMOS: se o main.conf é mais novo que o
+            # start do bluetoothd, o disco ainda não é o que o daemon carregou.
+            # O irmão FastConnectable já dizia "vale desde o último start" — a
+            # ressalva existia no arquivo e faltava logo na chave de segurança.
+            _t_conf="$(stat -c %Y "${etc_bt}/main.conf" 2>/dev/null || echo 0)"
+            # `HEFESTO_BT_ATIVO_DESDE` existe para a bancada morder os DOIS
+            # ramos (o `systemctl` de mentira dela não tem relógio). Em produção
+            # nunca vem definida, e o valor sai do systemd logo abaixo.
+            _t_bluez="${HEFESTO_BT_ATIVO_DESDE:-}"
+            if [[ -z "${_t_bluez}" ]]; then
+                _ts_bluez="$(systemctl show bluetooth.service \
+                    -p ActiveEnterTimestamp --value 2>/dev/null || true)"
+                # `date -d ""` NÃO falha: o GNU date devolve MEIA-NOITE DE HOJE
+                # (medido em 06/08/2026). Sem esta guarda, toda máquina em que o
+                # `bluetooth.service` não reporta — inativo, mascarado, container
+                # sem systemd — comparava o `main.conf` contra meia-noite, e o
+                # aviso saía em falso para qualquer arquivo tocado no dia. O
+                # `|| echo 0` original não protegia nada, porque não havia erro.
+                if [[ -n "${_ts_bluez//[[:space:]]/}" ]]; then
+                    _t_bluez="$(date -d "${_ts_bluez}" +%s 2>/dev/null || echo 0)"
+                else
+                    _t_bluez=0
+                fi
+            fi
+            if [[ "${_t_conf}" -gt 0 && "${_t_bluez}" -gt 0 \
+                  && "${_t_conf}" -gt "${_t_bluez}" ]]; then
+                warn "o main.conf mudou DEPOIS do último start do bluetoothd — o daemon VIVO ainda roda com o valor anterior, e o rádio só fecha no próximo boot (ou com 'sudo systemctl restart bluetooth', que derruba os controles conectados agora)"
+            fi
+            state="$(systemctl is-active hefesto-bt-agent.service 2>/dev/null || true)"
+            if [[ "${state}" != "active" ]]; then
+                warn "JustWorksRepairing=confirm depende de um agente registrado, e o hefesto-bt-agent.service está ${state:-ausente} — re-pareamento legítimo pode ser RECUSADO ('Refusing connection from ...'); ligue: sudo systemctl enable --now hefesto-bt-agent.service"
+            fi
+            ;;
+        always)
+            fail "JustWorksRepairing=always ATIVO no ${etc_bt}/main.conf — remove a última recusa do BlueZ ao re-pareamento por Just Works de quem já tem bond; com o agente NoInputNoOutput isso termina em injeção de teclas (RADIO-ABERTO-01). Cura: rode ./install.sh SEM --no-udev (a flag pula este passo inteiro) ou, direto, sudo bash scripts/bluez_config.sh aplicar — os dois corrigem o bloco antigo do hefesto SEM reiniciar o bluetoothd"
+            ;;
+        ausente|"")
+            warn "JustWorksRepairing não está declarado no main.conf — o BlueZ cai no default da distro, que não é decisão desta casa; rode ./install.sh (entra por default, e NÃO com --no-udev, que pula este passo)"
+            ;;
+        ilegível)
+            warn "não consigo LER ${etc_bt}/main.conf — sem leitura não sei o valor de JustWorksRepairing; rode: sudo bash ${dono} verificar"
+            ;;
+        recusado)
+            # Achado de 06/08/2026: uma linha malformada em QUALQUER ponto do
+            # arquivo faz o GKeyFile abortar a carga, e o bluetoothd fica sem
+            # config nenhuma — nem a nossa. Antes, o dono lia a chave normal e o
+            # doctor dava selo verde a um arquivo que o BlueZ descarta inteiro.
+            fail "${etc_bt}/main.conf tem uma linha que o parser do bluetoothd (GKeyFile) RECUSA, e uma linha recusada invalida o ARQUIVO INTEIRO: o BlueZ fica sem config nenhuma — nem JustWorksRepairing, nem FastConnectable, nem o que já era dela. Veja qual linha é e conserte-a à mão: bash ${dono} verificar"
+            ;;
+        never)
+            # A PROMESSA AQUI ERA FALSA NA METADE DOS CASOS (06/08/2026): dizia
+            # sem ressalva que "a sua linha é neutralizada, e 'remover' a
+            # devolve". Só vale FORA do bloco hefesto. DENTRO do bloco — que é
+            # onde quem lê este aviso vai escrever, porque é onde a chave já
+            # está — a faixa inteira é reescrita, nenhuma marca é gravada e o
+            # `remover` entrega o arquivo SEM a chave. O `aplicar` sabe dizer
+            # qual dos dois casos é o dela (ele lê a posição da linha que vence);
+            # o doctor não precisa saber, precisa é não prometer o que não pode.
+            warn "JustWorksRepairing=never no main.conf — é MAIS restritivo que o 'confirm' desta casa (recusa todo re-pareamento de quem já tem bond). Se foi escolha sua, NÃO rode ./install.sh: ele rebaixa para 'confirm'. E confira ONDE a sua linha está: FORA das sentinelas do hefesto ela é neutralizada e o 'bluez_config.sh remover' a devolve inteira; DENTRO do bloco ela é reescrita junto com o bloco e não volta (só o backup guarda)"
+            ;;
+        *)
+            warn "JustWorksRepairing=${valor} no main.conf — esta casa instala 'confirm'; rode ./install.sh se o valor não foi escolha sua"
+            ;;
+    esac
 }
 
 # O "clone DS4" 054C:05C4 que stormou o rádio com 211 mil erros de CRC numa
@@ -1748,6 +2532,21 @@ check_bt_radio() {
         trusted="$(_dbus_bt_prop "${p}" org.bluez.Device1 Trusted)"
         if [[ "${trusted}" == "false" ]]; then
             warn "${alias:-controle} (${mac}) pareado mas SEM confiança (Trusted: no) — a reconexão pelo botão PS pode depender de autorização; o watchdog corrige no próximo tick; na mão: busctl set-property org.bluez ${p} org.bluez.Device1 Trusted b true"
+        fi
+        # BT-SDP-VAZIO-01 (02/08): bond SEM registro de serviços SDP. O
+        # `profiles/input/server.c` do BlueZ recusa conexão ENTRANTE de quem
+        # não tem o perfil HID (0x1124) registrado — "Refusing connection:
+        # unknown device" — e o device entra num laço: o rádio sobe, o perfil
+        # não, o link cai. Nenhum dos checks acima enxergava isso: Paired,
+        # Bonded e Trusted ficam todos `true` o tempo todo.
+        #
+        # Sem este aviso o defeito se parece com regressão do Hefesto, e foi
+        # exatamente assim que ele chegou (a queixa dela: "conecta sozinho e
+        # algo apaga a conexão"). Vale para device pareado, conectado ou não.
+        if [[ "$(_dbus_bt_prop "${p}" org.bluez.Device1 Paired)" == "true" ]] \
+                && ! _dbus_bt_prop "${p}" org.bluez.Device1 UUIDs \
+                    | grep -q '00001124-0000-1000-8000-00805f9b34fb'; then
+            fail "${alias:-controle} (${mac}) tem bond mas NENHUM perfil HID registrado (SDP vazio) — o BlueZ recusa a reconexão dele como 'unknown device' e o link cai sozinho. Cura (apaga o pareamento): busctl call org.bluez /org/bluez/hci0 org.bluez.Adapter1 RemoveDevice o ${p} && sudo rm -f /var/lib/bluetooth/*/cache/${mac} — e pareie de novo. O cache TEM de sair junto (SDP-CACHE-01), senão o pareamento novo nasce igual"
         fi
     done <<<"${paths}"
     # Inquiry contínuo rouba banda dos links dos controles (provado ao vivo:
@@ -1883,19 +2682,45 @@ check_cmdline_platform() {
 # check_display_authority, mais abaixo) — não duplicado aqui.
 # ============================================================================
 
-# Compara a versão do bluez instalada com o piso 5.79 (abaixo dele: crashes
-# crônicos de input/HIDP documentados no estudo da Onda R). Função PURA —
-# só `dpkg --compare-versions`, sem tocar em pacote nenhum.
+# A faixa de bluez que esta casa aceita tem DOIS limites, não um.
+#
+# PISO 5.79 — abaixo dele, crashes crônicos de input/HIDP (estudo da Onda R,
+#   2026-07-19-estudo-bluez-backport-onda-r.md).
+#
+# TETO 5.87 — a MENOR versão REJEITADA conhecida. Motivo medido (estudo
+#   docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-
+#   outros-cinco.md §D, GRAU MEDIDO pela topologia do git): o commit `5d836f1`
+#   introduziu um uso-depois-de-liberado (UAF) em `dev_disconnected`
+#   (`src/adapter.c`) — `device_is_connected()` chamado DEPOIS de
+#   `adapter_remove_connection()`, que pode ter liberado o device. `5d836f1` é
+#   ancestral da tag 5.87 (dentro); a correção `5bc6aa79` está UM commit depois
+#   do 5.87 e NENHUM lançamento a carrega ainda. Por isso o alvo do backport é
+#   o 5.86 (install.sh, passo 3f) e o 5.87 foi recusado em 22/07 e de novo em
+#   07/08 — com número.
+#
+# Por que o teto é WARN e não FAIL: numa máquina que já veio com bluez ≥ 5.87
+# (o caso do PC novo), nada disto é escolha dela, e o primeiro lançamento pós-
+# 5.87 que carregue o `5bc6aa79` (previsivelmente o 5.88) sai desta faixa por
+# mérito próprio. O dever do doctor aqui é NOMEAR o motivo, não decidir por
+# ela. Quando o 5.88 sair com a correção, este teto sobe — e o estudo §D é o
+# lugar onde se confere isso antes de mexer.
+readonly _BZ_PISO="5.79"
+readonly _BZ_TETO="5.87"
+
+# Compara a versão do bluez instalada com a faixa [_BZ_PISO, _BZ_TETO).
+# Função PURA — só `dpkg --compare-versions`, sem tocar em pacote nenhum.
 _bluez_version_verdict() {
     local ver="$1"
     if [[ -z "${ver}" ]]; then
         printf 'unknown\n'
         return
     fi
-    if dpkg --compare-versions "${ver}" ge 5.79 2>/dev/null; then
-        printf 'ok\n'
-    else
+    if ! dpkg --compare-versions "${ver}" ge "${_BZ_PISO}" 2>/dev/null; then
         printf 'old\n'
+    elif dpkg --compare-versions "${ver}" ge "${_BZ_TETO}" 2>/dev/null; then
+        printf 'nova\n'
+    else
+        printf 'ok\n'
     fi
 }
 
@@ -1909,10 +2734,13 @@ check_bluez_backport_version() {
     veredito="$(_bluez_version_verdict "${ver}")"
     case "${veredito}" in
         ok)
-            pass "bluez ${ver} >= 5.79 (sem os crashes crônicos de input/HIDP do 5.72)"
+            pass "bluez ${ver} >= ${_BZ_PISO} e < ${_BZ_TETO} (sem os crashes crônicos de input/HIDP do 5.72, e sem o UAF do 5.87)"
+            ;;
+        nova)
+            warn "bluez ${ver} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo desta casa é o backport 5.86 (./install.sh, passo 3f); o porquê está em docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md §D"
             ;;
         old)
-            fail "bluez ${ver} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: ./install.sh (passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os: git show arquivo/processo-pre-1.0:docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3)"
+            fail "bluez ${ver} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: ./install.sh (passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os pela receita em docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md, seção 3, caminho 1)"
             ;;
         *)
             info "bluez não instalado via dpkg (ou versão ilegível) — pulo o check de versão"
@@ -1954,7 +2782,7 @@ check_bt_resilience() {
         warn "resiliência do bluetoothd não instalada (crash do bluetoothd destrói bonds sem backup); rode ./install.sh (passo ONDA-R2 aplica por default)"
     fi
     if [[ ! -f /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf ]]; then
-        warn "drop-in 10-hefesto-resilience.conf ausente — sem WatchdogSec (hang sem crash fica invisível) e sem snapshot na parada do serviço"
+        warn "drop-in 10-hefesto-resilience.conf ausente — sem o desarme do watchdog do systemd (BLUETOOTHD-MORTO-POR-NOS-01) e sem snapshot na parada do serviço"
     fi
     # BT-NINTENDO-ACTIVE-01 + BT-SNIFF-PER-OUI-01 (23/07): o modo ativo é o nome
     # "Nintendo*" (do ADAPTADOR, vale para todos) + no-sniff SÓ no Pro genuíno
@@ -2368,6 +3196,13 @@ PYEOF
     case "${open_res}" in
         ok)
             pass "cmd open serviu fd real via SCM_RIGHTS (${open_det}) — fd-injection do giroscópio operante"
+            # A PORTA, DECLARADA (A-PORTA-QUE-A-CASA-CONSTRUIU-01, 15/08/2026).
+            # Este diagnóstico NUNCA abre /dev/hidraw* por conta própria: ele
+            # pede o fd ao broker, que é a porta que a casa construiu para o nó
+            # escondido. Dizer isso na tela importa porque quem lê o doctor
+            # decide, a seguir, por onde o PRÓXIMO instrumento vai medir — e a
+            # sessão de 15/08 se perdeu justamente batendo na porta errada.
+            info "porta: broker (SCM_RIGHTS) via /run/hefesto-hidraw-broker/broker.sock — nenhum open() direto de /dev/hidraw* neste diagnóstico"
             ;;
         fail)
             fail "cmd open do broker FALHOU (${open_det}) — o giroscópio morre sob o hide; confira DeviceAllow=char-hidraw rw e CapabilityBoundingSet (CAP_DAC_OVERRIDE) em /etc/systemd/system/hefesto-hidraw-broker.service e rode: sudo systemctl restart hefesto-hidraw-broker.service"
@@ -2442,6 +3277,145 @@ PYEOF
     else
         info "validação de recusa a outro uid pulada (sem sudo -n ou usuário nobody ausente)"
     fi
+}
+
+# ---------------------------------------------------------------------------
+# TECLADO-QUE-NAO-DIGITA-01 — o teclado na tela que o L3 do controle abre.
+# ---------------------------------------------------------------------------
+# ESTE CHECK CONFERE E NÃO CURA. É regra desta casa, e aqui ela tem dente
+# próprio: instalar pacote de sistema é decisão com senha de root, e o doctor
+# roda no meio de um diagnóstico — quem instala é o install.sh (passo 4f e o
+# bloco dos formatos de pacote), quem confere é este. Nem o `--fix` toca nisto.
+#
+# O CONTRATO DE NOMES é o mesmo do `scripts/install_osk.sh` e o mesmo do
+# `daemon/subsystems/keyboard.py`, e o `scripts/check_packaging_parity.sh`
+# cobra a coincidência dos três: instalador, conferidor e daemon têm de estar
+# falando do MESMO binário para a MESMA sessão, senão o produto instala um e
+# procura outro — e ninguém percebe, porque cada um dos três passa sozinho.
+#
+# A ARMADILHA QUE ESTE CHECK EXISTE PARA NÃO REPETIR (commit 108b711):
+# "install.sh ARMA, uninstall.sh DESARMA, doctor.sh lê a AUSÊNCIA como escolha
+# dela — máquina curada e máquina quebrada são o MESMO estado para o portão".
+# Aqui a ausência tem QUATRO histórias possíveis, e o binário faltando é
+# idêntico nas quatro:
+#
+#   1. o install nunca passou por aqui (produto anterior a esta cura, ou
+#      install nunca rodado nesta máquina);
+#   2. ela pediu para pular (`--no-osk`);
+#   3. o install TENTOU e não conseguiu (sem sudo, sem rede, distro sem o
+#      pacote);
+#   4. o pacote foi instalado e alguém o removeu depois — não fomos nós: o
+#      uninstall do Hefesto NUNCA remove pacote de sistema.
+#
+# O que as distingue é a sentinela que o install grava
+# (~/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf). Sem ela, este
+# check só poderia dizer "não tem" — que é exatamente a resposta que fez a
+# máquina dela ficar quatro dias quebrada em agosto. O caso (2) é o único que
+# NÃO é FAIL: é escolha dela, registrada e datada.
+readonly OSK_BIN_WAYLAND="wvkbd-mobintl"
+readonly OSK_BIN_X11="onboard"
+readonly OSK_PKG_WAYLAND="wvkbd"
+readonly OSK_PKG_X11="onboard"
+# `${HOME:-}` e não `${HOME}`: este `readonly` roda no SOURCE do arquivo, e o
+# doctor.sh é sourceado por testes de unidade das funções de parse com um
+# ambiente mínimo, sem HOME (ver o rodapé deste arquivo). Sob `set -u`, um
+# `${HOME}` aqui derruba o source inteiro com "unbound variable" — e o que
+# quebra não é o teclado na tela, é toda a suíte que source este arquivo.
+readonly OSK_SENTINELA="${HOME:-}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf"
+
+# `WAYLAND_DISPLAY` primeiro, `DISPLAY` só depois: numa sessão Wayland com
+# XWayland os DOIS estão setados (nesta máquina, `WAYLAND_DISPLAY=wayland-1` e
+# `DISPLAY=:1`), então olhar `DISPLAY` antes diria "X11" para toda sessão
+# Wayland moderna — e o veredito sairia invertido.
+_osk_sessao() {
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]] || [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
+        printf 'wayland\n'
+    elif [[ -n "${DISPLAY:-}" ]] || [[ "${XDG_SESSION_TYPE:-}" == "x11" ]]; then
+        printf 'x11\n'
+    else
+        printf 'desconhecida\n'
+    fi
+}
+
+_osk_sentinela() {
+    local chave="$1"
+    [[ -r "${OSK_SENTINELA}" ]] || return 1
+    sed -n "s/^${chave}=//p" "${OSK_SENTINELA}" | head -1
+}
+
+check_teclado_na_tela() {
+    local sessao esperado pacote gestor comando instalado outro
+    sessao="$(_osk_sessao)"
+    if [[ "${sessao}" == "x11" ]]; then
+        esperado="${OSK_BIN_X11}";     pacote="${OSK_PKG_X11}"
+        outro="${OSK_BIN_WAYLAND}"
+    else
+        esperado="${OSK_BIN_WAYLAND}"; pacote="${OSK_PKG_WAYLAND}"
+        outro="${OSK_BIN_X11}"
+    fi
+    gestor="sua distribuição"
+    comando="instale o pacote ${pacote} pela ${gestor}"
+    if command -v apt-get >/dev/null 2>&1; then
+        comando="sudo apt install ${pacote}"
+    elif command -v dnf >/dev/null 2>&1; then
+        comando="sudo dnf install ${pacote}"
+    elif command -v pacman >/dev/null 2>&1; then
+        comando="sudo pacman -S ${pacote}"
+    fi
+
+    if command -v "${esperado}" >/dev/null 2>&1; then
+        pass "teclado na tela: ${esperado} instalado (sessão ${sessao}) — o L3 do controle abre"
+        return
+    fi
+
+    # O caso que mais engana: o binário do OUTRO mundo está instalado. "Tem
+    # teclado na tela" seria verdade e resposta errada — o onboard numa sessão
+    # Wayland ABRE (via XWayland) e as teclas só chegam a clientes XWayland; o
+    # wvkbd numa sessão X11 nem abre, porque é cliente Wayland puro.
+    if command -v "${outro}" >/dev/null 2>&1; then
+        if [[ "${sessao}" == "x11" ]]; then
+            warn "teclado na tela: só ${outro} instalado, e esta sessão é X11 — ele é cliente Wayland puro e não abre aqui"
+        else
+            warn "teclado na tela: só ${outro} instalado, e esta sessão é Wayland — ele digita por XTEST e as teclas só chegam a janelas XWayland (abre e não digita)"
+        fi
+        info "quem digita nesta sessão é ${esperado}: ${comando}"
+        info "o Hefesto NÃO remove o ${outro} — pacote de sistema é seu, não nosso"
+        return
+    fi
+
+    # Daqui para baixo: nenhum dos dois no disco. Qual das quatro histórias?
+    local resultado motivo data pacote_gravado
+    resultado="$(_osk_sentinela resultado || true)"
+    motivo="$(_osk_sentinela motivo || true)"
+    data="$(_osk_sentinela data || true)"
+    pacote_gravado="$(_osk_sentinela pacote || true)"
+
+    case "${resultado}" in
+        pulado)
+            # ESCOLHA DELA — e é por isso que não é FAIL. Sem a sentinela esta
+            # linha seria indistinguível do FAIL de baixo, que é o defeito de
+            # 04/08 (108b711) inteiro em uma frase.
+            info "teclado na tela: PULADO a pedido (${motivo:-"--no-osk"}, em ${data:-data não registrada})"
+            info "o L3 do controle avisa na tela que não tem o que abrir, em vez de abrir"
+            info "para ter: ${comando} (ou reinstale sem --no-osk)"
+            ;;
+        instalado|ja-instalado)
+            fail "teclado na tela: o install registrou ${pacote_gravado:-${pacote}} instalado em ${data:-data não registrada}, e ele NÃO está mais na máquina"
+            info "não fomos nós: o uninstall do Hefesto nunca remove pacote de sistema"
+            info "para devolver: ${comando}"
+            ;;
+        falhou|dry-run)
+            fail "teclado na tela: o install TENTOU instalar ${pacote_gravado:-${pacote}} e não conseguiu (motivo: ${motivo:-não registrado}, em ${data:-data não registrada})"
+            info "rode: ${comando}"
+            ;;
+        *)
+            fail "teclado na tela AUSENTE (${esperado}) e o install nunca passou por aqui — sem sentinela em ${OSK_SENTINELA}"
+            info "é o ÚNICO caminho de fábrica para ESCREVER TEXTO com o controle:"
+            info "nenhum dos nove atalhos padrão digita letra (Super, PrintScreen,"
+            info "Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois de OSK)"
+            info "rode: ${comando}    — ou reinstale: ./install.sh"
+            ;;
+    esac
 }
 
 # GYRO-03: o giroscópio está chegando ao jogo? ------------------------------
@@ -2580,10 +3554,34 @@ check_steam_input() {
 # (`steam_input_apps.txt`) era INERTE fora do guard de VDF — nada no caminho de
 # lançamento a consultava e o broker escondia o hidraw do físico do mesmo jeito,
 # então o jogo cujo DualSense vem PELA Steam (medido: Mullet Mad Jack, 2111190)
-# não achava controle nenhum. Este check separa as duas perguntas que viviam
-# coladas: a exceção está CONFIGURADA? e ela está EFETIVA (o .env por appid
-# nasceu sem dedup)? "Efetiva agora" no hidraw só faz sentido com o jogo aberto,
-# então aqui o veredito é sobre o que dá para afirmar sem o jogo rodando.
+# não achava controle nenhum.
+#
+# FATO SUBSTITUÍDO — 16/08/2026 (a regra dela de 11/08: número errado não vira
+# nota de rodapé, sai). Este check reprovava com [FAIL] quando o
+# `steam_app_<appid>.env` de um jogo da allowlist trazia
+# `SDL_GAMECONTROLLER_IGNORE_DEVICES`/`PROTON_DISABLE_HIDRAW` ("a exceção NÃO
+# vale"). **Isso deixou de ser verdade em 09/08**, com a decisão dela
+# ESCONDER-EM-VEZ-DE-SAIR-01: a marca passou a significar "esconda o controle
+# FÍSICO neste jogo", e a JOGO-01 escreveu o invariante que voltou a valer —
+# *"a allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS"*. O obituário
+# do ramo está no cabeçalho de `daemon/launch_env.py`: **o jogo marcado recebe
+# exatamente a mesma env de qualquer outro jogo**, dedup incluído. A nota datada
+# de `tests/unit/test_r06_allowlist_steam_input.py` diz o mesmo com outras
+# palavras: *"a env sem dedup virou a AUSÊNCIA de ramo"*.
+#
+# Ou seja: o [FAIL] passou 7 dias exigindo o estado que a decisão dela matou de
+# propósito, e o `.env` que ele acusava era o CERTO. Medido em 16/08 05h: os
+# dois jogos da allowlist com `.env` (Pragmata e Sackboy) reprovavam, e o
+# install termina imprimindo os [FAIL] do doctor — todo install dela acabava em
+# vermelho por causa de uma doutrina morta. O ramo sai; o que se observa
+# continua na tela, como `info`.
+#
+# O que este check pergunta HOJE, e por quê:
+#   1. QUAIS jogos estão na lista (nome, não appid) — nomear é o conserto do
+#      defeito nº 2 desta noite;
+#   2. o Steam Input está mesmo LIGADO na Steam para cada um? Entrar na lista
+#      não liga nada: o arquivo só IMPEDE o guard de desligar. Uma entrada
+#      posta depois de o guard já ter zerado o jogo é inerte para sempre.
 check_steam_input_allowlist() {
     local arquivo="${XDG_CONFIG_HOME:-$HOME/.config}/hefesto-dualsense4unix/steam_input_apps.txt"
     if [[ ! -f "${arquivo}" ]]; then
@@ -2591,39 +3589,124 @@ check_steam_input_allowlist() {
         return
     fi
     local appids
-    appids="$(sed 's/#.*$//' "${arquivo}" 2>/dev/null | tr -d '[:space:]' | grep -E '^[0-9]+$' || true)"
+    # `[:blank:]` (espaço e tab), NUNCA `[:space:]`. O `tr -d '[:space:]'` que
+    # estava aqui apagava também as QUEBRAS DE LINHA, e o `tr` trabalha sobre o
+    # fluxo inteiro: a allowlist de três appids virava UM appid de 21 dígitos
+    # ("211119033576501599660"), que nunca tem `.env`, e o check avisava
+    # "1/1 appid(s) sem .env materializado" para sempre — desde 23/07.
+    #
+    # O defeito sobreviveu 24 dias porque a mensagem CONTAVA em vez de NOMEAR:
+    # "1/1" é plausível, e ninguém desconfia de um número. Na primeira execução
+    # em que o check diz o NOME, o appid-monstro aparece na tela e o defeito
+    # dura um minuto. É a mesma lição do Pragmata, medida de novo em 16/08 —
+    # e é a razão de este arquivo ter passado a nomear em toda parte.
+    appids="$(sed 's/#.*$//' "${arquivo}" 2>/dev/null | tr -d '[:blank:]' | grep -E '^[0-9]+$' || true)"
     if [[ -z "${appids}" ]]; then
         info "allowlist per-app do Steam Input vazia (${arquivo})"
         return
     fi
-    local envdir="${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
-    local appid arquivo_env faltando=0 envenenado=0
-    while IFS= read -r appid; do
+    local appid rotulo valor nomes="" desligado="" ausente=""
+    for appid in ${appids}; do
         [[ -n "${appid}" ]] || continue
-        arquivo_env="${envdir}/steam_app_${appid}.env"
-        if [[ ! -f "${arquivo_env}" ]]; then
-            faltando=$((faltando + 1))
-            continue
-        fi
-        # A exceção só é EFETIVA se o .env daquele appid não carrega o dedup —
-        # com IGNORE/PROTON_DISABLE_HIDRAW o físico segue escondido do jogo e a
-        # allowlist volta a ser decorativa.
-        if grep -qE '^(SDL_GAMECONTROLLER_IGNORE_DEVICES|PROTON_DISABLE_HIDRAW)=' "${arquivo_env}" 2>/dev/null; then
-            envenenado=$((envenenado + 1))
-        fi
-    done <<< "${appids}"
-    local total
-    total="$(printf '%s\n' "${appids}" | grep -c . || true)"
-    if [[ "${envenenado}" -gt 0 ]]; then
-        fail "allowlist do Steam Input com ${envenenado} appid(s) cujo .env ainda esconde o físico (IGNORE/PROTON_DISABLE_HIDRAW) — a exceção NÃO vale; reinicie o daemon para regravar: systemctl --user restart hefesto-dualsense4unix"
-    elif [[ "${faltando}" -gt 0 ]]; then
-        warn "allowlist do Steam Input com ${faltando}/${total} appid(s) sem .env materializado — o jogo cai no default.env (com dedup) e a exceção não vale; reinicie o daemon para regravar"
-    else
-        pass "allowlist do Steam Input efetiva: ${total} appid(s) com .env próprio SEM dedup (o jogo enxerga o controle físico)"
+        # NOMEAR-EM-VEZ-DE-CONTAR-01 (16/08/2026): até hoje este check dizia
+        # "1/3 appid(s) sem .env" e nunca QUAL — a mesma cegueira que deixou o
+        # Pragmata quebrado a noite toda enquanto o contador do wrapper passava
+        # em verde. "1/3" não diz em que jogo ela vai esbarrar, e é justamente
+        # isso que ela precisa saber para decidir se abre o jogo hoje.
+        rotulo="$(_rotulo_do_appid "${appid}")"
+        nomes+="${nomes:+; }${rotulo}"
+        # Entrar na allowlist NÃO liga o Steam Input de jogo nenhum:
+        # `add_appid_to_steam_input_allowlist` escreve UMA linha no nosso `.txt`
+        # e nada mais. A única coisa que o arquivo faz é impedir o guard
+        # (`disable_steam_input.sh`) de ZERAR um `UseSteamControllerConfig` que
+        # JÁ estava em 1|2. Se o guard passou por ali antes de o appid entrar na
+        # lista, o valor foi a zero e não volta sozinho — a entrada fica lá para
+        # sempre, inerte, e a casa acha que cumpriu o pedido dela.
+        # Medido em 16/08: o Sackboy (1599660) está na allowlist com
+        # `UseSteamControllerConfig "0"` no vdf, marcado por ela no editor de
+        # perfil e desligado na Steam.
+        valor="$(_steam_input_do_appid "${appid}")"
+        case "${valor}" in
+            0) desligado+="${desligado:+; }${rotulo}" ;;
+            "") ausente+="${ausente:+; }${rotulo}" ;;
+        esac
+    done
+    pass "allowlist do Steam Input (o Hefesto não desliga o Steam Input destes): ${nomes}"
+    [[ -n "${desligado}" ]] && warn "jogo(s) na allowlist com o Steam Input DESLIGADO na Steam (UseSteamControllerConfig=0): ${desligado} — entrar na allowlist só IMPEDE o Hefesto de desligar, nunca LIGA; ligue na Steam (Propriedades → Controle → 'Ativar Entrada Steam'), ou tire o jogo da lista se a intenção mudou"
+    [[ -n "${ausente}" ]] && info "jogo(s) na allowlist sem a chave UseSteamControllerConfig no vdf (a Steam nunca gravou nada para eles): ${ausente} — vale o default da Steam, que esta casa não mediu; abrir Propriedades → Controle uma vez faz a Steam escrever a chave"
+    return 0
+}
+
+# O nome do jogo a partir do appid, para os checks que precisam NOMEAR. Sem o
+# pacote (python3 ausente, repo incompleto) cai no "appid N", que ainda é
+# melhor que um número solto no meio de uma frase.
+_rotulo_do_appid() {
+    local appid="$1"
+    if ! command -v python3 >/dev/null 2>&1; then
+        printf 'appid %s' "${appid}"
+        return 0
     fi
+    HEFESTO_SRC="${ROOT_DIR}/src" HEFESTO_APPID="${appid}" python3 - <<'PY' 2>/dev/null || printf 'appid %s' "${appid}"
+import os
+import sys
+
+sys.path.insert(0, os.environ.get("HEFESTO_SRC", ""))
+appid = os.environ.get("HEFESTO_APPID", "")
+try:
+    from hefesto_dualsense4unix.integrations.steam_launch_options import rotulo_do_jogo
+except Exception:  # noqa: BLE001
+    print("appid %s" % appid, end="")
+else:
+    print(rotulo_do_jogo(appid), end="")
+PY
+}
+
+# `UseSteamControllerConfig` do appid nos localconfig.vdf: "2"/"1" (ligado),
+# "0" (desligado) ou vazio (a chave não existe — a Steam nunca escreveu nada
+# para este jogo, e aí o que vale é o default dela, que não medimos).
+#
+# A chave NÃO mora na mesma árvore que o `LaunchOptions`: no vdf dela ela está
+# em `UserLocalConfigStore/apps/<appid>`, enquanto o `LaunchOptions` vivo está
+# em `UserLocalConfigStore/Software/Valve/Steam/apps/<appid>`. Por isso aqui a
+# busca é pelo BLOCO do appid, em qualquer árvore — é o mesmo critério do
+# `disable_steam_input.sh`, que é quem escreve esta chave.
+_steam_input_do_appid() {
+    local appid="$1" vdf linha
+    shopt -s nullglob
+    for vdf in "${HOME}/.steam/steam/userdata/"*/config/localconfig.vdf \
+               "${HOME}/.steam/debian-installation/userdata/"*/config/localconfig.vdf \
+               "${HOME}/.local/share/Steam/userdata/"*/config/localconfig.vdf; do
+        [[ -f "${vdf}" ]] || continue
+        linha="$(awk -v alvo="${appid}" '
+            /^[[:space:]]*"[^"]*"[[:space:]]*$/ { nome = $0; gsub(/^[[:space:]]*"|"[[:space:]]*$/, "", nome); pend = nome; next }
+            /^[[:space:]]*\{[[:space:]]*$/ { depth++; stack[depth] = pend; pend = ""; next }
+            /^[[:space:]]*\}[[:space:]]*$/ { if (depth > 0) { delete stack[depth]; depth-- } next }
+            /"UseSteamControllerConfig"/ {
+                if (depth > 0 && stack[depth] == alvo) {
+                    if (match($0, /"UseSteamControllerConfig"[^"]*"[^"]*"/)) {
+                        v = substr($0, RSTART, RLENGTH)
+                        sub(/.*"UseSteamControllerConfig"[^"]*"/, "", v)
+                        sub(/"$/, "", v)
+                        print v
+                    }
+                }
+            }
+        ' "${vdf}" 2>/dev/null | head -1)"
+        if [[ -n "${linha}" ]]; then
+            shopt -u nullglob
+            printf '%s' "${linha}"
+            return 0
+        fi
+    done
+    shopt -u nullglob
+    return 0
 }
 
 check_controller() {
+    # As duas linhas abaixo LISTAM nós, e nunca abrem nenhum: `[[ -e ]]` e `ls`
+    # não fazem `open(2)`. É a exceção declarada no portão da porta
+    # (tests/unit/test_a_porta_que_a_casa_construiu_01.py) — quem precisa de um
+    # fd de hidraw neste arquivo pede ao broker, em `check_hidraw_broker`.
     local h hidraw=0
     for h in /dev/hidraw*; do [[ -e "$h" ]] && hidraw=1; done
     [[ "${hidraw}" -eq 1 ]] && info "nós hidraw: $(ls /dev/hidraw* 2>/dev/null | tr '\n' ' ')"
@@ -2636,12 +3719,484 @@ check_controller() {
     fi
 }
 
+# PURA: varre regras udev e imprime `arquivo:linha:conteúdo` de toda regra que
+# abre TODO nó hidraw para quem não é dono nem do grupo. Nenhum privilégio é
+# necessário — `/etc/udev/rules.d` e `/usr/lib/udev/rules.d` são legíveis por
+# qualquer usuário. Sem argumento, varre esses dois, nessa ordem.
+#
+# ACUSA-O-CULPADO-01 (medido nesta máquina em 06/08/2026). O aviso antigo dizia
+# "provável ajuste manual" para cada nó 0666 — e o ajuste manual não existia. A
+# causa era UMA linha, `KERNEL=="hidraw*", MODE="0666"`, num arquivo de terceiro
+# (`60-openrgb.rules`), que abria os SEIS nós que ninguém reivindicava — entre
+# eles os receptores do teclado e do mouse dela. A mensagem acusava a única
+# pessoa que não tinha feito aquilo, e mandava procurar onde não estava.
+#
+# Os três critérios, e por que cada um:
+#
+#  1. a linha tem de casar `hidraw` (`KERNEL=="hidraw*"` ou `SUBSYSTEM=="hidraw"`);
+#  2. o MODE tem de dar algum bit para OUTROS (último octeto != 0). O check
+#     antigo casava só o literal `666` e deixava passar `664`, `662` e `646` —
+#     e é o bit de LEITURA (4) que vaza o que é digitado, não só o de escrita;
+#  3. a regra NÃO pode estreitar por aparelho. `ATTRS{idVendor}`, `KERNELS==` e
+#     companhia são o que separa "abriu o gamepad dele" de "abriu a máquina
+#     inteira". CONTROLE POSITIVO vivo nesta máquina:
+#     `/usr/lib/udev/rules.d/71-pdp-controllers.rules` tem `MODE="0666"` com
+#     `ATTRS{idVendor}=="0e6f"` — é regra de distro, mira UM controle, e NÃO
+#     pode aparecer aqui.
+#
+# SOMBRA: arquivo de mesmo nome em `/etc` anula o de `/usr/lib` (é assim que o
+# udev resolve), então o primeiro diretório em que o nome aparece é o que vale.
+#
+# RESTAURO-SO-COM-SINTOMA-01 (07/08/2026): a varredura ganhou uma SEGUNDA vista,
+# e o corpo virou `_udev_hidraw_scan <manta|estreita>` para as duas nascerem do
+# MESMO awk. O motivo é a lição da RECEITA-ERRADA-01: enquanto o critério for
+# escrito duas vezes, ele diverge — e o pior lugar para a divergência aparecer é
+# a tela, porque é ali que ela vira instrução.
+#
+#   manta    = a regra abre TODO hidraw (a de ACUSA-O-CULPADO-01, acima);
+#   estreita = a regra abre hidraw MAS estreita por aparelho. Essa NUNCA é
+#              acusada — e agora precisa ser ENUMERADA, porque é ela que
+#              distingue "nó aberto por decisão de terceiro" (mexer é atropelo,
+#              e o próximo evento de udev desfaz) de "nó aberto sem explicação"
+#              (é aí, e só aí, que o restauro vale). CONTROLE POSITIVO vivo
+#              nesta máquina em 07/08: `71-pdp-controllers.rules:8` abre um
+#              controle PDP com MODE="0666" estreitando por idVendor 0e6f.
+#
+# Na vista `estreita` a saída ganha um campo: `arquivo:linha:ids:conteúdo`, onde
+# `ids` são os identificadores de 4 hex citados pela regra (minúsculos, com
+# vírgula no fim de cada um). O casamento com o nó é DELIBERADAMENTE frouxo — um
+# id em comum basta — porque todo erro dele tem de cair para o lado de NÃO agir.
+_udev_hidraw_scan() {
+    local vista="$1"; shift
+    local dirs=("$@")
+    [[ ${#dirs[@]} -gt 0 ]] || dirs=(/etc/udev/rules.d /usr/lib/udev/rules.d)
+    local d f base v sombreado vistos=()
+    for d in "${dirs[@]}"; do
+        [[ -d "${d}" ]] || continue
+        for f in "${d}"/*.rules; do
+            [[ -f "${f}" ]] || continue
+            base="${f##*/}"
+            sombreado=0
+            for v in ${vistos[@]+"${vistos[@]}"}; do
+                [[ "${v}" == "${base}" ]] && sombreado=1
+            done
+            vistos+=("${base}")
+            [[ "${sombreado}" -eq 1 ]] && continue
+            awk -v arq="${f}" -v vista="${vista}" '
+                {
+                    linha = $0
+                    sub(/^[[:space:]]+/, "", linha)
+                    sub(/[[:space:]]+$/, "", linha)
+                }
+                linha == "" || linha ~ /^#/ { next }
+                linha !~ /KERNEL=="hidraw/ && linha !~ /SUBSYSTEM=="hidraw"/ { next }
+                {
+                    if (match(linha, /MODE[[:space:]]*:?=[[:space:]]*"[0-7]+"/) == 0) next
+                    modo = substr(linha, RSTART, RLENGTH)
+                    # O valor do MODE sai do texto ANTES da colheita de ids:
+                    # "0666" é quatro dígitos hexadecimais válidos e viraria um
+                    # identificador fantasma em toda regra estreitada.
+                    resto = substr(linha, 1, RSTART - 1) substr(linha, RSTART + RLENGTH)
+                    gsub(/[^0-7]/, "", modo)
+                    if (modo == "") next
+                    outros = substr(modo, length(modo), 1)
+                    if (outros == "0") next
+
+                    # Estreitamento por aparelho: a regra é de quem a escreveu.
+                    estreita = 0
+                    if (linha ~ /ATTRS?\{id(Vendor|Product)\}/) estreita = 1
+                    if (linha ~ /KERNELS[[:space:]]*==/)        estreita = 1
+                    if (linha ~ /ENV\{ID_(VENDOR|MODEL)_ID\}/)  estreita = 1
+
+                    if (vista == "manta"    && estreita == 1) next
+                    if (vista == "estreita" && estreita == 0) next
+                    if (vista != "estreita") { print arq ":" FNR ":" linha; next }
+
+                    # Colhe todo bloco de exatamente 4 hex delimitado por
+                    # não-hex. Pega `ATTRS{idVendor}=="0e6f"` e também o
+                    # `KERNELS=="*045e:02ea*"` das regras de distro, que embutem
+                    # vendor:produto dentro de um curinga.
+                    ids = ""
+                    tmp = resto
+                    while (match(tmp, /[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]/)) {
+                        tok    = substr(tmp, RSTART, 4)
+                        antes  = (RSTART == 1) ? "" : substr(tmp, RSTART - 1, 1)
+                        depois = substr(tmp, RSTART + 4, 1)
+                        tmp    = substr(tmp, RSTART + 4)
+                        if (antes ~ /[0-9a-fA-F]/ || depois ~ /[0-9a-fA-F]/) continue
+                        ids = ids tolower(tok) ","
+                    }
+                    print arq ":" FNR ":" ids ":" linha
+                }
+            ' "${f}"
+        done
+    done
+}
+
+# A vista de ACUSA-O-CULPADO-01, intocada no nome, na assinatura e na saída:
+# `arquivo:linha:conteúdo` de toda regra que abre TODO nó hidraw.
+_udev_hidraw_rw_global() { _udev_hidraw_scan manta "$@"; }
+
+# A vista nova: `arquivo:linha:ids:conteúdo` de toda regra que abre hidraw
+# ESTREITANDO por aparelho. Não é acusação — é o inventário de decisões alheias
+# que o restauro tem de respeitar.
+_udev_hidraw_rw_estreitas() { _udev_hidraw_scan estreita "$@"; }
+
+# Os identificadores 4-hex do aparelho por trás do nó, como `vendor,produto`
+# minúsculos, lidos do uevent do sysfs:
+#
+#   HID_ID=0003:0000054C:00000CE6  ->  054c,0ce6
+#
+# Sem uevent legível devolve VAZIO — e quem chama trata "não sei" como "não
+# mexo", nunca como "está livre".
+_hidraw_ids_do_no() {
+    local no="${1##*/}" sysroot="${2:-/sys/class/hidraw}" ue hid vend prod
+    for ue in "${sysroot}/${no}/device/uevent" "${sysroot}/${no}/uevent"; do
+        [[ -r "${ue}" ]] || continue
+        hid="$(sed -n 's/^HID_ID=//p' "${ue}" 2>/dev/null | head -n1)"
+        [[ -n "${hid}" ]] || continue
+        prod="${hid##*:}"
+        vend="${hid%:*}"; vend="${vend##*:}"
+        [[ ${#vend} -ge 4 ]] && vend="${vend: -4}"
+        [[ ${#prod} -ge 4 ]] && prod="${prod: -4}"
+        printf '%s,%s' "${vend,,}" "${prod,,}"
+        return 0
+    done
+    return 0
+}
+
+# O CRITÉRIO DE "HÁ SINTOMA", num lugar só — RESTAURO-SO-COM-SINTOMA-01.
+#
+# É esta função que o CHECK consulta para decidir se OFERECE o conserto, e é a
+# mesma que a CURA consulta para decidir em que tocar. Um cano só, porque dois
+# critérios com o mesmo nome divergem (RECEITA-ERRADA-01) e a tela passa a
+# prometer o que a cura não faz.
+#
+# Imprime uma linha por nó ABERTO A OUTROS (os fechados não são sintoma nenhum):
+#
+#   alvo <nó> <modo>                 -> nenhuma regra udev explica: restaurar VALE
+#   pulo <nó> manta    <arq:linha>   -> uma regra abre TODO hidraw
+#   pulo <nó> estreita <arq:linha>   -> uma regra abre ESTE aparelho, de propósito
+#   pulo <nó> incerta  <arq:linha>   -> abre hidraw estreitando por chave que não
+#                                       sei avaliar, ou o nó não tem ids legíveis
+#
+# Por que os três `pulo` são recusa, e não preguiça — as DUAS metades importam:
+#
+#   1. ATROPELO: quem escreveu a regra escolheu abrir aquilo. Um projeto de
+#      gamepad reescrevendo permissão de aparelho alheio é invasão de
+#      configuração, mesmo com a intenção certa;
+#   2. INUTILIDADE: a regra continua lá. No próximo evento de udev (add/change)
+#      ela reabre o nó, e o conserto nem dura até o replug.
+#
+# Uma das duas já bastaria para não agir. As duas juntas fazem do `pulo` a única
+# resposta honesta — e é por isso que o texto diz as duas.
+_hidraw_alvos_do_restauro() {
+    local devdir="${1:-/dev}" sysroot="${2:-/sys/class/hidraw}"
+    [[ $# -gt 0 ]] && shift
+    [[ $# -gt 0 ]] && shift
+    local dirs=("$@")
+    local mantas estreitas h mode ids linha end idlista casou incerta id
+    mantas="$(_udev_hidraw_rw_global ${dirs[@]+"${dirs[@]}"})"
+    estreitas="$(_udev_hidraw_rw_estreitas ${dirs[@]+"${dirs[@]}"})"
+    for h in "${devdir}"/hidraw*; do
+        [[ -e "${h}" ]] || continue
+        mode="$(stat -c '%a' "${h}" 2>/dev/null || echo '?')"
+        # Mesmo teste do check_perms_soft: último octeto != 0 = algum bit para
+        # "outros". 4 (leitura) já basta — é a leitura que vaza a tecla.
+        [[ "${mode}" =~ ^[0-7]*[1-7]$ ]] || continue
+        if [[ -n "${mantas}" ]]; then
+            printf 'pulo %s manta %s\n' "${h}" \
+                   "$(printf '%s\n' "${mantas}" | head -n1 | cut -d: -f1,2)"
+            continue
+        fi
+        ids="$(_hidraw_ids_do_no "${h}" "${sysroot}")"
+        casou=""; incerta=""
+        while IFS= read -r linha; do
+            [[ -n "${linha}" ]] || continue
+            end="$(printf '%s' "${linha}" | cut -d: -f1,2)"
+            idlista="$(printf '%s' "${linha}" | cut -d: -f3)"
+            if [[ -z "${idlista}" || -z "${ids}" ]]; then
+                [[ -n "${incerta}" ]] || incerta="incerta ${end}"
+                continue
+            fi
+            for id in ${ids//,/ }; do
+                [[ -n "${id}" ]] || continue
+                case ",${idlista}" in
+                    *",${id},"*) casou="estreita ${end}" ;;
+                esac
+            done
+            [[ -n "${casou}" ]] && break
+        done <<< "${estreitas}"
+        if [[ -n "${casou}" ]]; then
+            printf 'pulo %s %s\n' "${h}" "${casou}"
+        elif [[ -n "${incerta}" ]]; then
+            printf 'pulo %s %s\n' "${h}" "${incerta}"
+        else
+            printf 'alvo %s %s\n' "${h}" "${mode}"
+        fi
+    done
+}
+
+# O que o nó hidraw É, em palavra humana — para o aviso poder dizer o que está
+# aberto em vez de só o caminho. Sem udevadm, devolve vazio (e o aviso degrada
+# para o nome do nó, que é melhor que nada).
+_hidraw_classe_humana() {
+    local no="${1##*/}" sys="${2:-/sys/class/hidraw}/${1##*/}/device" nome="" props="" classe=""
+    command -v udevadm >/dev/null 2>&1 || return 0
+    [[ -d "${sys}" ]] || return 0
+    nome="$(udevadm info -q property -p "${sys}" 2>/dev/null \
+            | sed -n 's/^HID_NAME=//p' | head -n1)"
+    local i
+    for i in "${sys}"/input/input*; do
+        [[ -d "${i}" ]] || continue
+        props+="$(udevadm info -q property -p "${i}" 2>/dev/null \
+                  | grep -E '^ID_INPUT_(KEYBOARD|MOUSE)=1' || true)"$'\n'
+    done
+    [[ "${props}" == *ID_INPUT_KEYBOARD=1* ]] && classe="teclado"
+    if [[ "${props}" == *ID_INPUT_MOUSE=1* ]]; then
+        classe="${classe:+${classe}+}mouse"
+    fi
+    printf '%s' "${classe:+${classe} }${nome:-${no}}"
+}
+
+# ACUSA-O-CULPADO-01: UM aviso por CAUSA, não um por nó. Uma linha de regra
+# produziu quatro avisos idênticos em 06/08 — quatro vezes a mesma notícia, e
+# nenhuma vez o endereço.
+#
+# O grau continua [WARN] DE PROPÓSITO, e isso foi decidido, não esquecido: só o
+# `fail` alimenta o `FAILS` que é o código de saída do doctor. Fazer a
+# configuração de um programa de TERCEIRO reprovar o portão de saúde do Hefesto
+# seria dizer "estou doente" por algo que não é nosso, e empurrar quem usa a
+# desinstalar o vizinho para o nosso relatório ficar verde. A gravidade vai no
+# TEXTO, que é onde ela sempre deveria ter estado.
 check_perms_soft() {
-    local h mode
-    for h in /dev/hidraw*; do
+    local devdir="${1:-/dev}" sysroot="${2:-/sys/class/hidraw}"
+    [[ $# -gt 0 ]] && shift
+    [[ $# -gt 0 ]] && shift
+    local dirs=("$@")
+    local h mode abertos=() classes="" causas="" plano="" tipo no campo3 campo4
+    local alvos=() pulo_no=() pulo_motivo=() pulo_end=()
+    for h in "${devdir}"/hidraw*; do
         [[ -e "$h" ]] || continue
         mode="$(stat -c '%a' "$h" 2>/dev/null || echo '?')"
-        [[ "${mode}" == "666" ]] && warn "${h} está 0666 (rw global) — provável ajuste manual; esperado é 0660+uaccess"
+        # Último octeto != 0 = algum bit para "outros". 4 (leitura) já basta:
+        # hidraw entrega os relatórios de entrada CRUS, em paralelo ao evdev —
+        # quem lê o nó do receptor do teclado lê o que está sendo digitado.
+        [[ "${mode}" =~ ^[0-7]*[1-7]$ ]] || continue
+        abertos+=("${h}")
+        classes+="  ${h} (${mode}): $(_hidraw_classe_humana "${h}" "${sysroot}")"$'\n'
+    done
+    [[ ${#abertos[@]} -eq 0 ]] && return 0
+    causas="$(_udev_hidraw_rw_global ${dirs[@]+"${dirs[@]}"})"
+    # O MESMO cano que a cura usa. Se o check calculasse por conta própria, a
+    # tela ofereceria o que a cura recusaria — foi exatamente esse o defeito da
+    # RECEITA-ERRADA-01, e é o único jeito de ele não voltar.
+    plano="$(_hidraw_alvos_do_restauro "${devdir}" "${sysroot}" ${dirs[@]+"${dirs[@]}"})"
+    while read -r tipo no campo3 campo4; do
+        case "${tipo}" in
+            alvo) alvos+=("${no}") ;;
+            pulo) pulo_no+=("${no}"); pulo_motivo+=("${campo3}"); pulo_end+=("${campo4}") ;;
+        esac
+    done <<< "${plano}"
+    if [[ -n "${causas}" ]]; then
+        warn "${#abertos[@]} nó(s) hidraw abertos a qualquer usuário local — QUALQUER processo, sem privilégio, lê o que esses aparelhos reportam"
+    elif [[ ${#alvos[@]} -gt 0 ]]; then
+        warn "${#abertos[@]} nó(s) hidraw abertos a qualquer usuário local, e NENHUMA regra udev explica — aí sim, ajuste manual é hipótese (esperado é 0660+uaccess)"
+    else
+        # RESTAURO-SO-COM-SINTOMA-01, nota datada de 07/08/2026: até aqui esta
+        # linha era a de cima, e ela AFIRMAVA "NENHUMA regra udev explica" sempre
+        # que a varredura de manta voltava vazia. Isso é falso quando a regra
+        # estreita por aparelho — que é justamente o caso que a varredura de
+        # manta se recusa a acusar, por decisão medida de ACUSA-O-CULPADO-01.
+        # CONTROLE POSITIVO vivo nesta máquina em 07/08:
+        # `/usr/lib/udev/rules.d/71-pdp-controllers.rules:8` abre um controle PDP
+        # com MODE="0666" estreitando por `ATTRS{idVendor}=="0e6f"`. Com esse
+        # controle no cabo, o doctor dizia "ninguém explica" sobre um nó que a
+        # distribuição abriu de propósito.
+        warn "${#abertos[@]} nó(s) hidraw abertos a qualquer usuário local, e uma regra udev ESTREITADA por aparelho explica cada um — é decisão de quem escreveu a regra, não defeito do Hefesto"
+    fi
+    printf '%s' "${classes}"
+    if [[ -n "${causas}" ]]; then
+        info "  CAUSA (regra udev que abre TODO hidraw, sem estreitar por aparelho):"
+        printf '%s\n' "${causas}" | while IFS= read -r linha; do
+            [[ -n "${linha}" ]] && info "    ${linha}"
+        done
+        info "  este arquivo NÃO é do Hefesto — a decisão de mantê-lo é de quem o instalou."
+        # AFIRMACAO-SO-NO-ESTADO-DELA-01 (06/08/2026, achado de verificação
+        # adversarial): esta linha afirmava, sem condição, que "os aparelhos do
+        # Hefesto não são afetados". É verdade só quando o culpado está numerado
+        # ABAIXO das nossas regras — que é o estado desta bancada (culpado em 60,
+        # nós em 70+). É FALSA em três estados plausíveis, e um deles é o mais
+        # provável de todos: a receita de internet mais copiada para hidraw é
+        # `99-hidraw-permissions.rules`, que roda DEPOIS de nós e vence. Os
+        # outros dois: `MODE:=` (atribuição final, que ninguém desfaz) e a
+        # máquina sem as nossas regras instaladas — que é justamente quando se
+        # roda o doctor.
+        #
+        # Então a frase passa a ser MEDIDA em vez de afirmada: só sai quando o
+        # menor número de regra nossa é maior que o do culpado, e nenhum culpado
+        # usa `:=`.
+        # `causas` vem como "arquivo:linha:conteúdo", uma por linha.
+        _rules_nossas="$(ls /etc/udev/rules.d/7*-ps5-controller.rules 2>/dev/null | head -1)"
+        _culpado_tardio=0
+        while IFS= read -r _entrada; do
+            [[ -z "${_entrada}" ]] && continue
+            _arq="${_entrada%%:*}"
+            _num="$(basename "${_arq}" | sed -n 's/^\([0-9]\{1,3\}\).*/\1/p')"
+            if [[ -n "${_num}" ]] && [[ "${_num}" -ge 70 ]]; then
+                _culpado_tardio=1
+            fi
+            case "${_entrada}" in
+                *MODE\ :=*|*MODE:=*) _culpado_tardio=1 ;;
+            esac
+        done <<< "${causas}"
+        if [[ -z "${_rules_nossas}" ]]; then
+            info "  as regras do Hefesto NÃO estão instaladas aqui — então nada devolve esses nós ao esperado; rode ./install.sh."
+        elif [[ "${_culpado_tardio}" -eq 1 ]]; then
+            info "  ATENÇÃO: a regra acima roda DEPOIS das do Hefesto (ou usa 'MODE:='), então ela vence — os nós dos controles também ficam abertos."
+        else
+            info "  os aparelhos do Hefesto não são afetados: a regra deles roda depois e os devolve a 0660+uaccess."
+        fi
+    fi
+    # A OFERTA — decisão dela de 07/08/2026, resposta 16 do painel: o restauro
+    # mora no doctor e só aparece quando há sintoma. O diagnóstico NÃO age: ele
+    # diz que o conserto existe, o que ele vai fazer antes de fazer, e o que ele
+    # não resolve. Diagnóstico que conserta sozinho é o oposto de diagnóstico.
+    if [[ ${#alvos[@]} -gt 0 ]]; then
+        info "  o conserto EXISTE e não roda sozinho: scripts/doctor.sh --restaurar-hidraw-uaccess"
+        info "  o que ele VAI fazer, e nada além disso: tirar o bit de OUTROS de ${#alvos[@]} nó(s) — ${alvos[*]}"
+        info "  o que ele NÃO faz: não cria regra udev, não escreve em /etc, não concede acesso a ninguém e não toca em nó que alguma regra explique."
+        info "  o que ele NÃO resolve: ele não IMPEDE o nó de reabrir. Se o nó voltar a abrir depois, existe regra que este diagnóstico não lê (ENV{...}, GOTO, ou programa fora do udev) — e aí o conserto não dura."
+    elif [[ ${#pulo_no[@]} -gt 0 ]]; then
+        # RECEITA-ERRADA-01: citar o comando para dizer que ele NÃO serve é
+        # honestidade; mandar rodá-lo é que era o defeito.
+        info "  o --restaurar-hidraw-uaccess NÃO resolve este caso, e por isso ele não é oferecido aqui:"
+        local i
+        for i in "${!pulo_no[@]}"; do
+            case "${pulo_motivo[$i]}" in
+                manta)
+                    info "    ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre TODO hidraw — fechar agora desfaria o que esse arquivo manda de propósito, e o nó reabriria no próximo evento de udev"
+                    ;;
+                estreita)
+                    info "    ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre ESTE aparelho, estreitando por ele — a decisão é de quem escreveu a regra, e o nó reabriria no próximo evento de udev"
+                    ;;
+                *)
+                    info "    ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre hidraw estreitando por chave que não sei avaliar — não mexo no que não consigo provar que está órfão"
+                    ;;
+            esac
+        done
+    fi
+}
+
+# A CURA de RESTAURO-SO-COM-SINTOMA-01 — decisão dela, 07/08/2026, resposta 16
+# do painel: *"o `--restaurar-hidraw-uaccess`: só no `doctor`, quando houver
+# sintoma"*.
+#
+# POR QUE NÃO ENTRA NO INSTALL, na palavra dela: o install roda SEMPRE, e
+# reescreveria permissão que outro programa pôs de propósito. O caso concreto
+# desta casa é o OpenRGB (ACUSA-O-CULPADO-01). Pelo mesmo motivo isto NÃO entra
+# no `--fix`: o `--fix` é o laço que roda tudo de uma vez, e roda ANTES dos
+# checks — agiria sem sintoma nenhum. Há teste que cobra as duas ausências.
+#
+# O QUE ELE FAZ, por inteiro: `chmod o=` nos nós que o critério aprovou. Só
+# isso. Não instala regra, não escreve em /etc, não concede acesso a ninguém.
+#
+# Por que o mecanismo é `chmod o=` e não `chmod 0660` nem `setfacl`:
+#
+#   - `chmod o=` tira SÓ o bit de outros: mexe na entrada `other::` e não toca
+#     no `mask::` nem nas entradas nomeadas. `chmod 0660` escreveria a classe de
+#     GRUPO, que num nó com ACL é a MÁSCARA — e o efeito medido não é fechar, é
+#     ABRIR. MEDIDO nesta bancada em 07/08/2026, num nó com
+#     `user:nobody:rwx` sob `mask::r--`:
+#
+#         chmod 0660  ->  mask::rw-   e nobody sai de #effective:r-- para rw-
+#         chmod o=    ->  mask::r--   intacta, nobody continua em r--
+#
+#     Ou seja: o `chmod 0660` CONCEDE, no meio de uma operação que se chama
+#     restauro, uma escrita que alguém tinha mascarado de propósito. GRAU:
+#     MEDIDO (o teste `test_a_cura_nao_alarga_a_mascara_da_acl` reprova com a
+#     troca feita — e a primeira versão dele NÃO reprovava, porque olhava um nó
+#     cuja máscara já era `rw-`: nesse nó os dois comandos dão no mesmo);
+#   - CONCEDER acesso não é RESTAURAR. Um `setfacl` nosso num nó alheio daria à
+#     sessão acesso que ela não tinha — que é precisamente o que a casa recusou
+#     por escrito (2026-08-06-RECOMENDACAO-A-ELA, "o que o Hefesto NÃO vai
+#     fazer"): projeto de gamepad não legisla a política de segurança da máquina
+#     inteira. Quem CONCEDE o uaccess aos nós do Hefesto é a regra udev — o
+#     `./install.sh` e o `scripts/doctor.sh --fix`, que a reaplicam.
+#
+# O nome da opção é o DELA (resposta 16) e não foi trocado; a metade "uaccess"
+# do nome descreve o estado a que os nós do Hefesto voltam, não uma concessão
+# que este comando faça.
+restaurar_hidraw_uaccess() {
+    local devdir="${1:-/dev}" sysroot="${2:-/sys/class/hidraw}"
+    [[ $# -gt 0 ]] && shift
+    [[ $# -gt 0 ]] && shift
+    local dirs=("$@")
+    local plano tipo no campo3 campo4 i alvo modo depois
+    local alvos=() modos=() pulo_no=() pulo_motivo=() pulo_end=()
+
+    # AGIR CALADO É O QUE NÃO PODE ACONTECER. O `--quiet` existe para o
+    # diagnóstico caber numa linha de log; aqui ele apagaria justamente o texto
+    # que diz o que vai ser feito ANTES de ser feito. Neste modo ele não vale.
+    QUIET=0
+
+    plano="$(_hidraw_alvos_do_restauro "${devdir}" "${sysroot}" ${dirs[@]+"${dirs[@]}"})"
+    while read -r tipo no campo3 campo4; do
+        case "${tipo}" in
+            alvo) alvos+=("${no}"); modos+=("${campo3}") ;;
+            pulo) pulo_no+=("${no}"); pulo_motivo+=("${campo3}"); pulo_end+=("${campo4}") ;;
+        esac
+    done <<< "${plano}"
+
+    if [[ ${#alvos[@]} -eq 0 ]]; then
+        if [[ ${#pulo_no[@]} -eq 0 ]]; then
+            pass "nenhum nó hidraw aberto a outros — não há o que restaurar (é este o estado esperado)"
+            return 0
+        fi
+        info "não vou tocar em nada, e o motivo é este — em cada caso, mexer seria ao mesmo tempo atropelo e inútil:"
+        for i in "${!pulo_no[@]}"; do
+            case "${pulo_motivo[$i]}" in
+                manta)
+                    info "  ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre TODO hidraw — fechar agora desfaria o que esse arquivo manda de propósito, e o nó reabriria no próximo evento de udev"
+                    ;;
+                estreita)
+                    info "  ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre ESTE aparelho, estreitando por ele — a decisão é de quem escreveu a regra, e o nó reabriria no próximo evento de udev"
+                    ;;
+                *)
+                    info "  ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre hidraw estreitando por chave que não sei avaliar — não mexo no que não consigo provar que está órfão"
+                    ;;
+            esac
+        done
+        info "se a permissão desse arquivo estiver errada, o conserto é no arquivo, não no nó: edite a regra e rode 'sudo udevadm control --reload-rules'."
+        return 0
+    fi
+
+    # O TEXTO ANTES DA AÇÃO (RECEITA-ERRADA-01): quem lê tem de saber o que vai
+    # acontecer enquanto ainda dá para desistir.
+    info "vou tirar o bit de OUTROS destes ${#alvos[@]} nó(s), e nada além disso:"
+    for i in "${!alvos[@]}"; do
+        info "  ${alvos[$i]}: ${modos[$i]} -> ${modos[$i]%?}0   ($(_hidraw_classe_humana "${alvos[$i]}" "${sysroot}"))"
+    done
+    info "nenhuma regra udev é criada, nada é escrito em /etc, e nenhum acesso é concedido a ninguém."
+    info "o que isto NÃO resolve: não IMPEDE o nó de reabrir. Se ele voltar a abrir, existe regra que este diagnóstico não lê (ENV{...}, GOTO, ou programa fora do udev) — e aí o conserto não dura."
+    info "quem CONCEDE o uaccess aos nós do Hefesto é a regra udev, não este comando: ./install.sh ou scripts/doctor.sh --fix."
+
+    for i in "${!alvos[@]}"; do
+        alvo="${alvos[$i]}"
+        # Sem sudo primeiro: quem já pode (root, ou dono do nó) não gasta
+        # elevação, e a suíte exercita a cura DE VERDADE sem privilégio nenhum.
+        if ! chmod o= "${alvo}" 2>/dev/null; then
+            if command -v sudo >/dev/null 2>&1; then
+                sudo chmod o= "${alvo}" 2>/dev/null || true
+            fi
+        fi
+        depois="$(stat -c '%a' "${alvo}" 2>/dev/null || echo '?')"
+        modo="${modos[$i]}"
+        if [[ "${depois}" =~ ^[0-7]*[1-7]$ ]]; then
+            fail "${alvo} continua aberto a outros (${modo} -> ${depois}) — o chmod não pegou; confira quem é o dono do nó (ls -l ${alvo})"
+        else
+            pass "${alvo} restaurado (${modo} -> ${depois})"
+        fi
     done
 }
 
@@ -3141,13 +4696,52 @@ watch_dropout() {
       && printf '\n[WATCH] primeiro sinal de dropout capturado acima.\n'
 }
 
+# IRMAO-SEM-CARONA-01 (12/08/2026) — quem reaplica as regras udev depende do
+# layout em que ESTE doctor está rodando, e até aqui só um dos dois existia no
+# código.
+#
+# MEDIDO: `scripts/build_deb.sh:216` leva o `doctor.sh` para dentro do pacote
+# (`/usr/share/hefesto-dualsense4unix/scripts/`), e o `ROOT_DIR` deste arquivo
+# é derivado do lugar dele (:60) — no .deb, portanto,
+# `${ROOT_DIR}/scripts/install_udev.sh` NÃO EXISTE: aquele laço leva cinco
+# scripts, e o `install_udev.sh` não é um deles. O que o pacote leva, e leva de
+# propósito para este exato serviço, é o `install-host-udev.sh` (a forma 3 do
+# cabeçalho dele: "Direto de um .deb instalado"). O resultado na máquina de
+# quem instalou pelo pacote era `hefesto-dualsense4unix doctor --fix` dizendo
+# "falha ao reaplicar udev" — cura prometida, caminho inexistente.
+#
+# A escolha é por EXISTÊNCIA, não por adivinhar o layout: o checkout tem os
+# dois e o `install_udev.sh` vem primeiro porque é o dono nativo (conjunto
+# canônico das regras); o pacote tem só o `install-host-udev.sh`, que resolve
+# as regras em `/usr/share/hefesto-dualsense4unix/udev-rules/`. Se nenhum dos
+# dois estiver aqui, o recado diz qual arquivo faltou — em vez do "falha ao
+# reaplicar" mudo, que não distingue script ausente de script que reprovou.
+#
+# Portão: a seção "irmão sem carona" de `scripts/check_packaging_parity.sh`, e
+# `tests/unit/test_portao_reprova_irmao_sem_carona.py`.
+_dono_das_regras_udev() {
+    if [[ -f "${ROOT_DIR}/scripts/install_udev.sh" ]]; then
+        printf '%s' "${ROOT_DIR}/scripts/install_udev.sh"
+        return 0
+    fi
+    if [[ -f "${ROOT_DIR}/scripts/install-host-udev.sh" ]]; then
+        printf '%s' "${ROOT_DIR}/scripts/install-host-udev.sh"
+        return 0
+    fi
+    return 1
+}
+
 apply_fixes() {
     hdr "aplicando correções (--fix)"
-    if command -v sudo >/dev/null 2>&1; then
-        if sudo bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
-            pass "regras udev reaplicadas"
+    local _udev_dono=""
+    _udev_dono="$(_dono_das_regras_udev || true)"
+    if [[ -z "${_udev_dono}" ]]; then
+        warn "nem install_udev.sh nem install-host-udev.sh estão em ${ROOT_DIR}/scripts — não reapliquei udev"
+    elif command -v sudo >/dev/null 2>&1; then
+        if sudo bash "${_udev_dono}" >/dev/null 2>&1; then
+            pass "regras udev reaplicadas ($(basename "${_udev_dono}"))"
         else
-            warn "falha ao reaplicar udev"
+            warn "falha ao reaplicar udev ($(basename "${_udev_dono}"))"
         fi
     else
         warn "sudo ausente — não reapliquei udev"
@@ -3168,11 +4762,26 @@ apply_fixes() {
     # que pode reinstalar o drop-in e reiniciar o WirePlumber — o perfil da placa
     # e o mute da source precisam ser conferidos com o serviço já de pé.
     fix_mic_dualsense
+    # AUSÊNCIA DELIBERADA — RESTAURO-SO-COM-SINTOMA-01, decisão dela de
+    # 07/08/2026: `restaurar_hidraw_uaccess` NÃO é chamado aqui. O `--fix` roda
+    # tudo de uma vez e roda ANTES dos checks, então chamá-lo daqui seria agir
+    # sem sintoma — exatamente o motivo pelo qual ela recusou pôr isto no
+    # install. O restauro só existe atrás da opção própria. Há teste que cobra
+    # esta ausência, porque uma linha a mais aqui a desfaz em silêncio.
 }
 
 main() {
     [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
     [[ "${SUGGEST_PORT}" -eq 1 ]] && { suggest_port; exit 0; }
+    # RESTAURO-SO-COM-SINTOMA-01 (decisão dela, 07/08/2026): rota própria, pedida
+    # a dedo. Ela não é alcançável por nenhum outro modo do doctor — nem pelo
+    # --fix, nem pelo install.
+    if [[ "${RESTAURAR_HIDRAW}" -eq 1 ]]; then
+        hdr "restauro de permissão dos nós hidraw (--restaurar-hidraw-uaccess)"
+        restaurar_hidraw_uaccess
+        [[ "${FAILS}" -eq 0 ]]
+        exit $?
+    fi
     # MIC-USB-01: rota curta para quem só quer o microfone de volta agora —
     # cura as camadas 1 e 2, mostra o veredito das duas e sai. É também o que o
     # `fix_wireplumber_default_source.sh --promote-source` chama, para a cura
@@ -3200,7 +4809,12 @@ main() {
     check_uinput
     check_uhid
     check_hid_playstation
+    check_hid_playstation_probe_abortado
     check_led_sysfs_gravavel
+    # OQ-6: logo depois do check da 77 (nó de LED gravável) porque é a mesma
+    # pergunta — "a regra desta casa chegou a valer no nó vivo?" — só que para
+    # os nós de ENTRADA do touchpad e dos sensores de movimento.
+    check_input_uaccess
     hdr "energia USB e rádio"
     check_usb_power_devices
     check_usb_power_hosts
@@ -3208,6 +4822,7 @@ main() {
     check_power_saboteurs
     check_btusb_autosuspend
     check_bluez_fastconnectable
+    check_bluez_justworks_repairing
     check_bt_clone_ds4
     check_bt_radio
     check_bt_crc_counters
@@ -3246,6 +4861,8 @@ main() {
     check_hidraw_broker
     hdr "giroscópio no jogo (vpad Motion)"
     check_vpad_motion
+    hdr "teclado na tela (o que o L3 do controle abre)"
+    check_teclado_na_tela
     hdr "controle"
     check_controller
     check_perms_soft

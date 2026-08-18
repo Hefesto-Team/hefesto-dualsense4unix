@@ -54,6 +54,12 @@ def _strength(default: int = 4) -> TriggerParamSpec:
     return TriggerParamSpec("strength", "Intensidade", 0, 8, default)
 
 
+#: A curva padrão dos presets por posição: firmeza crescente do solto ao
+#: fundo. TRIGGER-CANON-01 — antes eram dez zeros, e dez zeros é "nenhuma zona
+#: ativa": o preset existia na tela e não fazia nada ao ser aplicado.
+_RAMPA_PADRAO: tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8, 8)
+
+
 def _frequency(default: int = 10) -> TriggerParamSpec:
     return TriggerParamSpec("frequency", "Frequência", 0, 255, default)
 
@@ -107,7 +113,10 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Resistência constante a partir de uma posição.",
     ),
     TriggerPresetSpec(
-        "Bow", "Arco (Bow)",
+        # DECISÃO DELA, 07/08/2026 (resposta 6): "Arco" sozinho é ambíguo em
+        # português (arco de círculo, arco elétrico). O `name` em inglês fica —
+        # ele é contrato de disco, IPC e DSX, e o perfil dela o lê.
+        "Bow", "Arco de flecha (Bow)",
         params=(
             TriggerParamSpec("start", "Início", 0, 8, 1),
             TriggerParamSpec("end", "Fim", 1, 9, 7),
@@ -138,8 +147,14 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     ),
     TriggerPresetSpec(
         "AutoGun", "Arma automática",
+        # TRIGGER-CANON-01: era `_pos(2)`, cujo `name` é "position" — e a
+        # factory `auto_gun` recebe `start`. Pelo caminho POSICIONAL ninguém
+        # notava (a posição batia); pelo NOMEADO ele levantava
+        # `TypeError: auto_gun() got an unexpected keyword argument 'position'`.
+        # O `name` do PRESET é contrato e não mudou; o do parâmetro tinha de
+        # ser o kwarg da factory desde sempre.
         params=(
-            _pos(2),
+            _start(0, 9, 2),
             _strength(6),
             _frequency(60),
         ),
@@ -163,7 +178,10 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Barreira a partir de uma posição, com força de 0 a 8.",
     ),
     TriggerPresetSpec(
-        "Weapon", "Arma (Weapon)",
+        # DECISÃO DELA, 07/08/2026 (resposta 6): "Arma" não separava este modo
+        # de "Arma automática" nem de "Arma semi-automática" — três botões da
+        # mesma grade começavam pela mesma palavra.
+        "Weapon", "Disparo (Weapon)",
         params=(_start(0, 9, 2), _end(1, 9, 5), _force(0, 255, 200)),
         description="Disparo de arma padrão.",
     ),
@@ -184,9 +202,14 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     ),
     TriggerPresetSpec(
         "MultiPositionFeedback", "Curva de força",
+        # TRIGGER-CANON-01: os defaults eram TODOS zero, e zero é ZONA
+        # INATIVA — escolher este preset na tela e aplicar mandava "nenhuma
+        # zona ativa", que o firmware honra fazendo nada. A rampa 0..8 é o
+        # exemplo canônico do próprio `_flatten_multi_position`, e é o que
+        # "curva de força" quer dizer: firmeza crescente ao longo do curso.
         params=tuple(
             TriggerParamSpec(
-                f"pos_{i}", f"Posição {i}", 0, 8, 0
+                f"pos_{i}", f"Posição {i}", 0, 8, _RAMPA_PADRAO[i]
             )
             for i in range(10)
         ),
@@ -196,9 +219,10 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         "MultiPositionVibration", "Vibração por posição",
         params=(
             _frequency(40),
+            # Idem: zero em todas as posições é nenhuma zona ativa.
             *(
                 TriggerParamSpec(
-                    f"pos_{i}", f"Posição {i}", 0, 8, 0
+                    f"pos_{i}", f"Posição {i}", 0, 8, _RAMPA_PADRAO[i]
                 )
                 for i in range(10)
             ),
@@ -206,7 +230,12 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Vibração com perfil de amplitude por posição.",
     ),
     TriggerPresetSpec(
-        "Custom", "Personalizado (avançado)",
+        # DECISÃO DELA, 07/08/2026 (resposta 5): "Personalizado (avançado)" tem
+        # 24 caracteres e era o rótulo mais comprido da grade — quebrava a linha
+        # no piso da janela e subia a altura mínima. "Montar do zero" (14) cabe,
+        # é verbo do vocabulário dela e diz o que o modo faz. O aviso "avançado"
+        # desceu para a descrição, que é onde há espaço para ele.
+        "Custom", "Montar do zero",
         params=(
             TriggerParamSpec("mode", "Modo (byte cru)", 0, 255, 0),
             *(
@@ -216,7 +245,10 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
                 for i in range(7)
             ),
         ),
-        description="Envia os valores crus para o controle: 1 modo e 7 forças.",
+        description=(
+            "Avançado: envia os valores crus para o controle — 1 modo e 7 "
+            "forças."
+        ),
     ),
 )
 

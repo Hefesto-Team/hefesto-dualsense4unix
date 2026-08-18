@@ -230,7 +230,7 @@ def test_aplicar_em_todos_manda_led_set_por_mac(
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
-        "apply_draft",
+        "apply_draft_detalhado",
         lambda *_a, **_kw: pytest.fail("com conectados conhecidos é led.set por MAC"),
     )
     host = _host()
@@ -261,7 +261,7 @@ def test_falha_em_um_controle_nao_vira_sucesso(
     host = _host()
     host.on_lightbar_apply(None)
     assert vistos == [UNIQ_1, UNIQ_2]
-    assert any("não consegui aplicar" in t for t in host._toasts)
+    assert any("Não consegui aplicar" in t for t in host._toasts)
 
 
 def _gdk_rgba_ok() -> bool:
@@ -290,7 +290,7 @@ def test_apagar_em_todos_manda_preto_por_mac(
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
-        "apply_draft",
+        "apply_draft_detalhado",
         lambda *_a, **_kw: pytest.fail("com conectados conhecidos é led.set por MAC"),
     )
     host = _host()

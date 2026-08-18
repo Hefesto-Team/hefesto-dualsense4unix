@@ -352,9 +352,16 @@ class TestDreno:
         daemon._drenar_modo_pendente()
 
         # Vpad intocado (mesmo flavor, `set_gamepad_emulation` nem é chamado) e
-        # o co-op do perfil sobe — que é o que ela precisa para jogar a 4.
+        # a pendência drena — que é o que ela precisa para jogar a 4.
+        #
+        # NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: aqui se mediu
+        # também `setters.coop == [(True, "profile")]`, porque quem subia o
+        # co-op era o perfil. Não é mais: o piso do daemon já nasce ligado e o
+        # perfil parou de governar o campo. O que este teste guarda continua
+        # inteiro — o dreno acontece com jogo aberto quando não destrói nada.
         assert setters.gamepad == []
-        assert setters.coop == [(True, "profile")]
+        assert setters.coop == []
+        assert daemon.config.coop_enabled is True
         assert daemon._mode_pendente is None
 
 

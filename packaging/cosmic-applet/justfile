@@ -21,9 +21,17 @@ install: build-release
     {{sudo}} install -Dm755 target/release/{{bin}} /usr/local/bin/{{bin}}
     {{sudo}} install -Dm644 data/{{app-id}}.desktop \
         /usr/share/applications/{{app-id}}.desktop
+    # APPLET-MONOCROMÁTICO-01 (07/08/2026): o simbólico passou a morar em
+    # `symbolic/apps/`, que é onde o `hicolor` do sistema o declara
+    # (`index.theme`, bloco `[symbolic/apps]`) e onde o vizinho que funciona
+    # (Flatpak do Spotify) põe o dele. O caminho antigo `scalable/apps/` é
+    # apagado no mesmo gesto: dois arquivos com o mesmo nome em diretórios
+    # diferentes deixam a busca de ícones escolher, e "escolher" é o começo de
+    # "não mudou nada" sem explicação.
+    {{sudo}} rm -f /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
     {{sudo}} install -Dm644 \
-        data/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg \
-        /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
+        data/icons/hicolor/symbolic/apps/{{app-id}}-symbolic.svg \
+        /usr/share/icons/hicolor/symbolic/apps/{{app-id}}-symbolic.svg
     {{sudo}} install -Dm644 \
         data/icons/hicolor/256x256/apps/{{app-id}}.png \
         /usr/share/icons/hicolor/256x256/apps/{{app-id}}.png
@@ -37,6 +45,8 @@ install: build-release
 uninstall:
     {{sudo}} rm -f /usr/local/bin/{{bin}}
     {{sudo}} rm -f /usr/share/applications/{{app-id}}.desktop
+    {{sudo}} rm -f /usr/share/icons/hicolor/symbolic/apps/{{app-id}}-symbolic.svg
+    # Caminho antigo (até 07/08/2026) — remoção continua para limpar instalação velha.
     {{sudo}} rm -f /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
     {{sudo}} rm -f /usr/share/icons/hicolor/256x256/apps/{{app-id}}.png
     {{sudo}} gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true

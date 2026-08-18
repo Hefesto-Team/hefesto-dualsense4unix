@@ -1,0 +1,368 @@
+A TROCA DE BRAÇOS — os mesmos quatro aparelhos nos dois transportes (15/08/2026)
+
+O QUE ESTE BRUTO RESOLVE
+------------------------
+A Lei 4 do método da mesa 2+2: até aqui, toda comparação cabo x rádio comparava
+APARELHOS DIFERENTES ao mesmo tempo que comparava TRANSPORTES. Se o cabo dava um
+número e o rádio outro, não havia como separar "é do transporte" de "é daquela
+unidade".
+
+Ela trocou os braços às 19h de 15/08/2026: os dois que estavam no cabo foram
+para o rádio, e os dois que estavam no rádio foram para o cabo. Os MESMOS quatro
+aparelhos passaram pelos DOIS transportes, com minutos de diferença.
+
+A MESA, ANTES E DEPOIS
+----------------------
+    aparelho              hw            antes     depois
+    d4:2f:4b:00:00:d8     0x00001111    CABO  ->  RÁDIO
+    a0:fa:9c:00:00:f0     0x00000710    CABO  ->  RÁDIO
+    44:46:48:00:00:03     0x00000811    RÁDIO ->  CABO    (o vermelho)
+    14:3a:9a:00:00:ab     0x00000711    RÁDIO ->  CABO    (o branco)
+
+O QUE SEGUIU O BRAÇO (logo: é do TRANSPORTE)
+--------------------------------------------
+  - a placa de áudio USB. Antes nascia dos dois do cabo; depois nasce dos dois
+    que estão no cabo AGORA (card2 e card3). Os do rádio não expõem placa
+    nenhuma, seja qual for a unidade.
+  - o descritor HID inteiro. Os 9 reports exclusivos de um transporte
+    (0x0a, 0x0c, 0x21, 0x84, 0x85, 0xa0, 0xe0 no cabo; 0xf6, 0xf7 no rádio) são
+    os MESMOS antes e depois. A união continua 24.
+  - o estado de carga: "Full" nos do cabo, "Discharging" nos do rádio — inverteu
+    junto com os braços.
+
+O QUE SEGUIU O APARELHO (logo: é da UNIDADE)
+--------------------------------------------
+  - o `hardware_version`. O 0x00001111 continua colado no d4:2f:4b, esteja no
+    braço que estiver.
+
+O CUSTO DE LER POR RÁDIO, MEDIDO DE NOVO
+-----------------------------------------
+18 leituras por rádio nesta corrida, TODAS em 1 tentativa: 12 em 0,01 s, 5 em
+0,02 s, 1 em 0,03 s. Somadas às 14 da corrida das 17h32 (D-32), são 32 de 32
+leituras instantâneas, em duas rodadas independentes, com UNIDADES DIFERENTES em
+cada braço.
+
+A afirmação de que "cada falha de GET_FEATURE por rádio custa 3,2-3,7 s e a cura
+é REPETIR" — chamada em três células do mapa de "regra que vale para toda
+medição futura desta casa" — está derrubada. O timeout de ~3 s do BlueZ EXISTE e
+foi observado na manhã de 15/08; o que caiu é que ele seja o regime normal. O
+retry é seguro de vida, não pedágio.
+
+PROCEDÊNCIA
+-----------
+Instrumentos: `scripts/ensaios/quem_e_quem.py` e `scripts/ensaios/censo_features.py`,
+leitura pura, nenhum byte escrito em aparelho nenhum. O daemon estava VIVO nas duas
+corridas — a leitura entrou pelo broker (SCM_RIGHTS). MAC mascarados na convenção
+da casa (octetos 4 e 5 zerados). Saída literal dos instrumentos, sem edição além
+da máscara, da remoção das linhas de log do broker, e deste cabeçalho.
+
+==============================================================================
+(1) A MESA ANTES DA TROCA — quem_e_quem.py
+==============================================================================
+==============================================================================
+  quem_e_quem.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... qual controle físico é qual jogador, e o que só se resolve apertando botão?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... evdev                  de /usr/lib/python3/dist-packages/evdev/__init__.py
+  biblioteca ....... os                     de /usr/lib/python3.12/os.py
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+
+  mesa com 1 controle(s): 1 no rádio. SÓ UM TRANSPORTE presente — isto NÃO é o ensaio 2+2, e nenhuma coluna cabo-x-rádio abaixo compara coisa alguma.
+
+  OS CONTROLES FÍSICOS
+
+MAC                transporte  hidraw   evdev principal      placa ALSA      LED aceso  LED diz  hardware    bateria
+-----------------  ----------  -------  -------------------  --------------  ---------  -------  ----------  ---------------
+14:3a:9a:00:00:ab  rádio       hidraw9  /dev/input/event268  - (só no cabo)  10101      P3       0x00000711  85% Discharging
+
+  OS VPADS — a saída do produto, o que o jogo enxerga
+
+vpad  jogador  hidraw    evdev principal      MAC forjado
+----  -------  --------  -------------------  -----------------
+P1    P1       hidraw6   /dev/input/event29   02:fe:00:00:00:01
+P3    P3       hidraw10  /dev/input/event271  02:fe:00:00:00:03
+P4    P4       hidraw11  /dev/input/event275  02:fe:00:00:00:04
+
+  O QUE ESTA TABELA NÃO RESOLVE, e é honesto dizer:
+    - qual vpad é alimentado por qual MAC. Nenhum arquivo de /sys carrega
+      essa ligação, e o `state_full` publica `coop.players` como um NÚMERO,
+      não como lista. Use --apertar, ou torne o estado publicado mais rico.
+
+------------------------------------------------------------------------------
+RESUMO: 1 físico(s) e 3 vpad(s) resolvidos por sysfs; LED lido em 1/1 (P3) contra vpads P1, P3, P4. A ligação vpad↔MAC continua NÃO observável sem apertar botão.
+------------------------------------------------------------------------------
+
+==============================================================================
+(2) A MESA DEPOIS DA TROCA — quem_e_quem.py
+==============================================================================
+==============================================================================
+  quem_e_quem.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... qual controle físico é qual jogador, e o que só se resolve apertando botão?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... evdev                  de /usr/lib/python3/dist-packages/evdev/__init__.py
+  biblioteca ....... os                     de /usr/lib/python3.12/os.py
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+
+  mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+  OS CONTROLES FÍSICOS
+
+MAC                transporte  hidraw    evdev principal      placa ALSA            LED aceso  LED diz  hardware    bateria
+-----------------  ----------  --------  -------------------  --------------------  ---------  -------  ----------  ---------------
+a0:fa:9c:00:00:f0  rádio       hidraw4   /dev/input/event21   - (só no cabo)        11011      P4       0x00000710  95% Discharging
+d4:2f:4b:00:00:d8  rádio       hidraw5   /dev/input/event25   - (só no cabo)        00100      P1       0x00001111  95% Discharging
+14:3a:9a:00:00:ab  cabo        hidraw8   /dev/input/event264  card3 (Controller_1)  10101      P3       0x00000711  100% Full
+44:46:48:00:00:03  cabo        hidraw10  /dev/input/event271  card2 (Controller)    01010      P2       0x00000811  100% Full
+
+  OS VPADS — a saída do produto, o que o jogo enxerga
+
+vpad  jogador  hidraw    evdev principal      MAC forjado
+----  -------  --------  -------------------  -----------------
+P1    P1       hidraw6   /dev/input/event29   02:fe:00:00:00:01
+P2    P2       hidraw7   /dev/input/event24   02:fe:00:00:00:02
+P3    P3       hidraw9   /dev/input/event263  02:fe:00:00:00:03
+P4    P4       hidraw11  /dev/input/event275  02:fe:00:00:00:04
+
+  O QUE ESTA TABELA NÃO RESOLVE, e é honesto dizer:
+    - qual vpad é alimentado por qual MAC. Nenhum arquivo de /sys carrega
+      essa ligação, e o `state_full` publica `coop.players` como um NÚMERO,
+      não como lista. Use --apertar, ou torne o estado publicado mais rico.
+
+------------------------------------------------------------------------------
+RESUMO: 4 físico(s) e 4 vpad(s) resolvidos por sysfs; LED lido em 4/4 (P1, P2, P3, P4) contra vpads P1, P2, P3, P4. A ligação vpad↔MAC continua NÃO observável sem apertar botão.
+------------------------------------------------------------------------------
+
+==============================================================================
+(3) O CENSO DE FEATURES DEPOIS DA TROCA — censo_features.py
+==============================================================================
+==============================================================================
+  censo_features.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... cada feature report é o mesmo byte a byte no cabo e no rádio?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... array                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... zlib                   de embutido no interpretador (stdlib estática)
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+
+  mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+aparelho           hidraw    transporte  permissão do fs                                                                                                 porta
+-----------------  --------  ----------  --------------------------------------------------------------------------------------------------------------  -------------------
+a0:fa:9c:00:00:f0  hidraw4   rádio       sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+d4:2f:4b:00:00:d8  hidraw5   rádio       sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+14:3a:9a:00:00:ab  hidraw8   cabo        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+44:46:48:00:00:03  hidraw10  cabo        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+
+  O QUE CADA TRANSPORTE DECLARA (do report_descriptor, sem ler nada)
+
+report  cabo  rádio
+------  ----  -----
+0x05    sim   sim
+0x08    sim   sim
+0x09    sim   sim
+0x0a    sim   —
+0x0b    sim   sim
+0x0c    sim   —
+0x20    sim   sim
+0x21    sim   —
+0x22    sim   sim
+0x80    sim   sim
+0x81    sim   sim
+0x82    sim   sim
+0x83    sim   sim
+0x84    sim   —
+0x85    sim   —
+0xa0    sim   —
+0xe0    sim   —
+0xf0    sim   sim
+0xf1    sim   sim
+0xf2    sim   sim
+0xf4    sim   sim
+0xf5    sim   sim
+0xf6    —     sim
+0xf7    —     sim
+
+    9 report(s) declarados por UM transporte só: 0x0a, 0x0c, 0x21, 0x84, 0x85, 0xa0, 0xe0, 0xf6, 0xf7
+    Um conjunto não é subconjunto do outro — não existe 'a lista
+    dos feature reports do DualSense'; existe uma por transporte.
+
+  24 feature reports na UNIÃO dos descritores da mesa.
+
+  lendo a0:fa:9c:00:00:f0 (hidraw4, rádio) …
+      0x05   41B  ok      1 tentativa(s)   0.02s
+      0x08   48B  ok      1 tentativa(s)   0.01s
+      0x09   20B  ok      1 tentativa(s)   0.01s
+      0x0a    -   não declarado neste transporte
+      0x0b   42B  ok      1 tentativa(s)   0.01s
+      0x0c    -   não declarado neste transporte
+      0x20   64B  ok      1 tentativa(s)   0.01s
+      0x21    -   não declarado neste transporte
+      0x22   64B  ok      1 tentativa(s)   0.01s
+      0x80   64B  ok      1 tentativa(s)   0.01s
+      0x81   64B  ok      1 tentativa(s)   0.01s
+      0x82   10B  ok      1 tentativa(s)   0.02s
+      0x83   64B  ok      1 tentativa(s)   0.01s
+      0x84    -   não declarado neste transporte
+      0x85    -   não declarado neste transporte
+      0xa0    -   não declarado neste transporte
+      0xe0    -   não declarado neste transporte
+      0xf0   64B  ok      1 tentativa(s)   0.01s
+      0xf1   64B  ok      1 tentativa(s)   0.03s
+      0xf2   16B  ok      1 tentativa(s)   0.03s
+      0xf4   64B  ok      1 tentativa(s)   0.01s
+      0xf5    8B  ok      1 tentativa(s)   0.01s
+      0xf6  547B  ok      1 tentativa(s)   0.01s
+      0xf7    8B  ok      1 tentativa(s)   0.01s
+
+  lendo d4:2f:4b:00:00:d8 (hidraw5, rádio) …
+      0x05   41B  ok      1 tentativa(s)   0.01s
+      0x08   48B  ok      1 tentativa(s)   0.02s
+      0x09   20B  ok      1 tentativa(s)   0.01s
+      0x0a    -   não declarado neste transporte
+      0x0b   42B  ok      1 tentativa(s)   0.02s
+      0x0c    -   não declarado neste transporte
+      0x20   64B  ok      1 tentativa(s)   0.01s
+      0x21    -   não declarado neste transporte
+      0x22   64B  ok      1 tentativa(s)   0.01s
+      0x80   64B  ok      1 tentativa(s)   0.03s
+      0x81   64B  ok      1 tentativa(s)   0.01s
+      0x82   10B  ok      1 tentativa(s)   0.02s
+      0x83   64B  ok      1 tentativa(s)   0.01s
+      0x84    -   não declarado neste transporte
+      0x85    -   não declarado neste transporte
+      0xa0    -   não declarado neste transporte
+      0xe0    -   não declarado neste transporte
+      0xf0   64B  ok      1 tentativa(s)   0.03s
+      0xf1   64B  ok      1 tentativa(s)   0.01s
+      0xf2   16B  ok      1 tentativa(s)   0.01s
+      0xf4   64B  ok      1 tentativa(s)   0.01s
+      0xf5    8B  ok      1 tentativa(s)   0.01s
+      0xf6  547B  ok      1 tentativa(s)   0.05s
+      0xf7    8B  ok      1 tentativa(s)   0.01s
+
+  lendo 14:3a:9a:00:00:ab (hidraw8, cabo) …
+      0x05   41B  ok      1 tentativa(s)   0.21s
+      0x08   48B  NÃO TEM 1 tentativa(s)   0.21s
+      0x09   20B  ok      1 tentativa(s)   0.21s
+      0x0a   27B  NÃO TEM 1 tentativa(s)   0.21s
+      0x0b   42B  ok      1 tentativa(s)   0.21s
+      0x0c   42B  NÃO TEM 1 tentativa(s)   0.21s
+      0x20   64B  ok      1 tentativa(s)   0.21s
+      0x21    5B  NÃO TEM 1 tentativa(s)   0.21s
+      0x22   64B  ok      1 tentativa(s)   0.21s
+      0x80   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0x81   64B  ok      1 tentativa(s)   0.21s
+      0x82   10B  NÃO TEM 1 tentativa(s)   0.21s
+      0x83   64B  ok      1 tentativa(s)   0.21s
+      0x84   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0x85    3B  ok      1 tentativa(s)   0.21s
+      0xa0    2B  NÃO TEM 1 tentativa(s)   0.21s
+      0xe0   64B  ok      1 tentativa(s)   0.21s
+      0xf0   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0xf1   64B  ok      1 tentativa(s)   0.21s
+      0xf2   16B  ok      1 tentativa(s)   0.21s
+      0xf4   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0xf5    4B  ok      1 tentativa(s)   0.21s
+      0xf6    -   não declarado neste transporte
+      0xf7    -   não declarado neste transporte
+
+  lendo 44:46:48:00:00:03 (hidraw10, cabo) …
+      0x05   41B  ok      1 tentativa(s)   0.21s
+      0x08   48B  NÃO TEM 1 tentativa(s)   0.21s
+      0x09   20B  ok      1 tentativa(s)   0.21s
+      0x0a   27B  NÃO TEM 1 tentativa(s)   0.21s
+      0x0b   42B  ok      1 tentativa(s)   0.21s
+      0x0c   42B  NÃO TEM 1 tentativa(s)   0.21s
+      0x20   64B  ok      1 tentativa(s)   0.21s
+      0x21    5B  NÃO TEM 1 tentativa(s)   0.21s
+      0x22   64B  ok      1 tentativa(s)   0.21s
+      0x80   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0x81   64B  ok      1 tentativa(s)   0.21s
+      0x82   10B  NÃO TEM 1 tentativa(s)   0.21s
+      0x83   64B  ok      1 tentativa(s)   0.21s
+      0x84   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0x85    3B  ok      1 tentativa(s)   0.21s
+      0xa0    2B  NÃO TEM 1 tentativa(s)   0.21s
+      0xe0   64B  ok      1 tentativa(s)   0.21s
+      0xf0   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0xf1   64B  ok      1 tentativa(s)   0.21s
+      0xf2   16B  ok      1 tentativa(s)   0.21s
+      0xf4   64B  NÃO TEM 1 tentativa(s)   0.21s
+      0xf5    4B  ok      1 tentativa(s)   0.21s
+      0xf6    -   não declarado neste transporte
+      0xf7    -   não declarado neste transporte
+
+  OS FEATURE REPORTS, LADO A LADO
+
+report  bytes  tentativas  CRC          conteúdo   cabo x rádio
+------  -----  ----------  -----------  ---------  --------------------------
+0x05    41     1           confere      com dado   DIFERE
+0x08    48     1           sem trailer  TODO ZERO  sem par (um transporte só)
+0x09    20     1           confere      com dado   DIFERE
+0x0a    27     -           -            NÃO LIDO   não implementado (EPIPE)
+0x0b    42     1           confere      com dado   DIFERE
+0x0c    42     -           -            NÃO LIDO   não implementado (EPIPE)
+0x20    64     1           confere      com dado   DIFERE
+0x21    5      -           -            NÃO LIDO   não implementado (EPIPE)
+0x22    64     1           confere      com dado   DIFERE
+0x80    64     1           sem trailer  TODO ZERO  sem par (um transporte só)
+0x81    64     1           confere      com dado   DIFERE
+0x82    10     1           sem trailer  TODO ZERO  sem par (um transporte só)
+0x83    64     1           confere      com dado   DIFERE
+0x84    64     -           -            NÃO LIDO   não implementado (EPIPE)
+0x85    3      1           n/a (cabo)   com dado   sem par (um transporte só)
+0xa0    2      -           -            NÃO LIDO   não implementado (EPIPE)
+0xe0    64     1           n/a (cabo)   com dado   sem par (um transporte só)
+0xf0    64     1           sem trailer  TODO ZERO  sem par (um transporte só)
+0xf1    64     1           confere      com dado   DIFERE
+0xf2    16     1           confere      com dado   DIFERE
+0xf4    64     1           sem trailer  TODO ZERO  sem par (um transporte só)
+0xf5    8      1           confere      com dado   DIFERE
+0xf6    547    1           sem trailer  TODO ZERO  sem par (um transporte só)
+0xf7    8      1           confere      com dado   sem par (um transporte só)
+
+  O QUE SEPARA UMA UNIDADE DA OUTRA
+
+report  difere entre unidades?  amostra do 1º aparelho
+------  ----------------------  -------------------------------------
+0x05    SIM (4 valores em 4)    05 17 00 fd ff fc ff a3 22 85 dd 87 …
+0x08    não                     08 00 00 00 00 00 00 00 00 00 00 00 …
+0x09    SIM (4 valores em 4)    09 f0 11 c3 9c fa a0 08 25 00 c4 13 …
+0x0b    SIM (4 valores em 4)    0b f0 11 c3 9c fa a0 08 25 00 00 c4 …
+0x20    SIM (4 valores em 4)    20 4a 75 6c 20 20 34 20 32 30 32 35 …
+0x22    SIM (4 valores em 4)    22 03 00 10 07 00 00 2a 00 10 01 00 …
+0x80    não                     80 00 00 00 00 00 00 00 00 00 00 00 …
+0x81    SIM (2 valores em 4)    81 00 00 00 00 00 00 00 00 00 00 00 …
+0x82    não                     82 00 00 00 00 00 00 00 00 00
+0x83    SIM (2 valores em 4)    83 ff ff ff ff 00 00 00 00 00 00 00 …
+0x85    não                     85 00 ff
+0xe0    SIM (2 valores em 2)    e0 12 00 02 00 00 00 00 00 00 00 00 …
+0xf0    não                     f0 00 00 00 00 00 00 00 00 00 00 00 …
+0xf1    SIM (2 valores em 4)    f1 ff ff ff ff 00 00 00 00 00 00 00 …
+0xf2    SIM (2 valores em 4)    f2 00 00 10 ff 00 00 00 00 00 00 00 …
+0xf4    não                     f4 00 00 00 00 00 00 00 00 00 00 00 …
+0xf5    SIM (2 valores em 4)    f5 00 00 00 ce f4 1d 40
+0xf6    não                     f6 00 00 00 00 00 00 00 00 00 00 00 …
+0xf7    não                     f7 00 00 00 45 3c 14 ea
+
+------------------------------------------------------------------------------
+RESUMO: 58/78 leituras ok; 0 reports idênticos entre transportes, 10 diferentes.
+------------------------------------------------------------------------------

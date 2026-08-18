@@ -319,6 +319,15 @@ class TestEnableImuNaoApagaADefesaDosOutrosExternos:
     def test_enable_imu_trava_mas_o_8bitdo_ja_foi_repintado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        # NOTA DATADA — 07/08/2026, E0 da LUGAR-À-MESA-01 (DECISÃO DELA: "calar
+        # a luz até a entrega existir"): em produção o tick não escreve mais LED
+        # nos externos (`EXTERNAL_PLAYER_LED_ENABLED` nasce False). A ORDEM que
+        # este teste mede — repintura ANTES do enable-IMU, para que um `os.write`
+        # travado não prenda o único worker do pool antes da defesa de LED de
+        # TODO MUNDO — continua sendo a ordem correta do código e volta a valer
+        # com a `E3`. Nada caducou: o interruptor é ligado aqui para que a
+        # regressão de ordem continue vigiada.
+        monkeypatch.setattr(ei_mod, "EXTERNAL_PLAYER_LED_ENABLED", True)
         travou = threading.Event()
         pode_prosseguir = threading.Event()
 

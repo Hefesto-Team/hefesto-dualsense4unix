@@ -17,13 +17,29 @@
        RUMBLE_CUSTOM_MULT_MAX` (2.0). Eram três: 2.0 no schema, 1.0 no handler
        `rumble.policy_custom` e 200% aqui; de 101% em diante a usuária levava um
        erro de validação que a aba reportava como "daemon offline?". Mexeu no
-       teto? Mexa no schema — este slider é `mult * 100`. -->
+       teto? Mexa no schema — este slider é `mult * 100`.
+
+       DECISÃO DELA, 11/08/2026: `upper` volta a 200 e o `value` de partida
+       passa de 70 para 100. Os dois números vinham do Balanceado antigo (0,7),
+       que virou 1,0 — deixar o 70 aqui seria âncora morta, um valor de partida
+       que não é degrau de nada. O tooltip logo abaixo promete "acima de 100 sai
+       mais forte" desde sempre; com `upper=100` isso era mentira que a própria
+       tela contava. Este XML não importa nada de ninguém: o 200 é cópia, e quem
+       o segura é o portão `tests/unit/test_rumble_mult_um_dono.py`, que compara
+       com `RUMBLE_CUSTOM_MULT_MAX * 100`.
+
+       ESTE 200 É MAIOR QUE O BOTÃO "Máximo" (150%), e de propósito: os quatro
+       botões são presets SEGUROS e o deslizador é o ajuste livre de quem aceita
+       o preço. O preço está medido — de 170 para cima a conta satura em 255 e
+       um terço da faixa que o jogo pede vira força constante. O porquê inteiro
+       está em `profiles/schema.py` (RUMBLE_CUSTOM_MULT_MAX) e na tabela da
+       escada em `daemon/subsystems/rumble.py`. -->
   <object class="GtkAdjustment" id="rumble_policy_adj">
     <property name="lower">0</property>
     <property name="upper">200</property>
     <property name="step-increment">1</property>
     <property name="page-increment">10</property>
-    <property name="value">70</property>
+    <property name="value">100</property>
   </object>
 
   <object class="GtkAdjustment" id="rumble_weak_adj">
@@ -44,8 +60,14 @@
 
   <!-- PERFIL-NASCE-CERTO-01: teto 100 -> 200. Com o teto em 100 e um perfil
        "vale sempre" exatamente em 100, não existia número escolhível pela
-       janela que fizesse o perfil de um jogo vencer. Espelha
-       profiles_actions.PRIORIDADE_MAXIMA. -->
+       janela que fizesse o perfil de um jogo vencer.
+
+       UNIFICA-CONSTANTE-01 (05/08/2026): a fonte agora é
+       profiles/schema.py (PRIORIDADE_MINIMA / PRIORIDADE_MAXIMA), a mesma
+       que profiles/sanidade.py e app/actions/profiles_actions.py importam.
+       Este XML não importa nada de ninguém — os dois números abaixo são
+       cópia, e quem os segura é o portão
+       tests/unit/test_teto_da_prioridade_tem_uma_fonte_so.py. -->
   <object class="GtkAdjustment" id="profile_priority_adj">
     <property name="lower">0</property>
     <property name="upper">200</property>
@@ -199,45 +221,23 @@
                 <property name="spacing">12</property>
                 <property name="margin">12</property>
 
-                <!-- AUTO-01.2: o co-op local (quatro jogadores) e a
-                     funcionalidade central do projeto e ate aqui NAO existia na
-                     janela - so por linha de comando (`coop on`). Este e o
-                     unico widget da aba montado em Glade: ele e o atalho de um
-                     clique para o que antes eram varias abas, e por isso vem
-                     ANTES do resto no arquivo. O install_home_tab() o reposiciona
-                     logo abaixo dos dois banners (que sao montados em codigo) e
-                     conecta o clique; rotulo e dica sao reescritos a cada
-                     _render_home com o numero de jogadores que o daemon reporta. -->
-                <child>
-                  <object class="GtkFrame" id="home_coop_frame">
-                    <property name="label" translatable="yes">Jogar acompanhada</property>
-                    <child>
-                      <object class="GtkBox" id="home_coop_box">
-                        <property name="orientation">vertical</property>
-                        <property name="spacing">6</property>
-                        <property name="margin">10</property>
-                        <child>
-                          <object class="GtkButton" id="home_coop_prep_btn">
-                            <property name="label" translatable="yes">Preparar co-op</property>
-                            <property name="halign">start</property>
-                            <property name="tooltip-text" translatable="yes">Deixa tudo pronto para jogar em dupla (ou em quatro): entra no modo de jogo, dá um jogador para cada controle e arruma a numeração. Um clique no lugar de várias abas.</property>
-                            <style><class name="suggested-action"/></style>
-                          </object>
-                          <packing><property name="expand">False</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkLabel" id="home_coop_prep_hint">
-                            <property name="wrap">True</property>
-                            <property name="xalign">0</property>
-                            <style><class name="dim-label"/></style>
-                          </object>
-                          <packing><property name="expand">False</property></packing>
-                        </child>
-                      </object>
-                    </child>
-                  </object>
-                  <packing><property name="expand">False</property></packing>
-                </child>
+                <!-- LAPIDE - COOP-SEM-INTERRUPTOR-01 (06/08/2026). Aqui morava
+                     o frame "Jogar acompanhada", com o botao "Preparar co-op"
+                     (home_coop_frame / home_coop_box / home_coop_prep_btn /
+                     home_coop_prep_hint), entregue pela AUTO-01.2 em 25/07 - o
+                     UNICO conteudo Glade desta aba. Saiu por decisao dela,
+                     tomada duas vezes: "todos e tudo no Hefesto tem que ta com
+                     o permitir co-op ligado (...) se eu conecto 4 controles no
+                     PC eu espero, com 4 pessoas jogando, que cada um controle o
+                     proprio personagem". Preparar o co-op deixou de ser um
+                     gesto porque o co-op deixou de ser uma opcao: o piso do
+                     daemon nasce ligado (DaemonConfig.coop_enabled) e o
+                     `coop.set {enabled:false}` recusa em voz alta.
+                     O gesto de RECUPERACAO que este botao carregava de carona
+                     (o ciclo forcado `coop.sync(force=True)`) nao evaporou: foi
+                     entregue ANTES da remocao ao botao "Reconciliar jogadores"
+                     da mesma aba (home_actions.py, IPC `coop.sync`).
+                     A aba agora e 100% montada em codigo (install_home_tab). -->
               </object>
             </child>
             <child type="tab">
@@ -319,12 +319,59 @@
                     <property name="halign">fill</property>
                     <property name="hexpand">True</property>
                     <property name="width-request">1040</property>
+                    <!-- CARD-ÚNICO-01: quem manda na visibilidade deste frame
+                         é a `status_actions._set_frame_estado_visivel`. Ela
+                         pediu *"apaga estado"*, e com UM controle ele some
+                         inteiro — o card passou a dizer tudo o que ele dizia.
+
+                         Ele NÃO foi apagado do glade porque continua sendo a
+                         única voz da aba em dois casos: com nenhum controle
+                         (não há card para falar, e é justamente quando a aba
+                         precisa dizer que o daemon não responde) e com 2+
+                         (perfil ativo e daemon são fatos GLOBAIS, e num card
+                         por controle apareceriam repetidos).
+
+                         E NÃO tem `no-show-all`, de propósito. Seria o
+                         reflexo óbvio para o frame não voltar num `show_all`,
+                         e é armadilha: o `no-show-all` também impede o
+                         `show_all` de marcar os FILHOS, e o frame voltaria
+                         VAZIO — é a mesma pegadinha que o
+                         `ControllerCard._esconder_modulo` documenta, onde a
+                         cura é `show_all()` ANTES do `no_show_all`. Aqui não
+                         é preciso nenhum dos dois: depois da montagem, quem
+                         chama `show_all` são os cards e o slot da rota, e
+                         nenhum deles sobe até este frame. -->
                     <child>
+                      <!-- ESTADO-TRES-LINHAS-01: entre o frame e o grid entrou
+                           uma caixa VERTICAL, e a razão é geométrica: a linha
+                           da bateria precisa da largura inteira, e uma célula
+                           de GtkGrid nunca é mais larga que as colunas que ela
+                           abrange. Pedir essa largura de dentro do grid fazia
+                           as quatro colunas expandirem juntas, e a coluna de
+                           valores voltava aos 1242px que a LARGURA-01/E2
+                           curou — há teste que reprova exatamente isso. Fora
+                           do grid, a barra estica sem contaminar ninguém.
+                           O `card` desceu do grid para esta caixa: é ela que
+                           passa a ser o retângulo desenhado. -->
+                      <object class="GtkBox" id="status_estado_box">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">6</property>
+                        <property name="margin">12</property>
+                        <style><class name="hefesto-dualsense4unix-card"/></style>
+                        <child>
                       <object class="GtkGrid" id="status_grid">
                         <property name="row-spacing">6</property>
                         <property name="column-spacing">12</property>
-                        <property name="margin">12</property>
-                        <style><class name="hefesto-dualsense4unix-card"/></style>
+                        <!-- ESTADO-TRES-LINHAS-01: `halign=start`. Sem ele o
+                             grid preenche a caixa e o GTK3 despeja TODO o
+                             excedente na última coluna — medido: 1549px para
+                             "USB" e "Ligado". Não era `hexpand` de ninguém; era
+                             o grid esticado com colunas que não pedem nada.
+                             Com `start` as quatro colunas ficam no natural e a
+                             sobra fica à direita, fora delas, que é onde ela
+                             não incomoda. Quem estica é a linha da bateria,
+                             abaixo, que tem caixa própria. -->
+                        <property name="halign">start</property>
 
                         <child>
                           <object class="GtkLabel">
@@ -341,76 +388,52 @@
                           <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
                         </child>
 
+                        <!-- ESTADO-TRES-LINHAS-01 (01/08, pedido dela: "na guia
+                             de estado temos 5 linhas. Isso deveria ser no
+                             máximo 3 linhas sendo a última a bateria e ela
+                             usaria 100% da largura horizontal").
+
+                             O grid passa de 2 colunas x 5 linhas para 4 colunas
+                             x 3 linhas. Os pares que sobravam empilhados viram
+                             pares lado a lado:
+
+                               linha 0:  Conexão: <valor>   Transporte: <valor>
+                               linha 1:  Perfil ativo: <v>  Hefesto:    <valor>
+                               linha 2:  Bateria:  [barra ocupando 1..3]
+
+                             Nenhum id muda — o Python escreve nos mesmos
+                             widgets, e o `status_battery_caption` continua
+                             sendo escondido junto com a barra quando há 2+
+                             controles (cada card tem a própria bateria). -->
                         <child>
                           <object class="GtkLabel">
                             <property name="label" translatable="yes">Transporte:</property>
                             <property name="xalign">1</property>
                           </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                          <packing><property name="left-attach">2</property><property name="top-attach">0</property></packing>
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_transport">
                             <property name="label">—</property>
                             <property name="xalign">0</property>
                           </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                          <packing><property name="left-attach">3</property><property name="top-attach">0</property></packing>
                         </child>
 
-                        <child>
-                          <!-- STATUS-02: id p/ a mixin esconder a linha junto
-                               com a barra quando há 2+ controles (cada card
-                               tem a própria bateria). -->
-                          <object class="GtkLabel" id="status_battery_caption">
-                            <property name="label" translatable="yes">Bateria:</property>
-                            <property name="xalign">1</property>
-                          </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
-                        </child>
-                        <child>
-                          <!-- LARGURA-01/E2: o teto da SOM-01 para no frame e
-                               não alcançava o miolo dele. Medido nesta bancada,
-                               com a janela em 1920 e o frame já em 1400: esta
-                               barra recebia 1242px para 150px de natural, com o
-                               "— %" desenhado no meio — o texto tem 26px, então
-                               sobravam 608px de barra vazia de cada lado de um
-                               número de dois dígitos.
-
-                               O `hexpand` era a causa dos DOIS defeitos, e não
-                               só do dela: num GtkGrid o `hexpand` de UM filho
-                               faz a COLUNA inteira expandir, então a coluna de
-                               valores (que tem 112px de maior tinta) também ia
-                               a 1242px. Tirá-lo cura os dois de uma vez.
-
-                               O par que fica é `halign=start` + `width-request`,
-                               a mesma receita já no ar nas três barras da aba
-                               Rumble (LARGURA-01/E1). E é par mesmo: no GTK3
-                               pedido de tamanho é MÍNIMO, nunca máximo — o
-                               `width-request` sozinho não segura nada, e com
-                               `halign=center` ele TRAVA o widget no número
-                               exato (a armadilha escrita em
-                               controller_card.py:314). -->
-                          <object class="GtkProgressBar" id="status_battery_bar">
-                            <property name="show-text">True</property>
-                            <property name="text">— %</property>
-                            <property name="halign">start</property>
-                            <property name="width-request">300</property>
-                          </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
-                        </child>
 
                         <child>
                           <object class="GtkLabel">
                             <property name="label" translatable="yes">Perfil ativo:</property>
                             <property name="xalign">1</property>
                           </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_active_profile">
                             <property name="label" translatable="yes">Nenhum</property>
                             <property name="xalign">0</property>
                           </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                         </child>
 
                         <child>
@@ -418,14 +441,156 @@
                             <property name="label" translatable="yes">Hefesto:</property>
                             <property name="xalign">1</property>
                           </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
+                          <packing><property name="left-attach">2</property><property name="top-attach">1</property></packing>
                         </child>
                         <child>
+                          <!-- ESTADO-TRES-LINHAS-01: este é o `hexpand` do grid,
+                               e é o ÚNICO. Ele mora na última coluna de
+                               propósito — é a coluna mais à direita e tem texto
+                               `xalign=0`, então o espaço extra cai depois do
+                               texto e nada se desloca. É o que faz a barra de
+                               bateria, que abrange 1..3, chegar na borda. -->
                           <object class="GtkLabel" id="status_daemon">
                             <property name="label" translatable="yes">Consultando...</property>
                             <property name="xalign">0</property>
+                            <property name="hexpand">True</property>
                           </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
+                          <packing><property name="left-attach">3</property><property name="top-attach">1</property></packing>
+                        </child>
+
+                        <!-- SOM-04, entrega 2: o botao que manda o som do
+                             SISTEMA para o alto-falante do controle, e que
+                             desfaz. Rotulo, sensibilidade e dica saem inteiros
+                             de `audio_saida.acao_da_rota`; quem os aplica e
+                             `status_actions._refresh_rota_de_som`.
+
+                             POR QUE AQUI, e nao no bloco "Alto-falante" do
+                             card, que e onde a sprint o pediu. Duas razoes, a
+                             primeira medida e a segunda de significado:
+
+                             1. NAO CABE la. Medido em 01/08/2026 com o card
+                                montado e alocado numa GtkOffscreenWindow, na
+                                escala de fonte +3 e na janela de projeto
+                                (1180px): um botao a mais no bloco custa +0px
+                                de largura e +36px de ALTURA, e leva o card de
+                                442 para 478px contra os 467px da faixa. Os
+                                11px de folga do card mais alto ja eram a folga
+                                mais fina da aba;
+                             2. a saida padrao do sistema NAO e um fato do
+                                controle — e do sistema. Com dois cards lado a
+                                lado haveria dois botoes para um unico
+                                interruptor global, e so um deles poderia estar
+                                certo. Este frame ja e o lugar dos fatos
+                                globais da aba (perfil ativo, daemon).
+
+                             O CUSTO AQUI, medido no mesmo dia: o minimo do
+                             grid sobe de 456 para 628px, e o frame tem
+                             width-request de 1040 — o minimo do grid continua
+                             MUITO abaixo do piso do frame, entao nada sobe
+                             para a janela. Altura: +0px. A folga horizontal do
+                             grid alocado era de 672px, e o botao ocupa parte
+                             de um vao que ja existia. -->
+                        <child>
+                          <object class="GtkButton" id="btn_som_no_controle">
+                            <property name="label" translatable="yes">Ouvir no controle</property>
+                            <!-- A dica INICIAL, antes da primeira leitura do
+                                 `pactl`. Ela e' copia fiel de
+                                 `audio_saida.DICA_ROTA_INICIAL`, e um teste
+                                 trava as duas juntas para nao derivarem. O
+                                 texto vale nos QUATRO estados do botao de
+                                 proposito: nos dois primeiros segundos a
+                                 janela ainda nao sabe onde o som esta, e
+                                 prometer a acao ali seria afirmar o que um
+                                 botao que pode nascer insensivel faria. -->
+                            <property name="tooltip-text" translatable="yes">Manda o som do sistema para o alto-falante do controle, e desfaz. O rótulo do botão diz o que o próximo clique faz, e a dica muda junto com ele assim que a janela ler a saída de áudio.</property>
+                            <!-- LARGURA-01, mesma causa que a E2 tirou da barra
+                                 de bateria: o par `halign=end` + `hexpand=True`
+                                 jogava o botao contra a borda direita do card e
+                                 ainda fazia a coluna de valores do grid
+                                 expandir. Medido: 1280px entre a ultima tinta
+                                 do grid e o botao — um botao de acao sem
+                                 vizinhanca nenhuma nao le como parte do card.
+                                 `start` sem `hexpand` o ancora logo depois dos
+                                 valores. -->
+                            <property name="halign">start</property>
+                            <property name="valign">center</property>
+                            <property name="sensitive">False</property>
+                          </object>
+                          <!-- SOM-ROTA-NO-CARD-01: este é o berço, não a
+                               casa. A `status_actions._alojar_botao_da_rota`
+                               muda o botão para o bloco "Alto-falante" do card
+                               primário assim que os cards existem. Ele nasce
+                               aqui porque o Glade é onde o rótulo, a dica e o
+                               `sensitive=False` inicial estão escritos — e
+                               atravessa a coluna 4, fora das duas colunas de
+                               par rótulo/valor, ocupando as DUAS linhas do
+                               grid para não criar uma terceira. -->
+                          <packing>
+                            <property name="left-attach">4</property>
+                            <property name="top-attach">0</property>
+                            <property name="height">2</property>
+                          </packing>
+                        </child>
+                      </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                        <child>
+                          <!-- STATUS-02: id p/ a mixin esconder a linha junto
+                               com a barra quando há 2+ controles (cada card
+                               tem a própria bateria). -->
+                          <!-- ESTADO-TRES-LINHAS-01: a linha da bateria tem
+                               geometria PRÓPRIA — uma célula só, abrangendo as
+                               quatro colunas, com uma caixa horizontal dentro.
+
+                               Por que não usar as colunas do grid como as duas
+                               linhas de cima: para a barra chegar na borda,
+                               alguma coluna abrangida por ela teria de
+                               expandir, e num GtkGrid o `hexpand` de um filho
+                               expande a COLUNA INTEIRA — a de "Transporte:" e
+                               "Hefesto:" junto, afastando cada rótulo do valor
+                               que ele nomeia. É o mesmo mecanismo que a
+                               LARGURA-01/E2 já tinha diagnosticado aqui.
+                               Numa caixa própria, o `expand` fica na barra e
+                               não contamina ninguém. -->
+                          <object class="GtkBox" id="status_battery_row">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">12</property>
+                            <child>
+                              <object class="GtkLabel" id="status_battery_caption">
+                                <property name="label" translatable="yes">Bateria:</property>
+                                <property name="xalign">1</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <!-- O `show-text` fica DESLIGADO: o
+                                   GtkProgressBar desenha o texto CENTRADO, e
+                                   numa barra que ocupa a largura toda o "75 %"
+                                   ficaria a ~600px de cada borda — exatamente
+                                   o defeito que ela apontou nas barras de
+                                   L2/R2 ("o valor flutuando no meio do
+                                   vazio"). O número vai para o rótulo ao lado,
+                                   colado no fim da barra. -->
+                              <object class="GtkProgressBar" id="status_battery_bar">
+                                <property name="show-text">False</property>
+                                <property name="text">— %</property>
+                                <property name="valign">center</property>
+                                <property name="width-request">300</property>
+                              </object>
+                              <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                            </child>
+                            <child>
+                              <!-- O número da bateria, espelhado do `set_text`
+                                   da barra por `_set_battery_text` — dono
+                                   único, para os dois não derivarem. -->
+                              <object class="GtkLabel" id="status_battery_pct">
+                                <property name="label">— %</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
                         </child>
                       </object>
                     </child>
@@ -456,7 +621,21 @@
                              respondia com rolagem, justamente o que as
                              sprints S3/S5 tiraram das outras abas. Em duas
                              colunas os 2 controles dividem a MESMA faixa
-                             vertical (4 viram 2x2). Grid e não FlowBox: o
+                             vertical (4 viram 2x2).
+
+                             EMPILHA-01 (02/08/2026): a decisão acima foi
+                             REVISTA por ela, olhando a tela com dois
+                             controles — *"os dois blocos não deveriam estar
+                             lado a lado mas um em cima do outro de forma que
+                             o scroll surgisse"*. O grid continua sendo grid
+                             (a geometria explícita é o que evita o
+                             "Negative content width" do FlowBox), mas o
+                             número de colunas passou a ser 1 no
+                             `_rebuild_status_cards`. A rolagem vertical desta
+                             aba deixou de ser defeito e passou a ser o
+                             desenho.
+
+                             Grid e não FlowBox: o
                              FlowBox é quem dropou 3 dos 4 botões do rodapé
                              com "Negative content width"
                              (FIX-GUI-COSMIC-REMEDIATION-01) — aqui a
@@ -477,6 +656,35 @@
             </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label" translatable="yes">Status</property></object>
+            </child>
+
+            <!-- ABA "NO JOGO" (ESCONDER-EM-VEZ-DE-SAIR / 09/08/2026).
+                 Pedido dela, olhando a aba Status: *"eu sei que a aba status é
+                 uma coisa, mas isso converter em input seja via xbox ou
+                 dualsense ou nativo é outra"*. A aba Status mostra o controle
+                 FÍSICO; esta mostra o que atravessa para o JOGO, recurso por
+                 recurso, nos três modos.
+
+                 Ela mora AQUI, colada na Status, e não dentro dela: a aba
+                 Status está exatamente no orçamento de largura (dois cards
+                 pedem 1180px numa janela de 1180), e qualquer widget novo
+                 dentro de um card estoura o portão de geometria. Uma página
+                 própria não disputa largura com ninguém.
+
+                 O conteúdo é montado em CÓDIGO (`install_no_jogo_tab`, em
+                 `status_actions.py`), no molde da aba Início e dos cards do
+                 Status: o glade só reserva a página e o berço. -->
+            <child>
+              <object class="GtkBox" id="tab_no_jogo_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel" id="tab_no_jogo_label">
+                <property name="label" translatable="yes">No jogo</property>
+              </object>
             </child>
 
             <!-- ABA TRIGGERS -->
@@ -595,17 +803,31 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LARGURA-01/E9: a fileira de acao vai para o PE da
+                                 coluna. O frame recebe `expand=True` e o conteudo
+                                 era todo empacotado no topo, deixando ~770px de
+                                 vazio DENTRO da moldura, abaixo dos botoes — o
+                                 defeito que a VAO-01 registrou como nao resolvido
+                                 ("a folga saiu de entre o Modo: e o Aplicar, mas
+                                 foi para BAIXO dos botoes"). -->
+                            <property name="valign">end</property>
+                            <property name="vexpand">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="trigger_left_apply">
-                                <property name="tooltip-text" translatable="yes">Envia ao controle o modo e os ajustes escolhidos aqui, no gatilho L2 (o de cima, do lado esquerdo).</property>
+                                <property name="tooltip-text" translatable="yes">Envia ao controle selecionado o modo e os ajustes escolhidos aqui, no gatilho L2 (o de cima, do lado esquerdo).</property>
                                 <style><class name="btn-trigger-apply"/></style>
                                 <property name="label" translatable="yes">Aplicar em L2</property>
                                 <signal name="clicked" handler="on_trigger_left_apply"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Aplicar gatilho adaptativo no L2</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho esquerdo ao controle</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho esquerdo ao controle selecionado</property>
                                 </object>
                               </child>
                               </object>
@@ -733,17 +955,31 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LARGURA-01/E9: a fileira de acao vai para o PE da
+                                 coluna. O frame recebe `expand=True` e o conteudo
+                                 era todo empacotado no topo, deixando ~770px de
+                                 vazio DENTRO da moldura, abaixo dos botoes — o
+                                 defeito que a VAO-01 registrou como nao resolvido
+                                 ("a folga saiu de entre o Modo: e o Aplicar, mas
+                                 foi para BAIXO dos botoes"). -->
+                            <property name="valign">end</property>
+                            <property name="vexpand">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="trigger_right_apply">
-                                <property name="tooltip-text" translatable="yes">Envia ao controle o modo e os ajustes escolhidos aqui, no gatilho R2 (o de cima, do lado direito).</property>
+                                <property name="tooltip-text" translatable="yes">Envia ao controle selecionado o modo e os ajustes escolhidos aqui, no gatilho R2 (o de cima, do lado direito).</property>
                                 <style><class name="btn-trigger-apply"/></style>
                                 <property name="label" translatable="yes">Aplicar em R2</property>
                                 <signal name="clicked" handler="on_trigger_right_apply"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Aplicar gatilho adaptativo no R2</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho direito ao controle</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho direito ao controle selecionado</property>
                                 </object>
                               </child>
                               </object>
@@ -872,7 +1108,12 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="lightbar_apply">
                                 <property name="tooltip-text" translatable="yes">Acende a barra de luz do controle selecionado com a cor e o brilho escolhidos aqui.</property>
@@ -881,7 +1122,7 @@
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Aplicar cor na lightbar</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Envia cor selecionada para a barra de LED do controle</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Envia cor selecionada para a barra de LED do controle selecionado</property>
                                 </object>
                               </child>
                               </object>
@@ -894,7 +1135,7 @@
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Apagar lightbar</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Desliga a barra de LED do controle</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Desliga a barra de LED do controle selecionado</property>
                                 </object>
                               </child>
                               </object>
@@ -952,6 +1193,12 @@
 
                         <child>
                           <object class="GtkScale" id="lightbar_brightness_scale">
+                            <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                                 largura inteira da coluna (medido: 766px para 38px de natural) e o
+                                 valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                                 `width-request` sozinho nao segura, e `halign=center` trava. -->
+                            <property name="halign">start</property>
+                            <property name="width-request">400</property>
                             <property name="tooltip-text" translatable="yes">Quanto a barra de luz acende, de apagada até o brilho máximo. Vale na próxima vez que você aplicar a cor.</property>
                             <property name="draw-value">True</property>
                             <property name="digits">0</property>
@@ -990,6 +1237,13 @@
                             <property name="label" translatable="yes">Escolha o desenho das luzes. Isto muda só a aparência — o número do controle continua sendo o do cabeçalho.</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
+                            <!-- LARGURA-01/E3: teto de ~100 caracteres por linha (ver os outros
+                                 quatro paragrafos com a mesma nota). So age junto com o `wrap`. -->
+                            <property name="max-width-chars">100</property>
+                            <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                                 acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                                 esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                            <property name="halign">start</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
@@ -1070,7 +1324,12 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">6</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p1">
                                 <property name="label" translatable="yes">Desenho do P1</property>
@@ -1118,7 +1377,7 @@
                             <child>
                               <object class="GtkButton" id="player_leds_preset_none">
                                 <property name="label" translatable="yes">Todas apagadas</property>
-                                <property name="tooltip_text" translatable="yes">Apaga as 5 luzes deste controle. Sem escolha sua, volta a valer o desenho do número do controle.</property>
+                                <property name="tooltip_text" translatable="yes">Apaga as 5 luzes deste controle. Sem escolha sua, volta a valer o desenho do número deste controle.</property>
                                 <signal name="clicked" handler="on_player_leds_preset_none"/>
                               </object>
                               <packing><property name="expand">False</property></packing>
@@ -1144,12 +1403,12 @@
                                      O texto novo fala do que está à vista: os
                                      botões de desenho logo acima e o momento
                                      em que reenviar é útil. -->
-                                <property name="tooltip-text" translatable="yes">Reenvia ao controle o desenho escolhido nos botões acima. Útil quando o controle se reconectou ou você trocou de perfil e quer ver as luzes voltarem ao desenho que está aqui. Não muda o número do controle.</property>
+                                <property name="tooltip-text" translatable="yes">Reenvia ao controle selecionado o desenho escolhido nos botões acima. Útil quando ele se reconectou ou você trocou de perfil e quer ver as luzes voltarem ao desenho que está aqui. Não muda o número do jogador.</property>
                                 <signal name="clicked" handler="on_player_leds_apply"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Aplicar o desenho das luzes</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Reenvia ao controle o desenho das 5 luzes escolhido acima</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Reenvia ao controle selecionado o desenho das 5 luzes escolhido acima</property>
                                 </object>
                               </child>
                               </object>
@@ -1189,10 +1448,19 @@
                              a numeração deixou de morar nela. -->
                         <child>
                           <object class="GtkLabel" id="player_leds_note">
-                            <property name="label" translatable="yes">&lt;i&gt;Cada botão de desenho envia na hora ao controle e fica salvo no perfil ativo. &quot;Aplicar o desenho&quot; só reenvia o que já está escolhido — útil depois de reconectar o controle ou trocar de perfil.&lt;/i&gt;</property>
+                            <property name="label" translatable="yes">&lt;i&gt;Cada botão de desenho envia na hora ao controle selecionado e fica salvo no perfil ativo. &quot;Aplicar o desenho&quot; só reenvia o que já está escolhido — útil depois de reconectar o controle selecionado ou trocar de perfil.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
+                            <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
+                                 este paragrafo estica ate a largura da aba (medido: 1869px na
+                                 Emulacao, ~230 caracteres) e vira parede de texto. So funciona
+                                 junto com o `wrap` acima. -->
+                            <property name="max-width-chars">100</property>
+                            <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                                 acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                                 esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                            <property name="halign">start</property>
                             <property name="margin-top">8</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -1200,10 +1468,19 @@
 
                         <child>
                           <object class="GtkLabel" id="player_leds_auto_note">
-                            <property name="label" translatable="yes">&lt;i&gt;O desenho que você escolhe aqui vence o automático neste controle, mesmo com as cores automáticas ligadas. Sem escolha sua, vale o desenho do número do controle. Com o co-op ligado, quem manda no desenho é o co-op.&lt;/i&gt;</property>
+                            <property name="label" translatable="yes">&lt;i&gt;O desenho que você escolhe aqui vence o automático neste controle, mesmo com as cores automáticas ligadas. Sem escolha sua, vale o desenho do número deste controle. Com o co-op ligado, quem manda no desenho é o co-op.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
+                            <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
+                                 este paragrafo estica ate a largura da aba (medido: 1869px na
+                                 Emulacao, ~230 caracteres) e vira parede de texto. So funciona
+                                 junto com o `wrap` acima. -->
+                            <property name="max-width-chars">100</property>
+                            <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                                 acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                                 esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                            <property name="halign">start</property>
                             <property name="margin-top">4</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -1241,11 +1518,16 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">6</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
 
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_economia">
-                                <property name="tooltip-text" translatable="yes">Vibração fraca em todos os jogos: poupa bateria e faz menos barulho.</property>
+                                <property name="tooltip-text" translatable="yes">30% do que o jogo pede: vibração fraca em todos os jogos, poupa bateria e faz menos barulho.</property>
                                 <property name="label" translatable="yes">Economia</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_economia"/>
@@ -1253,7 +1535,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_balanceado">
-                                <property name="tooltip-text" translatable="yes">Vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão.</property>
+                                <property name="tooltip-text" translatable="yes">100%: vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão.</property>
                                 <property name="label" translatable="yes">Balanceado</property>
                                 <property name="active">True</property>
                                 <signal name="toggled" handler="on_rumble_policy_balanceado"/>
@@ -1261,7 +1543,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_max">
-                                <property name="tooltip-text" translatable="yes">Vibração no máximo que o controle aguenta. Gasta bateria bem mais depressa.</property>
+                                <property name="tooltip-text" translatable="yes">150%: aumenta pela metade a vibração que o jogo pede. Só as cenas mais fortes batem no limite do controle e ficam parecidas entre si. Gasta bateria bem mais depressa.</property>
                                 <property name="label" translatable="yes">Máximo</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_max"/>
@@ -1269,7 +1551,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_auto">
-                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle e o jogo aberto.</property>
+                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle. Nunca aumenta a vibração além do que o jogo pediu: ele existe para poupar bateria.</property>
                                 <property name="label" translatable="yes">Auto</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_auto"/>
@@ -1337,7 +1619,7 @@
                               <object class="GtkScale" id="rumble_policy_slider">
                                 <property name="halign">start</property>
                                 <property name="width-request">400</property>
-                                <property name="tooltip-text" translatable="yes">Multiplica a vibração que o jogo pede: abaixo de 100 sai mais fraca, acima de 100 sai mais forte.</property>
+                                <property name="tooltip-text" translatable="yes">Multiplica a vibração que o jogo pede: abaixo de 100 sai mais fraca, acima de 100 sai mais forte. Vai além dos quatro botões — mas de 170 para cima metade das cenas fortes bate no limite do controle e fica tudo parecido.</property>
                                 <property name="hexpand">True</property>
                                 <property name="draw-value">True</property>
                                 <property name="digits">0</property>
@@ -1354,9 +1636,51 @@
                         <!-- Label educativo do modo Auto (oculto por padrão) -->
                         <child>
                           <object class="GtkLabel" id="rumble_policy_auto_label">
-                            <property name="label" translatable="yes">Modo Auto: ajusta intensidade conforme a bateria do controle.
-Bateria &gt;50%: 100% (Máximo).  20-50%: 70% (Balanceado).  &lt;20%: 30% (Economia).
-Transições com debounce de 5 segundos para evitar oscilação.</property>
+                            <!-- DECISÃO, 11/08/2026: o Auto NUNCA amplifica — ele
+                                 existe para poupar bateria, e amplificar sozinho
+                                 seria o oposto do que ele promete. A escada dele
+                                 é PRÓPRIA (1,0 / 0,7 / 0,3) e não é mais a dos
+                                 quatro botões: desde que "Máximo" passou a valer
+                                 150%, chamar o degrau de cima de "Máximo" e o do
+                                 meio de "Balanceado" virou mentira, e é o que
+                                 este texto dizia. "Debounce" também saiu: é
+                                 jargão, e ela nunca vê jargão. A escada viva está
+                                 em `core.rumble._effective_mult`. -->
+                            <property name="label" translatable="yes">Modo Auto: ajusta a força sozinho, conforme a bateria do controle.
+Bateria acima de 50%: 100%, o que o jogo pediu.  Entre 20% e 50%: 70%.  Abaixo de 20%: 30%.
+O Auto nunca passa de 100%: ele existe para poupar bateria, não para aumentar a vibração.
+Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- A INTENSIDADE QUE NÃO ALCANÇA (11/08/2026).
+                             Medido no journal da máquina dela:
+                             `launch_env_materializado ... backends=[]
+                             emulacao=False mascara=dualsense native=False` —
+                             sem gamepad virtual E sem Conexão Nativa ao mesmo
+                             tempo. Nesse estado o multiplicador destes quatro
+                             botões NÃO age sobre a vibração do jogo: ele mora
+                             no caminho de saída do gamepad virtual
+                             (`daemon.subsystems.gamepad.apply_game_rumble`, que
+                             só roda a partir do sink criado em
+                             `make_primary_rumble_sink`), e sem gamepad virtual
+                             esse caminho não existe. A tela seguia mostrando
+                             Economia/Balanceado/Máximo como se valessem.
+
+                             Escondido por padrão e preenchido em código
+                             (`rumble_actions.texto_do_alcance_da_intensidade`),
+                             pela mesma disciplina do `rumble_state_label`: sem
+                             o dado do daemon a linha não afirma nada — "não
+                             sei" e "não alcança" mandam caçar em lugares
+                             diferentes. -->
+                        <child>
+                          <object class="GtkLabel" id="rumble_policy_aviso">
+                            <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
                             <property name="visible">False</property>
@@ -1454,14 +1778,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="spacing">8</property>
                             <child>
                               <object class="GtkButton" id="rumble_test_500ms">
-                                <property name="tooltip-text" translatable="yes">Faz o controle vibrar por meio segundo com os valores acima, para você sentir antes de aplicar.</property>
+                                <property name="tooltip-text" translatable="yes">Faz o controle selecionado vibrar por meio segundo com os valores acima, para você sentir antes de aplicar.</property>
                                 <property name="label" translatable="yes">Testar por 500 ms</property>
                                 <signal name="clicked" handler="on_rumble_test_500ms"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="rumble_apply">
-                                <property name="tooltip-text" translatable="yes">Envia ao controle a vibração escolhida; passa a valer até você mudar de novo.</property>
+                                <property name="tooltip-text" translatable="yes">Envia ao controle selecionado a vibração escolhida; passa a valer até você mudar de novo.</property>
                                 <property name="label" translatable="yes">Aplicar</property>
                                 <signal name="clicked" handler="on_rumble_apply"/>
                               </object>
@@ -1469,7 +1793,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <child>
                               <object class="GtkButton" id="rumble_passthrough">
                                 <property name="label" translatable="yes">Deixar o jogo controlar a vibração</property>
-                                <property name="tooltip-text" translatable="yes">Devolve a vibração ao jogo. Use depois de 'Parar' para o jogo voltar a fazer o controle vibrar.</property>
+                                <property name="tooltip-text" translatable="yes">Devolve a vibração ao jogo. Use depois de 'Parar' para o jogo voltar a fazer os controles vibrarem.</property>
                                 <signal name="clicked" handler="on_rumble_passthrough"/>
                               </object>
                             </child>
@@ -1505,7 +1829,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <object class="GtkButton" id="rumble_stop">
                                 <style><class name="btn-rumble-stop"/></style>
                                 <property name="label" translatable="yes">Parar</property>
-                                <property name="tooltip-text" translatable="yes">Trava o controle em silêncio: nada vibra, nem no jogo. Para o jogo voltar a comandar, clique em 'Deixar o jogo controlar a vibração'.</property>
+                                <property name="tooltip-text" translatable="yes">Trava o controle selecionado em silêncio: nada vibra, nem no jogo. Para o jogo voltar a comandar, clique em 'Deixar o jogo controlar a vibração'.</property>
                                 <signal name="clicked" handler="on_rumble_stop"/>
                               </object>
                             </child>
@@ -1607,7 +1931,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       <object class="GtkBox" id="profiles_btnbox">
                         <property name="orientation">horizontal</property>
                         <property name="spacing">4</property>
-                        <property name="homogeneous">True</property>
+                        <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                             da a TODO botao a largura do maior rotulo da fileira — era assim
+                             que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                             regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                             nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                             :1509, que foram curadas antes e servem de referencia. -->
                         <child>
                           <object class="GtkButton" id="profile_new_button">
                             <property name="tooltip-text" translatable="yes">Cria um perfil em branco. Um perfil guarda os gatilhos, a cor e a vibração de um jogo.</property>
@@ -1643,7 +1972,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_activate_button">
-                            <property name="tooltip-text" translatable="yes">Passa a usar o perfil selecionado agora: os gatilhos, a cor e a vibração dele vão para o controle.</property>
+                            <property name="tooltip-text" translatable="yes">Passa a usar o perfil selecionado agora: os gatilhos, a cor e a vibração dele vão para os controles.</property>
                             <property name="label" translatable="yes">Ativar</property>
                             <signal name="clicked" handler="on_profile_activate"/>
                           <child internal-child="accessible">
@@ -1722,6 +2051,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkEntry" id="profile_name_entry">
+                            <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                                 largura inteira da coluna (medido: 766px para 38px de natural) e o
+                                 valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                                 `width-request` sozinho nao segura, e `halign=center` trava. -->
+                            <property name="halign">start</property>
+                            <property name="width-request">420</property>
                             <property name="tooltip-text" translatable="yes">Nome do perfil, o que aparece na lista ao lado. Escolha um que lembre o jogo.</property>
                             <property name="hexpand">True</property>
                           </object>
@@ -1739,6 +2074,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                H6 (UI-PROFILES-LAYOUT-POLISH-01): marks 0/50/100 no
                                bottom dão referência visual dos extremos. -->
                           <object class="GtkScale" id="profile_priority_scale">
+                            <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                                 largura inteira da coluna (medido: 766px para 38px de natural) e o
+                                 valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                                 `width-request` sozinho nao segura, e `halign=center` trava. -->
+                            <property name="halign">start</property>
+                            <property name="width-request">400</property>
                             <property name="adjustment">profile_priority_adj</property>
                             <property name="draw-value">True</property>
                             <property name="digits">0</property>
@@ -1812,6 +2153,100 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                   </object>
                                   <packing><property name="expand">True</property><property name="fill">True</property></packing>
                                 </child>
+                                <!-- O NOME do jogo, ao lado do número.
+                                     JOGO-QUE-SE-DIZ-01 (13/08/2026, pedido
+                                     dela): o campo passou a aceitar o endereço
+                                     da loja e a lista dos jogos desta máquina,
+                                     e depois de escolher um jogo o que fica no
+                                     campo é `851100` — que não diz nada a
+                                     ninguém, nem a ela daqui a um mês. Este
+                                     rótulo é o menor lugar legível para o nome:
+                                     mesma linha, à direita do campo.
+
+                                     Nasce SEM texto e escondido; quem decide o
+                                     que ele diz é a função pura
+                                     `jogos_locais.frase_do_campo_do_jogo`, e
+                                     ela também o usa para a frase de "não
+                                     reconheci este endereço". Um widget, dois
+                                     recados que nunca acontecem juntos. -->
+                                <child>
+                                  <object class="GtkLabel" id="profile_jogo_reconhecido">
+                                    <property name="visible">False</property>
+                                    <property name="no-show-all">True</property>
+                                    <property name="xalign">0</property>
+                                    <property name="ellipsize">end</property>
+                                    <property name="max-width-chars">36</property>
+                                    <property name="halign">start</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- A caixinha que TIRA um jogo do Steam Input.
+                                 DECISÃO DELA, 07/08/2026 (resposta 1 do painel):
+                                 "no editor do perfil, logo abaixo do jogo
+                                 escolhido" — e é por isso que ela mora AQUI, e
+                                 não na aba Sistema, onde o botão que MARCA
+                                 sempre esteve. Aparece só com "Jogo da Steam"
+                                 escolhido, porque a marca é por appid.
+
+                                 O texto NÃO diz "o Hefesto sai da frente": ela
+                                 mediu o contrário em 06/08
+                                 (CONTROLE-SONY-MEDIDO-01, seção A INVERSÃO) —
+                                 com o jogo na lista, os gatilhos dela seguraram
+                                 e a cor dela FICOU. O que a marca entrega é a
+                                 ENTRADA; a SAÍDA continua sendo do Hefesto.
+
+                                 Nasce `visible=False` + `no-show-all=True` pelo
+                                 mesmo motivo do box do jogo, e o código a
+                                 revela na ordem que a CAMPO-QUE-NAO-NASCIA-01
+                                 provou ser a única que funciona: desarmar o
+                                 `no_show_all` ANTES do `show_all()`. -->
+                            <child>
+                              <object class="GtkBox" id="profile_steam_input_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">2</property>
+                                <property name="visible">False</property>
+                                <property name="no-show-all">True</property>
+                                <child>
+                                  <object class="GtkCheckButton" id="profile_steam_input_check">
+                                    <property name="label" translatable="yes">Esconder os controles físicos neste jogo</property>
+                                    <property name="tooltip-text" translatable="yes">Para jogos que mostram os seus controles DOBRADOS — um Xbox e um Sony para cada um. Marcado: o jogo vê só os controles do Hefesto, e a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Desmarcado: o jogo volta a enxergar também os controles físicos. Feche e abra o jogo para valer.</property>
+                                  <child internal-child="accessible">
+                                    <object class="AtkObject">
+                                      <property name="AtkObject::accessible-name" translatable="yes">Esconder os controles físicos neste jogo</property>
+                                      <property name="AtkObject::accessible-description" translatable="yes">Para jogos que mostram os seus controles dobrados, um Xbox e um Sony para cada um. Marcado, o jogo vê só os controles do Hefesto, e a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Feche e abra o jogo para a marca valer</property>
+                                    </object>
+                                  </child>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="profile_steam_input_hint">
+                                    <property name="label" translatable="yes">&lt;i&gt;Marque quando o jogo mostrar os seus controles dobrados. A marca vale para o jogo inteiro, não só para este perfil.&lt;/i&gt;</property>
+                                    <property name="use-markup">True</property>
+                                    <property name="xalign">0</property>
+                                    <property name="wrap">True</property>
+                                    <property name="halign">start</property>
+                                    <property name="max-width-chars">70</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="profile_exigencia_invisivel">
+                                    <property name="label" translatable="yes"></property>
+                                    <property name="use-markup">True</property>
+                                    <property name="xalign">0</property>
+                                    <property name="wrap">True</property>
+                                    <property name="halign">start</property>
+                                    <property name="max-width-chars">70</property>
+                                    <property name="visible">False</property>
+                                    <property name="no-show-all">True</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
@@ -1880,6 +2315,27 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
+
+                            <!-- PROCESSO-CEGO-01: o aviso de que "process_name"
+                                 não casa NESTE ambiente. Nasce invisível e só
+                                 aparece quando o daemon disse qual backend está
+                                 lendo a janela
+                                 (`profiles_actions.texto_do_processo_que_nao_casa`),
+                                 pela mesma disciplina do `rumble_policy_aviso`:
+                                 sem o dado do daemon a linha não afirma nada —
+                                 "não sei" e "não casa" mandam caçar em lugares
+                                 diferentes. -->
+                            <child>
+                              <object class="GtkLabel" id="profile_process_name_aviso">
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                                <property name="visible">False</property>
+                                <property name="no-show-all">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
                             <child>
                               <object class="GtkLabel" id="profile_editor_hint">
                                 <property name="label" translatable="yes">&lt;i&gt;AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são ignorados.&lt;/i&gt;</property>
@@ -2004,7 +2460,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   <object class="GtkBox" id="daemon_btns">
                     <property name="orientation">horizontal</property>
                     <property name="spacing">4</property>
-                    <property name="homogeneous">True</property>
+                    <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                         da a TODO botao a largura do maior rotulo da fileira — era assim
+                         que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                         regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                         nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                         :1509, que foram curadas antes e servem de referencia. -->
                     <child>
                       <object class="GtkButton" id="daemon_start_button">
                         <property name="tooltip-text" translatable="yes">Liga o Hefesto: luzes, gatilhos e os seus ajustes voltam a valer.</property>
@@ -2020,20 +2481,20 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_stop_button">
-                        <property name="tooltip-text" translatable="yes">Desliga o Hefesto: o controle continua jogando, mas sem luzes, gatilhos nem os seus ajustes.</property>
+                        <property name="tooltip-text" translatable="yes">Desliga o Hefesto: os controles continuam jogando, mas sem luzes, gatilhos nem os seus ajustes.</property>
                         <property name="label" translatable="yes">Desligar o Hefesto</property>
                         <signal name="clicked" handler="on_daemon_stop"/>
                       <child internal-child="accessible">
                         <object class="AtkObject">
                           <property name="AtkObject::accessible-name" translatable="yes">Desligar o Hefesto</property>
-                          <property name="AtkObject::accessible-description" translatable="yes">Desliga o Hefesto: o controle continua funcionando, mas sem luzes, gatilhos nem seus ajustes</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Desliga o Hefesto: os controles continuam funcionando, mas sem luzes, gatilhos nem seus ajustes</property>
                         </object>
                       </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_refresh_button">
-                        <property name="tooltip-text" translatable="yes">Relê o estado do Hefesto e atualiza o que esta aba mostra. Não muda nada no controle.</property>
+                        <property name="tooltip-text" translatable="yes">Relê o estado do Hefesto e atualiza o que esta aba mostra. Não muda nada nos controles.</property>
                         <property name="label" translatable="yes">Atualizar</property>
                         <signal name="clicked" handler="on_daemon_refresh"/>
                       </object>
@@ -2143,36 +2604,59 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <child>
                           <object class="GtkButton" id="btn_steam_ready">
                             <property name="label" translatable="yes">Deixar tudo pronto</property>
-                            <property name="tooltip-text" translatable="yes">Ajusta de uma vez tudo que costuma brigar com o controle nos jogos da Steam. Se a Steam estiver aberta, eu peço sua permissão antes de fechá-la por uns 20 segundos (e abro de novo). Com um jogo aberto, não faço nada.</property>
+                            <property name="tooltip-text" translatable="yes">Ajusta de uma vez tudo que costuma brigar com os controles nos jogos da Steam. Se a Steam estiver aberta, eu peço sua permissão antes de fechá-la por uns 20 segundos (e abro de novo). Com um jogo aberto, não faço nada.</property>
                           <child internal-child="accessible">
                             <object class="AtkObject">
                               <property name="AtkObject::accessible-name" translatable="yes">Deixar tudo pronto</property>
-                              <property name="AtkObject::accessible-description" translatable="yes">Prepara todos os jogos da Steam para funcionarem com o controle, sem você precisar escolher como</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Prepara todos os jogos da Steam para funcionarem com os controles, sem você precisar escolher como</property>
                             </object>
                           </child>
                           </object>
                         </child>
                         <child>
                           <!-- BOTÃO-QUE-NÃO-MENTE-01 (entrega 4): o tooltip
-                               terminava com "e dá para desfazer". NÃO DÁ. A
-                               função que desmarca existe
-                               (`remove_appid_from_steam_input_allowlist`,
-                               integrations/steam_launch_options.py:821) e tem
-                               ZERO chamadores em `src/` — nove em `tests/`.
-                               Não há superfície de remoção nenhuma: nem aqui,
-                               nem na linha de comando. Enquanto o desfazer não
-                               existir, o texto para de prometer e passa a
-                               dizer o custo, que está escrito no próprio
-                               código: o jogo marcado fica sem cor, gatilhos e
-                               co-op do Hefesto. Mentira na tela é pior que
-                               falta. -->
+                               terminava com "e dá para desfazer". NÃO DAVA — a
+                               função que desmarca
+                               (`remove_appid_from_steam_input_allowlist`)
+                               tinha ZERO chamadores em `src/`. O texto passou
+                               então a AVISAR que não havia como desmarcar.
+
+                               NOTA DATADA — 07/08/2026: o aviso CADUCOU, e por
+                               decisão dela (resposta 1 do painel de 07/08) o
+                               desmarcar nasceu no editor do perfil, logo
+                               abaixo do jogo escolhido — a caixinha
+                               `profile_steam_input_check` da aba Perfis. O
+                               aviso sai porque deixou de ser verdade; o texto
+                               agora diz ONDE se desmarca.
+
+                               O custo também foi remedido e mudou: a frase
+                               antiga ("fica sem cor, gatilhos e co-op") está
+                               REFUTADA pela medição dela de 06/08
+                               (CONTROLE-SONY-MEDIDO-01, seção A INVERSÃO): com
+                               o jogo marcado, os gatilhos dela seguraram e a
+                               cor dela ficou. O que a marca entrega é a
+                               ENTRADA (fim do controle dobrado); a SAÍDA
+                               continua sendo do Hefesto.
+
+                               NOTA DATADA — 09/08/2026
+                               (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela): "o
+                               controle passa a ser entregue pela Steam" morreu.
+                               A marca inverteu de lado — em vez de tirar o
+                               Hefesto da frente, ela ESCONDE o controle físico
+                               do jogo. O texto agora diz isso, e é o mesmo que
+                               a caixinha da aba Perfis diz, porque marcam a
+                               mesma coisa. O que a inversão devolveu, e o texto
+                               velho tinha de omitir: os JOGADORES. Derrubar os
+                               controles virtuais para curar o dobrado derrubava
+                               o jogador 2 junto — vinte vezes no journal dela em
+                               08/08. -->
                           <object class="GtkButton" id="btn_steam_game_broken">
                             <property name="label" translatable="yes">Este jogo não funciona</property>
-                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele o controle passa a ser entregue direto pela Steam e o Hefesto sai da frente. Use quando um jogo específico ignora o controle. Não fecha a Steam. Atenção: ainda não existe um botão para desmarcar — enquanto a marca estiver lá, esse jogo fica sem cor, gatilhos e co-op do Hefesto.</property>
+                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele os controles físicos ficam escondidos, o jogo deixa de mostrá-los dobrados e passa a ver só os controles do Hefesto — a sua cor, os seus gatilhos, a sua vibração e os seus jogadores continuam valendo. Use quando um jogo específico ignora os controles. Não fecha a Steam. Feche e abra o jogo para valer. Para tirar a marca: aba Perfis, no editor do perfil, logo abaixo do jogo escolhido.</property>
                           <child internal-child="accessible">
                             <object class="AtkObject">
                               <property name="AtkObject::accessible-name" translatable="yes">Este jogo não funciona</property>
-                              <property name="AtkObject::accessible-description" translatable="yes">Troca a estratégia do último jogo aberto: o controle passa a ser entregue pela Steam. Ainda não existe um botão para desmarcar</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Esconde os controles físicos no último jogo aberto: o jogo passa a ver só os controles do Hefesto. Para tirar a marca, use a caixinha no editor do perfil, na aba Perfis</property>
                             </object>
                           </child>
                           </object>
@@ -2200,8 +2684,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkButton" id="btn_storm_copy_launch">
-                            <property name="label" translatable="yes">Copiar opções p/ jogos</property>
-                            <property name="tooltip-text" translatable="yes">Copia a Opção de Inicialização da Steam (sempre a mesma linha): o launcher do Hefesto decide na hora do jogo se esconde o controle físico — se o Hefesto estiver desligado, o jogo abre normal. Cole em: jogo → Propriedades → Opções de inicialização.</property>
+                            <property name="label" translatable="yes">Copiar opções para os jogos</property>
+                            <property name="tooltip-text" translatable="yes">Copia a Opção de Inicialização da Steam (sempre a mesma linha): o launcher do Hefesto decide na hora do jogo se esconde os controles físicos — se o Hefesto estiver desligado, o jogo abre normal. Cole em: jogo → Propriedades → Opções de inicialização.</property>
                             <signal name="clicked" handler="on_storm_copy_launch"/>
                           </object>
                         </child>
@@ -2402,8 +2886,19 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                            outras fontes e já pediu 431px onde esta máquina pedia
                            357. Quem quiser essa troca precisa da medição da CI,
                            não desta. -->
+                      <!-- MESA-CHEIA-11/E4 (14/08/2026): o combo é do controle
+                           que comanda o PC — existe UM `EvdevReader`, atrelado
+                           ao primário ("single-controller por construção",
+                           `core/backend_pydualsense.py:read_state`), e P2, P3 e
+                           P4 apertam PS + Options sem que nada aconteça, sem
+                           erro e sem aviso. O sujeito NÃO cabe no rótulo: ele
+                           tem teto de 78 caracteres visíveis (o parágrafo
+                           acima), e hoje usa 77. Então ele entra na DICA, que
+                           não custa pixel nenhum — a sprint prometeu zero pixel
+                           novo, e o teto medido é anterior a esta entrega. -->
                       <object class="GtkLabel">
                         <property name="label" translatable="yes">&lt;b&gt;Modo jogo&lt;/b&gt;: PS + Options suspende mouse e teclado. Segurar o PS vem desligado.</property>
+                        <property name="tooltip-text" translatable="yes">Quem faz o combo é o controle que comanda o PC — mouse e teclado são de um controle só, porque o PC tem um cursor e um foco de teclado. Nos outros controles, PS + Options não faz nada.</property>
                         <property name="use-markup">True</property>
                         <property name="halign">start</property>
                       </object>
@@ -2482,7 +2977,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_refresh_button">
-                        <property name="tooltip-text" translatable="yes">Relê o estado da emulação e atualiza o que esta aba mostra. Não muda nada no controle.</property>
+                        <property name="tooltip-text" translatable="yes">Relê o estado da emulação e atualiza o que esta aba mostra. Não muda nada nos controles.</property>
                         <property name="label" translatable="yes">Atualizar</property>
                         <signal name="clicked" handler="on_emulation_refresh"/>
                       </object>
@@ -2506,10 +3001,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                          Volta quando (e se) existir arquivo de configuração de
                          verdade — proposto no bloco C da
-                         PROMESSA-NÃO-CUMPRIDA-01. O handler
-                         `on_emulation_open_toml` fica sem quem o chame no
-                         glade; quem cuida do Python nesta leva decide se o
-                         código sai junto. -->
+                         PROMESSA-NÃO-CUMPRIDA-01.
+
+                         Fechado em 01/08 (entregas 5 e 6): o handler
+                         `on_emulation_open_toml` saiu do Python junto — o
+                         método em `app/actions/emulation_actions.py` e o nome
+                         no mapa de sinais de `app/app.py`. Enquanto o código
+                         existisse, reconectar o nome aqui fazia o arquivo
+                         fantasma voltar a nascer no disco dela. -->
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
@@ -2522,13 +3021,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="margin-top">8</property>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label" translatable="yes">Gamepad p/ jogos:</property>
+                        <property name="label" translatable="yes">Gamepad para os jogos:</property>
                       </object>
                     </child>
                     <child>
                       <!-- VAO-01/E2: o `wrap` FICA. Os textos reais deste
                            rotulo sao multi-palavra ("ligado — DualSense (PS)",
-                           "jogar direto (Sony) — o jogo fala direto com o
+                           "Conexão Nativa (Sony) — o jogo fala direto com o
                            controle"), e sem quebra a largura MINIMA da aba
                            sobe — largura e a restricao dura desta janela, com
                            rolagem horizontal `never`.
@@ -2556,21 +3055,21 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_off_button">
                         <property name="label" translatable="yes">Desligado</property>
-                        <property name="tooltip-text" translatable="yes">Volta o controle a controlar o PC (mouse/teclado) — o mesmo que "Controlar o PC" na aba Início. Desliga o gamepad virtual e também sai do "Jogar direto (Sony)".</property>
+                        <property name="tooltip-text" translatable="yes">Volta ao Controlar o PC: o mouse e o teclado ficam com o controle que comanda o PC — o mesmo que "Controlar o PC" na aba Início. Desliga o gamepad virtual e também sai da "Conexão Nativa (Sony)".</property>
                         <signal name="clicked" handler="on_emulation_gamepad_off"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_dualsense_button">
                         <property name="label" translatable="yes">DualSense (PS)</property>
-                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções p/ jogos' (aba Sistema) o controle também não aparece duplicado — layout PS sem o controle dobrado. Atenção: jogos que só entendem controle de Xbox ignoram esta máscara — neles use "Xbox 360".</property>
+                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções para os jogos' (aba Sistema) os controles também não aparecem duplicados — layout PS sem o controle dobrado. Atenção: jogos que só entendem controle de Xbox ignoram esta máscara — neles use "Xbox 360".</property>
                         <signal name="clicked" handler="on_emulation_gamepad_dualsense"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_xbox_button">
                         <property name="label" translatable="yes">Xbox 360</property>
-                        <property name="tooltip-text" translatable="yes">Máscara Xbox 360: a vibração funciona em jogo e o controle não aparece duplicado. Os jogos mostram prompts de Xbox (A/B/X/Y). É a única máscara que jogos XInput-only entendem; nessa API não existe giroscópio.</property>
+                        <property name="tooltip-text" translatable="yes">Máscara Xbox 360: a vibração funciona em jogo e os controles não aparecem duplicados. Os jogos mostram prompts de Xbox (A/B/X/Y). É a única máscara que jogos XInput-only entendem; nessa API não existe giroscópio.</property>
                         <signal name="clicked" handler="on_emulation_gamepad_xbox"/>
                       </object>
                     </child>
@@ -2579,8 +3078,17 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_gamepad_hint_label">
-                    <property name="label" translatable="yes">Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, Pragmata, Mad King Redemption, Mullet Mad Jack) funcionam completos com "DualSense (PS)": vibração, giroscópio e lightbar. Jogos que só entendem controle de Xbox ignoram a máscara DualSense — neles escolha "Xbox 360" (vibração funciona; giroscópio não existe nessa API). Sinal típico de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do jogo. Quando o suporte a DualSense do jogo vem PELA Steam (é o caso do Mullet Mad Jack), o jogo precisa enxergar o controle físico: use a exceção por jogo em "Steam Input" na aba Emulação. Guia completo: docs/usage/jogos-e-mascaras.md</property>
+                    <property name="label" translatable="yes">Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, Pragmata, Mad King Redemption, Mullet Mad Jack) funcionam completos com "DualSense (PS)": vibração, giroscópio e lightbar. Jogos que só entendem controle de Xbox ignoram a máscara DualSense — neles escolha "Xbox 360" (vibração funciona; giroscópio não existe nessa API). Sinal típico de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do jogo. Quando o suporte a DualSense do jogo vem PELA Steam (é o caso do Mullet Mad Jack), o jogo precisa enxergar os controles físicos: use a exceção por jogo em "Steam Input" na aba Emulação. Guia completo: docs/usage/jogos-e-mascaras.md</property>
                     <property name="wrap">True</property>
+                    <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
+                         este paragrafo estica ate a largura da aba (medido: 1869px na
+                         Emulacao, ~230 caracteres) e vira parede de texto. So funciona
+                         junto com o `wrap` acima. -->
+                    <property name="max-width-chars">100</property>
+                    <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                         acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                         esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                    <property name="halign">start</property>
                     <property name="xalign">0</property>
                     <property name="margin-start">10</property>
                     <property name="margin-end">10</property>
@@ -2639,7 +3147,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                            partiria a frase no meio. -->
                       <object class="GtkButton" id="emulation_pause_button">
                         <property name="label" translatable="yes">Suspender mouse e teclado</property>
-                        <property name="tooltip-text" translatable="yes">Suspende a emulação de mouse/teclado (igual ao combo PS+Options). Só faz sentido jogando: em "Controlar o PC" o controle ficaria sem função nenhuma, por isso fica desabilitado nesse modo. Transitório — não sobrevive ao reboot.</property>
+                        <property name="tooltip-text" translatable="yes">Suspende a emulação de mouse/teclado (igual ao combo PS+Options). Só faz sentido jogando: em "Controlar o PC" o controle que comanda o PC ficaria sem função nenhuma, por isso fica desabilitado nesse modo. Transitório — não sobrevive ao reboot.</property>
                         <signal name="clicked" handler="on_emulation_pause"/>
                       <child internal-child="accessible">
                         <object class="AtkObject">
@@ -2703,7 +3211,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_steam_input_disable_button">
                         <property name="label" translatable="yes">Desligar Steam Input</property>
-                        <property name="tooltip-text" translatable="yes">Desliga o Steam Input, que sequestra o controle e briga com o Hefesto. Se a Steam estiver aberta, eu PEÇO sua permissão antes de fechá-la por uns 20 segundos — e abro de novo depois. Com um jogo aberto, não faço nada.</property>
+                        <property name="tooltip-text" translatable="yes">Desliga o Steam Input, que sequestra os controles e briga com o Hefesto. Se a Steam estiver aberta, eu PEÇO sua permissão antes de fechá-la por uns 20 segundos — e abro de novo depois. Com um jogo aberto, não faço nada.</property>
                         <signal name="clicked" handler="on_emulation_steam_input_disable"/>
                       </object>
                     </child>
@@ -2755,10 +3263,19 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_hint">
-                    <property name="label" translatable="yes">&lt;i&gt;Como o jogo vê o controle: &lt;b&gt;DualSense&lt;/b&gt; mostra os botões de PlayStation e vibra. &lt;b&gt;Xbox 360&lt;/b&gt; serve para jogos que só entendem controle de Xbox. Enquanto isso, o Hefesto é quem fala com o controle.&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Como o jogo vê o controle: &lt;b&gt;DualSense&lt;/b&gt; mostra os botões de PlayStation e vibra. &lt;b&gt;Xbox 360&lt;/b&gt; serve para jogos que só entendem controle de Xbox. Enquanto isso, o Hefesto é quem fala com os controles.&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
+                    <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
+                         este paragrafo estica ate a largura da aba (medido: 1869px na
+                         Emulacao, ~230 caracteres) e vira parede de texto. So funciona
+                         junto com o `wrap` acima. -->
+                    <property name="max-width-chars">100</property>
+                    <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                         acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                         esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                    <property name="halign">start</property>
                     <property name="margin-start">10</property>
                     <property name="margin-end">10</property>
                   </object>
@@ -2828,7 +3345,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkSwitch" id="mouse_emulation_toggle">
-                        <property name="tooltip-text" translatable="yes">Liga o controle como mouse do computador: cursor, cliques e rolagem. O teclado tem interruptor próprio, na coluna ao lado. Só funciona no modo Controlar o PC.</property>
+                        <property name="tooltip-text" translatable="yes">Liga o controle que comanda o PC como mouse do computador: cursor, cliques e rolagem. O PC tem um cursor só, então quem move o mouse é sempre um controle — os outros seguem jogando. O teclado tem interruptor próprio, na coluna ao lado. Só funciona no modo Controlar o PC.</property>
                         <property name="active">False</property>
                         <!-- HARM-05: nasce fechado e só abre quando o daemon
                              confirmar o modo "Controlar o PC" (o refresh da aba
@@ -2885,6 +3402,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkScale" id="mouse_speed_scale">
+                        <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                             largura inteira da coluna (medido: 766px para 38px de natural) e o
+                             valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                             `width-request` sozinho nao segura, e `halign=center` trava. -->
+                        <property name="halign">start</property>
+                        <property name="width-request">400</property>
                         <property name="tooltip-text" translatable="yes">Quão rápido o cursor anda quando você empurra o analógico esquerdo.</property>
                         <property name="adjustment">mouse_speed_adj</property>
                         <property name="digits">0</property>
@@ -2904,6 +3427,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkScale" id="mouse_scroll_speed_scale">
+                        <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                             largura inteira da coluna (medido: 766px para 38px de natural) e o
+                             valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                             `width-request` sozinho nao segura, e `halign=center` trava. -->
+                        <property name="halign">start</property>
+                        <property name="width-request">400</property>
                         <property name="tooltip-text" translatable="yes">Quão rápido a página rola quando você empurra o analógico direito.</property>
                         <property name="adjustment">mouse_scroll_speed_adj</property>
                         <property name="digits">0</property>
@@ -3054,6 +3583,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
+                    <!-- LARGURA-01/E3: teto de ~100 caracteres por linha (ver os outros
+                         quatro paragrafos com a mesma nota). So age junto com o `wrap`. -->
+                    <property name="max-width-chars">100</property>
+                    <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                         acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                         esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                    <property name="halign">start</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
@@ -3096,14 +3632,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkSwitch" id="keyboard_emulation_toggle">
-                        <property name="tooltip-text" translatable="yes">Liga o controle como teclado do computador. Desligar tira TUDO o que o controle digita: os atalhos da lista abaixo, o teclado na tela em L3/R3 e as três regiões do touchpad (Backspace, Enter e Delete).</property>
+                        <property name="tooltip-text" translatable="yes">Liga o controle que comanda o PC como teclado do computador. Desligar tira TUDO o que esse controle digita: os atalhos da lista abaixo, o teclado na tela em L3/R3 e as três regiões do touchpad (Backspace, Enter e Delete).</property>
                         <property name="active">True</property>
                         <property name="sensitive">False</property>
                         <signal name="state-set" handler="on_keyboard_toggle_set"/>
                       <child internal-child="accessible">
                         <object class="AtkObject">
                           <property name="AtkObject::accessible-name" translatable="yes">Emular teclado</property>
-                          <property name="AtkObject::accessible-description" translatable="yes">Liga ou desliga o controle como teclado do computador; desligar tira também o teclado na tela em L3 ou R3 e as três regiões do touchpad</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Liga ou desliga o controle que comanda o PC como teclado do computador; desligar tira também o teclado na tela em L3 ou R3 e as três regiões do touchpad</property>
                         </object>
                       </child>
                       </object>
@@ -3145,6 +3681,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="can-focus">True</property>
                     <property name="shadow-type">in</property>
                     <property name="min-content-height">160</property>
+                    <!-- VÃO-01: o teto que faltava. A lista tem faixa (160 a
+                         320px) em vez de crescer com a janela. Sem ele, a
+                         `max-content-height` ausente somada ao `expand=True`
+                         abaixo esticava a lista por 827px para seis linhas de
+                         atalho. -->
+                    <property name="max-content-height">320</property>
+                    <property name="propagate-natural-height">True</property>
                     <child>
                       <object class="GtkTreeView" id="key_bindings_treeview">
                         <property name="visible">True</property>
@@ -3154,7 +3697,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                   </object>
-                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                  <!-- VÃO-01: `expand=False`. Este era o ÚLTIMO `expand`
+                       vertical do notebook — a tabela da sprint cobria quatro
+                       listas e esta escapou. Com ele, os botões Adicionar e
+                       Remover ficavam largados no pé da janela, a 800px da
+                       lista que comandam. Mesma cura já provada na lista de
+                       perfis. -->
+                  <packing><property name="expand">False</property><property name="fill">True</property></packing>
                 </child>
                 <child>
                   <object class="GtkBox" id="key_bindings_button_row">
@@ -3239,13 +3788,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <child>
                   <object class="GtkButton" id="btn_footer_apply">
                     <property name="label" translatable="yes">Aplicar</property>
-                    <property name="tooltip-text" translatable="yes">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) ao controle</property>
+                    <property name="tooltip-text" translatable="yes">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) aos controles</property>
                     <signal name="clicked" handler="on_apply_draft"/>
                     <style><class name="btn-apply"/></style>
                   <child internal-child="accessible">
                     <object class="AtkObject">
                       <property name="AtkObject::accessible-name" translatable="yes">Aplicar todas as configuracoes</property>
-                      <property name="AtkObject::accessible-description" translatable="yes">Envia gatilhos LEDs rumble e mouse ao controle</property>
+                      <property name="AtkObject::accessible-description" translatable="yes">Envia gatilhos LEDs rumble e mouse aos controles</property>
                     </object>
                   </child>
                   </object>

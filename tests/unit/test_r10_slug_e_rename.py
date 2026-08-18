@@ -185,10 +185,12 @@ class _EditorSalvar(pa.ProfilesActionsMixin):
         self.toasts: list[str] = []
         self.overwrite_perguntado: list[str] = []
         self.downgrade_perguntado: list[str] = []
+        self.prioridade_perguntada: list[str] = []
         self.rename_perguntado: list[tuple[str, str]] = []
         # Respostas dos diálogos (default: confirma tudo).
         self.resposta_overwrite = True
         self.resposta_downgrade = True
+        self.resposta_prioridade = True
         self.resposta_rename: str | None = "renomear"
         self.ativo = selecionado
 
@@ -238,11 +240,22 @@ def _rodar_save(
         ),
         raising=False,
     )
+    # SALVAR-NAO-REBAIXA-02: o diálogo ganhou o `regra_atual` (o rótulo do que
+    # o perfil É HOJE) — `**_kw` aqui é só o dublê acompanhando a assinatura.
     monkeypatch.setattr(
         gd,
         "confirm_downgrade_match_to_any",
-        lambda parent, name: (
+        lambda parent, name, **_kw: (
             editor.downgrade_perguntado.append(name) or editor.resposta_downgrade
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        gd,
+        "confirm_downgrade_priority",
+        lambda parent, name, **_kw: (
+            editor.prioridade_perguntada.append(name)
+            or editor.resposta_prioridade
         ),
         raising=False,
     )

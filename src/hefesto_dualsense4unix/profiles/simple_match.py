@@ -12,17 +12,11 @@ do launch_env. Daí a opção "steam_game".
 """
 from __future__ import annotations
 
-import re
-
 from hefesto_dualsense4unix.profiles.schema import Match, MatchAny, MatchCriteria
-
-#: R-12: ``wm_class`` de jogo Steam (Proton ou nativo). Mesmo formato que
-#: `app.actions.launch_wrapper_dialog._STEAM_APP_RE` reconhece no state_full.
-_STEAM_APP_RE = re.compile(r"^steam_app_(\d+)$")
-
-#: Aceita o que a usuária tem em mãos: o número puro da URL da loja
-#: (``1599660``) ou a wm_class inteira, copiada de um doctor/journal.
-_APPID_RE = re.compile(r"^\s*(?:steam_app_)?(\d+)\s*$", re.IGNORECASE)
+from hefesto_dualsense4unix.profiles.steam_app import (
+    steam_appid_de_texto,
+    steam_appid_from_wm_class,
+)
 
 # R-12 item 2 (auditoria 23/07): campo obrigatório em branco NÃO degrada em
 # silêncio. Antes, "Jogo específico" sem nome devolvia `MatchAny()` — o perfil
@@ -39,8 +33,8 @@ MSG_STEAM_SEM_APPID = (
     "campo é preenchido sozinho."
 )
 MSG_STEAM_APPID_INVALIDO = (
-    "O número do jogo na Steam é só dígitos (ex.: 1599660) — é o número que "
-    "aparece na URL da loja."
+    "O número do jogo na Steam é só dígitos (ex.: 1599660). Cole o endereço "
+    "da página do jogo na loja e o número sai dele sozinho."
 )
 
 #: Frases que a GUI pode mostrar CRUAS para a usuária (ver `_humanize_profile_error`).
@@ -67,18 +61,31 @@ def normalize_appid(raw: str | None) -> str | None:
 
     Devolve ``None`` quando não há nada aproveitável — quem decide se isso é
     erro é o chamador (o editor levanta; a detecção do round-trip só ignora).
+
+    13/08/2026: passou a aceitar também o ENDEREÇO da loja e o
+    ``steam://rungameid/<id>``, delegando a `steam_app.steam_appid_de_texto`.
+    Delegar, e não repetir o regex aqui, é o que faz o caminho do **Salvar**
+    aceitar o endereço mesmo quando a janela não chegou a reescrever o campo —
+    e é a disciplina que UNIFICA-PREDICADO-01 deixou escrita: a pergunta "que
+    appid é este texto?" tem um dono só.
     """
-    if not raw:
-        return None
-    m = _APPID_RE.match(raw)
-    return m.group(1) if m else None
+    appid = steam_appid_de_texto(raw)
+    return None if appid is None else str(appid)
 
 
 def from_simple_choice(
     choice: str,
     custom_name: str | None = None,
+    regra_do_disco: Match | None = None,
 ) -> MatchCriteria | MatchAny:
     """Converte escolha do radio "Aplica a" em MatchCriteria ou MatchAny.
+
+    ``regra_do_disco`` é a regra que este Salvar vai sobrescrever, e existe só
+    para o "steam_game": a página simples tem um campo (o número do jogo) e o
+    perfil no disco pode ter também um ``process_name`` do MESMO jogo, que ela
+    nunca viu na tela e portanto nunca pediu para tirar
+    (ESCONDER-EM-VEZ-DE-SAIR-01; ver `_process_name_a_preservar`). Omitir o
+    parâmetro é o comportamento histórico — nada a preservar.
 
     Regras:
     - "steam_game" + appid    → MatchCriteria(window_class=["steam_app_<id>"])
@@ -103,7 +110,10 @@ def from_simple_choice(
             if custom_name and custom_name.strip():
                 raise ValueError(MSG_STEAM_APPID_INVALIDO)
             raise ValueError(MSG_STEAM_SEM_APPID)
-        return MatchCriteria(window_class=[f"steam_app_{appid}"])
+        return MatchCriteria(
+            window_class=[f"steam_app_{appid}"],
+            process_name=_process_name_a_preservar(regra_do_disco, appid),
+        )
     if choice == "game":
         if custom_name and custom_name.strip():
             return MatchCriteria(process_name=[custom_name.strip()])
@@ -181,19 +191,83 @@ def simple_extra(match: Match) -> str:
 
 
 def _detect_steam_appid(match: Match) -> str | None:
-    """Appid quando o match é EXATAMENTE "um jogo da Steam", senão None.
+    """Appid quando o match é "um jogo da Steam", senão None.
 
-    Exige window_class com um único ``steam_app_<id>`` e nenhum outro campo:
-    ``MatchCriteria.matches`` é AND entre campos preenchidos, então um regex de
-    título junto mudaria o significado e o editor simples estaria mentindo
-    sobre o que o perfil faz.
+    Exige window_class com um único ``steam_app_<id>`` e NENHUM
+    ``window_title_regex``: ``MatchCriteria.matches`` é AND entre campos
+    preenchidos, então um regex de título junto ESTREITA o perfil para um
+    subconjunto das janelas daquele jogo (uma tela, um mapa, um título
+    traduzido). O editor simples não tem como exprimir esse recorte, e mostrar
+    o perfil como "Jogo da Steam <id>" seria mentir sobre o que ele faz.
+
+    NOTA DATADA — 10/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, relatado por ela:
+    *"sumiu a opção de entregar o controle pra Steam? pq ela é que impedia o
+    dual input em jogos como pragmata"*). A regra estrita também recusava
+    ``process_name``, e ESSA metade caducou. O parágrafo acima continua
+    valendo inteiro para ``window_title_regex``.
+
+    Por que ``process_name`` é diferente — e é MEDIDO, não deduzido:
+
+    1. Ele designa o MESMO jogo que a ``steam_app_<id>``, não um segundo alvo.
+       Trocar "3357650 E PRAGMATA.exe" por "Jogo da Steam 3357650" na tela não
+       muda a resposta a *de qual jogo é este perfil*, que é a única pergunta
+       que o seletor "Aplica a" faz.
+    2. A precisão que a recusa dizia proteger não existia. No journal dela de
+       10/08, com a janela ``steam_app_3357650`` em foco, o daemon registrou
+       ``profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']``
+       — o perfil ``Pragmata`` NÃO era candidato ao próprio jogo. Sob Proton o
+       basename de ``/proc/PID/exe`` é o binário do wine, nunca ``PRAGMATA.exe``
+       (é a razão de "steam_game" existir; ver o cabeçalho deste módulo), então
+       o AND com ``process_name`` não estreita o casamento: ele o ANULA.
+    3. O preço da recusa era a janela. Com ``detect_simple_preset`` devolvendo
+       ``None``, o perfil abria no editor avançado com o seletor rebaixado a
+       "Vale sempre", e a caixinha "Esconder o controle físico neste jogo" só
+       nasce com "Jogo da Steam" escolhido
+       (``profiles_actions._mostrar_caixa_do_steam_input``). O único gesto que
+       ela tinha para desfazer a duplicação de controle sumia da tela.
+
+    Reconhecer NÃO é apagar: ``from_simple_choice`` preserva o ``process_name``
+    do disco quando o appid não mudou (ver ``_process_name_a_preservar``). Sem
+    isso, reabrir e salvar tiraria da regra dela um campo que ela não pediu
+    para tirar — que é exatamente o round-trip quebrado de onde o R-12 nasceu.
+
+    UNIFICA-PREDICADO-01: o reconhecimento vem da fonte única
+    (`profiles/steam_app.py`), que já absorveu o ``.strip()`` daqui. O
+    alargamento para caixa é a cura de uma mentira do editor: um perfil salvo
+    com ``Steam_App_2111190`` CASA com o jogo (o matcher compara sem caixa) e
+    abria no editor AVANÇADO, como se não fosse perfil de jogo da Steam — e
+    ``simple_extra`` devolvia "" no campo que pede o número. A conversão para
+    `str` é do callsite: a fonte devolve `int` e a GUI escreve texto no campo.
     """
     if not isinstance(match, MatchCriteria):
         return None
-    if len(match.window_class) != 1 or match.window_title_regex or match.process_name:
+    if len(match.window_class) != 1 or match.window_title_regex:
         return None
-    m = _STEAM_APP_RE.match(match.window_class[0].strip())
-    return m.group(1) if m else None
+    appid = steam_appid_from_wm_class(match.window_class[0])
+    return None if appid is None else str(appid)
+
+
+def _process_name_a_preservar(regra_do_disco: Match | None, appid: str) -> list[str]:
+    """O ``process_name`` que o editor simples não mostra, mas não pode apagar.
+
+    ESCONDER-EM-VEZ-DE-SAIR-01 (10/08/2026). ``_detect_steam_appid`` passou a
+    reconhecer o jogo da Steam mesmo com ``process_name`` junto — e a página
+    simples tem UM campo, o do número. Sem esta preservação, reabrir o perfil
+    ``Pragmata`` dela e salvar gravaria ``window_class`` sozinho: o
+    ``PRAGMATA.exe`` evaporaria porque a tela não tinha onde mostrá-lo, que é
+    o mesmo defeito de round-trip que o R-12 catalogou.
+
+    **Só do MESMO jogo.** Se ela digitar outro appid no campo, o perfil passou
+    a ser de OUTRO jogo, e carregar junto o nome do programa do jogo anterior
+    seria pior que apagar: o perfil novo nasceria com um AND que nunca casa,
+    sem nada na tela dizendo por quê. Regra de disco que não é jogo da Steam
+    (ou ausente) também não empresta nada.
+    """
+    if regra_do_disco is None:
+        return []
+    if _detect_steam_appid(regra_do_disco) != appid:
+        return []
+    return list(getattr(regra_do_disco, "process_name", None) or [])
 
 
 def _criteria_equal(a: MatchCriteria, b: MatchCriteria) -> bool:
@@ -202,4 +276,47 @@ def _criteria_equal(a: MatchCriteria, b: MatchCriteria) -> bool:
         sorted(a.window_class) == sorted(b.window_class)
         and a.window_title_regex == b.window_title_regex
         and sorted(a.process_name) == sorted(b.process_name)
+    )
+
+
+def exigencia_invisivel(match: Match) -> str:
+    """O que o perfil exige e a página SIMPLES não mostra. "" = nada escondido.
+
+    A-REGRA-QUE-A-TELA-NAO-MOSTRA-01 (10/08/2026), e nasceu de uma foto dela.
+
+    O editor simples do "Jogo da Steam" tem um campo só — o número. O
+    `from_simple_choice` PRESERVA um `process_name` que já esteja no disco, e
+    isso é certo: salvar pela janela não pode apagar o que a tela não mostra
+    (ESCONDER-EM-VEZ-DE-SAIR-01). O que estava errado era o silêncio em volta.
+
+    Na foto do editor dela, o perfil "Pragmata" aparecia assim:
+
+        Aplica a: [Jogo da Steam]   Nome do jogo: 3357650
+
+    e no arquivo estava `process_name: ["PRAGMATA.exe"]`. O `matches` é AND, e o
+    campo invisível é o que decidia — o perfil não entrava sozinho, medido seis
+    vezes num intervalo de dois minutos com ela jogando. A tela mostrava uma
+    regra que não era a regra.
+
+    Preservar o invisível continua certo. Esconder que ele EXISTE é que não.
+
+    A frase é factual e não manda apagar nada: quem escreveu o critério foi ela,
+    e a decisão de mudá-lo é dela. Diz o que há e onde mexer.
+    """
+    if not isinstance(match, MatchCriteria):
+        return ""
+    if _detect_steam_appid(match) is None:
+        return ""
+    partes: list[str] = []
+    if match.process_name:
+        nomes = ", ".join(f'"{n}"' for n in match.process_name)
+        partes.append(f"nome do processo {nomes}")
+    if match.window_title_regex:
+        partes.append(f'título da janela "{match.window_title_regex}"')
+    if not partes:
+        return ""
+    return (
+        f"Este perfil também exige {' e '.join(partes)}, e só entra quando isso "
+        "bater junto com o número do jogo. Ligue o Modo avançado para ver e "
+        "mudar."
     )

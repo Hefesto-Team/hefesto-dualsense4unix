@@ -356,6 +356,37 @@ def notify_emulation_suppressed(suppressed: bool) -> bool:
     return notify(summary=summary, body=body, icon="input-gaming", timeout_ms=2500)
 
 
+def notify_teclado_na_tela_ausente(candidatos: list[str]) -> bool:
+    """Avisa que o "teclado na tela" (L3/R3) não tem programa para abrir.
+
+    TECLADO-QUE-NAO-DIGITA-01 (09/08/2026). Nenhum atalho de fábrica do teclado
+    emulado digita uma LETRA — o único caminho do produto para ESCREVER texto
+    com o controle é o teclado na tela em L3 (`__OPEN_OSK__`, o default de l3 em
+    `core/keyboard_mappings.py`), e ele depende de um programa externo
+    (`onboard` ou `wvkbd-mobintl`) que nenhum instalador, empacotamento ou
+    doctor desta casa instala, declara ou confere. Medido na máquina dela em
+    09/08: nenhum dos dois existe. Apertar L3 não fazia absolutamente nada, e o
+    único registro era um `warning` no journal — que ela não lê.
+
+    Notifica SEMPRE, sem o opt-in `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS`,
+    pelo mesmo motivo já declarado em `notify_emulation_suppressed`: é a resposta
+    a um gesto DELIBERADO dela (apertou L3 agora), e sem resposta visível o gesto
+    parece um produto quebrado. `once_key` evita repetir a cada aperto.
+    """
+    lista = " ou ".join(candidatos) if candidatos else "onboard"
+    return notify(
+        summary="Teclado na tela não instalado",
+        body=(
+            "L3 abriria o teclado na tela, mas nenhum programa de teclado na "
+            f"tela foi encontrado no computador. Instale {lista} e aperte L3 "
+            "de novo."
+        ),
+        icon="dialog-warning",
+        timeout_ms=10000,
+        once_key="osk_binary_missing",
+    )
+
+
 __all__ = [
     "notify",
     "notify_battery_low",
@@ -366,6 +397,7 @@ __all__ = [
     "notify_emulation_suppressed",
     "notify_profile_activated",
     "notify_system_warnings",
+    "notify_teclado_na_tela_ausente",
     "reset_once_cache",
     "reset_throttle_cache",
     "statusnotifierwatcher_available",

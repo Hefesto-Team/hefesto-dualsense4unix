@@ -440,7 +440,7 @@ def test_rotulo_nativo_o_jogo_e_dono_do_led(host: _Host) -> None:
     host._render_live_state(_state(_entry(), native_mode=True))
     card = host.cards()[0]
     assert card._lightbar_label.get_visible() is True
-    assert card._lightbar_label.get_text() == "em Nativo o jogo é dono do LED"
+    assert card._lightbar_label.get_text() == "Em Nativo o jogo é dono do LED"
     # Última cor conhecida segue nos traços (ajustada).
     assert card._accent == ensure_min_contrast(COR_A)
 
@@ -495,7 +495,7 @@ def test_cor_conhecida_e_acesa_sem_rotulo(host: _Host) -> None:
             {"lightbar_rgb": [16, 32, 72], "lightbar_on": True,
              "lightbar_source": "sysfs"},
             {"native_mode": True},
-            "em Nativo o jogo é dono do LED",
+            "Em Nativo o jogo é dono do LED",
         ),
         # cor conhecida acesa → sem rótulo.
         (
@@ -528,7 +528,7 @@ def test_badge_degradado_acende_com_uinput_e_motivo_e_some_com_uhid(
     card = host.cards()[0]
     assert card._degradacao_badge.get_visible() is True
     texto = card._degradacao_badge.get_text()
-    assert texto.startswith("emulação degradada (uinput): ")
+    assert texto.startswith("Emulação degradada (uinput): ")
     assert MOTIVOS_DEGRADACAO_LEIGOS["uhid_bind_falhou"] in texto
 
     # Promovido a uhid → o badge some (mesmo card, sem rebuild).
@@ -562,7 +562,7 @@ def test_frases_leigas_nunca_cravam_o_mecanismo_do_sono_bt(
         _entry(vpad_backend="uinput", vpad_motivo=motivo)
     )
     assert texto is not None
-    assert texto.startswith("emulação degradada (uinput): ")
+    assert texto.startswith("Emulação degradada (uinput): ")
     minusculo = texto.lower()
     for proibido in ("bluetooth", " bt", "sono", "dormiu", "adormec"):
         assert proibido not in minusculo, f"{motivo!r} crava mecanismo: {texto}"
@@ -574,7 +574,7 @@ def test_texto_degradacao_motivo_desconhecido_vira_legivel() -> None:
     texto = texto_degradacao(
         _entry(vpad_backend="uinput", vpad_motivo="motivo_novo_do_daemon")
     )
-    assert texto == "emulação degradada (uinput): motivo novo do daemon"
+    assert texto == "Emulação degradada (uinput): motivo novo do daemon"
 
 
 # ---------------------------------------------------------------------------
@@ -677,7 +677,19 @@ def test_render_offline_limpa_os_cards_e_restaura_a_bateria(
 def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
     """Baseline da mixin: 2 periódicos em ms + 1 periódico em segundos +
     1 one-shot de 5 s (ambos via timeout_add_seconds) + 2 idle one-shot.
-    O card NÃO agenda nada. Qualquer timer novo estoura este diff.
+
+    O card agenda UMA coisa, e só uma: o repouso do controle deslizante de
+    volume (SOM-02/E1), que é um disparo ÚNICO armado por gesto humano. Até a
+    SOM-02 este gate cobrava ZERO ocorrências no card — e a linha que ele
+    protege não é "zero timers", é "nada de laço no card": foi um
+    ``idle_add`` devolvendo True que rendeu os 104% de CPU da v3.8.1, e um
+    periódico novo aqui roda por CARD, multiplicado pelos quatro controles.
+
+    O que continua reprovando, e por isso o gate segue mordendo: um segundo
+    ``timeout_add``, qualquer ``timeout_add_seconds``, qualquer ``idle_add``, e
+    um repouso que se re-arme sozinho (o retorno ``False`` do disparo único é
+    aferido no comportamento, com o card real, em
+    ``test_status_som_02_controle_de_volume``).
     """
     src_mixin = Path(sa_mod.__file__).read_text(encoding="utf-8")
     src_card = Path(cc_mod.__file__).read_text(encoding="utf-8")
@@ -686,8 +698,9 @@ def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
     assert len(re.findall(r"GLib\.timeout_add_seconds\(", src_mixin)) == 2
     assert len(re.findall(r"GLib\.idle_add\(", src_mixin)) == 2
 
-    assert re.search(r"GLib\.(timeout_add|idle_add)", src_card) is None
-    assert "from gi.repository import Gtk" in src_card  # sem GLib no card
+    assert len(re.findall(r"GLib\.timeout_add\(", src_card)) == 1
+    assert re.search(r"GLib\.timeout_add_seconds\(", src_card) is None
+    assert re.search(r"GLib\.idle_add\(", src_card) is None
 
 
 # ---------------------------------------------------------------------------
@@ -695,27 +708,72 @@ def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_sticks_encolhem_com_dois_cards(host: _Host) -> None:
-    """O número exato vem das constantes — travá-lo aqui só travaria o ajuste
-    de altura da aba, que é justamente o que elas existem para permitir. O que
-    o teste garante é a REGRA: 2+ cards usam o tamanho compacto, e ele é menor.
+def test_os_sticks_nao_encolhem_mais_com_dois_cards(host: _Host) -> None:
+    """EMPILHA-02 (02/08/2026): com UMA coluna, todo card tem largura inteira.
+
+    **A regra anterior estava certa para o desenho anterior**, e fica
+    registrada: com dois cards LADO A LADO, cada um recebia metade da janela,
+    e o stick de 120px empurrava a coluna. O compacto existia para isso.
+
+    Empilhados numa coluna (decisão dela, EMPILHA-01), cada card recebe a
+    largura INTEIRA — e continuar desenhando para meia deixava o conteúdo
+    espremido à esquerda com um vazio à direita. Foi o que ela apontou no
+    print de 02/08: *"layout quebrou, e piorou algumas coisas. antes ele tava
+    bem distribuido"*.
+
+    O `compact` controlava DUAS coisas misturadas — o tamanho dos desenhos e a
+    presença do par global "Perfil ativo / Hefesto" — e elas andavam juntas
+    por acidente. Agora são parâmetros separados: o tamanho é sempre o grande,
+    e o par global só aparece quando NÃO há frame Estado para mostrá-lo.
+
+    Mordida: voltar `ControllerCard(compact=compact)` no `_rebuild_status_cards`.
     """
-    assert STICK_SIZE_COMPACT < STICK_SIZE_SINGLE
+    assert STICK_SIZE_COMPACT < STICK_SIZE_SINGLE, (
+        "as duas constantes continuam existindo — o card compacto ainda é "
+        "construível, e é o que um chamador avulso pede"
+    )
 
     host._render_live_state(_state(_entry()))
     card_solo = host.cards()[0]
-    largura, altura = card_solo._stick_left.get_size_request()
-    assert (largura, altura) == (STICK_SIZE_SINGLE, STICK_SIZE_SINGLE)
+    assert card_solo._stick_left.get_size_request() == (
+        STICK_SIZE_SINGLE,
+        STICK_SIZE_SINGLE,
+    )
 
     host._render_live_state(
         _state(
             _entry(),
-            _entry(index=1, uniq="aa:bb:cc:00:00:02", is_primary=False),
+            _entry(index=1, uniq="aa:bb:cc:00:00:02"),
         )
     )
     for card in host.cards():
-        largura, altura = card._stick_left.get_size_request()
-        assert (largura, altura) == (STICK_SIZE_COMPACT, STICK_SIZE_COMPACT)
+        assert card._stick_left.get_size_request() == (
+            STICK_SIZE_SINGLE,
+            STICK_SIZE_SINGLE,
+        ), "empilhados, os dois cards têm a largura inteira e o desenho grande"
+
+
+def test_o_par_global_aparece_uma_vez_so_na_tela(host: _Host) -> None:
+    """E o que a quantidade de controles DECIDE agora é outra coisa.
+
+    Com um controle, o frame "Estado" sai da tela e o card responde por perfil
+    e daemon. Com dois, o frame volta — e nenhum dos cards os mostra, senão a
+    mesma informação apareceria três vezes.
+
+    Mordida: passar `mostrar_estado_global=True` fixo no `_rebuild_status_cards`.
+    """
+    host._render_live_state(_state(_entry()))
+    assert host.cards()[0]._linha_estado_global is not None
+
+    host._render_live_state(
+        _state(_entry(), _entry(index=1, uniq="aa:bb:cc:00:00:02"))
+    )
+    for card in host.cards():
+        assert card._linha_estado_global is None, (
+            "com 2+ controles quem responde por perfil e daemon é o frame "
+            "Estado; repetir em cada card é a duplicação que a "
+            "STATUS-SIMETRIA-02 curou na bateria"
+        )
 
 
 def test_swatch_guarda_a_cor_crua_nao_a_ajustada(host: _Host) -> None:

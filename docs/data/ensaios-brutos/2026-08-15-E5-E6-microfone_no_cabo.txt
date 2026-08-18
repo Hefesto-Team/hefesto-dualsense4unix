@@ -1,0 +1,111 @@
+2026-08-15T07:27:52.873056 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:28:07.005699 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:28:07.006146 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T07:28:07.011334 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:28:07.011698 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T07:28:07.016844 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:28:07.017145 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T07:28:07.022284 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:28:07.022548 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw11 state=hidden
+2026-08-15T07:28:07.027715 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:28:07.027964 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T07:28:07.028018 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:28:07.028240 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T07:28:07.028290 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:28:07.028558 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T07:28:07.028616 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:28:07.028853 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw11 state=hidden
+==============================================================================
+  microfone_no_cabo.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... o microfone do CABO capta, e a companhia no controlador custa taxa?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... subprocess             de /usr/lib/python3.12/subprocess.py
+  biblioteca ....... wave                   de /usr/lib/python3.12/wave.py
+  biblioteca ....... array                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... selectors              de /usr/lib/python3.12/selectors.py
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+  T0 (hora de parede) ... 2026-08-15T07:27:52.873
+  ferramenta externa .... arecord (/usr/bin/arecord)
+  régua do E-5 .......... zeros exatos = não captou; qualquer não-zero = captou
+  régua do E-6 .......... reports de entrada por segundo, por nó hidraw
+
+  mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+  AS PLACAS ALSA, AMARRADAS AO CONTROLE PELO DISPOSITIVO USB EM COMUM
+
+placa  id            canais de captura  controle           transporte
+-----  ------------  -----------------  -----------------  ----------
+card2  Controller    2                  d4:2f:4b:00:00:d8  cabo
+card3  Controller_1  2                  a0:fa:9c:00:00:f0  cabo
+
+    2 controle(s) no rádio, e NENHUM tem placa ALSA. Isso prova que a
+    ROTA ALSA não existe no rádio — NÃO prova que o aparelho não capta por
+    rádio: já está medido que capta, por HID e Opus, desde 25/07.
+
+  O NEGATIVO DA RÉGUA — uma fonte que se SABE muda, pelo mesmo arecord
+
+    fonte ....... alsa_output.pci-0000_0c_00.4.iec958-stereo.monitor
+    resultado ... ZEROS EXATOS: 288000 amostras, 0 não-zero, pico 0
+
+  E-5 — O MICROFONE DE CADA PLACA DO CABO
+
+controle           dispositivo  amostras  não-zero  pico  RMS    veredito
+-----------------  -----------  --------  --------  ----  -----  -------------
+d4:2f:4b:00:00:d8  hw:2,0       480000    474078    282   64.6   PISO DE RUÍDO
+a0:fa:9c:00:00:f0  hw:3,0       480000    476620    535   116.2  PISO DE RUÍDO
+
+  O QUE O APARELHO DIZ DO PRÓPRIO MICROFONE (status[1] do report de entrada)
+
+controle           transporte  o aparelho diz
+-----------------  ----------  -------------------------------------------------
+d4:2f:4b:00:00:d8  cabo        status[1]=0x08 — jack sem fone, bit de mudo limpo
+a0:fa:9c:00:00:f0  cabo        status[1]=0x08 — jack sem fone, bit de mudo limpo
+44:46:48:00:00:03  rádio       status[1]=0x40 — jack sem fone, bit de mudo limpo
+14:3a:9a:00:00:ab  rádio       status[1]=0x40 — jack sem fone, bit de mudo limpo
+
+    Ressalva: `DS_STATUS1_MIC_MUTE` é DEFINIDO no driver e nunca LIDO por ele, e
+    o bit vizinho `MIC_DETECT` é do JACK de 3,5 mm, não do microfone embutido.
+    O que está acima é o byte com a leitura que o fonte sugere, não um veredito.
+
+  E-6 — A DOSE-RESPOSTA DA COMPANHIA (0, 1 e 2 microfones capturando)
+
+    carga ....... ['hw:2,0', 'hw:3,0']
+    janela ...... 15 s por patamar
+    rodadas ..... 4 (a escada sobe e desce, alternando)
+
+    rodada 1, patamar 0: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=366.9 Hz, hidraw11=173.2 Hz
+    rodada 1, patamar 1: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=359.0 Hz, hidraw11=222.3 Hz
+    rodada 1, patamar 2: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=358.3 Hz, hidraw11=232.3 Hz
+    rodada 2, patamar 2: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=359.1 Hz, hidraw11=207.3 Hz
+    rodada 2, patamar 1: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=358.1 Hz, hidraw11=208.5 Hz
+    rodada 2, patamar 0: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=357.9 Hz, hidraw11=211.2 Hz
+    rodada 3, patamar 0: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=356.3 Hz, hidraw11=216.9 Hz
+    rodada 3, patamar 1: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=360.7 Hz, hidraw11=210.1 Hz
+    rodada 3, patamar 2: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=358.4 Hz, hidraw11=190.7 Hz
+    rodada 4, patamar 2: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=356.0 Hz, hidraw11=192.8 Hz
+    rodada 4, patamar 1: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=354.4 Hz, hidraw11=221.1 Hz
+    rodada 4, patamar 0: hidraw4=250.0 Hz, hidraw5=250.0 Hz, hidraw9=354.9 Hz, hidraw11=211.5 Hz
+
+controle           transporte  patamar 0        patamar 1        patamar 2        veredito
+-----------------  ----------  ---------------  ---------------  ---------------  ----------------------------------------------------------
+d4:2f:4b:00:00:d8  cabo        250.0 (250-250)  250.0 (250-250)  250.0 (250-250)  sem efeito separável (variação +0.0 Hz, dispersão 0.0 Hz)
+a0:fa:9c:00:00:f0  cabo        250.0 (250-250)  250.0 (250-250)  250.0 (250-250)  sem efeito separável (variação +0.0 Hz, dispersão 0.0 Hz)
+44:46:48:00:00:03  rádio       359.0 (355-367)  358.0 (354-361)  358.0 (356-359)  sem efeito separável (variação +1.0 Hz, dispersão 11.9 Hz)
+14:3a:9a:00:00:ab  rádio       203.2 (173-217)  215.5 (208-222)  205.8 (191-232)  sem efeito separável (variação -2.6 Hz, dispersão 43.7 Hz)
+
+    Cada célula é a MÉDIA das rodadas, e entre parênteses o mínimo e o
+    máximo observados naquele patamar. Queda menor que a própria dispersão
+    NÃO é dose-resposta — é ruído com sorte.
+
+  T1 (hora de parede) ... 2026-08-15T07:31:34.150
+  CSV ................... docs/data/ensaios-brutos/2026-08-15-E5-E6-microfone_no_cabo.csv
+
+------------------------------------------------------------------------------
+RESUMO: E-5: 2/2 microfone(s) do cabo com piso de ruído. E-6: NENHUM dos 2 do rádio caiu além da dispersão — a topologia compartilhada não bastou para produzir dano
+------------------------------------------------------------------------------

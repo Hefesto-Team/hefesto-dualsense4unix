@@ -61,6 +61,43 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   recupera o seu. Fechar a lacuna deixa de ser um gesto e passa a ser
   aritmética. O critério que resume: **nunca existe um jogador 2 sem um
   jogador 1**;
+- **D-30 / ORDEM-DE-CHEGADA-01 (decisão DELA, 15/08/2026, 03:54)**: o número
+  segue a **ordem de conexão daquele momento**, e não mais o lugar que o
+  endereço ganhou num dia qualquer do passado — *"deve ser lembrado por ordem
+  de conexão naquele momento apenas. Não uma imagem fixa salva por mec"*. Isto
+  REVERTE em parte R-15 e R-23, e por isso vem com as duas garantias que
+  aquelas auditorias compraram, escritas aqui como invariante:
+
+  - a **FILA DO MOMENTO** (``_chegada``) é o que ordena a exibição. Ela
+    guarda, por key, a **ONDA** em que a casa VIU aquele controle chegar
+    (:data:`JANELA_DE_ONDA_SEC`) — não um carimbo de relógio de parede, e
+    nada disso vai para o disco;
+  - **empate de onda desempata pelo GRAVADO** (o ``rank``). Dois controles
+    vistos na MESMA olhada para a mesa (o mesmo ``sync_connected``, o mesmo
+    tick do provider) chegaram, para a casa, ao mesmo tempo: aí o registro
+    NÃO inventa uma ordem, ele lê a que já tinha. É este degrau que faz o
+    restart do daemon com quatro controles já ligados não embaralhar nada
+    (R-23) — quem sobrevive ao restart é o gravado, e é dele que a ordem
+    renasce;
+  - **a marca de chegada NUNCA é solta dentro da sessão** — quem cai e volta
+    recupera a onda que tinha, e portanto o MESMO número (D2/R-15). É a
+    diferença entre esta entrega e a renumeração por ORDEM DE WAKE que R-15
+    arrancou em 23/07: lá, religar dois controles em ordem invertida trocava
+    o dono do 1; aqui, os dois voltam ao que eram porque a onda deles é a de
+    quando chegaram, não a de quando voltaram;
+  - **CONGELAR é gravar** (:meth:`_congelar_locked`): quando a mesa fica
+    :data:`JANELA_MESA_ESTAVEL_SEC` sem entrar nem sair ninguém, a ordem do
+    momento é escrita na FILA GRAVADA — os ``rank`` dos PRESENTES são
+    permutados entre si, na ordem de chegada. O conjunto de ``rank`` não
+    muda, só o dono de cada um: nenhum posto some, nenhum vale 0 no meio do
+    caminho, e por isso a janela de DUPLICATA que R-15 mediu
+    (``_ds_reserve`` lendo piso 0) não pode reabrir. Depois de congelada, a
+    ordem do momento e a gravada dizem a MESMA coisa — e é a gravada que
+    atravessa o restart e o reboot, exatamente como R-23 exige.
+
+  O que continua valendo de R-15/R-23, sem asterisco: nada expira, o lugar
+  do ausente não é dropado, e o "Renumerar agora" (``compact``) segue sendo
+  o gesto explícito dela;
 - o vpad (MAC forjado ``02:fe:...``) NUNCA ganha slot (D9) — o filtro
   existe aqui além do filtro de enumeração do backend, porque outros
   chamadores (describe/co-op) também consultam;
@@ -163,6 +200,7 @@ import os
 import re
 import tempfile
 import threading
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -213,6 +251,43 @@ KIND_EXTERNAL = "external"
 #: acima disso, caem as entradas do FIM DA FILA (NUM-01: são as menos
 #: estabelecidas — quem está na frente é quem a casa usa).
 _MAX_PERSISTED_SLOTS = 16
+
+#: D-30: largura da ONDA de chegada — dois controles vistos dentro da mesma
+#: janela chegaram, para a casa, JUNTOS, e a ordem entre eles é a do GRAVADO
+#: (o desempate), não uma ordem inventada.
+#:
+#: O número não é escolhido, é espremido entre dois limites medidos:
+#:
+#: - **teto**: a casa olha para a mesa a cada **2,0 s** (o tick lento do
+#:   ``lifecycle`` — ``identity_sync_next_at = tick_started + 2.0``). A janela
+#:   tem de ser MENOR que isso, senão duas olhadas DIFERENTES (que são
+#:   informação de verdade sobre a ordem) seriam fundidas numa onda só;
+#: - **piso**: tem de cobrir a rajada de chamadas de UMA olhada — o
+#:   ``sync_connected`` do tick e os ``slot_for`` que o provider de cor faz um
+#:   por controle logo em seguida. Essa rajada é memória pura, sem I/O por
+#:   construção (ver docstring da classe): microssegundos.
+#:
+#: 0,5 s fica 4x abaixo do teto e ordens de magnitude acima do piso.
+JANELA_DE_ONDA_SEC = 0.5
+
+#: D-30: quanto tempo a mesa precisa ficar SEM ninguém entrar nem sair para
+#: ser declarada estável — e é aí que a ordem do momento é CONGELADA na fila
+#: gravada (:meth:`ControllerIdentityRegistry._congelar_locked`).
+#:
+#: 4,0 s é o número que esta casa já mediu duas vezes, não um chute:
+#:
+#: - ``external_identity.VOLATILE_ABSENCE_LIMIT = 2`` (MODO-01) fixou DUAS
+#:   ausências consecutivas — *"~4 s no poll lento"* — como o limiar entre
+#:   "sumiu de verdade" e "hiccup de enumeração", justamente para que *"um
+#:   hiccup de enumeração não renumere ninguém"*. Congelar é gravar: exigir o
+#:   MESMO limiar é o que impede que um blip de enumeração vire ordem gravada;
+#: - a repintura que a Steam faz a cada conexão nova dura **~4 s**
+#:   (``core/lightbar_gatilho.py``) — enquanto ela roda, a mesa ainda está se
+#:   mexendo, e uma foto tirada no meio dela não é a mesa dela.
+#:
+#: E é 8x a :data:`JANELA_DE_ONDA_SEC`: uma onda sempre fecha antes de a mesa
+#: poder ser declarada estável.
+JANELA_MESA_ESTAVEL_SEC = 4.0
 
 #: R-23: fallbacks da âncora de sessão quando ``/proc`` não está montado
 #: (contêiner/Flatpak). machine-id não é por-boot, e tudo bem: depois do R-23
@@ -382,8 +457,31 @@ class ControllerIdentityRegistry:
     ``_io_lock`` do backend e DEVE ser barato, sem I/O).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, clock: Callable[[], float] | None = None) -> None:
         self._lock = threading.RLock()
+        #: D-30: relógio MONOTÔNICO da fila do momento (ondas e estabilidade
+        #: da mesa). Injetável só para o teste poder mover o tempo sem
+        #: dormir — em produção é sempre ``time.monotonic``, que não anda
+        #: para trás com ajuste de NTP nem com suspend/resume.
+        self._clock: Callable[[], float] = clock or time.monotonic
+        #: D-30: key → ONDA em que a casa VIU este controle chegar NESTA
+        #: sessão (1, 2, 3…). É a FILA DO MOMENTO, e é ela que ordena a
+        #: exibição; o ``rank`` gravado só desempata dentro de uma onda.
+        #: NUNCA é persistida (é da sessão, por definição) e NUNCA é solta
+        #: dentro dela: é a marca antiga que devolve o mesmo número a quem
+        #: cai e volta (D2/R-15).
+        self._chegada: dict[str, int] = {}
+        #: onda corrente e o instante em que ela abriu (:data:`JANELA_DE_ONDA_SEC`).
+        self._onda = 0
+        self._onda_aberta_em: float | None = None
+        #: D-30: instante da última MUDANÇA de composição da mesa (alguém
+        #: entrou ou saiu). A mesa fica estável :data:`JANELA_MESA_ESTAVEL_SEC`
+        #: depois dele — e é então que a ordem do momento é gravada.
+        self._mesa_mudou_em: float = self._clock()
+        #: True quando a ordem do momento JÁ foi gravada para a composição
+        #: atual da mesa. Volta a False a cada entrada/saída — congelar de
+        #: novo custa uma permutação, e só acontece uma vez por mesa.
+        self._mesa_congelada = False
         #: NUM-01: key canônica (MAC 12-hex, ou a key volátil crua) → RANK,
         #: o lugar na fila GLOBAL (compartilhada com os externos). Contém
         #: presentes E ausentes — a permanência do lugar É a promessa D2.
@@ -575,12 +673,15 @@ class ControllerIdentityRegistry:
                     logger.warning("identity_slot_vpad_ignorado", uniq=key)
             return None
         with self._lock:
+            self._avaliar_mesa_locked()
             if key not in self._ordem:
                 if not assign:
                     return None
                 self._assign_locked(key, persistable)
-            if assign:
+            if assign and key not in self._connected:
                 self._connected.add(key)
+                self._mesa_mexeu_locked()
+                self._marcar_chegada_locked(key)
             return self._posicao_locked(key)
 
     def _assign_locked(self, key: str, persistable: bool) -> int:
@@ -620,6 +721,124 @@ class ControllerIdentityRegistry:
         )
         return rank
 
+    # ------------------------------------------------------------------
+    # A fila do MOMENTO (D-30 / ORDEM-DE-CHEGADA-01)
+    # ------------------------------------------------------------------
+
+    def _mesa_mexeu_locked(self) -> None:
+        """Alguém entrou ou saiu — a mesa volta a se mexer (já sob o lock).
+
+        Zera a estabilidade: a próxima foto só pode ser tirada
+        :data:`JANELA_MESA_ESTAVEL_SEC` depois daqui. Chamado nos TRÊS pontos
+        onde ``_connected`` muda (``slot_for``, ``mark_disconnected`` e
+        ``sync_connected``) — se um deles esquecer, a casa congela uma mesa
+        que ainda está se montando.
+        """
+        self._mesa_mudou_em = self._clock()
+        self._mesa_congelada = False
+
+    def _marcar_chegada_locked(self, key: str) -> None:
+        """Carimba a ONDA de chegada de ``key`` NESTA sessão (já sob o lock).
+
+        Idempotente por decisão, e a decisão é a garantia de R-15: quem JÁ
+        tem marca não ganha outra. Um controle que cai e volta no meio da
+        partida volta com a onda de quando CHEGOU — é isso que devolve a ele
+        o mesmo número, em vez de mandá-lo para o fim da fila (o defeito da
+        "ordem de wake" que a auditoria de 23/07 arrancou).
+
+        Ondas, e não um carimbo de relógio: tudo que a casa vê na MESMA
+        olhada para a mesa (:data:`JANELA_DE_ONDA_SEC`) chega junto, e a
+        ordem entre esses fica com o desempate gravado.
+        """
+        if key in self._chegada:
+            return
+        agora = self._clock()
+        aberta = self._onda_aberta_em
+        if aberta is None or agora - aberta >= JANELA_DE_ONDA_SEC:
+            self._onda += 1
+            self._onda_aberta_em = agora
+        self._chegada[key] = self._onda
+
+    def _ordem_do_momento_locked(self, presentes: list[str]) -> list[str]:
+        """``presentes`` ordenados pela FILA DO MOMENTO (já sob o lock).
+
+        A chave de ordenação é ``(onda de chegada, rank gravado)``, nesta
+        ordem e por decisão dela: a fila do momento MANDA, o gravado
+        DESEMPATA. Key sem marca de chegada (defensivo — todo conectado é
+        carimbado nos três pontos de entrada) cai na onda 0 e é ordenada
+        inteiramente pelo gravado, que é o comportamento anterior a D-30.
+        """
+        return sorted(
+            presentes,
+            key=lambda k: (self._chegada.get(k, 0), self._ordem.get(k, 0), k),
+        )
+
+    def _avaliar_mesa_locked(self) -> bool:
+        """Congela a ordem do momento se a mesa já está estável (sob o lock).
+
+        Barato no caminho quente: um ``monotonic()`` e duas comparações
+        enquanto não há nada a fazer (o ``_mesa_congelada`` mata a repetição —
+        congela-se UMA vez por composição de mesa). Mesa vazia não é mesa
+        estável: não há foto a tirar, e tirá-la apagaria a ordem viva.
+        """
+        if self._mesa_congelada or not self._connected:
+            return False
+        if self._clock() - self._mesa_mudou_em < JANELA_MESA_ESTAVEL_SEC:
+            return False
+        self._mesa_congelada = True
+        self._congelar_locked()
+        return True
+
+    def _congelar_locked(self) -> None:
+        """Grava a ordem do momento na FILA GRAVADA — CONGELAR (já sob o lock).
+
+        A operação inteira é uma PERMUTAÇÃO: os ``rank`` que os presentes já
+        detêm são redistribuídos ENTRE ELES, na ordem de chegada. O conjunto
+        de postos não muda em momento nenhum — nenhum posto some, nenhum vale
+        0 no meio do caminho, e o ausente não é tocado. É isso que impede a
+        janela de DUPLICATA que R-15 mediu em 23/07 (``_ds_reserve`` lendo
+        piso 0 entre expirar e reatribuir): aqui não existe "entre".
+
+        Depois desta escrita a ordem do momento e a gravada dizem a mesma
+        coisa — e é a gravada que atravessa restart e reboot (R-23). Não
+        persiste em disco aqui: marca ``_dirty`` e o ``sync_connected`` (tick
+        lento) salva, porque este método também roda no caminho quente do
+        provider de cor, onde I/O é proibido.
+        """
+        presentes = [k for k in self._connected if k in self._ordem]
+        if len(presentes) < 2:
+            return
+        postos = sorted(self._ordem[k] for k in presentes)
+        mudou = False
+        for key, posto in zip(
+            self._ordem_do_momento_locked(presentes), postos, strict=True
+        ):
+            if self._ordem[key] != posto:
+                self._ordem[key] = posto
+                mudou = True
+        if not mudou:
+            return
+        self._dirty = True
+        logger.info(
+            "identity_ordem_do_momento_congelada",
+            ordem={k: self._ordem[k] for k in presentes},
+        )
+
+    def snapshot_chegada(self) -> dict[str, int]:
+        """Cópia da FILA DO MOMENTO: key → onda de chegada (D-30). Leitura pura.
+
+        Diagnóstico e testes. NÃO é o número exibido (esse é ``slot_for``) nem
+        o lugar na fila gravada (esse é ``snapshot()``): é a ordem em que a
+        casa VIU cada controle chegar nesta sessão.
+        """
+        with self._lock:
+            return dict(self._chegada)
+
+    def mesa_congelada(self) -> bool:
+        """True quando a ordem do momento já foi gravada para esta mesa (D-30)."""
+        with self._lock:
+            return self._mesa_congelada
+
     def _external_present_ranks_locked(self) -> set[int]:
         """Lugares dos externos que contam para a exibição (já sob o lock).
 
@@ -646,21 +865,38 @@ class ControllerIdentityRegistry:
     def _posicao_locked(self, key: str) -> int | None:
         """Colocação de ``key`` entre os PRESENTES (já sob ``self._lock``).
 
-        O coração do NUM-01: 1 + quantos controles presentes têm lugar ANTES
-        do dele na fila global. Empate de lugar com um externo (só possível
-        por corrupção do arquivo) resolve a favor do DualSense — a MESMA
-        regra do cross-check do ``load`` e da gravação da fila, para que a
-        ordem exibida nunca discorde da ordem gravada.
+        O coração do NUM-01: 1 + quantos controles presentes vêm ANTES dele.
+        Empate de lugar com um externo (só possível por corrupção do arquivo)
+        resolve a favor do DualSense — a MESMA regra do cross-check do
+        ``load`` e da gravação da fila, para que a ordem exibida nunca
+        discorde da ordem gravada.
+
+        D-30 mudou UMA coisa: quem decide "antes" entre os DualSense
+        presentes é a FILA DO MOMENTO, não o ``rank``. O mecanismo é uma
+        permutação, e ela é o que mantém o resto da casa intacto: os postos
+        que os presentes ocupam são os MESMOS (``postos``), só muda de quem é
+        cada um. O conjunto que ``present_ranks()`` publica para o lado dos
+        externos não se mexe, então a contagem 1..N da mesa inteira continua
+        fechando sem buraco e sem duplicata — e um controle AUSENTE segue
+        sendo colocado pelo lugar gravado dele, que é a resposta à pergunta
+        "que número ele teria se estivesse na mesa".
         """
         rank = self._ordem.get(key)
         if rank is None:
             return None
-        antes = sum(
-            1
-            for outra in self._connected
-            if outra != key and self._ordem.get(outra, rank + 1) < rank
-        )
-        antes += sum(1 for r in self._external_present_ranks_locked() if r < rank)
+        presentes = [k for k in self._connected if k in self._ordem]
+        if key in self._connected:
+            postos = sorted(self._ordem[k] for k in presentes)
+            posicao = self._ordem_do_momento_locked(presentes).index(key)
+            meu_posto = postos[posicao]
+        else:
+            # Ausente: não está na fila do momento (não chegou), então a
+            # pergunta só pode ser respondida pelo gravado — comportamento
+            # idêntico ao de antes de D-30.
+            meu_posto = rank
+            posicao = sum(1 for k in presentes if self._ordem[k] < rank)
+        antes = posicao
+        antes += sum(1 for r in self._external_present_ranks_locked() if r < meu_posto)
         return antes + 1
 
     def mark_disconnected(self, uniq: str | None) -> None:
@@ -676,18 +912,33 @@ class ControllerIdentityRegistry:
         sozinho na mesa exibir 2. Agora ele segura só o LUGAR NA FILA: quem
         está presente conta 1..N sem ele e, quando ele volta, cada um recupera
         a sua colocação. As duas promessas passam a caber juntas.
+
+        D-30 acrescentou a SEGUNDA metade da promessa: além do lugar gravado,
+        o ausente mantém a ONDA DE CHEGADA desta sessão. Sem isso, "ordem de
+        conexão" leria a volta dele como uma chegada nova e o mandaria para o
+        fim da fila — que é, palavra por palavra, o defeito de ORDEM DE WAKE
+        que R-15 arrancou em 23/07.
         """
         if not uniq or not isinstance(uniq, str):
             return
         key, _ = self._canonical(uniq)
         with self._lock:
-            self._connected.discard(key)
+            # D-30: avaliar ANTES de tirar da mesa. Se a mesa já estava
+            # estável há tempo, a foto é tirada com este controle ainda nela —
+            # é a saída dele que faz a mesa se mexer, não o contrário.
+            self._avaliar_mesa_locked()
+            if key in self._connected:
+                self._connected.discard(key)
+                self._mesa_mexeu_locked()
+            # A marca de chegada FICA (D2/R-15): quem volta recupera a onda
+            # que tinha, e com ela o mesmo número.
 
     def sync_connected(self, uniqs: Iterable[str]) -> None:
         """Reconcilia com os uniqs CONECTADOS agora e ATRIBUI quem falta (~2s).
 
         - quem chegou SEM lugar entra no fim da fila, na ORDEM em que o
-          chamador entrega (R-24 — ver abaixo);
+          chamador entrega (R-24 — ver abaixo), e entra também na FILA DO
+          MOMENTO, todos os desta olhada na MESMA onda (D-30 — ver abaixo);
         - quem saiu do conjunto mantém o LUGAR (D2), e a exibição dos que
           ficaram fecha a lacuna sozinha (NUM-01 — a "compactação automática"
           não é um passo, é consequência de contar só os presentes);
@@ -713,6 +964,22 @@ class ControllerIdentityRegistry:
         ocupa 1..N primeiro. A ORDEM do iterável é significativa (o
         lifecycle entrega em ordem de ``describe_controllers``, primário
         primeiro) — nunca passar um ``set``, que numeraria por hash.
+
+        D-30 (decisão dela, 15/08) — este método é o BATIMENTO da fila do
+        momento, e faz três coisas novas, todas baratas:
+
+        1. carimba a onda de chegada de quem entrou AGORA (quem já estava na
+           mesa não é recarimbado — é isso que devolve o número a quem volta);
+        2. reconhece que a mesa se mexeu quando a composição muda, o que
+           reinicia a contagem de estabilidade;
+        3. quando nada muda por :data:`JANELA_MESA_ESTAVEL_SEC`, CONGELA: a
+           ordem do momento é gravada na fila persistida e este mesmo tick a
+           leva ao disco. É o único ponto de escrita, como sempre foi.
+
+        A ordem do iterável NÃO decide sozinha o número: quem chega na mesma
+        olhada divide a onda, e o desempate ali é o GRAVADO. É por isso que
+        reiniciar o daemon com quatro controles já ligados (todos vistos na
+        mesma primeira olhada) não embaralha nada — R-23 continua de pé.
         """
         vivos: list[tuple[str, bool]] = []
         vistos: set[str] = set()
@@ -727,10 +994,26 @@ class ControllerIdentityRegistry:
             vistos.add(key)
             vivos.append((key, persistable))
         with self._lock:
+            # D-30: a foto da mesa ANTERIOR primeiro (pelo mesmo motivo do
+            # ``mark_disconnected``: se ela estava estável, o que se grava é
+            # a mesa que estava estável, não a que este tick acabou de mudar).
+            self._avaliar_mesa_locked()
+            anteriores = self._connected
             self._connected = vistos
+            if vistos != anteriores:
+                self._mesa_mexeu_locked()
             for key, persistable in vivos:
                 if key not in self._ordem:
                     self._assign_locked(key, persistable)
+                if key not in anteriores:
+                    # Chegou nesta olhada: entra na fila do momento. Todos os
+                    # que chegaram JUNTOS ficam na mesma onda, e o desempate
+                    # entre eles é o gravado (a ordem do iterável não decide
+                    # sozinha — ver ``_marcar_chegada_locked``).
+                    self._marcar_chegada_locked(key)
+            # Este tick é também o batimento que declara a mesa estável: quando
+            # nada muda, a avaliação lá em cima congela, e o save daqui leva a
+            # ordem do momento ao disco no MESMO tick lento.
             if self._dirty:
                 self._save_locked()
                 self._dirty = False
@@ -812,6 +1095,16 @@ class ControllerIdentityRegistry:
         NUM-01: os valores de ``mapping`` são LUGARES NA FILA, não números
         exibidos. Escrever aqui não repinta ninguém sozinho — muda a ordem de
         quem exibe o quê quando estiver na mesa.
+
+        D-30 estreitou o alcance deste gesto e a nota fica aqui para a E3 não
+        reaprender: com a exibição saindo da FILA DO MOMENTO, reescrever o
+        gravado mexe no DESEMPATE (quem chegou junto) e no que atravessa o
+        restart — não na ordem de quem a casa viu chegar em momentos
+        diferentes. A fila do momento NÃO é tocada aqui de propósito: um
+        gesto que a apagasse mandaria todo mundo para o fim da fila no
+        replug seguinte, que é o defeito de ORDEM DE WAKE de R-15. O que o
+        botão "Renumerar agora" deve significar depois de D-30 é decisão da
+        E3, não desta função.
         """
         with self._lock:
             changed = False
@@ -1063,6 +1356,8 @@ def reset_identity_registry() -> None:
 __all__ = [
     "CONTROLLERS_FILE_LOCK",
     "CONTROLLERS_SCHEMA_VERSION",
+    "JANELA_DE_ONDA_SEC",
+    "JANELA_MESA_ESTAVEL_SEC",
     "KIND_DUALSENSE",
     "KIND_EXTERNAL",
     "ORDER_FIELD",

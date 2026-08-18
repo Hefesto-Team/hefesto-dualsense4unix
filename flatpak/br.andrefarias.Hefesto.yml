@@ -148,6 +148,48 @@ modules:
     cleanup:
       - /share/man
 
+  # Módulo 2-bis: wvkbd — o TECLADO NA TELA que o L3 do controle abre
+  # (TECLADO-QUE-NAO-DIGITA-01). Mesma situação do wlrctl acima, e pelo mesmo
+  # motivo: no .deb ele vem por `Recommends: wvkbd | onboard`, mas dentro do
+  # sandbox um pacote do HOST é invisível — este manifesto não pede
+  # `--talk-name=org.freedesktop.Flatpak` nem nada que permita
+  # `flatpak-spawn --host`, então o daemon só enxerga o que está em /app.
+  # Sem este módulo, `shutil.which("wvkbd-mobintl")` dentro da sandbox devolve
+  # None SEMPRE, e o L3 — o ÚNICO caminho do produto para ESCREVER TEXTO, já
+  # que nenhum dos nove atalhos de fábrica digita LETRA — não teria o que abrir
+  # no formato Flatpak, por construção e para sempre.
+  #
+  # Upstream: https://git.sr.ht/~proycon/wvkbd (tag v0.14.3). SHA-256 conferido
+  # em 10/08/2026, com o tarball baixado duas vezes para provar que o hash é
+  # estável (a mesma cautela que o wlrctl acima já exigia deste host).
+  #
+  # Deps: wayland-client, xkbcommon e pangocairo (o `PKGS` do Makefile), mais
+  # o `wayland-scanner` no build — todos presentes no org.gnome.Sdk//47, que é
+  # o que o wlrctl acima já prova empiricamente. Os quatro .xml de protocolo
+  # (inclusive `virtual-keyboard-unstable-v1` e `wlr-layer-shell-unstable-v1`,
+  # que são COMO ele digita e como ele aparece) viajam dentro do próprio
+  # tarball, em `proto/` — não depende de wayland-protocols do sistema.
+  #
+  # `make` sem alvo constrói `wvkbd-${LAYOUT}` com LAYOUT=mobintl (o default do
+  # config.mk), que é exatamente o binário que
+  # `daemon/subsystems/keyboard.py` procura.
+  #
+  # Só o wvkbd, não o onboard: dentro do sandbox a sessão é Wayland (o
+  # manifesto monta --socket=wayland), e o onboard digita por XTEST — abriria
+  # e não digitaria fora do XWayland. Bundlar um teclado que abre e não digita
+  # seria pior do que não bundlar nenhum.
+  - name: wvkbd
+    buildsystem: simple
+    build-commands:
+      - make PREFIX=/app MANPREFIX=/app/share/man
+      - make PREFIX=/app MANPREFIX=/app/share/man install
+    sources:
+      - type: archive
+        url: https://git.sr.ht/~proycon/wvkbd/archive/v0.14.3.tar.gz
+        sha256: 1e4e3e20faaa344555a7e2c97076d170e971bd01a6aba7422aca92324a8a6043
+    cleanup:
+      - /share/man
+
   # Módulo 3: Hefesto - Dualsense4Unix — instalação do wheel local com --no-deps
   - name: hefesto
     buildsystem: simple
@@ -207,6 +249,8 @@ modules:
           /app/share/hefesto-dualsense4unix/udev-rules/71-uinput.rules
       - install -Dm644 assets/72-ps5-controller-autosuspend.rules
           /app/share/hefesto-dualsense4unix/udev-rules/72-ps5-controller-autosuspend.rules
+      - install -Dm644 assets/72-hefesto-touchpad-motion-uaccess.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/72-hefesto-touchpad-motion-uaccess.rules
       - install -Dm644 assets/76-dualsense-touchpad-libinput-ignore.rules
           /app/share/hefesto-dualsense4unix/udev-rules/76-dualsense-touchpad-libinput-ignore.rules
       - install -Dm644 assets/77-dualsense-leds.rules
@@ -261,6 +305,11 @@ modules:
       # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota
       # da Onda T: o dkms roda a partir do HOST via install-host-udev.sh.
       - cp -a assets/dkms/rtw88-usb /app/share/hefesto-dualsense4unix/dkms/
+      # CR-05 (07/08/2026): a GPL-2.0, seção 1, exige que a cópia do texto da
+      # licença viaje JUNTO com o fonte. Os três diretórios acima são GPL (o
+      # rtw88-usb é GPL-2.0 OR BSD-3-Clause, licença dupla), e até 07/08 nenhum
+      # texto os acompanhava. Procedência em LICENSES/README.md.
+      - cp -a LICENSES /app/share/hefesto-dualsense4unix/dkms/
 
       # BROKER-01 (Onda S — fd-injection): binário standalone + units-
       # template do broker root hide-hidraw. O sandbox NÃO instala unit de

@@ -152,6 +152,22 @@ def _stub_with(rows, tree) -> Any:
     stub._select_profile_by_name = lambda name: (  # type: ignore[attr-defined]
         ProfilesActionsMixin._select_profile_by_name(stub, name)
     )
+    # NUNCA-TROCA-O-ALVO-01 (06/08/2026): o sync deixou de mover a barra azul
+    # cegamente — ele pergunta antes se há trabalho não salvo no editor, e
+    # marca a mexida como PROGRAMÁTICA para o handler de seleção não repintar
+    # o editor. Os três ajudantes vêm do mixin REAL: com dublês aqui, este
+    # arquivo passaria a testar o dublê em vez da recusa que ele mede.
+    stub._selecao_programatica = False  # type: ignore[attr-defined]
+    stub._alvo_do_salvar = None  # type: ignore[attr-defined]
+    stub._ha_trabalho_no_editor = lambda: (  # type: ignore[attr-defined]
+        ProfilesActionsMixin._ha_trabalho_no_editor(stub)
+    )
+    stub._selecao_pode_se_mover_sozinha = lambda destino: (  # type: ignore[attr-defined]
+        ProfilesActionsMixin._selecao_pode_se_mover_sozinha(stub, destino)
+    )
+    stub._mover_selecao_sem_gesto = lambda linha: (  # type: ignore[attr-defined]
+        ProfilesActionsMixin._mover_selecao_sem_gesto(stub, linha)
+    )
     # UX-PROFILES-ACTIVE-HIGHLIGHT-01: o sync também realça a linha ativa; o
     # store fake destes testes tem 3 colunas (sem a de peso), então o stub só
     # registra a intenção.
@@ -345,11 +361,28 @@ class _FakeCombo:
 
 
 class _FakeBox:
+    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK.
+
+    CAMPO-QUE-NAO-NASCIA-01: nasce com ``no_show_all`` armado como no glade;
+    ``show()`` para na caixa e só ``show_all()`` desarmado desce nos filhos.
+    """
+
     def __init__(self) -> None:
         self.visible = True
+        self.no_show_all = True
+        self.filhos_visiveis = False
 
     def show(self) -> None:
         self.visible = True
+
+    def show_all(self) -> None:
+        if self.no_show_all:
+            return
+        self.visible = True
+        self.filhos_visiveis = True
+
+    def set_no_show_all(self, valor: bool) -> None:
+        self.no_show_all = bool(valor)
 
     def hide(self) -> None:
         self.visible = False
@@ -372,6 +405,28 @@ def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNa
 
     stub._get = _get  # type: ignore[attr-defined]
     stub._aplica_a = combo  # type: ignore[attr-defined]
+    # A caixinha do Steam Input (decisão dela, 07/08/2026) é irmã do box do
+    # jogo, e `_on_aplica_a_changed` a mostra/esconde junto. O método REAL é
+    # amarrado ao stub — e não substituído por um no-op — para este arquivo
+    # continuar exercitando o handler de produção inteiro; sem o widget no
+    # `_get`, ele sai pela porta que já existe para glade desatualizado.
+    from types import MethodType
+
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        ProfilesActionsMixin,
+    )
+
+    stub._mostrar_caixa_do_steam_input = MethodType(  # type: ignore[attr-defined]
+        ProfilesActionsMixin._mostrar_caixa_do_steam_input, stub
+    )
+    # JOGO-QUE-SE-DIZ-01 (13/08/2026): o handler passou a atualizar também o
+    # rótulo com o NOME do jogo ao lado do número. Amarrado pela mesma razão do
+    # de cima — sem o widget no `_get`, o método real sai pela porta que já
+    # existe para glade desatualizado, e este arquivo continua exercitando o
+    # `_on_aplica_a_changed` de produção inteiro em vez de uma versão podada.
+    stub._atualizar_frase_do_jogo = MethodType(  # type: ignore[attr-defined]
+        ProfilesActionsMixin._atualizar_frase_do_jogo, stub
+    )
     return stub
 
 
@@ -489,7 +544,9 @@ class TestProfilesCacheNonBlocking:
 
         alvo = SimpleNamespace(name="meu_perfil")
         populados: list = []
-        stub = SimpleNamespace(_profiles_cache=[alvo])
+        # NUNCA-TROCA-O-ALVO-01: sem seleção programática em curso, o handler
+        # repinta o editor como sempre repintou — que é o que este teste mede.
+        stub = SimpleNamespace(_profiles_cache=[alvo], _selecao_programatica=False)
         stub._selected_profile_name = lambda _sel: "meu_perfil"  # type: ignore[attr-defined]
         stub._find_cached_profile = (  # type: ignore[attr-defined]
             lambda name: ProfilesActionsMixin._find_cached_profile(stub, name)

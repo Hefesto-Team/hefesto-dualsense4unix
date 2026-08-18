@@ -180,10 +180,30 @@ def test_doctor_checa_wrapper_no_path() -> None:
     assert "wrapper no PATH" in texto
 
 
-def test_doctor_conta_jogos_com_wrapper_aplicado() -> None:
+def test_doctor_nomeia_quem_falta_em_vez_de_contar() -> None:
+    """O contador SAIU em 16/08/2026, e a ausência dele é o que se trava aqui.
+
+    Ele fazia `grep -o` do caminho do wrapper no vdf inteiro e imprimia
+    "N jogo(s) com o wrapper aplicado" em VERDE — contando as três árvores
+    `apps` do arquivo quando a Steam só lê uma (medido: "[ OK ] 76" onde a
+    árvore viva tem 63), e nunca dizendo QUAL faltava.
+
+    Era a forma exata do `WRAPPER-EM-TODOS-01`, e nos últimos dias esse verde
+    saía logo ACIMA do `[FAIL] PRAGMATA`. O dano de um portão assim não é errar
+    o diagnóstico uma vez: é ensinar que verde-e-vermelho juntos são normais
+    aqui, e é assim que um portão morre de descrédito.
+
+    O que tem de existir no lugar são as duas réguas que NOMEIAM.
+    """
     texto = (REPO_ROOT / "scripts/doctor.sh").read_text(encoding="utf-8")
-    assert ".local/share/hefesto-dualsense4unix/bin/hefesto-launch" in texto
-    assert "wrapper hefesto-launch aplicado" in texto
+
+    # o `pass` que contava sem nomear não pode voltar
+    assert "jogo(s) com o wrapper hefesto-launch aplicado" not in texto
+
+    # e as duas que nomeiam têm de estar chamadas, não só definidas
+    assert texto.count("check_sentinela_wrapper") >= 2
+    assert texto.count("check_arvore_canonica_do_wrapper") >= 2
+    assert "jogo(s) que PERDERAM as Opções de Inicialização do Hefesto:" in texto
 
 
 def test_doctor_avisa_env_morta_proton_enable_hidraw() -> None:

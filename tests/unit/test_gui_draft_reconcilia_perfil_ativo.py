@@ -127,13 +127,27 @@ def test_perfil_igual_nao_dispara_nada() -> None:
 
 
 def test_troca_de_perfil_sem_edicao_recarrega_o_draft() -> None:
-    """O caso do autoswitch: ela abre o Sackboy e a GUI acompanha."""
+    """O caso do autoswitch: ela abre o Sackboy e a GUI acompanha.
+
+    NUNCA-TROCA-O-ALVO-01 (06/08/2026) — nota datada sobre o que caducou:
+    até aqui este teste exigia `app.toasts == []`, ou seja, que a troca fosse
+    MUDA. A decisão medida que continua de pé é a outra (não recarregar por
+    baixo de uma edição pendente); o silêncio nunca foi medido, e virou defeito
+    quando se mediu o outro lado: recarregar em silêncio move o alvo dos DOIS
+    botões de salvar sem gesto dela, e o diálogo do rodapé passa a nascer
+    perguntando "substituir 'sackboy_nativo'?" logo depois de ela ter ativado
+    'vitoria' na mão. Seguro para os dados, enganoso para ela. A troca continua
+    acontecendo — agora ela é anunciada.
+    """
     app = _AppFalsa(ativo="FPS")
     app._reconciliar_draft_com_perfil_ativo({"active_profile": "sackboy_nativo"})
     assert app.bootstraps == ["sackboy_nativo"], (
         "sem recarregar, as abas passam a editar e salvar o perfil ERRADO"
     )
-    assert app.toasts == []
+    assert len(app.toasts) == 1, "a janela trocou o alvo do Salvar em silêncio"
+    contexto, msg = app.toasts[0]
+    assert contexto == "draft-reload"
+    assert "sackboy_nativo" in msg and "Salvar" in msg
 
 
 def test_edicao_pendente_avisa_em_vez_de_descartar() -> None:

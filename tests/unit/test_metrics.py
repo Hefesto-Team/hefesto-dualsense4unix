@@ -22,8 +22,11 @@ import pytest
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems.metrics import (
     _BIND_HOST,
+    ENV_METRICS_ENABLED,
+    ENV_METRICS_PORT,
     MetricsCollector,
     MetricsSubsystem,
+    _porta_efetiva,
 )
 
 # ---------------------------------------------------------------------------
@@ -205,6 +208,17 @@ class TestMetricsCollector:
 
 
 class TestMetricsSubsystem:
+    @pytest.fixture(autouse=True)
+    def _sem_env_de_metricas(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """As duas chaves saem do ambiente antes de cada teste desta classe.
+
+        Sem isto, um `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1` exportado no
+        shell de quem roda a suíte faria `test_is_enabled_false` reprovar por
+        motivo que não é do código.
+        """
+        monkeypatch.delenv(ENV_METRICS_ENABLED, raising=False)
+        monkeypatch.delenv(ENV_METRICS_PORT, raising=False)
+
     def _make_config(self, *, enabled: bool = True, port: int = 0) -> MagicMock:
         cfg = MagicMock()
         cfg.metrics_enabled = enabled
@@ -226,6 +240,66 @@ class TestMetricsSubsystem:
     def test_is_enabled_false(self) -> None:
         subsystem = MetricsSubsystem()
         assert subsystem.is_enabled(self._make_config(enabled=False)) is False
+
+    # -----------------------------------------------------------------------
+    # PROMESSA-NÃO-CUMPRIDA-01/C1 — a chave que faltava.
+    #
+    # A mordida: arrancada a cura de `is_enabled` (voltando ao `return
+    # bool(getattr(config, "metrics_enabled", False))`), o primeiro teste fica
+    # VERMELHO — a env deixa de existir para o código. Um teste que só
+    # conferisse `metrics_enabled=True` continuaria verde com a cura arrancada,
+    # porque essa metade nunca esteve quebrada.
+    # -----------------------------------------------------------------------
+
+    def test_a_env_liga_as_metricas_com_a_config_desligada(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A queixa C1 em uma linha: o campo era inalcançável de fora do código."""
+        monkeypatch.setenv(ENV_METRICS_ENABLED, "1")
+        subsystem = MetricsSubsystem()
+
+        assert subsystem.is_enabled(self._make_config(enabled=False)) is True
+
+    @pytest.mark.parametrize("valor", ["0", "true", "yes", "", "2"])
+    def test_so_o_literal_um_liga(
+        self, valor: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Mesma gramática dos plugins: só `"1"`, e nada de `"true"`.
+
+        Duas chaves opcionais do mesmo daemon com regras diferentes seria
+        armadilha — quem aprendeu `PLUGINS_ENABLED=1` escreveria `=true` aqui e
+        veria o endpoint não subir, sem erro nenhum.
+        """
+        monkeypatch.setenv(ENV_METRICS_ENABLED, valor)
+        subsystem = MetricsSubsystem()
+
+        assert subsystem.is_enabled(self._make_config(enabled=False)) is False
+
+    def test_a_config_ligada_continua_valendo_sem_env(self) -> None:
+        """A metade que já funcionava não pode passar a depender da env."""
+        subsystem = MetricsSubsystem()
+
+        assert subsystem.is_enabled(self._make_config(enabled=True)) is True
+
+    def test_a_porta_da_env_vence_a_da_config(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Ligar sem poder escolher a porta seria meia-chave (9090 ocupada)."""
+        monkeypatch.setenv(ENV_METRICS_PORT, "9111")
+
+        assert _porta_efetiva(9090) == 9111
+
+    @pytest.mark.parametrize("valor", ["abc", "", "0", "65536", "-1", "9090.5"])
+    def test_porta_invalida_cai_na_config_em_vez_de_derrubar_o_daemon(
+        self, valor: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Mesma postura do bind que falha: o daemon segue, as métricas não sobem."""
+        monkeypatch.setenv(ENV_METRICS_PORT, valor)
+
+        assert _porta_efetiva(9090) == 9090
+
+    def test_sem_env_a_porta_e_a_da_config(self) -> None:
+        assert _porta_efetiva(9090) == 9090
 
     @pytest.mark.asyncio
     async def test_stop_idempotente_sem_servidor(self) -> None:

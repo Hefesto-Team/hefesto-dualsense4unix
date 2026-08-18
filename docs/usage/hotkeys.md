@@ -28,9 +28,21 @@ cabeçalho dizendo exatamente o mesmo, e nada nele chega ao daemon.
 
 A configuração efetiva vem de duas fontes, e só delas:
 
-1. **Variáveis de ambiente lidas na subida do daemon** — hoje são três:
-   `HEFESTO_DUALSENSE4UNIX_POLL_HZ`, `HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS`
-   e `HEFESTO_DUALSENSE4UNIX_NICE`.
+1. **Variáveis de ambiente lidas na subida do daemon** — hoje são seis, todas
+   em `daemon/main.py`:
+   `HEFESTO_DUALSENSE4UNIX_POLL_HZ`, `HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS`,
+   `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`, `HEFESTO_DUALSENSE4UNIX_NICE`,
+   `HEFESTO_DUALSENSE4UNIX_FAKE` e `HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT`.
+
+   As duas últimas são o backend falso (teste e desenvolvimento, sem hardware),
+   não configuração de uso. A terceira,
+   `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`, nasceu em 29/07 com a
+   EMULACAO-NO-JOGO-01 e é o desligador do teclado emulado — `=0` desliga,
+   qualquer outro valor mantém ligado. Esta página a omitia até 01/08 e
+   afirmava "hoje são três" (DOC-VERDADE-02, E7). A precedência dela, do mais
+   fraco ao mais forte: default do `DaemonConfig` < esta variável <
+   `keyboard_emulation.flag`, que é a escolha registrada na janela e vence
+   sempre.
 2. **O método IPC `daemon.reload`**, que aceita `config_overrides` com qualquer
    subconjunto dos campos de `DaemonConfig` e aplica em tempo de execução:
 
@@ -98,6 +110,7 @@ funcionando e conseguir reativar a emulação depois.
 | PS (toque curto) | Ação `[hotkey.ps_button]` — default `steam` |
 | **PS + Options** | Modo jogo on/off — suprime/restaura emulação de mouse/teclado |
 | PS + D-pad ↑/↓ | Troca de perfil (combo sagrado) |
+| **L3 / R3** | Abre / fecha o **teclado na tela** (ver a seção abaixo) |
 
 **Por que não é mais o long-press.** O gesto original era segurar o PS por ~1 s
 (FEAT-EMULATION-GAMEMODE-LONGPRESS-01, v3.8.1). Ele provocava modo jogo
@@ -142,6 +155,55 @@ Notifica via D-Bus (`org.freedesktop.Notifications`) em ambas as transições �
 porque a ação é deliberada (sem visual, o usuário não saberia se o gesto pegou). O estado é
 **transitório**: não persiste entre boots — a emulação volta ao estado da config no próximo
 restart do daemon.
+
+> **NOTA DATADA — 09/08/2026: "transitório" continua verdade para o GESTO, e
+> deixou de ser toda a história.** O combo PS + Options segue sem persistir. O
+> que mudou é que a **janela** passou a guardar o modo jogo: o interruptor da
+> aba Emulação escreve no rascunho e o **Salvar Perfil** do rodapé o persiste em
+> `suppress_desktop_emulation`, **inclusive** em perfil "Vale sempre" — a recusa
+> que existia nesse caso caiu por decisão dela, *"a vontade na GUI prevalece
+> sempre"*. Num perfil "Vale sempre" o valor fica guardado no arquivo mas o
+> daemon **não o liga sozinho** na ativação seguinte, e é isso que impede o
+> desktop de acordar sem ponteiro depois de um boot. O campo e o preço estão em
+> [`creating-profiles.md`](creating-profiles.md#seção-opcional-mouse-e-suppress_desktop_emulation).
+
+## Teclado na tela — L3 abre, R3 fecha
+
+Os defaults de `l3` e `r3` no mapa de fábrica não são teclas: são os tokens
+virtuais `__OPEN_OSK__` e `__CLOSE_OSK__`, interceptados pelo device de teclado
+virtual e delegados ao subsistema de teclado, que sobe (ou mata) o processo do
+teclado na tela do sistema. Nada de evento de tecla real é emitido.
+
+**Isto é o único caminho de fábrica para escrever texto pelo controle.** Nenhum
+atalho de fábrica digita uma letra: o mapa de fábrica tem nove entradas, e as
+que emitem tecla de verdade são Super (Options), PrintScreen (Create),
+Alt+Shift+Tab (L1) e Alt+Tab (R1) — mais Backspace, Enter e Delete, que eram
+das três regiões do touchpad e [saíram em 09/08/2026](modos.md#o-touchpad-é-touchpad-do-sistema).
+As outras duas entradas são justamente o `l3` e o `r3` desta seção.
+
+O programa é do sistema, e a escolha sai da **sessão viva**, não de preferência:
+
+| Sessão | Pacote | Binário | Como digita |
+|---|---|---|---|
+| Wayland | `wvkbd` | `wvkbd-mobintl` | `zwp_virtual_keyboard_manager_v1` — cliente Wayland puro |
+| X11 | `onboard` | `onboard` | XTEST |
+
+Desde 10/08/2026 o `install.sh` instala o certo sozinho, sem flag (passo 4f). Em
+máquina provisionada antes disso, `sudo apt install wvkbd` (ou `onboard` em X11)
+resolve, **sem reiniciar o daemon** — ele reconsulta o sistema a cada 10 s. Sem
+nenhum dos dois instalados, o L3 **avisa na tela** em vez de não fazer nada.
+
+A ordem importa e já foi um defeito: até 10/08 a lista de candidatos era fixa,
+com o `onboard` primeiro. Com os dois instalados numa sessão Wayland, o daemon
+escolheria justamente o que **abre e não digita**. Hoje quem decide é
+`WAYLAND_DISPLAY` primeiro, `DISPLAY` só depois — numa sessão Wayland com
+XWayland os dois estão setados, então olhar `DISPLAY` antes classificaria toda
+sessão Wayland moderna como X11.
+
+Desligar **"Emular teclado"** na aba Navegação tira também o teclado na tela: é
+o mesmo device virtual que carrega os dois. Diagnóstico e as quatro histórias de
+um `command -v` vazio em
+[`troubleshooting.md`](troubleshooting.md#17-o-l3-não-abre-o-teclado-na-tela).
 
 ## Observações
 

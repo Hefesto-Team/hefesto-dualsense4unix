@@ -147,6 +147,29 @@ tem zero ocorrências em `src/`), e o daemon não lê arquivo de configuração.
 não o reinicia — logo nem o `daemon.reload` via IPC liga o endpoint num daemon
 já rodando.
 
+> **Essa contagem caducou quatro dias depois** — hoje são quatro parâmetros.
+> Ver a nota de 2026-08-01, abaixo.
+
 Consequência prática: hoje o endpoint só sobe mexendo no código. O item
 "histograma de latência por tick, previsto para V2.1" também não foi feito, e
 não há trabalho em andamento. Detalhe em `docs/usage/metrics.md`.
+
+## Nota de verificação — 2026-08-01
+
+Corrige um número da nota anterior, e só ele. O veredito de 25/07 continua de
+pé: não há chave de usuário para as métricas, e subir o endpoint exige mexer no
+código.
+
+O `DaemonConfig` é construído em `daemon/main.py` com **quatro** parâmetros, não
+três: `poll_hz`, `auto_reconnect`, `ps_long_press_ms` e
+`keyboard_emulation_enabled`. O quarto entrou em 29/07 com a
+EMULACAO-NO-JOGO-01 — é o campo que desliga o teclado emulado dentro da
+partida, lido de `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`.
+
+Vale registrar por que o erro passou: esta ADR, o `README.md` e o
+`docs/usage/metrics.md` são as três páginas **mais honestas** do projeto, e
+erram por serem específicas. Uma frase que diz "três, e são estas" envelhece no
+dia em que nasce a quarta; uma frase vaga nunca envelhece porque nunca afirmou
+nada. A cura não é voltar a ser vago — é o teste que conta os parâmetros no
+código e cobra o mesmo número aqui
+(`tests/unit/test_doc_verdade_02_contagens_derivadas.py`).

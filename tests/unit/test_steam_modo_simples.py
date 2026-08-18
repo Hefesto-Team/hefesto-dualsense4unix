@@ -82,14 +82,28 @@ class TestFormatFixSafe:
         assert "Deixar tudo pronto" in msg
 
     def test_aplicado_relata_o_que_mudou(self) -> None:
+        """NOTA DATADA (05/08/2026, D-33): este teste exigia a frase literal
+        "a Steam não sequestra mais o seu controle".
+
+        A frase caducou por dois motivos MEDIDOS, não por gosto: (1) ela não
+        dizia de qual JOGO falava — a queixa dela é exatamente "não faço ideia
+        de quando é pra ativar os controles Steam e quando não"; (2) chamava de
+        sequestro o gesto que ela mesma fez na janela da Steam. O que continua
+        travado aqui é o que a decisão original protegia: o toast RELATA a
+        mudança (não fica mudo) e não manda clicar no "Deixar tudo pronto"
+        quando não há nada adiado.
+        """
         msg = format_fix_safe_result(
             {
                 "ran": 2,
                 "missing": 0,
                 "steam_input": (0, "[steam-input] resultado=aplicado\n"),
+                "steam_input_jogos": ["Sackboy (appid 1599660)"],
             }
         )
-        assert "não sequestra mais" in msg
+        assert "Sackboy (appid 1599660)" in msg
+        assert "voltou a ser entregue pelo Hefesto" in msg
+        assert "sequestra" not in msg
         assert "Deixar tudo pronto" not in msg
 
     def test_erro_do_script_nao_vira_sucesso(self) -> None:
@@ -179,6 +193,22 @@ class TestFormatGameBroken:
             msg = format_game_broken_result(status=status, appid=1)
             assert "Steam Input" not in msg
             assert "inicialização" not in msg
+
+    def test_nao_promete_o_que_ela_mediu_ao_contrario(self) -> None:
+        """NOTA DATADA — 07/08/2026: o toast dizia "o Hefesto sai da frente".
+
+        `CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, 06/08, grau MEDIDO: com
+        o jogo marcado o Hefesto entrega a ENTRADA (acaba o controle dobrado) e
+        MANTÉM A SAÍDA — os gatilhos dela seguraram e a cor dela ficou, com o
+        Mullet Mad Jack aberto. Quem lia "sai da frente" esperava perder cor e
+        gatilho, que é o que acontece **fora** da lista.
+        """
+        for status in ("adicionado", "ja_estava"):
+            msg = format_game_broken_result(status=status, appid=2111190)
+            assert "sai da frente" not in msg
+            assert "dobrado" in msg, "o defeito que a marca cura é o dobrado"
+        adicionado = format_game_broken_result(status="adicionado", appid=2111190)
+        assert "gatilhos continuam valendo" in adicionado
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +304,28 @@ class TestFixSafeHandler:
             t.startswith("Correções aplicadas (sem senha). A cura") for t in stub.toasts
         )
 
+    def test_o_nome_do_jogo_atravessa_o_worker_ate_o_toast(
+        self, sincrono: None, slo_fake: dict[str, Any], monkeypatch
+    ) -> None:
+        """D-33: a medição é feita pelo WORKER, antes de rodar o script.
+
+        O formatter sozinho estar certo não basta — se o worker não medir, o
+        toast volta a ser genérico. Este teste é o fio entre os dois.
+        """
+        monkeypatch.setattr(
+            _Stub, "_find_repo_file", lambda _self, rel: Path("/fake") / rel
+        )
+        monkeypatch.setattr(
+            daemon_actions,
+            "medir_jogos_com_steam_input",
+            lambda: ["Sackboy: A Big Adventure (appid 1599660)"],
+        )
+        stub = _Stub()
+
+        stub.on_storm_fix_safe(None)
+
+        assert any("Sackboy: A Big Adventure (appid 1599660)" in t for t in stub.toasts)
+
 
 class TestDeixarTudoPronto:
     def test_jogo_aberto_nao_toca_em_nada(
@@ -311,6 +363,44 @@ class TestDeixarTudoPronto:
         toast = stub.toasts[-1]
         assert "Controle:" in toast and "Jogos:" in toast
         assert "2 jogo(s)" in toast
+
+    def test_mede_o_jogo_dentro_da_janela_de_steam_fechada(
+        self, sincrono: None, slo_fake: dict[str, Any], monkeypatch
+    ) -> None:
+        """D-33: medir DEPOIS do script não adianta — o vdf já foi zerado.
+
+        A ordem que este teste trava: a medição acontece dentro da janela de
+        Steam fechada e ANTES da chamada do script, e o rótulo medido chega ao
+        toast.
+        """
+        slo_fake["steam"] = True
+        ordem: list[str] = []
+        monkeypatch.setattr(
+            _Stub, "_find_repo_file", lambda _self, rel: Path("/fake") / rel
+        )
+
+        def _medir() -> list[str]:
+            ordem.append("mediu")
+            return ["Sackboy: A Big Adventure (appid 1599660)"]
+
+        monkeypatch.setattr(daemon_actions, "medir_jogos_com_steam_input", _medir)
+        run_original = daemon_actions.subprocess.run
+
+        def _run(args, **kwargs):
+            ordem.append("rodou")
+            return run_original(args, **kwargs)
+
+        monkeypatch.setattr(
+            daemon_actions,
+            "subprocess",
+            SimpleNamespace(run=_run, SubprocessError=Exception),
+        )
+        stub = _Stub()
+
+        stub._steam_ready_worker()
+
+        assert ordem == ["mediu", "rodou"]
+        assert "Sackboy: A Big Adventure (appid 1599660)" in stub.toasts[-1]
 
     def test_steam_fechada_nao_fecha_nem_reabre(
         self, sincrono: None, slo_fake: dict[str, Any], monkeypatch

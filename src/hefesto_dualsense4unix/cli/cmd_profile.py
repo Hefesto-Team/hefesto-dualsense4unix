@@ -13,6 +13,7 @@ via pydantic, salva e ativa via IPC/hardware) e `save <nome>
 from __future__ import annotations
 
 import json as _json
+from datetime import datetime as _datetime
 from pathlib import Path
 
 import typer
@@ -23,8 +24,10 @@ from rich.table import Table
 from hefesto_dualsense4unix.cli.ipc_client import IpcError
 from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
+    listar_historico,
     load_all_profiles,
     load_profile,
+    restaurar_do_historico,
     save_profile,
 )
 from hefesto_dualsense4unix.profiles.schema import (
@@ -225,6 +228,103 @@ def cmd_delete(
     except FileNotFoundError:
         console.print(f"[red]perfil não encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
+
+
+@app.command("historico")  # (noqa-acento): nome de subcomando e ASCII
+def cmd_historico(
+    name: str = typer.Argument(..., help="Nome ou slug do perfil."),
+) -> None:
+    """Lista as versões guardadas de um perfil (a mais recente por último).
+
+    PERFIL-SEM-RASTRO-01: cada gravação copia o arquivo ANTERIOR para
+    `profiles/.historico/<slug>/`. Esta é a janela para esse histórico — e a
+    resposta para "o que este perfil era ontem?".
+    """
+    versoes = listar_historico(name)
+    if not versoes:
+        console.print(f"[dim]sem histórico guardado para {name!r}[/dim]")
+        console.print(
+            "[dim]o histórico nasce na PRÓXIMA vez que este perfil for salvo.[/dim]"
+        )
+        return
+
+    tabela = Table(title=f"Histórico de {name}")
+    tabela.add_column("Quando", style="cyan")
+    tabela.add_column("Match", style="magenta")
+    tabela.add_column("Prioridade", justify="right")
+    tabela.add_column("Arquivo", style="dim")
+
+    for versao in versoes:
+        tipo, prioridade = _resumo_da_versao(versao)
+        tabela.add_row(_quando_legivel(versao.stem), tipo, prioridade, versao.name)
+
+    console.print(tabela)
+    console.print(
+        f"[dim]restaurar a mais recente: profile restore {name}[/dim]"
+    )
+
+
+@app.command("restore")
+def cmd_restore(
+    name: str = typer.Argument(..., help="Nome ou slug do perfil."),
+    em: str | None = typer.Option(
+        None, "--em",
+        help="Carimbo da versão (coluna Arquivo do `profile historico`). "  # (noqa-acento)
+             "Sem isto, volta a MAIS RECENTE.",
+    ),
+) -> None:
+    """Devolve ao perfil uma versão guardada (byte a byte).
+
+    A versão atual é arquivada antes de ser substituída: restaurar por engano
+    também tem volta.
+    """
+    try:
+        alvo, versao = restaurar_do_historico(name, em)
+    except FileNotFoundError as exc:
+        console.print(f"[red]{exc}[/red]")
+        console.print(
+            f"[dim]veja o que existe com: profile historico {name}[/dim]"  # (noqa-acento)
+        )
+        raise typer.Exit(code=1) from None
+    except ValueError as exc:
+        console.print(f"[red]versão guardada não valida contra o schema:[/red] {exc}")
+        raise typer.Exit(code=1) from None
+    console.print(
+        f"[green]perfil restaurado:[/green] {alvo} "
+        f"[dim](versão {versao.name})[/dim]"
+    )
+
+
+def _resumo_da_versao(versao: Path) -> tuple[str, str]:
+    """(`match.type`, prioridade) de uma versão guardada, sem levantar.
+
+    Lê o JSON cru de propósito: uma versão que NÃO valida contra o schema é
+    exatamente a que se quer ver na lista (é o retrato da corrupção), então ela
+    aparece como "ilegível" em vez de sumir.
+    """
+    try:
+        dados = _json.loads(versao.read_text(encoding="utf-8"))
+    except (OSError, _json.JSONDecodeError, UnicodeDecodeError):
+        return ("[red]ilegível[/red]", "?")
+    if not isinstance(dados, dict):
+        return ("[red]ilegível[/red]", "?")
+    match = dados.get("match")
+    tipo = match.get("type") if isinstance(match, dict) else None
+    prioridade = dados.get("priority")
+    return (
+        str(tipo) if isinstance(tipo, str) else "[red]sem match[/red]",
+        str(prioridade) if isinstance(prioridade, int) else "?",
+    )
+
+
+def _quando_legivel(carimbo: str) -> str:
+    """``20260805T031500_123456`` -> ``05/08/2026 03:15:00``. Cru se não casar."""
+    base = carimbo.split("_", 1)[0].split("-", 1)[0]
+    try:
+        quando = _datetime.strptime(base, "%Y%m%dT%H%M%S")
+    except ValueError:
+        return carimbo
+    return quando.strftime("%d/%m/%Y %H:%M:%S")
 
 
 @app.command("apply")
