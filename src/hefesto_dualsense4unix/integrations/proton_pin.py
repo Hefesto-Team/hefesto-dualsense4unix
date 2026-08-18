@@ -44,6 +44,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 try:  # importado como módulo do pacote (GUI/daemon/testes)
     from .steam_launch_options import steam_game_running, steam_running
@@ -273,7 +274,9 @@ def _extract_verified_tarball(
         # files/lib/wine/). O 3.11+ acerta. Como o tarball já passou pelo SHA256
         # fixado antes de chegar aqui, no 3.10 usamos "tar", que continua
         # barrando caminho absoluto e path traversal do próprio nome.
-        _filtro = "data" if sys.version_info >= (3, 11) else "tar"
+        _filtro: Literal["data", "tar"] = (
+            "data" if sys.version_info >= (3, 11) else "tar"
+        )
         with tarfile.open(tarball, mode="r:gz") as tar:
             tar.extractall(path=tmp_root, filter=_filtro)
         extracted = tmp_root / name
