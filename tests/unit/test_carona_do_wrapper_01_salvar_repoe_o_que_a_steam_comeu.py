@@ -28,6 +28,14 @@ Steam dela).
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito. Os
+# `footer_actions`/`profiles_actions` importados abaixo puxam `app.gui_dialogs`,
+# que faz `import gi` no topo — sem esta guarda o módulo derruba a COLETA
+# inteira no CI headless (censo de coleta), em vez de pular.
+exigir_gi_real("carona do wrapper 01 (footer/profiles actions puxam GTK)")
+
 import json
 from pathlib import Path
 from typing import Any
