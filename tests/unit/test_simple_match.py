@@ -1,6 +1,8 @@
 """Testes para src/hefesto_dualsense4unix/profiles/simple_match.py."""
 from __future__ import annotations
 
+import pytest
+
 from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria
 from hefesto_dualsense4unix.profiles.simple_match import (
     SIMPLE_MATCH_PRESETS,
@@ -81,18 +83,33 @@ class TestFromSimpleChoice:
         assert not result.window_class
         assert result.window_title_regex is None
 
-    def test_game_custom_name_normalizado_para_lowercase(self) -> None:
+    def test_game_custom_name_preserva_as_maiusculas(self) -> None:
+        """CONTRATO MUDADO de propósito (R-12 item 3, auditoria 23/07).
+
+        O teste antigo (`..._normalizado_para_lowercase`) congelava um
+        `.lower()` que era o BUG: quem casa do outro lado é
+        `MatchCriteria.matches`, comparando com o basename CRU de
+        `/proc/PID/exe`. Os presets de fábrica gravam `Cyberpunk2077.exe`,
+        `Sekiro.exe`, `NieR.exe` — com o lower(), o que a usuária digitasse
+        no editor simples NUNCA casaria com o executável real.
+        """
         result = from_simple_choice("game", custom_name="EldenRing")
         assert isinstance(result, MatchCriteria)
-        assert result.process_name == ["eldenring"]
+        assert result.process_name == ["EldenRing"]
 
-    def test_game_sem_custom_name_retorna_match_any(self) -> None:
-        result = from_simple_choice("game")
-        assert isinstance(result, MatchAny)
+    def test_game_sem_custom_name_levanta(self) -> None:
+        """CONTRATO MUDADO de propósito (R-12 item 2).
 
-    def test_game_custom_name_apenas_espacos_retorna_match_any(self) -> None:
-        result = from_simple_choice("game", custom_name="   ")
-        assert isinstance(result, MatchAny)
+        Devolver `MatchAny()` fazia o perfil criado PARA UM JOGO nascer valendo
+        para TUDO — mais um catch-all na disputa (R-01) e o toast dizendo
+        "Perfil salvo". Erro com frase de gente > degradação em silêncio.
+        """
+        with pytest.raises(ValueError, match="nome do programa"):
+            from_simple_choice("game")
+
+    def test_game_custom_name_apenas_espacos_levanta(self) -> None:
+        with pytest.raises(ValueError, match="nome do programa"):
+            from_simple_choice("game", custom_name="   ")
 
     def test_chave_desconhecida_retorna_match_any(self) -> None:
         result = from_simple_choice("nao_existe")

@@ -4,19 +4,28 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
 
     profile.switch       {name: str} -> {active_profile: str}
     profile.list         {}          -> {profiles: [{name, priority, match_type}]}
-    profile.apply_draft  {triggers?, leds?, rumble?, mouse?} -> {status, applied: [str]}
+    profile.apply_draft  {triggers?, leds?, rumble?, mouse?}
+                         -> {status, applied: [str], failed: {str: str}}
     trigger.set          {side, mode, params} -> {status}
-    trigger.reset        {side?}               -> {status}
+    trigger.reset        {side?, uniq?}        -> {status}
     led.set              {rgb}                 -> {status}
     led.player_set       {bits: [bool]*5}      -> {status, bits}
+    identity.renumber    {}          -> {ok, renumbered: {uniq: slot}} | {ok: false, reason}
+    identity.number.set  {uniq, number} -> {ok, number, changed} | {ok: false, reason}
     rumble.set           {weak, strong}        -> {status, weak, strong}
     rumble.stop          {}                    -> {status}
     rumble.passthrough   {enabled: bool}       -> {status}
     daemon.status        {}          -> {connected, transport, active_profile, battery_pct}
     daemon.state_full    {}          -> {... estado + mouse_emulation se daemon expõe}
-    controller.list      {}          -> {controllers: [{connected, transport}]}
+    controller.list      {}          -> {controllers: [{index, connected, transport, is_primary?}]}
+    controller.target.set {index|null} -> {status, target_index}
     daemon.reload        {}          -> {status}
+    launch_env.refresh   {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
+    mouse.emulation.restore {}                            -> {status, enabled}
+    keyboard.emulation.set {enabled: bool} -> {status, enabled, keyboard_emulation}
+    speaker.set          {volume?: 0-255, muted?: bool, uniq?} -> {status, speaker}
+    mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
 
@@ -104,10 +113,39 @@ class IpcServer(IpcHandlersMixin):
             "rumble.policy_custom": self._handle_rumble_policy_custom,
             "daemon.status": self._handle_daemon_status,
             "daemon.state_full": self._handle_daemon_state_full,
+            "daemon.pause": self._handle_daemon_pause,
+            "daemon.resume": self._handle_daemon_resume,
+            "autoswitch.lock": self._handle_autoswitch_lock,
+            "native.mode.set": self._handle_native_mode_set,
             "controller.list": self._handle_controller_list,
+            "controller.target.set": self._handle_controller_target_set,
             "daemon.reload": self._handle_daemon_reload,
+            "launch_env.refresh": self._handle_launch_env_refresh,
+            # D4: volume/mudo do alto-falante do DualSense (assume a posse dos
+            # bytes de volume do report — ver `_handle_speaker_set`).
+            "speaker.set": self._handle_speaker_set,
+            # MIC-USB-01: mudo do microfone no FIRMWARE do controle — a
+            # CAMADA 3 das três que deixavam o mic mudo. As camadas 1 e 2
+            # (mute persistido por rota e perfil S/PDIF sem sinal) são do
+            # WirePlumber e moram no `doctor --fix`; esta é a única do
+            # controle, e até 25/07 só o botão físico a alcançava.
+            "mic.set": self._handle_mic_set,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
+            "mouse.emulation.restore": self._handle_mouse_emulation_restore,
+            # EMULACAO-NO-JOGO-01: o interruptor que o teclado emulado nunca
+            # teve. Sem ele, "desliguei o modo mouse teclado" desligava só o
+            # mouse e o R1 seguia trocando de aplicativo dentro do jogo.
+            "keyboard.emulation.set": self._handle_keyboard_emulation_set,
+            "gamepad.emulation.set": self._handle_gamepad_emulation_set,
+            "coop.set": self._handle_coop_set,
+            "daemon.emulation.suppress": self._handle_emulation_suppress,
             "led.player_set": self._handle_led_player_set,
+            # ONDA-U (U2/U10): renumeração explícita gated por sessão vazia.
+            "identity.renumber": self._handle_identity_renumber,
+            # PLAYER-01 (25/07): atribuir o NÚMERO EXIBIDO de UM controle. Era
+            # o comando que faltava — só existia o renumber, que compacta todo
+            # mundo; não havia como dizer "este é o 2".
+            "identity.number.set": self._handle_identity_number_set,
             "plugin.list": self._handle_plugin_list,
             "plugin.reload": self._handle_plugin_reload,
         }
@@ -224,6 +262,21 @@ class IpcServer(IpcHandlersMixin):
                 if response is not None:
                     writer.write(response + b"\n")
                     await writer.drain()
+        except (ConnectionError, asyncio.IncompleteReadError) as exc:
+            # BUG-IPC-DISCONNECT-STORM-01: cliente que fecha a conexão antes do
+            # daemon terminar de responder é cenário NORMAL — não um erro. A GUI
+            # e o applet COSMIC usam timeout curto (0.25s) e fecham o socket assim
+            # que ele estoura; o `writer.drain()` acima então levanta
+            # BrokenPipeError/ConnectionResetError (ambos subclasses de
+            # ConnectionError). Antes logávamos com exc_info=True e o
+            # ConsoleRenderer renderizava o traceback rico COM locals — todo o
+            # grafo do daemon (StateStore, Server, handlers, AutoSwitcher...). A
+            # ~5 conexões/s de GUI+applet isso fritava 100% de uma CPU e despejava
+            # ~950 linhas/s no journal, criando uma ESPIRAL: daemon lento ->
+            # mais timeouts no cliente -> mais disconnects -> mais tracebacks. O
+            # daemon ficava vivo porém inresponsivo e a interface inteira parava
+            # de "aplicar". Log em debug, sem traceback.
+            logger.debug("ipc_client_disconnect", err=str(exc))
         except Exception as exc:
             logger.warning("ipc_client_error", err=str(exc), exc_info=True)
         finally:

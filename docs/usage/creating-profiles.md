@@ -16,7 +16,7 @@ Perfis ficam em `~/.config/hefesto-dualsense4unix/profiles/<nome>.json`. Schema 
   },
   "priority": 10,
   "triggers": {
-    "left":  {"mode": "Medium", "params": []},
+    "left":  {"mode": "Resistance", "params": [3, 5]},
     "right": {"mode": "Galloping", "params": [0, 9, 7, 7, 10]}
   },
   "leds": {
@@ -27,7 +27,72 @@ Perfis ficam em `~/.config/hefesto-dualsense4unix/profiles/<nome>.json`. Schema 
 }
 ```
 
+O `mode` de cada gatilho é validado na carga do perfil contra
+`PRESET_FACTORIES` (`src/hefesto_dualsense4unix/core/trigger_effects.py`), a
+fonte única dos nomes aceitos — 19 exatamente, listados na seção "Modos de
+trigger" abaixo. Nome fora dessa lista faz `Profile.model_validate` levantar
+`ValidationError` citando os válidos, e o perfil não carrega.
+
 Arquivo fallback com `match.type = "any"` e `priority: 0` é obrigatório para garantir que algum perfil sempre case.
+
+## Seção opcional `mouse` e `suppress_desktop_emulation`
+
+Desde a wave V3.11 (FEAT-POINT-AND-CLICK-01) o perfil pode controlar a emulação
+de mouse e o modo-jogo:
+
+```json
+{
+  "mouse": {"enabled": true, "speed": 8, "scroll_speed": 1},
+  "suppress_desktop_emulation": false
+}
+```
+
+- `mouse` ausente (ou `null`) → ativar o perfil **não toca** no estado da
+  emulação (comportamento de sempre). Presente → liga/desliga com `speed`
+  (1-12) e `scroll_speed` (1-5) do perfil, em qualquer rota de ativação
+  (autoswitch por janela, `profile activate`, hotkey PS+D-pad, restore no boot).
+- `suppress_desktop_emulation: true` → ativa o modo-jogo (suprime os bindings
+  de teclado/mouse no desktop) — útil para jogos de **gamepad** que leem o
+  controle cru. Perfil sem o campo libera a supressão apenas quando ela veio de
+  outro perfil; o toggle manual (PS+Options, GUI, CLI) é sempre respeitado e
+  trava mudanças por perfil por 30 s. Atenção: este campo NÃO desliga o gamepad
+  virtual (footgun documentado — o gamepad do jogo morreria no meio da partida).
+
+## Perfil default `point_and_click` (Grim Fandango e afins)
+
+Instalado com os presets, casa `window_class` `GrimFandango`/`grim` com
+`priority: 60` (acima de `navegacao`, 50). O match é Grim-específico de
+propósito: o port Linux do Grim Fandango Remastered é NATIVO (não roda sob
+ScummVM), e casar `scummvm`/`residualvm` genéricos sequestraria QUALQUER jogo
+ScummVM — inclusive os que você joga de gamepad, ligando o modo mouse e matando
+o gamepad virtual. Para levar o point-and-click a outra aventura, adicione o
+`window_class` dela ao perfil pela GUI. Ao focar o jogo:
+
+- **Mouse liga** com `speed: 8` — stick move o cursor; X/L2 = clique esquerdo
+  (andar/interagir), Triângulo/R2 = clique direito, R3 = botão do meio,
+  Círculo = Enter, Quadrado = Esc, D-pad = setas (mapeamentos fixos do device
+  de mouse).
+- **Teclado do jogo** (override completo — nada de Super/Alt+Tab/PrintScreen
+  vazando para o desktop): L1 = Shift (correr), R1 = `.` (pular diálogo),
+  Options = Esc (menu), Create = I (inventário), touchpad esquerda/meio/
+  direita = E (examinar) / U (usar) / P (pegar).
+- Gatilhos Off/Off, rumble passthrough, lightbar âmbar.
+
+Notas para o Grim Fandango Remastered:
+
+- O port Linux é nativo e tem point-and-click por mouse oficial (código do mod
+  Grim Mouse, 2015) — o modo mouse é o caminho preferido neste jogo.
+- **Steam Input permanece OFF** para este título: a combinação é incompatível
+  no Linux (bug conhecido desde 2019) e quebra o controle dentro do jogo.
+- Rota alternativa de **gamepad nativo** (jogos de gamepad com SDL antigo): o
+  `controllerdef.txt` embarcado não conhece o DualSense, mas conhece o X360 —
+  ligue o gamepad virtual com máscara xbox360 (`hefesto-dualsense4unix gamepad
+  on --flavor xbox` ou aba Emulação) e abra o jogo **depois** de o device virtual
+  existir (SDL 2.0.3 só enumera na inicialização). Não é o caminho preferido
+  para o Grim; fica registrado para títulos sem suporte a mouse.
+
+Antes de confiar no match, confirme o `wm_class` real da janela com o jogo
+aberto (ver seção abaixo) — ports via Proton/ScummVM usam classes diferentes.
 
 ## Semântica de match
 
@@ -107,3 +172,48 @@ Presets comuns:
 | `Vibration`  | 3     | `[3, 4, 40]` (pos, amp, freq)              |
 
 Valores fora de range levantam `ValueError` na carga do perfil.
+
+Os 19 nomes aceitos, como estão em `PRESET_FACTORIES`: `Off`, `Rigid`,
+`SimpleRigid`, `Pulse`, `PulseA`, `PulseB`, `Resistance`, `Bow`, `Galloping`,
+`SemiAutoGun`, `AutoGun`, `Machine`, `Feedback`, `Weapon`, `Vibration`,
+`SlopeFeedback`, `MultiPositionFeedback`, `MultiPositionVibration`, `Custom`.
+
+Cuidado com o vocabulário do DSX: `Medium`, `Soft`, `Hard`, `VeryHard`,
+`Hardest`, `Choppy`, `GameCube` e afins são nomes do enum `TriggerMode` do DSX,
+**não** presets do Hefesto — nenhum deles existe em `PRESET_FACTORIES` e um
+perfil que os use não carrega. O motivo de não estarem traduzidos (curvas de
+força fechadas, sem parâmetro, cuja única transcrição pública está num
+repositório sem licença) está em `docs/protocol/udp-schema.md`.
+
+## Modo Nativo — jogar com os gatilhos nativos da Sony (Sackboy & cia)
+
+Para jogos que dirigem os gatilhos adaptativos por conta própria (ex.: Sackboy:
+Uma Grande Aventura), o hefesto pode SOLTAR o controle por completo:
+
+```
+hefesto-dualsense4unix native on      # solta o controle pro jogo
+hefesto-dualsense4unix native off     # o hefesto reassume o teu perfil
+hefesto-dualsense4unix native status
+```
+
+Com o Modo Nativo ligado: gatilhos neutros (o jogo impõe os dele), rumble do
+jogo (o hefesto não re-asserta), emulação de mouse/gamepad desligada (libera o
+grab), autoswitch/hotkey de perfil travados, e o dispatch de input congelado. O
+estado da tua emulação (gamepad/mouse) é guardado e RESTAURADO ao desligar. O
+modo sobrevive a reboot (o controle segue solto até você fazer `native off`).
+
+## Anti-storm (dsx) via `doctor`
+
+O diagnóstico do storm -71 e os fixes seguros também vivem no CLI:
+
+```
+hefesto-dualsense4unix doctor              # inclui o bloco "anti-storm / sistema"
+hefesto-dualsense4unix doctor --fix-safe   # SEM sudo: Steam Input OFF + WirePlumber
+hefesto-dualsense4unix doctor --fix        # aplica os fixes do doctor.sh
+hefesto-dualsense4unix doctor --quiet      # só o resumo
+```
+
+> **`--reapply-all` não existe mais.** Ele invocava um `scripts/dsx.sh` que <!-- ref-externa: a ausência deste script é o assunto do aviso -->
+> também não existe mais no repositório. A cura do storm `-71` migrou para o
+> quirk do `snd_usb_audio` — instalado por padrão e reaplicável por `--fix-safe`.
+> Se você tem esse comando na memória muscular, o substituto é `--fix-safe`.

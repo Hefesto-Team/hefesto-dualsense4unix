@@ -1,5 +1,7 @@
 # ADR-002: TUI com Textual
 
+**Status:** aceito
+
 ## Contexto
 Opções para interface terminal: `curses` puro, `urwid`, `textual`, `blessed`. `textual` tem API declarativa moderna, async-first, temas CSS-like, ecossistema ativo e mesma stack já adotada em outros projetos do autor.
 

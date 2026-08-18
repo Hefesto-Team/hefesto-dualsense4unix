@@ -56,6 +56,7 @@ mkdir -p \
     "${STAGING}/usr/share/applications" \
     "${STAGING}/usr/share/hefesto-dualsense4unix/assets" \
     "${STAGING}/usr/share/icons/hicolor/256x256/apps" \
+    "${STAGING}/usr/share/locale" \
     "${STAGING}/opt/hefesto-dualsense4unix"
 
 # ---------------------------------------------------------------------------
@@ -63,24 +64,21 @@ mkdir -p \
 # ---------------------------------------------------------------------------
 VENV_DIR="${STAGING}/opt/hefesto-dualsense4unix/venv"
 
-# Pegar Python target compatível com Ubuntu/Pop! >= 22.04. python3.10 é a
-# versão padrão do Jammy (libpython3.10.so.1.0 vem com python3-minimal).
-# `python3` default em distros newer pode ser 3.11/3.12 — venv ficaria
-# embarcando libpython mais nova que Jammy não tem (BUG diagnosticado em
-# build local com Pop!_OS 22.04 + pyenv 3.12 → libpython3.12.so missing
-# em ubuntu:22.04). Preferir 3.10 via fallback explícito.
-TARGET_PYTHON=""
-for cand in /usr/bin/python3.10 /usr/bin/python3.11 /usr/bin/python3.12 /usr/bin/python3; do
-    if [ -x "$cand" ]; then
-        TARGET_PYTHON="$cand"
-        break
-    fi
-done
-if [ -z "$TARGET_PYTHON" ]; then
-    echo "Erro: nenhum Python 3 do sistema (/usr/bin/python3*) encontrado." >&2
+# Python target = o python3 DEFAULT da distro de build. O venv (--copies) linka
+# contra libpython3.X.so.1.0 dessa versão exata; logo o .deb é especifico da
+# versão de Python (= da distro). Por isso o CI builda UM .deb por distro
+# (Jammy 22.04 -> 3.10, Noble 24.04 -> 3.12) e o filename + o Depends abaixo
+# carregam a versão, para os dois coexistirem no release e o apt instalar só o
+# compativel (BUG-DEB-VENV-CROSS-PYVER-01: venv 3.10 quebrava no 24.04 por
+# falta de libpython3.10).
+TARGET_PYTHON="/usr/bin/python3"
+if [ ! -x "$TARGET_PYTHON" ]; then
+    echo "Erro: /usr/bin/python3 não encontrado." >&2
     exit 1
 fi
-echo "Python target: ${TARGET_PYTHON} ($(${TARGET_PYTHON} --version 2>&1))"
+PYVER="$("$TARGET_PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+PYTAG="py$(printf '%s' "$PYVER" | tr -d .)"
+echo "Python target: ${TARGET_PYTHON} ($(${TARGET_PYTHON} --version 2>&1)) -> ${PYTAG}"
 
 echo "Criando venv em ${VENV_DIR} ..."
 # --copies (não symlink — venv autocontido sobrevive entre máquinas).
@@ -136,31 +134,195 @@ cp -r assets/. "${STAGING}/usr/share/hefesto-dualsense4unix/assets/"
 
 # Icone principal (usa o da pasta appimage que é o mais completo)
 if [ -f "assets/appimage/Hefesto-Dualsense4Unix.png" ]; then
+    # Os DOIS nomes, porque há DOIS consumidores e eles não concordam: o
+    # .desktop pede Icon=hefesto, e o código pede o nome longo em
+    # app/main.py (set_default_icon_name) e app/tray.py (TRAY_ICON_NAME).
+    # Instalar só o curto deixa a bandeja com o joystick genérico.
     cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto.png"
+    cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png"
 fi
 
 # ---------------------------------------------------------------------------
 # Copiar regras udev
 # ---------------------------------------------------------------------------
+# PACKAGING-UDEV-DEB-PARITY-01: empacota o conjunto canônico 70/71/72/76/77 —
+# PARIDADE com scripts/install_udev.sh (native) e scripts/install-host-udev.sh.
+# 76 (touchpad-libinput-ignore) e 77 (leds) NÃO são opt-in: sem a 76 o touchpad
+# do DualSense briga com a emulação de mouse (feature-título point-and-click);
+# sem a 77 a lightbar/player-LED via sysfs não grava. As 73/74 (hotplug-GUI)
+# ficam de fora (alimentavam a re-enumeração do storm -71); a 75 (disable-usb-
+# audio) é a genuinamente opt-in.
 echo "Copiando regras udev ..."
-for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules assets/73-*.rules assets/74-*.rules; do
+# BUG-DEB-MIRROR-RULES-INCOMPLETO-01: as regras viajam para DOIS destinos (o
+# diretório VIVO /usr/lib/udev/rules.d e o ESPELHO /usr/share/.../udev-rules,
+# que o install-host-udev.sh PREFERE como origem). O espelho tinha um glob
+# próprio, defasado, que parava na 81 — o pre-flight do helper exige TODAS as
+# 14 regras e ABORTAVA com exit 1, derrubando a ativação inteira do .deb
+# (sem grupo hefesto, sem broker, sem nenhum dos três módulos DKMS).
+# Agora existe UMA fonte de verdade: esta lista, consumida pelos dois laços.
+# Glob por prefixo, uma faixa por linha: acrescentar uma regra nova exige
+# lembrar de vir aqui — o `check_packaging_parity.sh` cobra os DOIS destinos.
+UDEV_RULES_GLOBS=(
+    assets/70-*.rules assets/71-*.rules assets/72-*.rules
+    assets/76-*.rules assets/77-*.rules assets/78-*.rules
+    assets/79-*.rules assets/80-*.rules assets/81-*.rules
+    assets/82-*.rules assets/83-*.rules assets/84-*.rules
+)
+for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
+
+# v3.3.1: bundla install-host-udev.sh em /usr/share para re-aplicar regras
+# manualmente fora do apt install (ex: usuário renomeou /etc/udev/rules.d/
+# por engano, ou quer re-trigger após upgrade do kernel). O script resolve
+# origem em 3 contextos (Flatpak /app/share, .deb /usr/share, source
+# ../assets) — aqui só o .deb precisa do helper exposto.
+echo "Copiando helper install-host-udev.sh ..."
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/scripts"
+install -Dm755 scripts/install-host-udev.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+# Cura de raiz do storm: o usuário do .deb precisa poder consultar/reverter
+# (`--status` / `--remove`) sem o repo. O script resolve o .conf em /usr/share.
+install -Dm755 scripts/install_snd_quirk.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/install_snd_quirk.sh"
+# M10 (auditoria): os scripts que a GUI/doctor executam (via _find_repo_file, que
+# resolve /usr/share/.../scripts) precisam existir no .deb — senão o cartão
+# anti-storm ("Reaplicar fixes seguros") e o doctor caem em no-op silencioso.
+for _s in doctor.sh disable_steam_input.sh fix_wireplumber_default_source.sh dsx_recover.sh; do
+    [ -f "scripts/${_s}" ] && install -Dm755 "scripts/${_s}" \
+        "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/${_s}"
+done
+# (O launcher standalone "DualSense Fix (dsx)" e o dsx.sh foram REMOVIDOS — eram
+# baseados na teoria de HW já refutada; a cura de raiz do storm está integrada.)
+# Também copia o conf modules-load para o local que o helper procura
+# em /usr/share/hefesto-dualsense4unix/modules-load/.
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load"
+install -Dm644 assets/hefesto-dualsense4unix.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf"
+# SPRINT-GAME-RUMBLE-01: a cura de RAIZ do storm (quirk do snd_usb_audio).
+# DOIS destinos, de propósito:
+#   1. /usr/lib/modprobe.d/ — o path VIVO que o kmod lê de verdade (junto com
+#      /etc/modprobe.d). É o que faz a cura PEGAR no .deb sem passo manual; o
+#      dpkg o remove no purge. (BUG-DEB-MODPROBE-INERT-PATH-01: só empacotar em
+#      /usr/share deixava a cura INERTE — o kernel nunca lê de lá.)
+#   2. /usr/share/.../modprobe/ — cópia espelhada que o install-host-udev.sh e o
+#      install_snd_quirk.sh procuram (mesma lógica das udev-rules acima).
+install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
+    "${STAGING}/usr/lib/modprobe.d/hefesto-dualsense-storm.conf"
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe"
+install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe/hefesto-dualsense-storm.conf"
+# PLAT-04 (onda PLATAFORMA 2026-07-18): btusb sem autosuspend — o adaptador
+# Bluetooth nunca dorme. Mesmos DOIS destinos da cura do storm (path vivo do
+# kmod + espelho que o install-host-udev.sh resolve em modprobe.d/).
+install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
+    "${STAGING}/usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d"
+install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+# Onda T (2026-07-20): opções do hid-nintendo patchado (bt_probe_retries=3).
+# Mesmos DOIS destinos. Sem o módulo DKMS o in-tree só loga "unknown parameter
+# ignored" e sobe normal (fail-safe do desenho da Onda T) — o conf pode (e
+# deve, paridade) viajar em todo formato.
+install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
+    "${STAGING}/usr/lib/modprobe.d/hefesto-hid-nintendo.conf"
+install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-nintendo.conf"
+# Contenção BT (2026-07-25): opções do hid-playstation patchado (feature_retries=2). Mesmos DOIS destinos e mesmo
+# fail-safe da Onda T: sem o módulo DKMS o in-tree só loga "unknown parameter
+# ignored" e sobe normal, então a conf viaja em todo formato (paridade).
+install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
+    "${STAGING}/usr/lib/modprobe.d/hefesto-hid-playstation.conf"
+install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-playstation.conf"
+# Onda T (corretor, achado #9): a conf acima é INERTE sem o MÓDULO DKMS — e o
+# módulo só nasce do source + dkms_lib.sh. Empacota os dois para o
+# install-host-udev.sh (o passo pós-instalação que o postinst documenta)
+# rodar o dkms add/build/install no host. Sem isso a cura de raiz do probe
+# BT nunca chegaria a quem instala por .deb (ficava só no checkout git).
+echo "Copiando fontes DKMS do hid-nintendo patchado (Onda T) ..."
+install -Dm644 scripts/dkms_lib.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/dkms_lib.sh"
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo"
+cp -a assets/dkms/hid-nintendo/. \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo/"
+# Contenção BT (2026-07-25): fontes do hid-playstation patchado (retry de
+# feature report na probe) — mesma paridade da Onda T/W.
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-playstation"
+cp -a assets/dkms/hid-playstation/. \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-playstation/"
+# Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
+# port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota da
+# Onda T: as fontes viajam no pacote e o install-host-udev.sh (que o
+# postinst documenta) roda o dkms add/build/install no host. Sem isto a
+# cura ficava reservada a quem roda ./install.sh de um checkout git.
+echo "Copiando fontes DKMS do rtw88-usb patchado (Onda W) ..."
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb"
+cp -a assets/dkms/rtw88-usb/. \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/"
+# Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
+# as regras vivas, mas o helper procura em /usr/share/.../udev-rules/ E a
+# PREFERE como origem: o espelho tem de carregar a lista INTEIRA, senão o
+# pre-flight do install-host-udev.sh aborta. Mesma lista do laço vivo acima
+# (UDEV_RULES_GLOBS) — uma fonte de verdade só.
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"
+for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
+    [ -f "$rules_file" ] && install -Dm644 "$rules_file" \
+        "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
+done
+# ---------------------------------------------------------------------------
+# BROKER-01 (Onda S — fd-injection): binário standalone + units-template
+# ---------------------------------------------------------------------------
+# O binário (stdlib pura) e as units NÃO ativam sozinhos aqui — postinst do
+# .deb roda sem sessão (SUDO_UID ausente ⇒ renderizaria uid 0, PROIBIDO —
+# lição 6). Só empacota; a ATIVAÇÃO (render __SESSION_UID__/__SESSION_GROUP__
+# + enable --now do .socket) é o mesmo helper install-host-udev.sh já
+# bundlado acima — rode-o depois do apt install para ligar o broker.
+echo "Copiando broker root hide-hidraw (hefesto-hidraw-broker) ..."
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/broker"
+install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/broker/hidraw_broker.py"
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/systemd"
+for _unit in hefesto-hidraw-broker.service hefesto-hidraw-broker.socket; do
+    [ -f "assets/systemd/${_unit}" ] && install -Dm644 "assets/systemd/${_unit}" \
+        "${STAGING}/usr/share/hefesto-dualsense4unix/systemd/${_unit}"
+done
+# ---------------------------------------------------------------------------
+# Copiar catalogos i18n (.mo) — FEAT-I18N-CATALOGS-01 (v3.4.0)
+# ---------------------------------------------------------------------------
+# Os .mo precisam estar em /usr/share/locale/<lang>/LC_MESSAGES/<domain>.mo
+# para o gettext encontrar (candidate path #3 do utils/i18n.py).
+if [ -d "locale" ]; then
+    echo "Copiando catalogos i18n (.mo) ..."
+    for lang_dir in locale/*/; do
+        [ -d "$lang_dir" ] || continue
+        lang="$(basename "$lang_dir")"
+        src_mo="${lang_dir}LC_MESSAGES/hefesto-dualsense4unix.mo"
+        [ -f "$src_mo" ] || continue
+        install -Dm644 "$src_mo" \
+            "${STAGING}/usr/share/locale/${lang}/LC_MESSAGES/hefesto-dualsense4unix.mo"
+    done
+else
+    echo "aviso: locale/ ausente — rode 'bash scripts/i18n_compile.sh' antes do build se quiser i18n"
+fi
 
 # ---------------------------------------------------------------------------
 # Copiar units systemd user
 # ---------------------------------------------------------------------------
 echo "Copiando units systemd ..."
-for service_file in assets/*.service; do
+# PACKAGING-DEB-SERVICES-EXPLICIT-01: só as units que FUNCIONAM no contexto .deb
+# (binários em /usr/bin, resolvidos pelo sed abaixo). As demais de assets/
+# (storm-watch, steam-input-guard, dsx-recover) dependem de scripts que o .deb
+# não instala ou de placeholders (__SCRIPT__) que só o install.sh nativo resolve
+# — empacotá-las deixaria units quebradas visíveis em list-unit-files.
+for base in hefesto-dualsense4unix.service hefesto-dualsense4unix-gui-hotplug.service; do
+    service_file="assets/${base}"
     [ -f "$service_file" ] || continue
-    base=$(basename "$service_file")
     cp "$service_file" "${STAGING}/usr/lib/systemd/user/${base}"
     # ExecStart no source usa %h/.local/bin/... (path do install.sh nativo
-    # que cria symlink). No .deb o binário fica em /usr/bin/. Substituir
-    # in-place pra unit apontar pro wrapper correto.
+    # que cria symlink). No .deb o binário fica em /usr/bin/. O sed cobre tanto
+    # o CLI quanto o -gui (o -gui casa pelo prefixo). Substituir in-place.
     sed -i 's|%h/\.local/bin/hefesto-dualsense4unix|/usr/bin/hefesto-dualsense4unix|g' \
-        "${STAGING}/usr/lib/systemd/user/${base}"
-    sed -i 's|%h/\.local/bin/hefesto-dualsense4unix-gui|/usr/bin/hefesto-dualsense4unix-gui|g' \
         "${STAGING}/usr/lib/systemd/user/${base}"
 done
 
@@ -193,10 +355,37 @@ chmod 755 "${STAGING}/usr/bin/hefesto-dualsense4unix-gui"
 echo "Preparando metadados DEBIAN/ ..."
 cp packaging/debian/control "${STAGING}/DEBIAN/control"
 
-# Injeta versão correta no control (caso difira do hardcoded)
-if command -v sed >/dev/null 2>&1; then
-    sed -i "s/^Version: .*/Version: ${VERSION}/" "${STAGING}/DEBIAN/control"
+# PACKAGING-EPOCH-DOWNGRADE-01: a numeração voltou de 4.0.0 para 0.1.0 em
+# 2026-07-24, então para o apt qualquer 0.x é DOWNGRADE de um 3.x/4.0 já
+# instalado e o upgrade é RECUSADO. A cura no mundo Debian é o EPOCH, que vive
+# dentro do próprio campo Version (`1:0.3.0`) — e não pode ficar hardcoded no
+# packaging/debian/control porque o scripts/check_version_consistency.py cobra
+# `Version:` == versão canônica do pyproject.toml. Por isso o epoch é declarado
+# no control em campo próprio (X-Hefesto-Deb-Epoch) e COMPOSTO aqui; o campo
+# auxiliar é retirado do control final (o dpkg não o conhece).
+DEB_EPOCH="$(sed -n 's/^X-Hefesto-Deb-Epoch:[[:space:]]*//p' \
+    "${STAGING}/DEBIAN/control" | head -1)"
+if [ -z "${DEB_EPOCH}" ]; then
+    echo "Erro: packaging/debian/control sem X-Hefesto-Deb-Epoch." >&2
+    echo "      Sem epoch o apt RECUSA o upgrade de qualquer 3.x/4.0 instalado" >&2
+    echo "      (0.3.0 é downgrade). Declare o epoch no control." >&2
+    exit 1
 fi
+sed -i "/^X-Hefesto-Deb-Epoch:/d" "${STAGING}/DEBIAN/control"
+
+# Injeta versão correta no control (caso difira do hardcoded), com o epoch
+# na frente — `Version: <epoch>:<versão>`.
+if command -v sed >/dev/null 2>&1; then
+    sed -i "s/^Version: .*/Version: ${DEB_EPOCH}:${VERSION}/" \
+        "${STAGING}/DEBIAN/control"
+fi
+
+# Exigir a versão EXATA do Python contra a qual o venv foi linkado. Sem isto,
+# `python3 (>= 3.10)` também casa o 3.12 do Noble e o apt instalaria o .deb
+# py310 num sistema sem libpython3.10 -> venv quebrado. Com `python${PYVER}`,
+# o apt recusa o pacote na distro errada (o py310 não instala no 24.04, que
+# não tem 3.10) e o usuário pega o .deb correto da sua distro.
+sed -i "s/^Depends: /Depends: python${PYVER}, /" "${STAGING}/DEBIAN/control"
 
 for script in postinst prerm postrm; do
     if [ -f "packaging/debian/${script}" ]; then
@@ -220,7 +409,9 @@ fi
 # ---------------------------------------------------------------------------
 mkdir -p dist
 
-OUTPUT_DEB="dist/hefesto-dualsense4unix_${VERSION}_amd64.deb"
+# Filename carrega a tag de Python (ex.: _py310 / _py312) para os .debs das
+# duas distros coexistirem no mesmo release sem colisão.
+OUTPUT_DEB="dist/hefesto-dualsense4unix_${VERSION}_amd64_${PYTAG}.deb"
 
 echo "Construindo ${OUTPUT_DEB} ..."
 dpkg-deb --build --root-owner-group "${STAGING}" "${OUTPUT_DEB}"
@@ -239,6 +430,9 @@ echo "  SHA-256 : ${SHA}"
 echo ""
 echo "Para instalar localmente:"
 echo "  sudo apt install ./${OUTPUT_DEB}"
+echo ""
+echo "Broker root hide-hidraw (BROKER-01) — ative depois do apt install:"
+echo "  sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
 echo ""
 echo "Para verificar conteúdo:"
 echo "  dpkg-deb -c ${OUTPUT_DEB}"

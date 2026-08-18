@@ -1,0 +1,214 @@
+# Maintainer: Vitoria Maria <[REDACTED]>
+# Contributor: Andre Farias <noreply@example.com>
+#
+# PKGBUILD para o Hefesto - Dualsense4Unix (gerenciador DualSense para
+# Linux). FEAT-PACKAGING-ARCH-01.
+#
+# Strategy: o pacote consolida deps Python via `pip install --root --prefix
+# /usr` para cobrir pydualsense (sem pacote oficial em repos Arch), e usa
+# PyGObject + GTK3 + libayatana-appindicator do pacman para a stack GUI.
+# Idempotente; usuario final faz `makepkg -si` apos clonar o repo ou via
+# `yay -S hefesto-dualsense4unix` se o pacote for submetido ao AUR.
+
+pkgname=hefesto-dualsense4unix
+pkgver=0.5.0
+pkgrel=1
+# PACKAGING-EPOCH-DOWNGRADE-01: a numeração voltou de 4.0.0 para 0.1.0 em
+# 2026-07-24. Para o pacman (vercmp) 0.3.0 é DOWNGRADE de qualquer 3.x/4.0 já
+# instalado e o upgrade é RECUSADO. O epoch vence a comparação de pkgver e é
+# o único jeito de a série 0.x suceder a 4.0. Mesmo valor do .deb e do RPM.
+epoch=1
+pkgdesc="DualSense controller manager for Linux (GTK3 GUI + CLI + TUI)"
+arch=('any')
+url="https://github.com/AndreBFarias/hefesto-dualsense4unix"
+license=('MIT')
+depends=(
+    'python>=3.10'
+    'python-gobject'
+    'python-cairo'
+    'gtk3'
+    'libayatana-appindicator'
+    'hidapi'
+    'libnotify'
+    # Deps Python no pacman (pacotes oficiais):
+    'python-pydantic'
+    'python-typer'
+    'python-textual'
+    'python-rich'
+    'python-evdev'
+    'python-xlib'
+    'python-structlog'
+    'python-platformdirs'
+    'python-filelock'
+    'python-jeepney'
+    # Sem python-pydualsense no Arch — vamos puxar via pip.
+)
+makedepends=(
+    'python-build'
+    'python-installer'
+    'python-wheel'
+    'python-hatchling'
+    'python-pip'
+    'gettext'
+)
+optdepends=(
+    'wlrctl: backend Wayland (wlroots) para auto-switch de perfis'
+    'dkms: módulos patchados hid-nintendo (Onda T — probe BT Nintendo/8BitDo) e rtw88_usb (Onda W — fantasma USB do dongle WiFi)'
+    'linux-headers: build dos módulos DKMS patchados (hid-nintendo, rtw88-usb)'
+)
+install="${pkgname}.install"
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "${srcdir}/${pkgname}-${pkgver}"
+
+    # Compila catalogos i18n (.mo) antes do wheel para o include do
+    # pyproject pegar os arquivos.
+    bash scripts/i18n_compile.sh
+
+    # Build do wheel via hatchling (PEP 517).
+    python -m build --wheel --no-isolation
+}
+
+package() {
+    cd "${srcdir}/${pkgname}-${pkgver}"
+
+    # Instala wheel + pydualsense (puxado do PyPI no install time).
+    # --prefix=/usr para alinhar com layout esperado pelos wrappers do
+    # python-installer; --root=$pkgdir para empacotar relativo ao $pkgdir.
+    python -m installer --destdir="$pkgdir" \
+        --prefix=/usr \
+        dist/*.whl
+
+    # pydualsense via pip (--root cobre o destdir; --no-deps para evitar
+    # reinstalar coisas que ja vem do pacman).
+    pip install \
+        --root="$pkgdir" \
+        --prefix=/usr \
+        --no-deps \
+        --no-build-isolation \
+        --no-compile \
+        "pydualsense>=0.7.5"
+
+    # Desktop entry + icones.
+    install -Dm644 packaging/hefesto-dualsense4unix.desktop \
+        "$pkgdir/usr/share/applications/${pkgname}.desktop"
+    # PACKAGING-ICON-NAME-MISMATCH-01: o nome do arquivo TEM de casar o
+    # `Icon=hefesto` do packaging/hefesto-dualsense4unix.desktop (compartilhado
+    # por todos os formatos) — instalar como ${pkgname}.png deixava o lançador
+    # sem ícone. Paridade com o build_deb.sh, que já usava hefesto.png.
+    # Os DOIS nomes, porque ha DOIS consumidores e eles nao concordam:
+    # o .desktop pede Icon=hefesto, e o codigo pede o nome longo em
+    # app/main.py (set_default_icon_name) e app/tray.py (TRAY_ICON_NAME).
+    # Instalar so um troca o lancador sem icone pela bandeja com joystick
+    # generico — medido em 29/07, sem ganho liquido.
+    install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
+        "$pkgdir/usr/share/icons/hicolor/256x256/apps/hefesto.png"
+    install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
+        "$pkgdir/usr/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png"
+
+    # Udev rules — conjunto CANÔNICO (M13): 70/71/72/76..84, alinhado a
+    # scripts/install_udev.sh + install-host-udev.sh + build_deb.sh. As regras
+    # 73/74 (GUI auto-spawn no hotplug) foram DESCONTINUADAS 2026-06-23 — abriam
+    # o controle a cada ACTION=="add" e AMPLIFICAVAM o storm -71.
+    # As 82/83/84 (no-sniff do Pro, snapshot de bond, variante do clone 8BitDo)
+    # faltavam aqui: o install-host-udev.sh exige TODAS as 14 no pre-flight.
+    install -Dm644 -t "$pkgdir/usr/lib/udev/rules.d/" \
+        assets/70-ps5-controller.rules \
+        assets/71-uhid.rules \
+        assets/71-uinput.rules \
+        assets/72-ps5-controller-autosuspend.rules \
+        assets/76-dualsense-touchpad-libinput-ignore.rules \
+        assets/77-dualsense-leds.rules \
+        assets/78-dualsense-motion-not-joystick.rules \
+        assets/79-external-controller-leds.rules \
+        assets/80-motion-joydev-hide.rules \
+        assets/81-hefesto-usb-power.rules \
+        assets/81-hefesto-usb-host-power.rules \
+        assets/82-nintendo-pro-nosniff.rules \
+        assets/83-hefesto-bond-snapshot.rules \
+        assets/84-nintendo-pro-variant.rules
+    install -Dm644 assets/hefesto-dualsense4unix.conf \
+        "$pkgdir/usr/lib/modules-load.d/hefesto-dualsense4unix.conf"
+
+    # SPRINT-GAME-RUMBLE-01: cura de RAIZ do storm -71 (quirk do snd_usb_audio)
+    # no path VIVO que o kmod lê. PRESERVA mic+fone. Paridade com o .deb.
+    install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
+        "$pkgdir/usr/lib/modprobe.d/hefesto-dualsense-storm.conf"
+    # PLAT-04: btusb sem autosuspend (adaptador BT nunca dorme).
+    install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
+        "$pkgdir/usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+    # Onda T (2026-07-20): opções do hid-nintendo patchado (bt_probe_retries=3).
+    # Sem o módulo DKMS o in-tree só loga "unknown parameter ignored" (fail-safe).
+    install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
+        "$pkgdir/usr/lib/modprobe.d/hefesto-hid-nintendo.conf"
+    # Contenção BT (2026-07-25): opções do hid-playstation patchado (feature_retries=2).
+    # Mesmo fail-safe: sem o módulo DKMS o in-tree ignora o parâmetro.
+    install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
+        "$pkgdir/usr/lib/modprobe.d/hefesto-hid-playstation.conf"
+    # Onda T (corretor, achado #9): a conf acima é INERTE sem o MÓDULO DKMS.
+    # Empacota as fontes (dkms/hid-nintendo) + a lib genérica; quem roda o
+    # dkms add/build/install é o install-host-udev.sh (bundlado abaixo) no
+    # pós-instalação — mesma instrução do broker.
+    install -Dm644 scripts/dkms_lib.sh \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/dkms_lib.sh"
+    mkdir -p "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo"
+    cp -a assets/dkms/hid-nintendo/. \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo/"
+    # Contenção BT (2026-07-25): fontes do hid-playstation patchado (retry de
+    # feature report na probe) — mesma paridade da Onda T/W.
+    mkdir -p "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/hid-playstation"
+    cp -a assets/dkms/hid-playstation/. \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/hid-playstation/"
+    # Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
+    # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota:
+    # quem roda o dkms é o install-host-udev.sh no pós-instalação.
+    mkdir -p "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb"
+    cp -a assets/dkms/rtw88-usb/. \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/"
+
+    # Systemd user units (M14): SÓ as que funcionam no contexto de pacote
+    # (binário em /usr/bin, resolvido pelo sed). As demais de assets/ dependem de
+    # scripts que o pacote não instala ou de placeholders (__SCRIPT__) — copiá-las
+    # deixaria units quebradas (203/EXEC no `systemctl --user enable`). Espelha
+    # a allowlist+sed do build_deb.sh.
+    for base in hefesto-dualsense4unix.service hefesto-dualsense4unix-gui-hotplug.service; do
+        unit="assets/${base}"
+        [ -f "$unit" ] || continue
+        install -Dm644 "$unit" "$pkgdir/usr/lib/systemd/user/${base}"
+        sed -i 's|%h/\.local/bin/hefesto-dualsense4unix|/usr/bin/hefesto-dualsense4unix|g' \
+            "$pkgdir/usr/lib/systemd/user/${base}"
+    done
+
+    # BROKER-01 (Onda S — fd-injection): binário standalone + units-template
+    # do broker root hide-hidraw. NÃO ativa sozinho aqui — pacman roda
+    # package()/hooks sem sessão (sem SUDO_UID equivalente ⇒ renderizaria uid
+    # 0, PROIBIDO — lição 6). Bundla também o install-host-udev.sh (mesmo
+    # helper do .deb/Flatpak) para o usuário ATIVAR depois de instalar:
+    #   sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
+    install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/broker/hidraw_broker.py"
+    install -Dm644 -t "$pkgdir/usr/share/hefesto-dualsense4unix/systemd/" \
+        assets/systemd/hefesto-hidraw-broker.service \
+        assets/systemd/hefesto-hidraw-broker.socket
+    install -Dm755 scripts/install-host-udev.sh \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+
+    # Catalogos i18n compilados em /usr/share/locale/<lang>/LC_MESSAGES/.
+    if [ -d locale ]; then
+        for lang_dir in locale/*/; do
+            [ -d "$lang_dir" ] || continue
+            lang="$(basename "$lang_dir")"
+            mo="${lang_dir}LC_MESSAGES/hefesto-dualsense4unix.mo"
+            [ -f "$mo" ] && install -Dm644 "$mo" \
+                "$pkgdir/usr/share/locale/${lang}/LC_MESSAGES/hefesto-dualsense4unix.mo"
+        done
+    fi
+
+    # License.
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/${pkgname}/LICENSE"
+
+    # README + checklist para referencia.
+    install -Dm644 README.md "$pkgdir/usr/share/doc/${pkgname}/README.md"
+}

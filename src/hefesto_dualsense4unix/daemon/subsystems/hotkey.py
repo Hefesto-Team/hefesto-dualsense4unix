@@ -16,11 +16,12 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.context import DaemonContext
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
 
-def build_ps_solo_callback(daemon: Any) -> Any:
+def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
     """Cria o callback on_ps_solo que lê self.config em runtime (REFACTOR-DAEMON-RELOAD-01).
 
     Leitura em runtime — não em closure — para que reload_config funcione sem
@@ -30,6 +31,23 @@ def build_ps_solo_callback(daemon: Any) -> Any:
     def _on_ps_solo() -> None:
         cfg = daemon.config
         if cfg.ps_button_action == "none":
+            return
+        # FEAT-PARITY-REVIEW-01 + M5: com o controle dedicado a um JOGO, o PS já
+        # vai cru como BTN_MODE (guide/overlay) e disparar TAMBÉM a ação de sistema
+        # roubaria o foco. O sinal de "está em jogo" é o MODO JOGO — Modo Nativo
+        # (native_mode_active) ou emulação suprimida (_emulation_suppressed, que os
+        # perfis de jogo ligam e o long-press do PS alterna). Ambos são flags EM
+        # MEMÓRIA — nada de subprocess aqui (o callback roda inline no poll loop; um
+        # pgrep bloqueava input/IPC/co-op por até 2s — REVIEW-M5-PGREP-BLOCK-01).
+        # Cobre também jogos NÃO-Steam (Lutris/Heroic/nativo), que a checagem por
+        # processo Steam deixava passar (REVIEW-M5-NONSTEAM-FOCUS-01). No desktop
+        # (sem modo jogo) a ação roda normal — abre a Steam. Combos PS+* seguem.
+        store = getattr(daemon, "store", None)
+        if store is not None and getattr(store, "native_mode_active", False):
+            logger.info("hotkey_ps_solo_skip_native_mode")
+            return
+        if getattr(daemon, "_emulation_suppressed", False):
+            logger.info("hotkey_ps_solo_skip_modo_jogo")
             return
         if cfg.ps_button_action == "steam":
             from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
@@ -52,20 +70,147 @@ def build_ps_solo_callback(daemon: Any) -> Any:
     return _on_ps_solo
 
 
-def start_hotkey_manager(daemon: Any) -> None:
-    """Instancia HotkeyManager e atribui a daemon._hotkey_manager."""
-    from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
+def build_ps_long_press_callback(daemon: DaemonProtocol) -> Any:
+    """Cria o callback on_ps_long_press: alterna o modo jogo (supressao da
+    emulacao de mouse/teclado). FEAT-EMULATION-GAMEMODE-LONGPRESS-01."""
 
-    daemon._hotkey_manager = HotkeyManager(on_ps_solo=build_ps_solo_callback(daemon))
-    logger.info("hotkey_manager_started", ps_button_action=daemon.config.ps_button_action)
+    def _on_ps_long_press() -> None:
+        daemon.set_emulation_suppressed()
+
+    return _on_ps_long_press
 
 
-def stop_hotkey_manager(daemon: Any) -> None:
+def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
+    """Cria o callback on_next (+1) / on_prev (-1): cicla para o perfil
+    seguinte/anterior e o ativa — triggers + LEDs + key_bindings + marca ativo +
+    notifica — reusando ProfileManager.activate, o MESMO caminho do profile.switch
+    (IPC) e do restore_last_profile. FEAT-HOTKEY-PROFILE-CYCLE-01.
+
+    Antes os combos PS+D-pad estavam disabled_until_wired: o observe() disparava
+    com cb=None (no-op) mas ainda suprimia o D-pad e o PS-solo — gesto morto que
+    comia o D-pad. Agora o cb troca de perfil de verdade.
+
+    Feedback in-hand (você está com o controle na mão): flasha o lightbar em
+    branco antes do activate() repintar a cor do perfil novo, então há sinal
+    visível mesmo que dois perfis tenham a mesma cor. O sleep roda em task
+    própria (não bloqueia o poll loop).
+    """
+
+    async def _cycle() -> None:
+        import functools
+        import time as _time
+
+        from hefesto_dualsense4unix.daemon.state_store import MANUAL_PROFILE_LOCK_SEC
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.utils.session import save_active_marker
+
+        # FEAT-NATIVE-MODE-01: em Modo Nativo o controle está solto para o jogo —
+        # o ciclo de perfil (PS+dpad) NÃO troca de perfil (re-escreveria gatilhos).
+        store = getattr(daemon, "store", None)
+        if store is not None and getattr(store, "native_mode_active", False):
+            logger.info("profile_cycle_skip_native_mode")
+            return
+
+        # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers de
+        # emulação — paridade com o profile.switch (IPC) e o autoswitch.
+        manager = ProfileManager(
+            controller=daemon.controller,
+            store=daemon.store,
+            keyboard_device_provider=lambda: getattr(
+                daemon, "_keyboard_device", None
+            ),
+            mouse_applier=getattr(daemon, "apply_profile_mouse", None),
+            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
+            mode_applier=getattr(daemon, "apply_profile_mode", None),
+            # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
+            rumble_policy_applier=getattr(
+                daemon, "apply_profile_rumble_policy", None
+            ),
+            rumble_passthrough_applier=getattr(
+                daemon, "apply_profile_rumble_passthrough", None
+            ),
+        )
+        profiles = await daemon._run_blocking(manager.list_profiles)
+        if len(profiles) < 2:
+            logger.info("profile_cycle_skip", n=len(profiles))
+            return
+        names = [p.name for p in profiles]
+        active = daemon.store.active_profile
+        idx = names.index(active) if active in names else 0
+        target = names[(idx + direction) % len(names)]
+
+        # Feedback visual imediato; activate() repinta a cor do perfil a seguir.
+        with contextlib.suppress(Exception):
+            await daemon._run_blocking(daemon.controller.set_led, (255, 255, 255))
+            await asyncio.sleep(0.12)
+
+        # PERFIL-03: botão físico no controle = gesto MANUAL — origin="manual"
+        # persiste a intenção em session.json (paridade com o profile.switch).
+        # `functools.partial` porque `_run_blocking(fn, *args)` só aceita
+        # posicionais e `origin` é keyword-only.
+        profile = await daemon._run_blocking(
+            functools.partial(manager.activate, target, origin="manual")
+        )
+        with contextlib.suppress(Exception):
+            save_active_marker(profile.name)
+        # Gesto explícito do usuário: libera o autoswitch e arma o lock manual
+        # (paridade com _handle_profile_switch) — senão o autoswitch desfaz a
+        # troca no próximo tick por causa da janela ativa.
+        daemon.store.clear_manual_trigger_active()
+        daemon.store.mark_manual_profile_lock(
+            _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
+        )
+        logger.info("profile_cycled", direction=direction, to=profile.name)
+
+    return _cycle
+
+
+def start_hotkey_manager(daemon: DaemonProtocol) -> None:
+    """Instancia HotkeyManager e atribui a daemon._hotkey_manager.
+
+    BUGFIX: o HotkeyManager era criado sem config, ignorando
+    `daemon.config.ps_long_press_ms` (ficava preso no default 1000ms). Agora a
+    config do daemon é propagada — inclusive 0 = desliga o long-press do PS.
+    """
+    from hefesto_dualsense4unix.integrations.hotkey_daemon import (
+        DEFAULT_COMBO_NEXT,
+        DEFAULT_COMBO_PREV,
+        HotkeyConfig,
+        HotkeyManager,
+    )
+
+    # FEAT-HOTKEY-PROFILE-CYCLE-01: os combos next/prev (PS+D-pad) agora estão
+    # LIGADOS — on_next/on_prev ciclam o perfil via ProfileManager.activate (o
+    # mesmo caminho do profile.switch). Antes ficavam disabled_until_wired: o
+    # observe() disparava com cb=None (no-op) mas ainda comia o D-pad. Com o cb
+    # de verdade, suprimir o D-pad durante o hold do PS é o comportamento certo
+    # (você está trocando de perfil, não mirando). Modo-jogo segue no PS+Options.
+    hotkey_config = HotkeyConfig(
+        ps_long_press_ms=getattr(daemon.config, "ps_long_press_ms", 0),
+        next_profile=DEFAULT_COMBO_NEXT,
+        prev_profile=DEFAULT_COMBO_PREV,
+    )
+    daemon._hotkey_manager = HotkeyManager(
+        on_ps_solo=build_ps_solo_callback(daemon),
+        on_ps_long_press=build_ps_long_press_callback(daemon),
+        on_next=build_profile_cycle_callback(daemon, +1),
+        on_prev=build_profile_cycle_callback(daemon, -1),
+        config=hotkey_config,
+    )
+    logger.info(
+        "hotkey_manager_started",
+        ps_button_action=daemon.config.ps_button_action,
+        ps_long_press_ms=hotkey_config.ps_long_press_ms,
+        next_prev_combos="ps+dpad_up / ps+dpad_down",
+    )
+
+
+def stop_hotkey_manager(daemon: DaemonProtocol) -> None:
     """Descarta o HotkeyManager. Idempotente."""
     daemon._hotkey_manager = None
 
 
-def start_mic_hotkey(daemon: Any) -> None:
+def start_mic_hotkey(daemon: DaemonProtocol) -> None:
     """Cria AudioControl e inicia task de consumo de BUTTON_DOWN para mic_btn."""
     from hefesto_dualsense4unix.integrations.audio_control import AudioControl
 
@@ -76,12 +221,17 @@ def start_mic_hotkey(daemon: Any) -> None:
     logger.info("mic_hotkey_iniciado")
 
 
-async def mic_button_loop(daemon: Any) -> None:
+async def mic_button_loop(daemon: DaemonProtocol) -> None:
     """Consome BUTTON_DOWN do bus e aciona mute/unmute do microfone do sistema.
 
     Filtra apenas eventos com button='mic_btn'. Chama AudioControl (que já
     tem debounce interno de 200ms) e atualiza set_mic_led no controle.
     Não relança exceções: falhas são logadas como warning.
+
+    O toggle de mute (wpctl/pactl via subprocess) e o set_mic_led (HID) são
+    chamadas SÍNCRONAS bloqueantes (até ~4s). Rodá-las direto no event loop
+    asyncio travaria o daemon inteiro; por isso são offloadadas para o executor
+    via `daemon._run_blocking`. O debounce interno de 200ms continua valendo.
     """
     from hefesto_dualsense4unix.core.events import EventTopic
 
@@ -94,12 +244,20 @@ async def mic_button_loop(daemon: Any) -> None:
                 continue
             if payload.get("button") != "mic_btn":
                 continue
+            # MIC-EXPOSE-01: o flag é consultado AQUI, a cada evento, e não só
+            # no boot — assim a seção `mic` do perfil/draft vale no próximo
+            # toque do botão sem restart do daemon. Desligado, o botão não
+            # mexe no mute do sistema (nem no LED); o kernel segue dono do
+            # mudo de microfone do próprio controle.
+            if not getattr(daemon.config, "mic_button_toggles_system", True):
+                logger.debug("mic_hotkey_desligado_por_config")
+                continue
             audio = daemon._audio
             if audio is None:
                 continue
             try:
-                muted = audio.toggle_default_source_mute()
-                daemon.controller.set_mic_led(muted)
+                muted = await daemon._run_blocking(audio.toggle_default_source_mute)
+                await daemon._run_blocking(daemon.controller.set_mic_led, muted)
                 logger.info("mic_hotkey_toggle", muted=muted)
             except Exception as exc:
                 logger.warning("mic_hotkey_falhou", err=str(exc))
@@ -131,6 +289,7 @@ class HotkeySubsystem:
 
 __all__ = [
     "HotkeySubsystem",
+    "build_ps_long_press_callback",
     "build_ps_solo_callback",
     "mic_button_loop",
     "start_hotkey_manager",

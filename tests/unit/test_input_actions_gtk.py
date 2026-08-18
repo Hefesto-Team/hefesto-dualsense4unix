@@ -38,6 +38,20 @@ try:
 except Exception:  # pragma: no cover — sem PyGObject
     GTK_AVAILABLE = False
 
+# CI-GTK-REAL-SEM-DISPLAY-01: ter o PyGObject não basta — Gtk REAL sem
+# servidor gráfico é comportamento indefinido. No runner do GitHub estes três
+# testes não pulavam (o `gi` está lá e expõe `ListStore`), rodavam, e o job
+# MORRIA em seguida sem sequer imprimir o sumário do pytest. Quem depende de
+# Gtk de verdade depende do ambiente de verdade: sem `DISPLAY` nem
+# `WAYLAND_DISPLAY`, o honesto é pular — e aparecer como `skipped`, não como
+# um job abortado sem explicação.
+import os as _os_probe
+
+if GTK_AVAILABLE and not (
+    _os_probe.environ.get("DISPLAY") or _os_probe.environ.get("WAYLAND_DISPLAY")
+):
+    GTK_AVAILABLE = False
+
 
 pytestmark = pytest.mark.skipif(
     not GTK_AVAILABLE,

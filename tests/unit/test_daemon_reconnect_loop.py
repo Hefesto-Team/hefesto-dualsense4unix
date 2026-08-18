@@ -4,10 +4,14 @@ Cobre:
 - IPC sobe ANTES do daemon conectar (o controle pode aparecer depois).
 - reconnect_loop publica CONTROLLER_CONNECTED na transição offline→online.
 - _stop_event durante o backoff faz a task retornar rapidamente.
+- VPAD-01: a transição offline→online promove o vpad degradado (uinput→uhid)
+  exatamente 1x, no executor e sob o `_emu_lock` — hotplug tardio deixou de
+  ser o buraco em que o vpad ficava uinput `054c:0ce6` até reiniciar o daemon.
 """
 from __future__ import annotations
 
 import asyncio
+import threading
 
 import pytest
 
@@ -132,6 +136,173 @@ async def test_reconnect_loop_publica_controller_connected_em_transicao(
     assert payload == {"transport": "usb"}
     daemon.stop()
     await asyncio.wait_for(run_task, timeout=2.0)
+
+
+class _DepthLock:
+    """RLock instrumentado: expõe a profundidade de aquisição vigente.
+
+    Substitui o `_emu_lock` do daemon nos testes do VPAD-01 para provar que a
+    promoção roda SERIALIZADA (depth >= 1 no instante da chamada) — é o que a
+    protege de colidir com set_gamepad_emulation/set_mouse_emulation vindos do
+    IPC/GUI em outra thread.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self.depth = 0
+
+    def __enter__(self) -> _DepthLock:
+        self._lock.acquire()
+        self.depth += 1
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.depth -= 1
+        self._lock.release()
+
+
+def _config() -> DaemonConfig:
+    """Config hermética padrão destes testes (sem IPC/UDP/autoswitch)."""
+    return DaemonConfig(
+        poll_hz=120,
+        auto_reconnect=False,
+        ipc_enabled=False,
+        udp_enabled=False,
+        autoswitch_enabled=False,
+        keyboard_emulation_enabled=False,
+        mic_button_toggles_system=False,
+    )
+
+
+def _intercepta_upgrade(
+    monkeypatch: pytest.MonkeyPatch, lock: _DepthLock
+) -> list[dict[str, object]]:
+    """Troca `upgrade_primary_vpad_to_uhid` por um espião que registra a
+    thread e a profundidade do lock no instante da chamada (o lifecycle e o
+    reconnect_loop importam a função na hora do uso, então o patch no módulo
+    pega os dois callers)."""
+    from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
+
+    chamadas: list[dict[str, object]] = []
+
+    def _fake_upgrade(_daemon: object) -> bool:
+        chamadas.append(
+            {
+                "thread": threading.current_thread().name,
+                "lock_depth": lock.depth,
+            }
+        )
+        return True
+
+    monkeypatch.setattr(gp, "upgrade_primary_vpad_to_uhid", _fake_upgrade)
+    return chamadas
+
+
+@pytest.mark.asyncio
+async def test_hotplug_tardio_promove_o_vpad_exatamente_uma_vez(
+    tmp_path, monkeypatch
+) -> None:
+    """VPAD-01: a transição offline→online do probe chama a promoção 1x — e só
+    1x (as iterações online seguintes, sem transição, não geram churn). A
+    chamada roda no executor (não bloqueia o event loop que o poll loop
+    divide) e sob o `_emu_lock`."""
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    import hefesto_dualsense4unix.daemon.connection as conn_mod
+
+    monkeypatch.setattr(conn_mod, "RECONNECT_PROBE_INTERVAL_SEC", 0.05)
+
+    lock = _DepthLock()
+    chamadas = _intercepta_upgrade(monkeypatch, lock)
+
+    fc = _OfflineThenOnlineController(fail_until=1)  # boot offline; probe conecta
+    bus = EventBus()
+    queue = bus.subscribe(EventTopic.CONTROLLER_CONNECTED)
+    daemon = Daemon(controller=fc, bus=bus, config=_config())
+    daemon._emu_lock = lock
+
+    run_task = asyncio.create_task(daemon.run())
+    try:
+        await asyncio.wait_for(queue.get(), timeout=2.0)
+        # A promoção roda no executor logo após o publish — espera aparecer.
+        for _ in range(40):
+            if chamadas:
+                break
+            await asyncio.sleep(0.05)
+        assert len(chamadas) == 1, "offline→online tem que promover exatamente 1x"
+        assert str(chamadas[0]["thread"]).startswith("hefesto-hid"), (
+            "a promoção deve rodar via _run_blocking (executor) — síncrona no "
+            "event loop ela congelaria o input por até UHID_BIND_TIMEOUT_S"
+        )
+        assert chamadas[0]["lock_depth"] == 1, (
+            "a promoção deve segurar o _emu_lock (serializada com os toggles "
+            "de emulação do IPC/GUI)"
+        )
+        # Sem nova transição, nenhuma promoção extra (probe segue online).
+        await asyncio.sleep(0.2)
+        assert len(chamadas) == 1
+    finally:
+        daemon.stop()
+        await asyncio.wait_for(run_task, timeout=2.0)
+
+
+@pytest.mark.asyncio
+async def test_conectado_no_boot_so_o_gancho_do_boot_promove(
+    tmp_path, monkeypatch
+) -> None:
+    """Já conectado no boot: quem promove é o gancho do lifecycle (síncrono,
+    na thread do event loop); o reconnect_loop parte de `was_connected=True`,
+    não vê transição e NÃO repromove."""
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    import hefesto_dualsense4unix.daemon.connection as conn_mod
+
+    monkeypatch.setattr(conn_mod, "RECONNECT_PROBE_INTERVAL_SEC", 0.05)
+
+    lock = _DepthLock()
+    chamadas = _intercepta_upgrade(monkeypatch, lock)
+
+    fc = _OfflineThenOnlineController(fail_until=0)  # conecta de primeira
+    bus = EventBus()
+    queue = bus.subscribe(EventTopic.CONTROLLER_CONNECTED)
+    daemon = Daemon(controller=fc, bus=bus, config=_config())
+    daemon._emu_lock = lock
+
+    run_task = asyncio.create_task(daemon.run())
+    try:
+        await asyncio.wait_for(queue.get(), timeout=2.0)
+        await asyncio.sleep(0.3)  # várias iterações do probe (0.05s cada)
+        assert len(chamadas) == 1, "conectado no boot = só o gancho do boot"
+        assert not str(chamadas[0]["thread"]).startswith("hefesto-hid"), (
+            "a chamada única deve ser a do boot (lifecycle, thread do event "
+            "loop) — o reconnect_loop não viu transição nenhuma"
+        )
+    finally:
+        daemon.stop()
+        await asyncio.wait_for(run_task, timeout=2.0)
+
+
+@pytest.mark.asyncio
+async def test_offline_continuo_nao_promove(tmp_path, monkeypatch) -> None:
+    """Sem transição não há promoção: controle nunca aparece, vpad em paz."""
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    import hefesto_dualsense4unix.daemon.connection as conn_mod
+
+    monkeypatch.setattr(conn_mod, "RECONNECT_PROBE_INTERVAL_SEC", 0.05)
+
+    lock = _DepthLock()
+    chamadas = _intercepta_upgrade(monkeypatch, lock)
+
+    fc = _OfflineThenOnlineController(fail_until=999)  # nunca conecta
+    bus = EventBus()
+    daemon = Daemon(controller=fc, bus=bus, config=_config())
+    daemon._emu_lock = lock
+
+    run_task = asyncio.create_task(daemon.run())
+    try:
+        await asyncio.sleep(0.3)
+        assert chamadas == []
+    finally:
+        daemon.stop()
+        await asyncio.wait_for(run_task, timeout=2.0)
 
 
 @pytest.mark.asyncio

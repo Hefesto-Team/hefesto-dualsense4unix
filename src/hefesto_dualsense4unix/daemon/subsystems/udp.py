@@ -13,6 +13,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
@@ -53,7 +54,7 @@ class UdpSubsystem:
         return config.udp_enabled
 
 
-async def start_udp(daemon: Any) -> None:
+async def start_udp(daemon: DaemonProtocol) -> None:
     """Função utilitária: inicia o UdpServer usando o Daemon diretamente."""
     from hefesto_dualsense4unix.daemon.udp_server import UdpServer
 
@@ -70,7 +71,7 @@ async def start_udp(daemon: Any) -> None:
         daemon._udp_server = None
 
 
-async def stop_udp(daemon: Any) -> None:
+async def stop_udp(daemon: DaemonProtocol) -> None:
     """Função utilitária: para o UdpServer do Daemon."""
     if daemon._udp_server is not None:
         with contextlib.suppress(Exception):

@@ -15,6 +15,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
@@ -41,6 +42,9 @@ class MouseSubsystem:
             device = UinputMouseDevice(
                 mouse_speed=cfg.mouse_speed,
                 scroll_speed=cfg.mouse_scroll_speed,
+                # FEAT-MOUSE-CURSOR-FEEL-01: o device integra px/s pelo período
+                # real do tick — passa o poll_hz configurado (não hardcodar 60).
+                poll_hz=cfg.poll_hz,
             )
         except Exception as exc:
             logger.warning("mouse_subsystem_import_failed", err=str(exc))
@@ -67,7 +71,7 @@ class MouseSubsystem:
         return config.mouse_emulation_enabled
 
 
-def start_mouse_emulation(daemon: Any) -> bool:
+def start_mouse_emulation(daemon: DaemonProtocol) -> bool:
     """Cria device virtual de mouse+teclado (FEAT-MOUSE-01). Idempotente.
 
     Retorna True se ativo ao final; False se falhou ao iniciar.
@@ -80,6 +84,8 @@ def start_mouse_emulation(daemon: Any) -> bool:
         device = UinputMouseDevice(
             mouse_speed=daemon.config.mouse_speed,
             scroll_speed=daemon.config.mouse_scroll_speed,
+            # FEAT-MOUSE-CURSOR-FEEL-01: período real do tick p/ integrar px/s.
+            poll_hz=daemon.config.poll_hz,
         )
     except Exception as exc:
         logger.warning("mouse_emulation_import_failed", err=str(exc))
@@ -89,6 +95,17 @@ def start_mouse_emulation(daemon: Any) -> bool:
         return False
     daemon._mouse_device = device
     daemon.config.mouse_emulation_enabled = True
+    # FEAT-MOUSE-PERSIST-01 + FEAT-MOUSE-CURSOR-FEEL-01 (A5): persiste toggle E
+    # velocidades p/ sobreviver a restart/reboot (antes só o toggle era salvo e
+    # speed/scroll voltavam a 6/1 a cada reinício do daemon).
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.utils.session import save_mouse_emulation
+
+        save_mouse_emulation(
+            True,
+            speed=daemon.config.mouse_speed,
+            scroll_speed=daemon.config.mouse_scroll_speed,
+        )
     logger.info(
         "mouse_emulation_started",
         speed=daemon.config.mouse_speed,
@@ -97,18 +114,32 @@ def start_mouse_emulation(daemon: Any) -> bool:
     return True
 
 
-def stop_mouse_emulation(daemon: Any) -> None:
-    """Para e descarta o dispositivo virtual. Idempotente."""
+def stop_mouse_emulation(daemon: DaemonProtocol, *, persist: bool = True) -> None:
+    """Para e descarta o dispositivo virtual. Idempotente.
+
+    ``persist=False`` (HARM-06) desliga o device SEM tocar na preferência
+    persistida — é o que a exclusão mútua do gamepad usa. Desligar o mouse
+    porque o controle foi para o jogo não é a usuária dizendo "não quero mouse";
+    gravar "off" ali fazia o round-trip desktop->gamepad->desktop apagar a
+    preferência e o controle voltava sem função nenhuma.
+    Espelha `stop_gamepad_emulation(persist=...)`.
+    """
     if daemon._mouse_device is None:
         return
     with contextlib.suppress(Exception):
         daemon._mouse_device.stop()
     daemon._mouse_device = None
     daemon.config.mouse_emulation_enabled = False
-    logger.info("mouse_emulation_stopped")
+    # FEAT-MOUSE-PERSIST-01: grava "off" para não religar no próximo boot.
+    if persist:
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.utils.session import save_mouse_emulation
+
+            save_mouse_emulation(False)
+    logger.info("mouse_emulation_stopped", persist=persist)
 
 
-def dispatch_mouse(daemon: Any, state: Any, buttons_pressed: frozenset[str]) -> None:
+def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]) -> None:
     """Traduz o estado do controle em eventos de mouse+teclado virtual.
 
     Chamado pelo poll loop a cada tick se _mouse_device não for None.
@@ -129,10 +160,38 @@ def dispatch_mouse(daemon: Any, state: Any, buttons_pressed: frozenset[str]) -> 
         )
     except Exception as exc:
         logger.warning("mouse_dispatch_failed", err=str(exc))
+    # B4 (FEAT-DSX-TOUCHPAD-CURSOR-B4): o touchpad é fonte ÚNICA do cursor.
+    # Drena o delta acumulado pelo TouchpadReader desde o tick anterior e o
+    # converte em REL_X/REL_Y. Só roda aqui (dispatch_mouse), que o poll loop
+    # já gateia por mouse_device != None e not _emulation_suppressed.
+    reader = getattr(daemon, "_touchpad_reader", None)
+    consume = getattr(reader, "consume_motion", None)
+    if consume is not None:
+        try:
+            dx, dy = consume()
+            if dx or dy:
+                device.emit_touchpad_move(dx, dy)
+        except Exception as exc:
+            logger.warning("touchpad_move_dispatch_failed", err=str(exc))
+
+
+def discard_touchpad_motion(daemon: DaemonProtocol) -> None:
+    """Drena-e-descarta o movimento acumulado do touchpad (B4).
+
+    Chamado pelo poll loop quando a emulação está suprimida (modo-jogo) ou sem
+    device de mouse: sem isso, o delta acumularia enquanto a emulação está
+    desligada e o cursor "pularia" o acúmulo ao religar.
+    """
+    reader = getattr(daemon, "_touchpad_reader", None)
+    consume = getattr(reader, "consume_motion", None)
+    if consume is not None:
+        with contextlib.suppress(Exception):
+            consume()
 
 
 __all__ = [
     "MouseSubsystem",
+    "discard_touchpad_motion",
     "dispatch_mouse",
     "start_mouse_emulation",
     "stop_mouse_emulation",

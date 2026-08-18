@@ -1,10 +1,19 @@
 """Subsystem Keyboard — emulação de teclado virtual via uinput.
 
 Introduzido em FEAT-KEYBOARD-EMULATOR-01. Encapsula criação, despacho e
-destruição do `UinputKeyboardDevice`. Ativado por padrão (não depende de
-toggle explícito como `mouse_emulation_enabled`): a instalação do daemon já
-espera que os 4 botões default (Options/Share/L1/R1) emitam teclas
+destruição do `UinputKeyboardDevice`. Ativado por padrão: a instalação do
+daemon já espera que os 4 botões default (Options/Share/L1/R1) emitam teclas
 correspondentes assim que o serviço sobe.
+
+EMULACAO-NO-JOGO-01 (29/07) corrigiu a assimetria que este cabeçalho declarava:
+o teclado NÃO tinha toggle explícito nenhum — nem gate de criação, nem flag em
+disco, nem IPC —, e por isso o R1 (Alt+Tab, `core/keyboard_mappings.py`)
+trocava de aplicativo no meio da partida dela. Agora `keyboard_emulation_enabled`
+é respeitado no gate de criação abaixo (molde de `subsystems/mouse.py`), a
+preferência é persistida em `keyboard_emulation.flag`
+(`utils/session.py:save_keyboard_emulation`) e o runtime alterna por
+`keyboard.emulation.set`. O default continua LIGADO — desligar tira também o
+teclado virtual do sistema (L3/R3) e as três regiões do touchpad.
 
 Wire-up no Daemon (armadilha A-07 — 3 pontos):
   1. Slot `_keyboard_device: Any = None` em `Daemon` (lifecycle.py).
@@ -22,10 +31,13 @@ import contextlib
 import os
 import shutil
 import subprocess
-from typing import Any
+from typing import TYPE_CHECKING
 
 from hefesto_dualsense4unix.core.keyboard_mappings import TOKEN_CLOSE_OSK, TOKEN_OPEN_OSK
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
@@ -122,15 +134,28 @@ class _OSKController:
             logger.warning("osk_token_desconhecido", token=token)
 
 
-def start_keyboard_emulation(daemon: Any) -> bool:
+def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     """Cria device virtual de teclado + touchpad reader. Idempotente.
 
     Retorna True se ativo ao final; False se falhou ao iniciar o device
     principal. O `TouchpadReader` é best-effort: se o device evdev do
     touchpad não existir (controle BT, kernel velho), não quebra o fluxo.
+
+    EMULACAO-NO-JOGO-01: o gate de `keyboard_emulation_enabled` mora AQUI,
+    espelhando `subsystems/mouse.py` (`if not cfg.mouse_emulation_enabled:
+    return`). É o que dá dentes ao interruptor: desligada, o device NÃO nasce,
+    e o gate de despacho do poll loop (`_keyboard_device is not None`) fecha
+    sozinho — a mesma mecânica que fazia o mouse dela estar honestamente
+    desligado enquanto o teclado emitia Alt+Tab dentro da partida. `getattr`
+    defensivo em dois níveis: dublê de teste sem `config` (ou sem o campo)
+    segue com o comportamento histórico (ligado).
     """
     if getattr(daemon, "_keyboard_device", None) is not None:
         return True
+    cfg = getattr(daemon, "config", None)
+    if cfg is not None and not getattr(cfg, "keyboard_emulation_enabled", True):
+        logger.debug("keyboard_emulation_desligada_device_nao_criado")
+        return False
     try:
         from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDevice
 
@@ -157,7 +182,7 @@ def start_keyboard_emulation(daemon: Any) -> bool:
     return True
 
 
-def _start_touchpad_reader(daemon: Any) -> None:
+def _start_touchpad_reader(daemon: DaemonProtocol) -> None:
     """Inicia TouchpadReader se device evdev disponível; no-op caso contrário.
 
     Em modo FAKE (testes, CI, smoke runs) o reader é pulado pois
@@ -184,7 +209,7 @@ def _start_touchpad_reader(daemon: Any) -> None:
         logger.info("touchpad_reader_iniciado")
 
 
-def stop_keyboard_emulation(daemon: Any) -> None:
+def stop_keyboard_emulation(daemon: DaemonProtocol) -> None:
     """Para device + reader + OSK. Idempotente."""
     device = getattr(daemon, "_keyboard_device", None)
     if device is not None:
@@ -204,7 +229,46 @@ def stop_keyboard_emulation(daemon: Any) -> None:
     logger.info("keyboard_emulation_stopped")
 
 
-def dispatch_keyboard(daemon: Any, buttons_pressed: frozenset[str]) -> None:
+def _combine_with_touchpad(
+    daemon: DaemonProtocol, buttons_pressed: frozenset[str]
+) -> frozenset[str]:
+    """Mescla as regiões do TouchpadReader ao frozenset de botões.
+
+    Extraído para reuso por `dispatch_keyboard` e `prime_keyboard` (mesma
+    visão de botões que o device de teclado enxerga). Falha de leitura do
+    reader é tratada como "nenhuma região pressionada".
+    """
+    reader = getattr(daemon, "_touchpad_reader", None)
+    if reader is None:
+        return buttons_pressed
+    regions: frozenset[str]
+    try:
+        regions = frozenset(reader.regions_pressed())
+    except Exception as exc:
+        logger.warning("touchpad_regions_read_failed", err=str(exc))
+        regions = frozenset()
+    return buttons_pressed | regions
+
+
+def prime_keyboard(daemon: DaemonProtocol, buttons_pressed: frozenset[str]) -> None:
+    """Semeia o edge-tracker do device de teclado com o baseline da conexão.
+
+    Usado pelo poll loop no 1º tick conectado (BUG-DAEMON-CONNECT-GHOST-
+    INPUT-01). Reaplica a mesma combinação botões+touchpad de `dispatch_keyboard`
+    para que o estado semeado seja idêntico ao que o device veria, e delega ao
+    `UinputKeyboardDevice.prime` (zero emissão). No-op sem device.
+    """
+    device = getattr(daemon, "_keyboard_device", None)
+    if device is None:
+        return
+    combined = _combine_with_touchpad(daemon, buttons_pressed)
+    try:
+        device.prime(combined)
+    except Exception as exc:
+        logger.warning("keyboard_prime_failed", err=str(exc))
+
+
+def dispatch_keyboard(daemon: DaemonProtocol, buttons_pressed: frozenset[str]) -> None:
     """Traduz o set de botões pressionados em eventos de teclado virtual.
 
     Chamado pelo poll loop a cada tick. Reusa `buttons_pressed` já obtido
@@ -217,16 +281,7 @@ def dispatch_keyboard(daemon: Any, buttons_pressed: frozenset[str]) -> None:
     device = getattr(daemon, "_keyboard_device", None)
     if device is None:
         return
-    reader = getattr(daemon, "_touchpad_reader", None)
-    if reader is not None:
-        try:
-            regions = reader.regions_pressed()
-        except Exception as exc:
-            logger.warning("touchpad_regions_read_failed", err=str(exc))
-            regions = frozenset()
-        combined = buttons_pressed | regions
-    else:
-        combined = buttons_pressed
+    combined = _combine_with_touchpad(daemon, buttons_pressed)
     try:
         device.dispatch(combined)
     except Exception as exc:
@@ -236,6 +291,7 @@ def dispatch_keyboard(daemon: Any, buttons_pressed: frozenset[str]) -> None:
 __all__ = [
     "_OSKController",
     "dispatch_keyboard",
+    "prime_keyboard",
     "start_keyboard_emulation",
     "stop_keyboard_emulation",
 ]

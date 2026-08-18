@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hefesto-dualsense4unix"
-version = "3.0.0"
+version = "0.5.0"
 description = "Hefesto - Dualsense4Unix: Linux adaptive trigger daemon for DualSense controllers"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,9 +39,22 @@ dev = [
     "pytest>=7.4",
     "pytest-asyncio>=0.23",
     "pytest-cov>=4.1",
-    "ruff>=0.1",
+    # Pin do ruff: lint sem pin (ruff>=0.1) deixa cada release/CI refém da versão
+    # publicada no dia — ruff 0.15.x passou a flagar RUF100 de noqa de regra não
+    # habilitada e a reformatar blocos de import, quebrando o release v3.8.3 num
+    # código que estava limpo na versão anterior. Pin garante build determinístico
+    # (CHORE-CI-PIN-RUFF-01). Bump consciente do mantenedor ao subir o ruff.
+    "ruff==0.15.20",
     "mypy>=1.7",
     "types-python-xlib",
+    # PACOTE-COM-NOME-01: tests/unit/test_release_workflow_nomes_e_portoes.py lê
+    # os workflows do GitHub com yaml.safe_load. Sem esta dep declarada, o
+    # `importorskip("yaml")` fazia os cinco testes SKIPAREM no CI (que instala
+    # com `pip install -e ".[dev]"`) e o portão existiria só na máquina da
+    # mantenedora — que é literalmente o defeito que a PORTÃO-VIVO-01 nomeia:
+    # portão que não roda no caminho do commit só avisa tarde.
+    "PyYAML>=6.0",
+    "types-PyYAML",
 ]
 emulation = [
     "python-uinput>=0.11",
@@ -54,6 +67,13 @@ tray = [
 metrics = [
     "prometheus-client>=0.19",
 ]
+# BUG-COSMIC-WLR-BACKEND-REGRESSION-01 — backend Wayland via portal D-Bus
+# usa jeepney (puro Python, sem deps nativas). Sem essa dep, o portal
+# fica indisponível e o cascade cai direto em wlrctl. Recomendada para
+# qualquer compositor Wayland (COSMIC, GNOME, Sway, etc.).
+cosmic = [
+    "jeepney>=0.8",
+]
 
 [project.scripts]
 hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"
@@ -64,6 +84,10 @@ packages = ["src/hefesto_dualsense4unix"]
 include = [
     "src/hefesto_dualsense4unix/gui/*.glade",
     "src/hefesto_dualsense4unix/gui/assets/*.png",
+    # FEAT-I18N-CATALOGS-01 (v3.4.0): catalogos .mo embedded no wheel.
+    # Fallback de path #5 do utils/i18n.py — garante que pip install
+    # sem rodar install.sh ainda resolva traducoes.
+    "src/hefesto_dualsense4unix/locale/*/LC_MESSAGES/*.mo",
 ]
 
 [tool.ruff]
@@ -73,6 +97,14 @@ exclude = ["tests/fixtures/**"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+
+# GUARDA-GI-REAL-01: nos testes de interface, `exigir_gi_real()` PRECISA rodar
+# antes de qualquer `import gi` — senão o módulo derruba a coleta inteira no CI
+# headless em vez de pular. Isso põe uma chamada acima do bloco de imports, que
+# é exatamente o que E402 (import fora do topo) e I001 (ordem do bloco) proíbem.
+# A exceção vale só para os testes; em `src/` as duas regras seguem valendo.
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402", "I001"]
 
 [tool.mypy]
 python_version = "3.10"

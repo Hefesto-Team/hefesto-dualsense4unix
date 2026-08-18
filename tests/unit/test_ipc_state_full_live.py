@@ -208,3 +208,126 @@ async def test_state_full_aciona_warning_quando_neutro_persistente(
 
     # bump foi chamado pelo menos 3 vezes (3 chamadas = 3 incrementos)
     assert store.counter("state_full.stale_neutral") >= 3
+
+
+class TestPlayerPorControle:
+    """LEIGO-01b — o `state_full` carrega o número do jogador de cada controle.
+
+    A GUI rotulava os cards por POSIÇÃO na lista (`idx+1`), o que mente: com o
+    co-op desligado todos os controles alimentam o mesmo gamepad virtual (um
+    jogador só) e, com ele ligado, os índices são reusados. O número só pode
+    vir do daemon — então ele tem de estar no payload.
+    """
+
+    @pytest.mark.asyncio
+    async def test_controllers_ganham_o_campo_player(self, running_server: Any) -> None:
+        _server, socket_path, fc, _store, daemon = running_server
+        # Controller com o método real de descrição (o FakeController não o tem)
+        # e daemon sem gamepad virtual: ninguém é jogador (modo desktop).
+        fc.describe_controllers = lambda: [  # type: ignore[attr-defined]
+            {"index": 0, "connected": True, "transport": "usb",
+             "is_primary": True, "uniq": "aabbcc001100"},
+        ]
+        daemon._gamepad_device = None
+
+        async with IpcClient.connect(socket_path) as client:
+            result = await client.call("daemon.state_full")
+
+        # STATUS-01/COR-05/BT-03: além do `player`, cada entrada carrega os
+        # campos por controle — aqui tudo None/"desconhecida" (FakeController
+        # sem sysfs/desired, sem coop, sem registry, `_last_state` None).
+        assert result["controllers"] == [
+            {"index": 0, "connected": True, "transport": "usb",
+             "is_primary": True, "uniq": "aabbcc001100", "player": None,
+             "player_slot": None, "lightbar_rgb": None, "lightbar_on": False,
+             "lightbar_source": "desconhecida", "inputs": None,
+             "vpad_backend": None, "vpad_motivo": None},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_payload_segue_serializavel_com_daemon_dublado(
+        self, running_server: Any
+    ) -> None:
+        """Blindagem: `_coop_manager` MagicMock não pode estourar o json.dumps.
+
+        O daemon dos testes é um MagicMock — sem coerção, `player_indexes()`
+        devolveria um mock e o `state_full` inteiro deixaria de serializar
+        (a mesma armadilha que o `_as_str_or_none` já cobria).
+        """
+        _server, socket_path, fc, _store, _daemon = running_server
+        fc.describe_controllers = lambda: [  # type: ignore[attr-defined]
+            {"index": 0, "connected": True, "transport": "usb",
+             "is_primary": True, "uniq": "aabbcc001100"},
+        ]
+
+        async with IpcClient.connect(socket_path) as client:
+            result = await client.call("daemon.state_full")
+
+        assert result["controllers"][0]["player"] is None
+
+
+class TestVpadDegradadoNoEstado:
+    """VPAD-05 — fallback nunca silencioso: o `state_full` carrega o dado
+    honesto da degradação (`gamepad_emulation.degraded`/`degraded_motivo`).
+
+    É daqui que o banner da GUI (fase 2) e o doctor consomem — flavor dualsense
+    em backend uinput = vpad sem hidraw (vibração in-game morta) e sem launch
+    option segura; o motivo é o que a factory pendurou no vpad.
+    """
+
+    @pytest.mark.asyncio
+    async def test_dualsense_em_uinput_expoe_degraded_e_motivo(
+        self, running_server: Any
+    ) -> None:
+        from types import SimpleNamespace
+
+        _server, socket_path, _fc, _store, daemon = running_server
+        daemon._gamepad_device = SimpleNamespace(
+            flavor="dualsense", backend="uinput", ff_supported=True,
+            fallback_motivo="uhid_bind_falhou", ff_play_count=0,
+            ff_last_sent=(0, 0),
+        )
+
+        async with IpcClient.connect(socket_path) as client:
+            result = await client.call("daemon.state_full")
+
+        gp = result["gamepad_emulation"]
+        assert gp["backend"] == "uinput"
+        assert gp["degraded"] is True
+        assert gp["degraded_motivo"] == "uhid_bind_falhou"
+
+    @pytest.mark.asyncio
+    async def test_uhid_saudavel_nao_e_degradado(self, running_server: Any) -> None:
+        from types import SimpleNamespace
+
+        _server, socket_path, _fc, _store, daemon = running_server
+        daemon._gamepad_device = SimpleNamespace(
+            flavor="dualsense", backend="uhid", ff_supported=True,
+            fallback_motivo=None, ff_play_count=0, ff_last_sent=(0, 0),
+        )
+
+        async with IpcClient.connect(socket_path) as client:
+            result = await client.call("daemon.state_full")
+
+        gp = result["gamepad_emulation"]
+        assert gp["backend"] == "uhid"
+        assert gp["degraded"] is False
+        assert "degraded_motivo" not in gp
+
+    @pytest.mark.asyncio
+    async def test_mascara_xbox_nao_e_degradada(self, running_server: Any) -> None:
+        """Xbox é uinput por design — o dado não pode acusar degradação."""
+        from types import SimpleNamespace
+
+        _server, socket_path, _fc, _store, daemon = running_server
+        daemon._gamepad_device = SimpleNamespace(
+            flavor="xbox", backend="uinput", ff_supported=True,
+            fallback_motivo=None, ff_play_count=0, ff_last_sent=(0, 0),
+        )
+
+        async with IpcClient.connect(socket_path) as client:
+            result = await client.call("daemon.state_full")
+
+        gp = result["gamepad_emulation"]
+        assert gp["degraded"] is False
+        assert "degraded_motivo" not in gp

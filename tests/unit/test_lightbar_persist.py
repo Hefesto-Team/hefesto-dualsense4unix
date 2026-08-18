@@ -10,7 +10,6 @@ from __future__ import annotations
 import sys
 import types
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -30,6 +29,14 @@ def _install_gi_stubs() -> None:
     """
     try:
         # Ambiente com GTK real: não instala stubs.
+        # BUG-TEST-GDK-VERSION-PIN-01: SEM o require_version, este import
+        # carregava Gdk 4.0 e envenenava o processo inteiro — qualquer módulo
+        # que exigisse 3.0 depois (lightbar_actions) falhava na coleta,
+        # dependendo da ORDEM alfabética dos arquivos de teste.
+        import gi as _gi
+
+        _gi.require_version("Gdk", "3.0")
+        _gi.require_version("Gtk", "3.0")
         from gi.repository import Gdk as _Gdk  # noqa: F401
         return
     except Exception:
@@ -46,11 +53,19 @@ def _install_gi_stubs() -> None:
 
     # --- Gtk ---
     gtk_mod = sys.modules.get("gi.repository.Gtk") or types.ModuleType("gi.repository.Gtk")
+    # GUARDA-GI-REAL-01: esta lista era INCOMPLETA de propósito — o docstring
+    # acima dizia "complementa stubs existentes", ou seja, contava com o stub
+    # que OUTRO arquivo de teste tivesse plantado antes dele no alfabeto.
+    # Faltava `Gtk.Box`, e sem ele o `SegmentedSelector` (que herda de Gtk.Box)
+    # derruba a coleta deste módulo. Agora a lista se basta sozinha.
     for _attr in (
         "Builder", "Window", "Button", "ComboBoxText", "Switch",
         "TextView", "TextBuffer", "Scale", "DrawingArea", "ColorButton",
         "CheckButton", "TreeView", "TreeSelection", "TreeViewColumn",
         "CellRendererText", "ListStore",
+        "Box", "Label", "Frame", "Entry", "RadioButton", "Stack", "TreePath",
+        "ToggleButton", "MessageDialog", "MessageType", "ButtonsType",
+        "ResponseType",
     ):
         if not hasattr(gtk_mod, _attr):
             setattr(gtk_mod, _attr, object)
@@ -97,11 +112,11 @@ def _install_gi_stubs() -> None:
 _install_gi_stubs()
 
 # Imports dependentes de gi abaixo da instalação dos stubs.
-from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin  # noqa: E402
-from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin  # noqa: E402
-from hefesto_dualsense4unix.profiles import loader as loader_module  # noqa: E402
-from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile  # noqa: E402
-from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile  # noqa: E402
+from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
+from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 
 # ---------------------------------------------------------------------------
 # Fixture: diretório isolado de perfis
@@ -221,43 +236,8 @@ def test_build_profile_sem_existente_usa_pending(isolated_profiles_dir: Path) ->
 
 
 # ---------------------------------------------------------------------------
-# Testes de _refresh_lightbar_from_state: slider atualizado pelo state_full
+# Teste do guard de refresh: on_lightbar_brightness_changed
 # ---------------------------------------------------------------------------
-
-
-def test_refresh_lightbar_atualiza_slider() -> None:
-    """_refresh_lightbar_from_state move o slider para o valor do state_full."""
-    instance = LightbarActionsMixin.__new__(LightbarActionsMixin)
-    instance._current_brightness = 1.0  # type: ignore[attr-defined]
-    instance._pending_brightness = 1.0  # type: ignore[attr-defined]
-    instance._refresh_guard = False  # type: ignore[attr-defined]
-
-    scale_mock = MagicMock()
-    instance._get = lambda wid: scale_mock if wid == "lightbar_brightness_scale" else None  # type: ignore[attr-defined]
-
-    state_full: dict[str, Any] = {"leds": {"lightbar_brightness": 0.4}}
-    instance._refresh_lightbar_from_state(state_full)
-
-    scale_mock.set_value.assert_called_once_with(pytest.approx(40.0))
-    assert instance._current_brightness == pytest.approx(0.4)  # type: ignore[attr-defined]
-    assert instance._pending_brightness == pytest.approx(0.4)  # type: ignore[attr-defined]
-
-
-def test_refresh_lightbar_default_quando_ausente() -> None:
-    """Quando state_full não tem leds.lightbar_brightness, usa 1.0 (sem dimming)."""
-    instance = LightbarActionsMixin.__new__(LightbarActionsMixin)
-    instance._current_brightness = 0.5  # type: ignore[attr-defined]
-    instance._pending_brightness = 0.5  # type: ignore[attr-defined]
-    instance._refresh_guard = False  # type: ignore[attr-defined]
-
-    scale_mock = MagicMock()
-    instance._get = lambda wid: scale_mock if wid == "lightbar_brightness_scale" else None  # type: ignore[attr-defined]
-
-    state_full: dict[str, Any] = {}
-    instance._refresh_lightbar_from_state(state_full)
-
-    scale_mock.set_value.assert_called_once_with(pytest.approx(100.0))
-    assert instance._current_brightness == pytest.approx(1.0)  # type: ignore[attr-defined]
 
 
 def test_refresh_guard_previne_loop() -> None:

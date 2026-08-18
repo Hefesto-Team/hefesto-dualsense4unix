@@ -113,11 +113,49 @@ class ServiceInstaller:
     def restart(self) -> None:
         self._systemctl("restart", SERVICE_NORMAL)
 
+    def enable(self) -> None:
+        """Habilita o auto-start no boot e inicia o daemon (FEAT-DAEMON-DISABLE-CONTROL-01)."""
+        self._systemctl("enable", SERVICE_NORMAL, check=False)
+        self.start()
+
+    def disable(self) -> None:
+        """Para o daemon e desabilita o auto-start, mantendo a unit instalada.
+
+        Distinto de `pause` (runtime, daemon vivo, sem input) e de `uninstall`
+        (remove a unit). É o "desligar" do programa sem desinstalar.
+        """
+        self._disable_if_installed(SERVICE_NORMAL)
+        self.stop()
+
     def status_text(self) -> str:
+        """Retorna o output de `systemctl --user status <unit>`.
+
+        Se a unit não está instalada (nenhum arquivo em `~/.config/systemd/user/`
+        nem em `SYSTEM_UNIT_DIRS`), retorna mensagem clara em vez de string
+        vazia — o `systemctl status <unit-inexistente>` escreve a explicação em
+        stderr e fica com stdout vazio, o que confunde o usuário CLI.
+        """
+        if self.detect_installed_unit() is None:
+            return (
+                "hefesto-dualsense4unix.service não instalada.\n"
+                "Para instalar via systemd --user:\n"
+                "  hefesto-dualsense4unix daemon install-service\n"
+                "Para iniciar em foreground sem systemd:\n"
+                "  hefesto-dualsense4unix daemon start --foreground"
+            )
         result = self._systemctl(
             "status", SERVICE_NORMAL, capture=True, check=False
         )
-        return result.stdout if result is not None else ""
+        if result is None:
+            return ""
+        # systemctl status escreve em stdout em sucesso, mas em alguns casos
+        # (unit failed sem journal) só popula stderr. Concatenamos para garantir
+        # que o usuário veja algo util.
+        stdout = (getattr(result, "stdout", "") or "").strip()
+        stderr = (getattr(result, "stderr", "") or "").strip()
+        if stdout and stderr:
+            return f"{stdout}\n\n[stderr]\n{stderr}"
+        return stdout or stderr
 
     def detect_installed_unit(self) -> str | None:
         """Retorna `"hefesto-dualsense4unix"` se a unit está em algum path

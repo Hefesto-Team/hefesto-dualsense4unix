@@ -1,20 +1,22 @@
 Package: hefesto-dualsense4unix
-Version: 3.0.0
+Version: 0.5.0
+X-Hefesto-Deb-Epoch: 1
 Section: utils
 Priority: optional
 Architecture: amd64
 Depends: python3 (>= 3.10), python3-venv,
          python3-gi, python3-gi-cairo, gir1.2-gtk-3.0,
          gir1.2-ayatanaappindicator3-0.1,
-         libhidapi-hidraw0, libnotify-bin
-Recommends: ydotool | wlrctl
+         libhidapi-hidraw0, libnotify-bin,
+         libopus0
+Recommends: ydotool | wlrctl, dkms, pulseaudio-utils
 Maintainer: Hefesto - Dualsense4Unix Project <noreply@example.com>
-Description: Daemon Linux para gatilhos adaptativos do controle DualSense
+Description: Gerenciador DualSense para Linux
  Hefesto - Dualsense4Unix e um daemon user-level que habilita os gatilhos
  adaptativos do DualSense (Sony) em Linux, com suporte a perfis automaticos
  por janela ativa, lightbar RGB, rumble, emulacao Xbox 360 via uinput,
- e GUI GTK3 com 10 abas (Status, Gatilhos, Lightbar, Rumble, Perfis,
- Daemon, Emulacao, Mouse, Teclado, Firmware).
+ e GUI GTK3 com 9 abas (Início, Status, Gatilhos, Lightbar, Rumble,
+ Perfis, Sistema, Emulação, Navegação DSX).
  .
  Este pacote inclui um virtualenv Python pre-construido em
  /opt/hefesto-dualsense4unix/venv/ com todas as dependencias Python
@@ -30,3 +32,9 @@ Description: Daemon Linux para gatilhos adaptativos do controle DualSense
  Recomenda-se instalar tambem ydotool ou wlrctl para foco automatico
  de janelas (auto-switch de perfis):
    sudo apt install ydotool
+ .
+ libopus0 e dependencia dura do microfone do DualSense por Bluetooth
+ (BT-MIC-01): nesse transporte o controle nao fala A2DP/HFP e manda o
+ audio como Opus dentro dos reports HID, decodificado via ctypes sobre
+ a libopus do sistema (sem binding pip). pulseaudio-utils (pactl) e o
+ que publica o microfone no PipeWire.

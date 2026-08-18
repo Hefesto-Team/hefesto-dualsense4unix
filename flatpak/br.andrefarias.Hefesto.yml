@@ -24,9 +24,14 @@ command: hefesto-dualsense4unix-gui
 finish-args:
   # Compartilhamento IPC entre processos (necessário para GTK X11)
   - --share=ipc
-  # Suporte a X11 com fallback se Wayland não disponível
-  - --socket=fallback-x11
-  # Suporte a Wayland nativo (COSMIC, GNOME)
+  # X11 SEMPRE disponível (não fallback). No COSMIC a GUI força
+  # GDK_BACKEND=x11 (XWayland) para contornar o bug de grab/posicionamento
+  # dos popups de GtkComboBox/GtkMenu no cosmic-comp Wayland nativo. Com
+  # `fallback-x11`, o socket X11 NÃO é montado quando Wayland está presente,
+  # e o XWayland forçado quebraria dentro do sandbox. `--socket=x11` garante
+  # o socket sem afetar GNOME (lá GDK_BACKEND fica livre → Wayland nativo).
+  - --socket=x11
+  # Suporte a Wayland nativo (GNOME e demais; no COSMIC cai em XWayland)
   - --socket=wayland
   # Acesso ao D-Bus de sessão (portals, notificações)
   - --socket=session-bus
@@ -61,7 +66,18 @@ modules:
       build-args:
         - --share=network
     build-commands:
+      # BUG-FLATPAK-PYGMENTS-MISSING-01 (v3.2.0): `rich.markdown.Markdown`
+      # importa `pygments.lexer` para syntax highlighting; sem pygments
+      # no sandbox, qualquer `hefesto-dualsense4unix --help` quebra com
+      # ModuleNotFoundError via except_hook do Typer.
+      #
+      # Detalhe sutil: pygments existe no `org.gnome.Sdk//47` (build time)
+      # mas NÃO no `org.gnome.Platform//47` (runtime). Sem `--ignore-installed`,
+      # o pip detecta pygments no /usr/lib do SDK e pula a instalação em
+      # /app/, deixando o runtime do usuário órfão. `--ignore-installed`
+      # força o bundling em /app para sobreviver à troca SDK->Platform.
       - pip3 install --prefix=/app --no-build-isolation
+          --ignore-installed
           "pydualsense>=0.7.5"
           "python-uinput"
           "textual>=0.47"
@@ -71,10 +87,40 @@ modules:
           "evdev>=1.6"
           "structlog>=23.0"
           "rich>=13.0"
+          "pygments>=2.17"
           "platformdirs>=4.0"
           "filelock>=3.13"
           "jeepney>=0.8"
     sources: []
+
+  # Módulo intermediário: libhidapi — biblioteca nativa que o wrapper Python
+  # `hidapi-usb` carrega via `ctypes.CDLL("libhidapi-hidraw.so")`.
+  # BUG-FLATPAK-HIDAPI-MISSING-01 (v3.2.0): `org.gnome.Platform//47` NÃO inclui
+  # libhidapi. Sem este módulo, `import pydualsense` falha com
+  # `OSError: Could not find any hidapi library` antes do controle aparecer
+  # para o daemon. Build upstream do github (cmake + libusb-1.0 + udev — todos
+  # presentes no Sdk).
+  - name: hidapi
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DHIDAPI_BUILD_HIDTEST=OFF
+      # libusb-1.0 NÃO está no GNOME Sdk//47 (built-in só udev/hidraw stack).
+      # DualSense USB+BT funciona 100% via hidraw, então OFF é safe.
+      - -DHIDAPI_WITH_LIBUSB=OFF
+      - -DHIDAPI_WITH_HIDRAW=ON
+      # CMake default em x86_64 instala em /app/lib64; o wrapper Python
+      # `hidapi.py` (ctypes) procura em /app/lib via `LD_LIBRARY_PATH`
+      # padrão do Flatpak. Forçar `lib` evita symlink manual no build-commands.
+      - -DCMAKE_INSTALL_LIBDIR=lib
+    sources:
+      - type: archive
+        url: https://github.com/libusb/hidapi/archive/refs/tags/hidapi-0.14.0.tar.gz
+        sha256: a5714234abe6e1f53647dd8cba7d69f65f71c558b7896ed218864ffcf405bcbd
+    cleanup:
+      - /include
+      - /lib/pkgconfig
+      - /lib/cmake
 
   # Módulo 2: wlrctl — CLI wayland wlroots usado por WlrctlBackend
   # (BUG-COSMIC-WLR-BACKEND-01). No fluxo .deb vem via Recommends do apt;
@@ -114,6 +160,28 @@ modules:
       - install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png
           /app/share/icons/hicolor/256x256/apps/br.andrefarias.Hefesto.png
 
+      # Glyphs SVG dos botões do DualSense. Sem isto, ButtonGlyph não acha os
+      # assets dentro do sandbox (nem ~/.local/share nem /usr/share resolvem)
+      # e os glyphs da aba Status somem. O resolver olha sys.prefix/share
+      # (=/app no Flatpak) — ver gui/widgets/button_glyph.py.
+      - install -Dm644 -t /app/share/hefesto-dualsense4unix/glyphs/
+          assets/glyphs/*.svg
+
+      # FIX-FLATPAK-PRESET-SEED-01 (30/07): presets default para a semeadura em
+      # tempo de execução. O profiles/loader.py procura em três lugares — o
+      # assets/ do repositório (dev), `sys.prefix/share/.../assets/
+      # profiles_default` (bundle) e /usr/share (.deb) — e o Flatpak não
+      # instalava em NENHUM deles: quem instalava pelo Flatpak nunca recebia
+      # coop_local, sackboy_nativo, fps, fallback e os outros, e abria a janela
+      # com a lista de perfis vazia. Dentro do sandbox sys.prefix é /app (o
+      # wheel é instalado com --prefix=/app), então este destino é exatamente o
+      # segundo candidato do loader.
+      # Espelha o FIX-APPIMAGE-PRESET-SEED-01 do scripts/build_appimage_gui.sh:
+      # o defeito foi diagnosticado e curado para o AppImage GUI em 25/07 e
+      # nunca havia sido portado para cá. Mesmo par que os glyphs acima.
+      - install -Dm644 -t /app/share/hefesto-dualsense4unix/assets/profiles_default/
+          assets/profiles_default/*.json
+
       # Instalar arquivo .desktop adaptado para o App ID Flatpak
       - install -Dm644 flatpak/br.andrefarias.Hefesto.desktop
           /app/share/applications/br.andrefarias.Hefesto.desktop
@@ -123,17 +191,115 @@ modules:
           /app/share/metainfo/br.andrefarias.Hefesto.metainfo.xml
 
       # Copiar regras udev para dentro do bundle (leitura apenas)
-      # Instalação no host via scripts/install-host-udev.sh + pkexec
+      # Instalação no host via scripts/install-host-udev.sh + pkexec.
+      # PACKAGING-UDEV-CANONICAL-FIX-01: conjunto CANÔNICO 70/71/72. As 73/74
+      # (hotplug-GUI) foram removidas por alimentarem a re-enumeração do storm
+      # -71 — paridade com scripts/install_udev.sh (assets/ é fonte de verdade).
+      # A 75 é opt-in e não entra no bundle auto-instalado.
+      # FIX-FLATPAK-UDEV-PARITY-01: 76/77/78 SÃO obrigatórias para o
+      # install-host-udev.sh (pre-flight aborta se qualquer uma faltar no
+      # bundle) — sem elas o setup de udev do Flatpak falhava inteiro.
       - install -Dm644 assets/70-ps5-controller.rules
           /app/share/hefesto-dualsense4unix/udev-rules/70-ps5-controller.rules
+      - install -Dm644 assets/71-uhid.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/71-uhid.rules
       - install -Dm644 assets/71-uinput.rules
           /app/share/hefesto-dualsense4unix/udev-rules/71-uinput.rules
       - install -Dm644 assets/72-ps5-controller-autosuspend.rules
           /app/share/hefesto-dualsense4unix/udev-rules/72-ps5-controller-autosuspend.rules
+      - install -Dm644 assets/76-dualsense-touchpad-libinput-ignore.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/76-dualsense-touchpad-libinput-ignore.rules
+      - install -Dm644 assets/77-dualsense-leds.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/77-dualsense-leds.rules
+      - install -Dm644 assets/78-dualsense-motion-not-joystick.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/78-dualsense-motion-not-joystick.rules
+      - install -Dm644 assets/79-external-controller-leds.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/79-external-controller-leds.rules
+      - install -Dm644 assets/80-motion-joydev-hide.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/80-motion-joydev-hide.rules
+      - install -Dm644 assets/81-hefesto-usb-power.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/81-hefesto-usb-power.rules
+      - install -Dm644 assets/81-hefesto-usb-host-power.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/81-hefesto-usb-host-power.rules
+      - install -Dm644 assets/82-nintendo-pro-nosniff.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/82-nintendo-pro-nosniff.rules
+      - install -Dm644 assets/83-hefesto-bond-snapshot.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/83-hefesto-bond-snapshot.rules
+      - install -Dm644 assets/84-nintendo-pro-variant.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/84-nintendo-pro-variant.rules
+      - install -Dm644 assets/hefesto-dualsense4unix.conf
+          /app/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf
+
+      # SPRINT-GAME-RUMBLE-01: cura de RAIZ do storm -71 (quirk do snd_usb_audio)
+      # no path que o install-host-udev.sh procura dentro do sandbox. PRESERVA
+      # mic+fone do controle (não é a regra 75, que é áudio-off e segue opt-in).
+      - install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf
+          /app/share/hefesto-dualsense4unix/modprobe/hefesto-dualsense-storm.conf
+      - install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf
+          /app/share/hefesto-dualsense4unix/modprobe.d/hefesto-btusb-no-autosuspend.conf
+      # Onda T (2026-07-20): opções do hid-nintendo patchado (bt_probe_retries=3).
+      # O install-host-udev.sh (abaixo) copia p/ /etc/modprobe.d do HOST. Sem o
+      # módulo DKMS o in-tree ignora o parâmetro e sobe normal (fail-safe).
+      - install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf
+          /app/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-nintendo.conf
+      # Contenção BT (2026-07-25): opções do hid-playstation patchado (feature_retries=2).
+      # Mesmo caminho: o install-host-udev.sh copia p/ /etc/modprobe.d do HOST.
+      - install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf
+          /app/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-playstation.conf
+      # Onda T (corretor, achado #9): fontes DKMS + lib genérica no /app/share —
+      # paridade com .deb/rpm/arch. O install-host-udev.sh as encontra; dentro
+      # do sandbox o dkms do HOST não é alcançável, então o dkms_lib.sh avisa
+      # honesto e segue (fail-safe) — a rota real do Flatpak é rodar o script
+      # a partir do host. Sem os arquivos aqui, nem essa rota existiria.
+      - install -Dm644 scripts/dkms_lib.sh
+          /app/share/hefesto-dualsense4unix/scripts/dkms_lib.sh
+      - mkdir -p /app/share/hefesto-dualsense4unix/dkms
+      - cp -a assets/dkms/hid-nintendo /app/share/hefesto-dualsense4unix/dkms/
+      # Contenção BT (2026-07-25): fontes do hid-playstation patchado.
+      - cp -a assets/dkms/hid-playstation /app/share/hefesto-dualsense4unix/dkms/
+      # Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
+      # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota
+      # da Onda T: o dkms roda a partir do HOST via install-host-udev.sh.
+      - cp -a assets/dkms/rtw88-usb /app/share/hefesto-dualsense4unix/dkms/
+
+      # BROKER-01 (Onda S — fd-injection): binário standalone + units-
+      # template do broker root hide-hidraw. O sandbox NÃO instala unit de
+      # SISTEMA sozinho (fora do alcance de um Flatpak) — install-host-
+      # udev.sh (abaixo) é quem faz a ATIVAÇÃO no HOST (render
+      # __SESSION_UID__/__SESSION_GROUP__ + enable --now do .socket), o
+      # mesmo caminho que hoje aplica as regras udev fora do sandbox.
+      - install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py
+          /app/share/hefesto-dualsense4unix/broker/hidraw_broker.py
+      - install -Dm644 assets/systemd/hefesto-hidraw-broker.service
+          /app/share/hefesto-dualsense4unix/systemd/hefesto-hidraw-broker.service
+      - install -Dm644 assets/systemd/hefesto-hidraw-broker.socket
+          /app/share/hefesto-dualsense4unix/systemd/hefesto-hidraw-broker.socket
 
       # Instalar script de setup de udev (executado pelo usuário uma vez)
       - install -Dm755 scripts/install-host-udev.sh
           /app/bin/install-host-udev.sh
+
+      # FEAT-I18N-CATALOGS-01 (v3.4.0): instala catalogos .mo em path
+      # próprio do app — NAO em /app/share/locale/ porque o Flatpak
+      # runtime GNOME//47 usa Locale extension que injeta symlinks no
+      # deploy (ex.: /app/share/locale/pt_BR -> share/runtime/locale/pt/
+      # share/pt_BR), sobrescrevendo o que instalamos no build.
+      #
+      # Solucao: usar path próprio /app/share/hefesto-dualsense4unix/
+      # locale/ que o runtime não toca, e adicionar esse path ao
+      # candidate list do utils/i18n.py (gettext.bindtextdomain).
+      - |
+        if [ -d locale ]; then
+          for lang_dir in locale/*/; do
+            [ -d "$lang_dir" ] || continue
+            lang="$(basename "$lang_dir")"
+            mo="${lang_dir}LC_MESSAGES/hefesto-dualsense4unix.mo"
+            target_dir="/app/share/hefesto-dualsense4unix/locale/${lang}/LC_MESSAGES"
+            if [ -f "$mo" ]; then
+              install -Dm644 "$mo" "${target_dir}/hefesto-dualsense4unix.mo"
+            fi
+          done
+        fi
 
     sources:
       # Código-fonte local (usado pelo flatpak-builder com --force-clean)

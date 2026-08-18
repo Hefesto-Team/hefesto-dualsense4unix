@@ -1,9 +1,25 @@
 name: CI
 
 on:
+  # PORTÃO-VIVO-01 bloco C: até aqui o `push` só disparava em `main`. Como o
+  # fluxo declarado da casa é merge direto em `main` sem PR
+  # (.github/CONTRIBUTING.md), o `pull_request:` abaixo nunca chegava a cobrir
+  # ramo nenhum — na prática NADA rodava até o código já estar na `main`.
+  # Medido em 27/07: o ramo `restauro/inicio-da-sessao` acumulou commits desde
+  # a v0.2.0 com ZERO workflow executado sobre eles.
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'restauro/**'
+      - 'sprint/**'
+      - 'onda/**'
+    # E as tags: o `release.yml` dispara em `v*`, mas o CI não — ou seja, o
+    # push da tag publicava um artefato que nenhum gate deste arquivo tinha
+    # visto. Agora a tag chama os dois.
+    tags:
+      - 'v*'
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,17 +30,111 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash scripts/check_anonymity.sh
+      # BUG-GATE-TEST-DATA-NAO-RODAVA-01 (25/07): o check_test_data.sh existia,
+      # reprovava, e NÃO era executado por workflow nenhum — o único jeito de
+      # descobrir era rodá-lo à mão. Ele reprovava porque contradizia o gate de
+      # anonimato (exigia MAC neutro onde a convenção da casa manda OUI:00:00:NN);
+      # corrigida a contradição, ele volta a valer aqui, ao lado do irmão.
+      - run: bash scripts/check_test_data.sh
 
   acentuacao:
-    name: Acentuação PT-BR estrita
-    runs-on: ubuntu-22.04
+    name: Acentuação PT-BR estrita (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco A: este job era PINADO em 3.11, e a versão era o
+    # bug. A partir do Python 3.12 o `tokenize` quebra f-string em
+    # FSTRING_START/MIDDLE/END, tokens que o validador não olhava — então o
+    # mesmo erro de acentuação REPROVAVA no 3.11 do CI e PASSAVA no 3.12 da
+    # máquina dela. Verde na mesa, vermelho na main: foi essa assimetria que
+    # produziu seis commits corretivos em 29 minutos no dia 25/07.
+    #
+    # A mesma matriz do job `lint-test` é o ponto: as três versões têm de ver
+    # exatamente a mesma coisa. Se voltarem a divergir, divergem AQUI, num job
+    # que custa segundos, e não no meio de uma leva.
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python }}
       - name: Varredura estrita
         run: python3 scripts/validar-acentuacao.py --all
+
+  glifos:
+    name: Glifos (emoji proibido, forma geométrica preservada)
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco C + sprint GATE-EMOJI-01: o higienizador do ambiente
+    # APAGA glifo em silêncio, inclusive os que o ADR-011 declara PERMITIDOS
+    # (Geometric Shapes, Box Drawing, Block Elements, Arrows) — já apagou o
+    # desenho dos LEDs do código e do valor esperado do teste no mesmo passe,
+    # deixando a suíte verde com a função quebrada. O que apaga não reprova; o
+    # que reprova é este job.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Varredura de glifos
+        run: python3 scripts/validar-glifos.py --all
+
+  referencias-docs:
+    name: Documento que cita arquivo inexistente
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco F. Nasceu informativo (continue-on-error) porque
+    # reprovava de propósito: a sprint exigiu que ele mordesse na árvore como
+    # ela estava, e ele achou 25 referências mortas — entre elas o
+    # `docs/adr/011-glyphs-vs-emojis.md`, que apoiava uma decisão arquitetural
+    # inteira num hook que nunca existiu, e três sprints linkadas no índice de
+    # 26/07 sem arquivo correspondente.
+    #
+    # DÍVIDA PAGA EM 27/07: as 25 foram corrigidas no documento (o ADR-011
+    # passou a citar `scripts/validar-glifos.py`, que existe e faz o que o nome
+    # imaginário prometia) e `--all` sai com código 0. O `continue-on-error`
+    # saiu junto: a partir daqui o job PROTEGE, não relata.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Varredura de referências
+        run: python3 scripts/validar-referencias-docs.py --all
+
+  shellcheck:
+    name: Shellcheck (severidade error)
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco E: cerca de 40 scripts rodam com `sudo` na máquina
+    # dela — o `doctor.sh` sozinho tem 150 KB — e NENHUM linter passava por
+    # eles. É a classe de furo do `uninstall.sh --help` que desinstalava tudo.
+    #
+    # Piso deliberado em `-S error` para não afogar em aviso de estilo. Quando
+    # o job nasceu havia UMA reprovação com shellcheck 0.9.0 nesta árvore, em
+    # `scripts/build_appimage_gui.sh` (SC1087), e por isso ele entrou
+    # informativo.
+    #
+    # DÍVIDA PAGA EM 27/07: o SC1087 foi corrigido pondo chaves na expansão
+    # (`"${HERE}[extras]"`), com o argumento entregue ao pip provado idêntico
+    # antes e depois. A varredura sai com código 0 e o `continue-on-error` saiu
+    # junto: a partir daqui o job PROTEGE, não relata.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versão do shellcheck (vem no runner)
+        run: shellcheck --version
+      - name: Varredura em severidade error
+        run: shellcheck -S error scripts/*.sh install.sh uninstall.sh
+
+  packaging-parity:
+    name: Paridade de empacotamento
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco E: 312 linhas de guarda contra regressão de
+    # empacotamento que não rodavam em workflow NENHUM. Travar agora é barato
+    # porque ele está VERDE hoje (rodado à mão em 27/07, exit 0, cobrindo 15
+    # regras udev, 4 arquivos de modprobe, 2 módulos DKMS e o broker); depois
+    # que alguém acrescentar uma regra nova, descobrir a divergência custa caro.
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check_packaging_parity.sh
 
   version-check:
     runs-on: ubuntu-latest
@@ -36,7 +146,7 @@ jobs:
       - run: python scripts/check_version_consistency.py
 
   version-sync:
-    name: Sync fallback __init__.py ↔ pyproject.toml (CHORE-VERSION-SYNC-GATE-01)
+    name: Sync fallback __init__.py vs pyproject.toml (CHORE-VERSION-SYNC-GATE-01)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,7 +169,7 @@ jobs:
           fi
           if [ "$PYPROJECT_VERSION" != "$FALLBACK_VERSION" ]; then
             echo "::error::Fallback desatualizado: __init__.py=$FALLBACK_VERSION mas pyproject.toml=$PYPROJECT_VERSION"
-            echo "::error::Bump ambos juntos no release. Ver docs/process/sprints/CHORE-VERSION-SYNC-GATE-01.md"
+            echo "::error::Bump ambos juntos no release (sprint CHORE-VERSION-SYNC-GATE-01, no arquivo de processo)."
             exit 1
           fi
           echo "Sync OK: ambos em $PYPROJECT_VERSION"
@@ -67,6 +177,11 @@ jobs:
   lint-test:
     runs-on: ubuntu-latest
     strategy:
+      # GUARDA-GI-REAL-01: sem `fail-fast: false`, a primeira versão de Python
+      # a reprovar CANCELA as outras duas — e o relatório mostra dois jobs
+      # "cancelled" que ninguém sabe dizer se passariam. As três têm de
+      # responder sempre, como já acontece na matriz de acentuação.
+      fail-fast: false
       matrix:
         python: ["3.10", "3.11", "3.12"]
     steps:
@@ -74,9 +189,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+          # CI-CACHE-PIP-01 (v3.4.0): cacheia ~/.cache/pip chaveado por hash
+          # de pyproject.toml. Speed-up ~30-60s por job nos PRs.
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Instalar deps do sistema
         run: |
           sudo apt-get update
+          # CI-GUI-PULAVA-CALADO-01 (recuo consciente): a tentativa de rodar a
+          # interface AQUI foi revertida. Instalar `PyGObject` pelo pip ao lado
+          # das typelibs do sistema derrubava o interpretador no meio da suíte
+          # (morte silenciosa aos ~40%, sem traceback) — trocaria um gate que
+          # mente por um gate instável, que é pior.
+          #
+          # Estado HONESTO de hoje: os ~210 testes de interface PULAM no CI.
+          # Isso aparece como `skipped` no relatório, em vez de ficar mascarado
+          # por um `|| echo warning` — mas continua sendo cobertura que só a
+          # máquina de desenvolvimento exerce. Fechar essa lacuna exige o
+          # `python3-gi` do SISTEMA (o setup-python isola o ambiente e não
+          # enxerga o dist-packages) ou um container dedicado a este job.
+          # Está registrado como pendência; não finja que está coberto.
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
       - name: Instalar Hefesto - Dualsense4Unix em modo dev
         run: pip install -e ".[dev]"
@@ -90,8 +222,200 @@ jobs:
           fi
       - name: Ruff
         run: ruff check src/ tests/
+      # GUARDA-GI-REAL-01: um módulo que some da coleta some CALADO. O `pytest`
+      # aborta com "Interrupted: N errors during collection" no meio de
+      # milhares de linhas de log, e um `6 skipped` na coleta não aparece em
+      # lugar nenhum. Este passo mede a coleta ANTES de rodar qualquer teste e
+      # reprova por duas razões distintas: erro de coleta, e encolhimento.
+      #
+      # O piso 5100 foi MEDIDO (28/07, sem PyGObject: 5226 testes coletados) e
+      # é uma trava de encolhimento, não uma meta: só sobe quando alguém quiser
+      # subi-lo. Se cair abaixo, um módulo inteiro deixou de ser coletado.
+      - name: Censo de coleta (nenhum módulo pode sumir calado)
+        run: |
+          set -uo pipefail
+          PISO=5100
+          pytest tests --collect-only -q --continue-on-collection-errors \
+            > /tmp/coleta.txt 2>&1 || true
+          TOTAL=$(grep -cE '^tests/.+::' /tmp/coleta.txt || true)
+          ERROS=$(grep -cE '^ERROR ' /tmp/coleta.txt || true)
+          echo "coletados=${TOTAL}  piso=${PISO}  erros_de_coleta=${ERROS}"
+          FALHOU=0
+          if [ "${TOTAL}" -lt "${PISO}" ]; then
+            echo "::error::A coleta encolheu: ${TOTAL} testes, piso ${PISO}."
+            echo "::error::Algum módulo deixou de ser coletado. Compare com o log anterior."
+            FALHOU=1
+          fi
+          if [ "${ERROS}" -gt 0 ]; then
+            echo "::error::${ERROS} módulo(s) NÃO coletam neste ambiente:"
+            grep -E '^ERROR ' /tmp/coleta.txt
+            echo "::error::Módulo de interface precisa de exigir_gi_real() (tests/conftest.py)."
+            FALHOU=1
+          fi
+          exit "${FALHOU}"
+      # GUARDA-GI-REAL-01: `--cov` sem `--cov-fail-under` NÃO é um portão — é
+      # um relatório que ninguém lê. O piso 70 foi MEDIDO em 28/07 nesta
+      # árvore, no ambiente SEM PyGObject (72% exatos: 19.379 de 26.937
+      # linhas), e fica dois pontos abaixo de propósito: é trava de queda, não
+      # meta de crescimento.
+      #
+      # `--continue-on-collection-errors` é deliberado: sem ele, UM módulo
+      # quebrado aborta a suíte inteira e esconde o estado dos outros 5.000.
+      # O run continua vermelho — só para de ser cego.
       - name: Pytest unit
-        run: pytest tests/unit -v --cov=hefesto_dualsense4unix
+        run: |
+          pytest tests/unit -v \
+            --continue-on-collection-errors \
+            --cov=hefesto_dualsense4unix \
+            --cov-report=term-missing \
+            --cov-fail-under=70
+      # CI-TESTS-CORE-ORFAO-01: `tests/core` (12 testes) não era rodado por
+      # NENHUM job — existia no repo e nunca reprovava nada.
+      - name: Pytest core
+        run: pytest tests/core -v
+
+  gtk-real:
+    name: Interface com GTK REAL (python3-gi + Xvfb)
+    runs-on: ubuntu-latest
+    # GUARDA-GI-REAL-01. Este job é a razão de a guarda existir: sem ele, os
+    # testes de interface ou PULAM (e o pulo passa despercebido) ou rodam
+    # contra um `Gtk` de mentira plantado em sys.modules por outro arquivo de
+    # teste — que foi o que se mediu em 28/07.
+    #
+    # Ele NÃO é `needs:` de ninguém e ninguém é `needs:` dele, de propósito: a
+    # falha deste job não pode cancelar nem mascarar o `lint-test`, o `mypy` ou
+    # o `runtime-smoke`, que respondem perguntas diferentes.
+    steps:
+      - uses: actions/checkout@v4
+      # SEM `actions/setup-python`: o Python que ele instala é isolado e NÃO
+      # enxerga /usr/lib/python3/dist-packages, onde o `python3-gi` do sistema
+      # mora. Instalar PyGObject pelo pip ao lado das typelibs do sistema já
+      # foi tentado nesta casa e derrubava o interpretador no meio da suíte
+      # (morte silenciosa aos ~40%, sem traceback). O caminho que funciona é o
+      # Python do sistema + venv com --system-site-packages.
+      - name: Instalar GTK do sistema (typelib COMPLETA)
+        run: |
+          sudo apt-get update
+          # ARMADILHA JÁ PAGA POR ESTA CASA: typelib PARCIAL na CI derruba a
+          # COLETA inteira (`Gtk.ResponseType` estoura AttributeError) e o
+          # `importorskip("gi")` NÃO protege disso — ele só olha se `import gi`
+          # funciona. Por isso a lista abaixo traz o conjunto INTEIRO que a
+          # interface toca, não só o gir1.2-gtk-3.0.
+          sudo apt-get install -y --no-install-recommends \
+            python3 python3-dev python3-venv python3-pip \
+            python3-gi python3-gi-cairo python3-cairo \
+            gir1.2-glib-2.0 gir1.2-gtk-3.0 gir1.2-gdkpixbuf-2.0 \
+            gir1.2-pango-1.0 gir1.2-atk-1.0 gir1.2-harfbuzz-0.0 \
+            gir1.2-freedesktop gir1.2-notify-0.7 gir1.2-ayatanaappindicator3-0.1 \
+            libgirepository-1.0-1 libgtk-3-0 libcairo2 libcairo-gobject2 \
+            libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
+            xvfb dbus-x11 \
+            librsvg2-2 librsvg2-common gir1.2-rsvg-2.0
+          # SVG NÃO é opcional aqui: os glifos dos botões (ButtonGlyph) são SVG
+          # carregados por `GdkPixbuf.new_from_file_at_scale`, e sem o loader do
+          # librsvg o pixbuf sai `None`. Medido na estreia da v0.3.0: quatro
+          # testes de tintura falhando com "NoneType has no get_pixels", e o
+          # card pedindo 431px de altura contra 357px na máquina real — o
+          # fallback sem pixbuf muda a geometria e derruba o orçamento.
+      - name: Provar que a typelib está COMPLETA (antes de coletar qualquer teste)
+        run: |
+          # /usr/bin/python3 EXPLÍCITO: é o único que enxerga o
+          # dist-packages onde o python3-gi do sistema mora.
+          xvfb-run -a /usr/bin/python3 - <<'PY'
+          import sys
+
+          import gi
+
+          gi.require_version("Gtk", "3.0")
+          gi.require_version("Gdk", "3.0")
+          from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+
+          faltando = []
+          # Gtk.Box e Gtk.ListStore são o critério da guarda (tests/conftest.py):
+          # no stub eles valem `object`, no PyGObject real são classes próprias.
+          for alvo, nome in (
+              (getattr(Gtk, "Box", None), "Gtk.Box"),
+              (getattr(Gtk, "ListStore", None), "Gtk.ListStore"),
+              (getattr(Gtk, "ResponseType", None), "Gtk.ResponseType"),
+              (getattr(Gtk, "MessageDialog", None), "Gtk.MessageDialog"),
+              (getattr(Gtk, "CssProvider", None), "Gtk.CssProvider"),
+              (getattr(Gdk, "RGBA", None), "Gdk.RGBA"),
+              (getattr(GdkPixbuf, "Pixbuf", None), "GdkPixbuf.Pixbuf"),
+              (getattr(GLib, "idle_add", None), "GLib.idle_add"),
+          ):
+              if alvo is None or alvo is object:
+                  faltando.append(nome)
+          if faltando:
+              print("::error::typelib PARCIAL, ausentes: " + ", ".join(faltando))
+              print("::error::Typelib parcial derruba a COLETA inteira; seguir e inutil.")
+              sys.exit(1)
+          print("typelib completa:", Gtk.Box, Gtk.ResponseType, GdkPixbuf.Pixbuf)
+          PY
+      - name: venv com acesso ao dist-packages do sistema
+        run: |
+          /usr/bin/python3 -m venv --system-site-packages .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -e ".[dev]"
+      - name: Confirmar que o gi do sistema chegou ao venv
+        run: |
+          .venv/bin/python -c "
+          import gi
+          gi.require_version('Gtk', '3.0')
+          from gi.repository import Gtk
+          assert Gtk.Box is not object, 'o venv ignora o PyGObject do sistema'
+          print('o venv enxerga o gi real:', gi.__file__)
+          "
+      # HEFESTO_EXIGE_GTK_REAL=1 vira a chave da guarda: aqui, "pulei porque
+      # não tenho GTK" não é sucesso, é REPROVAÇÃO. Se o ambiente degradar, o
+      # job fala; não fica verde por omissão.
+      - name: Testes de interface sob Xvfb
+        env:
+          HEFESTO_EXIGE_GTK_REAL: "1"
+          GDK_BACKEND: x11
+          NO_AT_BRIDGE: "1"
+        run: |
+          # SÓ os testes de INTERFACE, não a suíte inteira. A suíte completa já
+          # roda no `lint-test`, com o piso de cobertura; repeti-la aqui, sob
+          # Xvfb e com o GTK real carregado, custou 39% da coleta e a morte
+          # silenciosa do processo na estreia deste job (v0.3.0, 29/07) — sem
+          # traceback, que é a assinatura de OOM no runner.
+          #
+          # O critério de "teste de interface" é o mesmo da guarda: o arquivo
+          # chama `exigir_gi_real` ou usa o marcador `skip_sem_gi_real`. Assim a
+          # lista não precisa ser mantida à mão, e um arquivo novo entra sozinho
+          # no dia em que ganhar a guarda.
+          ALVOS=$(grep -rlE 'exigir_gi_real|skip_sem_gi_real' tests/unit \
+                  --include='*.py' | sort | tr '\n' ' ')
+          echo "arquivos de interface: $(echo $ALVOS | wc -w)"
+          test -n "$ALVOS" || { echo "::error::nenhum teste de interface encontrado"; exit 1; }
+          xvfb-run -a --server-args="-screen 0 1280x1024x24" \
+            .venv/bin/python -m pytest $ALVOS -v \
+              --continue-on-collection-errors
+
+  pre-commit:
+    name: pre-commit run --all-files
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco B, dívida paga: os quatro hooks do
+    # `.pre-commit-config.yaml` não rodavam em lugar NENHUM. O `core.hooksPath`
+    # global da máquina da mantenedora desvia o git local (a própria ferramenta
+    # `pre-commit` recusa instalar), e nenhum workflow chamava `pre-commit`.
+    # Quatro portões declarados, zero portões vivos. A partir daqui eles rodam
+    # aqui — que é onde o `hooksPath` de ninguém alcança.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+      - name: Instalar pre-commit e o ruff pinado
+        # Os hooks são `language: system`: eles chamam `python3 scripts/...`,
+        # `bash scripts/...` e `ruff` do PATH. O pin do ruff é o mesmo do
+        # pyproject (CHORE-CI-PIN-RUFF-01) para o hook e o job `lint-test`
+        # nunca divergirem de versão.
+        run: pip install pre-commit "ruff==0.15.20"
+      - name: Rodar todos os hooks em todos os arquivos
+        run: pre-commit run --all-files --show-diff-on-failure
 
   typecheck:
     name: Mypy (gate rígido)
@@ -101,6 +425,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Instalar deps do sistema
         run: |
           sudo apt-get update
@@ -117,13 +443,23 @@ jobs:
       fail-fast: false
       matrix:
         transport: [usb, bt]
+        # CHORE-CI-COSMIC-MATRIX-01 (v3.1.0): exercita o caminho de seleção
+        # de backend de detecção de janela em duas variantes de ambiente.
+        # GNOME mock = DISPLAY presente, comportamento histórico (XlibBackend).
+        # COSMIC mock = XDG_CURRENT_DESKTOP=COSMIC + WAYLAND_DISPLAY presente,
+        # exercita _WaylandCascadeBackend + probe StatusNotifierWatcher +
+        # defer logic do tray (FEAT-COSMIC-TRAY-FALLBACK-01).
+        desktop_env: ["gnome", "cosmic"]
     env:
       TRANSPORT: ${{ matrix.transport }}
+      DESKTOP_ENV: ${{ matrix.desktop_env }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Instalar deps do sistema
         run: |
           sudo apt-get update
@@ -135,6 +471,19 @@ jobs:
           python -m venv .venv
           .venv/bin/pip install --upgrade pip
           .venv/bin/pip install -e ".[dev]"
+      - name: Configurar ambiente de DE mockado (CHORE-CI-COSMIC-MATRIX-01)
+        run: |
+          if [[ "$DESKTOP_ENV" == "cosmic" ]]; then
+            echo "XDG_CURRENT_DESKTOP=COSMIC" >> $GITHUB_ENV
+            echo "XDG_SESSION_DESKTOP=cosmic" >> $GITHUB_ENV
+            echo "XDG_SESSION_TYPE=wayland" >> $GITHUB_ENV
+            echo "WAYLAND_DISPLAY=wayland-0" >> $GITHUB_ENV
+            # DISPLAY removido deliberadamente para forçar _WaylandCascadeBackend
+            echo "DISPLAY=" >> $GITHUB_ENV
+          else
+            echo "XDG_CURRENT_DESKTOP=GNOME" >> $GITHUB_ENV
+            echo "DISPLAY=:0" >> $GITHUB_ENV
+          fi
       - name: Smoke runtime-real
         env:
           HEFESTO_DUALSENSE4UNIX_FAKE: "1"
@@ -146,6 +495,23 @@ jobs:
           else
             ./run.sh --smoke
           fi
+      - name: Verificar backend selecionado (CHORE-CI-COSMIC-MATRIX-01)
+        run: |
+          .venv/bin/python -c "
+          import os
+          # Em CI o display real não existe, então o smoke acima já validou
+          # o boot do daemon. Aqui só confirmamos que o factory escolhe o
+          # backend esperado para o env do matrix.
+          from hefesto_dualsense4unix.integrations.window_detect import detect_window_backend
+          backend = type(detect_window_backend()).__name__
+          desktop = os.environ.get('DESKTOP_ENV', '')
+          if desktop == 'cosmic':
+              expected = '_WaylandCascadeBackend'
+          else:
+              expected = 'XlibBackend'
+          assert backend == expected, f'Esperado {expected}, recebido {backend}'
+          print(f'OK: DESKTOP_ENV={desktop} -> {backend}')
+          "
       - name: Verificar ausência de AssertionError e Traceback no log
         run: |
           LOG="/tmp/hefesto_dualsense4unix_smoke_${TRANSPORT}.log"
@@ -163,6 +529,126 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hefesto-dualsense4unix-smoke-${{ matrix.transport }}.log
+          name: hefesto-dualsense4unix-smoke-${{ matrix.transport }}-${{ matrix.desktop_env }}.log
           path: /tmp/hefesto_dualsense4unix_smoke_${{ matrix.transport }}.log
           if-no-files-found: ignore
+
+  # CI-SMOKE-DOCKER-MATRIX-01 (v3.4.0): valida que o wheel instala +
+  # roda em containers Fedora/Arch/Debian sem regressao. Antes,
+  # ubuntu-latest era a única distro coberta — bugs em libcs / paths /
+  # python ABI das outras so apareciam em report de usuario.
+  build-wheel:
+    name: Build wheel (para smoke multi-distro)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+      - name: Instalar gettext (compila .mo) + build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext
+          pip install --upgrade pip build
+      - name: Compilar catalogos i18n
+        run: bash scripts/i18n_compile.sh
+      - name: Build wheel
+        run: python -m build --wheel
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hefesto-dualsense4unix-wheel
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke-multi-distro:
+    name: Smoke ${{ matrix.distro }}
+    needs: build-wheel
+    runs-on: ubuntu-latest
+    # Arch/Fedora são EXPERIMENTAIS (continue-on-error): o evdev não publica wheel no
+    # PyPI (o sdist SEMPRE compila) e o Arch roda Python bleeding-edge (3.14) — alvo
+    # móvel. A falha deles INFORMA mas não bloqueia o run; debian-12 segue gate duro.
+    # BUG-CI-SMOKE-EVDEV-NO-GCC-01.
+    continue-on-error: ${{ matrix.experimental || false }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: fedora-40
+            image: fedora:40
+            experimental: true
+            # evdev compila do sdist: precisa de gcc + Python.h (python3-devel) +
+            # linux/input.h (kernel-headers). pydantic-core tem wheel p/ o 3.12.
+            install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify gcc python3-devel kernel-headers git
+          - distro: archlinux
+            image: archlinux:latest
+            experimental: true
+            # Python 3.14: instala evdev/pydantic-core compilados pelo próprio Arch
+            # (sem wheel no PyPI p/ 3.14) + gcc/linux-api-headers de fallback p/ o sdist.
+            install_cmd: pacman -Syu --noconfirm python python-pip python-gobject gtk3 hidapi libnotify python-evdev python-pydantic python-pydantic-core gcc linux-api-headers git
+          - distro: debian-12
+            image: debian:12
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin git
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar deps do sistema (${{ matrix.distro }})
+        run: ${{ matrix.install_cmd }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: hefesto-dualsense4unix-wheel
+          path: dist
+      - name: Instalar wheel + extras
+        run: |
+          # --break-system-packages cobre Debian 12+/Fedora 40+ que bloqueiam
+          # pip install fora de venv por PEP 668. Container e descartavel,
+          # sem risco real.
+          python3 -m pip install --break-system-packages \
+              dist/*.whl \
+              "pydualsense>=0.7.5"
+      - name: Smoke version
+        run: hefesto-dualsense4unix version
+      - name: Smoke i18n (EN)
+        env:
+          LANG: en_US.UTF-8
+          LANGUAGE: en
+        run: |
+          python3 -c "
+          from hefesto_dualsense4unix.utils.i18n import _, init_locale
+          init_locale()
+          assert _('Aplicar') == 'Apply', f\"esperado 'Apply', recebido {_('Aplicar')!r}\"
+          print('i18n EN OK:', _('Aplicar'))
+          "
+      # CI-SMOKE-ESCOPO-01: este passo rodava a suíte unitária INTEIRA dentro
+      # do container — e nunca passou. Era o `|| echo "::warning::"` que
+      # escondia isso, junto de markers inexistentes e de um `--ignore` para
+      # um diretório que não existe (CI-TEATRO-01).
+      #
+      # Ao tirar o aviso, o motivo apareceu, e não é um bug do produto: a
+      # suíte assume um ambiente que o container de smoke não é. Um dos
+      # próprios testes diz a frase inteira —
+      #   "AssertionError: a suíte nunca roda como root (regra da casa)"
+      # e o container roda como root. Some a isso o Python 3.11 do Debian 12
+      # (`TarFile.extractall(filter=)` só existe a partir do 3.11.4/3.12), e
+      # os testes de permissão, que como root não têm o que negar.
+      #
+      # A suíte já roda três vezes por commit no `lint-test` (3.10/3.11/3.12),
+      # em ambiente adequado. O que ESTE job existe para responder é outra
+      # pergunta: "o wheel instala e roda nesta distro?". É isso que os passos
+      # abaixo medem — e falham de verdade se a resposta for não.
+      - name: Smoke do pacote instalado
+        run: |
+          set -e
+          python3 -c "
+          import hefesto_dualsense4unix as h
+          print('import OK, versao', h.__version__)  # noqa-acento
+          from hefesto_dualsense4unix.core import ds_output_report  # noqa: F401
+          from hefesto_dualsense4unix.profiles import schema  # noqa: F401
+          print('modulos de dominio importam OK')  # noqa-acento
+          "
+          hefesto-dualsense4unix --help > /dev/null
+          hefesto-dualsense4unix doctor --help > /dev/null
+          echo "CLI responde nesta distro"

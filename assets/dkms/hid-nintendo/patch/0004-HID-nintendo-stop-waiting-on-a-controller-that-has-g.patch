@@ -1,0 +1,217 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Sat, 25 Jul 2026 11:30:00 -0300
+Subject: [PATCH] HID: nintendo: stop waiting on a controller that has gone
+ silent
+
+A controller that answers nothing still costs a full subcommand budget for
+every send, forever. Measured on a third-party pad that clones the Pro
+Controller USB IDs and completes probe in degraded mode (the driver
+synthesizes its identity and keeps going) but never answers a subcommand
+afterwards:
+
+  nintendo 0003:057E:2009.0001: timeout waiting for input report
+  ... 500 of these, 1.99 lines/s sustained for 4 minutes ...
+  nintendo 0003:057E:2009.0001: joycon_enforce_subcmd_rate: exceeded max attempts
+
+The arithmetic behind those numbers is the whole bug.
+joycon_enforce_subcmd_rate() loops until it sees consecutive valid report
+deltas, and a silent controller produces none, so it always runs to
+max_attempts. Each iteration calls joycon_wait_for_input_report(), which
+waits input_report_wait_ms and logs a warning on timeout. Each of those
+loops is then repeated sync_send_tries times by joycon_hid_send_sync().
+
+With the values this machine runs (input_report_wait_ms=500,
+subcmd_rate_max_attempts=25, sync_send_tries=4), one subcommand costs
+4 x 25 x 500 ms = 50 seconds of blocking under output_mutex and 100 log
+lines. The 500 lines above are five subcommands - the player LED and home
+LED writes that userspace issues right after probe. Every future LED or
+rumble write pays the same price again, because nothing in the driver
+remembers that the controller never replies.
+
+Waiting is only useful while there is something to wait for. Count the
+input report waits that time out in a row and, once that streak crosses a
+threshold, stop waiting: joycon_wait_for_input_report() returns
+immediately and joycon_enforce_subcmd_rate() gives up with -EAGAIN, which
+joycon_hid_send_sync() already turns into -ETIMEDOUT without transmitting.
+The subcommand still fails, exactly as it did before - it just fails in
+microseconds instead of 50 seconds, and quietly.
+
+The streak is cleared by joycon_parse_report(), i.e. by any full input
+report the driver actually understands, so this latches and un-latches on
+its own: a controller that comes back into range or finally switches to a
+parsed report mode starts accepting subcommands again with no replug and
+no reload. One warning is emitted per silence episode, not per wait,
+because that line is what explains why the subcommands after it fail
+immediately.
+
+The threshold is keyed on measured silence rather than on "this controller
+was degraded during probe" on purpose. Silence is the condition that makes
+the waiting useless, a degraded controller that does answer keeps its full
+retry budget, and a bluetooth controller that walks out of range gets the
+same protection without being a clone at all.
+
+Off by default (subcmd_silence_streak_max=0), like every other parameter
+added by this series.
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+ drivers/hid/hid-nintendo.c | 111 ++++++++++++++++++++++++++++++++++---
+ 1 file changed, 104 insertions(+), 7 deletions(-)
+
+index eed197b..f3a0c21 100644
+--- a/drivers/hid/hid-nintendo.c
++++ b/drivers/hid/hid-nintendo.c
+@@ -84,6 +84,11 @@
+ MODULE_PARM_DESC(register_leds_on_set_failure,
+ 		 "Register LED class devices even when the initial LED set fails (e.g. -ETIMEDOUT on a congested bluetooth link), so a later brightness write can heal the controller instead of leaving it without player LEDs forever (default N = skip registration, same as before)");
+
++static unsigned int subcmd_silence_streak_max;
++module_param(subcmd_silence_streak_max, uint, 0644);
++MODULE_PARM_DESC(subcmd_silence_streak_max,
++		 "Consecutive input report timeouts after which a controller is treated as unreachable, so subcommand sends fail fast instead of each one burning sync_send_tries x subcmd_rate_max_attempts x input_report_wait_ms while the controller says nothing (default 0 = disabled, same as before). Any input report clears the streak, so a controller that starts answering recovers by itself");
++
+ /*
+  * Third-party controllers cloning the Pro Controller's USB IDs (057e:2009)
+  * are strict about things genuine hardware forgives. The three parameters
+@@ -670,6 +675,13 @@
+ 	unsigned int last_input_report_msecs;
+ 	unsigned int last_subcmd_sent_msecs;
+ 	unsigned int consecutive_valid_report_deltas;
++	/*
++	 * How many input report waits in a row have timed out. Guarded by
++	 * ctlr->lock: incremented by the subcommand path, cleared by the input
++	 * path. Only read through joycon_ctlr_is_silent().
++	 */
++	unsigned int silent_wait_streak;
++	bool silence_reported;
+
+ 	/* factory calibration data */
+ 	struct joycon_stick_cal left_stick_cal_x;
+@@ -867,6 +879,37 @@
+ 	return ret;
+ }
+
++/*
++ * Has this controller gone quiet for long enough that waiting on it again is
++ * pointless?
++ *
++ * A controller that answers nothing still costs a full
++ * sync_send_tries x subcmd_rate_max_attempts x input_report_wait_ms per
++ * subcommand, and every one of those waits logs a line. Measured here with a
++ * third-party pad that completes probe in degraded mode and then never speaks:
++ * one LED write from userspace = 4 x 25 x 500 ms = 50 s of blocking under
++ * output_mutex and 100 log lines, repeated for every write forever after.
++ *
++ * Deliberately keyed on measured silence rather than on "this controller was
++ * degraded during probe": silence is the condition that actually makes the
++ * waiting useless, it also covers a bluetooth controller that walks out of
++ * range, and a degraded controller that does answer keeps its retries.
++ */
++static bool joycon_ctlr_is_silent(struct joycon_ctlr *ctlr)
++{
++	unsigned long flags;
++	unsigned int streak;
++
++	if (!subcmd_silence_streak_max)
++		return false;
++
++	spin_lock_irqsave(&ctlr->lock, flags);
++	streak = ctlr->silent_wait_streak;
++	spin_unlock_irqrestore(&ctlr->lock, flags);
++
++	return streak >= subcmd_silence_streak_max;
++}
++
+ static void joycon_wait_for_input_report(struct joycon_ctlr *ctlr)
+ {
+ 	int ret;
+@@ -878,6 +921,16 @@
+ 	 */
+ 	if (ctlr->ctlr_state == JOYCON_CTLR_STATE_READ) {
+ 		unsigned long flags;
++		bool announce = false;
++
++		/*
++		 * Already known to be silent: waiting another
++		 * input_report_wait_ms would only delay the caller and add a
++		 * log line. The streak is cleared by the input path, so this
++		 * un-latches as soon as the controller sends anything.
++		 */
++		if (joycon_ctlr_is_silent(ctlr))
++			return;
+
+ 		spin_lock_irqsave(&ctlr->lock, flags);
+ 		ctlr->received_input_report = false;
+@@ -886,9 +939,30 @@
+ 					 ctlr->received_input_report,
+ 					 msecs_to_jiffies(input_report_wait_ms));
+ 		/* We will still proceed, even with a timeout here */
+-		if (!ret)
++		if (!ret) {
++			spin_lock_irqsave(&ctlr->lock, flags);
++			if (ctlr->silent_wait_streak < UINT_MAX)
++				ctlr->silent_wait_streak++;
++			if (subcmd_silence_streak_max &&
++			    ctlr->silent_wait_streak >= subcmd_silence_streak_max &&
++			    !ctlr->silence_reported) {
++				ctlr->silence_reported = true;
++				announce = true;
++			}
++			spin_unlock_irqrestore(&ctlr->lock, flags);
++
+ 			hid_warn(ctlr->hdev,
+ 				 "timeout waiting for input report\n");
++			/*
++			 * One line per silence episode, not per wait: this is
++			 * the message that explains why the subcommands below
++			 * start failing immediately.
++			 */
++			if (announce)
++				hid_warn(ctlr->hdev,
++					 "no input report for %u consecutive waits; failing subcommands fast until the controller answers again\n",
++					 subcmd_silence_streak_max);
++		}
+ 	}
+ }
+
+@@ -918,6 +992,20 @@
+
+ 	do {
+ 		joycon_wait_for_input_report(ctlr);
++		/*
++		 * A silent controller never produces the valid report deltas
++		 * this loop is waiting for, so it would spin all the way to
++		 * max_attempts every single time. Give up now and report the
++		 * same -EAGAIN the rate limiter uses for "no safe TX window":
++		 * the caller already knows how to turn that into -ETIMEDOUT
++		 * without transmitting.
++		 */
++		if (joycon_ctlr_is_silent(ctlr)) {
++			hid_dbg(ctlr->hdev,
++				"%s: controller silent, not waiting for a TX window\n",
++				__func__);
++			return -EAGAIN;
++		}
+ 		current_ms = jiffies_to_msecs(jiffies);
+ 		subcmd_delta = current_ms - ctlr->last_subcmd_sent_msecs;
+
+@@ -1904,6 +1992,16 @@
+ 	spin_lock_irqsave(&ctlr->lock, flags);
+ 	ctlr->last_input_report_msecs = msecs;
+ 	/*
++	 * The controller is talking, so it is not silent: clear the streak that
++	 * makes joycon_wait_for_input_report() stop waiting. This runs for
++	 * every report, not only for the ones a subcommand sender is waiting
++	 * on, which is what lets a controller that recovers (back in range,
++	 * finally in the right report mode) start accepting subcommands again
++	 * without a replug.
++	 */
++	ctlr->silent_wait_streak = 0;
++	ctlr->silence_reported = false;
++	/*
+ 	 * Was this input report a reasonable time delta compared to the prior
+ 	 * report? We use this information to decide when a safe time is to send
+ 	 * rumble packets or subcommand packets.
+--
+2.43.0

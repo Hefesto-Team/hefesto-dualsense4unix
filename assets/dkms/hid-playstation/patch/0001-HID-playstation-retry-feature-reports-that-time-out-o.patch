@@ -1,0 +1,167 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Sat, 25 Jul 2026 12:00:00 -0300
+Subject: [PATCH] HID: playstation: allow retrying feature reports that time out
+ during probe
+
+Losing one feature report during probe costs the user the whole controller,
+and over bluetooth that happens for reasons unrelated to the controller being
+broken. Measured with two DualSense pads connecting to the same adapter about
+a second apart. The first completed probe in 74 ms. The second retrieved its
+pairing info (reportID 9) and then lost the firmware info (reportID 32):
+
+  playstation 0005:054C:0CE6.0008: Registered DualSense controller ...
+  playstation 0005:054C:0CE6.0009: Failed to retrieve feature with reportID 32: -5
+  playstation 0005:054C:0CE6.0009: Failed to retrieve DualSense firmware info: -5
+  playstation 0005:054C:0CE6.0009: Failed to create dualsense.
+  playstation 0005:054C:0CE6.0009: probe with driver playstation failed with error -5
+
+The -5 hides what happened. Over bluetooth hid_hw_raw_request() lands in uhid,
+and uhid_hid_get_report() turns any error the transport reports into -EIO:
+
+  if (req->err)
+          ret = -EIO;
+
+Three seconds passed between the request and that -EIO, which is not uhid's
+own 5 second wait. The daemon on the other end recorded the real error:
+
+  bluetoothd: profiles/input/device.c:hidp_report_req_timeout()
+              Device <addr> HIDP GET_REPORT request timed out
+
+That is BlueZ's REPORT_REQ_TIMEOUT, three seconds, on the HID control
+channel, answered to the kernel as ETIMEDOUT. So the controller was reachable
+- it had answered the previous feature report - it just did not get the
+control channel within three seconds while a second pad was being brought up
+on the same radio. The failure scales with the number of controllers pairing
+at once, and four is a normal number of players.
+
+Reading a feature report is a pure read, so repeating it is safe. By the time
+the timeout fires the transport has already cleared its pending request, so
+the retry is accepted immediately rather than rejected as busy. Probe runs in
+a uhid worker - uhid schedules hid_add_device() through one specifically so
+that drivers may issue feature requests from .probe - so sleeping between
+attempts does not block the daemon that has to answer them.
+
+All the failures __ps_get_report() detects are retried, not only the transport
+error: a short transfer, a mismatched reportID and a bad CRC all describe a
+transfer that did not arrive intact, which is the same transient.
+
+Defaults to a single attempt, i.e. current behavior.
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+ drivers/hid/hid-playstation.c | 88 +++++++++++++++++++++++++++++++++--
+ 1 file changed, 84 insertions(+), 4 deletions(-)
+
+index 9c8b0f0..a71e3d5 100644
+--- a/drivers/hid/hid-playstation.c
++++ b/drivers/hid/hid-playstation.c
+@@ -9,6 +9,7 @@
+ #include <linux/bits.h>
+ #include <linux/cleanup.h>
+ #include <linux/crc32.h>
++#include <linux/delay.h>
+ #include <linux/device.h>
+ #include <linux/hid.h>
+ #include <linux/idr.h>
+@@ -21,6 +22,19 @@
+
+ #include "hid-ids.h"
+
++/*
++ * Feature reports are read during probe only, and over bluetooth a single
++ * unanswered one costs the whole controller. See ps_get_report() for the
++ * measured failure this parameter exists for.
++ */
++static unsigned int feature_retries;
++module_param(feature_retries, uint, 0644);
++MODULE_PARM_DESC(feature_retries,
++		 "Extra attempts when a feature report read fails during probe, for controllers that lose the race for the bluetooth control channel when several pair at once (default 0 = one attempt, same as before)");
++
++/* Backoff before the first retry; doubled for each further attempt. */
++#define PS_FEATURE_RETRY_DELAY_MS	100
++
+ /* List of connected playstation devices. */
+ static DEFINE_MUTEX(ps_devices_lock);
+ static LIST_HEAD(ps_devices_list);
+@@ -787,8 +801,8 @@
+ 	return gamepad;
+ }
+
+-static int ps_get_report(struct hid_device *hdev, u8 report_id, u8 *buf,
+-			 size_t size, bool check_crc)
++static int __ps_get_report(struct hid_device *hdev, u8 report_id, u8 *buf,
++			   size_t size, bool check_crc)
+ {
+ 	int ret;
+
+@@ -823,6 +837,67 @@
+ 	return 0;
+ }
+
++/*
++ * A feature report that goes unanswered once costs the user the whole
++ * controller, and over bluetooth that happens for reasons that have nothing to
++ * do with the controller being broken.
++ *
++ * Measured with two DualSense pads connecting to the same adapter about a
++ * second apart. The first completed probe in 74 ms. The second got its pairing
++ * info (reportID 9) fine and then lost the firmware info (reportID 32):
++ *
++ *   playstation 0005:054C:0CE6.0009: Failed to retrieve feature with reportID 32: -5
++ *   playstation 0005:054C:0CE6.0009: Failed to retrieve DualSense firmware info: -5
++ *   playstation 0005:054C:0CE6.0009: Failed to create dualsense.
++ *   playstation 0005:054C:0CE6.0009: probe with driver playstation failed with error -5
++ *
++ * The -5 is not what happened. Over bluetooth hid_hw_raw_request() goes to
++ * uhid, and uhid flattens every error the userspace transport reports into
++ * -EIO. Three seconds elapsed between the request and the failure, and the
++ * daemon on the other side said what it really was:
++ *
++ *   bluetoothd: profiles/input/device.c:hidp_report_req_timeout()
++ *               Device <addr> HIDP GET_REPORT request timed out
++ *
++ * i.e. BlueZ's own REPORT_REQ_TIMEOUT (3 s) on the HID control channel, sent
++ * back as ETIMEDOUT and delivered to the driver as -EIO. The controller was
++ * reachable - it had just answered the previous feature report - it simply did
++ * not win the control channel within three seconds while a second pad was
++ * being brought up on the same radio.
++ *
++ * That is a transient the driver can ride out. Reading a feature report is a
++ * pure read with no side effects, so repeating it is safe, and by the time the
++ * timeout fires the transport has already cleared its pending request, so the
++ * retry is accepted immediately. Probe runs in a uhid worker (uhid schedules
++ * hid_add_device() precisely so drivers may issue feature requests from
++ * .probe), so waiting here does not block the daemon that has to answer.
++ *
++ * Every failure __ps_get_report() detects - transport error, short transfer,
++ * wrong reportID, bad CRC - describes a transfer that did not arrive intact,
++ * so all of them are retried.
++ *
++ * Off by default: one attempt, exactly as before.
++ */
++static int ps_get_report(struct hid_device *hdev, u8 report_id, u8 *buf,
++			 size_t size, bool check_crc)
++{
++	unsigned int attempts_left = min(feature_retries, 10U) + 1;
++	unsigned int delay_ms = PS_FEATURE_RETRY_DELAY_MS;
++	int ret;
++
++	for (;;) {
++		ret = __ps_get_report(hdev, report_id, buf, size, check_crc);
++		if (!ret || --attempts_left == 0)
++			return ret;
++
++		hid_warn(hdev,
++			 "retrying feature reportID %d in %u ms (%u attempt(s) left)\n",
++			 report_id, delay_ms, attempts_left);
++		msleep(delay_ms);
++		delay_ms *= 2;
++	}
++}
++
+ static int ps_led_register(struct ps_device *ps_dev, struct led_classdev *led,
+ 			   const struct ps_led_info *led_info)
+ {
+--
+2.43.0

@@ -62,6 +62,14 @@ def _effective_mult(
     Os dois últimos valores devem ser guardados no estado do chamador
     para o debounce do modo "auto" funcionar corretamente entre chamadas.
 
+    `novo_last_auto_mult` é SEMPRE o último mult efetivo: além de âncora do
+    debounce do "auto", ele é a fonte da observabilidade (o poll loop o
+    guarda em `daemon._last_auto_mult`, que o `daemon.state_full` expõe como
+    `rumble_mult_applied`). MISC-08 item 1 (2026-07-18): as políticas fixas
+    devolviam `last_auto_mult` INTOCADO, então o campo ficava preso no
+    default 0.7 — ao vivo, policy=max reportava `rumble_mult_applied=0.7` e
+    parecia atenuação real do rumble do jogo (o hardware recebia 1.0).
+
     Modo "auto":
       - bateria >50% -> mult 1.0 (Máximo)
       - bateria 20-50% -> mult 0.7 (Balanceado)
@@ -74,11 +82,11 @@ def _effective_mult(
 
     if policy == "custom":
         mult = float(config.rumble_policy_custom_mult)
-        return mult, last_auto_mult, last_auto_change_at
+        return mult, mult, last_auto_change_at
 
     if policy in RUMBLE_POLICY_MULT:
         mult = RUMBLE_POLICY_MULT[policy]
-        return mult, last_auto_mult, last_auto_change_at
+        return mult, mult, last_auto_change_at
 
     if policy == "auto":
         # Calcula mult alvo baseado em bateria.
@@ -105,9 +113,10 @@ def _effective_mult(
 
         return last_auto_mult, last_auto_mult, last_auto_change_at
 
-    # Política desconhecida: fallback para balanceado.
+    # Política desconhecida: fallback para balanceado (estado observável
+    # acompanha — mesma regra das políticas fixas acima).
     logger.warning("rumble_policy_desconhecida", policy=policy)
-    return 0.7, last_auto_mult, last_auto_change_at
+    return 0.7, 0.7, last_auto_change_at
 
 
 class RumbleEngine:

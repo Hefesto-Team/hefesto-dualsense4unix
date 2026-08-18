@@ -1,13 +1,18 @@
 """Persistência de sessão — salva e carrega o último perfil ativo do usuário.
 
 O arquivo `~/.config/hefesto-dualsense4unix/session.json` guarda apenas o nome do
-último perfil explicitamente ativado. O daemon lê esse arquivo no
-startup e re-ativa o perfil automaticamente.
+último perfil explicitamente ativado — desde o PERFIL-03, SÓ o gesto manual
+(`ProfileManager.activate(origin="manual")`) o escreve; autoswitch e restores
+de sistema não tocam nele. O daemon lê esse arquivo no startup (via
+`resolve_boot_profile`) e re-ativa o perfil automaticamente.
 
 CLUSTER-IPC-STATE-PROFILE-01 (Bug B): adicional `active_profile.txt` é marker
 secundário para a CLI legada (`hefesto-dualsense4unix profile current`).
 `session.json` continua sendo o canônico para o daemon restaurar no boot.
-Ambos são escritos em paridade pelo handler IPC `profile.switch`.
+Ambos são escritos em paridade pelos gestos manuais (handler IPC
+`profile.switch` e ciclo por hotkey); quando divergem (herança de versões em
+que o autoswitch clobberava o session.json), o marker vence no boot — ver
+`resolve_boot_profile`.
 
 Nunca propaga exceção: falha silenciosa em ambos os sentidos.
 """
@@ -17,6 +22,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
@@ -88,7 +94,8 @@ def read_active_marker() -> str | None:
     """Lê `active_profile.txt`, ou None se ausente/vazio.
 
     Marker secundário usado pela CLI (`hefesto-dualsense4unix profile current`).
-    Daemon usa `load_last_profile` (session.json) no restore.
+    Daemon usa `resolve_boot_profile` (session.json + seed do marker) no
+    restore.
 
     Import lazy de `config_dir` (mesma justificativa de `save_active_marker`).
     """
@@ -104,9 +111,513 @@ def read_active_marker() -> str | None:
         return None
 
 
+def resolve_boot_profile() -> str | None:
+    """Nome do perfil a restaurar no boot — com o seed de migração (PERFIL-03).
+
+    `session.json` é o canônico e, pós-fix, guarda só a última escolha
+    MANUAL (`ProfileManager.activate(origin="manual")`). Mas versões
+    anteriores deixavam o autoswitch sobrescrevê-lo a cada troca de janela —
+    o valor herdado pode ser lixo (provado ao vivo: session.json dizia
+    "Navegação" enquanto a escolha da usuária era "vitoria"). O marker
+    `active_profile.txt` sempre foi manual-only (escrito apenas pelo
+    profile.switch IPC e pelo ciclo de hotkey), então quando os dois
+    DIVERGEM é o marker que carrega a intenção manual — ele vence, com log.
+
+    Pós-fix os dois arquivos convergem a cada gesto manual (o autoswitch
+    não grava mais nenhum dos dois) e o seed vira no-op. Sem marker (nunca
+    houve escolha manual) o comportamento é o histórico: session.json.
+
+    Nota (review 2026-07-16): esta função só resolve NOMES — não valida se o
+    perfil carrega. Quem cobre marker órfão (perfil renomeado/apagado) é o
+    `restore_last_profile` (daemon/connection.py), que cai no session.json
+    com o log `last_profile_seed_marker_invalido` quando a ativação falha.
+    """
+    session_name = load_last_profile()
+    marker = read_active_marker()
+    if marker and marker != session_name:
+        logger.info(
+            "last_profile_seed_from_marker",
+            session=session_name,
+            marker=marker,
+        )
+        return marker
+    return session_name
+
+
+_PAUSED_FLAG_FILE = "paused.flag"
+
+
+def save_paused_state(paused: bool) -> None:
+    """Persiste se o daemon está pausado (FEAT-DAEMON-PAUSE-RESUME-01).
+
+    Usa um arquivo-flag em config_dir (existe = pausado) para o daemon retomar
+    pausado após restart. Best-effort: nunca propaga exceção.
+    """
+    try:
+        flag = config_dir(ensure=True) / _PAUSED_FLAG_FILE
+        if paused:
+            flag.write_text("1\n", encoding="utf-8")
+        else:
+            flag.unlink(missing_ok=True)
+        logger.debug("paused_state_saved", paused=paused)
+    except Exception as exc:
+        logger.debug("paused_state_save_failed", err=str(exc))
+
+
+def load_paused_state() -> bool:
+    """Retorna True se o daemon foi deixado pausado na sessão anterior."""
+    try:
+        return (config_dir() / _PAUSED_FLAG_FILE).exists()
+    except Exception:
+        return False
+
+
+_AUTOSWITCH_LOCK_FLAG_FILE = "autoswitch_locked.flag"
+
+
+def save_autoswitch_locked(locked: bool) -> None:
+    """Persiste o cadeado da troca automática de perfil (FEAT-AUTOSWITCH-LOCK-01).
+
+    Arquivo-flag em config_dir (existe = congelado), no mesmo idioma do
+    `paused.flag`. Best-effort: nunca propaga exceção.
+    """
+    try:
+        flag = config_dir(ensure=True) / _AUTOSWITCH_LOCK_FLAG_FILE
+        if locked:
+            flag.write_text("1\n", encoding="utf-8")
+        else:
+            flag.unlink(missing_ok=True)
+        logger.debug("autoswitch_locked_saved", locked=locked)
+    except Exception as exc:
+        logger.debug("autoswitch_locked_save_failed", err=str(exc))
+
+
+def load_autoswitch_locked() -> bool:
+    """True se a troca automática foi deixada congelada na sessão anterior."""
+    try:
+        return (config_dir() / _AUTOSWITCH_LOCK_FLAG_FILE).exists()
+    except Exception:
+        return False
+
+
+_NATIVE_MODE_FLAG_FILE = "native_mode.flag"
+
+
+def save_native_mode(active: bool, *, emu_stash: dict[str, Any] | None = None) -> None:
+    """Persiste o Modo Nativo (FEAT-NATIVE-MODE-01) — existe = ativo.
+
+    O conteúdo é JSON com o STASH da emulação PRÉ-nativo (`emu_stash`) para
+    restaurar mouse/gamepad ao desligar (o release apaga os flags próprios).
+    Conteúdo legado `"1\n"` é tolerado no load. Best-effort: nunca propaga.
+    """
+    try:
+        flag = config_dir(ensure=True) / _NATIVE_MODE_FLAG_FILE
+        if active:
+            flag.write_text(
+                json.dumps(emu_stash or {}), encoding="utf-8"
+            )
+        else:
+            flag.unlink(missing_ok=True)
+        logger.debug("native_mode_saved", active=active)
+    except Exception as exc:
+        logger.debug("native_mode_save_failed", err=str(exc))
+
+
+def load_native_mode() -> tuple[bool, dict[str, Any]]:
+    """Retorna (ativo, emu_stash) da sessão anterior.
+
+    `emu_stash`: {"mouse": [enabled, speed, scroll], "gamepad": [enabled, flavor]}
+    ou {} (ausente/legado). Tolerante a conteúdo legado `"1"` e a JSON inválido.
+    """
+    try:
+        path = config_dir() / _NATIVE_MODE_FLAG_FILE
+        if not path.exists():
+            return False, {}
+        raw = path.read_text(encoding="utf-8").strip()
+        try:
+            stash = json.loads(raw) if raw else {}
+            if not isinstance(stash, dict):
+                stash = {}
+        except (json.JSONDecodeError, ValueError):
+            stash = {}  # legado "1\n"
+        return True, stash
+    except Exception:
+        return False, {}
+
+
+_MOUSE_EMULATION_FLAG_FILE = "mouse_emulation.flag"
+
+
+def _read_mouse_flag() -> dict[str, Any] | None:
+    """Lê o flag de mouse cru: ``None`` = arquivo ausente (nunca configurada).
+
+    Tolerante ao conteúdo legado ``"1\\n"`` (pré-JSON), a JSON malformado e a
+    tipos errados: devolve ``{}`` (= o arquivo existe, sem dados aproveitáveis),
+    nunca levanta. Valores não-inteiros de velocidade são descartados aqui, no
+    ponto único de parse.
+    """
+    try:
+        flag = config_dir() / _MOUSE_EMULATION_FLAG_FILE
+        if not flag.exists():
+            return None
+        content = flag.read_text(encoding="utf-8").strip()
+    except Exception:
+        return None
+    if not content:
+        return {}
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        return {}  # conteúdo legado "1\n" → arquivo existe, sem dados
+    if not isinstance(data, dict):
+        return {}
+    out: dict[str, Any] = {}
+    raw_enabled = data.get("enabled")
+    if isinstance(raw_enabled, bool):
+        out["enabled"] = raw_enabled
+    for key in ("speed", "scroll_speed"):
+        raw = data.get(key)
+        if isinstance(raw, int) and not isinstance(raw, bool):
+            out[key] = raw
+    return out
+
+
+def save_mouse_emulation(
+    enabled: bool,
+    speed: int | None = None,
+    scroll_speed: int | None = None,
+) -> None:
+    """Persiste a PREFERÊNCIA de emulação de mouse: toggle + velocidades.
+
+    FEAT-MOUSE-CURSOR-FEEL-01 + HARM-06 (SPRINT-HARMONIA-01). O arquivo carrega
+    JSON ``{"enabled": bool, "speed": N, "scroll_speed": M}`` e agora existe
+    também quando a emulação está DESLIGADA: antes o "off" era gravado apagando
+    o arquivo, o que confundia "a usuária desligou" com "nunca foi configurada".
+    O modo "Controlar o PC" precisa distinguir os dois — ele liga o mouse por
+    default no segundo caso e respeita o "off" no primeiro.
+
+    ``speed``/``scroll_speed`` omitidos PRESERVAM o que já estava gravado (o
+    desligar não passa velocidades e não pode zerar a escolha da usuária).
+    Arquivo ausente segue significando "nunca configurada"; conteúdo legado sem
+    a chave ``enabled`` (inclusive o ``"1\\n"`` pré-JSON) segue contando como
+    ligada — era o que existir-o-arquivo queria dizer.
+
+    NÃO usa session.json: `save_last_profile` reescreve aquele arquivo inteiro
+    e apagaria as velocidades. Best-effort: nunca propaga exceção.
+    """
+    try:
+        anterior = _read_mouse_flag() or {}
+        payload: dict[str, Any] = {"enabled": bool(enabled)}
+        for key, valor in (("speed", speed), ("scroll_speed", scroll_speed)):
+            if valor is not None:
+                payload[key] = int(valor)
+            elif key in anterior:
+                payload[key] = anterior[key]
+        flag = config_dir(ensure=True) / _MOUSE_EMULATION_FLAG_FILE
+        flag.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+        logger.debug(
+            "mouse_emulation_state_saved",
+            enabled=enabled,
+            speed=payload.get("speed"),
+            scroll_speed=payload.get("scroll_speed"),
+        )
+    except Exception as exc:
+        logger.debug("mouse_emulation_state_save_failed", err=str(exc))
+
+
+def load_mouse_preference() -> tuple[bool | None, int | None, int | None]:
+    """Preferência de mouse persistida: ``(ligada|None, speed, scroll_speed)``.
+
+    HARM-06: ``None`` no primeiro campo = **nunca configurada** (arquivo
+    ausente) — quem entra em "Controlar o PC" liga o mouse por default nesse
+    caso, em vez de deixar o controle sem função nenhuma. ``False`` = a usuária
+    desligou de propósito, e sair-e-voltar do modo tem que respeitar isso.
+
+    Velocidades ``None`` (flag legado sem elas) = usar os defaults da config.
+    """
+    data = _read_mouse_flag()
+    if data is None:
+        return None, None, None
+    # Sem a chave `enabled` o arquivo é de uma versão antiga, quando existir
+    # JÁ significava ligada.
+    return bool(data.get("enabled", True)), data.get("speed"), data.get("scroll_speed")
+
+
+def load_mouse_emulation() -> tuple[bool, int | None, int | None]:
+    """Retorna ``(ligada, speed, scroll_speed)`` da sessão anterior.
+
+    ``(False, None, None)`` se a flag não existir (nunca configurada = não
+    ligar sozinha no boot). Quem precisa distinguir "desligada" de "nunca
+    configurada" usa `load_mouse_preference`.
+    """
+    enabled, speed, scroll_speed = load_mouse_preference()
+    return bool(enabled), speed, scroll_speed
+
+
+def save_mouse_emulation_enabled(enabled: bool) -> None:
+    """Wrapper legado (FEAT-MOUSE-PERSIST-01) — persiste só o toggle.
+
+    Delega para `save_mouse_emulation` sem velocidades (quando ligada, o JSON
+    sai vazio e o load devolve speeds ``None`` → defaults). Preferir a função
+    nova, que grava as velocidades junto.
+    """
+    save_mouse_emulation(enabled)
+
+
+def load_mouse_emulation_enabled() -> bool:
+    """Wrapper legado — retorna só se a emulação foi deixada ligada."""
+    return load_mouse_emulation()[0]
+
+
+_KEYBOARD_EMULATION_FLAG_FILE = "keyboard_emulation.flag"
+
+
+def save_keyboard_emulation(enabled: bool) -> None:
+    """Persiste a PREFERÊNCIA de emulação de teclado (EMULACAO-NO-JOGO-01).
+
+    Molde exato do `save_mouse_emulation` (HARM-06): JSON com a chave
+    ``enabled``, gravado nos DOIS sentidos — o "off" é uma decisão dela e tem de
+    ficar escrito, não apagado. Até esta sprint o teclado emulado não tinha
+    lugar nenhum onde ser desligado: o default `True` de
+    `DaemonConfig.keyboard_emulation_enabled` vencia sempre, e o R1 (Alt+Tab no
+    mapa default) trocava de aplicativo dentro do jogo dela.
+
+    Não usa `session.json`: `save_last_profile` reescreve aquele arquivo inteiro.
+    Best-effort: nunca propaga exceção (o IPC/boot não pode cair por I/O).
+    """
+    try:
+        flag = config_dir(ensure=True) / _KEYBOARD_EMULATION_FLAG_FILE
+        flag.write_text(json.dumps({"enabled": bool(enabled)}) + "\n", encoding="utf-8")
+        logger.debug("keyboard_emulation_state_saved", enabled=enabled)
+    except Exception as exc:
+        logger.debug("keyboard_emulation_state_save_failed", err=str(exc))
+
+
+def load_keyboard_preference() -> bool | None:
+    """Preferência persistida do teclado emulado: ``True``/``False``/``None``.
+
+    ``None`` = **nunca configurada** (arquivo ausente, que é o caso de toda
+    instalação anterior a esta sprint). Quem lê no boot mantém, nesse caso, o
+    default histórico da config — ver `load_keyboard_emulation_enabled`.
+
+    Tolerante a conteúdo legado/malformado do mesmo jeito que
+    `_read_mouse_flag`: arquivo vazio ou JSON inválido conta como "ligada" (era
+    o que existir-o-arquivo queria dizer), tipo errado em ``enabled`` também.
+    Erro de I/O vira ``None`` (nunca decidiu) — fail-safe é não mudar nada.
+    """
+    try:
+        flag = config_dir() / _KEYBOARD_EMULATION_FLAG_FILE
+        if not flag.exists():
+            return None
+        content = flag.read_text(encoding="utf-8").strip()
+    except Exception:
+        return None
+    if not content:
+        return True
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        return True  # conteúdo legado "1\n" → arquivo existe = ligada
+    if not isinstance(data, dict):
+        return True
+    raw = data.get("enabled")
+    if isinstance(raw, bool):
+        return raw
+    return True
+
+
+def load_keyboard_emulation_enabled(*, default: bool = True) -> bool:
+    """True se o teclado emulado deve subir; ``default`` quando nunca configurada.
+
+    ASSIMETRIA DELIBERADA com `load_mouse_emulation` (que devolve False para
+    "nunca configurada"): o teclado emulado é ligado desde o
+    FEAT-KEYBOARD-EMULATOR-01 e carrega, além dos atalhos, o teclado virtual do
+    sistema em L3/R3 e as três regiões do touchpad. Um upgrade que o desligasse
+    em silêncio tiraria acessibilidade de quem já a usava. Quem quiser o
+    teclado opt-in passa ``default=False``.
+    """
+    pref = load_keyboard_preference()
+    return default if pref is None else pref
+
+
+_GAMEPAD_EMULATION_FLAG_FILE = "gamepad_emulation.flag"
+
+#: AUTO-01.1: OPT-OUT explícito do gamepad virtual — "ela desligou de propósito".
+#: Até aqui o desligar era gravado APAGANDO o `gamepad_emulation.flag`, o que
+#: conflatava dois estados muito diferentes: *nunca configurado* (instalação
+#: nova) e *desligado a pedido dela*. A automação que liga a emulação com dois
+#: ou mais controles na mesa (`Daemon.aplicar_gamepad_para_multiplos_controles`)
+#: precisa distinguir os dois, senão religaria em ~2 s o vpad que ela acabou de
+#: desligar — a pior classe de bug possível (o produto brigando com a usuária).
+#: Mesmo desenho do `coop_disabled.flag` (FEAT-COOP-DEFAULT-ON-01) e da chave
+#: `enabled` do flag de mouse (HARM-06): grava-se a decisão, não a ausência.
+_GAMEPAD_DISABLED_FLAG_FILE = "gamepad_disabled.flag"
+
+
+def save_gamepad_emulation(enabled: bool, flavor: str | None = None) -> None:
+    """Persiste o estado do gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01).
+
+    Flag-file em config_dir cujo conteúdo é o flavor (`dualsense`/`xbox`) quando
+    ligado; o arquivo é removido quando desligado. Assim o daemon restaura tanto
+    o liga/desliga quanto a máscara após restart/reboot. Best-effort.
+
+    AUTO-01.1: o desligar passou a gravar TAMBÉM o opt-out
+    (`gamepad_disabled.flag`), e o ligar a apagá-lo. O contrato de leitura
+    antigo (`load_gamepad_emulation`) não muda em nada — quem quer saber se ela
+    JÁ DECIDIU alguma coisa usa `load_gamepad_preference`. Só o gesto manual
+    chega aqui (R-07: `stop_gamepad_emulation(persist=origin == "manual")`), que
+    é exatamente a decisão que a automação tem de respeitar.
+    """
+    try:
+        cfg = config_dir(ensure=True)
+        flag = cfg / _GAMEPAD_EMULATION_FLAG_FILE
+        optout = cfg / _GAMEPAD_DISABLED_FLAG_FILE
+        if enabled:
+            flag.write_text(f"{(flavor or 'dualsense').strip()}\n", encoding="utf-8")
+            optout.unlink(missing_ok=True)
+        else:
+            flag.unlink(missing_ok=True)
+            optout.write_text("1\n", encoding="utf-8")
+        logger.debug("gamepad_emulation_state_saved", enabled=enabled, flavor=flavor)
+    except Exception as exc:
+        logger.debug("gamepad_emulation_state_save_failed", err=str(exc))
+
+
+def load_gamepad_preference() -> tuple[bool | None, str | None]:
+    """Preferência PERSISTIDA do gamepad virtual: ``(ligado|None, flavor)``.
+
+    AUTO-01.1 — o primeiro campo tem TRÊS valores, e é essa a razão de existir:
+
+      - ``True``  — ela deixou ligado (flag presente; o flavor é o conteúdo);
+      - ``False`` — ela DESLIGOU de propósito (opt-out gravado). Nada de
+        automação pode religar por conta própria;
+      - ``None``  — **nunca decidiu** (instalação nova, ou versão anterior a
+        esta que apagava o flag ao desligar). Só neste caso o daemon pode ligar
+        a emulação sozinho ao ver dois controles na mesa.
+
+    Espelha `load_mouse_preference` (HARM-06), que resolveu o mesmo problema no
+    eixo do mouse. Best-effort: erro de I/O vira "nunca decidiu" — o fail-safe
+    aqui é deixar a automação agir, porque o efeito dela (dois controles = dois
+    jogadores) é o que a usuária espera quando não disse nada.
+    """
+    try:
+        cfg = config_dir()
+        flag = cfg / _GAMEPAD_EMULATION_FLAG_FILE
+        if flag.exists():
+            return True, (flag.read_text(encoding="utf-8").strip() or None)
+        if (cfg / _GAMEPAD_DISABLED_FLAG_FILE).exists():
+            return False, None
+        return None, None
+    except Exception:
+        return None, None
+
+
+def load_gamepad_emulation() -> tuple[bool, str | None]:
+    """Retorna (ligado, flavor) do gamepad virtual da sessão anterior.
+
+    `(False, None)` se a flag não existir. Se existir mas vazia, assume ligado
+    com flavor None (o caller normaliza para o default). Quem precisa
+    distinguir "desligado de propósito" de "nunca configurado" usa
+    `load_gamepad_preference` (AUTO-01.1).
+    """
+    enabled, flavor = load_gamepad_preference()
+    return bool(enabled), flavor
+
+
+#: FEAT-COOP-DEFAULT-ON-01: co-op local é o PADRÃO (cada controle = um
+#: jogador). O que se persiste é o OPT-OUT: flag presente = usuária desligou.
+_COOP_DISABLED_FLAG_FILE = "coop_disabled.flag"
+#: Semântica antiga (presente = ligado) — removido na primeira escrita nova.
+_COOP_ENABLED_FLAG_FILE_LEGACY = "coop_enabled.flag"
+
+
+def save_coop_enabled(enabled: bool) -> None:
+    """Persiste a escolha da usuária sobre o co-op local.
+
+    FEAT-COOP-DEFAULT-ON-01: com 2+ controles, "cada controle = um jogador" é
+    o comportamento esperado por padrão; grava-se apenas o opt-out
+    (`coop_disabled.flag` existe = desligado de propósito). Migra o flag
+    legado `coop_enabled.flag` apagando-o. Best-effort: nunca propaga exceção.
+    """
+    try:
+        cfg = config_dir(ensure=True)
+        (cfg / _COOP_ENABLED_FLAG_FILE_LEGACY).unlink(missing_ok=True)
+        flag = cfg / _COOP_DISABLED_FLAG_FILE
+        if enabled:
+            flag.unlink(missing_ok=True)
+        else:
+            flag.write_text("1\n", encoding="utf-8")
+        logger.debug("coop_enabled_state_saved", enabled=enabled)
+    except Exception as exc:
+        logger.debug("coop_enabled_state_save_failed", err=str(exc))
+
+
+#: Marker da migração do opt-out de co-op (LEIGO-01). Ao lado do flag.
+_COOP_OPTOUT_MIGRATION_MARKER = ".coop_optout_migrated"
+
+
+def migrate_coop_optout() -> bool:
+    """One-shot: apaga o `coop_disabled.flag` das versões antigas. True = migrou.
+
+    LEIGO-01: o checkbox "Cada controle é um jogador" saiu da tela — cada
+    controle é um jogador, sempre. Quem o desmarcou numa versão JÁ LANÇADA tem o
+    opt-out gravado em disco, e ele sobrevive ao upgrade: o co-op ficaria
+    desligado **sem nenhum caminho de volta na interface**.
+
+    Apagar é a leitura certa da decisão de produto ("ninguém conecta dois
+    controles no PC esperando que os dois controlem a mesma pessoa"), e espelha o
+    que o `save_coop_enabled` já fazia com o flag legado. Idempotente via marker
+    próprio: se alguém desligar o co-op pela CLI depois da migração, a escolha
+    fica de pé.
+
+    Best-effort: nunca propaga exceção — o daemon sobe de qualquer jeito.
+    """
+    try:
+        cfg = config_dir(ensure=True)
+        marker = cfg / _COOP_OPTOUT_MIGRATION_MARKER
+        if marker.exists():
+            return False
+        flag = cfg / _COOP_DISABLED_FLAG_FILE
+        migrou = flag.exists()
+        flag.unlink(missing_ok=True)
+        marker.write_text("1\n", encoding="utf-8")
+        if migrou:
+            logger.info("coop_optout_migrado", motivo="o checkbox saiu da UI (LEIGO-01)")
+        return migrou
+    except Exception as exc:
+        logger.debug("coop_optout_migracao_falhou", err=str(exc))
+        return False
+
+
+def load_coop_enabled() -> bool:
+    """True (padrão) salvo se a usuária desligou o co-op (opt-out persistido)."""
+    try:
+        return not (config_dir() / _COOP_DISABLED_FLAG_FILE).exists()
+    except Exception:
+        return True
+
+
 __all__ = [
+    "load_autoswitch_locked",
+    "load_coop_enabled",
+    "load_gamepad_emulation",
+    "load_gamepad_preference",
+    "load_keyboard_emulation_enabled",
+    "load_keyboard_preference",
     "load_last_profile",
+    "load_mouse_emulation",
+    "load_mouse_emulation_enabled",
+    "load_mouse_preference",
+    "load_paused_state",
     "read_active_marker",
+    "resolve_boot_profile",
     "save_active_marker",
+    "save_autoswitch_locked",
+    "save_coop_enabled",
+    "save_gamepad_emulation",
+    "save_keyboard_emulation",
     "save_last_profile",
+    "save_mouse_emulation",
+    "save_mouse_emulation_enabled",
+    "save_paused_state",
 ]

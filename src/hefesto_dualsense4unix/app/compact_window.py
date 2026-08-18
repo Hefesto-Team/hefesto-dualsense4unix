@@ -1,0 +1,327 @@
+"""Janela compacta OPT-IN, desligada por padrão.
+
+FEAT-COMPACT-WINDOW-FALLBACK-01 (v3.3.0): em Pop!_OS COSMIC e em sessões
+minimalistas, o `org.kde.StatusNotifierWatcher` D-Bus que o libayatana
+usa não existe, então o tray clássico fica oculto. Esta janela 320x90
+sempre-on-top nasceu como surrogate: mostra status conectado/perfil/
+bateria + 3 botões essenciais (Painel / Trocar perfil / Sair).
+
+Gating VIGENTE — leia `is_enabled()` logo abaixo, que é quem decide:
+- OPT-IN: a janela só sobe com
+  `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=1` no ambiente.
+- Default DESLIGADO. Sem a variável, `is_enabled()` devolve False e
+  `app/app.py` nem constrói a janela — nenhuma detecção automática de
+  tray ausente a liga, e `=0` não é o que a desliga (a ausência é).
+- Quem não tem bandeja no COSMIC é atendido pelo applet nativo do
+  painel, não por esta janela.
+
+Histórico, porque o cabeçalho contava a versão errada até 31/07/2026: o
+gating original (decisão UX 2026-05-16) era AUTO por default com opt-out
+via `...=0`. Ele foi invertido para opt-in — a janela flutuante
+sempre-on-top no COSMIC era intrusiva — e este texto ficou descrevendo o
+comportamento antigo, contradizendo o código quarenta linhas abaixo.
+
+Update model:
+- Tick a cada `COMPACT_REFRESH_SEC` reusa `ipc_bridge.call_async` via
+  `daemon.state_full` + `profiles_list` (mesmo data path do tray).
+- `GLib.idle_add` no boot dispara o primeiro refresh imediato.
+
+Reuso intencional:
+- `_desktop_is_cosmic()` em `app/tray.py` — não duplicado (importado).
+- `notify_*` helpers de `desktop_notifications` — não usados aqui, mas
+  a CompactWindow não bloqueia o pipeline existente de notificações.
+"""
+# ruff: noqa: E402
+from __future__ import annotations
+
+import os
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gdk, GLib, Gtk
+
+from hefesto_dualsense4unix.app.constants import ICON_PATH
+from hefesto_dualsense4unix.utils.i18n import _
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+# Refresh do label de estado (bateria/perfil/connected). Igual ao tray
+# (3 s) para coerência visual.
+COMPACT_REFRESH_SEC = 3
+
+# Tamanho fixo intencional — 320x90 cabe em qualquer painel/canto sem
+# competir com janelas reais. Sempre-on-top + sem decoração para
+# parecer um widget de painel.
+COMPACT_WIDTH = 320
+COMPACT_HEIGHT = 90
+
+# Env var de controle. A janela compacta é OPT-IN (default DESLIGADO): a
+# versão flutuante always-on-top no COSMIC era intrusiva. `ENV_OPT_OUT` é
+# mantido como alias do nome antigo para compat de imports/testes.
+ENV_COMPACT_WINDOW = "HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW"
+ENV_OPT_OUT = ENV_COMPACT_WINDOW
+
+
+def is_enabled() -> bool:
+    """Janela compacta é OPT-IN: só ativa com
+    ``HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=1``.
+
+    Default DESLIGADO. No COSMIC sem tray, use o applet "Área de status"
+    (Configurações > Painel) ou a janela principal — fechar a principal
+    encerra o app quando não há bandeja real (sem deixá-lo órfão).
+    """
+    return os.environ.get(ENV_COMPACT_WINDOW, "0") == "1"
+
+
+ShowFn = Callable[[], None]
+QuitFn = Callable[[], None]
+ListProfilesFn = Callable[[], list[dict[str, Any]]]
+SwitchProfileFn = Callable[[str], bool]
+StateFn = Callable[[], dict[str, Any] | None]
+
+
+@dataclass
+class CompactWindow:
+    """Surrogate de tray quando AppIndicator/StatusNotifierWatcher ausente.
+
+    API espelha `AppTray` para minimizar churn no caller (`app/app.py`):
+    mesmas 4 callbacks (`on_show_window`, `on_quit`, `on_list_profiles`,
+    `on_switch_profile`) + uma adicional opcional `on_state` para puxar
+    `daemon.state_full` (passa o último estado via IPC quando disponível).
+    """
+
+    on_show_window: ShowFn
+    on_quit: QuitFn
+    on_list_profiles: ListProfilesFn
+    on_switch_profile: SwitchProfileFn
+    on_state: StateFn | None = None
+
+    _window: Gtk.Window | None = None
+    _status_label: Gtk.Label | None = None
+    _battery_label: Gtk.Label | None = None
+    _profile_menu_items: list[Gtk.MenuItem] = field(default_factory=list)
+    _profiles_menu: Gtk.Menu | None = None
+
+    def start(self) -> bool:
+        """Cria a janela compacta. Retorna True se subiu."""
+        if not is_enabled():
+            logger.info("compact_window_opt_out", env=f"{ENV_OPT_OUT}=0")
+            return False
+
+        try:
+            self._build_window()
+        except Exception as exc:
+            logger.warning(
+                "compact_window_build_failed",
+                err=str(exc),
+                exc_info=True,
+            )
+            return False
+
+        # Primeiro refresh imediato + tick periódico.
+        # FIX-GUI-COSMIC-REMEDIATION-01 (R2): _tick_refresh retorna True (para o
+        # timeout periódico repetir); no idle_add isso viraria busy-loop 100% CPU
+        # (BUG-GUI-IDLE-ADD-BUSY-LOOP-01). O lambda força retorno False (one-shot).
+        GLib.idle_add(lambda: self._tick_refresh() and False)
+        GLib.timeout_add_seconds(COMPACT_REFRESH_SEC, self._tick_refresh)
+        logger.info(
+            "compact_window_started",
+            size=f"{COMPACT_WIDTH}x{COMPACT_HEIGHT}",
+        )
+        return True
+
+    def stop(self) -> None:
+        if self._window is not None:
+            import contextlib as _ctx
+
+            with _ctx.suppress(Exception):
+                self._window.destroy()
+            self._window = None
+
+    def _build_window(self) -> None:
+        win = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
+        win.set_title("Hefesto - Dualsense4Unix")
+        # BUG-COMPACT-WINDOW-WMCLASS-ICON-01: identidade da janela para a
+        # dock/taskbar (XWayland no COSMIC). Sem WM_CLASS casando o
+        # StartupWMClass do .desktop, a janela aparecia como "py" e sem logo.
+        # Espelha exatamente o que app.py faz na janela principal.
+        win.set_wmclass("hefesto-dualsense4unix", "Hefesto-Dualsense4Unix")
+        if ICON_PATH.exists():
+            import contextlib as _ctx
+            with _ctx.suppress(Exception):
+                win.set_icon_from_file(str(ICON_PATH))
+        win.set_default_size(COMPACT_WIDTH, COMPACT_HEIGHT)
+        win.set_resizable(False)
+        win.set_keep_above(True)
+        win.set_skip_taskbar_hint(True)
+        win.set_skip_pager_hint(True)
+        win.set_decorated(False)
+        # Posiciona no canto inferior-direito (área tradicional de widget).
+        win.set_gravity(Gdk.Gravity.SOUTH_EAST)
+        # BUG-COMPACT-WINDOW-CLOSE-NOOP-01: fechar a janela compacta encerra o
+        # app. Ela é o ponto de acesso persistente quando não há tray; antes o
+        # delete-event retornava True ("nunca fecha"), e o usuário via a janela
+        # ignorar o clique de fechar (parecia travada no COSMIC).
+        win.connect("delete-event", self._on_delete_event)
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        outer.set_margin_start(8)
+        outer.set_margin_end(8)
+        outer.set_margin_top(6)
+        outer.set_margin_bottom(6)
+        win.add(outer)
+
+        # Linha 1: status + bateria.
+        line1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self._status_label = Gtk.Label()
+        # Glyph U+25CB (white circle) via NCR + texto inicial.
+        self._status_label.set_markup(
+            '<span foreground="#8b8fa8">&#9675; ' + _("Iniciando...") + "</span>"
+        )
+        self._status_label.set_xalign(0.0)
+        line1.pack_start(self._status_label, True, True, 0)
+
+        self._battery_label = Gtk.Label()
+        self._battery_label.set_markup(
+            '<span font_family="monospace">— %</span>'
+        )
+        self._battery_label.set_xalign(1.0)
+        line1.pack_end(self._battery_label, False, False, 0)
+        outer.pack_start(line1, False, False, 0)
+
+        # Linha 2: botões.
+        line2 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        line2.set_homogeneous(True)
+
+        btn_panel = Gtk.Button.new_with_label(_("Painel"))
+        btn_panel.connect("clicked", lambda _w: self.on_show_window())
+        line2.pack_start(btn_panel, True, True, 0)
+
+        btn_profile = Gtk.Button.new_with_label(_("Perfil"))
+        btn_profile.connect("clicked", self._on_profile_button_clicked)
+        line2.pack_start(btn_profile, True, True, 0)
+
+        btn_quit = Gtk.Button.new_with_label(_("Sair"))
+        btn_quit.connect("clicked", lambda _w: self.on_quit())
+        line2.pack_start(btn_quit, True, True, 0)
+
+        outer.pack_start(line2, False, False, 0)
+
+        win.show_all()
+        self._window = win
+
+    def _on_delete_event(self, *_args: Any) -> bool:
+        """Fechar a janela compacta encerra o app (delega a on_quit).
+
+        Retorna True para impedir o destroy default do GTK antes de on_quit
+        rodar o shutdown limpo (tray + daemon).
+        """
+        self.on_quit()
+        return True
+
+    def _on_profile_button_clicked(self, btn: Gtk.Button) -> None:
+        """Abre popup menu com perfis disponíveis ancorado no botão."""
+        if self._profiles_menu is None:
+            self._profiles_menu = Gtk.Menu()
+        # Limpa items antigos.
+        for item in self._profile_menu_items:
+            self._profiles_menu.remove(item)
+        self._profile_menu_items = []
+
+        profiles = self.on_list_profiles()
+        if not profiles:
+            item = Gtk.MenuItem.new_with_label(_("(nenhum perfil)"))
+            item.set_use_underline(False)
+            item.set_sensitive(False)
+            self._profiles_menu.append(item)
+            self._profile_menu_items.append(item)
+        else:
+            for entry in profiles:
+                name = str(entry.get("name", ""))
+                if not name:
+                    continue
+                # ASCII marker para não conflitar com sanitizer global.
+                label = (
+                    f"> {name}" if entry.get("active") else name
+                )
+                item = Gtk.MenuItem.new_with_label(label)
+                item.set_use_underline(False)
+                item.connect(
+                    "activate",
+                    lambda _w, n=name: self.on_switch_profile(n),
+                )
+                self._profiles_menu.append(item)
+                self._profile_menu_items.append(item)
+        self._profiles_menu.show_all()
+        self._profiles_menu.popup_at_widget(
+            btn,
+            Gdk.Gravity.SOUTH_WEST,
+            Gdk.Gravity.NORTH_WEST,
+            None,
+        )
+
+    def _tick_refresh(self) -> bool:
+        """Atualiza labels (status + bateria) com o último state do daemon."""
+        try:
+            state = self.on_state() if self.on_state else None
+        except Exception as exc:
+            logger.debug("compact_window_state_fetch_failed", err=str(exc))
+            state = None
+        self._render_state(state)
+        return True  # mantém o timer vivo
+
+    def _render_state(self, state: dict[str, Any] | None) -> None:
+        if self._status_label is None or self._battery_label is None:
+            return
+        if state is None or not isinstance(state, dict):
+            self._status_label.set_markup(
+                '<span foreground="#ff5555">&#9675; '
+                + _("Daemon offline")
+                + "</span>"
+            )
+            self._battery_label.set_markup(
+                '<span font_family="monospace">— %</span>'
+            )
+            return
+        connected = bool(state.get("connected"))
+        transport = (state.get("transport") or "").upper() or "?"
+        active = state.get("active_profile") or "—"
+        battery = state.get("battery_pct")
+        # FEAT-DSX-MULTI-CONTROLLER-01: com 2+ controles, mostra todos os
+        # transportes (ex.: "BT + USB") no lugar do transporte do primário.
+        controllers = state.get("controllers")
+        if isinstance(controllers, list):
+            conectados = [
+                c for c in controllers if isinstance(c, dict) and c.get("connected")
+            ]
+            if len(conectados) > 1:
+                transport = " + ".join(
+                    (c.get("transport") or "?").upper() for c in conectados
+                )
+        if connected:
+            self._status_label.set_markup(
+                f'<span foreground="#50fa7b">&#9679; {transport} · {active}</span>'
+            )
+        else:
+            self._status_label.set_markup(
+                '<span foreground="#ff5555">&#9675; '
+                + _("Controle desconectado")
+                + "</span>"
+            )
+        if isinstance(battery, int) and 0 <= battery <= 100:
+            self._battery_label.set_markup(
+                f'<span font_family="monospace">{battery} %</span>'
+            )
+        else:
+            self._battery_label.set_markup(
+                '<span font_family="monospace">— %</span>'
+            )
+
+
+__all__ = ["COMPACT_REFRESH_SEC", "ENV_OPT_OUT", "CompactWindow", "is_enabled"]

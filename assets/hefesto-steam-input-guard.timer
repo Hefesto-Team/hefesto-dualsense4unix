@@ -1,0 +1,12 @@
+[Unit]
+# doc: docs/process/sprints/FEAT-STEAM-INPUT-SELF-HEAL-01.md
+Description=Hefesto — rede de segurança: reaplica Steam Input OFF periodicamente
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=30min
+Persistent=true
+Unit=hefesto-steam-input-guard.service
+
+[Install]
+WantedBy=timers.target

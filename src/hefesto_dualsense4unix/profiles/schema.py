@@ -9,7 +9,43 @@ import os
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+#: Teto do multiplicador de rumble da política "custom". Acima de 1.0 AMPLIFICA o
+#: que o jogo pediu — é a razão de existir da faixa (BUG-RUMBLE-CUSTOM-MULT-CAP-01).
+#:
+#: HARM-19: mora aqui, num dono só, porque a faixa já valeu 2.0 no esquema, 1.0 no
+#: handler `rumble.policy_custom` e 200% no slider da GUI ao mesmo tempo — de 101%
+#: em diante a usuária levava um erro de validação que a aba reportava como
+#: "daemon offline?". Quem mudar o teto muda AQUI e os três seguem juntos.
+RUMBLE_CUSTOM_MULT_MAX = 2.0
+
+
+def _casa_sem_caixa(valor: object, aceitos: list[str]) -> bool:
+    """Pertence-à-lista SEM diferenciar maiúsculas de minúsculas.
+
+    R-12 (auditoria 23/07), a metade que faltava. O editor simples aplicava um
+    ``.lower()`` no que a usuária digitava, e o matcher comparava com o dado
+    CRU do sistema — ``Cyberpunk2077.exe`` (basename de ``/proc/PID/exe``)
+    nunca casava com o ``cyberpunk2077.exe`` gravado. O agente do R-12 tirou o
+    ``.lower()`` (parar de corromper o dado guardado é o dano garantido); a
+    cura completa é esta: **guardar como veio, comparar sem caixa**.
+
+    Vale para os dois lados porque nenhum dos dois é confiável:
+
+    - ``wm_class`` chega do X/XWayland com a caixa que o toolkit escolheu
+      (``Steam`` vs. ``steam``, ``Firefox`` vs. ``firefox``), e a mesma janela
+      muda de grafia entre backends de detecção;
+    - o basename do executável é o que o jogo enviou (``Sackboy.exe``), e
+      ninguém digita isso à mão com a caixa certa.
+
+    Alvo vazio nunca casa: janela sem ``wm_class``/sem ``exe_basename`` é
+    ausência de evidência, não igualdade com uma entrada vazia do perfil.
+    """
+    alvo = str(valor or "").casefold()
+    if not alvo:
+        return False
+    return any(alvo == item.casefold() for item in aceitos)
 
 
 class MatchCriteria(BaseModel):
@@ -21,6 +57,7 @@ class MatchCriteria(BaseModel):
     - `window_title_regex` usa `re.search` (V2-10); padrões com `.*`
       continuam válidos mas redundantes.
     - `process_name` casa com basename de `/proc/PID/exe` (V2-9).
+    - A comparação IGNORA maiúsculas/minúsculas nos três campos (R-12).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -33,13 +70,25 @@ class MatchCriteria(BaseModel):
     def matches(self, window_info: dict[str, Any]) -> bool:
         conditions: list[bool] = []
         if self.window_class:
-            conditions.append(window_info.get("wm_class", "") in self.window_class)
+            conditions.append(
+                _casa_sem_caixa(window_info.get("wm_class"), self.window_class)
+            )
         if self.window_title_regex:
             pattern = self.window_title_regex
             title = window_info.get("wm_name", "") or ""
-            conditions.append(bool(re.search(pattern, title)))
+            # R-12: `re.IGNORECASE` pela MESMA razão das listas — título de
+            # janela é texto de marketing ("Sackboy: A Big Adventure",
+            # "SACKBOY"), e um regex que só casa com a grafia exata é uma
+            # armadilha silenciosa (o perfil simplesmente nunca ativa, sem erro
+            # nenhum). Deixar só as listas tolerantes seria pior que os dois
+            # extremos: a mesma tela do editor teria dois campos com regras de
+            # caixa diferentes. Quem PRECISA de caixa exata continua tendo
+            # saída, com o grupo local `(?-i:...)` do próprio `re`.
+            conditions.append(bool(re.search(pattern, title, re.IGNORECASE)))
         if self.process_name:
-            conditions.append(window_info.get("exe_basename", "") in self.process_name)
+            conditions.append(
+                _casa_sem_caixa(window_info.get("exe_basename"), self.process_name)
+            )
         if not conditions:
             return False
         return all(conditions)
@@ -56,7 +105,39 @@ class MatchAny(BaseModel):
         return True
 
 
-Match = MatchCriteria | MatchAny
+class MatchManual(BaseModel):
+    """Sentinel explícito de perfil SÓ-MANUAL: nunca casa com janela nenhuma.
+
+    R-12 item 3 (débito da auditoria 23/07). Existia um jeito de escrever "este
+    perfil só entra quando eu mandar": um ``MatchCriteria`` com os três campos
+    vazios, que ``matches()`` reprova por falta de condição. O problema é que
+    esse estado é INDISTINGUÍVEL do acidente — foi exatamente assim que o
+    preset ``coop_local`` de fábrica saiu inalcançável e ninguém percebeu, e é
+    o que a GUI teve de adivinhar para escrever "Só manual (nunca ativa
+    sozinho)" na coluna "Quando usar".
+
+    Com o sentinel, intenção e acidente param de ter a mesma forma: quem
+    declara ``{"type": "manual"}`` está dizendo isso, e o
+    ``check_perfis_inalcancaveis`` do ``doctor.sh`` deixa de reclamar dele (e
+    continua reclamando do criteria vazio, que agora é só o acidente).
+
+    Retrocompatível: o tipo é ADITIVO na união discriminada — perfis já
+    gravados com ``any``/``criteria`` validam sem migração, e nada no código
+    escreve ``manual`` sozinho (só o editor avançado com os três campos
+    vazios e o ``profile create --manual``). ATENÇÃO downgrade, mesma nota do
+    ``auto_player_colors``: um perfil salvo com este tipo é rejeitado por
+    binário antigo, que não conhece o discriminador.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["manual"] = "manual"
+
+    def matches(self, window_info: dict[str, Any]) -> bool:
+        return False
+
+
+Match = MatchCriteria | MatchAny | MatchManual
 
 
 class TriggerConfig(BaseModel):
@@ -64,6 +145,28 @@ class TriggerConfig(BaseModel):
 
     mode: str
     params: list[int] | list[list[int]] = Field(default_factory=list)
+
+    @field_validator("mode", mode="after")
+    @classmethod
+    def _validate_mode(cls, value: str) -> str:
+        """Rejeita modos fora do conjunto canônico aceito por `build_from_name`.
+
+        O registro de fábricas (`PRESET_FACTORIES`) é a fonte única de verdade
+        dos modos válidos — inclui "Off", "Custom", "MultiPositionFeedback" etc.
+        Sem esta checagem, um typo no `mode` (ex.: "Galoping") passa pela
+        validação do perfil e só explode com `ValueError` lá no `apply()`, em
+        runtime, longe da origem do erro. Import lazy de `core.trigger_effects`
+        evita ciclo de import com `profiles.schema`.
+        """
+        from hefesto_dualsense4unix.core.trigger_effects import PRESET_FACTORIES
+
+        if value not in PRESET_FACTORIES:
+            validos = ", ".join(sorted(PRESET_FACTORIES))
+            raise ValueError(
+                f"modo de trigger desconhecido: {value!r} "
+                f"(modos válidos: {validos})"
+            )
+        return value
 
     @field_validator("params", mode="after")
     @classmethod
@@ -122,6 +225,19 @@ class LedsConfig(BaseModel):
     lightbar: tuple[int, int, int] = (0, 0, 0)
     player_leds: list[bool] = Field(default_factory=lambda: [False] * 5)
     lightbar_brightness: float = Field(default=1.0, ge=0.0, le=1.0)
+    # COR-03 (sprint cores-e-led-automaticos): cores automáticas por controle
+    # — cada DualSense acende a cor do SEU slot (paleta PS5) + o LED do número
+    # do controle (D7). Default True = o comportamento pedido pela mantenedora
+    # nasce ligado; False = comportamento broadcast histórico intacto (D5).
+    # Perfil antigo sem o campo valida com o default (aditivo, sem migração).
+    # SÓ tem efeito na seção GLOBAL `profile.leds`: dentro de um override
+    # por-controle (`ControllerOverrides.leds`) o campo é aceito pelo schema
+    # (reuso do modelo) mas ignorado — o toggle é do perfil, não do controle
+    # (`_controllers_to_specs` não o lê, então ele nunca densifica um
+    # override parcial). ATENÇÃO downgrade: perfil salvo com este campo fica
+    # inválido em binário antigo (`extra="forbid"`) — coberto nas notas de
+    # release (COR-08).
+    auto_player_colors: bool = True
 
     @field_validator("lightbar")
     @classmethod
@@ -142,9 +258,146 @@ class LedsConfig(BaseModel):
 
 
 class RumbleConfig(BaseModel):
+    """Seção de rumble do perfil.
+
+    FEAT-RUMBLE-POLICY-PROFILE-01: além do ``passthrough`` (v1), o perfil pode
+    declarar a POLÍTICA de intensidade de rumble, aplicada na ativação em
+    paridade com a seção ``mode``:
+
+    - ``policy=None`` (default) — perfil SEM opinião: ativar não mexe na
+      política global do daemon; apenas reverte política que OUTRO perfil
+      tenha aplicado (ver ``Daemon.apply_profile_rumble_policy``).
+    - ``policy`` preenchida — aplicada via ``rumble_policy_applier`` injetado
+      no ``ProfileManager``, respeitando o lock manual de 30s.
+    - ``custom_mult`` — multiplicador 0.0-2.0; só faz sentido com
+      ``policy="custom"`` (validado abaixo).
+
+    Aditivo/retrocompatível: perfis v1 sem os campos continuam válidos.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     passthrough: bool = True
+    policy: Literal["economia", "balanceado", "max", "auto", "custom"] | None = None
+    custom_mult: float | None = None
+
+    @model_validator(mode="after")
+    def _validate_custom_mult(self) -> RumbleConfig:
+        """Range de ``custom_mult`` + coerência com ``policy``.
+
+        ``custom_mult`` fora de ``policy="custom"`` é erro semântico (o valor
+        seria silenciosamente ignorado pelo daemon) — rejeitamos cedo, na
+        borda do schema, com mensagem clara.
+        """
+        if self.custom_mult is not None:
+            if not (0.0 <= self.custom_mult <= RUMBLE_CUSTOM_MULT_MAX):
+                raise ValueError(
+                    f"custom_mult fora de [0.0, {RUMBLE_CUSTOM_MULT_MAX}]: "
+                    f"{self.custom_mult}"
+                )
+            if self.policy != "custom":
+                raise ValueError(
+                    "custom_mult só é válido com policy='custom' "
+                    f"(policy={self.policy!r})"
+                )
+        return self
+
+
+class ProfileMouseConfig(BaseModel):
+    """Seção opcional de emulação de mouse por perfil (FEAT-POINT-AND-CLICK-01).
+
+    Aditiva ao schema v1 (sem bump de versão): perfis sem a seção continuam
+    válidos e NÃO tocam no estado de emulação ao serem ativados. Ranges de
+    `speed`/`scroll_speed` espelham o contrato do daemon
+    (`Daemon.set_mouse_emulation`: 1-12 / 1-5).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+    speed: int = Field(default=6, ge=1, le=12)
+    scroll_speed: int = Field(default=1, ge=1, le=5)
+
+
+class ProfileMicConfig(BaseModel):
+    """Seção opcional de MICROFONE por perfil (MIC-EXPOSE-01, 25/07).
+
+    Aditiva ao schema v1 (sem bump de versão), mesmo contrato do `mouse`:
+    perfil sem a seção não tem opinião e ativá-lo NÃO mexe no comportamento
+    do botão de mic.
+
+    `button_toggles_system` espelha `DaemonConfig.mic_button_toggles_system`,
+    que até aqui era um campo SECRETO: existia no dataclass do lifecycle,
+    gateava o subsystem `mic_hotkey` no boot e não aparecia em lugar nenhum —
+    nem na GUI, nem no draft, nem no perfil. Ligado (default do daemon), o
+    botão de mic do controle alterna o mute do microfone PADRÃO DO SISTEMA
+    (wpctl/pactl) e acende o LED do mic junto. Desligado, o botão não mexe no
+    áudio do sistema — é o que se quer num perfil de gravação/live, em que o
+    mute é do OBS/da mesa e um toque acidental no controle não pode derrubar
+    a captura.
+
+    NÃO confundir com o mudo de microfone do FIRMWARE (`common[9]` do report
+    de saída): esse é do kernel e o hefesto deixou de disputá-lo
+    (AUDIO-OWNER-01).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    button_toggles_system: bool
+
+
+class ProfileModeConfig(BaseModel):
+    """Seção opcional de MODO do sistema por perfil (FEAT-PROFILE-MODE-01).
+
+    O perfil do JOGO declara como o controle deve se comportar quando ele está
+    em foco — as features passam a COEXISTIR porque o contexto decide, sem
+    toggles globais brigando entre si:
+
+    - ``kind="native"`` — release total: o jogo usa os gatilhos adaptativos
+      NATIVOS da Sony (Sackboy & cia); o hefesto solta o controle.
+    - ``kind="gamepad"`` — gamepad virtual com a máscara `gamepad_flavor`
+      (prompts PlayStation ou Xbox). Cada controle físico vira um jogador
+      (``coop``, ligado por padrão — ver o campo).
+    - ``kind="desktop"`` — declaração explícita de app de desktop: desliga
+      gamepad/nativo/co-op vindos de perfil (e também os expirados do lock).
+
+    Perfis SEM a seção não têm opinião: liberam apenas o modo que outro PERFIL
+    tinha ligado (gesto manual da usuária é respeitado — mesma semântica do
+    `suppress_desktop_emulation`). Toggles manuais recentes vencem por
+    ``MANUAL_PROFILE_LOCK_SEC`` (30s), como no `mouse`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["desktop", "gamepad", "native"]
+    gamepad_flavor: Literal["dualsense", "xbox"] | None = None
+    # LEIGO-01: default True. Ninguém pluga dois controles esperando que os dois
+    # movam o MESMO personagem — o default False fazia todo perfil salvo pela GUI
+    # carregar `coop: false` e desligar o co-op ao ativar, pelas costas de quem
+    # nunca pediu isso. Perfis já gravados são migrados em
+    # `loader.migrate_profiles_coop_default`.
+    coop: bool = True
+
+
+class ControllerOverrides(BaseModel):
+    """Overrides POR CONTROLE dentro do perfil (PERFIL-02, 2026-07-16).
+
+    Subconjunto deliberado das seções do perfil que fazem sentido por
+    controle físico: ``leds`` (lightbar + player_leds + brilho) e
+    ``triggers``. Campo ``None`` = sem opinião — o controle herda a seção
+    GLOBAL do perfil (merge POR CAMPO na aplicação, PERFIL-01: override
+    parcial nunca apaga a cor global no replug).
+
+    Fora por decisão (revisão adversarial do sprint perfis-por-controle):
+    - ``label`` — identidade visível é outra frente (4P-03);
+    - ``mic_led`` — o mic jamais é colateral de troca de perfil
+      (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    leds: LedsConfig | None = None
+    triggers: TriggersConfig | None = None
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
@@ -172,6 +425,32 @@ class Profile(BaseModel):
     # - {} = desativa todos os bindings do perfil (teclado silencioso).
     # - {"triangle": ["KEY_C"]} = override apenas desse botão; demais seguem default.
     key_bindings: dict[str, list[str]] | None = None
+    # FEAT-POINT-AND-CLICK-01: seção opcional de emulação de mouse.
+    # - None = ativar o perfil não toca no estado da emulação (comportamento v1).
+    # - Preenchida = ativar o perfil liga/desliga a emulação com as velocidades
+    #   dadas (via `mouse_applier` injetado no ProfileManager).
+    mouse: ProfileMouseConfig | None = None
+    # MIC-EXPOSE-01: comportamento do botão de mic por perfil. None = sem
+    # opinião (ativar o perfil não mexe no `mic_button_toggles_system`).
+    mic: ProfileMicConfig | None = None
+    # FEAT-PROFILE-MODE-01: modo do sistema por perfil (nativo/gamepad/desktop
+    # + co-op). None = sem opinião (libera só modo vindo de outro perfil).
+    mode: ProfileModeConfig | None = None
+    # FEAT-POINT-AND-CLICK-01: modo-jogo por perfil. True = ativar o perfil
+    # suprime a emulação de mouse/teclado no desktop (jogos de GAMEPAD que
+    # leem o controle cru); False (default) = ativar o perfil LIBERA a
+    # supressão apenas se ela veio de outro perfil (toggle manual da usuária
+    # é respeitado — ver `Daemon.apply_profile_suppression`).
+    suppress_desktop_emulation: bool = False
+    # PERFIL-02 (sprint 2026-07-16-perfis-por-controle): mapa ADITIVO de
+    # overrides por controle físico, keyed pelo MAC normalizado (12 hex
+    # minúsculos — o mesmo `norm_mac` do backend; PROVADO ao vivo estável
+    # entre USB e BT no DualSense). None = perfil v1 puro, sem opinião
+    # por-controle. A serialização em `save_profile` OMITE o campo quando
+    # None/vazio — requisito de compatibilidade: sem a omissão, todo save
+    # gravaria `"controllers": null` e binário antigo (extra="forbid")
+    # rejeitaria TODO perfil no downgrade, não só os que usam o mapa.
+    controllers: dict[str, ControllerOverrides] | None = None
 
     @field_validator("name")
     @classmethod
@@ -239,17 +518,204 @@ class Profile(BaseModel):
                     )
         return value
 
+    @field_validator("controllers", mode="after")
+    @classmethod
+    def _validate_controllers_keys(
+        cls, value: dict[str, ControllerOverrides] | None
+    ) -> dict[str, ControllerOverrides] | None:
+        """Chave do mapa = MAC normalizado (12 hex); rejeita degenerados.
+
+        Usa o MESMO ``norm_mac`` do backend (import lazy, padrão do módulo):
+        ``"AA:BB:CC:00:00:02"`` é aceito e canonizado para ``"aabbcc000002"``
+        — JSON editado à mão continua casando com a key que o backend
+        enumera. Rejeições, com mensagem clara:
+
+        - o que não vira 12 dígitos hex (ex.: key de fallback ``path:...``);
+        - uniq DEGENERADO, que não identifica UMA unidade — OUI ``00:00:00``
+          (medido ao vivo no Pro Controller, ``000000000001``, idêntico
+          entre unidades) e broadcast ``ff:ff:ff:ff:ff:ff``;
+        - duas chaves que canonizam para o mesmo MAC (colisão silenciosa:
+          um dos overrides venceria por ordem de inserção, sem aviso).
+        """
+        if value is None:
+            return value
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        canonizado: dict[str, ControllerOverrides] = {}
+        for key, overrides in value.items():
+            mac = norm_mac(key)
+            if mac is None or len(mac) != 12:
+                raise ValueError(
+                    f"controllers: chave {key!r} não é um MAC de 12 dígitos "
+                    "hex (ex.: 'aabbcc000002')"
+                )
+            if mac.startswith("000000") or mac == "ffffffffffff":
+                raise ValueError(
+                    f"controllers: chave {key!r} é um uniq degenerado — não "
+                    "identifica um controle único (visto em receivers 2.4G "
+                    "e no Pro Controller)"
+                )
+            if mac in canonizado:
+                raise ValueError(
+                    "controllers: chaves duplicadas após normalização "
+                    f"({mac!r}) — remova uma das grafias"
+                )
+            canonizado[mac] = overrides
+        return canonizado
+
     def matches(self, window_info: dict[str, Any]) -> bool:
         return self.match.matches(window_info)
 
+    @property
+    def e_catch_all(self) -> bool:
+        """True quando o perfil casa com QUALQUER janela.
+
+        R-01 (auditoria 23/07): há duas formas de catch-all, e as duas
+        precisam ser tratadas igual na hora de decidir especificidade —
+        ``MatchAny`` explícito (``vitoria``, ``fallback``, ``meu_perfil``) e
+        um ``MatchCriteria`` com todos os campos vazios (o preset
+        ``coop_local`` de fábrica). O segundo na prática nunca casa
+        (``MatchCriteria.matches`` devolve ``False`` sem condição alguma),
+        mas ele TAMBÉM não é uma regra específica — então some dos dois
+        lados da comparação pelo mesmo predicado.
+
+        ``MatchManual`` NÃO entra aqui, e a diferença é de propósito. Este
+        predicado responde "o perfil chegou por acidente?" — é o que segura a
+        reversão de modo/supressão em `lifecycle._perfil_tem_opiniao`. Um
+        catch-all chega quando nenhuma regra casou; um perfil manual só entra
+        porque a usuária o escolheu na mão, então ele tem a autoridade que o
+        catch-all não tem. Na seleção do autoswitch a distinção é inócua: o
+        manual nunca vira candidato (``matches`` é sempre False).
+        """
+        if isinstance(self.match, MatchAny):
+            return True
+        if isinstance(self.match, MatchManual):
+            return False
+        criteria = self.match
+        return not (
+            criteria.window_class
+            or criteria.window_title_regex
+            or criteria.process_name
+        )
+
+
+def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any]) -> bool:
+    """True quando o perfil é a regra PRÓPRIA do jogo em foco.
+
+    R-01 (auditoria 23/07). Antes, o autoswitch tratava como "perfil do jogo"
+    qualquer candidato que aparecesse enquanto uma janela ``steam_app_*``
+    estivesse em foco — sem checar se o perfil casou POR CAUSA dela. Com três
+    perfis catch-all no disco e nenhum perfil para o Mullet Mad Jack, o
+    vencedor era o ``vitoria`` (genérico de desktop): a trava manual das três
+    categorias era apagada e o genérico entrava por cima da configuração que a
+    usuária tinha acabado de fazer.
+
+    Ser regra de jogo exige as duas coisas:
+
+    1. ``match.type == "criteria"`` com critério de verdade (catch-all não é
+       regra de jogo, nem o ``MatchAny`` nem o criteria vazio);
+    2. a ``wm_class`` ``steam_app_<id>`` em foco estar listada em
+       ``match.window_class``.
+
+    Regex de título **não** conta: o ``fps.json`` da usuária tem ``|Control)``
+    e ``|Metro)`` sem âncora — deixá-lo valer como regra de jogo reabriria o
+    mesmo buraco por outra porta. (Hoje o ``fps.json`` também preenche
+    ``process_name``, e o ``matches`` é AND, então na prática ele não dispara
+    em "Painel de Controle"; mas a regra aqui não pode depender disso.)
+
+    A checagem é por ESTRUTURA, não pelo rótulo ``match.type``: um
+    ``MatchCriteria`` com ``window_class`` preenchido já é, por definição, não
+    catch-all. Isso também mantém o predicado tolerante a dublês de teste
+    (``getattr`` defensivo), no mesmo idioma de
+    ``lifecycle._profile_rule_matches_game``.
+    """
+    match = getattr(profile, "match", None)
+    if not isinstance(match, MatchCriteria) or not match.window_class:
+        return False
+    wm_class = str(window_info.get("wm_class") or "")
+    if not wm_class.startswith("steam_app_"):
+        return False
+    # Mesma comparação de `MatchCriteria.matches` (R-12): sem ela, um
+    # `steam_app_` digitado com maiúscula faria o perfil CASAR pelo matcher e
+    # não ser reconhecido como regra do jogo aqui — a divergência entre os dois
+    # predicados é justamente o buraco que este módulo existe para fechar.
+    return _casa_sem_caixa(wm_class, match.window_class)
+
+
+def normalizar_gamepad_flavor(valor: object) -> Literal["dualsense", "xbox"] | None:
+    """Converte uma máscara CRUA na forma fechada que `ProfileModeConfig` aceita.
+
+    MODO-01. A máscara viaja como `str` solto por todo o daemon
+    (`DaemonConfig.gamepad_flavor` nasce de um flag em disco) e como `Literal`
+    fechado no schema de perfil. Quem constrói um `ProfileModeConfig` a partir do
+    estado vivo — o modo jogo padrão do daemon e o editor de perfis da GUI —
+    precisa atravessar essa fronteira; um `cast` em cada callsite mentiria para o
+    verificador de tipos sobre um valor que vem de arquivo.
+
+    Desconhecido vira `None`, que no applier significa "mantém a máscara atual"
+    — o fail-safe certo: um flag corrompido não pode recriar o vpad no meio do
+    jogo, que invalida os handles que o jogo já abriu.
+    """
+    if valor == "dualsense":
+        return "dualsense"
+    if valor == "xbox":
+        return "xbox"
+    return None
+
+
+def perfil_declara_modo_de_jogo(profile: Profile | None) -> bool:
+    """True quando o perfil DIZ, no próprio arquivo, que serve para jogar.
+
+    MODO-01/B2 (sprint 25/07). O cadeado de autoswitch prometia uma coisa só —
+    *"não trocar de perfil sozinho ao abrir um jogo"* — e congelava muito mais
+    do que isso, porque o único jeito de ceder a ele era o
+    `perfil_e_regra_de_jogo`, que exige critério por ``window_class`` COM uma
+    ``steam_app_<id>`` em foco. Duas vítimas medidas:
+
+    - o preset ``coop_local``, que **tem** ``mode: gamepad`` mas casa por TÍTULO
+      de janela (Sackboy, Overcooked, It Takes Two, Cuphead) — ficava congelado;
+    - todo jogo fora da Steam (GOG, Heroic, itch, nativo) com perfil próprio,
+      pelo mesmo motivo.
+
+    O predicado aqui é o complemento honesto: o perfil **não é catch-all** (não
+    chegou por acidente — casou por regra de verdade) e **declara** ``mode.kind``
+    em ``{gamepad, native}``. Isso é o perfil dizendo "eu sou de jogo" sem
+    depender da Steam ter carimbado a janela.
+
+    Por que é uma função NOVA em vez de afrouxar `perfil_e_regra_de_jogo`: o
+    predicado estrito tem um segundo consumidor, o furo da trava manual em
+    `AutoSwitcher._activate` (F2/R-01), onde afrouxar reabriria por outra porta
+    o buraco que a R-01 fechou — ali um regex de título solto (``|Control)``,
+    ``|Metro)`` do ``fps.json``) passaria a apagar a configuração que ela acabou
+    de fazer na mão. O cadeado e a trava manual protegem coisas diferentes e
+    agora podem ceder por critérios diferentes.
+
+    `getattr` defensivo (mesmo idioma do resto do módulo): dublê de teste sem
+    `mode`/`e_catch_all` responde False — na dúvida o cadeado continua segurando,
+    que é o comportamento histórico.
+    """
+    if profile is None:
+        return False
+    if bool(getattr(profile, "e_catch_all", True)):
+        return False
+    kind = getattr(getattr(profile, "mode", None), "kind", None)
+    return kind in ("gamepad", "native")
+
 
 __all__ = [
+    "ControllerOverrides",
     "LedsConfig",
     "Match",
     "MatchAny",
     "MatchCriteria",
+    "MatchManual",
     "Profile",
+    "ProfileMicConfig",
+    "ProfileMouseConfig",
     "RumbleConfig",
     "TriggerConfig",
     "TriggersConfig",
+    "normalizar_gamepad_flavor",
+    "perfil_declara_modo_de_jogo",
+    "perfil_e_regra_de_jogo",
 ]

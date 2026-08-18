@@ -1,0 +1,53 @@
+# Hefesto - Dualsense4Unix — acesso de escrita aos LEDs de player dos controles
+# Nintendo/8BitDo (modo Switch). 8BIT-02.
+#
+# O QUE FAZ: torna graváveis (pelo usuário do desktop) os nós de LED de player
+# que o driver `hid-nintendo` expõe para os controles Nintendo/8BitDo em modo
+# Switch — os 4 LEDs de player VERDES (`*057E:*:green:player-N`) e o 5º AZUL
+# (`*057E:*:blue:player-5`). O DualSense usa `:white:player-N` (coberto pela
+# 77-dualsense-leds).
+#
+# POR QUE: no co-op de controles MISTOS (DualSense + Nintendo), cada controle
+# precisa de um NÚMERO distinto. O Hefesto dá 1..N aos DualSense e CONTINUA a
+# contagem nos externos (o 1º externo = slot N+1), escrevendo esse número no
+# LED de player do controle — para o LED físico bater com o número da GUI.
+# Só LED, nunca input: o Hefesto não adota esses controles.
+#
+# R-25 (2026-07-25): o 5º LED (AZUL, `:blue:player-5`) NÃO é mais "sempre
+# apagado" — ele virou o bit "+5" da numeração (azul aceso = some 5 aos verdes
+# acesos), o que estende a barra de 4 para 9 números DISTINGUÍVEIS. Com o
+# capping antigo em 4, o slot 7 acendia exatamente o mesmo padrão do slot 4 e
+# dois controles ficavam idênticos na mesa. A regra do azul abaixo, que já
+# existia, passa portanto a ser FUNCIONAL (antes só servia para apagá-lo):
+# sem ela, controles em slot >= 5 caem no capping em 4 e voltam a colidir.
+#
+# Sem esta regra, os nós ficam root:root e o daemon (que roda como usuário,
+# sudo-zero) NÃO consegue escrever — a numeração do LED cai no default do
+# kernel (colisão possível), sem regressão de input. Por isso a regra e a
+# coordenação de LED entram JUNTAS.
+#
+# MECANISMO (igual à 77-dualsense-leds): RUN chmod 0666 garante a gravabilidade
+# (LED é inócuo). Reaplicado a cada replug/reconexão (ACTION=="add").
+#
+# ONDA-R (2026-07-19): TAG+="uaccess" foi REMOVIDA — este arquivo é
+# 79-external-controller-leds.rules (regra ≥73), e systemd-logind só converte
+# "uaccess" em ACL para regras numeradas < 73 (feito pelo 73-seat-late.rules do
+# próprio systemd; ver reference_udev_uaccess_ordem_73 na memória do projeto).
+# Numa regra ≥73 a TAG nunca vira ACL: era morta/inerte, sem efeito funcional
+# (o chmod 0666 abaixo já cobre 100% do acesso). Removida para não sugerir uma
+# garantia que a ordem de carga do udev não entrega.
+#
+# MODO DS4 (8BitDo por BLUETOOTH): o 8BitDo pareado por Bluetooth se apresenta
+# como DualShock4 (054C:05C4, driver hid-playstation) e NÃO tem barra de player
+# — só a lightbar RGB (nós `inputNN:red|green|blue|global`). Como indicador de
+# posição, o Hefesto pinta a lightbar com a COR do slot (3 = verde). Estas
+# regras liberam a escrita desses canais, ancoradas em DRIVERS=="playstation"
+# para NÃO tocar LEDs de outros devices; o DualSense usa `:rgb:indicator`
+# (coberto pela 77), então não casa aqui. Cobre o pedido "atender BT também".
+
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:green:player-*", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:blue:player-*", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:red", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:green", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:blue", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:global", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"

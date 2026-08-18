@@ -18,10 +18,31 @@ import typer
 
 app = typer.Typer(
     name="hefesto-dualsense4unix",
-    help="Daemon de gatilhos adaptativos para DualSense no Linux.",
+    help="Gerenciador DualSense para Linux.",
     add_completion=True,
     no_args_is_help=True,
 )
+
+
+def _version_callback(value: bool) -> None:
+    """Callback de `--version`: imprime versão e sai."""
+    if value:
+        from hefesto_dualsense4unix import __version__
+        typer.echo(__version__)
+        raise typer.Exit()
+
+
+@app.callback()
+def main_callback(
+    _version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Mostra a versão e sai.",
+    ),
+) -> None:
+    """Callback global para flags root (`--version`)."""
 
 daemon_app = typer.Typer(
     name="daemon",
@@ -30,16 +51,22 @@ daemon_app = typer.Typer(
 )
 app.add_typer(daemon_app, name="daemon")
 
-from hefesto_dualsense4unix.cli.cmd_emulate import app as emulate_app  # noqa: E402
+from hefesto_dualsense4unix.cli.cmd_controller import app as controller_app  # noqa: E402
+from hefesto_dualsense4unix.cli.cmd_coop import app as coop_app  # noqa: E402
+from hefesto_dualsense4unix.cli.cmd_gamepad import app as gamepad_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_mouse import app as mouse_app  # noqa: E402
+from hefesto_dualsense4unix.cli.cmd_native import app as native_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_plugin import app as plugin_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_profile import app as profile_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_test import app as test_app  # noqa: E402
 
 app.add_typer(profile_app, name="profile")
 app.add_typer(test_app, name="test")
-app.add_typer(emulate_app, name="emulate")
 app.add_typer(mouse_app, name="mouse")
+app.add_typer(native_app, name="native")
+app.add_typer(gamepad_app, name="gamepad")
+app.add_typer(coop_app, name="coop")
+app.add_typer(controller_app, name="controller")
 app.add_typer(plugin_app, name="plugin")
 
 
@@ -49,6 +76,22 @@ def status() -> None:
     from hefesto_dualsense4unix.cli.cmd_status import status_cmd
 
     status_cmd()
+
+
+@app.command()
+def doctor(
+    fix: bool = typer.Option(False, "--fix", help="Aplica correções seguras (udev + WirePlumber)."),
+    quiet: bool = typer.Option(False, "--quiet", help="Só mostra FAIL/WARN."),
+    fix_safe: bool = typer.Option(
+        False,
+        "--fix-safe",
+        help="Anti-storm SEGURO (sem sudo): Steam Input OFF + WirePlumber + cura de raiz.",
+    ),
+) -> None:
+    """Diagnóstico de saúde: daemon, udev, applet, áudio, anti-storm + checks via IPC."""
+    from hefesto_dualsense4unix.cli.cmd_doctor import doctor_cmd
+
+    doctor_cmd(fix=fix, quiet=quiet, fix_safe=fix_safe)
 
 
 @app.command()
@@ -90,10 +133,50 @@ def tui() -> None:
 
 @app.command()
 def tray() -> None:
-    """Abre o tray icon GTK3 (requer extra [tray])."""
+    """Abre o tray icon GTK3 (requer pip install com extra tray)."""
     from hefesto_dualsense4unix.cli.cmd_tray import tray_cmd
 
     tray_cmd()
+
+
+@app.command()
+def mic(
+    action: str = typer.Argument(
+        "status",
+        help=(
+            "on | off | status | promote | demote | mute | unmute | release | "
+            "bt | bt-status — mic embutido do DualSense."
+        ),
+    ),
+    uniq: str = typer.Option(
+        "",
+        "--uniq",
+        help="MAC normalizado do controle nas ações mute/unmute/release.",
+    ),
+) -> None:
+    """Liga/desliga o microfone embutido do DualSense.
+
+    NO CABO (via WirePlumber): por padrão o mic vem suprimido (sem virar
+    microfone padrão / sem spam). `mic on` libera o mic quando você for jogar
+    algo que precise dele; `mic off` volta a suprimir. Mesmo caminho usado pelo
+    botão na GUI e no applet COSMIC. `mic promote` vai além do `on`: elege o mic
+    do controle como entrada PADRÃO do sistema e persiste a escolha; `mic
+    demote` devolve a prioridade rebaixada de sempre (MIC-USB-01).
+
+    NO FIRMWARE DO CONTROLE (MIC-USB-01): `mic mute` / `mic unmute` mexem no
+    mesmo mudo que o botão físico do controle alterna e que acende o LED —
+    exige o daemon rodando. `mic release` devolve esse registrador ao kernel,
+    que é quem alterna o mudo na borda do botão; sem ele, o valor que você
+    mandou continua valendo e o botão do controle não responde mais.
+
+    EM BLUETOOTH (BT-MIC-01): o controle não fala A2DP/HFP — o áudio vem como
+    Opus dentro dos reports HID e precisa de uma ponte. `mic bt` sobe essa ponte
+    e publica o microfone no PipeWire (Ctrl-C encerra e desliga o mic no
+    controle); `mic bt-status` só diagnostica as pré-condições.
+    """
+    from hefesto_dualsense4unix.cli.cmd_mic import mic_cmd
+
+    mic_cmd(action, uniq=uniq or None)
 
 
 @app.command()
@@ -192,8 +275,71 @@ def daemon_status() -> None:
     typer.echo(text)
 
 
+def _toggle_pause(method: str, label: str) -> None:
+    """Chama daemon.pause/resume via IPC (FEAT-DAEMON-PAUSE-RESUME-01)."""
+    import asyncio
+
+    from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+
+    async def _call() -> bool:
+        try:
+            async with IpcClient.connect() as client:
+                await client.call(method)
+                return True
+        except (FileNotFoundError, ConnectionError, IpcError):
+            return False
+
+    if asyncio.run(_call()):
+        typer.echo(f"daemon {label}")
+    else:
+        typer.echo(
+            "daemon offline — pausar/retomar exige o daemon rodando "
+            "(inicie com 'hefesto-dualsense4unix daemon start')"
+        )
+        raise typer.Exit(code=1)
+
+
+@daemon_app.command("pause")
+def daemon_pause() -> None:
+    """Pausa o despacho de input — o daemon segue vivo, mas para de afetar o sistema."""
+    _toggle_pause("daemon.pause", "pausado")
+
+
+@daemon_app.command("resume")
+def daemon_resume() -> None:
+    """Retoma o despacho de input previamente pausado."""
+    _toggle_pause("daemon.resume", "retomado")
+
+
+@daemon_app.command("disable")
+def daemon_disable() -> None:
+    """Desliga: para o daemon e desabilita o auto-start (mantém instalado)."""
+    from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
+
+    ServiceInstaller().disable()
+    typer.echo(
+        "daemon parado e auto-start desabilitado — religue com "
+        "'hefesto-dualsense4unix daemon enable'"
+    )
+
+
+@daemon_app.command("enable")
+def daemon_enable() -> None:
+    """Habilita o auto-start no boot e inicia o daemon."""
+    from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
+
+    ServiceInstaller().enable()
+    typer.echo("auto-start habilitado e daemon iniciado")
+
+
 def main() -> None:
     """Entry point declarado em pyproject.toml [project.scripts]."""
+    # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): inicializa locale ANTES do
+    # Typer parsear argv para que `--help` e mensagens de erro do nosso
+    # callback global respeitem `LANG=en_US.UTF-8` quando o usuário pedir.
+    from hefesto_dualsense4unix.utils.i18n import init_locale
+
+    init_locale()
     app()
 
 

@@ -1,0 +1,24 @@
+# BT-SNIFF-BORDA-01 (2026-07-24)
+#
+# Tira o Nintendo Pro Controller GENUÍNO do SNIFF no instante em que o link
+# nasce, em vez de esperar o próximo tick da vigia de saúde do Bluetooth.
+#
+# O `bt_active_mode.sh` já aplicava o no-sniff por-conexão, mas só a cada 2
+# minutos, apostando que isso "cobre reconexão sem precisar caçar a borda". A
+# aposta caiu ao vivo: o Pro voltou a desconectar, e a janela entre o connect e
+# o primeiro tick é justamente onde o link negocia sniff e cai sob carga
+# (rumble + IMU com vários jogadores).
+#
+# ESCOPO: só a OUI `e0:f6:b5`, do Pro genuíno. O 8BitDo clone
+# (`e4:17:d8`) PRECISA do sniff para completar a probe: sem ele a probe morre em
+# `Failed to get joycon info; ret=-110` (medido no A/B de 23/07). Por isso o
+# default do adaptador continua COM sniff e a recusa é por-link.
+#
+# O MAC vem do `HID_UNIQ`, que o kernel preenche com o endereço Bluetooth do
+# device HID remoto. O helper revalida a OUI antes de agir — a regra e o script
+# não podem discordar sobre quem recebe o tratamento.
+#
+# Reverter: remover este arquivo, `udevadm control --reload`, e devolver o link
+# com `hcitool lp <MAC> RSWITCH,HOLD,SNIFF,PARK`.
+ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="e0:f6:b5:*", RUN+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh $env{HID_UNIQ}"
+ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="E0:F6:B5:*", RUN+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh $env{HID_UNIQ}"

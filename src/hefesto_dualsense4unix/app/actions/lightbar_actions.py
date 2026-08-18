@@ -9,8 +9,101 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gtk
 
+from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.ipc_bridge import led_set, player_leds_set
+
+#: Aviso D4 (sprint cores-e-led-automaticos): cor única em "Todos" com o
+#: automático ligado seria INVISÍVEL (a paleta vence o global no merge do
+#: backend) — então o fluxo desliga o toggle e avisa, nunca em popup.
+_AVISO_D4 = "Cores automáticas desligadas para aplicar uma cor única"
+
+#: PLAYER-01 entrega 6: recusa do envio de desenho SEM destinatário. Quando a
+#: janela ainda não sabe quem está na mesa (nenhum tique do daemon), o pedido
+#: saía sem ``uniq`` e o daemon o gravava no default GLOBAL — uma camada ABAIXO
+#: da automática no merge por campo do backend (D5). O automático o desfazia no
+#: reforço seguinte, e era esse o "volta sozinho" que ela relatou. Recusar é a
+#: única resposta honesta: escrever numa camada que será sobrescrita é pior que
+#: não escrever, porque parece ter funcionado por meio segundo.
+_AVISO_SEM_DESTINATARIO = (
+    "ainda não sei quais controles estão na mesa — espere um instante e "
+    "tente de novo (mandar sem destinatário seria desfeito pela numeração "
+    "automática)"
+)
+
+#: PLAYER-01: desenho vazio = SEM opinião. Um ``player_leds`` todo apagado no
+#: perfil nunca chega ao hardware — a camada automática (o padrão do NÚMERO do
+#: controle) vence o default global no merge por campo, e um override por-MAC
+#: idêntico ao global é podado por ``with_controller_leds``. Então "tudo
+#: apagado no rascunho" significa, com certeza, "quem manda é o automático" —
+#: e é isso que a moldura passa a dizer, em vez de mostrar nada escolhido
+#: enquanto o controle exibe três luzes acesas.
+_DESENHO_VAZIO: tuple[bool, bool, bool, bool, bool] = (False,) * 5
+
+
+def nome_do_desenho(bits: tuple[bool, ...] | list[bool]) -> str | None:
+    """"desenho do P3" quando ``bits`` é um padrão canônico; ``None`` se não.
+
+    Os padrões vêm de ``core.led_control.player_led_pattern`` — a MESMA fonte
+    que o daemon usa para acender, para a janela nunca batizar de "P3" um
+    desenho que o hardware não chamaria assim. A varredura vai até 8 porque o
+    espaço de numeração é único entre DualSense, externos e co-op (R-24/R-25)
+    e um DualSense pode legitimamente cair no 5 ou acima.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_led_pattern
+
+    alvo = tuple(bool(b) for b in bits)
+    for numero in range(1, 9):
+        if tuple(player_led_pattern(numero)) == alvo:
+            return f"desenho do P{numero}"
+    return None
+
+
+def texto_do_desenho_aceso(
+    player_leds: tuple[bool, ...] | list[bool],
+    slot: int | None,
+    *,
+    coop_ligado: bool = False,
+    descricao_livre: str = "",
+) -> str:
+    """Frase da LEITURA DE VOLTA do desenho das 5 luzes (PLAYER-01 entrega 5).
+
+    Função PURA: a moldura só sabia mostrar o RASCUNHO, e a camada automática
+    nunca entra nele — num perfil recém-criado ela via "nada escolhido"
+    enquanto o controle exibia três luzes acesas. Aqui a janela responde a
+    pergunta que ela de fato faz olhando para o controle: *o que está aceso
+    agora, e por ordem de quem?*
+
+    As três respostas possíveis, na ordem em que o backend resolve:
+
+    1. **co-op ligado** — a camada de co-op sobrescreve o desenho ACIMA da
+       escolha manual, por construção. Com ele ativo, escolher desenho aqui
+       não adianta, e a tela diz isso em vez de deixá-la descobrir sozinha;
+    2. **escolha dela** — qualquer desenho não-vazio no rascunho vence a
+       camada automática por campo (D5), com as cores automáticas ligadas ou
+       desligadas;
+    3. **automático** — rascunho vazio: vale o desenho do NÚMERO do controle.
+       Sem número conhecido (registro ainda sem opinião), a frase diz apenas
+       que o automático manda, sem inventar um número.
+    """
+    if coop_ligado:
+        return (
+            "Aceso agora: o desenho do co-op — com o co-op ligado, é ele que "
+            "manda nas 5 luzes."
+        )
+    bits = tuple(bool(b) for b in player_leds)
+    if bits != _DESENHO_VAZIO:
+        nome = nome_do_desenho(bits) or descricao_livre or "desenho próprio"
+        return f"Aceso agora: {nome} — escolha sua."
+    if isinstance(slot, int) and slot >= 1:
+        return (
+            f"Aceso agora: desenho do P{slot} — automático, do número deste "
+            "controle."
+        )
+    return (
+        "Aceso agora: o desenho automático do número do controle (nenhuma "
+        "escolha sua)."
+    )
 
 
 class LightbarActionsMixin(WidgetAccessMixin):
@@ -24,12 +117,188 @@ class LightbarActionsMixin(WidgetAccessMixin):
     _pending_brightness: float = 1.0
     # Guard para bloquear o handler durante refresh programático do slider.
     _refresh_guard: bool = False
+    # BOTÃO-QUE-NÃO-MENTE-01 (entrega 1): houve movimento no controle
+    # deslizante de brilho que ainda NÃO foi escrito no hardware. Cada pixel de
+    # arraste apenas marca isto; quem escreve é o soltar. Sem a marca, um
+    # clique no trilho que não muda valor mandaria uma escrita à toa.
+    _brilho_pendente: bool = False
+    # Idempotência da fiação do "aplicar ao soltar": ``install_lightbar_tab``
+    # tem DOIS pontos de chamada em ``app.py`` (janela normal e janela que
+    # nasce oculta na bandeja). Conectar duas vezes o mesmo sinal mandaria duas
+    # escritas por gesto — o dobro de tráfego na fila que o adiamento existe
+    # para poupar.
+    _soltar_fiado: bool = False
+
+    def _uniqs_conectados(self) -> list[str]:
+        """MACs dos controles CONECTADOS, na ordem do índice (R-14).
+
+        Fonte: ``_target_uniq_by_index``, o mapa que a aba Status recalcula do
+        ``state_full`` a cada tick (só controles conectados entram). Controle
+        sem MAC estável (handle por path) fica de fora — para ele não existe
+        override por-controle, e a escrita dele continua sendo a global.
+
+        Lista vazia = a GUI ainda não sabe quem está na mesa (nenhum tick do
+        daemon, host parcial de teste). Os chamadores tratam isso como
+        "escopo desconhecido" e caem no caminho global de sempre, nunca em
+        broadcast disfarçado de por-controle.
+        """
+        mapa = getattr(self, "_target_uniq_by_index", None)
+        if not isinstance(mapa, dict):
+            return []
+        vistos: set[str] = set()
+        saida: list[str] = []
+        for _idx, uniq in sorted(mapa.items(), key=lambda kv: kv[0]):
+            if isinstance(uniq, str) and uniq and uniq not in vistos:
+                vistos.add(uniq)
+                saida.append(uniq)
+        return saida
+
+    def _edit_uniq(self) -> str | None:
+        """MAC do controle em edição (PERFIL-04); None = edição global.
+
+        Vem do seletor de alvo do banner (``StatusActionsMixin`` mantém
+        ``_edit_target_uniq`` em sync com o daemon). getattr defensivo: o
+        mixin pode ser instanciado sozinho em testes.
+        """
+        return getattr(self, "_edit_target_uniq", None)
+
+    def _auto_preview_slot(self) -> int | None:
+        """Slot do controle em edição QUANDO a prévia deve mostrar a cor
+        AUTOMÁTICA (achado ao vivo 2026-07-17).
+
+        Com "Cores automáticas por controle" LIGADO e um controle específico
+        selecionado no seletor do banner, o que ele EXIBE é a cor da paleta
+        (azul/vermelho...), não a cor manual global — mas a prévia mostrava a
+        manual (roxo), MENTINDO. O número vem do rótulo do alvo mantido pela
+        aba Status (``_edit_target_label`` = "Controle N — BT"). ``None`` =
+        mostrar a cor manual (automático desligado, ou alvo "Todos").
+        """
+        import re
+
+        draft = getattr(self, "draft", None)
+        if draft is None or not draft.leds.auto_player_colors:
+            return None
+        if self._edit_uniq() is None:
+            return None
+        label = getattr(self, "_edit_target_label", None)
+        if not isinstance(label, str):
+            return None
+        match = re.search(r"Controle\s+(\d+)", label)
+        return int(match.group(1)) if match else None
+
+    def _persist_leds_update(self, update: dict[str, Any]) -> bool:
+        """Grava campos de LEDs no draft — no GLOBAL ou no override do alvo.
+
+        PERFIL-04 (sprint perfis-por-controle): com um controle selecionado
+        no seletor do banner, a edição cai em ``draft.controllers[uniq].leds``
+        — semeada com o que está NA TELA (o efetivo do alvo), então mudar só
+        a cor preserva brilho/player-LEDs exibidos. É o que faz o "Salvar
+        Perfil" do rodapé persistir o ajuste DENTRO do perfil, por controle
+        ("configurei pro 1-BT, fica salvo pra ele dentro do meu perfil").
+
+        Em "Todos", seção global do draft — E o campo editado sai dos
+        overrides por-controle (fix HIGH do review 2026-07-16), espelhando a
+        regra que o backend aplica ao vivo: sem a limpeza, "mudei todos para
+        azul" + "Salvar Perfil" ressuscitava a cor antiga do alvo na próxima
+        ativação. Cor e brilho saem JUNTOS (formam um único campo — o RGB
+        pré-escalado — no estado desejado do backend).
+
+        COR-04 (semântica D4): COR (``lightbar_rgb``) editada em "Todos" com
+        o automático ligado também DESLIGA ``auto_player_colors`` no draft —
+        senão a cor única seria invisível (a paleta automática vence o global
+        no merge). Brilho NÃO dispara o D4 (o brilho escala a própria paleta
+        — D11). ONDA-U (U9): ``player_leds`` (clique manual de player-LED)
+        AGORA também dispara o D4 — antes só ``lightbar_rgb`` disparava, e a
+        paleta automática (COR-03) reescrevia o player-LED por cima no
+        próximo merge do backend, fazendo o clique manual parecer que "não
+        funciona". Devolve True quando o D4 desligou o automático AGORA (o
+        chamador compõe o aviso ``_AVISO_D4`` no toast — visível, nunca
+        popup); o checkbox da aba é sincronizado aqui mesmo, sob guard.
+
+        R-14 (auditoria 23/07) — o D4 vira EXCEÇÃO, não regra. Desligar
+        ``auto_player_colors`` é o martelo mais pesado que a aba tem: além da
+        paleta, o flag governava a numeração dos DualSense E a dos externos
+        (Pro Nintendo/8BitDo paravam de receber número), e o valor ainda ia
+        para o JSON do perfil — um clique de cor em "Todos" apagava a
+        identidade automática de todo mundo, para sempre. Com os controles
+        CONECTADOS conhecidos, o mesmo desejo ("esta cor/este padrão em todo
+        mundo") é expresso como OVERRIDE POR-MAC em cada um deles: override
+        vence a camada automática no merge por campo do backend (D5), então a
+        cor única aparece **sem** desligar nada e a numeração continua viva.
+        A ordem importa: os overrides são escritos ANTES de o global mudar,
+        porque ``with_controller_leds`` só guarda o que DIVERGE do global — se
+        o global já tivesse o valor novo, o override seria podado e a paleta
+        automática voltaria a vencer (a cor "não pegaria").
+
+        ABAS-02 (25/07) — a limpeza é do campo EDITADO, e só dele. Cor e brilho
+        saíam JUNTOS dos overrides (formam um único campo no estado desejado do
+        backend: o RGB pré-escalado), mas o brilho não tem alvo para re-semear
+        (ele não disputa com o automático, então ``alvos`` fica vazio neste
+        ramo). Efeito medido: com o alvo em "Todos", arrastar o controle de
+        brilho UM PIXEL apagava o campo de cor de TODOS os ajustes por controle
+        — Controle 1 azul e Controle 2 vermelho viravam nada — e o evento
+        dispara a cada movimento do arraste, então bastava encostar. Limpando
+        só o campo editado, o brilho global passa a valer em todo mundo (que é
+        o que "Todos" quer dizer) e a cor própria de cada controle sobrevive: a
+        emissão por campo de ``_controllers_to_ipc`` resolve o brilho do GLOBAL
+        quando o override fala só de cor, e o merge por campo do backend faz o
+        mesmo na ativação. A recíproca também melhora — editar a COR em "Todos"
+        deixa de apagar o brilho próprio de quem tem um.
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return False
+        uniq = self._edit_uniq()
+        if uniq is None:
+            campos: set[str] = set()
+            if "lightbar_rgb" in update:
+                campos.add("lightbar")
+            if "lightbar_brightness" in update:
+                campos.add("lightbar_brightness")
+            if "player_leds" in update:
+                campos.add("player_leds")
+            # Campos "de opinião" (cor e padrão de player-LED) são os que
+            # disputam com a camada automática; brilho apenas ESCALA a paleta
+            # (D11) e nunca disputou.
+            disputa_com_o_auto = "lightbar_rgb" in update or "player_leds" in update
+            alvos = self._uniqs_conectados() if disputa_com_o_auto else []
+            campos_update = dict(update)
+            d4_disparou = bool(
+                disputa_com_o_auto and draft.leds.auto_player_colors and not alvos
+            )
+            if d4_disparou:
+                # Escopo desconhecido (a GUI não sabe quem está conectado): sem
+                # alvo para o override, o único jeito de a cor única aparecer
+                # continua sendo desligar a paleta. Caminho degradado, honesto
+                # e avisado — nunca o caminho normal.
+                campos_update["auto_player_colors"] = False
+            if campos:
+                # Tira o valor VELHO de todos os overrides (inclusive dos
+                # desconectados, que ressuscitariam na próxima ativação).
+                draft = draft.with_override_fields_cleared("leds", campos)
+            for alvo in alvos:
+                base = draft.effective_leds_for(alvo)
+                draft = draft.with_controller_leds(
+                    alvo, base.model_copy(update=update)
+                )
+            new_leds = draft.leds.model_copy(update=campos_update)
+            draft = draft.model_copy(update={"leds": new_leds})
+            self.draft = draft
+            if d4_disparou:
+                self._sync_auto_checkbox(False)
+            return d4_disparou
+        base = draft.effective_leds_for(uniq)
+        self.draft = draft.with_controller_leds(uniq, base.model_copy(update=update))
+        return False
 
     def _refresh_lightbar_from_draft(self) -> None:
-        """Popula widgets da aba Lightbar a partir de self.draft.leds.
+        """Popula widgets da aba Lightbar a partir do draft.
 
-        Protegido por _refresh_guard para não disparar handlers de signal
-        durante a atualização programatica dos widgets.
+        PERFIL-04: exibe os LEDs EFETIVOS do alvo de edição atual — o
+        override por-controle quando existe (brilho incluso, lido do PERFIL,
+        não do backend), senão a seção global. Protegido por _refresh_guard
+        para não disparar handlers de signal durante a atualização
+        programatica dos widgets.
         """
         if self._refresh_guard:
             return
@@ -38,7 +307,13 @@ class LightbarActionsMixin(WidgetAccessMixin):
             return
         self._refresh_guard = True
         try:
-            leds = draft.leds
+            leds = draft.effective_leds_for(self._edit_uniq())
+            # COR-04: o checkbox "Cores automáticas por controle" reflete o
+            # GLOBAL do draft (campo do PERFIL), nunca o efetivo do alvo — um
+            # override por-controle não tem opinião sobre o toggle.
+            auto_check: Gtk.CheckButton = self._get("auto_player_colors_check")
+            if auto_check is not None:
+                auto_check.set_active(bool(draft.leds.auto_player_colors))
             # Cor RGB
             if leds.lightbar_rgb is not None:
                 r, g, b = leds.lightbar_rgb
@@ -51,6 +326,24 @@ class LightbarActionsMixin(WidgetAccessMixin):
                     rgba.blue = b / 255.0
                     rgba.alpha = 1.0
                     button.set_rgba(rgba)
+            # Prévia HONESTA (achado ao vivo): com automático ligado + um
+            # controle específico em edição, mostra a cor REAL da paleta desse
+            # controle (o brilho é aplicado no draw, como no caminho manual) —
+            # antes a prévia ficava roxa enquanto o controle estava azul.
+            auto_slot = self._auto_preview_slot()
+            if auto_slot is not None:
+                from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+                self._current_rgb = player_slot_color(auto_slot)
+                auto_btn: Gtk.ColorButton = self._get("lightbar_color_button")
+                if auto_btn is not None:
+                    ar, ag, ab = self._current_rgb
+                    auto_rgba = Gdk.RGBA()
+                    auto_rgba.red = ar / 255.0
+                    auto_rgba.green = ag / 255.0
+                    auto_rgba.blue = ab / 255.0
+                    auto_rgba.alpha = 1.0
+                    auto_btn.set_rgba(auto_rgba)
             # Brightness
             pct = float(leds.lightbar_brightness)
             self._current_brightness = pct / 100.0
@@ -63,12 +356,41 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 checkbox: Gtk.CheckButton = self._get(f"player_led_{i}")
                 if checkbox is not None:
                     checkbox.set_active(bool(state))
+            # PLAYER-01 entrega 5: leitura de volta do que está ACESO. Os
+            # checkboxes acima seguem sendo o RASCUNHO (e não podem virar o
+            # resolvido: "Aplicar o desenho" os lê, e congelar a numeração
+            # automática num override por-MAC seria o defeito que o R-14
+            # desfez). O estado resolvido vive neste rótulo.
+            self._atualizar_estado_das_luzes(leds.player_leds)
             # Repinta preview
             preview: Gtk.DrawingArea = self._get("lightbar_preview")
             if preview is not None:
                 preview.queue_draw()
         finally:
             self._refresh_guard = False
+
+    def _atualizar_estado_das_luzes(
+        self, player_leds: tuple[bool, ...] | list[bool]
+    ) -> None:
+        """Escreve no rótulo ``player_leds_estado`` o desenho ACESO (PLAYER-01).
+
+        O número do alvo (``_edit_target_slot``) e o estado do co-op
+        (``_coop_ligado``) são mantidos pela aba Status a partir do
+        ``state_full`` — ``getattr`` defensivo porque os mixins só convivem de
+        fato na instância composta, nunca isolados nos testes. Sem os dois, a
+        frase degrada para "o automático manda", que continua sendo verdade.
+        """
+        rotulo = self._get("player_leds_estado")
+        if rotulo is None:
+            return
+        rotulo.set_text(
+            texto_do_desenho_aceso(
+                player_leds,
+                getattr(self, "_edit_target_slot", None),
+                coop_ligado=bool(getattr(self, "_coop_ligado", False)),
+                descricao_livre=self._descreve_player_leds(list(player_leds)),
+            )
+        )
 
     def install_lightbar_tab(self) -> None:
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
@@ -85,6 +407,99 @@ class LightbarActionsMixin(WidgetAccessMixin):
             rgba.alpha = 1.0
             button.set_rgba(rgba)
             self._current_rgb = (255, 128, 0)
+        # COR-04: widgets do automático conectados em CÓDIGO (não pelo Glade)
+        # — o dict de ``_signal_handlers()`` vive em app.py, e a fiação aqui
+        # segue o precedente do install_triggers_tab (SegmentedSelector).
+        auto_check: Gtk.CheckButton = self._get("auto_player_colors_check")
+        if auto_check is not None:
+            auto_check.connect("toggled", self.on_auto_player_colors_toggled)
+        reset_target: Gtk.Button = self._get("lightbar_auto_reset_target")
+        if reset_target is not None:
+            reset_target.connect("clicked", self.on_lightbar_auto_reset_target)
+        reset_all: Gtk.Button = self._get("lightbar_auto_reset_all")
+        if reset_all is not None:
+            reset_all.connect("clicked", self.on_lightbar_auto_reset_all)
+        self._fiar_aplicar_ao_soltar()
+
+    def _fiar_aplicar_ao_soltar(self) -> None:
+        """Liga o "acende ao SOLTAR" da cor e do brilho (BOTÃO-QUE-NÃO-MENTE-01).
+
+        O defeito medido: escolher uma cor não acendia nada. O handler do
+        seletor gravava só no rascunho e o hardware só via a cor no SEGUNDO
+        clique, num botão trinta linhas de layout abaixo ("Aplicar no
+        controle"). Ela clicava, o controle não mudava, e concluía que a janela
+        era maquete. Estava funcionando — e não estava contando.
+
+        Adiar a escrita continua CERTO: aplicar a cada pixel de arraste do
+        controle deslizante saturaria a fila do rádio (por Bluetooth cada
+        escrita disputa a mesma fila dos relatórios de input, e são quatro
+        controles). O defeito nunca foi o adiamento: era o adiamento
+        SILENCIOSO. A cura mantém o adiamento e encurta a janela dele para um
+        gesto: escreve ao **soltar**, uma vez.
+
+        Os dois gestos, e por que cada sinal:
+
+        * **cor** — ``color-set`` do ``GtkColorButton`` já É o soltar: só
+          dispara quando ela confirma a cor no diálogo, nunca durante a
+          escolha. Um gesto, uma escrita;
+        * **brilho** — ``value-changed`` do ``GtkScale`` dispara a CADA pixel
+          do arraste, então ele continua sem tocar no hardware (só rascunho e
+          prévia) e quem escreve é ``button-release-event``. O
+          ``key-release-event`` cobre quem move o controle pelas setas do
+          teclado, que nunca solta botão de mouse nenhum.
+
+        A fiação é em CÓDIGO e não no glade de propósito: o dict de sinais do
+        ``app.py`` já leva ``color-set`` e ``value-changed`` aos handlers de
+        rascunho, e o Builder conecta ANTES desta instalação — a ordem garante
+        que o rascunho já esteja atualizado quando a escrita sai. É o mesmo
+        precedente do checkbox de cores automáticas acima.
+        """
+        if self._soltar_fiado:
+            return
+        botao_cor: Gtk.ColorButton = self._get("lightbar_color_button")
+        if botao_cor is not None:
+            botao_cor.connect("color-set", self._on_lightbar_cor_solta)
+        escala: Gtk.Scale = self._get("lightbar_brightness_scale")
+        if escala is not None:
+            escala.connect("button-release-event", self._on_lightbar_brilho_solto)
+            escala.connect("key-release-event", self._on_lightbar_brilho_solto)
+        self._soltar_fiado = True
+
+    def _on_lightbar_cor_solta(self, _botao: Any = None) -> None:
+        """Cor confirmada no diálogo -> acende no controle AGORA (entrega 1).
+
+        Roda depois do ``on_lightbar_color_set`` do Builder (ordem de conexão),
+        então ``_current_rgb`` e o rascunho já estão atualizados. Reusa o mesmo
+        caminho de escrita do botão "Aplicar no controle" — nada de rota
+        paralela, para a cor não passar a viajar por dois códigos diferentes
+        conforme quem a mandou.
+        """
+        if self._refresh_guard:
+            return
+        # O brilho da tela vai junto na mesma escrita (cor e brilho são um
+        # único campo no estado desejado do backend), então não fica pendente.
+        self._brilho_pendente = False
+        self._aplicar_cor_no_controle()
+
+    def _on_lightbar_brilho_solto(
+        self, _widget: Any = None, _evento: Any = None
+    ) -> bool:
+        """Soltou o controle deslizante de brilho -> UMA escrita (entrega 1).
+
+        Devolve ``False`` sempre: este handler observa o evento, não o consome.
+        Devolver ``True`` num ``button-release-event`` do ``GtkRange`` roubaria
+        o fim do arraste do próprio widget (o botão ficaria "preso").
+
+        Sem movimento pendente não há escrita: clicar no controle deslizante
+        sem mudar o valor não é um pedido de nada, e a fila do rádio é curta.
+        """
+        if self._refresh_guard:
+            return False
+        if not self._brilho_pendente:
+            return False
+        self._brilho_pendente = False
+        self._aplicar_cor_no_controle()
+        return False
 
     # --- signals lightbar ---
 
@@ -97,32 +512,100 @@ class LightbarActionsMixin(WidgetAccessMixin):
             int(rgba.green * 255),
             int(rgba.blue * 255),
         )
-        # Atualiza draft
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-
-            new_leds = draft.leds.model_copy(update={"lightbar_rgb": self._current_rgb})
-            self.draft = draft.model_copy(update={"leds": new_leds})
+        # Atualiza draft (global ou override do alvo — PERFIL-04). Em "Todos"
+        # com o automático ligado, o D4 desliga o toggle — aviso visível
+        # (COR-04; sem outro toast por cima: escolher cor não tem toast).
+        if self._persist_leds_update({"lightbar_rgb": self._current_rgb}):
+            self._toast_light(_AVISO_D4)
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
 
     def on_lightbar_apply(self, _btn: Gtk.Button) -> None:
-        ok = led_set(self._current_rgb, brightness=self._current_brightness)
+        """Botão "Aplicar no controle" — reenvia a cor da tela ao hardware.
+
+        Continua existindo depois da entrega 1 do BOTÃO-QUE-NÃO-MENTE-01 (a
+        cor já acende ao soltar o seletor): é o reenvio explícito, útil depois
+        de reconectar um controle ou trocar de alvo no seletor do banner, e é
+        o botão que os textos da tela citam. Um único caminho de escrita para
+        os dois gestos — ``_aplicar_cor_no_controle``.
+        """
+        self._aplicar_cor_no_controle()
+
+    def _aplicar_cor_no_controle(self) -> bool:
+        """Envia a cor da tela ao hardware. Devolve True quando todos aceitaram.
+
+        CAMINHO ÚNICO de escrita da cor: o botão "Aplicar no controle" e o
+        aplicar-ao-soltar (cor e brilho) entram os dois por aqui. Duplicar a
+        rota faria a cor viajar por códigos diferentes conforme o gesto — e as
+        regras abaixo (R-14, COR-04, PERFIL-05) valem para os dois.
+
+        R-14 (auditoria 23/07): em "Todos" com os controles CONECTADOS
+        conhecidos, a cor vai por MAC para cada um (``led.set`` com ``uniq``)
+        — o override por-uniq vence a camada automática no merge por campo do
+        backend (D5), então a cor única aparece sem desligar a paleta (e sem
+        levar junto a numeração e os externos, que o mesmo flag governava).
+
+        COR-04 (caminho degradado, só quando a GUI ainda não sabe quem está
+        conectado): a cor viaja JUNTO com o toggle do automático num único
+        ``profile.apply_draft`` parcial (seção ``leds``) — o ``led.set``
+        clássico gravaria só o default e a paleta automática venceria no
+        próximo reassert ("apliquei e voltou colorido"). Com um controle
+        selecionado (ou sem draft — hosts parciais de teste), o fluxo
+        por-controle clássico permanece: ``led.set`` respeita o alvo do
+        seletor e não mexe no toggle.
+        """
         pct = round(self._current_brightness * 100)
-        self._toast_light(
-            f"Cor RGB {self._current_rgb} a {pct}% aplicada"
+        draft = getattr(self, "draft", None)
+        d4_disparou = False
+        alvos = self._uniqs_conectados() if self._edit_uniq() is None else []
+        if self._edit_uniq() is None and alvos:
+            ok = self._enviar_led_em_todos(
+                self._current_rgb, self._current_brightness, alvos
+            )
+        elif self._edit_uniq() is None and draft is not None:
+            d4_disparou = self._d4_disable_auto_for_single_color()
+            ok = ipc_bridge.apply_draft(
+                {
+                    "leds": {
+                        "lightbar_rgb": list(self._current_rgb),
+                        "lightbar_brightness": self._current_brightness,
+                        "auto_player_colors": self.draft.leds.auto_player_colors,
+                    }
+                }
+            )
+        else:
+            # PERFIL-05 (22/07): com um controle selecionado, o MAC viaja no
+            # pedido — o daemon aplica SÓ nele (antes: caminho por índice que
+            # caía em broadcast quando desalinhava).
+            ok = led_set(
+                self._current_rgb,
+                brightness=self._current_brightness,
+                uniq=self._edit_uniq(),
+            )
+        msg = (
+            f"Cor aplicada no controle ({pct}% de brilho)"
             if ok
-            else "Falha (daemon offline?)"
+            else "não consegui aplicar a cor — o Hefesto pode estar desligado "
+            "(ligue na aba Sistema)"
         )
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
+        return bool(ok)
 
     def on_lightbar_brightness_changed(self, scale: Gtk.Scale) -> None:
-        """Slider 0-100 (%) -> atualiza luminosidade corrente e repinta prévia.
+        """Controle deslizante 0-100 (%) -> luminosidade corrente e prévia.
 
-        Não aplica no hardware automaticamente; o usuário confirma via botao
-        "Aplicar no controle". Assim evitamos flood de IPC durante arrasto.
-        Guard _refresh_guard previne loop quando _refresh_lightbar_from_state
-        atualiza o slider programaticamente (FEAT-LED-BRIGHTNESS-03).
+        NÃO escreve no hardware: este sinal dispara a cada pixel do arraste, e
+        uma escrita por pixel saturaria a fila do rádio (por Bluetooth ela
+        disputa com os relatórios de input do próprio controle). O que o
+        movimento faz é marcar ``_brilho_pendente``; quem escreve, uma vez só,
+        é o soltar (``_on_lightbar_brilho_solto`` — BOTÃO-QUE-NÃO-MENTE-01
+        entrega 1). O guard ``_refresh_guard`` previne o laço quando
+        ``_refresh_lightbar_from_draft`` move o controle programaticamente
+        (FEAT-LED-BRIGHTNESS-03) — e é por isso que a marca de pendente fica
+        DEPOIS dele: repovoar a aba não é gesto dela, e não pode virar escrita.
         """
         if self._refresh_guard:
             return
@@ -131,14 +614,10 @@ class LightbarActionsMixin(WidgetAccessMixin):
         pct = max(0.0, min(100.0, raw))
         self._current_brightness = pct / 100.0
         self._pending_brightness = self._current_brightness
-        # Atualiza draft com novo valor de brightness.
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-
-            new_leds = draft.leds.model_copy(
-                update={"lightbar_brightness": round(pct)}
-            )
-            self.draft = draft.model_copy(update={"leds": new_leds})
+        # Atualiza draft com novo valor de brightness (global ou override do
+        # alvo — PERFIL-04).
+        self._persist_leds_update({"lightbar_brightness": round(pct)})
+        self._brilho_pendente = True
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
@@ -153,39 +632,226 @@ class LightbarActionsMixin(WidgetAccessMixin):
         button: Gtk.ColorButton = self._get("lightbar_color_button")
         if button is not None:
             button.set_rgba(rgba)
+        # B2: espelha a cor preta no draft (mesmo mecanismo de
+        # on_lightbar_color_set). Sem isso, "Apagar" + "Salvar Perfil" gravava a
+        # cor antiga e revisitar a aba repintava a cor anterior.
+        # COR-04 (D4): apagar é aplicar a cor única preta — em "Todos" com o
+        # automático ligado, o toggle desliga (senão a paleta reacenderia por
+        # cima no próximo reassert) e o preto viaja com o toggle num único
+        # apply_draft parcial, como no on_lightbar_apply.
+        d4_disparou = self._persist_leds_update({"lightbar_rgb": self._current_rgb})
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
-        ok = led_set((0, 0, 0))
-        self._toast_light("Lightbar apagada" if ok else "Falha (daemon offline?)")
+        draft = getattr(self, "draft", None)
+        alvos = self._uniqs_conectados() if self._edit_uniq() is None else []
+        if self._edit_uniq() is None and alvos:
+            # R-14: apagar é aplicar a cor única preta — mesma rota por-MAC do
+            # "Aplicar", sem desligar a paleta automática de ninguém.
+            ok = self._enviar_led_em_todos((0, 0, 0), None, alvos)
+        elif self._edit_uniq() is None and draft is not None:
+            ok = ipc_bridge.apply_draft(
+                {
+                    "leds": {
+                        "lightbar_rgb": [0, 0, 0],
+                        "auto_player_colors": draft.leds.auto_player_colors,
+                    }
+                }
+            )
+        else:
+            # R-17 (auditoria 23/07): o "Apagar" era o ÚNICO output da GUI que
+            # não mandava o `uniq` do alvo — o "Aplicar" logo ao lado manda. Sem
+            # ele o pedido cai na rota GLOBAL (broadcast) que o PERFIL-05
+            # abandonou: apagava a lightbar dos QUATRO controles quando ela
+            # pediu para apagar a de UM, e ainda derrubava o override por-MAC
+            # dos outros.
+            ok = led_set((0, 0, 0), uniq=self._edit_uniq())
+        msg = "Lightbar apagada" if ok else "Falha (daemon offline?)"
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
 
-    # --- refresh de estado ---
+    # --- signals cores automáticas por controle (COR-04) ---
 
-    def _refresh_lightbar_from_state(self, state_full: dict) -> None:  # type: ignore[type-arg]
-        """Atualiza o slider de brightness a partir do state_full do daemon.
+    def on_auto_player_colors_toggled(self, checkbox: Gtk.CheckButton) -> None:
+        """Checkbox "Cores automáticas por controle" → ``draft.leds``.
 
-        Lê ``state_full['leds']['lightbar_brightness']`` (float 0.0-1.0).
-        Se ausente ou perfil antigo sem o campo, usa default 1.0 (sem dimming).
-        Guard _refresh_guard ativo durante a atualização programática do slider
-        para evitar que on_lightbar_brightness_changed dispare IPC loop.
+        Campo do PERFIL: grava SEMPRE na seção GLOBAL do draft, mesmo com um
+        controle selecionado no seletor (um override por-controle não tem
+        opinião sobre o toggle — regra do schema). Persiste no "Salvar
+        Perfil" (``to_profile``) e viaja no "Aplicar" (``to_ipc_dict``).
+        RELIGAR o automático NÃO apaga cores explícitas por-controle: elas
+        continuam vencendo onde existirem (merge do backend, D5) — quem as
+        remove são os botões "Voltar ao automático".
         """
-        leds = state_full.get("leds") or {}
-        raw = leds.get("lightbar_brightness", 1.0)
+        if self._refresh_guard:
+            return
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        ativo = bool(checkbox.get_active())
+        if bool(draft.leds.auto_player_colors) == ativo:
+            return  # sem mudança real (eco de set_active programático)
+        self.draft = draft.model_copy(
+            update={
+                "leds": draft.leds.model_copy(update={"auto_player_colors": ativo})
+            }
+        )
+        if ativo:
+            self._toast_light(
+                "Cores automáticas ligadas — cores escolhidas por controle "
+                "continuam valendo onde existirem"
+            )
+        else:
+            self._toast_light(
+                "Cores automáticas desligadas — vale a cor única do perfil"
+            )
+
+    def on_lightbar_auto_reset_target(self, _btn: Gtk.Button) -> None:
+        """"Voltar ao automático" — remove a cor explícita do ALVO selecionado.
+
+        Só a cor (``lightbar`` + ``lightbar_brightness``, que formam UM campo
+        no backend) sai do override do controle; player-LEDs e gatilhos
+        próprios ficam. A automática volta a valer nele no próximo Aplicar
+        (ou na próxima ativação do perfil salvo). Com o alvo em "Todos" não
+        há controle selecionado: orienta pelo toast, sem popup.
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        uniq = self._edit_uniq()
+        if uniq is None:
+            self._toast_light(
+                'Sem um controle escolhido, use o botão '
+                '"Voltar todos ao automático".'
+            )
+            return
+        self.draft = draft.with_controller_fields_cleared(
+            uniq, "leds", {"lightbar", "lightbar_brightness"}
+        )
+        self._refresh_lightbar_from_draft()
+        if self.draft.leds.auto_player_colors:
+            self._toast_light(
+                "Cor própria removida — a cor automática volta a valer "
+                "neste controle no próximo Aplicar"
+            )
+        else:
+            self._toast_light(
+                'Cor própria removida — ligue "Cores automáticas por '
+                'controle" para valer a paleta'
+            )
+
+    def on_lightbar_auto_reset_all(self, _btn: Gtk.Button) -> None:
+        """"Voltar todos ao automático" — limpa as cores explícitas e religa o auto.
+
+        Remove ``lightbar``/``lightbar_brightness`` de TODOS os overrides
+        por-controle do draft (player-LEDs e gatilhos explícitos ficam) e
+        religa ``auto_player_colors`` — a paleta automática volta a valer em
+        todo mundo no próximo Aplicar/Salvar.
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        novo = draft.with_override_fields_cleared(
+            "leds", {"lightbar", "lightbar_brightness"}
+        )
+        novo = novo.model_copy(
+            update={"leds": novo.leds.model_copy(update={"auto_player_colors": True})}
+        )
+        self.draft = novo
+        self._refresh_lightbar_from_draft()
+        self._toast_light(
+            "Cores automáticas religadas para todos os controles — aplique "
+            "ou salve o perfil para valer"
+        )
+
+    def _enviar_led_em_todos(
+        self,
+        rgb: tuple[int, int, int],
+        brightness: float | None,
+        alvos: list[str],
+    ) -> bool:
+        """``led.set`` por MAC em cada controle conectado (R-14).
+
+        "Todos" deixa de ser um broadcast sem dono: cada controle recebe o
+        pedido com o próprio ``uniq``, e o daemon grava override por-uniq
+        (``_record_desired_locked`` com alvo) em vez de escrever o default
+        global e limpar os overrides. É o que faz a cor única vencer a paleta
+        automática SEM desligar o automático — e é a mesma disciplina do
+        R-17 ("todo output da GUI leva ``uniq``").
+
+        Sucesso só quando TODOS aceitaram: um controle que ficou de fora é
+        falha visível, não silêncio. Sem curto-circuito — o `and` preguiçoso
+        pularia os controles seguintes na primeira falha.
+        """
+        resultados = [
+            bool(led_set(rgb, brightness=brightness, uniq=alvo)) for alvo in alvos
+        ]
+        return all(resultados)
+
+    def _enviar_player_leds(
+        self, bits: tuple[bool, bool, bool, bool, bool]
+    ) -> tuple[bool, str | None]:
+        """Envia o desenho das 5 luzes ao alvo certo (R-14/R-17/PLAYER-01).
+
+        Devolve ``(ok, motivo)``: ``motivo`` preenchido é uma recusa NOSSA,
+        com explicação própria — o chamador a mostra em vez da frase genérica
+        "o Hefesto pode estar desligado", que mandaria a usuária caçar o
+        problema no lugar errado.
+
+        Alvo selecionado → só ele. "Todos" com os conectados conhecidos → um
+        pedido POR MAC (override por-uniq vence a numeração automática no
+        merge do backend; era o que o desligar-o-flag do U9 tentava obter
+        pelo caminho destrutivo).
+
+        PLAYER-01 entrega 6 — "Todos" SEM saber quem está conectado deixou de
+        cair na rota global. O pedido sem ``uniq`` era gravado pelo daemon no
+        default GLOBAL, que fica ABAIXO da camada automática no merge por
+        campo (D5): o próximo reforço do automático o desfazia, e a escolha
+        dela "voltava sozinha". Era um sucesso mentiroso — o IPC respondia
+        ``ok``, o toast dizia que aplicou, e meio segundo depois o controle
+        voltava ao desenho anterior. Recusar com motivo é a única resposta
+        honesta; o mapa de conectados chega no próximo tique do daemon e o
+        clique seguinte funciona.
+        """
+        uniq = self._edit_uniq()
+        if uniq is not None:
+            return bool(player_leds_set(bits, uniq=uniq)), None
+        alvos = self._uniqs_conectados()
+        if not alvos:
+            return False, _AVISO_SEM_DESTINATARIO
+        resultados = [bool(player_leds_set(bits, uniq=alvo)) for alvo in alvos]
+        return all(resultados), None
+
+    def _d4_disable_auto_for_single_color(self) -> bool:
+        """D4 fora do ``_persist_leds_update``: desliga o auto no draft.
+
+        Usado pelos caminhos que APLICAM a cor da tela sem editá-la
+        (``on_lightbar_apply``): religou o automático e clicou "Aplicar no
+        controle" em "Todos" → o toggle desliga aqui, e o chamador compõe o
+        ``_AVISO_D4`` no toast do resultado. Devolve True quando desligou
+        AGORA; False se já estava desligado (ou sem draft).
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None or not draft.leds.auto_player_colors:
+            return False
+        self.draft = draft.model_copy(
+            update={"leds": draft.leds.model_copy(update={"auto_player_colors": False})}
+        )
+        self._sync_auto_checkbox(False)
+        return True
+
+    def _sync_auto_checkbox(self, active: bool) -> None:
+        """Reflete ``active`` no checkbox SEM disparar o handler (guard)."""
+        check: Gtk.CheckButton = self._get("auto_player_colors_check")
+        if check is None:
+            return
+        prev = self._refresh_guard
+        self._refresh_guard = True
         try:
-            level = float(raw)
-        except (TypeError, ValueError):
-            level = 1.0
-        level = max(0.0, min(1.0, level))
-        pct = level * 100.0
-        self._current_brightness = level
-        self._pending_brightness = level
-        scale: Gtk.Scale = self._get("lightbar_brightness_scale")
-        if scale is not None:
-            self._refresh_guard = True
-            try:
-                scale.set_value(pct)
-            finally:
-                self._refresh_guard = False
+            check.set_active(active)
+        finally:
+            self._refresh_guard = prev
 
     # --- signals player leds ---
 
@@ -197,6 +863,14 @@ class LightbarActionsMixin(WidgetAccessMixin):
 
     def on_player_leds_preset_p2(self, _btn: Gtk.Button) -> None:
         self._set_player_leds([False, True, False, True, False])
+
+    def on_player_leds_preset_p3(self, _btn: Gtk.Button) -> None:
+        # FEAT-COOP-PLAYER-LED-01: padrões canônicos P3/P4 (os mesmos que o
+        # co-op local aplica por controle) também disponíveis como preset.
+        self._set_player_leds([True, False, True, False, True])
+
+    def on_player_leds_preset_p4(self, _btn: Gtk.Button) -> None:
+        self._set_player_leds([True, True, False, True, True])
 
     def on_player_leds_preset_none(self, _btn: Gtk.Button) -> None:
         self._set_player_leds([False] * 5)
@@ -214,17 +888,21 @@ class LightbarActionsMixin(WidgetAccessMixin):
             return
         bits = self.get_current_player_leds()
         # Atualiza draft — mantém consistência com on_player_led_toggled.
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-            new_leds = draft.leds.model_copy(update={"player_leds": bits})
-            self.draft = draft.model_copy(update={"leds": new_leds})
-        ok = player_leds_set(bits)
-        label = " ".join("x" if b else "-" for b in bits)
-        self._toast_light(
-            f"Player LEDs aplicados: {label}"
+        # ONDA-U (U9): player-LEDs em "Todos" com o automático ligado também
+        # dispara o D4 (mesma composição de toast do on_lightbar_apply).
+        d4_disparou = self._persist_leds_update({"player_leds": bits})
+        ok, motivo = self._enviar_player_leds(bits)
+        descricao = self._descreve_player_leds(bits)
+        msg = (
+            f"Desenho das luzes aplicado — {descricao}"
             if ok
-            else f"Player LEDs: {label} (daemon offline?)"
+            else motivo
+            or "não consegui aplicar o desenho das luzes — o Hefesto pode "
+            "estar desligado (ligue na aba Sistema)"
         )
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
 
     def on_player_led_toggled(self, _checkbox: Gtk.CheckButton) -> None:
         """Sinal de toggle de qualquer checkbox de player LED.
@@ -238,17 +916,21 @@ class LightbarActionsMixin(WidgetAccessMixin):
         if getattr(self, "_player_leds_batch_guard", False):
             return
         bits = self.get_current_player_leds()
-        # Atualiza draft
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-
-            new_leds = draft.leds.model_copy(update={"player_leds": bits})
-            self.draft = draft.model_copy(update={"leds": new_leds})
-        ok = player_leds_set(bits)
-        label = " ".join("x" if b else "-" for b in bits)
-        self._toast_light(
-            f"Player LEDs: {label}" if ok else f"Player LEDs: {label} (daemon offline?)"
+        # Atualiza draft (global ou override do alvo — PERFIL-04)
+        # ONDA-U (U9): idem — player-LEDs em "Todos" com auto ligado dispara D4.
+        d4_disparou = self._persist_leds_update({"player_leds": bits})
+        ok, motivo = self._enviar_player_leds(bits)
+        descricao = self._descreve_player_leds(bits)
+        msg = (
+            f"Desenho das luzes atualizado — {descricao}"
+            if ok
+            else motivo
+            or "não consegui atualizar o desenho das luzes — o Hefesto pode "
+            "estar desligado (ligue na aba Sistema)"
         )
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
 
     # --- helpers ---
 
@@ -270,17 +952,25 @@ class LightbarActionsMixin(WidgetAccessMixin):
         bits: tuple[bool, bool, bool, bool, bool] = (
             pattern[0], pattern[1], pattern[2], pattern[3], pattern[4]
         )
-        # Atualiza draft
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-
-            new_leds = draft.leds.model_copy(update={"player_leds": bits})
-            self.draft = draft.model_copy(update={"leds": new_leds})
-        ok = player_leds_set(bits)
-        label = " ".join("x" if s else "-" for s in pattern)
-        self._toast_light(
-            f"Player LEDs: {label}" if ok else f"Player LEDs: {label} (daemon offline?)"
+        # Atualiza draft (global ou override do alvo — PERFIL-04)
+        # ONDA-U (U9): presets também disparam o D4 em "Todos" com auto ligado.
+        d4_disparou = self._persist_leds_update({"player_leds": bits})
+        ok, motivo = self._enviar_player_leds(bits)
+        descricao = self._descreve_player_leds(pattern)
+        msg = (
+            f"Desenho das luzes atualizado — {descricao}"
+            if ok
+            else motivo
+            or "não consegui atualizar o desenho das luzes — o Hefesto pode "
+            "estar desligado (ligue na aba Sistema)"
         )
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
+        # PLAYER-01: o rótulo de leitura de volta acompanha o preset na hora —
+        # o `_refresh_lightbar_from_draft` não roda neste caminho (ele é o
+        # sentido inverso: draft → widgets).
+        self._atualizar_estado_das_luzes(bits)
 
     def get_current_player_leds(self) -> tuple[bool, bool, bool, bool, bool]:
         states: list[bool] = []
@@ -288,6 +978,20 @@ class LightbarActionsMixin(WidgetAccessMixin):
             checkbox: Gtk.CheckButton = self._get(f"player_led_{i}")
             states.append(bool(checkbox.get_active()) if checkbox is not None else False)
         return (states[0], states[1], states[2], states[3], states[4])
+
+    @staticmethod
+    def _descreve_player_leds(bits: list[bool] | tuple[bool, ...]) -> str:
+        """Padrão dos LEDs de jogador em palavras (LB-03).
+
+        Troca a antiga notação "x - - - -" (parecia depuração) por texto que
+        casa com os rótulos "LED 1".."LED 5" das caixas: "LEDs acesos: 1 e 3".
+        """
+        acesos = [str(i) for i, ligado in enumerate(bits, start=1) if ligado]
+        if not acesos:
+            return "todos os LEDs apagados"
+        if len(acesos) == 1:
+            return f"LED aceso: {acesos[0]}"
+        return "LEDs acesos: " + ", ".join(acesos[:-1]) + " e " + acesos[-1]
 
     def _on_lightbar_preview_draw(
         self, widget: Gtk.DrawingArea, cairo_ctx: Any
@@ -307,8 +1011,4 @@ class LightbarActionsMixin(WidgetAccessMixin):
         return False
 
     def _toast_light(self, msg: str) -> None:
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id("light")
-        bar.push(ctx_id, msg)
+        self._status_toast("light", msg)
