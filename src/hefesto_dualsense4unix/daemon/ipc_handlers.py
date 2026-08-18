@@ -4081,6 +4081,14 @@ class IpcHandlersMixin:
         if not callable(setter):
             raise ValueError("backend sem suporte a mudo de microfone")
         ok = bool(setter(muted, uniq=uniq))
+        if ok:
+            # PERFIL-GUARDA-O-MIC-01 (18/08/2026), exceção MIC-GRAVACAO-01: o
+            # mudo do microfone passa a ARMAR a trava manual de áudio, como o
+            # `speaker.set` já fazia. Sem isto, o perfil sendo reaplicado pelo
+            # autoswitch a cada troca de janela desfaria, em silêncio, o mudo
+            # que ela acabou de pedir — e é o mudo do microfone dela no meio de
+            # uma gravação. A trava é o registro de um gesto DELA.
+            self._marcar_audio_manual()
         estado: Any = None
         leitor = getattr(self.controller, "audio_status_for", None)
         if callable(leitor):
@@ -4149,6 +4157,11 @@ class IpcHandlersMixin:
         if not fonte:
             return {"status": "sem_fonte", "fonte": None, "volume": None}
         ok = definir_volume_da_captura(volume, fonte=fonte)
+        if ok:
+            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): idem `mic.set` e
+            # `speaker.set` — ajuste MANUAL dela não pode ser pisado pelo
+            # perfil reaplicado na próxima troca de janela.
+            self._marcar_audio_manual()
         # O que volta é a LEITURA, não o que mandamos: guardar o valor mandado
         # como se fosse leitura é o hábito que fez esta tela parecer mentirosa.
         return {

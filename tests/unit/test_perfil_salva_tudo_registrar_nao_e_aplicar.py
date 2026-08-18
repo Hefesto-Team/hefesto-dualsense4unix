@@ -219,6 +219,17 @@ def test_cada_gesto_continua_chamando_o_escritor() -> None:
         (CARD_PY, "_on_canal_do_speaker_mudou"): "_confirmado_pelo_daemon",
         (CARD_PY, "_on_speaker_devolucao_clicada"): "_confirmado_pelo_daemon",
         (CARD_PY, "_confirmado_pelo_daemon"): "registrar_alto_falante_no_rascunho",
+        # PERFIL-GUARDA-O-MIC-01 (18/08/2026): os DOIS gestos do bloco
+        # "Microfone" que viram perfil — o controle deslizante do volume da
+        # captura e o botão Silenciar/Ativar/Liberar. Até este dia os dois
+        # passavam `lambda _ok: False` ao `run_in_thread`: o pedido ia ao vivo
+        # e nada era anotado, e por isso **nenhum dos 18 perfis dela tinha a
+        # seção `mic`** — medido no mesmo dia. Apagar qualquer uma destas
+        # chamadas devolve o defeito inteiro: ela ajusta o microfone, salva o
+        # perfil, e na sessão seguinte não há o que lembrar.
+        (CARD_PY, "_enviar_volume_do_mic"): "_mic_confirmado_pelo_daemon",
+        (CARD_PY, "_on_mic_clicado"): "_mic_confirmado_pelo_daemon",
+        (CARD_PY, "_mic_confirmado_pelo_daemon"): "registrar_microfone_no_rascunho",
     }
     for (caminho, gesto), elos in esperado.items():
         chamados = _nomes_chamados(_funcao(caminho, gesto))

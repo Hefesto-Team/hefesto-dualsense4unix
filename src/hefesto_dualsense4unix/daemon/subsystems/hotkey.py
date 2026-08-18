@@ -133,6 +133,11 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             # de perfil, que limpa as categorias travadas (inclusive `audio`) e
             # portanto aplica o volume do perfil que entra.
             speaker_applier=getattr(daemon, "apply_profile_speaker", None),
+            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): o ciclo PS+D-pad é gesto MANUAL dela, e
+            # `origin="manual"` é o ÚNICO caminho por onde o `mic.muted` do
+            # perfil atravessa (MIC-GRAVACAO-01) — o mudo do firmware só muda
+            # quando ela troca de perfil de propósito.
+            mic_applier=getattr(daemon, "apply_profile_mic", None),
         )
         profiles = await daemon._run_blocking(manager.list_profiles)
         if len(profiles) < 2:

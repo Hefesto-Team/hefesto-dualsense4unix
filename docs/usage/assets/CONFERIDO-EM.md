@@ -25,3 +25,4 @@ portão volta ao verde e fica escrito quem conferiu, quando, e contra qual commi
 | data | commit do código conferido | resultado |
 |---|---|---|
 | 15/08/2026 | `9441678` — a numeração dos jogadores | **10 abas, todas idênticas.** O commit mexeu na fonte do número do jogador (`coop.py`, `ipc_handlers.py`), que é dado e não desenho: nenhum pixel mudou. Conferido rodando `retratar_abas.py` e comparando com `git status docs/usage/assets/` — zero arquivos diferentes. |
+| 18/08/2026 | `afe9ba7` — o rodapé que saía pela borda, mais a leva do microfone no perfil e a guarda do foco errante | **10 abas, todas idênticas.** O commit de ontem mexeu no orçamento de altura do rodapé (`controller_card.py`, `main.glade`) e a leva de hoje acrescentou o escritor do microfone no rascunho (`controller_card.py`, `draft_config.py`) — dado e fiação, não desenho. Conferido rodando `retratar_abas.py`: `git status docs/usage/assets/` voltou vazio, zero arquivos diferentes. |

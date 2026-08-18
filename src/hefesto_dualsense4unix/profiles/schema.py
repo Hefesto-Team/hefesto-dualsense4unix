@@ -410,9 +410,30 @@ class ProfileMicConfig(BaseModel):
 
     **Os dois campos são opcionais, e `None` é "sem opinião".** É o mesmo
     contrato do `mouse` e do `speaker`, e ele importa aqui pelo motivo de
-    sempre: um perfil que não pediu nada não pode tomar a posse do volume do
-    microfone ao ser ativado. A queixa que originou essa regra — *"a config que
-    eu deixo nunca é respeitada"* — vale nos dois sentidos.
+    sempre: um perfil que não pediu nada não pode impor nada. A queixa que
+    originou essa regra — *"a config que eu deixo nunca é respeitada"* — vale
+    nos dois sentidos.
+
+    **ATIVAR UM PERFIL APLICA O MICROFONE (18/08/2026).** Esta docstring dizia
+    que a seção era só lembrança, e que ativar o perfil não tocava no
+    microfone. Isso caducou, e foi ELA quem o derrubou: *"informação de
+    microfone e som, touch, acelerômetro, giroscópio e afins. cara, temos que
+    salvar isso no perfil sempre"* — e, sobre o contrato antigo: *"isso é
+    informação antiga. o sistema de perfis não funcionava, mas acho que não vem
+    ao caso, até pq na época não tinhamos microfone dentro do sistema de
+    perfis."* Quem aplica é `ProfileManager.apply_mic`.
+
+    **A EXCEÇÃO NOMEADA, MIC-GRAVACAO-01.** Os dois campos NÃO custam a mesma
+    coisa, e por isso não atravessam pelos mesmos caminhos:
+
+    - `volume` aplica em TODA ativação (respeitada a trava manual de áudio):
+      ele é o ganho da fonte no PipeWire e não apaga luz nenhuma;
+    - `muted` só aplica em troca EXPLÍCITA de perfil (`origin="manual"` — ela
+      escolhendo na GUI/CLI ou no PS+D-pad). Ele é o mudo do FIRMWARE, o mesmo
+      que apaga o LED vermelho, e há decisão medida proibindo o perfil de
+      apagá-lo como COLATERAL (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01). Sem
+      essa separação, abrir um jogo durante uma gravação roubaria o mudo dela:
+      o perfil do jogo limpa a trava manual ao entrar.
 
     **`volume` é do CAMINHO, não do firmware.** Ele é o volume da fonte de
     captura no sistema (o source do PipeWire), e por isso funciona igual no cabo
@@ -429,10 +450,12 @@ class ProfileMicConfig(BaseModel):
 
     button_toggles_system: bool
     #: Volume da captura, em por cento. `None` = o perfil não tem opinião e
-    #: ativá-lo não toca no volume do microfone.
+    #: ativá-lo não toca no volume do microfone; com número, ativar APLICA.
     volume: int | None = Field(default=None, ge=0, le=100)
     #: Mudo do microfone. `None` = sem opinião. Ver o bloco acima: quem
-    #: responde por ele é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho.
+    #: responde por ele é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho
+    #: — e por isso ele só atravessa a troca EXPLÍCITA de perfil
+    #: (MIC-GRAVACAO-01).
     muted: bool | None = None
 
 
@@ -441,7 +464,9 @@ class ProfileSpeakerConfig(BaseModel):
 
     Aditiva ao schema v1 (sem bump de versão), mesmo contrato do `mouse` e do
     `mic`: perfil SEM a seção não tem opinião e ativá-lo **não toca no volume
-    e não toma a posse** dos bytes de áudio do report de saída. Tomar posse
+    e não toma a posse** dos bytes de áudio do report de saída. (A frase vale
+    para a AUSÊNCIA da seção nos três. Perfil COM seção aplica — inclusive o
+    `mic`, desde 18/08/2026.) Tomar posse
     por um perfil que não pediu nada é exatamente o hábito que produziu a
     queixa "a config que eu deixo nunca é respeitada".
 

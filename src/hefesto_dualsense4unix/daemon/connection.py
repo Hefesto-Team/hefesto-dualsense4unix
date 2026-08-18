@@ -290,6 +290,12 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         # chama o applier), então nenhum boot passa a tomar a posse do áudio
         # por causa desta linha.
         speaker_applier=getattr(daemon, "apply_profile_speaker", None),
+        # PERFIL-GUARDA-O-MIC-01 (18/08/2026): o volume do microfone no restauro de boot, pela
+        # MESMA razão do alto-falante — ele não tem flag persistido próprio e o
+        # perfil é a única fonte para restaurá-lo. O `muted` NÃO entra por aqui:
+        # o restauro vai com `origin="system"`, e a exceção MIC-GRAVACAO-01 só
+        # deixa o mudo do firmware passar em troca EXPLÍCITA de perfil.
+        mic_applier=getattr(daemon, "apply_profile_mic", None),
     )
     try:
         await daemon._run_blocking(

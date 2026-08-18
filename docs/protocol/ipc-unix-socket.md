@@ -72,19 +72,19 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `debug.player_leds` | `daemon/ipc_handlers.py:3569` (`_handle_debug_player_leds`) | Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação. | **não** |
 | `speaker.set` | `daemon/ipc_handlers.py:3856` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante (D4 + SOM-02). | sim |
 | `mic.set` | `daemon/ipc_handlers.py:4022` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle (MIC-USB-01). | sim |
-| `mic.volume.set` | `daemon/ipc_handlers.py:4095` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema (MIC-VOLUME-01). | **não** |
-| `mouse.emulation.set` | `daemon/ipc_handlers.py:4160` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01). | sim |
-| `mouse.emulation.restore` | `daemon/ipc_handlers.py:4204` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida (HARM-06). | **não** |
-| `keyboard.emulation.set` | `daemon/ipc_handlers.py:4225` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01). | **não** |
-| `gamepad.emulation.set` | `daemon/ipc_handlers.py:4261` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01). | **não** |
-| `coop.set` | `daemon/ipc_handlers.py:4337` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01). | sim |
-| `coop.sync` | `daemon/ipc_handlers.py:4391` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
-| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:4428` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
+| `mic.volume.set` | `daemon/ipc_handlers.py:4103` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema (MIC-VOLUME-01). | **não** |
+| `mouse.emulation.set` | `daemon/ipc_handlers.py:4173` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01). | sim |
+| `mouse.emulation.restore` | `daemon/ipc_handlers.py:4217` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida (HARM-06). | **não** |
+| `keyboard.emulation.set` | `daemon/ipc_handlers.py:4238` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01). | **não** |
+| `gamepad.emulation.set` | `daemon/ipc_handlers.py:4274` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01). | **não** |
+| `coop.set` | `daemon/ipc_handlers.py:4350` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01). | sim |
+| `coop.sync` | `daemon/ipc_handlers.py:4404` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
+| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:4441` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
 | `led.player_set` | `daemon/ipc_handlers.py:1261` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
 | `identity.renumber` | `daemon/ipc_handlers.py:1315` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos) — ONDA-U/NUM-01. | sim |
 | `identity.number.set` | `daemon/ipc_handlers.py:1468` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07). | sim |
-| `plugin.list` | `daemon/ipc_handlers.py:4445` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
-| `plugin.reload` | `daemon/ipc_handlers.py:4457` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
+| `plugin.list` | `daemon/ipc_handlers.py:4458` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
+| `plugin.reload` | `daemon/ipc_handlers.py:4470` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
 
 <!-- FIM DO BLOCO GERADO -->
 

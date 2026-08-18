@@ -1100,6 +1100,10 @@ class Daemon:
             mode_applier=getattr(self, "_mode_applier_ao_sair_do_nativo", None),
             rumble_policy_applier=getattr(self, "apply_profile_rumble_policy", None),
             speaker_applier=getattr(self, "apply_profile_speaker", None),
+            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): sair do Modo Nativo reativa o perfil com
+            # `origin="system"` — o volume do microfone volta, o mudo não
+            # (MIC-GRAVACAO-01).
+            mic_applier=getattr(self, "apply_profile_mic", None),
         )
         with contextlib.suppress(Exception):
             manager.activate(name, origin="system")
@@ -2885,6 +2889,119 @@ class Daemon:
             origin=origin,
         )
         return APLICADO
+
+    def apply_profile_mic(
+        self,
+        volume: int | None = None,
+        muted: bool | None = None,
+        *,
+        uniq: str | None = None,
+        origin: str = "autoswitch",
+    ) -> str:
+        """Aplica a seção `mic` de um perfil recém-ativado (18/08/2026).
+
+        PERFIL-GUARDA-O-MIC-01. Injetado como `mic_applier` do `ProfileManager`
+        e consumido por `ProfileManager.apply_mic`, que já decidiu, ANTES de
+        chegar aqui: que há opinião a aplicar (perfil sem a seção não chama
+        este método), que a trava manual de áudio não está armada, e — pela
+        exceção MIC-GRAVACAO-01 — se o `muted` atravessa esta ativação. Aqui
+        `muted=None` significa **não mexer no mudo**, e é o caso normal de toda
+        ativação que não seja gesto explícito dela.
+
+        DUAS CAMADAS, e por isso duas escritas separadas (a mesma separação que
+        `mic.set` e `mic.volume.set` mantêm no IPC — juntá-las faria o produto
+        prometer uma coisa e entregar outra):
+
+        - `volume` é o ganho da FONTE de captura no PipeWire (camada 1). É o
+          que torna a feature universal, que era o pedido dela: o DualSense não
+          expõe registrador de ganho de microfone em transporte nenhum, e o que
+          existe no cabo e no rádio é uma fonte no sistema.
+          `sem_fonte` NÃO é falha — por Bluetooth sem a ponte de áudio de pé não
+          existe fonte de captura nenhuma, e dizer "aplicado" ali seria mentir.
+        - `muted` é o mudo do FIRMWARE do controle (camada 3), o único que apaga
+          a luz vermelha do microfone e o único que tira o botão físico dela
+          enquanto vigora.
+
+        POR QUE ISTO FALA DIRETO COM O BACKEND, e não pelos handlers do IPC:
+        pela MESMA razão do `apply_profile_speaker` — `mic.set`/`mic.volume.set`
+        armam a categoria manual `"audio"` (desde 18/08/2026), que é
+        exatamente a trava que `ProfileManager.apply_mic` consulta para NÃO
+        escrever. Um applier de perfil que passasse por lá armaria a trava na
+        primeira ativação e todas as seguintes seriam descartadas em silêncio.
+        A trava é o registro de um gesto DELA; perfil reaplicado não é gesto
+        dela e não pode carimbá-la.
+
+        Vocabulário de retorno (R-03): `APLICADO`, `IGNORADO_SEM_CONTROLE`
+        (não havia fonte de captura nem handle para escrever — nada foi feito e
+        ninguém mentiu "aplicado") e `FALHOU`.
+        """
+        if volume is None and muted is None:
+            logger.debug("profile_mic_sem_opiniao_noop", origin=origin)
+            return IGNORADO_SEM_CONTROLE
+        escreveu = False
+        falhou = False
+        if volume is not None:
+            try:
+                from hefesto_dualsense4unix.integrations.audio_control import (
+                    definir_volume_da_captura,
+                    fonte_de_captura_do_controle,
+                )
+
+                fonte = fonte_de_captura_do_controle()
+                if not fonte:
+                    # Rádio sem a ponte de áudio: não há onde escrever. Não é
+                    # falha, é a ausência da fonte — dita com esse nome.
+                    logger.debug("profile_mic_sem_fonte", origin=origin)
+                elif definir_volume_da_captura(int(volume), fonte=fonte):
+                    escreveu = True
+                    logger.info(
+                        "profile_mic_volume_applied",
+                        volume=int(volume),
+                        fonte=fonte,
+                        origin=origin,
+                    )
+                else:
+                    falhou = True
+            except Exception as exc:
+                falhou = True
+                logger.warning(
+                    "profile_mic_volume_apply_failed",
+                    volume=volume,
+                    origin=origin,
+                    err=str(exc),
+                )
+        if muted is not None:
+            setter = getattr(self.controller, "set_microphone_mute", None)
+            if not callable(setter):
+                logger.debug("profile_mic_backend_sem_suporte", origin=origin)
+            else:
+                try:
+                    if bool(setter(bool(muted), uniq=uniq)):
+                        escreveu = True
+                        logger.info(
+                            "profile_mic_mute_applied",
+                            muted=bool(muted),
+                            uniq=uniq,
+                            origin=origin,
+                        )
+                    else:
+                        # Sem handle para este `uniq`: ausência de controle,
+                        # não falha.
+                        logger.debug(
+                            "profile_mic_sem_controle", uniq=uniq, origin=origin
+                        )
+                except Exception as exc:
+                    falhou = True
+                    logger.warning(
+                        "profile_mic_mute_apply_failed",
+                        muted=muted,
+                        uniq=uniq,
+                        origin=origin,
+                        err=str(exc),
+                    )
+        if escreveu:
+            return APLICADO
+        return FALHOU if falhou else IGNORADO_SEM_CONTROLE
 
     def mark_rumble_policy_manual(self) -> None:
         """Registra gesto MANUAL na política de rumble
