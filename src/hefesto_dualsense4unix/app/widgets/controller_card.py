@@ -5157,8 +5157,29 @@ if _GTK_DISPONIVEL:
             # O caminho sem largura. Num rótulo que quebra linha o GTK nem
             # costuma passar por aqui (ele resolve por height-for-width na
             # largura natural), mas quem passar tem de ver a mesma reserva.
+            #
+            # NÃO-DANCA-01, segunda mordida (medida em 18/08/2026): o GTK passa
+            # por aqui ANTES da primeira alocação, e ali `get_allocated_width()`
+            # ainda vale 1. Chamar `altura_reservada()` SEM largura devolvia
+            # ZERO nesse instante — a reserva sumia, o rótulo respondia a altura
+            # do TEXTO, e a resposta ficava cacheada: a altura que o CARD pede
+            # voltava a depender da frase (17px de diferença entre a curta e a
+            # mais longa nesta bancada, 16px no runner do CI), que é o mesmo
+            # defeito um nível acima. Por isso a largura vai EXPLÍCITA, e é a
+            # mesma que o `Gtk.Label` usaria para se medir sem largura (a
+            # natural dele): os dois caminhos passam a responder a mesma coisa
+            # já na PRIMEIRA pergunta, e não só depois de alocar.
+            #
+            # E isto NÃO contraria a ressalva de `altura_reservada` sobre medir
+            # na largura natural: ela continua preferindo a ALOCADA sempre que
+            # existe uma: 585px com a frase curta e 867px com a mais longa, e a
+            # frase-régua ocupa duas linhas nas duas. A natural entra só no
+            # instante anterior à primeira alocação, onde a alternativa era
+            # reserva ZERO — que é pior por definição, porque é a ausência dela.
             minimo, natural = Gtk.Label.do_get_preferred_height(self)
-            reserva = self.altura_reservada()
+            reserva = self.altura_reservada(
+                Gtk.Label.do_get_preferred_width(self)[1]
+            )
             return max(minimo, reserva), max(natural, reserva)
 
 
