@@ -1817,8 +1817,26 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
         # Alvo é a VERSÃO COMPLETA (não "5.86") para o compare-versions detectar
         # o upgrade .1→.2 — senão o "já ≥5.86" pularia o patch novo.
         _BZ_TARGET="5.86-0ubuntu0.1~hefesto24.04.3"
+        # Antes do pacote, o RÁDIO: quem cura o crash é o bluetoothd em
+        # execução. Quem subiu o 5.86 pelo tarball (drop-in da unit apontando
+        # /opt) tinha o dpkg dizendo 5.64 e ouvia deste passo que "o 5.72
+        # crônico segue ativo", com o 5.86 rodando na frente dele.
+        _bz_vivo="$(
+            systemctl show bluetooth.service -p ExecStart --value 2>/dev/null \
+                | grep -oE 'path=[^ ]+' | head -1 | cut -d= -f2
+        )" || true
+        _bz_ja_curado=0
+        if [[ -n "${_bz_vivo}" && -x "${_bz_vivo}" ]]; then
+            _bz_vv="$("${_bz_vivo}" --version 2>/dev/null | tr -d '[:space:]')" || true
+            if [[ -n "${_bz_vv}" ]] && dpkg --compare-versions "${_bz_vv}" ge 5.79 2>/dev/null; then
+                _bz_ja_curado=1
+            fi
+        fi
         _bz_cur="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
-        if [[ -z "${_bz_cur}" ]]; then
+        if [[ "${_bz_ja_curado}" -eq 1 ]]; then
+            printf '      bluetoothd em execução já é %s (%s) — nada a fazer\n' \
+                "${_bz_vv}" "${_bz_vivo}"
+        elif [[ -z "${_bz_cur}" ]]; then
             printf '      bluez não instalado via dpkg (sistema não-Debian?) — passo pulado\n'
         elif dpkg --compare-versions "${_bz_cur}" ge "${_BZ_TARGET}" 2>/dev/null; then
             printf '      bluez %s já ≥%s — nada a fazer\n' "${_bz_cur}" "${_BZ_TARGET}"
