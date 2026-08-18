@@ -190,6 +190,12 @@ class AutoswitchSubsystem:
             # do applier. Ele fala direto com o backend, sem armar a trava
             # (armaria contra si mesmo — ver `Daemon.apply_profile_speaker`).
             speaker_applier=getattr(daemon, "apply_profile_speaker", None),
+            # MIC-VOLUME-01 (18/08/2026): o irmão do de cima. Sem ele, trocar de
+            # perfil por JANELA não aplicava o volume do microfone do perfil —
+            # a lacuna que a lápide `_SEM_MIC_HOJE` declarava e este par fecha.
+            # O `muted` não passa por aqui: a exceção MIC-GRAVACAO-01 só o deixa
+            # em `origin="manual"`, e a troca por janela é `autoswitch`.
+            mic_applier=getattr(daemon, "apply_profile_mic", None),
         )
         # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
         # saúde/última wm_class útil no store a cada leitura do poll.
@@ -250,6 +256,9 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
         # SOM-02/E4: idem `AutoswitchSubsystem.start` — as DUAS rotas de subida
         # do autoswitch precisam do applier do alto-falante.
         speaker_applier=getattr(daemon, "apply_profile_speaker", None),
+        # MIC-VOLUME-01 (18/08/2026): idem `AutoswitchSubsystem.start` — as DUAS
+        # rotas de subida do autoswitch precisam do applier do microfone.
+        mic_applier=getattr(daemon, "apply_profile_mic", None),
     )
     # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
     # saúde/última wm_class útil no store a cada leitura do poll.

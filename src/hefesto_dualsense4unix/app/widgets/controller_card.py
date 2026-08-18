@@ -115,7 +115,10 @@ import contextlib
 from typing import Any, Final, NamedTuple
 
 from hefesto_dualsense4unix.app import audio_saida, ipc_bridge
-from hefesto_dualsense4unix.app.draft_config import registrar_alto_falante_no_rascunho
+from hefesto_dualsense4unix.app.draft_config import (
+    registrar_alto_falante_no_rascunho,
+    registrar_microfone_no_rascunho,
+)
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     GyroBars,
     LightbarBar,
@@ -3137,6 +3140,11 @@ if _GTK_DISPONIVEL:
             é o tick de 10 Hz da aba, relendo ``daemon.state_full``. Guardar o
             valor MANDADO como se fosse leitura é justamente o hábito que fez a
             tela parecer mentirosa quando ela nunca mentiu.
+
+            **NOTA DATADA — 18/08/2026 (PERFIL-GUARDA-O-MIC-01).** O callback
+            deixou de ser vazio: ele ANOTA no rascunho o mudo que ficou de pé,
+            para o "Salvar Perfil" o persistir. Continua não pintando nada —
+            registrar não é pintar, e registrar é DEPOIS da confirmação.
             """
             acao = self._mic_acao
             if acao is None or not acao.sensivel or self._som_sem_alvo():
@@ -3147,7 +3155,16 @@ if _GTK_DISPONIVEL:
             def _pedir() -> bool:
                 return ipc_bridge.mic_set(valor, uniq)
 
-            ipc_bridge.run_in_thread(_pedir, lambda _ok: False)
+            # `valor is None` é o "Liberar": ela devolveu a posse do mudo ao
+            # `hid-playstation`. No rascunho isso é APAGAR a opinião, não
+            # gravar um valor — daí o `soltar_mudo` em vez de `muted=None`,
+            # que significaria "este gesto não fala do mudo".
+            ipc_bridge.run_in_thread(
+                _pedir,
+                self._mic_confirmado_pelo_daemon(
+                    muted=valor, soltar_mudo=valor is None
+                ),
+            )
 
         def _montar_lightbar(self) -> Any:
             """Bloco "Lightbar": a cor que já chega no card, agora como BARRA.
@@ -3624,16 +3641,18 @@ if _GTK_DISPONIVEL:
                 return
             self._mic_volume_enviado = volume
             uniq = self._uniq
-            # O `lambda _ok: False` não é enfeite de tipagem: `run_in_thread`
-            # reposta o `on_success` pelo laço ocioso do GLib SEMPRE, e um
-            # `None` ali estoura dentro da worker — o pedido saía, e o erro
-            # morria sem ninguém ver. É o mesmo callback vazio que o
-            # alto-falante usa. (Sem escrever o nome da função: há um portão
-            # que conta as ocorrências dela neste arquivo por texto cru —
-            # `test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline`.)
+            # NOTA DATADA — 18/08/2026 (PERFIL-GUARDA-O-MIC-01). Aqui havia um
+            # `lambda _ok: False`, e a razão escrita para ele era só de
+            # tipagem: `run_in_thread` reposta o `on_success` pelo laço ocioso
+            # do GLib SEMPRE, e um `None` ali estoura dentro da worker — o
+            # pedido saía e o erro morria sem ninguém ver. Isso continua
+            # verdade e continua atendido; o que caducou é o callback ser
+            # VAZIO. Ele agora anota no rascunho o volume que ficou de pé,
+            # como o do alto-falante já fazia, e por isso o número dela
+            # sobrevive ao "Salvar Perfil".
             ipc_bridge.run_in_thread(
                 lambda: ipc_bridge.mic_volume_set(volume=volume, uniq=uniq),
-                lambda _ok: False,
+                self._mic_confirmado_pelo_daemon(volume=volume),
             )
 
         def _pintar_volume_do_mic(self, volume: int | None) -> None:
@@ -3938,6 +3957,49 @@ if _GTK_DISPONIVEL:
                         uniq=self._uniq,
                     )
                 return self._on_som_de_confirmacao(resultado)
+
+            return _feito
+
+        def _mic_confirmado_pelo_daemon(
+            self,
+            *,
+            volume: int | None = None,
+            muted: bool | None = None,
+            soltar_mudo: bool = False,
+        ) -> Any:
+            """O callback de sucesso dos gestos do MICROFONE (18/08/2026).
+
+            Irmão exato do ``_confirmado_pelo_daemon`` do alto-falante, e nasceu
+            do mesmo defeito um andar ao lado. Pedido dela em 18/08/2026, depois
+            de o microfone ficar mudo e o DON'T SCREAM não ouvir nada:
+            *"informação de microfone e som, touch, acelerômetro, giroscópio e
+            afins. cara, temos que salvar isso no perfil sempre."* Medido no
+            mesmo dia: nenhum dos 18 perfis dela tinha a seção ``mic``.
+
+            REGISTRAR NÃO É APLICAR, e registrar é DEPOIS. Quem aplica é o
+            ``mic.set``/``mic.volume.set`` que já saiu; aqui só se anota o que
+            ficou DE PÉ, para o "Salvar Perfil" persistir.
+
+            ``ok`` falso é o daemon tendo RECUSADO — e, no volume, também o
+            ``sem_fonte`` do Bluetooth sem a ponte de áudio de pé
+            (``ipc_bridge.mic_volume_set`` devolve False nos dois casos). Nos
+            dois, não há o que registrar: o rascunho descreve o que está de pé,
+            não a intenção.
+
+            Não pinta nada, como o gesto nunca pintou: quem repinta é o tique
+            de 10 Hz relendo ``daemon.state_full``. Devolver ``False`` é o
+            contrato do ``run_in_thread`` (repostado pelo laço ocioso do GLib).
+            """
+
+            def _feito(ok: Any) -> bool:
+                if ok:
+                    registrar_microfone_no_rascunho(
+                        self._dono_do_rascunho,
+                        volume=volume,
+                        muted=muted,
+                        soltar_mudo=soltar_mudo,
+                    )
+                return False
 
             return _feito
 

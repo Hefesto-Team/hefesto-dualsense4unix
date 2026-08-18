@@ -96,7 +96,14 @@ _SINAIS_DE_ESCRITOR: dict[str, dict[str, tuple[str, ...]]] = {
     "rumble": {"chaves": ("rumble",), "escritores": (), "classes": ("RumbleDraft",)},
     "key_bindings": {"chaves": ("key_bindings",), "escritores": (), "classes": ()},
     "mouse": {"chaves": ("mouse",), "escritores": (), "classes": ("MouseDraft",)},
-    "mic": {"chaves": ("mic",), "escritores": (), "classes": ("MicDraft",)},
+    "mic": {
+        "chaves": ("mic",),
+        # PERFIL-GUARDA-O-MIC-01 (18/08/2026): o escritor único do microfone,
+        # irmão do `registrar_alto_falante_no_rascunho`. O card o chama no
+        # callback de sucesso do daemon (volume, mudo e a devolução da posse).
+        "escritores": ("with_mic", "registrar_microfone_no_rascunho"),
+        "classes": ("MicDraft",),
+    },
     "speaker": {
         "chaves": ("speaker",),
         "escritores": (
@@ -127,20 +134,15 @@ _SINAIS_DE_ESCRITOR: dict[str, dict[str, tuple[str, ...]]] = {
 #: ``xfail(strict=True)``: no dia em que o escritor nascer, o caso passa e o
 #: pytest REPROVA o xfail que sobrou — a lápide não pode envelhecer calada.
 #: Quem entregar a cura APAGA a entrada daqui, e é essa a única manutenção.
-_SEM_ESCRITOR_HOJE: dict[str, str] = {
-    "mic": (
-        "MEDIDO em 09/08/2026 por varredura de AST em src/hefesto_dualsense4unix/"
-        "app/: NENHUM arquivo escreve a seção `mic` no rascunho. As únicas "
-        "escritas de `MicDraft` no projeto inteiro estão em "
-        "`DraftConfig.from_profile` (app/draft_config.py:431), que é LEITURA do "
-        "disco. O campo `ProfileMicConfig.button_toggles_system` existe no "
-        "esquema (profiles/schema.py:356), viaja no `to_profile` "
-        "(draft_config.py:530) e no `to_ipc_dict` (draft_config.py:1157), e o "
-        "daemon o aplica (daemon/ipc_draft_applier.py:410) — falta só a "
-        "superfície onde ela possa tocá-lo. É a classe de defeito 'a casa sabe "
-        "e o produto não faz'. QUANDO O ESCRITOR NASCER, apague esta entrada."
-    ),
-}
+#:
+#: ESTÁ VAZIO desde 18/08/2026, e o vazio é a CURA, não descuido. A única
+#: entrada que existiu aqui era a do ``mic``, medida em 09/08/2026: nenhuma
+#: superfície da janela escrevia a seção. Ela saiu quando o escritor nasceu
+#: (``draft_config.registrar_microfone_no_rascunho``, chamado pelo card do
+#: controle no callback de sucesso do daemon) — PERFIL-GUARDA-O-MIC-01, o
+#: pedido dela depois de o microfone ficar mudo e o DON'T SCREAM não ouvir
+#: nada: *"temos que salvar isso no perfil sempre"*.
+_SEM_ESCRITOR_HOJE: dict[str, str] = {}
 
 
 # ---------------------------------------------------------------------------

@@ -156,6 +156,22 @@ class ProfileManager:
     #
     # None = seção ignorada (CLI/testes sem daemon).
     speaker_applier: Callable[..., object] | None = None
+    # PERFIL-GUARDA-O-MIC-01 (18/08/2026): applier da seção `mic` do perfil.
+    # Assinatura: `(volume: int | None, muted: bool | None, *, uniq: str | None
+    # = None, origin: str)`. Pedido dela depois de o microfone ficar mudo e o
+    # DON'T SCREAM não ouvir nada: *"temos que salvar isso no perfil sempre"*.
+    #
+    # Mesmo contrato do `speaker_applier` (e não o do `mode`): perfil SEM a
+    # seção não chama o applier. Sem opinião é silêncio, não ordem.
+    #
+    # A DIFERENÇA que este eixo tem e o alto-falante não: `muted` é o mudo do
+    # FIRMWARE, o mesmo que apaga a luz vermelha do microfone — e há decisão
+    # medida proibindo o perfil de apagá-la como COLATERAL
+    # (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01). A conciliação está em
+    # `apply_mic`, e ela é a exceção nomeada MIC-GRAVACAO-01.
+    #
+    # None = seção ignorada (CLI/testes sem daemon).
+    mic_applier: Callable[..., object] | None = None
     # R-21: última `wm_class` de jogo cujo veto ao catch-all já foi logado. O
     # `select_for_window` roda a 2 Hz (poll do autoswitch): sem esta chave o
     # veto viraria ~7 mil linhas/hora no journal enquanto ela joga.
@@ -636,6 +652,10 @@ class ProfileManager:
         self.apply_speaker(profile, origin=origin, relatorio=resultado)
         # POR-UNIDADE-01: e DEPOIS do global, a peça que discorda dele.
         self.apply_controller_speakers(profile, origin=origin, relatorio=resultado)
+        # PERFIL-GUARDA-O-MIC-01 (18/08/2026): e o microfone, com o MESMO
+        # contrato do alto-falante — perfil sem a seção não chama applier
+        # nenhum (ver `apply_mic`).
+        self.apply_mic(profile, origin=origin, relatorio=resultado)
         return resultado
 
     def apply_controller_speakers(
@@ -715,6 +735,14 @@ class ProfileManager:
            troca de janela NÃO pisa o ajuste dela — a mesma disciplina do
            PERFIL-MANUAL-VENCE-01, que trata cor e gatilho assim. Trocar de
            perfil explicitamente limpa as categorias e solta a trava.
+
+           **NOTA DATADA — 18/08/2026.** A categoria `"audio"` deixou de ser só
+           do alto-falante: o `mic.set` e o `mic.volume.set` passaram a armá-la
+           também, e `apply_mic` a consulta aqui do lado. O que continua sendo
+           só daqui é a razão do item 1 (a POSSE dos bytes de volume do report);
+           o microfone tem razão própria, e ela é a exceção MIC-GRAVACAO-01
+           escrita em `apply_mic` — a trava sozinha não bastava, porque o perfil
+           de JOGO a limpa ao entrar.
         3. **o par vai SEMPRE completo.** `volume` e `muted` juntos, nunca um
            `speaker.set` sem volume — medido: sem volume e sem preferência
            guardada a chamada toma a posse e manda ZERO, publicando
@@ -765,6 +793,105 @@ class ProfileManager:
                 err=str(exc),
             )
         resultado["speaker"] = estado
+        return estado
+
+    def apply_mic(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        uniq: str | None = None,
+        relatorio: dict[str, str] | None = None,
+    ) -> str | None:
+        """Aplica a seção `mic` do perfil (PERFIL-GUARDA-O-MIC-01, 18/08/2026).
+
+        Pedido dela, depois de o microfone ficar mudo e o DON'T SCREAM não
+        ouvir nada: *"informação de microfone e som, touch, acelerômetro,
+        giroscópio e afins. cara, temos que salvar isso no perfil sempre."*
+        Até este dia ativar um perfil **nunca** tocava no microfone.
+
+        Espelho disciplinado de `apply_speaker`, com as MESMAS duas primeiras
+        guardas e uma terceira que é só deste eixo:
+
+        1. **perfil sem a seção não escreve NADA.** `mic=None` é ausência de
+           opinião, e o applier nem é chamado. Igual ao alto-falante, e pelo
+           mesmo motivo: um perfil que não pediu nada não pode impor nada.
+        2. **a trava manual de áudio vence o perfil.** Categoria `"audio"` do
+           `StateStore`, a mesma que o alto-falante consome — e agora armada
+           também pelo `mic.set`/`mic.volume.set` (18/08/2026). Se ela acabou
+           de mexer no microfone na mão, o autoswitch reaplicando o perfil a
+           cada troca de janela NÃO pisa o ajuste dela.
+        3. **MIC-GRAVACAO-01 — o `muted` só vai em troca EXPLÍCITA de perfil.**
+
+        A TERCEIRA GUARDA, por extenso, porque ela é o que explica o que já
+        funcionava. `ProfileMicConfig.muted` é o mudo do FIRMWARE, o mesmo que
+        apaga o LED vermelho, e há decisão medida proibindo o perfil de apagar
+        aquele LED como COLATERAL (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01).
+        Some-se a isso que a trava manual **não é intransponível**: o perfil de
+        JOGO a limpa ao entrar (`profiles/autoswitch.py`, a exceção F2 — a
+        troca por jogo não pode ficar silenciada para sempre por um `led.set`
+        da manhã). As duas coisas juntas produziriam o defeito: ela grava, o
+        jogo abre, o perfil do jogo entra com a trava limpa e **rouba o mudo do
+        microfone dela no meio da gravação**.
+
+        A conciliação é separar os dois campos pelo que eles custam:
+
+        - **`volume` aplica SEMPRE** (respeitada a trava). Ele é o ganho da
+          fonte no PipeWire — não toca no firmware, não tira o botão físico do
+          controle e não apaga luz nenhuma. Errar aqui custa um número, e ela
+          vê o número na tela.
+        - **`muted` só em `origin="manual"`** — ela escolhendo o perfil na
+          GUI/CLI ou no PS+D-pad. Autoswitch, restore de boot e reconexão
+          (`"autoswitch"`/`"system"`) NÃO mexem no mudo. O LED do mic morre
+          como colateral e sobrevive como consequência de um pedido explícito
+          dela, que é exatamente o que a decisão de 2026-07 protegia.
+
+        O LED do mic continua FORA de `LedSettings`/`ControllerOverrides`: nada
+        aqui o escreve por conta própria — quem o move é o firmware, ao receber
+        o mudo que ELA pediu e salvou.
+
+        Best-effort como os irmãos: falha do applier loga warning e não aborta
+        a ativação. `relatorio` recebe `"mic" → estado`.
+        """
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        secao = getattr(profile, "mic", None)
+        if self.mic_applier is None or secao is None:
+            return None
+        volume = getattr(secao, "volume", None)
+        muted = getattr(secao, "muted", None)
+        # MIC-GRAVACAO-01: o mudo só atravessa a troca EXPLÍCITA de perfil.
+        if origin != "manual":
+            muted = None
+        if volume is None and muted is None:
+            # Seção que existe só pelo `button_toggles_system` (ou perfil cujo
+            # `muted` acabou de ser silenciado pela guarda acima): nada a
+            # escrever, e "nada a escrever" não é uma chamada vazia ao applier.
+            return None
+        if "audio" in self._categorias_travadas():
+            resultado["mic"] = IGNORADO_TRAVA_MANUAL
+            logger.info(
+                "profile_mic_ignorado_trava_manual",
+                profile=profile.name,
+                origin=origin,
+            )
+            return resultado["mic"]
+        try:
+            estado = _estado_da_secao(
+                self.mic_applier(
+                    None if volume is None else int(volume),
+                    None if muted is None else bool(muted),
+                    uniq=uniq,
+                    origin=origin,
+                )
+            )
+        except Exception as exc:
+            estado = "falhou"
+            logger.warning(
+                "profile_mic_apply_failed",
+                profile=profile.name,
+                err=str(exc),
+            )
+        resultado["mic"] = estado
         return estado
 
     def reapply_speaker_on_connect(self, uniq: str | None = None) -> str | None:

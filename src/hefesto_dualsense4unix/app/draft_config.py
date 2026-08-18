@@ -148,23 +148,45 @@ class EmulationDraft(BaseModel):
 
 
 class MicDraft(BaseModel):
-    """Draft do MICROFONE (MIC-EXPOSE-01, 25/07).
+    """Draft do MICROFONE (MIC-EXPOSE-01, 25/07; volume e mudo em 18/08/2026).
 
     ``button_toggles_system`` espelha ``DaemonConfig.mic_button_toggles_system``
     e ``ProfileMicConfig.button_toggles_system``: o botão de mic do controle
-    alterna (ou não) o mute do microfone PADRÃO DO SISTEMA. O campo existia só
-    dentro do dataclass do daemon — nenhuma superfície o mostrava nem o
-    editava, e o único jeito de mudá-lo era editar código.
+    alterna (ou não) o mute do microfone PADRÃO DO SISTEMA.
+
+    ``volume`` (0-100, o por cento da FONTE de captura no sistema) e ``muted``
+    (o mudo do FIRMWARE do controle) espelham os dois campos homônimos de
+    ``ProfileMicConfig``. Eles entraram em 18/08/2026, a pedido dela — depois
+    de o microfone ficar mudo e o DON'T SCREAM não ouvir nada: *"informação de
+    microfone e som, touch, acelerômetro, giroscópio e afins. cara, temos que
+    salvar isso no perfil sempre."*
+
+    **NOTA DATADA — 18/08/2026.** Este parágrafo dizia que o mic não tinha
+    escritor na janela e que a seção só nascia pela leitura do disco. Isso
+    caducou: o controle deslizante e o botão Silenciar do card do controle
+    passam a anotar aqui pelo escritor único
+    ``registrar_microfone_no_rascunho``, no callback de sucesso do daemon —
+    a mesma disciplina do alto-falante.
 
     ``dirty``/``in_profile`` seguem a mesma disciplina do ``MouseDraft``:
     ``to_ipc_dict`` só emite a seção quando a usuária mexeu nela (dirty), e
     ``to_profile`` só a persiste quando ela foi mexida OU o perfil de origem
     já a tinha — perfis legados fazem round-trip sem ganhar seção fantasma.
+
+    ``volume=None``/``muted=None`` = o gesto que passou por aqui não tinha
+    opinião sobre AQUELE campo, e a ausência é preservada (mesma razão do
+    ``rota`` do ``SpeakerDraft``): mexer no volume não pode apagar o mudo que
+    ela acabou de escolher, nem o contrário.
     """
 
     model_config = ConfigDict(frozen=True)
 
     button_toggles_system: bool = True
+    #: Volume da captura no sistema, em por cento (a escala do
+    #: ``ProfileMicConfig.volume``, NÃO a do alto-falante, que é 0-255).
+    volume: int | None = Field(default=None, ge=0, le=100)
+    #: Mudo do FIRMWARE — o mesmo que apaga a luz vermelha do microfone.
+    muted: bool | None = None
     dirty: bool = False
     in_profile: bool = False
 
@@ -457,6 +479,10 @@ class DraftConfig(BaseModel):
         if profile.mic is not None:
             mic = MicDraft(
                 button_toggles_system=profile.mic.button_toggles_system,
+                # PERFIL-GUARDA-O-MIC-01 (18/08/2026): volume e mudo vêm junto,
+                # senão abrir o perfil na janela e salvar de novo os apagaria.
+                volume=profile.mic.volume,
+                muted=profile.mic.muted,
                 dirty=False,
                 in_profile=True,
             )
@@ -553,8 +579,17 @@ class DraftConfig(BaseModel):
             if (self.mouse.dirty or self.mouse.in_profile)
             else None
         )
+        # PERFIL-GUARDA-O-MIC-01 (18/08/2026): os TRÊS campos viajam juntos.
+        # `volume`/`muted` a `None` continuam sendo "sem opinião" DENTRO de uma
+        # seção que existe — diferente do alto-falante, cujo gate exige número
+        # (lá o `volume` é obrigatório no esquema; aqui é opcional, porque
+        # `button_toggles_system` sozinho já é uma seção legítima).
         mic_cfg = (
-            ProfileMicConfig(button_toggles_system=self.mic.button_toggles_system)
+            ProfileMicConfig(
+                button_toggles_system=self.mic.button_toggles_system,
+                volume=self.mic.volume,
+                muted=self.mic.muted,
+            )
             if (self.mic.dirty or self.mic.in_profile)
             else None
         )
@@ -758,6 +793,64 @@ class DraftConfig(BaseModel):
         """
         return self.model_copy(
             update={"source_suppress": bool(suppress), "suppress_dirty": True}
+        )
+
+    def with_mic(
+        self,
+        *,
+        volume: int | None = None,
+        muted: bool | None = None,
+        soltar_mudo: bool = False,
+    ) -> DraftConfig:
+        """Rascunho com o MICROFONE trocado por gesto DELA (18/08/2026).
+
+        PERFIL-GUARDA-O-MIC-01. Quem chama é a superfície que MANDOU o pedido
+        ao daemon (o controle deslizante do mic e o botão Silenciar do card),
+        DEPOIS de o daemon confirmar — o rascunho registra o que está de pé
+        para o "Salvar Perfil" persistir, exatamente como ``with_speaker``.
+
+        **Campo a ``None`` é gesto SEM OPINIÃO sobre aquele campo**, e preserva
+        o que já estava registrado — a mesma regra do ``rota`` em
+        ``with_speaker``, e pelo mesmo motivo: os dois campos têm gestos
+        SEPARADOS (o controle deslizante mexe no volume da fonte do sistema; o
+        botão mexe no mudo do firmware), e um não pode apagar o outro. Sem esta
+        preservação, arrastar o volume depois de silenciar desfaria o mudo no
+        rascunho, em silêncio.
+
+        ``soltar_mudo`` é o irmão do ``soltar`` do alto-falante, e é o terceiro
+        estado do botão do card: "Liberar" devolve a posse do registrador de
+        mudo ao ``hid-playstation`` (o botão físico do controle volta a mandar).
+        Um perfil salvo depois desse gesto não pode continuar carregando um
+        ``muted`` que a ativação seguinte reaplicaria, retomando a posse que ela
+        acabou de largar — então o campo volta a ``None`` (sem opinião) e a
+        seção FICA, porque o volume e o ``button_toggles_system`` continuam
+        valendo.
+
+        Não há ``without_mic``: aqui não existe o byte inteiro para devolver. O
+        volume é do PipeWire (o kernel continua dono da fonte) e o mudo tem a
+        própria devolução acima.
+        """
+        return self.model_copy(
+            update={
+                "mic": self.mic.model_copy(
+                    update={
+                        "volume": (
+                            self.mic.volume
+                            if volume is None
+                            else max(0, min(100, int(volume)))
+                        ),
+                        "muted": (
+                            None
+                            if soltar_mudo
+                            else self.mic.muted
+                            if muted is None
+                            else bool(muted)
+                        ),
+                        "dirty": True,
+                        "in_profile": True,
+                    }
+                )
+            }
         )
 
     def with_speaker(
@@ -1349,8 +1442,18 @@ class DraftConfig(BaseModel):
             # MIC-EXPOSE-01: só quando a usuária mexeu na seção (mesma regra
             # do `mouse`) — um "Aplicar" de outra aba não pode religar/desligar
             # o botão de mic pelas costas dela. Daemon antigo ignora a chave.
+            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): `volume` e `mudo` viajam
+            # junto do booleano. O nome das chaves é o do IPC `mic.volume.set`/
+            # `mic.set` de propósito, pela mesma razão do `speaker`: o daemon
+            # já sabe validá-las e um segundo vocabulário para o mesmo fato
+            # seria mais uma tradução sem necessidade. Daemon antigo (e o
+            # `ipc_draft_applier` de hoje) ignoram chave que não conhecem.
             "mic": (
-                {"button_toggles_system": self.mic.button_toggles_system}
+                {
+                    "button_toggles_system": self.mic.button_toggles_system,
+                    "volume": self.mic.volume,
+                    "muted": self.mic.muted,
+                }
                 if self.mic.dirty
                 else None
             ),
@@ -1465,6 +1568,65 @@ def registrar_alto_falante_no_rascunho(
     janela.draft = draft.with_speaker(volume, muted=muted, rota=rota)
 
 
+# ---------------------------------------------------------------------------
+# Registro do MICROFONE no rascunho (PERFIL-GUARDA-O-MIC-01 — 18/08/2026)
+# ---------------------------------------------------------------------------
+
+
+def registrar_microfone_no_rascunho(
+    janela: Any,
+    *,
+    volume: int | None = None,
+    muted: bool | None = None,
+    soltar_mudo: bool = False,
+) -> None:
+    """Anota no rascunho o MICROFONE que ficou DE PÉ. NÃO aplica nada.
+
+    Irmão exato de ``registrar_alto_falante_no_rascunho``, e nasceu do mesmo
+    defeito, um andar ao lado. Pedido dela em 18/08/2026, depois de o microfone
+    ficar mudo e o DON'T SCREAM não ouvir nada: *"informação de microfone e
+    som, touch, acelerômetro, giroscópio e afins. cara, temos que salvar isso
+    no perfil sempre."* Medido no mesmo dia: nenhum dos 18 perfis dela tinha a
+    seção ``mic``, embora ``ProfileMicConfig`` guarde ``volume`` e ``muted``
+    desde 16/08 — a classe de defeito *"a casa sabe e o produto não faz"*.
+
+    Quem chama é o CALLBACK DE SUCESSO do gesto no card, nunca o gesto em si:
+    o rascunho descreve o que ficou de pé, não a intenção. Um pedido recusado
+    pelo daemon (ou uma fonte de captura que não existe) não registra nada.
+
+    ``volume``/``muted`` a ``None`` significam **este gesto não tem opinião
+    sobre este campo** e preservam o que já estava anotado (ver ``with_mic``).
+    Os dois gestos são separados na tela e têm de continuar separados aqui.
+    ``soltar_mudo`` é o "Liberar" do botão — ela devolveu a posse do mudo ao
+    kernel, e o perfil tem de parar de carregar um valor que a ativação
+    seguinte retomaria.
+
+    NÃO há alvo por ``uniq``, e a ausência é deliberada: ``ControllerOverrides``
+    não tem seção ``mic`` (decisão de POR-UNIDADE-01), e o volume da captura é
+    de MÁQUINA — há uma fonte por PC, não uma por controle
+    (``_handle_mic_volume_set``). Aceitar um alvo aqui seria prometer um
+    endereço que o esquema não guarda.
+
+    Função de MÓDULO, e um escritor só, pela razão já paga por esta base em
+    ``registrar_modo_no_rascunho``/``registrar_alto_falante_no_rascunho``: o
+    dono do rascunho de um assunto tem de ser único e visível ao portão de AST
+    — a classe de defeito desta casa é *"três escritores do perfil sem dono"*.
+    ``janela`` sem ``draft`` (card avulso de teste, ou antes de a janela
+    terminar de nascer) é caso normal e sai calado.
+    """
+    draft = getattr(janela, "draft", None)
+    if not isinstance(draft, DraftConfig):
+        return
+    if volume is None and muted is None and not soltar_mudo:
+        # Gesto sem opinião nenhuma não marca a seção como tocada: marcar aqui
+        # faria um perfil legado ganhar seção `mic` fantasma por um clique que
+        # não mudou nada.
+        return
+    janela.draft = draft.with_mic(
+        volume=volume, muted=muted, soltar_mudo=soltar_mudo
+    )
+
+
 __all__ = [
     "DraftConfig",
     "EmulationDraft",
@@ -1476,4 +1638,5 @@ __all__ = [
     "TriggerDraft",
     "TriggersDraft",
     "registrar_alto_falante_no_rascunho",
+    "registrar_microfone_no_rascunho",
 ]

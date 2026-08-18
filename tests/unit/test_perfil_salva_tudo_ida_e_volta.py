@@ -105,7 +105,7 @@ SECOES_COBERTAS: dict[str, str] = {
     "rumble": "aba Rumble — RumbleActionsMixin._set_policy",
     "key_bindings": "aba Teclado — InputActionsMixin._persist_key_bindings_to_draft",
     "mouse": "aba Mouse — MouseActionsMixin.on_mouse_speed_changed",
-    "mic": "NENHUMA — não há superfície que escreva ProfileMicConfig no rascunho",
+    "mic": "card do controle — draft_config.registrar_microfone_no_rascunho",
     "speaker": "card do controle — draft_config.registrar_alto_falante_no_rascunho",
     "mode": "abas Início/Emulação — home_actions.registrar_modo_no_rascunho",
     "suppress_desktop_emulation": (
@@ -551,44 +551,54 @@ def _confere_mouse(perfil: Profile) -> None:
 
 
 def _gesto_mic(janela: Any) -> None:
-    """Aba/seção do MICROFONE: desligar "o botão do controle muda o mic do PC".
+    """Card do controle: o VOLUME da captura e o MUDO do firmware.
 
-    NÃO HÁ GESTO. Procurado em 09/08/2026 com
-    ``grep -rn button_toggles_system src/``: as ÚNICAS escritas de
-    ``MicDraft`` no projeto inteiro estão em ``DraftConfig.from_profile``
-    (leitura do disco) — nenhuma superfície da janela escreve a seção. O
-    campo existe no esquema, no rascunho, no ``to_profile``, no
-    ``to_ipc_dict`` e no ``ipc_draft_applier``; só não existe onde ela
-    poderia tocá-lo.
+    PERFIL-GUARDA-O-MIC-01 (18/08/2026). Pedido dela depois de o microfone
+    ficar mudo e o DON'T SCREAM não ouvir nada: *"informação de microfone e
+    som, touch, acelerômetro, giroscópio e afins. cara, temos que salvar isso
+    no perfil sempre."*
 
-    O gesto simulado aqui é o que a janela FARIA se tivesse a superfície —
-    escrever o ``MicDraft`` com ``dirty=True``, exatamente como o
-    ``MouseDraft`` faz. Enquanto não houver handler, este caso mede a metade
-    de BAIXO (rascunho -> disco) — a de cima é medida, e HOJE REPROVA, no
-    portão ao lado: ``test_perfil_salva_tudo_cobertura_das_secoes.py``,
-    ``TestTodaSecaoTemEscritorNaJanela``, com ``xfail(strict=True)`` e o
-    endereço da lacuna por extenso.
+    **NOTA DATADA — 18/08/2026.** Este gesto era SIMULADO: até aqui não havia
+    superfície que escrevesse a seção ``mic``, e o caso cobria só a metade de
+    baixo do caminho (rascunho -> disco). Isso caducou — o gesto agora entra
+    pelo escritor ÚNICO da casa, ``registrar_microfone_no_rascunho``, o mesmo
+    que o card chama no callback de sucesso do daemon. A lacuna que justificava
+    a simulação estava marcada em ``_SEM_ESCRITOR_HOJE`` do portão ao lado, e
+    saiu de lá junto com esta mudança.
 
-    Este caso ficar VERDE não quer dizer que o microfone está salvo: quer dizer
-    que, no dia em que a superfície nascer, o que ela escrever chega ao disco.
+    ``button_toggles_system`` continua ENTRANDO PELO RASCUNHO, e a ressalva é
+    honesta: ele é o único dos três campos que ainda não tem superfície onde
+    ela possa tocá-lo. O que este caso mede é que os TRÊS chegam ao arquivo
+    juntos — quem lhe der superfície troca só estas duas linhas.
     """
-    from hefesto_dualsense4unix.app.draft_config import MicDraft
+    from hefesto_dualsense4unix.app.draft_config import (
+        MicDraft,
+        registrar_microfone_no_rascunho,
+    )
 
     janela.draft = janela.draft.model_copy(
-        update={
-            "mic": MicDraft(button_toggles_system=False, dirty=True, in_profile=True)
-        }
+        update={"mic": MicDraft(button_toggles_system=False, dirty=True, in_profile=True)}
     )
+    registrar_microfone_no_rascunho(janela, volume=70, muted=True)
 
 
 def _confere_mic(perfil: Profile) -> None:
     assert perfil.mic is not None, (
-        "a seção `mic` NÃO existe no arquivo — o comportamento do botão de "
-        "microfone não foi salvo no perfil"
+        "a seção `mic` NÃO existe no arquivo — o microfone não foi salvo no "
+        "perfil (é a queixa literal de 18/08: nenhum dos 18 perfis dela tinha "
+        "esta seção)"
     )
     assert perfil.mic.button_toggles_system is False, (
         "o `button_toggles_system` do arquivo é "
         f"{perfil.mic.button_toggles_system!r} — ela desligou"
+    )
+    assert perfil.mic.volume == 70, (
+        f"o volume do microfone no arquivo é {perfil.mic.volume!r} — ela "
+        "deixou 70 no controle deslizante do card"
+    )
+    assert perfil.mic.muted is True, (
+        f"o mudo do microfone no arquivo é {perfil.mic.muted!r} — ela clicou "
+        "em Silenciar"
     )
 
 

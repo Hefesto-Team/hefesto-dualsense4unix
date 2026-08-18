@@ -105,14 +105,24 @@ class TestDraft:
         assert salvo.mic is None
 
     def test_to_ipc_dict_so_emite_quando_tocado(self) -> None:
-        """Mesma regra do mouse: "Aplicar" de outra aba não mexe no botão."""
+        """Mesma regra do mouse: "Aplicar" de outra aba não mexe no botão.
+
+        NOTA DATADA — 18/08/2026 (PERFIL-GUARDA-O-MIC-01): a seção passou a
+        carregar `volume` e `muted` junto do booleano. O que este caso mede
+        continua sendo o GATE (`dirty`), não a lista de chaves — e por isso
+        `None` nos dois campos novos, que é o rascunho sem opinião sobre eles.
+        """
         limpo = DraftConfig.default()
         assert limpo.to_ipc_dict()["mic"] is None
 
         tocado = limpo.model_copy(
             update={"mic": MicDraft(button_toggles_system=False, dirty=True)}
         )
-        assert tocado.to_ipc_dict()["mic"] == {"button_toggles_system": False}
+        assert tocado.to_ipc_dict()["mic"] == {
+            "button_toggles_system": False,
+            "volume": None,
+            "muted": None,
+        }
 
 
 class TestApplier:

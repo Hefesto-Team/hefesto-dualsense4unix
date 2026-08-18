@@ -652,15 +652,178 @@ def test_activate_substitui_o_mapa_de_overrides(isolated_profiles_dir: Path):
     assert backend._desired_default.led == (10, 20, 30)
 
 
-def test_activate_nao_toca_o_mic_led(isolated_profiles_dir: Path):
-    """AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: profile switch JAMAIS mexe no
-    LED do mic — nem pelo caminho novo (`apply_output_defaults`)."""
+def test_activate_sem_secao_mic_nao_toca_o_mic_led(isolated_profiles_dir: Path):
+    """AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: o LED do mic nunca é COLATERAL.
+
+    **NOTA DATADA — 18/08/2026 (PERFIL-GUARDA-O-MIC-01).** Este caso se chamava
+    `test_activate_nao_toca_o_mic_led` e afirmava "profile switch JAMAIS mexe
+    no LED do mic". A decisão medida CONTINUA valendo, e o ESCOPO dela é que ficou
+    explícito: o proibido é o LED como **colateral** — perfil que não pediu nada
+    apagando a luz vermelha do microfone dela ao trocar de janela. O que passou
+    a ser permitido, porque é o oposto disso, é o LED como **consequência de um
+    pedido explícito dela**: um perfil que GUARDA `mic.muted` porque ela o
+    salvou, aplicado numa troca EXPLÍCITA de perfil (a exceção MIC-GRAVACAO-01,
+    escrita em `ProfileManager.apply_mic`).
+
+    O que este caso trava, e é o que importa: **sem seção `mic`, jamais.**
+    """
     save_profile(_mk_profile("shooter"))
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc, store=StateStore())
     manager.activate("shooter")
     assert fc.mic_led_history == []
+
+
+# ---------------------------------------------------------------------------
+# PERFIL-GUARDA-O-MIC-01 (18/08/2026) — ativar um perfil aplica o microfone
+# ---------------------------------------------------------------------------
+
+
+class _MicEspiao:
+    """Dublê do `mic_applier`: guarda as chamadas, devolve "aplicado"."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[tuple[int | None, bool | None, str]] = []
+
+    def __call__(
+        self,
+        volume: int | None,
+        muted: bool | None,
+        *,
+        uniq: str | None = None,
+        origin: str = "manual",
+    ) -> str:
+        self.chamadas.append((volume, muted, origin))
+        return "aplicado"
+
+
+def _mk_profile_com_mic(
+    name: str = "gravando",
+    *,
+    volume: int | None = 70,
+    muted: bool | None = None,
+) -> Profile:
+    from hefesto_dualsense4unix.profiles.schema import ProfileMicConfig
+
+    return _mk_profile(
+        name,
+        mic=ProfileMicConfig(
+            button_toggles_system=True, volume=volume, muted=muted
+        ),
+    )
+
+
+def test_ativar_perfil_com_mic_aplica_volume(isolated_profiles_dir: Path):
+    """O pedido dela inteiro: *"temos que salvar isso no perfil sempre"*.
+
+    Medido em 18/08/2026: nenhum dos 18 perfis dela tinha a seção `mic`, e
+    ativar um perfil NUNCA tocava no microfone — a seção existia no esquema
+    desde 16/08 e nada a lia.
+
+    MORDIDA: apague a linha `self.apply_mic(...)` de
+    `ProfileManager.apply_emulation` (ou o `mic_applier=` da injeção) e este
+    caso fica vermelho.
+    """
+    save_profile(_mk_profile_com_mic("gravando", volume=70))
+    espiao = _MicEspiao()
+    manager = ProfileManager(
+        controller=FakeController(), store=StateStore(), mic_applier=espiao
+    )
+    relatorio: dict[str, str] = {}
+    manager.activate("gravando", origin="manual", relatorio=relatorio)
+
+    assert espiao.chamadas, (
+        "o applier do microfone não foi chamado — ativar o perfil continua "
+        "não tocando no mic (a queixa de 18/08)"
+    )
+    volume, _muted, _origin = espiao.chamadas[0]
+    assert volume == 70, f"o volume que chegou ao applier foi {volume!r}"
+    assert relatorio.get("mic") == "aplicado"
+
+
+def test_perfil_sem_secao_mic_nao_chama_o_applier(isolated_profiles_dir: Path):
+    """Sem opinião é silêncio, não ordem — o outro sentido da mesma queixa.
+
+    Mesmo contrato do alto-falante: perfil que não pediu nada não impõe nada.
+
+    MORDIDA (medida em 18/08/2026): `apply_mic` tem DUAS guardas de ausência —
+    o `or secao is None` e o `volume is None and muted is None` logo abaixo —, e
+    a segunda absorve a primeira num perfil legado. Arrancar só uma delas deixa
+    este caso verde; arrancar as DUAS o deixa vermelho, que é o que prova que a
+    ausência de opinião é o que segura a chamada. Sem elas, todo perfil legado
+    passaria a mexer no microfone dela.
+    """
+    save_profile(_mk_profile("sem_mic"))
+    espiao = _MicEspiao()
+    manager = ProfileManager(
+        controller=FakeController(), store=StateStore(), mic_applier=espiao
+    )
+    manager.activate("sem_mic", origin="manual")
+    assert espiao.chamadas == []
+
+
+def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(isolated_profiles_dir: Path):
+    """MIC-GRAVACAO-01 — a exceção nomeada, e a razão de ela existir.
+
+    O `muted` do perfil é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho.
+    A trava manual de áudio sozinha NÃO basta para protegê-lo: o perfil de JOGO
+    limpa as categorias travadas ao entrar (`profiles/autoswitch.py`, exceção
+    F2 — a troca por jogo não pode ficar silenciada para sempre por um
+    `led.set` da manhã). Sem esta guarda, abrir um jogo durante uma gravação
+    roubaria o mudo do microfone dela.
+
+    A separação: o `volume` (ganho da fonte no PipeWire, não apaga luz nenhuma)
+    atravessa toda ativação; o `muted` só a troca EXPLÍCITA de perfil.
+
+    MORDIDA: apague o `if origin != "manual": muted = None` de `apply_mic` e
+    este caso fica vermelho na primeira asserção.
+    """
+    save_profile(_mk_profile_com_mic("jogo", volume=70, muted=False))
+    espiao = _MicEspiao()
+    manager = ProfileManager(
+        controller=FakeController(), store=StateStore(), mic_applier=espiao
+    )
+
+    manager.activate("jogo", origin="autoswitch")
+    assert espiao.chamadas == [(70, None, "autoswitch")], (
+        "o mudo do perfil atravessou uma troca AUTOMÁTICA de perfil — abrir um "
+        f"jogo no meio da gravação dela desfaria o mudo: {espiao.chamadas!r}"
+    )
+
+    manager.activate("jogo", origin="system")
+    assert espiao.chamadas[-1] == (70, None, "system"), (
+        "o mudo do perfil atravessou o restauro de boot/reconexão"
+    )
+
+    manager.activate("jogo", origin="manual")
+    assert espiao.chamadas[-1] == (70, False, "manual"), (
+        "ela trocou de perfil DE PROPÓSITO e o mudo que ela salvou não foi "
+        f"aplicado: {espiao.chamadas[-1]!r}"
+    )
+
+
+def test_a_trava_manual_de_audio_vence_o_perfil_no_mic(isolated_profiles_dir: Path):
+    """Ela acabou de mexer no microfone na mão: o perfil não pisa.
+
+    Mesma disciplina do alto-falante (categoria `"audio"` do `StateStore`), e
+    agora com o `mic.set`/`mic.volume.set` armando a trava também.
+
+    MORDIDA: tire o bloco `if "audio" in self._categorias_travadas()` de
+    `apply_mic` e este caso fica vermelho.
+    """
+    save_profile(_mk_profile_com_mic("gravando", volume=70))
+    espiao = _MicEspiao()
+    store = StateStore()
+    store.mark_manual_trigger_active("audio")
+    manager = ProfileManager(
+        controller=FakeController(), store=store, mic_applier=espiao
+    )
+    relatorio: dict[str, str] = {}
+    manager.activate("gravando", origin="autoswitch", relatorio=relatorio)
+
+    assert espiao.chamadas == []
+    assert relatorio.get("mic") == "ignorado_trava_manual"
 
 
 # ---------------------------------------------------------------------------

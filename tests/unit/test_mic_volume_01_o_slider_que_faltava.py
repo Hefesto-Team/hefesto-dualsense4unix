@@ -238,11 +238,19 @@ class TestOPerfilLembra:
         assert mic.muted is False
 
     def test_perfil_sem_opiniao_nao_toma_a_posse(self) -> None:
-        """Mesmo contrato do `mouse` e do `speaker`.
+        """Campo a ``None`` continua sendo AUSÊNCIA DE OPINIÃO sobre o campo.
 
-        Um perfil que não pediu volume não pode mexer no microfone ao ser
-        ativado — a queixa "a config que eu deixo nunca é respeitada" vale nos
-        dois sentidos: não respeitar o que ela pôs, e impor o que ela não pediu.
+        **NOTA DATADA — 18/08/2026 (PERFIL-GUARDA-O-MIC-01).** Esta docstring
+        dizia que era "o mesmo contrato do `mouse` e do `speaker`" e que um
+        perfil "não pode mexer no microfone ao ser ativado". A segunda metade
+        caducou, e foi ELA quem a derrubou: *"isso é informação antiga. o
+        sistema de perfis não funcionava, mas acho que não vem ao caso, até pq
+        na época não tinhamos microfone dentro do sistema de perfis."* Ativar um
+        perfil **aplica** o microfone que ele guarda — o que continua valendo é
+        o de baixo, e só ele: perfil que não pediu nada não impõe nada.
+
+        O que este caso trava, hoje: os defaults são ``None`` nos dois campos,
+        e é isso que o applier lê como "não escreva".
         """
         mic = ProfileMicConfig(button_toggles_system=True)
         assert mic.volume is None and mic.muted is None
@@ -281,3 +289,284 @@ class TestAsDuasCamadasNaoSeMisturam:
         )[0]
         assert "set_microphone_mute" not in corpo
         assert "definir_volume_da_captura" in corpo
+
+
+# ---------------------------------------------------------------------------
+# PERFIL-GUARDA-O-MIC-01 (18/08/2026) — o mic chega ao RASCUNHO e ao PERFIL
+# ---------------------------------------------------------------------------
+
+
+class TestOMicChegaAoRascunho:
+    """A metade de CIMA do caminho: o dedo dela chega ao rascunho do perfil?
+
+    Pedido dela em 18/08/2026, depois de o microfone ficar mudo e o DON'T
+    SCREAM não ouvir nada: *"informação de microfone e som, touch,
+    acelerômetro, giroscópio e afins. cara, temos que salvar isso no perfil
+    sempre."* Medido no mesmo dia: **nenhum dos 18 perfis dela tinha a seção
+    `mic`**, embora `ProfileMicConfig` guardasse `volume` e `muted` desde
+    16/08 — a classe de defeito *"a casa sabe e o produto não faz"*.
+    """
+
+    def test_o_mic_faz_ida_e_volta_com_volume_e_mudo(self) -> None:
+        """A trava do ``to_profile``: os dois campos novos chegam ao arquivo.
+
+        MORDIDA: em ``app/draft_config.py``, tire ``volume=self.mic.volume``
+        (ou ``muted=self.mic.muted``) do ``ProfileMicConfig`` construído no
+        ``to_profile`` e este caso fica vermelho dizendo qual número se perdeu.
+        """
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+        draft = DraftConfig().with_mic(volume=70, muted=True)
+        perfil = draft.to_profile("gravando")
+        assert perfil.mic is not None, (
+            "a seção `mic` não existe no perfil — o gesto dela morreu no "
+            "rascunho"
+        )
+        assert perfil.mic.volume == 70, (
+            f"o volume do microfone é {perfil.mic.volume!r} — ela deixou 70"
+        )
+        assert perfil.mic.muted is True, (
+            f"o mudo do microfone é {perfil.mic.muted!r} — ela silenciou"
+        )
+
+    def test_perfil_sem_secao_mic_continua_sem_ganhar_uma(self) -> None:
+        """Perfil legado faz round-trip sem ganhar seção fantasma."""
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+        assert DraftConfig().to_profile("intocado").mic is None
+
+    def test_um_gesto_nao_apaga_o_campo_do_outro(self) -> None:
+        """Volume e mudo têm gestos SEPARADOS na tela e não se atropelam.
+
+        Sem esta preservação, arrastar o controle deslizante depois de
+        silenciar desfaria o mudo no rascunho, em silêncio — e o perfil salvo
+        sairia sem a metade que ela acabou de escolher.
+        """
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+        draft = DraftConfig().with_mic(muted=True).with_mic(volume=40)
+        assert draft.mic.muted is True
+        assert draft.mic.volume == 40
+
+    def test_liberar_apaga_o_mudo_e_preserva_o_volume(self) -> None:
+        """"Liberar" devolve a posse do registrador ao ``hid-playstation``.
+
+        Um perfil salvo depois desse gesto não pode continuar carregando um
+        ``muted`` que a ativação seguinte reaplicaria — retomando a posse que
+        ela acabou de largar. O volume, que é de outra camada, fica.
+        """
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+        draft = DraftConfig().with_mic(volume=55, muted=True)
+        solto = draft.with_mic(soltar_mudo=True)
+        assert solto.mic.muted is None
+        assert solto.mic.volume == 55
+        perfil = solto.to_profile("liberado")
+        assert perfil.mic is not None and perfil.mic.muted is None
+
+    def test_o_escritor_e_calado_quando_nao_ha_rascunho(self) -> None:
+        """Card avulso (teste de geometria) não tem ``draft`` — e sai calado."""
+        from hefesto_dualsense4unix.app.draft_config import (
+            registrar_microfone_no_rascunho,
+        )
+
+        class _JanelaSemRascunho:
+            pass
+
+        janela = _JanelaSemRascunho()
+        registrar_microfone_no_rascunho(janela, volume=10)  # não levanta
+        assert not hasattr(janela, "draft")
+
+    def test_gesto_sem_opiniao_nao_cria_secao_fantasma(self) -> None:
+        """Um callback sem nada a dizer não marca a seção como tocada."""
+        from hefesto_dualsense4unix.app.draft_config import (
+            DraftConfig,
+            registrar_microfone_no_rascunho,
+        )
+
+        class _Janela:
+            draft = DraftConfig()
+
+        janela = _Janela()
+        registrar_microfone_no_rascunho(janela)
+        assert janela.draft.to_profile("nada").mic is None
+
+
+# ---------------------------------------------------------------------------
+# MIC-GRAVACAO-01 (18/08/2026) — o gesto dela ARMA a trava manual de áudio
+# ---------------------------------------------------------------------------
+
+
+class _MicComEstado:
+    """Controle mínimo: aceita o mudo e devolve leitura de áudio."""
+
+    def __init__(self, aceita: bool = True) -> None:
+        self.aceita = aceita
+        self.pedidos: list[bool | None] = []
+
+    def set_microphone_mute(self, muted: bool | None, *, uniq: str | None = None) -> bool:
+        self.pedidos.append(muted)
+        return self.aceita
+
+    def audio_status_for(self, uniq: str | None = None) -> dict[str, bool]:
+        return {"mic_mudo": False}
+
+
+def _host_de_ipc(controller: Any) -> Any:
+    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+
+    class _Host(IpcHandlersMixin):  # type: ignore[misc]
+        def __init__(self) -> None:
+            self.controller = controller
+            self.store = StateStore()
+
+    return _Host()
+
+
+class TestOGestoDelaArmaATravaDeAudio:
+    """O gesto MANUAL no microfone não pode ser pisado pelo perfil reaplicado.
+
+    Até 18/08/2026 só o `speaker.set` armava a categoria `"audio"`. Com o
+    microfone entrando no sistema de perfis, a assimetria virava defeito: o
+    autoswitch reaplica o perfil ativo a CADA troca de janela, e sem a trava
+    isso desfaria, em silêncio, o mudo ou o volume que ela acabou de pedir —
+    o mudo do microfone dela no meio de uma gravação.
+    """
+
+    @pytest.mark.asyncio
+    async def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(self) -> None:
+        """MORDIDA: tire o `self._marcar_audio_manual()` de `_handle_mic_set`
+        e este caso fica vermelho — a trava some e o perfil reaplicado volta a
+        pisar o mudo dela."""
+        host = _host_de_ipc(_MicComEstado())
+        assert host.store.manual_override_categories == frozenset()
+        await host._handle_mic_set({"muted": True})
+        assert host.store.manual_override_categories == frozenset({"audio"}), (
+            "o mudo que ela pediu na mão não armou a trava — o autoswitch "
+            "reaplica o perfil na próxima troca de janela e o desfaz"
+        )
+
+    @pytest.mark.asyncio
+    async def test_pedido_recusado_nao_arma(self) -> None:
+        """Trava sem gesto por baixo seria trava por engano (igual ao speaker)."""
+        host = _host_de_ipc(_MicComEstado(aceita=False))
+        await host._handle_mic_set({"muted": True})
+        assert host.store.manual_override_categories == frozenset()
+
+    @pytest.mark.asyncio
+    async def test_o_volume_do_mic_tambem_arma(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """MORDIDA: tire o `self._marcar_audio_manual()` de
+        `_handle_mic_volume_set`."""
+        host = _host_de_ipc(_MicComEstado())
+        monkeypatch.setattr(ac, "fonte_de_captura_do_controle", lambda: "src")
+        monkeypatch.setattr(
+            ac, "definir_volume_da_captura", lambda v, *, fonte=None: True
+        )
+        monkeypatch.setattr(ac, "volume_da_captura", lambda *, fonte=None: 70)
+        await host._handle_mic_volume_set({"volume": 70})
+        assert host.store.manual_override_categories == frozenset({"audio"})
+
+    @pytest.mark.asyncio
+    async def test_sem_fonte_nao_arma(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`sem_fonte` é resposta, não gesto: nada foi ajustado, nada trava."""
+        host = _host_de_ipc(_MicComEstado())
+        monkeypatch.setattr(ac, "fonte_de_captura_do_controle", lambda: None)
+        res = await host._handle_mic_volume_set({"volume": 70})
+        assert res["status"] == "sem_fonte"
+        assert host.store.manual_override_categories == frozenset()
+
+
+# ---------------------------------------------------------------------------
+# A FIAÇÃO: onde o `speaker_applier` é injetado, o `mic_applier` também tem de
+# ---------------------------------------------------------------------------
+
+
+#: Rotas de ativação de perfil, e o que cada uma injeta hoje.
+_ROTAS_DE_ATIVACAO: tuple[str, ...] = (
+    "src/hefesto_dualsense4unix/daemon/lifecycle.py",
+    "src/hefesto_dualsense4unix/daemon/connection.py",
+    "src/hefesto_dualsense4unix/daemon/subsystems/ipc.py",
+    "src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py",
+    "src/hefesto_dualsense4unix/daemon/subsystems/autoswitch.py",
+)
+
+#: Injeções de `speaker_applier` que NÃO ganham um `mic_applier` ao lado,
+#: com quantas são e a razão por extenso e datada. O portão compara
+#: CONTAGENS, e este dicionário é a única folga que ele aceita.
+_SEM_MIC_HOJE: dict[str, tuple[int, str]] = {
+    # 18/08/2026 — a entrada de `daemon/subsystems/autoswitch.py` SAIU daqui
+    # porque a lacuna foi fechada: as duas rotas de subida do autoswitch
+    # passaram a injetar o `mic_applier`, e a troca de perfil por JANELA
+    # aplica o volume do microfone do perfil. Foi este caso que cobrou a
+    # remoção, reprovando no instante em que as linhas entraram.
+    "src/hefesto_dualsense4unix/daemon/connection.py": (
+        1,
+        "18/08/2026 — DECISÃO, não lacuna, e por isso a folga é de UMA das "
+        "duas injeções deste arquivo: `restore_last_profile` injeta o "
+        "applier do microfone (o volume volta no boot), e "
+        "`reapply_speaker_after_connect` NÃO. O gancho de reconexão existe "
+        "porque a posse dos bytes de volume do alto-falante morre com o "
+        "cabo — e o microfone não tem essa perda: o `volume` mora na fonte "
+        "do PipeWire e sobrevive ao replug, e o `muted` é barrado ali de "
+        "qualquer forma pela exceção MIC-GRAVACAO-01, que só o deixa "
+        "passar em `origin=\"manual\"` (reconexão é `origin=\"system\"`). "
+        "Injetá-lo aqui seria uma linha que nunca escreve nada.",
+    ),
+}
+
+
+class TestOApplierDoMicEstaFiado:
+    """O applier pode existir e não estar ligado em lugar nenhum.
+
+    É a classe de defeito mais cara desta casa — *"a casa sabe e o produto não
+    faz"*: `ProfileMicConfig` guardava `volume` e `muted` desde 16/08/2026 e
+    NADA os lia, e por isso nenhum dos 18 perfis dela tinha a seção. Um portão
+    de comportamento por rota custaria a máquina inteira do
+    `test_daemon_speaker_wiring.py`; este aqui é o barato que pega o esquecido:
+    **toda rota que injeta o irmão tem de injetar este**.
+    """
+
+    def _fonte(self, caminho: str) -> str:
+        from pathlib import Path
+
+        raiz = Path(__file__).resolve().parents[2]
+        return (raiz / caminho).read_text(encoding="utf-8")
+
+    def test_toda_rota_com_speaker_applier_tambem_tem_o_do_mic(self) -> None:
+        """MORDIDA: apague um `mic_applier=` de qualquer rota e o caso nomeia
+        o arquivo. Provada em 18/08 arrancando o de `subsystems/hotkey.py`."""
+        faltando: list[str] = []
+        for caminho in _ROTAS_DE_ATIVACAO:
+            fonte = self._fonte(caminho)
+            n_speaker = fonte.count("speaker_applier=")
+            n_mic = fonte.count("mic_applier=")
+            folga = _SEM_MIC_HOJE.get(caminho, (0, ""))[0]
+            if n_mic < n_speaker - folga:
+                faltando.append(f"{caminho} ({n_mic} de {n_speaker - folga})")
+        assert not faltando, (
+            "rotas de ativação que injetam o applier do alto-falante e NÃO o "
+            f"do microfone: {faltando}. O perfil guarda o microfone e ninguém "
+            "o aplica por esse caminho — a classe de defeito 'a casa sabe e o "
+            "produto não faz'."
+        )
+
+    def test_a_lacuna_conhecida_nao_envelhece_calada(self) -> None:
+        """Lacuna declarada tem razão longa, e continua sendo lacuna de verdade.
+
+        No dia em que a rota do autoswitch ganhar a linha, este caso REPROVA e
+        cobra que a entrada saia daqui — a lápide não pode sobreviver à cura.
+        """
+        for caminho, (folga, razao) in _SEM_MIC_HOJE.items():
+            assert len(razao) > 120, f"a razão de {caminho} é curta demais"
+            fonte = self._fonte(caminho)
+            n_speaker = fonte.count("speaker_applier=")
+            n_mic = fonte.count("mic_applier=")
+            assert n_speaker - n_mic == folga, (
+                f"{caminho} declara {folga} injeção(ões) sem o `mic_applier` e "
+                f"tem {n_speaker - n_mic}. Se a lacuna foi fechada, apague a "
+                "entrada de _SEM_MIC_HOJE; se cresceu, alguém injetou o "
+                "alto-falante numa rota nova e esqueceu o microfone."
+            )

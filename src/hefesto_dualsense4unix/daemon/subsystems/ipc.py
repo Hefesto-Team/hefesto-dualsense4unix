@@ -55,6 +55,11 @@ class IpcSubsystem:
             # categoria manual `audio` e a SEGUNDA ativação de perfil seria
             # descartada pela própria trava (ver `Daemon.apply_profile_speaker`).
             speaker_applier=getattr(daemon, "apply_profile_speaker", None),
+            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): o microfone por perfil. Mesma razão do
+            # alto-falante para falar direto com o backend — o `mic.set` do IPC
+            # arma a categoria manual `audio` e a SEGUNDA ativação seria
+            # descartada pela própria trava (ver `Daemon.apply_profile_mic`).
+            mic_applier=getattr(daemon, "apply_profile_mic", None),
         )
         self._server = IpcServer(
             controller=ctx.controller,
@@ -107,6 +112,9 @@ async def start_ipc(daemon: DaemonProtocol) -> None:
         # SOM-02/E4: idem `IpcSubsystem.start` — a seção `speaker` do perfil
         # precisa existir nas DUAS rotas de subida do IPC.
         speaker_applier=getattr(daemon, "apply_profile_speaker", None),
+        # PERFIL-GUARDA-O-MIC-01 (18/08/2026): idem `IpcSubsystem.start` — a seção `mic` do
+        # perfil precisa existir nas DUAS rotas de subida do IPC.
+        mic_applier=getattr(daemon, "apply_profile_mic", None),
     )
     daemon._ipc_server = IpcServer(
         controller=daemon.controller,
