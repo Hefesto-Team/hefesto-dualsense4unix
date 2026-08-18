@@ -44,7 +44,23 @@ SRC="${HEFESTO_BT_SRC:-/var/lib/bluetooth}"
 DST_ROOT="${HEFESTO_BT_SNAP_ROOT:-/var/lib/hefesto-dualsense4unix/bt-bonds}"
 KEEP=12
 
-log() { [[ "${QUIET}" -eq 1 ]] || printf '%s\n' "$*"; logger -t hefesto-bt-bonds "$*" 2>/dev/null || true; }
+# DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): o destino do log é parametrizável pelo
+# mesmo motivo que as raízes acima são — a suíte roda este script DE VERDADE, e
+# sem isto ela grava no journal da máquina dela linhas que descrevem eventos que
+# nunca aconteceram. Vazio = journal (produção); caminho = arquivo; `none` =
+# nada. O motivo completo está no cabeçalho do bt_bonds_autorestore.sh.
+LOG_TAG=hefesto-bt-bonds
+LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
+_registrar() {
+    case "${LOG_DEST}" in
+        "")   logger -t "${LOG_TAG}" "$*" 2>/dev/null || true ;;
+        none) : ;;
+        *)    printf '%s %s: %s\n' "$(date -Is 2>/dev/null || true)" "${LOG_TAG}" "$*" \
+                  2>/dev/null >>"${LOG_DEST}" || true ;;
+    esac
+}
+
+log() { [[ "${QUIET}" -eq 1 ]] || printf '%s\n' "$*"; _registrar "$*"; }
 
 # Root só é exigido para a árvore REAL (/var/lib/bluetooth é 700 do root). Com
 # as raízes de teste apontando para outro lugar, root não acrescenta nada — e
@@ -154,9 +170,40 @@ printf '%s' "${SIG}" > "${LAST_SIG_FILE}"
 chmod 600 "${LAST_SIG_FILE}"
 log "snapshot de bonds gravado em ${DST} (${#INFOS[@]} bond(s))"
 
-# Poda: mantém os KEEP mais recentes.
-mapfile -t OLD < <(find "${DST_ROOT}" -mindepth 1 -maxdepth 1 -type d | sort | head -n -"${KEEP}")
+# Poda: mantém os KEEP mais recentes — E O MELHOR, sempre.
+#
+# BONDS-QUE-SOBREVIVEM-01/E2 (04/08/2026) — MEDIDO, e é o defeito que esvazia o
+# salva-vidas por dentro: a poda era só por IDADE, e um `bluetoothd` que cai em
+# série grava uma fila de snapshots POBRES (1, 2 bonds) que empurra para fora o
+# snapshot RICO. Medido na máquina dela às 03:04 de 04/08: o snapshot de
+# 23:51:44 com os QUATRO controles já tinha sido podado por doze snapshots de
+# um bond — o acervo estava cheio e não servia para nada.
+#
+# Isso agora é dependência direta da restauração automática
+# (bt_bonds_autorestore.sh): de que adianta o gatilho da volta se o que sobrou
+# no acervo é o retrato do estrago? O melhor snapshot — o de mais bonds, e o
+# mais NOVO em caso de empate — não sai na poda. Custa um `find` por diretório,
+# uma vez a cada gravação.
+mapfile -t TODOS < <(find "${DST_ROOT}" -mindepth 1 -maxdepth 1 -type d | sort)
+MELHOR=""
+MELHOR_N=-1
+for D in "${TODOS[@]:-}"; do
+    [[ -n "${D}" ]] || continue
+    N_D="$(find "${D}" -mindepth 3 -maxdepth 3 -type f -name info 2>/dev/null | wc -l)"
+    # `-ge` e não `-gt`: a lista vem ordenada por tempo, então o empate fica
+    # com o mais NOVO — que é o que tem mais chance de ter a chave atual.
+    if [[ "${N_D}" -ge "${MELHOR_N}" ]]; then
+        MELHOR_N="${N_D}"
+        MELHOR="${D}"
+    fi
+done
+mapfile -t OLD < <(printf '%s\n' "${TODOS[@]:-}" | head -n -"${KEEP}")
 for D in "${OLD[@]:-}"; do
-    [[ -n "${D}" ]] && rm -rf "${D}"
+    [[ -n "${D}" ]] || continue
+    if [[ "${D}" == "${MELHOR}" ]]; then
+        log "poda: ${D##*/} é o melhor snapshot do acervo (${MELHOR_N} bond(s)) — preservado"
+        continue
+    fi
+    rm -rf "${D}"
 done
 exit 0

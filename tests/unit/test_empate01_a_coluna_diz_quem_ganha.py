@@ -258,16 +258,22 @@ class TestFiacaoDaColuna:
 
     @staticmethod
     def _stub() -> Any:
-        from gi.repository import GObject, Gtk
+        from gi.repository import GObject, Gtk, Pango
 
         class _Stub(ProfilesActionsMixin):
             def __init__(self) -> None:
+                # PERFIL-ATUAL-01 (10/08/2026): a 6ª coluna é o REALCE da
+                # linha ativa (`Pango.AttrList`, e não uma cor de `foreground`,
+                # que o GTK descarta na linha selecionada). O store deste dublê
+                # tem de acompanhar o real — com cinco colunas,
+                # `_mark_active_profile_row` estoura.
                 self._profiles_store = Gtk.ListStore(
                     GObject.TYPE_STRING,
                     GObject.TYPE_INT,
                     GObject.TYPE_STRING,
                     GObject.TYPE_INT,
                     GObject.TYPE_STRING,
+                    Pango.AttrList,
                 )
                 self._profiles_cache: list[Profile] = []
                 self._active_profile_hint: str | None = None

@@ -147,7 +147,6 @@ class _HomeStub:
 
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
-    _render_coop_prep = HomeActionsMixin._render_coop_prep
     _refresh_home_tab = HomeActionsMixin._refresh_home_tab
     # O helper REAL (pop antes do push): o teste não pode inventar uma
     # semântica de statusbar mais gentil do que a que roda na máquina dela.
@@ -171,10 +170,8 @@ class _HomeStub:
         self._home_wrapper_banner = _WidgetFalso()
         self._home_shutdown_btn = _WidgetFalso()
         self._home_offline = False
-        self._home_renumber_btn = _WidgetFalso()
-        self._home_renumber_hint = _WidgetFalso()
-        self._home_coop_prep_btn = _WidgetFalso()
-        self._home_coop_prep_hint = _WidgetFalso()
+        self._home_reconciliar_btn = _WidgetFalso()
+        self._home_reconciliar_hint = _WidgetFalso()
         self._home_autoswitch_lock = _WidgetFalso()
         self._home_autoswitch_lock_hint = _WidgetFalso()
 

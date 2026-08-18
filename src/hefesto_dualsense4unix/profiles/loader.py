@@ -22,6 +22,7 @@ import shutil
 import sys
 import tempfile
 from collections.abc import Sequence
+from datetime import datetime
 from pathlib import Path
 
 from filelock import FileLock
@@ -603,7 +604,187 @@ def audit_profiles() -> list[tuple[str, str]]:
     return invalid
 
 
-def save_profile(profile: Profile) -> Path:
+#: SOM-02/E4: seções OPCIONAIS do perfil que não são gravadas quando valem
+#: ``None`` — "sem opinião" é a AUSÊNCIA da chave no arquivo, nunca um `null`.
+#: Requisito de compatibilidade para trás (ver `save_profile`), não estética:
+#: um binário anterior a qualquer uma delas tem ``extra="forbid"`` no `Profile`
+#: e rejeitaria TODOS os perfis no downgrade, não só os que usam a seção.
+#: ``controllers`` tem tratamento próprio logo abaixo (mapa vazio também sai).
+_SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
+    "speaker",
+    "mouse",
+    "mic",
+    "mode",
+    "key_bindings",
+)
+
+
+# ---------------------------------------------------------------------------
+# PERFIL-SEM-RASTRO-01 (05/08/2026) — histórico versionado de cada gravação
+# ---------------------------------------------------------------------------
+# O PORQUÊ, medido: os perfis dela foram corrompidos por dentro da janela —
+# perderam o `match` (virou ``{"type": "any"}``) e as prioridades escalaram até
+# 191. Quando ela perguntou "como sabemos se algum teste ou algo a mais
+# corrompeu algo?", NÃO havia resposta possível: `save_profile` fazia
+# `os.replace` por cima do arquivo, e a versão anterior deixava de existir no
+# mesmo instante. Sem cópia anterior não há nem conserto (voltar ao que estava)
+# nem perícia (comparar o antes com o depois).
+#
+# O custo é desprezível — perfil tem ~1 KB, o arquivamento é uma leitura e uma
+# escrita dentro do MESMO FileLock que a gravação já segurava.
+HISTORICO_DIR_NAME = ".historico"
+
+#: Quantas versões de CADA perfil ficam guardadas. Dez cobre uma sessão inteira
+#: de ajuste fino na janela (que grava a cada confirmação) sem virar depósito.
+HISTORICO_MAX_VERSOES = 10
+
+
+def historico_dir(slug: str, *, ensure: bool = False) -> Path:
+    """Diretório do histórico de UM perfil: ``profiles/.historico/<slug>/``.
+
+    Fica DENTRO do diretório de perfis de propósito: quem faz backup do
+    ``~/.config`` leva o histórico junto. O nome começa com ponto e é um
+    subdiretório, então nenhuma varredura de perfis o enxerga — todas usam
+    ``glob("*.json")`` (não recursivo) ou ``find -maxdepth 1``.
+    """
+    _reject_traversal(slug)
+    destino = profiles_dir(ensure=ensure) / HISTORICO_DIR_NAME / slug
+    if ensure:
+        destino.mkdir(parents=True, exist_ok=True)
+    return destino
+
+
+def _carimbo_de_versao() -> str:
+    """Carimbo ordenável lexicograficamente: ``20260805T031500_123456``."""
+    return datetime.now().strftime("%Y%m%dT%H%M%S_%f")
+
+
+def listar_historico(identifier: str) -> list[Path]:
+    """Versões guardadas de um perfil, da MAIS ANTIGA para a mais recente.
+
+    Aceita slug direto ou display name acentuado (mesma tolerância do
+    `load_profile`). Diretório ausente = lista vazia, nunca exceção.
+    """
+    slug = _slug_para_historico(identifier)
+    destino = historico_dir(slug)
+    if not destino.is_dir():
+        return []
+    return sorted(destino.glob("*.json"))
+
+
+def _slug_para_historico(identifier: str) -> str:
+    """Resolve o identifier para o slug que nomeia o arquivo do perfil.
+
+    Prefere o slug LITERAL quando já existe histórico com esse nome (o
+    histórico é indexado pelo arquivo, não pelo display name); só então cai em
+    `slugify`, que é o que traduz "Ação Rápida" para ``acao_rapida``.
+    """
+    _reject_traversal(identifier)
+    raiz = profiles_dir() / HISTORICO_DIR_NAME
+    if (raiz / identifier).is_dir():
+        return identifier
+    try:
+        return slugify(identifier)
+    except ValueError:
+        return identifier
+
+
+def _podar_historico(destino: Path, manter: int) -> list[Path]:
+    """Apaga as versões mais antigas além de `manter`. Devolve as apagadas."""
+    versoes = sorted(destino.glob("*.json"))
+    apagadas: list[Path] = []
+    for velha in versoes[: max(0, len(versoes) - manter)]:
+        with contextlib.suppress(OSError):
+            velha.unlink()
+            apagadas.append(velha)
+    return apagadas
+
+
+def _arquivar_versao(slug: str, bruto: bytes) -> Path | None:
+    """Guarda os BYTES da versão atual do perfil no histórico.
+
+    Best-effort por contrato, e a razão é a hierarquia de danos: uma falha ao
+    arquivar (disco cheio, permissão) não pode impedir a usuária de SALVAR o
+    perfil dela. Loga warning e devolve None — o `profile_salvo` do journal
+    registra `backup=None`, então a ausência fica visível em vez de silenciosa.
+    """
+    try:
+        destino = historico_dir(slug, ensure=True)
+        alvo = destino / f"{_carimbo_de_versao()}.json"
+        # Dois saves no MESMO microssegundo são inverossímeis, mas o desempate
+        # é barato e evita perder uma versão por colisão de nome.
+        sufixo = 1
+        while alvo.exists():
+            alvo = destino / f"{_carimbo_de_versao()}-{sufixo}.json"
+            sufixo += 1
+        alvo.write_bytes(bruto)
+        _podar_historico(destino, HISTORICO_MAX_VERSOES)
+        return alvo
+    except OSError as exc:
+        logger.warning(
+            "profile_backup_failed",
+            slug=slug,
+            err=str(exc),
+            err_type=type(exc).__name__,
+        )
+        return None
+
+
+def _bytes_se_existe(path: Path) -> bytes | None:
+    """Conteúdo bruto do alvo, ou None quando o perfil ainda não existe."""
+    try:
+        return path.read_bytes()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        logger.warning(
+            "profile_read_before_save_failed",
+            path=str(path),
+            err=str(exc),
+            err_type=type(exc).__name__,
+        )
+        return None
+
+
+def _estado_gravado(bruto: bytes | None) -> tuple[str | None, int | None]:
+    """(discriminador do `match`, `priority`) do que está NO DISCO agora.
+
+    Devolve ``(None, None)`` quando não havia arquivo, e
+    ``("ilegivel", None)`` quando havia mas não decodifica — um perfil
+    corrompido é justamente o caso em que saber o "antes" mais importa.
+    """
+    if bruto is None:
+        return (None, None)
+    try:
+        dados = json.loads(bruto.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return ("ilegivel", None)
+    if not isinstance(dados, dict):
+        return ("ilegivel", None)
+    match = dados.get("match")
+    tipo = match.get("type") if isinstance(match, dict) else None
+    prioridade = dados.get("priority")
+    return (
+        str(tipo) if isinstance(tipo, str) else "ilegivel",
+        prioridade if isinstance(prioridade, int) else None,
+    )
+
+
+def _origem_do_processo() -> str:
+    """Quem é o processo que está gravando — ``hefesto-gui``, ``pytest``...
+
+    PERFIL-SEM-RASTRO-01: a pergunta dela era "algum TESTE corrompeu algo?".
+    Sem esta linha o journal registraria a mudança sem dizer quem a fez, e a
+    resposta continuaria sendo um encolher de ombros.
+    """
+    try:
+        nome = Path(sys.argv[0]).name
+    except (IndexError, ValueError):  # pragma: no cover — argv sempre tem [0]
+        nome = ""
+    return nome or "desconhecida"
+
+
+def save_profile(profile: Profile, *, origem: str | None = None) -> Path:
     """Grava perfil em `<slugify(profile.name)>.json` de forma atômica.
 
     PERFIL-02 (sprint perfis-por-controle): o campo aditivo ``controllers``
@@ -613,6 +794,26 @@ def save_profile(profile: Profile) -> Path:
     no downgrade; com a omissão, só perfis que USAM o mapa ficam
     incompatíveis, e perfis antigos seguem round-trip load→save sem ganhar
     a chave.
+
+    SOM-02/E4 (29/07): a seção ``speaker`` entra na MESMA omissão, e pelo
+    mesmo motivo medido. O ``model_dump`` emite todo campo declarado — um
+    perfil recém-criado já sai com ``"mouse": null, "mic": null,
+    "mode": null`` —, então acrescentar a seção faria TODO save gravar
+    ``"speaker": null`` e um binário anterior à sprint (``extra="forbid"``)
+    rejeitaria TODOS os perfis num downgrade, inclusive os que nunca ouviram
+    falar de alto-falante. Com a omissão, ``load → save`` de um perfil sem a
+    seção não acrescenta a chave ao arquivo.
+
+    E as OUTRAS seções opcionais entram junto — ``mouse``, ``mic``, ``mode`` e
+    ``key_bindings``. Elas tinham exatamente o mesmo defeito, só que já em
+    produção há semanas. Curar só a seção do dia e deixar as vizinhas doentes
+    seria escolher a estética em vez do requisito (o downgrade voltar a
+    funcionar). MEDIDO antes de entrar, com a suíte de unidade inteira: a
+    omissão ampliada não produz UM vermelho novo. O load é semanticamente
+    idêntico, porque chave ausente e chave ``null`` produzem o mesmo ``None``
+    no esquema; ``key_bindings`` ausente segue valendo "herda os defaults", e
+    o que muda comportamento lá é ``{}`` (teclado silencioso) — que não é
+    ``None`` e continua sendo gravado.
 
     Fix do review (2026-07-16, MED): as ENTRADAS do mapa são serializadas
     com ``exclude_unset`` — um override PARCIAL escrito à mão (só
@@ -627,6 +828,12 @@ def save_profile(profile: Profile) -> Path:
     """
     path = _profile_path(profile)
     payload = profile.model_dump(mode="json")
+    # SOM-02/E4: seção ausente é seção AUSENTE no arquivo (ver docstring).
+    # `is None` e não falsy: `key_bindings: {}` é a ordem "teclado silencioso"
+    # e tem de sobreviver ao save.
+    for secao in _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE:
+        if payload.get(secao) is None:
+            payload.pop(secao, None)
     if not payload.get("controllers"):
         payload.pop("controllers", None)
     else:
@@ -635,8 +842,107 @@ def save_profile(profile: Profile) -> Path:
             for uniq, cfg in (profile.controllers or {}).items()
         }
     with FileLock(str(_lock_path(path))):
+        # PERFIL-SEM-RASTRO-01: a versão que está no disco AGORA é lida antes de
+        # ser pisada — os mesmos bytes servem para o backup e para o `antes` do
+        # journal, então a perícia não custa uma segunda leitura.
+        anterior = _bytes_se_existe(path)
+        backup = _arquivar_versao(path.stem, anterior) if anterior is not None else None
         _atomic_write_json(path, payload)
+    _registrar_gravacao(profile, path, anterior, backup, origem)
     return path
+
+
+def _registrar_gravacao(
+    profile: Profile,
+    path: Path,
+    anterior: bytes | None,
+    backup: Path | None,
+    origem: str | None,
+) -> None:
+    """Emite o `profile_salvo` — a linha de journal que NÃO existia.
+
+    PERFIL-SEM-RASTRO-01: foi esta lacuna que impediu decidir se o ``191`` na
+    prioridade veio da catraca que sobe sozinha ou do slider da janela. Gravar
+    perfil era, até aqui, o único caminho do projeto que mudava o disco da
+    usuária sem deixar UMA linha dizendo o quê. As duas transições que mais
+    machucaram entram nomeadas: o discriminador do `match`
+    (``criteria`` -> ``any`` é a perda da regra) e a prioridade.
+
+    Nunca levanta: registrar não pode derrubar uma gravação que já aconteceu.
+    """
+    match_antes, priority_antes = _estado_gravado(anterior)
+    with contextlib.suppress(Exception):
+        logger.info(
+            "profile_salvo",
+            nome=profile.name,
+            arquivo=path.name,
+            criado=anterior is None,
+            match_antes=match_antes,
+            match_depois=profile.match.type,
+            priority_antes=priority_antes,
+            priority_depois=profile.priority,
+            origem=origem or _origem_do_processo(),
+            pid=os.getpid(),
+            backup=str(backup) if backup is not None else None,
+        )
+
+
+def restaurar_do_historico(
+    identifier: str, carimbo: str | None = None
+) -> tuple[Path, Path]:
+    """Devolve ao perfil uma versão guardada. Retorna ``(alvo, versão usada)``.
+
+    PERFIL-SEM-RASTRO-01. Sem `carimbo`, restaura a MAIS RECENTE — que é a
+    versão de antes da última gravação, e portanto a resposta certa para
+    "desfaça o que a janela acabou de fazer com meu perfil".
+
+    Escreve os BYTES ORIGINAIS, não uma reserialização: a restauração tem de
+    ser idêntica ao que foi guardado, inclusive na formatação, senão comparar
+    antes e depois deixa de provar coisa alguma. A validação acontece mesmo
+    assim (`Profile.model_validate`) para recusar devolver lixo ao disco.
+
+    A versão ATUAL é arquivada antes de ser substituída — restaurar por engano
+    também tem volta.
+    """
+    slug = _slug_para_historico(identifier)
+    versoes = listar_historico(slug)
+    if not versoes:
+        raise FileNotFoundError(f"perfil sem histórico guardado: {identifier}")
+
+    if carimbo is None:
+        escolhida = versoes[-1]
+    else:
+        alvos = {carimbo, f"{carimbo}.json"}
+        escolhida_ou_nada = next((v for v in versoes if v.name in alvos), None)
+        if escolhida_ou_nada is None:
+            raise FileNotFoundError(
+                f"versão {carimbo!r} não existe no histórico de {identifier}"
+            )
+        escolhida = escolhida_ou_nada
+
+    bruto = escolhida.read_bytes()
+    try:
+        Profile.model_validate(json.loads(bruto.decode("utf-8")))
+    except _PROFILE_DECODE_ERRORS as exc:
+        raise ValueError(
+            f"versão {escolhida.name} não valida contra o schema: {exc}"
+        ) from exc
+
+    alvo = profiles_dir(ensure=True) / f"{slug}.json"
+    with FileLock(str(_lock_path(alvo))):
+        atual = _bytes_se_existe(alvo)
+        if atual is not None:
+            _arquivar_versao(slug, atual)
+        _atomic_write_bytes(alvo, bruto)
+    with contextlib.suppress(Exception):
+        logger.info(
+            "profile_restaurado",
+            arquivo=alvo.name,
+            versao=escolhida.name,
+            origem=_origem_do_processo(),
+            pid=os.getpid(),
+        )
+    return (alvo, escolhida)
 
 
 def delete_profile(identifier: str) -> None:
@@ -675,10 +981,38 @@ def delete_profile(identifier: str) -> None:
                     break
 
     with FileLock(str(_lock_path(candidate))):
+        # PERFIL-SEM-RASTRO-01: apagar é a gravação mais destrutiva de todas —
+        # guarda a última versão antes de sumir com ela, e registra quem apagou.
+        conteudo = _bytes_se_existe(candidate)
+        backup = (
+            _arquivar_versao(candidate.stem, conteudo) if conteudo is not None else None
+        )
         candidate.unlink()
+    with contextlib.suppress(Exception):
+        logger.info(
+            "profile_apagado",
+            nome=profile.name,
+            arquivo=candidate.name,
+            origem=_origem_do_processo(),
+            pid=os.getpid(),
+            backup=str(backup) if backup is not None else None,
+        )
 
 
 def _atomic_write_json(target: Path, payload: object) -> None:
+    texto = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    _atomic_write_bytes(target, texto.encode("utf-8"))
+
+
+def _atomic_write_bytes(target: Path, bruto: bytes) -> None:
+    """Escrita atômica de bytes crus (tmpfile + fsync + rename).
+
+    PERFIL-SEM-RASTRO-01: a restauração precisa devolver os bytes EXATOS que
+    foram guardados — reserializar mudaria a formatação e uma comparação byte a
+    byte deixaria de provar que a versão voltou inteira. O JSON passou a
+    escrever por aqui também: é o mesmo tmpfile+fsync+rename de antes, num
+    lugar só.
+    """
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(
         prefix=f".{target.name}.",
@@ -686,9 +1020,8 @@ def _atomic_write_json(target: Path, payload: object) -> None:
         dir=str(target.parent),
     )
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump(payload, fh, indent=2, ensure_ascii=False)
-            fh.write("\n")
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(bruto)
             fh.flush()
             os.fsync(fh.fileno())
         os.replace(tmp_name, target)
@@ -699,14 +1032,19 @@ def _atomic_write_json(target: Path, payload: object) -> None:
 
 
 __all__ = [
+    "HISTORICO_DIR_NAME",
+    "HISTORICO_MAX_VERSOES",
     "SEED_MARKER_NAME",
     "SEED_SKIP_ENV_VAR",
     "delete_profile",
+    "historico_dir",
+    "listar_historico",
     "load_all_profiles",
     "load_profile",
     "migrate_coop_local_match",
     "migrate_game_presets_to_xbox",
     "migrate_profiles_coop_default",
+    "restaurar_do_historico",
     "save_profile",
     "seed_default_presets",
 ]

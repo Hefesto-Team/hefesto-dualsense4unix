@@ -64,6 +64,8 @@ def cmd_on(
     if scroll_speed is not None:
         params["scroll_speed"] = scroll_speed
 
+    # ORIGEM-QUE-MENTE-01: a CLI é ela digitando — gesto, não reconciliação.
+    params["origin"] = "manual"
     result = _call_sync("mouse.emulation.set", params)
     ok = isinstance(result, dict) and bool(result.get("enabled"))
     if ok:
@@ -78,7 +80,7 @@ def cmd_on(
 @app.command("off")
 def cmd_off() -> None:
     """Desliga a emulação de mouse no daemon."""
-    _call_sync("mouse.emulation.set", {"enabled": False})
+    _call_sync("mouse.emulation.set", {"enabled": False, "origin": "manual"})
     console.print("[green]emulação de mouse desligada[/green]")
 
 

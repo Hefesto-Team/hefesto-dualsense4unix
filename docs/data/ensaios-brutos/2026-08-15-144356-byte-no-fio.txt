@@ -1,0 +1,53 @@
+
+O QUE A CAPTURA VIU (arquivo do `btmon -w`, lido por parser próprio)
+  quadros ACL com payload L2CAP ...... 2729
+  DATA host->device (0xA2) ........... 120
+  ... destes, output report 0x31 ..... 120
+  DATA device->host (0xA1) ........... 2609
+  kprobe ............................. armado em dualsense_send_output_report.isra.0
+
+OUTPUT REPORTS 0x31 POR HANDLE, NA CAPTURA INTEIRA
+handle  de quem            quadros 0x31
+------  -----------------  ------------
+5       44:46:48:00:00:03  60
+6       14:3a:9a:00:00:ab  60
+
+A MORDIDA — a cor mágica que EU escrevi aparece no ar, nos offsets 47/48/49?
+rodada  MAC                handle  cor mágica (hex)  0x31 no handle  com a cor mágica  kprobe
+------  -----------------  ------  ----------------  --------------  ----------------  ------
+r1      44:46:48:00:00:03  5       11 22 33          60              30                30
+r1      14:3a:9a:00:00:ab  6       11 22 33          60              30                30
+r2      44:46:48:00:00:03  5       44 55 66          60              30                30
+r2      14:3a:9a:00:00:ab  6       44 55 66          60              30                30
+
+OS BYTES — um exemplar do 0x31 de cada controle que a cor mágica identificou
+MAC                seq_tag  tag   vflag0  vflag1  vflag2  lb_setup  brilho  R G B           tam  CRC
+-----------------  -------  ----  ------  ------  ------  --------  ------  --------------  ---  ---
+14:3a:9a:00:00:ab  0x40     0x10  0x00    0x04    0x00    0x00      0x00    0x11 0x22 0x33  78   ok
+44:46:48:00:00:03  0x80     0x10  0x00    0x04    0x00    0x00      0x00    0x11 0x22 0x33  78   ok
+
+  14:3a:9a:00:00:ab  0x31 inteiro, 78 bytes:
+      0: 31 40 10 00 04 00 00 00 00 00 00 00 00 00 00 00
+     16: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+     32: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 11
+     48: 22 33 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+     64: 00 00 00 00 00 00 00 00 00 00 96 a6 cd c1
+
+  44:46:48:00:00:03  0x31 inteiro, 78 bytes:
+      0: 31 80 10 00 04 00 00 00 00 00 00 00 00 00 00 00
+     16: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+     32: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 11
+     48: 22 33 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+     64: 00 00 00 00 00 00 00 00 00 00 b9 db 4a bd
+
+O DIFF BYTE A BYTE — 14:3a:9a:00:00:ab contra 44:46:48:00:00:03
+  tamanhos: 78 e 78
+offset  campo                                  14:3a:9a:00:00:ab  44:46:48:00:00:03
+------  -------------------------------------  -----------------  -----------------
+1       seq_tag (contador rotativo do driver)  0x40               0x80
+74      crc32                                  0x96               0xb9
+75      crc32                                  0xa6               0xdb
+76      crc32                                  0xcd               0x4a
+77      crc32                                  0xc1               0xbd
+
+RESUMO: O BYTE SAI NO FIO PARA TODOS OS 2. Nenhum comando morreu no host: compare os bytes acima — se forem iguais, o réu é o aparelho.

@@ -151,7 +151,7 @@ class TestGamepadPrimario:
         monkeypatch.setattr(gamepad_mod, "_set_controller_grab", lambda *_a: None)
         daemon = _daemon(hidraw={None: "/dev/hidraw4"})
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
         assert len(chamadas) == 1
         chamada = chamadas[0]
         assert chamada["flavor"] == "dualsense"
@@ -172,7 +172,7 @@ class TestGamepadPrimario:
         monkeypatch.setattr(gamepad_mod, "_set_controller_grab", lambda *_a: None)
         daemon = _daemon()
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
         assert chamadas[0]["allow_uhid"] is False
 
     def test_factory_sem_backend_falha_o_start(
@@ -185,7 +185,7 @@ class TestGamepadPrimario:
         )
         daemon = _daemon(hidraw={None: "/dev/hidraw4"})
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is False
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is False
         assert daemon._gamepad_device is None
         assert daemon.config.gamepad_emulation_enabled is False
 
@@ -314,7 +314,7 @@ class TestRebackendPorReselecao:
         pad = _PadP1()
         daemon._gamepad_device = pad
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
 
         assert pad.parado is True  # derrubou o uinput degradado...
         assert len(chamadas) == 1  # ...e recriou via factory (que prefere o uhid)
@@ -328,7 +328,7 @@ class TestRebackendPorReselecao:
         pad = _PadP1(backend="uhid")
         daemon._gamepad_device = pad
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
         assert pad.parado is False
         assert chamadas == []
 
@@ -339,7 +339,7 @@ class TestRebackendPorReselecao:
         pad = _PadP1(flavor="xbox", backend="uinput")
         daemon._gamepad_device = pad
 
-        assert start_gamepad_emulation(daemon, flavor="xbox") is True
+        assert start_gamepad_emulation(daemon, flavor="xbox", origin="manual") is True
         assert pad.parado is False
         assert chamadas == []
 
@@ -352,7 +352,7 @@ class TestRebackendPorReselecao:
         pad = _PadP1()
         daemon._gamepad_device = pad
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
         assert pad.parado is False
         assert chamadas == []
 
@@ -366,7 +366,7 @@ class TestRebackendPorReselecao:
         pad = _PadP1()
         daemon._gamepad_device = pad
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
         assert pad.parado is False
         assert chamadas == []
 
@@ -380,12 +380,12 @@ class TestRebackendPorReselecao:
         monkeypatch.setattr(gamepad_mod, "logger", espiao)
         daemon = _daemon(hidraw={})
         daemon._gamepad_device = _PadP1()
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
         assert len(chamadas) == 1  # 1ª re-seleção promoveu (e carimbou o cooldown)
 
         pad2 = _PadP1()  # o uhid caiu de novo (bind falhou): uinput outra vez
         daemon._gamepad_device = pad2
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
 
         assert pad2.parado is False
         assert len(chamadas) == 1  # nada recriado dentro do cooldown
@@ -427,7 +427,7 @@ class TestRebackendPorReselecao:
             start_gamepad_emulation(daemon, flavor="dualsense", origin="profile")
         assert chamadas == []
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
 
         assert pad.parado is True  # o gesto manual derrubou o degradado...
         assert len(chamadas) == 1  # ...e recriou 1 vez (cooldown segura a 2ª)
@@ -459,7 +459,7 @@ class TestFallbackNuncaSilencioso:
         self._factory_devolvendo(monkeypatch, flavor="dualsense", backend="uinput")
         daemon = _daemon(hidraw={})
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
 
         assert daemon.store.bumps == ["gamepad.uhid.fallback"]
 
@@ -467,7 +467,7 @@ class TestFallbackNuncaSilencioso:
         self._factory_devolvendo(monkeypatch, flavor="dualsense", backend="uhid")
         daemon = _daemon(hidraw={})
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
         assert daemon.store.bumps == []
 
     def test_mascara_xbox_nao_conta(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -476,7 +476,7 @@ class TestFallbackNuncaSilencioso:
         self._factory_devolvendo(monkeypatch, flavor="xbox", backend="uinput")
         daemon = _daemon(hidraw={})
 
-        assert start_gamepad_emulation(daemon, flavor="xbox") is True
+        assert start_gamepad_emulation(daemon, flavor="xbox", origin="manual") is True
         assert daemon.store.bumps == []
 
     def test_daemon_sem_store_nao_quebra(
@@ -488,7 +488,7 @@ class TestFallbackNuncaSilencioso:
         daemon = _daemon(hidraw={})
         daemon.store = None
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
 
 
 class TestStartFalhoRematerializaLaunchEnv:
@@ -520,7 +520,7 @@ class TestStartFalhoRematerializaLaunchEnv:
         # Boot da sessão N+1: a emulação estava LIGADA na sessão anterior.
         daemon.config.gamepad_emulation_enabled = True
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense") is False
+        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is False
 
         texto = (tmp_path / "default.env").read_text(encoding="utf-8")
         assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in texto

@@ -26,6 +26,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, Gtk
 
+from hefesto_dualsense4unix.app.actions.carona_do_wrapper import GESTO_APLICAR
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
@@ -377,7 +378,11 @@ class HefestoApp(
             # Emulação
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,
-            "on_emulation_open_toml": self.on_emulation_open_toml,
+            # BOTÃO-QUE-NÃO-MENTE-01 (entregas 5 e 6): o
+            # "on_emulation_open_toml" saiu daqui junto com o método. O botão
+            # dele já tinha saído do glade na entrega 3; o nome sobrevivia
+            # neste mapa apontando para um handler que ninguém podia chamar.
+
             # Emulação — microfone do DualSense
             "on_emulation_mic_on": self.on_emulation_mic_on,
             "on_emulation_mic_off": self.on_emulation_mic_off,
@@ -617,6 +622,20 @@ class HefestoApp(
                                capture_output=True, timeout=2, check=False)
 
     def show_window(self) -> None:
+        """Traz a janela para a frente (SIGUSR1, tray, notificação).
+
+        DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): levantar SÓ a janela
+        principal não bastava — se há um diálogo modal bloqueante aberto, a
+        principal é justamente a que está sob o grab, e presenteá-la não
+        devolve nada a ela. MEDIDO em 06/08: `GLib.idle_add` (por onde este
+        método chega, vindo do handler de SIGUSR1) **roda dentro do laço
+        aninhado do `dialog.run()`**, então este é o caminho externo que
+        alcança um diálogo perdido: `kill -USR1 <pid da GUI>`.
+        """
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.app import gui_dialogs
+
+            gui_dialogs.presentar_dialogos_em_curso()
         self.window.show_all()
         self.window.present()
 
@@ -870,6 +889,19 @@ class HefestoApp(
             "gui_draft_reconciliado",
             de=self._active_profile_name or None,
             para=ativo,
+        )
+        # NUNCA-TROCA-O-ALVO-01 (06/08/2026): esta troca é LEGÍTIMA — não havia
+        # nada a perder no instante do tique — mas ela move o alvo dos dois
+        # botões de salvar sem que ela tenha encostado em nada, e era isso que
+        # fazia o diálogo do rodapé nascer perguntando "substituir
+        # 'sackboy_nativo'?" logo depois de ela ter ativado 'vitoria' na mão.
+        # O silêncio aqui era a metade não medida do defeito: recarregar em
+        # silêncio é seguro para os DADOS e enganoso para ELA. A janela passa a
+        # dizer, no vocabulário do outro ramo, para onde o Salvar aponta agora.
+        self._status_toast(
+            "draft-reload",
+            f"O perfil ativo virou '{ativo}' — as abas passaram a mostrar "
+            f"esse perfil, e é nele que 'Salvar Perfil' grava agora.",
         )
         self._bootstrap_draft_async()
 
@@ -1179,12 +1211,35 @@ class HefestoApp(
             logger.debug("compact_state_fetch_failed", err=str(exc))
             return None
 
+    def _trocar_perfil_de_fora(self, name: str) -> bool:
+        """Trocar de perfil pela BANDEJA ou pela janela compacta.
+
+        CARONA-DO-WRAPPER-01: o pedido dela foi *"ao clicarmos em aplicar ou
+        salvar o perfil **seja dentro ou fora da guia de perfis**"*, e estes
+        dois menus são o "fora" que fica mais longe da guia — a bandeja é o
+        caminho de quem nem abriu a janela.
+
+        A carona vem DEPOIS da troca e não depende do resultado dela, pela
+        mesma razão do "Ativar" da aba: o wrapper que a Steam comeu continua
+        comido mesmo que o daemon esteja parado e a troca falhe.
+
+        Não há rodapé garantido aqui — a janela principal pode nem estar
+        montada. Isso custa a FRASE, nunca o REPARO: ``_carona_toast`` já cai
+        na statusbar e o degrau inteiro corre dentro do try do
+        ``_carona_ao_terminar``. Reparar calado é melhor que não reparar.
+        """
+        try:
+            trocou = profile_switch(name)
+        finally:
+            self.pegar_carona_no_gesto(GESTO_APLICAR)
+        return trocou
+
     def run(self, *, start_hidden: bool = False) -> None:
         self.tray = AppTray(
             on_show_window=self.show_window,
             on_quit=self.quit_app,
             on_list_profiles=profile_list,
-            on_switch_profile=profile_switch,
+            on_switch_profile=self._trocar_perfil_de_fora,
             # FEAT-DSX-MULTI-CONTROLLER-01: status item mostra "N controles".
             on_state=self._compact_state_snapshot,
         )
@@ -1200,7 +1255,7 @@ class HefestoApp(
                 on_show_window=self.show_window,
                 on_quit=self.quit_app,
                 on_list_profiles=profile_list,
-                on_switch_profile=profile_switch,
+                on_switch_profile=self._trocar_perfil_de_fora,
                 on_state=self._compact_state_snapshot,
             )
             if self.compact_window.start():

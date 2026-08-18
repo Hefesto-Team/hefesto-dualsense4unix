@@ -378,7 +378,17 @@ async def test_status_publica_o_bloco_do_teclado() -> None:
     daemon._keyboard_device = MagicMock()
     h = _HandlersStatus(daemon, daemon.store, daemon.controller)
     res = await h._handle_daemon_status({})
-    assert res["keyboard_emulation"] == {
+    # `osk_disponivel` entrou em 10/08/2026 (TECLADO-QUE-NAO-DIGITA-01): é a
+    # resposta do DAEMON sobre a máquina — a janela não pode perguntar sozinha,
+    # porque num Flatpak ela olharia dentro do sandbox. O valor aqui depende de
+    # haver wvkbd/onboard instalado em quem roda a suíte, então o teste cobra a
+    # PRESENÇA e o TIPO da chave, e a igualdade exata só nas outras quatro.
+    bloco = dict(res["keyboard_emulation"])
+    assert isinstance(bloco.pop("osk_disponivel"), bool), (
+        "o status parou de dizer se existe teclado na tela — a janela volta a "
+        "não ter como saber se o L3 abre alguma coisa"
+    )
+    assert bloco == {
         "enabled": True,
         "device_ativo": True,
         "despachando": True,

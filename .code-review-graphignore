@@ -1,0 +1,10 @@
+# Artefatos de build: 18G de target/ do applet Rust nao sao codigo-fonte a indexar
+packaging/cosmic-applet/target/
+flatpak-repo/
+build/
+dist/
+# Ambientes e caches
+venv/
+.venv/
+node_modules/
+__pycache__/

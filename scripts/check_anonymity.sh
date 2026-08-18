@@ -28,6 +28,28 @@ FORBIDDEN='(\b(claude|anthropic|openai|chatgpt|sonnet|haiku|gemini|copilot|mistr
 EXCLUDE_PATHSPECS=(
     ':!LICENSE'
     ':!NOTICE'
+    # ANONIMATO-TEXTO-DE-LICENCA-01 (07/08/2026): a CR-05 trouxe para a árvore o
+    # texto CANÔNICO da GPL-2.0 (LICENSES/GPL-2.0.txt), porque a GPL, seção 1,
+    # exige que a cópia da licença acompanhe o fonte — e cinco alvos de
+    # empacotamento distribuem os fontes GPL de assets/dkms/. O texto da FSF
+    # casa o regex em TRÊS linhas, todas falso positivo do padrão `made by`:
+    #
+    #   :76  "...independent of having been made by running the Program)."
+    #   :166 "If distribution of executable or object code is made by offering"
+    #   :330 "`Gnomovision' (which makes passes at compilers) written by James
+    #         Hacker."  (o exemplo de aviso de copyright que a própria GPL dá)
+    #
+    # Não há correção possível do lado do arquivo: licença editada é licença
+    # outra, e a regra da casa é que não se inventa nem se ajusta texto de
+    # licença. A exclusão é a mesma classe da do LICENSE e da do NOTICE logo
+    # acima — texto jurídico de terceiro, não código nosso.
+    #
+    # A exclusão é ESTREITA de propósito: só os `.txt`, que são os textos
+    # canônicos. O `LICENSES/README.md`, que é prosa NOSSA, continua dentro do
+    # portão. E os `.txt` não viram esconderijo porque
+    # tests/unit/test_cr05_licencas_de_terceiros_viajam.py fixa o
+    # `LICENSES/GPL-2.0.txt` por SHA-256: qualquer byte a mais reprova a suíte.
+    ':!LICENSES/*.txt'
     ':!CHANGELOG.md'
     ':!VALIDATOR_BRIEF.md'
     ':!.gitignore'
@@ -42,15 +64,92 @@ EXCLUDE_PATHSPECS=(
     ':!.github/workflows/anonymity-check.yml'
 )
 
-# Usa git grep se estivermos em repo (respeita .gitignore + pathspec).
-# Cai pra grep manual se repo ainda não inicializado (W0.1 pré-git init).
+# Usa a LISTA do git + grep se estivermos em repo (respeita .gitignore +
+# pathspec). Cai pra grep manual se repo ainda não inicializado (W0.1 pré-git
+# init).
 if git rev-parse --git-dir >/dev/null 2>&1; then
-    HITS=$(git grep -niE "$FORBIDDEN" -- "${EXCLUDE_PATHSPECS[@]}" 2>/dev/null || true)
+    # ANONIMATO-CEGO-A-ARQUIVO-NOVO-01 (13/08/2026): aqui era `git grep`, e
+    # `git grep` só enxerga o que está no ÍNDICE. Arquivo recém-escrito, ainda
+    # sem `git add`, passava VERDE — o portão calava exatamente no arquivo que
+    # ninguém tinha revisado, que é quando o deslize entra. O comentário da
+    # ANONIMATO-FRONTEIRA-DE-PALAVRA-01, lá em cima, já registrava a cegueira
+    # ("o defeito só aparecia DEPOIS do `git add`, porque o gate usa `git grep`
+    # e é cego a arquivo não rastreado; o commit f319c6f entrou vermelho por
+    # causa disso") e ninguém a tinha curado: este era o ÚLTIMO portão cego da
+    # casa. `validar-acentuacao.py` (listar_arquivos_git) e `validar-glifos.py`
+    # (idem) já fazem o mesmo desde a PORTÃO-VIVO-01 Bloco A.
+    #
+    # A cura é trocar a BUSCA pela LISTA: `git ls-files --cached --others
+    # --exclude-standard` traz o rastreado E o novo, sem trazer o ignorado, e o
+    # grep varre a lista. Os pathspecs de exclusão continuam valendo letra por
+    # letra — `git ls-files` lê a mesma sintaxe `:!` do `git grep`.
+    #
+    # MEDIDO em 13/08/2026, num repo de mentira: com o `git grep`, um
+    # `src/.../novo.py` contendo "# by claude" e NUNCA adicionado devolvia
+    # "OK: anonimato preservado." e exit 0.
+    #
+    # ANONIMATO-MAIUSCULA-01 (13/08/2026) — ACHADO, MEDIDO, E DEIXADO DE PÉ,
+    # porque consertá-lo é decisão dela e não do portão:
+    #
+    # o grep daqui NÃO leva `-i`, e a regex acima é toda minúscula. Logo, no
+    # ramo do git, maiúscula é esconderijo: um arquivo RASTREADO com "escrito
+    # com Claude Opus" passa verde (medido num repo de mentira em 13/08/2026).
+    # O `-i` existia (`git grep -niE`, commit 9cbfcc0) e sumiu em c51c902,
+    # quando o `-I` do parágrafo abaixo entrou NO LUGAR do `i` em vez de ao
+    # lado dele. A suíte não viu porque o teste que cobre esse caso
+    # (`test_ainda_pega_o_modelo_composto`) exercita o ramo de FALLBACK, que
+    # nunca perdeu o `-i`.
+    #
+    # O PREÇO DE DEVOLVER O `-i`, medido na árvore de 13/08/2026: 25
+    # reprovações em 7 arquivos, e TODAS são a mesma coisa — o nome do arquivo
+    # `CLAUDE.md`, citado por quem escreve sobre as regras da casa
+    # (test_portoes_da_casa_estao_ligados_no_ci.py sozinho responde por 19).
+    # ZERO são violação de verdade. Devolver o `-i` sem antes decidir o que
+    # fazer com esse nome transformaria o portão num gerador de ruído, e a
+    # regra da casa é que portão que grita falso é portão que se desliga.
+    #
+    # A decisão é dela porque é a MESMA decisão do `CLAUDE.md`: o arquivo é
+    # proibido de ser versionado por .github/workflows/anonymity-check.yml, e
+    # é ela quem escolhe se o NOME dele vira exceção explícita do regex, se o
+    # texto passa a citá-lo de outro jeito, ou se o ramo do git segue sensível
+    # a maiúscula de propósito. Enquanto não escolher, fica registrado aqui:
+    # este ramo NÃO pega o nome de modelo capitalizado.
+    #
+    # ANONIMATO-BINARIO-FALSO-POSITIVO-01 (01/08/2026): o `-I` NÃO é opcional.
+    # Sem ele o `git grep` varre os PNGs de `docs/usage/assets/` e um deles
+    # casou o regex POR ACASO, nos bytes comprimidos — a saída era um
+    # "Binary file docs/usage/assets/readme_lightbar.png matches" que reprovava
+    # o repositório inteiro e não tinha como ser "corrigido", porque não havia
+    # texto nenhum ali. E a imagem MUDA a cada `retratar_abas.py`, então o
+    # falso positivo é intermitente: aparece e some conforme o desenho da aba.
+    #
+    # Isto não afrouxa o portão. Ele nunca soube ler imagem: o `README.md` já
+    # avisa que os portões de anonimato NÃO varrem imagens, e que a foto da
+    # aba Sistema teve de ser borrada à mão. O `-I` só faz o script parar de
+    # fingir que varre.
+    #
+    # A lista entra num array por `read -d ''`, e NÃO por `git ls-files | grep`:
+    # é a mesma lição da CORRIDA-DO-PIPEFAIL-01 do check_packaging_parity.sh —
+    # produtor num pipe cujo consumidor pode sair antes é corrida, e o
+    # `pipefail` do `set -euo pipefail` do topo transformaria o SIGPIPE em
+    # veredito.
+    ARQUIVOS=()
+    while IFS= read -r -d '' _arquivo; do
+        ARQUIVOS+=("${_arquivo}")
+    done < <(git ls-files -z --cached --others --exclude-standard \
+        -- "${EXCLUDE_PATHSPECS[@]}" 2>/dev/null)
+    if [[ "${#ARQUIVOS[@]}" -gt 0 ]]; then
+        # `2>/dev/null` cobre o caso do arquivo apagado do disco mas ainda no
+        # índice, que o `--cached` lista e o grep não acha.
+        HITS=$(grep -HnIE "$FORBIDDEN" -- "${ARQUIVOS[@]}" 2>/dev/null || true)
+    else
+        HITS=""
+    fi
 else
     # Fallback: grep -r. Limitação: --exclude-dir só aceita basename, então
     # dirs com nome 'process'/'history'/'fixtures' em qualquer nível são excluídos.
     # Recomenda-se git init pra usar o pathspec rico do git grep.
-    HITS=$(grep -rniE "$FORBIDDEN" . \
+    HITS=$(grep -rnIiE "$FORBIDDEN" . \
         --include="*.py" --include="*.md" --include="*.toml" \
         --include="*.sh" --include="*.yaml" --include="*.yml" \
         --include="*.service" --include="*.rules" \
@@ -73,6 +172,227 @@ if [[ -n "$HITS" ]]; then
     echo "docs/history/** e tests/fixtures/** estão excluídos do check."
     echo "Decisões de arquitetura com menção de IA devem ficar em"
     echo "docs/process/ (fora do repo) ou docs/history/ (dentro, ignorado)."
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# MAC-BINARIO-EM-LITTLE-ENDIAN-01 (15/08/2026). MEDIDO.
+# ---------------------------------------------------------------------------
+#
+# Tudo acima é TEXTO: `grep -I`, que por desenho PULA arquivo binário
+# (ANONIMATO-BINARIO-FALSO-POSITIVO-01, no comentário lá em cima — e aquela
+# decisão continua de pé, ela é sobre nome de modelo em PNG comprimido).
+#
+# Só que em 15/08 a casa passou a versionar captura de rádio BINÁRIA
+# (`docs/data/ensaios-brutos/*.btsnoop`), e o `btmon` grava o endereço do
+# adaptador como seis bytes crus em ordem INVERTIDA: `d8:44:89:xx:xx:xx` vira
+# `xx xx xx 89 44 d8`. Medido: nenhum portão desta casa via isso. Um `.btsnoop`
+# de 238 KB entrou verde carregando o endereço duas vezes.
+#
+# Daqui em diante o portão também lê BYTES, e procura nas DUAS ordens — a
+# big-endian dá zero nas capturas de hoje, e continua sendo procurada de
+# propósito: zero é resultado declarado, não busca esquecida.
+#
+# A varredura é em Python porque `grep` quebra a entrada em LINHAS, e um
+# endereço cujos octetos contenham 0x0a atravessaria a quebra sem ser visto.
+# Fail-CLOSED se não houver python3: a mesma polaridade do guarda de CI —
+# o que não dá para medir REPROVA.
+#
+# O portão AUTORITATIVO desta regra é `tests/unit/test_docs_mac_anonimato.py`
+# (varre texto E bytes, com os testes de mordida). Este bloco é a segunda
+# linha, para quem roda só o script.
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "ANONIMATO: python3 ausente — a varredura de MAC em BINÁRIO não pôde"
+    echo "rodar. Isto NÃO é 'limpo': é 'não medido'. Reprovando."
+    exit 1
+fi
+
+# A lista vai por PIPE, e não por variável: `$(...)` DESCARTA byte nulo (o bash
+# até avisa), e a lista é separada por nulo justamente para aguentar nome de
+# arquivo com espaço. Medido em 15/08: com a lista numa variável, o python
+# recebia um nome só, gigante, e a varredura devolvia verde sem ter aberto
+# arquivo nenhum. O consumidor lê a entrada INTEIRA, então não há a corrida de
+# SIGPIPE que o `pipefail` transformaria em veredito.
+_listar_para_varredura_binaria() {
+    if git rev-parse --git-dir >/dev/null 2>&1; then
+        git ls-files -z --cached --others --exclude-standard 2>/dev/null
+    else
+        find . -type f -not -path './.git/*' -print0 2>/dev/null
+    fi
+}
+
+MAC_BIN=$(_listar_para_varredura_binaria | python3 -c '
+import sys
+
+# ESPELHO de tests/unit/test_docs_mac_anonimato.py::_OUIS_REAIS_OCTETOS e de
+# scripts/mascarar_btsnoop.py. tests/unit/test_mascarar_btsnoop.py reprova a
+# divergência entre as três cópias.
+OUIS = ("d84489", "a0fa9c", "e417d8", "e0f6b5",
+        "48b25d", "143a9a", "d42f4b", "444648")
+# Imagem e catálogo compilado ficam de fora: três bytes casam por acaso em dado
+# comprimido, e PNG que muda a cada captura de tela geraria alarme intermitente.
+PULA = (".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
+
+achados = []
+for nome in sys.stdin.buffer.read().split(b"\0"):
+    if not nome:
+        continue
+    caminho = nome.decode("utf-8", "surrogateescape")
+    if caminho.lower().endswith(PULA):
+        continue
+    try:
+        with open(nome, "rb") as fh:
+            dados = fh.read()
+    except OSError:
+        continue
+    for oui in OUIS:
+        be = bytes.fromhex(oui)
+        le = be[::-1]
+        pos = dados.find(be)
+        while pos != -1:
+            campo = dados[pos:pos + 6]
+            if len(campo) == 6 and (campo[3] or campo[4]):
+                achados.append(
+                    "%s: offset %d (big-endian): %s" % (caminho, pos, campo.hex(":"))
+                )
+            pos = dados.find(be, pos + 1)
+        pos = dados.find(le)
+        while pos != -1:
+            inicio = pos - 3
+            if inicio >= 0:
+                campo = dados[inicio:inicio + 6]
+                if campo[1] or campo[2]:
+                    achados.append(
+                        "%s: offset %d (little-endian): %s"
+                        % (caminho, inicio, campo[::-1].hex(":"))
+                    )
+            pos = dados.find(le, pos + 1)
+for linha in sorted(achados):
+    print(linha)
+')
+
+if [[ -n "$MAC_BIN" ]]; then
+    echo "ANONIMATO VIOLADO — MAC de hardware REAL gravado em BINÁRIO:"
+    echo "------------------------------------------------"
+    echo "$MAC_BIN"
+    echo "------------------------------------------------"
+    echo ""
+    echo "Nenhum portão de TEXTO enxerga isto: numa captura HCI o endereço vai"
+    echo "em bytes crus e em ordem invertida (little-endian)."
+    echo "Cura: scripts/mascarar_btsnoop.py ENTRADA -o SAIDA (captura .btsnoop),"
+    echo "ou zere os octetos 4 e 5 dos seis bytes apontados. A máscara da casa"
+    echo "é OUI:00:00:NN, e o tamanho do arquivo não pode mudar."
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# SERIAL-DE-FABRICA-01 (15/08/2026). MEDIDO.
+# ---------------------------------------------------------------------------
+#
+# Terceira vez da mesma família nesta casa: o portão só reprova a forma que ele
+# conhece. Foi assim no BURACO-DO-PORTAO-01 (06/08, o MAC colado) e no
+# MAC-BINARIO-EM-LITTLE-ENDIAN-01 (o bloco logo acima).
+#
+# Hoje um SERIAL DE FÁBRICA real, dos 17 caracteres, entrou na docstring de
+# `mascarar_serial()` em `scripts/ensaios/cor_do_plastico.py` — a função que
+# mascara serial vazou um — e ESTE script passou VERDE. Motivo: tudo acima caça
+# a forma de um MAC e menções a provedores de IA. Antes desta linha,
+# `grep -i serial scripts/check_anonymity.sh` devolvia ZERO.
+#
+# O serial identifica a unidade dela tão bem quanto o MAC: é o número da
+# etiqueta, o da garantia, o que liga o aparelho à compra. A máscara da casa
+# são os 6 primeiros caracteres e o resto em `#` — `A12B34###########`, num
+# prefixo FORJADO: nem exemplo mascarado precisa carregar o prefixo dela — e ela
+# preserva de propósito os caracteres 5 e 6, onde mora o código da COR, que é o
+# que o ensaio E7 mede.
+#
+# A FORMA é a MEDIDA nos dois aparelhos que responderam ao E7, e não a que
+# circulava de boca: o padrão `[A-Z]\d{2}[A-Z]\d{2}[A-Z]\d{10}` está ERRADO
+# porque o segundo serial da bancada tem DÍGITO no caractere 4 (ver
+# docs/data/ensaios-brutos/2026-08-15-E7-cor-do-plastico.csv, coluna
+# `serial_mascarado`), e aquele padrão não casaria com ele.
+#
+# FALSO POSITIVO, MEDIDO na árvore de 15/08 (rastreados + novos): `[A-Z0-9]{17}`
+# solto dá 12 reprovações em 8 arquivos, todas ruído (`INDEPENDENTEMENTE`,
+# `MICROCASSYVOLTAGE`, `REDIMENSIONAMENTO`, ... e os dois seriais forjados
+# legítimos). Exigir DÍGITO nas posições 2, 3, 5 e 6 leva o ruído a ZERO sem
+# perder a forma real — palavra não tem dígito, e os forjados não têm dígito
+# onde o serial verdadeiro tem.
+#
+# TRÊS FORMAS, porque duas já não bastaram: texto (inclusive dentro de
+# binário), hexdump em pares (o serial de 17 caracteres ATRAVESSA a quebra de
+# linha de um dump de 16 bytes) e corrida hexadecimal colada. A coluna de
+# offset do dump (`0000`) e um `0x00001111` ficam de fora sozinhos, pela
+# fronteira de hexadecimal dos pares.
+#
+# O portão AUTORITATIVO desta regra é `tests/unit/test_docs_mac_anonimato.py`
+# (mesmo padrão, com os testes de mordida das três formas, e com um teste que
+# reprova a divergência entre as duas cópias). Este bloco é a segunda linha,
+# para quem roda só o script. O python3 já foi exigido no bloco acima.
+#
+# A mensagem NÃO imprime o serial achado: saída de portão vai para log de CI, e
+# portão que republica o segredo para avisar do vazamento só mudou o vazamento
+# de lugar. Saem os 6 públicos e a máscara, que bastam para achar a linha.
+SERIAL_HITS=$(_listar_para_varredura_binaria | python3 -c '
+import re
+import sys
+
+# ESPELHO de tests/unit/test_docs_mac_anonimato.py::PADRAO_DE_SERIAL.
+# test_o_check_anonymity_usa_o_mesmo_padrao_de_serial reprova a divergência.
+PADRAO = (
+    r"(?<![A-Z0-9])"
+    r"[A-Z][0-9]{2}[A-Z0-9][0-9]{2}"
+    r"[A-Z0-9]{11}"
+    r"(?![A-Z0-9])"
+)
+SERIAL = re.compile(PADRAO)
+PAR_HEX = re.compile(rb"(?<![0-9A-Fa-f])([0-9A-Fa-f]{2})(?![0-9A-Fa-f])")
+HEX_COLADO = re.compile(rb"(?<![0-9A-Fa-f])((?:[0-9A-Fa-f]{2}){17,})(?![0-9A-Fa-f])")
+PULA = (".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
+PUBLICOS = 6
+
+
+def mascarar(achado):
+    return achado[:PUBLICOS] + "#" * (len(achado) - PUBLICOS)
+
+
+achados = []
+for nome in sys.stdin.buffer.read().split(b"\0"):
+    if not nome:
+        continue
+    caminho = nome.decode("utf-8", "surrogateescape")
+    if caminho.lower().endswith(PULA):
+        continue
+    try:
+        with open(nome, "rb") as fh:
+            dados = fh.read()
+    except OSError:
+        continue
+    for m in SERIAL.finditer(dados.decode("latin-1")):
+        achados.append("%s (texto): %s" % (caminho, mascarar(m.group(0))))
+    fluxo = bytes(int(p, 16) for p in PAR_HEX.findall(dados))
+    for m in SERIAL.finditer(fluxo.decode("latin-1")):
+        achados.append("%s (hexdump): %s" % (caminho, mascarar(m.group(0))))
+    for corrida in HEX_COLADO.finditer(dados):
+        bruto = bytes.fromhex(corrida.group(1).decode("ascii")).decode("latin-1")
+        for m in SERIAL.finditer(bruto):
+            achados.append("%s (hex colado): %s" % (caminho, mascarar(m.group(0))))
+for linha in sorted(set(achados)):
+    print(linha)
+')
+
+if [[ -n "$SERIAL_HITS" ]]; then
+    echo "ANONIMATO VIOLADO — SERIAL DE FÁBRICA real em arquivo versionado:"
+    echo "------------------------------------------------"
+    echo "$SERIAL_HITS"
+    echo "------------------------------------------------"
+    echo ""
+    echo "O serial de 17 caracteres identifica a unidade tão bem quanto o MAC:"
+    echo "é o número da etiqueta e o da garantia. Máscara da casa: os 6"
+    echo "primeiros caracteres e o resto em '#' (A12B34###########). Os"
+    echo "caracteres 5 e 6 — o código da COR — ficam preservados de propósito."
+    echo "Em instrumento, use mascarar_serial() de scripts/ensaios/cor_do_plastico.py."
+    echo "O achado acima já sai mascarado: o portão não republica o segredo."
     exit 1
 fi
 

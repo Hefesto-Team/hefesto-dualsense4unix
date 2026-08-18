@@ -54,6 +54,14 @@ class _SegmentedLogic:
         self._wrap = wrap
         self._items = []
         self._active_id = None
+        #: ESCOLHA-DELA-VENCE-01/E4: dica POR BOTÃO, `{id: texto}`.
+        #:
+        #: Ela mora aqui e NÃO dentro da tupla de `set_items`, e a decisão é
+        #: de risco: a forma `(id, label)` é load-bearing — o comparador de
+        #: idempotência (`if items == self._items`) e o `_index_of` desempacotam
+        #: dois elementos, e três arquivos de teste travam a tupla. Um método
+        #: separado entrega o mesmo e não encosta em nada disso.
+        self._dicas: dict[str, str] = {}
         # Guard: True enquanto marcamos botões programaticamente, para o handler
         # "toggled" não reemitir "changed" nem entrar em loop.
         self._updating = False
@@ -74,6 +82,10 @@ class _SegmentedLogic:
         prev_active = self._active_id
         self._items = items
         self._create_buttons(items)
+        # Os botões acabaram de ser recriados: as dicas guardadas voltam para
+        # eles. Sem isto, um `set_tooltips` ANTES do `set_items` seria perdido —
+        # e a ordem de montagem varia de tela para tela.
+        self._aplicar_dicas()
         keep = prev_active if self._index_of(items, prev_active) is not None else None
         self._active_id = None
         if keep is not None:
@@ -81,6 +93,44 @@ class _SegmentedLogic:
             if idx is not None:
                 self._activate_button(idx)
                 self._active_id = keep
+
+    def set_tooltips(self, dicas: dict[str, str]) -> None:
+        """Dica por BOTÃO — `{id: texto}`. Id ausente fica sem dica.
+
+        ESCOLHA-DELA-VENCE-01/E4, pedido dela: *"ao deixar o mouse sobre a
+        opção Xbox, ele falaria que o Xbox não tem tais features"*. Até aqui o
+        seletor só tinha UM tooltip, no widget inteiro — e no editor de perfis
+        ele dizia "Quais desenhos de botão o jogo mostra na tela", que não é o
+        preço de nada.
+
+        Pode ser chamada antes ou depois de `set_items`: a aplicação acontece
+        nas duas pontas, porque a ordem de montagem varia entre as telas.
+        """
+        self._dicas = dict(dicas)
+        self._aplicar_dicas()
+
+    def _aplicar_dicas(self) -> None:
+        """Hook: escreve as dicas nos botões (no-op sem toolkit)."""
+
+    def limpar_ativo(self) -> None:
+        """Deixa o seletor SEM nenhum botão marcado, sem emitir "changed".
+
+        ESCOLHA-DELA-VENCE-01/E1. É o estado que corresponde a "sem opinião" —
+        um perfil com `gamepad_flavor: null` diz ao applier "mantém a máscara
+        atual", e mostrar um dos dois botões marcado seria a tela afirmando
+        uma escolha que ninguém fez.
+
+        Não emite: é POPULATE, não gesto dela. O `_modo_tocado` do editor
+        existe justamente para separar as duas coisas, e um "changed" aqui o
+        levantaria como se ela tivesse clicado.
+        """
+        if self._active_id is None:
+            return
+        self._active_id = None
+        self._desmarcar_todos()
+
+    def _desmarcar_todos(self) -> None:
+        """Hook: tira a marca de todos os botões (no-op sem toolkit)."""
 
     def get_active_id(self) -> str | None:
         """Id do item ativo, ou ``None`` (espelha ``GtkComboBox.get_active_id``)."""
@@ -233,6 +283,30 @@ if _GTK_DISPONIVEL:
                     self._container.pack_start(btn, False, False, 0)
                 self._buttons.append(btn)
             self._container.show_all()
+
+        def _desmarcar_todos(self) -> None:
+            """Devolve o estado ativo ao founder OCULTO do grupo.
+
+            Num grupo de rádios do GTK sempre há um marcado. O founder existe
+            justamente para ser esse alguém quando nenhum botão VISÍVEL deve
+            estar — é o mesmo mecanismo que faz o seletor nascer sem seleção.
+            """
+            if self._group_founder is None:
+                return
+            self._updating = True
+            try:
+                self._group_founder.set_active(True)
+            finally:
+                self._updating = False
+
+        def _aplicar_dicas(self) -> None:
+            """Escreve a dica de cada id no botão correspondente."""
+            for (the_id, _label), btn in zip(
+                self._items, self._buttons, strict=False
+            ):
+                dica = self._dicas.get(the_id)
+                if dica:
+                    btn.set_tooltip_text(dica)
 
         def _activate_button(self, idx: int) -> None:
             """Marca o botão idx como ativo, sob guard (sem reemitir "changed")."""

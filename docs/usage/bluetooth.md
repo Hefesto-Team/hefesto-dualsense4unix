@@ -1,9 +1,16 @@
 # Bluetooth
 
 O Hefesto trata USB e Bluetooth do mesmo jeito — o backend é agnóstico ao
-transporte. Lightbar, gatilhos adaptativos, vibração, LED de microfone e LEDs de
-jogador funcionam nos dois. A diferença é o pareamento inicial, que ainda é
-manual: não há tela dedicada na janela.
+transporte. Gatilhos adaptativos, vibração, LED de microfone e LEDs de jogador
+funcionam nos dois. A diferença é o pareamento inicial, que ainda é manual: não
+há tela dedicada na janela.
+
+**A cor da barra de luz tem uma exceção por Bluetooth, e ela foi medida em
+12/08/2026:** se a **Steam já estiver aberta** no momento em que você liga o
+controle, a barra costuma nascer apagada e **não aceita a sua cor** enquanto
+aquela conexão durar. Não é avaria do controle nem do pareamento — é a Steam
+pintando a barra de todos os DualSense a cada conexão nova. O que fazer está em
+[Solução de problemas, seção 20](troubleshooting.md#20-a-barra-de-luz-não-pega-a-cor-por-bluetooth).
 
 ## Parear um DualSense
 
@@ -71,6 +78,32 @@ problema aberto no BlueZ ("random crash on device reconnect"), e a pesquisa do
 projeto **não encontrou correção upstream** para a corrupção de heap na via
 kernel-HIDP. Nós não temos como consertar isso a partir daqui.
 
+> **NOTA DATADA — 07/08/2026: a atribuição do parágrafo acima CADUCOU.** Ela
+> descrevia corretamente o que se sabia em 24/07, e por isso não se apaga. O que
+> a varredura do BlueZ de 07/08 mediu:
+>
+> - **a issue "random crash on device reconnect" (#815) está FECHADA**, e a
+>   família dela foi corrigida na via uhid **entre o 5.74 e o 5.79**. Quem roda
+>   5.86 — como esta máquina, há semanas — **já tem** todas essas correções.
+>   **GRAU: MEDIDO**, por leitura da issue e dos commits nas tags;
+> - **logo o crash de heap desta casa NÃO é aquele.** Ele continua acontecendo
+>   numa versão que tem a cura. **GRAU: MEDIDO**;
+> - **subir de 5.72 para 5.86 não reduziu a taxa nesta máquina:** quatro abortos
+>   em cinco dias no 5.86, contra cinco em cinco dias no 5.72. **GRAU: MEDIDO**
+>   para os dois números — e amostras de cinco dias **não** decidem tendência;
+> - **a causa continua sem prova, e sem backtrace não há causa.** Não se
+>   encontrou issue pública para esta assinatura (`unaligned fastbin`); o
+>   candidato mais próximo é o `LP #2137758`, ainda em aberto. **GRAU: SUSPEITA
+>   COM MECANISMO** para o candidato, **SEM PROVA** para a causa.
+>
+> **O que não muda:** o gatilho medido (dois controles Nintendo-class na mesma
+> janela de segundos), os conselhos abaixo e as fotos de pareamento continuam
+> valendo palavra por palavra. O que muda é a expectativa: *"esperar a correção
+> upstream"* deixou de ser um plano — ela chegou, e o defeito ficou.
+>
+> O estudo inteiro, com os sete defeitos de BlueZ separados um a um, está em
+> [o defeito do BlueZ que ela lembrou e os outros cinco](../process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md).
+
 **O que dá para fazer:**
 
 - Não ligue dois controles Nintendo-class na mesma janela de segundos. Ligue um,
@@ -91,9 +124,19 @@ verdade e continua sem cura.
 assume e conecta de primeira — validado em 25/07/2026 com **quatro controles por
 Bluetooth ao mesmo tempo**, um por jogador.
 
+> **NOTA DATADA — 06/08/2026: "um por jogador" aqui é um lugar na fila, não um
+> jogador na partida.** O que 25/07 provou continua de pé — os quatro
+> **conectam** ao mesmo tempo, e cada um ganha o seu lugar. O que caducou é a
+> leitura de que são quatro jogadores. **GRAU: MEDIDO** em 06/08/2026 às 22h40,
+> com um DualSense, um Nintendo Pro e um 8BitDo ligados: `coop status` respondeu
+> **"jogadores ativos: 1"** e `controller list` mostrou **um** controle. O co-op
+> só conta DualSense; o externo entra na fila e recebe luz, e nada mais. Medição
+> inteira na
+> [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
+
 Duas pegadinhas: o **MAC muda com o modo** (são dois pareamentos distintos, e o
-hefesto registra os dois como controles diferentes — use "Renumerar agora" na
-aba Início se os slots saírem trocados) e **não há LEDs de jogador** neste modo,
+hefesto registra os dois como controles diferentes — use "Reconciliar jogadores"
+na aba Início se os slots saírem trocados) e **não há LEDs de jogador** neste modo,
 porque o DualShock 4 usa a lightbar no lugar deles.
 
 Detalhes, medições e a tabela completa de modos em

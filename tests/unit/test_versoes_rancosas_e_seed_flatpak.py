@@ -45,6 +45,7 @@ GATE_REL = "scripts/check_version_consistency.py"
 ENTRYPOINT_REL = "assets/appimage/entrypoint.sh"
 METAINFO_REL = "flatpak/br.andrefarias.Hefesto.metainfo.xml"
 CARGO_REL = "packaging/cosmic-applet/Cargo.toml"
+CARGO_LOCK_REL = "packaging/cosmic-applet/Cargo.lock"
 MANIFESTO_REL = "flatpak/br.andrefarias.Hefesto.yml"
 BUILD_GUI_REL = "scripts/build_appimage_gui.sh"
 
@@ -57,6 +58,11 @@ _ALVOS_NOVOS: tuple[tuple[str, str], ...] = (
     (METAINFO_REL, '<releases>\n  <release version="{v}" date="2026-07-28"/>\n</releases>\n'),
     (CARGO_REL, '[package]\nname = "x"\nversion = "{v}"\n\n'
                 '[dependencies]\ntokio = {{ version = "1" }}\n'),
+    # O lock tem centenas de `version =`, uma por dependência: o molde põe uma
+    # ANTES da nossa, para que um regex sem a âncora do `name` case a errada.
+    (CARGO_LOCK_REL,
+     '[[package]]\nname = "libcosmic"\nversion = "0.1.0"\n\n'
+     '[[package]]\nname = "hefesto-dualsense4unix-applet"\nversion = "{v}"\n'),
 )
 
 
@@ -70,14 +76,32 @@ def _versao_canonica() -> str:
     return str(dados["project"]["version"])
 
 
-def _targets_do_portao() -> list[tuple[str, str, str]]:
-    """Lê `_TARGETS` do portão real sem executá-lo."""
+def _portao():
+    """Importa o portão real sem executá-lo."""
     sys.path.insert(0, str(REPO / "scripts"))
     try:
         import check_version_consistency as gate
     finally:
         sys.path.pop(0)
-    return list(gate._TARGETS)
+    return gate
+
+
+def _targets_do_portao() -> list[tuple[str, str, str]]:
+    """Lê `_TARGETS` do portão real sem executá-lo."""
+    return list(_portao()._TARGETS)
+
+
+def _esperado_no_alvo(relpath: str) -> str:
+    """A versão que o portão exige NAQUELE alvo.
+
+    Não é sempre a canônica literal: o Cargo não aceita quatro componentes, e o
+    portão traduz (`versao_para_cargo`). Perguntar ao portão em vez de repetir a
+    regra aqui é o que impede este teste de virar uma segunda fonte de verdade —
+    se a tradução mudar, o teste acompanha em vez de brigar.
+    """
+    gate = _portao()
+    canonica = _versao_canonica()
+    return gate._TRADUTORES.get(relpath, lambda v: v)(canonica)
 
 
 # --------------------------------------------------------------------------
@@ -85,7 +109,9 @@ def _targets_do_portao() -> list[tuple[str, str, str]]:
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("relpath", [ENTRYPOINT_REL, METAINFO_REL, CARGO_REL])
+@pytest.mark.parametrize(
+    "relpath", [ENTRYPOINT_REL, METAINFO_REL, CARGO_REL, CARGO_LOCK_REL]
+)
 def test_alvo_novo_esta_no_portao(relpath: str) -> None:
     """O portão de release precisa VER os três artefatos."""
     caminhos = {alvo[1] for alvo in _targets_do_portao()}
@@ -95,14 +121,16 @@ def test_alvo_novo_esta_no_portao(relpath: str) -> None:
     )
 
 
-@pytest.mark.parametrize("relpath", [ENTRYPOINT_REL, METAINFO_REL, CARGO_REL])
+@pytest.mark.parametrize(
+    "relpath", [ENTRYPOINT_REL, METAINFO_REL, CARGO_REL, CARGO_LOCK_REL]
+)
 def test_regex_do_alvo_extrai_a_versao_canonica_do_arquivo_real(relpath: str) -> None:
     """Cada sintaxe é diferente (shell, XML, semver) — o regex tem que pegar.
 
     Este é o teste que morde no arquivo real: com o Cargo.toml de volta em
     0.1.0, ou o metainfo com a 3.13.3 na frente, ele falha.
     """
-    esperado = _versao_canonica()
+    esperado = _esperado_no_alvo(relpath)
     padrao = next(alvo[2] for alvo in _targets_do_portao() if alvo[1] == relpath)
     texto = (REPO / relpath).read_text(encoding="utf-8")
     achado = re.search(padrao, texto, re.MULTILINE)
@@ -162,6 +190,108 @@ def test_portao_aprova_alvo_novo_em_dia(tmp_path: Path, relpath: str) -> None:
     assert "1 alvo" in proc.stdout
 
 
+# --------------------------------------------------------------------------
+# 2-bis) QUATRO-COMPONENTES-02 (14/08): o portão exigia do Cargo uma string que
+# o Cargo não aceita, e o applet parou de compilar em silêncio.
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("canonica", "esperada"),
+    [
+        ("0.9.4.2", "0.9.4+2"),   # o caso real que quebrou a release
+        ("0.9.4", "0.9.4"),       # três componentes atravessa intacto
+        ("1.0.0.10", "1.0.0+10"),  # a quarta casa pode ter mais de um dígito
+    ],
+)
+def test_versao_para_cargo_traduz_a_quarta_casa(canonica: str, esperada: str) -> None:
+    """`X.Y.Z.W` vira `X.Y.Z+W`; `X.Y.Z` não é tocada."""
+    assert _portao().versao_para_cargo(canonica) == esperada
+
+
+def test_a_traducao_nao_usa_pre_release() -> None:
+    """`-W` também compila e está ERRADO: inverteria a ordem da história.
+
+    Build metadata (`+W`) não conta na precedência SemVer, então `0.9.4+2`
+    ordena igual a `0.9.4`; `0.9.4-2` é pre-release e ordena ANTES dela.
+    """
+    assert "-" not in _portao().versao_para_cargo("0.9.4.2")
+
+
+@pytest.mark.parametrize("relpath", [CARGO_REL, CARGO_LOCK_REL])
+def test_portao_reprova_o_cargo_com_a_canonica_literal(
+    tmp_path: Path, relpath: str
+) -> None:
+    """MORDE: escrever `9.9.9.9` no Cargo é exatamente o que quebrou o build.
+
+    Era a menor edição que deixava o portão verde antes desta correção — e
+    custou o applet. Agora reprova.
+    """
+    repo = _repo_fake(
+        tmp_path, versao="9.9.9.9", relpath=relpath, versao_alvo="9.9.9.9"
+    )
+    proc = subprocess.run(
+        [sys.executable, GATE_REL], cwd=repo, capture_output=True, text=True
+    )
+    assert proc.returncode == 1, (
+        f"o portão APROVOU {relpath} com a canônica literal de quatro "
+        "componentes, que o Cargo rejeita: " + proc.stdout + proc.stderr
+    )
+    assert "9.9.9+9" in proc.stdout, "a mensagem não diz a forma que ele espera"
+
+
+@pytest.mark.parametrize("relpath", [CARGO_REL, CARGO_LOCK_REL])
+def test_portao_aprova_o_cargo_traduzido(tmp_path: Path, relpath: str) -> None:
+    """E o outro lado: com `9.9.9+9` no arquivo, passa."""
+    repo = _repo_fake(
+        tmp_path, versao="9.9.9.9", relpath=relpath, versao_alvo="9.9.9+9"
+    )
+    proc = subprocess.run(
+        [sys.executable, GATE_REL], cwd=repo, capture_output=True, text=True
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+@pytest.mark.skipif(
+    shutil.which("cargo") is None, reason="cargo ausente (CI sem toolchain Rust)"
+)
+def test_o_cargo_de_verdade_aceita_o_manifesto_real() -> None:
+    """A prova final: quem julga o Cargo.toml é o Cargo, não o nosso regex.
+
+    Sem isto o projeto volta a poder escrever uma versão que só o portão
+    aprova — foi assim que `0.9.4.2` entrou e o applet parou de compilar.
+    """
+    proc = subprocess.run(
+        ["cargo", "verify-project", "--manifest-path", CARGO_REL],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, (
+        "o Cargo REJEITA o manifesto do applet: " + proc.stdout + proc.stderr
+    )
+
+
+def test_cargo_toml_e_lock_declaram_a_mesma_versao() -> None:
+    """O lock ficou em `9.3.2` sem ninguém ver — o comentário pedia, e pedir
+    não é portão."""
+    def _versao(rel: str, padrao: str) -> str | None:
+        achado = re.search(
+            padrao, (REPO / rel).read_text(encoding="utf-8"), re.MULTILINE
+        )
+        return achado.group(1) if achado else None
+
+    do_toml = _versao(CARGO_REL, r'^version\s*=\s*"([^"]+)"')
+    do_lock = _versao(
+        CARGO_LOCK_REL,
+        r'^name = "hefesto-dualsense4unix-applet"\nversion = "([^"]+)"',
+    )
+    assert do_toml == do_lock, (
+        f"Cargo.toml diz {do_toml!r} e Cargo.lock diz {do_lock!r} — o "
+        "`cargo build` corrigiria sozinho, sujando a árvore no meio do release"
+    )
+
+
 def test_regex_do_cargo_ignora_a_versao_das_dependencias(tmp_path: Path) -> None:
     """Sem a âncora `^`, o regex casaria o `version = "1"` do tokio dentro de
     [dependencies] e o portão julgaria pela linha errada."""
@@ -214,7 +344,14 @@ def test_deb_sugerido_pelo_banner_casa_o_nome_que_o_build_deb_gera() -> None:
 def test_fallback_do_banner_e_o_unico_literal_de_versao() -> None:
     texto = (REPO / ENTRYPOINT_REL).read_text(encoding="utf-8")
     esperado = _versao_canonica()
-    literais = re.findall(r'"(\d+\.\d+\.\d+)"', texto)
+    # QUATRO-COMPONENTES-01 (13/08/2026): a versão canônica passou a ter
+    # QUATRO componentes (0.9.4.2) por decisão dela — a série 0.9.4.x marca
+    # o avanço do mapeamento dentro da mesma alfa. O regex de três casava
+    # ZERO literais aqui e a asserção reprovava dizendo que o fallback
+    # sumira, quando ele estava na linha 26, intacto. O `{1,2}` aceita as
+    # duas formas sem afrouxar o que a regra cobra: continua sendo UM
+    # literal, e continua tendo de ser o canônico.
+    literais = re.findall(r'"(\d+\.\d+\.\d+(?:\.\d+)?)"', texto)
     assert literais == [esperado], (
         f"literais de versão em {ENTRYPOINT_REL}: {literais} "
         f"(esperado apenas o fallback {esperado})"

@@ -16,6 +16,21 @@ o par (weak, strong) entregue ao `rumble_sink`, que vibra o controle físico.
 
 O device é substituído por um fd falso (`os.write`/`os.read` monkeypatchados), então
 o teste roda em CI sem /dev/uhid e sem hardware.
+
+MORDIDA PROVADA (13/08/2026, com o `src/` COPIADO para fora da árvore e o
+`PYTHONPATH` apontado para a cópia — a árvore de trabalho nunca foi mutada):
+
+- arrancando o repasse do FF ao físico — a chamada `self.rumble_sink(weak,
+  strong)` dentro de `_emit_rumble` (`integrations/uhid_gamepad.py`), trocada
+  por um `pass` para que só o REPASSE morresse e nada mais —, este arquivo
+  reprova **6 de 128**: `test_rumble_do_jogo_chega_ao_controle_fisico`,
+  `test_valor_repetido_nao_reenvia`, as três parametrizações de
+  `test_rumble_chega_em_qualquer_firmware` e
+  `test_report_sem_a_flag_de_vibracao_nao_zera_o_rumble`;
+- o nó que o mapa aponta reprova sozinho, e a mensagem diz o que sumiu:
+  `assert [] == [(200, 100), (0, 255), (0, 0)]`. Ou seja, o jogo pediu três
+  pares e NENHUM chegou ao controle físico;
+- com a cura devolvida, `128 passed in 0.39s`.
 """
 from __future__ import annotations
 
@@ -133,8 +148,24 @@ class TestMacProprio:
         assert pad._features[0x09][1:7] != _FEATURE_09_FISICO[1:7]
 
     def test_nome_e_mac_identificam_o_jogador(self) -> None:
+        """O nome carrega a substring que os jogos procuram — e o jogador.
+
+        BT-E-VPAD-01, furo 1: ele era `Hefesto Virtual DualSense P3`. Sob
+        Proton o nome vira o `FriendlyName` do lado Windows, e **jogos casam
+        pela substring "Wireless Controller"** para achar o controle e o
+        device de áudio dele. O fallback uinput já acertava; o uhid, que é o
+        caminho bom, não.
+
+        A distinção humana continua — é o que separa este device do físico na
+        lista do sistema. E o discriminador do daemon nunca foi o nome: é o
+        `phys` e o `uniq`.
+
+        Mordida: tirar "Wireless Controller" do nome.
+        """
         pad = UhidDualSense(player=3, blueprint=_blueprint())
-        assert pad.name == "Hefesto Virtual DualSense P3"
+        assert "Wireless Controller" in pad.name
+        assert "Hefesto" in pad.name, "a distinção humana não pode sumir"
+        assert "P3" in pad.name, "o jogador continua identificável no nome"
         assert pad.mac == "02:fe:00:00:00:03"
 
 

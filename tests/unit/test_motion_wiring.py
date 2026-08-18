@@ -7,9 +7,12 @@ Prova, sem hardware:
   registrado no backend (`attach_motion_reader`) para o retarget de primário.
 - `stop_gamepad_emulation` para o reader ANTES do `device.stop()` (o reader
   escreve no /dev/uhid do vpad — a ordem inversa seria write em fd morto).
-- Co-op: jogador DualSense (hidraw por-uniq resolve) ganha reader próprio;
-  externo (sem handle no backend) e identidade sem MAC ficam SEM espelho por
-  design (gyro nativo deles passa direto ao jogo). Teardown na mesma ordem.
+- Co-op: jogador DualSense ganha reader próprio — inclusive quando o handle do
+  backend ainda NÃO abriu (ESPELHO-QUE-NAO-NASCEU-01, 15/08/2026: quem esperava
+  o handle na promoção perdia a corrida do hotplug e ficava sem espelho para
+  sempre; quem espera é o `path_provider` do reader). Identidade sem MAC fica
+  SEM espelho, e externo (8BitDo/Nintendo) nem chega a `_players` — a garantia
+  do 8BIT-02 é da descoberta, fechada em vendor/PID. Teardown na mesma ordem.
 - `_recompute_primary` do backend cutuca o reader (request_reopen) junto do
   retarget do evdev.
 """
@@ -122,7 +125,7 @@ class TestP1:
         self, wired: tuple[_FakeDaemon, dict[str, Any]]
     ) -> None:
         daemon, capturado = wired
-        assert gp.start_gamepad_emulation(daemon, flavor="dualsense") is True
+        assert gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
         # A calibração do PRIMÁRIO viajou até a factory do vpad.
         assert capturado["calibration_0x05"] == _CALIB
         reader = daemon._motion_reader
@@ -137,7 +140,7 @@ class TestP1:
         self, wired: tuple[_FakeDaemon, dict[str, Any]]
     ) -> None:
         daemon, _ = wired
-        gp.start_gamepad_emulation(daemon, flavor="dualsense")
+        gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
         device = daemon._gamepad_device
         gp.stop_gamepad_emulation(daemon)
         assert daemon._motion_reader is None
@@ -154,7 +157,7 @@ class TestP1:
         monkeypatch.setattr(
             vp, "make_virtual_pad", lambda *_a, **_k: _FakeVpad(backend="uinput")
         )
-        gp.start_gamepad_emulation(daemon, flavor="dualsense")
+        gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
         assert daemon._motion_reader is None
 
     def test_backend_sem_hidraw_nao_ganha_reader(
@@ -163,7 +166,7 @@ class TestP1:
         daemon, _ = wired
         del daemon.controller.__class__.hidraw_path
         try:
-            gp.start_gamepad_emulation(daemon, flavor="dualsense")
+            gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
             assert daemon._motion_reader is None
         finally:
             _FakeController.hidraw_path = lambda self, uniq=None: "/dev/hidraw9"  # type: ignore[method-assign]
@@ -212,17 +215,99 @@ class TestCoop:
         assert player.motion_reader.started is True
         assert player.motion_reader.path_provider() == "/dev/hidraw9"
 
-    def test_externo_sem_handle_fica_sem_espelho(
+    def test_espelho_nasce_com_o_handle_ainda_fechado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # 8BitDo/Nintendo: `hidraw_path(uniq)` do backend devolve None — o gyro
-        # deles é NATIVO (passam direto ao jogo); espelhar seria reverter o
-        # design 8BIT-02.
+        """ESPELHO-QUE-NAO-NASCEU-01: perder a corrida não é ficar sem espelho.
+
+        A promoção roda no tick do hotplug, e o `_open_one` do backend para
+        aquele MAC pode ainda estar no ar (até `INIT_TIMEOUT_SEC` = 5 s; o BT
+        chega a estourar o teto). Enquanto ele não abre, `hidraw_path(identity)`
+        devolve None. O reader TEM de nascer assim mesmo: quem espera é ele, no
+        `path_provider`, na thread dele — como o espelho do P1 sempre fez.
+
+        Medido na mesa de quatro em 15/08/2026: o vpad do jogador que perdeu
+        essa corrida entregava ~0,4 Hz ao jogo contra 165-196 Hz dos outros.
+        """
+        monkeypatch.setattr(prr, "PhysicalReportReader", _FakeReader)
+        controller = _FakeController()
+        # O handle ainda não abriu: o backend não sabe o hidraw deste MAC.
+        aberto = False
+
+        def _hidraw(uniq: str | None = None) -> str | None:
+            return "/dev/hidraw11" if aberto else None
+
+        controller.hidraw_path = _hidraw  # type: ignore[method-assign]
+        manager = self._manager(controller)
+        player = self._player("aabbccddee02")
+        manager._start_player_motion_reader(player)
+
+        assert isinstance(player.motion_reader, _FakeReader)
+        assert player.motion_reader.started is True
+        # Enquanto o handle não abre, o provider devolve None e o reader espera.
+        assert player.motion_reader.path_provider() is None
+        # Quando o backend termina de abrir, o MESMO reader acha o nó sozinho —
+        # sem que ninguém precise reexecutar a promoção.
+        aberto = True
+        assert player.motion_reader.path_provider() == "/dev/hidraw11"
+
+    def test_externo_nunca_chega_a_pedir_espelho(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """8BIT-02 segue de pé — pela descoberta, não por olhar o handle.
+
+        A decisão da mantenedora (estudo 2026-07-19) não mudou: 8BitDo/Nintendo
+        passam direto ao jogo com o gyro NATIVO deles, sem espelho. O que mudou
+        em 15/08/2026 é onde ela é garantida. Antes, `_start_player_motion_reader`
+        a inferia de `hidraw_path(uniq) is None` — sinal que um DualSense
+        legítimo também emite enquanto o backend não abriu o handle dele
+        (ESPELHO-QUE-NAO-NASCEU-01). A garantia real é estrutural e anterior:
+        `discover_dualsense_evdevs`, única fonte dos secundários, é fechada em
+        `DUALSENSE_VENDOR`/`DUALSENSE_PIDS`, então um externo nunca entra em
+        `_players` — e um DualSense sem MAC legível para no gate `path:`.
+        """
+        from hefesto_dualsense4unix.core import evdev_reader as er
+
+        def _descoberto(especie: str, identidade: str, node: str) -> Any:
+            return er.GamepadDescoberto(
+                especie=especie,
+                identidade=identidade,
+                evdev_path=node,
+                name="dublê",
+                vid="054c",
+                pid="0ce6",
+                bus="0003",
+                uniq=None,
+                driver=None,
+                hidraw=None,
+            )
+
+        mesa = [
+            _descoberto(er.ESPECIE_DUALSENSE, "aabbccddee02", "/dev/input/event1"),
+            _descoberto("8bitdo", "aabbcc000042", "/dev/input/event2"),
+            _descoberto("nintendo", "aabbcc000043", "/dev/input/event3"),
+        ]
+        monkeypatch.setattr(er, "discover_gamepads", lambda **_kw: mesa)
+
+        achados = er.discover_dualsense_evdevs()
+
+        # Só o DualSense vira chave — e é de `achados` que `_players` nasce.
+        assert set(achados) == {"aabbccddee02"}
+        assert "aabbcc000042" not in achados
+        assert "aabbcc000043" not in achados
+        # A lista fechada que sustenta a garantia continua fechada.
+        assert er.DUALSENSE_VENDOR == 0x054C
+        assert sorted(er.DUALSENSE_PIDS) == [0x0CE6, 0x0DF2]
+
+    def test_identidade_sem_mac_e_o_gate_do_externo_sem_driver(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """DualSense sem MAC legível para no `path:` — mesmo com handle nenhum."""
         monkeypatch.setattr(prr, "PhysicalReportReader", _FakeReader)
         controller = _FakeController()
         controller.hidraw_path = lambda uniq=None: None  # type: ignore[method-assign]
         manager = self._manager(controller)
-        player = self._player("aabbcc000042")
+        player = self._player("path:/dev/input/event42")
         manager._start_player_motion_reader(player)
         assert player.motion_reader is None
 

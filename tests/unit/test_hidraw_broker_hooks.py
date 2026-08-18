@@ -149,16 +149,16 @@ def wired(monkeypatch: pytest.MonkeyPatch) -> _FakeDaemon:
 
 class TestGrabP1:
     def test_start_esconde_o_primario(self, wired: _FakeDaemon) -> None:
-        assert gp.start_gamepad_emulation(wired, flavor="dualsense") is True
+        assert gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual") is True
         assert ("hide", "/dev/hidraw3") in wired.broker.calls
 
     def test_nativo_nunca_esconde(self, wired: _FakeDaemon) -> None:
         wired._native = True
-        gp.start_gamepad_emulation(wired, flavor="dualsense")
+        gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         assert not any(c[0] == "hide" for c in wired.broker.calls)
 
     def test_stop_com_release_restaura_tudo(self, wired: _FakeDaemon) -> None:
-        gp.start_gamepad_emulation(wired, flavor="dualsense")
+        gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         gp.stop_gamepad_emulation(wired)  # release_grab default True
         assert ("restore_all",) in wired.broker.calls
 
@@ -166,14 +166,14 @@ class TestGrabP1:
         # release_grab=False (recriação imediata): expor o físico no meio da
         # troca abriria a janela do duplicado — o gate do grab cobre de graça
         # (o ramo nem chama `_set_controller_grab(False)`).
-        gp.start_gamepad_emulation(wired, flavor="dualsense")
+        gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         wired.broker.calls.clear()
         gp.stop_gamepad_emulation(wired, persist=False, release_grab=False)
         assert ("restore_all",) not in wired.broker.calls
 
     def test_restore_nao_tem_gate_de_modo(self, wired: _FakeDaemon) -> None:
         # Expor nunca é errado: mesmo em Modo Nativo o release restaura.
-        gp.start_gamepad_emulation(wired, flavor="dualsense")
+        gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         wired._native = True
         gp.stop_gamepad_emulation(wired)
         assert ("restore_all",) in wired.broker.calls
@@ -183,20 +183,20 @@ class TestGrabP1:
         wired.controller = SimpleNamespace(
             _evdev=SimpleNamespace(set_grab=lambda _g: True, grab_state="held")
         )
-        gp.start_gamepad_emulation(wired, flavor="dualsense")
+        gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         gp.stop_gamepad_emulation(wired)
         assert wired.broker.calls == []
 
     def test_primario_sem_no_nao_pede_hide(self, wired: _FakeDaemon) -> None:
         # Offline no boot: hidraw_path() → None; o re-hide do hotplug cobre.
         wired.controller.nodes[None] = None
-        gp.start_gamepad_emulation(wired, flavor="dualsense")
+        gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         assert not any(c[0] == "hide" for c in wired.broker.calls)
 
     def test_broker_explodindo_nao_derruba_emulacao(self, wired: _FakeDaemon) -> None:
         # A regra sagrada: duplicado > zero controles.
         wired._hidraw_broker_client = FakeBroker(explode=True)
-        assert gp.start_gamepad_emulation(wired, flavor="dualsense") is True
+        assert gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual") is True
         gp.stop_gamepad_emulation(wired)  # também não levanta
         assert wired.config.gamepad_emulation_enabled is False
 
@@ -582,7 +582,7 @@ class TestBrokerForaDoEventLoop:
         resultado: list[bool] = []
 
         async def _main() -> None:
-            resultado.append(gp.start_gamepad_emulation(wired, flavor="dualsense"))
+            resultado.append(gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual"))
 
         asyncio.run(_main())
         assert resultado == [True]
@@ -734,7 +734,7 @@ class TestBrokerClientForRespeitaDuble:
     def test_start_stop_nao_criam_cliente_real_com_duble(
         self, wired: _FakeDaemon
     ) -> None:
-        gp.start_gamepad_emulation(wired, flavor="dualsense")
+        gp.start_gamepad_emulation(wired, flavor="dualsense", origin="manual")
         gp.stop_gamepad_emulation(wired)
         assert isinstance(wired._hidraw_broker_client, FakeBroker)
 

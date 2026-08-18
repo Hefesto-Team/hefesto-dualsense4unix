@@ -31,13 +31,33 @@ pub enum SystemMode {
     Native,
 }
 
-/// Ícone do painel: a MESMA logo do app usada no `.desktop`
-/// (`Icon=hefesto-dualsense4unix`, PNG multi-tamanho em hicolor). Usado SEMPRE,
-/// em qualquer estado — assim a logo nunca "some" do painel em transições
-/// (onlineoffline). Antes o applet trocava o glifo para um SVG symbolic que
-/// não renderizava de forma confiável no tema (parecia sumir). O estado real
-/// (offline, bateria, perfil) é mostrado DENTRO do popover, não no ícone.
-const ICON_APP: &str = "hefesto-dualsense4unix";
+/// Ícone do painel: o SIMBÓLICO, monocromático, recolorido pelo tema. Usado
+/// SEMPRE, em qualquer estado — assim o glifo nunca "some" do painel em
+/// transições (online→offline). O estado real (offline, bateria, perfil) é
+/// mostrado DENTRO do popover, não no ícone.
+///
+/// HISTÓRIA, e ela importa para não voltar atrás por engano
+/// -------------------------------------------------------
+/// Até 27/06/2026 esta constante era `com.vitoriamaria.HefestoDualsense4Unix-symbolic`.
+/// O commit `13898ca` trocou pelo nome do PNG colorido, com esta justificativa:
+/// *"Antes o applet trocava o glifo para um SVG symbolic que não renderizava de
+/// forma confiável no tema (parecia sumir)."*
+///
+/// NOTA DE 07/08/2026 (APPLET-MONOCROMÁTICO-01). A decisão de 27/06 continua
+/// válida como registro do que se viu; o que caducou é a explicação. O arquivo
+/// existia e era instalado naquela data — logo, "não existia o ícone" nunca foi
+/// a causa. Em 07/08 a causa foi REPRODUZIDA: aquele arquivo usava
+/// `fill="currentColor"`, e `currentColor` sem contexto de cor resolve para
+/// PRETO — `rsvg-convert` devolve `srgb(0,0,0)`, o que dá 1,59:1 sobre o
+/// `#2F2F3A` do painel escuro dela. O glifo não "sumia" por bug de tema: ele
+/// era desenhado preto sobre preto.
+///
+/// O arquivo de hoje crava `#bebebe` (a escola do vizinho Flatpak, o único
+/// ícone de origem colorida da barra dela que aparece branco) e não usa
+/// `currentColor` em lugar nenhum. Dentro do painel a cor é substituída de
+/// qualquer forma; fora dele, é a diferença entre ver e não ver.
+/// Quem quiser desfazer isto de novo: reproduza primeiro, como 07/08 fez.
+const ICON_APP: &str = "com.vitoriamaria.HefestoDualsense4Unix-symbolic";
 /// Período de refresh do estado enquanto o popover está aberto (~1.5 Hz).
 const REFRESH_MS: u64 = 700;
 /// Binário da GUI a abrir no "Abrir painel".
@@ -653,10 +673,13 @@ impl HefestoApplet {
 
         // 3 modos mutuamente exclusivos; o ativo fica marcado e não re-dispara.
         // UX-MODE-TERMS-01: rótulos pela ação, em paridade com a GUI.
+        // UX-MODE-TERMS-02 (06/08/2026): "Jogar direto (Sony)" virou "Conexão
+        // Nativa (Sony)" na janela; o painel acompanha no mesmo passo (a nota
+        // mora em `app/actions/home_actions.py::_MODE_ITEMS`).
         let entries = [
             (SystemMode::Desktop, "Controlar o PC"),
             (SystemMode::Gamepad, "Jogar pelo Hefesto"),
-            (SystemMode::Native, "Jogar direto (Sony)"),
+            (SystemMode::Native, "Conexão Nativa (Sony)"),
         ];
         for (entry, label) in entries {
             let is_active = mode == entry;
@@ -941,8 +964,23 @@ fn spawn_stop_daemon() {
         .spawn();
 }
 
-/// Mic liberado quando NÃO há drop-ins de supressão (52/53) do WirePlumber.
+/// Mic ligado DE VERDADE: sem supressão (52/53) **e** com o promotor (51).
 /// FEAT-DUALSENSE-MIC-TOGGLE-01. Leitura de filesystem (a verdade do estado).
+///
+/// LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026): esta função olhava só o 52/53, e a
+/// janela do Hefesto tinha exatamente o mesmo furo (`_mic_is_on`, curado no
+/// mesmo dia). Desde o MONITOR-QUE-VENCE-01 (08/08) o drop-in **51** deixou de
+/// ser supressão e virou o PROMOTOR: ele põe a entrada do controle em
+/// `priority.session = 1500`, acima de qualquer monitor. Sem ele o microfone
+/// EXISTE, mas perde a eleição para o eco da saída — e chamar isso de "ligado"
+/// é afirmar o contrário do que a pessoa vai gravar.
+///
+/// Aqui o applet devolve `false` nesse caso, que é conservador de propósito: um
+/// applet tem um ícone, não três estados, e entre dizer "ligado" sobre um
+/// microfone que grava o eco e "desligado" sobre um que precisa de um clique
+/// para valer, o segundo erra para o lado que ela consegue corrigir. Quem conta
+/// a história inteira — "Ligado sem prioridade", com o motivo — é a aba
+/// Emulação da janela.
 fn mic_is_on() -> bool {
     let Ok(home) = std::env::var("HOME") else {
         return false;
@@ -954,7 +992,10 @@ fn mic_is_on() -> bool {
     ]
     .iter()
     .any(|name| base.join(name).exists());
-    !suppressed
+    let promoted = base
+        .join("51-hefesto-dualsense-no-default-source.conf")
+        .exists();
+    !suppressed && promoted
 }
 
 /// Liga/desliga o mic do DualSense via CLI (best-effort; falha silenciosa).

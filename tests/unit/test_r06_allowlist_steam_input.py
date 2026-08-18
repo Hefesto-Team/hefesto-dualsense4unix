@@ -19,10 +19,34 @@ defeito: medido com UM DualSense no cabo, o Mullet Mad Jack enumerava js0=vpad
 e js2=físico, dava jogador 1 a um e jogador 2 ao outro, e metade dos comandos
 dela ia para o controle que o jogo não lia. "Opt-in" não significa dois
 dispositivos onde existe um controle — significa trocar QUAL dispositivo o jogo
-vê. As travas deste arquivo seguem valendo palavra por palavra (a env sem dedup,
-o grab solto, o hidraw exposto, o rehide que não desfaz a exceção); o que mudou
-é que a exceção passou a retirar TAMBÉM o gamepad virtual de cena — ver
-`test_jogo01_um_dispositivo_por_controle.py`, que trava esse outro lado.
+vê. A JOGO-01 fechou o par: a exceção passou a retirar TAMBÉM o gamepad virtual
+de cena.
+
+NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão dela)
+===================================================================
+**As quatro travas do MECANISMO deste arquivo caducaram, e o desenho delas foi
+invertido, não apagado.** A palavra dela, de 08/08: *"a allowlist do Steam Input
+NÃO tira o Hefesto da frente"*. O que a matou é uma medição, não uma
+preferência: suspender os gamepads virtuais para curar o controle dobrado
+derruba o jogador 2 junto, porque **o jogador 2 é um gamepad virtual** —
+`coop_derrubado_pela_excecao_steam_input`, vinte ocorrências no journal dela em
+08/08.
+
+A marca passou a significar *"esconda o controle FÍSICO neste jogo"*. Então:
+
+- a **env sem dedup** virou a **ausência de ramo** (o jogo marcado recebe a env
+  de qualquer outro jogo) — `TestEnvPorAppidDaAllowlist`;
+- o **grab solto e o hidraw exposto** viraram **grab dado e hidraw escondido** —
+  `TestModoNativoPorAppid`;
+- o **rehide que não desfazia a exceção** virou o **rehide que a SUSTENTA**: é
+  ele que reesconde o nó que o replug/wake BT recria visível no meio da partida.
+
+O que NÃO caducou, e por isso segue intacto abaixo: a leitura do
+`steam_input_apps.txt` e a decisão de sessão (`TestAllowlistNoArquivo` e
+`TestSessaoDaExcecao`). QUANDO a marca vale continua sendo exatamente o que o
+R-06 estabeleceu; só mudou O QUE ela faz. O desenho inteiro está em
+`docs/process/sprints/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md`
+e o outro lado da cura em `test_esconder_em_vez_de_sair_01.py`.
 """
 
 from __future__ import annotations
@@ -82,28 +106,52 @@ class TestAllowlistNoArquivo:
 
 
 class TestEnvPorAppidDaAllowlist:
-    def test_appid_da_allowlist_ganha_env_sem_dedup_mesmo_sem_perfil(
+    """NOTA DATADA — 09/08/2026: as duas travas foram INVERTIDAS, não apagadas.
+
+    Elas afirmavam que o appid marcado ganhava uma env PRÓPRIA e SEM dedup — em
+    português, *"jogo, olhe para o controle físico"* — e que essa env vencia até
+    o perfil do mesmo appid (contradição 11 da §5 do plano). Estava certo
+    enquanto a OUTRA metade da marca retirava o gamepad virtual de cena: sem
+    vpad, esconder o físico seria deixá-la com ZERO controles.
+
+    A marca inverteu de lado, e o par tem de continuar sendo par. Uma env que
+    mande o jogo olhar para o físico enquanto o daemon o graba e esconde o
+    hidraw dele produz exatamente o "Jogador 3" fantasma que ela fotografou no
+    Sackboy em 08/08: um controle enumerado que não responde a nada. As travas
+    passam a afirmar a AUSÊNCIA do ramo.
+    """
+
+    def test_appid_marcado_nao_ganha_mais_env_propria(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Era o buraco: sem perfil, o MMJ caía no `default.env` COM dedup e o
-        físico ficava escondido do jogo que precisa vê-lo."""
+        """A MORDIDA: devolva o laço da allowlist a `materialize_launch_env` e o
+        `steam_app_<appid>.env` renasce sem dedup — o físico que o daemon acabou
+        de agarrar volta a ser enumerado pelo SDL, e o fantasma com ele.
+        """
         monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
         monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [])
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {MMJ})
 
         le.materialize_launch_env(_daemon_falso())
 
-        env = _env_do_arquivo(tmp_path / f"steam_app_{MMJ}.env")
-        assert _IGNORE not in env, "o dedup mata a via oficial de DualSense do jogo"
-        assert _DISABLE not in env
+        assert not (tmp_path / f"steam_app_{MMJ}.env").exists(), (
+            "o jogo marcado ganhou desvio próprio de lançamento de novo"
+        )
+        # Sem env própria, ele cai no `default.env` — o MESMO de qualquer outro
+        # jogo, e é isso que a decisão dela quer dizer por inteiro.
+        env = _env_do_arquivo(tmp_path / "default.env")
+        assert _IGNORE in env, "sem o dedup o jogo marcado volta a ver os dois"
         assert env["__GL_SHADER_DISK_CACHE"] == "1"  # o preload inócuo segue
-        # E o default.env continua com o dedup — a exceção é POR APPID.
-        assert _IGNORE in _env_do_arquivo(tmp_path / "default.env")
 
-    def test_allowlist_vence_o_perfil_do_mesmo_appid(
+    def test_o_perfil_do_appid_marcado_deixa_de_ser_atropelado(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Contradição 11: opt-in explícito vence o prognóstico do R-05."""
+        """A contradição 11 virou do avesso: quem vence agora é o PERFIL.
+
+        A marca deixou de ser um desvio do lançamento, então ela não tem mais o
+        que sobrescrever — e a máscara que ela escolheu para aquele jogo (aqui,
+        Xbox) chega ao `.env` como chegaria em qualquer outro appid.
+        """
         monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
         perfil = SimpleNamespace(
             name="mmj",
@@ -115,8 +163,8 @@ class TestEnvPorAppidDaAllowlist:
         le.materialize_launch_env(_daemon_falso())
 
         env = _env_do_arquivo(tmp_path / f"steam_app_{MMJ}.env")
-        assert _IGNORE not in env
-        assert _DISABLE not in env
+        assert _IGNORE in env, "a env do perfil dela voltou a ser atropelada"
+        assert _DISABLE in env
 
 
 class TestSessaoDaExcecao:
@@ -219,10 +267,37 @@ def _broker_falso(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+@pytest.fixture
+def _sem_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A borda de entrada regrava a `.env` do wrapper; aqui isso não interessa.
+
+    ESCONDER-EM-VEZ-DE-SAIR-01: `esconder_o_fisico_para_o_jogo` chama
+    `_materialize_launch_env` de propósito (a env do appid tem de estar gravada
+    com a verdade de agora antes do próximo `exec` do wrapper) — e quem trava
+    esse lado é `TestEnvPorAppidDaAllowlist`, com o diretório sob `tmp_path`.
+    """
+    monkeypatch.setattr(gp, "_materialize_launch_env", lambda daemon: None)
+
+
 class TestModoNativoPorAppid:
-    def test_entrar_na_excecao_solta_grab_e_expoe_o_hidraw(
-        self, monkeypatch: pytest.MonkeyPatch, _broker_falso: None
+    """NOTA DATADA — 09/08/2026: o "Modo Nativo por appid" acabou.
+
+    As duas primeiras travas desta classe afirmavam o que a marca fazia com a
+    ENTRADA: soltar o grab do evdev, mandar o broker reexpor o hidraw e nunca
+    deixar a reconciliação online reesconder nada. Era o Hefesto saindo da
+    frente, e é exatamente o que a decisão dela de 09/08 desfez. Elas continuam
+    aqui invertidas, com a mesma pergunta e a resposta de hoje; as duas últimas
+    (fora da marca nada muda; sair da marca retoma o canônico) nunca dependeram
+    do desvio e passam sem tocar em uma linha.
+    """
+
+    def test_entrar_na_marca_esconde_o_fisico_em_vez_de_expor(
+        self, monkeypatch: pytest.MonkeyPatch, _broker_falso: None, _sem_env: None
     ) -> None:
+        """A MORDIDA: troque `esconder_o_fisico_para_o_jogo` pelo par antigo
+        (`_set_evdev_grab(daemon, False)` + `client.restore_all`) e as três
+        asserções caem juntas. É a inversão inteira, numa linha.
+        """
         daemon = _DaemonComGrab(appid_ativo=MMJ)
         monkeypatch.setattr(
             le, "steam_input_exception_appid", lambda d, **k: MMJ
@@ -230,15 +305,25 @@ class TestModoNativoPorAppid:
 
         assert gp.sync_steam_input_exception(daemon) is True
 
-        assert daemon.grabs == [False], "o jogo tem de ver o evdev do físico"
-        assert daemon.restores == 1, "o hidraw escondido é o que matava a exceção"
+        assert daemon.grabs == [True], "soltar o grab é o jogo vendo o físico"
+        assert daemon.hides == ["/dev/hidraw0"], "o hidraw do físico tem de sumir"
+        assert daemon.restores == 0, "`restore_all` é a direção contrária da dela"
         assert gp.steam_input_excecao_ativa(daemon) is True
 
-    def test_com_excecao_ativa_o_broker_nao_reesconde(
+    def test_com_a_marca_ativa_o_broker_reesconde(
         self, monkeypatch: pytest.MonkeyPatch, _broker_falso: None
     ) -> None:
-        """Sem este gate a reconciliação online (≤30 s) desfaria a exceção no
-        meio do jogo — o físico voltaria a 0600."""
+        """De gate a aliado: a reconciliação online passou a SUSTENTAR a marca.
+
+        A trava antiga dizia *"sem este gate a reconciliação online (≤30 s)
+        desfaria a exceção no meio do jogo — o físico voltaria a 0600"*. Com a
+        inversão não há mais nada a desfazer, e o serviço que ela presta virou o
+        oposto: o nó recriado por replug/wake BT NASCE VISÍVEL (BROKER-01 §2.2)
+        e é este caminho que o esconde de novo, sem esperar o jogo fechar.
+
+        A MORDIDA: devolva o `if steam_input_excecao_ativa(daemon): return` a
+        `rehide_physical_hidraw` (e o irmão dele em `_broker_sync_grab`).
+        """
         daemon = _DaemonComGrab(appid_ativo=MMJ)
         daemon._steam_input_excecao = True
 
@@ -246,8 +331,12 @@ class TestModoNativoPorAppid:
         gp.rehide_physical_hidraw(daemon)
         gp._set_controller_grab(daemon, True)
 
-        assert daemon.hides == []
-        assert daemon.grabs == []
+        assert daemon.hides == ["/dev/hidraw0"] * 3, (
+            "os três caminhos do esconde-esconde têm de convergir para o mesmo "
+            "estado dentro do jogo marcado — é a idempotência que faz a "
+            "reconciliação a cada ≤30 s ser de graça"
+        )
+        assert daemon.grabs == [True]
 
     def test_sem_excecao_o_hide_e_o_grab_seguem_iguais(
         self, monkeypatch: pytest.MonkeyPatch, _broker_falso: None

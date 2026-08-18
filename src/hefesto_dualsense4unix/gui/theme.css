@@ -549,6 +549,98 @@ messagedialog button:active {
 .hefesto-dualsense4unix-window switch:checked slider {
     background-color: @app_bg;
 }
+/* BUG-GUI-SWITCH-APAGADO-INVISIVEL-01 (07/08/2026) — o interruptor INDISPONÍVEL
+   desenhava igual a um disponível.
+   Este arquivo já tinha `:disabled` para `button` (:237) e para `label` (:473).
+   Só o `switch` ficou de fora — e o preço apareceu no dia em que nasceu o
+   "Pelo rádio" do card do controle (`controller_card.py`), que nasce insensível
+   com o controle no cabo: o rótulo ao lado ficava @text_muted (cinza, legível
+   como indisponível) e o interruptor ao lado dele continuava com o miolo em
+   @fg #f8f8f2, do mesmo branco de um interruptor vivo. Mesmo caso do
+   `keyboard_emulation_toggle` (`emulation_actions.py`) enquanto o daemon não
+   responde.
+
+   MEDIDO em 07/08 (PyGObject 3.48.2, GTK 3.24.41, Gtk.OffscreenWindow, o mesmo
+   instrumento nas três colunas), contando pixels diferentes entre o render
+   sensível e o insensível do MESMO interruptor:
+
+     estado       tema             a 0%      acima de 3%   miolo (aceso -> apagado)
+     desligado    casa, ANTES       377 px         1 px     #F8F8F2 -> #F8F8F2
+     ligado       casa, ANTES       455 px       214 px     #21222C -> #21222C
+     desligado    GTK stock        1264 px      1264 px     #D2D2D2 -> #787878
+     ligado       GTK stock        1270 px       680 px     #FFFFFF -> #787878
+     desligado    casa, DEPOIS     1178 px      1047 px     #F8F8F2 -> #8B8FA8
+     ligado       casa, DEPOIS     1195 px      1170 px     #21222C -> #8B8FA8
+
+   A leitura que importa é a coluna do meio: ANTES a distância inteira morria no
+   antisserrilhado — 377 pixels de borda que somem à primeira tolerância, ou
+   seja, NADA que o olho use. O tema da casa tinha APAGADO a distinção que o GTK
+   dava de graça. O critério adotado é o do stock: a diferença tem de sobreviver
+   à tolerância, não só existir a 0%. DEPOIS o pior dos dois estados entrega
+   1047 px acima de 3% — acima dos 680 px do pior estado do stock.
+
+   As cores saem dos tokens que a casa já usa para dizer "indisponível", pelo
+   mesmo desenho do `button:disabled`: superfície recuada (@app_bg), divisória
+   apagada (@border_soft) e o miolo em @text_muted — o token do texto que ela lê
+   como fora de alcance. `background-image: none` porque o tema do sistema pinta
+   um degradê próprio no trilho insensível que sobrevive ao `background-color`.
+
+   E o `:checked:disabled` existe pela mesma razão que o `button:checked:disabled`
+   de :245 — sem ele o `:disabled` acima apagaria a marca de LIGADO. A marca
+   sobrevive rebaixada: @sel_bg com a borda @purple, o mesmo par do botão
+   marcado inativo.
+
+   ONDE MORA A MARCA, porque medir o lugar errado quase trocou esta cura por
+   outra: o que diz "ligado" num interruptor indisponível é o ANEL, não o
+   preenchimento. Entre o ligado e o desligado, ambos apagados, o trilho dá
+   1,48:1 e o anel dá 4,89:1 — o GTK stock dá 3,07:1 (ele mantém o trilho quase
+   no acento cheio e rebaixa só o miolo, o que deixa o indisponível parecendo
+   vivo). Os dois portadores são de propósito: o MIOLO carrega "posso mexer?" e
+   o ANEL carrega "está ligado?". Cobrir o trilho com um azul mais claro para
+   subir aquele 1,48 foi testado e recusado — reintroduzia na tela o azul que o
+   BUG-GUI-ACENTO-AZUL-VAZANDO-01 tinha removido.
+
+   Sobre a ORDEM destes blocos: `switch:checked` e `switch:disabled` empatam em
+   especificidade, então quem vem por último ganha. MEDIDO em 07/08: com o
+   `:checked:disabled` presente NÃO muda um pixel mover este bloco para antes do
+   `:checked`, porque a pseudo-classe dupla tem especificidade maior e decide
+   sozinha. A ordem só passa a mandar se alguém arrancar o `:checked:disabled` —
+   e aí o ligado volta aos 214 px / 7,60% do defeito. Ficam depois por segurança,
+   e `tests/unit/test_contraste_de_widget_desabilitado.py` mede o resultado em
+   pixel em vez de confiar na posição no arquivo. */
+.hefesto-dualsense4unix-window switch:disabled {
+    background-image: none;
+    background-color: @app_bg;
+    border-color: @border_soft;
+}
+.hefesto-dualsense4unix-window switch:checked:disabled {
+    background-image: none;
+    background-color: @sel_bg;
+    border-color: @purple;
+}
+.hefesto-dualsense4unix-window switch:disabled slider,
+.hefesto-dualsense4unix-window switch:checked:disabled slider {
+    background-image: none;
+    background-color: @text_muted;
+}
+/* BUG-GUI-SWITCH-ICONE-QUEBRADO-01 (01/08/2026) — o quadrado VERMELHO ao lado
+   dos quatro interruptores da janela.
+   Medido: todo GtkSwitch do GTK 3.24 tem dois nos `image` internos, alem do
+   `slider`, que pedem `switch-on-symbolic`/`switch-off-symbolic`. Nenhum tema
+   de icones desta maquina resolve esses nomes (breeze-dark, Adwaita e hicolor
+   devolvem None no `IconTheme.lookup_icon`), entao o GTK cai no `image-missing`
+   do tema ativo — que no breeze-dark e um quadrado de borda vermelha. Nao e
+   defeito deste CSS: o experimento mostrou o quadrado com e SEM este arquivo
+   carregado, e ate com o tema stock Adwaita.
+   O adw-gtk3 tenta neutralizar com `switch image { color: transparent }`, e nao
+   alcanca: `color` so recolore icone SIMBOLICO, e o fallback e colorido. Pelo
+   mesmo motivo `-gtk-icon-source: none` e `opacity: 0` nao surtiram efeito.
+   `-gtk-icon-transform: scale(0)` zera o desenho sem depender de icone nenhum
+   existir — e nao ha perda visual, porque esses icones nunca deveriam aparecer.
+   Escopado na janela do Hefesto: nao vaza para outras janelas GTK. */
+.hefesto-dualsense4unix-window switch image {
+    -gtk-icon-transform: scale(0);
+}
 .hefesto-dualsense4unix-window check,
 .hefesto-dualsense4unix-window radio {
     background-image: none;
@@ -1135,4 +1227,23 @@ textview.hefesto-dualsense4unix-log text selection,
 .hefesto-dualsense4unix-high-contrast statusbar label {
     color: #fff;
     opacity: 1;
+}
+
+/* SOM-CANAL-01 — o seletor de canal do bloco "Alto-falante", compacto.
+ *
+ * MEDIDO em 02/08/2026: o `SegmentedSelector` pede 67px de altura contra os
+ * 34px do botão que ele substituiu no bloco. A diferença é o padding que o
+ * tema dá a um `GtkRadioButton` em modo toggle, e ela sozinha estourava o
+ * orçamento de ALTURA da coluna do som (284px contra um teto de 258) — a
+ * linha mais apertada do card, como ela avisou na sprint.
+ *
+ * O corte vai no padding, e não na fonte: encolher a letra faria o rótulo
+ * deste seletor divergir do resto da faixa, que é o defeito de simetria que a
+ * STATUS-SIMETRIA-02 veio curar. */
+.hefesto-seletor-compacto button {
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    min-height: 0;
 }

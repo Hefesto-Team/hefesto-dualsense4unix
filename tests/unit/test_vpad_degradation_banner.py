@@ -94,6 +94,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     VPAD_COOP_DEGRADED_TEXT,
     VPAD_DEGRADED_TEXT,
     HomeActionsMixin,
+    texto_coop_degradado,
     vpad_degradation_text,
 )
 from hefesto_dualsense4unix.app.actions.status_actions import (
@@ -186,7 +187,25 @@ class TestGuardDedup06NoBanner:
         return state
 
     def test_jogador_do_coop_degradado_acende_mesmo_com_p1_saudavel(self) -> None:
+        # MESA-CHEIA-11/E2 (14/08/2026): o banner passou a NOMEAR o jogador —
+        # até aqui ele dizia "um dos jogadores" com o número em mãos. O texto
+        # genérico continua existindo, e o teste dele é o do rótulo sem número.
+        #
+        # A asserção contra `texto_coop_degradado([2])` sozinha seria
+        # implementação contra implementação: se o molde degenerasse para o
+        # genérico, os dois lados empatariam e o teste ficaria vazio (dois
+        # céticos mediram isso em 14/08 — esvaziaram a função e este teste
+        # continuou verde). Por isso o literal vem antes da igualdade.
         state = self._com_dedup(dedup_ok=False, motivo="jogador_2_uinput")
+        texto = vpad_degradation_text(state)
+        assert texto is not None
+        assert "Jogador 2" in texto
+        assert "um dos jogadores" not in texto
+        assert texto == texto_coop_degradado([2])
+
+    def test_jogador_sem_numero_cai_no_texto_generico(self) -> None:
+        """`jogador_?_uinput` é real: o co-op sem `player_index` emite o `?`."""
+        state = self._com_dedup(dedup_ok=False, motivo="jogador_?_uinput")
         assert vpad_degradation_text(state) == VPAD_COOP_DEGRADED_TEXT
 
     def test_dedup_ok_true_nao_acende(self) -> None:
@@ -293,8 +312,6 @@ class _FakeWidget:
 class _HomeStub:
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
-    # AUTO-01.2: o `_render_home` também reconcilia o botão "Preparar co-op".
-    _render_coop_prep = HomeActionsMixin._render_coop_prep
 
     def __init__(self) -> None:
         self._home_installed = True
@@ -314,12 +331,10 @@ class _HomeStub:
         # ONDA-U (U1): botão único de energia (toggle in-place).
         self._home_shutdown_btn = _FakeWidget()
         self._home_offline = False
-        # ONDA-U (U2/U10): botão "Renumerar agora" + aviso de gate.
-        self._home_renumber_btn = _FakeWidget()
-        self._home_renumber_hint = _FakeWidget()
-        # AUTO-01.2: botão "Preparar co-op" + frase (vêm do Glade).
-        self._home_coop_prep_btn = _FakeWidget()
-        self._home_coop_prep_hint = _FakeWidget()
+        # ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): botão
+        # "Reconciliar jogadores" + aviso de jogo aberto.
+        self._home_reconciliar_btn = _FakeWidget()
+        self._home_reconciliar_hint = _FakeWidget()
         # Estado inicial do widget real: invisível até o render decidir.
         self._home_vpad_banner.visible = False
 

@@ -17,6 +17,14 @@
 # o hidraw do controle Switch do mesmo jeito e o mesmo conflito com o daemon
 # se aplica. Tratado JUNTO do PSSupport (mesmo grep/sed/status) desde então.
 #
+# A PORTA (A-PORTA-QUE-A-CASA-CONSTRUIU-01, 15/08/2026):
+# este script NÃO ABRE /dev/hidraw*, nem precisa — ele edita arquivos `.vdf`
+# da Steam, e as menções a hidraw acima descrevem o que a STEAM faz com o nó.
+# Fica registrado porque o portão da porta (tests/unit/
+# test_a_porta_que_a_casa_construiu_01.py) varre `scripts/` atrás de quem abre
+# hidraw por conta própria, e um arquivo que fala de hidraw sem abrir nenhum
+# precisa dizer isso por escrito em vez de deixar a próxima pessoa averiguar.
+#
 # As keys ficam em `localconfig.vdf` per-user em Steam moderno (não no
 # config.vdf global como nas versões antigas). Por padrão este script
 # itera por TODOS os installs de Steam conhecidos (.deb, Flatpak, Snap,
@@ -163,8 +171,24 @@ steam_running() {
 # O `pgrep -f` é seguro aqui: a string `SteamLaunch AppId=` só aparece em
 # cmdline de launch REAL da Steam. O falso-positivo histórico
 # (BUG-STEAM-DETECT-EARLYOOM-FALSE-POSITIVE-01) era com NOMES de processo.
+#
+# 12/08/2026 — o `[ ]` e o `[0-9]` NÃO são enfeite, e a frase acima só é
+# verdadeira com eles. Duas razões, ambas medidas:
+#
+#  1. `pgrep -f` compara a regex contra a cmdline de TODO processo, e a cmdline
+#     do próprio `pgrep` contém o padrão procurado. Ele exclui o próprio pid —
+#     mas não o de OUTRO `pgrep` caçando o mesmo texto, e há um rodando a cada
+#     15 s nesta máquina (`~/.local/bin/aurora-game-watch-daemon.sh`). Dois
+#     desses se enxergam e ambos respondem "há jogo" com zero jogos abertos.
+#  2. Esta linha também virava ISCA para quem procura a mesma agulha: o daemon
+#     varre `/proc/*/cmdline` atrás de `SteamLaunch AppId=` e encontrava ESTE
+#     `pgrep`, devolvendo uma cmdline sem appid nenhum — o que fazia
+#     `steam_game_running_appid()` responder None com o jogo aberto.
+#
+# `[ ]` casa um espaço literal sem que a regex o contenha; `[0-9]` exige um
+# appid de verdade depois do `=`. É o idioma do `ps aux | grep [p]attern`.
 steam_game_running() {
-    pgrep -f 'SteamLaunch AppId=' >/dev/null 2>&1
+    pgrep -f 'SteamLaunch[ ]AppId=[0-9]' >/dev/null 2>&1
 }
 
 stop_steam() {
@@ -413,9 +437,17 @@ case "${MODE}" in
             exit 4
         fi
         # Pré-flight: alguém precisa fix? Se ninguém, evita fechar Steam à toa.
+        #
+        # D-32 (05/08/2026): este pré-voo usava o `needs_fix`, que casa também
+        # o opt-in per-app da allowlist. Com SÓ appids da allowlist ligados ele
+        # dizia "sim, precisa" — e o `--apply` FECHAVA E REABRIA a Steam dela
+        # para não mudar byte nenhum, terminando em `resultado=aplicado`, que a
+        # janela traduzia para "a Steam não sequestra mais o seu controle".
+        # Quem decide aqui é o `needs_real_fix`: precisa = a transformação
+        # MUDARIA o arquivo. Mesmo critério do `--status`.
         any_needs=0
         for vdf in "${VDFS[@]}"; do
-            needs_fix "$vdf" && any_needs=1
+            needs_real_fix "$vdf" && any_needs=1
         done
         if [[ "${any_needs}" -eq 0 ]]; then
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
@@ -447,9 +479,14 @@ case "${MODE}" in
             resultado "adiado-steam-aberta"
             exit 0
         fi
+        # D-32, mesma cura do `--apply` acima: este é o modo que o guarda de
+        # 30 em 30 minutos roda, e é dele que saiu o `resultado=aplicado` das
+        # 02:13:13 de 05/08 sobre um arquivo que ninguém tocou. O `--apply-quiet`
+        # não fecha a Steam, mas a tag mentirosa chega igual à janela (o botão
+        # "Aplicar correções" e o "Deixar tudo pronto" leem esta linha).
         any_needs=0
         for vdf in "${VDFS[@]}"; do
-            needs_fix "$vdf" && any_needs=1
+            needs_real_fix "$vdf" && any_needs=1
         done
         if [[ "${any_needs}" -eq 0 ]]; then
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"

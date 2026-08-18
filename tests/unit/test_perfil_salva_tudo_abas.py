@@ -87,6 +87,10 @@ def _install_gi_stubs() -> None:
 _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import footer_actions as fa
+# GRAVA-POR-UM-FUNIL-01: quem chama `save_profile` pelo rodapé é o funil
+# (`profile_writer`), não mais o `footer_actions` — o dublê de disco tem de
+# ser plantado onde a gravação acontece de verdade.
+from hefesto_dualsense4unix.app.actions import profile_writer as pw
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.profiles.schema import (
@@ -117,10 +121,17 @@ class _Disco:
     def __init__(self, *perfis: Profile) -> None:
         self.por_slug: dict[str, Profile] = {slugify(p.name): p for p in perfis}
         self.gravacoes: list[Profile] = []
+        #: A `origem` de cada gravação, na ordem — o carimbo que o journal leva.
+        self.origens: list[str | None] = []
 
-    def salvar(self, profile: Profile) -> Path:
+    def salvar(self, profile: Profile, *, origem: str | None = None) -> Path:
+        # `origem` espelha a assinatura real de `save_profile` (loader.py:787):
+        # o funil da janela a passa para carimbar o `profile_salvo` do journal.
+        # O dublê a aceita e a guarda — um dublê que não acompanha o contrato
+        # do original passa com o produto quebrado.
         self.por_slug[slugify(profile.name)] = profile
         self.gravacoes.append(profile)
+        self.origens.append(origem)
         return Path(f"/perfis/{slugify(profile.name)}.json")
 
     def apagar(self, nome: str) -> None:
@@ -192,6 +203,14 @@ class _FakeSelector:
 
     def get_active_id(self) -> str | None:
         return self._active_id
+
+    def limpar_ativo(self) -> None:
+        """ESCOLHA-DELA-VENCE-01: "sem opinião" não marca botão nenhum."""
+        self._active_id = None
+
+    def set_tooltips(self, dicas: dict[str, str]) -> None:
+        """Dica por botão (E4). O dublê só precisa aceitar."""
+        self._dicas = dict(dicas)
 
     def set_active_id(self, the_id: str) -> None:
         if the_id == self._active_id:
@@ -294,9 +313,15 @@ def _ligar(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
         gd, "prompt_overwrite_existing",
         lambda parent, name: janela.resposta_overwrite, raising=False,
     )
+    # SALVAR-NAO-REBAIXA-02: os dois avisos de rebaixamento (regra e
+    # PRIORIDADE) — `**_kw` acompanha o `regra_atual` novo do primeiro.
     monkeypatch.setattr(
         gd, "confirm_downgrade_match_to_any",
-        lambda parent, name: janela.resposta_downgrade, raising=False,
+        lambda parent, name, **_kw: janela.resposta_downgrade, raising=False,
+    )
+    monkeypatch.setattr(
+        gd, "confirm_downgrade_priority",
+        lambda parent, name, **_kw: True, raising=False,
     )
     monkeypatch.setattr(
         gd, "prompt_profile_name",
@@ -309,7 +334,7 @@ def _ligar(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
         pa, "profile_switch", lambda n: bool(janela.switches.append(n)) or True
     )
     monkeypatch.setattr(pa, "call_async", lambda *_a, **_kw: None)
-    monkeypatch.setattr(fa, "save_profile", janela._disco.salvar)
+    monkeypatch.setattr(pw, "save_profile", janela._disco.salvar)
     monkeypatch.setattr(fa, "load_all_profiles", janela._disco.todos)
     monkeypatch.setattr(fa.ipc_bridge, "run_in_thread", _sync_run_in_thread)
     monkeypatch.setattr(fa.ipc_bridge, "call_async", lambda *_a, **_kw: None)
@@ -361,7 +386,7 @@ class TestModoDaAbaEmulacaoNaoEvapora:
         """A mordida do outro lado: FEAT-PROFILE-MODE-GUI-01 intacto.
 
         Se a cura fosse "o rascunho sempre vence", o seletor de modo da aba
-        Perfis viraria enfeite — ela escolheria "Jogar direto (Sony)" e o
+        Perfis viraria enfeite — ela escolheria "Conexão Nativa (Sony)" e o
         arquivo nasceria com o gamepad da outra aba.
         """
         perfil = _perfil("Pragmata")

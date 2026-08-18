@@ -41,7 +41,35 @@ da tabela inteira, pela regra que o próprio processo escreveu.
 
 ## Efeitos
 
+A tabela abaixo é **gerada** do catálogo (`docs/data/curvas-proprias.json`) por
+`scripts/gerar-tabela-de-curvas.py`, que chama `gerar_tabela_markdown` — a
+função que a CR-02 escreveu para este fim e que, MEDIDO em 12/08/2026, ninguém
+chamava. O `--check` do gerador reprova quando o publicado deixa de ser o que o
+catálogo produz. Não a edite à mão: essa foi a proibição da CR-02, e ela só
+passou a valer no dia em que este chamador nasceu.
+
+<!-- BLOCO GERADO por scripts/gerar-tabela-de-curvas.py — não edite à mão -->
+
 _(nenhum ainda — ver CR-04)_
+
+<!-- FIM DO BLOCO GERADO -->
+
+## Sob que licença estas curvas saem
+
+**CC0-1.0** — domínio público, sem exigência de crédito.
+
+**Grau: DECISÃO DELA**, 07/08/2026. A pergunta estava aberta desde 25/07 na
+[CR-06](../process/sprints/2026-07-25-CR-06-devolver-ao-ecossistema.md), e a
+resposta separa as duas coisas de propósito: o **código** é MIT, os **dados
+medidos** são CC0.
+
+O motivo é o objetivo declarado da própria CR-06 — que a curva seja **adotada**.
+Exigir crédito num número medido cria uma dúvida ("dado factual tem autoria?")
+que só serve para fazer o outro projeto reescrever a medição em vez de usar a
+nossa. O registro de procedência continua aqui, e é ele que responde a pergunta
+de onde o número veio; a licença não precisa carregar esse peso.
+
+Ver o `NOTICE`, seção "A LICENÇA DAS CURVAS PRÓPRIAS".
 
 ## O que NÃO está aqui
 

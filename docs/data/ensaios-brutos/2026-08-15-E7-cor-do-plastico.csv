@@ -1,0 +1,8 @@
+no,transporte,mac_mascarado,hardware_version,escreveu,envelope,resultado_da_escrita,codigo_da_cor,cor_do_plastico,serial_mascarado,firmware_0x20_igual,hardware_version_igual,reports_depois,lightbar_mudou,continua_sao
+hidraw4,cabo,d4:2f:4b:00:00:d8,0x00001111,sim,cabo (sem CRC),aceito,05,Starlight Blue,M65A05###########,sim,sim,3,não,sim
+hidraw5,cabo,a0:fa:9c:00:00:f0,0x00000710,sim,cabo (sem CRC),aceito,04,Galactic Purple,E55704###########,sim,sim,3,não,sim
+hidraw8,rádio,44:46:48:00:00:03,0x00000811,sim,BT com CRC-32 semente 0xA3,EIO (errno 5) imediato,,não saiu,,sim,sim,3,não,sim
+hidraw8,rádio,44:46:48:00:00:03,0x00000811,sim,BT sem CRC (--sem-crc),EIO (errno 5) imediato,,não saiu,,sim,sim,3,não,sim
+hidraw9,rádio,14:3a:9a:00:00:ab,0x00000711,não,-,não tentado (lightbar travada; outra frente mede),,não tentado,,,,3,não,não escrito
+hidraw8,cabo,14:3a:9a:00:00:ab,0x00000711,sim,cabo (sem CRC),aceito,00,White,F54800###########,sim,sim,3,não,sim
+hidraw10,cabo,44:46:48:00:00:03,0x00000811,sim,cabo (sem CRC),aceito,02,Cosmic Red,F55602###########,sim,sim,3,não,sim

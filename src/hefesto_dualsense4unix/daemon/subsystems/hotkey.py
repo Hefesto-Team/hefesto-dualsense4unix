@@ -129,6 +129,10 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             rumble_passthrough_applier=getattr(
                 daemon, "apply_profile_rumble_passthrough", None
             ),
+            # SOM-02/E4: o ciclo PS+D-pad é gesto MANUAL dela — troca explícita
+            # de perfil, que limpa as categorias travadas (inclusive `audio`) e
+            # portanto aplica o volume do perfil que entra.
+            speaker_applier=getattr(daemon, "apply_profile_speaker", None),
         )
         profiles = await daemon._run_blocking(manager.list_profiles)
         if len(profiles) < 2:
@@ -144,22 +148,46 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             await daemon._run_blocking(daemon.controller.set_led, (255, 255, 255))
             await asyncio.sleep(0.12)
 
-        # PERFIL-03: botão físico no controle = gesto MANUAL — origin="manual"
-        # persiste a intenção em session.json (paridade com o profile.switch).
-        # `functools.partial` porque `_run_blocking(fn, *args)` só aceita
-        # posicionais e `origin` é keyword-only.
-        profile = await daemon._run_blocking(
-            functools.partial(manager.activate, target, origin="manual")
-        )
-        with contextlib.suppress(Exception):
-            save_active_marker(profile.name)
         # Gesto explícito do usuário: libera o autoswitch e arma o lock manual
         # (paridade com _handle_profile_switch) — senão o autoswitch desfaz a
         # troca no próximo tick por causa da janela ativa.
+        #
+        # TRAVA-QUE-SOLTA-TARDE-01 (medido ao vivo, 05/08): estas duas linhas
+        # vinham DEPOIS do `activate`, e o comentário acima ("paridade com
+        # _handle_profile_switch") era literal — a paridade copiou a ordem
+        # errada do irmão. Com a trava ainda armada durante o `activate`, o
+        # `manager.apply` pulava as categorias travadas, e a promessa do
+        # `speaker_applier` logo acima (SOM-02/E4: *"limpa as categorias
+        # travadas (inclusive `audio`) e portanto aplica o volume do perfil que
+        # entra"*) não se cumpria. Este é o gesto que ela usa DENTRO do jogo.
+        # `getattr` pelo mesmo motivo que `ProfileManager._categorias_travadas`
+        # (`profiles/manager.py:384-387`): dublês de teste e stores parciais
+        # continuam funcionando, e "não sei listar" vira "nada a restaurar".
+        travadas_antes = getattr(daemon.store, "manual_override_categories", ()) or ()
+        lock_antes = getattr(daemon.store, "_manual_profile_lock_until", 0.0)
         daemon.store.clear_manual_trigger_active()
         daemon.store.mark_manual_profile_lock(
             _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
         )
+        # PERFIL-03: botão físico no controle = gesto MANUAL — origin="manual"
+        # persiste a intenção em session.json (paridade com o profile.switch).
+        # `functools.partial` porque `_run_blocking(fn, *args)` só aceita
+        # posicionais e `origin` é keyword-only.
+        try:
+            profile = await daemon._run_blocking(
+                functools.partial(manager.activate, target, origin="manual")
+            )
+        except Exception:
+            # Ativação que falhou não é gesto cumprido — devolve a trava E o
+            # lock que ela tinha, como faz o `_handle_profile_switch`. Sem o
+            # lock de volta, um ciclo que falha congelaria a troca automática
+            # por 30 s sem gesto nenhum cumprido.
+            for categoria in travadas_antes:
+                daemon.store.mark_manual_trigger_active(categoria)
+            daemon.store.mark_manual_profile_lock(lock_antes)
+            raise
+        with contextlib.suppress(Exception):
+            save_active_marker(profile.name)
         logger.info("profile_cycled", direction=direction, to=profile.name)
 
     return _cycle
@@ -256,6 +284,27 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
             if audio is None:
                 continue
             try:
+                # BT-E-VPAD-01, defeito 1 — o botão do microfone do CONTROLE
+                # não pode mutar o microfone de OUTRO dispositivo.
+                #
+                # Medido em 01/08/2026: no Bluetooth o DualSense não tem placa
+                # de som nenhuma (o áudio vai dentro dos reports HID), então a
+                # fonte padrão do sistema é outra coisa — nesta máquina, o
+                # microfone da placa-mãe. O botão alternava aquele, e o LED do
+                # controle acendia para refletir um estado que não era dele.
+                #
+                # Das três saídas que a sprint desenhou, esta é a (a): o botão
+                # só age quando a fonte padrão É o controle. É a mais honesta
+                # e a mais barata. A (b) — mutar o registrador do firmware —
+                # foi recusada porque TOMA A POSSE e faz o botão físico parar
+                # de valer, que é o oposto do que se espera de um botão
+                # físico.
+                pertence = await daemon._run_blocking(
+                    audio.fonte_padrao_e_o_controle
+                )
+                if not pertence:
+                    logger.info("mic_hotkey_fonte_nao_e_o_controle")
+                    continue
                 muted = await daemon._run_blocking(audio.toggle_default_source_mute)
                 await daemon._run_blocking(daemon.controller.set_mic_led, muted)
                 logger.info("mic_hotkey_toggle", muted=muted)

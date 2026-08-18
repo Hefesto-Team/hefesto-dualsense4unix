@@ -68,11 +68,26 @@ def test_sem_dono_nao_disputa_o_mudo_com_o_kernel(handle: Any) -> None:
 
 
 def test_gatilhos_e_leds_seguem_autorizados(handle: Any) -> None:
-    """A poda é CIRÚRGICA: só áudio. Gatilhos/LEDs são nossos e continuam."""
+    """A poda é CIRÚRGICA: gatilhos e as luzes NOSSAS continuam autorizados.
+
+    NOTA DATADA — 12/08/2026. Até hoje esta função também exigia o
+    `MIC_MUTE_LED_CONTROL_ENABLE` (0x01), sob o rótulo "LEDs são nossos". **A
+    linha do LED do mudo estava errada e saiu**: `common[8]` é o
+    `mute_button_led`, e o dono dele no Linux é o KERNEL, que o escreve na
+    borda do botão de mudo junto com o mute real do firmware
+    (`assets/dkms/hid-playstation/hid-playstation.c:1538-1553`). Autorizá-lo em
+    todo report era mandar "apaga a luz do mudo" a cada ≤ 0,5 s por cima da
+    decisão dele — a MESMA classe de defeito que este arquivo trava para o
+    volume e para o mudo, e que passou batido em 25/07 porque a conta era
+    "áudio" e o LED foi contado como luz.
+
+    O contrato do 0x01 agora está em
+    `test_led_do_mudo_nao_apaga_o_que_o_kernel_acendeu.py`, com os dois lados:
+    sem dono não sai, com dono (`set_microphone_led`) sai.
+    """
     common = handle._build_common(rumble_asserted=False)
     assert common[0] & rep.VALID_FLAG0_RIGHT_TRIGGER_FFB
     assert common[0] & rep.VALID_FLAG0_LEFT_TRIGGER_FFB
-    assert common[1] & rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
     assert common[1] & rep.VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE
     assert common[1] & rep.VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE
 

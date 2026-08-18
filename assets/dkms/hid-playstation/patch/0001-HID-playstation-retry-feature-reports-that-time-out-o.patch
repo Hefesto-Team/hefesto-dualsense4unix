@@ -46,12 +46,30 @@ All the failures __ps_get_report() detects are retried, not only the transport
 error: a short transfer, a mismatched reportID and a bad CRC all describe a
 transfer that did not arrive intact, which is the same transient.
 
+The spacing between attempts is the whole of it, and getting it wrong is the
+same as not retrying at all. This was first written waiting 100 ms and then
+200 ms, and the arithmetic was never done: a failed attempt over bluetooth has
+already spent the full REPORT_REQ_TIMEOUT, so three attempts 100 ms and 200 ms
+apart are three questions asked inside one contention window. Measured at
+00:17:04, :07 and :10 followed by the abort, and over 2026-08-08 six of six
+probes that retried still aborted, not one of them saved. The retry only made
+the failure cost ~10 s instead of ~3.3 s.
+
+So the backoff is written in units of the timeout it exists to outlive. It
+starts at twice REPORT_REQ_TIMEOUT, which is the smallest wait that asks the
+question in a window the previous attempt has not already proven contended,
+doubles, and is capped at four times it so that a large feature_retries cannot
+park a probe worker for minutes. Over USB none of this applies - no BlueZ is
+in the path, a failed attempt returns at once, and the failure measured there
+is a clone answering the same short report every time - so that side keeps the
+original 100 ms.
+
 Defaults to a single attempt, i.e. current behavior.
 
 Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
 ---
- drivers/hid/hid-playstation.c | 88 +++++++++++++++++++++++++++++++++--
- 1 file changed, 84 insertions(+), 4 deletions(-)
+ drivers/hid/hid-playstation.c | 118 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 116 insertions(+), 2 deletions(-)
 
 index 9c8b0f0..a71e3d5 100644
 --- a/drivers/hid/hid-playstation.c
@@ -64,7 +82,7 @@ index 9c8b0f0..a71e3d5 100644
  #include <linux/device.h>
  #include <linux/hid.h>
  #include <linux/idr.h>
-@@ -21,6 +22,19 @@
+@@ -21,6 +22,45 @@
 
  #include "hid-ids.h"
 
@@ -78,13 +96,39 @@ index 9c8b0f0..a71e3d5 100644
 +MODULE_PARM_DESC(feature_retries,
 +		 "Extra attempts when a feature report read fails during probe, for controllers that lose the race for the bluetooth control channel when several pair at once (default 0 = one attempt, same as before)");
 +
-+/* Backoff before the first retry; doubled for each further attempt. */
-+#define PS_FEATURE_RETRY_DELAY_MS	100
++/*
++ * BlueZ answers a GET_REPORT on the HID control channel inside its own
++ * REPORT_REQ_TIMEOUT (profiles/input/device.c, hidp_report_req_timeout()) or
++ * not at all, and that timeout is three seconds. Every wait below is written
++ * as a multiple of it, because it is the clock a failed attempt is really
++ * paying, and the one a retry has to outlive to mean anything.
++ */
++#define PS_BLUEZ_REPORT_REQ_TIMEOUT_MS	3000
++
++/*
++ * Backoff before the first retry over bluetooth, and the ceiling for the
++ * doubling. Both are multiples of the timeout above, and the first one is
++ * deliberately larger than it: an attempt that timed out has proven the
++ * control channel was contended for one whole REPORT_REQ_TIMEOUT window, so
++ * sleeping for less than that window asks the same question inside it. See
++ * ps_get_report() for what was measured when this used to be 100 ms.
++ */
++#define PS_FEATURE_RETRY_DELAY_MS	(2U * PS_BLUEZ_REPORT_REQ_TIMEOUT_MS)
++#define PS_FEATURE_RETRY_MAX_DELAY_MS	(4U * PS_BLUEZ_REPORT_REQ_TIMEOUT_MS)
++
++/*
++ * Over USB there is no BlueZ in the path, so none of the above applies: a
++ * failed attempt costs nothing and comes back at once. The failure measured
++ * on that side is a clone answering the pairing info report short, with the
++ * same bytes every time, so spacing the attempts buys nothing and only delays
++ * the fallback that does help. Keep the original 100 ms.
++ */
++#define PS_FEATURE_RETRY_USB_DELAY_MS	100
 +
  /* List of connected playstation devices. */
  static DEFINE_MUTEX(ps_devices_lock);
  static LIST_HEAD(ps_devices_list);
-@@ -787,8 +801,8 @@
+@@ -787,8 +827,8 @@
  	return gamepad;
  }
 
@@ -95,7 +139,7 @@ index 9c8b0f0..a71e3d5 100644
  {
  	int ret;
 
-@@ -823,6 +837,67 @@
+@@ -823,6 +863,80 @@
  	return 0;
  }
 
@@ -139,12 +183,25 @@ index 9c8b0f0..a71e3d5 100644
 + * so all of them are retried.
 + *
 + * Off by default: one attempt, exactly as before.
++ *
++ * The spacing is not free-standing. This first shipped retrying after 100 ms
++ * and 200 ms, which is the same as not retrying at all, and the arithmetic
++ * says why: over bluetooth a failed attempt has already spent the whole
++ * REPORT_REQ_TIMEOUT, so three attempts 100 ms and 200 ms apart are three
++ * questions asked inside one contention episode. Measured in one journal at
++ * 00:17:04, :07 and :10, then probe aborted; over 2026-08-08 six of six
++ * probes that retried still aborted and not one was saved. All the retry
++ * bought was a failure that took ~10 s instead of ~3.3 s. The backoff is now
++ * read as a multiple of the timeout it has to ride over, and the budget is
++ * spent on spacing rather than on more attempts crowded into one window.
 + */
 +static int ps_get_report(struct hid_device *hdev, u8 report_id, u8 *buf,
 +			 size_t size, bool check_crc)
 +{
 +	unsigned int attempts_left = min(feature_retries, 10U) + 1;
-+	unsigned int delay_ms = PS_FEATURE_RETRY_DELAY_MS;
++	unsigned int delay_ms = hdev->bus == BUS_BLUETOOTH ?
++				PS_FEATURE_RETRY_DELAY_MS :
++				PS_FEATURE_RETRY_USB_DELAY_MS;
 +	int ret;
 +
 +	for (;;) {
@@ -156,7 +213,7 @@ index 9c8b0f0..a71e3d5 100644
 +			 "retrying feature reportID %d in %u ms (%u attempt(s) left)\n",
 +			 report_id, delay_ms, attempts_left);
 +		msleep(delay_ms);
-+		delay_ms *= 2;
++		delay_ms = min(delay_ms * 2, PS_FEATURE_RETRY_MAX_DELAY_MS);
 +	}
 +}
 +

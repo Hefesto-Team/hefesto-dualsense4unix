@@ -20,6 +20,7 @@ import os
 import re
 import signal
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Literal
 
@@ -31,6 +32,7 @@ from gi.repository import GLib, Gtk
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor
 from hefesto_dualsense4unix.daemon.service_install import SERVICE_NORMAL, ServiceInstaller
+from hefesto_dualsense4unix.integrations.steam_launch_options import juntar_rotulos
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -234,6 +236,54 @@ def format_apply_wrapper_result(result: object) -> str:
     return msg
 
 
+def build_consentimento_dialog(
+    parent: Any,
+    *,
+    titulo: str,
+    corpo: str,
+    botoes: Sequence[tuple[str, int]],
+    on_response: Any,
+    destrutivo: int | None = None,
+) -> Gtk.MessageDialog:
+    """O construtor de diálogo de consentimento — um dono do widget, N políticas.
+
+    RELANCAR-01 (08/08/2026): extraído de `build_steam_close_consent_dialog`,
+    que passou a ser uma casca sobre ele. O motivo de extrair em vez de copiar é
+    o mesmo que fez o original existir: consentimento pesado não pode divergir
+    entre botões. Duas cópias divergem no primeiro conserto.
+
+    `botoes` é `[(rótulo, resposta), ...]`, na ordem em que entram — a resposta
+    de cancelar deve vir primeiro, e é ela o `set_default_response` (a tecla Esc
+    e o Enter distraído caem no que não faz nada).
+
+    `destrutivo` marca UMA resposta com a classe `destructive-action`, a mesma do
+    botão "Desligar Hefesto": é o que separa visualmente o botão que toca no
+    processo dela dos que não tocam.
+
+    Temado e NÃO-bloqueante (`connect("response")`, nunca `run()`) — há portão
+    AST que reprova o contrário.
+    """
+    dialog = Gtk.MessageDialog(
+        transient_for=parent,
+        flags=0,
+        message_type=Gtk.MessageType.QUESTION,
+        buttons=Gtk.ButtonsType.NONE,
+        text=titulo,
+    )
+    with contextlib.suppress(Exception):
+        dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
+    dialog.format_secondary_text(corpo)
+    for rotulo, resposta in botoes:
+        botao = dialog.add_button(rotulo, resposta)
+        if destrutivo is not None and resposta == destrutivo:
+            with contextlib.suppress(Exception):
+                botao.get_style_context().add_class("destructive-action")
+    if botoes:
+        dialog.set_default_response(botoes[0][1])
+    dialog.connect("response", on_response)
+    return dialog
+
+
 def build_steam_close_consent_dialog(
     parent: Any,
     *,
@@ -255,21 +305,20 @@ def build_steam_close_consent_dialog(
     Temado e NÃO-bloqueante (`connect("response")`, nunca `run()`), padrão de
     `_build_proton_lock_confirm_dialog`/`gui_dialogs._apply_app_theme`.
     """
-    dialog = Gtk.MessageDialog(
-        transient_for=parent,
-        flags=0,
-        message_type=Gtk.MessageType.QUESTION,
-        buttons=Gtk.ButtonsType.NONE,
-        text=titulo,
+    # RELANCAR-01: o widget passou a ser construído por
+    # `build_consentimento_dialog`; esta função continua sendo o ÚNICO lugar que
+    # define a POLÍTICA de "posso fechar a Steam?" — os dois botões, o rótulo e
+    # o default. Quem chamava não muda uma linha.
+    return build_consentimento_dialog(
+        parent,
+        titulo=titulo,
+        corpo=corpo,
+        botoes=[
+            ("Cancelar", Gtk.ResponseType.CANCEL),
+            (rotulo_ok, Gtk.ResponseType.OK),
+        ],
+        on_response=on_response,
     )
-    with contextlib.suppress(Exception):
-        dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
-    dialog.format_secondary_text(corpo)
-    dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-    dialog.add_button(rotulo_ok, Gtk.ResponseType.OK)
-    dialog.set_default_response(Gtk.ResponseType.CANCEL)
-    dialog.connect("response", on_response)
-    return dialog
 
 
 def format_steam_janela_recusa(janela: object) -> str | None:
@@ -298,13 +347,30 @@ def format_steam_janela_recusa(janela: object) -> str | None:
     )
 
 
-def _frase_steam_input(rc: int, tag: str | None) -> str:
+def _frase_steam_input(
+    rc: int, tag: str | None, jogos: Sequence[str] | None = None
+) -> str:
     """Meia-frase sobre o desligar do Steam Input, a partir de rc + tag.
 
     Fonte da tag: a linha `[steam-input] resultado=<tag>` que o
     `disable_steam_input.sh` passou a emitir (HONESTIDADE-STEAM-01). Sem ela
     (script de instalação antiga) o texto DIZ que não houve confirmação, em
     vez de fingir que houve.
+
+    `jogos` são os rótulos (`rotulo_do_jogo`) dos jogos que estavam com Steam
+    Input ligado FORA da allowlist ANTES da execução — medidos por quem chama,
+    porque o script não relata appid nenhum na saída. `None` = ninguém mediu.
+
+    D-33 (05/08/2026): o ramo `aplicado` dizia *"a Steam não sequestra mais o
+    seu controle"*. Duas mentiras numa frase de sete palavras: nada dizia QUAL
+    jogo tinha sido mexido, e "sequestra" descreve como roubo o gesto que ela
+    mesma fez na janela da Steam. O que aconteceu de fato é que o Hefesto
+    desligou a entrada da Steam num jogo — e a frase agora diz isso, com nome.
+
+    MODO-SIMPLES (mantido): nenhuma destas meias-frases pronuncia o jargão
+    "Steam Input". Elas são coladas depois de ``"Controle: "`` no botão
+    "Deixar tudo pronto", cujo ponto inteiro é a usuária não precisar aprender
+    o vocabulário da Steam para usar o controle dela.
     """
     if tag == "recusado-jogo-aberto":
         return "NÃO mudou — havia um jogo aberto."
@@ -317,7 +383,24 @@ def _frase_steam_input(rc: int, tag: str | None) -> str:
     if tag == "nada-a-fazer":
         return "já estava do jeito certo."
     if tag == "aplicado":
-        return "a Steam não sequestra mais o seu controle."
+        if jogos:
+            sujeito = "esse jogo não está" if len(jogos) == 1 else "esses jogos não estão"
+            return (
+                f"o controle de {juntar_rotulos(jogos)} voltou a ser entregue "
+                f"pelo Hefesto, porque {sujeito} na sua lista de exceções."
+            )
+        if jogos is not None:
+            # Medido e vazio: só a chave GLOBAL da Steam foi desligada — não
+            # havia jogo fora da lista de exceções, e dizer o contrário seria
+            # inventar um jogo.
+            return (
+                "desliguei o ajuste geral da Steam que assume o controle em "
+                "todo jogo; nenhum jogo da sua lista de exceções foi tocado."
+            )
+        return (
+            "o controle voltou a ser entregue pelo Hefesto nos jogos fora da "
+            "sua lista de exceções."
+        )
     return "a correção rodou sem erro (versão antiga do script, sem confirmação)."
 
 
@@ -355,7 +438,14 @@ def format_steam_ready_result(
             rc, saida = bruto
         else:
             rc, saida = 1, ""
-        partes.append("Controle: " + _frase_steam_input(int(rc), _tag_do_script(saida)))
+        partes.append(
+            "Controle: "
+            + _frase_steam_input(
+                int(rc),
+                _tag_do_script(saida),
+                _jogos_do_relatorio(dados.get("steam_input_jogos")),
+            )
+        )
     else:
         partes.append(
             "Controle: não encontrei o script desta correção nesta "
@@ -380,6 +470,45 @@ def _tag_do_script(saida: object) -> str | None:
     return steam_input_result_tag(saida if isinstance(saida, str) else "")
 
 
+def _jogos_do_relatorio(bruto: object) -> list[str] | None:
+    """Rótulos de jogo guardados no relatório do worker, ou `None`.
+
+    `None` significa "ninguém mediu" (relatório antigo, medição falhou) — e o
+    formatter então evita nomear jogo nenhum em vez de chutar.
+    """
+    if isinstance(bruto, list) and all(isinstance(x, str) for x in bruto):
+        return list(bruto)
+    return None
+
+
+def medir_jogos_com_steam_input() -> list[str] | None:
+    """Rótulos dos jogos com Steam Input ligado FORA da allowlist, AGORA.
+
+    D-33: o `disable_steam_input.sh` não diz na saída QUAIS appids mexeu — ele
+    só emite `resultado=<tag>`. Quem sabe é o `localconfig.vdf`, e só ANTES da
+    execução (depois já foi zerado). Por isso os dois workers medem primeiro e
+    guardam o resultado no relatório.
+
+    `None` = não deu para medir; lista vazia = medido, e não havia jogo fora da
+    lista de exceções (o caso da chave GLOBAL da Steam).
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.emulation_actions import (
+            EmulationActionsMixin,
+        )
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            rotulo_do_jogo,
+        )
+
+        return [
+            rotulo_do_jogo(appid)
+            for appid in EmulationActionsMixin._steam_input_appids_ligados()
+        ]
+    except Exception as exc:  # pragma: no cover - defesa; nunca derruba o botão
+        logger.warning("steam_input_medicao_falhou", erro=str(exc))
+        return None
+
+
 def format_fix_safe_result(relatorio: object) -> str:
     """Toast do botão "Aplicar correções" (sem senha) — pura, testável.
 
@@ -401,15 +530,16 @@ def format_fix_safe_result(relatorio: object) -> str:
     if isinstance(bruto, tuple) and len(bruto) == 2:
         rc, saida = bruto
         tag = _tag_do_script(saida)
+        jogos = _jogos_do_relatorio(relatorio.get("steam_input_jogos"))
         if tag in ("adiado-steam-aberta", "recusado-jogo-aberto"):
             partes.append(
                 "Só o Steam Input NÃO foi desligado: "
-                + _frase_steam_input(int(rc), tag)
+                + _frase_steam_input(int(rc), tag, jogos)
                 + " Use o botão 'Deixar tudo pronto' — ele pede sua permissão "
                 "para fechar a Steam e faz o resto sozinho."
             )
         else:
-            partes.append("Steam Input: " + _frase_steam_input(int(rc), tag))
+            partes.append("Steam Input: " + _frase_steam_input(int(rc), tag, jogos))
     partes.append(
         "A cura anti-storm do áudio já é persistente (install) — reconecte o "
         "controle para ela pegar nesta sessão."
@@ -422,7 +552,19 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
 
     Deliberadamente SEM os termos "Steam Input" e "opção de inicialização": a
     usuária só declara que o jogo falhou, e o app troca de estratégia (o jogo
-    passa a ser entregue pela Steam e o Hefesto sai da frente dele).
+    passa a receber a ENTRADA pela Steam, e some o controle dobrado).
+
+    NOTA DATADA — 07/08/2026. Este toast dizia *"o Hefesto sai da frente
+    dele"*, e a frase está **refutada pela metade** pela medição dela de
+    06/08 (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, grau MEDIDO): com o
+    jogo marcado o Hefesto entrega a **entrada** (solta o grab e derruba o
+    gamepad virtual, o que acaba com o dobrado) e **mantém a saída inteira** —
+    os gatilhos dela seguraram duros e o vermelho dela ficou na lightbar, com
+    o Mullet Mad Jack aberto. Quem lia "sai da frente" esperava perder cor e
+    gatilho, que é o contrário do que acontece; e o que de fato se perde ali
+    é o co-op (os secundários caem junto com os vpads), que o toast não
+    escondia e continua não escondendo — ver o badge da aba Status
+    (`app/actions/status_actions.tooltip_do_coop_derrubado`).
     """
     if status == "sem_jogo":
         return (
@@ -435,16 +577,39 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
         return (
             "Não consegui anotar este jogo — veja os 'Detalhes técnicos'."
         )
+    # STEAM-INPUT-01 (entrega 1): aqui morava a única frase do produto que
+    # ENSINAVA o gesto de ligar a entrada da Steam pela janela da própria Steam
+    # (menu do jogo, aba do controle, "Ativar" — "agora o Hefesto respeita essa
+    # escolha em vez de desfazê-la"). Ela só era verdadeira para um appid JÁ na
+    # allowlist; como regra geral é falsa, e foi assim que ela a leu: a
+    # DUPLO-REGISTRO-01 mediu o Pragmata com `UseSteamControllerConfig "2"` no
+    # `localconfig.vdf` e AUSENTE do `steam_input_apps.txt` — o segundo
+    # cadastro, o único que o Hefesto consulta. Ligar pela Steam não escreve na
+    # allowlist, e o guarda (`scripts/disable_steam_input.sh`) zera o per-app de
+    # quem está fora dela. O texto novo responde à mesma pergunta legítima ("e
+    # se não funcionar?") sem mandar ninguém à Steam e sem prometer o que o
+    # clique não faz: ele NÃO liga a entrada da Steam em lugar nenhum — só
+    # entrega a ENTRADA daquele jogo (ungrab + restore do broker + vpad
+    # suspenso, em `daemon/subsystems/gamepad.py`), e é isso que faz o jogo
+    # enxergar o DualSense físico direto. A saída — cor, gatilhos, vibração —
+    # não passa por nenhum desses portões: os oito chamadores de
+    # `steam_input_excecao_ativa` estão todos em `gamepad.py`, nenhum em
+    # `core/` (MEDIDO por grep, 06/08).
     resto = (
-        " Feche e abra o jogo de novo. Se mesmo assim ele não responder ao "
-        "controle, na Steam: botão direito no jogo → Propriedades → Controle "
-        "→ 'Ativar' (agora o Hefesto respeita essa escolha em vez de desfazê-la)."
+        " Feche e abra o jogo de novo: ele passa a enxergar o controle "
+        "físico direto e você não precisa configurar nada na Steam — a marca "
+        "é do Hefesto e sobrevive a reiniciar a máquina. Se ainda assim o "
+        "jogo não responder, o guia é docs/usage/jogos-e-mascaras.md."
     )
     if status == "ja_estava":
-        return f"O jogo {appid} já estava marcado — o Hefesto já sai da frente dele.{resto}"
+        return (
+            f"O jogo {appid} já estava marcado — ele já recebe o controle "
+            f"direto pela Steam, sem o controle dobrado.{resto}"
+        )
     return (
-        f"Anotei: o jogo {appid} passa a ser entregue direto pela Steam e o "
-        f"Hefesto sai da frente dele.{resto}"
+        f"Anotei: o jogo {appid} passa a receber o controle direto pela "
+        f"Steam, sem o controle dobrado — e a sua cor e os seus gatilhos "
+        f"continuam valendo.{resto}"
     )
 
 
@@ -569,7 +734,20 @@ class DaemonActionsMixin(WidgetAccessMixin):
             try:
                 from hefesto_dualsense4unix.integrations import storm_doctor
 
-                rows = storm_doctor.storm_report()
+                # MESA-CHEIA-11/E3: o check de áudio agora CONTA, e o
+                # denominador é quantos controles estão no cabo AGORA — sem
+                # ele, um DualSense com áudio responderia pelos quatro. O
+                # state_full é best-effort: daemon offline devolve None e o
+                # check volta a responder presente/ausente (nunca alarme falso
+                # por payload ausente).
+                no_cabo: int | None = None
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.app.ipc_bridge import (
+                        daemon_state_full,
+                    )
+
+                    no_cabo = storm_doctor.controles_no_cabo(daemon_state_full())
+                rows = storm_doctor.storm_report(controles_no_cabo=no_cabo)
             except Exception as exc:
                 logger.warning("storm_diag_falhou", erro=str(exc))
                 return
@@ -655,7 +833,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._toast_daemon("Aplicando correções (não pede senha)…")
 
         def _worker() -> None:
-            relatorio: dict[str, Any] = {"ran": 0, "missing": 0, "steam_input": None}
+            relatorio: dict[str, Any] = {
+                "ran": 0,
+                "missing": 0,
+                "steam_input": None,
+                # D-33: medido ANTES de rodar — depois os appids já foram
+                # zerados no vdf e não haveria mais como nomear o jogo.
+                "steam_input_jogos": medir_jogos_com_steam_input(),
+            }
             for relpath, args in (
                 ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
                 ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
@@ -999,7 +1184,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
     #   "Deixar tudo pronto"     -> encadeia disable_steam_input + wrapper em
     #                               todos os jogos, com UM consentimento só.
     #   "Este jogo não funciona" -> marca o jogo ativo na allowlist do Steam
-    #                               Input: o Hefesto sai da frente DELE.
+    #                               Input: o Hefesto entrega a ENTRADA DELE
+    #                               (e só ela — ver `format_game_broken_result`).
     #
     # Nenhum dos dois pronuncia "Steam Input" nem "opção de inicialização".
 
@@ -1060,7 +1246,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 apply_fn = getattr(slo, "apply_wrapper_to_all_games", None)
 
                 def _acao() -> dict[str, Any]:
-                    saida: dict[str, Any] = {"script": None, "wrapper": None}
+                    saida: dict[str, Any] = {
+                        "script": None,
+                        "wrapper": None,
+                        # D-33: a medição acontece DENTRO da janela de Steam
+                        # fechada e ANTES do script — é o último instante em
+                        # que o vdf ainda diz de qual jogo estamos falando.
+                        "steam_input_jogos": medir_jogos_com_steam_input(),
+                    }
                     if script is not None:
                         proc = subprocess.run(
                             ["bash", str(script), "--apply-quiet"],
@@ -1143,9 +1336,12 @@ class DaemonActionsMixin(WidgetAccessMixin):
         """Botão "Este jogo não funciona" — troca a estratégia DESTE jogo.
 
         Sem diálogo de confirmação de propósito: a ação não fecha nada, não
-        edita arquivo da Steam e é reversível (uma linha num txt nosso). O
-        que ela custa é o Hefesto sair da frente do jogo — que é justamente o
-        que a usuária está pedindo ao clicar.
+        edita arquivo da Steam e é reversível (uma linha num txt nosso, e
+        desde 07/08 a caixinha do editor de perfil também a desfaz). O que
+        ela custa é o Hefesto entregar a ENTRADA daquele jogo — que é
+        justamente o que a usuária está pedindo ao clicar. A saída fica: em
+        06/08 os gatilhos dela seguraram e a cor dela ficou com o jogo
+        marcado aberto (`CONTROLE-SONY-MEDIDO-01`, *A INVERSÃO*).
         """
         self._toast_daemon("Procurando qual jogo é…")
 
@@ -1195,8 +1391,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
         A allowlist é relida do disco a cada consulta (guard em bash,
         `storm_doctor`, `launch_env.steam_input_appids`) — nada a invalidar
         ali. O que NÃO é relido é a materialização das envs de launch: o
-        `steam_app_<appid>.env` que faz o Hefesto sair da frente do jogo só
-        nasce quando `materialize_launch_env` roda. `launch_env.refresh` é o
+        `steam_app_<appid>.env` que entrega a entrada daquele jogo ao físico
+        só nasce quando `materialize_launch_env` roda. `launch_env.refresh` é o
         mesmo aviso best-effort que a aba Perfis manda ao salvar um perfil
         (daemon offline é normal — ele rematerializa sozinho no boot).
         """

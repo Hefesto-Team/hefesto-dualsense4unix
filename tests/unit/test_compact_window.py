@@ -1,12 +1,24 @@
 """Testes do FEAT-COMPACT-WINDOW-FALLBACK-01 (surrogate de tray COSMIC).
 
-Padrão: stubs gi/Gtk/Gdk para rodar sem display real (igual ao
-test_status_actions_reconnect.py). Foca em comportamento observável:
+CORREÇÃO DATADA (13/08/2026, TESTE-HONESTO-01/E1, lote A): a linha antiga
+dizia *"stubs gi/Gtk/Gdk para rodar sem display real"*. Era falsa como promessa
+de cobertura — sem PyGObject o módulo passava verde contra ``Gtk.Box = object``.
+Hoje ele EXIGE o PyGObject real e pula honestamente onde ele não existe; os
+stubs abaixo só entram quando o import real falha de verdade. Foca em
+comportamento observável:
 - `is_enabled()` respeita env var.
 - `_render_state` produz markup correto para online/offline/sem device.
 - Profile button popula popup menu com lista IPC.
 """
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01 (TESTE-HONESTO-01/E1, lote A): a guarda vem ANTES de
+# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
+# widgets que são `object` — e nunca entrava no job `gtk-real`, que seleciona
+# por `grep exigir_gi_real|skip_sem_gi_real`. Agora ele pula honestamente.
+exigir_gi_real("janela compacta")
 
 import sys
 import types

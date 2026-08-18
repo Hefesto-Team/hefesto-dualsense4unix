@@ -118,6 +118,12 @@ def _roda(
 ) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["HOME"] = str(ambiente["home"])
+    # CANARIO-FS-01: o script resolve a allowlist por
+    # `${XDG_CONFIG_HOME:-$HOME/.config}`. Sem fixar o XDG aqui, um shell com
+    # XDG_CONFIG_HOME exportado (o caso desta máquina) faria a bancada ler a
+    # allowlist REAL da mantenedora — o resultado do teste passaria a depender
+    # do disco dela. Fixar é o que mantém o HOME falso valendo de ponta a ponta.
+    env["XDG_CONFIG_HOME"] = str(ambiente["home"] / ".config")
     env["PATH"] = f"{ambiente['stubs']}:/usr/bin:/bin"
     env["FAKE_STATE"] = str(ambiente["estado"])
     if steam:
@@ -235,6 +241,116 @@ class TestContratoDoScript:
         proc = _roda(ambiente, "--apply-quiet")
         linhas = [linha for linha in proc.stdout.splitlines() if linha.strip()]
         assert linhas[-1].startswith("[steam-input] resultado=")
+
+
+#: Bancada da D-32: SÓ opt-in per-app, e SÓ de appids da allowlist. Nenhuma
+#: chave global — é o estado real dela em 05/08 depois de ligar o Steam Input
+#: pela janela da Steam nos jogos que precisam dele.
+_VDF_SO_ALLOWLIST = (
+    '"UserLocalConfigStore"\n'
+    "{\n"
+    '\t"apps"\n'
+    "\t{\n"
+    '\t\t"2111190"\n'
+    "\t\t{\n"
+    '\t\t\t"UseSteamControllerConfig"\t\t"2"\n'
+    "\t\t}\n"
+    '\t\t"3357650"\n'
+    "\t\t{\n"
+    '\t\t\t"UseSteamControllerConfig"\t\t"2"\n'
+    "\t\t}\n"
+    "\t}\n"
+    '\t"system"\n'
+    "\t{\n"
+    '\t\t"SteamController_PSSupport"\t\t"0"\n'
+    '\t\t"SteamController_SwitchSupport"\t\t"0"\n'
+    "\t}\n"
+    "}\n"
+)
+
+
+@pytest.fixture()
+def bancada_allowlist(ambiente: dict[str, Any]) -> dict[str, Any]:
+    """`ambiente`, mas com um vdf que SÓ tem appids da allowlist ligados.
+
+    A allowlist é escrita dentro do HOME falso — o arquivo real dela nunca é
+    lido nem tocado.
+    """
+    ambiente["vdf"].write_text(_VDF_SO_ALLOWLIST, encoding="utf-8")
+    lista = (
+        ambiente["home"] / ".config" / "hefesto-dualsense4unix" / "steam_input_apps.txt"
+    )
+    lista.parent.mkdir(parents=True, exist_ok=True)
+    lista.write_text(
+        "# bancada — jogos cujo DualSense vem pela Steam\n2111190\n3357650\n",
+        encoding="utf-8",
+    )
+    ambiente["allowlist"] = lista
+    return ambiente
+
+
+class TestPreVooNaoFechaSteamAToa:
+    """D-32 (05/08/2026) — o pré-voo do apply casava a allowlist e mentia.
+
+    `needs_fix` responde "tem chave em 1|2 aqui"; a allowlist per-app deixa
+    essas chaves em 1|2 DE PROPÓSITO. Com só appids da allowlist ligados o
+    pré-voo dizia "precisa", o `--apply` fechava e reabria a Steam dela para
+    não mudar byte nenhum, e terminava em `resultado=aplicado` — que a janela
+    lia como "a Steam não sequestra mais o seu controle". Quem decide agora é
+    o `needs_real_fix`: precisa = a transformação MUDARIA o arquivo.
+    """
+
+    def test_apply_nao_fecha_a_steam_nem_diz_aplicado(
+        self, bancada_allowlist: dict[str, Any]
+    ) -> None:
+        original = bancada_allowlist["vdf"].read_text(encoding="utf-8")
+
+        proc = _roda(bancada_allowlist, "--apply", steam=True)
+
+        assert proc.returncode == 0
+        assert _tag(proc) == "nada-a-fazer", proc.stdout
+        # A prova de que a Steam dela não foi derrubada: o stub `steam` nunca
+        # foi chamado, logo o arquivo de chamadas não existe.
+        assert not (bancada_allowlist["estado"] / "steam_calls").exists()
+        assert bancada_allowlist["vdf"].read_text(encoding="utf-8") == original
+
+    def test_apply_quiet_do_guarda_tambem_para_de_dizer_aplicado(
+        self, bancada_allowlist: dict[str, Any]
+    ) -> None:
+        """É o modo do timer de 30 min — a origem do `resultado=aplicado` das 02:13."""
+        original = bancada_allowlist["vdf"].read_text(encoding="utf-8")
+
+        proc = _roda(bancada_allowlist, "--apply-quiet")
+
+        assert proc.returncode == 0
+        assert _tag(proc) == "nada-a-fazer", proc.stdout
+        assert bancada_allowlist["vdf"].read_text(encoding="utf-8") == original
+
+    def test_jogo_fora_da_allowlist_continua_fechando_e_aplicando(
+        self, bancada_allowlist: dict[str, Any]
+    ) -> None:
+        """Contraprova: a cura não anestesiou o guarda.
+
+        Um appid FORA da allowlist ligado ainda fecha a Steam, ainda é zerado e
+        ainda termina em `aplicado`. Sem esta metade, trocar o pré-voo por um
+        `any_needs=0` fixo passaria nos dois testes de cima.
+        """
+        bancada_allowlist["vdf"].write_text(
+            _VDF_SO_ALLOWLIST.replace('"3357650"', '"1599660"'), encoding="utf-8"
+        )
+
+        proc = _roda(bancada_allowlist, "--apply", steam=True)
+
+        assert proc.returncode == 0
+        assert _tag(proc) == "aplicado", proc.stdout
+        chamadas = (bancada_allowlist["estado"] / "steam_calls").read_text(
+            encoding="utf-8"
+        )
+        assert "-shutdown" in chamadas
+        texto = bancada_allowlist["vdf"].read_text(encoding="utf-8")
+        # O de fora foi zerado; o da allowlist ficou de pé.
+        assert texto.count('"UseSteamControllerConfig"\t\t"0"') == 1
+        assert texto.count('"UseSteamControllerConfig"\t\t"2"') == 1
 
 
 class TestTagParser:

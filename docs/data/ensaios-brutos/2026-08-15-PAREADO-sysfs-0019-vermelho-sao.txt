@@ -1,0 +1,343 @@
+=== SYSFS PAREADO — VERMELHO — o controle SÃO (a lightbar obedece) ===
+
+Lastro do estudo docs/process/estudos/2026-08-15-O-PAR-QUE-FALTAVA-o-doente-e-o-sao-no-mesmo-radio.md
+
+Quando ............ 15/08/2026, 14h40, com o defeito VIVO
+Aparelho .......... VERMELHO — o controle SÃO (a lightbar obedece)
+Nó HID ............ 0005:054C:0CE6.0019          hidraw: hidraw8     evdev: input285
+MAC (mascarado) ... 44:46:48:00:00:03
+Coleta ............ leitura de sysfs SEM root, sem escrever, sem desligar nada:
+                    todo `leds/`, `input/`, `hidraw/`, `power/` e
+                    `power_supply/` sob o nó HID, uma linha por atributo, no
+                    formato `caminho|valor`.
+Achatamento ....... o coletor junta as linhas de um valor multilinha SEM
+                    separador (é por isso que `uevent` sai como uma linha só).
+Atributos ......... 306 linhas de atributo, depois da linha ATRIBUTOS abaixo.
+                    O par tem exatamente as mesmas 306 chaves.
+
+O QUE FOI ALTERADO NESTA CÓPIA VERSIONADA, E SÓ ISTO
+-----------------------------------------------------
+1. MAC — máscara da casa, octetos 4 e 5 zerados (OUI:00:00:NN):
+     o endereço do controle (OUI 44:46:48) .... 57 ocorrências
+     o endereço do adaptador (OUI d8:44:89) ... 1 ocorrência
+   Reprodutível com o mesmo regex do portão tests/unit/test_docs_mac_anonimato.py.
+
+2. `report_descriptor` — o valor é BINÁRIO puro e não é texto. Aqui ele sai
+   como HEXADECIMAL separado por espaço, entre `<hex>` e `</hex>`, na mesma
+   linha e na mesma ordem. Nada foi acrescentado nem removido.
+     bytes nesta transcrição ... 300
+     sha256 do valor ........... 0f621db7caa516b2ec84bd8cabf2cedae0c12c082c1e66a357f27b0744b4fc23
+   ATENÇÃO ao número: o estudo diz 320 B, e ele está certo — o `cmp` de lá foi
+   feito sobre os nós de sysfs, direto. Estes 300 B são o mesmo valor DEPOIS
+   do achatamento do coletor, que come os 0x0a (o valor aqui não tem nenhum).
+   O que esta transcrição prova é o que o estudo usa dela: o sha256 é IDÊNTICO
+   nos dois aparelhos.
+
+ATRIBUTOS
+---------
+country|00
+firmware_version|0x0110002a
+hardware_version|0x00000811
+hidraw/hidraw8/dev|237:8
+hidraw/hidraw8/power/async|disabled
+hidraw/hidraw8/power/autosuspend_delay_ms|
+hidraw/hidraw8/power/control|auto
+hidraw/hidraw8/power/runtime_active_kids|0
+hidraw/hidraw8/power/runtime_active_time|0
+hidraw/hidraw8/power/runtime_enabled|disabled
+hidraw/hidraw8/power/runtime_status|unsupported
+hidraw/hidraw8/power/runtime_suspended_time|0
+hidraw/hidraw8/power/runtime_usage|0
+hidraw/hidraw8/uevent|MAJOR=237MINOR=8DEVNAME=hidraw8
+input/input285/capabilities/abs|3003f
+input/input285/capabilities/ev|20000b
+input/input285/capabilities/ff|107030000 0
+input/input285/capabilities/key|7fdb000000000000 0 0 0 0
+input/input285/capabilities/led|0
+input/input285/capabilities/msc|0
+input/input285/capabilities/rel|0
+input/input285/capabilities/snd|0
+input/input285/capabilities/sw|0
+input/input285/event265/dev|13:265
+input/input285/event265/power/async|disabled
+input/input285/event265/power/autosuspend_delay_ms|
+input/input285/event265/power/control|auto
+input/input285/event265/power/runtime_active_kids|0
+input/input285/event265/power/runtime_active_time|0
+input/input285/event265/power/runtime_enabled|disabled
+input/input285/event265/power/runtime_status|unsupported
+input/input285/event265/power/runtime_suspended_time|0
+input/input285/event265/power/runtime_usage|0
+input/input285/event265/uevent|MAJOR=13MINOR=265DEVNAME=input/event265
+input/input285/id/bustype|0005
+input/input285/id/product|0ce6
+input/input285/id/vendor|054c
+input/input285/id/version|8100
+input/input285/inhibited|0
+input/input285/js8/dev|13:8
+input/input285/js8/power/async|disabled
+input/input285/js8/power/autosuspend_delay_ms|
+input/input285/js8/power/control|auto
+input/input285/js8/power/runtime_active_kids|0
+input/input285/js8/power/runtime_active_time|0
+input/input285/js8/power/runtime_enabled|disabled
+input/input285/js8/power/runtime_status|unsupported
+input/input285/js8/power/runtime_suspended_time|0
+input/input285/js8/power/runtime_usage|0
+input/input285/js8/uevent|MAJOR=13MINOR=8DEVNAME=input/js8
+input/input285/modalias|input:b0005v054Cp0CE6e8100-e0,1,3,15,k130,131,133,134,136,137,138,139,13A,13B,13C,13D,13E,ra0,1,2,3,4,5,10,11,mlsf50,51,58,59,5A,60,w
+input/input285/name|DualSense Wireless Controller
+input/input285/phys|
+input/input285/power/async|disabled
+input/input285/power/autosuspend_delay_ms|
+input/input285/power/control|auto
+input/input285/power/runtime_active_kids|0
+input/input285/power/runtime_active_time|0
+input/input285/power/runtime_enabled|disabled
+input/input285/power/runtime_status|unsupported
+input/input285/power/runtime_suspended_time|0
+input/input285/power/runtime_usage|0
+input/input285/properties|0
+input/input285/uevent|PRODUCT=5/54c/ce6/8100NAME="DualSense Wireless Controller"UNIQ="44:46:48:00:00:03"PROP=0EV=20000bKEY=7fdb000000000000 0 0 0 0ABS=3003fFF=107030000 0MODALIAS=input:b0005v054Cp0CE6e8100-e0,1,3,15,k130,131,133,134,136,137,138,139,13A,13B,13C,13D,13E,ra0,1,2,3,4,5,10,11,mlsf50,51,58,59,5A,60,w
+input/input285/uniq|44:46:48:00:00:03
+input/input286/capabilities/abs|3f
+input/input286/capabilities/ev|19
+input/input286/capabilities/ff|0
+input/input286/capabilities/key|0
+input/input286/capabilities/led|0
+input/input286/capabilities/msc|20
+input/input286/capabilities/rel|0
+input/input286/capabilities/snd|0
+input/input286/capabilities/sw|0
+input/input286/event266/dev|13:266
+input/input286/event266/power/async|disabled
+input/input286/event266/power/autosuspend_delay_ms|
+input/input286/event266/power/control|auto
+input/input286/event266/power/runtime_active_kids|0
+input/input286/event266/power/runtime_active_time|0
+input/input286/event266/power/runtime_enabled|disabled
+input/input286/event266/power/runtime_status|unsupported
+input/input286/event266/power/runtime_suspended_time|0
+input/input286/event266/power/runtime_usage|0
+input/input286/event266/uevent|MAJOR=13MINOR=266DEVNAME=input/event266
+input/input286/id/bustype|0005
+input/input286/id/product|0ce6
+input/input286/id/vendor|054c
+input/input286/id/version|8100
+input/input286/inhibited|0
+input/input286/js9/dev|13:9
+input/input286/js9/power/async|disabled
+input/input286/js9/power/autosuspend_delay_ms|
+input/input286/js9/power/control|auto
+input/input286/js9/power/runtime_active_kids|0
+input/input286/js9/power/runtime_active_time|0
+input/input286/js9/power/runtime_enabled|disabled
+input/input286/js9/power/runtime_status|unsupported
+input/input286/js9/power/runtime_suspended_time|0
+input/input286/js9/power/runtime_usage|0
+input/input286/js9/uevent|MAJOR=13MINOR=9DEVNAME=input/js9
+input/input286/modalias|input:b0005v054Cp0CE6e8100-e0,3,4,kra0,1,2,3,4,5,m5,lsfw
+input/input286/name|DualSense Wireless Controller Motion Sensors
+input/input286/phys|
+input/input286/power/async|disabled
+input/input286/power/autosuspend_delay_ms|
+input/input286/power/control|auto
+input/input286/power/runtime_active_kids|0
+input/input286/power/runtime_active_time|0
+input/input286/power/runtime_enabled|disabled
+input/input286/power/runtime_status|unsupported
+input/input286/power/runtime_suspended_time|0
+input/input286/power/runtime_usage|0
+input/input286/properties|40
+input/input286/uevent|PRODUCT=5/54c/ce6/8100NAME="DualSense Wireless Controller Motion Sensors"UNIQ="44:46:48:00:00:03"PROP=40EV=19ABS=3fMSC=20MODALIAS=input:b0005v054Cp0CE6e8100-e0,3,4,kra0,1,2,3,4,5,m5,lsfw
+input/input286/uniq|44:46:48:00:00:03
+input/input287/capabilities/abs|260800000000003
+input/input287/capabilities/ev|b
+input/input287/capabilities/ff|0
+input/input287/capabilities/key|2420 10000 0 0 0 0
+input/input287/capabilities/led|0
+input/input287/capabilities/msc|0
+input/input287/capabilities/rel|0
+input/input287/capabilities/snd|0
+input/input287/capabilities/sw|0
+input/input287/event267/dev|13:267
+input/input287/event267/power/async|disabled
+input/input287/event267/power/autosuspend_delay_ms|
+input/input287/event267/power/control|auto
+input/input287/event267/power/runtime_active_kids|0
+input/input287/event267/power/runtime_active_time|0
+input/input287/event267/power/runtime_enabled|disabled
+input/input287/event267/power/runtime_status|unsupported
+input/input287/event267/power/runtime_suspended_time|0
+input/input287/event267/power/runtime_usage|0
+input/input287/event267/uevent|MAJOR=13MINOR=267DEVNAME=input/event267
+input/input287/id/bustype|0005
+input/input287/id/product|0ce6
+input/input287/id/vendor|054c
+input/input287/id/version|8100
+input/input287/inhibited|0
+input/input287/modalias|input:b0005v054Cp0CE6e8100-e0,1,3,k110,145,14A,14D,ra0,1,2F,35,36,39,mlsfw
+input/input287/mouse7/dev|13:39
+input/input287/mouse7/power/async|disabled
+input/input287/mouse7/power/autosuspend_delay_ms|
+input/input287/mouse7/power/control|auto
+input/input287/mouse7/power/runtime_active_kids|0
+input/input287/mouse7/power/runtime_active_time|0
+input/input287/mouse7/power/runtime_enabled|disabled
+input/input287/mouse7/power/runtime_status|unsupported
+input/input287/mouse7/power/runtime_suspended_time|0
+input/input287/mouse7/power/runtime_usage|0
+input/input287/mouse7/uevent|MAJOR=13MINOR=39DEVNAME=input/mouse7
+input/input287/name|DualSense Wireless Controller Touchpad
+input/input287/phys|
+input/input287/power/async|disabled
+input/input287/power/autosuspend_delay_ms|
+input/input287/power/control|auto
+input/input287/power/runtime_active_kids|0
+input/input287/power/runtime_active_time|0
+input/input287/power/runtime_enabled|disabled
+input/input287/power/runtime_status|unsupported
+input/input287/power/runtime_suspended_time|0
+input/input287/power/runtime_usage|0
+input/input287/properties|5
+input/input287/uevent|PRODUCT=5/54c/ce6/8100NAME="DualSense Wireless Controller Touchpad"UNIQ="44:46:48:00:00:03"PROP=5EV=bKEY=2420 10000 0 0 0 0ABS=260800000000003MODALIAS=input:b0005v054Cp0CE6e8100-e0,1,3,k110,145,14A,14D,ra0,1,2F,35,36,39,mlsfw
+input/input287/uniq|44:46:48:00:00:03
+leds/input285:rgb:indicator/brightness|255
+leds/input285:rgb:indicator/max_brightness|255
+leds/input285:rgb:indicator/multi_index|red green blue
+leds/input285:rgb:indicator/multi_intensity|0 255 0
+leds/input285:rgb:indicator/power/async|disabled
+leds/input285:rgb:indicator/power/autosuspend_delay_ms|
+leds/input285:rgb:indicator/power/control|auto
+leds/input285:rgb:indicator/power/runtime_active_kids|0
+leds/input285:rgb:indicator/power/runtime_active_time|0
+leds/input285:rgb:indicator/power/runtime_enabled|disabled
+leds/input285:rgb:indicator/power/runtime_status|unsupported
+leds/input285:rgb:indicator/power/runtime_suspended_time|0
+leds/input285:rgb:indicator/power/runtime_usage|0
+leds/input285:rgb:indicator/trigger|[none] usb-gadget usb-host rfkill-any rfkill-none kbd-scrolllock kbd-numlock kbd-capslock kbd-kanalock kbd-shiftlock kbd-altgrlock kbd-ctrllock kbd-altlock kbd-shiftllock kbd-shiftrlock kbd-ctrlllock kbd-ctrlrlock disk-activity disk-read disk-write mtd nand-disk cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu
+leds/input285:rgb:indicator/uevent|
+leds/input285:white:player-1/brightness|0
+leds/input285:white:player-1/max_brightness|1
+leds/input285:white:player-1/power/async|disabled
+leds/input285:white:player-1/power/autosuspend_delay_ms|
+leds/input285:white:player-1/power/control|auto
+leds/input285:white:player-1/power/runtime_active_kids|0
+leds/input285:white:player-1/power/runtime_active_time|0
+leds/input285:white:player-1/power/runtime_enabled|disabled
+leds/input285:white:player-1/power/runtime_status|unsupported
+leds/input285:white:player-1/power/runtime_suspended_time|0
+leds/input285:white:player-1/power/runtime_usage|0
+leds/input285:white:player-1/trigger|[none] usb-gadget usb-host rfkill-any rfkill-none kbd-scrolllock kbd-numlock kbd-capslock kbd-kanalock kbd-shiftlock kbd-altgrlock kbd-ctrllock kbd-altlock kbd-shiftllock kbd-shiftrlock kbd-ctrlllock kbd-ctrlrlock disk-activity disk-read disk-write mtd nand-disk cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu
+leds/input285:white:player-1/uevent|
+leds/input285:white:player-2/brightness|0
+leds/input285:white:player-2/max_brightness|1
+leds/input285:white:player-2/power/async|disabled
+leds/input285:white:player-2/power/autosuspend_delay_ms|
+leds/input285:white:player-2/power/control|auto
+leds/input285:white:player-2/power/runtime_active_kids|0
+leds/input285:white:player-2/power/runtime_active_time|0
+leds/input285:white:player-2/power/runtime_enabled|disabled
+leds/input285:white:player-2/power/runtime_status|unsupported
+leds/input285:white:player-2/power/runtime_suspended_time|0
+leds/input285:white:player-2/power/runtime_usage|0
+leds/input285:white:player-2/trigger|[none] usb-gadget usb-host rfkill-any rfkill-none kbd-scrolllock kbd-numlock kbd-capslock kbd-kanalock kbd-shiftlock kbd-altgrlock kbd-ctrllock kbd-altlock kbd-shiftllock kbd-shiftrlock kbd-ctrlllock kbd-ctrlrlock disk-activity disk-read disk-write mtd nand-disk cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu
+leds/input285:white:player-2/uevent|
+leds/input285:white:player-3/brightness|1
+leds/input285:white:player-3/max_brightness|1
+leds/input285:white:player-3/power/async|disabled
+leds/input285:white:player-3/power/autosuspend_delay_ms|
+leds/input285:white:player-3/power/control|auto
+leds/input285:white:player-3/power/runtime_active_kids|0
+leds/input285:white:player-3/power/runtime_active_time|0
+leds/input285:white:player-3/power/runtime_enabled|disabled
+leds/input285:white:player-3/power/runtime_status|unsupported
+leds/input285:white:player-3/power/runtime_suspended_time|0
+leds/input285:white:player-3/power/runtime_usage|0
+leds/input285:white:player-3/trigger|[none] usb-gadget usb-host rfkill-any rfkill-none kbd-scrolllock kbd-numlock kbd-capslock kbd-kanalock kbd-shiftlock kbd-altgrlock kbd-ctrllock kbd-altlock kbd-shiftllock kbd-shiftrlock kbd-ctrlllock kbd-ctrlrlock disk-activity disk-read disk-write mtd nand-disk cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu
+leds/input285:white:player-3/uevent|
+leds/input285:white:player-4/brightness|0
+leds/input285:white:player-4/max_brightness|1
+leds/input285:white:player-4/power/async|disabled
+leds/input285:white:player-4/power/autosuspend_delay_ms|
+leds/input285:white:player-4/power/control|auto
+leds/input285:white:player-4/power/runtime_active_kids|0
+leds/input285:white:player-4/power/runtime_active_time|0
+leds/input285:white:player-4/power/runtime_enabled|disabled
+leds/input285:white:player-4/power/runtime_status|unsupported
+leds/input285:white:player-4/power/runtime_suspended_time|0
+leds/input285:white:player-4/power/runtime_usage|0
+leds/input285:white:player-4/trigger|[none] usb-gadget usb-host rfkill-any rfkill-none kbd-scrolllock kbd-numlock kbd-capslock kbd-kanalock kbd-shiftlock kbd-altgrlock kbd-ctrllock kbd-altlock kbd-shiftllock kbd-shiftrlock kbd-ctrlllock kbd-ctrlrlock disk-activity disk-read disk-write mtd nand-disk cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu
+leds/input285:white:player-4/uevent|
+leds/input285:white:player-5/brightness|0
+leds/input285:white:player-5/max_brightness|1
+leds/input285:white:player-5/power/async|disabled
+leds/input285:white:player-5/power/autosuspend_delay_ms|
+leds/input285:white:player-5/power/control|auto
+leds/input285:white:player-5/power/runtime_active_kids|0
+leds/input285:white:player-5/power/runtime_active_time|0
+leds/input285:white:player-5/power/runtime_enabled|disabled
+leds/input285:white:player-5/power/runtime_status|unsupported
+leds/input285:white:player-5/power/runtime_suspended_time|0
+leds/input285:white:player-5/power/runtime_usage|0
+leds/input285:white:player-5/trigger|[none] usb-gadget usb-host rfkill-any rfkill-none kbd-scrolllock kbd-numlock kbd-capslock kbd-kanalock kbd-shiftlock kbd-altgrlock kbd-ctrllock kbd-altlock kbd-shiftllock kbd-shiftrlock kbd-ctrlllock kbd-ctrlrlock disk-activity disk-read disk-write mtd nand-disk cpu cpu0 cpu1 cpu2 cpu3 cpu4 cpu5 cpu
+leds/input285:white:player-5/uevent|
+modalias|hid:b0005g0000v0000054Cp00000CE6
+power/async|enabled
+power/autosuspend_delay_ms|
+power/control|auto
+power/runtime_active_kids|0
+power/runtime_active_time|0
+power/runtime_enabled|disabled
+power/runtime_status|unsupported
+power/runtime_suspended_time|0
+power/runtime_usage|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/capacity|100
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/name|ps_controller_battery_44:46:48:00:00:03
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/power/async|disabled
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/power/autosuspend_delay_ms|
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/power/control|auto
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/power/runtime_active_kids|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/power/runtime_active_time|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/power/runtime_enabled|disabled
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/power/runtime_status|unsupported
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/power/runtime_suspended_time|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/power/runtime_usage|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/hwmon9/uevent|
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/async|disabled
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/autosuspend_delay_ms|
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/control|auto
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/runtime_active_kids|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/runtime_active_time|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/runtime_enabled|disabled
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/runtime_status|unsupported
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/runtime_suspended_time|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/runtime_usage|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/wakeup|enabled
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/wakeup_abort_count|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/wakeup_active|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/wakeup_active_count|1
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/wakeup_count|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/wakeup_expire_count|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/wakeup_last_time_ms|37997946
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/wakeup_max_time_ms|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/power/wakeup_total_time_ms|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/present|1
+power_supply/ps-controller-battery-44:46:48:00:00:03/scope|Device
+power_supply/ps-controller-battery-44:46:48:00:00:03/status|Full
+power_supply/ps-controller-battery-44:46:48:00:00:03/type|Battery
+power_supply/ps-controller-battery-44:46:48:00:00:03/uevent|DEVTYPE=power_supplyPOWER_SUPPLY_NAME=ps-controller-battery-44:46:48:00:00:03POWER_SUPPLY_TYPE=BatteryPOWER_SUPPLY_STATUS=FullPOWER_SUPPLY_PRESENT=1POWER_SUPPLY_CAPACITY=100POWER_SUPPLY_TYPE=BatteryPOWER_SUPPLY_SCOPE=Device
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/active_count|1
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/active_time_ms|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/event_count|1
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/expire_count|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/last_change_ms|37997946
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/max_time_ms|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/name|ps-controller-battery-44:46:48:00:00:03
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/prevent_suspend_time_ms|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/relax_count|1
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/total_time_ms|0
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/uevent|
+power_supply/ps-controller-battery-44:46:48:00:00:03/wakeup46/wakeup_count|0
+report_descriptor|<hex>05 01 09 05 a1 01 85 01 09 30 09 31 09 32 09 35 15 00 26 ff 00 75 08 95 04 81 02 09 39 15 00 25 07 35 00 46 3b 01 65 14 75 04 95 01 81 42 65 00 05 09 19 01 29 0e 15 00 25 01 75 01 95 0e 81 02 75 06 95 01 81 01 05 01 09 33 09 34 15 00 26 ff 00 75 08 95 02 81 02 06 00 ff 15 00 26 ff 00 75 08 95 4d 85 31 09 31 91 02 09 3b 81 02 85 32 09 32 95 8d 91 02 85 33 09 33 95 cd 91 02 85 34 09 34 96 0d 01 91 02 85 35 09 35 96 4d 01 91 02 85 36 09 36 96 8d 01 91 02 85 37 09 37 96 cd 01 91 02 85 38 09 38 96 0d 02 91 02 85 39 09 39 96 22 02 91 02 06 80 ff 85 05 09 33 95 28 b1 02 85 08 09 34 95 2f b1 02 85 09 09 24 95 13 b1 02 85 0b 09 41 95 29 b1 02 85 20 09 26 95 3f b1 02 85 22 09 40 95 3f b1 02 85 80 09 28 95 3f b1 02 85 81 09 29 95 3f b1 02 85 82 09 2a 95 09 b1 02 85 83 09 2b 95 3f b1 02 85 f1 09 31 95 3f b1 02 85 f2 09 32 95 0f b1 02 85 f0 09 30 95 3f b1 02 85 f4 09 2c 95 3f b1 02 85 f5 09 2d 95 07</hex>
+uevent|DRIVER=playstationHID_ID=0005:0000054C:00000CE6HID_NAME=DualSense Wireless ControllerHID_PHYS=d8:44:89:00:00:c4HID_UNIQ=44:46:48:00:00:03MODALIAS=hid:b0005g0000v0000054Cp00000CE6

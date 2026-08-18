@@ -11,6 +11,8 @@ multi-dimensional da interface:
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from tests.conftest import skip_sem_gi_real
@@ -56,8 +58,18 @@ class TestBuildFromNameFlatMultiPos:
 
     def test_preset_posicional_normal_intacto(self) -> None:
         # Presets de assinatura posicional comum não são afetados.
+        #
+        # TRIGGER-CANON-01: o literal `5` que estava aqui era o valor do modo
+        # `RIGID_B` — e `0x05` é o OFF do bloco de gatilho, o que este teste
+        # travava sem saber. O `Rigid` passou a mandar o `FEEDBACK` oficial.
+        # O que ele afere continua sendo o CAMINHO (lista posicional funciona),
+        # e por isso a asserção passou a ser contra a factory: quem trava os
+        # bytes do `Rigid` é o `test_trigger_effects.py`, num lugar só.
+        from hefesto_dualsense4unix.core.trigger_effects import rigid
+
         eff = build_from_name("Rigid", [5, 200])
-        assert eff.mode == 5
+        assert eff.mode == rigid(5, 200).mode
+        assert eff.forces == rigid(5, 200).forces
 
 
 class TestDraftMultiPosRoundTrip:
@@ -104,14 +116,55 @@ def test_gui_dialogs_confirm_delete_profile_exportado() -> None:
 
 
 @skip_sem_gi_real
-def test_restore_dialog_nao_cita_navegacao() -> None:
-    # BUG-RESTORE-DIALOG-WRONG-PROFILE-01: o texto EXIBIDO não deve citar o asset
-    # errado ('Navegação'). Checa a string passada a format_secondary_text.
-    import inspect
+def test_restore_dialog_nao_cita_navegacao(monkeypatch: pytest.MonkeyPatch) -> None:
+    """BUG-RESTORE-DIALOG-WRONG-PROFILE-01: o texto EXIBIDO não cita 'Navegação'.
 
+    TESTE-HONESTO-01/E3 (13/08/2026): a medida era um assert de substring sobre
+    o TEXTO-FONTE da função, e isso mede o ARQUIVO, não a tela — a frase certa
+    podia estar escrita ali e o diálogo passar outra string ao
+    `format_secondary_text` sem ninguém reprovar (provado por mutação em
+    13/08/2026: o assert antigo passa com o diálogo exibindo o texto do
+    diálogo de REMOVER). Agora o diálogo é EXECUTADO contra um dublê que
+    grava o que foi exibido.
+    """
     from hefesto_dualsense4unix.app import gui_dialogs
 
-    src = inspect.getsource(gui_dialogs.confirm_restore_default)
-    # A frase enganosa antiga sumiu e a correta está presente.
-    assert "cópia original (Navegação)" not in src
-    assert "aplica-se a todos os apps" in src
+    exibidos: list[str] = []
+
+    class _DialogoFalso:
+        def __init__(self, **kwargs: object) -> None:
+            self.kwargs = kwargs
+
+        def format_secondary_text(self, texto: str) -> None:
+            exibidos.append(texto)
+
+        def add_button(self, *_args: object) -> None:
+            pass
+
+        def set_default_response(self, *_args: object) -> None:
+            pass
+
+        def run(self) -> object:
+            return gui_dialogs.Gtk.ResponseType.CANCEL
+
+        def destroy(self) -> None:
+            pass
+
+    # Só o `MessageDialog` é de mentira; os enums continuam sendo os do GTK
+    # real, senão o "Cancelar" do dublê não teria como ser o mesmo "Cancelar"
+    # que a função compara.
+    gtk_falso = SimpleNamespace(
+        MessageDialog=_DialogoFalso,
+        MessageType=gui_dialogs.Gtk.MessageType,
+        ButtonsType=gui_dialogs.Gtk.ButtonsType,
+        ResponseType=gui_dialogs.Gtk.ResponseType,
+    )
+    monkeypatch.setattr(gui_dialogs, "Gtk", gtk_falso)
+
+    assert gui_dialogs.confirm_restore_default(None) is False
+
+    (secundario,) = exibidos
+    # A frase enganosa antiga sumiu, e a correta está na TELA.
+    assert "Navegação" not in secundario
+    assert "meu_perfil" in secundario
+    assert "aplica-se a todos os apps" in secundario

@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.5.0
+Version:        0.9.4.2
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -56,6 +56,19 @@ Recommends:     wlrctl
 # Onda T: modulo hid-nintendo patchado via DKMS (cura de raiz do probe BT
 # dos controles Nintendo/8BitDo) — o install-host-udev.sh roda o build.
 Recommends:     dkms
+# TECLADO-QUE-NAO-DIGITA-01: o teclado na tela que o L3 do controle abre.
+# Sem ele nenhum atalho de fabrica digita LETRA (os nove sao Super,
+# PrintScreen, Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois
+# tokens de OSK) — o unico caminho para ESCREVER TEXTO com o controle.
+#
+# wvkbd primeiro porque digita pelo zwp_virtual_keyboard_manager_v1 (Wayland
+# nativo); onboard digita por XTEST, que em sessao Wayland so alcanca janelas
+# XWayland. Weak dependency de proposito: o produto inteiro funciona sem, e
+# `Recommends` do RPM e IGNORADO em silencio quando o pacote nao existe nos
+# repositorios habilitados — nao trava a instalacao em nenhuma spin. Quem diz
+# a verdade sobre a maquina depois e o scripts/doctor.sh.
+Recommends:     wvkbd
+Suggests:       onboard
 
 %description
 Hefesto - Dualsense4Unix is a user-level Linux daemon that enables the
@@ -74,6 +87,8 @@ After installation, start the daemon as user service:
 Recommended optional packages:
 
     sudo dnf install wlrctl       # auto-switch in Wayland
+    sudo dnf install wvkbd        # on-screen keyboard opened by L3 (Wayland)
+    sudo dnf install onboard      # same, for X11 sessions
 
 %prep
 %autosetup -n %{pypi_name}-%{version}
@@ -118,6 +133,13 @@ install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
 install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
     %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
 
+# APPLET-MONOCROMÁTICO-01 (07/08/2026): o ícone SIMBÓLICO da bandeja. O código
+# pede `hefesto-dualsense4unix-symbolic` (app/tray.py), e esse nome NÃO se
+# satisfaz com PNG: PNG nunca é recolorido pelo tema, e o ícone ficaria o único
+# cromático do painel. Destino `symbolic/apps/`.
+install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
+    %{buildroot}%{_datadir}/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg
+
 # Udev rules — conjunto canônico (paridade com scripts/install_udev.sh).
 # 73/74 (hotplug-GUI) descontinuadas e removidas do repo em 2026-07-18.
 # As 82/83/84 (no-sniff do Pro, snapshot de bond, variante do clone 8BitDo)
@@ -127,6 +149,7 @@ install -Dm644 -t %{buildroot}%{_udevrulesdir} \
     assets/71-uhid.rules \
     assets/71-uinput.rules \
     assets/72-ps5-controller-autosuspend.rules \
+    assets/72-hefesto-touchpad-motion-uaccess.rules \
     assets/76-dualsense-touchpad-libinput-ignore.rules \
     assets/77-dualsense-leds.rules \
     assets/78-dualsense-motion-not-joystick.rules \
@@ -169,6 +192,13 @@ cp -a assets/dkms/hid-playstation/. \
 mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/rtw88-usb
 cp -a assets/dkms/rtw88-usb/. \
     %{buildroot}%{_datadir}/%{app_id}/dkms/rtw88-usb/
+# CR-05 (07/08/2026): a GPL-2.0, secao 1, exige que a copia do texto da licenca
+# viaje JUNTO com o fonte. Os tres diretorios acima sao GPL (o rtw88-usb e
+# GPL-2.0 OR BSD-3-Clause, licenca dupla), e ate 07/08 nenhum texto os
+# acompanhava. Procedencia em LICENSES/README.md.
+mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/LICENSES
+cp -a LICENSES/. \
+    %{buildroot}%{_datadir}/%{app_id}/dkms/LICENSES/
 install -Dm644 assets/hefesto-dualsense4unix.conf \
     %{buildroot}%{_modulesloaddir}/hefesto-dualsense4unix.conf
 
@@ -325,10 +355,12 @@ fi
 %{_datadir}/applications/%{app_id}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/hefesto.png
 %{_datadir}/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
+%{_datadir}/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg
 %{_udevrulesdir}/70-ps5-controller.rules
 %{_udevrulesdir}/71-uhid.rules
 %{_udevrulesdir}/71-uinput.rules
 %{_udevrulesdir}/72-ps5-controller-autosuspend.rules
+%{_udevrulesdir}/72-hefesto-touchpad-motion-uaccess.rules
 %{_udevrulesdir}/76-dualsense-touchpad-libinput-ignore.rules
 %{_udevrulesdir}/77-dualsense-leds.rules
 %{_udevrulesdir}/78-dualsense-motion-not-joystick.rules
@@ -360,6 +392,63 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Thu Aug 13 2026 Vitoria Maria <andre.dsbf@gmail.com> - 1:0.9.4.2-1
+- Instrumentos: a guarda de arvore congelada parou de confundir bytecode com produto
+- Instrumentos: a bancada voltou a abrir (colunas cabo_/radio_ da migracao v2)
+- Mapa: o --check compara CONTEUDO, nao mtime; e grau forte passou a exigir ensaio
+- Portoes: quatro novos (portoes ligados no CI, artefato sem dono, os dois lados
+  do install, e promessa sem caminho de producao)
+- Audio: o LED do botao de mudo deixou de apagar a luz que o kernel acendeu
+- Radio: cor e numero de jogador saem tambem pelo report 0x31
+
+* Wed Aug 12 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4-1
+- Rumble: o keepalive parou de zerar a vibracao que um jogo manda por EV_FF
+- Lightbar: gatilho que reescreve cor e numero quando a sequencia de eventos sossega
+- Co-op: a cobertura de vpads passou a valer no ambiente por appid
+- Instalador: o udevadm trigger de hidraw casava zero dispositivos
+
+* Sun Aug 02 2026 Vitoria Maria <[REDACTED]> - 1:0.9.3-1
+- Sete presets de gatilho nao faziam nada: tres mandavam o modo que vale OFF
+  no firmware e quatro mandavam modo oficial sem o bitmask de zonas ativas
+- Aba Status passou a dizer o que CHEGA ao jogo, e nao so o que existe
+- Cura do rumble preso: o report de parada do SDL vem com os flags zerados e
+  era descartado pelo filtro de vibracao
+- Alto-falante ganhou o pre-amplificador e a rota de saida (os 60% de curso
+  que estavam inertes)
+- Botao do microfone parou de mutar o microfone de outro aparelho no Bluetooth
+- A mascara escolhida no perfil parou de virar Xbox sozinha ao salvar
+
+* Sat Aug 01 2026 Vitoria Maria <[REDACTED]> - 1:0.7.0-1
+- Aba Status alinhada: as duas linhas do card passam a dividir o mesmo
+  desenho, o frame Estado cai para tres linhas e a bateria ocupa a largura
+  inteira sem o numero boiando no meio da barra
+- Botao da rota de som mudou para o bloco Alto-falante do card; "sem dado"
+  saiu dos botoes de microfone e alto-falante
+- Mascara Xbox passa a dizer o que custa: sem giroscopio e sem touchpad no
+  jogo (a API do controle de Xbox nao tem os dois)
+- Metricas ganham chave de usuario (HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED
+  e _METRICS_PORT), cumprindo a decisao registrada na ADR-016
+- Quadrado vermelho ao lado dos interruptores curado (icone quebrado do GTK)
+
+* Sat Aug 01 2026 Vitoria Maria <[REDACTED]> - 1:0.6.0-1
+- A leva do alto-falante: o bloco da aba Status ganhou controle deslizante,
+  botao de mudo e devolucao da posse, com o preco escrito na propria interface.
+- O controle deslizante percorre a faixa que o registrador de fato usa: medido
+  no hardware, os primeiros 15 por cento do curso emudecem e os ultimos 60 nao
+  mudam nada, entao a escala passou a ser remapeada para a faixa util.
+- O botao de mudo nasce insensivel enquanto nao ha volume conhecido: um mudo
+  como primeira escrita trancaria o alto-falante em zero sem o proprio botao
+  poder solta-lo.
+- Um selo avisa quando quem esta mudo e o sistema, e nao o registrador do
+  controle: sao duas verdades diferentes, e a que decide se sai som e a do
+  PipeWire.
+- O perfil ganhou secao propria de alto-falante, que fica de fora do arquivo
+  quando nao ha opiniao.
+- O clique do touchpad passou a chegar ao jogo: o leitor tinha o byte na mao e
+  o descartava.
+- O emblema de testes deixou de declarar contagem exata, que envelhecia a cada
+  leva, e o portao de anonimato deixou de aprovar quando nao conseguia auditar.
+
 * Fri Jul 31 2026 Vitoria Maria <[REDACTED]> - 1:0.5.0-1
 - A leva da auditoria: treze agentes mediram o projeto e um verificador
   independente reenquadrou tres dos oito achados graves.

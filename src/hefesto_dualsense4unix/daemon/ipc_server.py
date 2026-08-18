@@ -6,8 +6,8 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     profile.list         {}          -> {profiles: [{name, priority, match_type}]}
     profile.apply_draft  {triggers?, leds?, rumble?, mouse?}
                          -> {status, applied: [str], failed: {str: str}}
-    trigger.set          {side, mode, params} -> {status}
-    trigger.reset        {side?, uniq?}        -> {status}
+    trigger.set    {side, mode, params, uniq?} -> {status, aplicado_em, guardado_em}
+    trigger.reset  {side?, uniq?}              -> {status, aplicado_em, guardado_em}
     led.set              {rgb}                 -> {status}
     led.player_set       {bits: [bool]*5}      -> {status, bits}
     identity.renumber    {}          -> {ok, renumbered: {uniq: slot}} | {ok: false, reason}
@@ -24,7 +24,11 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
     keyboard.emulation.set {enabled: bool} -> {status, enabled, keyboard_emulation}
-    speaker.set          {volume?: 0-255, muted?: bool, uniq?} -> {status, speaker}
+    coop.set             {enabled: bool}       -> {status, enabled, players}
+                         `enabled:false` é RECUSADO ({status: "recusado", motivo})
+    coop.sync            {}                    -> {status, players, active}
+    speaker.set          {volume?: 0-255, muted?: bool, release?: bool, uniq?}
+                         -> {status, speaker}
     mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
@@ -121,8 +125,28 @@ class IpcServer(IpcHandlersMixin):
             "controller.target.set": self._handle_controller_target_set,
             "daemon.reload": self._handle_daemon_reload,
             "launch_env.refresh": self._handle_launch_env_refresh,
+            # LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026): instrumento de
+            # medição, não caminho automático. Manda o Reset LED state
+            # (0x08) sob demanda pelo handle que o daemon já tem aberto —
+            # é o que separa "o 0x08 trava a barra" de "o 0x08 trava a
+            # barra QUANDO mandado em cima da conexão" — o que a
+            # LIGHTBAR-BT-CULPADO-01 (03/08) mediu: 7/7 dentro da janela
+            # de ~3,4 s, e o controle negativo, fora dela, não travou.
+            # Aqui se lia também "a medição de 08/08 (5 dias sem 0x08,
+            # barra morta)": era FALSA e caiu em 11/08 — sem 0x08 a barra
+            # ACENDEU no rádio quatro vezes nesses cinco dias (ensaios
+            # `lightbar-bt-aceso-*` em `docs/data/ensaios.csv`; correção
+            # inteira no docstring de `cli/cmd_lightbar_reset.py`).
+            "lightbar.reset": self._handle_lightbar_reset,
+            # LIGHTBAR-ISOLAR-OS-PLAYERS-01: o outro instrumento da mesma
+            # medição — desliga a escrita do LED de JOGADOR ao vivo, para
+            # ela reconectar o controle e ver se a barra sobrevive.
+            "debug.player_leds": self._handle_debug_player_leds,
             # D4: volume/mudo do alto-falante do DualSense (assume a posse dos
-            # bytes de volume do report — ver `_handle_speaker_set`).
+            # bytes de volume do report — ver `_handle_speaker_set`). Desde a
+            # SOM-02 (E3) o MESMO método também DEVOLVE a posse, por
+            # `release: true` — a saída que faltava, e sem a qual o primeiro
+            # uso do volume sequestrava o alto-falante até a desconexão.
             "speaker.set": self._handle_speaker_set,
             # MIC-USB-01: mudo do microfone no FIRMWARE do controle — a
             # CAMADA 3 das três que deixavam o mic mudo. As camadas 1 e 2
@@ -138,6 +162,10 @@ class IpcServer(IpcHandlersMixin):
             "keyboard.emulation.set": self._handle_keyboard_emulation_set,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,
             "coop.set": self._handle_coop_set,
+            # COOP-SEM-INTERRUPTOR-01 (06/08): o ciclo cheio de reconciliação
+            # ganhou dono próprio — é o gesto de recuperação do jogador que
+            # nasce e morre em dois segundos, e ele NÃO liga nem desliga nada.
+            "coop.sync": self._handle_coop_sync,
             "daemon.emulation.suppress": self._handle_emulation_suppress,
             "led.player_set": self._handle_led_player_set,
             # ONDA-U (U2/U10): renumeração explícita gated por sessão vazia.

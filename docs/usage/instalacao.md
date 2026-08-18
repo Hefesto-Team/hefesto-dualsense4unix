@@ -17,17 +17,32 @@ todas as formas de instalar, o que o instalador toca no sistema, e como reverter
 - GTK 3 + PyGObject — sem eles não há janela, só CLI e TUI.
 - `wlrctl` em sessões Wayland (o instalador oferece instalar em COSMIC).
 - Extensão `ubuntu-appindicators@ubuntu.com` no GNOME 42+, para o ícone de bandeja.
+- **Teclado na tela**: `wvkbd` em sessão Wayland, `onboard` em X11. Desde
+  10/08/2026 **o instalador o instala sozinho, sem flag** (passo 4f) — a linha
+  aqui é para quem instalou antes disso ou pulou o passo. É ele que o **L3** do
+  controle abre, e é o único caminho de fábrica para escrever texto.
 
 **Opcionais**
 
 - `python-uinput` — extra `[emulation]`, para o controle virtual pela via uinput.
-- `dkms` + `linux-headers-$(uname -r)` — para os módulos de kernel (abaixo).
-  Sem eles o instalador só avisa e segue; os módulos do kernel continuam valendo.
+
+**O que o instalador oferece instalar por você**
+
+- `dkms`, `build-essential` e `linux-headers-$(uname -r)` — são o que os três
+  módulos de kernel desta casa (abaixo) precisam para compilar. Desde
+  11/08/2026 o `install.sh` confere se estão presentes, **pergunta** e instala
+  com `sudo` quando você aceita. Se você recusar, ou se os headers do seu
+  kernel exato não existirem no repositório da distro, ele avisa e segue: o
+  produto funciona com os drivers de fábrica do kernel, só sem as curas — e a
+  conferência final diz quais faltaram.
+
+A tabela de versões validadas de cada peça (Python, BlueZ, kernel) está em
+[as versões em que isto funciona](versoes-validadas.md).
 
 ## Do código-fonte
 
-A versão corrente é a alfa **0.5.0** (31/07/2026) e o ponto de instalação é a
-**tag `v0.5.0`** do fork `[REDACTED]/hefesto-dualsense4unix` — tag, não branch:
+A versão corrente é a alfa **0.9.4.2** (13/08/2026) e o ponto de instalação é a
+**tag `v0.9.4.2`** do fork `[REDACTED]/hefesto-dualsense4unix` — tag, não branch:
 as branches de trabalho recebem commits durante a sessão e não são um ponto
 estável para instalar. O `main` do repositório de origem
 (`AndreBFarias/hefesto-dualsense4unix`) está na v3.0.0, de abril de 2026, e
@@ -37,7 +52,7 @@ no [`README.md`](../../README.md).
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.5.0
+git checkout v0.9.4.2
 ./install.sh
 ```
 
@@ -75,7 +90,7 @@ seu `$HOME`, com os padrões de fábrica:
 
 | Caminho | O que é |
 |---|---|
-| `/etc/udev/rules.d/` | 14 regras (permissão, autosuspend, LEDs, touchpad, motion, energia do USB, sniff e variante dos Nintendo-class, snapshot de bonds). Uma 15ª, a `75` que desliga o áudio USB do controle, só entra com `--disable-usb-audio` |
+| `/etc/udev/rules.d/` | 15 regras (permissão de hidraw e dos nós de entrada do touchpad/giroscópio, autosuspend, LEDs, touchpad, motion, energia do USB, sniff e variante dos Nintendo-class, snapshot de bonds). Uma 16ª, a `75` que desliga o áudio USB do controle, só entra com `--disable-usb-audio` |
 | `/etc/modules-load.d/hefesto-dualsense4unix.conf` | carrega `uinput` e `uhid` no boot |
 | `/etc/modprobe.d/hefesto-dualsense-storm.conf` | a cura do travamento do USB (mantém mic e fone do controle) |
 | `/etc/modprobe.d/hefesto-btusb-no-autosuspend.conf` | evita o adaptador BT dormir no meio do jogo |
@@ -87,7 +102,27 @@ seu `$HOME`, com os padrões de fábrica:
 | `/var/lib/hefesto-dualsense4unix/bt-bonds/` | cópias de segurança dos pareamentos Bluetooth |
 | cmdline do kernel | `usbcore.autosuspend=-1` **e** `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn`, via kernelstub ou grub (passo 3e, padrão). O passo funde o token de quirks que já existir em vez de somar um segundo, registra que a atribuição é do Hefesto e o `uninstall.sh` reverte só a nossa; um valor posto por terceiros é registrado e preservado |
 | **DKMS** | `hefesto-hid-nintendo`, `hefesto-hid-playstation` e `hefesto-rtw88-usb` — três módulos fora da árvore |
+| **teclado na tela** (passo 4f) | instala `wvkbd` (Wayland) ou `onboard` (X11) pelo gerenciador de pacotes da distro. É o programa que o **L3** do controle abre |
 | configuração da Steam | desliga o Steam Input, migra as Opções de Inicialização, trava o Proton (sempre com cópia de segurança ao lado) |
+
+**O teclado na tela entra sem flag, desde 10/08/2026, e a escolha é medida.** O
+produto oferecia "Abrir teclado na tela" no L3 e não instalava nada:
+`grep -c onboard install.sh` devolvia **zero**, e esse é o único caminho de
+fábrica para escrever texto — nenhum dos nove atalhos de fábrica digita uma
+letra. Em Wayland o pacote é o `wvkbd` (binário `wvkbd-mobintl`), porque ele
+digita pelo `zwp_virtual_keyboard_manager_v1`, nativo; o `onboard` digita por
+XTEST e, em sessão Wayland, abriria e só alcançaria clientes XWayland — pior do
+que não abrir. Em X11 é o inverso, e o `onboard` é o certo.
+
+O passo entra em **todos os formatos**: `Recommends` no `.deb` (o apt instala
+Recommends por padrão, que é o que atende "sem flag") e no Fedora, `optdepends`
+no Arch, argumento com default nulo no Nix, e **bundlado** no Flatpak — dentro
+do sandbox um pacote do host é invisível, então sem o módulo o produto nunca
+acharia o binário, por construção. O `uninstall.sh` **não remove** o pacote: é
+software de sistema, e desinstalar o Hefesto não é motivo para tirar o teclado
+na tela de quem passou a usá-lo. O `hefesto-dualsense4unix doctor` confere e
+distingue as quatro histórias por trás de um `command -v` vazio — você pulou, o
+install tentou e falhou, o install nunca passou, ou estava instalado e sumiu.
 
 Quatro curas de Bluetooth entram **por padrão** e merecem nome, porque mexem em
 serviço de sistema:
@@ -117,10 +152,12 @@ serviço de sistema:
   `scripts/bt_bonds_restore.sh` devolve.
 
 Sobre os três módulos DKMS: eles **não apagam** os módulos originais do kernel —
-entram por precedência (`updates/dkms`) e só valem no próximo boot ou replug. Se
-o `dkms` ou os headers do kernel faltarem, ou se a compilação falhar, o instalador
-avisa e continua; o kernel segue com os módulos de fábrica. Para não instalá-los,
-use `--no-dkms` (a flag cobre os três de uma vez).
+entram por precedência (`updates/dkms`) e só valem no próximo boot ou replug.
+Se faltar `dkms`, `build-essential` ou os headers do kernel, o instalador
+pergunta se pode instalá-los antes de seguir; se você recusar, ou se a
+compilação falhar mesmo assim, ele avisa e continua, e o kernel segue com os
+módulos de fábrica. Para não instalá-los, use `--no-dkms` (a flag cobre os três
+de uma vez).
 
 O `hefesto-hid-playstation` existe por causa de um caso medido em julho de 2026:
 com dois DualSense pareando com cerca de um segundo de diferença, o segundo
@@ -223,3 +260,8 @@ Sendo alfa, a validação é honesta e curta:
 
 Os pacotes de Arch, Fedora e Nix são mantidos, mas nenhum foi validado em hardware
 nesta linha. Se você rodar em alguma dessas, um relato de issue vale ouro.
+
+A versão exata de cada peça desta bancada — kernel, Python, BlueZ, GTK — e a
+faixa que o produto confere sozinho estão em
+**[as versões em que isto funciona](versoes-validadas.md)**. É a página para
+consultar antes de instalar em máquina nova.

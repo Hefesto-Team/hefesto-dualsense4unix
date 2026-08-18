@@ -39,7 +39,7 @@ flatpak install --user br.andrefarias.Hefesto.flatpak
 # 29/07/2026; aquela branch parou dois lançamentos atrás.
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.5.0
+git checkout v0.9.4.2
 
 # Construir o Flatpak (requer flatpak-builder)
 ./scripts/build_flatpak.sh --install
@@ -64,7 +64,7 @@ flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
 ```
 
 O script copia o mesmo conjunto canônico que o `install_udev.sh` do código-fonte
-— hoje **14 regras** — para `/etc/udev/rules.d/`, mais o `modules-load` de
+— hoje **15 regras** — para `/etc/udev/rules.d/`, mais o `modules-load` de
 `uinput`/`uhid` e os drop-ins de `modprobe` do BlueZ e dos módulos HID. As
 principais:
 
@@ -139,12 +139,31 @@ ao autostart do ambiente gráfico.
 
 ## Localização (i18n)
 
+> **A língua do Hefesto é o português do Brasil — decisão de 07/08/2026.**
+> Esta seção descreve o que o bundle embarca e como forçar o catálogo EN. Ela
+> **não** é convite a acrescentar idiomas: o catálogo alcança o esqueleto fixo
+> da janela, e não alcança o texto que as abas escrevem enquanto rodam.
+> **Medido em 07/08/2026:** dos 18 módulos de
+> `src/hefesto_dualsense4unix/app/actions/`, **15** não importam a função de
+> tradução e carregam 561 literais acentuados em português. Motivo e registro em
+> `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
+>
+> **Nota datada — 08/08/2026:** são **19** módulos desde a `RELANCAR-01`, que
+> acrescentou `relancar.py`. Ele **não** importa a função de tradução, então a
+> proporção passou a **16 de 19** — o quadro não mudou de natureza.
+>
+> **Nota datada — 16/08/2026:** são **20** módulos desde a
+> `CARONA-DO-WRAPPER-01`, que acrescentou `carona_do_wrapper.py`. Ele
+> também **não** importa a função de tradução, então a proporção passou a
+> **17 de 20** — o quadro segue o mesmo.
+
 A partir da v3.4.0 o bundle Flatpak embarca **EN baseline** + **PT-BR
 identidade** em `/app/share/hefesto-dualsense4unix/locale/{en,pt_BR}/
 LC_MESSAGES/hefesto-dualsense4unix.mo`. O default é PT-BR (source
 language).
 
-Para rodar a GUI em inglês:
+Para forçar o catálogo EN (lembrando o alcance dito acima — a janela **não**
+fica em inglês, só os rótulos do esqueleto fixo):
 
 ```bash
 flatpak run --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
@@ -171,8 +190,11 @@ sobrescrevendo `/app/share/locale/<lang>/` para vários idiomas
 `/app/share/hefesto-dualsense4unix/locale/`, que o runtime não toca.
 Detalhe técnico em `arquivo/processo-pre-1.0:docs/process/sprints/BUG-FLATPAK-LOCALE-SYMLINK-01.md`.
 
-Para adicionar um novo idioma (ES, FR, DE, etc.), ver
-`.github/CONTRIBUTING.md` seção "Contribuir traduções".
+O encanamento de i18n **continua vivo e correto** — catálogos, scripts e os 308
+`translatable="yes"` de `gui/main.glade` estão onde sempre estiveram. O que
+mudou em 07/08/2026 é que o projeto parou de prometer que traduzi-los entrega
+uma janela em outro idioma. Ver `.github/CONTRIBUTING.md`, seção "A língua do
+produto".
 
 ---
 
@@ -213,6 +235,22 @@ O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões
 
 4. **Flathub**: o Hefesto - Dualsense4Unix não está publicado no Flathub ainda. A instalação é
    via bundle local ou build a partir do código-fonte.
+
+5. **Teclado na tela: só `wvkbd`, e ele vem embutido** (desde 10/08/2026). O
+   **L3** do controle abre o teclado na tela — o único caminho de fábrica para
+   escrever texto. Nos outros formatos o programa vem do sistema (`wvkbd` em
+   Wayland, `onboard` em X11); aqui não pode: **dentro do sandbox um pacote do
+   host é invisível**. Este manifesto não pede
+   `--talk-name=org.freedesktop.Flatpak` nem nada que permita
+   `flatpak-spawn --host`, então o daemon só enxerga o que está em `/app` — sem
+   um módulo próprio, a busca pelo binário devolveria "não existe" **para
+   sempre, por construção**. Por isso o manifesto constrói o `wvkbd` (v0.14.3,
+   binário `wvkbd-mobintl`) como módulo do bundle.
+
+   **O `onboard` não é embutido, e é decisão, não esquecimento:** o sandbox
+   monta `--socket=wayland` e o `onboard` digita por XTEST — dentro daqui ele
+   abriria e não digitaria fora do XWayland. Embutir um teclado que abre e não
+   digita é pior do que não embutir nenhum.
 
 ---
 

@@ -183,6 +183,13 @@ class AutoswitchSubsystem:
             rumble_passthrough_applier=getattr(
                 daemon, "apply_profile_rumble_passthrough", None
             ),
+            # SOM-02/E4: volume do alto-falante por perfil. Aqui o applier vai
+            # injetado como nas outras rotas — o que protege o ajuste manual
+            # dela na troca de janela é a categoria `audio` da trava, consultada
+            # por `ProfileManager.apply_speaker` a cada tick, e NÃO a ausência
+            # do applier. Ele fala direto com o backend, sem armar a trava
+            # (armaria contra si mesmo — ver `Daemon.apply_profile_speaker`).
+            speaker_applier=getattr(daemon, "apply_profile_speaker", None),
         )
         # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
         # saúde/última wm_class útil no store a cada leitura do poll.
@@ -240,6 +247,9 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
         rumble_passthrough_applier=getattr(
             daemon, "apply_profile_rumble_passthrough", None
         ),
+        # SOM-02/E4: idem `AutoswitchSubsystem.start` — as DUAS rotas de subida
+        # do autoswitch precisam do applier do alto-falante.
+        speaker_applier=getattr(daemon, "apply_profile_speaker", None),
     )
     # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
     # saúde/última wm_class útil no store a cada leitura do poll.

@@ -106,6 +106,62 @@ def _funcao_c(assinatura: str) -> str:
     return C[inicio:fim]
 
 
+def _constantes_c() -> dict[str, int]:
+    """Resolve os ``#define`` numéricos do módulo, inclusive os derivados.
+
+    Um ``#define A (2U * B)`` é resolvido em função de ``B`` — é justamente
+    essa forma derivada que o portão do backoff exige (ver
+    ``TestBackoffCavalgaOTeoDoBlueZ``), então lê-la é obrigatório para medir
+    o valor de verdade em vez do texto.
+    """
+    brutos: dict[str, str] = {
+        nome: valor.strip()
+        for nome, valor in re.findall(r"^#define\s+(PS_\w+)\s+(.+?)\s*$", C, re.MULTILINE)
+    }
+
+    def resolve(nome: str, vistos: frozenset[str] = frozenset()) -> int:
+        assert nome not in vistos, f"#define circular em {nome}"
+        texto = brutos[nome].strip("()")
+        if re.fullmatch(r"\d+U?", texto):
+            return int(texto.rstrip("U"))
+        casamento = re.fullmatch(r"(\d+)U?\s*\*\s*(PS_\w+)", texto)
+        assert casamento is not None, f"#define {nome} não é literal nem múltiplo: {texto}"
+        return int(casamento.group(1)) * resolve(casamento.group(2), vistos | {nome})
+
+    return {nome: resolve(nome) for nome in brutos if _e_numerico(brutos, nome)}
+
+
+def _e_numerico(brutos: dict[str, str], nome: str) -> bool:
+    texto = brutos[nome].strip("()")
+    return bool(
+        re.fullmatch(r"\d+U?", texto) or re.fullmatch(r"(\d+)U?\s*\*\s*(PS_\w+)", texto)
+    )
+
+
+def _feature_retries_da_conf() -> int:
+    casamento = re.search(
+        r"^options hid_playstation feature_retries=(\d+)$", MODPROBE_CONF, re.MULTILINE
+    )
+    assert casamento is not None, "a conf precisa declarar feature_retries numa linha só"
+    return int(casamento.group(1))
+
+
+def _pior_caso_por_report_ms() -> int:
+    """Segundos que uma probe por Bluetooth gasta num feature report que nunca
+
+    responde: cada tentativa paga o timeout INTEIRO do BlueZ, mais os backoffs
+    entre elas (que dobram até o teto).
+    """
+    const = _constantes_c()
+    tentativas = _feature_retries_da_conf() + 1
+    total = tentativas * const["PS_BLUEZ_REPORT_REQ_TIMEOUT_MS"]
+    atraso = const["PS_FEATURE_RETRY_DELAY_MS"]
+    for _ in range(tentativas - 1):
+        total += atraso
+        atraso = min(atraso * 2, const["PS_FEATURE_RETRY_MAX_DELAY_MS"])
+    return total
+
+
 def _baseline() -> dict[str, str]:
     dados: dict[str, str] = {}
     for linha in BASELINE.splitlines():
@@ -216,13 +272,119 @@ class TestRetryOptIn:
 
     def test_backoff_declarado_como_constante(self) -> None:
         assert re.search(
-            r"^#define PS_FEATURE_RETRY_DELAY_MS\s+\d+$", C, re.MULTILINE
+            r"^#define PS_FEATURE_RETRY_DELAY_MS\s+\S", C, re.MULTILINE
         ), "o backoff é constante nomeada, não número solto"
 
     def test_delay_h_incluido(self) -> None:
         # msleep() exige <linux/delay.h>; hoje ele chega por transitividade,
         # o que é acidente de header, não contrato.
         assert "#include <linux/delay.h>" in C
+
+
+class TestBackoffCavalgaOTetoDoBlueZ:
+    """F-1 (09/08/2026) — o backoff tem de ser maior que o teto do BlueZ.
+
+    A validação prevista para "o próximo boot" chegou e **reprovou** a forma
+    antiga: em 08/08, **6 de 6 abortos retentaram e nenhum foi salvo**. A conta
+    que faltava era aritmética — cada tentativa já custa os **3 s inteiros** do
+    `REPORT_REQ_TIMEOUT` do BlueZ, e o backoff era de 100 ms e 200 ms, então as
+    três tentativas caíam **dentro da mesma janela de contenção** (medido no
+    journal dela: ``00:17:04 -> :07 -> :10 -> aborto``). Espaçamento ~30x
+    pequeno demais; único efeito: encarecer a falha de ~3,3 s para ~10 s.
+
+    Este portão existe para que ninguém reduza o espaçamento de novo sem
+    reencontrar essa medição: o valor do código tem de **derivar** do teto do
+    BlueZ, ficar **acima** dele, e bater com o que o README e a conf declaram.
+    """
+
+    def test_o_teto_do_bluez_e_constante_nomeada_com_a_procedencia(self) -> None:
+        # Ninguém deveria ter de reaprender de onde vêm os 3 s: o número mora
+        # no BlueZ, não aqui, e o código tem de dizer isso.
+        assert _constantes_c()["PS_BLUEZ_REPORT_REQ_TIMEOUT_MS"] == 3000, (
+            "REPORT_REQ_TIMEOUT do BlueZ é 3 s (profiles/input/device.c)"
+        )
+        bloco = C.split("#define PS_BLUEZ_REPORT_REQ_TIMEOUT_MS", 1)[0]
+        cabecalho = bloco[bloco.rindex("/*") :]
+        assert "REPORT_REQ_TIMEOUT" in cabecalho
+        assert "profiles/input/device.c" in cabecalho
+
+    def test_o_backoff_e_derivado_do_teto_nao_um_numero_solto(self) -> None:
+        # Número solto se reduz sem ninguém notar; múltiplo declarado, não.
+        for nome in ("PS_FEATURE_RETRY_DELAY_MS", "PS_FEATURE_RETRY_MAX_DELAY_MS"):
+            casamento = re.search(rf"^#define {nome}\s+(.+)$", C, re.MULTILINE)
+            assert casamento is not None, f"{nome} sumiu"
+            assert "PS_BLUEZ_REPORT_REQ_TIMEOUT_MS" in casamento.group(1), (
+                f"{nome} tem que ser escrito EM FUNÇÃO do teto do BlueZ "
+                f"(hoje: {casamento.group(1)}) — foi por não fazer essa conta "
+                "que o retry de 100/200 ms falhou 6 de 6 vezes em 08/08"
+            )
+
+    def test_o_backoff_bt_e_maior_que_o_teto_do_bluez(self) -> None:
+        # ESTE é o portão que morde. Uma tentativa que falhou por Bluetooth já
+        # gastou a janela inteira do BlueZ, e é só isso que ela provou: dormir
+        # MENOS do que a janela é refazer a mesma pergunta dentro dela.
+        const = _constantes_c()
+        teto = const["PS_BLUEZ_REPORT_REQ_TIMEOUT_MS"]
+        assert const["PS_FEATURE_RETRY_DELAY_MS"] > teto, (
+            "o backoff do retry tem que CAVALGAR o timeout do BlueZ "
+            f"({teto} ms), não caber dentro dele — medido em 08/08: com 100 ms "
+            "e 200 ms, 6 de 6 abortos retentaram e NENHUM foi salvo. Se o "
+            "valor está caindo de propósito, a redução exige NOTA DATADA no "
+            "README do pacote com a medição que a justifica."
+        )
+        assert const["PS_FEATURE_RETRY_MAX_DELAY_MS"] >= const["PS_FEATURE_RETRY_DELAY_MS"], (
+            "o teto do dobramento não pode ser menor que o primeiro backoff"
+        )
+
+    def test_o_dobramento_tem_teto_para_nao_estacionar_a_probe(self) -> None:
+        # Com backoff em segundos, dobrar 10 vezes (o limite do param) seriam
+        # ~102 min de msleep num worker de probe. O teto é o que impede isso.
+        wrapper = C.split("static int ps_get_report(", 1)[1].split("\n}", 1)[0]
+        assert "PS_FEATURE_RETRY_MAX_DELAY_MS" in wrapper, "o dobramento tem que ser limitado"
+        assert "min(" in wrapper
+
+    def test_no_cabo_o_backoff_e_outro_porque_la_nao_ha_bluez(self) -> None:
+        # O backoff longo é derivado do BlueZ; por USB não há BlueZ no caminho
+        # e a falha medida é determinística (o clone responde os MESMOS 9 bytes
+        # sempre), então esperar 6 s só atrasaria os ds4_*, que é quem cura ali.
+        const = _constantes_c()
+        assert const["PS_FEATURE_RETRY_USB_DELAY_MS"] < const["PS_FEATURE_RETRY_DELAY_MS"]
+        wrapper = C.split("static int ps_get_report(", 1)[1].split("\n}", 1)[0]
+        assert "BUS_BLUETOOTH" in wrapper, (
+            "o backoff longo só vale onde o timeout do BlueZ existe"
+        )
+        assert "PS_FEATURE_RETRY_USB_DELAY_MS" in wrapper
+
+    def test_readme_e_conf_declaram_o_mesmo_espacamento_do_codigo(self) -> None:
+        # Sem isto, alguém muda o número no .c e a documentação segue mentindo
+        # o valor antigo — que é como a hipótese de 25/07 sobreviveu 14 dias.
+        segundos = _constantes_c()["PS_FEATURE_RETRY_DELAY_MS"] // 1000
+        assert f"**{segundos} s**" in README, (
+            f"o README tem que declarar o backoff em vigor ({segundos} s)"
+        )
+        assert f"{segundos} s" in MODPROBE_CONF, (
+            f"a conf tem que declarar o backoff em vigor ({segundos} s)"
+        )
+
+    def test_o_pior_caso_esta_declarado_e_bate_com_a_aritmetica(self) -> None:
+        # A regra da casa é dizer o preço. O pior caso não é escolhido: ele sai
+        # de (tentativas x 3 s) + backoffs, e tem que estar escrito nos dois
+        # lugares que alguém lê antes de mexer no número.
+        pior = _pior_caso_por_report_ms() // 1000
+        assert f"**{pior} s**" in README, (
+            f"o README tem que declarar o pior caso por feature report ({pior} s) — "
+            f"com feature_retries={_feature_retries_da_conf()} a conta dá isso"
+        )
+        assert f"{pior} s" in MODPROBE_CONF
+
+    def test_o_retry_continua_mais_barato_que_a_cura_que_ele_dispensa(self) -> None:
+        # Se a probe aborta, quem ressuscita o controle é o watchdog de rebind,
+        # que passa a cada 2 min. Um retry que custe mais que isso não é cura:
+        # é o mesmo prejuízo pago duas vezes.
+        assert _pior_caso_por_report_ms() < 120_000, (
+            "o pior caso do retry passou dos 2 min do watchdog de rebind — "
+            "reveja o NÚMERO DE TENTATIVAS, não o espaçamento"
+        )
 
 
 class TestCloneDs4NoCaboOptIn:
@@ -429,9 +591,19 @@ class TestFormatoDoPatchUpstream:
 
 class TestModprobeConf:
     def test_cura_opt_in_pela_conf(self) -> None:
-        assert re.search(
-            r"^options hid_playstation feature_retries=2$", MODPROBE_CONF, re.MULTILINE
-        ), "a cura entra pela conf (o default do módulo é 0 == vanilla)"
+        assert _feature_retries_da_conf() >= 1, (
+            "a cura entra pela conf (o default do módulo é 0 == vanilla)"
+        )
+
+    def test_conf_carrega_a_nota_datada_que_derrubou_o_valor_antigo(self) -> None:
+        # 09/08/2026: a conf dizia feature_retries=2 com backoff de 100/200 ms.
+        # Quem abrir este arquivo e pensar em "voltar para 2" tem que esbarrar
+        # na medição que reprovou aquilo, no próprio arquivo.
+        assert "NOTA DATADA (09/08/2026)" in MODPROBE_CONF
+        assert "6 de 6" in MODPROBE_CONF, "o número que reprovou a hipótese antiga"
+        assert "PS_BLUEZ_REPORT_REQ_TIMEOUT_MS" in MODPROBE_CONF, (
+            "a conf tem que apontar para onde o espaçamento é declarado"
+        )
 
     def test_conf_explica_a_cadeia_causal_nao_so_o_valor(self) -> None:
         # Quem abrir esse arquivo em 6 meses precisa entender por que o -5
@@ -502,6 +674,45 @@ class TestReadmeHonesto:
         # controle que vibra errado, calado.
         assert "REJEITADO" in README or "Rejeitado" in README
         assert "use_vibration_v2" in README
+
+    def test_readme_tem_a_nota_datada_da_hipotese_que_caiu(self) -> None:
+        # Regra da casa: NÃO SE APAGA DECISÃO MEDIDA — ela ganha nota datada.
+        # O README declarava "que feature_retries=2 de fato cura" como NÃO
+        # MEDIDO, com validação prevista para o próximo boot. A validação
+        # chegou em 08/08 e reprovou: 6 de 6 abortos retentaram, nenhum salvo.
+        assert "NOTA DATADA (09/08/2026)" in README, (
+            "a hipótese que caiu tem que ganhar nota DATADA, não sumir"
+        )
+        corrido = " ".join(README.replace("*", " ").split())
+        assert "6 de 6 abortos de probe retentaram e NENHUM foi salvo" in corrido, (
+            "a nota tem que trazer o NÚMERO que reprovou a hipótese"
+        )
+        assert "00:17:04" in README, "e a medição que explica POR QUE ela não podia curar"
+
+    def test_readme_nao_apaga_a_hipotese_antiga(self) -> None:
+        # O outro lado da mesma regra: a nota datada acrescenta, não reescreve.
+        # Quem ler daqui a um ano tem que ver o que se acreditava em 25/07 E o
+        # que a medição fez com isso.
+        assert "que `feature_retries=2` de fato cura" in README, (
+            "a hipótese de 25/07 fica no texto, com a data em que valia"
+        )
+        assert README.index("que `feature_retries=2` de fato cura") < README.index(
+            "NOTA DATADA (09/08/2026)"
+        ), "a nota datada vem DEPOIS da hipótese que ela derruba"
+
+    def test_readme_nao_manda_mais_aumentar_o_numero_de_tentativas(self) -> None:
+        # O conselho antigo era `echo 4 > feature_retries` quando o retry não
+        # bastasse. Com backoff em segundos isso vira minutos de probe muda, e
+        # continua sem tocar na causa (dois pads subindo no mesmo adaptador).
+        conselho_caducado = (
+            "echo 4 | sudo tee "
+            "/sys/module/hid_playstation/parameters/feature_retries"
+        )
+        assert conselho_caducado not in README, (
+            "aumentar a contagem foi justamente o que 08/08 reprovou"
+        )
+        corrido = " ".join(README.replace("*", " ").split())
+        assert "NÃO aumente `feature_retries`" in corrido
 
     def test_readme_avisa_que_srcversion_nao_prova_proveniencia(self) -> None:
         # Armadilha real: srcversion NÃO é reprodutível entre build in-tree e

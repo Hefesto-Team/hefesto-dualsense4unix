@@ -38,6 +38,50 @@ _dkms_initramfs_path() {
     printf '%s' "${HEFESTO_INITRAMFS_PATH:-/boot/initrd.img-$(uname -r)}"
 }
 
+# LICENÇA-QUE-VIAJA-01 (07/08/2026) — onde estão os textos de licença de
+# terceiros (LICENSES/, entregue pela CR-05 no mesmo dia).
+#
+# Por que isto vive AQUI e não no install.sh: os cinco alvos de EMPACOTAMENTO
+# ganharam a cópia (`scripts/build_deb.sh`, o PKGBUILD, o `.spec` e o
+# `.yml` do flatpak levam `LICENSES/` para junto de `assets/dkms/`), e o
+# `LICENSES/README.md` enumera exatamente esses cinco. Mas quem põe o
+# CÓDIGO-FONTE GPL-2.0 no disco de uma máquina são os DOIS caminhos que passam
+# por esta biblioteca — o `install.sh` nativo e o `scripts/install-host-udev.sh`
+# dos pacotes —, e nenhum dos dois levava o texto junto: a linha 249 copia
+# `assets/dkms/<mod>/.` para `/usr/src/<pkg>-<ver>/` e mais nada.
+# GRAU: MEDIDO (`grep -rn LICENSES install.sh scripts/*.sh` devolvia zero).
+#
+# É uma linha de cópia, não um recurso: a GPL-2.0, seção 1, pede que a cópia da
+# licença acompanhe o fonte, e o `/usr/src/<pkg>-<ver>` é o fonte na máquina.
+# Sai sozinha na desinstalação — `dkms remove --all` apaga o diretório inteiro
+# (uninstall.sh:836-838), então a simetria não custa uma linha sequer lá.
+#
+# Ordem dos candidatos: o checkout git primeiro (é onde o install.sh nativo
+# roda), depois o layout dos pacotes, que põem `LICENSES/` DENTRO de `dkms/`
+# (é o destino escrito no `build_deb.sh`, no PKGBUILD, no `.spec` e no `.yml`).
+# `HEFESTO_DKMS_LICENSES_DIR` existe pela mesma razão que as duas raízes acima:
+# costura de teste. Devolve vazio quando não acha — e aí o passo é pulado sem
+# aviso, porque licença ausente não pode derrubar instalação de módulo.
+_dkms_licenses_dir() {
+    if [[ -n "${HEFESTO_DKMS_LICENSES_DIR:-}" ]]; then
+        printf '%s' "${HEFESTO_DKMS_LICENSES_DIR}"
+        return 0
+    fi
+    local _libdir _cand
+    _libdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || return 0
+    for _cand in \
+        "${_libdir}/../LICENSES" \
+        "/usr/share/hefesto-dualsense4unix/dkms/LICENSES" \
+        "/app/share/hefesto-dualsense4unix/dkms/LICENSES" \
+    ; do
+        if [[ -d "${_cand}" ]]; then
+            (cd "${_cand}" && pwd)
+            return 0
+        fi
+    done
+    return 0
+}
+
 _dkms_log() { printf '      %s\n' "$*"; }
 
 _dkms_warn() {
@@ -216,7 +260,7 @@ _dkms_initramfs_desatualizado() {
 
 dkms_install_patched_module() {
     local _pkg="$1" _ver="$2" _src="$3" _built="$4"
-    local _kver _srcdst
+    local _kver _srcdst _dkms_lic
     _kver="$(uname -r)"
     _srcdst="$(_dkms_src_root)/${_pkg}-${_ver}"
 
@@ -236,7 +280,14 @@ dkms_install_patched_module() {
 
     # 1) Sincroniza o source em /usr/src (idempotente). Se os assets mudaram,
     #    remove a registração antiga ANTES de recopiar (rebuild limpo).
-    if [[ -d "${_srcdst}" ]] && sudo diff -rq -x patch "${_src}" "${_srcdst}" >/dev/null 2>&1; then
+    #
+    #    `-x LICENSES` pela MESMA razão do `-x patch`, e ela é armadilha: o
+    #    destino ganha `LICENSES/` no passo 1-bis abaixo e a ORIGEM não tem esse
+    #    diretório. Sem excluí-lo, o `diff -rq` acharia diferença em TODA
+    #    execução, e cada install passaria a `dkms remove --all` + recopiar +
+    #    reconstruir os três módulos — o oposto exato do contrato de
+    #    idempotência escrito no cabeçalho desta biblioteca.
+    if [[ -d "${_srcdst}" ]] && sudo diff -rq -x patch -x LICENSES "${_src}" "${_srcdst}" >/dev/null 2>&1; then
         _dkms_log "source ${_pkg}-${_ver} já sincronizado em ${_srcdst}"
     else
         sudo dkms remove "${_pkg}/${_ver}" --all >/dev/null 2>&1 || true
@@ -252,6 +303,31 @@ dkms_install_patched_module() {
         fi
         # patch/ é referência de rebase/upstream, não entra no build
         sudo rm -rf "${_srcdst}/patch" || true
+    fi
+
+    # 1-bis) LICENÇA-QUE-VIAJA-01: o texto das licenças de terceiros acompanha o
+    #        fonte GPL-2.0 que acabamos de pôr em /usr/src (racional completo em
+    #        `_dkms_licenses_dir`, acima). FORA do `if` de sincronia de
+    #        propósito: numa máquina já sincronizada o passo acima não roda, e
+    #        sem esta posição a licença nunca chegaria a quem instalou antes.
+    #        Best-effort integral — o contrato desta biblioteca é que NADA aqui
+    #        aborta o install, e licença ausente não vale um módulo a menos.
+    #        A cópia é guardada por um `diff` próprio, e não é zelo: o contrato
+    #        desta biblioteca é que a segunda execução NÃO repita passo nenhum,
+    #        e `tests/unit/test_dkms_lib.py::test_segunda_chamada_e_no_op_real`
+    #        conta as invocações de `sudo cp -a` para provar isso. Copiar a
+    #        licença a cada execução deixaria aquele teste vermelho — e ele
+    #        estaria certo.
+    _dkms_lic="$(_dkms_licenses_dir)"
+    if [[ -n "${_dkms_lic}" && -d "${_srcdst}" ]]; then
+        if sudo diff -rq "${_dkms_lic}" "${_srcdst}/LICENSES" >/dev/null 2>&1; then
+            : # já está lá, igual — nada a fazer
+        elif sudo install -d "${_srcdst}/LICENSES" 2>/dev/null \
+            && sudo cp -a "${_dkms_lic}/." "${_srcdst}/LICENSES/" 2>/dev/null; then
+            _dkms_log "licenças de terceiros copiadas p/ ${_srcdst}/LICENSES"
+        else
+            _dkms_log "não consegui copiar LICENSES p/ ${_srcdst} (o módulo segue)"
+        fi
     fi
 
     # 2) add (tolerante a "já adicionado")

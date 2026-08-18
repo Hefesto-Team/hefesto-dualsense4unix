@@ -22,7 +22,7 @@ Bluetooth ele sobe, no cabo ele morre.
 > | | cura | estado |
 > |---|---|---|
 > | **1ª linha** | `scripts/bt_rebind_orphans.sh` — rebind do device órfão no driver **vanilla**, em userspace |  **VALIDADA AO VIVO** em 25/07 12:06 |
-> | **2ª linha** | este DKMS (`feature_retries`) — retry dentro da probe |  **NÃO validada**; o teste real é o próximo boot |
+> | **2ª linha** | este DKMS (`feature_retries`) — retry dentro da probe |  **REPROVADA em 08/08** na forma antiga (backoff de 100/200 ms, 6 de 6 abortos, nenhum salvo); **reescrita em 09/08** com o espaçamento em unidades dos 3 s do BlueZ, e **ainda não validada** nessa forma |
 >
 > **A de primeira linha basta na maioria dos casos e é a que está provada.**
 > Ela não exige patch de kernel, não exige reboot, não recarrega módulo e não
@@ -175,7 +175,28 @@ o script já é idempotente e seguro para ser chamado dali.
 
 | param | o que faz | default |
 |---|---|---|
-| `feature_retries` | tentativas EXTRA quando um feature report da probe falha; backoff 100 ms dobrando | `0` (uma tentativa, == vanilla) |
+| `feature_retries` | tentativas EXTRA quando um feature report da probe falha; backoff **em unidades do timeout do BlueZ** (ver abaixo) | `0` (uma tentativa, == vanilla) |
+
+### O espaçamento é a cura — e ele é derivado dos 3 s do BlueZ
+
+O relógio que manda aqui não é nosso: é o `REPORT_REQ_TIMEOUT` do BlueZ,
+**3000 ms**, em `profiles/input/device.c`. Uma tentativa que falhou por
+Bluetooth **já gastou essa janela inteira**, e a única coisa que ela provou é
+que o canal de controle esteve disputado durante ela. Logo, dormir **menos** do
+que essa janela é fazer a mesma pergunta dentro dela.
+
+Por isso as constantes do módulo são múltiplos declarados do teto, e não
+números soltos:
+
+| constante | valor | por quê |
+|---|---|---|
+| `PS_BLUEZ_REPORT_REQ_TIMEOUT_MS` | `3000` | o teto do BlueZ, nomeado no código para que ninguém tenha de reaprendê-lo |
+| `PS_FEATURE_RETRY_DELAY_MS` | `2 ×` = **6 s** | o menor backoff que faz a pergunta numa janela que a tentativa anterior **não** provou disputada |
+| `PS_FEATURE_RETRY_MAX_DELAY_MS` | `4 ×` = **12 s** | teto do dobramento, para que `feature_retries` alto não estacione um worker de probe por minutos |
+| `PS_FEATURE_RETRY_USB_DELAY_MS` | `100 ms` | **no cabo não há BlueZ no caminho**: a falha medida ali é determinística (o clone responde os mesmos 9 bytes sempre), então espaçar não compra nada e só atrasa o fallback que cura |
+
+Por Bluetooth, portanto, a 2ª tentativa nasce **9 s** depois da 1ª (3 s de
+timeout + 6 s de backoff) — **3 janelas do BlueZ** —, contra os 3,1 s de antes.
 
 **Por que é seguro repetir.** Ler feature report é operação de LEITURA pura,
 sem efeito colateral no controle. E quando o timeout do BlueZ dispara, ele já
@@ -193,9 +214,30 @@ precisa responder.
 curto, `reportID` trocado e CRC ruim descrevem a mesma coisa — uma
 transferência que não chegou inteira.
 
-**Custo no pior caso:** com `feature_retries=2`, um controle de fato morto
-gasta 3 tentativas × 3 s + 100 ms + 200 ms ≈ **9,3 s** de probe antes de
-desistir (contra 3,3 s hoje). Em workqueue, sem segurar nada crítico.
+**Custo no pior caso.** A conta mudou de escala junto com o backoff, e é por
+isso que a contagem caiu de **2 tentativas extra para 1** (`feature_retries=1`
+em `assets/modprobe.d/hefesto-hid-playstation.conf`):
+
+| cenário (por Bluetooth) | com 1 extra (hoje) | com 2 extra | antes (100/200 ms) |
+|---|---|---|---|
+| um feature report que nunca responde | 3 + 6 + 3 = **12 s** | 3 + 6 + 3 + 12 + 3 = 27 s | 9,3 s |
+| um feature report resgatado na ÚLTIMA tentativa | 3 + 6 = **9 s** | 3 + 6 + 3 + 12 = 24 s | 6,3 s |
+| probe inteira no pior caso — 3 reports, os dois primeiros resgatados na última tentativa e o terceiro desistindo | 9 + 9 + 12 = **30 s** | 24 + 24 + 27 = 75 s | 21,9 s |
+
+**Por que 12 s valem a pena.** Quando a probe aborta, o controle não fica lento
+— fica **morto**: sem `hidraw`, sem `input`, sem LED, sem bateria. O que o
+resgata é o watchdog de rebind, que passa a cada **2 min**, ou a própria
+reconexão dela (medida em 08/08: de 2 a 20 min). Doze segundos de probe é uma
+ordem de grandeza mais barato do que qualquer uma dessas saídas, e é pago
+**apenas** quando algo já falhou. Os 75 s da coluna do meio, não: ali o retry
+já compete com o próprio watchdog que ele deveria dispensar — e é por isso que
+a 3ª tentativa saiu. Ela custaria os 12 s mais caros da série sem uma única
+medição a favor: o que 08/08 mostra é que a janela de contenção **passa de
+10 s** e que a recuperação levou de 2 a 20 min, não que ela termina entre o
+9º e o 21º segundo.
+
+A probe roda em workqueue (`uhid` agenda o `hid_add_device()` justamente para
+isso), então esses segundos não seguram nada crítico — nem o `bluetoothd`.
 
 ## O que foi avaliado e REJEITADO (no `0001`)
 
@@ -239,6 +281,37 @@ Separando o que é **fato medido** do que é **hipótese fundamentada**:
   `hid_playstation`, o que derruba os DualSense conectados, e a regra do
   projeto proíbe isso com controle em uso. **A validação é o próximo boot** —
   ver a seção de validação abaixo.
+
+> ###  NOTA DATADA (09/08/2026) — a validação chegou, e a hipótese CAIU
+>
+> **A hipótese acima está REPROVADA na forma em que foi escrita.** Em 08/08,
+> **6 de 6 abortos de probe retentaram e NENHUM foi salvo.** O parágrafo acima
+> fica onde está, com a data em que valia — esta casa não apaga decisão medida.
+>
+> **A conta que faltava fazer era aritmética.** Cada tentativa já custa os
+> **3 s inteiros** do BlueZ; o backoff entre elas era de **100 ms e 200 ms**;
+> logo as três tentativas caíam **dentro da mesma janela de contenção** — no
+> journal dela, `00:17:04 → :07 → :10 → aborto`. O espaçamento era ~30× pequeno
+> demais para o problema que se propunha a atravessar. Único efeito medido:
+> **encarecer a falha de ~3,3 s para ~10 s**.
+>
+> Por contraste, o que **cura** é esperar minutos — o `bt_rebind_orphans.sh`,
+> validado ao vivo em 25/07 12:06.
+>
+> **O que mudou em 09/08** (F-1 do índice de 09/08): o backoff passou a ser
+> declarado em unidades do teto do BlueZ — 6 s de primeiro backoff (2× o teto),
+> dobrando, limitado a 12 s (4× o teto) —, e a contagem caiu de 2 tentativas
+> extra para **1**, porque a 3ª passou a custar 12 s sem evidência nenhuma a
+> favor. No cabo nada disso vale: lá não há BlueZ no caminho.
+>
+> **O que esta nota NÃO promete.** Nada aqui prova que 6 s bastam. O que está
+> medido é que a janela de contenção **passa de 10 s** (foi o que os 6 abortos
+> gastaram) e que a recuperação por reconexão levou **de 2 a 20 min**. Ou seja:
+> o espaçamento novo compra a **ponta curta** de uma distribuição que ninguém
+> mediu. **Grau da cura: SUSPEITA COM MECANISMO** — o mecanismo é medido, o
+> efeito só se prova no próximo par de conexões simultâneas dela. A cura de
+> raiz continua sendo **serializar a subida** dos controles (F-2), nomeada
+> neste mesmo README há 14 dias e ainda sem código.
 
 Enquanto isso não acontecer, **a cura que está funcionando é o rebind**, não
 este módulo.
@@ -285,6 +358,13 @@ Três leituras que fecham o diagnóstico:
    `feature_retries=2` do `0001` em ação: as três tentativas trouxeram **os
    mesmos 9 bytes**. Resposta curta e determinística — esperar mais não muda
    nada. (Preço: 300 ms por conexão, que é o que põe a prova no log.)
+
+   > **Nota datada (09/08/2026):** este parágrafo é a medição de 25/07, com
+   > `feature_retries=2` e backoff de 100 ms. Hoje são **duas** tentativas e
+   > 200 ms no total — e é **de propósito** que o cabo não herdou o backoff
+   > novo de 6 s: ele é derivado do timeout do BlueZ, e por USB não há BlueZ
+   > no caminho. Esperar 6 s por uma resposta que já se sabe determinística
+   > só atrasaria os dois `ds4_*`, que são a cura de verdade aqui.
 2. **Dos 16 bytes o driver usa 7.** Report ID + 6 do endereço. O resto é o
    endereço do **host** com quem o controle pareou por último, que este driver
    nunca lê. Uma resposta de 9 bytes **pode** trazer tudo o que é usado.
@@ -405,14 +485,29 @@ sudo dmesg -T | grep -iE "playstation|retrying feature"
 sudo journalctl -u bluetooth | grep -i "GET_REPORT request timed out"
 ```
 
-Sucesso é ver `retrying feature reportID 32 ...` **seguido de**
+Sucesso é ver `retrying feature reportID 32 in 6000 ms ...` **seguido de**
 `Registered DualSense controller` — ou seja, o timeout do BlueZ aconteceu e o
-controle subiu assim mesmo. Se aparecer `probe ... failed with error -5`
-mesmo com retries, aumente `feature_retries` (vale na hora, é `0644`, lido a
-cada probe — basta reconectar o controle, sem reload):
+controle subiu assim mesmo. O `6000 ms` na linha é o que distingue o módulo
+novo do antigo sem precisar de `modinfo`: o antigo dizia `in 100 ms`.
+
+**Se aparecer `probe ... failed with error -5` mesmo com o retry, NÃO aumente
+`feature_retries`.** Foi exatamente isso que 08/08 reprovou: quem cura é o
+**espaçamento**, e ele já está no módulo; subir a contagem só multiplica o
+tempo em que o controle fica mudo (cada extra custa 3 s de timeout mais 6 a
+12 s de backoff) sem tocar na causa. O degrau certo, nessa ordem:
+
+1. conferir se o backoff em vigor é o novo — a linha do `dmesg` tem de dizer
+   `in 6000 ms`, não `in 100 ms` (se disser 100 ms, o módulo carregado é o
+   antigo: falta **rebuild do DKMS + reboot**);
+2. **serializar a subida** dos controles (F-2) — a causa é dois DualSense
+   subindo no mesmo adaptador com ~1 s de diferença;
+3. só então discutir mexer no `REPORT_REQ_TIMEOUT` do BlueZ.
+
+Para voltar ao comportamento vanilla enquanto se investiga (vale na hora, é
+`0644`, lido a cada probe — basta reconectar o controle, sem reload):
 
 ```bash
-echo 4 | sudo tee /sys/module/hid_playstation/parameters/feature_retries
+echo 0 | sudo tee /sys/module/hid_playstation/parameters/feature_retries
 ```
 
 ### Voltar atrás

@@ -35,6 +35,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("PERFIL-SALVA-TUDO-01/E3 (escritores das abas Inicio/Emulacao)")
 
 from hefesto_dualsense4unix.app.actions import emulation_actions as ea
+from hefesto_dualsense4unix.app.actions import footer_actions as fa
 from hefesto_dualsense4unix.app.actions import home_actions as ha
 from hefesto_dualsense4unix.app.actions import mode_transition as mt
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -102,12 +103,23 @@ class _FakeLabel:
         self.text = text
 
 
-class _Janela(ea.EmulationActionsMixin, ha.HomeActionsMixin):
-    """Emulação + Início compartilhando UM rascunho (a MRO do HefestoApp)."""
+class _Janela(ea.EmulationActionsMixin, ha.HomeActionsMixin, fa.FooterActionsMixin):
+    """Emulação + Início + rodapé compartilhando UM rascunho (a MRO do HefestoApp).
+
+    AGORA-E-DEPOIS-01 (08/08/2026): o rodapé entrou na lista porque o gesto da
+    aba Início passou a terminar nele — o clique no seletor marca, o "Aplicar"
+    aplica e registra. Sem os três na mesma casca, este arquivo mediria metade
+    do caminho.
+    """
 
     def __init__(self, perfil: Profile) -> None:
         self.draft = DraftConfig.from_profile(perfil)
         self.toasts: list[str] = []
+        self.window = None
+        self._escolha_pendente = None
+        self._modo_vigente_do_daemon = "desktop"
+        self._mascara_vigente_do_daemon = "xbox"
+        self._jogo_aberto = False
         self._home_guard = False
         self._home_mode_desc = _FakeLabel()
         self._home_mode_selector = _FakeSelector("desktop")
@@ -127,6 +139,12 @@ class _Janela(ea.EmulationActionsMixin, ha.HomeActionsMixin):
         return None
 
     def _refresh_home_tab(self) -> None:
+        return None
+
+    def _footer_toast(self, msg: str, _context: str = "footer") -> None:
+        self.toasts.append(msg)
+
+    def _reload_profiles_store(self, select_name: str | None = None) -> None:
         return None
 
 
@@ -150,6 +168,10 @@ def _ipc_que_confirma(
     monkeypatch.setattr(ea, "call_async", _fake)
     monkeypatch.setattr(ha, "call_async", _fake)
     monkeypatch.setattr(mt, "call_async", _fake)
+    # AGORA-E-DEPOIS-01: o "Aplicar" do rodapé manda o rascunho por outro
+    # cano (`footer_actions.ipc_bridge`) — sem cobri-lo, o gesto novo da aba
+    # Início falaria com o daemon de verdade no meio do teste.
+    monkeypatch.setattr(fa.ipc_bridge, "call_async", _fake)
     return chamadas
 
 
@@ -169,6 +191,10 @@ def _ipc_que_falha(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ea, "call_async", _fake)
     monkeypatch.setattr(ha, "call_async", _fake)
     monkeypatch.setattr(mt, "call_async", _fake)
+    # AGORA-E-DEPOIS-01: o "Aplicar" do rodapé manda o rascunho por outro
+    # cano (`footer_actions.ipc_bridge`) — sem cobri-lo, o gesto novo da aba
+    # Início falaria com o daemon de verdade no meio do teste.
+    monkeypatch.setattr(fa.ipc_bridge, "call_async", _fake)
 
 
 def _ipc_envenenado(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -188,7 +214,7 @@ def _ipc_envenenado(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ha, "call_async", _bomba)
     monkeypatch.setattr(mt, "call_async", _bomba)
     monkeypatch.setattr(mt, "apply_mode", _bomba)
-    monkeypatch.setattr(mt, "apply_coop_prep", _bomba)
+    monkeypatch.setattr(fa.ipc_bridge, "call_async", _bomba)
 
 
 # ---------------------------------------------------------------------------
@@ -247,11 +273,23 @@ class TestAAbaInicioEscreveNoRascunho:
     def test_comutador_de_modo_registra_o_que_ela_escolheu(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """AGORA-E-DEPOIS-01: o gesto tem dois tempos, e o registro é no segundo.
+
+        O clique no seletor MARCA (e nada mais); o "Aplicar" do rodapé aplica e
+        registra. A queixa dela que este teste guarda continua a mesma — *"salvei
+        o perfil e as configs das outras abas não ficam salvas"* — e agora ela só
+        estaria de volta se o caminho INTEIRO falhasse.
+        """
         janela = _Janela(_perfil("Pragmata", com_regra=True))
         _ipc_que_confirma(monkeypatch)
 
         # O gesto real: clique no seletor emite "changed" com UM argumento.
         janela._home_mode_selector.set_active_id("native")
+        assert janela.draft.to_profile("Pragmata").mode is None, (
+            "o clique registrou sozinho — o rascunho voltou a guardar intenção "
+            "em vez do que ficou de pé"
+        )
+        janela.on_apply_draft()
 
         salvo = janela.draft.to_profile("Pragmata")
         assert salvo.mode is not None and salvo.mode.kind == "native"
@@ -261,9 +299,11 @@ class TestAAbaInicioEscreveNoRascunho:
     ) -> None:
         janela = _Janela(_perfil("Pragmata", com_regra=True))
         janela._home_mode_selector = _FakeSelector("gamepad")
+        janela._modo_vigente_do_daemon = "gamepad"
         _ipc_que_confirma(monkeypatch)
 
         janela._home_flavor_selector.set_active_id("dualsense")
+        janela.on_apply_draft()
 
         salvo = janela.draft.to_profile("Pragmata")
         assert salvo.mode is not None and salvo.mode.kind == "gamepad"
@@ -287,9 +327,20 @@ class TestAAbaInicioEscreveNoRascunho:
 
         assert janela.draft.mode_dirty is False
 
-    def test_preparar_coop_e_o_unico_gesto_que_liga_o_coop(
+    def test_nenhum_gesto_da_janela_escreve_coop_no_perfil(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: era
+        ``test_preparar_coop_e_o_unico_gesto_que_liga_o_coop``.
+
+        Aquele gesto (o botão "Preparar co-op") era o ÚNICO que dizia ``coop``
+        na mão, e saiu com a decisão dela. Agora a janela não tem gesto nenhum
+        que escreva o campo — e a regra que sobra é mais forte: o que ela não
+        edita, ela não reescreve, nem para ligar. Um perfil que diz
+        ``coop: false`` continua dizendo ``coop: false`` no disco (o campo é
+        aceito e ignorado pelo daemon; reescrevê-lo seria mudar o arquivo dela
+        sem pedido).
+        """
         janela = _Janela(
             _perfil(
                 "Co-op",
@@ -299,10 +350,11 @@ class TestAAbaInicioEscreveNoRascunho:
         )
         _ipc_que_confirma(monkeypatch)
 
-        janela._on_home_coop_prep_clicked(None)
+        janela._home_mode_selector.set_active_id("gamepad")
+        janela._home_flavor_selector.set_active_id("dualsense")
 
         salvo = janela.draft.to_profile("Co-op")
-        assert salvo.mode is not None and salvo.mode.coop is True
+        assert salvo.mode is not None and salvo.mode.coop is False
 
     def test_trocar_a_mascara_nao_liga_o_coop_de_quem_dizia_nao(
         self, monkeypatch: pytest.MonkeyPatch
@@ -331,11 +383,28 @@ class TestAAbaInicioEscreveNoRascunho:
 
 
 # ---------------------------------------------------------------------------
-# O "modo jogo" — e a recusa MEDIDA em perfil catch-all
+# O "modo jogo" — e a recusa que CAIU em 09/08
 # ---------------------------------------------------------------------------
 
 
 class TestOModoJogoEntraNoPerfilQuePodeReceber:
+    """MODO-JOGO-VONTADE-DELA-01 (09/08/2026): *"a vontade na GUI prevalece
+    sempre"*.
+
+    Esta classe travava a RECUSA: ligar o modo jogo num perfil catch-all não era
+    guardado. A recusa se justificava por escrito com a ausência de gate no ramo
+    ``if desired:`` de ``lifecycle.apply_profile_suppression`` — e essa premissa
+    caducou em 05/08, quando o gate nasceu (``PERFIL-REESCRITO-NA-PARTIDA-01``,
+    item 2), sem que ninguém voltasse aqui. Cinco dos perfis dela são catch-all,
+    então por quatro dias a janela lhe cobrou, para nada, a configuração que ela
+    pedia.
+
+    O que estes testes travam agora é a decisão dela E o preço dela: o gesto é
+    guardado em qualquer perfil, e num "vale sempre" a janela DIZ que o daemon
+    não vai ligá-lo sozinho depois. Que ele de fato não ligue — o alçapão — é
+    outro portão, headless, em ``test_modo_jogo_a_vontade_dela_prevalece.py``.
+    """
+
     def test_perfil_com_regra_guarda_o_modo_jogo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -347,31 +416,61 @@ class TestOModoJogoEntraNoPerfilQuePodeReceber:
         assert janela.draft.suppress_dirty is True
         salvo = janela.draft.to_profile("Sackboy")
         assert salvo.suppress_desktop_emulation is True
-        # A frase normal, porque guardou de verdade.
+        # A frase normal, e SEM a ressalva: este perfil tem regra, então o
+        # daemon liga o modo jogo de novo na próxima ativação.
         assert janela.toasts[-1].startswith("Modo jogo ligado")
-        assert janela.toasts[-1] != ea.MODO_JOGO_NAO_GUARDADO
+        assert janela.toasts[-1] != ea.MODO_JOGO_GUARDADO_SEM_REGRA
 
-    def test_catch_all_nao_recebe_suppress_true_e_ela_e_avisada(
+    def test_catch_all_agora_guarda_o_modo_jogo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Os cinco perfis "vale sempre" dela.
+        """A MORDIDA da decisão dela: os cinco perfis "vale sempre".
 
-        MEDIDO em ``lifecycle.apply_profile_suppression``: o ramo ``if desired:``
-        liga SEM passar pelo ``_perfil_tem_opiniao`` — só o de LIBERAR passa. Um
-        ``suppress: true`` num catch-all é alçapão de mão única: liga em toda
-        ativação (inclusive no restauro do último perfil, no boot) e o caminho de
-        volta está fechado pelo R-02. Trocar a perda de configuração dela por um
-        desktop sem ponteiro não é cura.
+        Com a recusa de volta em ``rascunho_com_modo_jogo``, ``suppress_dirty``
+        fica ``False``, o arquivo nasce com ``suppress_desktop_emulation: false``
+        e a queixa dela volta inteira — *"liguei e não ficou salvo"*.
         """
         janela = _Janela(_perfil("Pragmata2", com_regra=False))
         _ipc_que_confirma(monkeypatch)
 
         janela.on_emulation_pause(None)
 
-        assert janela.draft.suppress_dirty is False
-        assert janela.draft.to_profile("Pragmata2").suppress_desktop_emulation is False
-        # E a janela NÃO fica calada sobre o que ela vai perder no próximo boot.
-        assert janela.toasts[-1] == ea.MODO_JOGO_NAO_GUARDADO
+        assert janela.draft.suppress_dirty is True
+        assert janela.draft.to_profile("Pragmata2").suppress_desktop_emulation is True
+
+    def test_o_catch_all_guarda_mas_a_janela_diz_o_preco(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A outra metade da mordida: guardar calado seria uma promessa falsa.
+
+        Num perfil que vale para qualquer janela o daemon NÃO liga o modo jogo
+        na ativação seguinte (é o gate que mantém o desktop com ponteiro). Se a
+        janela responder só "Modo jogo ligado", ela promete um retorno que não
+        vai acontecer — a mesma classe de mentira que a recusa antiga evitava,
+        agora pelo outro lado.
+        """
+        janela = _Janela(_perfil("Pragmata2", com_regra=False))
+        _ipc_que_confirma(monkeypatch)
+
+        janela.on_emulation_pause(None)
+
+        assert janela.toasts[-1] == ea.MODO_JOGO_GUARDADO_SEM_REGRA
+
+    def test_desligar_em_catch_all_nao_ganha_ressalva(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """DESLIGAR não tem preço a declarar — a ressalva é só do ramo de ligar.
+
+        ``suppress: false`` é o default do esquema e o applier o respeita em
+        qualquer perfil; avisar aqui seria assustar sem motivo.
+        """
+        janela = _Janela(_perfil("Pragmata2", com_regra=False, suppress=True))
+        _ipc_que_confirma(monkeypatch)
+
+        janela.on_emulation_resume(None)
+
+        assert janela.toasts[-1] != ea.MODO_JOGO_GUARDADO_SEM_REGRA
+        assert janela.toasts[-1].startswith("Modo jogo desligado")
 
     def test_desligar_o_modo_jogo_e_guardado_ate_em_catch_all(
         self, monkeypatch: pytest.MonkeyPatch
@@ -404,9 +503,8 @@ class TestAsQuatroCoisasNoMesmoSalvar:
         janela = _Janela(_perfil("Pragmata", com_regra=True, priority=100))
         _ipc_que_confirma(monkeypatch)
 
-        # Aba Início: "Jogar pelo Hefesto" e depois "Preparar co-op".
+        # Aba Início: "Jogar pelo Hefesto".
         janela._home_mode_selector.set_active_id("gamepad")
-        janela._on_home_coop_prep_clicked(None)
         # Aba Emulação: máscara PlayStation e "Modo jogo".
         janela.on_emulation_gamepad_dualsense(None)
         janela.on_emulation_pause(None)
@@ -415,7 +513,6 @@ class TestAsQuatroCoisasNoMesmoSalvar:
         assert salvo.mode is not None
         assert salvo.mode.kind == "gamepad"
         assert salvo.mode.gamepad_flavor == "dualsense"
-        assert salvo.mode.coop is True
         assert salvo.suppress_desktop_emulation is True
         # E nada do que já funcionava se perdeu no caminho.
         assert salvo.priority == 100
@@ -441,13 +538,12 @@ class TestRegistrarNaoEAplicar:
         _ipc_envenenado(monkeypatch)
 
         ha.registrar_modo_no_rascunho(janela, "gamepad", "dualsense")
-        ha.registrar_modo_no_rascunho(janela, "gamepad", "xbox", coop=True)
+        ha.registrar_modo_no_rascunho(janela, "gamepad", "xbox")
         guardado = ea.registrar_modo_jogo_no_rascunho(janela, True)
 
         assert guardado is True
         salvo = janela.draft.to_profile("Sackboy")
         assert salvo.mode is not None and salvo.mode.gamepad_flavor == "xbox"
-        assert salvo.mode.coop is True
         assert salvo.suppress_desktop_emulation is True
 
     def test_o_aplicar_do_rodape_continua_sem_levar_modo_nem_modo_jogo(
@@ -505,6 +601,42 @@ class TestOsMiolosPuros:
         assert novo is not None
         assert novo.to_profile("Pragmata").mode is not None
         assert novo.to_profile("Pragmata").mode.gamepad_flavor is None  # type: ignore[union-attr]
+
+    def test_a_frase_do_modo_jogo_so_ressalva_o_ligar_sem_regra(self) -> None:
+        """O miolo puro da frase (MODO-JOGO-VONTADE-DELA-01), nos quatro casos."""
+        padrao = "Modo jogo ligado"
+        assert (
+            ea.frase_do_modo_jogo(padrao, ligado=True, guardado=True, tem_regra=False)
+            == ea.MODO_JOGO_GUARDADO_SEM_REGRA
+        )
+        assert (
+            ea.frase_do_modo_jogo(padrao, ligado=True, guardado=True, tem_regra=True)
+            == padrao
+        )
+        # Sem rascunho não há perfil para guardar nem promessa a desmentir.
+        assert (
+            ea.frase_do_modo_jogo(padrao, ligado=True, guardado=False, tem_regra=False)
+            == padrao
+        )
+        assert (
+            ea.frase_do_modo_jogo(padrao, ligado=False, guardado=True, tem_regra=False)
+            == padrao
+        )
+
+    def test_o_catch_all_guarda_no_miolo_puro(self) -> None:
+        """``rascunho_com_modo_jogo`` não recusa mais — nem no ligar.
+
+        A recusa morava exatamente aqui (um ``if ligado and not
+        perfil_do_rascunho_tem_opiniao(draft)``), e é o miolo que o resto da aba
+        usa. Sem esta linha, o teste de handler acima é o único a morder.
+        """
+        catch_all = DraftConfig.from_profile(_perfil("vitoria", com_regra=False))
+
+        novo, guardado = ea.rascunho_com_modo_jogo(catch_all, True)
+
+        assert guardado is True
+        assert novo is not None
+        assert novo.to_profile("vitoria").suppress_desktop_emulation is True
 
     def test_o_predicado_de_opiniao_espelha_o_do_daemon(self) -> None:
         """Mesmo veredito do ``Profile.e_catch_all`` (R-01), nos três formatos."""

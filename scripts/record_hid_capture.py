@@ -23,6 +23,29 @@ Uso:
     # modo guiado (mapeia todos os botões em ordem):
     python scripts/record_hid_capture.py --transport usb --guided \\
         --output tests/fixtures/hid_capture_usb.bin
+
+O DAEMON TEM DE ESTAR PARADO — 11/08/2026
+=========================================
+Este gravador abre um `PyDualSenseController` **próprio**. Com o daemon vivo,
+são dois donos disputando o mesmo hidraw, e a captura sai contaminada sem
+nenhum erro na tela: é a terceira armadilha nomeada em
+`docs/process/COMO-OLHAR-A-TELA.md` — o instrumento brigando com o produto,
+que já fez `test trigger --raw` imprimir "aplicado" sem ter aplicado.
+
+Por isso o gravador agora RECUSA rodar com o daemon de pé, e diz o comando de
+parar e o de trazer de volta. `--com-o-daemon-vivo` desarma a recusa para quem
+tiver razão para isso, e carimba o header da captura com a ressalva, para que
+nenhuma medição futura acredite nela sem saber.
+
+A PORTA, DECLARADA — 15/08/2026 (A-PORTA-QUE-A-CASA-CONSTRUIU-01)
+=================================================================
+Este gravador **não abre `/dev/hidraw*` por conta própria**: quem abre é o
+`PyDualSenseController` do produto, pela hidapi. Isso significa que ele entra
+por `open()` direto, e não pelo broker — e com o co-op ligado o físico está
+escondido (`0600`, sem ACL), então o `connect()` falha por permissão e não por
+falta de controle. O gravador declara a porta ANTES de tentar, e carimba o
+header da captura com ela: uma fixture que não diz por onde foi gravada não
+pode ser comparada com outra.
 """
 from __future__ import annotations
 
@@ -30,11 +53,17 @@ import argparse
 import contextlib
 import gzip
 import json
+import os
+import socket
 import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "ensaios"))
+
+from comum import PORTA_DIRETA, declaracao_da_porta, porta_provavel
 
 DEFAULT_SAMPLE_HZ = 30
 STEP_TIMEOUT_SEC = 12.0      # tempo máximo pra cada passo do modo guiado
@@ -216,6 +245,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
                    help=f"Taxa de amostragem (default {DEFAULT_SAMPLE_HZ}Hz).")
     p.add_argument("--guided", action="store_true",
                    help="Modo guiado: narra passo a passo o que apertar.")
+    p.add_argument("--com-o-daemon-vivo", action="store_true",
+                   help="Grava mesmo com o daemon de pé, disputando o hidraw. "
+                        "A captura sai carimbada com a ressalva no header.")
     p.add_argument("--output", type=Path, required=True,
                    help="Arquivo binário de saída (.bin).")
     return p.parse_args(argv)
@@ -288,6 +320,76 @@ def _guided_loop(session: CaptureSession, sample_hz: int) -> None:
         _ = detected  # telemetria silenciosa por enquanto
 
 
+def daemon_esta_vivo() -> bool:
+    """Diz se há daemon atendendo no socket de IPC, AGORA.
+
+    Arquivo de socket no disco não é prova: um daemon morto de forma feia
+    deixa o nó para trás. O que responde é a conexão, então é ela que se
+    tenta. Qualquer falha de import ou de caminho vira "não sei dizer" e o
+    gravador segue — recusar por não conseguir perguntar seria pior.
+    """
+    try:
+        from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
+    except ImportError:
+        return False
+
+    caminho = str(ipc_socket_path())
+    with contextlib.suppress(OSError), socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        s.connect(caminho)
+        return True
+    return False
+
+
+#: Prefixo de `HID_ID` no uevent do sysfs, por transporte. O primeiro campo é
+#: o barramento: 0x0003 = USB, 0x0005 = Bluetooth.
+_BUS_POR_TRANSPORTE = {"usb": "0003", "bt": "0005"}
+
+
+def transporte_do_hidraw(path: bytes | str) -> str | None:
+    """Diz o transporte de um `/dev/hidrawN` lendo o `HID_ID` do sysfs.
+
+    É a única fonte que não depende de o handle já estar aberto, e é por isso
+    que ela serve para ESCOLHER o aparelho em vez de descobrir tarde demais
+    qual foi escolhido.
+    """
+    nome = Path(path.decode("utf-8", "replace") if isinstance(path, bytes) else path).name
+    uevent = Path("/sys/class/hidraw") / nome / "device" / "uevent"
+    try:
+        texto = uevent.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    for linha in texto.splitlines():
+        if linha.startswith("HID_ID="):
+            bus = linha.split("=", 1)[1].split(":", 1)[0]
+            for transporte, esperado in _BUS_POR_TRANSPORTE.items():
+                if bus == esperado:
+                    return transporte
+    return None
+
+
+def fixar_o_transporte(controlador_cls, transporte: str) -> int:
+    """Faz `--transport` ESCOLHER o aparelho, em vez de só rotular a captura.
+
+    Defeito medido em 11/08/2026, com dois DualSense na mesa (um no cabo, um
+    no rádio): pedir `--transport bt` gravou o do CABO. O primário do backend
+    é a primeira chave enumerada, e `--transport` só emitia um aviso que o
+    `tail` do terminal engolia — captura do aparelho errado, rotulada
+    corretamente, e portanto convincente.
+
+    Filtra o seam `_enumerate_device_keys` (documentado como stubável) para o
+    barramento pedido. Devolve quantos aparelhos sobraram.
+    """
+    original = controlador_cls._enumerate_device_keys
+
+    def so_deste_transporte():
+        return [t for t in original() if transporte_do_hidraw(t[1]) == transporte]
+
+    sobraram = len(so_deste_transporte())
+    controlador_cls._enumerate_device_keys = staticmethod(so_deste_transporte)
+    return sobraram
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
 
@@ -295,11 +397,57 @@ def main(argv: list[str] | None = None) -> int:
         print("erro: --output deve ter extensão .bin", file=sys.stderr)
         return 2
 
+    daemon_vivo = daemon_esta_vivo()
+    if daemon_vivo and not args.com_o_daemon_vivo:
+        print(
+            "erro: o daemon está de pé, e ele já é dono do hidraw deste controle.\n"
+            "      Gravar agora dá uma captura contaminada SEM erro na tela.\n"
+            "\n"
+            "  parar:   systemctl --user stop hefesto-dualsense4unix.service\n"
+            "  gravar:  (repita este comando)\n"
+            "  voltar:  systemctl --user start hefesto-dualsense4unix.service\n"
+            "\n"
+            "      Se você tem razão para gravar assim mesmo, use\n"
+            "      --com-o-daemon-vivo: a captura sai carimbada com a ressalva.",
+            file=sys.stderr,
+        )
+        return 5
+
+    # A DECLARAÇÃO ANTES DA MEDIÇÃO. A porta deste instrumento é sempre o
+    # `open()` da hidapi (é o backend do produto que abre, não ele), mas se o
+    # broker está de pé isso quer dizer que o físico PODE estar escondido — e
+    # aí o erro que vem a seguir é de permissão, não de aparelho ausente.
+    porta_do_broker, motivo_do_broker = porta_provavel()
+    print("biblioteca ....... pydualsense/hidapi (PyDualSenseController do produto)")
+    print(f"porta ............ {PORTA_DIRETA} — quem abre é o backend do produto, pela hidapi")
+    print(f"  {declaracao_da_porta()}")
+    if porta_do_broker != PORTA_DIRETA:
+        print(
+            "  ATENÇÃO: o broker está de pé, então os hidraw dos FÍSICOS podem estar\n"
+            "  escondidos (0600, sem ACL) — é o Hefesto tirando o controle do jogo.\n"
+            "  Se o connect() abaixo falhar por permissão, NÃO é a regra udev:\n"
+            "    systemctl --user stop hefesto-dualsense4unix"
+        )
+
     try:
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
     except ImportError as exc:
         print(f"erro: import falhou — rode via venv do projeto. {exc}", file=sys.stderr)
         return 3
+
+    encontrados = fixar_o_transporte(PyDualSenseController, args.transport)
+    if encontrados == 0:
+        print(
+            f"erro: nenhum DualSense em {args.transport}.\n"
+            "      Conecte o controle nesse transporte e repita. Gravar o que\n"
+            "      estiver à mão e rotular de outra coisa é como nasce fixture\n"
+            "      que mente para sempre.",
+            file=sys.stderr,
+        )
+        return 6
+    if encontrados > 1:
+        print(f"aviso: {encontrados} controles em {args.transport}; gravando o primeiro.",
+              file=sys.stderr)
 
     controller = PyDualSenseController()
     try:
@@ -312,8 +460,16 @@ def main(argv: list[str] | None = None) -> int:
 
     reported_transport = controller.get_transport()
     if reported_transport != args.transport:
-        print(f"aviso: transport esperado={args.transport} reportado={reported_transport}",
-              file=sys.stderr)
+        # Cinto e suspensório: o filtro acima já deveria ter garantido isto.
+        # Se ainda assim divergir, ABORTA — um aviso já provou não bastar.
+        print(
+            f"erro: pedi {args.transport} e o aparelho aberto reporta "
+            f"{reported_transport}. Abortando para não gravar fixture errada.",
+            file=sys.stderr,
+        )
+        with contextlib.suppress(Exception):
+            controller.disconnect()
+        return 7
 
     header = {
         "type": "header",
@@ -323,6 +479,14 @@ def main(argv: list[str] | None = None) -> int:
         "mode": "guided" if args.guided else "free",
         "duration_target_sec": args.duration if not args.guided else None,
         "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        # Viaja com a captura de propósito: quem replayar isto daqui a meses
+        # precisa saber se havia um segundo dono do hidraw na hora da gravação.
+        "daemon_vivo_na_gravacao": daemon_vivo,
+        # E por qual PORTA se gravou. Duas fixtures do mesmo controle gravadas
+        # por portas diferentes não são comparáveis, e sem este campo ninguém
+        # descobriria isso meses depois.
+        "porta_da_gravacao": PORTA_DIRETA,
+        "broker_no_caminho": motivo_do_broker,
     }
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

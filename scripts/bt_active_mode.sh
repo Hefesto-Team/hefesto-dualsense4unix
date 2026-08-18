@@ -38,7 +38,20 @@
 set -euo pipefail
 
 LOG_TAG=hefesto-bt-active
-log() { logger -t "${LOG_TAG}" "$*" 2>/dev/null || true; [[ "${QUIET:-0}" -eq 1 ]] || printf '%s\n' "$*"; }
+# DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): vazio = journal (produção); caminho =
+# arquivo; `none` = nada. Existe porque a suíte roda estes scripts DE VERDADE e
+# sem isto grava, no journal da máquina dela, linhas que descrevem eventos que
+# nunca aconteceram. Motivo completo no cabeçalho do bt_bonds_autorestore.sh.
+LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
+_registrar() {
+    case "${LOG_DEST}" in
+        "")   logger -t "${LOG_TAG}" "$*" 2>/dev/null || true ;;
+        none) : ;;
+        *)    printf '%s %s: %s\n' "$(date -Is 2>/dev/null || true)" "${LOG_TAG}" "$*" \
+                  2>/dev/null >>"${LOG_DEST}" || true ;;
+    esac
+}
+log() { _registrar "$*"; [[ "${QUIET:-0}" -eq 1 ]] || printf '%s\n' "$*"; }
 
 if [[ "$(id -u)" -ne 0 ]]; then
     printf 'bt_active_mode.sh: requer root\n' >&2

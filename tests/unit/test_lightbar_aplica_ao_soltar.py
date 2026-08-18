@@ -201,7 +201,7 @@ def escritas(monkeypatch: pytest.MonkeyPatch) -> _EspiaoDeEscrita:
     monkeypatch.setattr(lightbar_actions, "led_set", espiao.led_set)
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
-        "apply_draft",
+        "apply_draft_detalhado",
         lambda *_a, **_kw: pytest.fail(
             "com controles conectados a rota é led.set por MAC (R-14)"
         ),
@@ -346,7 +346,7 @@ def test_daemon_offline_nao_explode_e_conta_a_verdade(
     escala.disparar("button-release-event", escala, None)
 
     assert len(escritas.chamadas) == 1
-    assert any("não consegui aplicar" in t for t in host._toasts)
+    assert any("Não consegui aplicar" in t for t in host._toasts)
 
 
 def test_alvo_selecionado_recebe_sozinho(escritas: _EspiaoDeEscrita) -> None:

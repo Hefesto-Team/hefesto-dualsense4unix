@@ -350,7 +350,7 @@ def daemon(monkeypatch: pytest.MonkeyPatch) -> Daemon:
     """Daemon com o start do mouse dublado (sem uinput de verdade)."""
     d = _daemon()
 
-    def _start(target: Any) -> bool:
+    def _start(target: Any, **_kw: object) -> bool:
         target._mouse_device = _FakeMouseDevice()
         target.config.mouse_emulation_enabled = True
         session.save_mouse_emulation(
@@ -412,7 +412,7 @@ def test_ligar_o_gamepad_nao_apaga_a_preferencia_de_mouse(
 
     # O start do vpad falha (make_virtual_pad -> None), mas a exclusão mútua já
     # rodou — que é o ponto: ela não pode custar a preferência.
-    gamepad_sub.start_gamepad_emulation(d, flavor="xbox")
+    gamepad_sub.start_gamepad_emulation(d, flavor="xbox", origin="manual")
 
     assert d._mouse_device is None  # o device saiu do caminho do jogo
     assert d.config.mouse_emulation_enabled is False
@@ -428,7 +428,7 @@ def test_round_trip_desktop_gamepad_desktop_preserva(
     daemon.restore_mouse_preference()  # desktop: liga por default
     assert daemon.config.mouse_emulation_enabled is True
 
-    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox")  # foi jogar
+    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox", origin="manual")  # foi jogar
     assert daemon.config.mouse_emulation_enabled is False
 
     assert daemon.restore_mouse_preference() is True  # voltou pro desktop
@@ -485,7 +485,7 @@ def test_desligar_o_mouse_na_mao_persiste_off(tmp_config: Path, daemon: Daemon) 
     a exclusão mútua não pode imitar."""
     daemon.restore_mouse_preference()
 
-    daemon.set_mouse_emulation(False)
+    daemon.set_mouse_emulation(False, origin="manual")
 
     assert session.load_mouse_preference()[0] is False
 
@@ -513,7 +513,7 @@ def test_aplicar_jogando_nao_derruba_o_vpad(
     `enabled=True` (de quando ela estava no desktop) e `dirty` de um slider.
     """
     monkeypatch.setattr(virtual_pad, "make_virtual_pad", lambda *_a, **_k: object())
-    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox")
+    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox", origin="manual")
     assert daemon._gamepad_device is not None
 
     sujo = DraftConfig.default()
@@ -542,7 +542,7 @@ def test_aplicar_jogando_ainda_aplica_a_velocidade_editada(
     exceção da seção, então a perda seria SILENCIOSA).
     """
     monkeypatch.setattr(virtual_pad, "make_virtual_pad", lambda *_a, **_k: object())
-    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox")
+    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox", origin="manual")
 
     sujo = DraftConfig.default()
     sujo = sujo.model_copy(

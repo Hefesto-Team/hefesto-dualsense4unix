@@ -98,7 +98,7 @@ class TestStartGamepad:
         created = _patch_for_flavor(monkeypatch)
         daemon = _FakeDaemon()
 
-        ok = gp.start_gamepad_emulation(daemon, flavor="xbox")
+        ok = gp.start_gamepad_emulation(daemon, flavor="xbox", origin="manual")
 
         assert ok is True
         assert daemon._gamepad_device is created[0]
@@ -121,7 +121,7 @@ class TestStartGamepad:
         daemon._mouse_device = mouse
         daemon.config.mouse_emulation_enabled = True
 
-        gp.start_gamepad_emulation(daemon, flavor="dualsense")
+        gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
 
         assert mouse.stopped is True
         assert daemon._mouse_device is None
@@ -132,8 +132,8 @@ class TestStartGamepad:
     ) -> None:
         created = _patch_for_flavor(monkeypatch)
         daemon = _FakeDaemon()
-        gp.start_gamepad_emulation(daemon, flavor="dualsense")
-        gp.start_gamepad_emulation(daemon, flavor="dualsense")
+        gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
+        gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
         assert len(created) == 1  # não recria
 
     def test_troca_de_flavor_recria(
@@ -141,8 +141,8 @@ class TestStartGamepad:
     ) -> None:
         created = _patch_for_flavor(monkeypatch)
         daemon = _FakeDaemon()
-        gp.start_gamepad_emulation(daemon, flavor="dualsense")
-        gp.start_gamepad_emulation(daemon, flavor="xbox")
+        gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
+        gp.start_gamepad_emulation(daemon, flavor="xbox", origin="manual")
         assert len(created) == 2
         assert created[0].stopped is True
         assert daemon._gamepad_device is created[1]
@@ -158,7 +158,7 @@ class TestStartGamepad:
 
         monkeypatch.setattr(ug.UinputGamepad, "for_flavor", staticmethod(_fail))
         daemon = _FakeDaemon()
-        ok = gp.start_gamepad_emulation(daemon, flavor="dualsense")
+        ok = gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
         assert ok is False
         assert daemon._gamepad_device is None
         assert daemon.config.gamepad_emulation_enabled is False
@@ -170,7 +170,7 @@ class TestStopGamepad:
     ) -> None:
         _patch_for_flavor(monkeypatch)
         daemon = _FakeDaemon()
-        gp.start_gamepad_emulation(daemon, flavor="dualsense")
+        gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
         dev = daemon._gamepad_device
 
         gp.stop_gamepad_emulation(daemon)

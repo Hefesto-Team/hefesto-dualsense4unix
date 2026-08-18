@@ -1,0 +1,83 @@
+2026-08-15T07:27:28.438151 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:27:28.473538 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:27:28.473889 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T07:27:28.473966 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:27:28.474217 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T07:27:28.474277 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:27:28.474540 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw9 state=hidden
+2026-08-15T07:27:28.474590 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T07:27:28.474797 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw11 state=hidden
+==============================================================================
+  imu_no_cabo.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... o acelerômetro entrega número calibrado no CABO? (E-4 do plano da mesa 2+2)
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... os                     de /usr/lib/python3.12/os.py
+  biblioteca ....... struct                 de /usr/lib/python3.12/struct.py
+  biblioteca ....... selectors              de /usr/lib/python3.12/selectors.py
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+  T0 (hora de parede) ... 2026-08-15T07:27:28.438
+  régua declarada ....... DS_ACC_RES_PER_G = 8192 LSB/g
+                          de hid-playstation.c (faixa +-4 g), canônica §5
+  régua do giroscópio ... DS_GYRO_RES_PER_DEG_S = 1024
+
+  mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+  CONFERÊNCIA DA RÉGUA contra o kernel desta máquina (EVIOCGABS, fora da conta)
+
+aparelho           transporte  resolution  veredito  de onde
+-----------------  ----------  ----------  --------  ------------------------------------------------------
+d4:2f:4b:00:00:d8  cabo        8192        CONFERE   /dev/input/event22 publica resolution=8192 para ABS_X
+a0:fa:9c:00:00:f0  cabo        8192        CONFERE   /dev/input/event26 publica resolution=8192 para ABS_X
+44:46:48:00:00:03  rádio       8192        CONFERE   /dev/input/event266 publica resolution=8192 para ABS_X
+14:3a:9a:00:00:ab  rádio       8192        CONFERE   /dev/input/event273 publica resolution=8192 para ABS_X
+
+  OS OFFSETS QUE VOU USAR (do fonte do driver, por transporte)
+
+transporte  report id  tamanho  corpo em  accel em  gyro em
+----------  ---------  -------  --------  --------  -------
+cabo        0x01       64 B     data[1]   22..27    16..21
+rádio       0x31       78 B     data[2]   23..28    17..22
+
+  medindo 4 controle(s) por 20 s, na MESMA janela.
+  >> NÃO mexa nos controles: parados na mesa eles medem a gravidade,
+  >> e é o módulo dela (1 g) que é a régua deste ensaio.
+
+  A MEDIDA — módulo do vetor de gravidade, por controle
+
+aparelho           transporte  id    reports  |v|       desvio    eixos (g)
+-----------------  ----------  ----  -------  --------  --------  ----------------------
+d4:2f:4b:00:00:d8  cabo        0x01  5000     1.0095 g  +-0.0139  +0.009, +0.996, +0.166
+a0:fa:9c:00:00:f0  cabo        0x01  5001     0.9777 g  +-0.0140  -0.021, +0.961, +0.179
+44:46:48:00:00:03  rádio       0x31  7512     0.9899 g  +-0.0012  +0.009, +0.331, -0.933
+14:3a:9a:00:00:ab  rádio       0x31  3929     0.9777 g  +-0.0015  -0.001, +0.314, -0.926
+
+  PORTA USADA, POR NÓ (medir no nó escondido produz zero convincente e falso)
+
+aparelho           hidraw    porta                motivo
+-----------------  --------  -------------------  ---------------------------------------------------------------------------
+d4:2f:4b:00:00:d8  hidraw4   broker (SCM_RIGHTS)  o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock
+a0:fa:9c:00:00:f0  hidraw5   broker (SCM_RIGHTS)  o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock
+44:46:48:00:00:03  hidraw9   broker (SCM_RIGHTS)  o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock
+14:3a:9a:00:00:ab  hidraw11  broker (SCM_RIGHTS)  o broker serviu o fd (nó hidden) por /run/hefesto-hidraw-broker/broker.sock
+
+  O GIROSCÓPIO, COMO ACOMPANHANTE (parado tem de dar perto de zero)
+
+aparelho           transporte  giro médio (graus/s)  taxa de report
+-----------------  ----------  --------------------  --------------
+d4:2f:4b:00:00:d8  cabo        +0.02, +0.00, -0.01   250.0 Hz
+a0:fa:9c:00:00:f0  cabo        +0.02, -0.01, -0.00   250.0 Hz
+44:46:48:00:00:03  rádio       +0.01, +0.01, -0.00   375.6 Hz
+14:3a:9a:00:00:ab  rádio       -0.00, -0.00, -0.00   196.4 Hz
+
+  T1 (hora de parede) ... 2026-08-15T07:27:48.478
+  CSV ................... docs/data/ensaios-brutos/2026-08-15-E4-imu_no_cabo.csv
+
+------------------------------------------------------------------------------
+RESUMO: cabo: 1.0095 g; 0.9777 g (erro máximo 2.2% contra 1 g). rádio, como controle negativo: 0.9899 g; 0.9777 g. A régua é absoluta e nenhum braço foi comparado com o outro.
+------------------------------------------------------------------------------

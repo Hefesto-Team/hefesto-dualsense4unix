@@ -538,9 +538,81 @@ class TestPortaoParaDeAprovarOSintoma:
         assert "áudio de SAÍDA" in res.stdout, res.stdout
 
     def test_a_cura_e_oferecida_no_texto(self, cenario: Cenario) -> None:
+        """NOTA DATADA 06/08/2026 — este contrato MUDOU DE ALVO, de propósito.
+
+        Até hoje ele exigia que o check oferecesse ``pactl set-default-source
+        <onboard>``. Era o alvo ERRADO, e a própria suíte já sabia disso três
+        classes abaixo: a onboard tem as três portas `not available` e
+        ``fix_default_source_monitor`` a descarta, elegendo o DualSense (ver
+        ``test_a_cura_nao_elege_fonte_sem_porta``). O doctor imprimia na tela
+        dela um comando que a cura dele mesmo se recusava a executar — e que,
+        MEDIDO em 30/07, o WirePlumber desfaz em segundos, devolvendo o monitor.
+
+        O que fica travado agora é a CONCORDÂNCIA: o check oferece exatamente o
+        que a cura elegeria. A decisão antiga não foi apagada — está aqui, com
+        a data e o motivo de ter caducado.
+        """
         cenario.com_dropin(DROPIN_51)
         res = cenario.roda("check_default_source_monitor")
-        assert f"pactl set-default-source {SRC_ONBOARD}" in res.stdout, res.stdout
+        assert f"pactl set-default-source {SRC_DS}" in res.stdout, res.stdout
+        assert SRC_ONBOARD not in res.stdout, (
+            "o check voltou a oferecer a onboard, cujas portas estão `not "
+            "available` — é o comando que a cura recusa e que o WirePlumber "
+            "desfaz:\n" + res.stdout
+        )
+
+    def test_sem_fonte_alguma_o_check_nao_manda_rodar_o_fix_mic(
+        self, cenario: Cenario
+    ) -> None:
+        """RECEITA-ERRADA-01 — a receita que leva a um comando impotente.
+
+        MEDIDO em 06/08/2026 na máquina dela: sem webcam e sem controle no
+        cabo, o mic do DualSense suprimido e a onboard sem nada plugado, o
+        doctor reprovava e mandava ``rode: scripts/doctor.sh --fix-mic``. O
+        ``--fix-mic`` respondia *"não há nenhuma fonte de captura com porta
+        usável para eleger"* e não fazia nada — ele só sabe ELEGER outra fonte,
+        e não havia nenhuma.
+
+        Mandar rodar um comando que não pode funcionar é a mesma classe que
+        esta casa catalogou hoje na DIALOGO-QUE-MATA-A-JANELA-01: a receita
+        leva ao lugar errado. Aqui a tela tem de dizer o que resolve de
+        verdade, que é HARDWARE.
+        """
+        cenario.sources_short = "\n".join(
+            linha for linha in SOURCES_SHORT.splitlines() if ".monitor" in linha
+        ) + "\n"
+        cenario.com_dropin(DROPIN_51)
+        res = cenario.roda("check_default_source_monitor")
+
+        assert "[FAIL]" in res.stdout, "o defeito deixou de reprovar:\n" + res.stdout
+        # A RECEITA — o imperativo. Citar o `--fix-mic` para dizer que ele NÃO
+        # serve é honestidade; mandar rodá-lo é que era o defeito.
+        assert "rode: scripts/doctor.sh --fix-mic" not in res.stdout, (
+            "o check ainda manda rodar o --fix-mic num caso em que ele é "
+            "impotente:\n" + res.stdout
+        )
+        assert "NÃO resolve" in res.stdout, res.stdout
+        assert "conecte um mic" in res.stdout, (
+            "não diz o que resolve de verdade (hardware):\n" + res.stdout
+        )
+
+    def test_sem_fonte_alguma_a_cura_diz_a_consequencia_de_privacidade(
+        self, cenario: Cenario
+    ) -> None:
+        """O estado em que ela fica NÃO parece defeito.
+
+        O medidor de nível mostra sinal — é o áudio de saída da máquina. Sair
+        com um "não consegui" seco deixa de pé, calada, a parte que importa:
+        tudo o que qualquer aplicativo gravar é o som que SAI do computador.
+        """
+        cenario.sources_short = "\n".join(
+            linha for linha in SOURCES_SHORT.splitlines() if ".monitor" in linha
+        ) + "\n"
+        res = cenario.roda("fix_default_source_monitor")
+        assert "[WARN]" in res.stdout, res.stdout
+        assert "áudio de SAÍDA" in res.stdout, (
+            "a cura falha em silêncio sobre a consequência:\n" + res.stdout
+        )
 
     def test_entrada_de_verdade_aprova(self, cenario: Cenario) -> None:
         cenario.default_source = SRC_DS

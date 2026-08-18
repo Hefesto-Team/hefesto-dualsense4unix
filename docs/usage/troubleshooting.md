@@ -66,7 +66,7 @@ groups $USER | grep -E 'input|plugdev'  # opcional, ACL via udev tag uaccess é 
    flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
    ```
 
-   Todos aplicam o mesmo conjunto canônico — **14 regras** por padrão (mais a
+   Todos aplicam o mesmo conjunto canônico — **15 regras** por padrão (mais a
    `75`, que só entra com `--disable-usb-audio`) + o `modules-load` de
    `uinput`/`uhid`, com origem única em `assets/`. Após rodar, desplugue e
    replugue o controle (USB) ou re-pareie (BT).
@@ -343,8 +343,31 @@ Se já está em v3.2.0+ e o problema persiste, abra issue com o output de
 
 ## 11. Interface em inglês não aparece (i18n) no Flatpak
 
+> **Antes dos sintomas, o alcance real.** A língua do Hefesto é o **português
+> do Brasil** — decisão de 07/08/2026. O catálogo EN existe e funciona, mas
+> alcança só o **esqueleto fixo** da janela (os 308 `translatable="yes"` de
+> `gui/main.glade`). O texto que as abas escrevem enquanto rodam continua em
+> português mesmo com `LANG=en_US.UTF-8`. **Medido em 07/08/2026:** dos 18
+> módulos de `src/hefesto_dualsense4unix/app/actions/`, **15** não importam a
+> função de tradução e carregam 561 literais acentuados em português.
+>
+> **Nota datada — 08/08/2026:** são **19** módulos desde a `RELANCAR-01`, que
+> acrescentou `relancar.py`. Ele **não** importa a função de tradução, então a
+> proporção passou a **16 de 19** — o quadro não mudou de natureza.
+>
+> **Nota datada — 16/08/2026:** são **20** módulos desde a
+> `CARONA-DO-WRAPPER-01`, que acrescentou `carona_do_wrapper.py`. Ele
+> também **não** importa a função de tradução, então a proporção passou a
+> **17 de 20** — o quadro segue o mesmo.
+>
+> Se você chegou aqui esperando uma janela inteiramente em inglês, o problema
+> não é a sua instalação — é a promessa antiga, e ela foi retirada. Registro em
+> `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
+
 A partir da v3.4.0 o Hefesto - Dualsense4Unix tem catálogo EN baseline
-(`po/en.po`) e PT-BR identidade (`po/pt_BR.po`). Sintomas comuns:
+(`po/en.po`) e PT-BR identidade (`po/pt_BR.po`). Os sintomas abaixo são
+defeitos **de carregamento do catálogo** — reais, medidos e curados — e
+continuam valendo:
 
 ### Sintoma A — labels continuam em PT-BR mesmo com `LANG=en_US.UTF-8`
 
@@ -410,16 +433,18 @@ ls ~/.local/share/locale/en/LC_MESSAGES/hefesto-dualsense4unix.mo
 bash scripts/i18n_compile.sh && ./install.sh --yes
 ```
 
-### Adicionar idioma novo (comunidade)
+### O que saiu daqui em 07/08/2026, e por quê
 
-```bash
-bash scripts/i18n_extract.sh --add fr_FR  # cria po/fr_FR.po vazio
-$EDITOR po/fr_FR.po                        # preencher msgstr
-bash scripts/i18n_compile.sh               # gera .mo
-```
+Esta seção terminava com uma receita de três linhas ensinando a comunidade a
+acrescentar um idioma. Ela **saiu**: o que ela entregaria não é o que ela
+prometia, pela medição do quadro no início desta seção.
 
-Ver `.github/CONTRIBUTING.md` → "Contribuir traduções" para convenções
-de tom + glossário PT-BR  EN.
+O encanamento de i18n **não** foi removido junto — ele está correto, e
+arrancá-lo destruiria trabalho bom para provar um ponto. Catálogos, scripts e o
+esqueleto marcado continuam funcionando, e os três sintomas acima continuam
+sendo defeitos de verdade, com cura de verdade.
+
+Contexto completo em `.github/CONTRIBUTING.md`, seção "A língua do produto".
 
 ---
 
@@ -542,10 +567,28 @@ journalctl --user -u hefesto-dualsense4unix.service -n 30 --no-pager 2>/dev/null
 
 **Sintomas** (USB ou BT, com Steam rodando OU acabou de fechar):
 
-- Tocar no touchpad do controle move o cursor do desktop.
+- Tocar no touchpad do controle move o cursor do desktop. **Ver a nota datada
+  abaixo antes de tratar isto como defeito.**
 - Botões (X, círculo, etc.) disparam `ENTER` / `SPACE` / setas em qualquer janela ativa, inclusive
   com Steam minimizada ou outra aplicação em foco.
 - COSMIC notifica "Microfone mutado / desmutado" em loop ao plugar.
+
+> **NOTA DATADA — 09/08/2026: o primeiro sintoma deixou de ser sintoma.**
+> *"Tocar no touchpad do controle move o cursor do desktop"* é, hoje, o
+> **comportamento correto e pretendido** do Hefesto, nos três modos — decisão
+> dela, `TOUCHPAD-DO-SISTEMA-01`: *"a ideia do touchpad é ele voltar a funcionar
+> assim, seja no modo nativo ou dualsense"*. O touchpad do DualSense é o
+> touchpad do **sistema**, pelo libinput, como é quando o controle é plugado sem
+> o Hefesto instalado. Ver
+> [`modos.md`](modos.md#o-touchpad-é-touchpad-do-sistema).
+>
+> **Como separar um do outro, pela própria descrição desta seção** (GRAU:
+> DERIVADO do parágrafo "Por quê" abaixo, não medido de novo): o mapeamento do
+> `desktop_ps4.vdf` é touchpad → mouse **absoluto** — o dedo leva o ponteiro
+> para a posição correspondente na tela. O ponteiro do libinput é **relativo**,
+> como o de um touchpad de notebook. Os outros dois sintomas (teclas globais em
+> janela de fundo, e o loop de mute) continuam valendo inteiros e são o sinal
+> mais seguro de que é a Steam.
 
 **Por quê.** A Steam, com **PlayStation Controller Support** em modo *Always Enabled*, pega o
 `/dev/hidraw*` do DualSense exclusivamente e re-injeta como `Steam Virtual Gamepad` com bindings
@@ -585,9 +628,27 @@ Opt-out em ambos: `--keep-steam-input` (preserva a configuração atual da Steam
 **Solução manual (alternativa).** Steam → Settings → Controller → PlayStation Controller Support
 → *Disabled*. Pode exigir reabrir a Steam para persistir.
 
-**Plano de contingência (Fase B).** Se mesmo após desligar Steam Input o touchpad ainda mover o
-cursor (raro — indica que o compositor consume `event10` diretamente via libinput), aplicar regra
-udev defensiva:
+**Plano de contingência (Fase B).**
+
+> **NOTA DATADA — 09/08/2026: este plano briga com o produto de hoje. Não o
+> aplique para "curar" o cursor.** A regra abaixo tira o touchpad do DualSense
+> do libinput — que é exatamente o comportamento que o Hefesto **desfez** em
+> 09/08, por decisão dela. A premissa que a justificava (*"o compositor consumir
+> `event10` diretamente via libinput" é anomalia*) caducou: hoje isso é o
+> desenho. Aplicá-la devolve o touchpad ao estado que ela chamou de defeito, e
+> ainda o faz por fora do produto — o `uninstall.sh` não conhece esta regra e
+> não a remove.
+>
+> **Quando ela ainda serve:** só se você **quiser** que o touchpad deixe de ser
+> ponteiro do sistema. Nesse caso, o caminho de dentro do produto é o descrito
+> no cabeçalho de `assets/76-dualsense-touchpad-libinput-ignore.rules` (uma
+> linha, com o curinga de volta), e ele tem a vantagem de o Hefesto **saber** —
+> o leitor de touchpad lê a mesma flag e devolve o cursor e as três regiões de
+> clique ao Hefesto sozinho. A regra abaixo não avisa ninguém.
+
+Registro do que este plano era, preservado por não se apagar decisão medida —
+se mesmo após desligar Steam Input o touchpad ainda mover o cursor de forma
+**absoluta**, a regra defensiva era:
 
 ```bash
 sudo tee /etc/udev/rules.d/95-dualsense-touchpad-no-pointer.rules <<'EOF'
@@ -604,6 +665,244 @@ sudo udevadm trigger --action=change --subsystem-match=input
 
 Reconectar o controle após o trigger. Esta regra **não** é restauração do estado original — é uma
 adição mínima — mas resolve o sintoma sem reinstalar o daemon.
+
+---
+
+## 16. "Emular teclado" está ligado e o controle não escreve letra nenhuma
+
+**Sintoma.** O interruptor "Emular teclado" da aba Navegação está ligado, o
+Alt+Tab funciona, e mesmo assim não sai uma letra em campo de texto nenhum.
+
+**Não é defeito — é o que o produto entrega hoje, e a tela passou a dizer.**
+**GRAU: MEDIDO** em 09/08/2026: o motor funciona (34 teclas emitidas no journal
+dela, e o Alt+Tab pegou). O que não existe é a promessa: **nenhum dos nove
+atalhos de fábrica digita uma letra** — são Super, PrintScreen, Alt+Tab,
+Alt+Shift+Tab, Enter, Delete e Backspace. Além disso, onze dos vinte botões
+nascem **sem tecla nenhuma**, e a lista da aba os **escondia**: quem ligava a
+emulação via seis linhas, apertava X, Círculo, Quadrado e o direcional, e
+concluía, com razão, que "o teclado não funciona".
+
+**O caminho para escrever texto é o teclado na tela, no L3.** Hoje a lista
+mostra os vinte botões, inclusive os sem tecla, e a legenda diz isso com todas
+as letras.
+
+**Para dar uma letra a um botão:** aba **Navegação**, clique duas vezes na
+coluna "Tecla do teclado" da linha do botão. Botões que o **mouse** emulado já
+usa aparecem marcados — dar uma tecla a um deles não substitui o mouse: o botão
+passa a fazer as duas coisas ao mesmo tempo, cada uma pelo seu dispositivo
+virtual.
+
+---
+
+## 17. O L3 não abre o teclado na tela
+
+**Sintoma.** Clicar o analógico esquerdo (L3) não abre teclado nenhum, ou a
+janela avisa que o teclado na tela não está disponível.
+
+**Causa.** O teclado na tela é um programa do sistema, e ele não está instalado.
+Até 10/08/2026 o Hefesto **prometia** o L3 e não instalava, não declarava e não
+conferia nada — `grep -c onboard install.sh` devolvia zero. Hoje o `install.sh`
+o instala sozinho, sem flag (passo 4f), mas uma máquina provisionada antes disso
+segue sem ele.
+
+**Cura:**
+
+```bash
+sudo apt install wvkbd     # sessão Wayland (COSMIC, GNOME Wayland, KDE Wayland)
+sudo apt install onboard   # sessão X11
+
+# em que sessão você está:
+echo "$XDG_SESSION_TYPE"   # wayland | x11
+```
+
+Não é preciso reiniciar o daemon: ele reconsulta o sistema a cada 10 segundos —
+o cache era **eterno** até 10/08, e por isso instalar com o daemon no ar não
+resolvia nada até o próximo start.
+
+**Por que o pacote depende da sessão, e por que não instalar os dois.** O
+`onboard` digita por **XTEST** (`Depends: libxtst6`); numa sessão Wayland ele
+abre por XWayland e as teclas só chegam a clientes XWayland — **abre e não
+digita**, que é pior que não abrir, porque parece que funcionou. O `wvkbd` é
+cliente Wayland puro e digita pelo `zwp_virtual_keyboard_manager_v1`. Com os
+dois instalados o Hefesto escolhe pela **sessão viva** (`WAYLAND_DISPLAY`
+primeiro, `DISPLAY` só depois) — até 10/08 a ordem era fixa, com o `onboard`
+primeiro, e numa sessão Wayland ele escolheria justamente o que não digita.
+
+**Diagnóstico:** `hefesto-dualsense4unix doctor` confere, e distingue as quatro
+histórias por trás de um `command -v` vazio: você escolheu pular no install, o
+install tentou e falhou (com o motivo), o install nunca passou nesta máquina, ou
+estava instalado e sumiu. Nesse último caso o veredito diz também que não fomos
+nós: **o `uninstall.sh` nunca remove pacote de sistema.**
+
+No **Flatpak** o `wvkbd` vem embutido no bundle e nada precisa ser instalado —
+ver [`flatpak.md`](flatpak.md).
+
+---
+
+## 18. O perfil daquele jogo existe, e o jogo abriu sem ele
+
+**Sintoma.** Você escreveu um perfil para o jogo, o arquivo está no disco com o
+`appid` certo, e ao abrir o jogo vale outro perfil — normalmente o `fallback`.
+
+**A causa mais comum, medida em 10/08/2026: um `process_name` na regra.** O
+match é **AND** entre os campos preenchidos, e sob Proton o `process_name`
+**nunca** casa: ele compara com o basename de `/proc/PID/exe`, e sob Proton esse
+binário é o do wine, não o `.exe` do jogo. O AND com `process_name` não
+estreita — **anula**.
+
+No caso dela: `window_class` batia (`steam_app_3357650`), o perfil exigia
+`PRAGMATA.exe`, a máquina via `wine64-preloader`, e o journal registrava
+`profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']`.
+Tirando **só** o `process_name`, os candidatos viraram
+`['fallback', 'Pragmata']`.
+
+**Onde ver isso sem abrir journal:** a aba **No jogo**, com o jogo na frente,
+diz qual perfil daquele jogo não entrou e o que ele exigiu, lado a lado com o
+que a máquina vê. É uma linha amarela acima dos painéis, e ela aparece nos três
+modos.
+
+**Cura:** aba **Perfis** → o perfil do jogo → **Modo avançado** → apague o campo
+"nome do processo". A janela **não** o apaga sozinha: o que você escreveu é seu.
+Detalhe e a medição completa em
+[`creating-profiles.md`](creating-profiles.md#a-armadilha-do-process_name-em-jogo-da-steam-medido-em-10082026).
+
+**A outra causa, quando não há `process_name` envolvido:** o cadeado **"Não
+trocar de perfil sozinho ao abrir um jogo"**, na aba Início, está marcado. E
+lembre-se de que a prioridade é o **segundo** critério: um perfil com regra de
+janela sempre vence um "Vale sempre", por mais alta que seja a prioridade deste.
+
+---
+
+## 19. A vibração do jogo dura um instante e morre
+
+**Sintoma.** O jogo vibra o controle e a vibração **morre logo no começo** — um
+tranco e silêncio, ou nada. Não é vibração fraca nem intermitente: é
+cancelamento. Acontece com o controle no cabo **e** no rádio.
+
+**Onde isso aparece:** quando o jogo está falando com o **DualSense físico** em
+vez de com o controle virtual do Hefesto — ou seja, com **"Jogar pelo Hefesto"
+desligado** e sem estar na **Conexão Nativa (Sony)**. Nos outros casos uma das
+duas coisas protegia, e por isso o defeito parecia intermitente.
+
+**Como confirmar em dez segundos:** abra a aba **Rumble**. Se a linha em cima
+dos quatro botões disser *"A intensidade acima não está chegando a jogo nenhum:
+não há gamepad virtual, e é por ele que ela passa"*, você está exatamente nesse
+estado.
+
+**A causa, medida em 11/08/2026** com quatro DualSense na mesa, dois no cabo e
+dois no rádio: o Hefesto reconfirmava o estado do controle a cada meio segundo,
+e essa reconfirmação **zerava os motores** que o jogo tinha acabado de ligar. A
+prova não foi por argumento — subindo o intervalo de 0,5 s para 8,0 s, a
+vibração passou a durar **oito segundos exatos**, e a duração seguiu o número.
+
+**Corrigido**: a reconfirmação deixou de ser eterna. Ela agora só acontece na
+janela logo depois de uma mudança de verdade, que é para o que ela servia
+(garantir que a mudança chegou); passado isso, o Hefesto **cala** e não pisa mais
+no motor de quem está tocando.
+
+**A cura foi conferida no aparelho em 12/08/2026, com o serviço LIGADO** — grau
+*o aparelho obedeceu*, ensaios `rumble-ff-cura-cabo-so`, `rumble-ff-cura-cabo-par`
+e `rumble-ff-cura-radio-par` (`../data/ensaios.csv:59-61`), com o olho dela:
+
+- **no cabo**, um controle sozinho vibrou **8,26 s** contínuos numa janela de
+  8 s pedida — *"contínuo os 8 segundos"*, e a barra de luz não apagou junto;
+- **no cabo e no rádio disparados na mesma janela** (0,0 ms de diferença),
+  **8,28 s** nos dois: *"funcionou em ambos, aparentemente iguais"*. É a
+  **primeira** vez que a vibração por **rádio** dura a janela inteira com o
+  serviço vivo — em 11/08, o mesmo ensaio dava **um tranco** e morria.
+
+**Se o sintoma continuar depois de atualizar:** o serviço em memória pode ser
+mais velho que o código no disco. Aba **Sistema** → **Reiniciar**, ou:
+
+```bash
+systemctl --user restart hefesto-dualsense4unix.service
+```
+
+**Os quatro ao mesmo tempo: a duração ficou IGUAL** (medido em 12/08/2026,
+ensaios `rumble-quatro-duracao-igual-r1` e `-r2`, `../data/ensaios.csv:68-69`).
+Este parágrafo dizia, até 12/08, que o caso de quatro controles **não estava
+explicado**: com o serviço no estado antigo eles vibravam *"por duração
+diferente"* em vez de nenhum vibrar, e o contraste ficou sem dono. Com a cura
+ligada, os quatro receberam o efeito e ela comparou **dois por vez, um em cada
+mão** — um do cabo e um do rádio, porque duas mãos é comparação inequívoca e
+olhar quatro na mesa não é. **Duas rodadas, as duas iguais.** A observação de
+11/08 continua valendo como o que era: o retrato do defeito **antes** da cura.
+
+---
+
+## 20. A barra de luz não pega a cor por Bluetooth
+
+**Sintoma.** O controle conecta por Bluetooth, a barra de luz **nasce apagada**
+(ou com uma cor que não é a sua), e **"Aplicar no controle"** na aba Lightbar não
+muda nada. O mesmo controle, no cabo, obedece na hora.
+
+**A causa, medida em 12/08/2026 e conferida no ar:** com a **Steam aberta**, ela
+mantém uma via de escrita para **cada** DualSense e **repinta a barra de todos
+eles a cada conexão nova** — uma rajada de alguns segundos, que se repete a cada
+controle que você liga. A cor que o Hefesto pinta chega junto com a dela, e a
+última palavra fica sendo a da Steam.
+
+Passada a rajada, ela **cala** — e em regime **não apaga** a barra: abrindo a
+Steam com as barras já acesas, elas mudaram para as cores dela e continuaram
+acesas. O que a Steam estraga é o **começo** da conexão.
+
+Os números, para quem quiser conferir: com a Steam viva no momento da conexão,
+**um em três** controles aceitou a cor; com **ninguém** disputando antes da
+conexão, **três em três** aceitaram — e no fio saíram **98** escritas contra
+**6**. A medição inteira está em
+[a pilha do Steam Input](../protocol/pilha-steam-input-xpad-sdl.md), seção
+6-bis.
+
+**O que fazer hoje:**
+
+1. **Ligue os controles ANTES de abrir a Steam.** É o único gesto com medição
+   limpa atrás: os três nasceram acesos e os três aceitaram a cor escolhida.
+2. **Se já ligou com a Steam aberta:** feche a Steam, desligue o controle
+   (segure o botão PS até a barra apagar) e ligue de novo. **Reconectar com a
+   Steam ainda aberta às vezes funciona e às vezes não** — foi um em três nos
+   ensaios —, e a diferença não é preciosismo: o que decide não é a reconexão, é
+   **quem está disputando a barra no instante em que o controle sobe**.
+   *"Reconectar cura"* já foi concluído e derrubado quatro vezes neste projeto
+   justamente por isso.
+3. **No cabo o problema não aparece.** No ensaio de 11/08 em que os dois
+   controles do rádio **não** aceitaram a cor, os dois do cabo aceitaram **no
+   mesmo instante** — e a Steam estava aberta.
+
+**Insistir em "Aplicar no controle" adianta menos do que parece — mas não pelo
+motivo que esta página dava até 12/08.** Estava escrito aqui que *"por Bluetooth
+a cor sai por um caminho que perde essa disputa"*, como se a rota fosse ruim.
+**Não é a rota.** Na bancada de 12/08 à noite, com a **Steam fechada** e o
+serviço parado, as duas rotas obedeceram nos mesmos controles do rádio: magenta
+escrito pelo caminho cru e, logo depois, verde escrito pelo caminho do sistema —
+*"todos os controles estão verdes"* (ensaios `cor-rota-hidraw-sem-steam-2235` e
+`cor-rota-sysfs-sem-steam-2237`, `../data/ensaios.csv:71-72`). O que derruba a
+cor é **quem mais está escrevendo na hora**, e a hora é a **conexão**.
+
+**O controle não esquece a cor — 136 s cronometrados.** Ainda na mesma bancada,
+sem serviço e sem Steam, a cor escrita ficou de pé por **dois minutos e dezesseis
+segundos** sem ninguém reforçar nada, o dobro do prazo que o ensaio pedia. Uma
+barra apagada, portanto, **não** é o controle esquecendo: é alguém mandando
+apagar. Não adianta clicar de novo para *"segurar"* a cor.
+
+**Mirar UM controle funciona, e isso foi conferido:** com quatro na mesa, o verde
+aplicado só no controle do cabo pintou **só ele** — *"verde inequívoco, os demais
+mostrando a cor de antes"* (ensaio `lightbar-cabo-isolado-2229`,
+`../data/ensaios.csv:70`). Os outros três são o controle negativo do ensaio.
+
+**O que ainda não medimos, e vale registro se você testar:** se desligar o
+*PlayStation Controller Support* da Steam (a [seção 15](#15-steam-input-intercepta-o-dualsense-touchpad-vira-mouse-mic-spam-botões-em-janela-em-background)
+desta página) evita a repintura. Ninguém aqui rodou esse ensaio.
+
+**A cura ENTROU no produto em 12/08/2026** — escrever a cor depois que a sequência
+de conexões sossega, e escrevê-la em **todos** os controles, não só no que
+chegou, pelo caminho que vence a disputa. O aceite dela na bancada, quando o
+desenho foi mostrado, foi *"perfeito"*.
+
+> **A ressalva, dita porque a casa não confunde as duas coisas:** o que está
+> provado é que **o comando certo sai pelo caminho certo na hora certa** — isso
+> tem teste. **Ninguém viu ainda a barra acender pelo produto com a Steam viva
+> na conexão**, que é o ensaio de um minuto que falta. Até essa volta acontecer,
+> os três contornos acima continuam sendo o que se recomenda.
 
 ---
 

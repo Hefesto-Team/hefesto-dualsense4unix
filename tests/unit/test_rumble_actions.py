@@ -73,6 +73,14 @@ def _install_gi_stubs() -> None:
 _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import rumble_actions
+from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+#: 11/08/2026: os percentuais destes testes eram literais (70 = balanceado,
+#: 100 = max). Com a escada nova (30/100/150, decisão dela) eles passaram a
+#: apontar para o degrau errado — 70 deixou de ser botão nenhum e 100 virou o
+#: balanceado. O que os testes provam é o CASAMENTO deslizador↔botão, não os
+#: números; derivá-los do dono único mantém a prova viva em qualquer escada.
+_PCT = {nome: mult * 100 for nome, mult in RUMBLE_POLICY_MULT.items()}
 
 # --- Fakes de widgets GTK ---------------------------------------------
 
@@ -253,6 +261,9 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         "on_rumble_passthrough",
         # ABAS-04: "Parar"/"Deixar o jogo controlar" agora escrevem no rascunho.
         "_zerar_rumble_no_rascunho",
+        # POR-UNIDADE-01: a intensidade passou a ter alvo (global ou peça).
+        "_gravar_intensidade_no_rascunho",
+        "_rumble_edit_uniq",
         "_refresh_rumble_from_draft",
         "_refresh_rumble_state_label_async",
         "_cancel_rumble_test_timer",
@@ -356,11 +367,11 @@ def test_on_rumble_policy_guard_refresh_noop(
 def test_on_rumble_policy_slider_changed_preset_balanceado(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Slider em 70% casa mult canônico de balanceado (0.7)."""
+    """O deslizador no degrau do balanceado afunda o botão do balanceado."""
     mixin = _build_mixin(monkeypatch)
     mixin._rumble_policy = "economia"
     slider = mixin._widgets["rumble_policy_slider"]
-    slider.set_value(70.0)
+    slider.set_value(_PCT["balanceado"])
     mixin.on_rumble_policy_slider_changed(slider)
 
     assert mixin._rumble_policy == "balanceado"
@@ -497,11 +508,13 @@ def test_apply_policy_to_widgets_ativa_toggle_correto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mixin = _build_mixin(monkeypatch)
-    mixin._apply_policy_to_widgets("max", 1.0)
+    mixin._apply_policy_to_widgets("max", RUMBLE_POLICY_MULT["max"])
 
     assert mixin._widgets["rumble_policy_max"].get_active() is True
     assert mixin._widgets["rumble_policy_economia"].get_active() is False
-    assert mixin._widgets["rumble_policy_slider"].get_value() == pytest.approx(100.0)
+    assert mixin._widgets["rumble_policy_slider"].get_value() == pytest.approx(
+        _PCT["max"]
+    )
 
 
 def test_apply_policy_to_widgets_custom_usa_custom_mult(
@@ -617,25 +630,30 @@ def test_custom_mult_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ida e volta valor/100 no slider, inclusive no round-trip de perfil."""
     mixin = _build_mixin(monkeypatch)
     slider = mixin._widgets["rumble_policy_slider"]
-    slider.set_value(100.0)
+    slider.set_value(_PCT["max"])
     mixin.on_rumble_policy_slider_changed(slider)
 
-    # 100% coincide com o preset "max" — a aba afunda o preset em vez de custom.
+    # Em cima de um degrau, a aba afunda o BOTÃO em vez de virar ajuste livre.
     assert mixin._rumble_policy == "max"
     assert mixin.draft.rumble.policy == "max"
 
-    slider.set_value(95.0)
+    # E meio ponto percentual abaixo dele, vira ajuste livre — a ida e volta
+    # `valor/100` tem de sobreviver ao round-trip de perfil.
+    fora_do_degrau = _PCT["max"] - 5.0
+    slider.set_value(fora_do_degrau)
     mixin.on_rumble_policy_slider_changed(slider)
     assert mixin._rumble_policy == "custom"
-    assert mixin.draft.rumble.custom_mult == pytest.approx(0.95)
-    assert mixin._ipc_calls["rumble_policy_custom"] == [pytest.approx(0.95)]
+    esperado = pytest.approx(fora_do_degrau / 100.0)
+    assert mixin.draft.rumble.custom_mult == esperado
+    assert mixin._ipc_calls["rumble_policy_custom"] == [esperado]
 
-    mixin._apply_policy_to_widgets("custom", 0.95)
-    assert slider.get_value() == pytest.approx(95.0)
+    # E o caminho de volta: o mult do rascunho repinta o deslizador no lugar.
+    mixin._apply_policy_to_widgets("custom", fora_do_degrau / 100.0)
+    assert slider.get_value() == pytest.approx(fora_do_degrau)
 
-    profile = mixin.draft.to_profile("perfil_custom_95", priority=5)
+    profile = mixin.draft.to_profile("perfil_custom", priority=5)
     assert profile.rumble.policy == "custom"
-    assert profile.rumble.custom_mult == pytest.approx(0.95)
+    assert profile.rumble.custom_mult == esperado
 
 
 def test_glade_rumble_policy_adj_vai_ate_o_teto_do_schema() -> None:

@@ -22,11 +22,14 @@
 #                        Simétrico ao install.sh — se sai sem desligar, o sintoma
 #                        "controle vira mouse / botões em background" volta na hora.
 #                        Reverter desligamento: scripts/disable_steam_input.sh --restore.
-#   --keep-bluez         PRESERVA o backport do bluez (default: RESTAURA as versões
-#                        originais do noble via VERSOES-ANTERIORES.txt do cache).
-#                        Onda R — remoção BRUTAL de propósito (reinicia o bluetoothd
-#                        e descarta os bonds outra vez); pede confirmação interativa
-#                        (--yes pula). Detalhe completo mais abaixo ("Onda R").
+#   --restore-bluez      DEVOLVE as versões originais do noble via
+#                        VERSOES-ANTERIORES.txt do cache. **Destrutivo**: reinicia
+#                        o bluetoothd (a ÚNICA exceção à regra "uninstall nunca
+#                        reinicia o bluetoothd") e descarta os bonds pareados
+#                        outra vez. Pede confirmação interativa (--yes pula).
+#   --keep-bluez         [no-op] o backport é PRESERVADO por padrão desde
+#                        02/08/2026 (BLUEZ-PADRAO-INVERTIDO-01) — desinstalar o
+#                        Hefesto não pode piorar o Bluetooth da máquina.
 #   --yes,-y             responde 'sim' para prompts.
 #
 # Onda PLATAFORMA (2026-07-18) — removidos por DEFAULT, simétricos ao install:
@@ -116,7 +119,12 @@ readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4uni
 # O uninstall nativo não os conhecia → sobreviviam ao wipe (rastro deixado).
 readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
 readonly APPLET_DESKTOP="/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop"
+# Caminho ANTIGO do simbólico (até 07/08/2026) — continua na lista porque
+# instalação velha ainda tem o arquivo lá, e desinstalar não pode deixar rastro.
 readonly APPLET_ICON="/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
+# Caminho de hoje (APPLET-MONOCROMÁTICO-01): `symbolic/apps/`, onde o hicolor
+# do sistema declara o bloco e onde o vizinho Flatpak põe o dele.
+readonly APPLET_ICON_SYMB="/usr/share/icons/hicolor/symbolic/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
 readonly APPLET_ICON_PNG="/usr/share/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png"
 # Drop-in do WirePlumber (fix de microfone) — só o nosso arquivo, nunca o dir.
 readonly WIREPLUMBER_DROPIN="${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf"
@@ -126,6 +134,11 @@ readonly WIREPLUMBER_DROPIN_DISABLE="${HOME}/.config/wireplumber/wireplumber.con
 # Variante --disable-output (53): gerada junto do 52 pelo --disable-source.
 # Removida incondicionalmente (simetria — o uninstall esquecia dela).
 readonly WIREPLUMBER_DROPIN_OUTPUT="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
+# SOM-QUE-NAO-DORME-01 (54): impede o WirePlumber de suspender o SINK do
+# controle. Artefato nosso, instalado SEM FLAG em todo formato — logo sai
+# incondicionalmente, como o 52 e o 53. Sem esta linha a máquina dela ficaria
+# com uma regra de áudio do Hefesto depois de desinstalar o Hefesto.
+readonly WIREPLUMBER_DROPIN_ACORDADO="${HOME}/.config/wireplumber/wireplumber.conf.d/54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
 # environment.d do modo-jogo (PS_LONG_PRESS_MS=0). Hoje redundante (o default do
 # código é 0), mas é artefato do hefesto — remove na desinstalação por simetria.
 readonly ENVIRONMENTD_GAMEMODE="${HOME}/.config/environment.d/91-hefesto-dualsense-gamemode.conf"
@@ -139,7 +152,31 @@ REMOVE_UDEV=1
 REMOVE_USB_QUIRK=0       # cmdline é sensível: só remove com --remove-usb-quirk explícito
 KEEP_CONFIG=1            # preserva config por padrão (perfis do user) — apagar exige --purge-config
 KEEP_STEAM_INPUT=0       # desliga Steam Input PSSupport por default (FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01)
-KEEP_BLUEZ=0             # Onda R: restaura o bluez do noble por default (opt-out --keep-bluez)
+# BLUEZ-PADRAO-INVERTIDO-01 (02/08/2026) — decisão DELA, e ela tem razão:
+# *"o uninstall deveria desfazer o negócio e deixar o bluez certo, não? e caso
+# usássemos flag é que deveria voltar o bluez pro original do pop os"*.
+#
+# O padrão era RESTAURAR o bluez do noble, com esta justificativa escrita:
+# *"ficar com um bluez de terceiro órfão, sem o doctor/pin/gerenciamento que o
+# justificava, é pior do que voltar ao 5.72 do noble"*. **A justificativa não
+# é falsa — ela é secundária diante de três coisas:**
+#
+# 1. **o downgrade é destrutivo, e o próprio código admite**: "REMOÇÃO BRUTAL
+#    de propósito, pois reinicia o bluetoothd — a ÚNICA exceção documentada à
+#    regra 'uninstall nunca reinicia o bluetoothd' — e descarta os bonds
+#    pareados outra vez". A regra desta casa é que o PADRÃO seja o menos
+#    destrutivo, e o gesto destrutivo seja o explícito;
+# 2. **o 5.72 tem defeito MEDIDO nesta máquina**: `bluetoothd` crashando
+#    cronicamente e comendo bonds (estudo de 19/07). Desinstalar um aplicativo
+#    não pode PIORAR o Bluetooth de quem o desinstalou;
+# 3. **precedente na mesma casa, no mesmo arquivo**: o `--remove-usb-quirk`
+#    não remove por padrão porque *"cmdline é sensível e pode ser mantido por
+#    toolchain externa"*. O BlueZ é mais sensível que o cmdline.
+#
+# E o backport não é software obscuro de terceiro: é o BlueZ upstream 5.86,
+# recompilado para o noble. A simetria que se perde é de PACOTE; a que se
+# ganha é de EFEITO — o sistema dela sai do uninstall funcionando como entrou.
+KEEP_BLUEZ=1             # preserva o backport por default; --restore-bluez desfaz
 AUTO_YES=0
 
 # BUG-UNINSTALL-HELP-DESINSTALA-01: não havia `--help`, e argumento desconhecido
@@ -161,7 +198,10 @@ Opções:
   --purge-config        APAGA config e perfis (destrutivo; o padrão é preservar)
   --keep-config         preserva config e perfis (padrão)
   --keep-steam-input    não mexe no PSSupport do Steam Input
-  --keep-bluez          preserva o BlueZ do hefesto (o padrão RESTAURA o da distro)
+  --restore-bluez       DEVOLVE o BlueZ original da distro (o padrão PRESERVA o
+                        backport). Destrutivo: reinicia o bluetoothd e descarta
+                        os bonds pareados.
+  --keep-bluez          [no-op] preservar já é o padrão desde 02/08/2026
   --yes, -y             não pergunta nada (necessário sem TTY)
   --help, -h            mostra esta ajuda e sai
 
@@ -177,7 +217,11 @@ for arg in "$@"; do
         --purge-config)      KEEP_CONFIG=0 ;;
         --keep-config)       KEEP_CONFIG=1 ;;
         --keep-steam-input)  KEEP_STEAM_INPUT=1 ;;
+        # `--keep-bluez` vira NO-OP: ela é o padrão desde a
+        # BLUEZ-PADRAO-INVERTIDO-01. Fica aceita para não quebrar quem já a
+        # escreveu num script ou num roteiro.
         --keep-bluez)        KEEP_BLUEZ=1 ;;
+        --restore-bluez)     KEEP_BLUEZ=0 ;;
         --yes|-y)            AUTO_YES=1 ;;
         --help|-h)           uso; exit 0 ;;
         *)
@@ -244,9 +288,20 @@ _NEEDS_SUDO=0
 # com --keep-udev) — precisa entrar na priming independente do REMOVE_UDEV.
 [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]] && _NEEDS_SUDO=1
 [[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] && _NEEDS_SUDO=1
-grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
+# BUG-UNINSTALL-PRIMING-CEGO-AO-BLOCO-UNIFICADO-01 (RADIO-ABERTO-01/E1-bis,
+# 06/08/2026): esta lista primava a credencial pelos sentinelas LEGADOS e pelos
+# drop-ins, e NUNCA pelo `# >>> hefesto bluetooth >>>` — que é o único artefato
+# de BlueZ de toda máquina instalada desde 21/07, inclusive a dela. Resultado
+# MEDIDO por leitura: `uninstall.sh --keep-udev` numa máquina assim não pedia
+# sudo, caía no ramo "sudo indisponível" e o bloco com `JustWorksRepairing`
+# FICAVA PARA TRÁS. Um alternador cobre as três sentinelas de uma vez, e a
+# marca de neutralização entra junto (linha de terceiro a devolver também é
+# escrita em /etc).
+grep -qsE '^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>' \
+    /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
+grep -qsF '#hefesto-desativou# ' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf" ]] && _NEEDS_SUDO=1
-[[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
+[[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_SYMB}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
 dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
 # Onda R: bloco JustWorksRepairing (main.conf/drop-in), agente de pareamento
 # (unit de sistema) e restauração do bluez (apt) — todos pedem root.
@@ -379,6 +434,10 @@ for size in 16 22 24 32 48 64 96 128 192 256 512; do
     rm -f "${HOME}/.local/share/icons/hicolor/${size}x${size}/apps/${APP_ID}.png"
 done
 rm -f "${HOME}/.local/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
+# APPLET-MONOCROMÁTICO-01 (07/08/2026): o simbólico da bandeja. Sem esta linha,
+# desinstalar deixa lixo de ícone — e lixo de ícone é o tipo que reaparece numa
+# instalação futura e produz "não mudou nada" sem explicação.
+rm -f "${HOME}/.local/share/icons/hicolor/symbolic/apps/${APP_ID}-symbolic.svg"
 rm -f "${HOME}/.local/share/pixmaps/${APP_ID}.png"
 
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
@@ -401,9 +460,9 @@ fi
 
 # Applet COSMIC nativo (Rust): instalado em /usr/local + /usr/share via sudo
 # por packaging/cosmic-applet. Remove só se existir (evita pedir sudo à toa).
-if [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_PNG}" ]]; then
+if [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_SYMB}" || -e "${APPLET_ICON_PNG}" ]]; then
     log "removendo applet COSMIC (sudo): binário + .desktop + ícones"
-    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" "${APPLET_ICON_PNG}" 2>/dev/null || true
+    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" "${APPLET_ICON_SYMB}" "${APPLET_ICON_PNG}" 2>/dev/null || true
     sudo gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
     sudo update-desktop-database -q /usr/share/applications 2>/dev/null || true
     # cosmic-panel só relê a lista de applets ao reiniciar — sem isso o applet
@@ -445,6 +504,15 @@ if [[ -f "${WIREPLUMBER_DROPIN_OUTPUT}" ]]; then
     systemctl --user restart wireplumber >/dev/null 2>&1 || true
 fi
 
+# SOM-QUE-NAO-DORME-01 (54): o sono do alto-falante volta a ser o do sistema
+# (5 s de ociosidade). Vai embora com o resto — o produto não deixa regra de
+# áudio para trás.
+if [[ -f "${WIREPLUMBER_DROPIN_ACORDADO}" ]]; then
+    log "removendo drop-in WirePlumber (nunca-dorme): ${WIREPLUMBER_DROPIN_ACORDADO}"
+    rm -f "${WIREPLUMBER_DROPIN_ACORDADO}"
+    systemctl --user restart wireplumber >/dev/null 2>&1 || true
+fi
+
 # environment.d do modo-jogo (91): artefato do hefesto — remove por simetria.
 if [[ -f "${ENVIRONMENTD_GAMEMODE}" ]]; then
     log "removendo environment.d do modo-jogo: ${ENVIRONMENTD_GAMEMODE}"
@@ -479,6 +547,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         sudo rm -f /etc/udev/rules.d/70-ps5-controller.rules \
                    /etc/udev/rules.d/71-uinput.rules \
                    /etc/udev/rules.d/72-ps5-controller-autosuspend.rules \
+                   /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules \
                    /etc/udev/rules.d/73-ps5-controller-hotplug.rules \
                    /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules \
                    /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules \
@@ -523,7 +592,7 @@ else
     # que cada regra apareça com o nome exato — a versão com {70,72,...} escondia
     # as 82/83/84, que nunca foram citadas aqui.
     log "udev rules preservadas (--keep-udev). Para remover depois:"
-    log "  sudo rm /etc/udev/rules.d/70-ps5-controller.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/udev/rules.d/72-ps5-controller-autosuspend.rules /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules /etc/udev/rules.d/77-dualsense-leds.rules /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules /etc/udev/rules.d/79-external-controller-leds.rules /etc/udev/rules.d/80-motion-joydev-hide.rules /etc/udev/rules.d/81-hefesto-usb-power.rules /etc/udev/rules.d/81-hefesto-usb-host-power.rules /etc/udev/rules.d/82-nintendo-pro-nosniff.rules /etc/udev/rules.d/83-hefesto-bond-snapshot.rules /etc/udev/rules.d/84-nintendo-pro-variant.rules /etc/modules-load.d/hefesto-dualsense4unix.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+    log "  sudo rm /etc/udev/rules.d/70-ps5-controller.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/udev/rules.d/72-ps5-controller-autosuspend.rules /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules /etc/udev/rules.d/77-dualsense-leds.rules /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules /etc/udev/rules.d/79-external-controller-leds.rules /etc/udev/rules.d/80-motion-joydev-hide.rules /etc/udev/rules.d/81-hefesto-usb-power.rules /etc/udev/rules.d/81-hefesto-usb-host-power.rules /etc/udev/rules.d/82-nintendo-pro-nosniff.rules /etc/udev/rules.d/83-hefesto-bond-snapshot.rules /etc/udev/rules.d/84-nintendo-pro-variant.rules /etc/modules-load.d/hefesto-dualsense4unix.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
     log "  as 82 e 83 chamam alvos por RUN+= — os alvos ficaram junto com elas."
     log "  Ao remover as regras, remova também:"
     log "  sudo rm /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh /etc/systemd/system/hefesto-bt-bonds-snapshot.service"
@@ -553,78 +622,40 @@ elif [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# FastConnectable do BlueZ (PLAT-04) — simétrico ao install 3d. Drop-in OU
-# bloco marcado entre as sentinelas hefesto no /etc/bluetooth/main.conf
-# (conffile do dpkg → backup antes de mexer). NUNCA reinicia o bluetoothd
-# (derrubaria os controles BT conectados); a remoção vale no próximo
-# boot/restart natural do serviço.
+# Config do BlueZ (FastConnectable + JustWorksRepairing) — simétrico ao passo
+# 3d do install, e pelo MESMO dono: scripts/bluez_config.sh remover.
+#
+# RADIO-ABERTO-01/E1-bis (06/08/2026) — o que este bloco substituiu, e por quê:
+# havia TRÊS removedores independentes aqui (bloco legado FastConnectable,
+# bloco legado JustWorksRepairing e bloco unificado), cada um com o próprio
+# `cp` de backup e o próprio `sed -i` de faixa. Três defeitos disso:
+#
+#   1. numa máquina com os dois legados MAIS o unificado, uma única execução
+#      deixava TRÊS `main.conf.bak.hefesto-uninstall-<ts>` em /etc/bluetooth —
+#      e nenhum dos três scripts jamais podou backup (37 acumulados, 272 KB,
+#      MEDIDO em 06/08/2026);
+#   2. o `sed '/A/,/B/d'` com a sentinela de fechamento ancorada em `$` nunca
+#      fecha a faixa se alguém deixou um espaço no fim da linha — e faixa sem
+#      fim APAGA ATÉ O FIM DO ARQUIVO. O `remover` de hoje RECUSA nesse caso;
+#   3. o install APAGAVA chave de terceiro (`JustWorksRepairing = never`, por
+#      exemplo) e o uninstall nunca a devolvia: instalar+desinstalar era uma
+#      operação destrutiva líquida. Agora o install NEUTRALIZA com a marca
+#      `#hefesto-desativou# ` e é este `remover` que devolve a linha original.
+#
+# NUNCA reinicia o bluetoothd (derrubaria os controles BT conectados); a
+# remoção vale no próximo boot/restart natural do serviço.
 # ---------------------------------------------------------------------------
 if sudo -n true 2>/dev/null; then
-    if [[ -f /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]]; then
-        log "removendo FastConnectable (drop-in /etc/bluetooth/main.conf.d)"
-        sudo rm -f /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf || true
-    fi
-    if [[ -f /etc/bluetooth/main.conf ]] \
-       && sudo grep -qF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-        log "removendo bloco FastConnectable do /etc/bluetooth/main.conf (backup antes)"
-        sudo cp /etc/bluetooth/main.conf \
-            "/etc/bluetooth/main.conf.bak.hefesto-uninstall-$(date +%s)" 2>/dev/null || true
-        sudo sed -i '/^# >>> hefesto FastConnectable >>>$/,/^# <<< hefesto FastConnectable <<<$/d' \
-            /etc/bluetooth/main.conf || log "  ERRO: sed do bloco marcado falhou — remova manualmente"
-        log "  (vale no próximo boot/restart do bluetoothd — não reiniciamos o serviço)"
-    fi
+    log "removendo config do BlueZ do hefesto (bloco do main.conf + drop-ins)"
+    HEFESTO_BT_ASSETS="${ROOT_DIR}/assets/bluetooth" \
+        bash "${ROOT_DIR}/scripts/bluez_config.sh" remover \
+        || log "  ERRO: remoção da config do BlueZ falhou — confira /etc/bluetooth/main.conf"
 elif [[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] \
-     || grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-    log "sudo indisponível — FastConnectable do BlueZ não removido"
-    log "  (remova /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ou o bloco"
-    log "   entre as sentinelas '# >>> hefesto FastConnectable >>>' do main.conf)"
-fi
-
-# ---------------------------------------------------------------------------
-# Onda R (bluetoothd 5.72 crasha crônico — estudo 2026-07-19-estudo-bluez-
-# backport-onda-r.md): JustWorksRepairing do BlueZ + agente de pareamento
-# persistente + restauração do bluez. Mesmo cuidado da FastConnectable: NUNCA
-# reinicia o bluetoothd na remoção do bloco/drop-in (só a restauração do bluez,
-# mais abaixo, reinicia — e por isso pede confirmação).
-# ---------------------------------------------------------------------------
-
-# JustWorksRepairing — sentinelas/drop-in, mesmo mecanismo da FastConnectable.
-if sudo -n true 2>/dev/null; then
-    if [[ -f /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]]; then
-        log "removendo JustWorksRepairing (drop-in /etc/bluetooth/main.conf.d)"
-        sudo rm -f /etc/bluetooth/main.conf.d/hefesto-justworks.conf || true
-    fi
-    if [[ -f /etc/bluetooth/main.conf ]] \
-       && sudo grep -qF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-        log "removendo bloco JustWorksRepairing do /etc/bluetooth/main.conf (backup antes)"
-        sudo cp /etc/bluetooth/main.conf \
-            "/etc/bluetooth/main.conf.bak.hefesto-uninstall-$(date +%s)" 2>/dev/null || true
-        sudo sed -i '/^# >>> hefesto JustWorksRepairing >>>$/,/^# <<< hefesto JustWorksRepairing <<<$/d' \
-            /etc/bluetooth/main.conf || log "  ERRO: sed do bloco marcado falhou — remova manualmente"
-        log "  (vale no próximo boot/restart do bluetoothd — não reiniciamos o serviço)"
-    fi
-elif [[ -e /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]] \
-     || grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-    log "sudo indisponível — JustWorksRepairing do BlueZ não removido"
-    log "  (remova /etc/bluetooth/main.conf.d/hefesto-justworks.conf ou o bloco"
-    log "   entre as sentinelas '# >>> hefesto JustWorksRepairing >>>' do main.conf)"
-fi
-
-# Bloco UNIFICADO do main.conf (camada 1 da sprint BlueZ 2026-07-21 — o
-# install idempotente escreve FastConnectable+JustWorksRepairing num bloco só;
-# os dois removedores legados acima seguem existindo para instalações antigas).
-if sudo -n true 2>/dev/null; then
-    if [[ -f /etc/bluetooth/main.conf ]] \
-       && sudo grep -qF '# >>> hefesto bluetooth >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-        log "removendo bloco unificado hefesto do /etc/bluetooth/main.conf (backup antes)"
-        sudo cp /etc/bluetooth/main.conf \
-            "/etc/bluetooth/main.conf.bak.hefesto-uninstall-$(date +%s)" 2>/dev/null || true
-        sudo sed -i '/^# >>> hefesto bluetooth >>>$/,/^# <<< hefesto bluetooth <<<$/d' \
-            /etc/bluetooth/main.conf || log "  ERRO: sed do bloco unificado falhou — remova manualmente"
-        log "  (vale no próximo boot/restart do bluetoothd — não reiniciamos o serviço)"
-    fi
-elif grep -qsF '# >>> hefesto bluetooth >>>' /etc/bluetooth/main.conf 2>/dev/null; then
-    log "sudo indisponível — bloco unificado hefesto do main.conf não removido"
+     || [[ -e /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]] \
+     || grep -qsE '^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>' \
+             /etc/bluetooth/main.conf 2>/dev/null; then
+    log "sudo indisponível — config do BlueZ do hefesto NÃO removida"
+    log "  (rode: sudo bash ${ROOT_DIR}/scripts/bluez_config.sh remover)"
 fi
 
 # ONDA-R2: resiliência do bluetoothd (camada 2 — simétrico ao passo 3e-bis do
@@ -665,6 +696,7 @@ if sudo -n true 2>/dev/null; then
         sudo sysctl --system >/dev/null 2>&1 || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh \
+        /usr/local/lib/hefesto-dualsense4unix/bt_bonds_autorestore.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_health_watchdog.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh \
@@ -697,9 +729,35 @@ if sudo -n true 2>/dev/null; then
         fi
     fi
     if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then
-        log "removendo snapshots de bonds em /var/lib/hefesto-dualsense4unix/bt-bonds"
-        log "  (contêm LinkKeys; se quiser preservar, copie ANTES de rodar o uninstall)"
-        sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
+        # CICLO-QUE-PROVA-01 (08/08/2026) — MEDIDO no ciclo real, na máquina dela:
+        # este bloco fazia `rm -rf` por default, sem flag e sem confirmação, e o
+        # install recria só o diretório VAZIO. Doze snapshots viraram um.
+        #
+        # Por que isso é grave e não é higiene: os snapshots são a ÚNICA rede
+        # entre um crash do `bluetoothd` e ela repareando quatro controles à mão.
+        # Na mesma noite o crash das 00:27:35 mostrou para que servem — o
+        # salva-vidas gravou os quatro bonds dois segundos depois, sozinho — e um
+        # ciclo de manutenção normal os apagaria.
+        #
+        # A doutrina da casa para dado dela já estava escrita, e é a mesma que
+        # vale para a config: PRESERVA por default, apaga só com `--purge-config`
+        # explícito. Os bonds passam a seguir a mesma regra.
+        #
+        # E preservar NÃO é deixar credencial espalhada: o destino carrega o
+        # carimbo de que é sobra de desinstalação, e o modo 700 do diretório-pai
+        # continua valendo. Quem quiser o wipe de verdade tem a flag.
+        if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
+            _bonds_destino="/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-$(date +%Y%m%d-%H%M%S)"
+            log "preservando snapshots de bonds (contêm LinkKeys) em ${_bonds_destino}"
+            log "  para restaurar: sudo cp -a ${_bonds_destino}/. /var/lib/hefesto-dualsense4unix/bt-bonds/"
+            log "  para apagar de vez: rode o uninstall com --purge-config"
+            sudo mv "/var/lib/hefesto-dualsense4unix/bt-bonds" "${_bonds_destino}" 2>/dev/null \
+                || sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
+        else
+            log "removendo snapshots de bonds em /var/lib/hefesto-dualsense4unix/bt-bonds (--purge-config)"
+            log "  (contêm LinkKeys — wipe pedido explicitamente)"
+            sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
+        fi
         # O diretório-pai só sai junto com a unit de snapshot: ela declara
         # ReadWritePaths=/var/lib/hefesto-dualsense4unix sem o prefixo `-`, e o
         # systemd RECUSA iniciar a unit se o caminho não existir. Preservada a
@@ -983,15 +1041,23 @@ if [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]]; then
     fi
 fi
 
-# Restauração do bluez (backport 5.85 → versões originais do noble). Por
-# DEFAULT o uninstall É simétrico: devolve o pacote ao estado pré-Hefesto —
-# ficar com um bluez de terceiro (~hefesto24.04.1) órfão, sem o
-# doctor/pin/gerenciamento que o justificava, é pior do que voltar ao
-# 5.72 do noble. --keep-bluez preserva o backport (opt-out explícito: é
-# REMOÇÃO BRUTAL de propósito, pois reinicia o bluetoothd — a ÚNICA exceção
-# documentada à regra "uninstall nunca reinicia o bluetoothd" — e descarta os
-# bonds pareados outra vez, os mesmos efeitos colaterais medidos na migração
-# de ida). Por isso pede confirmação interativa antes de aplicar (--yes pula).
+# Restauração do bluez (backport → versões originais do noble).
+#
+# BLUEZ-PADRAO-INVERTIDO-01 (02/08/2026): isto só acontece com
+# `--restore-bluez`. O REGISTRO da decisão anterior fica, porque ela era
+# defensável e é o que explica o código: *"o uninstall É simétrico: devolve o
+# pacote ao estado pré-Hefesto — ficar com um bluez de terceiro órfão, sem o
+# doctor/pin/gerenciamento que o justificava, é pior do que voltar ao 5.72 do
+# noble"*.
+#
+# O que a fez cair: o gesto é REMOÇÃO BRUTAL de propósito — reinicia o
+# bluetoothd (a ÚNICA exceção documentada à regra "uninstall nunca reinicia o
+# bluetoothd") e descarta os bonds pareados outra vez. Um gesto assim não pode
+# ser o que acontece por OMISSÃO, ainda mais quando a versão para a qual se
+# volta tem defeito medido nesta máquina (bluetoothd crashando e comendo
+# bonds, estudo de 19/07).
+#
+# Continua pedindo confirmação interativa antes de aplicar (--yes pula).
 BLUEZ_BACKPORT_CACHE="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
 BLUEZ_VERSOES_FILE="${BLUEZ_BACKPORT_CACHE}/VERSOES-ANTERIORES.txt"
 if [[ "${KEEP_BLUEZ}" -eq 1 ]]; then
@@ -1283,6 +1349,8 @@ log "  kernel cmdline de TERCEIRO (pcie_aspm, mitigations, etc.) — só os para
 log "    REGISTRADOS como do hefesto (cmdline-owners.conf) são revertidos acima"
 log "  ~/.config/wireplumber/wireplumber.conf.d/   — dir compartilhado, só nosso .conf é removido"
 log "  ~/.local/lib/python*/site-packages/         — pip --user pode ser compartilhado"
+log "  wvkbd / onboard (teclado na tela do L3)      — pacote do sistema, pode servir a outra coisa"
+log "    (mesma decisão do libopus0 da ponte de mic: o install instala, o uninstall não desinstala)"
 
 # FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01: desliga Steam Input PSSupport em
 # todos os localconfig.vdf por default. Simétrico com install.sh — sem isso,
@@ -1364,6 +1432,31 @@ rmdir "${HOME}/.local/share/hefesto-dualsense4unix/bin" 2>/dev/null || true
 if [[ -d "${HOME}/.local/state/hefesto-dualsense4unix/launch_env" ]]; then
     log "removendo materialização de launch (~/.local/state/hefesto-dualsense4unix/launch_env)"
     rm -rf "${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
+fi
+# SENTINELA-WRAPPER-01: a memória de "quais jogos estão com o wrapper" é
+# estado NOSSO e sai junto — o `--strip` acima já tirou o wrapper do vdf, então
+# manter o registro faria a próxima instalação chamar de REGRESSÃO ("este jogo
+# perdeu o wrapper!") exatamente a remoção que o uninstall acabou de fazer.
+# O `jogos_sem_wrapper.txt` NÃO sai: é escolha DELA sobre a biblioteca dela, e
+# vale de novo no dia em que ela reinstalar.
+if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/wrapper-visto.json" ]]; then
+    log "removendo o registro do wrapper (~/.local/state/hefesto-dualsense4unix/wrapper-visto.json)"
+    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/wrapper-visto.json"
+fi
+# TECLADO-QUE-NAO-DIGITA-01: o PACOTE do teclado na tela (wvkbd / onboard) NÃO
+# sai daqui. É pacote de SISTEMA, instalado pelo gerenciador da distribuição, e
+# pode estar servindo a qualquer outra coisa da máquina dela — remover seria o
+# Hefesto decidindo sobre software que não é dele. É a mesma decisão já tomada
+# para o `libopus0` da ponte de microfone por Bluetooth: o install instala, o
+# uninstall não desinstala.
+#
+# O que SAI é a SENTINELA, que é estado nosso. E isso não é detalhe: enquanto
+# ela existir dizendo "instalado", o doctor leria uma máquina já desinstalada
+# como "o pacote sumiu depois do install" — daria diagnóstico de um produto que
+# não está mais aqui.
+if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf" ]]; then
+    log "removendo a sentinela do teclado na tela (o PACOTE wvkbd/onboard fica — é do sistema)"
+    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf"
 fi
 rmdir "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
 # O passo anterior de limpeza do share-dir roda antes do wrapper sair — repete

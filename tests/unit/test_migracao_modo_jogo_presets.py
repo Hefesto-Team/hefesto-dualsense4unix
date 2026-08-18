@@ -46,8 +46,9 @@ def test_preset_de_jogo_sem_modo_recebe_o_modo_jogo(tmp_path: Path) -> None:
 def test_modo_escolhido_por_ela_nao_e_sobrescrito(tmp_path: Path) -> None:
     """A regra que torna a migração segura: onde ela mexeu, recua.
 
-    Um perfil de jogo em Modo Nativo é uma escolha deliberada ("Jogar direto
-    (Sony)") — trocá-la por gamepad seria a migração decidindo no lugar dela.
+    Um perfil de jogo em Modo Nativo é uma escolha deliberada ("Conexão
+    Nativa (Sony)") — trocá-la por gamepad seria a migração decidindo no
+    lugar dela.
     """
     escolha = {"kind": "native"}
     fps = _escreve(tmp_path, "fps", {"name": "FPS", "priority": 60,

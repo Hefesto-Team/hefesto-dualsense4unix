@@ -134,6 +134,45 @@ class TestComparacaoSemCaixa:
         assert profile.matches(info) is True
         assert perfil_e_regra_de_jogo(profile, info) is True
 
+    def test_regra_de_jogo_com_a_janela_em_caixa_alta(self) -> None:
+        """O caso SIMÉTRICO — o que a suíte nunca cobria (UNIFICA-PREDICADO-01).
+
+        O teste acima varia a caixa do PERFIL (o que a usuária digitou). Este
+        varia a caixa da JANELA, que é o lado que ninguém controla: a
+        ``wm_class`` chega do X/XWayland com a grafia que o toolkit escolheu e
+        MUDA ENTRE BACKENDS de detecção — é o que `_casa_sem_caixa` documenta.
+
+        E era exatamente aqui que `perfil_e_regra_de_jogo` se contradizia: o
+        prefixo era testado com `startswith("steam_app_")` (SENSÍVEL) e a linha
+        seguinte comparava sem caixa. Com a janela se anunciando
+        ``STEAM_APP_2111190``, o perfil do jogo CASAVA pelo matcher e não era
+        reconhecido como regra do jogo — o buraco do R-01 por outra porta, com
+        o catch-all voltando a mandar na janela do jogo.
+        """
+        profile = Profile(
+            name="madjack",
+            match=MatchCriteria(window_class=["steam_app_2111190"]),
+        )
+        for wm_class in ("STEAM_APP_2111190", "Steam_App_2111190"):
+            info = {"wm_class": wm_class}
+            assert profile.matches(info) is True
+            assert perfil_e_regra_de_jogo(profile, info) is True
+
+    def test_editor_simples_reconhece_o_jogo_em_qualquer_caixa(self) -> None:
+        """O terceiro lugar onde a mesma divergência aparecia (UNIFICA-PREDICADO-01).
+
+        Um perfil salvo com ``Steam_App_2111190`` CASA com o jogo — o matcher
+        compara sem caixa desde o R-12. Só que o editor simples reconhecia o
+        preset "steam_game" com um predicado SENSÍVEL: o perfil de jogo abria
+        no editor AVANÇADO, como se não fosse perfil de jogo da Steam, e o
+        campo que pede o número da loja vinha vazio. A GUI mentia sobre um
+        perfil que funciona.
+        """
+        for wc in ("Steam_App_2111190", "STEAM_APP_2111190", " steam_app_2111190 "):
+            m = MatchCriteria(window_class=[wc])
+            assert detect_simple_preset(m) == "steam_game"
+            assert simple_extra(m) == "2111190"
+
 
 # ---------------------------------------------------------------------------
 # 2. Sentinel manual

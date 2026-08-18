@@ -1,0 +1,333 @@
+IDENTIDADE NOS DOIS TRANSPORTES — existe crachá que não peça escrita? (15/08/2026, 22h12)
+
+A PERGUNTA, E ELA É DELA
+------------------------
+Textual, 15/08/2026: "nos 4 controles via cabo e bt vamos ter sempre
+identificado né?"
+
+Traduzida para uma pergunta que uma máquina responde: existe um identificador
+que (a) distingue as 4 unidades, (b) é LEGÍVEL nos DOIS transportes, e (c) não
+exige escrita nenhuma?
+
+Ela importa porque a COR não responde isso. A cor distingue, mas custa um
+SET_FEATURE 0x80 — e o rádio recusou esse SET com EIO em 15/08. Um produto que
+só sabe quem é o controle quando ele está no fio não "sempre identifica".
+
+PROCEDÊNCIA
+-----------
+  instrumento .... scripts/ensaios/identidade_nos_dois_transportes.py
+                   LEITURA PURA. O arquivo NÃO SABE ESCREVER: não existe
+                   HIDIOCSFEATURE nele, e a ausência é a trava.
+  porta .......... broker (SCM_RIGHTS), /run/hefesto-hidraw-broker/broker.sock
+  bibliotecas .... fcntl, array, csv — do .venv/bin/python deste projeto
+  daemon ......... RODANDO. NÃO foi parado.
+  mesa ........... 2 no cabo, 2 no rádio, DEPOIS da troca de braços das 19h
+  máscara ........ mais larga que a da casa, e de propósito: o 0x09, o 0x0b e
+                   o 0x22 carregam MAC em BINÁRIO e INVERTIDO. Seis bytes em
+                   hexadecimal são o endereço dela tanto quanto os seis pares
+                   separados por dois-pontos. O instrumento varre o buffer
+                   atrás dos seis bytes de TODO MAC conhecido — os quatro
+                   controles e o adaptador do host —, nas duas ordens, e zera
+                   os octetos 4 e 5 em cada ocorrência ANTES de o hexadecimal
+                   virar texto.
+
+  UMA SUBSTITUIÇÃO DECLARADA, E O DEFEITO QUE A OBRIGOU
+  ------------------------------------------------------
+  A saída literal da rodada das 22h12 abaixo teve UMA substituição aplicada
+  depois: os seis bytes do MAC do ADAPTADOR do host, que saíram inteiros, foram
+  reduzidos à forma mascarada `c4 00 00 89 44 d8` — os octetos 4 e 5 zerados,
+  que é a máscara da casa aplicada à ordem invertida em que o firmware guarda o
+  endereço. Motivo: a primeira versão do instrumento procurava
+  o endereço do adaptador em `/sys/class/bluetooth/hci0/device/address`, que
+  NÃO EXISTE nesta versão do kernel. O caminho inexistente devolveu string
+  vazia, a máscara ficou sem agulha, e o endereço do host saiu em hexadecimal.
+  Nada além desses seis bytes foi tocado no texto.
+
+  A cura já está no instrumento e não depende de eu lembrar: ele agora tira o
+  endereço do adaptador do PRÓPRIO buffer do 0x09 (offset 10-15, invertido) e
+  o adiciona à lista de agulhas antes de imprimir. Uma máscara que se alimenta
+  do que vai imprimir não tem como ficar sem agulha. A prova de que a cura
+  morde está na rodada das 22h20, mais abaixo: ali o `c4 00 00 89 44 d8` sai
+  mascarado pelo instrumento, sem mão nenhuma.
+
+COMO A LEI 4 (o confundimento braço/unidade) FOI CONTORNADA SEM TROCAR OS BRAÇOS
+---------------------------------------------------------------------------------
+O `censo_features.py` responde "este report é o mesmo byte a byte no cabo e no
+rádio?" — e com dois aparelhos por braço essa pergunta é CONFUNDIDA: dois MAC
+diferentes fazem o 0x09 "diferir por transporte" sem que o transporte tenha
+nada a ver com isso.
+
+A escapatória usada aqui é a do E-4 (o acelerômetro contra 1 g): RÉGUA
+ABSOLUTA, não comparação entre braços. O `HID_UNIQ` que o sysfs publica é a
+régua externa. Se o conteúdo de um report CONTÉM o MAC da própria unidade que
+o emitiu, o valor daquele report não é opinião do braço — é o aparelho dizendo
+o próprio nome, e a conferência vale unidade por unidade, em qualquer
+transporte, sem precisar de rodada anterior para comparar.
+
+CONFUNDIMENTO: IMUNE. A âncora é externa e por unidade.
+
+==============================================================================
+(1) A RODADA VÁLIDA — 22h12:39 a 22h12:52, os QUATRO nos DOIS transportes
+==============================================================================
+==============================================================================
+  identidade_nos_dois_transportes.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... existe crachá que distinga as unidades nos DOIS transportes, sem escrita?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... array                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... csv                    de /usr/lib/python3.12/csv.py
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+
+  ESTE ARQUIVO NÃO SABE ESCREVER: não há HIDIOCSFEATURE nele.
+
+mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+  lendo a0:fa:9c:00:00:f0 (hidraw4, rádio) …
+  lendo d4:2f:4b:00:00:d8 (hidraw5, rádio) …
+  lendo 14:3a:9a:00:00:ab (hidraw8, cabo) …
+  lendo 44:46:48:00:00:03 (hidraw10, cabo) …
+
+  O QUE CADA APARELHO DEVOLVEU (duas leituras, 2.0s de distância)
+
+aparelho           transporte  hardware    report  bytes  2ª leitura  contém o MAC dele?          conteúdo (MAC mascarado no buffer)
+-----------------  ----------  ----------  ------  -----  ----------  --------------------------  ------------------------------------------------------------------------
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x05    41B    IGUAL       —                           05 17 00 fd ff fc ff a3 22 85 dd 87 22 6f dd 88 22 75 dd 1c 02 1c 02 04…
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x09    20B    IGUAL       sim, INVERTIDO, no byte 1   09 f0 00 00 9c fa a0 08 25 00 c4 00 00 89 44 d8 4b 90 67 b1
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x0b    42B    IGUAL       sim, INVERTIDO, no byte 1   0b f0 00 00 9c fa a0 08 25 00 00 c4 00 00 89 44 d8 01 b4 00 78 eb 68 dc…
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x20    64B    IGUAL       —                           20 4a 75 6c 20 20 34 20 32 30 32 35 31 30 3a 31 30 3a 33 32 03 00 04 00…
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x22    64B    IGUAL       sim, INVERTIDO, no byte 17  22 03 00 10 07 00 00 2a 00 10 01 00 00 00 00 00 00 f0 00 00 9c fa a0 0a…
+d4:2f:4b:00:00:d8  rádio       0x00001111  0x05    41B    IGUAL       —                           05 0e 00 03 00 f4 ff 9d 22 7f dd 82 22 84 dd 7a 22 6e dd 1c 02 1c 02 0b…
+d4:2f:4b:00:00:d8  rádio       0x00001111  0x09    20B    IGUAL       sim, INVERTIDO, no byte 1   09 d8 00 00 4b 2f d4 08 25 00 c4 00 00 89 44 d8 c3 24 c0 5a
+d4:2f:4b:00:00:d8  rádio       0x00001111  0x0b    42B    IGUAL       sim, INVERTIDO, no byte 1   0b d8 00 00 4b 2f d4 08 25 00 00 c4 00 00 89 44 d8 00 00 00 00 00 00 00…
+d4:2f:4b:00:00:d8  rádio       0x00001111  0x20    64B    IGUAL       —                           20 4a 75 6c 20 20 34 20 32 30 32 35 31 30 3a 33 38 3a 34 30 03 00 0b 00…
+d4:2f:4b:00:00:d8  rádio       0x00001111  0x22    64B    IGUAL       sim, INVERTIDO, no byte 17  22 03 00 11 11 00 00 2a 00 10 01 00 00 00 00 00 00 d8 00 00 4b 2f d4 10…
+14:3a:9a:00:00:ab  cabo        0x00000711  0x05    41B    IGUAL       —                           05 02 00 00 00 00 00 a7 22 61 dd 51 22 a8 dd d2 22 2d dd 1c 02 1c 02 fd…
+14:3a:9a:00:00:ab  cabo        0x00000711  0x09    20B    IGUAL       sim, INVERTIDO, no byte 1   09 ab 00 00 9a 3a 14 08 25 00 c4 00 00 89 44 d8 00 00 00 00
+14:3a:9a:00:00:ab  cabo        0x00000711  0x0b    42B    IGUAL       sim, INVERTIDO, no byte 1   0b ab 00 00 9a 3a 14 08 25 00 00 c4 00 00 89 44 d8 01 b4 00 78 eb 68 dc…
+14:3a:9a:00:00:ab  cabo        0x00000711  0x20    64B    IGUAL       —                           20 4a 75 6c 20 20 34 20 32 30 32 35 31 30 3a 31 30 3a 33 32 02 00 04 00…
+14:3a:9a:00:00:ab  cabo        0x00000711  0x22    64B    IGUAL       sim, INVERTIDO, no byte 17  22 02 00 11 07 00 00 2a 00 10 01 00 00 00 00 00 00 ab 00 00 9a 3a 14 0a…
+44:46:48:00:00:03  cabo        0x00000811  0x05    41B    IGUAL       —                           05 05 00 0d 00 01 00 98 22 72 dd 94 22 86 dd 80 22 82 dd 1c 02 1c 02 08…
+44:46:48:00:00:03  cabo        0x00000811  0x09    20B    IGUAL       sim, INVERTIDO, no byte 1   09 03 00 00 48 46 44 08 25 00 c4 00 00 89 44 d8 00 00 00 00
+44:46:48:00:00:03  cabo        0x00000811  0x0b    42B    IGUAL       sim, INVERTIDO, no byte 1   0b 03 00 00 48 46 44 08 25 00 00 c4 00 00 89 44 d8 00 00 00 00 00 00 00…
+44:46:48:00:00:03  cabo        0x00000811  0x20    64B    IGUAL       —                           20 4a 75 6c 20 20 34 20 32 30 32 35 31 30 3a 33 38 3a 34 30 03 00 0b 00…
+44:46:48:00:00:03  cabo        0x00000811  0x22    64B    IGUAL       sim, INVERTIDO, no byte 17  22 03 00 11 08 00 00 2a 00 10 01 00 00 00 00 00 00 03 00 00 48 46 44 10…
+
+  O JULGAMENTO — os três critérios da pergunta dela
+
+report  (a) distingue   (b) nos dois transportes  (c) sem escrita    estável  veredito
+------  --------------  ------------------------  -----------------  -------  ---------------------------
+0x05    4 valores em 4  cabo 2/2, rádio 2/2       sim (GET_FEATURE)  sim      SERVE
+0x09    4 valores em 4  cabo 2/2, rádio 2/2       sim (GET_FEATURE)  sim      SERVE — e é ancorado no MAC
+0x0b    4 valores em 4  cabo 2/2, rádio 2/2       sim (GET_FEATURE)  sim      SERVE — e é ancorado no MAC
+0x20    4 valores em 4  cabo 2/2, rádio 2/2       sim (GET_FEATURE)  sim      SERVE
+0x22    4 valores em 4  cabo 2/2, rádio 2/2       sim (GET_FEATURE)  sim      SERVE — e é ancorado no MAC
+
+  A ÂNCORA ABSOLUTA — quem carrega o MAC da própria unidade
+
+    0x09: 4/4 unidades — sim, INVERTIDO, no byte 1
+    0x0b: 4/4 unidades — sim, INVERTIDO, no byte 1
+    0x22: 4/4 unidades — sim, INVERTIDO, no byte 17
+
+------------------------------------------------------------------------------
+RESUMO: 5 candidato(s) passam nos três critérios: 0x05, 0x09, 0x0b, 0x20, 0x22. Medido em 4 unidade(s), 2 no cabo e 2 no rádio.
+------------------------------------------------------------------------------
+
+==============================================================================
+(2) A RODADA DAS 22h20 — A MESA CAIU NO MEIO. NÃO É MEDIÇÃO, É REGISTRO.
+==============================================================================
+
+Esta rodada é preservada por duas razões, e nenhuma delas é o resultado dela:
+
+  1. É a PROVA DE QUE A CURA DA MÁSCARA MORDE. Repare no `c4 00 00 89 44 d8`
+     das linhas do cabo: o endereço do adaptador saiu mascarado pelo próprio
+     instrumento, sem substituição a mão nenhuma. Na rodada das 22h12 esses
+     mesmos seis bytes saíram inteiros.
+  2. É o registro de que a mesa 2+2 CAIU às 22h21, e a hora de parede está
+     aqui para cruzar com o `journalctl -k` depois.
+
+O QUE ACONTECEU, medido e não suposto:
+  22:12:52  os quatro respondem, nos dois transportes.
+  22:17:58  uma rodada estoura 2 min. Diagnóstico honesto: são as retentativas
+            de 3,2 s do BlueZ, quatro por report — o rádio já estava indo.
+  22:20:26  a0:fa:9c devolve EIO em todos os reports; o nó de d4:2f:4b (o
+            hidraw5) SUMIU do sistema de arquivos.
+  22:21:55  censo de conferência: "mesa com 2 controle(s): 2 no cabo. SÓ UM
+            TRANSPORTE presente." Os DOIS controles de rádio se foram.
+
+A CAUSA — e a primeira resposta que eu escrevi aqui estava ERRADA:
+
+  ERRADO (escrito 22h25, derrubado 22h43): "o desligamento automático por
+  ociosidade do próprio DualSense; estavam parados desde as 19h".
+
+  CERTO (medido 22h43): OS BRAÇOS FORAM TROCADOS DE NOVO. O censo das 22:43:15
+  achou os QUATRO, e os dois que tinham "sumido" estavam NO CABO:
+
+      hidraw4   d4:2f:4b:00:00:d8   hw 0x00001111   CABO
+      hidraw5   a0:fa:9c:00:00:f0   hw 0x00000710   CABO
+      hidraw8   44:46:48:00:00:03   hw 0x00000811   rádio
+      hidraw10  14:3a:9a:00:00:ab   hw 0x00000711   rádio
+
+  Um controle que se desliga por ociosidade NÃO reaparece no USB sozinho.
+  Alguém o moveu. A hipótese do sono durou dezoito minutos e caiu por uma
+  leitura de 3 s — fica escrita aqui, com a data, para que ninguém a levante de
+  novo achando que é nova. O protocolo do controle que cai sozinho
+  (docs/process/estudos/2026-08-07-PROTOCOLO-o-controle-que-cai-sozinho.md)
+  existe e é real; ele só não é o que aconteceu aqui.
+
+  O QUE ISSO GANHA, de graça: esta é a TERCEIRA configuração de braços do dia,
+  e com ela CADA UM dos quatro controles já passou pelos DOIS transportes.
+  Nenhum deles é "o do cabo" ou "o do rádio".
+
+O QUE ISSO **NÃO** MUDA: nada da rodada das 22h12. Ela fechou às 22:12:52, com
+o censo de abertura confirmando 2+2 e os quatro respondendo em 1 tentativa. A
+regra 4 da ordem de execução do PLANO-DA-MESA-2-2 é explícita — "não conclua
+nada sobre o aparelho, ele não está mais lá" —, e é por isso que os vereditos
+deste arquivo saem da rodada das 22h12 e nenhum sai desta.
+
+O QUE ISSO CUSTA, e é honesto dizer: a mesa 2+2 não pode ser remontada sem
+ela. Religar controle de rádio é o botão PS, e isso é a mão dela.
+
+==============================================================================
+  identidade_nos_dois_transportes.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... existe crachá que distinga as unidades nos DOIS transportes, sem escrita?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... array                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... csv                    de /usr/lib/python3.12/csv.py
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+
+  ESTE ARQUIVO NÃO SABE ESCREVER: não há HIDIOCSFEATURE nele.
+
+mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+  lendo a0:fa:9c:00:00:f0 (hidraw4, rádio) …
+  lendo d4:2f:4b:00:00:d8 (hidraw5, rádio) …
+  lendo 14:3a:9a:00:00:ab (hidraw8, cabo) …
+  lendo 44:46:48:00:00:03 (hidraw10, cabo) …
+
+  O QUE CADA APARELHO DEVOLVEU (duas leituras, 2.0s de distância)
+
+aparelho           transporte  hardware    report  bytes  2ª leitura  contém o MAC dele?          conteúdo (MAC mascarado no buffer)
+-----------------  ----------  ----------  ------  -----  ----------  --------------------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x05    -      não medida  —                           ioctl: Input/output error
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x09    -      não medida  —                           ioctl: Input/output error
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x0b    -      não medida  —                           ioctl: Input/output error
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x20    -      não medida  —                           ioctl: Input/output error
+a0:fa:9c:00:00:f0  rádio       0x00000710  0x22    -      não medida  —                           ioctl: Input/output error
+14:3a:9a:00:00:ab  cabo        0x00000711  0x05    41B    IGUAL       —                           05 02 00 00 00 00 00 a7 22 61 dd 51 22 a8 dd d2 22 2d dd 1c 02 1c 02 fd…
+14:3a:9a:00:00:ab  cabo        0x00000711  0x09    20B    IGUAL       sim, INVERTIDO, no byte 1   09 ab 00 00 9a 3a 14 08 25 00 c4 00 00 89 44 d8 00 00 00 00
+14:3a:9a:00:00:ab  cabo        0x00000711  0x0b    42B    IGUAL       sim, INVERTIDO, no byte 1   0b ab 00 00 9a 3a 14 08 25 00 00 c4 00 00 89 44 d8 01 b4 00 78 eb 68 dc…
+14:3a:9a:00:00:ab  cabo        0x00000711  0x20    64B    IGUAL       —                           20 4a 75 6c 20 20 34 20 32 30 32 35 31 30 3a 31 30 3a 33 32 02 00 04 00…
+14:3a:9a:00:00:ab  cabo        0x00000711  0x22    64B    IGUAL       sim, INVERTIDO, no byte 17  22 02 00 11 07 00 00 2a 00 10 01 00 00 00 00 00 00 ab 00 00 9a 3a 14 0a…
+44:46:48:00:00:03  cabo        0x00000811  0x05    41B    IGUAL       —                           05 05 00 0d 00 01 00 98 22 72 dd 94 22 86 dd 80 22 82 dd 1c 02 1c 02 08…
+44:46:48:00:00:03  cabo        0x00000811  0x09    20B    IGUAL       sim, INVERTIDO, no byte 1   09 03 00 00 48 46 44 08 25 00 c4 00 00 89 44 d8 00 00 00 00
+44:46:48:00:00:03  cabo        0x00000811  0x0b    42B    IGUAL       sim, INVERTIDO, no byte 1   0b 03 00 00 48 46 44 08 25 00 00 c4 00 00 89 44 d8 00 00 00 00 00 00 00…
+44:46:48:00:00:03  cabo        0x00000811  0x20    64B    IGUAL       —                           20 4a 75 6c 20 20 34 20 32 30 32 35 31 30 3a 33 38 3a 34 30 03 00 0b 00…
+44:46:48:00:00:03  cabo        0x00000811  0x22    64B    IGUAL       sim, INVERTIDO, no byte 17  22 03 00 11 08 00 00 2a 00 10 01 00 00 00 00 00 00 03 00 00 48 46 44 10…
+
+  O JULGAMENTO — os três critérios da pergunta dela
+
+report  (a) distingue   (b) nos dois transportes  (c) sem escrita    estável  veredito
+------  --------------  ------------------------  -----------------  -------  ----------------------------------------
+0x05    2 valores em 2  cabo 2/2, rádio 0/2       sim (GET_FEATURE)  sim      NÃO SERVE — não sai nos dois transportes
+0x09    2 valores em 2  cabo 2/2, rádio 0/2       sim (GET_FEATURE)  sim      NÃO SERVE — não sai nos dois transportes
+0x0b    2 valores em 2  cabo 2/2, rádio 0/2       sim (GET_FEATURE)  sim      NÃO SERVE — não sai nos dois transportes
+0x20    2 valores em 2  cabo 2/2, rádio 0/2       sim (GET_FEATURE)  sim      NÃO SERVE — não sai nos dois transportes
+0x22    2 valores em 2  cabo 2/2, rádio 0/2       sim (GET_FEATURE)  sim      NÃO SERVE — não sai nos dois transportes
+
+  A ÂNCORA ABSOLUTA — quem carrega o MAC da própria unidade
+
+    0x09: 2/2 unidades — sim, INVERTIDO, no byte 1
+    0x0b: 2/2 unidades — sim, INVERTIDO, no byte 1
+    0x22: 2/2 unidades — sim, INVERTIDO, no byte 17
+
+  CSV (mascarado) em docs/data/ensaios-brutos/2026-08-15-IDENTIDADE-o-cracha-nos-dois-transportes.csv
+
+------------------------------------------------------------------------------
+RESUMO: NENHUM candidato passa nos três critérios. Leia a tabela do julgamento.
+------------------------------------------------------------------------------
+
+==============================================================================
+A LEITURA DO RESULTADO — o que a rodada das 22h12 decide, e o que não decide
+==============================================================================
+
+OS CINCO PASSAM NOS TRÊS CRITÉRIOS. ISSO NÃO SIGNIFICA CINCO CRACHÁS.
+----------------------------------------------------------------------
+Os cinco candidatos saem nos dois transportes, sem escrita, estáveis entre
+duas leituras, e assumem 4 valores em 4 unidades. Mas "distingue 4 em 4 NESTA
+MESA" e "é um identificador de unidade" são coisas diferentes, e a diferença é
+o coração da universalidade que ela pediu. Olhando o CONTEÚDO, e não só a
+contagem:
+
+  0x09  (20 B)  É o MAC. buf[1..6] = MAC do controle INVERTIDO; buf[7..9] =
+                `08 25 00` constante; buf[10..15] = MAC do host pareado.
+                Conferido nas 4 unidades, nos DOIS transportes. É crachá de
+                verdade: único por fabricação, não por lote.
+
+  0x0b  (42 B)  Carrega o MESMO MAC, na mesma posição (buf[1..6], invertido),
+                mais o MAC do host a partir de buf[11]. É o 0x09 com mais
+                campos. Não acrescenta identidade: acrescenta cópia.
+
+  0x22  (64 B)  buf[3..4] = o `hardware_version` (10 07 / 11 07 / 11 08 /
+                11 11 — a revisão de placa) e buf[17..22] = o MAC INVERTIDO.
+                Ou seja: o 0x22 só distingue as 4 unidades PORQUE embute o
+                MAC. Tire o MAC e o que sobra é metadado de placa.
+
+  0x20  (64 B)  **É ONDE A CONTAGEM ENGANA.** Os 19 primeiros bytes são a data
+                e a hora de compilação do firmware em ASCII, e elas COLIDEM EM
+                PARES nesta mesa:
+                    " Jul  4 2025 10:10:32"  ->  a0:fa:9c  E  14:3a:9a
+                    " Jul  4 2025 10:38:40"  ->  d4:2f:4b  E  44:46:48
+                Os bytes 48-56 também colidem nos mesmos pares. E os bytes
+                60-63 "diferem" entre braços por um motivo que não é
+                identidade nenhuma: no rádio eles são o CRC-32 do envelope de
+                Bluetooth; no cabo são zeros. O que resta de genuinamente
+                distinto no 0x20 são os bytes 24-25, que são o
+                `hardware_version` — de novo a placa.
+                **O 0x20 agrupa por REVISÃO DE PLACA, não por unidade.**
+
+  0x05  (41 B)  Calibração de fábrica da IMU. Distingue por trim analógico, e
+                de fato os quatro diferem. Mas é impressão digital, não
+                crachá: não há garantia de unicidade, não há significado, e a
+                própria família 0x80 tem um par (`[12,1]`) que GRAVA
+                calibração na NVS — isto é, o valor é reescrevível. Identidade
+                que se pode reescrever por acidente não é identidade.
+
+O QUE SOBRA, E É UMA COISA SÓ
+------------------------------
+**O MAC.** Ele é o único identificador desta mesa que é único por unidade
+FABRICADA e não por lote. Os cinco reports acima ou SÃO o MAC (0x09, 0x0b), ou
+embutem o MAC (0x22), ou são metadado de placa disfarçado de identidade (0x20,
+e o `hardware_version` junto com ele), ou são trim analógico reescrevível
+(0x05).
+
+E o caminho mais barato para o MAC não é nenhum destes reports: é o `HID_UNIQ`
+do `uevent`, que o `hid_playstation` publica de graça nos DOIS transportes, sem
+root, sem abrir hidraw, sem broker e sem disputar nada com o daemon. Os reports
+0x09/0x0b/0x22 servem para CONFIRMAR que o sysfs não está inventando — e essa
+confirmação, agora, está feita nos dois braços.
+
+A ARMADILHA QUE ESTA MESA ESCONDE, E ELA É EXATAMENTE A DA UNIVERSALIDADE
+--------------------------------------------------------------------------
+Os quatro controles dela são de QUATRO revisões de placa diferentes (0x0710,
+0x0711, 0x0811, 0x1111) e de QUATRO cores diferentes. É a amostra mais
+favorável possível — e é justamente por isso que ela esconde a colisão: nesta
+mesa, `hardware_version` "distingue 4 em 4", e a cor também. Num PC qualquer,
+com dois DualSense brancos comprados no mesmo dia, os dois colidem no mesmo
+instante. A única coluna que continua distinguindo é o MAC.
+
+Este parágrafo é a resposta à regra dela: "n=4 é AMOSTRA". A contagem de 4-em-4
+não promove candidato nenhum a universal; o que promove é o MECANISMO — e o
+mecanismo do MAC é a fabricação, não o lote.

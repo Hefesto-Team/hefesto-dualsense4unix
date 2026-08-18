@@ -123,10 +123,26 @@ class TestOAvisoMorreQuandoOCoopVolta:
 class TestOTooltipDizOPrecoPorExtenso:
     def test_tem_as_tres_partes_e_o_motivo(self) -> None:
         texto = tooltip_do_coop_derrubado(_coop(True, 3))
-        assert "O jogo assumiu o controle" in texto
+        assert "quem entrega o controle é a Steam" in texto
         assert "P2, P3 e P4" in texto
         assert "Você não desligou nada" in texto
         assert "fechar o jogo" in texto
+
+    def test_o_tooltip_nao_diz_o_contrario_do_que_ela_mediu(self) -> None:
+        """NOTA DATADA — 07/08/2026: a abertura antiga estava INVERTIDA.
+
+        O tooltip abria com *"O jogo assumiu o controle: o Hefesto saiu da
+        frente dele"*. A medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`,
+        seção *A INVERSÃO*, grau MEDIDO) mostrou o contrário **dentro** da
+        lista de exceções: os gatilhos dela seguraram e a cor dela ficou. Quem
+        "assume o controle" da luz e dos gatilhos é o jogo que está **fora**
+        da lista (medido no Sackboy). Um tooltip que promete a perda faz a
+        pessoa desmarcar o jogo justamente quando marcar era o certo.
+        """
+        texto = tooltip_do_coop_derrubado(_coop(True, 3))
+        assert "saiu da frente" not in texto
+        assert "assumiu o controle" not in texto
+        assert "gatilhos continuam valendo" in texto
 
     def test_sem_queda_nao_ha_tooltip(self) -> None:
         assert tooltip_do_coop_derrubado(_coop(False, 0)) == ""

@@ -50,6 +50,11 @@ class IpcSubsystem:
             rumble_passthrough_applier=getattr(
                 daemon, "apply_profile_rumble_passthrough", None
             ),
+            # SOM-02/E4: volume do alto-falante por perfil. O applier fala
+            # DIRETO com o backend — passar pelo `speaker.set` do IPC armaria a
+            # categoria manual `audio` e a SEGUNDA ativação de perfil seria
+            # descartada pela própria trava (ver `Daemon.apply_profile_speaker`).
+            speaker_applier=getattr(daemon, "apply_profile_speaker", None),
         )
         self._server = IpcServer(
             controller=ctx.controller,
@@ -99,6 +104,9 @@ async def start_ipc(daemon: DaemonProtocol) -> None:
         rumble_passthrough_applier=getattr(
             daemon, "apply_profile_rumble_passthrough", None
         ),
+        # SOM-02/E4: idem `IpcSubsystem.start` — a seção `speaker` do perfil
+        # precisa existir nas DUAS rotas de subida do IPC.
+        speaker_applier=getattr(daemon, "apply_profile_speaker", None),
     )
     daemon._ipc_server = IpcServer(
         controller=daemon.controller,

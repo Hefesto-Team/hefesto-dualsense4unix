@@ -13,15 +13,20 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import time
 from collections.abc import Callable
 from dataclasses import asdict, replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, cast
 
+from hefesto_dualsense4unix.core import escritor_cru as _escritor_cru
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.core.trigger_effects import off as trigger_off
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
+from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
+    apply_rumble_policy,
+    uniq_do_alvo_de_output,
+)
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -29,6 +34,35 @@ if TYPE_CHECKING:
     from hefesto_dualsense4unix.core.controller import IController
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
     from hefesto_dualsense4unix.daemon.state_store import StateStore
+
+
+def origem_do_pedido(params: dict[str, Any] | None) -> Literal["manual", "profile"]:
+    """A origem declarada pelo cliente. Silêncio = automático, nunca "manual".
+
+    ORIGEM-QUE-MENTE-01 (08/08/2026). Os setters do daemon tinham `origin`
+    com default `"manual"`, e o protocolo IPC não expunha o campo — então o
+    daemon lia a AUSÊNCIA de informação como a mão dela, e um cliente que
+    apenas reconciliava estado era promovido a gesto humano.
+
+    O custo, MEDIDO: com o Sackboy aberto e marcado na allowlist do Steam
+    Input, isso furou o portão JOGO-01 (`gamepad.py`, `if origin != "manual"`),
+    devolveu o gamepad virtual com o grab e o esconde-esconde pulados, e o jogo
+    passou a ver o controle físico E o virtual. Ela fotografou um "Jogador 3"
+    fantasma. Ver JOGADOR-3-FANTASMA-01.
+
+    A regra aqui é assimétrica de propósito, e é a inversão do default antigo:
+    **"manual" só quando o cliente DIZ que é manual.** Errar para "profile"
+    custa, no pior caso, um gesto dela que não fura o portão — e o produto lhe
+    diz por quê. Errar para "manual", como antes, custa o controle dela no meio
+    da partida.
+    """
+    bruto = (params or {}).get("origin")
+    if bruto is None:
+        return "profile"
+    if bruto not in ("manual", "profile"):
+        raise ValueError("'origin' precisa ser 'manual' ou 'profile'")
+    return cast('Literal["manual", "profile"]', bruto)
+
 
 logger = get_logger(__name__)
 
@@ -59,6 +93,18 @@ _LIGHTBAR_READ_TTL_SEC = 1.0
 #: watchdog), a mesma classe de incidente que HANG-01 foi desenhado para
 #: conter. `asyncio.wait_for` devolve erro ao IPC em vez de pendurar o loop.
 _IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC = 5.0
+
+#: COOP-SEM-INTERRUPTOR-01 (06/08/2026): a razão que o `coop.set` devolve a
+#: quem pede para DESLIGAR o co-op. Texto único, e é dela: *"se eu conecto 4
+#: controles no PC eu espero, com 4 pessoas jogando, que cada um controle o
+#: próprio personagem. Ninguém esperaria controlar o mesmo personagem com cada
+#: controle."* Fica aqui, e não em `subsystems/coop.py`, porque é POLÍTICA da
+#: superfície de comando — o mecanismo (grab, vpad por jogador, player-LED)
+#: não mudou uma linha.
+COOP_SEMPRE_LIGADO_MOTIVO = (
+    "o co-op local é sempre ligado: cada controle conectado é um jogador. "
+    "Para um controle de reserva, deixe-o desconectado."
+)
 
 
 class _RenumberAuthorityChangedError(Exception):
@@ -102,6 +148,285 @@ class _NumeroForaDaMesaError(Exception):
 _WRAPPER_MARKER_TTL_SEC = 2.0
 
 
+# ---------------------------------------------------------------------------
+# CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026): o controle que está LIGADO e que o
+# sistema não conseguiu entregar ao Hefesto.
+#
+# Medido na máquina dela em 09/08: dois DualSense ligados e pareados, e a
+# janela mostrava UM. O driver do kernel abortou o segundo na probe
+# (`probe with driver playstation failed`) — e um controle assim conecta no
+# rádio, acende a luz do próprio firmware e NÃO tem hidraw, nem nó de LED, nem
+# dispositivo de entrada. Como `describe_controllers` devolve uma entrada por
+# HANDLE ABERTO, ele simplesmente não existe para nós; a aba Início chegava a
+# escrever "Nenhum controle conectado." para um controle ligado e pareado.
+#
+# Ele NÃO é um controle desconectado (está no rádio) e NÃO é um externo (não
+# tem `/dev/input` para o inventário de externos enumerar): é um TERCEIRO
+# estado, e era ele que o produto não sabia representar.
+#
+# A REGRA É DE UM DONO SÓ, e o dono é `scripts/bt_rebind_orphans.sh` — a cura
+# que roda de 2 em 2 minutos pela vigia `bt_health_watchdog.sh`. O que está
+# aqui é a MESMA leitura, para EXIBIR o que aquele script vai tentar curar; se
+# os dois discordarem, a janela promete uma cura que não vem. É por isso que o
+# teste desta leva confere estas três constantes contra o texto do script.
+# ---------------------------------------------------------------------------
+
+#: Onde o kernel lista os devices HID. Parametrizável só como COSTURA DE
+#: TESTE (a suíte aponta para um diretório temporário) — em produção o default
+#: é o que vale, exatamente como no script.
+_HID_DEVICES_DIR = "/sys/bus/hid/devices"
+
+#: Barramento 0005 = Bluetooth. É o único onde a contenção de probe medida
+#: acontece, e é o que exclui por construção o gamepad virtual do próprio
+#: Hefesto, que nasce por uhid no barramento 0003.
+_HID_ORFAO_BUS = "0005"
+
+#: Vendor 054C = Sony — o dono é o driver `playstation`. Device órfão de
+#: qualquer outro fabricante é problema de outra pessoa, e o script não o toca.
+_HID_ORFAO_VID = "054C"
+
+#: TTL (s) da varredura do sysfs no `state_full`. O tick da GUI é 10 Hz e este
+#: é um fato que muda por gesto humano (ligar/desligar controle) — sem o cache
+#: seriam 10 `listdir` por segundo para responder a mesma pergunta. Mesmo
+#: padrão e mesmo número do cache do marker do wrapper, logo acima.
+_HID_ORFAOS_TTL_SEC = 2.0
+
+
+def _e_dualsense_por_bluetooth(id_do_device: str) -> bool:
+    """O nome do diretório é ``BUS:VID:PID.INSTANCIA`` — ex. ``0005:054C:0CE6.000F``.
+
+    Mesmo `_e_candidato` do `bt_rebind_orphans.sh`, traduzido: barramento
+    Bluetooth **e** vendor Sony. O `upper()` no vendor repete o `tr a-f A-F`
+    do script — o kernel escreve em maiúsculas, mas a comparação não pode
+    depender disso.
+    """
+    partes = id_do_device.split(":")
+    if len(partes) < 3:
+        return False
+    return partes[0] == _HID_ORFAO_BUS and partes[1].upper() == _HID_ORFAO_VID
+
+
+def dualsense_sem_driver(devices_dir: str | None = None) -> list[str]:
+    """Os DualSense presentes no sistema e SEM driver — a lista de ids do sysfs.
+
+    O critério é o do `bt_rebind_orphans.sh`, e é cirúrgico: **órfão é o que
+    NÃO tem o symlink `driver`**. Um controle que perdeu a probe fica em
+    `/sys/bus/hid/devices` sem `driver`, e por isso sem hidraw, sem input, sem
+    LED e sem bateria — invisível para todo o resto do produto.
+
+    ``devices_dir=None`` resolve `_HID_DEVICES_DIR` **na hora da chamada**, e
+    não no `def`: assim a constante do módulo continua sendo o único lugar
+    onde o caminho está escrito, e a suíte a troca por um diretório temporário
+    sem precisar mexer no default da função.
+
+    Devolve lista vazia quando o diretório não existe ou não pode ser lido:
+    este caminho roda dentro do `state_full`, e um `OSError` aqui derrubaria a
+    aba Status inteira por causa da linha menos importante dela.
+    """
+    alvo = devices_dir if devices_dir is not None else _HID_DEVICES_DIR
+    try:
+        entradas = sorted(os.listdir(alvo))
+    except OSError:
+        return []
+    achados: list[str] = []
+    for id_do_device in entradas:
+        # `os.path.exists` e não `lexists`: o `[[ -e ]]` do script SEGUE o
+        # symlink, e as duas leituras têm de dizer a mesma coisa.
+        if os.path.exists(os.path.join(alvo, id_do_device, "driver")):
+            continue  # tem driver: o sistema o adotou, nada a dizer
+        if _e_dualsense_por_bluetooth(id_do_device):
+            achados.append(id_do_device)
+    return achados
+
+
+def _visto_ha_s(vp: Any) -> dict[str, float]:
+    """O ``visto_ha_s`` do vpad, saneado para o payload de IPC.
+
+    PAINEL-DA-VERDADE-01/E1. O `getattr` com default existe pelo motivo de
+    sempre neste arquivo: o vpad pode ser um `uinput` (que não tem hidraw e
+    portanto não tem o que carimbar) ou um dublê de teste — e o `state_full`
+    nunca pode morrer por causa de um campo de telemetria.
+
+    Os valores são forçados a `float` e os não-numéricos caem fora: o payload
+    vira JSON, e um valor exótico aqui derrubaria a serialização inteira por
+    causa da linha menos importante dela.
+    """
+    cru = getattr(vp, "visto_ha_s", None)
+    if not isinstance(cru, dict):
+        return {}
+    return {
+        str(k): float(v)
+        for k, v in cru.items()
+        if isinstance(v, (int, float)) and not isinstance(v, bool)
+    }
+
+
+def _audio_do_jogo_amostra(vp: Any) -> dict[str, int] | None:
+    """A amostra de áudio do vpad, saneada para o payload de IPC.
+
+    PARIDADE-SONY-01 — o dado que destranca a E2: quais dos quatro bytes de
+    `common[4..7]` o jogo escreveu, e com que valores.
+
+    Mesmas duas defesas do `_visto_ha_s` logo acima, e pelos mesmos motivos: o
+    vpad pode ser um `uinput` (sem hidraw, nada a amostrar) ou um dublê de
+    teste, e o `state_full` não pode morrer pela linha menos importante dele.
+    Valores exóticos caem fora antes de virarem JSON.
+    """
+    cru = getattr(vp, "audio_do_jogo_amostra", None)
+    if not isinstance(cru, dict):
+        return None
+    return {
+        str(k): int(v)
+        for k, v in cru.items()
+        if isinstance(v, (int, float)) and not isinstance(v, bool)
+    }
+
+
+def _par_de_motores(cru: Any) -> list[int] | None:
+    """Um par (weak, strong) do vpad saneado para o payload, ou None.
+
+    RUMBLE-QUE-NAO-SE-SENTE-01. Mesmas defesas dos dois helpers acima: o vpad
+    pode ser um `uinput` (que não tem esta propriedade) ou um dublê de teste
+    devolvendo `MagicMock`, e o `state_full` não pode morrer por causa de uma
+    linha de diagnóstico. Sai como `list` porque JSON não tem tupla — e o
+    consumidor (aba Rumble) já trata os dois casos.
+    """
+    if not isinstance(cru, tuple) or len(cru) != 2:
+        return None
+    if not all(isinstance(v, int) and not isinstance(v, bool) for v in cru):
+        return None
+    return [int(cru[0]), int(cru[1])]
+
+
+def _contador_do_vpad(vp: Any, nome: str) -> int:
+    """Um contador cumulativo do vpad, com tipagem ESTRITA; 0 quando não há.
+
+    ORFAOS-QUE-VOLTAM-01. Os contadores vizinhos usam ``int(getattr(...) or 0)``
+    e isso basta para eles, porque um número a mais num diagnóstico só engana
+    quem está lendo o log. Estes dois não: ``motion_forwards`` decide a FRASE
+    do card (é ele que separa "o giroscópio parou" de "nunca começou"), e
+    ``int()`` de um `MagicMock` devolve **1** — um vpad dublado, ou um uinput
+    que não tem a property, publicaria "já fluiu uma vez" e a tela diria
+    "parou" num caminho que nunca existiu.
+
+    A disciplina é a mesma que o `motion_streaming` deste payload já aplica, e
+    pelo mesmo motivo escrito lá: um MagicMock nunca vira dado.
+    """
+    valor = getattr(vp, nome, 0)
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        return 0
+    return valor
+
+
+def _idade_ou_none(cru: Any) -> float | None:
+    """Uma idade em segundos saneada para o payload, ou None.
+
+    MOTOR-QUE-NAO-SE-VE-01. `None` significa **nunca aconteceu**, e é
+    diferente de `0.0`, que é "acabou de acontecer" — a mesma distinção que o
+    `visto_ha_s` faz omitindo a categoria. Publicar zero para "nunca" apagaria
+    a diferença e faria a tela dizer que os motores acabaram de girar num vpad
+    que nunca vibrou.
+    """
+    if isinstance(cru, bool) or not isinstance(cru, (int, float)):
+        return None
+    return float(cru)
+
+
+def _jack_do_vpad(vp: Any) -> dict[str, bool] | None:
+    """O `jack` do vpad (fone/microfone/mudo) saneado para o payload, ou None.
+
+    JACK-QUE-NAO-LIGOU-01. Mesmas defesas dos helpers acima: o vpad pode ser
+    um `uinput` (que não tem report 0x01 e portanto não tem byte 53) ou um
+    dublê devolvendo `MagicMock`, e o `state_full` não pode morrer por causa
+    de uma linha de diagnóstico. `None` = este vpad não fala de jack.
+    """
+    cru = getattr(vp, "jack", None)
+    if not isinstance(cru, dict):
+        return None
+    return {
+        str(k): bool(v) for k, v in cru.items() if isinstance(v, bool)
+    }
+
+
+def _bateria_do_vpad(vp: Any) -> dict[str, Any] | None:
+    """A bateria que o vpad ANUNCIA ao jogo, saneada para o payload, ou None.
+
+    BATERIA-QUE-NAO-CHEGOU-01. Mesmas defesas do `_jack_do_vpad`: o vpad pode
+    ser um `uinput` (que não tem report 0x01 nem byte 52) ou um dublê de teste
+    devolvendo `MagicMock`, e o `state_full` não pode morrer por causa de uma
+    linha de diagnóstico.
+
+    `pct` é `None` quando o vpad está em `_STATUS_DESCONHECIDO` — o "não sei"
+    honesto do byte, que é diferente de zero e não pode virar zero aqui: zero
+    é bateria crítica, e "não sei" é justamente o estado que existe para não
+    acender alerta nenhum.
+    """
+    cru = getattr(vp, "bateria_anunciada", None)
+    if not isinstance(cru, tuple) or len(cru) != 2:
+        return None
+    pct, carregando = cru
+    if pct is not None and (isinstance(pct, bool) or not isinstance(pct, int)):
+        return None
+    if not isinstance(carregando, bool):
+        return None
+    return {"pct": pct, "carregando": carregando}
+
+
+def _amostra_de_descarte(cru: Any) -> dict[str, int] | None:
+    """(flag0, flag1, flag2, weak, strong) do último descarte, nomeado.
+
+    RUMBLE-QUE-NAO-SE-SENTE-01 — é o dado que diz QUAL codificação de vibração
+    chegou sem o gate reconhecer. Vai nomeado, e não como lista de cinco
+    números, porque quem vai ler isto numa madrugada precisa saber qual byte é
+    qual sem abrir o código.
+    """
+    if not isinstance(cru, tuple) or len(cru) != 5:
+        return None
+    if not all(isinstance(v, int) and not isinstance(v, bool) for v in cru):
+        return None
+    nomes = ("flag0", "flag1", "flag2", "weak", "strong")
+    return dict(zip(nomes, (int(v) for v in cru), strict=True))
+
+
+def _anel_de_vibracao(cru: Any) -> list[dict[str, Any]] | None:
+    """Os últimos reports de vibração do vpad, nomeados (QUEM ESCREVEU-01).
+
+    Cada item vira ``{ha_s, flag0, flag1, flag2, weak, strong, ramo}``. É a
+    prova que os contadores não dão: *quem* escreveu o report e *o quê*. O
+    caso medido em 09/08 (``plays=4`` com força zero em todas) tem dois
+    autores possíveis — o jogo pelo hidraw e o ``hid_playstation`` do kernel
+    traduzindo force-feedback do nó evdev —, e só os bytes os separam.
+
+    ``None`` quando o vpad não expõe o anel (backend uinput, dublê de teste):
+    lista vazia diria "nada chegou", e "não sei" é outra coisa.
+    """
+    if not isinstance(cru, list):
+        return None
+    nomes = ("ha_s", "flag0", "flag1", "flag2", "weak", "strong", "ramo")
+    itens: list[dict[str, Any]] = []
+    for entrada in cru:
+        if not isinstance(entrada, tuple) or len(entrada) != 7:
+            return None
+        *numeros, ramo = entrada
+        if not isinstance(ramo, str):
+            return None
+        if not all(
+            isinstance(v, (int, float)) and not isinstance(v, bool) for v in numeros
+        ):
+            return None
+        itens.append(dict(zip(nomes, (*numeros, ramo), strict=True)))
+    return itens
+
+
+def _report_estranho(cru: Any) -> dict[str, int] | None:
+    """(report_id, tamanho) do último output com envelope que não lemos."""
+    if not isinstance(cru, tuple) or len(cru) != 2:
+        return None
+    if not all(isinstance(v, int) and not isinstance(v, bool) for v in cru):
+        return None
+    return {"report_id": int(cru[0]), "tamanho": int(cru[1])}
+
+
 def _norm_uniq(value: Any) -> str | None:
     """MAC 12-hex normalizado de uma key/serial do backend, ou None.
 
@@ -131,45 +456,92 @@ def _rgb_or_none(value: Any) -> tuple[int, int, int] | None:
         return None
 
 
+def _numero_de_exibicao(entry: dict[str, Any]) -> int:
+    """Número "Controle N" de UMA entrada de ``controllers``.
+
+    MESA-CHEIA-11/E1. É a MESMA regra de
+    `app/actions/base.numero_do_controle` (slot de sessão; sem slot, posição
+    1-based): o slot é a identidade estável, e é o número que a janela imprime
+    no título do card. A regra mora lá porque é da interface — e `base.py`
+    importa `gi`, que o daemon não pode importar. Para que as duas cópias não
+    divirjam existe portão: `test_mesa_cheia_11_a_janela_conta_quatro.py`
+    compara as duas sobre o payload REAL de quatro controles, onde `player_slot`
+    e `player` são listas DIFERENTES ([4,1,3,2] contra [1,2,3,4]) — foi essa
+    medição que mostrou que a escolha do número importa.
+    """
+    slot = entry.get("player_slot")
+    if isinstance(slot, int) and not isinstance(slot, bool):
+        return slot
+    indice = entry.get("index")
+    if isinstance(indice, int) and not isinstance(indice, bool):
+        return indice + 1
+    return 1
+
+
+def controles_bt_frageis(controllers: Any, *, native_mode: bool) -> list[int]:
+    """Números dos controles frágeis por BT no Modo Nativo — função pura.
+
+    MESA-CHEIA-11/E1, e o defeito que ela corrige é FALSO NEGATIVO: a flag
+    olhava só o `transport` do PRIMÁRIO, então com o Controle 1 no cabo e os
+    outros três no rádio o aviso **calava justamente para os três frágeis** —
+    a situação de co-op mais comum, porque o primeiro plugado é o dela.
+
+    Frágil é cada controle CONECTADO em ``transport == "bt"`` enquanto o Modo
+    Nativo está ligado (fora do Modo Nativo não há fragilidade a avisar: o
+    jogo vê o gamepad virtual, não o físico). Os números saem CRESCENTES, e
+    não na ordem dos handles: quem lê a frase procura o card pelo número, e
+    "Controles 3 e 2" faria ela varrer a fileira duas vezes.
+
+    Devolve `[]` — e não levanta — para `controllers` ausente ou dublado: o
+    handler roda com backends de teste e com o `describe_controllers` de um
+    MagicMock, e um aviso de tela nunca pode derrubar o `state_full`.
+    """
+    if not native_mode or not isinstance(controllers, list):
+        return []
+    numeros: list[int] = []
+    for entry in controllers:
+        if not isinstance(entry, dict):
+            continue
+        if not entry.get("connected"):
+            continue
+        transporte = entry.get("transport")
+        if not isinstance(transporte, str) or transporte.lower() != "bt":
+            continue
+        numero = _numero_de_exibicao(entry)
+        if numero not in numeros:
+            numeros.append(numero)
+    return sorted(numeros)
+
+
 # --- 8BIT-01: inventário de gamepads externos (opt-in do controller.list) ----
 
 #: Orçamentos da sonda "quem segura o hidraw" (opcional e degradável): pgrep
 #: com timeout curto e varredura de /proc/<pid>/fd com teto de tempo — o
 #: estudo mediu ~6 ms para ~4600 fds, então 0.5 s é folga patológica. A sonda
 #: roda na MESMA thread do inventário (nunca no event loop).
-_HOLDERS_PGREP_TIMEOUT_SEC = 1.0
-_HOLDERS_SCAN_BUDGET_SEC = 0.5
-_HOLDERS_MAX_STEAM_PIDS = 8
+#:
+#: ESCRITOR-CRU-01: os três números moram agora em `core/escritor_cru.py`
+#: (`PGREP_TIMEOUT_S`, `ORCAMENTO_DA_VARREDURA_S`, `MAX_PIDS_DA_STEAM`), junto
+#: com a sonda que os usa. Estes aliases ficam porque o número medido é o
+#: mesmo e quem lia daqui não precisa saber que a casa mudou.
+_HOLDERS_PGREP_TIMEOUT_SEC = _escritor_cru.PGREP_TIMEOUT_S
+_HOLDERS_SCAN_BUDGET_SEC = _escritor_cru.ORCAMENTO_DA_VARREDURA_S
+_HOLDERS_MAX_STEAM_PIDS = _escritor_cru.MAX_PIDS_DA_STEAM
 
 
 def _steam_pids() -> list[int]:
     """PIDs do processo Steam via pgrep — padrões do `steam_running` canônico.
 
-    Mesmos matches de `integrations/steam_launch_options.steam_running`
-    (`-f steamrt64/steam` pega o runtime pelo PATH; nunca `-f steam` solto —
-    o falso-positivo histórico do earlyoom), mais `-x steam` para instalações
-    fora do runtime. Best-effort: qualquer falha devolve o que juntou.
+    ESCRITOR-CRU-01: a implementação MUDOU DE CASA para
+    `core/escritor_cru.py`, e este nome ficou como porta (o inventário de
+    externos e a suíte o conhecem). A razão de ter uma casa só é a de sempre:
+    quando o vigia da lightbar passou a fazer a MESMA pergunta que o
+    inventário de externos já fazia, duas cópias seriam duas verdades sobre
+    quem segura o mesmo `/dev/hidrawN`.
     """
-    import subprocess
+    from hefesto_dualsense4unix.core.escritor_cru import pids_da_steam
 
-    pids: set[int] = set()
-    for args in (["pgrep", "-f", "steamrt64/steam"], ["pgrep", "-x", "steam"]):
-        try:
-            proc = subprocess.run(
-                args,
-                capture_output=True,
-                timeout=_HOLDERS_PGREP_TIMEOUT_SEC,
-                check=False,
-                text=True,
-            )
-        except (OSError, subprocess.SubprocessError):
-            continue
-        if proc.returncode != 0:
-            continue
-        for token in proc.stdout.split():
-            with contextlib.suppress(ValueError):
-                pids.add(int(token))
-    return sorted(pids)[:_HOLDERS_MAX_STEAM_PIDS]
+    return pids_da_steam()
 
 
 def _steam_hidraw_holders() -> dict[str, list[int]]:
@@ -182,28 +554,14 @@ def _steam_hidraw_holders() -> dict[str, list[int]]:
     ausência como "não sondado", NUNCA como "ninguém segura". Lembrete de
     honestidade do sprint: fd aberto pelo Steam é estado NORMAL, não
     assinatura de conflito.
-    """
-    import os
 
-    holders: dict[str, list[int]] = {}
-    deadline = time.monotonic() + _HOLDERS_SCAN_BUDGET_SEC
-    for pid in _steam_pids():
-        fd_dir = f"/proc/{pid}/fd"
-        try:
-            entries = os.listdir(fd_dir)
-        except OSError:
-            continue  # processo morreu / sem permissão: segue degradado
-        for fd in entries:
-            if time.monotonic() > deadline:
-                return holders
-            target = ""
-            with contextlib.suppress(OSError):
-                target = os.readlink(os.path.join(fd_dir, fd))
-            if target.startswith("/dev/hidraw"):
-                pids_do_no = holders.setdefault(target, [])
-                if pid not in pids_do_no:
-                    pids_do_no.append(pid)
-    return holders
+    ESCRITOR-CRU-01: o corpo mora em `core/escritor_cru.holders_de_hidraw`
+    (ver `_steam_pids` acima). Aqui sem filtro de nós — o inventário quer
+    TODOS os hidraw que a Steam segura, e é ele quem cruza com os seus.
+    """
+    from hefesto_dualsense4unix.core.escritor_cru import holders_de_hidraw
+
+    return holders_de_hidraw()
 
 
 def _external_inventory(
@@ -319,6 +677,12 @@ class IpcHandlersMixin:
     _wrapper_marker_cache: tuple[float, tuple[int, int] | None] | None = None
     _wrapper_first_seen: tuple[int, float] | None = None
 
+    #: CONTROLE-QUE-NAO-ENTROU-01: cache TTL da varredura de
+    #: `/sys/bus/hid/devices` (ver `dualsense_sem_driver`). Mesmo padrão dos
+    #: caches acima: class attribute (o mixin não é dataclass) com shadow por
+    #: instância no primeiro uso.
+    _hid_orfaos_cache: tuple[float, list[str]] | None = None
+
     #: S2 (sensores na aba Status): `SensorHub` lazy — os readers de
     #: giroscópio/touchpad só nascem quando alguém pede o `state_full` e
     #: morrem sozinhos quando param de ser pedidos. Mesmo padrão dos caches
@@ -358,25 +722,59 @@ class IpcHandlersMixin:
         if not isinstance(name, str) or not name:
             raise ValueError("profile.switch exige 'name' string")
         relatorio: dict[str, str] = {}
-        profile = self.profile_manager.activate(
-            name, origin="manual", relatorio=relatorio
-        )
-        # Bug B: paridade do marker da CLI legada com session.json.
-        from hefesto_dualsense4unix.utils.session import save_active_marker
-        save_active_marker(profile.name)
-        # Usuário escolheu perfil explícito: libera autoswitch de novo
-        # (BUG-MOUSE-TRIGGERS-01).
-        self.store.clear_manual_trigger_active()
-        # Bug C: arma lock manual; autoswitch suprime por
-        # MANUAL_PROFILE_LOCK_SEC segundos.
+        # TRAVA-QUE-SOLTA-TARDE-01 (medido ao vivo, 05/08): o clear e o lock
+        # vêm ANTES do `activate`. Até aqui eles vinham depois, e a ativação
+        # inteira rodava com a trava ainda armada — `manager.apply` pulava as
+        # categorias travadas (emitindo `None` no `OutputSpec`) e o handler
+        # respondia "ativado". A trava era limpa tarde demais para a ativação
+        # que a limpou: valia só para a PRÓXIMA. No journal dela, duas
+        # ativações idênticas do mesmo perfil davam resultados diferentes.
+        # O caminho automático (`autoswitch.py:505-518`) sempre fez assim —
+        # limpa e SÓ ENTÃO aplica; eram os dois gestos EXPLÍCITOS que estavam
+        # invertidos. Ver `tests/unit/test_trava_que_solta_tarde_01.py`.
+        #
+        # O lock sobe junto e pelo mesmo motivo: entre soltar a trava e
+        # terminar o `activate` não pode existir janela em que nem a trava nem
+        # o lock suprimam o autoswitch (Bug C).
         import time as _time
 
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
         )
+        # `getattr` pelo mesmo motivo que `ProfileManager._categorias_travadas`
+        # (`profiles/manager.py:384-387`): dublês de teste e stores parciais
+        # continuam funcionando, e "não sei listar" vira "nada a restaurar".
+        travadas_antes = getattr(self.store, "manual_override_categories", ()) or ()
+        lock_antes = getattr(self.store, "_manual_profile_lock_until", 0.0)
+        # Usuário escolheu perfil explícito: libera autoswitch de novo
+        # (BUG-MOUSE-TRIGGERS-01).
+        self.store.clear_manual_trigger_active()
+        # Bug C: arma lock manual; autoswitch suprime por
+        # MANUAL_PROFILE_LOCK_SEC segundos.
         self.store.mark_manual_profile_lock(
             _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
         )
+        try:
+            profile = self.profile_manager.activate(
+                name, origin="manual", relatorio=relatorio
+            )
+        except Exception:
+            # Atomicidade (a mesma que a docstring já promete ao marker): uma
+            # ativação que FALHOU não é gesto cumprido, e não pode custar a ela
+            # a trava que ela tinha armado — `profile.switch` com nome
+            # inexistente apagaria a configuração feita na mão.
+            #
+            # E o LOCK volta junto: sem isto, um nome errado congelava a troca
+            # automática por MANUAL_PROFILE_LOCK_SEC (30 s) sem que gesto nenhum
+            # tivesse sido cumprido. Borda aberta pela própria subida do lock
+            # (TRAVA-QUE-SOLTA-TARDE-01) e apontada na revisão.
+            for categoria in travadas_antes:
+                self.store.mark_manual_trigger_active(categoria)
+            self.store.mark_manual_profile_lock(lock_antes)
+            raise
+        # Bug B: paridade do marker da CLI legada com session.json.
+        from hefesto_dualsense4unix.utils.session import save_active_marker
+        save_active_marker(profile.name)
         # DEDUP-04: gatilho "mudança de perfil" — perfis com `steam_app_<id>`
         # no match materializam arquivo de env próprio; a troca manual também
         # pode ter mudado modo/máscara via apply do perfil.
@@ -457,26 +855,232 @@ class IpcHandlersMixin:
 
     # --- triggers --------------------------------------------------------
 
-    def _apply_por_uniq(self, params: dict[str, Any], **campos: Any) -> bool:
+    def _apply_por_uniq(self, params: dict[str, Any], **campos: Any) -> str | None:
         """Aplica ``campos`` SÓ no controle do MAC ``params["uniq"]``, se houver.
 
         PERFIL-05 (22/07): alinha o eixo da escrita VIVA com o da persistência
         (ambos por MAC, via ``apply_output_for`` — que registra o override
-        por-uniq e escreve só naquele controle). Retorna True quando aplicou;
-        False quando não há ``uniq`` no pedido ou o backend não expõe
-        ``apply_output_for`` (FakeController de teste) — nesse caso o chamador
-        segue o caminho clássico por índice/broadcast, intacto.
+        por-uniq e escreve só naquele controle).
+
+        MESA-CHEIA-09 (E1/E2): devolve **o que o backend fez** — uma palavra de
+        ``core.controller.ResultadoDeSaida`` — em vez de um booleano que só
+        dizia "esta rota foi usada". ``None`` continua querendo dizer "esta
+        rota NÃO se aplica" (sem ``uniq`` no pedido, ou backend sem
+        ``apply_output_for``), e o chamador segue o caminho clássico por
+        índice/broadcast, intacto.
+
+        **Backend que não sabe dizer** (dublê antigo que devolve ``None``)
+        vira ``"escreveu"``: é a resposta histórica, e trocá-la por "guardado"
+        faria a tela dizer que ficou pendente um ajuste que o dublê aplicou.
+        Quem quiser a verdade implementa o retorno.
         """
         alvo = params.get("uniq")
         if not isinstance(alvo, str) or not alvo:
-            return False
+            return None
         apply_for = getattr(self.controller, "apply_output_for", None)
         if not callable(apply_for):
-            return False
+            return None
         from hefesto_dualsense4unix.core.controller import OutputSpec
 
-        apply_for(alvo, OutputSpec(**campos))
-        return True
+        resultado = apply_for(alvo, OutputSpec(**campos))
+        return resultado if isinstance(resultado, str) and resultado else "escreveu"
+
+    @staticmethod
+    def _destinos_por_uniq(resultado: str | None, uniq: str) -> tuple[list[str], list[str]]:
+        """``(aplicado_em, guardado_em)`` a partir do que o backend fez.
+
+        MESA-CHEIA-09 (E1/E2). ``aplicado_em`` passa a significar **o byte
+        saiu** — a mesma coisa que já significava no ramo broadcast, onde a
+        lista só tem quem está CONECTADO. Antes, no ramo por-``uniq``, ele era
+        ``[uniq]`` sempre: com o controle fora da mesa a resposta afirmava
+        escrita onde só houve registro, e a janela repetia a afirmação.
+
+        ``guardado_em`` é o campo novo, e existe porque "não escreveu" tem
+        DUAS causas com destinos opostos na tela: o override que ficou
+        guardado e pega no hotplug (D-9 — *"Guardado — vai valer quando o
+        Controle N voltar"*) e o pedido que não guardou nada (sem MAC
+        estável). Sem o segundo campo, a tela teria de escolher entre chamar
+        de "guardado" o que se perdeu ou de "falhou" o que ficou.
+
+        Conserto 1.3: ``"registrado"`` passou a cobrir também o **Modo Nativo**
+        (o backend guarda e o desmute aplica), e por isso a aba Gatilhos parou
+        de dizer "aplicado" ali sem que nada mude aqui — este mapa já dava o
+        destino certo. E ``"falhou"`` (escrita que levantou) entra nas duas
+        listas VAZIAS: não escreveu, e prometer "guardado" seria mandá-la
+        esperar um evento que pode nunca vir.
+
+        Conserto 1.4: o default deixou de ser OTIMISTA. Era ``[uniq], []`` para
+        QUALQUER palavra fora das listas — a sexta palavra que o backend
+        aprendesse a dizer entraria calada como "aplicado", que é a mentira que
+        esta sprint existe para matar. Agora só ``"escreveu"`` afirma; palavra
+        desconhecida não afirma nem promete, e sai no log.
+        """
+        if resultado == "escreveu":
+            return [uniq], []
+        if resultado == "registrado":
+            return [], [uniq]
+        if resultado in (None, "sem_alvo", "nada_a_fazer", "falhou"):
+            return [], []
+        logger.warning(
+            "destino_por_uniq_palavra_desconhecida", resultado=resultado, uniq=uniq
+        )
+        return [], []
+
+    def _uniqs_conectados(self) -> list[str]:
+        """MACs dos controles CONECTADOS, na ordem do backend.
+
+        Fonte: ``describe_controllers`` — só getattrs baratos, sem HID I/O (a
+        mesma que o ``controller.list`` usa). Lista VAZIA quando o backend não
+        sabe dizer quem está na mesa (``FakeController``, backend legado) ou
+        quando não há ninguém: o chamador segue pelo caminho clássico, intacto.
+        """
+        describe = getattr(self.controller, "describe_controllers", None)
+        if not callable(describe):
+            return []
+        try:
+            entradas = describe()
+        except Exception as exc:  # observabilidade > silêncio
+            logger.debug("uniqs_conectados_falhou", err=str(exc))
+            return []
+        if not isinstance(entradas, list):
+            return []
+        alvos: list[str] = []
+        for entrada in entradas:
+            if not isinstance(entrada, dict) or not entrada.get("connected"):
+                continue
+            uniq = entrada.get("uniq")
+            if isinstance(uniq, str) and uniq and uniq not in alvos:
+                alvos.append(uniq)
+        return alvos
+
+    def _registrar_em_todos(self, **campos: Any) -> list[str]:
+        """Registra ``campos`` na camada da USUÁRIA de CADA controle conectado.
+
+        BROADCAST-QUE-NAO-MENTE-01 (02/08), medido na máquina dela: ``led.set``
+        SEM ``uniq`` respondia ``{"status": "ok"}`` e o sysfs NÃO mudava — os
+        dois controles continuavam com a cor da paleta (azul do slot 1,
+        vermelho do slot 2). Com ``uniq``, a mesma cor pegava e ficava.
+
+        A causa é a ORDEM DAS CAMADAS do merge, não a escrita. ``set_led``
+        escreve no hardware E grava o valor em ``_desired_default``
+        (``_record_desired_locked`` com alvo ``None``,
+        ``core/backend_pydualsense.py:1335``); o ``reassert_resolved_outputs``
+        logo abaixo re-resolve por controle, e o ``_merged_desired_for_key``
+        (``core/backend_pydualsense.py:1222``) põe a camada AUTOMÁTICA do slot
+        (COR-03) EM CIMA do default — a paleta repinta por cima da cor que
+        acabou de sair. O caminho por-``uniq`` SEMPRE funcionou pelo mesmo
+        motivo, ao contrário: ``apply_output_for`` grava em ``_desired_by_uniq``,
+        que no mesmo merge fica ACIMA da automática. E não adiantaria arrancar
+        o reassert imediato: a defesa de exibição (NUMA-03, ``defend_display``)
+        e o próximo hotplug re-resolvem pelo MESMO merge — a cor voltaria
+        segundos depois em vez de instantes.
+
+        A camada não é nova: é exatamente o que a GUI já faz desde a R-14
+        (``app/actions/lightbar_actions.py:828`` ``_enviar_led_em_todos`` —
+        "Todos" vira um pedido POR MAC, "sem desligar o automático"). O que
+        faltava era o DAEMON fazer o mesmo para quem não é a GUI: a CLI
+        (``hefesto test lightbar``) e qualquer chamada IPC direta continuavam
+        caindo no broadcast cru e recebendo um "ok" que não valia nada.
+
+        Roda DEPOIS da escrita clássica de propósito, nesta ordem: o broadcast
+        grava o default (é ele que pinta quem chegar DEPOIS, no hotplug — a
+        decisão "mudei todos para azul, repluguei e um voltou verde") e limpa o
+        campo dos overrides; só então cada conectado recebe de volta o MESMO
+        valor, agora na camada que sobrevive ao reassert. Inverter a ordem
+        apagaria o que acabamos de registrar.
+
+        O que NÃO muda: a camada GAME continua acima desta (o fix cross-cutting
+        U x N segue valendo — sob ``display_authority=='game'`` o jogo vence no
+        reassert), e a camada do CO-OP continua acima para ``player_leds``.
+
+        Devolve os MACs em que o registro entrou — lista vazia quando o backend
+        não expõe ``apply_output_for``/``describe_controllers`` ou a mesa está
+        vazia. É essa lista que a resposta publica em ``aplicado_em``.
+        """
+        apply_for = getattr(self.controller, "apply_output_for", None)
+        if not callable(apply_for):
+            return []
+        alvos = self._uniqs_conectados()
+        if not alvos:
+            return []
+        from hefesto_dualsense4unix.core.controller import OutputSpec
+
+        spec = OutputSpec(**campos)
+        aplicados: list[str] = []
+        for alvo in alvos:
+            try:
+                apply_for(alvo, spec)
+            except Exception as exc:
+                # Um controle que recusa não pode calar os outros (mesma
+                # disciplina do fan-out de `_for_each` no backend).
+                logger.warning(
+                    "registrar_em_todos_falhou", uniq=alvo, err=str(exc)
+                )
+                continue
+            aplicados.append(alvo)
+        return aplicados
+
+    def _destinos_do_broadcast(self) -> tuple[list[str], list[str]]:
+        """``(aplicado_em, guardado_em)`` da rota CLÁSSICA — o pedido SEM ``uniq``.
+
+        Conserto 1.4. O ``trigger.set``/``trigger.reset`` sem ``uniq`` devolvia
+        as duas listas vazias **mesmo tendo escrito**, enquanto a rota irmã
+        ``led.set`` respondia ``aplicado_em`` com a mesa inteira — duas rotas
+        irmãs, respostas opostas, e a tela lê as duas ("Todos" no seletor da
+        aba Gatilhos manda o pedido sem ``uniq``). Aqui a rota do gatilho passa
+        a dizer em QUEM pegou, com o mesmo teto de verdade do ramo por-``uniq``.
+
+        O que este método **não** faz, e cada "não" é medido, não suposto:
+
+        * **Não** registra nada por controle. O espelho LITERAL do ``led.set``
+          seria chamar ``_registrar_em_todos``, e isso mudaria a ESCRITA, não a
+          resposta: ``_record_desired_locked(None, ...)`` limpa o campo em todos
+          os overrides por-uniq e SOLTA o carimbo de dono, porque "Todos" é
+          gesto de NIVELAR. Medido (14/08): depois de ``apply_output_for`` o
+          campo fica com dono ``usuaria``; depois de um ``set_trigger``
+          broadcast o override some e o dono vira ``None``. Re-registrar por
+          controle desfaria o nivelamento que a própria rota promete.
+        * **Não** promete ``guardado_em`` — pelo mesmo nivelamento não há
+          promessa por-controle a publicar: o valor foi para o default, sem
+          endereço. Publicar um MAC aqui seria mandar a usuária esperar por um
+          controle que não é o dono do que ela pediu.
+        * **Não** afirma nada em **Modo Nativo**: o ``report_thread`` está mudo
+          e nenhum byte sai (CONSERTO 1.3). É onde a rota irmã ainda mente —
+          medido em 14/08, ``led.set`` sem ``uniq`` com o output mutado responde
+          ``aplicado_em`` com os dois MACs e ZERO byte no fio, porque
+          ``_registrar_em_todos`` ignora a palavra que o backend devolve.
+        * **Não** afirma quando não sabe: mesa vazia, backend que não diz quem
+          está nela nem onde o seletor está, ou alvo do seletor sem MAC estável
+          (key por path) devolvem as duas listas vazias — o "não sei dizer em
+          quem" que o comentário do ``led.set`` já fixou.
+
+        O teto de verdade é o MESMO do ramo por-``uniq``: ``_apply_trigger`` só
+        arma o estado no handle (``trigger.mode``/``setForce``, sem I/O nenhum)
+        e quem escreve no fio é o ``report_thread``. "Aplicado" aqui quer dizer,
+        como lá, que o desejado está armado e o fio não está mudo.
+        """
+        alvos = self._uniqs_conectados()
+        if not alvos:
+            return [], []
+        if self.daemon is not None and self.daemon.is_native_mode():
+            return [], []
+        onde_mira = getattr(self.controller, "get_output_target_index", None)
+        if not callable(onde_mira):
+            return [], []
+        try:
+            indice = onde_mira()
+        except Exception as exc:  # observabilidade > silêncio
+            logger.debug("destinos_do_broadcast_falhou", err=str(exc))
+            return [], []
+        if indice is None:
+            return alvos, []
+        # Seletor mirando UM controle: o `_for_each` do backend escreve só nele,
+        # e afirmar a mesa inteira aqui seria a mentira antiga com outro nome.
+        nomear = getattr(self.controller, "get_output_target_uniq", None)
+        alvo = nomear() if callable(nomear) else None
+        if not isinstance(alvo, str) or not alvo:
+            return [], []
+        return [alvo], []
 
     async def _handle_trigger_set(self, params: dict[str, Any]) -> dict[str, Any]:
         side = params.get("side")
@@ -494,13 +1098,38 @@ class IpcHandlersMixin:
         campos = (
             {"trigger_left": effect} if side == "left" else {"trigger_right": effect}
         )
-        if not self._apply_por_uniq(params, **campos):
+        resultado = self._apply_por_uniq(params, **campos)
+        if resultado is None:
             self.controller.set_trigger(side, effect)
+            # Conserto 1.4: a rota clássica (sem `uniq`) respondia as duas
+            # listas vazias MESMO TENDO ESCRITO — a rota irmã `led.set` dizia a
+            # mesa inteira, e a tela lê as duas. Agora ela diz em quem pegou, e
+            # só quando sabe; ver `_destinos_do_broadcast` para o que ela se
+            # recusa a afirmar (Modo Nativo, mesa vazia, alvo sem MAC) e por que
+            # `guardado_em` fica sempre vazio aqui.
+            aplicado_em, guardado_em = self._destinos_do_broadcast()
+        else:
+            aplicado_em, guardado_em = self._destinos_por_uniq(
+                resultado, str(params["uniq"])
+            )
         # BUG-MOUSE-TRIGGERS-01: usuário aplicou trigger manual via GUI/IPC.
         # Marca override para o autoswitch não sobrescrever (especialmente
         # ao ligar emulação de mouse, cujo movimento muda foco de janela).
         self.store.mark_manual_trigger_active("trigger")
-        return {"status": "ok"}
+        # MESA-CHEIA-09 (E2): espelho do `led.set` — mesmo nome de campo, mesma
+        # semântica de vazio. Era o único comando de saída que respondia
+        # `{"status": "ok"}` seco, e a aba Gatilhos dizia "aplicado" em três
+        # casos sem byte nenhum. Conserto 1.4 — os três da sprint são: alvo
+        # DESCONECTADO, alvo SEM MAC estável, e MODO NATIVO com output mutado.
+        # O comentário antigo trocava o Modo Nativo por "mesa vazia" e escondia
+        # justamente o caso que só morreu no conserto 1.3 (quando
+        # `apply_output_for` passou a devolver «registrado» sob o mute). Mesa
+        # vazia é caso da rota CLÁSSICA, e mora em `_destinos_do_broadcast`.
+        return {
+            "status": "ok",
+            "aplicado_em": aplicado_em,
+            "guardado_em": guardado_em,
+        }
 
     async def _handle_trigger_reset(self, params: dict[str, Any]) -> dict[str, Any]:
         """Devolve o gatilho ao perfil e LIBERA a trava manual dele (R-19).
@@ -532,12 +1161,26 @@ class IpcHandlersMixin:
             campos["trigger_left"] = trigger_off()
         if target in ("right", "both"):
             campos["trigger_right"] = trigger_off()
-        if not self._apply_por_uniq(params, **campos):
+        resultado = self._apply_por_uniq(params, **campos)
+        if resultado is None:
             for lado in ("left", "right"):
                 if f"trigger_{lado}" in campos:
                     self.controller.set_trigger(lado, campos[f"trigger_{lado}"])
+            # Conserto 1.4: mesma rota clássica do `trigger.set` — "Desligar"
+            # com "Todos" no seletor também escreve, e também dizia `[]`.
+            aplicado_em, guardado_em = self._destinos_do_broadcast()
+        else:
+            aplicado_em, guardado_em = self._destinos_por_uniq(
+                resultado, str(params["uniq"])
+            )
         self.store.clear_manual_trigger_active("trigger")
-        return {"status": "ok"}
+        # MESA-CHEIA-09 (E2): mesmo contrato do `trigger.set` — "Desligar" num
+        # controle fora da mesa é GUARDADO, não aplicado.
+        return {
+            "status": "ok",
+            "aplicado_em": aplicado_em,
+            "guardado_em": guardado_em,
+        }
 
     # --- leds ------------------------------------------------------------
 
@@ -568,8 +1211,22 @@ class IpcHandlersMixin:
         # a hotplug) e escreve SÓ naquele controle. Antes, o caminho vivo por
         # índice (`_output_target_key`) caía em BROADCAST quando o alvo
         # desalinhava — "configurei o controle 2 e mudou todos".
-        if not self._apply_por_uniq(params, led=(r, g, b)):
+        resultado = self._apply_por_uniq(params, led=(r, g, b))
+        guardado_em: list[str] = []
+        if resultado is not None:
+            # MESA-CHEIA-09 (E1): era `[uniq]` SEMPRE — com o controle fora da
+            # mesa, o campo criado para o daemon parar de mentir mentia.
+            aplicado_em, guardado_em = self._destinos_por_uniq(
+                resultado, str(params["uniq"])
+            )
+        else:
             self.controller.set_led((r, g, b))
+            # BROADCAST-QUE-NAO-MENTE-01 (02/08): a escrita acima grava o
+            # default e pinta o hardware, mas o default fica ABAIXO da paleta
+            # automática no merge — sem a linha seguinte, o reassert logo
+            # abaixo repinta a cor do slot por cima e o handler responderia
+            # "ok" para uma cor que nunca ficou. Ver `_registrar_em_todos`.
+            aplicado_em = self._registrar_em_todos(led=(r, g, b))
         # Fix cross-cutting U x N (2026-07-20, HIGH): `set_led` escreve CRU via
         # `_for_each_led` (gate só `_output_mute`, nunca `_game_wins`) — sem
         # isto a cor do JOGO ficava sobrescrita na hora, e a trava manual
@@ -588,7 +1245,18 @@ class IpcHandlersMixin:
         # ("perfil eterno", U9). Categoria "led" (F1): o fim do "Testar
         # motores" limpa só "rumble" e esta cor sobrevive.
         self.store.mark_manual_trigger_active("led")
-        return {"status": "ok"}
+        # APLICAR-VERDADE-01: `status` segue sempre "ok" (applet, CLI e TUI
+        # decidem por ele e passariam a dizer "daemon offline"); a verdade nova
+        # é ADITIVA. `aplicado_em` diz em QUE controles a intenção ficou
+        # registrada na camada que sobrevive ao reassert — vazio significa
+        # "escrita global sem registro por controle" (backend sem a API
+        # por-uniq, ou mesa vazia), que era justamente o caso em que o "ok"
+        # mentia.
+        return {
+            "status": "ok",
+            "aplicado_em": aplicado_em,
+            "guardado_em": guardado_em,
+        }
 
     async def _handle_led_player_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Aplica bitmask de 5 LEDs de player no controle.
@@ -607,8 +1275,23 @@ class IpcHandlersMixin:
         )
         # PERFIL-05: mesmo contrato do led.set — `uniq` presente = escrita
         # por-MAC via apply_output_for (só naquele controle).
-        if not self._apply_por_uniq(params, player_leds=bits):
+        resultado = self._apply_por_uniq(params, player_leds=bits)
+        guardado_em: list[str] = []
+        if resultado is not None:
+            aplicado_em, guardado_em = self._destinos_por_uniq(
+                resultado, str(params["uniq"])
+            )
+        else:
             self.controller.set_player_leds(bits)
+            # BROADCAST-QUE-NAO-MENTE-01: MESMO defeito do `led.set` e pela
+            # MESMA razão — a numeração automática (COR-03/D7) também entra no
+            # merge acima do default, então o broadcast cru era desfeito pelo
+            # reassert. É o "sucesso mentiroso" que a PLAYER-01 (entrega 6) já
+            # tinha diagnosticado e que a GUI resolvia RECUSANDO o pedido
+            # quando não sabia quem estava conectado; aqui o daemon, que SABE,
+            # registra por MAC em vez de recusar. A camada do co-op continua
+            # acima desta (R-13) — ligado o co-op, o número dele segue vencendo.
+            aplicado_em = self._registrar_em_todos(player_leds=bits)
         # Fix cross-cutting U x N (2026-07-20, HIGH) — mesmo raciocínio de
         # `_handle_led_set`: reassert imediato para o merge de N (jogo vence
         # sob `display_authority=='game'`) corrigir a escrita crua acima
@@ -618,7 +1301,14 @@ class IpcHandlersMixin:
             reassert()
         # ONDA-U (Causa A): mesma trava de trigger.set (U9), categoria "led".
         self.store.mark_manual_trigger_active("led")
-        return {"status": "ok", "bits": list(bits)}
+        # APLICAR-VERDADE-01, mesma decisão do `led.set`: `aplicado_em` é
+        # aditivo e `bits` (contrato de quem já lê a resposta) fica intacto.
+        return {
+            "status": "ok",
+            "bits": list(bits),
+            "aplicado_em": aplicado_em,
+            "guardado_em": guardado_em,
+        }
 
     # --- identidade (numeração) -------------------------------------------
 
@@ -1185,8 +1875,24 @@ class IpcHandlersMixin:
                          completa do gate do poll loop);
         - `bloqueio`  -- POR QUE não emitiria: `"desligada"`, `"sem_device"`,
                          `"modo_jogo"` (a supressão que ela chama de modo jogo),
-                         `"vpad_suspenso_pelo_steam_input"` (o jogo assumiu — o
-                         defeito medido em 29/07) ou `null` quando emite.
+                         `"vpad_suspenso_pelo_steam_input"` (o jogo assumiu a
+                         ENTRADA — o defeito medido em 29/07; a saída continua
+                         do Hefesto, MEDIDO em 06/08) ou `null` quando emite.
+
+        A quinta chave é de outra natureza e entrou em 10/08/2026
+        (TECLADO-QUE-NAO-DIGITA-01):
+
+        - `osk_disponivel` -- há teclado na tela instalado na MÁQUINA. É o que
+                         decide se o L3 (`__OPEN_OSK__`, o binding de fábrica)
+                         abre alguma coisa ou só avisa que não tem o que abrir —
+                         e, como nenhum dos nove atalhos de fábrica digita uma
+                         LETRA, é também o que decide se existe algum caminho
+                         para ESCREVER TEXTO com o controle.
+
+        Por que sai DAQUI e não de um `shutil.which` na janela: num Flatpak a
+        janela olharia dentro do sandbox e responderia sobre uma máquina que não
+        é a dela. O daemon é quem enxerga o host e é quem vai spawnar o
+        processo — a resposta tem de vir de quem executa.
 
         `getattr` defensivo em tudo: daemon/config dublados em teste não precisam
         conhecer os campos novos, e este handler roda a 10-20 Hz.
@@ -1211,11 +1917,28 @@ class IpcHandlersMixin:
             bloqueio = "modo_jogo"
         else:
             bloqueio = motivo_jogo
+        # Pergunta ao `_OSKController` do daemon quando ele existe (o cache dele
+        # já está quente) e cai na sonda de módulo quando não existe — que é o
+        # caso enquanto a emulação de teclado está desligada, justamente quando
+        # a janela mais precisa saber se ligar valeria alguma coisa. As duas
+        # respostas têm o mesmo TTL e a mesma ordem de candidatos.
+        osk_disponivel = False
+        with contextlib.suppress(Exception):
+            controlador = getattr(daemon, "_osk_controller", None)
+            if controlador is not None:
+                osk_disponivel = bool(controlador.disponivel())
+            else:
+                from hefesto_dualsense4unix.daemon.subsystems.keyboard import (
+                    osk_disponivel_no_sistema,
+                )
+
+                osk_disponivel = bool(osk_disponivel_no_sistema())
         return {
             "enabled": enabled,
             "device_ativo": device_ativo,
             "despachando": bloqueio is None,
             "bloqueio": bloqueio,
+            "osk_disponivel": osk_disponivel,
         }
 
     def _steam_input_payload(self) -> dict[str, bool]:
@@ -1227,8 +1950,11 @@ class IpcHandlersMixin:
         distinguem os dois desfechos possíveis do opt-in —
 
           - `excecao_ativa=True` + `vpad_suspenso=True`  → o jogo da allowlist
-            está rodando com o Hefesto fora do caminho (é o regime em que o R1
-            dela emitia Alt+Tab, e agora o que cala o desktop);
+            está rodando com a ENTRADA entregue a ele (é o regime em que o R1
+            dela emitia Alt+Tab, e agora o que cala o desktop). Só a entrada:
+            cor, gatilhos e vibração seguem sendo do Hefesto — MEDIDO em 06/08
+            (`CONTROLE-SONY-MEDIDO-01`, *A INVERSÃO*), e quem escrever a frase
+            da aba a partir daqui não pode prometer o contrário;
           - `excecao_ativa=True` + `vpad_suspenso=False` → o jogo da allowlist
             está rodando com o vpad DE PÉ porque a suspensão não pôde ser armada
             (ver `suspend_vpads_for_steam_input`).
@@ -1246,6 +1972,28 @@ class IpcHandlersMixin:
                 getattr(daemon, "_steam_input_vpad_suspenso", False)
             ),
         }
+
+    def _jogo_steam_payload(self) -> dict[str, Any]:
+        """Bloco `jogo_steam` do `state_full` — o TRI-ESTADO, inteiro.
+
+        ABA-DO-JOGO-01. `lido` é a peça que não pode faltar: sem ela, `appid:
+        null` responderia "não há jogo" e "o daemon acabou de subir e ainda não
+        perguntou" com a mesma palavra, e a aba "No jogo" piscaria a cada
+        restart do daemon (ver `StateStore.set_steam_jogo_appid`).
+
+        Coerção defensiva nos dois campos, e ela é o de sempre nesta função:
+        store dublado por `MagicMock` devolve um mock para qualquer atributo, e
+        um mock no `result` estoura na serialização JSON do IPC — não aqui, mas
+        no cliente, que é onde o defeito fica caro de achar.
+        """
+        lido = getattr(self.store, "steam_jogo_lido", None) is True
+        appid_raw = getattr(self.store, "steam_jogo_appid", None)
+        appid = (
+            int(appid_raw)
+            if isinstance(appid_raw, int) and not isinstance(appid_raw, bool)
+            else None
+        )
+        return {"lido": lido, "appid": appid if lido else None}
 
     def _window_detect_payload(self) -> dict[str, Any]:
         """Bloco `window_detect_*` publicado por `state_full` e `daemon.status`.
@@ -1344,7 +2092,7 @@ class IpcHandlersMixin:
             enabled = raw
         else:
             raise ValueError("native.mode.set exige 'enabled' boolean ou omitido")
-        new_state = self.daemon.set_native_mode(enabled)
+        new_state = self.daemon.set_native_mode(enabled, origin=origem_do_pedido(params))
         return {"status": "ok", "native_mode": bool(new_state)}
 
     async def _handle_daemon_state_full(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -1457,19 +2205,22 @@ class IpcHandlersMixin:
             # `_window_detect_payload`.
             **self._window_detect_payload(),
         }
-        # DEDUP-06 (achado NOVO da revisão): físico primário em BT + Modo
-        # Nativo é estruturalmente frágil — o SDL pode não enxergar o DualSense
-        # BT nem SEM launch option (o backend evdev deferencia ao HIDAPI por
-        # VID/PID e o HIDAPI não lê o hidraw BT). Fora do alcance do wrapper;
-        # a GUI e o doctor avisam a partir DESTA flag.
-        result["native_bt_fragil"] = bool(
-            result["native_mode"] and result["transport"] == "bt"
-        )
-
         # NUMA-05: sinal de autoridade de exibição (NUMA-01) para GUI/doctor —
         # a mesma leitura que o `defend_display`/merge-gate do backend usam,
         # SÓ exposição (nunca decide nada aqui).
         result["game_signal"] = self._game_signal_snapshot()
+
+        # ABA-DO-JOGO-01 (10/08/2026): há jogo da Steam aberto AGORA, e qual.
+        # Vem do store (sonda de 0,5 Hz do poll loop), NUNCA de um `pgrep` daqui
+        # — este handler roda a 10 Hz e um subprocesso por chamada seria o poller
+        # cego que esta casa já pagou uma vez.
+        #
+        # As duas chaves são o TRI-ESTADO inteiro, e viajam juntas de propósito
+        # (ver `StateStore.set_steam_jogo_appid`): `lido=false` é "o daemon ainda
+        # não perguntou", e é diferente de `lido=true, appid=null`, que é "não há
+        # jogo". Quem consome — a visibilidade da aba "No jogo" — faz coisas
+        # opostas nos dois casos.
+        result["jogo_steam"] = self._jogo_steam_payload()
 
         # FEAT-DSX-MULTI-CONTROLLER-01: lista de controles conectados (uma entrada
         # por controle físico, com transporte e qual é o primário) para a GUI, o
@@ -1509,6 +2260,46 @@ class IpcHandlersMixin:
                     self._enrich_controllers_per_controller(
                         [c for c in controllers if isinstance(c, dict)], state
                     )
+
+        # DEDUP-06 (achado NOVO da revisão): físico em BT + Modo Nativo é
+        # estruturalmente frágil — o SDL pode não enxergar o DualSense BT nem
+        # SEM launch option (o backend evdev deferencia ao HIDAPI por VID/PID e
+        # o HIDAPI não lê o hidraw BT). Fora do alcance do wrapper; a GUI e o
+        # doctor avisam a partir DESTA flag.
+        #
+        # MESA-CHEIA-11/E1 (14/08/2026) — por que este bloco MUDOU DE LUGAR:
+        # ele olhava só `result["transport"]`, que é o do PRIMÁRIO, e por isso
+        # calava com o Controle 1 no cabo e os outros três no rádio (falso
+        # negativo). Agora ele responde POR CONTROLE, e para isso precisa da
+        # lista `controllers` já montada e já enriquecida com o `player_slot` —
+        # daí ter descido para depois do bloco acima.
+        entradas_de_controle = result.get("controllers")
+        frageis = controles_bt_frageis(
+            entradas_de_controle, native_mode=result["native_mode"]
+        )
+        # A mesa é conhecida quando a lista existe e traz alguém conectado.
+        # Backend sem `describe_controllers` (fakes, MagicMock) não sabe QUEM
+        # está na mesa: aí a flag antiga — o primário — continua valendo, e a
+        # lista sai VAZIA de propósito, para a janela cair no texto genérico em
+        # vez de nomear um controle que ela não sabe qual é.
+        conhece_a_mesa = isinstance(entradas_de_controle, list) and any(
+            isinstance(e, dict) and e.get("connected") for e in entradas_de_controle
+        )
+        result["native_bt_fragil_controles"] = frageis
+        result["native_bt_fragil"] = bool(
+            frageis
+            if conhece_a_mesa
+            else (result["native_mode"] and result["transport"] == "bt")
+        )
+
+        # CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026): fica AO LADO do bloco
+        # `controllers` de propósito — é a resposta à pergunta que aquele bloco
+        # não consegue responder. `controllers` tem uma entrada por handle
+        # ABERTO; um controle cuja probe abortou no kernel não tem handle
+        # nenhum, e some da lista sem deixar rastro. Sem esta chave, a única
+        # coisa que o produto tinha a dizer sobre ele era "Nenhum controle
+        # conectado.".
+        result["controles_sem_driver"] = self._controles_sem_driver_payload()
 
         # FEAT-DSX-CONTROLLER-SELECTOR-01: índice do controle-alvo de output
         # (None = TODOS / broadcast). getattr defensivo: backends sem o método
@@ -1610,6 +2401,12 @@ class IpcHandlersMixin:
                         if motivo_atual
                         else "jogo_sem_wrapper"
                     )
+            # PERFIL-MUDO-01 (10/08/2026): o perfil DAQUELE jogo que não entrou.
+            # O daemon já sabia e só contava ao journal — quatro linhas de
+            # `profile_select_catch_all_sem_autoridade_em_jogo` enquanto ela
+            # jogava o Pragmata com o controle duplicado, e a janela muda. Aqui
+            # o fato vira estado, e a janela passa a poder dizer.
+            result["perfil_do_jogo_que_nao_entrou"] = self._perfil_que_nao_entrou()
             # FEAT-DSX-COOP-LOCAL-01: estado do co-op local (toggle + nº de
             # jogadores ativos) p/ GUI/applet/CLI.
             coop_mgr = getattr(self.daemon, "_coop_manager", None)
@@ -1620,6 +2417,31 @@ class IpcHandlersMixin:
                 # player_count() devolver um mock não-serializável.
                 "players": players_raw if isinstance(players_raw, int) else 1,
             }
+            # QUEM-É-QUEM-01 (15/08/2026) — o número vira TABELA.
+            # `players: 4` responde "quantos"; nunca respondeu "quem". Com os
+            # quatro controles dela na mesa, "o vpad do jogador 2 é alimentado
+            # por qual controle?" só se respondia apertando botão em cada um,
+            # quatro vezes, à mão — e o daemon SABIA a resposta o tempo todo (é
+            # ele que cria cada vpad a partir de um físico). A lista sai de
+            # `CoopManager.mesa`, que documenta o contrato de cada campo, a
+            # decisão de privacidade do MAC e a E3 (`nome_divergente`).
+            #
+            # `players` FICA, e não é redundância: ele é lido pela CLI, pelo
+            # applet e por `status_actions` desde a FEAT-DSX-COOP-LOCAL-01, e
+            # continua sendo a contagem barata. O que muda é que agora existe
+            # a lista ao lado — a chave nova nunca substitui a velha.
+            #
+            # Lista SEMPRE presente (vazia no pior caso): shape estável para
+            # GUI/CLI/applet, que assim nunca precisam distinguir "daemon
+            # antigo" de "mesa vazia" — e uma lista vazia já diz a verdade.
+            result["coop"]["mesa"] = []
+            if coop_mgr is not None:
+                with contextlib.suppress(Exception):
+                    mesa = coop_mgr.mesa()
+                    if isinstance(mesa, list):
+                        result["coop"]["mesa"] = [
+                            item for item in mesa if isinstance(item, dict)
+                        ]
             # EXT-COUNT-01 (25/07): quantos controles EXTERNOS (Nintendo Pro,
             # 8BitDo…) o daemon numerou mas NÃO adota. `coop.players` conta só
             # quem tem vpad do hefesto — com 2 DualSense e 2 Pro vivos ele diz
@@ -1685,34 +2507,86 @@ class IpcHandlersMixin:
             # REPLICA-03: além do agregado (compat), expõe contadores POR VPAD
             # (`per_vpad`) — o agregado escondia QUAL vpad recebeu o quê
             # (telemetria cega do estudo 2026-07-18). `player` é o número do
-            # jogador (1 = P1; secundários usam o player_index do co-op).
+            # JOGADOR dono deste vpad — ver o bloco MESA-CHEIA-12 logo abaixo.
             # GYRO-03: cada vpad viaja com o SEU espelho de motion (o
             # `PhysicalReportReader` do P1 mora em `daemon._motion_reader`;
             # o de cada jogador do co-op, em `player.motion_reader`) — é dele
             # que sai o `motion_hz` (taxa REAL de entrega ao /dev/uhid).
             vpads: list[tuple[int, Any, Any]] = []
+            coop_mgr = getattr(self.daemon, "_coop_manager", None)
+            # MESA-CHEIA-12 (15/08/2026): o `player` de cada bloco é o número do
+            # CONTROLE que alimenta este vpad, e tem de sair da MESMA função que
+            # produziu `controllers[].player` — é por esse inteiro que a GUI casa
+            # card↔vpad (`controller_card._bloco_do_vpad`, dono único do
+            # casamento). Enquanto o número publicado era o `player_index` cru,
+            # os dois lados coincidiam por construção; agora que ele é a fila de
+            # chegada, ler `player_index` aqui cruzaria os fios — o card de um
+            # controle mostraria a telemetria do vpad de OUTRO. As condições
+            # espelham `resolve_player_numbers`: sem co-op existe um vpad só e
+            # ele é o jogador 1.
+            numeros_por_mac: dict[str, int] = {}
+            if (
+                bool(getattr(getattr(self.daemon, "config", None), "coop_enabled", False))
+                and coop_mgr is not None
+            ):
+                with contextlib.suppress(Exception):
+                    numeros_por_mac = dict(coop_mgr.player_indexes())
             gp_device = getattr(self.daemon, "_gamepad_device", None)
             if gp_device is not None:
-                vpads.append((1, gp_device, getattr(self.daemon, "_motion_reader", None)))
-            coop_mgr = getattr(self.daemon, "_coop_manager", None)
+                primario = _as_str_or_none(
+                    getattr(self.controller, "primary_uniq", None)
+                )
+                vpads.append(
+                    (
+                        int(numeros_por_mac.get(primario or "", 1) or 1),
+                        gp_device,
+                        getattr(self.daemon, "_motion_reader", None),
+                    )
+                )
             if coop_mgr is not None:
                 players = getattr(coop_mgr, "_players", {})
                 if isinstance(players, dict):
                     vpads.extend(
                         (
-                            int(getattr(p, "player_index", 0) or 0),
+                            int(
+                                numeros_por_mac.get(
+                                    mac, getattr(p, "player_index", 0) or 0
+                                )
+                                or 0
+                            ),
                             p.vpad,
                             getattr(p, "motion_reader", None),
                         )
-                        for p in players.values()
+                        for mac, p in players.items()
                         if getattr(p, "vpad", None) is not None
                     )
             ff_plays = 0
+            ff_nao_nulos = 0
+            ff_descartados = 0
+            ff_v2 = 0
+            # QUEM ESCREVEU-01: agregados dos dois silêncios que a tela lia
+            # como "o jogo não pediu nada".
+            ff_paradas = 0
+            ff_estranhos = 0
             ff_last: tuple[int, int] = (0, 0)
             per_vpad: list[dict[str, Any]] = []
+            from hefesto_dualsense4unix.daemon.subsystems.coop import (
+                identidade_do_vpad,
+            )
+
             for player_num, vp, motion_reader in vpads:
                 with contextlib.suppress(Exception):
                     ff_plays += int(getattr(vp, "ff_play_count", 0) or 0)
+                    # RUMBLE-QUE-NAO-SE-SENTE-01: agregados irmãos do `plays`,
+                    # somados na MESMA varredura (a tela lê o total; o
+                    # `per_vpad` é quem responde "qual jogador").
+                    ff_nao_nulos += int(getattr(vp, "ff_nao_nulo_count", 0) or 0)
+                    ff_descartados += int(getattr(vp, "ff_descartado_count", 0) or 0)
+                    ff_v2 += int(getattr(vp, "ff_v2_count", 0) or 0)
+                    ff_paradas += int(getattr(vp, "ff_parada_sdl_count", 0) or 0)
+                    ff_estranhos += int(
+                        getattr(vp, "ff_report_estranho_count", 0) or 0
+                    )
                     last = getattr(vp, "ff_last_sent", None)
                     if isinstance(last, tuple) and len(last) == 2 and last != (0, 0):
                         ff_last = (int(last[0]), int(last[1]))
@@ -1728,11 +2602,58 @@ class IpcHandlersMixin:
                     # um MagicMock nunca vira True/taxa fantasma no payload.
                     streaming = getattr(vp, "motion_streaming", False)
                     hz_raw = getattr(motion_reader, "emit_hz", 0.0)
+                    # QUEM-É-QUEM-01 / E2: o bloco passa a carregar a IDENTIDADE
+                    # do nó — `vpad_uniq` (o `02:fe:…` que sai no `HID_UNIQ` do
+                    # sysfs), `vpad_nome` e `vpad_indice`. O objeto sempre soube
+                    # os três e nunca os publicava, e por isso `player` era a
+                    # única ponte entre esta lista e `controllers[]`: um inteiro
+                    # que não diz em que dispositivo do kernel olhar. Vem da
+                    # MESMA função que monta o `coop.mesa` — duas descrições do
+                    # mesmo vpad se afastariam na primeira mudança. O
+                    # `vpad_backend` dela é descartado aqui: `backend`, logo
+                    # abaixo, já é esse mesmo fato com o nome que esta lista
+                    # sempre usou.
+                    identidade = identidade_do_vpad(vp)
                     per_vpad.append(
                         {
                             "player": player_num,
+                            "vpad_uniq": identidade["vpad_uniq"],
+                            "vpad_nome": identidade["vpad_nome"],
+                            "vpad_indice": identidade["vpad_indice"],
                             "backend": backend if isinstance(backend, str) else None,
                             "ff_play_count": int(getattr(vp, "ff_play_count", 0) or 0),
+                            # RUMBLE-QUE-NAO-SE-SENTE-01: `ff_play_count` sobe
+                            # na PARADA também, então sozinho ele não separa
+                            # "pediu e sumiu" de "pediu zero". Estes quatro
+                            # separam — ver `integrations/uhid_gamepad`.
+                            "ff_nao_nulo_count": int(
+                                getattr(vp, "ff_nao_nulo_count", 0) or 0
+                            ),
+                            "ff_maior_pedido": _par_de_motores(
+                                getattr(vp, "ff_maior_pedido", None)
+                            ),
+                            "ff_descartado_count": int(
+                                getattr(vp, "ff_descartado_count", 0) or 0
+                            ),
+                            "ff_descartado_amostra": _amostra_de_descarte(
+                                getattr(vp, "ff_descartado_amostra", None)
+                            ),
+                            "ff_v2_count": int(getattr(vp, "ff_v2_count", 0) or 0),
+                            # QUEM ESCREVEU-01: os três buracos que faziam
+                            # "ninguém pediu nada" e "chegou e nós descartamos
+                            # na porta" saírem com o MESMO painel zerado.
+                            "ff_parada_sdl_count": int(
+                                getattr(vp, "ff_parada_sdl_count", 0) or 0
+                            ),
+                            "ff_report_estranho_count": int(
+                                getattr(vp, "ff_report_estranho_count", 0) or 0
+                            ),
+                            "ff_report_estranho_amostra": _report_estranho(
+                                getattr(vp, "ff_report_estranho_amostra", None)
+                            ),
+                            "ff_ultimos_reports": _anel_de_vibracao(
+                                getattr(vp, "ff_ultimos_reports", None)
+                            ),
                             "output_count": int(getattr(vp, "output_count", 0) or 0),
                             "trigger_replicas": int(
                                 getattr(vp, "trigger_replicas", 0) or 0
@@ -1752,10 +2673,96 @@ class IpcHandlersMixin:
                                 and not isinstance(hz_raw, bool)
                                 else 0.0
                             ),
+                            # SENSOR-VIVO-01/E4: quantas vezes o clique do
+                            # touchpad do físico saiu no report 0x01 do vpad —
+                            # é o número que distingue "o dedo chega ao jogo"
+                            # (que já acontecia) de "o clique chega ao jogo".
+                            # Contador do vpad, e não do reader: o que importa
+                            # é o que foi ESCRITO no /dev/uhid, não o que foi
+                            # lido do físico.
+                            "touchpad_clicks": int(
+                                getattr(vp, "touchpad_click_count", 0) or 0
+                            ),
+                            # ORFAOS-QUE-VOLTAM-01 (09/08/2026) — o ESTADO ao
+                            # lado da contagem. `touchpad_clicks` conta bordas;
+                            # com o dedo APERTADO ele para de subir, e a tela,
+                            # que decide por idade do carimbo, dizia "parou"
+                            # com o botão ainda pressionado no jogo. A property
+                            # `touchpad_click` existia desde a TOUCH-CLICK-01 e
+                            # nunca tinha sido lida por ninguém.
+                            "touchpad_pressionado": bool(
+                                getattr(vp, "touchpad_click", False) is True
+                            ),
+                            # ORFAOS-QUE-VOLTAM-01: quantas JANELAS de motion o
+                            # vpad de fato escreveu no /dev/uhid. Irmão do
+                            # `motion_hz` e diferente dele: o Hz é a taxa do
+                            # reader AGORA (morre em 1 s de silêncio), este é
+                            # cumulativo e responde "já fluiu alguma vez?" —
+                            # é ele que separa "o giroscópio nunca começou" de
+                            # "o giroscópio parou", que a tela dizia igual.
+                            "motion_forwards": _contador_do_vpad(
+                                vp, "motion_forward_count"
+                            ),
+                            # JACK-QUE-NAO-LIGOU-01: o que o vpad DIZ AO JOGO
+                            # sobre fone/microfone do controle (byte 53). Saía
+                            # fixo em 0x00 desde sempre — o `forward_jack`
+                            # existia desde 02/08 sem chamador e sem emissão.
+                            "jack": _jack_do_vpad(vp),
+                            "jack_forwards": _contador_do_vpad(
+                                vp, "jack_forward_count"
+                            ),
+                            # BATERIA-QUE-NAO-CHEGOU-01: o que o vpad DIZ AO
+                            # JOGO sobre a carga (byte 52). Diferente do
+                            # `battery_pct` do controle FÍSICO que a aba Status
+                            # já mostra: com o `forward_battery` órfão desde
+                            # 15/07, o físico podia estar em 95% e o jogo lia
+                            # "cheio e carregando" fixo — ou, antes disso, "5%
+                            # descarregando" e alertava bateria fraca.
+                            "bateria_no_jogo": _bateria_do_vpad(vp),
+                            "battery_forwards": _contador_do_vpad(
+                                vp, "battery_forward_count"
+                            ),
+                            # MOTOR-QUE-NAO-SE-VE-01: o par que foi AOS
+                            # MOTORES, depois da política de intensidade. Todos
+                            # os `ff_*` acima são o que o JOGO PEDIU; entre um
+                            # e outro há uma multiplicação que a tela não via.
+                            "rumble_no_fisico": _par_de_motores(
+                                getattr(vp, "rumble_no_fisico", None)
+                            ),
+                            "rumble_no_fisico_ha_s": _idade_ou_none(
+                                getattr(vp, "rumble_no_fisico_ha_s", None)
+                            ),
+                            # PAINEL-DA-VERDADE-01/E1 — o campo que faz a aba
+                            # Status parar de confundir "já funcionou uma vez"
+                            # com "está funcionando". Todos os contadores acima
+                            # são CUMULATIVOS (zeram só no `start()`); este diz
+                            # há quantos segundos cada categoria aconteceu pela
+                            # última vez, e OMITE a categoria que nunca
+                            # aconteceu — a tela diz frases diferentes para
+                            # "parou" e para "nunca começou".
+                            "visto_ha_s": _visto_ha_s(vp),
+                            # PARIDADE-SONY-01 — o carimbo acima diz QUANDO o
+                            # jogo pediu áudio; este diz O QUÊ. É a medição
+                            # que a sprint exige antes de a E2 escrever uma
+                            # linha de replicação, e sai do daemon pronta:
+                            # basta ela jogar e olhar.
+                            "audio_do_jogo_amostra": _audio_do_jogo_amostra(vp),
                         }
                     )
             result["rumble_ff"] = {
                 "plays": ff_plays,
+                # RUMBLE-QUE-NAO-SE-SENTE-01 — `plays` sozinho é ambíguo: ele
+                # conta a PARADA junto com o pedido. `nao_nulos` é o número que
+                # a aba Rumble usa para dizer QUAL das duas causas está viva.
+                "nao_nulos": ff_nao_nulos,
+                "descartados": ff_descartados,
+                "v2": ff_v2,
+                # QUEM ESCREVEU-01: `paradas` > 0 é PROVA de vibração viva
+                # (ninguém manda parar o que nunca começou) e `estranhos` > 0 é
+                # dado CHEGANDO e descartado na porta — o oposto exato da
+                # conclusão "o jogo não enxergou o gamepad virtual".
+                "paradas": ff_paradas,
+                "estranhos": ff_estranhos,
                 "last_weak": ff_last[0],
                 "last_strong": ff_last[1],
                 "vpads": len(vpads),
@@ -1832,6 +2839,14 @@ class IpcHandlersMixin:
           campo global ``native_mode`` (já no payload) é o aviso da GUI ("o
           jogo é dono do LED") — nenhuma flag nova por controle.
 
+        - ``lightbar_disputada`` (ESCRITOR-CRU-01): ``True`` quando outro
+          processo — hoje só a Steam é reconhecida — segura o ``hidraw``
+          DESTE controle. É o aviso de que ``lightbar_rgb`` acima é a cor
+          PEDIDA e pode não ser a acesa: escrita crua por hidraw não atualiza
+          a classe LED, e a madrugada de 16/08 mediu o mesmo ``[0 255 0]`` com
+          a barra apagada e com ela verde. Sai da FOTO do sentinela do daemon
+          (tique de 30 s) — este handler não toca ``/proc``.
+
           Contrato de cor (D8 — divergência fundamentada, decisão do
           orquestrador da onda): expõe-se UMA cor, a efetiva conhecida
           (pós-escala de brilho — o `_DesiredOutput.led` já é pós-escala; o
@@ -1878,6 +2893,16 @@ class IpcHandlersMixin:
                 if uniq is not None and rgb is not None:
                     written_by_uniq[uniq] = rgb
 
+        # ESCRITOR-CRU-01: o endereço com que se pergunta "quem mais segura
+        # este controle?". Leitura de atributo do backend (`_pinned_path`) —
+        # não re-enumera, não abre nada, não toca `/proc`: a FOTO de quem
+        # segura é do sentinela do daemon, tirada no tique do reconnect_loop.
+        nos_por_uniq: dict[str, str] = {}
+        mapear = getattr(self.controller, "nos_hidraw_por_uniq", None)
+        if callable(mapear):
+            with contextlib.suppress(Exception):
+                nos_por_uniq = dict(mapear() or {})
+
         snapshots = self._coop_live_snapshots()
         vpad_by_uniq = self._coop_vpads_by_uniq()
         gp_dev = (
@@ -1898,6 +2923,7 @@ class IpcHandlersMixin:
             entry["lightbar_rgb"] = list(rgb) if rgb is not None else None
             entry["lightbar_on"] = on
             entry["lightbar_source"] = source
+            entry["lightbar_disputada"] = self._lightbar_disputada(uniq, nos_por_uniq)
 
             if entry.get("is_primary") and state is not None:
                 entry["inputs"] = self._inputs_from_state(state)
@@ -2044,6 +3070,42 @@ class IpcHandlersMixin:
                 if rgb is not None:
                     return rgb, rgb != (0, 0, 0), "desired"
         return None, False, "desconhecida"
+
+    def _lightbar_disputada(
+        self, uniq: str | None, nos_por_uniq: dict[str, str]
+    ) -> bool:
+        """True quando OUTRO processo segura o hidraw DESTE controle.
+
+        ESCRITOR-CRU-01 — o campo existe porque a aba Status estava mentindo, e
+        a mentira era honesta: com nó gravável e escrita nossa registrada, ela
+        mostra a leitura de ``multi_intensity`` como "a cor efetiva". A
+        madrugada de 16/08 mediu que esse valor é o mesmo `[0 255 0]` com a
+        barra APAGADA e com ela VERDE — o sysfs guarda o PEDIDO, nunca o
+        aceso. Enquanto houver escritor cru, o que a tela pode afirmar é *"esta
+        é a cor que o Hefesto pediu"*, e é isso que este booleano diz à GUI.
+
+        Leitura PURA: sai da foto que o sentinela do daemon já tirou (o tique
+        de 30 s do `reconnect_loop`). O status é consultado a cada segundo pela
+        GUI — sondar `/proc` aqui seria um `pgrep` por segundo, e o defeito que
+        essa sonda existe para curar não vale esse preço.
+
+        ``False`` também é a resposta quando NADA foi sondado ainda. É
+        deliberado e é a disciplina desta casa: ausência de sonda não é prova
+        de que ninguém segura, e um aviso ligado por falta de dado treinaria a
+        usuária a ignorá-lo.
+        """
+        if uniq is None:
+            return False
+        no = nos_por_uniq.get(uniq)
+        if not no or self.daemon is None:
+            return False
+        sentinela = getattr(self.daemon, "_sentinela_de_escritor_cru", None)
+        # `isinstance`, e não pato: o daemon é MagicMock em boa parte da suíte,
+        # e `bool(mock.veredito.segurado(no))` é True — um aviso na tela dela
+        # nascido de um dublê de teste seria a pior estreia possível.
+        if not isinstance(sentinela, _escritor_cru.SentinelaDeEscritorCru):
+            return False
+        return bool(sentinela.veredito.segurado(no))
 
     def _lightbar_read_cached(
         self, node: Any
@@ -2259,6 +3321,57 @@ class IpcHandlersMixin:
 
     # --- GUI-05 item 3: honestidade do wrapper (`wrapper_used`) -----------
 
+    #: PERFIL-MUDO-01 — cache do último cálculo, chaveado pela janela em foco.
+    #: `state_full` roda a 10 Hz e `load_all_profiles()` lê o disco inteiro;
+    #: sem isto seriam ~140 leituras de JSON por segundo com os 14 perfis dela.
+    #: A chave é a tripla que o matcher consome, então a resposta só é
+    #: recalculada quando a pergunta muda de verdade.
+    _perfil_mudo_cache: tuple[tuple[str, str, str], list[dict[str, str]]] | None = None
+
+    def _perfil_que_nao_entrou(self) -> list[dict[str, str]]:
+        """Perfis que são regra DESTE jogo e mesmo assim não entraram.
+
+        Só as regras do jogo em foco (`e_regra_deste_jogo`), e essa poda é a
+        diferença entre informação e ruído: com 14 perfis no disco, doze
+        "não entraram" a cada janela de desktop, e todos por funcionarem como
+        deveriam. O que ela precisa ver é o perfil que ela escreveu PARA aquele
+        jogo e que o jogo abriu sem.
+
+        Fora de janela de jogo devolve `[]` sem tocar em disco: o predicado
+        `e_regra_deste_jogo` exige um appid em foco, então não há resposta
+        possível — e pagar `load_all_profiles()` para descobrir isso, a 10 Hz e
+        com ela no desktop, seria o poller cego que esta casa já pagou uma vez.
+        """
+        from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
+
+        def _txt(nome: str) -> str:
+            valor = getattr(self.store, nome, None)
+            return valor if isinstance(valor, str) else ""
+
+        wm_class = _txt("window_detect_current_class")
+        if steam_appid_from_wm_class(wm_class) is None:
+            self._perfil_mudo_cache = None
+            return []
+        chave = (wm_class, _txt("window_detect_current_name"), _txt("window_detect_current_exe"))
+        cache = self._perfil_mudo_cache
+        if cache is not None and cache[0] == chave:
+            return cache[1]
+
+        from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+        from hefesto_dualsense4unix.profiles.porque_nao_entrou import (
+            frase_do_perfil_que_nao_entrou,
+            perfis_que_nao_entraram,
+        )
+
+        info = {"wm_class": chave[0], "wm_name": chave[1], "exe_basename": chave[2]}
+        achados = [
+            {"nome": a.nome, "frase": frase_do_perfil_que_nao_entrou(a)}
+            for a in perfis_que_nao_entraram(info, load_all_profiles())
+            if a.e_regra_deste_jogo
+        ]
+        self._perfil_mudo_cache = (chave, achados)
+        return achados
+
     def _wrapper_used_now(self) -> bool | None:
         """`wrapper_used` do momento: True/False com jogo em foco, None sem.
 
@@ -2305,6 +3418,33 @@ class IpcHandlersMixin:
         marker = read_last_run_marker()
         self._wrapper_marker_cache = (now, marker)
         return marker
+
+    # --- CONTROLE-QUE-NAO-ENTROU-01: o controle ligado que não entrou ------
+
+    def _controles_sem_driver_payload(self) -> dict[str, Any]:
+        """Quantos DualSense estão ligados e o sistema NÃO conseguiu adotar.
+
+        Derivado do SISTEMA a cada leitura (`dualsense_sem_driver`), nunca de
+        um segundo campo mantido em paralelo. A distinção é a lição da
+        `ESTADO-QUE-MENTE-01` (03/08), que segue aberta neste mesmo payload: o
+        topo do `state_full` é mantido ao lado da lista de controles em vez de
+        derivado dela, e por isso a aba afirma "Conectado · USB · 85%" com a
+        mesa vazia. Este campo novo não pode nascer com o mesmo defeito.
+
+        `ids` são os nomes de diretório do sysfs (``0005:054C:0CE6.000F`` —
+        barramento, fabricante, produto e instância; **não** há MAC neles).
+        Vão para o payload porque é o que o `doctor` e o log precisam citar
+        para casar com a linha do `bt_rebind_orphans.sh`; a janela usa só a
+        quantidade.
+        """
+        now = time.monotonic()
+        hit = self._hid_orfaos_cache
+        if hit is not None and (now - hit[0]) < _HID_ORFAOS_TTL_SEC:
+            ids = hit[1]
+        else:
+            ids = dualsense_sem_driver()
+            self._hid_orfaos_cache = (now, ids)
+        return {"quantidade": len(ids), "ids": list(ids)}
 
     async def _handle_controller_list(self, params: dict[str, Any]) -> dict[str, Any]:
         """Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01.
@@ -2398,6 +3538,55 @@ class IpcHandlersMixin:
 
     # --- rumble ----------------------------------------------------------
 
+    async def _handle_lightbar_reset(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição.
+
+        LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026). Ver
+        `backend_pydualsense.enviar_release_leds` para as três medições que este
+        caminho existe para conciliar. Em uma linha: o 0x08 devolve o claim da
+        lightbar ao host, e a suspeita é que ele só TRAVA quando mandado dentro
+        da janela de ~3,4 s pós-conexão. Sem um gesto sob demanda, essa
+        diferença não é falsificável sem brigar com o daemon pelo hidraw.
+
+        ``uniq`` opcional restringe a um controle. A resposta traz o que foi
+        enviado por handle — ``{}`` quer dizer "nenhum handle aberto", que é
+        informação, não falha.
+        """
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("lightbar.reset: 'uniq' precisa ser texto")
+        # O backend é `self.controller` (o `IController` que o IpcServer
+        # carrega), não `daemon.backend` — o primeiro tiro deste instrumento
+        # errou exatamente aqui, e o defeito foi útil: provou que o handler
+        # levanta ANTES de escrever no controle, então uma chamada que falha
+        # não gasta a medição.
+        enviar = getattr(self.controller, "enviar_release_leds", None)
+        if not callable(enviar):
+            raise RuntimeError("backend sem suporte a lightbar.reset")
+        enviados = enviar(uniq=uniq)
+        return {"status": "ok", "enviados": enviados}
+
+    async def _handle_debug_player_leds(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação.
+
+        LIGHTBAR-ISOLAR-OS-PLAYERS-01 (08/08/2026), hipótese dela. Ver
+        `backend_pydualsense.suprimir_player_leds` para o porquê e para as
+        medições que apontam para cá.
+
+        Comutável ao vivo de propósito: o experimento anterior se perdeu porque
+        o instrumento exigia reiniciar o daemon, e o restart curou a barra antes
+        do gesto que se queria medir.
+        """
+        suprimir = params.get("suprimir")
+        if not isinstance(suprimir, bool):
+            raise ValueError("debug.player_leds exige 'suprimir' booleano")
+        alternar = getattr(self.controller, "suprimir_player_leds", None)
+        if not callable(alternar):
+            raise RuntimeError("backend sem suporte a debug.player_leds")
+        return {"status": "ok", "suprimir": bool(alternar(suprimir))}
+
     async def _handle_rumble_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Aplica rumble com política de intensidade (FEAT-RUMBLE-POLICY-01).
 
@@ -2405,6 +3594,11 @@ class IpcHandlersMixin:
         o poll loop continue re-afirmando via _reassert_rumble. O multiplicador
         de política é aplicado antes de enviar ao hardware — tanto aqui quanto
         em _reassert_rumble.
+
+        MESA-CHEIA-05 (E0): junto do par vai o DONO dele
+        (`rumble_active_uniq`), congelado agora. Sem isso o reassert do poll
+        loop reescrevia no alvo DE AGORA, e trocar o seletor levava o valor de
+        um controle para outro.
         """
         weak = params.get("weak")
         strong = params.get("strong")
@@ -2416,6 +3610,7 @@ class IpcHandlersMixin:
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (weak, strong)
+            daemon_cfg.rumble_active_uniq = uniq_do_alvo_de_output(self.controller)
         # Aplica política antes de enviar ao hardware.
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
@@ -2432,10 +3627,48 @@ class IpcHandlersMixin:
         (0, 0) de forma que o poll loop re-afirme o silêncio, evitando que outro
         write HID re-ative motores inadvertidamente. Use rumble.passthrough para
         liberar controle completo ao jogo.
+
+        MESA-CHEIA-05 (E0): o silêncio deliberado também tem dono — quem
+        mandou calar UM controle não mandou calar o que entrar no seletor
+        depois.
+
+        MESA-CHEIA-05 (E0, terceira rodada) — **e cala quem está vibrando, não
+        só quem está no seletor.** Medido em 14/08 contra `git archive HEAD`,
+        com os quatro controles: ela fixa 160/220 no Controle 2, move o seletor
+        para o 3 e clica «Parar». Os zeros iam para o 3 e o **2 continuava em
+        220/160**; antes de o par ter dono, voltar o seletor ao 2 o silenciava,
+        e com o dono congelado voltar o seletor deixou de significar coisa
+        alguma — o gesto criava um beco sem saída. «Parar» quer dizer *cale o
+        que está vibrando*, então o dono anterior leva os zeros ANTES de o
+        endereço passar para o seletor de agora. A §5 da sprint, pelo nome: *"a
+        volta ao neutro vale tanto quanto a ida"*.
         """
+        # Import local, e o motivo foi MEDIDO em 14/08 (não é o ciclo do
+        # reassert — no topo importa sem ciclo nenhum, nas cinco ordens de
+        # entrada que testei): hoje `import ...daemon.ipc_handlers` carrega
+        # ZERO módulos de `daemon.subsystems`, e puxar um deles executa o
+        # `subsystems/__init__.py`, que importa TODOS — bt_mic, metrics,
+        # plugins, udp, gamepad. Um handler de rumble não paga essa conta no
+        # import de quem só quer falar IPC.
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            silenciar_dono_abandonado,
+        )
+
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        dono_de_agora = uniq_do_alvo_de_output(self.controller)
         if daemon_cfg is not None:
+            par_velho = getattr(daemon_cfg, "rumble_active", None)
+            dono_velho = getattr(daemon_cfg, "rumble_active_uniq", None)
             daemon_cfg.rumble_active = (0, 0)
+            daemon_cfg.rumble_active_uniq = dono_de_agora
+            # Só quem vibrava por NOSSA conta é resgatado: par nenhum (o jogo
+            # dirige) ou par (0,0) (já calado) não abandonam ninguém.
+            if par_velho is not None and any(par_velho):
+                silenciar_dono_abandonado(self.controller, dono_velho, dono_de_agora)
+            # O par de agora é (0,0): ninguém mais vibra por nossa conta, e a
+            # anotação do poll loop não pode ficar rançosa cobrando um resgate
+            # que este gesto já pagou.
+            daemon_cfg.rumble_dono_vibrando = None
         self.controller.set_rumble(weak=0, strong=0)
         # ONDA-U (Causa A): mesma trava de trigger.set (U11), categoria
         # "rumble".
@@ -2474,6 +3707,8 @@ class IpcHandlersMixin:
             daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
             if daemon_cfg is not None:
                 daemon_cfg.rumble_active = None
+                # MESA-CHEIA-05 (E0): sem par fixado não há dono a lembrar.
+                daemon_cfg.rumble_active_uniq = None
             # F1 (auditoria 21/07): limpa SÓ a categoria "rumble" — o fim do
             # "Testar motores" não pode apagar um LED/gatilho deliberado
             # aplicado em outra aba (a trava era booleano único e o clear
@@ -2619,10 +3854,10 @@ class IpcHandlersMixin:
         return {"status": "ok"}
 
     async def _handle_speaker_set(self, params: dict[str, Any]) -> dict[str, Any]:
-        """`speaker.set` — volume/mudo do alto-falante do DualSense (D4).
+        """`speaker.set` — volume/mudo/devolução do alto-falante (D4 + SOM-02).
 
-        Params: ``{volume?: 0-255, muted?: bool, uniq?: str}``. `uniq` escolhe
-        o controle (MAC normalizado); omitido = o primário.
+        Params: ``{volume?: 0-255, muted?: bool, release?: bool, uniq?: str}``.
+        `uniq` escolhe o controle (MAC normalizado); omitido = o primário.
 
         Escrever é o ÚNICO jeito de o volume ser conhecido: o controle não tem
         caminho de leitura para esse registrador. A primeira chamada faz o
@@ -2630,10 +3865,48 @@ class IpcHandlersMixin:
         dela o firmware é o dono e o daemon não toca no bloco (AUDIO-OWNER-01).
         Por isso `daemon.state_full` só passa a trazer a chave `speaker` DEPOIS
         de um `speaker.set`: até lá, publicar um número seria inventá-lo.
+
+        `release: true` (SOM-02/E3) DEVOLVE a posse: os quatro bytes voltam a
+        "sem dono", os bits de áudio do flag0 saem zerados e a chave `speaker`
+        some do estado. O que ele devolve é o CONTROLE, não o valor — o firmware
+        conserva o último número que mandamos, porque ninguém pode ler qual era
+        o de antes.
+
+        POR QUE `release` É CHAVE PRÓPRIA, e não `muted: null` como no `mic.set`:
+        aqui `muted` é OPCIONAL e a ausência já significa "não mexer"; lá a
+        chave é obrigatória e a ausência é erro. Reaproveitar o `null` daria
+        DUAS leituras para o mesmo payload — o `{}` seria ao mesmo tempo "não
+        mexer no mudo" e "devolver a posse".
+
+        PRECEDÊNCIA (decidida na SOM-02, entrega 3): `release` junto de
+        `volume`/`muted` é ERRO DE VALIDAÇÃO, não uma ordem com vencedor. A
+        mistura não tem significado honesto — "pare de mandar E mande isto" —, e
+        escolher um vencedor em silêncio esconderia um chamador confuso. São
+        dois pedidos, e quem quer os dois manda dois.
         """
         volume = params.get("volume")
         muted = params.get("muted")
+        release = params.get("release")
         uniq = params.get("uniq")
+        rota = params.get("rota")
+        if rota is not None:
+            # SOM-ROTA-01/E3 — o caso do Zelda em um byte: `rota=2` manda o
+            # canal esquerdo para o fone/TV e o DIREITO para o alto-falante do
+            # controle. Ela descreveu assim: *"o speaker do controle faz os
+            # barulhos da espada do Link enquanto na tela tem o som normal do
+            # jogo"*.
+            #
+            # A faixa é 0-3 e o erro é de VALIDAÇÃO, não clamp: os quatro
+            # valores significam coisas diferentes, e escolher um vizinho em
+            # silêncio mandaria o áudio para outro lugar que não o pedido.
+            if not isinstance(rota, int) or isinstance(rota, bool):
+                raise ValueError("speaker.set: 'rota' precisa ser int 0-3")
+            if not 0 <= rota <= 3:
+                raise ValueError(
+                    "speaker.set: 'rota' fora de 0-3 (0=estéreo no fone, "
+                    "1=mono no fone, 2=L no fone e R no alto-falante, "
+                    "3=só no alto-falante)"
+                )
         if volume is not None:
             if not isinstance(volume, int) or isinstance(volume, bool):
                 raise ValueError("speaker.set: 'volume' precisa ser int 0-255")
@@ -2641,21 +3914,110 @@ class IpcHandlersMixin:
                 raise ValueError("speaker.set: 'volume' fora de 0-255")
         if muted is not None and not isinstance(muted, bool):
             raise ValueError("speaker.set: 'muted' precisa ser boolean ou omitido")
+        if release is not None and not isinstance(release, bool):
+            raise ValueError("speaker.set: 'release' precisa ser boolean ou omitido")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("speaker.set: 'uniq' precisa ser string ou omitido")
+        if release and (volume is not None or muted is not None or rota is not None):
+            raise ValueError(
+                "speaker.set: 'release' não combina com 'volume'/'muted' — "
+                "devolver a posse e mandar um valor na mesma chamada não tem "
+                "significado honesto; mande dois pedidos"
+            )
+
+        if release:
+            return await self._speaker_release(uniq)
+
+        # O suporte do backend vem ANTES da guarda abaixo: num backend que nem
+        # tem o método, "sem suporte" é a resposta verdadeira e "sem volume
+        # conhecido" seria uma consequência dela vestida de causa.
         setter = getattr(self.controller, "set_speaker_volume", None)
         if not callable(setter):
             raise ValueError("backend sem suporte a volume de alto-falante")
-        ok = bool(setter(volume, muted=muted, uniq=uniq))
-        estado: Any = None
-        leitor = getattr(self.controller, "speaker_state_for", None)
-        if callable(leitor):
-            with contextlib.suppress(Exception):
-                estado = leitor(uniq)
+
+        # SOM-02 (armadilha 2, medida): mudo como PRIMEIRA escrita tranca o
+        # alto-falante em zero e o próprio mudo não o solta — o `muted=False`
+        # restauraria uma preferência que vale 0. Sem volume conhecido, o pedido
+        # é recusado com o caminho dito por extenso, em vez de virar um
+        # `{'volume': 0, 'muted': True}` do qual não se sai. O backend recusa de
+        # novo, na raiz (`set_speaker_volume`); aqui a recusa vira MENSAGEM, que
+        # é o que o `status` sozinho não conseguiria dizer sem mentir
+        # "sem_controle" para um controle que está conectado.
+        sem_volume_conhecido = self._speaker_estado(uniq) is None
+        if muted is not None and volume is None and sem_volume_conhecido:
+            raise ValueError(
+                "speaker.set: 'muted' sem volume conhecido — mande um 'volume' "
+                "antes (mudo como primeira escrita tranca o alto-falante em "
+                "zero e o próprio mudo não o solta)"
+            )
+        # A `rota` só é repassada QUANDO VEIO, e o kwarg nem aparece na
+        # chamada sem ela. Duas razões, e a segunda é de contrato:
+        #
+        # 1. o backend trata `None` como "não tome a posse do common[7]", e é
+        #    assim que o caminho do microfone (que mora no mesmo byte)
+        #    continua intocado por omissão;
+        # 2. o backend é TROCÁVEL (ADR-001), e um parâmetro novo não pode
+        #    virar exigência retroativa para quem implementa a interface. Só
+        #    quem pede a rota precisa de um backend que a conheça — e aí o
+        #    `TypeError` é a resposta certa, não um silêncio.
+        extras: dict[str, Any] = {} if rota is None else {"rota": rota}
+        ok = bool(setter(volume, muted=muted, uniq=uniq, **extras))
+        if ok:
+            self._marcar_audio_manual()
         return {
             "status": "ok" if ok else "sem_controle",
-            "speaker": estado if isinstance(estado, dict) else None,
+            "speaker": self._speaker_estado(uniq),
         }
+
+    async def _speaker_release(self, uniq: str | None) -> dict[str, Any]:
+        """Devolve a posse dos bytes de volume (SOM-02/E3) e relê o estado.
+
+        A releitura tem de sair `None`: `speaker_state_for` devolve None assim
+        que o byte do alto-falante fica sem dono, e o `_merge_audio` só publica
+        dicionário — é assim que a chave `speaker` SOME do `daemon.state_full` e
+        a janela volta a dizer "não ajustado" no tique seguinte.
+        """
+        soltar = getattr(self.controller, "release_speaker_volume", None)
+        if not callable(soltar):
+            raise ValueError("backend sem suporte a devolução do alto-falante")
+        ok = bool(soltar(uniq=uniq))
+        if ok:
+            self._marcar_audio_manual()
+        return {
+            "status": "ok" if ok else "sem_controle",
+            "speaker": self._speaker_estado(uniq),
+        }
+
+    def _speaker_estado(self, uniq: str | None) -> dict[str, Any] | None:
+        """Leitura tolerante do `speaker_state_for` (None = sem volume conhecido).
+
+        `getattr` defensivo pelo mesmo motivo do resto do bloco de áudio:
+        FakeController e daemon antigo não têm o método, e ausência é resposta.
+        """
+        leitor = getattr(self.controller, "speaker_state_for", None)
+        if not callable(leitor):
+            return None
+        estado: Any = None
+        with contextlib.suppress(Exception):
+            estado = leitor(uniq)
+        return estado if isinstance(estado, dict) else None
+
+    def _marcar_audio_manual(self) -> None:
+        """Arma a trava manual da categoria `audio` (SOM-02, decisão da E4).
+
+        Mesma disciplina de `trigger.set`/`led.set`/`rumble.set`: um ajuste
+        MANUAL dela não pode ser pisado pelo autoswitch reaplicando o perfil na
+        próxima troca de janela. A alternativa considerada — deixar o volume
+        fora da trava e fazer o aplicador de perfil rodar só em troca EXPLÍCITA
+        de perfil — deixaria o furo aberto para todo caminho que reaplica perfil
+        sem ser troca explícita. A razão está escrita junto da categoria em
+        `daemon/state_store.py`.
+
+        A devolução da posse também arma: parar de mandar é uma decisão dela
+        tanto quanto mandar, e um perfil reaplicado logo depois retomaria a
+        posse que ela acabou de soltar.
+        """
+        self.store.mark_manual_trigger_active("audio")
 
     async def _handle_mic_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`mic.set` — mudo do microfone no FIRMWARE do controle (MIC-USB-01).
@@ -2767,7 +4129,10 @@ class IpcHandlersMixin:
             }
 
         ok = self.daemon.set_mouse_emulation(
-            enabled=enabled, speed=speed, scroll_speed=scroll_speed
+            enabled=enabled,
+            speed=speed,
+            scroll_speed=scroll_speed,
+            origin=origem_do_pedido(params),
         )
         return {"status": "ok" if ok else "failed", "enabled": enabled and ok}
 
@@ -2835,7 +4200,12 @@ class IpcHandlersMixin:
 
         Params:
             enabled: bool (obrigatório)
-            flavor: "dualsense" | "xbox" (opcional; mantém o atual se ausente)
+            flavor: "dualsense" | "xbox" e os sinônimos de
+                `uinput_gamepad.FLAVOR_SINONIMOS` ("sony", "ps5", "ps",
+                "playstation", "ds", "xbox360", "x360", "xinput") — opcional;
+                ausente mantém a máscara atual. Nome fora dessa lista é
+                **recusado** (`ValueError` → `invalid params`), nunca convertido
+                em xbox por default (ver o comentário no corpo).
 
         Achado Onda S #6 — decisão registrada (desenho §9): o setter continua
         sendo chamado direto (síncrono) porque a parte BLOQUEANTE da cadeia —
@@ -2853,10 +4223,45 @@ class IpcHandlersMixin:
         flavor = params.get("flavor")
         if flavor is not None and not isinstance(flavor, str):
             raise ValueError("gamepad.emulation.set: 'flavor' precisa ser string")
+        if flavor is not None:
+            # NOME DESCONHECIDO É ERRO, NÃO DEFAULT (10/08/2026).
+            #
+            # Aqui embaixo o `normalize_flavor` é TOLERANTE: o que ele não
+            # reconhece vira `DEFAULT_FLAVOR` == "xbox". Medido em runtime:
+            # `--flavor sony` (a palavra dela) e `--flavor nintendo` chegavam ao
+            # vpad como Xbox — a máscara OPOSTA à pedida no primeiro caso —, o
+            # daemon respondia `status: "ok"` e devolvia `flavor: "xbox"` como se
+            # fosse o pedido atendido. "sony"/"ps5" viraram sinônimos legítimos
+            # (`FLAVOR_SINONIMOS`); o resto tem de RECUSAR em voz alta, senão a
+            # tolerância do normalizador segue transformando erro de digitação em
+            # troca silenciosa de máscara. Mesma lição do `or "xbox"` do editor de
+            # perfis (ESCOLHE-DELA-VENCE-01, E1) e da `normalizar_mascara`
+            # estrita do `external_mask`.
+            #
+            # A recusa vive AQUI, no portão de entrada de gente (GUI/CLI/applet
+            # falam por este método), e não dentro do `normalize_flavor`: os
+            # chamadores internos DEPENDEM do fallback — `uhid_gamepad.for_flavor`
+            # lê "não é dualsense, logo não é meu" do default xbox, e
+            # `coop`/`gamepad`/`virtual_pad` precisam de uma máscara sempre, até
+            # com config de disco corrompida. Endurecer o normalizador quebraria
+            # esses caminhos; endurecer o portão não toca em nenhum.
+            from hefesto_dualsense4unix.integrations.uinput_gamepad import (
+                nomes_de_flavor_aceitos,
+                resolver_flavor,
+            )
+
+            if resolver_flavor(flavor) is None:
+                aceitos = ", ".join(nomes_de_flavor_aceitos())
+                raise ValueError(
+                    f"gamepad.emulation.set: máscara desconhecida {flavor!r} — "
+                    f"aceito: {aceitos}"
+                )
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar o gamepad virtual")
 
-        ok = self.daemon.set_gamepad_emulation(enabled=enabled, flavor=flavor)
+        ok = self.daemon.set_gamepad_emulation(
+            enabled=enabled, flavor=flavor, origin=origem_do_pedido(params)
+        )
         active_flavor = getattr(self.daemon.config, "gamepad_flavor", None)
         return {
             "status": "ok" if ok else "failed",
@@ -2865,10 +4270,21 @@ class IpcHandlersMixin:
         }
 
     async def _handle_coop_set(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01).
+        """Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01).
 
-        Params: enabled: bool (obrigatório). Com o co-op ligado + gamepad virtual
-        ativo + 2+ controles, cada controle vira um jogador (P1, P2, …).
+        Params: enabled: bool (obrigatório). Com o gamepad virtual ativo + 2+
+        controles, cada controle é um jogador (P1, P2, …).
+
+        COOP-SEM-INTERRUPTOR-01 (06/08/2026, decisão da mantenedora): *"todos e
+        tudo no Hefesto tem que tá com o permitir co-op ligado (…) se eu conecto
+        4 controles no PC eu espero, com 4 pessoas jogando, que cada um controle
+        o próprio personagem"*. O método SOBREVIVE porque a forma é contrato
+        vivo (a CLI lê ``result["players"]``, e o "ligar" continua sendo o ciclo
+        que reconcilia os jogadores), mas ``enabled: false`` passa a ser
+        recusado EM VOZ ALTA — ``status: "recusado"`` com motivo legível, nunca
+        um "ok" mentiroso. Quem quer um controle de reserva o deixa
+        desconectado; quem quer suspender o co-op por Steam Input usa
+        ``CoopManager.disable()``, que não depende desta flag.
 
         Achado Onda S #6: mesma decisão do `_handle_gamepad_emulation_set` —
         o hide/restore por jogador (`_broker_hide_player`/`_broker_restore_
@@ -2881,10 +4297,68 @@ class IpcHandlersMixin:
             raise ValueError("coop.set exige 'enabled' boolean")
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar o co-op")
-        effective = self.daemon.set_coop_enabled(enabled)
+        if not enabled:
+            # A forma do retorno é a MESMA (`players` continua lá): quem chama
+            # não quebra, mas também não é enganado — `status` diz "recusado" e
+            # `enabled` diz a verdade sobre o estado que ficou.
+            coop_recusa = getattr(self.daemon, "_coop_manager", None)
+            players_recusa = (
+                coop_recusa.player_count() if coop_recusa is not None else 1
+            )
+            logger.warning(
+                "coop_set_desligar_recusado",
+                motivo="coop_sempre_ligado",
+                players=players_recusa,
+            )
+            return {
+                "status": "recusado",
+                "enabled": True,
+                "players": players_recusa,
+                "motivo": COOP_SEMPRE_LIGADO_MOTIVO,
+            }
+        effective = self.daemon.set_coop_enabled(
+            enabled, origin=origem_do_pedido(params)
+        )
         coop = getattr(self.daemon, "_coop_manager", None)
         players = coop.player_count() if coop is not None else 1
         return {"status": "ok", "enabled": bool(effective), "players": players}
+
+    async def _handle_coop_sync(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`).
+
+        COOP-SEM-INTERRUPTOR-01, entrega 5 (06/08/2026). Antes desta entrega o
+        ciclo FORÇADO só existia em dois lugares automáticos (a troca de máscara
+        em `set_gamepad_emulation` e a volta da exceção de Steam Input em
+        `resume_vpads_after_steam_input`) e num gesto que ia sair da tela — o
+        botão "Preparar co-op", que o disparava de carona no `coop.set`. Sem
+        dono próprio, tirar o botão tiraria dela o ÚNICO gesto de recuperação do
+        jogador que nasce e morre em dois segundos
+        (COOP-QUE-NÃO-DESMONTA-01): o ciclo normal do poll loop só reenumera
+        quando /dev/input muda, e um grab recusado ou um vpad morto podem
+        esperar o próximo hotplug para sempre.
+
+        Não liga nem desliga nada: não toca `config.coop_enabled`, não persiste
+        preferência e não toma a posse do eixo `mode` (ao contrário do
+        `coop.set`, que é gesto manual). Com o co-op inativo — sem gamepad
+        virtual, ou dentro da exceção de Steam Input — `should_be_active()` é
+        False e o ciclo apenas desmonta o que sobrou, que é o comportamento
+        correto: reconciliar nunca ressuscita o que o jogo suspendeu.
+
+        Retorno: ``{status: "ok", players: N, active: bool}``.
+        """
+        del params  # sem parâmetros: o gesto é "reconcilie agora".
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para reconciliar o co-op")
+        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+
+        coop = get_coop_manager(self.daemon)
+        coop.sync(force=True)
+        players = coop.player_count()
+        return {
+            "status": "ok",
+            "players": players if isinstance(players, int) else 1,
+            "active": bool(coop.should_be_active()),
+        }
 
     async def _handle_emulation_suppress(
         self, params: dict[str, Any]

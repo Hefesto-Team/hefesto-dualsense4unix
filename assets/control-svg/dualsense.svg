@@ -1,0 +1,228 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" role="img" aria-labelledby="titulo-dualsense"
+     data-controle="dualsense" data-modelo="Sony DualSense">
+  <title id="titulo-dualsense">DualSense — mapa de peças e features</title>
+
+  <!--
+    SEM width/height NO <svg>, DE PROPOSITO: o viewBox ja define a proporcao, e
+    declarar tamanho com razao um pouco diferente faz o renderizador ENCAIXAR
+    COM TARJA e deslocar o desenho meio pixel. Custou duas confusoes num dia
+    so: a medida de componente saiu com posicao relativa impossivel (1,207), e
+    a prova de fidelidade acusou 19.968 pixels de diferenca que eram apenas
+    esse deslocamento. Quem consome define o tamanho; o arquivo nao opina.
+
+    NORMA DESTE DESENHO (vale para os três controles)
+
+    1. A FORMA NÃO É MINHA. O corpo veio da arte de assets/control-svg/
+       Sony-dualsense.svg, decomposta por script em 23 componentes. A prova de
+       que a decomposição foi fiel: render antes x depois difere em 379 pixels
+       de ~540.000 (0,07%, só antisserrilhado de borda). A tentativa ingênua
+       — partir os paths nos subcaminhos — diferia em 231.898, porque o traço
+       fino aqui é PREENCHIMENTO COM FURO (fill-rule evenodd), e partir um anel
+       produz dois borrões. Subcaminho não é componente; o par contorno+furo é.
+
+    2. OS NOMES SÃO OS QUE A CASA JÁ USA. Cada id é a chave de
+       BUTTON_GLYPH_LABELS (gui/widgets/button_glyph.py): cross, circle,
+       square, triangle, dpad_up, l1, r2, stick_l, ps, touchpad, mic. O
+       <title> é o rótulo PT-BR do mesmo mapa. Assim uma peça daqui casa com o
+       glifo de assets/glyphs/ e com o widget da aba Status, sem tradutor.
+
+    3. QUAL PEÇA É QUAL FOI MEDIDO, NÃO LIDO. Cada componente foi renderizado
+       isolado e teve o retângulo medido; o nome saiu da coordenada. Ex.: dos
+       quatro botões de face, o de menor y é o triângulo, o de maior é a cruz,
+       o de menor x é o quadrado. Ler o atributo d e adivinhar produziria um
+       mapa convincente e errado.
+
+    4. data-entrada é ENTRADA (o que o controle ENVIA ao ser apertado).
+       data-feature é SAÍDA ou SENSOR (o que nós ACIONAMOS ou LEMOS).
+       Só o segundo tem canal (cabo/BT), e é para isso que o mapa existe.
+
+    5. A COR DO CONTROLE PINTA O CORPO — que neste desenho É o contorno, por
+       ser anel preenchido. O miolo fica neutro.
+
+    6. O REALCE USA O LITERAL #bd93f9 de propósito: é o mesmo roxo Drácula que
+       set_accent() já substitui pela cor do lightbar daquele controle
+       (STATUS-03, com ensure_min_contrast e cache). Reaproveitar o literal faz
+       o mecanismo que já existe valer aqui, sem código novo.
+
+    7. COR EM ATRIBUTO, NUNCA EM var() DO CSS. Defeito medido: o librsvg (que o
+       GTK usa) não entende var() e o desenho saiu inteiro preto. O valor de
+       fábrica mora no atributo; o colorway entra por regra presa a
+       data-colorway, inerte quando ninguém define o atributo.
+  -->
+
+  <style>
+    svg[data-colorway="midnight-black"]  .corpo { fill: #292a2d; }
+    svg[data-colorway="cosmic-red"]      .corpo { fill: #b11f54; }
+    svg[data-colorway="galactic-purple"] .corpo { fill: #4c319d; }
+    svg[data-colorway="starlight-blue"]  .corpo { fill: #55bdf8; }
+    svg[data-colorway="nova-pink"]       .corpo { fill: #ec429d; }
+
+    g[data-entrada]:hover > .peca,
+    g[data-feature]:hover > .peca,
+    g.marcada > .peca { fill: #bd93f9; }
+    .oculta       { opacity: 0; }
+    .oculta.acesa { opacity: .95; }
+  </style>
+
+  <g id="corpo" data-feature="chassi">
+      <title>Corpo</title>
+      <path class="corpo" fill="#3a3f4b" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+      <path class="corpo" fill="#3a3f4b" fill-rule="evenodd" d="M 95.713 29.97 c -4.39 -0.486 -8.557 -0.56 -11.06 -0.478 a 0.5 0.5 0 0 0 -0.103 0.985 c 0.499 0.123 0.847 0.63 1.033 1.475 c 0.177 0.806 0.157 1.735 0.081 2.348 a 285 285 0 0 0 -1.984 11.223 c -0.82 5.241 1.358 8.944 2.624 10.188 v 0.001 c 1.69 1.662 3.442 3.384 5.898 6.765 c 2.5 3.441 6.075 11.187 9.291 18.742 c 2.416 5.676 4.61 11.195 5.972 14.62 a 405 405 0 0 0 1.067 2.665 l 0.077 0.156 c 0.218 0.45 0.565 1.164 1.279 1.54 c 0.846 0.444 2.03 0.359 3.775 -0.499 c 2.69 -1.323 4.847 -4.809 5.973 -10.224 c 1.132 -5.442 1.251 -12.944 -0.243 -22.493 c -2.392 -15.285 -8.301 -28.898 -10.968 -33.816 a 0.5 0.5 0 0 0 -0.23 -0.216 c -3.448 -1.595 -8.101 -2.496 -12.482 -2.982 M 107.625 33.791 c 2.661 4.959 8.433 18.346 10.78 33.347 c 1.482 9.473 1.353 16.847 0.252 22.136 c -1.106 5.315 -3.165 8.414 -5.436 9.53 c -1.654 0.813 -2.454 0.728 -2.867 0.51 c -0.405 -0.212 -0.604 -0.61 -0.842 -1.086 l -0.079 -0.159 c -0.243 -0.596 -0.594 -1.48 -1.033 -2.584 c -1.361 -3.424 -3.565 -8.969 -5.987 -14.658 c -3.203 -7.524 -6.821 -15.386 -9.401 -18.938 c -2.505 -3.447 -4.302 -5.214 -6.007 -6.89 c -1.05 -1.033 -3.105 -4.419 -2.337 -9.322 a 283 283 0 0 1 1.986 -11.233 c 0.088 -0.687 0.116 -1.747 -0.094 -2.706 c -0.095 -0.43 -0.248 -0.883 -0.494 -1.273 c 2.475 -0.018 5.93 0.1 9.537 0.5 c 4.284 0.474 8.737 1.342 12.022 2.826"/>
+      <path class="corpo" fill="#3a3f4b" fill-rule="evenodd" d="M 32.287 29.97 c 4.39 -0.486 8.557 -0.56 11.06 -0.478 a 0.5 0.5 0 0 1 0.102 0.985 c -0.498 0.123 -0.846 0.63 -1.032 1.475 c -0.177 0.806 -0.157 1.735 -0.081 2.348 c 0.334 1.649 1.192 6.16 1.984 11.223 c 0.82 5.241 -1.358 8.944 -2.624 10.188 v 0.001 c -1.69 1.662 -3.442 3.384 -5.898 6.765 c -2.5 3.441 -6.075 11.187 -9.291 18.742 c -2.416 5.676 -4.61 11.195 -5.972 14.62 a 418 418 0 0 1 -1.067 2.665 l -0.077 0.156 c -0.218 0.45 -0.565 1.164 -1.28 1.54 c -0.845 0.444 -2.029 0.359 -3.774 -0.499 c -2.69 -1.323 -4.847 -4.809 -5.973 -10.224 c -1.132 -5.442 -1.251 -12.944 0.243 -22.493 c 2.392 -15.285 8.3 -28.898 10.968 -33.816 a 0.5 0.5 0 0 1 0.23 -0.216 c 3.448 -1.595 8.1 -2.496 12.482 -2.982 M 20.375 33.791 c -2.66 4.959 -8.433 18.346 -10.78 33.347 c -1.482 9.473 -1.353 16.847 -0.252 22.136 c 1.105 5.315 3.165 8.414 5.436 9.53 c 1.654 0.813 2.454 0.728 2.867 0.51 c 0.405 -0.212 0.604 -0.61 0.842 -1.086 l 0.08 -0.159 c 0.242 -0.596 0.593 -1.48 1.032 -2.584 c 1.361 -3.424 3.565 -8.969 5.987 -14.658 c 3.203 -7.524 6.821 -15.386 9.402 -18.938 c 2.504 -3.447 4.301 -5.214 6.006 -6.89 c 1.05 -1.033 3.105 -4.418 2.337 -9.322 a 283 283 0 0 0 -1.986 -11.233 c -0.087 -0.687 -0.116 -1.747 0.094 -2.706 c 0.095 -0.43 0.248 -0.883 0.494 -1.273 c -2.475 -0.018 -5.93 0.1 -9.537 0.5 c -4.284 0.474 -8.737 1.342 -12.022 2.826"/>
+  </g>
+  <g id="touchpad" data-entrada="touchpad" data-feature="touchpad">
+      <title>Touchpad</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 46.909 28.946 c 4.429 -0.993 13.22 -1.483 18.085 -1.483 c 5.08 0 11.82 0.296 17.114 1.483 c 2.252 0.505 3.458 1.343 4.012 2.414 c 0.54 1.044 0.383 2.182 0.26 3.046 c -0.486 3.435 -1.166 7.554 -1.942 12.252 l -0.002 0.014 c -0.406 2.454 -1.43 4.164 -2.778 5.258 c -1.343 1.09 -2.967 1.533 -4.518 1.533 H 50.905 c -2.028 0 -3.6 -0.512 -4.739 -1.39 c -1.14 -0.88 -1.804 -2.096 -2.067 -3.424 c -0.508 -2.559 -1.242 -6.64 -2.067 -11.223 l -0.364 -2.021 c -0.416 -2.305 -0.05 -3.798 1.025 -4.784 c 0.517 -0.473 1.163 -0.796 1.872 -1.047 c 0.707 -0.251 1.507 -0.44 2.344 -0.628 M 64.994 28.463 c -4.85 0 -13.55 0.49 -17.866 1.459 c -0.84 0.188 -1.586 0.366 -2.23 0.594 c -0.642 0.228 -1.15 0.495 -1.53 0.842 c -0.715 0.656 -1.102 1.728 -0.716 3.87 l 0.364 2.021 c 0.825 4.585 1.558 8.656 2.064 11.205 c 0.222 1.123 0.773 2.113 1.697 2.827 c 0.926 0.714 2.269 1.182 4.128 1.182 H 77.14 c 1.365 0 2.754 -0.39 3.888 -1.31 c 1.13 -0.916 2.049 -2.392 2.42 -4.644 l 0.002 -0.004 c 0.777 -4.706 1.456 -8.816 1.94 -12.24 c 0.128 -0.903 0.215 -1.725 -0.158 -2.445 c -0.359 -0.694 -1.222 -1.423 -3.343 -1.898 c -5.182 -1.162 -11.832 -1.459 -16.895 -1.459"/>
+  </g>
+  <g id="triangle" data-entrada="triangle">
+      <title>Triângulo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 37.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 95.5 39.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+  </g>
+  <g id="cross" data-entrada="cross">
+      <title>Cruz</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 53.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+  </g>
+  <g id="square" data-entrada="square">
+      <title>Quadrado</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 91 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+  </g>
+  <g id="circle" data-entrada="circle">
+      <title>Círculo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 107 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+  </g>
+  <g id="dpad_up" data-entrada="dpad_up">
+      <title>D-pad Cima</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 28.635 45.843 a 0.5 0.5 0 0 0 0.73 0 l 2 -2.133 a 0.5 0.5 0 0 0 0.135 -0.342 v -3.405 a 0.5 0.5 0 0 0 -0.5 -0.5 h -4 a 0.5 0.5 0 0 0 -0.5 0.5 v 3.405 a 0.5 0.5 0 0 0 0.135 0.342 Z M 30.095 46.527 a 1.5 1.5 0 0 1 -2.19 0 l -2 -2.133 a 1.5 1.5 0 0 1 -0.405 -1.026 v -3.405 a 1.5 1.5 0 0 1 1.5 -1.5 h 4 a 1.5 1.5 0 0 1 1.5 1.5 v 3.405 a 1.5 1.5 0 0 1 -0.406 1.026 Z"/>
+  </g>
+  <g id="dpad_down" data-entrada="dpad_down">
+      <title>D-pad Baixo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 29.365 52.083 a 0.5 0.5 0 0 0 -0.73 0 l -2 2.134 a 0.5 0.5 0 0 0 -0.135 0.342 v 3.404 a 0.5 0.5 0 0 0 0.5 0.5 h 4 a 0.5 0.5 0 0 0 0.5 -0.5 V 54.56 a 0.5 0.5 0 0 0 -0.135 -0.342 Z M 27.905 51.399 a 1.5 1.5 0 0 1 2.19 0 l 2 2.134 a 1.5 1.5 0 0 1 0.405 1.026 v 3.404 a 1.5 1.5 0 0 1 -1.5 1.5 h -4 a 1.5 1.5 0 0 1 -1.5 -1.5 V 54.56 a 1.5 1.5 0 0 1 0.406 -1.026 Z"/>
+  </g>
+  <g id="dpad_left" data-entrada="dpad_left">
+      <title>D-pad Esquerda</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 25.88 49.328 a 0.5 0.5 0 0 0 0 -0.73 l -2.133 -2 a 0.5 0.5 0 0 0 -0.343 -0.135 H 20 a 0.5 0.5 0 0 0 -0.5 0.5 v 4 a 0.5 0.5 0 0 0 0.5 0.5 h 3.404 a 0.5 0.5 0 0 0 0.343 -0.135 Z M 26.564 47.868 a 1.5 1.5 0 0 1 0 2.19 l -2.134 2 a 1.5 1.5 0 0 1 -1.026 0.405 H 20 a 1.5 1.5 0 0 1 -1.5 -1.5 v -4 a 1.5 1.5 0 0 1 1.5 -1.5 h 3.404 a 1.5 1.5 0 0 1 1.026 0.406 Z"/>
+  </g>
+  <g id="dpad_right" data-entrada="dpad_right">
+      <title>D-pad Direita</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 32.12 48.598 a 0.5 0.5 0 0 0 0 0.73 l 2.134 2 a 0.5 0.5 0 0 0 0.342 0.135 H 38 a 0.5 0.5 0 0 0 0.5 -0.5 v -4 a 0.5 0.5 0 0 0 -0.5 -0.5 h -3.404 a 0.5 0.5 0 0 0 -0.342 0.135 Z M 31.436 50.058 a 1.5 1.5 0 0 1 0 -2.19 l 2.133 -2 a 1.5 1.5 0 0 1 1.026 -0.405 H 38 a 1.5 1.5 0 0 1 1.5 1.5 v 4 a 1.5 1.5 0 0 1 -1.5 1.5 h -3.404 a 1.5 1.5 0 0 1 -1.026 -0.406 Z"/>
+  </g>
+  <g id="stick_l" data-entrada="stick_l" data-clique="l3">
+      <title>Analógico Esquerdo (L3)</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 45.5 57.463 a 7 7 0 1 0 0 14 a 7 7 0 0 0 0 -14 M 37.5 64.463 a 8 8 0 1 1 16 0 a 8 8 0 0 1 -16 0"/>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 45.5 59.463 a 5 5 0 1 0 0 10 a 5 5 0 0 0 0 -10 M 39.5 64.463 a 6 6 0 1 1 12 0 a 6 6 0 0 1 -12 0"/>
+  </g>
+  <g id="stick_r" data-entrada="stick_r" data-clique="r3">
+      <title>Analógico Direito (R3)</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 82.5 57.463 a 7 7 0 1 0 0 14 a 7 7 0 0 0 0 -14 M 74.5 64.463 a 8 8 0 1 1 16 0 a 8 8 0 0 1 -16 0"/>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 82.5 59.463 a 5 5 0 1 0 0 10 a 5 5 0 0 0 0 -10 M 76.5 64.463 a 6 6 0 1 1 12 0 a 6 6 0 0 1 -12 0"/>
+  </g>
+  <g id="l1" data-entrada="l1">
+      <title>L1</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 22.218 30.654 v 0.875 c 4.889 -1.502 10.45 -1.96 13.21 -2.011 v -1.675 c -2.707 -0.632 -5.448 -0.32 -7.815 0.36 c -2.326 0.668 -4.26 1.681 -5.395 2.451 M 27.338 27.242 c 2.588 -0.743 5.665 -1.086 8.719 -0.272 a 0.5 0.5 0 0 1 0.37 0.483 v 2.56 a 0.5 0.5 0 0 1 -0.5 0.5 c -2.583 0 -8.839 0.448 -14.052 2.175 a 0.5 0.5 0 0 1 -0.657 -0.475 v -1.82 a 0.5 0.5 0 0 1 0.21 -0.407 c 1.188 -0.849 3.322 -2.001 5.91 -2.744"/>
+  </g>
+  <g id="r1" data-entrada="r1">
+      <title>R1</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 105.428 30.654 v 0.875 c -4.889 -1.502 -10.451 -1.96 -13.21 -2.011 v -1.675 c 2.706 -0.632 5.447 -0.32 7.814 0.36 c 2.327 0.668 4.26 1.681 5.396 2.451 M 100.308 27.242 c -2.588 -0.743 -5.665 -1.086 -8.72 -0.272 a 0.5 0.5 0 0 0 -0.37 0.483 v 2.56 a 0.5 0.5 0 0 0 0.5 0.5 c 2.583 0 8.839 0.448 14.052 2.175 a 0.5 0.5 0 0 0 0.658 -0.475 v -1.82 a 0.5 0.5 0 0 0 -0.21 -0.407 c -1.189 -0.849 -3.323 -2.001 -5.91 -2.744"/>
+  </g>
+  <g id="l2" data-entrada="l2" data-feature="gatilho-adaptativo-esquerdo">
+      <title>L2 — gatilho adaptativo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 36.758 32.993 a 1 1 0 0 1 1.212 0.728 l 1 4 a 1 1 0 1 1 -1.94 0.485 l -1 -4 a 1 1 0 0 1 0.727 -1.213"/>
+  </g>
+  <g id="r2" data-entrada="r2" data-feature="gatilho-adaptativo-direito">
+      <title>R2 — gatilho adaptativo</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 91.243 32.993 a 1 1 0 0 0 -1.213 0.728 l -1 4 a 1 1 0 1 0 1.94 0.485 l 1 -4 a 1 1 0 0 0 -0.727 -1.213"/>
+  </g>
+  <g id="alto-falante" data-feature="alto-falante">
+      <title>Alto-falante</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 57.5 55.963 a 0.5 0.5 0 0 1 0.5 -0.5 h 12 a 0.5 0.5 0 0 1 0 1 H 58 a 0.5 0.5 0 0 1 -0.5 -0.5"/>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 59.5 57.963 a 0.5 0.5 0 0 1 0.5 -0.5 h 8 a 0.5 0.5 0 0 1 0 1 h -8 a 0.5 0.5 0 0 1 -0.5 -0.5"/>
+  </g>
+  <g id="mic" data-entrada="mic" data-feature="microfone-mudo">
+      <title>Microfone (mudo)</title>
+      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 60.5 69.963 a 0.5 0.5 0 0 1 0.5 -0.5 h 6 a 0.5 0.5 0 0 1 0 1 h -6 a 0.5 0.5 0 0 1 -0.5 -0.5"/>
+  </g>
+
+  <!-- Abaixo: geometria que a arte doada NÃO tem e o mapa precisa. Posições
+       derivadas do retângulo medido do touchpad e dos analógicos. As três
+       marcadas com PRECISA-DO-OLHO-DELA são palpite meu e ela confirma. -->
+
+  <!-- POSIÇÃO LOCALIZADA em 11/08/2026, por FOTO DELA de dois DualSense acesos
+       ao mesmo tempo: o roxo com a barra AZUL e o branco com a barra VERMELHA.
+       A foto mostra que a lightbar não é uma peça só — são DUAS tiras, uma de
+       cada lado do touchpad, na costura entre ele e a carcaça.
+       Geometria ancorada nas bordas do touchpad (x 42.5..85.5, y 28.8..51.5):
+       cada tira encosta na borda vertical dele e vai de y 30 a y 52.
+       As bordas saíram da RENDERIZAÇÃO, não de caminhar o caminho: a primeira
+       tentativa usou uma caixa calculada por varredura dos comandos do path,
+       que devolveu x 38.8..86.4 — larga demais, porque o walker conta pontos
+       de controle das curvas como se fossem extremidades. As tiras nasceram
+       em cima dos ombros. Renderizar e OLHAR corrigiu em um passo o que a
+       aritmética errou.
+       As duas tiras acendem JUNTAS e sempre da mesma cor: para o mapa é UMA
+       feature com duas peças, e por isso as duas moram no mesmo grupo. Se um
+       dia alguém quiser endereçá-las em separado, é aqui que se descobre que
+       o firmware não oferece isso. -->
+  <g id="lightbar" data-feature="lightbar" data-posicao="ladeia-o-touchpad">
+      <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" x="41.3" y="30" width="1.2" height="22" rx="0.6"/>
+      <rect class="peca" fill="none" stroke="#2f333c" stroke-width="0.35" x="85.5" y="30" width="1.2" height="22" rx="0.6"/>
+  </g>
+
+  <g id="ps" data-entrada="ps">
+      <title>PS</title>
+      <circle class="peca" fill="#3a3f4b" cx="64.03" cy="64.4" r="2.2"/>
+  </g>
+
+  <!-- PRECISA-DO-OLHO-DELA: cinco lâmpadas sob o touchpad. O NÚMERO do jogador
+       é o PADRÃO aceso, não uma lâmpada individual. -->
+  <!-- ESPAÇAMENTO CORRIGIDO em 11/08/2026, por observação dela no aparelho.
+       As cinco NÃO são igualmente espaçadas: o plástico agrupa
+       `1 | vão | 3 | vão | 1` — uma lâmpada isolada em cada ponta e três
+       juntas no meio. Antes estavam com passo uniforme de 2,7, que era
+       suposição de quem desenhou.
+       Como isso foi medido, e por que custou três tentativas: acender UMA
+       lâmpada de ponta contra o plástico não aparece em foto (some no reflexo
+       do acrílico), e apagar UMA lâmpada de ponta também não, porque ela já é
+       isolada por um vão. O que respondeu foi o teste de controle —
+       TODAS apagadas num controle contra TODAS acesas no outro: o primeiro
+       apagou (logo a rota sysfs obedece) e o segundo manteve o padrão
+       `1-vão-3-vão-1`, provando que os vãos são do PLÁSTICO e não lâmpadas
+       apagadas. A lição vale para as próximas peças: antes de perguntar
+       "de que lado acende", prove que acende. -->
+  <g id="led-jogador" data-feature="led-jogador">
+      <title>Indicador de jogador (cinco lâmpadas: 1, vão, 3, vão, 1)</title>
+      <rect id="led-jogador-1" fill="#c9ced8" x="57.0" y="59.6" width="2" height="1" rx="0.5"/>
+      <rect id="led-jogador-2" fill="#c9ced8" x="61.3" y="59.6" width="2" height="1" rx="0.5"/>
+      <rect id="led-jogador-3" fill="#c9ced8" x="63.7" y="59.6" width="2" height="1" rx="0.5"/>
+      <rect id="led-jogador-4" fill="#c9ced8" x="66.1" y="59.6" width="2" height="1" rx="0.5"/>
+      <rect id="led-jogador-5" fill="#c9ced8" x="70.4" y="59.6" width="2" height="1" rx="0.5"/>
+  </g>
+
+  <!-- Features sem corpo visível: onde a coisa MORA no aparelho.
+       Somem por padrão; o mapa acende. -->
+  <g id="feat-rumble-esquerdo" class="oculta" data-feature="rumble-esquerdo">
+      <title>Motor de vibração esquerdo</title>
+      <ellipse cx="27" cy="86" rx="9.5" ry="10" fill="none" stroke="#bd93f9"
+               stroke-width=".7" stroke-dasharray="2 1.5"/>
+  </g>
+  <g id="feat-rumble-direito" class="oculta" data-feature="rumble-direito">
+      <title>Motor de vibração direito</title>
+      <ellipse cx="101" cy="86" rx="9.5" ry="10" fill="none" stroke="#bd93f9"
+               stroke-width=".7" stroke-dasharray="2 1.5"/>
+  </g>
+  <g id="feat-giroscopio" class="oculta" data-feature="giroscopio">
+      <title>Giroscópio</title>
+      <rect x="58" y="58" width="12" height="12" rx="2" fill="none" stroke="#bd93f9"
+            stroke-width=".7" stroke-dasharray="2 1.5"/>
+  </g>
+  <g id="feat-acelerometro" class="oculta" data-feature="acelerometro">
+      <title>Acelerômetro</title>
+      <rect x="55" y="55" width="18" height="18" rx="3" fill="none" stroke="#bd93f9"
+            stroke-width=".7" stroke-dasharray="2 1.5"/>
+  </g>
+  <g id="feat-bateria" class="oculta" data-feature="bateria">
+      <title>Bateria</title>
+      <rect x="52" y="74" width="24" height="7" rx="2" fill="none" stroke="#bd93f9"
+            stroke-width=".7" stroke-dasharray="2 1.5"/>
+  </g>
+</svg>

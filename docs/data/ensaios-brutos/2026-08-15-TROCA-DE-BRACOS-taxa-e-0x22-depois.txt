@@ -1,0 +1,228 @@
+A TROCA DE BRAÇOS — o que rodou DEPOIS, e que faltava ao bruto irmão (15/08/2026)
+=================================================================================
+
+O QUE ESTE ARQUIVO É
+--------------------
+O bruto irmão — `2026-08-15-TROCA-DE-BRACOS-os-mesmos-quatro-nos-dois-transportes.txt`
+— guarda a mesa antes, a mesa depois e o censo de features depois. Faltavam duas
+corridas do MESMO instante, e sem elas dois números do estudo ficariam sem
+endereço:
+
+  - a TAXA DE ENTRADA depois da troca (19:32:42 a 19:33:02), que é a metade
+    "depois" do E-2 e o que autoriza dizer que os 250,0 Hz são do CABO;
+  - o E-8, o feature 0x22 nos quatro aparelhos (19:33:49), que NUNCA rodou
+    antes da troca — e é por isso que a metade confundida dele NÃO fecha.
+
+Elas estão aqui inteiras, saída literal dos instrumentos.
+
+PROCEDÊNCIA
+-----------
+Instrumentos: `scripts/ensaios/taxa_no_hidraw.py` e `scripts/ensaios/censo_features.py`,
+leitura pura, nenhum byte escrito em aparelho nenhum. O daemon estava VIVO — a leitura
+entrou pelo broker (SCM_RIGHTS). MAC mascarados na convenção da casa (octetos 4 e 5
+zerados); no bloco (2) a máscara foi aplicada na cópia, porque o instrumento imprimiu
+o endereço inteiro. Fora a máscara e este cabeçalho, nada foi editado.
+
+A MESA NESTAS DUAS CORRIDAS (a de DEPOIS, já com os braços trocados)
+--------------------------------------------------------------------
+    aparelho              hw            braço nesta corrida
+    d4:2f:4b:00:00:d8     0x00001111    RÁDIO   (estava no cabo às 07h43)
+    a0:fa:9c:00:00:f0     0x00000710    RÁDIO   (estava no cabo às 07h43)
+    44:46:48:00:00:03     0x00000811    CABO    (estava no rádio às 07h43)
+    14:3a:9a:00:00:ab     0x00000711    CABO    (estava no rádio às 07h43)
+
+O "antes" da taxa é `2026-08-15-E2-taxa-dos-oito-nos.txt` / `.csv`, corrida das
+07:43:56. As duas janelas são de 20,000 s de relógio monotônico, mesmo instrumento,
+mesma régua (1 relatório = 1 read() que retornou no hidraw).
+
+==============================================================================
+(1) A TAXA DE ENTRADA DEPOIS DA TROCA — taxa_no_hidraw.py, 19:32:42
+==============================================================================
+2026-08-15T19:32:42.793809 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:32:42.983541 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:32:42.984042 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T19:32:42.984141 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:32:42.984455 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T19:32:42.984531 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:32:42.984756 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:32:42.984951 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:32:42.985155 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T19:32:42.985201 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:32:42.985389 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:32:42.985658 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw10 state=hidden
+2026-08-15T19:32:42.985701 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+==============================================================================
+  taxa_no_hidraw.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... quantos relatórios por segundo cada nó entrega, todos na mesma janela?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... os                     de /usr/lib/python3.12/os.py
+  biblioteca ....... selectors              de /usr/lib/python3.12/selectors.py
+  biblioteca ....... time                   de embutido no interpretador (stdlib estática)
+  biblioteca ....... zlib                   de embutido no interpretador (stdlib estática)
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  grab do evdev .... /dev/input/event21: PEGO por outro processo (EVIOCGRAB exclusivo)
+  grab do evdev .... /dev/input/event25: livre
+  grab do evdev .... /dev/input/event29: livre
+  grab do evdev .... /dev/input/event24: livre
+  grab do evdev .... /dev/input/event264: PEGO por outro processo (EVIOCGRAB exclusivo)
+  grab do evdev .... /dev/input/event263: livre
+  grab do evdev .... /dev/input/event271: PEGO por outro processo (EVIOCGRAB exclusivo)
+  grab do evdev .... /dev/input/event275: livre
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+  régua ............ 1 relatório = 1 read() que retornou no hidraw (o quadro do TRANSPORTE),
+                     NÃO um SYN_REPORT do evdev — as duas contas medem coisas diferentes.
+  o grab acima ..... é do EVDEV, e NÃO alcança o hidraw: cada open() de hidraw tem
+                     fila própria no kernel. Por isso aqui não sai zero onde o
+                     taxa_de_entrada.py sai MUDO.
+==============================================================================
+
+  mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+  medindo 8 nó(s) por 20 s, numa janela só.
+  >> NÃO é preciso mexer em nada: o DualSense parado na mesa já transmite.
+
+  T0 (hora de parede) .. 2026-08-15 19:32:42.985
+  T1 (hora de parede) .. 2026-08-15 19:33:02.986
+  janela ............... 20.000 s de relógio monotônico
+
+  OS CONTROLES FÍSICOS — o que o APARELHO entrega no fio
+
+aparelho           transporte  nó        porta                relatórios  Hz     bytes   report ids  CRC de entrada
+-----------------  ----------  --------  -------------------  ----------  -----  ------  ----------  --------------
+a0:fa:9c:00:00:f0  rádio       hidraw4   broker (SCM_RIGHTS)  3157        157.8  78..78  0x31x3157   -
+d4:2f:4b:00:00:d8  rádio       hidraw5   broker (SCM_RIGHTS)  5582        279.1  78..78  0x31x5582   -
+14:3a:9a:00:00:ab  cabo        hidraw8   broker (SCM_RIGHTS)  5000        250.0  64..64  0x01x5000   -
+44:46:48:00:00:03  cabo        hidraw10  broker (SCM_RIGHTS)  5000        250.0  64..64  0x01x5000   -
+
+  OS VPADS — a saída do produto, e o controle negativo desta janela
+
+aparelho  transporte             nó        porta          relatórios  Hz     bytes   report ids  CRC de entrada
+--------  ---------------------  --------  -------------  ----------  -----  ------  ----------  --------------
+vpad P1   vpad (sem transporte)  hidraw6   open() direto  2325        116.2  64..64  0x01x2325   -
+vpad P2   vpad (sem transporte)  hidraw7   open() direto  3179        158.9  64..64  0x01x3179   -
+vpad P3   vpad (sem transporte)  hidraw9   open() direto  1656        82.8   64..64  0x01x1656   -
+vpad P4   vpad (sem transporte)  hidraw11  open() direto  3142        157.1  64..64  0x01x3142   -
+
+  ATENÇÃO (controle negativo): 14:3a:9a:00:00:ab (hidraw8) e 44:46:48:00:00:03 (hidraw10) contaram o MESMO número de relatórios (5000) — confira se não é o mesmo nó lido duas vezes. Apelidos e nós distintos acima = o empate é do produto, não do instrumento.
+
+------------------------------------------------------------------------------
+RESUMO: cada braço entregou — cabo: 250.0 Hz (n=2); rádio: 218.5 Hz (n=2); vpads: 128.8 Hz. Régua: relatório de hidraw, não SYN_REPORT.
+------------------------------------------------------------------------------
+
+==============================================================================
+(2) O E-8 — o feature 0x22 nos quatro, DEPOIS da troca — censo_features.py, 19:33:49
+==============================================================================
+    RESSALVA QUE VIAJA COM ESTE BLOCO: o E-8 não tem "antes". Ele estava
+    planejado e não foi executado às 07h43, então o 0x22 diferir nos quatro
+    aparelhos NÃO decide se ele segue o aparelho ou o braço. Metade IMUNE
+    respondida, metade CONFUNDIDA em aberto.
+
+2026-08-15T19:33:49.776809 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:33:49.777912 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:33:49.778245 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T19:33:49.778306 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:33:49.778572 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T19:33:49.778625 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:33:49.778851 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T19:33:49.778894 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:33:49.779111 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw10 state=hidden
+2026-08-15T19:33:49.779902 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:33:49.780123 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw4 state=hidden
+2026-08-15T19:33:49.793585 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:33:49.793877 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw5 state=hidden
+2026-08-15T19:33:49.803565 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:33:49.803815 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw8 state=hidden
+2026-08-15T19:33:50.010590 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock
+2026-08-15T19:33:50.010926 [info     ] hidraw_broker_fd_recebido      node=/dev/hidraw10 state=hidden
+==============================================================================
+  censo_features.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
+==============================================================================
+  pergunta ......... cada feature report é o mesmo byte a byte no cabo e no rádio?
+  interpretador .... /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/python
+  biblioteca ....... fcntl                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... array                  de embutido no interpretador (stdlib estática)
+  biblioteca ....... zlib                   de embutido no interpretador (stdlib estática)
+  porta ............ broker (SCM_RIGHTS) — o broker responde em /run/hefesto-hidraw-broker/broker.sock
+  escreve no aparelho? .. NÃO — leitura pura, nesta rodada
+  daemon precisa parar? . não — este instrumento não disputa o hidraw com o daemon
+  daemon AGORA .......... RODANDO (unidade de usuário ativa)
+  broker AGORA .......... RODANDO — os hidraw dos FÍSICOS estão escondidos
+==============================================================================
+
+  mesa com 4 controle(s): 2 no cabo, 2 no rádio — os dois transportes presentes.
+
+aparelho           hidraw    transporte  permissão do fs                                                                                                 porta
+-----------------  --------  ----------  --------------------------------------------------------------------------------------------------------------  -------------------
+a0:fa:9c:00:00:f0  hidraw4   rádio       sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+d4:2f:4b:00:00:d8  hidraw5   rádio       sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+14:3a:9a:00:00:ab  hidraw8   cabo        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+44:46:48:00:00:03  hidraw10  cabo        sem permissão (modo 0600, root:root) — assinatura do broker do Hefesto ESCONDENDO o físico; a porta é o broker  broker (SCM_RIGHTS)
+
+  O QUE CADA TRANSPORTE DECLARA (do report_descriptor, sem ler nada)
+
+report  cabo  rádio
+------  ----  -----
+0x05    sim   sim
+0x08    sim   sim
+0x09    sim   sim
+0x0a    sim   —
+0x0b    sim   sim
+0x0c    sim   —
+0x20    sim   sim
+0x21    sim   —
+0x22    sim   sim
+0x80    sim   sim
+0x81    sim   sim
+0x82    sim   sim
+0x83    sim   sim
+0x84    sim   —
+0x85    sim   —
+0xa0    sim   —
+0xe0    sim   —
+0xf0    sim   sim
+0xf1    sim   sim
+0xf2    sim   sim
+0xf4    sim   sim
+0xf5    sim   sim
+0xf6    —     sim
+0xf7    —     sim
+
+    9 report(s) declarados por UM transporte só: 0x0a, 0x0c, 0x21, 0x84, 0x85, 0xa0, 0xe0, 0xf6, 0xf7
+    Um conjunto não é subconjunto do outro — não existe 'a lista
+    dos feature reports do DualSense'; existe uma por transporte.
+
+  1 feature reports na UNIÃO dos descritores da mesa.
+
+  lendo a0:fa:9c:00:00:f0 (hidraw4, rádio) …
+      0x22   64B  ok      1 tentativa(s)   0.01s
+
+  lendo d4:2f:4b:00:00:d8 (hidraw5, rádio) …
+      0x22   64B  ok      1 tentativa(s)   0.01s
+
+  lendo 14:3a:9a:00:00:ab (hidraw8, cabo) …
+      0x22   64B  ok      1 tentativa(s)   0.21s
+
+  lendo 44:46:48:00:00:03 (hidraw10, cabo) …
+      0x22   64B  ok      1 tentativa(s)   0.21s
+
+  OS FEATURE REPORTS, LADO A LADO
+
+report  bytes  tentativas  CRC      conteúdo  cabo x rádio
+------  -----  ----------  -------  --------  ------------
+0x22    64     1           confere  com dado  DIFERE
+
+  O QUE SEPARA UMA UNIDADE DA OUTRA
+
+report  difere entre unidades?  amostra do 1º aparelho
+------  ----------------------  -------------------------------------
+0x22    SIM (4 valores em 4)    22 03 00 10 07 00 00 2a 00 10 01 00 …
+
+------------------------------------------------------------------------------
+RESUMO: 4/4 leituras ok; 0 reports idênticos entre transportes, 1 diferentes.
+------------------------------------------------------------------------------

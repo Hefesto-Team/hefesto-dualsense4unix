@@ -106,6 +106,24 @@ class TestExtractSteamAppid:
     def test_extracao(self, wm_class: object, esperado: str | None) -> None:
         assert extract_steam_appid(wm_class) == esperado
 
+    def test_devolve_str_e_nao_int(self) -> None:
+        """UNIFICA-PREDICADO-01: a fronteira de TIPO fica neste callsite.
+
+        A fonte única (`profiles/steam_app.py`) devolve `int`; este módulo
+        inteiro chaveia por `str` — `_wrapper_dialog_vdf_cache`, o
+        `launch_dialog_dismissed.json` e o anti-spam da sessão. Esquecer o
+        `str(...)` não explode: um `int` num `in` de coleção de `str` é
+        sempre False, o cache nunca acerta e o diálogo passa a reaparecer
+        eternamente (ou a dispensa dela deixa de valer) — em SILÊNCIO.
+        """
+        appid = extract_steam_appid(WM_JOGO)
+        assert isinstance(appid, str)
+        # E o silêncio é este: o anti-spam e a dispensa só funcionam se o tipo
+        # bater com o das coleções que a GUI mantém em disco (JSON = str).
+        assert _decide(_state(), dismissed={APPID}) == (DECISION_SKIP, None)
+        assert _decide(_state(), shown_this_session={APPID}) == (DECISION_SKIP, None)
+        assert _decide(_state(), vdf_cache={APPID: True}) == (DECISION_PROMPT, APPID)
+
 
 # ---------------------------------------------------------------------------
 # Decisão pura — condições a-e

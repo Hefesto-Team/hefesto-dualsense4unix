@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OPÇÃO C do símbolo do painel — a BIGORNA dentro do aro aberto da logo.
+
+  Este arquivo NÃO é instalado por ninguém. Ele existe para que a escolha dela
+  seja uma troca de arquivo, e não um desenho novo: se ela preferir a bigorna,
+  copie este por cima de `hefesto-dualsense4unix-symbolic.svg` e da cópia do
+  applet, e nada mais muda no encanamento.
+
+  Por que ele existe, com o número que o motiva. Reduzindo `assets/hefesto-logo.svg`
+  a 20 px (o tamanho real do painel dela) e recortando a mancha CLARA, o que
+  sobra da logo é: o aro com a falha e as contas, a BIGORNA branca embaixo, e um
+  risco diagonal que é o cabo do martelo. Medindo a interseção sobre a união
+  dessa mancha, a bigorna cobre mais da logo que o martelo: 0,211 contra 0,205.
+  Ou seja, se o critério fosse só "parecer com a logo a 20 px", este arquivo
+  ganharia — mas por três centésimos, e é honesto dizer que a diferença é
+  pequena. Ela era bem maior (0,285 contra 0,212) enquanto o aro era o FINO da
+  manhã; o aro grosso, que a barra exigiu, passou a dominar a conta dos dois
+  lados e encolheu a vantagem da peça do meio.
+
+  Não é ele o entregue, e o motivo também está dito: ela nomeou o martelo em
+  07/08 pela manhã ("o círculo com borda preta e a borda do martelo ao centro"),
+  e a DECISÃO 14 pediu REDESENHAR o símbolo mais parecido com a logo, não trocar
+  o motivo dele. Trocar a peça central é mudança que ela não pediu, e a regra da
+  casa é não entregar mudança que ela não pediu. A palavra final é dela, e a
+  foto comparativa de 07/08 põe os dois lado a lado a 20 px, nos dois temas.
+
+  O aro é IDÊNTICO ao do entregue, inclusive nos ângulos da falha (232 a 269
+  graus, medidos na logo) e nas contas das pontas. Todas as regras do arquivo
+  principal valem aqui igualmente: uma cor só acromática e clara, contorno de
+  preenchimento e nunca `stroke`, fundo transparente, sem `transform`.
+
+  A terceira opção é a bigorna em silhueta de 27/06, SEM aro, em
+  `opcao-b-bigorna-symbolic.svg`. Ver a sprint
+  `docs/process/sprints/2026-08-07-APPLET-MONOCROMATICO-01-o-icone-que-destoa-do-painel.md`.
+-->
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hefesto - Dualsense4Unix">
+  <title>Aro e bigorna</title>
+  <!-- Aro: faixa de arco com a falha da logo (232 a 269 graus). Nunca stroke. -->
+  <path fill="#bebebe" d="M 7.87,0.6 A 7.4,7.4 0 1,1 3.44,2.17 L 4.49,3.51 A 5.7,5.7 0 1,0 7.9,2.3 Z"/>
+  <!-- As duas contas das pontas do arco, como as bolinhas da logo. -->
+  <path fill="#bebebe" d="M 6.64,1.45 A 1.25,1.25 0 1,0 9.14,1.45 A 1.25,1.25 0 1,0 6.64,1.45 Z M 2.72,2.84 A 1.25,1.25 0 1,0 5.22,2.84 A 1.25,1.25 0 1,0 2.72,2.84 Z"/>
+  <!-- Bigorna: a silhueta do grupo "Bigorna" da logo, com o chifre a DIREITA. -->
+  <path fill="#bebebe" d="M 4.5,5.9 L 9.98,5.9 L 11.5,6.86 L 9.98,7.82 L 9.29,7.82 L 9.13,9.16 L 9.68,10.5 L 5.26,10.5 L 5.81,9.16 L 5.79,8.2 L 5.79,6.86 L 4.5,6.86 Z"/>
+</svg>

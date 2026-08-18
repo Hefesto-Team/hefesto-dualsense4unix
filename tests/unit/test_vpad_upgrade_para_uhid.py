@@ -66,7 +66,7 @@ def sem_efeitos(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         chamadas["stop"] += 1
         chamadas["stop_kwargs"] = kwargs
 
-    def _start(_daemon: Any, flavor: str | None = None) -> bool:
+    def _start(_daemon: Any, flavor: str | None = None, **_kw: object) -> bool:
         chamadas["start"].append(flavor)
         return True
 

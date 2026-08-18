@@ -69,6 +69,50 @@ class AudioControl:
     # API publica
     # ------------------------------------------------------------------
 
+    def fonte_padrao_e_o_controle(self) -> bool:
+        """True quando o microfone padrão do sistema É o do DualSense.
+
+        BT-E-VPAD-01, defeito 1. **Medido em 01/08/2026**: com o controle no
+        Bluetooth, `pactl list short cards | grep -i dualsense` devolve ZERO —
+        no BT o DualSense **não tem placa de som nenhuma**. O áudio vai dentro
+        dos reports HID e depende da ponte deste projeto, que é opt-in.
+
+        Sem esta pergunta, o botão do microfone do controle alternava o mudo
+        da FONTE PADRÃO, que no Bluetooth é outra coisa: nesta máquina, o
+        microfone da placa-mãe. O log de três toques dela mostra a assinatura
+        do defeito — sempre o mesmo resultado, porque não era o microfone do
+        controle que estava sendo alternado:
+
+            20:15:54  mic_hotkey_toggle  muted=True
+            20:16:31  mic_hotkey_toggle  muted=True
+            20:16:43  mic_hotkey_toggle  muted=True
+
+        A comparação é por SUBSTRING do nome da fonte padrão, e não por
+        enumeração de placas: é uma pergunta só, na cadência de um toque de
+        botão, e o nome do node do PipeWire para o controle carrega
+        "DualSense" em qualquer um dos dois backends.
+
+        Em caso de dúvida devolve **False** — e o chamador não mexe em nada.
+        É a resposta segura: não fazer nada é sempre melhor que mutar o
+        microfone errado.
+        """
+        backend = self._ensure_backend()
+        try:
+            if backend == "wpctl":
+                # O `wpctl inspect` do source padrão traz `node.name` e
+                # `node.description`; o do controle carrega "DualSense".
+                saida = self._run(
+                    ["wpctl", "inspect", "@DEFAULT_AUDIO_SOURCE@"]
+                ).stdout
+            elif backend == "pactl":
+                saida = self._run(["pactl", "get-default-source"]).stdout
+            else:
+                return False
+        except Exception as exc:
+            logger.warning("audio_fonte_padrao_falhou", err=str(exc))
+            return False
+        return "dualsense" in (saida or "").lower()
+
     def toggle_default_source_mute(self) -> bool:
         """Alterna mute do microfone padrão do sistema.
 

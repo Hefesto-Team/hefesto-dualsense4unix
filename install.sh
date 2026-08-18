@@ -135,12 +135,31 @@
 #                         Nada quebra sem elas (o CSS tem fallback); o que muda é
 #                         a interface ser a do design e as medidas de texto
 #                         baterem com as do mockup.
+#   (DEFAULT) teclado na tela — o que o L3 do controle abre. Instalado em TODO
+#                         formato pelo scripts/install_osk.sh, que escolhe pela
+#                         SESSÃO: em Wayland o `wvkbd` (binário wvkbd-mobintl,
+#                         cliente Wayland puro, digita pelo
+#                         zwp_virtual_keyboard_manager_v1 que o cosmic-comp
+#                         expõe — medido); em X11 o `onboard` (GTK3, digita por
+#                         XTEST, que em Wayland só alcança janelas XWayland).
+#                         Importa porque nenhum dos nove atalhos de fábrica
+#                         digita uma LETRA: sem isto, "o teclado emulado não
+#                         digita" é literalmente verdade. Best-effort (o install
+#                         nunca aborta por causa dele) e o passo GRAVA o que fez
+#                         em ~/.local/state/hefesto-dualsense4unix/
+#                         teclado-na-tela.conf, para o doctor distinguir "ela não
+#                         quis" de "o install não instalou". Opt-out: --no-osk.
+#   --no-osk              pula o teclado na tela. O L3 do controle passa a só
+#                         avisar na tela que não tem o que abrir.
 #   (DEFAULT) cura gentil do WirePlumber: REBAIXA o DualSense para não virar o
 #                         microfone padrão (drop-in 51, user-space) — simétrica com o
 #                         uninstall que a remove. Opt-out: --keep-dualsense-mic.
 #   --keep-dualsense-mic  NÃO rebaixa o DualSense (deixa-o elegível como mic padrão).
 #   --with-wireplumber-fix  redundante (já é o default); mantida para compat.
 #   --with-wireplumber-disable-mic  DESABILITA de vez a source (mic) do DualSense
+#   --no-doctor           pula a CONFERÊNCIA final. Por padrão o install roda o
+#                         doctor no fim e mostra o veredito: uma instalação que
+#                         termina com cura desarmada tem de DIZER isso.
 #                         (node.disabled; controle vira só-HID). Vence até escassez
 #                         de fonte. Mutuamente exclusiva com --with-wireplumber-fix.
 #   --keep-steam-input    preserva Steam Input PSSupport (default: desliga).
@@ -193,6 +212,14 @@ NO_DEV=0
 # nada indicar, e as MEDIDAS de texto mudam com a fonte — foi a falta dessas
 # métricas que fez a CI pedir 431px de altura onde aqui cabia em 357.
 NO_FONTS=0
+# TECLADO-QUE-NAO-DIGITA-01 (10/08/2026). DEFAULT ON, pela regra dela de
+# 08/08: "toda cura entra no install, sem flag — nada à mão, nada opt-in".
+# Medido antes desta linha existir: `grep -c onboard install.sh` dava 0, e o
+# `command -v onboard wvkbd-mobintl` na máquina dela não achava nenhum dos
+# dois. O produto oferecia "Abrir teclado na tela" no L3 e não instalava o que
+# ele precisa. O opt-out existe pelo mesmo motivo que o --no-fonts: CI e
+# máquina enxuta não querem pacote gráfico novo.
+NO_OSK=0
 # BUG-UNINSTALL-WP-ASYMMETRY: DEFAULT ON. O uninstall remove o drop-in 51 por
 # padrão, então o install tem de recolocá-lo por padrão (simetria) — senão o
 # ciclo uninstall→install deixa o DualSense virar o microfone padrão. É a cura
@@ -206,6 +233,8 @@ SKIP_KERNEL_WATCH=0
 NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
 KEEP_STEAM_INPUT=0
+# CONFERENCIA-FINAL-01: o doctor roda no fim, por padrão. `--no-doctor` pula.
+RUN_DOCTOR=1
 FORCE_XWAYLAND=0
 # W2 (corretor final, achado #5): a flag documentada no asset e no desenho da
 # Onda W nunca tinha sido implementada — o parser só avisava "argumento
@@ -226,8 +255,10 @@ for arg in "$@"; do
         --no-cosmic-applet|--disable-cosmic-applet) DISABLE_COSMIC_APPLET=1 ;;
         --no-dev)             NO_DEV=1 ;;
         --no-fonts)           NO_FONTS=1 ;;
+        --no-osk)             NO_OSK=1 ;;
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;  # já é default; mantida p/ compat
         --keep-dualsense-mic) WITH_WIREPLUMBER_FIX=0 ;;
+        --no-doctor) RUN_DOCTOR=0 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
         --no-dkms)            NO_DKMS=1 ;;
@@ -485,6 +516,43 @@ install_udev_host() {
         fi
     else
         warn "sudo ausente — rode scripts/install_udev.sh como root depois"
+    fi
+}
+
+# TECLADO-QUE-NAO-DIGITA-01: o teclado na tela é DEFAULT em TODO formato, pela
+# mesma razão do broker logo abaixo — e pelo mesmo furo. O `exit 0` do bloco de
+# formatos (poucas linhas adiante) deixa doze passos de cura para trás, e um
+# passo escrito só no fluxo native cairia do lado errado da cerca: flatpak,
+# appimage e deb sairiam sem o único caminho do produto para ESCREVER TEXTO,
+# em silêncio. Por isso a função nasce AQUI, acima da bifurcação, e é chamada
+# dos DOIS lados — é o mesmo molde do `install_broker_host`.
+#
+# Best-effort integral: o `scripts/install_osk.sh` sai 0 mesmo quando não
+# consegue instalar (sem sudo, sem rede, distro sem o pacote) e grava o que
+# aconteceu na sentinela; o `if` aqui é só o cinto contra o `set -e`.
+install_osk_host() {
+    if [[ "${NO_OSK}" -eq 1 ]]; then
+        printf '      teclado na tela pulado (--no-osk) — o L3 do controle só avisa que não tem o que abrir\n'
+        # A escolha dela também vira sentinela: sem isto, "ela não quis" e "o
+        # install não instalou" ficariam com a MESMA cara para o doctor — a
+        # armadilha do commit 108b711, palavra por palavra.
+        mkdir -p "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
+        {
+            printf '# gravado por install.sh (--no-osk) — NÃO editar à mão.\n'
+            printf 'resultado=pulado\n'
+            printf 'motivo=--no-osk\n'
+            printf 'data=%s\n' "$(date -Is 2>/dev/null || date)"
+        } > "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf" 2>/dev/null || true
+        return 0
+    fi
+    if [[ ! -r "${ROOT_DIR}/scripts/install_osk.sh" ]]; then
+        warn "scripts/install_osk.sh ausente — teclado na tela pulado"
+        return 0
+    fi
+    if [[ "${AUTO_YES}" -eq 1 ]]; then
+        bash "${ROOT_DIR}/scripts/install_osk.sh" --yes || true
+    else
+        bash "${ROOT_DIR}/scripts/install_osk.sh" || true
     fi
 }
 
@@ -879,6 +947,124 @@ format_deb() {
     printf '\n      Instalado via apt (udev + .desktop via postinst).\n      Abrir: hefesto-dualsense4unix-gui\n'
 }
 
+# ANTES DO DESVIO DE FORMATO (11/08/2026) — e a posição importa.
+#
+# Estes dois blocos nasceram DEPOIS da linha do `exit 0`, e a revisão de 11/08
+# pegou o furo: os três módulos DKMS são construídos no ramo de pacote (os
+# `step "dkms*"` logo abaixo), ANTES daquele `exit`. Garantir as dependências
+# só no fluxo nativo deixava o "verde mentiroso" de pé em `--deb`, `--flatpak`
+# e `--appimage` — exatamente o que o bloco existe para curar. Mover para cá é
+# a cura; deixar embaixo era comentário prometendo o que a posição não
+# entregava.
+
+# VOO DE RECONHECIMENTO (11/08/2026) — o que esta máquina é, ANTES de mexer
+# nela.
+#
+# Nasceu de uma frase dela sobre levar o produto para outro PC: "o ideal é que o
+# nosso install contivesse isso também". Antes, as três respostas que decidem se
+# a instalação vai funcionar só apareciam DEPOIS: o aviso de Secure Boot mora em
+# `scripts/dkms_lib.sh:110` e só dispara no passo 3i, quando a senha já foi
+# digitada e quarenta passos já rodaram; o veredito de BlueZ só sai na
+# conferência final; e a família da distro só se descobre quando o `run_apt`
+# falha.
+#
+# Nenhum destes três ABORTA. Eles informam no momento em que a informação ainda
+# muda a decisão de quem instala — que é a diferença entre um aviso e um
+# lamento.
+_reconhecimento() {
+    local achou_algo=0
+
+    # 1. Família da distro. O caminho nativo só sabe `apt-get` (ver `run_apt`).
+    if ! command -v apt-get >/dev/null 2>&1; then
+        warn "sem apt-get: esta não é uma distro da família Debian/Ubuntu"
+        printf '      O caminho nativo instala dependências só por apt. Em Fedora, Arch ou\n'
+        printf '      Nix, use o pacote da sua distro (ver docs/usage/instalacao.md) — e saiba\n'
+        printf '      que nenhum deles foi validado em hardware ainda.\n'
+        achou_algo=1
+    fi
+
+    # 2. BlueZ. A faixa validada é a mesma que o doctor cobra no fim.
+    local _bz
+    _bz="$(bluetoothctl --version 2>/dev/null | awk '{print $NF}')"
+    if [[ -n "${_bz}" ]]; then
+        # Compara só major.minor; o formato do bluetoothctl é "bluetoothctl: 5.86".
+        if [[ "$(printf '%s\n5.79\n' "${_bz}" | sort -V | head -1)" != "5.79" ]]; then
+            warn "bluez ${_bz} — abaixo de 5.79, a faixa que esta casa validou"
+            printf '      Abaixo de 5.79 há crashes crônicos de input/HIDP (medidos: 6 em 5 dias).\n'
+            printf '      A conferência final vai REPROVAR por isto. A cura é um backport, e a\n'
+            printf '      receita está em docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md\n'
+            achou_algo=1
+        fi
+    fi
+
+    # 3. Secure Boot. É o único dos três que deixa a máquina PIOR que antes: o
+    # kernel recusa o .ko e NÃO volta ao módulo in-tree sozinho.
+    if command -v mokutil >/dev/null 2>&1 &&
+       mokutil --sb-state 2>/dev/null | grep -qi 'SecureBoot enabled'; then
+        warn "Secure Boot ATIVO — os módulos DKMS podem não carregar no próximo boot"
+        printf '      Sem a chave MOK enrolada, o kernel RECUSA o .ko e não volta ao driver\n'
+        printf '      in-tree sozinho: um controle Nintendo pode sumir depois de reiniciar.\n'
+        printf '      Se acontecer: sudo mokutil --import /var/lib/dkms/mok.pub\n'
+        printf '      (placa NVIDIA por DKMS funcionando indica que a chave já está enrolada.)\n'
+        achou_algo=1
+    fi
+
+    # `info` NUNCA foi função deste script — só existem step/ok/warn/die (l. 323-326).
+    # O shell caía no /usr/bin/info do sistema (o leitor de documentação GNU), que
+    # sai com erro, e o `set -e` derrubava a instalação no passo 1. E a linha só
+    # executa quando NADA atrapalha — ou seja, quebrava exatamente na máquina limpa,
+    # que é a primeira coisa que um PC novo faz. Medido no ciclo uninstall→install
+    # de 12/08/2026: zero regras udev, daemon inativo, produto ausente.
+    [[ "${achou_algo}" -eq 0 ]] && printf '      distro, bluez e Secure Boot: nada que atrapalha\n'
+    return 0
+}
+_reconhecimento
+ok
+
+# --- DKMS-CAUSA-RAIZ-01: o que os três módulos precisam para COMPILAR --------
+# Medido em 11/08/2026, na auditoria de "o que só existe nesta máquina": o
+# `install.sh` instala TRÊS módulos DKMS por padrão, sem flag, e nunca garantia
+# `dkms` nem os headers do kernel. Quando faltam, `scripts/dkms_lib.sh:269` e
+# `:273` pulam o módulo com um aviso que some entre 46 passos — e, pior, o
+# `doctor` chama módulo ausente de `info`, que não conta como falha.
+#
+# O resultado numa máquina nova era o pior possível: os três forks não entram,
+# a conferência final sai VERDE, e o aparelho se comporta diferente sem que
+# nada na tela explique por quê. Esta é a causa raiz daquele verde mentiroso.
+#
+# Best-effort com a mesma disciplina do bloco de áudio abaixo: se ela recusar,
+# ou se a distro não tiver os headers deste kernel exato (kernel de fora do
+# apt), o instalador AVISA e SEGUE. Abortar seria pior — o driver in-tree
+# continua funcionando, só sem as curas.
+if [[ "${NO_DKMS}" -eq 0 ]] && command -v apt-get >/dev/null 2>&1; then
+    _dkms_faltando=()
+    command -v dkms >/dev/null 2>&1 || _dkms_faltando+=("dkms")
+    command -v make >/dev/null 2>&1 || _dkms_faltando+=("build-essential")
+    [[ -d "/lib/modules/$(uname -r)/build" ]] || _dkms_faltando+=("linux-headers-$(uname -r)")
+
+    if [[ "${#_dkms_faltando[@]}" -gt 0 ]]; then
+        printf '\n      Os três módulos de kernel desta casa precisam compilar, e falta:\n'
+        printf '        %s\n' "${_dkms_faltando[*]}"
+        printf '      Sem eles, as curas NÃO entram: o controle da Nintendo pode não subir\n'
+        printf '      pelo rádio, e dois DualSense no mesmo adaptador podem virar um só.\n\n'
+        ask_yn "instalar agora com sudo?" "${AUTO_YES}"
+        if [[ "${REPLY,,}" =~ ^y ]]; then
+            if run_apt "${_dkms_faltando[@]}"; then
+                printf '      pronto para compilar os módulos\n'
+            else
+                warn "não consegui instalar ${_dkms_faltando[*]} — os módulos DKMS vão ser pulados"
+                printf '      O produto funciona com os drivers in-tree, sem as curas desta casa.\n'
+                printf '      A conferência final no fim vai dizer quais faltaram.\n'
+            fi
+        else
+            warn "sem ${_dkms_faltando[*]}: os três módulos DKMS vão ser pulados"
+            printf '      Reexecute o install depois de instalá-los para ganhar as curas.\n'
+        fi
+    fi
+    unset _dkms_faltando
+fi
+
+
 if [[ "${FORMAT}" != "native" ]]; then
     case "${FORMAT}" in
         flatpak)  format_flatpak ;;
@@ -925,11 +1111,54 @@ if [[ "${FORMAT}" != "native" ]]; then
     # módulo ficou staged.
     step "dkms-i" "regenerar initramfs se algum módulo DKMS mudou (INITRAMFS-01)"
     flush_initramfs_host
+    # TECLADO-QUE-NAO-DIGITA-01: mesmo achado do broker (#7 da Onda S) numa
+    # camada nova — o teclado na tela é pacote do SISTEMA, ortogonal ao formato
+    # do app. Sem esta chamada, `--flatpak`/`--appimage`/`--deb` sairiam pelo
+    # `exit 0` logo abaixo sem o único caminho do produto para digitar texto.
+    step "osk" "teclado na tela do L3 (TECLADO-QUE-NAO-DIGITA-01 — DEFAULT em todo formato)"
+    install_osk_host
+    # MIC-EM-TODO-FORMATO-01 (10/08/2026): a voz dela também é ortogonal ao
+    # formato do app, e ficava para trás por acidente de posição.
+    #
+    # Os drop-ins do WirePlumber vivem em `~/.config/wireplumber/` — o HOME dela,
+    # não o prefixo do pacote. **Nenhum formato os empacota** (conferido: zero
+    # ocorrências de "wireplumber" em packaging/ e flatpak/), então o único jeito
+    # de eles chegarem é este script chamar o dono deles. Instalando por
+    # `--flatpak`/`--appimage`/`--deb`, o microfone do controle ficava sem o
+    # promotor: a entrada nasce com `priority.session = 50`, o monitor da saída
+    # ganha a eleição, e o que qualquer aplicativo grava é o eco do que sai — não
+    # a voz dela. Medido em 08/08 e curado no MONITOR-QUE-VENCE-01, mas só no
+    # caminho nativo.
+    #
+    # Respeita as MESMAS flags do passo 10 do nativo: quem pediu
+    # `--keep-dualsense-mic` continua sem ninguém mexendo no áudio, e
+    # `--with-wireplumber-disable-mic` continua vencendo. O que muda é só a
+    # posição no arquivo — a decisão é a dela, em qualquer formato.
+    # SOM-QUE-NAO-DORME-01 (16/08/2026) — SEM FLAG, e ANTES de qualquer decisão
+    # sobre o microfone, porque não é uma decisão sobre o microfone.
+    #
+    # Medido na orelha dela em 15/08 23h45: com o nó do PipeWire SUSPENSO, o
+    # primeiro som depois do silêncio se perde no religar do hardware — num jogo,
+    # é o SFX importante sumindo. Nenhuma das flags de mic
+    # (`--keep-dualsense-mic`, `--with-wireplumber-disable-mic`) diz nada sobre o
+    # sono do ALTO-FALANTE, então nenhuma delas pode decidir isto.
+    step "som" "áudio: o alto-falante do controle nunca dorme (SOM-QUE-NAO-DORME-01)"
+    bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --nunca-dorme \
+        || warn "nunca-dorme falhou — rode: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme"
+    if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
+        step "mic" "áudio: desabilitar o microfone do DualSense (--with-wireplumber-disable-mic)"
+        bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source \
+            || warn "disable-source falhou — rode: bash scripts/fix_wireplumber_default_source.sh --disable-source"
+    elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
+        step "mic" "áudio: a voz do controle acima do eco da saída (MIC-EM-TODO-FORMATO-01)"
+        bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install \
+            || warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
+    fi
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
-    printf ' Obs.: ajuste do microfone, desligar do Steam Input, preparo dos\n'
-    printf ' jogos da Steam e os passos de plataforma (Proton pinado, BT no\n'
-    printf ' máximo, cmdline) só valem no formato "native" (padrão).\n'
+    printf ' Obs.: desligar do Steam Input, preparo dos jogos da Steam e os\n'
+    printf ' passos de plataforma (Proton pinado, BT no máximo, cmdline) só\n'
+    printf ' valem no formato "native" (padrão).\n'
     printf ' Desinstalar: ./uninstall.sh\n'
     printf '─────────────────────────────────────────\n\n'
     exit 0
@@ -940,6 +1169,7 @@ fi
 # ---------------------------------------------------------------------------
 step "1/11" "verificando dependências do sistema"
 require python3
+
 ok
 
 # Limpeza de caches Python e build dirs.
@@ -1122,6 +1352,7 @@ else
             70-*) rules_desc='permissão hidraw (USB, BT e vpad virtual)' ;;
             71-uinput.rules) rules_desc='emulação Xbox360 via uinput' ;;
             71-uhid.rules) rules_desc='DualSense virtual via uhid (vibração na máscara PS)' ;;
+            72-hefesto-touchpad-motion-uaccess.rules) rules_desc='touchpad e giroscópio acessíveis à sessão (uaccess)' ;;
             72-*) rules_desc='evita desconexão intermitente USB' ;;
             76-*) rules_desc='touchpad só pelo hefesto (sem briga)' ;;
             77-*) rules_desc='lightbar/player-LED graváveis via sysfs' ;;
@@ -1229,7 +1460,55 @@ fi
 #     (conffile do dpkg → backup antes). ARMADILHA respeitada: NUNCA
 #     reiniciamos o bluetoothd (derrubaria os controles BT conectados —
 #     provado ao vivo 2026-07-17); vale no próximo boot/restart natural.
-if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
+#
+# O PULO TEM DE FALAR (achado de 06/08/2026): este passo era gateado por
+# `SKIP_UDEV -eq 0` SEM `else`. Com `--no-udev`, o `step "3d"` nem imprimia: a
+# cura do BlueZ inteira sumia da saída, e numa máquina com
+# `JustWorksRepairing=always` no disco o valor perigoso SOBREVIVIA ao install
+# sem uma palavra — enquanto o detector novo do doctor manda "rode ./install.sh"
+# sem ressalva. O vizinho 3d-bis já fazia certo.
+#
+# NOTA DATADA — A JUSTIFICATIVA ANTERIOR ERA FALSA (06/08/2026). Até hoje este
+# comentário sustentava o gate dizendo que "é o que o CI sem hardware usa:
+# separar o gate faria o CI reescrever /etc/bluetooth/main.conf da máquina de
+# build". MEDIDO que a premissa não existe: **o CI não roda o `install.sh`**.
+#
+# E A INSTRUÇÃO DE REPRODUÇÃO DESTA NOTA ESTAVA ERRADA (correção do mesmo dia,
+# achado por verificação independente): ela mandava rodar
+# `grep -rn 'install\.sh' .github/workflows/` e dizia que acha UMA linha. Acha
+# DUAS, e a segunda é armadilha de leitura — `ci.yml:120` casa porque a palavra
+# `install.sh` está DENTRO de `uninstall.sh`, num comentário. A conclusão não
+# muda: a única linha que fala do arquivo é `ci.yml:136`,
+# `shellcheck -S error scripts/*.sh install.sh uninstall.sh`, e nenhuma das duas
+# INVOCA o instalador. Mas mandar o próximo leitor conferir um número que não
+# bate é o começo de ele desconfiar do resto — e o resto está certo.
+#
+# Decisão gravada sobre medição que não existe é a semente da próxima "hipótese
+# que não explica o que já funcionava", então a nota fica.
+#
+# A DECISÃO SE MANTÉM, pelo motivo VERDADEIRO: `--no-udev` está documentado no
+# cabeçalho deste arquivo (linha "…--no-udev pula os que tocam /etc") como o
+# opt-out dos passos que escrevem em /etc, e este passo escreve em
+# /etc/bluetooth/main.conf — que é conffile do dpkg. Tirar o passo do gate faria
+# a flag deixar de cumprir o próprio contrato, na máquina de quem a usa por
+# escolha e não em CI nenhum. O que MUDOU em 06/08 é que o pulo é anunciado, com
+# o comando exato do que ficou por fazer, e o estado ATUAL do disco é lido e
+# dito — leitura pura, pelo dono único, sem sudo.
+if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+    step "3d" "Bluetooth no máximo — PULADO (--no-udev)"
+    warn "btusb sem autosuspend e config do BlueZ NÃO aplicados (o passo toca /etc)"
+    warn "  falta fazer: sudo bash ${ROOT_DIR}/scripts/bluez_config.sh aplicar"
+    warn "  falta fazer: sudo install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+    _bt_estado="$(HEFESTO_BT_SUDO="" HEFESTO_BT_ASSETS="${ROOT_DIR}/assets/bluetooth" \
+        bash "${ROOT_DIR}/scripts/bluez_config.sh" verificar 2>/dev/null \
+        | sed -n 's/^JustWorksRepairing: //p' || true)"
+    if [[ "${_bt_estado}" == "always" ]]; then
+        warn "  e ATENÇÃO: o disco está com JustWorksRepairing=always AGORA — com --no-udev este install NÃO corrigiu isso (RADIO-ABERTO-01)"
+    elif [[ -n "${_bt_estado}" && "${_bt_estado}" != "confirm" && "${_bt_estado}" != "ausente" ]]; then
+        warn "  e o disco está com JustWorksRepairing=${_bt_estado} AGORA — este install NÃO tocou nesse valor"
+    fi
+    unset _bt_estado
+elif command -v sudo >/dev/null 2>&1; then
     step "3d" "Bluetooth no máximo (btusb sem autosuspend + reconexão rápida)"
     if ! sudo -n true 2>/dev/null; then
         warn "sudo recusado — passos de BT no máximo pulados (re-execute ./install.sh)"
@@ -1244,79 +1523,43 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         if [[ -e /sys/module/btusb/parameters/enable_autosuspend ]]; then
             printf '0' | sudo tee /sys/module/btusb/parameters/enable_autosuspend >/dev/null 2>&1 || true
         fi
-        # Config do BlueZ (camada 1 da sprint 2026-07-21 BlueZ): UM bloco
-        # gerenciado (FastConnectable + JustWorksRepairing juntos), escrito de
-        # forma IDEMPOTENTE — o rewrite remove qualquer versão anterior (o
-        # bloco unificado, os DOIS blocos legados com sentinelas próprias E
-        # chaves soltas nossas fora de bloco) antes de apensar. Rodar o
-        # install N vezes nunca acumula seções (bug real medido em 21/07:
-        # main.conf com 3× [General] de appends empilhados).
-        # main.conf segue sendo conffile do dpkg: SEMPRE com backup antes.
+        # Config do BlueZ (FastConnectable + JustWorksRepairing): o dono é o
+        # scripts/bluez_config.sh, e a lógica saiu DAQUI de propósito.
+        #
+        # RADIO-ABERTO-01/E1-bis (06/08/2026) — POR QUE A MUDANÇA:
+        # o mecanismo morava inline neste arquivo, e por isso nenhum teste da
+        # suíte conseguia EXERCITÁ-LO (todos liam install.sh/uninstall.sh como
+        # texto). Foi assim que passou despercebido o defeito MEDIDO na máquina
+        # dela em 06/08: `/etc/bluetooth/main.conf:25` com
+        # `JustWorksRepairing=always`, DENTRO do bloco `# >>> hefesto bluetooth
+        # >>>` — escrito por uma versão anterior deste próprio projeto. Os
+        # assets passaram a `confirm` em 05/08 e o valor perigoso continuou no
+        # disco porque só uma execução do install reescreve o arquivo, e não
+        # houve nenhuma entre as duas datas. Com o mecanismo num script
+        # próprio, a bancada de raiz falsa (tests/unit/test_bluez_config_sh.py)
+        # prova que valor inseguro preexistente vira `confirm`.
+        #
+        # O que o `aplicar` garante, e este passo não repete para não divergir:
+        # idempotência (rodar N vezes não acumula seção nem backup), backup do
+        # conffile só quando há mudança real, escrita ATÔMICA (temporário no
+        # mesmo diretório + rename, para que uma queda no meio não deixe o
+        # conffile dela truncado), neutralização reversível de chave de
+        # terceiro, RELATÓRIO (nunca poda automática) dos backups e — a
+        # assimetria fechada — o
+        # main.conf normalizado SEMPRE, com os drop-ins de main.conf.d POR CIMA
+        # quando o diretório existe (antes, o diretório presente fazia o
+        # install anunciar `confirm` sem nunca abrir o main.conf, onde o
+        # `always` seguia vivo).
         # ARMADILHA respeitada: NUNCA reiniciamos o bluetoothd aqui.
-        if [[ -d /etc/bluetooth/main.conf.d ]]; then
-            # BlueZ com main.conf.d: drop-ins dedicados (idempotentes por
-            # natureza — install -D sobrescreve no lugar, nunca acumula).
-            _bt_dropin_ok=1
-            sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-fastconnectable.conf" \
-                    /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf 2>/dev/null || _bt_dropin_ok=0
-            sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-justworks.conf" \
-                    /etc/bluetooth/main.conf.d/hefesto-justworks.conf 2>/dev/null || _bt_dropin_ok=0
-            if [[ "${_bt_dropin_ok}" -eq 1 ]]; then
-                printf '      FastConnectable + JustWorksRepairing via drop-ins main.conf.d (valem no próximo restart do bluetoothd)\n'
-            else
-                warn "drop-in de config do BlueZ falhou em main.conf.d"
-            fi
-        elif [[ -f /etc/bluetooth/main.conf ]]; then
-            _bt_tmp="$(mktemp)"
-            # O awk descarta: (a) os três blocos sentinelados (unificado +
-            # legados), (b) chaves nossas soltas fora de bloco (deixadas por
-            # edições manuais — só as NÃO comentadas; as comentadas do
-            # template upstream ficam), (c) as linhas em branco do FIM do
-            # arquivo.
-            #
-            # BUG-INSTALL-MAIN-CONF-CRESCE-01 (25/07): o (c) é novo e é o que
-            # torna o passo REALMENTE idempotente. As sentinelas delimitam só o
-            # bloco; a linha em branco que o `printf '\n'` abaixo apensa como
-            # separador ficava FORA delas e sobrevivia ao awk — cada execução do
-            # install empurrava o bloco uma linha para baixo. Medido nesta
-            # máquina: 10 linhas em branco acumuladas entre o `[General]`
-            # upstream e a sentinela, e o arquivo crescendo 1 byte por install.
-            # Guardar os brancos e só imprimi-los quando vem conteúdo depois
-            # preserva os brancos INTERNOS e descarta os do fim.
-            if sudo awk '
-                    /^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>/ { _skip=1; next }
-                    _skip && /^# <<< hefesto (bluetooth|FastConnectable|JustWorksRepairing) <<</ { _skip=0; next }
-                    _skip { next }
-                    /^[[:space:]]*(FastConnectable|JustWorksRepairing)[[:space:]]*=/ { next }
-                    /^[[:space:]]*$/ { _brancos++; next }
-                    { for (; _brancos > 0; _brancos--) print ""; print }
-                  ' /etc/bluetooth/main.conf > "${_bt_tmp}" \
-               && { printf '\n'; cat "${ROOT_DIR}/assets/bluetooth/hefesto-bt.block"; } >> "${_bt_tmp}"; then
-                # BUG-INSTALL-MAIN-CONF-BACKUP-INFINITO-01 (25/07): o backup era
-                # feito ANTES de saber se havia mudança, com timestamp no nome —
-                # cada install deixava mais um `main.conf.bak.hefesto-<ts>` em
-                # /etc/bluetooth (22 acumulados nesta máquina). Agora comparamos
-                # primeiro: conteúdo idêntico = no-op honesto, sem backup novo.
-                if sudo cmp -s "${_bt_tmp}" /etc/bluetooth/main.conf; then
-                    printf '      bloco hefesto já está no main.conf, byte a byte — nada a reescrever (sem backup novo)\n'
-                else
-                    _bt_backup="/etc/bluetooth/main.conf.bak.hefesto-$(date +%s)"
-                    if sudo cp /etc/bluetooth/main.conf "${_bt_backup}" 2>/dev/null \
-                       && sudo install -m644 -o root -g root "${_bt_tmp}" /etc/bluetooth/main.conf; then
-                        printf '      bloco hefesto (FastConnectable + JustWorksRepairing) reescrito no main.conf (backup: %s)\n' "${_bt_backup}"
-                        printf '      vale no próximo boot/restart do bluetoothd — NÃO reiniciamos o serviço (derrubaria os controles BT)\n'
-                    else
-                        warn "não consegui reescrever o bloco hefesto no /etc/bluetooth/main.conf"
-                    fi
-                fi
-            else
-                warn "não consegui preparar o bloco hefesto para o /etc/bluetooth/main.conf"
-            fi
-            rm -f "${_bt_tmp}"
-        else
-            printf '      sem /etc/bluetooth/main.conf (BlueZ ausente?) — config do BlueZ pulada\n'
+        if ! HEFESTO_BT_ASSETS="${ROOT_DIR}/assets/bluetooth" \
+             bash "${ROOT_DIR}/scripts/bluez_config.sh" aplicar; then
+            warn "config do BlueZ (FastConnectable + JustWorksRepairing) não ficou garantida"
         fi
     fi
+else
+    step "3d" "Bluetooth no máximo — PULADO (sem sudo nesta máquina)"
+    warn "sem o comando sudo: config do BlueZ e modprobe.d do btusb NÃO aplicados"
+    warn "  falta fazer, como root: bash ${ROOT_DIR}/scripts/bluez_config.sh aplicar"
 fi
 
 # ---------------------------------------------------------------------------
@@ -1468,10 +1711,18 @@ fi
 #      captura forense (esta última NUNCA ligada por default);
 #   2. drop-in do bluetooth.service: Restart=on-failure reafirmado (o template
 #      upstream traz comentado — bump futuro do pacote pode regredir) +
-#      WatchdogSec=30 (hang sem crash) + snapshot de bonds a cada parada;
+#      WatchdogSec=0 (BLUETOOTHD-MORTO-POR-NOS-01: era 30 e o systemd MATOU o
+#      bluetoothd dela com SIGABRT em 08/08, levando os quatro pareamentos)
+#      + snapshot de bonds a cada parada;
 #   3. timer de snapshot (15min, deduplicado por conteúdo, NUNCA fotografa
-#      estado vazio) — restauração é MANUAL (bt_bonds_restore.sh; automática
-#      poderia restaurar chave que o controle rotacionou → loop de auth);
+#      estado vazio, e a poda nunca joga fora o MELHOR snapshot) + a VOLTA
+#      automática (bt_bonds_autorestore.sh no ExecStopPost do drop-in), que é a
+#      decisão dela de 08/08: "restauro de bonds tem de ser automático; manual
+#      com sudo não é produto". A volta só corre quando o daemon MORREU
+#      (SERVICE_RESULT != success), é ADITIVA (nunca escreve por cima de uma
+#      [LinkKey] viva — é assim que a chave rotacionada deixa de ser risco) e
+#      tem quarentena por boot. O bt_bonds_restore.sh continua existindo para o
+#      restauro completo decidido à mão;
 #   4. timer do watchdog (2min): estado doente → restart rate-limitado (só com
 #      0 devices conectados); bond Paired-sem-Bonded (temporário, evapora no
 #      disconnect — medido 22/07) → promoção via Pair() explícito 1x/boot.
@@ -1483,7 +1734,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         warn "sudo recusado — resiliência do bluetoothd pulada (re-execute ./install.sh)"
     else
         _btres_ok=1
-        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh bt_nosniff_now.sh bt_rebind_orphans.sh; do
+        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_bonds_autorestore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh bt_nosniff_now.sh bt_rebind_orphans.sh; do
             sudo install -Dm755 "${ROOT_DIR}/scripts/${_btres_s}" \
                 "/usr/local/lib/hefesto-dualsense4unix/${_btres_s}" 2>/dev/null || _btres_ok=0
         done
@@ -1509,7 +1760,10 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
             _btres_ok=0
         fi
         if [[ "${_btres_ok}" -eq 1 ]]; then
-            printf '      drop-in de resiliência instalado (Restart reafirmado + WatchdogSec=30 + snapshot na parada)\n'
+            printf '      drop-in de resiliência instalado (Restart reafirmado + WatchdogSec=0 + snapshot na parada)\n'
+            printf '      restauro AUTOMÁTICO de bonds armado: se o bluetoothd morrer, os bonds que\n'
+            printf '        ele comeu voltam sozinhos antes do próximo start (aditivo; nunca por cima\n'
+            printf '        de chave viva). Nada a digitar, nenhum sudo.\n'
             printf '      vale no próximo restart do bluetoothd; captura forense é OPT-IN: bt_crash_capture.sh --on\n'
         else
             warn "resiliência do bluetoothd instalada PARCIALMENTE — confira as mensagens acima"
@@ -1578,7 +1832,13 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
             if [[ ! -f "${_bz_sums}" || -z "${_bz_deb_bluez}" || -z "${_bz_deb_cups}" || -z "${_bz_deb_libbt}" ]]; then
                 # (d) .debs ausentes: NÃO falha o install, só orienta o build.
                 warn "backport não encontrado em ${_bz_dir} — bluetoothd 5.72 crônico segue ativo"
-                printf '      como gerar: git show arquivo/processo-pre-1.0:docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3 item 1\n'
+                # A receita mora na ÁRVORE desde 11/08/2026. Antes esta linha
+                # mandava para `git show arquivo/processo-pre-1.0:...`, um ramo
+                # arquivado — e o `install.sh:1638` já citava o documento como se
+                # ele estivesse aqui. Quem levasse o produto para outra máquina
+                # lia uma instrução que não podia seguir.
+                printf '      como gerar: docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md, seção 3, caminho 1\n'
+                printf '      resumo: dget do .dsc do resolute -> dch --local -> mk-build-deps -ir -> dpkg-buildpackage -us -uc -b\n'
             else
                 # SHA256SUMS por basename (portátil — o arquivo pode ter sido
                 # gerado com caminho absoluto de outra máquina/usuário).
@@ -1671,6 +1931,22 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
             if sudo install -Dm644 "${ROOT_DIR}/assets/systemd/hefesto-bt-agent.service" \
                     /etc/systemd/system/hefesto-bt-agent.service 2>/dev/null; then
                 sudo systemctl daemon-reload >/dev/null 2>&1 || true
+                # AGENTE-EM-FAILED-NAO-VOLTA-PELO-INSTALL-01 (15/08/2026) — MEDIDO.
+                #
+                # `enable --now` NÃO tira uma unit do estado `failed`: o systemd
+                # recusa iniciar quem bateu o `StartLimitBurst`, e o install
+                # terminava com "habilitado" no texto e o agente morto de fato.
+                #
+                # O preço disso foi medido em 14/08: o agente ficou `failed` das
+                # 16:17 às 00:31 e, sem ele, TODO bond novo nasce meio-salvo
+                # (`Paired: yes / Bonded: no`) e some — que é o "conectam sozinhos
+                # e desligam em sequência" que ela relatou. Reinstalar não
+                # resolveria; só um `reset-failed` explícito resolve.
+                #
+                # O `KillSignal=SIGKILL` da unit (mesma data) impede que ele
+                # ENTRE em `failed`. Esta linha cuida de quem JÁ está — as duas
+                # são necessárias, e nenhuma substitui a outra.
+                sudo systemctl reset-failed hefesto-bt-agent.service >/dev/null 2>&1 || true
                 if sudo systemctl enable --now hefesto-bt-agent.service >/dev/null 2>&1; then
                     printf '      hefesto-bt-agent.service habilitado (agente NoInputNoOutput persistente)\n'
                 else
@@ -1776,14 +2052,29 @@ step "4/11" "atalho de aplicativo e launcher"
 # fallback generico em sizes nao-256 (chip 32x32 do menu apps, 128x128
 # do grid).
 #
-# BUG-ICON-FROM-PLACEHOLDER-SVG-01 (v3.4.3 fix): v3.4.2 usava SVG como
-# source para o rsvg-convert. Mas assets/appimage/Hefesto-Dualsense4Unix.
-# svg eh um PLACEHOLDER simples (chama laranja + texto "HEFESTO"),
-# não a logo real (martelo + gradiente roxo/azul/rosa no PNG 256x256).
-# Resultado: app library mostrava chama laranja em vez do martelo.
-# Fix: source canonico eh o PNG 256x256 sempre, com Lanczos downsample
-# do ImageMagick para outras resolucoes. Sem SVG escalavel ate termos
-# um SVG real do martelo.
+# BUG-ICON-FROM-PLACEHOLDER-SVG-01 (v3.4.3): v3.4.2 usava um SVG que era
+# PLACEHOLDER (chama laranja + texto "HEFESTO"), e a app library mostrava
+# chama em vez do martelo. A cura da epoca foi eleger o PNG como fonte.
+#
+# NOTA DE VERIFICACAO — 01/08/2026. Este comentario CADUCOU, e por dois
+# motivos medidos:
+#
+#   1. o SVG deixou de ser placeholder. `assets/hefesto-logo.svg` TEM o
+#      martelo, a bigorna e a chama, e o `rsvg-convert` gera dele um PNG
+#      indistinguivel do que estava versionado. A troca aconteceu em algum
+#      momento e ninguem atualizou este texto — que passou a mentir com
+#      autoridade;
+#   2. o ICON_SRC apontava para `assets/appimage/Hefesto-Dualsense4Unix.png`,
+#      que NAO EXISTIA nesta arvore. O `cp -f` falhava em silencio e o icone
+#      que aparecia no sistema vinha, por acidente, do PNG do applet COSMIC.
+#      Havia dois caminhos, e o documentado era o quebrado.
+#
+# Agora ha UMA fonte: `assets/hefesto-logo.svg`. Os PNGs derivados sao
+# gerados por `scripts/gerar_icones.sh` e travados por
+# `tests/unit/test_icones_refletem_o_svg.py` — mexer no desenho sem regerar
+# reprova. O install continua consumindo o PNG (o Lanczos do ImageMagick da
+# downsample melhor que o rsvg em tamanhos pequenos), mas o PNG deixou de
+# ser fonte: virou derivado.
 ICON_HICOLOR_BASE="${HOME}/.local/share/icons/hicolor"
 ICON_SIZES="16 22 24 32 48 64 96 128 192 256 512"
 
@@ -1804,10 +2095,50 @@ if command -v convert >/dev/null 2>&1; then
     mkdir -p "${HOME}/.local/share/pixmaps"
     cp -f "${ICON_SRC}" "${HOME}/.local/share/pixmaps/${APP_ID}.png"
     # Remove SVG placeholder de instalações anteriores (v3.4.2 colocava lah).
+    #
+    # ATENÇÃO, 07/08/2026 (APPLET-MONOCROMÁTICO-01): esta linha apaga
+    # `scalable/apps/${APP_ID}.svg` — o nome SEM sufixo, e SÓ ele. Ela NÃO
+    # alcança o simbólico instalado logo abaixo, que se chama
+    # `${APP_ID}-symbolic.svg` e vive em `symbolic/apps/`. O alvo está cravado
+    # de propósito: um `rm -f .../scalable/apps/${APP_ID}*.svg` apagaria o
+    # simbólico a cada instalação, e o sintoma seria um joystick genérico na
+    # barra dela, sem ninguém entender por quê.
     rm -f "${ICON_HICOLOR_BASE}/scalable/apps/${APP_ID}.svg"
 else
     printf '      aviso: ImageMagick (convert) ausente — so 256x256 PNG\n'
     printf '             instale: sudo apt install imagemagick\n'
+fi
+
+# ICONE SIMBOLICO DA BANDEJA — APPLET-MONOCROMATICO-01 (07/08/2026)
+# ------------------------------------------------------------------
+# Pedido dela, olhando a própria barra: "o applet do hefesto deve ficar em preto
+# e branco (...) no cosmic todos os applet são assim". Estava certa: dez dos
+# treze applets do System76 declaram `-symbolic`, e o Hefesto era o único de
+# glifo fixo que não declarava.
+#
+# Este arquivo NÃO é derivado dos PNGs acima, e não passa pelo ImageMagick: é
+# desenho próprio na grade 16x16 (a logo cheia a 20 px vira borrão). Por isso
+# fica FORA do `if command -v convert` — sem ImageMagick o resto degrada, este
+# não precisa degradar junto.
+#
+# O destino é `symbolic/apps/`, e isso foi MEDIDO em 07/08 na máquina dela: o
+# `index.theme` do `hicolor` do HOME dela NÃO lista `symbolic/apps`, e mesmo
+# assim a busca de ícones acha o arquivo lá (GTK) — e o painel desenhou um item
+# de bandeja de prova servido desse diretório. É onde o `hicolor` do sistema
+# declara o bloco `[symbolic/apps]` e onde o vizinho que já funciona (Flatpak do
+# Spotify) põe o dele.
+#
+# Sem este arquivo, `tray.py` cai para o nome antigo (logo colorida) e, se nem
+# ele existir, para o joystick genérico `input-gaming`.
+ICON_SIMBOLICO_SRC="${ROOT_DIR}/assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
+ICON_SIMBOLICO_DIR="${ICON_HICOLOR_BASE}/symbolic/apps"
+if [[ -r "${ICON_SIMBOLICO_SRC}" ]]; then
+    mkdir -p "${ICON_SIMBOLICO_DIR}"
+    cp -f "${ICON_SIMBOLICO_SRC}" "${ICON_SIMBOLICO_DIR}/${APP_ID}-symbolic.svg"
+    printf '      ícone simbólico da bandeja instalado (%s-symbolic.svg)\n' "${APP_ID}"
+else
+    printf '      aviso: %s ausente — a bandeja cai no ícone colorido\n' \
+        "assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
 fi
 
 # Detecção COSMIC → dois caminhos complementares para autoswitch funcionar:
@@ -1997,6 +2328,26 @@ else
             || printf '      fontes: incompletas — rode: bash scripts/install_fonts.sh\n'
     fi
 fi
+
+# ---------------------------------------------------------------------------
+# 4f. Teclado na tela — o que o L3 do controle abre (TECLADO-QUE-NAO-DIGITA-01)
+# ---------------------------------------------------------------------------
+# O mapa de fábrica dá ao L3 o token `__OPEN_OSK__` desde sempre, e o daemon o
+# cumpre abrindo um teclado na tela DO SISTEMA. Só que ninguém instalava esse
+# teclado: medido em 09/08/2026 na máquina dela, `command -v onboard
+# wvkbd-mobintl` não achava nenhum dos dois e `grep -c onboard install.sh` dava
+# ZERO. Como nenhum dos nove atalhos de fábrica digita uma LETRA (Super,
+# PrintScreen, Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois
+# tokens de OSK), sem o teclado na tela a frase "o teclado emulado não digita"
+# era literalmente verdade.
+#
+# Fica ao lado das fontes porque é a mesma natureza: acabamento que o produto
+# PROMETE, que vem de pacote da distribuição, best-effort, sem derrubar o
+# install. A escolha do pacote (wvkbd em Wayland, onboard em X11) e o porquê
+# MEDIDO moram num dono só — scripts/install_osk.sh —, para o instalador, o
+# doctor e o daemon nunca divergirem sobre qual binário é o certo.
+step "4f" "teclado na tela do L3 (wvkbd em Wayland, onboard em X11)"
+install_osk_host
 
 # ---------------------------------------------------------------------------
 # 5. Symlink ~/.local/bin/hefesto-dualsense4unix
@@ -2295,10 +2646,34 @@ fi
 # ---------------------------------------------------------------------------
 # 10. WirePlumber: DualSense fora da fonte de áudio padrão — DEFAULT (opt-out: --keep-dualsense-mic)
 # ---------------------------------------------------------------------------
+# SOM-QUE-NAO-DORME-01 (16/08/2026) — SEM FLAG, e num passo PRÓPRIO, antes do
+# 10/11 (que decide o microfone).
+#
+# A decisão dela, textual: *"garantir que sempre fique acordado"*. O defeito foi
+# medido na orelha dela em 15/08 23h45 (ensaio `sfx-no-suspenso-come-o-comeco`):
+# o WirePlumber suspende o sink do controle depois de 5 s ociosos, e o religar do
+# hardware COME O COMEÇO DO SOM.
+#
+# Por que passo próprio, e não uma linha dentro do 10/11: os três ramos de lá
+# decidem o MICROFONE. Quem pediu `--keep-dualsense-mic` pediu para não
+# rebaixarem a entrada dele — não pediu para perder o começo de cada efeito
+# sonoro. São perguntas diferentes, e amarrar uma na outra deixaria a cura
+# opt-in por acidente de posição (foi o que MIC-EM-TODO-FORMATO-01 pagou em
+# 10/08). Separado também mantém o bloco do 10/11 do tamanho que o portão
+# `test_o_instalador_que_aprovou_o_monitor` lê.
+step "som" "áudio: o alto-falante do controle nunca dorme (SOM-QUE-NAO-DORME-01)"
+if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --nunca-dorme; then
+    : # a mensagem do próprio script já diz se instalou ou se já valia
+else
+    warn "nunca-dorme falhou — rode: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme"
+fi
+
 step "10/11" "audio: impedir o DualSense de virar o microfone padrão"
 if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
     [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]] && warn "--with-wireplumber-disable-mic vence --with-wireplumber-fix"
     # exit 2 (DualSense é a única fonte) não é falha de instalação — só aviso.
+    # exit 3 (a fonte padrão é um MONITOR) não fala do DualSense: quem dá esse
+    # veredito é a conferência do fim deste passo, depois da cura do microfone.
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source; rc=$?; [[ "${rc:-0}" -ne 1 ]]; then
         printf '      mic do DualSense DESABILITADO (node.disabled; controle só-HID)\n'
     else
@@ -2306,7 +2681,14 @@ if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
     fi
 elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; rc=$?; [[ "${rc:-0}" -ne 1 ]]; then
-        printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
+        # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o drop-in ter entrado NÃO é o
+        # microfone estar certo, e dizer "fonte padrão reeleita" quando ela não
+        # foi era a metade da contradição que ela leu na tela. rc 3 = monitor.
+        if [[ "${rc:-0}" -eq 3 ]]; then
+            printf '      drop-in do WirePlumber instalado (a fonte padrão ainda não é um microfone)\n'
+        else
+            printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
+        fi
     else
         warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
     fi
@@ -2343,6 +2725,45 @@ if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -ne 1 ]]; then
     fi
 fi
 
+# INSTALADOR-QUE-APROVOU-O-MONITOR-01 (09/08/2026) — a CONFERÊNCIA FINAL do
+# microfone, e o motivo de ela existir.
+#
+# MEDIDO na máquina dela, no mesmo terminal, com dois minutos de diferença:
+#
+#   passo 10/11:  OK: microfone padrão ativo = alsa_output…iec958-stereo.monitor
+#   doctor.sh:    [FAIL] a fonte de captura padrão é um MONITOR — o que qualquer
+#                 app gravar é o áudio de SAÍDA do sistema, não a voz
+#
+# O install declarava sucesso sobre um estado que o próprio produto reprova. A
+# verificação do `--install` do wp-fix já parou de aprovar monitor (exit 3), mas
+# ela roda ANTES da cura (`--fix-mic`), então o veredito dela é sempre parcial:
+# quem tem a última palavra é esta leitura, DEPOIS de tudo o que o passo tenta.
+#
+# Não oferece comando: RECEITA-ERRADA-01 mostrou o preço de mandar rodar algo que
+# não pode funcionar. Quando não há microfone nenhum na máquina, o que resolve é
+# hardware — e é isso que a linha diz.
+if command -v pactl >/dev/null 2>&1; then
+    _fonte_agora="$(pactl get-default-source 2>/dev/null || true)"
+    case "${_fonte_agora}" in
+        *.monitor|*.Monitor)
+            warn "o microfone padrão do sistema é um MONITOR (${_fonte_agora})"
+            printf '      isto NÃO é microfone: o que Discord, chat de jogo ou gravador\n'
+            printf '      captarem é o áudio que SAI do PC, não a voz de quem fala — e o\n'
+            printf '      medidor de nível mostra sinal, então parece estar funcionando.\n'
+            printf '      Não há comando que resolva sem uma entrada de verdade: conecte o\n'
+            printf '      DualSense (no cabo), um microfone/headset no jack, ou uma webcam\n'
+            printf '      com microfone. A janela do Hefesto avisa enquanto durar.\n'
+            ;;
+        "")
+            printf '      microfone: nenhuma fonte padrão eleita (PipeWire parado?)\n'
+            ;;
+        *)
+            printf '      microfone padrão do sistema: %s (entrada de verdade)\n' "${_fonte_agora}"
+            ;;
+    esac
+    unset _fonte_agora
+fi
+
 # ---------------------------------------------------------------------------
 # 11. Steam Input: desligar PSSupport (default ON, opt-out --keep-steam-input)
 # ---------------------------------------------------------------------------
@@ -2367,18 +2788,23 @@ else
         warn "disable_steam_input.sh falhou — rode: bash scripts/disable_steam_input.sh --apply"
     fi
 
-    # Guard: path unit + timer que reaplicam PSSupport=OFF se a Steam reescrever
-    # o vdf (update/saída). FEAT-STEAM-INPUT-SELF-HEAL-01. Usa --apply-quiet
-    # (nunca fecha a Steam). Units --user, sem sudo.
+    # Guard: path unit + timer que desfazem o que a Steam reescreve no vdf
+    # (update/saída). FEAT-STEAM-INPUT-SELF-HEAL-01 (Steam Input OFF) e
+    # CARONA-NO-GUARD-01 (o wrapper hefesto-launch, na carona do mesmo gatilho:
+    # o instante em que a Steam grava o vdf é o instante em que ela acabou de
+    # sair, que é o ÚNICO em que a reposição sobrevive). Os dois passos adiam
+    # sozinhos se a Steam estiver viva. Units --user, sem sudo.
     USER_UNIT_DIR="${HOME}/.config/systemd/user"
     mkdir -p "${USER_UNIT_DIR}"
     install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.path"  "${USER_UNIT_DIR}/hefesto-steam-input-guard.path"
     install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.timer" "${USER_UNIT_DIR}/hefesto-steam-input-guard.timer"
-    sed "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
+    SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
+    sed -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
+        -e "s#__SENTINELA__#${SENTINELA_PY}#g" \
         "${ROOT_DIR}/assets/hefesto-steam-input-guard.service" > "${USER_UNIT_DIR}/hefesto-steam-input-guard.service"
     if systemctl --user daemon-reload 2>/dev/null \
        && systemctl --user enable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer 2>/dev/null; then
-        printf '      guard do Steam Input habilitado (path + timer 30min)\n'
+        printf '      guard do Steam Input + wrapper habilitado (path + timer 30min)\n'
     else
         warn "não consegui habilitar o guard --user (sessão systemd ausente?) — será pego no próximo login"
     fi
@@ -2412,6 +2838,124 @@ if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     fi
 else
     warn "steam_launch_options.py ausente ou sem python3 — migração pulada; rode depois: python3 ${LAUNCH_MIGRATE_PY} --migrate"
+fi
+
+# ---------------------------------------------------------------------------
+# 11b-bis. Launch Options: APLICAR o wrapper a TODOS os jogos — DEFAULT, sem flag
+# ---------------------------------------------------------------------------
+# JOGO-COMPLETO-01 entrega E4, pedido literal dela: "isso deveria estar no
+# install sem flag". O passo 11b só MIGRA veneno legado — numa instalação
+# limpa não existe veneno, então ele não põe nada e NENHUM jogo fica com o
+# wrapper. Medido em 02/08 nesta máquina: `--status` dizia "veneno estático: 0
+# / chamadas do wrapper: 0" e o doctor avisava "NENHUM jogo com o wrapper".
+# Sem a chamada do wrapper, as envs que o projeto materializa
+# (SDL_GAMECONTROLLER_IGNORE_DEVICES, PROTON_DISABLE_HIDRAW) nunca são
+# exportadas e todo jogo enxerga DOIS DualSense — o defeito do controle
+# duplicado voltando pela porta dos fundos.
+#
+# Idempotente por construção (requisito dela): jogo que já chama o wrapper é
+# PULADO, nada é duplicado, e um vdf sem nada a fazer não é sequer reescrito —
+# rodar o install N vezes é igual a rodar uma. Steam Flatpak/Snap é pulada
+# inteira (o wrapper do host é invisível dentro da sandbox, DEDUP-04).
+#
+# ORDEM — armadilha 1 da sprint, "não ligar o broker antes do wrapper": o
+# broker hide-hidraw é instalado lá atrás, no passo 3h, e este passo vem só
+# aqui. É seguro, e o motivo é que o 3h NÃO esconde nada: ele instala o
+# binário e habilita o .socket; o .service só sobe na primeira conexão do
+# daemon e o hide do hidraw FÍSICO acontece em tempo de JOGO, com vpad vivo
+# confirmado (`coop._broker_hide_player`). Entre o 3h e este passo nenhum nó é
+# escondido — e este passo RECUSA rodar com um jogo aberto (rc=3, nada é
+# tocado), de modo que o primeiro jogo a subir depois do install já encontra o
+# wrapper posto. A rede de segurança nunca fica no ar sozinha.
+#
+# Falha aqui é best-effort, como nos vizinhos: o wrapper degrada por desenho
+# (`[ -x "$W" ] && exec "$W" "$@"; exec env "$@"`), logo o pior caso continua
+# sendo o controle duplicado de hoje — nunca um jogo que não abre.
+step "11b-bis" "Steam: aplicar o wrapper hefesto-launch a todos os jogos"
+if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    printf '      sem isto, as opções de inicialização ficam vazias e o jogo\n'
+    printf '      enxerga dois DualSense (jogos que já têm o wrapper são pulados).\n'
+    if python3 "${LAUNCH_MIGRATE_PY}" --apply --stop-steam; then
+        printf '      wrapper hefesto-launch nas Launch Options de todos os jogos\n'
+    else
+        warn "aplicação do wrapper adiada — rode com a Steam fechada (e sem jogo aberto): python3 ${LAUNCH_MIGRATE_PY} --apply"
+    fi
+else
+    warn "steam_launch_options.py ausente ou sem python3 — wrapper NÃO aplicado; rode depois: python3 ${LAUNCH_MIGRATE_PY} --apply"
+fi
+
+# ---------------------------------------------------------------------------
+# 11b-ter. Sentinela do wrapper: REPOR quem perdeu, e anotar quem tem
+# ---------------------------------------------------------------------------
+# SENTINELA-WRAPPER-01 (16/08/2026), sem flag como todo o resto. O passo acima
+# põe o wrapper em todo mundo; este REPÕE onde a Steam o comeu depois e ANOTA
+# quem ficou com ele (~/.local/state/hefesto-dualsense4unix/wrapper-visto.json).
+#
+# Sem essa anotação, o produto não tem como distinguir "este jogo PERDEU o
+# wrapper" de "este jogo é novo na biblioteca" — e a diferença é a frase que
+# ela precisava ouvir em 15/08, quando o Pragmata teve a chamada do wrapper
+# SUBSTITUÍDA por `VKD3D_CONFIG=no_upload_hvv %command%` (a Steam guarda UMA
+# linha por jogo e a sobrescreve sem avisar). O daemon estava saudável, o
+# perfil aceso, a luz certa — e o jogo, no Bluetooth, sem controle nenhum.
+#
+# POR QUE REPARAR AQUI, e não só anotar (16/08, 05h)
+# --------------------------------------------------
+# Este passo rodava `--relatorio`, que só OLHA. Anotar um defeito e deixá-lo em
+# pé é o defeito mais caro desta casa ("a casa sabe e o produto não faz"), e o
+# install é o momento em que a cura é mais barata: a Steam costuma estar
+# fechada (o passo 11b acabou de escrever no vdf) e a pessoa está na frente da
+# tela, esperando. O vizinho de trinta linhas abaixo já faz assim há semanas —
+# o 11c não "relata" o Proton fora do pin, ele roda `--ensure` e `--lock`.
+#
+# O reparo PRESERVA o que já estava na linha (é o `migrate_value`, que
+# PREPENDE): o Pragmata volta com o wrapper E com o `VKD3D_CONFIG` que cura o
+# crash de 14/08. Trocar um defeito por outro não é conserto.
+#
+# Ele NUNCA fecha a Steam por conta própria: adia (rc=3) com um jogo aberto ou
+# com a Steam viva, porque a Steam regrava o vdf ao sair e engoliria a edição.
+# Adiar não é falha do install — é a resposta certa, e por isso sai como aviso
+# com o comando na mão, nunca como erro.
+#
+# Idempotente por construção (`WRAPPER_PREFIX in value` pula quem já tem), e o
+# que ela marcou em `jogos_sem_wrapper.txt` fica de fora: o produto não briga
+# com a dona da máquina.
+#
+# CICLO uninstall -> install: o `--strip` do uninstall tira o wrapper de todo
+# mundo, e por isso o uninstall também apaga o `wrapper-visto.json` — sem isso,
+# a instalação seguinte chamaria de REGRESSÃO ("este jogo perdeu o wrapper!")
+# exatamente a remoção que ela pediu. Sem a memória, toda ausência volta como
+# `novo`, o reparo repõe tudo do mesmo jeito, e a memória renasce aqui.
+#
+# O QUE ESTE PASSO NÃO ALCANÇA (medido em 16/08 05h07, e não é hipótese)
+# ----------------------------------------------------------------------
+# O censo lê os TRÊS blocos `apps` do localconfig.vdf como se fossem um só, e a
+# última leitura vence. Só `UserLocalConfigStore/Software/Valve/Steam/apps` é a
+# árvore que a Steam usa; as outras duas foram escritas por nós em 21/07 e são
+# invisíveis para ela. Com o Pragmata quebrado NA árvore viva e o wrapper
+# intacto NA secundária, o censo responde "nada a fazer" e este reparo passa
+# batido. O doctor no fim do install nomeia o jogo assim mesmo — a régua
+# independente está em `check_arvore_canonica_do_wrapper`, e a cura da fusão é
+# do dono de `steam_launch_options.py`.
+step "11b-ter" "Steam: repor o wrapper onde a Steam o apagou (sentinela)"
+LAUNCH_SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
+if [[ -f "${LAUNCH_SENTINELA_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    _sw_rc=0
+    python3 "${LAUNCH_SENTINELA_PY}" --reparar || _sw_rc=$?
+    case "${_sw_rc}" in
+        0)
+            printf '      se um jogo perder o wrapper depois, o doctor e a janela dizem QUAL\n'
+            ;;
+        3)
+            warn "reparo do wrapper ADIADO (Steam ou um jogo aberto) — feche a Steam e rode:"
+            warn "  python3 ${LAUNCH_SENTINELA_PY} --reparar"
+            ;;
+        *)
+            warn "reparo do wrapper falhou (rc=${_sw_rc}) — rode depois: python3 ${LAUNCH_SENTINELA_PY} --reparar"
+            ;;
+    esac
+    unset _sw_rc
+else
+    warn "sentinela_do_wrapper.py ausente ou sem python3 — sem memória de quem tem o wrapper; regressão futura apareceria como 'jogo novo'"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2455,6 +2999,56 @@ else
             warn "  (ou use o botão 'Travar Proton validado' na aba Sistema da GUI)"
         else
             warn "trava do Proton falhou — rode manualmente: python3 ${PROTON_PIN_PY} --lock"
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Conferência final: o doctor
+# ---------------------------------------------------------------------------
+# CONFERENCIA-FINAL-01, 04/08/2026 — pedido dela, e nascido de um defeito real:
+#
+#   *"nosso install não deveria rodar o doctor por default sem flag? pra
+#   garantir tudo tudo real mesmo?"*
+#
+# Na noite de 03→04/08 a máquina dela estava SEM o drop-in
+# `51-hefesto-dualsense-no-default-source.conf`. Sem ele o WirePlumber promoveu
+# o DualSense a microfone padrão do sistema, o mic ficou mudo por estado
+# persistido por rota, e o alto-falante do controle ficou MUTED — os três
+# sintomas que ela reportou como "não funciona nem mic, nem os botões de som".
+#
+# O install TINHA o passo que arma o drop-in (passo 10) e o uninstall TEM a
+# linha que o remove. O que não havia era alguém CONFERINDO no fim: uma
+# instalação podia terminar imprimindo "instalado" com cura desarmada, e o
+# único jeito de descobrir era ela sentir o defeito jogando.
+#
+# Por que CONFERIR e não `--fix`: os passos acima já são as curas, e cada um
+# reporta o que fez. Este passo existe para dizer a VERDADE sobre o resultado
+# — se ele precisasse curar, o defeito seria do passo, e escondê-lo com um
+# `--fix` no fim tiraria justamente o sinal que aponta para o passo furado.
+#
+# Por que não derruba a instalação: sem controle plugado o doctor emite muitos
+# avisos legítimos (nada a medir), e um `exit 1` aqui transformaria "instalei
+# sem o controle na mão" em "a instalação falhou". FALHA aparece na tela, em
+# destaque, com o comando para investigar — e a decisão é dela.
+if [[ "${RUN_DOCTOR}" -eq 1 ]]; then
+    printf '\n'
+    printf '─────────────────────────────────────────\n'
+    printf ' Conferência final (doctor)\n'
+    printf '─────────────────────────────────────────\n'
+    if [[ ! -r "${ROOT_DIR}/scripts/doctor.sh" ]]; then
+        warn "scripts/doctor.sh ausente — conferência final pulada"
+    else
+        doctor_saida="$(bash "${ROOT_DIR}/scripts/doctor.sh" 2>&1 || true)"
+        printf '%s\n' "${doctor_saida}" | grep -E '^\[FAIL\]| Diagnóstico:' || true
+        if printf '%s' "${doctor_saida}" | grep -q '^\[FAIL\]'; then
+            printf '\n'
+            warn "a instalação terminou com FALHA(s) acima — veja tudo com:"
+            warn "  bash scripts/doctor.sh"
+            warn "e tente a cura automática com:"
+            warn "  bash scripts/doctor.sh --fix"
+        else
+            printf '      nenhuma FALHA — as curas desta casa estão armadas\n'
         fi
     fi
 fi

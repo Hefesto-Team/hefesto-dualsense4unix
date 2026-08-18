@@ -20,7 +20,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.core.controller import ControllerState, IController
@@ -102,6 +102,14 @@ class DaemonProtocol(Protocol):
     _failed_subsystems: dict[str, str]
     # BT-MIC-REGISTRY-01: ponte de microfone por Bluetooth (opt-in) ou None.
     _bt_mic_subsystem: Any
+    # GATILHO-DA-COR-01: `core.gatilho_fim_de_sequencia.RegistroDeGatilhos` —
+    # as reafirmações "no fim da sequência" por nome — ou None até o 1º uso.
+    _registro_de_gatilhos: Any
+    # ESCRITOR-CRU-01: `core.escritor_cru.SentinelaDeEscritorCru` — a última
+    # foto de quem segura o hidraw de cada controle (a Steam), ou None até o
+    # 1º uso. Único por daemon: é a MESMA foto que arma o gatilho da cor e que
+    # a aba Status mostra.
+    _sentinela_de_escritor_cru: Any
 
     # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.
@@ -140,11 +148,23 @@ class DaemonProtocol(Protocol):
         """Substitui a config em runtime (usado pelo IPC `daemon.set_config`)."""
         ...
 
+    # ORIGEM-QUE-MENTE-01 (08/08/2026): os quatro setters abaixo declaram
+    # `origin` SEM default, e é keyword-only. Antes o protocolo NÃO mencionava
+    # `origin` — a armadilha morava no contrato, não só na implementação: quem
+    # programasse contra este protocolo não tinha como saber que existia essa
+    # decisão a tomar, e a implementação assumia `"manual"` no silêncio.
+    #
+    # O custo, MEDIDO: um cliente reconciliando estado furou o portão JOGO-01
+    # com o jogo da allowlist aberto, o gamepad virtual voltou com o grab
+    # pulado, e o jogo passou a ver o físico E o virtual. Ver
+    # JOGADOR-3-FANTASMA-01.
     def set_mouse_emulation(
         self,
         enabled: bool,
         speed: int | None = None,
         scroll_speed: int | None = None,
+        *,
+        origin: Literal["manual", "profile"],
     ) -> bool:
         """Liga/desliga emulação de mouse e ajusta velocidades."""
         ...
@@ -166,11 +186,19 @@ class DaemonProtocol(Protocol):
         """
         ...
 
-    def set_gamepad_emulation(self, enabled: bool, flavor: str | None = None) -> bool:
+    def set_gamepad_emulation(
+        self,
+        enabled: bool,
+        flavor: str | None = None,
+        *,
+        origin: Literal["manual", "profile"],
+    ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
         ...
 
-    def set_coop_enabled(self, enabled: bool) -> bool:
+    def set_coop_enabled(
+        self, enabled: bool, *, origin: Literal["manual", "profile"]
+    ) -> bool:
         """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01)."""
         ...
 
@@ -202,7 +230,13 @@ class DaemonProtocol(Protocol):
         """True se o Modo Nativo está ativo (FEAT-NATIVE-MODE-01)."""
         ...
 
-    def set_native_mode(self, enabled: bool, *, reapply: bool = True) -> bool:
+    def set_native_mode(
+        self,
+        enabled: bool,
+        *,
+        reapply: bool = True,
+        origin: Literal["manual", "profile"],
+    ) -> bool:
         """Liga/desliga o Modo Nativo — solta o controle para o jogo nativo."""
         ...
 
@@ -234,6 +268,37 @@ class DaemonProtocol(Protocol):
 
         R-03: com ``origin="manual"`` fura o lock; com origem automática devolve
         `"adiado_lock_manual"` e agenda a pendência que o poll loop drena.
+        """
+        ...
+
+    def apply_profile_speaker(
+        self,
+        volume: int,
+        muted: bool = False,
+        *,
+        uniq: str | None = None,
+        origin: str = "autoswitch",
+        rota: int | None = None,
+    ) -> str:
+        """Aplica a seção `speaker` de um perfil (SOM-02/E4).
+
+        Injetado como `speaker_applier` do ProfileManager nas rotas de ativação
+        (IPC switch, autoswitch, hotkey e restore de boot) e consumido por
+        `apply_speaker` / `reapply_speaker_on_connect`, que já decidiram antes
+        de chegar aqui que há opinião a aplicar — perfil sem a seção não chama
+        este método, porque tomar a posse dos bytes de áudio por um perfil que
+        não pediu nada é a queixa "a config que eu deixo nunca é respeitada".
+
+        Fala DIRETO com o backend, nunca pelo `speaker.set` do IPC: o handler
+        arma a categoria manual `"audio"`, que é a mesma trava que o
+        ProfileManager consulta para não escrever. Um applier que a armasse
+        faria o perfil funcionar uma vez e nunca mais, calado.
+
+        `volume` é sempre explícito (0-255): chamada sem volume toma a posse e
+        manda ZERO — a armadilha 1, medida na SOM-02.
+
+        `rota` é o CANAL de saída do perfil (SOM-ROTA-01). `None` significa não
+        tocar no `common[7]`, que carrega a rota E o caminho do microfone.
         """
         ...
 

@@ -8,7 +8,7 @@ uma env ESTÁTICA colada por jogo e vira o wrapper `hefesto-launch %command%`
 Este módulo concentra:
 
 1. A string constante do wrapper (`WRAPPER_LAUNCH`) — consumida pelo botão
-   "Copiar opções p/ jogos" da GUI (`compose_launch`) e pela migração. Ela
+   "Copiar opções para os jogos" da GUI (`compose_launch`) e pela migração. Ela
    degrada sozinha: se o wrapper não existir no caminho, o `sh -c` cai em
    `exec env "$@"` e o jogo abre do mesmo jeito (pior caso: controle
    duplicado, nunca zero controles nem launch quebrado).
@@ -18,6 +18,13 @@ Este módulo concentra:
    vivo). `--migrate` troca as linhas envenenadas pela chamada do wrapper;
    `--strip` (uninstall) remove o nosso trecho — novo E legado — deixando o
    resto intacto.
+3. A APLICAÇÃO em massa (`--apply`, `apply_wrapper_to_all_games`): põe a
+   chamada do wrapper em TODOS os jogos do bloco `apps`, inclusive nos que
+   nunca tiveram LaunchOptions. É o que o botão "Aplicar aos jogos da Steam"
+   da GUI faz e — desde a JOGO-COMPLETO-01/E4 — o que o `install.sh` faz sem
+   flag: a migração sozinha não põe NADA numa instalação limpa (não há veneno
+   legado a migrar), e sem o wrapper as envs que o projeto materializa nunca
+   são exportadas — todo jogo enxerga dois DualSense.
 
 Decisões herdadas da revisão adversarial (não relaxar):
 
@@ -54,7 +61,7 @@ import shutil
 import subprocess
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -307,18 +314,72 @@ def is_sandboxed_layout(vdf: Path) -> bool:
     return any(marker in text for marker in _SANDBOXED_MARKERS)
 
 
-def read_launch_options_by_appid(text: str) -> dict[str, str]:
-    """Mapeia appid → LaunchOptions (desescapado) de um localconfig.vdf.
+#: O caminho da ÚNICA árvore `apps` que a Steam lê para `LaunchOptions`, de
+#: dentro para fora. Ver `e_a_arvore_canonica` — e o defeito que a criou.
+_CAMINHO_CANONICO = ("apps", "steam", "valve", "software")
 
-    Leitura ESTRUTURAL e read-only para o lembrete do wrapper "1x por jogo"
-    (DEDUP-05, item 4): o `_LAUNCH_OPTIONS_RE` de migrate/strip enxerga
-    linhas soltas sem saber de QUAL jogo são; aqui um parser mínimo de
-    KeyValues (pilha de blocos por linha) liga cada LaunchOptions ao appid
-    do bloco pai. Só entram chaves NUMÉRICAS cujo pai imediato é `apps`
-    (case-insensitive — o caminho canônico é Software/Valve/Steam/apps).
-    Nunca escreve nada; conteúdo fora do padrão é ignorado em silêncio.
+
+def e_a_arvore_canonica(pilha: Sequence[str]) -> bool:
+    """A posição atual do parser é ``…/Software/Valve/Steam/apps/<appid>``?
+
+    ARVORE-ERRADA-01 (16/08/2026). O `localconfig.vdf` dela tem **três** blocos
+    chamados `apps`, e só um deles é o que a Steam consulta::
+
+        UserLocalConfigStore/Software/Valve/Steam/apps   63 jogos  <- este
+        UserLocalConfigStore/apps                        11 jogos
+        UserLocalConfigStore/WebStorage/apps              3 jogos
+
+    O leitor e o escritor deste módulo conferiam só o pai imediato
+    (``stack[-2] == "apps"``), então os três valiam. As consequências, as duas
+    medidas na mesma noite:
+
+    1. **O escritor sujou.** Os 11 blocos de ``UserLocalConfigStore/apps`` são
+       da Steam (guardam `UseSteamControllerConfig` e `SteamControllerRumble`);
+       recebendo um `LaunchOptions` nosso, ganharam uma chave que ninguém lê.
+       Inócuo, mas é escrever em arquivo de outro dono sem saber onde.
+    2. **O leitor MENTIU, e essa é a cara.** Um appid presente nas duas árvores
+       era lido duas vezes, e o dicionário guardava o ÚLTIMO — a árvore errada,
+       que vem depois no arquivo. O PRAGMATA estava assim: sem o wrapper na
+       árvore canônica (o ``VKD3D_CONFIG=no_upload_hvv`` dela o havia comido de
+       novo) e com o wrapper na outra. O `censo_do_wrapper` respondeu
+       **"faltantes: 0"** com o defeito vivo, e o jogo dela sem reconhecer o
+       controle no rádio.
+
+    É a família do `WRAPPER-EM-TODOS-01`: o portão que passa verde porque olha
+    para o lugar errado é pior que portão nenhum, porque encerra a busca.
+
+    A âncora é por SUFIXO, não pelo caminho inteiro, para não depender do nome
+    da raiz (`UserLocalConfigStore` aqui; outras contas de Steam já foram vistas
+    com outro) — o que se exige é que `apps` esteja pendurado em
+    `Software/Valve/Steam`.
     """
-    out: dict[str, str] = {}
+    if len(pilha) < len(_CAMINHO_CANONICO):
+        return False
+    return all(
+        pilha[-1 - i].lower() == esperado
+        for i, esperado in enumerate(_CAMINHO_CANONICO)
+    )
+
+
+def read_apps_by_appid(text: str) -> dict[str, str | None]:
+    """Mapeia appid → LaunchOptions de um localconfig.vdf, **incluindo os apps
+    que NÃO têm a linha** (valor ``None``).
+
+    Leitura ESTRUTURAL e read-only: o `_LAUNCH_OPTIONS_RE` de migrate/strip
+    enxerga linhas soltas sem saber de QUAL jogo são; aqui um parser mínimo de
+    KeyValues (pilha de blocos por linha) liga cada LaunchOptions ao appid do
+    bloco pai. Só entram chaves NUMÉRICAS penduradas na árvore CANÔNICA
+    ``Software/Valve/Steam/apps`` — ver `e_a_arvore_canonica`, e o defeito
+    ARVORE-ERRADA-01 que essa âncora fecha.
+    Nunca escreve nada; conteúdo fora do padrão é ignorado em silêncio.
+
+    **Por que o `None` importa** (SENTINELA-WRAPPER-01, 16/08/2026): a
+    `read_launch_options_by_appid` abaixo devolve só quem TEM a linha, e por
+    isso não sabe distinguir "este jogo não existe na biblioteca" de "a linha
+    deste jogo foi APAGADA". As duas coisas são a mesma ausência para ela, e a
+    segunda é justamente a regressão que o censo do wrapper precisa enxergar.
+    """
+    out: dict[str, str | None] = {}
     stack: list[str] = []
     pending: str | None = None
     for raw in text.splitlines():
@@ -328,6 +389,8 @@ def read_launch_options_by_appid(text: str) -> dict[str, str]:
         if line == "{":
             stack.append(pending if pending is not None else "")
             pending = None
+            if stack[-1].isdigit() and e_a_arvore_canonica(stack[:-1]):
+                out.setdefault(stack[-1], None)
             continue
         if line == "}":
             if stack:
@@ -339,7 +402,7 @@ def read_launch_options_by_appid(text: str) -> dict[str, str]:
             pending = None
             if _vdf_unescape(pair.group("key")).lower() != "launchoptions":
                 continue
-            if len(stack) < 2 or stack[-2].lower() != "apps":
+            if not stack or not e_a_arvore_canonica(stack[:-1]):
                 continue
             appid = stack[-1]
             if appid.isdigit():
@@ -351,8 +414,24 @@ def read_launch_options_by_appid(text: str) -> dict[str, str]:
     return out
 
 
-def apply_wrapper_vdf_text(text: str) -> tuple[str, list[str], list[tuple[str, str]]]:
-    """Aplica o wrapper a TODOS os jogos do bloco ``apps`` de UM vdf (puro).
+def read_launch_options_by_appid(text: str) -> dict[str, str]:
+    """Mapeia appid → LaunchOptions (desescapado) — só os apps que TÊM a linha.
+
+    Consumida pelo lembrete do wrapper "1x por jogo" (DEDUP-05, item 4). É o
+    filtro de `read_apps_by_appid`; a semântica é a de sempre.
+    """
+    return {a: v for a, v in read_apps_by_appid(text).items() if v is not None}
+
+
+def apply_wrapper_vdf_text(
+    text: str, *, excluir: Sequence[str] | None = None
+) -> tuple[str, list[str], list[tuple[str, str]]]:
+    """Aplica o wrapper a todos os jogos da árvore CANÔNICA de UM vdf (puro).
+
+    "Canônica" é literal e é âncora de caminho: só
+    ``…/Software/Valve/Steam/apps/<appid>``. As outras árvores `apps` do mesmo
+    arquivo pertencem à Steam e não são lidas para `LaunchOptions` — escrever
+    nelas é sujar arquivo de outro dono à toa. Ver `e_a_arvore_canonica`.
 
     PATH-06 item 2: a via em-massa consentida. Diferente de ``transform_vdf_text``
     (que só toca linhas já NOSSAS), aqui todo app do vdf entra:
@@ -364,10 +443,18 @@ def apply_wrapper_vdf_text(text: str) -> tuple[str, list[str], list[tuple[str, s
     - app SEM a linha LaunchOptions: insere ``"LaunchOptions" "<wrapper>"`` no
       fim do bloco do app, com a indentação dos vizinhos.
 
+    ``excluir``: appids que a USUÁRIA marcou como "não quero o wrapper neste
+    jogo" (SENTINELA-WRAPPER-01). Saem com o motivo ``opt_out_da_usuaria`` e
+    nada é escrito neles — o produto não briga com a dona da máquina. A lista
+    vem do `jogos_sem_wrapper.txt`; ``None`` significa "não excluir ninguém"
+    (o comportamento histórico), nunca "leia o arquivo real" — quem lê o
+    arquivo é o chamador, para esta função continuar pura.
+
     Retorna ``(texto_novo, appids_aplicados, [(appid, motivo_skip), ...])``.
     O parse de blocos é o MESMO do ``read_launch_options_by_appid`` (pilha por
     linha); conteúdo fora do padrão passa intacto byte a byte.
     """
+    fora = {str(a).strip() for a in (excluir or ())}
     lines = text.splitlines(keepends=True)
     applied: list[str] = []
     skipped: list[tuple[str, str]] = []
@@ -389,16 +476,17 @@ def apply_wrapper_vdf_text(text: str) -> tuple[str, list[str], list[tuple[str, s
             pending = None
             if (
                 frame is None
-                and len(stack) >= 2
                 and stack[-1].isdigit()
-                and stack[-2].lower() == "apps"
+                and e_a_arvore_canonica(stack[:-1])
             ):
                 frame = (stack[-1], len(stack), idx, None)
             continue
         if line == "}":
             if frame is not None and len(stack) == frame[1]:
                 appid, _, open_idx, lo_idx = frame
-                if lo_idx is None:
+                if lo_idx is None and appid in fora:
+                    skipped.append((appid, "opt_out_da_usuaria"))
+                elif lo_idx is None:
                     # App sem LaunchOptions: a linha nova entra no fim do
                     # bloco, indentada como o `{` de abertura + 1 tab.
                     body = lines[open_idx].rstrip("\r\n")
@@ -427,6 +515,11 @@ def apply_wrapper_vdf_text(text: str) -> tuple[str, list[str], list[tuple[str, s
             appid = frame[0]
             frame = (appid, frame[1], frame[2], idx)
             value = _vdf_unescape(pair.group("value"))
+            if appid in fora:
+                # A vontade dela vem ANTES de qualquer diagnóstico nosso: nem
+                # "já tem" nem "estendido" — ela disse que não quer, e ponto.
+                skipped.append((appid, "opt_out_da_usuaria"))
+                continue
             if has_extended_ignore(value):
                 skipped.append((appid, "ignore_estendido"))
                 continue
@@ -468,6 +561,7 @@ def apply_wrapper_to_all_games(
     vdfs: list[Path] | None = None,
     *,
     dry_run: bool = False,
+    excluir: Sequence[str] | None = None,
 ) -> dict[str, list[dict[str, str]]]:
     """Aplica o wrapper a todos os jogos dos localconfig.vdf elegíveis.
 
@@ -476,6 +570,11 @@ def apply_wrapper_to_all_games(
     migrate/strip — a Steam viva regrava o vdf ao sair e a edição seria
     perdida; com um JOGO aberto nem se cogita). vdf sandbox (Flatpak/Snap) é
     pulado inteiro: o wrapper do host é invisível lá dentro (DEDUP-04).
+
+    ``excluir``: os appids do `jogos_sem_wrapper.txt` (SENTINELA-WRAPPER-01).
+    O `main()` os lê e passa por default — inclusive no passo sem flag do
+    install —, para que "não quero o wrapper neste jogo" sobreviva ao próximo
+    `./install.sh` em vez de ser desfeito por ele.
 
     Retorna ``{"applied": [...], "skipped": [...], "errors": [...]}`` — cada
     item é ``{"vdf": ..., "appid": ..., "reason": ...}`` (``reason`` vazio nos
@@ -513,7 +612,7 @@ def apply_wrapper_to_all_games(
                 {"vdf": str(vdf), "appid": "", "reason": str(exc)}
             )
             continue
-        new_text, applied, skipped = apply_wrapper_vdf_text(original)
+        new_text, applied, skipped = apply_wrapper_vdf_text(original, excluir=excluir)
         for appid, reason in skipped:
             result["skipped"].append(
                 {"vdf": str(vdf), "appid": appid, "reason": reason}
@@ -585,26 +684,219 @@ def steam_running() -> bool:
     return False
 
 
+#: Agulha que identifica a cmdline de launch da Steam. `reaper SteamLaunch
+#: AppId=<id>` embrulha todo jogo lançado pela Steam (Proton E nativo).
+#:
+#: **O `\d` final não é enfeite — é o que separa o jogo das ISCAS.** Auditoria de
+#: 12/08/2026: a substring solta `"SteamLaunch AppId="` casa a cmdline de quem
+#: está PROCURANDO por ela, e há dois desses vivos nesta máquina, sem o truque
+#: do `[ ]`:
+#:
+#:   - `~/.local/bin/aurora-game-watch-daemon.sh:16` — `pgrep -f 'reaper
+#:     SteamLaunch AppId='`, a cada 15 s, com o serviço active/running;
+#:   - `scripts/disable_steam_input.sh:167` — idem, a cada 30 min.
+#:
+#: (`pgrep` exclui o próprio pid, nunca o do vizinho.) Como a varredura devolve
+#: UMA cmdline — a primeira em ordem de pid —, uma isca com pid menor que o do
+#: jogo fazia `steam_game_running()` dizer True e `steam_game_running_appid()`
+#: dizer None, ao mesmo tempo. Consequências medidas: o botão "Fechar o jogo e
+#: abrir de novo" (`app/actions/base.py`) FECHAVA E NÃO REABRIA, que é
+#: literalmente o defeito que a RELANCAR-AGORA-01 existe para curar; e o tique
+#: de 2 s do daemon chamava `set_steam_jogo_appid(None)`, sumindo com a aba "No
+#: jogo" no meio da partida.
+#:
+#: Exigir um dígito depois do `=` derruba as duas iscas (elas terminam a string
+#: no `=`) e torna `running()`/`appid()` consistentes por construção: se casou,
+#: há appid para extrair.
+#:
+#: Risco residual, idêntico ao do `pgrep -f` que isto substituiu e não removível
+#: por regex: qualquer cmdline que apenas MENCIONE `SteamLaunch AppId=<dígito>`
+#: casa. É o mesmo contrato de antes, não uma regressão.
+_STEAM_LAUNCH_RE = re.compile(r"SteamLaunch AppId=\d")
+
+
+def _cmdline_of(pid: str | int) -> str:
+    """Cmdline de um pid, com os NUL virando espaço. `""` se não der para ler.
+
+    Nunca levanta: pid que morreu entre o `listdir` e o `open` é o caso comum,
+    não a exceção, e um processo de outro usuário devolve EACCES.
+    """
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as fh:
+            return fh.read().decode("utf-8", "replace").replace("\0", " ")
+    except OSError:
+        return ""
+
+
+def _steam_launch_cmdline() -> str | None:
+    """A cmdline do launch da Steam em curso, ou None. Sem forkar nada.
+
+    PERF-PROC-SCAN-01 (12/08/2026). Isto substitui um `pgrep -f` que o daemon
+    forkava **a cada 2 segundos, para sempre**. O custo medido do jeito antigo,
+    com `strace -c -f` no daemon vivo:
+
+      - 1.287 `openat`/s — o `pgrep` lê CINCO arquivos por processo
+        (`status`, `stat`, `cmdline`, `cgroup`, `ctty`) mais um `/proc/uptime`,
+        vezes ~425 pids, duas vezes por segundo;
+      - 12 `execve` em 5 s, dos quais 10 são LIXO: o `PATH` erra cinco vezes
+        (`~/.cargo/bin`, `~/.local/bin`, `/usr/local/sbin`, `/usr/local/bin`,
+        `/usr/sbin`) antes de achar o `pgrep` em `/usr/bin`;
+      - 912 contextos voluntários/s — mesma ordem de grandeza do applet
+        eyedropper que o "Guia — Diagnóstico de lentidão" condenou (1.148/s).
+
+    O mecanismo pelo qual isso morde um jogo é ler `/proc/<pid>/cmdline` de
+    TODO processo: cada leitura toma o `mmap_read_lock` do alvo, inclusive o do
+    jogo. Honestidade sobre a evidência: o teste de causalidade (SIGSTOP no
+    daemon, 12 s, SIGCONT) **não** condenou o daemon — mas rodou sem jogo
+    aberto, então ele não absolve também. O que segue é redução de custo com
+    semântica idêntica, não uma cura de bug provado.
+
+    Duas camadas, nesta ordem:
+
+    1. **Marker do wrapper** — o `hefesto-launch` já grava `appid` e `pid` em
+       `launch_env/last_run` justamente para isto. Confirmamos lendo a cmdline
+       DESSE pid: se ela casa a agulha E o appid, acabou em 3 `open` (dois do
+       marker, um da cmdline). A confirmação é o que elimina o "pid reuse" que o
+       NUMA-01 documenta — aqui não precisamos do `last_exit`, porque não
+       confiamos no pid sozinho.
+    2. **Varredura em Python** — quando o marker falta (jogo lançado fora do
+       wrapper, atalho não-Steam, marker de um launch já morto), varremos
+       `/proc` lendo UM arquivo por pid em vez de cinco, e sem `fork`/`execve`.
+
+    Números honestos, medidos nesta máquina (auditoria de 12/08/2026 corrigiu a
+    versão anterior desta frase, que anunciava o melhor caso como se fosse o
+    comum):
+
+      - **Jogo aberto pelo wrapper**: ~3 `openat` por tique (era ~1.287).
+      - **Estado permanente de um daemon 24/7, ou seja jogo FECHADO**: o marker
+        é global e sobrevive ao jogo, então o pid dele está morto, o caminho
+        rápido falha e caímos na varredura — **400 `openat`, 4,2 ms por tique**.
+        Contra os ~2.100 do `pgrep`, ainda é ~5x menos, e sem `fork`/`execve`.
+
+    O retorno é a cmdline crua para o chamador extrair o que quiser — é o que
+    permite `steam_game_running` e `steam_game_running_appid` compartilharem uma
+    varredura só, e é por isso que ambas enxergam exatamente o mesmo processo.
+    """
+    # 1) Caminho rápido: o marker que o próprio wrapper grava no launch.
+    #
+    #    Import TARDIO porque este módulo é stdlib puro de propósito (ver o
+    #    cabeçalho do arquivo): o `uninstall.sh` o executa avulso DEPOIS de
+    #    apagar o `.venv`, e um import de `hefesto_dualsense4unix.daemon` no
+    #    topo quebraria esse uso. [Correção de 12/08/2026: a versão anterior
+    #    deste comentário alegava import circular. É falso — `daemon/launch_env`
+    #    não importa nada deste módulo. A razão é o modo avulso.]
+    #
+    #    `ImportError` é o caminho ESPERADO (rodando sem venv). `OSError` cobre
+    #    marker ilegível. Qualquer outra exceção sobe: engolir tudo aqui faria
+    #    um rename futuro em `read_last_run_*` degradar em silêncio para a
+    #    varredura completa, para sempre, sem uma linha de log.
+    try:
+        from hefesto_dualsense4unix.daemon.launch_env import (
+            read_last_run_marker,
+            read_last_run_pid,
+        )
+
+        marker = read_last_run_marker()
+        pid = read_last_run_pid()
+    except (ImportError, OSError):
+        marker = None
+        pid = None
+
+    if marker is not None and pid is not None:
+        appid = marker[0]
+        cmd = _cmdline_of(pid)
+        # `AppId={appid} ` com a fronteira à direita: sem ela, um marker de
+        # appid 159 confirmaria contra um jogo 1599660 (casamento por prefixo).
+        # Inofensivo na prática, porque o appid devolvido é reextraído da
+        # cmdline logo abaixo — mas confirmar coisa errada não se deixa passar.
+        if _STEAM_LAUNCH_RE.search(cmd) and re.search(rf"AppId={appid}\b", cmd):
+            return cmd
+
+    # 2) Varredura direta, sem forkar. Um `open` por pid.
+    try:
+        entries = os.listdir("/proc")
+    except OSError:
+        return None
+    for entry in entries:
+        if not entry.isdigit():
+            continue
+        cmd = _cmdline_of(entry)
+        if _STEAM_LAUNCH_RE.search(cmd):
+            return cmd
+    return None
+
+
 def steam_game_running() -> bool:
     """True quando há um JOGO da Steam em execução (não só a Steam).
 
     DEDUP-05, exigência 2 da revisão: `steam -shutdown` com jogo aberto MATA o
     jogo (progresso não salvo perdido) — o fluxo de migrate/strip RECUSA em vez
     de derrubar. Detecção pelo processo lançador `reaper SteamLaunch AppId=<id>`
-    que embrulha todo jogo lançado pela Steam (Proton E nativo). O `pgrep -f`
-    aqui é seguro: a string `SteamLaunch AppId=` só existe em cmdline de launch
-    real — o falso-positivo histórico (earlyoom) era com NOMES de processo.
+    que embrulha todo jogo lançado pela Steam (Proton E nativo).
+
+    A detecção em si mora em `_steam_launch_cmdline` desde PERF-PROC-SCAN-01
+    (12/08/2026) — mesma semântica de antes, sem forkar `pgrep`.
     """
-    try:
-        proc = subprocess.run(
-            ["pgrep", "-f", "SteamLaunch AppId="],
-            capture_output=True,
-            timeout=5,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return False
-    return proc.returncode == 0
+    return _steam_launch_cmdline() is not None
+
+
+
+def steam_game_running_appid() -> int | None:
+    """O appid do jogo da Steam em execução, ou None.
+
+    RELANCAR-AGORA-01 (08/08/2026). A `steam_game_running` acima já casava
+    ``SteamLaunch AppId=<id>`` e **jogava o id fora**, devolvendo só um booleano.
+    Isso bastava para RECUSAR ("há jogo aberto, não mexo"), e não basta para
+    OFERECER: quem promete reabrir o jogo precisa saber qual é.
+
+    Ela apontou o defeito olhando o botão: *"pior que essa terceira opção nem faz
+    isso né? Só fecha mesmo"*. Estava certa — o botão dizia "Fechar o jogo e
+    abrir de novo" e só fechava.
+
+    Devolve o PRIMEIRO appid encontrado. Com dois jogos abertos a escolha é
+    arbitrária, e é aceitável: o diálogo que consome isto nasce de um gesto dela
+    sobre o jogo que está na frente, e a alternativa — recusar quando há dois —
+    tiraria a cura no caso comum por causa do raro.
+
+    PERF-PROC-SCAN-01 (12/08/2026): esta é a função que o poll loop do daemon
+    chama a cada 2 s (`lifecycle._sync_game_signal`), e por isso era ela que
+    pagava o `pgrep -af` — 1.287 `openat`/s varrendo `/proc` inteiro. A
+    varredura foi para `_steam_launch_cmdline`, que resolve pelo marker do
+    wrapper quando ele existe. Semântica de retorno intacta.
+    """
+    cmd = _steam_launch_cmdline()
+    if cmd is None:
+        return None
+    achado = re.search(r"SteamLaunch AppId=(\d+)", cmd)
+    return int(achado.group(1)) if achado else None
+
+
+def start_steam_game(appid: int) -> bool:
+    """Pede à Steam que abra o jogo. True = o pedido saiu.
+
+    RELANCAR-AGORA-01. Usa a URL `steam://rungameid/<appid>`, que é o caminho
+    que a própria Steam usa nos atalhos do menu — e é o que faz o jogo nascer
+    COM o wrapper do Hefesto, lendo o `launch_env` novo. Chamar o executável
+    direto puralaria o wrapper e a mudança dela não valeria, que é o oposto do
+    ponto.
+
+    **Não espera o jogo subir**: a Steam leva de segundos a minutos (shader
+    cache, atualização), e bloquear a janela por isso seria pior que o defeito.
+    O True diz "o pedido saiu", nunca "o jogo abriu" — e o texto da tela precisa
+    dizer a mesma coisa, sob pena de mentir.
+    """
+    url = f"steam://rungameid/{int(appid)}"
+    for cmd in (["steam", url], ["xdg-open", url]):
+        if shutil.which(cmd[0]) is None:
+            continue
+        try:
+            subprocess.Popen(
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            return True
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return False
 
 
 def stop_steam() -> bool:
@@ -710,9 +1002,15 @@ def with_steam_closed(
 # --- allowlist do Steam Input per-app (STEAM-INPUT-ALLOWLIST-01) ------------
 # O arquivo existia e era LIDO por três lados (disable_steam_input.sh,
 # integrations/storm_doctor, daemon/launch_env) — e por NINGUÉM escrito. Editar
-# `~/.config/.../steam_input_apps.txt` na mão era a única via de "este jogo é
-# entregue pela Steam, sai da frente", o que na prática significa que a
-# usuária final nunca a tinha. O botão "Este jogo não funciona" escreve aqui.
+# `~/.config/.../steam_input_apps.txt` na mão era a única via de "a entrada
+# deste jogo vem da Steam", o que na prática significa que a usuária final
+# nunca a tinha. O botão "Este jogo não funciona" escreve aqui.
+#
+# NOTA DATADA — 07/08/2026: este comentário dizia "este jogo é entregue pela
+# Steam, sai da frente". A segunda metade caiu com a medição dela de 06/08
+# (CONTROLE-SONY-MEDIDO-01, seção A INVERSÃO, grau MEDIDO): o que a lista
+# entrega à Steam é a ENTRADA; a saída (cor, gatilhos, vibração) continua do
+# Hefesto durante a exceção inteira.
 
 #: Caminho relativo ao diretório de config XDG (mesma convenção do
 #: `disable_steam_input.sh`, que resolve `${XDG_CONFIG_HOME:-$HOME/.config}`).
@@ -762,11 +1060,130 @@ def parse_steam_input_allowlist(text: str) -> list[str]:
     return out
 
 
+# --- appid -> nome do jogo (D-33, 05/08/2026) -------------------------------
+# A tradução existia, mas SÓ dentro da CLI (`cli/cmd_steam.py`), que importa
+# typer e rich no topo — inimportável de dentro do doctor ou da janela. Por
+# isso as três mensagens do Steam Input falavam em "1 perfil(is)" e em "Ligado"
+# sem dizer DE QUAL JOGO. A leitura mudou de casa para cá (o módulo que já é o
+# dono da allowlist), e a CLI passou a importá-la daqui.
+#
+# Sem rede e sem cache: a fonte é o `appmanifest_<appid>.acf` que a própria
+# Steam mantém em disco. Jogo desinstalado não tem manifest — nesse caso o
+# appid CRU é a resposta honesta, e inventar nome não é.
+
+#: Linha `"chave"<tab>"valor"` de .acf/.vdf. O valor pode conter espaço.
+_PAR_ACF = re.compile(r'^\s*"(?P<chave>[^"]+)"\s+"(?P<valor>.*)"\s*$')
+
+
+def _desescapar_acf(valor: str) -> str:
+    """Desfaz o escape de VDF (`\\\\` e `\\"`) — mesmo critério do proton_pin."""
+    return valor.replace('\\\\', '\\').replace('\\"', '"')
+
+
+def pastas_steamapps(home: Path | None = None) -> list[Path]:
+    """A `steamapps` padrão mais as bibliotecas extras do `libraryfolders.vdf`.
+
+    Best-effort e read-only: biblioteca ilegível ou ausente é pulada em
+    silêncio — traduzir appid em nome é conveniência, não pode derrubar nada.
+
+    **Sem pasta repetida, e a comparação é pelo diretório REAL** (16/08/2026).
+    Nesta máquina ``~/.steam/steam`` é um link para
+    ``~/.steam/debian-installation``, e o `libraryfolders.vdf` lista o segundo:
+    dois caminhos com texto diferente, um diretório só. O ``not in pastas``
+    comparava o texto, então a lista saía com a mesma `steamapps` duas vezes e
+    todo `.acf` dela era lido em dobro. Os dois consumidores de então
+    (`nome_do_appid`, que para no primeiro achado, e `jogos_da_biblioteca_steam`,
+    que faz `setdefault` por appid) não erravam a conta por sorte de forma — mas
+    um censo escrito depois contou 65 jogos onde havia 33, e essa é exatamente a
+    armadilha do `WRAPPER-EM-TODOS-01`: um número que parece cobertura.
+    O caminho devolvido continua sendo o PRIMEIRO visto, não o resolvido, porque
+    é ele que aparece nas mensagens de erro e no relatório.
+    """
+    # Import TARDIO e com fallback avulso, como o `proton_pin` faz com este
+    # módulo: o cabeçalho promete "100% stdlib, roda como script solto", e um
+    # `from hefesto_dualsense4unix…` cru quebrava essa promessa com
+    # ModuleNotFoundError. Latente até 16/08/2026, quando o `--relatorio` da
+    # sentinela — rodado pelo install e pelo doctor com o python3 do SISTEMA —
+    # passou a traduzir appid em nome de jogo por este caminho.
+    try:
+        from .proton_pin import default_steam_root
+    except ImportError:  # pragma: no cover - executado como script avulso
+        from proton_pin import default_steam_root  # type: ignore[no-redef]
+
+    def real(caminho: Path) -> Path:
+        """O diretório de verdade. Link ilegível vale por si mesmo."""
+        try:
+            return caminho.resolve()
+        except OSError:  # pragma: no cover - link quebrado ou permissão
+            return caminho
+
+    raiz = default_steam_root(home) / "steamapps"
+    pastas = [raiz]
+    vistas = {real(raiz)}
+    with contextlib.suppress(OSError):
+        texto = (raiz / "libraryfolders.vdf").read_text(encoding="utf-8", errors="replace")
+        for linha in texto.splitlines():
+            par = _PAR_ACF.match(linha)
+            if par is None or par.group("chave").lower() != "path":
+                continue
+            candidata = Path(_desescapar_acf(par.group("valor"))) / "steamapps"
+            if candidata.is_dir() and real(candidata) not in vistas:
+                pastas.append(candidata)
+                vistas.add(real(candidata))
+    return pastas
+
+
+def nome_do_appid(appid: str, home: Path | None = None) -> str | None:
+    """Nome do jogo pelo `appmanifest_<appid>.acf`. `None` = não instalado."""
+    for steamapps in pastas_steamapps(home):
+        manifesto = steamapps / f"appmanifest_{appid}.acf"
+        try:
+            texto = manifesto.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for linha in texto.splitlines():
+            par = _PAR_ACF.match(linha)
+            if par is not None and par.group("chave").lower() == "name":
+                nome = _desescapar_acf(par.group("valor")).strip()
+                if nome:
+                    return nome
+    return None
+
+
+def rotulo_do_jogo(appid: object, home: Path | None = None) -> str:
+    """Como o jogo aparece numa frase de tela: nome quando dá, appid sempre.
+
+    ``"Mullet Mad Jack (appid 2111190)"`` quando o manifest existe; o cru
+    ``"appid 2111190"`` quando não. O appid NUNCA some da frase: é o número
+    que ela precisa para conferir na Steam e o único identificador que os três
+    cadastros do projeto (vdf, allowlist, env materializado) compartilham.
+    """
+    bruto = str(appid).strip()
+    nome = nome_do_appid(bruto, home) if bruto else None
+    return f"{nome} (appid {bruto})" if nome else f"appid {bruto}"
+
+
+def juntar_rotulos(rotulos: Sequence[str]) -> str:
+    """`["A", "B", "C"]` -> ``"A, B e C"``. Vazio -> ``""``. Pura (sem disco)."""
+    lista = list(rotulos)
+    if not lista:
+        return ""
+    if len(lista) == 1:
+        return lista[0]
+    return f"{', '.join(lista[:-1])} e {lista[-1]}"
+
+
+def lista_de_jogos(appids: Sequence[object], home: Path | None = None) -> str:
+    """`[a, b, c]` -> ``"Jogo A (appid a), Jogo B (appid b) e ..."``."""
+    return juntar_rotulos([rotulo_do_jogo(a, home) for a in appids])
+
+
 def add_appid_to_steam_input_allowlist(
     appid: int | str,
     *,
     path: Path | None = None,
     nota: str = "",
+    cabecalho: str | None = None,
 ) -> str:
     """Acrescenta um appid à allowlist. Retorna o status para o toast.
 
@@ -782,7 +1199,10 @@ def add_appid_to_steam_input_allowlist(
       então um appid comentado ("desliguei este") é RE-adicionado como linha
       viva em vez de ser considerado presente;
     - **cabeçalho**: preservado byte a byte num arquivo existente (só append);
-      escrito do zero apenas quando o arquivo não existe.
+      escrito do zero apenas quando o arquivo não existe. O parâmetro
+      `cabecalho` troca o texto desse cabeçalho — é o que deixa o
+      `jogos_sem_wrapper.txt` (SENTINELA-WRAPPER-01) reusar esta escrita, que
+      já tem as três armadilhas resolvidas, em vez de clonar o corpo dela.
     """
     alvo = str(appid).strip()
     if not alvo.isdigit():
@@ -801,7 +1221,7 @@ def add_appid_to_steam_input_allowlist(
         corpo = (
             (atual if atual.endswith("\n") else atual + "\n")
             if atual
-            else _ALLOWLIST_HEADER
+            else (cabecalho if cabecalho is not None else _ALLOWLIST_HEADER)
         )
         if nota:
             corpo += f"# {nota}\n"
@@ -891,6 +1311,96 @@ def remove_appid_from_steam_input_allowlist(
         return "erro"
 
 
+# --- "não quero o wrapper NESTE jogo" (SENTINELA-WRAPPER-01, 16/08/2026) ----
+# O censo do wrapper (integrations/sentinela_do_wrapper) sabe dizer quais jogos
+# perderam a chamada do `hefesto-launch`. Sabendo disso, ele PRECISA saber
+# também quando a ausência é vontade dela — senão o produto vira um assistente
+# que desfaz a escolha da dona da máquina a cada `./install.sh`.
+#
+# A regra, e ela é dura de propósito: **intenção nunca é inferida**. Uma linha
+# que sumiu é sempre tratada como estrago (a Steam guarda UMA linha por jogo e
+# a sobrescreve sem avisar — foi assim que o Pragmata perdeu o wrapper em
+# 15/08). O ÚNICO jeito de dizer "não quero" é este arquivo, que a GUI escreve
+# com um clique. Adivinhar seria escolher entre dois erros: ou desfazer a
+# escolha dela, ou deixar um jogo quebrado calado.
+#
+# Formato IDÊNTICO ao da allowlist do Steam Input (um appid por linha, `#`
+# comenta) porque é o formato que ela já conhece deste projeto — e o parser é
+# literalmente o mesmo (`parse_steam_input_allowlist`).
+
+#: Caminho relativo ao diretório de config XDG (mesma convenção da allowlist).
+SEM_WRAPPER_RELPATH = "hefesto-dualsense4unix/jogos_sem_wrapper.txt"
+
+_SEM_WRAPPER_HEADER = """\
+# hefesto-dualsense4unix — jogos que NÃO devem receber o wrapper de launch
+# (SENTINELA-WRAPPER-01)
+#
+# AppIDs listados aqui ficam de fora do "Aplicar aos jogos da Steam", do passo
+# sem flag do install e do reparo automático — e o aviso de "este jogo perdeu
+# as opções de inicialização" não aparece para eles.
+#
+# Um jogo sem o wrapper NÃO recebe as envs do Hefesto: no Bluetooth ele tende
+# a não enxergar controle nenhum, com o perfil e a luz seguindo acesos.
+# Uma linha por AppID; '#' comenta.
+"""
+
+
+def sem_wrapper_path(config_home: Path | None = None) -> Path:
+    """Caminho do `jogos_sem_wrapper.txt` (XDG), sem tocar no disco."""
+    if config_home is not None:
+        base = config_home
+    else:
+        env = os.environ.get("XDG_CONFIG_HOME")
+        base = Path(env) if env else Path.home() / ".config"
+    return base / SEM_WRAPPER_RELPATH
+
+
+def ler_jogos_sem_wrapper(path: Path | None = None) -> list[str]:
+    """AppIDs que ela marcou como "não quero o wrapper aqui". Nunca levanta.
+
+    Arquivo ausente/ilegível = lista vazia: o pior caso de uma leitura falha é
+    aplicar o wrapper num jogo que ela não queria, e isso é reversível com um
+    clique; o oposto (falhar aberto e deixar 60 jogos sem wrapper) não é.
+    """
+    destino = path if path is not None else sem_wrapper_path()
+    try:
+        return parse_steam_input_allowlist(destino.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def marcar_jogo_sem_wrapper(
+    appid: int | str, *, path: Path | None = None, nota: str = ""
+) -> str:
+    """"Não quero o wrapper neste jogo" — o botão de recusa da GUI.
+
+    Status: ``"adicionado"`` | ``"ja_estava"`` | ``"appid_invalido"`` |
+    ``"erro"``. Mesmas três armadilhas (e mesmas respostas) do
+    `add_appid_to_steam_input_allowlist`: duplicata não reescreve nada, appid
+    apenas COMENTADO é re-adicionado como linha viva, e o cabeçalho de um
+    arquivo existente é preservado byte a byte.
+    """
+    return add_appid_to_steam_input_allowlist(
+        appid,
+        path=path if path is not None else sem_wrapper_path(),
+        nota=nota,
+        cabecalho=_SEM_WRAPPER_HEADER,
+    )
+
+
+def desmarcar_jogo_sem_wrapper(appid: int | str, *, path: Path | None = None) -> str:
+    """"Pode pôr o wrapper de volta" — o avesso do `marcar_jogo_sem_wrapper`.
+
+    Status: ``"removido"`` | ``"nao_estava"`` | ``"appid_invalido"`` |
+    ``"erro"``. Reversível é requisito, não conveniência: um jogo marcado por
+    engano ficaria sem controle no Bluetooth para sempre, e o conserto não
+    pode exigir abrir um arquivo de configuração num editor de texto.
+    """
+    return remove_appid_from_steam_input_allowlist(
+        appid, path=path if path is not None else sem_wrapper_path()
+    )
+
+
 def process_vdf(vdf: Path, mode: str, *, dry_run: bool = False) -> tuple[int, str]:
     """Transforma UM vdf com backup ao lado. Retorna (linhas alteradas, diff).
 
@@ -962,12 +1472,95 @@ def _warn_extended(vdf: Path, text: str) -> None:
         )
 
 
+#: Motivos de RECUSA do `apply_wrapper_to_all_games` (nada foi tocado) e a
+#: frase honesta de cada um. Espelham palavra por palavra as recusas do
+#: migrate/strip no `main` — é o MESMO fato, dito do mesmo jeito.
+_APPLY_RECUSAS = {
+    "jogo_da_steam_aberto": (
+        "há um JOGO da Steam em execução — fechar a Steam agora MATARIA o jogo "
+        "(progresso não salvo perdido). Feche o jogo e rode de novo."
+    ),
+    "steam_aberta": (
+        "a Steam está aberta — feche-a e rode de novo (ou use --stop-steam). "
+        "Não vou editar o vdf agora porque a Steam regrava o arquivo ao sair e "
+        "a edição seria perdida (ou pior, corrompida)."
+    ),
+}
+
+
+def _report_apply(
+    resultado: dict[str, list[dict[str, str]]], *, dry_run: bool
+) -> int:
+    """Imprime o relatório do `--apply` (estilo do `_report_status`) e dá o rc.
+
+    Os códigos de saída são os MESMOS do migrate/strip, porque o `install.sh`
+    trata os três do mesmo jeito:
+
+    - **3** — recusa de porta (Steam ou jogo aberto): NADA foi tocado;
+    - **1** — houve erro POR-VDF (vdf ilegível/não-UTF-8); os demais seguiram;
+    - **0** — sucesso, inclusive quando não havia nada a fazer. Rodar duas
+      vezes é sucesso, não falha: o passo do install roda sem flag e a
+      idempotência é requisito dela.
+    """
+    for erro in resultado["errors"]:
+        motivo = _APPLY_RECUSAS.get(erro["reason"])
+        if motivo is not None:
+            print(f"[launch-options] ERRO: {motivo}")
+            return 3
+
+    aplicados_por_vdf: dict[str, list[str]] = {}
+    for item in resultado["applied"]:
+        aplicados_por_vdf.setdefault(item["vdf"], []).append(item["appid"])
+    pulados_por_vdf: dict[str, list[tuple[str, str]]] = {}
+    for item in resultado["skipped"]:
+        pulados_por_vdf.setdefault(item["vdf"], []).append(
+            (item["appid"], item["reason"])
+        )
+
+    for vdf in dict.fromkeys([*aplicados_por_vdf, *pulados_por_vdf]):
+        aplicados = aplicados_por_vdf.get(vdf, [])
+        pulados = pulados_por_vdf.get(vdf, [])
+        print(f"[launch-options] {vdf}")
+        verbo = "receberiam" if dry_run else "receberam"
+        detalhe = f" ({', '.join(aplicados)})" if aplicados else ""
+        print(f"    jogos que {verbo} o wrapper: {len(aplicados)}{detalhe}")
+        if pulados:
+            # `appid` vazio = o vdf INTEIRO foi pulado (sandbox Flatpak/Snap).
+            dito = ", ".join(
+                f"{appid or 'vdf inteiro'}: {motivo}" for appid, motivo in pulados
+            )
+            print(f"    pulados: {len(pulados)} ({dito})")
+
+    total = len(resultado["applied"])
+    if not total:
+        print(
+            "[launch-options] nada a fazer: nenhum jogo sem a chamada do wrapper"
+        )
+    elif dry_run:
+        print(
+            f"[launch-options] --dry-run: {total} jogos receberiam o wrapper "
+            "(nada foi escrito)"
+        )
+    else:
+        print(
+            f"[launch-options] wrapper aplicado a {total} jogos "
+            "(backup .bak.hefesto-launch-<ts> ao lado de cada vdf)"
+        )
+
+    rc = 0
+    for erro in resultado["errors"]:
+        print(f"[launch-options] ERRO em {erro['vdf']}: {erro['reason']}")
+        rc = 1
+    return rc
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="steam_launch_options",
         description=(
-            "Migra/remove as Launch Options do Hefesto nos localconfig.vdf "
-            "(DEDUP-05/UX-04). Sem argumentos, --status."
+            "Aplica/migra/remove as Launch Options do Hefesto nos "
+            "localconfig.vdf (DEDUP-05/UX-04, JOGO-COMPLETO-01/E4). Sem "
+            "argumentos, --status."
         ),
     )
     group = parser.add_mutually_exclusive_group()
@@ -978,6 +1571,15 @@ def main(argv: list[str] | None = None) -> int:
         "--migrate",
         action="store_true",
         help="troca o veneno estático pela chamada do wrapper (exige Steam fechada)",
+    )
+    group.add_argument(
+        "--apply",
+        action="store_true",
+        help=(
+            "põe a chamada do wrapper em TODOS os jogos da Steam nativa, "
+            "inclusive nos que nunca tiveram Launch Options (idempotente; "
+            "exige Steam fechada)"
+        ),
     )
     group.add_argument(
         "--strip",
@@ -1013,6 +1615,8 @@ def main(argv: list[str] | None = None) -> int:
         mode = "migrate"
     elif args.strip:
         mode = "strip"
+    elif args.apply:
+        mode = "apply"
     else:
         return _report_status(vdfs)
 
@@ -1045,6 +1649,36 @@ def main(argv: list[str] | None = None) -> int:
                 "sair e a edição seria perdida (ou pior, corrompida)."
             )
             return 3
+
+    if mode == "apply":
+        # A via em-massa tem função PRÓPRIA (parse por bloco de app, para
+        # alcançar também o jogo que nunca teve LaunchOptions) — o loop de
+        # migrate/strip abaixo é por LINHA e não saberia onde inserir. O gate
+        # de Steam/jogo aberto de `apply_wrapper_to_all_games` é a segunda
+        # muralha: o `--stop-steam` acima pode ter dito que fechou sem ter
+        # fechado, e aí nada é tocado.
+        # A recusa dela é lida AQUI (e não lá dentro) para a função continuar
+        # pura e testável: o passo sem flag do install passa por este `main`,
+        # então "não quero o wrapper neste jogo" sobrevive ao reinstall.
+        recusados = ler_jogos_sem_wrapper()
+        if recusados:
+            print(
+                "[launch-options] fora do wrapper por escolha dela "
+                f"(jogos_sem_wrapper.txt): {', '.join(recusados)}"
+            )
+        try:
+            return _report_apply(
+                apply_wrapper_to_all_games(
+                    vdfs=vdfs, dry_run=args.dry_run, excluir=recusados
+                ),
+                dry_run=args.dry_run,
+            )
+        finally:
+            # Espelho do rodapé do migrate/strip: quem fechou a Steam a reabre
+            # — e reabre mesmo se o relatório levantar, para nunca deixá-la
+            # sem Steam por causa de um erro nosso.
+            if args.stop_steam and was_running and not args.dry_run:
+                reopen_steam()
 
     rc = 0
     total = 0

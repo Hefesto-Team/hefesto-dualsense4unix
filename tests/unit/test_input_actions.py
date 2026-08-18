@@ -85,6 +85,11 @@ def _build_mixin() -> Any:
     for name in (
         "_resolve_effective_bindings",
         "_refresh_key_bindings_from_draft",
+        # TECLADO-QUE-NAO-DIGITA-01: o refresh passou a repintar a
+        # legenda (a frase que nomeia os botões sem tecla). A composição
+        # deste arquivo liga método por método — sem esta linha o refresh
+        # morre de AttributeError e o teste acusa a cura, não o defeito.
+        "_atualizar_legenda",
         "on_key_binding_add",
         "on_key_binding_remove",
         "on_key_binding_restore_defaults",

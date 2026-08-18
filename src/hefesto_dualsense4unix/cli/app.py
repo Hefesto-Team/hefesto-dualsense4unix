@@ -87,11 +87,16 @@ def doctor(
         "--fix-safe",
         help="Anti-storm SEGURO (sem sudo): Steam Input OFF + WirePlumber + cura de raiz.",
     ),
+    perfis: bool = typer.Option(
+        False,
+        "--perfis",
+        help="SÓ a coerência dos perfis entre si (rápido, sem daemon). Sai 1 se houver erro.",
+    ),
 ) -> None:
     """Diagnóstico de saúde: daemon, udev, applet, áudio, anti-storm + checks via IPC."""
     from hefesto_dualsense4unix.cli.cmd_doctor import doctor_cmd
 
-    doctor_cmd(fix=fix, quiet=quiet, fix_safe=fix_safe)
+    doctor_cmd(fix=fix, quiet=quiet, fix_safe=fix_safe, perfis=perfis)
 
 
 @app.command()
@@ -121,6 +126,75 @@ def led(
     from hefesto_dualsense4unix.cli.cmd_test import cmd_led
 
     cmd_led(color=color, brightness=brightness)
+
+
+@app.command("lightbar-reset")
+def lightbar_reset(
+    uniq: str | None = typer.Option(
+        None, "--uniq", help="Só neste controle (o MAC/uniq). Sem isto, todos."
+    ),
+) -> None:
+    """Devolve ao host o claim da lightbar (Reset LED state, 0x08).
+
+    INSTRUMENTO DE MEDIÇÃO — LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026).
+
+    A adoção de um DualSense por Bluetooth derruba o claim da lightbar na
+    máquina de estados do FIRMWARE: a barra apaga e passa a IGNORAR as escritas
+    de cor, enquanto os LEDs de jogador e os gatilhos seguem funcionando. Este
+    comando manda o report que devolve o claim, pelo handle que o daemon já tem
+    aberto — sem disputar o hidraw com ele.
+
+    Ele existe para tornar falsificável o que sobrou de pé sobre o 0x08: dentro
+    da janela de ~3,4 s pós-conexão ele travou a barra (7/7 em 03/08), e FORA
+    dela não travou (controle negativo da mesma sprint). A hipótese que as
+    concilia — ele cura FORA da janela — se testa aqui, com o olho de quem está
+    com o controle na mão.
+
+    Aqui se lia também que "sem 0x08 nenhum a barra ficou morta por 5 dias
+    (08/08)". Era FALSO, e caiu em 11/08: sem 0x08 a barra ACENDEU no rádio
+    quatro vezes nesses cinco dias. A correção inteira, com endereço de ensaio,
+    está no docstring de `cli/cmd_lightbar_reset.py`.
+
+    Exige o daemon vivo: é ele que tem o handle.
+    """
+    from hefesto_dualsense4unix.cli.cmd_lightbar_reset import cmd_lightbar_reset
+
+    cmd_lightbar_reset(uniq=uniq)
+
+
+@app.command("player-leds")
+def player_leds(
+    acao: str = typer.Argument(
+        ..., help="'off' suprime a escrita do LED de jogador; 'on' devolve."
+    ),
+) -> None:
+    """Liga/desliga a escrita do LED de JOGADOR — instrumento de eliminação.
+
+    LIGHTBAR-ISOLAR-OS-PLAYERS-01 (08/08/2026). Serve a UMA pergunta: **é a
+    escrita do LED de jogador que derruba o claim da lightbar quando o controle
+    acaba de conectar?**
+
+    O que aponta para lá: o report que DEVOLVE a barra (0x08) apaga os players
+    — as duas coisas vivem na mesma máquina de estados do firmware —, e a barra
+    apaga justamente quando o controle acaba de conectar, que é quando o
+    priming escreve os players.
+
+    Como medir, e a ordem importa:
+
+        1. `player-leds off`  (com o controle ligado — não reinicie nada)
+        2. desligue e religue o controle
+        3. olhe a barra: acendeu?
+        4. `player-leds on` para devolver o produto ao normal
+
+    Se a barra sobreviver com os players suprimidos, a escrita deles é a causa.
+    Se apagar do mesmo jeito, a causa é a conexão em si e este caminho está
+    inocente — e as duas respostas valem, porque as duas eliminam uma variável.
+
+    Não persiste: um restart do daemon devolve o comportamento normal.
+    """
+    from hefesto_dualsense4unix.cli.cmd_lightbar_reset import cmd_player_leds
+
+    cmd_player_leds(acao=acao)
 
 
 @app.command()
@@ -177,6 +251,42 @@ def mic(
     from hefesto_dualsense4unix.cli.cmd_mic import mic_cmd
 
     mic_cmd(action, uniq=uniq or None)
+
+
+@app.command()
+def speaker(
+    action: str = typer.Argument(
+        "status",
+        help=(
+            "status | volume <0-100> | mute | unmute | release — alto-falante "
+            "e fone do DualSense."
+        ),
+    ),
+    value: int = typer.Argument(
+        None, help="Porcentagem 0-100, só para `volume`."
+    ),
+    uniq: str = typer.Option(
+        "", "--uniq", help="MAC normalizado do controle (omitido = o primário)."
+    ),
+) -> None:
+    """Volume, mudo e DEVOLUÇÃO da posse do alto-falante do controle (SOM-02).
+
+    O volume mora no firmware do controle e ele NÃO o devolve: a única forma de
+    saber o valor é termos sido nós a mandá-lo. Por isso a primeira escrita
+    assume a posse dos bytes de volume — a partir dela o hefesto manda o volume
+    do alto-falante E do fone em todo report, até `speaker release` ou até o
+    controle desconectar.
+
+    `speaker release` é a saída sem a janela, o irmão do `mic release`: ele
+    devolve o CONTROLE, não o valor. Ninguém pode saber qual era o volume antes
+    de nós, então o firmware fica com o último número que mandamos.
+
+    `speaker mute` exige um volume conhecido — mudo como primeira escrita
+    trancaria o alto-falante em zero e o próprio mudo não o soltaria.
+    """
+    from hefesto_dualsense4unix.cli.cmd_speaker import speaker_cmd
+
+    speaker_cmd(action, value=value, uniq=uniq or None)
 
 
 @app.command()

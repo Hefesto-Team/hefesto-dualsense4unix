@@ -35,7 +35,6 @@ from __future__ import annotations
 import contextlib
 import json
 import os
-import re
 import tempfile
 from collections.abc import Collection, Mapping
 from pathlib import Path
@@ -64,9 +63,6 @@ logger = get_logger(__name__)
 # Decisão pura do gatilho (condições a-e do pedido aprovado)
 # ---------------------------------------------------------------------------
 
-#: wm_class de jogo Steam sob Proton/nativo: `steam_app_<appid>`.
-_STEAM_APP_RE = re.compile(r"^steam_app_(\d+)$")
-
 #: Ações que a decisão pura devolve para o adaptador do tick.
 DECISION_SKIP = "skip"
 DECISION_READ_VDF = "read_vdf"
@@ -86,11 +82,25 @@ def extract_steam_appid(wm_class: object) -> str | None:
     ÚTIL vista pelo detector — pode ficar "grudado" no jogo por alguns
     segundos depois de o foco mudar; inofensivo aqui, porque o anti-spam
     limita a 1 exibição por appid por sessão.
+
+    UNIFICA-PREDICADO-01: o reconhecimento em si vem da fonte única
+    (`profiles/steam_app.py`), que já era insensível a caixa e a espaço como
+    este callsite precisa. O que continua morando aqui é o TIPO: a fonte
+    devolve `int` e todo este módulo trabalha com `str` (chave do
+    `_wrapper_dialog_vdf_cache`, do `dismissed` em JSON e da string de
+    LaunchOptions). A conversão é explícita de propósito — um `==` entre `int`
+    e `str` seria sempre False, em silêncio, e o diálogo simplesmente nunca
+    apareceria.
+
+    Import tardio no idioma dos vizinhos (`daemon_actions`, `emulation_actions`):
+    não vale puxar o módulo em todo import desta janela.
     """
+    from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+
     if not isinstance(wm_class, str):
         return None
-    m = _STEAM_APP_RE.match(wm_class.strip().lower())
-    return m.group(1) if m else None
+    appid = steam_appid_from_wm_class(wm_class)
+    return None if appid is None else str(appid)
 
 
 def wrapper_dialog_decision(
@@ -436,7 +446,7 @@ class LaunchWrapperDialogMixin(WidgetAccessMixin):
     def _copy_wrapper_launch_to_clipboard() -> bool:
         """Copia a string constante do wrapper para o clipboard.
 
-        Mesmo caminho do botão "Copiar opções p/ jogos" da aba Sistema
+        Mesmo caminho do botão "Copiar opções para os jogos" da aba Sistema
         (``DaemonActionsMixin.on_storm_copy_launch``). True se o clipboard
         aceitou; falha silenciosa devolve False (o texto do diálogo continua
         selecionável).

@@ -105,9 +105,6 @@ class _FakeWidget:
 class _HomeStub:
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
-    # AUTO-01.2: o botão "Preparar co-op" é reconciliado pelo `_render_home`
-    # como qualquer outro widget da aba.
-    _render_coop_prep = HomeActionsMixin._render_coop_prep
     _refresh_home_tab = HomeActionsMixin._refresh_home_tab
 
     def __init__(self) -> None:
@@ -129,12 +126,10 @@ class _HomeStub:
         # ONDA-U (U1): botão único de energia (toggle in-place).
         self._home_shutdown_btn = _FakeWidget()
         self._home_offline = False
-        # ONDA-U (U2/U10): botão "Renumerar agora" + aviso de gate.
-        self._home_renumber_btn = _FakeWidget()
-        self._home_renumber_hint = _FakeWidget()
-        # AUTO-01.2: botão "Preparar co-op" + frase (vêm do Glade).
-        self._home_coop_prep_btn = _FakeWidget()
-        self._home_coop_prep_hint = _FakeWidget()
+        # ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): botão
+        # "Reconciliar jogadores" + aviso de jogo aberto.
+        self._home_reconciliar_btn = _FakeWidget()
+        self._home_reconciliar_hint = _FakeWidget()
 
 
 @pytest.fixture()
@@ -372,37 +367,50 @@ class TestPowerClickDispatcher:
         HomeActionsMixin._on_home_power_clicked(host, object())  # type: ignore[arg-type]
 
 
-class TestRenumberButtonGate:
-    """U2/U10: "Renumerar agora" reflete o MESMO gate do IPC
-    `identity.renumber` — desabilitado (com aviso) quando há jogo aberto."""
+class TestReconciliarButtonGate:
+    """COOP-SEM-INTERRUPTOR-01 (06/08) — "Reconciliar jogadores" fica DE PÉ com
+    jogo aberto; o aviso passou a explicar, não a bloquear.
+
+    NOTA DATADA: até 06/08/2026 esta classe se chamava ``TestRenumberButtonGate``
+    e travava o oposto (``sensitive is False`` com jogo aberto). Estava certa
+    enquanto o botão só renumerava — o daemon recusa renumerar em partida, e
+    mostrar um botão que só sabe falhar seria pior. Deixou de estar quando o
+    botão herdou a reconciliação do co-op: o jogador que cai e some é um defeito
+    DE PARTIDA ABERTA, e desabilitar ali esconderia o gesto na hora exata em que
+    ela precisa dele.
+    """
 
     def test_offline_desabilita_sem_aviso(self, fake_gtk: None) -> None:
         host = _HomeStub()
 
         host._render_home(None)
 
-        assert host._home_renumber_btn.sensitive is False
-        assert host._home_renumber_hint.get_text() == ""
+        assert host._home_reconciliar_btn.sensitive is False
+        assert host._home_reconciliar_hint.get_text() == ""
 
     def test_online_sem_jogo_habilita(self, fake_gtk: None) -> None:
         host = _HomeStub()
 
         host._render_home(_state([]))  # sem game_signal = sem jogo
 
-        assert host._home_renumber_btn.sensitive is True
-        assert host._home_renumber_hint.get_text() == ""
+        assert host._home_reconciliar_btn.sensitive is True
+        assert host._home_reconciliar_hint.get_text() == ""
 
-    def test_jogo_aberto_desabilita_e_explica(self, fake_gtk: None) -> None:
+    def test_jogo_aberto_mantem_o_botao_e_explica_o_que_nao_muda(
+        self, fake_gtk: None
+    ) -> None:
         host = _HomeStub()
         estado = _state([])
         estado["game_signal"] = {"authority": "game"}
 
         host._render_home(estado)
 
-        assert host._home_renumber_btn.sensitive is False
+        assert host._home_reconciliar_btn.sensitive is True, (
+            "com jogo aberto o botão sumiu — é justamente quando o P2 cai"
+        )
         assert (
-            host._home_renumber_hint.get_text()
-            == home_actions.RENUMBER_GAME_OPEN_TEXT
+            host._home_reconciliar_hint.get_text()
+            == home_actions.RECONCILIAR_JOGO_ABERTO_TEXT
         )
 
     def test_authority_daemon_habilita(self, fake_gtk: None) -> None:
@@ -412,12 +420,19 @@ class TestRenumberButtonGate:
 
         host._render_home(estado)
 
-        assert host._home_renumber_btn.sensitive is True
+        assert host._home_reconciliar_btn.sensitive is True
 
 
-class TestRenumberClickHandler:
-    """U2/U10: `_on_home_renumber_clicked` chama o IPC com o contrato fixado
-    e traduz a resposta em toast — falha-sem: no HEAD o botão não existia."""
+class TestReconciliarClickHandler:
+    """COOP-SEM-INTERRUPTOR-01, entrega 5: um clique = ``coop.sync`` e depois
+    ``identity.renumber``, encadeados, com UM toast que conta os dois.
+
+    NOTA DATADA: até 06/08/2026 o gesto era ``identity.renumber`` sozinho
+    (``TestRenumberClickHandler``). O ``coop.sync`` entrou porque o botão
+    "Preparar co-op" saiu da tela levando consigo o único ciclo FORÇADO do co-op
+    ao alcance dela — o gesto de recuperação do jogador que nasce e morre em
+    dois segundos.
+    """
 
     def _stub_com_toasts(self) -> _HomeStub:
         host = _HomeStub()
@@ -426,102 +441,179 @@ class TestRenumberClickHandler:
         host._refresh_home_tab = lambda: None  # type: ignore[method-assign]
         return host
 
-    def test_dispara_identity_renumber_sem_parametros(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        calls: list[tuple[str, dict[str, Any]]] = []
+    def _encadeia(
+        self, monkeypatch: pytest.MonkeyPatch, respostas: dict[str, Any]
+    ) -> list[tuple[str, dict[str, Any]]]:
+        """`call_async` que responde SUCESSO com a resposta gravada para cada método, na ordem."""
+        chamadas: list[tuple[str, dict[str, Any]]] = []
 
-        def _fake_call_async(
+        def _fake(
             method: str,
             params: dict[str, Any] | None,
-            _done: Any = None,
-            _fail: Any = None,
-            timeout_s: float = 0.25,
-        ) -> None:
-            calls.append((method, dict(params or {})))
-
-        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
-        host = self._stub_com_toasts()
-
-        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
-
-        assert calls == [("identity.renumber", {})]
-
-    def test_sucesso_com_renumerados_avisa_quantidade(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        def _fake_call_async(
-            _method: str,
-            _params: dict[str, Any] | None,
             done: Any = None,
             _fail: Any = None,
             timeout_s: float = 0.25,
         ) -> None:
-            done({"ok": True, "renumbered": {"aabbcc000001": 1, "aabbcc000002": 2}})
+            chamadas.append((method, dict(params or {})))
+            if done is not None and method in respostas:
+                done(respostas[method])
 
-        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
-        host = self._stub_com_toasts()
+        monkeypatch.setattr(home_actions, "call_async", _fake)
+        return chamadas
 
-        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
-
-        assert any("2 controle(s)" in t for t in host.toasts)  # type: ignore[attr-defined]
-
-    def test_sucesso_sem_renumerados_avisa_ja_compacto(
+    def test_a_ordem_e_a_entrega_coop_sync_antes_do_renumber(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        def _fake_call_async(
-            _method: str,
-            _params: dict[str, Any] | None,
-            done: Any = None,
-            _fail: Any = None,
-            timeout_s: float = 0.25,
-        ) -> None:
-            done({"ok": True, "renumbered": {}})
-
-        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
+        """Renumerar antes de reconciliar compactaria uma mesa incompleta."""
+        chamadas = self._encadeia(
+            monkeypatch,
+            {
+                "coop.sync": {"status": "ok", "players": 3, "active": True},
+                "identity.renumber": {"ok": True, "renumbered": {}},
+            },
+        )
         host = self._stub_com_toasts()
 
-        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
+        HomeActionsMixin._on_home_reconciliar_clicked(host, object())  # type: ignore[arg-type]
 
-        assert any("já estava compacta" in t for t in host.toasts)  # type: ignore[attr-defined]
+        assert [m for m, _p in chamadas] == ["coop.sync", "identity.renumber"]
+        assert chamadas[0][1] == {} and chamadas[1][1] == {}
 
-    def test_recusado_por_sessao_de_jogo_aberta_avisa_fechar_o_jogo(
+    def test_o_renumber_so_sai_depois_da_resposta_do_coop_sync(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        def _fake_call_async(
-            _method: str,
-            _params: dict[str, Any] | None,
-            done: Any = None,
-            _fail: Any = None,
-            timeout_s: float = 0.25,
-        ) -> None:
-            done({"ok": False, "reason": "sessao_de_jogo_aberta"})
+        """Encadeado, não paralelo: sem resposta do sync, o acabamento não sai."""
+        chamadas = self._encadeia(monkeypatch, {})  # ninguém responde
 
-        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
+        HomeActionsMixin._on_home_reconciliar_clicked(  # type: ignore[arg-type]
+            self._stub_com_toasts(), object()
+        )
+
+        assert [m for m, _p in chamadas] == ["coop.sync"]
+
+    def test_toast_unico_conta_jogadores_e_numeracao(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._encadeia(
+            monkeypatch,
+            {
+                "coop.sync": {"status": "ok", "players": 4, "active": True},
+                "identity.renumber": {
+                    "ok": True,
+                    "renumbered": {"aabbcc000001": 1, "aabbcc000002": 2},
+                },
+            },
+        )
         host = self._stub_com_toasts()
 
-        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
+        HomeActionsMixin._on_home_reconciliar_clicked(host, object())  # type: ignore[arg-type]
 
-        assert any("Feche o jogo" in t for t in host.toasts)  # type: ignore[attr-defined]
+        assert host.toasts == [  # type: ignore[attr-defined]
+            "Jogadores reconciliados — 4 jogador(es). "
+            "Numeração compactada em 2 controle(s)."
+        ]
 
-    def test_falha_de_ipc_avisa_daemon_desligado(
+    def test_renumber_recusado_por_jogo_aberto_nao_vira_falha_do_gesto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        def _fake_call_async(
-            _method: str,
+        """Com os jogadores JÁ de pé, um toast de erro seria a UI mentindo."""
+        self._encadeia(
+            monkeypatch,
+            {
+                "coop.sync": {"status": "ok", "players": 2, "active": True},
+                "identity.renumber": {
+                    "ok": False,
+                    "reason": "sessao_de_jogo_aberta",
+                },
+            },
+        )
+        host = self._stub_com_toasts()
+
+        HomeActionsMixin._on_home_reconciliar_clicked(host, object())  # type: ignore[arg-type]
+
+        (toast,) = host.toasts  # type: ignore[attr-defined]
+        assert "Jogadores reconciliados — 2 jogador(es)." in toast
+        assert "jogo fechado" in toast
+        assert "Não consegui" not in toast
+
+    def test_falha_do_coop_sync_avisa_daemon_desligado_e_nao_renumera(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        chamadas: list[str] = []
+
+        def _fake(
+            method: str,
             _params: dict[str, Any] | None,
             _done: Any = None,
             fail: Any = None,
             timeout_s: float = 0.25,
         ) -> None:
-            fail(RuntimeError("timeout"))
+            chamadas.append(method)
+            if fail is not None:
+                fail(RuntimeError("timeout"))
 
-        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
+        monkeypatch.setattr(home_actions, "call_async", _fake)
         host = self._stub_com_toasts()
 
-        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
+        HomeActionsMixin._on_home_reconciliar_clicked(host, object())  # type: ignore[arg-type]
 
+        assert chamadas == ["coop.sync"]
         assert any("desligado" in t for t in host.toasts)  # type: ignore[attr-defined]
+
+    def test_cada_passo_leva_o_timeout_longo(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Criar/desmontar uinput e grab não cabe nos 0,25 s do default."""
+        prazos: list[float] = []
+
+        def _fake(
+            method: str,
+            _params: dict[str, Any] | None,
+            done: Any = None,
+            _fail: Any = None,
+            timeout_s: float = 0.25,
+        ) -> None:
+            prazos.append(timeout_s)
+            if method == "coop.sync" and done is not None:
+                done({"status": "ok", "players": 2, "active": True})
+
+        monkeypatch.setattr(home_actions, "call_async", _fake)
+
+        HomeActionsMixin._on_home_reconciliar_clicked(  # type: ignore[arg-type]
+            self._stub_com_toasts(), object()
+        )
+
+        assert prazos == [home_actions._MODE_IPC_TIMEOUT_S] * 2
+
+
+class TestReconciliarToast:
+    """A frase única do gesto — função pura (06/08/2026)."""
+
+    def test_sem_numero_de_jogadores_nao_inventa_contagem(self) -> None:
+        frase = home_actions.reconciliar_toast(None, {"ok": True, "renumbered": {}})
+
+        assert frase.startswith("Jogadores reconciliados.")
+        assert "jogador(es)" not in frase
+
+    def test_bool_nao_passa_por_contagem(self) -> None:
+        """`True` é `int` em Python — "1 jogador(es)" seria mentira de tipo."""
+        frase = home_actions.reconciliar_toast(True, {"ok": True, "renumbered": {}})
+
+        assert frase.startswith("Jogadores reconciliados.")
+
+    def test_numeracao_ja_compacta(self) -> None:
+        frase = home_actions.reconciliar_toast(2, {"ok": True, "renumbered": {}})
+
+        assert frase == (
+            "Jogadores reconciliados — 2 jogador(es). "
+            "A numeração já estava compacta."
+        )
+
+    def test_acabamento_sem_resposta_nao_afirma_numeracao(self) -> None:
+        frase = home_actions.reconciliar_toast(2, None)
+
+        assert "Jogadores reconciliados — 2 jogador(es)." in frase
+        assert "Não consegui conferir a numeração." in frase
 
 
 class TestMascaraTemUmDonoSo:
@@ -554,10 +646,17 @@ class TestMascaraTemUmDonoSo:
         assert host._home_flavor_selector.active_id == "dualsense"
 
 
-class TestBotaoDeCoopNaAbaInicio:
-    """AUTO-01.2 — o co-op passou a existir na janela (era só linha de comando)."""
+class TestOBotaoDeCoopSaiuDaAbaInicio:
+    """COOP-SEM-INTERRUPTOR-01 (06/08/2026) — LÁPIDE de ``TestBotaoDeCoopNaAbaInicio``.
 
-    def test_conta_os_jogadores_que_o_clique_vai_criar(self, fake_gtk: None) -> None:
+    Aquela classe mediu o rótulo e a sensibilidade do botão "Preparar co-op"
+    (AUTO-01.2, 25/07). O botão saiu por decisão dela — o co-op deixou de ser
+    opção —, então o que sobra a medir é o CONTRÁRIO: que o `_render_home` não
+    voltou a procurar os widgets, e que a frase que ficou no lugar continua
+    contando os jogadores a partir do `state_full`.
+    """
+
+    def test_o_render_nao_toca_mais_em_widget_de_coop(self, fake_gtk: None) -> None:
         host = _HomeStub()
 
         host._render_home(
@@ -571,13 +670,32 @@ class TestBotaoDeCoopNaAbaInicio:
             )
         )
 
-        assert host._home_coop_prep_btn.label == "Preparar co-op (2 jogadores)"
-        assert host._home_coop_prep_btn.sensitive is True
+        assert not hasattr(host, "_home_coop_prep_btn")
+        assert not hasattr(host, "_home_coop_prep_hint")
+        assert not hasattr(HomeActionsMixin, "_render_coop_prep")
+        assert not hasattr(HomeActionsMixin, "_on_home_coop_prep_clicked")
 
-    def test_daemon_desligado_desabilita_o_botao(self, fake_gtk: None) -> None:
+    def test_a_frase_que_ficou_no_lugar_conta_do_state_full(
+        self, fake_gtk: None
+    ) -> None:
+        host = _HomeStub()
+
+        host._render_home(
+            _state(
+                [
+                    {"index": 0, "connected": True, "transport": "usb",
+                     "is_primary": True, "player": 1},
+                    {"index": 1, "connected": True, "transport": "usb",
+                     "is_primary": False, "player": 2},
+                ]
+            )
+        )
+
+        assert host._home_players_hint.get_text() == "2 controles = 2 jogadores"
+
+    def test_daemon_desligado_cala_a_frase(self, fake_gtk: None) -> None:
         host = _HomeStub()
 
         host._render_home(None)
 
-        assert host._home_coop_prep_btn.sensitive is False
-        assert host._home_coop_prep_hint.label == ""
+        assert host._home_players_hint.get_text() == ""

@@ -279,3 +279,66 @@ def test_git_grep_detecta_violacao_rastreada(fake_repo: Path) -> None:
 
     result = run_check(fake_repo)
     assert result.returncode == 1
+
+
+# =============================================================================
+# ANONIMATO-CEGO-A-ARQUIVO-NOVO-01 e ANONIMATO-MAIUSCULA-01 (13/08/2026)
+#
+# Os dois furos que o ramo do git tinha e a suíte não via, porque TODO teste
+# acima ou roda o ramo de fallback (sem `git init`) ou faz `git add` antes de
+# medir. Ambos foram medidos num repo de mentira em 13/08/2026, e ambos davam
+# "OK: anonimato preservado." com exit 0.
+# =============================================================================
+
+def _git_de_mentira(repo: Path) -> None:
+    """Inicializa o repo fake para que o script tome o ramo do git."""
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=repo, check=True, capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "test"],
+        cwd=repo, check=True, capture_output=True,
+    )
+
+
+def test_git_detecta_violacao_em_arquivo_ainda_nao_adicionado(fake_repo: Path) -> None:
+    """O portão enxerga o arquivo NOVO, antes de qualquer `git add`.
+
+    Com `git grep` este cenário passava verde: `git grep` só lê o índice, e o
+    arquivo que ninguém revisou é justamente o que ainda não foi adicionado.
+    A cura é `git ls-files --cached --others --exclude-standard`, o mesmo
+    remédio que `validar-acentuacao.py` e `validar-glifos.py` já tomaram.
+    """
+    _git_de_mentira(fake_repo)
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# código limpo\n")
+    subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
+
+    # Este NUNCA passa por `git add` — é o arquivo recém-escrito.
+    (fake_repo / "src/hefesto_dualsense4unix/novo.py").write_text("# by claude\n")
+
+    result = run_check(fake_repo)
+    assert result.returncode == 1, (
+        "arquivo novo com violação passou VERDE: o portão voltou a olhar só o "
+        f"índice.\nsaída:\n{result.stdout}"
+    )
+    assert "novo.py" in result.stdout, result.stdout
+
+
+def test_git_nao_reprova_arquivo_novo_que_o_gitignore_manda_ignorar(
+    fake_repo: Path,
+) -> None:
+    """A outra metade da régua: `--exclude-standard` não pode ser esquecido.
+
+    Sem ele a cura acima traria o que o `.gitignore` manda ignorar — build,
+    `.venv`, capturas — e o portão passaria a reprovar coisa que não é da
+    árvore. Um portão que grita falso é um portão desligado.
+    """
+    _git_de_mentira(fake_repo)
+    (fake_repo / ".gitignore").write_text("lixo/\n", encoding="utf-8")
+    (fake_repo / "lixo").mkdir()
+    (fake_repo / "lixo" / "gerado.py").write_text("# by claude\n")
+
+    result = run_check(fake_repo)
+    assert result.returncode == 0, result.stdout

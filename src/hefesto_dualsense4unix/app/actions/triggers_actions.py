@@ -23,6 +23,12 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import (
     preset_to_positional_params,
 )
 from hefesto_dualsense4unix.app.ipc_bridge import trigger_reset, trigger_set_checked
+from hefesto_dualsense4unix.app.textos_de_aplicacao import (
+    alvo_fora_da_mesa,
+    guardado_ate_o_alvo_voltar,
+    guardado_ate_o_nativo_sair,
+    modo_nativo_manda_no_output,
+)
 from hefesto_dualsense4unix.app.widgets import SegmentedSelector
 from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
@@ -237,6 +243,72 @@ class TriggersActionsMixin(WidgetAccessMixin):
         # debounce evita inundar o IPC quando o combobox dispara mudanças
         # rapidamente (autocompletar/scroll do usuário).
         self._schedule_live_preview(side)
+
+    def _cancelar_live_preview(self, side: str) -> None:
+        """Mata o preview PENDENTE daquele lado, se houver (MESA-CHEIA-08).
+
+        Existe por causa de uma regressão de cura: o "Desligar" **solta** a
+        trava manual (``trigger.reset``) e, 300 ms depois, o live-preview que
+        o próprio gesto agendou mandava um ``trigger.set`` que a **re-armava**
+        (``daemon/ipc_handlers._handle_trigger_set`` →
+        ``mark_manual_trigger_active``). A troca automática de perfil ficava
+        pausada sem nada na tela dizer isso — a queixa histórica *"a config
+        que eu deixo não fica"*, que a R-19 já tinha curado uma vez.
+
+        **Só o "Desligar" cancela.** Cancelar em toda troca de modo mataria o
+        live-preview inteiro, que é feature pedida — e hipótese que não
+        explica o que já funcionava é contorno.
+
+        **E cancela só o lado do botão.** O preview pendente do OUTRO gatilho
+        não se cancela: ele é uma aplicação que ela pediu, num gatilho que ela
+        não mandou desligar. Quem cuida dele é ``_adiantar_live_preview``.
+        """
+        timers = getattr(self, "_trigger_live_preview_timer", None)
+        if not isinstance(timers, dict):
+            return
+        pendente = timers.get(side, 0)
+        if pendente:
+            GLib.source_remove(pendente)
+        timers[side] = 0
+
+    def _adiantar_live_preview(self, side: str) -> None:
+        """Faz o preview PENDENTE daquele lado acontecer AGORA (14/08/2026).
+
+        Furo residual da MESA-CHEIA-08, medido pelo ceticismo da ONDA 1 e
+        reproduzido antes desta cura: ``_cancelar_live_preview`` mata só o lado
+        do botão, mas a trava manual **não tem lado** —
+        ``daemon/state_store.mark_manual_trigger_active`` recebe uma categoria
+        só (``"trigger"``) para os dois gatilhos. Então mexer no modo do gatilho
+        DIREITO e, dentro de 300 ms, clicar "Desligar" no ESQUERDO deixava o
+        ``trigger.set`` da direita cair DEPOIS do ``trigger.reset`` da esquerda
+        e re-armar a trava que o botão acabou de soltar. Medido nesta árvore::
+
+            disparados: 1  trigger.set: [('right', 'Rigid', [5, 200])]
+
+        É o mesmo dano da MESA-CHEIA-08 por uma janela mais estreita.
+
+        **Adiantar, e não cancelar.** Cancelar o outro lado mataria um preview
+        que ela pediu — o contorno que a mordida 3 da sprint já proíbe para o
+        próprio lado. Adiantando, o mesmo ``trigger.set``, com os mesmos bytes,
+        sai antes do ``trigger.reset``; o "Desligar" volta a ser a última
+        palavra, exatamente como quando o preview já tinha disparado sozinho.
+
+        **O que mais muda, medido — sete sequências de cliques rodadas contra o
+        fonte de antes e o de depois, saídas comparadas.** Só duas diferem: a
+        cena acima, e "Desligar" nos DOIS lados dentro dos 300 ms — nela o
+        ``trigger.set`` do outro lado, que antes era descartado em silêncio,
+        agora sai e é desfeito pelo ``trigger.reset`` daquele mesmo lado logo
+        em seguida (estado final idêntico, um pedido a mais no fio). As outras
+        cinco saem iguais, chamada por chamada. Registro na seção 6 da sprint
+        ``docs/process/sprints/2026-08-13-MESA-CHEIA-08-...``.
+        """
+        timers = getattr(self, "_trigger_live_preview_timer", None)
+        if not isinstance(timers, dict):
+            return
+        if not timers.get(side, 0):
+            return  # nada pendente daquele lado: nada a adiantar
+        self._cancelar_live_preview(side)
+        self._fire_live_preview(side)
 
     def _schedule_live_preview(self, side: str) -> None:
         """Agenda `_apply_trigger(side)` em 300 ms, cancelando handle pendente."""
@@ -566,6 +638,19 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if combo is not None:
             combo.set_active_id("Off")
         self._rebuild_params(side, "Off")
+        # MESA-CHEIA-08 (13/08): o `set_active_id` acima EMITE "changed"
+        # (`app/widgets/segmented_selector.set_active_id`), e o
+        # `_on_mode_changed` agenda um live-preview de 300 ms. Esse preview
+        # manda `trigger.set` DEPOIS do `trigger.reset` de baixo, e o
+        # `trigger.set` RE-ARMA a trava manual que este botão existe para
+        # soltar. Cancelar aqui — depois de trocar o combo, antes de soltar —
+        # é o que faz o "Desligar" desligar.
+        self._cancelar_live_preview(side)
+        # 14/08: e o preview pendente do OUTRO gatilho, que não se cancela
+        # (é aplicação que ela pediu), sai AGORA — antes do `trigger.reset` —
+        # para não cair depois dele e re-armar a trava, que é uma só para os
+        # dois lados. Ver `_adiantar_live_preview`.
+        self._adiantar_live_preview("right" if side == "left" else "left")
         uniq = getattr(self, "_edit_uniq", lambda: None)()
         ok, _motivo = trigger_reset(side, uniq=uniq)
         self._toast_trigger(side, "Off", ok)
@@ -596,7 +681,24 @@ class TriggersActionsMixin(WidgetAccessMixin):
             "right": "Gatilho direito (R2)",
         }.get(side, side)
         if ok:
-            msg = f"{lado}: {preset_id} aplicado"
+            # MESA-CHEIA-09/E3 + D-9: com o alvo FORA da mesa nenhum byte saiu
+            # — o override fica registrado e o hotplug o aplica quando o
+            # controle voltar. Dizer "aplicado" aqui era a mentira que a aba
+            # Gatilhos repetia a cada clique num controle que saiu.
+            #
+            # Conserto 1.3: e o MODO NATIVO é a outra — o backend muta toda
+            # escrita (o jogo é o dono do hidraw), guarda o desejado e o
+            # re-escreve no desmute. A ordem espelha a da aba Lightbar com o
+            # co-op: o dono de AGORA vem primeiro, porque ele vale mesmo com o
+            # controle na mesa.
+            assunto = f"{lado}: {preset_id}"
+            fora = alvo_fora_da_mesa(self)
+            if modo_nativo_manda_no_output(self):
+                msg = guardado_ate_o_nativo_sair(assunto)
+            elif fora:
+                msg = guardado_ate_o_alvo_voltar(assunto, fora)
+            else:
+                msg = f"{assunto} aplicado"
         elif motivo:
             msg = (
                 f"{lado}: {preset_id} não aplicado — "

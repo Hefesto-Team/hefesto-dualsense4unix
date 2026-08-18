@@ -5,8 +5,28 @@ name = "hefesto-dualsense4unix-applet"
 # errada. Esta linha é ALVO do scripts/check_version_consistency.py: subir o
 # pyproject e esquecer aqui reprova a release. Ao mexer, subir também a entrada
 # `hefesto-dualsense4unix-applet` do Cargo.lock (o `cargo build` do justfile
-# reescreve sozinho, mas deixa a árvore suja no meio do release).
-version = "0.5.0"
+# reescreve sozinho, mas deixa a árvore suja no meio do release) — que desde
+# 14/08 também é alvo do mesmo portão, porque ficou em `9.3.2` sem ninguém ver.
+#
+# QUATRO-COMPONENTES-02 (14/08/2026): a canônica é `0.9.4.2`, e aqui ela NÃO
+# cabe literal. O Cargo exige SemVer, e quatro componentes não é SemVer:
+#
+#     $ cargo verify-project   # com version = "0.9.4.2"
+#     error: unexpected character '.' after patch version number
+#
+# A release parou de compilar o applet por isso — o passo do install avisou
+# "build/instalacao do applet falhou" e seguiu, então o estrago era silencioso.
+# A quarta casa entra como BUILD METADATA (`+2`), que é SemVer válido e é o
+# único formato que preserva o número sem mentir sobre a ordem: metadata de
+# build não conta na precedência, então `0.9.4+2` ordena IGUAL a `0.9.4` — que
+# é o que a série 0.9.4.x significa (revisão do mapeamento dentro da mesma
+# alfa). O irmão `0.9.4-2` também compila e está ERRADO: `-2` é pre-release e
+# ordenaria ANTES da 0.9.4, invertendo a história.
+#
+# A tradução `X.Y.Z.W` → `X.Y.Z+W` mora em `versao_para_cargo()` no portão, e é
+# ela que o portão aplica antes de comparar — subir o pyproject e esquecer esta
+# linha continua reprovando.
+version = "0.9.4+2"
 edition = "2021"
 # Redigido no mesmo padrão do packaging/arch/PKGBUILD (`Maintainer: Vitoria
 # Maria <[REDACTED]>`): havia um e-mail pessoal real aqui, e nem o

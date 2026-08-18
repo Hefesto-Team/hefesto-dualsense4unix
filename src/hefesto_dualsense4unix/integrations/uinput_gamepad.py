@@ -45,6 +45,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -139,17 +140,71 @@ DEFAULT_FLAVOR = "xbox"
 DEVICE_NAME = XBOX360_NAME
 
 
+#: Sinônimos tolerados na CLI/IPC → chave canônica de :data:`FLAVORS`. As
+#: chaves canônicas NÃO entram aqui (o resolvedor consulta o `FLAVORS` antes,
+#: para que um terceiro sabor no catálogo valha sem uma linha de edição nesta
+#: tabela — a mesma regra de fonte única do `external_mask.mascaras_validas`).
+#:
+#: NOTA DATADA — 10/08/2026: **"sony"** e **"ps5"** entraram aqui porque eram a
+#: palavra que ela usa para pedir a máscara de PlayStation, e caíam no `else`
+#: junto com o lixo: `normalize_flavor("sony")` devolvia **"xbox"** — a máscara
+#: OPOSTA à pedida, sem erro e sem log. Não entram "nintendo"/"switch"/"pro":
+#: não existe máscara de Switch neste catálogo, e mapeá-las para dualsense
+#: repetiria o defeito (entregar calado uma máscara que ninguém pediu). Elas são
+#: nome desconhecido, e nome desconhecido agora é ERRO no portão do IPC
+#: (`ipc_handlers._handle_gamepad_emulation_set`), não default.
+FLAVOR_SINONIMOS: dict[str, str] = {
+    "ps": "dualsense",
+    "ps5": "dualsense",
+    "playstation": "dualsense",
+    "sony": "dualsense",
+    "ds": "dualsense",
+    "xbox360": "xbox",
+    "x360": "xbox",
+    "xinput": "xbox",
+}
+
+
+def resolver_flavor(flavor: object) -> str | None:
+    """A máscara canônica de `flavor`, ou **None** quando ninguém a reconhece.
+
+    A metade ESTRITA do par: aceita as chaves de :data:`FLAVORS` e os
+    :data:`FLAVOR_SINONIMOS` (sem caixa e sem espaço em volta) e devolve `None`
+    para qualquer outra coisa — inclusive `None`, número e `""`. Quem chama
+    decide o que fazer com a recusa; o que esta função JAMAIS faz é escolher uma
+    máscara por conta própria.
+
+    É a função que o portão do IPC usa. O :func:`normalize_flavor` continua
+    tolerante porque os caminhos internos (perfil em disco, config do daemon,
+    co-op) precisam de um valor sempre — mas nenhum deles é a usuária digitando.
+    """
+    if not isinstance(flavor, str):
+        return None
+    key = flavor.strip().lower()
+    if key in FLAVORS:
+        return key
+    return FLAVOR_SINONIMOS.get(key)
+
+
+def nomes_de_flavor_aceitos() -> tuple[str, ...]:
+    """Todo nome que :func:`resolver_flavor` reconhece, ordenado.
+
+    Existe para a mensagem de recusa do portão poder DIZER o que vale — recusar
+    sem listar a alternativa é trocar um default calado por um erro calado.
+    """
+    return tuple(sorted(set(FLAVORS) | set(FLAVOR_SINONIMOS)))
+
+
 def normalize_flavor(flavor: str | None) -> str:
-    """Resolve um flavor válido; cai no default se desconhecido/None."""
+    """Resolve um flavor válido; cai no default se desconhecido/None.
+
+    TOLERANTE de propósito, e por isso NÃO serve de portão: o desconhecido vira
+    :data:`DEFAULT_FLAVOR` em silêncio. Quem valida entrada de gente (IPC, CLI)
+    usa :func:`resolver_flavor`, que devolve `None` em vez de escolher.
+    """
     if flavor is None:
         return DEFAULT_FLAVOR
-    key = flavor.strip().lower()
-    # Sinônimos tolerados na CLI/IPC.
-    if key in ("ps", "playstation", "ds", "dualsense"):
-        return "dualsense"
-    if key in ("xbox", "xbox360", "x360", "xinput"):
-        return "xbox"
-    return key if key in FLAVORS else DEFAULT_FLAVOR
+    return resolver_flavor(flavor) or DEFAULT_FLAVOR
 
 # Mapeamento canonico Hefesto - Dualsense4Unix (HOTFIX-2) -> evdev constant usado no uinput.
 # Layout Xbox: cross=A, circle=B, square=X, triangle=Y.
@@ -267,6 +322,36 @@ class UinputGamepad:
     #: Incrementa em cada `_start_ff_effect` de efeito válido; exposto no
     #: state_full para a GUI/doctor confirmarem se o jogo enxerga o vpad.
     _ff_play_count: int = 0
+    # --- MASCARA-XBOX-MUDA-01 (09/08/2026) ------------------------------
+    #
+    #: Nº de pares NÃO-NULOS que saíram para o `rumble_sink` — o irmão do
+    #: `ff_nao_nulo_count` do caminho uhid.
+    #:
+    #: **Por que ele existe, e é defeito de verdade.** O painel da aba Rumble
+    #: (`app/actions/rumble_actions.texto_dos_pedidos_de_vibracao`) pergunta
+    #: `nao_nulos` ANTES de `plays`, e o `daemon/ipc_handlers` lê os dois com
+    #: `getattr(vp, ..., 0)`. Como este backend nunca teve `ff_nao_nulo_count`,
+    #: o zero do default virava afirmação: com a máscara **Xbox** funcionando
+    #: perfeitamente, a tela dizia *"o jogo falou de vibração Nx, mas pediu
+    #: força zero em todas"* — e a frase manda caçar no jogo/máscara, que é o
+    #: lado oposto do código. Um modo inteiro do produto era, por construção,
+    #: impossível de medir; e o número que ele mostrava acusava o inocente.
+    #:
+    #: A contagem é no `_refresh_ff`, no instante em que o par vai ao sink:
+    #: é o mesmo ponto do caminho uhid (o PEDIDO do jogo em 0-255, antes do
+    #: multiplicador da política) e, aqui, DEPOIS do ganho e do `>> 8` — que
+    #: é honesto: um efeito de magnitude 200/65535 vira zero nos motores, e
+    #: contá-lo como "pediu força" seria a mesma mentira ao contrário.
+    _ff_nao_nulo_count: int = 0
+    #: Maior par pedido (weak, strong) — "dava para SENTIR?". Comparado por
+    #: intensidade (o maior motor, desempate pela soma) e nunca por ordem
+    #: lexicográfica de tupla: `(0, 255)` é um pedido enorme e `(1, 0)` é
+    #: imperceptível, mas `(1, 0) > (0, 255)` em Python.
+    _ff_maior_pedido: tuple[int, int] = (0, 0)
+    #: Play de efeito que nunca foi uploadado — pedido do jogo que NÃO virou
+    #: vibração por falha nossa (catálogo perdido). Sem contá-lo, o descarte
+    #: era invisível e a tela dizia "o jogo não pediu".
+    _ff_descartado_count: int = 0
 
     @classmethod
     def for_flavor(
@@ -274,13 +359,26 @@ class UinputGamepad:
         flavor: str | None = DEFAULT_FLAVOR,
         *,
         rumble_sink: Callable[[int, int], None] | None = None,
+        identity: str | None = None,
     ) -> UinputGamepad:
         """Constrói o gamepad com a máscara (VID/PID/nome) do flavor dado.
 
         `rumble_sink` (FEAT-VPAD-FF-PASSTHROUGH-01) recebe o rumble do jogo
         já em 0-255 (weak, strong); ver docstring do campo.
+
+        `identity` (MÁSCARA-POR-JOGADOR-01, 15/08/2026) é o MAC canônico do
+        controle FÍSICO deste jogador — o mesmo que `discover_dualsense_evdevs`
+        usa como chave. Quando ele vem, `flavor` deixa de ser a resposta e passa
+        a ser o **padrão herdado**: a máscara que este aparelho escolheu vence
+        (`external_mask.mascara_efetiva`), e sem escolha nada muda. `None` = o
+        chamador não sabe de quem é o vpad, e aí a máscara é a do jogo, como
+        sempre foi.
         """
-        key = normalize_flavor(flavor)
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            mascara_efetiva,
+        )
+
+        key = mascara_efetiva(identity, flavor)
         spec = FLAVORS[key]
         return cls(
             name=spec["name"],
@@ -359,6 +457,9 @@ class UinputGamepad:
         self._ff_gain = 1.0
         self._ff_last_sent = (0, 0)
         self._ff_play_count = 0
+        self._ff_nao_nulo_count = 0
+        self._ff_maior_pedido = (0, 0)
+        self._ff_descartado_count = 0
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -372,6 +473,26 @@ class UinputGamepad:
     def ff_play_count(self) -> int:
         """Nº de play de FF que o JOGO pediu neste vpad (diagnóstico de rumble)."""
         return self._ff_play_count
+
+    @property
+    def ff_nao_nulo_count(self) -> int:
+        """Nº de pedidos com FORÇA — os que fariam o motor mexer.
+
+        MASCARA-XBOX-MUDA-01. Este é o número que a aba Rumble pergunta
+        primeiro; sem ele a máscara Xbox respondia zero por ausência e a tela
+        acusava o jogo de pedir silêncio. Ver o campo `_ff_nao_nulo_count`.
+        """
+        return self._ff_nao_nulo_count
+
+    @property
+    def ff_maior_pedido(self) -> tuple[int, int]:
+        """Maior par (weak, strong) pedido pelo jogo — "dava para sentir?"."""
+        return self._ff_maior_pedido
+
+    @property
+    def ff_descartado_count(self) -> int:
+        """Nº de play de efeito que NÃO tínhamos no catálogo (perdido por nós)."""
+        return self._ff_descartado_count
 
     @property
     def ff_last_sent(self) -> tuple[int, int]:
@@ -551,7 +672,12 @@ class UinputGamepad:
         """Marca o efeito como tocando, com deadline = duração x repetições."""
         params = self._ff_effects.get(effect_id)
         if params is None:
-            return  # play de efeito nunca uploadado — ignora
+            # MASCARA-XBOX-MUDA-01: play de efeito nunca uploadado é um pedido
+            # do jogo que NÃO vira vibração — descartar é certo (não há o que
+            # tocar), descartar EM SILÊNCIO não é. Sem o contador, a tela
+            # afirmava "o jogo não pediu" sem ter como saber.
+            self._ff_descartado_count += 1
+            return
         duration_ms = params[2]
         if duration_ms <= 0:
             # Duração 0 significa "toca até o jogo mandar parar" (semântica do
@@ -597,6 +723,14 @@ class UinputGamepad:
         pair = (weak, strong)
         if pair == self._ff_last_sent:
             return
+        # MASCARA-XBOX-MUDA-01: as duas perguntas que a aba Rumble faz — "o
+        # jogo pediu FORÇA?" e "dava para sentir?" — respondidas no MESMO
+        # ponto em que o par vai ao sink. Antes do dedup não serve: um jogo
+        # que reafirma o mesmo valor 60x/s inflaria a contagem; depois dele,
+        # cada número é uma mudança real de pedido, igual ao caminho uhid.
+        if weak or strong:
+            self._ff_nao_nulo_count += 1
+            self._ff_maior_pedido = pedido_mais_forte(self._ff_maior_pedido, pair)
         self._ff_last_sent = pair
         sink = self.rumble_sink
         if sink is None:
@@ -633,10 +767,13 @@ __all__ = [
     "DUALSENSE_PRODUCT",
     "DUALSENSE_VENDOR",
     "FLAVORS",
+    "FLAVOR_SINONIMOS",
     "MAX_FF_EFFECTS",
     "XBOX360_NAME",
     "XBOX360_PRODUCT",
     "XBOX360_VENDOR",
     "UinputGamepad",
+    "nomes_de_flavor_aceitos",
     "normalize_flavor",
+    "resolver_flavor",
 ]

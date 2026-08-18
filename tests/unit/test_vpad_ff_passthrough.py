@@ -466,11 +466,25 @@ class _FakeBackend:
 
 def _make_daemon(
     *,
-    policy: str = "max",
+    policy: str = "balanceado",
     rumble_active: tuple[int, int] | None = None,
     battery: int = 80,
     controller: Any | None = None,
 ) -> Any:
+    """Daemon de mentira para os testes de TARGETING do FF.
+
+    O padrão era ``policy="max"``, e funcionava por ACIDENTE: enquanto o
+    "Máximo" valia 1,0, o multiplicador era neutro e cada assert podia escrever
+    o número cru que entrou. Em 11/08/2026 o Máximo passou a amplificar
+    (decisão dela) e seis testes de MAC reprovaram de uma vez — nenhum deles
+    fala de intensidade.
+
+    O padrão agora é o ``balanceado``, que é o degrau neutro POR DEFINIÇÃO
+    (1,0 = "o que o jogo pediu"): o multiplicador sai da frente e cada teste
+    volta a falar só do que é dele. Quem quer testar o multiplicador passa a
+    política explicitamente — é o que `test_politica_global_aplica_multiplicador`
+    faz logo abaixo.
+    """
     ctrl_state = SimpleNamespace(battery_pct=battery)
     return SimpleNamespace(
         config=SimpleNamespace(

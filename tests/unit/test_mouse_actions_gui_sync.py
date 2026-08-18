@@ -196,7 +196,10 @@ def test_toggle_sucesso_atualiza_draft_sem_deixar_pendencia(
     switch.set_active(True)
 
     assert calls == [
-        ("mouse.emulation.set", {"enabled": True, "speed": 9, "scroll_speed": 2})
+        (
+            "mouse.emulation.set",
+            {"enabled": True, "speed": 9, "scroll_speed": 2, "origin": "manual"},
+        )
     ]
     assert harness.draft.mouse.enabled is True
     assert harness.draft.mouse.speed == 9
@@ -239,7 +242,7 @@ def test_slider_envia_payload_sem_enabled(monkeypatch: pytest.MonkeyPatch) -> No
 
     harness.on_mouse_speed_changed(scale)
 
-    assert calls == [("mouse.emulation.set", {"speed": 9})]
+    assert calls == [("mouse.emulation.set", {"speed": 9, "origin": "manual"})]
     assert "enabled" not in calls[0][1]
     assert harness.draft.mouse.dirty is True
 
@@ -268,7 +271,7 @@ def test_slider_scroll_envia_payload_sem_enabled(
 
     harness.on_mouse_scroll_speed_changed(scale)
 
-    assert calls == [("mouse.emulation.set", {"scroll_speed": 3})]
+    assert calls == [("mouse.emulation.set", {"scroll_speed": 3, "origin": "manual"})]
 
 
 def test_slider_com_toggle_off_nao_faz_ipc(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -318,12 +321,12 @@ def test_slider_coalescing_um_rpc_em_voo_aplica_ultimo(
     harness.on_mouse_speed_changed(scale)
 
     assert len(held) == 1, "um RPC em voo por vez"
-    assert held[0][0] == {"speed": 7}
+    assert held[0][0] == {"speed": 7, "origin": "manual"}
 
     held[0][1]({"status": "ok"})  # completa o primeiro
 
     assert len(held) == 2, "pendente reenviado ao terminar"
-    assert held[1][0] == {"speed": 9}, "só o último valor sobrevive"
+    assert held[1][0] == {"speed": 9, "origin": "manual"}, "só o último valor sobrevive"
 
     held[1][1]({"status": "ok"})
     assert len(held) == 2, "sem eco infinito"

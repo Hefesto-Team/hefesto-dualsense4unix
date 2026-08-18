@@ -11,9 +11,9 @@ Auto-switch por janela ativa fica em `hefesto_dualsense4unix.profiles.autoswitch
 """
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 from hefesto_dualsense4unix.core.controller import IController, OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS, KeyBinding
@@ -31,16 +31,23 @@ from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     Profile,
 )
+from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: R-21 (auditoria 24/07): a wm_class que a Steam dá a TODA janela de jogo
-#: lançado por ela. Mesma forma reconhecida por `perfil_e_regra_de_jogo`
-#: (schema) e por `lifecycle._janela_de_jogo_em_foco` — a doutrina do
-#: "catch_all_sem_opiniao" precisa da MESMA noção de "isto é um jogo" nos três
-#: lugares, senão a divergência entre os predicados vira o buraco de sempre.
-_STEAM_APP_WM_CLASS_RE = re.compile(r"^steam_app_\d+$", re.IGNORECASE)
+#: R-21 (auditoria 24/07): a doutrina do "catch_all_sem_opiniao" precisa da
+#: MESMA noção de "isto é um jogo" em todo lugar que a usa, senão a divergência
+#: entre os predicados vira o buraco de sempre.
+#:
+#: NOTA DE 05/08/2026 (UNIFICA-PREDICADO-01). Até aqui a regex era cópia local,
+#: e a comparação era a única das cinco cópias com `re.IGNORECASE` — o que a
+#: fazia CERTA e as outras erradas. Agora ela vem de `profiles/steam_app.py`,
+#: que herdou a insensibilidade a caixa (mais o `.strip()`) justamente para
+#: esta linha não perder nada na mudança: uma fonte sensível a caixa revogaria
+#: o veto para uma janela `Steam_App_2111190` e devolveria o catch-all ao jogo.
+#: Portão: `tests/unit/test_profile_manager.py::
+#: test_veto_r21_vale_com_wm_class_em_caixa_alta`.
 
 #: MODO-01 (B3, sprint 25/07): vocabulário do MOTIVO devolvido por
 #: `select_for_window_ex`. Até aqui a seleção respondia só `Profile | None`, e o
@@ -60,6 +67,22 @@ _STEAM_APP_WM_CLASS_RE = re.compile(r"^steam_app_\d+$", re.IGNORECASE)
 MOTIVO_SELECIONADO = "selecionado"
 MOTIVO_SEM_CANDIDATO = "sem_candidato"
 MOTIVO_JOGO_SEM_PERFIL_PROPRIO = "jogo_sem_perfil_proprio"
+
+#: SOM-02/E4: a seção não entrou porque a usuária mexeu NAQUELA categoria na mão
+#: e a trava (`StateStore.manual_override_categories`) está armada. Vocabulário
+#: `ignorado_*` de `daemon.lifecycle`, escrito aqui porque quem o produz é o
+#: manager, não o daemon (e importar o lifecycle no topo deste módulo fecharia
+#: um ciclo). Era literal solto em `apply_speaker`; virou constante quando a
+#: PERFIL-REESCRITO-NA-PARTIDA-01 passou a usá-lo também em `apply`.
+IGNORADO_TRAVA_MANUAL = "ignorado_trava_manual"
+
+#: PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 4: as categorias de
+#: trava manual que `ProfileManager.apply` de fato SILENCIA — são as que viram
+#: `None` no `OutputSpec` logo abaixo. As outras duas categorias existem e são
+#: consumidas noutros pontos ("audio" em `apply_speaker`, "rumble" fora da
+#: ativação), e reportá-las aqui seria inventar um silêncio que este método não
+#: produziu. O relatório só pode afirmar o que este código fez.
+_CATEGORIAS_SILENCIADAS_NO_APPLY = frozenset({"trigger", "led"})
 
 
 @dataclass
@@ -106,6 +129,9 @@ class ProfileManager:
     # só política aplicada por OUTRO perfil; política manual fica), mais o
     # `origin=` por keyword (R-03). None = seção ignorada (CLI/testes sem
     # daemon).
+    # PERFIL-REESCRITO-NA-PARTIDA-01 (05/08): e o `profile=` por keyword, como
+    # `suppression_applier`/`mode_applier` — é o que permite ao applier recusar
+    # a reversão pedida por um catch-all (R-02), a guarda que faltava só neste.
     rumble_policy_applier: Callable[..., object] | None = None
     # SPRINT-GAME-RUMBLE-01: applier da seção `rumble.passthrough` do perfil.
     # Os callsites injetam `daemon.apply_profile_rumble_passthrough` — recebe o
@@ -115,6 +141,21 @@ class ProfileManager:
     # travado e o FF do jogo era ignorado mesmo com a máscara certa. None =
     # seção ignorada (CLI/testes sem daemon).
     rumble_passthrough_applier: Callable[[bool], None] | None = None
+    # SOM-02/E4: applier da seção `speaker` do perfil (volume do alto-falante
+    # e do fone do controle). Assinatura: `(volume: int, muted: bool, *,
+    # uniq: str | None = None, origin: str)` — o par SEMPRE explícito, nunca
+    # um `speaker.set` sem `volume` (armadilha 1 da sprint: chamada sem
+    # volume toma a posse e manda ZERO).
+    #
+    # DIFERENÇA deliberada em relação a `mode_applier`/`rumble_policy_applier`,
+    # que recebem SEMPRE a seção (inclusive None, para reverter o que outro
+    # perfil ligou): aqui perfil sem a seção NÃO chama o applier. Reverter
+    # áudio custaria tomar a posse dos bytes de volume por um perfil que não
+    # pediu nada — o hábito que produziu "a config que eu deixo nunca é
+    # respeitada". Sem opinião é silêncio, não ordem.
+    #
+    # None = seção ignorada (CLI/testes sem daemon).
+    speaker_applier: Callable[..., object] | None = None
     # R-21: última `wm_class` de jogo cujo veto ao catch-all já foi logado. O
     # `select_for_window` roda a 2 Hz (poll do autoswitch): sem esta chave o
     # veto viraria ~7 mil linhas/hora no journal enquanto ela joga.
@@ -203,7 +244,9 @@ class ProfileManager:
         poderia ser lido como se fosse o de outra.
         """
         profile = load_profile(name)
-        self.apply(profile, origin=origin)
+        # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o `relatorio` desce até o
+        # `apply` para as categorias travadas na mão entrarem nele — ver lá.
+        self.apply(profile, origin=origin, relatorio=relatorio)
         self.apply_keyboard(profile)
         self.apply_emulation(profile, origin=origin, relatorio=relatorio)
         self.store.set_active_profile(profile.name)
@@ -228,7 +271,13 @@ class ProfileManager:
             pass
         return profile
 
-    def apply(self, profile: Profile, *, origin: str = "auto") -> None:
+    def apply(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "auto",
+        relatorio: dict[str, str] | None = None,
+    ) -> None:
         """Aplica triggers e LEDs do perfil em TODOS os controles (sem marcar ativo).
 
         PERFIL-01 (4P-01): a seção global vai por `apply_output_defaults` —
@@ -308,16 +357,25 @@ class ProfileManager:
             if callable(soltar):
                 soltar()
 
-        travadas: frozenset[str] = frozenset()
-        store = getattr(self, "store", None)
-        if store is not None:
-            travadas = frozenset(getattr(store, "manual_override_categories", ()) or ())
+        travadas = self._categorias_travadas()
         if travadas:
             logger.info(
                 "profile_apply_respeita_override_manual",
                 profile=profile.name,
                 categorias=sorted(travadas),
             )
+            # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o que a trava silencia
+            # entra no RELATÓRIO, e não só no journal. Este método já sabia
+            # quais categorias iria pular — emitia `None` no `OutputSpec` e
+            # seguia — e nada disso chegava a quem pergunta pelo resultado da
+            # ativação: o `profile.switch` respondia "ativado" e a janela não
+            # tinha como dizer à usuária que o gatilho/a cor do perfil não
+            # entraram porque o ajuste de mão dela venceu. Mesmo vocabulário
+            # que o `apply_speaker` já usava para a categoria "audio", agora
+            # numa constante só.
+            if relatorio is not None:
+                for categoria in travadas & _CATEGORIAS_SILENCIADAS_NO_APPLY:
+                    relatorio[categoria] = IGNORADO_TRAVA_MANUAL
 
         left = build_from_name(profile.triggers.left.mode, profile.triggers.left.params)
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
@@ -342,6 +400,15 @@ class ProfileManager:
         escalar = getattr(self.controller, "set_led_scales", None)
         if callable(escalar):
             escalar(escalas or None)
+        # POR-UNIDADE-01: a intensidade de vibração por peça segue o MESMO
+        # ciclo de vida da escala de brilho — publicada aqui, SUBSTITUINDO o
+        # mapa inteiro (perfil sem overrides limpa o que o anterior deixou).
+        escalas_rumble = _controllers_to_rumble_scales(
+            profile.controllers, getattr(profile, "rumble", None)
+        )
+        escalar_rumble = getattr(self.controller, "set_rumble_scales", None)
+        if callable(escalar_rumble):
+            escalar_rumble(escalas_rumble or None)
         publicar = getattr(self.controller, "reset_profile_overrides", None)
         if callable(publicar):
             publicar(overrides or None)
@@ -360,6 +427,19 @@ class ProfileManager:
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
+
+    def _categorias_travadas(self) -> frozenset[str]:
+        """Categorias de override MANUAL armadas no store agora.
+
+        ONDA-U F1/F2: "trigger" | "led" | "rumble" — e "audio" desde a SOM-02,
+        que é a categoria que o alto-falante consome. Lido por `getattr` de
+        propósito: dublês de teste e o `ProfileManager` sem store continuam
+        funcionando, e o conjunto vazio significa "nada travado".
+        """
+        store = getattr(self, "store", None)
+        if store is None:
+            return frozenset()
+        return frozenset(getattr(store, "manual_override_categories", ()) or ())
 
     @staticmethod
     def _configure_auto_player_colors(profile: Profile) -> None:
@@ -441,6 +521,9 @@ class ProfileManager:
 
         Applier de dublê que devolve `None` conta como "aplicado" — só o daemon
         real sabe adiar, e um dublê nunca deve fabricar um adiamento.
+
+        SOM-02/E4: a seção `speaker` fecha a lista, com contrato PRÓPRIO —
+        perfil sem ela não chama applier nenhum (ver `apply_speaker`).
         """
         resultado: dict[str, str] = relatorio if relatorio is not None else {}
         if self.mouse_applier is not None and profile.mouse is not None:
@@ -512,10 +595,17 @@ class ProfileManager:
         if self.rumble_policy_applier is not None:
             rumble_cfg = getattr(profile, "rumble", None)
             try:
+                # PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 3: junto
+                # com o par vai QUEM mandou, como já ia para `suppression` e
+                # `mode` (R-02). Sem isso o applier não conseguia distinguir "o
+                # perfil deste jogo não quer política" de "caiu num catch-all
+                # porque nenhuma regra casou" — e a segunda hipótese revertia a
+                # política de rumble DENTRO da partida dela.
                 resultado["rumble_policy"] = _estado_da_secao(
                     self.rumble_policy_applier(
                         getattr(rumble_cfg, "policy", None),
                         getattr(rumble_cfg, "custom_mult", None),
+                        profile=profile,
                         origin=origin,
                     )
                 )
@@ -541,7 +631,178 @@ class ProfileManager:
                     profile=profile.name,
                     err=str(exc),
                 )
+        # SOM-02/E4: o alto-falante entra POR ÚLTIMO e só quando o perfil tem
+        # opinião — ver `apply_speaker`.
+        self.apply_speaker(profile, origin=origin, relatorio=resultado)
+        # POR-UNIDADE-01: e DEPOIS do global, a peça que discorda dele.
+        self.apply_controller_speakers(profile, origin=origin, relatorio=resultado)
         return resultado
+
+    def apply_controller_speakers(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+    ) -> dict[str, str]:
+        """Aplica o alto-falante das UNIDADES que discordam do global (10/08).
+
+        Ela, em 10/08/2026: *"se eu quiser fazer uma guia específica do perfil
+        X pro controle branco e outra pro mesmo perfil mas pra um controle
+        preto"*. O alto-falante é da peça — cada unidade tem o seu —, e a
+        fiação por-``uniq`` já existia inteira e nunca fora ligada:
+        ``apply_speaker`` aceita ``uniq`` desde a SOM-02/E4 e
+        ``lifecycle.apply_profile_speaker`` o repassa a
+        ``set_speaker_volume(uniq=...)``. Faltava o perfil ter ONDE guardar
+        quem é quem — agora tem (``ControllerOverrides.speaker``).
+
+        DEPOIS do global, e é a ordem que importa: o global já escreveu em
+        todo mundo (``uniq=None`` = broadcast), e cada override reescreve
+        apenas a SUA peça por cima. Unidade sem override fica com o global,
+        que é o que "sem opinião" quer dizer aqui como em toda seção.
+
+        A seção do alto-falante NÃO é parcial por construção (``volume`` é
+        obrigatório no esquema — SOM-02, armadilhas 1 e 2), então não há
+        merge por campo a fazer: o override substitui a seção inteira daquela
+        peça. Reusa ``apply_speaker`` VERBATIM através de uma vista do perfil
+        (``model_copy``) para não duplicar as três guardas dela — a trava
+        manual de áudio, o par volume+mudo completo e o silêncio de quem não
+        pediu nada valem igual para a peça.
+
+        Relatório: ``speaker:<uniq>`` → estado, uma chave por unidade. Chave
+        distinta da ``speaker`` global de propósito, para a GUI conseguir
+        dizer QUAL peça foi ignorada pela trava manual em vez de fundir tudo
+        num rótulo só.
+        """
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        controllers = getattr(profile, "controllers", None)
+        if not controllers:
+            return resultado
+        for uniq, cfg in controllers.items():
+            secao = getattr(cfg, "speaker", None)
+            if secao is None:
+                continue
+            vista = profile.model_copy(update={"speaker": secao})
+            estado = self.apply_speaker(vista, origin=origin, uniq=str(uniq))
+            if estado is not None:
+                resultado[f"speaker:{uniq}"] = estado
+        return resultado
+
+    def apply_speaker(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        uniq: str | None = None,
+        relatorio: dict[str, str] | None = None,
+    ) -> str | None:
+        """Aplica a seção `speaker` do perfil (SOM-02/E4). Devolve o estado.
+
+        As TRÊS guardas desta entrega, cada uma vinda de uma medição da sprint:
+
+        1. **perfil sem a seção não escreve NADA.** `speaker=None` é ausência
+           de opinião, e o applier nem é chamado — diferente do `mode` e da
+           política de rumble, que recebem `None` para reverter o que outro
+           perfil ligou. Aqui "reverter" custaria tomar a posse dos bytes de
+           volume: a primeira escrita nossa faz o hefesto mandar o volume do
+           alto-falante E do fone em todo report, e o DualSense não devolve o
+           valor que o firmware tinha. Um perfil que não pediu nada não pode
+           pagar esse preço (é a queixa "a config que eu deixo nunca é
+           respeitada", do lado do áudio).
+        2. **a trava manual de áudio vence o perfil.** Categoria `"audio"` do
+           `StateStore` (irmã de "trigger"/"led"/"rumble"): se ela acabou de
+           mexer no volume na mão, o autoswitch reaplicando o perfil a cada
+           troca de janela NÃO pisa o ajuste dela — a mesma disciplina do
+           PERFIL-MANUAL-VENCE-01, que trata cor e gatilho assim. Trocar de
+           perfil explicitamente limpa as categorias e solta a trava.
+        3. **o par vai SEMPRE completo.** `volume` e `muted` juntos, nunca um
+           `speaker.set` sem volume — medido: sem volume e sem preferência
+           guardada a chamada toma a posse e manda ZERO, publicando
+           `{'volume': 0, 'muted': True}`. O esquema já recusa a seção sem
+           `volume` (ver `ProfileSpeakerConfig`); aqui o `int(...)` explícito
+           é a segunda cerca, para um dublê ou um objeto parcial não
+           conseguirem produzir a chamada vazia.
+
+        Best-effort como os irmãos: falha do applier loga warning e não aborta
+        a ativação. `relatorio` recebe `"speaker" → estado` para a GUI poder
+        contar a verdade (inclusive `"ignorado_trava_manual"`, que sem o
+        registro sumiria sem rastro — o buraco que o R-03 fechou).
+        """
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        secao = getattr(profile, "speaker", None)
+        if self.speaker_applier is None or secao is None:
+            return None
+        if "audio" in self._categorias_travadas():
+            resultado["speaker"] = IGNORADO_TRAVA_MANUAL
+            logger.info(
+                "profile_speaker_ignorado_trava_manual",
+                profile=profile.name,
+                origin=origin,
+            )
+            return resultado["speaker"]
+        try:
+            estado = _estado_da_secao(
+                self.speaker_applier(
+                    int(secao.volume),
+                    bool(secao.muted),
+                    uniq=uniq,
+                    origin=origin,
+                    # SOM-ROTA-01/perfil: o CANAL vai junto do par volume+mudo.
+                    # O esquema já GUARDAVA a rota e ninguém a escrevia no
+                    # controle — perfil com "Todo o som do PC" salvo ativava
+                    # mudo e o som continuava saindo por onde estava. `None`
+                    # (o default de quem nunca mexeu no seletor) significa
+                    # NÃO TOCAR no `common[7]`, que é o mesmo byte do caminho
+                    # do microfone: sem opinião continua sendo silêncio.
+                    rota=getattr(secao, "rota", None),
+                )
+            )
+        except Exception as exc:
+            estado = "falhou"
+            logger.warning(
+                "profile_speaker_apply_failed",
+                profile=profile.name,
+                err=str(exc),
+            )
+        resultado["speaker"] = estado
+        return estado
+
+    def reapply_speaker_on_connect(self, uniq: str | None = None) -> str | None:
+        """Reaplica o volume do perfil ATIVO quando um controle (re)conecta.
+
+        SOM-02/E4, item 3 das medições da sprint — a armadilha 4: a posse dos
+        bytes de áudio morre com o cabo. `_volumes_audio` nasce vazio em cada
+        handle e CADA conexão cria um handle novo, então desconectar e
+        reconectar (ou reiniciar o daemon) apaga a posse e o volume: a chave
+        `speaker` some do estado e o rótulo volta a "não ajustado". Persistir
+        por perfil sem este gancho faria o volume voltar ao do firmware ao
+        trocar o cabo, em silêncio.
+
+        **Só reaplica quando o perfil ativo TEM a seção** — sem isso
+        voltaríamos a tomar posse sem pedido a cada replug, que é o defeito
+        que a E4 inteira existe para não cometer. Sem perfil ativo, sem seção
+        ou sem applier: devolve `None` e não escreve nada. Com a trava manual
+        de áudio armada devolve `"ignorado_trava_manual"` (e também não
+        escreve): se ela mexeu no volume na mão, quem manda é ela — a
+        reconexão não é ocasião para o perfil retomar o campo.
+
+        `origin="system"` de propósito: reconexão é o sistema reaplicando o
+        que já estava configurado, nunca um gesto novo dela (mesma leitura do
+        restore de boot).
+        """
+        nome = getattr(getattr(self, "store", None), "active_profile", None)
+        if not nome:
+            return None
+        try:
+            profile = load_profile(str(nome))
+        except Exception as exc:
+            logger.warning(
+                "profile_speaker_reapply_load_failed", name=str(nome), err=str(exc)
+            )
+            return None
+        if getattr(profile, "speaker", None) is None:
+            return None
+        return self.apply_speaker(profile, origin="system", uniq=uniq)
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:
         """Escolhe o perfil MAIS ESPECÍFICO que case com a janela.
@@ -612,7 +873,7 @@ class ProfileManager:
         """
         candidates = [p for p in load_all_profiles() if p.matches(dict(window_info))]
         wm_class = str(window_info.get("wm_class") or "")
-        e_janela_de_jogo = bool(_STEAM_APP_WM_CLASS_RE.match(wm_class))
+        e_janela_de_jogo = steam_appid_from_wm_class(wm_class) is not None
         if not candidates:
             if e_janela_de_jogo:
                 return None, MOTIVO_JOGO_SEM_PERFIL_PROPRIO
@@ -880,6 +1141,80 @@ def _controllers_to_led_scales(
         if "lightbar" in campos or "lightbar_brightness" not in campos:
             continue
         fator = float(cfg.leds.lightbar_brightness) / base
+        if fator == 1.0:
+            continue
+        out[uniq] = fator
+    return out
+
+
+#: Política de intensidade que o daemon assume quando NINGUÉM opinou — o
+#: default de `DaemonConfig.rumble_policy`. É o denominador honesto do fator
+#: por unidade num perfil sem seção `rumble.policy` própria: sem opinião
+#: global, o que o hardware recebe é o "balanceado" do daemon.
+_RUMBLE_POLICY_PADRAO = "balanceado"
+
+
+def _mult_da_politica(policy: str | None, custom_mult: float | None) -> float | None:
+    """Multiplicador de uma política FIXA de rumble, ou None se não há.
+
+    Fonte única: a MESMA tabela `RUMBLE_POLICY_MULT` que o daemon usa
+    (`daemon.subsystems.rumble`), com import lazy — `profiles/` não importa
+    `daemon/` no topo. `auto` devolve None de propósito: ele não é um número,
+    é uma função da bateria (ver `ControllerRumbleOverride`).
+    """
+    if policy is None:
+        return None
+    if policy == "custom":
+        return None if custom_mult is None else float(custom_mult)
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+    return RUMBLE_POLICY_MULT.get(policy)
+
+
+def _controllers_to_rumble_scales(
+    controllers: dict[str, ControllerOverrides] | None,
+    global_rumble: Any | None = None,
+) -> dict[str, float]:
+    """Escala de VIBRAÇÃO por controle do perfil (POR-UNIDADE-01, 10/08/2026).
+
+    Devolve `{uniq: fator}` — o mesmo contrato, campo por campo, de
+    `_controllers_to_led_scales`, e pela MESMA razão de desenho: o valor que
+    chega ao `set_rumble` do backend JÁ vem escalado pela política GLOBAL
+    (`apply_rumble_policy` faz isso em todo caminho de rumble), então o que a
+    unidade registra tem de ser RELATIVO — `mult_da_unidade / mult_global` —,
+    senão a peça escalaria duas vezes.
+
+    O denominador é a política do PRÓPRIO perfil quando ele tem uma; sem
+    opinião global, é o `balanceado` que o daemon assume. Com o global em
+    `auto`, o denominador é um número que muda com a bateria a cada tick — e
+    aí a entrada é PULADA, com log: um fator contra denominador móvel faria a
+    peça vibrar de forma imprevisível, e prometer isso seria pior do que não
+    entregar. (O `auto` por unidade já é recusado na borda do esquema.)
+
+    Fator 1.0 não entra — é "sem opinião", igual ao irmão dos LEDs.
+    """
+    out: dict[str, float] = {}
+    policy_global = getattr(global_rumble, "policy", None) or _RUMBLE_POLICY_PADRAO
+    base = _mult_da_politica(
+        policy_global, getattr(global_rumble, "custom_mult", None)
+    )
+    for uniq, cfg in (controllers or {}).items():
+        if cfg.rumble is None:
+            continue
+        campos = cfg.rumble.model_fields_set
+        if "policy" not in campos:
+            continue
+        mult = _mult_da_politica(cfg.rumble.policy, cfg.rumble.custom_mult)
+        if mult is None:
+            continue
+        if base is None or base <= 0.0:
+            logger.info(
+                "escala_de_vibracao_pulada_base_movel",
+                uniq=uniq,
+                policy_global=policy_global,
+            )
+            continue
+        fator = mult / base
         if fator == 1.0:
             continue
         out[uniq] = fator

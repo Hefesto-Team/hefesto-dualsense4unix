@@ -21,10 +21,12 @@ Complemento de scripts: tab-completion funciona em zsh e bash via
 | `hefesto-dualsense4unix led --color ...` | Cor da lightbar (com `--brightness` opcional). |
 | `hefesto-dualsense4unix mouse on/off/status` | Emulação de mouse via daemon. |
 | `hefesto-dualsense4unix profile list/show/activate/create/delete/apply/save` | Gerência de perfis. |
+| `hefesto-dualsense4unix profile historico/restore` | Versões guardadas de um perfil — e a volta. |
 | `hefesto-dualsense4unix trigger/rumble` (subgrupo `test`) | Efeitos direto no hardware. |
 | `hefesto-dualsense4unix daemon start/stop/restart/status/pause/resume/enable/disable/install-service/uninstall-service` | Ciclo do daemon. |
 | `hefesto-dualsense4unix gamepad on/off/status` | Controle virtual (substituiu o antigo `emulate xbox360`). |
 | `hefesto-dualsense4unix mic on/off/status/bt/bt-status` | Microfone do controle — no cabo (política) e por Bluetooth (ponte). |
+| `hefesto-dualsense4unix speaker status/volume/mute/unmute/release` | Alto-falante e fone do controle — inclusive a DEVOLUÇÃO da posse. |
 | `hefesto-dualsense4unix tui` / `hefesto-dualsense4unix tray` | Interfaces alternativas. |
 
 ---
@@ -116,6 +118,11 @@ hefesto-dualsense4unix profile apply --file draft.json --no-save   # ativa sem p
 
 # Snapshot
 hefesto-dualsense4unix profile save <novo_nome> --from-active     # clona o perfil ativo
+
+# Histórico (automático, uma cópia por gravação)
+hefesto-dualsense4unix profile historico <nome>                   # o que este perfil ja foi
+hefesto-dualsense4unix profile restore <nome>                     # volta a versao ANTERIOR a ultima gravacao
+hefesto-dualsense4unix profile restore <nome> --em <carimbo>      # volta a uma versao especifica
 ```
 
 ### `profile apply --file`
@@ -150,6 +157,53 @@ Exit codes:
 - `2` — flag `--from-active` ausente. Sem ela a operação é recusada: clonar
   um perfil por nome arbitrário não está implementado, e não há trabalho em
   andamento para isso.
+
+### `profile historico` e `profile restore` (a volta de uma gravação)
+
+Diferente do `profile save --from-active`, que é um snapshot que **você** pede:
+o histórico é **automático**. Desde a `PERFIL-SEM-RASTRO-01`, toda gravação de
+perfil copia a versão **anterior** para
+`~/.config/hefesto-dualsense4unix/profiles/.historico/<slug>/`, guardando as
+**dez** mais recentes. É a resposta para *"o que este perfil era ontem?"* e para
+*"desfaça o que a janela acabou de fazer com meu perfil"*.
+
+```bash
+hefesto-dualsense4unix profile historico sackboy_nativo
+hefesto-dualsense4unix profile restore sackboy_nativo
+hefesto-dualsense4unix profile restore sackboy_nativo --em 20260805T031500_123456.json
+```
+
+O `historico` recebe **nome ou slug** e imprime uma tabela com *Quando*, *Match*,
+*Prioridade* e *Arquivo* — a mais recente por último. A coluna *Match* é o que
+importa quando um perfil de jogo vira `any` sozinho. Uma versão que não valida
+contra o schema aparece como **ilegível** em vez de sumir da lista: é
+justamente ela o retrato da corrupção.
+
+O `restore` **sem `--em` volta à mais recente**, que é a versão de antes da
+última gravação. Com `--em`, recebe o carimbo da coluna *Arquivo*. A versão que
+está em disco agora é arquivada **antes** de ser substituída — restaurar por
+engano também tem volta —, e os bytes voltam **como estavam**, sem
+reserialização: um instrumento de perícia que altera a prova não é instrumento.
+
+Exit codes do `restore`:
+
+- `0` — perfil restaurado (imprime o arquivo e o carimbo da versão usada).
+- `1` — não há histórico para esse perfil, o carimbo não existe, **ou** a versão
+  guardada não valida contra o schema (lixo guardado não volta ao disco).
+
+Notas:
+
+- **o histórico nasce na PRÓXIMA vez que o perfil for salvo.** Um perfil que
+  nunca foi regravado desde a instalação desta versão não tem versão nenhuma
+  guardada, e o `historico` diz isso;
+- **`profile delete` também arquiva** antes de apagar — apagar é a gravação mais
+  destrutiva de todas;
+- o `.historico/` fica **dentro** de `profiles/` de propósito: quem faz backup
+  do `~/.config` leva o histórico junto. Ele é invisível às varreduras de perfil,
+  que são todas não recursivas;
+- o arquivamento é *best-effort*: disco cheio ou permissão negada **não impedem
+  você de salvar o perfil**. A falha vira `profile_backup_failed` no journal, e a
+  linha `profile_salvo` registra `backup=None` em vez de mentir.
 
 ## `hefesto-dualsense4unix daemon`
 
@@ -208,7 +262,18 @@ hefesto-dualsense4unix gamepad status
 ## Demais comandos
 
 - `hefesto-dualsense4unix status` — estado do daemon via IPC (fallback local se offline).
-- `hefesto-dualsense4unix doctor` — diagnóstico ponta a ponta (`--fix`, `--fix-safe`, `--quiet`).
+- `hefesto-dualsense4unix doctor` — diagnóstico ponta a ponta (`--fix`,
+  `--fix-safe`, `--quiet`). O bloco **perfis (coerência entre eles)** sai junto,
+  mas **não** muda o código de saída aqui.
+- `hefesto-dualsense4unix doctor --perfis` — **só** a coerência dos perfis entre
+  si: sem `doctor.sh`, sem diagnóstico de storm e sem IPC. É o caminho rápido
+  para responder *"meus perfis estão sãos?"* — read-only, não toca em arquivo
+  nenhum. Compara os perfis **uns com os outros** e acusa catch-all vencendo
+  perfil de jogo, catch-all com cara de jogo, prioridades empatadas, prioridade
+  fora da faixa e catch-all demais. **Sai com código `1` quando há achado
+  grave** e `0` quando não há — é o único bloco do `doctor` feito para virar
+  portão. Ele **avisa e não corrige**: os seus arquivos de perfil não são
+  reescritos por este comando.
 - `hefesto-dualsense4unix battery` — percentual de bateria.
 - `hefesto-dualsense4unix mic on|off|status|bt|bt-status` — microfone embutido
   do DualSense. `on`/`off`/`status` são **política do WirePlumber** e valem no
@@ -216,8 +281,36 @@ hefesto-dualsense4unix gamepad status
   a **ponte** que decodifica o Opus tunelado nos relatórios HID e publica o
   microfone no PipeWire (Ctrl-C encerra); `bt-status` só diagnostica as
   pré-condições, sem mexer em nada. Ver [`bluetooth.md`](bluetooth.md).
+- `hefesto-dualsense4unix speaker status|volume <0-100>|mute|unmute|release` —
+  alto-falante **e fone** do controle (é um volume só: o mesmo valor vai nos dois
+  bytes). Exige o daemon. O volume mora no firmware e o controle **não o
+  devolve**: a única forma de saber o valor é termos sido nós a mandá-lo, e por
+  isso a primeira escrita assume a posse — daí em diante o hefesto manda o volume
+  em todo report. `speaker release` é a saída, o irmão do `mic release`: devolve
+  o CONTROLE, não o valor (o firmware fica com o último número que mandamos até o
+  controle desconectar). `speaker mute` exige um volume conhecido — mudo como
+  primeira escrita trancaria o alto-falante em zero e o próprio mudo não o
+  soltaria. Se nenhum som sair mesmo com volume alto, o problema é a outra
+  camada: o sink do controle no PipeWire pode estar mudo (`scripts/doctor.sh`
+  reporta), e por Bluetooth não existe fluxo de áudio de saída nenhum.
 - `hefesto-dualsense4unix native on|off|status` — Modo Nativo (solta o controle para o jogo).
-- `hefesto-dualsense4unix coop on|off|status` — co-op local (cada controle = um jogador).
+- `hefesto-dualsense4unix coop on|status` — co-op local (cada controle = um
+  jogador). O `on` reconcilia os jogadores agora; o `status` conta quantos há.
+  **`coop off` não desliga mais** (06/08/2026): ele explica por quê e sai com
+  código 2. Cada controle conectado é um jogador, sempre — quem quer um controle
+  de reserva o deixa desconectado. Nos jogos com exceção de Steam Input o co-op
+  **continua de pé**: desde 09/08/2026 a exceção esconde o controle físico e
+  mantém os virtuais, então o jogador 2 não cai.
+
+  > **NOTA DATADA — 06/08/2026: "cada controle = um jogador" vale para
+  > DualSense.** A frase fica registrada porque decisão medida não se apaga.
+  > **GRAU: MEDIDO** em 06/08/2026 às 22h40, com um DualSense, um Nintendo Pro e
+  > um 8BitDo ligados: `coop status` respondeu **"jogadores ativos: 1"** e
+  > `controller list` mostrou **um** controle. O número que o `status` conta vem
+  > só dos DualSense descobertos; controle de outra marca aparece em
+  > `controller list --external`, recebe número e luz, e **não entra nessa
+  > conta**. Medição inteira na
+  > [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
 - `hefesto-dualsense4unix controller list|target` — mira as ações num controle específico.
 - `hefesto-dualsense4unix plugin list|reload` — plugins do daemon.
 - `hefesto-dualsense4unix tui` — abre a TUI Textual.

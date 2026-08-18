@@ -1,5 +1,5 @@
 Package: hefesto-dualsense4unix
-Version: 0.5.0
+Version: 0.9.4.2
 X-Hefesto-Deb-Epoch: 1
 Section: utils
 Priority: optional
@@ -9,7 +9,7 @@ Depends: python3 (>= 3.10), python3-venv,
          gir1.2-ayatanaappindicator3-0.1,
          libhidapi-hidraw0, libnotify-bin,
          libopus0
-Recommends: ydotool | wlrctl, dkms, pulseaudio-utils
+Recommends: ydotool | wlrctl, dkms, pulseaudio-utils, wvkbd | onboard
 Maintainer: Hefesto - Dualsense4Unix Project <noreply@example.com>
 Description: Gerenciador DualSense para Linux
  Hefesto - Dualsense4Unix e um daemon user-level que habilita os gatilhos
@@ -38,3 +38,25 @@ Description: Gerenciador DualSense para Linux
  audio como Opus dentro dos reports HID, decodificado via ctypes sobre
  a libopus do sistema (sem binding pip). pulseaudio-utils (pactl) e o
  que publica o microfone no PipeWire.
+ .
+ wvkbd | onboard e o TECLADO NA TELA que o L3 do controle abre
+ (TECLADO-QUE-NAO-DIGITA-01). Importa porque nenhum dos nove atalhos de
+ fabrica do teclado emulado digita uma LETRA (Super, PrintScreen,
+ Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois tokens de
+ OSK): sem ele, o unico caminho do produto para ESCREVER TEXTO com o
+ controle nao existe.
+ .
+ Por que Recommends e nao Depends: o Hefesto inteiro funciona sem o
+ teclado na tela — gatilhos, lightbar, rumble, perfis, emulacao — e so
+ o gesto do L3 fica sem efeito. Recommends e instalado por padrao pelo
+ apt (e o que atende a regra "sem flag"), e ainda permite remover o
+ teclado sem desinstalar o Hefesto junto, que e o que um Depends
+ impediria. Mesmo criterio ja aplicado a pulseaudio-utils e wlrctl.
+ .
+ Por que wvkbd PRIMEIRO na alternativa: o apt instala a primeira
+ alternativa disponivel, e wvkbd e um cliente Wayland puro que digita
+ pelo protocolo zwp_virtual_keyboard_manager_v1. O onboard digita por
+ XTEST (Depends: libxtst6), entao numa sessao Wayland ele abre via
+ XWayland e as teclas so chegam a clientes XWayland — abre e nao
+ digita. Em sessao X11 o onboard e o certo, e o scripts/install_osk.sh
+ do instalador nativo escolhe pela sessao viva.

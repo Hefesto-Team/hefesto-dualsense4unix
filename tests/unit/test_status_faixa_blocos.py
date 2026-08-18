@@ -307,19 +307,40 @@ def test_a_barra_do_gatilho_nao_toma_a_largura_do_card(compact: bool) -> None:
     ~800px na tela de 1920: o mesmo defeito, no caminho que ela não estava
     olhando naquele dia.
 
-    A mordida: devolver o `set_hexpand(True)` no lugar do teto faz a barra
-    voltar a receber a largura inteira do card e este teste cai.
+    ALINHA-DUAS-LINHAS-01 (01/08) trocou o TETO, e não a regra. Ela pediu,
+    olhando a tela: *"alinha a seção do L2 e R2 pra ficar entre o touchpad e o
+    analógico direito"*. O teto deixa de ser o número fixo de
+    ``largura_da_barra_de_gatilho()`` e passa a ser a METADE ESQUERDA da faixa
+    de baixo — que é bem menor que o card (medido: 698 de 1400 na tela dela) e
+    por isso continua curando o defeito 4.
+
+    A mordida é a mesma de antes, e continua valendo: devolver o
+    ``set_hexpand(True)`` SEM o ``SizeGroup`` — ou tirar o ``SizeGroup``
+    deixando o ``hexpand`` — faz a barra voltar a receber a largura inteira do
+    card, e a primeira asserção cai. Um teste que só afirmasse "a barra é
+    menor que o card" não morderia: 881px também é menor que 1400.
     """
     card = _card_na_tela_dela(compact=compact)
-    teto = card.largura_da_barra_de_gatilho()
+    metade = card._metade_esquerda.get_allocated_width()
+    fim_da_metade = _faixa(card._metade_esquerda)[1]
 
     for nome, barra in (("L2", card._l2_bar), ("R2", card._r2_bar)):
         largura = barra.get_allocated_width()
-        assert largura <= teto, (
-            f"a barra do {nome} mede {largura}px (teto de {teto}px): o valor "
-            "volta a flutuar no meio do vazio"
+        assert largura <= metade, (
+            f"a barra do {nome} mede {largura}px e a metade esquerda da faixa "
+            f"tem {metade}px: a barra saiu da coluna que a limita"
         )
-    assert card.largura_da_barra_de_gatilho() <= LARGURA_BARRA_GATILHO_UNICO
+        # A tolerância é a borda da moldura do bloco vizinho, não folga de
+        # conveniência: o alvo é o fim do analógico direito.
+        fim_da_barra = _faixa(barra)[1]
+        assert abs(fim_da_barra - fim_da_metade) <= 12, (
+            f"a barra do {nome} termina em {fim_da_barra} e a metade esquerda "
+            f"em {fim_da_metade}: era esse alinhamento o pedido dela"
+        )
+    assert card.largura_da_barra_de_gatilho() <= LARGURA_BARRA_GATILHO_UNICO, (
+        "o PISO da barra (o `set_size_request`) não pode subir: ele entra "
+        "inteiro no mínimo do card, que já está no teto de 1040"
+    )
 
 
 @pytest.mark.parametrize("compact", [False, True])
@@ -328,34 +349,51 @@ def test_o_numero_do_giroscopio_fica_perto_do_nome_do_eixo(
 ) -> None:
     """Defeito 4 — os números do giroscópio a ~880px dos rótulos X/Y/Z.
 
-    O desenho põe a letra do eixo na borda ESQUERDA do widget e o número
+    O desenho punha a letra do eixo na borda ESQUERDA do widget e o número
     colado na borda DIREITA (`fim_barra + 4`, em `sensor_widgets`), então a
-    largura alocada É a distância entre os dois. Ela leu isso como "rótulos
+    largura alocada ERA a distância entre os dois. Ela leu isso como "rótulos
     apertados à esquerda e números jogados na borda direita".
 
-    A medida é uma FAIXA, com piso e teto, porque a cura erra para os dois
-    lados: sem o `set_size_request` o desenho encolhe até quase sumir (a
-    moldura abraça o conteúdo, e um `DrawingArea` não tem largura natural);
-    sem o `halign` que o prende à esquerda ele volta a receber a coluna
-    inteira do grid.
+    **ALINHA-DUAS-LINHAS-01 (01/08) curou a causa em vez do sintoma.** Até
+    aqui a cura era estreitar o desenho — e ela deixou de ser possível quando
+    ela pediu, olhando a tela, *"alinha e estica a seção do giroscópio pra
+    ficar entre o microfone e o triângulo"*. Um desenho de 640px com o número
+    na borda direita seria o defeito de volta, pior.
+
+    O número mudou de lado: agora ele fica logo DEPOIS da letra do eixo
+    (`inicio_valor`, em `sensor_widgets`), e a barra ocupa todo o resto. A
+    distância entre o nome e o número passou a ser uma constante do desenho —
+    não muda mais com a largura, em nenhuma janela.
+
+    Por isso este teste deixou de medir largura e passou a medir A DISTÂNCIA,
+    que é o que o título dele sempre disse. A mordida: devolver o
+    `ctx.move_to(fim_barra + 4, ...)` no `_on_draw` faz a distância voltar a
+    ser a largura inteira do desenho e a primeira asserção cai — em qualquer
+    largura, inclusive na antiga.
 
     E a moldura tem de acompanhar o desenho: uma moldura larga com um
     desenho estreito dentro só mudaria o vazio de lugar, para DENTRO do
     bloco — que é a definição do defeito que ela nomeou.
     """
+    from hefesto_dualsense4unix.app.widgets.sensor_widgets import _ROTULO_GYRO_PX
+
     card = _card_na_tela_dela(compact=compact)
-    teto = card.largura_do_giroscopio()
 
     largura = card._gyro_bars.get_allocated_width()
-    piso = teto * 3 // 4
+    # O número nasce em `_ROTULO_GYRO_PX` e a letra em x=0: a distância entre
+    # os dois é essa constante, e nada mais. O teto de 40px é generoso de
+    # propósito — o que este teste recusa é a distância CRESCER com a janela.
+    distancia = _ROTULO_GYRO_PX
 
-    assert piso <= largura <= teto, (
-        f"o giroscópio ocupa {largura}px de largura (faixa esperada: {piso} a "
-        f"{teto}px), então o número de cada eixo está a "
-        f"{largura}px do nome dele — ou o desenho encolheu a ponto de não se "
-        "ler"
+    assert distancia <= 40, (
+        f"o número de cada eixo está a {distancia}px do nome dele. O desenho "
+        "voltou a ancorar o valor na borda direita — com o giroscópio "
+        f"esticado ({largura}px) isso é o defeito 4 de volta, pior"
     )
-    assert card.largura_do_giroscopio() <= LARGURA_GYRO_UNICO
+    assert card.largura_do_giroscopio() <= LARGURA_GYRO_UNICO, (
+        "o PISO do desenho (o `set_size_request`) não pode subir: ele entra "
+        "inteiro no mínimo do card, que já está no teto de 1040"
+    )
     moldura = card._gyro_box.get_allocated_width()
     assert moldura - largura <= 60, (
         f"a moldura do giroscópio mede {moldura}px para um desenho de "
@@ -435,6 +473,12 @@ def test_cada_sensor_tem_moldura_propria_no_card_de_um_controle(
 
     A mordida: fazer `_bloco` devolver a caixa nua (o que ele faz no card
     compacto, onde a moldura não cabe na largura) derruba os cinco casos.
+
+    A comparação é por PREFIXO desde 01/08 (SOM-ROTA-NO-CARD-01): o rótulo do
+    alto-falante passou a carregar o valor — "Alto-falante · 71 %" — porque o
+    lugar onde esse valor morava foi cedido ao botão da rota, a pedido dela. O
+    nome do bloco continua sendo a primeira coisa que se lê, e é isso que este
+    teste guarda; um rótulo que começasse por outra coisa continua reprovando.
     """
     card = _card_na_tela_dela()
 
@@ -445,7 +489,10 @@ def test_cada_sensor_tem_moldura_propria_no_card_de_um_controle(
     )
     assert bloco.get_shadow_type() != Gtk.ShadowType.NONE
     rotulo = bloco.get_label_widget()
-    assert rotulo is not None and rotulo.get_text() == nome
+    assert rotulo is not None and rotulo.get_text().startswith(nome), (
+        f"o rótulo da moldura é {rotulo.get_text()!r} e tem de começar por "
+        f"{nome!r}: o nome do bloco vem antes de qualquer valor"
+    )
 
 
 def test_o_card_compacto_nao_paga_moldura_porque_nao_cabe() -> None:
@@ -509,26 +556,39 @@ def test_o_alto_falante_aparece_mesmo_sem_ninguem_ter_ajustado() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_a_bateria_do_card_sai_quando_o_frame_estado_ja_a_mostra() -> None:
+def test_a_bateria_aparece_uma_vez_so_na_tela_em_qualquer_modo() -> None:
     """Com UM controle, a bateria aparecia duas vezes na mesma tela.
 
-    As duas regras já eram complementares e ninguém as tinha juntado: a linha
-    do frame "Estado" só fica visível com 0 ou 1 controle
-    (`_set_battery_row_visible`), e o card só é compacto com 2+. Quem sai no
-    caso de um controle é a linha do CARD — a do frame Estado responde também
-    quando não há controle nenhum, e aí não existe card.
+    **A regra que este teste trava nunca mudou: a bateria aparece UMA vez.**
+    O que mudou, na CARD-ÚNICO-01, foi qual das duas sai — e por isso o
+    teste passou a medir o comportamento em vez do mecanismo (ele exigia,
+    literalmente, que a linha do card estivesse invisível).
 
-    A mordida: tirar o `_esconder_modulo(linha_bateria)` do card único faz a
-    repetição voltar e este teste cai.
+    Antes: o frame "Estado" mostrava a bateria com 0 ou 1 controle, e a linha
+    do card único se escondia para não repetir. Agora o frame Estado inteiro
+    some quando há um controle só — ela pediu, *"apaga estado"* — e quem
+    mostra a bateria passou a ser o card, nos DOIS modos.
+
+    A mordida: devolver o `_esconder_modulo(linha_bateria)` ao card único faz
+    a bateria sumir da tela dela por inteiro (o frame que a mostrava não está
+    mais lá), e a primeira asserção cai.
     """
     unico = _card_na_tela_dela()
     dois = _card_na_tela_dela(compact=True, largura=600)
 
-    assert unico._battery_row.get_visible() is False
+    assert unico._battery_row.get_visible() is True
     assert dois._battery_row.get_visible() is True
-    # E o valor continua sendo calculado nos dois — o card compacto é o que
-    # responde pela bateria quando há 2+ controles.
+    # E o valor continua sendo calculado nos dois.
     assert dois._battery_bar.get_text() == "80 %"
+    assert unico._battery_bar.get_text() == "80 %"
+    # No card único quem MOSTRA o número é o rótulo ao lado, e não a barra: o
+    # GtkProgressBar centra o próprio texto, e centrado numa barra larga o
+    # "80 %" fica no meio do vazio — o defeito que ela apontou nas barras de
+    # L2/R2, na mesma tela. Mordida: religar o `show-text` da barra do card
+    # único e apagar o rótulo.
+    assert unico._battery_bar.get_show_text() is False
+    assert unico._battery_pct_label is not None
+    assert unico._battery_pct_label.get_text() == "80 %"
 
 
 def test_o_frame_estado_e_o_card_param_no_mesmo_numero_com_a_janela_larga() -> None:

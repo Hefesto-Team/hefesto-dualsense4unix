@@ -18,14 +18,14 @@ import pytest
 
 SCRIPT_REL_PATH = "scripts/check_packaging_parity.sh"
 
-RULE = "79-teste-parity.rules"
+RULE = "72-teste-parity.rules"
 
 #: build_deb.sh fake no molde do real: UMA lista de globs consumida pelos DOIS
 #: destinos (diretório vivo /usr/lib/udev/rules.d + espelho
 #: /usr/share/hefesto-dualsense4unix/udev-rules).
 _BUILD_DEB_DOIS_DESTINOS = """\
 UDEV_RULES_GLOBS=(
-    assets/79-*.rules
+    assets/72-*.rules
 )
 for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
     cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
@@ -37,14 +37,51 @@ done
 """
 
 
+def _semeia_simbolico(raiz: Path) -> None:
+    """Põe no repo fake o simbólico da bandeja e a cópia do applet.
+
+    APPLET-MONOCROMÁTICO-01 (07/08/2026): o gate passou a exigir que o
+    simbólico exista e que bandeja e applet sirvam o MESMO desenho. Sem estes
+    dois arquivos, todo teste de "passa" deste módulo reprovaria por uma seção
+    que não é o alvo dele — e, pior, a saída começaria pela seção de udev,
+    mandando quem lesse procurar no lugar errado.
+    """
+    desenho = '<svg viewBox="0 0 16 16"><title>fake</title></svg>\n'
+    alvos = (
+        raiz / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg",
+        raiz
+        / "packaging"
+        / "cosmic-applet"
+        / "data"
+        / "icons"
+        / "hicolor"
+        / "symbolic"
+        / "apps"
+        / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg",
+    )
+    for alvo in alvos:
+        alvo.parent.mkdir(parents=True, exist_ok=True)
+        alvo.write_text(desenho, encoding="utf-8")
+
+
 @pytest.fixture
 def fake_repo(tmp_path: Path) -> Path:
-    """Repo fake mínimo: só o script + uma regra 79 coberta em TODO lugar.
+    """Repo fake mínimo: só o script + uma regra 72 coberta em TODO lugar.
 
     Sem packaging/, as seções de applet COSMIC passam vazias — aqui o alvo é
     exclusivamente a seção de paridade udev. FIX-FLATPAK-UDEV-PARITY-01: o
     check passou a exigir a regra também no manifesto Flatpak, então o repo
     fake ganha um flatpak/fake.yml cobrindo a regra obrigatória.
+
+    OQ-6 (09/08/2026): a regra do fixture era `79-teste-parity`
+    e virou `72-teste-parity`, com CONTEÚDO de regra de acesso. Motivo: o
+    portão ganhou a seção "acesso da sessão aos nós de ENTRADA", que cobra que
+    ALGUMA regra dê `TAG+="uaccess"` ao touchpad e aos sensores de movimento —
+    e um repo com regras udev e nenhuma delas dando acesso é exatamente o
+    defeito que a seção existe para acusar. O número mudou junto porque a mesma
+    seção cobra `< 73`: acima disso a `73-seat-late.rules` já passou e a TAG
+    nunca vira ACL. O alvo destes testes (paridade contra instaladores) não muda —
+    a regra continua obrigatória e continua tendo de aparecer em todo formato.
     """
     repo_root = Path(__file__).resolve().parents[2]
     src_script = repo_root / SCRIPT_REL_PATH
@@ -60,15 +97,29 @@ def fake_repo(tmp_path: Path) -> Path:
     shutil.copy2(src_script, dst_script)
     dst_script.chmod(0o755)
 
-    (tmp_path / "assets" / RULE).write_text("# regra de teste\n", encoding="utf-8")
+    # OQ-6: conteúdo de regra de ACESSO, não um comentário
+    # solto — a seção nova do portão cobra `TAG+="uaccess"` no nó de touchpad e
+    # no de sensores de movimento, e só linha de CÓDIGO conta.
+    (tmp_path / "assets" / RULE).write_text(
+        "# regra de teste\n"
+        'ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", '
+        'ATTRS{id/vendor}=="054c", ATTRS{name}=="*Motion Sensors", TAG+="uaccess"\n'
+        'ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", '
+        'ATTRS{id/vendor}=="054c", ATTRS{name}=="*Touchpad", TAG+="uaccess"\n',
+        encoding="utf-8",
+    )
     # Cobertura completa: nativo e host por nome; .deb por glob (como o real);
-    # Flatpak por nome no manifesto.
+    # Flatpak por nome no manifesto. O `udevadm trigger` de input também é
+    # cobrado (sem ele a regra de acesso só valeria no próximo replug).
     (tmp_path / "scripts" / "install_udev.sh").write_text(
-        f'sudo install -Dm644 "$ASSETS/{RULE}" /etc/udev/rules.d/{RULE}\n',
+        f'sudo install -Dm644 "$ASSETS/{RULE}" /etc/udev/rules.d/{RULE}\n'
+        "sudo udevadm trigger --action=change --subsystem-match=input\n",
         encoding="utf-8",
     )
     (tmp_path / "scripts" / "install-host-udev.sh").write_text(
-        f'RULES=("{RULE}")\n', encoding="utf-8"
+        f'RULES=("{RULE}")\n'
+        'cmd+="udevadm trigger --action=change --subsystem-match=input; "\n',
+        encoding="utf-8",
     )
     # BUG-DEB-MIRROR-RULES-INCOMPLETO-01: o .deb tem DOIS destinos (o
     # diretório vivo e o espelho /usr/share/.../udev-rules, que o
@@ -93,6 +144,7 @@ def fake_repo(tmp_path: Path) -> Path:
         f"          /app/share/hefesto-dualsense4unix/udev-rules/{RULE}\n",
         encoding="utf-8",
     )
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -164,7 +216,7 @@ def test_espelho_do_deb_com_glob_proprio_defasado_falha(fake_repo: Path) -> None
     """
     (fake_repo / "scripts" / "build_deb.sh").write_text(
         # Destino VIVO cobre a regra...
-        'for rules_file in assets/79-*.rules; do\n'
+        'for rules_file in assets/72-*.rules; do\n'
         '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'
         "done\n"
         # ...e o ESPELHO tem glob PRÓPRIO que a deixa de fora.
@@ -186,7 +238,7 @@ def test_espelho_do_deb_fora_da_lista_unica_falha(fake_repo: Path) -> None:
     laços consumam a MESMA lista."""
     (fake_repo / "scripts" / "build_deb.sh").write_text(
         "UDEV_RULES_GLOBS=(\n"
-        "    assets/79-*.rules\n"
+        "    assets/72-*.rules\n"
         ")\n"
         'for rules_file in "${UDEV_RULES_GLOBS[@]}"; do\n'
         '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'
@@ -207,7 +259,7 @@ def test_regra_so_no_espelho_sem_diretorio_vivo_falha(fake_repo: Path) -> None:
     """Simetria do anterior: sumir com o espelho também reprova."""
     (fake_repo / "scripts" / "build_deb.sh").write_text(
         "UDEV_RULES_GLOBS=(\n"
-        "    assets/79-*.rules\n"
+        "    assets/72-*.rules\n"
         ")\n"
         'for rules_file in "${UDEV_RULES_GLOBS[@]}"; do\n'
         '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'
@@ -327,6 +379,7 @@ def fake_repo_broker(tmp_path: Path) -> Path:
     (tmp_path / "packaging" / "debian" / "postrm").write_text(
         f"# {BROKER_TXT}\n", encoding="utf-8"
     )
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -511,6 +564,7 @@ def fake_repo_dkms_nintendo(tmp_path: Path) -> Path:
     (tmp_path / "uninstall.sh").write_text(
         _DKMS_REMOVE_NINTENDO, encoding="utf-8"
     )
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -647,6 +701,7 @@ def fake_repo_dkms_playstation(tmp_path: Path) -> Path:
     (tmp_path / "uninstall.sh").write_text(
         _DKMS_REMOVE_PLAYSTATION, encoding="utf-8"
     )
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -775,6 +830,7 @@ def fake_repo_icone(tmp_path: Path) -> Path:
         ok, encoding="utf-8"
     )
     (tmp_path / "packaging" / "nix" / "package.nix").write_text(ok, encoding="utf-8")
+    _semeia_simbolico(tmp_path)
     return tmp_path
 
 
@@ -835,3 +891,275 @@ def test_icone_do_repo_real_esta_verde() -> None:
     secao = result.stdout.split("== Icon dos .desktop de aplicativo", 1)
     assert len(secao) == 2, "seção de Icon do aplicativo ausente na saída"
     assert "[FAIL]" not in secao[1].split("== ", 1)[0]
+
+
+# ---------------------------------------------------------------------------
+# A REGRA DE PAR do BlueZ olhava o arquivo ERRADO no Flatpak
+#
+# Achado de 06/08/2026, MEDIDO: a lista de empacotadores trazia
+# `scripts/build_flatpak.sh`, que é um INVÓLUCRO de 120 linhas — chama o
+# `flatpak-builder` e não lista arquivo nenhum. Quem declara o conteúdo do
+# pacote é o MANIFESTO `flatpak/br.andrefarias.Hefesto.yml`, que não estava em
+# lista nenhuma. Como o invólucro não cita `doctor.sh`, o `continue` disparava e
+# a regra de PAR NUNCA alcançava o Flatpak: pôr o doctor no manifesto sem o
+# `bluez_config.sh` passava VERDE — e o detector empacotado fica CEGO, porque lê
+# exclusivamente pelo dono único em `${ROOT_DIR}/scripts/bluez_config.sh`.
+# ---------------------------------------------------------------------------
+
+_MANIFESTO = "flatpak/br.andrefarias.Hefesto.yml"
+
+
+@pytest.fixture
+def fake_repo_bluez(tmp_path: Path) -> Path:
+    """O mínimo para a seção do BlueZ rodar: o asset que a abre + o manifesto."""
+    repo_root = Path(__file__).resolve().parents[2]
+    origem = repo_root / SCRIPT_REL_PATH
+    if not origem.exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+    (tmp_path / "scripts").mkdir()
+    shutil.copy2(origem, tmp_path / SCRIPT_REL_PATH)
+    (tmp_path / "flatpak").mkdir()
+    (tmp_path / "assets" / "bluetooth").mkdir(parents=True)
+    (tmp_path / "assets" / "bluetooth" / "hefesto-bt.block").write_text(
+        "# >>> hefesto bluetooth >>>\n", encoding="utf-8"
+    )
+    return tmp_path
+
+
+def _mensagem_de_par(saida: str) -> bool:
+    return f"{_MANIFESTO} empacota doctor.sh e deixa bluez_config.sh para trás" in saida
+
+
+def test_manifesto_flatpak_com_doctor_sem_o_dono_reprova(fake_repo_bluez: Path) -> None:
+    """O caso que passava verde: o doctor viaja, o dono único fica para trás."""
+    (fake_repo_bluez / _MANIFESTO).write_text(
+        "modules:\n"
+        "  - name: hefesto\n"
+        "    build-commands:\n"
+        "      - install -Dm755 scripts/doctor.sh /app/share/hefesto/scripts/doctor.sh\n",
+        encoding="utf-8",
+    )
+
+    resultado = run_check(fake_repo_bluez)
+
+    assert resultado.returncode == 1
+    assert _mensagem_de_par(resultado.stdout), (
+        "o portão não alcançou o MANIFESTO do Flatpak — enquanto ele enumerava "
+        "o invólucro build_flatpak.sh, um doctor.sh sem o bluez_config.sh no "
+        f"pacote passava verde. Saída:\n{resultado.stdout}"
+    )
+
+
+def test_manifesto_flatpak_com_o_par_completo_passa(fake_repo_bluez: Path) -> None:
+    """A linha de base: com o dono junto, a regra de PAR se cala."""
+    (fake_repo_bluez / _MANIFESTO).write_text(
+        "modules:\n"
+        "  - name: hefesto\n"
+        "    build-commands:\n"
+        "      - install -Dm755 scripts/doctor.sh /app/share/hefesto/scripts/doctor.sh\n"
+        "      - install -Dm755 scripts/bluez_config.sh"
+        " /app/share/hefesto/scripts/bluez_config.sh\n",
+        encoding="utf-8",
+    )
+
+    resultado = run_check(fake_repo_bluez)
+
+    assert not _mensagem_de_par(resultado.stdout), resultado.stdout
+
+
+def test_comentario_do_manifesto_nao_satisfaz_a_regra_de_par(
+    fake_repo_bluez: Path,
+) -> None:
+    """Só linha de CÓDIGO conta — o manifesto é YAML e comenta com `#`.
+
+    Foi assim que a primeira versão desta regra passou verde no `build_deb.sh`
+    com a cópia arrancada: o próprio comentário que EXPLICA a regra a satisfazia.
+    """
+    (fake_repo_bluez / _MANIFESTO).write_text(
+        "modules:\n"
+        "  - name: hefesto\n"
+        "    build-commands:\n"
+        "      # o scripts/bluez_config.sh viaja junto (não viaja)\n"
+        "      - install -Dm755 scripts/doctor.sh /app/share/hefesto/scripts/doctor.sh\n",
+        encoding="utf-8",
+    )
+
+    resultado = run_check(fake_repo_bluez)
+
+    assert _mensagem_de_par(resultado.stdout), (
+        "um COMENTÁRIO no manifesto satisfez a regra de PAR"
+    )
+
+
+# ---------------------------------------------------------------------------
+# APPLET-MONOCROMÁTICO-01 (07/08/2026) — o simbólico do painel
+# ---------------------------------------------------------------------------
+
+
+def test_simbolico_ausente_falha(fake_repo: Path) -> None:
+    """Sem o arquivo, a bandeja dela cai no ícone colorido — e ninguém vê."""
+    (fake_repo / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg").unlink()
+    result = run_check(fake_repo)
+    assert result.returncode == 1
+    assert "não existe" in result.stdout
+    assert "assets/simbolico/hefesto-dualsense4unix-symbolic.svg" in result.stdout
+
+
+def test_simbolico_do_applet_divergente_falha(fake_repo: Path) -> None:
+    """Dois nomes, um desenho só: se divergirem, a mesma aplicação aparece com
+    ícones diferentes conforme a superfície — que é o defeito desta sprint."""
+    alvo = (
+        fake_repo
+        / "packaging"
+        / "cosmic-applet"
+        / "data"
+        / "icons"
+        / "hicolor"
+        / "symbolic"
+        / "apps"
+        / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
+    )
+    alvo.write_text('<svg viewBox="0 0 16 16"><title>outro</title></svg>\n', encoding="utf-8")
+    result = run_check(fake_repo)
+    assert result.returncode == 1
+    assert "DIVERGIRAM" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# CORRIDA-DO-PIPEFAIL-01 (13/08/2026) — `produtor | grep -q` sob `pipefail`
+#
+# O comentário no topo do `check_packaging_parity.sh` já contava a história: o
+# `grep -q` SAI no primeiro casamento, o produtor a montante morre de SIGPIPE,
+# e o `pipefail` faz o pipe INTEIRO devolver 141 mesmo tendo o grep achado o
+# que procurava. O veredito pendurado nesse status inverte.
+#
+# É CORRIDA — e por isso os testes abaixo não torcem por ela: eles a FORÇAM,
+# dando ao produtor mais bytes do que cabem no buffer do pipe. Com o produtor
+# obrigado a escrever depois da saída do grep, o SIGPIPE deixa de ser sorte e
+# vira certeza, na máquina dela como no runner.
+# ---------------------------------------------------------------------------
+
+#: Nomes bastantes para estourar com folga o buffer do pipe (4 KiB nesta
+#: máquina, 64 KiB no Linux por padrão desde 2.6.11).
+_PRODUTOR_LONGO = 4000
+
+
+def _fake_repo_minimo(tmp_path: Path) -> Path:
+    """Repo de mentira só com o script — as seções sem asset ficam quietas."""
+    (tmp_path / "scripts").mkdir()
+    shutil.copy2(
+        Path(__file__).resolve().parents[2] / SCRIPT_REL_PATH,
+        tmp_path / SCRIPT_REL_PATH,
+    )
+    (tmp_path / SCRIPT_REL_PATH).chmod(0o755)
+    return tmp_path
+
+
+def test_icone_de_applet_com_muitos_arquivos_nao_e_acusado_de_faltar(
+    tmp_path: Path,
+) -> None:
+    """O ícone EXISTE; o portão não pode dizer que falta porque o find era longo.
+
+    Sítio curado: o `find ... | grep -q .` da seção de Icon dos applets. O
+    veredito está num `if`, então o 141 do pipe cai no `else` e o portão
+    imprime "[FAIL] ...: Icon=... sem arquivo de ícone" sobre um diretório que
+    tem o ícone milhares de vezes.
+    """
+    repo = _fake_repo_minimo(tmp_path)
+    applet = repo / "packaging" / "corrida-applet"
+    apps = applet / "data" / "icons" / "hicolor" / "scalable" / "apps"
+    apps.mkdir(parents=True)
+    (applet / "corrida.desktop").write_text(
+        "[Desktop Entry]\n"
+        "X-CosmicApplet=true\n"
+        "Icon=hefesto-corrida-do-pipefail\n",
+        encoding="utf-8",
+    )
+    for n in range(_PRODUTOR_LONGO):
+        (apps / f"hefesto-corrida-do-pipefail.{n:05d}.svg").write_text("<svg/>\n")
+
+    result = run_check(repo)
+    assert "sem arquivo de ícone" not in result.stdout, (
+        "o portão acusou um ícone que existe 4000 vezes: o `find` voltou para "
+        f"dentro de um pipe com `grep -q`.\nsaída:\n{result.stdout}"
+    )
+    assert "Icon=hefesto-corrida-do-pipefail tem arquivo versionado" in result.stdout
+
+
+def test_bluez_com_empacotador_longo_nao_acusa_par_desfeito(tmp_path: Path) -> None:
+    """Controle: com o par inteiro, o portão cala — antes e depois da cura.
+
+    MEDIDO em 13/08/2026, e a medição corrigiu a expectativa: neste sítio a
+    corrida NÃO produz falso positivo. O primeiro `grep -qF` da dupla termina
+    em `|| continue`, então o 141 do pipe faz o laço PULAR o empacotador
+    inteiro — a checagem do par nunca chega a rodar. Silêncio, não alarme.
+
+    Por isso este teste é o controle e não a mordida: ele passa dos dois lados.
+    Quem morde é o gêmeo logo abaixo, que exige a acusação quando ela é devida.
+    """
+    repo = _fake_repo_minimo(tmp_path)
+    (repo / "assets" / "bluetooth").mkdir(parents=True)
+    (repo / "assets" / "bluetooth" / "hefesto-bt.block").write_text("bloco\n")
+    enchimento = "\n".join(
+        f"echo linha-de-enchimento-numero-{n:05d}" for n in range(_PRODUTOR_LONGO)
+    )
+    (repo / "scripts" / "build_deb.sh").write_text(
+        "bash scripts/doctor.sh\n"
+        "bash scripts/bluez_config.sh aplicar\n" + enchimento + "\n",
+        encoding="utf-8",
+    )
+
+    result = run_check(repo)
+    assert "deixa bluez_config.sh para trás" not in result.stdout, (
+        "o portão acusou o empacotador de esquecer o bluez_config.sh, que está "
+        f"na segunda linha dele.\nsaída:\n{result.stdout}"
+    )
+
+
+def test_bluez_empacotador_longo_que_esquece_o_dono_continua_reprovando(
+    tmp_path: Path,
+) -> None:
+    """O outro lado da régua: sem o `bluez_config.sh`, a acusação tem de vir.
+
+    Sem este teste a cura acima seria indistinguível de desligar a checagem —
+    um portão que nunca acusa também "não dá falso positivo".
+    """
+    repo = _fake_repo_minimo(tmp_path)
+    (repo / "assets" / "bluetooth").mkdir(parents=True)
+    (repo / "assets" / "bluetooth" / "hefesto-bt.block").write_text("bloco\n")
+    enchimento = "\n".join(
+        f"echo linha-de-enchimento-numero-{n:05d}" for n in range(_PRODUTOR_LONGO)
+    )
+    (repo / "scripts" / "build_deb.sh").write_text(
+        "bash scripts/doctor.sh\n" + enchimento + "\n", encoding="utf-8"
+    )
+
+    result = run_check(repo)
+    assert "deixa bluez_config.sh para trás" in result.stdout, (
+        "o empacotador leva o doctor.sh e NÃO leva o bluez_config.sh, e o "
+        f"portão calou.\nsaída:\n{result.stdout}"
+    )
+
+
+def test_nenhum_produtor_entra_num_pipe_com_grep_q() -> None:
+    """A contagem que o comentário do topo promete: ZERO `| grep -q` no código.
+
+    Estrutural de propósito. Os dois testes acima forçam a corrida em DOIS dos
+    onze sítios; forçá-la nos onze exigiria montar onze repos de mentira, e o
+    que importa é a FORMA — `| grep -q` é a armadilha, esteja ela onde estiver.
+    Comentário citando a forma não conta: o portão não pode reprovar a própria
+    explicação de por que ela é proibida.
+    """
+    alvo = Path(__file__).resolve().parents[2] / SCRIPT_REL_PATH
+    culpadas = [
+        (n, linha)
+        for n, linha in enumerate(alvo.read_text(encoding="utf-8").splitlines(), 1)
+        if "| grep -q" in linha and not linha.lstrip().startswith("#")
+    ]
+    assert not culpadas, (
+        "voltou `produtor | grep -q` ao check_packaging_parity.sh:\n"
+        + "".join(f"  :{n}  {linha.strip()}\n" for n, linha in culpadas)
+        + "Use here-string: guarde o produtor numa variável e faça "
+        "`grep -q ... <<< \"${var}\"`. O porquê está no comentário "
+        "CORRIDA-DO-PIPEFAIL-01, no topo do arquivo."
+    )

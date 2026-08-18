@@ -29,6 +29,11 @@ from typing import Any, Literal, cast, get_args
 
 from hefesto_dualsense4unix.core.controller import ControllerState, IController
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.daemon.battery_journal import (
+    INTERVALO_SONDA_S,
+    diario_da_bateria,
+    registrar_queda_da_bateria,
+)
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 # ---------------------------------------------------------------------------
@@ -65,6 +70,13 @@ INPUT_GRACE_SEC: float = 0.3
 #: todo tick; 2s é folgado o bastante para não pesar e rápido para recuperar o
 #: controle logo após uma re-enumeração (storm -71 / replug).
 EVDEV_WATCHDOG_SEC: float = 2.0
+
+#: GRAB-DOBRADO-01: intervalo entre retomadas do `EVIOCGRAB` do primário quando
+#: ele está `failed`. Mesmo ritmo do `coop.sync` — que é quem já dava esse
+#: retry aos jogadores SECUNDÁRIOS e nunca ao P1 —, e pela mesma razão: dois
+#: segundos de input dobrado é o que o co-op já aceitava como teto, e o custo
+#: por tick sem falha é uma comparação de float mais uma de string.
+GRAB_RECONCILE_SEC: float = 2.0
 
 #: HANG-01 (Sprint 2026-07-19): teto de espera do tick de LED dos externos
 #: (`ExternalLedSync.tick`, executado no pool DEDICADO `hefesto-ext`, ver
@@ -140,9 +152,24 @@ class DaemonConfig:
     gamepad_flavor: str = "dualsense"
     # FEAT-DSX-COOP-LOCAL-01 — co-op local: cada controle físico vira um jogador
     # (P1, P2, …) com seu próprio gamepad virtual, em vez do modo "N controles, 1
-    # player" (broadcast). OFF por default (preserva o uso de reserva/troca de
-    # controle). Só tem efeito com a emulação de gamepad ligada + 2+ controles.
-    coop_enabled: bool = False
+    # player" (broadcast). Só tem efeito com a emulação de gamepad ligada + 2+
+    # controles.
+    #
+    # COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA. O default era `False`,
+    # e o motivo escrito aqui era *"preserva o uso de reserva/troca de
+    # controle"*. Esse motivo CADUCOU POR DECISÃO DELA, tomada mais de uma vez:
+    # *"todos e tudo no Hefesto tem que tá com o permitir co-op ligado (…) se eu
+    # conecto 4 controles no PC eu espero, com 4 pessoas jogando, que cada um
+    # controle o próprio personagem. Ninguém esperaria controlar o mesmo
+    # personagem com cada controle."* Quem quer um controle de reserva o deixa
+    # DESCONECTADO — não precisa de flag para isso, e a flag custava um co-op
+    # que não subia sozinho na máquina de quem nunca ouviu falar dela.
+    #
+    # Este dataclass é o ÚNICO piso desde 06/08: o boot deixou de reler o
+    # opt-out (`utils/session.load_coop_enabled` virou lápide) justamente para
+    # que arrancar este `True` REPROVE — antes, `run()` forçava `True` logo
+    # adiante e um teste de boot passava com a cura arrancada.
+    coop_enabled: bool = True
     # FEAT-KEYBOARD-EMULATOR-01 — emula teclado virtual a partir de botões
     # do DualSense.
     #
@@ -173,6 +200,43 @@ class DaemonConfig:
     ps_long_press_ms: int = 0
     # BUG-RUMBLE-APPLY-IGNORED-01
     rumble_active: tuple[int, int] | None = None
+    #: MESA-CHEIA-05 (E0) — o DONO do par acima: o MAC do controle em que ele
+    #: foi fixado, ou None para "a mesa inteira" (o alvo era "Todos", ou o
+    #: alvo não tem MAC estável).
+    #:
+    #: **Por que o par não bastava.** `rumble_active` é um valor só para o
+    #: daemon inteiro e o destino dele era o `_output_target_key` do backend —
+    #: um ponteiro MUTÁVEL. Ela fixava 160/220 no Controle 2, trocava o seletor
+    #: para o 3 por outro motivo qualquer e, 200 ms depois, o `reassert_rumble`
+    #: marretava o Controle 3 com o valor do 2: o par fixado MIGRAVA de dono
+    #: por um gesto que não fala de vibração.
+    #:
+    #: Guardar o endereço junto do valor é o que faz o reassert reescrever
+    #: NAQUELE controle (via `set_rumble_for`, a rota por MAC que já existia e
+    #: só o co-op e o force-feedback usavam). Isto NÃO é a D-4: a intensidade
+    #: continua sendo uma só para a máquina — o que deixa de acontecer é a
+    #: migração de dono.
+    rumble_active_uniq: str | None = None
+    #: MESA-CHEIA-05 (E0, terceira rodada) — o controle que está vibrando POR
+    #: NOSSA CONTA neste instante, ou None quando nenhum está.
+    #:
+    #: **Por que o dono não bastava.** Guardar o endereço fez o par parar de
+    #: migrar — mas a mudança de dono passou a ABANDONAR quem vibrava. Medido
+    #: em 14/08 contra `git archive HEAD`, com os quatro controles: ela fixa
+    #: 160/220 no Controle 2, move o seletor para o 3 e clica «Parar» (ou
+    #: aplica outro par). Nos dois mundos os zeros vão para o 3 e o 2 continua
+    #: em 220/160 — mas no HEAD o reassert seguia o seletor, e **voltar o
+    #: seletor ao 2 o silenciava**; com o dono congelado, voltar o seletor
+    #: deixou de significar coisa alguma e o 2 vibra para sempre.
+    #:
+    #: Este campo é a rota de volta: o `reassert_rumble` compara quem vibra
+    #: com o dono de agora e, quando o par troca de controle, **zera o
+    #: abandonado antes de escrever no novo**. A §5 da sprint, pelo nome: *"a
+    #: volta ao neutro vale tanto quanto a ida"*.
+    #:
+    #: Transitório como o par: não é lido nem escrito em disco, e vale só
+    #: enquanto o daemon vive.
+    rumble_dono_vibrando: str | None = None
     # FEAT-RUMBLE-POLICY-01
     rumble_policy: RumblePolicy = "balanceado"
     rumble_policy_custom_mult: float = 0.7
@@ -219,6 +283,13 @@ ADIADO_LOCK_MANUAL = "adiado_lock_manual"
 IGNORADO_CATCH_ALL = "ignorado_catch_all"
 IGNORADO_JANELA_DE_JOGO = "ignorado_janela_de_jogo"
 FALHOU = "falhou"
+
+#: SOM-02/E4: a seção não foi escrita porque NÃO HÁ controle para escrever
+#: (nenhum handle para o `uniq` pedido, ou nada conectado). Estado próprio, e
+#: não `FALHOU`, porque nada quebrou: o controle está fora da mesa. Distinguir
+#: importa no relatório que a GUI mostra — "falhou" mandaria procurar defeito
+#: onde só falta o cabo.
+IGNORADO_SEM_CONTROLE = "ignorado_sem_controle"
 
 
 @dataclass
@@ -536,6 +607,10 @@ class Daemon:
     # anterior ainda não tinha terminado (guard de reentrância) — só
     # observabilidade, nunca lido por lógica de gate.
     _external_tick_skipped: int = 0
+    # PROTOCOLO-QUEDA-01 (07/08): `battery_journal.DiarioDaBateria` — quem
+    # escreve a carga no journal. Criado no 1º uso por `diario_da_bateria`
+    # (espelho do `get_coop_manager`); None até a primeira sonda.
+    _diario_bateria: Any = None
     # HANG-01: watch barato de /dev/input (mesma classe do EVDEV_WATCHDOG)
     # usado só para destravar a degradação; criado sob demanda.
     _external_tick_watch: Any = None
@@ -546,6 +621,21 @@ class Daemon:
     # provider`) é gateada por `hasattr` — sem o método, o backend fica
     # byte-idêntico ao HEAD (fail-safe da síntese da Onda N).
     _game_signal: Any = None
+    # GATILHO-DA-COR-01: o `core.gatilho_fim_de_sequencia.RegistroDeGatilhos`
+    # deste daemon — as reafirmações "no fim da sequência" por nome —, ou None
+    # até a primeira consulta. Mora no daemon, e não no `reconnect_loop`,
+    # porque cada gatilho tem VÁRIOS armadores (o tick de hotplug, a transição
+    # do sinal de jogo, e o co-op quando ele entrar) e UM SÓ relógio. Criado
+    # sob demanda por `connection.registro_de_gatilhos_de`.
+    _registro_de_gatilhos: Any = None
+    # ESCRITOR-CRU-01: o `core.escritor_cru.SentinelaDeEscritorCru` deste
+    # daemon — a última FOTO de quem mais segura o `hidraw` de cada controle
+    # (hoje só a Steam é reconhecida) —, ou None até a primeira consulta. Mora
+    # aqui pela mesma razão do registro acima: quem SONDA é o tique do
+    # `reconnect_loop` e quem LÊ é também a aba Status, e duas fotos dariam
+    # duas verdades sobre a mesma mesa. Criado sob demanda por
+    # `connection.sentinela_de_escritor_cru_de`.
+    _sentinela_de_escritor_cru: Any = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -634,19 +724,18 @@ class Daemon:
         kbd_pref = load_keyboard_preference()
         if kbd_pref is not None:
             self.config.keyboard_emulation_enabled = kbd_pref
-        # FEAT-DSX-COOP-LOCAL-01: restaura o co-op local se a sessão anterior o
-        # deixou ligado (só tem efeito com gamepad + 2+ controles; o poll loop
-        # reconcilia via CoopManager.sync).
-        # LEIGO-01: a migração vem ANTES da leitura — o checkbox saiu da UI, e o
-        # opt-out gravado por uma versão antiga deixaria o co-op desligado sem
-        # nenhum caminho de volta na interface.
-        from hefesto_dualsense4unix.utils.session import (
-            load_coop_enabled,
-            migrate_coop_optout,
-        )
+        # FEAT-DSX-COOP-LOCAL-01 / LEIGO-01: apaga o opt-out gravado por versão
+        # antiga (`coop_disabled.flag`) — one-shot, com marker próprio.
+        #
+        # COOP-SEM-INTERRUPTOR-01 (06/08/2026): aqui havia também
+        # `if load_coop_enabled(): self.config.coop_enabled = True`. Saiu, e a
+        # remoção é a entrega, não faxina: com ela, o piso do co-op passa a ter
+        # UM dono só (`DaemonConfig.coop_enabled`, agora `True`). Enquanto o
+        # boot forçava `True` aqui, arrancar o default do dataclass não reprovava
+        # teste nenhum — a cura tinha um sósia.
+        from hefesto_dualsense4unix.utils.session import migrate_coop_optout
+
         migrate_coop_optout()
-        if load_coop_enabled():
-            self.config.coop_enabled = True
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
@@ -745,6 +834,37 @@ class Daemon:
                     err=str(exc),
                     exc_info=True,
                 )
+            # ENV-VELHA-NO-BOOT-01 (10/08/2026): materializa o launch_env no
+            # BOOT, e não só nas transições.
+            #
+            # Ela perguntou, com o defeito na mão: *"temos soluções que não
+            # dependam desse feito manual? Tipo mais automático de fato?"*.
+            # Tinha razão, e o buraco era estrutural: TODOS os gatilhos de
+            # `materialize_launch_env` eram de TRANSIÇÃO — start/stop do
+            # gamepad, Modo Nativo, co-op, os handlers de IPC. Nenhum no start
+            # do daemon. Provado no disco dela em 10/08: apaguei o
+            # `steam_app_3357650.env`, reiniciei o daemon, e o arquivo NÃO
+            # voltou.
+            #
+            # O preço aparecia exatamente no pior momento — quando a cura acabou
+            # de entrar. O daemon subia com o código novo e continuava servindo
+            # ao wrapper o arquivo escrito pelo daemon ANTIGO, até ela conectar
+            # o controle. É a versão em arquivo do `[[o-daemon-vivo-e-mais-velho-
+            # que-o-codigo]]`: quem estava velho não era o processo, era o que
+            # ele tinha deixado no disco. Foi assim que a cura do
+            # TRES-CONTROLES-01 nasceu inerte na máquina dela.
+            #
+            # Aqui, no fim do boot, porque é onde o estado já é o real: modo,
+            # máscara, backends e perfil restaurado. Antes disto o conteúdo
+            # sairia de um estado provisório, e regravar com dado provisório é
+            # pior que não regravar. `suppress` porque a regra desta função vale
+            # inteira: materialização quebrada nunca derruba o start.
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.launch_env import (
+                    materialize_launch_env,
+                )
+
+                materialize_launch_env(self)
             # Reconnect probe em background — não bloqueia o boot e cobre
             # transicoes onlineoffline em runtime.
             self._reconnect_task = asyncio.create_task(
@@ -802,7 +922,7 @@ class Daemon:
         *,
         reapply: bool = True,
         restore_stash: bool = False,
-        origin: Literal["manual", "profile"] = "manual",
+        origin: Literal["manual", "profile"],
     ) -> bool:
         """Liga/desliga o Modo Nativo — "release total" do controle.
 
@@ -914,6 +1034,7 @@ class Daemon:
             self.controller.set_trigger("right", off)
         # Rumble passthrough: reassert_rumble pula quando rumble_active é None.
         self.config.rumble_active = None
+        self.config.rumble_active_uniq = None
         # Emulação off: libera grab de evdev / device uinput. origin="profile"
         # de propósito: desligar a emulação no release NÃO é um gesto manual da
         # usuária — se carimbasse `_emu_manual_ts`, o lock de 30s BLOQUEARIA o
@@ -954,13 +1075,64 @@ class Daemon:
             keyboard_device_provider=lambda: getattr(self, "_keyboard_device", None),
             mouse_applier=self.apply_profile_mouse,
             suppression_applier=self.apply_profile_suppression,
-            # FEAT-PROFILE-MODE-01: SEM mode_applier aqui de propósito — este
-            # caminho roda ao SAIR do Modo Nativo; se o last_profile tiver
-            # `mode.kind=native`, o applier o religaria na hora (loop). O gesto
-            # de sair é soberano; o próximo autoswitch/switch re-avalia o modo.
+            # PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 6: as três
+            # seções que faltavam. Esta rota era a única das quatro que montava
+            # o manager sem elas, e o efeito é o que ela sente ao desligar o
+            # Modo Nativo: gatilhos e LEDs voltam, mas a máscara do vpad, a
+            # política de rumble e o volume do alto-falante do perfil ficam
+            # como o jogo os deixou.
+            #
+            # O `mode_applier` vai EMBRULHADO, e o embrulho é a nota datada da
+            # decisão que estava aqui: a FEAT-PROFILE-MODE-01 tirou o applier
+            # inteiro porque um `last_profile` com `mode.kind=native` seria
+            # religado na hora (o `_native_mode` já é False quando chegamos
+            # aqui — `set_native_mode` o zera antes do reapply), e sair do
+            # nativo viraria um laço. Aquilo continua verdade e continua
+            # barrado; o que não se justifica é o preço colateral — perder
+            # `gamepad`/`desktop` e a reversão do modo por causa do caso
+            # `native`. O embrulho barra SÓ o `native`.
+            #
+            # `getattr` nos três pelo mesmo motivo das outras rotas
+            # (`subsystems/autoswitch.py`, `subsystems/ipc.py`): este método é
+            # chamado desligado da instância por dublês da suíte, e um atributo
+            # ausente não pode derrubar a saída do Modo Nativo — sem o applier,
+            # a seção volta a ser ignorada, que é o comportamento histórico.
+            mode_applier=getattr(self, "_mode_applier_ao_sair_do_nativo", None),
+            rumble_policy_applier=getattr(self, "apply_profile_rumble_policy", None),
+            speaker_applier=getattr(self, "apply_profile_speaker", None),
         )
         with contextlib.suppress(Exception):
             manager.activate(name, origin="system")
+
+    def _mode_applier_ao_sair_do_nativo(
+        self,
+        mode: Any | None,
+        *,
+        profile: Any | None = None,
+        origin: str = "system",
+    ) -> str:
+        """`apply_profile_mode` menos o `kind="native"` (item 6 da leva de 05/08).
+
+        Usado SÓ pelo `_reapply_last_profile`, que roda ao DESLIGAR o Modo
+        Nativo. Religar o nativo aqui seria desfazer o gesto que acabou de
+        acontecer — `set_native_mode(False)` já zerou `_native_mode`, então o
+        applier veria "nativo desligado, o perfil pede nativo" e o ligaria de
+        volta no mesmo instante. É a razão pela qual a FEAT-PROFILE-MODE-01
+        tirou o applier inteiro desta rota; a diferença é que agora só o caso
+        `native` paga.
+
+        As demais seções de `mode` seguem: `gamepad` devolve a máscara/co-op do
+        perfil, `desktop` limpa, e `mode=None` reverte o que outro perfil tinha
+        ligado. `IGNORADO_GESTO_DELA` é o estado certo do vocabulário — a
+        decisão já é dela, e é mais específica que o que o perfil pede.
+        """
+        if getattr(mode, "kind", None) == "native":
+            logger.info(
+                "profile_mode_skipped_saida_do_nativo",
+                profile=getattr(profile, "name", None),
+            )
+            return IGNORADO_GESTO_DELA
+        return self.apply_profile_mode(mode, profile=profile, origin=origin)
 
     def _zero_rumble_motors(self) -> None:
         """Zera os motores ao SAIR de um modo (HARM-16). Thin wrapper."""
@@ -1002,10 +1174,12 @@ class Daemon:
         stop_hotkey_manager(self)
         start_hotkey_manager(self)
         if old.mouse_emulation_enabled != new_config.mouse_emulation_enabled:
+            # ORIGEM-QUE-MENTE-01: aplicar config nova é reconciliação.
             self.set_mouse_emulation(
                 new_config.mouse_emulation_enabled,
                 speed=new_config.mouse_speed,
                 scroll_speed=new_config.mouse_scroll_speed,
+                origin="profile",
             )
         if old.keyboard_emulation_enabled != new_config.keyboard_emulation_enabled:
             if new_config.keyboard_emulation_enabled:
@@ -1024,7 +1198,7 @@ class Daemon:
         speed: int | None = None,
         scroll_speed: int | None = None,
         *,
-        origin: Literal["manual", "profile"] = "manual",
+        origin: Literal["manual", "profile"],
     ) -> bool:
         """Liga/desliga emulação de mouse e atualiza velocidades. Usado pelo IPC.
 
@@ -1096,7 +1270,8 @@ class Daemon:
         pref, speed, scroll_speed = load_mouse_preference()
         if pref is None:
             pref = True
-        ok = self.set_mouse_emulation(pref, speed, scroll_speed)
+        # ORIGEM-QUE-MENTE-01: restaurar preferência salva é reconciliação.
+        ok = self.set_mouse_emulation(pref, speed, scroll_speed, origin="profile")
         logger.info("mouse_preference_restored", enabled=pref, ok=ok)
         return bool(pref and ok)
 
@@ -1187,12 +1362,30 @@ class Daemon:
             # pedido (`stop_keyboard_emulation` é idempotente e best-effort).
             return ativo if enabled else True
 
+    # ORIGEM-QUE-MENTE-01 (08/08/2026): `origin` NÃO tem default, e é
+    # keyword-only. O default antigo era `"manual"`, e isso fazia o daemon
+    # ler a AUSÊNCIA de informação como a mão dela — quem esquecesse o
+    # parâmetro era promovido a gesto humano.
+    #
+    # O que isso custou, MEDIDO: com o Sackboy aberto e marcado na allowlist
+    # do Steam Input, um cliente reconciliando estado chamou o setter sem
+    # `origin`; o portão JOGO-01 (`gamepad.py`, `if origin != "manual"`)
+    # deixou passar, o gamepad virtual voltou com o grab e o esconde-esconde
+    # pulados, e o jogo passou a ver o físico E o virtual. Ela fotografou um
+    # "Jogador 3" fantasma. Ver JOGADOR-3-FANTASMA-01.
+    #
+    # E o ramo `origin == "manual"` ainda carimba `_emu_manual_ts`, que cala
+    # o perfil por 30 s: o cliente distraído não só furava o portão como
+    # silenciava o autoswitch depois.
+    #
+    # Sem default, o `mypy` obriga cada chamador a DECLARAR o que é. Silêncio
+    # deixa de ser resposta.
     def set_gamepad_emulation(
         self,
         enabled: bool,
         flavor: str | None = None,
         *,
-        origin: Literal["manual", "profile"] = "manual",
+        origin: Literal["manual", "profile"],
     ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara. Usado pelo IPC.
 
@@ -1282,13 +1475,24 @@ class Daemon:
         self,
         enabled: bool,
         *,
-        origin: Literal["manual", "profile"] = "manual",
+        origin: Literal["manual", "profile"],
     ) -> bool:
-        """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01). Usado pelo IPC.
+        """Liga o co-op local (FEAT-DSX-COOP-LOCAL-01). Usado pelo IPC.
 
-        Persiste o toggle (sobrevive reboot) e reconcilia na hora: ligar sobe os
-        jogadores secundários (se gamepad on + 2+ controles); desligar desmonta
-        todos (solta grab/uinput). Retorna o estado efetivo de `coop_enabled`.
+        Reconcilia na hora: ligar sobe os jogadores secundários (se gamepad on +
+        2+ controles). Retorna o estado efetivo de `coop_enabled`.
+
+        COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o ramo `False` desta
+        função ficou INALCANÇÁVEL pelas superfícies de comando. `coop.set` recusa
+        `enabled:false` antes de chegar aqui (é lá que mora a política, com a
+        razão legível), o perfil parou de governar o campo e a CLI explica em vez
+        de desligar. O ramo continua escrito porque o setter é o mecanismo — e
+        porque a suspensão legítima do co-op (Steam Input) NÃO passa por ele:
+        ela chama `CoopManager.disable()` direto, sem tocar na flag, e é isso que
+        faz o co-op voltar sozinho quando o jogo fecha.
+
+        A persistência virou lápide junto: `save_coop_enabled` não grava mais
+        opt-out nenhum (só apaga o que versão antiga deixou).
         """
         self.config.coop_enabled = bool(enabled)
         if origin == "manual":
@@ -1355,8 +1559,9 @@ class Daemon:
         A queixa que isto cura: numa instalação nova, quatro DualSense plugados
         alimentam **um cursor só**. `DaemonConfig.gamepad_emulation_enabled`
         nasce `False`, o gate do co-op (`CoopManager.should_be_active`) exige o
-        vpad do P1 de pé, e por isso o `coop_enabled=True` do boot era
-        decorativo: sem emulação não existe jogador 2. O caminho para os quatro
+        vpad do P1 de pé, e por isso o `coop_enabled=True` (o piso do
+        `DaemonConfig`, desde 06/08) é decorativo sozinho: sem emulação não
+        existe jogador 2. O caminho para os quatro
         jogadores passava por abrir um terminal ou caçar a aba certa.
 
         Um segundo controle na mesa é a declaração de intenção mais clara que
@@ -1518,6 +1723,11 @@ class Daemon:
            ligada por gesto manual ANTIGO (lock expirado), o perfil a ADOTA:
            ao sair do jogo, o perfil do desktop libera — é a UX esperada do
            autoswitch dono do estado após a janela de respeito.
+           PERFIL-REESCRITO-NA-PARTIDA-01 (05/08): **catch-all não liga**, pela
+           mesma razão pela qual ele não libera (item 3) — ver o comentário no
+           corpo. Sem essa metade, um catch-all com `suppress: true` (o
+           `sackboy_nativo` do disco dela) criava um estado do qual nenhum
+           outro catch-all conseguia sair.
         3. **desired=False** — LIBERA a supressão apenas se ela veio de perfil
            (`_suppress_from_profile`). Supressão de origem manual (lock já
            expirado, sem perfil que a adotasse) permanece intocada: quem ligou
@@ -1555,6 +1765,44 @@ class Daemon:
             )
             return ADIADO_LOCK_MANUAL
         if desired:
+            # PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 2: a
+            # supressão era uma armadilha de MÃO ÚNICA. Só o ramo que LIBERA
+            # tinha o gate de catch-all (logo abaixo, R-02); o ramo que LIGA
+            # aceitava a ordem de qualquer perfil — inclusive de um catch-all,
+            # que por definição chegou porque NENHUMA regra casou.
+            #
+            # O resultado está no disco dela hoje: `sackboy_nativo` é catch-all
+            # e tem `suppress_desktop_emulation: true`. Ele LIGA a supressão de
+            # mouse/teclado; e como nenhum outro catch-all tem autoridade para
+            # liberar, o estado não sai mais — a emulação de desktop fica morta
+            # até um gesto manual dela ou um perfil ESPECÍFICO aparecer.
+            #
+            # A cura é a simetria, e ela vale nas duas leituras: se ausência de
+            # regra não é ordem para LIBERAR, também não é ordem para LIGAR.
+            #
+            # NOTA DATADA — 09/08/2026 (MODO-JOGO-VONTADE-DELA-01). Este gate
+            # deixou de ser só a cura do disco de 05/08: ele virou a CONDIÇÃO de
+            # uma entrega da janela. Até hoje a aba Emulação RECUSAVA guardar
+            # `suppress: true` num perfil catch-all, e a recusa se justificava
+            # por escrito com a ausência deste gate — mas ele já existia desde
+            # 05/08, e a janela nunca foi avisada. Decisão dela em 09/08 ("a
+            # vontade na GUI prevalece sempre"): o gesto dela passa a ser
+            # guardado, porque cinco dos perfis dela são catch-all e para ela
+            # isso era "liguei e não ficou salvo". Consequência: a partir de
+            # hoje há `suppress: true` em catch-all no disco dela DE PROPÓSITO,
+            # e quem impede aquilo de virar mouse e teclado suspensos no
+            # desktop, em toda ativação (o restauro do boot inclusive), são
+            # estas seis linhas. Arrancá-las devolve o alçapão, agora com mais
+            # arquivos para abri-lo — a mordida está em
+            # `test_modo_jogo_a_vontade_dela_prevalece.py`.
+            if self._perfil_e_catch_all(profile):
+                logger.info(
+                    "profile_suppression_skipped",
+                    motivo="catch_all_sem_opiniao",
+                    desired=True,
+                    profile=getattr(profile, "name", None),
+                )
+                return IGNORADO_CATCH_ALL
             if not self._emulation_suppressed:
                 self.set_emulation_suppressed(True, origin="profile")
             self._suppress_from_profile = True
@@ -1694,6 +1942,30 @@ class Daemon:
         if e_catch_all is None:
             return False
         return not e_catch_all
+
+    @staticmethod
+    def _perfil_e_catch_all(profile: Any | None) -> bool:
+        """True SÓ com evidência POSITIVA de que o perfil é catch-all.
+
+        PERFIL-REESCRITO-NA-PARTIDA-01, item 2. É o irmão de
+        `_perfil_tem_opiniao`, e a diferença entre os dois É a resposta na
+        DÚVIDA — por isso são dois predicados e não uma negação:
+
+        - ao reverter `mode`/supressão, a dúvida vale "sem opinião"
+          (`_perfil_tem_opiniao`): aquelas guardas são antigas, todos os seus
+          chamadores já passam `profile=`, e não reverter é o fail-safe;
+        - aqui a dúvida NÃO bloqueia. Perfil ausente é o chamador direto
+          (dublês da suíte, CLI) e `e_catch_all` ausente é um objeto parcial —
+          nos dois casos a leitura honesta é "não sei se chegou por acidente",
+          e uma guarda NOVA não pode transformar esse silêncio em recusa para
+          quem nunca teve guarda nenhuma.
+
+        Para um `Profile` de verdade os dois predicados coincidem, e em
+        produção o perfil SEMPRE chega: `ProfileManager.apply_emulation` passa
+        `profile=` a cada ativação. Usado ao LIGAR a supressão (item 2 da leva)
+        e ao reverter a política de rumble (item 3).
+        """
+        return getattr(profile, "e_catch_all", None) is True
 
     def _janela_de_jogo_em_foco(self) -> bool:
         """True quando a janela em foco AGORA é de um jogo Steam.
@@ -1970,12 +2242,21 @@ class Daemon:
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
             if not gamepad_on or (flavor is not None and flavor != flavor_atual):
                 self.set_gamepad_emulation(True, flavor, origin="profile")
-            # LEIGO-01: o default do campo é True (esquema) — o fallback do
-            # getattr acompanha, senão um `mode` dublado sem o campo voltaria a
-            # significar "desliga o co-op".
-            want_coop = bool(getattr(mode, "coop", True))
-            if want_coop != bool(self.config.coop_enabled):
-                self.set_coop_enabled(want_coop, origin="profile")
+            # COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o campo
+            # `mode.coop` do perfil deixou de GOVERNAR. Ele continua sendo LIDO
+            # (e o esquema continua aceitando-o — ver `profiles/schema.py`:
+            # tirá-lo do modelo faria todo perfil dela que traz `"coop"` falhar
+            # na validação, inclusive dois presets de fábrica), mas nenhum perfil
+            # liga nem desliga o co-op: cada controle é um jogador, sempre.
+            # Antes daqui saía `set_coop_enabled(want_coop, origin="profile")`,
+            # e um perfil antigo com `"coop": false` desligava o co-op dela ao
+            # ativar — pelas costas de quem nunca pediu isso.
+            _coop_do_perfil_ignorado = bool(getattr(mode, "coop", True))
+            if not _coop_do_perfil_ignorado:
+                logger.info(
+                    "perfil_pediu_coop_off_ignorado",
+                    motivo="coop_sempre_ligado",
+                )
             self._mode_from_profile = "gamepad"
             return APLICADO
 
@@ -2046,7 +2327,7 @@ class Daemon:
             return self._log_modo_jogo_padrao(
                 ADIADO_LOCK_MANUAL, "gesto_manual_recente", wm_class
             )
-        # Modo Nativo MANUAL ("Jogar direto (Sony)") já É a resposta dela para
+        # Modo Nativo MANUAL ("Conexão Nativa (Sony)") já É a resposta dela para
         # "como quero jogar": o controle está SOLTO para o jogo, de propósito.
         # Sem esta guarda, o modo jogo padrão o derrubaria assim que o lock de
         # 30 s vencesse — trocando a escolha explícita dela por um default. É a
@@ -2291,6 +2572,7 @@ class Daemon:
         policy: str | None,
         custom_mult: float | None = None,
         *,
+        profile: Any | None = None,
         origin: str = "autoswitch",
     ) -> str:
         """Aplica a política de rumble de um perfil recém-ativado
@@ -2310,6 +2592,14 @@ class Daemon:
            outro PERFIL aplicou: volta ao par (policy, custom_mult) vigente
            ANTES de o 1º perfil-com-opinião mexer. Política de origem manual
            fica intocada.
+           PERFIL-REESCRITO-NA-PARTIDA-01 (05/08), item 3: e a reversão passa
+           pelas MESMAS DUAS guardas do `mode` e da supressão —
+           `catch_all_sem_opiniao` e `janela_de_jogo_em_foco`. Este applier era
+           o único irmão sem nenhuma delas, e o preço apareceu no journal dela:
+           um `profile_rumble_policy_reverted` DENTRO da sessão de jogo, com a
+           vibração do jogo mudando por causa de um perfil que só passou por
+           ali. A doutrina R-02 não tem por que valer para dois eixos e não
+           para o terceiro: ausência de regra não é ordem, em nenhum deles.
         3. **policy preenchida** — guarda a política anterior (1ª intervenção
            de perfil), grava no `DaemonConfig` e re-aplica o rumble ATIVO via
            `apply_rumble_policy` para efeito imediato. Se a política vigente
@@ -2343,6 +2633,37 @@ class Daemon:
         if policy is None:
             # Perfil sem opinião: reverte só política que veio de perfil.
             if self._rumble_policy_from_profile:
+                # PERFIL-REESCRITO-NA-PARTIDA-01, item 3: as duas guardas que o
+                # `mode` (`apply_profile_mode`) e a supressão
+                # (`apply_profile_suppression`) já tinham, e que faltavam aqui.
+                # Ficam DENTRO do `if` de propósito: sem política de perfil de
+                # pé não há reversão nenhuma a barrar, e devolver
+                # `ignorado_*` para um no-op encheria o relatório da GUI de
+                # recusa onde nada seria feito de todo jeito.
+                #
+                # A guarda de catch-all usa a forma de evidência POSITIVA
+                # (`_perfil_e_catch_all`) e não a negação de
+                # `_perfil_tem_opiniao`: para um `Profile` de verdade as duas
+                # são idênticas — que é o caso de TODA ativação, porque
+                # `apply_emulation` sempre passa `profile=` —, e diferem só
+                # quando ninguém disse quem mandou. Aqui a guarda é NOVA, e
+                # tomar o silêncio de um chamador direto (CLI, dublê) como
+                # recusa mudaria o comportamento de quem nunca teve guarda
+                # nenhuma, sem uma medição que peça isso.
+                if self._perfil_e_catch_all(profile):
+                    logger.info(
+                        "profile_rumble_policy_revert_skipped",
+                        motivo="catch_all_sem_opiniao",
+                        profile=getattr(profile, "name", None),
+                    )
+                    return IGNORADO_CATCH_ALL
+                if self._janela_de_jogo_em_foco():
+                    logger.info(
+                        "profile_rumble_policy_revert_skipped",
+                        motivo="janela_de_jogo_em_foco",
+                        profile=getattr(profile, "name", None),
+                    )
+                    return IGNORADO_JANELA_DE_JOGO
                 before = self._rumble_policy_before_profile
                 if before is not None:
                     self.config.rumble_policy = before[0]
@@ -2433,9 +2754,104 @@ class Daemon:
             # Silêncio deliberado (botão "Parar") — preserva; não religa o jogo.
             return
         self.config.rumble_active = None
+        self.config.rumble_active_uniq = None
         with contextlib.suppress(Exception):
             self.controller.set_rumble(weak=0, strong=0)
         logger.info("profile_rumble_passthrough_released")
+
+    def apply_profile_speaker(
+        self,
+        volume: int,
+        muted: bool = False,
+        *,
+        uniq: str | None = None,
+        origin: str = "autoswitch",
+        rota: int | None = None,
+    ) -> str:
+        """Aplica a seção `speaker` de um perfil recém-ativado (SOM-02/E4).
+
+        Injetado como `speaker_applier` do `ProfileManager` nas rotas de
+        ativação (IPC `profile.switch`, autoswitch, ciclo por hotkey e restore
+        de boot) e consumido por `ProfileManager.apply_speaker` /
+        `reapply_speaker_on_connect`, que já decidiram, ANTES de chegar aqui,
+        que há opinião a aplicar: perfil sem a seção não chama este método (sem
+        opinião é silêncio, não ordem — tomar a posse dos bytes de áudio por um
+        perfil que não pediu nada é a queixa "a config que eu deixo nunca é
+        respeitada", do lado do som).
+
+        POR QUE ISTO FALA DIRETO COM O BACKEND, e não pelo `speaker.set` do IPC
+        (a armadilha desta entrega, e a razão de a chamada estar aqui e não lá):
+        o handler `_handle_speaker_set` arma a categoria manual `"audio"`
+        (`_marcar_audio_manual`, decisão da E3) — que é EXATAMENTE a trava que
+        `ProfileManager.apply_speaker` consulta para NÃO escrever. Um applier de
+        perfil que passasse por aquele caminho armaria a trava na primeira
+        ativação e todas as seguintes seriam descartadas em silêncio: o perfil
+        pararia de funcionar depois do primeiro uso. A trava é o registro de um
+        gesto DELA; perfil reaplicado não é gesto dela e não pode carimbá-la.
+
+        Pelo mesmo eixo, o lock de 30 s de `_emu_manual_ts` (mouse/modo/política
+        de rumble) NÃO é consultado aqui: o gesto manual de áudio tem trava
+        própria, por categoria, e ela já foi consultada rio acima. Empilhar o
+        lock de emulação faria mexer no mouse silenciar o volume do perfil por
+        meio minuto, sem que ninguém tivesse tocado no som.
+
+        `volume` é OBRIGATÓRIO e vai sempre junto do `muted` (armadilha 1,
+        medida: `set_speaker_volume` sem volume e sem preferência guardada toma
+        a posse e manda ZERO, publicando `{'volume': 0, 'muted': True}`). O
+        esquema do perfil já recusa a seção sem volume e o manager faz
+        `int(secao.volume)`; a guarda abaixo é a terceira cerca, para um dublê
+        ou um chamador novo não conseguirem produzir a chamada vazia.
+
+        Vocabulário de retorno (R-03): `APLICADO`, `IGNORADO_SEM_CONTROLE`
+        (nenhum handle para o `uniq` — nada foi escrito e ninguém mentiu
+        "aplicado") e `FALHOU`.
+
+        `rota` é o CANAL de saída (SOM-ROTA-01) e vem do `speaker.rota` do
+        perfil. `None` — o default, e o que todo perfil de antes desta linha
+        carrega — quer dizer **não tocar no `common[7]`**: aquele byte guarda a
+        rota de saída (bits 4-5) E o caminho do microfone (o resto), e
+        escrevê-lo inteiro apagaria o caminho do mic em silêncio. Quem preserva
+        os outros bits é o `_byte_da_rota` do backend, que lê o valor vigente
+        do handle antes de trocar só os dois bits da rota.
+        """
+        if volume is None:
+            # Nunca um `set_speaker_volume` sem volume — ver a docstring. A
+            # anotação diz `int`; a guarda existe para o chamador que não a lê.
+            logger.warning("profile_speaker_sem_volume_recusado", origin=origin)
+            return FALHOU
+        setter = getattr(self.controller, "set_speaker_volume", None)
+        if not callable(setter):
+            logger.debug("profile_speaker_backend_sem_suporte", origin=origin)
+            return IGNORADO_SEM_CONTROLE
+        alvo = max(0, min(255, int(volume)))
+        try:
+            ok = bool(setter(alvo, muted=bool(muted), uniq=uniq, rota=rota))
+        except Exception as exc:
+            logger.warning(
+                "profile_speaker_apply_failed",
+                volume=alvo,
+                muted=bool(muted),
+                uniq=uniq,
+                rota=rota,
+                err=str(exc),
+            )
+            return FALHOU
+        if not ok:
+            # Sem handle para este `uniq` (controle ausente/desconectado). Não é
+            # falha: é a ausência do controle, dita com esse nome.
+            logger.debug(
+                "profile_speaker_sem_controle", uniq=uniq, origin=origin
+            )
+            return IGNORADO_SEM_CONTROLE
+        logger.info(
+            "profile_speaker_applied",
+            volume=alvo,
+            muted=bool(muted),
+            uniq=uniq,
+            rota=rota,
+            origin=origin,
+        )
+        return APLICADO
 
     def mark_rumble_policy_manual(self) -> None:
         """Registra gesto MANUAL na política de rumble
@@ -2484,10 +2900,21 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
             apply_rumble_policy,
         )
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            escrever_rumble_no_dono,
+        )
 
         with contextlib.suppress(Exception):
             eff_weak, eff_strong = apply_rumble_policy(self, active[0], active[1])
-            self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
+            # MESA-CHEIA-05 (E0): o par tem dono, e trocar a POLÍTICA não é
+            # gesto de trocar de controle — escreve em quem o par é, não em
+            # quem está no seletor agora.
+            escrever_rumble_no_dono(
+                self.controller,
+                self.config.rumble_active_uniq,
+                eff_weak,
+                eff_strong,
+            )
 
     def _flush_emulation_devices(self) -> None:
         """Solta todas as teclas/botões dos devices virtuais (mouse+teclado).
@@ -2871,6 +3298,35 @@ class Daemon:
         except Exception as exc:  # nunca derrubar o poll loop
             logger.debug("identity_sync_falhou", err=str(exc))
 
+    def _amostrar_bateria(self, agora: float) -> None:
+        """Sonda a carga de cada controle e deixa no journal o que valer linha.
+
+        PROTOCOLO-QUEDA-01 (07/08/2026), entrega 1: até aqui o daemon LIA a
+        bateria a cada tique e não escrevia uma linha — a hipótese mais forte
+        para as nove quedas de link (a carga acabando) era indecidível por falta
+        de instrumento. Quem decide a cadência e a máscara do endereço é o
+        `battery_journal`; aqui só entregamos a leitura barata do backend
+        (`describe_controllers`, os mesmos getattrs do tique lento) e o relógio
+        do tique.
+
+        Roda ANTES do gate de conexão do poll loop, pelo mesmo motivo do
+        `_sync_identity_registry`: é a transição para ZERO controles que mais
+        interessa, e depois do gate ela nunca seria vista.
+
+        Nunca derruba o poll loop: leitura de sysfs falha por corrida (o nó some
+        entre o `exists` e o `read`) e isso é rotina, não defeito.
+        """
+        describe = getattr(self.controller, "describe_controllers", None)
+        if not callable(describe):
+            return
+        try:
+            infos = describe()
+            if not isinstance(infos, list):
+                return
+            diario_da_bateria(self).observar(infos, agora)
+        except Exception as exc:  # nunca derrubar o poll loop
+            logger.debug("bateria_amostra_falhou", err=str(exc))
+
     # ------------------------------------------------------------------
     # Identidade + LED dos controles EXTERNOS (EXT-04)
     # ------------------------------------------------------------------
@@ -3246,6 +3702,22 @@ class Daemon:
         novo = signal.authority
         if novo == anterior:
             return
+        # GATILHO-DA-COR-01 (escolha dela, 12/08): a rajada de repintura da
+        # Steam é por EVENTO, e a conexão é só o evento mais visível — abrir e
+        # fechar jogo também a provoca. Esta transição É o "jogo abrindo/
+        # fechando" que o produto já detecta (o mesmo sinal que governa o
+        # `launch_env`), então é aqui que se ARMA. Quem espera a sequência
+        # sossegar e escreve é o `reconnect_loop`, com o MESMO debounce das
+        # conexões — um só gatilho, uma só repintura por rajada.
+        # Sem gate próprio de Modo Nativo: o portão mora na escrita
+        # (`reescrever_lightbar_por_hidraw` é no-op sob `_output_mute`), que é
+        # o único lugar onde ele não pode ser esquecido.
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.connection import (
+                armar_gatilho_da_cor_por_evento,
+            )
+
+            armar_gatilho_da_cor_por_evento(self, f"game_signal:{anterior}->{novo}")
         if novo == "daemon":
             with contextlib.suppress(Exception):
                 defend = getattr(self.controller, "defend_display", None)
@@ -3258,6 +3730,64 @@ class Daemon:
                     replay()
 
     # ------------------------------------------------------------------
+    # ABA-DO-JOGO-01: há jogo da Steam aberto AGORA? (o fato passa a viajar)
+    # ------------------------------------------------------------------
+
+    #: Task da sonda por jogo da Steam. `pgrep` é subprocesso: um tique que ainda
+    #: não voltou não pode ganhar companhia a cada 2 s. Molde (e ponto de
+    #: cancelamento na saída do poll loop) do `_external_tick_task`.
+    _steam_jogo_task: asyncio.Task[Any] | None = None
+
+    def _schedule_steam_jogo_tick(self) -> None:
+        """Tique lento (~2 s) da pergunta *"há jogo da Steam aberto?"*.
+
+        ABA-DO-JOGO-01 (10/08/2026). Nenhuma capacidade nova: quem responde é a
+        `steam_game_running_appid`, que existe desde 08/08 (RELANCAR-AGORA-01) e
+        até hoje só era chamada por gesto dela, dentro da janela. O que muda é
+        que o fato passa a VIAJAR — o daemon o publica no store, o `state_full` o
+        leva, e a janela deixa de ter que adivinhar.
+
+        **Por que no daemon e não na janela**, que já tem executor próprio: a
+        pergunta é uma varredura de `/proc` e as respostas seriam idênticas em
+        três consumidores (janela, applet, CLI). Uma sonda a 0,5 Hz no daemon
+        serve os três; três sondas a 0,5 Hz cada seriam a mesma resposta paga
+        três vezes.
+
+        **Por que agendado e não `await` inline** (HANG-01, a lição do tique dos
+        externos, escrito duas telas acima): `pgrep` é `fork`+`exec`, e um `fork`
+        que engasga — memória apertada, `/proc` gigante — pendura QUEM ESPERAR.
+        O poll loop é a rota do controle para o jogo e não pode ficar pendurado
+        por uma pergunta de cosmética de aba. Aqui ele só AGENDA; se a sonda
+        anterior não voltou, este tique simplesmente não acontece.
+
+        Falha é silêncio de propósito: sem resposta, `set_steam_jogo_appid` não é
+        chamado, o `steam_jogo_lido` do store fica como está, e a janela mantém a
+        aba exatamente como ela estava. O contrário — tratar "não consegui
+        perguntar" como "não há jogo" — sumiria com a aba debaixo dela no meio da
+        partida, que é o oposto do pedido.
+        """
+        task = self._steam_jogo_task
+        if task is not None and not task.done():
+            return
+        self._steam_jogo_task = asyncio.create_task(
+            self._sondar_steam_jogo(), name="steam_jogo_tick"
+        )
+
+    async def _sondar_steam_jogo(self) -> None:
+        """Corpo da TASK da sonda (ABA-DO-JOGO-01). Ver `_schedule_steam_jogo_tick`."""
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            steam_game_running_appid,
+        )
+
+        try:
+            appid = await self._run_blocking(steam_game_running_appid)
+        except Exception as exc:  # sonda muda: o último fato continua valendo
+            logger.debug("steam_jogo_sonda_falhou", err=str(exc))
+            return
+        with contextlib.suppress(Exception):
+            self.store.set_steam_jogo_appid(appid)
+
+    # ------------------------------------------------------------------
     # Poll loop (permanece aqui: testes fazem monkeypatch de daemon._poll_loop)
     # ------------------------------------------------------------------
 
@@ -3267,6 +3797,11 @@ class Daemon:
         loop = asyncio.get_running_loop()
         next_rumble_assert_at: float = 0.0
         evdev_watchdog_next_at: float = 0.0
+        # GRAB-DOBRADO-01: retomada do `EVIOCGRAB` do primário, no mesmo ritmo
+        # do retry que o co-op já dava aos secundários (~2 s). Sem ela, uma
+        # recusa transitória (troca de primário, Steam Input, replug) deixava o
+        # P1 DOBRADO no jogo até o próximo replug ou restart do daemon.
+        grab_reconcile_next_at: float = 0.0
         # FEAT-DSX-COOP-LOCAL-01: reconcilia os jogadores secundários (P2+) a cada
         # ~2s (enumerar evdevs todo tick é caro); o forward roda todo tick.
         coop_sync_next_at: float = 0.0
@@ -3285,6 +3820,16 @@ class Daemon:
         # antes do gate de conexão — o marker do wrapper e a janela do jogo
         # independem do controle estar plugado neste instante.
         game_signal_next_at: float = 0.0
+        # ABA-DO-JOGO-01: sonda por jogo da Steam aberto, no MESMO tick lento e
+        # pela MESMA razão de vir antes do gate de conexão — o jogo dela pode
+        # estar aberto com o DualSense carregando na mesa, e a aba "No jogo" tem
+        # de contar isso do mesmo jeito.
+        steam_jogo_next_at: float = 0.0
+        # PROTOCOLO-QUEDA-01: sonda da bateria, no MESMO intervalo do diário
+        # (`INTERVALO_SONDA_S`, 30 s) — pedir mais vezes não adiantaria nada: o
+        # `DiarioDaBateria.observar` se gateia pelo próprio relógio e devolveria
+        # sem ler. Custo por tick sem sonda: uma comparação de float.
+        battery_journal_next_at: float = 0.0
         # R-03: dreno da pendência de `mode` adiada pelo lock de gesto manual.
         # ~1 Hz (o lock é de 30 s — precisão de segundo basta) e TAMBÉM antes do
         # gate de conexão: um blip de link BT não pode fazer o modo do perfil
@@ -3313,6 +3858,9 @@ class Daemon:
                 # estado neste instante. Nunca derruba o poll loop.
                 with contextlib.suppress(Exception):
                     self.aplicar_gamepad_para_multiplos_controles()
+            if tick_started >= battery_journal_next_at:
+                battery_journal_next_at = tick_started + INTERVALO_SONDA_S
+                self._amostrar_bateria(tick_started)
             if tick_started >= external_led_next_at:
                 external_led_next_at = tick_started + 2.0
                 # HANG-01: nunca mais `await` inline — só AGENDA a task (o
@@ -3321,6 +3869,11 @@ class Daemon:
             if tick_started >= game_signal_next_at:
                 game_signal_next_at = tick_started + 2.0
                 await self._sync_game_signal()
+            if tick_started >= steam_jogo_next_at:
+                steam_jogo_next_at = tick_started + 2.0
+                # ABA-DO-JOGO-01: AGENDA (não espera) — ver
+                # `_schedule_steam_jogo_tick`, no molde do tique dos externos.
+                self._schedule_steam_jogo_tick()
             if tick_started >= mode_pending_next_at:
                 mode_pending_next_at = tick_started + 1.0
                 # R-03: DEPOIS do `_sync_game_signal` de propósito — a guarda de
@@ -3328,6 +3881,34 @@ class Daemon:
                 # a de dois segundos atrás.
                 with contextlib.suppress(Exception):
                     self._drenar_modo_pendente()
+            # JOGADOR-2-REFEM-01 (10/08/2026): o co-op SOBE PARA CÁ, para antes
+            # do gate de conexão — o sexto bloco a fazer essa viagem, pela mesma
+            # razão dos cinco acima.
+            #
+            # O DEFEITO, medido lendo o laço: `coop.sync()` e `coop.forward_all()`
+            # moravam DEPOIS do `if not self.controller.is_connected(): continue`.
+            # Cada jogador secundário tem o SEU próprio controle físico e o SEU
+            # próprio gamepad virtual, e nenhum dos dois depende do primário — mas
+            # o `continue` levava tudo junto. Com o DualSense do P1 fora da mesa
+            # (bateria, cabo solto, blip de BT), o jogador 2 ficava sem input no
+            # meio da partida, sem uma linha no journal explicando.
+            #
+            # É o mesmo raciocínio já escrito para o LED dos externos duas telas
+            # acima — *"o 8BitDo/Pro Controller merece número mesmo sem nenhum
+            # DualSense plugado"* —, e vale ainda mais aqui: número é cosmética,
+            # input é o produto.
+            #
+            # O `grace_passed` do primário continua sendo o gate, e sobe junto:
+            # ele é o anti-ghost-input da conexão (`_input_ready_at`), um relógio
+            # que segue correndo depois do unplug — então desconectar não o
+            # rearma, e o P2 não paga o settling de um controle que nem está lá.
+            grace_passed = tick_started >= self._input_ready_at
+            if grace_passed:
+                coop = get_coop_manager(self)
+                if tick_started >= coop_sync_next_at:
+                    coop.sync()
+                    coop_sync_next_at = tick_started + 2.0
+                coop.forward_all()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: se o controller ainda não está
             # conectado (boot sem hardware ou pós-unplug), pula o tick
             # silenciosamente. O `reconnect_loop` cuida de retentar; quando
@@ -3348,6 +3929,11 @@ class Daemon:
                 state = await self._run_blocking(self.controller.read_state)
             except Exception as exc:
                 logger.warning("poll_read_failed", err=str(exc), exc_info=True)
+                # PROTOCOLO-QUEDA-01: a última carga conhecida ANTES de qualquer
+                # reconexão. É o dado que transforma o próximo "desligou sozinho"
+                # em resposta — e este caminho (erro de leitura) é o irmão do
+                # `probe_offline` de `daemon/connection.py`.
+                registrar_queda_da_bateria(self, "poll_read_failed", tick_started)
                 self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)})
                 if self.config.auto_reconnect:
                     from hefesto_dualsense4unix.daemon.connection import reconnect
@@ -3401,6 +3987,21 @@ class Daemon:
                         if await self._run_blocking(heal):
                             self.store.bump("evdev.watchdog.reopen")
 
+            # GRAB-DOBRADO-01: irmão do watchdog acima, e do retry que o co-op
+            # já dava aos secundários. O watchdog cura o node OBSOLETO (troca de
+            # nó); este cura o node CERTO com o `EVIOCGRAB` RECUSADO — o estado
+            # que ficava `failed` para sempre porque `_reapply_grab` só roda no
+            # (re)open e `_set_controller_grab` só no start da emulação. Sem
+            # reabrir nada: uma comparação de string quando está tudo bem.
+            if tick_started >= grab_reconcile_next_at:
+                grab_reconcile_next_at = tick_started + GRAB_RECONCILE_SEC
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                        reconciliar_grab_do_primario,
+                    )
+
+                    reconciliar_grab_do_primario(self)
+
             buttons_pressed = self._evdev_buttons_once()
             current_buttons = state.buttons_pressed
 
@@ -3417,6 +4018,15 @@ class Daemon:
             # grace-period (anti-ghost-input), com os botões CRUS: o jogo quer
             # PS/Options/dpad crus; a subtração de combo (abaixo) é proteção
             # contra vazamento pro DESKTOP e não se aplica ao gamepad.
+            #
+            # RELÊ o grace, e isto NÃO é linha repetida: desde a
+            # JOGADOR-2-REFEM-01 (10/08/2026) o `grace_passed` também é calculado
+            # lá em cima, antes do gate de conexão, para o co-op. Entre um ponto
+            # e outro está a borda desconectado→conectado, que ARMA um grace novo
+            # (`_input_ready_at = tick_started + INPUT_GRACE_SEC`). Apagar esta
+            # linha por parecer duplicada faria o primário despachar com o valor
+            # de ANTES da borda — ou seja, sem o settling anti-ghost, que é o
+            # defeito inteiro que o BUG-DAEMON-CONNECT-GHOST-INPUT-01 curou.
             grace_passed = tick_started >= self._input_ready_at
             gamepad_dispatched = False
             if grace_passed and self._gamepad_device is not None:
@@ -3429,17 +4039,14 @@ class Daemon:
                     discard_touchpad_motion(self)
                 gamepad_dispatched = True
 
-            # FEAT-DSX-COOP-LOCAL-01: co-op local — repassa cada controle
-            # SECUNDÁRIO ao SEU gamepad virtual (P2+). Como o P1 acima, sobrevive
-            # a pause/modo-jogo (é rota pro jogo) e é gateado só pelo grace. A
-            # reconciliação (sync, throttada ~2s) cria/derruba os secundários e
-            # também desmonta tudo se o co-op/gamepad for desligado.
-            if grace_passed:
-                coop = get_coop_manager(self)
-                if tick_started >= coop_sync_next_at:
-                    coop.sync()
-                    coop_sync_next_at = tick_started + 2.0
-                coop.forward_all()
+            # FEAT-DSX-COOP-LOCAL-01: o co-op local — repassar cada controle
+            # SECUNDÁRIO ao SEU gamepad virtual (P2+) — morava AQUI, e subiu para
+            # antes do gate de conexão em 10/08/2026 (JOGADOR-2-REFEM-01). O
+            # comportamento é o mesmo em tudo o que este bloco garantia:
+            # sobrevive a pause e ao modo jogo (é rota pro jogo), é gateado só
+            # pelo grace, e a reconciliação segue throttada em ~2 s. O que mudou
+            # é que ele deixou de ser refém do controle do P1 estar plugado.
+            # A leitura do primário continua abaixo, onde sempre esteve.
 
             # BUG-DAEMON-CONNECT-GHOST-INPUT-01: gate de assentamento. Enquanto
             # `loop.time() < _input_ready_at`, NÃO despacha teclado/mouse/hotkey
@@ -3577,6 +4184,11 @@ class Daemon:
         tick_task = self._external_tick_task
         if tick_task is not None and not tick_task.done():
             tick_task.cancel()
+        # ABA-DO-JOGO-01: a sonda da Steam é agendada pelo mesmo laço e sai pela
+        # mesma porta — best-effort, igual à de cima.
+        steam_task = self._steam_jogo_task
+        if steam_task is not None and not steam_task.done():
+            steam_task.cancel()
 
     # ------------------------------------------------------------------
     # Helpers internos

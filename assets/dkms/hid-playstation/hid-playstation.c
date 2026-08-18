@@ -32,8 +32,34 @@ module_param(feature_retries, uint, 0644);
 MODULE_PARM_DESC(feature_retries,
 		 "Extra attempts when a feature report read fails during probe, for controllers that lose the race for the bluetooth control channel when several pair at once (default 0 = one attempt, same as before)");
 
-/* Backoff before the first retry; doubled for each further attempt. */
-#define PS_FEATURE_RETRY_DELAY_MS	100
+/*
+ * BlueZ answers a GET_REPORT on the HID control channel inside its own
+ * REPORT_REQ_TIMEOUT (profiles/input/device.c, hidp_report_req_timeout()) or
+ * not at all, and that timeout is three seconds. Every wait below is written
+ * as a multiple of it, because it is the clock a failed attempt is really
+ * paying, and the one a retry has to outlive to mean anything.
+ */
+#define PS_BLUEZ_REPORT_REQ_TIMEOUT_MS	3000
+
+/*
+ * Backoff before the first retry over bluetooth, and the ceiling for the
+ * doubling. Both are multiples of the timeout above, and the first one is
+ * deliberately larger than it: an attempt that timed out has proven the
+ * control channel was contended for one whole REPORT_REQ_TIMEOUT window, so
+ * sleeping for less than that window asks the same question inside it. See
+ * ps_get_report() for what was measured when this used to be 100 ms.
+ */
+#define PS_FEATURE_RETRY_DELAY_MS	(2U * PS_BLUEZ_REPORT_REQ_TIMEOUT_MS)
+#define PS_FEATURE_RETRY_MAX_DELAY_MS	(4U * PS_BLUEZ_REPORT_REQ_TIMEOUT_MS)
+
+/*
+ * Over USB there is no BlueZ in the path, so none of the above applies: a
+ * failed attempt costs nothing and comes back at once. The failure measured
+ * on that side is a clone answering the pairing info report short, with the
+ * same bytes every time, so spacing the attempts buys nothing and only delays
+ * the fallback that does help. Keep the original 100 ms.
+ */
+#define PS_FEATURE_RETRY_USB_DELAY_MS	100
 
 /*
  * Third-party controllers cloning the DualShock4's USB IDs (054c:05c4) answer
@@ -898,12 +924,25 @@ static int __ps_get_report(struct hid_device *hdev, u8 report_id, u8 *buf,
  * so all of them are retried.
  *
  * Off by default: one attempt, exactly as before.
+ *
+ * The spacing is not free-standing. This first shipped retrying after 100 ms
+ * and 200 ms, which is the same as not retrying at all, and the arithmetic
+ * says why: over bluetooth a failed attempt has already spent the whole
+ * REPORT_REQ_TIMEOUT, so three attempts 100 ms and 200 ms apart are three
+ * questions asked inside one contention episode. Measured in one journal at
+ * 00:17:04, :07 and :10, then probe aborted; over 2026-08-08 six of six
+ * probes that retried still aborted and not one was saved. All the retry
+ * bought was a failure that took ~10 s instead of ~3.3 s. The backoff is now
+ * read as a multiple of the timeout it has to ride over, and the budget is
+ * spent on spacing rather than on more attempts crowded into one window.
  */
 static int ps_get_report(struct hid_device *hdev, u8 report_id, u8 *buf,
 			 size_t size, bool check_crc)
 {
 	unsigned int attempts_left = min(feature_retries, 10U) + 1;
-	unsigned int delay_ms = PS_FEATURE_RETRY_DELAY_MS;
+	unsigned int delay_ms = hdev->bus == BUS_BLUETOOTH ?
+				PS_FEATURE_RETRY_DELAY_MS :
+				PS_FEATURE_RETRY_USB_DELAY_MS;
 	int ret;
 
 	for (;;) {
@@ -915,7 +954,7 @@ static int ps_get_report(struct hid_device *hdev, u8 report_id, u8 *buf,
 			 "retrying feature reportID %d in %u ms (%u attempt(s) left)\n",
 			 report_id, delay_ms, attempts_left);
 		msleep(delay_ms);
-		delay_ms *= 2;
+		delay_ms = min(delay_ms * 2, PS_FEATURE_RETRY_MAX_DELAY_MS);
 	}
 }
 

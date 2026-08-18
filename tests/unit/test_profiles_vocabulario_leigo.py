@@ -48,6 +48,22 @@ class TestRotulosDoEditorDeModo:
         assert rotulos["none"] == "Não mexer no modo"
         assert "Sem opinião" not in rotulos.values()
 
+    def test_os_quatro_rotulos_leem_como_uma_lista_so(self) -> None:
+        """UX-MODE-TERMS-02 (06/08/2026), decisão dela: "Jogar direto (Sony)"
+        virou "Conexão Nativa (Sony)".
+
+        O rótulo antigo dizia o GESTO ("jogar") e não a COISA, enquanto os
+        vizinhos dizem para onde o controle fala. Este é o gate do vocabulário:
+        os quatro itens do editor têm de ler como uma lista só, nesta ordem —
+        quem ressuscitar "Jogar direto" em qualquer um deles reprova aqui.
+        """
+        assert [rotulo for _id, rotulo in _MODE_KIND_ITEMS] == [
+            "Não mexer no modo",
+            "Controlar o PC",
+            "Jogar pelo Hefesto",
+            "Conexão Nativa (Sony)",
+        ]
+
     def test_ids_do_schema_intactos(self) -> None:
         """LEIGO-06 é só TEXTO: os ids são chaves de config e não podem mudar
         (`none` = sem a seção; os demais = ProfileModeConfig.kind)."""

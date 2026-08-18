@@ -9,8 +9,8 @@
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT%20%2B%20GPL--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.4.0%20alfa-6a3fb4.svg)](CHANGELOG.md)
-[![Testes](https://img.shields.io/badge/testes-6097-brightgreen.svg)](tests/)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.9.4.2%20alfa-6a3fb4.svg)](CHANGELOG.md)
+[![Testes](https://img.shields.io/badge/testes-mais%20de%207000-brightgreen.svg)](tests/)
 [![CI](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml)
 
 </div>
@@ -18,7 +18,7 @@
 ---
 
 ```
-Versão: 0.5.0 (alfa)
+Versão: 0.9.4.2 (alfa)
 Alvo:   Linux com systemd-logind · Python 3.10+
 Licença: MIT, exceto `assets/dkms/*` (GPL-2.0) — ver LICENSE e NOTICE
 ```
@@ -44,19 +44,45 @@ interface de terminal e uma linha de comando. Controles de outras marcas
 (Nintendo Pro, 8BitDo em modo Switch no cabo ou em modo DirectInput/PS4 por
 Bluetooth) entram como jogadores adicionais.
 
+> **NOTA DATADA — 06/08/2026: "cada um vira um jogador" vale para os DualSense;
+> para os controles de outras marcas, NÃO.** As duas frases acima ficam onde
+> estão porque decisão medida não se apaga — esta nota diz o que caducou nelas.
+>
+> **GRAU: MEDIDO**, na máquina dela em 06/08/2026 às 22h40, com um DualSense, um
+> Nintendo Pro e um 8BitDo ligados ao mesmo tempo: `coop status` respondeu
+> **"jogadores ativos: 1"** e `controller list` mostrou **um** controle. Controle
+> de outra marca **não entra na contagem de jogadores e não ganha controle
+> virtual próprio** — ele recebe **número e luz**, e chega ao jogo como o gamepad
+> nativo que já era.
+>
+> **GRAU: SEM PROVA** — que o jogo veja os três como jogador 1. É o relato dela
+> (*"os 3 controles conectados e com os 3 como player 1"*); o caminho até o jogo
+> não foi instrumentado nessa medição.
+>
+> **O que é verdade hoje:** cada **DualSense** vira um jogador, com controle
+> virtual próprio; controle de outra marca entra na **lista de externos**, com
+> número e luz próprios. A cura tem dona e ordem — as entregas E3 e E4 da
+> [LUGAR-À-MESA-01](docs/process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md),
+> que ela autorizou em 07/08/2026 **só depois da MÁSCARA-01**.
+
 ### O que ele entrega
 
-- **Gatilhos adaptativos** — 19 modos (Rigid, Pulse, Galloping, Machine, Bow,
-  Automatic Gun e os demais), ajustáveis por gatilho e salvos no perfil.
+- **Gatilhos adaptativos** — 19 modos numa grade (Rígido, Pulso, Galope,
+  Metralhadora, Arco de flecha, Arma automática e os demais), ajustáveis por
+  gatilho e salvos no perfil. Os nomes em inglês (`Rigid`, `Galloping`, …)
+  continuam sendo os do perfil em disco e os do protocolo.
 - **Um controle virtual por jogador** — o jogo vê um DualSense completo (com
   vibração, gatilhos, luz e giroscópio) ou um Xbox 360, conforme a máscara que
   você escolher. Ver [os três modos](docs/usage/modos.md).
 - **Perfis por jogo** — trocam sozinhos quando você abre a janela do jogo, com um
   cadeado para quando você não quiser que troquem.
 - **Luzes** — cor da lightbar por controle (com cores automáticas de jogador) e
-  os cinco LEDs de jogador no padrão oficial do PS5.
-- **Vibração com política** — Economia, Balanceado, Máximo ou Auto por bateria,
-  aplicada ao que o jogo pede antes de chegar ao motor.
+  o **desenho das 5 luzes** de jogador, com os presets do P1 ao P4, todas acesas
+  e todas apagadas, no padrão oficial do PS5. O desenho é aparência: o número do
+  controle continua sendo o do cabeçalho.
+- **Vibração com política** — Economia (30%), Balanceado (100%), Máximo (150%)
+  ou Auto por bateria, aplicada ao que o jogo pede antes de chegar ao motor. Um
+  controle deslizante vai de 0 a 200 para quem quiser sair dos quatro degraus.
 - **Protocolo do DSX, parcialmente** — servidor UDP em `127.0.0.1:6969` que
   aceita o envelope do DualSenseX e as seis instruções principais
   (`TriggerUpdate`, `TriggerThreshold`, `RGBUpdate`, `PlayerLED`, `MicLED`,
@@ -66,13 +92,22 @@ Bluetooth) entram como jogadores adicionais.
   que use só os modos paramétricos funciona; um que chame `Instruction.Hard()`
   não faz nada. A lista completa do que falta está em
   [docs/protocol/udp-schema.md](docs/protocol/udp-schema.md).
+- **O touchpad continua sendo o touchpad do sistema** — em qualquer um dos três
+  modos, o dedo no touchpad do DualSense move o cursor pelo libinput, como move
+  quando o controle é plugado sem o Hefesto instalado. Decisão dela, de
+  09/08/2026: *"a ideia do touchpad é ele voltar a funcionar assim, seja no modo
+  nativo ou dualsense"*. Só o touchpad do **controle virtual** fica fora do
+  libinput — era ele quem duplicava cada toque dentro do jogo.
+- **Teclado na tela pelo controle** — L3 abre, R3 fecha. É o único caminho de
+  fábrica para escrever texto, e o `install.sh` instala o programa sozinho
+  (`wvkbd` em Wayland, `onboard` em X11).
 - **Automação** — socket JSON-RPC local para scripts e um sistema de plugins
   Python com ganchos de tique, botão e bateria.
 
 ## Instalação
 
 > **Onde esta versão mora — instale pela tag, não por branch nenhuma.** O ponto
-> recomendado é a tag da versão corrente, hoje a **`v0.5.0`**. Duas ressalvas
+> recomendado é a tag da versão corrente, hoje a **`v0.9.4`**. Duas ressalvas
 > antes de clonar:
 >
 > - **Não clone por branch.** As páginas de uso já mandaram, no passado, clonar
@@ -84,11 +119,20 @@ Bluetooth) entram como jogadores adicionais.
 >   isto.
 >
 > Conferido em 30/07/2026 contra o `pyproject.toml`.
+>
+> **NOTA DATADA — 10/08/2026: esta caixa dizia `v0.7.0` e o comando abaixo
+> mandava `git checkout v0.7.0`.** Caducou em 02/08/2026, quando a 0.9.4 saiu:
+> **GRAU: MEDIDO** hoje, `scripts/check_version_consistency.py` responde *"11
+> alvo(s) versionado(s) em 0.9.4"* e o `pyproject.toml` traz `version =
+> "0.9.4"`. As páginas de uso ([`quickstart.md`](docs/usage/quickstart.md) e
+> [`instalacao.md`](docs/usage/instalacao.md)) já diziam `v0.9.4` — era esta
+> capa que estava atrás, e quem seguiu o comando daqui instalou **um
+> lançamento a menos** por oito dias.
 
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.5.0
+git checkout v0.9.4
 ./install.sh
 ```
 
@@ -126,8 +170,8 @@ hefesto-dualsense4unix-gui
 
 **Antes de instalar, saiba o que ele toca.** O Hefesto não é um aplicativo de
 espaço de usuário puro: boa parte das curas mora em regra de udev, módulo de
-kernel e serviço de sistema. Com os padrões de fábrica ele grava 14 regras udev
-(mais uma 15ª que só entra por opt-in), drop-ins de `modprobe` e do BlueZ,
+kernel e serviço de sistema. Com os padrões de fábrica ele grava 15 regras udev
+(mais uma 16ª que só entra por opt-in), drop-ins de `modprobe` e do BlueZ,
 serviços em `/etc/systemd/system`, **três** módulos de kernel via DKMS
 (`hid-nintendo`, `hid-playstation` e `rtw88-usb`), um parâmetro no cmdline do
 kernel e ajustes na
@@ -142,17 +186,24 @@ alfa, o caminho testado é o do código-fonte.
 
 ### A janela
 
-Nove abas. A primeira, **Início**, é a de decisão: escolha ali *o que o controle
-faz agora*.
+Dez abas. A primeira, **Início**, é a de decisão: no quadro *"Quando o jogo
+abrir"* escolhe-se *o que o controle faz agora* e como o jogo o enxerga.
 
 | Modo | O que acontece |
 |---|---|
 | **Controlar o PC** | o controle vira mouse e teclado |
 | **Jogar pelo Hefesto** | o jogo enxerga um controle virtual — é o padrão para jogar, e o único modo com co-op local |
-| **Jogar direto (Sony)** | o Hefesto solta o controle e o jogo fala direto com ele |
+| **Conexão Nativa (Sony)** | o Hefesto solta o controle e o jogo fala direto com ele |
+
+A segunda pergunta que a janela responde tem aba própria desde 10/08/2026: a
+**No jogo** mostra, recurso por recurso e com a linha sempre na mesma posição,
+o que está atravessando para o jogo — giroscópio, vibração, gatilho, luz,
+clique do touchpad e som do controle. A **Status** responde pelo controle
+**físico**; a **No jogo**, pelo que o jogo recebe. Ela **só aparece com um jogo
+da Steam aberto**: entra na tira quando o jogo abre e sai quando ele fecha.
 
 As outras oito abas — Status, Gatilhos, Lightbar, Rumble, Perfis, Sistema,
-Emulação e Navegação DSX — estão descritas uma a uma em
+Emulação e Navegação — estão descritas uma a uma em
 **[docs/usage/interface.md](docs/usage/interface.md)**.
 
 ### Atalhos no próprio controle
@@ -162,7 +213,26 @@ Emulação e Navegação DSX — estão descritas uma a uma em
 | PS + D-pad cima / baixo | perfil seguinte / anterior |
 | PS (toque curto) | abre a Steam (configurável) |
 | PS + Options | modo jogo: suspende a emulação de mouse e teclado |
+| L3 / R3 (clique no analógico) | abre / fecha o **teclado na tela** |
 | Botão de microfone | muta o microfone do sistema |
+
+O **teclado na tela do L3 é o único caminho de fábrica para escrever texto**:
+nenhum dos nove atalhos de fábrica digita uma letra (são Super, PrintScreen,
+Alt+Tab, Alt+Shift+Tab, Enter, Delete e Backspace). Ele depende de um programa
+do sistema, e desde 10/08/2026 o `install.sh` o instala sozinho, sem flag —
+`wvkbd` em sessão Wayland, `onboard` em X11. Numa instalação anterior a essa
+data, ou se você pulou o passo:
+
+```bash
+sudo apt install wvkbd     # sessão Wayland (COSMIC, GNOME Wayland, KDE Wayland)
+sudo apt install onboard   # sessão X11
+```
+
+A escolha não é gosto: o `onboard` digita por XTEST, e em sessão Wayland ele
+abre e as teclas só alcançam clientes XWayland — pior do que não abrir. O
+`wvkbd` é cliente Wayland puro e digita pelo
+`zwp_virtual_keyboard_manager_v1`. Sem nenhum dos dois instalado, o L3 avisa na
+tela em vez de não fazer nada.
 
 Detalhes e configuração em [docs/usage/hotkeys.md](docs/usage/hotkeys.md).
 
@@ -194,16 +264,36 @@ Referência completa dos comandos em [docs/usage/cli.md](docs/usage/cli.md).
 
 ## Capturas de tela
 
-Feitas em 25/07/2026, com a interface redesenhada e **quatro controles
-conectados por Bluetooth ao mesmo tempo** — dois DualSense, um Nintendo Pro e um
-8BitDo em modo DirectInput/PS4. Uma por aba, em
-[docs/usage/interface.md](docs/usage/interface.md), com o que cada uma faz.
+As dez abas, na ordem em que aparecem na janela, na resolução em que ela usa a
+janela maximizada. São geradas por `scripts/gui-captura/retratar_abas.py` — um
+comando, sem clique nenhum — e por isso **acompanham a versão**: quem mexe na
+interface roda o script antes de commitar, e estas imagens deixam de poder
+envelhecer.
 
-[![Aba Início](docs/usage/assets/readme_inicio.png)](docs/usage/interface.md)
+| | |
+|---|---|
+| **Início** — quando o jogo abrir | **Status** — tudo o que o controle está fazendo |
+| [![Início](docs/usage/assets/readme_inicio.png)](docs/usage/interface.md) | [![Status](docs/usage/assets/readme_status.png)](docs/usage/interface.md) |
+| **No jogo** — o que atravessa para o jogo | |
+| [![No jogo](docs/usage/assets/readme_no_jogo.png)](docs/usage/interface.md) | |
+| **Gatilhos** — os dezenove modos de resistência | **Lightbar** — a cor e o desenho das cinco luzes |
+| [![Gatilhos](docs/usage/assets/readme_gatilhos.png)](docs/usage/interface.md) | [![Lightbar](docs/usage/assets/readme_lightbar.png)](docs/usage/interface.md) |
+| **Rumble** — a intensidade da vibração dos jogos | **Perfis** — um ajuste por jogo, que entra sozinho |
+| [![Rumble](docs/usage/assets/readme_rumble.png)](docs/usage/interface.md) | [![Perfis](docs/usage/assets/readme_perfis.png)](docs/usage/interface.md) |
+| **Sistema** — o serviço, a saúde e os jogos da Steam | **Emulação** — como o jogo vê o controle |
+| [![Sistema](docs/usage/assets/readme_sistema.png)](docs/usage/interface.md) | [![Emulação](docs/usage/assets/readme_emulacao.png)](docs/usage/interface.md) |
+| **Navegação** — o controle como mouse e teclado | |
+| [![Navegação](docs/usage/assets/readme_navegacao_dsx.png)](docs/usage/interface.md) | |
 
-Na aba Sistema, o bloco "Detalhes técnicos" está borrado de propósito: o log
-mostra o endereço Bluetooth real dos controles desta máquina, e os gates de
-anonimato do projeto não varrem imagens.
+O que cada uma faz, em detalhe, está em
+[docs/usage/interface.md](docs/usage/interface.md).
+
+**Por que estas fotos não têm dado real.** Elas nascem da própria interface
+montada do zero, alimentada pelos dublês da suíte de testes — o script **nunca
+fala com o daemon**. Isso não é cuidado de quem gerou: é regra travada por
+teste (`test_retrato_das_abas_nao_vaza_dado_real.py`), porque uma foto antiga
+desta seção precisou ser borrada à mão para esconder o endereço Bluetooth dos
+controles, e **os portões de anonimato deste projeto não varrem imagens**.
 
 ## Limitações conhecidas
 
@@ -239,10 +329,37 @@ cabo, o modo Switch continua sendo o provadamente estável. Tabela de modos,
 identidades e níveis de prova em
 [docs/usage/troubleshooting-8bitdo.md](docs/usage/troubleshooting-8bitdo.md).
 
+> **NOTA DATADA — 06/08/2026: o "um por jogador" desta linha é um lugar na fila,
+> não um jogador na partida.** O que foi validado em 25/07 continua valendo: os
+> quatro **conectam** por Bluetooth ao mesmo tempo, e cada um ganha o seu lugar
+> na fila do Hefesto. O que caducou é a leitura de que isso são quatro jogadores.
+> **GRAU: MEDIDO** em 06/08/2026 às 22h40, com três ligados: `coop status`
+> respondeu **"jogadores ativos: 1"**. Os dois externos entram na fila e recebem
+> luz; **na contagem de jogadores, não**. Detalhe na
+> [LUGAR-À-MESA-01](docs/process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
+
+**A cor da barra de luz por Bluetooth perde para a Steam, quando a Steam já está
+aberta.** Ela mantém uma via de escrita para cada DualSense e **repinta a barra
+de todos eles a cada conexão nova**; se o controle sobe nessa janela, a barra
+costuma nascer apagada e a sua cor não fica — e clicar em "Aplicar no controle"
+de novo não resolve, porque a disputa é na **conexão** e não no clique.
+**GRAU: MEDIDO** em 12/08/2026, com três controles: com a Steam viva no
+momento da conexão, **um em três** aceitou a cor; com ninguém disputando antes
+de conectar, **três em três**. No **cabo** o problema não aparece. **A culpa
+não é da rota:** na mesma noite, sem escritor concorrente, os dois caminhos de
+escrita pintaram os controles do rádio, e a cor ficou de pé **136 s** sem
+ninguém reforçar nada. O contorno de hoje é ligar os controles **antes** de
+abrir a Steam; a cura **entrou no produto**, e o que falta é vê-la vencer a
+disputa no aparelho. Detalhe, contornos e a medição no fio em
+[docs/usage/troubleshooting.md](docs/usage/troubleshooting.md#20-a-barra-de-luz-não-pega-a-cor-por-bluetooth).
+
 **A validação em hardware é de uma máquina só.** Pop!\_OS 24.04 com COSMIC é o
 ambiente onde tudo é medido. Ubuntu tem cobertura de integração contínua, sem
 hardware. Fedora, Arch, Debian e Mint têm pacotes mantidos, mas **nenhum foi
-rodado com controle real** nesta linha.
+rodado com controle real** nesta linha. A versão exata de cada peça dessa
+bancada — kernel, Python, BlueZ, GTK —, a faixa que o produto confere sozinho e
+o que **não** foi testado estão em
+[as versões em que isto funciona](docs/usage/versoes-validadas.md).
 
 **A troca automática de perfil não vê janelas Wayland nativas.** No COSMIC, o
 portal ainda não expõe a janela ativa, então o reconhecimento cobre o que roda
@@ -269,14 +386,17 @@ Os plugins ligam por variável de ambiente
 (`HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1`). Já o endpoint Prometheus depende
 de `metrics_enabled` no `DaemonConfig`, e **não existe hoje** variável de
 ambiente, flag de linha de comando nem arquivo de configuração que ligue esse
-campo: o daemon o constrói com três parâmetros só (`poll_hz`, `auto_reconnect`,
-`ps_long_press_ms`). Na prática, subir as métricas exige mexer no código. Ver
+campo: o daemon o constrói com quatro parâmetros só (`poll_hz`,
+`auto_reconnect`, `ps_long_press_ms`, `keyboard_emulation_enabled`). Na
+prática, subir as métricas exige mexer no código. Ver
 [docs/usage/metrics.md](docs/usage/metrics.md).
 
 ## Documentação
 
 - **Primeiros passos:** [docs/usage/quickstart.md](docs/usage/quickstart.md)
 - **Instalação em detalhe:** [docs/usage/instalacao.md](docs/usage/instalacao.md)
+- **As versões em que isto funciona:**
+  [docs/usage/versoes-validadas.md](docs/usage/versoes-validadas.md)
 - **A janela, aba por aba:** [docs/usage/interface.md](docs/usage/interface.md)
 - **Os três modos e a máscara:** [docs/usage/modos.md](docs/usage/modos.md)
 - **Perfis:** [docs/usage/creating-profiles.md](docs/usage/creating-profiles.md)
@@ -287,6 +407,11 @@ campo: o daemon o constrói com três parâmetros só (`poll_hz`, `auto_reconnec
 - **Quando dá errado:** [docs/usage/troubleshooting.md](docs/usage/troubleshooting.md)
   · [8BitDo](docs/usage/troubleshooting-8bitdo.md)
 - **Decisões arquiteturais:** [docs/adr/](docs/adr/)
+- **O que o DualSense entende (a referência canônica):**
+  [docs/protocol/dualsense-referencia-canonica.md](docs/protocol/dualsense-referencia-canonica.md)
+  — o mapa dos 47 bytes do report de saída, os modos de gatilho contra a enum
+  oficial da Sony, a rota do áudio, os sensores e o que um gamepad virtual
+  precisa cumprir. Cada linha traz o grau de confiança da fonte.
 - **Protocolos (UDP, JSON-RPC, gatilhos):** [docs/protocol/](docs/protocol/)
 - **Pesquisas e medições:** [docs/research/](docs/research/)
 - **Histórico de versões:** [CHANGELOG.md](CHANGELOG.md)
@@ -343,7 +468,8 @@ Relato de uso em distro fora da lista é especialmente bem-vindo: rode
 
 ## Licença
 
-**MIT, exceto `assets/dkms/*`** — veja [`LICENSE`](LICENSE).
+**MIT, exceto `assets/dkms/*`** — o texto MIT está em [`LICENSE`](LICENSE) e a
+exceção, com a auditoria arquivo por arquivo, no [`NOTICE`](NOTICE).
 
 Os três módulos de kernel vendorados em `assets/dkms/` são derivados do Linux e
 mantêm a licença própria declarada no cabeçalho SPDX de cada arquivo:

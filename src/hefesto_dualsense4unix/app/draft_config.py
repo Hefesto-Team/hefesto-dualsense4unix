@@ -21,6 +21,14 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# HARM-19 / 11/08/2026: o teto do multiplicador tem UM dono, e este arquivo era
+# a ponta que o repetia à mão (`le=2.0`) — quando o esquema baixou para 1.0, o
+# rascunho da GUI continuou aceitando 2.0 e a divergência só aparecia no
+# "Salvar Perfil", com erro de validação. Import em tempo de execução (e não sob
+# TYPE_CHECKING como o `Profile` abaixo) porque o pydantic precisa do valor na
+# hora de construir a classe.
+from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
+
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -83,7 +91,9 @@ class RumbleDraft(BaseModel):
     (FEAT-RUMBLE-POLICY-PROFILE-01). ``policy=None`` = perfil sem opinião
     (ativar não mexe na política global do daemon). A aba Rumble grava aqui
     cada escolha da usuária, para o "Salvar Perfil" do rodapé persistir o que
-    ela vê; ``custom_mult`` (0.0-2.0) só acompanha ``policy="custom"``.
+    ela vê; ``custom_mult`` só acompanha ``policy="custom"``, e a faixa dele é
+    a do esquema do perfil (``RUMBLE_CUSTOM_MULT_MAX``), nunca um número
+    escrito aqui.
 
     ``passthrough``: preserva o campo v1 do perfil no round-trip
     (não editável pela GUI nesta sprint).
@@ -94,7 +104,7 @@ class RumbleDraft(BaseModel):
     weak: int = Field(default=0, ge=0, le=255)
     strong: int = Field(default=0, ge=0, le=255)
     policy: Literal["economia", "balanceado", "max", "auto", "custom"] | None = None
-    custom_mult: float | None = Field(default=None, ge=0.0, le=2.0)
+    custom_mult: float | None = Field(default=None, ge=0.0, le=RUMBLE_CUSTOM_MULT_MAX)
     passthrough: bool = True
 
 
@@ -155,6 +165,38 @@ class MicDraft(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     button_toggles_system: bool = True
+    dirty: bool = False
+    in_profile: bool = False
+
+
+class SpeakerDraft(BaseModel):
+    """Draft do ALTO-FALANTE do controle (SOM-02/E4, 29/07).
+
+    ``volume`` 0-255 (o range do protocolo, não a porcentagem da tela) e
+    ``muted`` espelham ``ProfileSpeakerConfig``. ``dirty``/``in_profile``
+    seguem a MESMA disciplina do ``MouseDraft``/``MicDraft``: ``to_profile``
+    só persiste a seção quando ela foi mexida OU o perfil de origem já a
+    tinha — perfil legado faz round-trip sem ganhar seção fantasma, que é
+    metade do critério de aceite da entrega.
+
+    ``volume=None`` = a seção NÃO existe no rascunho. É deliberado que o
+    default não seja um número: qualquer número aqui seria uma opinião que
+    ninguém deu, e persistir opinião não dada é tomar a posse do volume do
+    controle por conta própria (armadilha 1 da sprint — a chamada sem volume
+    manda ZERO e o mudo não a solta).
+
+    ``rota`` é o canal de SAÍDA do controle (``OUTPUT_PATH_SEL``, 0-3 — ver
+    ``ProfileSpeakerConfig``), pedido dela em 09/08/2026. ``None`` = sem
+    opinião, e o mesmo argumento do volume vale aqui: o byte ``common[7]``
+    carrega também o caminho do microfone, então "não sei" tem de continuar
+    sendo "não escrevo".
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    volume: int | None = Field(default=None, ge=0, le=255)
+    muted: bool = False
+    rota: int | None = Field(default=None, ge=0, le=3)
     dirty: bool = False
     in_profile: bool = False
 
@@ -247,6 +289,23 @@ def _triggers_config_to_draft(cfg: Any) -> TriggersDraft:
     )
 
 
+def _override_vazio(override: Any) -> bool:
+    """True quando um ``ControllerOverrides`` não tem mais NENHUMA seção.
+
+    Entrada vazia some do mapa — se ficasse, o JSON salvo carregaria uma chave
+    de MAC apontando para ``{}`` e a próxima leitura acharia que aquela peça
+    tem opinião. A checagem varre os campos DECLARADOS do modelo em vez de
+    listá-los à mão: até 10/08/2026 a linha era ``leds is None and triggers is
+    None``, e cada seção nova por unidade (``rumble``, ``speaker``) teria de
+    lembrar de vir aqui — o tipo de esquecimento que só aparece meses depois,
+    como um override fantasma que ninguém consegue apagar pela janela.
+    """
+    campos = getattr(type(override), "model_fields", None)
+    if not campos:
+        return False
+    return all(getattr(override, nome, None) is None for nome in campos)
+
+
 def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
     """Converte o sub-draft de gatilhos em ``TriggersConfig`` persistível."""
     from hefesto_dualsense4unix.profiles.schema import TriggerConfig, TriggersConfig
@@ -287,6 +346,8 @@ class DraftConfig(BaseModel):
     emulation: EmulationDraft = Field(default_factory=EmulationDraft)
     # MIC-EXPOSE-01: comportamento do botão de mic (ver `MicDraft`).
     mic: MicDraft = Field(default_factory=MicDraft)
+    # SOM-02/E4: volume do alto-falante do controle (ver `SpeakerDraft`).
+    speaker: SpeakerDraft = Field(default_factory=SpeakerDraft)
     # FEAT-KEYBOARD-UI-01: bindings de teclado do perfil em edição.
     # None = herdar DEFAULT_BUTTON_BINDINGS; {} = teclado silencioso; dict
     # parcial = override explícito. Mapeia 1:1 para `Profile.key_bindings`.
@@ -402,12 +463,28 @@ class DraftConfig(BaseModel):
         else:
             mic = MicDraft()
 
+        # Alto-falante — SOM-02/E4, mesmo contrato do `mic`: seção presente
+        # vira draft com `in_profile=True` (o "Salvar Perfil" não a descarta);
+        # ausente mantém o default, que é a AUSÊNCIA de volume — perfil sem
+        # opinião não ganha uma opinião ao ser aberto na janela.
+        if profile.speaker is not None:
+            speaker = SpeakerDraft(
+                volume=profile.speaker.volume,
+                muted=profile.speaker.muted,
+                rota=getattr(profile.speaker, "rota", None),
+                dirty=False,
+                in_profile=True,
+            )
+        else:
+            speaker = SpeakerDraft()
+
         return cls(
             triggers=triggers,
             leds=leds,
             rumble=rumble,
             mouse=mouse,
             mic=mic,
+            speaker=speaker,
             emulation=emulation,
             key_bindings=profile.key_bindings,
             source_match=profile.match,
@@ -462,6 +539,7 @@ class DraftConfig(BaseModel):
             Profile,
             ProfileMicConfig,
             ProfileMouseConfig,
+            ProfileSpeakerConfig,
             RumbleConfig,
         )
         from hefesto_dualsense4unix.profiles.slug import mesmo_slug
@@ -480,6 +558,23 @@ class DraftConfig(BaseModel):
             if (self.mic.dirty or self.mic.in_profile)
             else None
         )
+        # SOM-02/E4: a seção só existe com VOLUME. O gate tem o `volume is not
+        # None` junto de propósito — um rascunho marcado (dirty/in_profile) mas
+        # sem número não pode virar uma seção pela metade: o esquema a recusa,
+        # e a razão é medida (perfil só com `muted` faria a ativação mandar
+        # ZERO e tomar a posse do alto-falante).
+        speaker_cfg = (
+            ProfileSpeakerConfig(
+                volume=self.speaker.volume,
+                muted=self.speaker.muted,
+                rota=self.speaker.rota,
+            )
+            if (
+                self.speaker.volume is not None
+                and (self.speaker.dirty or self.speaker.in_profile)
+            )
+            else None
+        )
 
         # R-11: os `source_*` só valem para o perfil DE ONDE VIERAM.
         #
@@ -492,10 +587,28 @@ class DraftConfig(BaseModel):
         # "Salvar Perfil" como "MadJack" produzia um perfil com o regex de
         # título do FPS e prioridade 60 — e nenhuma regra para o jogo dela.
         #
-        # `MatchAny()` para nome novo é deliberado e casa com o contrato do
-        # diálogo do rodapé, que não tem campo de regra: o perfil nasce
-        # "sempre", e a regra específica é definida na aba Perfis. Não nasce
-        # com a regra ERRADA, que é o ponto.
+        # `MatchAny()` para nome novo era deliberado e casava com o contrato do
+        # diálogo do rodapé, que não tem campo de regra: o perfil nascia
+        # "sempre", e a regra específica seria definida na aba Perfis. Não
+        # nascia com a regra ERRADA, que era o ponto.
+        #
+        # NOTA DATADA — 05/08/2026, REGRA-NAO-SE-PERDE-02 (decisão dela): esse
+        # parágrafo CADUCOU como contrato e sobrevive como DEFAULT DE
+        # CONVERSÃO. Medido no mesmo dia: `MatchAny` não é neutro, é catch-all
+        # — perde para qualquer regra na chave de seleção do
+        # `profiles/manager.py`, dispara o veto R-21 (janela `steam_app_*` só
+        # com catch-all candidato = nenhum perfil) e por isso NUNCA ativa
+        # dentro do jogo, ao mesmo tempo em que nasce com `max(catch-all) +
+        # folga` e ganha o desktop inteiro carregando a supressão. Um perfil
+        # que ela acabou de salvar com o jogo em foco não valia no jogo.
+        #
+        # A decisão de qual regra o perfil recebe MUDOU DE LUGAR: agora ela é
+        # do RODAPÉ (`app/actions/footer_actions._regra_do_save`), que herda a
+        # regra da origem quando ela é regra de verdade e usa `MatchManual()`
+        # para o órfão. Aqui não se mexeu de propósito — `to_profile` tem outro
+        # chamador, e este gate governa quatro campos com a mesma regra. Quem
+        # chama `to_profile` direto continua recebendo `MatchAny()`, e é isso
+        # que as testemunhas deste ramo ainda medem.
         # R-10: a identidade de um perfil em disco é o SLUG, não o nome de
         # exibição — `save_profile` grava `<slugify(name)>.json`. Comparar
         # string crua aqui fazia "Navegação" (no disco) e "Navegacao" (digitado
@@ -545,6 +658,7 @@ class DraftConfig(BaseModel):
             key_bindings=self.key_bindings,
             mouse=mouse_cfg,
             mic=mic_cfg,
+            speaker=speaker_cfg,
             # R-11: `controllers` NÃO entra no gate de `mesmo_perfil`, ao
             # contrário de match/priority/mode. A distinção é o que a coisa É:
             # match/priority/mode são REGRA (identidade do perfil, de onde ele
@@ -645,6 +759,59 @@ class DraftConfig(BaseModel):
         return self.model_copy(
             update={"source_suppress": bool(suppress), "suppress_dirty": True}
         )
+
+    def with_speaker(
+        self, volume: int, *, muted: bool = False, rota: int | None = None
+    ) -> DraftConfig:
+        """Rascunho com o ALTO-FALANTE trocado por gesto DELA.
+
+        SOM-02/E4. Quem chama é a superfície que MANDOU o volume ao daemon
+        (o controle deslizante da E1), DEPOIS de o daemon confirmar — o
+        rascunho registra o que está de pé para o "Salvar Perfil" persistir,
+        exatamente como ``with_mode``/``with_suppress``.
+
+        ``volume`` é sempre explícito, 0-255: não existe caminho aqui para
+        marcar a seção sem número, porque não existe caminho no protocolo para
+        mandar mudo sem volume sem trancar o alto-falante em zero (SOM-02,
+        armadilhas 1 e 2). ``dirty`` liga porque é gesto dela — é o que faz o
+        valor sobreviver a um "Salvar Perfil" com nome NOVO.
+
+        ``rota=None`` NÃO apaga a rota já registrada: significa "este gesto não
+        tem opinião sobre o canal", que é a verdade do controle deslizante e do
+        botão de mudo — nenhum dos dois toca no ``OUTPUT_PATH_SEL``. Quem apaga
+        a rota é ``without_speaker``, porque soltar a posse solta o byte
+        inteiro. Sem essa preservação, mexer no volume depois de escolher o
+        canal desfaria o canal no rascunho em silêncio.
+        """
+        return self.model_copy(
+            update={
+                "speaker": SpeakerDraft(
+                    volume=max(0, min(255, int(volume))),
+                    muted=bool(muted),
+                    rota=self.speaker.rota if rota is None else int(rota),
+                    dirty=True,
+                    in_profile=True,
+                )
+            }
+        )
+
+    def without_speaker(self) -> DraftConfig:
+        """Rascunho SEM a seção do alto-falante — ela DEVOLVEU a posse.
+
+        SOM-02/E3 mais SOM-02/E4. "Soltar" faz o hefesto parar de mandar os
+        bytes de volume: o registrador volta a ser do firmware e o
+        ``daemon.state_full`` deixa de publicar a chave ``speaker``. Um perfil
+        salvo DEPOIS desse gesto não pode continuar carregando um número —
+        ``lifecycle.apply_profile_speaker`` o reaplicaria na ativação seguinte
+        e tomaria de volta uma posse que ela acabou de largar, que é
+        exatamente o eco de estado velho que esta fiação existe para matar.
+
+        Zera a seção inteira (volta ao ``SpeakerDraft()`` de fábrica) em vez de
+        só apagar o número: com ``volume=None`` o gate de ``to_profile`` já
+        omite a seção, e deixar ``muted``/``in_profile`` de pé seria guardar a
+        sombra de uma opinião que não existe mais.
+        """
+        return self.model_copy(update={"speaker": SpeakerDraft()})
 
     # --- overrides por-controle (PERFIL-04) ---
 
@@ -760,6 +927,110 @@ class DraftConfig(BaseModel):
             uniq, "triggers", _triggers_draft_to_config(triggers)
         )
 
+    # --- POR-UNIDADE-01 (10/08/2026): vibração e som por peça ---
+
+    def effective_rumble_for(self, uniq: str | None) -> RumbleDraft:
+        """Vibração EFETIVA que a aba Rumble exibe para o alvo ``uniq``.
+
+        MESMA regra de ``effective_leds_for``, campo por campo: o override
+        traz só a INTENSIDADE (``policy``/``custom_mult``) e herda o resto do
+        global — inclusive ``weak``/``strong``, que são o teste de motores e
+        nunca foram do perfil, e ``passthrough``, que é da sessão (ver
+        ``ControllerRumbleOverride``).
+        """
+        override = self.controller_override(uniq)
+        cfg = getattr(override, "rumble", None)
+        if cfg is None:
+            return self.rumble
+        campos = cfg.model_fields_set
+        if "policy" not in campos:
+            return self.rumble
+        return self.rumble.model_copy(
+            update={"policy": cfg.policy, "custom_mult": cfg.custom_mult}
+        )
+
+    def with_controller_rumble(self, uniq: str, rumble: RumbleDraft) -> DraftConfig:
+        """Novo draft com a INTENSIDADE de ``uniq`` substituída.
+
+        Contrato copiado de ``with_controller_leds``, incluindo a regra COR-04:
+        o override guarda só o que DIVERGE do global do rascunho. Intensidade
+        igual à global não vira override — herda, e a peça some do mapa quando
+        não sobra mais nada nela. É o que faz "voltei os dois para Balanceado"
+        deixar o perfil limpo em vez de guardar dois overrides idênticos ao
+        global que a próxima ativação teria de reaplicar.
+
+        ``auto`` NÃO chega aqui como override: o esquema o recusa por unidade
+        (escala pela bateria do controle PRIMÁRIO). Escolher "Auto" com uma
+        peça selecionada limpa o override dela e devolve a peça ao global —
+        que é a leitura honesta do gesto, e não um erro silencioso.
+        """
+        from hefesto_dualsense4unix.profiles.schema import ControllerRumbleOverride
+
+        igual_ao_global = (
+            rumble.policy == self.rumble.policy
+            and rumble.custom_mult == self.rumble.custom_mult
+        )
+        if igual_ao_global or rumble.policy is None or rumble.policy == "auto":
+            return self.with_controller_fields_cleared(
+                uniq, "rumble", {"policy", "custom_mult"}
+            )
+        campos: dict[str, Any] = {"policy": rumble.policy}
+        if rumble.policy == "custom":
+            campos["custom_mult"] = rumble.custom_mult
+        return self._with_override_section(
+            uniq, "rumble", ControllerRumbleOverride(**campos)
+        )
+
+    def effective_speaker_for(self, uniq: str | None) -> SpeakerDraft:
+        """Alto-falante EFETIVO que o card exibe para o alvo ``uniq``.
+
+        Sem merge por campo, e é o esquema que decide: ``volume`` é
+        OBRIGATÓRIO em ``ProfileSpeakerConfig`` (SOM-02, armadilhas 1 e 2),
+        então a seção nunca é parcial — o override substitui a seção inteira
+        daquela peça, ou não existe.
+        """
+        override = self.controller_override(uniq)
+        cfg = getattr(override, "speaker", None)
+        if cfg is None:
+            return self.speaker
+        return SpeakerDraft(
+            volume=int(cfg.volume),
+            muted=bool(cfg.muted),
+            rota=getattr(cfg, "rota", None),
+            dirty=self.speaker.dirty,
+            in_profile=True,
+        )
+
+    def with_controller_speaker(self, uniq: str, speaker: SpeakerDraft) -> DraftConfig:
+        """Novo draft com o alto-falante de ``uniq`` substituído.
+
+        Mesma regra COR-04 do ``with_controller_leds``: valor igual ao global
+        não vira override. ``volume=None`` é "esta peça não tem mais opinião"
+        e LIMPA o override — nunca grava a seção sem número, porque uma seção
+        sem volume manda ZERO ao firmware e tranca o alto-falante (SOM-02,
+        armadilha 1); o esquema também a recusaria.
+        """
+        from hefesto_dualsense4unix.profiles.schema import ProfileSpeakerConfig
+
+        igual_ao_global = (
+            speaker.volume == self.speaker.volume
+            and speaker.muted == self.speaker.muted
+            and speaker.rota == self.speaker.rota
+        )
+        if speaker.volume is None or igual_ao_global:
+            return self.with_controller_fields_cleared(
+                uniq, "speaker", {"volume", "muted", "rota"}
+            )
+        return self._with_override_section(
+            uniq,
+            "speaker",
+            ProfileSpeakerConfig(
+                volume=int(speaker.volume),
+                muted=bool(speaker.muted),
+                rota=speaker.rota,
+            ),
+        )
+
     def _with_override_section(
         self, uniq: str, section: str, value: Any
     ) -> DraftConfig:
@@ -818,7 +1089,7 @@ class DraftConfig(BaseModel):
                 else None
             )
             novo_override = override.model_copy(update={section: nova_secao})
-            if novo_override.leds is None and novo_override.triggers is None:
+            if _override_vazio(novo_override):
                 continue  # entrada esvaziou — some do mapa
             novo[uniq] = novo_override
         if not mudou:
@@ -853,7 +1124,7 @@ class DraftConfig(BaseModel):
         )
         novo_override = override.model_copy(update={section: nova_secao})
         mapa: dict[str, Any] = dict(self.source_controllers or {})
-        if novo_override.leds is None and novo_override.triggers is None:
+        if _override_vazio(novo_override):
             mapa.pop(uniq, None)  # entrada esvaziou — some do mapa
         else:
             mapa[uniq] = novo_override
@@ -923,6 +1194,28 @@ class DraftConfig(BaseModel):
                     }
                 if trig_entry:
                     entry["triggers"] = trig_entry
+            # POR-UNIDADE-01: a INTENSIDADE de vibração da peça viaja no
+            # "Aplicar" (o global não viaja — a aba já o aplicou ao vivo pelo
+            # `rumble.policy_set`, e não existe IPC vivo por unidade). Sem
+            # isto, a escolha por peça só valeria na PRÓXIMA ativação.
+            if override.rumble is not None:
+                campos_r = override.rumble.model_fields_set
+                if "policy" in campos_r and override.rumble.policy is not None:
+                    rumble_entry: dict[str, Any] = {"policy": override.rumble.policy}
+                    if override.rumble.custom_mult is not None:
+                        rumble_entry["custom_mult"] = float(
+                            override.rumble.custom_mult
+                        )
+                    entry["rumble"] = rumble_entry
+            if override.speaker is not None:
+                speaker_entry: dict[str, Any] = {
+                    "volume": int(override.speaker.volume),
+                    "muted": bool(override.speaker.muted),
+                }
+                rota_ovr = getattr(override.speaker, "rota", None)
+                if rota_ovr is not None:
+                    speaker_entry["rota"] = int(rota_ovr)
+                entry["speaker"] = speaker_entry
             if entry:
                 out[str(uniq)] = entry
         return out or None
@@ -954,6 +1247,46 @@ class DraftConfig(BaseModel):
         ``key_bindings`` (None → DEFAULT_BUTTON_BINDINGS; dict → override). Daemon
         antigo ignora a seção desconhecida (aditivo, sem quebra de contrato).
 
+        SOM-02/E4: a seção ``speaker`` NÃO viajava aqui, de propósito. Quem
+        manda o volume ao vivo é o ``speaker.set`` do IPC, disparado pela
+        superfície que a usuária tocou (o controle deslizante da E1) — o
+        rascunho só guardava o que ficou, para o "Salvar Perfil" persistir.
+        Emiti-la no "Aplicar" repetiria o estrago do HARM-05 numa seção com
+        preço: um Aplicar disparado por ter mexido num gatilho tomaria a posse
+        dos bytes de volume do controle sem ninguém ter pedido volume nenhum.
+
+        NOTA DATADA — 10/08/2026 (pedido dela: *"cada feature de cada aba ao
+        clicarmos em salvar perfil e aplicar (botão verde) tudo fique salvo no
+        perfil ativo (...) speaker, mic (...) tudo"*). O parágrafo acima
+        CADUCOU como ausência e sobrevive INTEIRO como regra de portão: a seção
+        viaja, mas só com ``speaker.dirty`` — a MESMA regra do ``mouse`` e do
+        ``mic``, e é ela que impede o Aplicar de outra aba de mexer no som pelas
+        costas dela. O medo era de emissão INCONDICIONAL, e com o portão ele não
+        se realiza: sem gesto de som nesta sessão não há chave nenhuma no
+        payload, e "Soltar" (``without_speaker``) zera o rascunho e cala a seção
+        junto.
+
+        O que a nota corrige, medido em 10/08/2026: o botão verde levava o
+        volume, o mudo e o canal para o ARQUIVO (``to_profile``) e não os levava
+        ao CONTROLE — a única seção do rascunho que ela edita e que o "Aplicar"
+        não conhecia. ``volume=None`` nunca viaja, porque seção sem número faz o
+        backend cair na preferência ZERO e tomar a posse (SOM-02, armadilha 1);
+        e ``rota`` só viaja quando há opinião, porque o byte ``common[7]``
+        carrega junto o caminho do MICROFONE — chave ausente é "não escrevo".
+
+        A RÉGUA, que é o contrato com a outra ponta: o ``volume`` daqui é
+        **0-255**, a régua do REGISTRADOR — a mesma do ``SpeakerDraft``, a do
+        ``ProfileSpeakerConfig`` do esquema e a do IPC ``speaker.set``, que
+        recusa com *"'volume' fora de 0-255"*. Não é a porcentagem da tela:
+        quem converte é o ``core/speaker_scale.volume_do_percentual``, uma vez
+        só, no card (a régua única da SOM-02). Quem ler esta seção do outro lado
+        valida 0-255; validar 0-100 recusaria o volume normal dela (180 no
+        registrador) e o botão verde reportaria a seção como falha.
+
+        A chave é ADITIVA: seção desconhecida é IGNORADA pelo ``DraftApplier``,
+        nunca recusada, então daemon sem suporte não quebra — e sem ela a ponta
+        do daemon não teria o que receber.
+
         A seção ``mouse`` é ``None`` quando não foi tocada nesta sessão
         (``MouseDraft.dirty`` False) — o DraftApplier pula seção None
         (BUG-MOUSE-GUI-SYNC-01 A2: "Aplicar" não desliga emulação viva).
@@ -970,6 +1303,17 @@ class DraftConfig(BaseModel):
         rota speed-only do applier, que não liga nem desliga nada.
         """
         rgb = self.leds.lightbar_rgb
+        # SOM-NO-AGORA-01 (10/08/2026) — ver a NOTA DATADA acima. Montada fora
+        # do dicionário porque o gate tem duas perguntas e a ``rota`` é
+        # condicional: um literal aninhado esconderia as duas.
+        speaker_ipc: dict[str, Any] | None = None
+        if self.speaker.dirty and self.speaker.volume is not None:
+            speaker_ipc = {
+                "volume": int(self.speaker.volume),
+                "muted": bool(self.speaker.muted),
+            }
+            if self.speaker.rota is not None:
+                speaker_ipc["rota"] = int(self.speaker.rota)
         return {
             "triggers": {
                 "left": {
@@ -1010,6 +1354,12 @@ class DraftConfig(BaseModel):
                 if self.mic.dirty
                 else None
             ),
+            # SOM-NO-AGORA-01: volume, mudo e canal do alto-falante — só quando
+            # ela mexeu no som nesta sessão (``dirty``) e há número para mandar.
+            # O nome das três chaves é o do IPC ``speaker.set`` de propósito: o
+            # daemon já sabe validá-las, e um segundo vocabulário para o mesmo
+            # byte seria mais uma tradução onde não há necessidade nenhuma.
+            "speaker": speaker_ipc,
             "keyboard": {
                 "key_bindings": (
                     {b: list(tokens) for b, tokens in self.key_bindings.items()}
@@ -1025,6 +1375,96 @@ class DraftConfig(BaseModel):
         }
 
 
+# ---------------------------------------------------------------------------
+# Registro do ALTO-FALANTE no rascunho (SOM-02/E4 — a fiação que faltava)
+# ---------------------------------------------------------------------------
+
+
+def registrar_alto_falante_no_rascunho(
+    janela: Any,
+    *,
+    volume: int | None,
+    muted: bool = False,
+    rota: int | None = None,
+    uniq: str | None = None,
+) -> None:
+    """Anota no rascunho o alto-falante que ficou DE PÉ. NÃO aplica nada.
+
+    A fiação que faltava desde a SOM-02/E4: ``with_speaker`` existia, tinha
+    teste e **nenhum chamador no produto**. O bloco "Alto-falante" do card
+    mandava o volume por IPC e não tocava no rascunho, então o "Salvar Perfil"
+    persistia o número VELHO — e a ativação seguinte o devolvia ao controle
+    (``lifecycle.apply_profile_speaker``). Ela ajustava o volume, salvava, e o
+    próprio gesto de salvar desfazia o ajuste.
+
+    Quem chama é o CALLBACK DE SUCESSO do gesto no card, nunca o gesto em si:
+    o rascunho descreve o que ficou de pé, não a intenção — a mesma disciplina
+    de ``registrar_modo_no_rascunho`` (Emulação) e do "Aplicar" do rodapé. Um
+    pedido recusado pelo daemon não registra nada.
+
+    ``volume=None`` significa **soltar** (a devolução da posse da SOM-02/E3) e
+    apaga a seção; qualquer número registra volume e mudo juntos, que é o
+    único par que o protocolo aceita sem trancar o alto-falante em zero.
+    ``rota`` só vem do gesto que MEXEU no canal — ``None`` preserva a rota já
+    registrada em vez de apagá-la (ver ``with_speaker``).
+
+    Função de MÓDULO, e um escritor só, pela razão já paga por esta base em
+    ``registrar_modo_no_rascunho``: o dono do rascunho do alto-falante tem de
+    ser único e visível ao portão de AST — a classe de defeito desta casa é
+    *"três escritores do perfil sem dono"*. ``janela`` sem ``draft`` (card
+    avulso de teste, ou antes de a janela terminar de nascer) é caso normal e
+    sai calado: o gesto ao vivo já foi, e não há rascunho para anotar.
+
+    ``uniq`` — POR-UNIDADE-01 (10/08/2026), o alcance que ela pediu: *"uma guia
+    específica do perfil X pro controle branco e outra pro mesmo perfil pra um
+    controle preto"*. O card SEMPRE soube de quem é o bloco (o ``speaker.set``
+    dele já sai com ``uniq``); o que faltava era o perfil ter onde guardar isso.
+
+    QUEM DECIDE se a anotação é da casa ou da peça é o SELETOR DE ALVO, o
+    mesmo ``_edit_target_uniq`` que a Lightbar, os Gatilhos e agora a Rumble
+    já obedecem — e o mesmo selo ao lado dele que diz, na tela, qual peça está
+    sendo editada. Só quando ela ESCOLHEU aquela peça no seletor a anotação
+    vira override; com o seletor em "Todos" (o padrão, e o caso de quem tem um
+    controle só) nada muda: a escrita é a GLOBAL de sempre, byte-idêntica.
+
+    A alternativa — deduzir a peça do card em que ela encostou — foi medida e
+    RECUSADA: com um controle só, todo gesto de volume viraria um override por
+    MAC e a seção global do perfil nunca mais seria escrita
+    (``test_a_secao_do_alto_falante_so_viaja_quando_ela_mexeu_no_som`` reprova
+    exatamente isso). O card diz de quem foi o gesto; o SELETOR diz para quem
+    ela quer que valha, e é essa a pergunta.
+
+    Dentro do ramo por peça vale a regra COR-04 de ``with_controller_leds``:
+    valor igual ao global não vira override (herda), e a entrada some do mapa
+    quando esvazia.
+    """
+    draft = getattr(janela, "draft", None)
+    if not isinstance(draft, DraftConfig):
+        return
+    if volume is None:
+        # "Soltar" a posse é da CASA: solta em todo mundo (o byte de áudio
+        # volta a ser do firmware) e nenhuma peça pode continuar carregando um
+        # número que a próxima ativação reaplicaria.
+        janela.draft = draft.without_speaker().with_override_fields_cleared(
+            "speaker", {"volume", "muted", "rota"}
+        )
+        return
+    alvo = getattr(janela, "_edit_target_uniq", None)
+    if uniq and alvo and str(alvo) == str(uniq):
+        atual = draft.effective_speaker_for(uniq)
+        update: dict[str, Any] = {
+            "volume": max(0, min(255, int(volume))),
+            "muted": bool(muted),
+        }
+        if rota is not None:
+            update["rota"] = int(rota)
+        janela.draft = draft.with_controller_speaker(
+            uniq, atual.model_copy(update=update)
+        )
+        return
+    janela.draft = draft.with_speaker(volume, muted=muted, rota=rota)
+
+
 __all__ = [
     "DraftConfig",
     "EmulationDraft",
@@ -1032,6 +1472,8 @@ __all__ = [
     "MicDraft",
     "MouseDraft",
     "RumbleDraft",
+    "SpeakerDraft",
     "TriggerDraft",
     "TriggersDraft",
+    "registrar_alto_falante_no_rascunho",
 ]

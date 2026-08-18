@@ -24,6 +24,186 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
+    <release version="0.9.4.2" date="2026-08-13">
+      <description>
+        <p>Os instrumentos de medição desta casa passaram a morder: a guarda que confundia bytecode com produto, a bancada que não abria, o --check que comparava relógio em vez de conteúdo, e o portão do mapa que não ligava afirmação a ensaio. Quatro portões novos e três curas de produto — o LED do botão de mudo deixou de mentir sobre o microfone.</p>
+      </description>
+    </release>
+    <release version="0.9.4" date="2026-08-12">
+      <description>
+        <p>
+          A vibracao que um jogo manda parava quase na hora: o proprio Hefesto
+          escrevia por cima meio segundo depois e apagava o motor. Agora ele so
+          reconfirma o que pediu, e a vibracao do jogo sobrevive.
+        </p>
+        <p>
+          A barra de luz nao pegava a cor por Bluetooth quando a Steam estava
+          aberta. O Hefesto passa a escrever a cor e o numero de jogador depois
+          que os controles terminam de conectar, em vez de no meio.
+        </p>
+        <p>
+          A intensidade da vibracao passou a fazer o que o nome diz: Balanceado
+          entrega o que o jogo pediu, Maximo amplifica, e a tela avisa quando a
+          escolha nao esta chegando a jogo nenhum.
+        </p>
+      </description>
+    </release>
+    <release version="0.9.3" date="2026-08-10">
+      <description>
+        <p>
+          O Hefesto podia ficar fora dos dois modos de jogo — nem Conexao
+          Nativa, nem "Jogar pelo Hefesto" — por causa de um desligamento feito
+          numa sessao anterior, e nada na tela dizia isso. Sem controle virtual,
+          o giroscopio nao chega ao jogo.
+        </p>
+        <p>
+          A aba Inicio passa a avisar quando esta nesse estado, com as duas
+          saidas nomeadas, e o aviso some assim que o modo muda. A escolha
+          anterior continua sendo respeitada: ela so deixou de ser invisivel.
+        </p>
+      </description>
+    </release>
+    <release version="0.9.2" date="2026-08-10">
+      <description>
+        <p>
+          O botao verde "Aplicar" nunca aplicava o alto-falante do controle: o
+          volume so mudava na proxima troca de perfil. Agora vai na hora, e
+          continua calado quando o Aplicar parte de outra aba.
+        </p>
+        <p>
+          O editor avancado abria com os campos da regra vazios, e salvar assim
+          transformava o perfil em "so manual" — ele deixava de entrar no jogo
+          para sempre, sem aviso. Agora a regra aparece, e o rebaixamento
+          pergunta antes.
+        </p>
+        <p>
+          E um portao novo confere, a cada teste, que toda configuracao de toda
+          aba tem caminho ate o arquivo do perfil e de volta — para que a
+          proxima feature nao nasca solta.
+        </p>
+      </description>
+    </release>
+    <release version="0.9.1" date="2026-08-10">
+      <description>
+        <p>
+          O jogador 2 do co-op deixa de perder o input quando o controle do
+          jogador 1 sai da mesa: cada secundario tem o seu controle e o seu
+          gamepad virtual, e nenhum dos dois depende do primario.
+        </p>
+        <p>
+          O ajuste do microfone passa a valer em todos os formatos de
+          instalacao, e nao so no nativo. Sem ele a entrada do controle nasce
+          sem prioridade e o eco da saida vence a voz.
+        </p>
+        <p>
+          O applet do COSMIC parou de dizer "Ligado" sobre um microfone que
+          perde para o eco.
+        </p>
+      </description>
+    </release>
+    <release version="0.9.0" date="2026-08-10">
+      <description>
+        <p>
+          O touchpad voltou a ser o touchpad do sistema em todos os modos. Uma
+          regra udev nossa, com curinga, o apagava para o desktop inteiro; agora
+          so o controle virtual fica fora do libinput, que era quem dobrava o
+          toque. O giroscopio e o touchpad tambem ganharam acesso aos nos de
+          entrada, que faltava desde sempre.
+        </p>
+        <p>
+          O teclado na tela que o L3 do controle abre passou a ser instalado. O
+          produto oferecia o gesto e nao instalava nada, e a escolha agora e
+          medida: wvkbd em Wayland, onboard em X11 — o segundo digita por XTEST
+          e, numa sessao Wayland, abre e nao digita.
+        </p>
+        <p>
+          A aba "No jogo" responde, recurso por recurso, o que esta chegando ao
+          jogo agora: giroscopio, vibracao, gatilho, luz, toque e som do
+          controle. E diz quando o perfil que voce escreveu para aquele jogo nao
+          entrou, com o que ele exigiu e o que o Hefesto viu.
+        </p>
+        <p>
+          O jogo via TRES controles com o Steam Input ligado: o Steam faz um
+          espelho de cada controle que enxerga, inclusive do virtual do Hefesto,
+          e os espelhos nao estavam sendo escondidos. Agora estao.
+        </p>
+        <p>
+          O botao "Ligar" do microfone apagava a propria cura que faz a sua voz
+          vencer o eco da saida — e a tela dizia "Ligado". O volume, o mudo e o
+          canal do alto-falante voltaram a chegar ao perfil, e a bateria do
+          controle chega ao jogo em vez de ficar em 5% para sempre.
+        </p>
+      </description>
+    </release>
+    <release version="0.8.0" date="2026-08-02">
+      <description>
+        <p>
+          Sete presets de gatilho nao faziam nada, e ela mediu pelo tato:
+          "rigido e desligado sem diferenca". Tres deles mandavam o modo que
+          vale OFF no firmware. Os seis que ela aprovou nao mudaram um byte.
+        </p>
+        <p>
+          A aba Status passou a dizer o que CHEGA ao jogo, e nao so o que
+          existe: cada recurso carimba quando aconteceu pela ultima vez, e o
+          card mostra numa linha o que esta chegando agora. Com mascara Xbox
+          ela explica em vez de parecer quebrada.
+        </p>
+        <p>
+          O "tremendo sem parar" ganhou cura, e nao so mitigacao: o report de
+          parada do SDL vem com todos os flags zerados, e era descartado.
+        </p>
+        <p>
+          O alto-falante ganhou o pre-amplificador e a rota de saida — os 60%
+          do controle deslizante que estavam inertes. E o botao do microfone
+          parou de mutar o microfone de outro aparelho no Bluetooth.
+        </p>
+      </description>
+    </release>
+    <release version="0.7.0" date="2026-08-01">
+      <description>
+        <p>
+          A aba Status alinhada: as duas linhas do card passam a dividir o
+          mesmo desenho, o frame Estado cai de cinco para tres linhas e a
+          bateria ocupa a largura inteira com o numero ao lado da barra, e
+          nao mais boiando no meio dela.
+        </p>
+        <p>
+          O botao que manda o som para o controle mudou para o bloco
+          Alto-falante do card. Os rotulos "sem dado" sairam dos botoes de
+          microfone e alto-falante: um botao diz o que o clique faz, e nasce
+          cinza quando ainda nao ha leitura.
+        </p>
+        <p>
+          A mascara Xbox passa a dizer o que custa: nela o jogo nao recebe
+          giroscopio nem touchpad, porque o controle de Xbox nao tem esses
+          dois. Vibracao, microfone e alto-falante continuam funcionando.
+        </p>
+        <p>
+          As metricas Prometheus ganharam chave de usuario, cumprindo a
+          decisao registrada na ADR-016. E o quadrado vermelho ao lado dos
+          interruptores da janela — um icone quebrado do GTK — sumiu.
+        </p>
+      </description>
+    </release>
+    <release version="0.6.0" date="2026-08-01">
+      <description>
+        <p>A leva do alto-falante. O volume do controle tem tres camadas e a
+           janela so alcancava a do meio — justamente a unica sem leitura e com
+           preco. Agora o bloco Alto-falante tem controle deslizante, botao de
+           mudo e devolucao da posse, com o preco escrito na propria interface:
+           a partir do primeiro clique o Hefesto manda o volume em todo report,
+           e o DualSense nao devolve esse valor. O botao de mudo nasce
+           insensivel enquanto nao ha volume conhecido, porque um mudo como
+           primeira escrita trancaria o alto-falante em zero sem o proprio botao
+           poder solta-lo. Um selo avisa quando quem esta mudo e o sistema, e
+           nao o registrador do controle — sao duas verdades diferentes, e a que
+           decide se sai som e a do PipeWire. O perfil ganhou secao propria de
+           alto-falante, que fica de fora do arquivo quando nao ha opiniao. O
+           clique do touchpad passou a chegar ao jogo: o leitor tinha o byte na
+           mao e o descartava. E o emblema de testes deixou de declarar uma
+           contagem exata que envelhecia a cada leva.</p>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-07-31">
       <description>
         <p>A leva da auditoria: treze agentes mediram o projeto inteiro e um

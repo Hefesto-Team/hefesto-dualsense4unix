@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ícone SIMBÓLICO do painel — o ARO ABERTO DA LOGO com o MARTELO ao centro.
+
+  Redesenho de 07/08/2026, pela DECISÃO 14 dela: "redesenhar o símbolo mais
+  parecido com a logo, mantendo a grade pequena"
+  (`docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md`).
+  Antes dela, duas propostas foram renderizadas e mostradas, e as duas caíram
+  por motivo medido: "preto com borda branca" deixa de acompanhar o tema, e a
+  logo da dock a 20 px vira borrão. O que sobrou é o meio-termo: aproximar o
+  desenho da logo o máximo que a legibilidade a 16 e 20 px permitir.
+
+  Fonte da forma: `assets/hefesto-logo.svg`. Este arquivo NÃO é derivado por
+  escala da logo (a logo a 16 px vira borrão): é desenho próprio na grade
+  simbólica, e por isso NÃO passa pelo `scripts/gerar_icones.sh`. Quem o trava é
+  `tests/unit/test_simbolico_do_painel.py`.
+
+  O QUE ESTE REDESENHO TROUXE DA LOGO, item por item, e o número de cada um.
+  (Nada de linha de traços aqui dentro: dois hifens seguidos fecham comentário
+  em XML, e o arquivo inteiro vira ilegível para o librsvg. Aconteceu em 07/08,
+  e hoje há `test_o_simbolico_e_xml_valido`.)
+
+  1. O ARO É ABERTO, COM AS DUAS CONTAS NAS PONTAS. Na logo o aro não é um
+     círculo fechado: é um arco de 323 graus com uma FALHA no alto à esquerda e
+     uma bolinha em cada ponta (`M100 6 A94 94 0 1 1 43 25`, mais os dois
+     `<circle r="5">`). Os ângulos daqui são os medidos na logo: a falha vai de
+     232 a 269 graus. É a marca mais reconhecível da logo, e a mais barata em
+     pixel: aparece inteira já a 16 px.
+
+  2. A CABEÇA DO MARTELO É CHEIA, com canto arredondado de 25% da espessura, e o
+     cabo é uma cápsula. É como a logo desenha (`rect rx="6"` numa espessura 24,
+     e `rect rx="5"` numa largura 10). O desenho anterior tinha a cabeça VAZADA,
+     que era a proposta dela de 07/08 pela manhã ("a borda do martelo ao
+     centro"); o vazado saiu porque a logo não tem vazado e porque o furo pesava
+     contra a regra 4 abaixo. Se ela quiser o vazado de volta, é uma troca de
+     caminho: está renderizado na foto da decisão.
+
+  3. A PROPORÇÃO CABEÇA/CABO É A DA LOGO, aproximada pelo que a grade aguenta:
+     2,6 por 1,35 (1,93 para 1) contra 25,8 por 11,7 da logo (2,2 para 1). O
+     desenho anterior tinha 2,83 para 1. Mais fino que 1,35 não passa: a 16 px o
+     cabo cairia abaixo de 1,4 px e viraria fiapo.
+
+  4. O TRAÇO TEM O PESO DOS VIZINHOS. Medido em 07/08 com `rsvg-convert` a 320
+     px e varredura de alfa: o traço mínimo dos applets do COSMIC na barra dela
+     é 2,0 unidades da grade de 16 (energia 2,05; som 2,00), e o aro anterior
+     tinha 1,15. Era metade do peso da barra, e por isso o ícone parecia magro
+     ao lado dos outros. O aro agora tem 1,70. O critério dela é comparativo
+     ("no cosmic todos os applet são assim"), então o peso é requisito, não
+     gosto. E 1,70 não é 2,00 de propósito: com 2,00 o furo do aro cai para
+     raio 5,4, o canto da cabeça do martelo fica a 0,70 dele, e a 20 px essa
+     folga some no antisserrilhado. 1,70 é o mais grosso que ainda deixa o
+     martelo respirar. Na logo o aro é proporcionalmente muito mais fino
+     (equivalente a 0,47 nesta grade), então 1,70 já é 3,6 vezes ela: aqui a
+     barra ganhou da fidelidade, e está dito.
+
+  5. A BIGORNA E O MARTELO JUNTOS NÃO CABEM. Foram TRÊS tentativas medidas em
+     07/08 (três geometrias, com as partes engrossadas até o limite), e as três
+     viraram borrão a 20 px. O motivo é aritmético e vale registrar: na logo a
+     cabeça do martelo ENCOSTA na mesa da bigorna, e quem separa as duas é a
+     COR (cinza contra branco). Em monocromia não há cor para separar, e o vão
+     precisaria de 1 px que não existe. A medição de 27/06 dizia o mesmo por
+     outro caminho, e continua valendo. A bigorna sozinha, dentro deste mesmo
+     aro, ficou como opção dela em `opcao-c-bigorna-no-aro-symbolic.svg`, e a
+     medição de cobertura da mancha clara da logo a 20 px favorece ELA por pouco
+     (0,211 contra 0,205 de interseção sobre união, medido nestes dois arquivos):
+     quem decide é ela, não a medição sozinha.
+
+  AS QUATRO REGRAS QUE ESTE ARQUIVO OBEDECE, e o que cada uma custou.
+
+  1. UMA COR SÓ, ACROMÁTICA E CLARA (#bebebe), cravada — a escola do vizinho
+     Flatpak (`com.spotify.Client-symbolic.svg`), que é o único ícone de origem
+     colorida da barra dela que aparece branco. `currentColor` NÃO serve:
+     renderizado sem contexto de cor (rsvg-convert, resvg) ele cai para PRETO.
+     Medido em 07/08: o simbólico antigo, que usava `currentColor`, sai
+     `srgb(0,0,0)` — 1,59:1 sobre o `#2F2F3A` do painel dela. Some.
+     Dentro do painel a cor deste arquivo é irrelevante: medido em 07/08, o
+     `cosmic-applet-status-area` RECOLORE tudo que tem nome `-symbolic`. A cor
+     clara é o seguro para FORA do painel.
+
+  2. CONTORNO FEITO DE PREENCHIMENTO, NUNCA DE `stroke` + `fill="none"`.
+     Esta é a armadilha que quase estragou o pedido dela, e ela foi REPRODUZIDA
+     em 07/08. O GTK recolore símbolo injetando CSS
+     `rect,circle,path {fill: <cor> !important;}` — o `!important` atropela
+     `fill="none"`, e o mesmo aro desenhado com `stroke` virou um DISCO CHAPADO,
+     com a logo inteira sumida dentro dele. Aqui o aro é uma FAIXA: um caminho
+     fechado com o arco de fora (raio 7,4) e o arco de dentro (raio 5,7), que é
+     forma preenchida de verdade e não depende de regra de preenchimento
+     nenhuma. `test_o_aro_e_faixa_e_nao_disco` reprova quem transformar isso num
+     disco.
+
+  3. FUNDO TRANSPARENTE. O desenho é o RECORTE. A recoloração da pilha do
+     COSMIC substitui o RGB e PRESERVA o alfa (`iced_wgpu/image/vector.rs`):
+     qualquer `<circle>` opaco de fundo viraria disco liso da cor do tema.
+
+  4. SEM `transform-origin` e sem `transform` — CSS SVG2 que o librsvg
+     (renderizador do GTK) ignora, jogando a forma para fora do `viewBox`.
+     Armadilha medida antes, registrada no simbólico da bigorna. Todas as
+     coordenadas daqui são cruas, já rotacionadas na conta.
+
+  Grade 16x16 (padrão simbólico), mas o alvo real é 20 px: é o que o
+  `cosmic-panel` dá a um ícone simbólico com o painel no tamanho `S`, que é o
+  dela (`get_applet_icon_size(is_symbolic=true)` → S=20; sem simbólico, S=32).
+  As contas do aro são o ponto mais externo do desenho e alcançam 7,80 de 8,00
+  a partir do centro; maiores que 1,25 elas encostariam na borda do `viewBox`.
+
+  Validado com `rsvg-convert -w N -h N` em 16, 20, 24 e 48 px sobre o `#2F2F3A`
+  medido do painel dela e sobre o claro, e comparado lado a lado com os
+  vizinhos reais da barra (Spotify, Bluetooth, som, rede, energia).
+
+  AS OUTRAS DUAS OPÇÕES, que são dela para escolher:
+  `assets/simbolico/opcao-b-bigorna-symbolic.svg` (a bigorna em silhueta de
+  27/06, sem aro) e `assets/simbolico/opcao-c-bigorna-no-aro-symbolic.svg` (a
+  bigorna dentro deste mesmo aro aberto). Ver a sprint
+  `docs/process/sprints/2026-08-07-APPLET-MONOCROMATICO-01-o-icone-que-destoa-do-painel.md`.
+-->
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hefesto - Dualsense4Unix">
+  <title>Aro e martelo</title>
+  <!-- Aro: faixa de arco com a falha da logo (232 a 269 graus). Nunca stroke. -->
+  <path fill="#bebebe" d="M 7.87,0.6 A 7.4,7.4 0 1,1 3.44,2.17 L 4.49,3.51 A 5.7,5.7 0 1,0 7.9,2.3 Z"/>
+  <!-- As duas contas das pontas do arco, como as bolinhas da logo. -->
+  <path fill="#bebebe" d="M 6.64,1.45 A 1.25,1.25 0 1,0 9.14,1.45 A 1.25,1.25 0 1,0 6.64,1.45 Z M 2.72,2.84 A 1.25,1.25 0 1,0 5.22,2.84 A 1.25,1.25 0 1,0 2.72,2.84 Z"/>
+  <!-- Cabeca do martelo: cheia, canto de 0,65 (25% da espessura), como na logo. -->
+  <path fill="#bebebe" d="M 5.4,4.6 L 10.6,4.6 A 0.65,0.65 0 0,1 11.25,5.25 L 11.25,6.55 A 0.65,0.65 0 0,1 10.6,7.2 L 5.4,7.2 A 0.65,0.65 0 0,1 4.75,6.55 L 4.75,5.25 A 0.65,0.65 0 0,1 5.4,4.6 Z"/>
+  <!-- Cabo: capsula, topo reto porque ele entra por baixo da cabeca. -->
+  <path fill="#bebebe" d="M 7.325,7.2 L 8.675,7.2 L 8.675,11.525 A 0.675,0.675 0 0,1 7.325,11.525 Z"/>
+</svg>

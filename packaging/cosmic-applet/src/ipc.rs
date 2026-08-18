@@ -4,9 +4,10 @@
 //! cada requisição é UMA linha JSON terminada em `\n`; a resposta também é
 //! uma única linha JSON. Usamos `tokio::net::UnixStream` + `BufReader` e um
 //! timeout por chamada — se o socket não existir ou o daemon não responder a
-//! tempo, devolvemos `Err` e a UI degrada para "offline". São DOIS timeouts:
-//! `IPC_TIMEOUT` (leitura/refresh) e `MODE_IPC_TIMEOUT` (trocar de modo, que
-//! cria uinput + grab). Ver os dois consts abaixo.
+//! tempo, devolvemos `Err` e a UI degrada para "offline". São TRÊS timeouts:
+//! `IPC_TIMEOUT` (leitura/refresh), `MODE_IPC_TIMEOUT` (trocar de modo, que
+//! cria uinput + grab) e `SWITCH_IPC_TIMEOUT` (trocar de perfil, que aplica o
+//! perfil inteiro no controle). Ver os três consts abaixo.
 //!
 //! Métodos consumidos pelo applet:
 //!   - `daemon.state_full` -> estado completo (bateria, transporte, perfil...)
@@ -36,6 +37,16 @@ const IPC_TIMEOUT: Duration = Duration::from_millis(250);
 /// dizia "offline" com o modo JÁ aplicado — e esta onda dobrou a exposição, ao
 /// fazer o applet mandar 2-3 chamadas por troca em vez de 1.
 const MODE_IPC_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// Timeout de `profile.switch`. Espelha o `PROFILE_SWITCH_TIMEOUT_S = 3.0` da
+/// GUI (`app/ipc_bridge.py`): ativar um perfil não é leitura — o handler do
+/// daemon faz `activate` + `save_active_marker` + `materialize_launch_env` e
+/// levou ~1,2 s MEDIDOS no journal dela. Com os 250 ms da leitura, TODA
+/// ativação pelo applet voltava `Offline` com o perfil JÁ ativo, e o painel
+/// convidava ao segundo clique — cada clique uma ativação real
+/// (ATIVAR-NAO-MENTE-01). Constante PRÓPRIA, e não `IPC_TIMEOUT` esticado: o
+/// refresh do painel continua não podendo pendurar 3 s num daemon morto.
+const SWITCH_IPC_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// Nome-base padrão do socket (igual a `IPC_SOCKET_DEFAULT_NAME` no Python).
 const SOCKET_DEFAULT_NAME: &str = "hefesto-dualsense4unix.sock";
@@ -346,8 +357,17 @@ pub async fn fetch_profiles() -> Result<Vec<ProfileInfo>, IpcError> {
 }
 
 /// `profile.switch {name}` — ativa um perfil. Devolve o nome do perfil ativo.
+///
+/// Usa [`SWITCH_IPC_TIMEOUT`], não o timeout de leitura: ativar um perfil
+/// aplica o perfil inteiro no controle e não cabe em 250 ms
+/// (ATIVAR-NAO-MENTE-01).
 pub async fn switch_profile(name: String) -> Result<String, IpcError> {
-    let value = call_raw("profile.switch", json!({ "name": name })).await?;
+    let value = call_raw_with_timeout(
+        "profile.switch",
+        json!({ "name": name }),
+        SWITCH_IPC_TIMEOUT,
+    )
+    .await?;
     let active = value
         .get("active_profile")
         .and_then(|v| v.as_str())
@@ -674,6 +694,77 @@ mod tests {
         .expect("o daemon respondeu dentro da folga de modo");
 
         assert_eq!(value.get("native_mode").and_then(|v| v.as_bool()), Some(true));
+    }
+
+    #[tokio::test]
+    async fn trocar_de_perfil_nao_cabe_no_timeout_de_leitura() {
+        // ATIVAR-NAO-MENTE-01: o handler `profile.switch` levou ~1,2 s MEDIDOS
+        // no journal dela (activate + save_active_marker +
+        // materialize_launch_env). Aqui o daemon responde em 400 ms — já não
+        // cabe nos 250 ms da leitura, e o applet dizia "offline" com o perfil
+        // JÁ ativo.
+        let path = temp_socket("switch-lento-curto");
+        spawn_mock_lento(
+            path.clone(),
+            r#"{"jsonrpc":"2.0","id":1,"result":{"active_profile":"vitoria"}}"#.to_string(),
+            Duration::from_millis(400),
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+
+        let res = call_raw_at(path, "profile.switch", json!({"name": "vitoria"}), IPC_TIMEOUT)
+            .await;
+
+        assert!(matches!(res, Err(IpcError::Offline)), "{res:?}");
+    }
+
+    #[tokio::test]
+    async fn trocar_de_perfil_cabe_no_timeout_do_switch() {
+        let path = temp_socket("switch-lento-folga");
+        spawn_mock_lento(
+            path.clone(),
+            r#"{"jsonrpc":"2.0","id":1,"result":{"active_profile":"vitoria"}}"#.to_string(),
+            Duration::from_millis(400),
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+
+        let value = call_raw_at(
+            path,
+            "profile.switch",
+            json!({"name": "vitoria"}),
+            SWITCH_IPC_TIMEOUT,
+        )
+        .await
+        .expect("o daemon respondeu dentro da folga da troca de perfil");
+
+        assert_eq!(
+            value.get("active_profile").and_then(|v| v.as_str()),
+            Some("vitoria")
+        );
+    }
+
+    #[test]
+    fn switch_profile_usa_a_folga_e_nao_o_timeout_de_leitura() {
+        // Morde a FIAÇÃO, não só a constante: o defeito não era o número, era
+        // `switch_profile` chamar `call_raw` (que carrega `IPC_TIMEOUT`).
+        let fonte = include_str!("ipc.rs");
+        let corpo = fonte
+            .split("pub async fn switch_profile")
+            .nth(1)
+            .expect("switch_profile existe");
+        let corpo = corpo.split("\n}\n").next().unwrap_or(corpo);
+        assert!(
+            corpo.contains("SWITCH_IPC_TIMEOUT"),
+            "switch_profile voltou a usar o timeout de leitura"
+        );
+    }
+
+    #[test]
+    fn timeout_do_switch_espelha_o_da_gui() {
+        // `PROFILE_SWITCH_TIMEOUT_S = 3.0` em app/ipc_bridge.py. Os dois lados
+        // falam com o MESMO daemon: divergir aqui é reabrir o defeito de um
+        // lado só.
+        assert_eq!(SWITCH_IPC_TIMEOUT, Duration::from_secs(3));
+        assert!(SWITCH_IPC_TIMEOUT > IPC_TIMEOUT);
     }
 
     #[test]

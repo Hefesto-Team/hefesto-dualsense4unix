@@ -376,9 +376,27 @@ def _entry(uniq: str | None, hidraw: str | None, path: str) -> dict[str, Any]:
 
 @pytest.fixture()
 def led_escritas(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, int]]:
-    """Captura `apply_player_number` (nunca toca o sysfs real)."""
+    """Captura `apply_player_number` (nunca toca o sysfs real).
+
+    NOTA DATADA — 07/08/2026, E0 da LUGAR-À-MESA-01 (**DECISÃO DELA**: *"calar
+    a luz até a entrega existir"*): em produção o tick **não escreve mais LED
+    nenhum** nos externos — `EXTERNAL_PLAYER_LED_ENABLED` nasceu `False`.
+
+    **Nada abaixo caducou, e nada foi apagado.** Toda a bateria que usa esta
+    fixture mede a MAQUINARIA da luz (cache por-valor, rate-limit, autoridade
+    de exibição, R-24/R-25, telemetria), e essa maquinaria continua viva,
+    correta e inteira — esperando a `E3`. O que mudou foi o INTERRUPTOR, e é
+    por isso que a fixture o liga: sem isso a suíte pararia de vigiar a cura
+    medida da "dois player 1, dois player 2", e a E0 teria custado a leva
+    inteira em vez de uma linha.
+
+    Quem mede o comportamento ENTREGUE (zero escritas) é
+    ``tests/unit/test_lugar_a_mesa_e0_calar_a_luz.py``, que NÃO usa esta
+    fixture e lê o interruptor no valor com que ele é entregue.
+    """
     import hefesto_dualsense4unix.core.external_leds as leds_mod
 
+    monkeypatch.setattr(ei_mod, "EXTERNAL_PLAYER_LED_ENABLED", True)
     escritas: list[tuple[str, int]] = []
     monkeypatch.setattr(
         leds_mod,

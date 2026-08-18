@@ -1,13 +1,20 @@
 """DraftApplier — aplica `profile.apply_draft` em ordem canônica.
 
 Extraído de `_handle_profile_apply_draft` em AUDIT-FINDING-IPC-SERVER-SPLIT-01.
-Cada seção (leds, triggers, controllers, rumble, mouse, keyboard) é aplicada
-de forma best-effort: falha em uma seção loga warning, fica registrada em
-``failed`` (APLICAR-VERDADE-01) e não bloqueia as demais. A ordem é leds
--> triggers -> controllers -> rumble -> mouse ->
-keyboard (leds primeiro por ser menos transiente visualmente; controllers
-DEPOIS das seções globais para o override por-controle vencer no alvo —
-PERFIL-04).
+Cada seção (leds, triggers, controllers, rumble, mouse, keyboard, mic, speaker)
+é aplicada de forma best-effort: falha em uma seção loga warning, fica registrada
+em ``failed`` (APLICAR-VERDADE-01) e não bloqueia as demais. A ordem é leds
+-> triggers -> controllers -> rumble -> mouse -> keyboard -> mic -> speaker
+(leds primeiro por ser menos transiente visualmente; controllers DEPOIS das
+seções globais para o override por-controle vencer no alvo — PERFIL-04).
+
+ESTA LISTA É A PROMESSA DO BOTÃO VERDE, e ela ficou desatualizada duas vezes
+antes de alguém notar: o `mic` entrou pela MIC-EXPOSE-01 sem ser citado aqui, e
+o `speaker` faltava por inteiro até 10/08/2026 — `grep -c speaker` neste arquivo
+devolvia ZERO, e o volume que ela ajustava no card só chegava ao controle na
+próxima troca de perfil. Há portão que compara esta lista com o que o rascunho
+emite; se as duas divergirem, ele reprova
+(`tests/unit/test_o_verde_leva_tudo_01.py`).
 """
 from __future__ import annotations
 
@@ -15,7 +22,10 @@ from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core.controller import OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
-from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
+from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
+    apply_rumble_policy,
+    uniq_do_alvo_de_output,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -85,6 +95,20 @@ class DraftApplier:
         )
         # MIC-EXPOSE-01: seção `mic` (botão de mic  mute do sistema).
         self._apply_section(applied, params.get("mic"), "mic", self._apply_mic)
+        # O-VERDE-NAO-LEVAVA-O-SOM-01 (10/08/2026): a seção `speaker` faltava
+        # aqui, e a palavra é literal — `grep -c speaker` neste arquivo devolvia
+        # ZERO. O botão verde "Aplicar" carregava gatilho, luz, rumble, mouse,
+        # teclado e mic, e deixava o alto-falante do controle para trás.
+        #
+        # O volume, o mudo e o canal chegavam ao PERFIL (`to_profile`) e ao
+        # hardware na ATIVAÇÃO do perfil (`apply_profile_speaker`, pela rota do
+        # autoswitch), mas não no AGORA: ela mexia no card, clicava no verde, e
+        # o som não mudava até trocar de perfil. É metade exata da queixa dela —
+        # *"literalmente nenhuma feature ficou lá"*.
+        #
+        # Por último de propósito, como o mic: é a seção mais barata de refazer
+        # se falhar, e nenhuma outra depende dela.
+        self._apply_section(applied, params.get("speaker"), "speaker", self._apply_speaker)
         return applied
 
     def _apply_section(
@@ -291,6 +315,113 @@ class DraftApplier:
             reset(specs or None)
         for uniq, spec in specs.items():
             self.controller.apply_output_for(uniq, spec)
+        # POR-UNIDADE-01 (10/08/2026): vibração e som da PEÇA. Ficam FORA do
+        # `OutputSpec` de propósito — não são output persistente do controle
+        # (o rumble é transitório; o áudio tem posse própria), e empurrá-los
+        # para dentro do spec faria o reassert de hotplug re-vibrar o que já
+        # passou. Cada um segue a sua rota por-uniq, que já existia.
+        self._publicar_escalas_de_vibracao(raw)
+        self._escrever_alto_falantes_por_unidade(raw)
+
+    def _publicar_escalas_de_vibracao(self, raw: dict[str, Any]) -> None:
+        """Publica a escala de vibração por peça no backend (POR-UNIDADE-01).
+
+        SUBSTITUI o mapa inteiro, como o ``reset_output_overrides`` acima e
+        pela mesma razão: intensidade que ela TIROU de um controle na janela
+        (a peça voltou ao global e sumiu do payload) tem de sumir do backend
+        no mesmo "Aplicar", senão continuaria valendo até a próxima troca de
+        perfil e a tela mentiria.
+
+        O fator é RELATIVO à política global vigente no daemon — o mesmo
+        denominador que ``_controllers_to_rumble_scales`` usa na ativação,
+        porque o valor que chega ao ``set_rumble`` já vem escalado por ela
+        (``apply_rumble_policy``). Sem daemon (CLI/testes), o denominador é o
+        ``balanceado`` padrão.
+        """
+        from hefesto_dualsense4unix.profiles.manager import (
+            _RUMBLE_POLICY_PADRAO,
+            _mult_da_politica,
+        )
+
+        escalar = getattr(self.controller, "set_rumble_scales", None)
+        if not callable(escalar):
+            return
+        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        policy_global = (
+            getattr(daemon_cfg, "rumble_policy", None) or _RUMBLE_POLICY_PADRAO
+        )
+        base = _mult_da_politica(
+            policy_global, getattr(daemon_cfg, "rumble_policy_custom_mult", None)
+        )
+        escalas: dict[str, float] = {}
+        for uniq, entry in raw.items():
+            rumble_raw = entry.get("rumble") if isinstance(entry, dict) else None
+            if not isinstance(rumble_raw, dict):
+                continue
+            mult = _mult_da_politica(
+                rumble_raw.get("policy"), rumble_raw.get("custom_mult")
+            )
+            if mult is None or base is None or base <= 0.0:
+                # Global em `auto` (denominador móvel) ou política que não vira
+                # número: a peça fica com o global. Ver a docstring do irmão em
+                # `profiles/manager.py` — prometer um fator contra denominador
+                # móvel seria pior do que não entregar.
+                continue
+            fator = mult / base
+            if fator != 1.0:
+                escalas[str(uniq)] = fator
+        escalar(escalas or None)
+
+    def _escrever_alto_falantes_por_unidade(self, raw: dict[str, Any]) -> None:
+        """Aplica o alto-falante de cada peça (POR-UNIDADE-01).
+
+        Rota por-``uniq`` que já existia e nunca fora ligada pelo perfil:
+        ``set_speaker_volume(volume, muted=..., uniq=..., rota=...)``. Fala
+        DIRETO com o backend, e não pelo ``speaker.set`` do IPC, pela mesma
+        razão de ``lifecycle.apply_profile_speaker``: aquele handler arma a
+        trava manual da categoria ``"audio"``, e um "Aplicar" que a armasse
+        faria todo "Aplicar" seguinte ser descartado em silêncio.
+
+        Sem broadcast e sem ``None``: seção ausente é ausência de opinião, e
+        nunca escrever é o que impede tomar a posse dos bytes de áudio de uma
+        peça que ninguém pediu (SOM-02, armadilha 1).
+        """
+        setter = getattr(self.controller, "set_speaker_volume", None)
+        if not callable(setter):
+            return
+        for uniq, entry in raw.items():
+            speaker_raw = entry.get("speaker") if isinstance(entry, dict) else None
+            if not isinstance(speaker_raw, dict):
+                continue
+            volume = speaker_raw.get("volume")
+            if not isinstance(volume, int) or isinstance(volume, bool):
+                raise ValueError(
+                    f"controllers[{uniq!r}].speaker.volume precisa ser int 0-255"
+                )
+            if not (0 <= volume <= 255):
+                raise ValueError(
+                    f"controllers[{uniq!r}].speaker.volume fora de 0-255"
+                )
+            muted = speaker_raw.get("muted", False)
+            if not isinstance(muted, bool):
+                raise ValueError(
+                    f"controllers[{uniq!r}].speaker.muted precisa ser booleano"
+                )
+            rota = speaker_raw.get("rota")
+            if rota is not None and (
+                not isinstance(rota, int) or isinstance(rota, bool) or not (0 <= rota <= 3)
+            ):
+                raise ValueError(
+                    f"controllers[{uniq!r}].speaker.rota precisa ser int 0-3"
+                )
+            try:
+                setter(volume, muted=muted, uniq=str(uniq), rota=rota)
+            except Exception as exc:
+                logger.warning(
+                    "apply_draft_speaker_por_unidade_falhou",
+                    uniq=str(uniq),
+                    erro=str(exc),
+                )
 
     def _controller_override_spec(
         self, entry: dict[str, Any], uniq: str
@@ -347,6 +478,8 @@ class DraftApplier:
         if weak == 0 and strong == 0:
             if daemon_cfg is not None:
                 daemon_cfg.rumble_active = None
+                # MESA-CHEIA-05 (E0): sem par fixado não há dono a lembrar.
+                daemon_cfg.rumble_active_uniq = None
             self.controller.set_rumble(weak=0, strong=0)
             return
         # AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01:
@@ -356,6 +489,10 @@ class DraftApplier:
         # canônico de _handle_rumble_set.
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (weak, strong)
+            # MESA-CHEIA-05 (E0): o "Aplicar" do rodapé mira o alvo do seletor
+            # tanto quanto a aba Rumble — então congela o dono junto do par,
+            # senão o valor migra para quem entrar no seletor depois.
+            daemon_cfg.rumble_active_uniq = uniq_do_alvo_de_output(self.controller)
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
 
@@ -409,6 +546,57 @@ class DraftApplier:
             raise ValueError("daemon não disponível para alterar o botão de mic")
         self.daemon.config.mic_button_toggles_system = valor
         logger.info("mic_button_toggles_system_aplicado", enabled=valor)
+
+    def _apply_speaker(self, speaker_raw: Any) -> None:
+        """Aplica a seção `speaker` do rascunho — O-VERDE-NAO-LEVAVA-O-SOM-01.
+
+        Três campos, os MESMOS do `ProfileSpeakerConfig` e do `SpeakerDraft`:
+        ``volume`` (0 a 255, byte do registrador), ``muted`` e ``rota`` (o canal de saída). Um nome
+        diferente aqui criaria um terceiro vocabulário para o mesmo fato.
+
+        **Reusa a porta que já existe**, `Daemon.apply_profile_speaker`, e isso
+        é requisito, não conveniência: ela é a mesma que a ativação de perfil
+        usa, já sabe conversar por-`uniq` e já carrega a política de silêncio da
+        SOM-02/E4. Um caminho novo direto ao backend seria um segundo dono dos
+        bytes de áudio — e o `set_speaker_volume` do backend, medido em 10/08,
+        **não tem gate de `_output_mute`**: chamá-lo por fora responderia `ok` em
+        Modo Nativo sem mandar byte nenhum, e a tela diria que aplicou.
+
+        Campo ausente é campo NÃO tocado (`volume` obrigatório, o resto opcional):
+        o rascunho só emite esta seção quando ela mexeu, e mesmo assim o mudo e a
+        rota podem não ter opinião. Sem opinião é silêncio, nunca ordem.
+        """
+        if not isinstance(speaker_raw, dict):
+            raise ValueError("speaker deve ser objeto")
+        if "volume" not in speaker_raw:
+            return
+        volume = speaker_raw.get("volume")
+        if not isinstance(volume, int) or isinstance(volume, bool):
+            raise ValueError("speaker.volume deve ser inteiro")
+        # A RÉGUA É 0..255, e errar isso recusa o volume NORMAL dela. Medido em
+        # 10/08/2026: a primeira versão desta guarda usou 0..100, por eu ter lido
+        # "volume" como porcentagem — e o controle deslizante do card em 100 %
+        # sai como **102**. A seção cairia em `failed` e o rodapé diria que o som
+        # falhou, no gesto mais comum que existe. O registrador do controle é um
+        # byte, e é assim em toda a casa: `ProfileSpeakerConfig` (`ge=0, le=255`),
+        # o `SpeakerDraft`, o IPC `speaker.set` e o `set_speaker_volume` do
+        # backend. Aqui não pode ser diferente — quatro réguas iguais e uma
+        # sozinha é como se recusa em silêncio o que a pessoa acabou de escolher.
+        if not 0 <= volume <= 255:
+            raise ValueError("speaker.volume fora de 0..255")
+        muted = speaker_raw.get("muted", False)
+        if not isinstance(muted, bool):
+            raise ValueError("speaker.muted deve ser booleano")
+        rota = speaker_raw.get("rota")
+        if rota is not None and (not isinstance(rota, int) or isinstance(rota, bool)):
+            raise ValueError("speaker.rota deve ser inteiro ou nulo")
+        applier = getattr(self.daemon, "apply_profile_speaker", None)
+        if not callable(applier):
+            raise ValueError("daemon não expõe apply_profile_speaker")
+        applier(volume, muted, uniq=speaker_raw.get("uniq"), origin="draft", rota=rota)
+        logger.info(
+            "speaker_do_rascunho_aplicado", volume=volume, muted=muted, rota=rota
+        )
 
     def _apply_keyboard(self, keyboard_raw: Any) -> None:
         """Aplica os key_bindings editados ao device de teclado virtual vivo.
