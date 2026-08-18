@@ -10,6 +10,12 @@ corrente. Antes, o backend cego virava `wm_class='unknown'`, o `MatchAny`
 do perfil padrão casava com tudo e a emulação caía no meio do jogo
 (provado ao vivo: journal 03:40:29 e 13:07:18 de 2026-07-16).
 
+FOCO-ERRANTE-01 (18/08/2026): a janela do CLIENTE Steam não tira o perfil de um
+jogo VIVO. A histerese UX-01 cobre a AUSÊNCIA de dado; nada cobria o dado
+ERRADO — e sob XWayland uma janela invisível do `steamwebhelper` (classe
+`steam`) rouba o foco do X no meio da partida. Ver `jogo_do_wrapper_vivo` e
+`AutoSwitcher._recusa_a_janela_do_cliente_steam`.
+
 Desligável via env `HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT=1` (usado pelo unit headless,
 V2-4 / Patch 8).
 """
@@ -17,10 +23,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import math
 import os
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -34,6 +43,10 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     perfil_declara_modo_de_jogo,
     perfil_e_regra_de_jogo,
+)
+from hefesto_dualsense4unix.profiles.steam_app import (
+    e_janela_do_cliente_steam,
+    steam_appid_from_wm_class,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -82,6 +95,134 @@ OWN_GUI_WM_CLASSES: frozenset[str] = frozenset(
 WindowReader = Callable[[], dict[str, Any]]
 
 
+def _cmdline_confirma_appid(
+    pid: int, appid: int, proc_dir: Path | None = None
+) -> bool:
+    """A linha de comando de `pid` anuncia `AppId=<appid>`? (FOCO-ERRANTE-01)
+
+    É a corroboração que SUBSTITUI a janela de frescor de 15 min do
+    `wrapper_game_running` — ver `jogo_do_wrapper_vivo`. O que a janela de
+    tempo cobria era o PID RECICLADO: um marker velho apontando para um número
+    que o núcleo já entregou a outro processo. A linha de comando responde a
+    mesma pergunta sem prazo de validade, porque o processo do marker é o
+    `reaper` da Steam e ele carrega o appid na própria `argv`, medido na
+    máquina dela em 18/08 (`.../reaper SteamLaunch AppId=2497900 -- ...`).
+
+    Consequência declarada: jogo lançado pelo wrapper FORA da Steam não tem
+    `AppId=` na `argv` e não é reconhecido aqui. É o lado seguro do erro — sem
+    corroboração, sem guarda, e o autoswitch segue como sempre seguiu.
+
+    `proc_dir` existe pela mesma razão do `base_dir` das funções de marker do
+    `launch_env`: dar costura de teste hermético. Nunca levanta — leitura de
+    `/proc` que falha vira "não confirmei".
+    """
+    base = proc_dir if proc_dir is not None else Path("/proc")
+    try:
+        bruto = (base / str(pid) / "cmdline").read_bytes()
+    except OSError:
+        return False
+    except Exception:  # defensivo: sondar /proc jamais derruba o tique
+        logger.debug("cmdline_do_jogo_ilegivel", exc_info=True)
+        return False
+    # `/proc/<pid>/cmdline` separa os argumentos por NUL; virar espaço mantém a
+    # fronteira entre eles, que é o que o lookbehind abaixo usa.
+    texto = bruto.decode("utf-8", "replace").replace("\0", " ")
+    return (
+        re.search(
+            rf"(?<![0-9A-Za-z_])appid={appid}(?![0-9])", texto, re.IGNORECASE
+        )
+        is not None
+    )
+
+
+def jogo_do_wrapper_vivo(
+    *,
+    base_dir: Path | None = None,
+    proc_dir: Path | None = None,
+    now: float | None = None,
+) -> int | None:
+    """Appid do jogo do wrapper que ainda está RODANDO agora, ou None.
+
+    FOCO-ERRANTE-01 (18/08/2026). Irmã de `launch_env.launch_session_appid`,
+    e a diferença entre as duas é a única razão de esta existir: aquela exige
+    que o marker `last_run` seja FRESCO (`WRAPPER_MARKER_WINDOW_SEC`, 900 s), e
+    a partida dela dura mais que isso. **Medido:** o marker tinha 1296 s de
+    idade no instante em que o perfil do jogo foi roubado pela janela do
+    cliente Steam (marker de 00:31:38, roubo às 00:53:14). Uma guarda montada
+    sobre `launch_session_appid` teria respondido `None` e não teria evitado o
+    defeito — por isso a janela de frescor SAI, e só ela.
+
+    Tudo o mais é a MESMA decisão pura de sempre: `wrapper_game_running`
+    (NUMA-01) é reusada com `window_sec=inf`, então a correlação por pid entre
+    `last_run` e `last_exit` — a correção pós-auditoria da Onda N — continua
+    valendo byte a byte. Reinventar o critério aqui reabriria a divergência
+    entre predicados que o `profiles/steam_app.py` existe para fechar.
+
+    O que ENTRA no lugar da janela de tempo é a corroboração por `AppId=` na
+    linha de comando do processo (`_cmdline_confirma_appid`): sem prazo de
+    validade e imune a PID reciclado, que era o risco real que os 900 s
+    cobriam. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.daemon.launch_env import (
+        pid_is_alive,
+        read_last_exit_marker,
+        read_last_exit_pid,
+        read_last_run_marker,
+        read_last_run_pid,
+        wrapper_game_running,
+    )
+
+    marker = read_last_run_marker(base_dir)
+    if marker is None:
+        return None
+    marker_pid = read_last_run_pid(base_dir)
+    if marker_pid is None:
+        # Sem `pid=` no marker não há vitalidade nenhuma para atestar (marker
+        # gravado por um wrapper anterior ao NUMA-01) — e sem PID também não há
+        # linha de comando para corroborar. Recusar é o lado seguro.
+        return None
+    vivo = wrapper_game_running(
+        marker=marker,
+        exit_marker=read_last_exit_marker(base_dir),
+        pid_alive=pid_is_alive(marker_pid),
+        marker_pid=marker_pid,
+        exit_pid=read_last_exit_pid(base_dir),
+        now=now,
+        # A ÚNICA diferença para `launch_session_appid`, e ela é o assunto
+        # inteiro desta função (ver docstring).
+        window_sec=math.inf,
+    )
+    if not vivo:
+        return None
+    appid = marker[0]
+    if not _cmdline_confirma_appid(marker_pid, appid, proc_dir):
+        return None
+    return appid
+
+
+def _appids_de_jogo_do_perfil(profile: object) -> frozenset[int]:
+    """Os appids de que este perfil é a regra PRÓPRIA (FOCO-ERRANTE-01).
+
+    Lê as `window_class` do `match` e as passa pelo predicado ÚNICO
+    (`steam_app.steam_appid_from_wm_class`) — nada de um sexto predicado de
+    "isto é janela de jogo da Steam", que é a armadilha nº 5 da sprint.
+
+    Vazio quando o perfil não é regra de jogo da Steam (catch-all, regra por
+    título/processo, dublê de teste sem `match`): a guarda que consome isto
+    fica inerte, que é o comportamento histórico.
+    """
+    match = getattr(profile, "match", None)
+    classes = getattr(match, "window_class", None)
+    if not isinstance(classes, (list, tuple, set, frozenset)):
+        return frozenset()
+    achados = set()
+    for classe in classes:
+        appid = steam_appid_from_wm_class(classe if isinstance(classe, str) else None)
+        if appid is not None:
+            achados.add(appid)
+    return frozenset(achados)
+
+
 @dataclass
 class AutoSwitcher:
     manager: ProfileManager
@@ -106,6 +247,12 @@ class AutoSwitcher:
     # exibição, lock de gesto manual de 30 s, idempotência — mora no daemon.
     modo_jogo_padrao_applier: Callable[..., object] | None = None
     modo_jogo_padrao_reverter: Callable[..., object] | None = None
+    # FOCO-ERRANTE-01: quem responde "que jogo do wrapper está VIVO agora?".
+    # None = `jogo_do_wrapper_vivo()` com os diretórios reais, que é o que o
+    # daemon usa (nenhuma rota de subida precisa ligar fio nenhum). O campo
+    # existe para o teste apontar a leitura para um `tmp_path` — o mesmo motivo
+    # do `base_dir` das funções de marker do `launch_env`.
+    jogo_vivo_reader: Callable[[], int | None] | None = None
 
     _last_candidate: str | None = None
     _candidate_since: float = 0.0
@@ -145,6 +292,20 @@ class AutoSwitcher:
     # entrava no relatório da ativação — a janela não tinha como lhe dizer o que
     # não entrou. Vazio = o par não foi chamado nesta instância.
     _estado_modo_jogo_padrao: str = ""
+    # FOCO-ERRANTE-01: chave (candidato, perfil corrente) da última recusa
+    # logada. Mesma razão — e o mesmo padrão — do `_cadeado_log_key`: a recusa
+    # é avaliada a 2 Hz e o episódio medido no journal dela durou minutos; sem
+    # dedup seriam 7 200 linhas por hora.
+    _recusa_log_key: tuple[str, str] | None = None
+    # FOCO-ERRANTE-01: cache de `_appids_de_jogo_do_perfil` para o perfil
+    # CORRENTE, chaveado pelo nome. `ProfileManager.get` lê o JSON do disco (e
+    # varre o diretório quando o arquivo não bate com o slug); a guarda roda a
+    # 2 Hz enquanto a janela da Steam está na frente. A chave é o NOME, então o
+    # cache se invalida sozinho em toda troca de perfil — inclusive na
+    # sincronização de crença. Custo declarado: editar o `match` do perfil ATIVO
+    # em disco só é visto na próxima troca, e o efeito se limita à guarda.
+    _appids_do_perfil_nome: str | None = None
+    _appids_do_perfil_valor: frozenset[int] = frozenset()
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -380,6 +541,31 @@ class AutoSwitcher:
         else:
             self._cadeado_log_key = None
 
+        # FOCO-ERRANTE-01 (18/08/2026): a janela do CLIENTE Steam não tira o
+        # perfil de um jogo que ainda está VIVO. Medido no journal dela: treze
+        # trocas entre 00:15 e 01:09, todas com `wm_class=steam`, uma delas
+        # cinco segundos depois da anterior — gatilhos e lightbar do jogo
+        # reescritos pelos do desktop no meio da partida, porque uma janela
+        # INVISÍVEL do `steamwebhelper` (instância `steamwebhelper`, classe
+        # `steam`, `WM_NAME` vazio) rouba o foco do X sob XWayland.
+        #
+        # A ironia que originou esta guarda: `lifecycle._janela_de_jogo_em_foco`
+        # (VPAD-NA-JANELA-DA-STEAM-01, 17/08) já sabia que "a janela da Steam
+        # durante a partida não autoriza voltar ao desktop" — e era consultada
+        # DEPOIS da troca, para salvar o modo e a política de rumble. Ninguém a
+        # consultava ANTES, para não trocar.
+        #
+        # A guarda vem aqui, ANTES do bloco de estabilidade, pelo mesmo motivo
+        # do cadeado: zerando o candidato, a espera não acumula. Quando o jogo
+        # morre, o candidato renasce e a troca sai no debounce normal (~1 s) —
+        # é o ensaio E-4 da sprint, e é o que separa esta cura de um cadeado.
+        if self._recusa_a_janela_do_cliente_steam(candidate, info):
+            self._last_candidate = None
+            if not self._suppression_active():
+                self._suppress_log_key = None
+            return
+        self._recusa_log_key = None
+
         if candidate != self._last_candidate or resumed:
             # `resumed`: primeira leitura útil após um gap reinicia o relógio
             # do debounce — o tempo pulado não conta como estabilidade
@@ -507,6 +693,100 @@ class AutoSwitcher:
         if self._current_profile is None or profile.name == self._current_profile:
             return False
         return bool(getattr(profile, "e_catch_all", True))
+
+    def _recusa_a_janela_do_cliente_steam(
+        self, candidate: str | None, info: dict[str, Any]
+    ) -> bool:
+        """A troca de perfil tem de ser RECUSADA neste tique? (FOCO-ERRANTE-01)
+
+        Três termos, e os três são obrigatórios — tirar qualquer um deles é o
+        que transforma a cura em defeito:
+
+        1. **a janela em foco é o CLIENTE Steam** (loja, biblioteca, Big
+           Picture, `steamwebhelper`), pelo predicado ÚNICO da casa
+           (`steam_app.e_janela_do_cliente_steam`). Sem este termo, a guarda
+           valeria para o Firefox e mataria a política de 23/07;
+        2. **o perfil CORRENTE é a regra própria de um jogo da Steam** — é o
+           que impede o marker do jogo A de segurar o perfil do jogo B;
+        3. **esse jogo está VIVO agora** (`jogo_do_wrapper_vivo`). Sem o termo
+           de vitalidade, ela fecharia o jogo, ficaria na biblioteca da Steam e
+           o perfil do jogo ficaria PRESO PARA SEMPRE — um cadeado permanente é
+           pior que o defeito que ele cura.
+
+        Só recusa uma troca que ia acontecer: candidato ausente, ou candidato
+        que já É o perfil corrente, seguem pelo caminho de sempre.
+        """
+        corrente = self._current_profile
+        if candidate is None or corrente is None or candidate == corrente:
+            return False
+        if not e_janela_do_cliente_steam(info.get("wm_class")):
+            return False
+        appids = self._appids_do_perfil_corrente(corrente)
+        if not appids:
+            return False
+        appid_vivo = self._appid_do_jogo_vivo()
+        if appid_vivo is None or appid_vivo not in appids:
+            return False
+        self._log_recusa_uma_vez(candidate, corrente, appid_vivo, info)
+        return True
+
+    def _appid_do_jogo_vivo(self) -> int | None:
+        """Appid do jogo do wrapper vivo agora, pelo leitor injetado ou o real.
+
+        FOCO-ERRANTE-01. Best-effort declarado: leitor que levanta vira "não
+        sei", e "não sei" NÃO recusa a troca — a guarda é a exceção, e uma
+        exceção que falha tem de devolver o comportamento histórico.
+        """
+        leitor = self.jogo_vivo_reader
+        try:
+            return jogo_do_wrapper_vivo() if leitor is None else leitor()
+        except Exception as exc:
+            logger.debug("jogo_vivo_indisponivel", err=str(exc))
+            return None
+
+    def _appids_do_perfil_corrente(self, nome: str) -> frozenset[int]:
+        """Appids de que o perfil CORRENTE é a regra própria, com cache por nome.
+
+        FOCO-ERRANTE-01 — ver `_appids_do_perfil_nome` para o porquê do cache.
+        Manager sem `get` (dublê de teste) ou perfil que não abre devolvem o
+        conjunto vazio, e conjunto vazio desliga a guarda.
+        """
+        if self._appids_do_perfil_nome == nome:
+            return self._appids_do_perfil_valor
+        getter = getattr(self.manager, "get", None)
+        appids: frozenset[int] = frozenset()
+        if callable(getter):
+            try:
+                appids = _appids_de_jogo_do_perfil(getter(nome))
+            except Exception as exc:
+                logger.debug("perfil_corrente_ilegivel", name=nome, err=str(exc))
+                appids = frozenset()
+        self._appids_do_perfil_nome = nome
+        self._appids_do_perfil_valor = appids
+        return appids
+
+    def _log_recusa_uma_vez(
+        self, candidate: str, corrente: str, appid: int, info: dict[str, Any]
+    ) -> None:
+        """Loga a recusa 1x por episódio (candidato, perfil corrente).
+
+        FOCO-ERRANTE-01, passo 5 da sprint. O poll é 2 Hz e o episódio medido
+        durou minutos: sem a chave seriam ~7 200 linhas por hora. Mesmo padrão
+        (e mesma razão) do `_log_cadeado_uma_vez` e do `_log_suppressed_once`.
+        A chave é zerada no `_tick` assim que a recusa deixa de valer, para o
+        episódio SEGUINTE voltar a aparecer no journal.
+        """
+        key = (candidate, corrente)
+        if self._recusa_log_key == key:
+            return
+        self._recusa_log_key = key
+        logger.info(
+            "autoswitch_recusou_a_janela_da_steam",
+            candidato=candidate,
+            perfil_corrente=corrente,
+            appid=appid,
+            wm_class=str(info.get("wm_class") or ""),
+        )
 
     def _log_cadeado_uma_vez(
         self, evento: str, candidate: str | None, info: dict[str, Any]
@@ -668,6 +948,17 @@ class AutoSwitcher:
             logger.warning("autoswitch_activate_failed", name=name, err=str(exc))
             return
         self._current_profile = name
+        # FOCO-ERRANTE-01: o objeto do perfil que ACABOU de entrar já está aqui
+        # — carimbar os appids dele agora é de graça e poupa a guarda de reler
+        # o disco a 2 Hz enquanto a janela da Steam segura o foco. Sem o objeto
+        # (chamada direta com só o nome), o cache é INVALIDADO em vez de
+        # carimbado com vazio: vazio desliga a guarda, e desligar a guarda por
+        # falta de dado seria o defeito de volta.
+        if profile is not None:
+            self._appids_do_perfil_nome = name
+            self._appids_do_perfil_valor = _appids_de_jogo_do_perfil(profile)
+        else:
+            self._appids_do_perfil_nome = None
         # UX-04: carimba a especificidade do que ACABOU de entrar — é o que
         # decide, na próxima troca, se o debounce de saída se aplica.
         self._current_especifico = profile is not None and not bool(
@@ -728,4 +1019,5 @@ __all__ = [
     "OWN_GUI_WM_CLASSES",
     "AutoSwitcher",
     "WindowReader",
+    "jogo_do_wrapper_vivo",
 ]
