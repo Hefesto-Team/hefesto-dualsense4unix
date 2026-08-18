@@ -2724,26 +2724,52 @@ _bluez_version_verdict() {
     fi
 }
 
+# Versão do bluetoothd que o systemd REALMENTE executa, lida pelo ExecStart da
+# unit (que o drop-in pode ter reapontado) — não precisa de privilégio.
+#
+# Quem cura o crash é o daemon em execução, não o que o dpkg empacotou. Em
+# 18/08/2026, nesta casa, o backport saiu pelo tarball upstream porque o .deb do
+# resolute exige noble (glib 2.80, libell 0.64, json-c 0.17, debhelper 13.14) e
+# o jammy tem 2.72 / 0.49 / 0.15 / 13.6 — mas o configure.ac do 5.86 pede
+# dbus>=1.10, libudev>=196, json-c>=0.13 e ell>=0.39, todos satisfeitos ali. O
+# dpkg seguiu dizendo 5.64 com o rádio rodando 5.86, e este portão reprovava a
+# cura que já estava de pé.
+_bluez_versao_do_daemon_vivo() {
+    local caminho
+    caminho="$(systemctl show bluetooth.service -p ExecStart --value 2>/dev/null \
+        | grep -oE 'path=[^ ]+' | head -1 | cut -d= -f2)"
+    [[ -n "${caminho}" && -x "${caminho}" ]] || return 1
+    "${caminho}" --version 2>/dev/null | tr -d '[:space:]'
+}
+
 check_bluez_backport_version() {
-    if ! command -v dpkg-query >/dev/null 2>&1 || ! command -v dpkg >/dev/null 2>&1; then
+    if ! command -v dpkg >/dev/null 2>&1; then
         info "dpkg ausente (sistema não-Debian?) — pulo o check de versão do bluez"
         return
     fi
-    local ver veredito
-    ver="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
+    local ver veredito origem
+    ver="$(_bluez_versao_do_daemon_vivo || true)"
+    if [[ -n "${ver}" ]]; then
+        origem=" (daemon em execução)"
+    elif command -v dpkg-query >/dev/null 2>&1; then
+        ver="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
+        origem=" (pacote dpkg — daemon parado)"
+    else
+        origem=""
+    fi
     veredito="$(_bluez_version_verdict "${ver}")"
     case "${veredito}" in
         ok)
-            pass "bluez ${ver} >= ${_BZ_PISO} e < ${_BZ_TETO} (sem os crashes crônicos de input/HIDP do 5.72, e sem o UAF do 5.87)"
+            pass "bluez ${ver}${origem} >= ${_BZ_PISO} e < ${_BZ_TETO} (sem os crashes crônicos de input/HIDP do 5.72, e sem o UAF do 5.87)"
             ;;
         nova)
-            warn "bluez ${ver} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo desta casa é o backport 5.86 (./install.sh, passo 3f); o porquê está em docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md §D"
+            warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo desta casa é o backport 5.86 (./install.sh, passo 3f); o porquê está em docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md §D"
             ;;
         old)
-            fail "bluez ${ver} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: ./install.sh (passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os pela receita em docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md, seção 3, caminho 1)"
+            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: ./install.sh (passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os pela receita em docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md, seção 3, caminho 1)"
             ;;
         *)
-            info "bluez não instalado via dpkg (ou versão ilegível) — pulo o check de versão"
+            info "bluez não encontrado (nem daemon em execução, nem pacote) — pulo o check de versão"
             ;;
     esac
 }

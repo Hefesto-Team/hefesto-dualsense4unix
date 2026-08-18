@@ -1062,10 +1062,28 @@ def texto_do_sono(instalada: bool, estados: dict[str, str]) -> str:
 
 
 def estado_do_sono(home: str | None = None) -> str:
-    """A leitura completa, pronta para a tela. BLOQUEIA — rode em worker.
+    """A leitura completa numa frase só. BLOQUEIA — rode em worker.
 
     Mesma disciplina do resto do módulo: nada de subprocess na thread do GTK
     (use ``ipc_bridge.run_in_thread``, o padrão do card).
+
+    NOTA DATADA — 18/08/2026: **a tela já diz isto, por outro caminho, e esta
+    composição não tem chamador de propósito.** O item 6 da
+    ``SOM-QUE-NAO-DORME-01`` (*"a aba Status consegue dizer o estado —
+    inclusive denunciar a cura arrancada"*) foi entregue pela
+    ``SOM-ACORDADO-01``, que mediu o desenho e escolheu dizer o estado POR
+    CONTROLE, no rótulo da moldura de cada card, em vez de uma frase global:
+    ``RotaDeSaida.estado`` publica os canais (:786 e :817 acima, via
+    :func:`estados_dos_sinks`), ``status_actions.py``:1038 lê a regra na MESMA
+    worker, :1249 entrega os dois ao card por ``definir_estado_do_canal``, e
+    ``controller_card.py``:4216-4224 escreve as frases — inclusive a
+    ``DICA_CANAL_SEM_A_REGRA``, que é a cura arrancada sendo denunciada.
+
+    Por isso ela **não deve ganhar chamador na janela**: seria um segundo
+    leitor de PipeWire aqui dentro (`controller_card.py`:4044-4049 escreve por que
+    isso é defeito) para repetir o que já está na tela. O corpo fica de pé
+    porque é a única forma de perguntar as duas coisas de uma vez fora da
+    janela, e porque podar símbolo público é decisão DELA, não deste módulo.
     """
     saida = rodar_leitura(["pactl", "list", "sinks", "short"])
     return texto_do_sono(regra_nunca_dorme_instalada(home), sono_dos_sinks_do_controle(saida))

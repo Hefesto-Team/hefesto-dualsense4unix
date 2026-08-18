@@ -216,9 +216,9 @@ def _rotulo_do_vpad(campos: dict[str, str]) -> str:
             return f"P{numero}"
     uniq = campos.get("HID_UNIQ", "").strip()
     if uniq.lower().startswith("02:fe:"):
-        ultimo = uniq.split(":")[-1]
+        último = uniq.split(":")[-1]
         try:
-            return f"P{int(ultimo, 16)}"
+            return f"P{int(último, 16)}"
         except ValueError:
             return "?"
     return "?"
