@@ -46,12 +46,8 @@ git checkout v0.9.4.2
 ./install.sh
 ```
 
-> **Clone pela tag, não por branch.** Esta página mandava, até 29/07/2026,
-> clonar `-b sprint/harmonia-uhid` para pegar "a alfa 0.1.1" — aquela branch
-> parou dois lançamentos atrás. E o `main` de
-> `[REDACTED]/hefesto-dualsense4unix` está na v3.0.0 (abril/2026), anterior a
-> tudo isto. Ver a caixa "Onde esta versão mora" no
-> [`README.md`](../../README.md).
+> **Clone pela tag, não por branch.** As branches de trabalho recebem commits
+> durante a sessão e não são ponto estável para instalar.
 
 > **Ligue o DualSense no cabo USB antes de abrir a janela pela primeira vez.**
 > Instalar não precisa do controle; usar, sim. É pelo cabo que o Hefesto elege o
