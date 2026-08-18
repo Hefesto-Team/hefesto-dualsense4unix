@@ -66,6 +66,8 @@ SUPPORTED_KEYS: tuple[str, ...] = (
     # Números (linha principal)
     "KEY_0", "KEY_1", "KEY_2", "KEY_3", "KEY_4",
     "KEY_5", "KEY_6", "KEY_7", "KEY_8", "KEY_9",
+    # Pontuação (FEAT-POINT-AND-CLICK-01: "." pula diálogo no Grim Fandango)
+    "KEY_COMMA", "KEY_DOT",
     # Função
     "KEY_F1", "KEY_F2", "KEY_F3", "KEY_F4", "KEY_F5", "KEY_F6",
     "KEY_F7", "KEY_F8", "KEY_F9", "KEY_F10", "KEY_F11", "KEY_F12",
@@ -181,6 +183,25 @@ class UinputKeyboardDevice:
             self._emit_sequence_release(button)
 
         self._pressed_buttons = now_mapped
+
+    def prime(self, buttons_pressed: frozenset[str]) -> None:
+        """Semeia o edge-tracker com `buttons_pressed` SEM emitir nada.
+
+        Usado pelo poll loop no 1º tick após conectar (BUG-DAEMON-CONNECT-
+        GHOST-INPUT-01): adota o estado cru lido no instante da conexão como
+        baseline. Assim botões fantasma/segurados na conexão são tratados como
+        "já pressionados" e só geram sequência de teclas quando o usuário
+        soltá-los e pressioná-los de novo — análogo ao racional de
+        `_release_all`, mas no sentido inverso (zero emissão, só estado).
+
+        No-op se o device ainda não foi criado: o `dispatch` também é no-op
+        nesse caso, então não há divergência de estado.
+        """
+        if self._device is None or self._uinput_mod is None:
+            return
+        self._pressed_buttons = frozenset(
+            b for b in buttons_pressed if b in self.bindings
+        )
 
     # ------------------------------------------------------------------
     # Helpers internos

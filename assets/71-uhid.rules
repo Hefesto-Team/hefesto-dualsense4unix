@@ -1,0 +1,26 @@
+# SPRINT-UHID-VPAD-01 (2026-07-15) — acesso a /dev/uhid via systemd-logind.
+#
+# O gamepad virtual do modo "Jogar pelo Hefesto" deixa de ser um device de
+# uinput (só evdev, SEM hidraw) e passa a nascer de /dev/uhid: o driver
+# hid_playstation do kernel faz bind nele e registra um DualSense COMPLETO —
+# com hidraw, lightbar, LEDs de jogador, sensores de movimento e touchpad.
+#
+# Por que isso importa: sem hidraw, o SDL não vibra o controle com a máscara
+# DualSense (ele usa o driver PS5 e procura o hidraw que o uinput não tem) —
+# era por isso que só a máscara Xbox 360 vibrava, e por isso gatilhos
+# adaptativos/lightbar/giroscópio/touchpad eram impossíveis no vpad.
+#
+# /dev/uhid nasce root-only (crw------- root root); esta regra dá acesso ao
+# usuário da sessão local pelo mesmo mecanismo da 71-uinput.rules (uaccess).
+# Reverter: remover este arquivo e recarregar udev (o daemon volta ao uinput
+# sozinho, avisando que a vibração da máscara DualSense não vai funcionar).
+#
+# VPAD-09 (2026-07-21): GROUP="hefesto" além do uaccess. A ACL do uaccess é
+# aplicada pelo systemd-logind NO LOGIN — o mesmo instante em que o daemon de
+# sessão sobe: corrida real, perdida ao vivo (EACCES no boot → vpad nenhum).
+# O GROUP= é aplicado pelo udev NA CRIAÇÃO do nó, antes de qualquer login —
+# determinístico. Grupo DEDICADO de propósito: nunca o "input" (membro de
+# input lê todos os /dev/input/event* = primitiva de keylogger). O install
+# cria o grupo e adiciona a usuária; sem o grupo no sistema o udev ignora o
+# GROUP= e a regra degrada para o comportamento uaccess-only anterior.
+KERNEL=="uhid", SUBSYSTEM=="misc", MODE="0660", GROUP="hefesto", TAG+="uaccess"

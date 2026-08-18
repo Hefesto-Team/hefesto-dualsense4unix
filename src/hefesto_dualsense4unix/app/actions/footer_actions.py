@@ -6,7 +6,10 @@ para feedback ao usuário.
 
 Padrão de thread:
 - ``on_apply_draft``: usa ``ipc_bridge.call_async`` para não bloquear GTK.
-- Demais: operações de I/O rápidas executadas na thread GTK diretamente.
+- ``on_save_profile`` / ``on_import_profile`` / ``on_restore_default``: diálogos
+  na thread GTK, mas o I/O de disco (carregar/checar conflito/salvar) é despachado
+  para um worker via ``ipc_bridge.run_in_thread`` e renderizado no callback
+  (``GLib.idle_add``) — PERF-FOOTER-ASYNC-IO-01.
 
 Importações de topo para permitir patch nos testes:
 - ``ipc_bridge`` exposto como variável de módulo.
@@ -21,16 +24,62 @@ from typing import Any
 
 from hefesto_dualsense4unix.app import gui_dialogs, ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
-from hefesto_dualsense4unix.app.constants import ROOT_DIR
-from hefesto_dualsense4unix.profiles.loader import load_all_profiles, load_profile, save_profile
+from hefesto_dualsense4unix.profiles.loader import (
+    _seed_source_file,
+    load_all_profiles,
+    load_profile,
+    save_profile,
+)
+from hefesto_dualsense4unix.profiles.schema import Profile
+from hefesto_dualsense4unix.profiles.slug import find_by_slug
+from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
 logger = get_logger(__name__)
 
 # Asset canônico do perfil do usuário (FEAT-PROFILES-PRESET-06).
-_MEU_PERFIL_ASSET = ROOT_DIR / "assets" / "profiles_default" / "meu_perfil.json"
 _MEU_PERFIL_NOME = "meu_perfil"
+_MEU_PERFIL_ARQUIVO = f"{_MEU_PERFIL_NOME}.json"
+
+
+def _meu_perfil_asset() -> Path | None:
+    """Acha o preset `meu_perfil.json`; ``None`` quando não há em lugar nenhum.
+
+    JANELA-FIEL-01/E3: este caminho era `ROOT_DIR / "assets" / ...`, e
+    `ROOT_DIR` é `parents[3]` do módulo — a raiz do repositório SÓ em instalação
+    editável. Num `.deb`/AppImage/Flatpak o módulo vive dentro de um venv e
+    `parents[3]` cai num diretório onde `assets/` nunca existiu, então o botão
+    "Restaurar Padrão" desistia com o toast de indisponível numa máquina onde o
+    preset ESTÁ instalado — os três pacotes o embalam, em
+    `sys.prefix/share/...` ou em `/usr/share/...`.
+
+    Quem responde é a cascata do loader (`_seed_source_file`), a mesma que
+    semeia os presets em produção: repo editável → prefixo → `/usr/share`. Sem
+    caminho duplicado aqui, o botão passa a achar o arquivo onde ele realmente
+    está.
+    """
+    return _seed_source_file(_MEU_PERFIL_ARQUIVO)
+
+
+# APLICAR-VERDADE-01: nome de cada seção do contrato IPC na língua da janela.
+# O daemon fala "leds"/"triggers"; o rodapé precisa dizer o que não entrou com
+# as palavras que ela lê nas abas. O dicionário guarda o PT-BR cru porque é
+# construído no import, antes de `init_locale()` — traduzir AQUI congelaria o
+# idioma errado. A tradução acontece no ponto de USO, em `_lista_de_secoes`.
+_NOMES_DE_SECAO: dict[str, str] = {
+    "leds": "luzes",
+    "triggers": "gatilhos",
+    "rumble": "vibração",
+    "mouse": "mouse",
+    "keyboard": "teclado",
+    "mic": "microfone",
+    "controllers": "ajustes por controle",
+}
+
+# A statusbar trunca com reticências em meia tela: acima disto a lista vira
+# "os três primeiros e mais N".
+_MAX_SECOES_NO_TEXTO = 3
 
 # Widgets congelados durante operação de aplicar draft.
 FROZEN_WIDGET_IDS: tuple[str, ...] = (
@@ -40,11 +89,19 @@ FROZEN_WIDGET_IDS: tuple[str, ...] = (
     "btn_footer_restore_default",
     "lightbar_color_button",
     "lightbar_brightness_scale",
-    "trigger_left_mode_combo",
-    "trigger_right_mode_combo",
+    # BUG-FROZEN-WIDGET-IDS-01: IDs reais do glade (eram *_combo / mouse_toggle,
+    # que não existem -> freeze nunca cobria triggers nem o toggle de mouse).
+    # FEAT-DSX-COMBO-TO-SEGMENTED-01: o combo de modo virou um slot (GtkBox) com
+    # o SegmentedSelector dentro; congelar o slot propaga insensitive aos botões.
+    "trigger_left_mode_slot",
+    "trigger_right_mode_slot",
     "rumble_weak_scale",
     "rumble_strong_scale",
-    "mouse_toggle",
+    "mouse_emulation_toggle",
+    # BUG-MOUSE-GUI-SYNC-01: os sliders da aba Mouse também disparam IPC —
+    # precisam congelar junto durante a transação do Aplicar.
+    "mouse_speed_scale",
+    "mouse_scroll_speed_scale",
 )
 
 
@@ -53,6 +110,13 @@ class FooterActionsMixin(WidgetAccessMixin):
 
     # Referência ao draft central (definida em HefestoApp.__init__).
     draft: Any  # DraftConfig — evita import circular; validado em runtime
+
+    #: Piso usado quando o cálculo do irmão não está alcançável — ver
+    #: `_persist_profile_async`. Vale mais que TODO catch-all medido no disco
+    #: dela em 30/07 (o maior era 5), então mesmo o caminho degradado nasce
+    #: vencendo; e vale MENOS que a regra de jogo mais baixa de fábrica (50),
+    #: então não atropela perfil de jogo alheio.
+    _PISO_ACIMA_DOS_CATCH_ALL = 15
 
     # ------------------------------------------------------------------
     # Controle de freeze
@@ -69,6 +133,19 @@ class FooterActionsMixin(WidgetAccessMixin):
             widget = self._get(widget_id)
             if widget is not None:
                 widget.set_sensitive(sensitive)
+        if freeze:
+            return
+        # HARM-05: descongelar é "devolver o que a transação tomou", não "liberar
+        # tudo" — o switch do mouse tem um gate próprio (só em "Controlar o PC")
+        # e um set_sensitive(True) cego aqui o reabria fora do modo desktop,
+        # ressuscitando o clique que derruba o vpad no meio do jogo. Reconciliar
+        # com o daemon reaplica o gate (e a aba volta a mostrar o estado vivo).
+        reconcile = getattr(self, "_refresh_mouse_from_daemon_async", None)
+        if reconcile is not None:
+            try:
+                reconcile()
+            except Exception as exc:
+                logger.warning("footer_regate_mouse_falhou", erro=str(exc))
 
     # ------------------------------------------------------------------
     # Statusbar
@@ -76,11 +153,28 @@ class FooterActionsMixin(WidgetAccessMixin):
 
     def _footer_toast(self, msg: str, context: str = "footer") -> None:
         """Empurra mensagem na statusbar com contexto ``context``."""
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id(context)
-        bar.push(ctx_id, msg)
+        self._status_toast(context, msg)
+
+    # ------------------------------------------------------------------
+    # DEDUP-04: aviso ao daemon quando o conjunto de perfis muda
+    # ------------------------------------------------------------------
+
+    def _notify_launch_env_refresh(self) -> None:
+        """Avisa o daemon que o conjunto de perfis mudou (`launch_env.refresh`).
+
+        save/import/restore de perfil rodam no processo da GUI, direto no
+        disco — sem este aviso o `steam_app_<appid>.env` de antecipação só
+        seria regravado na PRÓXIMA transição de estado do daemon, tarde demais
+        para o primeiro launch de um jogo com perfil recém-criado (achado MED
+        da revisão adversarial da Fase 2). Best-effort: daemon offline é
+        normal (ele rematerializa sozinho no boot).
+        """
+        ipc_bridge.call_async(
+            method="launch_env.refresh",
+            params={},
+            on_success=lambda _result: False,
+            on_failure=lambda _exc: False,
+        )
 
     # ------------------------------------------------------------------
     # Handler: Aplicar
@@ -93,30 +187,48 @@ class FooterActionsMixin(WidgetAccessMixin):
         reabilita e exibe resultado na statusbar.
         """
         self._freeze_ui(True)
-        self._footer_toast("Aplicando perfil inteiro...")
+        self._footer_toast(_("Aplicando perfil inteiro..."))
 
         draft_dict = self.draft.to_ipc_dict()
 
         def _on_ok(result: Any) -> bool:
             self._freeze_ui(False)
+            # APLICAR-VERDADE-02: DUAS perguntas diferentes, que eram uma só.
+            # `aceita` = o daemon respondeu (não está offline nem recusou) e
+            # decide QUAL frase o rodapé usa. `aplicou` = alguma seção entrou
+            # de fato no controle, e é o que pode baixar o `dirty` e o que o
+            # journal registra. Enquanto foram a mesma variável, `ok` era
+            # SEMPRE True (o `status` do `apply_draft` é fixo em "ok" por
+            # contrato): o rodapé parou de mentir em e8f9060, mas a
+            # contabilidade continuava dizendo `ok=True` e baixando o `dirty`
+            # do mouse com as sete seções fora.
             if isinstance(result, bool):
-                ok = result
+                aceita = result
             elif isinstance(result, dict):
-                ok = result.get("status") == "ok"
+                aceita = result.get("status") == "ok"
             else:
-                ok = bool(result)
+                aceita = bool(result)
+            aplicou = aceita and _algo_foi_aplicado(result)
+            # A pendência do mouse só acaba se a seção MOUSE entrou: com
+            # `applied=["leds"]` e `failed={"mouse": ...}` algo foi aplicado,
+            # mas a edição do mouse continua por aplicar — baixar o `dirty`
+            # aqui a perderia em silêncio.
+            if aplicou and _secao_aplicada(result, "mouse"):
+                self._clear_mouse_dirty()
             msg = (
-                "Perfil aplicado ao controle."
-                if ok
-                else "ERRO ao aplicar perfil (daemon offline?)."
+                _mensagem_de_aplicacao(result)
+                if aceita
+                else _("ERRO ao aplicar perfil (daemon offline?).")
             )
             self._footer_toast(msg)
-            logger.info("footer_apply_draft_resultado", ok=ok)
+            logger.info(
+                "footer_apply_draft_resultado", ok=aplicou, aceita=aceita
+            )
             return False  # GLib.idle_add não repete
 
         def _on_err(exc: Exception) -> bool:
             self._freeze_ui(False)
-            self._footer_toast(f"ERRO ao aplicar: {exc}")
+            self._footer_toast(_("ERRO ao aplicar: {erro}").format(erro=exc))
             logger.warning("footer_apply_draft_falhou", erro=str(exc))
             return False
 
@@ -128,6 +240,32 @@ class FooterActionsMixin(WidgetAccessMixin):
             timeout_s=1.5,
         )
 
+    def _clear_mouse_dirty(self) -> None:
+        """Baixa o ``dirty`` da seção mouse DEPOIS de aplicar com sucesso (HARM-05).
+
+        ``dirty`` quer dizer "há uma edição de mouse por aplicar" — e era ligado
+        para nunca mais baixar (o único ``dirty=False`` era a carga programática
+        do bootstrap): a seção viajava em todo "Aplicar" pelo resto da sessão, e
+        a aba Mouse nunca mais se reconciliava com o estado vivo (o overlay do
+        daemon pula enquanto houver edição pendente). Aplicou, acabou a
+        pendência.
+
+        Isto NÃO é o que impede o Aplicar de mexer no modo — quem garante isso é
+        ``to_ipc_dict``, que não emite ``enabled`` (o dano vinha do PRIMEIRO
+        Aplicar, que uma limpeza no callback de sucesso não alcança: ela roda
+        depois de o payload já ter ido e voltado).
+
+        ``in_profile=True`` junto: a seção deixa de ser "edição pendente" e passa
+        a fazer parte da configuração, que é exatamente o que ``to_profile``
+        pergunta. Sem isso, "Aplicar" antes de "Salvar Perfil" faria o perfil
+        salvo perder a seção mouse (BUG-MOUSE-SAVE-DROPS-SECTION-01 de novo).
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None or not draft.mouse.dirty:
+            return
+        novo_mouse = draft.mouse.model_copy(update={"dirty": False, "in_profile": True})
+        self.draft = draft.model_copy(update={"mouse": novo_mouse})
+
     # ------------------------------------------------------------------
     # Handler: Salvar Perfil
     # ------------------------------------------------------------------
@@ -137,36 +275,104 @@ class FooterActionsMixin(WidgetAccessMixin):
 
         Usa ``DraftConfig.to_profile(name)`` e ``save_profile(profile)``.
         Após salvar, dispara refresh da aba Perfis se disponível.
+
+        PERF-FOOTER-ASYNC-IO-01: o diálogo de nome roda na thread GTK, mas o I/O
+        de disco (checagem de conflito + gravação) é despachado para um worker via
+        ``ipc_bridge.run_in_thread``, com o resultado renderizado no callback
+        (``GLib.idle_add``). A checagem de conflito é feita NO DISCO dentro do
+        worker (nunca no cache em memória), evitando decisão com estado stale.
         """
         window = self._get("main_window")
-        active_name: str = getattr(self.draft, "_active_name", "") or ""
+        # BUG-FOOTER-ACTIVE-NAME-01: DraftConfig é frozen e nunca teve `_active_name`
+        # (getattr morto -> default sempre vazio). O nome do perfil ativo agora vive
+        # em HefestoApp._active_profile_name (populado por _bootstrap_draft_async).
+        active_name: str = getattr(self, "_active_profile_name", "") or ""
         nome = gui_dialogs.prompt_profile_name(parent=window, default_name=active_name)
         if nome is None:
             return  # usuário cancelou
 
-        # Verifica conflito
-        existentes = [p.name for p in load_all_profiles()]
-        if nome in existentes:
-            ok = gui_dialogs.prompt_overwrite_existing(parent=window, name=nome)
-            if not ok:
-                self._footer_toast("Operação cancelada.")
-                return
+        # Worker: lê os perfis do disco (sem cache) p/ checar conflito.
+        def _perfis_em_disco() -> list[Profile]:
+            return load_all_profiles()
 
-        try:
-            profile = self.draft.to_profile(nome)
-            path = save_profile(profile)
-        except Exception as exc:
-            self._footer_toast(f"Falha ao salvar perfil: {exc}")
+        def _on_checked(existentes: list[Profile]) -> bool:
+            # R-10 (auditoria 23/07): a identidade de um perfil em disco é o
+            # SLUG — `save_profile` grava `<slugify(name)>.json`. Este gate
+            # comparava NOME CRU, então "Navegacao" digitado aqui não casava com
+            # a "Navegação" dela em disco: o diálogo não aparecia e
+            # `navegacao.json` era regravado em silêncio, com prioridade e regra
+            # de janela recalculadas — um catch-all a mais no lugar do perfil.
+            # O diálogo cita `alvo.name` e não `nome`: quem some é o perfil do
+            # disco. Mesma guarda que a aba Perfis e a CLI já usam.
+            alvo = find_by_slug(nome, existentes)
+            if alvo is not None and not gui_dialogs.prompt_overwrite_existing(
+                parent=window, name=alvo.name
+            ):
+                self._footer_toast(_("Operação cancelada."))
+                return False
+            self._persist_profile_async(nome)
+            return False
+
+        ipc_bridge.run_in_thread(_perfis_em_disco, on_success=_on_checked)
+
+    def _persist_profile_async(self, nome: str) -> None:
+        """Grava o DraftConfig como perfil ``nome`` em worker (I/O fora da thread GTK).
+
+        PERFIL-NASCE-CERTO-01, meia-entrega que faltava a este caminho: a
+        prioridade é CALCULADA e não herdada de default nenhum. O `to_profile`
+        passou a delegar ao default do esquema quando o chamador "não tem
+        opinião", e o default do esquema é ``0`` (``profiles/schema.py``) — o que
+        fazia um perfil novo salvo por aqui nascer ABAIXO dos "vale sempre" que
+        ela já tem em disco (medido em 30/07: ``fallback`` 0, ``vitoria`` 0,
+        ``meu_perfil`` 1, ``Pragmata`` 5, ``Pragmata2`` 5). Ou seja: o perfil que
+        ela acabou de salvar perdia para o Pragmata, que é exatamente a queixa
+        crônica dela — "a config que eu deixo nunca é respeitada".
+
+        O número sai de ``_prioridade_acima_dos_catch_all`` (o mesmo que a aba
+        Perfis usa, ``profiles_actions.py``): ``max(prioridade dos catch-all) +
+        folga``. Com o disco dela hoje isso dá 15, acima de todos. O cálculo é
+        lido do cache em memória — nunca do disco — porque este método corre na
+        thread do GTK.
+
+        O acesso é por `getattr` e não direto, pelo mesmo motivo que o resto
+        desta base usa `getattr` para falar com irmão de mixin: dublê de teste
+        (e qualquer composição degradada) monta só ESTE mixin, e uma chamada
+        direta viraria `AttributeError` no gesto de salvar. O piso do fallback
+        não é 0 de propósito — 0 é justamente o valor que reabria o defeito.
+        """
+        draft = self.draft
+        calcula = getattr(self, "_prioridade_acima_dos_catch_all", None)
+        prioridade = (
+            int(calcula()) if callable(calcula) else self._PISO_ACIMA_DOS_CATCH_ALL
+        )
+
+        def _save() -> Path:
+            return save_profile(draft.to_profile(nome, priority=prioridade))
+
+        def _on_saved(path: Path) -> bool:
+            self._footer_toast(_("Perfil salvo em {caminho}").format(caminho=path))
+            logger.info("footer_save_profile_ok", nome=nome, path=str(path))
+            # mantém o pré-preenchimento coerente nos próximos "Salvar Perfil".
+            self._active_profile_name = nome
+            # R-08: o que estava em memória virou o que está em disco — a
+            # edição deixa de ser "pendente". Sem zerar a linha de base aqui, o
+            # draft ficaria sujo para sempre e a reconciliação com o perfil
+            # ativo nunca mais voltaria a rodar nesta sessão.
+            self._draft_baseline = draft
+            refresh = getattr(self, "_reload_profiles_store", None)
+            if refresh is not None:
+                refresh(select_name=nome)
+            # DEDUP-04: o daemon rematerializa o launch_env (perfil novo pode
+            # ter steam_app_<id> no match — a antecipação por appid).
+            self._notify_launch_env_refresh()
+            return False
+
+        def _on_err(exc: Exception) -> bool:
+            self._footer_toast(_("Falha ao salvar perfil: {erro}").format(erro=exc))
             logger.warning("footer_save_profile_falhou", nome=nome, erro=str(exc))
-            return
+            return False
 
-        self._footer_toast(f"Perfil salvo em {path}")
-        logger.info("footer_save_profile_ok", nome=nome, path=str(path))
-
-        # Refresh aba Perfis se mixin disponível
-        refresh = getattr(self, "_reload_profiles_store", None)
-        if refresh is not None:
-            refresh(select_name=nome)
+        ipc_bridge.run_in_thread(_save, on_success=_on_saved, on_failure=_on_err)
 
     # ------------------------------------------------------------------
     # Handler: Importar
@@ -208,52 +414,73 @@ class FooterActionsMixin(WidgetAccessMixin):
         if response != Gtk.ResponseType.OK or not filename:
             return
 
-        # Carrega e valida
-        try:
+        # PERF-FOOTER-ASYNC-IO-01: o FileChooser tem que rodar na thread GTK, mas
+        # ler/validar o arquivo e listar os perfis existentes (p/ checar conflito)
+        # é I/O de disco — vai para um worker. A checagem de conflito é feita no
+        # disco (não no cache) e o diálogo de conflito decide no callback GTK.
+        def _read() -> tuple[Profile, list[str]]:
             raw = json.loads(Path(filename).read_text(encoding="utf-8"))
             profile = Profile.model_validate(raw)
-        except Exception as exc:
-            self._footer_toast(f"Arquivo inválido: {exc}")
+            existentes = [p.name for p in load_all_profiles()]
+            return profile, existentes
+
+        def _on_read(payload: tuple[Profile, list[str]]) -> bool:
+            profile, existentes = payload
+            nome = profile.name
+            if nome in existentes:
+                escolha = gui_dialogs.prompt_import_conflict(parent=window, name=nome)
+                if escolha is None:
+                    self._footer_toast(_("Importação cancelada."))
+                    return False
+                if escolha == "renomear":
+                    novo_nome = gui_dialogs.prompt_profile_name(
+                        parent=window, default_name=nome
+                    )
+                    if not novo_nome:
+                        self._footer_toast(_("Importação cancelada."))
+                        return False
+                    dados = profile.model_dump(mode="python")
+                    dados["name"] = novo_nome
+                    try:
+                        profile = Profile.model_validate(dados)
+                    except Exception as exc:
+                        self._footer_toast(_("Nome inválido: {erro}").format(erro=exc))
+                        return False
+            self._import_save_async(profile)
+            return False
+
+        def _on_read_err(exc: Exception) -> bool:
+            self._footer_toast(_("Arquivo inválido: {erro}").format(erro=exc))
             logger.warning("footer_import_invalido", arquivo=filename, erro=str(exc))
-            return
+            return False
 
-        nome = profile.name
-        existentes = [p.name for p in load_all_profiles()]
+        ipc_bridge.run_in_thread(_read, on_success=_on_read, on_failure=_on_read_err)
 
-        if nome in existentes:
-            escolha = gui_dialogs.prompt_import_conflict(parent=window, name=nome)
-            if escolha is None:
-                self._footer_toast("Importação cancelada.")
-                return
-            if escolha == "renomear":
-                novo_nome = gui_dialogs.prompt_profile_name(
-                    parent=window, default_name=nome
+    def _import_save_async(self, profile: Any) -> None:
+        """Grava o perfil importado em worker (I/O fora da thread GTK)."""
+        def _save() -> Path:
+            return save_profile(profile)
+
+        def _on_saved(path: Path) -> bool:
+            self._footer_toast(
+                _("Perfil importado: {nome} -> {caminho}").format(
+                    nome=profile.name, caminho=path
                 )
-                if not novo_nome:
-                    self._footer_toast("Importação cancelada.")
-                    return
-                dados = profile.model_dump(mode="python")
-                dados["name"] = novo_nome
-                try:
-                    profile = Profile.model_validate(dados)
-                except Exception as exc:
-                    self._footer_toast(f"Nome inválido: {exc}")
-                    return
-                nome = novo_nome
+            )
+            logger.info("footer_import_ok", nome=profile.name, path=str(path))
+            refresh = getattr(self, "_reload_profiles_store", None)
+            if refresh is not None:
+                refresh(select_name=profile.name)
+            # DEDUP-04: perfil importado também muda o conjunto de perfis.
+            self._notify_launch_env_refresh()
+            return False
 
-        try:
-            path = save_profile(profile)
-        except OSError as exc:
-            self._footer_toast(f"Falha ao importar: {exc}")
-            logger.warning("footer_import_falhou", nome=nome, erro=str(exc))
-            return
+        def _on_err(exc: Exception) -> bool:
+            self._footer_toast(_("Falha ao importar: {erro}").format(erro=exc))
+            logger.warning("footer_import_falhou", nome=profile.name, erro=str(exc))
+            return False
 
-        self._footer_toast(f"Perfil importado: {nome} -> {path}")
-        logger.info("footer_import_ok", nome=nome, path=str(path))
-
-        refresh = getattr(self, "_reload_profiles_store", None)
-        if refresh is not None:
-            refresh(select_name=nome)
+        ipc_bridge.run_in_thread(_save, on_success=_on_saved, on_failure=_on_err)
 
     # ------------------------------------------------------------------
     # Handler: Restaurar Default
@@ -269,61 +496,163 @@ class FooterActionsMixin(WidgetAccessMixin):
 
         window = self._get("main_window")
 
-        if not _MEU_PERFIL_ASSET.exists():
+        asset = _meu_perfil_asset()
+        if asset is None:
             self._footer_toast(
-                "Asset 'meu_perfil.json' não encontrado — Restaurar Default indisponível."
+                _(
+                    "Asset 'meu_perfil.json' não encontrado — "
+                    "Restaurar Default indisponível."
+                )
             )
-            logger.warning(
-                "footer_restore_default_asset_ausente",
-                path=str(_MEU_PERFIL_ASSET),
-            )
+            logger.warning("footer_restore_default_asset_ausente")
             return
 
         if not gui_dialogs.confirm_restore_default(parent=window):
-            self._footer_toast("Restauração cancelada.")
+            self._footer_toast(_("Restauração cancelada."))
             return
 
-        try:
-            from hefesto_dualsense4unix.profiles.schema import Profile
-
-            raw = json.loads(_MEU_PERFIL_ASSET.read_text(encoding="utf-8"))
+        # PERF-FOOTER-ASYNC-IO-01: a confirmação roda na thread GTK, mas ler o
+        # asset, gravar o perfil e recarregar o DraftConfig é I/O de disco — vai
+        # para um worker; o resultado é aplicado no callback (GLib.idle_add).
+        def _restore() -> Any:
+            raw = json.loads(asset.read_text(encoding="utf-8"))
             profile = Profile.model_validate(raw)
             save_profile(profile)
-        except Exception as exc:
-            self._footer_toast(f"Falha ao restaurar: {exc}")
+            # Recarrega DraftConfig a partir do perfil restaurado (best-effort:
+            # falha aqui não invalida o restore em disco, só mantém o draft antigo).
+            try:
+                return DraftConfig.from_profile(load_profile(_MEU_PERFIL_NOME))
+            except Exception as exc:
+                logger.warning("footer_restore_default_draft_falhou", erro=str(exc))
+                return None
+
+        def _on_restored(novo_draft: Any) -> bool:
+            if novo_draft is not None:
+                self.draft = novo_draft
+                # R-08/C9: draft e NOME trocam como unidade. Sem isto, o
+                # "Salvar Perfil" ao lado (mesmo rodapé) vinha pré-preenchido
+                # com o perfil ANTERIOR e gravava o conteúdo INTEIRO de
+                # meu_perfil por cima dele — destruindo o perfil ativo sem que
+                # nada tivesse dito "você trocou de perfil".
+                # A atribuição fica DENTRO do `if`: quando o reload falha, o
+                # draft antigo continua válido e o nome antigo continua certo.
+                self._active_profile_name = _MEU_PERFIL_NOME
+                self._draft_baseline = novo_draft
+                logger.info(
+                    "footer_restore_default_draft_recarregado",
+                    perfil_ativo_agora=_MEU_PERFIL_NOME,
+                )
+            destino = profiles_dir() / f"{_MEU_PERFIL_NOME}.json"
+            self._footer_toast(
+                _("meu_perfil restaurado para {destino}").format(destino=destino)
+            )
+            _refresh_all_tabs(self)
+            # DEDUP-04: restaurar o default também muda o conjunto de perfis.
+            self._notify_launch_env_refresh()
+            return False
+
+        def _on_err(exc: Exception) -> bool:
+            self._footer_toast(_("Falha ao restaurar: {erro}").format(erro=exc))
             logger.warning("footer_restore_default_falhou", erro=str(exc))
-            return
+            return False
 
-        # Recarrega DraftConfig a partir do perfil restaurado
-        try:
-            perfil_disco = load_profile(_MEU_PERFIL_NOME)
-            self.draft = DraftConfig.from_profile(perfil_disco)
-            logger.info("footer_restore_default_draft_recarregado")
-        except Exception as exc:
-            logger.warning("footer_restore_default_draft_falhou", erro=str(exc))
-
-        destino = profiles_dir() / f"{_MEU_PERFIL_NOME}.json"
-        self._footer_toast(f"meu_perfil restaurado para {destino}")
-
-        _refresh_all_tabs(self)
+        ipc_bridge.run_in_thread(_restore, on_success=_on_restored, on_failure=_on_err)
 
     # ------------------------------------------------------------------
-    # Instalação (documentação de ponto canônico)
+    # Instalação
     # ------------------------------------------------------------------
-
-    def install_footer_actions(self) -> None:
-        """Ponto de instalação documentado dos handlers do rodapé.
-
-        O builder.connect_signals() em HefestoApp.__init__ já registra os
-        handlers via _signal_handlers; este método existe como referência
-        canônica e para testes que injetam botões programaticamente.
-        """
-        pass
+    # Os handlers do rodapé são registrados pelo builder.connect_signals()
+    # em HefestoApp.__init__ (via _signal_handlers), como todos os demais.
+    # Havia aqui um `install_footer_actions` que era só `pass` e se dizia
+    # "referência canônica e ponto para testes que injetam botões" — nenhum
+    # teste o chamava e nenhum call site existia. Um stub vazio que se
+    # apresenta como ponto de extensão é pior que nada: quem procura onde
+    # ligar um botão novo do rodapé para aqui em vez de ir ao Glade.
 
 
 # ------------------------------------------------------------------
 # Helpers de módulo
 # ------------------------------------------------------------------
+
+
+def _lista_de_secoes(secoes: Any) -> str:
+    """Nomes legíveis das seções, curtos o bastante para a statusbar.
+
+    Aceita o mapa ``{seção: motivo}`` do daemon (APLICAR-VERDADE-01) e também
+    uma lista crua de nomes. Seção desconhecida (daemon mais novo que a GUI)
+    aparece com o nome técnico mesmo — melhor um termo estranho do que omitir
+    que algo ficou de fora.
+    """
+    if isinstance(secoes, dict):
+        chaves: list[Any] = list(secoes)
+    elif isinstance(secoes, list):
+        chaves = list(secoes)
+    else:
+        return ""
+    nomes = [_(_NOMES_DE_SECAO.get(str(s), str(s))) for s in chaves]
+    if not nomes:
+        return ""
+    if len(nomes) > _MAX_SECOES_NO_TEXTO:
+        return _("{primeiras} e mais {resto}").format(
+            primeiras=", ".join(nomes[:_MAX_SECOES_NO_TEXTO]),
+            resto=len(nomes) - _MAX_SECOES_NO_TEXTO,
+        )
+    return ", ".join(nomes)
+
+
+def _algo_foi_aplicado(result: Any) -> bool:
+    """Alguma seção entrou de fato no controle? (APLICAR-VERDADE-02).
+
+    Lê o ``applied`` do ``profile.apply_draft`` — o ``status`` não serve, é
+    fixo em ``"ok"`` por contrato do daemon (a resposta é "recebi", não
+    "apliquei"). Resposta SEM ``applied`` (daemon antigo, ou o ``True`` cru do
+    bridge) conta como aplicada: sem informação não há do que desconfiar, a
+    mesma regra que ``_mensagem_de_aplicacao`` já usa para o texto — as duas
+    não podem divergir.
+    """
+    if not isinstance(result, dict):
+        return True
+    aplicadas = result.get("applied")
+    if not isinstance(aplicadas, list):
+        return True
+    return bool(aplicadas)
+
+
+def _secao_aplicada(result: Any, secao: str) -> bool:
+    """A seção ``secao`` está no ``applied`` da resposta? (APLICAR-VERDADE-02).
+
+    Mesma regra de ausência de informação de ``_algo_foi_aplicado``: sem
+    ``applied`` no payload, assume-se que entrou.
+    """
+    if not isinstance(result, dict):
+        return True
+    aplicadas = result.get("applied")
+    if not isinstance(aplicadas, list):
+        return True
+    return secao in aplicadas
+
+
+def _mensagem_de_aplicacao(result: Any) -> str:
+    """Texto do rodapé para uma resposta ACEITA de ``profile.apply_draft``.
+
+    APLICAR-VERDADE-01: o ``status`` da resposta é sempre ``"ok"``, inclusive
+    quando nenhuma seção entrou — decidir por ele fazia o rodapé anunciar
+    "Perfil aplicado ao controle." depois de nada ter chegado no controle.
+    Quem conta a verdade são ``applied`` (o que entrou) e ``failed`` (o que
+    não entrou).
+
+    Resposta sem esses campos — daemon antigo, ou o ``True`` cru do bridge —
+    mantém a mensagem de sucesso: sem informação não há do que desconfiar.
+    """
+    if not isinstance(result, dict):
+        return _("Perfil aplicado ao controle.")
+    aplicadas = result.get("applied")
+    if isinstance(aplicadas, list) and not aplicadas:
+        return _("Nada foi aplicado ao controle.")
+    nao_entraram = _lista_de_secoes(result.get("failed"))
+    if nao_entraram:
+        return _("Aplicado, menos: {secoes}.").format(secoes=nao_entraram)
+    return _("Perfil aplicado ao controle.")
 
 
 def _refresh_all_tabs(mixin: Any) -> None:
@@ -332,7 +661,22 @@ def _refresh_all_tabs(mixin: Any) -> None:
         "_refresh_lightbar_from_draft",
         "_refresh_triggers_from_draft",
         "_refresh_rumble_from_draft",
-        "_refresh_mouse_from_draft",
+        # BUG-MOUSE-RESTORE-DEFAULT-LIES-01: usa _refresh_mouse_TAB (draft +
+        # sync com o estado vivo do daemon), não _refresh_mouse_from_draft — se
+        # não, após "Restaurar Default" com a emulação viva (ligada por CLI/
+        # applet) a aba mostra toggle OFF enquanto o cursor continua andando.
+        "_refresh_mouse_tab",
+        # BUG-KEYBOARD-TAB-NO-REFRESH-01: faltava a aba Teclado -> Restaurar
+        # Default (e qualquer recarga via _refresh_all_tabs) deixava os bindings
+        # stale, podendo reverter o restore ao editar.
+        "_refresh_key_bindings_from_draft",
+        # BUG-RESTORE-DEFAULT-DEIXA-INICIO-E-EMULACAO-STALE-01: as abas Início e
+        # Emulação ficavam de fora desta lista, então após "Restaurar Default"
+        # elas só voltavam à verdade quando o poller passasse ou quando a
+        # usuária trocasse de aba — até lá, mostravam o modo/máscara antigos.
+        # Ambos os agregadores são idempotentes e read-only (IPC state_full).
+        "_refresh_home_tab",
+        "_refresh_emulation_tab",
     ):
         fn = getattr(mixin, method_name, None)
         if fn is not None:

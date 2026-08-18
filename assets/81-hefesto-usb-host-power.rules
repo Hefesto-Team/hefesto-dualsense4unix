@@ -1,0 +1,21 @@
+# hefesto-dualsense4unix — runtime PM dos HOSTS USB sempre ligado.
+# PLAT-03 item 3 (estudo 2026-07-18-estudo-kernel-hardening.md §2).
+#
+# A economia no host xHCI (power/control=auto) suspende o CONTROLADOR PCI inteiro
+# quando os filhos dormem; num wake mal suportado (AMD 400-series: provado em maio
+# de 2026 nesta classe de máquina) o barramento INTEIRO cai — teclado, mouse e
+# controle juntos. Host em "on" custa ~nada em desktop e elimina a classe do bug.
+# Classe PCI 0x0c03xx = USB host (xHCI 0x0c0330, EHCI 0x0c0320, OHCI/UHCI 0x0c0310/00).
+# Match por CLASSE (não por driver): pega o host mesmo antes/sem bind do xhci_hcd.
+#
+# POR QUE udev E NÃO tmpfiles: tmpfiles.d roda UMA vez no boot e não filtra por
+# atributo — um glob /sys/bus/pci/devices/*/power/control escreveria "on" em TODA
+# a PCI (GPU, NVMe), destruindo runtime PM alheio; e não reage a hotplug nem a
+# "change". udev filtra por classe, tem coldplug garantido pelo
+# systemd-udev-trigger.service e re-assert em change (precedente da Aurora).
+#
+# ATRIBUIÇÃO: a Aurora cobre os hosts via 99-storage-no-link-pm.rules
+# (DRIVER=="xhci_hcd"); esta regra existe para a máquina virgem e escreve o
+# MESMO valor (inócua por cima). Instalada/removida pelo install/uninstall do
+# hefesto (default, sem flag).
+ACTION=="add|change", SUBSYSTEM=="pci", ATTR{class}=="0x0c03*", TEST=="power/control", ATTR{power/control}="on"

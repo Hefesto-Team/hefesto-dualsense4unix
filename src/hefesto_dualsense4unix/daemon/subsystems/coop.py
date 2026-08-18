@@ -1,0 +1,1405 @@
+"""Subsystem Co-op local — N controles = N jogadores (FEAT-DSX-COOP-LOCAL-01).
+
+O multi-controle base (FEAT-DSX-MULTI-CONTROLLER-01) é "N controles, 1 player":
+o OUTPUT é broadcast e o INPUT vem só do primário. Isso serve para reserva/troca
+de controle, mas NÃO para co-op (2 pessoas) — os dois viram o mesmo player.
+
+Este subsystem adiciona, SEM tocar no caminho do primário (P1), uma camada de
+"jogadores secundários": para cada controle FÍSICO além do primário, cria um
+leitor evdev dedicado (com grab) e um gamepad virtual próprio (P2, P3, …). O
+poll loop, depois de despachar o P1, chama `forward_all()` para repassar cada
+secundário ao SEU gamepad virtual. Assim o jogo enxerga N devices distintos =
+co-op local de verdade.
+
+BUG-COOP-GRAB-PENDING-VPAD-01 — garantia: o gamepad virtual de um secundário SÓ
+nasce depois do EVIOCGRAB CONFIRMADO (`grab_state == "held"`). Um jogador cujo
+grab ainda está "pending" (a thread do reader não abriu o device) fica
+registrado SEM vpad — o jogo não vê nada dobrado — e é promovido pelo próprio
+tick (`forward_all`/`sync`) assim que o grab confirmar. Antes, o vpad nascia
+com grab apenas "pendente" e uma recusa tardia (EBUSY) deixava até ~2s de
+input DOBRADO no jogo até o sync derrubar o jogador.
+
+FEAT-COOP-PLAYER-LED-01: com o co-op ativo, cada controle acende o padrão
+canônico de player-LED do SEU jogador (P1 no primário, P2.. nos secundários,
+na ordem de criação), via a rota sysfs do kernel — a mesma da lightbar BT
+(FEAT-DSX-LIGHTBAR-SYSFS-01). Quando um jogador sai ou o co-op desliga, o
+padrão do perfil ativo é restaurado (ver `_revert_player_leds`).
+
+Pré-requisitos (gate em `should_be_active`):
+  - `config.coop_enabled` ligado (default OFF — preserva o modo "1 player");
+  - emulação de gamepad ativa (o P1 já é um gamepad virtual; os secundários
+    seguem a mesma máscara/flavor);
+  - 2+ controles físicos conectados.
+
+FEAT-VPAD-FF-PASSTHROUGH-01: o vpad de cada jogador nasce com um
+`rumble_sink` que devolve o rumble pedido pelo JOGO ao controle físico
+DAQUELE jogador (targeting por MAC via `apply_game_rumble`); o
+`forward_all()` bombeia o FF de cada vpad a cada tick.
+"""
+from __future__ import annotations
+
+import contextlib
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+# FEAT-COOP-PLAYER-LED-01 / COR-03: os padrões canônicos de player-LED
+# (P1..P4 do PS5) moraram aqui até o COR-03; agora o dono é
+# `core.led_control` (a cor automática por controle usa o MESMO padrão fora
+# do co-op — D7 "número do controle"). O import reexporta para preservar o
+# contrato público (`from ...coop import player_led_pattern` continua
+# válido — testes e chamadores antigos não quebram).
+from hefesto_dualsense4unix.core.led_control import player_led_pattern
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping, Sequence
+
+    from hefesto_dualsense4unix.core.evdev_reader import EvdevReader, EvdevSnapshot
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
+    from hefesto_dualsense4unix.integrations.virtual_pad import VirtualPad
+
+logger = get_logger(__name__)
+
+#: R-22: prazo máximo (s) que a promoção de UM jogador espera pela calibração
+#: antes de nascer com o 0x05 canônico. Medido: no caminho quente (USB, ou BT
+#: com o report_thread mantendo o link vivo) o `HIDIOCGFEATURE` volta em ~1ms e
+#: a promoção acontece no tick seguinte; o prazo só existe para o caminho
+#: patológico (broker mudo = 2s de timeout por tentativa; BT ocioso = 5s até o
+#: EIO do hidp). Esperar além disso não traz calibração nenhuma — só deixaria o
+#: jogador sem vpad. Fail-safe: na dúvida o jogador NASCE (drift leve de gyro é
+#: tolerável; "sem controle" não é).
+_CALIB_PRAZO_S = 2.0
+
+
+def calibration_cache(daemon: Any) -> dict[str, bytes]:
+    """Cache de calibração 0x05 POR MAC, vivo no daemon (R-22).
+
+    O feature 0x05 é imutável por unidade (bias/sensibilidade de fábrica da
+    IMU daquele controle), então cachear por MAC é correto por construção — a
+    chave é a identidade estável do jogador, nunca o node/handle volátil.
+
+    Mora no daemon (`_calibration_by_uniq`) de propósito: o P1
+    (`gamepad.read_primary_calibration`) e os secundários do co-op leem o
+    MESMO controle quando a usuária troca de primário, e uma leitura já paga
+    não deve ser paga de novo pelo outro caminho.
+
+    Degradação (dublê/objeto que recusa setattr): devolve um dicionário novo a
+    cada chamada — sem cache, mas TAMBÉM sem I/O no event loop (a promoção
+    adia uma vez e nasce com o 0x05 canônico). O invariante do R-22 é sobre a
+    thread do loop, não sobre o hit rate.
+    """
+    cache = getattr(daemon, "_calibration_by_uniq", None)
+    if isinstance(cache, dict):
+        return cache
+    cache = {}
+    with contextlib.suppress(Exception):
+        daemon._calibration_by_uniq = cache
+    return cache
+
+
+@dataclass
+class _SecondaryPlayer:
+    """Um jogador secundário: o evdev de um controle físico + seu gamepad virtual.
+
+    FEAT-DSX-CONTROLLER-IDENTITY-01: a identidade do jogador é o MAC
+    (`identity`); o `evdev_path` é só o node volátil que estava valendo quando
+    o jogador nasceu — se o kernel re-enumerar (storm/replug), o `sync()`
+    detecta a troca de node e recria o jogador limpo no node novo.
+
+    BUG-COOP-GRAB-PENDING-VPAD-01: `vpad` nasce None quando o grab ainda está
+    "pending"; `_promote_pending` cria o vpad SÓ quando `grab_state == "held"`.
+    Nunca existe vpad sem grab confirmado — sem janela de input dobrado.
+
+    FEAT-COOP-PLAYER-LED-01 / R-24: `player_index` é o número do jogador para
+    o JOGO (2..N), fixado na criação (menor índice livre, REUSADO quando
+    alguém sai — é ele que vira o MAC do vpad uhid `02:fe:00:00:00:0N`, e o
+    jogo quer P1..PN contíguos). NÃO é o número EXIBIDO: a barra de player e
+    os rótulos usam o slot do `identity_registry` (espaço de numeração único,
+    via `CoopManager._numero_exibido`). Acender este índice na lâmpada é o
+    que fazia "os dois controles aparecem como player 1".
+    """
+
+    identity: str
+    evdev_path: str
+    reader: EvdevReader
+    player_index: int
+    vpad: VirtualPad | None = None
+    # GYRO-01 (co-op): espelho de motion do FÍSICO deste jogador → vpad dele
+    # (`core.physical_report_reader.PhysicalReportReader`). Só nasce quando o
+    # vpad é uhid E o backend resolve hidraw por-uniq (DualSense); None para
+    # externos (8BitDo/Nintendo passam direto ao jogo — gyro nativo deles).
+    motion_reader: Any = None
+
+
+class CoopManager:
+    """Gerencia os jogadores secundários (P2+) do co-op local.
+
+    Aditivo e idempotente: `sync()` reconcilia o conjunto de secundários com os
+    controles fisicamente plugados (hotplug-safe); `forward_all()` repassa cada
+    um ao seu gamepad virtual; `disable()`/`stop_all()` desmontam tudo (solta o
+    grab, fecha os vpads e restaura os player-LEDs do perfil). Nunca propaga
+    exceção para não derrubar o poll loop.
+    """
+
+    def __init__(self, daemon: DaemonProtocol) -> None:
+        self._daemon = daemon
+        self._players: dict[str, _SecondaryPlayer] = {}
+        # PERF-MULTI-CONTROLLER-01: a enumeração completa de /dev/input é cara
+        # (~10-40ms) e rodava a cada 2s NO EVENT LOOP (hitch rítmico de input
+        # durante o jogo). O watch detecta mudança por listdir (~µs); a
+        # enumeração cara só roda quando o conjunto de nodes mudou de fato.
+        from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
+
+        self._watch = InputDirWatch()
+        self._was_active = False
+        # FEAT-COOP-PLAYER-LED-01: True quando o co-op sobrescreveu algum
+        # player-LED — gate para restaurar o padrão do perfil só quando preciso.
+        self._leds_overridden = False
+        # R-13 item 1 (auditoria 23/07): espelho da CAMADA publicada no backend
+        # (`{mac: padrão}`). Vazio = nada publicado — ou o backend não tem a API
+        # de camadas (fakes/legado) e o caminho sysfs cru segue valendo, ou o
+        # co-op ainda não escreveu nada. É o que permite revogar UM jogador
+        # (republicar sem ele) sem perguntar nada ao backend.
+        self._camada_coop: dict[str, tuple[bool, bool, bool, bool, bool]] = {}
+        # BUG-COOP-GRAB-PENDING-VPAD-01: True quando `_promote_pending` derrubou
+        # um jogador (grab "failed"); força o próximo sync a rodar o ciclo cheio
+        # e respawnar (retry), mesmo sem mudança em /dev/input.
+        self._retry_spawn = False
+        # R-22 (auditoria 23/07): identidade -> instante (monotonic) em que a
+        # promoção para de esperar a calibração. Presença = leitura JÁ agendada
+        # fora do loop; é o que impede reagendar o mesmo MAC a cada tick.
+        self._calib_prazo: dict[str, float] = {}
+        # R-22: identidades cuja leitura de calibração já foi tentada e não
+        # rendeu bytes (externo sem handle, BT ocioso com EIO, CRC corrompido).
+        # Negativo NÃO vai para o cache do daemon — lá só entra o que é
+        # imutável de verdade. `_teardown_player` limpa a marca, então replug/
+        # respawn ganham uma tentativa nova sem nunca repetir o custo por tick.
+        self._calib_sem_leitura: set[str] = set()
+
+    # -- estado / gate --------------------------------------------------
+
+    def should_be_active(self) -> bool:
+        """True se o co-op deve estar ativo agora (flag + gamepad + 2+ controles)."""
+        cfg = getattr(self._daemon, "config", None)
+        if not bool(getattr(cfg, "coop_enabled", False)):
+            return False
+        # co-op exige o caminho de gamepad virtual ligado (o P1 já é um vpad).
+        return getattr(self._daemon, "_gamepad_device", None) is not None
+
+    def player_count(self) -> int:
+        """Total de jogadores ativos (P1 + secundários, incluindo pendentes)."""
+        return 1 + len(self._players)
+
+    def player_indexes(self) -> dict[str, int]:
+        """MAC -> número do jogador que o JOGO vê (P1 no primário, P2+ nos demais).
+
+        LEIGO-01b: a GUI rotulava os cards por POSIÇÃO na lista (`idx+1`), o que
+        mente em dois casos reais — com o co-op desligado todos os controles
+        alimentam o MESMO vpad (são um jogador só) e, com ele ligado,
+        `_next_player_index` REUSA índices de quem saiu, então a ordem da lista
+        deixa de casar com o número do jogador.
+
+        Só entra quem o jogo enxerga: um secundário ainda aguardando o grab não
+        tem vpad — reservou o índice, mas não é jogador nenhum até ser promovido.
+        Identidade sem MAC ("path:") fica de fora (não há como casar o card).
+        """
+        out: dict[str, int] = {}
+        primary = self._primary_identity()
+        if primary is not None and not primary.startswith("path:"):
+            out[primary] = 1
+        for mac, player in self._players.items():
+            if player.vpad is not None and not mac.startswith("path:"):
+                out[mac] = player.player_index
+        return out
+
+    def live_snapshots(self) -> dict[str, EvdevSnapshot]:
+        """MAC -> snapshot de input AO VIVO de cada jogador secundário promovido.
+
+        STATUS-01: é a fonte dos `inputs` por controle no `state_full` (o
+        primário sai de `daemon._last_state`, a MESMA fonte do topo do payload
+        — nunca daqui). Leitura pura e não-destrutiva: `EvdevReader.snapshot()`
+        já devolve uma CÓPIA sob lock, sem consumir nada do reader.
+
+        Ficam FORA (o card mostra "—", nunca um valor congelado fingindo vida):
+          - jogador pendente (`vpad is None` — aguardando o grab confirmar; o
+            jogo também não o vê);
+          - identidade sem MAC (`path:...` — não casa com o `uniq` de nenhuma
+            entrada de `controllers`);
+          - reader cujo snapshot falhou (defensivo — nunca derruba o handler).
+        """
+        out: dict[str, EvdevSnapshot] = {}
+        for mac, player in list(self._players.items()):
+            if player.vpad is None or mac.startswith("path:"):
+                continue
+            try:
+                out[mac] = player.reader.snapshot()
+            except Exception as exc:
+                logger.debug("coop_live_snapshot_falhou", identity=mac, err=str(exc))
+        return out
+
+    def _primary_evdev_path(self) -> str | None:
+        ev = getattr(getattr(self._daemon, "controller", None), "_evdev", None)
+        path = getattr(ev, "_device_path", None)
+        return str(path) if path is not None else None
+
+    def _primary_identity(self) -> str | None:
+        """Identidade (MAC) do primário; fallback por path do reader.
+
+        FEAT-DSX-CONTROLLER-IDENTITY-01: antes o coop excluía o primário por
+        PATH lido de `controller._evdev._device_path` — que fica stale/None
+        durante hotplug/re-enumeração, fazendo o coop criar um vpad para o
+        PRÓPRIO controle do P1 (input dobrado). O MAC do backend é estável.
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        uniq = getattr(ctrl, "primary_uniq", None)
+        if uniq:
+            return str(uniq)
+        path = self._primary_evdev_path()
+        return f"path:{path}" if path else None
+
+    # -- reconciliação --------------------------------------------------
+
+    def sync(self, *, force: bool = False) -> None:
+        """Reconcilia os secundários com os controles plugados. Idempotente.
+
+        Keyed por IDENTIDADE (MAC). Derruba e recria um jogador quando:
+        o controle sumiu; o node evdev do MESMO controle mudou (re-enumeração
+        pós storm/replug — reconexão limpa no node novo); ou o EVIOCGRAB
+        falhou (BUG-COOP-GRAB-SILENT-FAIL-01 — sem grab confirmado o físico
+        dobraria o input no jogo; derrubar aqui garante retry a cada ciclo).
+
+        BUG-COOP-GRAB-PENDING-VPAD-01: jogadores "aguardando grab" são
+        promovidos (ganham vpad) aqui e a cada `forward_all` — nunca antes do
+        grab confirmado. A promoção roda mesmo em tick quieto: o grab
+        confirmar não muda /dev/input, então o watch não a cobriria.
+
+        PERF-MULTI-CONTROLLER-01: a enumeração cara de /dev/input só roda
+        quando (a) o listdir mudou (hotplug/re-enumeração), (b) o co-op acabou
+        de ser ativado, (c) há grab degradado/derrubado a recuperar, ou
+        (d) `force=True` (toggle explícito da usuária). Ticks quietos custam
+        um listdir (~µs).
+        """
+        if not self.should_be_active():
+            self._was_active = False
+            if self._players or self._leds_overridden:
+                self.disable()
+            return
+
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
+
+        activated = not self._was_active
+        self._was_active = True
+        self._promote_pending()
+        retry_needed = self._retry_spawn
+        self._retry_spawn = False
+        grab_degraded = any(
+            p.reader.grab_state == "failed" for p in self._players.values()
+        )
+        # Achado Onda S #1: vpad MORTO (uhid derrubado por UHID_STOP sem
+        # `_teardown_player` — `_started=False` com o objeto vivo) também
+        # força o ciclo cheio: o jogador é derrubado e respawnado abaixo.
+        # Sem isto ele ficaria vpad-morto PARA SEMPRE (nenhum gatilho de
+        # /dev/input dispara quando o kernel só derruba o uhid).
+        vpad_morto = any(
+            p.vpad is not None and not vpad_vivo(p.vpad)
+            for p in self._players.values()
+        )
+        if not (
+            self._watch.poll()
+            or activated
+            or grab_degraded
+            or vpad_morto
+            or retry_needed
+            or force
+        ):
+            return
+
+        from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
+
+        primary = self._primary_identity()
+        # BUG-COOP-BOOT-PRIMARY-DUP-01: o conjunto `want` é keyed por MAC; se o
+        # primário ainda não resolveu o MAC (`primary_uniq` None no boot/restart
+        # com controles já plugados → fallback "path:"), não há como excluí-lo de
+        # `want` e um secundário nasceria para o PRÓPRIO controle do P1 (input
+        # DOBRADO até o próximo sync ~2s). Adia enquanto não há MAC do primário;
+        # `_retry_spawn` garante o re-teste no tick seguinte, sem depender do
+        # watch de /dev/input (resolver o MAC não muda os nodes).
+        if primary is None or primary.startswith("path:"):
+            logger.debug("coop_sync_defer_primary_sem_mac", primary=primary)
+            self._retry_spawn = True
+            return
+        want = {
+            mac: str(path)
+            for mac, path in discover_dualsense_evdevs().items()
+            if mac != primary
+        }
+        # SPRINT-GAME-RUMBLE-01: a máscara (flavor) do P1 pode ter mudado em
+        # runtime (aba Início / perfil xboxdualsense). O vpad de cada
+        # secundário nasce com o flavor vigente na criação (`_flavor()`), mas
+        # não se repropaga sozinho — sem isto, P2+ ficam presos no flavor antigo
+        # (rumble morto e prompts divergentes do P1). Derrubar por mismatch aqui
+        # força a recriação com a máscara nova. Só efetiva no ciclo cheio (o
+        # `set_gamepad_emulation` chama `sync(force=True)` após trocar o flavor).
+        desired_flavor = self._flavor()
+
+        for mac in list(self._players):
+            player = self._players[mac]
+            if mac not in want:
+                self._teardown_player(mac)
+            elif player.evdev_path != want[mac]:
+                logger.info(
+                    "coop_player_node_changed",
+                    identity=mac,
+                    old=player.evdev_path,
+                    new=want[mac],
+                )
+                self._teardown_player(mac)
+            elif player.reader.grab_state == "failed":
+                logger.warning("coop_player_grab_failed_retry", identity=mac)
+                self._teardown_player(mac)
+            elif player.vpad is not None and not vpad_vivo(player.vpad):
+                # Achado Onda S #1: vpad morto (UHID_STOP pós-promoção) —
+                # derruba (o teardown restaura o físico via broker) e o loop
+                # de spawn deste MESMO ciclo recria o jogador do zero.
+                logger.warning("coop_player_vpad_morto_respawn", identity=mac)
+                self._teardown_player(mac)
+            elif (
+                player.vpad is not None
+                and getattr(player.vpad, "flavor", None) != desired_flavor
+            ):
+                logger.info(
+                    "coop_player_flavor_changed",
+                    identity=mac,
+                    old=getattr(player.vpad, "flavor", None),
+                    new=desired_flavor,
+                )
+                self._teardown_player(mac)
+
+        # hotplug-IN: cria secundários novos.
+        for mac, path in want.items():
+            if mac not in self._players:
+                self._spawn_player(mac, path)
+
+        # FEAT-COOP-PLAYER-LED-01: (re)afirma o padrão por jogador ao final de
+        # todo ciclo cheio — cobre ativação, spawn, node novo e o replug (o
+        # backend re-afirma o padrão broadcast do perfil no nó que reaparece;
+        # como o replug também dispara o watch, este reassert devolve o padrão
+        # do jogador logo em seguida).
+        self._apply_coop_player_leds()
+
+    def _flavor(self) -> str:
+        from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
+
+        cfg = getattr(self._daemon, "config", None)
+        return normalize_flavor(getattr(cfg, "gamepad_flavor", None))
+
+    def _next_player_index(self) -> int:
+        """Menor índice de jogador livre (≥2).
+
+        Estável para quem já está vivo (ninguém é renumerado) e sem duplicata:
+        o índice de um jogador que saiu é reusado pelo próximo que entrar.
+        """
+        used = {p.player_index for p in self._players.values()}
+        index = 2
+        while index in used:
+            index += 1
+        return index
+
+    def _spawn_player(self, identity: str, path: str) -> None:
+        """Cria um jogador secundário para o controle `identity` no node `path`.
+
+        BUG-COOP-GRAB-PENDING-VPAD-01: o vpad SÓ nasce com grab CONFIRMADO
+        ("held"). Recusa imediata de EVIOCGRAB → nada é criado (retry natural
+        no próximo sync, BUG-COOP-GRAB-SILENT-FAIL-01). Grab "pending" (a
+        thread do reader ainda não abriu o device) → o jogador é registrado
+        SEM vpad — o jogo não vê nada — e `_promote_pending` (todo tick) cria
+        o vpad quando o grab confirmar.
+        """
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+        # target_uniq: reconexões do loop re-localizam ESTE controle pelo MAC,
+        # nunca "o primeiro node da lista" (identidade estável por jogador).
+        target = None if identity.startswith("path:") else identity
+        reader = EvdevReader(device_path=Path(path), target_uniq=target)
+        if not reader.start():
+            logger.debug("coop_player_reader_unavailable", identity=identity, evdev=path)
+            return
+        # Grab: o jogo deve ver SÓ o gamepad virtual deste jogador, não o cru.
+        if not reader.set_grab(True):
+            logger.warning("coop_player_grab_refused", identity=identity, evdev=path)
+            reader.stop()
+            return
+        player = _SecondaryPlayer(
+            identity=identity,
+            evdev_path=path,
+            reader=reader,
+            player_index=self._next_player_index(),
+        )
+        self._players[identity] = player
+        # R-22: esquenta o cache do 0x05 assim que o jogador é registrado —
+        # normalmente o grab só confirma um tick depois, então a leitura (que
+        # roda fora do loop) já terminou quando a promoção precisar dela e o
+        # adiamento nem chega a acontecer.
+        self._prefetch_calibration(identity)
+        if reader.grab_state == "held":
+            self._promote_player(player)
+        else:
+            logger.info(
+                "coop_player_grab_pending",
+                identity=identity,
+                evdev=path,
+                player=player.player_index,
+            )
+
+    def _promote_pending(self) -> None:
+        """Promove jogadores "aguardando grab": cria o vpad quando "held".
+
+        BUG-COOP-GRAB-PENDING-VPAD-01: chamado a cada tick (`forward_all`) e a
+        cada `sync`. Grab "failed" derruba o jogador SEM nunca ter criado o
+        vpad e marca `_retry_spawn` (o próximo sync recria do zero).
+        """
+        for identity in list(self._players):
+            player = self._players[identity]
+            if player.vpad is not None:
+                continue
+            state = player.reader.grab_state
+            if state == "held":
+                self._promote_player(player)
+            elif state == "failed":
+                logger.warning(
+                    "coop_player_grab_failed_drop",
+                    identity=identity,
+                    evdev=player.evdev_path,
+                )
+                self._teardown_player(identity)
+                self._retry_spawn = True
+
+    def _make_player_rumble_sink(self, identity: str) -> Callable[[int, int], None]:
+        """Sink de FF do vpad de UM jogador → rumble no controle DELE (por MAC).
+
+        FEAT-VPAD-FF-PASSTHROUGH-01: delega em `apply_game_rumble` com
+        `target_uniq=MAC` — targeting via a API por-uniq do backend
+        (`set_rumble_for`, PERFIL-01, sem flip do seletor global), com a
+        política global de intensidade e o respeito ao rumble fixado já
+        embutidos lá. Identidade sem MAC ("path:...") não tem como casar o
+        handle → broadcast (limitação documentada; não acontece com DualSense
+        real).
+        """
+        daemon = self._daemon
+
+        def _sink(weak: int, strong: int) -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import apply_game_rumble
+
+            target = None if identity.startswith("path:") else identity
+            apply_game_rumble(daemon, weak, strong, target_uniq=target)
+
+        return _sink
+
+    def _make_player_replica_sinks(self, identity: str) -> dict[str, Any]:
+        """Sinks de replicação (REPLICA-03) do vpad de UM jogador → físico DELE.
+
+        Espelho por-jogador do `make_primary_replica_sinks` do P1: gatilhos
+        adaptativos, lightbar e player-LEDs que o JOGO escrever no vpad deste
+        jogador vão para o controle da identidade dele (por MAC), e o fim da
+        sessão uhid devolve perfil/paleta/co-op. Identidade sem MAC
+        ("path:...") não tem alvo estável — os appliers descartam com log
+        (sem broadcast: réplica no controle errado é o bug P1-lightbar).
+        """
+        daemon = self._daemon
+        target = None if identity.startswith("path:") else identity
+
+        def _trigger(side: str, block: bytes) -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                apply_game_trigger,
+            )
+
+            apply_game_trigger(daemon, side, block, target_uniq=target)
+
+        def _lightbar(r: int, g: int, b: int) -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                apply_game_lightbar,
+            )
+
+            apply_game_lightbar(daemon, (r, g, b), target_uniq=target)
+
+        def _player_leds(bits: tuple[bool, bool, bool, bool, bool]) -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                apply_game_player_leds,
+            )
+
+            apply_game_player_leds(daemon, bits, target_uniq=target)
+
+        def _session_end() -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                end_game_output_session,
+            )
+
+            end_game_output_session(daemon, target_uniq=target)
+
+        return {
+            "trigger_sink": _trigger,
+            "lightbar_sink": _lightbar,
+            "player_led_sink": _player_leds,
+            "session_end_sink": _session_end,
+        }
+
+    def _promote_player(self, player: _SecondaryPlayer) -> None:
+        """Cria o vpad de um jogador com grab CONFIRMADO. Falha derruba o jogador."""
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import controller_allows_uhid
+        from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
+
+        # R-22: a calibração vem do CACHE — nenhuma leitura de hidraw/socket
+        # acontece nesta thread. Enquanto ela não resolve, a promoção ADIA (o
+        # jogador segue sem vpad, exatamente como no grab pendente) e o
+        # `_promote_pending` do próximo tick tenta de novo; nunca há
+        # `make_virtual_pad` com calibração de outra unidade.
+        calib_pronta, calib = self._calibration_pronta(player.identity)
+        if not calib_pronta:
+            logger.debug(
+                "coop_player_calibracao_pendente",
+                identity=player.identity,
+                player=player.player_index,
+            )
+            return
+
+        # SPRINT-UHID-VPAD-01 + VPAD-03: `player_index` não é detalhe — no
+        # backend uhid o índice vira o MAC do vpad (02:fe:00:00:00:0N), e MAC
+        # repetido faz o probe do 2º jogador em diante morrer com -EEXIST (co-op
+        # de 4 reduzido a 1). O blueprint é o canônico embutido (nenhuma leitura
+        # do físico): jogador com controle não-DualSense (8BitDo, Pro Controller)
+        # também ganha vpad uhid Edge — decisão de produto do VPAD-09
+        # (uniformidade, dedup segura e rumble via hidraw para todos). O backend
+        # fake veta o uhid (VPAD-08).
+        vpad = make_virtual_pad(
+            self._flavor(),
+            rumble_sink=self._make_player_rumble_sink(player.identity),
+            player=player.player_index,
+            allow_uhid=controller_allows_uhid(self._daemon),
+            # GYRO-01: 0x05 do físico DESTE jogador calibra o motion espelhado
+            # (None para externos/sem MAC → canônico, fail-safe).
+            calibration_0x05=calib,
+            # REPLICA-03: o output do jogo (gatilhos/lightbar/player-LED)
+            # replica no físico DESTE jogador; CLOSE devolve perfil/paleta.
+            **self._make_player_replica_sinks(player.identity),
+        )
+        if vpad is None:
+            logger.warning(
+                "coop_player_vpad_failed",
+                identity=player.identity,
+                evdev=player.evdev_path,
+            )
+            self._teardown_player(player.identity)
+            self._retry_spawn = True
+            return
+        player.vpad = vpad
+        # GYRO-01 (co-op): o gyro/touchpad do físico deste jogador flui pelo
+        # espelho de report — um reader POR JOGADOR, no hidraw por-uniq.
+        self._start_player_motion_reader(player)
+        logger.info(
+            "coop_player_added",
+            identity=player.identity,
+            evdev=player.evdev_path,
+            player=player.player_index,
+            players=self.player_count(),
+        )
+        # BT-03: vpad de secundário que nasceu degradado (máscara DualSense em
+        # uinput) é transição anunciada — mesma borda do P1 (log estruturado +
+        # bus), nunca reavaliada por tick. Máscara xbox é uinput POR DESIGN e
+        # não degradação (o mesmo critério do `dedup_status`).
+        if (
+            getattr(vpad, "flavor", None) == "dualsense"
+            and getattr(vpad, "backend", None) == "uinput"
+        ):
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                notify_vpad_degradado,
+            )
+
+            motivo = getattr(vpad, "fallback_motivo", None)
+            with contextlib.suppress(Exception):
+                notify_vpad_degradado(
+                    self._daemon,
+                    player=player.player_index,
+                    motivo=motivo if isinstance(motivo, str) and motivo else "sem_uhid",
+                )
+        # DEDUP-04: gatilho "mudança do conjunto de jogadores" — o dedup_ok do
+        # launch é POR JOGADOR (um único vpad de co-op degradado em uinput já
+        # proíbe o IGNORE), então cada spawn regrava as envs do wrapper.
+        self._materialize_launch_env()
+        # BROKER-01: ÚLTIMA linha do caminho feliz — hide do físico DESTE
+        # jogador, só com o vpad confirmado (regra de ouro: nunca hide sem
+        # vpad vivo). O reader de motion acima nem depende da ordem: o opener
+        # dele fura o hide via broker (fd-injection).
+        self._broker_hide_player(player)
+
+    def _read_player_calibration(self, identity: str) -> bytes | None:
+        """Feature 0x05 do físico de UM jogador (GYRO-01), ou None = canônico.
+
+        Vista fail-safe de `_calibration_pronta`: "ainda não resolveu" vira
+        None (o 0x05 canônico que o contrato do vpad já prevê). Quem PODE
+        adiar — só a promoção — chama `_calibration_pronta` direto.
+        """
+        return self._calibration_pronta(identity)[1]
+
+    def _calibration_pronta(self, identity: str) -> tuple[bool, bytes | None]:
+        """`(resolvida?, calibração)` do jogador pelo CACHE — R-22.
+
+        `resolvida=False` significa "ainda não sei, tente no próximo tick";
+        nunca "não tem" (isso é `(True, None)` = 0x05 canônico).
+
+        R-22 (auditoria 23/07) — I/O BLOQUEANTE na thread do event loop. A
+        leitura do 0x05 é cara em dois pontos e AMBOS rodavam aqui dentro, no
+        poll loop: o `open` do socket do broker (2s de timeout por tentativa,
+        até 2 tentativas) e o `HIDIOCGFEATURE` no hidraw (BT ocioso segura até
+        o timeout de 5s do hidp antes do EIO). Enquanto isso o loop não
+        despacha `forward_all` — o input dos QUATRO jogadores e o IPC da GUI
+        congelam por segundos, sem uma linha de log dizendo por quê (é o "bug
+        não notado" da queixa 5).
+
+        A cura é de raiz, não paliativa (encurtar o timeout do broker não
+        cobriria o ioctl): a leitura sai do loop e o loop passa a consumir só
+        cache. Três estados:
+
+        - HIT — `(True, bytes)` na hora, custo zero;
+        - MISS — agenda a leitura no executor DEDICADO do broker
+          (`broker_call_nonblocking`, 1 worker FIFO: nunca o pool 'hefesto-hid'
+          do `read_state` que o HANG-01 baniu) e devolve `(False, None)`;
+        - resolvido-sem-bytes / prazo estourado — `(True, None)` (canônico).
+
+        Por que ADIAR em vez de nascer com o canônico no primeiro miss: o 0x05
+        é carimbado no blueprint na CRIAÇÃO do uhid e não tem como ser
+        retrofitado depois; promover no miss trocaria o congelamento do loop
+        por gyro permanentemente calibrado com a unidade errada (drift na mira
+        — o que o GYRO-01 existe para curar). O adiamento custa um tick,
+        `_promote_pending` já roda a cada `forward_all`, e o jogador ainda nem
+        aparecia para o jogo. `_CALIB_PRAZO_S` é o teto: passou dele, o vpad
+        nasce canônico — ninguém fica sem controle esperando um rádio mudo.
+
+        Fora do event loop (testes, shutdown síncrono, qualquer caminho que já
+        venha de `_run_blocking`) o `broker_call_nonblocking` executa INLINE:
+        o cache preenche na mesma chamada e o retorno é o `bytes` — o
+        comportamento síncrono de antes, preservado onde ele nunca foi problema.
+        """
+        # Identidade sem MAC ("path:...") e controles fora do backend
+        # pydualsense (externos: 8BitDo/Nintendo) não têm handle por-uniq →
+        # None, fail-safe, sem nem tocar no cache.
+        if identity.startswith("path:"):
+            return True, None
+        cache = calibration_cache(self._daemon)
+        hit = cache.get(identity)
+        if hit is not None:
+            return True, hit
+        if identity in self._calib_sem_leitura:
+            return True, None
+        prazo = self._calib_prazo.get(identity)
+        if prazo is None:
+            self._schedule_calibration(identity)
+            # Fora do loop a linha acima rodou INLINE — reconsulta antes de
+            # mandar adiar (senão o chamador síncrono perderia a leitura que
+            # acabou de pagar).
+            hit = cache.get(identity)
+            if hit is not None or identity in self._calib_sem_leitura:
+                self._calib_prazo.pop(identity, None)
+                return True, hit
+            return False, None
+        if time.monotonic() < prazo:
+            return False, None
+        # Prazo estourado: a leitura ainda pode voltar depois (e o cache a
+        # aproveita num respawn futuro), mas ESTE jogador nasce agora.
+        self._calib_prazo.pop(identity, None)
+        logger.warning("coop_calibracao_prazo_estourado", identity=identity)
+        return True, None
+
+    def _prefetch_calibration(self, identity: str) -> None:
+        """Esquenta o cache do 0x05 de um jogador recém-registrado (R-22).
+
+        Só age no miss frio: já cacheado, já tentado sem sucesso ou já agendado
+        não fazem nada. Não consome o prazo nem loga o estouro — isso é
+        decisão da promoção, não do spawn.
+        """
+        if identity.startswith("path:"):
+            return
+        if identity in self._calib_sem_leitura or identity in self._calib_prazo:
+            return
+        if calibration_cache(self._daemon).get(identity) is not None:
+            return
+        self._schedule_calibration(identity)
+
+    def _schedule_calibration(self, identity: str) -> None:
+        """Agenda (fora do event loop) a leitura do 0x05 deste MAC — R-22.
+
+        Idempotente por identidade enquanto o prazo estiver armado. O
+        `broker_call_nonblocking` é o mesmo despachante que o `hide`/`restore`
+        do co-op já usam: no event loop agenda no executor dedicado do broker e
+        retorna na hora; fora dele executa inline.
+        """
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            broker_call_nonblocking,
+        )
+
+        self._calib_prazo[identity] = time.monotonic() + _CALIB_PRAZO_S
+        broker_call_nonblocking(self._daemon, lambda: self._fill_calibration(identity))
+
+    def _fill_calibration(self, identity: str) -> None:
+        """Lê o 0x05 e preenche o cache. Roda NA THREAD DO EXECUTOR (R-22).
+
+        Publicação segura sem lock: `dict.__setitem__` e `set.add` são atômicos
+        sob o GIL e o leitor (`_calibration_pronta`, no event loop) só faz `get`/
+        `in` — nunca há estado meio-escrito para ele enxergar. O `read_calibration`
+        do backend já serializa com o report_thread pelo `_io_lock` dele.
+        """
+        data: Any = None
+        fn = getattr(self._daemon.controller, "read_calibration", None)
+        if callable(fn):
+            try:
+                data = fn(identity)
+            except Exception as exc:
+                logger.warning(
+                    "coop_calibration_read_failed", identity=identity, err=str(exc)
+                )
+                data = None
+        if isinstance(data, bytes) and data:
+            calibration_cache(self._daemon)[identity] = data
+        else:
+            self._calib_sem_leitura.add(identity)
+
+    def _start_player_motion_reader(self, player: _SecondaryPlayer) -> None:
+        """Espelho de motion por jogador (GYRO-01 co-op): hidraw dele → vpad dele.
+
+        Gates (todos fail-safe — sem reader o vpad segue como hoje, IMU neutra):
+        - vpad em uhid (o uinput é evdev puro, sem `forward_motion`);
+        - identidade com MAC (o hidraw por-uniq vem do backend pydualsense);
+        - `hidraw_path(identity)` resolvendo AGORA — controle externo
+          (8BitDo/Nintendo) não tem handle no backend e fica sem espelho POR
+          DESIGN: ele passa direto ao jogo com o gyro nativo dele (decisão da
+          mantenedora no estudo 2026-07-19 — dar-lhe vpad reverteria o 8BIT-02).
+        """
+        vpad = player.vpad
+        if getattr(vpad, "backend", None) != "uhid":
+            return
+        identity = player.identity
+        if identity.startswith("path:"):
+            return
+        hidraw_fn = getattr(self._daemon.controller, "hidraw_path", None)
+        if not callable(hidraw_fn):
+            return
+        try:
+            if hidraw_fn(identity) is None:
+                return  # externo/sem handle: gyro nativo, sem espelho
+        except Exception:
+            return
+        from hefesto_dualsense4unix.core.physical_report_reader import (
+            PhysicalReportReader,
+        )
+
+        def _player_hidraw() -> str | None:
+            try:
+                path = hidraw_fn(identity)
+            except Exception:
+                return None
+            return path if isinstance(path, str) else None
+
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            make_broker_opener,
+        )
+
+        # BROKER-01 §6.3: o reader deste jogador nasce com o opener
+        # broker-aware — reabre o hidraw via fd do broker root mesmo com o nó
+        # escondido; sem broker, os.open por caminho (comportamento de hoje).
+        reader = PhysicalReportReader(
+            path_provider=_player_hidraw,
+            vpad=vpad,
+            opener=make_broker_opener(self._daemon),
+        )
+        reader.start()
+        player.motion_reader = reader
+        logger.info(
+            "coop_motion_reader_spawned",
+            identity=identity,
+            player=player.player_index,
+        )
+
+    # -- broker hide-hidraw por jogador (BROKER-01) ----------------------
+
+    def _player_hidraw_node(self, identity: str) -> str | None:
+        """`/dev/hidrawN` do físico DESTE jogador via `hidraw_path(uniq)`, ou None.
+
+        Controles externos (8BitDo/Nintendo, identidade `path:*`) nunca têm
+        hide: não há handle por-uniq no backend — e o validador do broker os
+        rejeitaria de qualquer forma (defesa dupla).
+        """
+        if identity.startswith("path:"):
+            return None
+        hidraw_fn = getattr(self._daemon.controller, "hidraw_path", None)
+        if not callable(hidraw_fn):
+            return None
+        with contextlib.suppress(Exception):
+            node = hidraw_fn(identity)
+            return node if isinstance(node, str) and node else None
+        return None
+
+    def _broker_hide_player(self, player: _SecondaryPlayer) -> None:
+        """Hide do físico do jogador — SÓ com vpad confirmado E VIVO (BROKER-01).
+
+        Chamado como última etapa do caminho feliz de `_promote_player`:
+        nunca se esconde o físico de um jogador sem vpad (seria ZERO controle
+        para aquela pessoa). Achado Onda S #1: o gate é VIDA (`vpad_vivo`,
+        lição 6/#17), não existência — um uhid derrubado por UHID_STOP mantém
+        o objeto Python com `_started=False` e NÃO autoriza hide. Achados
+        #5/#10: a chamada ao broker vai via `broker_call_nonblocking` — o
+        `coop.sync()` roda NA thread do event loop (poll loop) e um broker
+        lento não pode congelar todos os jogadores. Best-effort integral:
+        broker ausente, daemon dublado sem `is_native_mode` — nada levanta e,
+        na dúvida, NÃO esconde.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
+
+        if not vpad_vivo(player.vpad):
+            return
+        with contextlib.suppress(Exception):
+            if self._daemon.is_native_mode():
+                return
+            node = self._player_hidraw_node(player.identity)
+            if node is None:
+                return
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                broker_call_nonblocking,
+                broker_client_for,
+            )
+
+            client = broker_client_for(self._daemon)
+            broker_call_nonblocking(self._daemon, lambda: client.hide(node))
+
+    def _broker_restore_player(self, identity: str) -> None:
+        """Restore do físico do jogador no `_teardown_player` (best-effort).
+
+        O nó re-resolve por identity NA HORA; se o controle já saiu
+        fisicamente, devolve None e o EOF/`restore_node_gone` do broker cobre.
+        Sem gate de modo: expor nunca é errado. Achados Onda S #5/#10: a
+        chamada ao broker vai via `broker_call_nonblocking` — o teardown roda
+        no tick do poll loop (hotplug-out) e não pode bloquear o event loop.
+        """
+        with contextlib.suppress(Exception):
+            node = self._player_hidraw_node(identity)
+            if node is None:
+                return
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                broker_call_nonblocking,
+                broker_client_for,
+            )
+
+            client = broker_client_for(self._daemon)
+            broker_call_nonblocking(self._daemon, lambda: client.restore(node))
+
+    def _materialize_launch_env(self) -> None:
+        """Regrava as envs do wrapper hefesto-launch (best-effort, DEDUP-04)."""
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.launch_env import (
+                materialize_launch_env,
+            )
+
+            materialize_launch_env(self._daemon)
+
+    def _teardown_player(self, identity: str) -> None:
+        player = self._players.pop(identity, None)
+        if player is None:
+            return
+        # R-22: o jogador está saindo — limpa o prazo e a marca de "leitura sem
+        # bytes" desta identidade. Um replug/respawn merece tentativa nova (a
+        # falha típica é transitória: BT ocioso, broker reiniciando); o cache
+        # POSITIVO fica, porque o 0x05 é imutável por unidade.
+        self._calib_prazo.pop(identity, None)
+        self._calib_sem_leitura.discard(identity)
+        # BROKER-01: restore do físico ANTES de soltar grab/reader/vpad — o
+        # jogador está saindo e o nó dele não pode ficar 0600 sem dono.
+        self._broker_restore_player(identity)
+        with contextlib.suppress(Exception):
+            player.reader.set_grab(False)
+        with contextlib.suppress(Exception):
+            player.reader.stop()
+        # GYRO-01: o reader de motion morre ANTES do vpad (ele escreve no
+        # /dev/uhid do vpad — mesma ordem do stop_gamepad_emulation do P1).
+        if player.motion_reader is not None:
+            with contextlib.suppress(Exception):
+                player.motion_reader.stop()
+            player.motion_reader = None
+        if player.vpad is not None:
+            with contextlib.suppress(Exception):
+                player.vpad.stop()
+        # FEAT-COOP-PLAYER-LED-01: devolve ESTE controle ao padrão do perfil.
+        # Best-effort: em hotplug-out o nó sysfs já sumiu junto com o controle
+        # (nada a escrever); em teardown-com-respawn (node novo / retry de
+        # grab) o reassert do mesmo ciclo de sync reaplica o padrão do jogador.
+        self._revert_single_player_led(identity)
+        # DEDUP-04: o conjunto de jogadores mudou — regrava as envs do wrapper.
+        self._materialize_launch_env()
+        logger.info("coop_player_removed", identity=identity, players=self.player_count())
+
+    # -- player LEDs por jogador (FEAT-COOP-PLAYER-LED-01) ---------------
+
+    def _apply_coop_player_leds(self) -> None:
+        """Acende em cada controle o padrão canônico do SEU jogador.
+
+        R-13 item 1 (auditoria 23/07) — ESCRITOR ÚNICO. Até aqui o co-op
+        escrevia sysfs CRU (`*:white:player-N` casado por MAC), fora do estado
+        desejado do backend. O `reassert_resolved_outputs` roda em TODO
+        `connect()` (a cada ≤30 s) e repintava o padrão do PERFIL por cima —
+        um repintava o outro, num pisca-pisca sem fim que é metade da queixa
+        dos números duplicados. Agora o co-op PUBLICA seu padrão como camada
+        por-uniq no backend (`set_coop_outputs`, acima da automática e da
+        usuária) e o mesmo reassert passa a reafirmar o valor DO CO-OP.
+
+        A publicação depende do R-20: com a substituição antiga do mapa
+        (`reset_output_overrides`), a camada do co-op seria apagada na
+        ativação de perfil seguinte — os dois são um par.
+
+        Backend sem a API de camadas (fakes/legado) cai no caminho sysfs cru
+        histórico. Ele requer a regra udev `77-dualsense-leds.rules` (a mesma
+        da lightbar sysfs); sem nó/permissão loga warning e segue — o co-op
+        continua funcional.
+        """
+        # R-13 item 4 (auditoria 23/07): SEM SECUNDÁRIO NÃO HÁ CO-OP.
+        #
+        # `should_be_active()` liga o co-op pela preferência persistida
+        # (`coop_enabled.flag`, que é 1 na configuração dela), não pela
+        # contagem de controles — a docstring do módulo promete um gate de
+        # "2+ controles" que nunca existiu. Resultado: com um único DualSense,
+        # o co-op cravava player-LED 1 nele.
+        #
+        # Isso alimenta a queixa dos números duplicados: o Pro Nintendo tem
+        # slot 1 no registry de externos e o DualSense primário recebia 1 do
+        # co-op — dois "player 1" acesos ao mesmo tempo.
+        #
+        # A correção é no EFEITO, não no gate: mexer em `should_be_active()`
+        # exigiria enumerar `/dev/input` por tick, que é justamente o que o
+        # PERF-MULTI-CONTROLLER-01 removeu, e faria o co-op piscar a cada blip
+        # de link.
+        if not self._players:
+            logger.debug("coop_sem_secundario_nao_escreve_player_led")
+            # Se havia camada publicada (o último secundário acabou de sair),
+            # revoga: o revert por-jogador do teardown já cuidou dos LEDs, mas
+            # a camada no backend não pode ficar pendurada sem jogador.
+            if self._camada_coop:
+                self._publicar_camada_coop({})
+            return
+        targets: list[tuple[str, int]] = []
+        primary = self._primary_identity()
+        if primary is not None:
+            targets.append((primary, 1))
+        targets.extend((mac, p.player_index) for mac, p in self._players.items())
+        padroes: dict[str, tuple[bool, bool, bool, bool, bool]] = {}
+        usados: set[int] = set()
+        for mac, index in targets:
+            if mac.startswith("path:"):
+                # Sem MAC não há como casar o controle — segue com o padrão
+                # broadcast (não deveria acontecer com DualSense real).
+                logger.debug("coop_player_led_sem_mac", identity=mac, player=index)
+                continue
+            numero = self._numero_exibido(mac, index, usados)
+            usados.add(numero)
+            padroes[mac] = player_led_pattern(numero)
+        if self._publicar_camada_coop(padroes):
+            return
+        # Caminho sysfs cru (backend sem camadas): comportamento histórico.
+        from hefesto_dualsense4unix.core import sysfs_leds
+
+        try:
+            nodes = sysfs_leds.discover()
+        except Exception as exc:
+            logger.warning("coop_player_led_discover_falhou", err=str(exc))
+            return
+        for mac, bits in padroes.items():
+            node = nodes.get(mac)
+            if node is None or not node.set_players(bits):
+                logger.warning("coop_player_led_indisponivel", identity=mac)
+                continue
+            self._leds_overridden = True
+
+    def _numero_exibido(self, identity: str, fallback: int, usados: set[int]) -> int:
+        """Número que este controle ACENDE na barra de player (R-24).
+
+        A lâmpada tinha DOIS espaços de numeração disputando-a e essa era a
+        queixa literal ("os dois controles aparecem como player 1"):
+
+        - o registro de identidade (`identity_registry`) dá o "Controle N" que
+          a GUI, a CLI e a cor automática exibem — keyed por MAC, reservado no
+          disconnect, agora estável entre boots (R-23);
+        - o co-op tem o `player_index`, que é o número do JOGADOR para o jogo
+          (índice de alocação do vpad: vira o MAC `02:fe:00:00:00:0N` do uhid,
+          por isso 1..N contíguo e REUSADO quando alguém sai — VPAD-03).
+
+        São coisas diferentes e as duas estão certas no seu domínio; o erro
+        era acender o SEGUNDO na lâmpada. Com o primário cravado em 1 e o Pro
+        Nintendo segurando o slot 1 no registro de externos, dois controles
+        acendiam "player 1" ao mesmo tempo. E o `player_index` reusa o índice
+        de quem saiu: P2 sai, P4 entra e herda o 2 — se P2 volta, dois "player
+        2". Aqui a lâmpada passa a falar SÓ o espaço único.
+
+        `fallback` = o `player_index` do co-op, usado quando não há registro
+        (FakeController, backend legado, dublê de teste) — sem registro, nada
+        muda em relação ao histórico. `usados` garante a última linha de
+        defesa: número já tomado NESTA passada nunca acende duas vezes.
+        """
+        numero: int | None = None
+        registry = getattr(self._daemon, "identity_registry", None)
+        slot_for = getattr(registry, "slot_for", None) if registry is not None else None
+        if callable(slot_for):
+            with contextlib.suppress(Exception):
+                # `assign=False`: acender LED jamais aloca identidade (o dono
+                # da atribuição é o provider de cor / o `sync_connected`).
+                bruto = slot_for(identity, assign=False)
+                if isinstance(bruto, int) and not isinstance(bruto, bool) and bruto >= 1:
+                    numero = bruto
+        if numero is None or numero in usados:
+            numero = fallback
+        while numero in usados:
+            numero += 1
+        return numero
+
+    def _publicar_camada_coop(
+        self, padroes: dict[str, tuple[bool, bool, bool, bool, bool]]
+    ) -> bool:
+        """Publica (ou revoga, com `{}`) a camada do co-op no backend (R-13).
+
+        Devolve True quando o backend tem a API de camadas e a publicação
+        rodou — é o sinal para `_apply_coop_player_leds` NÃO cair no sysfs
+        cru. False = backend legado/fake (sem `set_coop_outputs`): o chamador
+        segue pelo caminho histórico. Idempotente: republicar o mesmo mapa é
+        um no-op barato do lado do backend (compara antes de escrever).
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        publicar = getattr(ctrl, "set_coop_outputs", None)
+        if not callable(publicar):
+            return False
+        if padroes == self._camada_coop:
+            return True
+        from hefesto_dualsense4unix.core.controller import OutputSpec
+
+        try:
+            publicar(
+                {mac: OutputSpec(player_leds=bits) for mac, bits in padroes.items()}
+                or None
+            )
+        except Exception as exc:
+            logger.warning("coop_publicar_camada_falhou", err=str(exc))
+            return True
+        self._camada_coop = dict(padroes)
+        # A camada tem dono próprio no backend; o revert por-uniq do teardown
+        # é desnecessário para os controles cobertos por ela, mas manter o
+        # flag preserva o gate do sync (`disable()` quando não deveria estar
+        # ativo) e o caminho legado.
+        self._leds_overridden = bool(padroes)
+        return True
+
+    def _profile_player_leds(self) -> tuple[bool, bool, bool, bool, bool] | None:
+        """Último padrão de player-LED aplicado pelo perfil/GUI (broadcast).
+
+        Decisão (documentada): o perfil aplica player-LEDs por broadcast
+        (`apply_output_defaults`/`set_player_leds`) e o backend guarda o
+        último padrão pedido no DEFAULT do estado desejado para re-afirmá-lo
+        em reconexões. PERFIL-01: `_desired` é a property de compatibilidade
+        do backend → `_desired_default` (o padrão broadcast — a BASE do
+        revert); o padrão POR CONTROLE (default + override do uniq) vem de
+        `_resolved_player_leds` (PERFIL-06). Ler esse valor é a forma mais
+        simples e fiel de saber "o padrão do perfil ativo" sem recarregar o
+        perfil aqui. None = nenhum perfil/GUI setou player-LED ainda.
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        bits = getattr(getattr(ctrl, "_desired", None), "player_leds", None)
+        if bits is None or len(bits) != 5:
+            return None
+        return (bool(bits[0]), bool(bits[1]), bool(bits[2]), bool(bits[3]), bool(bits[4]))
+
+    def _resolved_player_leds(
+        self, mac: str
+    ) -> tuple[bool, bool, bool, bool, bool] | None:
+        """Padrão de player-LED do perfil para `mac`, resolvido POR-UNIQ.
+
+        PERFIL-06: prefere a API de leitura do backend
+        (`resolved_player_leds_for` — merge por campo default + override do
+        uniq): restaurar o broadcast global por cima de um override
+        por-controle era exatamente o "caminho (4)" do COR-02 que este item
+        fecha. Backend sem a API (fakes/legado) cai no padrão broadcast
+        (`_profile_player_leds`), o comportamento histórico. None = sem
+        padrão conhecido → quem chama não escreve nada.
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        reader = getattr(ctrl, "resolved_player_leds_for", None)
+        if not callable(reader):
+            return self._profile_player_leds()
+        try:
+            bits = reader(mac)
+        except Exception as exc:
+            logger.warning(
+                "coop_player_led_resolucao_falhou", identity=mac, err=str(exc)
+            )
+            return None
+        if bits is None or len(bits) != 5:
+            return None
+        return (bool(bits[0]), bool(bits[1]), bool(bits[2]), bool(bits[3]), bool(bits[4]))
+
+    def _backend_output_muted(self) -> bool:
+        """True quando o backend está em Modo Nativo (output_mute) — gate D12.
+
+        Mutado, o JOGO é dono do LED: os reverts por-uniq (escrita sysfs
+        direta, fora do report_thread que o mute cobre) NÃO escrevem — o
+        estado desejado segue guardado no backend e o unmute re-aplica o
+        resolvido por-uniq de cada controle (`set_output_mute(False)`).
+        Espelha o gate dos caminhos públicos (`_for_each_led`).
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        return bool(getattr(ctrl, "_output_mute", False))
+
+    def _revert_single_player_led(self, mac: str) -> None:
+        """Devolve UM controle (por MAC) ao padrão do perfil. Best-effort.
+
+        PERFIL-06: o padrão restaurado é o RESOLVIDO POR-UNIQ deste mac
+        (override de `player_leds` do perfil onde existe, default broadcast
+        onde não) — nunca o global cego por cima do override. Em Modo
+        Nativo (output_mute) não escreve: o jogo é dono do LED e o unmute do
+        backend re-aplica o resolvido (D12).
+
+        R-13: com a API de camadas, este revert por-controle é DESNECESSÁRIO
+        — o jogador sai da camada no próximo `_apply_coop_player_leds` (fim
+        do mesmo sync) e o `set_coop_outputs` reescreve o resolvido dele sem
+        o co-op. Curto-circuito para não escrever sysfs cru duas vezes.
+        """
+        if callable(getattr(getattr(self._daemon, "controller", None),
+                            "set_coop_outputs", None)):
+            return
+        if not self._leds_overridden or mac.startswith("path:"):
+            return
+        if self._backend_output_muted():
+            logger.debug("coop_player_led_revert_mutado", identity=mac)
+            return
+        bits = self._resolved_player_leds(mac)
+        if bits is None:
+            return
+        from hefesto_dualsense4unix.core import sysfs_leds
+
+        try:
+            node = sysfs_leds.discover().get(mac)
+        except Exception:
+            node = None
+        if node is None or not node.set_players(bits):
+            # Hotplug-out: o nó sumiu junto com o controle — nada a restaurar.
+            logger.debug("coop_player_led_revert_indisponivel", identity=mac)
+
+    def _revert_player_leds(self) -> None:
+        """Restaura o padrão do perfil em TODOS os controles (co-op desligado).
+
+        PERFIL-06 (revert por-uniq): com a API de leitura do backend
+        (`resolved_player_leds_for`), cada controle conectado volta ao SEU
+        padrão resolvido — default broadcast onde não há override, override
+        por-uniq onde há — em dois passos:
+
+        1. re-emite o DEFAULT por `apply_output_defaults` (broadcast REAL e
+           NÃO-destrutivo: grava no default sem limpar os overrides —
+           `set_player_leds` broadcast LIMPARIA o campo `player_leds` de
+           todos os overrides por-uniq, corrompendo o estado do perfil);
+        2. corrige por-uniq, pela MESMA rota sysfs por MAC do co-op, os
+           conectados cujo resolvido difere do default
+           (`_reassert_overridden_player_leds`). O transiente do passo 1
+           nesses controles dura ms até o passo 2 cobrir.
+
+        Backend sem a API (fakes/legado): re-emite o último padrão broadcast
+        pelo caminho público que o perfil usa (`set_player_leds`, que
+        prefere sysfs e cai em pydualsense) — o comportamento histórico.
+        Sem padrão conhecido (None), não escreve nada: o próximo apply de
+        perfil / reassert do backend na reconexão cobre. Os caminhos
+        públicos do backend respeitam o output_mute por construção; a
+        correção sysfs tem o gate explícito (D12).
+        """
+        if not self._leds_overridden:
+            return
+        self._leds_overridden = False
+        ctrl = getattr(self._daemon, "controller", None)
+        if ctrl is None:
+            logger.debug("coop_player_led_revert_sem_padrao")
+            return
+        # R-13: com camadas, reverter = REVOGAR a camada. O backend recalcula
+        # o resolvido de cada controle afetado SEM o co-op (override por-uniq
+        # onde há, default onde não — a mesma promessa do PERFIL-06) e escreve
+        # sozinho. Não passa pelo broadcast + correção por-uniq abaixo, que
+        # existe só para backends sem estado por-controle.
+        if self._camada_coop and self._publicar_camada_coop({}):
+            return
+        bits = self._profile_player_leds()
+        if not callable(getattr(ctrl, "resolved_player_leds_for", None)):
+            # Comportamento histórico: backend sem estado por-controle.
+            if bits is None:
+                logger.debug("coop_player_led_revert_sem_padrao")
+                return
+            try:
+                ctrl.set_player_leds(bits)
+            except Exception as exc:
+                logger.warning("coop_player_led_revert_falhou", err=str(exc))
+            return
+        if bits is not None:
+            from hefesto_dualsense4unix.core.controller import OutputSpec
+
+            try:
+                ctrl.apply_output_defaults(OutputSpec(player_leds=bits))
+            except Exception as exc:
+                logger.warning("coop_player_led_revert_falhou", err=str(exc))
+        self._reassert_overridden_player_leds(default=bits)
+
+    def _reassert_overridden_player_leds(
+        self, default: tuple[bool, bool, bool, bool, bool] | None
+    ) -> None:
+        """Re-escreve por-uniq (sysfs por MAC) os conectados com override efetivo.
+
+        Complemento do passo broadcast do `_revert_player_leds` (PERFIL-06):
+        o `apply_output_defaults` pinta TODOS os conectados com o default;
+        aqui os controles cujo padrão RESOLVIDO difere (têm override de
+        `player_leds` no perfil ativo) voltam ao padrão DELES. Best-effort:
+        só toca o sysfs quando há o que corrigir, e nunca em Modo Nativo
+        (output_mute — o unmute do backend re-aplica o resolvido, D12).
+        Controle sem MAC (uniq None no describe) fica de fora — segue só o
+        global, como em todo o resto do mapa por-uniq.
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        describe = getattr(ctrl, "describe_controllers", None)
+        if not callable(describe):
+            return
+        try:
+            infos = describe()
+        except Exception as exc:
+            logger.warning("coop_player_led_revert_describe_falhou", err=str(exc))
+            return
+        pending: list[tuple[str, tuple[bool, bool, bool, bool, bool]]] = []
+        for info in infos:
+            if not info.get("connected"):
+                continue
+            uniq = info.get("uniq")
+            if not isinstance(uniq, str) or not uniq:
+                continue
+            bits = self._resolved_player_leds(uniq)
+            if bits is None or bits == default:
+                continue
+            pending.append((uniq, bits))
+        if not pending:
+            return
+        if self._backend_output_muted():
+            logger.debug(
+                "coop_player_led_revert_mutado",
+                identities=[mac for mac, _ in pending],
+            )
+            return
+        from hefesto_dualsense4unix.core import sysfs_leds
+
+        try:
+            nodes = sysfs_leds.discover()
+        except Exception as exc:
+            logger.warning("coop_player_led_discover_falhou", err=str(exc))
+            return
+        for mac, bits in pending:
+            node = nodes.get(mac)
+            if node is None or not node.set_players(bits):
+                logger.debug("coop_player_led_revert_indisponivel", identity=mac)
+
+    # -- por tick -------------------------------------------------------
+
+    def forward_all(self) -> None:
+        """Repassa cada secundário ao seu gamepad virtual. Chamado por tick.
+
+        Também promove jogadores "aguardando grab" (BUG-COOP-GRAB-PENDING-
+        VPAD-01): o vpad nasce aqui, poucos ms depois de o grab confirmar —
+        sem esperar o próximo sync (~2s). Jogadores ainda pendentes são
+        pulados (não existe vpad para repassar; o jogo não vê nada).
+        """
+        self._promote_pending()
+        for player in list(self._players.values()):
+            if player.vpad is None:
+                continue  # aguardando confirmação de grab
+            try:
+                snap = player.reader.snapshot()
+                player.vpad.forward_analog(
+                    lx=snap.lx,
+                    ly=snap.ly,
+                    rx=snap.rx,
+                    ry=snap.ry,
+                    l2=snap.l2_raw,
+                    r2=snap.r2_raw,
+                )
+                player.vpad.forward_buttons(snap.buttons_pressed)
+                # FEAT-VPAD-FF-PASSTHROUGH-01: rumble do jogo deste jogador.
+                # getattr defensivo: fakes/vpads sem pump_ff degradam sem crash.
+                pump = getattr(player.vpad, "pump_ff", None)
+                if pump is not None:
+                    pump()
+            except Exception as exc:  # nunca derruba o poll loop
+                logger.warning("coop_forward_failed", evdev=player.evdev_path, err=str(exc))
+
+    # -- ciclo de vida --------------------------------------------------
+
+    def disable(self) -> None:
+        """Desmonta todos os secundários (solta grab, fecha uinput) e restaura
+        os player-LEDs do perfil ativo. Idempotente."""
+        for key in list(self._players):
+            self._teardown_player(key)
+        self._revert_player_leds()
+
+    # Alias semântico para o shutdown do daemon.
+    stop_all = disable
+
+
+def resolve_player_numbers(
+    daemon: DaemonProtocol, controllers: Sequence[Mapping[str, object]]
+) -> list[int | None]:
+    """Número do jogador que o JOGO vê, para cada controle de `controllers`.
+
+    LEIGO-01b: a fonte do número é o daemon, nunca a posição na lista. `None`
+    significa "este controle não é um jogador agora" e a UI simplesmente não
+    mostra número — melhor calar que mentir. Acontece em três casos:
+
+    - sem gamepad virtual (modo desktop/nativo): não existe jogador — o controle
+      mexe no PC ou fala direto com o jogo;
+    - controle desconectado;
+    - co-op ligado mas o jogador ainda não foi promovido (aguardando o grab), ou
+      controle sem MAC para casar.
+
+    Com o gamepad ligado e o co-op DESLIGADO todos os controles conectados são o
+    jogador 1 — é literalmente o que o jogo vê (um vpad só, alimentado pelo
+    primário). Função de leitura pura: não toca no estado do co-op.
+    """
+    if getattr(daemon, "_gamepad_device", None) is None:
+        return [None] * len(controllers)
+    connected = [bool(c.get("connected")) for c in controllers]
+    coop_on = bool(getattr(getattr(daemon, "config", None), "coop_enabled", False))
+    manager = getattr(daemon, "_coop_manager", None)
+    if not coop_on or manager is None:
+        return [1 if ok else None for ok in connected]
+    index_by_mac = manager.player_indexes()
+    out: list[int | None] = []
+    for ctrl, ok in zip(controllers, connected, strict=True):
+        uniq = ctrl.get("uniq")
+        number = index_by_mac.get(uniq) if ok and isinstance(uniq, str) else None
+        # Blindagem de serialização (mesma do `_as_str_or_none` do state_full):
+        # com o daemon dublado por MagicMock em teste, `player_indexes()` devolve
+        # um mock — que estoura no json.dumps do servidor IPC. Só int real passa.
+        out.append(
+            number if isinstance(number, int) and not isinstance(number, bool) else None
+        )
+    return out
+
+
+def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:
+    """Retorna o `CoopManager` do daemon, criando-o sob demanda (lazy)."""
+    manager = getattr(daemon, "_coop_manager", None)
+    if manager is None:
+        manager = CoopManager(daemon)
+        daemon._coop_manager = manager
+    return manager
+
+
+__all__ = [
+    "CoopManager",
+    # R-22: público de propósito — o caminho do P1 (`gamepad`) compartilha o
+    # MESMO cache por MAC, para que trocar de primário não repague a leitura.
+    "calibration_cache",
+    "get_coop_manager",
+    "player_led_pattern",
+    "resolve_player_numbers",
+]

@@ -34,9 +34,12 @@ flatpak install --user br.andrefarias.Hefesto.flatpak
 ### Construir localmente a partir do código-fonte
 
 ```bash
-# Clonar o repositório
-git clone https://github.com/AndreBFarias/hefesto.git
-cd hefesto
+# Clonar o repositório pela TAG da versão (ver a caixa "Onde esta versão mora"
+# no README). Esta página mandava clonar a branch sprint/harmonia-uhid até
+# 29/07/2026; aquela branch parou dois lançamentos atrás.
+git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
+cd hefesto-dualsense4unix
+git checkout v0.5.0
 
 # Construir o Flatpak (requer flatpak-builder)
 ./scripts/build_flatpak.sh --install
@@ -60,13 +63,25 @@ de administrador:
 flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
 ```
 
-O script copia três arquivos para `/etc/udev/rules.d/`:
+O script copia o mesmo conjunto canônico que o `install_udev.sh` do código-fonte
+— hoje **14 regras** — para `/etc/udev/rules.d/`, mais o `modules-load` de
+`uinput`/`uhid` e os drop-ins de `modprobe` do BlueZ e dos módulos HID. As
+principais:
 
 | Arquivo                               | Finalidade                                          |
 |---------------------------------------|-----------------------------------------------------|
-| `70-ps5-controller.rules`             | Acesso a `/dev/hidraw*` sem root para o grupo input |
+| `70-ps5-controller.rules`             | Acesso a `/dev/hidraw*` sem root (grupo `hefesto` + ACL por `uaccess`) |
 | `71-uinput.rules`                     | Acesso a `/dev/uinput` para emulação de mouse       |
+| `71-uhid.rules`                       | Acesso a `/dev/uhid` — o controle virtual como DualSense de verdade |
 | `72-ps5-controller-autosuspend.rules` | Previne autosuspend USB que derruba a conexão       |
+| `77-dualsense-leds.rules`             | Torna graváveis os nós de LED (lightbar e jogador)  |
+| `81-hefesto-usb-power.rules`          | Controles e adaptadores BT nunca dormem no USB      |
+
+A lista completa, item por item, está em
+[`instalacao.md`](instalacao.md#o-que-o-instalador-mexe-no-sistema). O
+`scripts/check_packaging_parity.sh` existe justamente para travar a paridade
+entre os três caminhos de instalação — se uma regra entra no `install_udev.sh`
+e não no helper do Flatpak, o gate reprova.
 
 Após a instalação, desconecte e reconecte o controle DualSense.
 
@@ -122,6 +137,45 @@ ao autostart do ambiente gráfico.
 
 ---
 
+## Localização (i18n)
+
+A partir da v3.4.0 o bundle Flatpak embarca **EN baseline** + **PT-BR
+identidade** em `/app/share/hefesto-dualsense4unix/locale/{en,pt_BR}/
+LC_MESSAGES/hefesto-dualsense4unix.mo`. O default é PT-BR (source
+language).
+
+Para rodar a GUI em inglês:
+
+```bash
+flatpak run --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
+    br.andrefarias.Hefesto
+```
+
+Ou persistir o override permanentemente:
+
+```bash
+flatpak override --user --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
+    br.andrefarias.Hefesto
+# Próxima execução já pega EN sem precisar passar --env:
+flatpak run br.andrefarias.Hefesto
+```
+
+> **Importante**: o sandbox Flatpak **filtra `LANG`/`LANGUAGE`** do
+> host por padrão. Sem `--env=` ou `flatpak override --env=`, a GUI
+> sempre cai no PT-BR (default do runtime GNOME 47).
+
+Por que path próprio (e não `/app/share/locale/`): o runtime
+`org.gnome.Platform//47` injeta symlinks de Locale Extension no deploy
+sobrescrevendo `/app/share/locale/<lang>/` para vários idiomas
+(incluindo pt_BR). Para sobreviver a essa intercepção, instalamos em
+`/app/share/hefesto-dualsense4unix/locale/`, que o runtime não toca.
+Detalhe técnico em `arquivo/processo-pre-1.0:docs/process/sprints/BUG-FLATPAK-LOCALE-SYMLINK-01.md`.
+
+Para adicionar um novo idioma (ES, FR, DE, etc.), ver
+`.github/CONTRIBUTING.md` seção "Contribuir traduções".
+
+---
+
 ## Permissões do sandbox
 
 O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões:
@@ -130,11 +184,18 @@ O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões
 |--------------------------------------------|-----------------------------------------------------|
 | `--device=all`                             | Acesso a `/dev/hidraw*` (DualSense) e `/dev/uinput` |
 | `--socket=wayland`                         | Interface GTK3 nativa no COSMIC/GNOME Wayland       |
-| `--socket=fallback-x11`                    | Fallback para ambientes X11                         |
+| `--socket=x11`                             | X11 e XWayland — **não** é `fallback-x11`, ver nota  |
 | `--socket=session-bus`                     | D-Bus de sessão (portals, notificações)             |
 | `--filesystem=xdg-run/hefesto-dualsense4unix:create`      | Socket IPC entre GUI e daemon                       |
 | `--filesystem=xdg-config/hefesto-dualsense4unix:create`   | Leitura e escrita de perfis                         |
 | `--talk-name=org.freedesktop.portal.*`     | Portals do freedesktop (tray, background)           |
+
+> **Por que `--socket=x11` e não `--socket=fallback-x11`.** O `fallback-x11` só
+> monta o socket X11 quando **não** há Wayland — e no COSMIC há. Como esta
+> interface roda com XWayland forçado, o `fallback-x11` deixava o sandbox sem
+> socket nenhum e a janela não abria. O manifesto declara `--socket=x11` desde
+> então, com o motivo escrito ao lado da linha. Esta tabela dizia
+> `fallback-x11` até 29/07/2026: descrevia a versão que foi corrigida.
 
 ---
 

@@ -1,8 +1,26 @@
 # Research — Protocolo de atualização de firmware do DualSense em Linux
 
+> ##  PESQUISA EXPLORATÓRIA — NÃO HÁ IMPLEMENTAÇÃO
+>
+> **O Hefesto não atualiza firmware, e nenhuma linha de código foi escrita para
+> isso.** Conferido no HEAD em 25/07/2026: zero ocorrências de `dualsensectl` em
+> `src/`, `scripts/` e `install.sh`; nenhum módulo, comando de CLI ou aba de GUI
+> de firmware (a janela tem nove abas — Início, Status, Gatilhos, Lightbar,
+> Rumble, Perfis, Sistema, Emulação e Navegação DSX — e nenhuma delas é
+> "Firmware"). As menções a "firmware" no código são todas sobre *ler* a versão
+> do controle ou sobre o comportamento do firmware dele, nunca sobre gravá-lo.
+>
+> Este documento e o
+> [survey de 2026-04-23](firmware-dualsense-2026-04-survey.md) são o resultado
+> de uma investigação de viabilidade que **parou aqui**. As "fases 2 e 3"
+> citadas no texto nunca começaram. O documento fica publicado porque a pesquisa
+> tem valor por si — o protocolo, as fontes e o terreno legal estão mapeados, e
+> quem for retomar não precisa refazer o caminho. Leia como levantamento, não
+> como plano em execução.
+
 Sprint de origem: `FEAT-FIRMWARE-UPDATE-PHASE1-01` (fase 1 da spec-mãe `FEAT-FIRMWARE-UPDATE-01`).
 Data da pesquisa: 2026-04-23.
-Status: **preliminar — requer validação empírica**.
+Status: **arquivado como pesquisa — nunca saiu do papel**.
 
 Este documento é uma análise do estado da arte para atualização de firmware do controle Sony DualSense em ambiente Linux. Nenhum código executável é entregue aqui; a fase 2 da spec-mãe depende do desfecho desta análise.
 

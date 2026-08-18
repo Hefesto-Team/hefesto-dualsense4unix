@@ -191,3 +191,595 @@ async def test_erro_no_window_reader_nao_derruba(isolated_profiles_dir: Path):
     switcher.stop()
     # Terminou limpo, sem exception propagada
     await switcher._task  # type: ignore[union-attr]
+
+
+# ---------------------------------------------------------------------------
+# UX-01 (SPRINT-UX-AUTOSWITCH-01) — histerese: leitura sem informação não
+# troca perfil. Os testes dirigem `_tick(info, now)` com relógio controlado
+# porque o debounce é wall-time (o buraco-do-debounce só é testável assim).
+# ---------------------------------------------------------------------------
+
+
+def _mk_switcher(
+    manager: ProfileManager, *, debounce_sec: float = 0.5
+) -> AutoSwitcher:
+    return AutoSwitcher(
+        manager=manager, window_reader=lambda: {}, debounce_sec=debounce_sec
+    )
+
+
+def test_cenario_medido_sackboy_nativo_unknown_nao_cai_para_vitoria(
+    isolated_profiles_dir: Path,
+):
+    """O episódio do journal 2026-07-16 13:07:18 vira teste: perfil de jogo
+    ativo + leituras `wm_class=unknown wm_name=` (backend cego no COSMIC) NÃO
+    caem para o fallback MatchAny `vitoria` — o perfil corrente fica retido."""
+    save_profile(
+        _mk_profile(
+            "sackboy_nativo",
+            match=MatchCriteria(window_class=["steam_app_1599660"]),
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "steam_app_1599660"}, 0.0)
+    sw._tick({"wm_class": "steam_app_1599660"}, 0.6)
+    assert sw._current_profile == "sackboy_nativo"
+
+    # O glitch medido ao vivo: minutos de unknown/vazio no meio do jogo.
+    for t in (1.0, 1.5, 6.1, 60.0, 300.0):
+        sw._tick({"wm_class": "unknown", "wm_name": ""}, t)
+
+    assert sw._current_profile == "sackboy_nativo"
+    assert manager.store.counter("profile.activated") == 1
+
+
+def test_matchany_nunca_ativado_por_leitura_vazia_ou_unknown(
+    isolated_profiles_dir: Path,
+):
+    """Critério 2: com perfil MatchAny salvo, reads `{}` ou unknown NUNCA o
+    ativam — por mais estáveis que fiquem (sem TTL, por design)."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    leituras_cegas: list[dict] = [
+        {},
+        {"wm_class": "unknown"},
+        {"wm_class": ""},
+        {"wm_class": "unknown", "wm_name": "", "exe_basename": ""},
+    ]
+    for i, info in enumerate(leituras_cegas * 5):
+        sw._tick(info, float(i))
+
+    assert sw._current_profile is None
+    assert manager.store.counter("profile.activated") == 0
+
+
+def test_fresh_install_desktop_wayland_puro_nao_ativa_matchany(
+    isolated_profiles_dir: Path,
+):
+    """Critério 5: fresh-install em desktop Wayland puro (backend cego desde o
+    primeiro tick, sem last_profile salvo) — o MatchAny não ativa sozinho via
+    unknown. Intencional: o boot é coberto pelo restore_last_profile
+    (FEAT-PERSIST-SESSION-01), não pelo autoswitch."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    for t in range(20):
+        sw._tick(
+            {"wm_class": "unknown", "wm_name": "", "pid": 0, "exe_basename": ""},
+            float(t),
+        )
+
+    assert sw._current_profile is None
+    assert manager.store.counter("profile.activated") == 0
+
+
+def test_unknown_com_exe_basename_ainda_entra_no_select(
+    isolated_profiles_dir: Path,
+):
+    """Critério 3: wm_class 'unknown' mas exe_basename preenchido é evidência
+    positiva — preserva perfis por process_name."""
+    save_profile(
+        _mk_profile("shooter", match=MatchCriteria(process_name=["doom-bin"]))
+    )
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "unknown", "exe_basename": "doom-bin"}, 0.0)
+    sw._tick({"wm_class": "unknown", "exe_basename": "doom-bin"}, 0.6)
+
+    assert sw._current_profile == "shooter"
+
+
+def test_unknown_com_titulo_ativa_fallback_apos_debounce(
+    isolated_profiles_dir: Path,
+):
+    """Tradeoff residual aceito (armadilha 3 da UX-01, coberto de propósito):
+    janela X sem WM_CLASS mas com TÍTULO ainda entra no select e ativa o
+    fallback MatchAny depois do debounce."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "unknown", "wm_name": "Splash sem classe"}, 0.0)
+    sw._tick({"wm_class": "unknown", "wm_name": "Splash sem classe"}, 0.6)
+
+    assert sw._current_profile == "vitoria"
+
+
+def test_buraco_do_debounce_glitch_apos_gap_nao_ativa_na_hora(
+    isolated_profiles_dir: Path,
+):
+    """Critério 4 (armadilha 1): o debounce é wall-time. Glitch útil → gap
+    longo de skips → glitch útil idêntico NÃO ativa na hora: a primeira
+    leitura útil pós-gap reinicia o relógio do debounce (o tempo pulado não
+    conta como estabilidade)."""
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "Doom"}, 0.0)  # glitch útil (1 tick só)
+    for t in (0.4, 1.0, 100.0, 399.5):  # gap longo sem informação
+        sw._tick({"wm_class": "unknown"}, t)
+
+    sw._tick({"wm_class": "Doom"}, 400.0)  # glitch idêntico pós-gap
+    assert sw._current_profile is None  # NÃO ativou na hora
+
+    sw._tick({"wm_class": "Doom"}, 400.6)  # estabilidade REAL >= debounce
+    assert sw._current_profile == "shooter"
+
+
+def test_skip_nao_pula_reset_da_suppress_log_key(isolated_profiles_dir: Path):
+    """Armadilha 2 da UX-01 (regressão do BUG-AUTOSWITCH-LOG-KEY-STUCK-01):
+    o tick pulado AINDA reabre o log de supressão quando a supressão cessou."""
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)  # store=None → supressão nunca ativa
+
+    sw._suppress_log_key = ("autoswitch_suppressed_by_manual_override", "jogo")
+    sw._tick({"wm_class": "unknown"}, 0.0)
+    assert sw._suppress_log_key is None
+
+
+def test_log_info_unavailable_uma_vez_por_episodio(
+    isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Critério 6: journal sem flood — `autoswitch_window_info_unavailable` sai
+    1x por episódio; leitura útil fecha o episódio e reabre o log."""
+    from unittest.mock import MagicMock
+
+    from hefesto_dualsense4unix.profiles import autoswitch as autoswitch_mod
+
+    spy = MagicMock()
+    monkeypatch.setattr(autoswitch_mod, "logger", spy)
+
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    # Episódio 1: 3 skips → 1 log.
+    for t in (0.0, 0.5, 1.0):
+        sw._tick({"wm_class": "unknown"}, t)
+    # Leitura útil encerra o episódio.
+    sw._tick({"wm_class": "Doom"}, 1.5)
+    # Episódio 2: 2 skips → mais 1 log.
+    for t in (2.0, 2.5):
+        sw._tick({}, t)
+
+    eventos = [
+        c
+        for c in spy.info.call_args_list
+        if c[0][0] == "autoswitch_window_info_unavailable"
+    ]
+    assert len(eventos) == 2
+
+
+@pytest.mark.asyncio
+async def test_histerese_no_run_loop_mantem_perfil(isolated_profiles_dir: Path):
+    """Critério 1 pelo run() REAL: Doom estável → N ticks unknown → mantém
+    shooter e counter('profile.activated') == 1 (o fallback MatchAny salvo
+    nunca rouba o lugar)."""
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+
+    sequence = [{"wm_class": "Doom"}] * 5 + [{"wm_class": "unknown", "wm_name": ""}]
+    idx = {"i": 0}
+
+    def reader() -> dict:
+        i = idx["i"]
+        idx["i"] = min(i + 1, len(sequence) - 1)
+        return sequence[i]
+
+    switcher = AutoSwitcher(
+        manager=manager,
+        window_reader=reader,
+        poll_interval_sec=0.02,
+        debounce_sec=0.05,
+    )
+    switcher.start()
+    await asyncio.sleep(0.4)
+    switcher.stop()
+    await switcher._task  # type: ignore[union-attr]
+
+    assert switcher._current_profile == "shooter"
+    assert manager.store.counter("profile.activated") == 1
+
+
+def test_autoswitch_ativa_sem_gravar_last_profile_manual(
+    isolated_profiles_dir: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """PERFIL-03: a troca automática ativa o perfil (aplica + marca ativo) mas
+    NÃO grava session.json nem o marker — o bug provado do autoload era o
+    autoswitch reescrever a intenção manual da usuária a cada troca de janela
+    (ao vivo: session.json dizia 'Navegação' com active_profile.txt='vitoria').
+    Integração com manager e sessão REAIS, config isolada."""
+    config = tmp_path / "config"
+    config.mkdir()
+
+    def fake_config_dir(ensure: bool = False) -> Path:
+        if ensure:
+            config.mkdir(parents=True, exist_ok=True)
+        return config
+
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.utils.session.config_dir", fake_config_dir
+    )
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    monkeypatch.setattr(xdg_paths, "config_dir", fake_config_dir)
+
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "Doom"}, 0.0)
+    sw._tick({"wm_class": "Doom"}, 0.6)
+
+    assert sw._current_profile == "shooter"
+    assert manager.store.active_profile == "shooter"
+    from hefesto_dualsense4unix.utils.session import (
+        load_last_profile,
+        read_active_marker,
+    )
+
+    assert load_last_profile() is None
+    assert read_active_marker() is None
+
+
+# ---------------------------------------------------------------------------
+# MISC-08 item 2 (2026-07-18) — GUI-neutra: a PRÓPRIA GUI/applet em foco não
+# conta como janela para seleção de perfil; o perfil corrente fica retido
+# (mesma histerese UX-01 da leitura sem informação). Journal 2026-07-18
+# 20:15:40-51: cada alt-tab jogoGUI flipava vitoriasackboy_nativo.
+# ---------------------------------------------------------------------------
+
+
+def test_gui_propria_em_foco_nao_flipa_perfil(isolated_profiles_dir: Path):
+    """Cenário do journal: sackboy_nativo ativo + foco na própria GUI
+    (wm_class Main.py / Hefesto-Dualsense4Unix) NÃO cai para o fallback
+    MatchAny vitoria — por mais que o foco na GUI dure."""
+    save_profile(
+        _mk_profile(
+            "sackboy_nativo",
+            match=MatchCriteria(window_class=["steam_app_1599660"]),
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "steam_app_1599660"}, 0.0)
+    sw._tick({"wm_class": "steam_app_1599660"}, 0.6)
+    assert sw._current_profile == "sackboy_nativo"
+
+    # Alt-tab para a GUI, bem além do debounce, em todas as formas de
+    # wm_class que a nossa GUI/applet reporta (journal + código).
+    for t, wm in (
+        (1.0, "Main.py"),
+        (1.5, "Hefesto-Dualsense4Unix"),
+        (30.0, "hefesto-dualsense4unix"),
+        (60.0, "hefesto-dualsense4unix-gui"),
+        (120.0, "com.vitoriamaria.HefestoDualsense4Unix"),
+    ):
+        sw._tick({"wm_class": wm, "wm_name": "Hefesto DualSense4Unix"}, t)
+
+    assert sw._current_profile == "sackboy_nativo"
+    assert manager.store.counter("profile.activated") == 1
+
+
+def test_gui_propria_nunca_ativa_fallback_sem_perfil_corrente(
+    isolated_profiles_dir: Path,
+):
+    """Sem perfil corrente, encarar a GUI por minutos não ativa o MatchAny —
+    a janela própria é 'sem informação', não evidência de desktop."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    for t in range(10):
+        sw._tick(
+            {"wm_class": "Main.py", "wm_name": "Hefesto DualSense4Unix"},
+            float(t) * 30.0,
+        )
+
+    assert sw._current_profile is None
+    assert manager.store.counter("profile.activated") == 0
+
+
+def test_pos_gui_debounce_reinicia(isolated_profiles_dir: Path):
+    """Voltar da GUI reinicia o relógio do debounce (armadilha 1 da UX-01):
+    glitch de jogo → foco longo na GUI → glitch idêntico NÃO ativa na hora."""
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "Doom"}, 0.0)  # glitch útil (1 tick só)
+    for t in (0.4, 10.0, 100.0):  # foco longo na GUI
+        sw._tick({"wm_class": "Main.py"}, t)
+
+    sw._tick({"wm_class": "Doom"}, 100.5)  # glitch idêntico pós-GUI
+    assert sw._current_profile is None  # o tempo na GUI não conta
+
+    sw._tick({"wm_class": "Doom"}, 101.1)  # estabilidade REAL >= debounce
+    assert sw._current_profile == "shooter"
+
+
+def test_log_janela_propria_uma_vez_por_episodio(
+    isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Journal sem flood: `autoswitch_janela_propria_ignorada` sai 1x por
+    episódio; leitura útil fecha o episódio e reabre o log."""
+    from unittest.mock import MagicMock
+
+    from hefesto_dualsense4unix.profiles import autoswitch as autoswitch_mod
+
+    spy = MagicMock()
+    monkeypatch.setattr(autoswitch_mod, "logger", spy)
+
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    # Episódio 1: 3 ticks na GUI → 1 log.
+    for t in (0.0, 0.5, 1.0):
+        sw._tick({"wm_class": "Main.py"}, t)
+    # Leitura útil encerra o episódio.
+    sw._tick({"wm_class": "Doom"}, 1.5)
+    # Episódio 2: 2 ticks na GUI → mais 1 log.
+    for t in (2.0, 2.5):
+        sw._tick({"wm_class": "Hefesto-Dualsense4Unix"}, t)
+
+    eventos = [
+        c
+        for c in spy.info.call_args_list
+        if c[0][0] == "autoswitch_janela_propria_ignorada"
+    ]
+    assert len(eventos) == 2
+
+
+def test_janela_propria_matcher():
+    """Matcher unitário: wm_class nossos (case-insensitive, com espaços) são
+    próprios; janelas de jogo/apps comuns não são."""
+    proprias = [
+        "Main.py",
+        "main.py",
+        "Hefesto-Dualsense4Unix",
+        "hefesto-dualsense4unix",
+        "  hefesto-dualsense4unix-gui ",
+        "com.vitoriamaria.HefestoDualsense4Unix",
+    ]
+    for wm in proprias:
+        assert AutoSwitcher._janela_propria({"wm_class": wm}), wm
+
+    alheias = [
+        {"wm_class": "steam_app_1599660"},
+        {"wm_class": "Doom"},
+        {"wm_class": "unknown"},
+        {"wm_class": ""},
+        {},
+    ]
+    for info in alheias:
+        assert not AutoSwitcher._janela_propria(info), info
+
+
+# ---------------------------------------------------------------------------
+# UX-04 (auditoria 24/07) — debounce ASSIMÉTRICO.
+#
+# A terceira causa do ping-pong medido: poll 0,5 s + debounce 0,5 s ⇒ DOIS ticks
+# (1 s) já trocavam de perfil, e a histerese UX-01 só cobre leitura SEM
+# informação — entre duas janelas CONHECIDAS não havia cooldown nenhum. Journal
+# 22-23/07: `vitoria``Navegação` a cada 18-28 s, o controle mudando de cor e de
+# comportamento no meio da partida.
+#
+# A cura é assimétrica de propósito: ENTRAR num perfil específico segue barato
+# (é o que faz o perfil do jogo valer desde o começo); SAIR dele rumo a um
+# CATCH-ALL custa `DEFAULT_DEBOUNCE_SAIDA_SEC`. Uma pausa curta (overlay da
+# Steam, um guia no navegador, notificação que rouba o foco) não é "ela saiu do
+# jogo", e errar para o lado de FICAR custa zero.
+# ---------------------------------------------------------------------------
+
+
+def _sw_assimetrico(manager: ProfileManager) -> AutoSwitcher:
+    return AutoSwitcher(
+        manager=manager,
+        window_reader=lambda: {},
+        debounce_sec=0.5,
+        debounce_saida_sec=12.0,
+    )
+
+
+def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
+    save_profile(
+        _mk_profile(
+            "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "firefox"}, 0.0)
+    sw._tick({"wm_class": "firefox"}, 0.6)
+    assert sw._current_profile == "vitoria"
+
+    sw._tick({"wm_class": "steam_app_2111190"}, 1.0)
+    sw._tick({"wm_class": "steam_app_2111190"}, 1.6)
+    assert sw._current_profile == "madjack"  # ~0,5 s, como sempre
+
+
+def test_sair_do_perfil_de_jogo_para_catch_all_exige_o_debounce_longo(
+    isolated_profiles_dir: Path,
+):
+    """O cenário exato do journal: alt-tab do jogo para uma janela que só casa
+    o genérico. Antes trocava em 1 s; agora precisa de estabilidade REAL."""
+    save_profile(
+        _mk_profile(
+            "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "steam_app_2111190"}, 0.0)
+    sw._tick({"wm_class": "steam_app_2111190"}, 0.6)
+    assert sw._current_profile == "madjack"
+
+    # 11 s de foco no navegador: NÃO troca (o debounce de saída é 12 s).
+    for t in (10.0, 10.5, 11.0, 11.4):
+        sw._tick({"wm_class": "firefox"}, t)
+    assert sw._current_profile == "madjack"
+
+    sw._tick({"wm_class": "firefox"}, 22.1)  # agora sim, estabilidade real
+    assert sw._current_profile == "vitoria"
+
+
+def test_alt_tab_curto_no_meio_do_jogo_nao_flipa(isolated_profiles_dir: Path):
+    """Ping-pong de 18-28 s do journal, reproduzido: com o debounce de saída,
+    nenhuma das idas ao genérico se consolida."""
+    save_profile(
+        _mk_profile(
+            "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "steam_app_2111190"}, 0.0)
+    sw._tick({"wm_class": "steam_app_2111190"}, 0.6)
+
+    t = 1.0
+    for _ in range(6):  # 6 alt-tabs de ~2 s cada
+        for _ in range(4):
+            sw._tick({"wm_class": "firefox"}, t)
+            t += 0.5
+        for _ in range(4):
+            sw._tick({"wm_class": "steam_app_2111190"}, t)
+            t += 0.5
+
+    assert sw._current_profile == "madjack"
+    assert manager.store.counter("profile.activated") == 1
+
+
+def test_troca_entre_dois_perfis_especificos_segue_no_debounce_curto(
+    isolated_profiles_dir: Path,
+):
+    """A assimetria é só para a VOLTA ao genérico — trocar de um jogo para
+    outro (ou para um app com regra própria) não pode ficar lento."""
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+    save_profile(_mk_profile("driving", match=MatchCriteria(window_class=["Forza"])))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "Doom"}, 0.0)
+    sw._tick({"wm_class": "Doom"}, 0.6)
+    assert sw._current_profile == "shooter"
+
+    sw._tick({"wm_class": "Forza"}, 1.0)
+    sw._tick({"wm_class": "Forza"}, 1.6)
+    assert sw._current_profile == "driving"
+
+
+def test_saida_de_catch_all_para_catch_all_nao_paga_o_debounce_longo(
+    isolated_profiles_dir: Path,
+):
+    """Só perfil ESPECÍFICO arma o lado lento: quem já está no genérico não tem
+    nada de valioso a proteger."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(
+        _mk_profile("leitura", priority=50, match=MatchCriteria(window_class=["zathura"]))
+    )
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "firefox"}, 0.0)
+    sw._tick({"wm_class": "firefox"}, 0.6)
+    assert sw._current_profile == "vitoria"
+    assert sw._current_especifico is False
+
+    sw._tick({"wm_class": "zathura"}, 1.0)
+    sw._tick({"wm_class": "zathura"}, 1.6)
+    assert sw._current_profile == "leitura"
+    assert sw._current_especifico is True

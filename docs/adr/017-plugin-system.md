@@ -22,8 +22,8 @@ acesso limitado ao `IController` + eventos + state.
 
 ## Decisão
 
-Carregar plugins Python de `~/.config/hefesto/plugins/*.py` (cada arquivo = 1 plugin).
-A API minima exposta e:
+Carregar plugins Python de `~/.config/hefesto-dualsense4unix/plugins/*.py` (cada
+arquivo = 1 plugin). A API minima exposta e:
 
 - `Plugin` ABC: hooks `on_load`, `on_tick`, `on_button_down`, `on_battery_change`,
   `on_profile_change`, `on_unload`. Todos com implementação no-op por padrao.
@@ -43,7 +43,7 @@ A API minima exposta e:
 ### Arquivo de plugin
 
 ```python
-from hefesto.plugin_api import Plugin, PluginContext
+from hefesto_dualsense4unix.plugin_api import Plugin, PluginContext
 
 class MeuPlugin(Plugin):
     name = "meu_plugin"          # slug unico, snake_case
@@ -60,18 +60,24 @@ class MeuPlugin(Plugin):
 ### Diretório de instalação
 
 ```
-~/.config/hefesto/plugins/
+~/.config/hefesto-dualsense4unix/plugins/
 ```
 
 Arquivos com prefixo `_` sao ignorados (uso interno/desabilitado).
+
+O diretório pode ser trocado por `HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR` — a
+variavel tem precedência sobre o caminho acima.
 
 ### Ativação
 
 Por padrão, plugins sao desativados (`plugins_enabled = False` em `DaemonConfig`).
 Ativar via:
 
-- Configuração em `~/.config/hefesto/config.toml`: `plugins_enabled = true`
-- Variavel de ambiente: `HEFESTO_PLUGINS_ENABLED=1`
+- Variavel de ambiente: `HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1`
+- `plugins_enabled = True` no `DaemonConfig` (no código)
+
+As duas so sao lidas na **subida** do daemon — ver a nota de verificação no
+rodape antes de tentar ligar plugins num daemon já rodando.
 
 ---
 
@@ -81,9 +87,9 @@ Ativar via:
 
 Plugins rodam com os mesmos privilegios do processo daemon (usuário comum, sem root).
 Não ha `RestrictedPython`, cgroups ou bubblewrap. O usuário e **inteiramente
-responsavel** pelo código instalado em `~/.config/hefesto/plugins/`.
+responsavel** pelo código instalado em `~/.config/hefesto-dualsense4unix/plugins/`.
 
-Mitigacao operacional: o diretório `~/.config/hefesto/plugins/` deve ser `owned by user`
+Mitigacao operacional: o diretório `~/.config/hefesto-dualsense4unix/plugins/` deve ser `owned by user`
 (o próprio usuário quem instala os arquivos ali). Não instale plugins de fontes
 desconhecidas.
 
@@ -117,21 +123,57 @@ de plugins. Mudancas breaking exigirao bump de versão da API e nota de migracao
 ## Impacto no código
 
 Arquivos novos:
-- `src/hefesto/plugin_api/__init__.py`
-- `src/hefesto/plugin_api/plugin.py`
-- `src/hefesto/plugin_api/context.py`
-- `src/hefesto/plugin_api/loader.py`
-- `src/hefesto/daemon/subsystems/plugins.py`
-- `src/hefesto/cli/cmd_plugin.py`
+- `src/hefesto_dualsense4unix/plugin_api/__init__.py`
+- `src/hefesto_dualsense4unix/plugin_api/plugin.py`
+- `src/hefesto_dualsense4unix/plugin_api/context.py`
+- `src/hefesto_dualsense4unix/plugin_api/loader.py`
+- `src/hefesto_dualsense4unix/daemon/subsystems/plugins.py`
+- `src/hefesto_dualsense4unix/cli/cmd_plugin.py`
 - `examples/plugins/lightbar_rainbow.py`
 - `tests/unit/test_plugin_api.py`
 
 Arquivos modificados:
-- `src/hefesto/daemon/lifecycle.py` — `DaemonConfig.plugins_enabled`, slot `_plugins_subsystem`, wire-up
-- `src/hefesto/daemon/subsystems/__init__.py` — registro de `PluginsSubsystem`
-- `src/hefesto/daemon/subsystems/connection.py` — `shutdown()` chama `ps.stop()`
-- `src/hefesto/daemon/ipc_server.py` — handlers `plugin.list`, `plugin.reload`
-- `src/hefesto/cli/app.py` — registro do `plugin_app`
+- `src/hefesto_dualsense4unix/daemon/lifecycle.py` — `DaemonConfig.plugins_enabled`, slot `_plugins_subsystem`, wire-up
+- `src/hefesto_dualsense4unix/daemon/subsystems/__init__.py` — registro de `PluginsSubsystem`
+- `src/hefesto_dualsense4unix/daemon/connection.py` — `shutdown()` chama `ps.stop()`. O arquivo nasceu em `daemon/subsystems/` e foi movido para `daemon/` no commit `560a0b2` (REFACTOR-CONNECTION-FUNCTIONS-01, auditoria P2-02): é uma coleção de funções soltas, não uma classe com `start()`/`stop()` como os outros módulos de `subsystems/`
+- `src/hefesto_dualsense4unix/daemon/ipc_server.py` — handlers `plugin.list`, `plugin.reload`
+- `src/hefesto_dualsense4unix/cli/app.py` — registro do `plugin_app`
+
+---
+
+## Nota de verificação — 2026-07-31
+
+A decisão continua válida. **As receitas de ativação desta ADR nunca foram
+verdade no código**, e quem seguisse a seção "Ativação" ao pé da letra não
+ligava plugin nenhum. O que foi corrigido no corpo acima, item a item:
+
+- Ativação por **arquivo de configuração** (`~/.config/hefesto/config.toml`,
+  `plugins_enabled = true`): **removida**. O daemon não lê arquivo de
+  configuração nenhum — nem esse, nem `daemon.toml`
+  (BUG-DAEMON-TOML-DEAD-01). A receita era morta na origem.
+- Variavel de ambiente: era `HEFESTO_PLUGINS_ENABLED`, que tem **zero**
+  ocorrências em `src/`. A real é `HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1`,
+  lida em `daemon/subsystems/plugins.py` (`PluginsSubsystem.is_enabled`).
+- Diretório de plugins: era `~/.config/hefesto/plugins/`, o layout curto
+  legado. O real é `~/.config/hefesto-dualsense4unix/plugins/`
+  (`_default_plugins_dir` em `daemon/subsystems/plugins.py`), com override por
+  `HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR` — variavel que a ADR não citava.
+- Import do exemplo de plugin: era `from hefesto.plugin_api import ...`, pacote
+  que não existe. O real é `from hefesto_dualsense4unix.plugin_api import
+  Plugin, PluginContext`, exatamente como o `__init__.py` do pacote documenta.
+
+Uma limitação a mais, medida agora e que a ADR não previa: **os dois switches
+só valem na subida do daemon**. `_start_plugins` é chamado uma vez, na
+sequência de start (`daemon/lifecycle.py`), e `reload_config` não reinicia
+subsistemas — então `daemon.reload` com `plugins_enabled: true` troca o campo
+do `DaemonConfig` e **não** carrega plugin num daemon já rodando. Mesma forma do
+achado da ADR-016 sobre métricas. Como o daemon roda sob `systemd --user`,
+exportar a variavel num terminal também não o alcança: ela precisa estar no
+ambiente da unit.
+
+`plugins_enabled` **existe** de fato em `DaemonConfig`
+(`daemon/lifecycle.py`), e o `PluginsSubsystem` está registrado em
+`daemon/subsystems/__init__.py` — nisso a ADR confere.
 
 ---
 

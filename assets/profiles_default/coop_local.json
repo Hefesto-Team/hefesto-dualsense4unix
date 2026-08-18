@@ -1,0 +1,21 @@
+{
+  "name": "coop_local",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_title_regex": ".*(Sackboy|Overcooked|It Takes Two|Split Fiction|Cuphead|Moving Out|Unravel Two|LEGO |Rayman Legends|Broforce|Castle Crashers|TowerFall|Gang Beasts|Human Fall Flat|Ultimate Chicken Horse|Streets of Rage|Trine|Portal 2|Stardew Valley|Nine Parchments|Heave Ho|Pico Park|Boomerang Fu).*"
+  },
+  "priority": 75,
+  "triggers": {
+    "left":  {"mode": "Off", "params": []},
+    "right": {"mode": "Off", "params": []}
+  },
+  "leds": {
+    "lightbar": [0, 200, 120],
+    "player_leds": [true, false, false, false, true],
+    "lightbar_brightness": 0.7
+  },
+  "rumble": {"passthrough": true},
+  "mode": {"kind": "gamepad", "gamepad_flavor": "xbox", "coop": true},
+  "suppress_desktop_emulation": true
+}

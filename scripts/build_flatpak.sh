@@ -11,9 +11,9 @@
 # Pré-requisitos:
 #   - flatpak-builder  (sudo apt install flatpak-builder  OU  flatpak install flathub org.flatpak.Builder)
 #   - python -m build  (pip install build)
-#   - Runtime GNOME//45 adicionado ao Flatpak:
+#   - Runtime GNOME//47 adicionado ao Flatpak (casa runtime-version do manifesto):
 #       flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-#       flatpak install flathub org.gnome.Platform//45 org.gnome.Sdk//45
+#       flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47
 
 set -euo pipefail
 

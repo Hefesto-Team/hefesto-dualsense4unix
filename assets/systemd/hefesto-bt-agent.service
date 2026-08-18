@@ -1,0 +1,52 @@
+[Unit]
+# Onda R: cura do bond "meio-salvo" (Paired: yes / Bonded: no). A causa
+# medida no estudo (docs/process/estudos/2026-07-19-estudo-bluez-backport-
+# onda-r.md §4) é "No agent available for request type 2" — nenhum agente de
+# pareamento D-Bus registrado no momento em que o BlueZ pede confirmação, e a
+# autenticação nunca completa. Este agente persistente NoInputNoOutput cobre
+# QUALQUER pareamento disparado fora da GUI/daemon do hefesto (bluetoothctl
+# manual, re-pareamento em massa pós-migração do backport bluez 5.85, o
+# instalador do Blueman, etc.) — sem depender de uma janela aberta na hora.
+Description=Hefesto — agente de pareamento Bluetooth persistente (NoInputNoOutput)
+# Sem Documentation=: um URI file: precisa ser absoluto (RFC-conforme) e o
+# caminho do estudo (docs/process/estudos/2026-07-19-estudo-bluez-backport-
+# onda-r.md) só existe dentro do checkout do repo — variável por usuário,
+# nunca instalado em /etc junto com esta unit. `systemd-analyze verify`
+# acusava "Invalid URL, ignoring" com o caminho relativo antigo.
+After=bluetooth.service
+Requires=bluetooth.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/bt-agent --capability=NoInputNoOutput
+Restart=on-failure
+RestartSec=5
+
+# --- hardening LEVE (espelha um subconjunto do broker root do repo em
+#     docs/process/future-broker/systemd/hefesto-hidraw-broker.service; aqui
+#     mais frouxo de propósito porque o bt-agent (bluez-tools) só fala D-Bus
+#     no barramento de sistema e não temos o mesmo controle fino sobre ele) ---
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @mount @debug @cpu-emulation @obsolete @raw-io @reboot @swap @clock
+
+[Install]
+WantedBy=multi-user.target

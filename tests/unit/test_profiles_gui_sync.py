@@ -19,8 +19,6 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
-from pydantic import ValidationError
-
 
 def _install_gi_stubs() -> None:
     """Instala stubs mínimos de ``gi.repository`` se o módulo real não estiver disponível.
@@ -28,8 +26,15 @@ def _install_gi_stubs() -> None:
     Réplica do helper de ``test_status_actions_reconnect.py`` para evitar requerer
     GTK/PyGObject em CI e no ``.venv`` sem ``--with-tray`` (A-12).
     """
-    if "gi" in sys.modules and hasattr(sys.modules["gi"], "require_version"):
+    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
+    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
+    # "ambiente sem GTK" mesmo com o GTK real presente.
+    existente = sys.modules.get("gi")
+    if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
+            import gi
+
+            gi.require_version("Gtk", "3.0")
             from gi.repository import Gtk  # noqa: F401
 
             return
@@ -86,7 +91,7 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin  # noqa: E402
+from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
 # ---------------------------------------------------------------------------
 # Stubs de Gtk.ListStore / Gtk.TreeView para iteração de linhas.
@@ -146,6 +151,12 @@ def _stub_with(rows, tree) -> Any:
     # Binda o método do mixin ao stub preservando ``self`` como o próprio stub.
     stub._select_profile_by_name = lambda name: (  # type: ignore[attr-defined]
         ProfilesActionsMixin._select_profile_by_name(stub, name)
+    )
+    # UX-PROFILES-ACTIVE-HIGHLIGHT-01: o sync também realça a linha ativa; o
+    # store fake destes testes tem 3 colunas (sem a de peso), então o stub só
+    # registra a intenção.
+    stub._mark_active_profile_row = lambda active: setattr(  # type: ignore[attr-defined]
+        stub, "_active_profile_hint", active
     )
     return stub
 
@@ -345,9 +356,14 @@ class _FakeBox:
 
 
 def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNamespace:
-    """Stub com _get que expõe combo + entry_box, para testes sem GTK."""
+    """Stub com _get + ref do seletor "Aplica a:", para testes sem GTK.
+
+    FEAT-DSX-COMBO-TO-SEGMENTED-01: `_selected_simple_choice`/`_select_radio` agora
+    leem `self._aplica_a` (o SegmentedSelector) em vez de `_get(...)`. O ``_FakeCombo``
+    serve de stub por expor a mesma API por-ID (get/set_active_id).
+    """
     stub = SimpleNamespace()
-    widgets: dict[str, Any] = {"profile_aplica_a_combo": combo}
+    widgets: dict[str, Any] = {}
     if box is not None:
         widgets["profile_game_entry_box"] = box
 
@@ -355,6 +371,7 @@ def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNa
         return widgets.get(widget_id)
 
     stub._get = _get  # type: ignore[attr-defined]
+    stub._aplica_a = combo  # type: ignore[attr-defined]
     return stub
 
 
@@ -436,86 +453,79 @@ class TestProfileSimpleCombo:
 # ---------------------------------------------------------------------------
 
 
-class _FakeLabel:
-    def __init__(self) -> None:
-        self.text = ""
-
-    def set_text(self, text: str) -> None:
-        self.text = text
+# PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: cache em memoria + carga assincrona
+# ---------------------------------------------------------------------------
 
 
-class TestProfilePreview:
-    def _stub_with_preview(self, build_result: Any) -> SimpleNamespace:
-        """Stub mínimo para exercitar _refresh_preview sem GTK."""
-        label = _FakeLabel()
+class TestProfilesCacheNonBlocking:
+    def test_find_cached_profile_retorna_do_cache(self):
+        _install_gi_stubs()
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+
+        p1 = SimpleNamespace(name="alpha")
+        p2 = SimpleNamespace(name="beta")
+        stub = SimpleNamespace(_profiles_cache=[p1, p2])
+
+        assert ProfilesActionsMixin._find_cached_profile(stub, "beta") is p2
+        assert ProfilesActionsMixin._find_cached_profile(stub, "inexistente") is None
+
+    def test_find_cached_profile_cache_ausente_retorna_none(self):
+        _install_gi_stubs()
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+
+        stub = SimpleNamespace()  # sem _profiles_cache atribuido
+        assert ProfilesActionsMixin._find_cached_profile(stub, "x") is None
+
+    def test_on_profile_selection_changed_le_do_cache_sem_disco(self, monkeypatch):
+        """Selecionar perfil lê do cache; não chama load_all_profiles (não bloqueia)."""
+        _install_gi_stubs()
+        import hefesto_dualsense4unix.app.actions.profiles_actions as mod
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+
+        tocou_disco: list = []
+        monkeypatch.setattr(
+            mod, "load_all_profiles", lambda: tocou_disco.append(True) or []
+        )
+
+        alvo = SimpleNamespace(name="meu_perfil")
+        populados: list = []
+        stub = SimpleNamespace(_profiles_cache=[alvo])
+        stub._selected_profile_name = lambda _sel: "meu_perfil"  # type: ignore[attr-defined]
+        stub._find_cached_profile = (  # type: ignore[attr-defined]
+            lambda name: ProfilesActionsMixin._find_cached_profile(stub, name)
+        )
+        stub._populate_editor = lambda p: populados.append(p)  # type: ignore[attr-defined]
+
+        ProfilesActionsMixin.on_profile_selection_changed(stub, MagicMock())
+
+        assert populados == [alvo]
+        assert tocou_disco == []  # não releu o disco a cada clique
+
+    def test_reload_profiles_store_usa_worker_e_popula_cache(self, monkeypatch):
+        """_reload_profiles_store carrega via run_in_thread e popula o cache."""
+        _install_gi_stubs()
+        import hefesto_dualsense4unix.app.actions.profiles_actions as mod
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+
+        def fake_run_in_thread(fn, on_success, on_failure=None):
+            on_success(fn())  # simula worker + idle_add sincronos no teste
+
+        monkeypatch.setattr(mod, "run_in_thread", fake_run_in_thread)
+
+        p1 = SimpleNamespace(name="a", priority=1, match=SimpleNamespace(type="any"))
+        monkeypatch.setattr(mod, "load_all_profiles", lambda: [p1])
+
+        populados: list = []
+        feito: list = []
         stub = SimpleNamespace()
-        widgets: dict[str, Any] = {"profile_preview_label": label}
-        stub._get = lambda wid: widgets.get(wid)  # type: ignore[attr-defined]
+        stub._populate_profiles_store = (  # type: ignore[attr-defined]
+            lambda profiles, sel: populados.append((list(profiles), sel))
+        )
 
-        if isinstance(build_result, Exception):
-            def raiser() -> Any:
-                raise build_result
-            stub._build_profile_from_editor = raiser  # type: ignore[attr-defined]
-        else:
-            stub._build_profile_from_editor = lambda: build_result  # type: ignore[attr-defined]
+        ProfilesActionsMixin._reload_profiles_store(
+            stub, select_name="a", on_done=lambda: feito.append(True)
+        )
 
-        stub._preview_label = label  # type: ignore[attr-defined]
-        return stub
-
-    def test_preview_atualiza_com_perfil_valido(self):
-        _install_gi_stubs()
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        fake_profile = MagicMock()
-        fake_profile.model_dump.return_value = {
-            "name": "meu_perfil",
-            "priority": 0,
-            "match": {"kind": "any"},
-        }
-        stub = self._stub_with_preview(fake_profile)
-
-        ProfilesActionsMixin._refresh_preview(stub)
-
-        text = stub._preview_label.text
-        assert '"name": "meu_perfil"' in text
-        assert '"priority": 0' in text
-        assert '"kind": "any"' in text
-
-    def test_preview_mostra_msg_quando_validation_error(self):
-        _install_gi_stubs()
-        # ValidationError de pydantic não aceita construção direta; disparamos
-        # via model_validate com payload inválido.
-        from pydantic import BaseModel, Field
-
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        class _Dummy(BaseModel):
-            name: str = Field(min_length=1)
-
-        try:
-            _Dummy.model_validate({"name": ""})
-            raise AssertionError("deveria ter falhado")
-        except ValidationError as real_err:
-            err = real_err
-
-        stub = self._stub_with_preview(err)
-
-        ProfilesActionsMixin._refresh_preview(stub)
-
-        text = stub._preview_label.text
-        assert "perfil inválido" in text
-
-    def test_preview_no_op_quando_label_ausente(self):
-        """Se glade não tem profile_preview_label, _refresh_preview é no-op."""
-        _install_gi_stubs()
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        stub = SimpleNamespace()
-        stub._get = lambda _w: None  # type: ignore[attr-defined]
-        stub._build_profile_from_editor = MagicMock()  # type: ignore[attr-defined]
-
-        # Não levanta exceção
-        ProfilesActionsMixin._refresh_preview(stub)
-
-        # build_profile nem deveria ser chamado se label ausente
-        stub._build_profile_from_editor.assert_not_called()
+        assert stub._profiles_cache == [p1]
+        assert populados == [([p1], "a")]
+        assert feito == [True]  # on_done roda apos popular o store

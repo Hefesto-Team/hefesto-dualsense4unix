@@ -12,6 +12,13 @@ StartLimitBurst=3
 
 [Service]
 Type=simple
+# AUTOSWITCH-FLOOD-FIX-01: importa o env gráfico (WAYLAND_DISPLAY/DISPLAY) do
+# gerenciador de usuário para dentro do serviço, para o autoswitch (perfil por
+# app ativo) sair do NullBackend em COSMIC/Wayland — sem isso o daemon nasce
+# sem display, o autoswitch fica morto e o window_detect floodava o journal.
+# Prefixo '-' = não-fatal se o compositor ainda não exportou nada (o subsystem
+# tem fallback via `systemctl --user show-environment` no _ensure_display_env).
+ExecStartPre=-/usr/bin/systemctl --user import-environment WAYLAND_DISPLAY DISPLAY
 ExecStart=%h/.local/bin/hefesto-dualsense4unix daemon start --foreground
 Restart=on-failure
 RestartSec=2

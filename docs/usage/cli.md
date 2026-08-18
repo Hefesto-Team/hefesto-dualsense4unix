@@ -22,8 +22,9 @@ Complemento de scripts: tab-completion funciona em zsh e bash via
 | `hefesto-dualsense4unix mouse on/off/status` | Emulação de mouse via daemon. |
 | `hefesto-dualsense4unix profile list/show/activate/create/delete/apply/save` | Gerência de perfis. |
 | `hefesto-dualsense4unix trigger/rumble` (subgrupo `test`) | Efeitos direto no hardware. |
-| `hefesto-dualsense4unix daemon start/stop/restart/status/install-service/uninstall-service` | Ciclo do daemon. |
-| `hefesto-dualsense4unix emulate xbox360` | Gamepad virtual Xbox360. |
+| `hefesto-dualsense4unix daemon start/stop/restart/status/pause/resume/enable/disable/install-service/uninstall-service` | Ciclo do daemon. |
+| `hefesto-dualsense4unix gamepad on/off/status` | Controle virtual (substituiu o antigo `emulate xbox360`). |
+| `hefesto-dualsense4unix mic on/off/status/bt/bt-status` | Microfone do controle — no cabo (política) e por Bluetooth (ponte). |
 | `hefesto-dualsense4unix tui` / `hefesto-dualsense4unix tray` | Interfaces alternativas. |
 
 ---
@@ -40,12 +41,23 @@ hefesto-dualsense4unix led --color '255,136,0'          # CSV também aceito
 
 - Quando o daemon está rodando: envia `led.set` via IPC. Perfis e
   autoswitch continuam funcionando em paralelo.
-- Quando o daemon está offline: aplica direto no hardware. Se
-  `--brightness` for fornecido, faz escala linear do RGB como
-  aproximação (`100%%` = cor pura, `0%%` = apagado).
-- Pós FEAT-LED-BRIGHTNESS-01 (ainda não mergeada na escrita desta
-  sprint): o daemon honrará `brightness` nativamente, sem distorcer
-  a matiz.
+- Quando o daemon está offline: aplica direto no hardware.
+- `--brightness` é um multiplicador do RGB (`100%` = cor pura, `0%` =
+  apagado). Não existe canal de luminosidade separado no hardware nesta
+  implementação: o nó `brightness` do LED multicolor fica fixo em 255 e
+  quem carrega o nível é a própria cor. O handler `led.set` do daemon
+  faz exatamente a mesma escala linear que o caminho offline.
+
+> **Falha conhecida, não corrigida: as duas pontas usam unidades
+> diferentes.** A CLI aceita `--brightness` em 0–100 e manda esse número
+> cru no `led.set`; o handler do daemon valida `0.0 ≤ brightness ≤ 1.0` e
+> recusa qualquer coisa acima de 1. Efeito prático com o daemon rodando:
+> `--brightness 50` faz a chamada IPC falhar e o comando cai em silêncio
+> no caminho de hardware direto (onde a conversão para 0–1 acontece, e o
+> resultado sai certo); `--brightness 1` é aceito pelo daemon como 100%,
+> não como 1%. Medido em 25/07/2026 lendo `cli/cmd_test.py` e
+> `daemon/ipc_handlers.py`. Enquanto isso não for arrumado no código, a
+> luminosidade só é confiável com o daemon **parado**.
 
 Exit codes:
 
@@ -135,8 +147,9 @@ Exit codes:
 
 - `0` — clone salvo com sucesso.
 - `1` — nenhum perfil ativo marcado OU perfil ativo ausente do disco.
-- `2` — flag `--from-active` ausente (sem ela a operação é recusada;
-  clone por nome arbitrário fica para sprint futura).
+- `2` — flag `--from-active` ausente. Sem ela a operação é recusada: clonar
+  um perfil por nome arbitrário não está implementado, e não há trabalho em
+  andamento para isso.
 
 ## `hefesto-dualsense4unix daemon`
 
@@ -148,12 +161,24 @@ hefesto-dualsense4unix daemon start            # foreground, sem systemd
 hefesto-dualsense4unix daemon stop             # systemctl --user stop hefesto-dualsense4unix.service
 hefesto-dualsense4unix daemon restart          # systemctl --user restart hefesto-dualsense4unix.service
 hefesto-dualsense4unix daemon status           # systemctl --user status hefesto-dualsense4unix.service
+hefesto-dualsense4unix daemon pause            # para o despacho de input; o daemon segue vivo
+hefesto-dualsense4unix daemon resume           # retoma o despacho
+hefesto-dualsense4unix daemon disable          # para o daemon e desliga o auto-start
+hefesto-dualsense4unix daemon enable           # religa o auto-start e inicia
 hefesto-dualsense4unix daemon uninstall-service
 ```
 
 `daemon start` roda o daemon em foreground (útil para debug). Para rodar
 como serviço em background, instale a unit e use `start`/`stop`/`restart`
 via subcomandos acima — eles despacham `systemctl --user` por baixo.
+
+`pause`/`resume` falam por IPC e exigem o daemon rodando (saem com código
+`1` se ele estiver offline). `disable`/`enable` mexem na unit do systemd.
+
+Não existe `daemon reload` na linha de comando. O que existe é o método
+IPC `daemon.reload`, que aceita `config_overrides` com um subconjunto dos
+campos de `DaemonConfig` — ver a seção de configuração em
+[`hotkeys.md`](hotkeys.md).
 
 ## `hefesto-dualsense4unix test` (efeitos direto no hardware)
 
@@ -166,17 +191,35 @@ hefesto-dualsense4unix test led --color '#ff0000' --brightness 40
 hefesto-dualsense4unix test rumble --weak 128 --strong 64
 ```
 
-## `hefesto-dualsense4unix emulate`
+## `hefesto-dualsense4unix gamepad` (o controle virtual)
+
+Substituiu o antigo `emulate xbox360`, que subia um processo avulso e abria um
+**segundo** leitor do mesmo controle (double input). Agora quem cria o controle
+virtual é o daemon:
 
 ```bash
-hefesto-dualsense4unix emulate xbox360           # cria gamepad virtual Xbox360 via uinput
-hefesto-dualsense4unix emulate xbox360 --off
+hefesto-dualsense4unix gamepad on                     # máscara padrão
+hefesto-dualsense4unix gamepad on --flavor xbox       # o jogo vê um Xbox
+hefesto-dualsense4unix gamepad on --flavor dualsense  # o jogo vê um DualSense
+hefesto-dualsense4unix gamepad off
+hefesto-dualsense4unix gamepad status
 ```
 
 ## Demais comandos
 
 - `hefesto-dualsense4unix status` — estado do daemon via IPC (fallback local se offline).
+- `hefesto-dualsense4unix doctor` — diagnóstico ponta a ponta (`--fix`, `--fix-safe`, `--quiet`).
 - `hefesto-dualsense4unix battery` — percentual de bateria.
+- `hefesto-dualsense4unix mic on|off|status|bt|bt-status` — microfone embutido
+  do DualSense. `on`/`off`/`status` são **política do WirePlumber** e valem no
+  cabo, onde o mic é um dispositivo de áudio USB comum. `bt` é outra coisa: sobe
+  a **ponte** que decodifica o Opus tunelado nos relatórios HID e publica o
+  microfone no PipeWire (Ctrl-C encerra); `bt-status` só diagnostica as
+  pré-condições, sem mexer em nada. Ver [`bluetooth.md`](bluetooth.md).
+- `hefesto-dualsense4unix native on|off|status` — Modo Nativo (solta o controle para o jogo).
+- `hefesto-dualsense4unix coop on|off|status` — co-op local (cada controle = um jogador).
+- `hefesto-dualsense4unix controller list|target` — mira as ações num controle específico.
+- `hefesto-dualsense4unix plugin list|reload` — plugins do daemon.
 - `hefesto-dualsense4unix tui` — abre a TUI Textual.
 - `hefesto-dualsense4unix tray` — abre o tray GTK3 (extra `[tray]`).
 - `hefesto-dualsense4unix version` — versão instalada.

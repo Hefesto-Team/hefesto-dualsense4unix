@@ -267,3 +267,58 @@ class TestProfileListFallback:
         assert isinstance(resultado, list)
         assert all("name" in p and "active" in p for p in resultado)
         assert all(p["active"] is False for p in resultado)  # fallback marca offline
+
+
+# ---------------------------------------------------------------------------
+# HARM-19 — recusa do daemon != daemon offline
+# ---------------------------------------------------------------------------
+
+
+class TestTriggerSetChecked:
+    """`trigger_set_checked` separa "o daemon recusou" de "não achei o daemon".
+
+    `_safe_call` colapsa os dois em (False, None) — e era por isso que a aba
+    Triggers pintava "Fim <= Início" como "daemon offline?" com o daemon vivo.
+    """
+
+    def test_recusa_de_validacao_devolve_a_mensagem(self):
+        from hefesto_dualsense4unix.daemon.ipc_server import CODE_INVALID_PARAMS
+
+        exc = IpcError(CODE_INVALID_PARAMS, "end (3) deve ser > start (5)")
+        with patch.object(ipc_bridge, "_run_call", side_effect=exc):
+            ok, motivo = ipc_bridge.trigger_set_checked("left", "Bow", [5, 3, 4, 4])
+
+        assert ok is False
+        assert motivo == "end (3) deve ser > start (5)"
+
+    def test_daemon_offline_nao_inventa_motivo(self):
+        with patch.object(
+            ipc_bridge, "_run_call", side_effect=FileNotFoundError("sem socket")
+        ):
+            ok, motivo = ipc_bridge.trigger_set_checked("left", "Rigid", [5, 200])
+
+        assert (ok, motivo) == (False, None)
+
+    def test_timeout_de_transporte_nao_vira_motivo(self):
+        """O timeout do IpcClient também é IpcError — mas com code=-1, não é
+        uma recusa do daemon."""
+        with patch.object(
+            ipc_bridge, "_run_call", side_effect=IpcError(-1, "conexão timeout")
+        ):
+            ok, motivo = ipc_bridge.trigger_set_checked("left", "Rigid", [5, 200])
+
+        assert (ok, motivo) == (False, None)
+
+    def test_sucesso_sem_motivo(self):
+        with patch.object(ipc_bridge, "_run_call", return_value={"status": "ok"}):
+            assert ipc_bridge.trigger_set_checked("left", "Rigid", [5, 200]) == (
+                True,
+                None,
+            )
+
+    def test_excecao_inesperada_propaga(self):
+        with (
+            patch.object(ipc_bridge, "_run_call", side_effect=TypeError("bug")),
+            pytest.raises(TypeError),
+        ):
+            ipc_bridge.trigger_set_checked("left", "Rigid", [5, 200])

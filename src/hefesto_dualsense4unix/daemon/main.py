@@ -29,21 +29,84 @@ def build_controller() -> IController:
     return PyDualSenseController()
 
 
+def single_instance_name() -> str:
+    """Nome do lock de instância única do daemon, derivado do socket IPC.
+
+    BUG-MULTI-INSTANCE-ISOLATED-SOCKET-01: um daemon com socket ISOLADO (fake via
+    `run.sh --fake`, smoke, ou socket custom) NÃO deve brigar pelo mesmo pid-lock
+    do daemon de PRODUÇÃO. Antes o lock era sempre "daemon": um fake fazia
+    takeover (SIGTERM) do real, o systemd ressuscitava o real, e podiam sobrar
+    daemons órfãos disputando o socket (GUI/applet falando com o daemon errado).
+    Atando o lock ao socket, cada namespace de socket tem seu próprio
+    single-instance: dois daemons de PRODUÇÃO (socket default) ainda se substituem
+    corretamente; fake/smoke/custom nunca matam o real.
+
+    BUG-FAKE-SOCKET-SYNC-01: o nome-base vem de `ipc_socket_name()` (fake-aware), a
+    MESMA fonte que `ipc_socket_path()`. Assim o lock e o socket derivam do mesmo
+    switch de fake — um daemon fake (mesmo iniciado como `daemon start` cru) tem
+    socket E lock isolados, e nunca sequestra/mata o daemon de produção.
+    """
+    from hefesto_dualsense4unix.utils.xdg_paths import (
+        IPC_SOCKET_DEFAULT_NAME,
+        ipc_socket_name,
+    )
+
+    sock = ipc_socket_name()
+    if sock == IPC_SOCKET_DEFAULT_NAME:
+        return "daemon"
+    return "daemon-" + sock.removesuffix(".sock")
+
+
 def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     configure_logging()
     logger = get_logger(__name__)
+
+    # CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: traz perfis/sessão/prefs do
+    # layout curto legado (~/.config/hefesto) para o atual, se necessário.
+    # Idempotente e não-destrutivo; roda antes de qualquer leitura de config.
+    from hefesto_dualsense4unix.utils.migrate_legacy_paths import migrate_legacy_paths
+
+    migrate_legacy_paths()
 
     # BUG-MULTI-INSTANCE-01: "última vence" — encerra daemon predecessor
     # (SIGTERM grace 2s, depois SIGKILL) antes de subir. Evita dois daemons
     # disputando /dev/hidraw* e criando uinput duplicado. Ver armadilha A-10.
     from hefesto_dualsense4unix.utils.single_instance import acquire_or_takeover
 
-    acquire_or_takeover("daemon")
+    acquire_or_takeover(single_instance_name())
+
+    # PERF-MULTI-CONTROLLER-01: o daemon nunca deve disputar CPU de igual com o
+    # JOGO (SCHED_OTHER). Com 2+ controles as threads de evdev/report somam
+    # carga real; um nice moderado elimina o stutter por starvation sem
+    # prejudicar a latência de input (as threads acordam por evento). Opt-out /
+    # ajuste: HEFESTO_DUALSENSE4UNIX_NICE=0..19 (default 5).
+    try:
+        nice_level = int(os.getenv("HEFESTO_DUALSENSE4UNIX_NICE", "5"))
+        if nice_level > 0:
+            os.nice(nice_level)
+    except (OSError, ValueError):
+        logger.warning("daemon_nice_unavailable")
 
     controller = build_controller()
     config = DaemonConfig(
         poll_hz=poll_hz or int(os.getenv("HEFESTO_DUALSENSE4UNIX_POLL_HZ", "60")),
         auto_reconnect=auto_reconnect,
+        # FEAT-EMULATION-GAMEMODE-COMBO-01: modo jogo e' so pelo combo PS+Options.
+        # Default 0 = long-press DESLIGADO (evita o modo-jogo acidental); quem
+        # quiser o gesto seta HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS>0.
+        ps_long_press_ms=int(
+            os.getenv("HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS", "0")
+        ),
+        # EMULACAO-NO-JOGO-01: até 29/07 este campo NUNCA era passado aqui — o
+        # default True da dataclass vencia sempre e não havia superfície nenhuma
+        # que o desligasse (nem env, nem arquivo, nem IPC), enquanto o R1 do mapa
+        # default emitia Alt+Tab dentro da partida dela.
+        # Precedência, do mais fraco ao mais forte: default da dataclass (True) <
+        # este env < `keyboard_emulation.flag` (a decisão DELA, lida no boot em
+        # `Daemon.run`). `=0` desliga; qualquer outro valor mantém ligado.
+        keyboard_emulation_enabled=(
+            os.getenv("HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION", "1") != "0"
+        ),
     )
     daemon = Daemon(controller=controller, config=config)
 
@@ -56,4 +119,4 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
         return 130
 
 
-__all__ = ["build_controller", "run_daemon"]
+__all__ = ["build_controller", "run_daemon", "single_instance_name"]

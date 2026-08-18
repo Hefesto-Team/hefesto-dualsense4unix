@@ -9,6 +9,7 @@ escritas sem o acento canônico (ex.: ``funcao`` em vez de ``função``,
 Uso:
     scripts/validar-acentuacao.py --all
     scripts/validar-acentuacao.py --check-file caminho/arquivo.py
+    scripts/validar-acentuacao.py --check-file arquivo1.py arquivo2.md
     scripts/validar-acentuacao.py arquivo1.py arquivo2.md
     scripts/validar-acentuacao.py --show-whitelist
 
@@ -405,6 +406,9 @@ WHITELIST_PATTERNS: list[str] = [
     r"^scripts/check_anonymity\.sh$",
     # O teste do validador usa fixtures com texto sem acento propositalmente.
     r"^tests/unit/test_validar_acentuacao\.py$",
+    # Registro histórico: são as mensagens de tag como foram escritas na época.
+    # Reescrevê-las falsificaria o histórico — o arquivo é arquivo, não texto vivo.
+    r"^docs/tags-arquivo-pre-1\.0\.txt$",
     r"\.json$",
     r"\.lock$",
     r"^\.git/.*",
@@ -564,6 +568,84 @@ def _mascara_inline_code_md(linha: str) -> str:
     return _INLINE_CODE_MD.sub(_sub, linha)
 
 
+def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
+    """Em ``.py``, apaga tudo que NÃO é comentário/string antes da varredura.
+
+    BUG-VALIDAR-ACENTUACAO-IDENTIFICADOR-PY-01: o validador cobrava acento de
+    NOMES DE VARIÁVEL. `producao`, `modulo`, `sessao`, `padrao`, `conteudo`,
+    `acao` — em Python identificador não leva acento, então a "correção"
+    pedida ia da má prática ao erro de sintaxe em alguns casos. Resultado: o
+    gate ficou vermelho de forma permanente, com dezenas de apontamentos que
+    ninguém podia atender, e um gate que sempre reprova deixa de ser lido.
+
+    As heurísticas que já existiam (`_esta_em_identificador_snake`,
+    `_is_uppercase_snake_token`) cobriam só parte: pegavam `foo_acao_bar` e
+    `def acao(`, mas não `producao: None`, `for modulo in ...` nem
+    `sessao = ...`. Em vez de empilhar mais casos especiais, a regra passa a
+    ser a que sempre foi a intenção: **acentuação é sobre TEXTO**, e num
+    arquivo Python o texto mora em comentário, docstring e literal de string.
+    O `tokenize` do próprio Python responde isso com exatidão, sem adivinhar.
+
+    Arquivo que não tokeniza (sintaxe inválida, encoding exótico) volta
+    inteiro para a varredura antiga — degradar para o comportamento anterior
+    é preferível a deixar de checar o arquivo.
+
+    PORTÃO-VIVO-01 Bloco A: a partir do Python 3.12 (PEP 701) o `tokenize`
+    deixou de devolver a f-string como um `STRING` único e passou a emitir
+    `FSTRING_START` / `FSTRING_MIDDLE` / `FSTRING_END`. Como o filtro só
+    aceitava `COMMENT` e `STRING`, **todo o texto de f-string virava espaço**
+    e o gate ficava cego justamente na forma de string mais usada no projeto.
+    Pior: o CI pinava 3.11, onde f-string ainda é `STRING` — a máquina dela
+    ficava verde e a `main` vermelha pelo mesmo arquivo.
+
+    O token aceito é o `FSTRING_MIDDLE`, e só ele, porque ele é exatamente a
+    parte **textual**: o que está dentro das chaves sai como `NAME`/`OP` e
+    continua mascarado. Aceitar `FSTRING_START`/`FSTRING_END` traria só as
+    aspas, e aceitar o miolo das chaves ressuscitaria o falso positivo em nome
+    de variável que este mascaramento existe para matar (`f"{producao}"` não
+    pode virar apontamento). Os nomes são buscados com `getattr` porque no
+    3.11 esses atributos não existem — assumi-los quebraria o gate na versão
+    que o CI ainda usa.
+    """
+    import io
+    import tokenize
+
+    try:
+        tokens = list(tokenize.generate_tokens(io.StringIO(conteudo).readline))
+    except (tokenize.TokenError, SyntaxError, IndentationError, ValueError):
+        return linhas
+
+    tipos_texto = {tokenize.COMMENT, tokenize.STRING}
+    fstring_middle = getattr(tokenize, "FSTRING_MIDDLE", None)
+    if fstring_middle is not None:
+        tipos_texto.add(fstring_middle)
+
+    # Começa tudo em branco e devolve só os trechos de texto, preservando as
+    # colunas — as heurísticas seguintes usam os índices da linha original.
+    mascarado = [" " * len(linha) for linha in linhas]
+    for tok in tokens:
+        if tok.type not in tipos_texto:
+            continue
+        (lin_ini, col_ini), (lin_fim, col_fim) = tok.start, tok.end
+        for n in range(lin_ini, lin_fim + 1):
+            i = n - 1
+            if not 0 <= i < len(linhas):
+                continue
+            original = linhas[i]
+            inicio = col_ini if n == lin_ini else 0
+            # `fim` importa: numa linha como `assert "x" not in codigo`, a
+            # string ocupa só um pedaço e `codigo` é identificador. Copiar até
+            # o fim da linha traria o código junto de volta.
+            fim = col_fim if n == lin_fim else len(original)
+            fim = min(fim, len(original))
+            mascarado[i] = (
+                mascarado[i][:inicio]
+                + original[inicio:fim]
+                + mascarado[i][fim:]
+            )
+    return mascarado
+
+
 def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
     """Retorna lista de (linha, palavra_errada, palavra_correta, texto_da_linha)."""
     try:
@@ -587,6 +669,10 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
     eh_markdown = path.suffix.lower() == ".md"
     if eh_markdown:
         pular_idx = _linhas_markdown_codigo(linhas)
+    # BUG-VALIDAR-ACENTUACAO-IDENTIFICADOR-PY-01: em .py, só comentário e
+    # string são texto — o resto é código e não leva acento.
+    eh_python = path.suffix.lower() == ".py"
+    linhas_texto = _mascara_codigo_python(conteudo, linhas) if eh_python else linhas
 
     violacoes: list[tuple[int, str, str, str]] = []
     for idx, linha in enumerate(linhas):
@@ -594,7 +680,12 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
             continue
         if "noqa-acento" in linha or "noqa: acentuacao" in linha:
             continue
-        linha_busca = _mascara_inline_code_md(linha) if eh_markdown else linha
+        if eh_markdown:
+            linha_busca = _mascara_inline_code_md(linha)
+        elif eh_python:
+            linha_busca = linhas_texto[idx]
+        else:
+            linha_busca = linha
         for errada, correta in _CORRECOES.items():
             pat = _PATTERNS[errada]
             for m in pat.finditer(linha_busca):
@@ -671,7 +762,7 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
         # normalizacao Unicode externa), a linha sai intocada para
         # `novas_linhas`. Custo de falso negativo (palavra sem acento na linha
         # do glyph) e infinitamente menor que o custo da regressao reportada
-        # 3x: arquivos com strip silencioso de "●○◐△□↑↓←→".
+        # 3x: arquivos com strip silencioso de "□↑↓←→".
         if _contem_glyph_protegido(linha):
             novas_linhas.append(linha_com_sep)
             continue
@@ -701,7 +792,7 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
         # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02 camada 1: rejeita qualquer
         # substituição cuja faixa original contém glyph protegido por ADR-011.
         # Aplica em modo --fix estritamente — se um par mal-formado em _PARES
-        # colocasse "●" como "errada", este filtro impede remoção silenciosa.
+        # colocasse "" como "errada", este filtro impede remoção silenciosa.
         if subs:
             filtrados = [
                 (s, e, r) for s, e, r in subs
@@ -760,18 +851,40 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
 
 
 def listar_arquivos_git(raiz: Path) -> list[Path]:
+    """Lista os arquivos que o modo ``--all`` deve varrer.
+
+    PORTÃO-VIVO-01 Bloco A (bônus): `git ls-files -z` puro lista só o índice,
+    então `--all` era **cego a arquivo novo** ainda não adicionado — dava verde
+    exatamente no arquivo que ninguém revisou. `--others --exclude-standard`
+    traz o não rastreado sem trazer o ignorado, e `--cached` mantém explícito o
+    que já era varrido. Duplicata não ocorre: um caminho é `cached` ou `other`,
+    nunca os dois.
+    """
     try:
         out = subprocess.check_output(
-            ["git", "ls-files", "-z"], cwd=str(raiz), text=True
+            [
+                "git",
+                "ls-files",
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+            ],
+            cwd=str(raiz),
+            text=True,
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
         return []
     arquivos: list[Path] = []
+    vistos: set[Path] = set()
     for nome in out.split("\x00"):
         if not nome:
             continue
         p = raiz / nome
+        if p in vistos:
+            continue
         if p.is_file() and p.suffix.lower() in EXTENSOES_ALVO:
+            vistos.add(p)
             arquivos.append(p)
     return arquivos
 
@@ -797,7 +910,8 @@ def main() -> int:
     grp.add_argument(
         "--check-file",
         metavar="PATH",
-        help="Varre um único arquivo (modo pre-commit)",
+        nargs="+",
+        help="Varre um ou mais arquivos (modo pre-commit)",
     )
     grp.add_argument(
         "--show-whitelist",
@@ -824,13 +938,22 @@ def main() -> int:
 
     raiz = descobrir_raiz()
 
-    if args.check_file:
-        alvos = [Path(args.check_file)]
-    elif args.all or (not args.paths and not args.check_file):
+    # GATE-ACENTO-MULTIARQUIVO-01: o `pre-commit` apenda TODOS os nomes de
+    # arquivo staged ao entry do hook. Enquanto `--check-file` aceitava um
+    # valor só, o argparse consumia o primeiro nome e jogava os demais no
+    # positional `paths`, que este bloco descartava em silêncio — com N
+    # arquivos staged, N-1 passavam sem checagem alguma. Agora `--check-file`
+    # aceita N caminhos E os positionais são somados aos alvos: nada que chega
+    # pela linha de comando fica sem ser lido, e basta um arquivo reprovar para
+    # o gate reprovar.
+    recebidos: list[Path] = [Path(p) for p in (args.check_file or [])]
+    recebidos.extend(args.paths)
+
+    if args.all or not recebidos:
         alvos = listar_arquivos_git(raiz)
     else:
         alvos = []
-        for p in args.paths:
+        for p in recebidos:
             if p.is_dir():
                 for ext in EXTENSOES_ALVO:
                     alvos.extend(p.rglob(f"*{ext}"))

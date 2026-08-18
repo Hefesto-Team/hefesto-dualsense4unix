@@ -6,14 +6,19 @@ Tolerante a ausência do arquivo (retorna defaults).
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.utils import xdg_paths
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-_CONFIG_DIR = Path("~/.config/hefesto").expanduser()
+# CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: usa o caminho XDG canônico
+# (`~/.config/hefesto-dualsense4unix`) via `xdg_paths` — antes era hardcoded no
+# caminho curto legado `~/.config/hefesto`, divergindo de perfis/sessão e
+# deixando as preferências órfãs após reinstalar. A migração curto→longo
+# (`utils.migrate_legacy_paths`) traz preferências antigas para cá.
+_CONFIG_DIR = xdg_paths.config_dir()
 _PREFS_FILE = _CONFIG_DIR / "gui_preferences.json"
 
 _DEFAULTS: dict[str, Any] = {

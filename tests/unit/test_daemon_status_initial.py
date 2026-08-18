@@ -1,6 +1,6 @@
 """Testes do primeiro refresh do status do daemon no bootstrap da GUI.
 
-BUG-GUI-DAEMON-STATUS-INITIAL-01 — a aba Daemon (e a aba Status) mostrava
+BUG-GUI-DAEMON-STATUS-INITIAL-01 — a aba Sistema (e a aba Status) mostrava
 "Offline" no primeiro frame mesmo com o daemon ativo, porque:
 
   1. O default do Glade em ``status_daemon`` era ``"Offline"``.
@@ -12,11 +12,11 @@ BUG-GUI-DAEMON-STATUS-INITIAL-01 — a aba Daemon (e a aba Status) mostrava
 Fix coberto por estes testes:
 
   - Cenário 1 (daemon ativo): após ``install_daemon_tab``, o label final
-    mostra ``online_systemd`` (verde, "● Online").
+    mostra ``online_systemd`` (verde, " Online").
   - Cenário 2 (daemon inativo): o label final mostra ``offline``
-    (vermelho, "○ Offline") — nunca "Iniciando...".
+    (vermelho, " Offline") — nunca "Iniciando...".
   - Cenário 3 (systemctl não responde / falha): durante a janela em que o
-    worker ainda está rodando, o label mostra "● Consultando..." cinza em
+    worker ainda está rodando, o label mostra " Consultando..." cinza em
     vez do falso-negativo "Offline".
 
 Usa stubs de ``gi`` idênticos aos de ``test_daemon_status_matrix.py``.
@@ -30,11 +30,18 @@ from typing import Any
 
 def _install_gi_stubs() -> None:
     """Stubs mínimos de gi.repository para rodar sem GTK real."""
-    if "gi" in sys.modules and hasattr(sys.modules["gi"], "require_version"):
+    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
+    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
+    # "ambiente sem GTK" mesmo com o GTK real presente.
+    existente = sys.modules.get("gi")
+    if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
+            import gi
+
+            gi.require_version("Gtk", "3.0")
             from gi.repository import Gtk  # noqa: F401
             return
-        except Exception:
+        except Exception:  # pragma: no cover — ambientes sem GTK
             pass
 
     gi_mod = types.ModuleType("gi")
@@ -74,10 +81,10 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-import pytest  # noqa: E402
+import pytest
 
-import hefesto_dualsense4unix.utils.single_instance as si_mod  # noqa: E402
-from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
+import hefesto_dualsense4unix.utils.single_instance as si_mod
+from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 
 # ---------------------------------------------------------------------------
 # Fakes mínimos (espelham test_daemon_status_matrix.py)
@@ -103,6 +110,10 @@ class _FakeTextViewObj:
         return _FakeBufferObj()
 
     def scroll_to_mark(self, *_a: Any, **_kw: Any) -> None:
+        pass
+
+    # UI-DAEMON-LOG-AUTOSCROLL-01: autoscroll do log usa scroll_to_iter.
+    def scroll_to_iter(self, *_a: Any, **_kw: Any) -> None:
         pass
 
 
@@ -230,7 +241,7 @@ def test_install_daemon_tab_com_daemon_ativo_pinta_online(
 
     Após `install_daemon_tab`, o worker roda imediatamente (executor síncrono),
     o `GLib.idle_add` (stub) aplica o resultado e o label final mostra
-    "● Online" verde — nunca passa por "Offline".
+    " Online" verde — nunca passa por "Offline".
     """
     _patch_installer_none(monkeypatch)
     _patch_executor_immediate(monkeypatch)
@@ -250,12 +261,14 @@ def test_install_daemon_tab_com_daemon_ativo_pinta_online(
 
     host.install_daemon_tab()
 
-    assert "#2d8" in host._label.markup, (
+    assert "#50fa7b" in host._label.markup, (
         f"esperava cor verde (#2d8) para online_systemd; markup={host._label.markup!r}"
     )
-    assert "Online" in host._label.markup
-    assert "Offline" not in host._label.markup
-    assert "Consultando" not in host._label.markup  # já foi sobrescrito pelo async
+    # LEIGO-03: o label deixou de dizer "Online (systemd + auto-start)" — o
+    # estado exibido é o mesmo, a palavra é que virou português de gente.
+    assert "Funcionando" in host._label.markup
+    assert "Desligado" not in host._label.markup
+    assert "Verificando" not in host._label.markup  # já sobrescrito pelo async
     assert host._sw.active is True  # enabled
 
 
@@ -264,8 +277,8 @@ def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
 ) -> None:
     """Cenário 2: daemon inativo (systemd inactive + sem processo).
 
-    Após `install_daemon_tab`, o label final é "○ Offline" vermelho — nunca
-    fica preso em "Iniciando..." nem no estado "Consultando..." transitório.
+    Após `install_daemon_tab`, o label final é " Desligado" vermelho — nunca
+    fica preso em "Ligando..." nem no estado "Verificando…" transitório.
     """
     _patch_installer_none(monkeypatch)
     _patch_executor_immediate(monkeypatch)
@@ -285,24 +298,24 @@ def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
 
     host.install_daemon_tab()
 
-    assert "#d33" in host._label.markup, (
+    assert "#ff5555" in host._label.markup, (
         f"esperava cor vermelha (#d33) para offline; markup={host._label.markup!r}"
     )
-    assert "Offline" in host._label.markup
-    assert "Iniciando" not in host._label.markup
-    assert "Consultando" not in host._label.markup
+    assert "Desligado" in host._label.markup
+    assert "Ligando" not in host._label.markup
+    assert "Verificando" not in host._label.markup
     assert host._sw.active is False
 
 
 def test_consulting_placeholder_aparece_antes_do_worker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cenário 3: worker não responde — label permanece "Consultando...".
+    """Cenário 3: worker não responde — label permanece "Verificando…".
 
     Aqui o executor NÃO é substituído pelo síncrono: o `submit` do
     `ThreadPoolExecutor` real agenda o worker em outra thread e retorna
     imediatamente. Durante o primeiro frame da GUI (antes do worker terminar),
-    o usuário precisa ver "Consultando..." cinza — nunca "Offline" cru.
+    o usuário precisa ver "Verificando…" cinza — nunca "Desligado" cru.
     """
     _patch_installer_none(monkeypatch)
 
@@ -325,13 +338,27 @@ def test_consulting_placeholder_aparece_antes_do_worker(
     host.install_daemon_tab()
 
     # Worker foi agendado mas não executado — label deve mostrar o placeholder
-    # "Consultando..." cinza (nem verde, nem vermelho, nem amarelo).
-    assert "Consultando" in host._label.markup, (
-        f"esperava placeholder 'Consultando...'; markup={host._label.markup!r}"
+    # "Verificando…" cinza (nem verde, nem vermelho, nem amarelo).
+    assert "Verificando" in host._label.markup, (
+        f"esperava o placeholder 'Verificando…'; markup={host._label.markup!r}"
     )
-    assert "#888" in host._label.markup, (
+    assert "#8b8fa8" in host._label.markup, (
         f"esperava cor cinza (#888) no placeholder; markup={host._label.markup!r}"
     )
-    assert "Offline" not in host._label.markup
-    assert "Iniciando" not in host._label.markup
+    assert "Desligado" not in host._label.markup
+    assert "Ligando" not in host._label.markup
     assert "fn" in captured, "worker do _refresh_daemon_view_async não foi agendado"
+
+
+def test_find_repo_file_resolve_raiz_do_repo() -> None:
+    """BUG-GUI-REPO-ROOT-OFFBYONE-01 (H3 da auditoria): _find_repo_file achava
+    a raiz do repo em parents[3] (= <repo>/src), então os botões do cartão
+    anti-storm eram no-op silencioso. A raiz correta é parents[4] — provamos
+    resolvendo um arquivo REAL que os botões chamam."""
+    host = _Host()
+    found = host._find_repo_file("scripts/install_snd_quirk.sh")
+    assert found is not None, "não resolveu — _find_repo_file quebrado (parents errado)"
+    assert found.name == "install_snd_quirk.sh"
+    assert found.is_file()
+    # E um arquivo na raiz do repo (prova que a base é a raiz, não src/).
+    assert host._find_repo_file("run.sh") is not None

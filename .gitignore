@@ -23,6 +23,11 @@ squashfs-root/
 # dist/ nao commitado por padrao; release workflow gera.
 dist/
 
+# flatpak-builder gera caches e repos locais
+.flatpak-builder/
+flatpak-build-dir/
+flatpak-repo/
+
 # Testing
 .pytest_cache/
 .coverage
@@ -46,6 +51,11 @@ Task_Final/
 IMPORTANT.md
 *_AI_*.md
 *_agent_*.md
+# Auditorias/varreduras multi-agente: transcripts brutos (.jsonl) e sinteses trazem
+# atribuicao de IA (model-ids, "claude"/"anthropic") — NUNCA versionar. O gate de
+# anonimato isenta docs/process/**, entao o bloqueio aqui e a defesa real.
+docs/process/audits/
+*.jsonl
 
 # Secrets
 .env
@@ -92,3 +102,7 @@ STATE.md
 .aider*
 .continue/
 .github/copilot-instructions.md
+
+# Material de trabalho do redesign: mockups, referências e capturas de tela
+# soltas. A logo final vive em assets/hefesto-logo.svg; o resto não vai pro repo.
+novo-layout/

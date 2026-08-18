@@ -12,6 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+from hefesto_dualsense4unix.daemon.ipc_server import CODE_INVALID_PARAMS
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -54,7 +55,12 @@ def _run_call(
     """
     async def _do() -> Any:
         async with IpcClient.connect(timeout=timeout) as client:
-            return await client.call(method, params or {})
+            # BUG-IPC-READ-NO-TIMEOUT-01: o timeout precisa cobrir TAMBÉM a
+            # leitura da resposta, não só o connect — um daemon que aceita a
+            # conexão mas trava ao responder bloquearia o worker eternamente.
+            # IpcClient.call envolve o readline em asyncio.wait_for e converte
+            # TimeoutError em IpcError(-1, "conexão timeout") (já capturado).
+            return await client.call(method, params or {}, timeout=timeout)
 
     return asyncio.run(_do())
 
@@ -127,6 +133,37 @@ def call_async(
     _get_executor().submit(_worker)
 
 
+def run_in_thread(
+    fn: Callable[[], Any],
+    on_success: Callable[[Any], bool],
+    on_failure: Callable[[Exception], bool] | None = None,
+) -> None:
+    """Roda ``fn()`` em thread worker; callbacks re-postados via GLib.idle_add.
+
+    Generaliza ``call_async`` para qualquer função bloqueante fora de IPC (ex.:
+    ler perfis do disco com ``load_all_profiles``), mantendo a thread GTK livre.
+    Reusa o mesmo executor de 1 worker. Os callbacks DEVEM retornar ``False``
+    (contrato de ``GLib.idle_add``).
+    """
+    from gi.repository import GLib
+
+    def _worker() -> None:
+        try:
+            result = fn()
+        except Exception as exc:
+            if on_failure is not None:
+                GLib.idle_add(on_failure, exc)
+            else:
+                logger.warning(
+                    "ipc_bridge.run_in_thread falhou sem handler de erro",
+                    erro=str(exc),
+                )
+            return
+        GLib.idle_add(on_success, result)
+
+    _get_executor().submit(_worker)
+
+
 # ---------------------------------------------------------------------------
 # Helpers síncronos de alto nível (usados por CLI e código legado da GUI que
 # já está em thread worker ou contexto de teste).
@@ -138,6 +175,22 @@ def daemon_state_full() -> dict[str, Any] | None:
     ok, result = _safe_call("daemon.state_full")
     if ok and isinstance(result, dict):
         return result
+    return None
+
+
+def autoswitch_lock_set(locked: bool | None = None) -> bool | None:
+    """Congela/descongela a troca automática de perfil (FEAT-AUTOSWITCH-LOCK-01).
+
+    `locked=None` faz toggle no daemon. Devolve o estado resultante
+    (True=congelado), ou None se o daemon está offline.
+    """
+    params: dict[str, Any] = {}
+    if locked is not None:
+        params["locked"] = bool(locked)
+    ok, result = _safe_call("autoswitch.lock", params)
+    if ok and isinstance(result, dict):
+        estado = result.get("autoswitch_locked")
+        return bool(estado) if isinstance(estado, bool) else None
     return None
 
 
@@ -169,8 +222,33 @@ def profile_list() -> list[dict[str, Any]]:
             }
             for p in load_all_profiles()
         ]
-    except Exception:
+    except (FileNotFoundError, PermissionError, OSError) as exc:
+        # PROFILE-LOADER-UX-01: load_all_profiles agora pula perfis corrompidos
+        # internamente; aqui só sobram falhas de I/O do diretório de perfis
+        # (permissão negada, FS desmontado etc.). Logar com exc_info para a
+        # GUI mostrar diretório vazio + investigador ter trilha.
+        logger.warning(
+            "profile_load_fallback_failed",
+            err=str(exc),
+            err_type=type(exc).__name__,
+            exc_info=True,
+        )
         return []
+
+
+def active_profile_name() -> str | None:
+    """Nome do perfil ATIVO no daemon (``state_full.active_profile``) ou None.
+
+    PERFIL-SAVE-APPLY-01: usado pelo Salvar da aba Perfis para decidir se o
+    perfil recém-gravado precisa ser reaplicado na hora (daemon não relê
+    JSON de perfil por conta própria). Best-effort: offline = None.
+    """
+    ok, res = _safe_call("daemon.state_full", {})
+    if ok and isinstance(res, dict):
+        nome = res.get("active_profile")
+        if isinstance(nome, str) and nome:
+            return nome
+    return None
 
 
 def profile_switch(name: str) -> bool:
@@ -178,23 +256,114 @@ def profile_switch(name: str) -> bool:
     return ok
 
 
+def _call_checked(
+    method: str,
+    params: dict[str, Any],
+    timeout: float | None = 0.25,
+) -> tuple[bool, str | None]:
+    """RPC que distingue "o daemon RECUSOU" de "o daemon não respondeu".
+
+    Retorna ``(ok, motivo)``. ``motivo`` só vem preenchido quando o daemon
+    respondeu e recusou por parâmetro inválido (``CODE_INVALID_PARAMS``): ele
+    está VIVO, o pedido é que não serve — a UI tem de mostrar o motivo dele, não
+    acusar o daemon de estar morto. Falha de transporte (offline, socket ausente,
+    timeout) volta como ``(False, None)``.
+
+    Existe porque ``_safe_call`` colapsa os dois casos em ``(False, None)``
+    (ver o docstring dele) e a UI pintava recusa de validação como "daemon
+    offline?". ``IpcError`` é capturado ANTES de ``_IPC_TRANSPORT_ERRORS``, que
+    o contém.
+    """
+    try:
+        _run_call(method, params, timeout=timeout)
+    except IpcError as exc:
+        if exc.code == CODE_INVALID_PARAMS:
+            return False, exc.message
+        logger.debug(
+            "ipc_bridge falha esperada de transporte",
+            method=method,
+            erro_tipo=type(exc).__name__,
+            erro=str(exc),
+        )
+        return False, None
+    except _IPC_TRANSPORT_ERRORS as exc:
+        logger.debug(
+            "ipc_bridge falha esperada de transporte",
+            method=method,
+            erro_tipo=type(exc).__name__,
+            erro=str(exc),
+        )
+        return False, None
+    return True, None
+
+
+def trigger_set_checked(
+    side: str, mode: str, params: list[int], uniq: str | None = None
+) -> tuple[bool, str | None]:
+    """Aplica gatilho devolvendo o MOTIVO quando o daemon RECUSA (HARM-19).
+
+    Recusa típica: Fim <= Início. Ver ``_call_checked`` para o contrato.
+    ``uniq`` (PERFIL-05): MAC do controle selecionado no seletor — o daemon
+    aplica SÓ nele (override por-MAC); omitido = comportamento global clássico.
+    """
+    payload: dict[str, Any] = {"side": side, "mode": mode, "params": params}
+    if uniq:
+        payload["uniq"] = uniq
+    return _call_checked("trigger.set", payload)
+
+
 def trigger_set(side: str, mode: str, params: list[int]) -> bool:
-    ok, _ = _safe_call("trigger.set", {"side": side, "mode": mode, "params": params})
+    """Aplica gatilho; True se o daemon confirmou. Descarta o motivo da recusa."""
+    ok, _motivo = trigger_set_checked(side, mode, params)
     return ok
+
+
+def trigger_reset(
+    side: str | None = None, uniq: str | None = None
+) -> tuple[bool, str | None]:
+    """LIBERA a trava manual e devolve o gatilho ao perfil (`trigger.reset`).
+
+    R-19 (auditoria 23/07): o RPC já existia e já estava roteado
+    (`ipc_server.py:102`), mas a GUI não o expunha — então o botão "Desligar" da
+    aba Gatilhos mandava outro `trigger.set` com modo "Off". A diferença é
+    decisiva: `trigger.set` **ARMA** `mark_manual_trigger_active`, então o botão
+    que a usuária usa para "voltar ao normal" era mais um jeito de PAUSAR a
+    troca automática de perfil. É a queixa "estado armado que nunca é liberado".
+
+    ABAS-06 (25/07): `uniq` — MAC do controle escolhido no seletor. Este era o
+    ÚNICO comando de saída da janela sem alvo: com "Controle 2" selecionado,
+    "Desligar" zerava o gatilho dos QUATRO, enquanto o "Aplicar" ao lado
+    mandava para um só. Omitido = comportamento global clássico.
+
+    ABAS-05 (25/07): o clear das TRÊS categorias (documentado aqui como
+    "contrato deliberado" até 24/07) foi estreitado para a categoria `trigger`
+    — desligar um gatilho apagava a trava de LED e de vibração de outras abas e
+    reabria a troca automática para reescrever a cor recém-aplicada.
+    """
+    payload: dict[str, Any] = {}
+    if side:
+        payload["side"] = side
+    if uniq:
+        payload["uniq"] = uniq
+    return _call_checked("trigger.reset", payload)
 
 
 def led_set(
     rgb: tuple[int, int, int],
     brightness: float | None = None,
+    uniq: str | None = None,
 ) -> bool:
     """Aplica cor RGB (opcionalmente escalada) no lightbar via IPC.
 
     ``brightness`` (0.0-1.0) é repassado ao daemon quando fornecido; omitido
     preserva o contrato v1 (sem multiplicador). Ver FEAT-LED-BRIGHTNESS-01.
+    ``uniq`` (PERFIL-05): MAC do controle selecionado — aplica SÓ nele.
     """
     payload: dict[str, Any] = {"rgb": list(rgb)}
     if brightness is not None:
         payload["brightness"] = float(brightness)
+    if uniq:
+        payload["uniq"] = uniq
     ok, _ = _safe_call("led.set", payload)
     return ok
 
@@ -222,13 +391,28 @@ def rumble_passthrough(enabled: bool = True) -> bool:
     return ok
 
 
+def rumble_policy_set_checked(
+    policy: str, *, timeout: float | None = 0.25
+) -> tuple[bool, str | None]:
+    """Altera a intensidade devolvendo o MOTIVO quando o daemon RECUSA.
+
+    Mesmo tratamento dos gatilhos (ver ``_call_checked``): a aba Rumble afirmava
+    "O Hefesto não está rodando" também para erro JSON-RPC — daemon VIVO que
+    recusou o pedido. ``timeout`` é do chamador: a folga de leitura de estado
+    mora em ``app.actions.mode_transition``, que importa este módulo (importá-lo
+    aqui seria ciclo).
+    """
+    return _call_checked("rumble.policy_set", {"policy": policy}, timeout=timeout)
+
+
 def rumble_policy_set(policy: str) -> bool:
     """Altera política global de intensidade de rumble (FEAT-RUMBLE-POLICY-01).
 
     ``policy`` deve ser um de "economia", "balanceado", "max", "auto", "custom".
     Retorna True se o daemon confirmou; False se offline ou parâmetro inválido.
+    Descarta o motivo da recusa — use ``rumble_policy_set_checked`` para tê-lo.
     """
-    ok, _ = _safe_call("rumble.policy_set", {"policy": policy})
+    ok, _motivo = rumble_policy_set_checked(policy)
     return ok
 
 
@@ -242,13 +426,69 @@ def rumble_policy_custom(mult: float) -> bool:
     return ok
 
 
-def player_leds_set(bits: tuple[bool, bool, bool, bool, bool]) -> bool:
+#: PLAYER-01: motivos de recusa do ``identity.number.set`` traduzidos para a
+#: frase que a janela mostra. Mapa explícito (não f-string do ``reason``) para
+#: a usuária nunca ler um identificador do protocolo na barra de status.
+_MOTIVOS_NUMERO: dict[str, str] = {
+    "sessao_de_jogo_aberta": (
+        "feche o jogo antes de trocar o número — trocar agora repintaria "
+        "o controle no meio da partida"
+    ),
+    "controle_ausente": (
+        "este controle não está na mesa agora — só quem está ligado tem número"
+    ),
+    "numero_fora_da_mesa": (
+        "esse número é maior do que a quantidade de controles ligados"
+    ),
+    "lock_timeout": "o Hefesto está ocupado — tente de novo em um instante",
+}
+
+
+def identity_number_set(uniq: str, number: int) -> tuple[bool, str | None]:
+    """Atribui o NÚMERO EXIBIDO do controle ``uniq`` (PLAYER-01, 25/07).
+
+    O comando que faltava no projeto inteiro: até 25/07 não havia forma
+    nenhuma de dizer "este controle é o 2". Só existia ``identity.renumber``,
+    que compacta TODOS preservando a ordem relativa e mora na aba Início — e
+    era por isso que a expectativa dela ("escolho o player e o cabeçalho
+    acompanha") não tinha como se realizar: ela clicava num controle de
+    APARÊNCIA (o desenho das 5 luzes) esperando mudar IDENTIDADE.
+
+    Devolve ``(ok, motivo)``. ``motivo`` só vem preenchido quando o daemon
+    RESPONDEU e RECUSOU — cada ``reason`` do protocolo já traduzido para a
+    frase da janela (:data:`_MOTIVOS_NUMERO`). Daemon offline volta como
+    ``(False, None)``: a distinção existe porque a tela precisa dizer coisas
+    diferentes em "o Hefesto está desligado" e "o jogo está aberto".
+
+    ``number`` é 1..N entre os controles PRESENTES (NUM-01: o número exibido
+    é a colocação entre quem está na mesa). Não confundir com o número de
+    JOGADOR do co-op — ver ``app/actions/base.py:26``.
+    """
+    ok, result = _safe_call(
+        "identity.number.set", {"uniq": uniq, "number": int(number)}
+    )
+    if not ok or not isinstance(result, dict):
+        return False, None
+    if result.get("ok"):
+        return True, None
+    reason = result.get("reason")
+    motivo = _MOTIVOS_NUMERO.get(reason) if isinstance(reason, str) else None
+    return False, motivo or "não consegui trocar o número — tente de novo"
+
+
+def player_leds_set(
+    bits: tuple[bool, bool, bool, bool, bool], uniq: str | None = None
+) -> bool:
     """Aplica bitmask de 5 LEDs de player no hardware via IPC (FEAT-PLAYER-LEDS-APPLY-01).
 
     ``bits[0]`` = LED 1 (extremo esquerdo), ``bits[4]`` = LED 5 (extremo direito).
     Retorna True se o daemon confirmou; False se offline ou erro.
+    ``uniq`` (PERFIL-05): MAC do controle selecionado — aplica SÓ nele.
     """
-    ok, _ = _safe_call("led.player_set", {"bits": list(bits)})
+    payload: dict[str, Any] = {"bits": list(bits)}
+    if uniq:
+        payload["uniq"] = uniq
+    ok, _ = _safe_call("led.player_set", payload)
     return ok
 
 
@@ -260,20 +500,126 @@ def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
 
     Retorna True se o daemon confirmou aplicação (status ok). False se daemon
     offline, erro de transporte ou resposta inesperada.
+
+    R-18 (auditoria 23/07): `status` é SEMPRE "ok" — o handler responde isso
+    mesmo quando o applier não aplicou seção nenhuma, e a GUI toastava "aplicado"
+    para um no-op. Agora exigimos também que o daemon diga o que aplicou: uma
+    resposta com `applied` vazio é um no-op honesto, não sucesso.
+
+    O `status:"ok"` foi mantido de propósito (em vez de "partial"/"failed"): a
+    GUI atual traduz status != "ok" como "daemon offline?", e essa mensagem
+    mandaria a usuária caçar o problema no lugar errado. A honestidade entra
+    pelo campo `applied`, que já viajava na resposta e ninguém lia.
     """
     ok, result = _safe_call("profile.apply_draft", draft_dict, timeout=1.0)
     if ok and isinstance(result, dict):
-        return result.get("status") == "ok"
+        if result.get("status") != "ok":
+            return False
+        aplicado = result.get("applied")
+        if isinstance(aplicado, list):
+            return bool(aplicado)
+        # Daemon antigo, sem o campo: preserva o contrato v1.
+        return True
     return False
 
 
+def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
+    """Muta/desmuta o microfone no FIRMWARE do controle (MIC-USB-01).
+
+    ``muted=True`` muta, ``muted=False`` DESMUTA e ``muted=None`` devolve a
+    posse do registrador ao `hid-playstation` (o botão físico do controle volta
+    a mandar). Os três são pedidos EXPLÍCITOS e diferentes: ``False`` não é "não
+    mexer" — é a ordem "desmuta", e enquanto ela vigorar o botão físico deixa de
+    valer. Confundir os dois foi o defeito dos dois escritores do byte de mute
+    (`3d9bb7e`), então o parâmetro não tem default: quem chama declara.
+
+    Esta é a CAMADA 3 do achado de 25/07. As outras duas (o ``mute:true``
+    persistido por rota em ``~/.local/state/wireplumber/default-routes`` e o
+    perfil da placa preso em ``input:iec958-stereo``, que é S/PDIF e não carrega
+    sinal nenhum) são do WirePlumber, não do controle, e se curam pelo
+    ``scripts/doctor.sh --fix``. Nenhum ``mic_set`` do mundo as alcança — se o
+    medidor continuar parado depois de desmutar aqui, é uma delas.
+
+    PONTO EXATO DE FIAÇÃO (deixado pronto, não fiado — a GUI está sendo mexida
+    por outra frente): o botão de microfone da aba Status, ao lado do medidor
+    montado por ``app/mic_monitor.py``, chamando daqui via
+    ``app/actions/status_actions.py``. Depois do pedido, RELER
+    ``daemon.state_full`` e pintar o selo a partir de ``audio.mic_mudo``
+    (leitura do firmware) + ``audio.mic_mudo_desejado`` (quem manda) — jamais
+    guardar o valor mandado como se fosse leitura, que é justamente o hábito que
+    fez a tela parecer mentirosa quando ela nunca mentiu.
+
+    Retorna True se o daemon confirmou; False se offline ou sem controle.
+    """
+    payload: dict[str, Any] = {"muted": muted}
+    if uniq:
+        payload["uniq"] = uniq
+    ok, result = _safe_call("mic.set", payload)
+    if not ok or not isinstance(result, dict):
+        return False
+    return result.get("status") == "ok"
+
+
+def speaker_set(
+    volume: int | None = None,
+    muted: bool | None = None,
+    uniq: str | None = None,
+) -> bool:
+    """Volume/mudo do alto-falante e do fone do controle (D4 / MIC-USB-01).
+
+    DECISÃO DA MIC-USB-01, registrada aqui de propósito: o ``speaker.set``
+    existia no IPC desde a D4 **sem um único chamador no produto** — método de
+    protocolo que ninguém chama é dívida com aparência de recurso, e a sprint
+    deu duas saídas, ganhar superfície ou sair. Ele FICA, e ganha superfície
+    junto com o microfone, por uma razão de substância e não de simpatia: mic e
+    alto-falante do DualSense são o MESMO bloco de posse do report de saída
+    (``common[4..9]``, AUDIO-OWNER-01). Expor só metade deixaria a outra metade
+    como um escritor sem dono à espera de virar o próximo bug dos dois
+    escritores — que é exatamente a classe de defeito que a MIC-USB-01 foi
+    fechar. Sair custaria uma quebra de protocolo e apagaria a única forma de
+    baixar o alto-falante do controle, que é alto de fábrica.
+
+    ``volume`` 0-255 (None mantém o vigente); ``muted=True`` manda 0 sem perder
+    o volume preferido e ``muted=False`` o restaura. A primeira chamada faz o
+    hefesto assumir a posse dos bytes de volume: o DualSense não devolve esse
+    registrador, então ``daemon.state_full`` só passa a trazer a chave
+    ``speaker`` DEPOIS de um ``speaker.set`` — antes disso publicar um número
+    seria inventá-lo.
+
+    PONTO EXATO DE FIAÇÃO: o mesmo bloco de áudio da aba Status onde entra o
+    botão de microfone — um slider de volume do controle ao lado do medidor,
+    ligado por ``app/actions/status_actions.py``, escondido enquanto
+    ``state_full`` não trouxer a chave ``speaker`` (ausência é resposta).
+
+    Retorna True se o daemon confirmou; False se offline ou sem controle.
+    """
+    payload: dict[str, Any] = {}
+    if volume is not None:
+        payload["volume"] = int(volume)
+    if muted is not None:
+        payload["muted"] = bool(muted)
+    if uniq:
+        payload["uniq"] = uniq
+    ok, result = _safe_call("speaker.set", payload)
+    if not ok or not isinstance(result, dict):
+        return False
+    return result.get("status") == "ok"
+
+
 def mouse_emulation_set(
-    enabled: bool,
+    enabled: bool | None,
     speed: int | None = None,
     scroll_speed: int | None = None,
 ) -> bool:
-    """Liga/desliga emulação de mouse e atualiza velocidades via IPC."""
-    params: dict[str, Any] = {"enabled": bool(enabled)}
+    """Liga/desliga emulação de mouse e atualiza velocidades via IPC.
+
+    ``enabled=None`` omite o campo do payload — rota speed-only do daemon
+    (BUG-MOUSE-GUI-SYNC-01 A4): atualiza só as velocidades, sem ligar/desligar
+    a emulação nem persistir o flag.
+    """
+    params: dict[str, Any] = {}
+    if enabled is not None:
+        params["enabled"] = bool(enabled)
     if speed is not None:
         params["speed"] = int(speed)
     if scroll_speed is not None:
@@ -283,11 +629,15 @@ def mouse_emulation_set(
 
 
 __all__ = [
+    "active_profile_name",
     "apply_draft",
+    "autoswitch_lock_set",
     "call_async",
     "daemon_state_full",
     "daemon_status_basic",
+    "identity_number_set",
     "led_set",
+    "mic_set",
     "mouse_emulation_set",
     "player_leds_set",
     "profile_list",
@@ -295,9 +645,14 @@ __all__ = [
     "rumble_passthrough",
     "rumble_policy_custom",
     "rumble_policy_set",
+    "rumble_policy_set_checked",
     "rumble_set",
     "rumble_stop",
+    "run_in_thread",
+    "speaker_set",
+    "trigger_reset",
     "trigger_set",
+    "trigger_set_checked",
 ]
 
 # "O segredo de ter sucesso é saber o que descartar." — Charlie Munger

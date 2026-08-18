@@ -152,12 +152,20 @@ async def test_run_nao_inicia_keyboard_quando_desabilitado(
 # --- Ponto 3: poll_loop reusa buttons_pressed (A-09) -------------------------
 
 @pytest.mark.asyncio
-async def test_poll_loop_chama_dispatch_keyboard_com_buttons_pressed() -> None:
+async def test_poll_loop_chama_dispatch_keyboard_com_buttons_pressed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Com _keyboard_device vivo, poll_loop chama dispatch() a cada tick
     passando o MESMO frozenset resultado de _evdev_buttons_once.
 
     Garante A-09: snapshot único reaproveitado para keyboard + mouse + hotkey.
+
+    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para que dispatch comece no
+    1º tick (o priming durante o settling tem teste dedicado).
     """
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
+    )
     n_ticks = 8
     fc = FakeController(transport="usb", states=_mk_states(n_ticks * 4))
 

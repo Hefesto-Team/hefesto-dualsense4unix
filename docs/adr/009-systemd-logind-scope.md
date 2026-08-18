@@ -1,5 +1,7 @@
 # ADR-009: Escopo Linux — `systemd-logind` requerido
 
+**Status:** aceito
+
 ## Contexto
 As udev rules do projeto usam `TAG+="uaccess"` para dar ACL seletiva ao usuário da sessão ativa. Essa tag é processada pelo `systemd-logind`, que só existe em distros com systemd. Alternativas em distros sem systemd (Alpine OpenRC, Void runit, Gentoo/Artix com OpenRC) exigem ACL manual via `setfacl` ou `MODE="0666"` (inseguro: qualquer processo lê o controle).
 

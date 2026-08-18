@@ -23,5 +23,6 @@
     "lightbar_brightness": 0.9
   },
   "rumble": {"passthrough": true},
+  "mode": {"kind": "gamepad", "gamepad_flavor": "xbox"},
   "key_bindings": null
 }

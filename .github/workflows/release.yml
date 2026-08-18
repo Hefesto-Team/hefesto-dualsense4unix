@@ -29,17 +29,51 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          # CI-CACHE-PIP-01 (v3.4.0): pip cache para release pipeline.
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Instalar build deps
         run: |
           sudo apt-get update
+          # CI-TYPELIB-PARCIAL-01: o runner traz um `gi` PELA METADE — `import
+          # gi` e `from gi.repository import Gtk` funcionam, mas GdkPixbuf e
+          # Pango estouram `ImportError: unknown location`. Isso acontece na
+          # COLETA do pytest, então NÃO vira skip: derrubava a suíte inteira.
+          # A cura ficou do lado dos testes (checar a typelib que cada módulo
+          # puxa); instalar PyGObject pelo pip aqui foi tentado e revertido —
+          # matava o interpretador no meio da suíte.
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
+      # PORTÃO-VIVO-01 bloco D: "o workflow que produz o artefato é o que
+      # verifica menos". Até aqui a release rodava TRÊS gates —
+      # check_anonymity.sh, ruff e pytest tests/unit — enquanto o ci.yml rodava
+      # o dobro. E como o ci.yml não disparava em tag, o push da tag não
+      # chamava nem os que existiam lá: o pacote publicado nunca passou pelos
+      # gates de acentuação, tipo, dados de teste e consistência de versão.
+      #
+      # A v0.2.0 saiu exatamente por esse caminho. Os quatro passos abaixo são
+      # os mesmos do ci.yml (:23, :34, :43, :140), na mesma ordem de custo:
+      # primeiro o que só precisa de python3, depois o que precisa do venv.
       - name: Verificar anonimato
         run: bash scripts/check_anonymity.sh
+      - name: Verificar dados de teste neutros
+        run: bash scripts/check_test_data.sh
+      - name: Acentuação PT-BR estrita
+        run: python3 scripts/validar-acentuacao.py --all
+      # A prova de mordida do bloco D é este passo: dessincronizar de propósito
+      # o fallback __version__ do src/hefesto_dualsense4unix/__init__.py contra
+      # o pyproject.toml e tentar publicar tem de REPROVAR aqui.
+      - name: Consistência de versão entre os alvos versionados
+        run: python3 scripts/check_version_consistency.py
       - name: Instalar e testar
         run: |
           pip install -e ".[dev]"
           ruff check src/ tests/
           pytest tests/unit -v
+          # tests/core (12 testes) também não rodava aqui — mesma lacuna que o
+          # CI-TESTS-CORE-ORFAO-01 fechou do lado do ci.yml.
+          pytest tests/core -v
+      - name: Mypy (gate rígido, o mesmo do ci.yml)
+        run: mypy src/hefesto_dualsense4unix
       - name: Build wheel + sdist
         run: |
           pip install build twine
@@ -68,6 +102,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Deps do SO (libfuse2 pra AppImage + librsvg pra PNG)
         run: |
           sudo apt-get update
@@ -92,37 +128,51 @@ jobs:
           path: dist/appimage/*.AppImage
 
   deb:
-    runs-on: ubuntu-22.04
+    # Um .deb por distro: o venv bundlado (--copies) linka contra a
+    # libpython3.X exata do build, então 22.04->py310 e 24.04->py312. Os dois
+    # vão no release; o usuário instala o da sua distro (apt recusa o outro
+    # via Depends python3.X). Resolve BUG-DEB-VENV-CROSS-PYVER-01.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
     needs: build
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
+      # setup-python 3.12 fica no PATH só para o build_deb.sh ler a versão via
+      # tomllib (3.11+); o venv bundlado usa /usr/bin/python3 (default da distro).
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Instalar dpkg-deb (nativo no Ubuntu)
-        run: sudo apt-get update && sudo apt-get install -y dpkg
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+      - name: Instalar dpkg-deb + python3-venv do sistema
+        run: sudo apt-get update && sudo apt-get install -y dpkg python3-venv
       - name: Build .deb
         run: bash scripts/build_deb.sh
       - name: Upload pacote .deb
         uses: actions/upload-artifact@v4
         with:
-          name: deb-${{ needs.build.outputs.version }}
+          name: deb-${{ needs.build.outputs.version }}-${{ matrix.os }}
           path: dist/*.deb
 
   deb-install-smoke:
     name: Smoke install do .deb
-    # Histórico de iterações:
-    # - Sprint 74: runs-on ubuntu-24.04, presumiu pydantic v2 no apt. FALHOU.
-    # - Sprint 79.1: runs-on ubuntu-22.04 + pip install pydantic>=2. FALHOU
-    #   em v2.2.2 por structlog/typer/platformdirs TAMBEM velhos no Jammy apt.
-    # - Sprint 82 (2026-04-24): MIGRACAO para ubuntu-24.04 (Noble). Empirico
-    #   confirmou typer 0.9, structlog 24.1, platformdirs 4 modernos; so
-    #   pydantic 1.10 do apt exige pip install --user (fix 79.1 preservado).
-    #   Noble e runner alvo preferido: LTS mais recente, dep stack moderna
-    #   exceto pydantic, zero compat layers arriscadas.
-    runs-on: ubuntu-24.04
+    # Um smoke por distro, casando o .deb que aquela distro produz: o py310 é
+    # instalado e validado no 22.04 (Jammy, libpython3.10) e o py312 no 24.04
+    # (Noble, libpython3.12). O venv bundlado é AUTOCONTIDO (pydantic 2, typer,
+    # etc. pinados via pip no build) — não precisa do antigo hack de
+    # `pip install --user pydantic` (que ainda por cima quebraria no 22.04, cujo
+    # pip não tem --break-system-packages). gi vem do python3-gi do sistema via
+    # .pth shim. Resolve BUG-DEB-VENV-CROSS-PYVER-01.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
     needs: [build, deb]
     env:
       VERSION: ${{ needs.build.outputs.version }}
@@ -130,40 +180,26 @@ jobs:
       - name: Baixar artifact do .deb
         uses: actions/download-artifact@v4
         with:
-          name: deb-${{ needs.build.outputs.version }}
+          name: deb-${{ needs.build.outputs.version }}-${{ matrix.os }}
           path: ./dist
       - name: Listar artifact
         run: ls -lah ./dist
-      - name: Instalar pydantic v2 + typer moderno via pip
-        # Noble 24.04 apt: pydantic 1.10.14 (precisa v2), typer 0.9.0
-        # (precisa 0.12+ para PEP 604 'int | None' em cli/app.py).
-        # Empirico 2026-04-24 (docker ubuntu:24.04): pydantic>=2 + typer>=0.12
-        # + deps apt = hefesto CLI carrega, 'hefesto-dualsense4unix version' imprime 2.2.2.
-        # --break-system-packages: Noble e PEP 668.
-        run: |
-          python3 -m pip install --user --break-system-packages --upgrade 'pydantic>=2.0' 'typer>=0.12'
       - name: Instalar .deb via apt (resolve deps)
         run: |
           sudo apt-get update
-          sudo apt-get install -y ./dist/hefesto-dualsense4unix_*_amd64.deb
+          sudo apt-get install -y ./dist/hefesto-dualsense4unix_*_amd64_*.deb
       - name: Validar binário hefesto-dualsense4unix
         run: |
           which hefesto-dualsense4unix
-          # Expor pydantic v2 + typer 0.12+ do pip --user para o hefesto-dualsense4unix
-          # (instalado em /usr/lib/python3/dist-packages). PYTHONPATH coloca o
-          # user site ANTES do dist-packages para os imports resolverem as
-          # versões modernas primeiro. Subcomando correto e 'hefesto-dualsense4unix version',
-          # não '--version' (não existe como top-level option).
-          USER_SITE="$(python3 -m site --user-site)"
-          echo "USER_SITE=$USER_SITE"
-          PYTHONPATH="$USER_SITE" hefesto-dualsense4unix version
+          # Venv bundlado é autocontido — roda direto, sem PYTHONPATH.
+          # 'version' é subcomando (não existe '--version' top-level).
+          hefesto-dualsense4unix version
       - name: Validar binário hefesto-dualsense4unix-gui
         run: |
           which hefesto-dualsense4unix-gui
           # --help em runner headless pode falhar por falta de DISPLAY/GTK;
           # o critério é localizar o binário. Exit não-zero aqui é aceitável.
-          USER_SITE="$(python3 -m site --user-site)"
-          PYTHONPATH="$USER_SITE" hefesto-dualsense4unix-gui --help || echo "hefesto-dualsense4unix-gui --help retornou não-zero em headless (esperado)"
+          hefesto-dualsense4unix-gui --help || echo "gui --help retornou não-zero em headless (esperado)"
       - name: Desinstalar (valida postrm)
         run: sudo apt-get remove -y hefesto-dualsense4unix
 
@@ -198,29 +234,134 @@ jobs:
         run: |
           pip3 install build
           python3 -m build --wheel --outdir dist/
+      # PACOTE-COM-NOME-01: o manifesto não declara `branch:`, então o
+      # flatpak-builder gravava o ref como `master` — nome herdado do git, que
+      # não diz nada sobre canal de distribuição. A branch passa a ser `stable`.
+      #
+      # ATENÇÃO, medido em 29/07: `--default-branch` existe SÓ no
+      # `flatpak-builder`. O `flatpak build-bundle` NÃO conhece essa flag
+      # (`man flatpak-build-bundle` aceita apenas --runtime, --arch, --repo-url,
+      # --runtime-repo, --gpg-keys, --gpg-homedir, --from-commit, --oci e os
+      # verbosos) e morreria com "Unknown option" na primeira tag — levando o
+      # `github-release`, que depende deste job, junto. No bundle a branch é o
+      # ÚLTIMO ARGUMENTO POSICIONAL, e é assim que ela viaja abaixo.
       - name: Construir Flatpak
         run: |
           flatpak-builder \
             --user \
             --force-clean \
+            --default-branch=stable \
             --repo=flatpak-repo \
             flatpak-build-dir \
             flatpak/br.andrefarias.Hefesto.yml
+      # PACOTE-COM-NOME-01: o bundle era o ÚNICO artefato sem versão no nome —
+      # o AppImage e os dois .deb já a carregam. Duas releases publicavam o
+      # mesmo `Hefesto-Dualsense4Unix.flatpak`, e quem baixasse não tinha como
+      # saber qual estava na mão.
       - name: Exportar bundle .flatpak
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           flatpak build-bundle \
             flatpak-repo \
-            Hefesto-Dualsense4Unix.flatpak \
-            br.andrefarias.Hefesto
+            "Hefesto-Dualsense4Unix-${VERSION}-x86_64.flatpak" \
+            br.andrefarias.Hefesto \
+            stable
       - name: Upload bundle
         uses: actions/upload-artifact@v4
         with:
           name: flatpak-${{ needs.build.outputs.version }}
-          path: Hefesto-Dualsense4Unix.flatpak
+          path: Hefesto-Dualsense4Unix-${{ needs.build.outputs.version }}-x86_64.flatpak
           if-no-files-found: error
 
+  # PACOTE-COM-NOME-01, acoplamento release/CI: o `ci.yml` já dispara na tag
+  # `v*` (bloco C do PORTÃO-VIVO-01), mas o `github-release` só dependia de
+  # jobs deste arquivo. Resultado medido: os nove portões que existem SÓ no
+  # ci.yml — packaging-parity, shellcheck, glifos, referencias-docs,
+  # version-sync, pre-commit, gtk-real, runtime-smoke, smoke-multi-distro —
+  # informavam e não impediam nada. Um ci.yml vermelho e uma release verde
+  # conviviam no mesmo commit.
+  #
+  # Das três saídas possíveis, esta é a que NÃO duplica lógica: em vez de
+  # copiar os portões para cá (que os faria divergir na primeira mudança) ou
+  # converter o ci.yml em `workflow_call` (que muda o gatilho de TODOS os
+  # eventos do arquivo mais crítico da casa, incluindo os PRs), o guarda
+  # apenas PERGUNTA qual foi a conclusão do ci.yml na MESMA SHA.
+  #
+  # A política de "o que é flaky" continua morando no ci.yml, onde já está
+  # declarada: fedora-40 e archlinux são `continue-on-error: true`, portanto a
+  # falha deles não muda a conclusão do run e não trava a release. Este guarda
+  # não mantém lista paralela nenhuma — se amanhã alguém marcar outro job como
+  # experimental, o guarda obedece sem ser editado.
+  guarda-ci:
+    name: Guarda — o ci.yml desta SHA tem de estar verde
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Exigir conclusão "success" do ci.yml na mesma SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # A SHA do que está sendo empacotado, não a do ref do run: em
+          # workflow_dispatch o `github.sha` é o da branch do dispatch, e a tag
+          # a republicar veio pelo input (mesma armadilha que o passo "Ler
+          # versão" já trata).
+          SHA="$(git rev-parse HEAD)"
+          echo "SHA sob julgamento: ${SHA}"
+
+          LIMITE_SEG=2700   # 45 min: o ci.yml roda em paralelo a este release
+          INTERVALO=30
+          GASTO=0
+          while :; do
+            # `|| true`: erro transitório da API não pode derrubar o guarda —
+            # cai no ramo "ausente" e tenta de novo até o limite.
+            LINHA="$(gh api \
+              "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&per_page=100" \
+              --jq '.workflow_runs | sort_by(.created_at) | reverse | .[0] // empty
+                    | "\(.status)|\(.conclusion)|\(.html_url)"' || true)"
+            if [ -z "${LINHA}" ]; then
+              STATUS="ausente"; CONCLUSAO=""; URL=""
+            else
+              STATUS="${LINHA%%|*}"
+              RESTO="${LINHA#*|}"
+              CONCLUSAO="${RESTO%%|*}"
+              URL="${RESTO##*|}"
+            fi
+            echo "ci.yml: status=${STATUS} conclusao=${CONCLUSAO} ${URL}"
+
+            if [ "${STATUS}" = "completed" ]; then
+              if [ "${CONCLUSAO}" = "success" ]; then
+                echo "CI verde nesta SHA — a release pode publicar."
+                exit 0
+              fi
+              echo "::error::O ci.yml desta SHA concluiu como '${CONCLUSAO}'."
+              echo "::error::Publicar agora entregaria pacote que os portões do ci.yml reprovaram: ${URL}"
+              exit 1
+            fi
+
+            if [ "${GASTO}" -ge "${LIMITE_SEG}" ]; then
+              if [ "${STATUS}" = "ausente" ]; then
+                echo "::error::Nenhum run do ci.yml para a SHA ${SHA} em ${LIMITE_SEG}s."
+                echo "::error::Rode o ci.yml nesta ref (workflow_dispatch) antes de republicar a tag."
+              else
+                echo "::error::O ci.yml desta SHA ainda está '${STATUS}' depois de ${LIMITE_SEG}s: ${URL}"
+              fi
+              exit 1
+            fi
+
+            sleep "${INTERVALO}"
+            GASTO=$((GASTO + INTERVALO))
+          done
+
   github-release:
-    needs: [build, appimage, deb, deb-install-smoke, flatpak]
+    needs: [build, appimage, deb, deb-install-smoke, flatpak, guarda-ci]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -234,10 +375,12 @@ jobs:
         with:
           name: appimage-${{ needs.build.outputs.version }}
           path: dist/appimage/
+      # Dois .deb (um por distro): deb-<ver>-ubuntu-22.04 e -ubuntu-24.04.
       - uses: actions/download-artifact@v4
         with:
-          name: deb-${{ needs.build.outputs.version }}
+          pattern: deb-${{ needs.build.outputs.version }}-*
           path: dist/deb/
+          merge-multiple: true
       - uses: actions/download-artifact@v4
         with:
           name: flatpak-${{ needs.build.outputs.version }}
@@ -263,6 +406,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
+          # Idempotente: re-run / re-dispatch da mesma tag não deve falhar com
+          # "release already exists". Se já existe, apaga (preservando a tag
+          # git — sem --cleanup-tag) e recria com os artefatos atuais.
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "Release v${VERSION} já existe — apagando para recriar."
+            gh release delete "v${VERSION}" --yes
+          fi
           gh release create "v${VERSION}" \
             --title "Hefesto - Dualsense4Unix v${VERSION}" \
             --notes-file /tmp/release-notes.md \
@@ -271,8 +421,13 @@ jobs:
             dist/deb/*.deb \
             dist/flatpak/*.flatpak
 
+  # O `if` deixa este job inerte enquanto a variável não existir, mas inerte não
+  # é guardado: no dia em que ela existir, sem o `guarda-ci` aqui o wheel sobe
+  # ao PyPI — que é irreversível, o índice não aceita reenvio da mesma versão —
+  # com os portões do ci.yml vermelhos. Todo job que entrega para fora depende
+  # do guarda; quem cobra isso é `tests/unit/test_release_workflow_nomes_e_portoes.py`.
   pypi:
-    needs: build
+    needs: [build, guarda-ci]
     runs-on: ubuntu-latest
     environment: pypi
     if: ${{ vars.PYPI_PUBLISH == 'true' }}

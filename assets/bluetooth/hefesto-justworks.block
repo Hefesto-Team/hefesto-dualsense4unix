@@ -1,0 +1,21 @@
+# >>> hefesto JustWorksRepairing >>>
+# hefesto-dualsense4unix — Onda R: re-pareamento resiliente de controle BT já
+# com bond (JustWorksRepairing=always). Necessário após a migração do backport
+# bluez 5.85 (descarta bonds antigos no 1º start — reparear exige que o BlueZ
+# aceite o re-pareamento em vez de rejeitar) e para o bond "meio-salvo" (Paired
+# sem Bonded, causado por "No agent available for request type 2") nunca
+# travar o controle. Estudo docs/process/estudos/2026-07-19-estudo-bluez-
+# backport-onda-r.md §4. Bloco gerenciado pelo install do hefesto: o uninstall
+# remove TUDO entre as sentinelas ">>> hefesto JustWorksRepairing >>>" e
+# "<<< hefesto JustWorksRepairing <<<".
+# O [General] repetido é seguro: o GKeyFile do bluetoothd FUNDE grupos
+# duplicados (provado ao vivo em 2026-07-18 com o GLib desta máquina) — este
+# bloco pode ser APENSADO ao FIM do /etc/bluetooth/main.conf sem tocar o resto
+# do arquivo (main.conf é conffile do dpkg: sempre com backup antes).
+# Vale no próximo start do bluetoothd — NUNCA forçar restart do serviço por
+# causa deste bloco (derrubaria os controles BT conectados; provado ao vivo em
+# 2026-07-17). A ÚNICA exceção documentada é o postinst do próprio pacote
+# bluez quando o backport ONDA-R troca a versão instalada.
+[General]
+JustWorksRepairing = always
+# <<< hefesto JustWorksRepairing <<<

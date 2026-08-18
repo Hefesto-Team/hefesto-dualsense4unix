@@ -1,4 +1,5 @@
 """Entry point da GUI Hefesto - Dualsense4Unix (GTK3)."""
+# ruff: noqa: E402
 from __future__ import annotations
 
 import contextlib
@@ -7,9 +8,51 @@ import signal
 import subprocess
 import sys
 import time
+from typing import TYPE_CHECKING
+
+
+def _force_xwayland_on_cosmic() -> bool:
+    """Força GDK_BACKEND=x11 (XWayland) quando a sessão é COSMIC.
+
+    No cosmic-comp (Wayland nativo), os popups de GtkComboBox/GtkMenu abrem
+    com fundo claro, mal-posicionados e com grab quebrado (fecham sozinhos,
+    exigem "segurar o clique"). Rodar a GUI sob XWayland contorna o bug.
+
+    IMPORTANTE: a própria sessão COSMIC do Pop!_OS exporta
+    `GDK_BACKEND=wayland,x11` (lista de fallback que PREFERE wayland) — que é
+    exatamente o que dispara o bug. Por isso sobrescrevemos esse valor; só não
+    mexemos se já for `x11` puro ou se o usuário pediu opt-out via
+    `HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND=1` (ex.: um COSMIC futuro que conserte
+    o grab de popups e queira Wayland nativo de volta).
+
+    Retorna True se aplicou (para logar depois que o logging subir).
+    """
+    if os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND") == "1":
+        return False
+    if os.environ.get("GDK_BACKEND", "") == "x11":
+        return False  # já é XWayland puro — nada a fazer
+    desktop = (
+        os.environ.get("XDG_CURRENT_DESKTOP", "")
+        + os.environ.get("XDG_SESSION_DESKTOP", "")
+    ).lower()
+    if "cosmic" in desktop:
+        os.environ["GDK_BACKEND"] = "x11"
+        return True
+    return False
+
+
+# CRÍTICO: setar GDK_BACKEND ANTES de importar HefestoApp. A cadeia de imports
+# da app (gi.repository) ABRE um GdkDisplay já no import — se o backend não
+# estiver definido aqui, o display abre em Wayland e o ajuste em main() chega
+# tarde demais. Por isso o call é no topo do módulo, não dentro de main().
+_XWAYLAND_FORCED = _force_xwayland_on_cosmic()
 
 from hefesto_dualsense4unix.app.app import HefestoApp
+from hefesto_dualsense4unix.utils.i18n import init_locale
 from hefesto_dualsense4unix.utils.logging_config import configure_logging, get_logger
+
+if TYPE_CHECKING:
+    import structlog
 
 
 def _is_systemd_managed(pid: int) -> bool:
@@ -36,7 +79,7 @@ def _is_systemd_managed(pid: int) -> bool:
         return False
 
 
-def _kill_previous_instances(logger) -> None:
+def _kill_previous_instances(logger: structlog.stdlib.BoundLogger) -> None:
     """Mata processos GUI anteriores; preserva daemon managed por systemd.
 
     Cobre:
@@ -112,7 +155,36 @@ def _kill_previous_instances(logger) -> None:
 def main(argv: list[str] | None = None) -> int:
     configure_logging()
     logger = get_logger(__name__)
-    _ = argv
+    # XWayland forçado no topo do módulo (antes do import da app abrir o
+    # display). Aqui só registramos o resultado depois que o logging subiu.
+    if _XWAYLAND_FORCED:
+        logger.info("gdk_backend_x11_forcado_cosmic")
+    _unused_argv = argv
+
+    # CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: migra config legada curta→longa
+    # ANTES de qualquer leitura de preferências/perfis pela app (idempotente).
+    from hefesto_dualsense4unix.utils.migrate_legacy_paths import migrate_legacy_paths
+
+    migrate_legacy_paths()
+
+    # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): inicializa locale ANTES de
+    # qualquer Gtk.Builder ou widget, garantindo que set_translation_domain
+    # consiga resolver labels traduzíveis do Glade no boot.
+    init_locale()
+
+    # BUG-DOCK-ICON-WMCLASS-MISMATCH-01 (v3.4.3): seta prgname ANTES de
+    # qualquer Gtk init para o GTK derivar `app_id` Wayland corretamente.
+    # Sem isso, a dock COSMIC não associa janela ao .desktop e mostra
+    # icone generico. prgname deve casar com basename do .desktop file.
+    # Também seta application_name (usado em window title bar fallback).
+    import gi
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import GLib, Gtk
+    GLib.set_prgname("hefesto-dualsense4unix")
+    GLib.set_application_name("Hefesto - Dualsense4Unix")
+    # Default icon do app — janelas filhas (diálogos, etc.) herdam.
+    with contextlib.suppress(Exception):
+        Gtk.Window.set_default_icon_name("hefesto-dualsense4unix")
 
     # Garantia de instância única absoluta — mata qualquer processo antigo do
     # Hefesto - Dualsense4Unix antes de subir. Evita estado inconsistente, socket

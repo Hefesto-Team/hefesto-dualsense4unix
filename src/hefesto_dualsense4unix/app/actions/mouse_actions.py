@@ -10,46 +10,57 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
+from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
-from hefesto_dualsense4unix.app.ipc_bridge import mouse_emulation_set
+from hefesto_dualsense4unix.app.actions.mode_transition import (
+    MODE_DESKTOP,
+    STATE_IPC_TIMEOUT_S,
+    mode_of_state,
+)
 from hefesto_dualsense4unix.integrations.uinput_mouse import (
     DEFAULT_MOUSE_SPEED,
     DEFAULT_SCROLL_SPEED,
 )
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 UINPUT_DEV = "/dev/uinput"
 
-MAPPING_LEGEND = (
-    "<b>Mapeamento:</b>\n"
-    "Cruz (X) ou L2 → botão esquerdo\n"
-    "Triângulo (△) ou R2 → botão direito\n"
-    "R3 (clique no analógico direito) → botão do meio\n"
-    "Círculo (○) → Enter\n"
-    "Quadrado (□) → Esc\n"
-    "D-pad (↑↓←→) → setas do teclado\n"
-    "Analógico esquerdo → movimento do cursor\n"
-    "Analógico direito → rolagem vertical e horizontal"
+#: HARM-05: a razão de o switch estar bloqueado, em texto simples. Fala da
+#: CONSEQUÊNCIA (o que ela perde), não da regra — e diz onde é o botão certo.
+MODE_GATE_HINT = (
+    "Só dá para ligar o mouse em \"Controlar o PC\" (aba Início): jogando, o "
+    "controle é do jogo — ligar o mouse aqui derrubaria o controle virtual e "
+    "os jogadores do co-op no meio da partida."
 )
+
 
 
 class MouseActionsMixin(WidgetAccessMixin):
     """Controla a aba Mouse."""
 
     # Guard para evitar loop widget->draft->refresh->widget.
-    _guard_refresh: bool = False
+    _mouse_guard_refresh: bool = False
+
+    # Coalescing dos sliders (BUG-MOUSE-GUI-SYNC-01): um RPC em voo por
+    # parâmetro; valores emitidos durante o voo guardam só o ÚLTIMO.
+    # Lazy-init em _send_mouse_param_async (mixin não tem __init__ próprio).
+    _mouse_inflight: dict[str, bool] | None = None
+    _mouse_pending: dict[str, int] | None = None
 
     def _refresh_mouse_from_draft(self) -> None:
         """Popula widgets da aba Mouse a partir de self.draft.mouse.
 
-        Protegido por _guard_refresh para não disparar handlers de signal
+        Protegido por _mouse_guard_refresh para não disparar handlers de signal
         durante a atualização programatica dos widgets.
         """
-        if self._guard_refresh:
+        if self._mouse_guard_refresh:
             return
         draft = getattr(self, "draft", None)
         if draft is None:
             return
-        self._guard_refresh = True
+        self._mouse_guard_refresh = True
         try:
             mouse = draft.mouse
             toggle: Gtk.Switch = self._get("mouse_emulation_toggle")
@@ -62,71 +73,265 @@ class MouseActionsMixin(WidgetAccessMixin):
             if scroll_scale is not None:
                 scroll_scale.set_value(float(mouse.scroll_speed))
         finally:
-            self._guard_refresh = False
+            self._mouse_guard_refresh = False
 
     def install_mouse_tab(self) -> None:
-        # mouse_legend_label foi substituído por GtkFrame estático (UI-MOUSE-CLEANUP-01).
-        # Mantém compatibilidade caso o widget ainda exista em alguma versão do GLADE.
-        legend = self._get("mouse_legend_label")
-        if legend is not None:
-            legend.set_markup(MAPPING_LEGEND)
+        # A legenda de mapeamento virou um GtkFrame estático no Glade
+        # (UI-MOUSE-CLEANUP-01). O `mouse_legend_label` não existe em nenhuma
+        # versão do arquivo, então o branch de compatibilidade que vivia aqui
+        # nunca era alcançado e mantinha viva uma constante de 16 linhas que
+        # duplicava o texto do Glade — duas fontes da verdade para a mesma
+        # tabela, uma delas invisível.
         self._refresh_mouse_view()
+        # T6: popula os widgets a partir do draft já no bootstrap. Sem isto, se o
+        # daemon estiver offline no install, a aba mostra os defaults do glade em
+        # vez dos valores do perfil ativo. Idempotente sob _mouse_guard_refresh.
+        self._refresh_mouse_from_draft()
+
+    # --- sincronização com o estado vivo do daemon (BUG-MOUSE-GUI-SYNC-01 A1) ---
+
+    def _refresh_mouse_tab(self) -> None:
+        """Refresh completo da aba Mouse: draft imediato + estado vivo assíncrono."""
+        self._refresh_mouse_from_draft()
+        self._refresh_mouse_from_daemon_async()
+
+    def _sync_mouse_mode_gate(self, mode: str | None) -> None:
+        """HARM-05: o switch da aba Mouse só existe dentro de "Controlar o PC".
+
+        O dono da emulação de mouse/teclado é o MODO, não esta aba — aqui só se
+        ajusta o que o modo desktop liga. Ligar o switch durante "Jogar pelo
+        Hefesto" derrubava o vpad e os jogadores do co-op SEM AVISO (a exclusão
+        mútua do daemon é silenciosa): a exclusão continua, mas agora é visível
+        ANTES do clique, com a razão ao lado.
+
+        Modo desconhecido (daemon offline) também bloqueia, mas sem texto: não
+        dá para saber o que explicar, e oferecer às cegas é o que mentia.
+        """
+        blocked = mode != MODE_DESKTOP
+        toggle = self._get("mouse_emulation_toggle")
+        if toggle is not None:
+            toggle.set_sensitive(not blocked)
+        hint = self._get("mouse_mode_hint_label")
+        if hint is None:
+            return
+        texto = MODE_GATE_HINT if blocked and mode is not None else ""
+        hint.set_text(texto)
+        hint.set_visible(bool(texto))
+
+    def _refresh_mouse_from_daemon_async(self) -> None:
+        """Sincroniza a aba Mouse com o bloco ``mouse_emulation`` vivo do daemon.
+
+        A1: o draft nasce do PERFIL (que não tem seção mouse) — sem esta rota a
+        aba mente quando a emulação foi ligada por CLI/applet/flag de boot.
+        Assíncrono (call_async) para não bloquear a thread GTK; widgets são
+        atualizados sob ``_mouse_guard_refresh`` via ``_refresh_mouse_from_draft``.
+        NÃO marca ``dirty`` — sincronização programática não é toque da usuária.
+        """
+        def _on_state(state: Any) -> bool:
+            # HARM-05: o gate do modo vem ANTES de qualquer return — os ramos
+            # abaixo pulam a atualização do draft (edição pendente, seção do
+            # perfil), não a exclusão mútua, que vale sempre.
+            self._sync_mouse_mode_gate(
+                mode_of_state(state if isinstance(state, dict) else None)
+            )
+            me = state.get("mouse_emulation") if isinstance(state, dict) else None
+            if not isinstance(me, dict):
+                return False
+            draft = getattr(self, "draft", None)
+            if draft is None:
+                return False
+            # BUG-MOUSE-SLIDER-PREF-LOSS-01: se a usuária tem uma edição pendente
+            # (dirty — ex.: arrastou o slider com a emulação OFF, que só atualiza
+            # o draft sem IPC), NÃO sobrepor com o estado vivo: sobrescrever
+            # apagaria a preferência e ainda persistiria o valor do daemon como
+            # se fosse escolha dela. O estado vivo re-sincroniza após Aplicar.
+            # BUG-MOUSE-OVERLAY-CLOBBERS-SECTION-01: idem para perfil COM seção
+            # mouse (in_profile) — a aba mostra o valor do PERFIL (= o que será
+            # salvo); sobrepor o vivo faria o Salvar Perfil clobberar a seção.
+            if draft.mouse.dirty or draft.mouse.in_profile:
+                return False
+            try:
+                new_mouse = draft.mouse.model_copy(
+                    update={
+                        "enabled": bool(me.get("enabled", False)),
+                        "speed": int(me.get("speed", draft.mouse.speed)),
+                        "scroll_speed": int(
+                            me.get("scroll_speed", draft.mouse.scroll_speed)
+                        ),
+                    }
+                )
+            except (TypeError, ValueError) as exc:
+                logger.warning("mouse_state_full_bloco_invalido", erro=str(exc))
+                return False
+            self.draft = draft.model_copy(update={"mouse": new_mouse})
+            self._refresh_mouse_from_draft()
+            return False
+
+        def _on_err(_exc: Exception) -> bool:
+            # Daemon offline: mantém o draft atual (defaults seguros). O switch
+            # fecha (HARM-05) — sem estado não dá para saber se ligar o mouse
+            # derrubaria um jogo em andamento.
+            self._sync_mouse_mode_gate(None)
+            return False
+
+        ipc_bridge.call_async(
+            "daemon.state_full",
+            {},
+            on_success=_on_state,
+            on_failure=_on_err,
+            # HARM-15: o state_full não cabe nos 0.25s default sob carga
+            # (hotplug, co-op subindo) — sem folga o `_on_err` fechava o switch
+            # com o daemon VIVO e em modo desktop.
+            timeout_s=STATE_IPC_TIMEOUT_S,
+        )
 
     # --- handlers de UI ---
 
     def on_mouse_toggle_set(self, switch: Gtk.Switch, _state: Any) -> bool:
-        if self._guard_refresh:
+        if self._mouse_guard_refresh:
             return False
         enabled = bool(switch.get_active())
         speed = self._read_speed("mouse_speed_scale", DEFAULT_MOUSE_SPEED)
         scroll = self._read_speed("mouse_scroll_speed_scale", DEFAULT_SCROLL_SPEED)
-        ok = mouse_emulation_set(enabled, speed=speed, scroll_speed=scroll)
-        if not ok:
+
+        def _on_ok(result: Any) -> bool:
+            if isinstance(result, dict) and result.get("status") != "ok":
+                return _on_err(RuntimeError("daemon respondeu status=failed"))
+            draft = getattr(self, "draft", None)
+            if draft is not None:
+                # HARM-05: `dirty=False` — o daemon ACABOU de aplicar, não há nada
+                # pendente. Marcar dirty aqui fazia o próprio sucesso do toggle
+                # deixar a seção suja pelo resto da sessão, e o "Aplicar" seguinte
+                # do rodapé re-enviava `mouse.emulation.set` — religando o mouse e
+                # matando o vpad no meio do jogo. `in_profile=True` mantém a seção
+                # no "Salvar Perfil" (é o que o dirty garantia de carona).
+                new_mouse = draft.mouse.model_copy(
+                    update={
+                        "enabled": enabled,
+                        "speed": speed,
+                        "scroll_speed": scroll,
+                        "dirty": False,
+                        "in_profile": True,
+                    }
+                )
+                self.draft = draft.model_copy(update={"mouse": new_mouse})
+            status = "ligado" if enabled else "desligado"
+            self._toast_mouse(f"Mouse emulado {status}")
+            self._refresh_mouse_view()
+            return False
+
+        def _on_err(_exc: Exception) -> bool:
             self._toast_mouse(
                 "Falha ao comunicar com o daemon. Mouse não alterado."
             )
-            switch.set_active(not enabled)
-            return True
-        # Atualiza draft
-        draft = getattr(self, "draft", None)
-        if draft is not None:
+            # BUG-MOUSE-TOGGLE-STALE-REVERT-01: reverte para o último estado
+            # CONFIRMADO (draft.mouse.enabled só muda no sucesso), não para
+            # ``not enabled`` capturado no clique — com dois toggles rápidos e
+            # daemon travado, ``not enabled`` do 2º RPC deixava o switch preso
+            # ON. Reverter para o confirmado converge ao estado real do daemon.
+            draft = getattr(self, "draft", None)
+            confirmed = draft.mouse.enabled if draft is not None else not enabled
+            self._revert_mouse_toggle(confirmed)
+            return False
 
-            new_mouse = draft.mouse.model_copy(
-                update={"enabled": enabled, "speed": speed, "scroll_speed": scroll}
-            )
-            self.draft = draft.model_copy(update={"mouse": new_mouse})
-        status = "ligado" if enabled else "desligado"
-        self._toast_mouse(f"Mouse emulado {status}")
-        self._refresh_mouse_view()
-        return False  # default handler aplica o estado no switch
+        ipc_bridge.call_async(
+            "mouse.emulation.set",
+            {"enabled": enabled, "speed": speed, "scroll_speed": scroll},
+            on_success=_on_ok,
+            on_failure=_on_err,
+        )
+        # Otimista: o default handler aplica o estado; falha reverte no callback.
+        return False
+
+    def _revert_mouse_toggle(self, active: bool) -> None:
+        """Reverte o switch sem reentrar no handler (BUG-MOUSE-GUI-SYNC-01 A3).
+
+        Em GTK3, ``set_active`` reemite ``state-set`` SINCRONAMENTE (``return
+        True`` no handler não evita — repro real: 999 reentradas +
+        RecursionError). Salva/restaura ``_mouse_guard_refresh`` em vez de zerar
+        absoluto: o revert pode disparar dentro de um refresh programático que
+        mantém o guard True (padrão do fix ``_update_preset_to_custom``).
+        """
+        switch = self._get("mouse_emulation_toggle")
+        if switch is None:
+            return
+        prev_guard = self._mouse_guard_refresh
+        self._mouse_guard_refresh = True
+        try:
+            switch.set_active(active)
+        finally:
+            self._mouse_guard_refresh = prev_guard
 
     def on_mouse_speed_changed(self, scale: Gtk.Scale) -> None:
-        if self._guard_refresh:
+        if self._mouse_guard_refresh:
             return
         speed = int(scale.get_value())
         # Atualiza draft independente de estar habilitado (preserva preferência)
         draft = getattr(self, "draft", None)
         if draft is not None:
-
-            new_mouse = draft.mouse.model_copy(update={"speed": speed})
+            new_mouse = draft.mouse.model_copy(update={"speed": speed, "dirty": True})
             self.draft = draft.model_copy(update={"mouse": new_mouse})
         if not self._mouse_is_enabled():
             return
-        mouse_emulation_set(True, speed=speed)
+        self._send_mouse_param_async("speed", speed)
 
     def on_mouse_scroll_speed_changed(self, scale: Gtk.Scale) -> None:
-        if self._guard_refresh:
+        if self._mouse_guard_refresh:
             return
         scroll = int(scale.get_value())
         # Atualiza draft independente de estar habilitado (preserva preferência)
         draft = getattr(self, "draft", None)
         if draft is not None:
-
-            new_mouse = draft.mouse.model_copy(update={"scroll_speed": scroll})
+            new_mouse = draft.mouse.model_copy(
+                update={"scroll_speed": scroll, "dirty": True}
+            )
             self.draft = draft.model_copy(update={"mouse": new_mouse})
         if not self._mouse_is_enabled():
             return
-        mouse_emulation_set(True, scroll_speed=scroll)
+        self._send_mouse_param_async("scroll_speed", scroll)
+
+    def _send_mouse_param_async(self, param: str, value: int) -> None:
+        """Envia UM parâmetro de velocidade via IPC, SEM ``enabled`` (A4).
+
+        O payload speed-only cai na rota do daemon que atualiza config e device
+        (se existir) sem start/stop nem persistir o flag — religar a emulação
+        pelo slider é impossível por construção, mesmo com toggle stale-ON.
+
+        Coalescing simples: um RPC em voo por parâmetro; mudanças durante o voo
+        guardam só o último valor, reenviado ao terminar. Falha é silenciosa
+        (slider é gesto contínuo; toast por tick poluiria a statusbar).
+        """
+        if self._mouse_inflight is None or self._mouse_pending is None:
+            self._mouse_inflight = {}
+            self._mouse_pending = {}
+        inflight = self._mouse_inflight
+        pending = self._mouse_pending
+        if inflight.get(param):
+            pending[param] = value
+            return
+        inflight[param] = True
+
+        def _finish() -> None:
+            inflight[param] = False
+            próximo = pending.pop(param, None)
+            if próximo is not None and próximo != value:
+                self._send_mouse_param_async(param, próximo)
+
+        def _on_ok(_result: Any) -> bool:
+            _finish()
+            return False
+
+        def _on_err(exc: Exception) -> bool:
+            logger.debug("mouse_param_async_falhou", param=param, erro=str(exc))
+            _finish()
+            return False
+
+        ipc_bridge.call_async(
+            "mouse.emulation.set",
+            {param: int(value)},
+            on_success=_on_ok,
+            on_failure=_on_err,
+        )
 
     # --- helpers ---
 
@@ -155,32 +360,28 @@ class MouseActionsMixin(WidgetAccessMixin):
 
         if module_ok and dev_writable:
             label.set_markup(
-                '<span foreground="#2d8">uinput disponível</span>'
+                '<span foreground="#50fa7b">Pronto para usar como mouse</span>'
             )
         elif module_ok and dev_exists:
             label.set_markup(
-                '<span foreground="#d33">sem permissão em /dev/uinput — '
-                'rode ./scripts/install_udev.sh</span>'
+                '<span foreground="#ff5555">O mouse virtual está sem permissão — '
+                'abra a aba Sistema e clique em “Aplicar correções”</span>'
             )
         elif module_ok:
             label.set_markup(
-                '<span foreground="#c90">módulo ok, /dev/uinput ausente '
-                '(modprobe uinput)</span>'
+                '<span foreground="#ffb86c">O mouse virtual ainda não está pronto — '
+                'abra a aba Sistema e clique em “Aplicar correções”</span>'
             )
         else:
             label.set_markup(
-                '<span foreground="#d33">python-uinput não instalado '
-                '(pip install python-uinput)</span>'
+                '<span foreground="#ff5555">Falta um componente do mouse virtual — '
+                'rode a instalação de novo (./install.sh)</span>'
             )
 
     def _toast_mouse(self, msg: str) -> None:
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id("mouse")
-        bar.push(ctx_id, msg)
+        self._status_toast("mouse", msg)
 
 
-__all__ = ["MAPPING_LEGEND", "UINPUT_DEV", "MouseActionsMixin"]
+__all__ = ["UINPUT_DEV", "MouseActionsMixin"]
 
 # "Conhece-te a ti mesmo." — Sócrates

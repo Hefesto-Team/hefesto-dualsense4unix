@@ -1,4 +1,4 @@
-"""Hefesto - Dualsense4Unix — daemon Linux de gatilhos adaptativos para DualSense."""
+"""Hefesto - Dualsense4Unix — gerenciador DualSense para Linux."""
 
 from importlib.metadata import PackageNotFoundError, version
 
@@ -10,7 +10,7 @@ except PackageNotFoundError:
     # Mantenha sincronizado com pyproject.toml [project].version a cada bump.
     # Regressão coberta pelo gate version-sync em .github/workflows/ci.yml
     # (CHORE-VERSION-SYNC-GATE-01, MERGED).
-    __version__ = "3.0.0"
+    __version__ = "0.5.0"
 
 
 def _check_pydantic_v2() -> None:

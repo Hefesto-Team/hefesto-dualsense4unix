@@ -5,19 +5,119 @@
   <id>br.andrefarias.Hefesto</id>
 
   <name>Hefesto - Dualsense4Unix</name>
-  <summary>Daemon de gatilhos adaptativos para controle DualSense no Linux</summary>
+  <summary>Gerenciador DualSense para Linux</summary>
 
   <!-- Metadados de lançamento -->
   <launchable type="desktop-id">br.andrefarias.Hefesto.desktop</launchable>
 
-  <!-- Versão atual -->
+  <!-- Versão atual.
+       METAINFO-VERSAO-RANCOSA-01 (30/07): a entrada mais recente aqui era a
+       3.13.3 de 14/07 e não havia NENHUMA 0.x — a loja anunciava uma versão
+       duas semanas mais velha que o pacote. A PRIMEIRA <release> deste bloco é
+       agora alvo do scripts/check_version_consistency.py, então o portão de
+       release reprova se ela ficar atrás do pyproject.toml.
+
+       METAINFO-DATA-DA-RELEASE-01 (31/07): a entrada da 0.4.0 era a da 0.3.0
+       com o número trocado — mesma data, mesmo texto — e a 0.3.0 sumia da
+       série. O portão conferia só o NÚMERO, então trocar o número na entrada
+       que já existia era a menor edição que o deixava verde. A data da
+       primeira <release> é agora conferida contra a seção correspondente do
+       CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
-    <release version="1.1.0" date="2024-04-22">
+    <release version="0.5.0" date="2026-07-31">
       <description>
-        <p>Primeira versão Flatpak. Daemon + GUI GTK3 empacotados com suporte a
-           emulação de mouse, troca de perfis e gatilhos adaptativos via DualSense.</p>
+        <p>A leva da auditoria: treze agentes mediram o projeto inteiro e um
+           verificador independente reenquadrou tres dos oito achados graves. O
+           instalador voltou a rearmar as curas de modulo — quatro portoes
+           testavam permissao de escrita num arquivo de root, davam sempre falso
+           e o ciclo de desinstalar e instalar desligava seis curas em silencio
+           ate o proximo boot. Os desenhos da aba Status passaram a ocupar o vao
+           lateral que o teto elastico devolveu, e o teto chegou as seis abas que
+           faltavam. A janela parou de perder a reconciliacao quando o daemon
+           engasga, o botao Restaurar Padrao deixou de morrer em instalacao
+           empacotada, e salvar perfil passou a comparar por identidade de disco
+           em vez de texto digitado. O NOTICE parou de mentir por omissao: os
+           tres drivers de kernel GPL-2.0 embarcados agora estao declarados.</p>
       </description>
     </release>
+    <release version="0.4.0" date="2026-07-30">
+      <description>
+        <p>A leva conduzida por agentes com arquivos particionados e um
+           verificador independente com poder de reprovar. O R1 parou de trocar
+           de aplicativo dentro do jogo: a emulação de teclado não tinha
+           interruptor — nascia ligada, sem persistência e sem chave na janela —
+           e a exclusão mútua lia a suspensão do controle virtual pelo Steam
+           Input como permissão para a emulação de desktop entrar, deixando o
+           Alt esquerdo preso. Agora o teclado emulado tem interruptor próprio,
+           o predicado só estreita o portão, e a borda de episódio solta a tecla
+           presa na hora. O perfil passou a guardar as outras abas: modo,
+           máscara, co-op e "modo jogo" iam só para o estado vivo do daemon e o
+           Salvar reemitia a fotografia do boot por cima. O microfone voltou a
+           gravar a voz e não o monitor da saída do próprio controle. No
+           empacotamento, o caminho de ativação do .deb estava morto, o módulo
+           de kernel sobrevivia ao apt remove, e o comando que constrói o pacote
+           Flatpak usava uma opção que não existe — a release inteira teria
+           falhado.</p>
+      </description>
+    </release>
+    <release version="0.3.0" date="2026-07-28">
+      <description>
+        <p>A leva do que desfazia o trabalho dela. O tema é a janela parar de
+           afirmar o que não aconteceu: o desempate entre perfis deixou de ser a
+           ordem alfabética do nome do arquivo (em empate vence o perfil que já
+           está ativo); salvar um perfil pela janela parou de rebaixá-lo a
+           catch-all com prioridade zero; o teto da escala de prioridade subiu de
+           100 para 200, porque não existia número escolhível pela janela capaz
+           de vencer um catch-all em 100; e aplicar um rascunho de perfil parou
+           de responder sucesso com seções falhando — o rodapé nomeia o que não
+           entrou. O microfone voltou para a faixa com botão que funciona, o
+           diagnóstico dele parou de reprovar por causa do alto-falante mudo, e o
+           instalador passou a chamar a cura que existia e nunca era chamada. O
+           detector de janela pode adoecer e voltar (a marca de saúde era um
+           trinco de mão única). A aba Status foi reorganizada olhando a tela.</p>
+      </description>
+    </release>
+    <release version="0.2.0" date="2026-07-26">
+      <description>
+        <p>Checkpoint validado em hardware real: quatro controles em co-op num
+           jogo, numerados 1-2-3-4, sobrevivendo a reinício do daemon. O co-op
+           passou a existir pela janela (a funcionalidade central do projeto só
+           existia por linha de comando), o microfone ganhou um dono único para o
+           byte de mudo, a máscara de gamepad deixou de responder diferente
+           conforme fosse pela janela ou pelo terminal, e "modo jogo" — que eram
+           seis conceitos com o mesmo nome — foi separado.</p>
+      </description>
+    </release>
+    <release version="0.1.1" date="2026-07-25">
+      <description>
+        <p>A leva das causas-raiz: quatorze queixas de uso viraram defeito
+           medido. Entre elas, o initramfs servindo um módulo DKMS velho depois
+           do reboot (o instalador agora atualiza o initramfs), o microfone do
+           DualSense por Bluetooth (Opus tunelado em HID) e o controle 8BitDo em
+           modo PS4 subindo por Bluetooth de primeira.</p>
+      </description>
+    </release>
+    <release version="0.1.0" date="2026-07-24">
+      <description>
+        <p>Reinício da numeração em 0.x: o projeto assumiu publicamente que ainda
+           não é 1.0. Redesenho da interface entregue e a causa-raiz das
+           desconexões de Bluetooth identificada — o bluetoothd travava e comia
+           os pareamentos.</p>
+      </description>
+    </release>
+    <!-- METAINFO-ORDEM-DAS-RELEASES-01 (30/07): as entradas de 3.13.3 a 1.1.0
+         foram RETIRADAS daqui. Duas razões, e a segunda é a que morde:
+         (1) o `appstreamcli validate` (portão do
+         .github/workflows/flatpak.yml) reprova com
+         `releases-not-in-order 0.1.0 << 3.13.3` — a numeração voltou para 0.x
+         em 24/07 e as duas linhas não convivem numa lista ordenada; medido:
+         com as 3.x aqui o portão saía com 3, sem elas sai com 0;
+         (2) o AppStream COMPARA versões: com a 3.13.3 na lista, uma loja
+         entende que o mais novo do projeto é 3.13.3 e nunca oferece a 0.3.0
+         como atualização. Manter a história aqui era o mesmo defeito que este
+         sprint cura, por outro caminho.
+         A história completa (3.x, 4.0.0 e as 0.x) está no CHANGELOG.md, que é
+         a fonte de verdade das notas de versão. -->
   </releases>
 
   <!-- Descrição PT-BR (principal) -->

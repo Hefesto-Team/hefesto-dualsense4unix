@@ -26,19 +26,22 @@ if ! command -v python-appimage >/dev/null 2>&1; then
     exit 2
 fi
 
-# Converte SVG -> PNG (AppImage exige PNG).
+# Verifica que o PNG canonico do icone existe. v3.4.3+ removeu o SVG
+# placeholder (chama laranja); o PNG real 256x256 (martelo + gradiente)
+# em assets/appimage/Hefesto-Dualsense4Unix.png e a única source canonica.
 if [[ ! -f "$APPDIR_SRC/Hefesto-Dualsense4Unix.png" ]]; then
-    echo "[1/4] Gerando Hefesto-Dualsense4Unix.png do SVG..."
-    if command -v rsvg-convert >/dev/null 2>&1; then
-        rsvg-convert -w 256 -h 256 "$APPDIR_SRC/Hefesto-Dualsense4Unix.svg" \
-            -o "$APPDIR_SRC/Hefesto-Dualsense4Unix.png"
-    elif command -v convert >/dev/null 2>&1; then
-        convert -background none -size 256x256 "$APPDIR_SRC/Hefesto-Dualsense4Unix.svg" \
-            "$APPDIR_SRC/Hefesto-Dualsense4Unix.png"
-    else
-        echo "erro: instale rsvg-convert (sudo apt install librsvg2-bin)"
-        exit 3
-    fi
+    echo "erro: PNG do icone ausente em $APPDIR_SRC/Hefesto-Dualsense4Unix.png"
+    echo "       (o repo distribui o PNG real; verifique o checkout)"
+    exit 3
+fi
+
+# Garante que catalogos i18n estao compilados (necessário para o wheel
+# embarcar os .mo via pyproject `[tool.hatch.build.targets.wheel] include`).
+# FEAT-I18N-CATALOGS-01 (v3.4.0). Idempotente — re-compila do .po.
+if [[ ! -d "$HERE/src/hefesto_dualsense4unix/locale" ]] \
+        || [[ -z "$(ls "$HERE/src/hefesto_dualsense4unix/locale" 2>/dev/null)" ]]; then
+    echo "[i18n] catalogos .mo ausentes — compilando do po/..."
+    bash "$HERE/scripts/i18n_compile.sh"
 fi
 
 # Garante que há um wheel atualizado.

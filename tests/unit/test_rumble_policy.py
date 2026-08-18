@@ -69,6 +69,52 @@ class TestPresets:
 
 
 # ---------------------------------------------------------------------------
+# MISC-08 item 1 (2026-07-18) — o 2º retorno de _effective_mult é o último
+# mult EFETIVO (fonte de `daemon._last_auto_mult` → `rumble_mult_applied`
+# do state_full). Políticas fixas o deixavam INTOCADO, preso no default 0.7:
+# ao vivo, policy=max reportava rumble_mult_applied=0.7 e parecia atenuação
+# real do rumble do jogo (o hardware recebia 1.0).
+# ---------------------------------------------------------------------------
+
+
+class TestMultEfetivoObservavel:
+    """Toda política sincroniza o estado observável com o mult efetivo."""
+
+    def test_max_sincroniza_estado_observavel(self) -> None:
+        """O cenário do journal: policy=max com estado herdado 0.7 tem que
+        devolver new_last=1.0 — não deixar o 0.7 fantasma para o state_full."""
+        cfg = _config("max")
+        mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.7, 0.0)
+        assert mult == pytest.approx(1.0)
+        assert new_last == pytest.approx(1.0)
+
+    def test_economia_sincroniza_estado_observavel(self) -> None:
+        cfg = _config("economia")
+        mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.7, 0.0)
+        assert mult == pytest.approx(0.3)
+        assert new_last == pytest.approx(0.3)
+
+    def test_custom_sincroniza_estado_observavel(self) -> None:
+        cfg = _config("custom", custom_mult=0.45)
+        mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.7, 0.0)
+        assert mult == pytest.approx(0.45)
+        assert new_last == pytest.approx(0.45)
+
+    def test_politica_desconhecida_sincroniza_fallback(self) -> None:
+        cfg = _config("turbo")
+        mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.3, 0.0)
+        assert mult == pytest.approx(0.7)
+        assert new_last == pytest.approx(0.7)
+
+    def test_politica_fixa_preserva_relogio_do_debounce_auto(self) -> None:
+        """Política fixa não mexe no timestamp do debounce do auto — só no
+        valor observável."""
+        cfg = _config("max")
+        _, _, new_at = _effective_mult(cfg, 100, 500.0, 0.7, 123.0)
+        assert new_at == pytest.approx(123.0)
+
+
+# ---------------------------------------------------------------------------
 # Modo Auto — thresholds de bateria
 # ---------------------------------------------------------------------------
 
@@ -299,9 +345,25 @@ class TestIpcHandlers:
         assert cfg.rumble_policy_custom_mult == pytest.approx(0.45)
 
     def test_policy_custom_fora_de_range(self) -> None:
+        """HARM-19: o teto é o do esquema (2.0), não 1.0.
+
+        Este teste travava `1.5` como inválido — mas 1.5 é justamente o caso de
+        uso: acima de 1.0 o multiplicador AMPLIFICA o que o jogo pediu, e o
+        slider da GUI (0-200%) sempre ofereceu essa faixa. Quem estava fora do
+        combinado era o handler.
+        """
         server, _cfg = self._make_server()
         with pytest.raises(ValueError, match="fora de"):
-            asyncio.run(server._handle_rumble_policy_custom({"mult": 1.5}))
+            asyncio.run(server._handle_rumble_policy_custom({"mult": 2.5}))
+
+    def test_policy_custom_amplificado_e_aceito(self) -> None:
+        """150% no slider = mult 1.5 — o que a UI oferece, o daemon aceita."""
+        server, cfg = self._make_server()
+
+        result = asyncio.run(server._handle_rumble_policy_custom({"mult": 1.5}))
+
+        assert result["mult"] == 1.5
+        assert cfg.rumble_policy_custom_mult == 1.5
 
     def test_policy_auto(self) -> None:
         server, cfg = self._make_server()
@@ -332,11 +394,16 @@ class TestIpcHandlers:
         server.store = MagicMock()
         server.store.snapshot.return_value = snap
 
+        # L1: rumble_mult_applied agora vem da origem VIVA daemon._last_auto_mult
+        # (não do _rumble_engine morto). Confirma que o valor é propagado.
+        server.daemon._last_auto_mult = 0.3
+
         result = asyncio.run(server._handle_daemon_state_full({}))
         assert "rumble_policy" in result
         assert result["rumble_policy"] == "balanceado"
         assert "rumble_policy_custom_mult" in result
         assert "rumble_mult_applied" in result
+        assert result["rumble_mult_applied"] == pytest.approx(0.3)
 
 
 # ---------------------------------------------------------------------------

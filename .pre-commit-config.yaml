@@ -1,12 +1,48 @@
+# AVISO MEDIDO (sprint PORTÃO-VIVO-01, bloco B): nesta máquina o
+# `core.hooksPath` global aponta para ~/.config/git/hooks, e com isso o git
+# NUNCA executa .git/hooks/* — a própria ferramenta `pre-commit` recusa
+# instalar. Ou seja: os hooks declarados aqui não rodam no caminho do commit
+# local. Pior, a MERA EXISTÊNCIA deste arquivo faz o hook global marcar
+# HAS_FRAMEWORK=true e DESLIGAR as checagens próprias dele, delegando a um
+# framework que não está instalado.
+#
+# DÍVIDA PAGA EM 28/07 (leva GUARDA-GI-REAL-01): enquanto o commit local
+# continua desviado pelo `hooksPath` global, estes quatro hooks deixaram de ser
+# decorativos — o job `pre-commit` do .github/workflows/ci.yml roda
+# `pre-commit run --all-files` a cada push, onde `hooksPath` de ninguém
+# alcança. Quatro portões declarados, quatro portões vivos.
+#
+# Continua valendo: no caminho do COMMIT desta máquina, quem protege é o CI, e
+# não este arquivo. Rode `pre-commit run --all-files` à mão antes de empurrar
+# se quiser a resposta sem esperar o runner.
 repos:
   - repo: local
     hooks:
+      # GATE-ACENTO-MULTIARQUIVO-01 (29/07): o `pre-commit` APENDA todos os
+      # arquivos staged a este entry. Até esta data `--check-file` aceitava um
+      # valor só: o argparse ficava com o primeiro nome e o script descartava
+      # os demais em silêncio — com N arquivos no commit, N-1 passavam sem
+      # checagem nenhuma. A flag agora aceita N caminhos e reprova se QUALQUER
+      # um falhar; regressão coberta por
+      # tests/unit/test_validar_acentuacao_multiplos_arquivos.py.
       - id: acentuacao-strict
         name: Acentuação PT-BR estrita
         entry: python3 scripts/validar-acentuacao.py --check-file
         language: system
         types: [text]
         exclude: '^(tests/fixtures/|tests/unit/test_validar_acentuacao\.py$|docs/history/|docs/research/|LICENSE$|NOTICE$|CHANGELOG\.md$|VALIDATOR_BRIEF\.md$|AGENTS\.md$|scripts/validar-acentuacao\.py$|scripts/check_anonymity\.sh$)'
+      # PORTÃO-VIVO-01 bloco C / GATE-EMOJI-01: o higienizador do ambiente
+      # apaga glifo em silêncio e NÃO reprova — inclusive os glifos que o
+      # ADR-011 declara permitidos (Geometric Shapes, Box Drawing, Block
+      # Elements, Arrows). Este hook é o que reprova. As exclusões seguem o
+      # mesmo princípio do gate de acentuação: o próprio validador e o teste
+      # dele precisam conter os casos que detectam.
+      - id: glifos
+        name: Glifos (emoji proibido, forma geométrica preservada)
+        entry: python3 scripts/validar-glifos.py
+        language: system
+        types: [text]
+        exclude: '^(tests/fixtures/|tests/unit/test_validar_glifos\.py$|docs/history/|docs/research/|scripts/validar-glifos\.py$|CHANGELOG\.md$)'
       - id: anonimato
         name: Anonimato (sem menção a IA)
         entry: bash scripts/check_anonymity.sh

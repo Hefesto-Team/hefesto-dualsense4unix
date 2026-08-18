@@ -78,12 +78,13 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
             udp_enabled=False,
             autoswitch_enabled=False,
             mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
 
     run_task = asyncio.create_task(daemon.run())
     # Aguarda n_ticks ticks a 200Hz (~50ms)
-    await asyncio.sleep(0.06)
+    await asyncio.sleep(0.15)
     daemon.stop()
     await run_task
 
@@ -97,13 +98,22 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
 
 
 @pytest.mark.asyncio
-async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse():
+async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse(
+    monkeypatch: pytest.MonkeyPatch,
+):
     """Com hotkey_manager E mouse_device ativos, snapshot() deve ser chamado
     1x por tick (não 2x como era antes do refactor REFACTOR-HOTKEY-EVDEV-01).
 
     Este é o cenário crítico da armadilha A-09: 2 consumidores → antes=20 chamadas,
     depois=10 chamadas para 10 ticks.
+
+    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para que o mouse.dispatch
+    ocorra desde o 1º tick (o snapshot evdev é lido fora do gate de settling,
+    mas o dispatch de mouse é suprimido durante o grace).
     """
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
+    )
     n_ticks = 10
     call_counter: list[int] = []
 
@@ -122,6 +132,7 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse()
             udp_enabled=False,
             autoswitch_enabled=False,
             mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
 
@@ -138,7 +149,7 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse()
     daemon._mouse_device = mock_mouse
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.06)
+    await asyncio.sleep(0.15)
     daemon.stop()
     await run_task
 
@@ -177,11 +188,13 @@ async def test_snapshot_nao_chamado_quando_evdev_indisponivel():
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
+            mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.04)
+    await asyncio.sleep(0.10)
     daemon.stop()
     await run_task
 
@@ -210,11 +223,13 @@ async def test_snapshot_excecao_retorna_frozenset_vazio():
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
+            mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.04)
+    await asyncio.sleep(0.10)
     daemon.stop()
     await run_task
 
@@ -226,12 +241,20 @@ async def test_snapshot_excecao_retorna_frozenset_vazio():
 
 
 @pytest.mark.asyncio
-async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse():
+async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
+    monkeypatch: pytest.MonkeyPatch,
+):
     """Botões retornados por _evdev_buttons_once devem chegar ao hotkey_manager.observe
     E ao mouse_device.dispatch — o mesmo conjunto, não snapshots independentes.
+
+    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para que observe/dispatch
+    ocorram desde o 1º tick (do contrário a asserção `all(...)` ficaria vacuamente
+    verdadeira sobre listas vazias durante o settling).
     """
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
+    )
     n_ticks = 5
-    botoes_esperados = frozenset(["cross", "ps"])
 
     fc = FakeController(transport="usb", states=_mk_states(n_ticks * 4))
     mock_evdev = MagicMock()
@@ -243,10 +266,16 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse():
 
     from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 
-    class _SpyHotkey(HotkeyManager):
-        def observe(self, pressed: Any, *, now: Any = None) -> Any:  # type: ignore[override]
-            hotkey_observes.append(frozenset(pressed))
-            return super().observe(pressed, now=now)
+    # O daemon cria o próprio HotkeyManager em run() (start_hotkey_manager), então
+    # espionamos o método real em vez de injetar uma instância (que seria
+    # sobrescrita). Assim testamos o wiring de verdade.
+    _orig_observe = HotkeyManager.observe
+
+    def _spy_observe(self: Any, pressed: Any, *, now: Any = None) -> Any:
+        hotkey_observes.append(frozenset(pressed))
+        return _orig_observe(self, pressed, now=now)
+
+    monkeypatch.setattr(HotkeyManager, "observe", _spy_observe)
 
     dispatch_buttons: list[frozenset[str]] = []
     mock_mouse = MagicMock()
@@ -262,23 +291,33 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse():
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
+            mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
-    daemon._hotkey_manager = _SpyHotkey()
     daemon._mouse_device = mock_mouse
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.04)
+    await asyncio.sleep(0.10)
     daemon.stop()
     await run_task
 
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks
 
-    # Hotkey e mouse receberam os mesmos botões em todos os ticks.
-    assert all(b == botoes_esperados for b in hotkey_observes), (
+    # FEAT-HOTKEY-COMBO-NO-LEAK-01/02: observe() SEMPRE recebe o conjunto
+    # completo (precisa do 'ps' para detectar combos), mas a emulação NÃO recebe
+    # os membros de um combo PS+X. Aqui 'ps' é membro dos combos (PS+Options
+    # etc.) e fica latchado enquanto pressionado, então mouse.dispatch recebe só
+    # {cross} — o 'ps' não vaza para a emulação.
+    observe_esperado = frozenset(["cross", "ps"])
+    dispatch_esperado = frozenset(["cross"])
+    assert hotkey_observes, "hotkey_manager.observe nunca foi chamado"
+    assert all(b == observe_esperado for b in hotkey_observes), (
         f"hotkey_manager recebeu botões incorretos: {hotkey_observes[:3]!r}"
     )
-    assert all(b == botoes_esperados for b in dispatch_buttons), (
-        f"mouse.dispatch recebeu botões incorretos: {dispatch_buttons[:3]!r}"
+    assert dispatch_buttons, "mouse.dispatch nunca foi chamado"
+    assert all(b == dispatch_esperado for b in dispatch_buttons), (
+        f"mouse.dispatch recebeu botões incorretos (ps deve ser latchado): "
+        f"{dispatch_buttons[:3]!r}"
     )

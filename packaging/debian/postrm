@@ -6,9 +6,11 @@ case "$1" in
         echo ""
         echo "Hefesto - Dualsense4Unix removido."
         echo ""
-        echo "Configuracoes do usuario em ~/.config/hefesto-dualsense4unix/"
-        echo "foram preservadas. Para remover tambem as configuracoes:"
-        echo "  rm -rf ~/.config/hefesto-dualsense4unix/"
+        echo "Configuracoes do usuario foram preservadas em:"
+        echo "  ~/.config/hefesto-dualsense4unix/  (perfis, sessao, preferencias)"
+        echo "  ~/.config/hefesto/                 (layout legado pre-rename, se existir)"
+        echo "Para remover tambem as configuracoes:"
+        echo "  rm -rf ~/.config/hefesto-dualsense4unix/ ~/.config/hefesto/"
         echo ""
         echo "Se o servico systemd ainda estiver habilitado para algum usuario:"
         echo "  systemctl --user disable --now hefesto-dualsense4unix.service"
@@ -17,6 +19,85 @@ case "$1" in
         # Limpeza do venv bundlado (apt remove apenas arquivos rastreados;
         # o venv tem .pyc gerados em runtime que ficam orfaos sem isso).
         rm -rf /opt/hefesto-dualsense4unix 2>/dev/null || true
+        # BROKER-01 (Onda S — achados #2/#8): belt do purge — se o prerm foi
+        # interrompido (ou o remove veio de uma versao sem o bloco do broker),
+        # a unit ROOT hefesto-hidraw-broker nao pode sobreviver ao purge
+        # habilitada. Mesma sequencia do prerm: disable --now (dispara o
+        # ExecStopPost --restore-all-and-exit) + belt explicito + rm das
+        # units renderizadas e do binario instalado pelo install-host-udev.sh
+        # (ambos fora do manifesto do dpkg — purge promete remocao COMPLETA).
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl disable --now hefesto-hidraw-broker.socket \
+                hefesto-hidraw-broker.service 2>/dev/null || true
+        fi
+        if [ -x /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
+            /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker \
+                --restore-all-and-exit 2>/dev/null || true
+        fi
+        rm -f /etc/systemd/system/hefesto-hidraw-broker.service \
+              /etc/systemd/system/hefesto-hidraw-broker.socket \
+              /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl daemon-reload 2>/dev/null || true
+        fi
+        # Onda T (corretor, achado #9): belt do purge — se o prerm foi
+        # interrompido (ou o remove veio de uma versao sem o bloco DKMS), o
+        # modulo patchado nao pode sobreviver ao purge registrado no DKMS.
+        if command -v dkms >/dev/null 2>&1 \
+                && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q .; then
+            dkms status hefesto-hid-nintendo 2>/dev/null \
+                | sed -n 's|^hefesto-hid-nintendo/\([^,: ]*\).*|\1|p' | sort -u \
+                | while read -r _v; do
+                    [ -n "${_v}" ] || continue
+                    dkms remove "hefesto-hid-nintendo/${_v}" --all 2>/dev/null || true
+                    rm -rf "/usr/src/hefesto-hid-nintendo-${_v}"
+                done
+            depmod -a 2>/dev/null || true
+        fi
+        rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
+        # Onda W: belt do purge para o modulo DKMS hefesto-rtw88-usb (mesma
+        # logica do hid-nintendo acima) — se o prerm foi interrompido, o
+        # patchado nao pode sobreviver ao purge registrado no DKMS. NUNCA
+        # descarrega modulo em uso (o WiFi cairia).
+        if command -v dkms >/dev/null 2>&1 \
+                && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q .; then
+            dkms status hefesto-rtw88-usb 2>/dev/null \
+                | sed -n 's|^hefesto-rtw88-usb/\([^,: ]*\).*|\1|p' | sort -u \
+                | while read -r _v; do
+                    [ -n "${_v}" ] || continue
+                    dkms remove "hefesto-rtw88-usb/${_v}" --all 2>/dev/null || true
+                    rm -rf "/usr/src/hefesto-rtw88-usb-${_v}"
+                done
+            depmod -a 2>/dev/null || true
+            # belt (simetrico ao uninstall.sh nativo): desarma o reset
+            # agressivo a quente se o patchado ainda estiver carregado.
+            if [ -e /sys/module/rtw88_usb/parameters/hang_reset ]; then
+                printf '0' > /sys/module/rtw88_usb/parameters/hang_reset 2>/dev/null || true
+            fi
+        fi
+        # Contencao BT: belt do purge para o modulo DKMS
+        # hefesto-hid-playstation (mesma logica dos dois irmaos acima) — se o
+        # prerm foi interrompido, o patchado nao pode sobreviver ao purge
+        # registrado no DKMS, porque o dkms.conf dele tem AUTOINSTALL="yes" e
+        # ele se reconstruiria a cada kernel novo. NUNCA descarrega o modulo em
+        # uso: derrubaria TODOS os DualSense, inclusive os por Bluetooth.
+        if command -v dkms >/dev/null 2>&1 \
+                && dkms status hefesto-hid-playstation 2>/dev/null | grep -q .; then
+            dkms status hefesto-hid-playstation 2>/dev/null \
+                | sed -n 's|^hefesto-hid-playstation/\([^,: ]*\).*|\1|p' | sort -u \
+                | while read -r _v; do
+                    [ -n "${_v}" ] || continue
+                    dkms remove "hefesto-hid-playstation/${_v}" --all 2>/dev/null || true
+                    rm -rf "/usr/src/hefesto-hid-playstation-${_v}"
+                done
+            depmod -a 2>/dev/null || true
+            # belt: devolve o feature_retries a 0 se o patchado ainda estiver
+            # carregado (lido a cada probe — a proxima conexao ja e vanilla).
+            if [ -e /sys/module/hid_playstation/parameters/feature_retries ]; then
+                printf '0' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || true
+            fi
+        fi
+        rm -f /etc/modprobe.d/hefesto-hid-playstation.conf
         ;;
     upgrade|failed-upgrade|abort-install|abort-upgrade|disappear) ;;
 esac
