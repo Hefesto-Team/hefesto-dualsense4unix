@@ -152,6 +152,11 @@ RemoveIPC=yes
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
 SystemCallFilter=~@privileged @resources @mount @debug @cpu-emulation @obsolete @raw-io @reboot @swap @clock
+# sched_setattr (syscall 314) mora em @resources e o bt-agent do bluez-tools a
+# usa no start: sem esta linha o seccomp mata o processo com SIGSYS num loop de
+# restart (systemd 249 / Pop!_OS 22.04). Re-permitida sozinha para manter o
+# resto de @resources negado.
+SystemCallFilter=sched_setattr
 
 [Install]
 WantedBy=multi-user.target
