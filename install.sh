@@ -1826,9 +1826,9 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
             printf '      bluez %s < alvo %s (5.72: crashes crônicos de input/HIDP; 5.85: heap corruption no loop de reconexão — ver sprint 2026-07-21)\n' "${_bz_cur}" "${_BZ_TARGET}"
             _bz_dir="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
             _bz_sums="${_bz_dir}/SHA256SUMS"
-            _bz_deb_bluez="$(ls -t "${_bz_dir}"/bluez_*.deb 2>/dev/null | head -1)"
-            _bz_deb_cups="$(ls -t "${_bz_dir}"/bluez-cups_*.deb 2>/dev/null | head -1)"
-            _bz_deb_libbt="$(ls -t "${_bz_dir}"/libbluetooth3_*.deb 2>/dev/null | head -1)"
+            _bz_deb_bluez="$(ls -t "${_bz_dir}"/bluez_*.deb 2>/dev/null | head -1)" || true
+            _bz_deb_cups="$(ls -t "${_bz_dir}"/bluez-cups_*.deb 2>/dev/null | head -1)" || true
+            _bz_deb_libbt="$(ls -t "${_bz_dir}"/libbluetooth3_*.deb 2>/dev/null | head -1)" || true
             if [[ ! -f "${_bz_sums}" || -z "${_bz_deb_bluez}" || -z "${_bz_deb_cups}" || -z "${_bz_deb_libbt}" ]]; then
                 # (d) .debs ausentes: NÃO falha o install, só orienta o build.
                 warn "backport não encontrado em ${_bz_dir} — bluetoothd 5.72 crônico segue ativo"

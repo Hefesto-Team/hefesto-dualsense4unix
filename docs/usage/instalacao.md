@@ -41,16 +41,12 @@ A tabela de versões validadas de cada peça (Python, BlueZ, kernel) está em
 
 ## Do código-fonte
 
-A versão corrente é a alfa **0.9.4.2** (13/08/2026) e o ponto de instalação é a
-**tag `v0.9.4.2`** do fork `[REDACTED]/hefesto-dualsense4unix` — tag, não branch:
-as branches de trabalho recebem commits durante a sessão e não são um ponto
-estável para instalar. O `main` do repositório de origem
-(`AndreBFarias/hefesto-dualsense4unix`) está na v3.0.0, de abril de 2026, e
-**não** contém o que esta página descreve — ver a caixa "Onde esta versão mora"
-no [`README.md`](../../README.md).
+A versão corrente é a alfa **0.9.4.2** e o ponto de instalação é a **tag
+`v0.9.4.2`** de `[REDACTED]/hefesto-dualsense4unix` — tag, não branch: as
+branches de trabalho recebem commits durante a sessão e não são ponto estável.
 
 ```bash
-git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
+git clone https://github.com/AndreBFarias/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
 git checkout v0.9.4.2
 ./install.sh
