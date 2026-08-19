@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -67,7 +69,18 @@ def _rodar(nome: str, *, mascarar: list[str] | None = None) -> int:
                 binds += ["--bind", vazio, alvo]
         if not binds:
             pytest.skip(f"nada para mascarar: {mascarar}")
+        # O CI não traz `bwrap`. Sem esta guarda o `subprocess.run` estourava com
+        # `FileNotFoundError` e a mordida virava ERRO — que se lê como "a régua
+        # do doctor quebrou", quando o que falta é a ferramenta de mascarar.
+        if shutil.which("bwrap") is None:
+            pytest.skip("sem `bwrap` não dá para mascarar a biblioteca")
         cmd = ["bwrap", "--dev-bind", "/", "/", *binds, *cmd]
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True).returncode
+        finally:
+            # BERCO-DE-TMP-01: a máscara sai com o teste. Ela é um `.so` VAZIO e
+            # inofensivo, mas o berço conta entradas, não perigo.
+            Path(vazio).unlink(missing_ok=True)
     return subprocess.run(cmd, capture_output=True, text=True).returncode
 
 
@@ -98,8 +111,42 @@ class TestOhDoctorCobraALibhidapi:
         )
 
 
+def _tem_loader_svg() -> bool:
+    """O gdk-pixbuf desta máquina CARREGA um SVG?
+
+    A pergunta é pelo efeito, e não pelo pacote — é a mesma disciplina do
+    `check_loader_svg` que este arquivo afere. E precisa ser feita: o job
+    `lint-test` do CI não instala o loader, então "com o loader passa" ali não
+    tinha premissa. Reprovava dizendo que a régua estava errada, quando o que
+    faltava era a coisa medida.
+    """
+    codigo = (
+        "import gi; gi.require_version('GdkPixbuf','2.0');"
+        "from gi.repository import GdkPixbuf;"
+        "import os, tempfile, pathlib;"
+        # BERCO-DE-TMP-01: o SVG de mentira sai com o processo. Sem isto a régua
+        # deixava lixo em /tmp e o próprio berço da suíte reclamava dela.
+        "fd, nome = tempfile.mkstemp(suffix='.svg'); os.close(fd);"
+        "p=pathlib.Path(nome);"
+        "p.write_text('<svg xmlns=\"http://www.w3.org/2000/svg\" "
+        "width=\"8\" height=\"8\"/>');"
+        "\ntry:\n"
+        "    GdkPixbuf.Pixbuf.new_from_file_at_scale(str(p),8,8,True)\n"
+        "finally:\n"
+        "    p.unlink(missing_ok=True)"
+    )
+    return (
+        subprocess.run(
+            [sys.executable, "-c", codigo], capture_output=True
+        ).returncode
+        == 0
+    )
+
+
 class TestOhDoctorCobraOLoaderSVG:
     def test_com_o_loader_passa(self) -> None:
+        if not _tem_loader_svg():
+            pytest.skip("esta máquina não carrega SVG — não há loader a aferir")
         assert _rodar("check_loader_svg") == 0
 
     def test_a_mordida_sem_o_loader_reprova(self) -> None:
