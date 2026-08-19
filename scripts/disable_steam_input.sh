@@ -40,6 +40,13 @@
 #                   acontece quando a Steam já saiu (que é quando ela grava o vdf).
 #     --status      só relata o estado atual (PSSupport / SwitchSupport /
 #                   UseSteamControllerConfig) em cada .vdf. Não modifica nada.
+#
+# A LISTA DE EXCEÇÕES LIGA (PONTE-STEAM-INPUT-01, 19/08/2026): nos dois modos
+# de aplicar, depois de desligar o que tem de ser desligado e com a Steam já
+# fechada, o `steam_input_ponte.py` GARANTE o Steam Input dos jogos da
+# allowlist — escreve `UseSteamControllerConfig = 2` em quem estiver em `0`.
+# Antes disso a lista só preservava o que já estava ligado, e uma exceção posta
+# num jogo desligado não fazia nada (o estorvo `excecao_inerte` do prontuário).
 #     --restore     reverte o último backup (.bak.steam-input-<ts>) de cada .vdf.
 #
 # Backups: `<localconfig.vdf>.bak.steam-input-<unix-ts>`. Idempotente.
@@ -249,6 +256,72 @@ reopen_steam() {
 # quando o appid está na allowlist (uma linha por appid; '#' comenta):
 ALLOWLIST_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/hefesto-dualsense4unix/steam_input_apps.txt"
 
+# PONTE-STEAM-INPUT-01 (19/08/2026) — A LISTA PASSOU A LIGAR.
+#
+# Até aqui a allowlist só PRESERVAVA: se o jogo já estivesse com o Steam Input
+# ligado, o guarda não o desligava. Se estivesse desligado, a lista não fazia
+# absolutamente nada — o próprio produto nomeava isso, no estorvo
+# `excecao_inerte` do prontuário: *"A lista só preserva o que já estava ligado
+# — ela nunca liga."*
+#
+# O preço, medido na noite de 18→19/08: DON'T SCREAM é da classe "só aceita
+# Steam Input" (motor Unreal falando XInput; quem lhe dava um dispositivo
+# XInput era o espelho Xbox do Steam Input), e com o Steam Input desligado ele
+# não via controle NENHUM. O guarda desligava a única ponte que o fazia
+# funcionar.
+#
+# A ponte é construída pelo `steam_input_ponte.py`, e ela roda AQUI, neste
+# script, pelo motivo mais simples: este é o único instante em que a escrita
+# sobrevive. A Steam regrava o `localconfig.vdf` ao SAIR e engole edição feita
+# por baixo — e o gatilho deste guarda (`hefesto-steam-input-guard.path`)
+# acorda exatamente quando o `userdata` muda, isto é, quando a Steam acabou de
+# sair. Um gatilho novo seria inventar o que já existe.
+#
+# O módulo é 100% stdlib: roda no `python3` do sistema, sem venv — mesmo
+# contrato do `sentinela_do_wrapper` chamado pelo doctor.sh.
+_SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PONTE_PY="${PONTE_PY:-${_SCRIPT_DIR}/../src/hefesto_dualsense4unix/integrations/steam_input_ponte.py}"
+
+# Constrói a ponte dos jogos da allowlist. Chamado SÓ com a Steam já fechada
+# (os dois chamadores garantem isso antes). Nunca derruba o guarda: a ponte é
+# um acréscimo, e uma falha dela não pode transformar em `failed` a unit que
+# desliga o Steam Input.
+ligar_ponte_da_allowlist() {
+    if [[ ! -f "${PONTE_PY}" ]] || ! command -v python3 >/dev/null 2>&1; then
+        return 0
+    fi
+    if steam_running; then
+        log "ponte: Steam viva — não escrevo agora (a saída dela engoliria)"
+        return 0
+    fi
+    local saida
+    saida="$(python3 "${PONTE_PY}" --ligar 2>&1)" || true
+    printf '%s\n' "${saida}" | while IFS= read -r linha; do
+        [[ -n "${linha}" ]] && printf '%s\n' "${linha}"
+    done
+}
+
+# A ponte tem pendência? Read-only, para o `--status` não cantar "tudo limpo"
+# com um jogo da lista dela ainda desligado — o portão que olha para o lugar
+# errado é pior que portão nenhum, porque encerra a busca.
+ponte_pendente() {
+    [[ -f "${PONTE_PY}" ]] || return 1
+    command -v python3 >/dev/null 2>&1 || return 1
+    python3 "${PONTE_PY}" --estado 2>/dev/null | python3 -c '
+import json
+import sys
+
+try:
+    dados = json.load(sys.stdin)
+except (ValueError, OSError):
+    sys.exit(1)
+pendentes = dados.get("pendentes") or []
+for jogo in pendentes:
+    print("[steam-input] ponte pendente: " + str(jogo.get("rotulo")))
+sys.exit(0 if pendentes else 1)
+'
+}
+
 # stdin -> stdout: aplica as trocas respeitando a allowlist por-app (pilha de
 # blocos do VDF: uma linha `"nome"` seguida de `{` abre um bloco; o appid do
 # bloco corrente decide se o UseSteamControllerConfig dele fica em paz).
@@ -390,6 +463,13 @@ case "${MODE}" in
                 any_allow=1
             fi
         done
+        # PONTE-STEAM-INPUT-01: um jogo da lista dela com o Steam Input
+        # DESLIGADO também é "precisa corrigir". Sem esta linha o --status
+        # respondia "tudo limpo" com a exceção dela inerte — e foi lendo esse
+        # verde que a noite de 18/08 se perdeu.
+        if ponte_pendente; then
+            any_needs=1
+        fi
         if [[ "${any_needs}" -eq 1 ]]; then
             log "ação sugerida: scripts/disable_steam_input.sh --apply"
             resultado "precisa-corrigir"
@@ -449,6 +529,12 @@ case "${MODE}" in
         for vdf in "${VDFS[@]}"; do
             needs_real_fix "$vdf" && any_needs=1
         done
+        # PONTE-STEAM-INPUT-01: construir a ponte TAMBÉM é edição de verdade —
+        # entra no mesmo pré-voo, e por isso o D-32 continua valendo (a Steam só
+        # fecha quando algum byte vai mudar).
+        if ponte_pendente >/dev/null 2>&1; then
+            any_needs=1
+        fi
         if [[ "${any_needs}" -eq 0 ]]; then
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
             resultado "nada-a-fazer"
@@ -466,6 +552,10 @@ case "${MODE}" in
         for vdf in "${VDFS[@]}"; do
             apply_vdf "$vdf" || rc=1
         done
+        # A ponte vem DEPOIS do desligamento, e com a Steam já fechada: é a
+        # ordem que faz as duas coisas conviverem (o guarda desliga o global e
+        # o que não está na lista; a ponte liga o que está).
+        ligar_ponte_da_allowlist
         [[ "${was_running}" -eq 1 ]] && reopen_steam
         if [[ "${rc}" -eq 0 ]]; then resultado "aplicado"; else resultado "erro"; fi
         exit "${rc}"
@@ -488,6 +578,12 @@ case "${MODE}" in
         for vdf in "${VDFS[@]}"; do
             needs_real_fix "$vdf" && any_needs=1
         done
+        # PONTE-STEAM-INPUT-01: a Steam ACABOU de sair (é o que acorda este
+        # guarda), então este é o instante em que a escrita sobrevive. A ponte
+        # roda mesmo quando não há nada a DESLIGAR — ligar e desligar são duas
+        # tarefas, e amarrar uma na outra deixaria a exceção dela inerte para
+        # sempre num vdf já limpo.
+        ligar_ponte_da_allowlist
         if [[ "${any_needs}" -eq 0 ]]; then
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
             resultado "nada-a-fazer"
