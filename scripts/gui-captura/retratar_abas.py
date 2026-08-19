@@ -151,10 +151,12 @@ para fora de `docs/`.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 RAIZ = Path(os.environ.get("HEFESTO_RAIZ", Path(__file__).resolve().parents[2]))
@@ -1117,6 +1119,7 @@ def main(destino: str | None = None, *, mesa_cheia: bool = False) -> int:
 
     print(f"\n  {total} aba(s) em {saida}")
     if saida == DESTINO_DOC:
+        print(f"  {_gravar_prova_da_foto(saida)}")
         print("  as imagens do README e de docs/usage/interface.md estão em dia.")
     if mesa_cheia:
         print(
@@ -1137,6 +1140,50 @@ USO = (
     f"                  versionado; destino padrão "
     f"{DESTINO_MESA_CHEIA.relative_to(RAIZ)}\n"
 )
+
+
+#: O nome do recibo. Vive JUNTO das fotos de propósito: é o commit dele que faz
+#: `docs/usage/assets` avançar quando nenhum pixel se move.
+NOME_DA_PROVA = "PROVA-DA-FOTO.txt"
+
+
+def _gravar_prova_da_foto(saida: Path) -> str:
+    """Grava o recibo do ensaio: quando rodou, contra qual tela, e o que saiu.
+
+    FOTO-QUE-NAO-MOVE-PIXEL-01 (19/08/2026). O portão
+    `test_as_fotos_nao_ficam_atras_do_codigo_da_tela` compara TOPOLOGIA: o
+    commit que tocou `src/…/app` ou `src/…/gui` tem de ser ancestral do commit
+    que tocou `docs/usage/assets`. O critério está certo — data mentiria — mas
+    tem um ponto cego: uma mudança de tela que não move pixel nenhum (uma frase
+    de aviso, um comentário, um caminho de IPC) faz as fotos saírem **byte a
+    byte idênticas**. O `git` não registra nada, o commit das fotos não avança,
+    e o portão fica vermelho para sempre — exigindo, na prática, um commit
+    falso. Aconteceu na leva NATIVO-RUMBLE-01.
+
+    O recibo resolve dizendo a verdade em vez de fingir: ele muda porque a data
+    e o commit da tela mudaram, então o commit dele É a prova de que o ensaio
+    rodou. E as somas dizem o que saiu — se um PNG for editado à mão depois,
+    a soma não bate mais.
+    """
+
+    pngs = sorted(q for q in saida.glob("*.png") if q.is_file())
+    linhas = [
+        "# Recibo do ensaio de fotos — gerado por scripts/gui-captura/retratar_abas.py",
+        "#",
+        "# NÃO edite à mão. Rode o script; ele reescreve este arquivo.",
+        "# Existe porque uma mudança de tela que não move pixel deixa as fotos",
+        "# idênticas, e sem este recibo o portão das fotos ficaria vermelho para",
+        "# sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.",
+        "",
+        f"ensaio: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"abas:   {len(pngs)}",
+        "",
+        "# soma sha256 de cada foto, em ordem alfabética",
+    ]
+    for q in pngs:
+        linhas.append(f"{hashlib.sha256(q.read_bytes()).hexdigest()}  {q.name}")
+    (saida / NOME_DA_PROVA).write_text("\n".join(linhas) + "\n", encoding="utf-8")
+    return f"recibo do ensaio em {NOME_DA_PROVA} ({len(pngs)} soma[s])"
 
 
 def _ler_argumentos(argv: list[str]) -> tuple[str | None, bool]:

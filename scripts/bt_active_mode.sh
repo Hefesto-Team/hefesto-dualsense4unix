@@ -86,8 +86,17 @@ _adaptador() {
             | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u | head -1 || true)"
         if [[ -n "${nome}" ]]; then printf '%s\n' "${nome}"; return 0; fi
     fi
+# BTMGMT-QUE-NAO-VOLTA-01 (19/08/2026): `btmgmt` fala com o kernel pelo socket
+# de MANAGEMENT, e sem adaptador ele fica esperando uma resposta que nunca vem —
+# não devolve erro, não devolve vazio, não devolve NADA. Medido: o job do Arch
+# ficou preso exatamente aqui e só morreu no teto de 30 min do CI, e o mesmo
+# aconteceria na máquina de quem instala sem Bluetooth: o install trava para
+# sempre, no passo 8 de 11, sem uma linha dizendo por quê.
+# O `2>/dev/null` não ajuda (não há erro) e o `|| true` não ajuda (não há saída).
+# Só o teto de tempo resolve. Cinco segundos é vinte vezes o que ele leva numa
+# máquina sadia — medido: responde em menos de 0,25 s com adaptador de pé.
     if command -v btmgmt >/dev/null 2>&1; then
-        nome="$(btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | head -1 || true)"
+        nome="$(timeout 5 btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | head -1 || true)"
         if [[ -n "${nome}" ]]; then printf '%s\n' "${nome}"; return 0; fi
     fi
     command -v hciconfig >/dev/null 2>&1 || return 0
@@ -113,7 +122,7 @@ _macs_conectados() {
         [[ "${achou}" -eq 1 ]] && return 0
     fi
     if command -v btmgmt >/dev/null 2>&1; then
-        saida="$(btmgmt con 2>/dev/null | grep -oE '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || true)"
+        saida="$(timeout 5 btmgmt con 2>/dev/null | grep -oE '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || true)"
         if [[ -n "${saida}" ]]; then printf '%s\n' "${saida^^}"; return 0; fi
     fi
     command -v hcitool >/dev/null 2>&1 || return 0

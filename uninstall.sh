@@ -750,7 +750,7 @@ if sudo -n true 2>/dev/null; then
             | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u | head -1 || true)"
     fi
     if [[ -z "${_hci}" ]] && command -v btmgmt >/dev/null 2>&1; then
-        _hci="$(btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | head -1 || true)"
+        _hci="$(timeout 5 btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | head -1 || true)"
     fi
     if [[ -z "${_hci}" ]] && command -v hciconfig >/dev/null 2>&1; then
         _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}' || true)"
