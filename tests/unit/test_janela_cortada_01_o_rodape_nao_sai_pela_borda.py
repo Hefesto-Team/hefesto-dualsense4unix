@@ -45,6 +45,22 @@ mínimo do conteúdo, que é o regime em que o defeito vivia.
 
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# `import gi` CRU aceita o stub que outro arquivo de teste planta em
+# `sys.modules` — e com o stub dentro, o `Gtk.init_check()` do `_gtk_pronto()`
+# estoura antes de qualquer teste rodar, derrubando a COLETA do módulo inteiro.
+# Dois sintomas, uma causa só:
+#
+# 1. no runner headless o módulo não coleta (o portão do CI reprova a leva);
+# 2. nesta bancada ele reprova por ORDEM — verde sozinho, vermelho depois do
+#    `test_layout_orcamento_altura.py`, sempre com `fim = 1080`, porque o
+#    `_alocar` não pegou. Quem mentiu foi o arquivo anterior.
+#
+# `exigir_gi_real()` limpa o stub quando o ambiente tem PyGObject de verdade, e
+# pula o módulo quando não tem. Tem de vir ANTES do `import gi`.
+exigir_gi_real("JANELA-CORTADA-01 (o rodapé na janela inteira)")
+
 from pathlib import Path
 
 import gi
@@ -106,10 +122,29 @@ def _montar():  # type: ignore[no-untyped-def]
     janela.set_size_request(LARGURA, ALTURAS[-1])
     janela.show_all()
     _assentar()
-    return builder, raiz
+    return builder, raiz, janela
 
 
-def _alocar(raiz, altura: int) -> None:  # type: ignore[no-untyped-def]
+def _alocar(raiz, altura: int, janela=None) -> None:  # type: ignore[no-untyped-def]
+    """Põe a raiz na altura pedida — e faz a JANELA concordar com ela.
+
+    Sem o `janela`, este ajudante era instável POR ORDEM DE EXECUÇÃO: verde
+    sozinho, vermelho depois do `test_layout_orcamento_altura.py`, sempre com
+    `fim = 1080` nas primeiras alturas — que é o `ALTURAS[-1]` que o `_montar`
+    pede à `OffscreenWindow`.
+
+    A causa é uma disputa, não o produto: o `size_allocate` aqui empurra o
+    FILHO para a altura do ensaio, e o `_assentar` logo abaixo drena eventos —
+    entre eles o ciclo de alocação da PRÓPRIA janela, que devolve o filho aos
+    1080 dela. Quem chega primeiro depende de haver trabalho pendente no GTK
+    quando o teste começa, e isso o arquivo anterior decide.
+
+    Então a janela passa a pedir a mesma altura antes: as duas concordam, e não
+    há corrida para perder. Não afrouxa a mordida — a medição continua sendo a
+    alocação REAL do rodapé depois que o GTK assentou.
+    """
+    if janela is not None:
+        janela.set_size_request(LARGURA, altura)
     r = Gdk.Rectangle()
     r.x, r.y, r.width, r.height = 0, 0, LARGURA, altura
     raiz.size_allocate(r)
@@ -123,13 +158,13 @@ class TestORodapeNaoSai:
         É o defeito de 17/08 inteiro: os quatro botões de ação global e a
         statusbar saindo pela borda de baixo sem que nada no GTK reclame.
         """
-        builder, raiz = _montar()
+        builder, raiz, janela = _montar()
         rodape = builder.get_object("footer_box")
         assert rodape is not None, "footer_box sumiu do glade"
 
         fora = []
         for altura in ALTURAS:
-            _alocar(raiz, altura)
+            _alocar(raiz, altura, janela)
             a = rodape.get_allocation()
             fim = a.y + a.height
             if fim > altura:
@@ -148,13 +183,13 @@ class TestORodapeNaoSai:
         Sem este par, a cura "espreme o rodapé até caber" passaria — e ela é
         pior que o defeito, porque some sem deixar rastro na alocação.
         """
-        builder, raiz = _montar()
+        builder, raiz, janela = _montar()
         rodape = builder.get_object("footer_box")
         botoes = builder.get_object("footer_buttons_box")
 
         magros = []
         for altura in ALTURAS:
-            _alocar(raiz, altura)
+            _alocar(raiz, altura, janela)
             if rodape.get_allocation().height < 20:
                 magros.append(f"{altura}px: rodapé com {rodape.get_allocation().height}px")
             if botoes.get_allocation().height < 20:
@@ -170,12 +205,12 @@ class TestORodapeNaoSai:
         isto, os dois testes acima passariam numa janela que simplesmente nunca
         encolhe — e o defeito voltaria no dia em que alguém a deixasse encolher.
         """
-        builder, raiz = _montar()
+        builder, raiz, janela = _montar()
         notebook = builder.get_object("main_notebook")
 
         alturas_do_miolo = []
         for altura in (620, 750, 1080):
-            _alocar(raiz, altura)
+            _alocar(raiz, altura, janela)
             alturas_do_miolo.append(notebook.get_allocation().height)
 
         assert alturas_do_miolo == sorted(alturas_do_miolo), (
@@ -209,8 +244,8 @@ class TestOPisoDaJanela:
                     piso = int((prop.text or "0").strip())
         assert piso is not None, "height-request sumiu de main_window"
 
-        builder, raiz = _montar()
-        _alocar(raiz, piso)
+        builder, raiz, janela = _montar()
+        _alocar(raiz, piso, janela)
         fixos = sum(
             builder.get_object(n).get_allocation().height
             for n in ("header_bar", "footer_box")
