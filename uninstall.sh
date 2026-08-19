@@ -713,7 +713,48 @@ if sudo -n true 2>/dev/null; then
     fi
     # BT-NINTENDO-ACTIVE-01: reverter a link policy (volta o SNIFF default) e o
     # nome do adaptador (tira o prefixo "Nintendo"). Best-effort; vale já.
-    _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}')"
+    #
+    # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026) — o uninstall FICOU PARA TRÁS.
+    # A migração levou `bt_active_mode.sh`, `doctor.sh`, `bt_nosniff_now.sh`,
+    # `bt_health_watchdog.sh`, `storm_watch.sh` e `medir_w3_coex.sh` do
+    # `hciconfig`/`hcitool`/`sdptool` para o sysfs/D-Bus/`btmgmt`, e este
+    # arquivo não entrou na lista. O efeito era o pior tipo de defeito daqui:
+    # numa distro que moveu as depreciadas para `bluez-deprecated` (Fedora e
+    # Arch, que é EXATAMENTE o público da migração), o `hciconfig` não existe,
+    # `_hci` saía VAZIO e o bloco inteiro era pulado em silêncio — inclusive a
+    # reversão do Alias, que é a metade que NÃO precisa de ferramenta
+    # depreciada nenhuma (sai por D-Bus). O adaptador dela ficava chamado
+    # "Nintendo ..." para sempre depois de desinstalar o Hefesto.
+    #
+    # A escada é a MESMA de `bt_active_mode.sh::_adaptador`, na mesma ordem, de
+    # propósito: sysfs (kernel puro, sem pacote e sem privilégio; o filtro
+    # `^hci[0-9]+$` descarta as entradas de conexão, que ali nascem como
+    # "hci0:256"), D-Bus do BlueZ, `btmgmt`, e o `hciconfig` como plano B — quem
+    # AINDA o tem não pode perder leitura.
+    #
+    # `HEFESTO_SYSFS_BLUETOOTH` é o gancho de teste do primeiro degrau, no mesmo
+    # espírito do `HEFESTO_OS_RELEASE` e do `HEFESTO_FAMILIA_PACOTES` do
+    # install.sh: sem ele, a máquina de quem roda a suíte TEM `/sys/class/
+    # bluetooth/hci0`, o primeiro degrau sempre vence, e os três de baixo — que
+    # são justamente a migração — nunca seriam exercitados. Portão que só
+    # consegue medir o caminho que já funcionava é decoração.
+    _hci=""
+    for _hci_p in "${HEFESTO_SYSFS_BLUETOOTH:-/sys/class/bluetooth}"/hci*; do
+        [[ -e "${_hci_p}" ]] || continue
+        [[ "${_hci_p##*/}" =~ ^hci[0-9]+$ ]] || continue
+        _hci="${_hci_p##*/}"
+        break
+    done
+    if [[ -z "${_hci}" ]] && command -v busctl >/dev/null 2>&1; then
+        _hci="$(busctl tree org.bluez --list 2>/dev/null \
+            | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u | head -1 || true)"
+    fi
+    if [[ -z "${_hci}" ]] && command -v btmgmt >/dev/null 2>&1; then
+        _hci="$(btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | head -1 || true)"
+    fi
+    if [[ -z "${_hci}" ]] && command -v hciconfig >/dev/null 2>&1; then
+        _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}' || true)"
+    fi
     if [[ -n "${_hci}" ]]; then
         # ATENÇÃO: `hciconfig lp` exige a lista separada por VÍRGULA. Com
         # espaços ele lê só o primeiro token e a reversão vira NO-OP
@@ -721,7 +762,23 @@ if sudo -n true 2>/dev/null; then
         # deixou a policy em RSWITCH, e só "rswitch,hold,sniff,park"
         # devolveu RSWITCH HOLD SNIFF PARK. O uninstall estava deixando o
         # adaptador sem SNIFF para sempre.
-        sudo hciconfig "${_hci}" lp rswitch,hold,sniff,park 2>/dev/null || true
+        #
+        # A LINK POLICY NÃO TEM SUCESSOR VIVO: ela sai do ioctl HCIGETDEVINFO,
+        # e nem `btmgmt` nem `bluetoothctl` do 5.86 a expõem (conferido nos
+        # `--help` em 19/08/2026 — é a mesma conclusão de `storm_watch.sh` e do
+        # `doctor.sh`). Onde o `hciconfig` falta, esta metade SE PERDE, e o
+        # certo é DIZER isso em vez de calar: sem SNIFF de volta, o rádio dela
+        # segue no modo ativo que a cura do Pro pediu. A outra metade (o Alias)
+        # continua revertida logo abaixo, que é o ganho desta migração.
+        if command -v hciconfig >/dev/null 2>&1; then
+            sudo hciconfig "${_hci}" lp rswitch,hold,sniff,park 2>/dev/null || true
+        else
+            log "link policy de ${_hci} NÃO revertida: só o 'hciconfig' escreve"
+            log "  link policy (ioctl HCIGETDEVINFO) e ele não está nesta máquina"
+            log "  (pacote bluez-deprecated / bluez-deprecated-tools). O SNIFF do"
+            log "  adaptador segue como a cura do Pro o deixou — instale o pacote e"
+            log "  rode: sudo hciconfig ${_hci} lp rswitch,hold,sniff,park"
+        fi
         _alias="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
         if [[ "${_alias}" == Nintendo\ * ]]; then
             sudo busctl set-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias s "${_alias#Nintendo }" 2>/dev/null || true

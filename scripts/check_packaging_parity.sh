@@ -1456,6 +1456,135 @@ else
     fi
 fi
 
+# LOADER-SVG-01 (19/08/2026) — o loader SVG do gdk-pixbuf em TODA forma de
+# empacotamento.
+#
+# POR QUE ESTA SEÇÃO NASCEU: a leva de 19/08 pôs o loader nos empacotamentos e a
+# conferência foi "rode o check_packaging_parity.sh e veja se os três concordam".
+# O portão respondeu VERDE — e estava CEGO: não havia uma linha sobre `librsvg`
+# neste arquivo. Verde por silêncio é a pior resposta que um portão dá, porque
+# quem perguntou vai embora achando que mediu.
+#
+# E O SINTOMA NÃO APONTA PARA A CAUSA, que é o motivo de isto virar portão em vez
+# de nota: sem o loader, `GdkPixbuf.Pixbuf.new_from_file_at_scale` devolve None
+# EM SILÊNCIO — o ícone some da bandeja e os 38 glifos da interface caem junto,
+# sem uma linha de erro no log (BUG-TRAY-ICONE-INVISIVEL-01, descrito em
+# app/main.py). Ninguém liga a tela vazia ao pacote que faltou.
+#
+# A ÂNCORA É A PROMESSA, não o pacote — mesma disciplina da seção do teclado na
+# tela: enquanto o produto DESENHAR SVG em execução, ele tem de declarar o
+# loader em todo formato. Se um dia o desenho sair do produto, a seção cala por
+# direito (e é isso que a mantém quieta nos checkouts sintéticos dos testes deste
+# próprio portão, que trazem só `assets/` e `scripts/`).
+_SVG_PROMESSA="src/hefesto_dualsense4unix/gui/widgets/button_glyph.py"
+echo "== loader SVG do gdk-pixbuf (o que desenha) × o que cada formato declara =="
+if [[ ! -f "${_SVG_PROMESSA}" ]] \
+   || ! grep -q 'new_from_file_at_scale' "${_SVG_PROMESSA}" 2>/dev/null; then
+    echo "[ OK ] loader SVG: o produto não carrega SVG em execução neste checkout — nada a checar"
+else
+    missing=()
+
+    #: Formato -> padrão que só o CAMPO LIDO PELO GERENCIADOR satisfaz.
+    #:
+    #: A LIÇÃO DA SEÇÃO DO TECLADO NA TELA, aplicada de novo: procurar a palavra
+    #: `librsvg` no arquivo inteiro passaria VERDE com a dependência arrancada,
+    #: porque os quatro arquivos EXPLICAM a armadilha de nome em prosa — e a
+    #: `Description:` do debian/control não é comentário, então nem o filtro de
+    #: `#` a remove. Cada padrão abaixo mira o campo, e só ele.
+    #:
+    #: OS NOMES DIVERGEM DE PROPÓSITO, e a divergência é a armadilha: quem
+    #: desenha é `librsvg2-common` (Debian), `librsvg2` (Fedora) e `librsvg`
+    #: (Arch/Nix). O `librsvg2-bin`/`librsvg2-tools` é o `rsvg-convert`,
+    #: ferramenta de BUILD — o errado em todos eles.
+    _svg_declaram=(
+        "packaging/fedora/hefesto-dualsense4unix.spec:^(Requires|Recommends):[[:space:]]*librsvg2([[:space:]]|$)"
+        "packaging/arch/PKGBUILD:^[[:space:]]*'librsvg'"
+        "packaging/nix/package.nix:^[[:space:]]*librsvg[[:space:]]*$"
+    )
+    for _svg_item in "${_svg_declaram[@]}"; do
+        _svg_arq="${_svg_item%%:*}"
+        _svg_padrao="${_svg_item#*:}"
+        [[ -f "${_svg_arq}" ]] || continue
+        # CORRIDA-DO-PIPEFAIL-01: here-string, nunca `produtor | grep -q`.
+        _svg_codigo="$(grep -v '^[[:space:]]*#' "${_svg_arq}" 2>/dev/null || true)"
+        grep -qE "${_svg_padrao}" <<< "${_svg_codigo}" \
+            || missing+=("${_svg_arq} não declara o loader SVG no campo que o gerenciador lê (padrão: ${_svg_padrao})")
+    done
+
+    # O .deb tem contrato PRÓPRIO, e o motivo é medido: `Depends:` é um campo de
+    # CONTINUAÇÃO — o nome do pacote mora numa linha que começa com espaço, e um
+    # `^Depends:.*librsvg2-common` nunca casaria. Pior: a palavra também vive na
+    # `Description`, cujas linhas TAMBÉM começam com espaço. Então o campo é
+    # recortado de verdade (cabeçalho + continuações, até a próxima linha que
+    # começa em coluna 0), e é dentro DELE que se procura.
+    if [[ -f packaging/debian/control ]]; then
+        _svg_campo_deb="$(awk '
+            /^(Depends|Recommends|Pre-Depends):/ { dentro = 1; print; next }
+            dentro && /^[[:space:]]/ { print; next }
+            dentro { dentro = 0 }
+        ' packaging/debian/control 2>/dev/null || true)"
+        grep -qE '(^|[[:space:],])librsvg2-common([[:space:],]|$)' <<< "${_svg_campo_deb}" \
+            || missing+=("packaging/debian/control: librsvg2-common não está em Depends/Recommends (a menção na Description NÃO instala nada)")
+    fi
+
+    # O install.sh nativo: o loader tem de estar no CENSO com criticidade
+    # `obrigatoria` — e a checagem tem de ser a do EFEITO (`svg`: o gdk-pixbuf lê
+    # SVG?), nunca o nome de um pacote. É o que faz a mesma régua valer nas três
+    # famílias, e é o que impede a volta do `librsvg2-bin` pelo nome.
+    if [[ -f install.sh ]]; then
+        _svg_censo="$(grep -v '^[[:space:]]*#' install.sh 2>/dev/null || true)"
+        grep -qE '"svg-loader\|obrigatoria\|svg\|' <<< "${_svg_censo}" \
+            || missing+=("install.sh: o censo _DEPS_DE_SISTEMA não cobra o svg-loader como obrigatória pela checagem de EFEITO (svg)")
+        for _svg_fam in 'librsvg2-common' 'librsvg2"' "librsvg\""; do
+            grep -qF -- "${_svg_fam}" <<< "${_svg_censo}" \
+                || missing+=("install.sh: _pkg_nome perdeu o nome do loader para uma família (procurado: ${_svg_fam})")
+        done
+    fi
+
+    # O FLATPAK NÃO DECLARA, e está certo: ele roda sobre `org.gnome.Platform`,
+    # que já traz o loader SVG dentro do runtime — é assim que qualquer app GTK
+    # desenha ícone simbólico ali, e o próprio manifesto registra que as deps
+    # deste tipo "já estão dentro do runtime". O que o portão cobra, então, é a
+    # PREMISSA: se um dia o manifesto trocar para um runtime que não a garante
+    # (`org.freedesktop.Platform`, por exemplo), a isenção morre junto e alguém
+    # tem de declarar o módulo à mão.
+    if [[ -f flatpak/br.andrefarias.Hefesto.yml ]]; then
+        _svg_runtime="$(sed -n 's/^runtime:[[:space:]]*//p' flatpak/br.andrefarias.Hefesto.yml | head -1)"
+        if [[ "${_svg_runtime}" != "org.gnome.Platform" ]]; then
+            grep -qi 'rsvg' flatpak/br.andrefarias.Hefesto.yml 2>/dev/null \
+                || missing+=("flatpak: runtime '${_svg_runtime}' não é o org.gnome.Platform que garantia o loader SVG, e o manifesto não bundla nenhum — a isenção caducou")
+        fi
+    fi
+
+    #: A DÍVIDA DECLARADA — `arquivo:razão com data`. Mesmo molde de
+    #: `_ARTEFATO_SEM_DONO_HOJE` acima: declarar é honesto, e o portão não
+    #: castiga honestidade — só não deixa a lápide envelhecer calada.
+    _SVG_LACUNAS_HOJE=(
+        "scripts/build_appimage_gui.sh:19/08/2026 — o AppImage GUI BUNDLA os loaders do gdk-pixbuf (ele mesmo aponta GDK_PIXBUF_MODULE_FILE para o loaders.cache de dentro do pacote, :134), então quem decide se o SVG desenha é o que estava na MÁQUINA DE BUILD. E a lista de pré-requisitos do cabeçalho (:14-15) pede python3-gi, gir1.2-gtk-3.0 e o appindicator, e NÃO pede o librsvg2-common: buildar num host sem ele produz um AppImage com a bandeja vazia e nenhum erro no log. A cura é do dono do build (pedir o pacote no cabeçalho e ABORTAR quando o loader não estiver no host antes de bundlar), não deste portão."
+    )
+    for _svg_lac in ${_SVG_LACUNAS_HOJE[@]+"${_SVG_LACUNAS_HOJE[@]}"}; do
+        _svg_lac_arq="${_svg_lac%%:*}"
+        [[ -f "${_svg_lac_arq}" ]] && continue
+        missing+=("lacuna declarada que já não vale: ${_svg_lac_arq} não existe mais — APAGUE a entrada de _SVG_LACUNAS_HOJE")
+    done
+
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] loader SVG: declarado no .deb, no .spec, no PKGBUILD, no package.nix e no censo do install.sh (por EFEITO), com o flatpak coberto pelo runtime — ${#_SVG_LACUNAS_HOJE[@]} lacuna(s) declarada(s)"
+    else
+        for _svg_m in "${missing[@]}"; do
+            echo "[FAIL] loader SVG: ${_svg_m}"
+        done
+        echo "       Sem o loader, GdkPixbuf.Pixbuf.new_from_file_at_scale devolve None"
+        echo "       EM SILÊNCIO: o ícone some da bandeja e os 38 glifos da interface"
+        echo "       caem junto, sem UMA linha de erro no log. Quem instalar por esse"
+        echo "       formato vai ver uma interface quebrada sem nada que a explique."
+        echo "       ARMADILHA DE NOME: quem desenha é librsvg2-common (Debian),"
+        echo "       librsvg2 (Fedora) e librsvg (Arch/Nix). O librsvg2-bin e o"
+        echo "       librsvg2-tools são o rsvg-convert, ferramenta de BUILD — errados."
+        rc=1
+    fi
+fi
+
 echo "─────────────────────────────────────────"
 if [[ "${rc}" -eq 0 ]]; then
     echo "paridade de empacotamento OK"

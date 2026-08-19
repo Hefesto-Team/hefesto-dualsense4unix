@@ -621,7 +621,18 @@ _DEPS_DE_SISTEMA=(
     "appindicator|importante|appindicator|a bandeja não nasce: a janela abre, o ícone ao lado do relógio não"
     "desktop-utils|importante|cmd:desktop-file-validate,update-desktop-database,gtk-update-icon-cache|o atalho e o ícone podem não aparecer no menu do sistema"
     "imagemagick|importante|cmd:convert|o ícone fica só no 256x256, sem as resoluções menores"
-    "bluez|importante|cmd:bluetoothctl|parear pelo rádio, conferir o bond e o diagnóstico de Bluetooth param de funcionar"
+    # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026): a régua pedia SÓ o
+    # `bluetoothctl`, e desde a migração o produto também chama o `btmgmt`
+    # (`bt_active_mode.sh`, `doctor.sh`, `uninstall.sh`). Os dois entram, e a
+    # tabela de pacotes NÃO muda — MEDIDO em contêiner limpo no mesmo dia,
+    # família por família, e é o único jeito honesto de afirmar isto:
+    #     debian:12   -> `dpkg -S /usr/bin/btmgmt` = bluez (o mesmo do bluetoothctl)
+    #     fedora:40   -> `dnf repoquery --whatprovides /usr/bin/btmgmt` = bluez
+    #     archlinux   -> `pacman -F usr/bin/btmgmt` = extra/bluez-utils
+    # No Arch a dupla vive em `bluez-utils`, que a linha `bluez)` de `_pkg_nome`
+    # já instala junto com o `bluez`. Se um dia alguma família separar os dois,
+    # é ESTA linha que grita — antes era ela que ficava cega.
+    "bluez|importante|cmd:bluetoothctl,btmgmt|parear pelo rádio, conferir o bond e o diagnóstico de Bluetooth param de funcionar"
     "usbutils|importante|cmd:lsusb|o diagnóstico perde a leitura do barramento USB"
     "fontconfig|importante|cmd:fc-cache|a interface troca de fonte em silêncio (Space Grotesk e JetBrains Mono não entram)"
     "curl|importante|cmd:curl|as fontes da identidade visual não são baixadas"
