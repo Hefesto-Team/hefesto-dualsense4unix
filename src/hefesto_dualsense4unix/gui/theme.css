@@ -810,11 +810,35 @@ textview.hefesto-dualsense4unix-log text selection,
     color: #f8f8f2;
 }
 
-.hefesto-dualsense4unix-status-ok     { color: #50fa7b; }
-.hefesto-dualsense4unix-status-warn   { color: #f1fa8c; }
-.hefesto-dualsense4unix-status-err    { color: #ff5555; }
-.hefesto-dualsense4unix-accent-purple { color: #bd93f9; }
-.hefesto-dualsense4unix-accent-pink   { color: #ff79c6; }
+/* COR-QUE-NAO-PINTAVA-01 (19/08/2026). Estas cinco nasceram SOLTAS (0,1,0) e
+   perdiam para `.hefesto-dualsense4unix-window label` (0,1,1), que casa o label
+   diretamente — então a classe era aplicada e o texto saía BRANCO.
+
+   Não é hipótese: a casa já tinha visto o sintoma e contornado sem achar a
+   causa. O `app/widgets/painel_no_jogo.py:135` registra, textual — "a classe
+   existe, é aplicada e não pinta nada (a primeira foto saiu com 'no jogo agora'
+   em branco)" — e usa `set_markup` com `foreground` NO LUGAR do desenho
+   preferido desta casa, que é a classe.
+
+   Quem sofria, contado hoje: `status-warn` em DOZE lugares, dois deles rótulos
+   do próprio `main.glade` (`:310` e `:325`) que o produto manda pintar de
+   amarelo e a tela dela desenhava em branco desde sempre.
+
+   A cura é a MESMA que o bloco de `:146` já usa e explica para os degraus de
+   texto: escopar na window (0,2,1) em vez de deixar solta. Nenhuma cor muda —
+   muda quem ganha a disputa. O contorno por markup do `painel_no_jogo` segue
+   valendo e não foi tocado: é decisão medida, e trocá-lo agora seria mexer em
+   tela sem foto. */
+.hefesto-dualsense4unix-window .hefesto-dualsense4unix-status-ok,
+.hefesto-dualsense4unix-window label.hefesto-dualsense4unix-status-ok     { color: #50fa7b; }
+.hefesto-dualsense4unix-window .hefesto-dualsense4unix-status-warn,
+.hefesto-dualsense4unix-window label.hefesto-dualsense4unix-status-warn   { color: #f1fa8c; }
+.hefesto-dualsense4unix-window .hefesto-dualsense4unix-status-err,
+.hefesto-dualsense4unix-window label.hefesto-dualsense4unix-status-err    { color: #ff5555; }
+.hefesto-dualsense4unix-window .hefesto-dualsense4unix-accent-purple,
+.hefesto-dualsense4unix-window label.hefesto-dualsense4unix-accent-purple { color: #bd93f9; }
+.hefesto-dualsense4unix-window .hefesto-dualsense4unix-accent-pink,
+.hefesto-dualsense4unix-window label.hefesto-dualsense4unix-accent-pink   { color: #ff79c6; }
 
 /* Footer action buttons — paleta Drácula aplicada para diferenciar a
    responsabilidade de cada ação. Borda lateral colorida marca o botão

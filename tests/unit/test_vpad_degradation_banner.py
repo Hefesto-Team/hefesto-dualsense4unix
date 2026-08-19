@@ -312,6 +312,11 @@ class _FakeWidget:
 class _HomeStub:
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
+    # PONTE-NA-TELA-01: o `_render_home` também rege a linha "Ponte com o jogo"
+    # + o aviso de divergência
+    # de máscara (cobertos em `test_home_ponte_e_divergencia.py`).
+    _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
+    _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
 
     def __init__(self) -> None:
         self._home_installed = True
@@ -332,9 +337,15 @@ class _HomeStub:
         self._home_shutdown_btn = _FakeWidget()
         self._home_offline = False
         # ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): botão
-        # "Reconciliar jogadores" + aviso de jogo aberto.
+        # "Reconciliar jogadores" + aviso de jogo aberto. (O par nasceu como
+        # "Renumerar agora"; o `_render_home` de hoje só conhece o nome
+        # `reconciliar`, então é este que o duplo tem de ter.)
         self._home_reconciliar_btn = _FakeWidget()
         self._home_reconciliar_hint = _FakeWidget()
+        # PONTE-NA-TELA-01: linha "Ponte com o jogo" + banner da divergência.
+        self._home_ponte_label = _FakeWidget()
+        self._home_divergencia_banner = _FakeWidget()
+        self._home_flavor_pedido: str | None = None
         # Estado inicial do widget real: invisível até o render decidir.
         self._home_vpad_banner.visible = False
 
