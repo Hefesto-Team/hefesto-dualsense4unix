@@ -336,6 +336,109 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
         logger.warning("rumble_zero_on_mode_exit_failed", err=str(exc), exc_info=True)
 
 
+# --- NATIVO-RUMBLE-01: o Modo Nativo RECUSA fixar vibração ------------------
+#
+# **O defeito, medido em 19/08/2026.** No Modo Nativo o backend muta TODA
+# escrita de output (`lifecycle._release_controller_to_game` →
+# `backend_pydualsense.set_output_mute(True)`), e o mute é a ÚNICA porta antes
+# do `sendReport`. Medido: `rumble.set` dentro do modo produz **zero write no
+# fio** e mesmo assim o daemon respondia `{"status": "ok"}` — a aba dizia
+# "Vibração travada (fraca=…, forte=…)" com o motor parado.
+#
+# **E a parte destrutiva não é a tela que mente, é o estado que sobrevive ao
+# modo.** Gravar `daemon.config.rumble_active` DESARMA a cura HARM-16: o
+# `zero_motors_on_mode_exit` logo acima só zera os motores em passthrough
+# (`rumble_active is None`), justamente porque com par fixado o dono é a
+# usuária. Com um par gravado durante o modo, a saída do Modo Nativo deixa de
+# zerar o hardware — e quem estava vibrando ali era o JOGO, escrevendo direto
+# no hidraw. Resultado: o controle sai do modo vibrando, e ninguém mais zera.
+#
+# **A decisão dela (19/08/2026), com as três opções na mesa** — recusar no
+# daemon, impedir o clique na tela, ou as duas: *"a aba Gatilhos já sabe exibir
+# recusa vinda do daemon"*. O mecanismo existe e só precisava ser usado aqui.
+# Impedir o clique foi descartado porque contraria a regra da casa de que **a
+# vontade da GUI prevalece**: recusar com motivo diz o que aconteceu, impedir
+# esconde a escolha.
+#
+# **Por que "recusado" e não "guardado".** As outras abas usam
+# `app.textos_de_aplicacao.guardado_ate_o_nativo_sair` — o desejado fica
+# registrado e é re-escrito no desmute. Para o rumble essa palavra seria a
+# própria bomba: guardar o par É o que desarma a HARM-16. Aqui o pedido não
+# fica pendurado; ele é recusado, e a frase diz o que fazer.
+
+#: O vocabulário de desfecho do rumble fixado — o mesmo contrato que a leva
+#: VERDADE-01 (18-19/08) criou para o gamepad em `subsystems.gamepad`, pela
+#: mesma razão: um `bool` que valia para "aplicou", "já estava" e "bloqueado"
+#: foi a mentira que fez um laço destruir e recriar o vpad no meio da partida.
+#: Quem só quer saber se pode confiar no par lê o `status`; quem precisa da
+#: verdade inteira lê o `desfecho`.
+#:
+#:   - ``"aplicado"``              — o par foi fixado e o reassert vai re-afirmá-lo;
+#:   - ``"parado"``                — o pedido era calar, e o silêncio foi fixado;
+#:   - ``"recusado_modo_nativo"``  — o Modo Nativo está ligado: NADA foi armado,
+#:                                   nem no `rumble_active` nem no hardware;
+#:   - ``"solto_no_modo_nativo"``  — o pedido era calar DENTRO do modo. O Hefesto
+#:                                   não consegue calar o jogo, mas soltou o par
+#:                                   que estivesse fixado (volta ao passthrough).
+RUMBLE_APLICADO = "aplicado"
+RUMBLE_PARADO = "parado"
+RUMBLE_RECUSADO_MODO_NATIVO = "recusado_modo_nativo"
+RUMBLE_SOLTO_NO_MODO_NATIVO = "solto_no_modo_nativo"
+
+#: A frase é para uma PESSOA: o que aconteceu, e o que fazer a respeito. O
+#: léxico é o que já está na tela — "Modo Nativo" e "quem manda ... é o jogo"
+#: são as mesmas palavras de `app.textos_de_aplicacao._MOTIVO_NATIVO`, com
+#: "no controle" trocado por "nos motores" porque é dos motores que se fala.
+MOTIVO_MODO_NATIVO_MANDA_NOS_MOTORES = (
+    "Vibração não aplicada: em Modo Nativo quem manda nos motores é o jogo. "
+    "Saia do Modo Nativo para fixar a vibração por aqui."
+)
+
+#: O "Parar" tem frase PRÓPRIA porque o desfecho é outro, e dizer a frase de
+#: cima seria mentir por omissão: o gesto fez alguma coisa (soltou o par), só
+#: não fez a que ela esperava (calar o motor que o jogo está tocando).
+MOTIVO_MODO_NATIVO_SOLTOU_O_PAR = (
+    "Em Modo Nativo quem manda nos motores é o jogo, e o Hefesto não consegue "
+    "pará-los. A vibração fixada por aqui foi solta — ela não volta quando o "
+    "Modo Nativo sair."
+)
+
+
+def modo_nativo_manda_nos_motores(daemon: Any) -> bool:
+    """O Modo Nativo está ligado — logo, o dono dos motores é o jogo.
+
+    Um lugar só para a pergunta, pelo mesmo motivo que
+    `app.textos_de_aplicacao.modo_nativo_manda_no_output` é um lugar só para a
+    frase: as três portas que armam `rumble_active` (o `rumble.set` da aba, o
+    `rumble.stop` e o "Aplicar" do rodapé, em `ipc_draft_applier`) têm de
+    responder a MESMA coisa. Duas cópias divergem, e a que divergir vira o
+    vazamento silencioso.
+
+    `getattr` defensivo e `False` como padrão: sem daemon (testes de handler
+    isolado) ou sem o método, não há Modo Nativo para recusar — não se inventa
+    uma recusa por não saber.
+
+    **A resposta tem de ser `True` DE VERDADE, e não só verdadeira** — a
+    diferença é medida, não teórica: com `bool(...)` no lugar do `is True`,
+    catorze testes da MESA-CHEIA-05 e sete da ONDA-U passaram a reprovar de uma
+    vez, porque montam a mesa com `daemon = MagicMock()` e todo `MagicMock()`
+    responde verdadeiro a qualquer pergunta. O contrato de `DaemonProtocol.
+    is_native_mode` é `-> bool`, então quem responde outra coisa é um dublê — e
+    um dublê não decide o destino da vibração dela. É a mesma regra do resto da
+    casa: não afirmar o que não se sabe.
+    """
+    if daemon is None:
+        return False
+    pergunta = getattr(daemon, "is_native_mode", None)
+    if not callable(pergunta):
+        return False
+    try:
+        return pergunta() is True
+    except Exception as exc:  # observabilidade > silêncio
+        logger.debug("modo_nativo_manda_nos_motores_falhou", err=str(exc))
+        return False
+
+
 class RumbleSubsystem:
     """Subsystem sentinela para o registry — lógica real está em reassert_rumble().
 
@@ -361,9 +464,16 @@ class RumbleSubsystem:
 
 __all__ = [
     "AUTO_DEBOUNCE_SEC",
+    "MOTIVO_MODO_NATIVO_MANDA_NOS_MOTORES",
+    "MOTIVO_MODO_NATIVO_SOLTOU_O_PAR",
+    "RUMBLE_APLICADO",
+    "RUMBLE_PARADO",
     "RUMBLE_POLICY_MULT",
+    "RUMBLE_RECUSADO_MODO_NATIVO",
+    "RUMBLE_SOLTO_NO_MODO_NATIVO",
     "RumbleSubsystem",
     "escrever_rumble_no_dono",
+    "modo_nativo_manda_nos_motores",
     "reassert_rumble",
     "sem_dono_do_rumble",
     "silenciar_dono_abandonado",

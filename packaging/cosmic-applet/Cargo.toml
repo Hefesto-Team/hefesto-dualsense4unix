@@ -26,7 +26,7 @@ name = "hefesto-dualsense4unix-applet"
 # A tradução `X.Y.Z.W` → `X.Y.Z+W` mora em `versao_para_cargo()` no portão, e é
 # ela que o portão aplica antes de comparar — subir o pyproject e esquecer esta
 # linha continua reprovando.
-version = "0.9.4+4"
+version = "0.9.4+5"
 edition = "2021"
 # Redigido no mesmo padrão do packaging/arch/PKGBUILD (`Maintainer: Vitoria
 # Maria <[REDACTED]>`): havia um e-mail pessoal real aqui, e nem o

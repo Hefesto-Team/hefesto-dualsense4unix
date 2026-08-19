@@ -396,7 +396,18 @@ def test_saida_de_modo_nao_desfaz_rumble_fixado_pela_usuaria(
     daemon: Daemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Com rumble FIXADO (aba Rumble), o dono é a usuária: o reassert re-afirma
-    o valor de qualquer jeito e zerar seria desfazer o gesto dela."""
+    o valor de qualquer jeito e zerar seria desfazer o gesto dela.
+
+    NOTA DATADA — 19/08/2026 (NATIVO-RUMBLE-01). A regra que este teste guarda
+    continua valendo para TODA saída de modo, mas o cenário montado aqui deixou
+    de ser alcançável pelo Modo Nativo: `rumble_active` é gravado direto na
+    config de propósito porque, por IPC, o daemon agora RECUSA fixar vibração
+    dentro do modo (`rumble.set`, `rumble.stop` e o "Aplicar" do rodapé), e a
+    ENTRADA no modo já solta o par (`_release_controller_to_game`). Era esse par
+    gravado durante o modo que desarmava a HARM-16 e devolvia o controle
+    vibrando. Quem exercita a recusa é
+    `tests/unit/test_nativo_rumble_01_a_recusa_com_motivo.py`; aqui a unidade
+    sob prova segue sendo `zero_motors_on_mode_exit`, que não mudou."""
     monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
     daemon.set_native_mode(True, origin="manual")
     daemon.config.rumble_active = (120, 200)

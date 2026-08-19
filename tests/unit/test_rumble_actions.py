@@ -194,9 +194,15 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
     # escolher entre daemon que RECUSA (vivo) e daemon que não responde.
     resultado_policy: list[tuple[bool, str | None]] = [(True, None)]
 
-    def fake_rumble_set(weak: int, strong: int) -> bool:
+    # NATIVO-RUMBLE-01 (19/08/2026): a aba passou a usar a rota "checked" também
+    # para fixar vibração — `(ok, motivo)`, com o motivo lido do CORPO da
+    # resposta. Mutável para o teste escolher entre daemon que RECUSA (vivo, com
+    # frase) e daemon que aceita.
+    resultado_rumble_set: list[tuple[bool, str | None]] = [(True, None)]
+
+    def fake_rumble_set_checked(weak: int, strong: int) -> tuple[bool, str | None]:
         calls["rumble_set"].append((weak, strong))
-        return True
+        return resultado_rumble_set[0]
 
     def fake_rumble_stop() -> bool:
         calls["rumble_stop"].append(True)
@@ -227,7 +233,9 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         calls["call_async"].append((method, params))
         calls["call_async_timeout"].append(kwargs.get("timeout_s"))
 
-    monkeypatch.setattr(rumble_actions, "rumble_set", fake_rumble_set)
+    monkeypatch.setattr(
+        rumble_actions, "rumble_set_checked", fake_rumble_set_checked
+    )
     monkeypatch.setattr(rumble_actions, "rumble_stop", fake_rumble_stop)
     monkeypatch.setattr(
         rumble_actions, "rumble_passthrough", fake_rumble_passthrough
@@ -243,6 +251,8 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
     instance = _FakeRumbleMixin()
     instance._ipc_calls = calls  # type: ignore[attr-defined]
     instance._policy_result = resultado_policy  # type: ignore[attr-defined]
+    # NATIVO-RUMBLE-01: mesma alavanca para a recusa do `rumble.set`.
+    instance._rumble_set_result = resultado_rumble_set  # type: ignore[attr-defined]
 
     for name in (
         "install_rumble_tab",
@@ -814,3 +824,55 @@ def test_troca_de_politica_da_folga_de_timeout(
     mixin._set_policy("economia")
 
     assert mixin._ipc_calls["rumble_policy_set_timeout"] == [1.0]
+
+
+# --- NATIVO-RUMBLE-01: a recusa do Modo Nativo chega aos olhos dela ---------
+
+
+def test_apply_no_modo_nativo_mostra_a_recusa_e_nao_diz_travada(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O defeito medido em 19/08/2026: "Vibração travada" com o motor parado.
+
+    Sob Modo Nativo o backend muta TODA escrita de output — `rumble.set` produz
+    zero write no fio — e mesmo assim o daemon respondia de um jeito que a aba
+    lia como sucesso. Pior que a tela mentir: gravar o par DESARMA a HARM-16, e
+    o controle sai do modo vibrando.
+
+    Este teste MORDE: devolva `on_rumble_apply` a usar `rumble_set` e a
+    afirmação "travada" volta ao toast.
+    """
+    mixin = _build_mixin(monkeypatch)
+    motivo = "Conexão Nativa (Sony) ligada: quem manda nos motores é o jogo."
+    mixin._rumble_set_result[0] = (False, motivo)  # type: ignore[attr-defined]
+
+    mixin.on_rumble_apply(None)  # type: ignore[arg-type]
+
+    msg = [m for _ctx, m in mixin._widgets["status_bar"].pushed][-1]
+    assert msg == motivo
+    assert "travada" not in msg
+    # E não acusa o daemon de morto: ele respondeu, e o motivo prova isso.
+    assert "não está rodando" not in msg
+
+
+def test_teste_de_meio_segundo_recusado_nao_agenda_o_parar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Recusado, o temporizador não nasce.
+
+    Sem esta guarda o `_rumble_test_stop` dispararia um «Parar» 500 ms depois de
+    um pedido que nunca chegou ao aparelho — e dentro do Modo Nativo o «Parar»
+    é justamente o gesto mais traiçoeiro dos três (mede-se `(0,0)`, que não é
+    `None`, e a HARM-16 se desarma).
+    """
+    mixin = _build_mixin(monkeypatch)
+    motivo = "Conexão Nativa (Sony) ligada: quem manda nos motores é o jogo."
+    mixin._rumble_set_result[0] = (False, motivo)  # type: ignore[attr-defined]
+
+    mixin.on_rumble_test_500ms(None)  # type: ignore[arg-type]
+
+    assert mixin._rumble_test_source is None, (
+        "o temporizador de 500 ms não pode nascer de um pedido recusado"
+    )
+    msg = [m for _ctx, m in mixin._widgets["status_bar"].pushed][-1]
+    assert msg == motivo

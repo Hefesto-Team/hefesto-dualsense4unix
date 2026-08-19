@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.9.4.4
+Version:        0.9.4.5
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -405,6 +405,14 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Tue Aug 19 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.5-1
+- Lightbar: o controle pisca na cor do modo ao trocar de ponte, e volta a cor dela
+- Gesto: PS + R3 troca de ponte sem sair do jogo
+- Ponte: o perfil carimba qual ponte funcionou, e o lancamento a arma
+- Install: garante libhidapi, loader SVG, gettext e libudev em apt/dnf/pacman
+- Install: dois bloqueantes curados (bluetoothctl sem guarda; soname sem .so)
+- Doctor: passa a cobrar as duas obrigatorias, medindo o EFEITO
+- BlueZ: a migracao para btmgmt/bluetoothctl chegou ao uninstall
 * Tue Aug 19 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.4-1
 - Proton: o pin parou de trocar a ferramenta que a usuaria ja tinha escolhido
 - Vpad: o retorno deixou de fundir tres desfechos num True, e o laco que

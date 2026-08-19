@@ -39,7 +39,7 @@ from hefesto_dualsense4unix.app.ipc_bridge import (
     rumble_passthrough,
     rumble_policy_custom,
     rumble_policy_set_checked,
-    rumble_set,
+    rumble_set_checked,
     rumble_stop,
 )
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (
@@ -254,10 +254,17 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
             "você fixar aqui embaixo."
         )
     if vpads == 0 and native:
+        # NATIVO-RUMBLE-01 (19/08/2026): a oração final desta frase dizia "Ela
+        # continua valendo para a vibração que você fixar aqui embaixo" — e a
+        # medição do mesmo dia mostrou que essa vibração produz **zero write no
+        # fio** sob Modo Nativo. Era a frase mais precisa da aba a afirmar
+        # exatamente o contrário do que o aparelho faz. Substituída, e não
+        # anotada ao lado: número errado não é decisão medida.
         return (
             "Conexão Nativa (Sony): o jogo fala direto com o controle, e a "
-            "intensidade acima não passa por ele. Ela continua valendo para a "
-            "vibração que você fixar aqui embaixo."
+            "intensidade acima não passa por ele. Enquanto o modo estiver "
+            "ligado, fixar vibração aqui embaixo também não chega ao motor — "
+            "quem manda nele é o jogo."
         )
     return None
 
@@ -588,14 +595,23 @@ class RumbleActionsMixin(WidgetAccessMixin):
         if draft is not None:
             new_rumble = draft.rumble.model_copy(update={"weak": weak, "strong": strong})
             self.draft = draft.model_copy(update={"rumble": new_rumble})
-        ok = rumble_set(weak, strong)
-        self._toast_rumble(
-            f"Vibração travada (fraca={weak}, forte={strong}) — enquanto travada o "
-            f"jogo NÃO controla a vibração; clique “{_BTN_GIVE_BACK_TO_GAME}” "
-            "para jogar"
-            if ok
-            else f"Vibração {_MSG_HEFESTO_OFF}"
-        )
+        # NATIVO-RUMBLE-01 (19/08/2026): o `ok` mudo dizia "travada" com o motor
+        # parado. A recusa do daemon vem no CORPO da resposta (`status`), não
+        # como erro JSON-RPC — por isso `rumble_set_checked` e não o
+        # `_call_checked` da aba Gatilhos. Com motivo preenchido o daemon está
+        # VIVO e recusou: acusá-lo de desligado mandaria ela caçar o problema no
+        # lugar errado, que é o defeito que o HARM-19 já pagou uma vez.
+        ok, motivo = rumble_set_checked(weak, strong)
+        if motivo:
+            self._toast_rumble(motivo)
+        else:
+            self._toast_rumble(
+                f"Vibração travada (fraca={weak}, forte={strong}) — enquanto travada o "
+                f"jogo NÃO controla a vibração; clique “{_BTN_GIVE_BACK_TO_GAME}” "
+                "para jogar"
+                if ok
+                else f"Vibração {_MSG_HEFESTO_OFF}"
+            )
 
     def on_rumble_test_500ms(self, _btn: Gtk.Button) -> None:
         # Cancela um teste anterior ainda em curso antes de armar o novo.
@@ -605,7 +621,13 @@ class RumbleActionsMixin(WidgetAccessMixin):
             weak = 160
             strong = 220
             self._set_scales(weak, strong)
-        ok = rumble_set(weak, strong)
+        # NATIVO-RUMBLE-01: e o teste não arma o temporizador de 500 ms quando o
+        # daemon recusou — sem isso o `_rumble_test_stop` dispararia um `Parar`
+        # sobre um pedido que nunca existiu.
+        ok, motivo = rumble_set_checked(weak, strong)
+        if motivo:
+            self._toast_rumble(motivo)
+            return
         if not ok:
             self._toast_rumble(f"Teste {_MSG_HEFESTO_OFF}")
             return

@@ -78,6 +78,10 @@ ALTURA_JANELA = _dimensao_da_janela("default-height")
 TETO_CONTEUDO = ALTURA_JANELA
 #: Largura de referência, também vinda do glade.
 LARGURA = _dimensao_da_janela("default-width")
+#: Teto de voltas do bombeamento até a alocação assentar. Medido em 19/08:
+#: isolada a faixa assenta na 2ª volta; sob a suíte inteira já precisou de 9.
+#: 200 é folga de vinte vezes o pior caso, e ainda roda em milissegundos.
+_TETO_DE_VOLTAS = 200
 
 
 def _gtk_pronto() -> bool:
@@ -178,6 +182,56 @@ def _tema_na_escala_que_sai() -> Iterator[None]:
         settings.set_property("gtk-font-name", anterior)
     if tela is not None:
         Gtk.StyleContext.remove_provider_for_screen(tela, provider)
+
+
+def _faixa_assentada(builder: Gtk.Builder, janela: Gtk.Widget) -> int:
+    """A altura da faixa de cards DEPOIS que a alocação parou de mudar.
+
+    RÉGUA-QUE-NÃO-ASSENTA-01 (19/08/2026). Estes dois testes passavam sozinhos e
+    reprovavam dentro da suíte, com números impossíveis: a faixa marcava **46px**
+    onde mede ~429px isolada — e o veredito saía como se o card tivesse
+    engordado 415px. Não tinha: o que faltava era a alocação.
+
+    O `while Gtk.events_pending()` do lado de fora não basta. `events_pending()`
+    responde "não há evento AGORA", e sob a carga da suíte inteira o
+    `size-allocate` que o `resize()` provoca ainda não entrou na fila quando o
+    laço pergunta. O laço termina, a medida sai de uma janela ainda não alocada,
+    e o alarme é convincente e falso — a armadilha nº 1 desta casa, em roupa de
+    teste de layout.
+
+    Então a espera é pelo EFEITO, não pelo relógio: bombeia até a altura repetir
+    o mesmo valor por três voltas seguidas, com teto. Se estourar o teto sem
+    assentar, o instrumento se declara inválido em vez de dar um veredito sobre
+    o layout — porque um número que não assentou não mede layout nenhum.
+    """
+    scroll = builder.get_object("status_players_scroll")
+    # A alocação é IMPOSTA, não esperada. Numa `Gtk.OffscreenWindow` não há
+    # gerenciador de janelas para responder ao `resize()` — a janela se dimensiona
+    # pelo filho, e sob a carga da suíte inteira ela ficava em 292px dos 830px
+    # pedidos por mais que o laço bombeasse. `size_allocate` diz o tamanho em vez
+    # de pedi-lo, que é a única forma determinística de medir aqui.
+    caixa = Gdk.Rectangle()
+    caixa.x, caixa.y = 0, 0
+    caixa.width, caixa.height = LARGURA, ALTURA_JANELA
+    anterior, iguais = -1, 0
+    for _ in range(_TETO_DE_VOLTAS):
+        janela.size_allocate(caixa)
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+        atual = scroll.get_allocated_height()
+        iguais = iguais + 1 if atual == anterior else 0
+        anterior = atual
+        # Assentou: três leituras iguais, e a faixa medida é a que a janela dá.
+        if iguais >= 2 and atual > 0:
+            return atual
+        janela.queue_resize()
+    pytest.fail(
+        f"instrumento inválido: a faixa não assentou em {_TETO_DE_VOLTAS} "
+        f"voltas (última leitura {anterior}px, janela com "
+        f"{janela.get_allocated_height()}px de {ALTURA_JANELA}px impostos). "
+        "Isto NÃO é um veredito sobre o layout — é a régua avisando que não "
+        "chegou a medir."
+    )
 
 
 def _montar() -> tuple[Gtk.Builder, Gtk.Widget]:
@@ -367,10 +421,8 @@ def test_card_de_controle_cabe_na_faixa_que_a_aba_status_da() -> None:
     janela.show_all()
     janela.resize(LARGURA, ALTURA_JANELA)
     card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO, _LeituraMic())
-    while Gtk.events_pending():
-        Gtk.main_iteration()
 
-    faixa = builder.get_object("status_players_scroll").get_allocated_height()
+    faixa = _faixa_assentada(builder, janela)
     pedido = card.get_preferred_height_for_width(LARGURA // 2)[0]
 
     assert pedido <= faixa, (
@@ -400,10 +452,8 @@ def test_card_de_um_controle_so_tambem_cabe_na_faixa() -> None:
     janela.show_all()
     janela.resize(LARGURA, ALTURA_JANELA)
     card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO, _LeituraMic())
-    while Gtk.events_pending():
-        Gtk.main_iteration()
 
-    faixa = builder.get_object("status_players_scroll").get_allocated_height()
+    faixa = _faixa_assentada(builder, janela)
     # Um controle só ocupa a largura inteira do slot, não a metade.
     pedido = card.get_preferred_height_for_width(LARGURA)[0]
 

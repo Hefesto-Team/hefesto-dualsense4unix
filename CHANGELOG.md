@@ -40,6 +40,94 @@ fez nascer está na `QUATRO-COMPONENTES-02`, logo abaixo.
 
 ## [Unreleased]
 
+## [0.9.4.5] — 2026-08-19
+
+A leva da ponte. O alvo é o QoL de quem não é técnico: abrir o jogo, não andar,
+apertar `PS + R3` até andar, e nunca mais precisar fazer isso naquele jogo.
+
+### Adicionado
+
+#### O controle diz em que modo está
+
+Ao trocar de ponte, todos os DualSense conectados piscam três vezes na cor do
+modo novo e **voltam à cor do perfil** — um aviso que rouba a cor e não devolve
+é defeito, não cura. Steam Input azul claro, Xbox verde claro, Modo Nativo
+branco, máscara DualSense rosa, mouse e teclado âmbar.
+
+A piscada é por COR e não por brilho: o brilho da lightbar tem `aciona=não` nos
+dois transportes, e isso está medido no mapa de canais. Por rádio usa a rota que
+pinta mesmo quando outro processo é dono do nó — o caso "com a Steam aberta".
+
+O ritmo é escolha dela: 0,15s aceso e 0,12s apagado. Ela viu as três opções e
+escolheu a mais lenta, com o preço na mesa — quase um segundo de luz piscando
+durante a partida. O que ela comprou: dá para contar as três e para **ler a
+cor**, que é a única coisa que o aviso tem a dizer.
+
+#### `PS + R3` troca de ponte sem sair do jogo
+
+Escolha dela, e melhor que a proposta original: sendo um clique e não uma
+direção, não se confunde com os combos de perfil nem se aperta sem querer.
+
+#### O produto aprende a ponte de cada jogo
+
+O perfil passou a carimbar qual ponte funcionou, quem confirmou e quando. No
+lançamento, jogo com carimbo arma direto e a escada não roda; jogo sem carimbo
+começa no primeiro degrau. Apertar o gesto é o sinal de que o degrau atual não
+serve; parar de apertar, com o jogo vivo, carimba.
+
+A distinção que não se perde: **o gesto é vontade explícita dela e sempre
+obedece**; a **escada é o caminho automático** e não roda em jogo que já
+funciona.
+
+#### O install garante o que o produto precisa, em qualquer distro
+
+Passou a descobrir a família (apt, dnf, pacman) e a garantir `libhidapi`, o
+loader SVG, `gettext` e `libudev` — duas delas não eram citadas uma única vez no
+arquivo, e sem a `libhidapi` nenhum aparelho sobe.
+
+#### Um job de CI que executa o instalador de verdade
+
+Em contêiner, como usuária comum. Pagou por si no primeiro uso.
+
+### Corrigido
+
+#### O instalador morria com código 127, calado
+
+`bluetoothctl --version | awk` sem guarda: em máquina sem BlueZ o `command not
+found` devolve 127, o `pipefail` propaga e o `set -e` derruba — antes do passo 1
+de 11, e o `2>/dev/null` engolia até a mensagem. Era código antigo; nenhuma
+máquina de quem desenvolve o pegava.
+
+#### Um soname que o `dlopen` nunca abre
+
+`lib:libhidapi` funcionava enquanto a régua era `grep` na saída do `ldconfig`.
+Com `ctypes.CDLL` é `dlopen`, e ele falha em toda máquina.
+
+#### O doctor não cobrava as duas obrigatórias
+
+E a primeira régua do loader SVG **mentia**: perguntava ao catálogo do
+gdk-pixbuf em vez de carregar um SVG. Com o loader mascarado, o catálogo dava
+verde numa máquina em que o ícone sairia vazio.
+
+#### A migração do BlueZ ficou de fora do uninstall
+
+Ele achava o adaptador só por `hciconfig` — numa distro que moveu as
+depreciadas, o bloco inteiro era pulado em silêncio, inclusive a reversão do
+Alias, que sai por D-Bus e nunca precisou dele. O adaptador ficaria chamado
+"Nintendo …" para sempre depois de desinstalar.
+
+### O mapa ganhou a direção que faltava
+
+A escada de profundidade media só a ida. Entraram `O JOGO RECEBEU` e `O JOGO
+REAGIU`, e o segundo só fecha com o olho dela — não existe régua nesta casa que
+leia o estado interno de um jogo sob Proton. Nenhuma célula foi preenchida: esta
+onda foi construída com dublê, e preencher sem ensaio é o que o arquivo proíbe.
+
+### Aberto
+
+Nada desta onda foi visto em hardware. O roteiro de validação está em
+[`docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md`](docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
+
 ## [0.9.4.4] — 2026-08-19
 
 A leva dos três portões. Ela não conseguia jogar o DON'T SCREAM, e a noite foi
