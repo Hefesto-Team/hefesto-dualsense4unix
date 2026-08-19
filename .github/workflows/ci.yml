@@ -353,7 +353,17 @@ jobs:
           # `python3-gi` do SISTEMA (o setup-python isola o ambiente e não
           # enxerga o dist-packages) ou um container dedicado a este job.
           # Está registrado como pendência; não finja que está coberto.
-          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
+          # `bubblewrap` e `librsvg2-common` entram por causa do
+          # test_doctor_cobra_as_duas_obrigatorias (19/08/2026). Sem eles as duas
+          # mordidas do doctor não RODAM aqui: a máscara precisa do `bwrap`, e a
+          # régua do loader SVG precisa de um loader para aferir. Sem `bwrap` o
+          # teste estourava (lido como "a régua quebrou"); sem o loader ele
+          # reprovava dizendo que a régua estava errada, quando o que faltava era
+          # a coisa medida. As guardas do teste agora PULAM nesses casos, e é
+          # justamente por isso que estes dois pacotes têm de estar aqui: portão
+          # que só pula é portão que não existe.
+          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
+            bubblewrap librsvg2-common
       - name: Instalar Hefesto - Dualsense4Unix em modo dev
         run: pip install -e ".[dev]"
       - name: Verificar tamanho de HID captures
