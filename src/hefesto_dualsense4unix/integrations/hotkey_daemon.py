@@ -5,10 +5,11 @@ W1.2 o loop só publica state.update; em W8.1 consolidamos detecção de
 botão via diff de estados consecutivos, mantendo compat com o bus).
 
 Política (V2-4 + V3-2 + FEAT-HOTKEY-STEAM-01):
-  - Os combos next/prev (PS + D-pad) estão DESATIVADOS no daemon
-    (disabled_until_wired) até a troca de perfil por hotkey ser ligada ao
-    ProfileManager — ver daemon/subsystems/hotkey.py. NÃO há leitura de
-    `daemon.toml`; config efetiva vem de env vars + IPC daemon.reload.
+  - Os combos next/prev (PS + D-pad) estão LIGADOS desde o
+    FEAT-HOTKEY-PROFILE-CYCLE-01 — trocam o perfil ativo via
+    `ProfileManager.activate` (ver daemon/subsystems/hotkey.py). NÃO há
+    leitura de `daemon.toml`; config efetiva vem de env vars + IPC
+    daemon.reload.
   - Modo jogo: segurar o botão PS (ps_long_press) suspende a emulação.
   - Buffer de 150ms (V3-2): pressionar PS solo atrasa repasse ao uinput
     pra aguardar possível segundo botão; se passou o buffer, libera.
@@ -17,6 +18,19 @@ Política (V2-4 + V3-2 + FEAT-HOTKEY-STEAM-01):
   - PS solo (FEAT-HOTKEY-STEAM-01): se PS é pressionado e solto sem
     combo em `buffer_ms`, dispara `on_ps_solo` (default: abrir/focar
     Steam). Detecção: após o release do PS sem combo ter disparado.
+  - PS + seta direita (FEAT-HOTKEY-PONTE-CYCLE-01): próxima PONTE — a
+    forma como o jogo enxerga o controle. Ver
+    `daemon/subsystems/hotkey.py:build_next_bridge_callback` para o que o
+    gesto pode e o que NÃO pode prometer.
+
+Vocabulário completo dos gestos:
+    PS sozinho          abre/foca a Steam (buffer de 150 ms)
+    PS + cima           perfil seguinte
+    PS + baixo          perfil anterior
+    PS + direita        próxima ponte
+    PS + Options        modo jogo
+    PS segurado         desligado por padrão (disparava modo-jogo acidental)
+`dpad_left` segue livre.
 
 Sem hardware físico nesta sprint: manager consome payload genérico
 `{"buttons": set[str]}` oriundo do event bus, facilitando testes.
@@ -50,6 +64,11 @@ DEFAULT_PS_LONG_PRESS_MS = 0
 # PS+Options — gesto deliberado que NAO colide com o PS solo (Steam) nem com
 # next/prev (PS+dpad). Tupla vazia desliga o combo.
 DEFAULT_COMBO_GAMEMODE = ("ps", "options")
+# FEAT-HOTKEY-PONTE-CYCLE-01: combo que pede a PRÓXIMA PONTE — a forma como o
+# jogo enxerga o controle (máscara DualSense, máscara Xbox, mouse+teclado).
+# Default PS+seta direita: o par cima/baixo já é o ciclo de PERFIL e as setas
+# esquerda/direita estavam livres. Tupla vazia desliga o gesto.
+DEFAULT_COMBO_PONTE = ("ps", "dpad_right")
 
 
 @dataclass
@@ -60,6 +79,7 @@ class HotkeyConfig:
     passthrough_in_emulation: bool = False
     ps_long_press_ms: int = DEFAULT_PS_LONG_PRESS_MS
     gamemode_toggle: tuple[str, ...] = DEFAULT_COMBO_GAMEMODE
+    next_bridge: tuple[str, ...] = DEFAULT_COMBO_PONTE
 
 
 @dataclass
@@ -70,6 +90,8 @@ class HotkeyManager:
     on_prev: Any | None = None
     on_ps_solo: Any | None = None
     on_ps_long_press: Any | None = None
+    # FEAT-HOTKEY-PONTE-CYCLE-01: próxima ponte (PS+seta direita).
+    on_next_bridge: Any | None = None
     config: HotkeyConfig = field(default_factory=HotkeyConfig)
 
     _first_seen_at: dict[frozenset[str], float] = field(default_factory=dict)
@@ -89,6 +111,35 @@ class HotkeyManager:
     # neste ciclo de hold (evita repetir e suprime o PS solo no release).
     _ps_long_press_fired: bool = False
 
+    def _combos_configurados(self) -> dict[str, frozenset[str]]:
+        """Mapa nome→botões dos combos LIGADOS. Tupla vazia = combo desligado.
+
+        FONTE ÚNICA dos combos: `observe`, `should_passthrough` e
+        `combo_buttons_active` leem daqui. Antes cada um repetia a lista de
+        tuplas na mão, e um combo novo entrava num e faltava nos outros — o
+        gesto disparava e ainda deixava vazar o membro (dpad→seta, options→Meta)
+        para o desktop, que é exatamente o defeito que o FEAT-HOTKEY-COMBO-NO-
+        LEAK-01/02 curou para os combos que existiam na época.
+
+        O filtro por tupla não-vazia vale para TODOS: `frozenset()` vazio é
+        subconjunto de qualquer coisa e dispararia a cada tick (antes só o
+        `gamemode` tinha essa guarda, e `next_profile=()` — o estado
+        disabled_until_wired de outrora — disparava sem parar).
+        """
+        bruto: dict[str, tuple[str, ...]] = {
+            "next": self.config.next_profile,
+            "prev": self.config.prev_profile,
+            # FEAT-EMULATION-GAMEMODE-COMBO-01: default PS+Options.
+            "gamemode": self.config.gamemode_toggle,
+            # FEAT-HOTKEY-PONTE-CYCLE-01: default PS+seta direita.
+            "ponte": self.config.next_bridge,
+        }
+        return {
+            nome: frozenset(b.lower() for b in tupla)
+            for nome, tupla in bruto.items()
+            if tupla
+        }
+
     def observe(
         self,
         pressed: Iterable[str],
@@ -97,23 +148,14 @@ class HotkeyManager:
     ) -> str | None:
         """Processa snapshot de botões. Retorna nome do evento disparado.
 
-        Valores possíveis: `"next"`, `"prev"`, `"ps_solo"` ou `None`.
+        Valores possíveis: `"next"`, `"prev"`, `"gamemode"`, `"ponte"`,
+        `"ps_solo"`, `"ps_long_press"` ou `None`.
         """
         t = now if now is not None else time.monotonic()
         buttons = frozenset(str(b).lower() for b in pressed)
         ps_now = PS_BUTTON in buttons
 
-        combos = {
-            "next": frozenset(b.lower() for b in self.config.next_profile),
-            "prev": frozenset(b.lower() for b in self.config.prev_profile),
-        }
-        # FEAT-EMULATION-GAMEMODE-COMBO-01: combo (default PS+Options) alterna o
-        # modo jogo. So registrado se nao-vazio — frozenset() vazio e' subconjunto
-        # de tudo e dispararia a cada tick.
-        if self.config.gamemode_toggle:
-            combos["gamemode"] = frozenset(
-                b.lower() for b in self.config.gamemode_toggle
-            )
+        combos = self._combos_configurados()
 
         # Esquece registros cujo combo não esta mais pressionado
         stale = [key for key in self._first_seen_at if not key.issubset(buttons)]
@@ -234,17 +276,10 @@ class HotkeyManager:
         if not emulation_active or self.config.passthrough_in_emulation:
             return True
         buttons = frozenset(str(b).lower() for b in pressed)
-        for combo_tuple in (
-            self.config.next_profile,
-            self.config.prev_profile,
-            self.config.gamemode_toggle,
-        ):
-            if not combo_tuple:
-                continue
-            combo = frozenset(b.lower() for b in combo_tuple)
-            if combo.issubset(buttons):
-                return False
-        return True
+        return all(
+            not combo.issubset(buttons)
+            for combo in self._combos_configurados().values()
+        )
 
     def combo_buttons_active(self, pressed: Iterable[str]) -> frozenset[str]:
         """Botões a NÃO despachar à emulação por pertencerem a um combo PS+X.
@@ -264,14 +299,7 @@ class HotkeyManager:
         buttons = frozenset(str(b).lower() for b in pressed)
         # 1. Enquanto o combo se forma (PS + membro juntos), latcha os membros.
         if PS_BUTTON in buttons:
-            for combo_tuple in (
-                self.config.next_profile,
-                self.config.prev_profile,
-                self.config.gamemode_toggle,
-            ):
-                if not combo_tuple:
-                    continue
-                combo = frozenset(b.lower() for b in combo_tuple)
+            for combo in self._combos_configurados().values():
                 if PS_BUTTON not in combo:
                     continue
                 self._combo_latch |= {b for b in combo if b in buttons}
@@ -280,16 +308,35 @@ class HotkeyManager:
         # 3. Bloqueia da emulação tudo que segue latchado (e pressionado).
         return frozenset(self._combo_latch)
 
+    def _callback_do_combo(self, name: str) -> tuple[bool, Any | None]:
+        """Resolve o callback de um combo. Devolve (conhecido, callback).
+
+        DESPACHO POR DICIONÁRIO, e não cadeia de ifs. A cadeia anterior
+        terminava num `else: cb = self.on_prev` — ou seja, QUALQUER combo que
+        não fosse "gamemode" nem "next" caía no perfil ANTERIOR. Um combo novo
+        (o da ponte, por exemplo) trocaria o perfil dela para trás no meio da
+        partida, silenciosamente. Aqui, nome desconhecido é `(False, None)`:
+        não dispara nada e deixa rastro no journal.
+
+        `gamemode` reaproveita o callback do long-press de propósito
+        (FEAT-EMULATION-GAMEMODE-COMBO-01): os dois alternam a mesma supressão.
+        """
+        despacho: dict[str, Any | None] = {
+            "next": self.on_next,
+            "prev": self.on_prev,
+            "gamemode": self.on_ps_long_press,
+            "ponte": self.on_next_bridge,
+        }
+        if name not in despacho:
+            return False, None
+        return True, despacho[name]
+
     def _fire(self, name: str, combo: frozenset[str]) -> None:
         logger.info("hotkey_fired", combo=name, buttons=sorted(combo))
-        # FEAT-EMULATION-GAMEMODE-COMBO-01: o combo gamemode reaproveita o
-        # callback de long-press (toggle da supressao da emulacao).
-        if name == "gamemode":
-            cb = self.on_ps_long_press
-        elif name == "next":
-            cb = self.on_next
-        else:
-            cb = self.on_prev
+        conhecido, cb = self._callback_do_combo(name)
+        if not conhecido:
+            logger.warning("hotkey_combo_sem_despacho", combo=name)
+            return
         if cb is None:
             return
         try:
@@ -329,6 +376,7 @@ __all__ = [
     "DEFAULT_BUFFER_MS",
     "DEFAULT_COMBO_GAMEMODE",
     "DEFAULT_COMBO_NEXT",
+    "DEFAULT_COMBO_PONTE",
     "DEFAULT_COMBO_PREV",
     "DEFAULT_PS_LONG_PRESS_MS",
     "PS_BUTTON",
