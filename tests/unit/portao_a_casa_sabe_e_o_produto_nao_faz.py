@@ -616,6 +616,34 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # --- PONTE-NA-TELA-01 (19/08/2026): a frase certa existe, e a resposta do
+    # daemon não chega a quem a escreveria --------------------------------------
+    "app/actions/home_actions.py::desfecho_da_troca": (
+        "MEDIDO em 19/08/2026: é promessa ao produto, e o caminho ainda não "
+        "existe. Ela lê o payload de um `gamepad.emulation.set` e separa "
+        "aplicou / já-estava / recusado-pelo-gate — inclusive sem campo novo, "
+        "comparando a máscara DEVOLVIDA com a pedida, porque o daemon só grava "
+        "esse campo depois de o vpad nascer. "
+        "ONDE O CAMINHO SE PERDE: `app/actions/footer_actions.py`, no "
+        "`_transicao_de_modo` — o `_done(_resultado)` RECEBE a resposta do "
+        "daemon e a descarta, porque `ao_aplicar` é um callback de ZERO "
+        "argumentos nos dois chamadores (`:456` e `:975`). "
+        "O QUE A FECHA: `ao_aplicar` passar a receber o resultado, e os dois "
+        "chamadores repassarem. NÃO fiz porque muda assinatura e o texto que "
+        "sai na tela dela — desenho é palavra dela (PROVA-DE-TELA-01), e a "
+        "mudança pede foto antes e depois."
+    ),
+    "app/actions/home_actions.py::toast_da_troca_de_mascara": (
+        "MEDIDO em 19/08/2026: a irmã da de cima, e cai no mesmo lugar. Ela dá "
+        "a frase de CADA desfecho, e a do bloqueio diz o motivo E o caminho "
+        "(\"Ainda não: o jogo aberto está com o controle\"). Existe para "
+        "impedir o rodapé de dizer \"pronto\" sobre uma troca recusada — que é "
+        "o que ele fez na noite de 18->19/08, com o journal registrando "
+        "`vpad_recriacao_bloqueada_por_jogo` sete milissegundos antes. "
+        "ONDE O CAMINHO SE PERDE e O QUE A FECHA: idem `desfecho_da_troca`. As "
+        "duas entram juntas ou nenhuma entra — meia cura escreveria a frase "
+        "certa sobre um desfecho que ninguém apurou."
+    ),
     # --- a família mais numerosa: o desligar que ninguém chama --------------
     "daemon/subsystems/ipc.py::stop_ipc": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. É a terceira instância de "
