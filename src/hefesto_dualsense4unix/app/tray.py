@@ -23,6 +23,7 @@ import contextlib
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import gi
@@ -96,6 +97,37 @@ def _desktop_is_cosmic() -> bool:
     return "cosmic" in desktops
 
 ShowFn = Callable[[], None]
+def _painel_recolore_simbolico() -> bool:
+    """O painel desta sessão sabe desenhar o ícone SIMBÓLICO em SVG?
+
+    BUG-TRAY-SIMBOLICO-NAO-DESENHA-01 (medido em 18/08/2026, Pop!_OS 22.04 com
+    GNOME): o item registra no `StatusNotifierWatcher`, mas a barra desenha o
+    marcador de "ícone faltando" — três pontinhos — no lugar do símbolo. Medido
+    das duas formas que o protocolo permite: pelo NOME do tema e pelo CAMINHO
+    ABSOLUTO do arquivo. As duas dão o mesmo placeholder. O mesmo painel, na
+    mesma sessão e no mesmo instante, desenha o PNG colorido sem titubear.
+
+    A escolha do símbolo monocromático foi tomada e MEDIDA no painel do COSMIC
+    (APPLET-MONOCROMÁTICO-01, 07/08): lá o `cosmic-applet-status-area` recolore
+    o `-symbolic` com a cor do tema, e é isso que faz o ícone parar de ser o
+    único cromático da barra. Nada disso muda — o que muda é que fora do COSMIC
+    a preferência se inverte, e a logo colorida (que o painel comprovadamente
+    desenha) vem primeiro. Antes desta inversão, quem não estivesse no COSMIC
+    ficava sem ícone nenhum: não é um ícone mais feio, é a ausência dele.
+
+    A pergunta é feita ao ambiente da sessão, e na dúvida a resposta é "sim" —
+    quem não se declara continua recebendo o símbolo, como era antes.
+    """
+    sessao = (
+        os.environ.get("XDG_CURRENT_DESKTOP", "")
+        + " "
+        + os.environ.get("XDG_SESSION_DESKTOP", "")
+    ).upper()
+    if "COSMIC" in sessao:
+        return True
+    return "GNOME" not in sessao
+
+
 QuitFn = Callable[[], None]
 ListProfilesFn = Callable[[], list[dict[str, Any]]]
 SwitchProfileFn = Callable[[str], bool]
@@ -171,6 +203,7 @@ class AppTray:
 
         icon = self._preferred_icon()
         self._indicator = indicator_cls.new(TRAY_APP_ID, icon, category)
+        self._ensinar_o_caminho_do_icone(icon)
         ns = indicator_cls._hefesto_ns
         self._indicator_ns = ns
         self._indicator.set_status(ns.IndicatorStatus.ACTIVE)
@@ -458,6 +491,42 @@ class AppTray:
             )
             self._status_item.set_label(label + controllers_suffix)
 
+    def _ensinar_o_caminho_do_icone(self, icone: str) -> None:
+        """Diz ao PAINEL onde o arquivo do ícone mora, em vez de só o nome.
+
+        BUG-TRAY-ICONE-INVISIVEL-01 (medido em 18/08/2026, Pop!_OS 22.04 com
+        GNOME): quem resolve o nome do ícone não é este processo — é o painel.
+        Aqui dentro o `Gtk.IconTheme` acha `hefesto-dualsense4unix-symbolic` sem
+        titubear, o item aparece registrado no `StatusNotifierWatcher`, e mesmo
+        assim a barra não mostra nada: o `gnome-shell` carregou o tema de ícones
+        no login, ANTES de o Hefesto existir no disco, e não recarrega sozinho
+        quando o `gtk-update-icon-cache` roda depois. Sem isto, o ícone só
+        aparecia no logout seguinte — e quem instalasse hoje concluiria que a
+        bandeja não funciona.
+
+        `set_icon_theme_path` viaja junto do item pelo D-Bus, então o painel
+        passa a procurar no diretório indicado além do tema dele. O caminho sai
+        do arquivo que realmente existe, e não de um palpite: se nenhum for
+        encontrado, o método não faz nada e o comportamento antigo continua.
+        """
+        definir_caminho = getattr(self._indicator, "set_icon_theme_path", None)
+        if definir_caminho is None:
+            return
+        bases = (
+            Path.home() / ".local/share/icons/hicolor",
+            Path("/usr/share/icons/hicolor"),
+            Path("/usr/local/share/icons/hicolor"),
+        )
+        for base in bases:
+            for sufixo in ("symbolic/apps", "scalable/apps", "256x256/apps"):
+                pasta = base / sufixo
+                for ext in (".svg", ".png"):
+                    if (pasta / f"{icone}{ext}").is_file():
+                        definir_caminho(str(pasta))
+                        logger.info("tray_icon_theme_path", pasta=str(pasta), icone=icone)
+                        return
+        logger.info("tray_icon_sem_arquivo_no_disco", icone=icone)
+
     @staticmethod
     def _preferred_icon() -> str:
         """Nome do ícone a pedir ao painel, em ordem de preferência.
@@ -476,7 +545,12 @@ class AppTray:
         theme = Gtk.IconTheme.get_default()
         if theme is None:
             return TRAY_ICON_FALLBACK
-        for nome in (TRAY_ICON_NAME, TRAY_ICON_NAME_LEGADO):
+        ordem = (
+            (TRAY_ICON_NAME, TRAY_ICON_NAME_LEGADO)
+            if _painel_recolore_simbolico()
+            else (TRAY_ICON_NAME_LEGADO, TRAY_ICON_NAME)
+        )
+        for nome in ordem:
             if theme.has_icon(nome):
                 return nome
         return TRAY_ICON_FALLBACK

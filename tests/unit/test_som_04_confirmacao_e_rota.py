@@ -26,6 +26,7 @@ A fiação nos widgets é aferida em `test_status_som_04_rota.py`.
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -122,6 +123,25 @@ class _Tocador:
         return fora
 
 
+#: O som que os dublês fingem ter no disco. Ele é o caminho REAL do primeiro
+#: candidato (:data:`audio_saida._CANDIDATOS_DE_SOM`), mas quem o entrega aqui é
+#: um dublê — e essa é a correção.
+#:
+#: MEDIDO em 18/08/2026 num `ubuntu:24.04` pelado, que é o sistema do runner: o
+#: `arquivo_de_confirmacao` era a ÚNICA borda que `_tocar` deixava ir ao disco
+#: de verdade, e sem o pacote `sound-theme-freedesktop` ele devolve "". Cinco
+#: testes que medem o SINK, a trava e o argv reprovavam com
+#: `motivo='sem_arquivo'` — falando do tema de som da máquina, não do produto.
+#: O docstring de `_tocar` já prometia "todas as bordas dubladas"; agora é
+#: verdade.
+#:
+#: O caminho NEGATIVO (máquina sem tema nenhum) continua aferido de verdade, com
+#: o `arquivo_de_confirmacao` real e sem dublê, em
+#: `test_sem_arquivo_de_som_recusa_com_recado` e nos testes de escolha do
+#: candidato, que injetam `raizes`/`tamanho` próprios.
+ARQUIVO_DE_SOM = "/usr/share/sounds/freedesktop/stereo/audio-volume-change.oga"
+
+
 def _tocar(**kwargs: Any) -> Any:
     """`tocar_confirmacao` com todas as bordas dubladas, menos o que o teste dá."""
     base: dict[str, Any] = {
@@ -132,7 +152,9 @@ def _tocar(**kwargs: Any) -> Any:
     }
     base.update(kwargs)
     sink = base.pop("sink", SINK_CONTROLE)
-    return tocar_confirmacao(sink, **base)
+    arquivo = base.pop("arquivo", ARQUIVO_DE_SOM)
+    with patch.object(audio_saida, "arquivo_de_confirmacao", lambda: arquivo):
+        return tocar_confirmacao(sink, **base)
 
 
 # ---------------------------------------------------------------------------

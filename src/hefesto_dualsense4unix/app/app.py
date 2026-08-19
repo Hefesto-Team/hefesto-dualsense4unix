@@ -1173,6 +1173,7 @@ class HefestoApp(
         notebook = self.builder.get_object("main_notebook")
         if notebook is not None:
             notebook.connect("switch-page", self._on_notebook_switch_page)
+        self._caber_na_area_util()
         self.window.show_all()
         self._force_initial_repaint()
         # BUG-DAEMON-AUTOSTART-01: dispara start do daemon em thread worker
@@ -1181,6 +1182,148 @@ class HefestoApp(
         self.ensure_daemon_running()
         # BUG-DRAFT-NEVER-LOADED-01: carrega o draft do perfil ativo (worker).
         self._bootstrap_draft_async()
+
+    def _teto_da_area_util(self) -> tuple[int, int] | None:
+        """Largura/altura máximas que a janela pode ocupar neste monitor.
+
+        `get_workarea()` já desconta os painéis que o compositor declara — nesta
+        bancada (Pop!_OS 22.04 / GNOME, 1920x1080) ele devolve 1920x952, tirando
+        os 31px da barra de topo e os 97px da dock. A margem abaixo cobre a
+        decoração da janela, que o compositor desenha POR FORA do tamanho do
+        cliente, e a dock que flutua por cima sem se declarar (COSMIC).
+        """
+        from gi.repository import Gdk
+
+        margem_altura = 80
+        margem_largura = 40
+
+        display = Gdk.Display.get_default()
+        if display is None:
+            return None
+        monitor = None
+        gdkwin = self.window.get_window()
+        if gdkwin is not None:
+            monitor = display.get_monitor_at_window(gdkwin)
+        if monitor is None:
+            monitor = display.get_primary_monitor() or display.get_monitor(0)
+        if monitor is None:
+            return None
+        area = monitor.get_workarea()
+        return (
+            max(640, area.width - margem_largura),
+            max(480, area.height - margem_altura),
+        )
+
+    def _caber_na_area_util(self) -> None:
+        """A janela nunca ocupa mais do que a tela comporta.
+
+        BUG-JANELA-MAIOR-QUE-A-TELA-01 (medido em 18/08/2026, Pop!_OS 22.04 com
+        GNOME, 1920x1080): com um controle CONECTADO o card entra, o conteúdo
+        passa a pedir mais que os 830px do `default-height`, e a janela nasceu
+        com 955px — três a mais que os 952px de área útil, sem contar a
+        decoração. O rodapé (Aplicar/Salvar Perfil/Importar/Restaurar) saiu por
+        baixo da borda, e a decoração daquela sessão não oferecia maximizar:
+        não havia gesto nenhum para corrigir de dentro.
+
+        O `_wrap_notebook_pages_in_scroll` já cuidava do rodapé sob tiling do
+        COSMIC, mas ele resolve o mínimo do NOTEBOOK, não o tamanho com que a
+        janela nasce numa sessão flutuante.
+
+        O corte não pode sair só daqui: logo após `show_all()` o `get_size()`
+        ainda devolve o `default-height` do glade, porque o compositor ainda não
+        negociou nada — foi assim que a primeira tentativa desta cura não cortou
+        coisa alguma. Por isso o ajuste fica ARMADO no `size-allocate`, que é
+        onde o tamanho real aparece, e se desarma sozinho na primeira correção.
+        """
+        teto = self._teto_da_area_util()
+        if teto is None:
+            return
+        teto_largura, teto_altura = teto
+
+        # O mínimo declarado no glade não pode passar do teto, senão o
+        # compositor devolve a altura do pedido e o corte vira enfeite.
+        min_largura, min_altura = self.window.get_size_request()
+        if (min_largura > 0 and min_largura > teto_largura) or (
+            min_altura > 0 and min_altura > teto_altura
+        ):
+            self.window.set_size_request(
+                min(min_largura, teto_largura) if min_largura > 0 else -1,
+                min(min_altura, teto_altura) if min_altura > 0 else -1,
+            )
+
+        self._ajuste_de_tela_pendente = True
+        self.window.connect("size-allocate", self._on_alocacao_verifica_tela)
+
+    def _ceder_altura_do_log(self, teto_altura: int) -> None:
+        """Encolhe o log da aba Sistema quando o piso da janela não cabe na tela.
+
+        Cortar a janela por fora não basta: o GTK não a deixa encolher abaixo do
+        MÍNIMO do conteúdo, e foi por isso que o `resize()` desta cura, sozinho,
+        não moveu um pixel. Medido nesta bancada, o piso era 913px contra 872 de
+        área útil — header 127 + notebook 734 + rodapé 52.
+
+        Dentro do notebook, quem sustenta os 734 é a aba **Sistema** (686): ela
+        é a única fora do `_wrap_notebook_pages_in_scroll`, e de propósito — o
+        log já tem rolagem própria, e envolvê-lo num segundo `ScrolledWindow`
+        quebraria o auto-scroll (EST-10). As outras nove abas pedem 46 ou menos.
+
+        Então a folga sai de onde ela é elástica por natureza: o `min_content_
+        height` do log. Ele só encolhe o quanto faltar, nunca abaixo de 60px, e
+        somente quando falta — em tela que comporta a janela inteira, este método
+        não toca em nada e o log mantém os 140px do glade. A altura NATURAL não
+        muda: com espaço, o log continua abrindo nos 280px de sempre.
+        """
+        piso_do_log = 60
+        log = self.builder.get_object("daemon_log_scroll")
+        if log is None:
+            return
+        piso_janela, _ = self.window.get_preferred_height()
+        faltam = piso_janela - teto_altura
+        if faltam <= 0:
+            return
+        atual = log.get_min_content_height()
+        novo = max(piso_do_log, atual - faltam)
+        if novo >= atual:
+            logger.info(
+                "log_nao_tem_folga_suficiente",
+                faltam=faltam,
+                min_content_atual=atual,
+                piso=piso_do_log,
+            )
+            return
+        log.set_min_content_height(novo)
+        logger.info(
+            "log_cedeu_altura_para_a_janela_caber",
+            faltam=faltam,
+            de=atual,
+            para=novo,
+        )
+
+    def _on_alocacao_verifica_tela(self, _widget: Any, _alocacao: Any) -> None:
+        """Corta a janela na primeira alocação que estourar a área útil."""
+        if not getattr(self, "_ajuste_de_tela_pendente", False):
+            return
+        teto = self._teto_da_area_util()
+        if teto is None:
+            return
+        teto_largura, teto_altura = teto
+        largura, altura = self.window.get_size()
+        if largura <= teto_largura and altura <= teto_altura:
+            return
+        self._ajuste_de_tela_pendente = False
+        # A ordem importa: o `resize` sozinho não move nada enquanto o MÍNIMO do
+        # conteúdo for maior que o teto — o GTK simplesmente devolve o pedido.
+        # Primeiro se abre espaço, depois se corta.
+        self._ceder_altura_do_log(teto_altura)
+        nova_largura = min(largura, teto_largura)
+        nova_altura = min(altura, teto_altura)
+        self.window.resize(nova_largura, nova_altura)
+        logger.info(
+            "janela_ajustada_a_tela",
+            pedida=f"{largura}x{altura}",
+            aplicada=f"{nova_largura}x{nova_altura}",
+            teto=f"{teto_largura}x{teto_altura}",
+        )
 
     def _force_initial_repaint(self) -> None:
         """Contorna a race de primeiro-frame XWayland+NVIDIA no COSMIC: injeta um

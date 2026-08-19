@@ -197,6 +197,16 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "(integrations/hidraw_broker_client.py:49). Em produção o caminho vem "
         "do XDG. MEDIDO em 12/08/2026."
     ),
+    "HEFESTO_CARONA_WRAPPER": (
+        "Desliga a carona do wrapper da Steam (app/actions/carona_do_wrapper.py:186). "
+        "A razão está escrita na seção `O DESLIGADOR, e por que ele existe` do "
+        "próprio módulo, em maiúsculas: `Ele NÃO é uma flag de produto — a regra "
+        "da casa é toda cura entra no install, sem flag, e em produção a carona "
+        "está sempre ligada`. Ausente = LIGADA, e é isolamento de suíte: a suíte "
+        "roda na máquina DELA e um teste de GUI que chamasse `Salvar` com a "
+        "carona ligada varreria o `localconfig.vdf` REAL. Quem a desliga é o "
+        "`tests/conftest.py`:1197, em todo teste. MEDIDO em 18/08/2026."
+    ),
     "HEFESTO_DUALSENSE4UNIX_ASSETS_DIR": (
         "Onde procurar os arquivos de `assets/` (daemon/service_install.py:49). "
         "Existe para o teste e para a execução a partir do fonte não dependerem "
@@ -574,6 +584,27 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "declara por que o corpo fica de pé: a assinatura é contrato público "
         "que CLI, applet e testes importam, e uma lápide legível vale mais que "
         "um `ImportError` para quem for reabrir a decisão."
+    ),
+    "app/audio_saida.py::estado_do_sono": (
+        "MEDIDO em 18/08/2026. LÁPIDE COM NOTA DATADA, e a nota está no próprio "
+        "docstring, escrita nesta data. A promessa que a fez nascer é o item 6 "
+        "da `SOM-QUE-NAO-DORME-01` — `a aba Status consegue dizer o estado, "
+        "inclusive denunciar a cura arrancada` — e ela ESTÁ entregue, por outro "
+        "caminho: a `SOM-ACORDADO-01` mediu o desenho e escolheu dizer o estado "
+        "POR CONTROLE, no rótulo da moldura de cada card, em vez de uma frase "
+        "global. O caminho vivo é `RotaDeSaida.estado` (audio_saida.py:817) "
+        "publicando os canais, `status_actions.py`:1038 lendo "
+        "`regra_nunca_dorme_instalada()` na MESMA worker, :1249 entregando os "
+        "dois ao card por `definir_estado_do_canal`, e "
+        "`controller_card.py`:4216-4224 escrevendo as frases — inclusive a "
+        "`DICA_CANAL_SEM_A_REGRA`, que é a cura arrancada sendo denunciada na "
+        "tela. Não deve chamador: fiá-la na janela seria um SEGUNDO leitor de "
+        "PipeWire lá dentro (o defeito que controller_card.py:4044-4049 descreve) "
+        "para repetir o que já está escrito. A PODA É DELA — símbolo público "
+        "não se apaga por conta própria, e apagar este arruinaria de quebra "
+        "`texto_do_sono` e `sono_dos_sinks_do_controle`, que hoje só são "
+        "alcançados por ele e que `tests/unit/test_o_alto_falante_nunca_dorme_01.py`"
+        ":573-608 exercita como as funções PURAS da decisão."
     ),
 }
 

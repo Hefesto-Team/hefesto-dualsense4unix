@@ -44,6 +44,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 try:  # importado como módulo do pacote (GUI/daemon/testes)
     from .steam_launch_options import steam_game_running, steam_running
@@ -267,8 +268,17 @@ def _extract_verified_tarball(
     if tmp_root.exists():
         shutil.rmtree(tmp_root)
     try:
+        # O data_filter do Python 3.10 erra o cálculo de symlink relativo e
+        # recusa links internos legítimos do GE-Proton (start.exe em
+        # files/share/default_pfx/... aponta 5 níveis acima, e cai dentro de
+        # files/lib/wine/). O 3.11+ acerta. Como o tarball já passou pelo SHA256
+        # fixado antes de chegar aqui, no 3.10 usamos "tar", que continua
+        # barrando caminho absoluto e path traversal do próprio nome.
+        _filtro: Literal["data", "tar"] = (
+            "data" if sys.version_info >= (3, 11) else "tar"
+        )
         with tarfile.open(tarball, mode="r:gz") as tar:
-            tar.extractall(path=tmp_root, filter="data")
+            tar.extractall(path=tmp_root, filter=_filtro)
         extracted = tmp_root / name
         if not (extracted / "proton").is_file():
             raise OSError(
