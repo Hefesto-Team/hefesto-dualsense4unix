@@ -532,14 +532,39 @@ def build_compat_tool_mapping(
     *,
     tool_name: str,
     appids: Sequence[str],
+    atropelar_escolha_dela: bool = False,
 ) -> tuple[str, dict[str, dict[str, str]]]:
-    """Trava o global (`"0"`) + cada appid em `tool_name`, preservando o resto.
+    """Trava o global (`"0"`) + cada appid em `tool_name`, **sem** atropelar escolha.
 
     Retorna ``(texto_novo, mudanças)`` — mudanças é o registro que o lock
     persiste para o unlock reverter SÓ o nosso:
-    ``{appid: {"action": "added"|"replaced", "previous_name": "…"}}``.
+    ``{appid: {"action": "added"|"replaced"|"preservado", "previous_name": "…"}}``.
     Idempotente: entrada já apontando para `tool_name` não gera mudança; o
     resto do arquivo passa intacto byte a byte (edição por linha).
+
+    ESCOLHA DELA NÃO SE ATROPELA (19/08/2026). Até aqui, uma entrada que já
+    apontava para OUTRA ferramenta era **substituída** sem perguntar. O preço foi
+    medido na máquina dela: em 14/08/2026 03:04 o lock trocou o Proton de TRÊS
+    jogos que tinham escolha deliberada — o DON'T SCREAM (appid 2497900) saiu de
+    ``proton_11`` para ``GE-Proton10-34``, e nesse Proton o motor Unreal registra
+    ``No Audio Capture implementations found`` e ZERO ``WasapiCapture``: o
+    microfone do jogo, que é a mecânica inteira dele, morreu. Ela zerou o jogo no
+    ``proton_11``; o produto lhe tirou o caminho e não avisou. Os outros 16 jogos
+    da mesma leva eram ``added`` (não tinham nada) e não sofreram.
+
+    Agora o padrão é **preservar**: entrada DE JOGO com nome diferente vira
+    ``action="preservado"``, o arquivo não muda naquela linha, e quem chamou
+    recebe o registro para poder CONTAR o que respeitou. O unlock ignora
+    ``preservado`` de propósito — não há o que reverter onde nada foi escrito.
+
+    A entrada global ``"0"`` NÃO entra nessa guarda: travar o padrão do Steam
+    Play é a função declarada deste recurso, e ela já tem caminho de volta (o
+    ``previous_name`` do ``"0"`` sobrevive a re-locks e o uninstall o restaura).
+    O dano de 14/08 foi por jogo, não no global.
+
+    ``atropelar_escolha_dela=True`` restaura o comportamento antigo. Nada no
+    produto passa isso hoje; existe para o caso em que ELA peça, explicitamente,
+    "troque tudo para o Proton validado" — e aí a palavra é dela.
 
     `config.vdf` sem bloco Software/Valve/Steam = ValueError (arquivo que não
     é um config.vdf de verdade — melhor explodir que "criar" a árvore).
@@ -567,6 +592,20 @@ def build_compat_tool_mapping(
                 # Entrada sem "name" (fora do padrão) — não arriscar.
                 continue
             if entry.name_value == tool_name:
+                continue
+            if appid != "0" and not atropelar_escolha_dela:
+                # A entrada existe e aponta para OUTRA ferramenta: é escolha
+                # deliberada dela POR JOGO. Registra e NÃO escreve.
+                #
+                # A entrada global `"0"` fica de fora desta guarda de propósito:
+                # travar o padrão do Steam Play é a função declarada do recurso,
+                # e ela tem caminho de volta — o `previous_name` do `"0"` sobrevive
+                # a re-locks e o uninstall o restaura. O dano medido em 14/08 foi
+                # POR JOGO (3 appids com escolha própria), não no global.
+                changes[appid] = {
+                    "action": "preservado",
+                    "previous_name": entry.name_value,
+                }
                 continue
             body = lines[entry.name_idx].rstrip("\r\n")
             line_eol = lines[entry.name_idx][len(body):]
@@ -839,11 +878,26 @@ def lock_proton_for_all_games(
         dry_run=dry_run,
     )
     changes = result.get("changes")
-    locked = len(changes) if isinstance(changes, dict) else 0
+    if isinstance(changes, dict):
+        # `preservado` NÃO é travado: é jogo em que ela já tinha escolhido, e o
+        # produto respeitou. Contar os dois juntos diria "travei 19" numa leva em
+        # que 3 ficaram intactos de propósito — e foi assim que o atropelo de
+        # 14/08 passou despercebido. Cada balde conta o que ele é.
+        locked = sum(
+            1 for c in changes.values()
+            if isinstance(c, dict) and c.get("action") != "preservado"
+        )
+        preservados = sum(
+            1 for c in changes.values()
+            if isinstance(c, dict) and c.get("action") == "preservado"
+        )
+    else:
+        locked = 0
+        preservados = 0
     status = result.get("status")
     return {
         "locked": locked,
-        "skipped": 0,
+        "skipped": preservados,
         "errors": 1 if status == "erro" else 0,
         "tool": tool_name,
         "detail": result,

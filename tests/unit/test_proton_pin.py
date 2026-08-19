@@ -628,3 +628,96 @@ def test_list_installed_appids_filtra_ferramentas(tmp_path):
     manifest("1628350", "Steam Linux Runtime 3.0 (sniper)")
     manifest("228980", "Steamworks Common Redistributables")
     assert pp.list_installed_appids(home=tmp_path) == ["1245620", "1599660"]
+
+
+# ── ESCOLHA-DELA-01 (19/08/2026) ──────────────────────────────────────────────
+# O lock atropelava escolha deliberada. Medido na máquina dela: em 14/08 03:04 o
+# "Travar Proton validado" trocou o Proton de TRÊS jogos que já tinham escolha —
+# o DON'T SCREAM (2497900) saiu de `proton_11` para `GE-Proton10-34`, e nesse
+# Proton o motor Unreal registra "No Audio Capture implementations found" e ZERO
+# `WasapiCapture`: o microfone do jogo, que é a mecânica inteira dele, morreu.
+# Ela zerou o jogo no `proton_11`; o produto lhe tirou o caminho sem avisar.
+
+_VDF_COM_ESCOLHA_DELA = """"UserLocalConfigStore"
+{
+\t"Software"
+\t{
+\t\t"Valve"
+\t\t{
+\t\t\t"Steam"
+\t\t\t{
+\t\t\t\t"CompatToolMapping"
+\t\t\t\t{
+\t\t\t\t\t"2497900"
+\t\t\t\t\t{
+\t\t\t\t\t\t"name"\t\t"proton_11"
+\t\t\t\t\t\t"config"\t\t""
+\t\t\t\t\t\t"priority"\t\t"250"
+\t\t\t\t\t}
+\t\t\t\t}
+\t\t\t}
+\t\t}
+\t}
+}
+"""
+
+
+def test_o_lock_nao_atropela_o_proton_que_ela_escolheu() -> None:
+    """A MORDIDA. Tire o `if not atropelar_escolha_dela` e isto fica vermelho."""
+    texto, changes = pp.build_compat_tool_mapping(
+        _VDF_COM_ESCOLHA_DELA,
+        tool_name="GE-Proton10-34",
+        appids=["2497900"],
+    )
+
+    assert changes["2497900"]["action"] == "preservado", (
+        "o lock diz ter feito "
+        f"{changes['2497900']['action']} num jogo em que ela JÁ tinha escolhido "
+        "o Proton — foi assim que o DON'T SCREAM perdeu o microfone em 14/08"
+    )
+    assert changes["2497900"]["previous_name"] == "proton_11"
+    assert '"name"\t\t"proton_11"' in texto, (
+        "a linha do Proton DELA foi reescrita no config.vdf: o produto atropelou "
+        "uma escolha deliberada, que é exatamente o defeito de 14/08"
+    )
+    # O bloco DELE, e só ele: a entrada global "0" também recebe o Proton do
+    # produto e vive depois no arquivo — medir "o que vem depois do 2497900"
+    # pegaria a global e acusaria um atropelo que não houve.
+    corpo = texto.split('"2497900"', 1)[1].split("}", 1)[0]
+    assert "GE-Proton10-34" not in corpo, (
+        "o Proton do produto entrou no bloco do jogo dela"
+    )
+
+
+def test_quem_nao_tinha_escolha_continua_ganhando_o_proton_validado() -> None:
+    """A cura não pode virar cadeado: jogo SEM escolha continua sendo travado."""
+    _, changes = pp.build_compat_tool_mapping(
+        _VDF_COM_ESCOLHA_DELA,
+        tool_name="GE-Proton10-34",
+        appids=["2497900", "851100"],
+    )
+    assert changes["851100"]["action"] == "added", (
+        "jogo que não tinha escolha nenhuma deixou de receber o Proton validado — "
+        "a cura foi longe demais"
+    )
+    assert changes["2497900"]["action"] == "preservado"
+
+
+def test_a_contagem_nao_chama_de_travado_o_que_foi_preservado() -> None:
+    """`locked` contava tudo, inclusive o que o produto respeitou."""
+    changes = {
+        "0": {"action": "added", "previous_name": ""},
+        "851100": {"action": "added", "previous_name": ""},
+        "2497900": {"action": "preservado", "previous_name": "proton_11"},
+    }
+    locked = sum(
+        1 for c in changes.values()
+        if isinstance(c, dict) and c.get("action") != "preservado"
+    )
+    preservados = sum(
+        1 for c in changes.values()
+        if isinstance(c, dict) and c.get("action") == "preservado"
+    )
+    assert (locked, preservados) == (2, 1), (
+        "a contagem somaria 3 travados numa leva em que 1 foi respeitado"
+    )
