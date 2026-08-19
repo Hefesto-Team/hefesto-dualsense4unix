@@ -220,8 +220,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Versão do shellcheck (vem no runner)
         run: shellcheck --version
+      # `scripts/ci/*.sh` entrou em 19/08/2026 com o primeiro script daquela
+      # pasta: um diretório de scripts que nenhum linter enxerga é exatamente o
+      # padrão de portão cego que o `install-multi-distro` nasceu para fechar.
       - name: Varredura em severidade error
-        run: shellcheck -S error scripts/*.sh install.sh uninstall.sh
+        run: shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 
   icones:
     name: Ícones derivados do SVG canônico
@@ -883,3 +886,78 @@ jobs:
           hefesto-dualsense4unix --help > /dev/null
           hefesto-dualsense4unix doctor --help > /dev/null
           echo "CLI responde nesta distro"
+
+  # CI-INSTALL-USUARIA-01 (19/08/2026): o `install.sh` RODA, de verdade, como
+  # usuária comum, nas três famílias que a casa promete.
+  #
+  # POR QUE ESTE JOB EXISTE. No mesmo dia, a leva que tornou o instalador
+  # universal (apt/dnf/pacman) trouxe junto um bloqueante que teria quebrado o
+  # Debian 12 para toda pessoa que instala sem ser root: a régua de biblioteca
+  # perguntava ao `ldconfig`, que mora em `/usr/sbin` — fora do PATH de usuária
+  # comum no Debian, dentro do PATH do root em qualquer distro. Toda biblioteca
+  # PRESENTE virava ausente, e as obrigatórias matavam a instalação.
+  #
+  # NENHUM PORTÃO VIU, e são três buracos somados:
+  #   1. o `smoke-multi-distro` acima instala o WHEEL e nunca toca no
+  #      `install.sh`;
+  #   2. os contêineres dele rodam como ROOT, e o PATH do root tem `sbin`;
+  #   3. o único portão que olhava para o `install.sh` era o `shellcheck` —
+  #      análise estática, que não executa uma linha.
+  #
+  # Medido na bancada em 19/08/2026, com o `ldconfig` devolvido numa cópia
+  # isolada e este mesmo passo rodando: o job REPROVA com
+  #     falta hidapi — sem ele, o backend do controle não abre NENHUM aparelho
+  #     ERRO: faltam dependências obrigatórias (hidapi)
+  # e passa quando a régua enxerga. Ele MORDE.
+  #
+  # A MATRIZ É ESPELHO da do `smoke-multi-distro`: mesmas imagens, mesmos nomes
+  # de pacote. Se uma mudar, a outra tem de mudar junto — são a mesma promessa
+  # ("estas três famílias") medida por duas perguntas diferentes ("o wheel
+  # roda?" e "o instalador instala?").
+  #
+  # PATH: só o Debian 12 reproduz o bloqueante — no Fedora 40 e no Arch o
+  # `/usr/sbin` está no PATH de todo mundo (medido, e o script imprime qual é o
+  # caso em cada corrida). É mais uma razão para o `debian-12` seguir sendo o
+  # gate duro e os outros dois, informativos, como no job irmão.
+  install-multi-distro:
+    name: Install real ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: ${{ matrix.experimental || false }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: fedora-40
+            image: fedora:40
+            experimental: true
+            install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify gcc python3-devel kernel-headers git
+            presentes: --presente hidapi --presente toolchain-c
+          - distro: archlinux
+            image: archlinux:latest
+            experimental: true
+            install_cmd: pacman -Syu --noconfirm python python-pip python-gobject gtk3 hidapi libnotify python-evdev python-pydantic python-pydantic-core gcc linux-api-headers git
+            presentes: --presente hidapi --presente toolchain-c
+          - distro: debian-12
+            image: debian:12
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin git
+            presentes: --presente hidapi
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar deps do sistema (${{ matrix.distro }})
+        run: ${{ matrix.install_cmd }}
+      # O `sudo` e a usuária são criados pelo script, que é quem sabe a família.
+      # O que ELE não instala, de propósito: nada do censo do produto. Instalar
+      # aqui o que o `install.sh` deveria instalar sozinho seria escrever a
+      # resposta na prova.
+      - name: Executar o install.sh como usuária comum
+        run: bash scripts/ci/instalar_como_usuaria.sh ${{ matrix.presentes }}
+      - name: Upload do log do install
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-como-usuaria-${{ matrix.distro }}.log
+          path: /tmp/install-como-usuaria.log
+          if-no-files-found: ignore

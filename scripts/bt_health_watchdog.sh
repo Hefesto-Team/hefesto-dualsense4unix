@@ -202,8 +202,21 @@ vigia_sdp_cache() {
         # Caso (b): o device não responde SDP. Distinguir de (a) é barato e evita
         # mandar a humana re-parear um controle que vai recusar do mesmo jeito.
         if ! grep -q '^\[ServiceRecords\]' "${CACHE}" 2>/dev/null; then
-            if command -v sdptool >/dev/null 2>&1 \
-               && ! timeout 20 sdptool browse "${MAC}" >/dev/null 2>&1; then
+            # SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026): o
+            # browse SDP sob demanda num device só existe no `sdptool`, que o
+            # BlueZ depreciou; `bluetoothctl` lê UUIDs do CACHE (o mesmo que
+            # acabou de falhar) e `btmgmt find-service` é varredura por UUID no
+            # ar, não pergunta a um device já conectado — conferido nos dois
+            # `--help` do 5.86 em 19/08/2026.
+            #
+            # O ramo `else` daqui cobria DOIS casos com uma frase só: "o device
+            # responde ao browse direto" era escrito também quando o `sdptool`
+            # não existia — ou seja, sem ter perguntado nada. Numa distro que
+            # moveu as depreciadas de pacote, a vigia afirmava saúde que não
+            # mediu. Agora são três ramos, e o terceiro diz "não sei".
+            if ! command -v sdptool >/dev/null 2>&1; then
+                log "SDP de ${MAC} não resolveu em 6 tentativas e NÃO SEI dizer qual das duas causas é: o browse direto exigia o 'sdptool', depreciado pelo BlueZ e ausente nesta máquina (pacote bluez-deprecated / bluez-deprecated-tools), e nenhuma ferramenta viva o substitui. Instale-o para a vigia voltar a distinguir 'direção da conexão' de 'controle travado'. Enquanto isso: se o próximo tick também não resolver, trate como controle travado — reset de hardware do controle (furinho atrás, ~5 s com um clipe)"
+            elif ! timeout 20 sdptool browse "${MAC}" >/dev/null 2>&1; then
                 log "controle ${MAC} NÃO responde SDP (browse direto estoura) — o link sobe mas o stack do controle está travado; re-parear NÃO resolve. Cura: reset de hardware do controle (furinho atrás, ~5 s com um clipe) e ligar de novo"
             else
                 log "SDP de ${MAC} não resolveu em 6 tentativas mas o device responde ao browse direto — o doctor aponta; último recurso é bluetoothctl remove ${MAC} + re-parear"

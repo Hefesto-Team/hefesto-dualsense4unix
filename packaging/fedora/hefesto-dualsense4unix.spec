@@ -40,6 +40,19 @@ Requires:       gtk3
 Requires:       libayatana-appindicator-gtk3
 Requires:       hidapi
 Requires:       libnotify
+# LOADER SVG DO GDK-PIXBUF (19/08/2026) — dependencia DURA, e nao Recommends.
+# A interface carrega 38 glifos SVG em execucao (gui/widgets/button_glyph.py,
+# GdkPixbuf.Pixbuf.new_from_file_at_scale) e o icone da bandeja e um SVG
+# simbolico (app/tray.py). Sem o loader o pixbuf sai None EM SILENCIO: o icone
+# some da barra e todo glifo da interface cai junto, sem erro no log
+# (BUG-TRAY-ICONE-INVISIVEL-01, descrito em app/main.py). Nao remova por
+# parecer superfluo — o sintoma nao aponta para a causa.
+#
+# ARMADILHA DE NOME: no Fedora quem entrega o modulo de execucao
+# (libpixbufloader-svg.so) e o `librsvg2`; `librsvg2-tools` e o rsvg-convert,
+# ferramenta de BUILD, e o errado aqui. Mesmo pacote que o install.sh nativo
+# instala pelo dnf, e paridade com librsvg2-common (.deb) e librsvg (Arch).
+Requires:       librsvg2
 Requires:       python3-pydantic >= 2.0
 Requires:       python3-typer
 Requires:       python3-textual

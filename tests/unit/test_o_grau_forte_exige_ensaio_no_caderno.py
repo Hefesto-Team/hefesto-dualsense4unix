@@ -13,8 +13,16 @@ O caso central deste arquivo é literalmente aquela mutação. E junto vem o cas
 SIMÉTRICO — linha com grau forte E ensaio correspondente passa —, sem o qual a
 regra viraria "grau é proibido", que é uma forma de o portão mentir ao contrário.
 
-PROVA DE QUE MORDEM (arrancar, ver reprovar, devolver), 12/08/2026: está na
-docstring de cada teste, uma cura de cada vez.
+19/08/2026 — A ESCADA GANHOU A DIREÇÃO DE ENTRADA. Até esta data os três
+degraus cobriam só a IDA (produto → aparelho), e o mapa admitia o buraco por
+escrito em duas linhas suas: o vpad ENTREGA, e ninguém sabia se o jogo REAGE. A
+segunda metade deste arquivo cobra os dois degraus novos — `O JOGO RECEBEU` e
+`O JOGO REAGIU` — com a mesma severidade dos fortes de saída, e mais uma: o
+degrau que só a mão dela fecha DERRUBA, não avisa.
+
+PROVA DE QUE MORDEM (arrancar, ver reprovar, devolver), 12/08/2026 e
+19/08/2026: está na docstring de cada teste, uma cura de cada vez, com a saída
+literal do `pytest`.
 """
 from __future__ import annotations
 
@@ -478,12 +486,290 @@ def test_o_censo_conta_o_mesmo_que_uma_regua_independente_de_grau() -> None:
         1
         for linha in linhas
         for lado in ("cabo", "radio")
+        # A régua independente redigita a lista DE PROPÓSITO: importar a do
+        # portão faria o instrumento conferir a si mesmo. Os dois degraus de
+        # ENTRADA (19/08/2026) entram aqui pela mesma razão que os de saída —
+        # eles também exigem ensaio, e a contagem tem de enxergá-los.
         if (linha[f"{lado}_ate_onde_foi"] or "").strip()
-        in ("SAIU NO FIO", "O APARELHO OBEDECEU")
+        in ("SAIU NO FIO", "O APARELHO OBEDECEU", "O JOGO RECEBEU", "O JOGO REAGIU")
         and ((linha["id"] or "").strip(), lado) not in lados_com_ensaio
     )
     achadas = processo.stdout.count("FALHA grau-sem-ensaio:")
     assert achadas == esperado, (
         f"a régua achou {achadas} grau(s) forte(s) sem ensaio e a contagem "
         f"independente achou {esperado}"
+    )
+
+
+# --------------------------------------------------------------------------
+# A DIREÇÃO DE ENTRADA — os dois degraus de 19/08/2026
+#
+# Até esta data a escada cobria só a IDA (produto -> aparelho), e dá para
+# conferir no dado: `O APARELHO OBEDECEU` só aparece em linha de saída. O mapa
+# admitia o buraco por escrito em duas linhas suas (`toque.touchpad` e
+# `movimento.giroscopio.jogo`): o vpad ENTREGA, e ninguém sabe se o jogo REAGE.
+# Era possível o mapa inteiro ficar verde enquanto ela não conseguia jogar.
+#
+# Os casos abaixo provam três coisas, e a terceira é a que dá sentido a haver
+# DOIS degraus novos em vez de um: `O JOGO RECEBEU` um instrumento fecha, `O
+# JOGO REAGIU` não.
+# --------------------------------------------------------------------------
+DEGRAUS_DE_ENTRADA = ("O JOGO RECEBEU", "O JOGO REAGIU")
+
+
+def test_os_degraus_do_jogo_sem_ensaio_reprovam_igual_aos_de_saida(
+    tmp_path: Path,
+) -> None:
+    """MORDIDA MEDIDA (19/08/2026): trocado, em `check_paridade_transporte.py`,
+
+        GRAUS_QUE_EXIGEM_ENSAIO = tuple(
+            degrau.valor for degrau in ESCADA if degrau.fechado_por != FECHA_A_SUITE
+        )
+
+    por `... if degrau.direcao == DIRECAO_SAIDA and degrau.fechado_por != ...`
+    — isto é, os degraus novos entram no vocabulário mas ninguém lhes cobra
+    bancada. Saída LITERAL de `pytest -q`:
+
+        E       AssertionError: OK: nenhuma afirmação forte sem rede em mapa-controles.csv.
+        E         ...
+        E           graus que a suíte não sustenta sozinha...... 0
+        E                desses, SEM ensaio no caderno.......... 0
+        E                desses, na direção de ENTRADA (o jogo). 0
+        E       assert 0 == 1
+        FAILED ...::test_os_degraus_do_jogo_sem_ensaio_reprovam_igual_aos_de_saida
+        FAILED ...::test_o_jogo_reagiu_sem_o_olho_dela_derruba_e_nao_apenas_avisa
+        2 failed, 20 passed in 1.65s
+
+    A linha do resumo é a prova mais limpa: o censo dizia `graus que a suíte não
+    sustenta sozinha: 0` com um `O JOGO RECEBEU` escrito na célula. Cura
+    devolvida, 22 verdes.
+
+    O caderno desta árvore NÃO está vazio: tem um ensaio de outra linha. Sem
+    isso o teste passaria pelo motivo errado — o de a regra 6 estar desligada
+    por falta de caderno.
+    """
+    for degrau in DEGRAUS_DE_ENTRADA:
+        caminho = monta_arvore(
+            tmp_path,
+            [linha_com_grau(cabo_ate_onde_foi=degrau, radio_ate_onde_foi="MONTOU")],
+            [ensaio("luz.lightbar.cor@dualsense", "radio")],
+        )
+        processo = rodar(caminho, tmp_path)
+        assert processo.returncode == 1, f"{degrau}\n{processo.stdout}"
+        assert processo.stdout.count("FALHA grau-sem-ensaio:") == 1, (
+            f"{degrau}\n{processo.stdout}"
+        )
+        assert degrau in processo.stdout
+
+
+def test_o_jogo_recebeu_fecha_com_instrumento_e_nao_pede_o_olho_dela(
+    tmp_path: Path,
+) -> None:
+    """O degrau que um INSTRUMENTO vê, e é isto que o separa do de cima.
+
+    "O processo do jogo abriu o nó do nosso vpad" é observável de fora: o inode
+    do nó (`stat -c %i`, nunca o caminho — o minor é reciclado) aparece em
+    `/proc/<pid>/fd` de um processo da árvore do jogo, que é visível do
+    hospedeiro. Um ensaio de bancada fecha, e o portão TEM de deixar passar:
+    exigir o olho dela aqui seria cobrar a pessoa por uma medida que a máquina
+    faz — e um portão que cobra o impossível ensina a baixar o grau para calar,
+    que é a mesma mentira ao contrário.
+    """
+    caminho = monta_arvore(
+        tmp_path,
+        [
+            linha_com_grau(
+                cabo_ate_onde_foi="O JOGO RECEBEU",
+                radio_ate_onde_foi="MONTOU",
+                mordida_provada_em="2026-08-19",
+            )
+        ],
+        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="bancada")],
+    )
+    processo = rodar(caminho, tmp_path)
+    assert processo.returncode == 0, processo.stdout
+    assert "reagiu-sem-olho-dela" not in processo.stdout
+    assert "grau-sem-olho-dela" not in processo.stdout
+
+
+def test_o_jogo_reagiu_sem_o_olho_dela_derruba_e_nao_apenas_avisa(
+    tmp_path: Path,
+) -> None:
+    """MORDIDA MEDIDA (19/08/2026): trocado o `FALHA` do ramo
+    `if grau in GRAUS_SEM_LEGADO:` de `_achado_sem_olho_dela` por
+    `FALHA if OLHO_DELA_REPROVA else AVISO` — isto é, o degrau novo passaria a
+    só avisar, como o da lightbar. Saída LITERAL de `pytest -q`:
+
+        E       AssertionError: 1 aviso(s) — não derrubam este portão hoje:
+        E           AVISO reagiu-sem-olho-dela: linha 2 (audio.jack.deteccao@pro)
+        E           [cabo]: declara `cabo_ate_onde_foi = O JOGO REAGIU` no cabo com
+        E           ensaio observado por ['bancada']. Este degrau NÃO tem
+        E           instrumento: nenhuma régua desta casa lê o estado interno de um
+        E           jogo sob Proton. Só `olho-dela` o fecha — grave o ensaio com o
+        E           gesto dela, ou desça para `O JOGO RECEBEU`, que é o que um
+        E           instrumento consegue ver de fora
+        E
+        E         OK: nenhuma afirmação forte sem rede em mapa-controles.csv.
+        E       assert 0 == 1
+        FAILED ...::test_o_jogo_reagiu_sem_o_olho_dela_derruba_e_nao_apenas_avisa
+        1 failed, 21 passed in 1.71s
+
+    (o AVISO acima sai numa linha só; foi quebrado aqui para caber na régua de
+    100 colunas do `ruff`, e nada mais)
+
+    Repare no `OK:` logo abaixo do aviso — é exatamente o retrato do defeito: o
+    portão dizia OK sobre uma célula que afirma que ELA CONSEGUIU JOGAR, com um
+    ensaio que ninguém do `olho-dela` observou. Cura devolvida.
+
+    POR QUE DURA, e a regra 10 irmã não: é LEGADO, não princípio. A regra 10
+    nasceu com células já escritas por outra régua, e reprovar retroativamente
+    afirmação verdadeira é o defeito que o portão inteiro existe para não
+    cometer. Este degrau nasceu em 19/08/2026 com ZERO células no CSV — não há
+    afirmação antiga para machucar, e deixá-lo avisando abriria de graça a porta
+    que a regra 6 fechou em 12/08.
+    """
+    caminho = monta_arvore(
+        tmp_path,
+        [
+            linha_com_grau(
+                cabo_ate_onde_foi="O JOGO REAGIU",
+                radio_ate_onde_foi="MONTOU",
+                mordida_provada_em="2026-08-19",
+            )
+        ],
+        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="bancada")],
+    )
+    processo = rodar(caminho, tmp_path)
+    assert processo.returncode == 1, processo.stdout
+    assert "FALHA reagiu-sem-olho-dela:" in processo.stdout
+    assert "O JOGO RECEBEU" in processo.stdout, (
+        "a mensagem tem de oferecer o degrau que um instrumento consegue "
+        f"fechar, senão ela só diz não:\n{processo.stdout}"
+    )
+
+
+def test_o_jogo_reagiu_com_o_olho_dela_passa(tmp_path: Path) -> None:
+    """O caso SIMÉTRICO: com o gesto dela gravado, o degrau mais alto passa.
+
+    Sem este teste a regra 13 viraria "`O JOGO REAGIU` é proibido", que é a
+    mesma mentira ao contrário — e o degrau existe justamente para ela poder
+    dizer, uma vez por jogo, que aquilo funcionou.
+    """
+    caminho = monta_arvore(
+        tmp_path,
+        [
+            linha_com_grau(
+                cabo_ate_onde_foi="O JOGO REAGIU",
+                radio_ate_onde_foi="MONTOU",
+                mordida_provada_em="2026-08-19",
+            )
+        ],
+        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="olho-dela")],
+    )
+    processo = rodar(caminho, tmp_path)
+    assert processo.returncode == 0, processo.stdout
+    assert "reagiu-sem-olho-dela" not in processo.stdout
+
+
+def test_a_escada_tem_um_dono_so(tmp_path: Path) -> None:
+    """MORDIDA MEDIDA (19/08/2026): devolvido ao `DOMINIO_POR_SUFIXO` do portão o
+    `frozenset` literal de antes — os três degraus da ida escritos à mão, em vez
+    de `{"", *VALORES_DA_ESCADA}`. Saída LITERAL de `pytest -q`:
+
+        E       AssertionError: o domínio do portão e a `ESCADA` divergem:
+        E           só no domínio: set()
+        E           só na escada: {'O JOGO RECEBEU', 'O JOGO REAGIU'}
+        E       assert {'', 'MONTOU'...'SAIU NO FIO'} == {'', 'MONTOU'...'SAIU NO FIO'}
+        FAILED ...::test_o_jogo_recebeu_fecha_com_instrumento_e_nao_pede_o_olho_dela
+        FAILED ...::test_o_jogo_reagiu_com_o_olho_dela_passa
+        FAILED ...::test_a_escada_tem_um_dono_so
+        3 failed, 19 passed in 1.65s
+
+    SEGUNDA MORDIDA, na outra ponta: apagado `<em>O JOGO REAGIU</em> (...)` da
+    legenda do `specs.html` publicado — o que aconteceria se alguém voltasse a
+    escrever a legenda à mão. Saída LITERAL:
+
+        E       AssertionError: `O JOGO REAGIU` está na escada e não na legenda
+        E       do specs.html — rode `python3 scripts/gerar-mapa.py`
+        1 failed in 0.15s
+
+    As duas curas devolvidas, 22 verdes.
+
+    Uma segunda lista do mesmo vocabulário é o defeito que este teste existe
+    para não deixar voltar: até 19/08 o portão tinha os degraus num `frozenset`
+    e o `gerar-mapa.py` os tinha escritos à mão na legenda do `specs.html`.
+    Divergir quer dizer publicar uma página que descreve um domínio diferente do
+    que o portão aceita.
+
+    O QUE ESTE TESTE AINDA NÃO COBRE, dito na cara: `bancada.py` tem um
+    `GRAUS = [...]` próprio (o seletor do formulário que grava no CSV). Ele é
+    território de outra frente e não foi tocado — enquanto não importar
+    `VALORES_DA_ESCADA`, o portão ACEITA os dois degraus novos e o formulário
+    não os OFERECE.
+    """
+    censo = modulo_do_censo()
+    valores = tuple(censo.VALORES_DA_ESCADA)
+
+    dominio = set(censo.DOMINIO_POR_SUFIXO["ate_onde_foi"])
+    esperado = {"", *valores}
+    assert dominio == esperado, (
+        "o domínio do portão e a `ESCADA` divergem:\n"
+        f"  só no domínio: {dominio - esperado}\n"
+        f"  só na escada: {esperado - dominio}"
+    )
+
+    # Todo degrau tem critério ESCRITO. Sem isso ele é adjetivo, e adjetivo é o
+    # que este mapa existe para não aceitar.
+    for degrau in censo.ESCADA:
+        assert degrau.criterio.strip(), degrau.valor
+        assert degrau.direcao in (censo.DIRECAO_SAIDA, censo.DIRECAO_ENTRADA), degrau.valor
+
+    # A legenda publicada sai da escada, e o método a define em prosa. Os dois
+    # têm de nomear os CINCO degraus, ou a página e a régua contam histórias
+    # diferentes.
+    publicado = (RAIZ_REAL / "specs.html").read_text(encoding="utf-8")
+    metodo = (RAIZ_REAL / "docs" / "process" / "METODO-DE-ISOLAMENTO.md").read_text(
+        encoding="utf-8"
+    )
+    for valor in valores:
+        assert f"<em>{valor}</em>" in publicado, (
+            f"`{valor}` está na escada e não na legenda do specs.html — rode "
+            "`python3 scripts/gerar-mapa.py`"
+        )
+        assert valor in metodo, (
+            f"`{valor}` está na escada e não no METODO-DE-ISOLAMENTO.md, que é "
+            "onde o critério de cada degrau se escreve"
+        )
+
+
+def test_nenhuma_celula_do_mapa_real_usa_os_degraus_novos_sem_ensaio() -> None:
+    """A leva que criou os degraus NÃO preencheu célula nenhuma, de propósito.
+
+    `◌ ninguém respondeu` é VERDADE, e preencher por analogia destrói o valor
+    deste arquivo: nada do que a onda de 19/08 construiu — o aviso na lightbar
+    por modo, o gesto `PS + R3`, a ponte confirmada por jogo — foi visto em
+    HARDWARE. Foi tudo dublê.
+
+    Este teste NÃO proíbe preencher: ele exige que quem preencher traga o ensaio
+    junto, que é a mesma conta da regra 6 conferida por uma régua independente —
+    um `csv.DictReader` próprio, sem passar pelo `eliminacao.py`.
+    """
+    with ENSAIOS_REAIS.open(encoding="utf-8", newline="") as arquivo:
+        lados_com_ensaio = {
+            ((registro["linha_id"] or "").strip(), (registro["transporte"] or "").strip())
+            for registro in csv.DictReader(arquivo)
+        }
+    with CSV_REAL.open(encoding="utf-8", newline="") as arquivo:
+        linhas = list(csv.DictReader(arquivo))
+
+    orfas = [
+        ((linha["id"] or "").strip(), lado, grau)
+        for linha in linhas
+        for lado in ("cabo", "radio")
+        if (grau := (linha[f"{lado}_ate_onde_foi"] or "").strip()) in DEGRAUS_DE_ENTRADA
+        and ((linha["id"] or "").strip(), lado) not in lados_com_ensaio
+    ]
+    assert not orfas, (
+        "célula com degrau de ENTRADA e nenhum ensaio no caderno daquele "
+        f"transporte: {orfas}"
     )

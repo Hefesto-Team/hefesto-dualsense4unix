@@ -169,9 +169,21 @@ class TestArmingPeloMarker:
         }
         assert daemon.aplicados == []
 
-    def test_perfil_sem_secao_mode_nao_arma(
+    def test_perfil_sem_secao_mode_nao_arma_modo_de_perfil_nenhum(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """R-02 continua de pé: perfil sem `mode` não tem opinião sobre a
+        máscara, e o arming não inventa uma para ele.
+
+        NOTA DATADA — 19/08/2026 (PONTE-ESCADA-LACO-01). Este teste afirmava
+        que o lançamento devolvia `motivo="perfil_sem_modo"` e não aplicava
+        NADA. A primeira metade caducou: o silêncio do perfil passou a ser
+        preenchido pela ESCADA, que arma o primeiro degrau e abre uma
+        tentativa (`tests/unit/test_ponte_escada_laco_01_quem_sobe_a_escada.py`).
+        A segunda metade é a que este teste sempre mediu e continua medindo: o
+        que foi aplicado NÃO é opinião do perfil — é a escada, e ela se
+        identifica no relatório.
+        """
         _marker(env_dir, appid=APPID, epoch=1000)
         sem_modo = Profile(
             name="so_cores",
@@ -185,8 +197,9 @@ class TestArmingPeloMarker:
 
         resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
 
-        assert resultado is not None and resultado["motivo"] == "perfil_sem_modo"
-        assert daemon.aplicados == []
+        assert resultado is not None
+        assert resultado["ponte_da_escada"] is True, "não é opinião do perfil"
+        assert resultado["ponte_do_carimbo"] is False
 
     def test_appid_da_allowlist_do_steam_input_nao_e_armado(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
@@ -272,7 +285,12 @@ class TestAllowlistPulaSoAMascara:
 
         resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
 
-        assert resultado is not None and resultado["motivo"] == "perfil_sem_modo"
+        # ALLOWLIST-SUPRESSAO-01 é o que este teste mede, e ele não mudou: a
+        # supressão é opinião do perfil e vale mesmo sem `mode`. (A afirmação
+        # `motivo == "perfil_sem_modo"` que morava aqui caducou em 19/08 — ver
+        # a nota datada em `test_perfil_sem_secao_mode_nao_arma_MODO_DE_
+        # PERFIL_NENHUM`, acima.)
+        assert resultado is not None
         assert daemon.suprimidos == [(True, so_cores, "launch")]
 
     def test_jogo_da_allowlist_sem_perfil_nao_suprime(

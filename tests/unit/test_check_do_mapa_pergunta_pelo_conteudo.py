@@ -68,7 +68,13 @@ def arvore(tmp_path: Path) -> Path:
     (tmp_path / "docs" / "data").mkdir(parents=True)
     (tmp_path / "assets" / "control-svg").mkdir(parents=True)
 
-    for script in ("gerar-mapa.py", "eliminacao.py"):
+    # `check_paridade_transporte.py` entra desde 19/08/2026: ele é o dono da
+    # ESCADA de `ate_onde_foi`, e o gerador importa os degraus de lá para montar
+    # a legenda em vez de redigitá-los. Sem ele na árvore de brinquedo o gerador
+    # nem carrega — que é o comportamento que se quer: régua e legenda que
+    # divergem publicariam uma página descrevendo um domínio que o portão não
+    # aceita, e um `ImportError` grita, enquanto duas listas envelhecem caladas.
+    for script in ("gerar-mapa.py", "eliminacao.py", "check_paridade_transporte.py"):
         shutil.copy(RAIZ / "scripts" / script, tmp_path / "scripts" / script)
     for desenho in (RAIZ / "assets" / "control-svg").glob("*.svg"):
         shutil.copy(desenho, tmp_path / "assets" / "control-svg" / desenho.name)

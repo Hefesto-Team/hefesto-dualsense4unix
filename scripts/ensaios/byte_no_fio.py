@@ -49,9 +49,11 @@ que só existe no sentido host->device. Isso é de propósito: o opcode é memó
 minha sobre um formato, e o `0xA2` é o protocolo. A casa já pagou por um parser
 de `btmon` que, em 12/08/2026, não venceu o formato.
 
-O `handle` do ACL vira MAC pela tabela de `hcitool con`, que é a mesma que o
-kernel usa. O mapa handle->MAC sai IMPRESSO no relatório: sem ele, dizer "o
-branco não recebeu" seria uma afirmação sem sujeito.
+O `handle` do ACL vira MAC pela tabela do kernel: cada conexão ACL é um device
+`hciN:<handle>` em `/sys/class/bluetooth`, com o `address` ao lado. Onde essa
+leitura não responder, o `hcitool con` (DEPRECIADO pelo BlueZ) é o plano B. O
+mapa handle->MAC sai IMPRESSO no relatório, com a RÉGUA de onde saiu: sem ele,
+dizer "o branco não recebeu" seria uma afirmação sem sujeito.
 
 A MORDIDA (é isto que autoriza acreditar no número)
 ----------------------------------------------------
@@ -302,8 +304,47 @@ def crc_confere(report: bytes) -> bool | None:
 # ---------------------------------------------------------------------------
 
 
-def handles_por_mac() -> dict[str, int]:
-    """O mapa MAC -> handle ACL, pedido ao mesmo lugar que o kernel usa."""
+def _handles_do_sysfs(raiz: str = "/sys/class/bluetooth") -> dict[str, int]:
+    """MAC -> handle ACL lido do sysfs: cada conexão vira `hciN:<handle>`.
+
+    MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026). O `hcitool` foi DEPRECIADO pela
+    upstream do BlueZ e cada família de distro o mudou de pacote
+    (`bluez-deprecated`, `bluez-deprecated-tools`). Onde ele não existe, este
+    instrumento voltava um mapa VAZIO e o relatório saía com "SEM HANDLE" em
+    todo mundo — sem dizer por quê.
+
+    A fonte viva é o próprio kernel: o `hci_conn` registra um device
+    `hciN:<handle>` (handle em decimal) sob /sys/class/bluetooth, com os
+    atributos `address` e `type`. Nada de root, nada de pacote.
+
+    NÃO CONFERIDO AO VIVO: em 19/08/2026 esta bancada não tinha adaptador BT
+    ligado (`/sys/class/bluetooth` vazio), então a forma exata dos nomes e
+    atributos veio do fonte do kernel, não de medição aqui. Por isso o
+    `hcitool` continua como plano B e o relatório DECLARA de qual régua o mapa
+    saiu — se a leitura do sysfs estiver errada, isso aparece impresso em vez
+    de contaminar o veredito em silêncio.
+    """
+    mapa: dict[str, int] = {}
+    try:
+        nomes = os.listdir(raiz)
+    except OSError:
+        return mapa
+    for nome in nomes:
+        m = re.fullmatch(r"hci\d+:(\d+)", nome)
+        if not m:
+            continue
+        try:
+            with open(os.path.join(raiz, nome, "address"), encoding="utf-8") as fh:
+                mac = fh.read().strip().lower()
+        except OSError:
+            continue
+        if re.fullmatch(r"([0-9a-f]{2}:){5}[0-9a-f]{2}", mac):
+            mapa[mac] = int(m.group(1))
+    return mapa
+
+
+def _handles_do_hcitool() -> dict[str, int]:
+    """Plano B: o `hcitool con` depreciado, para não perder leitura em quem o tem."""
     try:
         saida = subprocess.run(
             ["sudo", "-n", "hcitool", "con"],
@@ -319,6 +360,23 @@ def handles_por_mac() -> dict[str, int]:
         if m:
             mapa[m.group(1).lower()] = int(m.group(2))
     return mapa
+
+
+def handles_por_mac() -> tuple[dict[str, int], str]:
+    """O mapa MAC -> handle ACL, e a RÉGUA de onde ele saiu.
+
+    Ferramenta viva primeiro (sysfs do kernel), depreciada como plano B. A régua
+    volta junto porque este instrumento declara a régua — regra desta casa
+    desde que uma medição contra a biblioteca errada produziu alarme
+    convincente e falso.
+    """
+    mapa = _handles_do_sysfs()
+    if mapa:
+        return mapa, "sysfs /sys/class/bluetooth"
+    mapa = _handles_do_hcitool()
+    if mapa:
+        return mapa, "hcitool con (depreciado)"
+    return {}, "NENHUMA — nem sysfs nem hcitool responderam"
 
 
 def led_do_aparelho(ap: Aparelho) -> str:
@@ -488,7 +546,7 @@ def main() -> int:
         print("\nNão há DualSense por rádio nesta mesa. Nada a medir.")
         return 2
 
-    mapa = handles_por_mac()
+    mapa, regua_do_mapa = handles_por_mac()
     alvos: list[Alvo] = []
     for a in aparelhos:
         dir_led = led_do_aparelho(a)
@@ -499,7 +557,7 @@ def main() -> int:
         alvo.handle = mapa.get(a.mac.lower(), -1)
         alvos.append(alvo)
 
-    print("\nA MESA DE RÁDIO, E O MAPA handle -> MAC (de `hcitool con`)")
+    print(f"\nA MESA DE RÁDIO, E O MAPA handle -> MAC (régua: {regua_do_mapa})")
     print(tabela(
         ["MAC", "hidraw", "handle ACL", "LED do sysfs", "cor agora"],
         [[mascarar(a.ap.mac), a.ap.hidraw, str(a.handle) if a.handle >= 0 else "SEM HANDLE",

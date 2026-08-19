@@ -356,13 +356,13 @@ ask_yn() {
 #
 # O que havia antes: `run_apt` era a ÚNICA porta, e o `_reconhecimento()` dizia
 # por escrito que fora da família Debian o instalador nativo não garante nada.
-# Numa máquina limpa de Fedora, Arch ou openSUSE o install terminava "ok" com a
+# Numa máquina limpa de Fedora ou de Arch o install terminava "ok" com a
 # libhidapi ausente — o verde mentiroso que `install.sh` já nomeia no bloco DKMS.
 #
 # O desenho, em três peças, e o molde é da própria casa
 # (`scripts/install_osk.sh:206-220`, que já despacha por família):
 #
-#   _familia_pacotes()  descobre a família (apt/dnf/pacman/zypper/nenhum);
+#   _familia_pacotes()  descobre a família (apt/dnf/pacman/nenhum);
 #   _pkg_nome()         UMA tabela: nome canônico -> nome em cada família;
 #   run_pkg()           instala nomes canônicos na família corrente.
 #
@@ -377,10 +377,23 @@ ask_yn() {
 # (`packaging/debian/control`, `packaging/fedora/*.spec`, `packaging/arch/PKGBUILD`)
 # e da matriz `smoke-multi-distro` do CI (`.github/workflows/ci.yml:796-811`),
 # que já declara os nomes de runtime de Fedora 40, Arch e Debian 12. Não são
-# palpite. A coluna do **zypper é INFERIDA** e está marcada como tal: o
-# repositório não tinha uma linha sobre openSUSE antes desta leva, então a
-# coluna existe para não abandonar quem está lá, mas nenhum teste de hardware
-# a sustenta ainda.
+# palpite: cada nome tem empacotamento ou contêiner de CI por trás.
+#
+# NOTA DATADA — 19/08/2026: o **openSUSE SAIU**, e a coluna `zypper` com ele.
+# A leva da manhã tinha acrescentado a família com nomes de pacote INFERIDOS em
+# 100% das linhas — o repositório não tem uma linha sequer sobre zypper — e sem
+# nenhum smoke que os conferisse. Prometer openSUSE assim é afirmação forte sem
+# teste que a sustente, e esta casa tem portão contra isso. É decisão dela,
+# tomada no mesmo dia, e fica registrada em vez de sair calada.
+#
+# Quem está no openSUSE cai no caminho de "família sem tratamento", que já
+# existe e já é honesto: o install DIZ o que falta, com o nome no Debian/Ubuntu
+# como referência, e SEGUE sem instalar nada — não aborta.
+#
+# O QUE O TRAZ DE VOLTA: um contêiner openSUSE na matriz `smoke-multi-distro`
+# do CI (`.github/workflows/ci.yml`), conferindo os nomes de pacote de verdade
+# numa máquina limpa. Com esse smoke verde, a coluna volta — medida, e não
+# inferida.
 _OS_RELEASE="${HEFESTO_OS_RELEASE:-/etc/os-release}"
 
 # Família do gerenciador de pacotes. `/etc/os-release` primeiro (é a fonte
@@ -403,13 +416,11 @@ _familia_pacotes() {
             debian|ubuntu|linuxmint|pop|raspbian|devuan)  printf 'apt\n';    return 0 ;;
             fedora|rhel|centos|almalinux|rocky|nobara)    printf 'dnf\n';    return 0 ;;
             arch|archlinux|manjaro|endeavouros|cachyos)   printf 'pacman\n'; return 0 ;;
-            opensuse*|suse|sles|sle)                      printf 'zypper\n'; return 0 ;;
         esac
     done
     command -v apt-get >/dev/null 2>&1 && { printf 'apt\n';    return 0; }
     command -v dnf     >/dev/null 2>&1 && { printf 'dnf\n';    return 0; }
     command -v pacman  >/dev/null 2>&1 && { printf 'pacman\n'; return 0; }
-    command -v zypper  >/dev/null 2>&1 && { printf 'zypper\n'; return 0; }
     printf 'nenhum\n'
 }
 
@@ -419,7 +430,7 @@ _familia_pacotes() {
 _pkg_nome() {
     local _canon="$1" _familia="${2:-}"
     [[ -z "${_familia}" ]] && _familia="$(_familia_pacotes)"
-    local _apt="" _dnf="" _pacman="" _zypper=""
+    local _apt="" _dnf="" _pacman=""
     case "${_canon}" in
         # --- OBRIGATÓRIAS -------------------------------------------------
         # A biblioteca que o backend do controle abre por dlopen. A wheel
@@ -427,102 +438,97 @@ _pkg_nome() {
         # sistema, `import hidapi` levanta OSError e nenhum aparelho sobe.
         hidapi)
             _apt="libhidapi-hidraw0"; _dnf="hidapi"
-            _pacman="hidapi";         _zypper="libhidapi-hidraw0" ;;
+            _pacman="hidapi" ;;
         # O loader SVG do gdk-pixbuf. ARMADILHA DE NOME: `librsvg2-bin` é o
         # `rsvg-convert`, ferramenta de BUILD; quem desenha na tela é o
         # `librsvg2-common`. Sem ele o ícone da bandeja some e todo glifo SVG
         # da interface cai junto (BUG-TRAY-ICONE-INVISIVEL-01, app/main.py).
         svg-loader)
             _apt="librsvg2-common";   _dnf="librsvg2"
-            _pacman="librsvg";        _zypper="gdk-pixbuf-loader-rsvg" ;;
+            _pacman="librsvg" ;;
         # O módulo venv. Só o Debian o separa do interpretador; nas outras
         # famílias ele vem no pacote do próprio Python (listado para que a
         # mensagem de erro nunca fique sem nome de pacote).
         python-venv)
             _apt="python3-venv";      _dnf="python3-libs"
-            _pacman="python";         _zypper="python3-base" ;;
+            _pacman="python" ;;
         # Compilar o que não tem wheel: python-uinput e evdev sempre saem do
         # sdist (BUG-CI-SMOKE-EVDEV-NO-GCC-01). Precisa de compilador,
         # `Python.h` e `linux/input.h`.
         toolchain-c)
             _apt="build-essential python3-dev linux-libc-dev"
             _dnf="gcc python3-devel kernel-headers"
-            _pacman="gcc linux-api-headers"
-            _zypper="gcc python3-devel linux-glibc-devel" ;;
+            _pacman="gcc linux-api-headers" ;;
         # --- GUI ----------------------------------------------------------
         python-gi)
             _apt="python3-gi";        _dnf="python3-gobject"
-            _pacman="python-gobject"; _zypper="python3-gobject" ;;
+            _pacman="python-gobject" ;;
         python-gi-cairo)
             _apt="python3-gi-cairo";  _dnf="python3-cairo"
-            _pacman="python-cairo";   _zypper="python3-gobject-cairo" ;;
+            _pacman="python-cairo" ;;
         gtk3)
             _apt="gir1.2-gtk-3.0";    _dnf="gtk3"
-            _pacman="gtk3";           _zypper="typelib-1_0-Gtk-3_0 gtk3" ;;
+            _pacman="gtk3" ;;
         appindicator)
             _apt="gir1.2-ayatanaappindicator3-0.1"
             _dnf="libayatana-appindicator-gtk3"
-            _pacman="libayatana-appindicator"
-            _zypper="typelib-1_0-AyatanaAppIndicator3-0_1" ;;
+            _pacman="libayatana-appindicator" ;;
         gi-dev)
             _apt="libgirepository1.0-dev libcairo2-dev"
             _dnf="gobject-introspection-devel cairo-devel"
-            _pacman="gobject-introspection cairo"
-            _zypper="gobject-introspection-devel cairo-devel" ;;
+            _pacman="gobject-introspection cairo" ;;
         desktop-utils)
             _apt="desktop-file-utils libgtk-3-bin"
             _dnf="desktop-file-utils gtk-update-icon-cache"
-            _pacman="desktop-file-utils gtk-update-icon-cache"
-            _zypper="desktop-file-utils gtk3-tools" ;;
+            _pacman="desktop-file-utils gtk-update-icon-cache" ;;
         imagemagick)
             _apt="imagemagick";       _dnf="ImageMagick"
-            _pacman="imagemagick";    _zypper="ImageMagick" ;;
+            _pacman="imagemagick" ;;
         # --- ÁUDIO / RÁDIO / DIAGNÓSTICO ----------------------------------
         opus)
             _apt="libopus0";          _dnf="opus"
-            _pacman="opus";           _zypper="libopus0" ;;
+            _pacman="opus" ;;
         pactl)
             _apt="pulseaudio-utils";  _dnf="pulseaudio-utils"
-            _pacman="libpulse";       _zypper="pulseaudio-utils" ;;
+            _pacman="libpulse" ;;
         bluez)
             _apt="bluez";             _dnf="bluez"
-            _pacman="bluez bluez-utils"; _zypper="bluez" ;;
-        # `bt-agent` (ONDA-R, cura do bond meio-salvo). Fedora e openSUSE não
-        # empacotam `bluez-tools` com esse nome — deixados VAZIOS de propósito:
-        # é melhor dizer "não tenho nome para isso aqui" do que instalar outra
-        # coisa. Escopo dela: se a cura vale só para Debian/Arch, é promessa do
+            _pacman="bluez bluez-utils" ;;
+        # `bt-agent` (ONDA-R, cura do bond meio-salvo). O Fedora não empacota
+        # `bluez-tools` com esse nome — deixado VAZIO de propósito: é melhor
+        # dizer "não tenho nome para isso aqui" do que instalar outra coisa.
+        # Escopo dela: se a cura vale só para Debian/Arch, é promessa do
         # produto que muda de valor conforme a distro.
         bt-agent)
             _apt="bluez-tools";       _dnf=""
-            _pacman="bluez-tools";    _zypper="" ;;
+            _pacman="bluez-tools" ;;
         wlrctl)
             _apt="wlrctl";            _dnf="wlrctl"
-            _pacman="wlrctl";         _zypper="" ;;
+            _pacman="wlrctl" ;;
         usbutils)
             _apt="usbutils";          _dnf="usbutils"
-            _pacman="usbutils";       _zypper="usbutils" ;;
+            _pacman="usbutils" ;;
         fontconfig)
             _apt="fontconfig";        _dnf="fontconfig"
-            _pacman="fontconfig";     _zypper="fontconfig" ;;
+            _pacman="fontconfig" ;;
         curl)
             _apt="curl";              _dnf="curl"
-            _pacman="curl";           _zypper="curl" ;;
+            _pacman="curl" ;;
         # --- DKMS ---------------------------------------------------------
         dkms)
             _apt="dkms";              _dnf="dkms"
-            _pacman="dkms";           _zypper="dkms" ;;
+            _pacman="dkms" ;;
         compilador)
             _apt="build-essential";   _dnf="gcc make"
-            _pacman="base-devel";     _zypper="gcc make" ;;
+            _pacman="base-devel" ;;
         kernel-headers)
             _apt="linux-headers-$(uname -r)"; _dnf="kernel-devel"
-            _pacman="linux-headers";          _zypper="kernel-devel" ;;
+            _pacman="linux-headers" ;;
     esac
     case "${_familia}" in
         apt)    printf '%s\n' "${_apt}" ;;
         dnf)    printf '%s\n' "${_dnf}" ;;
         pacman) printf '%s\n' "${_pacman}" ;;
-        zypper) printf '%s\n' "${_zypper}" ;;
         *)      printf '%s\n' "" ;;
     esac
 }
@@ -569,7 +575,6 @@ run_pkg() {
         apt)    run_apt "${_nomes[@]}" ;;
         dnf)    _run_pkg_quieto sudo dnf install -y "${_nomes[@]}" ;;
         pacman) _run_pkg_quieto sudo pacman -S --noconfirm --needed "${_nomes[@]}" ;;
-        zypper) _run_pkg_quieto sudo zypper --non-interactive install "${_nomes[@]}" ;;
         *)      warn "sem gerenciador de pacotes conhecido — não instalei ${*}"; return 1 ;;
     esac
 }
@@ -589,7 +594,6 @@ comando_manual_pkg() {
         apt)    printf 'sudo apt install %s\n' "${_lista}" ;;
         dnf)    printf 'sudo dnf install %s\n' "${_lista}" ;;
         pacman) printf 'sudo pacman -S %s\n' "${_lista}" ;;
-        zypper) printf 'sudo zypper install %s\n' "${_lista}" ;;
         *)      printf 'instale pela sua distro o equivalente a: %s\n' "${_lista}" ;;
     esac
 }
@@ -611,7 +615,7 @@ comando_manual_pkg() {
 # `dpkg` são do build. Instalar isso na máquina de quem joga seria cobrar um
 # preço por nada.
 _DEPS_DE_SISTEMA=(
-    "hidapi|obrigatoria|lib:libhidapi|o backend do controle não abre NENHUM aparelho (o pydualsense faz dlopen da libhidapi; a wheel do pip não traz o .so)"
+    "hidapi|obrigatoria|lib:libhidapi-hidraw.so.0,libhidapi-libusb.so.0|o backend do controle não abre NENHUM aparelho (o pydualsense faz dlopen da libhidapi; a wheel do pip não traz o .so)"
     "svg-loader|obrigatoria|svg|o ícone da bandeja some e todo glifo SVG da interface cai junto"
     "toolchain-c|importante|toolchain|as extensões sem wheel (python-uinput, evdev) não compilam e o passo 2 pode abortar"
     "appindicator|importante|appindicator|a bandeja não nasce: a janela abre, o ícone ao lado do relógio não"
@@ -655,11 +659,23 @@ _dep_presente() {
             # O `ldconfig` fica como PLANO B, com caminho absoluto, para o caso
             # de o venv ainda não existir quando alguém chamar isto de outro
             # ponto do arquivo.
-            local _so="${_checagem#lib:}"
+            # LISTA separada por vírgula, e ela não é conveniência: o wrapper
+            # `hidapi.py` do pip percorre `libhidapi-hidraw.so[.0]`,
+            # `libhidapi-libusb.so[.0]` e outros até um abrir (hidapi.py:136-144).
+            # A régua tem de aceitar as mesmas alternativas, senão reprova numa
+            # máquina em que o produto funcionaria.
+            local _sos="${_checagem#lib:}" _so
+            # shellcheck disable=SC2086  # a lista separada por vírgula é o objetivo
+            for _so in ${_sos//,/ }; do
+                if [[ -x "${VENV_DIR}/bin/python" ]]; then
+                    "${VENV_DIR}/bin/python" -c \
+                        "import ctypes,sys; sys.exit(0 if ctypes.CDLL('${_so}') else 1)" \
+                        >/dev/null 2>&1 && return 0
+                    continue
+                fi
+                break
+            done
             if [[ -x "${VENV_DIR}/bin/python" ]]; then
-                "${VENV_DIR}/bin/python" -c \
-                    "import ctypes,sys; sys.exit(0 if ctypes.CDLL('${_so}') else 1)" \
-                    >/dev/null 2>&1 && return 0
                 return 1
             fi
             local _ldconfig=""
@@ -1382,9 +1398,9 @@ _reconhecimento() {
 
     # 1. Família da distro. DEPS-UNIVERSAIS-01 (19/08/2026) substituiu o texto
     # que estava aqui: ele dizia "o caminho nativo instala dependências só por
-    # apt", e isso caducou — o `run_pkg` despacha para apt, dnf, pacman e
-    # zypper. Fato errado se SUBSTITUI. O que sobra de aviso é honesto: fora do
-    # apt, os nomes de pacote não têm hardware desta casa por trás.
+    # apt", e isso caducou — o `run_pkg` despacha para apt, dnf e pacman. Fato
+    # errado se SUBSTITUI. O que sobra de aviso é honesto: fora do apt, os
+    # nomes de pacote não têm hardware desta casa por trás.
     local _fam
     _fam="$(_familia_pacotes)"
     if [[ "${_fam}" == "nenhum" ]]; then
@@ -1403,7 +1419,18 @@ _reconhecimento() {
 
     # 2. BlueZ. A faixa validada é a mesma que o doctor cobra no fim.
     local _bz
-    _bz="$(bluetoothctl --version 2>/dev/null | awk '{print $NF}')"
+    # `|| true` NÃO é decoração, e a falta dele foi MEDIDA em 19/08/2026 num
+    # contêiner debian:12 limpo: sem `bluetoothctl` no PATH o `command not
+    # found` devolve 127, o `set -o pipefail` da linha 188 propaga, o `set -e`
+    # derruba o script — e o `2>/dev/null` engole até a mensagem. O instalador
+    # morria calado, com código 127, ANTES do passo 1 de 11.
+    #
+    # E isso contradizia o desenho do próprio arquivo: o censo de dependências
+    # lista `bluez` como IMPORTANTE, não obrigatória — ou seja, o instalador
+    # deve seguir sem ele e só avisar. Quem descobriu foi o job novo que EXECUTA
+    # o install.sh em contêiner; nenhuma máquina de quem desenvolve pega isto,
+    # porque todas têm bluetoothctl.
+    _bz="$(bluetoothctl --version 2>/dev/null | awk '{print $NF}' || true)"
     if [[ -n "${_bz}" ]]; then
         # Compara só major.minor; o formato do bluetoothctl é "bluetoothctl: 5.86".
         if [[ "$(printf '%s\n5.79\n' "${_bz}" | sort -V | head -1)" != "5.79" ]]; then
@@ -1706,7 +1733,7 @@ _garantir_deps_de_sistema
 # Best-effort: sem isso o hefesto inteiro funciona, só o `mic bt` não sobe —
 # e ele já diz exatamente o que falta (`mic bt-status`).
 # DEPS-UNIVERSAIS-01: nomes canônicos, para o mic por BT nascer também em
-# Fedora, Arch e openSUSE — antes este bloco só sabia falar apt.
+# Fedora e em Arch — antes este bloco só sabia falar apt.
 # A checagem da libopus passou a ser a mesma régua do censo (`_dep_presente`)
 # por um defeito MEDIDO em 19/08/2026: o `ldconfig -p | grep -q` que morava
 # aqui devolvia 141 sob `pipefail` (SIGPIPE do ldconfig quando o grep sai no
@@ -1917,6 +1944,24 @@ fi
 # comentário sustentava o gate dizendo que "é o que o CI sem hardware usa:
 # separar o gate faria o CI reescrever /etc/bluetooth/main.conf da máquina de
 # build". MEDIDO que a premissa não existe: **o CI não roda o `install.sh`**.
+#
+# SEGUNDA NOTA DATADA — O FATO DE 06/08 CADUCOU EM 19/08/2026, e a decisão NÃO.
+# Desde 19/08 o CI roda, sim, o `install.sh`: o job `install-multi-distro` do
+# `ci.yml` o executa DE VERDADE dentro dos contêineres de Fedora 40, Arch e
+# Debian 12, como USUÁRIA COMUM (o PATH de login dela, nunca o do root).
+#
+# O que NÃO mudou é o que sustenta este gate: ele se sustenta no CONTRATO
+# documentado — `--no-udev` pula os passos que tocam `/etc`, e este escreve em
+# `/etc/bluetooth/main.conf`. A justificativa antiga — a que falava em reescrever
+# o `main.conf` da máquina onde o CI constrói — continua falsa e continua
+# proibida por portão; a premissa de 06/08 é que envelheceu, e envelheceu porque
+# o produto melhorou.
+#
+# E o job novo pagou por si no primeiro uso: achou DOIS bloqueantes vivos que
+# nenhuma máquina de quem desenvolve pegava — o `bluetoothctl --version` sem
+# guarda, que matava o instalador com 127 antes do passo 1 de 11 em qualquer
+# máquina sem BlueZ; e um soname que o `dlopen` nunca abre. Os dois estão
+# curados neste arquivo, com teste que morde.
 #
 # E A INSTRUÇÃO DE REPRODUÇÃO DESTA NOTA ESTAVA ERRADA (correção do mesmo dia,
 # achado por verificação independente): ela mandava rodar
@@ -2382,8 +2427,8 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
     else
         if ! command -v bt-agent >/dev/null 2>&1; then
             printf '      bluez-tools ausente (fornece bt-agent) — instalando (sudo)\n'
-            # DEPS-UNIVERSAIS-01: nome canônico. Em Fedora e openSUSE a tabela
-            # está VAZIA de propósito (não há `bluez-tools` com esse nome), e o
+            # DEPS-UNIVERSAIS-01: nome canônico. No Fedora a tabela está
+            # VAZIA de propósito (não há `bluez-tools` com esse nome), e o
             # `run_pkg` diz isso em voz alta em vez de instalar outra coisa.
             if run_pkg bt-agent; then
                 printf '      bluez-tools instalado\n'

@@ -2484,6 +2484,84 @@ _dbus_bt_prop() {
         | sed -e 's/^[a-z]* //' -e 's/^"//' -e 's/"$//' || true
 }
 
+# MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026) — `hciconfig`, `hcitool` e
+# `sdptool` foram DEPRECIADOS pela upstream do BlueZ, e cada família de distro
+# os mudou de pacote (`bluez-deprecated`, `bluez-deprecated-tools`). Em quem não
+# os tem, o `command -v` falhava e o check inteiro SUMIA da saída: a conferência
+# saía verde sem ter medido nada. Mentir por omissão é pior que não medir.
+#
+# A ordem, daqui em diante, é sempre a mesma:
+#   1. fonte VIVA  — sysfs (kernel) e D-Bus do BlueZ (a regra do WATCHDOG-FP-01
+#      já mandava consulta de estado BT sair do D-Bus, porque o `bluetoothctl`
+#      one-shot do 5.86 é mudo nesta casa — COMPAT BLUEZ-586-CTL-01);
+#   2. `btmgmt`    — a ferramenta que a upstream indica no lugar das três;
+#   3. depreciada  — plano B, para não perder leitura em quem AINDA a tem;
+#   4. e quando NENHUMA responde, o doctor DIZ que não sabe.
+#
+# O que NÃO tem sucessor vivo (conferido nos `--help` do bluez 5.86 desta casa,
+# 19/08/2026 — nem `btmgmt` nem `bluetoothctl` têm comando equivalente):
+#   - contadores RX/TX errors do adaptador (só o ioctl HCIGETDEVINFO os entrega,
+#     e só o `hciconfig` o chama);
+#   - link policy, do adaptador (`hciconfig lp`) e da conexão (`hcitool lp`);
+#   - browse SDP sob demanda num device (`sdptool browse`).
+# Onde essas três aparecem, o código diz "não sei" em vez de inventar.
+
+# Adaptadores HCI, um por linha ("hci0"). Fonte viva: /sys/class/bluetooth, que
+# é o kernel e não depende de pacote nenhum. O filtro `^hci[0-9]+$` existe
+# porque ali também nascem as entradas de CONEXÃO, no formato "hci0:256".
+_bt_adaptadores() {
+    local p nome achou=0 lista
+    for p in /sys/class/bluetooth/hci*; do
+        [[ -e "${p}" ]] || continue
+        nome="${p##*/}"
+        [[ "${nome}" =~ ^hci[0-9]+$ ]] || continue
+        printf '%s\n' "${nome}"
+        achou=1
+    done
+    [[ "${achou}" -eq 1 ]] && return 0
+    if command -v busctl >/dev/null 2>&1; then
+        lista="$(busctl tree org.bluez --list 2>/dev/null \
+            | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u || true)"
+        if [[ -n "${lista}" ]]; then
+            printf '%s\n' "${lista}"
+            return 0
+        fi
+    fi
+    command -v hciconfig >/dev/null 2>&1 || return 0
+    hciconfig 2>/dev/null | awk -F: '/^hci/{print $1}' || true
+}
+
+# MACs com ACL de pé, um por linha, MAIÚSCULAS com ':'. Substitui o `hcitool
+# con`. Fonte viva: o D-Bus do BlueZ (Device1.Connected). Plano B: `btmgmt con`
+# (precisa de CAP_NET_ADMIN — daqui, sem root, costuma vir vazio). Plano C: o
+# `hcitool con` depreciado, que ainda responde mesmo com o bluetoothd parado.
+_bt_macs_conectados() {
+    local p mac saida="" achou=0
+    if command -v busctl >/dev/null 2>&1; then
+        while IFS= read -r p; do
+            [[ -z "${p}" ]] && continue
+            [[ "$(_dbus_bt_prop "${p}" org.bluez.Device1 Connected)" == "true" ]] || continue
+            mac="${p##*/dev_}"
+            printf '%s\n' "${mac//_/:}"
+            achou=1
+        done <<<"$(_dbus_bt_device_paths)"
+        [[ "${achou}" -eq 1 ]] && return 0
+    fi
+    if command -v btmgmt >/dev/null 2>&1; then
+        saida="$(btmgmt con 2>/dev/null \
+            | grep -oE '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || true)"
+        if [[ -n "${saida}" ]]; then
+            printf '%s\n' "${saida^^}"
+            return 0
+        fi
+    fi
+    command -v hcitool >/dev/null 2>&1 || return 0
+    saida="$(hcitool con 2>/dev/null \
+        | grep -oE '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || true)"
+    [[ -n "${saida}" ]] && printf '%s\n' "${saida^^}"
+    return 0
+}
+
 check_bt_clone_ds4() {
     command -v busctl >/dev/null 2>&1 || { info "busctl ausente — pulo a caça ao clone DS4"; return; }
     local paths p mac modalias clone=0
@@ -2558,14 +2636,32 @@ check_bt_radio() {
         fi
     fi
     # Contadores do adaptador (proxy não-intrusivo de rádio sujo — sem btmon).
-    if command -v hciconfig >/dev/null 2>&1; then
+    #
+    # LEITURA SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026):
+    # esses números são o `hci_dev_stats` do kernel, e o kernel só os entrega
+    # pelo ioctl HCIGETDEVINFO — que é exatamente o que o `hciconfig` faz. Nem
+    # `btmgmt` nem `bluetoothctl` do 5.86 têm comando que devolva contador de
+    # erro (conferido nos dois `--help` em 19/08/2026). Onde a ferramenta
+    # depreciada não existe, esta medida SE PERDE — e o doctor tem de dizer
+    # isso. Antes ele calava, e a seção inteira sumia da saída: quem lia via uma
+    # conferência sem avisos e concluía "rádio limpo".
+    #
+    # O adaptador também deixou de ser 'hci0' na unha (WATCHDOG-HCI-HARDCODE-01:
+    # hci1 já aconteceu nesta máquina, e ali o check virava no-op mudo).
+    local _adp
+    _adp="$(_bt_adaptadores | head -1)"
+    if [[ -z "${_adp}" ]]; then
+        info "nenhum adaptador Bluetooth no sistema — sem contadores de rádio para ler"
+    elif command -v hciconfig >/dev/null 2>&1; then
         local errs
-        errs="$(hciconfig hci0 2>/dev/null | grep -oE 'errors:[0-9]+' | grep -oE '[0-9]+' | paste -sd/ -)"
+        errs="$(hciconfig "${_adp}" 2>/dev/null | grep -oE 'errors:[0-9]+' | grep -oE '[0-9]+' | paste -sd/ -)"
         if [[ -n "${errs}" && "${errs}" != "0/0" ]]; then
             warn "adaptador BT com erros acumulados (RX/TX: ${errs}) — rádio sujo; veja as linhas [BT-ERR] no kernel.log e os conselhos de posicionamento acima"
         elif [[ -n "${errs}" ]]; then
             pass "adaptador BT sem erros de RX/TX (0/0)"
         fi
+    else
+        info "NÃO SEI se o rádio acumulou erros de RX/TX em ${_adp}: esses contadores só saem do 'hciconfig' (ioctl HCIGETDEVINFO), que o BlueZ depreciou e sua distribuição moveu de pacote — instale bluez-deprecated (ou bluez-deprecated-tools) se quiser esta medida de volta. Nem btmgmt nem bluetoothctl a substituem, e as linhas [BT-ERR] do kernel-watch dependem da mesma fonte"
     fi
     # IdleTimeout do input.conf: default 0 = nunca desconecta por ociosidade
     # (já é o máximo). Valor > 0 = regressão de terceiro.
@@ -2638,6 +2734,16 @@ check_kernel_watch() {
     fi
     if [[ "${n_bterr}" -gt 0 ]]; then
         warn "o rádio BT acumulou erros em ${n_bterr} janela(s) [BT-ERR] — rádio sujo; ver os conselhos de posicionamento acima"
+    fi
+    # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026): [BT-ERR] só nasce se o
+    # kernel-watch conseguiu LER os contadores, e a única fonte deles é o
+    # `hciconfig` depreciado. Sem ele o log fica sem [BT-ERR] para sempre — e
+    # zero [BT-ERR] é indistinguível de "rádio limpo". O kernel-watch passou a
+    # marcar isso com [BT-SEM-CONTADOR]; aqui a marca vira frase.
+    local n_semcontador
+    n_semcontador="$(grep -cF '[BT-SEM-CONTADOR]' "${log}" 2>/dev/null || true)"
+    if [[ "${n_semcontador:-0}" -gt 0 ]]; then
+        info "o kernel-watch NÃO está medindo os erros do rádio ([BT-SEM-CONTADOR]) — o 'hciconfig' foi depreciado pelo BlueZ e não está aqui, e nenhuma ferramenta viva devolve esses contadores. Não leia 'BT-ERR=0' acima como rádio limpo: é ausência de medida, não medida de ausência. Para recuperá-la, instale bluez-deprecated (ou bluez-deprecated-tools)"
     fi
 }
 
@@ -2818,30 +2924,50 @@ check_bt_resilience() {
     #   - o alias começa com "Nintendo";
     #   - o adaptador MANTÉM o SNIFF (o clone precisa dele);
     #   - o Pro genuíno conectado, se houver, está com no-sniff na SUA conexão.
-    if command -v hciconfig >/dev/null 2>&1; then
-        local _hci _lp _alias _pro_mac _pro_lp
-        _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}')"
-        if [[ -n "${_hci}" ]]; then
+    #
+    # LEITURA SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026): a
+    # link policy — a do adaptador (`hciconfig lp`) e a da conexão (`hcitool
+    # lp`) — não tem equivalente nas ferramentas vivas. A mgmt API do BlueZ não
+    # expõe link policy, e por isso nem `btmgmt` nem `bluetoothctl` do 5.86 têm
+    # comando para lê-la (conferido nos dois `--help` em 19/08/2026). O que
+    # migrou aqui foi o resto da pergunta: QUAL é o adaptador (sysfs) e QUEM
+    # está conectado (D-Bus). O SNIFF, sem as depreciadas, o doctor diz que não
+    # sabe — antes ele calava e a linha inteira sumia da conferência.
+    local _hci _lp _alias _pro_mac _pro_lp
+    _hci="$(_bt_adaptadores | head -1)"
+    if [[ -n "${_hci}" ]]; then
+        _alias="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
+        if command -v hciconfig >/dev/null 2>&1; then
             _lp="$(hciconfig "${_hci}" lp 2>/dev/null | grep -o 'SNIFF' || true)"
-            _alias="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
-            # Pro Nintendo genuíno conectado (OUI E0:F6:B5) — se houver, checa a
-            # policy DELE (deve ser sem SNIFF).
-            _pro_lp="ausente"
+        else
+            _lp="?"
+        fi
+        # Pro Nintendo genuíno conectado (OUI E0:F6:B5) — se houver, checa a
+        # policy DELE (deve ser sem SNIFF). Quem está conectado agora sai do
+        # D-Bus; só a POLICY dele ainda depende do `hcitool`.
+        _pro_lp="ausente"
+        _pro_mac="$(_bt_macs_conectados | grep -oiE 'E0:F6:B5(:[0-9A-F]{2}){3}' | head -1 || true)"
+        if [[ -n "${_pro_mac}" ]]; then
             if command -v hcitool >/dev/null 2>&1; then
-                _pro_mac="$(hcitool con 2>/dev/null | grep -oiE 'E0:F6:B5(:[0-9A-F]{2}){3}' | head -1 || true)"
-                if [[ -n "${_pro_mac}" ]]; then
-                    _pro_lp="$(hcitool lp "${_pro_mac}" 2>/dev/null | grep -o 'SNIFF' || echo 'sem-sniff')"
-                fi
-            fi
-            if [[ -n "${_lp}" && "${_alias}" == Nintendo* ]]; then
-                if [[ "${_pro_lp}" == "SNIFF" ]]; then
-                    warn "modo ativo p/ Nintendo: alias e SNIFF do adaptador OK, mas o Pro genuíno conectado está COM sniff (deveria ser sem). Reaplique: sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
-                else
-                    pass "modo ativo p/ Nintendo (nome '${_alias}' + SNIFF no adaptador p/ o 8BitDo probar + no-sniff só no Pro genuíno — BT-SNIFF-PER-OUI-01)"
-                fi
+                _pro_lp="$(hcitool lp "${_pro_mac}" 2>/dev/null | grep -o 'SNIFF' || echo 'sem-sniff')"
             else
-                warn "modo ativo p/ Nintendo incompleto (alias='${_alias:-?}', SNIFF-adaptador=${_lp:-AUSENTE}); o adaptador deve MANTER o SNIFF (o 8BitDo precisa) — reaplique: sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
+                _pro_lp="?"
             fi
+        fi
+        if [[ "${_lp}" == "?" || "${_pro_lp}" == "?" ]]; then
+            if [[ "${_alias}" == Nintendo* ]]; then
+                warn "modo ativo p/ Nintendo pela METADE do que dá para conferir: o nome do adaptador está certo ('${_alias}'), mas NÃO SEI dizer o estado do SNIFF (nem do adaptador, nem do Pro genuíno) — a link policy só sai de 'hciconfig lp'/'hcitool lp', que o BlueZ depreciou e não estão nesta máquina, e a mgmt API (btmgmt/bluetoothctl) não a expõe. Instale bluez-deprecated (ou bluez-deprecated-tools) para esta conferência voltar"
+            else
+                warn "modo ativo p/ Nintendo incompleto (alias='${_alias:-?}') e SEM COMO conferir o SNIFF nesta máquina (hciconfig/hcitool depreciados e ausentes; btmgmt/bluetoothctl não leem link policy) — reaplique: sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
+            fi
+        elif [[ -n "${_lp}" && "${_alias}" == Nintendo* ]]; then
+            if [[ "${_pro_lp}" == "SNIFF" ]]; then
+                warn "modo ativo p/ Nintendo: alias e SNIFF do adaptador OK, mas o Pro genuíno conectado está COM sniff (deveria ser sem). Reaplique: sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
+            else
+                pass "modo ativo p/ Nintendo (nome '${_alias}' + SNIFF no adaptador p/ o 8BitDo probar + no-sniff só no Pro genuíno — BT-SNIFF-PER-OUI-01)"
+            fi
+        else
+            warn "modo ativo p/ Nintendo incompleto (alias='${_alias:-?}', SNIFF-adaptador=${_lp:-AUSENTE}); o adaptador deve MANTER o SNIFF (o 8BitDo precisa) — reaplique: sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
         fi
     fi
 }
@@ -2904,7 +3030,20 @@ check_bt_sdp_cache_envenenado() {
         sudo -n test -f "${cache}" 2>/dev/null || continue
         sudo -n grep -q '^\[ServiceRecords\]' "${cache}" 2>/dev/null && continue
         achou=1
-        fail "cache SDP de ${mac} SEM [ServiceRecords] — o perfil HID não sobe (controle 'Conectado' e sem input). Primeiro confira QUAL das duas causas é: 'sudo sdptool browse ${mac}' — se responder em <1 s, é só a direção da conexão e o watchdog cura sozinho no próximo tick (Connect() pelo host, sem desparear); se ESTOURAR o timeout, o stack do controle travou e nem re-parear resolve: reset de hardware do controle (furinho atrás, ~5 s com um clipe)"
+        # LEITURA SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026):
+        # o `sdptool browse` é o único jeito de perguntar SDP DIRETO ao controle
+        # sob demanda; `btmgmt`/`bluetoothctl` do 5.86 não têm equivalente
+        # (`btmgmt find-service` é varredura por UUID, não browse de um device
+        # já conectado). Sem ele o conselho muda: em vez de mandar a humana
+        # rodar um comando que não existe na máquina dela, o doctor assume o
+        # que não sabe e dá o caminho barato primeiro.
+        local _como_distinguir
+        if command -v sdptool >/dev/null 2>&1; then
+            _como_distinguir="Primeiro confira QUAL das duas causas é: 'sudo sdptool browse ${mac}' — se responder em <1 s, é só a direção da conexão e o watchdog cura sozinho no próximo tick (Connect() pelo host, sem desparear); se ESTOURAR o timeout, o stack do controle travou e nem re-parear resolve: reset de hardware do controle (furinho atrás, ~5 s com um clipe)"
+        else
+            _como_distinguir="NÃO DÁ para distinguir as duas causas nesta máquina: o browse SDP sob demanda só existia no 'sdptool', que o BlueZ depreciou e não está instalado aqui (pacote bluez-deprecated / bluez-deprecated-tools), e btmgmt/bluetoothctl não o substituem. Faça o barato primeiro: o watchdog tenta Connect() a cada 2 min — se em dois ticks o [ServiceRecords] não aparecer, trate como stack do controle travado (nem re-parear resolve): reset de hardware do controle (furinho atrás, ~5 s com um clipe)"
+        fi
+        fail "cache SDP de ${mac} SEM [ServiceRecords] — o perfil HID não sobe (controle 'Conectado' e sem input). ${_como_distinguir}"
     done < <(sudo -n find /var/lib/bluetooth -mindepth 3 -maxdepth 3 -type f -name info 2>/dev/null | sort)
     [[ "${achou}" -eq 0 ]] && pass "cache SDP íntegro em todos os controles com bond (todos têm [ServiceRecords])"
 }

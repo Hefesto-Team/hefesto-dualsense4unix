@@ -18,7 +18,7 @@ Política (V2-4 + V3-2 + FEAT-HOTKEY-STEAM-01):
   - PS solo (FEAT-HOTKEY-STEAM-01): se PS é pressionado e solto sem
     combo em `buffer_ms`, dispara `on_ps_solo` (default: abrir/focar
     Steam). Detecção: após o release do PS sem combo ter disparado.
-  - PS + seta direita (FEAT-HOTKEY-PONTE-CYCLE-01): próxima PONTE — a
+  - PS + R3 (FEAT-HOTKEY-PONTE-CYCLE-01): próxima PONTE — a
     forma como o jogo enxerga o controle. Ver
     `daemon/subsystems/hotkey.py:build_next_bridge_callback` para o que o
     gesto pode e o que NÃO pode prometer.
@@ -27,10 +27,10 @@ Vocabulário completo dos gestos:
     PS sozinho          abre/foca a Steam (buffer de 150 ms)
     PS + cima           perfil seguinte
     PS + baixo          perfil anterior
-    PS + direita        próxima ponte
+    PS + R3             próxima ponte
     PS + Options        modo jogo
     PS segurado         desligado por padrão (disparava modo-jogo acidental)
-`dpad_left` segue livre.
+`dpad_left` e `dpad_right` seguem livres.
 
 Sem hardware físico nesta sprint: manager consome payload genérico
 `{"buttons": set[str]}` oriundo do event bus, facilitando testes.
@@ -66,9 +66,25 @@ DEFAULT_PS_LONG_PRESS_MS = 0
 DEFAULT_COMBO_GAMEMODE = ("ps", "options")
 # FEAT-HOTKEY-PONTE-CYCLE-01: combo que pede a PRÓXIMA PONTE — a forma como o
 # jogo enxerga o controle (máscara DualSense, máscara Xbox, mouse+teclado).
-# Default PS+seta direita: o par cima/baixo já é o ciclo de PERFIL e as setas
-# esquerda/direita estavam livres. Tupla vazia desliga o gesto.
-DEFAULT_COMBO_PONTE = ("ps", "dpad_right")
+# Tupla vazia desliga o gesto.
+#
+# Default PS+R3 desde 19/08/2026, por pedido dela: *"ao invés de apertarmos 4
+# vezes o botão ps, deveriamos mudar pra ser segurar o botão ps e o start faz
+# ele pular de modo de sincronização"* — e a correção dela em seguida, porque
+# `PS + Options` já é o modo jogo (`DEFAULT_COMBO_GAMEMODE`), então o par é o
+# R3. SUBSTITUI o `PS + seta direita` de 18/08: era um default escolhido por
+# estar LIVRE, e o clique do analógico direito é gesto de polegar que a mão já
+# está segurando, sem tirar o dedo de lugar nenhum.
+#
+# Por que o R3 cabe: ele existe no mapa de botões do evdev
+# (`core/evdev_reader.py`, `BTN_THUMBR`) e nenhum outro combo o usa. Ele TEM
+# outros donos fora do combo — clique do meio na emulação de mouse
+# (`integrations/uinput_mouse.py`) e fechar o teclado virtual
+# (`core/keyboard_mappings.py`) —, e é o latch de combo
+# (FEAT-HOTKEY-COMBO-NO-LEAK-02) que impede o gesto de vazar para eles: o
+# membro fica bloqueado até TODOS serem soltos, não só enquanto o PS está
+# pressionado.
+DEFAULT_COMBO_PONTE = ("ps", "r3")
 
 
 @dataclass

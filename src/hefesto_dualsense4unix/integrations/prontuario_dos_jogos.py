@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -98,10 +99,25 @@ except ImportError:  # pragma: no cover - executado como script avulso
         steam_input_allowlist_path,
     )
 
-#: Os três vereditos. Ver o cabeçalho: nenhum deles é "funciona".
+#: Os vereditos. Ver o cabeçalho: nenhum deles é "funciona".
 IMPEDIDO = "impedido"
 SEM_IMPEDIMENTO = "sem_impedimento_conhecido"
 NAO_SEI = "nao_sei"
+
+#: O QUARTO veredito (PONTE-CONFIRMADA-01, 19/08/2026), e o único que se apoia
+#: em algo que NÃO foi lido do disco: alguém confirmou, com o jogo aberto, que
+#: esta combinação de ponte pegou aqui — o gesto dela no controle, ou a escolha
+#: direta na aba de perfil.
+#:
+#: **Ele não é "funciona", e a diferença não é retórica.** Vale para UMA
+#: combinação, a carimbada; trocar a máscara ou mexer na lista de exceções
+#: devolve o jogo ao `IMPEDIDO` por `PONTE_DIVERGENTE`, e qualquer estorvo
+#: vence o carimbo (um jogo carimbado e sem wrapper continua impedido, porque a
+#: ponte que funcionou não está de pé). O `SEM_IMPEDIMENTO` segue intacto e
+#: segue não prometendo nada — este veredito não o afrouxa, ele tira do balde
+#: da ausência-de-motivo os poucos jogos sobre os quais existe evidência
+#: POSITIVA, que é justamente a evidência que o disco nunca teve como dar.
+PONTE_CONFIRMADA = "ponte_confirmada"
 
 #: Os estorvos que o disco consegue NOMEAR. Cada um traz a cura junto — um
 #: diagnóstico sem cura ao lado só transfere o trabalho para ela.
@@ -109,6 +125,7 @@ SEM_WRAPPER = "sem_wrapper"
 LINHA_INTOCAVEL = "linha_intocavel"
 SEM_EXECUTAVEL = "sem_executavel"
 EXCECAO_INERTE = "excecao_inerte"
+PONTE_DIVERGENTE = "ponte_divergente"
 
 #: Texto de cada estorvo: (o que é, a cura, a cura é automática?).
 _ESTORVOS: dict[str, tuple[str, str, bool]] = {
@@ -143,6 +160,16 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
         "engole).",
         True,
     ),
+    PONTE_DIVERGENTE: (
+        "A ponte que já foi CONFIRMADA neste jogo não é a que está de pé hoje: "
+        "uma das duas usa o Steam Input e a outra não. O jogo está recebendo o "
+        "controle por um caminho diferente do que funcionou.",
+        "A decisão é sua, e são duas: repor a ponte confirmada (devolver o jogo "
+        "à sua lista de exceções, ou tirá-lo dela), ou confirmar a ponte de "
+        "hoje, se foi você que mudou de ideia. O Hefesto NÃO desfaz gesto seu "
+        "na lista — foi você que mexeu nela por último.",
+        False,
+    ),
 }
 
 #: `UseSteamControllerConfig` mora no bloco do jogo, dentro da árvore `apps`
@@ -159,6 +186,149 @@ _INFRAESTRUTURA_RE = re.compile(
     r"^(proton\b|steam linux runtime|steamworks common|steam controller configs)",
     re.IGNORECASE,
 )
+
+
+#: PONTE-CONFIRMADA-01 (19/08/2026) — onde o carimbo mora, lido com stdlib.
+#:
+#: A pasta de perfis, resolvida como `steam_input_allowlist_path` resolve a
+#: allowlist (o mesmo `XDG_CONFIG_HOME` que a GUI, o daemon e o shell usam),
+#: pela mesma razão dela: assim as três leituras apontam para o MESMO arquivo e
+#: os testes ficam herméticos.
+_PERFIS_RELPATH = "hefesto-dualsense4unix/profiles"
+
+#: `steam_app_<appid>` — a wm_class que o perfil de jogo declara.
+#:
+#: CÓPIA DELIBERADA de `profiles/steam_app.py`, pela MESMA razão escrita no
+#: `e_infraestrutura` logo abaixo: aquele módulo é do pacote e este arquivo tem
+#: de rodar como script solto no `python3` do sistema, sem venv e sem pydantic
+#: (o `doctor.sh` o chama assim). O que impede as duas de divergirem não é a
+#: disciplina de quem edita: é o portão `test_ponte_confirmada_01`, que compara
+#: as DUAS leituras sobre a mesma pasta de perfis e reprova se discordarem.
+_STEAM_APP_WC_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class Ponte:
+    """A ponte CONFIRMADA de um jogo, como o disco a guarda.
+
+    Gêmea de `profiles.schema.PonteConfirmada` — mesmos campos, mesmos nomes —
+    e a semelhança é o contrato: quem escreve é o esquema (pydantic, com
+    validação na borda); quem lê aqui é stdlib puro. A tupla é a mesma de
+    sempre: `(kind, gamepad_flavor, steam_input)`, mais o carimbo de quando e
+    de como foi confirmada.
+
+    Este módulo NÃO valida o que lê. Um perfil escrito à mão com lixo no campo
+    é problema do load do daemon, que o recusa com mensagem; aqui, um prontuário
+    que levantasse exceção por causa de um perfil torto deixaria a usuária sem
+    censo NENHUM — e o censo dos outros 17 jogos continua verdadeiro.
+    """
+
+    kind: str
+    gamepad_flavor: str | None = None
+    steam_input: bool = False
+    confirmada_em: str | None = None
+    confirmada_por: str | None = None
+
+    def como_dicionario(self) -> dict[str, object]:
+        return {
+            "kind": self.kind,
+            "gamepad_flavor": self.gamepad_flavor,
+            "steam_input": self.steam_input,
+            "confirmada_em": self.confirmada_em,
+            "confirmada_por": self.confirmada_por,
+        }
+
+
+def pasta_de_perfis(config_home: Path | None = None) -> Path:
+    """Onde os perfis moram, sem tocar no disco (gêmea da allowlist)."""
+    if config_home is not None:
+        base = config_home
+    else:
+        env = os.environ.get("XDG_CONFIG_HOME")
+        base = Path(env) if env else Path.home() / ".config"
+    return base / _PERFIS_RELPATH
+
+
+def pontes_confirmadas(config_home: Path | None = None) -> dict[str, Ponte]:
+    """`{appid: Ponte}` de tudo que já foi confirmado nos perfis do disco.
+
+    Só entram os perfis COM carimbo: perfil sem `ponte` é "ainda não sei", e
+    "ainda não sei" é a ausência da chave — nunca uma ponte vazia.
+
+    Empate (dois perfis nomeando o mesmo appid, que é real no disco dela:
+    `pragmata.json` e `pragmata2.json`) segue a MESMA regra do
+    `profiles.manager.perfil_do_appid`, e é o portão que segura as duas juntas:
+    vence quem tem carimbo; entre carimbados, a maior `priority`; e o `name`
+    do perfil desempata — o MESMO terceiro termo do gêmeo, e não o nome do
+    arquivo, que ordenaria diferente (o slug do arquivo é minúsculo e sem
+    acento) e faria as duas leituras discordarem em empate.
+    """
+    pasta = pasta_de_perfis(config_home)
+    try:
+        arquivos = sorted(pasta.glob("*.json"))
+    except OSError:  # pragma: no cover - pasta sumiu entre o listar e o ler
+        return {}
+    melhor: dict[str, tuple[int, str, Ponte]] = {}
+    for arquivo in arquivos:
+        try:
+            dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            # Perfil ilegível não pode derrubar o censo dos outros.
+            continue
+        if not isinstance(dados, dict):
+            continue
+        crua = dados.get("ponte")
+        if not isinstance(crua, dict) or not isinstance(crua.get("kind"), str):
+            continue
+        ponte = Ponte(
+            kind=str(crua.get("kind")),
+            gamepad_flavor=(
+                str(crua["gamepad_flavor"])
+                if isinstance(crua.get("gamepad_flavor"), str)
+                else None
+            ),
+            steam_input=bool(crua.get("steam_input")),
+            confirmada_em=(
+                str(crua["confirmada_em"])
+                if isinstance(crua.get("confirmada_em"), str)
+                else None
+            ),
+            confirmada_por=(
+                str(crua["confirmada_por"])
+                if isinstance(crua.get("confirmada_por"), str)
+                else None
+            ),
+        )
+        prioridade = dados.get("priority")
+        peso = (
+            prioridade
+            if isinstance(prioridade, int) and not isinstance(prioridade, bool)
+            else 0
+        )
+        nome = dados.get("name") if isinstance(dados.get("name"), str) else arquivo.stem
+        for appid in _appids_do_perfil(dados):
+            atual = melhor.get(appid)
+            if atual is None or (peso, str(nome)) > (atual[0], atual[1]):
+                melhor[appid] = (peso, str(nome), ponte)
+    return {appid: item[2] for appid, item in melhor.items()}
+
+
+def _appids_do_perfil(dados: dict[str, object]) -> set[str]:
+    """Os appids que o `match` deste perfil declara (gêmeo do manager)."""
+    match = dados.get("match")
+    if not isinstance(match, dict) or match.get("type") != "criteria":
+        return set()
+    classes = match.get("window_class")
+    if not isinstance(classes, list):
+        return set()
+    achados: set[str] = set()
+    for item in classes:
+        if not isinstance(item, str):
+            continue
+        casou = _STEAM_APP_WC_RE.match(item.strip())
+        if casou is not None:
+            achados.add(casou.group(1))
+    return achados
 
 
 @dataclass(frozen=True)
@@ -199,6 +369,10 @@ class Prontuario:
     steam_input_global: str | None = None
     #: Está no `steam_input_apps.txt` (o opt-in dela)?
     na_allowlist: bool = False
+    #: PONTE-CONFIRMADA-01: a ponte já confirmada NESTE jogo, do perfil dele.
+    #: `None` = **ainda não sei** — nunca "não funciona". É a distinção entre
+    #: "nunca tentei" e "tentei e funciona", e é o que faz a escada parar.
+    ponte: Ponte | None = None
 
     # -- os fatos derivados, cada um com um nome que diz o que ele é --------
 
@@ -235,6 +409,30 @@ class Prontuario:
         return self.api is Veredito.INDECISO
 
     @property
+    def ponte_confirmada(self) -> bool:
+        """Alguém já confirmou uma ponte NESTE jogo?
+
+        É a única pergunta que este módulo responde com um booleano, e ela NÃO
+        é "funciona": é "existe carimbo". O carimbo diz que a combinação já
+        pegou uma vez, na máquina dela, com o jogo aberto — que é evidência de
+        outra natureza que tudo o mais aqui, todo lido do disco.
+        """
+        return self.ponte is not None
+
+    @property
+    def ponte_divergente(self) -> bool:
+        """A ponte de hoje contradiz a que foi confirmada?
+
+        O prontuário só enxerga UM dos três termos da ponte — o Steam Input,
+        que mora no disco (a allowlist). Os outros dois (`kind` e
+        `gamepad_flavor`) são do daemon VIVO e mudam sem tocar em arquivo
+        nenhum; afirmar sobre eles a partir daqui seria inventar, que é
+        exatamente o que este módulo existe para não fazer. Então a divergência
+        que ele NOMEIA é a que ele MEDE, e só ela.
+        """
+        return self.ponte is not None and bool(self.ponte.steam_input) != self.na_allowlist
+
+    @property
     def estorvos(self) -> list[Estorvo]:
         """Tudo que o disco consegue nomear como impedimento, em ordem de peso."""
         achados: list[Estorvo] = []
@@ -259,12 +457,46 @@ class Prontuario:
             achados.append(Estorvo(EXCECAO_INERTE))
         if self.raiz is not None and (self.evidencia is None or not self.evidencia.executavel):
             achados.append(Estorvo(SEM_EXECUTAVEL))
+        if self.ponte_divergente:
+            achados.append(Estorvo(PONTE_DIVERGENTE))
         return achados
 
     @property
     def veredito(self) -> str:
+        """O veredito, com a ponte confirmada DENTRO dele — e nada afrouxado.
+
+        PONTE-CONFIRMADA-01 (19/08/2026). O carimbo entra pelos dois lados que
+        ele de fato sustenta, e por nenhum terceiro:
+
+        - contra o jogo, quando a ponte de hoje CONTRADIZ a confirmada: isso é
+          um impedimento nomeado, com a cura ao lado, como qualquer outro;
+        - a favor, num balde PRÓPRIO: `PONTE_CONFIRMADA`, que diz "esta
+          combinação já pegou aqui" — um fato de natureza diferente de tudo o
+          mais neste módulo, porque não foi lido do disco: foi confirmado com o
+          jogo aberto, na máquina dela.
+
+        O que ele NÃO faz, e a recusa é decisão medida (16/08, Duskfade x
+        DON'T SCREAM): promover ninguém a "funciona". `SEM_IMPEDIMENTO`
+        continua sendo `sem_impedimento_conhecido` e continua NÃO sendo
+        promessa; e o balde da ponte confirmada vale para UMA combinação, a
+        carimbada — trocar a máscara ou a lista devolve o jogo à divergência,
+        que é o primeiro item aqui em cima. Um carimbo NÃO apaga estorvo: um
+        jogo com ponte confirmada e sem wrapper continua `IMPEDIDO`, porque a
+        ponte que funcionou não está de pé.
+
+        A ORDEM entre o carimbo e o `NAO_SEI` tem razão, e ela é a varredura
+        rápida: com `examinar=False` (o censo que a cura e o portão usam) a
+        `evidencia` é `None` para TODOS os jogos, e todo jogo cairia em
+        `NAO_SEI` — o carimbo sumiria justo no caminho mais rodado. O carimbo
+        não depende de ler executável nenhum, então ele vem antes. O que ele
+        NÃO atravessa é a pasta ausente (`raiz is None`): jogo cuja instalação
+        sumiu do disco continua `NAO_SEI`, porque aí a cegueira é sobre o jogo
+        inteiro, não sobre a API dele.
+        """
         if self.estorvos:
             return IMPEDIDO
+        if self.ponte_confirmada and self.raiz is not None:
+            return PONTE_CONFIRMADA
         if self.raiz is None or self.evidencia is None:
             return NAO_SEI
         return SEM_IMPEDIMENTO
@@ -280,6 +512,12 @@ class Prontuario:
             "depende_de_espelho": self.depende_de_espelho,
             "steam_input_ligado": self.steam_input_ligado,
             "na_allowlist": self.na_allowlist,
+            # PONTE-CONFIRMADA-01, item 4: a ponte sai PUBLICADA aqui. Quem
+            # consome este dicionário (a janela, o `doctor.sh`) pergunta "qual
+            # a ponte confirmada deste appid?" sem abrir perfil nenhum e sem
+            # reimplementar o casamento por `steam_app_<id>`.
+            "ponte": self.ponte.como_dicionario() if self.ponte else None,
+            "ponte_divergente": self.ponte_divergente,
             "estorvos": [
                 # A chave abaixo é JSON, não prosa: o `doctor.sh` a lê com
                 # `jq`, e chave acentuada em shell é o tipo de detalhe que
@@ -312,6 +550,11 @@ class Censo:
     def dependem_de_espelho(self) -> list[Prontuario]:
         return [j for j in self.jogos if j.depende_de_espelho]
 
+    @property
+    def com_ponte_confirmada(self) -> list[Prontuario]:
+        """Os jogos em que alguém já confirmou uma ponte — carimbo, não palpite."""
+        return [j for j in self.jogos if j.ponte_confirmada]
+
     def por_api(self) -> dict[str, list[Prontuario]]:
         saida: dict[str, list[Prontuario]] = {v.value: [] for v in Veredito}
         for jogo in self.jogos:
@@ -327,11 +570,21 @@ class Censo:
         """
         if not self.jogos:
             return "Nenhum jogo da Steam instalado por aqui."
+        # PONTE-CONFIRMADA-01: o carimbo entra na frase como CAUDA, e não como
+        # manchete. Quem abre esta tela está atrás do que falta; o que já foi
+        # confirmado é a boa notícia que não pode empurrar a pendência para
+        # baixo — foi contando em vez de nomear que o Pragmata passou a noite
+        # quebrado com o portão verde.
+        confirmadas = len(self.com_ponte_confirmada)
+        pontes = (
+            f" {confirmadas} com ponte já confirmada." if confirmadas else ""
+        )
         impedidos = self.impedidos
         if not impedidos:
             return (
                 f"{len(self.jogos)} jogos, nenhum com pendência conhecida "
-                f"({len(self.dependem_de_espelho)} dependem do espelho XInput)."
+                f"({len(self.dependem_de_espelho)} dependem do espelho "
+                f"XInput).{pontes}"
             )
         nomes = ", ".join(j.nome for j in impedidos[:3])
         resto = f" e mais {len(impedidos) - 3}" if len(impedidos) > 3 else ""
@@ -341,7 +594,7 @@ class Censo:
             if automaticos
             else " Nenhuma se conserta sozinha — veja o detalhe de cada uma."
         )
-        return f"Com pendência: {nomes}{resto}.{cauda}"
+        return f"Com pendência: {nomes}{resto}.{cauda}{pontes}"
 
     def como_dicionario(self) -> dict[str, object]:
         return {
@@ -352,6 +605,7 @@ class Censo:
                 "impedidos": len(self.impedidos),
                 "curaveis_sozinho": len(self.curaveis_sozinho),
                 "dependem_de_espelho": len(self.dependem_de_espelho),
+                "com_ponte_confirmada": len(self.com_ponte_confirmada),
                 "por_api": {k: len(v) for k, v in self.por_api().items()},
             },
         }
@@ -466,12 +720,18 @@ def levantar_censo(
     *,
     allowlist: Sequence[str] | None = None,
     examinar: bool = True,
+    pontes: dict[str, Ponte] | None = None,
 ) -> Censo:
     """A fotografia read-only de toda a biblioteca instalada.
 
     `examinar=False` pula a varredura dos executáveis — que é a parte cara
     (segundos, num jogo grande). A GUI a quer; um portão que só confere o
     wrapper, não.
+
+    `pontes` segue o MESMO contrato do `allowlist` logo acima: `None` = leia do
+    disco (a pasta de perfis, por `XDG_CONFIG_HOME`), dicionário = use este e
+    não toque em disco nenhum. É o que deixa o teste hermético sem monkeypatch
+    de `Path.home`.
     """
     linhas: dict[str, str | None] = {}
     steam_input: dict[str, str] = {}
@@ -501,6 +761,7 @@ def levantar_censo(
         except OSError:
             allowlist = []
     permitidos = {str(a).strip() for a in allowlist}
+    carimbos = pontes if pontes is not None else pontes_confirmadas()
 
     fichas: list[Prontuario] = []
     for appid, nome, raiz in jogos_instalados(home):
@@ -520,6 +781,7 @@ def levantar_censo(
                 steam_input=steam_input.get(appid),
                 steam_input_global=global_ps,
                 na_allowlist=appid in permitidos,
+                ponte=carimbos.get(appid),
             )
         )
     return Censo(jogos=fichas, erros=erros)
@@ -671,13 +933,33 @@ def curar_o_que_e_automatico(
     )
 
 
+def _texto_da_ponte(ponte: Ponte | None) -> str:
+    """A ponte carimbada em uma coluna de terminal, ou o travessão do "não sei".
+
+    Vocabulário de `daemon.subsystems.hotkey` — as pontes que o gesto PS + R3
+    percorre são `dualsense`, `xbox` e `mouse_teclado`, e a máscara é a mesma
+    palavra nos dois lados. O que se acrescenta aqui é o terceiro termo, o
+    `+steam_input`, que o ciclo do gesto não percorre e o disco conhece.
+    """
+    if ponte is None:
+        return "-"
+    if ponte.kind == "gamepad":
+        base = ponte.gamepad_flavor or "gamepad"
+    elif ponte.kind == "desktop":
+        base = "mouse_teclado"
+    else:
+        base = ponte.kind
+    return f"{base}+steam_input" if ponte.steam_input else base
+
+
 def _tabela(censo: Censo) -> str:
     """O relatório de terminal — uma linha por jogo, e o nome sempre."""
     largura = max((len(j.nome) for j in censo.jogos), default=4)
     largura = min(largura, 34)
     linhas = [
-        f"{'jogo':{largura}} | {'veredito':26} | {'api':18} | wrapper | Steam Input",
-        "-" * (largura + 70),
+        f"{'jogo':{largura}} | {'veredito':26} | {'api':18} | wrapper | "
+        f"{'ponte confirmada':20} | Steam Input",
+        "-" * (largura + 92),
     ]
     for jogo in censo.jogos:
         si = jogo.steam_input_ligado
@@ -686,7 +968,8 @@ def _tabela(censo: Censo) -> str:
             texto_si += " (allowlist)"
         linhas.append(
             f"{jogo.nome[:largura]:{largura}} | {jogo.veredito:26} | "
-            f"{jogo.api.value:18} | {'sim' if jogo.tem_wrapper else 'NÃO':7} | {texto_si}"
+            f"{jogo.api.value:18} | {'sim' if jogo.tem_wrapper else 'NÃO':7} | "
+            f"{_texto_da_ponte(jogo.ponte):20} | {texto_si}"
         )
     for jogo in censo.impedidos:
         linhas.append("")

@@ -30,6 +30,19 @@ depends=(
     'libayatana-appindicator'
     'hidapi'
     'libnotify'
+    # LOADER SVG DO GDK-PIXBUF (19/08/2026) — dependência DURA, não optdepends.
+    # A interface carrega 38 glifos SVG em execução (gui/widgets/button_glyph.py,
+    # GdkPixbuf.Pixbuf.new_from_file_at_scale) e o ícone da bandeja é um SVG
+    # simbólico (app/tray.py). Sem o loader o pixbuf sai None EM SILÊNCIO: o
+    # ícone some da barra e todo glifo da interface cai junto, sem erro no log
+    # (BUG-TRAY-ICONE-INVISIVEL-01, descrito em app/main.py). Não remova por
+    # parecer supérfluo — o sintoma não aponta para a causa.
+    #
+    # ARMADILHA DE NOME: no Arch o pacote `librsvg` traz as DUAS coisas (o
+    # módulo libpixbufloader-svg.so e o rsvg-convert), então aqui o nome é um
+    # só; no Debian quem desenha é o `librsvg2-common` e o `librsvg2-bin` é a
+    # ferramenta de BUILD. Paridade com o .deb, o .spec e o install.sh nativo.
+    'librsvg'
     # Deps Python no pacman (pacotes oficiais):
     'python-pydantic'
     'python-typer'

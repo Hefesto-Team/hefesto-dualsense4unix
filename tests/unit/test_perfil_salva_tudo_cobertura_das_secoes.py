@@ -63,6 +63,19 @@ ISENTOS: dict[str, str] = {
         "há gesto que a mude e o pydantic recusa qualquer outro valor no load "
         "— um caso de ida e volta aqui mediria o pydantic, não o produto."
     ),
+    "ponte": (
+        "PONTE-CONFIRMADA-01 (19/08/2026): não é preferência dela, é REGISTRO "
+        "de uma confirmação — a ponte que já pegou naquele jogo, carimbada pelo "
+        "gesto no controle, pelo silêncio de quem jogou sem reclamar, ou pela "
+        "escolha direta dela. E ela tem de ficar FORA do rascunho da janela por "
+        "uma razão de produto, não de conveniência: se o 'Salvar Perfil' "
+        "escrevesse este campo, todo save carimbaria como confirmada uma ponte "
+        "que ninguém confirmou, e a escada pararia de rodar em todo jogo — o "
+        "defeito mais silencioso desta frente, o que faz o produto jurar que "
+        "sabe o que não sabe. Quem escreve é `manager.confirmar_ponte`, e o "
+        "ida e volta dela está em "
+        "`test_ponte_confirmada_01_o_perfil_guarda_a_ponte_que_funcionou.py`."
+    ),
 }
 
 #: Seções que a JANELA escreve no rascunho, e os sinais no código-fonte que

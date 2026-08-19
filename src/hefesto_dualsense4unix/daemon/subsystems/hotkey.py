@@ -4,7 +4,7 @@ Responsabilidades:
   - Instanciar HotkeyManager com callback on_ps_solo (leitura de config em runtime).
   - Iniciar e parar a task _mic_button_loop que ouve BUTTON_DOWN para mic_btn.
   - Expor funções utilitárias usadas pelo Daemon como thin wrappers.
-  - FEAT-HOTKEY-PONTE-CYCLE-01: o gesto PS+seta direita cicla a PONTE (a forma
+  - FEAT-HOTKEY-PONTE-CYCLE-01: o gesto PS+R3 cicla a PONTE (a forma
     como o jogo enxerga o controle) — ver `build_next_bridge_callback`, que
     também registra o que o gesto NÃO pode prometer.
 """
@@ -13,8 +13,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import subprocess as _sp
+import threading
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.integrations import ponte_tentativa
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -92,7 +94,7 @@ def build_ps_long_press_callback(daemon: DaemonProtocol) -> Any:
     return _on_ps_long_press
 
 
-#: FEAT-HOTKEY-PONTE-CYCLE-01 — as PONTES que o gesto PS+seta direita percorre.
+#: FEAT-HOTKEY-PONTE-CYCLE-01 — as PONTES que o gesto PS+R3 percorre.
 #: Ponte = a forma como o jogo enxerga o controle. A ordem é a de "chance de
 #: pegar": máscara Xbox primeiro não, porque a casa parte do DualSense — a
 #: ordem abaixo começa na máscara nativa e só depois cai no XInput.
@@ -101,12 +103,33 @@ PONTE_XBOX = "xbox"
 PONTE_MOUSE_TECLADO = "mouse_teclado"
 CICLO_DE_PONTES: tuple[str, ...] = (PONTE_DUALSENSE, PONTE_XBOX, PONTE_MOUSE_TECLADO)
 
-#: Cor da lightbar de cada ponte — o ÚNICO canal que ela enxerga sem sair do
-#: jogo. Azul = DualSense (a cor da casa), verde = Xbox, âmbar = mouse+teclado.
-CORES_DA_PONTE: dict[str, tuple[int, int, int]] = {
-    PONTE_DUALSENSE: (0, 60, 255),
-    PONTE_XBOX: (0, 200, 60),
-    PONTE_MOUSE_TECLADO: (255, 170, 0),
+#: AVISO-DE-MODO-01 — os DOIS modos que NÃO são ponte e que ela mesma nomeou
+#: no pedido de 19/08/2026: *"entramos no modo steam input azul clarinho, modo
+#: xbox verde claro, modo sony nativo branco"*. Não entram no `CICLO_DE_PONTES`
+#: (o gesto não liga Steam Input nem entra em Modo Nativo — ver
+#: `build_next_bridge_callback`), mas o AVISO vale para eles igual: quem troca
+#: pela janela tem de ver a mesma coisa que quem troca pelo gesto.
+MODO_STEAM_INPUT = "steam_input"
+MODO_NATIVO = "nativo"
+
+#: Cor da lightbar de cada MODO — o ÚNICO canal que ela enxerga sem sair do
+#: jogo. Os hex saem da paleta de `gui/theme.css`, que é o léxico visual desta
+#: casa: `cyan` #8be9fd, `green` #50fa7b, `fg` #f8f8f2, `pink` #ff79c6 (a cor de
+#: MARCA do produto) e `orange` #ffb86c. Inventar cor nova aqui seria dizer na
+#: barra uma coisa que a janela não diz.
+#:
+#: SUBSTITUI (19/08/2026) o `CORES_DA_PONTE` de 18/08, em que a máscara
+#: DualSense era AZUL (0, 60, 255). Não é decisão apagada, é fato corrigido: o
+#: azul claro passou a significar **Steam Input** por decisão dela, e deixar os
+#: dois azuis lado a lado tornaria a barra ilegível justamente no par que ela
+#: mais precisa distinguir. A máscara DualSense é o "Hefesto na frente", e a
+#: cor do Hefesto é o rosa da marca.
+CORES_DO_MODO: dict[str, tuple[int, int, int]] = {
+    MODO_STEAM_INPUT: (139, 233, 253),
+    PONTE_XBOX: (80, 250, 123),
+    MODO_NATIVO: (248, 248, 242),
+    PONTE_DUALSENSE: (255, 121, 198),
+    PONTE_MOUSE_TECLADO: (255, 184, 108),
 }
 #: Aviso de RISCO: a troca de máscara destrói e recria o vpad, e foi MEDIDO
 #: (R-04) que isso invalida o handle que o jogo abriu. Dois pulsos vermelhos
@@ -115,9 +138,23 @@ CORES_DA_PONTE: dict[str, tuple[int, int, int]] = {
 #: seguidos de um vermelho longo — "pedi e não consegui", que é diferente de
 #: "consegui e pode ter derrubado o jogo".
 COR_AVISO_RISCO = (255, 0, 0)
-#: Duração de um pulso e da cor da ponte, em segundos.
+#: Duração de um pulso, em segundos.
 PULSO_SEG = 0.14
-COR_PONTE_SEG = 0.9
+
+#: Sentinela do "ainda não anunciei nada". O boot NÃO é troca de modo: um
+#: daemon que sobe já em máscara DualSense não pode piscar como se ela tivesse
+#: acabado de mexer em alguma coisa. `None` não serve de sentinela porque
+#: `modo_vigente` nunca devolve `None` — mas um daemon dublado sem o atributo e
+#: um daemon que já anunciou têm de ser distinguíveis, e é isso que o objeto
+#: único abaixo faz.
+_NUNCA_ANUNCIADO = object()
+
+#: Uma piscada por vez. O aviso é level-triggered e quem o chama passa de novo
+#: no tique seguinte, então uma troca que caiu em cima de outra piscada não se
+#: perde: ela só não CARIMBA o modo anunciado, e a próxima passada tenta outra
+#: vez. Enfileirar meio segundo de piscada por apertada seria o aviso ficando
+#: para trás da mão dela.
+_AVISO_EM_CURSO = threading.Lock()
 
 
 def ponte_atual(daemon: DaemonProtocol) -> str:
@@ -152,22 +189,173 @@ async def _sinalizar_lightbar(
     A lightbar é o único canal que ela enxerga sem sair do jogo — não há
     notificação de desktop que apareça por cima de um jogo em tela cheia.
     Best-effort: falha de HID aqui NUNCA pode derrubar a troca de ponte, que
-    é o que ela pediu. O `reassert_resolved_outputs` do final devolve a cor do
-    perfil (o mesmo caminho da ativação de perfil e do "Aplicar" da GUI).
+    é o que ela pediu.
+
+    **CONSERTO de 19/08/2026 (AVISO-DE-MODO-01): o aviso ROUBAVA a cor dela.**
+    Esta função pintava com `controller.set_led`, e o `set_led` GRAVA a cor no
+    estado desejado — no caminho broadcast o `_record_desired_locked` ainda
+    LIMPA o campo `led` de todos os overrides por-uniq. O
+    `reassert_resolved_outputs` do fim, então, devolvia fielmente… a cor do
+    AVISO, porque era ela que estava gravada. Duas voltas do gesto e a cor do
+    perfil dela tinha sumido de vez. Agora o par usado é o
+    `pintar_lightbar_sem_lembrar` / `restaurar_lightbar_do_perfil`, que não
+    grava nada e por isso tem o que devolver.
+
+    Também passa a pintar em TODOS os controles (o `set_led` obedecia ao
+    seletor da janela) e a sair pelas três rotas — inclusive o `0x31` avulso
+    por rádio, que é o que pinta com a Steam segurando o nó.
 
     HONESTIDADE: com um jogo que pinta a lightbar sozinho (a defesa de
     exibição do backend repassa o que o jogo escreve), este aviso pode ser
     sobrepintado em seguida. É sinal, não garantia.
     """
+    pintar = getattr(daemon.controller, "pintar_lightbar_sem_lembrar", None)
     for cor, segundos in cores:
-        with contextlib.suppress(Exception):
-            await daemon._run_blocking(daemon.controller.set_led, cor)
+        if pintar is not None:
+            with contextlib.suppress(Exception):
+                await daemon._run_blocking(pintar, cor)
         if segundos > 0:
             await asyncio.sleep(segundos)
-    reassert = getattr(daemon.controller, "reassert_resolved_outputs", None)
-    if reassert is not None:
+    devolver = getattr(daemon.controller, "restaurar_lightbar_do_perfil", None)
+    if devolver is None:
+        devolver = getattr(daemon.controller, "reassert_resolved_outputs", None)
+    if devolver is not None:
         with contextlib.suppress(Exception):
-            await daemon._run_blocking(reassert)
+            await daemon._run_blocking(devolver)
+
+
+def modo_vigente(daemon: DaemonProtocol) -> str:
+    """O MODO de pé AGORA, lido do estado VIVO. AVISO-DE-MODO-01.
+
+    Superconjunto de `ponte_atual`: acrescenta os dois estados que não são
+    ponte e que mudam o que o jogo enxerga tanto quanto uma máscara.
+
+    A ordem de precedência é a de quem está NA FRENTE do controle:
+
+    1. **Modo Nativo** primeiro, porque nele o dono do aparelho é o jogo — não
+       há vpad para consultar e não há máscara nossa em lugar nenhum;
+    2. **Steam Input** depois: com a exceção por appid valendo, quem entrega o
+       dispositivo ao jogo é a Steam, mesmo com o nosso vpad de pé. Os dois
+       flags são lidos (`_steam_input_excecao` e `_steam_input_vpad_suspenso`)
+       porque eles não andam sempre juntos — o par distingue "exceção ativa com
+       o vpad recolhido" de "exceção ativa e a suspensão não pôde ser armada",
+       e nos DOIS quem está na frente é a Steam;
+    3. **a ponte**, que é o caso comum.
+
+    Tudo por `getattr`/`suppress`: daemons dublados de teste não têm store nem
+    os flags, e um aviso NUNCA pode derrubar o laço que o chama.
+    """
+    store = getattr(daemon, "store", None)
+    if store is not None and getattr(store, "native_mode_active", False):
+        return MODO_NATIVO
+    with contextlib.suppress(Exception):
+        checar = getattr(daemon, "is_native_mode", None)
+        if callable(checar) and bool(checar()):
+            return MODO_NATIVO
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            steam_input_excecao_ativa,
+            steam_input_vpad_suspenso,
+        )
+
+        if steam_input_excecao_ativa(daemon) or steam_input_vpad_suspenso(daemon):
+            return MODO_STEAM_INPUT
+    return ponte_atual(daemon)
+
+
+def _disparar_piscada(
+    daemon: DaemonProtocol, cor: tuple[int, int, int], *, modo: str
+) -> bool:
+    """Manda a piscada para uma thread. True = saiu daqui. AVISO-DE-MODO-01.
+
+    A piscada é BLOQUEANTE (meio segundo de `time.sleep` no backend) e quem
+    chama o aviso é o poll loop — segurar o laço do controle por meio segundo
+    para acender uma luz seria trocar a rota do jogo por um enfeite. Thread
+    `daemon=True`: um aviso no ar nunca segura o desligamento do produto.
+    """
+    piscar = getattr(getattr(daemon, "controller", None), "piscar_aviso_de_modo", None)
+    if not callable(piscar):
+        # Backend sem a piscada (fake da bancada, controle desconectado): o
+        # modo mudou do mesmo jeito e o journal registra — o produto não trava
+        # nem finge que avisou.
+        logger.debug("aviso_de_modo_sem_backend", modo=modo)
+        return False
+    if not _AVISO_EM_CURSO.acquire(blocking=False):
+        logger.debug("aviso_de_modo_sobreposto", modo=modo)
+        return False
+
+    def _correr() -> None:
+        try:
+            escritas = piscar(cor)
+        except Exception as exc:
+            logger.warning("aviso_de_modo_falhou", modo=modo, err=str(exc))
+            return
+        finally:
+            _AVISO_EM_CURSO.release()
+        # `escritas` = controles que RECEBERAM a escrita, não que acenderam. A
+        # barra por rádio pode nascer travada (medido: ignora as escritas do
+        # kernel até o power-off físico), e não há leitura que desminta isso —
+        # o `multi_intensity` é a memória do que se PEDIU. Dizer "acendeu" aqui
+        # seria o journal mentindo.
+        logger.info(
+            "aviso_de_modo_piscado", modo=modo, cor=cor, controles_escritos=escritas
+        )
+
+    threading.Thread(
+        target=_correr, name="hefesto-aviso-de-modo", daemon=True
+    ).start()
+    return True
+
+
+def avisar_troca_de_modo(daemon: DaemonProtocol) -> str | None:
+    """Pisca em TODOS os controles quando o MODO muda. AVISO-DE-MODO-01.
+
+    Pedido dela, 19/08/2026: *"um alerta visual no lightbar de todos os
+    controles dualsense conectados, seja via bt, seja via cabo. seja com steam
+    aberta ou não"* — e *"o lightbar de todos pisca 3 vezes rápido"*.
+
+    **Por que é level-triggered, e não um callback do gesto.** Ela troca de
+    modo por quatro portas: o gesto no controle, a janela, a CLI/IPC e o
+    autoswitch por jogo. Pendurar o aviso no callback do gesto faria a barra
+    dizer a verdade só numa delas — e o combinado é que o controle diga o modo,
+    não que ele conte quem mexeu. Comparando o estado VIVO com o último modo
+    ANUNCIADO, toda troca acende, tenha vindo de onde tiver vindo. É a mesma
+    disciplina do `ponte_atual`: acreditar no vivo, nunca no papel.
+
+    **O boot não é troca.** Na primeira passada o modo só é memorizado — um
+    daemon que sobe já em máscara DualSense não pode piscar como se ela tivesse
+    acabado de mexer em alguma coisa.
+
+    **Só carimba o que ANUNCIOU.** Se a piscada não saiu (backend sem a rota,
+    outra piscada no ar), o modo NÃO é registrado como anunciado, e a próxima
+    passada tenta de novo. O carimbo é a prova de que o aviso saiu, e não um
+    "eu vi que mudou".
+
+    Devolve o modo anunciado, ou `None` quando não houve o que anunciar.
+    """
+    modo = modo_vigente(daemon)
+    anterior = getattr(daemon, "_modo_anunciado", _NUNCA_ANUNCIADO)
+    if modo == anterior:
+        return None
+    if anterior is _NUNCA_ANUNCIADO:
+        with contextlib.suppress(Exception):
+            daemon._modo_anunciado = modo  # type: ignore[attr-defined]
+        logger.debug("aviso_de_modo_primeira_leitura", modo=modo)
+        return None
+    cor = CORES_DO_MODO.get(modo)
+    if cor is None:
+        # Modo sem cor no léxico: registrar e seguir. Piscar uma cor inventada
+        # seria a barra dizendo uma coisa que a janela não diz.
+        logger.warning("aviso_de_modo_sem_cor", modo=modo, de=anterior)
+        with contextlib.suppress(Exception):
+            daemon._modo_anunciado = modo  # type: ignore[attr-defined]
+        return None
+    if not _disparar_piscada(daemon, cor, modo=modo):
+        return None
+    with contextlib.suppress(Exception):
+        daemon._modo_anunciado = modo  # type: ignore[attr-defined]
+    logger.info("aviso_de_modo_trocado", de=anterior, para=modo, cor=cor)
+    return modo
 
 
 def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
@@ -201,7 +389,7 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
     with contextlib.suppress(Exception):
         daemon.set_emulation_suppressed(False)
     with contextlib.suppress(Exception):
-        # `origin="manual"` porque É gesto dela: o `PS + seta direita` é a
+        # `origin="manual"` porque É gesto dela: o `PS + R3` é a
         # vontade explícita da usuária, e é o único origin que atravessa o
         # gate R-04 (`_recriacao_bloqueada_por_jogo`). Vir sem ele reprovaria
         # o mypy — o protocolo exige o parâmetro justamente para ninguém
@@ -213,11 +401,30 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
 
 
 def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
-    """Cria o callback do gesto PS + seta direita: PRÓXIMA PONTE.
+    """Cria o callback do gesto PS + R3: PRÓXIMA PONTE.
 
     FEAT-HOTKEY-PONTE-CYCLE-01. Ponte = a forma como o jogo enxerga o
     controle. Ela pediu poder trocar de ponte SEM fechar o jogo, com um gesto
     no controle; o ciclo é `dualsense → xbox → mouse+teclado → dualsense`.
+
+    PONTE-ESCADA-LACO-01 (19/08/2026) — o gesto ganhou um SEGUNDO leitor, e
+    não uma segunda regra. O que ele faz não mudou: sempre troca, na hora,
+    com `origin="manual"`. O que mudou é que agora alguém ESCUTA:
+
+    - **para o laço da escada, este gesto significa "o degrau de pé não
+      funcionou"**. É o único sinal que a escada tem, e é dela que ela
+      aprende (`ponte_tentativa.avancar_por_gesto`);
+    - com uma tentativa em curso, o ALVO passa a ser o próximo degrau da
+      `ESCADA` em vez do próximo item do `CICLO_DE_PONTES`. A diferença é o
+      dado por trás: a ordem da escada é justificada linha a linha contra o
+      `mapa-controles.csv`; a do ciclo era um arranjo;
+    - sem tentativa — jogo com ponte CONFIRMADA, ou nenhum jogo — nada muda.
+      **E o gesto continua trocando mesmo num jogo confirmado**: recusar seria
+      o produto discutindo com a dona. Quem não roda em jogo confirmado é a
+      ESCADA, que é o caminho automático.
+
+    O gesto NÃO confirma nada. Ele é o contrário de uma confirmação, e quem
+    carimba é o silêncio dela (`launch_env.tique_da_escada`).
 
     O QUE O GESTO PROMETE:
       - troca a ponte na hora, com `origin="manual"` — a única origem que
@@ -260,17 +467,41 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
             return
 
         atual = ponte_atual(daemon)
-        alvo = proxima_ponte(atual)
         # `display_authority == "game"` é o MESMO sinal que o R-04 consulta
         # (`gamepad._autoridade_do_jogo`) — quem responde "há jogo com o
         # controle na mão AGORA?".
         jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
+
+        # PONTE-ESCADA-LACO-01, momento 2 (19/08/2026). O gesto TROCA de
+        # qualquer jeito — a linha abaixo não decide SE troca, decide PARA
+        # ONDE. Com uma tentativa de escada em curso (jogo sem carimbo), o
+        # próximo degrau da `ESCADA` vence o `CICLO_DE_PONTES`, porque é ele
+        # que carrega o dado: o mapa de canais diz por que a máscara DualSense
+        # vem antes da Xbox, e o ciclo fixo não dizia nada. Sem tentativa —
+        # jogo com carimbo, ou nenhum jogo — `passo` é `None` e o gesto faz
+        # exatamente o que fazia ontem.
+        passo = None
+        with contextlib.suppress(Exception):
+            passo = ponte_tentativa.avancar_por_gesto(
+                daemon, jogo_vivo=jogo_no_controle
+            )
+        degrau_da_escada = None
+        if passo is not None and passo.mascara is not None:
+            alvo = passo.mascara
+            degrau_da_escada = passo.degrau
+        else:
+            # Inclui os dois casos em que a escada AVISA E PARA (o próximo
+            # degrau exige reabrir o jogo ou fechar a Steam) e o caso em que
+            # ela acabou. O gesto não pode ficar sem resposta: ela apertou, e
+            # alguma coisa tem de mudar. Volta ao ciclo de sempre.
+            alvo = proxima_ponte(atual)
 
         logger.info(
             "ponte_troca_pedida_por_gesto",
             de=atual,
             para=alvo,
             jogo_com_autoridade=jogo_no_controle,
+            escada=passo.motivo if passo is not None else None,
         )
 
         if jogo_no_controle:
@@ -289,6 +520,13 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
 
         ok = _aplicar_ponte(daemon, alvo)
         efetiva = ponte_atual(daemon)
+        if degrau_da_escada is not None and efetiva == alvo:
+            # A escada só anda depois que o APARELHO concorda. `ok` vale True
+            # para três desfechos diferentes (aplicou, já-estava, bloqueado —
+            # MASCARA-01), e avançar a tentativa por ele faria o gesto
+            # seguinte pular o degrau que nunca chegou a ser tentado.
+            with contextlib.suppress(Exception):
+                ponte_tentativa.degrau_subiu(daemon, degrau_da_escada)
         logger.info(
             "ponte_trocada_por_gesto",
             de=atual,
@@ -302,7 +540,13 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
                 store.bump("hotkey.ponte.cycled")
 
         if ok and efetiva == alvo:
-            await _sinalizar_lightbar(daemon, [(CORES_DA_PONTE[alvo], COR_PONTE_SEG)])
+            # QUEM PINTA A COR DO MODO NÃO É DAQUI (AVISO-DE-MODO-01,
+            # 19/08/2026). O gesto pintava a cor da ponte nova aqui mesmo, e
+            # por isso a barra só dizia a verdade quando a troca vinha DO
+            # GESTO — trocar pela janela não acendia nada. O aviso passou a ser
+            # level-triggered em `avisar_troca_de_modo`, disparado do ponto por
+            # onde toda troca passa; pintar de novo aqui daria piscada dupla no
+            # único caminho que já estava certo.
             return
         # A ponte NÃO subiu (vpad recusado, uinput/uhid fora do ar). Dizer isso
         # é obrigatório: `set_gamepad_emulation` devolve True para três
@@ -466,7 +710,7 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         ps_long_press_ms=getattr(daemon.config, "ps_long_press_ms", 0),
         next_profile=DEFAULT_COMBO_NEXT,
         prev_profile=DEFAULT_COMBO_PREV,
-        # FEAT-HOTKEY-PONTE-CYCLE-01: PS+seta direita = próxima ponte.
+        # FEAT-HOTKEY-PONTE-CYCLE-01: PS+R3 = próxima ponte.
         next_bridge=DEFAULT_COMBO_PONTE,
     )
     daemon._hotkey_manager = HotkeyManager(
@@ -482,7 +726,7 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         ps_button_action=daemon.config.ps_button_action,
         ps_long_press_ms=hotkey_config.ps_long_press_ms,
         next_prev_combos="ps+dpad_up / ps+dpad_down",
-        ponte_combo="ps+dpad_right",
+        ponte_combo="ps+r3",
     )
 
 
@@ -677,17 +921,21 @@ class HotkeySubsystem:
 
 __all__ = [
     "CICLO_DE_PONTES",
-    "CORES_DA_PONTE",
+    "CORES_DO_MODO",
     "MIC_SOSSEGO_S",
+    "MODO_NATIVO",
+    "MODO_STEAM_INPUT",
     "PONTE_DUALSENSE",
     "PONTE_MOUSE_TECLADO",
     "PONTE_XBOX",
     "HotkeySubsystem",
+    "avisar_troca_de_modo",
     "build_next_bridge_callback",
     "build_profile_cycle_callback",
     "build_ps_long_press_callback",
     "build_ps_solo_callback",
     "mic_button_loop",
+    "modo_vigente",
     "ponte_atual",
     "proxima_ponte",
     "start_hotkey_manager",

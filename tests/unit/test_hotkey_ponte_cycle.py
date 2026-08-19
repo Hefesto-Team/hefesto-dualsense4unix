@@ -1,4 +1,4 @@
-"""FEAT-HOTKEY-PONTE-CYCLE-01 — o gesto PS + seta direita = PRÓXIMA PONTE.
+"""FEAT-HOTKEY-PONTE-CYCLE-01 — o gesto PS + R3 = PRÓXIMA PONTE.
 
 Ponte = a forma como o jogo enxerga o controle (máscara DualSense, máscara
 Xbox, mouse+teclado). Ela pediu poder trocar de ponte SEM fechar o jogo.
@@ -33,6 +33,7 @@ from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
     start_hotkey_manager,
 )
 from hefesto_dualsense4unix.integrations.hotkey_daemon import (
+    DEFAULT_COMBO_GAMEMODE,
     DEFAULT_COMBO_PONTE,
     HotkeyConfig,
     HotkeyManager,
@@ -53,8 +54,8 @@ def test_combo_da_ponte_nao_dispara_o_perfil_anterior() -> None:
         on_prev=lambda: eventos.append("prev"),
         on_next_bridge=lambda: eventos.append("ponte"),
     )
-    mgr.observe(["ps", "dpad_right"], now=0.0)
-    assert mgr.observe(["ps", "dpad_right"], now=0.2) == "ponte"
+    mgr.observe(["ps", "r3"], now=0.0)
+    assert mgr.observe(["ps", "r3"], now=0.2) == "ponte"
     assert eventos == ["ponte"], "o combo da ponte não pode disparar next/prev"
 
 
@@ -84,16 +85,23 @@ def test_todo_combo_configurado_tem_despacho() -> None:
 
 
 def test_default_do_combo_da_ponte() -> None:
-    assert DEFAULT_COMBO_PONTE == ("ps", "dpad_right")
-    assert HotkeyConfig().next_bridge == ("ps", "dpad_right")
+    """Pedido dela, 19/08/2026: o gesto é `PS + R3`.
+
+    SUBSTITUI o `PS + seta direita` de 18/08. `PS + Options` não serve — já é o
+    modo jogo (`DEFAULT_COMBO_GAMEMODE`), e foi ela quem apontou a colisão.
+    """
+    assert DEFAULT_COMBO_PONTE == ("ps", "r3")
+    assert HotkeyConfig().next_bridge == ("ps", "r3")
+    assert DEFAULT_COMBO_PONTE != DEFAULT_COMBO_GAMEMODE, "colide com o modo jogo"
 
 
 def test_ponte_nao_vaza_para_o_desktop() -> None:
-    """FEAT-HOTKEY-COMBO-NO-LEAK: sem isto o 'dpad_right' do gesto vira seta
-    para o desktop (e pode travar segurado)."""
+    """FEAT-HOTKEY-COMBO-NO-LEAK: sem isto o 'r3' do gesto vira clique do meio
+    no desktop (`uinput_mouse`) ou fecha o teclado virtual
+    (`keyboard_mappings`) — os dois donos que o R3 já tem fora do combo."""
     mgr = HotkeyManager()
-    assert mgr.should_passthrough(["ps", "dpad_right"], emulation_active=True) is False
-    assert "dpad_right" in mgr.combo_buttons_active(["ps", "dpad_right"])
+    assert mgr.should_passthrough(["ps", "r3"], emulation_active=True) is False
+    assert "r3" in mgr.combo_buttons_active(["ps", "r3"])
 
 
 def test_tupla_vazia_desliga_o_gesto_da_ponte() -> None:
@@ -102,8 +110,8 @@ def test_tupla_vazia_desliga_o_gesto_da_ponte() -> None:
         on_next_bridge=lambda: eventos.append("ponte"),
         config=HotkeyConfig(next_bridge=()),
     )
-    mgr.observe(["ps", "dpad_right"], now=0.0)
-    assert mgr.observe(["ps", "dpad_right"], now=0.2) is None
+    mgr.observe(["ps", "r3"], now=0.0)
+    assert mgr.observe(["ps", "r3"], now=0.2) is None
     assert eventos == []
 
 
@@ -133,8 +141,20 @@ class _FakeController:
     def __init__(self, trilha: list[Any]) -> None:
         self._trilha = trilha
 
-    def set_led(self, color: tuple[int, int, int]) -> None:
+    def pintar_lightbar_sem_lembrar(self, color: tuple[int, int, int]) -> int:
         self._trilha.append(("led", color))
+        return 1
+
+    def set_led(self, color: tuple[int, int, int]) -> None:
+        # AVISO-DE-MODO-01: rota PROIBIDA para aviso — o `set_led` GRAVA a cor
+        # no estado desejado e o broadcast ainda limpa os overrides por-uniq.
+        # O dublê registra separado para o teste poder reprovar quem voltar a
+        # usá-la.
+        self._trilha.append(("led_gravado", color))
+
+    def restaurar_lightbar_do_perfil(self) -> int:
+        self._trilha.append(("devolve", None))
+        return 1
 
     def reassert_resolved_outputs(self) -> None:
         self._trilha.append(("reassert", None))
@@ -207,7 +227,6 @@ class _FakeDaemon:
 def _sem_espera(monkeypatch: pytest.MonkeyPatch) -> None:
     """Zera as durações da lightbar — o teste mede ORDEM, não relógio."""
     monkeypatch.setattr(hotkey_sub, "PULSO_SEG", 0.0)
-    monkeypatch.setattr(hotkey_sub, "COR_PONTE_SEG", 0.0)
 
 
 def test_ponte_atual_le_o_estado_vivo() -> None:
@@ -249,8 +268,10 @@ async def test_gesto_avisa_pela_lightbar_antes_de_derrubar_o_jogo() -> None:
     )
     indice_troca = next(i for i, t in enumerate(d.trilha) if t[0] == "gamepad")
     assert indice_vermelho < indice_troca, "o aviso saiu depois da troca"
-    # E a cor da ponte nova aparece depois, dizendo qual ponte ficou de pé.
-    assert ("led", hotkey_sub.CORES_DA_PONTE[PONTE_XBOX]) in d.trilha[indice_troca:]
+    # A COR DO MODO não sai daqui (AVISO-DE-MODO-01): quem pinta é o aviso
+    # level-triggered, para a barra dizer a mesma coisa quando a troca vem da
+    # janela. Pintar aqui também era piscada dupla no caminho do gesto.
+    assert ("led", hotkey_sub.CORES_DO_MODO[PONTE_XBOX]) not in d.trilha
 
 
 @pytest.mark.asyncio
@@ -260,7 +281,6 @@ async def test_sem_jogo_na_autoridade_nao_ha_aviso_vermelho() -> None:
     d = _FakeDaemon(flavor=PONTE_DUALSENSE, authority="daemon")
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     assert ("led", hotkey_sub.COR_AVISO_RISCO) not in d.trilha
-    assert ("led", hotkey_sub.CORES_DA_PONTE[PONTE_XBOX]) in d.trilha
 
 
 @pytest.mark.asyncio
@@ -294,7 +314,7 @@ async def test_ponte_que_nao_sobe_avisa_em_vez_de_mentir() -> None:
     VIVO — e, se a ponte não subiu, a lightbar diz isso."""
     d = _FakeDaemon(flavor=PONTE_DUALSENSE, aplica=False)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
-    assert ("led", hotkey_sub.CORES_DA_PONTE[PONTE_XBOX]) not in d.trilha
+    assert ("led", hotkey_sub.CORES_DO_MODO[PONTE_XBOX]) not in d.trilha
     assert ("led", hotkey_sub.COR_AVISO_RISCO) in d.trilha
 
 

@@ -94,12 +94,29 @@ que mediam. Os domínios são fechados e o portão reprova valor fora deles.
 **Régua 2 — `ate_onde_foi`: ATÉ ONDE A PROVA CHEGOU.** É uma escada, e cada
 degrau contém o anterior.
 
-| Valor | Significa | Células |
-|---|---|---:|
-| `MONTOU` | o produto montou o report | 65 |
-| `SAIU NO FIO` | o byte saiu e algo voltou | 15 |
-| `O APARELHO OBEDECEU` | acendeu, girou, saiu som | 21 |
-| vazio | a escada não foi registrada | 503 |
+| Valor | Direção | Significa | Células |
+|---|---|---|---:|
+| `MONTOU` | saída | o produto montou o report | 71 |
+| `SAIU NO FIO` | saída | o byte saiu e algo voltou | 15 |
+| `O APARELHO OBEDECEU` | saída | acendeu, girou, saiu som | 21 |
+| `O JOGO RECEBEU` | **entrada** | o processo do jogo ABRIU o nó do nosso vpad | 0 |
+| `O JOGO REAGIU` | **entrada** | o jogo agiu sobre o que recebeu | 0 |
+| vazio | — | a escada não foi registrada | 509 |
+
+**OS DOIS ÚLTIMOS SÃO DE 19/08/2026, e nasceram de um buraco que este arquivo já
+confessava em duas linhas** — `toque.touchpad` diz *"quem ler `radio_aciona =
+sim` aqui está lendo 'o vpad ENTREGA', não 'o jogo REAGE'"*, e
+`movimento.giroscopio.jogo` diz *"o repasse está íntegro e o jogo não reage: a
+falha, se existir, é DEPOIS do vpad, e ninguém a localizou"*. Os três degraus
+antigos medem só a IDA (produto -> aparelho); os dois novos medem a volta que
+importa para jogar.
+
+**`O JOGO REAGIU` só fecha com `olho-dela`**, e o portão derruba quem tentar
+outra coisa: não existe régua nesta casa que leia o estado interno de um jogo
+sob Proton. `O JOGO RECEBEU` fecha com instrumento — mas o instrumento ainda
+não foi escrito, e as duas sondas que existem hoje mentem nesse cenário (uma
+conta handle MORTO como fd vivo; a outra varre só os PIDs da Steam, onde o
+`winedevice` não está).
 
 **A confusão que custa caro, dita na cara: uma régua não implica a outra.** O
 cruzamento das 604 células (302 linhas x 2 lados), medido hoje:
@@ -249,7 +266,7 @@ esteja o documento onde ele aparece.
 |---|---|---|
 | `de_onde_sei` | domínio em `scripts/check_paridade_transporte.py` | `confianca` (nome até 15/08/2026); "confiança" na prosa das notas |
 | `ate_onde_foi` | domínio no mesmo portão | `grau` (nome até 15/08/2026 — **o `METODO-DE-ISOLAMENTO.md` ainda ensina este, e o portão o reprova**); `degrau` (`bancada.py`) |
-| `MONTOU` / `SAIU NO FIO` / `O APARELHO OBEDECEU` | `bancada.py:64` e o domínio do portão | maiúsculas exatas, sem variação: um degrau com outra tipografia atravessa a regra 6 sem ser visto |
+| `MONTOU` / `SAIU NO FIO` / `O APARELHO OBEDECEU` | `scripts/check_paridade_transporte.ESCADA` (o `bancada.py` importa de lá desde 19/08/2026) e o domínio do portão | maiúsculas exatas, sem variação: um degrau com outra tipografia atravessa a regra 6 sem ser visto |
 | `e-a-causa` / `nao-e-a-causa` | `scripts/eliminacao.py`, decisão datada de 10/08 | `culpado` / `inocentado` — **abandonados por decisão escrita**, mas ainda vivos no rodapé do `specs.html` e no `METODO-DE-ISOLAMENTO.md` |
 | **rádio** (prosa) · `radio_` (coluna) · `radio` (valor no caderno) | os três coexistem por construção | `Bluetooth`, `BT`. **Ao buscar por texto, procure sem acento** — `grep 'rádio'` não acha uma linha sequer do caderno |
 | `nao-tem` | `DOMINIO_EXISTE`, sem acento | `não-tem` aparece acentuado na prosa das notas; o portão rejeita o acentuado |

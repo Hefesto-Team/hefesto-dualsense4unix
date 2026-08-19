@@ -57,7 +57,17 @@ if [[ "${MAC^^}" != "${OUI_NINTENDO_REAL}"* ]]; then
     exit 0  # não é o Pro genuíno: o sniff fica como está
 fi
 
-command -v hcitool >/dev/null 2>&1 || exit 0
+# SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026): escrever link
+# policy não existe na mgmt API do BlueZ — `btmgmt` e `bluetoothctl` do 5.86 não
+# têm comando para isso (conferido nos dois `--help` em 19/08/2026). O
+# `hcitool lp` é o único caminho, e continua sendo. O que mudou é que a AUSÊNCIA
+# dele deixou de ser um `exit 0` mudo: numa distro que moveu as depreciadas para
+# `bluez-deprecated`, este script virava no-op invisível e o Pro seguia caindo
+# sob carga sem nenhum rastro de por quê.
+if ! command -v hcitool >/dev/null 2>&1; then
+    _registrar "no-sniff na borda de ${MAC} NÃO aplicado: o 'hcitool' foi depreciado pelo BlueZ e não está nesta máquina (pacote bluez-deprecated / bluez-deprecated-tools), e nenhuma ferramenta viva escreve link policy — o Pro genuíno vai cair sob carga até isso ser resolvido"
+    exit 0
+fi
 
 # O device HID pode nascer alguns milissegundos antes de o link aceitar mudança
 # de policy. Três tentativas curtas cobrem isso sem segurar o udev: se ainda

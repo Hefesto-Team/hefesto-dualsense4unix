@@ -12,6 +12,19 @@
 , libayatana-appindicator
 , hidapi
 , libnotify
+# LOADER SVG DO GDK-PIXBUF (19/08/2026). CONFERIDO ANTES DE ACRESCENTAR: o
+# runtime do Nix NAO o traz de graca. Em nixpkgs quem monta o
+# `GDK_PIXBUF_MODULE_FILE` do wrapper e o setup-hook do gdk-pixbuf, e ele so
+# junta os loaders dos pacotes que estao nos `buildInputs` DESTA derivacao —
+# o `gtk3` nao propaga o `librsvg`. Sem ele o wrapper aponta para um
+# loaders.cache sem svg, o pixbuf sai None em silencio, o icone da bandeja
+# some da barra (app/tray.py) e os 38 glifos SVG da interface caem junto
+# (gui/widgets/button_glyph.py) — BUG-TRAY-ICONE-INVISIVEL-01, descrito em
+# app/main.py. Nao remova por parecer superfluo: o sintoma nao aponta para a
+# causa. Paridade com librsvg2-common (.deb), librsvg2 (RPM) e librsvg (Arch);
+# no Flatpak quem cobre e o proprio runtime (org.gnome.Platform//47 ja traz
+# libpixbufloader_svg.so e librsvg-2.so.2 — medido em 19/08/2026).
+, librsvg
 , gettext
 , gobject-introspection
 , wrapGAppsHook
@@ -50,6 +63,10 @@ python3Packages.buildPythonApplication rec {
     libayatana-appindicator
     hidapi
     libnotify
+    # Aqui, e nao em nativeBuildInputs: o que o setup-hook do gdk-pixbuf varre
+    # para montar o GDK_PIXBUF_MODULE_FILE do wrapper sao os buildInputs. Ver o
+    # comentario do argumento `librsvg` no topo.
+    librsvg
     glib
   ];
 

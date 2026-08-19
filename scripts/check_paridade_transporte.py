@@ -50,10 +50,13 @@ FALHA
                           duplicado, valor fora do domínio declarado abaixo.
   5. `mapa-nao-publicado` — linha do CSV cujo `id` não aparece no `specs.html`
                           publicado. Ver a nota sobre ela, logo abaixo.
-  6. `grau-sem-ensaio`  — célula que declara `ate_onde_foi = SAIU NO FIO` ou
-                          `ate_onde_foi = O APARELHO OBEDECEU` e NÃO tem ensaio
-                          nenhum em `docs/data/ensaios.csv` para aquele `id`
-                          NAQUELE transporte. Ver "o buraco de 12/08" abaixo.
+  6. `grau-sem-ensaio`  — célula que declara um `ate_onde_foi` que a suíte não
+                          sustenta sozinha (hoje: `SAIU NO FIO`,
+                          `O APARELHO OBEDECEU`, `O JOGO RECEBEU`,
+                          `O JOGO REAGIU` — a lista sai de `ESCADA`, nunca de
+                          uma cópia) e NÃO tem ensaio nenhum em
+                          `docs/data/ensaios.csv` para aquele `id` NAQUELE
+                          transporte. Ver "o buraco de 12/08" abaixo.
 
 AVISO (não derruba o CI hoje)
   7. `assimetria-nao-declarada` — `cabo_aciona` e `radio_aciona` divergem (ou um
@@ -95,6 +98,31 @@ AVISO (não derruba o CI hoje)
                           `obedece` nesta coluna tem de escrever no caderno, na
                           mesma linha, o que o aparelho fez — que é exatamente o
                           que a casa cobra em toda parte.
+
+ 13. `reagiu-sem-olho-dela` — `ate_onde_foi = O JOGO REAGIU` com ensaio que
+                          sustenta, mas observado por quem não é `olho-dela`.
+                          DURA desde o primeiro dia, ao contrário da regra 10, e
+                          o motivo é LEGADO, não princípio: o degrau nasceu em
+                          19/08/2026 com zero células no CSV, então não há
+                          afirmação antiga que uma regra dura possa machucar.
+                          Detalhe em `_achado_sem_olho_dela`.
+
+Os dois degraus que faltavam (19/08/2026)
+-----------------------------------------
+Até esta data a escada de `ate_onde_foi` cobria só a IDA — produto para aparelho
+—, e dá para conferir no dado: `O APARELHO OBEDECEU` só aparece em linha de
+saída. A volta (aparelho → vpad → JOGO) não tinha uma palavra, e o mapa admitia
+isso por escrito em duas linhas suas: `toque.touchpad` ("quem ler
+`radio_aciona = sim` aqui está lendo 'o vpad ENTREGA', não 'o jogo REAGE'") e
+`movimento.giroscopio.jogo` ("o repasse está íntegro e o jogo não reage: a
+falha, se existir, é DEPOIS do vpad, e ninguém a localizou"). Era possível o
+mapa inteiro ficar verde enquanto ela não conseguia jogar.
+
+`O JOGO RECEBEU` e `O JOGO REAGIU` entram com o critério escrito em `ESCADA` —
+sem critério um degrau vira adjetivo — e com a mesma severidade dos degraus
+fortes de saída: sem ensaio no caderno, FALHA. NENHUMA célula do CSV foi
+preenchida com eles nesta leva, de propósito: `◌ ninguém respondeu` é verdade, e
+preencher por analogia é o que destruiria o valor deste arquivo.
 
 O buraco de 12/08/2026, e por que a regra 6 nasceu
 --------------------------------------------------
@@ -281,6 +309,180 @@ COLUNAS_EXIGIDAS = (
 #: 6, e o portão tem de gritar em vez de passar.
 SUFIXOS_EXIGIDOS = ("aciona", "de_onde_sei", "canal", "ate_onde_foi")
 
+#: ─────────────────────────────────────────────────────────────────────────
+#: A ESCADA DE `ate_onde_foi`, e este é o ÚNICO dono executável dela.
+#: ─────────────────────────────────────────────────────────────────────────
+#: A prosa e os critérios moram em `docs/process/METODO-DE-ISOLAMENTO.md`
+#: (seção "O que registrar em cada linha do mapa"); o que roda mora aqui, e
+#: mais nada deve repetir a lista. Quem precisa dela IMPORTA daqui:
+#: `scripts/gerar-mapa.py` monta a legenda do `specs.html` a partir de `ESCADA`
+#: em vez de reescrever os degraus à mão, que foi o que ele fazia até
+#: 19/08/2026 — duas listas, e a do HTML já teria envelhecido nesta mesma leva.
+#:
+#: O DEGRAU RESTANTE QUE AINDA É CÓPIA, dito na cara: `bancada.py`, linha ~64,
+#: tem um `GRAUS = [...]` próprio (é o seletor do formulário que grava no CSV).
+#: Ele não foi tocado aqui porque é território de outra frente; enquanto ele não
+#: importar `ESCADA`, o formulário não sabe ESCREVER os dois degraus novos — o
+#: portão os aceita, a bancada não os oferece. A cura é uma linha:
+#: `from check_paridade_transporte import VALORES_DA_ESCADA as GRAUS`.
+#:
+#: 15/08/2026 (D-13, decisão dela): a coluna se chamava `grau`.
+#: 19/08/2026: a escada ganhou a direção de ENTRADA. Até aqui os três degraus
+#: eram TODOS da direção de SAÍDA — produto → aparelho —, e dá para conferir no
+#: dado: `O APARELHO OBEDECEU` só aparece em linha de saída (alto-falante,
+#: rumble, gatilho adaptativo, lightbar). O mapa admitia o buraco por escrito,
+#: em duas linhas suas: `toque.touchpad` ("quem ler `radio_aciona = sim` aqui
+#: está lendo 'o vpad ENTREGA', não 'o jogo REAGE'") e
+#: `movimento.giroscopio.jogo` ("o repasse está íntegro e o jogo não reage: a
+#: falha, se existir, é DEPOIS do vpad, e ninguém a localizou"). Era possível o
+#: mapa inteiro ficar verde enquanto ela não conseguia jogar, porque NENHUMA
+#: célula falava do jogo. O desenho dos dois degraus é o da
+#: `2026-08-19-TRES-PORTOES-01`, seção 7.
+DIRECAO_SAIDA = "saída"
+DIRECAO_ENTRADA = "entrada"
+
+#: QUEM consegue fechar cada degrau. É o campo que decide a severidade das
+#: regras 6, 9, 10 e 13 — não um adjetivo.
+FECHA_A_SUITE = "a suíte, sem aparelho"
+FECHA_A_BANCADA = "a bancada, com o aparelho na mão"
+FECHA_O_INSTRUMENTO = "um instrumento, de fora do jogo"
+FECHA_A_MAO_DELA = "a mão dela, e mais ninguém"
+
+
+@dataclass(frozen=True)
+class Degrau:
+    """Um degrau de `ate_onde_foi`: o que ele afirma, e o que o fecha.
+
+    `criterio` não é enfeite. Um degrau sem critério escrito vira adjetivo — e
+    adjetivo é exatamente o que este mapa existe para não aceitar. O texto de
+    cada `criterio` diz o que se tem de OBSERVAR, e onde o instrumento mente.
+    """
+
+    valor: str
+    direcao: str
+    resumo: str
+    criterio: str
+    fechado_por: str
+
+
+#: A escada inteira, em ordem. A ordem é a do desenho dela na TRES-PORTOES-01
+#: §7.2: os dois degraus novos vêm DEPOIS de `O APARELHO OBEDECEU`, porque o
+#: caminho é produto → aparelho → vpad → jogo, e cada degrau só faz sentido com
+#: o anterior de pé.
+ESCADA = (
+    Degrau(
+        valor="MONTOU",
+        direcao=DIRECAO_SAIDA,
+        resumo="o produto montou o report",
+        criterio=(
+            "o byte existe na memória do produto e a suíte o lê. Nada saiu do "
+            "processo. Tratar MONTOU como `funciona` é a mentira mais cara "
+            "desta casa."
+        ),
+        fechado_por=FECHA_A_SUITE,
+    ),
+    Degrau(
+        valor="SAIU NO FIO",
+        direcao=DIRECAO_SAIDA,
+        resumo="o byte saiu e algo voltou",
+        criterio=(
+            "a escrita no nó do transporte não errou e houve resposta do outro "
+            "lado. Diz que o canal está aberto — não diz que o aparelho fez "
+            "coisa alguma com o que recebeu."
+        ),
+        fechado_por=FECHA_A_BANCADA,
+    ),
+    Degrau(
+        valor="O APARELHO OBEDECEU",
+        direcao=DIRECAO_SAIDA,
+        resumo="acendeu, girou, saiu som",
+        criterio=(
+            "alguém VIU o aparelho fazer o que foi pedido, e registrou o ensaio "
+            "no caderno com `observado_por = olho-dela`. É o fim da direção de "
+            "saída: depois dele o aparelho já fez a sua parte."
+        ),
+        fechado_por=FECHA_A_MAO_DELA,
+    ),
+    Degrau(
+        valor="O JOGO RECEBEU",
+        direcao=DIRECAO_ENTRADA,
+        resumo="o processo do jogo abriu o nó do nosso vpad",
+        criterio=(
+            "o INODE do nó do vpad (`stat -c %i`) aparece em `/proc/<pid>/fd` de "
+            "um processo da árvore do jogo. É observável de fora, sem a pessoa: "
+            "a árvore de processos do contêiner é visível do hospedeiro, e quem "
+            "segura o vpad é o `winedevice`, não o `.exe`. NUNCA case por "
+            "caminho (o minor é reciclado: `event22` foi vpad DualSense às 01:40 "
+            "e vpad Xbox às 01:50) e NUNCA pelo carimbo de tempo do fd (ele "
+            "marca quando alguém OLHOU, e fica cacheado — medido: dois fds do "
+            "MESMO nó com carimbos separados por 1m36s)."
+        ),
+        fechado_por=FECHA_O_INSTRUMENTO,
+    ),
+    Degrau(
+        valor="O JOGO REAGIU",
+        direcao=DIRECAO_ENTRADA,
+        resumo="o personagem andou, o gatilho endureceu DENTRO do jogo",
+        criterio=(
+            "ela jogou e viu. Nenhum instrumento desta casa lê o estado interno "
+            "de um jogo sob Proton, e nenhum vai ler: o único sensor deste "
+            "degrau é ela. O ensaio tem de trazer `observado_por = olho-dela`, e "
+            "o gesto `PS + R3` existe para ela poder fechá-lo sem tirar a mão do "
+            "controle."
+        ),
+        fechado_por=FECHA_A_MAO_DELA,
+    ),
+)
+
+#: Os valores, na ordem, para quem só precisa da lista (domínio, seletor).
+VALORES_DA_ESCADA = tuple(degrau.valor for degrau in ESCADA)
+DEGRAU_POR_VALOR = {degrau.valor: degrau for degrau in ESCADA}
+
+GRAU_MONTOU = "MONTOU"
+GRAU_SAIU_NO_FIO = "SAIU NO FIO"
+GRAU_OBEDECEU = "O APARELHO OBEDECEU"
+GRAU_JOGO_RECEBEU = "O JOGO RECEBEU"
+GRAU_JOGO_REAGIU = "O JOGO REAGIU"
+
+#: Os degraus que a suíte NÃO sustenta sozinha — e por isso os que a regra 6
+#: cobra no caderno de bancada. `MONTOU` fica de fora de propósito: montar o
+#: report é o que o pytest já morde sem aparelho, e cobrar ensaio dele seria
+#: pedir bancada para o que não precisa.
+#:
+#: Os dois degraus de ENTRADA entram aqui com a MESMA severidade dos de saída
+#: (FALHA, não aviso). Não há legado que amoleça: eles nascem em 19/08/2026 com
+#: ZERO células no CSV, então nenhuma afirmação verdadeira já escrita pode ser
+#: reprovada por engano — que era a única razão pela qual as regras 9 e 10
+#: começaram como aviso.
+GRAUS_QUE_EXIGEM_ENSAIO = tuple(
+    degrau.valor for degrau in ESCADA if degrau.fechado_por != FECHA_A_SUITE
+)
+
+#: Os degraus em que não basta EXISTIR ensaio: o ensaio tem de dizer que a
+#: coisa aconteceu (regra 9). `SAIU NO FIO` fica de fora porque ele afirma
+#: sobre o CANAL, e um ensaio que elimina um suspeito sustenta o canal mesmo
+#: quando o veredicto da feature é `não obedece`.
+GRAUS_QUE_EXIGEM_VEREDICTO = tuple(
+    degrau.valor
+    for degrau in ESCADA
+    if degrau.fechado_por in (FECHA_O_INSTRUMENTO, FECHA_A_MAO_DELA)
+)
+
+#: Os degraus que só a mão dela fecha (regras 10 e 13). `O JOGO RECEBEU` NÃO
+#: está aqui, e a diferença é o que dá sentido a ter dois degraus de entrada em
+#: vez de um: "o jogo abriu o nó" é medível por instrumento; "o jogo reagiu",
+#: não.
+GRAUS_QUE_SO_A_MAO_DELA_FECHA = tuple(
+    degrau.valor for degrau in ESCADA if degrau.fechado_por == FECHA_A_MAO_DELA
+)
+
+#: Os degraus nascidos em 19/08/2026, sem uma única célula no CSV. É o que
+#: autoriza a regra 13 a ser DURA enquanto a 10 segue avisando: a regra 10 é
+#: aviso por causa das células que já existiam quando ela chegou, e aqui não
+#: existe nenhuma. Quando `OLHO_DELA_REPROVA` virar True esta distinção some
+#: sozinha, e é para sumir mesmo.
+GRAUS_SEM_LEGADO = frozenset({GRAU_JOGO_RECEBEU, GRAU_JOGO_REAGIU})
+
 #: Domínio de cada coluna. Vazio é SEMPRE aceito, e isso é decisão de desenho:
 #: o próprio `specs.html` declara no rodapé que "vazio aqui é pergunta aberta,
 #: nunca não". Valor novo que não estiver nesta tabela reprova — de propósito.
@@ -304,7 +506,8 @@ DOMINIO_POR_SUFIXO = {
     "de_onde_sei": frozenset(
         {"", "medido", "inferido-do-codigo", "afirmado-no-doc", "incerto"}
     ),
-    "ate_onde_foi": frozenset({"", "MONTOU", "SAIU NO FIO", "O APARELHO OBEDECEU"}),
+    #: DERIVADO de `ESCADA`, nunca redigitado: a lista tem UM dono.
+    "ate_onde_foi": frozenset({"", *VALORES_DA_ESCADA}),
 }
 DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 
@@ -314,23 +517,16 @@ DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 ACIONA_FORTE = "sim"
 DE_ONDE_SEI_FORTE = "medido"
 
-#: A escada de grau, tal como `docs/process/METODO-DE-ISOLAMENTO.md` a define:
-#: MONTOU (montou o report) -> SAIU NO FIO (o byte saiu, algo voltou) ->
-#: O APARELHO OBEDECEU (acendeu, girou, saiu som).
-GRAU_MONTOU = "MONTOU"
-GRAU_SAIU_NO_FIO = "SAIU NO FIO"
-GRAU_OBEDECEU = "O APARELHO OBEDECEU"
-
-#: Os dois degraus que só a bancada sustenta — e por isso os dois que a regra 6
-#: cobra no caderno. `MONTOU` fica de fora de propósito: montar o report é o que
-#: a suíte prova sozinha, sem aparelho, e cobrar ensaio dele seria pedir bancada
-#: para algo que o pytest já morde.
-GRAUS_QUE_EXIGEM_ENSAIO = (GRAU_SAIU_NO_FIO, GRAU_OBEDECEU)
-
-#: O que, em `resultado`, conta como "o aparelho obedeceu". LIDO do caderno em
+#: O que, em `resultado`, conta como "aconteceu". LIDO do caderno em
 #: 12/08/2026 (`obedece`, `não obedece`, `parcial`, `inconclusivo`), não
 #: inventado aqui — e por isso a regra que o usa é AVISO: um valor novo no
 #: caderno não pode virar reprovação sem alguém ter dito o que ele significa.
+#:
+#: 19/08/2026: os dois degraus de ENTRADA reusam este MESMO vocabulário, de
+#: propósito. `obedece` num ensaio de `O JOGO RECEBEU` quer dizer "o jogo abriu
+#: o nó"; num de `O JOGO REAGIU`, "o jogo agiu". Inventar palavra nova para a
+#: direção nova seria criar um segundo vocabulário para a mesma escala — e a
+#: casa já pagou por ter duas listas do mesmo dado.
 RESULTADOS_QUE_SUSTENTAM = frozenset({"obedece"})
 
 #: A coluna do caderno que diz o que a FEATURE fez, quando `resultado` está
@@ -347,8 +543,11 @@ RESULTADOS_DO_CADERNO = frozenset(
     {"obedece", "não obedece", "parcial", "inconclusivo"}
 )
 
-#: Quem, em `observado_por`, sustenta o degrau mais alto. A régua é do
-#: METODO-DE-ISOLAMENTO: "só `olho-dela` sustenta *O APARELHO OBEDECEU*".
+#: Quem, em `observado_por`, sustenta os degraus que só a mão dela fecha. A
+#: régua é do METODO-DE-ISOLAMENTO: "só `olho-dela` sustenta *O APARELHO
+#: OBEDECEU*", e desde 19/08/2026 ela vale também para *O JOGO REAGIU*, pelo
+#: motivo escrito no `criterio` daquele degrau — não há instrumento que leia o
+#: estado interno de um jogo sob Proton.
 OBSERVADOR_QUE_SUSTENTA = "olho-dela"
 
 #: Convenção de coleta do pytest (não há `python_files`/`python_functions`
@@ -415,6 +614,7 @@ class Resumo:
     alvos_de_teste: int = 0
     graus_fortes: int = 0
     graus_fortes_sem_ensaio: int = 0
+    graus_de_entrada: int = 0
     ensaios_no_caderno: int = 0
 
 
@@ -796,6 +996,8 @@ def censo(
             if grau in GRAUS_QUE_EXIGEM_ENSAIO:
                 resumo.graus_fortes += 1
                 graus_fortes_nesta_linha.append(grau)
+                if DEGRAU_POR_VALOR[grau].direcao == DIRECAO_ENTRADA:
+                    resumo.graus_de_entrada += 1
                 if ensaios_por_lado is not None:
                     achados.extend(
                         _regra_do_caderno(
@@ -1062,7 +1264,7 @@ def _regra_do_caderno(
 
     guarda = _regra_do_veredicto_da_feature(ensaios, numero, ident, lado)
 
-    if grau != GRAU_OBEDECEU:
+    if grau not in GRAUS_QUE_EXIGEM_VEREDICTO:
         return guarda
 
     sustentam = [
@@ -1080,7 +1282,7 @@ def _regra_do_caderno(
                 numero,
                 ident,
                 lado,
-                f"declara `{lado}_ate_onde_foi = {GRAU_OBEDECEU}` e os {len(ensaios)} "
+                f"declara `{lado}_ate_onde_foi = {grau}` e os {len(ensaios)} "
                 f"ensaio(s) de {rotulo} desta linha dizem {vistos}. Ou o degrau "
                 f"está alto demais, ou o ensaio foi gravado com o `resultado` do "
                 "SUSPEITO em vez do que a FEATURE fez — se for o segundo, "
@@ -1090,25 +1292,67 @@ def _regra_do_caderno(
             )
         ]
 
+    if grau not in GRAUS_QUE_SO_A_MAO_DELA_FECHA:
+        return guarda
+
     if not any(
         (e.get("observado_por") or "").strip() == OBSERVADOR_QUE_SUSTENTA for e in sustentam
     ):
         observadores = sorted({(e.get("observado_por") or "").strip() for e in sustentam})
-        return [
-            *guarda,
-            Achado(
-                FALHA if OLHO_DELA_REPROVA else AVISO,
-                "grau-sem-olho-dela",
-                numero,
-                ident,
-                lado,
-                f"o ensaio que sustenta `{GRAU_OBEDECEU}` no {rotulo} foi "
-                f"observado por {observadores}, e o METODO-DE-ISOLAMENTO diz que "
-                f"só `{OBSERVADOR_QUE_SUSTENTA}` sustenta esse degrau: peça o "
-                "olho dela, ou desça para `SAIU NO FIO`",
-            )
-        ]
+        return [*guarda, _achado_sem_olho_dela(grau, observadores, numero, ident, lado, rotulo)]
     return guarda
+
+
+def _achado_sem_olho_dela(
+    grau: str,
+    observadores: list[str],
+    numero: int,
+    ident: str,
+    lado: str,
+    rotulo: str,
+) -> Achado:
+    """Regras 10 e 13 — o degrau que só a mão dela fecha, sem a mão dela.
+
+    Uma pergunta, duas severidades, e a diferença é LEGADO, não princípio:
+
+      - regra 10 (`grau-sem-olho-dela`, `O APARELHO OBEDECEU`) é AVISO porque
+        quando ela nasceu já havia células escritas por outra régua, e reprovar
+        afirmação verdadeira retroativamente é o defeito que este arquivo passa
+        uma seção inteira explicando por que não se comete. Promoção por
+        `OLHO_DELA_REPROVA`;
+      - regra 13 (`reagiu-sem-olho-dela`, `O JOGO REAGIU`) é FALHA desde o
+        primeiro dia, porque o degrau nasceu em 19/08/2026 com ZERO células no
+        CSV. Não há afirmação antiga para machucar, e deixá-la avisando seria
+        abrir de graça exatamente a porta que a regra 6 fechou em 12/08 — a de
+        escrever a afirmação mais forte do vocabulário sem ninguém ter visto
+        nada. `O JOGO REAGIU` é a afirmação mais forte que este mapa sabe
+        fazer: ela diz que ELA CONSEGUIU JOGAR.
+    """
+    if grau in GRAUS_SEM_LEGADO:
+        return Achado(
+            FALHA,
+            "reagiu-sem-olho-dela",
+            numero,
+            ident,
+            lado,
+            f"declara `{lado}_ate_onde_foi = {grau}` no {rotulo} com ensaio "
+            f"observado por {observadores}. Este degrau NÃO tem instrumento: "
+            "nenhuma régua desta casa lê o estado interno de um jogo sob "
+            f"Proton. Só `{OBSERVADOR_QUE_SUSTENTA}` o fecha — grave o ensaio "
+            f"com o gesto dela, ou desça para `{GRAU_JOGO_RECEBEU}`, que é o "
+            "que um instrumento consegue ver de fora",
+        )
+    return Achado(
+        FALHA if OLHO_DELA_REPROVA else AVISO,
+        "grau-sem-olho-dela",
+        numero,
+        ident,
+        lado,
+        f"o ensaio que sustenta `{grau}` no {rotulo} foi "
+        f"observado por {observadores}, e o METODO-DE-ISOLAMENTO diz que "
+        f"só `{OBSERVADOR_QUE_SUSTENTA}` sustenta esse degrau: peça o "
+        "olho dela, ou desça para `SAIU NO FIO`",
+    )
 
 
 def _regra_da_mordida_nao_provada(
@@ -1164,10 +1408,14 @@ def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
         ("alvos de pytest apontados pelo mapa", resumo.alvos_de_teste),
         ("assimetrias não declaradas", resumo.assimetrias_nao_declaradas),
         (
-            f"graus fortes (`{GRAU_SAIU_NO_FIO}` ou `{GRAU_OBEDECEU}`)",
+            "graus que a suíte não sustenta sozinha",
             resumo.graus_fortes,
         ),
         ("     desses, SEM ensaio no caderno", resumo.graus_fortes_sem_ensaio),
+        # A conta que denuncia o buraco de 19/08: enquanto ela for ZERO, o mapa
+        # não tem uma única célula falando do JOGO — e podia estar todo verde
+        # com ela sem conseguir jogar.
+        ("     desses, na direção de ENTRADA (o jogo)", resumo.graus_de_entrada),
         ("ensaios lidos do caderno de bancada", resumo.ensaios_no_caderno),
     ]
     largura = max(len(rotulo) for rotulo, _ in linhas)
@@ -1241,10 +1489,16 @@ def main(argv: list[str] | None = None) -> int:
         print("`de_onde_sei` da célula para o que ela de fato é. Vazio é pergunta")
         print("aberta e não reprova; `medido` sem teste, sim.")
         print("")
-        print(f"E o grau é a MESMA conta na bancada: `{GRAU_SAIU_NO_FIO}` e")
-        print(f"`{GRAU_OBEDECEU}` pedem ensaio do MESMO transporte em")
+        pedem = ", ".join(f"`{valor}`" for valor in GRAUS_QUE_EXIGEM_ENSAIO)
+        print("E o grau é a MESMA conta na bancada:")
+        print(f"{pedem} pedem ensaio do MESMO transporte em")
         print(f"{ENSAIOS_RELATIVO}. Sem ensaio, o degrau honesto é")
         print(f"`{GRAU_MONTOU}` — que já é o que a suíte prova sem aparelho.")
+        print("")
+        print(f"E `{GRAU_JOGO_REAGIU}` pede mais: só `{OBSERVADOR_QUE_SUSTENTA}`")
+        print("o fecha, porque não existe instrumento que leia o estado interno")
+        print("de um jogo sob Proton. O degrau que um instrumento vê é")
+        print(f"`{GRAU_JOGO_RECEBEU}` — o inode do vpad em `/proc/<pid>/fd`.")
         return 1
 
     print(f"OK: nenhuma afirmação forte sem rede em {caminho_csv.name}.")

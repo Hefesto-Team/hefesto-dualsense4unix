@@ -45,7 +45,20 @@ log() { printf '[w3] %s\n' "$*"; }
 
 HCI=hci0
 log "plano: 3 braços de ${DUR}s (A ocioso / B carga / C rfkill block wifi)"
-log "métricas: delta hciconfig -a ${HCI} + btmon snoop + evdev + debugfs"
+# INSTRUMENTO DECLARA A RÉGUA (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026): os
+# contadores RX/TX vêm do ioctl HCIGETDEVINFO, que só o `hciconfig` (depreciado
+# pelo BlueZ) chama — nem `btmgmt` nem `bluetoothctl` do 5.86 os expõem. Onde
+# ele não existe, este braço da medição SE PERDE, e um Δ vazio não pode ser lido
+# como "rádio não sofreu": tem de ser lido como "não medi".
+if command -v hciconfig >/dev/null 2>&1; then
+    log "métricas: delta hciconfig -a ${HCI} + btmon snoop + evdev + debugfs"
+else
+    log "métricas: btmon snoop + evdev + debugfs — SEM o delta de contadores HCI"
+    log "  (o hciconfig foi depreciado pelo BlueZ e não está nesta máquina; os"
+    log "   contadores RX/TX só saem do ioctl HCIGETDEVINFO e nenhuma ferramenta"
+    log "   viva os devolve. Δ ausente = medida ausente, não rádio limpo. Para"
+    log "   recuperar este braço: instale bluez-deprecated/bluez-deprecated-tools)"
+fi
 if [[ ${#EVDEVS[@]} -eq 0 ]]; then
     log "dica: passe --evdev /dev/input/eventN (1x por controle) p/ medir"
     log "  taxa de reports e lacunas; sem isso mede-se só o lado HCI."
@@ -108,7 +121,13 @@ print(f"{dev}: {n} eventos em {dur:.0f}s = {taxa:.1f} ev/s; "
 PY
 }
 
-snapshot_hci() { hciconfig -a "${HCI}" 2>/dev/null | grep -E 'RX bytes|TX bytes' || true; }
+snapshot_hci() {
+    if ! command -v hciconfig >/dev/null 2>&1; then
+        echo "(sem hciconfig — contadores HCI NÃO medidos neste braço)"
+        return 0
+    fi
+    hciconfig -a "${HCI}" 2>/dev/null | grep -E 'RX bytes|TX bytes' || true
+}
 
 # Δ dos contadores HCI entre dois snapshots (RX/TX bytes, acl, sco, events,
 # errors). Cada linha vem taggeada RX./TX. porque 'bytes'/'acl'/'errors'
