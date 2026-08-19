@@ -77,14 +77,21 @@ DUALSENSE_EDGE_PID = 0x0DF2
 KERNEL_DEFAULT_BLUE: tuple[int, int, int] = (0, 0, 128)
 
 #: AVISO-DE-MODO-01: a piscada do aviso de modo. Ela pediu "pisca 3 vezes
-#: rápido" — rápido o bastante para ler como AVISO e não como perfil novo, e
-#: curto o bastante para caber num instante de jogo (3 x 0,16 s = meio segundo).
+#: rápido", e "rápido" é palavra DELA — quem escreveu o primeiro número chutou.
+#:
+#: ESCOLHA DELA, 19/08/2026: 0,15 s aceso e 0,12 s apagado, três vezes — 0,81 s
+#: no total. Ela viu as três opções (0,33 s / 0,48 s / 0,81 s) e escolheu a mais
+#: LENTA, com o preço na mesa: é quase um segundo de luz piscando no canto do
+#: olho durante uma partida. O que ela comprou com isso: dá para CONTAR as três
+#: e para LER a cor, que é a única coisa que o aviso tem a dizer. Um aviso que
+#: pisca rápido demais vira um susto sem mensagem.
+#:
 #: O apagado é PRETO, não brilho zero: `luz.lightbar.brilho` tem `aciona=não`
 #: nos dois transportes no mapa de canais, então mexer no `brightness` não
 #: apaga nada — quem apaga é a COR.
 AVISO_PISCADAS = 3
-AVISO_ACESO_S = 0.09
-AVISO_APAGADO_S = 0.07
+AVISO_ACESO_S = 0.15
+AVISO_APAGADO_S = 0.12
 AVISO_APAGADO: tuple[int, int, int] = (0, 0, 0)
 
 #: REPLICA-03: tamanho do bloco de trigger effect que o jogo escreve no report
