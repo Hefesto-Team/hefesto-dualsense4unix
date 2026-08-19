@@ -347,16 +347,422 @@ ask_yn() {
     REPLY="${REPLY:-$default}"
 }
 
-run_apt() {
-    # Roda apt-get quieto; só mostra saída se falhar.
+# ---------------------------------------------------------------------------
+# DEPS-UNIVERSAIS-01 (19/08/2026) — o install deixa de ser só-apt.
+#
+# O pedido dela, literal: *"corrige nosso install pra instalar isso tudo aí"* e,
+# a frase que manda no desenho, *"qualquer install. inclusive o do andre ou de
+# qualquer outro user"*. Ou seja: a cura não é para a bancada dela.
+#
+# O que havia antes: `run_apt` era a ÚNICA porta, e o `_reconhecimento()` dizia
+# por escrito que fora da família Debian o instalador nativo não garante nada.
+# Numa máquina limpa de Fedora, Arch ou openSUSE o install terminava "ok" com a
+# libhidapi ausente — o verde mentiroso que `install.sh` já nomeia no bloco DKMS.
+#
+# O desenho, em três peças, e o molde é da própria casa
+# (`scripts/install_osk.sh:206-220`, que já despacha por família):
+#
+#   _familia_pacotes()  descobre a família (apt/dnf/pacman/zypper/nenhum);
+#   _pkg_nome()         UMA tabela: nome canônico -> nome em cada família;
+#   run_pkg()           instala nomes canônicos na família corrente.
+#
+# `run_apt` CONTINUA existindo, e virou o braço apt do `run_pkg` — não uma
+# fachada morta. Razão: é ele que guarda a disciplina de saída quieta (só fala
+# se falhar), ele é citado por teste e por documento desta casa, e duplicar
+# essa disciplina no `run_pkg` seria dois lugares para consertar quando ela
+# mudar. Quem chama `run_apt` direto passa nome de pacote APT — hoje ninguém,
+# só o `run_pkg`.
+#
+# De onde vêm os nomes: dos empacotamentos que esta casa já publica
+# (`packaging/debian/control`, `packaging/fedora/*.spec`, `packaging/arch/PKGBUILD`)
+# e da matriz `smoke-multi-distro` do CI (`.github/workflows/ci.yml:796-811`),
+# que já declara os nomes de runtime de Fedora 40, Arch e Debian 12. Não são
+# palpite. A coluna do **zypper é INFERIDA** e está marcada como tal: o
+# repositório não tinha uma linha sobre openSUSE antes desta leva, então a
+# coluna existe para não abandonar quem está lá, mas nenhum teste de hardware
+# a sustenta ainda.
+_OS_RELEASE="${HEFESTO_OS_RELEASE:-/etc/os-release}"
+
+# Família do gerenciador de pacotes. `/etc/os-release` primeiro (é a fonte
+# padrão e sobrevive a máquinas com dois gerenciadores instalados); o PATH só
+# decide quando o os-release não conclui. `HEFESTO_FAMILIA_PACOTES` é o gancho
+# de teste, no mesmo espírito do `HEFESTO_OSK_GERENCIADOR`.
+_familia_pacotes() {
+    if [[ -n "${HEFESTO_FAMILIA_PACOTES:-}" ]]; then
+        printf '%s\n' "${HEFESTO_FAMILIA_PACOTES}"
+        return 0
+    fi
+    local _id="" _id_like="" _token
+    if [[ -r "${_OS_RELEASE}" ]]; then
+        _id="$(sed -n 's/^ID=//p' "${_OS_RELEASE}" | tr -d '"' | head -1)"
+        _id_like="$(sed -n 's/^ID_LIKE=//p' "${_OS_RELEASE}" | tr -d '"' | head -1)"
+    fi
+    # shellcheck disable=SC2086  # a quebra em palavras do ID_LIKE é o objetivo
+    for _token in ${_id} ${_id_like}; do
+        case "${_token}" in
+            debian|ubuntu|linuxmint|pop|raspbian|devuan)  printf 'apt\n';    return 0 ;;
+            fedora|rhel|centos|almalinux|rocky|nobara)    printf 'dnf\n';    return 0 ;;
+            arch|archlinux|manjaro|endeavouros|cachyos)   printf 'pacman\n'; return 0 ;;
+            opensuse*|suse|sles|sle)                      printf 'zypper\n'; return 0 ;;
+        esac
+    done
+    command -v apt-get >/dev/null 2>&1 && { printf 'apt\n';    return 0; }
+    command -v dnf     >/dev/null 2>&1 && { printf 'dnf\n';    return 0; }
+    command -v pacman  >/dev/null 2>&1 && { printf 'pacman\n'; return 0; }
+    command -v zypper  >/dev/null 2>&1 && { printf 'zypper\n'; return 0; }
+    printf 'nenhum\n'
+}
+
+# A TABELA. Nome canônico -> nome real em cada família. Vazio quer dizer "esta
+# família não tem esse pacote com nome que eu saiba" — e aí o `run_pkg` diz
+# isso em voz alta em vez de instalar a coisa errada.
+_pkg_nome() {
+    local _canon="$1" _familia="${2:-}"
+    [[ -z "${_familia}" ]] && _familia="$(_familia_pacotes)"
+    local _apt="" _dnf="" _pacman="" _zypper=""
+    case "${_canon}" in
+        # --- OBRIGATÓRIAS -------------------------------------------------
+        # A biblioteca que o backend do controle abre por dlopen. A wheel
+        # `hidapi` do pip é wrapper CFFI e NÃO traz o .so: sem o pacote do
+        # sistema, `import hidapi` levanta OSError e nenhum aparelho sobe.
+        hidapi)
+            _apt="libhidapi-hidraw0"; _dnf="hidapi"
+            _pacman="hidapi";         _zypper="libhidapi-hidraw0" ;;
+        # O loader SVG do gdk-pixbuf. ARMADILHA DE NOME: `librsvg2-bin` é o
+        # `rsvg-convert`, ferramenta de BUILD; quem desenha na tela é o
+        # `librsvg2-common`. Sem ele o ícone da bandeja some e todo glifo SVG
+        # da interface cai junto (BUG-TRAY-ICONE-INVISIVEL-01, app/main.py).
+        svg-loader)
+            _apt="librsvg2-common";   _dnf="librsvg2"
+            _pacman="librsvg";        _zypper="gdk-pixbuf-loader-rsvg" ;;
+        # O módulo venv. Só o Debian o separa do interpretador; nas outras
+        # famílias ele vem no pacote do próprio Python (listado para que a
+        # mensagem de erro nunca fique sem nome de pacote).
+        python-venv)
+            _apt="python3-venv";      _dnf="python3-libs"
+            _pacman="python";         _zypper="python3-base" ;;
+        # Compilar o que não tem wheel: python-uinput e evdev sempre saem do
+        # sdist (BUG-CI-SMOKE-EVDEV-NO-GCC-01). Precisa de compilador,
+        # `Python.h` e `linux/input.h`.
+        toolchain-c)
+            _apt="build-essential python3-dev linux-libc-dev"
+            _dnf="gcc python3-devel kernel-headers"
+            _pacman="gcc linux-api-headers"
+            _zypper="gcc python3-devel linux-glibc-devel" ;;
+        # --- GUI ----------------------------------------------------------
+        python-gi)
+            _apt="python3-gi";        _dnf="python3-gobject"
+            _pacman="python-gobject"; _zypper="python3-gobject" ;;
+        python-gi-cairo)
+            _apt="python3-gi-cairo";  _dnf="python3-cairo"
+            _pacman="python-cairo";   _zypper="python3-gobject-cairo" ;;
+        gtk3)
+            _apt="gir1.2-gtk-3.0";    _dnf="gtk3"
+            _pacman="gtk3";           _zypper="typelib-1_0-Gtk-3_0 gtk3" ;;
+        appindicator)
+            _apt="gir1.2-ayatanaappindicator3-0.1"
+            _dnf="libayatana-appindicator-gtk3"
+            _pacman="libayatana-appindicator"
+            _zypper="typelib-1_0-AyatanaAppIndicator3-0_1" ;;
+        gi-dev)
+            _apt="libgirepository1.0-dev libcairo2-dev"
+            _dnf="gobject-introspection-devel cairo-devel"
+            _pacman="gobject-introspection cairo"
+            _zypper="gobject-introspection-devel cairo-devel" ;;
+        desktop-utils)
+            _apt="desktop-file-utils libgtk-3-bin"
+            _dnf="desktop-file-utils gtk-update-icon-cache"
+            _pacman="desktop-file-utils gtk-update-icon-cache"
+            _zypper="desktop-file-utils gtk3-tools" ;;
+        imagemagick)
+            _apt="imagemagick";       _dnf="ImageMagick"
+            _pacman="imagemagick";    _zypper="ImageMagick" ;;
+        # --- ÁUDIO / RÁDIO / DIAGNÓSTICO ----------------------------------
+        opus)
+            _apt="libopus0";          _dnf="opus"
+            _pacman="opus";           _zypper="libopus0" ;;
+        pactl)
+            _apt="pulseaudio-utils";  _dnf="pulseaudio-utils"
+            _pacman="libpulse";       _zypper="pulseaudio-utils" ;;
+        bluez)
+            _apt="bluez";             _dnf="bluez"
+            _pacman="bluez bluez-utils"; _zypper="bluez" ;;
+        # `bt-agent` (ONDA-R, cura do bond meio-salvo). Fedora e openSUSE não
+        # empacotam `bluez-tools` com esse nome — deixados VAZIOS de propósito:
+        # é melhor dizer "não tenho nome para isso aqui" do que instalar outra
+        # coisa. Escopo dela: se a cura vale só para Debian/Arch, é promessa do
+        # produto que muda de valor conforme a distro.
+        bt-agent)
+            _apt="bluez-tools";       _dnf=""
+            _pacman="bluez-tools";    _zypper="" ;;
+        wlrctl)
+            _apt="wlrctl";            _dnf="wlrctl"
+            _pacman="wlrctl";         _zypper="" ;;
+        usbutils)
+            _apt="usbutils";          _dnf="usbutils"
+            _pacman="usbutils";       _zypper="usbutils" ;;
+        fontconfig)
+            _apt="fontconfig";        _dnf="fontconfig"
+            _pacman="fontconfig";     _zypper="fontconfig" ;;
+        curl)
+            _apt="curl";              _dnf="curl"
+            _pacman="curl";           _zypper="curl" ;;
+        # --- DKMS ---------------------------------------------------------
+        dkms)
+            _apt="dkms";              _dnf="dkms"
+            _pacman="dkms";           _zypper="dkms" ;;
+        compilador)
+            _apt="build-essential";   _dnf="gcc make"
+            _pacman="base-devel";     _zypper="gcc make" ;;
+        kernel-headers)
+            _apt="linux-headers-$(uname -r)"; _dnf="kernel-devel"
+            _pacman="linux-headers";          _zypper="kernel-devel" ;;
+    esac
+    case "${_familia}" in
+        apt)    printf '%s\n' "${_apt}" ;;
+        dnf)    printf '%s\n' "${_dnf}" ;;
+        pacman) printf '%s\n' "${_pacman}" ;;
+        zypper) printf '%s\n' "${_zypper}" ;;
+        *)      printf '%s\n' "" ;;
+    esac
+}
+
+# Roda o instalador quieto; só mostra saída se falhar. A disciplina é a mesma
+# de sempre — barulho de gerenciador de pacotes num install que ela roda dez
+# vezes por dia é defeito.
+_run_pkg_quieto() {
     local _tmp
     _tmp="$(mktemp)"
-    if ! sudo apt-get install -y -qq "$@" > "$_tmp" 2>&1; then
+    if ! "$@" > "$_tmp" 2>&1; then
         cat "$_tmp" >&2
         rm -f "$_tmp"
         return 1
     fi
     rm -f "$_tmp"
+}
+
+run_apt() {
+    # O braço apt do run_pkg. Recebe nome de pacote APT, não canônico.
+    _run_pkg_quieto sudo apt-get install -y -qq "$@"
+}
+
+# Instala uma lista de nomes CANÔNICOS na família desta máquina.
+run_pkg() {
+    local _familia _canon _nome _parte
+    local _nomes=()
+    _familia="$(_familia_pacotes)"
+    for _canon in "$@"; do
+        _nome="$(_pkg_nome "${_canon}" "${_familia}")"
+        if [[ -z "${_nome}" ]]; then
+            warn "não tenho nome de pacote para '${_canon}' em ${_familia} — instale o equivalente pela sua distro"
+            return 1
+        fi
+        # shellcheck disable=SC2086  # um canônico pode valer vários pacotes
+        for _parte in ${_nome}; do _nomes+=("${_parte}"); done
+    done
+    (( ${#_nomes[@]} )) || return 1
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — não consigo instalar ${_nomes[*]}"
+        return 1
+    fi
+    case "${_familia}" in
+        apt)    run_apt "${_nomes[@]}" ;;
+        dnf)    _run_pkg_quieto sudo dnf install -y "${_nomes[@]}" ;;
+        pacman) _run_pkg_quieto sudo pacman -S --noconfirm --needed "${_nomes[@]}" ;;
+        zypper) _run_pkg_quieto sudo zypper --non-interactive install "${_nomes[@]}" ;;
+        *)      warn "sem gerenciador de pacotes conhecido — não instalei ${*}"; return 1 ;;
+    esac
+}
+
+# O comando exato que a pessoa roda se nós não conseguirmos — impresso, nunca
+# escondido (mesma regra do `install_osk.sh:comando_manual`).
+comando_manual_pkg() {
+    local _familia _canon _nome _lista=""
+    _familia="$(_familia_pacotes)"
+    for _canon in "$@"; do
+        _nome="$(_pkg_nome "${_canon}" "${_familia}")"
+        [[ -z "${_nome}" ]] && _nome="$(_pkg_nome "${_canon}" apt)"
+        [[ -z "${_nome}" ]] && _nome="${_canon}"
+        _lista="${_lista}${_lista:+ }${_nome}"
+    done
+    case "${_familia}" in
+        apt)    printf 'sudo apt install %s\n' "${_lista}" ;;
+        dnf)    printf 'sudo dnf install %s\n' "${_lista}" ;;
+        pacman) printf 'sudo pacman -S %s\n' "${_lista}" ;;
+        zypper) printf 'sudo zypper install %s\n' "${_lista}" ;;
+        *)      printf 'instale pela sua distro o equivalente a: %s\n' "${_lista}" ;;
+    esac
+}
+
+# O CENSO, em código. Cada linha é
+#     canônico|criticidade|checagem|o que quebra sem ele
+#
+# CRITICIDADE, e a diferença é a mesma que já existe no arquivo entre o bloco do
+# GTK (fatal) e o BT-MIC-01 (best-effort):
+#   obrigatoria -> `die`. Sem ela o produto não faz o que promete: ou nenhum
+#                  aparelho sobe, ou a interface não consegue desenhar.
+#   importante  -> `warn` e segue. Morre UMA função; o resto vive.
+#
+# O que NÃO entra aqui, de propósito: tudo que é só-de-CI. `libhidapi-dev`,
+# `libudev-dev` e `libxi-dev` são CABEÇALHOS (quem instala precisa da
+# biblioteca, não do -dev); `librsvg2-bin` é o `rsvg-convert`, que só o
+# `scripts/gerar_icones.sh` usa; `gettext` não é preciso porque os `.mo` já vêm
+# COMPILADOS na árvore e o install só os copia; `appstream`, `libfuse2` e
+# `dpkg` são do build. Instalar isso na máquina de quem joga seria cobrar um
+# preço por nada.
+_DEPS_DE_SISTEMA=(
+    "hidapi|obrigatoria|lib:libhidapi|o backend do controle não abre NENHUM aparelho (o pydualsense faz dlopen da libhidapi; a wheel do pip não traz o .so)"
+    "svg-loader|obrigatoria|svg|o ícone da bandeja some e todo glifo SVG da interface cai junto"
+    "toolchain-c|importante|toolchain|as extensões sem wheel (python-uinput, evdev) não compilam e o passo 2 pode abortar"
+    "appindicator|importante|appindicator|a bandeja não nasce: a janela abre, o ícone ao lado do relógio não"
+    "desktop-utils|importante|cmd:desktop-file-validate,update-desktop-database,gtk-update-icon-cache|o atalho e o ícone podem não aparecer no menu do sistema"
+    "imagemagick|importante|cmd:convert|o ícone fica só no 256x256, sem as resoluções menores"
+    "bluez|importante|cmd:bluetoothctl|parear pelo rádio, conferir o bond e o diagnóstico de Bluetooth param de funcionar"
+    "usbutils|importante|cmd:lsusb|o diagnóstico perde a leitura do barramento USB"
+    "fontconfig|importante|cmd:fc-cache|a interface troca de fonte em silêncio (Space Grotesk e JetBrains Mono não entram)"
+    "curl|importante|cmd:curl|as fontes da identidade visual não são baixadas"
+)
+
+# Cheque ANTES de instalar. A instalação dela roda muitas vezes; chamar o
+# gerenciador de pacotes à toa é barulho, e barulho é defeito. Cada checagem
+# pergunta pelo EFEITO (a biblioteca abre? o gdk-pixbuf lê SVG?), nunca pelo
+# nome do pacote — é o que faz a mesma régua valer nas quatro famílias.
+_dep_presente() {
+    local _checagem="$1" _bin _inc _saida
+    case "${_checagem}" in
+        lib:*)
+            # A pergunta é "a biblioteca ABRE?", não "o `ldconfig` a lista?" —
+            # e é a mesma disciplina do `svg` e do `appindicator` logo abaixo.
+            # `ctypes.CDLL` é LITERALMENTE o que o produto faz: o `hidapi` do
+            # pip abre por `ffi.dlopen` (`hidapi.py:149`) e o
+            # `integrations/dualsense_bt_audio.py:473-494` abre a libopus por
+            # `ctypes.CDLL`. Se abrir aqui, abre lá.
+            #
+            # POR QUE NÃO O `ldconfig`, e isto é um BLOQUEANTE medido em
+            # 19/08/2026: ele mora em `/usr/sbin`, que NÃO está no PATH de
+            # usuário comum no Debian 12 — só no do root. A régua sairia vazia
+            # para toda pessoa que instala sem ser root, e TODA biblioteca
+            # presente seria lida como ausente. O CI é cego para isso porque os
+            # contêineres da matriz rodam como root, e o root tem sbin no PATH
+            # em qualquer distro.
+            #
+            # E há um segundo buraco, medido no mesmo dia e que o `ldconfig`
+            # tinha: com o `set -o pipefail` deste arquivo (linha 188), um
+            # `ldconfig -p | grep -q` devolvia 141 — o `grep -q` sai no
+            # primeiro acerto, o `ldconfig` morre de SIGPIPE, e o pipeline
+            # inteiro reprova. Os dois buracos somem perguntando pelo efeito.
+            #
+            # O `ldconfig` fica como PLANO B, com caminho absoluto, para o caso
+            # de o venv ainda não existir quando alguém chamar isto de outro
+            # ponto do arquivo.
+            local _so="${_checagem#lib:}"
+            if [[ -x "${VENV_DIR}/bin/python" ]]; then
+                "${VENV_DIR}/bin/python" -c \
+                    "import ctypes,sys; sys.exit(0 if ctypes.CDLL('${_so}') else 1)" \
+                    >/dev/null 2>&1 && return 0
+                return 1
+            fi
+            local _ldconfig=""
+            for _bin in /usr/sbin/ldconfig /sbin/ldconfig ldconfig; do
+                command -v "${_bin}" >/dev/null 2>&1 && { _ldconfig="${_bin}"; break; }
+            done
+            [[ -z "${_ldconfig}" ]] && return 1
+            _saida="$("${_ldconfig}" -p 2>/dev/null || true)"
+            [[ "${_saida}" == *"${_so}"* ]]
+            ;;
+        cmd:*)
+            local _bins="${_checagem#cmd:}"
+            # shellcheck disable=SC2086  # a lista separada por vírgula é o objetivo
+            for _bin in ${_bins//,/ }; do
+                command -v "${_bin}" >/dev/null 2>&1 || return 1
+            done
+            return 0
+            ;;
+        svg)
+            # A pergunta certa não é "o pacote está instalado?", e sim "o
+            # gdk-pixbuf sabe ler SVG?" — que é o que a interface faz.
+            "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('GdkPixbuf','2.0');from gi.repository import GdkPixbuf;import sys;sys.exit(0 if any(f.get_name()=='svg' for f in GdkPixbuf.Pixbuf.get_formats()) else 1)" >/dev/null 2>&1
+            ;;
+        appindicator)
+            # A bandeja tenta Ayatana e cai no AppIndicator3 (app/tray.py) —
+            # a checagem aceita os dois, como o produto.
+            "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('AyatanaAppIndicator3','0.1')" >/dev/null 2>&1 ||
+            "${VENV_DIR}/bin/python" -c "import gi;gi.require_version('AppIndicator3','0.1')" >/dev/null 2>&1
+            ;;
+        toolchain)
+            command -v cc >/dev/null 2>&1 || return 1
+            [[ -f /usr/include/linux/input.h ]] || return 1
+            _inc="$("${_VENV_PYTHON:-python3}" -c \
+                'import sysconfig;print(sysconfig.get_paths()["include"])' 2>/dev/null)"
+            [[ -n "${_inc}" && -f "${_inc}/Python.h" ]]
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+# O passo que fecha a lacuna: garante o censo inteiro, em qualquer família.
+_garantir_deps_de_sistema() {
+    local _familia _linha _canon _crit _checagem _razao
+    local _obrig=() _import=() _ainda=()
+    _familia="$(_familia_pacotes)"
+
+    for _linha in "${_DEPS_DE_SISTEMA[@]}"; do
+        IFS='|' read -r _canon _crit _checagem _razao <<< "${_linha}"
+        _dep_presente "${_checagem}" && continue
+        printf '      falta %s — sem ele, %s\n' "${_canon}" "${_razao}"
+        if [[ "${_crit}" == "obrigatoria" ]]; then
+            _obrig+=("${_canon}")
+        else
+            _import+=("${_canon}")
+        fi
+    done
+    (( ${#_obrig[@]} + ${#_import[@]} )) || return 0
+
+    # Família sem tratamento (NixOS, Gentoo, container enxuto): não minta e não
+    # aborte. Quem está lá tem de sair sabendo o que instalar à mão — inclusive
+    # o que é OBRIGATÓRIO, que aqui vira aviso porque o instalador não tem como
+    # cumprir a promessa nem como julgar o sistema de pacotes da pessoa.
+    if [[ "${_familia}" == "nenhum" ]]; then
+        warn "não reconheço o gerenciador de pacotes desta distro — não instalei nada"
+        printf '      Instale o equivalente na sua distro (nome no Debian/Ubuntu como referência):\n'
+        for _canon in ${_obrig[@]+"${_obrig[@]}"} ${_import[@]+"${_import[@]}"}; do
+            printf '        %-14s %s\n' "${_canon}" "$(_pkg_nome "${_canon}" apt)"
+        done
+        return 0
+    fi
+
+    if (( ${#_obrig[@]} )); then
+        printf '\n      Obrigatórias — sem elas o produto não funciona: %s\n' "${_obrig[*]}"
+        ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
+        if [[ "${REPLY,,}" =~ ^y ]]; then
+            run_pkg ${_obrig[@]+"${_obrig[@]}"} || true
+        fi
+        # Reconfere pelo EFEITO: morre só quem continuou faltando. Um nome de
+        # pacote errado nesta tabela não pode passar por instalado.
+        for _linha in "${_DEPS_DE_SISTEMA[@]}"; do
+            IFS='|' read -r _canon _crit _checagem _razao <<< "${_linha}"
+            [[ "${_crit}" == "obrigatoria" ]] || continue
+            _dep_presente "${_checagem}" || _ainda+=("${_canon}")
+        done
+        if (( ${#_ainda[@]} )); then
+            printf '      rode: %s\n' "$(comando_manual_pkg ${_ainda[@]+"${_ainda[@]}"})"
+            die "faltam dependências obrigatórias (${_ainda[*]}) — instale e reexecute ./install.sh"
+        fi
+        printf '      obrigatórias ok\n'
+    fi
+
+    if (( ${#_import[@]} )); then
+        printf '\n      Importantes — cada uma custa uma função: %s\n' "${_import[*]}"
+        ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
+        if [[ "${REPLY,,}" =~ ^y ]] && run_pkg ${_import[@]+"${_import[@]}"}; then
+            printf '      importantes ok\n'
+        else
+            warn "sem ${_import[*]} — as funções acima ficam indisponíveis"
+            printf '      quando quiser: %s\n' "$(comando_manual_pkg ${_import[@]+"${_import[@]}"})"
+        fi
+    fi
 }
 
 require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
@@ -974,12 +1380,24 @@ format_deb() {
 _reconhecimento() {
     local achou_algo=0
 
-    # 1. Família da distro. O caminho nativo só sabe `apt-get` (ver `run_apt`).
-    if ! command -v apt-get >/dev/null 2>&1; then
-        warn "sem apt-get: esta não é uma distro da família Debian/Ubuntu"
-        printf '      O caminho nativo instala dependências só por apt. Em Fedora, Arch ou\n'
-        printf '      Nix, use o pacote da sua distro (ver docs/usage/instalacao.md) — e saiba\n'
-        printf '      que nenhum deles foi validado em hardware ainda.\n'
+    # 1. Família da distro. DEPS-UNIVERSAIS-01 (19/08/2026) substituiu o texto
+    # que estava aqui: ele dizia "o caminho nativo instala dependências só por
+    # apt", e isso caducou — o `run_pkg` despacha para apt, dnf, pacman e
+    # zypper. Fato errado se SUBSTITUI. O que sobra de aviso é honesto: fora do
+    # apt, os nomes de pacote não têm hardware desta casa por trás.
+    local _fam
+    _fam="$(_familia_pacotes)"
+    if [[ "${_fam}" == "nenhum" ]]; then
+        warn "não reconheço o gerenciador de pacotes desta distro"
+        printf '      O install vai DIZER o que falta, com o nome no Debian/Ubuntu como\n'
+        printf '      referência, e seguir sem instalar nada — em Nix ou Gentoo, use o\n'
+        printf '      pacote da sua distro (ver docs/usage/instalacao.md).\n'
+        achou_algo=1
+    elif [[ "${_fam}" != "apt" ]]; then
+        warn "distro fora da família Debian/Ubuntu — o install usa ${_fam}"
+        printf '      As dependências de sistema são instaladas pelo %s, com os nomes que\n' "${_fam}"
+        printf '      esta casa já declara no empacotamento da sua família. O que ainda não\n'
+        printf '      foi validado em hardware é a distro, não o instalador.\n'
         achou_algo=1
     fi
 
@@ -1036,20 +1454,24 @@ ok
 # ou se a distro não tiver os headers deste kernel exato (kernel de fora do
 # apt), o instalador AVISA e SEGUE. Abortar seria pior — o driver in-tree
 # continua funcionando, só sem as curas.
-if [[ "${NO_DKMS}" -eq 0 ]] && command -v apt-get >/dev/null 2>&1; then
+# DEPS-UNIVERSAIS-01: o guarda era `command -v apt-get`, então fora do Debian o
+# instalador nem PERGUNTAVA sobre os módulos — as três curas de raiz sumiam em
+# silêncio, que é o verde mentiroso descrito acima. Agora vale em toda família
+# reconhecida, com os nomes da tabela.
+if [[ "${NO_DKMS}" -eq 0 ]] && [[ "$(_familia_pacotes)" != "nenhum" ]]; then
     _dkms_faltando=()
     command -v dkms >/dev/null 2>&1 || _dkms_faltando+=("dkms")
-    command -v make >/dev/null 2>&1 || _dkms_faltando+=("build-essential")
-    [[ -d "/lib/modules/$(uname -r)/build" ]] || _dkms_faltando+=("linux-headers-$(uname -r)")
+    command -v make >/dev/null 2>&1 || _dkms_faltando+=("compilador")
+    [[ -d "/lib/modules/$(uname -r)/build" ]] || _dkms_faltando+=("kernel-headers")
 
     if [[ "${#_dkms_faltando[@]}" -gt 0 ]]; then
         printf '\n      Os três módulos de kernel desta casa precisam compilar, e falta:\n'
-        printf '        %s\n' "${_dkms_faltando[*]}"
+        printf '        %s\n' "$(comando_manual_pkg "${_dkms_faltando[@]}")"
         printf '      Sem eles, as curas NÃO entram: o controle da Nintendo pode não subir\n'
         printf '      pelo rádio, e dois DualSense no mesmo adaptador podem virar um só.\n\n'
         ask_yn "instalar agora com sudo?" "${AUTO_YES}"
         if [[ "${REPLY,,}" =~ ^y ]]; then
-            if run_apt "${_dkms_faltando[@]}"; then
+            if run_pkg "${_dkms_faltando[@]}"; then
                 printf '      pronto para compilar os módulos\n'
             else
                 warn "não consegui instalar ${_dkms_faltando[*]} — os módulos DKMS vão ser pulados"
@@ -1234,30 +1656,46 @@ fi
 
 if [[ ! -d "${VENV_DIR}" ]]; then
     printf '      criando venv...\n'
-    "${_VENV_PYTHON}" -m venv --system-site-packages "${VENV_DIR}" 2>/dev/null
+    # DEPS-UNIVERSAIS-01: o `2>/dev/null` sem checagem de retorno escondia o
+    # caso mais banal de máquina Debian limpa — `python3-venv` não instalado.
+    # O venv não nascia, o silêncio passava, e a linha seguinte rodava contra
+    # um venv inexistente. Agora: tenta, instala o módulo, tenta de novo, e só
+    # então morre — com o comando exato na tela.
+    if ! "${_VENV_PYTHON}" -m venv --system-site-packages "${VENV_DIR}" 2>/dev/null; then
+        printf '      módulo venv ausente — instalando pelo %s\n' "$(_familia_pacotes)"
+        run_pkg python-venv || true
+        if ! "${_VENV_PYTHON}" -m venv --system-site-packages "${VENV_DIR}" 2>/dev/null; then
+            printf '      rode: %s\n' "$(comando_manual_pkg python-venv)"
+            die "não consegui criar o venv em ${VENV_DIR}"
+        fi
+    fi
 fi
 
 if ! "${VENV_DIR}/bin/python" -c \
         "import gi; gi.require_version('Gtk','3.0')" >/dev/null 2>&1; then
 
     printf '\n      Bindings GTK3 não encontrados — obrigatórios para a GUI.\n'
-    printf '      Pacotes: python3-gi  python3-gi-cairo  gir1.2-gtk-3.0\n'
-    printf '               gir1.2-ayatanaappindicator3-0.1  libgirepository1.0-dev\n'
-    printf '               libcairo2-dev  desktop-file-utils  imagemagick\n\n'
+    # DEPS-UNIVERSAIS-01: os nomes saem da tabela, na família desta máquina —
+    # antes esta lista era a grafia do apt e, fora do Debian, o `run_apt`
+    # falhava e o install MORRIA sem ter como acertar.
+    printf '      Rodaria: %s\n\n' \
+        "$(comando_manual_pkg python-gi python-gi-cairo gtk3 appindicator gi-dev)"
 
     ask_yn "instalar agora com sudo?" "${AUTO_YES}"
     if [[ "${REPLY,,}" =~ ^y ]]; then
         printf '      instalando...\n'
-        run_apt \
-            python3-gi python3-gi-cairo gir1.2-gtk-3.0 \
-            gir1.2-ayatanaappindicator3-0.1 libgirepository1.0-dev \
-            libcairo2-dev desktop-file-utils imagemagick \
+        run_pkg python-gi python-gi-cairo gtk3 appindicator gi-dev \
             || die "falha ao instalar GTK3 — verifique a conexão e tente novamente"
         printf '      GTK3 instalado\n'
     else
         die "GTK3 obrigatório. Instale manualmente e reexecute ./install.sh"
     fi
 fi
+
+# --- DEPS-UNIVERSAIS-01: o resto do censo, em qualquer família ---------------
+# Aqui e não antes: as checagens do loader SVG e da bandeja perguntam ao
+# `gi` do venv, que só existe depois do bloco acima.
+_garantir_deps_de_sistema
 
 # --- BT-MIC-01: microfone do DualSense por Bluetooth -------------------------
 # Em Bluetooth o DualSense NÃO fala A2DP/HFP: o áudio do microfone vem como
@@ -1267,21 +1705,28 @@ fi
 # `pactl` (pulseaudio-utils) é quem publica o microfone no PipeWire.
 # Best-effort: sem isso o hefesto inteiro funciona, só o `mic bt` não sobe —
 # e ele já diz exatamente o que falta (`mic bt-status`).
+# DEPS-UNIVERSAIS-01: nomes canônicos, para o mic por BT nascer também em
+# Fedora, Arch e openSUSE — antes este bloco só sabia falar apt.
+# A checagem da libopus passou a ser a mesma régua do censo (`_dep_presente`)
+# por um defeito MEDIDO em 19/08/2026: o `ldconfig -p | grep -q` que morava
+# aqui devolvia 141 sob `pipefail` (SIGPIPE do ldconfig quando o grep sai no
+# primeiro acerto), então este bloco chamava o gerenciador de pacotes para
+# instalar a libopus JÁ INSTALADA a cada execução do install. Barulho é defeito.
 _btmic_faltando=()
-ldconfig -p 2>/dev/null | grep -q 'libopus\.so\.0' || _btmic_faltando+=(libopus0)
-command -v pactl >/dev/null 2>&1 || _btmic_faltando+=(pulseaudio-utils)
+_dep_presente "lib:libopus.so.0" || _btmic_faltando+=(opus)
+_dep_presente "cmd:pactl" || _btmic_faltando+=(pactl)
 if (( ${#_btmic_faltando[@]} )); then
     printf '\n      Microfone por Bluetooth: faltam %s\n' "${_btmic_faltando[*]}"
     ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
     if [[ "${REPLY,,}" =~ ^y ]]; then
-        if run_apt "${_btmic_faltando[@]}"; then
+        if run_pkg "${_btmic_faltando[@]}"; then
             printf '      ok — `hefesto-dualsense4unix mic bt` disponível\n'
         else
             warn "não instalei ${_btmic_faltando[*]} — o mic por BT fica indisponível"
         fi
     else
-        printf '      pulando (mic por BT indisponível; instale depois: sudo apt install %s)\n' \
-            "${_btmic_faltando[*]}"
+        printf '      pulando (mic por BT indisponível; instale depois: %s)\n' \
+            "$(comando_manual_pkg "${_btmic_faltando[@]}")"
     fi
 fi
 unset _btmic_faltando
@@ -1937,10 +2382,14 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
     else
         if ! command -v bt-agent >/dev/null 2>&1; then
             printf '      bluez-tools ausente (fornece bt-agent) — instalando (sudo)\n'
-            if run_apt bluez-tools; then
+            # DEPS-UNIVERSAIS-01: nome canônico. Em Fedora e openSUSE a tabela
+            # está VAZIA de propósito (não há `bluez-tools` com esse nome), e o
+            # `run_pkg` diz isso em voz alta em vez de instalar outra coisa.
+            if run_pkg bt-agent; then
                 printf '      bluez-tools instalado\n'
             else
-                warn "não consegui instalar bluez-tools — instale manualmente: sudo apt install bluez-tools"
+                warn "não consegui instalar o bt-agent — o bond meio-salvo pode voltar"
+                printf '      quando quiser: %s\n' "$(comando_manual_pkg bt-agent)"
             fi
         else
             printf '      bluez-tools já presente (bt-agent em %s)\n' "$(command -v bt-agent)"
@@ -2182,24 +2631,25 @@ if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
     printf '      método org.freedesktop.portal.Window::GetActiveWindow,\n'
     printf '      o autoswitch de perfil precisa de uma das opções abaixo:\n\n'
 
-    # Caminho 1: wlrctl via apt (se não estiver no PATH já).
+    # Caminho 1: wlrctl pelo gerenciador desta máquina (se não estiver no PATH).
+    # DEPS-UNIVERSAIS-01: antes este bloco IMPRIMIA as linhas de Arch e Fedora
+    # mas só INSTALAVA por apt — dizia o certo e fazia o do Debian.
     if ! command -v wlrctl >/dev/null 2>&1; then
-        printf '      Caminho recomendado: instalar wlrctl (apt) - cobre qualquer\n'
+        printf '      Caminho recomendado: instalar wlrctl - cobre qualquer\n'
         printf '      app Wayland (não so XWayland). Pacote no Ubuntu 24.04+.\n\n'
-        ask_yn "instalar wlrctl via apt agora?" "${AUTO_YES}" "y"
+        ask_yn "instalar wlrctl agora?" "${AUTO_YES}" "y"
         if [[ "${REPLY,,}" =~ ^y ]]; then
             if command -v sudo >/dev/null 2>&1; then
-                if run_apt wlrctl 2>/dev/null; then
+                if run_pkg wlrctl 2>/dev/null; then
                     printf '      wlrctl instalado (%s)\n' "$(command -v wlrctl)"
                 else
                     warn "wlrctl não esta nos repos deste sistema (Ubuntu <24.04?)"
                     printf '      alternativas:\n'
-                    printf '        - Arch:   sudo pacman -S wlrctl\n'
-                    printf '        - Fedora: sudo dnf install wlrctl\n'
+                    printf '        - pelo gerenciador: %s\n' "$(comando_manual_pkg wlrctl)"
                     printf '        - fonte:  https://git.sr.ht/~brocellous/wlrctl\n'
                 fi
             else
-                warn "sudo ausente - rode manualmente: sudo apt install wlrctl"
+                warn "sudo ausente - rode manualmente: $(comando_manual_pkg wlrctl)"
             fi
         fi
     else
