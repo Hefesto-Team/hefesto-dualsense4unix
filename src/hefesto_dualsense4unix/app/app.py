@@ -1112,9 +1112,14 @@ class HefestoApp(
 
         Envolvendo cada página num `GtkScrolledWindow` (scroll vertical), o mínimo
         da página cai para ~0 e o rodapé fica SEMPRE visível, em qualquer tamanho
-        de janela. Exceção: a aba **Sistema** (`daemon_box`), cujo conteúdo
-        principal já é um `GtkScrolledWindow` (o log) com auto-scroll — envolvê-la
-        de novo quebraria essa rolagem; o mínimo dela já é pequeno. Idempotente.
+        de janela. Exceção: a aba **Sistema**, cujo conteúdo principal já é um
+        `GtkScrolledWindow` (o log) com auto-scroll — envolvê-la de novo
+        quebraria essa rolagem; o mínimo dela já é pequeno. Idempotente.
+
+        Desde a JANELA-CORTADA-01 quem envolve a aba Sistema é o PRÓPRIO glade
+        (`scroll_daemon_box` em volta do `daemon_box`), então a página que chega
+        aqui JÁ É um `ScrolledWindow` e quem a pula é a guarda `isinstance`, não
+        mais o `skip_pages`. Veja o comentário do EST-10 logo abaixo.
         """
         self._envolver_estado_em_teto_elastico()
         notebook = self.builder.get_object("main_notebook")
@@ -1125,6 +1130,14 @@ class HefestoApp(
         # SPRINT-LEIGO-01 troca "Daemon" por "Sistema") faria o skip parar de
         # casar em silêncio, envolvendo o log num segundo ScrolledWindow e
         # quebrando o auto-scroll. O id do Glade não muda quando o rótulo muda.
+        #
+        # ATENÇÃO (18/08, ao mesclar o v0.9.4.3): este `skip_pages` HOJE não casa
+        # com nada. A JANELA-CORTADA-01 pôs um `scroll_daemon_box` no glade em
+        # volta do `daemon_box`, então a PÁGINA do notebook passou a ser o
+        # scroller, e não o `daemon_box` que está aqui. Quem protege o auto-scroll
+        # do log agora é a guarda `not isinstance(page, Gtk.ScrolledWindow)` do
+        # laço. O conjunto fica como cinto de segurança: se algum dia o glade
+        # voltar a entregar o `daemon_box` cru, o EST-10 volta a valer sozinho.
         skip_pages = {
             page
             for page in (self.builder.get_object("daemon_box"),)  # log com scroll próprio
@@ -1262,10 +1275,18 @@ class HefestoApp(
         não moveu um pixel. Medido nesta bancada, o piso era 913px contra 872 de
         área útil — header 127 + notebook 734 + rodapé 52.
 
-        Dentro do notebook, quem sustenta os 734 é a aba **Sistema** (686): ela
-        é a única fora do `_wrap_notebook_pages_in_scroll`, e de propósito — o
-        log já tem rolagem própria, e envolvê-lo num segundo `ScrolledWindow`
-        quebraria o auto-scroll (EST-10). As outras nove abas pedem 46 ou menos.
+        Dentro do notebook, quem sustentava os 734 era a aba **Sistema** (686),
+        a única então fora de um `ScrolledWindow` — o log já tem rolagem própria,
+        e envolvê-lo num segundo quebraria o auto-scroll (EST-10). As outras nove
+        abas pediam 46 ou menos.
+
+        Isso valia até 18/08. A JANELA-CORTADA-01 pôs um `scroll_daemon_box` no
+        glade em volta do `daemon_box`, e a aba Sistema deixou de ser exceção:
+        hoje TODAS as dez páginas chegam ao notebook dentro de um scroller. Este
+        método não ficou inútil por isso — ele age sobre o `min_content_height`
+        do log, que continua sendo a folga elástica —, mas passa a ser a SEGUNDA
+        linha de defesa: com o mínimo do notebook já em ~0, o `faltam <= 0`
+        costuma desarmá-lo sozinho. Ele existe para a tela em que nem isso basta.
 
         Então a folga sai de onde ela é elástica por natureza: o `min_content_
         height` do log. Ele só encolhe o quanto faltar, nunca abaixo de 60px, e
