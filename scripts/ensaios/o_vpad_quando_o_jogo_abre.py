@@ -59,6 +59,7 @@ USO
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import re
 import select
@@ -70,7 +71,7 @@ from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from comum import (  # noqa: E402
+from comum import (
     abrir_no_hidraw,
     cabecalho_do_instrumento,
     descobrir_aparelhos,
@@ -198,10 +199,8 @@ def _le_o_vpad(janela: Janela, t0: float, ate: float, parar: threading.Event) ->
                 continue
             dados = os.read(no.fd, BUF)
         except OSError:
-            try:
-                no.close()
-            except Exception:  # noqa: BLE001 — fechar não pode derrubar a medição
-                pass
+            with contextlib.suppress(Exception):
+                no.close()  # fechar não pode derrubar a medição
             aberto = None
             continue
         base = _BASE.get(dados[0] if dados else -1)
@@ -283,7 +282,10 @@ def main() -> int:
         t.start()
 
     linhas: list[list[str]] = []
-    print(f"  {'t':>4}  {'vpad':<14} {'reports':>7} {'pares':>6}  {'perfil':<14} o que o daemon fez")
+    print(
+        f"  {'t':>4}  {'vpad':<14} {'reports':>7} {'pares':>6}  "
+        f"{'perfil':<14} o que o daemon fez"
+    )
     print("  " + "-" * 92)
     try:
         for seg in range(args.segundos):
