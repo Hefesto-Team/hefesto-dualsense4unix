@@ -364,6 +364,15 @@ jobs:
           # que só pula é portão que não existe.
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
             bubblewrap librsvg2-common
+          # E instalar o `bwrap` não basta: o Ubuntu 24.04 bloqueia user
+          # namespace sem privilégio por AppArmor, então ele saía com 1 — e o
+          # teste lia esse 1 como resposta do doctor, reprovando com "o doctor
+          # deu verde" sem o doctor ter rodado. O teste agora tem sonda e PULA
+          # nesse caso; esta linha existe para que ele não precise pular, porque
+          # portão que só pula é portão que não existe. O `|| true` é de
+          # propósito: em runner sem essa chave o sysctl não existe, e aí o
+          # bloqueio também não.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - name: Instalar Hefesto - Dualsense4Unix em modo dev
         run: pip install -e ".[dev]"
       - name: Verificar tamanho de HID captures

@@ -74,7 +74,31 @@ def _rodar(nome: str, *, mascarar: list[str] | None = None) -> int:
         # do doctor quebrou", quando o que falta é a ferramenta de mascarar.
         if shutil.which("bwrap") is None:
             pytest.skip("sem `bwrap` não dá para mascarar a biblioteca")
-        cmd = ["bwrap", "--dev-bind", "/", "/", *binds, *cmd]
+        envelope = ["bwrap", "--dev-bind", "/", "/", *binds]
+        # MASCARA-QUE-NAO-PEGOU-01 (19/08/2026): PROVE que a máscara pegou antes
+        # de acreditar no código de saída. Sem esta sonda o `returncode` podia ser
+        # do `bwrap`, não do doctor — e foi: no runner do Ubuntu 24.04 o AppArmor
+        # bloqueia user namespace sem privilégio, o `bwrap` saía com 1, e a
+        # mordida reprovava dizendo "o doctor deu verde" com o doctor nunca tendo
+        # rodado. Alarme convincente e falso, a armadilha nº 1 desta casa.
+        #
+        # A sonda pergunta pelo EFEITO: dentro do envelope, o primeiro alvo é um
+        # arquivo VAZIO? Se sim, a máscara está de pé e o que voltar depois é do
+        # doctor. Se não — por qualquer motivo —, o instrumento se declara
+        # incapaz em vez de dar veredito sobre o produto.
+        sonda = subprocess.run(
+            [*envelope, "/usr/bin/bash", "-c", f'test ! -s "{mascarar[0]}"'],
+            capture_output=True,
+            text=True,
+        )
+        if sonda.returncode != 0:
+            Path(vazio).unlink(missing_ok=True)
+            pytest.skip(
+                "o `bwrap` não conseguiu mascarar nesta máquina "
+                f"(saiu {sonda.returncode}: {sonda.stderr.strip()[:120]}) — "
+                "sem máscara não há mordida a medir"
+            )
+        cmd = [*envelope, *cmd]
         try:
             return subprocess.run(cmd, capture_output=True, text=True).returncode
         finally:
