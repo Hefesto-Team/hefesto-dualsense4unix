@@ -45,6 +45,24 @@ for arg in "$@"; do
     esac
 done
 
+# Um terminal empacotado (snap/flatpak) exporta GDK_PIXBUF_MODULE_FILE
+# apontando para o cache de loaders DELE. Todo processo GTK lançado daquele
+# terminal herda o apontamento, e o librsvg de dentro do confinamento pede uma
+# glibc mais nova que a do hospedeiro: o dlopen falha e o GTK ABORTA o processo
+# no primeiro ícone que precisar de SVG — a janela morre ao abrir, com
+# "Unable to load image-loading module ... GLIBC_2.xx not found".
+#
+# `app/main.py` também faz esta limpeza, com critério mais fino. Aqui ela cobre
+# o que roda ANTES do Python subir (o smoke abaixo, entre outros), e por isso o
+# critério é o grosso: se todos os módulos do cache moram dentro de /snap e nós
+# não estamos lá dentro, o cache não serve para este processo.
+if [[ -n "${GDK_PIXBUF_MODULE_FILE:-}" && -r "${GDK_PIXBUF_MODULE_FILE}" ]]; then
+    if grep -qE '^"/snap/' "${GDK_PIXBUF_MODULE_FILE}" 2>/dev/null \
+       && [[ "${SNAP:-}" != /snap/* ]]; then
+        unset GDK_PIXBUF_MODULE_FILE
+    fi
+fi
+
 if [[ "$MODE" == "gui" ]]; then
     # XWayland no COSMIC: popups de GtkMenu/GtkComboBox quebram no cosmic-comp
     # Wayland nativo (fundo claro, mal-posicionados, grab quebrado / "segurar
