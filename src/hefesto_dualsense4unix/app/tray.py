@@ -23,6 +23,7 @@ import contextlib
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import gi
@@ -171,6 +172,7 @@ class AppTray:
 
         icon = self._preferred_icon()
         self._indicator = indicator_cls.new(TRAY_APP_ID, icon, category)
+        self._ensinar_o_caminho_do_icone(icon)
         ns = indicator_cls._hefesto_ns
         self._indicator_ns = ns
         self._indicator.set_status(ns.IndicatorStatus.ACTIVE)
@@ -457,6 +459,42 @@ class AppTray:
                 else _("Hefesto - Dualsense4Unix - %d perfis") % len(profiles)
             )
             self._status_item.set_label(label + controllers_suffix)
+
+    def _ensinar_o_caminho_do_icone(self, icone: str) -> None:
+        """Diz ao PAINEL onde o arquivo do ícone mora, em vez de só o nome.
+
+        BUG-TRAY-ICONE-INVISIVEL-01 (medido em 18/08/2026, Pop!_OS 22.04 com
+        GNOME): quem resolve o nome do ícone não é este processo — é o painel.
+        Aqui dentro o `Gtk.IconTheme` acha `hefesto-dualsense4unix-symbolic` sem
+        titubear, o item aparece registrado no `StatusNotifierWatcher`, e mesmo
+        assim a barra não mostra nada: o `gnome-shell` carregou o tema de ícones
+        no login, ANTES de o Hefesto existir no disco, e não recarrega sozinho
+        quando o `gtk-update-icon-cache` roda depois. Sem isto, o ícone só
+        aparecia no logout seguinte — e quem instalasse hoje concluiria que a
+        bandeja não funciona.
+
+        `set_icon_theme_path` viaja junto do item pelo D-Bus, então o painel
+        passa a procurar no diretório indicado além do tema dele. O caminho sai
+        do arquivo que realmente existe, e não de um palpite: se nenhum for
+        encontrado, o método não faz nada e o comportamento antigo continua.
+        """
+        definir_caminho = getattr(self._indicator, "set_icon_theme_path", None)
+        if definir_caminho is None:
+            return
+        bases = (
+            Path.home() / ".local/share/icons/hicolor",
+            Path("/usr/share/icons/hicolor"),
+            Path("/usr/local/share/icons/hicolor"),
+        )
+        for base in bases:
+            for sufixo in ("symbolic/apps", "scalable/apps", "256x256/apps"):
+                pasta = base / sufixo
+                for ext in (".svg", ".png"):
+                    if (pasta / f"{icone}{ext}").is_file():
+                        definir_caminho(str(pasta))
+                        logger.info("tray_icon_theme_path", pasta=str(pasta), icone=icone)
+                        return
+        logger.info("tray_icon_sem_arquivo_no_disco", icone=icone)
 
     @staticmethod
     def _preferred_icon() -> str:
