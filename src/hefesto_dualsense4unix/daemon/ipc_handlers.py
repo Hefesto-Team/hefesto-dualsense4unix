@@ -3717,7 +3717,7 @@ class IpcHandlersMixin:
         return {"status": "ok", "suprimir": bool(alternar(suprimir))}
 
     async def _handle_rumble_set(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Aplica rumble com política de intensidade (FEAT-RUMBLE-POLICY-01).
+        """Fixa a vibração; RECUSA no Modo Nativo (FEAT-RUMBLE-POLICY-01 + NATIVO-RUMBLE-01).
 
         Persiste (weak, strong) brutos em daemon.config.rumble_active para que
         o poll loop continue re-afirmando via _reassert_rumble. O multiplicador
@@ -3728,7 +3728,21 @@ class IpcHandlersMixin:
         (`rumble_active_uniq`), congelado agora. Sem isso o reassert do poll
         loop reescrevia no alvo DE AGORA, e trocar o seletor levava o valor de
         um controle para outro.
+
+        NATIVO-RUMBLE-01 (19/08/2026): no Modo Nativo o pedido é RECUSADO, com
+        motivo — ver o bloco de comentário em `daemon.subsystems.rumble`. A
+        forma da resposta é a mesma (`weak`/`strong` continuam lá, dizendo o que
+        FICOU valendo); o que muda é o `status`, que passa a "recusado", e o
+        `desfecho`, que nomeia o porquê. Mesmo desenho do `coop.set` que recusa
+        desligar e do vocabulário `EMU_*` do gamepad.
         """
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            MOTIVO_MODO_NATIVO_MANDA_NOS_MOTORES,
+            RUMBLE_APLICADO,
+            RUMBLE_RECUSADO_MODO_NATIVO,
+            modo_nativo_manda_nos_motores,
+        )
+
         weak = params.get("weak")
         strong = params.get("strong")
         if not isinstance(weak, int) or not isinstance(strong, int):
@@ -3737,6 +3751,26 @@ class IpcHandlersMixin:
         strong = max(0, min(255, strong))
         # Persiste estado bruto antes de aplicar para o poll loop continuar re-afirmando.
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        if modo_nativo_manda_nos_motores(self.daemon):
+            # A recusa vem ANTES de qualquer escrita: nem `rumble_active` (que
+            # desarmaria a HARM-16), nem `set_rumble` (que armaria o handle do
+            # backend e dispararia sozinho no desmute), nem a trava manual.
+            par_de_pe = getattr(daemon_cfg, "rumble_active", None)
+            logger.warning(
+                "rumble_set_recusado_modo_nativo",
+                weak=weak,
+                strong=strong,
+                par_de_pe=par_de_pe,
+            )
+            return {
+                "status": "recusado",
+                "desfecho": RUMBLE_RECUSADO_MODO_NATIVO,
+                "motivo": MOTIVO_MODO_NATIVO_MANDA_NOS_MOTORES,
+                # A verdade sobre o que FICOU, não sobre o que foi pedido.
+                "weak": par_de_pe[0] if par_de_pe else 0,
+                "strong": par_de_pe[1] if par_de_pe else 0,
+                "passthrough": par_de_pe is None,
+            }
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (weak, strong)
             daemon_cfg.rumble_active_uniq = uniq_do_alvo_de_output(self.controller)
@@ -3747,10 +3781,15 @@ class IpcHandlersMixin:
         # AutoSwitcher reescrevia o rumble no próximo tick de troca de foco
         # (U11). Categoria "rumble".
         self.store.mark_manual_trigger_active("rumble")
-        return {"status": "ok", "weak": weak, "strong": strong}
+        return {
+            "status": "ok",
+            "desfecho": RUMBLE_APLICADO,
+            "weak": weak,
+            "strong": strong,
+        }
 
     async def _handle_rumble_stop(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Para rumble e persiste estado (0, 0) (BUG-RUMBLE-APPLY-IGNORED-01).
+        """Para o rumble e fixa (0, 0); no Modo Nativo SOLTA o par (NATIVO-RUMBLE-01).
 
         Zera os motores imediatamente e atualiza daemon.config.rumble_active para
         (0, 0) de forma que o poll loop re-afirme o silêncio, evitando que outro
@@ -3771,6 +3810,23 @@ class IpcHandlersMixin:
         que está vibrando*, então o dono anterior leva os zeros ANTES de o
         endereço passar para o seletor de agora. A §5 da sprint, pelo nome: *"a
         volta ao neutro vale tanto quanto a ida"*.
+
+        NATIVO-RUMBLE-01 (19/08/2026) — **dentro do Modo Nativo o "Parar" SOLTA
+        o par em vez de fixar (0,0)**, e este era o caminho mais traiçoeiro dos
+        três: `(0,0)` não é `None`, então o silêncio deliberado desarmava a
+        HARM-16 exatamente igual a um par de vibração — a usuária clicava
+        "Parar" achando que estava calando o controle, e era esse clique que
+        deixava o motor do jogo girando na SAÍDA do modo.
+
+        Recusar em bloco, como o `rumble.set` faz, seria pior: um par fixado
+        antes do modo ficaria armado apesar de ela ter pedido silêncio, e
+        dispararia na saída. Soltar o par (`None`, o mesmo estado do
+        `rumble.passthrough`) atende o que dá para atender — o Hefesto para de
+        mandar vibração — mantém a HARM-16 armada para zerar o hardware na
+        saída, e diz em voz alta o que NÃO consegue fazer: calar o motor que o
+        jogo está tocando pelo hidraw. **Ponto em aberto para ela:** a
+        alternativa é recusar este gesto igual aos outros; a medição de 19/08
+        levantou a pergunta e não a respondeu.
         """
         # Import local, e o motivo foi MEDIDO em 14/08 (não é o ciclo do
         # reassert — no topo importa sem ciclo nenhum, nas cinco ordens de
@@ -3780,11 +3836,41 @@ class IpcHandlersMixin:
         # plugins, udp, gamepad. Um handler de rumble não paga essa conta no
         # import de quem só quer falar IPC.
         from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            MOTIVO_MODO_NATIVO_SOLTOU_O_PAR,
+            RUMBLE_PARADO,
+            RUMBLE_SOLTO_NO_MODO_NATIVO,
+            modo_nativo_manda_nos_motores,
             silenciar_dono_abandonado,
         )
 
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         dono_de_agora = uniq_do_alvo_de_output(self.controller)
+        if modo_nativo_manda_nos_motores(self.daemon):
+            par_solto = getattr(daemon_cfg, "rumble_active", None)
+            if daemon_cfg is not None:
+                daemon_cfg.rumble_active = None
+                daemon_cfg.rumble_active_uniq = None
+                daemon_cfg.rumble_dono_vibrando = None
+            # O handle do backend vai a zero de propósito, mesmo mutado: o valor
+            # armado SOBREVIVE ao mute e dispara sozinho no desmute (medido em
+            # 19/08 — o report de saída carregava os motores da usuária). Zerar
+            # aqui é o que impede o par solto de voltar pela porta do backend.
+            with contextlib.suppress(Exception):
+                self.controller.set_rumble(weak=0, strong=0)
+            # Estado idêntico ao `rumble.passthrough`, logo a trava manual segue
+            # o MESMO caminho dele: armá-la aqui deixaria a troca automática de
+            # perfil travada sem fim por um gesto de liberação (ONDA-U, Causa A).
+            self.store.clear_manual_trigger_active("rumble")
+            logger.warning(
+                "rumble_stop_soltou_o_par_no_modo_nativo",
+                par_solto=par_solto,
+            )
+            return {
+                "status": "ok",
+                "desfecho": RUMBLE_SOLTO_NO_MODO_NATIVO,
+                "motivo": MOTIVO_MODO_NATIVO_SOLTOU_O_PAR,
+                "passthrough": True,
+            }
         if daemon_cfg is not None:
             par_velho = getattr(daemon_cfg, "rumble_active", None)
             dono_velho = getattr(daemon_cfg, "rumble_active_uniq", None)
@@ -3802,7 +3888,7 @@ class IpcHandlersMixin:
         # ONDA-U (Causa A): mesma trava de trigger.set (U11), categoria
         # "rumble".
         self.store.mark_manual_trigger_active("rumble")
-        return {"status": "ok"}
+        return {"status": "ok", "desfecho": RUMBLE_PARADO}
 
     async def _handle_rumble_passthrough(self, params: dict[str, Any]) -> dict[str, Any]:
         """Libera controle de rumble para jogo/UDP (BUG-RUMBLE-APPLY-IGNORED-01).

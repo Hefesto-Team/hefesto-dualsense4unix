@@ -458,8 +458,42 @@ class DraftApplier:
         )
 
     def _apply_rumble(self, rumble_raw: Any) -> None:
+        """Aplica a seção rumble do "Aplicar" do RODAPÉ.
+
+        NATIVO-RUMBLE-01 (19/08/2026) — **no Modo Nativo esta seção é recusada
+        inteira, sem tocar em nada.** Este era o vazamento silencioso da cura:
+        o rodapé emite a seção rumble em TODO "Aplicar" (mexer só no brilho já
+        basta — ABAS-04), então não passa por handler de rumble nenhum, e
+        gravar `rumble_active` aqui desarmava a HARM-16 pela porta de trás,
+        mesmo com o `rumble.set` já recusando. Ver o bloco de comentário em
+        `daemon.subsystems.rumble`.
+
+        Recusar SEM ESCREVER, e não "gravar passthrough", é deliberado: como a
+        seção viaja de carona em qualquer edição, zerar aqui apagaria um par
+        que ela tenha fixado por outro caminho num gesto que não era sobre
+        vibração.
+
+        A recusa sai como EXCEÇÃO, não como `return`, por APLICAR-VERDADE-01:
+        quem retorna sem levantar entra em `applied`, e o rodapé anunciaria
+        "aplicado" sobre uma seção que não encostou no controle — a mesma
+        mentira que esta leva inteira veio consertar. Levantando, a seção cai
+        em `self.failed` com o motivo e a tela conta a verdade.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            modo_nativo_manda_nos_motores,
+        )
+
         if not isinstance(rumble_raw, dict):
             raise ValueError("rumble deve ser objeto")
+        if modo_nativo_manda_nos_motores(self.daemon):
+            logger.warning(
+                "draft_rumble_recusado_modo_nativo",
+                pedido=rumble_raw,
+            )
+            # Motivo curto de propósito (`_apply_section` corta em 120): serve
+            # de diagnóstico. A frase que a usuária lê é a de
+            # `daemon.subsystems.rumble`.
+            raise ValueError("Modo Nativo: quem manda nos motores é o jogo")
         weak = rumble_raw.get("weak", 0)
         strong = rumble_raw.get("strong", 0)
         if not isinstance(weak, int) or not isinstance(strong, int):

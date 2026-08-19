@@ -395,14 +395,56 @@ def led_set(
     return ok
 
 
+def _recusa_no_corpo(resultado: Any) -> str | None:
+    """Lê a recusa que vem no CORPO de uma resposta bem-sucedida.
+
+    NATIVO-RUMBLE-01 (19/08/2026). Esta casa tem DOIS jeitos de o daemon dizer
+    "não": o erro JSON-RPC ``CODE_INVALID_PARAMS`` — que ``_call_checked`` já
+    sabe ler — e o campo ``status`` do resultado, usado quando o pedido é
+    *válido* e mesmo assim não se realiza (o ``coop.set`` que recusa desligar, o
+    vocabulário ``EMU_*`` do gamepad, e agora o rumble sob Modo Nativo).
+
+    A diferença importa porque para o segundo caso o ``_call_checked`` responde
+    ``(True, None)``: o RPC foi bem-sucedido. Sem esta leitura, a recusa medida
+    do daemon chegaria na tela como "Vibração travada (fraca=…, forte=…)" com o
+    motor parado — a mentira que o NATIVO-RUMBLE-01 mediu, e a mesma classe de
+    defeito do HARM-19 pelo avesso.
+
+    Devolve o ``motivo`` (frase pronta para uma pessoa) quando houve recusa, e
+    ``None`` quando o pedido valeu.
+    """
+    if not isinstance(resultado, dict):
+        return None
+    if resultado.get("status") != "recusado":
+        return None
+    motivo = resultado.get("motivo")
+    return motivo if isinstance(motivo, str) and motivo else None
+
+
+def rumble_set_checked(weak: int, strong: int) -> tuple[bool, str | None]:
+    """Fixa a vibração devolvendo o MOTIVO quando o daemon RECUSA.
+
+    Recusa típica: o Modo Nativo está ligado e o jogo é o dono dos motores
+    (NATIVO-RUMBLE-01). Ver ``_recusa_no_corpo`` para por que a recusa não vem
+    como erro JSON-RPC — e por que ``_call_checked`` não serve aqui.
+    """
+    ok, resultado = _safe_call("rumble.set", {"weak": weak, "strong": strong})
+    if not ok:
+        return False, None
+    motivo = _recusa_no_corpo(resultado)
+    return (motivo is None), motivo
+
+
 def rumble_set(weak: int, strong: int) -> bool:
     """Aplica rumble persistente via IPC (BUG-RUMBLE-APPLY-IGNORED-01).
 
     O daemon persiste (weak, strong) em daemon.config.rumble_active e
     re-afirma a cada 200ms — vibração contínua até rumble_stop() ou
     rumble_passthrough().
+
+    Descarta o motivo da recusa — use ``rumble_set_checked`` para tê-lo.
     """
-    ok, _ = _safe_call("rumble.set", {"weak": weak, "strong": strong})
+    ok, _motivo = rumble_set_checked(weak, strong)
     return ok
 
 

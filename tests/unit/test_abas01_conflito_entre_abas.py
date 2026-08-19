@@ -784,7 +784,8 @@ class _AbaRumble(ra.RumbleActionsMixin):
 def _aba_rumble(
     monkeypatch: pytest.MonkeyPatch, draft: DraftConfig | None = None
 ) -> _AbaRumble:
-    monkeypatch.setattr(ra, "rumble_set", lambda *_a, **_kw: True)
+    # NATIVO-RUMBLE-01 (19/08/2026): a aba usa a rota "checked" — `(ok, motivo)`.
+    monkeypatch.setattr(ra, "rumble_set_checked", lambda *_a, **_kw: (True, None))
     monkeypatch.setattr(ra, "rumble_stop", lambda *_a, **_kw: True)
     monkeypatch.setattr(ra, "rumble_passthrough", lambda *_a, **_kw: True)
     monkeypatch.setattr(ra, "call_async", lambda *_a, **_kw: None)

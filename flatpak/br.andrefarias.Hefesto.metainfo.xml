@@ -24,7 +24,7 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
-    <release version="0.9.4.4" date="2026-08-19">
+    <release version="0.9.4.5" date="2026-08-19">
       <description>
         <p>A leva da portabilidade: quatro defeitos que só apareciam fora da máquina onde o código nasceu. O install morria com código 2 e sem mensagem, o Proton não extraía sob Python 3.10, o agente de pareamento morria em loop pelo seccomp do systemd 249, e a janela nascia maior que a tela, com o rodapé por baixo da borda. O ícone da bandeja voltou à barra, e o backport do BlueZ 5.86 saiu pelo tarball onde o pacote não podia entrar.</p>
       </description>
