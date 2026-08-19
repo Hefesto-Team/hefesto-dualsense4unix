@@ -41,14 +41,14 @@ A tabela de versões validadas de cada peça (Python, BlueZ, kernel) está em
 
 ## Do código-fonte
 
-A versão corrente é a alfa **0.9.4.2** e o ponto de instalação é a **tag
-`v0.9.4.2`** — tag, não branch: as branches de trabalho recebem commits durante
+A versão corrente é a alfa **0.9.4.3** e o ponto de instalação é a **tag
+`v0.9.4.3`** — tag, não branch: as branches de trabalho recebem commits durante
 a sessão e não são ponto estável.
 
 ```bash
 git clone https://github.com/AndreBFarias/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.9.4.2
+git checkout v0.9.4.3
 ./install.sh
 ```
 

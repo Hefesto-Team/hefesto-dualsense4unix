@@ -97,6 +97,37 @@ def _desktop_is_cosmic() -> bool:
     return "cosmic" in desktops
 
 ShowFn = Callable[[], None]
+def _painel_recolore_simbolico() -> bool:
+    """O painel desta sessão sabe desenhar o ícone SIMBÓLICO em SVG?
+
+    BUG-TRAY-SIMBOLICO-NAO-DESENHA-01 (medido em 18/08/2026, Pop!_OS 22.04 com
+    GNOME): o item registra no `StatusNotifierWatcher`, mas a barra desenha o
+    marcador de "ícone faltando" — três pontinhos — no lugar do símbolo. Medido
+    das duas formas que o protocolo permite: pelo NOME do tema e pelo CAMINHO
+    ABSOLUTO do arquivo. As duas dão o mesmo placeholder. O mesmo painel, na
+    mesma sessão e no mesmo instante, desenha o PNG colorido sem titubear.
+
+    A escolha do símbolo monocromático foi tomada e MEDIDA no painel do COSMIC
+    (APPLET-MONOCROMÁTICO-01, 07/08): lá o `cosmic-applet-status-area` recolore
+    o `-symbolic` com a cor do tema, e é isso que faz o ícone parar de ser o
+    único cromático da barra. Nada disso muda — o que muda é que fora do COSMIC
+    a preferência se inverte, e a logo colorida (que o painel comprovadamente
+    desenha) vem primeiro. Antes desta inversão, quem não estivesse no COSMIC
+    ficava sem ícone nenhum: não é um ícone mais feio, é a ausência dele.
+
+    A pergunta é feita ao ambiente da sessão, e na dúvida a resposta é "sim" —
+    quem não se declara continua recebendo o símbolo, como era antes.
+    """
+    sessao = (
+        os.environ.get("XDG_CURRENT_DESKTOP", "")
+        + " "
+        + os.environ.get("XDG_SESSION_DESKTOP", "")
+    ).upper()
+    if "COSMIC" in sessao:
+        return True
+    return "GNOME" not in sessao
+
+
 QuitFn = Callable[[], None]
 ListProfilesFn = Callable[[], list[dict[str, Any]]]
 SwitchProfileFn = Callable[[str], bool]
@@ -514,7 +545,12 @@ class AppTray:
         theme = Gtk.IconTheme.get_default()
         if theme is None:
             return TRAY_ICON_FALLBACK
-        for nome in (TRAY_ICON_NAME, TRAY_ICON_NAME_LEGADO):
+        ordem = (
+            (TRAY_ICON_NAME, TRAY_ICON_NAME_LEGADO)
+            if _painel_recolore_simbolico()
+            else (TRAY_ICON_NAME_LEGADO, TRAY_ICON_NAME)
+        )
+        for nome in ordem:
             if theme.has_icon(nome):
                 return nome
         return TRAY_ICON_FALLBACK

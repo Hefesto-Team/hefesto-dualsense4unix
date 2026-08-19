@@ -40,6 +40,115 @@ fez nascer está na `QUATRO-COMPONENTES-02`, logo abaixo.
 
 ## [Unreleased]
 
+## [0.9.4.3] — 2026-08-18
+
+A leva da portabilidade. Quatro defeitos com a mesma assinatura: código que só
+tinha sido exercitado na máquina onde nasceu. A bancada de medição desta leva é
+outra — Pop!_OS 22.04, GNOME, Python 3.10, systemd 249 —, e foi ela que os
+revelou.
+
+### Corrigido
+
+#### O `install.sh` morria com código 2 e sem dizer uma palavra
+
+`ls` num diretório inexistente devolve 2, o `pipefail` propaga o código pelo
+`| head -1` e o `set -euo pipefail` derruba o script inteiro. Acontecia no passo
+do backport do BlueZ, e o comentário logo abaixo da linha já dizia a intenção
+certa — *"(d) .debs ausentes: NÃO falha o install, só orienta o build"*. Falhava
+mesmo assim, em toda máquina que nunca compilou o backport, e sem mensagem: o
+usuário via a instalação parar no meio sem motivo aparente.
+
+#### O Proton não extraía sob Python 3.10
+
+O `data_filter` do 3.10 erra o cálculo de symlink relativo e recusa links
+internos legítimos do GE-Proton — `files/share/default_pfx/.../start.exe` aponta
+cinco níveis acima e cai dentro de `files/lib/wine/`, mas o filtro o lê como
+saída do destino. O 3.11+ acerta. Como o tarball já passou pelo SHA256 fixado
+antes de chegar à extração, no 3.10 o filtro cai para `tar`, que segue barrando
+caminho absoluto e path traversal.
+
+#### O `hefesto-bt-agent` num loop de core-dump
+
+`sched_setattr` (syscall 314) mora em `@resources`, negado na unit, e o
+`bt-agent` do bluez-tools a chama no start. Sob systemd 249 o seccomp matava o
+processo com SIGSYS, seis vezes seguidas, até o systemd desistir. Re-permitida
+sozinha, com o resto de `@resources` negado.
+
+#### A janela nascia maior do que a tela comporta
+
+Com um controle CONECTADO o card entra, o conteúdo passa a pedir mais que os
+830px do `default-height`, e a janela nascia com 955px contra 952 de área útil.
+O rodapé — Aplicar/Salvar Perfil/Importar/Restaurar — saía por baixo da borda, e
+a decoração daquela sessão não oferecia maximizar: não havia gesto nenhum para
+corrigir de dentro.
+
+Cortar por fora não bastava: o GTK não deixa a janela encolher abaixo do MÍNIMO
+do conteúdo, e o piso era 913 (header 127 + notebook 734 + rodapé 52). Dentro do
+notebook, nove abas pediam 46px ou menos — quem sustentava os 734 era a aba
+Sistema, com 686, a única fora do `_wrap_notebook_pages_in_scroll` e de
+propósito. A folga passou a sair do `min_content_height` do log, que cede só o
+que falta, nunca abaixo de 60px, e apenas quando falta.
+
+#### O ícone da bandeja sumia da barra, sem um erro no log
+
+A bandeja subia, o item aparecia registrado no `StatusNotifierWatcher`, o
+arquivo estava no disco e o cache do tema tinha sido atualizado. Duas causas
+empilhadas: o snap do terminal exporta `GDK_PIXBUF_MODULE_FILE` apontando para
+um cache de loaders sem svg — e todo processo GTK lançado dali perde o loader
+de SVG do sistema, não só a bandeja; e o painel, que é quem resolve o nome do
+ícone, carregou o tema no login, antes de o Hefesto existir no disco.
+
+#### O ícone da bandeja saía como três pontinhos fora do COSMIC
+
+O símbolo monocromático foi desenhado e medido no painel do COSMIC, que o
+recolore com a cor do tema. No painel do GNOME ele não é desenhado: sai o
+marcador de ícone faltando, pedido pelo NOME ou pelo CAMINHO ABSOLUTO — as duas
+formas medidas, e o mesmo painel desenhando o PNG colorido sem titubear. Fora do
+COSMIC a preferência agora se inverte. Não era um ícone mais feio: era a
+ausência dele.
+
+#### O card voltou a dançar entre a frase curta e a longa
+
+`do_get_preferred_height` pedia a reserva de altura sem largura, e o GTK passa
+por ali antes da primeira alocação, quando `get_allocated_width()` ainda vale 1
+— a reserva devolvia zero. O teste e a cura anterior entraram juntos e nunca
+tinham passado por CI: estreou quebrado.
+
+#### O `lint-test` morria antes de rodar lint ou teste
+
+O job não reprovava por ruff nem por asserção: parava no Censo de coleta, com
+`erros_de_coleta=1`, e `ruff`/`pytest` nunca chegavam a executar. Um módulo
+importava `gi` sem a guarda `exigir_gi_real` e derrubava a coleta inteira no
+runner headless.
+
+### Alterado
+
+#### O backport do BlueZ saiu pelo tarball, e o portão passa a medir o rádio
+
+A receita da ONDA-R dava o backport como inexecutável fora do Ubuntu 24.04, e
+tinha razão pela metade: o `.deb` do resolute exige glib 2.80, libell 0.64,
+json-c 0.17 e debhelper 13.14, e o jammy traz 2.72 / 0.49 / 0.15 / 13.6. Só que
+essas versões são exigência do EMPACOTAMENTO — o `configure.ac` do 5.86 pede
+`dbus>=1.10`, `libudev>=196`, `json-c>=0.13` e `ell>=0.39`, e os quatro já
+estavam satisfeitos. O 5.86 compilou do tarball upstream e a unit passou a
+apontar para ele por drop-in; o journal responde `Bluetooth daemon 5.86` e o
+binário do sistema fica intacto.
+
+Com isso o doctor virou mentiroso ao contrário: lia `dpkg-query -W bluez`, via
+5.64 e reprovava a cura que já estava de pé. Ele e o `install.sh` passaram a ler
+o `ExecStart` da unit e perguntar a versão ao binário que o systemd realmente
+executa; o dpkg vira fallback para quando o daemon está parado.
+
+#### O README encolheu de 487 para 266 linhas
+
+Saíram as notas datadas, os graus de prova e as referências a sprints — isso é
+diário de processo, não capa. Ficaram as dez capturas, as badges e as
+limitações, ditas de forma direta. A badge de CI voltou a renderizar: o
+sanitizador global passou a preservar o dono em `github.com/<user>/`, e as
+quatro URLs redigidas — badge que não carregava e `git clone` que ninguém
+conseguia copiar — voltaram a funcionar.
+
+
 ### Corrigido
 
 #### MESA-CHEIA-12 — o controle acendia um número e era chamado de outro

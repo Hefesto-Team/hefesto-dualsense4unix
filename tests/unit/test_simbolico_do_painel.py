@@ -298,6 +298,37 @@ def _tray_com_tema(monkeypatch: pytest.MonkeyPatch, instalados: set[str]):
 def test_preferred_icon_pede_o_simbolico_quando_ele_existe(
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """No COSMIC, que RECOLORE o simbólico, ele continua sendo o primeiro."""
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC")
+    monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
+    mod = _tray_com_tema(
+        monkeypatch, {"hefesto-dualsense4unix-symbolic", "hefesto-dualsense4unix"}
+    )
+    assert mod.AppTray._preferred_icon() == "hefesto-dualsense4unix-symbolic"
+
+
+def test_preferred_icon_pede_o_colorido_no_gnome(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """BUG-TRAY-SIMBOLICO-NAO-DESENHA-01: no painel do GNOME o simbólico sai
+    como três pontinhos — o marcador de ícone faltando — pedido pelo NOME ou
+    pelo CAMINHO ABSOLUTO, medido das duas formas em 18/08/2026. O mesmo painel
+    desenha o PNG colorido. Preferir o simbólico ali não entrega um ícone mais
+    feio: entrega a AUSÊNCIA de ícone."""
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "pop:GNOME")
+    monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
+    mod = _tray_com_tema(
+        monkeypatch, {"hefesto-dualsense4unix-symbolic", "hefesto-dualsense4unix"}
+    )
+    assert mod.AppTray._preferred_icon() == "hefesto-dualsense4unix"
+
+
+def test_preferred_icon_na_duvida_mantem_o_simbolico(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Sessão que não se declara segue recebendo o símbolo, como antes."""
+    monkeypatch.delenv("XDG_CURRENT_DESKTOP", raising=False)
+    monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
     mod = _tray_com_tema(
         monkeypatch, {"hefesto-dualsense4unix-symbolic", "hefesto-dualsense4unix"}
     )

@@ -67,13 +67,39 @@ def _sanear_loaders_do_gdk_pixbuf() -> bool:
     if not caminho:
         return False
     try:
-        with open(caminho, encoding="utf-8", errors="replace") as cache:
-            if "svg" in cache.read():
-                return False
+        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
+            cache = arquivo.read()
     except OSError:
-        pass  # ilegível conta como inútil: melhor cair no padrão do sistema
-    del os.environ["GDK_PIXBUF_MODULE_FILE"]
-    return True
+        # Ilegível conta como inútil: melhor cair no padrão do sistema.
+        del os.environ["GDK_PIXBUF_MODULE_FILE"]
+        return True
+
+    # Não basta o cache MENCIONAR svg — o do snap menciona. O que importa é se
+    # os módulos que ele aponta são carregáveis AQUI. Um loader empacotado
+    # dentro do confinamento traz o librsvg dele, ligado a uma glibc mais nova
+    # que a do hospedeiro, e o dlopen falha com "version `GLIBC_2.xx' not
+    # found". O GTK não trata isso como ícone faltando: ele aborta o processo
+    # inteiro no `ensure_surface_for_gicon`, e a janela morre ao abrir.
+    modulos = [
+        linha.strip().strip('"')
+        for linha in cache.splitlines()
+        if linha.strip().startswith('"/') and linha.rstrip().endswith('.so"')
+    ]
+    if modulos and all(not os.path.exists(m) or _de_outro_confinamento(m) for m in modulos):
+        del os.environ["GDK_PIXBUF_MODULE_FILE"]
+        return True
+    if "svg" not in cache:
+        del os.environ["GDK_PIXBUF_MODULE_FILE"]
+        return True
+    return False
+
+
+def _de_outro_confinamento(modulo: str) -> bool:
+    """O módulo mora dentro de um pacote confinado que não é o nosso processo."""
+    for raiz in ("/snap/", "/var/lib/snapd/snap/"):
+        if modulo.startswith(raiz):
+            return not (os.environ.get("SNAP") or "").startswith(raiz)
+    return False
 
 
 _XWAYLAND_FORCED = _force_xwayland_on_cosmic()
