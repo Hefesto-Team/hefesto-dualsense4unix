@@ -45,7 +45,65 @@ def _force_xwayland_on_cosmic() -> bool:
 # da app (gi.repository) ABRE um GdkDisplay já no import — se o backend não
 # estiver definido aqui, o display abre em Wayland e o ajuste em main() chega
 # tarde demais. Por isso o call é no topo do módulo, não dentro de main().
+def _sanear_loaders_do_gdk_pixbuf() -> bool:
+    """Descarta um `GDK_PIXBUF_MODULE_FILE` herdado que não saiba ler SVG.
+
+    BUG-TRAY-ICONE-INVISIVEL-01 (medido em 18/08/2026, Pop!_OS 22.04): o snap do
+    terminal exporta essa variável apontando para um cache de loaders PRÓPRIO,
+    dentro do confinamento dele. Todo processo GTK lançado daquele terminal
+    herda o apontamento e perde o loader de SVG do sistema — o `rsvg-convert`
+    renderiza o ícone sem reclamar, e o mesmo arquivo falha no `GdkPixbuf` com
+    "Couldn't recognize the image file format".
+
+    O estrago é silencioso e não é só o ícone da bandeja, que some da barra sem
+    erro nenhum no log: qualquer SVG da interface cai junto.
+
+    A variável só é removida quando o cache apontado REALMENTE não declara svg —
+    quem tiver um cache próprio legítimo e completo continua com ele de pé. E a
+    remoção acontece no topo do módulo, antes de o GdkPixbuf inicializar: depois
+    disso ele já leu o cache e a correção chega tarde.
+    """
+    caminho = os.environ.get("GDK_PIXBUF_MODULE_FILE")
+    if not caminho:
+        return False
+    try:
+        with open(caminho, encoding="utf-8", errors="replace") as arquivo:
+            cache = arquivo.read()
+    except OSError:
+        # Ilegível conta como inútil: melhor cair no padrão do sistema.
+        del os.environ["GDK_PIXBUF_MODULE_FILE"]
+        return True
+
+    # Não basta o cache MENCIONAR svg — o do snap menciona. O que importa é se
+    # os módulos que ele aponta são carregáveis AQUI. Um loader empacotado
+    # dentro do confinamento traz o librsvg dele, ligado a uma glibc mais nova
+    # que a do hospedeiro, e o dlopen falha com "version `GLIBC_2.xx' not
+    # found". O GTK não trata isso como ícone faltando: ele aborta o processo
+    # inteiro no `ensure_surface_for_gicon`, e a janela morre ao abrir.
+    modulos = [
+        linha.strip().strip('"')
+        for linha in cache.splitlines()
+        if linha.strip().startswith('"/') and linha.rstrip().endswith('.so"')
+    ]
+    if modulos and all(not os.path.exists(m) or _de_outro_confinamento(m) for m in modulos):
+        del os.environ["GDK_PIXBUF_MODULE_FILE"]
+        return True
+    if "svg" not in cache:
+        del os.environ["GDK_PIXBUF_MODULE_FILE"]
+        return True
+    return False
+
+
+def _de_outro_confinamento(modulo: str) -> bool:
+    """O módulo mora dentro de um pacote confinado que não é o nosso processo."""
+    for raiz in ("/snap/", "/var/lib/snapd/snap/"):
+        if modulo.startswith(raiz):
+            return not (os.environ.get("SNAP") or "").startswith(raiz)
+    return False
+
+
 _XWAYLAND_FORCED = _force_xwayland_on_cosmic()
+_PIXBUF_SANEADO = _sanear_loaders_do_gdk_pixbuf()
 
 from hefesto_dualsense4unix.app.app import HefestoApp
 from hefesto_dualsense4unix.utils.i18n import init_locale

@@ -134,11 +134,45 @@ class TestCheckBluezBackportVersion:
     (comparação de string, sem tocar em pacote nenhum)."""
 
     def _fake_dpkg_query(self, tmp_path: Path, versao: str) -> Path:
+        """Cenário do FALLBACK: quem responde é o pacote, não o daemon.
+
+        O `systemctl` falso devolve ExecStart vazio de propósito — é assim que
+        a máquina de quem NÃO reapontou a unit se comporta, e é o caminho que
+        estes casos exercitam. Sem ele, o `systemctl` real da máquina vazaria
+        para dentro do teste e o bluetoothd vivo responderia no lugar do fake.
+        """
+        _escrever_fake_bin(tmp_path, "systemctl", "exit 1")
         return _escrever_fake_bin(
             tmp_path,
             "dpkg-query",
             f'echo -n "{versao}"',
         )
+
+    def _fake_daemon_vivo(self, tmp_path: Path, versao: str) -> Path:
+        """Cenário do DAEMON VIVO: a unit aponta para um bluetoothd fora do
+        dpkg, e é ELE quem vale. Foi o caso desta casa em 18/08/2026 — pacote
+        em 5.64, rádio rodando o 5.86 do tarball, e o portão reprovando a cura
+        que já estava de pé."""
+        fake_bin = _escrever_fake_bin(
+            tmp_path, "bluetoothd-falso", f'echo "{versao}"'
+        )
+        caminho = fake_bin / "bluetoothd-falso"
+        _escrever_fake_bin(
+            tmp_path,
+            "systemctl",
+            f'echo "{{ path={caminho} ; argv[]={caminho} ; ignore_errors=no }}"',
+        )
+        # dpkg-query diz o VELHO: se o check olhasse o pacote, reprovaria.
+        return _escrever_fake_bin(tmp_path, "dpkg-query", 'echo -n "5.64-0ubuntu1.4"')
+
+    def test_daemon_vivo_vence_o_pacote_velho(self, tmp_path: Path) -> None:
+        fake_bin = self._fake_daemon_vivo(tmp_path, "5.86")
+        saida = _rodar_check("check_bluez_backport_version", fake_bin)
+        assert "[ OK ]" in saida, saida
+        assert "[FAIL]" not in saida, saida
+        assert "5.86" in saida
+        assert "daemon em execução" in saida
+        assert "5.64" not in saida, "o pacote velho não pode aparecer no veredito"
 
     def test_bluez_velho_e_fail(self, tmp_path: Path) -> None:
         fake_bin = self._fake_dpkg_query(tmp_path, "5.72-0ubuntu5.5")

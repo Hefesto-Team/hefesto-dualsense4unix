@@ -52,11 +52,12 @@ PAGINAS_DE_USO = (INSTALACAO_REL, "docs/usage/quickstart.md", "docs/usage/flatpa
 #: peneira do sanitizador global.
 ARQUIVOS_COM_URL_DO_FORK = ("README.md", *PAGINAS_DE_USO)
 
-#: Dispensa NOMEADA da regra do marcador em URL, e o motivo está inteiro na
-#: docstring de `test_nenhum_marcador_de_redacao_dentro_de_url`: quem escreve o
-#: `[REDACTED]` é um hook global fora deste repositório, a cada commit. A lista
-#: não é permissão — é dívida com nome e com data, cobrada por dois testes.
-PENDENCIA_DO_SANITIZADOR = frozenset(ARQUIVOS_COM_URL_DO_FORK)
+#: Dispensa NOMEADA da regra do marcador em URL. Em 18/08/2026 a dívida foi
+#: PAGA: o sanitizador global passou a preservar o dono quando ele aparece em
+#: `github.com/<user>/`, e os quatro arquivos saíram da peneira de uma vez.
+#: Badge de CI e `git clone` voltaram a renderizar. A lista fica vazia e os dois
+#: testes seguem de pé — se o marcador voltar a uma URL, o portão reprova.
+PENDENCIA_DO_SANITIZADOR: frozenset[str] = frozenset()
 
 #: Estado do metainfo em 30/07, reproduzido literalmente: número certo, data da
 #: release anterior. É o caso que o portão de então aprovava.
@@ -313,13 +314,14 @@ def test_nenhum_marcador_de_redacao_dentro_de_url(relpath: str) -> None:
 
 
 def test_a_pendencia_do_sanitizador_nao_cresce() -> None:
-    """São QUATRO arquivos, nomeados, e a lista não engorda por descuido.
+    """A lista está VAZIA desde 18/08/2026 e não volta a crescer por descuido.
 
-    Mordida: acrescentar nome aqui abre buraco no portão e reprova.
+    Mordida: acrescentar nome aqui reabre o buraco no portão e reprova. Quem
+    precisar reabrir tem de explicar por que a cura do sanitizador saiu do ar.
     """
-    assert sorted(PENDENCIA_DO_SANITIZADOR) == sorted(ARQUIVOS_COM_URL_DO_FORK), (
-        "hoje o hook global redige TODOS os quatro; se algum sair da peneira, "
-        "tire-o da lista em vez de manter a dispensa por inércia"
+    assert not PENDENCIA_DO_SANITIZADOR, (
+        "a dispensa voltou: algum arquivo foi devolvido à peneira do "
+        "sanitizador em vez de ter a URL consertada"
     )
 
 

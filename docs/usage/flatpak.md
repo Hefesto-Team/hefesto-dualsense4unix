@@ -34,12 +34,10 @@ flatpak install --user br.andrefarias.Hefesto.flatpak
 ### Construir localmente a partir do código-fonte
 
 ```bash
-# Clonar o repositório pela TAG da versão (ver a caixa "Onde esta versão mora"
-# no README). Esta página mandava clonar a branch sprint/harmonia-uhid até
-# 29/07/2026; aquela branch parou dois lançamentos atrás.
-git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
+# Clonar pela TAG da versão — nunca por branch de trabalho.
+git clone https://github.com/AndreBFarias/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.9.4.2
+git checkout v0.9.4.3
 
 # Construir o Flatpak (requer flatpak-builder)
 ./scripts/build_flatpak.sh --install
