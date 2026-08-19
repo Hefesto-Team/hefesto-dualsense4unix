@@ -120,6 +120,77 @@ check_daemon_installed() {
     fi
 }
 
+# VERDE-MENTIROSO-01 (19/08/2026). Duas dependências OBRIGATÓRIAS não tinham
+# régua aqui — `grep -n "hidapi\|rsvg" scripts/doctor.sh` dava ZERO —, e o
+# instalador só passou a garanti-las em 19/08. Quem instalou ANTES disso, ou
+# instalou por pacote da distro, segue com verde mentiroso na conferência: o
+# doctor diz que está tudo bem e o produto não abre aparelho nenhum.
+#
+# As duas perguntam pelo EFEITO, nunca pelo nome do pacote — é a mesma
+# disciplina que o `install.sh` declara na `_dep_presente`, e a que sobrevive a
+# distro que empacota com outro nome.
+_python_do_produto() {
+    local py
+    for py in "${HOME}/.local/share/hefesto-dualsense4unix/venv/bin/python" \
+              "${HOME}/.venv/bin/python" "$(dirname "$0")/../.venv/bin/python"; do
+        [[ -x "${py}" ]] && { printf '%s\n' "${py}"; return 0; }
+    done
+    command -v python3 2>/dev/null
+}
+
+check_libhidapi() {
+    local py; py="$(_python_do_produto)"
+    [[ -z "${py}" ]] && { warn "sem python para conferir a libhidapi"; return; }
+    # O `hidapi` do pip é wrapper CFFI e NÃO traz o `.so`: ele percorre
+    # `libhidapi-hidraw.so[.0]` e `libhidapi-libusb.so[.0]` até um abrir. Sem a
+    # biblioteca do sistema o `import pydualsense` levanta OSError e NENHUM
+    # aparelho sobe — é falha, não aviso.
+    if "${py}" -c "import ctypes,sys
+for so in ('libhidapi-hidraw.so.0','libhidapi-libusb.so.0','libhidapi-hidraw.so','libhidapi.so.0'):
+    try:
+        ctypes.CDLL(so); sys.exit(0)
+    except OSError:
+        pass
+sys.exit(1)" 2>/dev/null; then
+        pass "libhidapi presente (o backend do controle consegue abrir aparelho)"
+    else
+        fail "libhidapi AUSENTE — sem ela o backend não abre NENHUM aparelho (o pydualsense faz dlopen dela; a wheel do pip não traz o .so). Rode ./install.sh, que agora a garante"
+    fi
+}
+
+check_loader_svg() {
+    local py; py="$(_python_do_produto)"
+    [[ -z "${py}" ]] && { warn "sem python para conferir o loader SVG"; return; }
+    # A pergunta certa não é "o pacote está instalado?", e sim "o gdk-pixbuf sabe
+    # ler SVG?" — que é o que a interface faz 38 vezes (os glifos dos botões) e
+    # mais uma no ícone da bandeja. ARMADILHA DE NOME já paga por esta casa: o
+    # pacote de EXECUÇÃO é o loader (`librsvg2-common` no Debian); o
+    # `librsvg2-bin` é o `rsvg-convert`, ferramenta de build.
+    # MEDIDO em 19/08/2026, e a primeira versão desta régua ERRAVA: perguntar
+    # `Pixbuf.get_formats()` lê o CACHE do gdk-pixbuf (`loaders.cache`), não o
+    # loader. Com o `libpixbufloader-svg.so` fora do alcance do processo, o
+    # catálogo continuava dizendo que sabe ler SVG — verde sobre uma máquina em
+    # que o ícone da bandeja sairia vazio. Agora a régua CARREGA um SVG de
+    # verdade, que é o que a interface faz 38 vezes.
+    if "${py}" -c "import gi,sys,tempfile,os
+gi.require_version('GdkPixbuf','2.0')
+from gi.repository import GdkPixbuf
+svg = b'<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"8\" height=\"8\"><rect width=\"8\" height=\"8\"/></svg>'
+fd, caminho = tempfile.mkstemp(suffix='.svg')
+try:
+    os.write(fd, svg); os.close(fd)
+    pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(caminho, 8, 8, True)
+    sys.exit(0 if pb is not None else 1)
+except Exception:
+    sys.exit(1)
+finally:
+    os.unlink(caminho)" 2>/dev/null; then
+        pass "loader SVG do gdk-pixbuf presente (os glifos e o ícone da bandeja desenham)"
+    else
+        fail "loader SVG AUSENTE — o ícone some da barra e os 38 glifos dos botões saem vazios (BUG-TRAY-ICONE-INVISIVEL-01). Instale o loader do librsvg (Debian: librsvg2-common) ou rode ./install.sh"
+    fi
+}
+
 check_service() {
     command -v systemctl >/dev/null 2>&1 || { warn "systemctl ausente — não checo o serviço"; return; }
     local state
@@ -4966,6 +5037,12 @@ main() {
     check_daemon_installed
     check_service
     check_socket
+    # VERDE-MENTIROSO-01: as duas obrigatórias que o doctor não cobrava. Ficam
+    # ao lado do CLI de propósito — são a mesma pergunta ("o produto consegue
+    # fazer o que promete?"), e as duas reprovam por AUSÊNCIA de biblioteca, não
+    # por defeito de configuração.
+    check_libhidapi
+    check_loader_svg
     hdr "kernel / udev"
     check_udev
     check_usb_audio_off
