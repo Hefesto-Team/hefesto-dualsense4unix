@@ -76,6 +76,17 @@ DUALSENSE_EDGE_PID = 0x0DF2
 #: isso, todo reconnect BT/hotplug leria `0 0 0` com o LED visivelmente aceso.
 KERNEL_DEFAULT_BLUE: tuple[int, int, int] = (0, 0, 128)
 
+#: AVISO-DE-MODO-01: a piscada do aviso de modo. Ela pediu "pisca 3 vezes
+#: rápido" — rápido o bastante para ler como AVISO e não como perfil novo, e
+#: curto o bastante para caber num instante de jogo (3 x 0,16 s = meio segundo).
+#: O apagado é PRETO, não brilho zero: `luz.lightbar.brilho` tem `aciona=não`
+#: nos dois transportes no mapa de canais, então mexer no `brightness` não
+#: apaga nada — quem apaga é a COR.
+AVISO_PISCADAS = 3
+AVISO_ACESO_S = 0.09
+AVISO_APAGADO_S = 0.07
+AVISO_APAGADO: tuple[int, int, int] = (0, 0, 0)
+
 #: REPLICA-03: tamanho do bloco de trigger effect que o jogo escreve no report
 #: 0x02 do vpad (modo + 10 parâmetros — `rgucRightTriggerEffect[11]` do
 #: DS5EffectsState_t do SDL; no kernel a área é o `reserved2` do
@@ -2919,6 +2930,147 @@ class PyDualSenseController(IController):
                 enviado=ok,
             )
         return resultado
+
+    # --- aviso de modo na lightbar (AVISO-DE-MODO-01) --------------------
+
+    def pintar_lightbar_sem_lembrar(self, rgb: tuple[int, int, int]) -> int:
+        """Pinta `rgb` em TODOS os controles SEM tocar no estado desejado.
+
+        AVISO-DE-MODO-01 (19/08/2026). É o irmão do `set_led` para o caso do
+        AVISO: a cor tem de aparecer agora e **sumir depois**, devolvendo a cor
+        que ela escolheu. Três diferenças, todas deliberadas:
+
+        1. **Não grava `record=`.** O `set_led` grava a cor no estado desejado
+           — e no caminho broadcast o `_record_desired_locked` ainda LIMPA o
+           campo `led` de todos os overrides por-uniq. Um aviso que passasse
+           por ali apagaria o perfil dela de verdade: o `reassert` seguinte
+           devolveria a cor do AVISO, não a dela. Aqui nada é lembrado, então
+           `restaurar_lightbar_do_perfil` tem o que devolver.
+        2. **`broadcast=True` sempre.** Ela pediu "o lightbar de TODOS pisca" —
+           o seletor de controle da janela não pode calar o aviso nos outros.
+        3. **Passa `rgb=` para a rota avulsa por hidraw.** Por rádio, com outro
+           processo (a Steam) segurando o nó, o `multi_intensity` não pinta e o
+           `0x31` avulso pinta (ROTA-BT-EM-REGIME-01, 12/08/2026). O
+           `_for_each_led` já manda os dois quando recebe o valor em forma de
+           dado.
+
+        Em Modo Nativo (`_output_mute`) é no-op: ali o dono do LED é o jogo, e
+        essa é a mesma regra do `reassert_resolved_outputs` e do
+        `reescrever_lightbar_por_hidraw`. O aviso de ENTRADA no Modo Nativo
+        ainda sai, porque quem o dispara roda antes do mute (ver
+        `daemon/subsystems/gamepad.stop_gamepad_emulation`).
+
+        Devolve **quantos controles receberam a escrita** — nunca "quantos
+        acenderam". Não há como saber o segundo: o `multi_intensity` é a
+        memória do último valor PEDIDO pela classe LED, não a verdade do
+        hardware, e escrita por hidraw nem o atualiza.
+        """
+        with self._io_lock:
+            if self._output_mute:
+                logger.debug("aviso_de_modo_no_op_modo_nativo")
+                return 0
+            quantos = len(self._handles)
+        if not quantos:
+            return 0
+        r, g, b = rgb
+        self._for_each_led(
+            sysfs_op=lambda node: node.set_rgb(r, g, b),
+            pydual_op=lambda h: h.light.setColorI(r, g, b),
+            what="aviso_de_modo",
+            broadcast=True,
+            rgb=(r, g, b),
+        )
+        return quantos
+
+    def restaurar_lightbar_do_perfil(self) -> int:
+        """Devolve a TODOS os controles a cor que o perfil resolve. AVISO-DE-MODO-01.
+
+        O par do `pintar_lightbar_sem_lembrar`. A cor não é inventada aqui: sai
+        do `_merged_desired_for_key`, o MESMO merge de camadas que o hotplug, o
+        reassert e o gatilho da cor usam — sem cor resolvida, o azul-default do
+        kernel, que é a mesma escolha do priming (controle virgem nasce aceso,
+        não apagado).
+
+        Escreve pelo `_write_partial_output`, e é por isso que ele: cobre as
+        TRÊS rotas de uma vez (sysfs, `0x31` avulso por rádio e o fallback
+        pydualsense do cabo) e falha por controle sem abortar os outros — o
+        caso medido do rádio travado registra no journal e o resto segue.
+
+        Só o campo `led` é devolvido. Reaplicar o `_DesiredOutput` inteiro
+        traria gatilhos e número de jogador junto, que o aviso nunca tocou —
+        devolver o que não se tirou é mudança que ela não pediu.
+        """
+        with self._io_lock:
+            if self._output_mute:
+                return 0
+            itens = [
+                (key, handle, self._sysfs.get(key), self._merged_desired_for_key(key).led)
+                for key, handle in self._handles.items()
+            ]
+        devolvidos = 0
+        for key, handle, node, cor in itens:
+            alvo = cor if cor is not None else KERNEL_DEFAULT_BLUE
+            try:
+                ok = self._write_partial_output(
+                    handle,
+                    node,
+                    False,
+                    _DesiredOutput(led=alvo),
+                    what="aviso_de_modo_devolve",
+                )
+            except Exception as exc:
+                logger.warning("aviso_de_modo_devolve_falhou", key=key, err=str(exc))
+                continue
+            if ok:
+                devolvidos += 1
+        logger.debug("aviso_de_modo_devolvido", controles=devolvidos, de=len(itens))
+        return devolvidos
+
+    def piscar_aviso_de_modo(
+        self,
+        rgb: tuple[int, int, int],
+        *,
+        vezes: int = AVISO_PISCADAS,
+        aceso_s: float = AVISO_ACESO_S,
+        apagado_s: float = AVISO_APAGADO_S,
+    ) -> int:
+        """Pisca `vezes` rápido na cor do modo novo e DEVOLVE a cor dela.
+
+        AVISO-DE-MODO-01, pedido dela em 19/08/2026: *"o lightbar de todos
+        pisca 3 vezes rápido"* na cor do modo em que se acabou de entrar.
+
+        **A piscada é por COR, nunca por brilho.** O mapa de canais mede
+        `luz.lightbar.brilho` com `aciona=não` nos DOIS transportes — mexer no
+        `brightness` não apaga nada. Apagado aqui é escrever preto.
+
+        **BLOQUEANTE de propósito** (`time.sleep`): a sequência tem de ficar
+        junta, e um `await` no meio a deixaria intercalada com o resto do laço.
+        Quem chama do laço de eventos joga isto numa thread — é o que o
+        `daemon/subsystems/hotkey._disparar_piscada` faz.
+
+        O `finally` é o contrato: **qualquer** saída — inclusive uma exceção no
+        meio — devolve a cor do perfil. Um aviso que rouba a cor dela e não
+        devolve é defeito, não cura.
+
+        Devolve quantos controles receberam a PRIMEIRA escrita (mesma ressalva
+        do `pintar_lightbar_sem_lembrar`: escrita recebida, não barra acesa).
+        """
+        alcancados = 0
+        try:
+            for volta in range(max(1, vezes)):
+                escritas = self.pintar_lightbar_sem_lembrar(rgb)
+                if volta == 0:
+                    alcancados = escritas
+                if not escritas:
+                    # Ninguém para avisar (mesa vazia ou Modo Nativo já mudo):
+                    # dormir a sequência inteira seria segurar a thread à toa.
+                    break
+                time.sleep(aceso_s)
+                self.pintar_lightbar_sem_lembrar(AVISO_APAGADO)
+                time.sleep(apagado_s)
+        finally:
+            self.restaurar_lightbar_do_perfil()
+        return alcancados
 
     def _for_each_led(
         self,

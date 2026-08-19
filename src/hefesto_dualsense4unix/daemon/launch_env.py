@@ -65,6 +65,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.integrations import ponte_escada, ponte_tentativa
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import launch_env_dir
@@ -742,6 +743,128 @@ def steam_input_exception_appid(
     return None
 
 
+def _modo_da_ponte(ponte: ponte_escada.Ponte) -> Any:
+    """Um `ProfileModeConfig` que materializa a ponte carimbada no perfil.
+
+    PONTE-ESCADA-01. A ponte é a tupla que o perfil já sabia guardar
+    (`mode.kind` + `mode.gamepad_flavor`), então trazê-la do carimbo de volta é
+    remontar exatamente esse objeto — nenhum caminho de aplicação novo, nenhum
+    vocabulário novo. Import local pelo mesmo motivo dos vizinhos: manter
+    `daemon -> profiles` fora do topo deste módulo.
+    """
+    from hefesto_dualsense4unix.profiles.schema import (
+        ProfileModeConfig,
+        normalizar_gamepad_flavor,
+    )
+
+    if ponte.kind == ponte_escada.KIND_GAMEPAD:
+        # A mesma fronteira `str` solto -> `Literal` fechado que o
+        # `carimbar_ponte` atravessa na ida. Uma máscara que o esquema não
+        # conhece vira None, e `None` é "sem opinião de máscara" — nunca uma
+        # máscara inventada.
+        return ProfileModeConfig(
+            kind="gamepad", gamepad_flavor=normalizar_gamepad_flavor(ponte.mascara)
+        )
+    return ProfileModeConfig(kind="native")
+
+
+def ponte_do_lancamento(
+    profile: Any, *, na_allowlist: bool
+) -> ponte_escada.Ponte | None:
+    """A ponte que ESTE lançamento entrega, ou None quando não há opinião.
+
+    Fachada fina sobre `ponte_escada.ponte_do_perfil`, aqui porque é aqui que
+    as três peças da tupla se encontram: o `mode` vem do perfil, e a terceira
+    (`steam_input`) vem da allowlist que este módulo já lê em
+    `steam_input_appids`.
+    """
+    return ponte_escada.ponte_do_perfil(profile, na_allowlist=na_allowlist)
+
+
+def _jogo_na_autoridade(daemon: DaemonProtocol) -> bool:
+    """Há jogo com o controle na mão dela AGORA? PONTE-ESCADA-LACO-01.
+
+    `display_authority` é o MESMO sinal que o gate R-04 consulta
+    (`gamepad._autoridade_do_jogo`) e que o gesto da ponte já lê
+    (`hotkey._ciclar_ponte`). Uma terceira definição de "jogo vivo" nesta casa
+    seria uma terceira verdade sobre a mesma pergunta — e o preço disso já foi
+    pago em 16/08, quando duas leituras do mesmo `.vdf` discordaram e o censo
+    jurou que o Pragmata estava são.
+
+    Ele é STICKY por 30 s (NUMA-01), e isso serve à escada: uma janela que
+    pisca não encerra a tentativa dela no meio da partida.
+    """
+    return getattr(daemon, "display_authority", "unknown") == "game"
+
+
+def tique_da_escada(
+    daemon: DaemonProtocol, *, agora: float | None = None
+) -> str | None:
+    """O relógio de 1 Hz da escada. Devolve o motivo do FIM, ou None.
+
+    PONTE-ESCADA-LACO-01 (19/08/2026), momento 3: *"quando ela para"*.
+
+    **Por que mora aqui, e não num relógio próprio.** Este tique anda no MESMO
+    ciclo do arming — `gamepad._reconciliar_launch` chama `arm_launch_profile`
+    a 1 Hz, e é a primeira linha dela que chama isto. Um segundo relógio para a
+    mesma pergunta seria um segundo estado, e dois estados sobre o mesmo jogo é
+    como esta casa fabrica duas verdades. O custo por tique sem tentativa
+    aberta é um `getattr`.
+
+    **É o ÚNICO ponto que carimba por silêncio**, e ele carimba uma vez só: a
+    tentativa é encerrada junto, então a volta seguinte não reencontra nada
+    para reconfirmar. Recarimbar a cada volta apagaria a data, que é a única
+    informação que o carimbo antigo carrega.
+
+    **Jogo fechado no meio da escada não carimba nada.** `ponte_tentativa.tique`
+    encerra a tentativa pela borda do jogo, e nenhum caminho de encerramento
+    escreve no disco — só este, e só com a `Ponte` que
+    `ponte_escada.confirmacao_por_silencio` devolveu.
+    """
+    resultado = ponte_tentativa.tique(
+        daemon, jogo_vivo=_jogo_na_autoridade(daemon), agora=agora
+    )
+    if resultado.carimbar is None:
+        return resultado.fim
+    ponte = resultado.carimbar
+    try:
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+        # `POR_SILENCIO` é byte a byte o `CONFIRMADA_POR_SILENCIO` do esquema
+        # — a igualdade é PORTÃO em `tests/unit/test_ponte_escada.py`, não
+        # coincidência, e é o que deixa a escada falar sem importar o esquema.
+        salvo = ProfileManager(controller=daemon.controller).confirmar_ponte(
+            resultado.appid,
+            kind=ponte.kind,
+            gamepad_flavor=ponte.mascara,
+            steam_input=ponte.steam_input,
+            por=ponte_escada.POR_SILENCIO,
+        )
+    except Exception as exc:
+        logger.warning(
+            "ponte_escada_carimbo_falhou",
+            appid=resultado.appid,
+            ponte=ponte.chave,
+            err=str(exc),
+        )
+        return resultado.fim
+    if salvo is None:
+        # O jogo não tem perfil próprio, e `confirmar_ponte` NÃO inventa um —
+        # criar arquivo nas costas dela tem uma porta só, que é o editor. Sem
+        # perfil não há gaveta, e o produto diz isso em vez de fingir que
+        # gravou.
+        logger.info("ponte_escada_sem_perfil_para_carimbar", appid=resultado.appid)
+        return resultado.fim
+    logger.info(
+        "ponte_escada_carimbada",
+        appid=resultado.appid,
+        ponte=ponte.chave,
+        perfil=getattr(salvo, "name", None),
+        por=ponte_escada.POR_SILENCIO,
+    )
+    return resultado.fim
+
+
 def arm_launch_profile(
     daemon: DaemonProtocol,
     *,
@@ -811,7 +934,35 @@ def arm_launch_profile(
     de mexer o cursor enquanto ela joga não rouba nada de ninguém. Agora a
     allowlist pula SÓ a seção `mode`; a supressão do perfil é aplicada
     normalmente.
+
+    PONTE-ESCADA-01 (19/08/2026) — o arming é onde a ponte GRAVADA passa a
+    valer, e a divisão de poderes é declarada, não implícita:
+
+    - **o perfil manda.** Perfil com `mode` continua sendo aplicado como
+      sempre, mesmo que o carimbo diga outra coisa. A divergência é
+      GRITADA (`ponte_confirmada_diverge_do_perfil`) e devolvida no dicionário,
+      nunca resolvida às escondidas — trocar o modo de um jogo dela sem ela
+      pedir é a regra mais velha desta casa ao contrário;
+    - **o carimbo preenche o silêncio.** Perfil SEM `mode` é ausência de
+      opinião (R-02), e era o ramo em que nada era armado. Com o
+      `Profile.ponte` carimbado, é ele que arma — porque a confirmação veio de
+      um gesto dela, e honrar o gesto dela não é atropelar ninguém;
+    - **a ponte entregue é relatada**, e só quando a máscara CONVERGIU. Dizer
+      "entreguei" sobre uma troca que o gate R-04 recusou é a mesma mentira
+      que a MASCARA-01 tirou daqui em 19/08. E o arming NÃO carimba nada: quem
+      confirma é o gesto dela, ou o silêncio dela com o jogo vivo
+      (`ponte_escada.confirmacao_por_silencio`), e quem grava é
+      `profiles/manager.confirmar_ponte`.
     """
+    # PONTE-ESCADA-LACO-01: o tique da escada vem ANTES de qualquer `return`
+    # deste corpo, e de propósito. Ele anda no relógio de 1 Hz do
+    # `_reconciliar_launch`, que é este; pendurá-lo depois do gate do marker o
+    # faria parar de andar assim que a janela do lançamento vencesse — ou seja,
+    # justo quando a partida dela começa, que é quando o silêncio conta.
+    # `suppress`: a escada é um extra, e um extra nunca derruba o arming.
+    with contextlib.suppress(Exception):
+        tique_da_escada(daemon)
+
     marker = read_last_run_marker(base_dir)
     if marker is None:
         return None
@@ -879,13 +1030,92 @@ def arm_launch_profile(
         }
 
     mode = getattr(profile, "mode", None)
+    ponte_perfil = ponte_do_lancamento(profile, na_allowlist=na_allowlist)
+    # PONTE-ESCADA-01: o carimbo vem do PRÓPRIO perfil que está armando — não
+    # de uma segunda busca por appid. Duas buscas poderiam eleger perfis
+    # diferentes (o disco dela tem appid coberto por dois perfis: pragmata e
+    # pragmata2), e aí o produto armaria um e leria o carimbo do outro.
+    ponte_gravada = ponte_escada.ponte_do_carimbo(getattr(profile, "ponte", None))
+
+    # PONTE-ESCADA-LACO-01, momento 1: *"jogo SEM carimbo: a escada começa"*.
+    ponte_de_pe = ponte_perfil
+    if ponte_de_pe is None and mode is not None:
+        # O perfil OPINA, mas com uma tupla que a escada não conhece (um
+        # `kind` fora do vocabulário dela). Silêncio e recusa são coisas
+        # diferentes: mandar `None` aqui faria a escada ler "ninguém opinou" e
+        # armar o primeiro degrau POR CIMA da escolha dela.
+        ponte_de_pe = ponte_escada.Ponte(kind=str(getattr(mode, "kind", "?")))
+    comeco = ponte_tentativa.comecar(
+        daemon,
+        appid=appid,
+        epoch=epoch,
+        ponte_do_perfil=ponte_de_pe,
+        confirmada=ponte_gravada,
+        jogo_vivo=_jogo_na_autoridade(daemon),
+    )
+
+    veio_do_carimbo = False
+    if (
+        mode is None
+        and ponte_gravada is not None
+        and ponte_gravada.kind != ponte_escada.KIND_DESKTOP
+    ):
+        # O carimbo preenche o SILÊNCIO do perfil, nunca o contradiz. Ver a nota
+        # PONTE-ESCADA-01 na docstring.
+        mode = _modo_da_ponte(ponte_gravada)
+        veio_do_carimbo = True
+        logger.info(
+            "launch_arm_ponte_confirmada",
+            appid=appid,
+            profile=getattr(profile, "name", None),
+            ponte=ponte_gravada.chave,
+        )
+    veio_da_escada = False
+    if mode is None and comeco.armar is not None:
+        # O primeiro degrau da escada. Este é o ramo em que o produto deixava
+        # de fazer o que a casa já sabia: perfil sem `mode` e sem carimbo era
+        # "nada a armar", e ela ficava com a máscara que estivesse de pé por
+        # acaso. Agora ele arma o degrau que o mapa de canais justifica — e só
+        # ele, porque `comecar` já recusou armar sozinho com jogo vivo.
+        mode = _modo_da_ponte(comeco.armar.ponte)
+        veio_da_escada = True
+        logger.info(
+            "launch_arm_primeiro_degrau",
+            appid=appid,
+            profile=getattr(profile, "name", None),
+            ponte=comeco.armar.ponte.chave,
+        )
+
     if mode is None:
         # Perfil sem seção `mode` é ausência de opinião (R-02) — nada a armar.
         logger.info(
             "launch_arm_perfil_sem_modo", appid=appid,
             profile=getattr(profile, "name", None),
+            escada=comeco.motivo,
         )
-        return {"appid": appid, "armado": False, "motivo": "perfil_sem_modo"}
+        return {
+            "appid": appid,
+            "armado": False,
+            "motivo": "perfil_sem_modo",
+            "escada": comeco.motivo,
+        }
+
+    if (
+        ponte_gravada is not None
+        and not veio_do_carimbo
+        and ponte_perfil is not None
+        and ponte_perfil != ponte_gravada
+    ):
+        # NÃO se resolve aqui: o perfil manda, e a discordância aparece inteira
+        # para quem tem a palavra (a aba de perfil, e ela). Resolver em silêncio
+        # é como o produto passa a discordar de si mesmo sem ninguém ver.
+        logger.warning(
+            "ponte_confirmada_diverge_do_perfil",
+            appid=appid,
+            profile=getattr(profile, "name", None),
+            ponte_do_perfil=ponte_perfil.chave,
+            ponte_gravada=ponte_gravada.chave,
+        )
 
     applier = getattr(daemon, "apply_profile_mode", None)
     if not callable(applier):
@@ -934,6 +1164,22 @@ def arm_launch_profile(
     # e para a divergência acima chegar ao `state_full` pelo mesmo caminho de
     # sempre.
     materialize_launch_env(daemon)
+    # PONTE-ESCADA-01: a ponte que este lançamento ENTREGOU, e só quando a
+    # máscara convergiu — dizer "entreguei" sobre uma troca que o gate R-04
+    # recusou é a mesma mentira que a MASCARA-01 tirou daqui em 19/08. Nada é
+    # gravado: a escada não guarda posição (o degrau é a ponte que está de pé),
+    # e quem carimba a confirmação é `profiles/manager.confirmar_ponte`.
+    ponte_entregue = ponte_gravada if veio_do_carimbo else ponte_perfil
+    if veio_da_escada and comeco.armar is not None:
+        ponte_entregue = comeco.armar.ponte
+    if divergencia is not None:
+        ponte_entregue = None
+        if veio_da_escada:
+            # O primeiro degrau foi PEDIDO e não subiu. A tentativa não pode
+            # ficar acreditando estar num degrau que não está de pé: o gesto
+            # seguinte pularia justamente o degrau que faltava tentar. Mesma
+            # disciplina da MASCARA-01 — a prova é o aparelho, nunca o retorno.
+            ponte_tentativa.encerrar(daemon, motivo="degrau_nao_subiu")
     return {
         "appid": appid,
         "armado": True,
@@ -941,6 +1187,13 @@ def arm_launch_profile(
         "resultado": resultado,
         "convergiu": divergencia is None,
         "divergente": divergencia,
+        "ponte": ponte_entregue.chave if ponte_entregue is not None else None,
+        "ponte_do_carimbo": veio_do_carimbo,
+        "ponte_da_escada": veio_da_escada,
+        "escada": comeco.motivo,
+        "ponte_confirmada": (
+            ponte_gravada.chave if ponte_gravada is not None else None
+        ),
     }
 
 
@@ -1865,6 +2118,7 @@ __all__ = [
     "launch_session_appid",
     "materialize_launch_env",
     "pid_is_alive",
+    "ponte_do_lancamento",
     "read_last_exit_marker",
     "read_last_exit_pid",
     "read_last_run_marker",
@@ -1873,6 +2127,7 @@ __all__ = [
     "steam_appid_from_wm_class",
     "steam_input_appids",
     "steam_input_exception_appid",
+    "tique_da_escada",
     "valor_disable_hidraw",
     "valor_ignore_devices",
     "vigiar_a_mesa",

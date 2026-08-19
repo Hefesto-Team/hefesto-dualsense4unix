@@ -601,6 +601,164 @@ class ProfileModeConfig(BaseModel):
     coop: bool = True
 
 
+#: PONTE-CONFIRMADA-01 (19/08/2026) — COMO a ponte foi confirmada.
+#:
+#: São os caminhos que ela fixou em 19/08/2026: o produto tenta em ordem e ela
+#: confirma UMA vez, com um gesto no controle, qual pegou (``gesto``); ou ela já
+#: sabe e escolhe direto na aba de perfil (``escolha_dela``). O automático é o
+#: caminho; a escolha dela é o atalho — e os dois carimbam o MESMO campo, porque
+#: a pergunta que o carimbo responde é a mesma ("esta ponte foi confirmada?").
+#:
+#: Guardar QUAL deles é o que separa "o produto adivinhou e ela confirmou" de
+#: "ela mandou" no dia em que a escada errar — sem isso, o journal é o único
+#: lugar onde essa diferença existe, e o journal roda.
+#:
+#: OS TRÊS NOMES SÃO OS DE ``integrations/ponte_escada.py`` (``POR_GESTO``,
+#: ``POR_SILENCIO``, ``POR_ESCOLHA_DELA``), e a coincidência é o ponto: quem
+#: DECIDE que a ponte pegou é a escada, quem GUARDA é este campo, e um esquema
+#: que não soubesse representar uma das confirmações que o produto já produz
+#: seria um esquema obrigando a uma segunda gaveta para o mesmo fato. O
+#: ``silencio`` é a confirmação mais barata que existe — ela jogou e não
+#: reclamou — e é justamente a que não pode ficar de fora.
+#:
+#: Anotados como `Literal` (e não `str`) de propósito: é o que permite usá-los
+#: como default do campo sem que o verificador de tipos perca a faixa fechada.
+CONFIRMADA_POR_GESTO: Literal["gesto"] = "gesto"
+CONFIRMADA_POR_SILENCIO: Literal["silencio"] = "silencio"
+CONFIRMADA_POR_ESCOLHA: Literal["escolha_dela"] = "escolha_dela"
+
+
+def _agora_em_iso() -> str:
+    """Instante atual em ISO-8601, segundo a segundo, com fuso.
+
+    Local e com offset (`astimezone()`), não UTC cru: quem lê o carimbo é ela,
+    olhando para *"quando foi que eu confirmei isto?"*, e um `Z` obriga a
+    pessoa a fazer a conta de cabeça. O offset preserva a ordenação e o
+    `fromisoformat` de volta.
+    """
+    from datetime import datetime
+
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+class PonteConfirmada(BaseModel):
+    """O CARIMBO: esta ponte foi confirmada NESTE jogo, e quando.
+
+    PONTE-CONFIRMADA-01 (19/08/2026). O perfil já guardava a ponte — ela é a
+    tupla ``(mode.kind, mode.gamepad_flavor, está na allowlist do Steam
+    Input)``, com as duas primeiras em ``mode`` e a terceira no
+    ``steam_input_apps.txt``. O que faltava não é vocabulário novo: é a resposta
+    da pergunta que decide tudo — **"esta combinação foi CONFIRMADA aqui, ou é
+    só o que estava no arquivo quando ninguém sabia?"**.
+
+    Sem essa distinção o produto não separa "nunca tentei" de "tentei e
+    funciona", e uma escada que tenta as pontes em ordem **nunca para**: ela
+    rodaria de novo em todo jogo, a cada abertura, arrancando o controle da mão
+    dela a cada degrau (R-04, medido em 23/07 — recriar o vpad com o jogo aberto
+    tira o controle do jogo).
+
+    POR QUE A TUPLA SE REPETE AQUI, em vez de o carimbo ser um simples
+    ``confirmado: true`` sobre o ``mode``. Porque as duas coisas divergem, e a
+    divergência é o fato mais útil que este campo produz: ela troca a máscara
+    na aba Início, ou tira o jogo da lista de exceções, e o ``mode`` do arquivo
+    passa a ser OUTRA ponte — a que foi confirmada continua sendo a de antes.
+    Um booleano em cima do ``mode`` seria apagado por essa troca sem que
+    ninguém notasse, e o produto voltaria a "não sei" logo depois de saber.
+    Guardando a tupla inteira, o produto sabe as duas coisas e pode dizer qual
+    é qual (é o que o ``prontuario_dos_jogos`` faz com ela).
+
+    ADITIVO, sem bump de versão — mesmo caminho do ``mouse``, do ``mic``, do
+    ``speaker`` e do ``mode``: perfil antigo, SEM o campo, carrega e vale.
+    ``None`` aqui significa exatamente **"ainda não sei"**, e é isso que os 18
+    perfis do disco dela passam a dizer. Um perfil que já traz
+    ``gamepad_flavor="dualsense"`` NÃO vira confirmado por existir: nenhuma
+    migração escreve este campo, e o portão
+    ``test_ponte_confirmada_01`` reprova quem tentar.
+
+    A serialização OMITE o campo quando ``None`` (ver o serializador do
+    ``Profile``), pela mesma razão medida do ``rota``/``controllers``:
+    ``extra="forbid"`` faz um hefesto ANTIGO recusar o perfil inteiro ao ver
+    uma chave que não conhece, e gravar ``"ponte": null`` em todo save
+    transformaria "voltar uma versão" em "todos os perfis quebrados".
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: Os três termos da ponte, com os MESMOS nomes de ``ProfileModeConfig`` e
+    #: da allowlist — quem lê os dois lado a lado compara campo com campo. É o
+    #: mesmo trio do ``ponte_escada.Ponte``, que chama a máscara de ``mascara``;
+    #: aqui ela se chama ``gamepad_flavor`` porque o vizinho de comparação é o
+    #: ``mode`` do próprio perfil, e nome igual é o que torna a comparação
+    #: campo a campo (``mesma_ponte``) legível em vez de uma tradução.
+    kind: Literal["desktop", "gamepad", "native"]
+    gamepad_flavor: Literal["dualsense", "xbox"] | None = None
+    #: O terceiro termo: o jogo estava na allowlist do Steam Input
+    #: (``steam_input_apps.txt``) quando a ponte foi confirmada.
+    steam_input: bool = False
+    confirmada_em: str = Field(default_factory=_agora_em_iso)
+    confirmada_por: Literal["gesto", "silencio", "escolha_dela"] = (
+        CONFIRMADA_POR_GESTO
+    )
+
+    @field_validator("confirmada_em")
+    @classmethod
+    def _e_uma_data_de_verdade(cls, value: str) -> str:
+        """Data ilegível é pior que data ausente: ela PARECE conhecimento.
+
+        A borda recusa, como o ``custom_mult`` e o ``volume`` do alto-falante:
+        o arquivo inválido morre no load, com mensagem que explica, em vez de
+        virar uma tela mostrando "confirmada em nunca".
+        """
+        from datetime import datetime
+
+        try:
+            datetime.fromisoformat(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"ponte.confirmada_em não é uma data ISO-8601: {value!r} "
+                "(ex.: '2026-08-19T21:30:00-03:00')"
+            ) from exc
+        return value
+
+    @model_validator(mode="after")
+    def _mascara_so_existe_com_gamepad(self) -> PonteConfirmada:
+        """Máscara sem gamepad virtual é uma ponte que não existe.
+
+        ``ProfileModeConfig`` aceita o par incoerente por história (perfis já
+        gravados o trazem, e rejeitá-los agora fecharia arquivo dela que abre
+        hoje). Aqui não há história a preservar — o campo nasce neste commit e
+        só o produto o escreve —, então a incoerência morre na borda em vez de
+        virar uma escada perguntando "a máscara do modo nativo é dualsense?".
+        """
+        if self.gamepad_flavor is not None and self.kind != "gamepad":
+            raise ValueError(
+                "ponte.gamepad_flavor só vale com kind='gamepad' "
+                f"(kind={self.kind!r}): sem o gamepad virtual não há máscara "
+                "para o jogo ver"
+            )
+        return self
+
+    def mesma_ponte(
+        self,
+        mode: ProfileModeConfig | None,
+        *,
+        na_allowlist: bool,
+    ) -> bool:
+        """A ponte de HOJE é a que foi confirmada?
+
+        Os três termos comparados de uma vez, que é a única comparação honesta:
+        ``mode`` ausente é "sem opinião", e sem opinião nunca é igual a uma
+        ponte confirmada.
+        """
+        if mode is None:
+            return False
+        return (
+            self.kind == mode.kind
+            and self.gamepad_flavor == (mode.gamepad_flavor if mode.kind == "gamepad" else None)
+            and self.steam_input is bool(na_allowlist)
+        )
+
+
 class ControllerRumbleOverride(BaseModel):
     """A INTENSIDADE da vibração de UMA unidade física (POR-UNIDADE-01, 10/08).
 
@@ -832,6 +990,37 @@ class Profile(BaseModel):
     # gravaria `"controllers": null` e binário antigo (extra="forbid")
     # rejeitaria TODO perfil no downgrade, não só os que usam o mapa.
     controllers: dict[str, ControllerOverrides] | None = None
+    # PONTE-CONFIRMADA-01 (19/08/2026): a ponte que já foi CONFIRMADA neste
+    # jogo — ver `PonteConfirmada`. None = **ainda não sei**, que é o que todo
+    # perfil existente diz (nenhuma migração escreve este campo). É a distinção
+    # entre "nunca tentei" e "tentei e funciona", e é ela que faz a escada de
+    # pontes parar em vez de recomeçar a cada abertura do jogo.
+    ponte: PonteConfirmada | None = None
+
+    @model_serializer(mode="wrap")
+    def _sem_ponte_a_chave_nem_aparece(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Perfil sem ponte confirmada sai do dump IDÊNTICO ao que era.
+
+        Mesma cura medida do ``rota`` em ``ProfileSpeakerConfig`` e das seções
+        opcionais em ``loader.save_profile``, e pelo mesmo motivo: com
+        ``extra="forbid"``, um hefesto ANTIGO recusa o perfil INTEIRO ao ver uma
+        chave que não conhece. Gravar ``"ponte": null`` em todo save faria um
+        downgrade quebrar os 18 perfis dela de uma vez — inclusive os que nunca
+        ouviram falar de ponte. Aqui, só quem de fato confirmou uma carrega a
+        chave nova, e o round-trip ``load → save`` de um perfil antigo não
+        acrescenta nada ao arquivo.
+
+        Mora no ESQUEMA, e não na lista de omissões do ``loader``, porque o
+        dump também sai por outros caminhos (o estado do IPC, a exportação da
+        GUI) — e a omissão que só vale num deles é a que se descobre no
+        downgrade.
+        """
+        dados = handler(self)
+        if isinstance(dados, dict) and dados.get("ponte") is None:
+            dados.pop("ponte", None)
+        return dados
 
     @field_validator("name")
     @classmethod
@@ -1093,6 +1282,9 @@ def perfil_declara_modo_de_jogo(profile: Profile | None) -> bool:
 
 
 __all__ = [
+    "CONFIRMADA_POR_ESCOLHA",
+    "CONFIRMADA_POR_GESTO",
+    "CONFIRMADA_POR_SILENCIO",
     "PRIORIDADE_MAXIMA",
     "PRIORIDADE_MINIMA",
     "ControllerOverrides",
@@ -1102,6 +1294,7 @@ __all__ = [
     "MatchAny",
     "MatchCriteria",
     "MatchManual",
+    "PonteConfirmada",
     "Profile",
     "ProfileMicConfig",
     "ProfileMouseConfig",

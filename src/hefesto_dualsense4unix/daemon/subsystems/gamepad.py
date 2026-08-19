@@ -2129,6 +2129,62 @@ def stop_gamepad_emulation(
     _materialize_launch_env(daemon)
     if tinha_device:
         logger.info("gamepad_emulation_stopped")
+    # AVISO-DE-MODO-01. A guarda é `release_grab`, e NÃO `persist` — foi
+    # conferido nos cinco chamadores, porque errar aqui faz a barra piscar âmbar
+    # num modo em que ela nunca esteve:
+    #
+    # - `persist` significa "a PREFERÊNCIA dela mudou" (R-07:
+    #   `persist=(origin == "manual")`), não "o vpad vai voltar já". O release
+    #   do Modo Nativo desliga a emulação com `origin="profile"`, ou seja
+    #   `persist=False` — e é justamente a troca que tem de piscar BRANCO;
+    # - `release_grab=False` é o carimbo dos TRÊS chamadores que recriam o vpad
+    #   no instante seguinte (troca de máscara em `start_gamepad_emulation_
+    #   desfecho`, promoção uinput→uhid em `upgrade_primary_vpad_to_uhid` e a
+    #   suspensão por Steam Input): soltar o grab no meio devolveria o físico ao
+    #   jogo, e por isso nenhum deles solta. É o sinal exato de "isto não é uma
+    #   parada, é um passo".
+    #
+    # O shutdown (`connection.py`) fica de fora pelo `_daemon_parando`: ali o
+    # vpad cai porque o produto está saindo, não porque o modo mudou.
+    if release_grab and not _daemon_parando(daemon):
+        _avisar_troca_de_modo(daemon)
+
+
+def _avisar_troca_de_modo(daemon: DaemonProtocol) -> None:
+    """Dispara o aviso de modo na lightbar. AVISO-DE-MODO-01 (19/08/2026).
+
+    Fina de propósito: a decisão inteira (qual é o modo, qual é a cor, se
+    mudou, e a piscada numa thread) mora em
+    `daemon/subsystems/hotkey.avisar_troca_de_modo`. Aqui fica só o GATILHO,
+    porque é este arquivo que tem o ponto por onde toda troca passa.
+
+    **Os dois pontos, e por que são estes dois.** Ela troca de modo por quatro
+    portas — o gesto, a janela, a CLI/IPC e o autoswitch — e o aviso tem de
+    acender nas quatro. Não há função única que todas atravessem, mas há dois
+    estados e cada um tem seu ponto:
+
+    - **com vpad de pé** (máscara DualSense, máscara Xbox, Steam Input na
+      frente): `dispatch_gamepad`, que o poll loop chama a cada tique. O aviso
+      é level-triggered, então uma comparação de string por tique cobre
+      qualquer troca, tenha vindo de onde tiver vindo, com a latência de um
+      tique;
+    - **sem vpad** (mouse+teclado e Modo Nativo): o fim do
+      `stop_gamepad_emulation`, que é por onde os dois entram — o Modo Nativo
+      inclusive, porque `lifecycle._release_controller_to_game` desliga a
+      emulação ANTES de mutar a saída (`set_output_mute(True)`). Essa ordem é
+      o que faz o branco do Modo Nativo conseguir sair: depois do mute o
+      backend não escreve mais nada, e o aviso seria no-op. A guarda de lá
+      (`release_grab`, não `persist`) está explicada no próprio ponto.
+
+    `suppress(Exception)` largo: um aviso NUNCA pode derrubar o dispatch do
+    controle, que é a ROTA do jogo. Mesma disciplina do `_reconciliar_launch`.
+    """
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
+            avisar_troca_de_modo,
+        )
+
+        avisar_troca_de_modo(daemon)
 
 
 def dispatch_gamepad(
@@ -2145,6 +2201,10 @@ def dispatch_gamepad(
     destrutivo), e despachar no objeto antigo escreveria num fd já fechado.
     """
     _reconciliar_launch(daemon)
+    # AVISO-DE-MODO-01: ANTES do `return` do device ausente, e sem throttle. O
+    # custo por tique é uma comparação de string; o que ele compra é a barra
+    # dizendo o modo com a latência de um tique, e não de um segundo.
+    _avisar_troca_de_modo(daemon)
     device = daemon._gamepad_device
     if device is None:
         return

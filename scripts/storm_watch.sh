@@ -22,7 +22,12 @@
 #   [XHCI]    reset/morte do host USB — PREVENTIVO (idem);
 #   [BT-ERR]  delta dos contadores RX/TX errors do adaptador (hciconfig), lido a
 #             cada HEFESTO_KERNELWATCH_BT_INTERVAL s (default 300) — só loga
-#             quando o contador PIOROU (pega rádio sujo sem btmon intrusivo).
+#             quando o contador PIOROU (pega rádio sujo sem btmon intrusivo);
+#   [BT-SEM-CONTADOR]  uma linha só, no arranque, quando o `hciconfig` não
+#             existe nesta máquina: aí [BT-ERR] NUNCA nasce, e sem esta marca
+#             "zero [BT-ERR]" se leria como rádio limpo (MIGRACAO-BLUEZ-
+#             DEPRECIADOS-01, 19/08/2026 — os contadores só saem do ioctl
+#             HCIGETDEVINFO, e btmgmt/bluetoothctl não os expõem).
 #
 # Log: ~/.local/state/hefesto-dualsense4unix/kernel.log (novo nome). O antigo
 # storm.log é PRESERVADO se existir (histórico); se não existir, vira symlink
@@ -36,6 +41,7 @@
 #   --classify                              lê linhas short-iso do stdin e as
 #                                           escreve com a TAG classificada
 #   --test-bt-delta P_RX P_TX C_RX C_TX DEV emite a linha [BT-ERR] se delta > 0
+#   --test-bt-sem-contador                  emite a linha [BT-SEM-CONTADOR]
 #
 # Uso manual: bash scripts/storm_watch.sh   (Ctrl+C encerra)
 set -uo pipefail
@@ -128,9 +134,29 @@ bt_emit_delta() {
     fi
 }
 
+# Linha única quando a medida de [BT-ERR] não existe nesta máquina.
+#
+# LEITURA SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026): os
+# contadores RX/TX errors são o `hci_dev_stats` do kernel, entregue só pelo
+# ioctl HCIGETDEVINFO — que só o `hciconfig` chama. Nem `btmgmt` nem
+# `bluetoothctl` do 5.86 têm comando equivalente (conferido nos dois `--help` em
+# 19/08/2026). Sem a ferramenta depreciada esta vigia não tem o que ler.
+#
+# Antes ela voltava CALADA, e o kernel.log ficava sem [BT-ERR] para sempre —
+# indistinguível de "rádio limpo", que é a mentira por omissão que o doctor
+# repetia adiante. A marca [BT-SEM-CONTADOR] existe para o doctor poder dizer
+# "isto não foi medido" em vez de "isto está bem".
+bt_sem_contador() {
+    printf '%s [BT-SEM-CONTADOR] contadores de erro do rádio não medidos: o hciconfig (única fonte do ioctl HCIGETDEVINFO) foi depreciado pelo BlueZ e não está nesta máquina; btmgmt/bluetoothctl não o substituem. Sem [BT-ERR] neste log = medida ausente, NÃO rádio limpo\n' \
+        "$(date '+%Y-%m-%dT%H:%M:%S%z')"
+}
+
 # Loop lateral: snapshot dos contadores por adaptador; emite só o delta.
 bt_delta_loop() {
-    command -v hciconfig >/dev/null 2>&1 || return 0
+    if ! command -v hciconfig >/dev/null 2>&1; then
+        bt_sem_contador >>"${LOG}"
+        return 0
+    fi
     local interval="${HEFESTO_KERNELWATCH_BT_INTERVAL:-300}"
     declare -A prev_rx prev_tx
     local path dev rx tx
@@ -138,6 +164,9 @@ bt_delta_loop() {
         for path in /sys/class/bluetooth/hci*; do
             [[ -e "${path}" ]] || continue
             dev="$(basename "${path}")"
+            # /sys/class/bluetooth também abriga as CONEXÕES ("hci0:256"), que
+            # não são adaptador e fariam o hciconfig devolver vazio.
+            [[ "${dev}" =~ ^hci[0-9]+$ ]] || continue
             read -r rx tx <<<"$(bt_read_errors "${dev}")"
             if [[ -n "${prev_rx[${dev}]:-}" ]]; then
                 bt_emit_delta "${prev_rx[${dev}]}" "${prev_tx[${dev}]}" \
@@ -159,6 +188,10 @@ case "${1:-}" in
     --test-bt-delta)
         shift
         bt_emit_delta "$@"
+        exit 0
+        ;;
+    --test-bt-sem-contador)
+        bt_sem_contador
         exit 0
         ;;
 esac

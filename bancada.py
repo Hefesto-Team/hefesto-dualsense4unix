@@ -61,7 +61,15 @@ EDITAVEIS = ["cabo_ate_onde_foi", "radio_ate_onde_foi", "provado_em", "provado_p
              "mordida_provada_em", "assimetria_declarada",
              "cabo_ressalva", "radio_ressalva"]
 
-GRAUS = ["", "MONTOU", "SAIU NO FIO", "O APARELHO OBEDECEU"]
+# ESCADA-COM-UM-DONO-SO (19/08/2026). Esta lista era a SEGUNDA cópia do
+# vocabulário: o portão tinha a dele e a bancada tinha esta, e em 19/08 os dois
+# degraus novos da direção de ENTRADA (`O JOGO RECEBEU`, `O JOGO REAGIU`)
+# entraram só no portão — o resultado é que ele os ACEITAVA e o formulário não
+# os OFERECIA, então ninguém conseguia escrevê-los. Duas listas do mesmo
+# vocabulário divergem no dia em que alguém mexe numa; agora há um dono só.
+from check_paridade_transporte import VALORES_DA_ESCADA  # noqa: E402
+
+GRAUS = ["", *VALORES_DA_ESCADA]
 #: O vocabulário de `provado_por` DIVERGE do que o método declara, e a lista
 #: abaixo é a soma dos dois — medido em 12/08/2026, com o CSV na mão:
 #: o `METODO-DE-ISOLAMENTO.md` prevê `ci`/`bancada`/`olho-dela`, e o mapa usa

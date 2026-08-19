@@ -105,6 +105,15 @@ _ESTADO: dict[str, Any] = {"native_mode": False}
 _janelas_vivas: list[Any] = []
 
 
+#: FOLGA-DE-RENDERIZACAO-01 (19/08/2026) — quantos pixels de diferença de
+#: MÉTRICA DE FONTE o teste aceita entre duas máquinas. Medido: com as fontes da
+#: identidade instaladas nos dois lados, a bancada dela pede ~1030px e o runner
+#: do CI pede 1043px para o MESMO card. A diferença é hinting e DPI do
+#: fontconfig, que ninguém fixa nem deveria — fixá-los faria o teste medir uma
+#: tela que nenhuma pessoa vê.
+FOLGA_DE_RENDERIZACAO: int = 10
+
+
 def _card_na_tela_dela(
     *, compact: bool = False, largura: int = LARGURA_DA_TELA_DELA
 ) -> Any:
@@ -709,10 +718,29 @@ def test_o_piso_de_largura_do_card_nao_subiu_com_os_desenhos_maiores() -> None:
 
     minimo, natural = card.get_preferred_width()
 
-    assert minimo <= LARGURA_CARD_UNICO, (
+    # FOLGA-DE-RENDERIZACAO-01 (19/08/2026). Esta asserção compara uma medida
+    # RENDERIZADA (o que o Pango devolve para o texto do card) contra uma
+    # constante de DESENHO — e essa comparação só vale se as duas máquinas
+    # renderizarem igual. Elas não renderizam.
+    #
+    # Medido: com as fontes da identidade instaladas nos dois lados (a leva de
+    # 19/08 as pôs no job de interface do CI), a bancada dela pede ~1030px e o
+    # runner pede 1043px para o MESMO card. São 13px de diferença de métrica —
+    # hinting e DPI do fontconfig, que ninguém fixa nem deveria: fixá-los faria
+    # o teste medir uma tela que nenhuma pessoa vê.
+    #
+    # A folga NÃO afrouxa a mordida, e a razão é a distância entre os números.
+    # O defeito que esta asserção existe para pegar está escrito no docstring
+    # acima: trocar a cura por `set_size_request(360, ...)` leva o mínimo a
+    # **1400px**. Contra um teto de 1050 isso reprova por 350px — trinta e
+    # cinco vezes a folga. Uma deriva de fonte não é o defeito, e o defeito não
+    # cabe na deriva.
+    teto = LARGURA_CARD_UNICO + FOLGA_DE_RENDERIZACAO
+    assert minimo <= teto, (
         f"o card de um controle passou a pedir {minimo}px de MÍNIMO (o piso "
-        f"é {LARGURA_CARD_UNICO}px): o crescimento foi parar no "
-        "`set_size_request`, e o mínimo da janela sobe junto"
+        f"é {LARGURA_CARD_UNICO}px, e o teto com a folga de renderização é "
+        f"{teto}px): o crescimento foi parar no `set_size_request`, e o "
+        "mínimo da janela sobe junto"
     )
     assert natural > minimo, (
         f"o card pede {natural}px de natural para {minimo}px de mínimo: os "

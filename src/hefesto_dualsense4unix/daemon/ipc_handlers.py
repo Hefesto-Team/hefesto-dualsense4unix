@@ -107,6 +107,25 @@ COOP_SEMPRE_LIGADO_MOTIVO = (
 )
 
 
+
+def _pontes_confirmadas_seguro() -> dict[str, Any]:
+    """As pontes confirmadas, e NUNCA uma exceção.
+
+    O `state_full` é lido pela janela a cada tique; uma leitura de disco que
+    levante aqui apagaria a aba inteira por causa de um perfil malformado. O
+    padrão é o dos vizinhos deste arquivo: devolve vazio e segue.
+    """
+    try:
+        from hefesto_dualsense4unix.profiles import manager as _pm
+
+        fn = getattr(_pm, "pontes_confirmadas", None)
+        if fn is None:
+            return {}
+        return dict(fn() or {})
+    except Exception:
+        return {}
+
+
 class _RenumberAuthorityChangedError(Exception):
     """F3: um jogo abriu enquanto o renumber esperava os locks — abortar.
 
@@ -1854,6 +1873,13 @@ class IpcHandlersMixin:
             "connected": bool(controller and controller.connected),
             "transport": controller.transport if controller else None,
             "active_profile": snap.active_profile,
+            # PONTE-CONFIRMADA-01 (19/08/2026): a ponte que cada jogo CONFIRMOU,
+            # para a janela dizer "este jogo já sabe por onde entra" sem
+            # reimplementar a leitura dos perfis. É de leitura pura: quem GRAVA
+            # é o `ProfileManager.confirmar_ponte`, e só o gesto dela ou a
+            # escolha dela na aba de perfil o chamam. Publicar aqui é o que tira
+            # o carimbo do disco e o põe na frente de quem decide.
+            "pontes_confirmadas": _pontes_confirmadas_seguro(),
             "battery_pct": controller.battery_pct if controller else None,
             # FEAT-DAEMON-PAUSE-RESUME-01: distingue pausado (vivo, sem input) de parado.
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),

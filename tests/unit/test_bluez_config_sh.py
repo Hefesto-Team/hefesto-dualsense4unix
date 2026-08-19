@@ -2191,9 +2191,23 @@ def test_a_nota_do_no_udev_nao_alega_o_que_o_ci_nao_faz() -> None:
             if linha.lstrip().startswith("#"):
                 continue
             invocacoes.append(f"{arquivo.name}:{numero}: {linha.strip()}")
-    assert invocacoes == [], (
-        "o CI passou a rodar o install.sh — se isso é de propósito, a nota "
-        f"datada tem de ser reescrita (e não apagada): {invocacoes}"
+    # 19/08/2026: o CI PASSOU a rodar o `install.sh`, de propósito — o job
+    # `install-multi-distro` o executa em contêiner, como usuária comum, e foi
+    # ele que achou dois bloqueantes que nenhuma máquina de quem desenvolve
+    # pegava. A asserção mudou de lado, e continua mordendo: o que ela guarda
+    # agora é que a SEGUNDA nota datada exista no `install.sh`, para ninguém
+    # ler a primeira (de 06/08) e concluir hoje o que era verdade naquele dia.
+    assert "SEGUNDA NOTA DATADA" in secao, (
+        "o CI roda o install.sh desde 19/08/2026, e o `install.sh` voltou a ter "
+        "só a nota de 06/08 dizendo que ele NÃO roda. Uma nota datada não se "
+        f"apaga e não envelhece calada. Invocações vivas: {invocacoes}"
+    )
+    assert invocacoes, (
+        "o CI deixou de rodar o `install.sh`. Se foi de propósito, reescreva a "
+        "SEGUNDA nota datada dizendo por quê — mas saiba o que se perde: era "
+        "esse job que aferia o instalador no PATH de uma usuária comum, e sem "
+        "ele o bloqueante do `ldconfig` fora do `/usr/sbin` volta a ser "
+        "invisível para todo portão desta casa"
     )
 
 

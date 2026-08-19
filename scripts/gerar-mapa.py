@@ -68,6 +68,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import eliminacao  # o caderno de eliminação de suspeitos
 
+# A escada de `ate_onde_foi` NÃO se redigita aqui. Até 19/08/2026 a legenda
+# abaixo trazia os três degraus escritos à mão, e o portão trazia os mesmos três
+# num `frozenset` — duas listas do mesmo vocabulário, que é a doença que este
+# mapa existe para não ter. Quem manda é `check_paridade_transporte.ESCADA`,
+# porque é ele que REPROVA: régua e legenda divergirem quer dizer publicar uma
+# página que descreve um domínio diferente do que o portão aceita.
+from check_paridade_transporte import (
+    DIRECAO_ENTRADA,
+    DIRECAO_SAIDA,
+    ESCADA,
+)
+
 RAIZ = Path(__file__).resolve().parent.parent
 CSV = RAIZ / "docs" / "data" / "mapa-controles.csv"
 SAIDA = RAIZ / "specs.html"
@@ -806,6 +818,19 @@ SCRIPT = """
 """
 
 
+def degraus_em_prosa(direcao: str) -> str:
+    """Os degraus de uma direção da escada, para a legenda do `specs.html`.
+
+    Lê `ESCADA` do portão. Acrescentar um degrau lá aparece aqui sozinho — e é
+    por isso que esta função existe em vez de um parágrafo escrito à mão.
+    """
+    return " · ".join(
+        f"<em>{html.escape(degrau.valor)}</em> ({html.escape(degrau.resumo)})"
+        for degrau in ESCADA
+        if degrau.direcao == direcao
+    )
+
+
 def monta() -> str:
     linhas = le_csv(reclamar=True)
     fams = sorted({lin["familia"] for lin in linhas})
@@ -850,6 +875,9 @@ def monta() -> str:
     }, ensure_ascii=False, separators=(",", ":"))
 
     opt_fam = "".join(f'<option value="{html.escape(f)}">{html.escape(f)}</option>' for f in fams)
+
+    escada_de_saida = degraus_em_prosa(DIRECAO_SAIDA)
+    escada_de_entrada = degraus_em_prosa(DIRECAO_ENTRADA)
 
     return f"""<!doctype html>
 <html lang="pt-BR">
@@ -904,13 +932,16 @@ def monta() -> str:
     <p><code>de_onde_sei</code> — <strong>de onde vem a informação</strong>:
        <em>medido</em> no aparelho · <em>inferido-do-codigo</em> (alguém leu a
        fonte) · <em>afirmado-no-doc</em> · <em>incerto</em>.</p>
-    <p><code>ate_onde_foi</code> — <strong>até onde a prova chegou</strong>:
-       <em>MONTOU</em> (o produto montou o report) · <em>SAIU NO FIO</em> (o byte
-       saiu e algo voltou) · <em>O APARELHO OBEDECEU</em> (acendeu, girou, saiu
-       som).</p>
+    <p><code>ate_onde_foi</code> — <strong>até onde a prova chegou</strong>.
+       {escada_de_saida}.</p>
+    <p>E a volta, do aparelho para o JOGO — os dois degraus que entraram em
+       19/08/2026, porque até então a escada cobria só a ida e o mapa podia
+       ficar todo verde sem ninguém conseguir jogar. {escada_de_entrada}.</p>
     <p>Duas perguntas diferentes, e por isso duas colunas. Até 15/08/2026 elas se
        chamavam <em>confianca</em> e <em>grau</em> — nomes que não diziam o que
-       mediam, e que por isso se confundiam. Os domínios não mudaram.</p>
+       mediam, e que por isso se confundiam. A troca de nome não mexeu nos
+       domínios; quem mexeu foi a escada de 19/08/2026, que ganhou dois degraus
+       novos e nenhuma célula preenchida — ainda não houve o ensaio.</p>
   </div>
 
   <div class="filtros">

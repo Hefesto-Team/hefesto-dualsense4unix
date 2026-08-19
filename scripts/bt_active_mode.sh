@@ -61,10 +61,68 @@ fi
 QUIET=0
 [[ "${1:-}" == "--quiet" ]] && QUIET=1
 
-command -v hciconfig >/dev/null 2>&1 || { log "hciconfig ausente (bluez-hcidump/bluez) — nada a fazer"; exit 0; }
+# MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026): este script SAÍA AQUI quando o
+# `hciconfig` não existia — e com isso perdia também a medida (1), o alias
+# "Nintendo*", que é a que NÃO precisa dele (sai pelo D-Bus). Numa distro que
+# moveu as depreciadas para `bluez-deprecated`, a cura inteira virava no-op com
+# um log de uma linha. Agora cada medida é guardada pela ferramenta que ELA usa.
+#
+# Adaptador primário: sysfs primeiro (kernel puro, sem pacote e sem privilégio;
+# o filtro `^hci[0-9]+$` descarta as entradas de conexão, que ali nascem como
+# "hci0:256"), a árvore do BlueZ no D-Bus depois — que é de onde sai o objeto
+# usado logo abaixo para o Alias —, `btmgmt info` em seguida, e o `hciconfig`
+# como plano B.
+_adaptador() {
+    local p nome
+    for p in /sys/class/bluetooth/hci*; do
+        [[ -e "${p}" ]] || continue
+        nome="${p##*/}"
+        [[ "${nome}" =~ ^hci[0-9]+$ ]] || continue
+        printf '%s\n' "${nome}"
+        return 0
+    done
+    if command -v busctl >/dev/null 2>&1; then
+        nome="$(busctl tree org.bluez --list 2>/dev/null \
+            | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u | head -1 || true)"
+        if [[ -n "${nome}" ]]; then printf '%s\n' "${nome}"; return 0; fi
+    fi
+    if command -v btmgmt >/dev/null 2>&1; then
+        nome="$(btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | head -1 || true)"
+        if [[ -n "${nome}" ]]; then printf '%s\n' "${nome}"; return 0; fi
+    fi
+    command -v hciconfig >/dev/null 2>&1 || return 0
+    hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}' || true
+}
 
-# Adaptador primário (hci0 por padrão; deriva do primeiro listado).
-HCI="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}')"
+# MACs com ACL de pé, MAIÚSCULAS com ':'. Substitui o `hcitool con`: o D-Bus do
+# BlueZ responde a mesma pergunta e está vivo; `btmgmt con` é o plano B (a
+# ferramenta que a upstream indica), e o `hcitool con` o plano C — ele ainda
+# responde com o bluetoothd parado, então não se joga fora quem o tem.
+_macs_conectados() {
+    local p mac saida="" achou=0
+    if command -v busctl >/dev/null 2>&1; then
+        while IFS= read -r p; do
+            [[ -z "${p}" ]] && continue
+            [[ "$(busctl get-property org.bluez "${p}" org.bluez.Device1 Connected 2>/dev/null \
+                | tr -d '[:space:]')" == "btrue" ]] || continue
+            mac="${p##*/dev_}"
+            printf '%s\n' "${mac//_/:}"
+            achou=1
+        done <<<"$(busctl tree org.bluez --list 2>/dev/null \
+            | grep -oE '/org/bluez/hci[0-9]+/dev_[0-9A-Fa-f_]+$' | sort -u || true)"
+        [[ "${achou}" -eq 1 ]] && return 0
+    fi
+    if command -v btmgmt >/dev/null 2>&1; then
+        saida="$(btmgmt con 2>/dev/null | grep -oE '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || true)"
+        if [[ -n "${saida}" ]]; then printf '%s\n' "${saida^^}"; return 0; fi
+    fi
+    command -v hcitool >/dev/null 2>&1 || return 0
+    saida="$(hcitool con 2>/dev/null | grep -oE '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || true)"
+    [[ -n "${saida}" ]] && printf '%s\n' "${saida^^}"
+    return 0
+}
+
+HCI="$(_adaptador)"
 [[ -z "${HCI}" ]] && { log "nenhum adaptador HCI — nada a fazer"; exit 0; }
 
 # --- 1) NOME "Nintendo*" via Alias do BlueZ (idempotente) --------------------
@@ -120,28 +178,40 @@ fi
 #: 057E:2009 igualzinho).
 OUI_NINTENDO_REAL="E0:F6:B5"
 
+# SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026): link policy —
+# ler ou escrever, no adaptador ou na conexão — NÃO existe na mgmt API do BlueZ,
+# e por isso não existe em `btmgmt` nem em `bluetoothctl` (conferido nos dois
+# `--help` do 5.86 desta casa em 19/08/2026). Aqui não há o que migrar: o
+# `hciconfig lp` / `hcitool lp` seguem sendo o ÚNICO caminho, e a resposta certa
+# quando eles faltam é DIZER que a medida não foi aplicada — não sair calado.
+
 # Default do adaptador: SNIFF PERMITIDO. Se uma versão anterior deixou o
 # adaptador sem SNIFF, isto o devolve — é o que destrava o clone.
 # ATENÇÃO: a lista vai separada por VÍRGULA; com espaços o hciconfig lê só o
 # primeiro token e o comando vira no-op silencioso (medido 23/07).
-if ! hciconfig "${HCI}" lp 2>/dev/null | grep -q 'SNIFF'; then
+if ! command -v hciconfig >/dev/null 2>&1; then
+    log "NÃO apliquei o SNIFF default de ${HCI}: o 'hciconfig' foi depreciado pelo BlueZ e não está nesta máquina, e nenhuma ferramenta viva escreve link policy — instale bluez-deprecated (ou bluez-deprecated-tools). O alias 'Nintendo*' acima segue valendo; o 8BitDo pode não completar a probe se o adaptador estiver sem SNIFF"
+elif ! hciconfig "${HCI}" lp 2>/dev/null | grep -q 'SNIFF'; then
     hciconfig "${HCI}" lp rswitch,hold,sniff,park 2>/dev/null \
         && log "link policy default de ${HCI} -> RSWITCH,HOLD,SNIFF,PARK (o clone 8BitDo precisa do SNIFF para probar)" \
         || log "falha ao devolver o SNIFF ao default (adaptador não pronto?)"
 fi
 
 # Por-conexão: no-sniff SÓ no Pro genuíno. Reaplicado a cada tick da vigia 0
-# (2 min), o que cobre reconexão sem precisar caçar a borda.
-if command -v hcitool >/dev/null 2>&1; then
-    hcitool con 2>/dev/null | awk '/[0-9A-F:]{17}/{for(i=1;i<=NF;i++) if($i ~ /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/){print $i; break}}' \
-    | while read -r MAC; do
-        [[ -z "${MAC}" ]] && continue
-        if [[ "${MAC^^}" != "${OUI_NINTENDO_REAL}"* ]]; then
-            continue
-        fi
-        hcitool lp "${MAC}" RSWITCH >/dev/null 2>&1 \
-            && log "link policy de ${MAC} -> RSWITCH (sem SNIFF; Pro genuíno)" || true
-    done
-fi
+# (2 min), o que cobre reconexão sem precisar caçar a borda. Quem está
+# conectado sai do D-Bus (`_macs_conectados`); só o ATO de mudar a policy
+# depende do `hcitool`.
+while read -r MAC; do
+    [[ -z "${MAC}" ]] && continue
+    if [[ "${MAC^^}" != "${OUI_NINTENDO_REAL}"* ]]; then
+        continue
+    fi
+    if ! command -v hcitool >/dev/null 2>&1; then
+        log "Pro genuíno ${MAC} conectado e NÃO consegui tirá-lo do SNIFF: o 'hcitool' foi depreciado pelo BlueZ e não está nesta máquina (pacote bluez-deprecated / bluez-deprecated-tools), e a mgmt API não escreve link policy. Ele vai cair sob carga até isso ser resolvido"
+        continue
+    fi
+    hcitool lp "${MAC}" RSWITCH >/dev/null 2>&1 \
+        && log "link policy de ${MAC} -> RSWITCH (sem SNIFF; Pro genuíno)" || true
+done <<<"$(_macs_conectados)"
 
 exit 0

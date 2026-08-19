@@ -119,6 +119,31 @@ def _constantes_de_texto() -> dict[str, str]:
     return achados
 
 
+def _importado_de_scripts(nome: str) -> list[str] | None:
+    """O valor de `nome`, quando o `bancada.py` o IMPORTA de `scripts/`.
+
+    Devolve `None` quando o nome não vem de import — aí quem resolve é o leitor
+    por AST, como sempre.
+    """
+    for no in ast.walk(_arvore()):
+        if not isinstance(no, ast.ImportFrom) or not no.module:
+            continue
+        if not any(a.name == nome or a.asname == nome for a in no.names):
+            continue
+        import importlib
+        import sys as _sys
+
+        caminho = str(BANCADA.parent / "scripts")
+        if caminho not in _sys.path:
+            _sys.path.insert(0, caminho)
+        modulo = importlib.import_module(no.module)
+        valor = getattr(modulo, nome, None)
+        if valor is None:
+            return None
+        return [str(x) for x in valor]
+    return None
+
+
 def _lista_literal(nome: str) -> list[str]:
     """A lista de strings atribuída a `nome`.
 
@@ -135,7 +160,19 @@ def _lista_literal(nome: str) -> list[str]:
         colunas: list[str] = []
         for item in no.value.elts:
             if isinstance(item, ast.Starred) and isinstance(item.value, ast.Name):
-                colunas.extend(_lista_literal(item.value.id))
+                # ESCADA-COM-UM-DONO-SO (19/08/2026): o `*NOME` pode vir de um
+                # IMPORT, não só de outra lista do mesmo arquivo. O `GRAUS`
+                # passou a ser `["", *VALORES_DA_ESCADA]`, com o vocabulário
+                # importado de `scripts/check_paridade_transporte` — que é o
+                # ponto: duas listas do mesmo vocabulário divergem no dia em que
+                # alguém mexe numa, e foi assim que o portão passou a aceitar
+                # dois degraus que o formulário não oferecia. Seguir o import é
+                # o que mantém este teste medindo o que ele promete.
+                importado = _importado_de_scripts(item.value.id)
+                if importado is not None:
+                    colunas.extend(importado)
+                else:
+                    colunas.extend(_lista_literal(item.value.id))
             elif isinstance(item, ast.Constant) and isinstance(item.value, str):
                 colunas.append(item.value)
             elif isinstance(item, ast.Name) and item.id in constantes:

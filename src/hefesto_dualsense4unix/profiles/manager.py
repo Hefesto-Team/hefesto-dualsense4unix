@@ -27,9 +27,13 @@ from hefesto_dualsense4unix.profiles.loader import (
     save_profile,
 )
 from hefesto_dualsense4unix.profiles.schema import (
+    CONFIRMADA_POR_GESTO,
     ControllerOverrides,
     LedsConfig,
+    MatchCriteria,
+    PonteConfirmada,
     Profile,
+    normalizar_gamepad_flavor,
 )
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -1093,6 +1097,233 @@ class ProfileManager:
                 prioridade=vencedor.priority,
             )
         return vencedor
+
+    # --- PONTE-CONFIRMADA-01: a ponte gravada, por appid --------------------
+
+    def perfil_do_appid(self, appid: object) -> Profile | None:
+        """O perfil que é a REGRA deste jogo da Steam, ou None."""
+        return perfil_do_appid(appid)
+
+    def ponte_confirmada(self, appid: object) -> PonteConfirmada | None:
+        """A ponte já CONFIRMADA neste jogo, ou None = ainda não sei.
+
+        É a pergunta que a escada faz antes de trocar qualquer coisa, e é a
+        única resposta que a faz parar. `None` aqui NÃO é "nada funciona": é
+        "ninguém confirmou ainda" — a mesma disciplina do
+        `sem_impedimento_conhecido` do prontuário.
+        """
+        return ponte_confirmada_do_appid(appid)
+
+    def confirmar_ponte(
+        self,
+        appid: object,
+        *,
+        kind: str,
+        gamepad_flavor: object = None,
+        steam_input: bool = False,
+        por: str = CONFIRMADA_POR_GESTO,
+        quando: str | None = None,
+    ) -> Profile | None:
+        """Carimba a ponte no perfil do jogo e GRAVA. None = não há perfil.
+
+        O gesto dela (PS + R3 confirmando que esta pegou) e a escolha direta na
+        aba de perfil entram pela MESMA porta, com `por=` dizendo qual foi —
+        ver `CONFIRMADA_POR_GESTO`/`CONFIRMADA_POR_ESCOLHA`.
+
+        Devolve `None`, sem escrever nada, quando o jogo não tem perfil
+        próprio: inventar um perfil aqui seria criar arquivo nas costas dela, e
+        o produto já tem um caminho para isso (o editor). O chamador que
+        quiser criar, cria e chama de novo.
+        """
+        profile = perfil_do_appid(appid)
+        if profile is None:
+            logger.info("ponte_confirmada_sem_perfil", appid=str(appid))
+            return None
+        carimbado = carimbar_ponte(
+            profile,
+            kind=kind,
+            gamepad_flavor=gamepad_flavor,
+            steam_input=steam_input,
+            por=por,
+            quando=quando,
+        )
+        save_profile(carimbado, origem="ponte_confirmada")
+        logger.info(
+            "ponte_confirmada",
+            appid=str(appid),
+            profile=carimbado.name,
+            kind=kind,
+            gamepad_flavor=carimbado.ponte.gamepad_flavor if carimbado.ponte else None,
+            steam_input=steam_input,
+            por=por,
+        )
+        return carimbado
+
+    @staticmethod
+    def pontes_confirmadas() -> dict[str, dict[str, object]]:
+        """A forma publicada: `{appid: ponte}` — ver `pontes_confirmadas`."""
+        return pontes_confirmadas()
+
+
+def _appids_do_perfil(profile: Profile) -> set[int]:
+    """Os appids da Steam que ESTE perfil declara como sua regra.
+
+    Uma regra de jogo é `match.window_class = ["steam_app_<appid>"]` — o mesmo
+    formato que `simple_match.from_simple_choice` escreve e que
+    `perfil_e_regra_de_jogo` reconhece. Aqui a lista inteira é varrida (e não só
+    o primeiro elemento, como em `simple_match._detect_steam_appid`): um perfil
+    escrito à mão pode cobrir dois appids, e ignorar o segundo faria a ponte
+    confirmada sumir para um jogo que o arquivo nomeia.
+
+    Catch-all e `MatchManual` não declaram appid nenhum, por construção: quem
+    chegou por acidente não confirma ponte de ninguém.
+    """
+    if not isinstance(profile.match, MatchCriteria):
+        return set()
+    achados = {
+        appid
+        for wc in profile.match.window_class
+        if (appid := steam_appid_from_wm_class(wc)) is not None
+    }
+    return achados
+
+
+def _chave_do_appid(appid: object) -> int | None:
+    """Aceita `2054970`, `"2054970"` e `"steam_app_2054970"` — um dono só.
+
+    Os três chegam de lugares diferentes (o estado publica `int`, a allowlist e
+    o prontuário guardam `str`, a janela em foco traz a `wm_class`), e obrigar
+    cada chamador a normalizar é como se cria a divergência que faz a ponte
+    "sumir" só num dos caminhos.
+    """
+    if isinstance(appid, bool):
+        return None
+    if isinstance(appid, int):
+        return appid if appid > 0 else None
+    if isinstance(appid, str):
+        texto = appid.strip()
+        pela_classe = steam_appid_from_wm_class(texto)
+        if pela_classe is not None:
+            return pela_classe
+        return int(texto) if texto.isdigit() and int(texto) > 0 else None
+    return None
+
+
+def perfil_do_appid(
+    appid: object, *, profiles: list[Profile] | None = None
+) -> Profile | None:
+    """O perfil que é a regra deste appid, ou None.
+
+    LEITURA ÚNICA (PONTE-CONFIRMADA-01, item 4). A janela, o `launch_env` e o
+    prontuário precisam da MESMA resposta para "qual é o perfil deste jogo?", e
+    cada um reimplementando o casamento é a receita das cinco cópias
+    divergentes que o `profiles/steam_app.py` teve de unificar em 05/08.
+
+    Empate — dois perfis nomeando o mesmo appid, que é REAL no disco dela
+    (`pragmata.json` e `pragmata2.json`, idênticos fora o nome): vence quem
+    tem ponte confirmada, depois a maior prioridade, depois o nome em ordem.
+    O primeiro termo é o que importa e é o único novo: entre um perfil que sabe
+    a ponte e outro que não sabe, a resposta honesta é a de quem sabe — o
+    contrário faria a escada rodar de novo num jogo já resolvido. Os outros
+    dois só existem para a resposta ser DETERMINÍSTICA, e não a ordem do
+    `glob`, que é o acidente que a EMPATE-01 nomeou.
+    """
+    alvo = _chave_do_appid(appid)
+    if alvo is None:
+        return None
+    candidatos = [
+        p
+        for p in (profiles if profiles is not None else load_all_profiles())
+        if alvo in _appids_do_perfil(p)
+    ]
+    if not candidatos:
+        return None
+    return max(
+        candidatos,
+        key=lambda p: (p.ponte is not None, p.priority, p.name),
+    )
+
+
+def ponte_confirmada_do_appid(
+    appid: object, *, profiles: list[Profile] | None = None
+) -> PonteConfirmada | None:
+    """A ponte confirmada deste appid, ou None = **ainda não sei**.
+
+    O `None` tem os dois sabores, e nenhum deles é "não funciona": o jogo não
+    tem perfil próprio, ou tem e ninguém confirmou ponte nele ainda. Quem
+    precisa distinguir chama `perfil_do_appid` junto.
+    """
+    profile = perfil_do_appid(appid, profiles=profiles)
+    return profile.ponte if profile is not None else None
+
+
+def pontes_confirmadas(
+    profiles: list[Profile] | None = None,
+) -> dict[str, dict[str, object]]:
+    """`{appid: ponte}` de tudo que já foi confirmado, pronto para o estado.
+
+    É a forma PUBLICADA (item 4 da PONTE-CONFIRMADA-01): quem monta o
+    `state_full` do IPC e quem arma o lançamento não precisam abrir perfil
+    nenhum nem conhecer o formato do `match` — chamam isto e leem o dicionário.
+    Chave `str` porque é JSON, como o resto do estado; valor no formato do
+    `PonteConfirmada.model_dump(mode="json")`.
+
+    Só entram os appids COM carimbo. Publicar `{"2054970": null}` para todo
+    jogo sem confirmação seria enviar a biblioteca inteira a 10 Hz para dizer
+    "não sei" — e "não sei" já é a ausência da chave.
+
+    O empate é resolvido por `perfil_do_appid`, e a delegação é o ponto: uma
+    varredura própria aqui responderia pela ORDEM DE CARGA dos arquivos, e a
+    janela passaria a mostrar uma ponte enquanto o launch armava outra para o
+    mesmo jogo — divergência entre duas leituras da mesma casa, que é o defeito
+    que esta frente existe para fechar. Os perfis são lidos UMA vez e passados
+    adiante: a resposta é a mesma e o disco é tocado uma vez só.
+    """
+    todos = list(profiles if profiles is not None else load_all_profiles())
+    com_carimbo = {
+        appid
+        for profile in todos
+        if profile.ponte is not None
+        for appid in _appids_do_perfil(profile)
+    }
+    saida: dict[str, dict[str, object]] = {}
+    for appid in sorted(com_carimbo):
+        ponte = ponte_confirmada_do_appid(appid, profiles=todos)
+        if ponte is not None:
+            saida[str(appid)] = ponte.model_dump(mode="json")
+    return saida
+
+
+def carimbar_ponte(
+    profile: Profile,
+    *,
+    kind: str,
+    gamepad_flavor: object = None,
+    steam_input: bool = False,
+    por: str = CONFIRMADA_POR_GESTO,
+    quando: str | None = None,
+) -> Profile:
+    """Devolve uma CÓPIA do perfil com a ponte carimbada. Não grava.
+
+    `model_copy` em vez de mutação: `Profile` é validado na borda, e a cópia
+    passa pela validação de novo — um `kind` inválido morre aqui, com mensagem,
+    em vez de virar um arquivo que o próximo load recusa.
+
+    A máscara é normalizada por `normalizar_gamepad_flavor` (a mesma fronteira
+    `str` solto → `Literal` fechado que o resto do daemon atravessa) e é
+    DESCARTADA quando a ponte não é de gamepad: "modo nativo com máscara xbox"
+    não é uma ponte, é ruído — e o esquema o recusa.
+    """
+    flavor = normalizar_gamepad_flavor(gamepad_flavor) if kind == "gamepad" else None
+    dados: dict[str, object] = {
+        "kind": kind,
+        "gamepad_flavor": flavor,
+        "steam_input": bool(steam_input),
+        "confirmada_por": por,
+    }
+    if quando is not None:
+        dados["confirmada_em"] = quando
+    return profile.model_copy(update={"ponte": PonteConfirmada(**dados)})  # type: ignore[arg-type]
 
 
 def _estado_da_secao(valor: object) -> str:
