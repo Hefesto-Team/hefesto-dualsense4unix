@@ -147,6 +147,13 @@ class _HomeStub:
 
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
+    # COOP-SEM-INTERRUPTOR-01 (06/08/2026): o `_render_coop_prep` e o botão
+    # "Preparar co-op" NÃO existem mais — cada controle conectado já é um
+    # jogador, sempre. `test_home_render_state.py` tem portão que exige a
+    # ausência dos dois. Não reponha.
+    # PONTE-NA-TELA-01: parte do `_render_home` como os outros reconciliadores.
+    _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
+    _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
     _refresh_home_tab = HomeActionsMixin._refresh_home_tab
     # O helper REAL (pop antes do push): o teste não pode inventar uma
     # semântica de statusbar mais gentil do que a que roda na máquina dela.
@@ -174,6 +181,10 @@ class _HomeStub:
         self._home_reconciliar_hint = _WidgetFalso()
         self._home_autoswitch_lock = _WidgetFalso()
         self._home_autoswitch_lock_hint = _WidgetFalso()
+        # PONTE-NA-TELA-01: linha "Ponte com o jogo" + banner da divergência.
+        self._home_ponte_label = _WidgetFalso()
+        self._home_divergencia_banner = _WidgetFalso()
+        self._home_flavor_pedido: str | None = None
 
     def _get(self, widget_id: str) -> Any:
         return self.barra if widget_id == "status_bar" else None

@@ -105,6 +105,15 @@ class _FakeWidget:
 class _HomeStub:
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
+    # PONTE-NA-TELA-01: a linha da ponte e o aviso de divergência de máscara
+    # também são reconciliados pelo `_render_home` (cobertos por inteiro em
+    # `test_home_ponte_e_divergencia.py`; aqui o dublê só precisa deles de pé).
+    _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
+    _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
+    # NOTA DATADA: até 06/08/2026 o dublê também emprestava o
+    # `_render_coop_prep` (AUTO-01.2, 25/07). O botão "Preparar co-op" saiu da
+    # aba por decisão dela — `TestOBotaoDeCoopSaiuDaAbaInicio`, no fim deste
+    # arquivo, é a lápide que mede a ausência dele.
     _refresh_home_tab = HomeActionsMixin._refresh_home_tab
 
     def __init__(self) -> None:
@@ -127,9 +136,15 @@ class _HomeStub:
         self._home_shutdown_btn = _FakeWidget()
         self._home_offline = False
         # ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): botão
-        # "Reconciliar jogadores" + aviso de jogo aberto.
+        # "Reconciliar jogadores" + aviso de jogo aberto. (Até 06/08/2026 este
+        # par se chamava `_home_renumber_btn`/`_home_renumber_hint`, quando o
+        # botão só sabia renumerar.)
         self._home_reconciliar_btn = _FakeWidget()
         self._home_reconciliar_hint = _FakeWidget()
+        # PONTE-NA-TELA-01: linha "Ponte com o jogo" + banner da divergência.
+        self._home_ponte_label = _FakeWidget()
+        self._home_divergencia_banner = _FakeWidget()
+        self._home_flavor_pedido: str | None = None
 
 
 @pytest.fixture()

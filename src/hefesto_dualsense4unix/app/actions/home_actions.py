@@ -12,6 +12,9 @@ antiga espalhava por quatro lugares:
    aviso de grab degradado (input dobrado). LEIGO-02: o fim do MAC saiu do card
    — ela distingue os controles pela COR da luz e pelo LED de jogador, não por
    um hash que não está escrito em lugar nenhum do aparelho.
+2b. "Por onde o jogo está recebendo o controle, e a minha escolha chegou?" —
+   PONTE-NA-TELA-01, a linha "Ponte com o jogo" e o aviso de divergência de
+   máscara, os dois logo abaixo de "O jogo vê o controle como:".
 3. "Como desligo o hefesto DE VERDADE?" — botão dedicado que para o daemon e
    NÃO o religa ao reabrir/atualizar a GUI (diferente do "Desligar o Hefesto"
    da aba Sistema, que o `ensure_daemon_running` ressuscitava sem avisar).
@@ -550,24 +553,39 @@ RECONCILIAR_JOGO_ABERTO_TEXT = (
 )
 
 
+def jogo_com_autoridade(state: dict[str, Any] | None) -> bool:
+    """O jogo está com a autoridade de exibição AGORA? — função pura.
+
+    Uma fonte só (``state_full.game_signal.authority == "game"``) para as três
+    coisas desta aba que dependem dela: o aviso do "Reconciliar jogadores", o
+    motivo da divergência de máscara (PONTE-NA-TELA-01) e o ``_jogo_aberto``
+    que a aba Perfis lê. É o MESMO critério que o daemon usa no gate R-04
+    (`subsystems/gamepad._recriacao_bloqueada_por_jogo` → `_autoridade_do_jogo`)
+    e no handler de ``identity.renumber``: nunca uma segunda fonte da verdade.
+
+    Sinal ausente/desconhecido devolve ``False`` — sem alarme falso.
+    """
+    if not isinstance(state, dict):
+        return False
+    game_signal = state.get("game_signal")
+    if not isinstance(game_signal, dict):
+        return False
+    return bool(game_signal.get("authority") == "game")
+
+
 def _reconciliar_gate_text(state: dict[str, Any] | None) -> str | None:
     """Aviso do "Reconciliar jogadores"; ``None`` = nada a dizer — função pura
     (padrão ``vpad_degradation_text``/``wrapper_banner_text``).
 
     Espelha o MESMO critério do handler de ``identity.renumber``
     (``display_authority == 'game'`` via ``state_full.game_signal.
-    authority``) — nunca uma segunda fonte da verdade; se o daemon ainda não
-    fiou o sinal (``game_signal`` ausente/authority desconhecida), não há aviso
-    (sem alarme falso).
+    authority``, lido por `jogo_com_autoridade`) — nunca uma segunda fonte da
+    verdade; se o daemon ainda não fiou o sinal (``game_signal`` ausente/
+    authority desconhecida), não há aviso (sem alarme falso).
     """
     if not isinstance(state, dict):
         return None
-    game_signal = state.get("game_signal")
-    if not isinstance(game_signal, dict):
-        return None
-    if game_signal.get("authority") == "game":
-        return RECONCILIAR_JOGO_ABERTO_TEXT
-    return None
+    return RECONCILIAR_JOGO_ABERTO_TEXT if jogo_com_autoridade(state) else None
 
 
 # MODO-QUE-NAO-CONTROLA-01 (09/08/2026) — medido com ela ao vivo, às 23h50.
@@ -699,6 +717,327 @@ def reconciliar_toast(jogadores: object, resultado_renumber: object) -> str:
     if quantos:
         return f"{cabeca} Numeração compactada em {quantos} controle(s)."
     return f"{cabeca} A numeração já estava compacta."
+
+
+# --- PONTE-NA-TELA-01: a divergência e a ponte, escritas na aba -------------
+#
+# Os dois defeitos de tela medidos na noite de 18→19/08/2026, com o jogo
+# DON'T SCREAM aberto:
+#
+# 1. ela escolheu "Xbox 360" no seletor "O jogo vê o controle como:", e a
+#    janela seguiu dizendo que estava tudo certo enquanto o aparelho continuava
+#    DualSense. O gate R-04 do daemon (`_recriacao_bloqueada_por_jogo`) tinha
+#    RECUSADO a troca — destruir/recriar o vpad com o jogo segurando os handles
+#    arranca o controle da mão dela no meio da partida — e nada na tela disse
+#    isso. Pior: o rodapé anunciou desfecho de sucesso sobre a recusa, porque
+#    `set_gamepad_emulation` devolve o MESMO ``True`` para "apliquei", "já
+#    estava" e "recusei" (o contrato de retorno é "ativo ao final", não
+#    "apliquei o pedido" — está escrito no próprio `start_gamepad_emulation`);
+# 2. a janela não dizia por ONDE o jogo estava recebendo o controle. Com a
+#    exceção de Steam Input ativa o vpad é suspenso, `gamepad_emulation.enabled`
+#    cai para False e `mode_of_state` chama isso de "Controlar o PC" — a aba
+#    mostrava o modo desktop com o jogo jogando pelo espelho da Steam. O dado
+#    que desfaz o engano já era publicado: o `_steam_input_payload` do
+#    `ipc_handlers` existe exatamente para isso e sua docstring diz, com todas
+#    as letras, "a correção mora na GUI (dono diferente); o dado sai daqui para
+#    ela não precisar adivinhar". Ninguém o consumia.
+#
+# A voz é a do diagnóstico da aba Sistema (`descrever_deteccao_de_janela`):
+# prefixo fixo, o veredito em cor, e a frase em português de quem usa. As cores
+# são as mesmas três de lá e do cartão "Saúde do sistema".
+
+#: Verde/laranja do diagnóstico da aba Sistema (`daemon_actions`, mesmo par).
+_COR_OK = "#50fa7b"
+_COR_AVISO = "#ffb86c"
+
+#: Prefixo fixo da linha da ponte. "Ponte" é palavra DELA (18/08): "o Hefesto é
+#: a construção de todas as pontes, de forma que usemos sempre todas as
+#: features do DualSense".
+PONTE_PREFIXO = "Ponte com o jogo: "
+
+#: Prefixo da linha de divergência, no mesmo formato ("assunto: veredito —
+#: explicação") do `PONTE_PREFIXO` e do detector de janela da aba Sistema.
+DIVERGENCIA_PREFIXO = "Sua escolha: "
+
+
+def _escapar(texto: object) -> str:
+    """Escapa markup Pango. Os rótulos de máscara são literais, mas o
+    `_flavor_label` devolve o id CRU para uma máscara desconhecida (payload de
+    daemon mais novo) — e um `&` ali viraria markup inválido, que o GTK recusa
+    inteiro: a linha sumiria da tela em vez de mostrar o id estranho.
+    """
+    return (
+        str(texto)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
+def mascara_viva(state: dict[str, Any] | None) -> str | None:
+    """A máscara que o gamepad virtual VIVO está usando; ``None`` = não sei.
+
+    Duas fontes, nesta ordem:
+
+    1. um campo explícito do daemon, se ele existir. A leitura é por
+       ``getattr``/``get`` tolerante porque a lane do daemon publica esse campo
+       em paralelo a esta: com um daemon que ainda não o traz, a função
+       simplesmente cai no item 2 em vez de estourar;
+    2. o ``backend``, que já existe e já é publicado. ``backend == "uhid"``
+       implica máscara DualSense e não pode ser outra coisa: o
+       `virtual_pad._try_uhid` recusa o uhid para Xbox de saída ("Xbox não é
+       trabalho do uhid" — o `hid_playstation` só faz bind em produto Sony).
+
+    ``backend == "uinput"`` é AMBÍGUO de propósito (Xbox normal ou DualSense
+    degradado usam o mesmo backend) e devolve ``None``: dizer "não sei" é o
+    comportamento honesto, e quem chama trata o ``None`` como "sem divergência
+    a afirmar". Enquanto o campo explícito não existir, a divergência é medida
+    contra `gamepad_emulation.flavor` — que serve, porque o daemon só grava
+    `config.gamepad_flavor` DEPOIS de o vpad novo nascer
+    (`subsystems/gamepad.py:1503`); uma troca recusada pelo gate volta com a
+    máscara antiga no payload.
+    """
+    if not isinstance(state, dict):
+        return None
+    gamepad = state.get("gamepad_emulation")
+    if not isinstance(gamepad, dict):
+        return None
+    for chave in ("flavor_vivo", "live_flavor", "flavor_ativo"):
+        valor = gamepad.get(chave)
+        if isinstance(valor, str) and valor:
+            return valor
+    if gamepad.get("backend") == "uhid":
+        return "dualsense"
+    return None
+
+
+def mascara_do_aparelho(state: dict[str, Any] | None) -> str | None:
+    """A máscara que o JOGO vê agora; ``None`` = não sei (offline/sem vpad).
+
+    O explícito (`mascara_viva`) vence; sem ele vale o `gamepad_emulation.
+    flavor` do payload, que é `config.gamepad_flavor` — gravado só depois de o
+    vpad novo existir, e portanto ainda o ANTIGO quando o gate recusa a troca.
+    """
+    viva = mascara_viva(state)
+    if viva:
+        return viva
+    if not isinstance(state, dict):
+        return None
+    gamepad = state.get("gamepad_emulation")
+    if not isinstance(gamepad, dict):
+        return None
+    valor = gamepad.get("flavor")
+    return valor if isinstance(valor, str) and valor else None
+
+
+def texto_da_divergencia(
+    escolhida: object, no_aparelho: object, *, jogo_aberto: bool
+) -> str | None:
+    """A frase da divergência entre o que ela escolheu e o que o jogo vê.
+
+    ``None`` quando não há divergência a mostrar — inclusive quando falta uma
+    das duas pontas: afirmar divergência sem saber as duas máscaras seria o
+    alarme falso que os outros banners desta aba evitam de propósito.
+
+    Duas frases porque são duas verdades diferentes:
+
+    - **com o jogo aberto** o Hefesto RECUSOU a troca de propósito (gate R-04),
+      e a recusa tem cura conhecida: fechar e abrir o jogo. A frase diz o
+      motivo, senão a recusa vira "o Hefesto não obedece";
+    - **sem jogo aberto** não há gate nenhum — a escolha simplesmente não
+      chegou, e o que resta a dizer é a verdade nua mais o gesto que tenta de
+      novo.
+
+    Devolve MARKUP, e o veredito vai colorido por `<span>` em vez de por classe
+    de CSS. Não é preferência: `.hefesto-dualsense4unix-window label
+    { color: #f8f8f2 }` (`theme.css:470`, especificidade 0,1,1) vence
+    `.hefesto-dualsense4unix-status-warn` (0,1,0), e a própria `theme.css`
+    documenta essa armadilha no BUG-GUI-FOOTER-LABEL-BRANCO-01. Medido na foto
+    offscreen desta leva: o aviso saía #f8f8f2, indistinguível do texto ao
+    lado. O `descrever_deteccao_de_janela` da aba Sistema já usa `<span>` pelo
+    mesmo motivo — é a voz da casa para diagnóstico, e é a que funciona.
+    """
+    if not isinstance(escolhida, str) or not escolhida:
+        return None
+    if not isinstance(no_aparelho, str) or not no_aparelho:
+        return None
+    if escolhida == no_aparelho:
+        return None
+    quero = _escapar(_flavor_label(escolhida))
+    tenho = _escapar(_flavor_label(no_aparelho))
+    if jogo_aberto:
+        return (
+            DIVERGENCIA_PREFIXO
+            + f'<span foreground="{_COR_AVISO}">ainda não chegou ao '
+            f"aparelho</span> — você escolheu {quero}; o jogo aberto ainda vê "
+            f"{tenho}. Trocar agora arrancaria o controle do jogo no meio da "
+            "partida, então a sua escolha vale quando o jogo fechar e abrir "
+            "de novo."
+        )
+    return (
+        DIVERGENCIA_PREFIXO
+        + f'<span foreground="{_COR_AVISO}">não chegou ao aparelho</span> — '
+        f"você escolheu {quero}; o Hefesto está com {tenho}. Escolha de novo."
+    )
+
+
+def texto_da_ponte(state: dict[str, Any] | None) -> str:
+    """Markup da linha "Ponte com o jogo" — função pura, voz da aba Sistema.
+
+    Responde a pergunta que a janela inteira não respondia: **por onde o jogo
+    está recebendo o controle agora?** A ordem das perguntas é a ordem em que
+    uma resposta invalida a seguinte:
+
+    1. sem daemon não há o que afirmar (mesma disciplina do `autoswitch_lock_
+       text`: offline é "não sei", nunca "nenhuma");
+    2. exceção de Steam Input com o vpad suspenso — este caso PRECISA vir antes
+       do gamepad e do desktop, porque é exatamente ele que `mode_of_state`
+       chama de "Controlar o PC" (o `stop_gamepad_emulation` zera
+       `gamepad_emulation_enabled` mesmo com `persist=False`). Era a leitura
+       mais enganosa da aba: jogo jogando pelo espelho da Steam, aba dizendo
+       que o controle estava mexendo no mouse;
+    3. Modo Nativo — o físico sai para o jogo e o Hefesto não está no caminho;
+    4. gamepad do Hefesto, dizendo QUAL máscara o jogo vê;
+    5. nenhuma — e aí a frase aponta o botão que constrói uma.
+    """
+    if not isinstance(state, dict):
+        return PONTE_PREFIXO + "não sei — o Hefesto está desligado."
+    steam_input = state.get("steam_input")
+    if (
+        isinstance(steam_input, dict)
+        and steam_input.get("excecao_ativa")
+        and steam_input.get("vpad_suspenso")
+    ):
+        # A frase daqui NÃO pode dizer que o Hefesto "sai da frente": ela foi
+        # refutada por ela em 06/08/2026 e há portão que reprova
+        # (`test_a_frase_refutada_da_allowlist`). O que a medição
+        # CONTROLE-SONY-MEDIDO-01 (seção A INVERSÃO) mostra é uma DIVISÃO: na
+        # exceção o Steam Input passa a entregar a ENTRADA ao jogo, e o Hefesto
+        # MANTÉM A SAÍDA — os gatilhos dela seguraram e a cor dela ficou.
+        return (
+            PONTE_PREFIXO
+            + f'<span foreground="{_COR_OK}">pelo Steam Input</span> — neste '
+            "jogo a Steam entrega os botões, e o Hefesto segue cuidando dos "
+            "gatilhos, da cor e da vibração."
+        )
+    if state.get("native_mode"):
+        return (
+            PONTE_PREFIXO
+            + f'<span foreground="{_COR_OK}">direto (Sony)</span> — o jogo fala '
+            "com o DualSense sem o Hefesto no meio."
+        )
+    gamepad = state.get("gamepad_emulation")
+    if isinstance(gamepad, dict) and gamepad.get("enabled"):
+        no_aparelho = mascara_do_aparelho(state)
+        visto = (
+            _escapar(_flavor_label(no_aparelho)) if no_aparelho else "um controle"
+        )
+        return (
+            PONTE_PREFIXO
+            + f'<span foreground="{_COR_OK}">pelo Hefesto</span> — o jogo '
+            f"recebe o controle do gamepad do Hefesto, e o vê como {visto}."
+        )
+    return (
+        PONTE_PREFIXO
+        + f'<span foreground="{_COR_AVISO}">nenhuma</span> — nenhum jogo está '
+        'recebendo controle do Hefesto. Escolha "Jogar pelo Hefesto" para o '
+        "jogo ver um controle."
+    )
+
+
+#: Os desfechos distinguíveis de um `gamepad.emulation.set`. Os três primeiros
+#: são o contrato que a lane do daemon está construindo em paralelo; os dois
+#: últimos são desta janela — "falhou" já existia (status "failed") e "incerto"
+#: é o que sobra quando o daemon do outro lado do socket é antigo demais para
+#: dizer qualquer das coisas acima.
+DESFECHO_APLICADO = "aplicado"
+DESFECHO_JA_ESTAVA = "ja_estava"
+DESFECHO_BLOQUEADO = "bloqueado_por_jogo"
+DESFECHO_FALHOU = "falhou"
+DESFECHO_INCERTO = "incerto"
+
+#: Aliases aceitos no payload para o mesmo desfecho — a lane do daemon pode
+#: nomear a chave em português ou em inglês, e esta janela não pode passar a
+#: mentir por causa de uma letra. O que NÃO se aceita é inferir "aplicado" de
+#: um campo que não existe: sem informação o desfecho é "incerto".
+_ALIASES_DE_DESFECHO = {
+    "aplicado": DESFECHO_APLICADO,
+    "applied": DESFECHO_APLICADO,
+    "ja_estava": DESFECHO_JA_ESTAVA,
+    "já_estava": DESFECHO_JA_ESTAVA,
+    "already": DESFECHO_JA_ESTAVA,
+    "no_op": DESFECHO_JA_ESTAVA,
+    "bloqueado_por_jogo": DESFECHO_BLOQUEADO,
+    "blocked_by_game": DESFECHO_BLOQUEADO,
+    "recusado_por_jogo": DESFECHO_BLOQUEADO,
+    "adiado_jogo_aberto": DESFECHO_BLOQUEADO,
+    "falhou": DESFECHO_FALHOU,
+    "failed": DESFECHO_FALHOU,
+}
+
+
+def desfecho_da_troca(resultado: Any, *, pedida: object = None) -> str:
+    """Desfecho de um ``gamepad.emulation.set`` — função pura.
+
+    A raiz do defeito 1 é que `set_gamepad_emulation` devolve **True** para
+    três desfechos diferentes (apliquei / já estava / recusei pelo gate R-04) e
+    o handler traduz isso em ``status: "ok"``. Quem chamava lia o "ok" e
+    anunciava sucesso sobre uma recusa.
+
+    A leitura tem duas camadas, e a segunda é o que faz esta cura valer HOJE,
+    sem esperar o daemon:
+
+    1. o campo distinguível, quando o payload o traz (``desfecho``/``outcome``,
+       nos aliases acima). É o contrato que a outra lane está montando; aqui
+       ele é consumido defensivamente — chave ausente não é erro;
+    2. a **máscara devolvida**. O handler já responde ``flavor: config.
+       gamepad_flavor``, e o daemon só grava esse campo DEPOIS de o vpad novo
+       nascer: uma troca recusada volta com a máscara ANTIGA. Comparar o que
+       voltou com o que foi pedido separa "aplicou" de "não aplicou" com o
+       payload que já existe. Era só ninguém olhar para o campo.
+
+    ``incerto`` é devolvido quando nada disso está disponível — e quem chama
+    tem de escolher uma frase que não afirme sucesso.
+    """
+    if not isinstance(resultado, dict):
+        return DESFECHO_INCERTO
+    for chave in ("desfecho", "outcome"):
+        bruto = resultado.get(chave)
+        if isinstance(bruto, str) and bruto:
+            conhecido = _ALIASES_DE_DESFECHO.get(bruto.strip().lower())
+            if conhecido is not None:
+                return conhecido
+    if resultado.get("status") == "failed":
+        return DESFECHO_FALHOU
+    devolvida = resultado.get("flavor")
+    if isinstance(pedida, str) and pedida and isinstance(devolvida, str) and devolvida:
+        return DESFECHO_APLICADO if devolvida == pedida else DESFECHO_BLOQUEADO
+    return DESFECHO_INCERTO
+
+
+def toast_da_troca_de_mascara(desfecho: str, pedida: object) -> str:
+    """A frase do rodapé para cada desfecho — função pura.
+
+    O que esta função existe para impedir: o rodapé dizer "pronto" sobre uma
+    troca recusada. Cada desfecho tem uma frase própria, e a do bloqueio diz o
+    motivo E o caminho — a mesma disciplina do `RECONCILIAR_JOGO_ABERTO_TEXT`.
+    """
+    alvo = _flavor_label(pedida)
+    if desfecho == DESFECHO_BLOQUEADO:
+        return (
+            f"Ainda não: o jogo aberto está com o controle. {alvo} vale quando "
+            "o jogo fechar e abrir de novo."
+        )
+    if desfecho == DESFECHO_JA_ESTAVA:
+        return f"Nada a mudar — o jogo já via: {alvo}"
+    if desfecho == DESFECHO_FALHOU:
+        return f"Não consegui trocar para {alvo} — o jogo continua como estava."
+    if desfecho == DESFECHO_INCERTO:
+        # Sem dado que sustente "pronto", a frase descreve o que a janela
+        # REALMENTE sabe (o pedido saiu) e manda ela conferir na linha que
+        # agora responde isso.
+        return f"Pedi a troca para {alvo} — confira em “Ponte com o jogo”."
+    return f"O jogo agora vê: {alvo}"
 
 
 def _format_controller_subtitle(
@@ -1262,6 +1601,48 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_gamepad_opts = opts
         mode_box.pack_start(opts, False, False, 0)
 
+        # PONTE-NA-TELA-01: as duas linhas que faltavam, imediatamente ABAIXO do
+        # "O jogo vê o controle como:" — é onde o olho dela já está quando faz a
+        # única escolha desta aba, e é a resposta à pergunta seguinte ("por onde
+        # o jogo recebe isso?"). Mandar essa resposta para a aba Status custaria
+        # uma troca de aba a cada clique.
+        #
+        # Fora da `opts` de propósito: a `opts` some fora do modo gamepad, e a
+        # ponte tem de continuar respondendo no Modo Nativo e no Steam Input —
+        # que são justamente os modos em que a aba mais enganava.
+        ponte = Gtk.Label(label="")
+        ponte.set_xalign(0.0)
+        ponte.set_line_wrap(True)
+        self._home_ponte_label = ponte
+        mode_box.pack_start(ponte, False, False, 0)
+
+        # A divergência usa o mesmo desenho dos banners de vpad/wrapper — label
+        # inline, `no_show_all` para o `show_all()` do build não desfazer o
+        # estado que o `_render_home` manda, nada de popup/popover no COSMIC
+        # (cosmic-epoch#2497). O que muda é a COR: aqui ela vem por markup
+        # (`texto_da_divergencia`), não por `hefesto-dualsense4unix-status-warn`
+        # — a classe perde para `.hefesto-dualsense4unix-window label` em
+        # especificidade, e o aviso saía branco (ver a docstring da função).
+        divergencia = Gtk.Label(label="")
+        divergencia.set_xalign(0.0)
+        divergencia.set_line_wrap(True)
+        divergencia.set_no_show_all(True)
+        divergencia.set_visible(False)
+        self._home_divergencia_banner = divergencia
+        mode_box.pack_start(divergencia, False, False, 0)
+
+        # PONTE-NA-TELA-01 + AGORA-E-DEPOIS-01 (fusão de 19/08/2026): a máscara
+        # que ela APLICOU por esta aba nesta sessão — não a que ela marcou. As
+        # duas coisas deixaram de ser a mesma em 08/08, quando o clique no
+        # seletor passou a só MARCAR (`marcar_escolha`) e a aplicação foi para o
+        # "Aplicar" do rodapé; marcar aqui um "pedido" no clique acenderia a
+        # divergência sobre uma escolha que ela ainda nem mandou aplicar — em
+        # cima da linha do pendente, que já diz isso com as palavras certas.
+        # Fica escrito e é lido: é o rodapé (`footer_actions`) que tem o
+        # desfecho do IPC na mão e o dono deste campo. Sem ele, a divergência
+        # ainda se sustenta pelo rascunho (ver `_mascara_escolhida_por_ela`).
+        self._home_flavor_pedido: str | None = None
+
         # AGORA-E-DEPOIS-01: a linha do que ela escolheu e ainda não aplicou.
         # Fica FORA do `opts` de propósito: uma pendência de modo ("Controlar o
         # PC") existe quando a caixa da máscara está escondida, e dentro do
@@ -1523,6 +1904,19 @@ class HomeActionsMixin(WidgetAccessMixin):
                 _desktop_aviso = getattr(self, "_home_desktop_aviso", None)
                 if _desktop_aviso is not None:
                     _desktop_aviso.set_visible(False)
+                # PONTE-NA-TELA-01: offline a ponte é "não sei" (a função pura
+                # escreve isso), e não há divergência a afirmar — sem daemon não
+                # se sabe o que o aparelho está fazendo.
+                #
+                # `getattr` no MÉTODO, e não chamada direta: os dublês parciais
+                # de `_render_home` copiam handlers avulsos da mixin, e a lição
+                # já escrita algumas linhas abaixo ("um atributo novo aqui
+                # derrubou 51 testes de cinco arquivos") vale igual para um
+                # método novo — 28 testes de dois arquivos, medidos na fusão de
+                # 19/08/2026. Na janela de verdade a mixin sempre o tem.
+                _ponte = getattr(self, "_render_ponte_e_divergencia", None)
+                if _ponte is not None:
+                    _ponte(None)
                 self._render_home_controllers([])
                 # ONDA-U (U1): toggle in-place — o botão de "Desligar" vira
                 # "Ligar o Hefesto" bem aqui, nada de mandar pra aba Sistema.
@@ -1714,6 +2108,13 @@ class HomeActionsMixin(WidgetAccessMixin):
                     banner_opt_out.set_text(aviso_opt_out)
                 banner_opt_out.set_visible(bool(aviso_opt_out))
 
+            # PONTE-NA-TELA-01: qual ponte está de pé, e — quando a escolha dela
+            # não chegou ao aparelho — a divergência, com o motivo. `getattr`
+            # pelo mesmo motivo do ramo offline (dublê parcial).
+            _ponte = getattr(self, "_render_ponte_e_divergencia", None)
+            if _ponte is not None:
+                _ponte(state)
+
             origin_bits: list[str] = []
             if state.get("native_mode") and state.get("native_mode_origin") == "profile":
                 origin_bits.append("Nativo ligado pelo perfil ativo")
@@ -1752,7 +2153,11 @@ class HomeActionsMixin(WidgetAccessMixin):
             # `reconciliar_aviso` já usa (`game_signal.authority == "game"`),
             # em vez de sondar processo com dois `pgrep` de 5 s que
             # congelariam a janela. Uma fonte da verdade, não duas.
-            sinal = state.get("game_signal") if isinstance(state, dict) else None
+            # PONTE-NA-TELA-01 (19/08): a leitura literal do `game_signal` que
+            # morava aqui virou `jogo_com_autoridade` — a MESMA função que o
+            # aviso do "Reconciliar jogadores" e a divergência de máscara usam.
+            # Eram três cópias da mesma condição; a terceira que divergisse
+            # viraria a segunda fonte da verdade que todas elas juram evitar.
             # RELANCAR-NO-BOTAO-01: o modo vigente, para o "Salvar este
             # perfil" saber se o perfil salvo MUDA o que o jogo vê. Mesma
             # fonte da aba Início — nunca uma segunda verdade.
@@ -1762,9 +2167,7 @@ class HomeActionsMixin(WidgetAccessMixin):
             # a pendência agora depende deste valor para saber se a escolha dela
             # ainda diverge do que está valendo.
             self._modo_vigente_do_daemon = mode
-            self._jogo_aberto = (
-                isinstance(sinal, dict) and sinal.get("authority") == "game"
-            )
+            self._jogo_aberto = jogo_com_autoridade(state)
             self._render_home_controllers(
                 connected,
                 grab_state=state.get("primary_grab_state"),
@@ -1780,6 +2183,87 @@ class HomeActionsMixin(WidgetAccessMixin):
             _ = Gtk
         finally:
             self._home_guard = False
+
+    def _mascara_escolhida_por_ela(self) -> str | None:
+        """A máscara que ELA pediu, sem perguntar ao daemon (PONTE-NA-TELA-01).
+
+        Duas fontes, nesta ordem — as duas são gesto dela, e a mais recente
+        ganha:
+
+        1. o pedido APLICADO nesta sessão (`_home_flavor_pedido`). É a única
+           memória de um pedido que o daemon não atendeu: o `_render_home`
+           reescreve o seletor com o valor do daemon a cada tique, então sem
+           isto a escolha dela sumiria da tela em 2 segundos. Quem grava é o
+           "Aplicar" do rodapé, que é quem tem o desfecho do IPC na mão desde a
+           AGORA-E-DEPOIS-01 (08/08) — aqui o campo é só lido;
+        2. a seção `mode` do rascunho do perfil (`draft.source_mode`), que é
+           onde o "Aplicar" e o "Salvar Perfil" gravam a máscara. Foi essa a
+           divergência medida na noite de 18→19/08: o perfil dizia
+           `gamepad_flavor="xbox"` e o aparelho estava `dualsense`.
+
+        O que NÃO entra aqui é a pendência (`_escolha_pendente`): ela é o que
+        ela MARCOU e ainda não mandou aplicar, e já tem linha própria na tela
+        (`render_pendente`). Lê-la como divergência acusaria o Hefesto de não
+        obedecer uma ordem que ninguém deu.
+
+        `getattr` em tudo pelo mesmo motivo do `registrar_modo_no_rascunho`:
+        janela sem `draft` (dublê de teste, bootstrap em voo) não pode virar
+        `AttributeError` dentro de um render.
+        """
+        pedido = getattr(self, "_home_flavor_pedido", None)
+        if isinstance(pedido, str) and pedido:
+            return pedido
+        draft = getattr(self, "draft", None)
+        origem = getattr(draft, "source_mode", None) if draft is not None else None
+        if origem is None:
+            return None
+        valor = (
+            origem.get("gamepad_flavor")
+            if isinstance(origem, dict)
+            else getattr(origem, "gamepad_flavor", None)
+        )
+        return valor if isinstance(valor, str) and valor else None
+
+    def _render_ponte_e_divergencia(self, state: dict[str, Any] | None) -> None:
+        """Pinta a linha da ponte e o aviso de divergência (PONTE-NA-TELA-01).
+
+        Só widget: as duas frases saem de funções puras (`texto_da_ponte`,
+        `texto_da_divergencia`), como o resto dos avisos desta aba. `getattr`
+        defensivo nos dois labels porque os dublês de `_render_home` nos testes
+        montam só os widgets que conhecem — a aba inteira não pode cair porque
+        um deles falta.
+        """
+        ponte = getattr(self, "_home_ponte_label", None)
+        if ponte is not None:
+            ponte.set_markup(texto_da_ponte(state))
+        banner = getattr(self, "_home_divergencia_banner", None)
+        if banner is None:
+            return
+        no_aparelho = mascara_do_aparelho(state)
+        # O pedido é PENDÊNCIA, não preferência: assim que o aparelho passa a
+        # dizer a mesma coisa, ele morre. Sem isto um pedido antigo e já
+        # atendido acusaria divergência falsa na próxima troca vinda de outro
+        # lugar (a aba Perfis, o autoswitch) — a aba passaria a mentir para o
+        # outro lado, que é o defeito de sempre com o sinal trocado.
+        pedido = getattr(self, "_home_flavor_pedido", None)
+        if pedido and no_aparelho and pedido == no_aparelho:
+            self._home_flavor_pedido = None
+        # Fora do modo gamepad não há máscara valendo: no Modo Nativo e sob a
+        # exceção de Steam Input quem entrega o controle não é o vpad, e cobrar
+        # a máscara ali seria aviso sobre coisa que não está em uso. Mesmo gate
+        # do `vpad_degradation_text`.
+        aviso = (
+            texto_da_divergencia(
+                self._mascara_escolhida_por_ela(),
+                no_aparelho,
+                jogo_aberto=jogo_com_autoridade(state),
+            )
+            if mode_of_state(state) == MODE_GAMEPAD
+            else None
+        )
+        if aviso:
+            banner.set_markup(aviso)
+        banner.set_visible(bool(aviso))
 
     def _render_home_controllers(
         self,
@@ -1882,6 +2366,18 @@ class HomeActionsMixin(WidgetAccessMixin):
         # para o "Aplicar" (`footer_actions._aplicar_escolha_pendente`), onde a
         # decisão dela está COMPLETA — modo e máscara escolhidos — em vez de
         # interromper no meio da escolha.
+        #
+        # PONTE-NA-TELA-01 (19/08/2026), a metade que este handler NÃO faz mais:
+        # a cura contra o toast que dizia "O jogo agora vê: Xbox 360" sobre uma
+        # troca RECUSADA nasceu aqui, no `_done` deste IPC — que já não mora
+        # nesta aba. Ela não se perdeu: virou as funções puras
+        # `desfecho_da_troca`/`toast_da_troca_de_mascara`, publicadas no
+        # `__all__` para quem HOJE tem a resposta do daemon na mão (o "Aplicar"
+        # do rodapé) ler o desfecho em vez de presumir sucesso do `status: "ok"`
+        # — que é o mesmo para "apliquei", "já estava" e "recusei". Enquanto o
+        # rodapé não as chamar, quem conta a verdade na tela é a linha de
+        # divergência, que compara a escolha dela com a máscara do aparelho a
+        # cada tique.
         marcar_escolha(self, "mascara", flavor_id)
 
     def _on_home_autoswitch_lock_toggled(self, check: Any) -> None:
@@ -2080,7 +2576,14 @@ class HomeActionsMixin(WidgetAccessMixin):
 
 __all__ = [
     "ABA_INICIO",
+    "DESFECHO_APLICADO",
+    "DESFECHO_BLOQUEADO",
+    "DESFECHO_FALHOU",
+    "DESFECHO_INCERTO",
+    "DESFECHO_JA_ESTAVA",
+    "DIVERGENCIA_PREFIXO",
     "HOME_POLL_INTERVAL_MS",
+    "PONTE_PREFIXO",
     "RECONCILIAR_JOGO_ABERTO_TEXT",
     "RECONCILIAR_LABEL",
     "TEXTO_DESKTOP_SEM_MOUSE",
@@ -2090,13 +2593,20 @@ __all__ = [
     "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",
     "controles_bt_frageis",
+    "desfecho_da_troca",
     "id_da_pagina",
     "id_da_pagina_corrente",
     "jogadores_degradados",
+    "jogo_com_autoridade",
+    "mascara_do_aparelho",
+    "mascara_viva",
     "reconciliar_toast",
     "texto_coop_degradado",
+    "texto_da_divergencia",
+    "texto_da_ponte",
     "texto_do_desktop_sem_emulacao",
     "texto_native_bt_fragil",
+    "toast_da_troca_de_mascara",
     "vpad_degradation_text",
     "wrapper_banner_text",
 ]
