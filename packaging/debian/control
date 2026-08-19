@@ -1,5 +1,5 @@
 Package: hefesto-dualsense4unix
-Version: 0.9.4.3
+Version: 0.9.4.4
 X-Hefesto-Deb-Epoch: 1
 Section: utils
 Priority: optional

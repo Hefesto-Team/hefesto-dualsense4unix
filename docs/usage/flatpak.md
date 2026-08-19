@@ -37,7 +37,7 @@ flatpak install --user br.andrefarias.Hefesto.flatpak
 # Clonar pela TAG da versão — nunca por branch de trabalho.
 git clone https://github.com/AndreBFarias/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.9.4.3
+git checkout v0.9.4.4
 
 # Construir o Flatpak (requer flatpak-builder)
 ./scripts/build_flatpak.sh --install

@@ -40,6 +40,88 @@ fez nascer está na `QUATRO-COMPONENTES-02`, logo abaixo.
 
 ## [Unreleased]
 
+## [0.9.4.4] — 2026-08-19
+
+A leva dos três portões. Ela não conseguia jogar o DON'T SCREAM, e a noite foi
+gasta procurando **um** defeito onde havia **três** — em série, cada um bastando
+sozinho para o jogo continuar injogável. Consertar um deixava o sintoma
+IDÊNTICO, e um conserto certo que não muda o sintoma parece um conserto errado.
+
+A lição, e ela é geral: com portões em série, *"o jogo funcionou?"* não é
+instrumento — ele não sabe atribuir. Cada portão precisa da sua própria régua.
+
+### Corrigido
+
+#### O produto trocava o Proton que ela tinha escolhido
+
+Em 14/08 o "Travar Proton validado" substituiu, sem perguntar e sem avisar, a
+ferramenta de compatibilidade de **três** jogos que já tinham escolha
+deliberada — entre eles o DON'T SCREAM, que saiu de `proton_11` para
+`GE-Proton10-34`. Dos 19 jogos da leva, 16 não tinham nada e nada perderam.
+
+Entrada **de jogo** que já aponta para outra ferramenta passa a ser
+`preservado`: o arquivo não muda naquela linha. A entrada global `"0"` fica de
+fora de propósito — travar o padrão do Steam Play é a função declarada do
+recurso, e ela tem volta no uninstall. E a contagem parou de mentir: `locked`
+conta o que travou, `skipped` conta o que respeitou.
+
+*Provado no ciclo real:* `uninstall` seguido de `install` completo devolveu
+`added: 16, preservado: 3`, com os três de sempre intactos.
+
+#### O retorno fundia três desfechos num `True`, e o laço matava o controle
+
+`set_gamepad_emulation` devolvia `True` para aplicou, já-estava e **bloqueado**.
+Quem chamava acreditava ter convergido e pedia de novo; a divergência persistia;
+o gamepad virtual era destruído e recriado em laço, e cada recriação invalida o
+handle que o jogo abriu. O journal registrava `mode=aplicado` sete
+milissegundos depois de `vpad_recriacao_bloqueada_por_jogo`.
+
+Os desfechos ganharam nome (`aplicado`, `ja_estava`, `adiado_jogo_aberto`,
+`bloqueado_por_jogo`), o bloqueio virou estado estável que ESPERA em vez de
+repetir, e o journal avisa uma vez por episódio.
+
+#### A cor que o GTK aplicava e não pintava
+
+As cinco classes de cor do tema nasceram soltas e perdiam a disputa de
+especificidade para a regra que casa o label diretamente — a classe era
+aplicada e o texto saía branco. Doze lugares sofriam, dois deles rótulos do
+próprio `main.glade`. A casa já tinha visto o sintoma e contornado sem achar a
+causa. Nenhuma cor mudou; mudou quem ganha.
+
+#### O botão do microfone pipocava
+
+Três alternâncias em 2,5 segundos no journal — não é mão humana, e o mudo é
+travado no sistema inteiro. Entrou uma janela de sossego de 1 s contada do fim
+do toggle anterior: N bordas viram um toggle.
+
+### Adicionado
+
+#### A lista de exceções passou a LIGAR o Steam Input
+
+Ela só preservava o que já estava ligado — o próprio produto nomeava isso, no
+estorvo `excecao_inerte`, e nunca agia. Jogos que só aceitam Steam Input, como
+o DON'T SCREAM, ficavam sem a única ponte que os fazia funcionar, e o guarda a
+desligava de volta.
+
+#### `PS + seta direita` — próxima ponte
+
+Gesto no controle, sem sair do jogo. Antes disso o despacho de combos era uma
+cadeia de ifs, e um combo novo cairia no "perfil anterior" no meio da partida.
+
+#### A aba Início diz qual ponte está de pé
+
+Duas linhas novas: por onde o jogo recebe o controle agora, e — só quando há
+divergência — o que ela pediu, com o motivo e o caminho.
+
+### Aberto, e dito
+
+O gesto ainda executa a recriação que a medição de 23/07 apontou como fatal
+para a partida; a sobreposição de dois gamepads virtuais é necessária e **não**
+suficiente, porque metade de cada ponte é variável de ambiente congelada no
+lançamento; e a cadeia causal entre o Proton trocado e o microfone continua sem
+prova. Tudo em
+[`docs/process/sprints/2026-08-19-TRES-PORTOES-01-nao-anda-nem-o-microfone.md`](docs/process/sprints/2026-08-19-TRES-PORTOES-01-nao-anda-nem-o-microfone.md).
+
 ## [0.9.4.3] — 2026-08-18
 
 A leva da portabilidade. Quatro defeitos com a mesma assinatura: código que só

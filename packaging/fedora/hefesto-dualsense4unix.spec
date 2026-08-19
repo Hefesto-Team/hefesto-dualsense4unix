@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.9.4.3
+Version:        0.9.4.4
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -392,6 +392,15 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Tue Aug 19 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.4-1
+- Proton: o pin parou de trocar a ferramenta que a usuaria ja tinha escolhido
+- Vpad: o retorno deixou de fundir tres desfechos num True, e o laco que
+  destruia e recriava o gamepad virtual no meio da partida parou
+- Steam Input: a lista de excecoes passou a LIGAR a ponte, nao so preservar
+- Gesto: PS + seta direita cicla a ponte, com despacho por dicionario
+- Microfone: janela de sossego de 1 s contra rajada de bordas do botao
+- Interface: a aba Inicio diz qual ponte esta de pe e mostra a divergencia
+- Tema: as cinco classes de cor voltaram a pintar (disputa de especificidade)
 * Thu Aug 13 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.3-1
 - Instrumentos: a guarda de arvore congelada parou de confundir bytecode com produto
 - Instrumentos: a bancada voltou a abrir (colunas cabo_/radio_ da migracao v2)
