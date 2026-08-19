@@ -683,6 +683,11 @@ class IpcHandlersMixin:
     #: instância no primeiro uso.
     _hid_orfaos_cache: tuple[float, list[str]] | None = None
 
+    #: MASCARA-01: a task do arming de launch em voo (ver
+    #: `_agendar_arming_do_launch`). Referência forte para o GC não recolher
+    #: a task no meio do caminho; volta a None quando ela termina.
+    _launch_arm_task: Any = None
+
     #: S2 (sensores na aba Status): `SensorHub` lazy — os readers de
     #: giroscópio/touchpad só nascem quando alguém pede o `state_full` e
     #: morrem sozinhos quando param de ser pedidos. Mesmo padrão dos caches
@@ -1828,6 +1833,21 @@ class IpcHandlersMixin:
     # --- estado ----------------------------------------------------------
 
     async def _handle_daemon_status(self, params: dict[str, Any]) -> dict[str, Any]:
+        # MASCARA-01 (19/08): este handler É o gate de vida do
+        # `hefesto-launch` — o wrapper grava o marker `last_run`, chama
+        # `daemon.status` e só então faz o `exec` do jogo. Logo ele é o único
+        # ponto da árvore que sabe, com certeza, que um jogo está SUBINDO
+        # AGORA, e é onde o arming do R-04 ("o modo do perfil passa a ser
+        # armado NO LAUNCH, antes de o jogo executar") deixa de depender de
+        # sorte.
+        #
+        # Até aqui o arming só rodava na reconciliação de 1 Hz do
+        # `dispatch_gamepad` — que o `_poll_loop` gateia em
+        # `_gamepad_device is not None`. Com a emulação DESLIGADA no momento
+        # do launch não havia vpad, logo não havia dispatch, logo o modo do
+        # perfil NUNCA era armado: o jogo subia com a máscara errada e a
+        # correção tardia batia no gate R-04, que a recusa com o jogo aberto.
+        self._agendar_arming_do_launch()
         snap = self.store.snapshot()
         controller = snap.controller
         return {
@@ -2401,6 +2421,36 @@ class IpcHandlersMixin:
                         if motivo_atual
                         else "jogo_sem_wrapper"
                     )
+            # MASCARA-01 (19/08): a máscara que o PERFIL do jogo promete vs a
+            # que está de pé no aparelho. Medido na madrugada de 18→19/08: o
+            # perfil dizia `xbox`, a bandeira viva dizia `dualsense`, e a
+            # contradição saía escrita na MESMA linha do
+            # `steam_app_<appid>.env` sem que nada agisse — o melhor detector
+            # de divergência da árvore era só texto. Aqui ele vira dado.
+            #
+            # Leitura de MEMÓRIA: quem mede é a materialização do launch_env
+            # (borda de transição, `_publicar_divergencias`), nunca este
+            # handler — o `state_full` roda a 10-20 Hz e ler perfis do disco
+            # aqui seria I/O no caminho quente (a mesma disciplina do
+            # `dedup_broken`).
+            #
+            # Duas chaves porque são duas perguntas: `mascara_divergente` é o
+            # ALARME (o jogo está em cena AGORA e vê máscara diferente da que
+            # ela escolheu); `mascara_divergencias` é a lista inteira, onde a
+            # divergência de um jogo fechado é só antecipação — normal, e a
+            # GUI decide se mostra.
+            result["gamepad_emulation"]["mascara_divergente"] = None
+            result["gamepad_emulation"]["mascara_divergencias"] = []
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.launch_env import (
+                    divergencias_publicadas,
+                )
+
+                divergencias = divergencias_publicadas(self.daemon)
+                result["gamepad_emulation"]["mascara_divergencias"] = divergencias
+                em_cena = [d for d in divergencias if d.get("em_cena")]
+                if em_cena:
+                    result["gamepad_emulation"]["mascara_divergente"] = em_cena[0]
             # PERFIL-MUDO-01 (10/08/2026): o perfil DAQUELE jogo que não entrou.
             # O daemon já sabia e só contava ao journal — quatro linhas de
             # `profile_select_catch_all_sem_autoridade_em_jogo` enquanto ela
@@ -3406,6 +3456,59 @@ class IpcHandlersMixin:
             marker=self._wrapper_marker_cached(),
             first_seen_epoch=first[1],
         )
+
+    def _agendar_arming_do_launch(self) -> None:
+        """Arma o modo do perfil quando o ping veio de um launch em curso.
+
+        Roda FORA da resposta (`asyncio.create_task`), por duas razões medidas:
+
+        - o gate de vida do wrapper tem timeout de **1 s**, e armar a máscara
+          pode custar até `UHID_BIND_TIMEOUT_S` (0,5 s) mais o stop do vpad
+          anterior. Estourar o gate faria o wrapper exportar NENHUMA env — o
+          jogo abriria com o controle duplicado. A resposta sai primeiro; o
+          arming acontece logo atrás, ainda antes do `exec` do jogo;
+        - `create_task` mantém tudo na THREAD do event loop, que é onde o poll
+          loop mexe no vpad. Um executor daria corrida com ele.
+
+        O gate de custo é o marker `last_run` (cache TTL de 2 s, o mesmo do
+        `wrapper_used`): sem marker fresco não há launch, e um `daemon.status`
+        de CLI/GUI não paga nada. A idempotência por `(appid, epoch)` é do
+        próprio `arm_launch_profile` — este agendamento pode repetir sem
+        rearmar o mesmo launch.
+        """
+        if self.daemon is None:
+            return
+        marker = self._wrapper_marker_cached()
+        if marker is None:
+            return
+        from hefesto_dualsense4unix.daemon.launch_env import LAUNCH_ARM_WINDOW_SEC
+
+        if (time.time() - marker[1]) > LAUNCH_ARM_WINDOW_SEC:
+            return
+        if getattr(self.daemon, "_launch_armed_for", None) == marker:
+            return
+        with contextlib.suppress(RuntimeError):
+            # A referência é guardada de propósito: task sem dono pode ser
+            # coletada pelo GC no meio do caminho (o loop só guarda weakrefs),
+            # e um arming que some é o defeito de volta.
+            tarefa = asyncio.get_running_loop().create_task(self._armar_launch())
+            self._launch_arm_task = tarefa
+            tarefa.add_done_callback(lambda _t: setattr(self, "_launch_arm_task", None))
+
+    async def _armar_launch(self) -> None:
+        """Corpo do arming agendado — best-effort, nunca derruba o loop."""
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.launch_env import arm_launch_profile
+
+            resultado = arm_launch_profile(self.daemon)
+            if isinstance(resultado, dict) and resultado.get("armado"):
+                logger.info(
+                    "launch_arm_pelo_ping_do_wrapper",
+                    appid=resultado.get("appid"),
+                    profile=resultado.get("profile"),
+                    convergiu=resultado.get("convergiu"),
+                    divergente=resultado.get("divergente"),
+                )
 
     def _wrapper_marker_cached(self) -> tuple[int, int] | None:
         """Marker `last_run` com cache TTL — o state_full roda a 10-20 Hz."""

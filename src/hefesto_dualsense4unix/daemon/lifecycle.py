@@ -36,6 +36,16 @@ from hefesto_dualsense4unix.daemon.battery_journal import (
 )
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 
+#: VERDADE-01: o vocabulário de desfecho da emulação (`EMU_*`) e a origem
+#: aceita moram no subsystem que os produz — aqui só se importa o que as
+#: assinaturas deste módulo precisam nomear. `subsystems.gamepad` não importa
+#: nada deste módulo em tempo de execução (só sob `TYPE_CHECKING`), então o
+#: import direto não fecha ciclo.
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+    EMU_BLOQUEADO_POR_JOGO,
+    OrigemEmulacao,
+)
+
 # ---------------------------------------------------------------------------
 # Reexportações de backcompat — NÃO remover (testes importam diretamente).
 # ---------------------------------------------------------------------------
@@ -291,6 +301,19 @@ FALHOU = "falhou"
 #: onde só falta o cabo.
 IGNORADO_SEM_CONTROLE = "ignorado_sem_controle"
 
+#: VERDADE-01 (18/08): a seção `mode` foi honrada em tudo, MENOS na máscara — o
+#: gate R-04 recusou recriar o vpad porque há jogo com a autoridade de exibição,
+#: e recriá-lo arrancaria o controle da mão dela no meio da partida. O estado é
+#: ESTÁVEL, não um retry: a divergência (perfil pede `xbox`, o vivo é
+#: `dualsense`) fica registrada em `_mascara_adiada_por_jogo` e ESPERA o jogo
+#: devolver a autoridade, em vez de ser pedida de novo a cada volta.
+#:
+#: Antes disto o applier devolvia `"aplicado"` sobre uma troca RECUSADA — foi
+#: essa mentira que encheu o journal de 19/08 (03:0x) com
+#: `vpad_recriacao_bloqueada_por_jogo` alternando as duas máscaras enquanto ela
+#: jogava DON'T SCREAM.
+ADIADO_JOGO_ABERTO = "adiado_jogo_aberto"
+
 
 @dataclass
 class ModoAdiado:
@@ -392,6 +415,32 @@ class ModoJogoPadrao:
     wm_class: str
 
 
+@dataclass
+class MascaraAdiada:
+    """A máscara que o perfil pediu e o gate R-04 recusou (VERDADE-01, 18/08).
+
+    Não é fila de retry — é o oposto dela. Enquanto o jogo tem a autoridade de
+    exibição, TODA troca automática de máscara está proibida (recriar o vpad
+    arranca o controle da mão dela no meio da partida, medido em 23/07), então
+    insistir só produz o laço que encheu o journal de 19/08: pedido recusado,
+    retorno mentindo "aplicado", quem chamou tentando de novo na volta seguinte.
+
+    Aqui a divergência vira ESTADO: fica registrada, é dita UMA vez no journal e
+    espera. O latch morre na borda em que o jogo devolve a autoridade — aí um
+    pedido novo passa pelo gate normalmente — e em qualquer desfecho que não
+    seja bloqueio (aplicou, já estava, gesto dela).
+
+    Campos:
+      - `flavor` — a máscara PEDIDA (a vigente é a do `_gamepad_device`);
+      - `profile_name` — quem pediu, só para o journal;
+      - `anunciada` — o aviso já saiu no journal neste episódio.
+    """
+
+    flavor: str | None
+    profile_name: str | None
+    anunciada: bool = False
+
+
 # ---------------------------------------------------------------------------
 # Daemon (orquestrador)
 # ---------------------------------------------------------------------------
@@ -484,6 +533,10 @@ class Daemon:
     # dreno do `_poll_loop` (`_drenar_modo_pendente`). UMA só, sempre
     # sobrescrita — ver `ModoAdiado`. None = nada pendente.
     _mode_pendente: ModoAdiado | None = None
+    # VERDADE-01 (18/08): a máscara que um perfil pediu e o gate R-04 recusou
+    # porque há jogo com a autoridade. None = nada divergindo. Enquanto vale, o
+    # applier NÃO repete o pedido — ver `MascaraAdiada`.
+    _mascara_adiada_por_jogo: MascaraAdiada | None = None
     # MODO-01/B3: o modo jogo que o SINAL DE JOGO ligou, sem perfil nenhum.
     # None = não há modo jogo padrão de pé. Ver `ModoJogoPadrao`.
     _modo_jogo_padrao: ModoJogoPadrao | None = None
@@ -1389,13 +1442,19 @@ class Daemon:
         enabled: bool,
         flavor: str | None = None,
         *,
-        origin: Literal["manual", "profile"],
+        origin: OrigemEmulacao,
     ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara. Usado pelo IPC.
 
+        Fachada de `set_gamepad_emulation_desfecho` — o bool diz **ativo (ou
+        parado) ao final**, nunca "aplicou o pedido". VERDADE-01 (18/08): era
+        essa confusão que fazia o autoswitch registrar `mode=aplicado` numa
+        troca de máscara RECUSADA pelo gate R-04 e tentar de novo na volta
+        seguinte; quem precisa da verdade inteira chama a versão `_desfecho`.
+
         FEAT-DSX-GAMEPAD-FLAVOR-01. `flavor` em ('dualsense','xbox'); None mantém
         o atual. Ligar desliga a emulação de mouse (mútua exclusão) e SAI do Modo
-        Nativo (idem). Retorna True se o estado pedido foi alcançado.
+        Nativo (idem).
 
         BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: um `gamepad on` manual carimba
         `_emu_manual_ts` — assim um perfil point-and-click focado logo em seguida
@@ -1411,7 +1470,49 @@ class Daemon:
         era coberto pelo `_release_controller_to_game`.
         """
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-            start_gamepad_emulation,
+            DESFECHOS_EMULACAO_ATIVA,
+            EMU_DESLIGADO,
+            EMU_JA_ESTAVA,
+        )
+
+        desfecho = self.set_gamepad_emulation_desfecho(
+            enabled, flavor, origin=origin
+        )
+        if enabled:
+            return desfecho in DESFECHOS_EMULACAO_ATIVA
+        return desfecho in (EMU_DESLIGADO, EMU_JA_ESTAVA)
+
+    # ORIGEM-QUE-MENTE-01 (08/08/2026): aqui também sem default. Este é o corpo
+    # que atravessa o portão JOGO-01 (`gamepad.py`, `if origin != "manual"`) —
+    # deixar `= "manual"` reabriria pela porta de trás a mina que a fachada
+    # acima fechou: um chamador distraído promovido a gesto dela, com o jogo da
+    # allowlist aberto, e o "Jogador 3" fantasma de volta.
+    def set_gamepad_emulation_desfecho(
+        self,
+        enabled: bool,
+        flavor: str | None = None,
+        *,
+        origin: OrigemEmulacao,
+    ) -> str:
+        """O mesmo pedido de `set_gamepad_emulation`, dizendo o que ACONTECEU.
+
+        VERDADE-01 (18/08). Devolve o vocabulário `EMU_*` de
+        `daemon.subsystems.gamepad`: `"aplicado"`, `"ja_estava"`,
+        `"bloqueado_por_jogo"`, `"recusado_steam_input"`, `"falhou"` (pedido de
+        ligar) e `"desligado"`/`"ja_estava"` (pedido de desligar).
+
+        A distinção que faltava é `"bloqueado_por_jogo"`: o gate R-04 recusa
+        recriar o vpad com jogo aberto e a emulação segue ATIVA com a máscara
+        anterior — indistinguível de "aplicou" para quem só lia o bool. Sem ela,
+        `apply_profile_mode` dizia `mode=aplicado` sobre uma troca recusada e
+        pedia de novo na volta seguinte, num laço que destruía e recriava o vpad
+        assim que a autoridade do jogo piscava (journal de 19/08 03:0x).
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            EMU_APLICADO,
+            EMU_DESLIGADO,
+            EMU_JA_ESTAVA,
+            start_gamepad_emulation_desfecho,
             stop_gamepad_emulation,
         )
 
@@ -1425,6 +1526,9 @@ class Daemon:
             # `set_gamepad_emulation(False, origin="profile")` sobre um vpad que
             # ela tinha ligado na mão.
             self._mode_from_profile = None
+            # VERDADE-01: o gesto dela é a palavra mais nova — uma máscara que
+            # um perfil deixou adiada não tem mais o que esperar.
+            self._esquecer_mascara_adiada("gesto_manual")
         # BUG-EMU-DEVICE-RACE-01: mesma serialização do set_mouse_emulation.
         with self._emu_lock:
             if enabled:
@@ -1434,7 +1538,13 @@ class Daemon:
                 # (o setter é idempotente). O restore do stash que ele dispara
                 # não reentra aqui: `_native_mode` já é False quando roda.
                 if self._native_mode:
-                    self.set_native_mode(False, origin=origin)
+                    # VERDADE-01: `gesto_de_perfil` vale só para o gate R-04 do
+                    # vpad; no eixo do Modo Nativo ele é o que sempre foi —
+                    # perfil. Mapear aqui mantém `native_mode_origin` intacto
+                    # (é ele que protege o "Jogar direto (Sony)" MANUAL dela).
+                    self.set_native_mode(
+                        False, origin="manual" if origin == "manual" else "profile"
+                    )
                 # BT-04(b): `origin` segue até o gate da promoção uinput→uhid —
                 # só o gesto manual da usuária recria um vpad degradado; o
                 # apply de perfil/autoswitch (a cada troca de janela) nunca.
@@ -1447,7 +1557,10 @@ class Daemon:
                 # ciclo FORÇADO do co-op (que reescreve player-LEDs via sysfs
                 # a cada força — ruído de escrita sem mudança nenhuma).
                 device_antes = self._gamepad_device
-                ok = start_gamepad_emulation(self, flavor=flavor, origin=origin)
+                desfecho = start_gamepad_emulation_desfecho(
+                    self, flavor=flavor, origin=origin
+                )
+                ok = desfecho in (EMU_APLICADO, EMU_JA_ESTAVA)
                 # SPRINT-GAME-RUMBLE-01: repropaga a máscara recém-aplicada aos
                 # vpads de co-op já criados. Trocar o flavor não muda /dev/input,
                 # então o watch do coop não dispara sozinho — force=True roda o
@@ -1465,15 +1578,18 @@ class Daemon:
                     # Config efetiva não mudou: nenhum vpad foi recriado e o
                     # co-op segue no ciclo normal (~2s) do poll loop.
                     logger.debug("gamepad_apply_identico_sem_recriacao")
-                return ok
+                return desfecho
             # HARM-16: o zero dos motores vem de dentro do stop (parar o vpad é
             # o que deixa o motor sem dono), não de um passo extra aqui.
             # R-07: só gesto manual apaga a preferência em disco. Um perfil sem
             # seção `mode` desligando o gamepad fazia `flag.unlink()` — e no
             # boot seguinte não nascia vpad nenhum, obrigando a religar tudo na
             # mão. O runtime continua desligando; a PREFERÊNCIA sobrevive.
+            tinha_device = self._gamepad_device is not None
             stop_gamepad_emulation(self, persist=(origin == "manual"))
-            return True
+            # Desligar é sempre alcançado (o stop é idempotente): o desfecho só
+            # separa "parei o vpad que existia" de "já não havia vpad nenhum".
+            return EMU_DESLIGADO if tinha_device else EMU_JA_ESTAVA
 
     def set_coop_enabled(
         self,
@@ -2160,6 +2276,10 @@ class Daemon:
            perfil; sair do foco (outro perfil ativar) reverte pelo item 2.
         4. **kind="gamepad"** — desliga nativo-de-perfil se preciso, liga o
            gamepad com a máscara pedida e sincroniza o co-op ao campo `coop`.
+           VERDADE-01: se o gate R-04 recusar a troca de máscara porque há jogo
+           com a autoridade, o resto da seção vale, a divergência fica guardada
+           (`_pedir_mascara_do_perfil`) e o retorno é `ADIADO_JOGO_ABERTO` — não
+           `APLICADO`, que era a mentira que fazia o chamador tentar de novo.
         5. **kind="desktop"** — declaração explícita: desliga nativo/gamepad
            mesmo os de origem manual JÁ EXPIRADA do lock (o perfil está
            dizendo "este app é desktop puro").
@@ -2277,8 +2397,18 @@ class Daemon:
                 self.set_native_mode(False, reapply=False, origin="profile")
             flavor = getattr(mode, "gamepad_flavor", None)
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
+            adiada_por_jogo = False
             if not gamepad_on or (flavor is not None and flavor != flavor_atual):
-                self.set_gamepad_emulation(True, flavor, origin="profile")
+                adiada_por_jogo = self._pedir_mascara_do_perfil(
+                    flavor, profile=profile, origin=origin
+                )
+            else:
+                # Este perfil não pede troca nenhuma (a máscara vigente já é a
+                # dele). Isso NÃO encerra por si a divergência de OUTRO perfil:
+                # no journal de 19/08 duas janelas se revezavam, e quem pedia a
+                # máscara vigente apagaria o latch a tempo de a outra reabrir o
+                # mesmo pedido recusado na volta seguinte.
+                self._reavaliar_mascara_adiada(flavor_atual)
             # COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o campo
             # `mode.coop` do perfil deixou de GOVERNAR. Ele continua sendo LIDO
             # (e o esquema continua aceitando-o — ver `profiles/schema.py`:
@@ -2294,8 +2424,10 @@ class Daemon:
                     "perfil_pediu_coop_off_ignorado",
                     motivo="coop_sempre_ligado",
                 )
+            # A POSSE do eixo é do perfil mesmo com a máscara adiada — ele
+            # opinou, e quem opina é dono. O que ficou em aberto é só a máscara.
             self._mode_from_profile = "gamepad"
-            return APLICADO
+            return ADIADO_JOGO_ABERTO if adiada_por_jogo else APLICADO
 
         # kind == "desktop": declaração explícita — limpa qualquer modo.
         # LEIGO-01: o co-op fica de fora da limpeza pelo mesmo motivo do ramo
@@ -2480,6 +2612,127 @@ class Daemon:
                 wm_class=wm_class,
             )
         return estado
+
+    def _pedir_mascara_do_perfil(
+        self, flavor: str | None, *, profile: Any | None, origin: str
+    ) -> bool:
+        """Pede ao vpad a máscara do perfil. True = ADIADA porque há jogo aberto.
+
+        VERDADE-01 (18/08) — o ponto em que o laço morre. Três coisas, nesta
+        ordem:
+
+        1. **não repetir**: se este daemon já foi recusado pelo gate R-04 e o
+           jogo SEGUE com a autoridade, o pedido nem chega ao subsystem. Sem
+           isto, `aplicar_modo_jogo_padrao` (2 Hz) e cada troca de janela do
+           autoswitch reabriam a mesma recusa, e era essa insistência — não o
+           gate — que virava destruir/recriar vpad assim que a autoridade
+           piscava;
+        2. **dizer uma vez**: o aviso sai no journal no primeiro bloqueio do
+           episódio, com a máscara pedida e a vigente;
+        3. **esquecer**: qualquer desfecho que não seja bloqueio (aplicou, já
+           estava, gesto dela, recusa da allowlist) apaga o latch — a próxima
+           divergência é episódio novo.
+
+        `origin` é o da ATIVAÇÃO do perfil (`"manual"` = ela ativou o perfil na
+        mão, pela GUI/applet ou pelo PS+D-pad). Só esse caso vira
+        `"gesto_de_perfil"` na emulação, a origem que o gate R-04 reconhece como
+        vontade dela — ver `ORIGENS_GESTO_DELA`. As rotas automáticas têm
+        origens próprias (`"autoswitch"`, `"launch"`, `"pendencia"`,
+        `"game_signal"`, `"system"`), então a distinção é segura hoje.
+
+        Ressalva para quem vier depois: `ProfileManager.activate` tem
+        `origin="manual"` por DEFAULT (para um caller novo nunca silenciar um
+        gesto real). Um caminho automático que esqueça o parâmetro passa a
+        atravessar o gate R-04 — se você está escrevendo um, passe a origem.
+        """
+        if self._mascara_ja_adiada_por_jogo(flavor):
+            return True
+        origem_emulacao: OrigemEmulacao = (
+            "gesto_de_perfil" if origin == "manual" else "profile"
+        )
+        desfecho = self.set_gamepad_emulation_desfecho(
+            True, flavor, origin=origem_emulacao
+        )
+        if desfecho != EMU_BLOQUEADO_POR_JOGO:
+            self._esquecer_mascara_adiada(desfecho)
+            return False
+        self._registrar_mascara_adiada(flavor, profile=profile)
+        return True
+
+    def _mascara_ja_adiada_por_jogo(self, flavor: str | None) -> bool:
+        """True se um pedido de máscara já foi recusado e o jogo segue na frente.
+
+        O latch NÃO é chaveado pela máscara pedida, e isso é a lição do journal
+        de 19/08: duas janelas se revezando (o perfil do jogo e o de uma janela
+        invisível da Steam) pediam `xbox` e `dualsense` alternadamente, e um
+        latch por máscara deixaria as duas passarem a cada volta. Com jogo na
+        frente, NENHUMA troca automática de máscara é possível — o latch só
+        guarda qual é a última pedida, para o diagnóstico dizer a verdade.
+        """
+        adiada = self._mascara_adiada_por_jogo
+        if adiada is None:
+            return False
+        if self.display_authority != "game":
+            self._esquecer_mascara_adiada("jogo_saiu_da_frente")
+            return False
+        if adiada.flavor != flavor:
+            # Outro perfil, outra máscara: o latch segue de pé (o gate recusaria
+            # igual), mas o registro passa a apontar o pedido mais novo.
+            adiada.flavor = flavor
+            logger.debug(
+                "profile_mode_mascara_adiada_atualizada",
+                pedida=flavor,
+                vigente=getattr(self._gamepad_device, "flavor", None),
+            )
+        return True
+
+    def _reavaliar_mascara_adiada(self, flavor_atual: str | None) -> None:
+        """Encerra o latch quando a divergência REALMENTE deixou de existir.
+
+        Duas saídas, e só elas: o jogo devolveu a autoridade (aí um pedido novo
+        passa pelo gate), ou a máscara vigente virou a que estava pendurada.
+        """
+        adiada = self._mascara_adiada_por_jogo
+        if adiada is None:
+            return
+        if self.display_authority != "game":
+            self._esquecer_mascara_adiada("jogo_saiu_da_frente")
+        elif adiada.flavor == flavor_atual:
+            self._esquecer_mascara_adiada("convergiu")
+
+    def _registrar_mascara_adiada(
+        self, flavor: str | None, *, profile: Any | None
+    ) -> None:
+        """Grava a divergência e a anuncia UMA vez (VERDADE-01)."""
+        anterior = self._mascara_adiada_por_jogo
+        if anterior is not None and anterior.anunciada:
+            anterior.flavor = flavor
+            return
+        adiada = MascaraAdiada(
+            flavor=flavor,
+            profile_name=getattr(profile, "name", None),
+            anunciada=True,
+        )
+        self._mascara_adiada_por_jogo = adiada
+        logger.warning(
+            "profile_mode_mascara_adiada_jogo_aberto",
+            pedida=flavor,
+            vigente=getattr(self._gamepad_device, "flavor", None),
+            profile=adiada.profile_name,
+        )
+
+    def _esquecer_mascara_adiada(self, motivo: str) -> None:
+        """Apaga o latch da máscara adiada — a divergência deixou de existir."""
+        adiada = self._mascara_adiada_por_jogo
+        if adiada is None:
+            return
+        self._mascara_adiada_por_jogo = None
+        logger.info(
+            "profile_mode_mascara_adiada_encerrada",
+            motivo=motivo,
+            pedida=adiada.flavor,
+            vigente=getattr(self._gamepad_device, "flavor", None),
+        )
 
     def _agendar_modo_adiado(
         self, mode: Any | None, profile: Any | None, origin: str, *, agora: float

@@ -13,6 +13,10 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+    EMU_APLICADO,
+    EMU_DESLIGADO,
+)
 from hefesto_dualsense4unix.profiles.schema import Profile, ProfileModeConfig
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
 
@@ -80,6 +84,18 @@ class _Calls:
                 d._gamepad_device = None
             return True
 
+        def fake_gamepad_desfecho(
+            enabled: bool, flavor: str | None = None, *, origin: str = "manual"
+        ) -> str:
+            """VERDADE-01: o seam que `apply_profile_mode` usa é o do DESFECHO.
+
+            O dublê delega ao de cima (mesma gravação de chamada) e devolve o
+            vocabulário `EMU_*` — quem quer testar a recusa do gate R-04 troca
+            o retorno por `EMU_BLOQUEADO_POR_JOGO`.
+            """
+            fake_gamepad(enabled, flavor, origin=origin)
+            return EMU_APLICADO if enabled else EMU_DESLIGADO
+
         def fake_coop(enabled: bool, *, origin: str = "manual") -> bool:
             self.coop.append((enabled, origin))
             d.config.coop_enabled = enabled
@@ -87,6 +103,7 @@ class _Calls:
 
         monkeypatch.setattr(d, "set_native_mode", fake_native)
         monkeypatch.setattr(d, "set_gamepad_emulation", fake_gamepad)
+        monkeypatch.setattr(d, "set_gamepad_emulation_desfecho", fake_gamepad_desfecho)
         monkeypatch.setattr(d, "set_coop_enabled", fake_coop)
 
 

@@ -41,6 +41,10 @@ import pytest
 
 from hefesto_dualsense4unix.daemon import lifecycle as lifecycle_mod
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+    EMU_APLICADO,
+    EMU_DESLIGADO,
+)
 from hefesto_dualsense4unix.daemon.state_store import (
     MANUAL_PROFILE_LOCK_SEC,
     StateStore,
@@ -147,7 +151,17 @@ class _Setters:
             d.config.coop_enabled = enabled
             return enabled
 
+        def fake_gamepad_desfecho(
+            enabled: bool, flavor: str | None = None, *, origin: str = "manual"
+        ) -> str:
+            """VERDADE-01: `apply_profile_mode` pede pelo seam do DESFECHO."""
+            fake_gamepad(enabled, flavor, origin=origin)
+            return EMU_APLICADO if enabled else EMU_DESLIGADO
+
         monkeypatch.setattr(d, "set_gamepad_emulation", fake_gamepad)
+        monkeypatch.setattr(
+            d, "set_gamepad_emulation_desfecho", fake_gamepad_desfecho
+        )
         monkeypatch.setattr(d, "set_native_mode", fake_native)
         monkeypatch.setattr(d, "set_coop_enabled", fake_coop)
 

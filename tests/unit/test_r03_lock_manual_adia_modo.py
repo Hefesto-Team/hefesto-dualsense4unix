@@ -32,6 +32,10 @@ import pytest
 
 from hefesto_dualsense4unix.daemon import lifecycle as lifecycle_mod
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+    EMU_APLICADO,
+    EMU_DESLIGADO,
+)
 from hefesto_dualsense4unix.daemon.state_store import (
     MANUAL_PROFILE_LOCK_SEC,
     StateStore,
@@ -110,7 +114,17 @@ class _Setters:
             d.config.coop_enabled = enabled
             return enabled
 
+        def fake_gamepad_desfecho(
+            enabled: bool, flavor: str | None = None, *, origin: str = "manual"
+        ) -> str:
+            """VERDADE-01: `apply_profile_mode` pede pelo seam do DESFECHO."""
+            fake_gamepad(enabled, flavor, origin=origin)
+            return EMU_APLICADO if enabled else EMU_DESLIGADO
+
         monkeypatch.setattr(d, "set_gamepad_emulation", fake_gamepad)
+        monkeypatch.setattr(
+            d, "set_gamepad_emulation_desfecho", fake_gamepad_desfecho
+        )
         monkeypatch.setattr(d, "set_native_mode", fake_native)
         monkeypatch.setattr(d, "set_coop_enabled", fake_coop)
 
@@ -203,7 +217,10 @@ class TestAdiamento:
         )
 
         assert estado == "aplicado"
-        assert setters.gamepad == [(True, "dualsense", "profile")]
+        # VERDADE-01: ativação por GESTO dela chega à emulação como
+        # `gesto_de_perfil` — a origem que o gate R-04 reconhece como vontade
+        # da usuária (e só ele: nada é gravado em disco nem promove backend).
+        assert setters.gamepad == [(True, "dualsense", "gesto_de_perfil")]
         assert daemon._mode_pendente is None
         # Consumido: a máscara que ESTE perfil acabou de pôr não pode travar o
         # perfil seguinte (o do jogo, quando a janela aparecer).
@@ -476,7 +493,8 @@ class TestRelatorio:
         manager.activate("sackboy_nativo", origin="manual", relatorio=relatorio)
 
         assert relatorio["mode"] == "aplicado"
-        assert setters.gamepad == [(True, "dualsense", "profile")]
+        # VERDADE-01: `origin="manual"` na ativação = gesto dela (ver acima).
+        assert setters.gamepad == [(True, "dualsense", "gesto_de_perfil")]
 
 
 class TestIpcProfileSwitch:
@@ -513,7 +531,8 @@ class TestIpcProfileSwitch:
         assert resposta["active_profile"] == "sackboy_nativo"
         assert resposta["mode_aplicado"] is True
         assert resposta["secoes"]["mode"] == "aplicado"
-        assert setters.gamepad == [(True, "dualsense", "profile")]
+        # VERDADE-01: o `profile.switch` do IPC é gesto dela (ver acima).
+        assert setters.gamepad == [(True, "dualsense", "gesto_de_perfil")]
 
 
 # ---------------------------------------------------------------------------

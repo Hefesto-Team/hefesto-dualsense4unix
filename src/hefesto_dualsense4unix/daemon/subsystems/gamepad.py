@@ -100,6 +100,72 @@ LAUNCH_RECONCILE_INTERVAL_SEC = 1.0
 #: outro carregador enquanto o vpad não existe.
 STEAM_INPUT_VIGIA_INTERVAL_SEC = 1.0
 
+# ---------------------------------------------------------------------------
+# VERDADE-01 — o desfecho de um pedido de emulação
+# ---------------------------------------------------------------------------
+
+#: VERDADE-01 (18/08): `start_gamepad_emulation` devolvia **True** para três
+#: desfechos diferentes — aplicou, já estava e foi RECUSADO pelo gate R-04 — e
+#: quem chamava não tinha como distinguir. Efeito medido na noite de 18→19/08:
+#: o autoswitch registrava `mode=aplicado` numa troca RECUSADA, acreditava ter
+#: convergido e pedia de novo na volta seguinte; como a divergência entre o
+#: perfil (`xbox`) e o vivo (`dualsense`) nunca sumia, o pedido se repetia e o
+#: journal encheu de `vpad_recriacao_bloqueada_por_jogo` alternando as duas
+#: máscaras enquanto ela jogava.
+#:
+#: O vocabulário é de STRING e espelha o dos appliers de perfil
+#: (`daemon.lifecycle`: `"aplicado"`/`"adiado_lock_manual"`/`"ignorado_*"`) —
+#: é o padrão desta árvore para retorno rico legível no journal:
+#:
+#:   - ``"aplicado"``            — o vpad foi criado/recriado com a máscara pedida;
+#:   - ``"ja_estava"``           — no-op idempotente (mesma máscara, backend são);
+#:   - ``"bloqueado_por_jogo"``  — R-04: recriar AGORA arrancaria o controle do
+#:                                 jogo aberto. A emulação segue ATIVA, com a
+#:                                 máscara ANTERIOR;
+#:   - ``"recusado_steam_input"``— JOGO-01: apply automático num appid da
+#:                                 allowlist, onde o dispositivo do jogo era o
+#:                                 físico. NOTA DATADA — 09/08/2026
+#:                                 (ESCONDER-EM-VEZ-DE-SAIR-01): essa premissa
+#:                                 se inverteu (no jogo marcado o dispositivo é
+#:                                 o vpad), o gate caiu, e HOJE nenhum caminho
+#:                                 devolve este desfecho. O nome fica porque é
+#:                                 vocabulário publicado (`__all__`, e o
+#:                                 `lifecycle` o cita); quem o reintroduzir tem
+#:                                 de derrubar antes o teste
+#:                                 `test_apply_automatico_volta_a_ser_aceito_no_jogo_marcado`;
+#:   - ``"falhou"``              — a factory não devolveu device nenhum;
+#:   - ``"desligado"``           — o pedido era desligar e o vpad foi parado.
+EMU_APLICADO = "aplicado"
+EMU_JA_ESTAVA = "ja_estava"
+EMU_BLOQUEADO_POR_JOGO = "bloqueado_por_jogo"
+EMU_RECUSADO_STEAM_INPUT = "recusado_steam_input"
+EMU_FALHOU = "falhou"
+EMU_DESLIGADO = "desligado"
+
+#: Os desfechos em que a emulação está ATIVA ao final — o que o `bool` histórico
+#: de `start_gamepad_emulation`/`set_gamepad_emulation` sempre quis dizer
+#: ("ativo ao final", não "aplicou o pedido"). O bool continua sendo isto, byte
+#: a byte; quem precisa da verdade inteira lê o desfecho.
+DESFECHOS_EMULACAO_ATIVA = frozenset(
+    {EMU_APLICADO, EMU_JA_ESTAVA, EMU_BLOQUEADO_POR_JOGO}
+)
+
+#: VERDADE-01: as origens que são GESTO DELA e por isso nunca são barradas pelo
+#: gate R-04 (a última palavra é sempre da usuária).
+#:
+#:   - ``"manual"`` — o toggle/máscara na GUI, no applet, na CLI ou no IPC;
+#:   - ``"gesto_de_perfil"`` — ela ATIVOU um perfil na mão (`profile.switch` da
+#:     GUI/applet ou o PS+D-pad no controle). `apply_profile_mode` só carimba
+#:     esta origem quando recebeu `origin="manual"`, que nas rotas de ativação
+#:     é exclusivamente gesto dela — autoswitch, launch, sinal de jogo e dreno
+#:     de pendência têm origens próprias. É "profile" em TODO o resto (não
+#:     grava preferência em disco, não promove backend, não fura a exceção de
+#:     Steam Input): a diferença é só quem tem autoridade sobre o vpad vivo.
+ORIGENS_GESTO_DELA = frozenset({"manual", "gesto_de_perfil"})
+
+#: Origem de emulação aceita por `start_gamepad_emulation`/`set_gamepad_emulation`.
+OrigemEmulacao = Literal["manual", "profile", "gesto_de_perfil"]
+
 
 class GamepadSubsystem:
     """Subsystem que gerencia o gamepad virtual. Espelha MouseSubsystem."""
@@ -1391,12 +1457,38 @@ def _recriacao_bloqueada_por_jogo(
 
     Nunca silencioso: warning no journal + contador no store, para o gesto
     recusado ter rastro (a mesma disciplina do `rebackend_suprimido_por_*`).
+
+    VERDADE-01 (18/08): o warning sai UMA vez por episódio de bloqueio, não a
+    cada volta. Na noite de 18→19/08 o journal encheu de
+    `vpad_recriacao_bloqueada_por_jogo` alternando `dualsense->xbox` e
+    `xbox->dualsense` porque quem chamava lia True e tentava de novo; o latch
+    (`_bloqueio_recriacao_episodio`) morre sozinho na borda em que o jogo perde
+    a autoridade, então um bloqueio NOVO volta a ser gritado. O contador do
+    store continua subindo a cada recusa — ele é a frequência, o log é o fato.
     """
-    if origin == "manual":
+    if origin in ORIGENS_GESTO_DELA:
         return False
     if not _autoridade_do_jogo(daemon):
+        # Borda de saída: o jogo devolveu a autoridade — o próximo bloqueio é
+        # um episódio novo e merece linha própria no journal.
+        with contextlib.suppress(Exception):
+            daemon._bloqueio_recriacao_episodio = None  # type: ignore[attr-defined]
         return False
-    logger.warning("vpad_recriacao_bloqueada_por_jogo", motivo=motivo, origem=origin)
+    # O episódio é a ORIGEM, não o motivo: a noite de 18→19/08 alternava
+    # `dualsense->xbox` e `xbox->dualsense` no mesmo laço, e chavear pelo motivo
+    # deixaria as duas linhas se revezando para sempre. O motivo de cada recusa
+    # segue no DEBUG.
+    episodio = origin
+    if getattr(daemon, "_bloqueio_recriacao_episodio", None) == episodio:
+        logger.debug(
+            "vpad_recriacao_bloqueada_por_jogo_repetida", motivo=motivo, origem=origin
+        )
+    else:
+        with contextlib.suppress(Exception):
+            daemon._bloqueio_recriacao_episodio = episodio  # type: ignore[attr-defined]
+        logger.warning(
+            "vpad_recriacao_bloqueada_por_jogo", motivo=motivo, origem=origin
+        )
     store = getattr(daemon, "store", None)
     if store is not None:
         with contextlib.suppress(Exception):
@@ -1718,7 +1810,7 @@ def _deve_promover_backend(
     daemon: DaemonProtocol,
     existing: Any,
     key: str,
-    origin: Literal["manual", "profile"] = "manual",
+    origin: OrigemEmulacao = "manual",
 ) -> bool:
     """True quando um apply de flavor IDÊNTICO deve recriar o vpad (VPAD-02).
 
@@ -1779,17 +1871,54 @@ def start_gamepad_emulation(
     daemon: DaemonProtocol,
     flavor: str | None = None,
     *,
-    origin: Literal["manual", "profile"],
+    origin: OrigemEmulacao,
 ) -> bool:
-    """Cria o gamepad virtual com a máscara `flavor`. Idempotente.
+    """Cria o gamepad virtual com a máscara `flavor`. Idempotente. True = ATIVO.
+
+    Fachada histórica de `start_gamepad_emulation_desfecho`: devolve o bool que
+    sempre quis dizer "ativo ao final" — e NUNCA "aplicou o pedido", que é o
+    mal-entendido que o VERDADE-01 desfez. Quem precisa distinguir aplicou de
+    já-estava de bloqueado-pelo-jogo chama a versão `_desfecho`.
+
+    `origin` é OBRIGATÓRIO e keyword-only — decisão medida de 08/08/2026
+    (ORIGEM-QUE-MENTE-01): o default `"manual"` fazia o SILÊNCIO de um cliente
+    virar gesto dela, e foi assim que nasceu o "Jogador 3" fantasma (pedido sem
+    origem furava o portão JOGO-01 e ainda calava o autoswitch por 30 s). O
+    VERDADE-01 (18/08) só alargou o TIPO, para caber `"gesto_de_perfil"` — não
+    devolveu o default. Há portão que reprova o retorno dele.
+    """
+    return (
+        start_gamepad_emulation_desfecho(daemon, flavor, origin=origin)
+        in DESFECHOS_EMULACAO_ATIVA
+    )
+
+
+def start_gamepad_emulation_desfecho(
+    daemon: DaemonProtocol,
+    flavor: str | None = None,
+    *,
+    origin: OrigemEmulacao,
+) -> str:
+    """Cria o gamepad virtual com a máscara `flavor` e DIZ o que aconteceu.
+
+    VERDADE-01: devolve o vocabulário `EMU_*` — `"aplicado"`, `"ja_estava"`,
+    `"bloqueado_por_jogo"` ou `"falhou"`. Os três primeiros deixam a emulação
+    ATIVA ao final (é isso, e só isso, que o bool da fachada diz).
+    `"recusado_steam_input"` existe no vocabulário mas NÃO sai daqui desde
+    09/08/2026 — ver a nota do ESCONDER-EM-VEZ-DE-SAIR-01 abaixo.
+
+    `origin` é OBRIGATÓRIO aqui pela mesma razão da fachada (08/08/2026,
+    ORIGEM-QUE-MENTE-01): este é o seam por onde o pedido entra de verdade, e
+    um default reabriria a porta dos fundos que aquela cura fechou.
 
     Desliga a emulação de mouse (mútua exclusão) e faz grab do controle real.
-    Retorna True se ativo ao final; False se falhou ao iniciar. Idempotência
-    por (flavor, backend): apply idêntico com backend saudável é no-op; mesma
+    Idempotência por (flavor, backend): apply idêntico com backend saudável é no-op; mesma
     máscara DualSense com backend degradado (uinput) recria em uhid (VPAD-02).
     `origin` vem de `set_gamepad_emulation` (BT-04(b)): só o gesto MANUAL da
     usuária destrava a promoção por apply idêntico — perfil/autoswitch nunca
     recriam o vpad degradado (o latch anti-churn; ver `_deve_promover_backend`).
+    `"gesto_de_perfil"` (VERDADE-01) conta como automático em TUDO aqui — só o
+    gate R-04 o reconhece como gesto dela.
 
     NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Aqui havia a trava da
     JOGO-01: *"com a exceção de Steam Input ATIVA, todo apply AUTOMÁTICO é
@@ -1847,7 +1976,7 @@ def start_gamepad_emulation(
         if getattr(existing, "flavor", None) == key and not _deve_promover_backend(
             daemon, existing, key, origin
         ):
-            return True
+            return EMU_JA_ESTAVA
         # R-04: daqui para baixo o vpad VIVO seria destruído e recriado. Com o
         # jogo segurando a autoridade de exibição isso arranca o controle da
         # mão dela no meio da partida — e é o desfecho que a queixa "abro o
@@ -1859,9 +1988,11 @@ def start_gamepad_emulation(
             origin=origin,
             motivo=f"troca_de_mascara:{getattr(existing, 'flavor', None)}->{key}",
         ):
-            # True porque a emulação SEGUE ativa (com a máscara anterior) — o
-            # contrato de retorno é "ativo ao final", não "aplicou o pedido".
-            return True
+            # A emulação SEGUE ativa (com a máscara ANTERIOR) — por isso o bool
+            # da fachada continua True: ele diz "ativo ao final", não "aplicou
+            # o pedido". VERDADE-01: aqui o desfecho é nomeado, e é por ele que
+            # `apply_profile_mode` para de repetir um pedido já recusado.
+            return EMU_BLOQUEADO_POR_JOGO
         # Flavor mudou — ou mesma máscara com backend degradado e uhid de
         # volta (VPAD-02): recria sem repersistir/regrab intermediário.
         stop_gamepad_emulation(daemon, persist=False, release_grab=False)
@@ -1909,7 +2040,7 @@ def start_gamepad_emulation(
         # controles NO LAUNCH. O `_snapshot` com `_gamepad_device=None` compõe
         # o arquivo seguro (só o preload de shaders).
         _materialize_launch_env(daemon)
-        return False
+        return EMU_FALHOU
 
     daemon._gamepad_device = device
     if key == "dualsense" and getattr(device, "backend", None) == "uinput":
@@ -1951,7 +2082,7 @@ def start_gamepad_emulation(
     # wrapper hefesto-launch decide as envs pelo que fica gravado aqui.
     _materialize_launch_env(daemon)
     logger.info("gamepad_emulation_started", flavor=key)
-    return True
+    return EMU_APLICADO
 
 
 def stop_gamepad_emulation(
@@ -2048,7 +2179,15 @@ def dispatch_gamepad(
 
 
 __all__ = [
+    "DESFECHOS_EMULACAO_ATIVA",
+    "EMU_APLICADO",
+    "EMU_BLOQUEADO_POR_JOGO",
+    "EMU_DESLIGADO",
+    "EMU_FALHOU",
+    "EMU_JA_ESTAVA",
+    "EMU_RECUSADO_STEAM_INPUT",
     "LAUNCH_RECONCILE_INTERVAL_SEC",
+    "ORIGENS_GESTO_DELA",
     "REBACKEND_COOLDOWN_SEC",
     "STEAM_INPUT_VIGIA_INTERVAL_SEC",
     "GamepadSubsystem",
@@ -2068,6 +2207,7 @@ __all__ = [
     "rehide_physical_hidraw",
     "resume_vpads_after_steam_input",
     "start_gamepad_emulation",
+    "start_gamepad_emulation_desfecho",
     "start_motion_reader",
     "steam_input_coop_derrubados",
     "steam_input_excecao_ativa",

@@ -61,6 +61,7 @@ import datetime as _dt
 import os
 import time
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -899,14 +900,47 @@ def arm_launch_profile(
     # máscara nos últimos 30 s, o gesto dela é mais novo que o perfil e o
     # applier guarda a pendência sozinho. Só o gesto DELA fura o lock.
     resultado = applier(mode, profile=profile, origin="launch")
+    # MASCARA-01 (19/08): o applier devolve True para três desfechos
+    # diferentes — aplicou, já-estava, e foi RECUSADO pelo gate R-04 — então o
+    # retorno dele não prova nada. A única prova é olhar o aparelho DEPOIS: a
+    # máscara viva tem de ser a que o perfil pediu. Sem esta conferência o
+    # arming registrava "armado" numa troca recusada, e o produto acreditava
+    # ter convergido (a mentira que sustentava o laço destrói-e-recria).
+    native_pos, enabled_pos, flavor_pos, backends_pos, fisicos_pos = _snapshot(daemon)
+    modo_antecipado = _modo_antecipado(
+        profile,
+        flavor_atual=flavor_pos,
+        backends=backends_pos,
+        permite_uhid=_permite_uhid(daemon),
+        fisicos=fisicos_pos,
+    )
+    divergencia = divergencia_de_mascara(
+        modo_antecipado,
+        native_vivo=native_pos,
+        emulacao_viva=enabled_pos,
+        flavor_vivo=flavor_pos,
+    )
+    if divergencia is not None:
+        logger.warning(
+            "launch_arm_mascara_nao_convergiu",
+            appid=appid,
+            profile=getattr(profile, "name", None),
+            mascara_perfil=getattr(modo_antecipado, "mascara", None),
+            mascara_viva=flavor_pos,
+            motivo=divergencia,
+        )
     # A máscara pode ter mudado: regrava as envs para o `default.env` refletir
-    # o estado real (o arquivo por appid já vinha certo pelo `_env_for_profile`).
+    # o estado real (o arquivo por appid já vinha certo pelo `_modo_antecipado`)
+    # e para a divergência acima chegar ao `state_full` pelo mesmo caminho de
+    # sempre.
     materialize_launch_env(daemon)
     return {
         "appid": appid,
         "armado": True,
         "profile": getattr(profile, "name", None),
         "resultado": resultado,
+        "convergiu": divergencia is None,
+        "divergente": divergencia,
     }
 
 
@@ -1311,15 +1345,76 @@ def _permite_uhid(daemon: Any) -> bool:
         return False
 
 
-def _env_for_profile(
+@dataclass(frozen=True)
+class ModoAntecipado:
+    """O modo que o perfil de um jogo IMPÕE quando ele estiver valendo.
+
+    MASCARA-01 (19/08): antes disto o arquivo por appid guardava só a `env` e
+    um `motivo` em prosa, e a linha `estado:` dele era copiada do estado
+    GLOBAL — daí a contradição medida às 00:40, com "perfil gamepad xbox" e
+    "mascara=dualsense" na MESMA linha, sem que nada agisse. O modo do perfil
+    agora é um dado: é ele que a linha do arquivo por appid descreve, e é
+    contra ele que a divergência é medida.
+    """
+
+    native: bool
+    emulacao: bool
+    mascara: str
+    backends: tuple[str, ...]
+    motivo: str
+    #: Físicos na mesa NO INSTANTE em que este modo foi antecipado.
+    #: IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026): a `env` do arquivo por appid
+    #: só obedece à cobertura por físico se o número viajar junto com o modo —
+    #: `0` é "NÃO SEI", e "não sei" AUTORIZA o IGNORE (ver `cobertura_total`).
+    #: Fica fora do `como_estado`: a linha `estado:` compara modo com modo, e o
+    #: censo da mesa é do estado VIVO, que já vai na mesma linha atrás de
+    #: `vivo:`.
+    fisicos: int = 0
+
+    def como_estado(self) -> str:
+        """A mesma gramática do `estado:` global, para os dois compararem."""
+        return (
+            f"native={self.native} emulacao={self.emulacao} "
+            f"mascara={self.mascara} backends={list(self.backends) or '[]'}"
+        )
+
+
+def divergencia_de_mascara(
+    modo: ModoAntecipado | None,
+    *,
+    native_vivo: bool,
+    emulacao_viva: bool,
+    flavor_vivo: str,
+) -> str | None:
+    """Motivo curto da divergência perfil-vs-aparelho, ou None quando casam.
+
+    Decisão PURA, testável sem daemon. A pergunta é uma só: **o jogo vai ver o
+    que o perfil dela prometeu?** Perfil nativo/desktop não promete máscara
+    nenhuma (o jogo vê o físico, e é isso que ele pediu) => nunca diverge.
+    Perfil `gamepad` promete uma máscara concreta, e aí três desfechos a
+    quebram: o daemon em Modo Nativo, a emulação desligada, ou uma máscara
+    diferente de pé.
+    """
+    if modo is None or modo.native or not modo.emulacao:
+        return None
+    if native_vivo:
+        return f"perfil_{modo.mascara}_vs_vivo_nativo"
+    if not emulacao_viva:
+        return f"perfil_{modo.mascara}_vs_vivo_sem_emulacao"
+    if modo.mascara != flavor_vivo:
+        return f"perfil_{modo.mascara}_vs_vivo_{flavor_vivo}"
+    return None
+
+
+def _modo_antecipado(
     profile: Any,
     *,
     flavor_atual: str,
     backends: list[str],
     permite_uhid: bool = False,
     fisicos: int = 0,
-) -> tuple[dict[str, str], str] | None:
-    """(env, motivo) antecipando o modo que o perfil impõe; None = sem opinião.
+) -> ModoAntecipado | None:
+    """O `ModoAntecipado` do perfil, ou None quando ele não tem opinião.
 
     Perfil `mode=None` não materializa arquivo próprio — o wrapper cai no
     `default.env`. `kind=gamepad` com máscara dualsense usa os backends
@@ -1358,32 +1453,23 @@ def _env_for_profile(
         return None
     kind = getattr(mode, "kind", None)
     if kind == "native":
-        return (
-            compose_env(
-                native_mode=True, emulation_enabled=False,
-                flavor=flavor_atual, backends=[],
-            ),
-            "perfil nativo",
+        return ModoAntecipado(
+            native=True, emulacao=False, mascara=flavor_atual,
+            backends=(), motivo="perfil nativo",
         )
     if kind == "desktop":
-        return (
-            compose_env(
-                native_mode=False, emulation_enabled=False,
-                flavor=flavor_atual, backends=[],
-            ),
-            "perfil desktop",
+        return ModoAntecipado(
+            native=False, emulacao=False, mascara=flavor_atual,
+            backends=(), motivo="perfil desktop",
         )
     if kind == "gamepad":
         flavor = str(getattr(mode, "gamepad_flavor", None) or flavor_atual)
         if flavor == "xbox":
             # O vpad Xbox é uinput 045e POR DESIGN — o IGNORE é seguro
             # independente do estado atual (invariante VPAD-06).
-            return (
-                compose_env(
-                    native_mode=False, emulation_enabled=True,
-                    flavor="xbox", backends=["uinput"],
-                ),
-                "perfil gamepad xbox",
+            return ModoAntecipado(
+                native=False, emulacao=True, mascara="xbox",
+                backends=("uinput",), motivo="perfil gamepad xbox",
             )
         # R-05 (auditoria 23/07): quando o perfil pede uma máscara DIFERENTE da
         # vigente, os `backends` recebidos são os do vpad ATUAL — que é de outro
@@ -1420,15 +1506,140 @@ def _env_for_profile(
                 if prognostico_uhid
                 else "perfil gamepad dualsense (prognóstico conservador)"
             )
-        return (
-            compose_env(
-                native_mode=False, emulation_enabled=True,
-                flavor=flavor, backends=backends_efetivos,
-                fisicos=fisicos_efetivos,
-            ),
-            motivo,
+        return ModoAntecipado(
+            native=False, emulacao=True, mascara=flavor,
+            backends=tuple(backends_efetivos), motivo=motivo,
+            fisicos=fisicos_efetivos,
         )
     return None
+
+
+def _env_for_profile(
+    profile: Any,
+    *,
+    flavor_atual: str,
+    backends: list[str],
+    permite_uhid: bool = False,
+    fisicos: int = 0,
+) -> tuple[dict[str, str], str] | None:
+    """(env, motivo) antecipando o modo que o perfil impõe; None = sem opinião.
+
+    Fachada fina sobre `_modo_antecipado` — a `env` é derivada do modo, para
+    o arquivo e a linha `estado:` dele NUNCA descreverem estados diferentes.
+    O `fisicos` atravessa inteiro: é ele que faz a cobertura por físico valer
+    também para o arquivo por appid (IGNORE-NO-FIM-DA-SEQUENCIA-01, 12/08).
+    """
+    modo = _modo_antecipado(
+        profile,
+        flavor_atual=flavor_atual,
+        backends=backends,
+        permite_uhid=permite_uhid,
+        fisicos=fisicos,
+    )
+    if modo is None:
+        return None
+    return env_do_modo(modo), modo.motivo
+
+
+def env_do_modo(modo: ModoAntecipado) -> dict[str, str]:
+    """A `env` que materializa um `ModoAntecipado`."""
+    return compose_env(
+        native_mode=modo.native,
+        emulation_enabled=modo.emulacao,
+        flavor=modo.mascara,
+        backends=list(modo.backends),
+        fisicos=modo.fisicos,
+    )
+
+
+def appids_em_cena(
+    daemon: Any, *, base_dir: Path | None = None, now: float | None = None
+) -> set[int]:
+    """Appids cujo perfil está (ou deveria estar) VALENDO agora.
+
+    Divergência entre a máscara do perfil e a máscara viva é NORMAL em repouso
+    — o arquivo por appid ANTECIPA o modo que o perfil vai impor, e o perfil só
+    passa a valer no launch. O que não é normal é divergir com o jogo em cena;
+    só esse caso vira alarme (`em_cena=True`) e chega à GUI.
+
+    As duas evidências são as mesmas do R-06 (`steam_input_exception_appid`),
+    pelo mesmo motivo: o marker do wrapper é autoritativo e imune a alt-tab; a
+    janela em foco cobre o jogo aberto sem as LaunchOptions do Hefesto.
+    """
+    out: set[int] = set()
+    with contextlib.suppress(Exception):
+        sessao = launch_session_appid(base_dir=base_dir, now=now)
+        if sessao is not None:
+            out.add(sessao)
+    with contextlib.suppress(Exception):
+        store = getattr(daemon, "store", None)
+        wm_class = getattr(store, "window_detect_current_class", None)
+        foco = steam_appid_from_wm_class(
+            wm_class if isinstance(wm_class, str) else None
+        )
+        if foco is not None:
+            out.add(foco)
+    return out
+
+
+def divergencias_publicadas(daemon: Any) -> list[dict[str, Any]]:
+    """As divergências da ÚLTIMA materialização — leitura de memória, sem I/O.
+
+    O `state_full` roda a 10-20 Hz e não pode ler perfis do disco; a mesma
+    disciplina do `dedup_broken`, que se mede na borda de materialização e se
+    publica daqui.
+    """
+    valor = getattr(daemon, "_mascara_divergencias", None)
+    if not isinstance(valor, list):
+        return []
+    return [item for item in valor if isinstance(item, dict)]
+
+
+def _publicar_divergencias(
+    daemon: Any, divergencias: list[dict[str, Any]]
+) -> None:
+    """Grava as divergências no daemon e loga as TRANSIÇÕES no journal.
+
+    MASCARA-01: a linha do arquivo por appid é diagnóstico para quem abre o
+    arquivo; o journal e o `state_full` são o que faz a divergência agir. Só
+    transições são logadas — a materialização roda em toda troca de estado e um
+    log por passagem viraria ruído (e a mesma divergência ficaria "nova" para
+    sempre).
+    """
+    anteriores = {
+        (item.get("appid"), item.get("motivo"))
+        for item in divergencias_publicadas(daemon)
+    }
+    atuais = {(item["appid"], item["motivo"]) for item in divergencias}
+    with contextlib.suppress(Exception):
+        daemon._mascara_divergencias = divergencias
+    for item in divergencias:
+        if (item["appid"], item["motivo"]) in anteriores:
+            continue
+        if item["em_cena"]:
+            # O caso medido: ela escolheu Xbox, salvou, e o aparelho ficou
+            # DualSense com o jogo aberto. Warning porque é defeito visível
+            # para ela, não curiosidade de log.
+            logger.warning(
+                "mascara_do_perfil_divergente",
+                appid=item["appid"],
+                profile=item["profile"],
+                mascara_perfil=item["mascara_perfil"],
+                mascara_viva=item["mascara_viva"],
+                motivo=item["motivo"],
+            )
+        else:
+            logger.info(
+                "mascara_do_perfil_antecipada",
+                appid=item["appid"],
+                profile=item["profile"],
+                mascara_perfil=item["mascara_perfil"],
+                mascara_viva=item["mascara_viva"],
+            )
+    for appid, motivo in sorted(
+        anteriores - atuais, key=lambda par: (par[0] or 0, par[1] or "")
+    ):
+        logger.info("mascara_do_perfil_convergiu", appid=appid, motivo=motivo)
 
 
 def _render(env: dict[str, str], estado: str) -> str:
@@ -1522,8 +1733,10 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
                 )
         _write_atomic(target / "default.env", _render(default_env, estado))
         desired = {"default.env"}
+        em_cena = appids_em_cena(daemon)
+        divergencias: list[dict[str, Any]] = []
         for appid, profile in _steam_profiles(daemon):
-            per_profile = _env_for_profile(
+            modo = _modo_antecipado(
                 profile,
                 flavor_atual=flavor,
                 backends=backends,
@@ -1536,12 +1749,40 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
                 # que a cobertura por físico nunca valeu.
                 fisicos=fisicos,
             )
-            if per_profile is None:
+            if modo is None:
                 continue
-            env, motivo = per_profile
+            # MASCARA-01: a linha `estado:` do arquivo por appid descreve o
+            # modo DO PERFIL — que é o que este arquivo materializa. Antes ela
+            # repetia o estado GLOBAL, e o resultado era a contradição medida
+            # ("perfil gamepad xbox ... mascara=dualsense" na mesma linha): o
+            # melhor detector de divergência da árvore era só texto, e
+            # descrevia o estado errado por cima. O estado vivo continua na
+            # linha, atrás de `vivo:`, porque é dele que a divergência fala.
+            estado_do_perfil = f"{modo.motivo} | {modo.como_estado()}"
+            motivo_divergencia = divergencia_de_mascara(
+                modo,
+                native_vivo=native,
+                emulacao_viva=enabled,
+                flavor_vivo=flavor,
+            )
+            if motivo_divergencia is not None:
+                estado_do_perfil += f" divergente={motivo_divergencia}"
+                divergencias.append(
+                    {
+                        "appid": appid,
+                        "profile": str(getattr(profile, "name", "?")),
+                        "mascara_perfil": modo.mascara,
+                        "mascara_viva": flavor,
+                        "motivo": motivo_divergencia,
+                        "em_cena": appid in em_cena,
+                    }
+                )
             name = f"steam_app_{appid}.env"
-            _write_atomic(target / name, _render(env, f"{motivo} | {estado}"))
+            _write_atomic(
+                target / name, _render(env_do_modo(modo), f"{estado_do_perfil} | vivo: {estado}")
+            )
             desired.add(name)
+        _publicar_divergencias(daemon, divergencias)
         # NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Aqui morreu o
         # laço da allowlist do Steam Input, e ele merece o obituário inteiro
         # porque cada linha dele tinha medição por trás.
@@ -1611,11 +1852,16 @@ __all__ = [
     "LAUNCH_ARM_WINDOW_SEC",
     "PAR_DUALSENSE_FISICO",
     "WRAPPER_MARKER_WINDOW_SEC",
+    "ModoAntecipado",
+    "appids_em_cena",
     "arm_launch_profile",
     "armar_rematerializacao",
     "cobertura_total",
     "compor_lista_vidpid",
     "compose_env",
+    "divergencia_de_mascara",
+    "divergencias_publicadas",
+    "env_do_modo",
     "launch_session_appid",
     "materialize_launch_env",
     "pid_is_alive",

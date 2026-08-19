@@ -18,6 +18,7 @@ backend do vpad.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -536,4 +537,11 @@ def test_o_lifecycle_propaga_a_origem_ate_o_gate() -> None:
 
     fonte = Path(lifecycle.__file__).read_text(encoding="utf-8")
 
-    assert "start_gamepad_emulation(self, flavor=flavor, origin=origin)" in fonte
+    # VERDADE-01 (18/08): o repasse passou a ser pelo seam do DESFECHO
+    # (`start_gamepad_emulation_desfecho`) — o `origin=origin` continua sendo o
+    # que este teste protege.
+    chamada = re.search(
+        r"start_gamepad_emulation_desfecho\((.*?)\)", fonte, re.DOTALL
+    )
+    assert chamada is not None, "o lifecycle não chama mais o seam do desfecho"
+    assert "origin=origin" in chamada.group(1)
