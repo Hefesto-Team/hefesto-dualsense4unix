@@ -2619,7 +2619,7 @@ _bt_macs_conectados() {
         [[ "${achou}" -eq 1 ]] && return 0
     fi
     if command -v btmgmt >/dev/null 2>&1; then
-        saida="$(btmgmt con 2>/dev/null \
+        saida="$(timeout 5 btmgmt con 2>/dev/null \
             | grep -oE '([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}' || true)"
         if [[ -n "${saida}" ]]; then
             printf '%s\n' "${saida^^}"

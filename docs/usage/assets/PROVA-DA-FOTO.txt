@@ -1,0 +1,23 @@
+# Recibo do ensaio de fotos — gerado por scripts/gui-captura/retratar_abas.py
+#
+# NÃO edite à mão. Rode o script; ele reescreve este arquivo.
+# Existe porque uma mudança de tela que não move pixel deixa as fotos
+# idênticas, e sem este recibo o portão das fotos ficaria vermelho para
+# sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
+
+ensaio: 2026-08-19 18:35
+abas:   12
+
+# soma sha256 de cada foto, em ordem alfabética
+b7016b2cc75aab92ba658e195bd815ebd73ef375b21324bb33c733af70c57b02  perfis-jogo-da-steam.png
+6598f6906487d1be87c9fa6156d1194d786a78e36f4c5389ecd8a0f3a53def67  readme_emulacao.png
+d45c3d36b684b3c77b798c6e19a47768fe3708c3e86379f39381ffe017880f74  readme_gatilhos.png
+e20cea32e0ff10fc08c0e1ec92277dd8085a46c5f6f485bc81e7141607d411d8  readme_inicio.png
+e597532a2e8cc297e69cb3ab41d149c90ef333498afa70d4009da6c4c3783f1e  readme_lightbar.png
+093318e477dde4845d7a5d3595a70d00f41915cf712499df577b6365b0a1bd2d  readme_navegacao_dsx.png
+c2a0ac9611fc692b8f7bbfc1b67206706c177ee439bdbba9495b2f0ef192fe72  readme_no_jogo.png
+cd090ed0698520977ce26e55b022fce1a58c5abc1ccc6d2f6aef816d35e67a30  readme_perfis.png
+e6a443a30e597700afdd456ba662cf52de2a0653efbe60ac1dd6e3a26e60fcb8  readme_rumble.png
+a3dd1311633d26847877524a5e44ac1328cd8f207feda9579f2737870a7b5240  readme_sistema.png
+caebc4ede96209044af47b190ba2179cb647cf6c5b070461200b734279fafb78  readme_status.png
+d4f96145200656d478ea9c8297fcf5dd0c83a950b2c7f71676979242ef85c943  social-preview.png
