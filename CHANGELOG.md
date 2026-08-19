@@ -103,6 +103,33 @@ máquina de quem desenvolve o pegava.
 `lib:libhidapi` funcionava enquanto a régua era `grep` na saída do `ldconfig`.
 Com `ctypes.CDLL` é `dlopen`, e ele falha em toda máquina.
 
+#### O `install.sh` travava para SEMPRE em quem não tem Bluetooth
+
+`btmgmt` fala com o kernel pelo socket de management, e sem adaptador espera uma
+resposta que nunca vem: não devolve erro, não devolve vazio, não devolve nada.
+Por isso nem o `2>/dev/null` nem o `|| true` que o cercavam serviam. O install
+parava no passo 8 de 11, calado. Teto de 5 segundos nos quatro pontos.
+
+Achado porque o job do Arch estava vermelho — e ele não reprovava, **travava**,
+morrendo no teto de 30 minutos do CI. Depois da cura: Arch aprovado em 100s,
+Debian e Fedora aprovados, os três com o install rodando como usuária comum em
+contêiner limpo.
+
+#### No Modo Nativo a aba dizia "Vibração travada" com o motor parado
+
+Medido: `rumble.set` dentro do modo produz **zero write no fio**, e o daemon
+respondia `ok`. Pior que a tela mentir — gravar o par DESARMA a cura HARM-16, e
+o controle sai do Modo Nativo vibrando, porque quem vibrava ali era o jogo.
+
+Decisão dela, com as três opções na mesa: o daemon **recusa, com motivo**.
+Impedir o clique na tela contraria a regra de que a vontade da GUI prevalece;
+recusar diz o que aconteceu, impedir esconde. A recusa entra nos três pontos
+onde a intenção é gravada — inclusive o "Aplicar" do rodapé, que era o
+vazamento silencioso.
+
+E uma frase da aba era falsa por extenso ("Ela continua valendo para a vibração
+que você fixar aqui embaixo", dita justamente sob Modo Nativo). Substituída.
+
 #### O doctor não cobrava as duas obrigatórias
 
 E a primeira régua do loader SVG **mentia**: perguntava ao catálogo do
@@ -124,6 +151,11 @@ leia o estado interno de um jogo sob Proton. Nenhuma célula foi preenchida: est
 onda foi construída com dublê, e preencher sem ensaio é o que o arquivo proíbe.
 
 ### Aberto
+
+**Decisão dela pendente:** no «Parar» dentro do Modo Nativo, o daemon hoje SOLTA
+o par (volta ao passthrough, mantendo a HARM-16 armada). A alternativa é recusar
+o gesto igual aos outros dois. A medição de 19/08 levantou a pergunta e não a
+respondeu.
 
 Nada desta onda foi visto em hardware. O roteiro de validação está em
 [`docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md`](docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
