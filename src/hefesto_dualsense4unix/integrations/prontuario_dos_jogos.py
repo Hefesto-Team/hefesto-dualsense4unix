@@ -49,12 +49,20 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
 try:  # importado como módulo do pacote (GUI/daemon/testes)
     from .api_de_entrada import Evidencia, Veredito, examinar_pasta
+    from .steam_input_ponte import (
+        PONTE_LIGADA,
+        PONTE_NADA,
+        arvore_viva,
+        conferir_reguas,
+        garantir_ponte,
+        ler_arvores,
+    )
     from .steam_launch_options import (
         _PAR_ACF,
         WRAPPER_PREFIX,
@@ -69,6 +77,14 @@ try:  # importado como módulo do pacote (GUI/daemon/testes)
     )
 except ImportError:  # pragma: no cover - executado como script avulso
     from api_de_entrada import Evidencia, Veredito, examinar_pasta  # type: ignore[no-redef]
+    from steam_input_ponte import (  # type: ignore[no-redef]
+        PONTE_LIGADA,
+        PONTE_NADA,
+        arvore_viva,
+        conferir_reguas,
+        garantir_ponte,
+        ler_arvores,
+    )
     from steam_launch_options import (  # type: ignore[no-redef]
         _PAR_ACF,
         WRAPPER_PREFIX,
@@ -120,18 +136,19 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
     ),
     EXCECAO_INERTE: (
         "Este jogo está na sua lista de exceções do Steam Input, mas o Steam "
-        "Input está DESLIGADO para ele. A lista só preserva o que já estava "
-        "ligado — ela nunca liga.",
-        "Ligue o Steam Input para este jogo na própria Steam (Propriedades > "
-        "Controle). A exceção então passa a valer e o Hefesto não o desliga de "
-        "novo.",
-        False,
+        "Input está DESLIGADO para ele — a exceção não está fazendo nada.",
+        "O Hefesto liga sozinho: escreve o UseSteamControllerConfig do jogo "
+        "assim que a Steam fechar (é o único instante em que a escrita "
+        "sobrevive — com ela viva, a Steam regrava o arquivo ao sair e "
+        "engole).",
+        True,
     ),
 }
 
-#: `UseSteamControllerConfig`: o bloco do jogo dentro de `apps`. `"0"` é
-#: desligado; qualquer outro valor é alguma forma de ligado.
-_USA_STEAM_INPUT = "usesteamcontrollerconfig"
+#: `UseSteamControllerConfig` mora no bloco do jogo, dentro da árvore `apps`
+#: VIVA — e quem sabe qual delas é ela mora no `steam_input_ponte`. Aqui não
+#: há mais cópia do nome da chave: duas cópias do mesmo nome é como se cria uma
+#: discordância que ninguém vê.
 #: A chave global equivalente, em `system`.
 _PS_SUPPORT_GLOBAL = "steamcontroller_pssupport"
 
@@ -226,9 +243,19 @@ class Prontuario:
         if self.na_allowlist and self.steam_input_ligado is False:
             # Ela pôs o jogo na lista de exceções — o gesto diz "quero Steam
             # Input aqui". Achado em 16/08/2026: o Sackboy estava assim, e a
-            # exceção não fazia nada. Nomear é o mínimo; DECIDIR é dela, porque
-            # daqui não dá para distinguir "a lista entrou tarde" de "eu desliguei
-            # depois e mudei de ideia".
+            # exceção não fazia nada.
+            #
+            # SUBSTITUÍDO em 19/08/2026 (PONTE-STEAM-INPUT-01). O que estava
+            # escrito aqui era: *"Nomear é o mínimo; DECIDIR é dela, porque
+            # daqui não dá para distinguir 'a lista entrou tarde' de 'eu
+            # desliguei depois e mudei de ideia'"*. A distinção não é
+            # necessária: a lista é o gesto MAIS RECENTE que o produto conhece,
+            # e ela quer dizer uma coisa só — *"a entrada deste jogo vem da
+            # Steam"*. Deixar a decisão pendurada custou DON'T SCREAM, que é da
+            # classe "só aceita Steam Input" e ficou sem controle nenhum
+            # enquanto o guarda desligava a única ponte que o fazia funcionar.
+            # Tirar da lista continua sendo um clique dela; o produto obedece
+            # à lista, não a adivinha.
             achados.append(Estorvo(EXCECAO_INERTE))
         if self.raiz is not None and (self.evidencia is None or not self.evidencia.executavel):
             achados.append(Estorvo(SEM_EXECUTAVEL))
@@ -386,11 +413,19 @@ def jogos_instalados(home: Path | None = None) -> list[tuple[str, str, Path | No
 def _steam_input_do_vdf(texto: str) -> tuple[dict[str, str], str | None]:
     """`({appid: UseSteamControllerConfig}, SteamController_PSSupport global)`.
 
-    Parser estrutural pela mesma razão do `read_apps_by_appid`: um regex de
-    linha solta enxerga o valor sem saber de qual jogo ele é, e o
-    `UseSteamControllerConfig` aparece dentro do bloco de cada app.
+    SUBSTITUÍDO em 19/08/2026 (PONTE-STEAM-INPUT-01). A versão anterior aceitava
+    o `UseSteamControllerConfig` de QUALQUER bloco chamado `apps` (`pilha[-2] ==
+    "apps"`) — o mesmo descuido que o `ARVORE-ERRADA-01` já havia curado do lado
+    das `LaunchOptions`, e que aqui devolvia o valor da ÚLTIMA árvore em que o
+    appid aparecesse. Quem sabe onde esta chave mora é o `steam_input_ponte`, e
+    ele **procura** a árvore viva em vez de a supor: a medição de 19/08 mostrou
+    que ela NÃO é a árvore canônica das `LaunchOptions` (as onze ocorrências da
+    chave, no arquivo dela, estão em `UserLocalConfigStore/apps`).
+
+    Um arquivo em que as duas réguas discordam, ou em que a árvore viva não se
+    prova, devolve dicionário VAZIO: o prontuário passa a dizer "herdado" em vez
+    de inventar um valor. Silêncio honesto vale mais que número convincente.
     """
-    por_app: dict[str, str] = {}
     global_ps: str | None = None
     pilha: list[str] = []
     pendente: str | None = None
@@ -410,22 +445,20 @@ def _steam_input_do_vdf(texto: str) -> tuple[dict[str, str], str | None]:
         par = _PAR_ACF.match(cru)
         if par is not None:
             pendente = None
-            chave = _desescapar_acf(par.group("chave")).lower()
-            valor = _desescapar_acf(par.group("valor"))
-            if chave == _PS_SUPPORT_GLOBAL:
-                global_ps = valor
-            elif (
-                chave == _USA_STEAM_INPUT
-                and len(pilha) >= 2
-                and pilha[-2].lower() == "apps"
-                and pilha[-1].isdigit()
-            ):
-                por_app[pilha[-1]] = valor
+            if _desescapar_acf(par.group("chave")).lower() == _PS_SUPPORT_GLOBAL:
+                global_ps = _desescapar_acf(par.group("valor"))
             continue
         so_chave = _SO_CHAVE_RE.match(cru)
         if so_chave is not None:
             pendente = _desescapar_acf(so_chave.group(1))
-    return por_app, global_ps
+
+    arvores = ler_arvores(texto)
+    if conferir_reguas(texto, arvores) is not None:
+        return {}, global_ps
+    viva = arvore_viva(arvores)
+    if viva is None:
+        return {}, global_ps
+    return {appid: valor for appid, (valor, _) in viva.chaves.items()}, global_ps
 
 
 def levantar_censo(
@@ -492,6 +525,152 @@ def levantar_censo(
     return Censo(jogos=fichas, erros=erros)
 
 
+#: Status de `curar_o_que_e_automatico`.
+CURA_NADA = "nada_a_curar"
+CURA_FEITA = "curado"
+CURA_ADIADA = "adiado"
+CURA_SO_MANUAL = "so_reparo_manual"
+
+
+@dataclass(frozen=True)
+class Cura:
+    """O que o produto consertou sozinho, e o que ele NÃO consertou."""
+
+    status: str
+    #: chave do estorvo -> desfecho de quem cuida dele.
+    desfechos: dict[str, str] = field(default_factory=dict)
+    #: appids efetivamente tocados, por estorvo.
+    tocados: dict[str, list[str]] = field(default_factory=dict)
+    #: estorvos presentes cuja cura NÃO é automática (ficam para ela).
+    manuais: list[str] = field(default_factory=list)
+    #: `--dry-run`: nada foi escrito. A frase TEM de dizer isso — anunciar
+    #: sucesso sobre um no-op é o defeito que a HONESTIDADE-STEAM-01 curou.
+    simulacao: bool = False
+
+    def frase(self) -> str:
+        if self.status == CURA_NADA:
+            return "Nada a consertar sozinho."
+        if self.status == CURA_ADIADA:
+            return (
+                "Tenho conserto para fazer, mas a Steam (ou um jogo) está "
+                "aberta — faço assim que ela fechar."
+            )
+        if self.status == CURA_SO_MANUAL:
+            return "O que sobrou só se conserta à mão — está descrito por jogo."
+        tudo = sorted({a for lista in self.tocados.values() for a in lista})
+        verbo = "Consertaria" if self.simulacao else "Consertei"
+        cauda = " (simulação: nada foi escrito)" if self.simulacao else ""
+        return f"{verbo} sozinho: {len(tudo)} jogo(s) — {', '.join(tudo)}.{cauda}"
+
+
+def _curar_excecao_inerte(
+    home: Path | None, *, dry_run: bool
+) -> tuple[str, list[str]]:
+    """A lista de exceções deixa de ser inerte: o produto LIGA o Steam Input."""
+    status, _estado, detalhe = garantir_ponte(home, dry_run=dry_run)
+    tocados = [
+        item["appid"]
+        for item in detalhe
+        if item["desfecho"] == PONTE_LIGADA and item["appid"]
+    ]
+    return status, tocados
+
+
+def _curar_sem_wrapper(home: Path | None, *, dry_run: bool) -> tuple[str, list[str]]:
+    """A reposição do `hefesto-launch`, que a sentinela já sabia fazer.
+
+    Ela roda no gesto de salvar/aplicar um perfil e no guarda; entra aqui para
+    que a tabela `_CURAS` seja a lista COMPLETA do que o produto conserta
+    sozinho, e não uma amostra. Rodar duas vezes no mesmo ciclo é inócuo: o
+    reparo delega ao `apply_wrapper_to_all_games`, que pula quem já tem.
+    """
+    try:  # importado como módulo do pacote
+        from .sentinela_do_wrapper import reparar_ou_adiar
+    except ImportError:  # pragma: no cover - executado como script avulso
+        from sentinela_do_wrapper import reparar_ou_adiar  # type: ignore[no-redef]
+    status, _censo, resultado = reparar_ou_adiar(home, dry_run=dry_run)
+    tocados = (
+        [item["appid"] for item in resultado["applied"]] if resultado else []
+    )
+    return status, tocados
+
+
+#: Quem cuida de cada estorvo automático. É esta tabela que torna o
+#: `Estorvo.automatica` uma AFIRMAÇÃO em vez de uma promessa: um estorvo com
+#: `automatica=True` e sem entrada aqui reprova no portão do
+#: `test_ponte_steam_input_01`, que compara as duas listas.
+_CURAS: dict[str, Callable[..., tuple[str, list[str]]]] = {
+    EXCECAO_INERTE: _curar_excecao_inerte,
+    SEM_WRAPPER: _curar_sem_wrapper,
+}
+
+
+def curar_o_que_e_automatico(
+    home: Path | None = None, *, dry_run: bool = False, censo: Censo | None = None
+) -> Cura:
+    """Conserta os estorvos que o prontuário declara automáticos. Sem clique.
+
+    PONTE-STEAM-INPUT-01, 19/08/2026. Este módulo nasceu em 16/08 modelando
+    estorvo, cura e `Estorvo.automatica` — *"O produto conserta sozinho, sem ela
+    clicar em nada?"* — e **nada no produto o importava**: só o teste dele.
+    Modelo que ninguém consulta é o defeito mais caro desta casa, o da cura
+    escrita e nunca ligada. Esta função é o fio.
+
+    Só entram estorvos com `automatica=True`. Os outros voltam em `manuais`,
+    nomeados — porque a alternativa (silêncio) é a que faz a pessoa pensar que
+    está tudo resolvido.
+
+    O gate de Steam/jogo aberto NÃO mora aqui: cada cura tem o seu, e cada uma
+    sabe qual é o seu instante. A ponte, por exemplo, só sobrevive com a Steam
+    fechada — e diz `adiado_steam_aberta` quando não é a hora.
+    """
+    ficha = censo if censo is not None else levantar_censo(home, examinar=False)
+    presentes: set[str] = set()
+    manuais: set[str] = set()
+    for jogo in ficha.impedidos:
+        for estorvo in jogo.estorvos:
+            if estorvo.automatica:
+                presentes.add(estorvo.chave)
+            else:
+                manuais.add(estorvo.chave)
+    if not presentes:
+        return Cura(
+            status=CURA_SO_MANUAL if manuais else CURA_NADA,
+            manuais=sorted(manuais),
+        )
+    desfechos: dict[str, str] = {}
+    tocados: dict[str, list[str]] = {}
+    for chave in sorted(presentes):
+        cura = _CURAS.get(chave)
+        if cura is None:
+            # Estorvo automático sem quem o cure: exatamente a mentira que este
+            # módulo existe para não contar. O portão reprova antes de chegar
+            # aqui; em produção, o honesto é dizer que ficou para ela.
+            manuais.add(chave)
+            continue
+        status, alvos = cura(home, dry_run=dry_run)
+        desfechos[chave] = status
+        if alvos:
+            tocados[chave] = alvos
+    if any(t for t in tocados.values()):
+        estado = CURA_FEITA
+    elif any(d.startswith("adiado") for d in desfechos.values()):
+        estado = CURA_ADIADA
+    elif manuais:
+        estado = CURA_SO_MANUAL
+    elif all(d == PONTE_NADA for d in desfechos.values()):
+        estado = CURA_NADA
+    else:
+        estado = CURA_ADIADA
+    return Cura(
+        status=estado,
+        desfechos=desfechos,
+        tocados=tocados,
+        manuais=sorted(manuais),
+        simulacao=dry_run,
+    )
+
+
 def _tabela(censo: Censo) -> str:
     """O relatório de terminal — uma linha por jogo, e o nome sempre."""
     largura = max((len(j.nome) for j in censo.jogos), default=4)
@@ -529,7 +708,25 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="não varre os executáveis (só a linha de inicialização)",
     )
+    ap.add_argument(
+        "--curar",
+        action="store_true",
+        help="conserta o que o prontuário declara automático (sem clique dela)",
+    )
+    ap.add_argument(
+        "--dry-run", action="store_true", help="não escreve nada (com --curar)"
+    )
     args = ap.parse_args(list(argv) if argv is not None else None)
+    if args.curar:
+        cura = curar_o_que_e_automatico(dry_run=args.dry_run)
+        print(f"[prontuario] resultado={cura.status}")
+        for chave, desfecho in sorted(cura.desfechos.items()):
+            alvos = ", ".join(cura.tocados.get(chave, ())) or "-"
+            print(f"[prontuario] {chave}: {desfecho} ({alvos})")
+        for chave in cura.manuais:
+            print(f"[prontuario] {chave}: só reparo manual")
+        print(f"[prontuario] {cura.frase()}")
+        return 0
     censo = levantar_censo(examinar=not args.rapido)
     if args.json:
         print(json.dumps(censo.como_dicionario(), ensure_ascii=False, indent=2))
