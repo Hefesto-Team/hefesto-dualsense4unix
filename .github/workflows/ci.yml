@@ -518,7 +518,20 @@ jobs:
             libgirepository-1.0-1 libgtk-3-0 libcairo2 libcairo-gobject2 \
             libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
             xvfb dbus-x11 \
-            librsvg2-2 librsvg2-common gir1.2-rsvg-2.0
+            librsvg2-2 librsvg2-common gir1.2-rsvg-2.0 \
+            fonts-space-grotesk-ttf fonts-jetbrains-mono
+            # AS FONTES NAO SAO ENFEITE - sao a regua. Mesma classe de armadilha
+            # do librsvg logo acima, e ela custou uma leva inteira em 19/08: os
+            # testes de PIXEL (test_layout_orcamento_altura,
+            # test_status_faixa_blocos) reprovavam SO aqui, e passavam em qualquer
+            # maquina de quem desenvolve. Medido: o theme.css pede "Space Grotesk"
+            # no corpo e "JetBrains Mono" nos valores, o install.sh as INSTALA
+            # (scripts/install_fonts.sh, opt-out --no-fonts), e este job - que monta
+            # as dependencias a mao e nunca roda o install - nao as tinha. O
+            # fontconfig substitui EM SILENCIO, o texto mede diferente, e os pisos
+            # de largura e altura mudam: "o card pediu 1043px de MINIMO, o piso e
+            # 1040px" foi so isto. Sem elas o job mede uma tela que nenhuma
+            # instalacao real produz.
           # SVG NÃO é opcional aqui: os glifos dos botões (ButtonGlyph) são SVG
           # carregados por `GdkPixbuf.new_from_file_at_scale`, e sem o loader do
           # librsvg o pixbuf sai `None`. Medido na estreia da v0.3.0: quatro
