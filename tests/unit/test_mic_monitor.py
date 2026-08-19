@@ -17,10 +17,12 @@ from __future__ import annotations
 
 import array
 import threading
+import time
 from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.app import mic_monitor
 from hefesto_dualsense4unix.app.mic_monitor import (
     LeituraMic,
     MicMonitor,
@@ -234,6 +236,41 @@ def test_captura_sem_parec_nao_levanta_e_nao_publica() -> None:
     assert publicados == []
 
 
+@pytest.fixture(autouse=True)
+def _sem_conhecimento_de_usb(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Este arquivo NÃO sabe nada de USB — e agora diz isso em voz alta.
+
+    MIC-QUE-DEPENDIA-DA-MAQUINA-01 (19/08/2026). Os testes daqui dublam o
+    `pactl` e o capturador, e ainda assim `MicMonitor.reconciliar` chamava
+    `usb_pai_por_uniq`, que lê o **sysfs de verdade** da máquina que estiver
+    rodando. O resultado passava a depender do host: verde aqui, vermelho no
+    runner do CI, sempre no mesmo teste. Medido — com um casamento por USB que
+    dá dono ao nó de áudio, `reconciliar` devolve ZERO captura e a asserção
+    `1 == 0` sai igualzinha à do CI.
+
+    O casamento por USB tem casa própria (`test_a_placa_e_o_controle_pelo_usb_pai`),
+    com sysfs dublado inteiro. Aqui ele fica de fora por escolha, não por
+    esquecimento — que é a diferença entre um dublê e um buraco.
+    """
+    monkeypatch.setattr(mic_monitor, "usb_pai_por_uniq", lambda _uniqs, **_kw: {})
+
+
+def _esperar_capturas(abertos: list[str], quantas: int, limite_s: float = 5.0) -> None:
+    """Espera as capturas NASCEREM — elas abrem em thread, não no `reconciliar`.
+
+    `_Captura.iniciar()` dá `Thread.start()` e volta na hora; quem chama o
+    `capturador` é o `_loop` já na thread. Afirmar sobre `abertos` na linha
+    seguinte é afirmar sobre uma corrida — e o teste passava porque o GIL
+    costuma ceder rápido, não porque o código garantisse algo.
+
+    A espera é pelo EFEITO, com teto: cinco segundos é mil vezes o que ela leva
+    aqui, e ainda assim termina em milissegundos no caso bom.
+    """
+    limite = time.monotonic() + limite_s
+    while len(abertos) < quantas and time.monotonic() < limite:
+        time.sleep(0.002)
+
+
 def _monitor(saida_pactl: str = _PACTL) -> tuple[MicMonitor, list[str]]:
     """Monitor com supervisora manual; `abertos` registra as sources pedidas."""
     abertos: list[str] = []
@@ -267,6 +304,7 @@ def test_aba_visivel_abre_a_captura_do_controle() -> None:
     monitor.set_controles(("aabbcc010203",))
 
     monitor.reconciliar()
+    _esperar_capturas(abertos, 1)
 
     assert len(abertos) == 1
     assert "Wireless_Controller" in abertos[0]
