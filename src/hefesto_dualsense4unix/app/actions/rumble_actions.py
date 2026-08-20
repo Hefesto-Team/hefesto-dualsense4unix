@@ -41,6 +41,7 @@ from hefesto_dualsense4unix.app.ipc_bridge import (
     rumble_policy_set_checked,
     rumble_set_checked,
     rumble_stop,
+    rumble_stop_checked,
 )
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     RUMBLE_POLICY_MULT,
@@ -683,10 +684,18 @@ class RumbleActionsMixin(WidgetAccessMixin):
         self._cancel_rumble_test_timer()
         self._set_scales(0, 0)
         self._zerar_rumble_no_rascunho()
-        rumble_stop()
+        # NATIVO-RUMBLE-01, segunda metade (20/08/2026): este era o terceiro
+        # botão, e o único que ficou mentindo depois da leva de 19/08. No Modo
+        # Nativo o daemon não trava silêncio — ele SOLTA o par e diz que não
+        # alcança o motor do jogo. Anunciar "travada em silêncio" ali era prometer
+        # exatamente o que não aconteceu.
+        _ok, motivo = rumble_stop_checked()
         self._toast_rumble(
-            f"Vibração parada (travada em silêncio) — clique "
-            f"“{_BTN_GIVE_BACK_TO_GAME}” para o jogo voltar a controlar a vibração"
+            motivo
+            or (
+                f"Vibração parada (travada em silêncio) — clique "
+                f"“{_BTN_GIVE_BACK_TO_GAME}” para o jogo voltar a controlar a vibração"
+            )
         )
 
     def on_rumble_passthrough(self, _btn: Gtk.Button) -> None:

@@ -410,12 +410,20 @@ def _recusa_no_corpo(resultado: Any) -> str | None:
     motor parado — a mentira que o NATIVO-RUMBLE-01 mediu, e a mesma classe de
     defeito do HARM-19 pelo avesso.
 
-    Devolve o ``motivo`` (frase pronta para uma pessoa) quando houve recusa, e
-    ``None`` quando o pedido valeu.
+    **E não é só recusa** (20/08/2026, censo das nove abas). O ``rumble.stop``
+    dentro do Modo Nativo devolve ``status: "ok"`` — porque ele REALIZOU parte do
+    pedido: soltou o par que o Hefesto segurava. O que ele não consegue é calar o
+    motor que o JOGO está tocando pelo hidraw, e é isso que o ``motivo`` diz. Ler
+    só o ``status`` deixava a aba anunciar "Vibração parada (travada em
+    silêncio)" com o motor girando.
+
+    Então a regra é: **se o daemon mandou uma frase, ela é para ela.** O produto
+    não põe ``motivo`` numa resposta sem ter o que explicar.
+
+    Devolve o ``motivo`` quando houver um, e ``None`` quando o pedido valeu sem
+    ressalva.
     """
     if not isinstance(resultado, dict):
-        return None
-    if resultado.get("status") != "recusado":
         return None
     motivo = resultado.get("motivo")
     return motivo if isinstance(motivo, str) and motivo else None
@@ -431,8 +439,8 @@ def rumble_set_checked(weak: int, strong: int) -> tuple[bool, str | None]:
     ok, resultado = _safe_call("rumble.set", {"weak": weak, "strong": strong})
     if not ok:
         return False, None
-    motivo = _recusa_no_corpo(resultado)
-    return (motivo is None), motivo
+    recusou = isinstance(resultado, dict) and resultado.get("status") == "recusado"
+    return (not recusou), _recusa_no_corpo(resultado)
 
 
 def rumble_set(weak: int, strong: int) -> bool:
@@ -448,9 +456,29 @@ def rumble_set(weak: int, strong: int) -> bool:
     return ok
 
 
+def rumble_stop_checked() -> tuple[bool, str | None]:
+    """Para a vibração devolvendo a FRASE do daemon quando ele tem uma.
+
+    NATIVO-RUMBLE-01, segunda metade (20/08/2026). Dentro do Modo Nativo este
+    gesto não trava silêncio: ele SOLTA o par que o Hefesto segurava e devolve
+    ``status: "ok"`` com o motivo, porque calar o motor que o jogo toca pelo
+    hidraw não está ao alcance do produto. A aba anunciava "Vibração parada
+    (travada em silêncio)" nesse caso — a mesma mentira que o "Aplicar" e o
+    "Testar" já não contam desde 19/08, e que ficou aqui por eu ter parado nos
+    dois primeiros botões.
+    """
+    ok, resultado = _safe_call("rumble.stop", {})
+    if not ok:
+        return False, None
+    return True, _recusa_no_corpo(resultado)
+
+
 def rumble_stop() -> bool:
-    """Para rumble e fixa estado (0, 0) para re-asserção (BUG-RUMBLE-APPLY-IGNORED-01)."""
-    ok, _ = _safe_call("rumble.stop", {})
+    """Para rumble e fixa estado (0, 0) para re-asserção (BUG-RUMBLE-APPLY-IGNORED-01).
+
+    Descarta a frase do daemon — use ``rumble_stop_checked`` para tê-la.
+    """
+    ok, _motivo = rumble_stop_checked()
     return ok
 
 
