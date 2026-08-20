@@ -48,6 +48,12 @@ CABECALHO = [
     # querem — nenhum deles fala de grau.
     "cabo_ate_onde_foi",
     "radio_ate_onde_foi",
+    # PONTE-NAO-DECLARADA-01 (20/08/2026): a régua da regra 15, e EXIGIDA no
+    # cabeçalho pelo mesmo motivo do par acima — sem a coluna,
+    # `linha.get("ponte_alcanca")` devolveria None em toda linha e a regra dura
+    # aprovaria o mapa inteiro sem dizer uma palavra. Vazia aqui, que é o que
+    # estes casos querem: nenhum deles fala de ponte, e nenhum é `uhid` forte.
+    "ponte_alcanca",
     "teste_que_morde",
     "provado_em",
     "validade_dias",

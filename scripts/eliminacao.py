@@ -127,8 +127,39 @@ def carrega(caminho: Path = ENSAIOS) -> dict[str, list[dict]]:
 LADOS = ("cabo", "radio")
 
 
-def carrega_por_lado(caminho: Path = ENSAIOS) -> dict[tuple[str, str], list[dict]]:
-    """Como `carrega`, mas separando o cabo do rádio.
+def sustentam_a_ponte(ensaios: list[dict], ponte: str) -> list[dict]:
+    """Dos `ensaios`, os que sustentam uma afirmação sobre `ponte`.
+
+    A REGRA, escrita por extenso porque ela é assimétrica de propósito
+    (ENSAIO-QUE-NAO-DIZ-A-PONTE-01, 20/08/2026):
+
+    - **ensaio de `ponte` VAZIA sustenta afirmação de QUALQUER ponte.** Vazio
+      quer dizer "não declarou", e os 177 ensaios do caderno nasceram assim, sem
+      o campo existir. Recusá-los reprovaria hoje toda célula de grau forte que
+      passa — e reprovar afirmação VERDADEIRA é o erro que esta casa já pagou
+      caro em 12/08 e em 13/08.
+    - **ensaio COM `ponte` sustenta só a DELA.** Quem declarou por onde mediu
+      disse também por onde NÃO mediu: um ensaio pela máscara Xbox não fala pelo
+      giroscópio, que só existe pela nossa máscara DualSense.
+
+    Note que "vazio sustenta qualquer ponte" NÃO é o mesmo que "vazio serve para
+    tudo": é a leitura mais generosa possível de um ensaio que não declarou, e
+    ela vale só enquanto ninguém declara. Quem quiser exigir declaração explícita
+    o faz na sua própria regra, como o portão faz com os degraus de ENTRADA.
+
+    `ponte` vazia aqui quer dizer "a afirmação também não declarou ponte", e aí
+    não há o que discriminar: devolve tudo.
+    """
+    alvo = ponte.strip()
+    if not alvo:
+        return list(ensaios)
+    return [e for e in ensaios if (e.get("ponte") or "").strip() in ("", alvo)]
+
+
+def carrega_por_lado(
+    caminho: Path = ENSAIOS, ponte: str = "",
+) -> dict[tuple[str, str], list[dict]]:
+    """Como `carrega`, mas separando o cabo do rádio — e, se pedirem, a ponte.
 
     Isto NÃO é refinamento: é o que impede a migração para o v2 de apagar o
     estudo da lightbar. Os sete ensaios por rádio e o do cabo levantam o MESMO
@@ -137,6 +168,18 @@ def carrega_por_lado(caminho: Path = ENSAIOS) -> dict[tuple[str, str], list[dict
     lado se contradizendo e devolveria CONFUSO, jogando fora dezesseis dias de
     isolamento. Separados, o rádio continua com o culpado isolado e o cabo
     continua explicando o que JÁ funcionava.
+
+    A `ponte` entra como TERCEIRO eixo do casamento (20/08/2026), e entra por
+    parâmetro em vez de virar parte da chave por uma razão de compatibilidade,
+    não de estética: a chave `(linha_id, transporte)` é lida em quatro lugares
+    (`bancada.py` duas vezes, `gerar-mapa.py`, `check_paridade_transporte.py`),
+    todos com `.get((ident, lado), [])` escrito à mão. Trocar a chave por uma
+    tripla faria os quatro devolverem lista vazia CALADOS — e lista vazia é
+    exatamente o que o portão lê como "não há ensaio nenhum". A cura seria pior
+    que a doença.
+
+    Sem `ponte` o comportamento é o de sempre, ensaio nenhum some. Com `ponte`,
+    o filtro é o `sustentam_a_ponte` — a regra está lá, e é só dela.
     """
     if not caminho.exists():
         return {}
@@ -145,7 +188,13 @@ def carrega_por_lado(caminho: Path = ENSAIOS) -> dict[tuple[str, str], list[dict
     por_lado: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for e in tudo:
         por_lado[(e["linha_id"], (e.get("transporte") or "").strip())].append(e)
-    return dict(por_lado)
+    if not ponte.strip():
+        return dict(por_lado)
+    return {
+        chave: sustentados
+        for chave, ensaios in por_lado.items()
+        if (sustentados := sustentam_a_ponte(ensaios, ponte))
+    }
 
 
 def julga_linha(ensaios: list[dict]) -> list[Julgamento]:

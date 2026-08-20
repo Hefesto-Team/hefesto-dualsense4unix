@@ -678,6 +678,12 @@ def linhas_de_caderno(
                 # fabricação que a ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 existe para
                 # impedir. Posicional, como as outras colunas deste escritor.
                 "",
+                # `ponte` VAZIA, pela mesma razão e no mesmo lugar
+                # (ENSAIO-QUE-NAO-DIZ-A-PONTE-01, 20/08/2026): este ensaio fala
+                # com o aparelho pelo hidraw, sem jogo e sem vpad no meio, então
+                # não há ponte a declarar. Vazio aqui quer dizer "não declarou",
+                # nunca "serve para toda ponte". Posicional, como o `degrau`.
+                "",
                 quando,
                 suspeito,
                 "sim" if presente else "não",
@@ -704,12 +710,15 @@ def gravar_no_caderno(linhas: list[list[str]]) -> None:
         escritor = csv.writer(fh)
         if novo:
             escritor.writerow(
-                # `degrau` entra depois de `transporte` porque é o mesmo tipo
-                # de eixo: o que a medição estava medindo
-                # (ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01, 20/08/2026). Este ensaio mede
-                # SAÍDA, então o campo sai VAZIO — declarar degrau que não se
-                # mediu é a fabricação que a regra existe para impedir.
-                ["id", "linha_id", "transporte", "degrau", "quando", "suspeito",
+                # `degrau` e `ponte` entram depois de `transporte` porque são o
+                # mesmo tipo de eixo: o que a medição estava medindo
+                # (ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01, 20/08/2026) e POR ONDE ela
+                # chegou (ENSAIO-QUE-NAO-DIZ-A-PONTE-01, 20/08/2026). Este
+                # ensaio mede SAÍDA e fala direto com o aparelho, então os dois
+                # saem VAZIOS — declarar degrau ou ponte que não se mediu é a
+                # fabricação que a regra existe para impedir.
+                ["id", "linha_id", "transporte", "degrau", "ponte", "quando",
+                 "suspeito",
                  "presente", "resultado", "resultado_da_feature", "observado_por",
                  "fonte", "nota", "linha_id_v1"]
             )
