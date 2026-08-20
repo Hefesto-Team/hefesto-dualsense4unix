@@ -27,6 +27,11 @@ from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
     apply_rumble_policy,
     uniq_do_alvo_de_output,
 )
+from hefesto_dualsense4unix.integrations.no_do_vpad import (
+    NO_DESCONHECIDO,
+    no_ainda_vale,
+    resolver_no_do_vpad,
+)
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -209,6 +214,16 @@ _HID_ORFAO_VID = "054C"
 #: seriam 10 `listdir` por segundo para responder a mesma pergunta. Mesmo
 #: padrão e mesmo número do cache do marker do wrapper, logo acima.
 _HID_ORFAOS_TTL_SEC = 2.0
+
+#: QUEM-SEGURA-O-NOSSO-NO-01: TTL (s) da varredura de `/sys/class/input` que
+#: resolve `evdev`/`hidraw` de cada vpad. Mesmo número dos caches irmãos, e
+#: pela mesma razão — o `state_full` roda a 10-20 Hz e isto muda por gesto
+#: (vpad nascer/morrer). O TTL sozinho deixaria até 2 s de caminho velho no
+#: payload, que é justamente a mentira que o inode existe para impedir; por
+#: isso o cache é re-conferido a cada leitura por `no_ainda_vale`, um `stat`
+#: que não abre nada. TTL para o caso de o nó ter simplesmente APARECIDO
+#: (não há o que reconferir), `stat` para o caso de ele ter MUDADO.
+_NO_DO_VPAD_TTL_SEC = 2.0
 
 
 def _e_dualsense_por_bluetooth(id_do_device: str) -> bool:
@@ -701,6 +716,12 @@ class IpcHandlersMixin:
     #: caches acima: class attribute (o mixin não é dataclass) com shadow por
     #: instância no primeiro uso.
     _hid_orfaos_cache: tuple[float, list[str]] | None = None
+
+    #: QUEM-SEGURA-O-NOSSO-NO-01: cache TTL da varredura de
+    #: `/sys/class/input` que resolve o nó de cada vpad (ver
+    #: `_no_do_vpad_cached`). Chave = `uniq` do vpad, ou `nome:<name>` quando
+    #: não há `uniq` (uinput). Mesmo padrão dos caches acima.
+    _no_do_vpad_cache: dict[str, tuple[float, dict[str, Any]]] | None = None
 
     #: MASCARA-01: a task do arming de launch em voo (ver
     #: `_agendar_arming_do_launch`). Referência forte para o GC não recolher
@@ -2690,12 +2711,55 @@ class IpcHandlersMixin:
                     # abaixo, já é esse mesmo fato com o nome que esta lista
                     # sempre usou.
                     identidade = identidade_do_vpad(vp)
+                    # QUEM-SEGURA-O-NOSSO-NO-01 (20/08/2026): o produto passa a
+                    # DECLARAR qual nó do kernel ele é. O `identidade_do_vpad`
+                    # acima responde "quem este vpad diz ser" (`uniq`, nome,
+                    # índice) e é leitura pura do objeto; estes quatro campos
+                    # respondem "onde ele está" e exigem o sysfs — por isso
+                    # moram em `integrations/no_do_vpad`, atrás de cache, e não
+                    # dentro daquela função, que também alimenta o `coop.mesa`.
+                    #
+                    # Sem isto, todo instrumento de bancada reimplementa "quem é
+                    # o nosso nó": hoje são três réguas (regex de caminho no
+                    # `quem_o_jogo_abre.py`, prefixo de nome na janela, `uevent`
+                    # do pai no `identidade_do_vpad.py` de `scripts/`), e a
+                    # lição desta casa é que uma delas envelhece calada.
+                    #
+                    # `ino` é o inode do **evdev**; `hidraw_ino`, o do hidraw.
+                    # Os dois viajam porque o caminho sozinho é um número de
+                    # fila: entre publicar `/dev/input/event22` e quem lê fazer
+                    # o `stat` dele cabe a renumeração inteira. O par
+                    # caminho+inode veio do MESMO instante de leitura.
+                    no_do_vpad = self._no_do_vpad_cached(
+                        identidade["vpad_uniq"], identidade["vpad_nome"]
+                    )
                     per_vpad.append(
                         {
                             "player": player_num,
                             "vpad_uniq": identidade["vpad_uniq"],
                             "vpad_nome": identidade["vpad_nome"],
                             "vpad_indice": identidade["vpad_indice"],
+                            "evdev": no_do_vpad["evdev"],
+                            "hidraw": no_do_vpad["hidraw"],
+                            "ino": no_do_vpad["ino"],
+                            "hidraw_ino": no_do_vpad["hidraw_ino"],
+                            # `game_open` = há sessão uhid ABERTA neste vpad
+                            # (UHID_OPEN..CLOSE). Existe no objeto desde a
+                            # NUMA-02 e nunca saiu por IPC: o daemon o agrega em
+                            # `_any_game_session_open` para modular a histerese
+                            # do sinal de jogo, e ninguém de fora conseguia ver
+                            # POR VPAD quem estava aberto.
+                            #
+                            # Vale o veto permanente da NUMA-02, e ele tem de
+                            # viajar com o campo: sessão aberta NÃO é evidência
+                            # de jogo — o cliente Steam também abre (mecanismo
+                            # do incidente 14:42). É "alguém segura este nó",
+                            # nunca "o jogo recebeu".
+                            #
+                            # `is True` e não `bool()`: um vpad dublado por
+                            # MagicMock devolve um mock truthy, e o payload
+                            # afirmaria sessão aberta onde não há nenhuma.
+                            "game_open": getattr(vp, "game_open", False) is True,
                             "backend": backend if isinstance(backend, str) else None,
                             "ff_play_count": int(getattr(vp, "ff_play_count", 0) or 0),
                             # RUMBLE-QUE-NAO-SE-SENTE-01: `ff_play_count` sobe
@@ -3547,6 +3611,43 @@ class IpcHandlersMixin:
         marker = read_last_run_marker()
         self._wrapper_marker_cache = (now, marker)
         return marker
+
+    def _no_do_vpad_cached(
+        self, uniq: str | None, nome: str | None
+    ) -> dict[str, Any]:
+        """`{evdev, hidraw, ino, hidraw_ino}` do vpad, com cache TTL + `stat`.
+
+        QUEM-SEGURA-O-NOSSO-NO-01. O produto é o único que sabe qual nó do
+        kernel é o vpad dele sem adivinhar — ele carimbou o `uniq` e o `phys`
+        no `UHID_CREATE2`. Publicar isso fecha o buraco que fazia cada
+        instrumento de bancada reimplementar a pergunta com uma régua própria
+        (hoje são três, e uma delas casa por regex de caminho).
+
+        Duas conferências, e cada uma tapa um buraco diferente: o TTL cobre o
+        nó que APARECEU (não havia o que reconferir) e o `no_ainda_vale` cobre
+        o nó que MUDOU (o `event22` de agora ser outro aparelho). Sem a
+        segunda, o payload afirmaria por até 2 s um caminho que já é de
+        outro device — a renumeração é exatamente o defeito que o inode
+        existe para impedir, e seria irônico reintroduzi-la pelo cache.
+        """
+        chave = (uniq or "").strip().casefold() or f"nome:{(nome or '').strip()}"
+        if chave == "nome:":
+            return dict(NO_DESCONHECIDO)
+        cache = self._no_do_vpad_cache
+        if cache is None:
+            cache = {}
+            self._no_do_vpad_cache = cache
+        now = time.monotonic()
+        hit = cache.get(chave)
+        if (
+            hit is not None
+            and (now - hit[0]) < _NO_DO_VPAD_TTL_SEC
+            and no_ainda_vale(hit[1])
+        ):
+            return dict(hit[1])
+        no = resolver_no_do_vpad(uniq=uniq, nome=nome)
+        cache[chave] = (now, no)
+        return dict(no)
 
     # --- CONTROLE-QUE-NAO-ENTROU-01: o controle ligado que não entrou ------
 

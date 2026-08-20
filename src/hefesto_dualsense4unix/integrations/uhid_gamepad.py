@@ -564,6 +564,17 @@ _BIND_POLL_INTERVAL_S = 0.01
 #: sem necessidade: o poll loop travava 3x mais para nada.)
 _BIND_SETTLE_S = 0.05
 
+#: O `phys` que o `_create2_event` carimba no `UHID_CREATE2` e que o kernel
+#: republica como `HID_PHYS` no `uevent` do device HID. É a marca MAIS forte do
+#: vpad: não é endereço nem nome de aparelho, é uma palavra que só este produto
+#: escreve (num DualSense de verdade este campo é o MAC do adaptador, no rádio,
+#: ou o caminho USB, no cabo).
+#:
+#: Vive aqui, e não repetido em cada leitor, porque quem CARIMBA é quem tem de
+#: dizer o que carimbou: `integrations/no_do_vpad.py` casa por este mesmo
+#: objeto, e assim o dia em que a palavra mudar não deixa um leitor para trás.
+VPAD_HID_PHYS = "hefesto-vpad"
+
 
 def player_mac(player: int) -> str:
     """MAC próprio do vpad do jogador (1-based).
@@ -1494,7 +1505,7 @@ class UhidDualSense:
     def _create2_event(self, descriptor: bytes) -> bytes:
         event = struct.pack("<I", UHID_CREATE2)
         event += self.name.encode("utf-8").ljust(128, b"\0")[:128]
-        event += b"hefesto-vpad".ljust(64, b"\0")[:64]
+        event += VPAD_HID_PHYS.encode("ascii").ljust(64, b"\0")[:64]
         event += self.mac.encode("ascii").ljust(64, b"\0")[:64]
         event += struct.pack("<HH", len(descriptor), BUS_USB)
         event += struct.pack("<IIII", DUALSENSE_VENDOR, self.product, 0x0100, 0)
@@ -2400,6 +2411,7 @@ class UhidDualSense:
 
 __all__ = [
     "UHID_NODE",
+    "VPAD_HID_PHYS",
     "VPAD_PRODUCT",
     "UhidDualSense",
     "capture_dualsense_blueprint",

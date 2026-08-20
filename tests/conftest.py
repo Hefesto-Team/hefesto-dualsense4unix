@@ -1560,3 +1560,46 @@ def _nenhum_uinput_de_verdade() -> Iterator[None]:
         yield
     finally:
         uinput.Device = verdadeiro  # type: ignore[misc]
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _nenhum_sysfs_vivo_na_varredura_de_vpad(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
+    """A varredura de `/sys/class/input` do `state_full` aponta para o VAZIO.
+
+    Irmã da `_nenhum_uinput_de_verdade` logo acima, e pela mesma razão: a
+    máquina de desenvolvimento é a máquina dela, e ali há vpads de VERDADE em
+    `/sys/class/input`. A `integrations/no_do_vpad.resolver_no_do_vpad` roda
+    dentro do `_handle_daemon_state_full`, que dezenas de testes chamam — sem
+    esta fixture, cada um deles leria o sysfs vivo e o payload sob teste
+    passaria a depender de quantos controles estavam ligados no momento.
+
+    Não é só hermetismo: um teste que casasse com o `event22` de verdade dela
+    estaria afirmando sobre o aparelho dela, e afirmação sobre aparelho nesta
+    casa se mede na bancada, nunca na suíte.
+
+    Vazio, e não um dublê: quem PRECISA de uma árvore forjada a monta e
+    aponta as constantes para ela com `monkeypatch` (escopo de função, que
+    desfaz por cima desta). O default da suíte é "não achei nó nenhum", que é
+    a resposta honesta de uma máquina sem vpad.
+    """
+    vazio = tmp_path_factory.mktemp("sysfs-sem-vpad")
+    from hefesto_dualsense4unix.integrations import no_do_vpad
+
+    antes = (
+        no_do_vpad.RAIZ_CLASS_INPUT,
+        no_do_vpad.RAIZ_DEV_INPUT,
+        no_do_vpad.RAIZ_DEV,
+    )
+    no_do_vpad.RAIZ_CLASS_INPUT = str(vazio / "class-input")
+    no_do_vpad.RAIZ_DEV_INPUT = str(vazio / "dev-input")
+    no_do_vpad.RAIZ_DEV = str(vazio / "dev")
+    try:
+        yield
+    finally:
+        (
+            no_do_vpad.RAIZ_CLASS_INPUT,
+            no_do_vpad.RAIZ_DEV_INPUT,
+            no_do_vpad.RAIZ_DEV,
+        ) = antes
