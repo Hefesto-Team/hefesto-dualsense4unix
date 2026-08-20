@@ -4346,10 +4346,18 @@ class IpcHandlersMixin:
         explicando — um controle que aceita o gesto e não faz nada é a tela
         mentindo, e um controle cinza não promete nada.
 
-        O `uniq` é aceito e hoje **não roteia**: há uma fonte de captura por
-        máquina para o controle, não uma por controle. Ele fica no contrato para
-        o dia em que a ponte publicar um source por aparelho — e está declarado
-        aqui em vez de silenciosamente ignorado.
+        **O `uniq` ROTEIA desde 20/08/2026 (MIC-DA-MESA-CHEIA-01).** Até então
+        esta docstring dizia que não, apoiada na premissa de que *"há uma fonte
+        de captura por máquina para o controle, não uma por controle"* — e essa
+        premissa a própria casa já havia derrubado: com dois DualSense no cabo há
+        DUAS placas de som, cada uma pendurada no seu dispositivo USB, e foi
+        exatamente por isso que `usb_pai_por_uniq` nasceu em 15/08. O medidor de
+        cada card já casava certo; só este controle deslizante não casava, e o
+        gesto ia para a primeira placa da lista — o microfone de outra pessoa.
+
+        Quando o alvo não se resolve (um controle só, sysfs ilegível, rádio sem
+        ponte) a rota global continua valendo, e o campo `por_uniq` da resposta
+        diz qual das duas foi usada, para a tela não precisar adivinhar.
         """
         if "volume" not in params:
             raise ValueError("mic.volume.set: 'volume' é obrigatório (0-100)")
@@ -4365,10 +4373,19 @@ class IpcHandlersMixin:
         from hefesto_dualsense4unix.integrations.audio_control import (
             definir_volume_da_captura,
             fonte_de_captura_do_controle,
+            fonte_de_captura_do_uniq,
             volume_da_captura,
         )
 
-        fonte = fonte_de_captura_do_controle()
+        # MIC-DA-MESA-CHEIA-01 (20/08/2026): o `uniq` deixou de ser decorativo.
+        # Com dois DualSense no cabo há DUAS placas de som, e a rota global
+        # devolve a PRIMEIRA — o microfone de outra pessoa. Quando o alvo se
+        # resolve, é ele que manda; quando não se resolve, a rota global continua
+        # valendo, porque com UM controle ela está certa e é mais barata.
+        fonte = fonte_de_captura_do_uniq(uniq) if uniq else None
+        por_uniq = fonte is not None
+        if fonte is None:
+            fonte = fonte_de_captura_do_controle()
         if not fonte:
             return {"status": "sem_fonte", "fonte": None, "volume": None}
         ok = definir_volume_da_captura(volume, fonte=fonte)
@@ -4383,6 +4400,11 @@ class IpcHandlersMixin:
             "status": "ok" if ok else "erro",
             "fonte": fonte,
             "volume": volume_da_captura(fonte=fonte),
+            # A tela precisa saber SE o alvo foi honrado. Sem este campo, um
+            # gesto que caiu na rota global (mesa cheia, sysfs ilegível) parece
+            # idêntico a um que acertou o controle escolhido — e é justamente a
+            # diferença entre mexer no microfone dela e no de outra pessoa.
+            "por_uniq": por_uniq,
         }
 
     async def _handle_mouse_emulation_set(
