@@ -259,6 +259,68 @@ def fonte_de_captura_do_controle() -> str | None:
     return None
 
 
+def fonte_de_captura_do_uniq(uniq: str) -> str | None:
+    """A fonte de captura DAQUELE controle, pelo dispositivo USB em que ela pendura.
+
+    MIC-DA-MESA-CHEIA-01 (20/08/2026). A `fonte_de_captura_do_controle` acima
+    devolve a PRIMEIRA fonte que casar com a marca — e isso estava certo enquanto
+    a premissa escrita no handler fosse verdade: *"há uma fonte de captura por
+    máquina para o controle, não uma por controle"*.
+
+    **A premissa caducou, e a própria casa já a tinha derrubado.** Com dois
+    DualSense no cabo há DUAS placas de som, cada uma pendurada no seu
+    dispositivo USB — foi exatamente por isso que `usb_pai_por_uniq` nasceu em
+    15/08, quando mic e botão de saída sumiram de todos os controles assim que
+    havia dois. O medidor de cada card da aba Status já casa certo desde então.
+    Só o controle deslizante de VOLUME não casava: ele mandava o `uniq`, o
+    handler o descartava, e o gesto ia para a primeira placa da lista — o
+    microfone de outra pessoa, na mesa cheia.
+
+    A identidade é o dispositivo USB, e não o nome do nó, porque o nome NÃO TEM
+    identidade: o `-00`/`-00.2` é desempate posicional do PipeWire e a string de
+    serial USB do DualSense é a mesma em todos os aparelhos.
+
+    Devolve `None` quando não dá para saber de quem é a fonte — e `None` aqui é
+    a resposta CERTA, não uma falha: mexer no microfone do controle errado é
+    pior que não mexer em nenhum. Quem chama decide se cai para a rota global.
+    """
+    from hefesto_dualsense4unix.integrations.usb_pai import (
+        nos_e_sysfs,
+        usb_pai_por_no,
+        usb_pai_por_uniq,
+    )
+
+    if not uniq:
+        return None
+    do_controle = usb_pai_por_uniq([uniq]).get(uniq, "")
+    if not do_controle:
+        return None
+    # A saída LONGA, e não a curta: só ela traz o `sysfs.path` de cada nó, que é
+    # o fio inteiro desta cura.
+    try:
+        longa = subprocess.run(
+            ["pactl", "list", "sources"],
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT_SEC,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        ).stdout
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("audio_fonte_do_uniq_falhou", err=str(exc))
+        return None
+    por_no = usb_pai_por_no(nos_e_sysfs(longa or ""))
+    for nome, usb in por_no.items():
+        alvo = nome.lower()
+        # Mesmas duas guardas da rota global, e pela mesma razão medida: o
+        # `.monitor` é o ECO DA SAÍDA, não a captura.
+        if alvo.endswith(".monitor") or alvo.startswith("alsa_output."):
+            continue
+        if usb and usb == do_controle:
+            return nome
+    return None
+
+
 def definir_volume_da_captura(volume_pct: int, *, fonte: str | None = None) -> bool:
     """Põe o volume da captura do controle em `volume_pct` (0-100).
 
@@ -334,5 +396,6 @@ __all__ = [
     "Backend",
     "definir_volume_da_captura",
     "fonte_de_captura_do_controle",
+    "fonte_de_captura_do_uniq",
     "volume_da_captura",
 ]

@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho para
 # sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
 
-ensaio: 2026-08-19 18:35
+ensaio: 2026-08-20 01:21
 abas:   12
 
 # soma sha256 de cada foto, em ordem alfabética
