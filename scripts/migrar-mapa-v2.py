@@ -826,7 +826,14 @@ def migra_ensaios(v1: list[dict]) -> tuple[list[dict], list[str]]:
 #: em que as duas respostas são opostas sem que nenhuma esteja errada. Vazia
 #: quer dizer "o `resultado` também responde pela feature", que é o caso de 76
 #: dos 77 ensaios — por isso acrescentá-la não reescreveu medição nenhuma.
-CABECALHO_ENSAIOS = ["id", "linha_id", "transporte", "quando", "suspeito", "presente",
+#: `degrau` entrou em 20/08/2026, logo depois de `transporte`, porque é o mesmo
+#: tipo de eixo: o que a medição estava medindo. Vazio quer dizer "não declarou",
+#: NUNCA "serve para tudo" — e é essa distinção que faz os dois degraus de
+#: ENTRADA exigirem declaração explícita. Ver ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01: sem
+#: ela o portão aceitava ensaio de acender lightbar como prova de que um JOGO
+#: REAGIU, e foi reproduzido à mão.
+CABECALHO_ENSAIOS = ["id", "linha_id", "transporte", "degrau", "quando", "suspeito",
+                     "presente",
                      "resultado", "resultado_da_feature", "observado_por", "fonte",
                      "nota", "linha_id_v1"]
 

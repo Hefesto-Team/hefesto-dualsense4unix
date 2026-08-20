@@ -333,6 +333,23 @@ else:
         c3, c4 = st.columns(2)
         resultado = c3.text_input("Resultado", placeholder="obedece / não obedece / acendeu / mudo")
         quem = c4.selectbox("Observado por", ["olho-dela", "bancada", "ci"])
+        # ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 (20/08/2026). O ensaio passa a dizer o
+        # que ele mediu. As opções saem de `GRAUS`, que sai de `VALORES_DA_ESCADA`
+        # — nunca redigitadas, mesma disciplina do resto deste arquivo.
+        #
+        # O padrão é VAZIO e continua sendo: os 177 ensaios do caderno nasceram
+        # sem o campo e vazio quer dizer "não declarou", que é a verdade sobre
+        # eles. O que vazio NÃO quer dizer é "serve para tudo" — os dois degraus
+        # de ENTRADA exigem declaração, porque foi lá que o portão aceitou ensaio
+        # de acender lightbar como prova de que um JOGO REAGIU.
+        degrau_medido = st.selectbox(
+            "Até onde este ensaio mediu?",
+            GRAUS,
+            help="Deixe vazio se o ensaio mediu a IDA (produto -> aparelho), que "
+                 "é o caso de todos os 177 do caderno. Preencha quando tiver "
+                 "medido a VOLTA (aparelho -> vpad -> JOGO): sem esta palavra o "
+                 "ensaio não sustenta `O JOGO RECEBEU` nem `O JOGO REAGIU`.",
+        )
         # PECA da cura de 13/08/2026: o `Resultado` acima responde pelo SUSPEITO
         # da linha, e há ensaio em que as duas respostas são OPOSTAS sem que
         # nenhuma esteja errada — o `gatilho-lado-nao-esta-invertido` eliminou o
@@ -360,6 +377,13 @@ else:
                           f"{datetime.now():%H%M%S}",
                     "linha_id": linha_id,
                     "transporte": lado,
+                    # ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 (20/08/2026): o ensaio passa
+                    # a DIZER o que mediu. Vazio quer dizer "não declarou", nunca
+                    # "serve para tudo" — e por isso os dois degraus de ENTRADA
+                    # exigem que ele venha preenchido. O que sai daqui é o valor
+                    # escolhido no formulário; as opções vêm de `VALORES_DA_ESCADA`,
+                    # nunca redigitadas.
+                    "degrau": degrau_medido,
                     "quando": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
                     "suspeito": susp,
                     "presente": "sim" if presente == "COM" else "não",

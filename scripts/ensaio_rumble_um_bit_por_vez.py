@@ -673,6 +673,11 @@ def linhas_de_caderno(
                 f"rumble-bits-{contador[0]}",
                 linha_id,
                 lado,
+                # `degrau` VAZIO, e de propósito: este ensaio mede a SAÍDA (o
+                # motor girou), não a volta. Declarar degrau que não se mediu é a
+                # fabricação que a ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 existe para
+                # impedir. Posicional, como as outras colunas deste escritor.
+                "",
                 quando,
                 suspeito,
                 "sim" if presente else "não",
@@ -699,9 +704,14 @@ def gravar_no_caderno(linhas: list[list[str]]) -> None:
         escritor = csv.writer(fh)
         if novo:
             escritor.writerow(
-                ["id", "linha_id", "transporte", "quando", "suspeito", "presente",
-                 "resultado", "resultado_da_feature", "observado_por", "fonte",
-                 "nota", "linha_id_v1"]
+                # `degrau` entra depois de `transporte` porque é o mesmo tipo
+                # de eixo: o que a medição estava medindo
+                # (ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01, 20/08/2026). Este ensaio mede
+                # SAÍDA, então o campo sai VAZIO — declarar degrau que não se
+                # mediu é a fabricação que a regra existe para impedir.
+                ["id", "linha_id", "transporte", "degrau", "quando", "suspeito",
+                 "presente", "resultado", "resultado_da_feature", "observado_por",
+                 "fonte", "nota", "linha_id_v1"]
             )
         escritor.writerows(linhas)
 
