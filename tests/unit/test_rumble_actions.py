@@ -204,6 +204,15 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         calls["rumble_set"].append((weak, strong))
         return resultado_rumble_set[0]
 
+    # NATIVO-RUMBLE-01, segunda metade: o «Parar» também usa a rota "checked" —
+    # no Modo Nativo o daemon devolve `status: "ok"` COM motivo, porque soltou o
+    # par mas não alcança o motor do jogo.
+    resultado_rumble_stop: list[tuple[bool, str | None]] = [(True, None)]
+
+    def fake_rumble_stop_checked() -> tuple[bool, str | None]:
+        calls["rumble_stop"].append(True)
+        return resultado_rumble_stop[0]
+
     def fake_rumble_stop() -> bool:
         calls["rumble_stop"].append(True)
         return True
@@ -238,6 +247,9 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
     )
     monkeypatch.setattr(rumble_actions, "rumble_stop", fake_rumble_stop)
     monkeypatch.setattr(
+        rumble_actions, "rumble_stop_checked", fake_rumble_stop_checked
+    )
+    monkeypatch.setattr(
         rumble_actions, "rumble_passthrough", fake_rumble_passthrough
     )
     monkeypatch.setattr(
@@ -253,6 +265,7 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
     instance._policy_result = resultado_policy  # type: ignore[attr-defined]
     # NATIVO-RUMBLE-01: mesma alavanca para a recusa do `rumble.set`.
     instance._rumble_set_result = resultado_rumble_set  # type: ignore[attr-defined]
+    instance._rumble_stop_result = resultado_rumble_stop  # type: ignore[attr-defined]
 
     for name in (
         "install_rumble_tab",
@@ -876,3 +889,36 @@ def test_teste_de_meio_segundo_recusado_nao_agenda_o_parar(
     )
     msg = [m for _ctx, m in mixin._widgets["status_bar"].pushed][-1]
     assert msg == motivo
+
+
+def test_parar_no_modo_nativo_diz_a_verdade_em_vez_de_travada_em_silencio(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O terceiro botão, e o último a mentir.
+
+    A leva de 19/08 curou o "Aplicar" e o "Testar" e parou ali. O «Parar» dentro
+    do Modo Nativo continuou anunciando "Vibração parada (travada em silêncio)"
+    — e ali o daemon não trava silêncio nenhum: ele SOLTA o par que o Hefesto
+    segurava, e o motor que estiver girando é o do jogo, pelo hidraw, fora do
+    alcance do produto.
+
+    E a leitura de 19/08 não pegava este caso de propósito nenhum: ela olhava só
+    `status == "recusado"`, e esta resposta vem com `status: "ok"`, porque parte
+    do pedido FOI realizada. A regra passou a ser: se o daemon mandou uma frase,
+    ela é para ela.
+
+    **Morde:** devolva `on_rumble_stop` a chamar `rumble_stop()` e o toast volta
+    a prometer silêncio travado sobre um motor girando.
+    """
+    mixin = _build_mixin(monkeypatch)
+    motivo = (
+        "Vibração solta: em Modo Nativo o Hefesto não consegue parar os motores "
+        "que o jogo está tocando."
+    )
+    mixin._rumble_stop_result[0] = (True, motivo)  # type: ignore[attr-defined]
+
+    mixin.on_rumble_stop(None)  # type: ignore[arg-type]
+
+    msg = [m for _ctx, m in mixin._widgets["status_bar"].pushed][-1]
+    assert msg == motivo
+    assert "travada em silêncio" not in msg
