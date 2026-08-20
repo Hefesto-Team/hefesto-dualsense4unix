@@ -17,7 +17,7 @@ import shutil
 import sys
 import tempfile
 import types
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -1491,3 +1491,72 @@ def ds5_de_bancada(
 ) -> Any:
     """O handle de bancada do transporte DESTE caso (ver `fabrica_de_bancada`)."""
     return fabrica_de_bancada(transporte)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _nenhum_uinput_de_verdade() -> Iterator[None]:
+    """A suíte NÃO cria aparelho de entrada no kernel de quem a roda.
+
+    **O defeito, medido em 20/08/2026, e ele saiu da máquina dela.** Ela relatou
+    janelas saindo de tela cheia sozinhas e suspeitou de tecla presa. O kernel
+    contava outra história: **1289 nós `Hefesto - Dualsense4Unix Virtual
+    Keyboard` criados naquele dia**, 51 nos últimos trinta minutos, cada um
+    vivendo cerca de 0,4 ms. Eram meus: cada `pytest -q` cria centenas deles, e a
+    suíte rodou quinze vezes naquela sessão.
+
+    **Por que isso derrubava a tela cheia dela sem ninguém apertar nada:** para o
+    compositor Wayland cada add/remove de teclado é um re-assentamento de seat, e
+    superfície em tela cheia costuma largar o fullscreen numa troca de foco. Não
+    é preciso Esc nenhum — e foi atrás do Esc que eu fui primeiro, ancorada em
+    duas linhas de log que depois se provaram falsas.
+
+    **A raiz não é a suíte ser desleixada — é a máquina dela ser a mesma.** Aqui
+    a máquina de desenvolvimento é a máquina em que ela joga, trabalha e assiste.
+    Uma suíte que mexe em `/dev/input` não está num ambiente isolado: está
+    escrevendo entrada de verdade, por cima da sessão de uma pessoa que está
+    usando o computador.
+
+    São dois pontos de criação, e só dois — `integrations/uinput_keyboard.py` e
+    `integrations/uinput_mouse.py`, ambos fazendo `import uinput` DENTRO da
+    função e chamando `uinput.Device(...)`. Por isso a troca é em
+    `sys.modules["uinput"].Device`: pega os dois sem que nenhum dos dois precise
+    saber que está sendo dublado.
+
+    Custo em produção: ZERO. Isto vive só na suíte.
+    """
+    try:
+        import uinput  # type: ignore[import-not-found]
+    except ImportError:
+        # Sem a biblioteca não há tempestade a impedir — e é o caso do CI.
+        yield
+        return
+
+    class _AparelhoDeMentira:
+        """Aceita o que o `uinput.Device` aceita, e não fala com o kernel."""
+
+        def __init__(self, capabilities: object, name: str = "", **_kw: object) -> None:
+            self.capabilities = capabilities
+            self.name = name
+            self.emitidos: list[tuple[object, ...]] = []
+
+        def emit(self, *args: object, **_kw: object) -> None:
+            self.emitidos.append(args)
+
+        def syn(self) -> None:
+            pass
+
+        def destroy(self) -> None:
+            pass
+
+        def __enter__(self) -> "_AparelhoDeMentira":
+            return self
+
+        def __exit__(self, *_exc: object) -> None:
+            pass
+
+    verdadeiro = uinput.Device
+    uinput.Device = _AparelhoDeMentira  # type: ignore[misc,assignment]
+    try:
+        yield
+    finally:
+        uinput.Device = verdadeiro  # type: ignore[misc]
