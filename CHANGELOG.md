@@ -40,7 +40,7 @@ fez nascer está na `QUATRO-COMPONENTES-02`, logo abaixo.
 
 ## [Unreleased]
 
-## [0.9.4.5] — 2026-08-19
+## [0.9.4.5] — 2026-08-20
 
 A leva da ponte. O alvo é o QoL de quem não é técnico: abrir o jogo, não andar,
 apertar `PS + R3` até andar, e nunca mais precisar fazer isso naquele jogo.
@@ -103,6 +103,25 @@ máquina de quem desenvolve o pegava.
 `lib:libhidapi` funcionava enquanto a régua era `grep` na saída do `ldconfig`.
 Com `ctypes.CDLL` é `dlopen`, e ele falha em toda máquina.
 
+#### O giroscópio chegava ao jogo com 36% das amostras faltando
+
+Ela disse: *"o giroscópio ficou meio estranho mas deu pra ver que tá sendo
+lido"*. Estava certa, e o defeito era de cadência, não de valor — eixo a eixo os
+números batiam idênticos entre o controle e o espelho.
+
+Medido no cabo: o nó do físico entrega 251 Hz e o do espelho, 160. O teto de
+emissão perguntava *"já passou um período desde a última entrega?"* carimbando o
+instante real da chegada; com o teto em 250,0 Hz e o cabo em 250,88, cada report
+chegava microssegundos cedo e era sobrescrito pelo seguinte. Bastava a fonte
+estar 0,35% acima do teto.
+
+Virou grade de prazo. O teto de 250 não mudou — estava certo; errada era a conta
+que o implementava. Conferido na máquina dela depois da cura: **251 Hz no
+espelho, perda 0%**, e a telemetria interna saiu de 136,5 para 250,0.
+
+A casa já tinha o aviso: em 15/08 o mapa registrou a fonte em "250,1 Hz" contra
+um cap de 250,0. O número estava do lado errado do teto havia quatro dias.
+
 #### O `install.sh` travava para SEMPRE em quem não tem Bluetooth
 
 `btmgmt` fala com o kernel pelo socket de management, e sem adaptador espera uma
@@ -157,7 +176,13 @@ o par (volta ao passthrough, mantendo a HARM-16 armada). A alternativa é recusa
 o gesto igual aos outros dois. A medição de 19/08 levantou a pergunta e não a
 respondeu.
 
-Nada desta onda foi visto em hardware. O roteiro de validação está em
+Parte desta onda JÁ foi vista em hardware, na bancada de 19→20/08 com ela ao
+controle: o `PS + R3` trocou a ponte dentro do Duskfade na primeira tentativa
+(`gestos=1`, de `dualsense` para `xbox`) e o jogo passou a andar; o carimbo por
+silêncio gravou a ponte do Big Walk sozinho; o daemon recusou vibração em Modo
+Nativo com a frase certa; e o giroscópio foi medido antes e depois da cura. O
+que segue sem prova de plástico: as cinco cores da piscada, e o carimbo depois
+de um gesto (o Duskfade fechou aos 95 s, e a regra pede 180). O roteiro de validação está em
 [`docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md`](docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
 
 ## [0.9.4.4] — 2026-08-19
