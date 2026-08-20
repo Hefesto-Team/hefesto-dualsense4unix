@@ -29,7 +29,17 @@ com PICO de ~797 Hz por controle; sem cap, 4 vpads em co-op seriam ~3200
 writes/s no /dev/uhid. A emissão é capada em `MOTION_EMIT_MAX_HZ` (250 Hz — a
 taxa nativa USB, e a mesma faixa do rate-limit do REPLICA-03) com dedup por
 valor e COALESCÊNCIA: janela retida é sobrescrita pela mais nova e a última
-nunca se perde (flush no timeout do select). Jogos integram gyro bem em
+nunca se perde (flush no timeout do select).
+
+O teto é uma GRADE DE PRAZO, e isso não é detalhe (GRADE-QUE-NAO-BATIA-01,
+19/08/2026): ele pergunta "já chegou o próximo prazo?", nunca "já passou um
+período desde a última entrega?". A segunda forma esteve no lugar até 19/08 e
+custava 36% das amostras NO CABO — cada entrega carimbava o instante REAL da
+chegada, empurrando a referência à frente, e o report seguinte chegava cedo por
+essa mesma diferença. Basta a fonte estar um pelo ACIMA do teto (o cabo entrega
+250,88 Hz contra 250,0 de cap) para meia amostra cair fora, e a taxa colapsar
+para perto da metade. Ela sentiu isso como giroscópio aos saltos, com os valores
+todos certos. Jogos integram gyro bem em
 250 Hz; o timestamp do sensor segue exato em cada janela entregue.
 
 A taxa do rádio é RAJADA, não uma taxa (medido em 11/08/2026)
@@ -205,8 +215,8 @@ _CARGA_DESCARREGANDO = 0x0
 _CARGA_CARREGANDO = 0x1
 _CARGA_CHEIO = 0x2
 
-#: Cap da taxa de emissão ao vpad. 250 Hz = taxa nativa do físico em USB (nada
-#: é jogado fora no cabo) e o mesmo teto do rate-limit do REPLICA-03; em BT
+#: Cap da taxa de emissão ao vpad. 250 Hz = a faixa da taxa nativa do físico em
+#: USB e o mesmo teto do rate-limit do REPLICA-03; em BT
 #: (rajada, pico de ~797 Hz) vira downsample com coalescência — o estudo
 #: aceita 250-500 Hz.
 #:
@@ -219,9 +229,18 @@ _CARGA_CHEIO = 0x2
 #: PICO DENTRO da rajada — p05 do intervalo em 1255 us, ~797 Hz (:757-758).
 #: Sem teto, quatro vpads em co-op fariam ~3200 writes/s no /dev/uhid.
 #:
-#: O valor 250.0 NÃO muda: é decisão medida (a taxa nativa do cabo, onde
-#: nada se perde) e o estudo do IMU a aceita. O que a remedição corrigiu foi
-#: o número que a justificava, não ela. `tests/unit/test_teto_de_emissao.py`
+#: O valor 250.0 NÃO muda: é decisão medida e o estudo do IMU a aceita. O que a
+#: remedição corrigiu foi o número que a justificava, não ela.
+#:
+#: GRADE-QUE-NAO-BATIA-01 (19/08/2026) — "onde nada se perde" ERA FALSO, e por
+#: quatro dias. A fonte do cabo foi medida em 250,88 Hz (6272 pacotes de motion
+#: em 25 s, nó evdev do físico) — ACIMA deste teto, não igual a ele. Com a
+#: contagem antiga isso jogava fora 36% das amostras justamente no transporte em
+#: que a frase prometia zero perda. A casa já tinha o número: em 15/08 o mapa de
+#: canais registrou a fonte em "250,1 Hz" contra um cap de 250,0, e ninguém
+#: reparou que a fonte estava do lado errado. A frase saiu; o teto ficou. Quem
+#: mexer aqui: o problema nunca foi o valor, era a aritmética que o implementava.
+#: Ver `TestAFonteDoCaboColadaNoTeto`. `tests/unit/test_teto_de_emissao.py`
 #: reprova se esta constante sumir, subir, ou deixar de ser o default do
 #: `PhysicalReportReader`.
 MOTION_EMIT_MAX_HZ = 250.0
@@ -567,6 +586,7 @@ class PhysicalReportReader:
         self._last_window: bytes | None = None
         self._pending: bytes | None = None
         self._last_emit_at = float("-inf")
+        self._next_emit_at = float("-inf")
         # TOUCH-CLICK-01: último clique ENTREGUE ao vpad. `None` = nada
         # entregue ainda nesta abertura do fd — é o que faz o primeiro report
         # depois de reabrir re-sincronizar o botão, mesmo que o estado seja o
@@ -1008,7 +1028,7 @@ class PhysicalReportReader:
             return
         if now is None:
             now = self._time_fn()
-        if (now - self._last_emit_at) < self._min_interval:
+        if now < self._next_emit_at:
             # Retida pelo cap — a mais nova SEMPRE sobrescreve (coalescência);
             # sai no próximo report pós-janela ou no flush do select-timeout.
             self._pending = window
@@ -1023,7 +1043,7 @@ class PhysicalReportReader:
             return
         if now is None:
             now = self._time_fn()
-        if (now - self._last_emit_at) < self._min_interval:
+        if now < self._next_emit_at:
             return
         self._pending = None
         if pending == self._last_window:
@@ -1046,6 +1066,15 @@ class PhysicalReportReader:
             # Fluxo voltou depois de um buraco: recomeça a medição do zero
             # (misturar a EMA de antes do buraco distorceria a taxa nova).
             self._emit_hz_ema = 0.0
+        proximo = self._next_emit_at + self._min_interval
+        # A grade tolera ficar UM período atrasada (jitter do host); mais
+        # que isso é buraco de fluxo de verdade, e aí ela recomeça de AGORA
+        # — sem isso um silêncio longo viraria crédito represado.
+        self._next_emit_at = (
+            proximo
+            if proximo >= now - self._min_interval
+            else now + self._min_interval
+        )
         self._last_emit_at = now
         self._last_window = window
         try:
