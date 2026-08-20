@@ -45,6 +45,14 @@ CSV_ = RAIZ / "docs" / "data" / "mapa-controles.csv"
 ENSAIOS_ = RAIZ / "docs" / "data" / "ensaios.csv"
 
 sys.path.insert(0, str(RAIZ / "scripts"))
+# O `src` entra no caminho pela mesma razão que o `scripts`: a bancada precisa
+# do vocabulário de PONTES, e o dono dele é `integrations/ponte_escada.py`.
+# Com o install editável do produto o import já funcionaria; sem ele (uma
+# `streamlit` de fora do `.venv`, que é como esta bancada costuma ser aberta)
+# não funcionaria, e o remédio seria redigitar as quatro pontes aqui — que é
+# exatamente a segunda cópia do vocabulário que a nota ESCADA-COM-UM-DONO-SO,
+# logo abaixo, existe para não deixar acontecer de novo.
+sys.path.insert(0, str(RAIZ / "src"))
 import eliminacao  # noqa: E402
 
 #: Só estas colunas se escrevem daqui. As outras vieram da escavação e mudam
@@ -70,6 +78,21 @@ EDITAVEIS = ["cabo_ate_onde_foi", "radio_ate_onde_foi", "provado_em", "provado_p
 from check_paridade_transporte import VALORES_DA_ESCADA  # noqa: E402
 
 GRAUS = ["", *VALORES_DA_ESCADA]
+
+# ENSAIO-QUE-NAO-DIZ-A-PONTE-01 (20/08/2026), e a mesma disciplina da linha
+# acima: as pontes NÃO se redigitam aqui. Elas saem da `ESCADA` de
+# `integrations/ponte_escada.py`, que é quem decide qual ponte o produto tenta
+# e em que ordem — se um degrau novo entrar lá, ele aparece neste formulário no
+# mesmo instante, sem ninguém lembrar de vir aqui.
+from hefesto_dualsense4unix.integrations.ponte_escada import ESCADA  # noqa: E402
+
+#: O `""` na frente é o padrão, e ele quer dizer **"não declarou"** — NUNCA
+#: "serve para toda ponte". A distinção não é filosofia: os 177 ensaios do
+#: caderno nasceram sem o campo, e ler o vazio deles como "vale para qualquer
+#: ponte" transformaria medição feita sem jogo nenhum em prova sobre a ponte que
+#: alguém quisesse. Quem consome isto é o `eliminacao.sustentam_a_ponte`, e lá a
+#: regra está escrita por extenso.
+PONTES = ["", *[degrau.ponte.chave for degrau in ESCADA]]
 #: O vocabulário de `provado_por` DIVERGE do que o método declara, e a lista
 #: abaixo é a soma dos dois — medido em 12/08/2026, com o CSV na mão:
 #: o `METODO-DE-ISOLAMENTO.md` prevê `ci`/`bancada`/`olho-dela`, e o mapa usa
@@ -350,6 +373,26 @@ else:
                  "medido a VOLTA (aparelho -> vpad -> JOGO): sem esta palavra o "
                  "ensaio não sustenta `O JOGO RECEBEU` nem `O JOGO REAGIU`.",
         )
+        # ENSAIO-QUE-NAO-DIZ-A-PONTE-01 (20/08/2026). Irmã da de cima, e do
+        # mesmo dia: o `degrau` diz ATÉ ONDE a medição foi, e esta diz POR ONDE
+        # ela chegou — máscara DualSense, máscara Xbox, nativo, ou Steam Input.
+        # As opções vêm de `PONTES`, que vem da `ESCADA`; nunca redigitadas.
+        #
+        # O padrão é VAZIO e continua sendo: nenhum dos 177 ensaios do caderno
+        # declara a ponte, e vazio quer dizer "não declarou", que é a verdade
+        # sobre eles. O que vazio NÃO quer dizer é "serve para toda ponte" — se
+        # quisesse, o ensaio de acender lightbar pelo hidraw, sem jogo e sem
+        # vpad no meio, sustentaria afirmação sobre a ponte que desse na
+        # telha. A regra que separa os dois casos está no
+        # `eliminacao.sustentam_a_ponte`.
+        ponte_medida = st.selectbox(
+            "Por qual ponte este ensaio mediu?",
+            PONTES,
+            help="Deixe vazio se o ensaio falou direto com o aparelho (hidraw, "
+                 "sem jogo e sem vpad no meio), que é o caso dos 177 do "
+                 "caderno. Preencha quando houver um JOGO do outro lado: a "
+                 "ponte é a máscara/modo por onde ele recebeu.",
+        )
         # PECA da cura de 13/08/2026: o `Resultado` acima responde pelo SUSPEITO
         # da linha, e há ensaio em que as duas respostas são OPOSTAS sem que
         # nenhuma esteja errada — o `gatilho-lado-nao-esta-invertido` eliminou o
@@ -384,6 +427,12 @@ else:
                     # escolhido no formulário; as opções vêm de `VALORES_DA_ESCADA`,
                     # nunca redigitadas.
                     "degrau": degrau_medido,
+                    # ENSAIO-QUE-NAO-DIZ-A-PONTE-01 (20/08/2026): ao lado do
+                    # `degrau`, porque é o mesmo tipo de eixo — ele diz até onde
+                    # a medição foi, esta diz por onde ela chegou. Vazio quer
+                    # dizer "não declarou", nunca "serve para toda ponte"; as
+                    # opções vêm da `ESCADA`, nunca redigitadas.
+                    "ponte": ponte_medida,
                     "quando": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
                     "suspeito": susp,
                     "presente": "sim" if presente == "COM" else "não",

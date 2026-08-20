@@ -107,6 +107,43 @@ AVISO (não derruba o CI hoje)
                           afirmação antiga que uma regra dura possa machucar.
                           Detalhe em `_achado_sem_olho_dela`.
 
+FALHA (as duas mais novas)
+  A numeração desta lista é CRONOLÓGICA, não por severidade — é por isso que as
+  regras 12 e 13, que também são DURAS, ficaram no bloco de cima. Estas duas
+  nasceram em 20/08/2026, e a 14 estava rodando sem ter sido escrita aqui.
+
+ 14. `ensaio-nao-diz-o-degrau` — grau de ENTRADA (`O JOGO RECEBEU`,
+                          `O JOGO REAGIU`) numa linha que TEM ensaios, sem que
+                          nenhum deles declare `degrau` igual ao afirmado. É o
+                          buraco irmão do de 12/08: a lição tinha sido aprendida
+                          para "nenhum ensaio" e não para "o ensaio errado".
+                          Reproduzido à mão — ver o comentário
+                          `ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01`, em `_regra_do_caderno`.
+ 15. `ponte-nao-declarada` — linha que entrega ao jogo por `canal = uhid`, com
+                          afirmação forte (`aciona = sim` + `de_onde_sei =
+                          medido`) em algum lado, e `ponte_alcanca` VAZIA.
+
+                          O `uhid` é o canal que só existe sob a máscara
+                          DualSense do nosso vpad (`054c:0df2`): quem escolhe a
+                          máscara Xbox perde essas linhas INTEIRAS, e perde em
+                          silêncio — é o cálculo que põe a DualSense no primeiro
+                          degrau de `integrations/ponte_escada.py`. Uma célula
+                          que diz "medi, e aciona" sem dizer POR QUAL PONTE mede
+                          coisa nenhuma: a mesma feature é `sim` sob uma ponte e
+                          inexistente sob outra, e o mapa ficaria verde
+                          afirmando as duas.
+
+                          VAZIO É "NÃO DECLAROU", NUNCA "SERVE PARA TODA PONTE"
+                          — a mesma convenção da coluna `ponte` do caderno de
+                          ensaios, escrita no mesmo dia. Por isso a regra só
+                          cobra onde a promessa é máxima; a linha `uhid` que não
+                          afirma nada continua podendo calar.
+
+                          A régua do DOMÍNIO desta coluna sai da `ESCADA` de
+                          `ponte_escada.py`, LIDA POR AST (ver
+                          `dominio_das_pontes`) — sem ela "Steam Input",
+                          "steam input" e "SteamInput" viram três pontes.
+
 Os dois degraus que faltavam (19/08/2026)
 -----------------------------------------
 Até esta data a escada de `ate_onde_foi` cobria só a IDA — produto para aparelho
@@ -275,6 +312,14 @@ ENSAIOS_RELATIVO = "docs/data/ensaios.csv"
 SPECS_RELATIVO = "specs.html"
 PASTA_DE_TESTES = "tests"
 
+#: O dono executável da lista de pontes. Este portão NÃO o importa, e a razão
+#: está no job `mapa-de-canais` do CI: ele é `checkout` + `setup-python` e mais
+#: nada — sem `pip install`. `ponte_escada.py` importa `utils.logging_config`,
+#: que importa `structlog`; um `import` aqui derrubaria o portão inteiro no
+#: runner. Por isso ele é LIDO POR AST, exatamente como `indexar_testes` lê
+#: `tests/` e pelo mesmo motivo escrito lá.
+PONTE_ESCADA_RELATIVO = "src/hefesto_dualsense4unix/integrations/ponte_escada.py"
+
 #: Colunas sem as quais este portão não tem o que medir. A ausência de qualquer
 #: uma é FALHA de integridade, não motivo para o portão se desligar calado.
 COLUNAS_EXIGIDAS = (
@@ -285,6 +330,11 @@ COLUNAS_EXIGIDAS = (
     "provado_em",
     "validade_dias",
     "assimetria_declarada",
+    #: A régua da regra 15. Entra aqui pelo motivo escrito em SUFIXOS_EXIGIDOS
+    #: logo abaixo: regra DURA não se desliga em silêncio. Sem a coluna,
+    #: `linha.get("ponte_alcanca")` devolveria None em todas as linhas e a regra
+    #: passaria a aprovar o mapa inteiro sem dizer uma palavra.
+    "ponte_alcanca",
     "id",
 )
 
@@ -519,6 +569,30 @@ DOMINIO_POR_SUFIXO = {
 }
 DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 
+#: ─────────────────────────────────────────────────────────────────────────
+#: A PONTE — por qual caminho a feature chega ao JOGO (regra 15).
+#: ─────────────────────────────────────────────────────────────────────────
+#: `transporte` diz por qual FIO a feature chega ao Hefesto; estas duas dizem
+#: por qual PONTE ela chega ao jogo. São GLOBAIS de propósito, e não um par
+#: `cabo_`/`radio_`: a ponte não é pergunta de fio, e `pares_de_transporte()`
+#: enxerga par por SUFIXO — `cabo_ponte_alcanca` viraria par no ato, e o portão
+#: passaria a cobrar paridade cabo↔rádio de um dado que não fala de transporte.
+COLUNA_DA_PONTE = "ponte_alcanca"
+COLUNA_DA_PONTE_DE_ONDE_SEI = "ponte_de_onde_sei"
+
+#: O canal que SÓ existe sob a máscara DualSense do nosso vpad (`054c:0df2`).
+#: A máscara Xbox é `uinput` (`045e:028e`) e não tem onde pôr nenhuma destas
+#: features — `docs/protocol/pilha-steam-input-xpad-sdl.md` §1.5. É por isso
+#: que a regra 15 mira `uhid` e não o mapa inteiro: aqui a ponte não é um
+#: detalhe da afirmação, é a condição dela existir.
+CANAL_QUE_A_MASCARA_DECIDE = "uhid"
+
+#: Os campos de `Ponte`, na ORDEM da assinatura do dataclass
+#: (`Ponte(kind, mascara=None, steam_input=False)`), para o leitor por AST
+#: resolver argumento posicional.
+_CAMPOS_DA_PONTE = ("kind", "mascara", "steam_input")
+
+
 #: O que conta como "afirmação forte": o produto ACIONA aquilo, e alguém MEDIU.
 #: `parcial` fica de fora de propósito — é uma afirmação com ressalva, e a
 #: sprint quer a rede primeiro onde a promessa é inteira.
@@ -624,6 +698,13 @@ class Resumo:
     graus_fortes_sem_ensaio: int = 0
     graus_de_entrada: int = 0
     ensaios_no_caderno: int = 0
+    #: Os três números da regra 15, e eles existem para responder a pergunta
+    #: "este portão ENXERGA?". Portão que não vê nada passa sempre: se o
+    #: primeiro destes números zerar, a regra parou de olhar — e é para isso
+    #: que ele é impresso no resumo em vez de ficar dentro da função.
+    linhas_que_alcancam_por_uhid: int = 0
+    linhas_uhid_com_afirmacao_forte: int = 0
+    pontes_nao_declaradas: int = 0
 
 
 def e_arquivo_que_pytest_coleta(nome: str) -> bool:
@@ -810,6 +891,112 @@ def caderno_de_ensaios(raiz: Path) -> tuple[dict[tuple[str, str], list[dict]] | 
         )
 
 
+def chave_da_ponte(kind: str, mascara: str | None, steam_input: bool) -> str:
+    """A `Ponte.chave` de `ponte_escada.py`, recalculada aqui — e a única cópia.
+
+    É uma SEGUNDA RÉGUA para o mesmo dado, que é o que esta casa evita. A cópia
+    existe porque a alternativa é pior: importar `ponte_escada` traria
+    `structlog` para dentro de um portão que roda em runner pelado. O preço está
+    pago com uma terceira régua que confere as duas —
+    `tests/unit/test_a_ponte_nao_declarada_01.py` importa a `ESCADA` de verdade
+    e exige que ela devolva EXATAMENTE o que este leitor por AST devolve. Se a
+    fórmula de `chave` mudar lá e não aqui, a suíte reprova.
+    """
+    alvo = mascara or "-"
+    return f"{kind}/{alvo}{'+steam_input' if steam_input else ''}"
+
+
+def _valor_constante(no: ast.expr, constantes: dict[str, str]) -> object:
+    """O valor literal de um argumento, ou o da constante de módulo que o nomeia."""
+    if isinstance(no, ast.Constant):
+        return no.value
+    if isinstance(no, ast.Name):
+        return constantes.get(no.id)
+    return None
+
+
+def dominio_das_pontes(raiz: Path) -> tuple[frozenset[str] | None, str]:
+    """As chaves da `ESCADA` de `ponte_escada.py`, lidas por AST.
+
+    Devolve `(domínio, motivo)`: com `None` no domínio, `motivo` diz por que a
+    conferência se desligou — e o desligamento é DITO no resumo, como o do
+    índice de testes e o do caderno de ensaios. O que NÃO se desliga junto é a
+    regra 15: ela só precisa saber se a célula está vazia, e isso o CSV responde
+    sozinho.
+
+    Nunca uma lista à mão. `ponte_escada.ESCADA` é o dono da escada de pontes
+    (nota `ESCADA-COM-UM-DONO-SO`), e redigitar as quatro chaves aqui seria a
+    segunda cópia que a casa já pagou para não ter — a mesma disciplina com que
+    `bancada.py` importa `ESCADA` para o seletor do caderno.
+    """
+    caminho = raiz / PONTE_ESCADA_RELATIVO
+    try:
+        arvore = ast.parse(caminho.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, UnicodeDecodeError) as erro:
+        return None, (
+            f"integridade da `{COLUNA_DA_PONTE}` ({PONTE_ESCADA_RELATIVO} "
+            f"ilegível: {erro!r} — sem a ESCADA não há domínio a conferir)"
+        )
+
+    constantes: dict[str, str] = {}
+    escada: ast.expr | None = None
+    for no in arvore.body:
+        if not isinstance(no, (ast.Assign, ast.AnnAssign)):
+            continue
+        alvos = no.targets if isinstance(no, ast.Assign) else [no.target]
+        for alvo in alvos:
+            if not isinstance(alvo, ast.Name) or no.value is None:
+                continue
+            if isinstance(no.value, ast.Constant) and isinstance(no.value.value, str):
+                constantes[alvo.id] = no.value.value
+            elif alvo.id == "ESCADA":
+                escada = no.value
+
+    if escada is None:
+        return None, (
+            f"integridade da `{COLUNA_DA_PONTE}` (não achei `ESCADA` em "
+            f"{PONTE_ESCADA_RELATIVO})"
+        )
+
+    chaves: set[str] = set()
+    for no in ast.walk(escada):
+        if not (
+            isinstance(no, ast.Call)
+            and isinstance(no.func, ast.Name)
+            and no.func.id == "Ponte"
+        ):
+            continue
+        valores: dict[str, object] = dict.fromkeys(_CAMPOS_DA_PONTE, None)
+        # `strict=False` de propósito: `Ponte(KIND_NATIVE)` passa UM argumento
+        # posicional para três campos, e é uma chamada legítima da ESCADA.
+        for campo, argumento in zip(_CAMPOS_DA_PONTE, no.args, strict=False):
+            valores[campo] = _valor_constante(argumento, constantes)
+        for palavra in no.keywords:
+            if palavra.arg in valores:
+                valores[palavra.arg] = _valor_constante(palavra.value, constantes)
+        kind = valores["kind"]
+        if not isinstance(kind, str) or not kind:
+            return None, (
+                f"integridade da `{COLUNA_DA_PONTE}` (uma `Ponte` da ESCADA tem "
+                f"`kind` que este leitor não resolve: {ast.dump(no)[:120]}…)"
+            )
+        mascara = valores["mascara"]
+        chaves.add(
+            chave_da_ponte(
+                kind,
+                mascara if isinstance(mascara, str) else None,
+                bool(valores["steam_input"]),
+            )
+        )
+
+    if not chaves:
+        return None, (
+            f"integridade da `{COLUNA_DA_PONTE}` (a `ESCADA` de "
+            f"{PONTE_ESCADA_RELATIVO} não tem uma única `Ponte`)"
+        )
+    return frozenset(chaves), ""
+
+
 def censo(
     caminho_csv: Path, raiz: Path, hoje: date
 ) -> tuple[list[Achado], Resumo, list[str]]:
@@ -863,6 +1050,12 @@ def censo(
         desligadas.append(motivo_sem_caderno)
     else:
         resumo.ensaios_no_caderno = sum(len(lista) for lista in ensaios_por_lado.values())
+
+    #: Só a conferência de DOMÍNIO depende da ESCADA. A regra 15 em si continua
+    #: de pé sem ela: para saber se a célula está VAZIA basta o CSV.
+    dominio_das_pontes_lido, motivo_sem_escada = dominio_das_pontes(raiz)
+    if dominio_das_pontes_lido is None:
+        desligadas.append(motivo_sem_escada)
 
     #: A regra 11 é AVISO, e regra mole se DESLIGA quando falta a coluna (a dura
     #: reprova — ver SUFIXOS_EXIGIDOS). Cobrar `mordida_provada_em` no cabeçalho
@@ -936,6 +1129,40 @@ def censo(
                 )
             )
 
+        ponte = (linha.get(COLUNA_DA_PONTE) or "").strip()
+        if ponte and dominio_das_pontes_lido is not None and ponte not in dominio_das_pontes_lido:
+            achados.append(
+                Achado(
+                    FALHA,
+                    "integridade",
+                    numero,
+                    ident,
+                    "",
+                    f"`{COLUNA_DA_PONTE}` fora do domínio: {ponte!r}. As pontes "
+                    f"são as da `ESCADA` de {PONTE_ESCADA_RELATIVO} "
+                    f"({', '.join(sorted(dominio_das_pontes_lido))}) — sem esta "
+                    "régua, `Steam Input`, `steam input` e `SteamInput` viram "
+                    "três pontes e o mapa deixa de casar com o produto",
+                )
+            )
+        #: A procedência da ponte reusa o domínio de `de_onde_sei`, que já
+        #: existe: a pergunta é a mesma (DE ONDE vem esta informação), e um
+        #: segundo vocabulário para a mesma escala é o defeito que esta casa
+        #: paga duas vezes — uma ao escrever, outra ao ler.
+        ponte_de_onde_sei = (linha.get(COLUNA_DA_PONTE_DE_ONDE_SEI) or "").strip()
+        if ponte_de_onde_sei not in DOMINIO_POR_SUFIXO["de_onde_sei"]:
+            achados.append(
+                Achado(
+                    FALHA,
+                    "integridade",
+                    numero,
+                    ident,
+                    "",
+                    f"`{COLUNA_DA_PONTE_DE_ONDE_SEI}` fora do domínio: "
+                    f"{ponte_de_onde_sei!r}",
+                )
+            )
+
         mordidas = alvos_da_celula(linha.get("teste_que_morde") or "")
         if mordidas:
             resumo.linhas_com_mordida += 1
@@ -951,6 +1178,10 @@ def censo(
         # --- as duas células de transporte da linha -------------------------
         mudas_nesta_linha = 0
         graus_fortes_nesta_linha: list[str] = []
+        #: Regra 15: os lados desta linha que entregam ao jogo por `uhid`, e os
+        #: que além disso AFIRMAM forte. Nomeia, nunca só conta.
+        lados_por_uhid: list[str] = []
+        lados_por_uhid_que_afirmam: list[str] = []
         for lado in LADOS:
             resumo.celulas += 1
             aciona = (linha[f"{lado}_aciona"] or "").strip()
@@ -981,6 +1212,11 @@ def censo(
                 resumo.celulas_que_afirmam += 1
             if de_onde_sei == DE_ONDE_SEI_FORTE:
                 resumo.celulas_medidas += 1
+
+            if (linha[f"{lado}_canal"] or "").strip() == CANAL_QUE_A_MASCARA_DECIDE:
+                lados_por_uhid.append(lado)
+                if aciona == ACIONA_FORTE and de_onde_sei == DE_ONDE_SEI_FORTE:
+                    lados_por_uhid_que_afirmam.append(lado)
 
             if aciona == ACIONA_FORTE and de_onde_sei == DE_ONDE_SEI_FORTE:
                 resumo.afirmacoes_fortes += 1
@@ -1021,6 +1257,16 @@ def censo(
         if mudas_nesta_linha == len(LADOS):
             resumo.linhas_mudas_dos_dois_lados += 1
 
+        if lados_por_uhid:
+            resumo.linhas_que_alcancam_por_uhid += 1
+        if lados_por_uhid_que_afirmam:
+            resumo.linhas_uhid_com_afirmacao_forte += 1
+            achados.extend(
+                _regra_da_ponte_nao_declarada(
+                    ponte, lados_por_uhid_que_afirmam, numero, ident, resumo
+                )
+            )
+
         if graus_fortes_nesta_linha and tem_coluna_da_mordida:
             achados.extend(_regra_da_mordida_nao_provada(linha, numero, ident))
 
@@ -1047,6 +1293,52 @@ def censo(
         )
 
     return achados, resumo, desligadas
+
+
+def _regra_da_ponte_nao_declarada(
+    ponte: str,
+    lados: list[str],
+    numero: int,
+    ident: str,
+    resumo: Resumo,
+) -> list[Achado]:
+    """Regra 15 — afirmação forte por `uhid` que não diz por qual ponte.
+
+    A linha `uhid` é a única do mapa em que a PONTE decide se a feature existe:
+    sob a nossa máscara DualSense (`054c:0df2`) ela chega ao jogo, e sob a
+    máscara Xbox (`045e:028e`) ela não tem por onde chegar — o pacote do Xbox
+    360 é fixo desde 2005 e o `xpad` declara sete eixos e um nó só
+    (`pilha-steam-input-xpad-sdl.md` §1.5). Por isso `aciona = sim, medido` sem
+    `ponte_alcanca` não é uma célula incompleta: é uma célula que afirma duas
+    coisas contraditórias ao mesmo tempo e fica verde nas duas.
+
+    Só cobra onde a promessa é máxima, e isso é desenho, não indulgência: as
+    linhas `uhid` que ainda não afirmam nada continuam podendo calar, porque
+    `◌ ninguém respondeu` é verdade e preencher por analogia é o que destruiria
+    o valor deste arquivo. Vazio segue sendo PERGUNTA ABERTA — nunca "serve para
+    toda ponte".
+    """
+    if ponte:
+        return []
+    resumo.pontes_nao_declaradas += 1
+    quais = " e ".join(ROTULO_DO_LADO[lado] for lado in lados)
+    return [
+        Achado(
+            FALHA,
+            "ponte-nao-declarada",
+            numero,
+            ident,
+            "",
+            f"entrega ao jogo por `{CANAL_QUE_A_MASCARA_DECIDE}` e afirma "
+            f"`aciona = {ACIONA_FORTE}` com `de_onde_sei = {DE_ONDE_SEI_FORTE}` "
+            f"no {quais}, mas `{COLUNA_DA_PONTE}` está vazia. O "
+            f"`{CANAL_QUE_A_MASCARA_DECIDE}` só existe sob a máscara DualSense "
+            "do nosso vpad: sob a máscara Xbox esta feature não chega ao jogo de "
+            "jeito nenhum. Diga por qual ponte você mediu — as pontes são as da "
+            f"`ESCADA` de {PONTE_ESCADA_RELATIVO} — ou baixe a "
+            f"`de_onde_sei` para o que a evidência de fato sustenta",
+        )
+    ]
 
 
 def _regra_da_validade(
@@ -1473,6 +1765,21 @@ def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
         # com ela sem conseguir jogar.
         ("     desses, na direção de ENTRADA (o jogo)", resumo.graus_de_entrada),
         ("ensaios lidos do caderno de bancada", resumo.ensaios_no_caderno),
+        # A conta que diz se a regra 15 ENXERGA. Portão que não vê nada passa
+        # sempre: no dia em que o primeiro destes zerar, a regra parou de olhar
+        # — e o resumo grita antes de alguém precisar desconfiar.
+        (
+            f"linhas que alcançam o jogo por `{CANAL_QUE_A_MASCARA_DECIDE}`",
+            resumo.linhas_que_alcancam_por_uhid,
+        ),
+        (
+            "     dessas, com afirmação forte",
+            resumo.linhas_uhid_com_afirmacao_forte,
+        ),
+        (
+            f"     dessas, SEM `{COLUNA_DA_PONTE}`",
+            resumo.pontes_nao_declaradas,
+        ),
     ]
     largura = max(len(rotulo) for rotulo, _ in linhas)
     for rotulo, valor in linhas:

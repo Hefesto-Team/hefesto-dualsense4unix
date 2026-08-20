@@ -764,6 +764,9 @@ SCRIPT = """
                 'nunca arrancaram a cura para ver reprovar')}
         ${campo('Assimetria declarada', l.assimetria_declarada, '\\u2014')}
         ${campo('Estado hoje', l.estado_hoje, '\\u2014')}
+        ${campo('Ponte que alcan\\u00e7a o jogo', l.ponte_alcanca,
+                'n\\u00e3o declarada \\u2014 vazio aqui \\u00e9 PERGUNTA ABERTA, nunca "serve para toda ponte"')}
+        ${campo('Ponte \\u00b7 de onde sei', l.ponte_de_onde_sei, '\\u2014')}
       </dl></td>`;
     return tr2;
   }

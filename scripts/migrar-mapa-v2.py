@@ -499,8 +499,19 @@ NOTAS_DE_JULGAMENTO: dict[tuple[str, str], str] = {
         "julgamento individual — foi casado pela mesma forma dos seis que passaram.",
 }
 
+#: `ponte_alcanca` e `ponte_de_onde_sei` entraram em 20/08/2026, logo depois de
+#: `transporte`, porque são o mesmo tipo de eixo: `transporte` diz por qual FIO a
+#: feature chega, a `ponte` diz por qual PONTE ela chega AO JOGO. As duas são
+#: GLOBAIS de propósito — não viram par `cabo_`/`radio_`, senão `pares_de_transporte`
+#: (check_paridade_transporte.py) passaria a cobrar paridade de uma coluna que não
+#: fala de transporte. O domínio de `ponte_alcanca` são as chaves de
+#: `integrations/ponte_escada.ESCADA`, nunca redigitadas; o de `ponte_de_onde_sei` é
+#: o MESMO de `de_onde_sei`. Vazio quer dizer "não declarou", NUNCA "serve para toda
+#: ponte". Esta migração não preenche nenhuma das duas: ela move dado do v1, e o v1
+#: não tinha a palavra.
 CABECALHO_V2 = [
     "chave", "controle", "familia", "rotulo", "peca", "evdev", "existe", "transporte",
+    "ponte_alcanca", "ponte_de_onde_sei",
     "cabo_aceita", "radio_aceita",
     "cabo_aciona", "radio_aciona",
     "cabo_canal", "radio_canal",
@@ -832,7 +843,13 @@ def migra_ensaios(v1: list[dict]) -> tuple[list[dict], list[str]]:
 #: ENTRADA exigirem declaração explícita. Ver ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01: sem
 #: ela o portão aceitava ensaio de acender lightbar como prova de que um JOGO
 #: REAGIU, e foi reproduzido à mão.
-CABECALHO_ENSAIOS = ["id", "linha_id", "transporte", "degrau", "quando", "suspeito",
+#: A `ponte` entra ao lado do `degrau` pela mesma razão e no mesmo dia
+#: (ENSAIO-QUE-NAO-DIZ-A-PONTE-01, 20/08/2026): o `degrau` diz ATÉ ONDE a
+#: medição foi, a `ponte` diz POR ONDE ela chegou ao jogo. As opções são as
+#: chaves de `integrations/ponte_escada.ESCADA`, nunca redigitadas. Aqui, como
+#: no `degrau`, o valor sai VAZIO: esta migração move ensaio antigo, não mede.
+CABECALHO_ENSAIOS = ["id", "linha_id", "transporte", "degrau", "ponte", "quando",
+                     "suspeito",
                      "presente",
                      "resultado", "resultado_da_feature", "observado_por", "fonte",
                      "nota", "linha_id_v1"]
