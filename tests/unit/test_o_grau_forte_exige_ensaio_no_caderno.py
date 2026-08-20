@@ -60,6 +60,9 @@ CABECALHO_DO_CADERNO = [
     "id",
     "linha_id",
     "transporte",
+    # ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 (20/08/2026): o que ESTE ensaio mediu.
+    # Junto de `transporte` porque é o mesmo tipo de eixo.
+    "degrau",
     "quando",
     "suspeito",
     "presente",
@@ -77,12 +80,21 @@ def ensaio(
     resultado: str = "obedece",
     observado_por: str = "olho-dela",
     identificador: str = "ensaio-de-mentira",
+    degrau: str = "",
 ) -> dict[str, str]:
-    """Uma linha do caderno, com o mínimo que o casamento e as regras leem."""
+    """Uma linha do caderno, com o mínimo que o casamento e as regras leem.
+
+    `degrau` (ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01, 20/08/2026) nasce VAZIO porque é
+    assim que os 177 ensaios do caderno nasceram, e é assim que a maioria dos
+    testes daqui quer o dublê. Quem estiver aferindo um degrau de ENTRADA tem de
+    passá-lo — que é exatamente a exigência nova, e vale para o dublê tanto
+    quanto para o caderno de verdade.
+    """
     return {
         "id": identificador,
         "linha_id": linha_id,
         "transporte": transporte,
+        "degrau": degrau,
         "quando": "2026-08-12T10:00:00",
         "suspeito": "o suspeito de mentira deste ensaio",
         "presente": "sim",
@@ -584,7 +596,14 @@ def test_o_jogo_recebeu_fecha_com_instrumento_e_nao_pede_o_olho_dela(
                 mordida_provada_em="2026-08-19",
             )
         ],
-        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="bancada")],
+        [
+            ensaio(
+                "audio.jack.deteccao@pro",
+                "cabo",
+                degrau=DEGRAUS_DE_ENTRADA[0],
+                observado_por="bancada",
+            )
+        ],
     )
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout
@@ -637,7 +656,14 @@ def test_o_jogo_reagiu_sem_o_olho_dela_derruba_e_nao_apenas_avisa(
                 mordida_provada_em="2026-08-19",
             )
         ],
-        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="bancada")],
+        [
+            ensaio(
+                "audio.jack.deteccao@pro",
+                "cabo",
+                degrau=DEGRAUS_DE_ENTRADA[1],
+                observado_por="bancada",
+            )
+        ],
     )
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 1, processo.stdout
@@ -664,7 +690,14 @@ def test_o_jogo_reagiu_com_o_olho_dela_passa(tmp_path: Path) -> None:
                 mordida_provada_em="2026-08-19",
             )
         ],
-        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="olho-dela")],
+        [
+            ensaio(
+                "audio.jack.deteccao@pro",
+                "cabo",
+                degrau=DEGRAUS_DE_ENTRADA[1],
+                observado_por="olho-dela",
+            )
+        ],
     )
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout

@@ -444,6 +444,14 @@ GRAU_OBEDECEU = "O APARELHO OBEDECEU"
 GRAU_JOGO_RECEBEU = "O JOGO RECEBEU"
 GRAU_JOGO_REAGIU = "O JOGO REAGIU"
 
+#: Os dois degraus da VOLTA. Eles exigem ensaio que DECLARE ter medido a
+#: entrada — ver `ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01`. Sai daqui, e não de uma
+#: lista à mão, para o dia em que a escada ganhar um terceiro degrau de
+#: entrada não deixar este portão para trás.
+GRAUS_DE_ENTRADA: frozenset[str] = frozenset(
+    {GRAU_JOGO_RECEBEU, GRAU_JOGO_REAGIU}
+)
+
 #: Os degraus que a suíte NÃO sustenta sozinha — e por isso os que a regra 6
 #: cobra no caderno de bancada. `MONTOU` fica de fora de propósito: montar o
 #: report é o que o pytest já morde sem aparelho, e cobrar ensaio dele seria
@@ -1261,6 +1269,54 @@ def _regra_do_caderno(
                 f"`{GRAU_MONTOU}`, que é o que a suíte sozinha sustenta",
             )
         ]
+
+    # ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01 (20/08/2026) — O BURACO IRMÃO DO DE 12/08.
+    #
+    # Em 12/08 um agente escreveu a afirmação mais forte da casa numa linha com
+    # ZERO ensaios e o portão passou. As regras 6, 9 e 13 nasceram disso. Só que
+    # a lição foi aprendida para "nenhum ensaio" e NÃO para "o ensaio errado":
+    # o casamento é `(linha_id, transporte)` e nada mais, então uma linha que TEM
+    # ensaios pode ser promovida a QUALQUER degrau — inclusive aos dois de
+    # ENTRADA — sustentada por ensaios que mediram outra coisa.
+    #
+    # REPRODUZIDO À MÃO em 20/08/2026, em cópia descartável: escrevi
+    # `cabo_ate_onde_foi = radio_ate_onde_foi = O JOGO REAGIU` em
+    # `luz.lightbar.cor@dualsense` — cujos oito ensaios falam todos de
+    # `0x08 VALID_FLAG1_RELEASE_LEDS`, que é SAÍDA pura — e o portão devolveu
+    # `exit 0`. O grau que afirma que um JOGO REAGIU passou sustentado por
+    # medições de acender luz.
+    #
+    # A cura é o ensaio DIZER o que mediu. A coluna `degrau` do caderno nasce
+    # vazia nos 177 ensaios existentes, e vazio aqui quer dizer "não declarou" —
+    # nunca "serve para tudo". Por isso a regra vale só para os degraus de
+    # ENTRADA: os de saída continuam sustentados pelo caderno como sempre
+    # estiveram (reprovar afirmação verdadeira é o erro que esta casa já pagou em
+    # 12/08 e 13/08), e a direção que ainda não tem UMA célula preenchida nasce
+    # exigindo declaração explícita — que é exatamente o momento certo de exigir.
+    if grau in GRAUS_DE_ENTRADA:
+        declararam = [
+            ensaio
+            for ensaio in ensaios
+            if (ensaio.get("degrau") or "").strip() == grau
+        ]
+        if not declararam:
+            resumo.graus_fortes_sem_ensaio += 1
+            return [
+                Achado(
+                    FALHA,
+                    "ensaio-nao-diz-o-degrau",
+                    numero,
+                    ident,
+                    lado,
+                    f"declara `{lado}_ate_onde_foi = {grau}` (direção de ENTRADA) "
+                    f"e nenhum dos {len(ensaios)} ensaio(s) de `{ident}` em "
+                    f"{ENSAIOS_RELATIVO} declara `degrau = {grau}`. Ensaio que "
+                    "não diz o que mediu não sustenta degrau de entrada: os "
+                    "ensaios desta linha podem ter medido a IDA (o aparelho "
+                    "obedeceu) e não a VOLTA (o jogo recebeu). Preencha a coluna "
+                    "`degrau` do ensaio que mediu a entrada, ou baixe o grau",
+                )
+            ]
 
     guarda = _regra_do_veredicto_da_feature(ensaios, numero, ident, lado)
 
