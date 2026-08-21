@@ -10,9 +10,15 @@ name: anonymity-check
 
 on:
   push:
-    branches: [main]
+    # FLUXO-DEV-01 (21/08/2026): `dev` entra porque o trabalho passou a nascer
+    # ali. Este é o ÚNICO portão de anonimato server-side desta casa — o que
+    # pega commit criado com `--no-verify` na máquina. Cobrindo só `main`, ele
+    # passaria a olhar apenas o lançamento, e um trailer de IA entraria na `dev`
+    # sem nada reprovar, para só aparecer no dia da release, quando desfazer
+    # custa reescrever histórico.
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 permissions:
   contents: read
