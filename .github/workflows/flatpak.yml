@@ -2,7 +2,9 @@ name: Flatpak Build
 
 on:
   push:
-    branches: [main]
+    # FLUXO-DEV-01 (21/08/2026): idem — o build do flatpak tem de quebrar no dia
+    # em que alguém mexe no empacotamento, não no dia do lançamento.
+    branches: [main, dev]
     paths:
       - "flatpak/**"
       - "scripts/build_flatpak.sh"

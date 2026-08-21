@@ -10,6 +10,12 @@ on:
   push:
     branches:
       - main
+      # FLUXO-DEV-01 (21/08/2026, decisão dela): a partir da 0.9.4.5 o trabalho
+      # do dia a dia vai para `dev`, e `main` só recebe no lançamento de uma
+      # release nova. Sem esta linha o CI passaria a rodar SÓ no lançamento —
+      # que é exatamente o defeito medido em 27/07 e curado pelo PORTÃO-VIVO-01
+      # bloco C, ressuscitado por uma mudança de fluxo em vez de uma de código.
+      - dev
       - 'restauro/**'
       - 'sprint/**'
       - 'onda/**'
