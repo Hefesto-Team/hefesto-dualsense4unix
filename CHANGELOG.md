@@ -185,6 +185,105 @@ que segue sem prova de plástico: as cinco cores da piscada, e o carimbo depois
 de um gesto (o Duskfade fechou aos 95 s, e a regra pede 180). O roteiro de validação está em
 [`docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md`](docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
 
+### A leva de 20/08 — o censo das nove abas, e a régua que faltava
+
+Esta parte entrou **depois** da primeira publicação da 0.9.4.5 e faz parte dela:
+o release foi regerado em 21/08/2026 para conter tudo o que a bancada de
+19→20/08 fechou, com o mesmo número.
+
+#### O «Parar» da vibração era o terceiro botão, e o único que continuou mentindo
+
+A leva de 19/08 curou o "Aplicar" e o "Testar" e parou ali. Dentro do Modo
+Nativo o «Parar» seguia anunciando "Vibração parada (travada em silêncio)" — e
+ali o daemon não trava silêncio nenhum: ele **solta** o par que o Hefesto
+segurava, e o motor que estiver girando é o do jogo, pelo hidraw, fora do
+alcance do produto.
+
+A régua escrita na véspera não pegava este caso, por desenho: ela olhava só
+`status == "recusado"`, e esta resposta vem com `status: "ok"` — parte do pedido
+foi realizada. A regra passou a ser mais simples e mais verdadeira: **se o
+daemon mandou uma frase, ela é para ela.**
+
+#### Na mesa cheia, o controle deslizante mexia no microfone de outra pessoa
+
+O card de cada controle manda o `uniq` junto do `mic.volume.set`, e o handler o
+descartava — por escrito, numa docstring que declarava a premissa: "há uma fonte
+de captura por máquina". **A premissa já estava derrubada pela própria casa:**
+com dois DualSense no cabo há duas placas de som, cada uma pendurada no seu
+dispositivo USB, e foi por isso que `usb_pai_por_uniq` nasceu em 15/08.
+
+Na prática: ela mexia no deslizante do card do Jogador 2 e abaixava o microfone
+do Jogador 1. A cura reusa a peça que já existia — `usb_pai` desceu para
+`integrations/`, a camada neutra, com reexport para quem já importava de `app/`.
+Duplicar criaria duas verdades sobre o mesmo sysfs.
+
+#### O portão aceitava prova de IDA como prova de VOLTA
+
+O buraco irmão do de 12/08. O casamento ensaio-célula era `(linha_id,
+transporte)` e nada mais, então uma linha que **tem** ensaios podia ser promovida
+a qualquer degrau — inclusive aos dois de ENTRADA — sustentada por medições de
+outra coisa inteira.
+
+Reproduzido à mão, em cópia descartável, antes de acreditar em qualquer agente:
+`ate_onde_foi = O JOGO REAGIU` nos dois lados de `luz.lightbar.cor@dualsense`,
+cujos ensaios falam todos de acender lightbar, e o portão devolveu exit 0.
+
+A cura é o ensaio **dizer** o que mediu: a coluna `degrau` nasce vazia nos 177
+ensaios, e vazio quer dizer "não declarou" — nunca "serve para tudo". A regra
+vale só para os degraus de ENTRADA; os de saída continuam sustentados pelo
+caderno, porque reprovar afirmação verdadeira é o erro que esta casa já pagou
+duas vezes.
+
+#### O eixo de ponte entra pelo caderno, onde mora a prova
+
+`ensaios.csv` ganhou `ponte`, ao lado do `degrau`. As 177 linhas ficam vazias e
+nenhuma célula antiga foi alterada. O casamento passa a ser `(linha_id,
+transporte, ponte)`, com compatibilidade explícita: ensaio de ponte vazia
+sustenta qualquer ponte, ensaio com ponte só sustenta a dela.
+
+O mapa ganhou duas colunas globais — 45 para 47 — e as 308 linhas continuam 308.
+Dez células nascem preenchidas, e **nenhuma é medição**: são as dez chaves que o
+`ponte_escada.py` já nomeia por escrito, conferidas verbatim contra a fonte e
+confirmadas por régua independente. O portão 15, `ponte-nao-declarada`, nasce
+verde.
+
+#### A suíte criava 1289 teclados de verdade no kernel dela, por dia
+
+Ela relatou janelas saindo de tela cheia sozinhas e suspeitou de tecla presa. O
+kernel contava outra história: 1289 nós `Virtual Keyboard` criados naquele dia,
+51 nos últimos trinta minutos, cada um vivendo cerca de 0,4 ms. **Eram meus** —
+cada `pytest -q` cria centenas deles, e a suíte rodou quinze vezes naquela
+sessão, por cima da sessão dela.
+
+Para o compositor Wayland cada add/remove de teclado é um re-assentamento de
+seat, e superfície em tela cheia larga o fullscreen numa troca de foco. Nenhum
+Esc precisava existir — e foi atrás do Esc que fui primeiro, ancorada em duas
+linhas de log que depois se provaram falsas.
+
+A raiz não é a suíte ser desleixada: é a máquina de desenvolvimento ser a mesma
+em que ela joga, trabalha e assiste. Prova, com a suíte inteira: teclados neste
+boot antes 1340, depois 1340. Criados por esta rodada: zero. Custo em produção:
+nenhum — isto vive só na suíte.
+
+#### A régua da direção de ENTRADA existe — e diz que não fecha nada hoje
+
+A VOLTA (O JOGO RECEBEU e O JOGO REAGIU) tinha zero células desde que os degraus
+nasceram em 19/08, porque não existia instrumento. Agora existem dois, e são
+independentes de propósito: portão em série engana, e duas réguas é o que revela
+quando uma olha para o lugar errado.
+
+O produto passou a declarar qual nó ele é (`evdev`, `hidraw`, `inode`,
+`game_open`) — o `game_open` existia, era agregado, e nunca saía por IPC.
+
+E o resultado honesto: **zero células preenchidas, e não por preguiça.** Três
+travas medidas — a régua do log é cega ao transporte; só há um log de Proton na
+máquina, e é sessão de cabo; e as duas réguas são de nó, não de tecla. Das 26
+células candidatas, 22 são de tecla e precisam da régua que abre o nó, que não
+foi construída porque abrir o nó arma o modo jogo e deixa o controle vibrando.
+Isso exige a máquina viva e um jogo aberto.
+
+O contrato foi cumprido e conferido por hash: mapa e caderno idênticos a HEAD.
+
 ## [0.9.4.4] — 2026-08-19
 
 A leva dos três portões. Ela não conseguia jogar o DON'T SCREAM, e a noite foi
