@@ -1585,7 +1585,26 @@ def _nenhum_sysfs_vivo_na_varredura_de_vpad(
     a resposta honesta de uma máquina sem vpad.
     """
     vazio = tmp_path_factory.mktemp("sysfs-sem-vpad")
-    from hefesto_dualsense4unix.integrations import no_do_vpad
+    try:
+        from hefesto_dualsense4unix.integrations import no_do_vpad
+    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+        # O job "A casa sabe e o produto não faz" do `ci.yml` instala SÓ o
+        # pytest, de propósito: é um portão de doze segundos que LÊ a árvore e
+        # nunca importa o produto. Esta fixture é `autouse=True` de escopo de
+        # SESSÃO, então ao nascer em 20/08 (e0a5837) passou a importar o
+        # produto em toda sessão de pytest — e vermelhou os 28 testes daquele
+        # portão, nenhum dos quais toca em vpad. O CI de main ficou vermelho
+        # nos dois repositórios desde então.
+        #
+        # Sem o pacote instalado NÃO HÁ o que blindar: a varredura de sysfs
+        # que esta fixture aponta para o vazio mora dentro do produto, e quem
+        # a chamasse já teria estourado no próprio import. O `except` é
+        # estreito de propósito — se faltar qualquer OUTRO módulo, propaga,
+        # porque aí a ausência é defeito e não desenho.
+        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+            raise
+        yield
+        return
 
     antes = (
         no_do_vpad.RAIZ_CLASS_INPUT,
