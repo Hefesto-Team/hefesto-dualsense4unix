@@ -1153,6 +1153,102 @@ install_bt_resilience_host() {
     fi
 }
 
+# PONTE-PRIVILEGIADA-01 (22/08/2026) — a infraestrutura que faz o botão de mover
+# um controle de dongle existir SEM a janela pedir senha.
+#
+# Decisão dela, do mesmo dia: "a ideia é que usemos o sudo só na hora do install
+# e isso vai valer sempre no nosso app. não tem como não usar se tratando de bt.
+# zero problemas."
+#
+# O gesto de migrar um controle (GUIA-RADIO-DA-SALA.md §6.3) tem uma linha que
+# só root faz — `rm /var/lib/bluetooth/*/cache/<MAC>`, o SDP-CACHE-01 que o
+# `scripts/doctor.sh` documenta. Sem ela o pareamento novo nasce com SDP vazio,
+# o BlueZ recusa a reconexão como *unknown device*, e parece defeito do
+# controle. Sem esta função, o botão dessa migração teria de pedir senha a cada
+# clique — ou não existir.
+#
+# O RACIONAL DA ESCOLHA (sudoers.d contra polkit contra unit contra daemon) está
+# no cabeçalho de `scripts/bt_ponte_privilegiada.sh`, junto com as três
+# contenções que pagam o preço de um NOPASSWD. Aqui ficam só as decisões DESTE
+# arquivo, que são três:
+#
+#   1. NADA É GRAVADO EM /etc/sudoers.d SEM PASSAR PELO `visudo -c`. Um sudoers
+#      inválido derruba o sudo da máquina inteira — inclusive o sudo que seria
+#      preciso para consertá-lo. Sem `visudo` na máquina, a regra NÃO vai;
+#   2. O TEXTO DA REGRA NÃO MORA AQUI. Ele sai de `bt_ponte_privilegiada.sh
+#      regra-sudo <usuária>`, que é o dono único da lista de verbos. Duplicar a
+#      lista aqui garantiria que um dia ela ficaria mais larga que o script;
+#   3. A CONFERÊNCIA É `sudo -l`, NÃO A EXISTÊNCIA DO ARQUIVO. "A casa sabe e o
+#      produto não faz" é o defeito mais caro daqui: arquivo gravado não é
+#      permissão concedida (ordem de leitura do sudoers.d, `#includedir`
+#      ausente, nome com ponto). Perguntamos ao próprio sudo.
+#
+# ACIMA DA BIFURCAÇÃO e chamada dos DOIS lados, como a resiliência acima: isto é
+# mudança de SISTEMA, ortogonal ao formato do aplicativo. Portão:
+# `tests/unit/test_install_serve_os_dois_lados_da_cerca.py`.
+install_bt_ponte_privilegiada_host() {
+    local _ponte_fonte="${ROOT_DIR}/scripts/bt_ponte_privilegiada.sh"
+    local _ponte_alvo=/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh
+    local _ponte_regra=/etc/sudoers.d/49-hefesto-bt-ponte
+    local _ponte_usuaria _ponte_tmp
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — ponte privilegiada do Bluetooth NÃO instalada (mover controle entre dongles seguirá sendo trabalho de terminal)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — ponte privilegiada do Bluetooth pulada (re-execute ./install.sh)"
+        return 0
+    fi
+    # A regra é NOMINAL: precisa saber para QUEM abrir. Rodar o install com sudo
+    # é proibido nesta casa (o HOME vira /root e o venv nasce errado), mas se
+    # alguém rodar assim mesmo, `SUDO_USER` diz quem é de verdade. Sem nenhum
+    # dos dois, gravar `root ALL=NOPASSWD` seria uma regra inútil e barulhenta.
+    _ponte_usuaria="${SUDO_USER:-$(id -un)}"
+    if [[ "${_ponte_usuaria}" == "root" ]]; then
+        warn "install rodando como root sem SUDO_USER — não sei para quem abrir a ponte; regra do sudoers NÃO gravada (rode ./install.sh como você, sem sudo)"
+        return 0
+    fi
+    if ! sudo install -Dm755 -o root -g root "${_ponte_fonte}" "${_ponte_alvo}" 2>/dev/null; then
+        warn "não consegui instalar ${_ponte_alvo} — ponte privilegiada indisponível"
+        return 0
+    fi
+    if ! command -v visudo >/dev/null 2>&1; then
+        warn "visudo ausente — a regra do sudoers NÃO foi gravada (sudoers inválido derruba o sudo da máquina inteira; não gravamos sem conferir)"
+        return 0
+    fi
+    _ponte_tmp="$(mktemp)" || {
+        warn "não consegui criar arquivo temporário — regra do sudoers NÃO gravada"
+        return 0
+    }
+    if ! bash "${_ponte_alvo}" regra-sudo "${_ponte_usuaria}" >"${_ponte_tmp}" 2>/dev/null; then
+        warn "a ponte recusou gerar a regra para '${_ponte_usuaria}' — nada gravado em ${_ponte_regra}"
+        rm -f "${_ponte_tmp}"
+        return 0
+    fi
+    if ! sudo visudo -cqf "${_ponte_tmp}" 2>/dev/null; then
+        warn "a regra gerada NÃO passou no 'visudo -c' — nada gravado em ${_ponte_regra} (o sudo desta máquina segue intacto)"
+        rm -f "${_ponte_tmp}"
+        return 0
+    fi
+    # 0440 root:root é o modo que o sudo EXIGE de um arquivo em sudoers.d — com
+    # qualquer outro ele ignora o arquivo em silêncio.
+    if ! sudo install -Dm440 -o root -g root "${_ponte_tmp}" "${_ponte_regra}" 2>/dev/null; then
+        warn "não consegui gravar ${_ponte_regra} — a janela vai precisar de senha para mover controle entre dongles"
+        rm -f "${_ponte_tmp}"
+        return 0
+    fi
+    rm -f "${_ponte_tmp}"
+    printf '      ponte privilegiada instalada: mover controle entre dongles sem digitar senha\n'
+    printf '        (%s, NOPASSWD só para %s; sete linhas de comando, MAC com forma fixa,\n' \
+        "${_ponte_regra}" "${_ponte_usuaria}"
+    printf '         nome novo pelo stdin e NENHUM verbo que execute comando livre)\n'
+    if sudo -n -l -U "${_ponte_usuaria}" "${_ponte_alvo}" adaptadores >/dev/null 2>&1; then
+        printf '      conferido no próprio sudo: a regra já vale para %s (não é só arquivo no disco)\n' "${_ponte_usuaria}"
+    else
+        warn "a regra foi gravada mas o sudo NÃO a reconheceu para ${_ponte_usuaria} — confira ${_ponte_regra} e o '#includedir /etc/sudoers.d' em /etc/sudoers"
+    fi
+}
+
 # Onda T (desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md):
 # módulo hid-nintendo patchado (probe BT resiliente + module params) via DKMS
 # genérico (scripts/dkms_lib.sh — reusado pela Onda W/rtw88). DEFAULT ON (regra
@@ -1654,6 +1750,12 @@ if [[ "${FORMAT}" != "native" ]]; then
     # cobertura do install, item 9). Mesma função do passo 3e-bis do nativo.
     step "bt-res" "ONDA-R2: resiliência do bluetoothd (DEFAULT em todo formato)"
     install_bt_resilience_host
+    # PONTE-PRIVILEGIADA-01: mesma razão da linha acima, uma camada adiante —
+    # é mudança de SISTEMA (helper em /usr/local/lib + regra em /etc/sudoers.d),
+    # ortogonal ao formato do aplicativo. Sem esta chamada, quem instala por
+    # flatpak/appimage/deb sairia com a aba de rádio pedindo senha a cada gesto.
+    step "bt-ponte" "PONTE-PRIVILEGIADA-01: a ponte de root do Bluetooth (DEFAULT em todo formato)"
+    install_bt_ponte_privilegiada_host
     # Onda T (achado equivalente ao #7 do broker): DKMS é mudança de
     # SISTEMA/kernel, ortogonal ao formato do app — mesma função do passo 3i
     # do fluxo native. Opt-out: --no-dkms.
@@ -2313,6 +2415,16 @@ fi
 # restart.
 step "3e-bis" "ONDA-R2: resiliência do bluetoothd (watchdog + snapshot de bonds)"
 install_bt_resilience_host
+
+# ---------------------------------------------------------------------------
+# 3e-ter. PONTE-PRIVILEGIADA-01: a ponte de root do Bluetooth
+# ---------------------------------------------------------------------------
+# O corpo mora em `install_bt_ponte_privilegiada_host`, acima da bifurcação de
+# formato, e o outro lado da cerca a chama também — o racional inteiro está lá.
+# A posição aqui é indiferente (não depende do bluetoothd nem do backport);
+# fica colada na resiliência porque é a mesma camada de Bluetooth.
+step "3e-ter" "PONTE-PRIVILEGIADA-01: mover controle entre dongles sem pedir senha"
+install_bt_ponte_privilegiada_host
 
 # ---------------------------------------------------------------------------
 # 3f. ONDA-R: BlueZ resiliente (backport local — alvo 5.86) — DEFAULT

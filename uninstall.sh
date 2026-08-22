@@ -308,6 +308,11 @@ dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
 [[ -e /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]] && _NEEDS_SUDO=1
 grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-bt-agent.service ]] && _NEEDS_SUDO=1
+# PONTE-PRIVILEGIADA-01 (22/08/2026): a regra do sudoers e o helper de root que
+# a janela usa para mover controle entre dongles. Resíduo de sudoers é o pior
+# tipo de resíduo — é privilégio concedido a um caminho que talvez já nem exista.
+[[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]] && _NEEDS_SUDO=1
+[[ -e /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
 # Onda S: broker root hide-hidraw (BROKER-01) — unit de sistema, precisa root.
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.service ]] && _NEEDS_SUDO=1
@@ -706,6 +711,21 @@ if sudo -n true 2>/dev/null; then
         /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh 2>/dev/null || true
+    # PONTE-PRIVILEGIADA-01 — saída simétrica ao passo 3e-ter do install.
+    #
+    # A REGRA SAI ANTES DO HELPER, e a ordem não é estética: entre um `rm` e o
+    # outro existe um instante em que um dos dois já não está. Regra apontando
+    # para caminho vazio é inofensiva (o sudo simplesmente não casa nada);
+    # helper de root ainda no disco COM a regra viva é privilégio pendurado.
+    # A ordem barata é a que erra para o lado seguro.
+    #
+    # Nenhum gate de `--keep-udev` aqui: esta camada não tem regra udev que a
+    # chame — o consumidor é a janela, e ela some com o aplicativo.
+    if [[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]]; then
+        log "removendo a regra da ponte privilegiada do Bluetooth (/etc/sudoers.d/49-hefesto-bt-ponte)"
+        sudo rm -f /etc/sudoers.d/49-hefesto-bt-ponte 2>/dev/null || true
+    fi
+    sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh 2>/dev/null || true
     # Os alvos das regras-cola 82 e 83, no mesmo gate das regras.
     if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.service \
@@ -831,8 +851,13 @@ if sudo -n true 2>/dev/null; then
     fi
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
 elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
-        || -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf ]]; then
+        || -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf \
+        || -e /etc/sudoers.d/49-hefesto-bt-ponte ]]; then
     log "sudo indisponível — resiliência do bluetoothd (timers/drop-ins/scripts) NÃO removida"
+    if [[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]]; then
+        log "  e a ponte privilegiada FICOU: é privilégio de root pendurado, remova à mão —"
+        log "  sudo rm /etc/sudoers.d/49-hefesto-bt-ponte /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
+    fi
 fi
 
 # Agente de pareamento persistente (bt-agent --capability=NoInputNoOutput via
