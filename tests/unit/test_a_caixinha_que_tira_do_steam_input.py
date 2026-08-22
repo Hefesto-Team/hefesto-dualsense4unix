@@ -407,6 +407,70 @@ def test_trocar_o_numero_do_jogo_troca_o_estado_da_caixinha(
     )
 
 
+# ---------------------------------------------------------------------------
+# DUAS-ABAS-UM-ARQUIVO-01 — o arquivo tem escritores fora desta aba
+# ---------------------------------------------------------------------------
+
+
+def test_a_caixinha_rele_o_arquivo_ao_entrar_na_aba_perfis(
+    allowlist: Path, sem_daemon: None
+) -> None:
+    """Marcar pela aba Sistema (ou pela CLI) e voltar: a caixa tem de virar.
+
+    A allowlist tem três escritores e só um deles é esta caixinha: o botão
+    "Este jogo não funciona" (`daemon_actions.on_steam_game_broken`) e o
+    `gamepad steam-input remove` (`cli/cmd_steam.py`) escrevem sem passar pela
+    janela. Como a caixa só se sincronizava ao ABRIR o editor
+    (`_mostrar_caixa_do_steam_input`), com o editor já aberto ela seguia
+    desenhando o arquivo de antes — e o tooltip do botão da aba Sistema manda
+    desmarcar justamente ali. O clique vale a posição DESENHADA: numa caixa que
+    mente "desmarcada", o primeiro clique marca de novo em vez de tirar.
+
+    O teste não chama o sincronizador pelo nome: percorre a tupla que a janela
+    real percorre (`HefestoApp._REFRESH_POR_ABA["profiles_paned"]`, disparada
+    pelo `switch-page`). Só assim a asserção morde o MAPA — que é onde o defeito
+    estava — e não o método, que já funcionava.
+
+    Mordida: tirei `_sincronizar_caixa_do_steam_input` da tupla em `app.py` e a
+    caixa ficou desmarcada depois da troca de aba, com o appid no arquivo — o
+    defeito exato, reproduzido. Devolvi e passou.
+    """
+    pytest.importorskip(
+        "gi.repository.GdkPixbuf", reason="precisa da typelib GdkPixbuf"
+    )
+    from hefesto_dualsense4unix.app.app import HefestoApp
+    from hefesto_dualsense4unix.integrations.steam_launch_options import (
+        add_appid_to_steam_input_allowlist,
+    )
+
+    novo = "1599660"
+    editor = _Editor()
+    editor.escolher("steam_game")
+    editor.digitar_o_jogo(novo)
+    assert editor.check().get_active() is False
+
+    # O que a aba Sistema faz — uma linha no txt, sem tocar em widget nenhum.
+    assert add_appid_to_steam_input_allowlist(novo, nota="aba Sistema") == "adicionado"
+    assert editor.check().get_active() is False, (
+        "instrumento inválido: a caixa não deveria adivinhar a escrita de fora "
+        "antes da troca de aba"
+    )
+
+    for nome in HefestoApp._REFRESH_POR_ABA["profiles_paned"]:
+        fn = getattr(editor, nome, None)
+        if callable(fn):
+            fn()
+    _assentar()
+
+    assert editor.check().get_active() is True, (
+        "entrar na aba Perfis não releu a allowlist: a caixa desenha o arquivo "
+        "de antes da marcação feita pela aba Sistema ou pela CLI"
+    )
+    assert vivos(allowlist) == [APPID, OUTRO, novo], (
+        "reler o disco escreveu nele — o sincronismo tem de ser somente leitura"
+    )
+
+
 def test_desmarcar_preserva_os_comentarios_do_arquivo_dela(
     allowlist: Path, sem_daemon: None
 ) -> None:

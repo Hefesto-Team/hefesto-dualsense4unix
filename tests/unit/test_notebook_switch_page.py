@@ -59,13 +59,57 @@ def _pagina(nome: str) -> Gtk.Widget:
     return page
 
 
-def test_aba_unificada_roda_os_dois_refreshers() -> None:
-    """"Navegação DSX" herda o refresh que era de Mouse E o que era de Teclado."""
+def test_aba_unificada_roda_os_tres_refreshers() -> None:
+    """"Navegação DSX" herda o de Mouse, o de Teclado e o interruptor do teclado.
+
+    O terceiro entrou em 22/08/2026 (SEGUNDO-ESCRITOR-01): o gesto PS + R3 da
+    ponte mouse+teclado chama `set_keyboard_emulation` em processo
+    (`daemon/subsystems/hotkey.py`, `_aplicar_ponte`) e persiste a escolha, então
+    o interruptor que DESENHA nesta aba passou a poder estar virado quando ela
+    entra. Enquanto esta janela era o único escritor da flag, relê-lo aqui não
+    corrigia staleness nenhuma — e a lista tinha dois nomes por essa razão
+    medida, não por esquecimento.
+
+    Mordida: tirei `_refresh_keyboard_switch` da tupla em `app.py` e este teste
+    reprovou com a lista de dois. Quem guarda o POR QUÊ — que existe um segundo
+    escritor da flag — é o portão do gesto em
+    `tests/unit/test_fiacao_da_janela_teclado_e_detector.py`, que reprovou junto.
+    """
     app = _AppFalso()
 
     app._on_notebook_switch_page(None, _pagina("tab_navegacao_dsx"), 8)
 
-    assert app.chamados == ["_refresh_mouse_tab", "_refresh_key_bindings_from_draft"]
+    assert app.chamados == [
+        "_refresh_mouse_tab",
+        "_refresh_key_bindings_from_draft",
+        "_refresh_keyboard_switch",
+    ]
+
+
+def test_entrar_na_aba_perfis_rele_a_caixinha_do_steam_input() -> None:
+    """DUAS-ABAS-UM-ARQUIVO-01: a allowlist tem escritores fora da aba Perfis.
+
+    A caixinha do Steam Input desenha um arquivo que o botão "Este jogo não
+    funciona" (`daemon_actions.on_steam_game_broken`) e o `gamepad steam-input
+    remove` (`cli/cmd_steam.py`) escrevem sem passar por esta aba. Ela só se
+    sincronizava ao ABRIR o editor, então com o editor já aberto a caixa
+    continuava mostrando o arquivo de antes — e o tooltip do botão da aba
+    Sistema manda desmarcar justamente ali.
+
+    Mordida: tirei `_sincronizar_caixa_do_steam_input` da tupla de
+    `profiles_paned` e este teste reprovou com a lista de um nome só. O efeito
+    na tela — a caixa virando sozinha depois de uma escrita por fora — é medido
+    com widget de verdade em
+    `tests/unit/test_a_caixinha_que_tira_do_steam_input.py`.
+    """
+    app = _AppFalso()
+
+    app._on_notebook_switch_page(None, _pagina("profiles_paned"), 0)
+
+    assert app.chamados == [
+        "_sync_selection_with_active_profile",
+        "_sincronizar_caixa_do_steam_input",
+    ]
 
 
 def test_pagina_dentro_de_scrolledwindow_ainda_e_reconhecida() -> None:

@@ -396,6 +396,17 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
         # trocar de ponte "por engano" no meio da partida.
         daemon.set_mouse_emulation(True, origin="manual")
     with contextlib.suppress(Exception):
+        # SEGUNDO-ESCRITOR-01 (22/08/2026): esta linha é o segundo escritor da
+        # `keyboard_emulation.flag`, e por isso ela tem eco na janela. O
+        # `set_keyboard_emulation` persiste por padrão
+        # (`daemon/protocols.py:180`), então o gesto não liga o teclado só para
+        # esta partida — grava a escolha. Enquanto a janela era o único caminho
+        # até a flag, o interruptor da aba Navegação não era relido ao entrar na
+        # aba; agora é (`app/app.py`, `_REFRESH_POR_ABA["tab_navegacao_dsx"]`).
+        # Quem for recontar escritores: o grep é por `set_keyboard_emulation(`,
+        # não por `keyboard.emulation.set` — o nome do método IPC não pega esta
+        # chamada, que é em processo, e foi esse grep que sustentou a razão
+        # caduca.
         daemon.set_keyboard_emulation(True)
     return True
 
