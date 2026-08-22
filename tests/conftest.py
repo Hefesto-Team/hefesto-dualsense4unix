@@ -10,6 +10,8 @@ que cobertura ausente. Ver ``exigir_gi_real`` e ``pytest_collectstart`` abaixo.
 """
 
 import contextlib
+import datetime
+import errno
 import fnmatch
 import hashlib
 import os
@@ -299,6 +301,13 @@ def pytest_collectstart(collector: Any) -> None:
         return
     if _remover_gi_do_processo():
         _MODULOS_DESPOLUIDOS.append(str(getattr(collector, "nodeid", collector)))
+
+
+def pytest_runtest_setup(item: Any) -> None:
+    """Diz à vigia QUEM está na mesa — sem isto o livro acusa sem endereço."""
+    vigia = vigia_da_sessao()
+    if vigia is not None:
+        vigia.quem = str(getattr(item, "nodeid", item))
 
 
 def pytest_report_header(config: Any) -> str:
@@ -812,6 +821,11 @@ def pytest_sessionstart(session: Any) -> None:
     """
     global _CANARIO_ARMADO
     _armar_berco(session)
+    # VIGIA-DE-APARELHO-01: antes da COLETA, porque um módulo de teste que
+    # criasse aparelho na importação passaria por baixo de qualquer fixture
+    # (fixture de sessão só nasce no primeiro teste, depois de importar tudo).
+    _armar_vigia_de_aparelho()
+    _INICIO_DA_SESSAO.append(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     if not _canario_ligado():
         return
     _CANARIO_FOTO_INICIAL.update(_fotografar_tudo())
@@ -852,6 +866,54 @@ def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
         _varrer_berco(session, getattr(session, "exitstatus", exitstatus))
 
 
+#: Teto de linhas do relato da vigia — o livro de uma sessão contaminada diz
+#: tudo nas primeiras; uma lista de trezentas só ensina a pular o bloco.
+_VIGIA_LIMITE_RELATO = 12
+
+
+def _vigia_no_fim_da_sessao(session: Any) -> None:
+    """O portão da vigia, cobrindo a sessão INTEIRA, e o aviso do kernel."""
+    vigia = vigia_da_sessao()
+    problemas = problemas_da_vigia(vigia)
+    if problemas:
+        mostrados = problemas[:_VIGIA_LIMITE_RELATO]
+        restam = len(problemas) - len(mostrados)
+        _escrever_no_terminal(session, [
+            "",
+            "VIGIA-DE-APARELHO-01: a suíte bateu na porta do kernel "
+            f"({len(problemas)} vez(es)) — nó de entrada de VERDADE na máquina "
+            "de quem roda:",
+            *[f"  - {p}" for p in mostrados],
+            *([f"  ... e mais {restam}"] if restam > 0 else []),
+            "  Um teste que precisa de aparelho de entrada precisa de um DUBLÊ:",
+            "  veja `_nenhum_uinput_de_verdade` neste conftest. Em 20/08/2026",
+            "  isto custou 1289 nós num dia e a tela cheia dela no meio do jogo.",
+        ])
+        session.exitstatus = 1
+
+    if not _INICIO_DA_SESSAO:
+        return
+    nascidos = nascimentos_no_journal(_INICIO_DA_SESSAO[0])
+    if not nascidos:
+        return
+    nossos = [
+        n for n in nascidos if "Hefesto" in n and n != NOME_DO_NO_DE_MORDIDA
+    ]
+    if not nossos:
+        return
+    contados = sorted({(n, nossos.count(n)) for n in nossos})
+    _escrever_no_terminal(session, [
+        "",
+        "VIGIA-DE-APARELHO-01 (aviso, não é portão): o kernel registrou "
+        f"{len(nossos)} nó(s) com nome do produto durante esta sessão:",
+        *[f"  - {n} x{q}" for n, q in contados[:_VIGIA_LIMITE_RELATO]],
+        "  Se nenhum teste apareceu no livro acima, quase sempre é o daemon "
+        "VIVO dela criando vpad (ela joga enquanto a suíte roda).",
+        "  Vale investigar quando a suíte tiver subido um processo FILHO do "
+        "produto: é o único caminho que a vigia da porta não enxerga.",
+    ])
+
+
 def _sessionfinish_das_guardas(session: Any) -> None:
     """GUARDA-GI-REAL-01 + ARVORE-CONGELADA-01 + CANARIO-FS-01, nesta ordem."""
     if EXIGE_GTK_REAL and _MODULOS_PULADOS_SEM_GI:
@@ -877,6 +939,11 @@ def _sessionfinish_das_guardas(session: Any) -> None:
             "  agente) antes de gravar qualquer nota que dependa dele.",
         ])
         session.exitstatus = 1
+
+    # VIGIA-DE-APARELHO-01, as duas metades: o PORTÃO (o livro da vigia, que
+    # atribui) e o AVISO (o journal do kernel, que enxerga o que a vigia não
+    # alcança — processo filho — e não sabe de quem é).
+    _vigia_no_fim_da_sessao(session)
 
     if not _canario_ligado() or not _CANARIO_ARMADO:
         return
@@ -1099,6 +1166,298 @@ def _deltas_do_congelado() -> list[str]:
         if (atual.stat().st_mode & 0o777) != (copia.stat().st_mode & 0o777):
             deltas.append(f"MODO     {relativo}")
     return deltas
+
+
+# ---------------------------------------------------------------------------
+# VIGIA-DE-APARELHO-01 — a suíte não cria aparelho de entrada no kernel DELA
+# ---------------------------------------------------------------------------
+# O DEFEITO é o da `_nenhum_uinput_de_verdade` (lá embaixo): 1289 nós
+# `Hefesto - Dualsense4Unix Virtual Keyboard` num dia, saídos do meu `pytest`,
+# derrubando a tela cheia dela no meio de um jogo. A CURA daquele dia pegou — o
+# `journalctl -k` de 19 a 22/08 não registra UM nó com esse nome. O que faltava
+# é o PORTÃO: sem ele, o próximo teste que abra a porta reabre isto e ninguém
+# nota por semanas (entre 04/08 e 20/08 foram dezesseis dias).
+#
+# A RÉGUA É A PORTA, e as outras três foram MEDIDAS nesta máquina em 22/08
+# antes de serem descartadas:
+#
+#  (a) contagem de `/dev/input/event*` antes e depois — CEGA ao defeito. O nó
+#      uinput morre quando o descritor que o criou fecha, e isso acontece dentro
+#      do próprio teste: a contagem do fim é idêntica à do início mesmo depois
+#      de 1289 nós. Medido em 04/08 e reconfirmado aqui pelo teste da mordida,
+#      que cria um nó de verdade e mostra a contagem parada nos dois lados.
+#  (b) o maior `inputN` de `/sys/class/input` — parecia a saída (o número cresce
+#      e não é reciclado: o nó da mordida saiu `input198` com o máximo em 196) e
+#      NÃO é: `/sys/class/input` lista só o que está VIVO, e o máximo volta a
+#      196 no instante em que o nó morre. Sysfs não guarda memória de número já
+#      usado. Régua descartada por MEDIÇÃO: a primeira versão deste bloco a
+#      chamava de "alto-d'água" e prometia o contrário — o teste da mordida
+#      derrubou a promessa na primeira execução. Ela também não atribuiria:
+#      nesta máquina nasceram 43 aparelhos de entrada em uma hora sem suíte
+#      nenhuma (espelhos do Steam Input e os controles dela).
+#  (c) journal do kernel — a ÚNICA régua que sobrevive à morte do nó, e foi com
+#      ela que os 1289 foram contados. Não serve de portão (não existe no CI, e
+#      a linha do kernel não diz de QUEM é o nó), mas é o AVISO do fim da
+#      sessão: é o único instrumento que enxerga nó que nasce em processo FILHO.
+#      Latência medida em 22/08: menos de 20 ms entre criar e aparecer.
+#  (d) arquivo fora do `tmp_path` — já é o CANARIO-FS-01 + BERCO-DE-TMP-01 aqui
+#      em cima, e nenhum dos dois vê uinput: nó de entrada não deixa arquivo.
+#
+# A porta: em processo, todo nó de entrada nasce por `uinput.Device`
+# (python-uinput), `evdev.UInput` (python-evdev) ou `os.open` de `/dev/uinput` /
+# `/dev/uhid` — as três são chamadas Python, então dá para ficar na porta,
+# registrar QUEM passou (o nodeid do teste) e recusar. Atribuição perfeita (é o
+# nosso processo), nenhum privilégio, e ela vê o nó transitório que (a) não vê.
+#
+# O CEGO DELA, declarado: nó que nasce em processo FILHO não passa por porta
+# nossa. É para esse buraco que o aviso de (c) existe.
+
+#: Os dois nós de kernel por onde nasce aparelho de entrada.
+PORTAS_DE_APARELHO: tuple[str, ...] = ("/dev/uinput", "/dev/uhid")
+
+#: As fábricas de biblioteca que criam o nó sem passar por `os.open` do Python
+#: (as duas abrem o `/dev/uinput` em C). Nome da porta -> (módulo, atributo).
+FABRICAS_DE_APARELHO: tuple[tuple[str, str], ...] = (
+    ("uinput", "Device"),
+    ("evdev", "UInput"),
+    ("evdev.uinput", "UInput"),
+)
+
+#: Escotilha de saída, mesmo padrão do canário e do berço.
+_VIGIA_DESLIGADA_ENV = "HEFESTO_SEM_VIGIA_APARELHO"
+
+
+@dataclass(frozen=True)
+class NascimentoDeAparelho:
+    """Uma passagem pela porta: quem tentou, por onde, com que nome."""
+
+    quem: str
+    porta: str
+    detalhe: str = ""
+
+    def __str__(self) -> str:
+        cauda = f" ({self.detalhe})" if self.detalhe else ""
+        return f"{self.porta}{cauda} <- {self.quem}"
+
+
+class AparelhoRecusadoError(PermissionError):
+    """A porta fechada, e ela é ``OSError`` de propósito.
+
+    O produto já sabe degradar quando `/dev/uinput` não abre (é o que acontece
+    no CI e em máquina sem a ACL do udev): quem chama trata `OSError` e responde
+    "não dá para usar". Recusar com um erro de outra família faria a suíte medir
+    um caminho que produção nenhuma percorre.
+    """
+
+
+class VigiaDeAparelho:
+    """Fica nas portas do kernel: registra quem passa e, por padrão, recusa.
+
+    ``recusar=False`` deixa passar e só anota — é o modo do teste da mordida,
+    que precisa de um nó de VERDADE para provar que a régua não é fantasia.
+    """
+
+    def __init__(self, *, recusar: bool = True) -> None:
+        self.livro: list[NascimentoDeAparelho] = []
+        self.quem = "<coleta ou fixture de sessão>"
+        self.recusar = recusar
+        #: O que estava na porta ANTES de nós — é daqui que o teste da mordida
+        #: tira a fábrica de verdade sem desarmar a vigia da sessão.
+        self.originais: dict[str, Any] = {}
+        self._desfazer: list[Callable[[], None]] = []
+
+    # -- a porta, isolada de qualquer instalação ---------------------------
+
+    def registrar(self, porta: str, detalhe: str = "") -> None:
+        self.livro.append(NascimentoDeAparelho(self.quem, porta, detalhe))
+
+    def envolver_fabrica(self, original: Any, porta: str) -> Callable[..., Any]:
+        """A fábrica guardada. Devolve um chamável com a MESMA assinatura."""
+
+        def _porta(*args: Any, **kwargs: Any) -> Any:
+            nome = kwargs.get("name")
+            if not isinstance(nome, str):
+                nome = next((a for a in args[1:] if isinstance(a, str)), "")
+            self.registrar(porta, f"name={nome!r}" if nome else "")
+            if self.recusar:
+                raise AparelhoRecusadoError(
+                    errno.EACCES, f"VIGIA-DE-APARELHO-01: {porta} recusado sob teste"
+                )
+            return original(*args, **kwargs)
+
+        _porta.vigia_de_aparelho = porta  # type: ignore[attr-defined]
+        return _porta
+
+    def envolver_os_open(self, original: Callable[..., int]) -> Callable[..., int]:
+        """O `os.open` guardado — só olha os dois nós, o resto passa reto."""
+
+        def _abrir(caminho: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+            try:
+                texto = os.fsdecode(caminho)
+            except (TypeError, ValueError):
+                texto = ""
+            if texto in PORTAS_DE_APARELHO:
+                self.registrar(texto, "os.open")
+                if self.recusar:
+                    raise AparelhoRecusadoError(
+                        errno.EACCES, f"VIGIA-DE-APARELHO-01: {texto} recusado sob teste"
+                    )
+            return original(caminho, flags, *args, **kwargs)
+
+        _abrir.vigia_de_aparelho = "os.open"  # type: ignore[attr-defined]
+        return _abrir
+
+    # -- instalação --------------------------------------------------------
+
+    def instalar(self) -> "VigiaDeAparelho":
+        """Põe a vigia nas três portas que existirem neste ambiente."""
+        self.originais["os.open"] = os.open
+        os.open = self.envolver_os_open(os.open)  # type: ignore[assignment]
+        self._desfazer.append(
+            lambda: setattr(os, "open", self.originais["os.open"])
+        )
+        for modulo, atributo in FABRICAS_DE_APARELHO:
+            self._instalar_fabrica(modulo, atributo)
+        return self
+
+    def _instalar_fabrica(self, modulo: str, atributo: str) -> None:
+        try:
+            alvo = __import__(modulo, fromlist=[atributo])
+            original = getattr(alvo, atributo)
+        except Exception:
+            # Sem a biblioteca não há porta a vigiar — é o caso do job leve do
+            # CI, que instala só o pytest.
+            return
+        porta = f"{modulo}.{atributo}"
+        self.originais[porta] = original
+        setattr(alvo, atributo, self.envolver_fabrica(original, porta))
+        self._desfazer.append(lambda: setattr(alvo, atributo, original))
+
+    def desinstalar(self) -> None:
+        for desfazer in reversed(self._desfazer):
+            with contextlib.suppress(Exception):
+                desfazer()
+        self._desfazer.clear()
+
+
+#: No máximo um — a vigia desta sessão.
+_VIGIA: list[VigiaDeAparelho] = []
+
+#: O relógio do início da sessão, no formato que o `journalctl --since` aceita.
+_INICIO_DA_SESSAO: list[str] = []
+
+#: O nome do nó que o teste da mordida cria (e mata) para provar que a régua não
+#: é fantasia. Mora aqui porque os dois lados precisam concordar: o teste o usa,
+#: e o aviso do journal o EXCLUI — senão a prova da régua vira alarme.
+#: Nunca o nome de produção: quem lê o journal tem de distinguir de olho (E1).
+NOME_DO_NO_DE_MORDIDA = "Hefesto MORDIDA de teste (VIGIA-DE-APARELHO-01)"
+
+
+def _vigia_ligada() -> bool:
+    return os.environ.get(_VIGIA_DESLIGADA_ENV) != "1"
+
+
+def vigia_da_sessao() -> VigiaDeAparelho | None:
+    """A vigia desta sessão, ou None quando ela não está armada."""
+    return _VIGIA[0] if _VIGIA else None
+
+
+def _armar_vigia_de_aparelho() -> None:
+    if not _vigia_ligada() or _VIGIA:
+        return
+    _VIGIA.append(VigiaDeAparelho().instalar())
+
+
+def maior_no_de_entrada_vivo() -> int:
+    """O maior `inputN` VIVO agora (-1 quando não há nenhum).
+
+    ATENÇÃO ao que este número NÃO é, porque a primeira versão desta função se
+    chamava `alto_dagua_de_aparelhos` e prometia justamente isso: ele **não é
+    alto-d'água**. Medido em 22/08 com um nó de verdade: o kernel deu `input198`
+    ao nó (o número cresce, não é reciclado), e a função devolveu 198 enquanto
+    ele vivia — mas 196 assim que ele morreu, porque `/sys/class/input` só lista
+    o que está VIVO. Não existe, em sysfs, memória do número já usado.
+
+    A consequência é a que decide o desenho da vigia: **nenhuma régua de sysfs
+    enxerga o nó que já morreu** — nem a contagem de `/dev/input/event*`, nem
+    esta. Quem enxerga é a porta (em processo) e o journal do kernel (também
+    para processo filho). Ver `nascimentos_no_journal`.
+    """
+    maior = -1
+    try:
+        entradas = os.listdir("/sys/class/input")
+    except OSError:
+        return maior
+    for nome in entradas:
+        if not nome.startswith("input") or not nome[5:].isdigit():
+            continue
+        maior = max(maior, int(nome[5:]))
+    return maior
+
+
+def nascimentos_no_journal(desde: str) -> list[str] | None:
+    """Os nomes dos aparelhos de entrada que o KERNEL registrou desde `desde`.
+
+    `None` quando não deu para ler o journal (CI em container, sem journald) —
+    e essa é a razão de isto ser aviso e nunca portão.
+
+    É a única régua que sobrevive à morte do nó, e foi com ela que os 1289 nós
+    de 20/08 foram contados. Latência medida em 22/08: a linha do kernel aparece
+    no journal em menos de 20 ms.
+    """
+    import subprocess
+
+    try:
+        saida = subprocess.run(
+            ["journalctl", "-k", "--since", desde, "--no-pager"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if saida.returncode != 0:
+        return None
+    nomes: list[str] = []
+    for linha in saida.stdout.splitlines():
+        marca = "kernel: input: "
+        if marca not in linha:
+            continue
+        nomes.append(linha.split(marca, 1)[1].split(" as ", 1)[0].strip())
+    return nomes
+
+
+def nomes_de_aparelhos_vivos() -> list[str]:
+    """Os nomes dos aparelhos de entrada VIVOS agora, lidos do sysfs.
+
+    A outra metade da contagem independente: enquanto o nó existe, o kernel
+    publica o nome dele. É assim que o teste da mordida confirma que o nó que a
+    vigia registrou nasceu mesmo — e que sumiu depois.
+    """
+    nomes: list[str] = []
+    raiz = Path("/sys/class/input")
+    try:
+        entradas = sorted(raiz.iterdir())
+    except OSError:
+        return nomes
+    for entrada in entradas:
+        if not entrada.name.startswith("input") or not entrada.name[5:].isdigit():
+            continue
+        with contextlib.suppress(OSError):
+            nomes.append((entrada / "name").read_text().strip())
+    return nomes
+
+
+def problemas_da_vigia(vigia: VigiaDeAparelho | None) -> list[str]:
+    """A lista que o portão lê: uma linha por passagem na porta (vazia = limpo).
+
+    Função e não `assert` porque ela é usada por DOIS lados: o portão da suíte
+    (`test_a_suite_nao_cria_aparelho_no_kernel.py`) e o `sessionfinish`, que
+    cobre a sessão inteira — o portão só enxerga o que rodou antes dele.
+    """
+    if vigia is None:
+        return []
+    return [str(n) for n in vigia.livro]
 
 
 @pytest.fixture(scope="session")
@@ -1516,11 +1875,18 @@ def _nenhum_uinput_de_verdade() -> Iterator[None]:
     escrevendo entrada de verdade, por cima da sessão de uma pessoa que está
     usando o computador.
 
-    São dois pontos de criação, e só dois — `integrations/uinput_keyboard.py` e
-    `integrations/uinput_mouse.py`, ambos fazendo `import uinput` DENTRO da
-    função e chamando `uinput.Device(...)`. Por isso a troca é em
-    `sys.modules["uinput"].Device`: pega os dois sem que nenhum dos dois precise
-    saber que está sendo dublado.
+    Esta fixture cobre os dois pontos que usam o **python-uinput**:
+    `integrations/uinput_keyboard.py` e `integrations/uinput_mouse.py`, ambos
+    fazendo `import uinput` DENTRO da função e chamando `uinput.Device(...)`.
+    Por isso a troca é em `sys.modules["uinput"].Device`: pega os dois sem que
+    nenhum deles precise saber que está sendo dublado.
+
+    **Eles NÃO são os únicos pontos de criação** (a versão de 20/08 desta
+    docstring dizia que sim; medido em 22/08, está errado):
+    `integrations/uinput_gamepad.py` cria o vpad com `evdev.UInput`, e
+    `integrations/uhid_gamepad.py` abre `/dev/uhid` com `os.open`. Nenhum dos
+    dois passa por aqui — quem fica nessas portas é a VIGIA-DE-APARELHO-01
+    acima, que registra e recusa.
 
     Custo em produção: ZERO. Isto vive só na suíte.
     """
