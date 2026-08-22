@@ -67,14 +67,21 @@ ISENTOS: dict[str, str] = {
         "PONTE-CONFIRMADA-01 (19/08/2026): não é preferência dela, é REGISTRO "
         "de uma confirmação — a ponte que já pegou naquele jogo, carimbada pelo "
         "gesto no controle, pelo silêncio de quem jogou sem reclamar, ou pela "
-        "escolha direta dela. E ela tem de ficar FORA do rascunho da janela por "
-        "uma razão de produto, não de conveniência: se o 'Salvar Perfil' "
-        "escrevesse este campo, todo save carimbaria como confirmada uma ponte "
-        "que ninguém confirmou, e a escada pararia de rodar em todo jogo — o "
-        "defeito mais silencioso desta frente, o que faz o produto jurar que "
-        "sabe o que não sabe. Quem escreve é `manager.confirmar_ponte`, e o "
-        "ida e volta dela está em "
-        "`test_ponte_confirmada_01_o_perfil_guarda_a_ponte_que_funcionou.py`."
+        "escolha direta dela. Não existe gesto de aba que a produza, e é por "
+        "isso que ela não tem ida e volta aqui. O rascunho a TRANSPORTA desde "
+        "22/08/2026 (`DraftConfig.source_ponte`, passthrough somente-leitura no "
+        "molde do `source_match`): `to_profile` reconstrói o perfil do zero, e "
+        "sem o transporte todo 'Salvar Perfil' apagava o carimbo — o jogo caía "
+        "do `manager.pontes_confirmadas()` e a escada recomeçava do primeiro "
+        "degrau no lançamento seguinte. TRANSPORTAR NÃO É ESCREVER, e a "
+        "diferença é a feature: se a janela ganhasse campo para este valor, "
+        "todo save carimbaria como confirmada uma ponte que ninguém confirmou e "
+        "a escada pararia em TODO jogo — o defeito mais silencioso desta "
+        "frente, o que faz o produto jurar que sabe o que não sabe. Quem "
+        "escreve é `manager.confirmar_ponte`, e o ida e volta dela está em "
+        "`test_ponte_confirmada_01_o_perfil_guarda_a_ponte_que_funcionou.py`; o "
+        "passthrough tem testemunha própria em "
+        "`test_o_carimbo_de_ponte_sobrevive_ao_salvar.py`."
     ),
 }
 
@@ -658,6 +665,10 @@ class TestOPortaoMorde:
         reprova. Sem ele, esquecer de vigiar uma seção nova produziria o mesmo
         silêncio que o portão existe para acabar.
         """
+        # `ISENTOS` entra aqui, e o `ponte` explica por quê o nome desta
+        # variável não é a régua: ele ATRAVESSA o rascunho (`source_ponte`,
+        # passthrough somente-leitura) e mesmo assim fica de fora — o que se
+        # vigia é ESCRITOR na janela, e ele não tem nenhum de propósito.
         fora_do_rascunho = {"name", "match", "priority", *ISENTOS}
         esperadas = set(Profile.model_fields) - fora_do_rascunho
         vigiadas = set(_SINAIS_DE_ESCRITOR)

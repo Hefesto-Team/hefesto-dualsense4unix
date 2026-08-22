@@ -81,9 +81,32 @@ class TestSchema:
             ProfileMicConfig(button_toggles_system=True, volume=fora)
 
 
+def _applier() -> tuple[Any, Any]:
+    """Applier com daemon de mentira e o flag do mic LIGADO, como no boot."""
+    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.testing import FakeController
+
+    daemon = MagicMock()
+    daemon.config = MagicMock(mic_button_toggles_system=True)
+    applier = DraftApplier(
+        controller=FakeController(transport="usb"),
+        store=StateStore(),
+        daemon=daemon,
+    )
+    return applier, daemon
+
+
 class TestDraft:
-    def test_default_espelha_o_default_do_daemon(self) -> None:
-        assert DraftConfig.default().mic.button_toggles_system is True
+    def test_o_default_do_rascunho_e_nao_ter_opiniao(self) -> None:
+        """NOTA DATADA — 22/08/2026 (MIC-GATE-POR-CAMPO-01).
+
+        Este caso afirmava `is True`, "espelha o default do daemon". Espelhar
+        aqui era o defeito: o rascunho nascia com uma opinião que ninguém deu,
+        e o "Aplicar" a escrevia na config viva. O default do DAEMON continua
+        `True` (daemon/lifecycle.py:272); o do RASCUNHO é o silêncio.
+        """
+        assert DraftConfig.default().mic.button_toggles_system is None
 
     def test_round_trip_perfil_para_draft_e_de_volta(self) -> None:
         origem = Profile(
@@ -125,35 +148,123 @@ class TestDraft:
         }
 
 
-class TestApplier:
-    def _applier(self) -> tuple[Any, Any]:
-        from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-        from hefesto_dualsense4unix.daemon.state_store import StateStore
-        from hefesto_dualsense4unix.testing import FakeController
+class TestGatePorCampo:
+    """MIC-GATE-POR-CAMPO-01 (22/08/2026) — o gate era por SEÇÃO.
 
-        daemon = MagicMock()
-        daemon.config = MagicMock(mic_button_toggles_system=True)
-        applier = DraftApplier(
-            controller=FakeController(transport="usb"),
-            store=StateStore(),
-            daemon=daemon,
+    Arrastar o volume marcava `dirty`, e o "Aplicar" levava junto um
+    `button_toggles_system` que nenhuma superfície escreve: o default de
+    fábrica, uma opinião que ninguém deu. Do outro lado,
+    `ipc_draft_applier._apply_mic` a escreve na config VIVA do daemon.
+
+    MORDIDA (arrancada e conferida em 22/08/2026): devolvendo o default do
+    campo para `True` em `MicDraft` e apagando a condicional de `mic_ipc` em
+    `to_ipc_dict`, os dois primeiros casos reprovam — a chave volta ao payload
+    e o `False` da config viva vira `True`.
+    """
+
+    def test_o_gesto_do_volume_nao_arrasta_o_botao_junto(self) -> None:
+        """O molde é o `rota` do alto-falante: sem opinião, a chave não viaja."""
+        depois_do_slider = DraftConfig.default().with_mic(volume=70)
+        secao = depois_do_slider.to_ipc_dict()["mic"]
+
+        assert secao == {"volume": 70, "muted": None}, (
+            f"a seção do microfone saiu como {secao!r} — o gesto do volume "
+            "levou junto um campo que ninguém escolheu"
         )
-        return applier, daemon
+
+    def test_o_aplicar_do_volume_nao_derruba_o_flag_vivo_do_daemon(self) -> None:
+        """A ponta que dói: a config VIVA do daemon, escrita pelas costas dela.
+
+        O `False` aqui é o caso que o defeito derrubava — alguém que desligou o
+        botão de mic no `DaemonConfig` (perfil de gravação/live, a razão escrita
+        em `ProfileMicConfig`) e depois arrastou o volume na janela.
+        """
+        applier, daemon = _applier()
+        daemon.config.mic_button_toggles_system = False
+
+        payload = DraftConfig.default().with_mic(volume=70).to_ipc_dict()
+        aplicadas = applier.apply({"mic": payload["mic"]})
+
+        assert daemon.config.mic_button_toggles_system is False, (
+            "o Aplicar religou o botão de mic do sistema — o gesto foi no "
+            "controle deslizante do volume"
+        )
+        assert "mic" in aplicadas, "sem opinião não é FALHA — é nada a fazer"
+
+    def test_a_chave_nula_e_silencio_e_nao_falha_a_secao(self) -> None:
+        """Nulo explícito é "sem opinião", não payload torto.
+
+        A seção já viaja com `volume`/`muted` nulos (é a forma dela desde
+        18/08/2026), e quem monta o payload fora da janela — CLI, applet, um
+        roteiro — serializa o mesmo `None` no booleano. Sem esta régua a seção
+        cairia em `failed` e o rodapé diria que o microfone falhou.
+
+        MORDIDA: trocando a guarda de `_apply_mic` de volta por
+        `if "button_toggles_system" not in mic_raw`, este caso reprova.
+        """
+        applier, daemon = _applier()
+
+        aplicadas = applier.apply(
+            {"mic": {"volume": 70, "muted": None, "button_toggles_system": None}}
+        )
+
+        assert "mic" in aplicadas
+        assert applier.failed == {}
+        assert daemon.config.mic_button_toggles_system is True
+
+    def test_com_opiniao_a_chave_viaja_e_e_aplicada(self) -> None:
+        """A outra metade: quem escolher o campo continua sendo obedecido.
+
+        Sem este caso a cura poderia ser "nunca mandar o booleano", que cala o
+        único caminho que o campo tem hoje até a superfície nascer.
+        """
+        draft = DraftConfig.default().model_copy(
+            update={"mic": MicDraft(button_toggles_system=False, dirty=True)}
+        )
+        applier, daemon = _applier()
+
+        applier.apply({"mic": draft.to_ipc_dict()["mic"]})
+
+        assert daemon.config.mic_button_toggles_system is False
+
+    def test_o_disco_continua_lembrando_do_que_ela_desligou(self) -> None:
+        """Sem opinião no rascunho não pode virar `False` no arquivo.
+
+        O esquema exige booleano; "sem opinião" vira `True`, o default do
+        daemon — e é o que `to_profile` já persistia antes de 22/08/2026.
+        """
+        salvo = DraftConfig.default().with_mic(volume=70).to_profile("p")
+        assert salvo.mic is not None
+        assert salvo.mic.button_toggles_system is True
+        assert salvo.mic.volume == 70
+
+        de_volta = DraftConfig.from_profile(
+            Profile(
+                name="live",
+                match=MatchAny(),
+                mic=ProfileMicConfig(button_toggles_system=False, volume=40),
+            )
+        )
+        assert de_volta.mic.button_toggles_system is False
+        assert de_volta.to_profile("live").mic.button_toggles_system is False
+
+
+class TestApplier:
 
     def test_apply_draft_escreve_na_config_viva(self) -> None:
-        applier, daemon = self._applier()
+        applier, daemon = _applier()
         aplicadas = applier.apply({"mic": {"button_toggles_system": False}})
         assert "mic" in aplicadas
         assert daemon.config.mic_button_toggles_system is False
 
     def test_secao_ausente_nao_toca_no_flag(self) -> None:
-        applier, daemon = self._applier()
+        applier, daemon = _applier()
         applier.apply({"rumble": {"weak": 0, "strong": 0}})
         assert daemon.config.mic_button_toggles_system is True
 
     def test_valor_invalido_nao_corrompe_a_config(self) -> None:
         """`_apply_section` engole a exceção — mas nada é escrito."""
-        applier, daemon = self._applier()
+        applier, daemon = _applier()
         aplicadas = applier.apply({"mic": {"button_toggles_system": "sim"}})
         assert "mic" not in aplicadas
         assert daemon.config.mic_button_toggles_system is True

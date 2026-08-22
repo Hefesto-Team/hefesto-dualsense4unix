@@ -3474,6 +3474,35 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         if source is not None:
             base["controllers"] = source.controllers
 
+        # PONTE-CONFIRMADA-01 (19/08/2026): o carimbo de ponte chega até aqui por
+        # passthrough — do rascunho (via `to_profile`, gateado pelo R-11) ou do
+        # perfil-base do disco —, e é isso que faz salvar pela aba Perfis parar
+        # de apagar qual ponte já funcionou naquele jogo.
+        #
+        # Mas ele é REGISTRO de uma confirmação, não configuração que se copia, e
+        # um arquivo que ESTREIA ainda não confirmou nada. Quem herdava de fato
+        # era o "Duplicar": `_edita_o_perfil_do_rascunho` já devolve `False` para
+        # ele e para o "Novo perfil", então a base vem do `_duplicate_source` —
+        # o perfil-fonte, com o carimbo dele dentro. A cópia sai com a mesma
+        # regra, mas o gesto seguinte é repontar a cópia para OUTRO jogo: aí o
+        # carimbo viaja junto, `pontes_confirmadas()` publica uma ponte que
+        # ninguém provou naquele appid e a escada para num jogo nunca testado —
+        # o produto jurando que sabe o que não sabe. É a MESMA resposta que o
+        # rodapé dá ao nome novo (`DraftConfig.to_profile`), e as duas
+        # superfícies não podem divergir num gesto que a tela nem nomeia.
+        #
+        # Quem já EXISTE em disco mantém o próprio carimbo, pelo argumento
+        # medido da REGRA-NAO-SE-PERDE-01: estrear por cima de um arquivo que
+        # está lá não apaga o que ele sabia. O jogo não perde nada com a cópia
+        # sem carimbo — `manager.perfil_do_appid` desempata por
+        # `(ponte is not None, priority, name)` e continua achando o original.
+        estreia = bool(getattr(self, "_new_profile", False)) or (
+            getattr(self, "_duplicate_source", None) is not None
+        )
+        if estreia:
+            no_disco = self._perfil_que_o_salvar_sobrescreve(name)
+            base["ponte"] = no_disco.ponte if no_disco is not None else None
+
         # FEAT-LED-BRIGHTNESS-03: brightness pendente do slider só é aplicado
         # quando o perfil-base NÃO tem brilho próprio. BUG-PROFILE-BRIGHTNESS-OVERWRITE-01:
         # antes sobrescrevia incondicionalmente com o global (default 1.0),
