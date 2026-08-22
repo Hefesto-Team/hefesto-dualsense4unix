@@ -27,6 +27,32 @@ from typing import Any
 import pytest
 
 # ---------------------------------------------------------------------------
+# SUITE-SEM-COR-01 — a suíte não pode depender do terminal de quem a roda
+# ---------------------------------------------------------------------------
+#
+# MEDIDO EM 22/08/2026, rodando a suíte inteira: **nove testes de CLI reprovam
+# ou passam conforme o TERMINAL**. Os testes comparam a saída dos comandos
+# (`'[ OK ]' in resultado`, `json.loads(resultado)`), o `rich` decide colorir na
+# CONSTRUÇÃO do `Console()` — que acontece no import de cada `cli/cmd_*.py` —, e
+# aí o texto vem com sequências ANSI no meio. `\x1b[36mControle` não contém
+# `Controle 2 — BT`, e o `json.loads` de uma linha colorida levanta.
+#
+# O gatilho aqui foi `FORCE_COLOR=3`, que o terminal do agente exporta. Podia
+# ter sido qualquer coisa: a precedência do `rich` é `FORCE_COLOR` acima de
+# `NO_COLOR`, então nem desligar a cor pelo caminho normal resolve — é preciso
+# TIRAR a variável.
+#
+# Isso é a família "o instrumento mente mais que o produto", e a mentira mais
+# cara possível: a suíte que reprova na máquina de quem trabalha e passa no CI
+# ensina a ignorar a suíte. O produto não tem defeito nenhum aqui.
+#
+# **No topo do módulo, e antes de qualquer import do produto, de propósito.**
+# Uma fixture — mesmo `autouse` e de sessão — roda DEPOIS da coleta, e a coleta
+# já importou os `cmd_*.py`. Um `Console()` já construído não relê o ambiente.
+os.environ.pop("FORCE_COLOR", None)
+os.environ.setdefault("NO_COLOR", "1")
+
+# ---------------------------------------------------------------------------
 # GUARDA-GI-REAL-01 — o `gi` do processo é o de verdade, ou é um stub?
 # ---------------------------------------------------------------------------
 
