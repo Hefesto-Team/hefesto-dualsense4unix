@@ -143,6 +143,24 @@ Nunca use `# TODO` ou `# FIXME` como substituto de spec. Débitos silenciosos qu
 
 ---
 
+## Verbosidade e fato errado
+
+Ver [ADR-021](../docs/adr/021-verbosidade-tem-custo-medido.md). Em resumo:
+
+1. **Fato errado sai de TODOS os lugares onde aparece**, não só de onde foi
+   notado. A prova é barata: `grep` pelo valor antigo na árvore, e o resultado
+   tem de ser vazio ou só histórico datado.
+2. **Verbosidade é custo**, em atenção de quem lê e em contexto de quem
+   processa. Vale para código, documento, comentário e mensagem de commit.
+3. **Na dúvida entre repetir e referenciar, referencie.** Na dúvida entre
+   guardar e cortar, guarde.
+
+O que separa decisão medida de número errado: *se apagar isto faria alguém
+repetir um trabalho ou pagar um custo já pago?* Se sim, leva data e fica. Se
+não, sai.
+
+---
+
 ## Anonimato
 
 O autor mantém anonimato absoluto. Contribuições devem respeitar:
@@ -172,12 +190,13 @@ recado da janela continuar em português.
 
 **Grau: MEDIDO** em 07/08/2026, por leitura de AST dos 18 arquivos (**19**
 desde 08/08, com o `relancar.py` da `RELANCAR-01`; **20** desde 16/08, com o
-`carona_do_wrapper.py` da `CARONA-DO-WRAPPER-01` — a proporção é **17 de 20**,
-e o quadro segue o mesmo): conta-se
+`carona_do_wrapper.py` da `CARONA-DO-WRAPPER-01` — a proporção era **17 de
+20**; **21** desde 21/08, com o `config_actions.py` da `CONFIG-01`, que
+**importa** a função de tradução e leva a proporção a **17 de 21**): conta-se
 quem importa `_` de `hefesto_dualsense4unix.utils.i18n` (ou `gettext`) e quem
-tem literal com caractere acentuado. Só `footer_actions.py`,
-`lightbar_actions.py` e `status_actions.py` importam. O portão que guarda esta
-decisão refaz essa mesma contagem a cada rodada — ver abaixo.
+tem literal com caractere acentuado. Importam `config_actions.py`,
+`footer_actions.py`, `lightbar_actions.py` e `status_actions.py`. O portão que
+guarda esta decisão refaz essa mesma contagem a cada rodada — ver abaixo.
 
 ### O encanamento de i18n continua vivo, e de propósito
 
