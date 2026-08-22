@@ -194,12 +194,30 @@ cores saem da paleta da janela, não são inventadas aqui:
 | **dois pulsos vermelhos**, antes de aplicar | "isto pode derrubar o controle dentro do jogo" |
 | dois pulsos vermelhos **+ um vermelho longo** | "pedi a ponte e não consegui" — o vpad não subiu |
 
+A cor do modo sai em **três piscadas rápidas** (0,15 s acesa, 0,12 s apagada) em
+**todos** os DualSense conectados, e a barra **volta à cor do perfil** no fim —
+aviso que rouba a cor e não devolve é defeito. Ela é de **modo**, não de gesto:
+acende igual quando a troca vem da janela, da CLI/IPC ou do autoswitch por jogo
+(AVISO-DE-MODO-01). Os dois pulsos vermelhos só saem quando **há jogo com o
+controle na mão** — é o risco que eles anunciam, e sem jogo aberto não há risco
+a anunciar.
+
 **O preço, que foi medido (R-04):** trocar de ponte **destrói e recria o vpad**,
 e isso invalida o handle que o jogo já tinha aberto. Um jogo aberto pode precisar
 de replug lógico — daí o aviso vermelho *antes* de aplicar.
 
-**Ressalva de 19/08/2026:** o gesto e as cinco cores da piscada ainda **não
-foram vistos em hardware**. O roteiro de prova está em
+**Num jogo sem ponte carimbada o alvo não é o ciclo fixo**, e sim o próximo
+degrau da escada de tentativas (PONTE-ESCADA-LACO-01): apertar o gesto é o sinal
+de que o degrau atual não serve. Com jogo já carimbado — ou sem jogo nenhum — o
+gesto anda o ciclo de sempre. O carimbo está em
+[`creating-profiles.md`](creating-profiles.md).
+
+**Ressalva de 22/08/2026 — o que tem prova de plástico e o que não tem.** A
+**troca em si** já foi vista em hardware, na bancada de 19→20/08 com ela ao
+controle: o `PS + R3` trocou a ponte dentro do Duskfade na primeira tentativa
+(`gestos=1`, de `dualsense` para `xbox`) e o jogo passou a andar. O que segue
+**sem prova de plástico são as cinco cores da piscada** — nenhuma delas foi
+conferida com o olho dela. O roteiro está em
 [PROVA-NO-PLASTICO-01](../process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
 
 ## Teclado na tela — L3 abre, R3 fecha

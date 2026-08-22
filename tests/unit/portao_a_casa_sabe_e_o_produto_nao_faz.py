@@ -356,9 +356,13 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED": (
         "Liga o servidor HTTP de métricas (daemon/subsystems/metrics.py:47). "
-        "Publicar métricas é escolha de quem instala. MEDIDO em 12/08/2026: sem "
-        "mão — a única ocorrência fora de src/ é uma linha de changelog do "
-        "packaging/fedora/hefesto-dualsense4unix.spec:420, que não liga nada."
+        "Publicar métricas é escolha de quem instala. REMEDIDO em 22/08/2026: "
+        "sem mão — nenhum `Environment=` em assets/, e o install.sh não menciona "
+        "METRICS. Fora de src/ há só documentação, testes e o %changelog do "
+        "pacote Fedora (spec:459). A redação anterior dizia 'a única ocorrência "
+        "fora de src/', e a medição derrubou: aparece também em README.md, "
+        "CHANGELOG.md, docs/adr/016, docs/usage/metrics.md e dois testes — "
+        "nenhum deles ESCREVE a variável, que é o que importa para este portão."
     ),
     "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED": (
         "Liga o carregamento de plugins (daemon/subsystems/plugins.py:194). É "
@@ -455,10 +459,13 @@ _SEM_MAO_HOJE: dict[str, str] = {
         "uma cura."
     ),
     "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED": (
-        "MEDIDO em 12/08/2026: a única ocorrência fora de src/ é a linha de "
-        "changelog em packaging/fedora/hefesto-dualsense4unix.spec:420, que "
-        "ANUNCIA a chave sem escrevê-la em lugar nenhum — é exatamente a forma "
-        "de promessa que este portão existe para acusar. O campo irmão "
+        "REMEDIDO em 22/08/2026: ninguém ESCREVE a chave — nenhum "
+        "`Environment=` em assets/, nada no install.sh. O %changelog do pacote "
+        "Fedora (spec:459) a ANUNCIA sem escrevê-la, que é exatamente a forma "
+        "de promessa que este portão existe para acusar. A redação de 12/08 "
+        "dizia que aquela era a ÚNICA ocorrência fora de src/, e não é: há "
+        "citações em README.md, CHANGELOG.md, ADR-016, docs/usage/metrics.md e "
+        "dois testes. Citar não é escrever. O campo irmão "
         "`DaemonConfig.metrics_enabled` também só tem leitor (metrics.py:389). "
         "O QUE A FECHA: `Environment=` na unit ou uma opção do instalador. "
         "ATENÇÃO ao decidir: enquanto ninguém liga isto, o `MetricsSubsystem` "

@@ -10,8 +10,11 @@ Complemento de scripts: tab-completion funciona em zsh e bash via
 `hefesto-dualsense4unix --install-completion <shell>` (herdado do Typer).
 
 > **Escopo.** Esta página cobre o **produto**. A CLI também traz
-> **instrumentos de medição** que não são feature e não persistem nada
-> (`lightbar-reset`, `player-leds`) — eles têm seção própria no fim.
+> **instrumentos de medição** — bancada, não cura: `test`, `lightbar-reset` e
+> `player-leds`. Eles não persistem nada, ninguém os chama sozinho, e têm
+> **seção própria no fim**. Rodar bancada não conserta o produto: se o efeito
+> tem de valer para quem joga, ele vem de perfil, da janela ou dos comandos
+> desta parte de cima.
 
 ---
 
@@ -21,18 +24,26 @@ Complemento de scripts: tab-completion funciona em zsh e bash via
 |---|---|
 | `hefesto-dualsense4unix version` | Versão instalada. |
 | `hefesto-dualsense4unix status` | Estado do daemon e do controle. |
+| `hefesto-dualsense4unix doctor` | Diagnóstico ponta a ponta (`--fix`, `--fix-safe`, `--quiet`, `--perfis`). |
 | `hefesto-dualsense4unix battery` | Percentual de bateria. |
 | `hefesto-dualsense4unix led --color ...` | Cor da lightbar (com `--brightness` opcional). |
 | `hefesto-dualsense4unix mouse on/off/status` | Emulação de mouse via daemon. |
 | `hefesto-dualsense4unix profile list/show/activate/create/delete/apply/save` | Gerência de perfis. |
 | `hefesto-dualsense4unix profile historico/restore` | Versões guardadas de um perfil — e a volta. |
-| `hefesto-dualsense4unix test trigger/led/rumble` | Efeitos direto no hardware. |
 | `hefesto-dualsense4unix daemon start/stop/restart/status/pause/resume/enable/disable/install-service/uninstall-service` | Ciclo do daemon. |
 | `hefesto-dualsense4unix gamepad on/off/status` | Controle virtual (substituiu o antigo `emulate xbox360`). |
-| `hefesto-dualsense4unix gamepad steam-input list/add/remove` | Exceção do Steam Input — os jogos em que a Steam entrega o controle. |
+| `hefesto-dualsense4unix gamepad steam-input list/remove` | Exceção do Steam Input — a **saída** dela pela linha de comando (marcar é na janela). |
+| `hefesto-dualsense4unix native on/off/status` | Modo Nativo — solta o controle para o jogo. |
+| `hefesto-dualsense4unix coop on/status` | Co-op local (`coop off` recusa e explica). |
+| `hefesto-dualsense4unix controller list/target` | Mira as ações de output num controle específico. |
+| `hefesto-dualsense4unix plugin list/reload` | Plugins do daemon. |
 | `hefesto-dualsense4unix mic on/off/status/promote/demote/mute/unmute/release/bt/bt-status` | Microfone do controle — política do sistema, mudo de firmware e a ponte por Bluetooth. |
 | `hefesto-dualsense4unix speaker status/volume/mute/unmute/release` | Alto-falante e fone do controle — inclusive a DEVOLUÇÃO da posse. |
 | `hefesto-dualsense4unix tui` / `hefesto-dualsense4unix tray` | Interfaces alternativas. |
+
+Fora da tabela porque **não são produto** — `test trigger/led/rumble`,
+`lightbar-reset` e `player-leds` são bancada, e estão na
+[seção dos instrumentos](#instrumentos-de-medição--não-são-cura).
 
 ---
 
@@ -54,13 +65,11 @@ hefesto-dualsense4unix led --color '255,136,0'          # CSV também aceito
   implementação: o nó `brightness` do LED multicolor fica fixo em 255 e
   quem carrega o nível é a própria cor. O handler `led.set` do daemon
   faz exatamente a mesma escala linear que o caminho offline.
-
-> **Corrigido em 25/07/2026 (commit `87cbd24`).** A CLI fala porcentagem
-> (0–100) com quem usa e converte para fração (0.0–1.0) antes de mandar o
-> `led.set`, que é o contrato do daemon — então `--brightness 50` é aceito como
-> 50% e `--brightness 1` acende 1%, com o daemon rodando ou parado. Coberto por
-> `tests/unit/test_cli_led_brightness.py`
-> (`test_led_brightness_1_por_cento_nao_vira_100`).
+- A CLI fala porcentagem (0–100) com quem usa e converte para fração (0.0–1.0)
+  antes de mandar o `led.set`, que é o contrato do daemon: `--brightness 1`
+  acende 1%, com o daemon rodando ou parado. As duas pontas estão travadas por
+  `tests/unit/test_cli_led_brightness.py`
+  (`test_led_brightness_1_por_cento_nao_vira_100`) desde 25/07/2026.
 
 Exit codes:
 
@@ -109,15 +118,15 @@ hefesto-dualsense4unix profile list
 hefesto-dualsense4unix profile show <nome>
 
 # Mutação
-hefesto-dualsense4unix profile create <nome> [--match-class X] [--match-regex ...] [--fallback]
+hefesto-dualsense4unix profile create <nome> [--match-class X] [--match-exe X] [--match-regex ...] [--priority N] [--fallback]
 hefesto-dualsense4unix profile create <nome> --manual        # nunca ativa sozinho: só pela janela ou pelo activate
-hefesto-dualsense4unix profile create <nome> --force         # sobrescreve o perfil que já ocupa o mesmo arquivo
+hefesto-dualsense4unix profile create <nome> --force         # `--force` existe em create, apply e save
 hefesto-dualsense4unix profile delete <nome> --yes
 
 # Aplicação
 hefesto-dualsense4unix profile activate <nome>              # ativa + grava marker
 hefesto-dualsense4unix profile apply --file draft.json      # valida, salva e ativa
-hefesto-dualsense4unix profile apply --file draft.json --no-save   # ativa sem persistir (exige --name ja em disco)
+hefesto-dualsense4unix profile apply --file draft.json --no-save   # ativa sem persistir (exige o mesmo `name` ja em disco)
 
 # Snapshot
 hefesto-dualsense4unix profile save <novo_nome> --from-active     # clona o perfil ativo
@@ -237,17 +246,6 @@ IPC `daemon.reload`, que aceita `config_overrides` com um subconjunto dos
 campos de `DaemonConfig` — ver a seção de configuração em
 [`hotkeys.md`](hotkeys.md).
 
-## `hefesto-dualsense4unix test` (efeitos direto no hardware)
-
-Pulam o daemon: conectam ao DualSense direto. Úteis para troubleshooting.
-
-```bash
-hefesto-dualsense4unix test trigger --side right --mode Rigid --params '5,200'
-hefesto-dualsense4unix test led --color '#ff0000'
-hefesto-dualsense4unix test led --color '#ff0000' --brightness 40
-hefesto-dualsense4unix test rumble --weak 128 --strong 64
-```
-
 ## `hefesto-dualsense4unix gamepad` (o controle virtual)
 
 Substituiu o antigo `emulate xbox360`, que subia um processo avulso e abria um
@@ -265,16 +263,24 @@ hefesto-dualsense4unix gamepad status
 ### `gamepad steam-input` — a exceção do Steam Input
 
 Os jogos em que a Steam entrega o controle, e por isso o jogador vê os controles
-**dobrados**. Marcar um jogo aqui esconde dele os controles físicos:
+**dobrados**. Um jogo marcado tem os controles físicos escondidos dele.
+
+**São duas ações, não três: `list` e `remove`.** Não existe
+`steam-input add` — **marcar é na janela**, pelo botão *"Este jogo não
+funciona"* ou pela caixinha do editor de perfil (aba **Perfis**, desde
+07/08/2026). A linha de comando é a **porta de saída**: a allowlist é um arquivo
+de appids, e sem `remove` desmarcar exigia editar
+`~/.config/hefesto-dualsense4unix/steam_input_apps.txt` à mão.
 
 ```bash
-hefesto-dualsense4unix gamepad steam-input list                 # os jogos marcados, pelo nome
-hefesto-dualsense4unix gamepad steam-input add <nome ou appid>
-hefesto-dualsense4unix gamepad steam-input remove <nome ou appid>
+hefesto-dualsense4unix gamepad steam-input list                    # os jogos marcados, pelo nome
+hefesto-dualsense4unix gamepad steam-input remove 2111190          # por appid
+hefesto-dualsense4unix gamepad steam-input remove 'mullet'         # ou por parte do nome
 ```
 
-A mesma marca tem caixinha na aba **Perfis** da janela desde 07/08/2026 — ver
-[`jogos-e-mascaras.md`](jogos-e-mascaras.md).
+O nome vem do `appmanifest_<appid>.acf` da Steam (leitura pura, sem rede). Jogo
+desinstalado não tem manifest: a linha diz **"(não instalado)"** em vez de
+inventar nome. Ver [`jogos-e-mascaras.md`](jogos-e-mascaras.md).
 
 ## Demais comandos
 
@@ -308,6 +314,9 @@ A mesma marca tem caixinha na aba **Perfis** da janela desde 07/08/2026 — ver
     decodifica o Opus tunelado nos relatórios HID e publica o microfone no
     PipeWire (Ctrl-C encerra); `bt-status` só diagnostica as pré-condições, sem
     mexer em nada. Ver [`bluetooth.md`](bluetooth.md).
+
+  Com mais de um controle na mesa, `--uniq <MAC normalizado>` escolhe qual deles
+  recebe `mute`/`unmute`/`release`; sem a opção, vale o primário.
 - `hefesto-dualsense4unix speaker status|volume <0-100>|mute|unmute|release` —
   alto-falante **e fone** do controle (é um volume só: o mesmo valor vai nos dois
   bytes). Exige o daemon. O volume mora no firmware e o controle **não o
@@ -319,7 +328,8 @@ A mesma marca tem caixinha na aba **Perfis** da janela desde 07/08/2026 — ver
   primeira escrita trancaria o alto-falante em zero e o próprio mudo não o
   soltaria. Se nenhum som sair mesmo com volume alto, o problema é a outra
   camada: o sink do controle no PipeWire pode estar mudo (`scripts/doctor.sh`
-  reporta), e por Bluetooth não existe fluxo de áudio de saída nenhum.
+  reporta), e por Bluetooth não existe fluxo de áudio de saída nenhum. Também
+  aceita `--uniq <MAC normalizado>` para mirar um controle na mesa cheia.
 - `hefesto-dualsense4unix native on|off|status` — Modo Nativo (solta o controle para o jogo).
 - `hefesto-dualsense4unix coop on|status` — co-op local (cada controle = um
   jogador). O `on` reconcilia os jogadores agora; o `status` conta quantos há.
@@ -338,7 +348,12 @@ A mesma marca tem caixinha na aba **Perfis** da janela desde 07/08/2026 — ver
   > `controller list --external`, recebe número e luz, e **não entra nessa
   > conta**. Medição inteira na
   > [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
-- `hefesto-dualsense4unix controller list|target` — mira as ações num controle específico.
+- `hefesto-dualsense4unix controller list|target` — mira as ações de output num
+  controle específico. `target <n|all>` recebe o número da listagem (ou `all`,
+  broadcast); `list` aceita `--json` (scripts) e `--external`, que junta o
+  inventário read-only dos gamepads de **outras marcas**. Eles não entram em
+  `jogadores pelo Hefesto`, mas **entram** em `controles na mesa` — as duas
+  contagens que o `coop status` imprime (`cli/cmd_coop.py:135-138`).
 - `hefesto-dualsense4unix plugin list|reload` — plugins do daemon.
 - `hefesto-dualsense4unix tui` — abre a TUI Textual.
 - `hefesto-dualsense4unix tray` — abre o tray GTK3 (extra `[tray]`).
@@ -348,9 +363,43 @@ A mesma marca tem caixinha na aba **Perfis** da janela desde 07/08/2026 — ver
 
 ## Instrumentos de medição — não são cura
 
-Estes dois **não são feature de produto**: são instrumentos de duas eliminações
-em aberto. Não persistem nada, e **nenhum caminho automático os chama** — quem
-os chama é quem está medindo.
+Estes **não são feature de produto**: são bancada. Não persistem nada, não
+entram em perfil, e **nenhum caminho automático os chama** — quem os chama é
+quem está medindo.
+
+### `hefesto-dualsense4unix test` (exercita o efeito uma vez)
+
+Serve para responder *"o aparelho aceita isto?"* — não para deixar o efeito de
+pé: nada disso vira perfil, e a próxima troca de perfil manda os efeitos dela
+por cima.
+
+**As três ações tentam o daemon primeiro** (`trigger.set`, `led.set`,
+`rumble.set` por IPC) e só caem no hardware direto quando ele não atende —
+FEAT-CLI-IPC-FIRST-01, para não abrir um **segundo** leitor do mesmo
+`/dev/hidraw` e disputá-lo com o daemon. A exceção é o `--raw`, que não tem
+contrato IPC.
+
+```bash
+hefesto-dualsense4unix test trigger --side right --mode Rigid --params '5,200'
+hefesto-dualsense4unix test trigger --side left --mode 2 --params '0,9,7,7,10,0,0' --raw
+hefesto-dualsense4unix test led --color '#ff0000'
+hefesto-dualsense4unix test led --color '#ff0000' --brightness 40
+hefesto-dualsense4unix test rumble --weak 128 --strong 64
+```
+
+- `trigger` exige `--side left|right` e `--mode`; `--params` é CSV de inteiros.
+- **`--raw` é recusado com o daemon vivo** (sai com código `1`), e a recusa é a
+  entrega: o report OUT
+  do DualSense é **atômico** (gatilho, vibração e luz saem no mesmo buffer),
+  então o primeiro write do daemon depois do seu leva o seu efeito cru junto —
+  e nada avisa quando isso acontece. Antes de 01/08/2026 este comando imprimia
+  *"trigger aplicado"* mesmo com o daemon sobrescrevendo o efeito em menos de
+  0,5 s: o instrumento brigando com o produto e anunciando sucesso. Para bancada
+  crua: `systemctl --user stop hefesto-dualsense4unix`, rode, e religue.
+- `test led` faz o mesmo que o `led` de cima, inclusive o `--brightness` 0–100;
+  `test rumble` aceita `--weak` e `--strong` em 0–255.
+
+### Os dois instrumentos de eliminação
 
 - `hefesto-dualsense4unix lightbar-reset` — manda o report `0x31` com
   `valid_flag1 = 0x08` ("Reset LED state"), que devolve ao host o claim da

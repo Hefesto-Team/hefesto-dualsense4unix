@@ -41,8 +41,23 @@ alvo dela:
 Quinze dos vinte e quatro dependem de que alguém faça o espelho XInput do nosso
 vpad `054c:0df2`. Isso não é detalhe de um jogo: é a maioria da biblioteca.
 
-100% stdlib e read-only, como os vizinhos — o `doctor.sh` o roda com o
-`python3` do sistema, sem venv, e ele não escreve em lugar nenhum.
+QUEM O CHAMA, E O QUE ELE ESCREVE
+---------------------------------
+100% stdlib, para rodar no `python3` do sistema sem venv. Mas ele é módulo de
+BANCADA: medido em 21/08/2026, NENHUM chamador em produção o invoca — nem o
+`doctor.sh`, nem a janela. `grep -rn prontuario_dos_jogos src scripts
+install.sh uninstall.sh assets` devolve só menções em prosa (`schema.py:668`,
+`ponte_escada.py:123`, `steam_input_ponte.py:5`, `hotkey.py:447`). Quem o roda
+é gente, por `python -m
+hefesto_dualsense4unix.integrations.prontuario_dos_jogos`, e a suíte — e a
+suíte verde não é chamador: é capacidade sem quem a use.
+
+E ele ESCREVE. O censo é read-only; o `--curar` não é. Desde 19/08/2026,
+`curar_o_que_e_automatico` despacha, pela tabela `_CURAS`,
+`_curar_excecao_inerte` (grava `UseSteamControllerConfig`) e
+`_curar_sem_wrapper` (repõe o `hefesto-launch` nas `LaunchOptions`) — os dois
+no `localconfig.vdf` da Steam, com backup ao lado e `tmp`+`replace`. Quem quiser
+rodar à vontade usa `--dry-run`.
 """
 from __future__ import annotations
 
@@ -201,7 +216,7 @@ _PERFIS_RELPATH = "hefesto-dualsense4unix/profiles"
 #: CÓPIA DELIBERADA de `profiles/steam_app.py`, pela MESMA razão escrita no
 #: `e_infraestrutura` logo abaixo: aquele módulo é do pacote e este arquivo tem
 #: de rodar como script solto no `python3` do sistema, sem venv e sem pydantic
-#: (o `doctor.sh` o chama assim). O que impede as duas de divergirem não é a
+#: (é assim que a bancada o chama). O que impede as duas de divergirem não é a
 #: disciplina de quem edita: é o portão `test_ponte_confirmada_01`, que compara
 #: as DUAS leituras sobre a mesma pasta de perfis e reprova se discordarem.
 _STEAM_APP_WC_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
@@ -502,7 +517,7 @@ class Prontuario:
         return SEM_IMPEDIMENTO
 
     def como_dicionario(self) -> dict[str, object]:
-        """Forma JSON — o que a GUI e o `doctor.sh` consomem."""
+        """Forma JSON — a saída de `--json`, hoje sem consumidor em produção."""
         return {
             "appid": self.appid,
             "nome": self.nome,
@@ -513,15 +528,15 @@ class Prontuario:
             "steam_input_ligado": self.steam_input_ligado,
             "na_allowlist": self.na_allowlist,
             # PONTE-CONFIRMADA-01, item 4: a ponte sai PUBLICADA aqui. Quem
-            # consome este dicionário (a janela, o `doctor.sh`) pergunta "qual
-            # a ponte confirmada deste appid?" sem abrir perfil nenhum e sem
-            # reimplementar o casamento por `steam_app_<id>`.
+            # consumir este dicionário pergunta "qual a ponte confirmada deste
+            # appid?" sem abrir perfil nenhum e sem reimplementar o casamento
+            # por `steam_app_<id>`.
             "ponte": self.ponte.como_dicionario() if self.ponte else None,
             "ponte_divergente": self.ponte_divergente,
             "estorvos": [
-                # A chave abaixo é JSON, não prosa: o `doctor.sh` a lê com
-                # `jq`, e chave acentuada em shell é o tipo de detalhe que
-                # quebra num terminal e não no outro. O texto que ELA lê está
+                # A chave abaixo é JSON, não prosa: é para ser lida com `jq`
+                # num terminal, e chave acentuada em shell é o tipo de detalhe
+                # que quebra num terminal e não no outro. O texto que ELA lê está
                 # em `_ESTORVOS`, acentuado.
                 {"chave": e.chave, "o_que": e.o_que, "cura": e.a_cura,
                  "automatica": e.automatica}  # (noqa-acento): chave de JSON
@@ -725,8 +740,8 @@ def levantar_censo(
     """A fotografia read-only de toda a biblioteca instalada.
 
     `examinar=False` pula a varredura dos executáveis — que é a parte cara
-    (segundos, num jogo grande). A GUI a quer; um portão que só confere o
-    wrapper, não.
+    (segundos, num jogo grande). O censo de bancada a quer; um portão que só
+    confere o wrapper, não.
 
     `pontes` segue o MESMO contrato do `allowlist` logo acima: `None` = leia do
     disco (a pasta de perfis, por `XDG_CONFIG_HOME`), dicionário = use este e
@@ -985,7 +1000,7 @@ def _tabela(censo: Censo) -> str:
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__ and __doc__.splitlines()[0])
-    ap.add_argument("--json", action="store_true", help="a forma que a GUI consome")
+    ap.add_argument("--json", action="store_true", help="a forma JSON, para `jq`")
     ap.add_argument(
         "--rapido",
         action="store_true",

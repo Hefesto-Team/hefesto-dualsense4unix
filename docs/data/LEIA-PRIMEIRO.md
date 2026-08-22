@@ -37,6 +37,13 @@ frescos.
 | `bancada.py` | 25.197 | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`, linha 78) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
 | `docs/data/mapa-controles-v1.csv` | 138.192 | Arqueologia. O mapa antes da migração. | Praticamente nunca. |
 
+**Cura de raiz, ainda não feita:** o bloco *Resumo do censo* de
+`scripts/check_paridade_transporte.py` já imprime **11** dos contadores das
+seções 1 a 3 — os do censo do mapa. Continuam digitados à mão os bytes dos dez
+arquivos, as 47 colunas, os 13 pares, o `existe`, as duas réguas por valor e as
+20 casas do cruzamento. Gerar os 11 dali já acaba com parte do digitar à mão que
+deixou este arquivo caduco uma vez.
+
 **Sobre os estudos.** `docs/process/estudos/` guarda o histórico por frente. O
 molde do que um estudo deve ser está em
 `docs/process/estudos/2026-08-15-A-LIGHTBAR-TRAVADA-o-que-ja-caiu-e-o-que-nunca-foi-tentado.md`:
@@ -145,9 +152,11 @@ Leia as duas casas em negrito e você entendeu o mapa:
   aparelho: leram a fonte e viram que o produto monta o report. Subir o primeiro
   degrau não exige hardware — subir do segundo em diante, exige.
 
-O portão já cobra o eixo de ponte no mesmo espírito: das **16 linhas que
-alcançam o jogo por `uhid`**, 4 têm afirmação forte e **nenhuma está sem
-`ponte_alcanca`**.
+O portão já cobra o eixo de ponte no mesmo espírito, na regra 15
+(`ponte-nao-declarada`): das **16 linhas que alcançam o jogo por `uhid`**, 10
+declaram `ponte_alcanca`, e as **4 que têm afirmação forte estão todas entre
+elas**. A regra só cobra ponte de quem afirma forte — as outras 6 vazias não são
+falha, são censo que ninguém respondeu.
 
 **Afirmação forte** é `aciona=sim` **e** `de_onde_sei=medido`. **Grau forte** é
 `SAIU NO FIO` ou `O APARELHO OBEDECEU` — hoje são **36 células, em 21 linhas**,
@@ -381,20 +390,18 @@ conteúdo na memória, e um `--check` que compara o publicado com o que as fonte
 produzem **por conteúdo, não por relógio**. O acréscimo é simétrico — um
 `monta_resumo()` ao lado, escrito no mesmo `main()`, e o `--check` comparando os
 dois arquivos em vez de um. O gerador já lê as duas fontes de que o resumo
-precisa. **Não implementei** por três razões: `gerar-mapa.py` está sendo tocado
-por outros agentes agora; `--check` **reprova neste minuto** (o `specs.html`
-publicado está desatualizado — a contagem 34 contra 35), então eu não teria como
-provar verde; e um derivado sem portão é exatamente o que a casa proíbe.
+precisa, e o portão de frescor está **verde** — medido em 22/08/2026:
+`scripts/gerar-mapa.py --check` responde *"specs.html: atualizado (confere com o
+CSV, com o caderno de ensaios e com os três desenhos)"*. Quem implementar
+consegue provar verde no mesmo minuto.
 
-**A ordem certa é regenerar o `specs.html` primeiro** — enquanto ele estiver
-velho, o portão de frescor está vermelho e qualquer derivado novo nasce na
-sombra dele.
-
-> **Nota de 22/08/2026 — o segundo impedimento caiu.**
-> `scripts/gerar-mapa.py --check` passa hoje: *"specs.html: atualizado (confere
-> com o CSV, com o caderno de ensaios e com os três desenhos)"*. Quem for
-> implementar o `mapa-resumo.csv` já consegue provar verde; sobram o cuidado com
-> agentes tocando o gerador e a exigência de portão.
+**O que segura o derivado não é impedimento técnico — são duas coisas.** A
+primeira é a palavra dela: isto é proposta, e arquivo novo em `docs/data/` que
+ela não pediu é mudança que ela não pediu. A segunda é a regra da casa de que
+derivado nasce **com** portão: o `monta_resumo()` e o `--check` que o cobre
+entram na mesma leva do arquivo, nunca depois — um `mapa-resumo.csv` sem portão
+envelhece calado e vira a segunda fonte que contradiz a primeira. Quem for
+implementar combine antes com quem estiver tocando o `gerar-mapa.py`.
 
 ### Repetição medida no CSV — proposta, e nenhuma linha apagada
 
