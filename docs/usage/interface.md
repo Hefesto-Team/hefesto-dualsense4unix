@@ -1,6 +1,6 @@
 # A janela, aba por aba
 
-A janela principal tem dez abas — nove sempre à vista e a **No jogo**, que entra
+A janela principal tem onze abas — dez sempre à vista e a **No jogo**, que entra
 na tira quando há um jogo da Steam aberto e sai quando ele fecha (10/08/2026).
 Esta página diz o que cada uma faz e o que se ajusta nela — e, no fim, o
 **cabeçalho** e o **rodapé**, que valem em todas.
@@ -9,11 +9,16 @@ Esta página diz o que cada uma faz e o que se ajusta nela — e, no fim, o
 > `scripts/gui-captura/retratar_abas.py` — um comando, sem clique nenhum — e
 > por isso **acompanham a versão**: quem mexe na interface roda o script antes
 > de commitar. As desta página foram conferidas pela última vez em
-> **15/08/2026**, e cada conferência fica registrada em
+> **22/08/2026**, e cada conferência fica registrada em
 > [`assets/CONFERIDO-EM.md`](assets/CONFERIDO-EM.md). A aba "No jogo" já
-> aparece na tira desde 10/08/2026.
+> aparece na tira desde 10/08/2026, e a **Configurações** desde 22/08/2026.
 >
-> **O que estas dez fotos NÃO mostram: o cabeçalho.** O script fotografa o
+> **Uma das onze ganha duas fotos.** A Configurações pede mais altura do que a
+> janela tem, então o script grava também a versão esticada
+> (`readme_configuracoes_inteira.png`) — sem ela a documentação mostraria
+> quatro seções e meia, e quem lê concluiria que a quinta não existe.
+>
+> **O que estas fotos NÃO mostram: o cabeçalho.** O script fotografa o
 > `main_notebook`, e a fita "Ajustes vão para:", o seletor "Número deste
 > controle:" e o selo "Editando: …" moram no `header_bar`, **fora do
 > recorte**. Por isso a seção "O cabeçalho", no fim desta página, foi escrita
@@ -28,8 +33,11 @@ Esta página diz o que cada uma faz e o que se ajusta nela — e, no fim, o
 > própria interface do zero e a alimenta com os dublês da suíte de testes, e
 > isso é travado por teste (`test_retrato_das_abas_nao_vaza_dado_real.py`).
 > Nenhuma imagem desta pasta tem dado real, e nenhuma precisa de borrão. O
-> cenário retratado hoje é o de **dois** controles (um USB, um BT), que é o que
-> o script monta.
+> cenário retratado é o de **dois** controles (um USB, um BT) em dez das onze
+> abas; a **Configurações** é alimentada pelo fixture de **quatro**
+> (`tests/fixtures/state_full_quatro_controles.json`, versionado e com MAC de
+> fixture), porque a seção "Os controles" desenha um card por aparelho e com
+> dois cards a foto não mostraria a grade.
 
 ## Início
 
@@ -564,10 +572,231 @@ O interruptor do mouse só fica disponível no modo **Controlar o PC**. Fora del
 ligar o mouse derrubaria o controle virtual e os jogadores do co-op no meio do
 jogo, sem aviso — por isso ele nasce bloqueado, com a razão escrita em texto.
 
+## Configurações
+
+![Aba Configurações](assets/readme_configuracoes.png)
+
+> **Esta é a única aba que não cabe na foto.** A imagem acima é o que se vê de
+> fato, na janela de 1080px; a página inteira, com as cinco seções, está em
+> [`assets/readme_configuracoes_inteira.png`](assets/readme_configuracoes_inteira.png).
+
+**Aba nova em 22/08/2026.** As outras dez operam sobre o que o produto **mede** —
+quantos controles, qual bateria, quantos hertz o giroscópio entrega, de que cor
+está a barra. Esta é o lugar do que ele **não tem como medir e precisa que você
+diga**: onde o adaptador está fisicamente, se há um hub no caminho, quem mais
+disputa os 2,4 GHz, qual a cor do plástico quando a leitura falha.
+
+O teste de admissão de qualquer controle que alguém queira pôr aqui é uma
+pergunta só: *o Hefesto conseguiria descobrir isso sozinho?* Se sim, o lugar não
+é esta aba — é ela que impede a aba de virar gaveta.
+
+Três regras valem nas cinco seções:
+
+- **Todo campo nasce em "não sei", e "não sei" é resposta válida.** Nada deixa de
+  funcionar por falta de declaração. Quem tem um adaptador, nenhum hub e nada
+  declarado pode não abrir esta aba na vida.
+- **Onde a medição existe, ela pré-preenche**, e a declaração só corrige. Hub e
+  painel do gabinete são lidos do barramento USB; a cor do plástico é lida do
+  próprio controle.
+- **A escolha só vale no "Aplicar" do rodapé.** Clicar num seletor aqui **marca**
+  o rascunho e não muda nada; o Aplicar grava tudo de uma vez em
+  `~/.config/hefesto-dualsense4unix/maquina.json`. Recusa ou Hefesto desligado
+  deixam o que você declarou marcado na tela — clicar de novo tenta de novo.
+
+> **A fita "Ajustes vão para:" fica inerte nesta aba**, esmaecida e com o motivo
+> ao lado: *"Esta aba vale para a mesa inteira, não para um controle"*. Hub,
+> orçamento e ambiente de área de trabalho não têm como valer "só para o Sony 2",
+> e deixar a fita ativa para ignorá-la em silêncio seria mentir para quem
+> escolheu um alvo lá em cima. A exceção mora dentro dos cards de "Os controles",
+> que é declaração **por aparelho**.
+
+### Está tudo certo?
+
+O exame que até aqui só existia no terminal, com resposta em uma linha. No alto,
+o selo — **Pronto para jogar**, **Dá para jogar, mas vale um ajuste**, **Há algo
+atrapalhando o jogo** ou **Não deu para conferir tudo** —, o botão **Examinar de
+novo** e o carimbo de quando foi ("Agora mesmo", "Há 3 minutos"). Abaixo, cinco
+linhas em duas colunas: **Economia de energia desligada**, **Energia das
+portas**, **Pareamentos salvos**, **Suporte ao controle** e **Vizinhança das
+portas**. Cada uma tem a dica do que promete, com o que o exame achou agora
+embaixo.
+
+O escopo está escrito na tela, e é o que separa esta da vizinha: *"Este exame
+olha a mesa: portas, energia e rádio. O estado do Hefesto e do som fica na aba
+Sistema"*. Nada saiu de lá para cá — são duas telas de saúde com escopos
+declarados.
+
+Quatro coisas que ele não faz, e as quatro são deliberadas:
+
+- **nunca pede senha.** O que exigiria `sudo` vira "não deu para conferir", nunca
+  vermelho — o `/var/lib/bluetooth` não é lido;
+- **nunca ecoa mensagem do diagnóstico de terminal.** As de lá carregam `sudo` e
+  carregam endereço de rádio; pareamento pela metade sai **contado**, nunca
+  endereçado;
+- **nunca mostra selo verde com linha vermelha embaixo.** Um problema em qualquer
+  linha derruba o selo, e um "não sei" já impede o verde. O dano de misturar os
+  dois não é errar um diagnóstico: é a tela ensinar que verde-e-vermelho juntos
+  são normais;
+- **não examina ao abrir a janela.** Só ao entrar na aba e no botão. Enquanto
+  você não entrou, o selo diz **"Ainda não examinei"** — a foto acima é a
+  exceção, pintada com um resultado de bancada justamente porque um exame de
+  verdade dentro do retrato poria a máquina de quem mantém o projeto num PNG
+  versionado.
+
+O glifo de cada linha é forma geométrica, e não um sinal de conferido, para que a
+**forma** mude junto com a cor: quem não distingue verde de laranja ainda vê
+círculo, triângulo e quadrado.
+
+### Os controles
+
+Um card por controle da mesa — os DualSense que o Hefesto adotou e os que ele só
+vê (8BitDo, Pro Controller, Xbox). **A borda de cada card é a cor do plástico
+daquele controle**, e é ela que responde sem texto à pergunta "qual destes é o
+meu?"; o anel roxo por dentro marca o que está selecionado no cabeçalho.
+
+| linha do card | quem responde |
+|---|---|
+| **Cor:** | lida **do aparelho**, do serial de fábrica, quando o controle está no cabo. Quando não dá para ler, o card oferece a lista — **Branco**, **Preto**, **Vermelho**, **Rosa**, **Roxo**, **Azul** e **Outra** —, com o nome oficial de fábrica na dica de cada uma |
+| **Modo:** (só nos não-Sony) | **deduzido e mostrado, nunca declarado**: D-input, X-input, Switch e Apple. O seletor é de leitura, com a mesma dica da ficha do controle — *"a troca não é por software: é um combo de botões no próprio controle ao ligar"* |
+| **Botões:** (só nos não-Sony) | **Xbox** ou **Nintendo**. Muda só o desenho que aparece na tela; nada é remapeado no controle |
+| **Jogador:** | fixa este controle num número, de 1 a 5. **Sem nenhum marcado, vale a ordem de chegada**, que é como o Hefesto trabalha por padrão |
+
+Os cards ficam lado a lado, em três colunas, e **todos com a mesma altura** — o
+seletor de jogador ancora no rodapé de todos. Um 8BitDo pede duas linhas que um
+DualSense não pede, e sem igualar a fileira leria como erro de montagem.
+
+Sem controle nenhum, a seção diz isso em uma frase em vez de mostrar uma grade
+vazia — e diz também que um controle ligado em modo D-input pode não aparecer
+ali, caso que ainda não foi medido nesta casa.
+
+> **A aba não troca o modo de um 8BitDo, e não tem como.** O modo é uma chave
+> física, escolhida por combo de botões ao ligar; o que esta seção acrescenta é
+> nomeá-lo — antes desta aba o produto nem sabia dizer "D-input" ou "Apple".
+
+### A mesa
+
+Onde cada adaptador Bluetooth está, quanto do rádio dele já está comprometido, e
+quem mais disputa os 2,4 GHz.
+
+**Adaptador / Onde está** — uma linha por adaptador, com o `VID:PID` e a posição
+lida do barramento: barramento, porta, o painel do gabinete (**Frente**,
+**Trás**, **Esquerda**, **Direita**, **Cima**, **Baixo** ou **Não sei**) e **Em
+hub** quando há um no caminho. O adaptador é nomeado pela identidade física e
+nunca por `hciN`, que inverte entre boots. Sem adaptador nenhum, a seção diz isso
+em uma linha e não mostra tabela vazia.
+
+**Altura da antena:** (Acima · Abaixo · Não sei) e **Linha de visada:** (Livre ·
+Com gente · Não sei) são as duas únicas perguntas desta seção, e são as duas que
+nenhum barramento responde. Corpo humano absorve 2,4 GHz, e nada no sistema sabe
+se a antena está acima da linha das cabeças.
+
+**Rádio em uso · `VID:PID`** — uma barra por adaptador, com uma de três palavras:
+**Folgada** (verde) até 60%, **Apertada** (laranja) até 85% e **Cheia** (laranja)
+acima disso. Nunca vermelho: rádio cheio é reversível, basta tirar um controle
+daquele adaptador.
+
+> **A barra diz na tela de onde vem o próprio número:** `derivado da
+> especificação`. O Bluetooth Classic divide o tempo em 1.600 fatias por segundo,
+> e é dessa aritmética que sai o denominador — não de medição nesta máquina. O
+> numerador usa as taxas do A/B de 25/07/2026: 260,4 relatórios por segundo com o
+> microfone desligado; 170,5 de entrada mais 106,2 de áudio com ele ligado (ligar
+> o microfone não abre canal novo — ele ocupa lugar na mesma fila).
+>
+> **Medir ao vivo seria pior.** Dois DualSense no mesmo adaptador entregaram
+> 381,5 e 191,4 Hz **com a mesa folgada**, e o envelope de um dia inteiro foi de
+> 157,8 a 402,9 Hz ([`../data/ensaios.csv`](../data/ensaios.csv), linha 104). Uma
+> barra que oscilasse 2,5 vezes sem ninguém mexer em nada ensinaria a desconfiar
+> dela.
+>
+> **E ela fala de ocupação, nunca de culpa.** Pode dizer que a mesa está cheia;
+> não pode dizer que é por isso que o seu controle está ruim — a taxa varia por
+> motivo **aberto**, inclusive com a mesa folgada.
+
+**Outros rádios que dividem a faixa** — o que mais está no barramento USB
+disputando os 2,4 GHz, e onde cada um está. Em laranja, os dois avisos que a
+leitura sustenta: **colado no vizinho** (dois rádios encostados se atrapalham) e
+**vizinho do adaptador N**, para um rádio USB 3.0 ao lado do adaptador Bluetooth
+— USB 3.0 emite ruído de banda larga bem em cima da faixa dos controles. O
+produto **informa e não age**: desplugar o Wi-Fi de alguém para melhorar o
+próprio link é decisão da pessoa, não do programa.
+
+**Reexaminar a mesa** relê os adaptadores e os rádios. Não muda nada.
+
+### Orçamento
+
+Um teto de recursos para a mesa inteira: **Economia**, **Balanceado**, **Máximo**
+e **Auto** — o mesmo vocabulário da aba Rumble, e de propósito: é o que os perfis
+já gravam em disco, e é uma palavra a aprender em vez de duas.
+
+**Teto, não troca.** Escolher Economia não desliga nada: o jogo continua pedindo,
+a aba Rumble continua mandando, e o valor chega ao controle limitado. Nenhum
+ajuste seu é apagado, e voltar para Balanceado devolve tudo como estava.
+
+A tabela embaixo tem **uma linha**, e ela é a vibração:
+
+| O que | Vem de | Economia | Balanceado | Máximo |
+|---|---|---|---|---|
+| Vibração | Rumble | No máximo 30% da força | Sem teto | Sem teto |
+
+A frase abaixo dela diz por que é uma só: *"Por enquanto o teto alcança a
+vibração e nada mais. Gatilhos, barra de luz, microfone por rádio e giroscópio
+ainda não têm por onde ser limitados — cada um entra quando ganhar esse ponto."*
+Uma linha prometendo teto sem ninguém limitar nada é a tela mentindo, que é o
+defeito que esta aba inteira existe para não cometer.
+
+O **Auto** acompanha a bateria e **nunca amplifica**: acima de 50% joga inteira,
+entre 20% e 50% cai para 70%, abaixo de 20% cai para 30%.
+
+**O "Máximo" daqui não é o "Máximo" da aba Rumble.** Lá ele *multiplica* por
+150% o que o jogo pede; aqui ele só diz "sem teto", e por isso hoje faz o mesmo
+que o Balanceado — a diferença nasce no dia em que o giroscópio ganhar teto. A
+dica do botão diz isso na tela.
+
+> Este é o eixo **quanto**. O **quando** é da aba Perfis, e os dois não se
+> substituem.
+
+### A janela
+
+Ajustes do programa, não dos controles.
+
+**Tamanho do texto:** **Compacto**, **Normal** ou **Grande**. A escolha grava, e
+a tela diz o que ela é: *"O tamanho novo vale na próxima vez que você abrir o
+Hefesto."* Aplicar na hora exigiria reescrever o tema, que **compõe** em vez de
+substituir — quatro chamadas no mesmo processo levaram a fonte de 12,25 a 19
+pontos.
+
+**Ambiente:** **COSMIC**, **GNOME** ou **Outro**, com o detectado escrito embaixo
+(*"Detectado: COSMIC. Corrija se estiver errado."*). Ele informa **só a mensagem
+de ajuda**, nunca o comportamento — a aba abre igual com `XDG_CURRENT_DESKTOP`
+vazia ou composta (`pop:GNOME`).
+
+**O ícone na barra do sistema** ganhou a linha que faltava. Quando ele sobe, a
+seção diz isso; quando não sobe, ela diz **o que fazer** em vez de sumir calada:
+no GNOME o ícone depende da extensão `ubuntu-appindicators@ubuntu.com`; no
+COSMIC, do applet "Área de status", em Configurações → Painel. **Não há caixa de
+ligar e desligar a bandeja** — não existe chave que alguém leia, e uma caixa que
+não liga nada é decoração.
+
+**Ligar junto com o computador** aparece aqui como **espelho**: o estado, mais o
+botão **Abrir a aba Sistema**. Quem manda continua sendo o interruptor de lá —
+dois donos do mesmo gesto é cicatriz que esta casa já pagou.
+
+### O que esta aba não faz
+
+- **não rouba controle nenhum das outras dez.** Nada saiu de Rumble, Lightbar,
+  Gatilhos ou Sistema: ela só acrescenta o que não existia em lugar nenhum e põe
+  teto por cima do que já existe;
+- **não é um segundo sistema de perfis.** A aba Perfis responde *quando* um
+  ajuste entra; o orçamento responde *quanto*;
+- **não desliga rádio de ninguém**, nem muda porta, nem mexe no seu Wi-Fi;
+- **não promete bateria em porcentagem.** Não existe medição de mA nem de horas
+  de autonomia neste projeto, então a tela diz a consequência verificável ("a
+  vibração chega com 30% da força") e nunca "poupa X% de bateria".
+
 ## O cabeçalho
 
 A faixa acima da tira de abas, e ela vale para **todas** — inclusive as que
-nenhuma das dez capturas desta página mostra: o script fotografa o
+nenhuma das capturas desta página mostra: o script fotografa o
 `main_notebook`, e isto mora no `header_bar`, fora do recorte. Por isso esta
 seção foi escrita contra o código.
 

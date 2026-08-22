@@ -68,8 +68,8 @@ Todas as formas de instalar, o que o instalador toca no sistema e como reverter:
 ## 3. Primeira abertura
 
 Abra pelo menu de aplicativos (ou `hefesto-dualsense4unix-gui` no terminal). A
-janela tem dez abas: **Início, Status, No jogo, Gatilhos, Lightbar, Rumble,
-Perfis, Sistema, Emulação, Navegação**.
+janela tem onze abas: **Início, Status, No jogo, Gatilhos, Lightbar, Rumble,
+Perfis, Sistema, Emulação, Navegação, Configurações**.
 
 Plugue o DualSense por USB ou pareie por Bluetooth. A aba **Status** mostra
 conexão, transporte, bateria, perfil ativo, sticks, gatilhos e a grade de botões

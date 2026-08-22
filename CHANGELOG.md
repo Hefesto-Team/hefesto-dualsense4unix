@@ -40,6 +40,133 @@ fez nascer está na `QUATRO-COMPONENTES-02`, logo abaixo.
 
 ## [Unreleased]
 
+### A leva de 22/08 — a aba Configurações, e o que o produto não tem como medir
+
+As dez abas de hoje operam sobre o que o produto **mede**: quantos controles,
+qual bateria, quantos hertz o giroscópio entrega. Existe uma classe inteira de
+informação que muda o comportamento e que nenhuma dessas fontes carrega — onde o
+adaptador está fisicamente, se há um hub no caminho, para que serve o rádio da
+porta ao lado. Nada disso é observável, e tudo isso é declarável.
+
+O teste de admissão de qualquer controle nesta aba é uma pergunta só: *o Hefesto
+conseguiria descobrir isso sozinho?* Se sim, o lugar não é ali — é o que a impede
+de virar gaveta de tranqueira.
+
+#### Adicionado
+
+**A décima primeira aba, com cinco seções.** Cada uma responde algo que nenhuma
+tela respondia:
+
+- **"Está tudo certo?"** — o diagnóstico que só existia no terminal responde em
+  uma linha, com selo e cinco conferências (economia de energia dos adaptadores,
+  energia das portas, pareamentos salvos, suporte ao controle, vizinhança das
+  portas). **Sudo-zero**: o que exigiria root vira "não deu para conferir", nunca
+  vermelho. Nenhuma mensagem do terminal chega à janela — elas carregam `sudo` e
+  carregam endereço de rádio, e esta tela é fotografada e versionada. Selo verde
+  não convive com linha vermelha: um problema derruba o selo, e um "não sei" já
+  impede o verde.
+- **"Os controles"** — um card por aparelho, com a borda na cor do plástico. A
+  leitura da cor saiu de `scripts/ensaios/` e entrou no produto: o código vem no
+  serial de fábrica, lido pelo cabo. O modo de um não-Sony (D-input, X-input,
+  Switch, Apple) é **deduzido e mostrado**, nunca declarado.
+- **"A mesa"** — os adaptadores com a posição lida do barramento (porta, painel
+  do gabinete, hub), os rádios que dividem os 2,4 GHz, e as duas únicas perguntas
+  que barramento nenhum responde: altura da antena e linha de visada.
+- **"Orçamento"** — Economia, Balanceado, Máximo e Auto como teto da mesa
+  inteira, e não mais só um seletor da aba Rumble.
+- **"A janela"** — tamanho do texto, ambiente da área de trabalho, e o ícone da
+  barra do sistema, que **para de sumir calado**: quando ele não sobe, a seção
+  diz o que fazer (a extensão no GNOME, o applet "Área de status" no COSMIC).
+
+**`maquina.json` — a camada de configuração que não é de perfil.** Este projeto
+não tinha onde guardar o que vale para a MESA: havia `profiles/` (por jogo,
+trocado a cada alt-tab), alguns arquivos-flag, e nada global. Onde o adaptador
+está não é do jogo, é da casa. Schema com `version: Literal[1]`, todo campo
+nascendo em `None`, e **gravação por fusão parcial** — as cinco seções gravam
+pelo mesmo gesto, e sem a fusão a última a escrever apagaria as outras quatro.
+Arquivo de uma versão futura não é lido nem sobrescrito. Método novo no IPC:
+`machine.declare`.
+
+**O medidor de ocupação do rádio**, e ele diz na tela de onde vem cada número.
+Uma barra por adaptador, com **Folgada** até 60%, **Apertada** até 85% e
+**Cheia** acima — nunca vermelho, porque rádio cheio é reversível. O denominador
+é aritmética da especificação do Bluetooth (1.600 fatias por segundo) e a barra
+carrega o selo `derivado da especificação` para dizer isso; o numerador usa as
+taxas do A/B de 25/07. Medir ao vivo seria pior: dois DualSense no mesmo
+adaptador entregaram 381,5 e 191,4 Hz **com a mesa folgada**, e o envelope de um
+dia foi de 157,8 a 402,9 Hz. A barra fala de ocupação e nunca de culpa.
+
+#### Alterado
+
+**O orçamento é teto, não troca.** Escolher Economia não desliga nada e não apaga
+ajuste nenhum: o jogo pede, a aba de origem manda, e o valor chega ao controle
+limitado. Voltar para Balanceado devolve tudo como estava. O dono único do valor
+efetivo é o orçamento; a aba de origem só exibe.
+
+**A tabela de consequências tem uma linha, e o desenho prometia cinco.** A
+vibração é a única com ponto de aplicação de verdade. Escrever "limitado a 25%
+pelo orçamento" na Lightbar sem ninguém limitar nada seria a tela mentindo — e a
+própria tela diz que gatilhos, barra de luz, microfone e giroscópio entram quando
+ganharem esse ponto.
+
+**A aba é diferida**: clicar num seletor marca o rascunho, e quem grava é o
+**Aplicar** do rodapé. A fita "Ajustes vão para:" fica inerte ali, com o motivo
+escrito ao lado — o que se declara vale para a mesa inteira, não para um
+controle.
+
+**As capturas passaram a ser onze**, e a Configurações ganha uma segunda foto,
+esticada até a altura que a página pede: ela é a única aba que não cabe em
+1080px, e a foto cortada mostraria quatro seções e meia.
+
+#### Corrigido
+
+**Economia é 30%, não 40%.** O produto entrega 30% e a aba Rumble já dizia isso
+na tela; o desenho da leva e o inventário de dicas diziam 40% em três lugares. O
+dono do número é o código.
+
+**O Auto nunca amplifica.** O desenho prometia *"controle no cabo joga em
+Máximo"*; desde 11/08/2026 ele lê bateria e só desce — acima de 50% joga inteira,
+entre 20% e 50% cai para 70%, abaixo de 20% cai para 30%.
+
+### A leva de 22/08 — quatro defeitos que a aba nova fez aparecer
+
+Construir a aba obrigou a reler os ganchos, o rascunho e o install inteiros.
+Quatro coisas que já estavam quebradas ficaram visíveis, e nenhuma delas é da
+aba nova.
+
+#### Corrigido
+
+**O carimbo de ponte sumia a cada "Salvar Perfil".** `Profile.ponte` registra
+qual ponte já funcionou naquele jogo — é o que faz a escada parar em vez de
+recomeçar do primeiro degrau, e recomeçar significa recriar o vpad com o jogo
+aberto. `to_profile` reconstruía o perfil do zero e deixava o campo de fora: o
+gesto mais banal apagava o que o produto tinha aprendido sozinho. Agora o
+rascunho o TRANSPORTA (sem escritor em aba nenhuma), o rodapé tem um degrau de
+disco para o save por cima de outro perfil, e quem ESTREIA — inclusive o
+"Duplicar" — nasce sem carimbo, porque ainda não confirmou nada.
+
+**O gate do microfone era por seção, e mandava opinião que ninguém deu.**
+Arrastar o volume levava junto o `button_toggles_system`, que nenhuma superfície
+escreve — o valor que viajava era o default de fábrica, e do outro lado ele
+sobrescrevia a config viva do daemon. Agora o campo nasce "sem opinião" e só
+viaja quando alguém o escolhe.
+
+**Duas telas desenhavam o arquivo de ontem.** A caixinha do Steam Input tem dois
+escritores fora da aba Perfis (o botão "Este jogo não funciona" e a CLI) e só se
+sincronizava ao abrir o editor — numa caixa que mentia "desmarcada", o primeiro
+clique marcava de novo em vez de tirar. O interruptor do teclado ganhou um
+segundo escritor no dia em que o gesto PS + R3 passou a ligar o teclado em
+processo. As duas passam a reler ao entrar na aba.
+
+**As regras udev 82 e 83 eram enfeite em quem instalou por pacote.** Elas só
+existem para chamar um alvo pelo `RUN+=`, e o alvo não viajava em empacotamento
+nenhum: a 83 mandava iniciar uma unit inexistente a cada conexão Bluetooth, e o
+salva-vidas de bonds nunca gravou uma linha para essas pessoas. O passo que o
+instalava ficava depois do `exit 0` do ramo dos formatos. Agora o alvo entra por
+onde a regra entra, as duas regras carregam um `TEST==` do próprio alvo — regra
+órfã fica inerte em vez de falhar por device — e o `doctor.sh` avisa quando isso
+acontece.
+
 ## [0.9.4.5] — 2026-08-20
 
 A leva da ponte. O alvo é o QoL de quem não é técnico: abrir o jogo, não andar,
