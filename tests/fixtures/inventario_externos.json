@@ -1,0 +1,72 @@
+{
+  "_comentario": [
+    "A mesa de CINCO desta casa, no formato que a seção 'Os controles' consome:",
+    "os quatro DualSense adotados (chave 'controllers', como o daemon.state_full",
+    "os entrega, já com player_slot) mais o 8BitDo que o Hefesto só VÊ (chave",
+    "'external', como o controller.list {external: true} os entrega).",
+    "",
+    "O state_full_quatro_controles.json, o irmão mais velho, NÃO serve: as 47",
+    "chaves dele não incluem 'external', e a mesa real desta casa é de cinco.",
+    "",
+    "Todo endereço aqui é FORJADO, nas duas faixas que o portão de anonimato",
+    "reconhece como sintéticas: aa:bb:cc (os DualSense) e e8:47:3a (o clone).",
+    "Nenhum aparelho desta bancada aparece neste arquivo.",
+    "",
+    "O 8BitDo está em modo Switch por Bluetooth: VID 057e, PID 2009, driver",
+    "nintendo. É o caso em que o produto o chama de 'Pro Controller' e a marca",
+    "por OUI o desmente — o primeiro dos três erros de rótulo medidos em",
+    "docs/protocol/externos-firmware-e-modos.md:230-246."
+  ],
+  "controllers": [
+    {
+      "index": 0,
+      "connected": true,
+      "is_primary": true,
+      "transport": "usb",
+      "uniq": "aabbcc0000d8",
+      "battery_pct": 100,
+      "player_slot": 1
+    },
+    {
+      "index": 1,
+      "connected": true,
+      "is_primary": false,
+      "transport": "bt",
+      "uniq": "aabbcc0000a1",
+      "battery_pct": 74,
+      "player_slot": 2
+    },
+    {
+      "index": 2,
+      "connected": true,
+      "is_primary": false,
+      "transport": "bt",
+      "uniq": "aabbcc0000b2",
+      "battery_pct": 55,
+      "player_slot": 4
+    },
+    {
+      "index": 3,
+      "connected": true,
+      "is_primary": false,
+      "transport": "bt",
+      "uniq": "aabbcc0000c3",
+      "battery_pct": null,
+      "player_slot": null
+    }
+  ],
+  "external": [
+    {
+      "name": "Nintendo Co., Ltd. Pro Controller",
+      "vid": "057e",
+      "pid": "2009",
+      "bus": "bluetooth",
+      "uniq": "e8:47:3a:00:00:07",
+      "driver": "nintendo",
+      "evdev_path": "/dev/input/event8",
+      "hidraw": "/dev/hidraw6",
+      "identity": "e8473a000007",
+      "player_slot": 5
+    }
+  ]
+}

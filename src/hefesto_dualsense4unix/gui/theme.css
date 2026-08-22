@@ -1271,3 +1271,53 @@ textview.hefesto-dualsense4unix-log text selection,
     margin-bottom: 0;
     min-height: 0;
 }
+
+/* CONFIG-06 — o card de UM controle na seção "Os controles".
+ *
+ * Ele herda tudo de `.hefesto-dualsense4unix-card` (fundo @bg, raio, padding) e
+ * troca só a BORDA, que aqui carrega informação: ela é a cor do plástico daquele
+ * controle, e é o que responde "qual destes é o meu?" sem uma palavra.
+ *
+ * A cor propriamente dita NÃO está aqui, e não pode estar: é um hexa DIFERENTE
+ * por aparelho, lido do firmware, e a restrição 6 desta leva proíbe hex solto
+ * nesta folha — só os vinte tokens `@define-color` do topo. Quem pinta é um
+ * `Gtk.CssProvider` POR WIDGET, em `app/widgets/external_card.py`, no mecanismo
+ * de `utils/color_contrast.tintar_progressbar`. O que fica aqui é a borda de
+ * REPOUSO: `@border_soft`, a mesma divisória do resto da janela, que é como o
+ * card diz "não sei de que cor este controle é".
+ *
+ * A borda é de 2px e não de 1px porque ela precisa ser lida como cor, e não como
+ * contorno: em 1px o Starlight Blue (#B5CED4, a única cor MEDIDA da tabela) some
+ * ao lado do @border_soft. */
+.hefesto-card-de-controle {
+    border: 2px solid @border_soft;
+}
+
+/* O ANEL de seleção — o card do controle marcado no cabeçalho da janela.
+ *
+ * ROXO, e a escolha tem duas fontes que concordam: o desenho aprovado diz roxo
+ * ("O anel roxo por dentro marca qual está selecionado", `TOOLTIPS.md:82`), e o
+ * @purple deste tema é justamente "acento primário, seleção" (`:29`) enquanto o
+ * @pink é reservado à marca e à aba ativa (`:28`, e a restrição 6 desta leva o
+ * repete).
+ *
+ * A RESSALVA, escrita porque ela é real e medida: a `ONDE-A-COR-MORA-01` §5.1
+ * mediu que o Galactic Purple do plástico (#5F4B9B) e o @purple ficam a um
+ * degrau de luminosidade um do outro — num controle roxo, o anel de seleção e a
+ * borda de cor quase se confundem. A recomendação de lá era o rosa da marca, que
+ * esta folha não permite. Fica o roxo, e fica escrito: quem for revisitar sabe
+ * que o caso apertado é o controle Galactic Purple, e não precisa remedir.
+ *
+ * `inset` de propósito: um anel POR DENTRO não muda o tamanho do card, então
+ * clicar de um card para outro não faz a fileira inteira se mexer. */
+.hefesto-card-de-controle.hefesto-card-selecionado {
+    box-shadow: inset 0 0 0 2px @purple;
+}
+
+/* O quadradinho de amostra ao lado do nome da cor lida — 13x13 como no desenho.
+ * O fundo dele também é hexa por aparelho e também entra por provider de
+ * widget; aqui ficam só a forma e o contorno neutro que a separa do card. */
+.hefesto-amostra-de-cor {
+    border: 1px solid @current_line;
+    border-radius: 3px;
+}
