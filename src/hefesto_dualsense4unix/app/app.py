@@ -930,7 +930,24 @@ class HefestoApp(
         "tab_rumble_box": ("_refresh_rumble_from_draft",),
         # BUG-PROFILES-ACTIVE-STALE-01: autoswitch/hotkey trocam o perfil sem
         # passar pela GUI — re-marcar o ativo (negrito) ao exibir a aba.
-        "profiles_paned": ("_sync_selection_with_active_profile",),
+        #
+        # DUAS-ABAS-UM-ARQUIVO-01 (22/08/2026): e reler do DISCO a caixinha do
+        # Steam Input, que tem dois escritores FORA desta aba — o botão "Este
+        # jogo não funciona" (`daemon_actions.on_steam_game_broken`) e o
+        # `gamepad steam-input remove` (`cli/cmd_steam.py:190`). Ela só se
+        # sincronizava ao ABRIR o editor
+        # (`profiles_actions._mostrar_caixa_do_steam_input`), então com o editor
+        # já aberto a caixa desenhava o arquivo de antes — e o tooltip daquele
+        # botão (`btn_steam_game_broken`, no glade) manda desmarcar justamente
+        # ali. O clique vale a posição DESENHADA, não a do disco: numa caixa que
+        # mente "desmarcada", o primeiro clique MARCA de novo (o `add` devolve
+        # "já estava") em vez de tirar — o oposto do que o tooltip promete.
+        # Reler ao entrar na aba é a única cura que alcança a CLI: ela não tem
+        # como avisar uma janela que talvez nem esteja aberta.
+        "profiles_paned": (
+            "_sync_selection_with_active_profile",
+            "_sincronizar_caixa_do_steam_input",
+        ),
         # BUG-DAEMON-TAB-STALE-01: status do daemon re-renderiza ao entrar na
         # aba (o daemon pode ter subido/caído por fora, via CLI ou systemd).
         # M7 (auditoria): também reavalia o cartão anti-storm.
@@ -941,26 +958,30 @@ class HefestoApp(
         # A aba unificada roda os DOIS refreshers que antes eram de uma aba cada:
         # BUG-MOUSE-GUI-SYNC-01 (A1) sincroniza com o estado vivo do daemon e
         # BUG-KEYBOARD-TAB-NO-REFRESH-01 recarrega os bindings do draft.
-        # EMULACAO-NO-JOGO-01/E1: `_refresh_keyboard_switch` NÃO entrou aqui, e
-        # a razão é medida. Ele seria o lugar certo — o interruptor do teclado
-        # vive nesta aba — mas hoje ele é o ÚNICO escritor da
-        # `keyboard_emulation.flag` em todo o projeto (`grep`: não há CLI nem
-        # applet chamando `keyboard.emulation.set`), então não existe caminho
-        # pelo qual a posição dele mude sem passar por esta janela: reconciliar
-        # ao entrar na aba não corrige staleness nenhuma HOJE. Ele é populado no
-        # bootstrap (`install_emulation_tab`) e reconciliado pelo
-        # `_refresh_emulation_tab`. Quando nascer um segundo escritor (a CLI
-        # `keyboard on/off`, o applet), o nome entra nesta tupla — e nada mais
-        # precisa mudar em teste nenhum: até 22/08/2026 este comentário afirmava
-        # que `tests/unit/test_notebook_switch_page.py` "congela esta lista com
-        # `==` e reprova qualquer acréscimo", e a afirmação é FALSA — o
-        # `_AppFalso` (`:41-50`) itera `_REFRESH_POR_ABA.values()` dinamicamente,
-        # e a única asserção sobre o mapa é `test_todo_id_do_mapa_existe_no_glade`
-        # (`:128-142`), que só exige a chave existir como id no glade. Os `==` do
-        # arquivo (`:68`, `:83`, `:92`) são sobre listas de CHAMADAS.
+        # SEGUNDO-ESCRITOR-01 (22/08/2026): `_refresh_keyboard_switch` entrou
+        # aqui no dia em que a razão de ele ficar de fora caducou. A razão era
+        # medida — esta janela era o único caminho até a
+        # `keyboard_emulation.flag`, e reconciliar ao entrar na aba não corrigia
+        # staleness nenhuma. O gesto PS + R3 da ponte mouse+teclado
+        # (`daemon/subsystems/hotkey.py`, `_aplicar_ponte`) chama
+        # `daemon.set_keyboard_emulation(True)` EM PROCESSO, e ele persiste por
+        # padrão: o interruptor passou a desenhar uma posição que o controle já
+        # virou. O grep que sustentava a razão antiga procurava
+        # `keyboard.emulation.set` — o nome do método IPC, que não pega chamada
+        # em processo. Quem for recontar escritores procure por
+        # `set_keyboard_emulation(`.
+        #
+        # O mouse tem o MESMO gesto por escritor (`set_mouse_emulation`) e o
+        # `_refresh_mouse_tab` já está aqui, mas ele desiste de sobrepor quando
+        # o perfil traz seção de mouse (`draft.mouse.in_profile`) — isso é
+        # deliberado e medido (BUG-MOUSE-OVERLAY-CLOBBERS-SECTION-01, em
+        # `mouse_actions._refresh_mouse_from_daemon_async`): sobrepor faria o
+        # Salvar Perfil clobberar a seção dela. O teclado não tem seção no
+        # perfil, então não há esse conflito e a releitura é incondicional.
         "tab_navegacao_dsx": (
             "_refresh_mouse_tab",
             "_refresh_key_bindings_from_draft",
+            "_refresh_keyboard_switch",
         ),
         # CONFIG-02: entrar na aba Configurações relê o barramento — quais
         # adaptadores Bluetooth existem, onde estão e o que mais divide a faixa

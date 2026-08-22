@@ -621,8 +621,10 @@ class EmulationActionsMixin(WidgetAccessMixin):
         # Teclado da aba Navegação (ao lado do do mouse, que é o lugar onde ela
         # o procurou), mas o dono do assunto "emulação" é este mixin. O
         # bootstrap é chamado daqui porque `install_mouse_tab` tem outro dono; a
-        # releitura vai pelo `_refresh_emulation_tab` logo abaixo. Por que ele NÃO
-        # está no gancho da aba Navegação: ver `app._REFRESH_POR_ABA`.
+        # releitura vai pelo `_refresh_emulation_tab` logo abaixo e, desde
+        # 22/08/2026, também pelo gancho da aba onde ele DESENHA — o gesto
+        # PS + R3 virou um segundo escritor da flag (SEGUNDO-ESCRITOR-01, em
+        # `app._REFRESH_POR_ABA`).
         self._refresh_keyboard_switch()
 
     # --- handlers ---
@@ -651,8 +653,8 @@ class EmulationActionsMixin(WidgetAccessMixin):
             # EMULACAO-NO-JOGO-01/E1: o interruptor do teclado. Ele DESENHA na
             # aba Navegação, mas o assunto é emulação e o dono é este mixin —
             # e é por aqui que ele é relido no botão "Atualizar" e ao entrar na
-            # aba Emulação. Ver o comentário em `app._REFRESH_POR_ABA` para por
-            # que ele não entrou no gancho da aba Navegação.
+            # aba Emulação. Desde 22/08/2026 o gancho da aba Navegação também o
+            # relê: ver SEGUNDO-ESCRITOR-01 em `app._REFRESH_POR_ABA`.
             "_refresh_keyboard_switch",
         ):
             fn = getattr(self, name, None)

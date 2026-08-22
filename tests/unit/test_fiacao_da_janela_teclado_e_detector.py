@@ -196,10 +196,8 @@ class TestOsDoisInterruptores:
         assert "_refresh_keyboard_switch" in metodos
         # A chave é populada no bootstrap e relida pelo agregador da aba
         # Emulação (que é o que o botão "Atualizar" e o `switch-page` da aba
-        # Emulação chamam). Ela NÃO entrou no gancho da aba Navegação de
-        # propósito — hoje esta janela é o único escritor da
-        # `keyboard_emulation.flag` no projeto, então não há staleness para
-        # corrigir ali; o "por que" está em `app._REFRESH_POR_ABA`.
+        # Emulação chamam) e, desde 22/08/2026, também pelo gancho da aba onde
+        # ela DESENHA — ver o teste do segundo escritor logo abaixo.
         fonte = EMULACAO_PY.read_text(encoding="utf-8")
         assert '"_refresh_keyboard_switch",' in fonte, (
             "a chave do teclado saiu do agregador `_refresh_emulation_tab`: ela "
@@ -209,12 +207,58 @@ class TestOsDoisInterruptores:
         assert "_refresh_keyboard_switch()" in fonte, (
             "a chave do teclado não é mais populada no bootstrap da janela"
         )
-        # O gancho da aba Navegação segue com os dois de sempre — se alguém
-        # acrescentar o terceiro, `tests/unit/test_notebook_switch_page.py`
-        # (que congela a lista com `==`) tem de ser atualizado no mesmo passe.
+        # O gancho da aba Navegação, congelado com `==` aqui e em
+        # `tests/unit/test_notebook_switch_page.py` (que congela as CHAMADAS):
+        # mexer na tupla exige os dois arquivos no mesmo passe.
         assert _refreshers_da_aba("tab_navegacao_dsx") == (
             "_refresh_mouse_tab",
             "_refresh_key_bindings_from_draft",
+            "_refresh_keyboard_switch",
+        )
+
+    def test_o_segundo_escritor_da_flag_obriga_o_gancho_da_aba(self) -> None:
+        """SEGUNDO-ESCRITOR-01 (22/08/2026): o gesto PS + R3 virou o interruptor.
+
+        Enquanto esta janela era o único caminho até a
+        `keyboard_emulation.flag`, deixar `_refresh_keyboard_switch` fora do
+        gancho da aba Navegação era decisão medida: não havia posição a
+        reconciliar. A ponte mouse+teclado do PS + R3
+        (`daemon/subsystems/hotkey.py`, `_aplicar_ponte`) chama
+        `daemon.set_keyboard_emulation(True)`, que persiste por padrão
+        (`daemon/protocols.py`) — o interruptor passou a poder estar virado
+        quando ela entra na aba.
+
+        A régua é `set_keyboard_emulation(`, não `keyboard.emulation.set`: o
+        segundo é o nome do método IPC e NÃO pega a chamada em processo, e foi
+        esse grep que sustentou a razão caduca por uma leva inteira. É o portão
+        contra repetir o erro: enquanto houver escritor no daemon, o refresher
+        fica na tupla.
+
+        Mordida: tirei `_refresh_keyboard_switch` da tupla em `app.py` e
+        reprovou; tirei a linha do `set_keyboard_emulation` do `_aplicar_ponte`
+        e o `pytest.skip` abaixo apagou o portão, que é o comportamento certo —
+        sem segundo escritor não há o que reconciliar.
+        """
+        hotkey = (PACOTE / "daemon" / "subsystems" / "hotkey.py").read_text(
+            encoding="utf-8"
+        )
+        chamadas = [
+            linha
+            for linha in hotkey.splitlines()
+            if "set_keyboard_emulation(" in linha
+            and not linha.lstrip().startswith("#")
+        ]
+        if not chamadas:
+            pytest.skip(
+                "o gesto deixou de escrever a flag — sem segundo escritor, o "
+                "gancho da aba Navegação volta a ser opcional"
+            )
+
+        assert "_refresh_keyboard_switch" in _refreshers_da_aba("tab_navegacao_dsx"), (
+            "o gesto PS + R3 escreve a `keyboard_emulation.flag` em "
+            f"{len(chamadas)} ponto(s) de `hotkey.py`, e a aba onde o "
+            "interruptor DESENHA não o relê ao ser exibida: ela vê a posição "
+            "de antes do gesto"
         )
 
 
