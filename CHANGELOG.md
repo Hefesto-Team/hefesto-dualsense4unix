@@ -128,6 +128,18 @@ dono do número é o código.
 Máximo"*; desde 11/08/2026 ele lê bateria e só desce — acima de 50% joga inteira,
 entre 20% e 50% cai para 70%, abaixo de 20% cai para 30%.
 
+**A seção "A mesa" não gravava nada, e o comentário dizia que era esperado.**
+CONFIG-02 escreveu o gesto de declarar com um `TODO(CONFIG-03)` dentro — *"a
+camada de persistência de mesa não existe"* —, e CONFIG-03 nasceu no mesmo dia.
+O TODO sobreviveu à cura que esperava: altura da antena e linha de visada
+morriam ao fechar a janela, sem uma linha avisando. Agora as duas vão para o
+`maquina.json` pelo "Aplicar" do rodapé, como as outras seções.
+
+**A coluna "O que é" dos rádios vizinhos.** `RadioDeclarado.tipo` também nasceu
+em CONFIG-03 e ficou sem tela nenhuma — a outra metade do mesmo defeito. Um
+dongle de teclado e um de caixa de som são o mesmo `VID:PID` para o kernel; sem
+a resposta da pessoa, o exame da mesa só sabe listar um endereço em hexa.
+
 ### A leva de 22/08 — quatro defeitos que a aba nova fez aparecer
 
 Construir a aba obrigou a reler os ganchos, o rascunho e o install inteiros.
