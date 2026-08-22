@@ -797,6 +797,59 @@ def _jogo_na_autoridade(daemon: DaemonProtocol) -> bool:
     return getattr(daemon, "display_authority", "unknown") == "game"
 
 
+def _ativar_o_perfil_do_lancamento(
+    daemon: DaemonProtocol, profile: Any, *, appid: int
+) -> dict[str, str]:
+    """Ativa o perfil do jogo que ACABOU de subir, e devolve o relatório.
+
+    A razão inteira está no chamador, junto do desvio da allowlist. Aqui ficam
+    as três coisas que são desta função:
+
+    **O gerente vem da fábrica**, não montado à mão. Quatro rotas desta casa
+    montavam o próprio `ProfileManager`, cada uma com a sua lista de appliers, e
+    uma derivou — a nota `PERFIL-REESCRITO-NA-PARTIDA-01` item 6 conta o preço.
+    Applier ausente NÃO levanta: a seção é ignorada em silêncio, e a rota nova
+    nasceria funcionando "quase". Uma rota nova com lista própria era o defeito
+    de novo, no dia em que ele foi diagnosticado.
+
+    **Nunca levanta.** Uma ativação que falhe não pode impedir o arming do modo
+    logo abaixo, que é o que põe o controle na mão dela. O motivo vai ao
+    journal e o relatório volta vazio — que é diferente de "aplicou nada": o
+    relatório vazio de uma exceção e o relatório cheio de `ignorado_*` contam
+    histórias diferentes, e as duas aparecem.
+
+    **O relatório sobe no dicionário de retorno do arming**, e é isso que
+    permite a alguém — a janela, o `doctor`, um agente — perguntar o que entrou
+    sem adivinhar pelo aparelho. Era o buraco que a `ELO-MUDO-01` nomeia: o
+    produto respondia pelo transporte e nunca pelo efeito.
+    """
+    nome = getattr(profile, "name", None)
+    if not nome:
+        return {}
+    relatorio: dict[str, str] = {}
+    try:
+        from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
+
+        gerente_do_daemon(daemon, store=getattr(daemon, "store", None)).activate(
+            str(nome), origin="launch", relatorio=relatorio
+        )
+    except Exception as exc:
+        logger.warning(
+            "launch_ativacao_do_perfil_falhou",
+            appid=appid,
+            profile=nome,
+            err=str(exc),
+        )
+        return {}
+    logger.info(
+        "launch_perfil_ativado",
+        appid=appid,
+        profile=nome,
+        secoes=relatorio,
+    )
+    return relatorio
+
+
 def tique_da_escada(
     daemon: DaemonProtocol, *, agora: float | None = None
 ) -> str | None:
@@ -1015,18 +1068,49 @@ def arm_launch_profile(
                 err=str(exc),
             )
 
+    # ELO-MUDO-01/E1 (22/08/2026): o LANÇAMENTO ATIVA O PERFIL.
+    #
+    # Vem ANTES do desvio da allowlist, e o lugar é a entrega. Até esta data o
+    # produto sabia o nome do jogo, resolvia o perfil por appid, e aplicava DUAS
+    # seções de oito: a supressão aqui em cima e, fora da allowlist, o `mode`
+    # logo abaixo. Gatilho, luz, vibração, som e microfone esperavam o
+    # autoswitch — que espera a CLASSE DA JANELA, e ela respondeu `unknown` por
+    # 21 minutos seguidos na medição de 22/08 (`reason="sem_foco_x"`,
+    # `useful_age_sec=1276`), com o jogo aberto e o perfil certo no disco.
+    #
+    # A queixa dela era essa, com estas palavras: *"o perfil do sackboy não tá
+    # aplicando as features das abas que eu seto e clico em salvar, como as abas
+    # de rumble, gatilhos e deve ter outras"*. O perfil estava certo, o `match`
+    # casava, a ativação sabe aplicar tudo — só que ninguém a chamava.
+    #
+    # E NA ALLOWLIST TAMBÉM, porque a decisão dela é essa: *"a allowlist do
+    # Steam Input NÃO é 'o Hefesto sai da frente'. É o contrário: permitir a
+    # allowlist faz o Hefesto continuar funcionando, com a saída sendo xbox ou
+    # DualSense e as features que ela marcou."* O que a allowlist pula é a
+    # DISPUTA PELO CONTROLE — máscara, grab, vpad, que é o `mode` do bloco
+    # abaixo. Não a cor, o gatilho, o volume nem a política de vibração.
+    #
+    # `origin="launch"` não fura o lock manual de 30 s (R-03) e não grava
+    # `session.json` — só `origin="manual"` grava (`manager.activate`), então a
+    # ativação automática não pode reescrever a escolha dela para o próximo
+    # boot. Idempotente com o autoswitch: se ele chegar depois com a mesma
+    # janela, `_activate` nem roda (candidato igual ao corrente).
+    ativacao = _ativar_o_perfil_do_lancamento(daemon, profile, appid=appid)
+
     if na_allowlist:
         logger.info(
             "launch_arm_pulado_allowlist_steam_input",
             appid=appid,
             profile=getattr(profile, "name", None),
             supressao=supressao,
+            ativacao=ativacao,
         )
         return {
             "appid": appid,
             "armado": False,
             "motivo": "allowlist_steam_input",
             "supressao": supressao,
+            "ativacao": ativacao,
         }
 
     mode = getattr(profile, "mode", None)
@@ -1194,6 +1278,11 @@ def arm_launch_profile(
         "ponte_confirmada": (
             ponte_gravada.chave if ponte_gravada is not None else None
         ),
+        # ELO-MUDO-01/E1: o relatório da ativação sobe junto do arming, aqui e
+        # no retorno da allowlist. Sem ele, "armado: True" continuaria sendo
+        # resposta de TRANSPORTE — diz que o modo foi pedido, e cala sobre as
+        # outras sete seções do perfil.
+        "ativacao": ativacao,
     }
 
 
