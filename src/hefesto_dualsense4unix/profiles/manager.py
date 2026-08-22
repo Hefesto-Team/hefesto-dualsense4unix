@@ -1599,7 +1599,72 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
     )
 
 
+
+#: Os nove appliers que um `ProfileManager` de daemon precisa para aplicar as
+#: OITO seções de um perfil. A lista é o contrato, e existe como dado — não
+#: como nove linhas repetidas — porque a repetição já custou uma leva.
+#:
+#: Cada item é `(parâmetro do construtor, atributo do daemon)`. O
+#: `keyboard_device_provider` fica de fora porque não é um atributo: é um
+#: `lambda` que resolve o device a cada ativação (o manager nasce antes de o
+#: teclado subir, e capturar a referência agora congelaria `None` para sempre).
+APPLIERS_DO_DAEMON: tuple[tuple[str, str], ...] = (
+    ("mouse_applier", "apply_profile_mouse"),
+    ("suppression_applier", "apply_profile_suppression"),
+    ("mode_applier", "apply_profile_mode"),
+    ("rumble_policy_applier", "apply_profile_rumble_policy"),
+    ("rumble_passthrough_applier", "apply_profile_rumble_passthrough"),
+    ("speaker_applier", "apply_profile_speaker"),
+    ("mic_applier", "apply_profile_mic"),
+)
+
+
+def gerente_do_daemon(
+    daemon: Any,
+    *,
+    controller: Any = None,
+    store: Any = None,
+    **sobrescritas: Any,
+) -> ProfileManager:
+    """O ``ProfileManager`` COMPLETO de uma rota do daemon — uma fonte só.
+
+    POR QUE ESTA FUNÇÃO EXISTE, e o defeito que ela fecha (22/08/2026). Quatro
+    rotas montavam o próprio manager à mão, cada uma com a sua lista de
+    appliers, e **uma delas derivou**: a nota
+    ``PERFIL-REESCRITO-NA-PARTIDA-01`` item 6 (``daemon/lifecycle.py``) conta
+    que a rota de saída do Modo Nativo nascia sem três appliers, e que o efeito
+    era ela desligar o Modo Nativo e ver gatilhos e LEDs voltarem enquanto a
+    máscara do vpad, a política de vibração e o volume do alto-falante ficavam
+    como o jogo os deixou.
+
+    **Applier ausente não levanta: a seção é ignorada em silêncio.** É esse o
+    formato do defeito, e é o que faz a lista repetida ser perigosa em vez de
+    apenas feia — a rota nova nasce funcionando "quase", e o "quase" só aparece
+    no aparelho dela.
+
+    Todos os acessos são ``getattr`` com default ``None``, e isso é contrato:
+    este construtor é chamado por dublês da suíte e por rotas de CLI que não
+    têm daemon nenhum, e um atributo ausente ali não pode derrubar a ativação —
+    a seção volta a ser ignorada, que é o comportamento histórico.
+
+    ``sobrescritas`` existe para o caso medido do ``lifecycle``: a saída do
+    Modo Nativo passa um ``mode_applier`` EMBRULHADO, que barra só o ``native``
+    para não religar o modo que ela acabou de desligar.
+    """
+    argumentos: dict[str, Any] = {
+        "controller": controller if controller is not None else daemon.controller,
+        "keyboard_device_provider": lambda: getattr(daemon, "_keyboard_device", None),
+    }
+    if store is not None:
+        argumentos["store"] = store
+    for parametro, atributo in APPLIERS_DO_DAEMON:
+        argumentos[parametro] = getattr(daemon, atributo, None)
+    argumentos.update(sobrescritas)
+    return ProfileManager(**argumentos)
+
+
 __all__ = [
+    "APPLIERS_DO_DAEMON",
     "MOTIVO_JOGO_SEM_PERFIL_PROPRIO",
     "MOTIVO_SELECIONADO",
     "MOTIVO_SEM_CANDIDATO",
@@ -1609,5 +1674,6 @@ __all__ = [
     "_estado_da_secao",
     "_to_key_bindings",
     "_to_led_settings",
+    "gerente_do_daemon",
     "resolve_key_bindings",
 ]
