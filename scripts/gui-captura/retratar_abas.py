@@ -632,6 +632,26 @@ _PERFIS_DA_FOTO = (
 )
 
 
+#: A LISTA DE MENTIRA do Steam Input, para a foto da aba Perfis.
+#:
+#: A-LISTA-QUE-FALTAVA-01 (22/08/2026). A caixinha do Steam Input NUNCA tinha
+#: sido fotografada: ela só aparece com "Aplica a = Jogo da Steam", e os três
+#: perfis da foto casavam por `process_name`. A lista nova nasceria invisível na
+#: documentação — que é o mesmo defeito que este script existe para não repetir.
+#:
+#: Os appids são inventados e não existem em biblioteca nenhuma desta casa. Dois
+#: têm nome no mapa abaixo e um NÃO tem, de propósito: é o caso honesto da tela
+#: — sem `appmanifest` no disco, a linha mostra o número e diz por quê, e a foto
+#: precisa mostrar isso tanto quanto mostra o caso feliz.
+_APPIDS_DA_LISTA_DE_MENTIRA: tuple[str, ...] = ("101010", "202020", "303030")
+
+_JOGOS_DA_LISTA_DE_MENTIRA: dict[str, str] = {
+    "101010": "Jogo de Exemplo",
+    "202020": "Outro Jogo de Exemplo",
+    # "303030" fica de fora: é o que faz a foto mostrar "nome não encontrado".
+}
+
+
 def _montar_aba_perfis(builder) -> str:  # type: ignore[no-untyped-def]
     """Monta a aba Perfis — a mais editada da janela, e a que saía como casca.
 
@@ -705,9 +725,40 @@ def _montar_aba_perfis(builder) -> str:  # type: ignore[no-untyped-def]
     class _Host(_pa.ProfilesActionsMixin):  # type: ignore[misc, name-defined]
         def __init__(self) -> None:
             self.builder = builder
+            # A-LISTA-QUE-FALTAVA-01 (22/08/2026): o nome dos jogos da lista do
+            # Steam Input. INVENTADO, como os perfis — o mapa de verdade sai de
+            # `appmanifest_*.acf` e poria a biblioteca DELA num PNG versionado.
+            self._nomes_dos_jogos = dict(_JOGOS_DA_LISTA_DE_MENTIRA)
 
         def _get(self, nome: str):  # type: ignore[no-untyped-def]
             return self.builder.get_object(nome)
+
+        def _instalar_lista_de_jogos_do_pc(self) -> None:  # type: ignore[override]
+            # O de produção VARRE O DISCO DELA — `appmanifest_*.acf` de toda
+            # biblioteca Steam mais os `.desktop` — para montar a completação do
+            # campo do jogo, e guarda o resultado em `self._nomes_dos_jogos`.
+            #
+            # DOIS motivos para ele não rodar aqui, e o segundo foi medido em
+            # 22/08/2026 escrevendo esta função:
+            #
+            # 1. PRIVACIDADE, a mesma da bancada da mesa: a biblioteca dela não
+            #    entra num PNG versionado. A lista suspensa não é desenhada na
+            #    foto, mas o catálogo fica vivo no widget, e um script de
+            #    fotografia que lê o disco dela já quebrou essa promessa antes;
+            # 2. ele roda numa THREAD e SOBRESCREVE `_nomes_dos_jogos` quando
+            #    volta. Foi por isso que a primeira foto saiu com os três jogos
+            #    dizendo "nome não encontrado" mesmo com o mapa de mentira posto
+            #    no `__init__`: o catálogo real (vazio, sem Steam no ambiente da
+            #    foto) chegou depois e apagou os nomes inventados.
+            return None
+
+        @staticmethod
+        def _appids_do_steam_input() -> set[str]:  # type: ignore[override]
+            # O de produção lê `~/.config/.../steam_input_apps.txt` — a lista
+            # DELA. Nunca aqui: são três appids que não existem em máquina
+            # nenhuma desta casa, escolhidos para a foto mostrar os dois casos
+            # que a lista sabe desenhar (com nome no disco e sem).
+            return set(_APPIDS_DA_LISTA_DE_MENTIRA)
 
         def _status_toast(self, _contexto: str, _msg: str) -> None:
             return None
@@ -737,12 +788,23 @@ def _montar_aba_perfis(builder) -> str:  # type: ignore[no-untyped-def]
         _pa.load_gui_prefs = prefs_de_verdade
         _pa.perfil_que_ela_ativou = ativo_de_verdade
 
+    # "Aplica a = Jogo da Steam" com um appid escrito: é o único estado em que a
+    # caixinha do Steam Input e a lista dela existem na tela. Sem isto a foto
+    # continuaria sem mostrá-las, e a documentação afirmaria por escrito uma
+    # tela que ninguém vê.
+    with contextlib.suppress(Exception):
+        host._aplica_a.set_active_id("steam_game")
+        builder.get_object("profile_simple_custom_name").set_text("404040")
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+
     caixa = builder.get_object("profiles_paned")
     if caixa is not None:
         caixa.show_all()
     return (
         f"aba Perfis montada ({len(perfis)} perfis inventados, "
-        '"Aplica a" e "Modo" com botões)'
+        '"Aplica a" e "Modo" com botões, e a lista do Steam Input com '
+        f"{len(_APPIDS_DA_LISTA_DE_MENTIRA)} jogos de mentira)"
     )
 
 

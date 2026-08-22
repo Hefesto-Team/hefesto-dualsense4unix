@@ -1566,6 +1566,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             return
         if mostrar:
             self._sincronizar_caixa_do_steam_input()
+            self._sincronizar_outros_marcados()
             self._sincronizar_exigencia_invisivel()
             with contextlib.suppress(Exception):
                 box.set_no_show_all(False)
@@ -1656,6 +1657,148 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         finally:
             self._suppress_steam_input_toggle = False
 
+    #: Como um jogo sem nome no disco aparece na lista. O NÚMERO fica, e a
+    #: razão vem junto — "não encontrado" é resposta, e inventar um nome para
+    #: preencher a coluna seria a tela afirmando o que não sabe.
+    SEM_NOME_NO_DISCO = "nome não encontrado"
+
+    def _nome_do_appid(self, appid: str) -> str | None:
+        """O nome do jogo pelo appid, do catálogo que a completação já leu.
+
+        Sem leitura de disco AQUI de propósito: `_instalar_lista_de_jogos_do_pc`
+        varre as bibliotecas numa thread no arranque do editor e guarda o mapa
+        em `_nomes_dos_jogos`. Varrer de novo a cada abertura da caixinha seria
+        um segundo leitor do mesmo disco, e na thread errada.
+
+        Devolve `None` quando o catálogo ainda não chegou ou o jogo não tem
+        `appmanifest` — e os dois casos são o MESMO na tela, porque para quem
+        olha a diferença não muda nada: o produto não sabe o nome.
+        """
+        mapa = getattr(self, "_nomes_dos_jogos", None)
+        if not isinstance(mapa, dict):
+            return None
+        nome = mapa.get(appid)
+        return nome if isinstance(nome, str) and nome.strip() else None
+
+    def _sincronizar_outros_marcados(self) -> None:
+        """Desenha os OUTROS jogos marcados, um por linha, com o botão de tirar.
+
+        A-LISTA-QUE-FALTAVA-01 (22/08/2026), decisão dela. A allowlist tinha
+        três caminhos e nenhum mostrava a LISTA: o botão "Este jogo não
+        funciona" da aba Sistema só MARCA, esta caixinha só alcança o jogo do
+        perfil aberto, e o resto era `gamepad steam-input remove` no terminal.
+        O tooltip daquele botão chegava a mandar vir até aqui para desmarcar —
+        marcar era um clique e desmarcar era uma viagem, para um jogo de cada
+        vez, sem nunca ver os outros.
+
+        **"Outros" exclui o jogo deste editor de propósito.** Ele já tem a
+        caixa acima, e listá-lo de novo daria dois controles para o mesmo fato
+        na mesma tela — a classe de defeito que a `ABAS-01` curou.
+
+        A caixa some quando não há outros: uma lista vazia com título é ruído,
+        e o silêncio aqui não esconde nada (a caixa acima continua dizendo o
+        que vale para este jogo).
+        """
+        caixa = self._get("profile_steam_input_outros")
+        if caixa is None:
+            return
+        for filho in list(caixa.get_children()):
+            caixa.remove(filho)
+            filho.destroy()
+
+        deste = self._appid_do_editor()
+        outros = sorted(self._appids_do_steam_input() - {deste or ""})
+        if not outros:
+            caixa.hide()
+            return
+
+        from gi.repository import Gtk
+
+        titulo = Gtk.Label()
+        titulo.set_xalign(0.0)
+        titulo.set_markup(
+            # Sem `_()`: este módulo inteiro ainda não tem encanamento de i18n
+            # (o piso está em `test_lingua_do_produto_01`), e meia tradução num
+            # arquivo de quatro mil linhas é pior que nenhuma — some do catálogo
+            # metade das frases da mesma tela.
+            f"<i>Outros jogos marcados: {len(outros)}</i>"
+        )
+        with contextlib.suppress(Exception):
+            titulo.get_style_context().add_class("dim-label")
+        caixa.pack_start(titulo, False, False, 0)
+
+        # GRADE, e não uma fileira por jogo: com `Gtk.Box` o rótulo precisava de
+        # `hexpand` para o botão não colar no texto, e aí o `hexpand` levava o
+        # botão para a borda direita do painel inteiro — 900px de vão entre o
+        # nome e o "Tirar", medido na foto de 22/08. Numa grade as três colunas
+        # se alinham entre si e param onde o conteúdo acaba.
+        grade = Gtk.Grid()
+        grade.set_column_spacing(12)
+        grade.set_row_spacing(2)
+        grade.set_halign(Gtk.Align.START)
+        for linha, appid in enumerate(outros):
+            for coluna, widget in enumerate(self._celulas_de_outro_marcado(appid)):
+                grade.attach(widget, coluna, linha, 1, 1)
+        caixa.pack_start(grade, False, False, 0)
+
+        with contextlib.suppress(Exception):
+            caixa.set_no_show_all(False)
+        caixa.show_all()
+
+    def _celulas_de_outro_marcado(self, appid: str) -> list[Any]:
+        """As três células de uma linha: o nome, o número e o botão que tira.
+
+        O NÚMERO tem coluna própria, e não some quando o nome aparece: é o mesmo
+        critério do `JogoLocal.rotulo` e do `steam_launch_options.rotulo_do_jogo`
+        — o appid é o que ela confere na Steam, e é o único identificador que os
+        cadastros deste projeto compartilham.
+
+        Sem nome no disco, a coluna do nome carrega a RAZÃO em vez de um rótulo
+        genérico. "Jogo desconhecido" seria a tela inventando uma categoria;
+        "nome não encontrado" diz o que houve.
+        """
+        from gi.repository import Gtk
+
+        nome = self._nome_do_appid(appid)
+        rotulo = Gtk.Label()
+        rotulo.set_xalign(0.0)
+        if nome is None:
+            rotulo.set_markup(f"<i>{self.SEM_NOME_NO_DISCO}</i>")
+            with contextlib.suppress(Exception):
+                rotulo.get_style_context().add_class("dim-label")
+        else:
+            rotulo.set_text(nome)
+
+        numero = Gtk.Label(label=appid)
+        numero.set_xalign(0.0)
+        with contextlib.suppress(Exception):
+            numero.get_style_context().add_class("mono")
+
+        tirar = Gtk.Button(label="Tirar")
+        tirar.set_tooltip_text(
+            "Tira este jogo da lista. Ele volta a enxergar os controles "
+            "físicos na próxima vez que você o abrir."
+        )
+        tirar.connect("clicked", self._ao_tirar_outro_marcado, appid)
+        return [rotulo, numero, tirar]
+
+    def _ao_tirar_outro_marcado(self, _botao: Any, appid: str) -> None:
+        """Desmarca um jogo que NÃO é o deste editor.
+
+        Passa pelo mesmo `_gravar_marca_do_steam_input` da caixinha — e não por
+        uma segunda chamada ao `remove` — porque é ele que dá o toast, avisa o
+        daemon e relê o disco. Dois caminhos de escrita para a mesma lista era
+        metade do defeito que esta entrega fecha.
+
+        **Sem a pergunta do RELANCAR-01, e a diferença é medida:** aquela
+        pergunta existe porque marcar/desmarcar o jogo QUE ESTÁ ABERTO tira
+        dele o dispositivo que ele já enumerou. Estes são os OUTROS jogos —
+        nenhum deles é o do editor, e o `_gravar_marca_do_steam_input` continua
+        sendo o único escritor. Se um deles estiver aberto, o efeito é o mesmo
+        de sempre: vale na próxima abertura, que é o que o tooltip promete.
+        """
+        self._gravar_marca_do_steam_input(appid, marcar=False)
+
     def _appid_do_editor(self) -> str | None:
         """O appid digitado no campo do jogo, ou None se não houver um válido."""
         if self._selected_simple_choice() != "steam_game":
@@ -1684,6 +1827,11 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         if self._colar_virou_numero():
             return
         self._sincronizar_caixa_do_steam_input()
+        # A-LISTA-QUE-FALTAVA-01: e a LISTA junto. Trocar o appid muda de qual
+        # jogo a caixinha fala E quais são os "outros" — sem esta linha o jogo
+        # do editor aparecia na própria lista de outros, que é o defeito que o
+        # teste `test_a_lista_mostra_os_OUTROS_jogos_marcados` pegou.
+        self._sincronizar_outros_marcados()
         self._atualizar_frase_do_jogo()
 
     # --- O campo que entende o endereço e conhece os jogos daqui ------------
@@ -1949,8 +2097,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         if status in ("adicionado", "removido"):
             self._avisar_o_daemon_da_allowlist()
         # O disco é a verdade: se a escrita não valeu, a caixa volta ao que o
-        # arquivo diz em vez de mentir que valeu.
+        # arquivo diz em vez de mentir que valeu. A LISTA relê junto — marcar
+        # este jogo tem de tirá-lo do "outros", e desmarcar tem de devolvê-lo.
         self._sincronizar_caixa_do_steam_input()
+        self._sincronizar_outros_marcados()
 
     def _controles_na_mesa(self) -> int | None:
         """Quantos controles CONECTADOS o daemon reporta, ou None se não der.

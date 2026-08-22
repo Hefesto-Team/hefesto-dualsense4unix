@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho para
 # sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
 
-ensaio: 2026-08-22 16:18
+ensaio: 2026-08-22 17:58
 abas:   14
 
 # soma sha256 de cada foto, em ordem alfabética
@@ -18,7 +18,7 @@ aa795e6f4062bce987004844a4c1f91a816cddba25f710fd541803123e32fc8c  readme_gatilho
 cf3163a3ced778ace7e2f58a493f0956ca0d8bb5a7eeb2f7eac540ae5099882f  readme_lightbar.png
 3e2521b27a4a55e06dda8a7a09ee45eb2590e73787477a3a27ec930d1b4e0a4e  readme_navegacao_dsx.png
 7818cc53060116d8e68f9d51d677640636bcbd39d705a7210ed97a27286bd56c  readme_no_jogo.png
-2e0514f064c67ddc0952a323b7f153124499bcb2e2cbd67815293a14384ebddb  readme_perfis.png
+096ddb6166626840fc2af41616dc02c3b9d1c1085c0a84f9bb4aeb956b37fcf2  readme_perfis.png
 1e298d5d9022dbd2052e7b03f88b60aca4dc2c73162c7163cc201ca101ff04d2  readme_rumble.png
 69a1780821e2ae5f19578830bf90ca20908d9b610d161d80d514d40149954d94  readme_sistema.png
 13620f3396b2eda37e565085d4c37c5821116bba74c501a0275daea1f51a28cd  readme_status.png

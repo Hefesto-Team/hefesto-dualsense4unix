@@ -452,9 +452,17 @@ ninguém a escolher como:
 | **Este jogo não funciona** | marca o jogo que você acabou de abrir: nele os controles físicos ficam escondidos e o jogo passa a ver só os do Hefesto. Não fecha a Steam. Feche e abra o jogo para valer |
 
 A marca do **"Este jogo não funciona"** se tira na aba **Perfis**, na caixinha
-**"Esconder os controles físicos neste jogo"** do editor. E ela entrega a
-**entrada**: a sua cor, os seus gatilhos, a sua vibração e os seus jogadores
-continuam valendo.
+**"Esconder os controles físicos neste jogo"** do editor — e, desde 22/08/2026,
+**a lista inteira mora ali junto**: logo abaixo da caixinha, os OUTROS jogos
+marcados aparecem um por linha, com o nome, o número e um botão **Tirar**.
+Antes, marcar era um clique aqui e desmarcar exigia abrir o perfil daquele jogo
+específico, um de cada vez, sem nunca ver quais estavam marcados.
+
+O nome do jogo vem do `appmanifest` da Steam. Quando ele não está no disco, a
+linha mostra o número e diz *"nome não encontrado"* — nunca um nome inventado.
+
+E a marca entrega a **entrada**: a sua cor, os seus gatilhos, a sua vibração e
+os seus jogadores continuam valendo.
 
 Por último, o bloco **Avançado — só se você quiser controlar cada passo**, com
 os quatro botões que fazem cada pedaço à mão: **Aplicar correções** (não pede

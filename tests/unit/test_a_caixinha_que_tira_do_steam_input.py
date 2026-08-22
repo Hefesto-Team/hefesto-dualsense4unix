@@ -519,3 +519,206 @@ def test_o_toast_nao_contradiz_o_que_ela_mediu() -> None:
     assert APPID in marcou and APPID in tirou
     assert texto_da_marca_do_steam_input("erro") .startswith("Não consegui")
     assert "não estava" in texto_da_marca_do_steam_input("nao_estava", APPID)
+
+
+# ---------------------------------------------------------------------------
+# A-LISTA-QUE-FALTAVA-01 (22/08/2026) — a caixinha vira LISTA
+# ---------------------------------------------------------------------------
+#
+# Decisão dela, depois de ver as quatro opções desenhadas: a lista mora AQUI, no
+# editor do perfil, junto da caixinha que já existia — e cada linha mostra o
+# NOME do jogo mais o appid, com o número sozinho quando o nome não está no
+# disco.
+#
+# O buraco que ela fecha: a allowlist tinha três caminhos e nenhum mostrava a
+# lista. O botão "Este jogo não funciona" (aba Sistema) só MARCA — o tooltip
+# dele chegava a mandar vir até aqui para desmarcar. Esta caixinha só alcançava
+# o jogo do perfil aberto. O resto era `gamepad steam-input remove` no terminal.
+# Ela tinha três jogos marcados e nenhuma tela que os mostrasse.
+
+
+def _linhas_dos_outros(editor: _Editor) -> list[str]:
+    """Os textos das linhas da lista, na ordem em que aparecem."""
+    caixa = editor.builder.get_object("profile_steam_input_outros")
+    if caixa is None:
+        return []
+    textos: list[str] = []
+
+    def _andar(widget: Any) -> None:
+        if isinstance(widget, Gtk.Label):
+            textos.append(widget.get_text())
+        if hasattr(widget, "get_children"):
+            for filho in widget.get_children():
+                _andar(filho)
+
+    _andar(caixa)
+    return textos
+
+
+def _botoes_de_tirar(editor: _Editor) -> list[Any]:
+    caixa = editor.builder.get_object("profile_steam_input_outros")
+    achados: list[Any] = []
+
+    def _andar(widget: Any) -> None:
+        if isinstance(widget, Gtk.Button):
+            achados.append(widget)
+        if hasattr(widget, "get_children"):
+            for filho in widget.get_children():
+                _andar(filho)
+
+    if caixa is not None:
+        _andar(caixa)
+    return achados
+
+
+def test_a_lista_mostra_os_outros_jogos_marcados(
+    allowlist: Path, sem_daemon: None
+) -> None:
+    """Com dois jogos no disco e um no editor, a lista mostra o outro.
+
+    Mordida: apagar a chamada de `_sincronizar_outros_marcados` do revelador.
+    """
+    editor = _Editor()
+    editor.escolher("steam_game")
+    editor.digitar_o_jogo(APPID)
+
+    texto = " ".join(_linhas_dos_outros(editor))
+    assert OUTRO in texto, (
+        f"o outro jogo marcado não aparece na lista. Linhas: {texto!r}"
+    )
+    assert APPID not in texto, (
+        "o jogo DESTE editor entrou na lista de 'outros'. Ele já tem a caixa "
+        "acima, e dois controles para o mesmo fato na mesma tela é a classe de "
+        "defeito que a ABAS-01 curou"
+    )
+
+
+def test_sem_outros_marcados_a_lista_some(
+    allowlist: Path, sem_daemon: None
+) -> None:
+    """Lista vazia com título é ruído.
+
+    Mordida: trocar o `caixa.hide()` por `caixa.show_all()` no ramo vazio.
+    """
+    allowlist.write_text(f"{CABECALHO}{APPID}\n", encoding="utf-8")
+    editor = _Editor()
+    editor.escolher("steam_game")
+    editor.digitar_o_jogo(APPID)
+
+    caixa = editor.builder.get_object("profile_steam_input_outros")
+    assert caixa is not None
+    assert not caixa.get_visible(), "a caixa dos outros ficou visível e vazia"
+
+
+def test_a_linha_mostra_o_nome_do_jogo_quando_o_disco_o_tem(
+    allowlist: Path, sem_daemon: None
+) -> None:
+    """Nome mais número, que foi a escolha dela.
+
+    O número fica ao lado do nome, e não só quando o nome falta: é o mesmo
+    critério do `JogoLocal.rotulo` — o appid é o que ela confere na Steam.
+
+    Mordida: parar de consultar `_nomes_dos_jogos` em `_nome_do_appid`.
+    """
+    editor = _Editor()
+    editor._nomes_dos_jogos = {OUTRO: "Pragmata"}
+    editor.escolher("steam_game")
+    editor.digitar_o_jogo(APPID)
+
+    texto = " ".join(_linhas_dos_outros(editor))
+    assert "Pragmata" in texto, f"o nome não apareceu: {texto!r}"
+    assert OUTRO in texto, "o número sumiu quando o nome apareceu"
+
+
+def test_sem_nome_no_disco_a_linha_mostra_o_numero_e_diz_por_que(
+    allowlist: Path, sem_daemon: None
+) -> None:
+    """O caso honesto: sem `appmanifest`, o número e a razão.
+
+    Inventar um nome para preencher a coluna seria a tela afirmando o que não
+    sabe — e é a única coisa que esta lista não pode fazer.
+
+    Mordida: cair num rótulo genérico ("Jogo desconhecido") em vez do número.
+    """
+    editor = _Editor()
+    editor._nomes_dos_jogos = {}
+    editor.escolher("steam_game")
+    editor.digitar_o_jogo(APPID)
+
+    texto = " ".join(_linhas_dos_outros(editor))
+    assert OUTRO in texto, "o número tem de aparecer quando o nome não existe"
+    assert _Editor.SEM_NOME_NO_DISCO in texto, (
+        f"a linha não diz POR QUE está sem nome: {texto!r}"
+    )
+
+
+def test_o_botao_tirar_desmarca_so_aquele_jogo(
+    allowlist: Path, sem_daemon: None
+) -> None:
+    """O gesto que faltava: desmarcar sem navegar até o perfil daquele jogo.
+
+    Mordida: ligar o botão direto no `remove_appid_from_steam_input_allowlist`
+    em vez do `_gravar_marca_do_steam_input` — o toast e o aviso ao daemon
+    somem, e este teste reprova nos dois.
+    """
+    editor = _Editor()
+    editor.escolher("steam_game")
+    editor.digitar_o_jogo(APPID)
+
+    botoes = _botoes_de_tirar(editor)
+    assert len(botoes) == 1, f"esperava um botão 'Tirar', achei {len(botoes)}"
+    botoes[0].clicked()
+    _assentar()
+
+    assert vivos(allowlist) == [APPID], (
+        f"o 'Tirar' mexeu na linha errada: {vivos(allowlist)}"
+    )
+    assert editor.toasts, "tirar um jogo não avisou nada na tela"
+    assert editor.avisos_ao_daemon == 1, (
+        "o daemon não foi avisado — a marca só valeria no próximo restart"
+    )
+
+
+def test_depois_de_tirar_a_lista_relê_o_disco(
+    allowlist: Path, sem_daemon: None
+) -> None:
+    """A lista é o disco, não a memória de quem a desenhou.
+
+    Mordida: não chamar `_sincronizar_outros_marcados` depois de gravar.
+    """
+    editor = _Editor()
+    editor.escolher("steam_game")
+    editor.digitar_o_jogo(APPID)
+    _botoes_de_tirar(editor)[0].clicked()
+    _assentar()
+
+    assert not _botoes_de_tirar(editor), (
+        "a linha do jogo removido continuou na tela depois do clique"
+    )
+
+
+def test_a_lista_nasce_preenchida_ao_revelar_a_caixinha(
+    allowlist: Path, sem_daemon: None
+) -> None:
+    """Abrir um perfil de jogo já mostra a lista, SEM ninguém digitar nada.
+
+    São dois chamadores para o mesmo preenchimento, e cada um cobre um gesto:
+    `_on_campo_do_jogo_mudou` cobre TROCAR o appid, e o revelador cobre ABRIR o
+    editor de um perfil que já é de jogo da Steam. Este teste existe porque o
+    primeiro escondia o segundo: arrancar a chamada do revelador deixava a
+    suíte inteira verde, já que todos os outros testes digitam o appid.
+
+    Sem appid escolhido, TODOS os marcados são "outros" — é a resposta certa: a
+    caixa de cima não fala de jogo nenhum ainda.
+
+    Mordida: apagar `self._sincronizar_outros_marcados()` de
+    `_mostrar_caixa_do_steam_input`.
+    """
+    editor = _Editor()
+    editor.escolher("steam_game")
+
+    texto = " ".join(_linhas_dos_outros(editor))
+    assert APPID in texto and OUTRO in texto, (
+        "revelar a caixinha não desenhou a lista. Quem abre um perfil de jogo "
+        f"da Steam sem digitar nada não vê nada. Linhas: {texto!r}"
+    )

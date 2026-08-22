@@ -2379,6 +2379,26 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                                   <packing><property name="expand">False</property></packing>
                                 </child>
                                 <child>
+                                  <!-- A-LISTA-QUE-FALTAVA-01 (22/08/2026),
+                                       decisão dela: a caixinha vira LISTA.
+                                       Marcar era um clique e desmarcar exigia
+                                       navegar até o perfil daquele jogo — e não
+                                       havia tela nenhuma mostrando QUAIS jogos
+                                       estão marcados. A caixa acima continua
+                                       sendo o gesto do jogo DESTE perfil; esta
+                                       caixa é o resto da lista, preenchida em
+                                       código por `_sincronizar_outros_marcados`. -->
+                                  <object class="GtkBox" id="profile_steam_input_outros">
+                                    <property name="orientation">vertical</property>
+                                    <property name="spacing">2</property>
+                                    <property name="margin-start">22</property>
+                                    <property name="margin-top">4</property>
+                                    <property name="visible">False</property>
+                                    <property name="no-show-all">True</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <child>
                                   <object class="GtkLabel" id="profile_exigencia_invisivel">
                                     <property name="label" translatable="yes"></property>
                                     <property name="use-markup">True</property>
