@@ -97,7 +97,7 @@ FRASE_EXAMINANDO = "Examinando…"
 #: projeto o aceitaria — ele deriva a proibição de `Emoji_Presentation`, e o
 #: U+2713 não está nela —, mas os dois portões precisam concordar, e o mais
 #: estrito manda. O `docs/adr/011-glyphs-vs-emojis.md` já tinha respondido a
-#: pergunta por escrito: Geometric Shapes (U+25A0–U+25FF) são o vocabulário
+#: pergunta por escrito: Geometric Shapes (U+25A0 a U+25FF) são o vocabulário
 #: permitido, e o BLACK CIRCLE é o exemplo canônico que a casa já usa nos
 #: cabeçalhos Pango e no medidor de bateria da TUI.
 #:

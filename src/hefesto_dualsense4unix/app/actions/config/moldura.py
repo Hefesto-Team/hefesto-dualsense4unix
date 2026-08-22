@@ -51,6 +51,20 @@ def moldura_de_secao(titulo: str, dica: str | None = None) -> tuple[Any, Any]:
     rotulo.show()
     frame.set_label_widget(rotulo)
 
+    # A seção NUNCA estica verticalmente, e a linha abaixo é o que garante isso.
+    #
+    # O GTK3 propaga `vexpand` de baixo para cima: um espaçador expansível lá no
+    # fundo — o que ancora o seletor de jogador no rodapé de todo card, para os
+    # cards terem a mesma altura — faz o `Gtk.Frame` inteiro pedir expansão, e a
+    # página entrega a ele toda a folga que sobrar. Medido em 22/08/2026: a
+    # seção "Os controles" saía com `compute_expand(VERTICAL) = True` e a aba
+    # ficava com um vão vazio de mais de cem pixels embaixo dos cards.
+    #
+    # A folga vertical desta aba é da PÁGINA, que rola. Nenhuma seção cresce
+    # para ocupá-la — se crescesse, a última seção afundaria para longe das
+    # outras a cada janela mais alta.
+    frame.set_vexpand(False)
+
     caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=ESPACAMENTO)
     caixa.set_margin_top(MARGEM_VERTICAL)
     caixa.set_margin_bottom(MARGEM_VERTICAL)
