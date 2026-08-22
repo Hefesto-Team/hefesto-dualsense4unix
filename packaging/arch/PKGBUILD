@@ -230,6 +230,17 @@ package() {
     install -Dm755 scripts/install-host-udev.sh \
         "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
 
+    # ALVOS DO `RUN+=` DAS REGRAS 82 E 83 (22/08/2026). As duas são REGRAS-COLA:
+    # sem o alvo no disco o `TEST==` as deixa INERTES, e o PKGBUILD levava as
+    # regras (acima) sem levar os alvos — o install-host-udev.sh caía em
+    # `BTRES_INSTALL_OK=0` e só avisava. Estes são os dois diretórios que ele
+    # procura; a remoção fica no pre_remove do .install, como a do broker.
+    install -Dm755 -t "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/" \
+        scripts/bt_nosniff_now.sh \
+        scripts/bt_bonds_snapshot.sh
+    install -Dm644 -t "$pkgdir/usr/share/hefesto-dualsense4unix/systemd/" \
+        assets/systemd/hefesto-bt-bonds-snapshot.service
+
     # Catalogos i18n compilados em /usr/share/locale/<lang>/LC_MESSAGES/.
     if [ -d locale ]; then
         for lang_dir in locale/*/; do

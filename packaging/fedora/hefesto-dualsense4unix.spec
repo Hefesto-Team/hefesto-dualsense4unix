@@ -247,6 +247,17 @@ install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
     assets/systemd/hefesto-hidraw-broker.service \
     assets/systemd/hefesto-hidraw-broker.socket
 
+# ALVOS DO RUN+= DAS REGRAS 82 E 83 (22/08/2026). As duas sao REGRAS-COLA: sem o
+# alvo no disco o TEST== as deixa INERTES, e o spec levava as regras (acima) sem
+# levar os alvos — o install-host-udev.sh caia em BTRES_INSTALL_OK=0 e so
+# avisava. Estes sao os dois diretorios que ele procura; a remocao fica no
+# %preun, como a do broker.
+install -Dm755 -t %{buildroot}%{_datadir}/%{app_id}/scripts/ \
+    scripts/bt_nosniff_now.sh \
+    scripts/bt_bonds_snapshot.sh
+install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
+    assets/systemd/hefesto-bt-bonds-snapshot.service
+
 %post
 # Recarrega udev rules + carrega uinput. Idempotente.
 /usr/sbin/udevadm control --reload-rules || :
@@ -269,6 +280,15 @@ MSG
 # o MESMO restore ANTES do rpm apagar o binario (arquivos saem DEPOIS do
 # %preun). So na remocao final ($1 -eq 0), nunca em upgrade.
 if [ $1 -eq 0 ]; then
+    # Alvos do RUN+= das regras 82 e 83 (22/08/2026): o rpm passou a levar as
+    # fontes, e quem as GRAVA e o install-host-udev.sh, FORA do manifesto do
+    # rpm (/usr/local/lib + /etc/systemd/system). Sem este bloco eles
+    # sobrevivem ao dnf remove — e como o helper tambem copia as regras para
+    # /etc/udev/rules.d, a cura continuaria armada sem o pacote. Os snapshots
+    # de bonds em /var/lib NAO sao apagados: sao o salva-vidas dela.
+    rm -f /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh \
+          /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
+          /etc/systemd/system/hefesto-bt-bonds-snapshot.service
     /usr/bin/systemctl disable --now hefesto-hidraw-broker.socket \
         hefesto-hidraw-broker.service >/dev/null 2>&1 || :
     if [ -x /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
@@ -403,6 +423,9 @@ fi
 %{_datadir}/%{app_id}/broker/hidraw_broker.py
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.service
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
+%{_datadir}/%{app_id}/scripts/bt_nosniff_now.sh
+%{_datadir}/%{app_id}/scripts/bt_bonds_snapshot.sh
+%{_datadir}/%{app_id}/systemd/hefesto-bt-bonds-snapshot.service
 
 %changelog
 * Tue Aug 19 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.5-1

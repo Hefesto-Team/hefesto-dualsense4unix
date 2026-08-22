@@ -195,6 +195,14 @@ install -Dm755 scripts/install-host-udev.sh \
 # (`--status` / `--remove`) sem o repo. O script resolve o .conf em /usr/share.
 install -Dm755 scripts/install_snd_quirk.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/install_snd_quirk.sh"
+# ALVOS DO `RUN+=` DAS REGRAS 82 E 83 (22/08/2026). As duas são REGRAS-COLA: sem
+# o alvo no disco o `TEST==` as deixa INERTES, e o .deb levava as regras sem
+# levar os alvos — o `install-host-udev.sh` caía em `BTRES_INSTALL_OK=0` e só
+# avisava. Este é o diretório que ele procura (`/usr/share/.../scripts`).
+install -Dm755 scripts/bt_nosniff_now.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_nosniff_now.sh"
+install -Dm755 scripts/bt_bonds_snapshot.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_bonds_snapshot.sh"
 # M10 (auditoria): os scripts que a GUI/doctor executam (via _find_repo_file, que
 # resolve /usr/share/.../scripts) precisam existir no .deb — senão o cartão
 # anti-storm ("Reaplicar fixes seguros") e o doctor caem em no-op silencioso.
@@ -315,7 +323,12 @@ mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/broker"
 install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
     "${STAGING}/usr/share/hefesto-dualsense4unix/broker/hidraw_broker.py"
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/systemd"
-for _unit in hefesto-hidraw-broker.service hefesto-hidraw-broker.socket; do
+# A hefesto-bt-bonds-snapshot.service entra na MESMA lista pelo mesmo motivo do
+# broker: unit de SISTEMA não se ativa do postinst (sem sessão), quem a instala
+# é o install-host-udev.sh, e ele a procura em `/usr/share/.../systemd`. É o
+# alvo do `RUN+=` da regra 83 — sem ela a regra fica inerte pelo `TEST==`.
+for _unit in hefesto-hidraw-broker.service hefesto-hidraw-broker.socket \
+             hefesto-bt-bonds-snapshot.service; do
     [ -f "assets/systemd/${_unit}" ] && install -Dm644 "assets/systemd/${_unit}" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/systemd/${_unit}"
 done

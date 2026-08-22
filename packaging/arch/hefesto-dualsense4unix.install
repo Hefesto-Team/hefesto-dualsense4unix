@@ -48,6 +48,16 @@ pre_remove() {
     systemctl --user stop hefesto-dualsense4unix.service 2>/dev/null || true
     systemctl --user disable hefesto-dualsense4unix.service 2>/dev/null || true
 
+    # Alvos do RUN+= das regras 82 e 83 (22/08/2026): o pacote passou a levar
+    # as fontes, e quem as GRAVA e o install-host-udev.sh, FORA do manifesto
+    # do pacman (/usr/local/lib + /etc/systemd/system). Sem este bloco eles
+    # sobrevivem ao pacman -R — e como o helper tambem copia as regras para
+    # /etc/udev/rules.d, a cura continuaria armada sem o pacote. Os snapshots
+    # de bonds em /var/lib NAO sao apagados: sao o salva-vidas dela.
+    rm -f /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh \
+          /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
+          /etc/systemd/system/hefesto-bt-bonds-snapshot.service
+
     # BROKER-01 (Onda S — achado #21): purge nao pode deixar a unit ROOT do
     # broker orfa habilitada. disable+stop dispara o ExecStopPost
     # --restore-all-and-exit da propria unit (nenhum hidraw fisico fica 0600

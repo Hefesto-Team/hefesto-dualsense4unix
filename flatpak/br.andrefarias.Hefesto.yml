@@ -324,6 +324,22 @@ modules:
       - install -Dm644 assets/systemd/hefesto-hidraw-broker.socket
           /app/share/hefesto-dualsense4unix/systemd/hefesto-hidraw-broker.socket
 
+      # ALVOS DO RUN+= DAS REGRAS 82 E 83 (22/08/2026). As duas viajam no bundle
+      # desde sempre (acima) e os alvos não viajavam em formato nenhum: o
+      # install-host-udev.sh caía em BTRES_INSTALL_OK=0 e só avisava, então o
+      # Pro genuíno não perdia o sniff na borda e o salva-vidas de bonds — a
+      # cura do crash que comeu 2 dos 3 pareamentos dela em 24/07 — nunca
+      # gravava uma linha para quem instalou por aqui. Estes são os dois
+      # diretórios que o helper procura PRIMEIRO (/app/share/...), a mesma rota
+      # que já entrega as units do broker e as fontes DKMS: o sandbox não grava
+      # em /usr/local/lib, quem grava é o helper rodando elevado no HOST.
+      - install -Dm755 scripts/bt_nosniff_now.sh
+          /app/share/hefesto-dualsense4unix/scripts/bt_nosniff_now.sh
+      - install -Dm755 scripts/bt_bonds_snapshot.sh
+          /app/share/hefesto-dualsense4unix/scripts/bt_bonds_snapshot.sh
+      - install -Dm644 assets/systemd/hefesto-bt-bonds-snapshot.service
+          /app/share/hefesto-dualsense4unix/systemd/hefesto-bt-bonds-snapshot.service
+
       # Instalar script de setup de udev (executado pelo usuário uma vez)
       - install -Dm755 scripts/install-host-udev.sh
           /app/bin/install-host-udev.sh
