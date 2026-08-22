@@ -251,6 +251,20 @@ class DaemonConfig:
     # FEAT-RUMBLE-POLICY-01
     rumble_policy: RumblePolicy = "balanceado"
     rumble_policy_custom_mult: float = 0.7
+    # CONFIG-05 (22/08/2026) — o teto de ORÇAMENTO da mesa, que
+    # `core.rumble._effective_mult` aplica por `min()` sobre os campos acima.
+    #
+    # É uma FONTE (chamável), não uma cópia da chave, e a diferença é o gesto
+    # do "Aplicar": o `machine.declare` relê o `maquina.json` e REBINDA
+    # `daemon._maquina` (`ipc_handlers.py:4858`), então uma cópia tirada no boot
+    # ficaria velha no instante exato em que ela acabou de escolher — e o teto
+    # novo só valeria no próximo início do Hefesto. Com a fonte, o próximo
+    # cálculo de vibração já lê a declaração nova, sem tique nem invalidação.
+    #
+    # `None` = ninguém fiou a fonte (dublê de teste, daemon construído à mão),
+    # e o cálculo entende isso como "nenhum teto" — nunca como teto de 100 %.
+    # Quem fia é `run()`, ao lado da leitura do `maquina.json`.
+    orcamento_da_mesa: Callable[[], str | None] | None = None
     # FEAT-HOTKEY-MIC-01 — o botão de mic do controle alterna o mute do
     # microfone PADRÃO DO SISTEMA (wpctl/pactl) e acompanha o LED do mic.
     # Desligado, o botão vira só um botão (o kernel segue mudando o mic do
@@ -749,10 +763,14 @@ class Daemon:
         # arquivo é da mesa, muda por gesto dela e nunca por trás do daemon.
         # A leitura nunca levanta (ver `carregar_maquina`), então não precisa de
         # `_safe_start` nem de try — arquivo corrompido sobe como "não sei".
-        # Invariante 2 da leva: nada AINDA consome esta declaração; quem passa a
-        # consumir (o teto de orçamento, o medidor da mesa) é que a lê daqui.
         from hefesto_dualsense4unix.utils.maquina import carregar_maquina
         self._maquina = carregar_maquina()
+        # CONFIG-05 (22/08/2026): o primeiro consumidor da declaração, e é o
+        # teto de orçamento. A config leva a FONTE, não o valor — o `lambda`
+        # fecha sobre `self`, então o rebind de `_maquina` que o
+        # `machine.declare` faz no "Aplicar" já vale no cálculo seguinte. Ver o
+        # campo `DaemonConfig.orcamento_da_mesa`.
+        self.config.orcamento_da_mesa = lambda: self._maquina.orcamento.teto
         if self._native_mode:
             # O gate de dispatch é o próprio _native_mode (consultado no poll
             # loop); não força _paused (evita conflatar com o pause manual).
