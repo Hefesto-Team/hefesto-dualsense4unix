@@ -38,7 +38,10 @@ import contextlib
 import html
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.config.moldura import rotulo_de_apoio
+from hefesto_dualsense4unix.app.actions.config.moldura import (
+    VALE_JA,
+    rotulo_de_apoio,
+)
 from hefesto_dualsense4unix.app.ambiente import (
     AMBIENTES,
     ambiente_efetivo,
@@ -112,6 +115,13 @@ def montar(host: Any, caixa: Any) -> None:
     )
     caixa.pack_start(_fileira_do_ambiente(host), False, False, 0)
     caixa.pack_start(rotulo_de_apoio(frase_do_detectado(ambiente_lido())), False, False, 0)
+    # A ÚNICA seção da aba que grava NA HORA, e por isso a única que precisa
+    # dizer o contrário das outras. As duas escolhas acima vão ao disco no
+    # próprio clique (`set_pref` e `gravar_correcao_de_ambiente`) — o "Aplicar"
+    # do rodapé não tem nada a ver com elas. Sem esta linha, "A janela" era a
+    # única seção sem resposta para "isto ficou guardado?": a frase que existia
+    # ali fala de QUANDO o tema é aplicado, não de se a escolha foi guardada.
+    caixa.pack_start(rotulo_de_apoio(VALE_JA), False, False, 0)
 
     bandeja = rotulo_de_apoio("Conferindo o ícone na barra do sistema.")
     host._config_bandeja_rotulo = bandeja

@@ -47,7 +47,10 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.config.moldura import rotulo_de_apoio
+from hefesto_dualsense4unix.app.actions.config.moldura import (
+    QUANDO_VALE,
+    rotulo_de_apoio,
+)
 from hefesto_dualsense4unix.integrations.mesa_de_radio import (
     Adaptador,
     Mesa,
@@ -262,6 +265,10 @@ class _PainelDaMesa:
         self._caixa_radios = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         caixa.pack_start(self._caixa_radios, False, False, 0)
 
+        # As três declarações desta seção são DIFERIDAS, e a frase é a
+        # mesma do Orçamento — literalmente a mesma constante. Ver
+        # `moldura.QUANDO_VALE` para o defeito que ela fecha.
+        caixa.pack_start(rotulo_de_apoio(QUANDO_VALE), False, False, 0)
         caixa.pack_start(self._botao_de_reexame(), False, False, 0)
         # Montar lê o BARRAMENTO e nada mais. O `daemon.state_full` que
         # alimenta o medidor fica de fora daqui de propósito, pelo mesmo motivo

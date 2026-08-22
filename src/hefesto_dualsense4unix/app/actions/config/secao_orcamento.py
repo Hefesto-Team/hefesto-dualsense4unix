@@ -42,7 +42,10 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.config.moldura import rotulo_de_apoio
+from hefesto_dualsense4unix.app.actions.config.moldura import (
+    QUANDO_VALE,
+    rotulo_de_apoio,
+)
 from hefesto_dualsense4unix.app.actions.rumble_actions import ROTULOS_DO_ORCAMENTO
 from hefesto_dualsense4unix.app.widgets.segmented_selector import SegmentedSelector
 from hefesto_dualsense4unix.core.rumble import teto_do_orcamento
@@ -120,11 +123,6 @@ ALCANCE_DE_HOJE = (
     "luz, microfone por rádio e giroscópio ainda não têm por onde ser "
     "limitados — cada um entra quando ganhar esse ponto."
 )
-
-#: A frase que diz quando a escolha passa a valer. A aba inteira é diferida, e
-#: sem esta linha o clique parece não ter feito nada.
-QUANDO_VALE = 'A escolha passa a valer quando você clicar em "Aplicar", no rodapé.'
-
 
 def orcamento_em_vigor(host: Any = None) -> str | None:
     """A chave do orçamento que está GRAVADA — nunca a que espera o "Aplicar".
