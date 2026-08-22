@@ -1059,6 +1059,100 @@ install_broker_host() {
     rm -rf "${_broker_tmp}"
 }
 
+# ---------------------------------------------------------------------------
+# ONDA-R2: resiliência do bluetoothd — DEFAULT EM TODO FORMATO
+# (camada 2 da sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md)
+# ---------------------------------------------------------------------------
+# O crash de heap do bluetoothd destrói bonds e deixa o daemon renascido
+# "doente" (recusa devices pareados em loop — medido 21/07). Quatro entregas:
+#   1. scripts de sistema em /usr/local/lib/hefesto-dualsense4unix/ (mesma
+#      casa do broker root): snapshot/restore de bonds, watchdog de saúde e
+#      captura forense (esta última NUNCA ligada por default);
+#   2. drop-in do bluetooth.service: Restart=on-failure reafirmado (o template
+#      upstream traz comentado — bump futuro do pacote pode regredir) +
+#      WatchdogSec=0 (BLUETOOTHD-MORTO-POR-NOS-01: era 30 e o systemd MATOU o
+#      bluetoothd dela com SIGABRT em 08/08, levando os quatro pareamentos)
+#      + snapshot de bonds a cada parada;
+#   3. timer de snapshot (15min, deduplicado por conteúdo, NUNCA fotografa
+#      estado vazio, e a poda nunca joga fora o MELHOR snapshot) + a VOLTA
+#      automática (bt_bonds_autorestore.sh no ExecStopPost do drop-in), que é a
+#      decisão dela de 08/08: "restauro de bonds tem de ser automático; manual
+#      com sudo não é produto". A volta só corre quando o daemon MORREU
+#      (SERVICE_RESULT != success), é ADITIVA (nunca escreve por cima de uma
+#      [LinkKey] viva — é assim que a chave rotacionada deixa de ser risco) e
+#      tem quarentena por boot. O bt_bonds_restore.sh continua existindo para o
+#      restauro completo decidido à mão;
+#   4. timer do watchdog (2min): estado doente → restart rate-limitado (só com
+#      0 devices conectados); bond Paired-sem-Bonded (temporário, evapora no
+#      disconnect — medido 22/07) → promoção via Pair() explícito 1x/boot.
+#
+# A FUNÇÃO NASCE AQUI, ACIMA DA BIFURCAÇÃO, PORQUE ISTO É MUDANÇA DE SISTEMA
+# (22/08/2026). Até hoje o passo 3e-bis morava ~600 linhas abaixo do `exit 0`
+# do ramo dos formatos: quem instalava por `--flatpak`, `--appimage` ou `--deb`
+# saía sem a camada, sem uma linha dizendo isso, e ainda LEVAVA as regras udev
+# 82 e 83 — que só existem para chamar dois alvos desta camada. Resultado
+# medido no estudo de 07/08 (cobertura do install, item 9): a regra 83 apontava
+# para uma unit inexistente e falhava a cada conexão Bluetooth, e o salva-vidas
+# de bonds nunca gravou nada para essas pessoas. Mesmo defeito, com o mesmo
+# molde de conserto, do achado #7 da Onda S (`install_broker_host`), do
+# TECLADO-QUE-NAO-DIGITA-01 (`install_osk_host`) e do MIC-EM-TODO-FORMATO-01.
+# Portão: `tests/unit/test_install_serve_os_dois_lados_da_cerca.py` (que enxerga
+# toda função `*_host`) e `tests/unit/test_regra_udev_nao_fica_orfa_do_alvo_do_run.py`.
+#
+# ORDEM no fluxo nativo: o chamador de lá fica ANTES do 3f, porque o postinst do
+# backport do BlueZ reinicia o bluetoothd — o drop-in precisa existir para armar
+# nesse restart.
+install_bt_resilience_host() {
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        printf '      resiliência do bluetoothd pulada (--no-udev) — sem os alvos, as regras 82 e 83 ficam INERTES pelo TEST== delas\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — resiliência do bluetoothd NÃO instalada (o crash do bluetoothd volta a comer bonds sem cópia)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — resiliência do bluetoothd pulada (re-execute ./install.sh)"
+        return 0
+    fi
+    _btres_ok=1
+    for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_bonds_autorestore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh bt_nosniff_now.sh bt_rebind_orphans.sh; do
+        sudo install -Dm755 "${ROOT_DIR}/scripts/${_btres_s}" \
+            "/usr/local/lib/hefesto-dualsense4unix/${_btres_s}" 2>/dev/null || _btres_ok=0
+    done
+    # BT-NINTENDO-ACTIVE-01: aplica JÁ (nome "Nintendo*" + link policy sem
+    # SNIFF) — cura de raiz da queda do Pro/8BitDo sob carga (pesquisa
+    # 2026-07-22). Idempotente; o drop-in reaplica a cada start do
+    # bluetoothd e o watchdog reafirma a cada 2 min.
+    sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh 2>/dev/null || true
+    sudo install -Dm644 "${ROOT_DIR}/assets/systemd/bluetooth-dropin-10-hefesto-resilience.conf" \
+        /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf 2>/dev/null || _btres_ok=0
+    for _btres_u in hefesto-bt-bonds-snapshot.service hefesto-bt-bonds-snapshot.timer \
+                    hefesto-bt-health-watchdog.service hefesto-bt-health-watchdog.timer; do
+        sudo install -Dm644 "${ROOT_DIR}/assets/systemd/${_btres_u}" \
+            "/etc/systemd/system/${_btres_u}" 2>/dev/null || _btres_ok=0
+    done
+    sudo install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds 2>/dev/null || true
+    sudo systemctl daemon-reload >/dev/null 2>&1 || true
+    if sudo systemctl enable --now hefesto-bt-bonds-snapshot.timer \
+            hefesto-bt-health-watchdog.timer >/dev/null 2>&1; then
+        printf '      timers ativos: snapshot de bonds (15 em 15 min) + watchdog de saúde (2 em 2 min)\n'
+    else
+        warn "enable dos timers de resiliência falhou — habilite manualmente (systemctl enable --now hefesto-bt-*.timer)"
+        _btres_ok=0
+    fi
+    if [[ "${_btres_ok}" -eq 1 ]]; then
+        printf '      drop-in de resiliência instalado (Restart reafirmado + WatchdogSec=0 + snapshot na parada)\n'
+        printf '      restauro AUTOMÁTICO de bonds armado: se o bluetoothd morrer, os bonds que\n'
+        printf '        ele comeu voltam sozinhos antes do próximo start (aditivo; nunca por cima\n'
+        printf '        de chave viva). Nada a digitar, nenhum sudo.\n'
+        printf '      as regras udev 82 e 83 acharam os alvos do RUN+= delas (no-sniff na borda + snapshot na conexão)\n'
+        printf '      vale no próximo restart do bluetoothd; captura forense é OPT-IN: bt_crash_capture.sh --on\n'
+    else
+        warn "resiliência do bluetoothd instalada PARCIALMENTE — confira as mensagens acima"
+    fi
+}
+
 # Onda T (desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md):
 # módulo hid-nintendo patchado (probe BT resiliente + module params) via DKMS
 # genérico (scripts/dkms_lib.sh — reusado pela Onda W/rtw88). DEFAULT ON (regra
@@ -1552,6 +1646,14 @@ if [[ "${FORMAT}" != "native" ]]; then
     # qualquer jogo sem wrapper. Mesmo passo 3h do fluxo native.
     step "broker" "broker root hide-hidraw (BROKER-01 — DEFAULT em todo formato)"
     install_broker_host
+    # ONDA-R2 (22/08/2026): mesmo achado do broker, na camada do Bluetooth. Os
+    # formatos de pacote levavam as regras udev 82 e 83 — que existem SÓ para
+    # chamar dois alvos desta camada — e saíam pelo `exit 0` sem a camada. A
+    # regra 83 apontava para uma unit inexistente e o salva-vidas de bonds nunca
+    # gravou nada para quem instalou por aqui (medido em 07/08, estudo da
+    # cobertura do install, item 9). Mesma função do passo 3e-bis do nativo.
+    step "bt-res" "ONDA-R2: resiliência do bluetoothd (DEFAULT em todo formato)"
+    install_bt_resilience_host
     # Onda T (achado equivalente ao #7 do broker): DKMS é mudança de
     # SISTEMA/kernel, ortogonal ao formato do app — mesma função do passo 3i
     # do fluxo native. Opt-out: --no-dkms.
@@ -2202,75 +2304,15 @@ PYEOF
 fi
 
 # ---------------------------------------------------------------------------
-# 3e-bis. ONDA-R2: resiliência do bluetoothd — DEFAULT (camada 2 da sprint
-#         2026-07-21-sprint-pesquisa-bluez-estabilidade.md)
+# 3e-bis. ONDA-R2: resiliência do bluetoothd — DEFAULT em TODO formato
 # ---------------------------------------------------------------------------
-# O crash de heap do bluetoothd destrói bonds e deixa o daemon renascido
-# "doente" (recusa devices pareados em loop — medido 21/07). Quatro entregas:
-#   1. scripts de sistema em /usr/local/lib/hefesto-dualsense4unix/ (mesma
-#      casa do broker root): snapshot/restore de bonds, watchdog de saúde e
-#      captura forense (esta última NUNCA ligada por default);
-#   2. drop-in do bluetooth.service: Restart=on-failure reafirmado (o template
-#      upstream traz comentado — bump futuro do pacote pode regredir) +
-#      WatchdogSec=0 (BLUETOOTHD-MORTO-POR-NOS-01: era 30 e o systemd MATOU o
-#      bluetoothd dela com SIGABRT em 08/08, levando os quatro pareamentos)
-#      + snapshot de bonds a cada parada;
-#   3. timer de snapshot (15min, deduplicado por conteúdo, NUNCA fotografa
-#      estado vazio, e a poda nunca joga fora o MELHOR snapshot) + a VOLTA
-#      automática (bt_bonds_autorestore.sh no ExecStopPost do drop-in), que é a
-#      decisão dela de 08/08: "restauro de bonds tem de ser automático; manual
-#      com sudo não é produto". A volta só corre quando o daemon MORREU
-#      (SERVICE_RESULT != success), é ADITIVA (nunca escreve por cima de uma
-#      [LinkKey] viva — é assim que a chave rotacionada deixa de ser risco) e
-#      tem quarentena por boot. O bt_bonds_restore.sh continua existindo para o
-#      restauro completo decidido à mão;
-#   4. timer do watchdog (2min): estado doente → restart rate-limitado (só com
-#      0 devices conectados); bond Paired-sem-Bonded (temporário, evapora no
-#      disconnect — medido 22/07) → promoção via Pair() explícito 1x/boot.
-# Ordem importa: este passo vem ANTES do 3f porque o postinst do backport
-# reinicia o bluetoothd — o drop-in precisa existir para armar nesse restart.
-if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
-    step "3e-bis" "ONDA-R2: resiliência do bluetoothd (watchdog + snapshot de bonds)"
-    if ! sudo -n true 2>/dev/null; then
-        warn "sudo recusado — resiliência do bluetoothd pulada (re-execute ./install.sh)"
-    else
-        _btres_ok=1
-        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_bonds_autorestore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh bt_nosniff_now.sh bt_rebind_orphans.sh; do
-            sudo install -Dm755 "${ROOT_DIR}/scripts/${_btres_s}" \
-                "/usr/local/lib/hefesto-dualsense4unix/${_btres_s}" 2>/dev/null || _btres_ok=0
-        done
-        # BT-NINTENDO-ACTIVE-01: aplica JÁ (nome "Nintendo*" + link policy sem
-        # SNIFF) — cura de raiz da queda do Pro/8BitDo sob carga (pesquisa
-        # 2026-07-22). Idempotente; o drop-in reaplica a cada start do
-        # bluetoothd e o watchdog reafirma a cada 2 min.
-        sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh 2>/dev/null || true
-        sudo install -Dm644 "${ROOT_DIR}/assets/systemd/bluetooth-dropin-10-hefesto-resilience.conf" \
-            /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf 2>/dev/null || _btres_ok=0
-        for _btres_u in hefesto-bt-bonds-snapshot.service hefesto-bt-bonds-snapshot.timer \
-                        hefesto-bt-health-watchdog.service hefesto-bt-health-watchdog.timer; do
-            sudo install -Dm644 "${ROOT_DIR}/assets/systemd/${_btres_u}" \
-                "/etc/systemd/system/${_btres_u}" 2>/dev/null || _btres_ok=0
-        done
-        sudo install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds 2>/dev/null || true
-        sudo systemctl daemon-reload >/dev/null 2>&1 || true
-        if sudo systemctl enable --now hefesto-bt-bonds-snapshot.timer \
-                hefesto-bt-health-watchdog.timer >/dev/null 2>&1; then
-            printf '      timers ativos: snapshot de bonds (15 em 15 min) + watchdog de saúde (2 em 2 min)\n'
-        else
-            warn "enable dos timers de resiliência falhou — habilite manualmente (systemctl enable --now hefesto-bt-*.timer)"
-            _btres_ok=0
-        fi
-        if [[ "${_btres_ok}" -eq 1 ]]; then
-            printf '      drop-in de resiliência instalado (Restart reafirmado + WatchdogSec=0 + snapshot na parada)\n'
-            printf '      restauro AUTOMÁTICO de bonds armado: se o bluetoothd morrer, os bonds que\n'
-            printf '        ele comeu voltam sozinhos antes do próximo start (aditivo; nunca por cima\n'
-            printf '        de chave viva). Nada a digitar, nenhum sudo.\n'
-            printf '      vale no próximo restart do bluetoothd; captura forense é OPT-IN: bt_crash_capture.sh --on\n'
-        else
-            warn "resiliência do bluetoothd instalada PARCIALMENTE — confira as mensagens acima"
-        fi
-    fi
-fi
+# O corpo mora em `install_bt_resilience_host`, acima da bifurcação de formato,
+# e o outro lado da cerca a chama também — o racional inteiro está lá.
+# A POSIÇÃO AQUI É QUE IMPORTA: antes do 3f, porque o postinst do backport do
+# BlueZ reinicia o bluetoothd, e o drop-in precisa existir para armar nesse
+# restart.
+step "3e-bis" "ONDA-R2: resiliência do bluetoothd (watchdog + snapshot de bonds)"
+install_bt_resilience_host
 
 # ---------------------------------------------------------------------------
 # 3f. ONDA-R: BlueZ resiliente (backport local — alvo 5.86) — DEFAULT

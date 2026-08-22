@@ -23,4 +23,18 @@
 # ficar esperando o systemd, sob pena de segurar a criação do device.
 #
 # Reverter: remover este arquivo e `udevadm control --reload`.
-ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="?*", TAG+="systemd", RUN+="/usr/bin/systemctl start --no-block hefesto-bt-bonds-snapshot.service"
+#
+# O `TEST==` É METADE DA CURA (22/08/2026) — mesma história da regra 82 irmã,
+# lida lá por inteiro. Aqui o custo do silêncio é maior: em flatpak e appimage a
+# unit nunca chegava, o `systemctl start` falhava a CADA conexão Bluetooth, e o
+# salva-vidas de bonds — a cura do crash que comeu 2 dos 3 pareamentos dela em
+# 24/07 — nunca gravou uma linha para quem instalou por ali.
+#
+# O SENTINELA É O `ExecStart` DA UNIT, NÃO O CAMINHO DELA. Testar
+# `/etc/systemd/system/hefesto-bt-bonds-snapshot.service` armaria uma armadilha:
+# no dia em que um pacote entregar a unit em `/usr/lib/systemd/system` a regra
+# ficaria inerte com tudo funcionando. O `bt_bonds_snapshot.sh` está soldado
+# dentro da unit (`assets/systemd/hefesto-bt-bonds-snapshot.service`, linha do
+# `ExecStart`) e não pode mudar de lugar sem que ela mude junto — e o portão
+# confere que os dois continuam concordando.
+ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="?*", TAG+="systemd", TEST=="/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh", RUN+="/usr/bin/systemctl start --no-block hefesto-bt-bonds-snapshot.service"

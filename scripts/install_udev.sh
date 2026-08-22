@@ -67,6 +67,9 @@ for f in \
     "$ASSETS/83-hefesto-bond-snapshot.rules" \
     "$ASSETS/84-nintendo-pro-variant.rules" \
     "$ASSETS/hefesto-dualsense4unix.conf" \
+    "$HERE/scripts/bt_nosniff_now.sh" \
+    "$HERE/scripts/bt_bonds_snapshot.sh" \
+    "$ASSETS/systemd/hefesto-bt-bonds-snapshot.service" \
 ; do
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
 done
@@ -165,6 +168,34 @@ else
     # removemos aqui — quem remove é o uninstall.sh ou rodar sem a flag não a apaga).
     [[ -e /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules ]] && \
         echo "[1b/3] 75-...-disable-usb-audio já presente (mantido)"
+fi
+
+# As 82 e 83 são REGRAS-COLA: não fazem nada sozinhas, só chamam o alvo do
+# `RUN+=`. Instalar uma sem o alvo é o defeito medido em 07/08 (estudo da
+# cobertura do install, item 9) — o portão de paridade dava `[OK]` para a regra
+# enquanto o alvo dela não existia em empacotamento nenhum, e a 83 falhava o
+# `systemctl start` a cada conexão Bluetooth. Desde 22/08 as duas regras
+# carregam um `TEST==` do próprio alvo, então a regra órfã fica INERTE em vez de
+# falhar; mas quem instala as regras tem de trazer o alvo, senão a cura não
+# existe. Alvo entra quando a regra entra; sai quando ela sai (uninstall.sh).
+#
+# ESCOPO DELIBERADO: só os alvos do `RUN+=` e o que a unit precisa para subir —
+# não a camada ONDA-R2 inteira. Os timers, o watchdog, o drop-in do
+# bluetooth.service e o restauro automático têm ciclo de vida próprio e são do
+# `install_bt_resilience_host` (install.sh), que roda em TODO formato.
+echo "[1c/3] alvos do RUN+= das regras 82 e 83 (sem eles as regras ficam inertes)..."
+sudo install -Dm755 "$HERE/scripts/bt_nosniff_now.sh" \
+    /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh
+sudo install -Dm755 "$HERE/scripts/bt_bonds_snapshot.sh" \
+    /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh
+sudo install -Dm644 "$ASSETS/systemd/hefesto-bt-bonds-snapshot.service" \
+    /etc/systemd/system/hefesto-bt-bonds-snapshot.service
+# O `ReadWritePaths=/var/lib/hefesto-dualsense4unix` da unit não é opcional: sem
+# o diretório, o systemd recusa a subir o serviço, e o gatilho da 83 vira um
+# erro por conexão em vez de um snapshot.
+sudo install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds
+if command -v systemctl >/dev/null 2>&1; then
+    sudo systemctl daemon-reload >/dev/null 2>&1 || true
 fi
 
 echo "[2/3] copiando modules-load uinput..."

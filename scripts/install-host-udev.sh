@@ -164,6 +164,52 @@ if [[ -n "${BROKER_BIN_SRC}" && -n "${BROKER_UNITS_SRC}" \
     BROKER_INSTALL_OK=1
 fi
 
+# ALVOS DO `RUN+=` DAS REGRAS 82 E 83 (22/08/2026).
+#
+# As duas são REGRAS-COLA: não fazem nada sozinhas, só chamam um alvo. Este
+# script instalava as duas e nenhum dos alvos — medido em 07/08 (estudo da
+# cobertura do install, item 9): o portão de paridade dava `[OK]` para a regra
+# enquanto o `bt_nosniff_now.sh` não existia em empacotamento nenhum, e a 83
+# mandava iniciar uma unit inexistente a CADA conexão Bluetooth. Quem instalou
+# por pacote nunca teve o salva-vidas de bonds.
+#
+# ESCOPO: só o que as regras invocam, mais o que a unit precisa para subir — a
+# camada ONDA-R2 inteira (timers, watchdog, drop-in do bluetooth.service,
+# restauro automático) é do `install_bt_resilience_host` do `install.sh`, que
+# desde 22/08 roda nos dois lados da bifurcação de formato.
+#
+# Quando o formato não traz as fontes, o `TEST==` das regras as deixa INERTES em
+# vez de falhando, e o aviso mais abaixo diz isso com todas as letras — nenhum
+# dos dois estados é silencioso.
+BTRES_SCRIPTS_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/scripts" \
+    "/usr/share/hefesto-dualsense4unix/scripts" \
+    "${SCRIPT_DIR}" \
+; do
+    if [[ -f "${candidate}/bt_nosniff_now.sh" && -f "${candidate}/bt_bonds_snapshot.sh" ]]; then
+        BTRES_SCRIPTS_SRC="${candidate}"
+        break
+    fi
+done
+
+BTRES_UNIT_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/systemd" \
+    "/usr/share/hefesto-dualsense4unix/systemd" \
+    "${SCRIPT_DIR}/../assets/systemd" \
+; do
+    if [[ -f "${candidate}/hefesto-bt-bonds-snapshot.service" ]]; then
+        BTRES_UNIT_SRC="${candidate}"
+        break
+    fi
+done
+
+BTRES_INSTALL_OK=0
+if [[ -n "${BTRES_SCRIPTS_SRC}" && -n "${BTRES_UNIT_SRC}" ]]; then
+    BTRES_INSTALL_OK=1
+fi
+
 if [[ -z "${RULES_SRC}" ]]; then
     echo "ERRO: regras udev não encontradas em nenhum dos paths esperados." >&2
     echo "      Verifique a instalação." >&2
@@ -260,7 +306,20 @@ if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
 elif [[ -n "${BROKER_BIN_SRC}" && -n "${BROKER_UNITS_SRC}" ]]; then
     echo "  - hefesto-hidraw-broker NÃO instalado (SESSION_UID resolveu 0/root — rode este script a partir da sessão da usuária)"
 fi
+if [[ "${BTRES_INSTALL_OK}" -eq 1 ]]; then
+    echo "  - bt_nosniff_now.sh + bt_bonds_snapshot.sh + hefesto-bt-bonds-snapshot.service"
+    echo "    (os alvos do RUN+= das regras 82 e 83 — sem eles as duas regras são enfeite)"
+fi
 echo ""
+if [[ "${BTRES_INSTALL_OK}" -eq 0 ]]; then
+    echo "AVISO: este formato não traz os alvos do RUN+= das regras 82 e 83."
+    echo "       As duas regras vão para o disco e ficam INERTES (o TEST== delas não acha"
+    echo "       o alvo): o Pro Controller genuíno não perde o sniff na borda da conexão,"
+    echo "       e o snapshot de bonds não é disparado quando um controle Bluetooth chega."
+    echo "       Para ganhar as duas curas: clone o repositório e rode ./install.sh (sem"
+    echo "       sudo — ele pede a senha por dentro)."
+    echo ""
+fi
 
 # Comando núcleo executado com privilégios elevados (pkexec ou sudo).
 # Define como string para reuso em ambos os caminhos sem duplicar lógica.
@@ -389,6 +448,20 @@ _build_install_cmd() {
         cmd+="rm -rf \"\${_hbr}\"; "
         cmd+="fi; "
     fi
+    # Alvos do RUN+= das regras 82 e 83, no MESMO comando elevado que grava as
+    # regras: alvo entra quando a regra entra. O diretório de snapshots não é
+    # detalhe — é o `ReadWritePaths` da unit, e sem ele o systemd recusa subir o
+    # serviço, trocando o snapshot por um erro a cada conexão.
+    if [[ "${BTRES_INSTALL_OK}" -eq 1 ]]; then
+        cmd+="install -Dm755 '${BTRES_SCRIPTS_SRC}/bt_nosniff_now.sh' "
+        cmd+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh; "
+        cmd+="install -Dm755 '${BTRES_SCRIPTS_SRC}/bt_bonds_snapshot.sh' "
+        cmd+="/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh; "
+        cmd+="install -Dm644 '${BTRES_UNIT_SRC}/hefesto-bt-bonds-snapshot.service' "
+        cmd+="/etc/systemd/system/hefesto-bt-bonds-snapshot.service; "
+        cmd+="install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds; "
+        cmd+="systemctl daemon-reload 2>/dev/null || true; "
+    fi
     # Recarrega udev e re-dispara eventos para dispositivos PS5 já presentes,
     # cobrindo BT (subsystem=hidraw) + USB (subsystem=usb).
     cmd+="udevadm control --reload-rules; "
@@ -448,6 +521,17 @@ else
     for regra in "${RULES[@]}"; do
         echo "  sudo install -Dm644 ${RULES_SRC}/${regra} ${RULES_DEST}/${regra}" >&2
     done
+    # A receita à mão também tem de trazer os alvos, senão ela reproduz o
+    # defeito que este script acabou de curar: regra no disco, cura nenhuma.
+    if [[ "${BTRES_INSTALL_OK}" -eq 1 ]]; then
+        echo "  sudo install -Dm755 ${BTRES_SCRIPTS_SRC}/bt_nosniff_now.sh \\" >&2
+        echo "       /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh" >&2
+        echo "  sudo install -Dm755 ${BTRES_SCRIPTS_SRC}/bt_bonds_snapshot.sh \\" >&2
+        echo "       /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh" >&2
+        echo "  sudo install -Dm644 ${BTRES_UNIT_SRC}/hefesto-bt-bonds-snapshot.service \\" >&2
+        echo "       /etc/systemd/system/hefesto-bt-bonds-snapshot.service" >&2
+        echo "  sudo install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds" >&2
+    fi
     if [[ -n "${MODLOAD_SRC}" ]]; then
         echo "  sudo install -Dm644 ${MODLOAD_SRC}/hefesto-dualsense4unix.conf \\" >&2
         echo "       ${MODLOAD_DEST}/hefesto-dualsense4unix.conf" >&2
