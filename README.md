@@ -57,8 +57,8 @@ entram.
 | [![Rumble](docs/usage/assets/readme_rumble.png)](docs/usage/interface.md) | [![Perfis](docs/usage/assets/readme_perfis.png)](docs/usage/interface.md) |
 | **Sistema** — o serviço, a saúde e os jogos da Steam | **Emulação** — como o jogo vê o controle |
 | [![Sistema](docs/usage/assets/readme_sistema.png)](docs/usage/interface.md) | [![Emulação](docs/usage/assets/readme_emulacao.png)](docs/usage/interface.md) |
-| **Navegação** — o controle como mouse e teclado | |
-| [![Navegação](docs/usage/assets/readme_navegacao_dsx.png)](docs/usage/interface.md) | |
+| **Navegação** — o controle como mouse e teclado | **Configurações** — o que o Hefesto não tem como medir |
+| [![Navegação](docs/usage/assets/readme_navegacao_dsx.png)](docs/usage/interface.md) | [![Configurações](docs/usage/assets/readme_configuracoes.png)](docs/usage/interface.md#configurações) |
 
 Aba por aba em [docs/usage/interface.md](docs/usage/interface.md).
 
