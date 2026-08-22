@@ -77,6 +77,19 @@ class WidgetAccessMixin:
     #: ele nasce e onde mora a regra de reconciliação com o daemon.
     _escolha_pendente: dict[str, str] | None = None
 
+    #: CONFIG-03 (22/08/2026): a declaração de MESA que ainda não valeu — uma
+    #: declaração PARCIAL no formato do ``MaquinaConfig`` (``utils/maquina.py``),
+    #: ou ``None`` quando não há nada pendente.
+    #:
+    #: Mora aqui pelo mesmo motivo do ``_escolha_pendente`` logo acima, e a
+    #: situação é literalmente a descrita ali: as cinco seções da aba
+    #: Configurações escrevem (cada clique acumula, com
+    #: ``maquina.fundir_declaracao``) e o rodapé lê e limpa (o "Aplicar" grava).
+    #:
+    #: A aba é DIFERIDA por decisão de produto (D-A4): **nada vale antes do
+    #: Aplicar**, e é por isso que a escolha precisa de um lugar para esperar.
+    _maquina_pendente: dict[str, Any] | None = None
+
     # --- RELANCAR-01: o que só vale quando o jogo reabre --------------------
 
     #: Ids de resposta do diálogo. Positivos de propósito: os `Gtk.ResponseType`

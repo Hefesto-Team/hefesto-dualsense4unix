@@ -4793,6 +4793,72 @@ class IpcHandlersMixin:
         new_state = self.daemon.set_emulation_suppressed(suppressed)
         return {"status": "ok", "emulation_suppressed": new_state}
 
+    async def _handle_machine_declare(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03).
+
+        A aba Configurações é o lugar do que o Hefesto **não tem como medir** —
+        altura da antena, linha de visada, o que é o rádio vizinho, o modo da
+        chave física de um controle genérico, a cor do plástico quando a leitura
+        do firmware falha. Este é o único gesto que escreve aquele arquivo.
+
+        Params: `{"maquina": {...}}`, uma declaração **parcial** no formato do
+        `MaquinaConfig` (`utils/maquina.py`). Parcial de propósito: cada seção
+        da aba manda só o que mudou, e a fusão acontece contra o disco sob o
+        lock — assim duas seções da mesma janela não se apagam.
+
+        Retorno `{"ok": True}` ou `{"ok": False, "reason": ...}`, com três
+        motivos: `declaracao_invalida`, `versao_desconhecida` e
+        `falha_ao_gravar`.
+
+        **Toda recusa vem no CORPO, nunca como erro JSON-RPC**, e as três pela
+        mesma razão: a ponte da GUI usa `_safe_call`, que colapsa erro de
+        protocolo e daemon morto em `(False, None)` — a janela anunciaria
+        "daemon offline?" para uma recusa de um daemon vivíssimo. É a doutrina
+        do commit `d614d04` ("o daemon recusa, e diz por quê"). A frase de tela
+        mora do lado da GUI (`_MOTIVOS_MAQUINA`, `app/ipc_bridge.py`): o daemon
+        não conhece o texto da janela.
+
+        `versao_desconhecida` é a recusa que importa: um `maquina.json` escrito
+        por uma versão futura não é lido **nem sobrescrito**, e os bytes ficam
+        intactos. Escolha de alguém não se destrói para registrar outra.
+
+        Fora do `daemon.state_full` de propósito — aquilo é o tique de 20 Hz, e
+        a declaração muda por gesto dela, não por quadro.
+        """
+        from hefesto_dualsense4unix.utils.maquina import (
+            carregar_maquina,
+            gravar_maquina,
+        )
+
+        declaracao = params.get("maquina")
+        if not isinstance(declaracao, dict):
+            return {"ok": False, "reason": "declaracao_invalida"}
+        try:
+            # Disco em thread: o handler roda no loop do daemon, e o
+            # read-modify-write pega um lock de módulo que outra thread pode
+            # estar segurando.
+            gravou = await asyncio.to_thread(gravar_maquina, declaracao)
+        except ValueError as exc:  # `ValidationError` do pydantic herda daqui
+            logger.info("machine_declare_recusada_schema", err=str(exc))
+            return {"ok": False, "reason": "declaracao_invalida"}
+        except OSError as exc:
+            logger.warning("machine_declare_falha_de_escrita", err=str(exc))
+            return {"ok": False, "reason": "falha_ao_gravar"}
+        if not gravou:
+            return {"ok": False, "reason": "versao_desconhecida"}
+        # O daemon vivo passa a valer o que está no disco. Relê em vez de
+        # aproveitar o payload: o que vale é o documento FUNDIDO, não o pedaço
+        # que este pedido trouxe.
+        #
+        # `DaemonProtocol` (`daemon/protocols.py:34`) não declara `_maquina`, e
+        # declarar lá é de quem CONSOME a declaração: enquanto nenhum handler a
+        # consulta, seria contrato sem leitor.
+        vivo: Any = self.daemon
+        vivo._maquina = await asyncio.to_thread(carregar_maquina)
+        return {"ok": True}
+
     async def _handle_plugin_list(self, params: dict[str, Any]) -> list[dict[str, Any]]:
         """Lista plugins carregados no daemon (FEAT-PLUGIN-01).
 
