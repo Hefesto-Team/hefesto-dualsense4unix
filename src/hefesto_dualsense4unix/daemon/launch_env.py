@@ -798,7 +798,7 @@ def _jogo_na_autoridade(daemon: DaemonProtocol) -> bool:
 
 
 def _ativar_o_perfil_do_lancamento(
-    daemon: DaemonProtocol, profile: Any, *, appid: int
+    daemon: DaemonProtocol, profile: Any, *, appid: int, na_allowlist: bool = False
 ) -> dict[str, str]:
     """Ativa o perfil do jogo que ACABOU de subir, e devolve o relatório.
 
@@ -822,6 +822,15 @@ def _ativar_o_perfil_do_lancamento(
     permite a alguém — a janela, o `doctor`, um agente — perguntar o que entrou
     sem adivinhar pelo aparelho. Era o buraco que a `ELO-MUDO-01` nomeia: o
     produto respondia pelo transporte e nunca pelo efeito.
+
+    **Na allowlist o `mode_applier` vai a `None`, e isso é a metade que o teste
+    não pegou e o journal pegou** (22/08/2026). O `return` do ramo da allowlist
+    pula o `apply_profile_mode` que o arming chama DIRETO — mas a ativação tem o
+    seu, dentro do `apply_emulation`, e sem esta linha ele armava o modo pelo
+    caminho de dentro: o journal do primeiro ensaio ao vivo trouxe
+    `launch_arm_pulado_allowlist_steam_input ... ativacao={... 'mode':
+    'aplicado' ...}`, que é a allowlist sendo pulada e cumprida ao mesmo tempo.
+    Dois caminhos para o mesmo applier, e o teste vigiava um só.
     """
     nome = getattr(profile, "name", None)
     if not nome:
@@ -830,9 +839,10 @@ def _ativar_o_perfil_do_lancamento(
     try:
         from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
-        gerente_do_daemon(daemon, store=getattr(daemon, "store", None)).activate(
-            str(nome), origin="launch", relatorio=relatorio
-        )
+        sem_disputa: dict[str, Any] = {"mode_applier": None} if na_allowlist else {}
+        gerente_do_daemon(
+            daemon, store=getattr(daemon, "store", None), **sem_disputa
+        ).activate(str(nome), origin="launch", relatorio=relatorio)
     except Exception as exc:
         logger.warning(
             "launch_ativacao_do_perfil_falhou",
@@ -1095,7 +1105,9 @@ def arm_launch_profile(
     # ativação automática não pode reescrever a escolha dela para o próximo
     # boot. Idempotente com o autoswitch: se ele chegar depois com a mesma
     # janela, `_activate` nem roda (candidato igual ao corrente).
-    ativacao = _ativar_o_perfil_do_lancamento(daemon, profile, appid=appid)
+    ativacao = _ativar_o_perfil_do_lancamento(
+        daemon, profile, appid=appid, na_allowlist=na_allowlist
+    )
 
     if na_allowlist:
         logger.info(

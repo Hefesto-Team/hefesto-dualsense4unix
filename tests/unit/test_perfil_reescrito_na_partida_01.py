@@ -379,14 +379,30 @@ def test_relatorio_registra_as_categorias_travadas_na_mao(
 def test_sem_trava_o_relatorio_nao_inventa_secao_ignorada(
     perfis_isolados: Path,
 ) -> None:
-    """A guarda: o relatório só afirma o que este código de fato silenciou."""
+    """A guarda: o relatório só afirma o que este código de fato silenciou.
+
+    ATUALIZADO EM 22/08/2026 pela `ELO-MUDO-01/E2`, e a mudança é de CONTRATO,
+    não de asserção. Até aqui este teste exigia a AUSÊNCIA das duas chaves, e a
+    ausência era o defeito irmão daquele que ele guarda: gatilho e luz eram
+    aplicados e nunca apareciam no relatório, então quem lia concluía que não
+    tinham entrado. Medido no daemon dela no mesmo dia, ativando o perfil do
+    Sackboy pelo lançamento — `secoes={'suppression': 'aplicado',
+    'rumble_policy': 'aplicado', 'speaker': 'aplicado'}`, com gatilho e luz
+    escritos naquele instante.
+
+    O que este teste guarda continua o mesmo, e é o nome dele: **não inventar
+    seção IGNORADA**. Sem trava, as duas dizem `aplicado`; com trava, dizem
+    `IGNORADO_TRAVA_MANUAL` (é o teste logo acima). O que mudou é que o silêncio
+    deixou de ser uma das respostas possíveis.
+    """
     manager, _store = _bancada([_perfil("sackboy_nativo")])
 
     relatorio: dict[str, str] = {}
     manager.activate("sackboy_nativo", origin="autoswitch", relatorio=relatorio)
 
-    assert "trigger" not in relatorio
-    assert "led" not in relatorio
+    assert relatorio["trigger"] == "aplicado"
+    assert relatorio["led"] == "aplicado"
+    assert IGNORADO_TRAVA_MANUAL not in {relatorio["trigger"], relatorio["led"]}
 
 
 def test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao(
