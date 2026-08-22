@@ -1,35 +1,22 @@
-"""Aba Configurações — onde entra o que o Hefesto não tem como medir.
+"""O montador da aba Configurações — cria as cinco molduras e nada mais.
 
-CONFIG-01, a décima primeira aba. As dez abas de hoje operam sobre o que o
-produto **mede**; esta é o lugar do que ele **não consegue medir** e precisa que
-a pessoa declare — onde o dongle está fisicamente, se há um hub no caminho, o
-que é aquele rádio vizinho, qual a cor do plástico quando a leitura falha.
+Este arquivo é deliberadamente burro, e é isso que o torna útil: ele conhece a
+ORDEM das seções e o formato da moldura, e não conhece uma linha do que há
+dentro de nenhuma delas. Cada seção mora no seu módulo (`secao_*.py`), declara
+o próprio título e a própria dica, e monta o próprio conteúdo.
 
-O teste de admissão de qualquer controle novo aqui é uma pergunta só: *o Hefesto
-conseguiria descobrir isso sozinho?* Se sim, o lugar não é esta aba.
-
-Nesta primeira entrega a aba nasce **vazia de propósito**: só os cinco títulos
-de seção, na ordem do desenho aprovado, cada um com a dica que explica por que a
-seção existe. Nenhum widget de conteúdo, nenhuma chamada ao daemon, nenhuma
-leitura de disco — e, principalmente, **nenhum número na tela**, porque nenhum
-número foi medido ainda. Rótulo estático é honesto; valor inventado não é.
-
-O que esta sprint existe para descobrir já foi medido, e é um não-evento: a
-décima primeira aba vazia custa ZERO de largura e ZERO do orçamento de altura.
-A largura mínima da janela e o teto por aba não se mexeram; a tira de abas
-continua sem seta de rolagem em 1180px. O aceite desta entrega é negativo e
-verificável — *os números não se mexeram*.
-
-Como a aba Início, o Glade só reserva o container (`tab_config_box`): todo
-widget é montado aqui, em código. É o padrão dos widgets dinâmicos desta casa,
-imune ao bug de popup do cosmic-comp (cosmic-epoch#2497).
+O desenho nasceu de uma medição: as oito frentes que constroem esta aba
+tocariam, todas, o mesmo arquivo. Um arquivo por seção troca oito colisões por
+zero, e o preço é este montador de trinta linhas.
 """
 from __future__ import annotations
 
 import contextlib
-from typing import Any, Final
+from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.config.moldura import moldura_de_secao
+from hefesto_dualsense4unix.app.actions.config.secoes import SECOES_DA_ABA
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -40,40 +27,6 @@ logger = get_logger(__name__)
 #: página (EST-10). Acrescentar uma aba renumera todas, e um gate por índice
 #: passaria a agir sobre a aba errada em silêncio.
 ABA_CONFIG = "tab_config_box"
-
-#: As cinco seções, na ordem do desenho aprovado, como (título, dica).
-#:
-#: A dica de cada uma é o texto do desenho, palavra por palavra — o contrato de
-#: escrita das dicas é explícito quanto a isso: elas não se reescrevem na hora.
-#: A quinta, "A janela", não tem dica porque no desenho ela também não tem: os
-#: rótulos dela se explicam sozinhos, e inventar uma explicação aqui seria pôr
-#: na tela uma frase que ninguém aprovou.
-#:
-#: A maiúscula inicial não é estilo: o portão da palavra de tela cobra.
-SECOES: Final[tuple[tuple[str, str | None], ...]] = (
-    (
-        "Está tudo certo?",
-        "O mesmo exame que o Hefesto já sabe fazer pelo terminal, agora com "
-        "resposta em uma linha. Só lê — não muda nada na máquina.",
-    ),
-    (
-        "Os controles",
-        "A borda de cada card é a cor do plástico daquele controle. O anel roxo "
-        "por dentro marca qual está selecionado no cabeçalho da janela.",
-    ),
-    (
-        "A mesa",
-        "O Hefesto enxerga os adaptadores, mas não enxerga onde eles estão. "
-        "Cabo, hub e altura mudam o alcance e não aparecem em lugar nenhum do "
-        "sistema.",
-    ),
-    (
-        "Orçamento",
-        "Um teto para a mesa inteira. As abas continuam mandando no que fazem — "
-        "só não passam daqui. Nenhum ajuste seu é apagado.",
-    ),
-    ("A janela", None),
-)
 
 #: Por que o seletor de controle do cabeçalho fica inerte nesta aba.
 #:
@@ -87,32 +40,28 @@ class ConfigActionsMixin(WidgetAccessMixin):
     """Mixin da aba Configurações (a última página do notebook)."""
 
     def install_config_tab(self) -> None:
-        """Monta o conteúdo da aba Configurações. Idempotente.
-
-        Nesta entrega o conteúdo são os cinco títulos de seção e nada mais.
+        """Monta as cinco seções da aba Configurações. Idempotente.
 
         Saída cedo tolerante, como as outras abas: sem o container no XML (dublê
         de teste, glade antigo) o método devolve sem levantar. Uma aba que não
         existe não pode derrubar a janela.
         """
-        from gi.repository import Gtk
-
         box = self._get(ABA_CONFIG)
         if box is None or getattr(self, "_config_installed", False):
             return
         self._config_installed = True
 
-        for titulo, dica in SECOES:
-            rotulo = Gtk.Label(label=_(titulo))
-            rotulo.set_xalign(0.0)
+        for secao in SECOES_DA_ABA:
+            frame, caixa = moldura_de_secao(secao.TITULO, secao.DICA)
+            box.pack_start(frame, False, False, 0)
+            # Uma seção que falha ao montar deixa a MOLDURA na tela e some com
+            # o conteúdo — que é o comportamento certo: a pessoa vê que a
+            # seção existe e está vazia, em vez de ver a aba inteira sumir.
             with contextlib.suppress(Exception):
-                rotulo.get_style_context().add_class("hefesto-titulo-secao")
-            if dica is not None:
-                rotulo.set_tooltip_text(_(dica))
-            box.pack_start(rotulo, False, False, 0)
-            rotulo.show()
+                secao.montar(self, caixa)
+            frame.show_all()
 
-        logger.info("config_tab_instalada", secoes=len(SECOES))
+        logger.info("config_tab_instalada", secoes=len(SECOES_DA_ABA))
 
     def set_alvo_inativo(self, inativo: bool) -> None:
         """Esmaece (ou devolve) o seletor de controle do cabeçalho.

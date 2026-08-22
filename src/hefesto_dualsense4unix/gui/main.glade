@@ -3959,7 +3959,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
 
                  O Glade só reserva o container, como na aba Início: todo widget
                  é montado em código por `install_config_tab()`
-                 (app/actions/config_actions.py). O `id` do box interno NÃO é
+                 (app/actions/config/). O `id` do box interno NÃO é
                  opcional, e o motivo é PIOR do que parece: medido em 21/08,
                  arrancando o id daqui, `id_da_pagina` não devolve `None` —
                  devolve algo como `___object_142___`, o nome que o GtkBuilder inventa a
