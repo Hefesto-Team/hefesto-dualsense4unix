@@ -80,4 +80,4 @@ Optional: substituir `sha256sums=('SKIP')` por checksum real via
 - `python-uinput` (extras emulation) e `python-jeepney` (extras cosmic)
   vem do pacman. Sem optional installs separados ainda.
 
-Reportar bugs em <https://github.com/AndreBFarias/hefesto-dualsense4unix/issues>.
+Reportar bugs em <https://github.com/Hefesto-Team/hefesto-dualsense4unix/issues>.

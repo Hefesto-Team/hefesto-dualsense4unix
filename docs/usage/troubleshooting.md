@@ -12,7 +12,7 @@ Cada seção tem **sintoma**, **diagnóstico** (comandos para confirmar a causa)
 > que* era o bug, que é o que importa quando o sintoma reaparece.
 
 Para problemas não cobertos aqui, abra issue com a label `bug` no repositório
-([AndreBFarias/hefesto-dualsense4unix](https://github.com/AndreBFarias/hefesto-dualsense4unix/issues))
+([Hefesto-Team/hefesto-dualsense4unix](https://github.com/Hefesto-Team/hefesto-dualsense4unix/issues))
 incluindo `journalctl --user -u hefesto-dualsense4unix.service -n 100`.
 
 ---

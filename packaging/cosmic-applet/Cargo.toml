@@ -35,8 +35,8 @@ edition = "2021"
 authors = ["Vitoria Maria <[REDACTED]>"]
 description = "Applet nativo COSMIC para gatilhos, perfis e bateria do DualSense (Hefesto - Dualsense4Unix)"
 license = "MIT"
-homepage = "https://github.com/vitoriamariadb/hefesto-dualsense4unix"
-repository = "https://github.com/vitoriamariadb/hefesto-dualsense4unix"
+homepage = "https://github.com/Hefesto-Team/hefesto-dualsense4unix"
+repository = "https://github.com/Hefesto-Team/hefesto-dualsense4unix"
 keywords = ["cosmic", "applet", "dualsense", "gamepad", "wayland"]
 categories = ["gui"]
 

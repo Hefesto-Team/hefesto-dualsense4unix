@@ -359,13 +359,13 @@
     <screenshot type="default">
       <caption>Interface principal — painel de gatilhos adaptativos</caption>
       <image type="source">
-        https://raw.githubusercontent.com/AndreBFarias/hefesto-dualsense4unix/main/docs/screenshots/gui-triggers.png
+        https://raw.githubusercontent.com/Hefesto-Team/hefesto-dualsense4unix/main/docs/screenshots/gui-triggers.png
       </image>
     </screenshot>
     <screenshot>
       <caption>Gerenciamento de perfis por aplicação</caption>
       <image type="source">
-        https://raw.githubusercontent.com/AndreBFarias/hefesto-dualsense4unix/main/docs/screenshots/gui-profiles.png
+        https://raw.githubusercontent.com/Hefesto-Team/hefesto-dualsense4unix/main/docs/screenshots/gui-profiles.png
       </image>
     </screenshot>
   </screenshots>
@@ -412,5 +412,5 @@
 
   <!-- Suporte (links opcionais) -->
   <url type="homepage">https://github.com/AndreBFarias/hefesto</url>
-  <url type="bugtracker">https://github.com/AndreBFarias/hefesto-dualsense4unix/issues</url>
+  <url type="bugtracker">https://github.com/Hefesto-Team/hefesto-dualsense4unix/issues</url>
 </component>

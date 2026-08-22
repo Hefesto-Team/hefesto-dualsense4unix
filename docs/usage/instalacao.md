@@ -46,7 +46,7 @@ A versão corrente é a alfa **0.9.4.5** e o ponto de instalação é a **tag
 a sessão e não são ponto estável.
 
 ```bash
-git clone https://github.com/AndreBFarias/hefesto-dualsense4unix.git
+git clone https://github.com/Hefesto-Team/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
 git checkout v0.9.4.5
 ./install.sh
