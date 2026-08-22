@@ -83,6 +83,17 @@ _POLICY_LABEL: dict[str, str] = {
     "auto": "Auto",
 }
 
+#: CONFIG-05 (22/08/2026): os MESMOS quatro rótulos, públicos, porque a seção
+#: "Orçamento" da aba Configurações oferece as mesmas quatro opções — e o
+#: vocabulário da mesa não pode divergir do vocabulário da aba de origem.
+#:
+#: Público em vez de importar o privado acima pelo mesmo motivo do
+#: `BTN_GIVE_BACK_TO_GAME` logo abaixo: quem depende de um nome de outro módulo
+#: precisa de um nome que aquele módulo se comprometeu a manter. Redigitar os
+#: quatro seria a alternativa, e é a que a casa já pagou — duas listas de
+#: rótulos divergem na primeira edição.
+ROTULOS_DO_ORCAMENTO: dict[str, str] = dict(_POLICY_LABEL)
+
 #: RUM-01: o texto dos toasts/estado mandava clicar "Devolver ao jogo" — botão
 #: que NÃO existe. O botão real (main.glade) tem este rótulo; um único dono aqui
 #: impede a dessincronia de voltar. Ao mexer no rótulo do glade, mexa aqui.
@@ -270,6 +281,124 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     return None
 
 
+def texto_do_teto_do_orcamento(
+    pedido: float | None, orcamento: str | None
+) -> str | None:
+    """A linha *"150% · limitado a 30% pelo orçamento"*, ou ``None``.
+
+    CONFIG-05 (22/08/2026), e ela é a metade visível da invariante **teto, não
+    troca**: o orçamento CALCULA, a aba de origem só EXIBE. Nada aqui reescreve
+    a escolha dela — os quatro botões seguem afundando onde ela os pôs, o
+    deslizador segue mostrando o número que ela escolheu, e voltar o orçamento
+    para Balanceado devolve tudo sem um clique a mais. Espelhar estado entre
+    abas é a classe de defeito que a `ABAS-01` curou, e esta linha é o formato
+    que não a repete.
+
+    ``None`` = **a linha não aparece**, e são quatro os silêncios, na ordem em
+    que a função pergunta. A disciplina é a do
+    :func:`texto_do_alcance_da_intensidade` acima, palavra por palavra: *"não
+    sei" e "não chega" mandam caçar em lugares opostos*.
+
+    1. **Ninguém declarou orçamento** (``orcamento is None``). Afirmar um teto
+       aqui seria inventar um limite que o daemon não impõe.
+    2. **O orçamento não impõe teto** — ``balanceado``, ``max``, e também o
+       ``auto``, cujo teto é MÓVEL: ele muda a cada tique com a bateria, e a
+       casa já decidiu não prometer número móvel na tela
+       (`profiles/manager.py:1556-1567`). Um "limitado a 70%" que vira 30% no
+       minuto seguinte ensina a desconfiar da tela inteira.
+    3. **Não se sabe o que a aba está pedindo** (``pedido is None``): política
+       fora dos degraus conhecidos, deslizador ainda não lido.
+    4. **O teto não morde** (``pedido <= teto``): o número que a aba mostra é
+       exatamente o que chega ao controle, e dizer "limitado" seria falso.
+
+    O percentual do teto sai de :func:`core.rumble.teto_do_orcamento`, que o
+    deriva de ``RUMBLE_POLICY_MULT``. Esta aba não recalcula degrau nenhum: a
+    única cópia autorizada em ``app/`` é o ``_POLICY_MULT`` do topo deste
+    arquivo, e há teste que vigia isso por grep.
+    """
+    from hefesto_dualsense4unix.core.rumble import teto_do_orcamento
+
+    if pedido is None:
+        return None
+    teto = teto_do_orcamento(orcamento)
+    if teto is None or pedido <= teto:
+        return None
+    return (
+        f"{round(pedido * 100)}% · limitado a {round(teto * 100)}% pelo orçamento"
+    )
+
+
+def _rotulo_do_teto(host: Any) -> Any:
+    """O rótulo da linha de teto, criado na primeira vez que faz falta.
+
+    Nasce em código e não no Glade porque o dono do Glade nesta leva é outra
+    frente, e um rótulo a mais no XML seria conflito garantido no mesmo bloco.
+    O molde é o `config_actions._rotulo_da_razao_do_alvo`: cria ao lado de um
+    widget que já existe, devolve ``None`` quando não há onde pendurá-lo, e
+    nunca levanta.
+
+    Vai para o fim da caixa do card "Intensidade da vibração", logo abaixo do
+    `rumble_policy_aviso` — que é o último filho dela no `main.glade`. Os dois
+    são vizinhos de propósito: um diz que a intensidade não ALCANÇA o jogo, o
+    outro diz que ela alcança mas CHEGA limitada, e são as duas metades da
+    mesma pergunta ("por que não sinto o que escolhi?").
+    """
+    existente = getattr(host, "_rumble_teto_label", None)
+    if existente is not None:
+        return existente
+    try:
+        aviso = host._get("rumble_policy_aviso")
+        if aviso is None:
+            return None
+        caixa = aviso.get_parent()
+        if caixa is None:
+            return None
+        rotulo = Gtk.Label()
+        rotulo.set_use_markup(True)
+        rotulo.set_xalign(0.0)
+        rotulo.set_line_wrap(True)
+        rotulo.set_no_show_all(True)
+        caixa.pack_start(rotulo, False, False, 0)
+        rotulo.hide()
+    except Exception:
+        return None
+    host._rumble_teto_label = rotulo
+    return rotulo
+
+
+def _pintar_a_linha_do_teto(host: Any, policy: str, custom_mult: float | None) -> None:
+    """Acende (ou apaga) a linha de teto do orçamento na aba Rumble.
+
+    Função de módulo, e não método do mixin, por uma razão medida: o dublê de
+    ``tests/unit/test_rumble_actions.py`` monta a aba por COMPOSIÇÃO, ligando
+    uma lista EXPLÍCITA de métodos — todo método novo no mixin nasce ausente
+    lá, e o primeiro sintoma é um ``AttributeError`` no meio de uma tela que não
+    tem nada a ver com a mudança. A mesma armadilha está escrita no docstring de
+    ``_update_rumble_state_label``.
+
+    O rótulo é procurado ANTES da leitura do orçamento, e a ordem importa: sem
+    rótulo não há o que pintar, e assim a montagem sem Glade (dublê, retrato)
+    não encosta no disco.
+    """
+    rotulo = _rotulo_do_teto(host)
+    if rotulo is None:
+        return
+    from hefesto_dualsense4unix.app.actions.config.secao_orcamento import (
+        orcamento_em_vigor,
+    )
+
+    pedido = custom_mult if policy == "custom" else _POLICY_MULT.get(policy)
+    texto = texto_do_teto_do_orcamento(pedido, orcamento_em_vigor(host))
+    if texto is None:
+        rotulo.set_visible(False)
+        return
+    # `#ffb86c` é o token de ALERTA da casa (`gui/theme.css`), o mesmo do aviso
+    # de alcance logo acima. O texto não leva `<`, `&` nem aspas, então entra
+    # inteiro no markup do Pango — mesma costura do rótulo de estado.
+    rotulo.set_markup(f'<span foreground="#ffb86c">{texto}</span>')
+    rotulo.set_visible(True)
+
+
 def _inteiro(valor: Any) -> int | None:
     """O inteiro do payload, ou ``None`` quando o campo não veio (daemon velho).
 
@@ -379,6 +508,11 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 lbl.set_visible(policy == "auto")
         finally:
             self._rumble_guard_refresh = False
+        # CONFIG-05: FORA do guard. O guard existe para não reentrar em handler
+        # de sinal, e pintar um rótulo não dispara nenhum; dentro dele, uma
+        # exceção da pintura deixaria o guard preso em True e a aba inteira
+        # muda para sempre.
+        _pintar_a_linha_do_teto(self, policy, custom_mult)
 
     # --- handlers dos toggles de política ---
 
@@ -429,6 +563,11 @@ class RumbleActionsMixin(WidgetAccessMixin):
         lbl: Gtk.Label = self._get("rumble_policy_auto_label")
         if lbl is not None:
             lbl.set_visible(policy == "auto")
+
+        # CONFIG-05: o degrau novo pode passar a bater no teto do orçamento (ou
+        # deixar de bater), e a linha tem de acompanhar o clique — não só a
+        # entrada na aba.
+        _pintar_a_linha_do_teto(self, policy, None)
 
         # FEAT-RUMBLE-POLICY-PROFILE-01: além do daemon vivo, grava a escolha
         # no draft — o "Salvar Perfil" do rodapé persiste a política que a
@@ -497,6 +636,9 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self._rumble_guard_refresh = False
 
         self._rumble_policy = "custom"
+        # CONFIG-05: o deslizador é o caminho que mais bate no teto — ele sobe
+        # até 200%, e o Economia da mesa limita em 30%.
+        _pintar_a_linha_do_teto(self, "custom", mult)
         # FEAT-RUMBLE-POLICY-PROFILE-01: persiste o custom no draft (mesma
         # razão do preset em `_set_policy` — o rodapé salva o que ela vê).
         self._gravar_intensidade_no_rascunho("custom", mult)

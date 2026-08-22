@@ -48,6 +48,84 @@ class RumbleCommand:
         return self.weak == 0 and self.strong == 0
 
 
+#: CONFIG-05 (22/08/2026): a única chave de orçamento da mesa que IMPÕE teto
+#: hoje. As outras três não impõem nenhum, e por dois motivos diferentes:
+#: ``balanceado`` e ``max`` porque a dica delas promete, palavra por palavra,
+#: *"tudo como o jogo pedir, sem teto"*; ``auto`` porque o teto dele seria
+#: MÓVEL — muda a cada tique com a bateria —, e a casa já decidiu não prometer
+#: número móvel na tela (`profiles/manager.py:1556-1567`, o pulo com log
+#: `escala_de_vibracao_pulada_base_movel`).
+_ORCAMENTO_COM_TETO = "economia"
+
+
+def teto_do_orcamento(orcamento: str | None) -> float | None:
+    """O teto que o orçamento da mesa impõe ao multiplicador, ou ``None``.
+
+    ``None`` quer dizer **não há teto**, e a tela precisa distinguir isso de um
+    teto de 100 %: sem teto, o que o jogo pedir chega inteiro, inclusive o
+    150 % do "Máximo". Devolvem ``None`` o orçamento não declarado (ninguém
+    escolheu), o ``balanceado``, o ``max`` e o ``auto`` — os motivos estão em
+    ``_ORCAMENTO_COM_TETO``, logo acima.
+
+    **O 0,3 não se escreve aqui.** Ele é o mesmo degrau que a política de
+    vibração "Economia" já entrega (``RUMBLE_POLICY_MULT["economia"]``), e é
+    isso que faz a frase da tela ser verificável: o orçamento em Economia
+    entrega exatamente a força que o botão Economia entrega. Dois números
+    divergiriam na primeira mudança de degrau — é o HARM-19 pela outra porta.
+
+    Import tardio da tabela pela mesma razão do corpo de ``_effective_mult``:
+    ``core`` não importa ``daemon`` no topo, senão fecha o ciclo com
+    ``daemon.subsystems.rumble``, que importa este módulo.
+    """
+    if orcamento != _ORCAMENTO_COM_TETO:
+        return None
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+    return RUMBLE_POLICY_MULT[_ORCAMENTO_COM_TETO]
+
+
+def _sob_o_teto(mult: float, teto: float | None) -> float:
+    """``mult`` limitado por ``teto`` — ``min``, **nunca** produto.
+
+    Teto que multiplica não é teto: 0,3 sobre um ``custom`` já amplificado a
+    2,0 entrega 0,6, ou seja, o dobro do que o Economia prometeu, e mais forte
+    que o próprio Balanceado. Com ``min`` o pedido de 2,0 chega em 0,3, que é o
+    número escrito na tela.
+
+    E ``min`` preserva o denominador de ``_controllers_to_rumble_scales``
+    (`profiles/manager.py:1541-1546`): o valor que chega ao backend já vem
+    escalado pela política global, então o fator por unidade é RELATIVO — um
+    produto mexeria na base daquela conta sem ninguém saber.
+    """
+    if teto is None:
+        return mult
+    return min(mult, teto)
+
+
+def _orcamento_declarado(config: Any) -> str | None:
+    """A chave do orçamento da mesa que vale AGORA, ou ``None``.
+
+    A config não carrega uma CÓPIA da escolha: carrega a fonte dela
+    (``DaemonConfig.orcamento_da_mesa``, fiada no boot em
+    ``daemon/lifecycle.py``). A diferença é o gesto do "Aplicar": o
+    ``machine.declare`` relê o ``maquina.json`` e REBINDA ``daemon._maquina``,
+    então uma cópia feita no boot ficaria velha exatamente no instante em que
+    ela acabou de escolher — e o teto novo só valeria no próximo início do
+    Hefesto.
+
+    Tolerante de propósito: config sem o campo (dublê de teste, daemon de uma
+    versão anterior no meio de um upgrade) e fonte que levante devolvem
+    ``None``, que é "nenhum teto" — nunca um teto inventado.
+    """
+    fonte = getattr(config, "orcamento_da_mesa", None)
+    if fonte is None:
+        return None
+    valor: Any = None
+    with contextlib.suppress(Exception):
+        valor = fonte()
+    return valor if isinstance(valor, str) else None
+
+
 def _effective_mult(
     config: DaemonConfig,
     battery_pct: int,
@@ -85,17 +163,33 @@ def _effective_mult(
     `rumble_policy_auto_label` do `gui/main.glade`, que é o dono único da frase
     desde 11/08/2026 (havia uma cópia morta em `app.actions.rumble_actions`,
     nunca usada por ninguém e já desatualizada).
+
+    **O TETO DO ORÇAMENTO DA MESA ENTRA AQUI, E SÓ AQUI** (CONFIG-05,
+    22/08/2026). Este é o funil dos TRÊS caminhos de vibração do produto —
+    ``ipc_rumble_policy.apply_rumble_policy`` (o ``rumble.set`` e o "Aplicar" do
+    rodapé), ``subsystems.gamepad._game_rumble_mult`` (o force-feedback do
+    JOGO) e ``subsystems.rumble.reassert_rumble`` (o tique de 200 ms do rumble
+    fixado) —, então um ponto de aplicação basta e não há como um caminho
+    escapar do teto. As QUATRO saídas o respeitam, o fallback de política
+    desconhecida inclusive: deixar uma de fora abriria um caminho em que o
+    orçamento simplesmente não vale.
+
+    **Teto, não troca**: o ``config.rumble_policy`` dela não é reescrito em
+    lugar nenhum. Voltar o orçamento para Balanceado devolve o mult inteiro sem
+    ela reclicar coisa alguma — é essa a invariante, e ela tem teste
+    (``tests/unit/test_orcamento_e_teto_nao_troca.py``).
     """
     from hefesto_dualsense4unix.daemon.lifecycle import RUMBLE_POLICY_MULT
 
     policy = config.rumble_policy
+    teto = teto_do_orcamento(_orcamento_declarado(config))
 
     if policy == "custom":
-        mult = float(config.rumble_policy_custom_mult)
+        mult = _sob_o_teto(float(config.rumble_policy_custom_mult), teto)
         return mult, mult, last_auto_change_at
 
     if policy in RUMBLE_POLICY_MULT:
-        mult = RUMBLE_POLICY_MULT[policy]
+        mult = _sob_o_teto(RUMBLE_POLICY_MULT[policy], teto)
         return mult, mult, last_auto_change_at
 
     if policy == "auto":
@@ -106,6 +200,15 @@ def _effective_mult(
             target = 0.7
         else:
             target = 0.3
+
+        # O teto entra ANTES do debounce, e a ordem é a cura. Limitar só o
+        # valor devolvido deixaria a âncora do debounce (`last_auto_mult`) com
+        # o degrau CRU: a cada chamada `target != last_auto_mult` seria
+        # verdadeiro, o "auto" se declararia em mudança para sempre e o journal
+        # ganharia um `rumble_auto_policy_change` por tique. Limitando o alvo,
+        # a escada do auto sob um orçamento Economia é 0,3 constante — que é o
+        # que a tela promete —, e o debounce assenta na primeira volta.
+        target = _sob_o_teto(target, teto)
 
         # Debounce: só muda se transcorreu tempo suficiente desde a última mudança.
         if target != last_auto_mult:
@@ -130,7 +233,7 @@ def _effective_mult(
     # balanceado virou 1.0 este número ficou sendo um degrau que não existe
     # mais em lugar nenhum — âncora morta. Derivar da tabela mantém a promessa
     # do comentário ("fallback para balanceado") verdadeira sozinha.
-    fallback = RUMBLE_POLICY_MULT["balanceado"]
+    fallback = _sob_o_teto(RUMBLE_POLICY_MULT["balanceado"], teto)
     logger.warning("rumble_policy_desconhecida", policy=policy)
     return fallback, fallback, last_auto_change_at
 
@@ -330,4 +433,5 @@ __all__ = [
     "RumbleEngine",
     "_effective_mult",
     "pedido_mais_forte",
+    "teto_do_orcamento",
 ]
