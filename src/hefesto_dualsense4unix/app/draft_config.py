@@ -150,9 +150,11 @@ class EmulationDraft(BaseModel):
 class MicDraft(BaseModel):
     """Draft do MICROFONE (MIC-EXPOSE-01, 25/07; volume e mudo em 18/08/2026).
 
-    ``button_toggles_system`` espelha ``DaemonConfig.mic_button_toggles_system``
-    e ``ProfileMicConfig.button_toggles_system``: o botão de mic do controle
-    alterna (ou não) o mute do microfone PADRÃO DO SISTEMA.
+    ``button_toggles_system`` espelha ``ProfileMicConfig.button_toggles_system``
+    e o ``DaemonConfig.mic_button_toggles_system`` (daemon/lifecycle.py:272): o
+    botão de mic do controle alterna (ou não) o mute do microfone PADRÃO DO
+    SISTEMA. ``None`` = **sem opinião**, e é o default DAQUI de propósito —
+    ver o gate por campo no parágrafo abaixo.
 
     ``volume`` (0-100, o por cento da FONTE de captura no sistema) e ``muted``
     (o mudo do FIRMWARE do controle) espelham os dois campos homônimos de
@@ -177,11 +179,27 @@ class MicDraft(BaseModel):
     opinião sobre AQUELE campo, e a ausência é preservada (mesma razão do
     ``rota`` do ``SpeakerDraft``): mexer no volume não pode apagar o mudo que
     ela acabou de escolher, nem o contrário.
+
+    **O GATE É POR CAMPO, e desde 22/08/2026 vale também para o booleano.**
+    Ele era por SEÇÃO: qualquer gesto de microfone (arrastar o volume, clicar
+    em Silenciar) marcava ``dirty``, e o "Aplicar" do rodapé levava junto o
+    ``button_toggles_system`` — que NENHUMA superfície escreve, então o valor
+    que viajava era o default de fábrica, uma opinião que ninguém deu. Do outro
+    lado, ``ipc_draft_applier._apply_mic`` a escreve na config VIVA do daemon.
+    O molde da cura é o ``rota`` do ``SpeakerDraft``, que já fazia certo:
+    ``None`` é sem opinião, a chave não viaja, e campo ausente é campo não
+    tocado. O custo do defeito era pequeno (a ativação de perfil não lê este
+    campo — ``profiles/manager.py::apply_mic`` só aplica volume e mudo — e o
+    valor volta no restart do daemon), mas ele derrubava calado um ``False``
+    escolhido no ``DaemonConfig``.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    button_toggles_system: bool = True
+    #: ``None`` = sem opinião (o default): ninguém escolheu, e o "Aplicar" não
+    #: manda a chave. Quem lhe der superfície escreve ``True``/``False`` aqui e
+    #: o gate abre sozinho.
+    button_toggles_system: bool | None = None
     #: Volume da captura no sistema, em por cento (a escala do
     #: ``ProfileMicConfig.volume``, NÃO a do alto-falante, que é 0-255).
     volume: int | None = Field(default=None, ge=0, le=100)
@@ -417,6 +435,25 @@ class DraftConfig(BaseModel):
     # gravam via ``with_controller_leds``/``with_controller_triggers``
     # (entradas não tocadas seguem passthrough byte-idêntico).
     source_controllers: Any | None = None
+    # PONTE-CONFIRMADA-01 (19/08/2026) — passthrough SOMENTE-LEITURA do carimbo
+    # `Profile.ponte`: qual ponte já foi CONFIRMADA naquele jogo, quando e por
+    # qual dos três caminhos. `to_profile` reconstrói o Profile do zero e o
+    # deixava de fora, então TODO "Salvar Perfil" pelo rodapé o apagava — e a aba
+    # Perfis junto, que usa `to_profile(ativo)` como base
+    # (`profiles_actions._build_profile_from_editor`). O gesto mais banal dela
+    # apagava o que o produto aprendeu sozinho: o jogo caía do
+    # `manager.pontes_confirmadas()` e a escada de `integrations/ponte_escada.py`
+    # recomeçava do primeiro degrau no lançamento seguinte — que é recriar o vpad
+    # com o jogo aberto e arrancar o controle da mão dela (R-04, 23/07).
+    #
+    # SEM ESCRITOR, e a ausência é a entrega: nenhuma aba ganha campo para isto.
+    # Quem carimba é `profiles.manager.confirmar_ponte`, e só depois de uma
+    # confirmação de verdade (gesto, silêncio ou escolha dela). Se a janela
+    # escrevesse aqui, todo save carimbaria como confirmada uma ponte que ninguém
+    # confirmou e a escada pararia em TODO jogo, convencida por um carimbo que
+    # nasceu de um clique em Salvar — a razão inteira está na isenção de
+    # `tests/unit/test_perfil_salva_tudo_cobertura_das_secoes.py`.
+    source_ponte: Any | None = None
     # R-11 (auditoria 23/07): DE QUAL perfil os `source_*` acima vieram.
     # `to_profile` reemitia `match`/`priority`/`mode` do snapshot do BOOT para
     # QUALQUER nome — então "Salvar Perfil" com um nome NOVO produzia um perfil
@@ -518,6 +555,7 @@ class DraftConfig(BaseModel):
             source_suppress=profile.suppress_desktop_emulation,
             source_priority=profile.priority,
             source_controllers=profile.controllers,
+            source_ponte=profile.ponte,
             source_name=profile.name,
         )
 
@@ -544,6 +582,8 @@ class DraftConfig(BaseModel):
         PERFIL-02: o mapa ``controllers`` (overrides por MAC) é reemitido do
         perfil de origem pelo mesmo motivo — sem o passthrough, o primeiro
         "Salvar Perfil" apagaria os ajustes por-controle da usuária.
+        PONTE-CONFIRMADA-01: o carimbo ``ponte`` é reemitido pelo mesmo
+        passthrough, gateado pelo ``mesmo_perfil`` — sem escritor na janela.
         PERFIL-SALVA-TUDO-01: ``mode`` e ``suppress_desktop_emulation`` também
         saem daqui quando ELA os editou nesta sessão (``mode_dirty`` /
         ``suppress_dirty``) — nesse caso o valor vale mesmo com nome NOVO,
@@ -584,9 +624,22 @@ class DraftConfig(BaseModel):
         # seção que existe — diferente do alto-falante, cujo gate exige número
         # (lá o `volume` é obrigatório no esquema; aqui é opcional, porque
         # `button_toggles_system` sozinho já é uma seção legítima).
+        # MIC-GATE-POR-CAMPO-01 (22/08/2026): no DISCO o campo continua sendo
+        # booleano obrigatório (`ProfileMicConfig.button_toggles_system`, sem
+        # default), então "sem opinião" não tem como ser escrito e vira `True`,
+        # que é o default do daemon (daemon/lifecycle.py:272) — o mesmo valor
+        # que o rascunho persistia antes desta data, e a ativação de perfil não
+        # lê o campo. O resíduo: reaberto na janela, esse `True` volta como
+        # opinião e passa a viajar no Aplicar. Fechá-lo exige o campo virar
+        # opcional no esquema (e um perfil sem a chave é recusado por binário
+        # antigo, que é decisão de compatibilidade) ou nascer a superfície.
         mic_cfg = (
             ProfileMicConfig(
-                button_toggles_system=self.mic.button_toggles_system,
+                button_toggles_system=(
+                    True
+                    if self.mic.button_toggles_system is None
+                    else self.mic.button_toggles_system
+                ),
                 volume=self.mic.volume,
                 muted=self.mic.muted,
             )
@@ -703,6 +756,15 @@ class DraftConfig(BaseModel):
             # Perfil" com nome novo significa "guarde o que eu tenho agora",
             # então a config vai junto; a regra do outro perfil, não.
             controllers=self.source_controllers,
+            # PONTE-CONFIRMADA-01: o carimbo entra no gate do R-11 junto com
+            # match/mode/priority, e NÃO com `controllers` — ele não é
+            # configuração dela que viaja entre perfis, é o REGISTRO de uma
+            # confirmação feita naquele perfil, para aquele jogo. Com nome NOVO,
+            # o perfil que nasce ainda não confirmou nada, e "ainda não sei" é a
+            # resposta honesta; o jogo não perde por isso, porque
+            # `manager.perfil_do_appid` desempata por `(ponte is not None,
+            # priority, name)` e continua achando o carimbo no perfil que o tem.
+            ponte=self.source_ponte if mesmo_perfil else None,
         )
         # Revalida para garantir round-trip (captura regressoes de schema).
         # Fix do review (2026-07-16): o `model_dump` DENSIFICA as seções
@@ -751,6 +813,13 @@ class DraftConfig(BaseModel):
                 "source_mode": profile.mode,
                 "source_priority": profile.priority,
                 "source_suppress": bool(profile.suppress_desktop_emulation),
+                # PONTE-CONFIRMADA-01: o carimbo também é fotografia, e sai do
+                # perfil GRAVADO — não do que o rascunho trazia. Salvar com nome
+                # novo produz um perfil sem carimbo, e é isso que o rascunho
+                # passa a dizer; do contrário o save seguinte, já com
+                # `mesmo_perfil` verdadeiro, carimbaria o perfil novo com uma
+                # confirmação que nunca foi feita nele.
+                "source_ponte": profile.ponte,
                 # PERFIL-SALVA-TUDO-01: o que estava pendente virou disco — os
                 # dois flags de edição baixam junto, senão um "Salvar Perfil"
                 # posterior com OUTRO nome levaria o modo deste perfil embora.
@@ -1407,6 +1476,18 @@ class DraftConfig(BaseModel):
             }
             if self.speaker.rota is not None:
                 speaker_ipc["rota"] = int(self.speaker.rota)
+        # MIC-GATE-POR-CAMPO-01 (22/08/2026) — montada fora do dicionário pela
+        # MESMA razão do alto-falante: o gate tem duas perguntas. A seção viaja
+        # quando ela mexeu no microfone (``dirty``); o ``button_toggles_system``
+        # viaja só quando ALGUÉM o escolheu, porque ele é o único dos três que
+        # ainda não tem superfície — sem esta condicional, arrastar o volume
+        # mandava o default de fábrica ao daemon e derrubava calado um `False`
+        # do ``DaemonConfig`` (ver ``MicDraft``).
+        mic_ipc: dict[str, Any] | None = None
+        if self.mic.dirty:
+            mic_ipc = {"volume": self.mic.volume, "muted": self.mic.muted}
+            if self.mic.button_toggles_system is not None:
+                mic_ipc["button_toggles_system"] = self.mic.button_toggles_system
         return {
             "triggers": {
                 "left": {
@@ -1448,15 +1529,9 @@ class DraftConfig(BaseModel):
             # já sabe validá-las e um segundo vocabulário para o mesmo fato
             # seria mais uma tradução sem necessidade. Daemon antigo (e o
             # `ipc_draft_applier` de hoje) ignoram chave que não conhecem.
-            "mic": (
-                {
-                    "button_toggles_system": self.mic.button_toggles_system,
-                    "volume": self.mic.volume,
-                    "muted": self.mic.muted,
-                }
-                if self.mic.dirty
-                else None
-            ),
+            # MIC-GATE-POR-CAMPO-01 (22/08/2026): montada acima — o booleano só
+            # entra com opinião.
+            "mic": mic_ipc,
             # SOM-NO-AGORA-01: volume, mudo e canal do alto-falante — só quando
             # ela mexeu no som nesta sessão (``dirty``) e há número para mandar.
             # O nome das três chaves é o do IPC ``speaker.set`` de propósito: o

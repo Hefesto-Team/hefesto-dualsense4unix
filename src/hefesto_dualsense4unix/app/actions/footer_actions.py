@@ -45,7 +45,12 @@ from hefesto_dualsense4unix.profiles.loader import (
     load_all_profiles,
     load_profile,
 )
-from hefesto_dualsense4unix.profiles.schema import Match, MatchManual, Profile
+from hefesto_dualsense4unix.profiles.schema import (
+    Match,
+    MatchManual,
+    PonteConfirmada,
+    Profile,
+)
 from hefesto_dualsense4unix.profiles.slug import find_by_slug
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -798,6 +803,37 @@ class FooterActionsMixin(ProfileWriterMixin):
                 return candidato.match
         return MatchManual()
 
+    @staticmethod
+    def _carimbo_do_save(
+        existente: Profile | None, do_rascunho: PonteConfirmada | None
+    ) -> PonteConfirmada | None:
+        """Carimbo de ponte que o perfil leva ao disco. Irmão de ``_regra_do_save``.
+
+        PONTE-CONFIRMADA-01 (19/08/2026). O carimbo diz qual ponte já FUNCIONOU
+        naquele jogo — é o que faz a escada de ``integrations/ponte_escada.py``
+        parar em vez de recomeçar do primeiro degrau a cada lançamento, e
+        recomeçar significa recriar o vpad com o jogo aberto (R-04, 23/07).
+
+        Degrau 1 — ``existente.ponte``, o DISCO, pelo argumento medido da
+        REGRA-NAO-SE-PERDE-01: quem já existe tem carimbo, e carimbo não se
+        perde por um gesto que a tela nem sabe nomear. Cobre o caso que o
+        passthrough do rascunho NÃO cobre — salvar por cima de um perfil
+        DIFERENTE daquele de onde o rascunho veio, onde o gate ``mesmo_perfil``
+        de ``to_profile`` responde ``False`` e o perfil do disco perderia o
+        carimbo para um save que só queria guardar uma cor.
+
+        Degrau 2 — o que ``to_profile`` já reemitiu (``draft.source_ponte``
+        gateado pelo R-11), que é o caso comum: salvar por cima de si mesmo.
+
+        Não há degrau 3, e a ausência é a entrega: nome novo sem nada em disco
+        nasce SEM carimbo. A janela nunca inventa uma confirmação — quem
+        carimba é ``profiles.manager.confirmar_ponte``, depois de a ponte ter
+        sido confirmada de verdade.
+        """
+        if existente is not None and existente.ponte is not None:
+            return existente.ponte
+        return do_rascunho
+
     def _persist_profile_async(
         self, nome: str, existente: Profile | None = None
     ) -> None:
@@ -879,7 +915,17 @@ class FooterActionsMixin(ProfileWriterMixin):
             # A anotação é o que dá tipo ao retorno: `self.draft` é `Any` no
             # mixin (o `DraftConfig` viria por import circular).
             perfil: Profile = draft.to_profile(nome, priority=prioridade)
-            return perfil.model_copy(update={"match": regra})
+            # PONTE-CONFIRMADA-01: o carimbo entra junto da regra, e pelo mesmo
+            # motivo — os dois têm um degrau de DISCO que o `to_profile` não
+            # alcança (ver `_carimbo_do_save`). `model_copy` e não
+            # `model_validate` pela guarda dos `controllers` parciais, escrita
+            # no fim de `DraftConfig.to_profile`.
+            return perfil.model_copy(
+                update={
+                    "match": regra,
+                    "ponte": self._carimbo_do_save(existente, perfil.ponte),
+                }
+            )
 
         # GRAVAR PRIMEIRO, APLICAR DEPOIS — e a ordem é decisão, não acaso. Ela
         # está por extenso em `_aplicar_o_modo_que_foi_gravado`; em uma linha:

@@ -568,10 +568,21 @@ class DraftApplier:
         a mudança vale já no próximo toque do botão, sem restart e sem
         derrubar/recriar task nenhuma (o laço é um assinante de bus barato e
         fica de pé independente do flag).
+
+        `volume` e `muted` chegam na mesma seção (PERFIL-GUARDA-O-MIC-01) e NÃO
+        são aplicados aqui: quem os manda ao vivo é o `mic.volume.set`/`mic.set`
+        do IPC, disparado pelo card no gesto dela — o rascunho só os carrega
+        para o "Salvar Perfil".
+
+        MIC-GATE-POR-CAMPO-01 (22/08/2026): campo ausente **ou nulo** é campo
+        NÃO tocado, a mesma régua do `speaker.rota` aqui do lado. Sem o nulo,
+        um rascunho sem opinião sobre o botão (o default desde esta data — ver
+        `MicDraft`) cairia em `failed` e o rodapé diria que o microfone falhou,
+        no gesto mais comum que existe: arrastar o volume e clicar no verde.
         """
         if not isinstance(mic_raw, dict):
             raise ValueError("mic deve ser objeto")
-        if "button_toggles_system" not in mic_raw:
+        if mic_raw.get("button_toggles_system") is None:
             return
         valor = mic_raw.get("button_toggles_system")
         if not isinstance(valor, bool):
