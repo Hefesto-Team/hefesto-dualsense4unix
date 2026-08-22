@@ -3230,6 +3230,70 @@ check_bt_paired_sem_bonded() {
     [[ "${achou}" -eq 0 ]] && pass "nenhum device BT com bond meio-salvo (Paired sem Bonded)"
 }
 
+# CONFIG-09 (22/08/2026): a MESMA leitura que a aba Configurações mostra.
+#
+# Por que uma linha a mais, se as cinco conferências do exame já têm linha
+# própria aqui em cima (btusb autosuspend, energia dos devices USB,
+# hid_playstation, bond meio-salvo). Porque a partir de hoje existe uma SEGUNDA
+# superfície dizendo se dá para jogar — a aba —, e ela lê por um módulo Python
+# dentro do wheel, não por este arquivo. Duas leituras do mesmo fato se afastam
+# na primeira mudança, e a que ninguém roda no terminal se afasta calada: esta
+# linha é o único lugar em que o módulo da aba roda numa máquina de verdade e
+# publica o que concluiu, lado a lado com as checagens de onde ele veio.
+#
+# O módulo é que viaja nos pacotes, não este script (`install.sh:3064-3076` só
+# copia o `storm_watch.sh`) — por isso a direção é esta, e não um
+# `doctor.sh --json` que a aba consumiria.
+#
+# `_python_do_produto` e não `python3` cru: a linha da vizinhança das portas
+# importa o `mesa_de_radio`, que só existe dentro do produto instalado. Com o
+# python do sistema ela degrada para "não deu para conferir" — honesto, mas
+# diferente do que a pessoa vê na aba, e é a aba que este check espelha.
+check_exame_da_mesa() {
+    local py arquivo
+    py="$(_python_do_produto)"
+    arquivo="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/exame_da_mesa.py"
+    if [[ -z "${py}" || ! -f "${arquivo}" ]]; then
+        return
+    fi
+    local resumo
+    resumo="$("${py}" "${arquivo}" --censo 2>/dev/null | "${py}" -c '
+import json
+import sys
+
+d = json.load(sys.stdin)
+itens = d.get("itens") or []
+def rot(estado):
+    return "; ".join(i["rotulo"] for i in itens if i["estado"] == estado)
+print("veredito=" + str(d.get("veredito") or ""))
+print("problema=" + rot("problema"))
+print("atencao=" + rot("atencao"))  # (noqa-acento): chaves do JSON
+print("naosei=" + rot("nao_sei"))
+' 2>/dev/null)"
+    if [[ -z "${resumo}" ]]; then
+        info "exame da mesa indisponível — rode: ${py} ${arquivo} --relatorio"
+        return
+    fi
+    local veredito problema alerta naosei
+    veredito="$(sed -n 's/^veredito=//p' <<<"${resumo}")"
+    problema="$(sed -n 's/^problema=//p' <<<"${resumo}")"
+    alerta="$(sed -n 's/^atencao=//p' <<<"${resumo}")"  # (noqa-acento): chave do JSON
+    naosei="$(sed -n 's/^naosei=//p' <<<"${resumo}")"
+
+    # O veredito NÃO é recalculado aqui. Ele sai de `exame_da_mesa.veredito()`,
+    # que é a resposta escrita ao `6c86e295` — um segundo lugar decidindo a cor
+    # do topo é exatamente como o verde volta a conviver com o vermelho.
+    if [[ -n "${problema}" ]]; then
+        fail "exame da mesa: ${problema} — é o que a aba Configurações mostra em vermelho, com a cura sem senha"
+    elif [[ -n "${alerta}" ]]; then
+        warn "exame da mesa: ${alerta} — dá para jogar, mas vale o ajuste (aba Configurações)"
+    elif [[ "${veredito}" == "certo" ]]; then
+        pass "exame da mesa: as cinco conferências da aba Configurações passaram"
+    else
+        info "exame da mesa: nem tudo deu para conferir sem senha (${naosei:-?})"
+    fi
+}
+
 # PLAT-01: relatório read-only do Proton pinado (proton_pin.py --report).
 check_proton_pin() {
     local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
@@ -5078,6 +5142,7 @@ main() {
     check_bt_connected_sem_hidraw
     check_bt_sdp_cache_envenenado
     check_bt_paired_sem_bonded
+    check_exame_da_mesa
     hdr "applet COSMIC"
     check_applet
     hdr "detector de janela (autoswitch / perfil-por-jogo)"

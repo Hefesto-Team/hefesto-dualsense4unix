@@ -151,6 +151,7 @@ para fora de `docs/`.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -745,6 +746,224 @@ def _montar_aba_perfis(builder) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+#: A BANCADA DE MENTIRA da seção "A mesa" — sysfs inteiro em memória.
+#:
+#: CONFIG-02 (22/08/2026). A seção lê `/sys` de verdade em produção, e uma foto
+#: tirada com a leitura real publicaria o barramento DELA num PNG versionado:
+#: quais dongles ela tem, em que porta, sob que controlador. Nenhum portão
+#: desta casa varre imagem — `test_retrato_das_abas_nao_vaza_dado_real`
+#: inspeciona o SCRIPT, e `check_test_data.sh` só olha `tests/`.
+#:
+#: Os aparelhos aqui não existem em máquina nenhuma desta casa: são dois
+#: adaptadores, um hub e quatro rádios inventados para exercitar TODOS os
+#: estados que a seção sabe desenhar — painel lido e painel ausente, adaptador
+#: em porta direta e adaptador atrás de hub, par colado e rádio USB 3.0 ao lado
+#: de um adaptador. A bancada real de 22/08/2026 mostraria menos: ela tem ZERO
+#: adaptadores.
+_MESA_PCI_A = "0000:aa:00.0"
+_MESA_PCI_B = "0000:bb:00.0"
+_MESA_RAIZ_BT = "/bancada/class/bluetooth"
+_MESA_RAIZ_USB = "/bancada/bus/usb/devices"
+_MESA_USB1 = f"/bancada/devices/pci0000:00/{_MESA_PCI_A}/usb1"
+_MESA_USB2 = f"/bancada/devices/pci0000:00/{_MESA_PCI_B}/usb2"
+
+#: `nó -> {atributo: valor}`. Atributo ausente é ausente de verdade: é assim
+#: que "Não sei" e "Em hub" chegam à foto pelo mesmo caminho do produto.
+_MESA_APARELHOS: dict[str, dict[str, str]] = {
+    f"{_MESA_USB1}/1-1": {
+        "idVendor": "0a12",
+        "idProduct": "0001",
+        "bDeviceClass": "e0",
+        "busnum": "1",
+        "devnum": "4",
+        "devpath": "1",
+        "speed": "12",
+        "physical_location/panel": "back",
+    },
+    f"{_MESA_USB1}/1-2": {
+        "idVendor": "05e3",
+        "idProduct": "0608",
+        "bDeviceClass": "09",
+        "busnum": "1",
+        "devnum": "5",
+        "devpath": "2",
+        "speed": "480",
+    },
+    f"{_MESA_USB1}/1-2/1-2.1": {
+        "idVendor": "0bda",
+        "idProduct": "8771",
+        "bDeviceClass": "e0",
+        "busnum": "1",
+        "devnum": "6",
+        "devpath": "2.1",
+        "speed": "12",
+    },
+    f"{_MESA_USB1}/1-2/1-2.2": {
+        "idVendor": "0bda",
+        "idProduct": "b812",
+        "bDeviceClass": "00",
+        "busnum": "1",
+        "devnum": "7",
+        "devpath": "2.2",
+        "speed": "5000",
+    },
+    f"{_MESA_USB1}/1-3": {
+        "idVendor": "1d57",
+        "idProduct": "fa20",
+        "bDeviceClass": "00",
+        "busnum": "1",
+        "devnum": "8",
+        "devpath": "3",
+        "speed": "12",
+        "physical_location/panel": "front",
+    },
+    f"{_MESA_USB1}/1-4": {
+        "idVendor": "046d",
+        "idProduct": "c52b",
+        "bDeviceClass": "00",
+        "busnum": "1",
+        "devnum": "9",
+        "devpath": "4",
+        "speed": "12",
+        "physical_location/panel": "front",
+    },
+    f"{_MESA_USB2}/2-1": {
+        "idVendor": "0cf3",
+        "idProduct": "3005",
+        "bDeviceClass": "00",
+        "busnum": "2",
+        "devnum": "3",
+        "devpath": "1",
+        "speed": "480",
+        "physical_location/panel": "right",
+    },
+}
+
+#: Onde cada `hciN` aterrissa: na INTERFACE do dispositivo, como no sysfs de
+#: verdade. Quem sobe daí até o dispositivo é o `dispositivo_usb_pai` do
+#: produto — o retrato não reimplementa a subida, senão a foto provaria o
+#: retrato e não o produto.
+_MESA_INTERFACES_BT: dict[str, str] = {
+    "hci0": f"{_MESA_USB1}/1-1/1-1:1.0",
+    "hci1": f"{_MESA_USB1}/1-2/1-2.1/1-2.1:1.0",
+}
+
+
+def _mesa_de_mentira():  # type: ignore[no-untyped-def]
+    """A leitura da seção "A mesa", feita sobre a bancada em memória.
+
+    Chama a função de PRODUÇÃO (`ler_a_mesa`) com as raízes trocadas, e não uma
+    cópia da lógica: a foto tem de mostrar o que o produto desenha, inclusive
+    quando o produto mudar. Nenhum caminho de `/sys` é aberto — `listar`, `ler`
+    e `existe` só conhecem `/bancada/...`.
+    """
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import ler_a_mesa
+
+    conteudo = {
+        os.path.join(no, atributo): f"{valor}\n"
+        for no, atributos in _MESA_APARELHOS.items()
+        for atributo, valor in atributos.items()
+    }
+    presentes = set(conteudo)
+    reais = {
+        os.path.join(_MESA_RAIZ_BT, nome): destino
+        for nome, destino in _MESA_INTERFACES_BT.items()
+    }
+    reais.update(
+        {os.path.join(_MESA_RAIZ_USB, os.path.basename(no)): no for no in _MESA_APARELHOS}
+    )
+    listagens = {
+        _MESA_RAIZ_BT: sorted(_MESA_INTERFACES_BT),
+        _MESA_RAIZ_USB: sorted(os.path.basename(no) for no in _MESA_APARELHOS),
+    }
+    return ler_a_mesa(
+        raiz_bt=_MESA_RAIZ_BT,
+        raiz_usb=_MESA_RAIZ_USB,
+        listar=lambda raiz: list(listagens.get(raiz, [])),
+        ler=lambda caminho: conteudo.get(caminho, ""),
+        existe=lambda caminho: caminho in presentes,
+        real=lambda caminho: reais.get(caminho, caminho),
+    )
+
+
+
+def _pintar_o_exame_de_bancada(hospedeiro) -> None:  # type: ignore[no-untyped-def]
+    """Desenha a seção "Está tudo certo?" com um resultado de bancada.
+
+    Sem isto a foto sai com "Ainda não examinei" e nenhuma das cinco linhas
+    pintada — que é o estado CORRETO da aba recém-montada, e um retrato inútil
+    da seção mais visual da aba.
+
+    O exame de verdade NÃO roda aqui, e a regra é dura: ele lê a energia das
+    portas, os pareamentos e a vizinhança de rádio DESTA máquina, e a foto vai
+    para `docs/usage/assets/` sem revisão humana. Os portões de anonimato não
+    varrem imagem nenhuma.
+
+    Quem desenha é o método de PRODUÇÃO (`PainelDoExame.aplicar`), com itens de
+    bancada e o veredito calculado pela função de produção. Assim a foto
+    acompanha o desenho sozinha quando ele mudar — copiar a pintura aqui criaria
+    um segundo dono do layout da seção.
+
+    Os cinco estados são os do desenho aprovado: quatro certos e a vizinhança em
+    atenção, que é o caso que o desenho escolheu mostrar por ser o único em que
+    a tela precisa dizer o que fazer.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.exame_da_mesa import (
+            ESTADO_ATENCAO,
+            ESTADO_CERTO,
+            ROTULO_ENERGIA_DAS_PORTAS,
+            ROTULO_ENERGIA_DO_RADIO,
+            ROTULO_PAREAMENTOS,
+            ROTULO_SUPORTE_AO_CONTROLE,
+            ROTULO_VIZINHANCA,
+            Item,
+            veredito,
+        )
+    except Exception:
+        return
+
+    painel = getattr(hospedeiro, "_painel_do_exame", None)
+    if painel is None:
+        return
+
+    itens = [
+        Item(
+            chave="energia_do_radio",
+            rotulo=ROTULO_ENERGIA_DO_RADIO,
+            estado=ESTADO_CERTO,
+            porque="A economia de energia do rádio está desligada.",
+        ),
+        Item(
+            chave="energia_das_portas",
+            rotulo=ROTULO_ENERGIA_DAS_PORTAS,
+            estado=ESTADO_CERTO,
+            porque="Nenhuma porta da bancada está em economia de energia.",
+        ),
+        Item(
+            chave="pareamentos",
+            rotulo=ROTULO_PAREAMENTOS,
+            estado=ESTADO_CERTO,
+            porque="Os dois pareamentos da bancada estão completos.",
+        ),
+        Item(
+            chave="suporte_ao_controle",
+            rotulo=ROTULO_SUPORTE_AO_CONTROLE,
+            estado=ESTADO_CERTO,
+            porque="O suporte ao DualSense está carregado.",
+        ),
+        Item(
+            chave="vizinhanca_das_portas",
+            rotulo=ROTULO_VIZINHANCA,
+            estado=ESTADO_ATENCAO,
+            porque="Dois rádios da bancada estão em portas vizinhas.",
+            cura="Vale mudar um deles de porta.",
+        ),
+    ]
+    with contextlib.suppress(Exception):
+        painel.aplicar(itens, veredito(itens), time.time())
+
+
 def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
     """Monta a aba Configurações — o glade dela é só o container vazio.
 
@@ -753,10 +972,10 @@ def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
     foto do glade cru sairia com a página em branco — e a documentação passaria
     a afirmar que a aba nova não tem nada dentro.
 
-    O método é o de PRODUÇÃO, e não uma cópia da montagem. Aqui isso é barato:
-    o `install_config_tab` não fala com o daemon, não lê disco e não depende de
-    dado nenhum da máquina, então o host mínimo é só o `builder` — não há o que
-    desviar, ao contrário da aba Perfis.
+    O método é o de PRODUÇÃO, e não uma cópia da montagem. O host mínimo é o
+    `builder` mais UM desvio: `_mesa_leitor`, que a seção "A mesa" consulta em
+    vez de ler `/sys`. Sem ele a foto sairia com o barramento dela dentro
+    (CONFIG-02, 22/08/2026) — e essa é a única coisa que esta aba lê da máquina.
     """
     try:
         from hefesto_dualsense4unix.app.actions.config import (
@@ -770,19 +989,29 @@ def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
     class _Host(ConfigActionsMixin):  # type: ignore[misc, name-defined]
         def __init__(self) -> None:
             self.builder = builder
+            # Atributo de INSTÂNCIA, não de classe: como atributo de classe ele
+            # viraria método ligado e receberia `self` que ninguém espera.
+            self._mesa_leitor = _mesa_de_mentira
 
         def _get(self, nome: str):  # type: ignore[no-untyped-def]
             return self.builder.get_object(nome)
 
+    hospedeiro = _Host()
     try:
-        _Host().install_config_tab()
+        hospedeiro.install_config_tab()
     except Exception as exc:
         return f"aba Configurações não montada ({exc})"
+    _pintar_o_exame_de_bancada(hospedeiro)
 
     caixa = builder.get_object(ABA_CONFIG)
     if caixa is not None:
         caixa.show_all()
-    return f"aba Configurações montada ({len(SECOES)} seções, ainda vazias)"
+    mesa = _mesa_de_mentira()
+    return (
+        f"aba Configurações montada ({len(SECOES)} seções; a mesa com "
+        f"{len(mesa.adaptadores)} adaptadores e {len(mesa.radios)} rádios "
+        "de bancada, nenhum desta máquina)"
+    )
 
 
 def _injetar_modos_de_gatilho(builder) -> str:  # type: ignore[no-untyped-def]
