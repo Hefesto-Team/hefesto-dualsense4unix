@@ -196,8 +196,10 @@ devolve `19199` com a variável de porta em `19199`.
 não é uma absolvição:**
 
 1. **Não existe botão.** Nada na árvore escreve as variáveis: nem o
-   `install.sh`, nem a unit systemd, nem a janela. Fora de `src/`, a única
-   ocorrência é changelog de pacote, que não liga nada. Quem quiser métricas
+   `install.sh`, nem a unit systemd, nem a janela: nenhum `.service` de
+   `assets/` tem `Environment=` com elas, e `install.sh` não menciona
+   `METRICS`. Fora de `src/` as variáveis só aparecem onde ninguém as exporta —
+   documentação, testes e o `%changelog` do pacote Fedora. Quem quiser métricas
    exporta a variável à mão ou põe `Environment=` na unit.
 2. **Ligar exige reiniciar o daemon.** O `reload_config` não tem uma linha
    sobre `metrics`; o `MetricsSubsystem` só é instanciado na subida. O

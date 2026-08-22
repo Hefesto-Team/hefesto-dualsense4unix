@@ -85,7 +85,9 @@ e o jogador 2 permanece.
 Para desfazer, a caixinha está na aba **Perfis** desde 07/08/2026: abra o perfil
 daquele jogo, com **"Jogo da Steam"** escolhido e o número do jogo preenchido, e
 desmarque **"Esconder os controles físicos neste jogo"**. A marca sai na hora,
-sem "Salvar" — ela é do jogo, não do perfil. Feche e abra o jogo para valer.
+sem "Salvar" — ela é do jogo, não do perfil. Se houver jogo aberto na hora do
+gesto, a janela **pergunta antes de gravar**: o que o jogo já enumerou não muda
+no meio da partida. Feche e abra o jogo para valer.
 
 Pela linha de comando também dá:
 `hefesto-dualsense4unix gamepad steam-input list` mostra os jogos marcados pelo

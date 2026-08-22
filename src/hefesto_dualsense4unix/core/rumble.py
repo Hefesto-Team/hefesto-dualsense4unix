@@ -79,9 +79,9 @@ def _effective_mult(
     **Por que o teto do auto é 1.0 e não o do "Máximo"** (11/08/2026): o auto
     existe para POUPAR bateria — amplificar seria fazer o oposto do que ele
     promete, e ainda por cima sozinho, sem ela ter pedido. Os três degraus
-    acima não são os de `RUMBLE_POLICY_MULT`: desde que "Máximo" passou a
-    valer 2.0, o degrau de cima do auto (1.0) coincide com o "Balanceado", e é
-    isso mesmo. Quem mexer nesta escada mexe no texto que a promete na tela: o
+    acima não são os de `RUMBLE_POLICY_MULT`: desde que "Máximo" subiu acima do
+    "Balanceado", o degrau de cima do auto empatou com o balanceado, e é isso
+    mesmo. Quem mexer nesta escada mexe no texto que a promete na tela: o
     `rumble_policy_auto_label` do `gui/main.glade`, que é o dono único da frase
     desde 11/08/2026 (havia uma cópia morta em `app.actions.rumble_actions`,
     nunca usada por ninguém e já desatualizada).

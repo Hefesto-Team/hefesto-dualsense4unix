@@ -26,9 +26,10 @@ de o daemon subir.
 > **A ressalva que continua de pé: existe chave, não existe botão.** Nada na
 > árvore escreve estas variáveis por você — nem o `install.sh`, nem a unit
 > systemd, nem a janela. Quem quiser as métricas exporta a variável à mão (ou
-> edita a unit) antes de iniciar o daemon. Medido em 12/08/2026 e reconferido em
-> 22/08/2026: a única ocorrência fora de `src/` é changelog de pacote, e ela não
-> liga nada.
+> edita a unit) antes de iniciar o daemon. Medido em 22/08/2026: nenhum
+> `.service` de `assets/` tem `Environment=` com estas variáveis, e `install.sh`
+> não menciona `METRICS`. Fora de `src/` elas só aparecem onde ninguém as
+> exporta — documentação, testes e o `%changelog` do pacote Fedora.
 >
 > **E ligar exige reiniciar o daemon.** O `MetricsSubsystem` só é instanciado na
 > subida (`_start_metrics`, no caminho de start, que consulta

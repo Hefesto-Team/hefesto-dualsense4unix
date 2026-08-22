@@ -37,15 +37,15 @@ trigger" abaixo. Nome fora dessa lista faz `Profile.model_validate` levantar
 
 Arquivo fallback com `match.type = "any"` e `priority: 0` é obrigatório para garantir que algum perfil sempre case.
 
-**Os campos que um perfil v1 aceita**, na ordem em que o esquema os declara.
-Cada um é opcional salvo `name` e `match`; ausente = **sem opinião**, o perfil
-não toca naquilo ao ativar:
+**Os campos que um perfil v1 aceita** (`profiles/schema.py`). Cada um é opcional
+salvo `name` e `match`; ausente = **sem opinião**, o perfil não toca naquilo ao
+ativar:
 
 | Campo | O que é | Onde está explicado |
 |---|---|---|
 | `name`, `version`, `match`, `priority` | identidade e quando o perfil entra | "Semântica de match", abaixo |
 | `triggers` | gatilhos adaptativos | "Modos de trigger", abaixo |
-| `leds` | lightbar e LEDs de jogador | exemplo acima |
+| `leds` | lightbar e LEDs de jogador | exemplo acima, mais `lightbar_brightness` (0.0-1.0) e `auto_player_colors` (liga por padrão: cada controle acende a cor do seu slot) |
 | `rumble` | vibração | exemplo acima |
 | `key_bindings` | mapa de botão → tecla deste perfil | [hotkeys.md](hotkeys.md) |
 | `mouse`, `suppress_desktop_emulation` | emulação de mouse e modo-jogo | seção abaixo |
@@ -129,35 +129,70 @@ a posse** dos bytes de áudio do report de saída.
 }
 ```
 
-- `button_toggles_system` — se o botão de microfone do próprio controle muta o
-  microfone **do sistema**, e não só o do controle.
-- `volume` e `muted` — ausentes significam **não tocar**; o perfil sem a seção
-  não tem opinião sobre o microfone.
+- `button_toggles_system` é **obrigatório** dentro da seção: diz se o botão de
+  microfone do próprio controle muta o microfone **do sistema**, e não só o do
+  controle. Seção sem ele é recusada no load.
+- `volume` é **0-100, por cento** — e não 0-255 como o do alto-falante. Ele é o
+  ganho da fonte de captura no sistema, por isso vale igual no cabo e no rádio;
+  o DualSense não expõe registrador de ganho de microfone. `"volume": 180` aqui
+  é recusado no load.
+- `muted` fala com o mudo do **firmware**, o mesmo que apaga o LED vermelho.
+- Os dois ausentes significam **não tocar**; o perfil sem a seção não tem
+  opinião sobre o microfone.
+
+**Ativar o perfil APLICA o microfone** (desde 18/08/2026 — até então a seção era
+só lembrança). Com uma separação medida, a MIC-GRAVACAO-01: o `volume` entra em
+toda ativação, mas o `muted` só entra em troca **explícita** de perfil (você
+escolhendo na janela, na CLI ou no PS+D-pad). Sem ela, abrir um jogo no meio de
+uma gravação roubaria o mudo que você tinha posto na mão — o perfil do jogo
+limpa a trava manual ao entrar.
 
 ## Seção opcional `controllers` (override por controle na mesa)
 
 Com mais de um controle, o perfil pode dar a cada um a sua cor, o seu gatilho, a
-sua vibração e o seu alto-falante. A chave é o identificador do controle e o
-valor aceita `leds`, `triggers`, `rumble` e `speaker` — os mesmos formatos das
-seções de cima:
+sua vibração e o seu alto-falante:
 
 ```json
 {
   "controllers": {
-    "<id do controle>": {"leds": {"lightbar": [0, 120, 255]}}
+    "aabbcc000002": {"leds": {"lightbar": [0, 120, 255]}}
   }
 }
 ```
 
-O que não estiver no override cai no valor geral do perfil.
+**A chave é o MAC do controle**, 12 dígitos hex — o mesmo `uniq` que o sistema
+enumera. `"AA:BB:CC:00:00:02"` também é aceito e canonizado para `aabbcc000002`,
+então JSON editado à mão continua casando. São **recusados no load**: apelido
+(`"branco"`), o broadcast `ff:ff:ff:ff:ff:ff`, o OUI `00:00:00` (não identifica
+uma unidade — o Pro Controller anuncia `000000000001` em todas) e duas grafias
+do mesmo MAC.
+
+O valor aceita quatro seções — `leds`, `triggers`, `rumble` e `speaker` — e o
+que não estiver no override cai no valor geral do perfil, **campo a campo**.
+
+**O `rumble` daqui NÃO é o `rumble` de cima**, e a diferença reprova o arquivo
+no load em vez de virar campo aceito e ignorado:
+
+- só `policy` e `custom_mult`. `passthrough` é recusado porque ele não descreve
+  a peça, e sim quem manda na vibração agora — e essa trava é uma só para o
+  daemon inteiro;
+- `policy: "auto"` é recusado porque o `auto` escala pela **bateria**, e quem a
+  lê é o controle primário: aceitá-lo por unidade faria as duas peças escalarem
+  pela bateria da mesma. Na seção global do perfil o `auto` continua valendo.
+
+O `speaker` do override exige `volume`, pela mesma armadilha da seção de cima. E
+`leds.auto_player_colors` é aceito aqui mas **ignorado**: o interruptor de cor
+automática é do perfil, não do controle.
 
 ## Seção `ponte` — o que o produto APRENDEU, não o que você pediu
 
-Esta seção é a única que **você não escreve**: quem a escreve é o produto, e ela
-existe desde 19/08/2026 (`PonteConfirmada`). Quando um jogo não anda e você
-troca de ponte com o gesto **PS + R3** (ver [hotkeys.md](hotkeys.md)), o produto
-**carimba no perfil daquele jogo** a ponte que funcionou — para não perguntar de
-novo na próxima vez.
+**O produto grava este campo sozinho, no seu perfil, sem você pedir.** É a única
+seção que você não escreve, e ela existe desde 19/08/2026 (`PonteConfirmada`).
+Quando um jogo não anda e você troca de ponte com o gesto **PS + R3** (ver
+[hotkeys.md](hotkeys.md)), o produto **carimba no perfil daquele jogo** a ponte
+que funcionou — e carimba também quando ninguém reclamou e a ponte ficou de pé.
+É para não perguntar de novo na próxima vez. Se o perfil de um jogo apareceu com
+uma chave `ponte` que você nunca digitou, é isto: o produto aprendeu.
 
 ```json
 {
@@ -165,20 +200,30 @@ novo na próxima vez.
     "kind": "gamepad",
     "gamepad_flavor": "dualsense",
     "steam_input": false,
-    "confirmada_em": "2026-08-19",
+    "confirmada_em": "2026-08-19T21:30:00-03:00",
     "confirmada_por": "gesto"
   }
 }
 ```
 
 - `kind` — `desktop`, `gamepad` ou `native`.
-- `gamepad_flavor` — `dualsense` ou `xbox`, quando `kind` é `gamepad`.
-- `steam_input` — se aquele jogo está na exceção do Steam Input.
-- `confirmada_em` — a data.
+- `gamepad_flavor` — `dualsense` ou `xbox`, e **só** com `kind: "gamepad"`:
+  máscara sem gamepad virtual é ponte que não existe, e o esquema a recusa.
+- `steam_input` — se aquele jogo **estava** na exceção do Steam Input no momento
+  da confirmação. É um dos três termos da ponte carimbada, não o estado de hoje.
+- `confirmada_em` — a data, em ISO-8601. Texto que não é data é recusado no
+  load: data ilegível é pior que data ausente, porque **parece** conhecimento.
 - `confirmada_por` — **como o produto soube**: `gesto` (você trocou com PS + R3),
   `silencio` (ninguém reclamou e a ponte ficou de pé) ou `escolha_dela` (você
   escolheu na janela). É este campo que explica por que o produto "decidiu
   sozinho" um modo.
+
+**O carimbo só cai em perfil que seja a REGRA do jogo** — `window_class:
+["steam_app_<appid>"]`. Jogo sem perfil próprio não aprende nada: o produto
+registra `ponte_confirmada_sem_perfil` no journal e não escreve arquivo nenhum,
+porque criar perfil nas suas costas seria mudança que você não pediu. Se um jogo
+insiste em recomeçar a escada de pontes toda vez, é este o motivo — crie o
+perfil dele pela aba Perfis e o aprendizado passa a ter onde morar.
 
 Perfil sem o carimbo simplesmente não traz a chave — ela é omitida na gravação
 quando está vazia. Apagá-la à mão não destrói nada: só faz o produto aprender de
