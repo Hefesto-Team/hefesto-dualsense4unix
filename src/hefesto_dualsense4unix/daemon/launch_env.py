@@ -1093,12 +1093,17 @@ def arm_launch_profile(
     # de rumble, gatilhos e deve ter outras"*. O perfil estava certo, o `match`
     # casava, a ativação sabe aplicar tudo — só que ninguém a chamava.
     #
-    # E NA ALLOWLIST TAMBÉM, porque a decisão dela é essa: *"a allowlist do
-    # Steam Input NÃO é 'o Hefesto sai da frente'. É o contrário: permitir a
-    # allowlist faz o Hefesto continuar funcionando, com a saída sendo xbox ou
-    # DualSense e as features que ela marcou."* O que a allowlist pula é a
-    # DISPUTA PELO CONTROLE — máscara, grab, vpad, que é o `mode` do bloco
-    # abaixo. Não a cor, o gatilho, o volume nem a política de vibração.
+    # E NA ALLOWLIST TAMBÉM, porque a decisão dela é essa: permitir a allowlist
+    # faz o Hefesto CONTINUAR FUNCIONANDO, com a saída sendo xbox ou DualSense e
+    # as features que ela marcou. O que a allowlist pula é a DISPUTA PELO
+    # CONTROLE — máscara, grab, vpad, que é o `mode` do bloco abaixo. Não a cor,
+    # o gatilho, o volume nem a política de vibração. A metade oposta dessa
+    # frase foi REFUTADA por medição dela em 06/08/2026
+    # (`CONTROLE-SONY-MEDIDO-01`, seção A INVERSÃO): com o DualSense físico e
+    # três jogos abertos, os gatilhos dela seguraram e a cor dela ficou. Há
+    # portão contra o retorno da frase caduca —
+    # `tests/unit/test_a_frase_refutada_da_allowlist.py`, e foi ele que pegou a
+    # primeira versão deste comentário.
     #
     # `origin="launch"` não fura o lock manual de 30 s (R-03) e não grava
     # `session.json` — só `origin="manual"` grava (`manager.activate`), então a

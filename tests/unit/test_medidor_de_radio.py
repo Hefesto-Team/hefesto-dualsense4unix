@@ -56,12 +56,21 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     palavra_da_ocupacao,
 )
 
-#: Endereços mascarados pela regra da casa (octetos 4 e 5 zerados). Os dois
-#: primeiros são os dois DualSense reais desta bancada, com a máscara aplicada;
-#: os endereços de adaptador são inventados, porque não há adaptador nenhum
-#: aqui para copiar (medido em 22/08/2026: `/sys/class/bluetooth` vazio).
-UNIQ_A = "44:46:48:00:00:03"
-UNIQ_B = "d4:2f:4b:00:00:d8"
+#: Endereços SINTÉTICOS, na faixa `aa:bb:cc` que o
+#: `test_anonimato_de_fixtures` reserva para fixture.
+#:
+#: SUBSTITUÍDOS EM 22/08/2026, no mesmo dia em que foram escritos: nasceram
+#: como os dois DualSense reais desta bancada com a máscara da casa (octetos 4
+#: e 5 zerados), e a máscara NÃO BASTA para fixture de teste. O
+#: `check_anonymity.sh` os aprovou — ele procura MAC sem máscara —, e o portão
+#: mais estrito reprovou: em fixture, o prefixo do fabricante ainda é a marca
+#: do aparelho DELA, e a faixa sintética existe justamente para o teste não
+#: precisar dessa distinção. Duas réguas, e a que morde é a mais estrita.
+#:
+#: Os endereços de adaptador sempre foram inventados: não há adaptador nenhum
+#: nesta bancada para copiar (medido em 22/08: `/sys/class/bluetooth` vazio).
+UNIQ_A = "aa:bb:cc:00:00:03"
+UNIQ_B = "aa:bb:cc:00:00:d8"
 ADAPTADOR_1 = "aa:bb:cc:00:00:33"
 ADAPTADOR_2 = "aa:bb:cc:00:00:66"
 

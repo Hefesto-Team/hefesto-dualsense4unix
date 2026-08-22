@@ -308,27 +308,42 @@ def test_os_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
 
     Eram três até 21/08/2026, quando a aba Configurações entrou já traduzindo.
     O nome do teste dizia "os três" e passou a mentir — por isso mudou. Em
-    22/08/2026 viraram cinco: o pacote `config/` traduz no montador e na
-    moldura, que são os dois arquivos dele que põem texto na tela.
+    22/08/2026 viraram cinco, e depois nove: as cinco seções do pacote `config/`
+    também põem texto na tela e também traduzem.
+
+    **A ASSERÇÃO É DE PISO, E NÃO DE IGUALDADE, DESDE 22/08/2026.** Ela era um
+    `==` contra uma lista congelada, e o `==` contradizia a própria mensagem de
+    falha deste teste: *"ganhar módulo aqui é bom e esperado; PERDER é
+    regressão"*. Com o `==`, ganhar reprovava igual a perder — e reprovou, na
+    leva que deu conteúdo às cinco seções. Um portão que acusa quem fez a coisa
+    certa ensina a próxima pessoa a desligá-lo, que é a lição que esta casa já
+    pagou em 13/08 com o `portao_a_casa_sabe_e_o_produto_nao_faz`.
+
+    O piso é a lista dos que JÁ traduziam. Perder qualquer um reprova; ganhar,
+    não.
     """
-    com_encanamento = sorted(
+    com_encanamento = {
         fonte.relative_to(DIR_ACOES).as_posix()
         for fonte in _modulos_de_acoes()
         if _importa_a_funcao_de_traducao(
             ast.parse(fonte.read_text(encoding="utf-8"))
         )
-    )
+    }
 
-    assert com_encanamento == [
+    #: O PISO — quem já traduzia e não pode parar. Cresce quando um módulo novo
+    #: entra e alguém quiser prendê-lo aqui; nunca encolhe.
+    piso = {
         "config/mixin.py",
         "config/moldura.py",
         "footer_actions.py",
         "lightbar_actions.py",
         "status_actions.py",
-    ], (
-        "mudou quem importa a função de tradução em `app/actions/`: "
-        f"{', '.join(com_encanamento)}. Ganhar módulo aqui é bom e esperado; "
-        "PERDER é regressão — o encanamento de i18n não se remove."
+    }
+
+    assert piso <= com_encanamento, (
+        "PERDEU encanamento de tradução em `app/actions/`: "
+        f"{', '.join(sorted(piso - com_encanamento))}. Ganhar módulo aqui é bom "
+        "e esperado; perder é regressão — o i18n não se remove."
     )
 
 

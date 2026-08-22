@@ -150,8 +150,10 @@ já rodando.
 > **Dois números desta nota caducaram, e os dois ficam aqui porque medição
 > datada não se apaga.**
 >
-> 1. **A contagem de parâmetros** caducou quatro dias depois — hoje são
->    quatro. Ver a nota de 2026-08-01, abaixo.
+> 1. **A contagem de parâmetros** caducou quatro dias depois — hoje são quatro
+>    parâmetros. Ver a nota de 2026-08-01, abaixo. (A frase "quatro parâmetros"
+>    é literal de propósito: `test_doc_verdade_02_contagens_derivadas` a procura
+>    inteira, e quebrá-la em duas linhas já derrubou o portão uma vez.)
 > 2. **O "zero ocorrências em `src/`"** caducou em 01/08/2026, quando as duas
 >    variáveis nasceram. Medido em 22/08/2026:
 >    `grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **quatro** linhas,
