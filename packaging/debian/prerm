@@ -19,6 +19,18 @@ esac
 
 case "$1" in
     remove)
+        # Alvos do RUN+= das regras 82 e 83 (22/08/2026): o .deb passou a
+        # levar as fontes, e quem as GRAVA e o install-host-udev.sh, FORA do
+        # manifesto do dpkg (/usr/local/lib + /etc/systemd/system). Sem este
+        # bloco eles sobrevivem ao apt remove — e como o helper tambem copia
+        # as regras para /etc/udev/rules.d (que o dpkg nao apaga), a cura
+        # continuaria armada depois de o pacote sair. Mesma simetria do
+        # broker abaixo, do pre_remove (Arch) e do %preun (Fedora).
+        # Os snapshots de bonds em /var/lib NAO sao apagados: sao o
+        # salva-vidas dela, e a remocao do pacote nao e motivo para queima-lo.
+        rm -f /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh \
+              /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
+              /etc/systemd/system/hefesto-bt-bonds-snapshot.service
         # BROKER-01 (Onda S — achados #2/#8, licao 6/#21): a unit ROOT do
         # broker (hefesto-hidraw-broker.{socket,service}) e instalada FORA do
         # manifesto do dpkg (render por-maquina via install-host-udev.sh) —
