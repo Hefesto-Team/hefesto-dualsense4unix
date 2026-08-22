@@ -39,7 +39,10 @@ import contextlib
 from collections.abc import Callable
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.config.moldura import rotulo_de_apoio
+from hefesto_dualsense4unix.app.actions.config.moldura import (
+    QUANDO_VALE,
+    rotulo_de_apoio,
+)
 from hefesto_dualsense4unix.app.actions.external_controllers import (
     ID_DE_OUTRA_COR,
     chave_de_maquina,
@@ -176,6 +179,15 @@ class _PainelDosControles:
         # resposta chega por callback, e uma seção em branco enquanto ela não
         # chega leria como seção quebrada.
         self._desenhar([])
+        # Cor e número de jogador são DIFERIDOS como o resto da aba, e a frase
+        # é a mesma constante do Orçamento e da Mesa. Ver `moldura.QUANDO_VALE`
+        # para o defeito que ela fecha: a aba tinha três semânticas de salvar e
+        # só uma escrita na tela.
+        #
+        # Ela fica FORA de `self._caixa` de propósito: aquela caixa é esvaziada
+        # e repreenchida a cada reexame, e a frase não é dado da mesa — some e
+        # volta piscaria a cada troca de aba.
+        caixa.pack_start(rotulo_de_apoio(QUANDO_VALE), False, False, 0)
         self.reexaminar()
 
     # -- leitura -----------------------------------------------------------

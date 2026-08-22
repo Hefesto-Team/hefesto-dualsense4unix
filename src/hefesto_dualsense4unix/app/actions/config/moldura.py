@@ -28,6 +28,27 @@ MARGEM_HORIZONTAL = 12
 #: Espaçamento entre filhos diretos do conteúdo de uma seção.
 ESPACAMENTO = 8
 
+#: A frase que diz quando a escolha passa a valer, para as seções DIFERIDAS.
+#:
+#: ELA MORA AQUI, E NÃO EM CADA SEÇÃO, POR UM DEFEITO MEDIDO EM 22/08/2026.
+#: A aba nasceu com TRÊS comportamentos de salvar e só UM deles escrito na tela:
+#:
+#: * "Orçamento" acumula no rascunho e DIZ que espera o "Aplicar";
+#: * "Os controles" e "A mesa" acumulam no mesmo rascunho e não diziam nada;
+#: * "A janela" grava NA HORA (`set_pref`, `gravar_correcao_de_ambiente`) e
+#:   também não dizia nada — a única frase dela, *"vale na próxima vez que você
+#:   abrir"*, fala de quando o tema é aplicado, não de se a escolha foi guardada.
+#:
+#: Três semânticas numa tela só, duas caladas. Quem clica e não vê nada
+#: acontecer conclui uma de duas coisas, e as duas são ruins: que salvou quando
+#: não salvou, ou que não salvou quando já salvou. Constante compartilhada
+#: porque a mesma frase em três arquivos diverge na primeira revisão de texto.
+QUANDO_VALE = 'A escolha passa a valer quando você clicar em "Aplicar", no rodapé.'
+
+#: A contraparte, para a seção que grava NA HORA. Sem ela, "A janela" seria a
+#: única sem resposta à pergunta "isto ficou guardado?".
+VALE_JA = 'A escolha fica guardada na hora — não espera o "Aplicar".'
+
 
 def moldura_de_secao(titulo: str, dica: str | None = None) -> tuple[Any, Any]:
     """Devolve ``(frame, caixa)`` — a moldura e a caixa onde a seção monta.
