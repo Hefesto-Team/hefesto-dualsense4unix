@@ -7,13 +7,13 @@ Este documento contém os comandos `gh` que requerem autenticação interativa d
 ## Pré-requisitos
 
 - `gh` autenticado no GitHub com escopo `repo` e `admin:org` (se aplicável).
-- Usuário autenticado é dono ou admin de `AndreBFarias/hefesto`.
+- Usuário autenticado é dono ou admin de `Hefesto-Team/hefesto-dualsense4unix`.
 
 ```bash
 gh auth status
 ```
 
-Deve mostrar `Logged in to github.com as AndreBFarias`.
+Deve mostrar `Logged in to github.com as [REDACTED]`.
 
 ---
 
@@ -22,14 +22,14 @@ Deve mostrar `Logged in to github.com as AndreBFarias`.
 Define a descrição de 1 linha (≤ 140 caracteres) exibida no topo da página do repositório e em resultados de busca do GitHub:
 
 ```bash
-gh repo edit AndreBFarias/hefesto \
+gh repo edit Hefesto-Team/hefesto-dualsense4unix \
   --description "Daemon Linux para DualSense: gatilhos adaptativos, rumble, LEDs, perfis e emulação. Zero-dep, anônimo, PT-BR."
 ```
 
 Valide:
 
 ```bash
-gh repo view AndreBFarias/hefesto --json description --jq '.description'
+gh repo view Hefesto-Team/hefesto-dualsense4unix --json description --jq '.description'
 ```
 
 ---
@@ -39,7 +39,7 @@ gh repo view AndreBFarias/hefesto --json description --jq '.description'
 Topics são a maior alavanca de descoberta orgânica no GitHub. A sprint definiu 20 topics cobrindo o domínio (DualSense, adaptive triggers, PS5), a stack (Python, GTK3, Textual), o packaging (Flatpak, AppImage, Debian) e a audiência (Linux, acessibilidade, PT-BR).
 
 ```bash
-gh repo edit AndreBFarias/hefesto \
+gh repo edit Hefesto-Team/hefesto-dualsense4unix \
   --add-topic dualsense \
   --add-topic playstation-5 \
   --add-topic ps5-controller \
@@ -65,7 +65,7 @@ gh repo edit AndreBFarias/hefesto \
 Valide:
 
 ```bash
-gh repo view AndreBFarias/hefesto --json repositoryTopics \
+gh repo view Hefesto-Team/hefesto-dualsense4unix --json repositoryTopics \
   --jq '.repositoryTopics[].name'
 ```
 
@@ -78,14 +78,14 @@ Deve listar as 20 topics.
 Se no futuro houver GitHub Pages ou site dedicado:
 
 ```bash
-gh repo edit AndreBFarias/hefesto \
-  --homepage "https://github.com/AndreBFarias/hefesto"
+gh repo edit Hefesto-Team/hefesto-dualsense4unix \
+  --homepage "https://github.com/Hefesto-Team/hefesto-dualsense4unix"
 ```
 
 Ou, quando houver Pages:
 
 ```bash
-gh repo edit AndreBFarias/hefesto \
+gh repo edit Hefesto-Team/hefesto-dualsense4unix \
   --homepage "https://andrebfarias.github.io/hefesto"
 ```
 
@@ -97,13 +97,13 @@ A imagem `docs/usage/assets/social-preview.png` (1280×640, gradiente Drácula +
 
 **A API REST do GitHub não expõe upload de social preview.** A operação precisa ser feita pela interface web:
 
-1. Abra `https://github.com/AndreBFarias/hefesto/settings`.
+1. Abra `https://github.com/Hefesto-Team/hefesto-dualsense4unix/settings`.
 2. Role até a seção **Social preview**.
 3. Clique em **Edit** → **Upload an image**.
 4. Selecione o arquivo `docs/usage/assets/social-preview.png`.
 5. Confirme. O card de preview será atualizado em alguns minutos (cache do GitHub e do Twitter/Discord/Slack pode levar mais tempo).
 
-Valide compartilhando o link `https://github.com/AndreBFarias/hefesto` em um chat com preview automático (Discord, Slack, Telegram) — o card deve mostrar a imagem customizada.
+Valide compartilhando o link `https://github.com/Hefesto-Team/hefesto-dualsense4unix` em um chat com preview automático (Discord, Slack, Telegram) — o card deve mostrar a imagem customizada.
 
 ---
 
@@ -113,16 +113,16 @@ Habilitar/desabilitar features conforme decisão do dono. Default atual provavel
 
 ```bash
 # Habilitar Discussions (fórum de perguntas — complementa o template question)
-gh repo edit AndreBFarias/hefesto --enable-discussions
+gh repo edit Hefesto-Team/hefesto-dualsense4unix --enable-discussions
 
 # Habilitar Issues (deve já estar ativo)
-gh repo edit AndreBFarias/hefesto --enable-issues
+gh repo edit Hefesto-Team/hefesto-dualsense4unix --enable-issues
 
 # Wiki — projeto pessoal raramente usa; manter desabilitado
-gh repo edit AndreBFarias/hefesto --enable-wiki=false
+gh repo edit Hefesto-Team/hefesto-dualsense4unix --enable-wiki=false
 
 # Projects — opcional para gerenciamento de sprints
-gh repo edit AndreBFarias/hefesto --enable-projects
+gh repo edit Hefesto-Team/hefesto-dualsense4unix --enable-projects
 ```
 
 ---
@@ -132,7 +132,7 @@ gh repo edit AndreBFarias/hefesto --enable-projects
 Como `main` recebe auto-merge via pipeline local, branch protection rígida atrapalha mais que ajuda. Se quiser proteger apenas contra force-push acidental:
 
 ```bash
-gh api -X PUT repos/AndreBFarias/hefesto/branches/main/protection \
+gh api -X PUT repos/Hefesto-Team/hefesto-dualsense4unix/branches/main/protection \
   -f required_status_checks=null \
   -f enforce_admins=false \
   -f required_pull_request_reviews=null \
@@ -155,7 +155,8 @@ Marcar conforme for aplicando:
 - [ ] Features ajustadas (Discussions opcional).
 - [ ] Branch protection leve aplicada (opcional).
 
-Após executar, atualize o status da sprint em `docs/process/SPRINT_ORDER.md` de `PROTOCOL_READY` para `MERGED`.
+Após executar, registre o resultado no índice de sprints aberto mais recente,
+em `docs/process/sprints/`.
 
 ---
 
