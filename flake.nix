@@ -8,7 +8,7 @@
 #   nix profile install .#default        # instala no perfil do usuario
 #
 # Ou de qualquer maquina com nix instalado, direto do GitHub:
-#   nix run github:AndreBFarias/hefesto-dualsense4unix -- version
+#   nix run github:Hefesto-Team/hefesto-dualsense4unix -- version
 {
   description = "Hefesto - Dualsense4Unix: Linux adaptive trigger daemon for the PS5 DualSense controller";
 

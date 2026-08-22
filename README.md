@@ -14,6 +14,7 @@
 [![Versão](https://img.shields.io/badge/vers%C3%A3o-0.9.4.5%20alfa-6a3fb4.svg)](CHANGELOG.md)
 [![Testes](https://img.shields.io/badge/testes-mais%20de%207000-brightgreen.svg)](tests/)
 [![CI](https://github.com/Hefesto-Team/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/Hefesto-Team/hefesto-dualsense4unix/actions/workflows/ci.yml)
+[![Patreon](https://img.shields.io/badge/Patreon-apoiar-f96854.svg?logo=patreon&logoColor=white)](https://www.patreon.com/Hefesto_Team)
 
 </div>
 
@@ -91,7 +92,7 @@ Aba por aba em [docs/usage/interface.md](docs/usage/interface.md).
 ## Instalação
 
 ```bash
-git clone https://github.com/AndreBFarias/hefesto-dualsense4unix.git
+git clone https://github.com/Hefesto-Team/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
 git checkout v0.9.4.5
 ./install.sh

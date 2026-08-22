@@ -17,19 +17,19 @@ funcione — nem `nix run`, que não tem árvore local para corrigir.
 
 ```bash
 # Direto do GitHub, sem clonar:
-nix run github:AndreBFarias/hefesto-dualsense4unix -- version
+nix run github:Hefesto-Team/hefesto-dualsense4unix -- version
 
 # Ou GUI:
-nix run github:AndreBFarias/hefesto-dualsense4unix#gui
+nix run github:Hefesto-Team/hefesto-dualsense4unix#gui
 
 # Instalar no perfil do usuario:
-nix profile install github:AndreBFarias/hefesto-dualsense4unix
+nix profile install github:Hefesto-Team/hefesto-dualsense4unix
 ```
 
 ## Build local
 
 ```bash
-git clone https://github.com/AndreBFarias/hefesto-dualsense4unix
+git clone https://github.com/Hefesto-Team/hefesto-dualsense4unix
 cd hefesto-dualsense4unix
 
 # Build do pacote:
@@ -56,7 +56,7 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
 
 ```nix
 {
-  inputs.hefesto.url = "github:AndreBFarias/hefesto-dualsense4unix";
+  inputs.hefesto.url = "github:Hefesto-Team/hefesto-dualsense4unix";
 
   outputs = { self, nixpkgs, hefesto, ... }: {
     nixosConfigurations.minha-maquina = nixpkgs.lib.nixosSystem {
@@ -143,4 +143,4 @@ via `python3Packages.buildPythonPackage` + `fetchPypi`.
 - Wayland backend `wlrctl` não bundlado; usuário instala via
   `environment.systemPackages = [ pkgs.wlrctl ];`.
 
-Reportar bugs em <https://github.com/AndreBFarias/hefesto-dualsense4unix/issues>.
+Reportar bugs em <https://github.com/Hefesto-Team/hefesto-dualsense4unix/issues>.

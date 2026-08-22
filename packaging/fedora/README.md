@@ -92,4 +92,4 @@ Apos o projeto sair de Alpha (v4.0+), considerar package review oficial:
 - `python-uinput` (extras emulation): Fedora tem `python3-python-uinput`
   em alguns chroots; spec atual NAO requer (apenas via pip se preciso).
 
-Reportar bugs em <https://github.com/AndreBFarias/hefesto-dualsense4unix/issues>.
+Reportar bugs em <https://github.com/Hefesto-Team/hefesto-dualsense4unix/issues>.
