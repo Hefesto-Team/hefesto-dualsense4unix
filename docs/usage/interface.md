@@ -793,6 +793,13 @@ não liga nada é decoração.
 botão **Abrir a aba Sistema**. Quem manda continua sendo o interruptor de lá —
 dois donos do mesmo gesto é cicatriz que esta casa já pagou.
 
+**Esta é a única seção que grava na hora**, e a tela diz isso: *"A escolha fica
+guardada na hora — não espera o 'Aplicar'."* As outras quatro acumulam e esperam
+o botão do rodapé, e cada uma delas também diz a sua. A aba tinha três
+comportamentos de salvar e só um estava escrito; desde 22/08/2026 há portão
+cobrando a frase de cada seção conforme o que ela faz de verdade com o clique
+(`tests/unit/test_a_aba_diz_quando_a_escolha_fica_guardada.py`).
+
 ### O que esta aba não faz
 
 - **não rouba controle nenhum das outras dez.** Nada saiu de Rumble, Lightbar,
