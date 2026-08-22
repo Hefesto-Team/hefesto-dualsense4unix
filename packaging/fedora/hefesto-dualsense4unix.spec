@@ -20,7 +20,7 @@ Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
 License:        MIT
-URL:            https://github.com/AndreBFarias/%{pypi_name}
+URL:            https://github.com/Hefesto-Team/%{pypi_name}
 Source0:        %{url}/archive/v%{version}/%{pypi_name}-%{version}.tar.gz
 
 BuildArch:      noarch

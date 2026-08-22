@@ -411,6 +411,6 @@
   </content_rating>
 
   <!-- Suporte (links opcionais) -->
-  <url type="homepage">https://github.com/AndreBFarias/hefesto</url>
+  <url type="homepage">https://github.com/Hefesto-Team/hefesto-dualsense4unix</url>
   <url type="bugtracker">https://github.com/Hefesto-Team/hefesto-dualsense4unix/issues</url>
 </component>
