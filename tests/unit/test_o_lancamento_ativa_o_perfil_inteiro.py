@@ -22,7 +22,10 @@ vpad, que é o `mode`. Não a cor, o gatilho, o volume nem a vibração.
 O que este portão cobra:
 
 1. o lançamento chama a ATIVAÇÃO, e não só os dois appliers;
-2. chama **também na allowlist**, e nela o `mode` continua sendo pulado;
+2. chama **também na allowlist**, e nela a MÁSCARA do perfil chega enquanto o
+   `kind` continua pulado (ALLOWLIST-SO-A-MASCARA-01 — o comportamento do
+   embrulho está no par deste arquivo,
+   `test_a_mascara_atravessa_a_allowlist.py`; aqui mede-se a fiação);
 3. `origin="launch"` — não fura o lock manual de 30 s (R-03) e não grava
    `session.json` (só `origin="manual"` grava);
 4. o relatório da ativação **sobe no retorno**, nos dois caminhos. Sem isso
@@ -57,12 +60,12 @@ def _marker(tmp_path: Path, *, appid: int, epoch: int) -> Path:
     return tmp_path
 
 
-def _perfil(nome: str = "Sackboy") -> Profile:
+def _perfil(nome: str = "Sackboy", *, kind: str = "gamepad") -> Profile:
     return Profile(
         name=nome,
         match=MatchCriteria(window_class=[f"steam_app_{APPID}"]),
         priority=97,
-        mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense", coop=True),
+        mode=ProfileModeConfig(kind=kind, gamepad_flavor="dualsense", coop=True),
     )
 
 
@@ -99,10 +102,21 @@ class _GerenteEspiao:
     Ele PREENCHE o relatório com as oito seções, como o de verdade faz — sem
     isso o teste do item 4 passaria com o relatório vazio, que é justamente o
     estado que o defeito produzia.
+
+    **E ele CHAMA o `mode_applier`, como o `ProfileManager.activate` chama**
+    (22/08/2026). A versão anterior só anotava os kwargs da construção, e por
+    isso mediu a FIAÇÃO e não o EFEITO: com `mode_applier=None` a régua dizia
+    "o modo está pulado" sem nunca ter perguntado o que o applier faria. Foi
+    assim que a allowlist passou horas REMOVENDO a máscara do perfil enquanto o
+    portão ficava verde. A fábrica de verdade injeta
+    `daemon.apply_profile_mode` quando o chamador não sobrescreve — o dublê
+    reproduz isso, senão o ramo de fora da allowlist ficaria mudo aqui.
     """
 
     chamadas: ClassVar[list[tuple[str, str]]] = []
     relatorios: ClassVar[list[dict[str, str]]] = []
+    modo_devolvido: ClassVar[list[str]] = []
+    perfil: ClassVar[Any] = None
     levanta: bool = False
 
     SECOES: ClassVar[tuple[str, ...]] = (
@@ -118,8 +132,9 @@ class _GerenteEspiao:
 
     construidos: ClassVar[list[dict[str, Any]]] = []
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, daemon: Any = None, **kwargs: Any) -> None:
         self.kwargs = kwargs
+        self.daemon = daemon
         type(self).construidos.append(kwargs)
 
     def activate(
@@ -128,6 +143,14 @@ class _GerenteEspiao:
         type(self).chamadas.append((nome, origin))
         if type(self).levanta:
             raise RuntimeError("o disco não tem esse perfil")
+        applier = self.kwargs.get(
+            "mode_applier", getattr(self.daemon, "apply_profile_mode", None)
+        )
+        perfil = type(self).perfil
+        if applier is not None and perfil is not None:
+            type(self).modo_devolvido.append(
+                str(applier(getattr(perfil, "mode", None), profile=perfil, origin=origin))
+            )
         if relatorio is not None:
             for secao in self.SECOES:
                 relatorio[secao] = "aplicado"
@@ -140,10 +163,14 @@ def espiao(monkeypatch: pytest.MonkeyPatch) -> type[_GerenteEspiao]:
     _GerenteEspiao.chamadas = []
     _GerenteEspiao.relatorios = []
     _GerenteEspiao.construidos = []
+    _GerenteEspiao.modo_devolvido = []
+    _GerenteEspiao.perfil = None
     _GerenteEspiao.levanta = False
     from hefesto_dualsense4unix.profiles import manager as m
 
-    monkeypatch.setattr(m, "gerente_do_daemon", lambda daemon, **kw: _GerenteEspiao(**kw))
+    monkeypatch.setattr(
+        m, "gerente_do_daemon", lambda daemon, **kw: _GerenteEspiao(daemon, **kw)
+    )
     return _GerenteEspiao
 
 
@@ -160,9 +187,12 @@ def _armar(
     na_allowlist: bool = False,
     now: float = 1001.0,
     epoch: int = 1000,
+    kind: str = "gamepad",
 ) -> tuple[_DaemonFalso, Any]:
     _marker(env_dir, appid=APPID, epoch=epoch)
-    monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(APPID, _perfil())])
+    perfil = _perfil(kind=kind)
+    _GerenteEspiao.perfil = perfil
+    monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(APPID, perfil)])
     monkeypatch.setattr(
         le, "steam_input_appids", lambda: ({APPID} if na_allowlist else set())
     )
@@ -223,53 +253,84 @@ def test_na_allowlist_o_perfil_e_ativado_do_mesmo_jeito(
     )
 
 
-def test_na_allowlist_o_modo_continua_pulado(
+def test_na_allowlist_a_mascara_do_perfil_chega(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """A outra metade: ativar o perfil não pode ressuscitar a disputa pelo vpad.
+    """ALLOWLIST-SO-A-MASCARA-01 — a metade que a medição de 22/08 derrubou.
 
-    **SÃO DOIS CAMINHOS ATÉ O MESMO APPLIER, e a primeira versão deste teste
-    vigiava um só** — medido ao vivo em 22/08/2026, no primeiro ensaio no daemon
-    dela. O `return` do ramo da allowlist pula o `apply_profile_mode` que o
-    arming chama DIRETO (`daemon.aplicados`, abaixo), e o teste passava verde
-    por causa disso. Mas a ativação tem o seu, dentro do `apply_emulation`, e
-    ele armou o modo pelo caminho de dentro: o journal trouxe
-    `launch_arm_pulado_allowlist_steam_input ... ativacao={... 'mode':
-    'aplicado' ...}` — a allowlist sendo pulada e cumprida na mesma linha.
+    **SÃO DOIS CAMINHOS ATÉ O MESMO APPLIER.** O `return` do ramo da allowlist
+    pula o `apply_profile_mode` que o arming chama DIRETO; a ativação tem o
+    seu, dentro do `apply_emulation`. Este teste cobra o de DENTRO: com o
+    Sackboy marcado, o perfil pede `gamepad_flavor="dualsense"` e a máscara
+    tem de chegar.
 
-    A cura é passar `mode_applier=None` à fábrica nesse ramo, e a régua deste
-    teste passou a ser a CONSTRUÇÃO do gerente, que é onde a decisão mora.
+    Por algumas horas de 22/08 a cura foi `mode_applier=None`, e ela está
+    refutada pela medição no daemon dela: `active_profile="Sackboy"`,
+    `mode_from_profile=null`, quatro vpads uinput e `flavor="xbox"` — marcar o
+    jogo REMOVIA touchpad, giroscópio e acelerômetro em vez de preservá-los.
 
-    Mordida: tirar o `return` do ramo da allowlist, ou tirar o
-    `mode_applier=None` da construção.
+    Mordida: trocar o embrulho de volta por `mode_applier=None`.
     """
     daemon, _resultado = _armar(env_dir, monkeypatch, na_allowlist=True)
 
-    assert daemon.aplicados == [], (
-        "o `mode` foi armado pelo caminho de FORA (o applier direto do arming)"
+    assert espiao.chamadas == [("Sackboy", "launch")]
+    assert len(daemon.aplicados) == 1, (
+        "a máscara do perfil não chegou ao `apply_profile_mode`. Com o físico "
+        "escondido o vpad é o único dispositivo do jogo, e um vpad Xbox não "
+        f"tem touchpad, giroscópio nem acelerômetro. Aplicados: {daemon.aplicados}"
     )
-    assert espiao.construidos == [{"store": None, "mode_applier": None}], (
-        "o gerente da allowlist nasceu com `mode_applier` — a ativação vai "
-        "armar o modo pelo caminho de DENTRO, que é a mesma disputa pelo "
-        f"controle que ela decidiu pular. Construído com: {espiao.construidos}"
+    mode, profile, origin = daemon.aplicados[0]
+    assert getattr(mode, "gamepad_flavor", None) == "dualsense"
+    assert getattr(profile, "name", None) == "Sackboy" and origin == "launch"
+    assert espiao.modo_devolvido == ["aplicado"], (
+        "o veredito do applier não subiu pelo embrulho — o relatório da "
+        "ativação volta a não distinguir aplicado de adiado"
     )
     assert len(daemon.suprimidos) == 1, "a supressão continua valendo nos dois lados"
 
 
-def test_fora_da_allowlist_o_gerente_nasce_com_o_mode_applier(
+def test_na_allowlist_o_kind_continua_pulado(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
 ) -> None:
-    """A contraparte: desarmar o modo é exceção da allowlist, não regra.
+    """A outra metade: ativar o perfil não pode ressuscitar a disputa pelo vpad.
 
-    Sem este par, `mode_applier=None` para todo mundo passaria no teste acima e
-    o perfil deixaria de armar o modo em TODO jogo — a cura virando o defeito.
+    Um perfil `kind="native"` marcado na allowlist pediria o release total —
+    largar o físico e desligar o vpad. Isso é disputa pelo controle, e é
+    exatamente o que a allowlist existe para pular.
 
-    Mordida: passar `mode_applier=None` incondicionalmente.
+    Mordida: apagar o `if kind != "gamepad"` de `_mode_applier_so_a_mascara`.
+    """
+    daemon, resultado = _armar(env_dir, monkeypatch, na_allowlist=True, kind="native")
+
+    assert resultado is not None and resultado["motivo"] == "allowlist_steam_input"
+    assert espiao.chamadas == [("Sackboy", "launch")], (
+        "as outras sete seções continuam valendo na allowlist"
+    )
+    assert daemon.aplicados == [], (
+        f"o `kind` atravessou a allowlist: {daemon.aplicados}"
+    )
+    assert espiao.modo_devolvido == [le.IGNORADO_DISPUTA_DA_ALLOWLIST]
+
+
+def test_fora_da_allowlist_nada_muda(
+    env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
+) -> None:
+    """A contraparte: o embrulho é exceção da allowlist, não regra.
+
+    Sem este par, embrulhar todo mundo passaria nos dois testes acima e o
+    perfil deixaria de armar o modo em TODO jogo que a máscara ainda não
+    estivesse de pé — a cura virando o defeito.
+
+    Mordida: passar o embrulho incondicionalmente.
     """
     _armar(env_dir, monkeypatch, na_allowlist=False)
 
     assert espiao.construidos == [{"store": None}], (
-        f"o gerente fora da allowlist não pode nascer capado: {espiao.construidos}"
+        "fora da allowlist o gerente nasce da fábrica limpa, com o "
+        f"`apply_profile_mode` do daemon: {espiao.construidos}"
+    )
+    assert espiao.modo_devolvido == ["aplicado"], (
+        "a ativação de fora da allowlist deixou de aplicar o modo"
     )
 
 
