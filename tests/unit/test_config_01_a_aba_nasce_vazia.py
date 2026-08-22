@@ -53,6 +53,7 @@ from gi.repository import Gtk
 from hefesto_dualsense4unix.app.actions.config import (
     ABA_CONFIG,
     SECOES,
+    SECOES_DA_ABA,
     ConfigActionsMixin,
 )
 from hefesto_dualsense4unix.app.constants import MAIN_GLADE
@@ -496,3 +497,52 @@ def test_nenhuma_secao_estica_para_ocupar_a_folga() -> None:
         f"estas seções esticam verticalmente: {esticam}. A folga da aba é da "
         "página, que rola — uma seção que cresce afunda as de baixo."
     )
+
+
+# --- 6. A dica viaja com a seção ------------------------------------------
+
+
+def test_secao_sem_widget_nao_tem_dica() -> None:
+    """Item 8 dos oito de 22/08: a dica não pode chegar antes do conteúdo.
+
+    Quando a aba nasceu (CONFIG-01, 21/08) as cinco seções eram rótulos soltos
+    e três delas já traziam dica afirmando NO PRESENTE o que a seção faria — o
+    desenho tinha sido copiado inteiro para dentro de uma tela vazia. Mentira na
+    tela, e do tipo caro: quem lê a dica não tem como saber que ela fala do
+    futuro.
+
+    A régua é mecânica, e é a que o `SPRINT_ORDER.md` fixou: **enquanto a seção
+    não puser um widget na caixa dela, ela não tem dica.** Uma seção que já
+    desenha pode explicar o que desenha; uma que não desenha nada só pode calar.
+
+    Mordida: trocar o `montar` de qualquer seção com dica por um que não
+    acrescente nada — este teste reprova nomeando a seção.
+    """
+    sem_conteudo_com_dica = []
+    for secao in SECOES_DA_ABA:
+        caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        try:
+            secao.montar(_HospedeiroVazio(), caixa)
+        except Exception:  # noqa: BLE001 - seção que nem monta é seção sem widget
+            pass
+        if not caixa.get_children() and secao.DICA is not None:
+            sem_conteudo_com_dica.append(secao.TITULO)
+
+    assert not sem_conteudo_com_dica, (
+        f"estas seções não põem widget nenhum na caixa e mesmo assim têm dica: "
+        f"{sem_conteudo_com_dica}. A dica viaja com a seção — descreve o que "
+        "está na tela, nunca o que ainda vai chegar."
+    )
+
+
+class _HospedeiroVazio(ConfigActionsMixin):
+    """Hospedeiro mínimo: sem builder, sem mesa, sem daemon.
+
+    É de propósito que ele não saiba nada. Uma seção que só consegue desenhar
+    com a mesa cheia ainda assim tem de pôr ALGO na caixa — nem que seja a linha
+    de "nenhum controle na mesa". Caixa vazia é seção sem tela, e seção sem tela
+    não fala.
+    """
+
+    def __init__(self) -> None:
+        self.builder = None
