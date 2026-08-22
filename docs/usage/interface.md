@@ -720,6 +720,18 @@ leitura sustenta: **colado no vizinho** (dois rádios encostados se atrapalham) 
 produto **informa e não age**: desplugar o Wi-Fi de alguém para melhorar o
 próprio link é decisão da pessoa, não do programa.
 
+**O que é** — a terceira coluna, e a única desta seção que só você pode
+responder: **Wi-Fi · Teclado · Mouse · Webcam · Caixa de som · Outro · Não
+sei**. Um dongle de teclado e um de caixa de som são o mesmo `VID:PID` para o
+kernel; sem a sua resposta o exame da mesa só sabe listar um endereço em hexa.
+Com ela, passa a poder dizer *de que aparelho* está falando. **Não sei** é
+resposta válida, e é onde tudo começa.
+
+**As três respostas ficam gravadas** — altura da antena, linha de visada e o
+tipo de cada rádio. Elas valem para a máquina inteira e não para um jogo, então
+moram em `maquina.json` e não em perfil nenhum. Como o resto da aba, a escolha
+é **diferida**: o clique marca, e quem grava é o **Aplicar** do rodapé.
+
 **Reexaminar a mesa** relê os adaptadores e os rádios. Não muda nada.
 
 ### Orçamento

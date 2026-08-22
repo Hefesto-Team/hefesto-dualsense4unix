@@ -40,6 +40,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("aba configurações")
 
 import ast
+import contextlib
 import inspect
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -521,10 +522,11 @@ def test_secao_sem_widget_nao_tem_dica() -> None:
     sem_conteudo_com_dica = []
     for secao in SECOES_DA_ABA:
         caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        try:
+        # Seção que nem monta é seção sem widget, e cai na mesma régua: engolir
+        # aqui é o que faz a falha virar "sem tela", em vez de derrubar o portão
+        # com um traceback que não diz nada sobre dica nenhuma.
+        with contextlib.suppress(Exception):
             secao.montar(_HospedeiroVazio(), caixa)
-        except Exception:  # noqa: BLE001 - seção que nem monta é seção sem widget
-            pass
         if not caixa.get_children() and secao.DICA is not None:
             sem_conteudo_com_dica.append(secao.TITULO)
 

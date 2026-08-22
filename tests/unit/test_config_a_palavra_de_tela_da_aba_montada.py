@@ -148,6 +148,33 @@ def test_nenhum_texto_da_aba_carrega_jargao_banido() -> None:
     assert not achados, "jargão na aba Configurações:\n  " + "\n  ".join(achados)
 
 
+#: Pares em que as DUAS grafias são palavras do português, e a diferença de
+#: acento é a diferença entre singular e plural — não um deslize de digitação.
+#:
+#: MEDIDO EM 22/08/2026, e o portão estava REPROVANDO TEXTO CERTO: a seção "A
+#: mesa" diz *"o rádio **tem** 1.600 fatias de tempo por segundo"* e a seção
+#: "Orçamento" diz *"gatilhos, barra de luz e giroscópio ainda não **têm** por
+#: onde ser limitados"*. As duas frases estão corretas, e a heurística de
+#: "mesma palavra com e sem acento" não tem como saber disso sozinha.
+#:
+#: Um portão que acusa de erro quem escreveu certo é pior que portão nenhum:
+#: ensina a próxima pessoa a não acreditar nele, que é a lição que esta casa já
+#: pagou em 13/08 com o `portao_a_casa_sabe_e_o_produto_nao_faz`. A isenção é
+#: por PAR e não por palavra — isentar "tem" sozinho deixaria passar um "tem"
+#: onde o certo fosse "têm".
+#:
+#: A lista é curta de propósito. Ela cresce quando uma frase NOVA da aba precisa
+#: dela, nunca por precaução: par isento é par que este portão deixa de vigiar.
+PARES_LEGITIMOS: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("tem", "têm"),
+        ("vem", "vêm"),
+        ("contem", "contêm"),
+        ("mantem", "mantêm"),
+    }
+)
+
+
 def test_o_texto_da_aba_esta_acentuado() -> None:
     """Português do Brasil escrito certo, na tela como no fonte.
 
@@ -155,6 +182,8 @@ def test_o_texto_da_aba_esta_acentuado() -> None:
     aba SEM acento, quando a mesma palavra aparece COM acento em outro ponto da
     mesma aba, é erro de digitação e não escolha. Comparar contra um dicionário
     inteiro seria o trabalho do `validar-acentuacao.py`, que já roda no fonte.
+
+    A exceção está em `PARES_LEGITIMOS`, e ela é medida — leia lá.
     """
     palavras_com_acento: dict[str, str] = {}
     todas: list[tuple[str, str, str]] = []
@@ -176,7 +205,9 @@ def test_o_texto_da_aba_esta_acentuado() -> None:
         f"{origem}: {palavra!r} — a mesma aba escreve "
         f"{palavras_com_acento[palavra]!r}"
         for origem, palavra, sem_acento in todas
-        if palavra == sem_acento and palavra in palavras_com_acento
+        if palavra == sem_acento
+        and palavra in palavras_com_acento
+        and (palavra, palavras_com_acento[palavra]) not in PARES_LEGITIMOS
     ]
 
     assert not achados, (
