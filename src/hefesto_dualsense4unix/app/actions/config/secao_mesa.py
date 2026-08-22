@@ -62,6 +62,7 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
 )
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.maquina import carregar_maquina, fundir_declaracao
 
 logger = get_logger(__name__)
 
@@ -73,6 +74,25 @@ TITULO = "A mesa"
 DICA: str | None = (
     "O Hefesto enxerga os adaptadores, mas não enxerga onde eles estão. Cabo, "
     "hub e altura mudam o alcance e não aparecem em lugar nenhum do sistema."
+)
+
+#: Os sete botões da coluna "O que é", na ordem do desenho. Os seis primeiros
+#: são exatamente os `Literal` de `RadioDeclarado.tipo`; o sétimo é a ausência
+#: de opinião, que o esquema representa como `None` e não como palavra.
+#:
+#: O "Outro" NÃO abre campo de texto aqui, e o desenho abria
+#: (`mockup:1148`, "Fone sem fio da TV"). O `apelido` existe no esquema e é
+#: entrega de outra leva: um `Gtk.Entry` por linha numa tabela que já tem três
+#: colunas custaria a largura que esta janela não tem, e o apelido não muda uma
+#: linha do que o exame consegue afirmar — o `tipo` muda.
+_TIPOS_DE_RADIO: tuple[tuple[str, str], ...] = (
+    ("wifi", "Wi-Fi"),
+    ("teclado", "Teclado"),
+    ("mouse", "Mouse"),
+    ("webcam", "Webcam"),
+    ("caixa_de_som", "Caixa de som"),
+    ("outro", "Outro"),
+    ("nao_sei", "Não sei"),
 )
 
 #: As SETE palavras do painel do gabinete, uma por valor de
@@ -155,9 +175,11 @@ def montar(host: Any, caixa: Any) -> None:
       no `mixin.py`, porque o montador da aba não conhece uma linha do que há
       dentro de nenhuma seção — e é isso que deixa oito frentes crescerem no
       mesmo lugar sem se pisarem;
-    * `_mesa_declarada` é o dicionário vivo das duas escolhas que barramento
-      nenhum responde. Hoje ele só existe em memória; é por ele que CONFIG-03
-      leva as duas ao disco, sem precisar alcançar widget nenhum.
+    * `_mesa_declarada` é o espelho de leitura das duas escolhas que barramento
+      nenhum responde. Desde 22/08/2026 ele **não é mais o dono**: quem guarda
+      é `host._maquina_pendente`, e quem grava é o "Aplicar" do rodapé. O
+      dicionário fica porque é por onde um teste ou o retrato olha o estado da
+      seção sem alcançar widget nenhum.
     """
     painel = _PainelDaMesa(host)
     painel.montar(caixa)
@@ -188,15 +210,24 @@ class _PainelDaMesa:
         self._com_mic: frozenset[str] = frozenset()
         #: Impede empilhar pedidos ao daemon quando ela troca de aba rápido.
         self._estado_pedido = False
-        #: A declaração dela, enquanto CONFIG-03 não a leva ao disco.
-        #: TODO(CONFIG-03): mandar cada mudança para `machine.declare` e ler o
-        #: valor gravado ao montar — os dois valores precisam sobreviver a
-        #: fechar a janela, e hoje não sobrevivem. O dicionário fica exposto no
-        #: hospedeiro como `_mesa_declarada`, que é por onde a costura entra.
+        #: A declaração dela nesta sessão, espelho de leitura do que já foi
+        #: acumulado em `host._maquina_pendente`. Exposto no hospedeiro como
+        #: `_mesa_declarada`.
+        #:
+        #: ELE NÃO É MAIS O DONO (22/08/2026). Até esta data o dicionário era o
+        #: único lugar onde a escolha existia, e o TODO daqui dizia que o valor
+        #: morria com a janela — mas a camada que faltava nasceu no MESMO dia
+        #: (CONFIG-03, `utils/maquina.py` mais o `machine.declare` do IPC), e o
+        #: TODO sobreviveu a ela. Foi a classe de defeito mais cara desta casa
+        #: acontecendo dentro da leva que a documentou: a cura escrita e nunca
+        #: ligada. Quem grava agora é o "Aplicar" do rodapé, pela mesma rota das
+        #: outras seções — `host._maquina_pendente`.
         self.declarado: dict[str, str | None] = {
             "altura_da_antena": None,
             "linha_de_visada": None,
         }
+        #: O tipo declarado de cada rádio vizinho, por `vid:pid`. Mesma rota.
+        self.radios_declarados: dict[str, str | None] = {}
 
     # -- montagem ----------------------------------------------------------
 
@@ -317,6 +348,16 @@ class _PainelDaMesa:
         # em cinco outras.
         seletor.set_orientation(Gtk.Orientation.HORIZONTAL)
         seletor.set_items([(ident, _(nome)) for ident, nome in itens])
+        # A pré-seleção vem ANTES do `connect`, e é a diferença entre mostrar o
+        # que ela escolheu e re-escrever no rascunho tudo o que a tela desenhou:
+        # `set_active_id` emite `changed`, e com o sinal já ligado o simples ato
+        # de abrir a aba marcaria o rascunho como sujo. O rodapé passaria a ter
+        # o que "Aplicar" sem ninguém ter clicado em nada.
+        gravado = self._mesa_em_vigor().get(chave)
+        if gravado is not None:
+            self.declarado[chave] = str(gravado)
+            with contextlib.suppress(Exception):
+                seletor.set_active_id(str(gravado))
         seletor.connect("changed", self._ao_declarar, chave)
         fileira.pack_start(seletor, False, False, 0)
         return fileira
@@ -535,9 +576,12 @@ class _PainelDaMesa:
             return
 
         avisos = _avisos_de_vizinhanca(mesa)
-        grade = self._grade(["Aparelho", "Onde"])
+        em_vigor = self._mesa_em_vigor().get("radios")
+        gravados: dict[str, Any] = em_vigor if isinstance(em_vigor, dict) else {}
+        grade = self._grade(["Aparelho", "Onde", "O que é"])
         for linha, radio in enumerate(mesa.radios, start=1):
-            grade.attach(self._celula_mono(f"{radio.vid}:{radio.pid}"), 0, linha, 1, 1)
+            chave = f"{radio.vid}:{radio.pid}"
+            grade.attach(self._celula_mono(chave), 0, linha, 1, 1)
             aviso = avisos.get(radio.no)
             grade.attach(
                 self._celula(
@@ -550,8 +594,64 @@ class _PainelDaMesa:
                 1,
                 1,
             )
+            declarado = gravados.get(chave)
+            grade.attach(
+                self._seletor_do_tipo(
+                    chave,
+                    declarado.get("tipo") if isinstance(declarado, dict) else None,
+                ),
+                2,
+                linha,
+                1,
+                1,
+            )
         self._caixa_radios.pack_start(grade, False, False, 0)
         self._caixa_radios.show_all()
+
+    def _seletor_do_tipo(self, chave_do_radio: str, gravado: Any) -> Any:
+        """Os seis tipos mais "Não sei", em grade de três colunas.
+
+        POR QUE ESTA COLUNA EXISTE. O Hefesto acha o aparelho no barramento e
+        não tem como saber para que ele serve — um dongle de teclado e um de
+        caixa de som são o mesmo `vid:pid` para o kernel. A resposta é a única
+        coisa desta seção que só a pessoa tem, e é ela que deixa o exame dizer
+        *"o engasgo pode ser a webcam ao lado do adaptador"* em vez de listar
+        um endereço hexa e calar.
+
+        O esquema (`RadioDeclarado.tipo`) existe desde CONFIG-03, no mesmo dia,
+        e ficou SEM TELA até aqui — a metade que faltava do mesmo defeito.
+
+        HORIZONTAL, E O NÚMERO É MEDIDO. A primeira versão usava `wrap=True`,
+        que é grade de três colunas FIXAS (`segmented_selector.py:32`) — sete
+        botões viram TRÊS linhas, e com quatro rádios na mesa a seção cresceu
+        384px de uma vez (1921 → 2305, medido na foto de 22/08). Em fileira
+        única os sete ocupam ~595px; com "Aparelho" (~90) e "Onde" (~200) a
+        tabela fica em ~885px, dentro dos 1066px de largura mínima da janela.
+        A largura sobrava e a altura não — esta tabela tem três colunas num
+        espaço de 1920px, e é a altura que custa numa aba que já rola.
+
+        `set_hexpand(False)` porque o `SegmentedSelector` propaga a expansão
+        horizontal para cima: sem isto a coluna come a largura da tabela
+        inteira, que é o defeito que a seção "A janela" pagou em 22/08 (757px
+        de vão). Curar dentro do widget quebraria a aba Início, que DEPENDE
+        dessa expansão (`home_actions.py:1523`).
+        """
+        from gi.repository import Gtk
+
+        from hefesto_dualsense4unix.app.widgets.segmented_selector import (
+            SegmentedSelector,
+        )
+
+        seletor = SegmentedSelector()
+        seletor.set_orientation(Gtk.Orientation.HORIZONTAL)
+        seletor.set_items([(ident, _(nome)) for ident, nome in _TIPOS_DE_RADIO])
+        seletor.set_hexpand(False)
+        if gravado is not None:
+            self.radios_declarados[chave_do_radio] = str(gravado)
+            with contextlib.suppress(Exception):
+                seletor.set_active_id(str(gravado))
+        seletor.connect("changed", self._ao_declarar_o_radio, chave_do_radio)
+        return seletor
 
     # -- desenho do medidor ------------------------------------------------
 
@@ -697,13 +797,71 @@ class _PainelDaMesa:
     # -- gestos ------------------------------------------------------------
 
     def _ao_declarar(self, seletor: Any, chave: str) -> None:
-        """Guarda a escolha dela em memória.
+        """Acumula a escolha no rascunho da máquina. NÃO grava, NÃO manda IPC.
 
-        TODO(CONFIG-03): mandar para `machine.declare`. Enquanto a camada de
-        persistência de mesa não existe, o valor morre com a janela — e a tela
-        não promete o contrário em lugar nenhum.
+        `D-A4`, o mesmo contrato de `secao_controles` e `secao_orcamento`: o
+        clique marca o rascunho e o efeito sai no "Aplicar" do rodapé. Chamar
+        `machine.declare` daqui criaria um segundo dono do gesto de gravar, que
+        é a classe de defeito que a `ABAS-01` curou.
+
+        `"nao_sei"` vira `None` e não a string: o esquema
+        (`MesaDeclarada.altura_da_antena`) só aceita os valores reais, e
+        `extra="forbid"` mais `Literal` recusariam o DOCUMENTO INTEIRO — o
+        sintoma na tela seria "não consegui gravar", não "valor inválido".
+        `None` é a resposta que o esquema já tem para "não sei", e ela é
+        preservada na fusão como qualquer outra.
         """
-        self.declarado[chave] = seletor.get_active_id()
+        escolha = self._valor_do_seletor(seletor)
+        self.declarado[chave] = escolha
+        self._acumular({chave: escolha})
+
+    def _ao_declarar_o_radio(self, seletor: Any, chave_do_radio: str) -> None:
+        """O mesmo gesto, para o `tipo` de um rádio vizinho.
+
+        A chave é `vid:pid` em hexa minúsculo, e o esquema a valida por regex
+        (`MesaDeclarada._chave_de_radio_e_vid_pid`). É de propósito que ela NÃO
+        seja o nó do sysfs: o nó muda de nome quando o aparelho troca de porta,
+        e a resposta "isto é um teclado" não muda com a porta.
+        """
+        escolha = self._valor_do_seletor(seletor)
+        self.radios_declarados[chave_do_radio] = escolha
+        self._acumular({"radios": {chave_do_radio: {"tipo": escolha}}})
+
+    @staticmethod
+    def _valor_do_seletor(seletor: Any) -> str | None:
+        """O id ativo, com `"nao_sei"` traduzido para a ausência de opinião."""
+        ativo = seletor.get_active_id()
+        return None if ativo in (None, "nao_sei") else str(ativo)
+
+    def _acumular(self, mesa: dict[str, Any]) -> None:
+        """Funde o pedaço em `host._maquina_pendente`, sob a chave `mesa`.
+
+        Fusão e não substituição pelo mesmo motivo de `gravar_maquina`: as cinco
+        seções da aba escrevem no MESMO rascunho pelo mesmo gesto, e a última a
+        clicar apagaria as outras quatro se cada uma trocasse o documento.
+        """
+        with contextlib.suppress(Exception):
+            self._host._maquina_pendente = fundir_declaracao(
+                getattr(self._host, "_maquina_pendente", None),
+                {"mesa": mesa},
+            )
+
+    def _mesa_em_vigor(self) -> dict[str, Any]:
+        """O que está no DISCO, com o que ainda espera o "Aplicar" por cima.
+
+        A ordem importa e é a mesma de `secao_controles._declarado_hoje`: o
+        pendente é mais novo que o disco, e mostrar o valor antigo faria o
+        clique dela parecer perdido ao trocar de aba e voltar.
+        """
+        gravado: dict[str, Any] = {}
+        with contextlib.suppress(Exception):
+            gravado = carregar_maquina().mesa.model_dump(mode="json")
+        pendente = getattr(self._host, "_maquina_pendente", None)
+        if isinstance(pendente, dict):
+            mesa = pendente.get("mesa")
+            if isinstance(mesa, dict):
+                gravado = fundir_declaracao(gravado, mesa)
+        return gravado
 
     def _ao_clicar_reexaminar(self, _botao: Any) -> None:
         self.reexaminar()
