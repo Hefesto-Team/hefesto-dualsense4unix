@@ -60,7 +60,7 @@ import contextlib
 import datetime as _dt
 import os
 import time
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -368,6 +368,16 @@ JANELA_DE_SOSSEGO_SEC = 0.6
 #: `materialize_launch_env` apaga os dela na primeira passagem, mas um arquivo
 #: copiado num relatório de defeito sobrevive a isso).
 ESTADO_ALLOWLIST_STEAM_INPUT = "allowlist Steam Input (físico é o único dispositivo)"
+
+#: ALLOWLIST-SO-A-MASCARA-01 (22/08/2026): o que o applier embrulhado da
+#: allowlist devolve quando NÃO chama o `apply_profile_mode`. Dialeto
+#: `IGNORADO_*` do `lifecycle.py`, e estado próprio de propósito: a seção
+#: `mode` do relatório da ativação precisa distinguir "a disputa foi pulada,
+#: como combinado" de `aplicado`, de `adiado_jogo_aberto` (o gate R-04 recusou)
+#: e de `falhou`. Sem palavra própria, quem lê o journal não sabe qual dos
+#: quatro aconteceu — e foi exatamente essa confusão que deixou a máscara
+#: `xbox` viva por horas num jogo cujo perfil pedia `dualsense`.
+IGNORADO_DISPUTA_DA_ALLOWLIST = "ignorado_disputa_allowlist"
 
 
 def _read_kv_int_fields(path: Path) -> dict[str, int]:
@@ -797,6 +807,88 @@ def _jogo_na_autoridade(daemon: DaemonProtocol) -> bool:
     return getattr(daemon, "display_authority", "unknown") == "game"
 
 
+def _mode_applier_so_a_mascara(daemon: DaemonProtocol) -> Callable[..., str]:
+    """`apply_profile_mode` menos o `kind` — o applier do ramo da ALLOWLIST.
+
+    ALLOWLIST-SO-A-MASCARA-01 (22/08/2026). A seção `mode` carrega DUAS coisas,
+    e até esta data o ramo da allowlist tratava as duas como uma só:
+
+    - **`kind`** (gamepad/native/desktop) é a DISPUTA PELO CONTROLE — ligar e
+      desligar vpad, largar o físico, soltar o grab. É isto que a allowlist
+      existe para pular, e continua pulado;
+    - **`gamepad_flavor`** é O QUE O JOGO ENXERGA. Com o físico escondido
+      (`ESCONDER-EM-VEZ-DE-SAIR-01`, 09/08) o vpad é o único dispositivo que o
+      jogo marcado tem, e um vpad Xbox NÃO TEM campo de touchpad, giroscópio
+      nem acelerômetro no descritor HID — dez linhas de `mapa-controles.csv`
+      dizem `gamepad/dualsense` na coluna `ponte_alcanca`.
+
+    Medido no daemon dela em 22/08/2026: perfil Sackboy pedindo
+    `gamepad_flavor="dualsense"`, quatro vpads uinput com máscara `xbox` e
+    `mode_from_profile=null`. Ou seja, marcar o jogo REMOVIA features em vez de
+    preservá-las — o oposto exato da decisão dela (*"a allowlist do Steam Input
+    NÃO tira o Hefesto da frente"*).
+
+    **Não é um segundo escritor da máscara.** Quem escreve continua sendo
+    `lifecycle.apply_profile_mode` -> `_pedir_mascara_do_perfil`, com o gate
+    R-04 inteiro no caminho (jogo com a autoridade => `ADIADO_JOGO_ABERTO`, e
+    nada é recriado na mão dela). O embrulho só decide se a chamada acontece,
+    exatamente como o `_mode_applier_ao_sair_do_nativo` do `lifecycle.py`, que
+    barra só o `native`.
+
+    **A precondição é o que garante que SÓ a máscara passa**, e ela não é
+    confiança no ramo do applier: a chamada só é feita quando o estado vivo JÁ
+    é o `kind` que o perfil pede — emulação ligada, vpad de pé, nativo
+    desligado. Nessa condição as duas linhas de disputa do ramo `gamepad`
+    (`set_native_mode(False)` e o `set_gamepad_emulation` de ligar) são
+    no-ops por construção, e a única coisa que sobra para mudar é o flavor.
+    Fora dela o applier nem é chamado — ligar o vpad num jogo marcado seria a
+    disputa que a allowlist pula.
+    """
+
+    def aplicar(
+        mode: Any | None,
+        *,
+        profile: Any | None = None,
+        origin: str = "launch",
+    ) -> str:
+        kind = getattr(mode, "kind", None) if mode is not None else None
+        nome = getattr(profile, "name", None)
+        if kind != "gamepad":
+            # `native`/`desktop` são disputa pura, e `None` é ausência de
+            # opinião — nenhum dos três traz máscara para entregar.
+            logger.info(
+                "launch_allowlist_mode_barrado",
+                motivo="kind_e_disputa",
+                kind=kind,
+                profile=nome,
+            )
+            return IGNORADO_DISPUTA_DA_ALLOWLIST
+        native, emulacao, flavor_vivo, _backends, _fisicos = _snapshot(daemon)
+        tem_vpad = getattr(daemon, "_gamepad_device", None) is not None
+        if native or not emulacao or not tem_vpad:
+            logger.info(
+                "launch_allowlist_mode_barrado",
+                motivo="vpad_nao_esta_de_pe",
+                native=native,
+                emulacao=emulacao,
+                tem_vpad=tem_vpad,
+                profile=nome,
+            )
+            return IGNORADO_DISPUTA_DA_ALLOWLIST
+        applier = getattr(daemon, "apply_profile_mode", None)
+        if not callable(applier):
+            return IGNORADO_DISPUTA_DA_ALLOWLIST
+        logger.info(
+            "launch_allowlist_so_a_mascara",
+            profile=nome,
+            mascara_do_perfil=getattr(mode, "gamepad_flavor", None),
+            mascara_viva=flavor_vivo,
+        )
+        return str(applier(mode, profile=profile, origin=origin))
+
+    return aplicar
+
+
 def _ativar_o_perfil_do_lancamento(
     daemon: DaemonProtocol, profile: Any, *, appid: int, na_allowlist: bool = False
 ) -> dict[str, str]:
@@ -823,14 +915,11 @@ def _ativar_o_perfil_do_lancamento(
     sem adivinhar pelo aparelho. Era o buraco que a `ELO-MUDO-01` nomeia: o
     produto respondia pelo transporte e nunca pelo efeito.
 
-    **Na allowlist o `mode_applier` vai a `None`, e isso é a metade que o teste
-    não pegou e o journal pegou** (22/08/2026). O `return` do ramo da allowlist
-    pula o `apply_profile_mode` que o arming chama DIRETO — mas a ativação tem o
-    seu, dentro do `apply_emulation`, e sem esta linha ele armava o modo pelo
-    caminho de dentro: o journal do primeiro ensaio ao vivo trouxe
-    `launch_arm_pulado_allowlist_steam_input ... ativacao={... 'mode':
-    'aplicado' ...}`, que é a allowlist sendo pulada e cumprida ao mesmo tempo.
-    Dois caminhos para o mesmo applier, e o teste vigiava um só.
+    **Na allowlist o `mode_applier` vai EMBRULHADO** — ver
+    `_mode_applier_so_a_mascara`. Ele foi `None` por algumas horas em
+    22/08/2026, e essa versão está refutada: barrar a seção `mode` inteira
+    barrava junto o `gamepad_flavor`, que não é disputa nenhuma. O embrulho
+    barra o `kind` e deixa a máscara passar.
     """
     nome = getattr(profile, "name", None)
     if not nome:
@@ -839,7 +928,11 @@ def _ativar_o_perfil_do_lancamento(
     try:
         from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
-        sem_disputa: dict[str, Any] = {"mode_applier": None} if na_allowlist else {}
+        sem_disputa: dict[str, Any] = (
+            {"mode_applier": _mode_applier_so_a_mascara(daemon)}
+            if na_allowlist
+            else {}
+        )
         gerente_do_daemon(
             daemon, store=getattr(daemon, "store", None), **sem_disputa
         ).activate(str(nome), origin="launch", relatorio=relatorio)
