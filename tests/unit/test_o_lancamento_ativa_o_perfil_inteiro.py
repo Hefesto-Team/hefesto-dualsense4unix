@@ -116,8 +116,11 @@ class _GerenteEspiao:
         "mode",
     )
 
+    construidos: ClassVar[list[dict[str, Any]]] = []
+
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
+        type(self).construidos.append(kwargs)
 
     def activate(
         self, nome: str, *, origin: str = "manual", relatorio: Any = None
@@ -136,10 +139,11 @@ class _GerenteEspiao:
 def espiao(monkeypatch: pytest.MonkeyPatch) -> type[_GerenteEspiao]:
     _GerenteEspiao.chamadas = []
     _GerenteEspiao.relatorios = []
+    _GerenteEspiao.construidos = []
     _GerenteEspiao.levanta = False
     from hefesto_dualsense4unix.profiles import manager as m
 
-    monkeypatch.setattr(m, "gerente_do_daemon", lambda daemon, **kw: _GerenteEspiao())
+    monkeypatch.setattr(m, "gerente_do_daemon", lambda daemon, **kw: _GerenteEspiao(**kw))
     return _GerenteEspiao
 
 
@@ -224,15 +228,49 @@ def test_na_allowlist_o_modo_continua_pulado(
 ) -> None:
     """A outra metade: ativar o perfil não pode ressuscitar a disputa pelo vpad.
 
-    Mordida: tirar o `return` do ramo da allowlist.
+    **SÃO DOIS CAMINHOS ATÉ O MESMO APPLIER, e a primeira versão deste teste
+    vigiava um só** — medido ao vivo em 22/08/2026, no primeiro ensaio no daemon
+    dela. O `return` do ramo da allowlist pula o `apply_profile_mode` que o
+    arming chama DIRETO (`daemon.aplicados`, abaixo), e o teste passava verde
+    por causa disso. Mas a ativação tem o seu, dentro do `apply_emulation`, e
+    ele armou o modo pelo caminho de dentro: o journal trouxe
+    `launch_arm_pulado_allowlist_steam_input ... ativacao={... 'mode':
+    'aplicado' ...}` — a allowlist sendo pulada e cumprida na mesma linha.
+
+    A cura é passar `mode_applier=None` à fábrica nesse ramo, e a régua deste
+    teste passou a ser a CONSTRUÇÃO do gerente, que é onde a decisão mora.
+
+    Mordida: tirar o `return` do ramo da allowlist, ou tirar o
+    `mode_applier=None` da construção.
     """
     daemon, _resultado = _armar(env_dir, monkeypatch, na_allowlist=True)
 
     assert daemon.aplicados == [], (
-        "o `mode` foi armado numa allowlist — é exatamente a disputa pelo "
-        "controle que ela decidiu pular"
+        "o `mode` foi armado pelo caminho de FORA (o applier direto do arming)"
+    )
+    assert espiao.construidos == [{"store": None, "mode_applier": None}], (
+        "o gerente da allowlist nasceu com `mode_applier` — a ativação vai "
+        "armar o modo pelo caminho de DENTRO, que é a mesma disputa pelo "
+        f"controle que ela decidiu pular. Construído com: {espiao.construidos}"
     )
     assert len(daemon.suprimidos) == 1, "a supressão continua valendo nos dois lados"
+
+
+def test_fora_da_allowlist_o_gerente_nasce_com_o_mode_applier(
+    env_dir: Path, monkeypatch: pytest.MonkeyPatch, espiao: type[_GerenteEspiao]
+) -> None:
+    """A contraparte: desarmar o modo é exceção da allowlist, não regra.
+
+    Sem este par, `mode_applier=None` para todo mundo passaria no teste acima e
+    o perfil deixaria de armar o modo em TODO jogo — a cura virando o defeito.
+
+    Mordida: passar `mode_applier=None` incondicionalmente.
+    """
+    _armar(env_dir, monkeypatch, na_allowlist=False)
+
+    assert espiao.construidos == [{"store": None}], (
+        f"o gerente fora da allowlist não pode nascer capado: {espiao.construidos}"
+    )
 
 
 # --- 4. O relatório sobe, nos dois caminhos ---------------------------------

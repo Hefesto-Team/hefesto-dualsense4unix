@@ -267,7 +267,7 @@ class ProfileManager:
         # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o `relatorio` desce até o
         # `apply` para as categorias travadas na mão entrarem nele — ver lá.
         self.apply(profile, origin=origin, relatorio=relatorio)
-        self.apply_keyboard(profile)
+        self.apply_keyboard(profile, relatorio=relatorio)
         self.apply_emulation(profile, origin=origin, relatorio=relatorio)
         self.store.set_active_profile(profile.name)
         self.store.bump("profile.activated")
@@ -447,6 +447,27 @@ class ProfileManager:
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
+        # ELO-MUDO-01/E2 (22/08/2026): AUSÊNCIA DE NOTÍCIA NÃO É NOTÍCIA.
+        #
+        # Até aqui o relatório só ganhava chave para as seções que passam por um
+        # APPLIER injetado (`mouse`, `suppression`, `mode`, `rumble_policy`,
+        # `speaker`, `mic`). O gatilho e a luz são escritos direto no controller,
+        # logo acima, e por isso NUNCA apareciam quando davam certo — só quando
+        # a trava manual os silenciava.
+        #
+        # Medido no daemon dela em 22/08, ativando o perfil do Sackboy pelo
+        # lançamento: `secoes={'suppression': 'aplicado', 'rumble_policy':
+        # 'aplicado', 'speaker': 'aplicado'}`. Gatilho e luz tinham sido
+        # aplicados naquele mesmo instante e não estão na lista — quem lê conclui
+        # que não entraram, que é exatamente a queixa dela sobre a aba Gatilhos.
+        #
+        # `setdefault` e não atribuição: o `IGNORADO_TRAVA_MANUAL` escrito lá em
+        # cima é mais específico e tem de vencer. As chaves são `trigger` e `led`
+        # no singular porque é o vocabulário que a trava já usa — dois nomes para
+        # a mesma seção seria pior que nenhum.
+        if relatorio is not None:
+            for categoria in sorted(_CATEGORIAS_SILENCIADAS_NO_APPLY):
+                relatorio.setdefault(categoria, "aplicado")
 
     def _categorias_travadas(self) -> frozenset[str]:
         """Categorias de override MANUAL armadas no store agora.
@@ -485,7 +506,9 @@ class ProfileManager:
         except Exception as exc:
             logger.debug("auto_player_colors_configure_falhou", err=str(exc))
 
-    def apply_keyboard(self, profile: Profile) -> None:
+    def apply_keyboard(
+        self, profile: Profile, *, relatorio: dict[str, str] | None = None
+    ) -> None:
         """Propaga `key_bindings` do perfil ao device virtual de teclado (A-06).
 
         No-op quando não há device (CLI, testes sem daemon) ou o device não
@@ -496,10 +519,17 @@ class ProfileManager:
         ele é resolvido AQUI, a cada ativação — imune ao boot fora de ordem
         (IPC/autoswitch sobem antes do keyboard) e ao device anulado/recriado
         em disconnect/reload.
+
+        ELO-MUDO-01/E2: e o resultado entra no `relatorio`, com os três estados
+        distintos. "Sem device" NÃO é o mesmo que "aplicou" nem que "falhou":
+        é a oitava seção do perfil dizendo que não tinha onde pousar, e quem
+        pergunta precisa poder diferenciar isso de um erro.
         """
         provider = self.keyboard_device_provider
         device = provider() if provider is not None else self.keyboard_device
         if device is None:
+            if relatorio is not None:
+                relatorio["keyboard"] = "ignorado_sem_device"
             return
         resolved = _to_key_bindings(profile)
         try:
@@ -510,6 +540,11 @@ class ProfileManager:
                 profile=profile.name,
                 err=str(exc),
             )
+            if relatorio is not None:
+                relatorio["keyboard"] = "falhou"
+            return
+        if relatorio is not None:
+            relatorio["keyboard"] = "aplicado"
 
     def apply_emulation(
         self,
