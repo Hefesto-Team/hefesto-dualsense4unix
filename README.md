@@ -6,12 +6,14 @@
 
 **Seu DualSense no Linux funcionando como funciona no PS5.**
 
+> *"O martelo não constrói o templo. Ele só ensina a pedra a lembrar da forma."*
+
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT%20%2B%20GPL--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Versão](https://img.shields.io/badge/vers%C3%A3o-0.9.4.5%20alfa-6a3fb4.svg)](CHANGELOG.md)
 [![Testes](https://img.shields.io/badge/testes-mais%20de%207000-brightgreen.svg)](tests/)
-[![CI](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions/workflows/ci.yml)
+[![CI](https://github.com/Hefesto-Team/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/Hefesto-Team/hefesto-dualsense4unix/actions/workflows/ci.yml)
 
 </div>
 
