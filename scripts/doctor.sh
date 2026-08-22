@@ -575,8 +575,26 @@ check_hid_playstation_probe_abortado() {
 # sem ela o daemon só alcança a cor por hidraw — que em BT sofre EIO — e a cor
 # por-controle degrada em silêncio (lightbar_source=="desired"). Só `test -w`:
 # este check NUNCA escreve no nó. O vpad uhid do daemon também cria um nó
-# rgb:indicator, mas o realpath do device dele vive em /devices/virtual/ e NÃO
-# serve de alvo (filtrado). Sem DualSense físico conectado: pula sem falhar.
+# rgb:indicator e precisa ser filtrado. Sem DualSense físico conectado: pula
+# sem falhar.
+#
+# LUZ-CEGA-01 (22/08/2026) — o filtro do vpad comia TODO controle do RÁDIO.
+# O critério era o caminho: `*/devices/virtual/*`. Mas o BlueZ moderno entrega
+# HID por `uhid`, que é um `misc` VIRTUAL — então um DualSense de Bluetooth
+# mora em `/sys/devices/virtual/misc/uhid/0005:054C:0CE6.xxxx/`, exatamente
+# como o vpad. MEDIDO nesta bancada com QUATRO DualSense no rádio, todos com
+# `multi_intensity` gravável: o check dizia *"sem DualSense físico com nó de
+# LED agora (só o controle virtual, ou nenhum)"*. Zero de quatro.
+#
+# O preço do silêncio é o pior possível: ela abre o doctor justamente quando a
+# cor não sai, e no rádio — que é onde a cor falha — o único check que olha o
+# LED se declarava cego. Só quem usa CABO chegava a ver este check rodar.
+#
+# O critério certo é a IDENTIDADE, não o caminho: o vpad anuncia
+# `HID_PHYS=hefesto-vpad` (a mesma marca que `broker/hidraw_broker.py:91`,
+# `integrations/cor_do_plastico.py:176` e `integrations/uhid_gamepad.py:576`
+# usam). Controle de verdade — cabo ou rádio — nunca tem esse `phys`.
+# Teste que morde: tests/unit/test_o_doctor_enxerga_a_luz_do_radio.py
 #
 # LED-QUE-NÃO-AFIRMA-01 (13/08/2026): o `pass` daqui dizia "cor por-controle via
 # sysfs OK (regra 77 valendo)" — e isso é uma afirmação de EFEITO que este check
@@ -588,12 +606,17 @@ check_hid_playstation_probe_abortado() {
 # em EIO, por lightbar_source=="desired", ou por driver ausente. Há teste que
 # reprova se a afirmação de efeito voltar: tests/unit/test_doctor_nao_afirma_efeito.py
 check_led_sysfs_gravavel() {
-    local node dev_real nome ok_nodes="" bad_nodes=""
+    local node dev_real nome phys ok_nodes="" bad_nodes=""
     for node in /sys/class/leds/*rgb:indicator*; do
         [[ -e "${node}" ]] || continue
         dev_real="$(readlink -f "${node}/device" 2>/dev/null || true)"
-        [[ -z "${dev_real}" ]] && dev_real="$(readlink -f "${node}" 2>/dev/null || true)"
-        [[ "${dev_real}" == */devices/virtual/* ]] && continue   # vpad do daemon
+        # Sem o link `device`: o nó mora em `<DEVICE_HID>/leds/<nome>` — dois
+        # dirname sobem até o device. É a MESMA conta de
+        # `core/sysfs_leds.py:discover`, de propósito: duas réguas que discordam
+        # sobre onde está o device já custaram caro nesta casa.
+        [[ -z "${dev_real}" ]] && dev_real="$(dirname "$(dirname "$(readlink -f "${node}" 2>/dev/null || echo /)")")"
+        phys="$(sed -n 's/^HID_PHYS=//p' "${dev_real}/uevent" 2>/dev/null || true)"
+        [[ "${phys}" == hefesto-vpad* ]] && continue   # vpad do daemon (LUZ-CEGA-01)
         [[ -e "${node}/multi_intensity" ]] || continue
         nome="${node##*/}"
         if [[ -w "${node}/multi_intensity" ]]; then
@@ -2690,6 +2713,11 @@ check_bt_clone_ds4() {
 check_bt_radio() {
     command -v busctl >/dev/null 2>&1 || return 0
     local paths p mac alias connected trusted rssi disc gamepad_conectado=0
+    # N-IGUAL-A-UM-01 (22/08/2026): os adaptadores que HOSPEDAM controle agora,
+    # um por linha. Não é o "primeiro adaptador": nesta bancada de três, o
+    # primeiro (hci0) hospeda um DualSense e o Pro mora no segundo — perguntar
+    # ao primeiro é perguntar a quem não tem a resposta.
+    local adps_com_controle="" adp
     paths="$(_dbus_bt_device_paths)"
     while IFS= read -r p; do
         [[ -z "${p}" ]] && continue
@@ -2699,6 +2727,7 @@ check_bt_radio() {
         connected="$(_dbus_bt_prop "${p}" org.bluez.Device1 Connected)"
         if [[ "${connected}" == "true" ]]; then
             gamepad_conectado=1
+            adps_com_controle+="${p%/*}"$'\n'
             # RSSI via D-Bus só existe durante discovery — mesmo limite do
             # `bluetoothctl info` antigo; sem valor, sem veredito.
             rssi="$(_dbus_bt_prop "${p}" org.bluez.Device1 RSSI)"
@@ -2725,16 +2754,28 @@ check_bt_radio() {
         if [[ "$(_dbus_bt_prop "${p}" org.bluez.Device1 Paired)" == "true" ]] \
                 && ! _dbus_bt_prop "${p}" org.bluez.Device1 UUIDs \
                     | grep -q '00001124-0000-1000-8000-00805f9b34fb'; then
-            fail "${alias:-controle} (${mac}) tem bond mas NENHUM perfil HID registrado (SDP vazio) — o BlueZ recusa a reconexão dele como 'unknown device' e o link cai sozinho. Cura (apaga o pareamento): busctl call org.bluez /org/bluez/hci0 org.bluez.Adapter1 RemoveDevice o ${p} && sudo rm -f /var/lib/bluetooth/*/cache/${mac} — e pareie de novo. O cache TEM de sair junto (SDP-CACHE-01), senão o pareamento novo nasce igual"
+            fail "${alias:-controle} (${mac}) tem bond mas NENHUM perfil HID registrado (SDP vazio) — o BlueZ recusa a reconexão dele como 'unknown device' e o link cai sozinho. Cura (apaga o pareamento): busctl call org.bluez ${p%/*} org.bluez.Adapter1 RemoveDevice o ${p} && sudo rm -f /var/lib/bluetooth/*/cache/${mac} — e pareie de novo. O cache TEM de sair junto (SDP-CACHE-01), senão o pareamento novo nasce igual"
         fi
     done <<<"${paths}"
     # Inquiry contínuo rouba banda dos links dos controles (provado ao vivo:
     # a tela de Bluetooth do cosmic-settings aberta mantém Discovering=yes).
+    #
+    # N-IGUAL-A-UM-01 (22/08/2026): a pergunta é por adaptador, e o adaptador
+    # certo é o que hospeda o controle — a busca só rouba banda DO RÁDIO EM QUE
+    # ela acontece. O `/org/bluez/hci0` literal que morava aqui era a mesma
+    # cicatriz do WATCHDOG-HCI-HARDCODE-01 (bt_health_watchdog.sh:158), que
+    # está escrita vinte linhas acima e não tinha sido generalizada: MEDIDO
+    # nesta bancada de três adaptadores, hci1 e hci2 hospedam quatro dos cinco
+    # controles e nenhum deles era olhado. Numa máquina com um adaptador só que
+    # tenha enumerado como hci1, o aviso era no-op MUDO.
     if [[ "${gamepad_conectado}" -eq 1 ]]; then
-        disc="$(_dbus_bt_prop /org/bluez/hci0 org.bluez.Adapter1 Discovering)"
-        if [[ "${disc}" == "true" ]]; then
-            warn "adaptador em modo de busca (Discovering: yes) com controle BT conectado — feche a tela de Bluetooth (cosmic-settings) enquanto joga; a busca rouba banda do rádio"
-        fi
+        while IFS= read -r adp; do
+            [[ -z "${adp}" ]] && continue
+            disc="$(_dbus_bt_prop "${adp}" org.bluez.Adapter1 Discovering)"
+            if [[ "${disc}" == "true" ]]; then
+                warn "adaptador ${adp##*/} em modo de busca (Discovering: yes) com controle BT conectado nele — feche a tela de Bluetooth (cosmic-settings) enquanto joga; a busca rouba banda do rádio"
+            fi
+        done <<<"$(printf '%s' "${adps_com_controle}" | sort -u)"
     fi
     # Contadores do adaptador (proxy não-intrusivo de rádio sujo — sem btmon).
     #
