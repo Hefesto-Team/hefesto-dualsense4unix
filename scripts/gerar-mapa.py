@@ -1097,7 +1097,16 @@ def main() -> int:
               "e com os três desenhos)")
         return 0
 
-    SAIDA.write_text(monta(), encoding="utf-8")
+    # A página sai SEM espaço no fim de linha, e a razão é briga medida em
+    # 22/08/2026: o `universal-sanitizer` do pre-commit apara essas caudas na
+    # hora do commit, e o gerador as reemitia na execução seguinte. Resultado —
+    # `specs.html` ficava PERMANENTEMENTE sujo no `git status` depois de todo
+    # `gerar-mapa.py`, e um arquivo que nunca fica limpo ensina a próxima pessoa
+    # a ignorar o `git status` inteiro. Os SVGs interpolados são a fonte das
+    # caudas; apará-las aqui é mais barato que caçá-las nos três desenhos.
+    SAIDA.write_text(
+        "\n".join(linha.rstrip() for linha in monta().split("\n")), encoding="utf-8"
+    )
     kb = SAIDA.stat().st_size / 1024
     linhas = le_csv()
     print(f"{SAIDA.relative_to(RAIZ)}: {kb:.0f} KB, {len(linhas)} linhas")
