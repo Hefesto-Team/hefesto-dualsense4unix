@@ -48,6 +48,13 @@ COR_MIC_PICO: Final[str] = "#50fa7b"
 COR_MIC_FALA: Final[str] = "#8be9fd"
 COR_MIC_SILENCIO: Final[str] = "#44475a"
 
+#: As duas fatias do medidor de rádio (mockup `aba-configuracoes.html:368`):
+#: entrada no roxo `@purple`, áudio no ciano `@cyan`. **Não é rosa** — o
+#: `gui/theme.css:28` reserva `#ff79c6` para marca e aba ativa, e `@purple` já
+#: é o acento primário de tudo que é entrada nesta janela.
+COR_RADIO_ENTRADA: Final[str] = "#bd93f9"
+COR_RADIO_AUDIO: Final[str] = "#8be9fd"
+
 
 def hex_para_rgb(valor: str) -> RGB:
     """``"#8be9fd"`` -> ``(0.545, 0.913, 0.992)`` para o cairo."""
@@ -99,6 +106,28 @@ def selo_mic(muted: bool | None) -> tuple[str, str, str] | None:
     if muted:
         return ("MUDO", COR_SELO_MUDO_FUNDO, COR_SELO_MUDO_TEXTO)
     return ("ATIVO", COR_SELO_ATIVO_FUNDO, COR_SELO_ATIVO_TEXTO)
+
+
+def fatias_da_barra(fracao_entrada: float, fracao_audio: float) -> tuple[float, float]:
+    """As duas fatias do medidor de rádio, prontas para pintar.
+
+    A regra pura é uma só, e ela é de honestidade de desenho: **a trilha tem
+    tamanho 1,0 e as duas fatias somadas nunca a ultrapassam.** Sem isso, um
+    adaptador com o rádio estourado pintaria a fatia de áudio para fora do
+    contorno e a barra passaria a mostrar menos ocupação do que tem, porque o
+    excesso simplesmente sumiria da vista.
+
+    Quem satura é o DESENHO, nunca a conta: a `Ocupacao` de
+    `integrations/radio_da_mesa.py` continua devolvendo a fração crua, e é ela
+    que vai ao selo `NNN/1600` e à palavra — que é onde "passou do teto"
+    precisa aparecer escrito.
+
+    Fica aqui, e não no `_on_draw`, porque é a única regra do medidor que se
+    testa sem GTK.
+    """
+    entrada = max(0.0, min(1.0, float(fracao_entrada)))
+    audio = max(0.0, min(1.0 - entrada, float(fracao_audio)))
+    return entrada, audio
 
 
 #: Quantas amostras o medidor de microfone mostra ao mesmo tempo (mockup).
@@ -239,6 +268,14 @@ _MIC_PX: Final[tuple[int, int]] = (72, 26)
 #: "faixa fina" da barra de LED do DualSense.
 _LIGHTBAR_PX: Final[tuple[int, int]] = (60, 12)
 _SPEAKER_PX: Final[tuple[int, int]] = (60, 12)
+#: Medidor de ocupação do rádio, na seção "A mesa" da aba Configurações. Mais
+#: largo que as barras do card porque ele mora numa fileira própria e não
+#: dentro de um card, e mais BAIXO que uma barra de progresso comum porque o
+#: mockup o desenha como trilho fino (`aba-configuracoes.html:149`). O piso é
+#: 120px e quem cresce é o `hexpand` de quem empacota: um `set_size_request`
+#: largo viraria piso da largura mínima da aba inteira, e a janela abre com
+#: 1180px sem rolagem horizontal.
+_RADIO_PX: Final[tuple[int, int]] = (120, 10)
 
 
 if _GTK_DISPONIVEL:
@@ -500,6 +537,65 @@ if _GTK_DISPONIVEL:
             ctx.stroke()
             return False
 
+    class MedidorDeRadio(Gtk.DrawingArea):  # type: ignore[misc]
+        """Barra de ocupação do rádio de UM adaptador Bluetooth — duas fatias.
+
+        Molde do `SpeakerBar` logo acima, com uma diferença de desenho: são
+        DUAS fatias na mesma trilha, a de entrada e a de áudio, e a segunda
+        começa onde a primeira termina. Duas barras separadas leriam como dois
+        orçamentos independentes, e o ponto do medidor é que **as duas dividem
+        as mesmas 1.600 fatias de tempo por segundo**.
+
+        O widget não sabe o que é slot, nem o que é microfone: ele recebe duas
+        frações e pinta. A conta e a procedência dela moram em
+        `integrations/radio_da_mesa.py`, que roda sem GTK e é onde os testes
+        mordem.
+        """
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._entrada = 0.0
+            self._audio = 0.0
+            self.set_size_request(*_RADIO_PX)
+            self.connect("draw", self._on_draw)
+
+        def set_ocupacao(self, fracao_entrada: float, fracao_audio: float) -> None:
+            """Guarda as duas frações e repinta SÓ quando alguma mudou.
+
+            A guarda de igualdade é a mesma do `SpeakerBar.set_volume`, e aqui
+            ela sobra: este medidor é alimentado ao ENTRAR na aba e no botão
+            "Reexaminar a mesa", nunca no tique. Fica assim mesmo — o dia em que
+            alguém pendurar isto num tique, o widget já está pronto.
+            """
+            fatias = fatias_da_barra(fracao_entrada, fracao_audio)
+            if fatias != (self._entrada, self._audio):
+                self._entrada, self._audio = fatias
+                self.queue_draw()
+
+        def _on_draw(self, _widget: Any, ctx: Any) -> bool:
+            largura = self.get_allocated_width()
+            altura = self.get_allocated_height()
+            ctx.set_source_rgb(*hex_para_rgb(COR_TRILHA))
+            ctx.rectangle(0, 0, largura, altura)
+            ctx.fill()
+            util = max(0.0, largura - 2)
+            fim_da_entrada = util * self._entrada
+            if self._entrada > 0:
+                ctx.set_source_rgb(*hex_para_rgb(COR_RADIO_ENTRADA))
+                ctx.rectangle(1, 1, fim_da_entrada, altura - 2)
+                ctx.fill()
+            if self._audio > 0:
+                ctx.set_source_rgb(*hex_para_rgb(COR_RADIO_AUDIO))
+                ctx.rectangle(1 + fim_da_entrada, 1, util * self._audio, altura - 2)
+                ctx.fill()
+            # Contorno por último: é ele que fecha a trilha por cima das duas
+            # fatias, como no `SpeakerBar`.
+            ctx.set_source_rgb(*hex_para_rgb(COR_CONTORNO))
+            ctx.set_line_width(1)
+            ctx.rectangle(0.5, 0.5, largura - 1, altura - 1)
+            ctx.stroke()
+            return False
+
     class TouchpadView(DesenhoElastico):
         """Retângulo do touchpad com o ponto de toque (guia §4).
 
@@ -628,6 +724,25 @@ else:
         def show(self) -> None:
             """No-op no stub."""
 
+    class MedidorDeRadio:  # type: ignore[no-redef]
+        """Stub sem GTK do medidor de ocupação do rádio."""
+
+        def __init__(self) -> None:
+            self._entrada = 0.0
+            self._audio = 0.0
+
+        def set_ocupacao(self, fracao_entrada: float, fracao_audio: float) -> None:
+            self._entrada, self._audio = fatias_da_barra(fracao_entrada, fracao_audio)
+
+        def set_size_request(self, *_args: object) -> None:
+            """No-op no stub."""
+
+        def set_hexpand(self, *_args: object) -> None:
+            """No-op no stub."""
+
+        def show(self) -> None:
+            """No-op no stub."""
+
     class TouchpadView(DesenhoElastico):  # type: ignore[no-redef]
         """Stub sem GTK do painel de touchpad."""
 
@@ -652,15 +767,19 @@ __all__ = [
     "COR_MIC_FALA",
     "COR_MIC_PICO",
     "COR_MIC_SILENCIO",
+    "COR_RADIO_AUDIO",
+    "COR_RADIO_ENTRADA",
     "ESCALA_GYRO_GRAUS_S",
     "MIC_AMOSTRAS",
     "DesenhoElastico",
     "GyroBars",
     "LightbarBar",
+    "MedidorDeRadio",
     "MicMeter",
     "SpeakerBar",
     "TouchpadView",
     "cor_da_barra_do_mic",
+    "fatias_da_barra",
     "fracao_do_eixo",
     "fracao_do_volume",
     "hex_para_rgb",
