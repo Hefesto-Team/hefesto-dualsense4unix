@@ -21,19 +21,23 @@ enumeráveis por varredura:
   ``install.sh``, uma unit de ``assets/``, um empacotamento, ou a janela.
   **Basta UMA**, nunca a conjunção;
 - **P3b — SÍMBOLO**: uma função ou classe pública de módulo em ``src/``. O
-  produto promete que isto FAZ algo. O caminho é qualquer chamador em ``src/``,
-  em ``scripts/`` (que o instalador roda), ou no **Python embutido em heredoc**
-  do ``install.sh``/``uninstall.sh``.
+  produto promete que isto FAZ algo. O caminho é **alcance a partir dos PONTOS
+  DE ENTRADA declarados** (``_PONTOS_DE_ENTRADA``), andando pelo grafo de
+  ``import``, com o nome resolvido ao **MÓDULO de origem**: ``from x.y import
+  f`` seguido de ``f()`` conta para ``x.y::f``, e para mais nada. Conta também
+  o **Python embutido em heredoc** do ``install.sh``/``uninstall.sh``, que é
+  ponto de entrada como qualquer outro.
 
-  Essa terceira porta nasceu em 13/08/2026, e nasceu de o portão ter errado: a
+  A porta do heredoc nasceu em 13/08/2026, e nasceu de o portão ter errado: a
   varredura só lia ``*.py`` e por isso acusava de órfã a ``strip_quirks_token``,
-  que o ``uninstall.sh``:1166 chama desde julho, dentro de um
+  que o ``uninstall.sh``:1243 chama desde julho, dentro de um
   ``python3 - "${ROOT_DIR}" <<'PYEOF'``. Um portão que acusa de dívida quem está
   certo é pior que portão nenhum: ensina a próxima pessoa a não acreditar nele.
 
 ``tests/`` NUNCA conta como caminho, e é essa linha que separa as curas soltas
-do resto da árvore: 30 dos 33 símbolos que este portão acusa hoje têm chamador
-em ``tests/`` e nenhum em produção — pareciam entregues.
+do resto da árvore: REMEDIDO em 22/08/2026, 52 dos 60 símbolos que este portão
+acusa hoje têm chamador em ``tests/`` e nenhum em produção — pareciam
+entregues.
 
 E a conjunção "install E GUI" está deliberadamente FORA daqui: ela é FALSA para
 quase toda a dívida. ``ExternalMaskRegistry`` quer GUI e não quer install;
@@ -91,15 +95,50 @@ AS QUATRO ARMADILHAS QUE A VARREDURA ANTERIOR CAIU, e como esta não cai
    (despachado em ``connection.py``:829) não aparece na lista.
 2. **Uso dentro do próprio arquivo.** A regra proposta era "chamador fora do
    próprio arquivo": medi, e ela acusa **846** símbolos, porque a maioria dos
-   auxiliares é usada no próprio módulo — e o módulo É produção. A regra certa é
-   "chamador em qualquer lugar de ``src/``, menos o corpo do próprio símbolo"
-   (o "menos" impede que recursão e auto-citação satisfaçam o portão sozinhas).
+   auxiliares é usada no próprio módulo — e o módulo é produção QUANDO ele é
+   alcançado. A régua de hoje é essa condição, escrita: chamador em qualquer nó
+   de um módulo ALCANÇADO, menos o próprio símbolo (o "menos" impede que
+   recursão e auto-citação satisfaçam o portão sozinhas).
 3. **Docstring e ``__all__``.** Um símbolo citado só no próprio docstring, ou só
    na lista de reexportação, não é alcançado por ninguém. Ambos são descartados
    — e é por isso que ``RumbleEngine`` aparece aqui apesar de
    ``ipc_handlers.py``:2237 afirmar, num comentário, que ele "segue em uso".
 4. **Alvo de atribuição.** ``X = 1`` não é uso de ``X``. Contar o ``ast.Store``
    fazia toda constante se satisfazer com a própria linha de definição.
+
+O QUE A RÉGUA PLANA PERDOAVA — SUBSTITUÍDA EM 22/08/2026
+---------------------------------------------------------
+Até 21/08/2026 a pergunta era plana: *existe algum chamador deste NOME em
+``src/``, em ``scripts/`` ou num heredoc?* Ela perdoava duas coisas, e as duas
+são a forma mais cara do defeito-mãe:
+
+a. **corrente fechada em si mesma.** ``A`` chama ``B``, ``B`` chama ``A``, e
+   ninguém de fora chama nenhum dos dois — os dois pareciam entregues. MEDIDO
+   em 22/08/2026: o par ``integrations/prontuario_dos_jogos.py`` +
+   ``integrations/api_de_entrada.py`` (19 símbolos) e
+   ``profiles/curva_propria.py`` (3) passavam inteiros assim, e o
+   ``SPRINT_ORDER.md`` já dizia, com outras palavras, que *"o prontuário não é
+   consumido por ninguém"*;
+b. **colisão de nome entre módulos.** ``prontuario_dos_jogos::Censo`` era
+   perdoado por ``sentinela_do_wrapper.py``:302, que usa um ``Censo`` sem
+   relação nenhuma com ele. Um nome não é um endereço.
+
+A régua de hoje resolve as duas de uma vez: alcance a partir dos pontos de
+entrada declarados, pelo grafo de ``import``, com o nome resolvido ao módulo.
+Só dois idiomas continuam PLANOS, e por medição: o **literal de texto**
+(despacho por ``getattr``, a armadilha 1) e o **atributo cuja base não é
+módulo** (``obj.metodo()``, que a varredura não tem como resolver sem inferir
+tipo). Contá-los planos custa perdão ocasional; não contá-los custaria acusar
+quem está certo, que é o defeito que este portão não pode ter.
+
+CONTAGEM da troca, MEDIDA em 22/08/2026: 33 acusações viraram 60. Nenhuma
+saiu; as 27 que entraram são os 22 símbolos das três correntes fechadas acima
+mais os cinco de ``hidraw_broker_client``, que perderam o perdão quando
+``_TERRITORIOS_DE_PRODUCAO`` deixou de ser a pasta ``scripts/`` inteira. São
+27 e não 28 porque o sexto símbolo que a pasta perdoava,
+``curva_propria.py::gerar_tabela_markdown``, já está entre os 22: o módulo
+inteiro dele é corrente fechada, e a régua de alcance o acusaria sozinha.
+Todas estão classificadas abaixo, com endereço.
 
 O CONTRATO DESTE ARQUIVO
 -------------------------
@@ -133,21 +172,84 @@ import pytest
 _RAIZ = Path(__file__).resolve().parents[2]
 _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: Territórios onde um chamador de produção pode morar. ``scripts/`` entra
-#: porque o instalador roda os helpers de lá (``install.sh`` chama
-#: ``scripts/fix_wireplumber_default_source.sh``, por exemplo): um símbolo
-#: alcançado só por um helper de ``scripts/`` ESTÁ alcançado.
+#: Os PONTOS DE ENTRADA do produto — onde o alcance começa. Cada um traz a
+#: FONTE que o declara, e ``test_todo_ponto_de_entrada_tem_fonte_viva`` confere
+#: que a fonte ainda diz o que esta tabela afirma. Lista adivinhada apodrece
+#: calada; lista com fonte conferida, não.
 #:
-#: Em 12/08/2026 esta porta não perdoava ninguém, e a nota daqui dizia isso. O
-#: fato MUDOU em 13/08/2026 e a frase foi SUBSTITUÍDA em 15/08/2026: hoje ela
-#: perdoa ``profiles/curva_propria.py::gerar_tabela_markdown``, que
-#: ``scripts/gerar-tabela-de-curvas.py``:83 chama — e o ``--check`` desse mesmo
-#: gerador roda no CI (``.github/workflows/ci.yml``, passo
-#: ``gerar-tabela-de-curvas.py --check``). A porta deixou de ser
-#: preventiva e passou a segurar peso, e é por isso que ela ganhou mordida
-#: própria em ``test_o_chamador_em_scripts_e_caminho_de_producao``: uma porta que
-#: segura peso sem mordida cai calada.
-_TERRITORIOS_DE_PRODUCAO = ("scripts",)
+#: ISTO SUBSTITUIU ``_TERRITORIOS_DE_PRODUCAO = ("scripts",)`` em 22/08/2026.
+#: A nota antiga dizia que ``scripts/`` era território de produção *"porque o
+#: instalador roda os helpers de lá"*. MEDIDO: o que o instalador roda de lá é
+#: SHELL — ``install_udev.sh``, ``fix_wireplumber_default_source.sh``,
+#: ``doctor.sh``. Nenhum ``.py`` de ``scripts/`` é rodado por instalador nem
+#: COPIADO para fora do checkout (as 51 varreduras de ``scripts/**/*.py``
+#: caíram todas em citação de comentário). O único Python copiado para fora é
+#: ``broker/hidraw_broker.py`` — e ele está aqui embaixo, como ponto de
+#: entrada. O que a pasta ``scripts/`` de fato guardava era a bancada: um
+#: instrumento de bancada é da mesma espécie que ``tests/``, e ``tests/`` nunca
+#: contou.
+#:
+#: PREÇO declarado dessa troca, MEDIDO em 22/08/2026: seis símbolos que a pasta
+#: perdoava passaram a ser acusados (os cinco de ``hidraw_broker_client`` e o
+#: ``gerar_tabela_markdown``) e estão classificados em ``_NAO_E_PROMESSA``.
+_PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
+    "cli/app.py": (
+        "pyproject.toml",
+        'hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"',
+        "console_script da CLI; é também o ExecStart da unit do daemon "
+        "(assets/hefesto-dualsense4unix.service:22, `daemon start --foreground`)",
+    ),
+    "app/main.py": (
+        "pyproject.toml",
+        'hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.app.main:main"',
+        "console_script da janela; ExecStart de "
+        "assets/hefesto-dualsense4unix-gui-hotplug.service:12",
+    ),
+    "__main__.py": (
+        "src/hefesto_dualsense4unix/__main__.py",
+        "from hefesto_dualsense4unix.cli.app import main",
+        "`python -m hefesto_dualsense4unix` — a boca que não passa pelo wheel",
+    ),
+    "broker/hidraw_broker.py": (
+        "install.sh",
+        "src/hefesto_dualsense4unix/broker/hidraw_broker.py",
+        "install.sh:1021 o COPIA para /usr/local/lib/hefesto-dualsense4unix/ "
+        "(o .deb em scripts/build_deb.sh:323 e o flatpak em "
+        "flatpak/br.andrefarias.Hefesto.yml:320 fazem o mesmo), e ele é o "
+        "ExecStart de assets/systemd/hefesto-hidraw-broker.service:34",
+    ),
+    "integrations/sentinela_do_wrapper.py": (
+        "install.sh",
+        "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
+        "install.sh:3367 substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "`python3 __SENTINELA__ --reparar` "
+        "(assets/hefesto-steam-input-guard.service:29); o doctor.sh:1643 "
+        "também o roda",
+    ),
+    "integrations/steam_input_ponte.py": (
+        "scripts/disable_steam_input.sh",
+        "integrations/steam_input_ponte.py",
+        "roda como `python3 ${PONTE_PY} --ligar` em "
+        "scripts/disable_steam_input.sh:283+298, e esse roteiro é o ExecStart "
+        "de assets/hefesto-steam-input-guard.service:14 (install.sh:3368)",
+    ),
+    "integrations/steam_launch_options.py": (
+        "install.sh",
+        "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
+        "install.sh:3395 o roda com `--migrate`; uninstall.sh:1467 o roda para "
+        "tirar o wrapper; doctor.sh:1862 o publica como cura",
+    ),
+    "integrations/proton_pin.py": (
+        "install.sh",
+        "src/hefesto_dualsense4unix/integrations/proton_pin.py",
+        "install.sh:3542 e uninstall.sh:1444 o rodam; doctor.sh:3339 também",
+    ),
+    "integrations/exame_da_mesa.py": (
+        "scripts/doctor.sh",
+        "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
+        "scripts/doctor.sh:3300 o roda — e o install.sh:3608 roda o doctor",
+    ),
+}
 
 #: Roteiros de shell que EMBUTEM Python de produção. Não é caso de borda nem
 #: gambiarra: é a política desta casa — *"quem DECIDE é o módulo puro
@@ -358,11 +460,14 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "Liga o servidor HTTP de métricas (daemon/subsystems/metrics.py:47). "
         "Publicar métricas é escolha de quem instala. REMEDIDO em 22/08/2026: "
         "sem mão — nenhum `Environment=` em assets/, e o install.sh não menciona "
-        "METRICS. Fora de src/ há só documentação, testes e o %changelog do "
-        "pacote Fedora (spec:459). A redação anterior dizia 'a única ocorrência "
-        "fora de src/', e a medição derrubou: aparece também em README.md, "
-        "CHANGELOG.md, docs/adr/016, docs/usage/metrics.md e dois testes — "
-        "nenhum deles ESCREVE a variável, que é o que importa para este portão."
+        "METRICS. Fora de src/ a chave aparece em OITO lugares e nenhum deles a "
+        "ESCREVE, que é o que importa para este portão: README.md, CHANGELOG.md, "
+        "docs/adr/016, docs/usage/metrics.md, o sprint DOC-QUE-NAO-MENTE-03 de "
+        "03/08, tests/unit/test_metrics.py, este arquivo, e o %changelog do "
+        "pacote Fedora (packaging/fedora/hefesto-dualsense4unix.spec, entrada "
+        "`1:0.7.0-1`). O endereço é a ENTRADA do changelog e não a linha, de "
+        "propósito: o %changelog cresce por cima, e o ponteiro por número de "
+        "linha já apodreceu duas vezes em dez dias."
     ),
     "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED": (
         "Liga o carregamento de plugins (daemon/subsystems/plugins.py:194). É "
@@ -461,11 +566,13 @@ _SEM_MAO_HOJE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED": (
         "REMEDIDO em 22/08/2026: ninguém ESCREVE a chave — nenhum "
         "`Environment=` em assets/, nada no install.sh. O %changelog do pacote "
-        "Fedora (spec:459) a ANUNCIA sem escrevê-la, que é exatamente a forma "
-        "de promessa que este portão existe para acusar. A redação de 12/08 "
-        "dizia que aquela era a ÚNICA ocorrência fora de src/, e não é: há "
-        "citações em README.md, CHANGELOG.md, ADR-016, docs/usage/metrics.md e "
-        "dois testes. Citar não é escrever. O campo irmão "
+        "Fedora (packaging/fedora/hefesto-dualsense4unix.spec, entrada "
+        "`1:0.7.0-1`) a ANUNCIA sem escrevê-la, que é exatamente a forma de "
+        "promessa que este portão existe para acusar. Ela é citada em outros "
+        "sete lugares fora de src/ (README.md, CHANGELOG.md, ADR-016, "
+        "docs/usage/metrics.md, o sprint DOC-QUE-NAO-MENTE-03, "
+        "tests/unit/test_metrics.py e este arquivo), e citar não é escrever. "
+        "O campo irmão "
         "`DaemonConfig.metrics_enabled` também só tem leitor (metrics.py:389). "
         "O QUE A FECHA: `Environment=` na unit ou uma opção do instalador. "
         "ATENÇÃO ao decidir: enquanto ninguém liga isto, o `MetricsSubsystem` "
@@ -612,6 +719,56 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`texto_do_sono` e `sono_dos_sinks_do_controle`, que hoje só são "
         "alcançados por ele e que `tests/unit/test_o_alto_falante_nunca_dorme_01.py`"
         ":573-608 exercita como as funções PURAS da decisão."
+    ),
+    # --- A BANCADA (22/08/2026): o que só um instrumento de `scripts/` usa ----
+    # Os cinco do broker entraram quando `_TERRITORIOS_DE_PRODUCAO =
+    # ("scripts",)` saiu; o sexto, `gerar_tabela_markdown`, entraria de todo
+    # jeito — `curva_propria.py` é corrente fechada e nenhum ponto de entrada o
+    # alcança. Não é dívida nova: é a mesma linha que já valia para `tests/`,
+    # aplicada à bancada. A nota de `_PONTOS_DE_ENTRADA` traz a medição.
+    "integrations/hidraw_broker_client.py::abrir_hidraw": (
+        "MEDIDO em 22/08/2026. API de BANCADA: o único chamador é "
+        "`scripts/ensaios/comum.py`:87+421, o cliente único que os instrumentos "
+        "de ensaio compartilham. O produto abre hidraw por `make_broker_opener` "
+        "(:486) e por `HidrawBrokerClient` (:79), e os dois seguem alcançados. "
+        "Instrumento é da mesma espécie que `tests/`, e `tests/` nunca contou."
+    ),
+    "integrations/hidraw_broker_client.py::porta_provavel": (
+        "MEDIDO em 22/08/2026. Instrumento: `scripts/record_hid_capture.py`"
+        ":66+420 e `scripts/ensaios/comum.py`:92+481 a usam para imprimir por "
+        "qual porta o ensaio está falando. É cabeçalho de relatório de bancada e "
+        "não muda nada no aparelho — quem escolhe a porta em produção é "
+        "`broker_client_for` (:386)."
+    ),
+    "integrations/hidraw_broker_client.py::estado_do_grab": (
+        "MEDIDO em 22/08/2026. Instrumento, e o docstring (:735) o diz: existe "
+        "para o ensaio saber se o zero que ele contou é do aparelho ou da "
+        "ausência de leitura. Chamadores: "
+        "`scripts/ensaio_o_keepalive_mata_o_rumble.py`:64+281 e "
+        "`scripts/ensaio_rumble_em_par.py`:93. O daemon não pergunta isso — ele "
+        "É quem segura o grab."
+    ),
+    "integrations/hidraw_broker_client.py::linha_do_grab": (
+        "MEDIDO em 22/08/2026. Formata a linha de cabeçalho `grab do evdev ....` "
+        "de um relatório de ensaio; chamada em "
+        "`scripts/ensaio_o_keepalive_mata_o_rumble.py`:373 e "
+        "`scripts/ensaio_rumble_em_par.py`:333. Irmã de `estado_do_grab`: sem o "
+        "instrumento não há onde imprimir."
+    ),
+    "integrations/hidraw_broker_client.py::leitura_de_zero": (
+        "MEDIDO em 22/08/2026. Instrumento declarado: o docstring (:744) diz que "
+        "ela existe para uma CÉLULA DE TABELA de ensaio não chamar de `0` o que "
+        "é `MUDO`. O único uso é a reexportação de `scripts/ensaios/comum.py`:89, "
+        "marcada `# noqa: F401 - reexportado para os instrumentos`."
+    ),
+    "profiles/curva_propria.py::gerar_tabela_markdown": (
+        "MEDIDO em 22/08/2026, e isto SUBSTITUI a nota de 15/08 que o dava por "
+        "fiado em produção. O docstring (:290) diz o que ele é: gera a tabela de "
+        "`docs/protocol/curvas-proprias.md`. O único chamador é "
+        "`scripts/gerar-tabela-de-curvas.py`:52-83, que roda no CI com `--check` "
+        "(`.github/workflows/ci.yml`:400). Gerador de documentação é instrumento, "
+        "e instrumento não é caminho de produção — a mesma linha que vale para "
+        "`tests/`."
     ),
 }
 
@@ -895,7 +1052,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # entrada afirmava "esse cuidado está escrito e nunca roda", pedindo como
     # cura que "o `uninstall.sh` chamar este caminho". SUBSTITUÍDO em
     # 13/08/2026, porque o fato era falso e não decisão a preservar: o
-    # `uninstall.sh` já chama, em uninstall.sh:1166 (`rest, changed =
+    # `uninstall.sh` já chama, em uninstall.sh:1243 (`rest, changed =
     # kc.strip_quirks_token(tok)`), dentro do heredoc que importa o módulo. Era
     # o PORTÃO que não enxergava — ver `_ROTEIROS_DE_PRODUCAO`. A entrada saiu
     # porque a varredura passou a alcançá-la, e não porque alguém a apagou à
@@ -909,6 +1066,11 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # esta entrada não foi a mão de ninguém: foi
     # `test_nenhuma_lapide_sobreviveu_a_propria_cura` reprovando — o portão
     # pegou a leva que o curou, que é exatamente o que ele existe para fazer.
+    # RETIFICADO em 22/08/2026: o que nasceu em 13/08 foi um GERADOR DE
+    # DOCUMENTAÇÃO, e a régua de alcance não o conta como caminho de produção.
+    # O símbolo voltou à lista, agora em `_NAO_E_PROMESSA`, e a razão está lá.
+    # A lápide fica porque o movimento de 13/08 aconteceu; a conclusão dele —
+    # "o caminho de produção nasceu" — é que era falsa.
     "profiles/sanidade.py::verificar_perfis_do_disco": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. É a conveniência que junta "
         "as duas metades que já existem e funcionam — carrega os perfis do XDG "
@@ -931,6 +1093,138 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "para ter entrada própria; ou apagar, se `run_tui` já é a entrada. "
         "Como este é o único acusado da lista SEM sequer um teste que o "
         "exercite, é também o mais provável de ser resto puro."
+    ),
+    # --- AS TRÊS CORRENTES FECHADAS EM SI MESMAS (22/08/2026) ----------------
+    # As 21 entradas abaixo são o que a régua PLANA perdoava e a régua de
+    # alcance acusou. Nenhuma é dívida nova: são três módulos inteiros escritos
+    # e nunca ligados, cujos símbolos se chamavam entre si e por isso pareciam
+    # entregues. É o defeito-mãe desta casa na forma mais cara que ele tem.
+    "integrations/prontuario_dos_jogos.py::Prontuario": (
+        "MEDIDO em 22/08/2026, e é o achado que a régua nova destravou: o módulo "
+        "INTEIRO é uma corrente fechada em si mesma. Nada em `src/` o importa, "
+        "nenhum roteiro o roda, nenhuma unit o cita — o `main` (:1001) só nasce "
+        "se alguém digitar `python3 prontuario_dos_jogos.py`. A régua plana o "
+        "perdoava porque os símbolos dele se chamam entre si; o `SPRINT_ORDER.md` "
+        "já dizia o mesmo em prosa (*o prontuário não é consumido por ninguém*). "
+        "O QUE FECHA: o consumidor que a decisão dela de 19/08 pede — a aba de "
+        "perfil lendo o prontuário, ou o `doctor.sh` rodando-o como já roda o "
+        "`sentinela_do_wrapper` (doctor.sh:1643). É DECISÃO DELA qual das duas "
+        "bocas, e por isso é lacuna e não conserto."
+    ),
+    "integrations/prontuario_dos_jogos.py::Censo": (
+        "MEDIDO em 22/08/2026. Da corrente fechada do prontuário — a medição e o "
+        "que a fecha estão na entrada de `::Prontuario`. Esta é a TESTEMUNHA da "
+        "colisão de nome: a régua plana a perdoava por `sentinela_do_wrapper.py`"
+        ":302, que tem um `Censo` sem relação nenhuma com este (:549)."
+    ),
+    "integrations/prontuario_dos_jogos.py::Cura": (
+        "MEDIDO em 22/08/2026. Da corrente fechada do prontuário (ver "
+        "`::Prontuario`). É o resultado de uma cura automática (:813), e o único "
+        "que o monta é `curar_o_que_e_automatico` (:885) — que também é órfão."
+    ),
+    "integrations/prontuario_dos_jogos.py::Estorvo": (
+        "MEDIDO em 22/08/2026. Da corrente fechada do prontuário (ver "
+        "`::Prontuario`). É o impedimento de um jogo (:350), citado só por "
+        "`Prontuario` (:370) — os dois órfãos se sustentavam um ao outro."
+    ),
+    "integrations/prontuario_dos_jogos.py::Ponte": (
+        "MEDIDO em 22/08/2026. Da corrente fechada do prontuário (ver "
+        "`::Prontuario`). É o carimbo de ponte confirmada (:226) lido por "
+        "`pontes_confirmadas` (:267); quem ESCREVE o carimbo é o daemon, e ele "
+        "não passa por aqui."
+    ),
+    "integrations/prontuario_dos_jogos.py::pasta_de_perfis": (
+        "MEDIDO em 22/08/2026. Da corrente fechada do prontuário (ver "
+        "`::Prontuario`). Devolve a pasta de perfis (:257) e é chamada só por "
+        "`pontes_confirmadas` (:267), que ninguém alcança."
+    ),
+    "integrations/prontuario_dos_jogos.py::e_infraestrutura": (
+        "MEDIDO em 22/08/2026. Da corrente fechada do prontuário (ver "
+        "`::Prontuario`). Separa runtime de jogo (:629) e é chamada só por "
+        "`jogos_instalados` (:652), que ninguém alcança."
+    ),
+    "integrations/prontuario_dos_jogos.py::jogos_instalados": (
+        "MEDIDO em 22/08/2026. Da corrente fechada do prontuário (ver "
+        "`::Prontuario`). Lê os manifestos da Steam (:652) e é chamada só por "
+        "`levantar_censo` (:733), que ninguém alcança."
+    ),
+    "integrations/prontuario_dos_jogos.py::levantar_censo": (
+        "MEDIDO em 22/08/2026. Da corrente fechada do prontuário (ver "
+        "`::Prontuario`). Monta o censo (:733) e é chamada só por "
+        "`curar_o_que_e_automatico` (:885) e pelo `main` (:1001) do próprio "
+        "módulo — os dois órfãos."
+    ),
+    "integrations/prontuario_dos_jogos.py::curar_o_que_e_automatico": (
+        "MEDIDO em 22/08/2026. Da corrente fechada do prontuário (ver "
+        "`::Prontuario`). É a mão que o prontuário promete (:885) e o único "
+        "chamador dela é o `main` (:1001) do próprio módulo, que nada invoca."
+    ),
+    "integrations/api_de_entrada.py::examinar_pasta": (
+        "MEDIDO em 22/08/2026: `integrations/api_de_entrada.py` só é importado "
+        "por `prontuario_dos_jogos.py`:73 (e :95, o import de roteiro solto) — e "
+        "o prontuário também não é alcançado por ninguém. São DUAS correntes "
+        "encadeadas: a régua plana via um chamador e não via que o chamador era "
+        "órfão junto. O módulo é o que sobrou do censo de 16/08 que derrubou a "
+        "heurística de trocar máscara por assinatura de disco (o docstring "
+        "conta: erraria em 13 dos 14). "
+        "O QUE FECHA: a mesma boca que fecha o prontuário. Enquanto ele não for "
+        "consumido, isto aqui não tem por onde ser chamado."
+    ),
+    "integrations/api_de_entrada.py::examinar": (
+        "MEDIDO em 22/08/2026. Da corrente encadeada do `api_de_entrada` (ver "
+        "`::examinar_pasta`). Examina UM executável (:271) e é chamada só por "
+        "`examinar_pasta` (:371), que ninguém alcança."
+    ),
+    "integrations/api_de_entrada.py::ler_imports": (
+        "MEDIDO em 22/08/2026. Da corrente encadeada do `api_de_entrada` (ver "
+        "`::examinar_pasta`). Lê a tabela de imports do PE (:200) e é chamada só "
+        "por `examinar` (:271), que ninguém alcança."
+    ),
+    "integrations/api_de_entrada.py::varrer_agulhas": (
+        "MEDIDO em 22/08/2026. Da corrente encadeada do `api_de_entrada` (ver "
+        "`::examinar_pasta`). Procura as agulhas no binário (:248) e é chamada "
+        "só por `examinar` (:271), que ninguém alcança."
+    ),
+    "integrations/api_de_entrada.py::escolher_executavel": (
+        "MEDIDO em 22/08/2026. Da corrente encadeada do `api_de_entrada` (ver "
+        "`::examinar_pasta`). Escolhe o executável do jogo na pasta (:313) e é "
+        "chamada só por `examinar_pasta` (:371), que ninguém alcança."
+    ),
+    "integrations/api_de_entrada.py::parece_infraestrutura": (
+        "MEDIDO em 22/08/2026. Da corrente encadeada do `api_de_entrada` (ver "
+        "`::examinar_pasta`). Descarta instalador e runtime (:307) e é chamada "
+        "só por `escolher_executavel` (:313), que ninguém alcança."
+    ),
+    "integrations/api_de_entrada.py::Evidencia": (
+        "MEDIDO em 22/08/2026. Da corrente encadeada do `api_de_entrada` (ver "
+        "`::examinar_pasta`). É o que o exame devolve (:141); os únicos a "
+        "montá-la são `examinar` e `examinar_pasta`, órfãos junto com ela."
+    ),
+    "integrations/api_de_entrada.py::Familia": (
+        "MEDIDO em 22/08/2026. Da corrente encadeada do `api_de_entrada` (ver "
+        "`::examinar_pasta`). É o vocabulário das APIs de entrada (:99) — SDL, "
+        "XInput, DirectInput, RawInput — usado só dentro do próprio módulo."
+    ),
+    "integrations/api_de_entrada.py::Veredito": (
+        "MEDIDO em 22/08/2026. Da corrente encadeada do `api_de_entrada` (ver "
+        "`::examinar_pasta`). É o veredito do exame (:126), e o único leitor "
+        "dele fora do módulo é o `prontuario_dos_jogos.py`:73, órfão junto."
+    ),
+    "profiles/curva_propria.py::CurvaPropria": (
+        "MEDIDO em 22/08/2026: NENHUM módulo de `src/` importa "
+        "`profiles/curva_propria.py`. O formato do efeito de gatilho próprio "
+        "(CR-02) está escrito, validado e desligado — `profiles/schema.py` não o "
+        "cita, e o docstring do módulo (:34) confessa o estado: *não existe "
+        "nenhuma curva própria no repositório*. Até 21/08 a régua plana o "
+        "perdoava pelo gerador de documentação de `scripts/`. "
+        "O QUE FECHA: a CR-04, que põe a mão dela no gatilho e produz a primeira "
+        "curva; enquanto não houver curva, não há de onde carregar o catálogo."
+    ),
+    "profiles/curva_propria.py::CatalogoCurvasProprias": (
+        "MEDIDO em 22/08/2026. Irmã da anterior (ver `::CurvaPropria`): é o "
+        "catálogo compartilhado que guarda as curvas (:259), e o único leitor "
+        "dele é `scripts/gerar-tabela-de-curvas.py`:52, um gerador de "
+        "documentação. Nada em `src/` o carrega do disco."
     ),
 }
 
@@ -986,7 +1280,7 @@ def trechos_python_embutidos(roteiro: Path) -> list[str]:
     A varredura anterior era CEGA a isto, e a cegueira tinha consequência
     escrita: uma função chamada pelo desinstalar desde julho aparecia na lista
     de dívida. Ler o shell como texto solto não serve — o nome também aparece
-    nos comentários em prosa do próprio roteiro (uninstall.sh:1125 cita
+    nos comentários em prosa do próprio roteiro (uninstall.sh:1202 cita
     ``strip_quirks_token`` numa linha ``#``), e comentário não é chamada. O que
     vale é o corpo do heredoc, e ele é Python de verdade: sai daqui e entra em
     ``ast.parse``, pela MESMA régua que mede ``src/``.
@@ -1013,17 +1307,222 @@ def trechos_python_embutidos(roteiro: Path) -> list[str]:
     return trechos
 
 
-class _Referencias(ast.NodeVisitor):
-    """Nomes ALCANÇADOS por um trecho de código.
+#: O nome do pacote — a raiz de todo import que este portão sabe resolver.
+_PACOTE = "hefesto_dualsense4unix"
 
-    Quatro decisões, cada uma nascida de um falso positivo medido (ver o
-    cabeçalho do arquivo): conta palavra de literal de texto; NÃO conta
-    docstring; NÃO conta o conteúdo de ``__all__``; NÃO conta alvo de
+
+@dataclass(frozen=True)
+class _Mapa:
+    """A árvore lida UMA vez: módulos, AST, o que cada um define e reexporta."""
+
+    modulos: dict[str, Path]
+    arvores: dict[str, ast.Module]
+    define: dict[str, frozenset[str]]
+    reexporta: dict[str, dict[str, tuple[str, str]]]
+
+
+def _nome_de_modulo(alvo: Path, caminho: Path) -> str:
+    partes = list(caminho.relative_to(alvo).with_suffix("").parts)
+    if partes[-1] == "__init__":
+        partes.pop()
+    return ".".join([_PACOTE, *partes])
+
+
+def _base_do_import(mapa: _Mapa, modulo: str, no: ast.ImportFrom) -> str:
+    """A que módulo aponta o ``from ... import`` deste nó.
+
+    Trata o import RELATIVO e o idioma do módulo que roda das duas formas —
+    como parte do pacote e como roteiro solto. ``sentinela_do_wrapper.py``:525
+    tem os dois (``from .steam_launch_options import x`` e
+    ``from steam_launch_options import x``, num ``try/except ImportError``), e
+    sem esta tradução o segundo apontaria para um módulo que não existe: os
+    dois símbolos de ``steam_launch_options`` apareceriam órfãos. MEDIDO em
+    22/08/2026.
+    """
+    if no.level:
+        partes = modulo.split(".")
+        e_pacote = mapa.modulos[modulo].name == "__init__.py"
+        base = partes if e_pacote else partes[:-1]
+        if no.level > 1:
+            base = base[: len(base) - (no.level - 1)]
+        return ".".join([*base, no.module] if no.module else base)
+    alvo = no.module or ""
+    if alvo.split(".")[0] != _PACOTE and modulo in mapa.modulos:
+        pai = (
+            modulo
+            if mapa.modulos[modulo].name == "__init__.py"
+            else modulo.rsplit(".", 1)[0]
+        )
+        irmao = f"{pai}.{alvo}"
+        if irmao in mapa.modulos:
+            return irmao
+    return alvo
+
+
+def _mapear(alvo: Path) -> _Mapa:
+    modulos = {_nome_de_modulo(alvo, p): p for p in _modulos(alvo)}
+    arvores = {nome: _arvore(p) for nome, p in modulos.items()}
+    mapa = _Mapa(modulos, arvores, {}, {})
+    for nome, arvore in arvores.items():
+        definidos: set[str] = set()
+        for no in arvore.body:
+            if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                definidos.add(no.name)
+            elif isinstance(no, ast.Assign):
+                definidos |= {a.id for a in no.targets if isinstance(a, ast.Name)}
+            elif isinstance(no, ast.AnnAssign) and isinstance(no.target, ast.Name):
+                definidos.add(no.target.id)
+        mapa.define[nome] = frozenset(definidos)
+        reexporta: dict[str, tuple[str, str]] = {}
+        for no in ast.walk(arvore):
+            if not isinstance(no, ast.ImportFrom):
+                continue
+            base = _base_do_import(mapa, nome, no)
+            if base.split(".")[0] != _PACOTE:
+                continue
+            for apelido in no.names:
+                if apelido.name != "*":
+                    reexporta[apelido.asname or apelido.name] = (base, apelido.name)
+        mapa.reexporta[nome] = reexporta
+    return mapa
+
+
+def _canonico(mapa: _Mapa, modulo: str, nome: str) -> tuple[str, str]:
+    """Segue a cadeia de reexportação até o módulo que DEFINE o símbolo.
+
+    Sem isto, ``from hefesto_dualsense4unix.daemon import X`` contaria para o
+    ``__init__.py`` e o símbolo real, uma pasta abaixo, continuaria órfão.
+    """
+    visto: set[tuple[str, str]] = set()
+    while (
+        modulo in mapa.modulos
+        and nome not in mapa.define.get(modulo, frozenset())
+        and (modulo, nome) not in visto
+    ):
+        visto.add((modulo, nome))
+        proximo = mapa.reexporta.get(modulo, {}).get(nome)
+        if proximo is None:
+            break
+        modulo, nome = proximo
+    return modulo, nome
+
+
+def _com_ancestrais(mapa: _Mapa, modulo: str) -> set[str]:
+    """O módulo e os pacotes que o Python roda para chegar nele."""
+    saida = {modulo}
+    partes = modulo.split(".")
+    for corte in range(1, len(partes)):
+        pai = ".".join(partes[:corte])
+        if pai in mapa.modulos:
+            saida.add(pai)
+    return saida
+
+
+def _importados(mapa: _Mapa, modulo: str) -> set[str]:
+    saida: set[str] = set()
+    for no in ast.walk(mapa.arvores[modulo]):
+        if isinstance(no, ast.Import):
+            for apelido in no.names:
+                if apelido.name in mapa.modulos:
+                    saida |= _com_ancestrais(mapa, apelido.name)
+        elif isinstance(no, ast.ImportFrom):
+            base = _base_do_import(mapa, modulo, no)
+            if base in mapa.modulos:
+                saida |= _com_ancestrais(mapa, base)
+            for apelido in no.names:
+                if f"{base}.{apelido.name}" in mapa.modulos:
+                    saida |= _com_ancestrais(mapa, f"{base}.{apelido.name}")
+    return saida
+
+
+def _tabela_de_nomes(
+    mapa: _Mapa, modulo: str, arvore: ast.AST, externo: bool = False
+) -> dict[str, tuple[str, object]]:
+    """Nome local -> o módulo (``módulo``) ou o símbolo (``símbolo``) que ele é."""
+    tabela: dict[str, tuple[str, object]] = {}
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.Import):
+            for apelido in no.names:
+                if apelido.asname:
+                    tabela[apelido.asname] = ("módulo", apelido.name)
+                else:
+                    raiz = apelido.name.split(".")[0]
+                    tabela[raiz] = ("módulo", raiz)
+        elif isinstance(no, ast.ImportFrom):
+            base = (no.module or "") if externo else _base_do_import(mapa, modulo, no)
+            for apelido in no.names:
+                if apelido.name == "*":
+                    continue
+                chave = apelido.asname or apelido.name
+                pleno = f"{base}.{apelido.name}"
+                if pleno in mapa.modulos:
+                    tabela[chave] = ("módulo", pleno)
+                else:
+                    tabela[chave] = ("símbolo", (base, apelido.name))
+    return tabela
+
+
+def _raizes_de_uma_fonte_externa(mapa: _Mapa, arvore: ast.AST) -> set[str]:
+    """O que um roteiro de fora do pacote importa DELE — e vira raiz do alcance."""
+    raizes: set[str] = set()
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.Import):
+            for apelido in no.names:
+                if apelido.name in mapa.modulos:
+                    raizes |= _com_ancestrais(mapa, apelido.name)
+        elif isinstance(no, ast.ImportFrom):
+            base = no.module or ""
+            if base in mapa.modulos:
+                raizes |= _com_ancestrais(mapa, base)
+            for apelido in no.names:
+                if f"{base}.{apelido.name}" in mapa.modulos:
+                    raizes |= _com_ancestrais(mapa, f"{base}.{apelido.name}")
+    return raizes
+
+
+def _fecho_de_import(mapa: _Mapa, raizes: set[str]) -> set[str]:
+    alcancados: set[str] = set()
+    fila = list(raizes)
+    while fila:
+        modulo = fila.pop()
+        if modulo in alcancados:
+            continue
+        alcancados.add(modulo)
+        fila.extend(o for o in _importados(mapa, modulo) if o not in alcancados)
+    return alcancados
+
+
+@dataclass(frozen=True)
+class _Contexto:
+    """O que é preciso para resolver um nome ao MÓDULO que o define."""
+
+    mapa: _Mapa
+    modulo: str
+    tabela: dict[str, tuple[str, object]]
+    definidos: frozenset[str]
+
+
+class _Referencias(ast.NodeVisitor):
+    """Nomes ALCANÇADOS por um trecho de código, em três coleções.
+
+    - ``nomes`` é a régua PLANA de até 21/08/2026. Ela sobrevive por uma razão
+      só: ``_regua_plana`` a usa para as mordidas provarem, lado a lado, o que
+      a régua nova pega e a velha perdoava. Nenhum portão a consulta;
+    - ``resolvidas`` são pares ``(módulo, nome)`` — a régua de hoje;
+    - ``planas`` é o que NÃO dá para resolver sem inferir tipo: literal de
+      texto (o despacho por ``getattr``) e atributo cuja base não é módulo.
+
+    Quatro decisões valem para as três, cada uma nascida de um falso positivo
+    medido (ver o cabeçalho do arquivo): conta literal de texto INTEIRO; NÃO
+    conta docstring; NÃO conta o conteúdo de ``__all__``; NÃO conta alvo de
     atribuição.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, contexto: _Contexto | None = None) -> None:
         self.nomes: set[str] = set()
+        self.resolvidas: set[tuple[str, str]] = set()
+        self.planas: set[str] = set()
+        self._ctx = contexto
         self._docstrings: set[int] = set()
 
     def _marcar_docstring(self, no: ast.AST) -> None:
@@ -1062,12 +1561,62 @@ class _Referencias(ast.NodeVisitor):
         self.generic_visit(no)
 
     def visit_Name(self, no: ast.Name) -> None:
-        if isinstance(no.ctx, ast.Load):
-            self.nomes.add(no.id)
+        if not isinstance(no.ctx, ast.Load):
+            return
+        self.nomes.add(no.id)
+        if self._ctx is None:
+            return
+        entrada = self._ctx.tabela.get(no.id)
+        if entrada is not None and entrada[0] == "símbolo":
+            modulo, nome = entrada[1]  # type: ignore[misc]
+            self.resolvidas.add(_canonico(self._ctx.mapa, modulo, nome))
+        elif no.id in self._ctx.definidos:
+            self.resolvidas.add((self._ctx.modulo, no.id))
 
     def visit_Attribute(self, no: ast.Attribute) -> None:
         if isinstance(no.ctx, ast.Load):
             self.nomes.add(no.attr)
+            if self._ctx is not None and not self._resolve_atributo(no):
+                # Base que não é módulo: `self.x.metodo()`, `obj.aplicar()`. Sem
+                # inferir tipo não dá para dizer de quem é o `aplicar` — conta
+                # plano, e o preço está declarado no cabeçalho.
+                self.planas.add(no.attr)
+        self.generic_visit(no)
+
+    def _resolve_atributo(self, no: ast.Attribute) -> bool:
+        assert self._ctx is not None
+        partes: list[str] = []
+        atual: ast.expr = no
+        while isinstance(atual, ast.Attribute):
+            partes.append(atual.attr)
+            atual = atual.value
+        if not isinstance(atual, ast.Name):
+            return False
+        partes.append(atual.id)
+        partes.reverse()
+        entrada = self._ctx.tabela.get(partes[0])
+        if entrada is None or entrada[0] != "módulo":
+            return False
+        alvo = ".".join([str(entrada[1]), *partes[1:-1]])
+        if alvo not in self._ctx.mapa.modulos:
+            return False
+        self.resolvidas.add(_canonico(self._ctx.mapa, alvo, partes[-1]))
+        return True
+
+    def visit_ImportFrom(self, no: ast.ImportFrom) -> None:
+        # `from x.y import f` É alcance: o nome fica ligado no módulo que
+        # importa, e um reexportador é justamente um módulo que só faz isso.
+        if self._ctx is not None:
+            base = _base_do_import(self._ctx.mapa, self._ctx.modulo, no)
+            if base in self._ctx.mapa.modulos:
+                for apelido in no.names:
+                    if apelido.name == "*":
+                        continue
+                    if f"{base}.{apelido.name}" in self._ctx.mapa.modulos:
+                        continue
+                    self.resolvidas.add(
+                        _canonico(self._ctx.mapa, base, apelido.name)
+                    )
         self.generic_visit(no)
 
     def visit_alias(self, no: ast.alias) -> None:
@@ -1084,6 +1633,7 @@ class _Referencias(ast.NodeVisitor):
     def visit_Constant(self, no: ast.Constant) -> None:
         if isinstance(no.value, str) and id(no) not in self._docstrings:
             self.nomes.add(no.value.strip())
+            self.planas.add(no.value.strip())
 
 
 def _refs(no: ast.AST) -> set[str]:
@@ -1108,8 +1658,78 @@ def _entregue_a_framework(no: ast.AST) -> bool:
     return False
 
 
+def _candidatas(mapa: _Mapa, alvo: Path) -> list[tuple[Promessa, str, int]]:
+    """As promessas públicas da árvore, com o módulo e a posição de cada uma."""
+    saida: list[tuple[Promessa, str, int]] = []
+    for modulo, arvore in mapa.arvores.items():
+        relativo = mapa.modulos[modulo].relative_to(alvo).as_posix()
+        for indice, no in enumerate(arvore.body):
+            if not isinstance(
+                no, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                continue
+            if no.name.startswith("_") or _entregue_a_framework(no):
+                continue
+            saida.append(
+                (
+                    Promessa(
+                        chave=f"{relativo}::{no.name}",
+                        nome=no.name,
+                        arquivo=relativo,
+                        linha=no.lineno,
+                        tipo="class" if isinstance(no, ast.ClassDef) else "def",
+                    ),
+                    modulo,
+                    indice,
+                )
+            )
+    return saida
+
+
+def _fontes_externas(raiz_do_projeto: Path) -> list[tuple[str, ast.Module]]:
+    """O Python que roda de FORA do pacote: os heredocs dos dois roteiros."""
+    saida: list[tuple[str, ast.Module]] = []
+    for roteiro in _ROTEIROS_DE_PRODUCAO:
+        caminho = raiz_do_projeto / roteiro
+        if not caminho.is_file():
+            continue
+        for indice, trecho in enumerate(trechos_python_embutidos(caminho)):
+            try:
+                saida.append((f"{roteiro}#heredoc{indice}", ast.parse(trecho)))
+            except SyntaxError:  # pragma: no cover — heredoc quebrado é do roteiro
+                continue
+    return saida
+
+
+def modulos_alcancados(raiz: Path | None = None) -> set[str]:
+    """Os módulos que o produto de fato roda, a partir de ``_PONTOS_DE_ENTRADA``.
+
+    Exposta porque é a metade da régua que mais engana quando quebra: se o
+    fecho encolher, o portão passa a acusar quem está certo, e sem poder olhar
+    o fecho ninguém descobre por quê.
+    """
+    alvo = _SRC if raiz is None else raiz
+    mapa = _mapear(alvo)
+    raiz_do_projeto = _RAIZ if raiz is None else raiz.parents[1]
+    raizes: set[str] = set()
+    for entrada in _PONTOS_DE_ENTRADA:
+        caminho = alvo / entrada
+        if caminho.is_file():
+            raizes |= _com_ancestrais(mapa, _nome_de_modulo(alvo, caminho))
+    for _rotulo, arvore in _fontes_externas(raiz_do_projeto):
+        raizes |= _raizes_de_uma_fonte_externa(mapa, arvore)
+    return _fecho_de_import(mapa, raizes)
+
+
 def promessas_sem_caminho(raiz: Path | None = None) -> dict[str, Promessa]:
     """Funções e classes públicas de módulo que nada em produção alcança.
+
+    A régua, desde 22/08/2026: um símbolo está alcançado quando algum nó de
+    topo de um módulo ALCANÇADO (ver ``modulos_alcancados``) o CITA com o
+    nome resolvido ao módulo que o define — menos o próprio símbolo, para que
+    recursão e auto-citação não satisfaçam o portão sozinhas. O que não dá para
+    resolver sem inferir tipo (literal de texto e atributo de objeto) conta
+    plano, e só a partir de módulo alcançado.
 
     ``raiz`` existe para o portão poder ser apontado para uma CÓPIA de si mesmo
     (ver ``TestOPortaoMorde``) — mutilar ou aumentar ``src/`` na árvore viva
@@ -1117,13 +1737,68 @@ def promessas_sem_caminho(raiz: Path | None = None) -> dict[str, Promessa]:
     (``ARVORE-CONGELADA-01``).
     """
     alvo = _SRC if raiz is None else raiz
+    mapa = _mapear(alvo)
+    raiz_do_projeto = _RAIZ if raiz is None else raiz.parents[1]
+    externas = _fontes_externas(raiz_do_projeto)
 
-    # Um passe por arquivo: para cada nó de topo, o conjunto de nomes que ELE
-    # alcança. Assim "quem alcança X" é a união de todos os nós menos o próprio
-    # X — e recursão ou auto-citação não satisfazem o portão sozinhas.
+    raizes: set[str] = set()
+    for entrada in _PONTOS_DE_ENTRADA:
+        caminho = alvo / entrada
+        if caminho.is_file():
+            raizes |= _com_ancestrais(mapa, _nome_de_modulo(alvo, caminho))
+    for _rotulo, arvore in externas:
+        raizes |= _raizes_de_uma_fonte_externa(mapa, arvore)
+    alcancados = _fecho_de_import(mapa, raizes)
+
+    refs_por_no: list[tuple[str, int, set[tuple[str, str]]]] = []
+    planas: set[str] = set()
+    for modulo in alcancados:
+        arvore = mapa.arvores[modulo]
+        contexto = _Contexto(
+            mapa, modulo, _tabela_de_nomes(mapa, modulo, arvore), mapa.define[modulo]
+        )
+        for indice, no in enumerate(arvore.body):
+            visitante = _Referencias(contexto)
+            visitante.visit(no)
+            refs_por_no.append((modulo, indice, visitante.resolvidas))
+            planas |= visitante.planas
+    for rotulo, arvore in externas:
+        contexto = _Contexto(
+            mapa, rotulo, _tabela_de_nomes(mapa, rotulo, arvore, externo=True),
+            frozenset(),
+        )
+        visitante = _Referencias(contexto)
+        visitante.visit(arvore)
+        refs_por_no.append((rotulo, -1, visitante.resolvidas))
+        planas |= visitante.planas
+
+    orfas: dict[str, Promessa] = {}
+    for promessa, modulo, indice in _candidatas(mapa, alvo):
+        se_alcanca = (modulo, promessa.nome)
+        if any(
+            se_alcanca in refs
+            for onde, posicao, refs in refs_por_no
+            if not (onde == modulo and posicao == indice)
+        ):
+            continue
+        if promessa.nome in planas:
+            continue
+        orfas[promessa.chave] = promessa
+    return orfas
+
+
+def _regua_plana(raiz: Path) -> set[str]:
+    """A régua de ATÉ 21/08/2026, viva só para as mordidas mostrarem a troca.
+
+    Ela pergunta "existe algum chamador deste NOME em qualquer lugar da
+    árvore?" — sem alcance e sem módulo. Duas mordidas a chamam para provar,
+    no mesmo caso, que o defeito que a nova pega era APROVADO por ela: a
+    corrente fechada em si mesma e a colisão de nome entre módulos. Sem esta
+    função as duas mordidas ficariam afirmando a troca sem medi-la.
+    """
     refs_por_no: list[tuple[Path, int, set[str]]] = []
-    candidatas: list[tuple[Promessa, Path, int]] = []
-    for caminho in _modulos(alvo):
+    candidatas: list[tuple[str, Path, int]] = []
+    for caminho in _modulos(raiz):
         arvore = _arvore(caminho)
         for indice, no in enumerate(arvore.body):
             refs_por_no.append((caminho, indice, _refs(no)))
@@ -1133,54 +1808,17 @@ def promessas_sem_caminho(raiz: Path | None = None) -> dict[str, Promessa]:
                 continue
             if no.name.startswith("_") or _entregue_a_framework(no):
                 continue
-            relativo = caminho.relative_to(alvo).as_posix()
-            candidatas.append(
-                (
-                    Promessa(
-                        chave=f"{relativo}::{no.name}",
-                        nome=no.name,
-                        arquivo=relativo,
-                        linha=no.lineno,
-                        tipo="class" if isinstance(no, ast.ClassDef) else "def",
-                    ),
-                    caminho,
-                    indice,
-                )
-            )
-
-    raiz_do_projeto = _RAIZ if raiz is None else raiz.parents[1]
-
-    alcancados_fora: set[str] = set()
-    for territorio in _TERRITORIOS_DE_PRODUCAO:
-        base = raiz_do_projeto / territorio
-        if not base.is_dir():
-            continue
-        for caminho in _modulos(base):
-            try:
-                alcancados_fora |= _refs(_arvore(caminho))
-            except SyntaxError:  # pragma: no cover — script quebrado é problema dele
-                continue
-    for roteiro in _ROTEIROS_DE_PRODUCAO:
-        caminho = raiz_do_projeto / roteiro
-        if not caminho.is_file():
-            continue
-        for trecho in trechos_python_embutidos(caminho):
-            try:
-                alcancados_fora |= _refs(ast.parse(trecho))
-            except SyntaxError:  # pragma: no cover — heredoc quebrado é do roteiro
-                continue
-
-    orfas: dict[str, Promessa] = {}
-    for promessa, caminho, indice in candidatas:
-        if promessa.nome in alcancados_fora:
-            continue
-        alcancada = any(
-            promessa.nome in refs
+            relativo = caminho.relative_to(raiz).as_posix()
+            candidatas.append((f"{relativo}::{no.name}", caminho, indice))
+    orfas: set[str] = set()
+    for chave, caminho, indice in candidatas:
+        nome = chave.split("::", 1)[1]
+        if not any(
+            nome in refs
             for arquivo, posicao, refs in refs_por_no
             if not (arquivo == caminho and posicao == indice)
-        )
-        if not alcancada:
-            orfas[promessa.chave] = promessa
+        ):
+            orfas.add(chave)
     return orfas
 
 
@@ -1508,9 +2146,9 @@ class TestTodaPromessaPublicaTemCaminho:
     def test_toda_promessa_solta_esta_classificada(self) -> None:
         """O caso que importa: o portão existe para pegar a PRÓXIMA.
 
-        Não para catalogar as trinta e três de hoje — essas já estão escritas
+        Não para catalogar as sessenta de hoje — essas já estão escritas
         acima, com endereço e com o que as fecharia. O valor deste arquivo é
-        que a trigésima terceira não consegue nascer calada.
+        que a sexagésima primeira não consegue nascer calada.
 
         MORDIDA: provada em ``TestOPortaoMorde``, que fabrica um símbolo
         público novo numa cópia de ``src/`` e cobra que ele apareça acusado E
@@ -1524,9 +2162,11 @@ class TestTodaPromessaPublicaTemCaminho:
             "disse o que elas são:\n  "
             + "\n  ".join(novas)
             + "\n"
-            "Nenhum chamador em `src/`, em `scripts/`, nem no Python embutido "
-            "nos heredocs de `install.sh`/`uninstall.sh`. `tests/` NÃO conta — "
-            "foi assim que trinta e três curas ficaram parecendo entregues.\n"
+            "Nenhum módulo ALCANÇADO a partir de `_PONTOS_DE_ENTRADA` a "
+            "cita, nem o Python embutido nos heredocs de "
+            "`install.sh`/`uninstall.sh`. `tests/` e `scripts/` NÃO contam — "
+            "foi assim que 52 das 60 curas desta lista ficaram parecendo "
+            "entregues.\n"
             "FAÇA UMA das quatro:\n"
             "  1. FIE — chame de onde o produto passa, e o defeito acaba;\n"
             "  2. APAGUE — se outro caminho já a substituiu, ela é resto;\n"
@@ -1590,6 +2230,35 @@ class TestTodaPromessaPublicaTemCaminho:
         _confere_razoes(_NAO_E_PROMESSA, "_NAO_E_PROMESSA")
         _confere_razoes(_SEM_CAMINHO_HOJE, "_SEM_CAMINHO_HOJE")
 
+    def test_todo_ponto_de_entrada_tem_fonte_viva(self) -> None:
+        """A lista de entradas é o chão da régua — e chão apodrece calado.
+
+        Cada entrada declara a FONTE que a torna entrada: o `[project.scripts]`,
+        o `ExecStart`, a linha do instalador. Se a fonte deixar de dizer o que
+        esta tabela afirma, o módulo continuaria alcançado por uma boca que não
+        existe mais — e o portão calaria sobre um módulo inteiro sem que nada o
+        denunciasse. É o mesmo defeito da lápide que sobrevive à cura, do outro
+        lado da régua.
+        """
+        for entrada, (fonte, agulha, razao) in _PONTOS_DE_ENTRADA.items():
+            alvo = _SRC / entrada
+            assert alvo.is_file(), (
+                f"o ponto de entrada {entrada!r} não existe mais em `src/`.\n"
+                f"Declarado por: {razao}\n"
+                "APAGUE a entrada se a boca morreu, ou corrija o caminho."
+            )
+            arquivo = _RAIZ / fonte
+            assert arquivo.is_file(), (
+                f"a FONTE de {entrada!r} sumiu: {fonte}\nDeclarado por: {razao}"
+            )
+            assert agulha in arquivo.read_text(encoding="utf-8", errors="ignore"), (
+                f"a fonte {fonte} não diz mais o que declara {entrada!r} como "
+                f"ponto de entrada — a agulha {agulha!r} não está lá.\n"
+                f"Declarado por: {razao}\n"
+                "CONFIRA se a boca mudou de forma (e corrija a agulha) ou se "
+                "ela morreu (e então o módulo virou dívida, não entrada)."
+            )
+
 
 # ===========================================================================
 # O portão apontado para si mesmo
@@ -1618,21 +2287,10 @@ def _copia_de_src(destino: Path) -> Path:
         origem = _RAIZ / roteiro
         if origem.is_file():
             shutil.copy2(origem, destino / roteiro)
-    # `scripts/` vai junto desde 15/08/2026, pela MESMA razão que os roteiros
-    # foram em 13/08: ele é `_TERRITORIOS_DE_PRODUCAO`, e uma cópia sem ele
-    # mediria uma árvore onde a porta não existe. Enquanto a porta não perdoava
-    # ninguém isso não tinha consequência; desde que ela segura
-    # `gerar_tabela_markdown`, uma cópia sem `scripts/` faz a mordida do
-    # território passar por AUSÊNCIA — o modo mais silencioso de um teste deixar
-    # de medir. Custo MEDIDO em 15/08/2026: 1,7 MB em 81 arquivos.
-    for territorio in _TERRITORIOS_DE_PRODUCAO:
-        origem = _RAIZ / territorio
-        if origem.is_dir():
-            shutil.copytree(
-                origem,
-                destino / territorio,
-                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-            )
+    # `scripts/` ia junto entre 15/08 e 22/08/2026, quando ele era
+    # `_TERRITORIOS_DE_PRODUCAO`. Parou de ir porque parou de ser porta: a
+    # medição está na nota de `_PONTOS_DE_ENTRADA`. A cópia é mais barata por
+    # isso — 1,7 MB em 81 arquivos a menos.
     return copia
 
 
@@ -1654,10 +2312,22 @@ class TestOPortaoMorde:
         produto.
         """
         soltas = promessas_sem_caminho()
-        assert len(soltas) < 60, (
+        assert len(soltas) < 75, (
             f"a varredura acusou {len(soltas)} promessas soltas — a régua "
-            "quebrou. Em 12/08/2026 eram 33, e a regra ingênua ('chamador fora "
-            "do próprio arquivo') dava 846."
+            "quebrou. MEDIDO em 22/08/2026: 60 com a régua de alcance (eram 33 "
+            "com a régua plana), e a regra ingênua ('chamador fora do próprio "
+            "arquivo') dava 846."
+        )
+        # O fecho de import é a metade que mais engana quando quebra: se ele
+        # encolher, o portão passa a acusar quem está certo, e a acusação sobe
+        # em bloco. MEDIDO em 22/08/2026: 196 dos 201 módulos são alcançados;
+        # os 5 de fora são as três correntes fechadas classificadas acima mais
+        # `xlib_window` e `tui/screens`.
+        alcancados = modulos_alcancados()
+        assert len(alcancados) > 150, (
+            f"o fecho de import alcançou só {len(alcancados)} módulos — algum "
+            "ponto de entrada de `_PONTOS_DE_ENTRADA` deixou de existir, ou a "
+            "resolução de import quebrou. Em 22/08/2026 eram 196 de 201."
         )
         assert (
             "daemon/subsystems/gamepad.py::resume_vpads_after_steam_input"
@@ -1729,7 +2399,7 @@ class TestOPortaoMorde:
     def test_uma_promessa_fabricada_e_acusada_sem_estar_na_lista(
         self, tmp_path: Path
     ) -> None:
-        """A prova que vale: o portão pega a PRÓXIMA, não as trinta e três.
+        """A prova que vale: o portão pega a PRÓXIMA, não as já escritas.
 
         Fabrica-se, numa CÓPIA de ``src/``, um módulo com uma função e uma
         classe públicas que ninguém chama — exatamente a forma de uma cura
@@ -1780,6 +2450,12 @@ class TestOPortaoMorde:
         Sem este caso, ``promessas_sem_caminho`` poderia estar acusando tudo o
         que é novo por construção — e um portão que grita sempre é pior que um
         que nunca grita, porque ensina a ignorá-lo.
+
+        Desde 22/08/2026 "entregue" tem um degrau a mais, e o caso o exercita:
+        não basta existir um chamador, o chamador tem de ser ALCANÇADO. Aqui a
+        borda nova é fiada ao ``cli/app.py``, que é ponto de entrada declarado
+        — e a cura só sai da acusação nesse instante. Um chamador que ninguém
+        alcança é a corrente fechada, não a cura.
         """
         copia = _copia_de_src(tmp_path)
         (copia / "daemon" / "cura_recem_nascida.py").write_text(
@@ -1798,6 +2474,20 @@ class TestOPortaoMorde:
             "    return rearmar_o_gatilho_da_cor()\n",
             encoding="utf-8",
         )
+        assert chave in promessas_sem_caminho(copia), (
+            "a cura sumiu da acusação com um chamador que NINGUÉM alcança — o "
+            "fecho de import parou de valer e a corrente fechada em si mesma "
+            "voltou a passar"
+        )
+
+        entrada = copia / "cli" / "app.py"
+        entrada.write_text(
+            "from hefesto_dualsense4unix.daemon.chamador_da_cura import (\n"
+            "    borda_do_produto,\n"
+            ")\n\n"
+            + entrada.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
         assert chave not in promessas_sem_caminho(copia), (
             "o portão continuou acusando uma promessa JÁ FIADA — ele grita "
             "sempre, e um portão que grita sempre é desligado na primeira "
@@ -1807,11 +2497,11 @@ class TestOPortaoMorde:
     def test_um_chamador_so_em_tests_nao_conta_como_caminho(
         self, tmp_path: Path
     ) -> None:
-        """A linha que separa as trinta e três do resto da árvore.
+        """A linha que separa a dívida solta do resto da árvore.
 
-        MEDIDO em 12/08/2026: 30 dos 33 acusados têm chamador em ``tests/`` —
+        REMEDIDO em 22/08/2026: 52 dos 60 acusados têm chamador em ``tests/`` —
         pareciam entregues. Se ``tests/`` passar a contar, a acusação despenca
-        para 3 e o portão para de ver justamente a forma mais comum do
+        para 8 e o portão para de ver justamente a forma mais comum do
         defeito.
         """
         copia = _copia_de_src(tmp_path)
@@ -1835,8 +2525,8 @@ class TestOPortaoMorde:
             in promessas_sem_caminho(copia)
         ), (
             "o portão aceitou um chamador de `tests/` como caminho de produção "
-            "— é exatamente esse engano que fez trinta e três curas parecerem "
-            "entregues por meses"
+            "— é exatamente esse engano que fez 52 das 60 curas desta lista "
+            "parecerem entregues por meses"
         )
 
     def test_arrancar_o_unico_chamador_de_uma_cura_viva_a_acusa(
@@ -1902,60 +2592,151 @@ class TestOPortaoMorde:
         assert chave in promessas_sem_caminho(copia), (
             "arrancada a chamada do heredoc, o portão NÃO voltou a acusar "
             f"{chave!r}. Ou ele está lendo o roteiro como texto solto (e o "
-            "COMENTÁRIO de uninstall.sh:1125 o satisfaz), ou ele parou de "
+            "COMENTÁRIO de uninstall.sh:1202 o satisfaz), ou ele parou de "
             "olhar o roteiro da CÓPIA e está medindo a árvore viva"
         )
         assert chave not in promessas_sem_caminho(), (
             "a árvore de verdade foi contaminada pela mordida"
         )
 
-    def test_o_chamador_em_scripts_e_caminho_de_producao(
+    def test_o_ponto_de_entrada_declarado_e_o_que_abre_o_alcance(
         self, tmp_path: Path
     ) -> None:
-        """A mordida da porta de ``scripts/``, sobre a árvore de verdade.
+        """A mordida de ``_PONTOS_DE_ENTRADA``, sobre a árvore de verdade.
 
-        Ela prova as DUAS metades, como a do heredoc: com o gerador inteiro o
-        portão CALA sobre ``gerar_tabela_markdown``; arrancada a chamada da
-        CÓPIA, ele VOLTA a acusar.
+        Ela SUBSTITUI ``test_o_chamador_em_scripts_e_caminho_de_producao``, que
+        mediu a porta de ``scripts/`` enquanto ela existiu (15→22/08/2026), e
+        prova a mesma coisa que aquela provava, sobre a porta que a substituiu:
+        um ponto de entrada declarado é a ÚNICA coisa entre um módulo inteiro e
+        a lista de dívida. Se a lista esvaziar ou apodrecer, o portão passa a
+        cobrar de quem está certo — que é o defeito que ``strip_quirks_token``
+        já custou uma vez.
 
-        Por que ela precisou nascer (15/08/2026): esta porta passou três dias
-        sem segurar peso — a nota de ``_TERRITORIOS_DE_PRODUCAO`` registrava, em
-        12/08, que nenhuma das 33 acusações tinha chamador em ``scripts/``. Em
-        13/08 ``scripts/gerar-tabela-de-curvas.py`` nasceu e a lápide de
-        ``gerar_tabela_markdown`` foi apagada por este portão. Desde esse dia a
-        porta é a ÚNICA coisa entre um símbolo fiado e a lista de dívida, e não
-        havia nada medindo se ela ainda abre. Se ``_TERRITORIOS_DE_PRODUCAO``
-        esvaziar, o portão passa a cobrar de quem está certo — que é o defeito
-        que ``strip_quirks_token`` já custou uma vez.
+        O alvo é ``integrations/steam_input_ponte.py``: onze símbolos públicos
+        que NADA em ``src/`` importa, e que só existem porque
+        ``scripts/disable_steam_input.sh``:283+298 roda o arquivo com
+        ``python3 ${PONTE_PY} --ligar``. É a forma mais pura da entrada por
+        roteiro, e por isso a testemunha certa.
         """
         copia = _copia_de_src(tmp_path)
-        chave = "profiles/curva_propria.py::gerar_tabela_markdown"
+        chave = "integrations/steam_input_ponte.py::garantir_ponte"
         assert chave not in promessas_sem_caminho(copia), (
-            f"com `scripts/` inteiro o portão AINDA acusa {chave!r} — a porta "
-            "de `_TERRITORIOS_DE_PRODUCAO` não abre, e a dívida volta a cobrar "
-            "de um símbolo que o CI já exercita "
-            "(`.github/workflows/ci.yml`, passo `--check` do gerador)"
+            f"com a lista inteira o portão AINDA acusa {chave!r} — o ponto de "
+            "entrada declarado não abre alcance nenhum, e um módulo que a unit "
+            "do guarda roda a cada saída da Steam vira dívida"
         )
 
-        # O alvo da mordida é o ARQUIVO inteiro, e não só a linha da chamada: o
-        # gerador IMPORTA o símbolo no topo (`gerar-tabela-de-curvas.py`:52-54)
-        # e `_Referencias.visit_alias` conta o `import` como referência. Trocar
-        # só a chamada deixaria o import satisfazendo a promessa sozinho, e esta
-        # mordida ficaria verde sem medir nada — que é o defeito que ela existe
-        # para pegar em outros. Conferido em 15/08/2026: nenhum outro arquivo de
-        # `scripts/` cita `gerar_tabela_markdown`.
-        gerador = tmp_path / "scripts" / "gerar-tabela-de-curvas.py"
-        assert "gerar_tabela_markdown" in gerador.read_text(encoding="utf-8"), (
-            "`scripts/gerar-tabela-de-curvas.py` não cita mais o símbolo — esta "
-            "mordida precisa de outro alvo, senão ela deixa de morder em "
-            "silêncio"
-        )
-        gerador.write_text("print('gerador de mentira')\n", encoding="utf-8")
+        # O alvo da mordida é o ARQUIVO do ponto de entrada, não uma chamada:
+        # é a existência dele que faz o fecho começar ali. Apagá-lo é o
+        # equivalente exato de tirá-lo de `_PONTOS_DE_ENTRADA`.
+        (copia / "integrations" / "steam_input_ponte.py").unlink()
 
+        soltas = promessas_sem_caminho(copia)
+        assert "integrations/prontuario_dos_jogos.py::Prontuario" in soltas, (
+            "sem o ponto de entrada a varredura devolveu algo inesperado — a "
+            "medição de controle caiu junto e este caso não prova nada"
+        )
+        assert chave not in _promessas_publicas_por_chave(copia), (
+            "o arquivo foi apagado da cópia e o símbolo continua sendo listado "
+            "como promessa pública — a mordida está medindo a árvore viva"
+        )
+        assert chave not in promessas_sem_caminho(), (
+            "a árvore de verdade foi contaminada pela mordida"
+        )
+
+    def test_a_corrente_fechada_em_si_mesma_nao_passa_mais(
+        self, tmp_path: Path
+    ) -> None:
+        """DEFEITO (a): ``A`` chama ``B``, ``B`` chama ``A``, e mais ninguém.
+
+        Os dois pareciam entregues, e é a forma mais cara do defeito-mãe —
+        três módulos reais desta árvore passavam assim (a nota do cabeçalho
+        traz a medição). Aqui a diferença é provada no MESMO caso: a régua
+        plana de até 21/08 APROVA a corrente, a régua de alcance REPROVA.
+        """
+        copia = _copia_de_src(tmp_path)
+        (copia / "daemon" / "corrente_fechada.py").write_text(
+            "def entrar_no_ciclo() -> int:\n"
+            "    return sair_do_ciclo() + 1\n"
+            "\n\n"
+            "def sair_do_ciclo() -> int:\n"
+            "    if False:\n"
+            "        return entrar_no_ciclo()\n"
+            "    return 0\n",
+            encoding="utf-8",
+        )
+        chaves = {
+            "daemon/corrente_fechada.py::entrar_no_ciclo",
+            "daemon/corrente_fechada.py::sair_do_ciclo",
+        }
+
+        plana = _regua_plana(copia)
+        assert not (chaves & plana), (
+            "a régua PLANA acusou a corrente fechada — então ela não é a régua "
+            "de ontem, e esta mordida não está medindo a troca de 22/08/2026"
+        )
+        assert chaves <= set(promessas_sem_caminho(copia)), (
+            "a régua de ALCANCE deixou passar a corrente fechada em si mesma: "
+            "dois símbolos que ninguém alcança se satisfazendo um ao outro. É "
+            "exatamente o defeito que a troca de 22/08/2026 existe para fechar"
+        )
+        assert not (chaves & set(promessas_sem_caminho())), (
+            "a árvore de verdade foi contaminada pela mordida"
+        )
+
+    def test_a_colisao_de_nome_entre_modulos_nao_perdoa_mais(
+        self, tmp_path: Path
+    ) -> None:
+        """DEFEITO (b): um nome não é um endereço.
+
+        A régua plana perguntava se o NOME aparecia em algum lugar. Com isso,
+        um ``Censo`` chamado num módulo absolvia o ``Censo`` órfão de outro —
+        e foi assim, literalmente, que ``prontuario_dos_jogos.py``:549 se
+        escondeu atrás de ``sentinela_do_wrapper.py``:302 por meses.
+        """
+        copia = _copia_de_src(tmp_path)
+        (copia / "daemon" / "orfa_com_nome_comum.py").write_text(
+            "class LevantamentoDaMesa:\n"
+            '    """A órfã de verdade — ninguém a instancia."""\n'
+            "\n"
+            "    def valor(self) -> int:\n"
+            "        return 0\n",
+            encoding="utf-8",
+        )
+        # O homônimo mora num módulo ALCANÇADO (o `cli/app.py` é ponto de
+        # entrada declarado) e não tem relação nenhuma com a órfã acima.
+        (copia / "cli" / "homonimo_alcancado.py").write_text(
+            "class LevantamentoDaMesa:\n"
+            "    def valor(self) -> int:\n"
+            "        return 1\n"
+            "\n\n"
+            "def usar() -> int:\n"
+            "    return LevantamentoDaMesa().valor()\n",
+            encoding="utf-8",
+        )
+        alvo = copia / "cli" / "app.py"
+        alvo.write_text(
+            "from hefesto_dualsense4unix.cli.homonimo_alcancado import usar\n\n"
+            + alvo.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        chave = "daemon/orfa_com_nome_comum.py::LevantamentoDaMesa"
+
+        assert chave not in _regua_plana(copia), (
+            "a régua PLANA acusou a órfã mesmo com o homônimo presente — então "
+            "ela não é a régua de ontem, e esta mordida não mede a troca"
+        )
         assert chave in promessas_sem_caminho(copia), (
-            "arrancado o único chamador de `scripts/`, o portão NÃO voltou a "
-            f"acusar {chave!r} — ele parou de ler o território da CÓPIA, ou "
-            "está medindo a árvore viva em vez dela"
+            "a régua de ALCANCE perdoou a órfã por causa de um homônimo em "
+            "outro módulo — o nome voltou a valer como endereço, e a colisão "
+            "de nome (defeito b de 22/08/2026) está de volta"
+        )
+        assert (
+            "cli/homonimo_alcancado.py::LevantamentoDaMesa"
+            not in promessas_sem_caminho(copia)
+        ), (
+            "o homônimo ALCANÇADO foi acusado junto — a resolução por módulo "
+            "ficou estrita demais e passou a cobrar de quem está fiado"
         )
         assert chave not in promessas_sem_caminho(), (
             "a árvore de verdade foi contaminada pela mordida"
@@ -1965,7 +2746,7 @@ class TestOPortaoMorde:
         """Citar não é chamar — a mesma linha que separa o P3a inteiro.
 
         O `uninstall.sh` cita `strip_quirks_token` DUAS vezes: numa linha `#` de
-        prosa (:1125) e na chamada dentro do heredoc (:1166). Um portão que
+        prosa (:1202) e na chamada dentro do heredoc (:1243). Um portão que
         lesse o roteiro como texto solto ficaria verde pelo comentário, e a
         mordida acima passaria a medir nada.
         """
@@ -1975,7 +2756,7 @@ class TestOPortaoMorde:
             "uninstall.sh:1150 — o delimitador ou a linha de abertura mudaram"
         )
         assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
-            "o extrator engoliu o COMENTÁRIO de uninstall.sh:1125 junto com o "
+            "o extrator engoliu o COMENTÁRIO de uninstall.sh:1202 junto com o "
             "heredoc — ele está pegando texto demais, e menção viraria prova"
         )
 
