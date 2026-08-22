@@ -9,6 +9,10 @@ integrar mods), veja `quickstart.md`, `creating-profiles.md` e
 Complemento de scripts: tab-completion funciona em zsh e bash via
 `hefesto-dualsense4unix --install-completion <shell>` (herdado do Typer).
 
+> **Escopo.** Esta página cobre o **produto**. A CLI também traz
+> **instrumentos de medição** que não são feature e não persistem nada
+> (`lightbar-reset`, `player-leds`) — eles têm seção própria no fim.
+
 ---
 
 ## Resumo
@@ -22,10 +26,11 @@ Complemento de scripts: tab-completion funciona em zsh e bash via
 | `hefesto-dualsense4unix mouse on/off/status` | Emulação de mouse via daemon. |
 | `hefesto-dualsense4unix profile list/show/activate/create/delete/apply/save` | Gerência de perfis. |
 | `hefesto-dualsense4unix profile historico/restore` | Versões guardadas de um perfil — e a volta. |
-| `hefesto-dualsense4unix trigger/rumble` (subgrupo `test`) | Efeitos direto no hardware. |
+| `hefesto-dualsense4unix test trigger/led/rumble` | Efeitos direto no hardware. |
 | `hefesto-dualsense4unix daemon start/stop/restart/status/pause/resume/enable/disable/install-service/uninstall-service` | Ciclo do daemon. |
 | `hefesto-dualsense4unix gamepad on/off/status` | Controle virtual (substituiu o antigo `emulate xbox360`). |
-| `hefesto-dualsense4unix mic on/off/status/bt/bt-status` | Microfone do controle — no cabo (política) e por Bluetooth (ponte). |
+| `hefesto-dualsense4unix gamepad steam-input list/add/remove` | Exceção do Steam Input — os jogos em que a Steam entrega o controle. |
+| `hefesto-dualsense4unix mic on/off/status/promote/demote/mute/unmute/release/bt/bt-status` | Microfone do controle — política do sistema, mudo de firmware e a ponte por Bluetooth. |
 | `hefesto-dualsense4unix speaker status/volume/mute/unmute/release` | Alto-falante e fone do controle — inclusive a DEVOLUÇÃO da posse. |
 | `hefesto-dualsense4unix tui` / `hefesto-dualsense4unix tray` | Interfaces alternativas. |
 
@@ -50,16 +55,12 @@ hefesto-dualsense4unix led --color '255,136,0'          # CSV também aceito
   quem carrega o nível é a própria cor. O handler `led.set` do daemon
   faz exatamente a mesma escala linear que o caminho offline.
 
-> **Falha conhecida, não corrigida: as duas pontas usam unidades
-> diferentes.** A CLI aceita `--brightness` em 0–100 e manda esse número
-> cru no `led.set`; o handler do daemon valida `0.0 ≤ brightness ≤ 1.0` e
-> recusa qualquer coisa acima de 1. Efeito prático com o daemon rodando:
-> `--brightness 50` faz a chamada IPC falhar e o comando cai em silêncio
-> no caminho de hardware direto (onde a conversão para 0–1 acontece, e o
-> resultado sai certo); `--brightness 1` é aceito pelo daemon como 100%,
-> não como 1%. Medido em 25/07/2026 lendo `cli/cmd_test.py` e
-> `daemon/ipc_handlers.py`. Enquanto isso não for arrumado no código, a
-> luminosidade só é confiável com o daemon **parado**.
+> **Corrigido em 25/07/2026 (commit `87cbd24`).** A CLI fala porcentagem
+> (0–100) com quem usa e converte para fração (0.0–1.0) antes de mandar o
+> `led.set`, que é o contrato do daemon — então `--brightness 50` é aceito como
+> 50% e `--brightness 1` acende 1%, com o daemon rodando ou parado. Coberto por
+> `tests/unit/test_cli_led_brightness.py`
+> (`test_led_brightness_1_por_cento_nao_vira_100`).
 
 Exit codes:
 
@@ -109,6 +110,8 @@ hefesto-dualsense4unix profile show <nome>
 
 # Mutação
 hefesto-dualsense4unix profile create <nome> [--match-class X] [--match-regex ...] [--fallback]
+hefesto-dualsense4unix profile create <nome> --manual        # nunca ativa sozinho: só pela janela ou pelo activate
+hefesto-dualsense4unix profile create <nome> --force         # sobrescreve o perfil que já ocupa o mesmo arquivo
 hefesto-dualsense4unix profile delete <nome> --yes
 
 # Aplicação
@@ -259,6 +262,20 @@ hefesto-dualsense4unix gamepad off
 hefesto-dualsense4unix gamepad status
 ```
 
+### `gamepad steam-input` — a exceção do Steam Input
+
+Os jogos em que a Steam entrega o controle, e por isso o jogador vê os controles
+**dobrados**. Marcar um jogo aqui esconde dele os controles físicos:
+
+```bash
+hefesto-dualsense4unix gamepad steam-input list                 # os jogos marcados, pelo nome
+hefesto-dualsense4unix gamepad steam-input add <nome ou appid>
+hefesto-dualsense4unix gamepad steam-input remove <nome ou appid>
+```
+
+A mesma marca tem caixinha na aba **Perfis** da janela desde 07/08/2026 — ver
+[`jogos-e-mascaras.md`](jogos-e-mascaras.md).
+
 ## Demais comandos
 
 - `hefesto-dualsense4unix status` — estado do daemon via IPC (fallback local se offline).
@@ -275,12 +292,22 @@ hefesto-dualsense4unix gamepad status
   portão. Ele **avisa e não corrige**: os seus arquivos de perfil não são
   reescritos por este comando.
 - `hefesto-dualsense4unix battery` — percentual de bateria.
-- `hefesto-dualsense4unix mic on|off|status|bt|bt-status` — microfone embutido
-  do DualSense. `on`/`off`/`status` são **política do WirePlumber** e valem no
-  cabo, onde o mic é um dispositivo de áudio USB comum. `bt` é outra coisa: sobe
-  a **ponte** que decodifica o Opus tunelado nos relatórios HID e publica o
-  microfone no PipeWire (Ctrl-C encerra); `bt-status` só diagnostica as
-  pré-condições, sem mexer em nada. Ver [`bluetooth.md`](bluetooth.md).
+- `hefesto-dualsense4unix mic <ação>` — microfone embutido do DualSense. São
+  **dez ações em quatro grupos**, e eles respondem perguntas diferentes:
+  - **política do WirePlumber** (`on` · `off` · `status`) — valem no cabo, onde
+    o mic é um dispositivo de áudio USB comum;
+  - **quem é o microfone padrão do sistema** (`promote` · `demote`) — `promote`
+    eleva o mic do controle a entrada padrão; `demote` devolve a política de
+    fábrica, que rebaixa a prioridade dele para não ser eleito sozinho;
+  - **mudo do FIRMWARE do controle** (`mute` · `unmute` · `release`) — o mesmo
+    estado que o botão físico alterna e que acende o LED. Os três são pedidos
+    **diferentes**: `unmute` não é `release`. **`release` devolve a posse** — e
+    o preço é que, enquanto ela não voltar a nós, o botão do controle não
+    responde;
+  - **a ponte por Bluetooth** (`bt` · `bt-status`) — `bt` sobe a ponte que
+    decodifica o Opus tunelado nos relatórios HID e publica o microfone no
+    PipeWire (Ctrl-C encerra); `bt-status` só diagnostica as pré-condições, sem
+    mexer em nada. Ver [`bluetooth.md`](bluetooth.md).
 - `hefesto-dualsense4unix speaker status|volume <0-100>|mute|unmute|release` —
   alto-falante **e fone** do controle (é um volume só: o mesmo valor vai nos dois
   bytes). Exige o daemon. O volume mora no firmware e o controle **não o
@@ -316,6 +343,25 @@ hefesto-dualsense4unix gamepad status
 - `hefesto-dualsense4unix tui` — abre a TUI Textual.
 - `hefesto-dualsense4unix tray` — abre o tray GTK3 (extra `[tray]`).
 - `hefesto-dualsense4unix version` — versão instalada.
+
+---
+
+## Instrumentos de medição — não são cura
+
+Estes dois **não são feature de produto**: são instrumentos de duas eliminações
+em aberto. Não persistem nada, e **nenhum caminho automático os chama** — quem
+os chama é quem está medindo.
+
+- `hefesto-dualsense4unix lightbar-reset` — manda o report `0x31` com
+  `valid_flag1 = 0x08` ("Reset LED state"), que devolve ao host o claim da
+  lightbar. Instrumento da LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026).
+- `hefesto-dualsense4unix player-leds` — liga/desliga a **escrita** do LED de
+  JOGADOR, para isolar se é ela que trava a barra. Instrumento da
+  LIGHTBAR-ISOLAR-OS-PLAYERS-01.
+
+O protocolo por trás deles está em
+[`../protocol/ipc-unix-socket.md`](../protocol/ipc-unix-socket.md) e na
+[canônica do DualSense](../protocol/dualsense-referencia-canonica.md).
 
 ---
 

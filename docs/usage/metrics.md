@@ -8,43 +8,47 @@ em `127.0.0.1:<metrics_port>/metrics`. Por padrão o endpoint está **desligado*
 
 ## Habilitando as métricas — o estado real hoje
 
-> **Não há caminho de usuário para ligar isto.** Versões anteriores desta página
-> ensinavam duas receitas — um bloco `[daemon]` no `daemon.toml` e a variável
-> `HEFESTO_DUALSENSE4UNIX_METRICS=1`. <!-- ref-externa: a variável é citada aqui JUSTAMENTE por não existir; a ausência dela é o assunto do parágrafo -->
-> **Nenhuma das duas funciona, e nenhuma nunca funcionou.** Conferido no código
-> em 25/07/2026:
->
-> - O daemon **não lê `daemon.toml`** (o arquivo é referência; ele mesmo diz
->   isso no cabeçalho que a GUI escreve).
-> - `HEFESTO_DUALSENSE4UNIX_METRICS` **não existe** no código: zero ocorrências em `src/`. <!-- ref-externa: idem — a ausência é a informação -->
-> - `daemon/main.py` constrói o `DaemonConfig` com quatro parâmetros —
->   `poll_hz`, `auto_reconnect`, `ps_long_press_ms` e
->   `keyboard_emulation_enabled`. `metrics_enabled` fica no default `False` e
->   nada o alcança.
-> - O `MetricsSubsystem` só é instanciado **na subida** do daemon
->   (`_start_metrics`, na sequência de start). O `reload_config` não o
->   reinicia — então nem o `daemon.reload` via IPC, que aceita
->   `config_overrides` com qualquer campo do `DaemonConfig`, sobe o servidor
->   num daemon que já está rodando.
->
-> **Recontagem de 01/08/2026 (DOC-VERDADE-02, E7):** o terceiro item dizia
-> "três" e listava só os três primeiros. Ficou falso em 29/07, quando
-> a EMULACAO-NO-JOGO-01 acrescentou `keyboard_emulation_enabled` à construção do
-> `DaemonConfig` — o campo que desliga o teclado emulado dentro da partida. A
-> confissão continua inteira; só a contagem mudou.
+**Existem duas variáveis de ambiente, desde 01/08/2026** (PROMESSA-NÃO-CUMPRIDA-01/C1).
+Conferido rodando o código em 22/08/2026:
 
-Consequência honesta: **subir o endpoint hoje exige mexer no código** — passar
-`metrics_enabled=True` na construção do `DaemonConfig` em
-`daemon/main.py` — e reiniciar o daemon. Tudo o que vem abaixo (formato,
-métricas, scraping, dashboard) descreve corretamente o que o
-`MetricsSubsystem` faz **quando ele sobe**; só a chave de ligar é que falta.
+```bash
+# ligar (só o valor "1" liga — "true" não liga, igual aos plugins)
+HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1 hefesto-dualsense4unix daemon start
 
-O que falta para isto virar recurso de usuário é pequeno e está identificado:
-uma variável de ambiente lida em `daemon/main.py` — como `poll_hz`,
-`ps_long_press_ms` e `keyboard_emulation_enabled` já são (`auto_reconnect` é o
-único dos quatro que vem do argumento da linha de comando, não do ambiente) —
-ou o `reload_config` passando a parar/subir o `MetricsSubsystem` quando
-`metrics_enabled` muda. Nenhum dos dois foi feito.
+# e, se a 9090 estiver ocupada, escolher a porta
+HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1 \
+HEFESTO_DUALSENSE4UNIX_METRICS_PORT=19199 hefesto-dualsense4unix daemon start
+```
+
+Num serviço systemd, as mesmas duas linhas vão em `Environment=` na unit, antes
+de o daemon subir.
+
+> **A ressalva que continua de pé: existe chave, não existe botão.** Nada na
+> árvore escreve estas variáveis por você — nem o `install.sh`, nem a unit
+> systemd, nem a janela. Quem quiser as métricas exporta a variável à mão (ou
+> edita a unit) antes de iniciar o daemon. Medido em 12/08/2026 e reconferido em
+> 22/08/2026: a única ocorrência fora de `src/` é changelog de pacote, e ela não
+> liga nada.
+>
+> **E ligar exige reiniciar o daemon.** O `MetricsSubsystem` só é instanciado na
+> subida (`_start_metrics`, no caminho de start, que consulta
+> `MetricsSubsystem.is_enabled`). O `reload_config` não o toca — zero ocorrências
+> de `metrics` no corpo dele — então o `daemon.reload` via IPC, mesmo aceitando
+> `config_overrides` com qualquer campo do `DaemonConfig`, **não** sobe o servidor
+> num daemon que já está rodando. Esse é o segundo dos "dois que faltavam", e ele
+> não foi feito.
+
+**Por que a variável é o único caminho.** O `daemon/main.py` constrói o
+`DaemonConfig` com quatro parâmetros — `poll_hz`, `auto_reconnect`,
+`ps_long_press_ms` e `keyboard_emulation_enabled` — e `metrics_enabled` não é
+nenhum deles: ele fica no default `False` e nada de fora do código o alcança. É
+essa lacuna que o `MetricsSubsystem.is_enabled` cobre lendo a variável de
+ambiente por cima da config.
+
+O outro caminho, sem variável nenhuma, continua sendo `metrics_enabled=True` na
+construção do `DaemonConfig` em `daemon/main.py` — mas isso é mexer no código.
+Tudo o que vem abaixo (formato, métricas, scraping, dashboard) descreve o que o
+`MetricsSubsystem` faz **quando ele sobe**.
 
 ---
 
@@ -105,9 +109,12 @@ de tick crescem ~3600/min. Intervalos menores que 5s oferecem pouco benefício
 extra e aumentam o custo de parse.
 
 > **Nota de porta:** a porta padrão 9090 é usada por muitos componentes
-> Prometheus. Se houver conflito, altere `metrics_port` no `DaemonConfig` —
-> vale a mesma ressalva da seção "Habilitando": esse campo também não tem
-> hoje chave de usuário.
+> Prometheus. Se houver conflito, exporte
+> `HEFESTO_DUALSENSE4UNIX_METRICS_PORT` — ela vence o `metrics_port` do
+> `DaemonConfig` (conferido em 22/08/2026: com a variável em `19199`, o endpoint
+> sobe na 19199 e não na 9090). Valor não numérico ou fora da faixa 1–65535 não
+> derruba o daemon: ele loga `metrics_port_env_invalida` ou
+> `metrics_port_env_fora_da_faixa` e usa a porta da config.
 
 ---
 

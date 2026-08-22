@@ -173,3 +173,36 @@ dia em que nasce a quarta; uma frase vaga nunca envelhece porque nunca afirmou
 nada. A cura não é voltar a ser vago — é o teste que conta os parâmetros no
 código e cobra o mesmo número aqui
 (`tests/unit/test_doc_verdade_02_contagens_derivadas.py`).
+
+## Nota de verificação — 2026-08-22
+
+**O veredito de 25/07, repetido na nota de 01/08, caducou no mesmo dia em que
+aquela nota foi escrita.** As métricas ganharam chave de usuário em 01/08/2026
+(commit `9799593`, PROMESSA-NÃO-CUMPRIDA-01/C1), e são duas variáveis de
+ambiente, não uma:
+
+- `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1` liga o endpoint. Só o valor `"1"`
+  liga — mesma gramática dos plugins, de propósito.
+- `HEFESTO_DUALSENSE4UNIX_METRICS_PORT` escolhe a porta e vence o `metrics_port`
+  do `DaemonConfig`. Valor inválido ou fora de 1–65535 loga
+  `metrics_port_env_invalida` / `metrics_port_env_fora_da_faixa` e cai na porta
+  da config, sem derrubar o daemon.
+
+Conferido rodando em 22/08/2026: `MetricsSubsystem.is_enabled(DaemonConfig())`
+devolve `True` com a variável em `1` e `False` sem ela, e `_porta_efetiva(9090)`
+devolve `19199` com a variável de porta em `19199`.
+
+**Duas metades do veredito antigo continuam de pé, e é por elas que esta nota
+não é uma absolvição:**
+
+1. **Não existe botão.** Nada na árvore escreve as variáveis: nem o
+   `install.sh`, nem a unit systemd, nem a janela. Fora de `src/`, a única
+   ocorrência é changelog de pacote, que não liga nada. Quem quiser métricas
+   exporta a variável à mão ou põe `Environment=` na unit.
+2. **Ligar exige reiniciar o daemon.** O `reload_config` não tem uma linha
+   sobre `metrics`; o `MetricsSubsystem` só é instanciado na subida. O
+   `daemon.reload` via IPC não sobe o endpoint num daemon já rodando.
+
+O `README.md` e o `docs/usage/metrics.md` foram corrigidos na mesma leva — lá o
+fato errado foi substituído; aqui, por ser decisão datada, ele fica com esta
+nota ao lado.
