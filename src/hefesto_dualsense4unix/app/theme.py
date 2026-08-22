@@ -49,6 +49,22 @@ ESCALA_PADRAO = 3
 #: uma tela 1080p oferece, e a janela deixa de caber em vez de ficar legível.
 ESCALA_MAXIMA = 8
 
+#: Os três degraus que a aba Configurações oferece, e o delta de cada um.
+#:
+#: A escala aceita 0 a 8, mas nove degraus numa fileira de botões é uma régua,
+#: não uma escolha — e a pergunta que a pessoa faz é "está pequeno demais?",
+#: que tem três respostas. "Normal" é o `ESCALA_PADRAO` por definição: o degrau
+#: do meio não pode divergir do padrão da casa no dia em que ele mudar.
+#:
+#: "Grande" é 6 e não `ESCALA_MAXIMA`: 8 é o teto de SEGURANÇA (acima dele a
+#: janela deixa de caber numa tela 1080p), e um degrau colado no teto não tem
+#: folga para o dia em que uma tela nova pedir mais um pixel.
+DEGRAUS_DE_ESCALA: dict[str, int] = {
+    "compacto": 0,
+    "normal": ESCALA_PADRAO,
+    "grande": 6,
+}
+
 #: 96 dpi: 1 ponto tipográfico = 4/3 de pixel. `gtk-font-name` fala em PONTOS;
 #: o CSS, em pixels. Sem esta conversão os dois canais cresceriam desigual e a
 #: interface ficaria com dois tamanhos de "corpo".
@@ -66,16 +82,19 @@ _NOME_COM_TAMANHO = re.compile(r"^(.*?)\s+([0-9]+(?:\.[0-9]+)?)$")
 _escala_aplicada: int | None = None
 
 
-def escala_fonte() -> int:
-    """Delta de tamanho da fonte, em px, lido das preferências da GUI.
+def escala_gravada() -> int:
+    """Delta de tamanho da fonte que está NO DISCO agora, sem cache.
 
     Valor fora da faixa (ou de tipo errado, num arquivo editado à mão) cai no
     padrão em vez de quebrar a abertura da janela — o tema NUNCA pode ser o
     motivo de a interface não abrir.
+
+    Existe separada de `escala_fonte` por causa da aba Configurações: a fileira
+    de degraus tem de nascer marcando o que VALE NA PRÓXIMA ABERTURA, e
+    `escala_fonte` devolve o cache `_escala_aplicada` da sessão — depois da
+    primeira leitura ela mente sobre o disco, que é justamente onde a gravação
+    de agora foi parar.
     """
-    global _escala_aplicada
-    if _escala_aplicada is not None:
-        return _escala_aplicada
     bruto = load_gui_prefs().get(CHAVE_ESCALA, ESCALA_PADRAO)
     if isinstance(bruto, bool) or not isinstance(bruto, (int, float)):
         logger.warning("theme_escala_invalida", valor=repr(bruto))
@@ -84,8 +103,33 @@ def escala_fonte() -> int:
     if delta < 0 or delta > ESCALA_MAXIMA:
         logger.warning("theme_escala_fora_da_faixa", valor=delta)
         delta = max(0, min(ESCALA_MAXIMA, delta))
-    _escala_aplicada = delta
     return delta
+
+
+def degrau_da_escala(delta: int) -> str:
+    """O degrau de `DEGRAUS_DE_ESCALA` mais perto de `delta`.
+
+    Nunca devolve "nenhum": um arquivo com `escala_fonte: 5` (alcançável
+    editando o JSON à mão, e foi o único caminho até esta tela existir) tem de
+    marcar um botão, senão a fileira nasce em branco e a pessoa não descobre
+    qual tamanho está valendo. Empate não existe entre inteiros — os degraus
+    são 0, 3 e 6, e as fronteiras caem em 1,5 e 4,5.
+    """
+    return min(DEGRAUS_DE_ESCALA, key=lambda nome: abs(DEGRAUS_DE_ESCALA[nome] - delta))
+
+
+def escala_fonte() -> int:
+    """Delta de tamanho da fonte, em px, APLICADO nesta sessão.
+
+    Cacheia de propósito: o tema é composto uma vez por processo, e o desenho
+    em Cairo consulta este valor a cada quadro. Quem quer saber o que está
+    gravado — e não o que está na tela — chama `escala_gravada`.
+    """
+    global _escala_aplicada
+    if _escala_aplicada is not None:
+        return _escala_aplicada
+    _escala_aplicada = escala_gravada()
+    return _escala_aplicada
 
 
 def escalar_css(texto: str, delta: int) -> str:
