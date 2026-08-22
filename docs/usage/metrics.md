@@ -51,6 +51,14 @@ construção do `DaemonConfig` em `daemon/main.py` — mas isso é mexer no cód
 Tudo o que vem abaixo (formato, métricas, scraping, dashboard) descreve o que o
 `MetricsSubsystem` faz **quando ele sobe**.
 
+> **Quem segura esta página:** `tests/unit/test_metricas_a_doc_nao_mente.py`.
+> Ele deriva do código as duas chaves, o corpo do `reload_config`, a ausência
+> de `METRICS` em `assets/*.service` e no `install.sh`, os oito nomes de
+> métrica da tabela abaixo e o comportamento do `is_enabled`/`_porta_efetiva`.
+> A ADR-016 afirmou por um mês *"zero ocorrências em `src/`"* de uma variável
+> que já existia; o portão existe para que nenhuma frase desta página possa
+> caducar calada do mesmo jeito.
+
 ---
 
 ## Verificando o endpoint

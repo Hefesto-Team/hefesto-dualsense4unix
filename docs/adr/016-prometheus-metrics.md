@@ -147,8 +147,15 @@ tem zero ocorrências em `src/`), e o daemon não lê arquivo de configuração.
 não o reinicia — logo nem o `daemon.reload` via IPC liga o endpoint num daemon
 já rodando.
 
-> **Essa contagem caducou quatro dias depois** — hoje são quatro parâmetros.
-> Ver a nota de 2026-08-01, abaixo.
+> **Dois números desta nota caducaram, e os dois ficam aqui porque medição
+> datada não se apaga.**
+>
+> 1. **A contagem de parâmetros** caducou quatro dias depois — hoje são
+>    quatro. Ver a nota de 2026-08-01, abaixo.
+> 2. **O "zero ocorrências em `src/`"** caducou em 01/08/2026, quando as duas
+>    variáveis nasceram. Medido em 22/08/2026:
+>    `grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **quatro** linhas,
+>    todas em `daemon/subsystems/metrics.py`. Ver a nota de 2026-08-22, no fim.
 
 Consequência prática: hoje o endpoint só sobe mexendo no código. O item
 "histograma de latência por tick, previsto para V2.1" também não foi feito, e
@@ -189,8 +196,15 @@ ambiente, não uma:
   da config, sem derrubar o daemon.
 
 Conferido rodando em 22/08/2026: `MetricsSubsystem.is_enabled(DaemonConfig())`
-devolve `True` com a variável em `1` e `False` sem ela, e `_porta_efetiva(9090)`
-devolve `19199` com a variável de porta em `19199`.
+devolve `True` com a variável em `1`, `False` com ela em `true` e `False` sem
+ela; `_porta_efetiva(9090)` devolve `19199` com a variável de porta em `19199`,
+e `9090` com ela em `abc` ou `70000`.
+
+**O número que a nota de 25/07 errou, medido:**
+`grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **quatro** linhas — duas
+no docstring do módulo e as duas constantes `ENV_METRICS_ENABLED` e
+`ENV_METRICS_PORT` —, todas em `daemon/subsystems/metrics.py`. Era zero em
+25/07, e foi por isso que aquela nota disse zero.
 
 **Duas metades do veredito antigo continuam de pé, e é por elas que esta nota
 não é uma absolvição:**
@@ -208,3 +222,10 @@ não é uma absolvição:**
 O `README.md` e o `docs/usage/metrics.md` foram corrigidos na mesma leva — lá o
 fato errado foi substituído; aqui, por ser decisão datada, ele fica com esta
 nota ao lado.
+
+**E cada frase acima virou portão**, porque a lição de 25/07 é que confissão
+específica envelhece calada: `tests/unit/test_metricas_a_doc_nao_mente.py`
+deriva do código as duas chaves, o corpo do `reload_config`, a ausência de
+`METRICS` em `assets/*.service` e no `install.sh`, os oito nomes de métrica e o
+comportamento do `is_enabled`/`_porta_efetiva` — e reprova a página que
+divergir. Nenhuma das seis afirmações desta nota pode caducar em silêncio.
