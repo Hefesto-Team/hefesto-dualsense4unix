@@ -18,17 +18,29 @@ root, sem subprocesso, sem IPC. Este módulo não lê arquivo nenhum: ele TRADUZ
 o que o kernel respondeu para palavra de gente, e é só aqui que `right` vira
 "Direita" e que a ausência de resposta vira "Não sei".
 
-Duas colunas do desenho não estão aqui, e o motivo é o mesmo dos dois lados —
-não há fonte (F3 de `DECISOES-DA-EXECUCAO.md`):
+Uma coluna do desenho não está aqui, e o motivo é que não há fonte (F3 de
+`DECISOES-DA-EXECUCAO.md`): **"Firmware"** — não existe check por adaptador em
+`scripts/doctor.sh`; a leitura viria do registro do kernel, que é escopo de
+CONFIG-09. Coluna que só sabe dizer "Não sei" em toda linha ocupa largura — o
+recurso escasso desta janela — e ensina a ignorar a tabela.
 
-* **"Firmware"** — não existe check por adaptador em `scripts/doctor.sh`; a
-  leitura viria do registro do kernel, que é escopo de CONFIG-09;
-* **"Em uso"** — o que amarra controle a adaptador é o *bond*, em
-  `/var/lib/bluetooth` (árvore `700`), e a janela é sudo-zero por doutrina. A
-  metade derivável vira o medidor de CONFIG-04, que é onde ela tem procedência.
+A coluna **"Em uso"** também saiu da tabela, mas por outro motivo: ela virou o
+MEDIDOR, mais abaixo nesta mesma seção, que é onde ela tem procedência.
 
-Coluna que só sabe dizer "Não sei" em toda linha ocupa largura — o recurso
-escasso desta janela — e ensina a ignorar a tabela.
+O MEDIDOR DE RÁDIO (CONFIG-04)
+-------------------------------
+
+O limite que CONFIG-02 escreveu — *"o que amarra controle a adaptador é o bond,
+em `/var/lib/bluetooth`, árvore 700, e a janela é sudo-zero"* — estava FALSO, e
+foi derrubado em 22/08/2026: o uevent do nó hidraw publica `HID_PHYS` = MAC do
+adaptador para BT real (`broker/hidraw_broker.py:281`), e
+`/sys/class/hidraw/*/device/uevent` abre como uid 1000. É por aí que o medidor
+sabe qual controle está em qual adaptador, sem tocar em `sudo`.
+
+A conta, a procedência de cada número e a fronteira que a tela NÃO atravessa
+(ocupação nunca é culpa) moram no cabeçalho de
+`integrations/radio_da_mesa.py`. Aqui em cima ficam só as três coisas que são
+de tela: o rótulo, a cor da palavra e o selo de procedência.
 """
 from __future__ import annotations
 
@@ -41,6 +53,12 @@ from hefesto_dualsense4unix.integrations.mesa_de_radio import (
     Mesa,
     RadioUsb,
     ler_a_mesa,
+)
+from hefesto_dualsense4unix.integrations.radio_da_mesa import (
+    PALAVRA_FOLGADA,
+    SEM_ADAPTADOR,
+    Ocupacao,
+    ocupacao_por_adaptador,
 )
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -95,6 +113,23 @@ _DICA_USB3_AO_LADO = (
 #: leva dizia "amarelo", e o tema vence (F2).
 _LARANJA = "#ffb86c"
 
+#: Verde de "está folgado", `@green` do `theme.css:26`.
+_VERDE = "#50fa7b"
+
+#: A dica do rótulo do medidor, literal do desenho aprovado (`TOOLTIPS.md`).
+#: Ela é a ÚNICA coisa na tela que declara de onde vêm as 1.600 fatias — e o
+#: número não é medição desta máquina.
+_DICA_DO_MEDIDOR = (
+    "Aritmética da especificação do Bluetooth, não medição desta máquina: o "
+    "rádio tem 1.600 fatias de tempo por segundo e todos os controles do mesmo "
+    "adaptador as dividem."
+)
+
+#: O selo de procedência, montado em Python porque os dois números são
+#: calculados. A frase depois do meio-ponto não muda nunca: é ela que impede a
+#: barra de ser lida como medição.
+_SELO_DE_PROCEDENCIA = "derivado da especificação"
+
 #: Quanto texto cabe numa linha de apoio desta seção antes de quebrar. Menor
 #: que o padrão de 92 da moldura porque a seção já gasta largura com duas
 #: tabelas, e a rolagem horizontal não existe nesta janela.
@@ -142,6 +177,17 @@ class _PainelDaMesa:
         self._host = host
         self._caixa_adaptadores: Any = None
         self._caixa_radios: Any = None
+        self._caixa_medidores: Any = None
+        #: A última mesa lida — o medidor precisa dela quando a resposta do
+        #: daemon chega DEPOIS da leitura do barramento (é sempre o caso).
+        self._mesa = Mesa()
+        #: `state["controllers"]` da última resposta, e os `uniq` com ponte de
+        #: microfone de pé. Nascem vazios, e barra em zero é o desenho certo
+        #: enquanto ninguém respondeu: zero é o que se sabe.
+        self._controles: list[dict[str, Any]] = []
+        self._com_mic: frozenset[str] = frozenset()
+        #: Impede empilhar pedidos ao daemon quando ela troca de aba rápido.
+        self._estado_pedido = False
         #: A declaração dela, enquanto CONFIG-03 não a leva ao disco.
         #: TODO(CONFIG-03): mandar cada mudança para `machine.declare` e ler o
         #: valor gravado ao montar — os dois valores precisam sobreviver a
@@ -162,6 +208,15 @@ class _PainelDaMesa:
         caixa.pack_start(self._caixa_adaptadores, False, False, 0)
 
         caixa.pack_start(self._declaracoes(), False, False, 0)
+
+        # O medidor fica ENTRE as declarações e os outros rádios, como no
+        # desenho (`mockup/aba-configuracoes.html:365-373`), e a ordem faz
+        # sentido de cima para baixo: primeiro quais adaptadores existem,
+        # depois o que você declarou sobre eles, depois quanto do rádio deles
+        # já está comprometido, e só então o que mais divide a faixa.
+        self._caixa_medidores = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        caixa.pack_start(self._caixa_medidores, False, False, 0)
+
         caixa.pack_start(
             self._subcabecalho(
                 "Outros rádios que dividem a faixa",
@@ -177,7 +232,13 @@ class _PainelDaMesa:
         caixa.pack_start(self._caixa_radios, False, False, 0)
 
         caixa.pack_start(self._botao_de_reexame(), False, False, 0)
-        self.reexaminar()
+        # Montar lê o BARRAMENTO e nada mais. O `daemon.state_full` que
+        # alimenta o medidor fica de fora daqui de propósito, pelo mesmo motivo
+        # da decisão E6 do exame: `install_config_tab` roda no ARRANQUE da
+        # janela (`app/app.py:1217` e `:1487`), inclusive por quem sobe
+        # minimizado na bandeja, e é por esse caminho que o retrato passa. Uma
+        # aba que ninguém abriu não fala com o daemon.
+        self._reler_a_mesa()
 
     def _declaracoes(self) -> Any:
         """As duas perguntas que barramento nenhum responde.
@@ -301,7 +362,7 @@ class _PainelDaMesa:
     # -- leitura -----------------------------------------------------------
 
     def reexaminar(self) -> None:
-        """Relê o barramento e redesenha as duas tabelas.
+        """Relê tudo: o barramento agora, e quem está no rádio quando chegar.
 
         É o refresher da aba: `_REFRESH_POR_ABA` o chama ao ENTRAR na
         Configurações, e o botão o chama de novo. Nunca em tique — os tiques da
@@ -309,14 +370,28 @@ class _PainelDaMesa:
         qualquer um deles é gastar CPU relendo o que não muda entre dois
         quadros.
 
+        As duas leituras são assimétricas de propósito: o barramento responde
+        na hora, e o daemon responde por callback. É por isso que o medidor é
+        desenhado DUAS vezes — uma com o que já se sabe, outra quando a
+        resposta chega. Esperar a segunda para desenhar a primeira deixaria a
+        seção em branco no gesto mais comum da aba.
+        """
+        self._reler_a_mesa()
+        self._pedir_o_estado()
+
+    def _reler_a_mesa(self) -> None:
+        """A metade síncrona: `/sys` agora, as três caixas redesenhadas.
+
         Engole a própria exceção porque o chamador não a embrulha: `app.py`
         chama o refresher direto, e uma leitura de `/sys` que falhe não pode
         derrubar a troca de aba.
         """
         try:
             mesa = self._ler()
+            self._mesa = mesa
             self._desenhar_adaptadores(mesa)
             self._desenhar_radios(mesa)
+            self._desenhar_medidores()
         except Exception:
             logger.warning("mesa_reexame_falhou", exc_info=True)
 
@@ -335,6 +410,79 @@ class _PainelDaMesa:
             return ler_a_mesa()
         resultado = leitor()
         return resultado if isinstance(resultado, Mesa) else Mesa()
+
+    def _pedir_o_estado(self) -> None:
+        """Pede ao daemon quem está no rádio — sem bloquear a thread da tela.
+
+        O medidor precisa de UMA coisa que o sysfs desta seção não tem: a lista
+        de controles conectados, com transporte e `uniq`. Ela mora no
+        `daemon.state_full`, e vem por `call_async` porque o refresher roda na
+        thread do GTK ao trocar de aba: um IPC síncrono ali congelaria a janela
+        no gesto mais comum da aba.
+
+        **A foto não fala com o daemon, e a guarda é a mesma da mesa.** Quem
+        injetou `_mesa_leitor` está capturando `docs/usage/assets/` — e o
+        `state_full` desta máquina traz o `uniq` dos controles DELA, que é MAC.
+        Nenhum portão de anonimato varre imagem (F5). Com o desvio de pé o
+        medidor fica com o que já tem, que é zero, e a foto sai com a barra
+        vazia — o resultado honesto de uma bancada sem rádio.
+        """
+        if getattr(self._host, "_mesa_leitor", None) is not None:
+            return
+        if self._estado_pedido:
+            return
+
+        # O timeout é o MESMO de toda leitura de `daemon.state_full` da casa
+        # (`mode_transition.py:43`, HARM-15: 1,0 s, porque sob hotplug o daemon
+        # passa dos 0,25 s de padrão do `call_async` e a janela o declarava
+        # morto estando vivo). Um número próprio aqui seria um segundo dono da
+        # mesma folga.
+        from hefesto_dualsense4unix.app.actions.mode_transition import (
+            STATE_IPC_TIMEOUT_S,
+        )
+        from hefesto_dualsense4unix.app.ipc_bridge import call_async
+
+        def _chegou(estado: Any) -> bool:
+            self._estado_pedido = False
+            self._aplicar_estado(estado if isinstance(estado, dict) else None)
+            return False
+
+        def _falhou(_exc: Exception) -> bool:
+            self._estado_pedido = False
+            # Daemon fora do ar não é "rádio folgado": é "não sei quem está no
+            # rádio". Zerar é o que a tela já mostra, e a barra em zero com o
+            # daemon parado não afirma nada que a seção não saiba.
+            self._aplicar_estado(None)
+            return False
+
+        self._estado_pedido = True
+        call_async(
+            "daemon.state_full", None, _chegou, _falhou, timeout_s=STATE_IPC_TIMEOUT_S
+        )
+
+    def _aplicar_estado(self, estado: dict[str, Any] | None) -> None:
+        """Guarda os controles e os `uniq` com microfone, e redesenha."""
+        controles = (estado or {}).get("controllers")
+        if isinstance(controles, list):
+            self._controles = [c for c in controles if isinstance(c, dict)]
+        else:
+            self._controles = []
+        # A TERCEIRA chave do bloco `bt_mic` — a lista de `uniq` com ponte de
+        # microfone de pé — AINDA NÃO EXISTE no `daemon.state_full`: o bloco de
+        # `daemon/ipc_handlers.py:2937-2940` publica só `enabled` e `running`,
+        # que são do PROCESSO e não do controle. Está lido daqui de propósito,
+        # com ausência virando conjunto vazio, para que ligá-la seja UMA linha
+        # no daemon e nenhuma aqui. Enquanto ela não existe, um controle com a
+        # ponte de pé é contado como sem microfone: a soma erra por 6% (276,7
+        # contra 260,4 fatias) e a fatia ciana não aparece. Está registrado como
+        # pendência da sprint CONFIG-04.
+        bloco = (estado or {}).get("bt_mic")
+        uniqs = bloco.get("uniqs") if isinstance(bloco, dict) else None
+        if isinstance(uniqs, list):
+            self._com_mic = frozenset(u for u in uniqs if isinstance(u, str))
+        else:
+            self._com_mic = frozenset()
+        self._desenhar_medidores()
 
     # -- desenho das tabelas -----------------------------------------------
 
@@ -404,6 +552,90 @@ class _PainelDaMesa:
             )
         self._caixa_radios.pack_start(grade, False, False, 0)
         self._caixa_radios.show_all()
+
+    # -- desenho do medidor ------------------------------------------------
+
+    def _desenhar_medidores(self) -> None:
+        """Uma barra por adaptador — ou nenhuma, quando não há adaptador."""
+        if self._caixa_medidores is None:
+            return
+        self._esvaziar(self._caixa_medidores)
+        for nome, ocupacao in _medidores_da_mesa(self._mesa, self._ocupacoes()):
+            self._caixa_medidores.pack_start(
+                self._fileira_do_medidor(nome, ocupacao), False, False, 0
+            )
+        self._caixa_medidores.show_all()
+
+    def _ocupacoes(self) -> dict[str, Ocupacao]:
+        """A conta, ou nada quando o sysfs não responde.
+
+        Engole a exceção pelo mesmo motivo do `reexaminar`: uma varredura de
+        `/sys` que falhe não pode apagar as duas tabelas que já foram
+        desenhadas acima.
+        """
+        try:
+            return ocupacao_por_adaptador(
+                self._controles, com_ponte_de_mic=self._com_mic
+            )
+        except Exception:
+            logger.warning("medidor_de_radio_falhou", exc_info=True)
+            return {}
+
+    def _fileira_do_medidor(self, nome: str, ocupacao: Ocupacao) -> Any:
+        """Rótulo, trilha de duas fatias, a palavra e o selo — nesta ordem.
+
+        A ordem é a do desenho (`mockup/aba-configuracoes.html:365-372`) e ela
+        conta uma frase: QUAL rádio, QUANTO dele, em UMA palavra, e DE ONDE
+        veio o número. Trocar a ordem quebra a frase.
+        """
+        from gi.repository import Gtk
+        from gi.repository.GLib import markup_escape_text
+
+        from hefesto_dualsense4unix.app.widgets.sensor_widgets import MedidorDeRadio
+
+        fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        fileira.set_margin_top(4)
+
+        rotulo = Gtk.Label(label=_(_rotulo_do_medidor(nome)))
+        rotulo.set_xalign(0.0)
+        rotulo.set_tooltip_text(_(_DICA_DO_MEDIDOR))
+        with contextlib.suppress(Exception):
+            rotulo.get_style_context().add_class("hefesto-rotulo")
+        fileira.pack_start(rotulo, False, False, 0)
+
+        medidor = MedidorDeRadio()
+        medidor.set_ocupacao(ocupacao.fracao_input, ocupacao.fracao_audio)
+        medidor.set_hexpand(True)
+        medidor.set_valign(Gtk.Align.CENTER)
+        # O trilho é a única coisa da fileira que pode crescer, e é ele que
+        # come a largura sobrando. Sem o `hexpand` aqui e com um
+        # `set_size_request` largo no widget, o mínimo da barra viraria o
+        # mínimo da aba inteira — a janela abre com 1180px e não tem rolagem
+        # horizontal.
+        with contextlib.suppress(Exception):
+            medidor.get_accessible().set_name(_texto_acessivel(ocupacao))
+        fileira.pack_start(medidor, True, True, 0)
+
+        palavra = Gtk.Label()
+        cor = _VERDE if ocupacao.rotulo == PALAVRA_FOLGADA else _LARANJA
+        # Duas cores, nunca três, e NUNCA vermelho (R3): rádio cheio se resolve
+        # tirando um controle daquele adaptador, e o vermelho desta casa é para
+        # o que destrói e não tem volta (`theme.css:13`).
+        palavra.set_markup(
+            f'<span foreground="{cor}">{markup_escape_text(_(ocupacao.rotulo))}</span>'
+        )
+        palavra.set_xalign(0.0)
+        with contextlib.suppress(Exception):
+            palavra.get_style_context().add_class("hefesto-valor-mono-peq")
+        fileira.pack_start(palavra, False, False, 0)
+
+        selo = Gtk.Label(label=_selo_da_ocupacao(ocupacao))
+        selo.set_xalign(0.0)
+        with contextlib.suppress(Exception):
+            selo.get_style_context().add_class("hefesto-valor-mono-peq")
+            selo.get_style_context().add_class("dim-label")
+        fileira.pack_start(selo, False, False, 0)
+        return fileira
 
     def _grade(self, cabecalhos: list[str]) -> Any:
         """Uma grade com a fileira de cabeçalhos já posta.
@@ -512,6 +744,81 @@ def _onde_esta_o_adaptador(adaptador: Adaptador) -> tuple[str, str | None]:
     # com fonte reporta 0mA e o USB 2.1 sem fonte reporta 100mA, o oposto do
     # palpite. Afirmar "com fonte" seria a tela inventando uma medição.
     return " · ".join(partes), "Lido do barramento USB: o Hefesto reconhece o hub."
+
+
+def _medidores_da_mesa(
+    mesa: Mesa, ocupacoes: dict[str, Ocupacao]
+) -> list[tuple[str, Ocupacao]]:
+    """`[(nome do rádio, ocupação)]` — a lista de barras a desenhar.
+
+    Duas fontes respondem "quais adaptadores existem", e elas não casam: a
+    tabela acima vem do sysfs e conhece VID:PID e porta, mas **não conhece o
+    endereço** (medido em 22/08: `/sys/class/bluetooth/hci0/` não publica
+    `address`); o medidor vem do `HID_PHYS` dos controles e conhece só o
+    endereço. Sem um lado que tenha os dois, casar linha com barra seria chute.
+
+    A regra que sai daí tem uma frase: **quem manda é quem sabe.**
+
+    * há controle no rádio -> uma barra por ENDEREÇO, que é o que o desenho
+      pede (`Rádio em uso · AA:BB:CC:11:22:33`). Com dois adaptadores e
+      controles só num deles, aparece uma barra — a do que está em uso, com
+      nome verdadeiro;
+    * não há controle nenhum no rádio -> uma barra em ZERO por adaptador da
+      tabela, nomeada pela identidade física. É o caso desta bancada, e é o
+      controle negativo da sprint: todos os controles no cabo, toda barra em
+      zero;
+    * não há nem controle nem adaptador -> nenhuma barra. A linha "Nenhum
+      adaptador Bluetooth encontrado" já disse tudo, e uma barra vazia embaixo
+      dela só ocuparia altura.
+
+    O que a regra NUNCA faz é somar a ocupação de um endereço numa linha da
+    tabela por posição. Emprestar o adaptador do vizinho é o erro que a chave
+    de ausência existe para impedir.
+    """
+    if ocupacoes:
+        return [(endereco, ocupacoes[endereco]) for endereco in sorted(ocupacoes)]
+    return [(_nome_do_adaptador(a), Ocupacao()) for a in mesa.adaptadores]
+
+
+def _rotulo_do_medidor(nome: str) -> str:
+    """O rótulo da barra. Endereço ausente vira "Não sei", nunca `hciN`.
+
+    `hci0` e `hci1` invertem entre boots — é a mesma decisão M1 que tirou o
+    `hciN` da tabela acima, e vale em dobro aqui: uma barra que troca de dono
+    entre boots faz a pessoa mexer na porta errada.
+    """
+    if nome == SEM_ADAPTADOR:
+        return f"Rádio em uso · {_PAINEL_DESCONHECIDO}"
+    return f"Rádio em uso · {nome}"
+
+
+def _selo_da_ocupacao(ocupacao: Ocupacao) -> str:
+    """`831/1600 · derivado da especificação` — o selo mono, montado aqui.
+
+    Montado em Python, e não declarado no Glade, por dois motivos: os dois
+    números são calculados, e um rótulo estático começando por "derivado"
+    reprovaria no `validar-palavra-de-tela.py` por primeira letra minúscula
+    (`:174-186`). Aqui a primeira coisa é um dígito, e o portão de maiúscula
+    pula o que não começa por letra.
+
+    A frase depois do meio-ponto não é enfeite: as 1.600 fatias vêm da
+    especificação do Bluetooth Classic e **nunca foram medidas nesta máquina**.
+    Sem ela, a barra seria lida como medição.
+    """
+    return (
+        f"{round(ocupacao.slots_total)}/{ocupacao.slots_teto} "
+        f"· {_SELO_DE_PROCEDENCIA}"
+    )
+
+
+def _texto_acessivel(ocupacao: Ocupacao) -> str:
+    """O que o leitor de tela lê na trilha — o `aria-label` do desenho.
+
+    A barra é desenhada em Cairo: sem isto ela é um retângulo sem nome nenhum
+    para quem não a enxerga, e a informação inteira do medidor ficaria só na
+    cor.
+    """
+    return f"{round(ocupacao.slots_total)} de {ocupacao.slots_teto}"
 
 
 def _onde_esta_o_radio(radio: RadioUsb, aviso: tuple[str, str] | None) -> str:

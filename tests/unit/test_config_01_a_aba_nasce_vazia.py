@@ -429,3 +429,70 @@ def test_nenhum_titulo_promete_numero() -> None:
             assert not any(caractere.isdigit() for caractere in dica), (
                 f"a dica de {titulo!r} promete um número que ninguém mediu"
             )
+
+
+def _aba_com_controles_na_mesa() -> Gtk.Builder:
+    """A aba montada com dois controles, para a seção dos cards existir."""
+
+    class _HospedeiroComMesa(ConfigActionsMixin):
+        def __init__(self, builder: Gtk.Builder) -> None:
+            self.builder = builder
+            self._controles_leitor = lambda: {
+                "controllers": [
+                    {
+                        "uniq": "aa:bb:cc:00:00:01",
+                        "connected": True,
+                        "transport": "usb",
+                        "player_slot": 1,
+                    },
+                    {
+                        "uniq": "aa:bb:cc:00:00:02",
+                        "connected": True,
+                        "transport": "bt",
+                        "player_slot": 2,
+                    },
+                ]
+            }
+
+    builder = Gtk.Builder()
+    builder.add_from_file(str(MAIN_GLADE))
+    _HospedeiroComMesa(builder).install_config_tab()
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+    return builder
+
+
+def test_nenhuma_secao_estica_para_ocupar_a_folga() -> None:
+    """A folga vertical é da PÁGINA, que rola — nenhuma seção cresce nela.
+
+    O GTK3 propaga `vexpand` de baixo para cima. Basta um espaçador expansível
+    no fundo de um widget — e há um legítimo, o que ancora o seletor de jogador
+    no rodapé de todo card para os cards terem a mesma altura — para o
+    `Gtk.Frame` da seção inteira passar a pedir expansão. A página então
+    entrega a ele toda a folga que sobrar.
+
+    Medido em 22/08/2026: a seção "Os controles" saiu com
+    `compute_expand(VERTICAL) = True` e a aba ganhou um vão vazio de mais de
+    cem pixels embaixo dos cards. O sintoma é pior numa janela alta, onde a
+    última seção afunda para longe das outras.
+
+    Mordida: arranquei o `frame.set_vexpand(False)` de `moldura_de_secao` e
+    este teste reprovou nomeando "Os controles".
+
+    A aba é montada aqui COM controles na mesa, e não pelo `_montar_a_aba()`
+    dos outros testes deste arquivo. A primeira versão deste teste usava
+    aquele, e não mordia: sem controle nenhum a seção mostra uma linha de texto,
+    não há card, não há espaçador, e não há `vexpand` para propagar. Um teste
+    que só passa é um teste que não testa.
+    """
+    builder = _aba_com_controles_na_mesa()
+    esticam = [
+        _titulo_da_moldura(frame)
+        for frame in builder.get_object(ABA_CONFIG).get_children()
+        if frame.compute_expand(Gtk.Orientation.VERTICAL)
+    ]
+
+    assert not esticam, (
+        f"estas seções esticam verticalmente: {esticam}. A folga da aba é da "
+        "página, que rola — uma seção que cresce afunda as de baixo."
+    )

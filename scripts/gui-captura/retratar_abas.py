@@ -887,6 +887,55 @@ def _mesa_de_mentira():  # type: ignore[no-untyped-def]
 
 
 
+
+def _controles_de_mentira():  # type: ignore[no-untyped-def]
+    """O inventário da seção "Os controles", vindo do fixture versionado.
+
+    Mesmo arquivo que o `--mesa-cheia` usa (`state_full_quatro_controles.json`),
+    e pelo mesmo motivo: ele é payload real de 14/08 que JÁ passou pelos portões
+    de anonimato da suíte, com MAC de fixture. Ler o daemon vivo aqui poria o
+    endereço dos controles dela num PNG versionado.
+    """
+    try:
+        return json.loads(FIXTURE_MESA_CHEIA.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+#: Os códigos de cor que os controles da bancada "responderiam" pelo cabo.
+#:
+#: São códigos do firmware da Sony, e a escolha de quais não é aleatória: o
+#: desenho aprovado mostra cards de cores diferentes lado a lado justamente
+#: porque a borda colorida é o que distingue um card do outro num relance.
+#: `02` é Cosmic Red e `05` é Starlight Blue — a única das vinte e uma linhas
+#: da tabela cujo tom é MEDIDO e não aproximado.
+_CODIGOS_DA_BANCADA = ("02", "05", "01", "03")
+
+
+def _cor_de_mentira(endereco: str = ""):  # type: ignore[no-untyped-def]
+    """A cor do plástico de um controle da bancada, escolhida pelo endereço.
+
+    Devolve o mesmo tipo que `cor_do_plastico.ler_pelo_cabo` — e passa pela
+    tradução de PRODUÇÃO, `cor_por_codigo`, em vez de montar o objeto à mão: se
+    um dia a tabela de cores mudar, a foto muda junto, que é o ponto de o
+    retrato chamar o produto e não uma cópia dele.
+
+    Determinística de propósito: a mesma bancada tem de produzir a mesma foto
+    duas vezes seguidas, senão o portão que compara as imagens acusa mudança
+    onde não houve nenhuma.
+    """
+    from hefesto_dualsense4unix.integrations import cor_do_plastico
+
+    codigo = _CODIGOS_DA_BANCADA[
+        sum(endereco.encode()) % len(_CODIGOS_DA_BANCADA) if endereco else 0
+    ]
+    for nome in ("cor_por_codigo", "_cor_por_codigo", "cor_do_codigo"):
+        traduz = getattr(cor_do_plastico, nome, None)
+        if traduz is not None:
+            return traduz(codigo)
+    return None
+
+
 def _pintar_o_exame_de_bancada(hospedeiro) -> None:  # type: ignore[no-untyped-def]
     """Desenha a seção "Está tudo certo?" com um resultado de bancada.
 
@@ -992,6 +1041,18 @@ def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
             # Atributo de INSTÂNCIA, não de classe: como atributo de classe ele
             # viraria método ligado e receberia `self` que ninguém espera.
             self._mesa_leitor = _mesa_de_mentira
+            # A seção "Os controles" pergunta ao daemon quem está na mesa. No
+            # retrato não há daemon, e não pode haver: o `state_full` de verdade
+            # traz o endereço Bluetooth dos controles DELA, e esta foto vai para
+            # `docs/usage/assets/` sem revisão humana — os portões de anonimato
+            # não varrem imagem. O leitor devolve o mesmo fixture VERSIONADO que
+            # a aba Status já usa, cujo MAC é falso por construção.
+            self._controles_leitor = _controles_de_mentira
+            # A cor do plástico é lida do controle pelo cabo. Sem controle, sem
+            # leitura — e a foto mostraria "Não sei" em todos os cards. Este
+            # dublê devolve a cor que o card desenharia se o aparelho tivesse
+            # respondido, para a borda colorida aparecer na documentação.
+            self._cor_do_plastico_leitor = _cor_de_mentira
 
         def _get(self, nome: str):  # type: ignore[no-untyped-def]
             return self.builder.get_object(nome)
@@ -1229,9 +1290,24 @@ def _injetar_cards_da_mesa_cheia(builder, estado) -> str:  # type: ignore[no-unt
 #: 02/08) pedem mais que o dobro da altura da tela dela.
 ABA_QUE_ESTOURA = "mesa_cheia_status"
 
+#: As abas que pedem mais altura do que a janela tem, e por isso ganham foto
+#: esticada TAMBÉM no modo normal — não só no `--mesa-cheia`.
+#:
+#: A Configurações entrou em 22/08/2026, quando as cinco seções ficaram
+#: prontas: ela pede mais de 1080px sozinha, e a foto de 1920x1080 cortava a
+#: seção "A janela" pela metade. A documentação da aba mostraria quatro seções
+#: e meia, o que é pior do que não mostrar nenhuma — quem lê conclui que a
+#: quinta não existe.
+ABAS_ESTICADAS = ("readme_configuracoes",)
+
 #: Teto da foto esticada, em px. Não é medo do arquivo grande: é o sinal de que
 #: alguma coisa cresceu sem limite e a foto viraria uma tira ilegível.
 ALTURA_MAXIMA_ESTICADA = 4000
+
+#: A moldura da tira de abas em volta do rótulo, em px: as margens que o tema
+#: dá à aba ativa mais a linha rosa embaixo dela. Medido no tema desta casa;
+#: sem ela a foto esticada corta os últimos pixels da última seção.
+_FOLGA_DA_TIRA = 26
 
 #: A foto do cabeçalho — ver `_fotografar_o_cabecalho`. Ela existe só no modo
 #: mesa cheia porque é lá que a fita do alvo tem o que mostrar: com um controle
@@ -1251,7 +1327,19 @@ def _fotografar_a_aba_inteira(janela, notebook, saida, indice, nome) -> str:  # 
     """
     notebook.set_current_page(indice)
     _assentar()
-    _, natural = notebook.get_preferred_height()
+    # A altura é a que ESTA página pede, não a que o notebook pede.
+    #
+    # `notebook.get_preferred_height()` devolve o MAIOR natural entre as onze
+    # páginas — é assim que um GtkNotebook funciona, e é o que ele precisa
+    # saber para não encolher ao trocar de aba. Usar esse número aqui esticava
+    # toda foto até a altura da aba mais alta, e o excedente aparecia como um
+    # vão vazio entre as seções da página fotografada. Medido em 22/08/2026: a
+    # Configurações pede 1005 px e a foto saía com 1925, com 900 px de folga
+    # espalhada.
+    pagina = notebook.get_nth_page(indice)
+    _, natural_da_pagina = pagina.get_preferred_height()
+    _, natural_da_tira = notebook.get_tab_label(pagina).get_preferred_height()
+    natural = natural_da_pagina + natural_da_tira + _FOLGA_DA_TIRA
     altura = min(max(natural, ALTURA), ALTURA_MAXIMA_ESTICADA)
     janela.set_size_request(LARGURA, altura)
     _esperar_o_redimensionamento()
@@ -1390,6 +1478,13 @@ def main(destino: str | None = None, *, mesa_cheia: bool = False) -> int:
         kb = arquivo.stat().st_size // 1024
         print(f"  {rotulo:<22} {arquivo.name:<26} {kb:>4} KB")
 
+    for nome_esticado in ABAS_ESTICADAS:
+        if nome_esticado in nomes:
+            print(
+                _fotografar_a_aba_inteira(
+                    janela, notebook, saida, nomes.index(nome_esticado), nome_esticado
+                )
+            )
     if mesa_cheia and ABA_QUE_ESTOURA in nomes:
         print(
             _fotografar_a_aba_inteira(
