@@ -211,18 +211,36 @@ def test_pagina_divergente_com_mtime_mais_novo_e_acusada(arvore: Path) -> None:
 def test_o_espaco_no_fim_da_linha_nao_derruba_o_check(arvore: Path) -> None:
     """A armadilha medida: alguma ferramenta da casa apara o espaço sobrando.
 
-    A saída do gerador tem linhas com espaço no fim dentro dos `<style>` vindos
-    dos SVG, e o arquivo commitado não tem. Um portão que reprovasse por isso
-    reprovaria em toda árvore limpa — e portão que reprova sempre é portão
-    desligado.
+    O `universal-sanitizer` do pre-commit apara espaço no fim de linha. Um
+    `--check` que comparasse byte a byte reprovaria em toda árvore que passou
+    pelo hook — e portão que reprova sempre é portão desligado.
+
+    **A ARMADILHA MUDOU DE MÃO EM 22/08/2026, e é uma melhora.** Até aqui o
+    teste dependia de o GERADOR emitir as caudas: ele aparava a saída e
+    conferia que o `--check` tolerava a diferença. Só que o gerador emitir
+    cauda era, ele mesmo, um defeito — `specs.html` ficava permanentemente sujo
+    no `git status` depois de toda regeração, e arquivo que nunca fica limpo
+    ensina a ignorar o `git status` inteiro. O gerador passou a aparar na
+    escrita, e este teste perdeu o objeto: a asserção que o guardava
+    (*"a página gerada não tem espaço no fim de linha nenhum"*) disparou, que é
+    o portão fazendo exatamente o trabalho dele.
+
+    Agora o teste PLANTA a cauda em vez de esperá-la. A garantia é a mesma e
+    não depende mais de um defeito do gerador para ser exercida.
     """
     alvo = pagina(arvore)
     texto = alvo.read_text(encoding="utf-8")
-    aparado = "\n".join(linha.rstrip() for linha in texto.splitlines()) + "\n"
-    assert aparado != texto, (
-        "a página gerada não tem espaço no fim de linha nenhum — este teste "
-        "perdeu o objeto e precisa de outra armadilha")
-    alvo.write_text(aparado, encoding="utf-8")
+    assert "\n" in texto, "a página gerada veio vazia — este teste ficou cego"
+
+    # Cauda em TODA linha não vazia: é o pior caso, e é barato.
+    sujo = (
+        "\n".join(
+            linha + "  " if linha.strip() else linha for linha in texto.splitlines()
+        )
+        + "\n"
+    )
+    assert sujo != texto, "plantar a cauda não mudou nada — a régua quebrou"
+    alvo.write_text(sujo, encoding="utf-8")
 
     saida = confere(arvore)
     assert saida.returncode == 0, (
