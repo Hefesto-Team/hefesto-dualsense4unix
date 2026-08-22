@@ -155,6 +155,8 @@ PARES_QUE_DESTROEM = {
 #: A tabela de cores. `dualshock-tools`, `ds5-controller.js`, confirmada pelo
 #: mantenedor na issue #210; concorda com `nsfm/dualsense-ts` e com
 #: `TechAntohere/Senshi`. Três fontes independentes.
+#: O **tom** de cada nome (hex, fonte e confiança) está em
+#: `docs/data/cores-do-plastico.md` — aqui mora só o nome.
 CORES = {
     "00": "White",
     "01": "Midnight Black",
