@@ -118,9 +118,36 @@ install -d -m 700 "${DST_ROOT}"
 # colidiram no mesmo diretório-timestamp e o install falhou com "não foi
 # possível mudar as permissões ... Arquivo ou diretório inexistente".
 # Serializa por flock; o nome do diretório ganha o PID como sufixo único.
+#
+# BT-AGENT-TRAVA-O-RESTART-01/E4 (06/08/2026) — QUANTO esperar depende de ONDE
+# se está. No gancho de parada do `bluetooth.service` o rádio já está fora do ar
+# e o systemd só reinicia o daemon depois que ESTE processo sair: cada segundo
+# aqui é segundo de Bluetooth morto. Medido no crash das 21:03 de 06/08 — dos
+# 57,25 s em que ela ficou sem rádio, 42,8 s saíram deste `ExecStopPost`,
+# enquanto o mesmo script rodando à mão sobre a mesma fonte custa 0,03 s. Ou
+# seja: o tempo era contenção, não trabalho.
+#
+# Esperar aqui troca "snapshot perdido" — que o timer de 15 min e a borda udev
+# da 83-hefesto-bond-snapshot.rules cobrem — por "rádio morto", que nada cobre.
+# Fora do gancho a espera continua certa: é ela que serializa o timer contra a
+# borda udev (SNAPSHOT-LOCK-01, acima).
+#
+# `$SERVICE_RESULT` é o carimbo do gancho — o systemd só o entrega a `ExecStop=`
+# e `ExecStopPost=`. É a mesma leitura que o `bt_bonds_autorestore.sh` usa, e
+# ela não se esquece: uma linha nova de `ExecStopPost` herda o comportamento
+# certo sem ninguém precisar lembrar de passar um argumento.
+if [[ -n "${SERVICE_RESULT:-}" ]]; then
+    ESPERA_LOCK=(-n)
+else
+    ESPERA_LOCK=(-w 30)
+fi
 exec 9>"${DST_ROOT}/.lock"
-if ! flock -w 30 9; then
-    log "outro snapshot em andamento há >30s — desisto (o timer cobre)"
+if ! flock "${ESPERA_LOCK[@]}" 9; then
+    if [[ -n "${SERVICE_RESULT:-}" ]]; then
+        log "outro snapshot em andamento e este é o gancho de parada — desisto na hora (esperar aqui é Bluetooth fora do ar; o timer e a borda udev cobrem)"
+    else
+        log "outro snapshot em andamento há >30s — desisto (o timer cobre)"
+    fi
     exit 0
 fi
 
