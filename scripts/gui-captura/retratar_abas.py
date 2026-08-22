@@ -759,7 +759,7 @@ def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
     desviar, ao contrário da aba Perfis.
     """
     try:
-        from hefesto_dualsense4unix.app.actions.config_actions import (
+        from hefesto_dualsense4unix.app.actions.config import (
             ABA_CONFIG,
             SECOES,
             ConfigActionsMixin,

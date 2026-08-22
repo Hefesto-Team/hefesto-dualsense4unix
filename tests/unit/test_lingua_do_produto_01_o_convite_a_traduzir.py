@@ -83,6 +83,20 @@ RAIZ = Path(__file__).resolve().parents[2]
 #: i18n precisa chegar para que traduzir signifique alguma coisa.
 DIR_ACOES = RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions"
 
+
+def _modulos_de_acoes() -> list[Path]:
+    """Todo `.py` de `app/actions/`, inclusive os de dentro de um pacote.
+
+    Recursivo desde 22/08/2026. Enquanto era `glob("*.py")`, o censo perdia de
+    vista qualquer módulo que descesse um nível — e perdeu: o pacote
+    `config/`, com nove arquivos, sumiu inteiro do mapa no dia em que nasceu.
+    """
+    return sorted(
+        caminho
+        for caminho in DIR_ACOES.rglob("*.py")
+        if "__pycache__" not in caminho.parts
+    )
+
 #: Onde moram os catálogos que o projeto de fato entrega.
 DIR_CATALOGOS = RAIZ / "po"
 
@@ -229,7 +243,7 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     lembrete de que a decisão tem uma condição, e a condição tem número.
     """
     fora = _modulos_que_escrevem_portugues_cru(DIR_ACOES)
-    total = len(list(DIR_ACOES.glob("*.py")))
+    total = len(_modulos_de_acoes())
 
     # RELANCAR-01 (08/08/2026): 18 viraram 19 com o `relancar.py`, e 15 viraram
     # 16 — ele escreve o texto do diálogo em português, direto, como os outros.
@@ -250,8 +264,19 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     # 21, e o quadro melhora pela primeira vez desde 07/08. Os dois números
     # NÃO subirem juntos é, aqui, a boa notícia — e é exatamente o sinal que
     # este teste existe para tornar visível.
-    assert total == 21, (
-        f"`app/actions/` tem {total} módulos, não 21. A contagem citada em "
+    #
+    # ANDAIME DA ABA CONFIGURAÇÕES (22/08/2026): o censo passou a ser
+    # RECURSIVO, e por um motivo de medição, não de estilo. O
+    # `config_actions.py` virou o pacote `app/actions/config/` — um módulo por
+    # seção, para que oito frentes escrevessem sem colidir — e o `glob("*.py")`
+    # de antes, que só olha o primeiro nível, deixou de enxergar a aba inteira:
+    # a contagem CAIU de 21 para 20 e o censo passou a jurar que ninguém ali
+    # traduz. Um portão cego a subpasta é pior que portão nenhum, porque a
+    # próxima pasta some do mapa em silêncio. Com `rglob`, 21 viraram 29 (os 20
+    # do primeiro nível mais os 9 do pacote) e o encanamento aparece em CINCO
+    # arquivos: os três de sempre mais `config/mixin.py` e `config/moldura.py`.
+    assert total == 29, (
+        f"`app/actions/` tem {total} módulos, não 29. A contagem citada em "
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
         "`docs/usage/troubleshooting.md` precisa mudar junto."
     )
@@ -281,20 +306,22 @@ def test_os_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
     módulos são a prova viva de que ele funciona; perdê-los seria arrancar
     trabalho bom para provar um ponto, que é o que ela recusou.
 
-    Eram três até 21/08/2026, quando o `config_actions.py` da CONFIG-01 entrou
-    já traduzindo. O nome do teste dizia "os três" e passou a mentir — por isso
-    mudou.
+    Eram três até 21/08/2026, quando a aba Configurações entrou já traduzindo.
+    O nome do teste dizia "os três" e passou a mentir — por isso mudou. Em
+    22/08/2026 viraram cinco: o pacote `config/` traduz no montador e na
+    moldura, que são os dois arquivos dele que põem texto na tela.
     """
     com_encanamento = sorted(
-        fonte.name
-        for fonte in DIR_ACOES.glob("*.py")
+        fonte.relative_to(DIR_ACOES).as_posix()
+        for fonte in _modulos_de_acoes()
         if _importa_a_funcao_de_traducao(
             ast.parse(fonte.read_text(encoding="utf-8"))
         )
     )
 
     assert com_encanamento == [
-        "config_actions.py",
+        "config/mixin.py",
+        "config/moldura.py",
         "footer_actions.py",
         "lightbar_actions.py",
         "status_actions.py",
@@ -341,7 +368,7 @@ def test_nenhuma_pagina_que_ensina_convida_a_traduzir(documento: str) -> None:
         f"{documento} voltou a convidar a traduzir: "
         + "; ".join(f"linha {n} ({motivo})" for n, motivo in achados)
         + ". Hoje "
-        + f"{len(fora)} dos {len(list(DIR_ACOES.glob('*.py')))} módulos de "
+        + f"{len(fora)} dos {len(_modulos_de_acoes())} módulos de "
         "`app/actions/` escrevem português direto, então a tradução não "
         "alcançaria a janela e o convite seria falso. Decisão de 07/08/2026, "
         "em `docs/process/sprints/"

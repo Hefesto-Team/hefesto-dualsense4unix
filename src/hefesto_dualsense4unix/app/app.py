@@ -27,7 +27,7 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, Gtk
 
 from hefesto_dualsense4unix.app.actions.carona_do_wrapper import GESTO_APLICAR
-from hefesto_dualsense4unix.app.actions.config_actions import (
+from hefesto_dualsense4unix.app.actions.config import (
     ABA_CONFIG,
     ConfigActionsMixin,
 )

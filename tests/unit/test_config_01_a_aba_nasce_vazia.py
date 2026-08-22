@@ -50,7 +50,7 @@ _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.actions.config_actions import (
+from hefesto_dualsense4unix.app.actions.config import (
     ABA_CONFIG,
     SECOES,
     ConfigActionsMixin,
@@ -329,23 +329,44 @@ def _montar_a_aba() -> tuple[Gtk.Builder, Gtk.Widget]:
     return builder, pagina
 
 
-def test_a_aba_nasce_com_as_cinco_secoes_e_nada_mais() -> None:
-    """Vazia é o aceite: cinco títulos, zero widget de conteúdo.
+def _titulo_da_moldura(frame: Gtk.Widget) -> str | None:
+    """O texto do `label_widget` de uma moldura de seção, ou `None`."""
+    rotulo = frame.get_label_widget()
+    return None if rotulo is None else rotulo.get_text()
 
-    Mordida: acrescentar qualquer widget ao `install_config_tab`.
+
+def test_a_aba_e_cinco_molduras_na_ordem_do_desenho() -> None:
+    """Cada seção é uma moldura — como nas outras dez abas — e a ordem é a do
+    desenho aprovado.
+
+    Este teste nasceu cobrando o contrário ("cinco títulos, zero conteúdo"), e
+    ele estava certo enquanto a aba era só o portão. O aceite mudou em
+    22/08/2026, e por uma medição: posta lado a lado com as outras dez, a
+    Configurações foi a única que leu como quebrada — as dez montam cada seção
+    num `Gtk.Frame` com título no canto (`home_actions.py:1500`, `:1712`,
+    `:1756`) e esta tinha cinco rótulos soltos na borda esquerda.
+
+    O que sobrevive daquele aceite é o que importa e não caduca: **a aba tem
+    exatamente as seções do desenho, na ordem do desenho**. Quantos widgets há
+    dentro de cada uma é assunto da seção, não deste portão.
+
+    Mordida: trocar a ordem em `secoes.py`, ou montar uma seção sem moldura.
     """
     builder, _pagina = _montar_a_aba()
     caixa = builder.get_object(ABA_CONFIG)
     filhos = caixa.get_children()
 
     assert len(filhos) == len(SECOES), (
-        f"a aba nasceu com {len(filhos)} widgets e as seções são "
-        f"{len(SECOES)}. Nesta entrega a aba é VAZIA: só os títulos."
+        f"a aba nasceu com {len(filhos)} filhos diretos e as seções são "
+        f"{len(SECOES)}. Todo widget da aba mora DENTRO de uma moldura de "
+        "seção — nada é empacotado solto na página."
     )
-    assert [f.get_text() for f in filhos] == [titulo for titulo, _ in SECOES]
-    assert all(isinstance(f, Gtk.Label) for f in filhos), (
-        "conteúdo entrou na aba antes da hora"
+    assert all(isinstance(f, Gtk.Frame) for f in filhos), (
+        "há widget empacotado solto na página, fora de uma moldura de seção"
     )
+    assert [_titulo_da_moldura(f) for f in filhos] == [
+        titulo for titulo, _ in SECOES
+    ]
 
 
 def test_a_instalacao_e_idempotente() -> None:
