@@ -1149,28 +1149,47 @@ def _injetar_modos_de_gatilho(builder) -> str:  # type: ignore[no-untyped-def]
     produto usa. Uma lista copiada aqui viraria um segundo dono dos rótulos, e
     a foto passaria a mentir no dia em que um deles mudasse.
     """
+    # O MÉTODO DE PRODUÇÃO, e não uma cópia dele. SUBSTITUÍDO em 22/08/2026,
+    # e a razão é medida: esta função montava os modos À MÃO
+    # (`SegmentedSelector(wrap=True)` mais `slot.pack_start(sel, True, True, 0)`)
+    # em vez de chamar `install_triggers_tab`. Era um SEGUNDO DONO da montagem —
+    # exatamente o que o docstring acima diz que não se deve fazer com os
+    # rótulos, cometido com o LAYOUT.
+    #
+    # O preço, medido no mesmo dia: o `expand=True` daquele `pack_start` não
+    # existe no produto, e por causa dele a foto saía com a moldura esticada até
+    # o pé da página. Ela decidiu a fila de interface OLHANDO ESTA FOTO — a
+    # dúvida da decisão 1 do `DECISOES.md` ("o vazio dos Gatilhos não sumiu,
+    # mudou de lado") nasceu de um vazio que era do INSTRUMENTO. Com o método de
+    # produção a moldura mede 482px de 1040; com a montagem à mão, 1016.
+    #
+    # Mesmo desenho da aba Perfis e do card do Status logo abaixo: host mínimo
+    # com `_get`, nada de IPC, nada de tique.
     try:
-        from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
-        from hefesto_dualsense4unix.app.widgets import SegmentedSelector
+        from hefesto_dualsense4unix.app.actions.triggers_actions import (
+            TriggersActionsMixin,
+        )
     except Exception as exc:
         return f"modos de gatilho não injetados ({exc})"
 
-    itens = [(spec.name, spec.label) for spec in PRESETS]
-    postos = 0
-    for lado in ("left", "right"):
-        slot = builder.get_object(f"trigger_{lado}_mode_slot")
-        if slot is None:
-            continue
-        sel = SegmentedSelector(wrap=True)
-        sel.set_items(itens)
-        # O primeiro é o "Desligado", e é o que a aba mostra ao abrir.
-        sel.set_active_id(itens[0][0])
-        slot.pack_start(sel, True, True, 0)
-        sel.show_all()
-        postos += 1
-    if not postos:
-        return "modos de gatilho não injetados (slots ausentes no glade)"
-    return f"{len(itens)} modos de gatilho injetados nos {postos} lados"
+    class _Host(TriggersActionsMixin):  # type: ignore[misc, valid-type]
+        def __init__(self) -> None:
+            self.builder = builder
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+        def _status_toast(self, _contexto: str, _msg: str) -> None:
+            return None
+
+    try:
+        _Host().install_triggers_tab()
+    except Exception as exc:
+        return f"modos de gatilho não injetados ({exc})"
+
+    from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
+
+    return f"{len(PRESETS)} modos de gatilho injetados pelo método de produção"
 
 
 def _injetar_card(builder) -> str:  # type: ignore[no-untyped-def]
