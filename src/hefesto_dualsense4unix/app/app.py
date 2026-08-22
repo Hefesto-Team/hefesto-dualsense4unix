@@ -27,6 +27,10 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, Gtk
 
 from hefesto_dualsense4unix.app.actions.carona_do_wrapper import GESTO_APLICAR
+from hefesto_dualsense4unix.app.actions.config_actions import (
+    ABA_CONFIG,
+    ConfigActionsMixin,
+)
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
@@ -164,6 +168,7 @@ class HefestoApp(
     EmulationActionsMixin,
     InputActionsMixin,
     FooterActionsMixin,
+    ConfigActionsMixin,
 ):
     """Aplicação GTK do Hefesto - Dualsense4Unix."""
 
@@ -976,6 +981,14 @@ class HefestoApp(
         visivel = getattr(self, "set_status_tab_visivel", None)
         if visivel is not None:
             visivel(nome == self._ABA_STATUS)
+        # CONFIG-01: na aba Configurações o seletor de controle do cabeçalho não
+        # tem sentido — o que se declara lá vale para a mesa inteira. A chamada
+        # é simétrica à de cima, e mora AQUI e não no `_REFRESH_POR_ABA` de
+        # propósito: aquele mapa só dispara ao ENTRAR na aba destino, então a
+        # fita ficaria esmaecida para sempre depois da primeira visita.
+        inativar = getattr(self, "set_alvo_inativo", None)
+        if inativar is not None:
+            inativar(nome == ABA_CONFIG)
         for atributo in self._REFRESH_POR_ABA.get(nome or "", ()):
             fn = getattr(self, atributo, None)
             if fn is not None:
@@ -1177,6 +1190,7 @@ class HefestoApp(
         self.install_daemon_tab()
         self.install_emulation_tab()
         self.install_input_tab()
+        self.install_config_tab()
         # LARGURA-01/E4-E5: o teto elástico das seis páginas entra AQUI, e não
         # junto com os roladores em `__init__`: a aba Início é montada em código
         # pelo `install_home_tab` logo acima, e um teto instalado antes ficaria
@@ -1441,6 +1455,12 @@ class HefestoApp(
             self.install_daemon_tab()
             self.install_emulation_tab()
             self.install_input_tab()
+            # BUG-HOME-TAB-HIDDEN-INSTALL-01, de novo: quem sobe minimizado na
+            # bandeja (o caminho de quem tem autostart) abriria a janela com a
+            # aba Configurações em branco se este `install_` só existisse no
+            # `show()`. Não havia teste guardando as duas listas — passa a
+            # haver: `test_config_01_a_aba_nasce_vazia.py`.
+            self.install_config_tab()
             # LARGURA-01/E4-E5: pelo mesmo motivo do caminho visível — depois
             # dos `install_*_tab`, porque a aba Início nasce em código.
             self._envolver_paginas_em_teto_elastico()

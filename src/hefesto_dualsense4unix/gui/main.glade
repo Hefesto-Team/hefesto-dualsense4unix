@@ -3952,6 +3952,53 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
               <object class="GtkLabel"><property name="label" translatable="yes">Navegação</property></object>
             </child>
 
+            <!-- ABA CONFIGURAÇÕES (CONFIG-01): a décima primeira aba, no fim da
+                 tira. Aqui entra o que o produto NÃO tem como medir e precisa
+                 que a pessoa declare — onde o dongle está, o que é aquele rádio
+                 vizinho, a cor do plástico quando a leitura falha.
+
+                 O Glade só reserva o container, como na aba Início: todo widget
+                 é montado em código por `install_config_tab()`
+                 (app/actions/config_actions.py). O `id` do box interno NÃO é
+                 opcional, e o motivo é PIOR do que parece: medido em 21/08,
+                 arrancando o id daqui, `id_da_pagina` não devolve `None` —
+                 devolve algo como `___object_142___`, o nome que o GtkBuilder inventa a
+                 partir da POSIÇÃO do objeto no arquivo. Ou seja, a página passa
+                 pelo `assert None not in nomes` de
+                 `test_toda_aba_continua_sendo_reconhecida_pelo_id_do_glade` e
+                 muda de identidade em silêncio no dia em que alguém inserir um
+                 objeto antes dela. É o EST-10 de novo, com outra roupa. Quem
+                 cobra o id de verdade é
+                 `tests/unit/test_config_01_a_aba_nasce_vazia.py`.
+
+                 O ScrolledWindow próprio (mesmo molde do `scroll_tab_home_box`)
+                 é o que faz `_wrap_notebook_pages_in_scroll` pular esta página:
+                 a guarda `isinstance(page, Gtk.ScrolledWindow)` já a reconhece
+                 embrulhada. -->
+            <child>
+          <object class="GtkScrolledWindow" id="scroll_tab_config_box">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="hscrollbar-policy">never</property>
+            <property name="vscrollbar-policy">automatic</property>
+            <property name="propagate-natural-height">True</property>
+            <property name="propagate-natural-width">True</property>
+            <property name="shadow-type">none</property>
+            <child>
+              <object class="GtkBox" id="tab_config_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+              </object>
+            </child>
+          </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel" id="tab_config_label">
+                <property name="label" translatable="yes">Configurações</property>
+              </object>
+            </child>
+
           </object>
           <packing>
             <property name="expand">True</property>

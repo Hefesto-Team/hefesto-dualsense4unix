@@ -154,6 +154,12 @@ ao autostart do ambiente gráfico.
 > `CARONA-DO-WRAPPER-01`, que acrescentou `carona_do_wrapper.py`. Ele
 > também **não** importa a função de tradução, então a proporção passou a
 > **17 de 20** — o quadro segue o mesmo.
+>
+> **Nota datada — 21/08/2026:** são **21** módulos desde a `CONFIG-01`, que
+> acrescentou `config_actions.py`. Ele **importa** a função de tradução — o
+> primeiro módulo novo de `actions/` a nascer assim —, então a proporção passou
+> a **17 de 21**: o quadro melhora pela primeira vez, e a promessa continua
+> retirada até ele virar zero.
 
 A partir da v3.4.0 o bundle Flatpak embarca **EN baseline** + **PT-BR
 identidade** em `/app/share/hefesto-dualsense4unix/locale/{en,pt_BR}/

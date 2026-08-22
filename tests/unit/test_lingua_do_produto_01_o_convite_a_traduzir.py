@@ -243,8 +243,15 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     # Inicialização…") é português direto, sem passar pela função de tradução.
     # Os dois números subiram juntos, que é o sinal de que nada mudou de
     # natureza; as três páginas ganham nota datada, não reescrita.
-    assert total == 20, (
-        f"`app/actions/` tem {total} módulos, não 20. A contagem citada em "
+    #
+    # CONFIG-01 (21/08/2026): 20 viraram 21 com o `config_actions.py`, e o 17
+    # NÃO subiu junto — este é o primeiro módulo novo de `actions/` que nasce
+    # importando a função de tradução. A proporção passa de 17 de 20 para 17 de
+    # 21, e o quadro melhora pela primeira vez desde 07/08. Os dois números
+    # NÃO subirem juntos é, aqui, a boa notícia — e é exatamente o sinal que
+    # este teste existe para tornar visível.
+    assert total == 21, (
+        f"`app/actions/` tem {total} módulos, não 21. A contagem citada em "
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
         "`docs/usage/troubleshooting.md` precisa mudar junto."
     )
@@ -267,12 +274,16 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     )
 
 
-def test_os_tres_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
+def test_os_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
     """O encanamento existente não pode sumir enquanto ninguém olha.
 
-    A decisão dela diz explicitamente que o i18n **não** é removido. Estes três
-    são a prova viva de que ele funciona; perdê-los seria arrancar trabalho bom
-    para provar um ponto, que é o que ela recusou.
+    A decisão dela diz explicitamente que o i18n **não** é removido. Estes
+    módulos são a prova viva de que ele funciona; perdê-los seria arrancar
+    trabalho bom para provar um ponto, que é o que ela recusou.
+
+    Eram três até 21/08/2026, quando o `config_actions.py` da CONFIG-01 entrou
+    já traduzindo. O nome do teste dizia "os três" e passou a mentir — por isso
+    mudou.
     """
     com_encanamento = sorted(
         fonte.name
@@ -283,6 +294,7 @@ def test_os_tres_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
     )
 
     assert com_encanamento == [
+        "config_actions.py",
         "footer_actions.py",
         "lightbar_actions.py",
         "status_actions.py",
