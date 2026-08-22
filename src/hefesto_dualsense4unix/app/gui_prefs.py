@@ -23,6 +23,12 @@ _PREFS_FILE = _CONFIG_DIR / "gui_preferences.json"
 
 _DEFAULTS: dict[str, Any] = {
     "advanced_editor": False,
+    # `None` = ninguém corrigiu, e a detecção da sessão vale. Esta chave é o
+    # que a aba Configurações grava quando a leitura de `XDG_CURRENT_DESKTOP`
+    # erra — ver `app/ambiente.py`, que é o dono do valor e o único que o
+    # valida. Ela mora AQUI e não em `maquina.json`: é preferência de janela,
+    # e nada fora da janela a lê.
+    "ambiente_corrigido": None,
 }
 
 
