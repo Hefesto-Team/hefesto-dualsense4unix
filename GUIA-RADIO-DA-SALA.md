@@ -31,7 +31,7 @@ Tudo neste guia decorre disso.
 | 5 × DualSense em BT, mic ligado | Bluetooth Classic | ~277 pacotes/s **cada** |
 | Teclado sem fio | 2,4 GHz proprietário | Desprezível |
 | Mouse sem fio | 2,4 GHz proprietário | Desprezível |
-| Teclado BT 5.0 (`E2:83:23:17:B8:08`) | Bluetooth LE | Baixo |
+| Teclado BT 5.0 (`E2:83:23:00:00:08`) | Bluetooth LE | Baixo |
 | Archer T3U | Wi-Fi 5 GHz (canal 161) | Fora da banda |
 | Webcam Logitech C920 | Nenhum (USB) | — |
 | Ethernet | Nenhum (cabo) | — |
@@ -252,7 +252,7 @@ O `scripts/bt_health_watchdog.sh` já carrega a cicatriz disso:
 
 ```bash
 bluetoothctl list
-# Controller D8:44:89:04:13:C4 Nintendo MeowSystem [default]   ← o UB500 antigo
+# Controller D8:44:89:00:00:C4 Nintendo MeowSystem [default]   ← o UB500 antigo
 # Controller XX:XX:XX:XX:XX:XX ...
 ```
 
@@ -263,7 +263,7 @@ Anote os MACs num papel colado no rack. Com dois UB500 idênticos, o BD Address
 
 ```bash
 # 1. Tirar do adaptador antigo — com o cache junto
-bluetoothctl select D8:44:89:04:13:C4
+bluetoothctl select D8:44:89:00:00:C4
 bluetoothctl remove <MAC_CONTROLE>
 sudo rm -f /var/lib/bluetooth/*/cache/<MAC_CONTROLE>
 
