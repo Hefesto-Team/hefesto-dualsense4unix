@@ -285,17 +285,17 @@ def test_o_relatorio_da_ativacao_sobe_no_retorno(
 ) -> None:
     """Sem ele, `armado: True` é resposta de TRANSPORTE.
 
-    Mordida: apagar a chave `"ativacao"` de um dos dois dicionários de retorno.
+    Mordida: apagar a chave do payload de um dos dois dicionários de retorno.
     """
     _daemon, resultado = _armar(env_dir, monkeypatch, na_allowlist=na_allowlist)
 
     assert resultado is not None
-    ativacao = resultado.get("ativacao")
-    assert isinstance(ativacao, dict) and ativacao, (
+    entrou = resultado.get("ativacao")  # chave de payload (noqa-acento)
+    assert isinstance(entrou, dict) and entrou, (
         "o retorno do arming não carrega o que a ativação fez. Quem pergunta "
         "'o perfil entrou?' continua tendo de adivinhar pelo aparelho"
     )
-    assert set(ativacao) == set(_GerenteEspiao.SECOES)
+    assert set(entrou) == set(_GerenteEspiao.SECOES)
 
 
 # --- 5. Falhar na ativação não derruba o arming -----------------------------
@@ -313,7 +313,7 @@ def test_ativacao_que_levanta_nao_impede_o_arming_do_modo(
 
     assert resultado is not None and resultado["armado"] is True
     assert len(daemon.aplicados) == 1, "o modo deixou de ser armado por causa da falha"
-    assert resultado["ativacao"] == {}, (
+    assert resultado["ativacao"] == {}, (  # chave de payload (noqa-acento)
         "relatório vazio é o que uma exceção deixa; um relatório cheio de "
         "`ignorado_*` conta outra história, e as duas precisam ser distinguíveis"
     )
@@ -349,7 +349,7 @@ def test_a_fabrica_cobre_todo_applier_que_o_gerente_aceita() -> None:
 
     Medido em 22/08/2026, escrevendo este arquivo: a primeira versão deste teste
     iterava `APPLIERS_DO_DAEMON` para conferir `APPLIERS_DO_DAEMON`. Arrancar um
-    par da lista fazia o teste passar — ele media o instrumento contra ele
+    par da lista fazia o teste passar — ele conferia o instrumento contra si
     mesmo. Nesta casa o instrumento mente mais que o produto, e a regra é
     validar a régua contra uma contagem independente antes de acreditar nela.
 
