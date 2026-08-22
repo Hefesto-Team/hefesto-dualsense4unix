@@ -179,6 +179,78 @@ onde a regra entra, as duas regras carregam um `TEST==` do próprio alvo — reg
 órfã fica inerte em vez de falhar por device — e o `doctor.sh` avisa quando isso
 acontece.
 
+### A leva da madrugada de 22/08 — o Sackboy, e o que ele revelou
+
+Ela abriu o Sackboy para conferir um engasgo e voltou com duas queixas. A
+segunda é a que muda o produto: *"o perfil do sackboy não tá aplicando as
+features das abas que eu seto e clico em salvar, como as abas de rumble,
+gatilhos e deve ter outras"*.
+
+#### Corrigido
+
+**O lançamento ATIVA o perfil, e não arma duas seções.** Nenhum elo estava
+quebrado: o perfil gravava certo, o `match` casava, a ativação sabia aplicar
+tudo. O daemon tinha o appid e o perfil na mão e aplicava **duas seções de
+oito**; gatilho, luz, vibração, som e microfone esperavam o autoswitch, que
+espera a classe da janela — e ela respondeu `unknown` por 21 minutos com o jogo
+aberto. Agora a ativação acontece no lançamento, com o appid na mão.
+
+**E na allowlist do Steam Input também**, que era onde estava o Sackboy. O
+código dava `return` antes de tudo; a decisão dela é que permitir a allowlist
+faz o Hefesto **continuar funcionando**, com as features que ela marcou. O que
+a allowlist pula é a disputa pelo controle — máscara, grab, vpad —, e o portão
+prende as duas metades.
+
+**Ausência de notícia não é notícia.** O relatório da ativação nomeava quatro
+seções e **nunca citava gatilho e luz quando davam certo** — só quando a trava
+manual os silenciava. O teclado não aparecia nunca. Agora as três entram, e o
+teclado com os três estados distintos (`aplicado`, `ignorado_sem_device`,
+`falhou`). Medido no daemon dela, antes e depois.
+
+**A seção "A mesa" não gravava nada.** O `TODO(CONFIG-03)` sobreviveu à camada
+que esperava, nascida no mesmo dia. Altura da antena e linha de visada morriam
+ao fechar a janela, sem uma linha avisando.
+
+**A aba Configurações tinha três jeitos de salvar e só um estava escrito na
+tela.** Duas seções acumulavam calado, uma gravava na hora e também calava.
+Agora cada uma diz o que faz com o clique, com portão que deriva a resposta do
+código.
+
+#### Aberto, e é dela
+
+**O engasgo não tem causa medida.** Caíram com régua: sniff e link policy (não
+há controle no rádio), autosuspend USB, keepalive, storm `-71`, perfil de
+energia e ociosidade do COSMIC. O canal ficou em **250,0 Hz constantes por 60
+segundos com o controle parado**, o que mata a família "economia de energia".
+Falta frametime dentro do jogo, e isso precisa da tela dela.
+
+**Não existe tela para ver nem escolher o Proton por jogo** — o produto pina
+todos numa versão só.
+
+O diagnóstico inteiro, elo por elo, está em
+`docs/process/sprints/2026-08-22-ELO-MUDO-01-o-ok-que-nao-sabe-dizer-nao.md`.
+
+### Instrumentos que a mesma madrugada endureceu
+
+**O portão da promessa sem caminho mede alcance por GRAFO de import**, a partir
+dos pontos de entrada declarados, e não mais por "existe algum chamador".
+Corrente fechada em si mesma e colisão de nome entre módulos deixaram de passar:
+33 acusados viraram 60, e os 27 novos entraram nos registros de lacuna com razão
+datada.
+
+**A suíte ganhou o portão que faltava contra sujar o kernel.** Entre a
+descoberta (04/08) e a cura (20/08) foram dezesseis dias em que 1289 nós de
+teclado virtual nasceram num único dia e derrubaram a tela cheia dela.
+
+**Três portões acusavam quem fazia a coisa certa**, e os três foram corrigidos:
+um congelava a lista de módulos traduzidos com `==` onde a própria mensagem
+dizia que ganhar é bom; outro dependia de um defeito do gerador para ter objeto;
+o terceiro reprovava "tem" ao lado de "têm", que são palavras diferentes.
+
+**Os alvos das regras udev 82 e 83 passaram a viajar nos pacotes** — e a sair
+junto na remoção. E o `TimeoutStopSec` do drop-in do bluetoothd fechou os 42,8
+segundos que o gancho de parada podia gastar sem teto.
+
 ## [0.9.4.5] — 2026-08-20
 
 A leva da ponte. O alvo é o QoL de quem não é técnico: abrir o jogo, não andar,
