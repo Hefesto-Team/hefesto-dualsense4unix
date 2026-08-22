@@ -241,13 +241,56 @@ class FooterActionsMixin(ProfileWriterMixin):
         Primeira linha do handler, antes dos dois tempos: a carona corre numa
         thread própria e o que ela decide não depende do resultado do
         ``apply_draft`` — o wrapper é da Steam, não do daemon.
+
+        CONFIG-03 (22/08/2026): logo depois da carona, este botão passou a ser
+        também o "Aplicar" da aba Configurações, que é diferida e não grava nada
+        sozinha. Ver ``_gravar_declaracao_de_maquina`` para por que o lugar é
+        aqui em cima, e não lá dentro do ``_apply_draft_agora``.
         """
         self.pegar_carona_no_gesto(GESTO_APLICAR)
+        self._gravar_declaracao_de_maquina()
         pendente = getattr(self, "_escolha_pendente", None)
         if pendente:
             self._aplicar_escolha_pendente(dict(pendente))
             return
         self._apply_draft_agora()
+
+    def _gravar_declaracao_de_maquina(self) -> None:
+        """Grava o que a aba Configurações declarou. Sem declaração, sai cedo.
+
+        CONFIG-03 (22/08/2026). A aba Configurações é DIFERIDA por decisão de
+        produto (D-A4): clicar num seletor lá não muda nada — acumula em
+        ``_maquina_pendente`` (``actions/base.py``). Quem salva é este botão, e
+        a aba diz isso na linha do rodapé dela.
+
+        **O lugar é o TOPO de ``on_apply_draft``, não ``_apply_draft_agora``**, e
+        duas medições fixam o ponto. Logo abaixo, ``on_apply_draft`` RETORNA CEDO
+        quando há escolha de modo pendente — pendurar depois daquele ramo faria o
+        "Aplicar com modo pendente" nunca gravar a declaração. E
+        ``_apply_draft_agora`` tem CINCO chamadores neste arquivo (o caminho
+        direto, a saída "sem modo vigente" e os três callbacks da transição de
+        modo), então pendurar lá dentro gravaria até duas vezes por clique.
+
+        Síncrono na thread do GTK pelo mesmo argumento do
+        ``_ha_jogo_aberto_agora`` (ver a docstring dele): o clique no "Aplicar"
+        já congela a janela, e o teto de 1,0 s da ponte é menor que o do
+        ``apply_draft`` que vem em seguida.
+
+        A pendência só é limpa quando o daemon CONFIRMA. Recusa e daemon offline
+        deixam a declaração de pé: as escolhas seguem marcadas na aba e clicar de
+        novo tenta de novo — o contrário perderia em silêncio o que ela declarou.
+        """
+        declaracao = self._maquina_pendente
+        if not declaracao:
+            return
+        ok, motivo = ipc_bridge.machine_declare(dict(declaracao))
+        if ok:
+            self._maquina_pendente = None
+            return
+        logger.warning("footer_declaracao_de_maquina_nao_gravada", motivo=motivo)
+        self._footer_toast(
+            motivo or _("O Hefesto está desligado — não gravei o que você declarou")
+        )
 
     def _ha_jogo_aberto_agora(self) -> bool:
         """Relê o sinal de jogo aberto NA HORA. Devolve o que ficou em cache.

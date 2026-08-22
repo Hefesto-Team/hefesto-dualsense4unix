@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**38 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **19** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**39 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **18** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -49,7 +49,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 |---|---|---|---|
 | `profile.switch` | `daemon/ipc_handlers.py:740` (`_handle_profile_switch`) | Aplica perfil escolhido pelo usuário (entrada manual via IPC). | sim |
 | `profile.list` | `daemon/ipc_handlers.py:860` (`_handle_profile_list`) | _(o handler não tem docstring)_ | sim |
-| `profile.apply_draft` | `daemon/ipc_handlers.py:877` (`_handle_profile_apply_draft`) | Aplica draft completo em ordem canonica: leds -> triggers -> rumble -> mouse. | **não** |
+| `profile.apply_draft` | `daemon/ipc_handlers.py:877` (`_handle_profile_apply_draft`) | Aplica draft completo em ordem canonica: leds -> triggers -> rumble -> mouse. | sim |
 | `trigger.set` | `daemon/ipc_handlers.py:1130` (`_handle_trigger_set`) | _(o handler não tem docstring)_ | sim |
 | `trigger.reset` | `daemon/ipc_handlers.py:1179` (`_handle_trigger_reset`) | Devolve o gatilho ao perfil e LIBERA a trava manual dele (R-19). | sim |
 | `led.set` | `daemon/ipc_handlers.py:1232` (`_handle_led_set`) | _(o handler não tem docstring)_ | sim |
@@ -83,8 +83,9 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `led.player_set` | `daemon/ipc_handlers.py:1306` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
 | `identity.renumber` | `daemon/ipc_handlers.py:1360` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos) — ONDA-U/NUM-01. | sim |
 | `identity.number.set` | `daemon/ipc_handlers.py:1513` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07). | sim |
-| `plugin.list` | `daemon/ipc_handlers.py:4796` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
-| `plugin.reload` | `daemon/ipc_handlers.py:4808` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
+| `machine.declare` | `daemon/ipc_handlers.py:4796` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03). | sim |
+| `plugin.list` | `daemon/ipc_handlers.py:4862` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
+| `plugin.reload` | `daemon/ipc_handlers.py:4874` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -372,6 +373,39 @@ expõem `native_mode: bool`.
   apenas `speed`/`scroll_speed` da emulação — **nunca** liga/desliga nem cria o
   device, e só re-persiste o flag se a emulação já estava ligada. Impede que
   arrastar um slider religue uma emulação desligada.
+
+### `machine.declare` — o que o Hefesto NÃO tem como medir (CONFIG-03)
+
+O único método que escreve o `maquina.json` (`utils/maquina.py`), o terceiro
+arquivo de `config_dir()` depois de `controllers.json` e `controller_masks.json`.
+Ele guarda o que nenhum barramento sabe: altura da antena, linha de visada, o que
+é cada rádio vizinho, o modo da chave física de um controle genérico, a cor do
+plástico quando a leitura do firmware falha, o teto de orçamento da mesa e o
+ambiente de área de trabalho. Não é configuração de perfil — não muda com o jogo
+aberto — e por isso não passa por `profile.apply_draft`.
+
+| Método            | Parâmetros                          | Retorno                                  |
+|-------------------|-------------------------------------|------------------------------------------|
+| `machine.declare` | `{maquina: {...}}` (declaração parcial) | `{ok: true}` ou `{ok: false, reason}` |
+
+A declaração é **parcial de propósito**: cada seção da aba manda só o que mudou, e
+a fusão acontece contra o disco sob lock, dicionário com dicionário. Sem isso, a
+última seção a gravar apagaria o que as outras quatro tinham declarado. `null`
+presente é escolha ("voltei para 'Não sei'") e sobrescreve; só a AUSÊNCIA da chave
+preserva o que havia.
+
+Os três `reason` possíveis são `declaracao_invalida`, `versao_desconhecida` e
+`falha_ao_gravar`, e **todos vêm no corpo, nunca como erro JSON-RPC** — a ponte da
+GUI usa `_safe_call`, que colapsa erro de protocolo e daemon morto no mesmo
+`(False, None)`, e a janela anunciaria "daemon offline?" para um daemon vivo. A
+frase de tela de cada motivo mora do lado da GUI (`_MOTIVOS_MAQUINA`,
+`app/ipc_bridge.py`): o daemon não conhece o texto da janela. `versao_desconhecida`
+é a recusa que importa — um arquivo escrito por uma versão futura não é lido **nem
+sobrescrito**, e os bytes ficam intactos.
+
+A declaração **não** entra no `daemon.state_full`: aquilo é o tique de 20 Hz, e
+isto muda por gesto dela. O daemon lê o arquivo uma vez no boot
+(`daemon/lifecycle.py`, ao lado dos flags de sessão).
 
 ## Perfil com seção `mouse` (FEAT-POINT-AND-CLICK-01)
 

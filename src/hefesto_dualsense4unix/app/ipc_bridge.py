@@ -578,6 +578,52 @@ def identity_number_set(uniq: str, number: int) -> tuple[bool, str | None]:
     return False, motivo or "Não consegui trocar o número — tente de novo"
 
 
+#: CONFIG-03: motivos de recusa do ``machine.declare`` traduzidos para a frase
+#: que a janela mostra. Mapa explícito pela mesma razão do
+#: :data:`_MOTIVOS_NUMERO`: a usuária nunca lê identificador de protocolo na
+#: barra de status.
+_MOTIVOS_MAQUINA: dict[str, str] = {
+    "versao_desconhecida": (
+        "O arquivo com o que você declarou sobre a mesa foi escrito por uma "
+        "versão mais nova do Hefesto — não vou sobrescrever o que está lá"
+    ),
+    "falha_ao_gravar": (
+        "Não consegui gravar o que você declarou — confira o espaço em disco"
+    ),
+    "declaracao_invalida": (
+        "O Hefesto não entendeu o que você declarou. Isto é defeito nosso, e "
+        "nada foi gravado"
+    ),
+}
+
+
+def machine_declare(maquina: dict[str, Any]) -> tuple[bool, str | None]:
+    """Grava a declaração de MESA (CONFIG-03, 22/08). Devolve ``(ok, motivo)``.
+
+    ``maquina`` é uma declaração **parcial** no formato do ``MaquinaConfig``
+    (``utils/maquina.py``) — só o que mudou. O daemon funde contra o disco sob
+    lock, então duas seções da mesma janela não apagam uma a outra.
+
+    ``motivo`` só vem preenchido quando o daemon RESPONDEU e RECUSOU, já
+    traduzido para a frase da janela (:data:`_MOTIVOS_MAQUINA`). Daemon offline
+    volta ``(False, None)``: a tela diz coisas diferentes em "o Hefesto está
+    desligado" e "não vou sobrescrever o que está lá".
+
+    ``_safe_call`` e não ``_call_checked`` pela razão de sempre nesta fronteira:
+    a recusa vem no CORPO, não como ``CODE_INVALID_PARAMS`` — ver
+    ``_handle_machine_declare``. E 1,0 s de teto em vez dos 250 ms de leitura
+    porque este pedido escreve em disco; o gesto é raro e já congela a janela.
+    """
+    ok, result = _safe_call("machine.declare", {"maquina": maquina}, timeout=1.0)
+    if not ok or not isinstance(result, dict):
+        return False, None
+    if result.get("ok"):
+        return True, None
+    reason = result.get("reason")
+    motivo = _MOTIVOS_MAQUINA.get(reason) if isinstance(reason, str) else None
+    return False, motivo or "Não consegui gravar o que você declarou"
+
+
 def player_leds_set(
     bits: tuple[bool, bool, bool, bool, bool], uniq: str | None = None
 ) -> bool:
@@ -863,6 +909,7 @@ __all__ = [
     "daemon_status_basic",
     "identity_number_set",
     "led_set",
+    "machine_declare",
     "mic_set",
     "mouse_emulation_set",
     "player_leds_set",

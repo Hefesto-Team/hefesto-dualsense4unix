@@ -60,6 +60,7 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     RUMBLE_POLICY_MULT,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
 logger = get_logger(__name__)
 
@@ -628,6 +629,11 @@ class Daemon:
     # teclado/mouse/hotkey) nem publica BUTTON_DOWN/UP — daemon vivo, sem afetar
     # o sistema. Reusa o gate do grace-period; persistido via utils.session.
     _paused: bool = field(default=False)
+    # CONFIG-03 (22/08/2026): o que ELA declarou sobre a mesa (`maquina.json`),
+    # lido uma vez no boot. `field()` porque o default é mutável, e um modelo
+    # vazio em vez de `None` porque "não sei" é o estado normal deste campo, não
+    # a ausência dele — quem consultar não precisa de guarda.
+    _maquina: MaquinaConfig = field(default_factory=MaquinaConfig)
     # FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01: subsystems que falharam ao iniciar
     # (nome -> erro). Um subsystem quebrado é isolado aqui em vez de derrubar o
     # daemon (poll/IPC/perfis seguem). Exposto para diagnóstico (doctor/status).
@@ -738,6 +744,15 @@ class Daemon:
         # gate em `restore_last_profile`).
         from hefesto_dualsense4unix.utils.session import load_native_mode
         self._native_mode, self._native_emu_stash = load_native_mode()
+        # CONFIG-03 (22/08/2026): a declaração de MESA do `maquina.json`. Ler no
+        # boot, ao lado dos outros flags de disco, e NÃO a cada consulta: o
+        # arquivo é da mesa, muda por gesto dela e nunca por trás do daemon.
+        # A leitura nunca levanta (ver `carregar_maquina`), então não precisa de
+        # `_safe_start` nem de try — arquivo corrompido sobe como "não sei".
+        # Invariante 2 da leva: nada AINDA consome esta declaração; quem passa a
+        # consumir (o teto de orçamento, o medidor da mesa) é que a lê daqui.
+        from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+        self._maquina = carregar_maquina()
         if self._native_mode:
             # O gate de dispatch é o próprio _native_mode (consultado no poll
             # loop); não força _paused (evita conflatar com o pause manual).

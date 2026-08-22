@@ -177,6 +177,10 @@ class IpcServer(IpcHandlersMixin):
             # o comando que faltava — só existia o renumber, que compacta todo
             # mundo; não havia como dizer "este é o 2".
             "identity.number.set": self._handle_identity_number_set,
+            # CONFIG-03 (22/08/2026): grava o que ela DECLAROU sobre a mesa —
+            # o que o Hefesto não tem como medir. Método próprio porque
+            # `daemon.reload` LEVANTA em chave que não é campo do `DaemonConfig`.
+            "machine.declare": self._handle_machine_declare,
             "plugin.list": self._handle_plugin_list,
             "plugin.reload": self._handle_plugin_reload,
         }
