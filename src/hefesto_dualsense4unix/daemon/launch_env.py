@@ -1122,7 +1122,7 @@ def arm_launch_profile(
             "armado": False,
             "motivo": "allowlist_steam_input",
             "supressao": supressao,
-            "ativacao": ativacao,
+            "ativacao": ativacao,  # chave de payload, como a `supressao` ao lado (noqa-acento)
         }
 
     mode = getattr(profile, "mode", None)
@@ -1294,7 +1294,7 @@ def arm_launch_profile(
         # no retorno da allowlist. Sem ele, "armado: True" continuaria sendo
         # resposta de TRANSPORTE — diz que o modo foi pedido, e cala sobre as
         # outras sete seções do perfil.
-        "ativacao": ativacao,
+        "ativacao": ativacao,  # chave de payload, como a `supressao` ao lado (noqa-acento)
     }
 
 
