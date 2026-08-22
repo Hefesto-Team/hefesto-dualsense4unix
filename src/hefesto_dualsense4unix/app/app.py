@@ -950,14 +950,38 @@ class HefestoApp(
         # ao entrar na aba não corrige staleness nenhuma HOJE. Ele é populado no
         # bootstrap (`install_emulation_tab`) e reconciliado pelo
         # `_refresh_emulation_tab`. Quando nascer um segundo escritor (a CLI
-        # `keyboard on/off`, o applet), o nome entra nesta tupla — e junto tem de
-        # entrar a linha correspondente em
-        # `tests/unit/test_notebook_switch_page.py`, que congela esta lista com
-        # `==` e reprova qualquer acréscimo.
+        # `keyboard on/off`, o applet), o nome entra nesta tupla — e nada mais
+        # precisa mudar em teste nenhum: até 22/08/2026 este comentário afirmava
+        # que `tests/unit/test_notebook_switch_page.py` "congela esta lista com
+        # `==` e reprova qualquer acréscimo", e a afirmação é FALSA — o
+        # `_AppFalso` (`:41-50`) itera `_REFRESH_POR_ABA.values()` dinamicamente,
+        # e a única asserção sobre o mapa é `test_todo_id_do_mapa_existe_no_glade`
+        # (`:128-142`), que só exige a chave existir como id no glade. Os `==` do
+        # arquivo (`:68`, `:83`, `:92`) são sobre listas de CHAMADAS.
         "tab_navegacao_dsx": (
             "_refresh_mouse_tab",
             "_refresh_key_bindings_from_draft",
         ),
+        # CONFIG-02: entrar na aba Configurações relê o barramento — quais
+        # adaptadores Bluetooth existem, onde estão e o que mais divide a faixa
+        # de 2,4 GHz. A leitura é de `/sys`, sem root e sem subprocesso, e mora
+        # AQUI e não num tique: os tiques da casa são de 100 ms, 500 ms e 2 s
+        # (`status_actions.py:507`), e nenhum deles mede algo que só muda quando
+        # alguém pluga um dongle. O método é pendurado no app pela seção da mesa
+        # (`app/actions/config/secao_mesa.py`); sem ela montada, `getattr`
+        # devolve `None` e a troca de aba segue.
+        # CONFIG-09: o exame da mesa. Ele roda AQUI e no botão, nunca na
+        # montagem da aba — a montagem é o caminho por onde o `retratar_abas.py`
+        # passa, e um exame de verdade ali publicaria a máquina dela num PNG
+        # versionado.
+        #
+        # AS DUAS ENTRADAS SÃO UMA TUPLA SÓ, e isso não é arrumação: um
+        # dicionário literal com a MESMA chave duas vezes não é erro em Python
+        # — ele fica com a última e a primeira some sem aviso. Cinco frentes
+        # desta leva querem esta chave; a tupla é o lugar de todas.
+        # `tests/unit/test_notebook_switch_page.py` passou a reprovar a chave
+        # repetida, para o próximo acréscimo não sumir em silêncio.
+        ABA_CONFIG: ("_reexaminar_a_mesa", "_refresh_saude_da_mesa"),
     }
 
     def _on_notebook_switch_page(

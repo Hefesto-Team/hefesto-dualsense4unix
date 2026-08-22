@@ -140,3 +140,52 @@ def test_todo_id_do_mapa_existe_no_glade() -> None:
     assert not faltando, (
         f"ids no mapa de refresh que não existem no glade: {sorted(faltando)}"
     )
+
+
+def test_nenhuma_aba_aparece_duas_vezes_no_mapa_de_refresh() -> None:
+    """Chave repetida no literal some em silêncio, e cinco frentes disputam uma.
+
+    Um dicionário literal com a mesma chave duas vezes NÃO é erro em Python: o
+    interpretador fica com a última e descarta a primeira sem uma palavra. Na
+    leva da aba Configurações isso quase aconteceu — cinco sprints precisavam
+    pendurar um refresher em `tab_config_box`, e a segunda a chegar teria
+    apagado a primeira. O sintoma seria uma seção que simplesmente não atualiza
+    ao entrar na aba, sem erro, sem log, sem teste vermelho.
+
+    O mapa em memória não guarda a duplicata — ela já se perdeu no parse. Por
+    isso este teste lê o FONTE e conta as chaves escritas.
+
+    Mordida: escrevi `ABA_CONFIG: ("_reexaminar_a_mesa",)` uma segunda vez
+    dentro do literal e o teste reprovou apontando a chave; sem ele, a suíte
+    inteira segue verde e o exame da mesa para de rodar.
+    """
+    import ast
+    from pathlib import Path
+
+    fonte = Path(__file__).resolve().parents[2] / (
+        "src/hefesto_dualsense4unix/app/app.py"
+    )
+    arvore = ast.parse(fonte.read_text(encoding="utf-8"))
+
+    literais = [
+        no.value
+        for no in ast.walk(arvore)
+        if isinstance(no, ast.AnnAssign)
+        and isinstance(no.target, ast.Name)
+        and no.target.id == "_REFRESH_POR_ABA"
+        and isinstance(no.value, ast.Dict)
+    ]
+    assert literais, "não achei o literal de `_REFRESH_POR_ABA` em `app.py`"
+
+    escritas = [
+        chave.value if isinstance(chave, ast.Constant) else ast.unparse(chave)
+        for chave in literais[0].keys
+        if chave is not None
+    ]
+    repetidas = sorted({c for c in escritas if escritas.count(c) > 1})
+
+    assert not repetidas, (
+        f"chave repetida em `_REFRESH_POR_ABA`: {repetidas}. Python fica com a "
+        "última e descarta as anteriores sem erro — junte os refreshers numa "
+        "tupla só."
+    )
