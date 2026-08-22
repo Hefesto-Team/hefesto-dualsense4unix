@@ -20,5 +20,32 @@
 #
 # Reverter: remover este arquivo, `udevadm control --reload`, e devolver o link
 # com `hcitool lp <MAC> RSWITCH,HOLD,SNIFF,PARK`.
-ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="e0:f6:b5:*", RUN+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh $env{HID_UNIQ}"
-ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="E0:F6:B5:*", RUN+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh $env{HID_UNIQ}"
+#
+# O `TEST==` É METADE DA CURA, NÃO ENFEITE (22/08/2026). Esta é uma regra-cola:
+# ela não faz nada sozinha, só chama o alvo do `RUN+=`. O arquivo de regra viaja
+# nos CINCO instaladores (install_udev.sh, install-host-udev.sh, build_deb.sh,
+# PKGBUILD, spec) e o alvo não viajava em nenhum — só o passo 3e-bis do
+# `install.sh` o gravava, e até 22/08 esse passo ficava DEPOIS do `exit 0` do
+# ramo dos formatos. Medido em 07/08 (estudo da cobertura do install, item 9): o
+# portão de paridade imprimia `[OK]` para esta regra enquanto o alvo dela não
+# existia em empacotamento nenhum.
+#
+# Sem o `TEST==`, regra sem alvo não fica quieta: o udev EXECUTA o `RUN+=` e
+# falha a cada device HID por Bluetooth — barulho no journal, que é o lugar onde
+# ninguém olha, e cura nenhuma. Com ele, quem instalou por um caminho que não
+# trouxe o alvo apenas não ganha a cura de borda, e quem AVISA é o
+# `check_bt_resilience` do `scripts/doctor.sh`. Silêncio inerte + uma voz que o
+# nomeia; nunca silêncio quebrado.
+#
+# A sintaxe foi CONFERIDA, não deduzida: `udevadm verify` (systemd 255) aprova
+# as duas regras com o `TEST==`, e reprova uma chave inventada — a régua não é
+# no-op. `TEST` é chave de casamento como as outras: falhando, a linha inteira
+# não casa, e nem o `RUN+=` nem o `TAG+=` da 83 são aplicados.
+#
+# Simetria do par: o alvo ENTRA quando a regra entra (`scripts/install_udev.sh`,
+# `scripts/install-host-udev.sh` e o `install_bt_resilience_host` do
+# `install.sh`, chamado nos dois lados da bifurcação de formato) e SAI quando ela
+# sai (`uninstall.sh`, BUG-UNINSTALL-KEEP-UDEV-ALVO-ORFAO-01). Portão:
+# `tests/unit/test_regra_udev_nao_fica_orfa_do_alvo_do_run.py`.
+ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="e0:f6:b5:*", TEST=="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh", RUN+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh $env{HID_UNIQ}"
+ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="E0:F6:B5:*", TEST=="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh", RUN+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh $env{HID_UNIQ}"

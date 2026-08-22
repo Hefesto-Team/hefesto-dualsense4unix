@@ -277,6 +277,36 @@ check_udev() {
             warn "${r}: regra descontinuada presente (amplificava o storm -71) — remova: sudo bash scripts/install_udev.sh"
         fi
     done
+    # REGRA-COLA SEM O ALVO (22/08/2026) — a metade B que nenhum portão media.
+    #
+    # O estudo de 07/08 (cobertura do install, item 9) mediu isto: o portão de
+    # paridade e este doctor davam `[OK]` para as regras 82 e 83 olhando só se o
+    # ARQUIVO existe, enquanto o alvo do `RUN+=` de cada uma não existia em
+    # empacotamento nenhum. Regra-cola sem alvo é enfeite: a 82 não tira o Pro
+    # genuíno do sniff na borda, e a 83 não fotografa bond nenhum — que é a cura
+    # do crash que comeu 2 dos 3 pareamentos dela em 24/07.
+    #
+    # O `TEST==` que as duas regras carregam desde 22/08 faz a regra órfã ficar
+    # INERTE em vez de falhar a cada conexão Bluetooth. Este bloco é a VOZ que
+    # falta ao silêncio: inerte sem ninguém dizendo é o defeito de novo.
+    #
+    # OS DOIS PARES ESTÃO ESCRITOS POR EXTENSO, um `[[ -f ]]` literal cada, em
+    # vez de um laço sobre uma lista — pela mesma razão que o
+    # `_dono_das_regras_udev` logo acima: a guarda de carona do
+    # `scripts/check_packaging_parity.sh` procura o NOME do script numa linha de
+    # teste de arquivo, e o que não está escrito portão nenhum lê. Escrito com
+    # variável, este bloco reprovava a paridade (medido em 22/08) — o gate via o
+    # doctor citar dois scripts que o .deb não empacota e não achava a guarda.
+    if { [[ -e /etc/udev/rules.d/82-nintendo-pro-nosniff.rules ]] \
+         || [[ -e /usr/lib/udev/rules.d/82-nintendo-pro-nosniff.rules ]]; } \
+       && [[ ! -f /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh ]]; then
+        warn "82-nintendo-pro-nosniff.rules instalada e o alvo do RUN+= dela NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh) — a regra fica inerte (o TEST== dela não acha o alvo) e o Pro genuíno não perde o sniff na borda da conexão; traga o alvo: ./install.sh no checkout do repo, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+    fi
+    if { [[ -e /etc/udev/rules.d/83-hefesto-bond-snapshot.rules ]] \
+         || [[ -e /usr/lib/udev/rules.d/83-hefesto-bond-snapshot.rules ]]; } \
+       && [[ ! -f /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh ]]; then
+        warn "83-hefesto-bond-snapshot.rules instalada e o alvo do RUN+= dela NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh, o ExecStart da unit de snapshot) — a regra fica inerte e o salva-vidas de bonds não grava nada quando um controle Bluetooth chega; traga o alvo: ./install.sh no checkout do repo, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+    fi
 }
 
 # True (0) se o snd-usb-audio AINDA está bindado em alguma interface de áudio
@@ -2982,7 +3012,17 @@ check_bt_resilience() {
     elif systemctl cat hefesto-bt-bonds-snapshot.timer >/dev/null 2>&1; then
         warn "timers de resiliência do bluetoothd instalados mas não ativos (snapshot=${t1:-?}, watchdog=${t2:-?}); ligue: sudo systemctl enable --now hefesto-bt-bonds-snapshot.timer hefesto-bt-health-watchdog.timer"
     else
-        warn "resiliência do bluetoothd não instalada (crash do bluetoothd destrói bonds sem backup); rode ./install.sh (passo ONDA-R2 aplica por default)"
+        # A FRASE ANTIGA MANDAVA REPETIR O QUE JÁ TINHA SIDO FEITO (22/08/2026).
+        # Ela dizia "rode ./install.sh (passo ONDA-R2 aplica por default)" — e
+        # quem chegava aqui em geral tinha rodado: até 22/08 o passo 3e-bis
+        # ficava DEPOIS do `exit 0` do ramo dos formatos, então `--flatpak`,
+        # `--appimage` e `--deb` saíam sem a camada. Mandar repetir o comando
+        # que não entrega é pior que não dizer nada: gasta o tempo da pessoa e
+        # ainda a convence de que o problema é ela. Hoje o `install.sh` aplica
+        # nos dois lados da cerca, e quem instalou por pacote sem checkout tem
+        # o caminho próprio — o mesmo par de endereços que os checks de DKMS
+        # já usam.
+        warn "resiliência do bluetoothd não instalada (crash do bluetoothd destrói bonds sem backup): ./install.sh no checkout do repo — em QUALQUER formato, inclusive --flatpak/--appimage/--deb —, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh (que traz os alvos das regras 82/83, mas não os timers)"
     fi
     if [[ ! -f /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf ]]; then
         warn "drop-in 10-hefesto-resilience.conf ausente — sem o desarme do watchdog do systemd (BLUETOOTHD-MORTO-POR-NOS-01) e sem snapshot na parada do serviço"

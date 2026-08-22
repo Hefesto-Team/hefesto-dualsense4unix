@@ -667,12 +667,17 @@ fi
 # BUG-UNINSTALL-KEEP-UDEV-ALVO-ORFAO-01: as regras 82 e 83 são regras-cola —
 # existem só para chamar um alvo por RUN+= (bt_nosniff_now.sh e a unit de
 # snapshot). Este bloco apagava os dois alvos INCONDICIONALMENTE, inclusive com
-# --keep-udev, e as regras preservadas passavam a falhar o RUN+= a cada device
-# HID por Bluetooth — ruído permanente no journal, e as duas curas (o Pro sem
-# sniff, o snapshot de bonds na borda) morriam em silêncio. Alvo de regra
-# preservada segue a regra: sai quando ela sai, fica quando ela fica. O resto
-# desta camada (timers, drop-ins, watchdog, snapshots) tem ciclo de vida
-# próprio e continua saindo sempre.
+# --keep-udev, e as duas curas (o Pro sem sniff, o snapshot de bonds na borda)
+# morriam em silêncio com as regras ainda no disco. Alvo de regra preservada
+# segue a regra: sai quando ela sai, fica quando ela fica. O resto desta camada
+# (timers, drop-ins, watchdog, snapshots) tem ciclo de vida próprio e continua
+# saindo sempre.
+#
+# NOTA DATADA 22/08/2026: o ruído no journal que este bug também causava — o
+# RUN+= falhando a cada device HID por Bluetooth — deixou de existir quando as
+# duas regras ganharam o `TEST==` do próprio alvo. A regra órfã agora fica
+# INERTE. O que NÃO mudou é a razão deste gate: sem o alvo a cura não existe, e
+# uma regra inerte é tão inútil quanto uma regra que falha.
 if sudo -n true 2>/dev/null; then
     if [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
           || -e /etc/systemd/system/hefesto-bt-health-watchdog.timer ]]; then
@@ -709,7 +714,7 @@ if sudo -n true 2>/dev/null; then
     else
         log "alvos das regras 82/83 preservados (--keep-udev): bt_nosniff_now.sh,"
         log "  bt_bonds_snapshot.sh e hefesto-bt-bonds-snapshot.service — sem eles as"
-        log "  regras que ficaram falhariam o RUN+= a cada device HID por Bluetooth."
+        log "  regras que ficaram virariam enfeite (o TEST== delas não acharia o alvo)."
     fi
     # BT-NINTENDO-ACTIVE-01: reverter a link policy (volta o SNIFF default) e o
     # nome do adaptador (tira o prefixo "Nintendo"). Best-effort; vale já.
