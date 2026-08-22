@@ -2,7 +2,9 @@
 
 ## Estrutura
 
-Perfis ficam em `~/.config/hefesto-dualsense4unix/profiles/<nome>.json`. Schema v1:
+Perfis ficam em `~/.config/hefesto-dualsense4unix/profiles/<nome>.json`.
+**Exemplo** de um perfil v1 — não é o esquema inteiro; a lista completa dos
+campos vem logo abaixo dele:
 
 ```json
 {
@@ -34,6 +36,24 @@ trigger" abaixo. Nome fora dessa lista faz `Profile.model_validate` levantar
 `ValidationError` citando os válidos, e o perfil não carrega.
 
 Arquivo fallback com `match.type = "any"` e `priority: 0` é obrigatório para garantir que algum perfil sempre case.
+
+**Os campos que um perfil v1 aceita**, na ordem em que o esquema os declara.
+Cada um é opcional salvo `name` e `match`; ausente = **sem opinião**, o perfil
+não toca naquilo ao ativar:
+
+| Campo | O que é | Onde está explicado |
+|---|---|---|
+| `name`, `version`, `match`, `priority` | identidade e quando o perfil entra | "Semântica de match", abaixo |
+| `triggers` | gatilhos adaptativos | "Modos de trigger", abaixo |
+| `leds` | lightbar e LEDs de jogador | exemplo acima |
+| `rumble` | vibração | exemplo acima |
+| `key_bindings` | mapa de botão → tecla deste perfil | [hotkeys.md](hotkeys.md) |
+| `mouse`, `suppress_desktop_emulation` | emulação de mouse e modo-jogo | seção abaixo |
+| `mic` | microfone do controle | seção abaixo |
+| `speaker` | alto-falante e fone | seção abaixo |
+| `mode` | qual ponte o perfil pede (e co-op) | "Modo Nativo", abaixo |
+| `controllers` | overrides **por controle** na mesa | seção abaixo |
+| `ponte` | o carimbo do que o produto **aprendeu** sobre este jogo | seção abaixo |
 
 ## Seção opcional `mouse` e `suppress_desktop_emulation`
 
@@ -100,6 +120,69 @@ a posse** dos bytes de áudio do report de saída.
 > guardava o valor **velho** — que voltava ao hardware na ativação seguinte. O
 > gesto era desfeito pelo próprio gesto de salvar. Hoje os três chegam ao
 > perfil.
+
+## Seção opcional `mic` (microfone do controle)
+
+```json
+{
+  "mic": {"button_toggles_system": true, "volume": 70, "muted": false}
+}
+```
+
+- `button_toggles_system` — se o botão de microfone do próprio controle muta o
+  microfone **do sistema**, e não só o do controle.
+- `volume` e `muted` — ausentes significam **não tocar**; o perfil sem a seção
+  não tem opinião sobre o microfone.
+
+## Seção opcional `controllers` (override por controle na mesa)
+
+Com mais de um controle, o perfil pode dar a cada um a sua cor, o seu gatilho, a
+sua vibração e o seu alto-falante. A chave é o identificador do controle e o
+valor aceita `leds`, `triggers`, `rumble` e `speaker` — os mesmos formatos das
+seções de cima:
+
+```json
+{
+  "controllers": {
+    "<id do controle>": {"leds": {"lightbar": [0, 120, 255]}}
+  }
+}
+```
+
+O que não estiver no override cai no valor geral do perfil.
+
+## Seção `ponte` — o que o produto APRENDEU, não o que você pediu
+
+Esta seção é a única que **você não escreve**: quem a escreve é o produto, e ela
+existe desde 19/08/2026 (`PonteConfirmada`). Quando um jogo não anda e você
+troca de ponte com o gesto **PS + R3** (ver [hotkeys.md](hotkeys.md)), o produto
+**carimba no perfil daquele jogo** a ponte que funcionou — para não perguntar de
+novo na próxima vez.
+
+```json
+{
+  "ponte": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "steam_input": false,
+    "confirmada_em": "2026-08-19",
+    "confirmada_por": "gesto"
+  }
+}
+```
+
+- `kind` — `desktop`, `gamepad` ou `native`.
+- `gamepad_flavor` — `dualsense` ou `xbox`, quando `kind` é `gamepad`.
+- `steam_input` — se aquele jogo está na exceção do Steam Input.
+- `confirmada_em` — a data.
+- `confirmada_por` — **como o produto soube**: `gesto` (você trocou com PS + R3),
+  `silencio` (ninguém reclamou e a ponte ficou de pé) ou `escolha_dela` (você
+  escolheu na janela). É este campo que explica por que o produto "decidiu
+  sozinho" um modo.
+
+Perfil sem o carimbo simplesmente não traz a chave — ela é omitida na gravação
+quando está vazia. Apagá-la à mão não destrói nada: só faz o produto aprender de
+novo na próxima vez.
 
 ## Perfil default `point_and_click` (Grim Fandango e afins)
 
@@ -300,6 +383,12 @@ jogo (o hefesto não re-asserta), emulação de mouse/gamepad desligada (libera 
 grab), autoswitch/hotkey de perfil travados, e o dispatch de input congelado. O
 estado da tua emulação (gamepad/mouse) é guardado e RESTAURADO ao desligar. O
 modo sobrevive a reboot (o controle segue solto até você fazer `native off`).
+
+**E isso persiste no perfil, no campo `mode`** — é a amarração que faltava nesta
+página. `mode` traz `kind` (`desktop`, `gamepad` ou `native`), `gamepad_flavor`
+(`dualsense` ou `xbox`, quando `kind` é `gamepad`) e `coop`. Ele é o que o perfil
+**pede**; o `ponte` acima é o que o produto **aprendeu** que funciona — os dois
+não são o mesmo campo, e é de propósito.
 
 ## Anti-storm (dsx) via `doctor`
 

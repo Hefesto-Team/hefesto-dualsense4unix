@@ -82,7 +82,12 @@ e o jogador 2 permanece.
 > da lista, e funcionou completo. Registro em
 > [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
 
-Para desfazer, ainda não há botão; a saída é pela linha de comando:
+Para desfazer, a caixinha está na aba **Perfis** desde 07/08/2026: abra o perfil
+daquele jogo, com **"Jogo da Steam"** escolhido e o número do jogo preenchido, e
+desmarque **"Esconder os controles físicos neste jogo"**. A marca sai na hora,
+sem "Salvar" — ela é do jogo, não do perfil. Feche e abra o jogo para valer.
+
+Pela linha de comando também dá:
 `hefesto-dualsense4unix gamepad steam-input list` mostra os jogos marcados pelo
 nome, e `hefesto-dualsense4unix gamepad steam-input remove <nome ou appid>`
 tira a marca.

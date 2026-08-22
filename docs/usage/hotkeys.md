@@ -110,6 +110,7 @@ funcionando e conseguir reativar a emulação depois.
 | PS (toque curto) | Ação `[hotkey.ps_button]` — default `steam` |
 | **PS + Options** | Modo jogo on/off — suprime/restaura emulação de mouse/teclado |
 | PS + D-pad ↑/↓ | Troca de perfil (combo sagrado) |
+| **PS + R3** | **Próxima ponte** — DualSense → Xbox 360 → mouse+teclado (ver a seção abaixo) |
 | **L3 / R3** | Abre / fecha o **teclado na tela** (ver a seção abaixo) |
 
 **Por que não é mais o long-press.** O gesto original era segurar o PS por ~1 s
@@ -166,6 +167,40 @@ restart do daemon.
 > daemon **não o liga sozinho** na ativação seguinte, e é isso que impede o
 > desktop de acordar sem ponteiro depois de um boot. O campo e o preço estão em
 > [`creating-profiles.md`](creating-profiles.md#seção-opcional-mouse-e-suppress_desktop_emulation).
+
+## Próxima ponte — combo PS + R3
+
+**Ponte** é a forma como o jogo enxerga o controle. O gesto **PS + R3** troca de
+ponte sem fechar o jogo, em ciclo: **DualSense → Xbox 360 → mouse+teclado →
+DualSense**. Ele vem **ligado de fábrica** (FEAT-HOTKEY-PONTE-CYCLE-01).
+
+**O R3 sozinho continua fechando o teclado na tela** — é o PS *junto* com o R3
+que troca a ponte. Os dois não brigam: o latch de combo
+(FEAT-HOTKEY-COMBO-NO-LEAK-02) segura o R3 até todos os botões serem soltos, e o
+combo só dispara com PS e R3 pressionados **juntos** por mais de 150 ms
+(`buffer_ms`). Acionar por acidente é difícil; acionar **sem saber o que se
+fez** é fácil, e é por isso que esta seção existe.
+
+**O produto avisa pela lightbar** — o único canal visível sem sair do jogo. As
+cores saem da paleta da janela, não são inventadas aqui:
+
+| Cor da barra | O que ficou de pé |
+|---|---|
+| **rosa** `#ff79c6` | ponte **DualSense** (o Hefesto na frente) |
+| **verde claro** `#50fa7b` | ponte **Xbox 360** |
+| **laranja** `#ffb86c` | ponte **mouse+teclado** |
+| **azul claro** `#8be9fd` | **Steam Input** (não entra no ciclo do gesto) |
+| **branco** `#f8f8f2` | **Modo Nativo** (não entra no ciclo do gesto) |
+| **dois pulsos vermelhos**, antes de aplicar | "isto pode derrubar o controle dentro do jogo" |
+| dois pulsos vermelhos **+ um vermelho longo** | "pedi a ponte e não consegui" — o vpad não subiu |
+
+**O preço, que foi medido (R-04):** trocar de ponte **destrói e recria o vpad**,
+e isso invalida o handle que o jogo já tinha aberto. Um jogo aberto pode precisar
+de replug lógico — daí o aviso vermelho *antes* de aplicar.
+
+**Ressalva de 19/08/2026:** o gesto e as cinco cores da piscada ainda **não
+foram vistos em hardware**. O roteiro de prova está em
+[PROVA-NO-PLASTICO-01](../process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
 
 ## Teclado na tela — L3 abre, R3 fecha
 

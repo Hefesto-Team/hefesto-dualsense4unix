@@ -155,6 +155,7 @@ o que o controle faz agora e como o jogo o enxerga:
 | PS + D-pad cima / baixo | perfil seguinte / anterior |
 | PS (toque curto) | abre a Steam (configurável) |
 | PS + Options | modo jogo: suspende a emulação de mouse e teclado |
+| PS + R3 | próxima ponte: DualSense → Xbox 360 → mouse+teclado |
 | L3 / R3 | abre / fecha o teclado na tela |
 | Botão de microfone | muta o microfone do sistema |
 
@@ -227,14 +228,17 @@ tudo é medido. Ubuntu tem CI sem hardware. Fedora, Arch, Debian e Mint têm
 pacotes mantidos, mas nenhum foi rodado com controle real. Versões exatas em
 [versoes-validadas.md](docs/usage/versoes-validadas.md).
 
-**Métricas e plugins são opt-in — e as métricas não têm chave para o usuário.**
-Os plugins ligam por variável de ambiente
-(`HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1`). Já o endpoint Prometheus depende de
-`metrics_enabled` no `DaemonConfig`, e não existe hoje variável de ambiente, flag
-nem arquivo de configuração que ligue esse campo: o daemon o constrói com
-quatro parâmetros só — `poll_hz`, `auto_reconnect`, `ps_long_press_ms` e
-`keyboard_emulation_enabled`. Na prática, subir as métricas exige mexer no
-código. Ver [docs/usage/metrics.md](docs/usage/metrics.md).
+**Métricas e plugins são opt-in, os dois por variável de ambiente — e nenhum
+tem botão.** Os plugins ligam com `HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1`; o
+endpoint Prometheus, com `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1` (e
+`HEFESTO_DUALSENSE4UNIX_METRICS_PORT` escolhe a porta), desde 01/08/2026. O que
+não existe é caminho de interface: nada na árvore escreve essas variáveis por
+você — nem o instalador, nem a unit systemd, nem a janela —, e ligar as métricas
+exige **reiniciar** o daemon, porque o `reload_config` não sobe o subsistema. A
+variável é o único caminho porque o daemon constrói o `DaemonConfig` com
+quatro parâmetros — `poll_hz`, `auto_reconnect`, `ps_long_press_ms` e
+`keyboard_emulation_enabled` — e `metrics_enabled` não está entre eles.
+Ver [docs/usage/metrics.md](docs/usage/metrics.md).
 
 **Distros sem `systemd-logind`** (Alpine OpenRC, Void runit, Artix) estão fora de
 escopo — ver [ADR-009](docs/adr/009-systemd-logind-scope.md).

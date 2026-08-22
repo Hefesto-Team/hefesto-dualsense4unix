@@ -10,28 +10,31 @@ nele. **O que ele não é:** um resumo do mapa. Nada aqui substitui a prosa das
 células — ele te dá o endereço dela.
 
 **A conta que justifica este arquivo.** Até hoje havia duas portas: ler o CSV
-inteiro (621.456 caracteres em células, ~155 mil tokens) ou não ler nada. O
-veredito por lado das 302 linhas, sem uma linha de prosa, custa 27.266
-caracteres — **4,4%**. A porta barata sempre existiu; faltava alguém dizer onde
+inteiro (661.177 caracteres em células, ~165 mil tokens) ou não ler nada. O
+veredito por lado das 308 linhas, sem uma linha de prosa, custa 27.828
+caracteres — **4,2%**. A porta barata sempre existiu; faltava alguém dizer onde
 ela fica.
 
 ---
 
 ## 1. O que existe, onde, e quanto custa
 
-Medido em 16/08/2026 com `stat` e `csv.DictReader`.
+Medido em 22/08/2026 com `stat` e `csv.DictReader`. **Este carimbo é a data da
+última medição, não a data em que a seção foi escrita** — em 19/08 o arquivo foi
+editado sem que ele mudasse, e os números passaram três dias caducos com cara de
+frescos.
 
 | Arquivo | Bytes | O que é | Quando abrir |
 |---|---:|---|---|
-| `docs/data/mapa-controles.csv` | 654.980 | **A FONTE.** 302 linhas x 45 colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
-| `docs/data/ensaios.csv` | 149.495 | **O LASTRO.** 177 ensaios x 12 colunas. Cada linha é uma medição com hardware na mesa. Casa com o mapa por `linha_id == id`. | Quando a célula do mapa diz `medido` e você quer ver a medição. |
-| `specs.html` | 1.275.303 | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
+| `docs/data/mapa-controles.csv` | 696.546 | **A FONTE.** 308 linhas x 47 colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
+| `docs/data/ensaios.csv` | 149.862 | **O LASTRO.** 177 ensaios x 14 colunas. Cada linha é uma medição com hardware na mesa. Casa com o mapa por `linha_id == id`. **`degrau` e `ponte` existem no cabeçalho desde 20/08/2026 e estão VAZIAS em 177 de 177** — não procure dado que ninguém escreveu ainda. | Quando a célula do mapa diz `medido` e você quer ver a medição. |
+| `specs.html` | 1.341.232 | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
 | `docs/protocol/dualsense-referencia-canonica.md` | 97.475 | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
 | `docs/protocol/paridade-bluetooth-versus-cabo.md` | 17.383 | Tabela cabo x rádio em prosa. Declara-se desempatador nas linhas `MEDIDO AO VIVO`. | Para visão geral. **Onde divergir do mapa fora das linhas `MEDIDO AO VIVO`, o mapa vence** — ele tem domínio fechado e portão; a tabela é prosa. |
-| `docs/process/METODO-DE-ISOLAMENTO.md` | 54.411 | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
-| `scripts/check_paridade_transporte.py` | 53.942 | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia as linhas 1-90. |
-| `scripts/eliminacao.py` | 9.218 | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
-| `bancada.py` | 19.901 | O formulário que grava no mapa. Define a escada de degraus na linha 64. | Quando for editar célula. |
+| `docs/process/METODO-DE-ISOLAMENTO.md` | 60.445 | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
+| `scripts/check_paridade_transporte.py` | 85.063 | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — hoje ela vai da linha 2 à 249. |
+| `scripts/eliminacao.py` | 11.675 | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
+| `bancada.py` | 25.197 | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`, linha 78) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
 | `docs/data/mapa-controles-v1.csv` | 138.192 | Arqueologia. O mapa antes da migração. | Praticamente nunca. |
 
 **Sobre os estudos.** `docs/process/estudos/` guarda o histórico por frente. O
@@ -46,31 +49,36 @@ o estudo guarda o caminho.
 
 ## 2. Como uma linha do mapa é organizada
 
-`id` é sempre exatamente `chave@controle` (confere em 302 de 302 linhas), então
+`id` é sempre exatamente `chave@controle` (confere em 308 de 308 linhas), então
 `vibracao.rumble.ff@dualsense` é uma chave de busca legítima. Os três controles
-são `dualsense` (108 linhas), `pro` (97) e `sn30` (97).
+são `dualsense` (110 linhas), `pro` (99) e `sn30` (99).
 
-22 das 45 colunas vêm em pares `cabo_*` / `radio_*` — cabo e rádio respondidos
+26 das 47 colunas vêm em pares `cabo_*` / `radio_*` (13 pares) — cabo e rádio respondidos
 lado a lado na mesma linha. As que importam para decidir:
 
-- `existe` — a peça existe no aparelho? (`tem` 137 · `desconhecido` 81 ·
-  `nao-tem` 65 · `parcial` 19)
+- `existe` — a peça existe no aparelho? (`tem` 139 · `desconhecido` 83 ·
+  `nao-tem` 67 · `parcial` 19)
 - `cabo_aceita` / `radio_aceita` — o **aparelho** aceita o comando por ali?
 - `cabo_aciona` / `radio_aciona` — o **Hefesto** aciona aquilo hoje? É a coluna
   do produto, e é a que o portão lê para dizer o que é afirmação forte.
 - `cabo_de_onde_sei` / `radio_de_onde_sei` e `cabo_ate_onde_foi` /
   `radio_ate_onde_foi` — **as duas réguas**, seção 3.
-- `teste_que_morde` (62 linhas) e `mordida_provada_em` (29) — o teste que
+- `ponte_alcanca` / `ponte_de_onde_sei` — **o eixo de ponte** (20/08/2026), e
+  ele não é um par cabo/rádio: pergunta por qual ponte a feature chega ao jogo
+  (`gamepad/dualsense`, `gamepad/xbox360`, `mouse+teclado`). Preenchido em 10 de
+  308 linhas hoje, todas com `gamepad/dualsense` + `inferido-do-codigo`. Quem
+  filtrar o mapa sem estas duas colunas não enxerga a direção inteira.
+- `teste_que_morde` (64 linhas) e `mordida_provada_em` (31) — o teste que
   reprova quando a cura é arrancada, e a prova de que alguém arrancou e viu.
 - `provado_em` (58 linhas, data pura) — quando. Cuidado: `mordida_provada_em`
   tem o mesmo sufixo `_em` e **é prosa**, não data.
-- `nota` (217 linhas), `cabo_ressalva` / `radio_ressalva`, `*_evidencia`,
+- `nota` (224 linhas), `cabo_ressalva` / `radio_ressalva`, `*_evidencia`,
   `*_detalhe` — **a prosa**. É onde mora o que salva trabalho, e é o que este
   documento existe para te ajudar a ler **sob demanda, pela chave**.
 
 **Não confie na coluna `transporte`.** Ela tem seis valores e nenhum deles é o
 transporte de hoje: `ambos` (36) e `cabo+rádio` (74) são o mesmo valor com duas
-grafias, e `sem linha no v1` (157 linhas, metade do mapa) é marca de migração,
+grafias, e `sem linha no v1` (163 linhas, metade do mapa) é marca de migração,
 não transporte. Quem responde por transporte são os pares `cabo_*` / `radio_*`.
 
 ---
@@ -85,11 +93,11 @@ que mediam. Os domínios são fechados e o portão reprova valor fora deles.
 
 | Valor | Significa | Células |
 |---|---|---:|
-| `medido` | alguém pôs o aparelho na mesa e viu | 123 |
-| `inferido-do-codigo` | alguém leu a fonte (nossa ou do driver) | 290 |
+| `medido` | alguém pôs o aparelho na mesa e viu | 124 |
+| `inferido-do-codigo` | alguém leu a fonte (nossa ou do driver) | 297 |
 | `afirmado-no-doc` | está escrito em alguma página | 7 |
 | `incerto` | ninguém sabe de onde saiu | 7 |
-| vazio | ninguém respondeu este lado | 177 |
+| vazio | ninguém respondeu este lado | 181 |
 
 **Régua 2 — `ate_onde_foi`: ATÉ ONDE A PROVA CHEGOU.** É uma escada, e cada
 degrau contém o anterior.
@@ -119,31 +127,35 @@ conta handle MORTO como fd vivo; a outra varre só os PIDs da Steam, onde o
 `winedevice` não está).
 
 **A confusão que custa caro, dita na cara: uma régua não implica a outra.** O
-cruzamento das 604 células (302 linhas x 2 lados), medido hoje:
+cruzamento das 616 células (308 linhas x 2 lados), medido em 22/08/2026:
 
 | | vazio | MONTOU | SAIU NO FIO | OBEDECEU |
 |---|---:|---:|---:|---:|
-| `medido` | **63** | 24 | 15 | 21 |
-| `inferido-do-codigo` | 250 | **40** | 0 | 0 |
+| `medido` | **63** | 25 | 15 | 21 |
+| `inferido-do-codigo` | 252 | **45** | 0 | 0 |
 | `afirmado-no-doc` | 6 | 1 | 0 | 0 |
 | `incerto` | 7 | 0 | 0 | 0 |
-| vazio | 177 | 0 | 0 | 0 |
+| vazio | 181 | 0 | 0 | 0 |
 
 Leia as duas casas em negrito e você entendeu o mapa:
 
 - **63 células são `medido` com a escada vazia.** Alguém mediu e não registrou
   até onde a prova chegou. `medido` **não** quer dizer que o aparelho obedeceu.
-- **40 células são `inferido-do-codigo` com `MONTOU`.** Ninguém tocou no
+- **45 células são `inferido-do-codigo` com `MONTOU`.** Ninguém tocou no
   aparelho: leram a fonte e viram que o produto monta o report. Subir o primeiro
   degrau não exige hardware — subir do segundo em diante, exige.
+
+O portão já cobra o eixo de ponte no mesmo espírito: das **16 linhas que
+alcançam o jogo por `uhid`**, 4 têm afirmação forte e **nenhuma está sem
+`ponte_alcanca`**.
 
 **Afirmação forte** é `aciona=sim` **e** `de_onde_sei=medido`. **Grau forte** é
 `SAIU NO FIO` ou `O APARELHO OBEDECEU` — hoje são **36 células, em 21 linhas**,
 e a regra 6 do portão exige que cada uma tenha ensaio casado no caderno. Conferi
 agora: **36 de 36 têm. Zero órfãos.**
 
-**O mapa da ignorância, de graça:** o caderno cobre **30 das 302 linhas
-(9,9%)**. As outras 272 são inferência de código. Antes de gastar leitura,
+**O mapa da ignorância, de graça:** o caderno cobre **30 das 308 linhas
+(9,7%)**. As outras 278 são inferência de código. Antes de gastar leitura,
 saiba que o lastro empírico está concentrado em 10% do mapa.
 
 ---
@@ -211,7 +223,7 @@ vibracao.rumble.ff@dualsense
   prosa: nota=263c cabo_ressalva=4750c radio_ressalva=4750c | morde=sim provado_em=2026-08-11
 ```
 
-Custo: ~600 caracteres em vez de 621 mil. E a última linha é o aviso que
+Custo: ~600 caracteres em vez de 661 mil. E a última linha é o aviso que
 importa — **há 4.750 caracteres de ressalva ali, e você ainda não os leu.**
 
 **Ler a prosa de uma célula, quando o veredito não basta:**
@@ -238,9 +250,10 @@ for x in csv.DictReader(open("docs/data/ensaios.csv", encoding="utf-8")):
               "->", x["resultado"], "|", x["observado_por"])
 ```
 
-**A tabela cabo x rádio inteira, que cabe em 1.660 caracteres:** só **35 das 302
-linhas** têm `cabo_aciona != radio_aciona`. O mapa paga 22 colunas espelhadas em
-todas as 302 para uma distinção que existe em 11,6% delas.
+**A tabela cabo x rádio inteira, que cabe em 3.447 caracteres** (medido rodando
+o trecho abaixo em 22/08/2026)**:** só **35 das 308 linhas** têm
+`cabo_aciona != radio_aciona`. O mapa paga 26 colunas espelhadas em todas as 308
+para uma distinção que existe em 11,4% delas.
 
 ```python
 import csv
@@ -316,7 +329,7 @@ Um esqueleto que parecesse completo seria pior que nenhum. **Vá à prosa quando
 - a célula tem grau forte (**36 células**) — a ressalva é onde mora a condição
   sob a qual a prova vale;
 - a linha tem ensaio no caderno (**30 linhas**) — o caderno tem o "como";
-- a linha tem `nota` (**217 linhas**) — é onde ficam as notas datadas, e a regra
+- a linha tem `nota` (**224 linhas**) — é onde ficam as notas datadas, e a regra
   da casa é que **decisão medida não se apaga**;
 - os dois lados divergem (**35 linhas**) — leia `assimetria_declarada`, ou saiba
   que ela está vazia em 14 delas.
@@ -352,8 +365,8 @@ fica na fonte. `tem_ensaio` e `tem_nota` são derivados na hora: dizem se aquela
 linha aparece no caderno e se tem nota, isto é, **onde parar de confiar no
 resumo**. É o que impede o esqueleto de parecer completo.
 
-**Medido, gerando o arquivo em rascunho:** 20.598 caracteres, **~5.150 tokens,
-3,3% do CSV**. Sai mais barato que o esqueleto cru de 8 colunas (27.266) porque
+**Medido, gerando o arquivo em rascunho:** 21.026 caracteres, **~5.250 tokens,
+3,2% do CSV**. Sai mais barato que o esqueleto cru de 8 colunas (27.828) porque
 o `teste_que_morde` vira booleano. As três primeiras linhas reais:
 
 ```
@@ -377,6 +390,12 @@ provar verde; e um derivado sem portão é exatamente o que a casa proíbe.
 velho, o portão de frescor está vermelho e qualquer derivado novo nasce na
 sombra dele.
 
+> **Nota de 22/08/2026 — o segundo impedimento caiu.**
+> `scripts/gerar-mapa.py --check` passa hoje: *"specs.html: atualizado (confere
+> com o CSV, com o caderno de ensaios e com os três desenhos)"*. Quem for
+> implementar o `mapa-resumo.csv` já consegue provar verde; sobram o cuidado com
+> agentes tocando o gerador e a exigência de portão.
+
 ### Repetição medida no CSV — proposta, e nenhuma linha apagada
 
 A regra é dura e eu a respeitei: **não apaguei uma linha de prosa.** O que
@@ -385,13 +404,13 @@ segue é medição, para ela decidir.
 | O que se repete | Custo | Meu parecer |
 |---|---:|---|
 | `nota`: o preâmbulo de migração v1, em 128 linhas ("o v1 não tem linha desta chave para este controle") | 14.534 chars no primeiro segmento; 12.717 de eco puro | **É o único corte que passa no teste da casa.** Nas 128 linhas, `id_v1` está vazio em 128 de 128 — a frase afirma o que a coluna já afirma, e é derivável por construção. Não é medição: é contabilidade de migração. O caminho honesto é o **gerador reemitir a frase** a partir de `id_v1` vazio, não apagá-la do que o leitor vê. |
-| `cabo_*` idêntico ao `radio_*` na mesma linha (7 pares de colunas) | 53.677 chars, ~8,7% do CSV | A mesma frase dita duas vezes na mesma linha. O caso extremo é `vibracao.rumble.ff@dualsense`: 4.750 caracteres de ressalva duplicados palavra por palavra. Além do custo, é **risco de contradição** — quem corrigir um lado e esquecer o outro deixa a linha se contradizendo sem portão nenhum notar. Um marcador `idem` (que `cabo_detalhe` já usa em algumas linhas) preserva 100% da informação, com o gerador expandindo. |
+| `cabo_*` idêntico ao `radio_*` na mesma linha (7 pares de colunas) | 53.899 chars, ~8,2% do CSV | A mesma frase dita duas vezes na mesma linha. O caso extremo é `vibracao.rumble.ff@dualsense`: 4.750 caracteres de ressalva duplicados palavra por palavra. Além do custo, é **risco de contradição** — quem corrigir um lado e esquecer o outro deixa a linha se contradizendo sem portão nenhum notar. Um marcador `idem` (que `cabo_detalhe` já usa em algumas linhas) preserva 100% da informação, com o gerador expandindo. |
 | `nota`: os blocos "POR QUE ESTA LINHA EXISTE", repetidos entre linhas irmãs | 16.050 chars de eco | **Eu não tocaria por referência.** Esses blocos são justamente os que explicam por que a célula está vazia, e é na linha isolada — achada por `grep`, não por leitura sequencial — que a próxima pessoa cai. Se for encolher, o caminho é a fonte guardar a **chave do bloco** e o gerador expandir; nunca um `ver nota-familia:coop` no que se lê. |
 | `cabo_ressalva`, `radio_ressalva`, `*_evidencia` (repetição entre linhas diferentes) | 12% a 20% | **Não tocar.** Ali a repetição é contexto de célula, não boilerplate. |
 
-Para calibrar: a coluna `nota` tem 113.604 caracteres em 217 células. Delas,
-29.742 são células byte a byte idênticas a outra, e o eco por trecho (blocos de
-60 caracteres ou mais, separados por ` · `) soma 36.950. **Só a linha 1 desta
+Para calibrar: a coluna `nota` tem 122.766 caracteres em 224 células. Delas,
+30.711 são células byte a byte idênticas a outra, e o eco por trecho (blocos de
+60 caracteres ou mais, separados por ` · `) soma 38.057. **Só a linha 1 desta
 tabela é corte; as outras são reorganização — a informação que chega ao leitor
 não muda em nenhuma delas.**
 
