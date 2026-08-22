@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retrata as DEZ abas da janela, com o card do controle vivo dentro.
+"""Retrata as ONZE abas da janela, com o card do controle vivo dentro.
 
 É o script que a documentação e quem for trabalhar na interface usam —
 pessoa ou assistente. Uma execução, nenhum
@@ -164,6 +164,25 @@ sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ))
 os.environ.setdefault("GDK_BACKEND", "x11")
 
+# CONFIG-01 (21/08/2026): a cura do snap NÃO entrou aqui, e a razão é medida.
+#
+# O produto já se defende sozinho (`app/main._sanear_loaders_do_gdk_pixbuf`), e
+# a tentação era importar essa função aqui, antes do `import gi`. Ela funciona —
+# e cobra um preço que só apareceu na comparação das fotos: importar
+# `app.main` arrasta `app.app`, que ABRE um GdkDisplay já no import, antes de
+# este script aplicar o tema. Medido em 21/08 sob Xvfb, com o mesmo glade e o
+# mesmo comando: `gtk-font-name` saiu `Fira Sans 12.25` sem o import e
+# `Sans 12.25` com ele. As DEZ fotos da documentação mudaram inteiras, por uma
+# razão que não tem nada a ver com o produto.
+#
+# A cura, então, fica FORA do script, na chamada:
+#
+#     GDK_PIXBUF_MODULE_FILE=/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders.cache \
+#       scripts/gui-captura/retratar_abas.py
+#
+# Um instrumento que muda o que mede não serve de instrumento — e esta casa já
+# pagou três medições falsas num dia por esquecer isso.
+
 import gi  # noqa: E402 — depois de gi.require_version, obrigatoriamente
 
 gi.require_version("Gtk", "3.0")
@@ -208,7 +227,7 @@ CONTROLES_DA_MESA_CHEIA = 4
 LARGURA, ALTURA = 1920, 1080
 
 #: Os nomes que a documentação referencia. A ORDEM é a das abas no notebook.
-#: O `interface.md` cita os nove; mudar um nome aqui quebra a documentação, então
+#: O `interface.md` cita os nomes; mudar um nome aqui quebra a documentação, então
 #: o script confere no fim e avisa.
 NOMES = (
     "readme_inicio",
@@ -221,6 +240,7 @@ NOMES = (
     "readme_sistema",
     "readme_emulacao",
     "readme_navegacao_dsx",
+    "readme_configuracoes",
 )
 
 #: Os nomes do modo mesa cheia. Prefixo próprio para que nenhuma delas possa
@@ -725,6 +745,46 @@ def _montar_aba_perfis(builder) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
+    """Monta a aba Configurações — o glade dela é só o container vazio.
+
+    CONFIG-01 (21/08/2026). Mesmo defeito que a PERFIS-NA-FOTO-01 pagou: o
+    conteúdo desta aba é montado em CÓDIGO (`install_config_tab`), então uma
+    foto do glade cru sairia com a página em branco — e a documentação passaria
+    a afirmar que a aba nova não tem nada dentro.
+
+    O método é o de PRODUÇÃO, e não uma cópia da montagem. Aqui isso é barato:
+    o `install_config_tab` não fala com o daemon, não lê disco e não depende de
+    dado nenhum da máquina, então o host mínimo é só o `builder` — não há o que
+    desviar, ao contrário da aba Perfis.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.config_actions import (
+            ABA_CONFIG,
+            SECOES,
+            ConfigActionsMixin,
+        )
+    except Exception as exc:
+        return f"aba Configurações não montada ({exc})"
+
+    class _Host(ConfigActionsMixin):  # type: ignore[misc, name-defined]
+        def __init__(self) -> None:
+            self.builder = builder
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+    try:
+        _Host().install_config_tab()
+    except Exception as exc:
+        return f"aba Configurações não montada ({exc})"
+
+    caixa = builder.get_object(ABA_CONFIG)
+    if caixa is not None:
+        caixa.show_all()
+    return f"aba Configurações montada ({len(SECOES)} seções, ainda vazias)"
+
+
 def _injetar_modos_de_gatilho(builder) -> str:  # type: ignore[no-untyped-def]
     """Põe os 19 modos de gatilho na aba Gatilhos.
 
@@ -1075,6 +1135,7 @@ def main(destino: str | None = None, *, mesa_cheia: bool = False) -> int:
     print(f"  {_montar_aba_inicio(builder, estado_da_mesa)}")
     print(f"  {_montar_aba_no_jogo(builder, estado_da_mesa)}")
     print(f"  {_montar_aba_perfis(builder)}")
+    print(f"  {_montar_aba_configuracoes(builder)}")
     _assentar()
 
     total = notebook.get_n_pages()

@@ -360,6 +360,12 @@ Se já está em v3.2.0+ e o problema persiste, abra issue com o output de
 > também **não** importa a função de tradução, então a proporção passou a
 > **17 de 20** — o quadro segue o mesmo.
 >
+> **Nota datada — 21/08/2026:** são **21** módulos desde a `CONFIG-01`, que
+> acrescentou `config_actions.py`. Ele **importa** a função de tradução — o
+> primeiro módulo novo de `actions/` a nascer assim —, então a proporção passou
+> a **17 de 21**: o quadro melhora pela primeira vez, e a promessa continua
+> retirada até ele virar zero.
+>
 > Se você chegou aqui esperando uma janela inteiramente em inglês, o problema
 > não é a sua instalação — é a promessa antiga, e ela foi retirada. Registro em
 > `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
