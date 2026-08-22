@@ -781,6 +781,36 @@
                 <!-- Coluna L2 -->
                 <child>
                   <object class="GtkFrame">
+                    <!-- VAO-01, fechada em 22/08/2026 com o olho dela.
+                         A E9 da LARGURA-01 pôs a fileira de ação no PÉ da coluna
+                         (`valign=end` + `vexpand=True`), a pedido literal dela — e
+                         isso MOVEU o vazio em vez de tirá-lo: os ~770px que ficavam
+                         ABAIXO dos botões passaram a ficar ACIMA deles. O próprio
+                         comentário da E9, mais abaixo, já registrava isso como "não
+                         resolvido"; a foto de 22/08 mostrou ~640px de nada entre a
+                         grade de modos e o "Aplicar em L2".
+
+                         A causa é a mesma que a aba Configurações pagou no mesmo
+                         dia: o GTK3 propaga `vexpand` de BAIXO PARA CIMA, então a
+                         fileira de ação faz o frame INTEIRO pedir expansão, e a
+                         página entrega toda a folga que sobrar. `vexpand=False`
+                         aqui corta a propagação — a moldura passa a ter a altura do
+                         conteúdo, e o `valign=end` da fileira continua valendo
+                         (ela fica no pé de uma coluna CURTA, que é o que ela pediu).
+
+                         A folga vertical desta janela é da PÁGINA, que rola.
+                         Nenhuma moldura cresce para ocupá-la. Molde e portão:
+                         `app/actions/config/moldura.py` e
+                         `tests/unit/test_config_01_a_aba_nasce_vazia.py::test_nenhuma_secao_estica_para_ocupar_a_folga`. -->
+                    <property name="vexpand">False</property>
+                    <!-- E o `valign` é a metade que faltava, medida em 22/08: com
+                         `vexpand=False` sozinho o frame AINDA saía com 1016px de
+                         1040. A razão é que o pai é um Box HORIZONTAL — nele o
+                         `expand` do packing distribui LARGURA, e a altura o filho
+                         recebe inteira por preenchimento, sem passar por `vexpand`
+                         nenhum. `valign=start` é o que faz a moldura ter a altura
+                         do conteúdo e encostar no topo. -->
+                    <property name="valign">start</property>
                     <property name="label" translatable="yes">L2 (gatilho esquerdo)</property>
                     <child>
                       <object class="GtkBox">
@@ -942,6 +972,9 @@
                 <!-- Coluna R2 -->
                 <child>
                   <object class="GtkFrame">
+                    <!-- VAO-01: o irmão do L2, mesma cura. Ver a nota lá em cima. -->
+                    <property name="vexpand">False</property>
+                    <property name="valign">start</property>
                     <property name="label" translatable="yes">R2 (gatilho direito)</property>
                     <child>
                       <object class="GtkBox">
