@@ -10,10 +10,23 @@ estados própria). O estado ruim persiste até o POWER-OFF físico do controle
 (sobrevive a re-parear e a rebind do driver; cabo USB escapa — o caminho USB
 não tem esse claim).
 
-A CURA (o que o SDL faz em toda conexão BT e o driver do kernel nunca faz —
-``DS_OUTPUT_VALID_FLAG1_RELEASE_LEDS`` é definido e jamais usado): enviar UM
-report de output 0x31 BEM-FORMADO com ``valid_flag1 = 0x08`` ("Reset LED
-state") — devolve a lightbar ao host, e a próxima escrita de cor volta a colar.
+O GESTO MANUAL DE ÚLTIMO RECURSO (``hefesto lightbar-reset`` / IPC
+``lightbar.reset``): enviar UM report de output 0x31 BEM-FORMADO com
+``valid_flag1 = 0x08`` ("Reset LED state") — é o que o SDL faz em toda conexão
+BT e o driver do kernel nunca faz (``DS_OUTPUT_VALID_FLAG1_RELEASE_LEDS`` é
+definido e jamais usado). Devolve a lightbar ao host, e a próxima escrita de
+cor volta a colar.
+
+**Isto NÃO é cura automática, e chamá-la assim foi o erro deste cabeçalho até
+22/08/2026.** O envio AUTOMÁTICO na adoção foi medido como NOCIVO — o
+LIGHTBAR-BT-CULPADO-01 (03/08) correlacionou 7 de 7 o travamento da barra com o
+``0x08`` que NÓS mandávamos na janela de conexão, e ele saiu do código em
+``108b711`` (04/08). O código está coerente com essa decisão: 776 reports
+capturados no fio em 22/08 trazem **zero** ``RELEASE_LEDS``. Quem estava
+incoerente era este texto — que prometia como remédio de rotina o que a
+medição derrubou (ver ``core/backend_pydualsense.py``, o bloco do
+LIGHTBAR-BT-CULPADO-01, e o F9 do
+``docs/process/sprints/2026-08-22-LUZ-CEGA-01-a-barra-apagada-e-o-exame-que-nao-olha-o-radio.md``).
 
 LAYOUT (validado contra o binário do hid-playstation DESTA máquina, por
 desmontagem — estudo 2026-07-18): ``[0]=0x31``, ``[1]=seq<<4`` (nibble alto;
