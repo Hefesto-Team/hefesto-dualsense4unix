@@ -1627,9 +1627,23 @@ def resumo_do_que_chega_ao_jogo(
     if bool(state_global.get("native_mode")):
         return "Modo Nativo: o jogo fala direto com o controle — tudo chega."
     if _mascara_e_xbox(state_global):
+        # NOTA DATADA — 23/08/2026. Esta frase dizia "giroscópio e touchpad …
+        # esses DOIS" enquanto `home_actions.TEXTO_CUSTO_MASCARA_XBOX` já dizia
+        # TRÊS, com o acelerômetro. Duas frases de produto, a mesma afirmação,
+        # contagens diferentes — o defeito que a regra "substitui em TODOS os
+        # lugares" existe para matar. A régua é a mesma que corrigiu a outra: os
+        # 8 eixos do vpad uinput são ABS_X/Y/RX/RY/Z/RZ/HAT0X/HAT0Y, nenhum é
+        # IMU, então o acelerômetro cai junto com o giroscópio (`c9859ff`).
+        #
+        # A frase NÃO é reusada de `home_actions`: aquela fala do que a máscara
+        # custa ao ESCOLHER (e cita microfone e alto-falante); esta fala do que
+        # está chegando AGORA neste card (e cita luz e gatilho). São duas
+        # perguntas, e é por isso que as duas existem — o que não pode divergir
+        # é a contagem dos buracos do descritor.
         return (
-            "Máscara Xbox 360: giroscópio e touchpad não chegam ao jogo — o "
-            "controle de Xbox não tem esses dois. Vibração, luz e gatilho vão."
+            "Máscara Xbox 360: giroscópio, acelerômetro e touchpad não chegam "
+            "ao jogo — o controle de Xbox não tem esses três. Vibração, luz e "
+            "gatilho vão."
         )
     if _visto_ha_s_do_vpad(entry, state_global) is None:
         return None

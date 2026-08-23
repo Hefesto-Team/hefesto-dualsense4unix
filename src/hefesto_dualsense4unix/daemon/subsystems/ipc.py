@@ -27,40 +27,17 @@ class IpcSubsystem:
     async def start(self, ctx: DaemonContext) -> None:
         """Inicia o IpcServer usando as dependências do DaemonContext."""
         from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
-        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
         # Daemon é o próprio ctx se tiver atributo daemon; fallback é None.
         daemon = getattr(ctx, "daemon", None)
-        # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider LAZY — capturar
-        # `daemon._keyboard_device` eager congelava None (o keyboard sobe
-        # DEPOIS do IPC no boot) e ficava stale após disconnect/reload.
-        manager = ProfileManager(
-            controller=ctx.controller,
-            store=ctx.store,
-            keyboard_device_provider=lambda: getattr(
-                daemon, "_keyboard_device", None
-            ),
-            mouse_applier=getattr(daemon, "apply_profile_mouse", None),
-            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
-            mode_applier=getattr(daemon, "apply_profile_mode", None),
-            # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
-            rumble_policy_applier=getattr(
-                daemon, "apply_profile_rumble_policy", None
-            ),
-            rumble_passthrough_applier=getattr(
-                daemon, "apply_profile_rumble_passthrough", None
-            ),
-            # SOM-02/E4: volume do alto-falante por perfil. O applier fala
-            # DIRETO com o backend — passar pelo `speaker.set` do IPC armaria a
-            # categoria manual `audio` e a SEGUNDA ativação de perfil seria
-            # descartada pela própria trava (ver `Daemon.apply_profile_speaker`).
-            speaker_applier=getattr(daemon, "apply_profile_speaker", None),
-            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): o microfone por perfil. Mesma razão do
-            # alto-falante para falar direto com o backend — o `mic.set` do IPC
-            # arma a categoria manual `audio` e a SEGUNDA ativação seria
-            # descartada pela própria trava (ver `Daemon.apply_profile_mic`).
-            mic_applier=getattr(daemon, "apply_profile_mic", None),
-        )
+        # A-FÁBRICA-COM-UM-CLIENTE-01 (22/08/2026): a lista de appliers vem da
+        # FÁBRICA, não de sete linhas repetidas aqui. Applier ausente não
+        # levanta — a seção é ignorada em silêncio, e foi assim que a rota da
+        # saída do Modo Nativo passou semanas sem o `rumble.passthrough`. O
+        # `controller`/`store` vêm por fora porque esta rota sobe pelo
+        # `DaemonContext`, e o `daemon` pode ser `None`.
+        manager = gerente_do_daemon(daemon, controller=ctx.controller, store=ctx.store)
         self._server = IpcServer(
             controller=ctx.controller,
             store=ctx.store,
@@ -89,33 +66,12 @@ async def start_ipc(daemon: DaemonProtocol) -> None:
     em vez de usar o subsystem registry.
     """
     from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
-    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
-    # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy do keyboard + appliers
-    # de emulação — o manager nasce no boot ANTES do keyboard subir
-    # (lifecycle.py sobe IPC primeiro) e o device é anulado/recriado em
-    # disconnect/reload; resolver a cada ativação imuniza o wiring.
-    manager = ProfileManager(
-        controller=daemon.controller,
-        store=daemon.store,
-        keyboard_device_provider=lambda: getattr(daemon, "_keyboard_device", None),
-        mouse_applier=daemon.apply_profile_mouse,
-        suppression_applier=daemon.apply_profile_suppression,
-        # getattr defensivo: testes de boot injetam daemons enxutos sem o
-        # applier de modo (FEAT-PROFILE-MODE-01).
-        mode_applier=getattr(daemon, "apply_profile_mode", None),
-        # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
-        rumble_policy_applier=getattr(daemon, "apply_profile_rumble_policy", None),
-        rumble_passthrough_applier=getattr(
-            daemon, "apply_profile_rumble_passthrough", None
-        ),
-        # SOM-02/E4: idem `IpcSubsystem.start` — a seção `speaker` do perfil
-        # precisa existir nas DUAS rotas de subida do IPC.
-        speaker_applier=getattr(daemon, "apply_profile_speaker", None),
-        # PERFIL-GUARDA-O-MIC-01 (18/08/2026): idem `IpcSubsystem.start` — a seção `mic` do
-        # perfil precisa existir nas DUAS rotas de subida do IPC.
-        mic_applier=getattr(daemon, "apply_profile_mic", None),
-    )
+    # A-FÁBRICA-COM-UM-CLIENTE-01: idem `IpcSubsystem.start` — as DUAS rotas de
+    # subida do IPC tiram a lista de appliers da mesma fábrica, e é isso que
+    # impede uma delas de derivar da outra em silêncio.
+    manager = gerente_do_daemon(daemon, store=daemon.store)
     daemon._ipc_server = IpcServer(
         controller=daemon.controller,
         store=daemon.store,

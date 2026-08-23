@@ -3960,7 +3960,7 @@ class PyDualSenseController(IController):
 
     # --- API por-uniq (PERFIL-01 / 4P-01) --------------------------------
 
-    def apply_output_defaults(self, spec: OutputSpec) -> None:
+    def apply_output_defaults(self, spec: OutputSpec) -> ResultadoDeSaida:
         """Aplica `spec` como PADRÃO do perfil em TODOS os controles.
 
         Broadcast REAL: IGNORA o seletor de alvo (`_output_target_key`) de
@@ -3971,11 +3971,44 @@ class PyDualSenseController(IController):
         mapa na ativação é `reset_output_overrides` (ciclo de vida explícito)
         — um default novo não pode apagar o override que o próprio perfil
         acabou de registrar.
+
+        ELO-MUDO-02 (23/08/2026): **devolve o que fez**, nas palavras que o
+        `ResultadoDeSaida` já tem. Este é o backend que CONHECE a mesa, então é
+        ele quem responde:
+
+        - `nada_a_fazer` — o `spec` não pediu campo nenhum;
+        - `registrado` — a mesa está vazia. O `_desired_default` FOI gravado
+          logo abaixo e o hotplug o aplica quando um controle chegar, mas
+          nenhum byte saiu agora. É a palavra que promete "vale depois", e é a
+          verdade deste caso;
+        - `escreveu` — havia pelo menos um handle e as escritas saíram.
+
+        Sem isto, quem pergunta pelo resultado da ativação recebia `aplicado`
+        para a mesa vazia — ver a nota do `profiles.manager.ProfileManager.apply`.
+
+        A foto da mesa é tirada sob o MESMO `_io_lock` que grava o
+        `_desired_default`, e não sob o das escritas — que cada `_for_each`
+        tira por conta própria, depois. **A foto vem ANTES das escritas, e por
+        isso o veredito erra nos DOIS sentidos** (medido em 23/08/2026, com um
+        `_io_lock` instrumentado para deixar o hotplug encostar assim que a
+        foto solta o lock):
+
+        - controle CAI entre a foto e o `_for_each`: diz `escreveu` e nenhum
+          byte saiu;
+        - controle CHEGA nessa mesma janela: saíram 3 escritas e o veredito
+          voltou `registrado`.
+
+        A janela é estreita e nenhum dos dois é grave — o relatório erra um
+        tique, não uma sessão —, mas quem precisar de resposta EXATA tem de
+        mudar o instrumento, não o texto: é o `_for_each` que teria de contar
+        as escritas que fez. Enquanto ele devolver `None`, esta resposta é uma
+        boa aproximação e não uma garantia.
         """
         fields = _spec_fields(spec)
         if not fields:
-            return
+            return "nada_a_fazer"
         with self._io_lock:
+            havia_alguem_na_mesa = bool(self._handles)
             for name, value in fields.items():
                 setattr(self._desired_default, name, value)
         if spec.trigger_left is not None:
@@ -4018,6 +4051,7 @@ class PyDualSenseController(IController):
                 what="apply_output_defaults",
                 broadcast=True,
             )
+        return "escreveu" if havia_alguem_na_mesa else "registrado"
 
     def apply_output_for(self, uniq: str, spec: OutputSpec) -> ResultadoDeSaida:
         """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override dele.

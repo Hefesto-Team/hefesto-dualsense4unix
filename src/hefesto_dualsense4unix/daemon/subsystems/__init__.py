@@ -4,8 +4,9 @@ Ordem de start: poll → ipc → udp → autoswitch → mouse → rumble → bt_
 plugins → metrics. Cada subsystem implementa o protocolo definido em base.py.
 
 MetricsSubsystem é condicional: só sobe se metrics_enabled=True na config.
-BtMicSubsystem é condicional e OPT-IN: só sobe com
-`HEFESTO_DUALSENSE4UNIX_BT_MIC=1` (ou `DaemonConfig.bt_mic_enabled`).
+BtMicSubsystem é condicional e OPT-IN: só sobe quando ela ligou o microfone de
+ALGUM controle (`DaemonConfig.bt_mic_uniqs`, a fonte que lê o `maquina.json`) ou
+com `HEFESTO_DUALSENSE4UNIX_BT_MIC=1`, que é o caminho à mão e vale por todos.
 
 AVISO AO PRÓXIMO QUE MEXER AQUI (BT-MIC-REGISTRY-01, 25/07): esta lista é
 **declarativa**. Quem de fato sobe os subsystems é `Daemon.run()`

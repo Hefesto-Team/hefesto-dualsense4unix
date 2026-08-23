@@ -298,6 +298,92 @@ enter_game_mode() {
     return 0
 }
 
+# --- Camadas Vulkan que engasgam o jogo (ENGASGO-VULKAN-01) -----------------
+# Uma camada Vulkan IMPLÍCITA registrada dentro do prefixo Wine embrulha a
+# chamada de apresentação de cada quadro. Medido em 23/08/2026 no Sackboy dela:
+# 60 fps de média perfeita e ~70 quadros longos por minuto (47 a 91 ms), num
+# metrônomo de 1,021 s solto do relógio de parede — e de 27 prefixos, o único
+# com camada a mais era o único que engasgava.
+#
+# Por que AQUI e não por variável de ambiente: camada Vulkan é lida de DENTRO do
+# prefixo, e é lá que ela tem de ser desarmada. Medido nesta mesma madrugada —
+# `MANGOHUD=1` exportado por este wrapper NÃO aparece no `environ` do processo
+# do jogo; só funciona quando a Steam INTEIRA nasce com a variável.
+#
+# CORREÇÃO 23/08/2026: este comentário dizia que o pressure-vessel "FILTRA o
+# ambiente" e que "cura por env não serve". Generalização falsa, tirada de UMA
+# variável. As envs do dedup logo acima (SDL_GAMECONTROLLER_IGNORE_DEVICES,
+# PROTON_DISABLE_HIDRAW) atravessam e funcionam — se não atravessassem, o jogo
+# não leria os vpads. O defeito real continua sendo o que a linha 66 já declara:
+# ninguém confere se o jogo HERDOU a env.
+#
+# Por que no gancho e não só num botão: regra dela de 14/08/2026 — *receita por
+# appid deixa todo jogo novo desprotegido*. O botão conserta os prefixos de
+# hoje; isto aqui pega o jogo que ela instalar amanhã, no primeiro lançamento.
+#
+# CUSTO MEDIDO (23/08/2026, na máquina dela, os 28 `system.reg` REAIS dos dois
+# discos — três repetições por prefixo, não uma amostra):
+#   - portão em TODO lançamento: média de 2,1 ms (2 ms no maior, de 5,4 MB;
+#     1 ms num de 4,1 MB). 27 dos 28 param aqui e nunca chamam o python3;
+#   - só quando há camada LIGADA para desligar, o curador em python3, UMA vez:
+#     ~120 ms de trabalho no registro de 5,4 MB do Sackboy — 44 ms de leitura e
+#     ~75 ms de escrita mais o backup —, e de 0,13 a 0,6 s de ponta a ponta
+#     contando o interpretador e a variação do disco;
+#   - DEPOIS de curado o portão passa batido (medido no mesmo registro): o
+#     lançamento seguinte volta aos 2 ms.
+#
+# À PROVA DE FALHA, como o `enter_game_mode || true` logo abaixo: sem
+# STEAM_COMPAT_DATA_PATH (jogo nativo, sem prefixo) não há nada a fazer; sem o
+# curador instalado, sem python3, ou com qualquer erro, o jogo abre igual.
+curar_camadas_vulkan() {
+    prefixo="${STEAM_COMPAT_DATA_PATH:-}"
+    [ -n "$prefixo" ] || return 0
+    reg="$prefixo/pfx/system.reg"
+    [ -f "$reg" ] || return 0
+
+    # Portão barato E PRECISO, numa varredura só. `dword:00000000` significa
+    # camada LIGADA (o número é a flag de DESABILITAR, zero = não desabilite),
+    # então só há trabalho quando existe entrada em zero DENTRO da seção de
+    # camadas implícitas. `-F` porque o alvo tem barras invertidas literais —
+    # `Vulkan\\ImplicitLayers` é como o registro do Wine as escreve.
+    #
+    # Sem o portão preciso, todo lançamento de um prefixo JÁ CURADO pagava de
+    # novo os 0,1 a 0,6 s do interpretador mais a leitura do registro inteiro
+    # (medido). Com ele: 2 ms, e o python3 só roda quando há o que desligar.
+    #
+    # O resultado do grep entra numa VARIÁVEL, não num pipe para `grep -q`:
+    # CORRIDA-DO-PIPEFAIL-01 (13/08/2026) — `grep -q` sai no primeiro
+    # casamento, o produtor morre de SIGPIPE, e o status do pipe passa a
+    # depender de quem ganhou a corrida.
+    #
+    # `-A 20` pode transbordar para a seção seguinte e disparar o python3 à
+    # toa. É o lado seguro de errar: o curador refaz a conta direito e não
+    # mexe em nada; um portão apertado demais é que perderia a cura.
+    cv_secao="$(grep -FA 20 'Vulkan\\ImplicitLayers' "$reg" 2>/dev/null)" || cv_secao=""
+    case "$cv_secao" in
+        *"=dword:00000000"*) ;;
+        *) return 0 ;;
+    esac
+
+    curador="$HOME/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas"
+    [ -x "$curador" ] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+
+    # Teto de tempo: nem um prefixo patológico pode segurar o launch. Sem
+    # timeout(1) roda direto — o curador é stdlib e só lê/escreve um arquivo.
+    if command -v timeout >/dev/null 2>&1; then
+        cv_run="timeout 10"
+    else
+        cv_run=""
+    fi
+    # As vars do loader ficam limpas SÓ para o helper (mesmo cuidado do gate de
+    # vida em `decide_envs`): o env do jogo não muda.
+    LD_LIBRARY_PATH= LD_PRELOAD= PYTHONPATH= PYTHONHOME= \
+        $cv_run python3 "$curador" --prefixo "$prefixo" \
+        --appid "${SteamAppId:-}" >/dev/null 2>&1
+    return 0
+}
+
 record_last_run || true
 
 hefesto_envs="$(decide_envs)" || hefesto_envs=""
@@ -312,6 +398,11 @@ if [ -n "$hefesto_envs" ]; then
 $hefesto_envs
 HEFESTO_EOF
 fi
+
+# Camada Vulkan que engasga (ENGASGO-VULKAN-01): antes do exec, porque o
+# `wineserver` deste prefixo só sobe DEPOIS — e é ele quem lê o registro. À
+# prova de falha, mesma disciplina do Game Mode.
+curar_camadas_vulkan || true
 
 # Game Mode COSMIC (PLAT-05): DEPOIS das envs decididas, ANTES do exec — e à
 # prova de falha: o jogo abre mesmo se nada disso funcionar.

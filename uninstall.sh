@@ -1503,6 +1503,29 @@ else
     log "  (a string do wrapper degrada sozinha: o jogo continua abrindo sem ele)"
 fi
 
+# ENGASGO-VULKAN-01: devolver ANTES de apagar o curador (mesma ordem e mesmo
+# motivo do strip acima). O que desligamos dentro do prefixo Wine de cada jogo
+# é mudança NOSSA no dado dela — deixá-la para trás com o produto removido é
+# resíduo, e ela não teria mais botão nenhum para desfazer. O estado local diz
+# exatamente o que é nosso, então quem religou por fora fica intocado.
+CAMADAS_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
+if [[ -f "${CAMADAS_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    log "devolvendo as sobreposições que o Hefesto tinha desligado nos jogos"
+    python3 "${CAMADAS_PY}" --devolver || \
+        log "  ERRO: devolução adiada — rode: python3 ${CAMADAS_PY} --devolver"
+else
+    log "camadas_vulkan.py ausente ou sem python3 — pulei a devolução das sobreposições"
+fi
+readonly CAMADAS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas"
+if [[ -e "${CAMADAS_TARGET}" ]]; then
+    log "removendo curador de camadas ${CAMADAS_TARGET}"
+    rm -f "${CAMADAS_TARGET}"
+fi
+if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/camadas-vulkan.json" ]]; then
+    log "removendo o registro das sobreposições (~/.local/state/hefesto-dualsense4unix/camadas-vulkan.json)"
+    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/camadas-vulkan.json"
+fi
+
 # Só DEPOIS do vdf limpo o wrapper pode sair (simetria com o passo 4b-2 do
 # install.sh). O launch_env/ é materialização volátil do daemon — sai junto.
 readonly LAUNCH_WRAPPER="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-launch"

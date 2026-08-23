@@ -72,6 +72,13 @@ mesma função:
   produto que oferece a cura sem consultar esta função entrega à pessoa o gesto
   do botão PS em troca de nada.
 
+E uma terceira peça, que é MEMÓRIA e não pergunta:
+
+- :class:`CartorioDoNascimento` — onde o veredito do diagnóstico fica guardado,
+  POR INSTÂNCIA, carimbado no tique de hotplug em que a conexão nasce
+  (``daemon/connection.py::carimbar_o_nascimento``). Sem ele o veredito só
+  existe enquanto o diário ainda tem a linha, e o diário rotaciona.
+
 A DISCIPLINA, herdada de ``integrations/exame_da_mesa.py`` e de
 ``core/escritor_cru.py``, linha a linha:
 
@@ -98,8 +105,9 @@ import os
 import re
 import subprocess
 import sys
-from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+import time
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from dataclasses import dataclass, replace
 
 #: Onde o ``hid-playstation`` pendura as instâncias de conexão. O sufixo hexa
 #: (``0005:054C:0CE6.0033``) é um contador do HID core: ele NÃO se repete
@@ -133,6 +141,22 @@ JANELA_DE_NASCIMENTO_S: float = 5.0
 #: Teto da leitura do diário. O diário dela tem 88 mil linhas só da unit do
 #: daemon; sem teto isto viraria uma pausa de segundos numa aba de interface.
 ORCAMENTO_DO_DIARIO_S: float = 8.0
+
+#: Quanto do passado o diário é lido. **Não é enfeite de desempenho: sem ele o
+#: teto acima é quase alcançado.** MEDIDO em 22/08/2026, na máquina dela, com o
+#: diário de quinze dias:
+#:
+#: ===========================================  =======
+#: ``journalctl --user -u ...service -o json``  5,21 s
+#: o mesmo, com ``-S`` de 6 horas               0,12 s
+#: ===========================================  =======
+#:
+#: Seis segundos por leitura seriam pagos por um dos DOIS workers do executor
+#: que o daemon divide com o ``read_state`` — o padrão que a ``HANG-01`` baniu.
+#: Seis horas cobre uma sessão inteira; uma conexão mais velha que isso cai no
+#: ``nao_sei`` de "mais velha que o diário desta sessão", que é resposta honesta
+#: e não invenção. ``0`` ou negativo lê tudo.
+JANELA_DO_DIARIO_S: float = 6 * 3600.0
 
 _RE_UEVENT = re.compile(r"^(HID_PHYS|HID_UNIQ|HID_ID)=(.*)$", re.MULTILINE)
 
@@ -174,11 +198,24 @@ def mascarar(mac: str) -> str:
 class Instancia:
     """Uma conexão viva, como o sysfs a descreve — sem tocar o aparelho.
 
-    ``hw_version`` entra porque é a única impressão digital do PLÁSTICO que
-    sobrevive à reconexão: o MAC muda de instância, o ``inputN`` muda, o sufixo
-    muda, e o ``hw_version`` não. Foi ele que casou ``.0028``→``.0033`` e
-    ``.002A``→``.0034`` na medição de 22/08/2026, e é ele que permite dizer
-    "este controle aqui já foi reconectado" sem perguntar a ninguém.
+    O que muda na reconexão é o ``inputN`` e o sufixo da instância. O ``uniq``
+    (o endereço do controle) e o ``hw_version`` **não** mudam, e os dois juntos
+    casaram ``.0028``→``.0033`` e ``.002A``→``.0034`` na medição de 22/08/2026.
+
+    QUAL DOS DOIS É IDENTIDADE, porque confundir isso custa caro:
+
+    - ``uniq`` **é**. É o endereço com que o resto do produto já chama cada
+      controle (``nos_hidraw_por_uniq``, ``_edit_target_uniq``, os perfis).
+      CONFERIDO em 22/08/2026 cruzando duas tabelas independentes com uma
+      semana de distância: os quatro pares ``uniq``↔``hw_version`` da canônica
+      (15/08, ``dualsense-referencia-canonica.md``, *"O hardware_version do
+      sysfs distingue as unidades"*) são os MESMOS quatro pares da bancada de
+      22/08. Quatro de quatro;
+    - ``hw_version`` **não é**. Ele é revisão de placa, e a canônica registra a
+      medição: *"dois controles da mesma cor comprados juntos teriam o mesmo
+      valor"*. Nos quatro aparelhos dela ele é distinto **por acaso de lote**.
+      Serve de chave de DIAGNÓSTICO — e é assim que
+      :meth:`CartorioDoNascimento.do_hw_version` o trata, devolvendo lista.
     """
 
     instancia: str
@@ -222,7 +259,14 @@ class Leitura:
 
 @dataclass(frozen=True)
 class Nascimento:
-    """O que o diário sabe sobre o nascimento de uma instância."""
+    """O que o diário sabe sobre o nascimento de uma instância.
+
+    ``escritor_conhecido`` é o terceiro estado de novo, e ele não é enfeite:
+    quando o kernel respondeu e o diário do DAEMON não, sabe-se QUANDO a
+    instância nasceu e não se sabe QUEM segurava o nó. Sem este campo, o
+    ``sujo=False`` de fábrica vira "limpa" — que é afirmar inocência sem ter
+    olhado, o erro exato que este módulo existe para não cometer.
+    """
 
     instancia: str
     quando: float
@@ -230,6 +274,62 @@ class Nascimento:
     transporte: str
     escritor: tuple[int, ...] = ()
     sujo: bool = False
+    escritor_conhecido: bool = True
+
+
+@dataclass(frozen=True)
+class Carimbo:
+    """O veredito de nascimento de UMA instância, guardado na hora em que ela nasceu.
+
+    Existe porque o veredito de :func:`ler_a_mesa` custa dois ``journalctl`` e
+    depende de o diário AINDA ter a linha. Carimbado no nascimento, ele vira
+    resposta de memória, e sobrevive à rotação do diário — a primeira das três
+    fragilidades que a ``SINAL-NO-NASCIMENTO-01`` listou.
+
+    ``firme`` diz se a janela de nascimento já fechou. Um carimbo tirado no
+    mesmo tique em que a instância apareceu ainda pode ganhar prova: a linha
+    ``escritor_cru_detectado`` chega de 0,64 s a 2,25 s depois do registro no
+    kernel (MEDIDO 22/08/2026, quatro instâncias), e o journald leva o seu
+    tempo para ingeri-la. Enquanto não é firme, o carimbo é retirado de novo no
+    tique seguinte — e ele só pode PIORAR, nunca melhorar (ver
+    :meth:`CartorioDoNascimento.carimbar`).
+    """
+
+    leitura: Leitura
+    visto_em: float
+    carimbado_em: float
+    firme: bool = False
+    #: True quando o cartório viu esta instância APARECER — e não quando ela já
+    #: estava na mesa desde antes de o daemon subir. Só quem nasceu sob nossos
+    #: olhos pode ser agravado pela sonda ao vivo: numa instância que já estava
+    #: aqui, "a Steam segura o nó agora" não diz nada sobre como ela nasceu.
+    nasceu_sob_nossos_olhos: bool = False
+
+    @property
+    def instancia(self) -> str:
+        return self.leitura.alvo.instancia
+
+    @property
+    def uniq(self) -> str:
+        """O endereço do CONTROLE — a chave por que o resto do produto o chama."""
+        return self.leitura.alvo.uniq
+
+    @property
+    def hw_version(self) -> str:
+        """A revisão de placa. Chave de DIAGNÓSTICO, nunca de identidade."""
+        return self.leitura.alvo.hw_version
+
+    @property
+    def confianca(self) -> str:
+        return self.leitura.confianca
+
+    @property
+    def porque(self) -> str:
+        return self.leitura.porque
+
+    @property
+    def pede_reconexao(self) -> bool:
+        return self.leitura.pede_reconexao
 
 
 #: A sonda de quem segura o nó, em forma de tipo — é o que torna este módulo
@@ -315,6 +415,7 @@ def nascimentos_pelo_diario(
     unidade: str = "hefesto-dualsense4unix.service",
     orcamento_s: float = ORCAMENTO_DO_DIARIO_S,
     janela_s: float = JANELA_DE_NASCIMENTO_S,
+    desde_s: float = JANELA_DO_DIARIO_S,
 ) -> dict[str, Nascimento] | None:
     """Reconstrói, do diário, quem segurava o nó quando cada instância nasceu.
 
@@ -328,7 +429,8 @@ def nascimentos_pelo_diario(
     lido. Vazio significaria "nenhuma instância nasceu", e isso é mentira
     diferente de "não consegui olhar".
     """
-    kernel = _linhas_do_diario(["journalctl", "-k", "-o", "json"], orcamento_s)
+    recorte = _recorte_do_diario(desde_s)
+    kernel = _linhas_do_diario(["journalctl", "-k", "-o", "json", *recorte], orcamento_s)
     if kernel is None:
         return None
     nascimentos: dict[str, Nascimento] = {}
@@ -344,13 +446,16 @@ def nascimentos_pelo_diario(
         )
 
     daemon = _linhas_do_diario(
-        ["journalctl", "--user", "-u", unidade, "-o", "json"], orcamento_s
+        ["journalctl", "--user", "-u", unidade, "-o", "json", *recorte], orcamento_s
     )
     if daemon is None:
         # O kernel respondeu e o daemon não. Não dá para dizer "ninguém
-        # segurava": devolve os nascimentos SEM veredito, e cada um vira
-        # `nao_sei` lá na frente.
-        return nascimentos
+        # segurava": devolve os nascimentos MARCADOS como "não olhei quem
+        # segurava", e cada um vira `nao_sei` lá no `_veredito`.
+        return {
+            chave: replace(nasc, escritor_conhecido=False)
+            for chave, nasc in nascimentos.items()
+        }
     return casar_escritores(nascimentos, deteccoes_de_escritor(daemon), janela_s)
 
 
@@ -403,6 +508,18 @@ def casar_escritores(
                     sujo=True,
                 )
     return casados
+
+
+def _recorte_do_diario(desde_s: float) -> list[str]:
+    """O ``-S @<epoch>`` que corta o passado. Lista vazia = lê tudo.
+
+    O ``@<segundos>`` é a forma que não passa por locale — a mesma razão pela
+    qual o carimbo de tempo sai do ``__REALTIME_TIMESTAMP`` e nunca do texto
+    formatado.
+    """
+    if desde_s <= 0:
+        return []
+    return ["-S", f"@{int(time.time() - float(desde_s))}"]
 
 
 def _linhas_do_diario(
@@ -505,12 +622,191 @@ def _veredito(
             pids_do_escritor=nasc.escritor,
             nasceu_em=nasc.quando,
         )
+    if not nasc.escritor_conhecido:
+        # O kernel disse QUANDO ela nasceu e o diário do daemon não disse QUEM
+        # segurava. Meia régua não absolve ninguém.
+        return Leitura(
+            alvo=alvo,
+            confianca=CONFIANCA_NAO_SEI,
+            porque=(
+                "o kernel registrou o nascimento desta conexão, mas o diário do "
+                "daemon não pôde ser lido — não dá para saber se alguém segurava "
+                "o nó na hora"
+            ),
+            nasceu_em=nasc.quando,
+        )
     return Leitura(
         alvo=alvo,
         confianca=CONFIANCA_LIMPA,
         porque="nasceu com o nó livre — nenhuma disputa registrada no nascimento",
         nasceu_em=nasc.quando,
     )
+
+
+class CartorioDoNascimento:
+    """Guarda, POR INSTÂNCIA, o veredito de como cada conexão nasceu.
+
+    ``SINAL-NO-NASCIMENTO-01``. O produto já sabia responder *"esta instância
+    nasceu limpa?"* e só sabia responder **enquanto o diário ainda tivesse a
+    linha**. O cartório é a memória: quem carimba é o tique de hotplug, na hora
+    em que a conexão nasce, e quem pergunta depois não paga ``journalctl``
+    nenhum.
+
+    A CHAVE É A INSTÂNCIA, E NÃO O CONTROLE
+    =======================================
+    O que foi medido em 22/08/2026 é que **o defeito é da CONEXÃO**: matar a
+    Steam não cura, e a mesma peça de plástico dá uma instância travada às
+    18h06 e uma sã às 19h51. Guardar o veredito por controle apagaria
+    exatamente a distinção que a medição produziu. Por isso a chave primária é
+    o sufixo ``.NNNN`` que o HID core atribui — que não se repete enquanto a
+    máquina não reinicia.
+
+    E o que serve de chave para ACHAR o carimbo de um controle na tela é o
+    ``uniq`` (:meth:`do_uniq`), que é o endereço com que o resto do produto já
+    chama cada controle (``nos_hidraw_por_uniq``, ``_edit_target_uniq``).
+    **Não é o ``hw_version``**, e isso está medido: a canônica de 15/08/2026
+    registra que ele é *revisão de placa* e que *"dois controles da mesma cor
+    comprados juntos teriam o mesmo valor"* — ele separa os quatro aparelhos
+    dela **por acaso de lote**. Ele fica no carimbo como chave de diagnóstico
+    (:meth:`do_hw_version`, que por isso devolve uma LISTA), nunca como
+    identidade.
+
+    Não lê relógio: recebe ``agora`` de fora, como o
+    ``SentinelaDeEscritorCru`` e o ``GatilhoDeFimDeSequencia``.
+    """
+
+    def __init__(self, *, janela_s: float = JANELA_DE_NASCIMENTO_S) -> None:
+        self._janela_s = float(janela_s)
+        self._carimbos: dict[str, Carimbo] = {}
+        #: ``instancia -> (visto_em, nasceu_sob_nossos_olhos)``.
+        self._vistas: dict[str, tuple[float, bool]] = {}
+        self._ja_observou = False
+
+    def observar(
+        self, instancias: Iterable[Instancia], agora: float
+    ) -> list[Instancia]:
+        """Anota quem está na mesa e devolve **quem ainda falta carimbar firme**.
+
+        Lista vazia é a resposta cara de produzir e barata de dar: é ela que
+        autoriza o tique de hotplug a NÃO ler o diário. Mesa parada = zero
+        subprocessos.
+
+        Instância que sumiu é esquecida, e isso é o desenho: o carimbo morre
+        com a conexão a que pertence, porque é dela que o defeito é.
+        """
+        vivas: dict[str, Instancia] = {}
+        for alvo in instancias:
+            vivas[alvo.instancia.lower()] = alvo
+        for morta in [c for c in self._carimbos if c not in vivas]:
+            del self._carimbos[morta]
+        for morta in [v for v in self._vistas if v not in vivas]:
+            del self._vistas[morta]
+        for chave in vivas:
+            if chave not in self._vistas:
+                self._vistas[chave] = (float(agora), self._ja_observou)
+        self._ja_observou = True
+        return [
+            alvo
+            for chave, alvo in vivas.items()
+            if not (chave in self._carimbos and self._carimbos[chave].firme)
+        ]
+
+    def carimbar(
+        self,
+        leituras: Iterable[Leitura],
+        agora: float,
+        *,
+        nos_segurados: Collection[str] = (),
+    ) -> list[Carimbo]:
+        """Grava o veredito de cada leitura e devolve os carimbos gravados.
+
+        Duas regras, e as duas são de uma direção só:
+
+        - **suspeita não volta atrás.** O diário só GANHA linhas; uma leitura
+          posterior que não ache a prova não absolve quem já foi condenado, e
+          um carimbo suspeito nasce firme (não há o que reconferir);
+        - **a sonda ao vivo só AGRAVA.** ``nos_segurados`` é a segunda régua, a
+          de primeira mão: o nó desta instância está segurado AGORA. Ela só é
+          aceita enquanto a janela de nascimento não fechou **e** só para quem
+          o cartório viu aparecer — numa instância que já estava na mesa antes
+          de o daemon subir, "alguém segura o nó agora" não diz nada sobre como
+          ela nasceu, e usá-la produziria a acusação falsa que gasta o gesto do
+          botão PS dela à toa.
+        """
+        gravados: list[Carimbo] = []
+        for leitura in leituras:
+            chave = leitura.alvo.instancia.lower()
+            visto_em, sob_olhos = self._vistas.get(chave, (float(agora), False))
+            fechou = (float(agora) - visto_em) >= self._janela_s
+            final = leitura
+            if (
+                not final.pede_reconexao
+                and sob_olhos
+                and not fechou
+                and leitura.alvo.hidraw
+                and leitura.alvo.hidraw in nos_segurados
+                and leitura.alvo.no_radio
+            ):
+                final = replace(
+                    final,
+                    confianca=CONFIANCA_SUSPEITA,
+                    porque=(
+                        "nasceu com outro processo segurando o nó do controle "
+                        "(visto pela sonda do próprio daemon, no tique em que a "
+                        "conexão apareceu) — nesta condição a barra não obedece, "
+                        "e só a reconexão devolve"
+                    ),
+                )
+            antigo = self._carimbos.get(chave)
+            if antigo is not None and antigo.pede_reconexao:
+                final = antigo.leitura
+            carimbo = Carimbo(
+                leitura=final,
+                visto_em=visto_em,
+                carimbado_em=float(agora),
+                firme=(
+                    fechou or final.pede_reconexao or not final.alvo.no_radio
+                ),
+                nasceu_sob_nossos_olhos=sob_olhos,
+            )
+            self._carimbos[chave] = carimbo
+            gravados.append(carimbo)
+        return gravados
+
+    def da_instancia(self, instancia: str) -> Carimbo | None:
+        """O carimbo desta conexão, ou ``None`` — que quer dizer "não carimbei"."""
+        return self._carimbos.get(str(instancia).lower())
+
+    def do_uniq(self, uniq: str) -> Carimbo | None:
+        """O carimbo do controle com este endereço. É por aqui que a tela pergunta.
+
+        Um controle só tem UMA conexão viva por vez, então não há ambiguidade —
+        e as conexões mortas já foram esquecidas por :meth:`observar`.
+        """
+        alvo = str(uniq).lower()
+        for carimbo in self._carimbos.values():
+            if carimbo.uniq.lower() == alvo:
+                return carimbo
+        return None
+
+    def do_hw_version(self, hw_version: str) -> list[Carimbo]:
+        """Os carimbos das conexões cuja placa tem esta revisão. **Lista**, e de propósito.
+
+        O ``hw_version`` é revisão de placa, não número de série (canônica,
+        MEDIDO 15/08/2026). Devolver um só esconderia a colisão de dois
+        controles do mesmo lote e faria a tela mostrar o veredito do controle
+        errado.
+        """
+        alvo = str(hw_version).lower()
+        return [c for c in self._carimbos.values() if c.hw_version.lower() == alvo]
+
+    def todos(self) -> list[Carimbo]:
+        """Todos os carimbos vivos, na ordem das instâncias."""
+        return [self._carimbos[c] for c in sorted(self._carimbos)]
+
+    def condenados(self) -> list[Carimbo]:
+        """Só as conexões que nasceram condenadas — as que a cura alcança."""
+        return [c for c in self.todos() if c.pede_reconexao]
 
 
 def limpo_para_conectar(

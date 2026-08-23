@@ -390,9 +390,22 @@ O quadro **Modo** tem quatro botões: **Não mexer no modo** (ativar o perfil
 deixa o sistema exatamente como está), **Controlar o PC**, **Jogar pelo Hefesto**
 e **Conexão Nativa (Sony)**. Escolhido "Jogar pelo Hefesto", aparece embaixo a
 linha **"O jogo vê o controle como:"** — **DualSense (botões PlayStation)** ou
-**Xbox 360** —, e o preço de cada máscara está no texto que aparece ao parar o
-ponteiro sobre ela. Não há campo de co-op aqui: cada controle é um jogador
-sempre.
+**Xbox 360**. Não há campo de co-op aqui: cada controle é um jogador sempre.
+
+**A máscara é escolha sua, e o preço de cada lado fica na tela** (decisão dela,
+22/08/2026: *"a máscara deve vir da escolha do user"*). Embaixo dos dois botões,
+uma linha diz o que muda com o que está marcado:
+
+| marcado | o que a linha diz |
+|---|---|
+| **Xbox 360** | o jogo **não** recebe giroscópio, acelerômetro nem touchpad — o controle de Xbox não tem esses três no descritor. Vibração, microfone e alto-falante continuam |
+| **DualSense** | o jogo recebe os três. É a máscara validada em jogo real (Sackboy, Mad King e Pragmata, julho de 2026, HARMONIA-MASK-01) e a que vale numa instalação nova |
+| **nenhum dos dois** | o perfil não mexe na máscara: ativar ele mantém a que estiver valendo. É assim que os perfis de gênero vêm |
+
+O último caso é o normal, não um erro: **nenhum perfil de fábrica escolhe
+máscara**. Preset é sobre gatilho, vibração e luz — aplicar "Ação" não troca o
+aparelho que o jogo enxerga. E a máscara que **você** escolher fica gravada até
+você mudá-la.
 
 A prioridade é o **segundo** critério, não o primeiro: um perfil com regra de
 janela sempre vence um perfil "Sempre", por mais alta que seja a prioridade
@@ -468,10 +481,51 @@ estivesse; o que o jogo enxerga continua sendo o que você escolheu. O porquê,
 com a medição, em [jogos e máscaras](jogos-e-mascaras.md).
 
 Por último, o bloco **Avançado — só se você quiser controlar cada passo**, com
-os quatro botões que fazem cada pedaço à mão: **Aplicar correções** (não pede
+os cinco botões que fazem cada pedaço à mão: **Aplicar correções** (não pede
 senha e nunca fecha a Steam), **Copiar opções para os jogos**, **Aplicar aos
-jogos da Steam** e **Travar Proton validado** — os dois últimos pedem a Steam
-fechada e fazem cópia de segurança antes.
+jogos da Steam**, **Travar Proton validado** — estes dois pedem a Steam fechada
+e fazem cópia de segurança antes — e **Tirar o que faz engasgar**.
+
+### Tirar o que faz engasgar
+
+Para o jogo que mantém a contagem de quadros e mesmo assim **picota**, uma
+engasgada mais ou menos por segundo. Alguns jogos instalam, por dentro deles, uma
+sobreposição que entra na frente de cada quadro desenhado — o caso medido aqui é
+o overlay do **Epic Online Services**, que vem junto de jogos que usam os
+serviços da Epic mesmo comprados na Steam.
+
+O botão **mostra antes de mexer**: abre a lista de quais jogos têm o quê, com o
+estado de cada um — ligada, já desligada, ou pendurada mas com o arquivo fora do
+disco. Só então oferece **Tirar** e, quando há o que devolver, **Devolver**. Fica
+cópia de segurança do arquivo do jogo, e a devolução o deixa igualzinho ao que
+era.
+
+**O que ele nunca toca:** a peça que faz o jogo desenhar (sem ela nenhum jogo
+abre), a **sobreposição da Steam** — é ela que dá o Shift+Tab, a captura de tela
+e a tela de configuração de controle — e os medidores e filtros que você tenha
+instalado de propósito. A lista completa do que é preservado está em
+`integrations/camadas_vulkan.py`.
+
+**Vale para os jogos de amanhã também.** Além do botão, o Hefesto confere isso no
+lançamento de cada jogo: um jogo instalado depois já nasce coberto, sem você
+precisar clicar de novo. Se você devolveu uma sobreposição de propósito, ele
+respeita — não desliga outra vez no lançamento seguinte.
+
+> **A medição, com o grau de confiança:** o jogo em que isso apareceu entregava
+> 60 quadros por segundo de média e ~70 quadros longos por minuto; de 27 jogos
+> instalados nesta máquina, era o único com sobreposição extra, e o único que
+> engasgava. **O teste lado a lado saiu em 23/08/2026, e derrubou a
+> explicação:** com a sobreposição desligada o engasgo mediu **pior** — o
+> atraso dos piores quadros subiu 4,19 ms por minuto contra 2,35, e os
+> travamentos passaram de 51 para 121 por minuto. E a piora ao longo da sessão
+> aparece dos dois lados. Uma ressalva: na sessão sem a sobreposição ela estava
+> jogando e na outra o jogo passou mais tempo parado, e essa diferença de carga
+> não foi controlada — o que ela não explica é a piora estar nos dois.
+>
+> **O botão continua valendo, e por outro motivo:** você tem o direito de ver e
+> de tirar o que um programa de terceiro põe na frente dos seus quadros. Ele
+> não promete curar engasgo. Os dados crus estão em
+> `docs/process/estudos/dados/2026-08-23-frametime-sackboy/`.
 
 **Ver detalhes** abre o registro técnico no quadro **Detalhes técnicos** ali
 embaixo, que é o que se anexa a um relato de problema.
@@ -671,6 +725,7 @@ meu?"; o anel roxo por dentro marca o que está selecionado no cabeçalho.
 | **Modo:** (só nos não-Sony) | **deduzido e mostrado, nunca declarado**: D-input, X-input, Switch e Apple. O seletor é de leitura, com a mesma dica da ficha do controle — *"a troca não é por software: é um combo de botões no próprio controle ao ligar"* |
 | **Botões:** (só nos não-Sony) | **Xbox** ou **Nintendo**. Muda só o desenho que aparece na tela; nada é remapeado no controle |
 | **Jogador:** | fixa este controle num número, de 1 a 5. **Sem nenhum marcado, vale a ordem de chegada**, que é como o Hefesto trabalha por padrão |
+| **Microfone** (só nos DualSense) | traz o microfone **daquele** controle pelo rádio, como no PS5. É por controle: ligar um não liga os outros |
 
 Os cards ficam lado a lado, em três colunas, e **todos com a mesma altura** — o
 seletor de jogador ancora no rodapé de todos. Um 8BitDo pede duas linhas que um
@@ -698,6 +753,19 @@ o produto não toma. Cancelar não reconecta nada.
 > **A aba não troca o modo de um 8BitDo, e não tem como.** O modo é uma chave
 > física, escolhida por combo de botões ao ligar; o que esta seção acrescenta é
 > nomeá-lo — antes desta aba o produto nem sabia dizer "D-input" ou "Apple".
+
+**O microfone nasce desligado, e ligá-lo é um gesto seu.** Um microfone que
+sobe sozinho junto com o Hefesto é inaceitável, por melhor que seja a intenção —
+por isso não há chave de mesa inteira, só uma por card. O interruptor fica
+**sempre visível** e só é acionável no rádio: pelo cabo o microfone do DualSense
+é uma placa de som USB e já funciona sem ponte nenhuma.
+
+Como o resto desta aba, o clique **espera o "Aplicar"** do rodapé. Desligar não
+grava "não quero": volta para "nunca pedi", que é o mesmo lugar de onde ele
+partiu. Abaixo da grade, uma linha diz **quanto do rádio** aquele microfone
+ocupa — é informação de capacidade, não advertência, e quanto já está em uso
+está na seção **A mesa**, que passa a pintar a fatia de áudio quando a ponte
+sobe.
 
 ### A mesa
 

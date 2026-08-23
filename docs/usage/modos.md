@@ -89,7 +89,7 @@ como:"*. Ele muda que tipo de controle virtual sobe:
 
 | Máscara | Como sobe | O que o jogo recebe |
 |---|---|---|
-| **DualSense (botões PlayStation)** — padrão | device HID real via `/dev/uhid` | botões e eixos, vibração, gatilhos adaptativos, lightbar, LEDs de jogador, giroscópio e touchpad |
+| **DualSense (botões PlayStation)** — padrão | device HID real via `/dev/uhid` | botões e eixos, vibração, gatilhos adaptativos, lightbar, LEDs de jogador, giroscópio, **acelerômetro** e touchpad |
 | **Xbox 360** | device evdev via `/dev/uinput` | botões, eixos e vibração — e só |
 
 A máscara DualSense é a completa: o controle virtual é um DualSense de verdade

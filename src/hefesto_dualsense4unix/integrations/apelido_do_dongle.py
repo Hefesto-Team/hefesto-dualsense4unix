@@ -576,17 +576,29 @@ def costurar_a_mesa(
     Devolve só o que MUDOU. Mesa já protegida devolve tupla vazia, e é o que se
     espera na esmagadora maioria das chamadas.
 
-    Por que este passe precisa existir, medido nesta bancada em 22/08/2026 com
-    três adaptadores e um Pro Controller no rádio:
+    Por que este passe nasceu, medido nesta bancada em 22/08/2026 com três
+    adaptadores e um Pro Controller no rádio: o ``bt_active_mode.sh`` fazia
+    ``head -1`` e costurava **um** adaptador, o primeiro que o
+    ``/sys/class/bluetooth`` listava. Nesta mesa o Pro está no SEGUNDO, então o
+    script protegia um adaptador que não hospeda Nintendo nenhum e deixava o
+    Pro sem proteção — e ninguém percebia, porque o sintoma do Pro sem prefixo
+    é queda **sob carga** (rumble e IMU juntos), que parece defeito do controle.
 
-    * ``bt_active_mode.sh`` costura **um** adaptador, o primeiro que o
-      ``/sys/class/bluetooth`` lista (``_adaptador()``, linha 75). Com um
-      dongle só isso sempre acertou;
-    * nesta mesa o Pro está no SEGUNDO, e o prefixo estava no primeiro. O
-      script protegeu um adaptador que não hospeda Nintendo nenhum e deixou o
-      Pro sem proteção;
-    * ninguém percebeu porque o sintoma do Pro sem prefixo é queda **sob
-      carga** — rumble e IMU juntos —, que parece defeito do controle.
+    .. note:: **CORREÇÃO DATADA — 23/08/2026.** Este bloco descrevia o script
+       no presente (*"costura um adaptador… ``_adaptador()``, linha 75"*) e
+       isso caducou no mesmo dia em que foi escrito. Desde ``e5376a0`` (22/08,
+       21h26) o script itera **todos** os que hospedam Nintendo
+       (``mapfile -t COM_NINTENDO < <(_hci_com_nintendo)``, laço em
+       ``scripts/bt_active_mode.sh:281``); ``_adaptador()`` não existe mais.
+       O mesmo commit diz, com todas as letras, que resolveu *"a duplicidade …
+       dois escritores do mesmo alias"* — este módulo de um lado e o script do
+       outro.
+
+       **Consequência para quem for fiar esta função:** ligá-la no install ou
+       no arranque do daemon **recria** a duplicidade que aquele commit
+       desfez. O defeito original está curado no script; o que sobra aqui é a
+       rota do produto, e ela precisa de dono declarado antes de ganhar
+       chamador.
 
     Este passe é por adaptador e por linhagem, não pela ordem de enumeração, e
     por isso a mesa de três acerta pelo mesmo caminho que a de um.

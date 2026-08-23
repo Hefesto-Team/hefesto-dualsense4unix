@@ -202,7 +202,7 @@ class IController(ABC):
     # multi-controle (PyDualSenseController) sobrescreve os quatro com o
     # estado desejado por-controle de verdade.
 
-    def apply_output_defaults(self, spec: OutputSpec) -> None:
+    def apply_output_defaults(self, spec: OutputSpec) -> ResultadoDeSaida | None:
         """Aplica `spec` como PADRÃO do perfil em TODOS os controles.
 
         Base: delega aos setters clássicos (suficiente para backend de um
@@ -210,6 +210,20 @@ class IController(ABC):
         seletor de alvo da GUI — os setters clássicos o respeitam, então
         ativar um perfil (manual OU autoswitch, mesma cadeia) com um alvo
         selecionado aplicava SÓ no alvo (bug provado do PERFIL-01).
+
+        ELO-MUDO-02 (23/08/2026): **devolve o que fez** — a mesma medicina do
+        `apply_output_for` (MESA-CHEIA-09), estendida à porta que o PERFIL usa.
+        Enquanto este método era `-> None`, o relatório de ativação escrevia
+        `'trigger': 'aplicado'` e `'led': 'aplicado'` **sem nenhum byte ter
+        saído**: com a mesa vazia o backend faz `output_offline_noop` e volta
+        calado. Ver `profiles.manager.ProfileManager.apply`.
+
+        `None` é resposta legítima e significa **"este backend não sabe
+        dizer"** — nunca "nada aconteceu". A base devolve `None` porque os
+        setters clássicos em que ela se apoia também não relatam, e é a mesma
+        disciplina do `profiles.manager._estado_da_secao`: quem não sabe não
+        pode fabricar um veredito. Só o backend que conhece a mesa responde
+        com uma das palavras de `ResultadoDeSaida`.
         """
         if spec.trigger_left is not None:
             self.set_trigger("left", spec.trigger_left)
@@ -221,6 +235,7 @@ class IController(ABC):
             self.set_player_leds(spec.player_leds)
         if spec.mic_led is not None:
             self.set_mic_led(spec.mic_led)
+        return None
 
     def apply_output_for(self, uniq: str, spec: OutputSpec) -> ResultadoDeSaida:
         """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override.

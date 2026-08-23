@@ -2946,6 +2946,26 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 4b-3. Curador de camadas Vulkan (ENGASGO-VULKAN-01) — DEFAULT, sem flag
+# ---------------------------------------------------------------------------
+# Regra da casa (08/08/2026): toda cura entra no install, sem flag. O
+# `hefesto-launch` acima chama este arquivo em TODO jogo lançado (portão barato
+# em `sh`, 2 ms; o interpretador só sobe quando há camada ligada de verdade) e
+# não pode depender do checkout existir — por isso o módulo é MATERIALIZADO ao
+# lado do wrapper, no mesmo diretório e com o mesmo tratamento.
+#
+# A fonte da verdade continua UMA: `integrations/camadas_vulkan.py`, que é 100%
+# stdlib de propósito (padrão do `proton_pin`/`steam_launch_options`) e roda com
+# o python3 do SISTEMA, sem o pacote no `sys.path`. Reinstalar atualiza a cópia.
+readonly CAMADAS_SRC="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
+readonly CAMADAS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas"
+if [[ -f "${CAMADAS_SRC}" ]]; then
+    install -Dm755 "${CAMADAS_SRC}" "${CAMADAS_TARGET}"
+else
+    warn "camadas_vulkan.py ausente — cura do engasgo por camada Vulkan não instalada"
+fi
+
+# ---------------------------------------------------------------------------
 # 4c. Perfis default (primeira instalação copia; reinstalação preserva)
 # ---------------------------------------------------------------------------
 if [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then

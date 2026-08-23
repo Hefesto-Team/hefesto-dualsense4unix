@@ -110,6 +110,11 @@ class DaemonProtocol(Protocol):
     # 1º uso. Único por daemon: é a MESMA foto que arma o gatilho da cor e que
     # a aba Status mostra.
     _sentinela_de_escritor_cru: Any
+    # SINAL-NO-NASCIMENTO-01: `integrations.sinal_da_barra.CartorioDoNascimento`
+    # — o veredito de COMO cada conexão viva nasceu, carimbado no tique de
+    # hotplug e guardado POR INSTÂNCIA (nunca global: instâncias travadas e sãs
+    # convivem na mesma mesa). None até o 1º uso.
+    _cartorio_do_nascimento: Any
 
     # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.
