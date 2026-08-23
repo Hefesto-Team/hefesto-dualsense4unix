@@ -233,6 +233,39 @@ OUIS = ("d84489", "a0fa9c", "e417d8", "e0f6b5",
 # comprimido, e PNG que muda a cada captura de tela geraria alarme intermitente.
 PULA = (".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
 
+# 23/08/2026 — o portão passou a DESCOMPRIMIR em vez de pular o comprimido.
+#
+# Medido no dia em que os logs de frametime do Sackboy entraram na árvore
+# (`docs/process/estudos/dados/2026-08-23-frametime-sackboy/*.csv.gz`): o
+# portão acusou TRÊS MACs em dois `.gz`, e os arquivos descomprimidos não têm
+# MAC nenhum — são só números de frametime e um cabeçalho de máquina. Eram os
+# três bytes do OUI casando por acaso no envelope comprimido, exatamente o que
+# o comentário do `PULA` acima já previa para dado de alta entropia.
+#
+# A cura NÃO é acrescentar ".gz" ao `PULA`: isso cegaria o portão para um MAC
+# de verdade dentro de um comprimido, que é justamente o caso que ele existe
+# para pegar. A cura é olhar o CONTEÚDO. Assim o portão fica mais forte nas
+# duas pontas — sem o falso positivo do envelope, e enxergando dentro do
+# arquivo.
+#
+# `.btsnoop.gz` (se um dia existir) cai aqui e é varrido como btsnoop cru.
+def _conteudo(nome, caminho):
+    """Bytes a varrer: o arquivo, ou o que ele contém quando é comprimido."""
+    try:
+        with open(nome, "rb") as fh:
+            dados = fh.read()
+    except OSError:
+        return None
+    if not caminho.lower().endswith(".gz"):
+        return dados
+    try:
+        import gzip
+        return gzip.decompress(dados)
+    except (OSError, EOFError, ValueError):
+        # Comprimido ilegível: varre o envelope mesmo, que é o lado seguro do
+        # erro — melhor um alarme falso que um MAC entrando escondido.
+        return dados
+
 achados = []
 for nome in sys.stdin.buffer.read().split(b"\0"):
     if not nome:
@@ -240,10 +273,8 @@ for nome in sys.stdin.buffer.read().split(b"\0"):
     caminho = nome.decode("utf-8", "surrogateescape")
     if caminho.lower().endswith(PULA):
         continue
-    try:
-        with open(nome, "rb") as fh:
-            dados = fh.read()
-    except OSError:
+    dados = _conteudo(nome, caminho)
+    if dados is None:
         continue
     for oui in OUIS:
         be = bytes.fromhex(oui)

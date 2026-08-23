@@ -67,6 +67,7 @@ leva, e não o histórico inteiro — nunca foi escrita nem medida.
 """
 from __future__ import annotations
 
+import gzip
 import re
 import subprocess
 from pathlib import Path
@@ -172,6 +173,44 @@ def _partes(m: re.Match[str]) -> tuple[str, str, str]:
 _SKIP_SUFFIXES = {".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg"}
 
 
+def _conteudo(path: Path) -> bytes | None:
+    """Os bytes a varrer: o arquivo, ou o que ele CONTÉM quando é comprimido.
+
+    ANONIMATO-ENVELOPE-COMPRIMIDO-01 (23/08/2026) — MEDIDO, e nas duas pontas.
+
+    No dia em que os logs de frametime do Sackboy entraram na árvore
+    (``docs/process/estudos/dados/2026-08-23-frametime-sackboy/*.csv.gz``,
+    3,7 MB), os três portões de MAC reprovaram o repositório inteiro acusando
+    TRÊS endereços em dois `.gz`. Os arquivos descomprimidos **não têm MAC
+    nenhum** — são frametime e um cabeçalho de máquina. Eram os três bytes do
+    OUI casando por acaso no envelope comprimido: exatamente o que a
+    ANONIMATO-BINARIO-FALSO-POSITIVO-01 já tinha medido para PNG, agora em
+    `.gz`.
+
+    **A cura NÃO é acrescentar `.gz` ao ``_SKIP_SUFFIXES``.** Isso cegaria o
+    portão para MAC de verdade dentro de comprimido — e medido no mesmo dia, o
+    buraco era real: um MAC em ASCII dentro de um `.gz` passava por TODOS os
+    portões (o de texto não descomprime; o de bytes procura os bytes crus do
+    OUI, não a forma escrita). A cura é varrer o CONTEÚDO, que fecha os dois
+    lados: some o falso positivo do envelope, e o portão passa a enxergar
+    dentro do arquivo.
+
+    Devolve ``None`` quando não dá para ler — o chamador pula, como antes.
+    """
+    try:
+        dados = path.read_bytes()
+    except (OSError, IsADirectoryError):  # deletado no working tree etc.
+        return None
+    if path.suffix.lower() != ".gz":
+        return dados
+    try:
+        return gzip.decompress(dados)
+    except (OSError, EOFError, ValueError):
+        # Comprimido ilegível: varre o envelope, que é o lado SEGURO do erro —
+        # melhor um alarme falso que um MAC entrando escondido.
+        return dados
+
+
 def _tracked_files(repo_root: Path) -> list[Path]:
     """A LISTA do git: o rastreado E o novo, sem o ignorado.
 
@@ -204,10 +243,10 @@ def test_nenhum_mac_real_completo_sem_mascara_no_repo() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     violacoes: list[str] = []
     for path in _tracked_files(repo_root):
-        try:
-            texto = path.read_text(encoding="utf-8", errors="ignore")
-        except (OSError, IsADirectoryError):  # deletado no working tree etc.
+        dados = _conteudo(path)
+        if dados is None:
             continue
+        texto = dados.decode("utf-8", errors="ignore")
         for num, linha in enumerate(texto.splitlines(), start=1):
             for m in MAC_COMPLETO_RE.finditer(linha):
                 oui, oct4, oct5 = _partes(m)
@@ -254,10 +293,10 @@ def test_nenhum_sufixo_de_mac_real_com_o_oui_elidido() -> None:
         # O próprio portão cita a forma no texto — senão ele se acusaria.
         if path.name == Path(__file__).name:
             continue
-        try:
-            texto = path.read_text(encoding="utf-8", errors="ignore")
-        except (OSError, IsADirectoryError):
+        dados = _conteudo(path)
+        if dados is None:
             continue
+        texto = dados.decode("utf-8", errors="ignore")
         for num, linha in enumerate(texto.splitlines(), start=1):
             for m in MAC_ELIDIDO_RE.finditer(linha):
                 if m.group("a") == "00" and m.group("b") == "00":
@@ -357,9 +396,8 @@ def test_nenhum_mac_real_em_bytes_no_repo() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     violacoes: list[str] = []
     for path in _tracked_files(repo_root):
-        try:
-            dados = path.read_bytes()
-        except (OSError, IsADirectoryError):  # deletado no working tree etc.
+        dados = _conteudo(path)
+        if dados is None:
             continue
         for offset, ordem, mac in _ocorrencias_binarias(dados):
             violacoes.append(
@@ -610,9 +648,8 @@ def test_nenhum_serial_de_fabrica_real_no_repo() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     violacoes: list[str] = []
     for path in _tracked_files(repo_root):
-        try:
-            dados = path.read_bytes()
-        except (OSError, IsADirectoryError):
+        dados = _conteudo(path)
+        if dados is None:
             continue
         for forma, mascarado in _ocorrencias_de_serial(dados):
             violacoes.append(

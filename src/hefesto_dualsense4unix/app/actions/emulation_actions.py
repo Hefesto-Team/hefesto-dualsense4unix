@@ -589,6 +589,141 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
     return guardado
 
 
+# ---------------------------------------------------------------------------
+# ENGASGO-VULKAN-01 — "Tirar o que faz engasgar"
+# ---------------------------------------------------------------------------
+#
+# O NOME, e por que não é "camada Vulkan": ninguém que joga procura por "camada
+# Vulkan implícita". Ela procura pelo que SENTE, e a palavra é dela — *"o
+# Sackboy engasga"*. É o molde do "A luz não acende"
+# (`app/actions/config/secao_controles.py`): o rótulo é a queixa, não o remédio.
+# O verbo na frente vem do vizinho de fileira — "Aplicar correções", "Copiar
+# opções para os jogos", "Travar Proton validado" —, que é a gramática do bloco
+# Avançado onde o botão mora.
+#
+# O QUE ELE FAZ: desliga, dentro do prefixo Wine de cada jogo, as camadas Vulkan
+# implícitas que não são o driver do Wine nem ferramenta reconhecida. Elas
+# embrulham a apresentação de cada quadro — medido em 23/08/2026: 60 fps de
+# média perfeita com ~70 quadros longos por minuto, e de 27 prefixos dela só um
+# tinha camada a mais (o do Sackboy, com o overlay do Epic Online Services), que
+# era justamente o único que engasgava. **O A/B saiu em 23/08 e DERRUBOU a
+# hipótese**: com a camada desligada a degradação mediu PIOR (p99 subindo
+# 4,19 ms/min contra 2,35, e 121 picos/min contra 51), e a rampa aparece nos
+# dois casos. Os números e a ressalva de carga estão em
+# `integrations/camadas_vulkan.py`. A interface não promete cura de engasgo, e
+# não pode: promete o que tirou, que é o contrato honesto deste botão.
+#
+# REVERSÍVEL NO MESMO GESTO, e é por isso que o botão abre diálogo em vez de
+# agir direto: o diálogo É o relatório (ELO-MUDO-01, silêncio não é resposta) e
+# leva os dois caminhos. "Devolver" só aparece quando há o que devolver, e
+# devolver marca a escolha dela — o gancho de lançamento não desfaz no jogo
+# seguinte.
+
+
+def frase_do_censo(
+    prefixos: Sequence[Any], *, bibliotecas: int = 1
+) -> tuple[str, bool, bool]:
+    """Texto do diálogo + (tem o que tirar, tem o que devolver).
+
+    Pura de propósito: é a frase que a pessoa lê antes de decidir, e ela tem de
+    ser testável sem GTK e sem disco. Diz jogo por jogo o que existe, com o
+    estado de cada camada — inclusive "o arquivo não está no disco", que é
+    exatamente o estado em que a máquina dela estava (os dois manifestos do
+    Epic renomeados à mão para medir). Chamar isso de "ligada" seco seria o
+    instrumento mentindo.
+
+    `bibliotecas` é a contagem de `steamapps/compatdata` que o censo alcançou,
+    e existe por causa da armadilha número um desta casa: **"não achei nada" e
+    "não consegui olhar" produzem a mesma lista vazia**, e dizer o primeiro
+    quando o certo é o segundo faz a pessoa parar de procurar. Medido em
+    23/08/2026 na CLI avulsa, que respondia exatamente essa mentira.
+    """
+    if not bibliotecas:
+        return (
+            "Não achei nenhuma biblioteca da Steam nesta máquina, então não "
+            "tenho onde olhar. Isto não quer dizer que os seus jogos estejam "
+            "limpos — quer dizer que eu não consegui abrir a lista.",
+            False,
+            False,
+        )
+    if not prefixos:
+        return (
+            "Olhei os jogos instalados e nenhum deles tem sobreposição extra "
+            "pendurada por dentro. Não há o que tirar.",
+            False,
+            False,
+        )
+    linhas: list[str] = []
+    tem_sobra = False
+    tem_devolucao = False
+    for prefixo in prefixos:
+        linhas.append(f"{prefixo.rotulo}")
+        for camada in prefixo.camadas:
+            if camada.e_o_driver:
+                continue
+            if camada.preservada_por is not None:
+                linhas.append(
+                    f"    {camada.nome_curto} — fica: {camada.preservada_por}"
+                )
+            elif not camada.ligada:
+                tem_devolucao = True
+                linhas.append(f"    {camada.nome_curto} — já desligada")
+            elif not camada.presente:
+                tem_sobra = True
+                linhas.append(
+                    f"    {camada.nome_curto} — pendurada, mas o arquivo não "
+                    "está no disco"
+                )
+            else:
+                tem_sobra = True
+                linhas.append(f"    {camada.nome_curto} — ligada")
+    corpo = "\n".join(linhas)
+    if tem_sobra:
+        rodape = (
+            "\n\nO que estiver ligado acima entra na frente de cada quadro que "
+            "o jogo desenha. Já medimos tirar isso no Sackboy e o engasgo "
+            "continuou — então não prometo que resolve. Tirar não apaga nada: "
+            "eu só marco a sobreposição como desligada no jogo, guardo cópia "
+            "do arquivo antes, e você pode devolver aqui mesmo."
+        )
+    else:
+        rodape = (
+            "\n\nNão há nada ligado para tirar. O que está desligado foi eu "
+            "que desliguei, e dá para devolver."
+        )
+    return corpo + rodape, tem_sobra, tem_devolucao
+
+
+def frase_do_resultado(resultados: Sequence[Any], *, devolver: bool) -> str:
+    """A frase do rodapé depois de agir. Nunca some, nunca mente.
+
+    Conta o que aconteceu em número de jogos e nomes, separa o que foi
+    respeitado (escolha dela) e o que deu erro. "Nada mudou" é resposta
+    legítima e é dita com todas as letras — ELO-MUDO-01.
+    """
+    mexidos = [r for r in resultados if r.desligadas or r.religadas]
+    erros = [r for r in resultados if r.erro]
+    respeitados = [r for r in resultados if r.respeitadas and not r.mexeu]
+    partes: list[str] = []
+    if mexidos:
+        nomes = sorted({n for r in mexidos for n in (r.religadas if devolver else r.desligadas)})
+        verbo = "Devolvi" if devolver else "Tirei"
+        jogos = "1 jogo" if len(mexidos) == 1 else f"{len(mexidos)} jogos"
+        partes.append(f"{verbo} em {jogos}: " + ", ".join(nomes) + ".")
+    if respeitados:
+        partes.append(
+            f"Deixei como estava em {len(respeitados)} jogo(s) — você já tinha "
+            "escolhido manter."
+        )
+    if erros:
+        partes.append(f"Não consegui em {len(erros)} jogo(s): {erros[0].erro}")
+    if not partes:
+        return "Nada mudou — não havia sobreposição para mexer."
+    if not devolver and mexidos:
+        partes.append("Feche e abra o jogo para valer.")
+    return " ".join(partes)
+
+
 class EmulationActionsMixin(WidgetAccessMixin):
     """Controla a aba Emulação."""
 
@@ -1658,3 +1793,133 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
     def _toast_emulation(self, msg: str) -> None:
         self._status_toast("emulation", msg)
+
+    # -- ENGASGO-VULKAN-01 — "Tirar o que faz engasgar" --------------------
+
+    def _toast_camadas(self, msg: str) -> None:
+        """Rodapé das camadas. Contexto próprio para não brigar com os outros."""
+        self._status_toast("camadas_vulkan", msg)
+
+    def on_camadas_engasgo(self, _btn: object) -> None:
+        """Botão "Tirar o que faz engasgar" (bloco Avançado, aba Sistema).
+
+        Consulta ANTES de perguntar: o censo lê o `system.reg` de cada prefixo
+        (5,5 MB no maior desta máquina, ~1 s no total) e travaria a janela se
+        rodasse na linha do GTK. Por isso o clique só dispara o worker; o
+        diálogo nasce com o resultado na mão, e é ele que mostra o preço —
+        precedente do "Travar Proton validado".
+        """
+        self._toast_camadas("Olhando os jogos instalados…")
+
+        def _worker() -> None:
+            try:
+                from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+                prefixos = cv.censo()
+                # Contado no worker, junto do censo, para o diálogo poder
+                # separar "olhei e não achei" de "não tinha onde olhar".
+                bibliotecas = len(cv.pastas_compatdata())
+            except Exception as exc:  # pragma: no cover - defesa de worker
+                logger.warning("censo_de_camadas_falhou", erro=str(exc))
+                GLib.idle_add(
+                    self._toast_camadas,
+                    "Não consegui olhar os jogos — veja os 'Detalhes técnicos'.",
+                )
+                return
+            GLib.idle_add(self._abrir_dialogo_camadas, prefixos, bibliotecas)
+
+        _get_executor().submit(_worker)
+
+    def _abrir_dialogo_camadas(
+        self, prefixos: Sequence[Any], bibliotecas: int = 1
+    ) -> bool:
+        """Monta e mostra o diálogo. Sempre no thread do GTK (via idle_add)."""
+        self._toast_camadas("")
+        dialog = self._build_camadas_dialog(prefixos, bibliotecas=bibliotecas)
+        dialog.show_all()
+        return False
+
+    def _build_camadas_dialog(
+        self, prefixos: Sequence[Any], *, bibliotecas: int = 1
+    ) -> Gtk.MessageDialog:
+        """Monta o diálogo (sem exibir) — separado para o teste alcançar.
+
+        Os botões seguem o que EXISTE: "Tirar" só aparece quando há camada
+        ligada; "Devolver" só quando há camada que nós desligamos. Botão que
+        aparece e não faz nada ensina que a tela é enfeite.
+        """
+        corpo, tem_sobra, tem_devolucao = frase_do_censo(
+            prefixos, bibliotecas=bibliotecas
+        )
+        window: Gtk.Window | None = getattr(self, "window", None)
+        dialog = Gtk.MessageDialog(
+            transient_for=window,
+            flags=0,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE,
+            text="O que está pendurado por dentro dos seus jogos",
+        )
+        with contextlib.suppress(Exception):
+            dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
+        dialog.format_secondary_text(corpo)
+        dialog.add_button("Fechar", Gtk.ResponseType.CANCEL)
+        if tem_devolucao:
+            dialog.add_button("Devolver", Gtk.ResponseType.APPLY)
+        if tem_sobra:
+            dialog.add_button("Tirar", Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.CANCEL)
+        dialog.connect("response", self._on_camadas_response)
+        return dialog
+
+    def _on_camadas_response(self, dialog: Any, response: int) -> None:
+        """Só OK (tirar) e APPLY (devolver) agem; o resto fecha e pronto."""
+        with contextlib.suppress(Exception):
+            dialog.destroy()
+        if response == int(Gtk.ResponseType.OK):
+            self._camadas_worker(devolver=False)
+        elif response == int(Gtk.ResponseType.APPLY):
+            self._camadas_worker(devolver=True)
+
+    def _camadas_worker(self, *, devolver: bool) -> None:
+        """Aplica em todos os prefixos, em worker, com o portão do jogo aberto.
+
+        RECUSA com jogo da Steam rodando: o Wine mantém o registro do prefixo
+        em MEMÓRIA e o regrava ao sair, então escrever agora seria trabalho
+        perdido — e pior, perdido em silêncio. Mesmo portão que o "Travar
+        Proton validado" usa para a Steam.
+
+        `forcar=True`: o clique é gesto explícito, e a vontade da GUI prevalece
+        (regra dela, 09/08/2026). Só o gancho de lançamento respeita a memória
+        sem perguntar.
+        """
+        self._toast_camadas("Devolvendo…" if devolver else "Tirando…")
+
+        def _worker() -> None:
+            try:
+                from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+                from hefesto_dualsense4unix.integrations import (
+                    steam_launch_options as slo,
+                )
+
+                if slo.steam_game_running():
+                    GLib.idle_add(
+                        self._toast_camadas,
+                        "Tem jogo aberto — feche-o e clique de novo. Com o "
+                        "jogo vivo o Windows do Proton regrava esse ajuste ao "
+                        "sair, e a mudança seria perdida.",
+                    )
+                    return
+                resultados = cv.curar_todos(religar=devolver, forcar=True)
+            except Exception as exc:
+                logger.warning("cura_de_camadas_falhou", erro=str(exc))
+                GLib.idle_add(
+                    self._toast_camadas,
+                    "Não consegui mexer nas sobreposições — veja os 'Detalhes "
+                    "técnicos'.",
+                )
+                return
+            GLib.idle_add(
+                self._toast_camadas, frase_do_resultado(resultados, devolver=devolver)
+            )
+
+        _get_executor().submit(_worker)
