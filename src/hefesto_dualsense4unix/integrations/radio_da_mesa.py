@@ -54,6 +54,32 @@ apareceu em unidades diferentes: 279,1 contra 157,8 Hz. O envelope do dia inteir
 no rádio foi de **157,8 a 402,9 Hz** (``docs/data/ensaios.csv:104``). O motivo
 está **ABERTO** — não é da unidade, não é do braço, e ninguém sabe o que é.
 
+    NOTA DATADA — 23/08/2026: há CANDIDATO, e ele aponta para o INSTRUMENTO.
+    A medição de 22/08 (QUATRO-MICROFONES-01) leu o mesmo par de controles com
+    duas réguas ao mesmo tempo:
+
+    * a régua do **laço de leitura** deu 282,1 / 348,5 Hz numa passagem e
+      357,0 / 353,9 na seguinte — instável, e desigual;
+    * a régua do **relógio do próprio aparelho** (carimbo de tempo do sensor,
+      derivado dos dados e não assumido: 3,000 MHz nos quatro) deu
+      **398,3 / 400,2 Hz nas DUAS passagens** — estável, e IGUAL.
+
+    Ou seja: a desigualdade pode estar no leitor, não no rádio. Reforça a
+    leitura o fato de ler os quatro nós em paralelo no mesmo processo Python
+    subcontar (638 Hz contra 780 Hz no mesmo nó) — o laço é o gargalo.
+
+    **NÃO FECHA a pergunta**, e por uma razão só: ninguém refez o ensaio de
+    15/08 com a régua nova. O que fecha é repetir aquele ensaio medindo pelo
+    relógio do aparelho. Até lá o envelope acima continua sendo o que a casa
+    tem, e as duas consequências de projeto abaixo continuam valendo.
+
+    A mesma medição relê o denominador: ~800 relatórios/s é orçamento do
+    **ADAPTADOR**, repartido entre os controles que ele hospeda — não uma taxa
+    por controle. O modelo aditivo de ``HZ_INPUT_SEM_MIC`` abaixo assume o
+    contrário. Trocar as constantes é decisão de produto (R1/R3 do PO) e exige o
+    A/B refeito com o microfone ligado; ver ``docs/protocol/driver-hid-playstation.md``,
+    a nota de 23/08 na seção do rádio.
+
 Duas consequências de projeto saem daí, e as duas estão no código:
 
 1. o medidor usa o **nominal do A/B**, nunca uma medição ao vivo. Uma barra
@@ -283,9 +309,16 @@ def ocupacao_por_adaptador(
     ``com_ponte_de_mic`` é o conjunto de ``uniq`` com a ponte agente por HID de
     pé. É só ela que custa rádio: por rádio o DualSense **não publica placa ALSA
     nenhuma** (medido 15/08/2026, ``integrations/usb_pai.py:38-42``), então
-    ``controllers[].audio`` não diz nada sobre ocupação, e o ``bt_mic`` do
-    ``daemon.state_full`` é do PROCESSO — com quatro controles e uma ponte ele
-    diz ``running: true`` e pintaria áudio nos quatro. Decisão R4.
+    ``controllers[].audio`` não diz nada sobre ocupação, e as duas primeiras
+    chaves do ``bt_mic`` do ``daemon.state_full`` são do PROCESSO — com quatro
+    controles e uma ponte elas dizem ``running: true`` e pintariam áudio nos
+    quatro. Decisão R4.
+
+    A FONTE, desde 22/08/2026 (``QUATRO-MICROFONES-01``): a terceira chave
+    daquele bloco, ``bt_mic.uniqs``, que o daemon publica com os ``uniq`` cuja
+    ponte SUBIU — não os que ela pediu. Uma ponte pedida que não subiu (libopus
+    ausente, hidraw recusado) não ocupa fatia de rádio nenhuma, e contá-la aqui
+    seria o produto respondendo pelo pedido em vez de pelo efeito.
 
     Três regras, e as três são de honestidade:
 

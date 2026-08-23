@@ -270,11 +270,21 @@ class DaemonConfig:
     # Desligado, o botão vira só um botão (o kernel segue mudando o mic do
     # próprio controle — isso é dele, não nosso).
     mic_button_toggles_system: bool = True
-    # BT-MIC-REGISTRY-01 — ponte de microfone por Bluetooth (Opus tunelado em
-    # HID). OPT-IN por privacidade e por banda de rádio: ver o cabeçalho de
-    # `daemon/subsystems/bt_mic.py`. Também aceita
-    # `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` (o subsystem consulta os dois).
-    bt_mic_enabled: bool = False
+    # BT-MIC-REGISTRY-01 + QUATRO-MICROFONES-01 (22/08/2026) — ponte de
+    # microfone por Bluetooth (Opus tunelado em HID), POR CONTROLE. OPT-IN por
+    # privacidade: ver o cabeçalho de `daemon/subsystems/bt_mic.py`, que também
+    # explica por que aqui havia um `bool` e por que ele não sustentava a mesa
+    # de quatro que ela pediu.
+    #
+    # É uma FONTE (chamável) pela mesma razão do `orcamento_da_mesa` logo acima:
+    # o `machine.declare` REBINDA `daemon._maquina` no "Aplicar", e uma cópia
+    # tirada no boot ficaria velha no instante em que ela acabou de escolher.
+    # `None` = ninguém fiou a fonte (dublê de teste, daemon à mão), e isso vale
+    # como "nenhum microfone pedido" — nunca como "todos".
+    #
+    # `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` continua valendo, e vale para TODOS os
+    # controles: é o caminho à mão, e quem o exporta pede a mesa inteira.
+    bt_mic_uniqs: Callable[[], frozenset[str]] | None = None
     # FEAT-METRICS-01
     metrics_enabled: bool = False
     metrics_port: int = 9090
@@ -603,8 +613,10 @@ class Daemon:
     # Instanciado por `_start_metrics` quando metrics_enabled; None até o 1º uso.
     _metrics_subsystem: Any = None
     # BT-MIC-REGISTRY-01: BtMicSubsystem (ponte de microfone por Bluetooth) ou
-    # None. OPT-IN — só é instanciado quando `bt_mic_enabled`/a env var estão
-    # ligadas; um microfone que sobe sozinho com o daemon é inaceitável.
+    # None. OPT-IN — só é instanciado quando `bt_mic_uniqs` traz ao menos um
+    # `uniq` (a declaração dela) ou a env var está ligada; um microfone que sobe
+    # sozinho com o daemon é inaceitável. Sobe e desce no meio da sessão pelo
+    # `reconciliar_bt_mic`, que o "Aplicar" da aba Configurações chama.
     _bt_mic_subsystem: Any = None
     # BUG-DAEMON-NO-DEVICE-FATAL-01 — task de probe de conexão em background
     # (substitui connect_with_retry bloqueante no boot). Cancelada em shutdown.
@@ -709,6 +721,14 @@ class Daemon:
     # duas verdades sobre a mesma mesa. Criado sob demanda por
     # `connection.sentinela_de_escritor_cru_de`.
     _sentinela_de_escritor_cru: Any = None
+    # SINAL-NO-NASCIMENTO-01: o `integrations.sinal_da_barra.CartorioDoNascimento`
+    # deste daemon — o veredito de COMO cada conexão viva nasceu, carimbado no
+    # tique de hotplug —, ou None até a primeira consulta. Mora aqui, e POR
+    # INSTÂNCIA, porque a BARRA-MUDA-01 mediu instâncias travadas e sãs
+    # convivendo na mesma máquina, no mesmo adaptador, no mesmo minuto: um
+    # veredito global apagaria a distinção que a medição produziu. Criado sob
+    # demanda por `connection.cartorio_do_nascimento_de`.
+    _cartorio_do_nascimento: Any = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -763,6 +783,7 @@ class Daemon:
         # arquivo é da mesa, muda por gesto dela e nunca por trás do daemon.
         # A leitura nunca levanta (ver `carregar_maquina`), então não precisa de
         # `_safe_start` nem de try — arquivo corrompido sobe como "não sei".
+        from hefesto_dualsense4unix.daemon.subsystems.bt_mic import uniqs_declarados
         from hefesto_dualsense4unix.utils.maquina import carregar_maquina
         self._maquina = carregar_maquina()
         # CONFIG-05 (22/08/2026): o primeiro consumidor da declaração, e é o
@@ -771,6 +792,17 @@ class Daemon:
         # `machine.declare` faz no "Aplicar" já vale no cálculo seguinte. Ver o
         # campo `DaemonConfig.orcamento_da_mesa`.
         self.config.orcamento_da_mesa = lambda: self._maquina.orcamento.teto
+        # QUATRO-MICROFONES-01 (22/08/2026): o segundo consumidor, e é a ponte
+        # de microfone POR CONTROLE. Mesma disciplina — a fonte fecha sobre
+        # `self`, então o "Aplicar" vale sem reiniciar o daemon.
+        #
+        # Só quando NINGUÉM a fiou: `None` é o contrato de "não há fonte", e
+        # sobrescrever uma fonte que já veio montada apagaria a única forma de
+        # exercer o gate sem escrever um `maquina.json` no disco de quem roda a
+        # bateria. O `orcamento_da_mesa` acima não precisa da guarda porque o
+        # teto tem valor de catálogo; um microfone não tem — ele tem endereço.
+        if self.config.bt_mic_uniqs is None:
+            self.config.bt_mic_uniqs = lambda: uniqs_declarados(self._maquina)
         if self._native_mode:
             # O gate de dispatch é o próprio _native_mode (consultado no poll
             # loop); não força _paused (evita conflatar com o pause manual).
@@ -3642,6 +3674,37 @@ class Daemon:
             subsystem = self._bt_mic_subsystem
             self._bt_mic_subsystem = None
             await subsystem.stop()
+
+    async def reconciliar_bt_mic(self) -> None:
+        """Casa o subsystem com o que a declaração da mesa pede AGORA.
+
+        QUATRO-MICROFONES-01 (22/08/2026). Sem isto, o "Aplicar" só valeria no
+        próximo início do Hefesto — que é a forma mais cara do defeito-mãe desta
+        casa: a escolha dela gravada em disco e nenhum efeito na mesa.
+
+        Três casos, e o terceiro é o que faz o "por controle" funcionar:
+
+        * pediu o primeiro microfone com o subsystem no chão → SOBE;
+        * desligou o último com ele de pé → DESCE, o que derruba as pontes e
+          desliga o microfone em cada controle;
+        * trocou QUAL controle, com o subsystem já de pé → nada a fazer aqui: o
+          laço relê a fonte a cada varredura e a próxima reconciliação derruba a
+          ponte de quem saiu e sobe a de quem entrou.
+
+        Pública (sem `_`) porque quem a chama é o handler `machine.declare`, de
+        fora da classe. Nunca levanta: o "Aplicar" já gravou, e uma falha de
+        ponte não pode virar "não consegui gravar" na tela dela.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+
+        quer = BtMicSubsystem().is_enabled(self.config)
+        try:
+            if quer and self._bt_mic_subsystem is None:
+                await self._start_bt_mic()
+            elif not quer and self._bt_mic_subsystem is not None:
+                await self._stop_bt_mic()
+        except Exception as exc:  # best-effort: o gesto de gravar já terminou
+            logger.warning("bt_mic_reconciliacao_de_gesto_falhou", err=str(exc))
 
     async def _stop_metrics(self) -> None:
         """Para o MetricsSubsystem de forma limpa. Idempotente."""

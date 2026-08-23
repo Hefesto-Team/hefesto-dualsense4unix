@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import inspect
 import os
 import time
 from collections.abc import Callable
@@ -2932,11 +2933,40 @@ class IpcHandlersMixin:
             result["mic_button_toggles_system"] = bool(
                 getattr(daemon_cfg, "mic_button_toggles_system", True)
             )
-            # BT-MIC-REGISTRY-01: ponte de mic por BT — se o subsystem está de
-            # pé AGORA (não só se a env var existe).
+            # BT-MIC-REGISTRY-01 + QUATRO-MICROFONES-01: ponte de mic por BT.
+            #
+            # As TRÊS chaves respondem a três perguntas diferentes, e confundi-las
+            # foi o que deixou o medidor de rádio cego até 22/08/2026:
+            #
+            # * `enabled` — alguém PEDIU microfone (a declaração da mesa, ou a
+            #   env à mão). É do processo;
+            # * `running` — o subsystem está de pé AGORA. Também é do processo;
+            # * `uniqs`  — de QUAIS controles a ponte está de pé. É a única das
+            #   três que fala de CONTROLE, e é a que o medidor de ocupação
+            #   consome (`integrations/radio_da_mesa.ocupacao_por_adaptador`,
+            #   via `app/actions/config/secao_mesa.py`). Sem ela, quatro
+            #   controles com uma ponte pintavam áudio nos quatro — e por isso a
+            #   seção da mesa nascia lendo esta chave, com ausência virando
+            #   conjunto vazio, para ligá-la ser UMA linha aqui.
+            #
+            # `uniqs` relata o que SUBIU, não o que foi pedido: uma ponte pedida
+            # que não subiu (libopus ausente, hidraw recusado) não ocupa fatia de
+            # rádio nenhuma, e pintá-la seria o produto respondendo pelo pedido
+            # em vez de pelo efeito.
+            from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
+                habilitado_por_env,
+                uniqs_pedidos,
+            )
+
+            bt_mic_sub = getattr(self.daemon, "_bt_mic_subsystem", None)
+            com_ponte: list[str] = []
+            if bt_mic_sub is not None:
+                with contextlib.suppress(Exception):
+                    com_ponte = sorted(bt_mic_sub.uniqs_com_ponte())
             result["bt_mic"] = {
-                "enabled": bool(getattr(daemon_cfg, "bt_mic_enabled", False)),
-                "running": getattr(self.daemon, "_bt_mic_subsystem", None) is not None,
+                "enabled": bool(uniqs_pedidos(daemon_cfg)) or habilitado_por_env(),
+                "running": bt_mic_sub is not None,
+                "uniqs": com_ponte,
             }
             rumble_active = getattr(daemon_cfg, "rumble_active", None)
             result["rumble_passthrough"] = rumble_active is None
@@ -4857,6 +4887,25 @@ class IpcHandlersMixin:
         # consulta, seria contrato sem leitor.
         vivo: Any = self.daemon
         vivo._maquina = await asyncio.to_thread(carregar_maquina)
+        # QUATRO-MICROFONES-01 (22/08/2026): o "Aplicar" tem de VALER agora.
+        #
+        # O rebind acima já faz a fonte `DaemonConfig.bt_mic_uniqs` devolver o
+        # conjunto novo, e o laço do subsystem relê a fonte a cada varredura —
+        # mas isso só resolve a troca de QUAL controle. Ligar o PRIMEIRO
+        # microfone com o subsystem no chão, ou desligar o ÚLTIMO com ele de pé,
+        # precisa de alguém que suba e desça o subsystem, e é este o gesto.
+        #
+        # Sem esta chamada a escolha dela só valeria no próximo início do
+        # Hefesto — a forma mais cara do defeito-mãe desta casa, e a mesma que
+        # esta sprint veio fechar.
+        reconciliar = getattr(vivo, "reconciliar_bt_mic", None)
+        if callable(reconciliar):
+            try:
+                resultado = reconciliar()
+                if inspect.isawaitable(resultado):
+                    await resultado
+            except Exception as exc:  # a gravação já terminou; a ponte é extra
+                logger.warning("machine_declare_bt_mic_nao_reconciliou", err=str(exc))
         return {"ok": True}
 
     async def _handle_plugin_list(self, params: dict[str, Any]) -> list[dict[str, Any]]:
