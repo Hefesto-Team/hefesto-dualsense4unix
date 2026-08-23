@@ -43,6 +43,32 @@
 # (o último a chegar ganha) — são indistinguíveis até no serial. A marca
 # `HEFESTO_CONTROLLER_VARIANT` continua correta nos dois.
 #
+# O TERCEIRO VALOR: `nintendo-pro-desconhecido`
+# (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 / E2, 22/08/2026).
+#
+# `bcdDevice` é o número de REVISÃO do descritor USB: ele muda com o firmware.
+# Os dois valores acima são de UMA unidade de cada, desta bancada. Um Pro
+# genuíno atualizado que reporte `0211`, ou um clone com outro firmware, não
+# casava NENHUMA das duas linhas — e aí a ausência de
+# `HEFESTO_CONTROLLER_VARIANT` e de `/dev/hefesto/*` era lida, pelo comentário
+# logo acima, como "o patch 0003 do DKMS não pegou". Diagnóstico errado, com
+# cara de certo.
+#
+# As linhas `desconhecido` fecham esse buraco dizendo exatamente o que se sabe:
+# *é um `057E:2009` que não é nenhum dos dois que eu conheço*. Elas NÃO
+# palpitam — não criam symlink, porque um symlink com nome de modelo seria
+# afirmar o modelo. Quem lê o diagnóstico passa a separar "não conheço este
+# aparelho" de "a cura não pegou", que são duas ações diferentes.
+#
+# Ordem importa: o udev aplica TODAS as regras que casam, então as três linhas
+# de cada subsistema não podem casar juntas. Por isso o `desconhecido` vem por
+# último e exclui os dois valores conhecidos com `!=`, que é a única forma de
+# escrever "qualquer outra revisão" na linguagem de regra do udev.
+#
+# ELEVAR ISTO A UMA FAIXA (`bcdDevice >= 0210`) é DECISÃO DELA e exige medir um
+# SEGUNDO Pro genuíno — o aparelho é dela. Enquanto não houver essa medição, o
+# valor entregue é o "desconhecido", que não afirma nada.
+#
 # NÃO MEXE EM INPUT, LED NEM ENERGIA: a `81-hefesto-usb-power.rules` (todo
 # `057e` nunca dorme) e a `79-external-controller-leds.rules` (todo
 # `*057E:*:*:player-*` gravável) devem MESMO pegar os dois controles — o
@@ -54,15 +80,19 @@
 # --- device USB (marca mais precoce possível; independe de driver) ---
 ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="057e", ATTR{idProduct}=="2009", ATTR{bcdDevice}=="0210", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro"
 ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="057e", ATTR{idProduct}=="2009", ATTR{bcdDevice}=="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="8bitdo-pro-clone"
+ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="057e", ATTR{idProduct}=="2009", ATTR{bcdDevice}!="0210", ATTR{bcdDevice}!="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro-desconhecido"
 
 # --- device HID (existe mesmo com a probe do driver falhando) ---
 ACTION=="add|change", SUBSYSTEM=="hid", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0210", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro"
 ACTION=="add|change", SUBSYSTEM=="hid", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="8bitdo-pro-clone"
+ACTION=="add|change", SUBSYSTEM=="hid", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}!="0210", ATTRS{bcdDevice}!="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro-desconhecido"
 
 # --- hidraw: marca + nome estável em /dev/hefesto/ ---
 ACTION=="add", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0210", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro", SYMLINK+="hefesto/nintendo-pro"
 ACTION=="add", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="8bitdo-pro-clone", SYMLINK+="hefesto/8bitdo-pro-clone"
+ACTION=="add", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}!="0210", ATTRS{bcdDevice}!="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro-desconhecido"
 
 # --- input: para quem enumera por evdev/joydev ver a mesma marca ---
 ACTION=="add|change", SUBSYSTEM=="input", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0210", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro"
 ACTION=="add|change", SUBSYSTEM=="input", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="8bitdo-pro-clone"
+ACTION=="add|change", SUBSYSTEM=="input", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}!="0210", ATTRS{bcdDevice}!="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro-desconhecido"

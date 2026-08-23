@@ -5,12 +5,16 @@
 # Reversível.
 #
 # DUAS medidas com ESCOPOS DIFERENTES (BT-SNIFF-PER-OUI-01, 23/07):
-#   (1) o NOME é do adaptador  — vale para todos, e o A/B de 23/07 provou que
-#       não atrapalha o clone;
+#   (1) o NOME é do ADAPTADOR — e serve aos DOIS controles da linhagem: o A/B de
+#       23/07 provou que o alias não atrapalha o clone. Vai nos adaptadores que
+#       hospedam a linhagem, não em todos (a razão está na seção 1);
 #   (2) o NO-SNIFF é POR DISPOSITIVO — só o Pro genuíno. Aplicá-lo como default
 #       do adaptador quebrava a probe do 8BitDo (regressão medida; §2).
 #
 # As duas entraram juntas em fb5e3ad e por isso ficaram acopladas até 23/07.
+#
+# E as duas valiam para UM adaptador só até 22/08 (N-IGUAL-A-UM-01): ver
+# `_adaptadores` e a seção 1.
 #
 # Pesquisa original
 # (docs/process/estudos/2026-07-22-pesquisa-pro-controller-bt-e-lightbar-keepalive.md):
@@ -30,12 +34,30 @@
 #    morre sem sniff. Agora é aplicada SÓ por-conexão, no Pro genuíno. Detalhes
 #    e o A/B que mediu isso estão na seção 2 do corpo.
 #
-# Reverter: `hciconfig hci0 lp rswitch,hold,sniff,park` (VÍRGULA — com
+# Reverter: `hciconfig <hciN> lp rswitch,hold,sniff,park` (VÍRGULA — com
 # espaços o hciconfig lê só o primeiro token e a reversão é no-op
 # silencioso; medido 23/07) e Alias de volta ao
 # hostname (o uninstall faz). Vale a partir do próximo start do bluetoothd/boot;
 # este script NUNCA reinicia o serviço.
 set -euo pipefail
+
+# GANCHOS DE TESTE — a suíte precisa de uma bancada de mentira com três
+# adaptadores, e nenhum teste desta casa pode ler o barramento vivo dela:
+#   HEFESTO_SYS_BLUETOOTH   raiz dos adaptadores (default /sys/class/bluetooth)
+#   HEFESTO_BT_LIB          raiz da árvore de bonds (default /var/lib/bluetooth)
+#   HEFESTO_BT_LOG_DEST     vazio = journal · caminho = arquivo · none = nada
+#
+# Os dois de CAMINHO morrem sob sudo (mesma contenção do
+# `bt_ponte_privilegiada.sh`): o `env_reset` já os apagaria, e esta linha é o
+# cinto para a máquina que o desligou. O de LOG fica — ele não muda nada do que
+# o script DECIDE, só onde ele escreve o diário, e o uninstall depende dele.
+if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
+    unset HEFESTO_SYS_BLUETOOTH HEFESTO_BT_LIB
+fi
+SYS_BLUETOOTH="${HEFESTO_SYS_BLUETOOTH:-/sys/class/bluetooth}"
+SYS_BLUETOOTH="${SYS_BLUETOOTH%/}"
+LIB="${HEFESTO_BT_LIB:-/var/lib/bluetooth}"
+LIB="${LIB%/}"
 
 LOG_TAG=hefesto-bt-active
 # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): vazio = journal (produção); caminho =
@@ -67,23 +89,33 @@ QUIET=0
 # moveu as depreciadas para `bluez-deprecated`, a cura inteira virava no-op com
 # um log de uma linha. Agora cada medida é guardada pela ferramenta que ELA usa.
 #
-# Adaptador primário: sysfs primeiro (kernel puro, sem pacote e sem privilégio;
-# o filtro `^hci[0-9]+$` descarta as entradas de conexão, que ali nascem como
-# "hci0:256"), a árvore do BlueZ no D-Bus depois — que é de onde sai o objeto
-# usado logo abaixo para o Alias —, `btmgmt info` em seguida, e o `hciconfig`
-# como plano B.
-_adaptador() {
-    local p nome
-    for p in /sys/class/bluetooth/hci*; do
+# N-IGUAL-A-UM-01 (22/08/2026): esta função devolvia UM adaptador — o primeiro
+# do glob, com `return 0` na primeira volta — e o script inteiro respondia pelo
+# rádio inteiro a partir dele. Com um dongle isso sempre acertou, e é por isso
+# que nunca apareceu. Com os TRÊS desta bancada, MEDIDO: o alias "Nintendo*"
+# ficava no `hci0`, que não hospeda Nintendo nenhum, enquanto o Pro vivia no
+# `hci1` sem proteção — e a vigia de 2 min reafirmava a escolha errada para
+# sempre. Agora é PLURAL, e quem decide o que fazer em cada adaptador é a
+# OPERAÇÃO, não a ordem de enumeração (as três razões estão na seção 1).
+#
+# Fontes, em ordem: sysfs (kernel puro, sem pacote e sem privilégio; o filtro
+# `^hci[0-9]+$` descarta as entradas de conexão, que ali nascem como
+# "hci0:256"), a árvore do BlueZ no D-Bus — que é de onde sai o objeto usado
+# logo abaixo para o Alias —, `btmgmt info` em seguida, e o `hciconfig` como
+# plano B. Nenhuma delas corta no primeiro.
+_adaptadores() {
+    local p nome achou=0
+    for p in "${SYS_BLUETOOTH}"/hci*; do
         [[ -e "${p}" ]] || continue
         nome="${p##*/}"
         [[ "${nome}" =~ ^hci[0-9]+$ ]] || continue
         printf '%s\n' "${nome}"
-        return 0
+        achou=1
     done
+    [[ "${achou}" -eq 1 ]] && return 0
     if command -v busctl >/dev/null 2>&1; then
         nome="$(busctl tree org.bluez --list 2>/dev/null \
-            | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u | head -1 || true)"
+            | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u || true)"
         if [[ -n "${nome}" ]]; then printf '%s\n' "${nome}"; return 0; fi
     fi
 # BTMGMT-QUE-NAO-VOLTA-01 (19/08/2026): `btmgmt` fala com o kernel pelo socket
@@ -96,11 +128,11 @@ _adaptador() {
 # Só o teto de tempo resolve. Cinco segundos é vinte vezes o que ele leva numa
 # máquina sadia — medido: responde em menos de 0,25 s com adaptador de pé.
     if command -v btmgmt >/dev/null 2>&1; then
-        nome="$(timeout 5 btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | head -1 || true)"
+        nome="$(timeout 5 btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | sort -u || true)"
         if [[ -n "${nome}" ]]; then printf '%s\n' "${nome}"; return 0; fi
     fi
     command -v hciconfig >/dev/null 2>&1 || return 0
-    hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}' || true
+    hciconfig 2>/dev/null | awk -F: '/^hci/{print $1}' || true
 }
 
 # MACs com ACL de pé, MAIÚSCULAS com ':'. Substitui o `hcitool con`: o D-Bus do
@@ -131,21 +163,141 @@ _macs_conectados() {
     return 0
 }
 
-HCI="$(_adaptador)"
-[[ -z "${HCI}" ]] && { log "nenhum adaptador HCI — nada a fazer"; exit 0; }
+# A REGRA de "quem faz um adaptador precisar do prefixo" tem UM DONO:
+# `src/hefesto_dualsense4unix/core/linhagem_nintendo.py` — `OUIS_CLONE`,
+# `OUIS_NINTENDO_VISTAS`, `NOMES_LINHAGEM` e `e_da_linhagem_nintendo`. As duas
+# listas abaixo são a MESMA regra escrita em shell, e existem porque este script
+# roda no `ExecStartPost` do bluetoothd, como root, antes de qualquer venv da
+# casa existir: importar Python aqui é depender de coisa que pode não estar de
+# pé no instante em que o Pro conecta.
+#
+# Cópia PINADA não é cópia solta:
+# `tests/unit/test_o_prefixo_vai_no_adaptador_que_hospeda_nintendo.py` lê os dois
+# lados e reprova se eles se separarem — inclusive quando o `linhagem_nintendo`
+# ganhar uma faixa nova e esta cópia não.
+OUIS_LINHAGEM=("e0:f6:b5" "e4:17:d8")
+NOMES_LINHAGEM=("pro controller" "nintendo")
+
+#: Teto do alias em BYTES UTF-8, MEDIDO em 22/08/2026 no BlueZ 5.86 desta
+#: bancada — o mesmo `TETO_DE_BYTES` de `integrations/apelido_do_dongle.py`.
+TETO_DE_BYTES=247
+
+#: Endereço do adaptador (MAIÚSCULO) -> `hciN`. Preenchido pelo D-Bus, porque o
+#: sysfs NÃO publica o endereço: `/sys/class/bluetooth/hciN/address` não existe
+#: (conferido em 22/08/2026). É o que deixa a árvore de bonds, que fala em
+#: endereço, apontar para um adaptador.
+declare -A HCI_DE=()
+
+# Este controle lê o nome Bluetooth do host? Genuíno e clone respondem SIM — o
+# A/B de 23/07 mediu que o nome não atrapalha o clone; o que atrapalha o clone é
+# o no-sniff, que é a outra metade e continua só para o genuíno.
+_e_linhagem_nintendo() {  # $1 = MAC do controle · $2 = nome do controle
+    local mac="${1,,}" nome="${2,,}" marca
+    for marca in "${OUIS_LINHAGEM[@]}"; do
+        [[ "${mac}" == "${marca}"* ]] && return 0
+    done
+    for marca in "${NOMES_LINHAGEM[@]}"; do
+        [[ "${nome}" == *"${marca}"* ]] && return 0
+    done
+    return 1
+}
+
+_prop_adaptador() {  # $1 = hciN · $2 = propriedade de org.bluez.Adapter1
+    busctl get-property org.bluez "/org/bluez/$1" org.bluez.Adapter1 "$2" 2>/dev/null \
+        | sed -E 's/^s "?//; s/"?$//' || true
+}
+
+# Os `hciN` que hospedam a linhagem, um por linha e com repetição — quem chama
+# passa por `sort -u`.
+_hci_com_nintendo() {
+    local caminho mac nome info dir end
+    if command -v busctl >/dev/null 2>&1; then
+        while IFS= read -r caminho; do
+            [[ -n "${caminho}" ]] || continue
+            mac="${caminho##*/dev_}"
+            mac="${mac//_/:}"
+            nome="$(busctl get-property org.bluez "${caminho}" org.bluez.Device1 Alias 2>/dev/null \
+                | sed -E 's/^s "?//; s/"?$//' || true)"
+            _e_linhagem_nintendo "${mac}" "${nome}" || continue
+            caminho="${caminho%/dev_*}"
+            printf '%s\n' "${caminho##*/}"
+        done <<<"$(busctl tree org.bluez --list 2>/dev/null \
+            | grep -oE '/org/bluez/hci[0-9]+/dev_[0-9A-Fa-f_]+$' | sort -u || true)"
+    fi
+    while IFS= read -r info; do
+        [[ -n "${info}" ]] || continue
+        dir="${info%/info}"
+        mac="${dir##*/}"
+        nome="$(sed -n 's/^Name=//p' "${info}" 2>/dev/null | head -1 || true)"
+        _e_linhagem_nintendo "${mac}" "${nome}" || continue
+        end="${dir%/*}"
+        end="${end##*/}"
+        [[ -n "${HCI_DE[${end^^}]:-}" ]] && printf '%s\n' "${HCI_DE[${end^^}]}"
+    done <<<"$(find "${LIB}" -mindepth 3 -maxdepth 3 -type f -name info 2>/dev/null || true)"
+}
+
+mapfile -t ADAPTADORES < <(_adaptadores)
+[[ "${#ADAPTADORES[@]}" -eq 0 ]] && { log "nenhum adaptador HCI — nada a fazer"; exit 0; }
 
 # --- 1) NOME "Nintendo*" via Alias do BlueZ (idempotente) --------------------
+#
+# QUAL OPERAÇÃO VALE PARA QUEM (N-IGUAL-A-UM-01, 22/08/2026). São TRÊS respostas
+# diferentes, e cada uma tem a razão dela:
+#
+#   (1) o alias "Nintendo*" -> SÓ nos adaptadores que hospedam a linhagem. Pôr
+#       em todos seria mais simples, e o A/B de 23/07 diz que o nome não
+#       atrapalha o clone — mas `integrations/apelido_do_dongle.py` só ESCONDE
+#       o prefixo na tela em adaptador COM Nintendo, e nunca subtrai. Num dongle
+#       sem Nintendo a palavra vira parte permanente do nome que ela escreveu:
+#       "Nintendo Sala", para sempre. Pôr onde não precisa custa mais que não
+#       pôr.
+#   (2) o SNIFF default -> em TODOS (ver a seção 2). É a devolução do default do
+#       kernel, e não existe adaptador para o qual "sniff permitido" seja errado.
+#   (3) o no-sniff por-conexão -> já é multi-adaptador de graça: `hcitool lp
+#       <MAC>` acha o adaptador da conexão sozinho (`hci_for_each_dev`). MEDIDO
+#       em 22/08/2026, com o Pro no `hci1` e o script mirando o `hci0`.
+#
+# QUEM HOSPEDA O QUÊ — duas fontes unidas, cada uma respondendo o que a outra
+# não responde:
+#
+#   * a árvore do BlueZ no D-Bus dá o `hciN` DIRETO e responde ANTES do link.
+#     MEDIDO em 22/08/2026: com o Pro DESLIGADO, o objeto
+#     `/org/bluez/hci1/dev_E0_F6_B5_*` continua lá. É o que importa — o Pro lê o
+#     nome do host no MOMENTO do link, e prefixo aplicado depois chega tarde;
+#   * a árvore de bonds em disco responde com o `bluetoothd` ainda povoando a
+#     árvore de objetos, que é exatamente o instante do `ExecStartPost`.
+#
+# O sysfs vivo (`/sys/class/hidraw/*/device/uevent`), que é a fonte do
+# `apelido_do_dongle` na GUI, NÃO entra aqui: tudo o que ele enxerga — controle
+# CONECTADO — a árvore do D-Bus já enxerga, e sem um segundo laço. Lá ele é a
+# fonte certa porque a GUI não tem root; aqui seria repetição. É a resposta "cada
+# um com a sua fonte" da decisão D2 da sprint.
 if command -v busctl >/dev/null 2>&1; then
-    ADAPTER_OBJ="/org/bluez/${HCI}"
-    ALIAS_ATUAL="$(busctl get-property org.bluez "${ADAPTER_OBJ}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
-    if [[ -n "${ALIAS_ATUAL}" && "${ALIAS_ATUAL}" != Nintendo* ]]; then
+    for HCI in "${ADAPTADORES[@]}"; do
+        END="$(_prop_adaptador "${HCI}" Address)"
+        [[ -n "${END}" ]] && HCI_DE["${END^^}"]="${HCI}"
+    done
+    mapfile -t COM_NINTENDO < <(_hci_com_nintendo | sort -u)
+    for HCI in ${COM_NINTENDO[@]+"${COM_NINTENDO[@]}"}; do
+        ADAPTER_OBJ="/org/bluez/${HCI}"
+        ALIAS_ATUAL="$(_prop_adaptador "${HCI}" Alias)"
+        [[ -n "${ALIAS_ATUAL}" && "${ALIAS_ATUAL}" != Nintendo* ]] || continue
         NOVO="Nintendo ${ALIAS_ATUAL}"
-        if busctl set-property org.bluez "${ADAPTER_OBJ}" org.bluez.Adapter1 Alias s "${NOVO}" 2>/dev/null; then
-            log "alias do adaptador -> '${NOVO}' (tira o Pro do sniff frágil)"
-        else
-            log "falha ao setar alias (adaptador não pronto?) — o watchdog re-tenta"
+        # O BlueZ recusa a chamada inteira quando o corte cai no meio de um
+        # caractere multibyte (medido; ver `apelido_do_dongle`), e o shell não
+        # tem como cortar UTF-8 em fronteira de caractere sem depender de
+        # ferramenta que pode não existir no boot. Então aqui não se corta: se
+        # não cabe, DIZ que não coube.
+        if [[ "$(printf '%s' "${NOVO}" | LC_ALL=C wc -c)" -gt "${TETO_DE_BYTES}" ]]; then
+            log "NÃO prefixei o alias de ${HCI}: 'Nintendo ' mais o nome de hoje passa de ${TETO_DE_BYTES} bytes, o teto do BlueZ — encurte o nome do adaptador pela aba do produto e o Pro volta a ficar protegido"
+            continue
         fi
-    fi
+        if busctl set-property org.bluez "${ADAPTER_OBJ}" org.bluez.Adapter1 Alias s "${NOVO}" 2>/dev/null; then
+            log "alias do adaptador ${HCI} -> '${NOVO}' (tira o Pro do sniff frágil)"
+        else
+            log "falha ao setar alias de ${HCI} (adaptador não pronto?) — o watchdog re-tenta"
+        fi
+    done
 fi
 
 # --- 2) LINK POLICY sem SNIFF — POR DISPOSITIVO (BT-SNIFF-PER-OUI-01) --------
@@ -198,12 +350,25 @@ OUI_NINTENDO_REAL="E0:F6:B5"
 # adaptador sem SNIFF, isto o devolve — é o que destrava o clone.
 # ATENÇÃO: a lista vai separada por VÍRGULA; com espaços o hciconfig lê só o
 # primeiro token e o comando vira no-op silencioso (medido 23/07).
+#
+# EM TODOS OS ADAPTADORES, e a razão é diferente da do alias (N-IGUAL-A-UM-01,
+# 22/08/2026): isto não escolhe favorecido nenhum, devolve o default do kernel.
+# Só age em quem está SEM sniff — e quem ficou sem foi uma versão anterior deste
+# script, que mexia em qualquer adaptador que calhasse de ser o primeiro naquele
+# boot. O 8BitDo pareia em qualquer um dos três e a probe dele morre em qualquer
+# um deles; consertar só o primeiro deixaria o reparo automático sem chegar
+# nunca ao adaptador estragado. Não existe adaptador para o qual "sniff
+# permitido" seja a resposta errada — o no-sniff é POR CONTROLE desde 23/07.
 if ! command -v hciconfig >/dev/null 2>&1; then
-    log "NÃO apliquei o SNIFF default de ${HCI}: o 'hciconfig' foi depreciado pelo BlueZ e não está nesta máquina, e nenhuma ferramenta viva escreve link policy — instale bluez-deprecated (ou bluez-deprecated-tools). O alias 'Nintendo*' acima segue valendo; o 8BitDo pode não completar a probe se o adaptador estiver sem SNIFF"
-elif ! hciconfig "${HCI}" lp 2>/dev/null | grep -q 'SNIFF'; then
-    hciconfig "${HCI}" lp rswitch,hold,sniff,park 2>/dev/null \
-        && log "link policy default de ${HCI} -> RSWITCH,HOLD,SNIFF,PARK (o clone 8BitDo precisa do SNIFF para probar)" \
-        || log "falha ao devolver o SNIFF ao default (adaptador não pronto?)"
+    log "NÃO apliquei o SNIFF default de ${ADAPTADORES[*]}: o 'hciconfig' foi depreciado pelo BlueZ e não está nesta máquina, e nenhuma ferramenta viva escreve link policy — instale bluez-deprecated (ou bluez-deprecated-tools). O alias 'Nintendo*' acima segue valendo; o 8BitDo pode não completar a probe se o adaptador estiver sem SNIFF"
+else
+    for HCI in "${ADAPTADORES[@]}"; do
+        if ! hciconfig "${HCI}" lp 2>/dev/null | grep -q 'SNIFF'; then
+            hciconfig "${HCI}" lp rswitch,hold,sniff,park 2>/dev/null \
+                && log "link policy default de ${HCI} -> RSWITCH,HOLD,SNIFF,PARK (o clone 8BitDo precisa do SNIFF para probar)" \
+                || log "falha ao devolver o SNIFF ao default de ${HCI} (adaptador não pronto?)"
+        fi
+    done
 fi
 
 # Por-conexão: no-sniff SÓ no Pro genuíno. Reaplicado a cada tick da vigia 0

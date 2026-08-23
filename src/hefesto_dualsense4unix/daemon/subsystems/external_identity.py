@@ -62,8 +62,9 @@ identidade: ver :data:`_SYNTHESIZED_MAC_FIRST_OCTET` e
 :meth:`ExternalIdentityRegistry._prune_volatile_locked`.
 
 GYRO-02 (2026-07-19, FASEADO): :class:`ExternalImuEnabler` reusa o MESMO
-tick/inventário para ligar a IMU do Nintendo Pro REAL (OUI
-:data:`NINTENDO_REAL_OUI`), que o hid-nintendo deixa em STANDBY. Mesmo
+tick/inventário para ligar a IMU do Nintendo Pro genuíno
+(:func:`~hefesto_dualsense4unix.core.linhagem_nintendo.e_pro_genuino`), que o
+hid-nintendo deixa em STANDBY. Mesmo
 território de subcomando do incidente acima — por isso a disciplina é
 ainda mais estrita: só ``bus == "usb"`` (fase 1), envio único por adoção,
 backoff de :data:`IMU_ENABLE_MAX_ATTEMPTS` tentativas ≥
@@ -81,6 +82,10 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core.linhagem_nintendo import (
+    OUI_PRO_DESTA_BANCADA,
+    e_pro_genuino,
+)
 from hefesto_dualsense4unix.daemon.subsystems.identity import (
     CONTROLLERS_FILE_LOCK,
     CONTROLLERS_SCHEMA_VERSION,
@@ -193,11 +198,19 @@ LED_MIN_INTERVAL_SEC = 2.0
 #: recusado de propósito: é exatamente a escrita que o critério dela proíbe.
 EXTERNAL_PLAYER_LED_ENABLED = False
 
-#: GYRO-02: OUI (6 hex, sem ``:``) do Nintendo Pro Controller GENUÍNO — o
-#: ÚNICO gatilho do enable-IMU. NÃO confundir com o 8BitDo em modo Switch
-#: (mesmo VID/PID 057e:2009, IMU nativa já viva — nada a fazer nele); a OUI
-#: é a fonte da verdade (mapa 2026-07-19 §OUI), nunca VID/PID/driver.
-NINTENDO_REAL_OUI = "e0f6b5"
+#: GYRO-02: faixa Nintendo que ESTA bancada tem. **Não é mais o gatilho do
+#: enable-IMU** — quem decide é :func:`~hefesto_dualsense4unix.core.
+#: linhagem_nintendo.e_pro_genuino`, por NEGATIVA.
+#:
+#: UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026): até hoje esta constante era
+#: o único gatilho, e a docstring dela chamava a si mesma de "a fonte da
+#: verdade". A Nintendo tem 82 faixas MA-L registradas (medido contra
+#: ``/usr/share/ieee-data/oui.csv``); comparar com UMA delas deixava o
+#: giroscópio de todo Pro de outra safra em STANDBY para sempre, sem log e sem
+#: aviso. Continua exportada porque testes e telas antigas a importam, e
+#: porque ela ainda é o fato verdadeiro que ela sempre foi — o que caducou é a
+#: quantificação que estava escrita em cima dela.
+NINTENDO_REAL_OUI = OUI_PRO_DESTA_BANCADA
 
 #: FASE 1 (GYRO-02): só USB. BT é o MESMO território de subcomando que matou
 #: o 8BitDo (`joycon_enforce_subcmd_rate`) — falta medição de campo com o
@@ -838,16 +851,23 @@ class ExternalImuEnabler:
     """Liga a IMU do Nintendo Pro REAL na ADOÇÃO (GYRO-02, FASEADO — só USB).
 
     Contexto medido (estudo 2026-07-19-estudo-gyro-universal-vpad.md §Parte
-    2): o Pro REAL (OUI :data:`NINTENDO_REAL_OUI`) declara os eixos da IMU
-    (o hid-nintendo lê a calibração de fábrica) mas o sensor fica em STANDBY
-    — accel/gyro travados em 0. O candidato de cura é o subcomando
-    Enable-IMU (0x40, arg 0x01) — o MESMO território de subcomando que
-    estourou o rate e derrubou o 8BitDo por Bluetooth (EXT-04). Por isso:
+    2): o Pro REAL declara os eixos da IMU (o hid-nintendo lê a calibração de
+    fábrica) mas o sensor fica em STANDBY — accel/gyro travados em 0. O
+    candidato de cura é o subcomando Enable-IMU (0x40, arg 0x01) — o MESMO
+    território de subcomando que estourou o rate e derrubou o 8BitDo por
+    Bluetooth (EXT-04). Por isso:
 
-    - gatilho ESTRITO: ``uniq`` cuja OUI é EXATAMENTE
-      :data:`NINTENDO_REAL_OUI` (nunca o 8BitDo, que mente VID/PID mas nunca
-      o MAC) **E** ``bus == "usb"`` (fase 1 — BT fica bloqueado até haver
-      medição de campo com o kernel-watch ``[JOYCON]`` limpo);
+    - gatilho por NEGATIVA:
+      :func:`~hefesto_dualsense4unix.core.linhagem_nintendo.e_pro_genuino` —
+      cara de Pro **e** OUI fora das faixas de clone conhecidas (nunca o
+      8BitDo, que mente VID/PID mas nunca o MAC) **E** ``bus == "usb"``
+      (fase 1 — BT bloqueado até haver medição de campo com o kernel-watch
+      ``[JOYCON]`` limpo).
+      **UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026):** até esta data o
+      gatilho era a igualdade com UMA faixa OUI, a desta bancada, e por isso
+      o giroscópio de todo Pro de outra safra ficava em STANDBY para sempre.
+      A Nintendo tem 82 faixas registradas; a 8BitDo tem uma. A lista fechada
+      que funciona é a do clone;
     - envio ÚNICO por adoção, com backoff: no máximo
       :data:`IMU_ENABLE_MAX_ATTEMPTS` tentativas, espaçadas por
       :data:`IMU_ENABLE_BACKOFF_SEC` — sucesso em qualquer tentativa encerra
@@ -896,7 +916,16 @@ class ExternalImuEnabler:
                 vivos.add(key)
                 if key in self._done:
                     continue
-                if key[:6] != NINTENDO_REAL_OUI:
+                # UMA-FAIXA-NÃO-É-UM-FABRICANTE-01: a pergunta é "é um Pro que
+                # NÃO é o clone?", não "é a faixa desta bancada?". Qualquer
+                # das 82 faixas da Nintendo passa; a lista fechada é a do
+                # clone, e ela é completa. Ver `core/linhagem_nintendo.py`.
+                if not e_pro_genuino(
+                    uniq=key,
+                    nome=str(entry.get("name") or ""),
+                    vid=str(entry.get("vid") or ""),
+                    pid=str(entry.get("pid") or ""),
+                ):
                     continue
                 bus = str(entry.get("bus") or "").lower()
                 if bus != _IMU_ENABLE_ALLOWED_BUS:

@@ -45,8 +45,13 @@ UNIVERSALIDADE
 Nada aqui olha nome de máquina, ordem de conexão ou quantidade de aparelhos. A
 mesma pergunta se responde igual numa mesa de zero, de um ou de quatro
 adaptadores — quem responde é o sysfs do kernel. Lista vazia e ``""`` são
-respostas legítimas, e a mais comum de todas: **esta bancada tem ZERO
-adaptadores** (``/sys/class/bluetooth`` vazio, medido em 22/08/2026).
+respostas legítimas, e **zero adaptadores é o caso mais comum lá fora**: a
+máquina sem Bluetooth nenhum, e o Flatpak, que não monta o barramento.
+
+Esta bancada NÃO é esse caso — ela tem TRÊS (``hci0``, ``hci1``, ``hci2``,
+medido em 22/08/2026). A frase anterior aqui dizia o contrário, e um fato
+errado sobre a bancada é justamente o tipo de linha que a próxima pessoa cita
+como prova (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01, A6).
 
 Todas as raízes e todos os leitores entram por argumento com default do sistema
 real — nunca por constante de módulo, que o ``CANARIO-FS-01``
