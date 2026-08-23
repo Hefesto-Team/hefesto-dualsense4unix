@@ -897,12 +897,11 @@ def _ativar_o_perfil_do_lancamento(
     A razão inteira está no chamador, junto do desvio da allowlist. Aqui ficam
     as três coisas que são desta função:
 
-    **O gerente vem da fábrica**, não montado à mão. Quatro rotas desta casa
-    montavam o próprio `ProfileManager`, cada uma com a sua lista de appliers, e
-    uma derivou — a nota `PERFIL-REESCRITO-NA-PARTIDA-01` item 6 conta o preço.
-    Applier ausente NÃO levanta: a seção é ignorada em silêncio, e a rota nova
-    nasceria funcionando "quase". Uma rota nova com lista própria era o defeito
-    de novo, no dia em que ele foi diagnosticado.
+    **O gerente vem da fábrica**, não montado à mão — e desde a
+    `A-FÁBRICA-COM-UM-CLIENTE-01` (22/08/2026) todas as rotas de ativação vêm.
+    Applier ausente NÃO levanta: a seção é ignorada em silêncio, e a rota com
+    lista própria nasce funcionando "quase" — a nota
+    `PERFIL-REESCRITO-NA-PARTIDA-01` item 6 conta o preço.
 
     **Nunca levanta.** Uma ativação que falhe não pode impedir o arming do modo
     logo abaixo, que é o que põe o controle na mão dela. O motivo vai ao
@@ -928,13 +927,18 @@ def _ativar_o_perfil_do_lancamento(
     try:
         from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
-        sem_disputa: dict[str, Any] = (
+        # O desvio entra por PARÂMETRO NOMEADO da fábrica (`mode_applier`), que
+        # é onde o porquê dele está escrito — a fábrica não tem, e não pode
+        # voltar a ter, um `**sobrescritas` que aceite qualquer coisa sem razão.
+        # Fora da allowlist o parâmetro simplesmente não é passado: "não
+        # informado" é diferente de `None`, e é a fábrica quem resolve.
+        desvio: dict[str, Any] = (
             {"mode_applier": _mode_applier_so_a_mascara(daemon)}
             if na_allowlist
             else {}
         )
         gerente_do_daemon(
-            daemon, store=getattr(daemon, "store", None), **sem_disputa
+            daemon, store=getattr(daemon, "store", None), **desvio
         ).activate(str(nome), origin="launch", relatorio=relatorio)
     except Exception as exc:
         logger.warning(
