@@ -208,7 +208,16 @@ class TestBtMaximoWiring:
 class TestDoctorRadio:
     def test_clone_ds4_detectado_por_modalias_com_texto_de_troca_de_modo(self) -> None:
         assert "usb:v054Cp05C4" in DOCTOR
-        assert "troque o modo" in DOCTOR
+        # NOTA DATADA — 23/08/2026. Aqui estava `assert "troque o modo" in
+        # DOCTOR`, e o portão congelava em verde um conselho que a medição da
+        # casa derrubou: para um aparelho PAREADO, mandar trocar para Switch é
+        # mandar para o modo "PROVADO instável, no rádio", saindo do
+        # DirectInput/PS4 que é o RECOMENDADO por rádio. O teste passa a exigir
+        # o contrário — e a intenção original (nunca mandar jogar fora) fica.
+        assert "não troque para Switch sem o cabo" in DOCTOR
+        assert "RECOMENDADO por rádio" in DOCTOR
+        # E a causalidade refutada em 04/08 não pode voltar.
+        assert "degradando o Bluetooth de TODOS" not in DOCTOR
         # Nunca "jogue fora" — é provavelmente um 8BitDo em modo D-input.
         assert "jogue fora" not in DOCTOR
 
