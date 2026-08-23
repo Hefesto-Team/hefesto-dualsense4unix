@@ -509,6 +509,115 @@ def medir_jogos_com_steam_input() -> list[str] | None:
         return None
 
 
+#: STEAM-INPUT-01/E7 — o vigia que reaplica o Steam Input OFF a cada 30min.
+GUARDA_STEAM_INPUT_TIMER = "hefesto-steam-input-guard.timer"
+
+#: As propriedades que dizem se o vigia está VIVO. `NextElapse*` é a única que
+#: responde pelo EFEITO; ver `interpretar_guarda_do_steam_input`.
+_GUARDA_PROPRIEDADES = (
+    "LoadState",
+    "UnitFileState",
+    "ActiveState",
+    "SubState",
+    "NextElapseUSecMonotonic",
+    "NextElapseUSecRealtime",
+)
+
+#: `systemctl enable` deixa a unidade num destes estados. Fora deles, o vigia
+#: está desligado por escolha de alguém — e escolha não é achado.
+_GUARDA_HABILITADO = frozenset({"enabled", "enabled-runtime"})
+
+
+def interpretar_guarda_do_steam_input(saida: object) -> tuple[str, str] | None:
+    """Achado do cartão "Saúde do sistema" sobre o vigia — ou `None` para calar.
+
+    Decisão dela, 22/08/2026, literal: *"o guarda morto entra como achado do
+    cartão 'Saúde do sistema', que já existe e já emite avisos, em vez de uma
+    linha permanente dizendo 'tudo bem' 99% do tempo"*. Por isso o retorno é
+    `None` no caso saudável: o cartão só ganha linha quando há problema.
+
+    ELO-MUDO-01 — por que a régua NÃO pode ser `ActiveState` nem `is-active`.
+    Medido nesta bancada em 22/08/2026 (systemd 255), reproduzindo o defeito de
+    26/07, o cadáver do vigia responde assim:
+
+        ActiveState=active                  <- diz "vivo"
+        SubState=elapsed
+        NextElapseUSecMonotonic=infinity    <- nunca mais dispara
+
+    Um check por `ActiveState` daria `[ OK ]` sobre um guarda que passou cinco
+    horas sem rodar. Quem responde pelo efeito é `NextElapse*`: sem próximo
+    disparo, não há rede de segurança.
+
+    `None` também quando não dá para medir (sem `systemctl`, sem sessão), quando
+    a unidade não existe (`install.sh --keep-steam-input`) e quando ela está
+    DESABILITADA — escolha não é achado. `docs/usage/troubleshooting-8bitdo.md`
+    ensina `systemctl --user disable --now` nas duas unidades do vigia para
+    segurar o gyro do 8BitDo; sem esta guarda o cartão passaria a resmungar
+    para sempre sobre um gesto documentado.
+
+    Medido em 22/08/2026: "parado mas habilitado" e "desligado de propósito"
+    respondem IGUAL em tudo — `ActiveState=inactive`, `SubState=dead`,
+    `NextElapseUSecMonotonic=infinity`. `UnitFileState` (`enabled` vs. `disabled`)
+    é o único campo que os separa.
+    """
+    if not isinstance(saida, str) or not saida.strip():
+        return None
+    campos: dict[str, str] = {}
+    for linha in saida.splitlines():
+        chave, sep, valor = linha.partition("=")
+        if sep:
+            campos[chave.strip()] = valor.strip()
+    if not campos:
+        return None
+    if campos.get("LoadState") != "loaded":
+        return None
+    if campos.get("UnitFileState") not in _GUARDA_HABILITADO:
+        return None
+
+    realtime = campos.get("NextElapseUSecRealtime", "")
+    monotonic = campos.get("NextElapseUSecMonotonic", "")
+    vivo = bool(realtime and realtime != "n/a") or bool(
+        monotonic and monotonic not in {"n/a", "infinity", "0"}
+    )
+    if vivo:
+        return None
+
+    from hefesto_dualsense4unix.integrations import storm_doctor
+
+    if campos.get("ActiveState") != "active":
+        motivo = "está habilitada, mas não está rodando"
+    else:
+        motivo = "consta ligada, mas não tem próximo disparo"
+    return (
+        storm_doctor.WARN,
+        "Steam Input: a rede de segurança "
+        f"{motivo} — a Steam pode religar a entrada Steam nos jogos e nada vai "
+        "desfazer. Conserto: rode `bash install.sh` de novo (sem sudo).",
+    )
+
+
+def medir_guarda_do_steam_input() -> tuple[str, str] | None:
+    """Lê o estado do vigia no systemd `--user` e devolve o achado, ou `None`."""
+    try:
+        result = subprocess.run(
+            [
+                "systemctl",
+                "--user",
+                "show",
+                GUARDA_STEAM_INPUT_TIMER,
+                *[f"--property={nome}" for nome in _GUARDA_PROPRIEDADES],
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        logger.debug("guarda_steam_input_indisponivel", erro=str(exc))
+        return None
+    return interpretar_guarda_do_steam_input(result.stdout)
+
+
 def format_fix_safe_result(relatorio: object) -> str:
     """Toast do botão "Aplicar correções" (sem senha) — pura, testável.
 
@@ -751,6 +860,13 @@ class DaemonActionsMixin(WidgetAccessMixin):
             except Exception as exc:
                 logger.warning("storm_diag_falhou", erro=str(exc))
                 return
+
+            # STEAM-INPUT-01/E7: o vigia morto vira achado DESTE cartão, e só
+            # quando está morto — decisão dela em 22/08/2026. `None` = calado.
+            with contextlib.suppress(Exception):
+                achado = medir_guarda_do_steam_input()
+                if achado is not None:
+                    rows = [*rows, achado]
             colors = {"[ OK ]": "#50fa7b", "[WARN]": "#ffb86c", "[INFO]": "#8b8fa8"}
 
             def _esc(text: str) -> str:

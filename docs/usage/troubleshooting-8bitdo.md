@@ -302,10 +302,33 @@ já configurados podem ter `UseSteamControllerConfig=0` persistido — que
 desliga o Steam Input do app para TODOS os controles.
 
 Ou seja: **para ter gyro do 8BitDo num jogo, é preciso reativar o Steam Input
-daquele jogo, sabendo que o guard do hefesto pode desfazer a escolha
-sozinho.** Não há configuração que dê gyro + guard ao mesmo tempo hoje. Dito
-isso, a escolha é sua — o hefesto não quebra o controle em nenhum dos casos;
-ele só não participa.
+daquele jogo, sabendo que o guard do hefesto vai desfazer a escolha sozinho.**
+Não há configuração que dê gyro + guard ao mesmo tempo hoje. Dito isso, a
+escolha é sua — o hefesto não quebra o controle em nenhum dos casos; ele só não
+participa.
+
+**Quando ele desfaz, exatamente.** O guard não é um gesto da instalação: são
+três unidades de usuário habilitadas por ela, e a reaplicação acontece em dois
+gatilhos — `hefesto-steam-input-guard.path`, que acorda quando a Steam escreve
+em `userdata/` (isto é, quando ela acaba de sair), e
+`hefesto-steam-input-guard.timer`, a cada **30 minutos**, como rede de
+segurança. Com a Steam viva o serviço **adia** em vez de fechá-la, então a sua
+escolha sobrevive à sessão em que você a fez e cai depois. Para segurar o gyro,
+desligue os dois:
+
+```bash
+systemctl --user disable --now hefesto-steam-input-guard.path \
+                               hefesto-steam-input-guard.timer
+```
+
+Desabilitar assim é uma escolha, e o Hefesto a respeita: o cartão *Saúde do
+sistema* (aba Sistema) **não** reclama de vigia desabilitado. Ele só avisa
+quando o vigia está habilitado e mesmo assim parou — que é defeito, não escolha.
+O `install.sh` reabilita os dois; para manter o gyro, rode-o com
+`--keep-steam-input` ou repita o `disable` depois.
+
+A lista inteira do que a instalação deixa rodando está em
+[instalação](instalacao.md).
 
 ---
 

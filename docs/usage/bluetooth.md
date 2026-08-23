@@ -142,7 +142,34 @@ porque o DualShock 4 usa a lightbar no lugar deles.
 Detalhes, medições e a tabela completa de modos em
 [`troubleshooting-8bitdo.md`](troubleshooting-8bitdo.md).
 
-## Fora de escopo
+## Áudio do controle sem fio — o que anda e o que não anda
 
-Áudio do DualSense por Bluetooth (fone e microfone do controle sem fio) usa
-protocolo proprietário e continua fora de escopo. Por USB o áudio funciona.
+São **duas** perguntas, e elas têm respostas diferentes. Por USB as duas
+funcionam.
+
+**O microfone por rádio anda, e vem desligado.** Está implementado por inteiro e
+nasce em opt-in, por privacidade e por banda: ligue com
+`HEFESTO_DUALSENSE4UNIX_BT_MIC=1`. *Não implementado* e *não ligado por padrão*
+são coisas diferentes, e confundi-las já custou tempo aqui.
+
+**O som SAINDO pelo alto-falante do controle, por rádio, não anda** — e o que se
+sabe hoje é mais preciso que "protocolo proprietário":
+
+- **A2DP e HFP estão descartados por medição** (07/08/2026, registro do BlueZ):
+  o controle anuncia só HID (`0x1124`) e PnP (`0x1200`), e a Class of Device
+  `0x002508` não tem o bit de áudio. Nenhum card de áudio nasce, e nenhum perfil
+  Bluetooth **padrão** leva som a este aparelho. Não é o host que não sabe: o
+  adaptador expõe A2DP Source e Sink, com aptX/LDAC/LC3/mSBC/G722.
+- **O canal por HID existe e responde** (15/08/2026): o descritor do rádio
+  declara nove degraus de report de saída, de `0x31` (77 B) a `0x39` (546 B), de
+  64 em 64 bytes. O firmware executou o mesmo bloco de 47 bytes mandado por
+  `0x32` e por `0x39`, com o olho dela na lightbar.
+- **O que falta é o conteúdo**: ninguém identificou o que vai nos ~469 bytes que
+  sobram além do bloco de controle, e ninguém mandou um byte de áudio e ouviu
+  coisa alguma. A frase honesta, contra o nosso próprio entusiasmo: *o canal
+  existe, o firmware responde, e o payload não foi identificado.*
+
+Linha por linha, com a procedência de cada célula, no
+[mapa de canais](../../specs.html) — `audio.microfone@dualsense`,
+`audio.saida_dedicada@dualsense` e
+`audio.saida_dedicada.payload_do_degrau@dualsense`.
