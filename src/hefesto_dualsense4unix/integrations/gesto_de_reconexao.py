@@ -132,8 +132,8 @@ class Resultado:
 def mascarar(mac: str) -> str:
     """Zera os octetos 4 e 5 — a máscara desta casa, e há portão que a cobra.
 
-    Aceita as duas formas que circulam no produto: ``d4:2f:4b:48:46:d8`` (o
-    ``uniq`` do daemon) e ``d42f4b4846d8`` (a chave do ``maquina.json``). A
+    Aceita as duas formas que circulam no produto: ``aa:bb:cc:11:22:33`` (o
+    ``uniq`` do daemon) e ``aabbcc112233`` (a chave do ``maquina.json``). A
     saída sai sempre com dois-pontos, que é como a pessoa lê um MAC.
     """
     limpo = mac.replace(":", "").replace("-", "").strip().lower()
@@ -145,7 +145,7 @@ def mascarar(mac: str) -> str:
 
 
 def _normalizar(mac: str) -> str | None:
-    """``d4:2f:4b:48:46:d8`` → ``D4_2F_4B_48_46_D8``, ou ``None`` se não é MAC.
+    """``aa:bb:cc:11:22:33`` → ``AA_BB_CC_11_22_33``, ou ``None`` se não é MAC.
 
     É a forma que o BlueZ usa no caminho do objeto. Recusar em vez de tentar é
     deliberado: um endereço forjado (o que começa em ``02``, do nosso DKMS) não

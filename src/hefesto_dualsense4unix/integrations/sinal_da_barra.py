@@ -159,7 +159,7 @@ _RE_ESCRITOR = re.compile(r"escritor_cru_detectado.*?nos=\[(?P<nos>[^\]]*)\]")
 def mascarar(mac: str) -> str:
     """Zera os octetos 4 e 5 — a máscara desta casa, e há portão que a cobra.
 
-    ``d4:2f:4b:48:46:d8`` vira ``d4:2f:4b:00:00:d8``. Serve para o relatório
+    ``aa:bb:cc:11:22:33`` vira ``aa:bb:cc:00:00:33``. Serve para o relatório
     poder nomear um controle sem que o endereço dela caia num PNG versionado
     pelo caminho do retrato das abas.
     """

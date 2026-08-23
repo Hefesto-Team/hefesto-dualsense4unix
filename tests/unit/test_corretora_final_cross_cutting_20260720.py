@@ -71,6 +71,14 @@ NINTENDO_UNIQ = f"{NINTENDO_REAL_OUI}000001"
 #: não depende do 8BitDo especificamente, só de não disparar o enable-IMU).
 BITDO_UNIQ = "aabbcc000002"
 
+#: UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026): o OUI deixou de bastar para
+#: disparar o enable-IMU. `e_pro_genuino` pergunta primeiro se o aparelho SE
+#: APRESENTA como Pro (nome/VID/PID) e só então descarta o clone pelo endereço
+#: — uma faixa sozinha não identifica fabricante. Sem este nome no inventário,
+#: estes dois testes mediriam o contrato antigo e passariam a exigir exatamente
+#: o defeito que a cura tirou.
+_NOME_DO_PRO = "Nintendo Co., Ltd. Pro Controller"
+
 
 class _FakeLedNode:
     """Nó sysfs de LED falso — mesma forma de `_FakeNode` do REPLICA-03."""
@@ -365,6 +373,7 @@ class TestEnableImuNaoApagaADefesaDosOutrosExternos:
         inventory = [
             {
                 "uniq": NINTENDO_UNIQ,
+                "name": _NOME_DO_PRO,
                 "bus": "usb",
                 "hidraw": "/dev/hidraw-nintendo",
                 "evdev_path": "/dev/input/event10",
@@ -433,6 +442,7 @@ class TestEnableImuNaoApagaADefesaDosOutrosExternos:
             lambda: [
                 {
                     "uniq": NINTENDO_UNIQ,
+                    "name": _NOME_DO_PRO,
                     "bus": "usb",
                     "hidraw": "/dev/hidraw-nintendo",
                     "evdev_path": "/dev/input/event10",
