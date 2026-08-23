@@ -206,7 +206,17 @@ class TestContadoresDeErroDoRadio:
             "\\tTX bytes:1 acl:0 sco:0 commands:1 errors:7\\n'\nexit 0\n",
         )
         saida = _rodar_check("check_bt_radio", fakes, "/usr/bin", "/bin")
-        assert "[WARN] adaptador BT com erros acumulados (RX/TX: 42/7)" in saida, saida
+        # A FRASE MUDOU EM 22/08/2026, e a mudança é a entrega (N-IGUAL-A-UM-01).
+        # O texto antigo dizia "adaptador BT" no singular porque o check lia UM
+        # adaptador — `_bt_adaptadores | head -1`. Numa mesa de três, hci1 e hci2
+        # hospedavam quatro dos cinco controles e o rádio sujo deles nunca era
+        # lido. Agora o aviso NOMEIA cada um, e sai uma linha por adaptador
+        # sujo — sem o nome, ela não sabe em qual mexer.
+        assert "com erros acumulados (RX/TX: 42/7)" in saida, saida
+        assert "adaptador hci" in saida, (
+            "o aviso tem de NOMEAR o adaptador: numa mesa de três, 'adaptador "
+            f"BT' não diz em qual mexer. Saída: {saida}"
+        )
 
 
 # ---------------------------------------------------------------------------
