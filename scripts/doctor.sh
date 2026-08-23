@@ -2866,7 +2866,11 @@ check_bt_radio() {
             pass "adaptador BT sem erros de RX/TX (0/0)"
         fi
     else
-        info "NÃO SEI se o rádio acumulou erros de RX/TX em ${_adp}: esses contadores só saem do 'hciconfig' (ioctl HCIGETDEVINFO), que o BlueZ depreciou e sua distribuição moveu de pacote — instale bluez-deprecated (ou bluez-deprecated-tools) se quiser esta medida de volta. Nem btmgmt nem bluetoothctl a substituem, e as linhas [BT-ERR] do kernel-watch dependem da mesma fonte"
+        # O NOME dos adaptadores vem do array, não de `${_adp}` — ele só é
+        # preenchido DENTRO do laço acima, que neste ramo nem roda. Medido em
+        # 22/08: a frase saía com "em " e o endereço vazio. Aqui ela nomeia os
+        # três, que é a informação que faltava quando o texto dizia "hci0".
+        info "NÃO SEI se o rádio acumulou erros de RX/TX em ${_adps_erro[*]}: esses contadores só saem do 'hciconfig' (ioctl HCIGETDEVINFO), que o BlueZ depreciou e sua distribuição moveu de pacote — instale bluez-deprecated (ou bluez-deprecated-tools) se quiser esta medida de volta. Nem btmgmt nem bluetoothctl a substituem, e as linhas [BT-ERR] do kernel-watch dependem da mesma fonte"
     fi
     # IdleTimeout do input.conf: default 0 = nunca desconecta por ociosidade
     # (já é o máximo). Valor > 0 = regressão de terceiro.
