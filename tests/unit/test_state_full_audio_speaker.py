@@ -248,7 +248,11 @@ class TestHotkeyEMic:
         daemon.config.mic_button_toggles_system = False
         payload = await _state_full(socket_path)
         assert payload["mic_button_toggles_system"] is False
-        assert payload["bt_mic"] == {"enabled": False, "running": False}
+        # A TERCEIRA chave entrou em 22/08/2026 (QUATRO-MICROFONES-01): `uniqs`
+        # diz de QUAIS controles a ponte de microfone está de pé. As outras duas
+        # são do PROCESSO; só esta fala de controle, e é a que o medidor de
+        # rádio consome.
+        assert payload["bt_mic"] == {"enabled": False, "running": False, "uniqs": []}
 
 
 class TestSpeakerSet:

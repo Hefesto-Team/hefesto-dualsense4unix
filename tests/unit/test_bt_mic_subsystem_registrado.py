@@ -98,7 +98,7 @@ async def test_boot_nao_sobe_bt_mic_por_padrao(
 
 @pytest.mark.asyncio
 async def test_boot_sobe_bt_mic_com_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com `bt_mic_enabled=True` o `run()` de fato inicia o subsystem.
+    """Com um `uniq` na fonte, o `run()` de fato inicia o subsystem.
 
     É ESTA a metade que faltava: sem a linha no `run()`, o teste do registry
     passaria e o daemon continuaria sem ponte de microfone nenhuma.
@@ -109,7 +109,11 @@ async def test_boot_sobe_bt_mic_com_opt_in(monkeypatch: pytest.MonkeyPatch) -> N
     iniciados: list[str] = []
 
     class _GerenciadorFalso:
-        def reconciliar(self) -> None:
+        # QUATRO-MICROFONES-01 (22/08/2026): a lista de nós chega EXPLÍCITA, e é
+        # nela que mora o "por controle" — o subsystem filtra pelos `uniq` que
+        # ela ligou antes de entregar. Assinatura tolerante para o dublê não
+        # amarrar a forma da chamada.
+        def reconciliar(self, nos: object = None) -> None:
             iniciados.append("reconciliar")
 
         def dormir(self, _s: float) -> bool:
@@ -125,7 +129,10 @@ async def test_boot_sobe_bt_mic_com_opt_in(monkeypatch: pytest.MonkeyPatch) -> N
     store = StateStore()
     daemon = Daemon(
         controller=FakeController(transport="usb", states=[_state()]),
-        bus=EventBus(), store=store, config=_config(bt_mic_enabled=True),
+        bus=EventBus(), store=store,
+        # O gate deixou de ser um `bool` e passou a ser um CONJUNTO de `uniq`:
+        # um `bool` não sabe dizer "o 2 sim, o 3 não", e a mesa dela tem quatro.
+        config=_config(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"})),
     )
     run_task = asyncio.create_task(daemon.run())
     for _ in range(500):
@@ -154,7 +161,8 @@ async def test_falha_do_bt_mic_nao_derruba_o_boot(
     store = StateStore()
     daemon = Daemon(
         controller=FakeController(transport="usb", states=[_state()]),
-        bus=EventBus(), store=store, config=_config(bt_mic_enabled=True),
+        bus=EventBus(), store=store,
+        config=_config(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"})),
     )
 
     async def _boom() -> None:
@@ -169,10 +177,17 @@ async def test_falha_do_bt_mic_nao_derruba_o_boot(
 
 
 def test_gate_por_env_var_continua_valendo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`is_enabled` aceita a env var documentada OU o campo novo da config."""
+    """`is_enabled` aceita a env var documentada OU a fonte por controle.
+
+    A env continua sendo o caminho à mão e vale por TODOS os controles; a fonte
+    é a declaração dela, e um `uniq` nela já basta. Conjunto VAZIO é desligado —
+    é o "nasce desligado" que a privacidade exige, e vem de graça da ausência.
+    """
     subsystem = BtMicSubsystem()
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
     assert subsystem.is_enabled(_config()) is False
-    assert subsystem.is_enabled(_config(bt_mic_enabled=True)) is True
+    assert subsystem.is_enabled(_config(bt_mic_uniqs=frozenset)) is False
+    um = _config(bt_mic_uniqs=lambda: frozenset({"aabbcc000001"}))
+    assert subsystem.is_enabled(um) is True
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", "1")
     assert subsystem.is_enabled(_config()) is True

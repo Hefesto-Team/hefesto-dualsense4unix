@@ -777,14 +777,14 @@ class _PainelDaMesa:
         else:
             self._controles = []
         # A TERCEIRA chave do bloco `bt_mic` — a lista de `uniq` com ponte de
-        # microfone de pé — AINDA NÃO EXISTE no `daemon.state_full`: o bloco de
-        # `daemon/ipc_handlers.py:2937-2940` publica só `enabled` e `running`,
-        # que são do PROCESSO e não do controle. Está lido daqui de propósito,
-        # com ausência virando conjunto vazio, para que ligá-la seja UMA linha
-        # no daemon e nenhuma aqui. Enquanto ela não existe, um controle com a
-        # ponte de pé é contado como sem microfone: a soma erra por 6% (276,7
-        # contra 260,4 fatias) e a fatia ciana não aparece. Está registrado como
-        # pendência da sprint CONFIG-04.
+        # microfone de pé. As outras duas (`enabled`, `running`) são do PROCESSO
+        # e não do controle: com quatro controles e uma ponte elas diriam
+        # `running: true` e pintariam áudio nos quatro.
+        #
+        # LIGADA em 22/08/2026 pela QUATRO-MICROFONES-01. A leitura tolerante
+        # continua: um daemon mais velho que a janela (o caso normal num install
+        # editable) não manda a chave, e ausência vira conjunto vazio — a barra
+        # conta aquele controle como sem microfone em vez de cair.
         bloco = (estado or {}).get("bt_mic")
         uniqs = bloco.get("uniqs") if isinstance(bloco, dict) else None
         if isinstance(uniqs, list):

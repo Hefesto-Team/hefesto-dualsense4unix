@@ -67,6 +67,7 @@ from hefesto_dualsense4unix.integrations.cor_do_plastico import (
     ler_pelo_cabo,
     tom_para_a_borda,
 )
+from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import carregar_maquina, fundir_declaracao
 
@@ -374,6 +375,183 @@ class EsperaPeloPS:
             return None
 
 
+# ---------------------------------------------------------------------------
+# O gesto do microfone — a ponte por rádio, POR CONTROLE (QUATRO-MICROFONES-01)
+# ---------------------------------------------------------------------------
+#
+# O campo `bt_mic_enabled` era lido por três lugares e escrito por NENHUM: a
+# ponte de microfone por Bluetooth só subia por `HEFESTO_DUALSENSE4UNIX_BT_MIC=1`
+# no ambiente do daemon. É a família A-CASA-SABE-E-O-PRODUTO-NAO-FAZ, e este
+# interruptor é a porta que faltava.
+#
+# AS QUATRO REGRAS DELA, de 22/08/2026, e as quatro estão em código aqui:
+#
+# 1. **POR CONTROLE.** Textual: *"por controle"*. Um por card, quatro
+#    independentes. Não existe chave de mesa inteira, e o daemon acompanha: o
+#    gate deixou de ser um `bool` e passou a ser um CONJUNTO de `uniq`
+#    (`daemon/subsystems/bt_mic.py`, que explica por que o `bool` não servia);
+# 2. **nasce desligado**, sempre. Ausência é desligado, e é por isso que
+#    desligar volta a "não sei" em vez de gravar um `false`;
+# 3. **sempre visível, só acionável no rádio** — a mesma regra do botão da luz,
+#    no mesmo card. No cabo o microfone do DualSense é placa de som USB e não
+#    passa por esta ponte; o interruptor fica apagado e a dica diz por quê.
+#    Botão que SOME ensina que a tela é instável;
+# 4. **capacidade, não advertência.** A frase de preço que existia foi derrubada
+#    por ela no mesmo dia — comparava 170 Hz de rádio com um espelho de 250 Hz
+#    que é a taxa NATIVA DO CABO. O que fica ao lado do interruptor é quanto do
+#    rádio o microfone ocupa, derivado das constantes do medidor.
+
+#: O rótulo do interruptor. Uma palavra, porque o card tem 208px de largura
+#: mínima e as outras linhas dele já são "Modo:", "Botões:", "Cor:" e "Jogador:".
+TEXTO_DO_MIC = "Microfone"
+
+#: A dica quando o interruptor PODE ser clicado. Ela diz o que o clique faz,
+#: quanto custa e que a escolha é dela — nunca "não faça isto".
+DICA_MIC_NO_RADIO = (
+    "Traz o microfone deste controle pelo rádio, como no PS5. Ele nasce "
+    "desligado por privacidade: a ponte é um gesto seu, e vale só para este "
+    "controle."
+)
+
+#: A dica do interruptor apagado no cabo. Diz POR QUE está apagado, que é a
+#: metade que falta em todo botão insensível desta casa.
+DICA_MIC_NO_CABO = (
+    "Só vale no rádio. Pelo cabo o microfone deste controle é uma placa de som "
+    "USB e não passa por esta ponte — ele já funciona sem ela."
+)
+
+#: A dica do interruptor apagado por falta de endereço. Sem os doze hexa não há
+#: chave no `maquina.json`, e o daemon não teria como saber de quem é a ponte.
+DICA_MIC_SEM_ENDERECO = (
+    "Este controle não tem endereço fixo, então o Hefesto não tem como guardar "
+    "a quem esta ponte pertence."
+)
+
+
+def _numero(valor: float) -> str:
+    """Uma casa decimal, com vírgula — é assim que ela lê número nesta casa."""
+    return f"{valor:.1f}".replace(".", ",")
+
+
+def frase_da_capacidade_do_mic() -> str:
+    """Quanto do rádio um microfone ocupa. DERIVADA, nunca digitada.
+
+    Os quatro números saem das constantes do medidor
+    (`integrations/radio_da_mesa`), que é o mesmo lugar de onde a barra de
+    "Rádio em uso" tira os dela. Digitá-los aqui criaria a segunda verdade — e a
+    primeira vez que alguém remedisse o A/B, a tela e a barra passariam a dizer
+    coisas diferentes sobre o mesmo fato.
+
+    É CAPACIDADE, não advertência: diz o que o rádio carrega, e a pergunta
+    "cabe?" quem responde é a barra da seção "A mesa".
+    """
+    from hefesto_dualsense4unix.integrations.radio_da_mesa import (
+        HZ_AUDIO_COM_MIC,
+        HZ_INPUT_COM_MIC,
+        HZ_INPUT_SEM_MIC,
+        SLOTS_POR_SEGUNDO,
+    )
+
+    total = HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC
+    return (
+        f"Com o microfone ligado, um controle no rádio troca {_numero(HZ_INPUT_SEM_MIC)} "
+        f"relatórios de entrada por segundo por {_numero(HZ_INPUT_COM_MIC)} mais "
+        f"{_numero(HZ_AUDIO_COM_MIC)} quadros de áudio: {_numero(total)} das "
+        f"{SLOTS_POR_SEGUNDO} fatias daquele adaptador. Quanto já está em uso "
+        'está na seção "A mesa".'
+    )
+
+
+def pode_ligar_o_mic(dados: Any) -> bool:
+    """O interruptor é clicável neste card?
+
+    Quatro condições. A primeira é a regra dela — **no rádio**; as outras três
+    são o que a ponte precisa para existir: um DualSense adotado (a ponte é
+    Opus tunelado em report HID da Sony, o 8BitDo não tem isso), um `uniq` para
+    o daemon casar com o nó do sysfs, e um `endereco` para a escolha ter onde
+    ser gravada.
+    """
+    return (
+        bool(getattr(dados, "adotado", False))
+        and not bool(getattr(dados, "no_cabo", False))
+        and bool(getattr(dados, "uniq", ""))
+        and bool(getattr(dados, "endereco", ""))
+    )
+
+
+def dica_do_microfone(dados: Any) -> str:
+    """A dica do interruptor, e ela nunca é vazia.
+
+    Os dois motivos de estar apagado são diferentes e pedem frases diferentes:
+    no cabo não FAZ FALTA, sem endereço não TEM ONDE ser guardada. Uma frase só
+    para os dois mandaria a pessoa procurar cabo onde o problema é endereço.
+    """
+    if pode_ligar_o_mic(dados):
+        return DICA_MIC_NO_RADIO
+    if not bool(getattr(dados, "endereco", "")) and bool(
+        getattr(dados, "adotado", False)
+    ):
+        return DICA_MIC_SEM_ENDERECO
+    return DICA_MIC_NO_CABO
+
+
+class _BlocoDoMicrofone:
+    """O interruptor de UM card. Dono de widgets, não subclasse de widget.
+
+    Mesma disciplina do `_BlocoDaLuz` logo abaixo, e pela mesma razão: assim
+    `app/widgets/external_card.py` continua sem saber que este gesto existe.
+
+    E o gesto é DIFERIDO como o resto da seção (`D-A4`): o clique acumula em
+    `host._maquina_pendente` e quem grava é o "Aplicar" do rodapé. Não é
+    detalhe de implementação — é o que a frase `QUANDO_VALE`, no pé da seção,
+    promete à pessoa que clicou. Gravar na hora aqui faria a seção mentir em
+    uma linha e dizer a verdade nas outras quatro.
+    """
+
+    def __init__(
+        self,
+        dados: DadosDoControle,
+        *,
+        ligado: bool,
+        ao_alternar: Callable[[str, bool], None],
+    ) -> None:
+        from gi.repository import Gtk
+
+        self.dados = dados
+        self._ao_alternar = ao_alternar
+        self._mudo = False
+
+        self.caixa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self.botao = Gtk.CheckButton(label=_(TEXTO_DO_MIC))
+        # O valor inicial entra ANTES do `connect`, como todo campo deste card:
+        # `set_active` EMITE "toggled", e com o handler já ligado a abertura da
+        # janela declararia sozinha o que ninguém escolheu.
+        self.botao.set_active(bool(ligado))
+        self.botao.set_sensitive(pode_ligar_o_mic(dados))
+        self.botao.set_tooltip_text(_(dica_do_microfone(dados)))
+        self.botao.connect("toggled", self._ao_clicar)
+        self.caixa.pack_start(self.botao, False, False, 0)
+
+    def encaixar(self, card: Any) -> None:
+        """Põe a caixa no corpo do card, ANTES do espaçador.
+
+        Mesma conta do `_BlocoDaLuz.encaixar`, e por isso a ordem entre os dois
+        é a ordem em que a seção os pendura: quem entra depois fica embaixo.
+        """
+        corpo = card.get_child()
+        if corpo is None:
+            return
+        antes = corpo.get_children()
+        corpo.pack_start(self.caixa, False, False, 0)
+        with contextlib.suppress(Exception):
+            corpo.reorder_child(self.caixa, max(0, len(antes) - 2))
+
+    def _ao_clicar(self, botao: Any) -> None:
+        if self._mudo:
+            return
+        self._ao_alternar(self.dados.chave, bool(botao.get_active()))
+
+
 def montar(host: Any, caixa: Any) -> None:
     """Monta a seção dentro de `caixa` — a caixa interna da moldura.
 
@@ -416,6 +594,13 @@ class _PainelDosControles:
         self._cards: dict[str, Any] = {}
         #: Os blocos do gesto da luz, por chave do card.
         self._luzes: dict[str, Any] = {}
+        #: Os interruptores de microfone, por chave do card.
+        self._microfones: dict[str, Any] = {}
+        #: `{endereco: True}` para quem tem a ponte de microfone declarada. Vive
+        #: separado do `DadosDoControle` de propósito: o card
+        #: (`app/widgets/external_card.py`) é território de outra frente, e um
+        #: campo novo lá obrigaria as duas a mexerem no mesmo arquivo.
+        self._mic_declarado: dict[str, bool] = {}
         #: Outro programa está segurando nó de controle agora? `None` = ainda
         #: não perguntei, ou a sonda não pôde responder — e "não sei" NÃO vira
         #: aviso: um alarme sem medição atrás ensina a ignorar alarmes.
@@ -440,6 +625,13 @@ class _PainelDosControles:
         # Ela fica FORA de `self._caixa` de propósito: aquela caixa é esvaziada
         # e repreenchida a cada reexame, e a frase não é dado da mesa — some e
         # volta piscaria a cada troca de aba.
+        # A capacidade do microfone vem ANTES da frase de quando a escolha vale,
+        # e vem UMA vez por seção, não uma por card: são 208px de largura por
+        # card, e a mesma frase repetida cinco vezes vira ruído em vez de
+        # informação. Ela fica fora de `self._caixa` pelo mesmo motivo da outra
+        # — aquela caixa é esvaziada a cada reexame, e a capacidade do rádio não
+        # é dado da mesa.
+        caixa.pack_start(rotulo_de_apoio(frase_da_capacidade_do_mic()), False, False, 0)
         caixa.pack_start(rotulo_de_apoio(QUANDO_VALE), False, False, 0)
         self.reexaminar()
 
@@ -588,6 +780,12 @@ class _PainelDosControles:
                 entrada, adotado=adotado, declarado=meu
             )
         )
+        if endereco:
+            # A ponte de microfone não passa por `declaracoes_do_aparelho` (ela
+            # não é campo do card, é gesto), então é lida do bruto aqui. `True`
+            # e só `True`: ausência e `False` deixam a ponte no chão do mesmo
+            # jeito, e é essa a razão de o desligar gravar "não sei".
+            self._mic_declarado[endereco] = meu.get("microfone") is True
         uniq = str(entrada.get("uniq") or chave or "")
         lida = self._cores.get(uniq)
         cor_id, cor_livre, nome_da_cor = _cor_na_tela(campos.get("cor"), lida)
@@ -715,6 +913,7 @@ class _PainelDosControles:
             with contextlib.suppress(Exception):
                 bloco.encerrar()
         self._luzes = {}
+        self._microfones = {}
         self._esvaziar(self._caixa)
         self._cards = {}
         if not cards:
@@ -744,6 +943,9 @@ class _PainelDosControles:
             )
             self._cards[dados.chave] = card
             self._pendurar_a_luz(card, dados)
+            # Depois da luz, e a ordem é a do encaixe: os dois usam a mesma
+            # conta de posição, então quem entra por último fica embaixo.
+            self._pendurar_o_microfone(card, dados)
             grade.attach(card, indice % COLUNAS, indice // COLUNAS, 1, 1)
         self._caixa.pack_start(grade, False, False, 0)
         self._caixa.show_all()
@@ -779,9 +981,51 @@ class _PainelDosControles:
             return
         self._luzes[dados.chave] = bloco
 
+    def _pendurar_o_microfone(self, card: Any, dados: DadosDoControle) -> None:
+        """Encaixa o interruptor de microfone neste card.
+
+        Só em DualSense adotado, e a razão é de protocolo, não de gosto: a ponte
+        é Opus tunelado num report HID da Sony (`0x31`/`0x32`), e o 8BitDo, o Pro
+        e o Xbox não têm isso. Um interruptor num card onde ele não pode ligar
+        nada é promessa que o produto não cumpre.
+
+        **No cabo o interruptor VAI**, apagado — é a regra dela, a mesma do botão
+        da luz logo acima.
+        """
+        if not bool(getattr(dados, "adotado", False)) or not dados.uniq:
+            return
+        try:
+            bloco = _BlocoDoMicrofone(
+                dados,
+                ligado=self._mic_declarado.get(dados.endereco, False),
+                ao_alternar=self._ao_alternar_o_microfone,
+            )
+            bloco.encaixar(card)
+        except Exception:
+            logger.debug("config_mic_bloco_nao_montou", exc_info=True)
+            return
+        self._microfones[dados.chave] = bloco
+
     # -- gestos ------------------------------------------------------------
 
-    def _ao_declarar(self, chave: str, campo: str, valor: str | None) -> None:
+    def _ao_alternar_o_microfone(self, chave: str, ligado: bool) -> None:
+        """A ponte de microfone deste controle entra no rascunho.
+
+        DESLIGAR grava `None`, não `False`: "nunca pedi" e "não quero" deixam a
+        ponte no chão do mesmo jeito, e um `false` em disco seria um valor de
+        catálogo para o silêncio — a porta pela qual o default entra disfarçado
+        de escolha dela (a regra é do `utils/maquina.py`).
+
+        Quem grava continua sendo o "Aplicar" do rodapé, e quem sobe a ponte é o
+        daemon, no `machine.declare`. A janela NÃO fala com
+        `integrations/dualsense_bt_audio` — o processo da janela não pode ter
+        esse gesto ao alcance de um clique enquanto a posse do hidraw não for
+        arbitrada — o susto de 16/08/2026 está no estudo `O-PS-PRESO`, em
+        `docs/process/estudos/`.
+        """
+        self._ao_declarar(chave, "microfone", True if ligado else None)
+
+    def _ao_declarar(self, chave: str, campo: str, valor: str | bool | None) -> None:
         """Acumula a escolha dela no rascunho. NÃO grava — quem grava é o rodapé.
 
         `D-A4`, sem exceção: o clique marca o rascunho e o efeito sai no
@@ -803,7 +1047,7 @@ class _PainelDosControles:
         logger.info("config_controle_declarado", campo=campo, tem_valor=valor is not None)
         self._repintar(chave, campo, valor)
 
-    def _repintar(self, chave: str, campo: str, valor: str | None) -> None:
+    def _repintar(self, chave: str, campo: str, valor: str | bool | None) -> None:
         """A borda acompanha a escolha na hora — é o que o desenho promete."""
         if campo != "cor":
             return
@@ -812,7 +1056,7 @@ class _PainelDosControles:
             return
         lida = self._cores.get(card.dados.uniq)
         with contextlib.suppress(Exception):
-            card.repintar_a_borda(_tom_da_cor(valor, lida))
+            card.repintar_a_borda(_tom_da_cor(valor if isinstance(valor, str) else None, lida))
 
     def _ao_numerar(self, uniq: str, numero: int) -> None:
         """Pede o número ao daemon e RELÊ quando ele confirmar.
