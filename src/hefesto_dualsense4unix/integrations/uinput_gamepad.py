@@ -134,6 +134,44 @@ FLAVORS: dict[str, dict[str, Any]] = {
 #: é Edge (VPAD-04), mas o default segue xbox: é o piso de compatibilidade que
 #: funciona validado em QUALQUER backend. Quem prefere prompts de PlayStation
 #: escolhe "dualsense" na GUI/perfil (documentado no README).
+#:
+#: NOTA DATADA — 22/08/2026 (MASCARA-QUE-GRUDA-01): a decisão dela — *"a máscara
+#: deve vir da escolha do user"* — tirou a máscara dos PRESETS, e **não** daqui.
+#: São duas perguntas, e confundi-las foi o que fez o `xbox` viajar do daemon
+#: para dentro do arquivo dela:
+#:
+#: * o que um PERFIL shipa: nada. Os presets de jogo passam a `gamepad_flavor:
+#:   null`, e um perfil novo nasce sem botão marcado no editor (`null` = "mantém
+#:   a máscara que estiver valendo"). Nenhum arquivo ganha máscara sem gesto;
+#: * o que o DAEMON usa quando ninguém nunca escolheu: **`dualsense`**, e NÃO
+#:   este valor. Quem decide numa instalação nova é
+#:   `DaemonConfig.gamepad_flavor` (HARMONIA-MASK-01, `lifecycle.py`), e
+#:   `start_gamepad_emulation` faz `normalize_flavor(flavor or
+#:   daemon.config.gamepad_flavor)` — o `DEFAULT_FLAVOR` só entra quando a
+#:   config vem `None` ou com valor desconhecido. A primeira escolha dela na
+#:   GUI substitui os dois e passa a grudar (`2b11172`).
+#:
+#: NOTA DATADA — 23/08/2026. Esta nota nasceu em 22/08 dizendo que este valor
+#: era "o que o daemon usa quando ninguém nunca escolheu" e que "a H1 **não foi
+#: remedida**". As duas afirmações são falsas, e a medição que as derruba já
+#: estava no repositório:
+#:
+#: * MEDIDO num `XDG_CONFIG_HOME` vazio: `DaemonConfig.gamepad_flavor` de
+#:   fábrica é `'dualsense'`; `DEFAULT_FLAVOR` aqui é `'xbox'`. Numa instalação
+#:   nova o jogo recebe a máscara DualSense;
+#: * a H1 FOI remedida, e a cronologia fecha: o portão que a citava nasceu em
+#:   **14/07** (`56564de`), o vpad passou a subir em `uhid` em **16/07**
+#:   (`b0596f0`/`389e429`), e em **22/07** a HARMONIA-MASK-01 — decisão dela —
+#:   registrou a máscara dualsense *"validada em jogo real
+#:   (Sackboy/Mad King/Pragmata)"* e a razão do xbox como *"de antes da máscara
+#:   dualsense vibrar — **superado** pela validação da Onda Harmonia"*. É essa
+#:   remedição que virou o default do daemon.
+#:
+#: Este piso continua `xbox` por um motivo mais estreito, e só ele: é o valor
+#: que `normalize_flavor` devolve para entrada CORROMPIDA (config ausente ou
+#: desconhecida), onde nenhuma das duas máscaras é a resposta certa e o que
+#: importa é não estourar. Trocá-lo é decisão de produto separada, não a
+#: consequência de uma H1 que ninguém remediu.
 DEFAULT_FLAVOR = "xbox"
 
 # Retrocompat: nome histórico apontando para o flavor Xbox.

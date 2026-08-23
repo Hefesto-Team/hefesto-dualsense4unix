@@ -195,59 +195,37 @@ def seed_default_presets(
     return copied
 
 
-#: SPRINT-GAME-RUMBLE-01: presets de jogo cuja máscara migrou dualsense->xbox
-#: (a DualSense faz o jogo ignorar o vpad e matar a vibração). Marker próprio para
-#: a migração rodar UMA vez em quem já tinha o preset semeado com o valor antigo.
-_FLAVOR_MIGRATION_MARKER = ".flavor_xbox_migrated"
-_FLAVOR_MIGRATION_PRESETS = ("sackboy_nativo.json", "coop_local.json")
-
-
-def migrate_game_presets_to_xbox(dest_dir: Path | None = None) -> list[str]:
-    """One-shot: troca `gamepad_flavor` dualsense->xbox nos presets de JOGO.
-
-    H1 da auditoria: `seed_default_presets` NUNCA sobrescreve, então quem já tinha
-    `sackboy_nativo`/`coop_local` semeados com `dualsense` continuaria com a
-    vibração morta mesmo após o bump. Esta migração corrige o valor UMA vez.
-
-    Conservadora: só reescreve quando o preset ainda está EXATAMENTE em
-    `"gamepad_flavor": "dualsense"` dentro de um `mode.kind=="gamepad"` — se a
-    usuária mudou o modo/flavor na mão, não toca. Idempotente via marker próprio.
-    Best-effort: falha loga e segue. Retorna os arquivos migrados.
-    """
-    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
-    marker = directory / _FLAVOR_MIGRATION_MARKER
-    if marker.exists():
-        return []
-    migrated: list[str] = []
-    with FileLock(str(_lock_path(marker))):
-        if marker.exists():
-            return []
-        for fname in _FLAVOR_MIGRATION_PRESETS:
-            path = directory / fname
-            if not path.is_file():
-                continue
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except Exception:
-                continue
-            mode = data.get("mode")
-            if (
-                isinstance(mode, dict)
-                and mode.get("kind") == "gamepad"
-                and mode.get("gamepad_flavor") == "dualsense"
-            ):
-                mode["gamepad_flavor"] = "xbox"
-                with contextlib.suppress(Exception):
-                    path.write_text(
-                        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-                        encoding="utf-8",
-                    )
-                    migrated.append(fname)
-        with contextlib.suppress(Exception):
-            marker.write_text("xbox\n", encoding="utf-8")
-    if migrated:
-        logger.info("game_presets_flavor_migrated", files=migrated)
-    return migrated
+# ---------------------------------------------------------------------------
+# A MÁSCARA NÃO É DO PRESET (MASCARA-QUE-GRUDA-01, 22/08/2026) — decisão dela
+# ---------------------------------------------------------------------------
+# Ela, literal: *"A máscara deve vir da escolha do user. Ele escolhe como quer
+# que o jogo reconheça o controle conectado: se deve aparecer como Xbox ou
+# DualSense."*
+#
+# Consequência: **preset de gênero não tem opinião sobre máscara.** Preset é
+# sobre gatilho, vibração e luz; quem aplica "Ação" não pode descobrir depois
+# que ele também trocou o aparelho que o jogo enxerga. Os sete presets de jogo
+# passam a shipar `"gamepad_flavor": null` — que o applier já entende como
+# "MANTÉM a máscara que estiver valendo".
+#
+# O QUE SAIU DAQUI, e por que não volta
+# --------------------------------------
+# `migrate_game_presets_to_xbox` (SPRINT-GAME-RUMBLE-01) era a one-shot que
+# trocava `dualsense`->`xbox` no `sackboy_nativo`/`coop_local` já semeados,
+# justificada pela H1 da auditoria pré-release ("a máscara DualSense faz o jogo
+# ignorar o gamepad virtual"). Ela FOI removida em 22/08/2026, e o que a
+# derruba não é a H1 ter caído — a H1 segue **sem remedição** (E1 da sprint) —
+# é a decisão dela: escrever máscara no perfil de alguém é o produto escolhendo
+# por ela, e desde `2b11172` essa escolha GRUDA no disco até ela mudar.
+#
+# O marker `.flavor_xbox_migrated` continua no disco de quem já rodou a
+# migração. Ele é inerte: ninguém mais o lê, e apagá-lo não faz nada voltar.
+#
+# NENHUMA MIGRAÇÃO NOVA ESCREVE MÁSCARA — nem a inversa. Quem tem `xbox` no
+# disco pode tê-lo escolhido: o preset shipava `xbox` E o seletor grava `xbox`,
+# e nada no arquivo separa os dois casos. Uma migração inversa desfaria em
+# silêncio uma escolha real — que é o defeito que esta sprint existe para
+# matar, com o sinal trocado. Portão: `test_o_preset_nao_escolhe_a_mascara.py`.
 
 
 #: R-12 (auditoria 23/07): marker da migração do `match` inalcançável do
@@ -472,9 +450,9 @@ def _maybe_seed_presets() -> None:
     _seed_attempted = True
     try:
         seed_default_presets()
-        # H1: corrige a máscara dos presets de jogo já semeados (one-shot).
-        with contextlib.suppress(Exception):
-            migrate_game_presets_to_xbox()
+        # MASCARA-QUE-GRUDA-01 (22/08/2026): aqui rodava a
+        # `migrate_game_presets_to_xbox`. Nenhuma migração escreve máscara em
+        # perfil — o motivo inteiro está na nota acima do bloco que a substituiu.
         # LEIGO-01: apaga o `coop: false` que o default antigo gravou (one-shot).
         with contextlib.suppress(Exception):
             migrate_profiles_coop_default()
@@ -1574,7 +1552,6 @@ __all__ = [
     "load_all_profiles",
     "load_profile",
     "migrate_coop_local_match",
-    "migrate_game_presets_to_xbox",
     "migrate_profiles_coop_default",
     "perfis_de_jogo_semeados",
     "perfis_que_casam_com_o_cliente_steam",
