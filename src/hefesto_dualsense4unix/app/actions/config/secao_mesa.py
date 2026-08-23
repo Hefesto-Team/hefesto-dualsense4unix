@@ -41,15 +41,81 @@ A conta, a procedência de cada número e a fronteira que a tela NÃO atravessa
 (ocupação nunca é culpa) moram no cabeçalho de
 `integrations/radio_da_mesa.py`. Aqui em cima ficam só as três coisas que são
 de tela: o rótulo, a cor da palavra e o selo de procedência.
+
+A COLUNA "O QUE É" É LIDA, E ELA SÓ CORRIGE (22/08/2026)
+---------------------------------------------------------
+
+Decisão dela: *"classifica sozinho, você só corrige"*. Até aqui a coluna
+oferecia SETE botões por linha e perguntava à mão o que o kernel já responde:
+`bInterfaceClass/SubClass/Protocol` da interface 0 distingue mouse de teclado
+(`03/01/02` contra `03/01/01`) e Bluetooth de "sem fio" (`e0/01/01`). Quem lê
+é `integrations/censo_do_barramento`, que nasceu em 22/08/2026 e ficou sem UM
+consumidor em `app/` — a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` nascendo na mesma
+sessão que a documentou.
+
+A ordem de precedência tem três degraus, e ela é o desenho:
+
+1. **a correção dela vence tudo** — `RadioDeclarado.tipo`, no `maquina.json`;
+2. **o que o kernel leu vence o botão vazio** — a linha nasce preenchida, com
+   o selo `(lido)`, e o seletor só aparece se ela clicar em "Corrigir";
+3. **quando ninguém sabe** — classe `ff`, em que o fabricante declinou de
+   classificar — a linha nasce com o seletor aberto e o `▲`. Na bancada dela,
+   das quatro linhas de rádio vizinho, só UMA cai aqui.
+
+A junção entre as duas leituras é o `no` — o caminho real no sysfs, a mesma
+convenção nos dois módulos. Nunca o `vid:pid`, que é a chave do que ELA
+declarou e que se repete quando há duas unidades do mesmo aparelho.
+
+O NOME DE CADA ADAPTADOR (22/08/2026)
+--------------------------------------
+
+Decisão dela: *"você escreve, o produto protege o prefixo"*. Três adaptadores
+`2357:0604` idênticos no barramento, e a única coisa que os separa é o BD
+Address — que não é nome. Quem lê e escreve o `org.bluez.Adapter1.Alias` é
+`integrations/apelido_do_dongle`, o segundo módulo que estava sem consumidor.
+
+Duas coisas desta tela dependem dele, e as duas juntas são a razão de ele ser
+lido aqui e não em outro lugar:
+
+* a coluna **"Nome"** da tabela de adaptadores, que é um campo livre. O que a
+  tela mostra é o nome DELA, limpo: o prefixo `Nintendo` que segura o Pro
+  Controller fora do sniff frágil é costurado por baixo, e ela nunca precisa
+  saber que existe;
+* o **rótulo do medidor**, que passa a dizer `Rádio em uso · Sala` em vez de um
+  endereço hexa. Essa junção é por ENDEREÇO dos dois lados (o `HID_PHYS` do
+  controle contra o `Address` do BlueZ) e não tem chute nenhum dentro.
+
+A junção da TABELA é outra, e ela é a única coisa aqui que usa `hciN`: o
+`Adaptador.interface` do sysfs contra o `/org/bluez/hciN` do BlueZ. O índice
+inverte entre boots e por isso ele nunca é guardado — a correspondência é
+refeita a cada leitura, e as duas leituras acontecem no mesmo gesto. O que vai
+para a escrita é sempre o BD Address.
+
+**O nome grava NA HORA**, e a frase ao lado do campo diz isso. As três
+declarações desta seção esperam o "Aplicar" do rodapé porque moram no
+`maquina.json`; o alias mora no BlueZ, que não passa pelo rascunho da máquina
+nem pelo rodapé. Duas semânticas na mesma seção é dívida declarada — ver o
+relatório da leva.
 """
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Sequence
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.config.moldura import (
     QUANDO_VALE,
     rotulo_de_apoio,
+)
+from hefesto_dualsense4unix.integrations.apelido_do_dongle import (
+    Dongle,
+    ler_os_dongles,
+    renomear_o_dongle,
+)
+from hefesto_dualsense4unix.integrations.censo_do_barramento import (
+    GRAU_LIDO,
+    Censo,
+    ler_o_barramento,
 )
 from hefesto_dualsense4unix.integrations.mesa_de_radio import (
     Adaptador,
@@ -96,6 +162,80 @@ _TIPOS_DE_RADIO: tuple[tuple[str, str], ...] = (
     ("caixa_de_som", "Caixa de som"),
     ("outro", "Outro"),
     ("nao_sei", "Não sei"),
+)
+
+#: `id -> palavra de tela` dos tipos acima. Existe para que a linha que ELA
+#: corrigiu mostre a palavra dela, e não o identificador do esquema.
+_PALAVRA_DO_TIPO: dict[str, str] = dict(_TIPOS_DE_RADIO)
+
+#: O selo de quem respondeu, na coluna "O que é". São os três degraus da
+#: precedência, e cada um tem de ser distinguível do outro na tela: sem isso a
+#: pessoa não sabe se está olhando o que ela disse ou o que a máquina deduziu.
+#:
+#: Começam por parêntese de propósito — o portão de maiúscula
+#: (`validar-palavra-de-tela.py:174`) só olha a primeira LETRA, e uma palavra
+#: solta em minúscula ao lado do valor é a gramática que a casa já usa no selo
+#: do medidor ("derivado da especificação").
+_SELO_LIDO = "(lido)"
+_SELO_DECLARADO = "(você disse)"
+
+#: A dica do selo `(lido)`. Ela é a única coisa na tela que diz DE ONDE veio a
+#: palavra — sem ela, a classificação parece chute do produto.
+_DICA_LIDO = (
+    "O sistema informou o que este aparelho é, pelo próprio barramento USB. "
+    'Se estiver errado, clique em "Corrigir".'
+)
+
+#: A dica do selo `(você disse)`.
+_DICA_DECLARADO = (
+    'Foi você quem respondeu isto. Clique em "Corrigir" para trocar a resposta.'
+)
+
+#: O botão que abre o seletor numa linha já respondida.
+_BOTAO_CORRIGIR = "Corrigir"
+
+#: A linha que aparece quando nem o sistema nem ela sabem o que é o aparelho.
+#: Ela repete a palavra do subcabeçalho — *"o Hefesto encontra os aparelhos,
+#: mas não sabe para que servem"* — de propósito: é a mesma frase, aplicada a
+#: uma linha, e um vocabulário novo aqui faria parecer outro assunto.
+_AVISO_NAO_SABE = "▲ O Hefesto não sabe"
+
+#: A dica do `▲`. Diz o fato medido sem jargão: há aparelho que não se declara.
+_DICA_NAO_SABE = (
+    "Este aparelho não diz ao sistema para que serve. É a única linha que "
+    "precisa de você."
+)
+
+#: O cabeçalho e a dica da coluna do nome de cada adaptador.
+_COLUNA_NOME = "Nome"
+_DICA_DO_NOME = (
+    "Adaptadores iguais são idênticos no sistema. O nome é seu, e é ele que "
+    "diz qual é qual."
+)
+
+#: O texto do campo vazio. Não é rótulo: é o cinza que o `Gtk.Entry` mostra
+#: enquanto ninguém escreveu nada.
+_NOME_EM_BRANCO = "Sem nome"
+
+#: A frase que diz que ESTE campo não espera o rodapé.
+#:
+#: Ela não é o `moldura.VALE_JA`, e a diferença é deliberada: aquela frase fala
+#: da SEÇÃO inteira, e nesta seção as três declarações continuam esperando o
+#: "Aplicar". Uma seção que mostrasse as duas frases gerais se contradiria —
+#: há portão que reprova (`test_as_duas_frases_nunca_aparecem_na_mesma_secao`).
+#: Esta é por CAMPO, mora colada na tabela do campo, e diz o que acontece com
+#: o gesto dele.
+_NOME_VALE_JA = (
+    "O nome vai para o Bluetooth do sistema assim que você aperta Enter."
+)
+
+#: A nota que explica o prefixo que ela nunca escreveu. Só aparece quando algum
+#: adaptador da mesa hospeda um controle da linhagem Nintendo — em mesa sem Pro
+#: ela seria uma explicação sobre coisa nenhuma.
+_NOTA_DO_PREFIXO = (
+    "▲ Um dos adaptadores guarda a palavra Nintendo por dentro do nome: é ela "
+    "que impede o Pro Controller de cair sob carga. O Hefesto cuida disso "
+    "sozinho, e o nome que você lê aqui é só o seu."
 )
 
 #: As SETE palavras do painel do gabinete, uma por valor de
@@ -206,6 +346,22 @@ class _PainelDaMesa:
         #: A última mesa lida — o medidor precisa dela quando a resposta do
         #: daemon chega DEPOIS da leitura do barramento (é sempre o caso).
         self._mesa = Mesa()
+        #: O barramento USB inteiro, na palavra do kernel. É ele que preenche a
+        #: coluna "O que é" sem perguntar nada a ela. Censo vazio é resposta:
+        #: toda linha cai em "não sei" e o seletor abre sozinho.
+        self._censo = Censo()
+        #: Os adaptadores pela ótica do BlueZ — endereço, alias e quem hospeda
+        #: Nintendo. Tupla vazia é o caso comum e legítimo: sem `busctl`, com o
+        #: `bluetoothd` parado, no Flatpak, ou em máquina sem adaptador.
+        self._dongles: tuple[Dongle, ...] = ()
+        #: Impede empilhar leituras do BlueZ quando ela clica duas vezes.
+        self._dongles_pedidos = False
+        #: `vid:pid` das linhas em que ela abriu o seletor para corrigir. Vive
+        #: só nesta montagem: corrigir é gesto, não declaração.
+        self._corrigindo: set[str] = set()
+        #: `endereço -> Gtk.Entry` do nome de cada adaptador. Existe para uma
+        #: coisa só: não redesenhar a tabela por baixo de quem está digitando.
+        self._campos_de_nome: dict[str, Any] = {}
         #: `state["controllers"]` da última resposta, e os `uniq` com ponte de
         #: microfone de pé. Nascem vazios, e barra em zero é o desenho certo
         #: enquanto ninguém respondeu: zero é o que se sabe.
@@ -426,6 +582,7 @@ class _PainelDaMesa:
         """
         self._reler_a_mesa()
         self._pedir_o_estado()
+        self._pedir_os_dongles()
 
     def _reler_a_mesa(self) -> None:
         """A metade síncrona: `/sys` agora, as três caixas redesenhadas.
@@ -437,6 +594,8 @@ class _PainelDaMesa:
         try:
             mesa = self._ler()
             self._mesa = mesa
+            self._censo = self._ler_o_censo()
+            self._ler_os_dongles_de_bancada()
             self._desenhar_adaptadores(mesa)
             self._desenhar_radios(mesa)
             self._desenhar_medidores()
@@ -458,6 +617,108 @@ class _PainelDaMesa:
             return ler_a_mesa()
         resultado = leitor()
         return resultado if isinstance(resultado, Mesa) else Mesa()
+
+    def _ler_o_censo(self) -> Censo:
+        """O barramento USB inteiro — ou a bancada de mentira do retrato.
+
+        Duas varreduras de `/sys` por reexame, e não uma, porque as duas
+        respondem perguntas diferentes: `ler_a_mesa` diz QUAIS aparelhos são
+        rádio vizinho (e já exclui hub, adaptador e controle), e o censo diz o
+        QUE cada aparelho é. Fundir os dois módulos faria a tabela de rádios
+        depender de um leitor que não filtra nada.
+
+        **A guarda do retrato é a mesma da mesa, e pelo mesmo motivo.** Sem o
+        `_censo_leitor`, uma captura publicaria a espécie de cada aparelho DELA
+        num PNG versionado. Censo vazio na foto seria pior que nada: a coluna
+        inteira cairia em "não sei" e a documentação mostraria a tela errada —
+        por isso o retrato injeta, e a ausência do dublê durante uma captura é
+        censo vazio, nunca leitura viva.
+        """
+        leitor = getattr(self._host, "_censo_leitor", None)
+        if leitor is not None:
+            resultado = leitor()
+            return resultado if isinstance(resultado, Censo) else Censo()
+        if getattr(self._host, "_mesa_leitor", None) is not None:
+            return Censo()
+        return ler_o_barramento()
+
+    def _ler_os_dongles_de_bancada(self) -> None:
+        """A leitura do BlueZ quando ela é de mentira — e só então.
+
+        O dublê é de MEMÓRIA e responde na hora, então entra no caminho
+        síncrono. A leitura de verdade não pode: ela é `busctl`, um subprocesso
+        por propriedade e por adaptador, e este método roda dentro de `montar`.
+
+        `montar` acontece no ARRANQUE da janela (`app/app.py:1217` e `:1487`),
+        inclusive em quem sobe minimizado na bandeja — é a mesma decisão E6 que
+        mantém o `daemon.state_full` fora daqui. Uma aba que ninguém abriu não
+        fala com o BlueZ nem gasta treze subprocessos.
+        """
+        leitor = getattr(self._host, "_dongles_leitor", None)
+        if leitor is None:
+            return
+        with contextlib.suppress(Exception):
+            self._dongles = tuple(leitor())
+
+    def _pedir_os_dongles(self) -> None:
+        """Pede ao BlueZ o nome de cada adaptador — fora da thread da tela.
+
+        Três guardas antes de gastar um subprocesso, e cada uma fecha um
+        defeito diferente:
+
+        * **dublê montado** — quem injetou já respondeu no caminho síncrono;
+        * **retrato sem dublê** — o alias do BlueZ é texto que ELA escreveu, e
+          a foto vai para `docs/usage/assets/` sem revisão humana (F5);
+        * **mesa sem adaptador** — sem adaptador não há nome a dar, e é o caso
+          mais comum lá fora. É esta guarda que mantém `busctl` fora de toda
+          máquina que não tem Bluetooth, e fora da bateria de testes.
+
+        `run_in_thread` e não `call_async`: isto não é IPC com o Hefesto, é
+        subprocesso. Os dois compartilham o mesmo executor de um worker.
+        """
+        if getattr(self._host, "_dongles_leitor", None) is not None:
+            return
+        if getattr(self._host, "_mesa_leitor", None) is not None:
+            return
+        if not self._mesa.adaptadores or self._dongles_pedidos:
+            return
+
+        from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
+
+        def _chegaram(resultado: Any) -> bool:
+            self._dongles_pedidos = False
+            if isinstance(resultado, tuple):
+                self._dongles = resultado
+                self._redesenhar_os_nomes()
+            return False
+
+        def _falhou(_exc: Exception) -> bool:
+            self._dongles_pedidos = False
+            # BlueZ mudo não é "adaptador sem nome": é "não sei o nome". A
+            # coluna simplesmente não aparece, que é o que a tabela já faz
+            # quando ninguém respondeu.
+            return False
+
+        self._dongles_pedidos = True
+        run_in_thread(ler_os_dongles, _chegaram, _falhou)
+
+    def _redesenhar_os_nomes(self) -> None:
+        """Redesenha o que depende do BlueZ — a não ser que ela esteja digitando.
+
+        A resposta chega dezenas de milissegundos depois de entrar na aba, e
+        nesse instante ninguém está no campo. Mas "Reexaminar a mesa" pode ser
+        clicado com um nome pela metade no campo ao lado, e redesenhar ali
+        apagaria o que ela escreveu sem aviso.
+        """
+        digitando = any(
+            campo.has_focus()
+            for campo in self._campos_de_nome.values()
+            if hasattr(campo, "has_focus")
+        )
+        if digitando:
+            return
+        self._desenhar_adaptadores(self._mesa)
+        self._desenhar_medidores()
 
     def _pedir_o_estado(self) -> None:
         """Pede ao daemon quem está no rádio — sem bloquear a thread da tela.
@@ -556,13 +817,89 @@ class _PainelDaMesa:
             self._caixa_adaptadores.show_all()
             return
 
-        grade = self._grade(["Adaptador", "Onde está"])
+        por_interface = _dongle_por_interface(self._dongles)
+        # A coluna do nome só existe quando o BlueZ respondeu por ALGUM
+        # adaptador desta tabela. É a mesma régua que manteve "Firmware" fora
+        # daqui: coluna que só sabe dizer "não sei" em toda linha ocupa
+        # largura, que é o recurso escasso desta janela, e ensina a ignorar a
+        # tabela. No Flatpak e com o `bluetoothd` parado ela não aparece.
+        com_nome = any(
+            adaptador.interface in por_interface for adaptador in mesa.adaptadores
+        )
+        self._campos_de_nome = {}
+
+        cabecalhos = ["Adaptador", "Onde está"]
+        if com_nome:
+            cabecalhos.insert(0, _COLUNA_NOME)
+        grade = self._grade(cabecalhos)
+        if com_nome:
+            with contextlib.suppress(Exception):
+                grade.get_child_at(0, 0).set_tooltip_text(_(_DICA_DO_NOME))
+
         for linha, adaptador in enumerate(mesa.adaptadores, start=1):
-            grade.attach(self._celula_mono(_nome_do_adaptador(adaptador)), 0, linha, 1, 1)
+            coluna = 0
+            if com_nome:
+                grade.attach(
+                    self._campo_do_nome(por_interface.get(adaptador.interface)),
+                    coluna,
+                    linha,
+                    1,
+                    1,
+                )
+                coluna += 1
+            grade.attach(
+                self._celula_mono(_nome_do_adaptador(adaptador)), coluna, linha, 1, 1
+            )
             texto, dica = _onde_esta_o_adaptador(adaptador)
-            grade.attach(self._celula(texto, dica=dica), 1, linha, 1, 1)
+            grade.attach(self._celula(texto, dica=dica), coluna + 1, linha, 1, 1)
         self._caixa_adaptadores.pack_start(grade, False, False, 0)
+
+        if com_nome:
+            self._caixa_adaptadores.pack_start(
+                rotulo_de_apoio(_NOME_VALE_JA, largura_max=_LARGURA_DA_FRASE),
+                False,
+                False,
+                0,
+            )
+            if any(d.hospeda_nintendo for d in self._dongles):
+                self._caixa_adaptadores.pack_start(
+                    rotulo_de_apoio(_NOTA_DO_PREFIXO, largura_max=_LARGURA_DA_FRASE),
+                    False,
+                    False,
+                    0,
+                )
         self._caixa_adaptadores.show_all()
+
+    def _campo_do_nome(self, dongle: Dongle | None) -> Any:
+        """O campo livre do nome de um adaptador — ou uma célula vazia.
+
+        Vazia quando o BlueZ não respondeu por ESTE adaptador, mesmo tendo
+        respondido pelos outros. Um campo que não sabe para onde escrever é
+        pior que nenhum: ela digitaria e nada aconteceria.
+
+        O texto do campo é `Dongle.nome`, que é o alias SEM a costura — o
+        prefixo que segura o Pro nunca aparece aqui, e é isso que faz o nome na
+        tela ser o dela.
+        """
+        from gi.repository import Gtk
+
+        if dongle is None:
+            return self._celula("")
+
+        campo = Gtk.Entry()
+        campo.set_text(dongle.nome)
+        campo.set_placeholder_text(_(_NOME_EM_BRANCO))
+        campo.set_width_chars(12)
+        campo.set_max_width_chars(16)
+        campo.set_hexpand(False)
+        campo.set_tooltip_text(_(_DICA_DO_NOME))
+        campo.connect("activate", self._ao_salvar_o_nome, dongle.endereco)
+        # Sair do campo também salva: quem digita e clica noutro lugar espera
+        # que o que escreveu tenha valido. `focus-out-event` devolve `False`
+        # para que o GTK siga entregando o foco a quem o pediu.
+        campo.connect("focus-out-event", self._ao_sair_do_nome, dongle.endereco)
+        self._campos_de_nome[dongle.endereco] = campo
+        return campo
 
     def _desenhar_radios(self, mesa: Mesa) -> None:
         """A tabela dos outros rádios — ou a frase de que não há nenhum."""
@@ -602,11 +939,17 @@ class _PainelDaMesa:
                 1,
             )
             declarado = gravados.get(chave)
+            tipo = declarado.get("tipo") if isinstance(declarado, dict) else None
+            # O espelho de leitura é preenchido AQUI, e não dentro do widget.
+            # Enquanto ele morava no `_seletor_do_tipo`, o que a seção sabia
+            # sobre a declaração dela dependia de QUAL widget tinha sido
+            # desenhado — e a linha que o kernel já classificou não desenha
+            # seletor nenhum. Medido em 22/08/2026: o tipo gravado sumia do
+            # espelho na primeira linha que nascia preenchida.
+            if tipo is not None:
+                self.radios_declarados[chave] = str(tipo)
             grade.attach(
-                self._seletor_do_tipo(
-                    chave,
-                    declarado.get("tipo") if isinstance(declarado, dict) else None,
-                ),
+                self._celula_do_que_e(radio, chave, tipo),
                 2,
                 linha,
                 1,
@@ -615,18 +958,111 @@ class _PainelDaMesa:
         self._caixa_radios.pack_start(grade, False, False, 0)
         self._caixa_radios.show_all()
 
-    def _seletor_do_tipo(self, chave_do_radio: str, gravado: Any) -> Any:
-        """Os seis tipos mais "Não sei", em grade de três colunas.
+    def _celula_do_que_e(self, radio: RadioUsb, chave: str, gravado: Any) -> Any:
+        """A coluna "O que é" — a resposta já pronta, ou o seletor.
 
-        POR QUE ESTA COLUNA EXISTE. O Hefesto acha o aparelho no barramento e
-        não tem como saber para que ele serve — um dongle de teclado e um de
-        caixa de som são o mesmo `vid:pid` para o kernel. A resposta é a única
-        coisa desta seção que só a pessoa tem, e é ela que deixa o exame dizer
-        *"o engasgo pode ser a webcam ao lado do adaptador"* em vez de listar
-        um endereço hexa e calar.
+        Os três degraus da precedência, na ordem em que são consultados:
+
+        1. **ela respondeu** — mostra a palavra dela com o selo `(você disse)`.
+           A correção vence o kernel, sempre: o kernel sabe a CLASSE do
+           aparelho, ela sabe o aparelho;
+        2. **o kernel leu** — mostra a palavra do kernel com o selo `(lido)`.
+           É o que muda com esta leva: a linha nasce preenchida, e o gesto de
+           responder some das linhas em que não havia pergunta;
+        3. **ninguém sabe** — o seletor de sete botões, com o `▲` ao lado.
+
+        Nos dois primeiros, "Corrigir" abre o seletor. Enquanto ele está aberto
+        (`self._corrigindo`), a linha se comporta como o degrau 3 sem o `▲`:
+        o aviso é sobre a AUSÊNCIA de resposta, e ali já há uma.
+        """
+        from gi.repository import Gtk
+
+        if chave in self._corrigindo:
+            return self._seletor_do_tipo(chave, gravado)
+
+        if gravado is not None:
+            palavra = _PALAVRA_DO_TIPO.get(str(gravado), str(gravado))
+            return self._celula_respondida(
+                palavra, _SELO_DECLARADO, _DICA_DECLARADO, chave
+            )
+
+        aparelho = self._censo.aparelho(radio.no)
+        if aparelho is not None and aparelho.grau == GRAU_LIDO:
+            return self._celula_respondida(
+                aparelho.especie, _SELO_LIDO, _DICA_LIDO, chave
+            )
+
+        fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        fileira.pack_start(self._seletor_do_tipo(chave, gravado), False, False, 0)
+        aviso = Gtk.Label(label=_AVISO_NAO_SABE)
+        aviso.set_xalign(0.0)
+        aviso.set_tooltip_text(_(_DICA_NAO_SABE))
+        with contextlib.suppress(Exception):
+            aviso.get_style_context().add_class("dim-label")
+        fileira.pack_start(aviso, False, False, 0)
+        return fileira
+
+    def _celula_respondida(
+        self, palavra: str, selo: str, dica: str, chave: str
+    ) -> Any:
+        """Palavra, selo de procedência e o botão que reabre a pergunta.
+
+        O selo não é enfeite: sem ele a tela afirma "Teclado" e não diz quem
+        afirmou. Foi o que o medidor desta mesma seção já tinha aprendido — um
+        número sem procedência é lido como medição.
+        """
+        from gi.repository import Gtk
+
+        fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+
+        rotulo = Gtk.Label(label=_(palavra))
+        rotulo.set_xalign(0.0)
+        rotulo.set_tooltip_text(_(dica))
+        with contextlib.suppress(Exception):
+            rotulo.get_style_context().add_class("hefesto-rotulo")
+        fileira.pack_start(rotulo, False, False, 0)
+
+        marca = Gtk.Label(label=selo)
+        marca.set_xalign(0.0)
+        marca.set_tooltip_text(_(dica))
+        with contextlib.suppress(Exception):
+            marca.get_style_context().add_class("hefesto-valor-mono-peq")
+            marca.get_style_context().add_class("dim-label")
+        fileira.pack_start(marca, False, False, 0)
+
+        botao = Gtk.Button(label=_(_BOTAO_CORRIGIR))
+        botao.set_tooltip_text(_(dica))
+        botao.connect("clicked", self._ao_corrigir, chave)
+        fileira.pack_start(botao, False, False, 0)
+        return fileira
+
+    def _ao_corrigir(self, _botao: Any, chave: str) -> None:
+        """Abre o seletor daquela linha. Não grava nada, não relê nada."""
+        self._corrigindo.add(chave)
+        self._desenhar_radios(self._mesa)
+
+    def _seletor_do_tipo(self, chave_do_radio: str, gravado: Any) -> Any:
+        """Os seis tipos mais "Não sei", em fileira única.
+
+        POR QUE ESTE SELETOR EXISTE — e a frase que estava aqui antes estava
+        ERRADA, medido em 22/08/2026. Ela dizia que *"um dongle de teclado e um
+        de caixa de som são o mesmo `vid:pid` para o kernel"*, e o `vid:pid`
+        nunca foi a fonte: o kernel classifica pela CLASSE DA INTERFACE, e
+        `03/01/01` contra `03/01/02` separa teclado de mouse sem perguntar nada
+        a ninguém (`integrations/censo_do_barramento`). A conclusão que saía
+        dali — sete botões em TODA linha — fazia a tela perguntar o que a
+        máquina já sabia.
+
+        O que sobra para o seletor é o que o kernel de fato não responde: a
+        classe `ff`, em que o fabricante declinou de classificar, e é dela que
+        sai o Wi-Fi Realtek desta casa. Aí a resposta é a única coisa desta
+        seção que só a pessoa tem, e é ela que deixa o exame dizer *"o engasgo
+        pode ser a webcam ao lado do adaptador"* em vez de listar um endereço
+        hexa e calar.
 
         O esquema (`RadioDeclarado.tipo`) existe desde CONFIG-03, no mesmo dia,
-        e ficou SEM TELA até aqui — a metade que faltava do mesmo defeito.
+        e ficou SEM TELA até 22/08/2026 — a metade que faltava do mesmo
+        defeito.
 
         HORIZONTAL, E O NÚMERO É MEDIDO. A primeira versão usava `wrap=True`,
         que é grade de três colunas FIXAS (`segmented_selector.py:32`) — sete
@@ -654,7 +1090,6 @@ class _PainelDaMesa:
         seletor.set_items([(ident, _(nome)) for ident, nome in _TIPOS_DE_RADIO])
         seletor.set_hexpand(False)
         if gravado is not None:
-            self.radios_declarados[chave_do_radio] = str(gravado)
             with contextlib.suppress(Exception):
                 seletor.set_active_id(str(gravado))
         seletor.connect("changed", self._ao_declarar_o_radio, chave_do_radio)
@@ -667,9 +1102,13 @@ class _PainelDaMesa:
         if self._caixa_medidores is None:
             return
         self._esvaziar(self._caixa_medidores)
+        apelidos = _apelido_por_endereco(self._dongles)
         for nome, ocupacao in _medidores_da_mesa(self._mesa, self._ocupacoes()):
             self._caixa_medidores.pack_start(
-                self._fileira_do_medidor(nome, ocupacao), False, False, 0
+                self._fileira_do_medidor(nome, ocupacao, apelidos),
+                False,
+                False,
+                0,
             )
         self._caixa_medidores.show_all()
 
@@ -688,7 +1127,9 @@ class _PainelDaMesa:
             logger.warning("medidor_de_radio_falhou", exc_info=True)
             return {}
 
-    def _fileira_do_medidor(self, nome: str, ocupacao: Ocupacao) -> Any:
+    def _fileira_do_medidor(
+        self, nome: str, ocupacao: Ocupacao, apelidos: dict[str, str] | None = None
+    ) -> Any:
         """Rótulo, trilha de duas fatias, a palavra e o selo — nesta ordem.
 
         A ordem é a do desenho (`mockup/aba-configuracoes.html:365-372`) e ela
@@ -703,7 +1144,7 @@ class _PainelDaMesa:
         fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         fileira.set_margin_top(4)
 
-        rotulo = Gtk.Label(label=_(_rotulo_do_medidor(nome)))
+        rotulo = Gtk.Label(label=_(_rotulo_do_medidor(nome, apelidos)))
         rotulo.set_xalign(0.0)
         rotulo.set_tooltip_text(_(_DICA_DO_MEDIDOR))
         with contextlib.suppress(Exception):
@@ -873,6 +1314,68 @@ class _PainelDaMesa:
     def _ao_clicar_reexaminar(self, _botao: Any) -> None:
         self.reexaminar()
 
+    def _ao_sair_do_nome(self, campo: Any, _evento: Any, endereco: str) -> bool:
+        """Sair do campo salva. Devolve `False` para não engolir o foco."""
+        self._ao_salvar_o_nome(campo, endereco)
+        return False
+
+    def _ao_salvar_o_nome(self, campo: Any, endereco: str) -> None:
+        """Escreve o nome no BlueZ — e só quando ele MUDOU.
+
+        A comparação é contra `Dongle.nome`, que é o alias já limpo da costura.
+        Sem ela, cada troca de aba reescreveria o alias dos três adaptadores
+        com o valor que eles já têm — escrita à toa num barramento de sistema,
+        e uma delas cairia bem em cima do prefixo que segura o Pro.
+
+        Não relê para conferir, e é medido: a escrita do `Alias` é assíncrona,
+        e ler logo depois devolve o valor ANTIGO
+        (`integrations/apelido_do_dongle`). Uma conferência com espera dentro
+        travaria a janela por um segundo a cada salvamento. Em vez disso a
+        tabela guarda o que o BlueZ respondeu ao `set-property`, que é o que se
+        pode afirmar.
+
+        Roda na thread da tela de propósito: é UM `busctl` de escrita, no gesto
+        dela, e o resultado tem de estar na mão antes de a linha ser redesenhada
+        — ao contrário da leitura, que são treze e acontece sozinha.
+        """
+        alvo = next(
+            (d for d in self._dongles if d.endereco == endereco),
+            None,
+        )
+        if alvo is None:
+            return
+        novo = campo.get_text().strip()
+        if novo == alvo.nome:
+            return
+        try:
+            feito = renomear_o_dongle(endereco, novo, dongles=self._dongles)
+        except Exception:
+            logger.warning("apelido_do_dongle_falhou", exc_info=True)
+            return
+        if not feito.aplicado:
+            with contextlib.suppress(Exception):
+                campo.set_tooltip_text(_(feito.porque) if feito.porque else _(_DICA_DO_NOME))
+            return
+        # O espelho de memória substitui a releitura que não se pode fazer. Sem
+        # ele, o próximo `focus-out` compararia contra o nome velho e mandaria
+        # o mesmo alias de novo.
+        self._dongles = tuple(
+            Dongle(
+                endereco=d.endereco,
+                alias=feito.alias,
+                nome_do_sistema=d.nome_do_sistema,
+                hospeda_nintendo=d.hospeda_nintendo,
+                ligado=d.ligado,
+                objeto=d.objeto,
+            )
+            if d.endereco == endereco
+            else d
+            for d in self._dongles
+        )
+        with contextlib.suppress(Exception):
+            campo.set_tooltip_text(_(_DICA_DO_NOME))
+        self._desenhar_medidores()
+
 
 # -- tradução do que o barramento respondeu ---------------------------------
 
@@ -945,16 +1448,48 @@ def _medidores_da_mesa(
     return [(_nome_do_adaptador(a), Ocupacao()) for a in mesa.adaptadores]
 
 
-def _rotulo_do_medidor(nome: str) -> str:
+def _rotulo_do_medidor(nome: str, apelidos: dict[str, str] | None = None) -> str:
     """O rótulo da barra. Endereço ausente vira "Não sei", nunca `hciN`.
 
     `hci0` e `hci1` invertem entre boots — é a mesma decisão M1 que tirou o
     `hciN` da tabela acima, e vale em dobro aqui: uma barra que troca de dono
     entre boots faz a pessoa mexer na porta errada.
+
+    Quando o BlueZ deu um nome àquele endereço, é o NOME que aparece. A junção
+    é endereço contra endereço — o `HID_PHYS` do controle de um lado, o
+    `Address` do adaptador do outro —, então não há chute nenhum aqui: ou o
+    endereço bate, ou a barra continua se chamando pelo endereço.
     """
     if nome == SEM_ADAPTADOR:
         return f"Rádio em uso · {_PAINEL_DESCONHECIDO}"
-    return f"Rádio em uso · {nome}"
+    apelido = (apelidos or {}).get(nome.upper(), "")
+    return f"Rádio em uso · {apelido or nome}"
+
+
+def _dongle_por_interface(dongles: Sequence[Dongle]) -> dict[str, Dongle]:
+    """`hciN -> Dongle`, refeito a cada leitura e NUNCA guardado.
+
+    É a única junção desta seção que passa por `hciN`, e ela existe porque os
+    dois lados só têm esse campo em comum: o sysfs conhece porta e `vid:pid` e
+    **não publica o endereço** (medido em 22/08/2026 —
+    `/sys/class/bluetooth/hci0/` não tem `address`); o BlueZ conhece o endereço
+    e não conhece a porta.
+
+    O índice inverte entre boots, e por isso o que se guarda dele é NADA: as
+    duas leituras acontecem no mesmo gesto, e o que segue para a escrita é
+    sempre o BD Address, que não inverte.
+    """
+    achados: dict[str, Dongle] = {}
+    for dongle in dongles:
+        interface = dongle.objeto.rsplit("/", 1)[-1]
+        if interface.startswith("hci"):
+            achados[interface] = dongle
+    return achados
+
+
+def _apelido_por_endereco(dongles: Sequence[Dongle]) -> dict[str, str]:
+    """`ENDEREÇO -> nome dela`, só para quem tem nome. Maiúsculas dos dois lados."""
+    return {d.endereco.upper(): d.nome for d in dongles if d.nome}
 
 
 def _selo_da_ocupacao(ocupacao: Ocupacao) -> str:
