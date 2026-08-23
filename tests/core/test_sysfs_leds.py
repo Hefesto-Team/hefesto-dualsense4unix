@@ -154,11 +154,34 @@ def test_set_rgb_igual_pula_o_filesystem(
     calls = _conta_writes(monkeypatch)
 
     assert node.set_rgb(0, 0, 153) is True
-    assert calls["n"] == 2  # brightness + multi_intensity
+    # UMA escrita, não duas. LUZ-CEGA-01/F3 (22/08/2026): a bancada falsa já
+    # tem `brightness=255`, e "fixar em 255" virou GARANTIR 255 — o `btmon`
+    # mediu os dois quadros saindo no mesmo milissegundo com bytes idênticos,
+    # porque o output report da classe LED leva o estado inteiro.
+    assert calls["n"] == 1  # só multi_intensity
     assert node.set_rgb(0, 0, 153) is True  # cache: nada de write, mas True
-    assert calls["n"] == 2
+    assert calls["n"] == 1
     assert node.set_rgb(153, 0, 0) is True  # cor mudou => escreve
-    assert calls["n"] == 4
+    assert calls["n"] == 2
+
+
+def test_brightness_divergente_volta_a_ser_escrito(
+    fake_leds: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A economia de F3 é CONDICIONAL, e é isto que a torna segura.
+
+    Se um terceiro apagou pela classe (`brightness` != 255), ou se o nó ficou
+    ilegível num replug, a escrita volta a acontecer como sempre aconteceu — e
+    na MESMA ordem, o `brightness` antes da cor. Arranque a condição e este
+    teste reprova junto com o de cima: um passa a exigir uma escrita onde há
+    duas, o outro duas onde há uma.
+    """
+    node = sysfs_leds.discover()["aabbcc000001"]
+    Path(node._indicator_brightness).write_text("0")  # terceiro apagou pela classe
+    calls = _conta_writes(monkeypatch)
+    assert node.set_rgb(0, 0, 153) is True
+    assert calls["n"] == 2  # brightness + multi_intensity
+    assert Path(node._indicator_brightness).read_text().strip() == "255"
 
 
 def test_invalidate_cache_forca_a_proxima_escrita(
@@ -171,7 +194,7 @@ def test_invalidate_cache_forca_a_proxima_escrita(
     node.set_rgb(0, 0, 153)
     node.invalidate_cache()
     node.set_rgb(0, 0, 153)
-    assert calls["n"] == 4
+    assert calls["n"] == 2  # duas passagens, uma escrita cada (ver F3 acima)
 
 
 def test_set_rgb_falho_nao_cacheia_e_retenta(
@@ -185,7 +208,7 @@ def test_set_rgb_falho_nao_cacheia_e_retenta(
     os.chmod(node._multi_intensity, 0o644)
     calls = _conta_writes(monkeypatch)
     assert node.set_rgb(10, 20, 30) is True  # retentou de verdade
-    assert calls["n"] == 2
+    assert calls["n"] == 1
     assert Path(node._multi_intensity).read_text() == "10 20 30"
 
 
