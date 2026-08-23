@@ -30,6 +30,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from hefesto_dualsense4unix.core.linhagem_nintendo import OUIS_CLONE
+
 #: CLONE-01: campo do payload que traz a identidade de APARELHO já resolvida
 #: pelo daemon (a mesma com que ele numerou o controle e acendeu o LED). É
 #: contrato de FIO, então o nome vive dos dois lados como literal — a definição
@@ -71,13 +73,19 @@ _NINTENDO_MODE_VIDS = frozenset({"057e"})
 #: Marca por OUI do MAC (3 primeiros octetos = 6 hex minúsculos, sem ``:``).
 #: É o ÚNICO sinal que desambigua um 8BitDo em modo DualShock4 — que MENTE o
 #: VID 054c (Sony) e o nome "Wireless Controller", ficando IDÊNTICO a um DS4
-#: Sony de verdade — de um controle Sony genuíno: o OUI ``e4:17:d8`` é da
-#: 8BitDo (registro IEEE "8BITDO TECHNOLOGY HK LIMITED"). Quando presente e
-#: conhecido, o OUI VENCE o VID (o firmware clone mente o VID, nunca o MAC).
-#: Só existe por Bluetooth — por cabo o ``uniq`` vem vazio e caímos no VID.
-_BRAND_BY_OUI: dict[str, str] = {
-    "e417d8": "8BitDo",
-}
+#: Sony de verdade — de um controle Sony genuíno. Quando presente e conhecido,
+#: o OUI VENCE o VID (o firmware clone mente o VID, nunca o MAC). Só existe por
+#: Bluetooth — por cabo o ``uniq`` vem vazio e caímos no VID.
+#:
+#: A faixa vem de ``core/linhagem_nintendo.OUIS_CLONE`` e **não** é copiada
+#: aqui: UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026) fez desse módulo a casa
+#: única de faixa OUI no ``src/``, e há portão que reprova a segunda cópia
+#: (``tests/unit/test_uma_faixa_nao_e_um_fabricante.py``).
+#:
+#: Aqui a lista de tamanho um é a lista COMPLETA — a 8BitDo tem exatamente uma
+#: faixa MA-L no registro IEEE, medido em 22/08/2026 —, e é essa diferença que
+#: separa este uso legítimo do defeito que a sprint curou.
+_BRAND_BY_OUI: dict[str, str] = dict.fromkeys(OUIS_CLONE, "8BitDo")
 
 
 def _vidpid(entry: dict[str, Any]) -> str:

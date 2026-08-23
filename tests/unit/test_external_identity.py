@@ -17,9 +17,14 @@ GYRO-02 (2026-07-19): `ExternalImuEnabler` (enable-IMU do Nintendo Pro REAL,
 FASEADO — só USB) tem seção própria mais abaixo.
 
 MACs sempre na faixa forjada canônica (`aa:bb:cc:*`) — regra do teste-guarda
-de anonimato. O OUI real do Nintendo (`E0:F6:B5`) NUNCA aparece aqui — os
-testes de `ExternalImuEnabler` monkeypatcham `NINTENDO_REAL_OUI` para uma
-faixa forjada (`aabbcc`) e usam os MESMOS MACs sintéticos do arquivo.
+de anonimato. O OUI real do Nintendo (`E0:F6:B5`) NUNCA aparece aqui.
+
+UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026) mudou o método destes testes: o
+monkeypatch de `NINTENDO_REAL_OUI` SAIU. Ele apontava a constante para a mesma
+faixa forjada que a fixture usava, então a suíte comparava a lista consigo
+mesma e ficou cega ao defeito por um mês. Hoje o predicado de produção decide,
+e a única faixa REAL que aparece no arquivo é a do clone (`e4:17:d8`, mascarada),
+como régua independente da lista que o módulo declara.
 """
 from __future__ import annotations
 
@@ -1312,14 +1317,27 @@ async def test_sync_external_leds_e_noop_sem_fiacao() -> None:
 # GYRO-02 — ExternalImuEnabler: enable-IMU do Nintendo Pro REAL (FASEADO)
 # ---------------------------------------------------------------------------
 
-#: MAC com OUI forjado (aabbcc, mesma faixa de MAC_A/MAC_B) usado como
-#: "Nintendo real" nestes testes — o teste monkeypatcha `NINTENDO_REAL_OUI`
-#: para esta MESMA faixa, nunca a OUI real (`E0:F6:B5`).
+#: MAC com OUI forjado (`aa:bb:cc`, mesma faixa de MAC_A/MAC_B). Depois de
+#: UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026) ele representa algo mais
+#: forte do que representava: um Pro numa das **81 faixas Nintendo que esta
+#: casa nunca viu**. Nenhum teste monkeypatcha mais faixa nenhuma — o predicado
+#: de produção é exercitado como está.
 MAC_NINTENDO_FAKE = "aa:bb:cc:00:99:01"
-#: MAC com outra faixa forjada (`e8:47:3a`, "Edge físico" no guarda de
-#: anonimato) representando um controle QUALQUER com OUI diferente do
-#: Nintendo real (ex.: o 8BitDo, que nunca deve disparar o enable-IMU).
-MAC_OUTRA_MARCA = "e8:47:3a:00:00:09"
+
+#: MAC na faixa do CLONE, com os octetos 4 e 5 zerados pela máscara da casa.
+#: `e4:17:d8` está escrito aqui como LITERAL de propósito: se ele viesse de
+#: `OUIS_CLONE`, este teste iteraria a mesma lista que deveria conferir e não
+#: mediria nada. É a régua independente do módulo.
+MAC_CLONE_8BITDO = "e4:17:d8:00:00:09"
+
+#: NOTA DATADA — 22/08/2026, UMA-FAIXA-NÃO-É-UM-FABRICANTE-01. Aqui existia
+#: `MAC_OUTRA_MARCA = "e8:47:3a:..."` e um `test_oui_errado_zero_escrita` que
+#: exigia ZERO escrita nele. Aquele teste virou FATO ERRADO com a cura, e não
+#: decisão medida a preservar: `e8:47:3a` não é faixa de clone conhecida, e um
+#: Pro nela é um Pro — exigir silêncio ali é exigir exatamente o defeito
+#: (giroscópio em STANDBY em todo aparelho que não é o desta bancada). O que
+#: aquele teste QUERIA medir — "o clone nunca recebe o subcomando" — passou a
+#: ser medido por `MAC_CLONE_8BITDO`, que mede a coisa certa.
 
 
 def _imu_entry(uniq: str | None, hidraw: str | None, *, bus: str = "usb") -> dict[str, Any]:
@@ -1336,9 +1354,28 @@ def _imu_entry(uniq: str | None, hidraw: str | None, *, bus: str = "usb") -> dic
 
 
 @pytest.fixture()
-def oui_nintendo_forjada(monkeypatch: pytest.MonkeyPatch) -> str:
-    """Aponta `NINTENDO_REAL_OUI` para a faixa forjada `aabbcc` (anonimato)."""
-    monkeypatch.setattr(ei_mod, "NINTENDO_REAL_OUI", "aabbcc")
+def oui_nintendo_forjada() -> str:
+    """A faixa forjada `aabbcc`, e a GUARDA de que ela é exercitada de verdade.
+
+    **Antes de 22/08/2026 esta fixture monkeypatchava `NINTENDO_REAL_OUI`** para
+    `aabbcc`, e é por isso que a suíte inteira nunca enxergou o defeito da
+    UMA-FAIXA-NÃO-É-UM-FABRICANTE-01: com a constante apontada para a faixa da
+    própria fixture, o que se aferia era "a comparação com a constante funciona",
+    nunca "o produto reconhece um Pro". Régua que anda junto com o que ela
+    deveria conferir não mede nada.
+
+    Agora ela não desvia nada — o predicado de PRODUÇÃO decide — e no lugar do
+    desvio afirma o que o desvio escondia: uma faixa que esta casa nunca viu é
+    tratada como Pro genuíno.
+    """
+    from hefesto_dualsense4unix.core.linhagem_nintendo import e_pro_genuino
+
+    assert e_pro_genuino(
+        uniq=MAC_NINTENDO_FAKE,
+        nome="Nintendo Co., Ltd. Pro Controller",
+        vid="057e",
+        pid="2009",
+    ), "a faixa forjada tem de passar pelo predicado REAL, sem desvio nenhum"
     return "aabbcc"
 
 
@@ -1371,11 +1408,17 @@ class TestExternalImuEnabler:
         enabler.tick(inventario, now=200.0)
         assert imu_escritas == [("/dev/hidraw5", 0)]
 
-    def test_oui_errado_zero_escrita(
+    def test_faixa_do_clone_zero_escrita(
         self, oui_nintendo_forjada: str, imu_escritas: list[tuple[str, int]]
     ) -> None:
+        """A contraprova: mesmo nome, mesmo `057e:2009`, e ainda assim silêncio.
+
+        É esta metade que impede a cura de virar regressão do clone — o 8BitDo
+        em modo Switch mente VID, PID, serial e `HID_NAME`, e a OUI é o único
+        sinal honesto que ele emite.
+        """
         enabler = ExternalImuEnabler()
-        inventario = [_imu_entry(MAC_OUTRA_MARCA, "/dev/hidraw5", bus="usb")]
+        inventario = [_imu_entry(MAC_CLONE_8BITDO, "/dev/hidraw5", bus="usb")]
         enabler.tick(inventario, now=0.0)
         assert imu_escritas == []
 

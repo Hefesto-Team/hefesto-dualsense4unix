@@ -3,10 +3,30 @@
 O PROBLEMA QUE ESTE MÓDULO RESOLVE
 -----------------------------------
 
-Ela tem TRÊS adaptadores Bluetooth idênticos — ``2357:0604``, todos TP-Link
-UB500, todos atrás do mesmo hub. Idênticos no barramento, idênticos na etiqueta,
-idênticos no ``lsusb``. A única coisa que os separa é o BD Address, e endereço
-não é nome: ninguém olha para ``AC:A7:F1:...`` e sabe qual é o do sofá.
+Ela tem TRÊS adaptadores Bluetooth ``2357:0604``, todos atrás do mesmo hub.
+Idênticos no barramento e no ``lsusb``. A única coisa que os separa é o BD
+Address, e endereço não é nome: ninguém olha para ``AC:A7:F1:...`` e sabe qual
+é o do sofá.
+
+E **o modelo deles não é uma pergunta que o barramento responda** — MEDIDO em
+22/08/2026, e é por isso que a frase acima não diz "UB500"::
+
+    3-3.1.1   2357:0604  bcdDevice=0200  product="TP-Link UB500 Adapter"
+    3-3.1.4   2357:0604  bcdDevice=0200  product="TP-Link Bluetooth USB Adapter"
+    3-3.2     2357:0604  bcdDevice=0200  product="TP-Link UB500 Adapter"
+
+O ``vid:pid`` NÃO distingue: UB500, UB5A e UB500 Plus são os três
+``2357:0604``, com o mesmo chip RTL8761BUV, e aqui nem o ``bcdDevice`` os
+separa. O único campo que varia é o ``product``, e ele é frágil: três unidades
+da mesma bancada devolvem DUAS strings diferentes, e há na natureza uma
+terceira com erro de digitação de fábrica (``TP-Lifk UB5A Adapter``).
+
+**Consequência que precisa estar escrita:** nenhuma regra de udev, linha do
+mapa de canais ou caminho de decisão deste produto pode depender de distinguir
+modelo de dongle TP-Link. Não dá. O que identifica um adaptador aqui é o BD
+Address; o que ela lê na tela é o apelido que ela mesma escreveu. É a mesma
+recusa do ``censo_do_barramento`` a heurística por ``product`` — adivinhar por
+texto é como se erra com confiança.
 
 O BlueZ já guarda um nome por adaptador — ``org.bluez.Adapter1.Alias`` — e o
 grava em ``/var/lib/bluetooth/<endereço>/settings``, então ele sobrevive a
@@ -108,6 +128,12 @@ import subprocess
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.core.linhagem_nintendo import (
+    NOMES_LINHAGEM,
+    OUIS_LINHAGEM_COM_DOIS_PONTOS,
+    _e_da_linhagem_nintendo,
+)
+
 #: O prefixo que tira o Pro Controller do sniff frágil. Caixa canônica, igual à
 #: de ``scripts/bt_active_mode.sh:142`` — os dois escritores têm de produzir a
 #: MESMA string, ou cada um desfaz o outro.
@@ -123,17 +149,22 @@ TETO_DE_BYTES = 247
 #: worker e a janela pareceria travada.
 ESPERA_DO_BUSCTL_S = 5.0
 
-#: OUIs da linhagem Nintendo, minúsculas com ``:``. A primeira é o Pro genuíno
-#: (mesma fonte da verdade de ``NINTENDO_REAL_OUI`` em
-#: ``daemon/subsystems/external_identity.py:200`` e de ``OUI_NINTENDO_REAL`` em
-#: ``scripts/bt_active_mode.sh:188``); a segunda é o 8BitDo em modo Switch, que
-#: mente VID/PID como ``057E:2009`` mas nunca mente a OUI.
+#: OUIs da linhagem Nintendo, minúsculas com ``:`` — a faixa do Pro desta
+#: bancada e a do 8BitDo em modo Switch, que mente VID/PID como ``057E:2009``
+#: mas nunca mente a OUI.
 #:
 #: O 8BitDo entra na lista de propósito, e o A/B de 23/07/2026 é quem autoriza:
 #: *"o alias 'Nintendo' seguiu aplicado — ou seja, o NOME não atrapalha o
 #: clone"* (``bt_active_mode.sh:170-174``). O que atrapalha o clone é o
 #: no-sniff, que não é deste módulo.
-OUIS_NINTENDO = frozenset({"e0:f6:b5", "e4:17:d8"})
+#:
+#: **UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026):** as faixas deixaram de ser
+#: literais aqui e vêm de ``core/linhagem_nintendo``, que é a casa única delas
+#: no ``src/``. A frase que este comentário trazia antes — *"mesma fonte da
+#: verdade de ``NINTENDO_REAL_OUI``"* — descrevia quatro cópias que se citavam
+#: mutuamente, que é a assinatura de uma fonte da verdade que não existe.
+#: Agora existe.
+OUIS_NINTENDO = OUIS_LINHAGEM_COM_DOIS_PONTOS
 
 #: Pedaços de ``HID_NAME`` que denunciam a linhagem, em minúsculas. Existem
 #: além das OUIs porque OUI é lista fechada e nome é o que o kernel deduziu do
@@ -143,7 +174,7 @@ OUIS_NINTENDO = frozenset({"e0:f6:b5", "e4:17:d8"})
 #: ``"pro controller"`` é o nome que o ``hid-nintendo`` dá ao Pro e ao clone.
 #: NÃO casa ``"DualSense Wireless Controller"``, e não casa ``"8BitDo Pro 2"``
 #: em modo X-input — que é um gamepad comum e não tem nada a ver com o sniff.
-NOMES_NINTENDO = ("pro controller", "nintendo")
+NOMES_NINTENDO = NOMES_LINHAGEM
 
 #: MAC bem-formado, minúsculo. Mesma forma de
 #: ``integrations/radio_da_mesa.py:152``. É o que separa um ``HID_PHYS`` de
@@ -389,15 +420,6 @@ def adaptadores_com_nintendo(
             continue
         achados.add(phys)
     return frozenset(achados)
-
-
-def _e_da_linhagem_nintendo(*, nome: str, uniq: str) -> bool:
-    """Este controle é da linhagem que lê o nome do host? OUI ou nome bastam."""
-    endereco = uniq.strip().lower()
-    if any(endereco.startswith(oui) for oui in OUIS_NINTENDO):
-        return True
-    minusculo = nome.strip().lower()
-    return any(marca in minusculo for marca in NOMES_NINTENDO)
 
 
 # ---------------------------------------------------------------------------

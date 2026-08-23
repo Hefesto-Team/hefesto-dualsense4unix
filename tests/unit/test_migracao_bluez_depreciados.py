@@ -456,6 +456,13 @@ class TestModoAtivoNaoDesisteInteiro:
             _fake(fakes, "hciconfig", "echo 'Link policy: RSWITCH HOLD PARK'\nexit 0\n")
             _fake(fakes, "hcitool", "exit 0\n")
         log = tmp_path / "active.log"
+        #: N-IGUAL-A-UM-01 (22/08/2026): sem estas duas raízes desviadas o
+        #: teste lia o `/sys/class/bluetooth` DA MÁQUINA — três adaptadores na
+        #: bancada dela, zero no CI — e a saída mudava conforme quem rodava. O
+        #: que se quer aqui é o plano B do D-Bus, que é o que o `busctl` de
+        #: mentira responde.
+        vazio = tmp_path / "sem-adaptador-no-sysfs"
+        vazio.mkdir(exist_ok=True)
         subprocess.run(
             [BASH, str(ACTIVE_MODE), "--quiet"],
             capture_output=True,
@@ -465,6 +472,8 @@ class TestModoAtivoNaoDesisteInteiro:
             env={
                 "PATH": ":".join([str(fakes), *(str(d) for d in dirs)]),
                 "HOME": str(tmp_path),
+                "HEFESTO_SYS_BLUETOOTH": str(vazio),
+                "HEFESTO_BT_LIB": str(vazio),
                 "HEFESTO_BT_LOG_DEST": str(log),
             },
         )
@@ -480,7 +489,10 @@ class TestModoAtivoNaoDesisteInteiro:
         funciona sem ferramenta nenhuma do pacote depreciado.
         """
         saida = self._rodar(tmp_path, sandbox_sem_velhas)
-        assert "alias do adaptador -> 'Nintendo meowsystem'" in saida, saida
+        #: A frase NOMEIA o adaptador desde N-IGUAL-A-UM-01 (22/08/2026):
+        #: "alias do adaptador -> 'X'" falava pelo rádio inteiro numa mesa com
+        #: três, e era impossível saber em qual deles a cura tinha caído.
+        assert "alias do adaptador hci0 -> 'Nintendo meowsystem'" in saida, saida
         assert "NÃO apliquei o SNIFF default" in saida, (
             "e o que NÃO foi aplicado tem de aparecer no diário, não sumir"
         )

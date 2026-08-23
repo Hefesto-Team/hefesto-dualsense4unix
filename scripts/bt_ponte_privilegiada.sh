@@ -88,9 +88,10 @@
 #
 # O ALIAS É ESCRITO LITERALMENTE, e isso é decisão dela (#5 de 22/08/2026: "o
 # nome do dongle é dela; o prefixo funcional é do produto"). O prefixo
-# "Nintendo " continua sendo posto pelo `bt_active_mode.sh` no PRIMEIRO
-# adaptador, a cada tick do watchdog — quem desenha a tela mostra o nome SEM o
-# prefixo, não tenta impedi-lo aqui.
+# "Nintendo " é posto pelo `bt_active_mode.sh` a cada tick do watchdog, nos
+# adaptadores que HOSPEDAM a linhagem Nintendo — era "no PRIMEIRO adaptador"
+# até 22/08/2026, e essa é a cura N-IGUAL-A-UM-01/E2. Quem desenha a tela
+# mostra o nome SEM o prefixo, e não tenta impedi-lo aqui.
 #
 # GANCHOS DE TESTE (inertes sob sudo, ver contenção 3):
 #   HEFESTO_BT_LIB          raiz da árvore do BlueZ (default /var/lib/bluetooth)
