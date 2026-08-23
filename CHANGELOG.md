@@ -251,6 +251,131 @@ o terceiro reprovava "tem" ao lado de "têm", que são palavras diferentes.
 junto na remoção. E o `TimeoutStopSec` do drop-in do bluetoothd fechou os 42,8
 segundos que o gancho de parada podia gastar sem teto.
 
+### A leva da noite de 22/08 — a máscara, a luz, e a auditoria de viés de bancada
+
+Ela pediu a auditoria assim: *"vai ficar pra sempre naquela de 'no meu pc
+funciona de boa'."* Quatro varreduras saíram atrás disso, viraram quatro sprints
+e trouxeram cura junto.
+
+#### Adicionado
+
+**"A luz não acende" — o botão que a cura da barra nunca teve.** Um por card,
+sempre visível e só acionável no rádio (regra dela: botão que some ensina que a
+tela é instável). O produto **não** reconecta: ele derruba e espera o PS dela, e
+a ausência é a entrega — não existe gesto que traga o controle de volta sem a
+mão dela. O botão consulta o sinal antes de oferecer a cura, porque reconectar
+com a mesa suja faz a instância nova nascer travada igual.
+
+**O sinal honesto da barra.** Não existe sinal de *"a barra está acesa"*; existe
+de *"esta conexão nasceu condenada?"*. Medido com o olho dela, 6 de 6: as quatro
+travadas têm `lightbar_escritor_cru_detectado` no journal, as duas sãs não. E
+**matar a Steam não cura** — o defeito é gravado no nascimento e só sai na
+reconexão. Isso explica por que a cura parecia intermitente.
+
+**A allowlist do Steam Input vira lista, no editor de perfil.** Ela tinha três
+jogos marcados e nenhuma tela que os mostrasse: *"a allowlist deveria aparecer
+na interface de alguma forma, pra que lá eu possa escolher"*. Cada linha traz o
+nome do jogo e o appid; sem nome no disco, a linha mostra o número e diz "nome
+não encontrado" em vez de inventar.
+
+**Um perfil por jogo nasce sozinho, sem clique.** Correção dela sobre a própria
+escolha: *"por default já deveria ter um perfil por jogo instalado (...) e todas
+as próximas vezes esse jogo automaticamente abriria com o perfil aplicado."*
+Nunca sobrescreve, e o perfil nasce sem opinião no resto — cor e gatilho de
+fábrica seriam o produto escolhendo por ela.
+
+**A ponte privilegiada.** Decisão dela: *"a ideia é que usemos o sudo só na hora
+do install e isso vai valer sempre no nosso app. Pode ser um botão."* O install
+pede a senha uma vez, instala um helper de verbos mínimos, e o gesto passa a
+funcionar sem pedir nada. É o que permite apagar o cache SDP ao mover um
+controle entre adaptadores — sem isso o pareamento novo nasce com SDP vazio e o
+link cai sozinho, parecendo defeito do controle.
+
+**A central de rádio ganha tela.** O censo do barramento e o apelido dos dongles
+nasceram de manhã sem consumidor nenhum e ganharam a seção "A mesa" no mesmo
+dia. A coluna "O que é" passa a ser **lida** do kernel — decisão dela,
+*"classifica sozinho, você só corrige"* — e os botões só aparecem onde o kernel
+não soube. Os três adaptadores idênticos dela ganham nome, endereçado por BD
+Address e nunca por `hciN`.
+
+#### Alterado
+
+**A máscara persiste até ELA mudar na interface.** Decisão dela. A premissa
+anterior era falsa: a máscara **não** voltava para `xbox` ao fechar a Steam —
+quem revertia era a borda de processo, sempre na troca de pid. O eixo foi
+partido em dois: liga/desliga continua sendo só dela (opt-out permanente), e a
+máscara passa a ser o último gesto, manual ou de perfil. Grava só o que o vpad
+vestiu de verdade.
+
+**A allowlist do Steam Input não pula mais o `gamepad_flavor`.** O `mode` carrega
+duas coisas: a disputa pelo controle (que a allowlist existe para pular) e o que
+o jogo enxerga. Um vpad Xbox **não tem** campo de touchpad, acelerômetro nem
+giroscópio no descritor HID — a allowlist estava removendo features em vez de
+preservá-las.
+
+**Cada mudança de cor custa um quadro de rádio, e não sete.** `set_rgb` escrevia
+dois e `set_players` cinco. Com quatro controles no rádio são 28 quadros onde
+bastam 4, e o `dmesg` dela já mostrava `input CRC's check failed`. Os bytes que
+saem são os mesmos.
+
+**O mapa de canais separa DÍVIDA de DECISÃO.** A contagem crua dizia 20 linhas
+medidas e não acionadas no cabo e 21 no rádio; com a coluna nova, a dívida real
+é **1 no cabo e 3 no rádio**, e cada uma tem nome. Um portão que contasse as 41
+reprovaria decisão junto com dívida, e seria desligado na primeira semana.
+
+#### Corrigido
+
+**O exame da luz não enxergava controle nenhum no rádio.** O doctor filtrava o
+nosso vpad pelo CAMINHO (`*/devices/virtual/*`), e o BlueZ moderno entrega HID
+por **uhid**, que é `misc` virtual — então todo DualSense de rádio mora ali. Com
+quatro no rádio, o exame dizia *"sem DualSense físico com nó de LED agora"*:
+zero de quatro. O filtro passou a ser por identidade, e ficou quatro de quatro.
+
+**O produto escolhia UM adaptador quando há três.** O `head -1` do
+`bt_active_mode.sh` prefixava `Nintendo` no adaptador que não hospeda Nintendo
+nenhum, e a vigia reafirmava o alvo errado a cada 2 minutos. O doctor passou a
+conferir os três e a cobrar só de quem hospeda.
+
+**Uma faixa de MAC não é um fabricante.** Faixas de OUI concretas — a do 8BitDo
+dela — eram usadas como identidade de modelo; quem tivesse outro lote receberia
+outro comportamento sem aviso. Nasceu `core/linhagem_nintendo.py` para separar
+vocabulário de protocolo da bancada desta casa.
+
+**A tela acusava a Steam de escrever a barra, e quem escreve somos nós — 426 a
+1.** Medido com `btmont`, 32 s cada: daemon parado = 1 escrita de cor; daemon
+rodando = 426 reports. A disputa pelo nó é real; a frase derivada é que mandava
+procurar o problema no lugar errado.
+
+**O vigia do Steam Input nascia morto.** Decisão dela: *"o timer nascer
+`elapsed` depois de todo `install.sh` é defeito, não política: conserto uma
+linha da unidade sem perguntar."* O guarda morto entra como achado do cartão
+"Saúde do sistema" — nada de linha permanente dizendo "tudo bem" 99% do tempo.
+
+**A foto da documentação montava a aba diferente do produto.** O
+`retratar_abas.py` montava os 19 modos à mão, com uma expansão que não existe no
+produto: 1016px na montagem à mão contra 482px no método de produção. **Ela
+decidiu a fila de interface olhando essa foto.** Portão novo lê a árvore de
+sintaxe do retrato e confere a lista de mixins contra o produto.
+
+**A suíte dependia do terminal de quem a roda.** Nove testes de CLI reprovavam
+ou passavam conforme a variável `FORCE_COLOR`: o `rich` decide colorir na
+construção do `Console()`, que acontece no import de cada `cmd_*.py`, e o texto
+saía com ANSI no meio da saída comparada. A cura mora no topo do `conftest` —
+uma fixture, mesmo `autouse`, roda depois da coleta.
+
+**A página de métricas e a ADR-016 param de poder envelhecer caladas.** A ADR
+afirmou por um mês que a variável de ambiente tinha "zero ocorrências em
+`src/`"; em 01/08 as duas variáveis nasceram. Cada frase verificável das duas
+páginas virou asserção derivada do código, nunca copiada do texto.
+
+**O `specs.html` ficava permanentemente sujo no `git status`.** O sanitizador do
+pre-commit apara espaço no fim de linha e o gerador os reemitia na execução
+seguinte — um arquivo que nunca fica limpo ensina a ignorar o `git status`
+inteiro.
+
+**O que a unit chama, o pacote leva.** Cinco scripts em quatro formatos: a
+terceira ocorrência da mesma família num único dia, e agora com portão.
+
 ## [0.9.4.5] — 2026-08-20
 
 A leva da ponte. O alvo é o QoL de quem não é técnico: abrir o jogo, não andar,
