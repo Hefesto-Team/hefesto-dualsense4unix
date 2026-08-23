@@ -2073,6 +2073,16 @@ def start_gamepad_emulation_desfecho(
     # Efeito medido: ela escolhia Xbox, abria o Sackboy (cujo perfil pede
     # dualsense) e a flag em disco virava `dualsense`; a escolha dela sumia sem
     # ela ter tocado em nada, e voltava assim no boot seguinte.
+    #
+    # MASCARA-PERSISTE-01 (22/08/2026) — NOTA DATADA, e ela NÃO muda esta
+    # linha: no eixo da MÁSCARA a decisão dela passou a ser *"a máscara deveria
+    # ficar independente do jogo, até que eu mude na interface novamente"*, e
+    # quem grava a máscara de um perfil é `Daemon._gravar_mascara_do_perfil`,
+    # uma camada acima. É lá porque só lá se sabe que um PERFIL pediu: aqui
+    # `origin="profile"` cobre também o restore do boot, o hotplug e o
+    # subsystem subindo — nenhum deles é gesto de ninguém. O que esta guarda
+    # segue protegendo, inteiro, é o eixo do LIGA/DESLIGA (AUTO-01.1): perfil
+    # nenhum cria ou apaga o flag, então o opt-out dela é permanente.
     if origin == "manual":
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
