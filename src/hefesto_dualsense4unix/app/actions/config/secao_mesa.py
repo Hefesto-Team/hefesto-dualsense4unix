@@ -1103,7 +1103,9 @@ class _PainelDaMesa:
             return
         self._esvaziar(self._caixa_medidores)
         apelidos = _apelido_por_endereco(self._dongles)
-        for nome, ocupacao in _medidores_da_mesa(self._mesa, self._ocupacoes()):
+        for nome, ocupacao in _medidores_da_mesa(
+            self._mesa, self._ocupacoes(), _dongle_por_interface(self._dongles)
+        ):
             self._caixa_medidores.pack_start(
                 self._fileira_do_medidor(nome, ocupacao, apelidos),
                 False,
@@ -1415,7 +1417,9 @@ def _onde_esta_o_adaptador(adaptador: Adaptador) -> tuple[str, str | None]:
 
 
 def _medidores_da_mesa(
-    mesa: Mesa, ocupacoes: dict[str, Ocupacao]
+    mesa: Mesa,
+    ocupacoes: dict[str, Ocupacao],
+    por_interface: dict[str, Dongle] | None = None,
 ) -> list[tuple[str, Ocupacao]]:
     """`[(nome do rádio, ocupação)]` — a lista de barras a desenhar.
 
@@ -1432,20 +1436,32 @@ def _medidores_da_mesa(
       controles só num deles, aparece uma barra — a do que está em uso, com
       nome verdadeiro;
     * não há controle nenhum no rádio -> uma barra em ZERO por adaptador da
-      tabela, nomeada pela identidade física. É o caso desta bancada, e é o
-      controle negativo da sprint: todos os controles no cabo, toda barra em
-      zero;
+      tabela, nomeada **pelo nome dela** quando o BlueZ respondeu, e pela
+      identidade física quando não. É o caso de todos os controles no cabo, e é
+      o que mais aparece: com três adaptadores iguais a versão anterior
+      desenhava `2357:0604` três vezes — três barras com o mesmo rótulo, que é
+      exatamente o problema que os nomes vieram resolver;
     * não há nem controle nem adaptador -> nenhuma barra. A linha "Nenhum
       adaptador Bluetooth encontrado" já disse tudo, e uma barra vazia embaixo
       dela só ocuparia altura.
 
     O que a regra NUNCA faz é somar a ocupação de um endereço numa linha da
     tabela por posição. Emprestar o adaptador do vizinho é o erro que a chave
-    de ausência existe para impedir.
+    de ausência existe para impedir — e o nome, que vem do `hciN` da MESMA
+    leitura, não muda isso: ele só troca o rótulo de uma barra que já era
+    daquele adaptador.
     """
     if ocupacoes:
         return [(endereco, ocupacoes[endereco]) for endereco in sorted(ocupacoes)]
-    return [(_nome_do_adaptador(a), Ocupacao()) for a in mesa.adaptadores]
+    nomes = por_interface or {}
+    return [
+        (
+            (dongle.nome if (dongle := nomes.get(a.interface)) and dongle.nome else "")
+            or _nome_do_adaptador(a),
+            Ocupacao(),
+        )
+        for a in mesa.adaptadores
+    ]
 
 
 def _rotulo_do_medidor(nome: str, apelidos: dict[str, str] | None = None) -> str:

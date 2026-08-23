@@ -34,7 +34,33 @@ from pathlib import Path
 _TESTS_DIR = Path(__file__).resolve().parents[1]
 
 #: Prefixos (3 bytes, sem ":") das faixas sintéticas permitidas em fixtures.
-_PREFIXOS_FORJADOS = ("02fe00", "aabbcc", "e8473a", "ffffff", "000000")
+_PREFIXOS_FORJADOS = (
+    "02fe00",
+    "aabbcc",
+    "e8473a",
+    "ffffff",
+    "000000",
+    # Segunda faixa sintética da casa, para provar que não há nada de especial
+    # na primeira (`test_uma_faixa_nao_e_um_fabricante.py`). CONFERIDA em
+    # 22/08/2026 contra `/usr/share/ieee-data/oui.csv`: não é atribuída a
+    # fabricante nenhum, igual a `e8473a`.
+    "3c9d07",
+)
+
+#: OUIs de FABRICANTE que aparecem de propósito em fixture, e só valem com a
+#: máscara da casa (octetos 4 e 5 zerados). Um OUI é dado PÚBLICO do registro
+#: IEEE — identifica a marca, nunca o aparelho — e escrever o literal é o que
+#: torna o teste régua independente do módulo que ele confere. Com a máscara
+#: exigida aqui, nenhum MAC de aparelho real passa: bastaria um octeto 4 ou 5
+#: não-zero para reprovar.
+_OUIS_DE_FABRICANTE_COM_MASCARA = frozenset(
+    {
+        # 8BITDO TECHNOLOGY HK LIMITED — a faixa do clone, escrita à mão em
+        # `test_external_identity.py` e `test_uma_faixa_nao_e_um_fabricante.py`
+        # justamente para NÃO iterar a mesma lista que deveria conferir.
+        "e417d8",
+    }
+)
 
 #: Hashes abreviados (12 hex) de commits PÚBLICOS do kernel upstream citados
 #: nos testes da Onda W (test_dkms_rtw88_usb_assets.py) como proveniência dos
@@ -78,9 +104,15 @@ def _permitido(mac_12hex: str) -> bool:
     if norm in _HASHES_UPSTREAM_DOCUMENTADOS:
         return True
     invertido = "".join(norm[i : i + 2] for i in range(10, -1, -2))
-    return norm.startswith(_PREFIXOS_FORJADOS) or invertido.startswith(
-        _PREFIXOS_FORJADOS
-    )
+    for candidato in (norm, invertido):
+        if candidato.startswith(_PREFIXOS_FORJADOS):
+            return True
+        # OUI de fabricante SÓ passa com a máscara da casa nos octetos 4 e 5.
+        if candidato[:6] in _OUIS_DE_FABRICANTE_COM_MASCARA and (
+            candidato[6:10] == "0000"
+        ):
+            return True
+    return False
 
 
 def test_nenhum_mac_fora_das_faixas_forjadas_em_tests() -> None:

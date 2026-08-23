@@ -680,6 +680,21 @@ Sem controle nenhum, a seção diz isso em uma frase em vez de mostrar uma grade
 vazia — e diz também que um controle ligado em modo D-input pode não aparecer
 ali, caso que ainda não foi medido nesta casa.
 
+**"A luz não acende"** — o botão no pé de cada card, para o defeito em que a
+barra de LED nasce travada apagada. Ele fica **sempre visível** e só é acionável
+no rádio: no cabo o defeito não existe, e botão que some ensina que a tela é
+instável.
+
+O que ele faz é derrubar a conexão daquele controle e esperar. **O Hefesto não
+reconecta por você** — quem aperta o **PS** é você, e essa é a parte do gesto que
+o produto não toma. Cancelar não reconecta nada.
+
+> **Ele pergunta antes de oferecer.** A barra trava quando outro programa segura
+> o nó do controle **no instante da conexão**, e o defeito fica gravado naquela
+> conexão até ela cair: matar o programa depois não cura. Se a mesa não estiver
+> limpa agora, reconectar faria a conexão nova nascer travada igual — e é isso
+> que fazia a cura parecer que funciona às vezes.
+
 > **A aba não troca o modo de um 8BitDo, e não tem como.** O modo é uma chave
 > física, escolhida por combo de botões ao ligar; o que esta seção acrescenta é
 > nomeá-lo — antes desta aba o produto nem sabia dizer "D-input" ou "Apple".
@@ -731,12 +746,26 @@ leitura sustenta: **colado no vizinho** (dois rádios encostados se atrapalham) 
 produto **informa e não age**: desplugar o Wi-Fi de alguém para melhorar o
 próprio link é decisão da pessoa, não do programa.
 
-**O que é** — a terceira coluna, e a única desta seção que só você pode
-responder: **Wi-Fi · Teclado · Mouse · Webcam · Caixa de som · Outro · Não
-sei**. Um dongle de teclado e um de caixa de som são o mesmo `VID:PID` para o
-kernel; sem a sua resposta o exame da mesa só sabe listar um endereço em hexa.
-Com ela, passa a poder dizer *de que aparelho* está falando. **Não sei** é
-resposta válida, e é onde tudo começa.
+**O que é** — a terceira coluna, e ela **nasce respondida**. O kernel classifica
+cada aparelho pela classe da interface, e a linha vem preenchida com um `(lido)`
+ao lado e um **Corrigir** para quando ele errar. Os sete botões — **Wi-Fi ·
+Teclado · Mouse · Webcam · Caixa de som · Outro · Não sei** — só aparecem onde o
+kernel **não soube**, e ele diz isso: os fabricantes têm uma classe própria
+(`ff`) que não significa nada, e nessas linhas a tela declara que o Hefesto não
+sabe em vez de adivinhar por nome de produto. Sua correção vence o kernel e fica
+gravada.
+
+Nesta bancada, das quatro linhas de rádio vizinho, **só uma** precisa de você: o
+Wi-Fi Realtek. Um dongle de teclado e um de caixa de som podem ser o mesmo
+`VID:PID`, e é para esse caso que o botão existe.
+
+**O nome do adaptador** — três dongles idênticos ficam indistinguíveis, e o
+campo ao lado de cada um resolve isso. O nome é seu e persiste; o Hefesto o
+endereça pelo endereço Bluetooth, nunca por `hciN`.
+
+> Um dos adaptadores guarda a palavra **Nintendo** por dentro do nome: é ela que
+> impede o Pro Controller de cair sob carga. O Hefesto costura essa parte
+> sozinho, e o nome que você lê na tela é só o seu.
 
 **As três respostas ficam gravadas** — altura da antena, linha de visada e o
 tipo de cada rádio. Elas valem para a máquina inteira e não para um jogo, então
