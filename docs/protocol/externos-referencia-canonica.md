@@ -212,10 +212,19 @@ data. GRAU: MEDIDO AQUI.
 
 ATENÇÃO: **o discriminador de USB não atravessa para o Bluetooth.** O campo
 `d` do Modalias publicado por rádio é `0001` nos dois, e **não** é o `bcdDevice`.
-Por rádio o **único** discriminador entre o Pro genuíno e o clone é a OUI. A
-árvore trata isso certo em três lugares independentes que concordam:
-`NINTENDO_REAL_OUI` em `daemon/subsystems/external_identity.py:200`,
-`scripts/bt_active_mode.sh`, e `assets/82-nintendo-pro-nosniff.rules`; e a
+Por rádio o **único** discriminador entre o Pro genuíno e o clone é a OUI.
+
+> **Atualizado em 22/08/2026 (N-IGUAL-A-UM-01 e UMA-FAIXA-NAO-E-UM-FABRICANTE-01).**
+> Isto estava em três lugares que "concordavam" — e concordar não é o mesmo que
+> ter um dono. A faixa `e0:f6:b5` é a do 8BitDo **desta bancada**, não a
+> definição de 8BitDo, e usá-la como identidade de modelo faz quem tem outro
+> lote receber outro comportamento sem nada avisar. Agora o dono da regra é
+> `core/linhagem_nintendo.py`, e há portão de paridade entre ele e os
+> escritores.
+
+A regra vive em `core/linhagem_nintendo.py`; `NINTENDO_REAL_OUI`
+(`daemon/subsystems/external_identity.py:213`) e `scripts/bt_active_mode.sh` a
+consomem, junto de `assets/82-nintendo-pro-nosniff.rules`; e a
 `assets/84-nintendo-pro-variant.rules`, que usa o `bcdDevice`, é escopada só ao
 cabo. GRAU: ALTA.
 

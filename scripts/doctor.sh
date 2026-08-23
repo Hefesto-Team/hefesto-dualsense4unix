@@ -2655,6 +2655,55 @@ _bt_adaptadores() {
     hciconfig 2>/dev/null | awk -F: '/^hci/{print $1}' || true
 }
 
+# Este adaptador hospeda um controle da linhagem Nintendo? (N-IGUAL-A-UM-01)
+#
+# É a MESMA pergunta que o `bt_active_mode.sh` faz para decidir onde pôr o
+# prefixo, e por isso o exame só pode cobrar o prefixo de quem ela responde SIM.
+# As duas fontes são as mesmas de lá, e a ordem importa:
+#
+#   1. o D-Bus, que sabe do controle CONECTADO agora;
+#   2. os BONDS em disco, que sabem do controle pareado e DESLIGADO — e é essa
+#      metade que faz a proteção valer ANTES do link subir, que é justamente
+#      quando o Pro precisa dela.
+#
+# A régua de "é da linhagem" é do produto, não deste arquivo:
+# `core/linhagem_nintendo.py` é o dono, e há portão de paridade entre os dois.
+# Sem privilégio: o D-Bus responde a uid 1000, e o `/var/lib/bluetooth` é lido
+# best-effort — quando ele não abre, sobra a primeira fonte e o exame diz o que
+# sabe em vez de inventar.
+_bt_hospeda_linhagem() {
+    local alvo="$1" caminho mac nome dir end
+    [[ -n "${alvo}" ]] || return 1
+    if command -v busctl >/dev/null 2>&1; then
+        while IFS= read -r caminho; do
+            [[ -n "${caminho}" ]] || continue
+            [[ "${caminho}" == "/org/bluez/${alvo}/dev_"* ]] || continue
+            mac="${caminho##*/dev_}"; mac="${mac//_/:}"
+            nome="$(busctl get-property org.bluez "${caminho}" org.bluez.Device1 Alias 2>/dev/null \
+                | sed -E 's/^s "?//; s/"?$//' || true)"
+            if [[ "${mac^^}" == E0:F6:B5:* || "${mac^^}" == 98:B6:E9:* \
+               || "${nome}" == *"Pro Controller"* || "${nome}" == *8BitDo* ]]; then
+                return 0
+            fi
+        done <<<"$(busctl tree org.bluez --list 2>/dev/null \
+            | grep -oE "/org/bluez/${alvo}/dev_[0-9A-Fa-f_]+$" | sort -u || true)"
+    fi
+    end="$(cat "/sys/class/bluetooth/${alvo}/address" 2>/dev/null | tr 'a-f' 'A-F' || true)"
+    [[ -n "${end}" ]] || return 1
+    dir="/var/lib/bluetooth/${end}"
+    [[ -d "${dir}" ]] || return 1
+    for caminho in "${dir}"/*/info; do
+        [[ -e "${caminho}" ]] || continue
+        mac="${caminho%/info}"; mac="${mac##*/}"
+        nome="$(grep -m1 '^Name=' "${caminho}" 2>/dev/null | cut -d= -f2- || true)"
+        if [[ "${mac^^}" == E0:F6:B5:* || "${mac^^}" == 98:B6:E9:* \
+           || "${nome}" == *"Pro Controller"* || "${nome}" == *8BitDo* ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 # MACs com ACL de pé, um por linha, MAIÚSCULAS com ':'. Substitui o `hcitool
 # con`. Fonte viva: o D-Bus do BlueZ (Device1.Connected). Plano B: `btmgmt con`
 # (precisa de CAP_NET_ADMIN — daqui, sem root, costuma vir vazio). Plano C: o
@@ -2790,15 +2839,29 @@ check_bt_radio() {
     #
     # O adaptador também deixou de ser 'hci0' na unha (WATCHDOG-HCI-HARDCODE-01:
     # hci1 já aconteceu nesta máquina, e ali o check virava no-op mudo).
-    local _adp
-    _adp="$(_bt_adaptadores | head -1)"
-    if [[ -z "${_adp}" ]]; then
+    # N-IGUAL-A-UM-01 (22/08/2026): o `head -1` daqui era a MESMA doença que o
+    # comentário acima descreve, uma linha abaixo de onde ele a descreve. Trocar
+    # `hci0` por "o primeiro que aparecer" não cura nada numa mesa de três: nesta
+    # bancada hci1 e hci2 hospedam quatro dos cinco controles, e o rádio sujo
+    # deles nunca era lido. Agora TODOS respondem, e o aviso NOMEIA qual.
+    local _adp _adps_erro=()
+    mapfile -t _adps_erro < <(_bt_adaptadores)
+    if [[ "${#_adps_erro[@]}" -eq 0 ]]; then
         info "nenhum adaptador Bluetooth no sistema — sem contadores de rádio para ler"
     elif command -v hciconfig >/dev/null 2>&1; then
-        local errs
-        errs="$(hciconfig "${_adp}" 2>/dev/null | grep -oE 'errors:[0-9]+' | grep -oE '[0-9]+' | paste -sd/ -)"
-        if [[ -n "${errs}" && "${errs}" != "0/0" ]]; then
-            warn "adaptador BT com erros acumulados (RX/TX: ${errs}) — rádio sujo; veja as linhas [BT-ERR] no kernel.log e os conselhos de posicionamento acima"
+        local errs _algum_erro=0 _algum_lido=0
+        for _adp in "${_adps_erro[@]}"; do
+            errs="$(hciconfig "${_adp}" 2>/dev/null | grep -oE 'errors:[0-9]+' | grep -oE '[0-9]+' | paste -sd/ -)"
+            [[ -n "${errs}" ]] && _algum_lido=1
+            if [[ -n "${errs}" && "${errs}" != "0/0" ]]; then
+                _algum_erro=1
+                warn "adaptador ${_adp} com erros acumulados (RX/TX: ${errs}) — rádio sujo; veja as linhas [BT-ERR] no kernel.log e os conselhos de posicionamento acima"
+            fi
+        done
+        errs=""
+        [[ "${_algum_lido}" -eq 1 ]] && errs="0/0"
+        if [[ "${_algum_erro}" -eq 1 ]]; then
+            :
         elif [[ -n "${errs}" ]]; then
             pass "adaptador BT sem erros de RX/TX (0/0)"
         fi
@@ -3085,9 +3148,24 @@ check_bt_resilience() {
     # migrou aqui foi o resto da pergunta: QUAL é o adaptador (sysfs) e QUEM
     # está conectado (D-Bus). O SNIFF, sem as depreciadas, o doctor diz que não
     # sabe — antes ele calava e a linha inteira sumia da conferência.
-    local _hci _lp _alias _pro_mac _pro_lp
-    _hci="$(_bt_adaptadores | head -1)"
-    if [[ -n "${_hci}" ]]; then
+    # N-IGUAL-A-UM-01 (22/08/2026): idem — a cura BT-NINTENDO-ACTIVE-01 passou a
+    # valer em TODO adaptador que hospeda a linhagem, e um exame que olha um só
+    # daria `[ OK ]` verde sobre os outros dois. O laço confere cada um.
+    local _hci _lp _alias _pro_mac _pro_lp _hcis=()
+    mapfile -t _hcis < <(_bt_adaptadores)
+    for _hci in "${_hcis[@]}"; do
+    # E SÓ OS QUE HOSPEDAM A LINHAGEM, que é a outra metade da mesma cura.
+    # Medido em 22/08 ao rodar o doctor na mesa de três logo depois de alargar o
+    # laço: ele passou a reclamar dos adaptadores #2 e #3 — *"modo ativo p/
+    # Nintendo incompleto"* — e nenhum dos dois hospeda Nintendo nenhum. O
+    # `bt_active_mode.sh` do mesmo dia deixou de prefixar quem não hospeda (pôr
+    # a palavra onde não precisa a torna parte permanente do nome dela, porque
+    # o `apelido_do_dongle` nunca subtrai), então cobrar o prefixo de todos era
+    # o exame reprovando a cura por ela ter ficado certa.
+    #
+    # Trocar um `head -1` por um laço cego é trocar o no-op mudo por barulho —
+    # e barulho em exame é o que ensina a ignorar exame.
+    if [[ -n "${_hci}" ]] && _bt_hospeda_linhagem "${_hci}"; then
         _alias="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
         if command -v hciconfig >/dev/null 2>&1; then
             _lp="$(hciconfig "${_hci}" lp 2>/dev/null | grep -o 'SNIFF' || true)"
@@ -3122,6 +3200,7 @@ check_bt_resilience() {
             warn "modo ativo p/ Nintendo incompleto (alias='${_alias:-?}', SNIFF-adaptador=${_lp:-AUSENTE}); o adaptador deve MANTER o SNIFF (o 8BitDo precisa) — reaplique: sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
         fi
     fi
+    done
 }
 
 # ONDA-R2: bonds em disco vs cache — a assinatura medida em 22/07 do estado
