@@ -29,6 +29,7 @@ digitado, e degradar calado aqui é requisito, não descuido.
 from __future__ import annotations
 
 import contextlib
+import os
 import re
 import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
@@ -112,9 +113,10 @@ def e_ferramenta_da_steam(nome: str) -> bool:
 def chave_de_busca(texto: str) -> str:
     """Texto achatado para comparar: sem acento, sem caixa, sem espaço em volta.
 
-    ``"Sackboy™: A Big Adventure"`` e ``"sackboy"`` têm de se encontrar, e
-    ``"Pokémon"`` tem de casar com ``"pokemon"`` — ela digita no teclado dela,
-    não no do catálogo.
+    ``"Sackboy\u2122: A Big Adventure"`` e ``"sackboy"`` têm de se encontrar,
+    e o símbolo vai escapado de propósito: o ADR-011 recusa o glifo cru, e
+    ele é parte do nome que a Steam grava no `appmanifest`. ``"Pokémon"`` tem de
+    casar com ``"pokemon"`` — ela digita no teclado dela, não no do catálogo.
     """
     decomposto = unicodedata.normalize("NFD", texto)
     sem_acento = "".join(c for c in decomposto if not unicodedata.combining(c))
@@ -178,6 +180,32 @@ def jogos_da_biblioteca_steam(home: Path | None = None) -> list[JogoLocal]:
                 continue
             achados.setdefault(appid, JogoLocal(appid=appid, nome=nome, fonte="steam"))
     return list(achados.values())
+
+
+def assinatura_da_biblioteca(home: Path | None = None) -> tuple[tuple[str, int], ...]:
+    """Impressão BARATA da biblioteca: ``(pasta, mtime_ns)`` de cada `steamapps`.
+
+    Existe para uma pergunta só, e ela se repete: *"instalaram ou tiraram jogo
+    desde a última vez que eu olhei?"*. Ler os 33 `appmanifest_*.acf` para
+    responder isso custaria 33 aberturas de arquivo; dois `stat()` de diretório
+    custam microssegundos, e o `mtime` de um diretório MUDA quando um arquivo
+    nasce ou morre dentro dele — que é exatamente o que instalar e desinstalar
+    um jogo fazem com a `steamapps`.
+
+    Pasta ausente entra com ``-1`` em vez de sumir da lista: instalar a Steam
+    depois também tem de contar como mudança. Pasta ilegível idem — não saber
+    é diferente de saber que não mudou.
+
+    NÃO responde "que jogos são" — para isso é `jogos_da_biblioteca_steam`.
+    Esta é o freio que decide se vale a pena chamar aquela.
+    """
+    linhas: list[tuple[str, int]] = []
+    for pasta in pastas_steamapps(home):
+        try:
+            linhas.append((str(pasta), os.stat(pasta).st_mtime_ns))
+        except OSError:
+            linhas.append((str(pasta), -1))
+    return tuple(linhas)
 
 
 def _nome_do_desktop(texto: str) -> str:
@@ -327,6 +355,7 @@ __all__ = [
     "MSG_NAO_RECONHECI",
     "PASTAS_DE_ATALHOS",
     "JogoLocal",
+    "assinatura_da_biblioteca",
     "casa_com_o_que_ela_digitou",
     "catalogo_de_jogos",
     "chave_de_busca",

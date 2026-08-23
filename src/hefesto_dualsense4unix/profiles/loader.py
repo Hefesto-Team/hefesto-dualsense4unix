@@ -21,17 +21,27 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Literal
 
 from filelock import FileLock
 from pydantic import ValidationError
 
-from hefesto_dualsense4unix.profiles.schema import Profile
+from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 from hefesto_dualsense4unix.profiles.slug import slugify
+from hefesto_dualsense4unix.profiles.steam_app import (
+    e_janela_do_cliente_steam,
+    steam_appid_from_wm_class,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+if TYPE_CHECKING:  # pragma: no cover - só para o verificador de tipos
+    from hefesto_dualsense4unix.integrations.jogos_locais import JogoLocal
 
 logger = get_logger(__name__)
 
@@ -485,6 +495,507 @@ def _maybe_seed_presets() -> None:
         )
 
 
+# ---------------------------------------------------------------------------
+# UM PERFIL POR JOGO (22/08/2026) — decisão dela
+# ---------------------------------------------------------------------------
+# Ela, literal: *"acho que por default já deveria ter um perfil por jogo
+# instalado. Por default na nossa lista, e lá eu só ativaria o perfil do jogo,
+# sairia modificando as abas pra setar o perfil, salvaria e aplicaria, e todas
+# as próximas vezes esse jogo automaticamente abriria com o perfil aplicado pra
+# todos os controles."*
+#
+# É AUTOMÁTICO, e não um botão: ela corrigiu a própria escolha anterior
+# ("semear só os que faltam" era um GESTO). O produto cria sozinho, inclusive
+# para o jogo que ela instalar amanhã.
+#
+# QUANDO, e a razão de cada corte:
+#
+# - a varredura pendura na PRIMEIRA carga de perfis do processo, que é onde a
+#   semeadura de presets já mora — isso cobre o arranque do daemon, o da janela
+#   e o da CLI sem gancho novo em lugar nenhum;
+# - e NÃO para aí. O daemon dela fica dias de pé, e o jogo instalado amanhã não
+#   pode esperar um reboot. Então a varredura é RE-TENTÁVEL, com dois freios:
+#   um piso de tempo (`INTERVALO_MINIMO_DA_VARREDURA_S`), porque
+#   `load_all_profiles()` é chamado a cada troca de janela pelo
+#   `profiles/manager.py` e ler 33 `.acf` a cada alt-tab seria disco à toa; e a
+#   assinatura da biblioteca (`jogos_locais.assinatura_da_biblioteca`), que são
+#   dois `stat()` de diretório — instalar ou desinstalar jogo muda o `mtime` da
+#   `steamapps`, e "nada mudou" custa microssegundos.
+#
+# Varrer só no boot deixaria o jogo de amanhã de fora; varrer a cada carga
+# cobraria disco a cada alt-tab. O par piso-de-tempo + assinatura faz as duas
+# pontas, e é por isso que ele existe em vez de um `if` só.
+#
+# O QUE NASCE, e o que NÃO nasce: nome do jogo, `match` pelo appid, prioridade
+# 80 — e nada mais. Nem cor, nem gatilho, nem modo. O fluxo dela é *"eu
+# ativaria e sairia modificando as abas"*; um perfil semeado com cor decidida
+# seria o produto escolhendo por ela.
+
+#: Um registro por jogo já processado, no diretório de perfis. Formato:
+#: ``<appid>\t<arquivo.json>`` para o que ESTE produto criou, e ``<appid>\t``
+#: (segundo campo vazio) para o jogo que o produto NÃO criou porque ela já
+#: tinha um perfil para ele.
+#:
+#: É a "marca de semeadura" do pedido, e ela responde a duas perguntas que sem
+#: marca nenhuma são indistinguíveis: *o que é meu e o que é dela* (só o que
+#: tem arquivo no segundo campo é do produto — base de qualquer desfazer do
+#: lote) e *o que já foi decidido* (appid registrado não volta a ser semeado,
+#: nem depois de ela apagar o perfil — mesmo contrato de `.seeded_presets`:
+#: perfil que ela apagou de propósito não ressuscita).
+MARCA_DE_SEMEADURA_DE_JOGOS = ".perfis_de_jogo_semeados"
+
+#: A prioridade do perfil semeado, e ela é COPIADA, não escolhida: 80 é o que
+#: `assets/profiles_default/sackboy_nativo.json` — o único preset de fábrica que
+#: mira um jogo — já usa. Fica acima dos presets de gênero (55-70), do co-op
+#: (75) e da Navegação (50), que é a ordem que o autoswitch precisa para que a
+#: regra do JOGO ganhe do genérico de desktop.
+PRIORIDADE_DO_PERFIL_DE_JOGO = 80
+
+#: Piso entre duas varreduras no MESMO processo. Cinco minutos é o compromisso
+#: entre "ela instalou um jogo agora" e "não custe disco a cada alt-tab" — a
+#: assinatura da biblioteca já derruba a varredura para dois `stat()` quando
+#: nada mudou, então este piso protege só os dois `stat()`.
+INTERVALO_MINIMO_DA_VARREDURA_S = 300.0
+
+#: Cada linha do relatório da semeadura. Ver `PerfilSemeado`.
+DesfechoDaSemeadura = Literal[
+    "criado",
+    "ja_tinha_perfil",
+    "ja_semeado",
+    "nome_ocupado",
+    "casa_com_a_loja",
+    "sem_slug",
+]
+
+#: Os dois desfechos que ficam GRAVADOS na marca. Os outros são recusas que
+#: podem deixar de valer (ela renomeia o perfil que ocupava o nome) e por isso
+#: são reavaliadas na próxima mudança da biblioteca, em vez de viverem para
+#: sempre num arquivo.
+_DESFECHOS_QUE_MARCAM: frozenset[str] = frozenset({"criado", "ja_tinha_perfil"})
+
+
+@dataclass(frozen=True)
+class PerfilSemeado:
+    """O que aconteceu com UM jogo na varredura — e por quê.
+
+    ELO-MUDO-01: um contador de criados responderia pelo transporte e não pelo
+    efeito. "Nasceram 3 perfis" não distingue *os outros 10 já tinham* de *os
+    outros 10 foram recusados por colisão de nome*, e ausência de notícia é
+    justamente o que esta casa aprendeu a ler como sucesso falso.
+    """
+
+    appid: str
+    jogo: str
+    desfecho: DesfechoDaSemeadura
+    #: O arquivo criado — só no desfecho ``criado``. Nos outros, o arquivo que
+    #: EXPLICA a recusa (o perfil dela que já cobre o appid, ou que já ocupa o
+    #: nome), ou vazio quando não há arquivo envolvido.
+    arquivo: str = ""
+
+
+@dataclass(frozen=True)
+class ResultadoDaSemeadura:
+    """O relatório inteiro de uma varredura."""
+
+    linhas: tuple[PerfilSemeado, ...] = ()
+    #: Os arquivos que a varredura CRIOU nesta passada.
+    criados: tuple[str, ...] = ()
+    #: Perfis já existentes cujo `match` casa com a janela do CLIENTE Steam —
+    #: o aviso do defeito irmão. Ver `perfis_que_casam_com_o_cliente_steam`.
+    avisos_da_loja: tuple[tuple[str, str, tuple[str, ...]], ...] = ()
+
+    def por_desfecho(self, desfecho: str) -> tuple[PerfilSemeado, ...]:
+        """As linhas de um desfecho — o que os testes e a tela perguntam."""
+        return tuple(linha for linha in self.linhas if linha.desfecho == desfecho)
+
+
+# Estado por PROCESSO da varredura re-tentável (ver o cabeçalho da seção).
+# Nada disso vai para disco: reler 33 `.acf` no arranque custa o mesmo que a
+# semeadura de presets que já roda ali, e um arquivo de estado a mais seria uma
+# terceira coisa para ficar velha.
+_ultima_varredura_de_jogos: float | None = None
+_assinatura_da_biblioteca_vista: tuple[tuple[str, int], ...] | None = None
+
+
+def _caminho_da_marca(directory: Path) -> Path:
+    return directory / MARCA_DE_SEMEADURA_DE_JOGOS
+
+
+def _linhas_da_marca(marca: Path) -> list[tuple[str, str]]:
+    """``[(appid, arquivo)]`` do arquivo de marca. Ausente/ilegível = vazio."""
+    try:
+        bruto = marca.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    lidas: list[tuple[str, str]] = []
+    for linha in bruto.splitlines():
+        appid, _, arquivo = linha.strip().partition("\t")
+        if not appid.isdigit():
+            continue
+        lidas.append((appid, arquivo.strip()))
+    return lidas
+
+
+def perfis_de_jogo_semeados(dest_dir: Path | None = None) -> dict[str, str]:
+    """``{appid: arquivo}`` do que o PRODUTO criou — nunca do que é dela.
+
+    É a resposta de "quais destes perfis eu posso desfazer sem tocar no
+    trabalho dela". Um jogo que o produto NÃO criou (porque ela já tinha
+    perfil) está na marca com o segundo campo vazio e **não aparece aqui**.
+
+    Esta função só INFORMA. Não apaga nada, e nada nesta entrega apaga: o
+    estrago que a leva de 05/08 passou uma semana consertando foi perfil
+    apagado, e um caminho automático que apaga não existe aqui nem para o que é
+    do próprio produto. O arquivo pode ter sido renomeado ou apagado por ela
+    desde então — quem for oferecer o desfazer confere a existência na hora.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir()
+    return {
+        appid: arquivo
+        for appid, arquivo in _linhas_da_marca(_caminho_da_marca(directory))
+        if arquivo
+    }
+
+
+def _dados_crus_do_perfil(path: Path) -> dict[str, object] | None:
+    """O JSON do perfil sem validar pelo schema. None se não der para ler.
+
+    CRU de propósito: as duas varreduras abaixo (que appid já tem dono, que
+    perfil casa com a loja) precisam enxergar TAMBÉM o perfil que o schema
+    rejeita. Um perfil corrompido que ocupa o nome ``sea_of_stars.json``
+    continua ocupando o nome, e semear por cima dele seria a sobrescrita que
+    esta entrega existe para não fazer.
+    """
+    try:
+        dados = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    return dados if isinstance(dados, dict) else None
+
+
+def _classes_do_match(dados: dict[str, object]) -> list[str]:
+    """As `window_class` declaradas no `match` cru. Formato torto = lista vazia."""
+    match = dados.get("match")
+    if not isinstance(match, dict):
+        return []
+    classes = match.get("window_class")
+    if not isinstance(classes, list):
+        return []
+    return [c for c in classes if isinstance(c, str)]
+
+
+def _appids_com_dono(directory: Path) -> dict[str, str]:
+    """``{appid: arquivo}`` dos jogos que JÁ têm perfil no diretório.
+
+    **A conferência é pelo APPID, nunca pelo nome do arquivo**, e isso é medido
+    no disco dela: o preset de fábrica do Sackboy se chama ``sackboy_nativo``,
+    não ``Sackboy: A Big Adventure``. Uma checagem por nome de arquivo não o
+    encontraria, e o produto criaria um SEGUNDO perfil para o mesmo jogo —
+    dois perfis empatados em 80 disputando a mesma janela, que é o defeito que
+    `profiles/sanidade.py` chama de `prioridades_empatadas`.
+    """
+    donos: dict[str, str] = {}
+    for path in sorted(directory.glob("*.json")):
+        dados = _dados_crus_do_perfil(path)
+        if dados is None:
+            continue
+        for classe in _classes_do_match(dados):
+            appid = steam_appid_from_wm_class(classe)
+            if appid is not None:
+                donos.setdefault(str(appid), path.name)
+    return donos
+
+
+def perfis_que_casam_com_o_cliente_steam(
+    dest_dir: Path | None = None,
+) -> list[tuple[str, str, tuple[str, ...]]]:
+    """``[(arquivo, nome, classes)]`` dos perfis que casam com a LOJA.
+
+    O defeito irmão, decisão dela na mesma rodada: *"tirar 'steam' e 'Steam' do
+    perfil Navegação"*. Treze trocas de perfil no meio da partida em 54
+    minutos, porque uma janela invisível do `steamwebhelper` se anuncia com a
+    `wm_class` ``steam`` — e o preset ``navegacao`` de fábrica lista ``steam``
+    e ``Steam``.
+
+    **O arquivo é dela e o produto não o edita.** O que o produto faz é DIZER,
+    que é o que faltava: até aqui a troca de perfil acontecia em silêncio, e
+    ela levou 54 minutos de partida para descobrir de onde vinha.
+
+    O predicado é `profiles/steam_app.e_janela_do_cliente_steam`, o mesmo que o
+    `lifecycle` usa para proteger a partida — não uma segunda lista de nomes.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir()
+    achados: list[tuple[str, str, tuple[str, ...]]] = []
+    try:
+        arquivos = sorted(directory.glob("*.json"))
+    except OSError:
+        return []
+    for path in arquivos:
+        dados = _dados_crus_do_perfil(path)
+        if dados is None:
+            continue
+        culpadas = tuple(
+            c for c in _classes_do_match(dados) if e_janela_do_cliente_steam(c)
+        )
+        if not culpadas:
+            continue
+        nome = dados.get("name")
+        achados.append((path.name, nome if isinstance(nome, str) else path.stem, culpadas))
+    return achados
+
+
+def classes_do_perfil_do_jogo(appid: str) -> list[str]:
+    """As `window_class` do perfil semeado. UMA, e é o endereço do jogo.
+
+    Separada de `_perfil_do_jogo` para que a guarda "isto casa com a loja?"
+    possa perguntar ANTES de existir perfil nenhum — e para que o teste da
+    guarda tenha o que arrancar.
+    """
+    return [f"steam_app_{appid}"]
+
+
+def _perfil_do_jogo(jogo: JogoLocal) -> Profile:
+    """O perfil que nasce para um jogo — e SÓ o que o pedido dela manda.
+
+    Nome do jogo como veio do `appmanifest` (o produto não reescreve o nome que
+    a Steam dá), `match` pelo appid e prioridade 80. Todo o resto fica no
+    default do schema, que é o "sem opinião" desta casa: gatilhos ``Off``,
+    `leds` com `auto_player_colors` (cada controle acende a cor do seu slot) e
+    as seções opcionais em ``None``, que `_payload_do_perfil` nem grava.
+    """
+    return Profile(
+        name=jogo.nome,
+        match=MatchCriteria(window_class=classes_do_perfil_do_jogo(jogo.appid)),
+        priority=PRIORIDADE_DO_PERFIL_DE_JOGO,
+    )
+
+
+def _gravar_sem_pisar(alvo: Path, payload: object) -> bool:
+    """Grava o JSON SÓ se `alvo` ainda não existe. ``True`` = gravou.
+
+    O `os.link` é o desenho, não detalhe de implementação: ele é atômico e
+    falha com `FileExistsError` quando o alvo já está lá, então **não existe
+    janela** entre "conferi que não existe" e "escrevi". `_atomic_write_json`
+    usa `os.replace`, que PISA — e apagar perfil dela é o estrago que a leva de
+    05/08 passou uma semana consertando. Aqui quem recusa é o kernel.
+
+    Sistema de arquivos sem hardlink cai no `O_CREAT|O_EXCL`, que dá a mesma
+    recusa (sem a atomicidade da escrita: um crash no meio deixa JSON truncado,
+    que `load_all_profiles` pula com `profile_invalid`).
+    """
+    bruto = (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    alvo.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_nome = tempfile.mkstemp(
+        prefix=f".{alvo.name}.", suffix=".tmp", dir=str(alvo.parent)
+    )
+    tmp = Path(tmp_nome)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(bruto)
+            fh.flush()
+            os.fsync(fh.fileno())
+        try:
+            os.link(tmp, alvo)
+        except FileExistsError:
+            return False
+        except OSError:  # pragma: no cover - fs sem hardlink
+            try:
+                fd_excl = os.open(alvo, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            except FileExistsError:
+                return False
+            with os.fdopen(fd_excl, "wb") as fh:
+                fh.write(bruto)
+                fh.flush()
+                os.fsync(fh.fileno())
+        return True
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def semear_perfis_dos_jogos(
+    dest_dir: Path | None = None,
+    home: Path | None = None,
+    jogos: Sequence[JogoLocal] | None = None,
+) -> ResultadoDaSemeadura:
+    """Cria um perfil para cada jogo da biblioteca Steam que ainda não tem.
+
+    As quatro recusas, e nenhuma delas apaga nem sobrescreve nada:
+
+    - **`ja_semeado`** — o appid está na marca. Não volta a nascer, nem depois
+      de ela apagar o perfil (mesmo contrato de `.seeded_presets`).
+    - **`ja_tinha_perfil`** — algum perfil do diretório já mira este appid.
+      Fica registrado na marca com o campo de arquivo VAZIO: o produto sabe que
+      tratou o jogo, e sabe que o arquivo não é dele.
+    - **`nome_ocupado`** — o nome do jogo dá no mesmo arquivo que outro perfil
+      já ocupa. Colisão de nome é RECUSA, nunca sobrescrita. Não vai para a
+      marca: se ela renomear o perfil que ocupava o nome, a próxima varredura
+      tenta de novo.
+    - **`casa_com_a_loja`** — guarda de invariante. O `match` que sai daqui é
+      sempre ``steam_app_<n>``, que nunca é a janela do cliente Steam; se um
+      dia deixar de ser, a semeadura recusa em vez de plantar treze cópias do
+      defeito que custou 54 minutos de partida a ela.
+
+    `jogos` injetável para teste hermético — nenhum teste desta entrega toca a
+    biblioteca real dela.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    directory.mkdir(parents=True, exist_ok=True)
+    if jogos is None:
+        # Import TARDIO: `profiles/` não importa `integrations/` no topo — é a
+        # mesma disciplina de grafo que `profiles/manager.py` já segue com o
+        # `desktop_notifications`.
+        from hefesto_dualsense4unix.integrations.jogos_locais import (
+            jogos_da_biblioteca_steam,
+        )
+
+        jogos = jogos_da_biblioteca_steam(home)
+
+    marca = _caminho_da_marca(directory)
+    linhas: list[PerfilSemeado] = []
+    criados: list[str] = []
+    # O MESMO FileLock da marca segura a varredura inteira: daemon e janela
+    # semeando ao mesmo tempo no primeiro boot é o caso normal, não o exótico.
+    with FileLock(str(_lock_path(marca))):
+        ja_processados = {appid for appid, _ in _linhas_da_marca(marca)}
+        donos = _appids_com_dono(directory)
+        ocupados = {p.name for p in directory.glob("*.json")}
+        novas: list[tuple[str, str]] = []
+        for jogo in sorted(jogos, key=lambda j: (j.nome.casefold(), j.appid)):
+            linha = _semear_um_jogo(jogo, directory, ja_processados, donos, ocupados)
+            linhas.append(linha)
+            if linha.desfecho == "criado":
+                criados.append(linha.arquivo)
+                ocupados.add(linha.arquivo)
+                donos[jogo.appid] = linha.arquivo
+            if linha.desfecho in _DESFECHOS_QUE_MARCAM:
+                novas.append(
+                    (jogo.appid, linha.arquivo if linha.desfecho == "criado" else "")
+                )
+        if novas or not marca.exists():
+            with marca.open("a", encoding="utf-8") as fh:
+                for appid, arquivo in novas:
+                    fh.write(f"{appid}\t{arquivo}\n")
+
+    avisos = perfis_que_casam_com_o_cliente_steam(directory)
+    _relatar_semeadura(linhas, criados, avisos)
+    return ResultadoDaSemeadura(
+        linhas=tuple(linhas), criados=tuple(criados), avisos_da_loja=tuple(avisos)
+    )
+
+
+def _semear_um_jogo(
+    jogo: JogoLocal,
+    directory: Path,
+    ja_processados: set[str],
+    donos: dict[str, str],
+    ocupados: set[str],
+) -> PerfilSemeado:
+    """A decisão de UM jogo. Ver `semear_perfis_dos_jogos` para as recusas."""
+    if jogo.appid in ja_processados:
+        return PerfilSemeado(jogo.appid, jogo.nome, "ja_semeado", donos.get(jogo.appid, ""))
+    dono = donos.get(jogo.appid)
+    if dono is not None:
+        return PerfilSemeado(jogo.appid, jogo.nome, "ja_tinha_perfil", dono)
+    try:
+        slug = slugify(jogo.nome)
+    except ValueError:
+        return PerfilSemeado(jogo.appid, jogo.nome, "sem_slug")
+    arquivo = f"{slug}.json"
+    if arquivo in ocupados:
+        return PerfilSemeado(jogo.appid, jogo.nome, "nome_ocupado", arquivo)
+    if any(e_janela_do_cliente_steam(c) for c in classes_do_perfil_do_jogo(jogo.appid)):
+        return PerfilSemeado(jogo.appid, jogo.nome, "casa_com_a_loja", arquivo)
+    perfil = _perfil_do_jogo(jogo)
+    if not _gravar_sem_pisar(directory / arquivo, _payload_do_perfil(perfil)):
+        # Outro processo criou o arquivo entre o glob e o link. Recusa, e a
+        # próxima varredura vai enxergá-lo como dono do appid.
+        return PerfilSemeado(jogo.appid, jogo.nome, "nome_ocupado", arquivo)
+    return PerfilSemeado(jogo.appid, jogo.nome, "criado", arquivo)
+
+
+def _relatar_semeadura(
+    linhas: Sequence[PerfilSemeado],
+    criados: Sequence[str],
+    avisos: Sequence[tuple[str, str, tuple[str, ...]]],
+) -> None:
+    """Diz o que a varredura fez — inclusive quando não fez nada de novo.
+
+    ELO-MUDO-01: cada RECUSA sai nomeada, com o jogo e o arquivo que a explica.
+    Um "semeei 0" sem motivo é indistinguível de "nem tentei".
+    """
+    contagem: dict[str, int] = {}
+    for linha in linhas:
+        contagem[linha.desfecho] = contagem.get(linha.desfecho, 0) + 1
+    with contextlib.suppress(Exception):
+        logger.info(
+            "perfis_de_jogo_semeados",
+            jogos=len(linhas),
+            criados=list(criados),
+            desfechos=contagem,
+        )
+        for linha in linhas:
+            if linha.desfecho in {"nome_ocupado", "casa_com_a_loja", "sem_slug"}:
+                logger.warning(
+                    "perfil_de_jogo_recusado",
+                    appid=linha.appid,
+                    jogo=linha.jogo,
+                    motivo=linha.desfecho,
+                    arquivo=linha.arquivo or None,
+                )
+        for arquivo, nome, classes in avisos:
+            logger.warning(
+                "perfil_casa_com_a_loja",
+                arquivo=arquivo,
+                perfil=nome,
+                classes=list(classes),
+                efeito=(
+                    "a janela invisível do steamwebhelper ativa este perfil no "
+                    "meio da partida"
+                ),
+            )
+
+
+def _talvez_semear_jogos() -> None:
+    """O gatilho automático: barato quando nada mudou, best-effort sempre.
+
+    Chamado de toda carga de perfis. A primeira chamada do processo SEMPRE
+    varre (a assinatura começa desconhecida), e é ela que cobre o arranque do
+    daemon e o da janela; as seguintes só passam do piso de tempo e da
+    assinatura quando a biblioteca mudou de verdade.
+
+    Uma falha aqui NUNCA pode impedir a carga dos perfis que já existem —
+    mesmo contrato de `_maybe_seed_presets`.
+    """
+    global _ultima_varredura_de_jogos, _assinatura_da_biblioteca_vista
+    if os.environ.get(SEED_SKIP_ENV_VAR) == "1":
+        return
+    agora = time.monotonic()
+    if (
+        _ultima_varredura_de_jogos is not None
+        and agora - _ultima_varredura_de_jogos < INTERVALO_MINIMO_DA_VARREDURA_S
+    ):
+        return
+    _ultima_varredura_de_jogos = agora
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import (
+            assinatura_da_biblioteca,
+        )
+
+        assinatura = assinatura_da_biblioteca()
+        if assinatura == _assinatura_da_biblioteca_vista:
+            return
+        semear_perfis_dos_jogos()
+        # Só depois de a varredura TERMINAR: uma exceção no meio não pode
+        # registrar a biblioteca como já tratada.
+        _assinatura_da_biblioteca_vista = assinatura
+    except Exception as exc:  # boundary best-effort (ver docstring)
+        logger.warning(
+            "semeadura_de_jogos_falhou",
+            err=str(exc),
+            err_type=type(exc).__name__,
+        )
+
+
 def _profile_path(identifier: str | Profile) -> Path:
     """Resolve filename a partir de slug direto ou de Profile.
 
@@ -515,6 +1026,7 @@ def load_profile(identifier: str) -> Profile:
     """
     _reject_traversal(identifier)
     _maybe_seed_presets()
+    _talvez_semear_jogos()
     directory = profiles_dir(ensure=True)
     direct = directory / f"{identifier}.json"
     # Defesa em profundidade: mesmo após rejeição de tokens, confirmar que o
@@ -564,6 +1076,7 @@ def load_all_profiles() -> list[Profile]:
     que falhar a decodificação ou validação Pydantic.
     """
     _maybe_seed_presets()
+    _talvez_semear_jogos()
     directory = profiles_dir(ensure=True)
     profiles: list[Profile] = []
     for path in sorted(directory.glob("*.json")):
@@ -592,6 +1105,7 @@ def audit_profiles() -> list[tuple[str, str]]:
     # Semeia ANTES de auditar: no primeiro boot pós-.deb, os presets precisam
     # existir quando o daemon montar o relatório de perfis.
     _maybe_seed_presets()
+    _talvez_semear_jogos()
     directory = profiles_dir(ensure=True)
     invalid: list[tuple[str, str]] = []
     for path in sorted(directory.glob("*.json")):
@@ -784,6 +1298,31 @@ def _origem_do_processo() -> str:
     return nome or "desconhecida"
 
 
+def _payload_do_perfil(profile: Profile) -> dict[str, object]:
+    """O DICIONÁRIO que vai para o disco — as regras de omissão num lugar só.
+
+    Extraído de `save_profile` quando a semeadura por jogo passou a gravar
+    perfil sem passar por ele (UM-PERFIL-POR-JOGO-01). Duplicar as regras de
+    omissão daria dois formatos de perfil no mesmo diretório, e o requisito
+    que elas atendem é de COMPATIBILIDADE — ver a docstring de `save_profile`.
+    """
+    payload: dict[str, object] = profile.model_dump(mode="json")
+    # SOM-02/E4: seção ausente é seção AUSENTE no arquivo (ver `save_profile`).
+    # `is None` e não falsy: `key_bindings: {}` é a ordem "teclado silencioso"
+    # e tem de sobreviver ao save.
+    for secao in _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE:
+        if payload.get(secao) is None:
+            payload.pop(secao, None)
+    if not payload.get("controllers"):
+        payload.pop("controllers", None)
+    else:
+        payload["controllers"] = {
+            uniq: cfg.model_dump(mode="json", exclude_unset=True)
+            for uniq, cfg in (profile.controllers or {}).items()
+        }
+    return payload
+
+
 def save_profile(profile: Profile, *, origem: str | None = None) -> Path:
     """Grava perfil em `<slugify(profile.name)>.json` de forma atômica.
 
@@ -827,20 +1366,7 @@ def save_profile(profile: Profile, *, origem: str | None = None) -> Path:
     deixar de aparecer — o load é semanticamente idêntico.
     """
     path = _profile_path(profile)
-    payload = profile.model_dump(mode="json")
-    # SOM-02/E4: seção ausente é seção AUSENTE no arquivo (ver docstring).
-    # `is None` e não falsy: `key_bindings: {}` é a ordem "teclado silencioso"
-    # e tem de sobreviver ao save.
-    for secao in _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE:
-        if payload.get(secao) is None:
-            payload.pop(secao, None)
-    if not payload.get("controllers"):
-        payload.pop("controllers", None)
-    else:
-        payload["controllers"] = {
-            uniq: cfg.model_dump(mode="json", exclude_unset=True)
-            for uniq, cfg in (profile.controllers or {}).items()
-        }
+    payload = _payload_do_perfil(profile)
     with FileLock(str(_lock_path(path))):
         # PERFIL-SEM-RASTRO-01: a versão que está no disco AGORA é lida antes de
         # ser pisada — os mesmos bytes servem para o backup e para o `antes` do
@@ -1034,8 +1560,14 @@ def _atomic_write_bytes(target: Path, bruto: bytes) -> None:
 __all__ = [
     "HISTORICO_DIR_NAME",
     "HISTORICO_MAX_VERSOES",
+    "INTERVALO_MINIMO_DA_VARREDURA_S",
+    "MARCA_DE_SEMEADURA_DE_JOGOS",
+    "PRIORIDADE_DO_PERFIL_DE_JOGO",
     "SEED_MARKER_NAME",
     "SEED_SKIP_ENV_VAR",
+    "PerfilSemeado",
+    "ResultadoDaSemeadura",
+    "classes_do_perfil_do_jogo",
     "delete_profile",
     "historico_dir",
     "listar_historico",
@@ -1044,7 +1576,10 @@ __all__ = [
     "migrate_coop_local_match",
     "migrate_game_presets_to_xbox",
     "migrate_profiles_coop_default",
+    "perfis_de_jogo_semeados",
+    "perfis_que_casam_com_o_cliente_steam",
     "restaurar_do_historico",
     "save_profile",
     "seed_default_presets",
+    "semear_perfis_dos_jogos",
 ]
