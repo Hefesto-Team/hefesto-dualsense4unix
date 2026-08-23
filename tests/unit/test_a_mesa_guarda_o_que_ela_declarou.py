@@ -49,6 +49,7 @@ _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.actions.config import secao_mesa
+from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador, Mesa, RadioUsb
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
@@ -80,11 +81,21 @@ def _mesa_de_bancada() -> Mesa:
     )
 
 
-def _montar(host: Any, mesa: Mesa | None = None) -> Gtk.Box:
-    """Monta a seção com uma mesa de bancada, sem tocar no `/sys` desta máquina."""
+def _montar(
+    host: Any, mesa: Mesa | None = None, censo: Censo | None = None
+) -> Gtk.Box:
+    """Monta a seção com uma mesa de bancada, sem tocar no `/sys` desta máquina.
+
+    `_ler_o_censo` é o SEGUNDO desvio, e ele não é opcional (22/08/2026): sem
+    ele a seção varre o barramento USB desta máquina para preencher a coluna
+    "O que é", e o resultado do teste passa a depender do que está espetado no
+    PC de quem roda. Censo vazio é o padrão daqui — toda linha cai em "não
+    sei", que é o estado em que o seletor aparece.
+    """
     caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     painel = secao_mesa._PainelDaMesa(host)
     painel._ler = lambda: _mesa_de_bancada() if mesa is None else mesa  # type: ignore[method-assign]
+    painel._ler_o_censo = lambda: Censo() if censo is None else censo  # type: ignore[method-assign]
     painel._pedir_o_estado = lambda: None  # type: ignore[method-assign]
     painel.montar(caixa)
     host._painel_da_mesa = painel
@@ -242,6 +253,12 @@ def test_cada_radio_vizinho_ganha_o_seletor_de_tipo() -> None:
     """A coluna "O que é" existe, com os sete botões do desenho.
 
     `RadioDeclarado.tipo` nasceu em CONFIG-03 e ficou sem widget nenhum.
+
+    A CONDIÇÃO MUDOU EM 22/08/2026, e sem ela este teste vira decoração: o
+    seletor não nasce mais em toda linha — nasce onde ninguém respondeu. Aqui o
+    censo é VAZIO por construção (`_montar`), que é exatamente esse caso. A
+    linha que o kernel já classificou é assunto do portão irmão,
+    `test_a_coluna_do_que_e_nasce_lida.py`.
 
     Mordida: não anexar o `_seletor_do_tipo` na grade dos rádios.
     """

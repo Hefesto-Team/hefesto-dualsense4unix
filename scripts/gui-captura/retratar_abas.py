@@ -901,6 +901,26 @@ _MESA_APARELHOS: dict[str, dict[str, str]] = {
     },
 }
 
+#: A INTERFACE 0 de cada aparelho da bancada, que é de onde o kernel diz o que
+#: cada coisa É (`bInterfaceClass/SubClass/Protocol`). Sem estas linhas o censo
+#: do barramento não teria o que ler e a coluna "O que é" sairia inteira em
+#: "não sei" — a foto mostraria a tela de uma máquina que não existe.
+#:
+#: A bancada exercita os DOIS casos que a coluna sabe desenhar, e é obrigada a
+#: isso: `03/01/01` e `03/01/02` viram "Teclado" e "Mouse" com o selo `(lido)`,
+#: `e0/01/01` vira "Bluetooth", e o `ff/ff/ff` do Realtek — o fabricante que
+#: declinou de classificar — é a única linha que nasce com o seletor aberto e
+#: o `▲`. Uma bancada só com casos lidos faria a foto esconder metade da tela.
+_MESA_INTERFACES: dict[str, tuple[str, str, str]] = {
+    f"{_MESA_USB1}/1-1/1-1:1.0": ("e0", "01", "01"),
+    f"{_MESA_USB1}/1-2/1-2:1.0": ("09", "00", "00"),
+    f"{_MESA_USB1}/1-2/1-2.1/1-2.1:1.0": ("e0", "01", "01"),
+    f"{_MESA_USB1}/1-2/1-2.2/1-2.2:1.0": ("ff", "ff", "ff"),
+    f"{_MESA_USB1}/1-3/1-3:1.0": ("03", "01", "01"),
+    f"{_MESA_USB1}/1-4/1-4:1.0": ("03", "01", "02"),
+    f"{_MESA_USB2}/2-1/2-1:1.0": ("e0", "01", "01"),
+}
+
 #: Onde cada `hciN` aterrissa: na INTERFACE do dispositivo, como no sysfs de
 #: verdade. Quem sobe daí até o dispositivo é o `dispositivo_usb_pai` do
 #: produto — o retrato não reimplementa a subida, senão a foto provaria o
@@ -909,6 +929,60 @@ _MESA_INTERFACES_BT: dict[str, str] = {
     "hci0": f"{_MESA_USB1}/1-1/1-1:1.0",
     "hci1": f"{_MESA_USB1}/1-2/1-2.1/1-2.1:1.0",
 }
+
+
+def _bancada_da_mesa():  # type: ignore[no-untyped-def]
+    """`(listar, ler, existe, real)` — o sysfs de mentira, montado uma vez.
+
+    Compartilhado pelas DUAS leituras da seção (`ler_a_mesa` e
+    `ler_o_barramento`) de propósito: se cada uma tivesse a sua bancada, a foto
+    poderia mostrar um rádio na tabela e nenhuma classe para ele — que é
+    exatamente o defeito que a coluna nova existe para não ter.
+    """
+    conteudo = {
+        os.path.join(no, atributo): f"{valor}\n"
+        for no, atributos in _MESA_APARELHOS.items()
+        for atributo, valor in atributos.items()
+    }
+    conteudo.update(
+        {
+            os.path.join(no, atributo): f"{valor}\n"
+            for no, tripla in _MESA_INTERFACES.items()
+            for atributo, valor in zip(
+                (
+                    "bInterfaceClass",
+                    "bInterfaceSubClass",
+                    "bInterfaceProtocol",
+                ),
+                tripla,
+                strict=True,
+            )
+        }
+    )
+    presentes = set(conteudo)
+    reais = {
+        os.path.join(_MESA_RAIZ_BT, nome): destino
+        for nome, destino in _MESA_INTERFACES_BT.items()
+    }
+    reais.update(
+        {os.path.join(_MESA_RAIZ_USB, os.path.basename(no)): no for no in _MESA_APARELHOS}
+    )
+    reais.update(
+        {os.path.join(_MESA_RAIZ_USB, os.path.basename(no)): no for no in _MESA_INTERFACES}
+    )
+    listagens = {
+        _MESA_RAIZ_BT: sorted(_MESA_INTERFACES_BT),
+        _MESA_RAIZ_USB: sorted(
+            os.path.basename(no)
+            for no in (*_MESA_APARELHOS, *_MESA_INTERFACES)
+        ),
+    }
+    return (
+        lambda raiz: list(listagens.get(raiz, [])),
+        lambda caminho: conteudo.get(caminho, ""),
+        lambda caminho: caminho in presentes,
+        lambda caminho: reais.get(caminho, caminho),
+    )
 
 
 def _mesa_de_mentira():  # type: ignore[no-untyped-def]
@@ -921,32 +995,74 @@ def _mesa_de_mentira():  # type: ignore[no-untyped-def]
     """
     from hefesto_dualsense4unix.integrations.mesa_de_radio import ler_a_mesa
 
-    conteudo = {
-        os.path.join(no, atributo): f"{valor}\n"
-        for no, atributos in _MESA_APARELHOS.items()
-        for atributo, valor in atributos.items()
-    }
-    presentes = set(conteudo)
-    reais = {
-        os.path.join(_MESA_RAIZ_BT, nome): destino
-        for nome, destino in _MESA_INTERFACES_BT.items()
-    }
-    reais.update(
-        {os.path.join(_MESA_RAIZ_USB, os.path.basename(no)): no for no in _MESA_APARELHOS}
-    )
-    listagens = {
-        _MESA_RAIZ_BT: sorted(_MESA_INTERFACES_BT),
-        _MESA_RAIZ_USB: sorted(os.path.basename(no) for no in _MESA_APARELHOS),
-    }
+    listar, ler, existe, real = _bancada_da_mesa()
     return ler_a_mesa(
         raiz_bt=_MESA_RAIZ_BT,
         raiz_usb=_MESA_RAIZ_USB,
-        listar=lambda raiz: list(listagens.get(raiz, [])),
-        ler=lambda caminho: conteudo.get(caminho, ""),
-        existe=lambda caminho: caminho in presentes,
-        real=lambda caminho: reais.get(caminho, caminho),
+        listar=listar,
+        ler=ler,
+        existe=existe,
+        real=real,
     )
 
+
+def _censo_de_mentira():  # type: ignore[no-untyped-def]
+    """O barramento USB da bancada, pela função de PRODUÇÃO.
+
+    É o que preenche a coluna "O que é" na foto. Mesma regra do irmão acima:
+    `ler_o_barramento` é o do produto, com as raízes trocadas — se ele mudar de
+    régua, a foto muda junto.
+    """
+    from hefesto_dualsense4unix.integrations.censo_do_barramento import (
+        ler_o_barramento,
+    )
+
+    listar, ler, _existe, real = _bancada_da_mesa()
+    return ler_o_barramento(
+        raiz_usb=_MESA_RAIZ_USB, listar=listar, ler=ler, real=real
+    )
+
+
+#: Os dois adaptadores da bancada pela ótica do BlueZ, para a coluna "Nome".
+#:
+#: PRIVACIDADE, e é o mesmo motivo da bancada acima: o alias de verdade é texto
+#: que ELA escreveu, e o `Address` é o endereço dos adaptadores dela. Ler o
+#: BlueZ vivo aqui publicaria os dois num PNG versionado — nenhum portão desta
+#: casa varre imagem.
+#:
+#: Os endereços são forjados (`AA:BB:CC:...`, a faixa que a suíte usa e que
+#: `test_o_duble_usado_tem_mac_falso` ancora) e nem aparecem na tela: a coluna
+#: mostra o nome.
+#:
+#: O segundo hospeda Nintendo de propósito. É ele que faz a foto mostrar as
+#: DUAS coisas que a costura do prefixo faz: o alias guardado é
+#: `"Nintendo Extra"`, e o que a tela desenha é `"Extra"`.
+_MESA_DONGLES: tuple[tuple[str, str, bool, str], ...] = (
+    ("AA:BB:CC:00:00:01", "Sala", False, "/org/bluez/hci0"),
+    ("AA:BB:CC:00:00:02", "Nintendo Extra", True, "/org/bluez/hci1"),
+)
+
+
+def _dongles_de_mentira():  # type: ignore[no-untyped-def]
+    """Os `Dongle` da bancada — o tipo de PRODUÇÃO, com dado inventado.
+
+    O tipo é o do produto porque é dele que sai a propriedade `nome`, que é a
+    que esconde o prefixo. Uma tupla de mentira com um `nome` calculado à mão
+    faria a foto provar o retrato, e não o produto.
+    """
+    from hefesto_dualsense4unix.integrations.apelido_do_dongle import Dongle
+
+    return tuple(
+        Dongle(
+            endereco=endereco,
+            alias=alias,
+            nome_do_sistema="Adaptador de bancada",
+            hospeda_nintendo=nintendo,
+            ligado=True,
+            objeto=objeto,
+        )
+        for endereco, alias, nintendo, objeto in _MESA_DONGLES
+    )
 
 
 
@@ -1103,6 +1219,15 @@ def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
             # Atributo de INSTÂNCIA, não de classe: como atributo de classe ele
             # viraria método ligado e receberia `self` que ninguém espera.
             self._mesa_leitor = _mesa_de_mentira
+            # A coluna "O que é" nasce LIDA do barramento, e a seção recusa a
+            # leitura viva sempre que o `_mesa_leitor` está de pé. Sem este
+            # segundo dublê a foto sairia com a coluna inteira em "não sei" —
+            # a tela de uma máquina que não existe.
+            self._censo_leitor = _censo_de_mentira
+            # A coluna "Nome" vem do BlueZ, e o alias é texto que ELA escreveu
+            # — mais o endereço dos adaptadores dela. Mesmo motivo dos outros
+            # dois dublês: esta foto vai para `docs/usage/assets/` sem revisão.
+            self._dongles_leitor = _dongles_de_mentira
             # A seção "Os controles" pergunta ao daemon quem está na mesa. No
             # retrato não há daemon, e não pode haver: o `state_full` de verdade
             # traz o endereço Bluetooth dos controles DELA, e esta foto vai para
@@ -1130,10 +1255,18 @@ def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
     if caixa is not None:
         caixa.show_all()
     mesa = _mesa_de_mentira()
+    censo = _censo_de_mentira()
+    lidos = sum(
+        1
+        for radio in mesa.radios
+        for aparelho in [censo.aparelho(radio.no)]
+        if aparelho is not None and aparelho.grau == "lido"
+    )
     return (
         f"aba Configurações montada ({len(SECOES)} seções; a mesa com "
         f"{len(mesa.adaptadores)} adaptadores e {len(mesa.radios)} rádios "
-        "de bancada, nenhum desta máquina)"
+        f"de bancada, nenhum desta máquina; {lidos} dos {len(mesa.radios)} "
+        f"classificados pelo barramento, {len(_MESA_DONGLES)} com nome)"
     )
 
 
