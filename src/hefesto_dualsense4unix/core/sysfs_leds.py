@@ -116,6 +116,23 @@ class SysfsLedNode:
             return None
         return (r, g, b)
 
+    def _brightness_lido(self) -> int | None:
+        """``brightness`` do LED multicolor como número, ou None se ilegível.
+
+        Memória do kernel — zero subcomando HID (mesma nota do ``get_players``).
+        None é "não sei", NUNCA "está apagado": nó que sumiu num replug/BT drop
+        tem de levar quem chama a ESCREVER, não a pular a escrita.
+        """
+        try:
+            with open(self._indicator_brightness) as fh:
+                raw = fh.read().strip()
+        except OSError:
+            return None
+        try:
+            return int(raw or "0")
+        except ValueError:
+            return None
+
     def is_on(self) -> bool:
         """True se o ``brightness`` do LED multicolor é > 0. Tolerante (nó pode sumir).
 
@@ -123,16 +140,12 @@ class SysfsLedNode:
         em 255 e apaga por ``multi_intensity "0 0 0"`` (ver ``set_rgb``), então
         "fisicamente apagada" = ``is_on() and get_rgb() == (0, 0, 0)`` com a
         escrita rastreada como nossa — quem compõe essa leitura é o handler IPC.
+
+        Lê pelo MESMO ``_brightness_lido`` que o ``set_rgb`` consulta: duas
+        réguas sobre o mesmo nó discordando é defeito que esta casa já pagou.
         """
-        try:
-            with open(self._indicator_brightness) as fh:
-                raw = fh.read().strip()
-        except OSError:
-            return False
-        try:
-            return int(raw or "0") > 0
-        except ValueError:
-            return False
+        valor = self._brightness_lido()
+        return valor is not None and valor > 0
 
     # --- escrita ---------------------------------------------------------
 
@@ -153,6 +166,15 @@ class SysfsLedNode:
         de chamar ``set_led``), então fixamos ``brightness`` no máximo (255) e o
         dimming vem do próprio RGB. Para apagar usamos ``multi_intensity "0 0 0"``
         (não ``brightness 0``) — "off" determinístico que não reacende no boot.
+
+        LUZ-CEGA-01/F3 (22/08/2026): "fixar em 255" passou a ser *garantir* 255,
+        não *reescrever* 255. Cada escrita na classe LED custa UM output report
+        do kernel, e o `btmon` mediu os dois quadros de uma troca de cor saindo
+        no mesmo milissegundo com bytes IDÊNTICOS — o report leva o estado
+        inteiro do LED, então o quadro do ``brightness`` já dizia a cor nova.
+        Com o valor divergente (um terceiro apagou pela classe) ou ILEGÍVEL (nó
+        sumindo num replug), a escrita acontece como sempre aconteceu, e na
+        MESMA ordem — o ``brightness`` antes da cor.
 
         GUERRA-01 item 3: escrita IGUAL à última bem-sucedida desta instância é
         pulada em silêncio (cache) — o reassert periódico do reconnect_loop
@@ -211,7 +233,20 @@ class SysfsLedNode:
                 self._foreign_logged = True
             # Cache invalidado: cai na reescrita abaixo (retoma a posse).
             self._last_write = None
-        ok = self._write(self._indicator_brightness, "255")
+        # LUZ-CEGA-01/F3: `brightness` só é escrito quando DIVERGE de 255.
+        # Cada escrita na classe LED faz o kernel montar um output report — o
+        # `btmon` mediu os dois saindo no mesmo milissegundo, com bytes
+        # IDÊNTICOS (`vf1=0x04`, mesmo RGB), porque o report carrega o estado
+        # inteiro do LED e o `brightness` já valia 255. Reescrevê-lo não
+        # acrescenta nada ao aparelho e custa um quadro de rádio por controle
+        # por reconciliação, numa mesa que já mostra `input CRC's check
+        # failed` no `dmesg`. Mesma disciplina do `set_players_verified`
+        # (NUMA-03): re-ler a memória do kernel é grátis, o quadro não é.
+        # Divergente (terceiro apagou pela classe) ou ILEGÍVEL (nó sumindo) =
+        # escreve, exatamente como antes.
+        ok = True
+        if self._brightness_lido() != 255:
+            ok = self._write(self._indicator_brightness, "255")
         ok = self._write(self._multi_intensity, f"{r} {g} {b}") and ok
         self._last_write = wanted if ok else None
         return ok

@@ -48,7 +48,10 @@ from typing import Any
 import pytest
 
 import hefesto_dualsense4unix.daemon.connection as conn_mod
-from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+from hefesto_dualsense4unix.app.widgets.controller_card import (
+    ROTULO_LIGHTBAR_SEGURADA,
+    rotulo_lightbar,
+)
 from hefesto_dualsense4unix.core.escritor_cru import (
     SentinelaDeEscritorCru,
     Veredito,
@@ -449,7 +452,13 @@ def test_a_aba_status_conta_que_a_barra_esta_disputada() -> None:
         "lightbar_disputada": True,
     }
     rotulo, base = rotulo_lightbar(entry, {})
-    assert rotulo == "A Steam também escreve nesta barra"
+    # LUZ-CEGA-01/E2 (22/08/2026): a frase era "a Steam também escreve nesta
+    # barra". O campo mede quem SEGURA o `fd`, não quem escreve — e o fio
+    # mediu que quem escreve somos nós (426 contra 1). O que este arquivo
+    # cobra é a propriedade; a frase inteira tem teste próprio em
+    # `test_a_tela_nao_acusa_a_steam_de_escrever.py`.
+    assert rotulo == ROTULO_LIGHTBAR_SEGURADA
+    assert "escreve" not in rotulo
     assert base == (0, 255, 0)
 
     # Sem disputa nada muda: card limpo, accent na cor.

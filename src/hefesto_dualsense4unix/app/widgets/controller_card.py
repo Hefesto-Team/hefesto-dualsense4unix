@@ -1103,6 +1103,14 @@ def dica_do_titulo(entry: dict[str, Any], state_global: dict[str, Any]) -> str |
     return None
 
 
+#: LUZ-CEGA-01/E2 — o rótulo de ``lightbar_disputada``. Diz o que o campo MEDE
+#: (a Steam tem o ``fd`` do controle aberto) e nada além: atribuir a ESCRITA a
+#: ela é afirmação sem medição, e o fio já respondeu quem escreve (426 a 1,
+#: nós). Constante para que o teste possa cobrar a propriedade — nenhum verbo
+#: de escrita aqui dentro — em vez de decorar a frase.
+ROTULO_LIGHTBAR_SEGURADA = "A Steam tem este controle aberto"
+
+
 def rotulo_lightbar(
     entry: dict[str, Any], state_global: dict[str, Any]
 ) -> tuple[str | None, RGB | None]:
@@ -1113,14 +1121,22 @@ def rotulo_lightbar(
     * ``native_mode`` global → "em Nativo o jogo é dono do LED"; o accent usa
       a última cor conhecida (ou o neutro, se nenhuma). O jogo escreve por
       hidraw e o daemon não pisa no LED — o card avisa em vez de mentir.
-    * ``lightbar_disputada`` (ESCRITOR-CRU-01) → "a Steam também escreve
-      nesta barra"; o accent segue a última cor NOSSA. Vem logo depois do
+    * ``lightbar_disputada`` (ESCRITOR-CRU-01) → "a Steam tem este controle
+      aberto"; o accent segue a última cor NOSSA. Vem logo depois do
       Nativo e antes de tudo o mais porque é um aviso sobre a CONFIANÇA no
       valor, não sobre o valor: com a Steam segurando o hidraw, o que a
       classe LED devolve é o que o Hefesto PEDIU — a madrugada de 16/08 leu
       ``[0 255 0]`` com a barra apagada e ``[0 255 0]`` com ela verde. Dizer
       "apagada" ou pintar a bolinha de verde sem ressalva seria, nos dois
       casos, afirmar o que ninguém mediu.
+
+      LUZ-CEGA-01/F2 (22/08/2026) — a frase era *"a Steam também escreve
+      nesta barra"*, e isso é justamente o que o campo NÃO mede. O booleano
+      sai de quem SEGURA o ``fd`` (``fuser`` nos oito nós, medido). Quem
+      ESCREVE somos nós: no fio, 32 s com o daemon vivo deram **426** reports
+      de saída contra **1** com ele parado, a Steam aberta nos dois lados.
+      Segurar não é escrever — e a frase antiga mandava a pessoa procurar o
+      defeito na Steam, onde ele não está.
     * ``lightbar_source == "desconhecida"`` (ou rgb ausente) → "Lightbar: cor
       desconhecida" + accent neutro. NUNCA "apagada": o 0,0,0 do sysfs sem
       escrita nossa pode ser o azul-kernel brilhando neste exato momento.
@@ -1135,7 +1151,7 @@ def rotulo_lightbar(
     if bool(state_global.get("native_mode")):
         return ("Em Nativo o jogo é dono do LED", rgb)
     if bool(entry.get("lightbar_disputada")):
-        return ("A Steam também escreve nesta barra", rgb)
+        return (ROTULO_LIGHTBAR_SEGURADA, rgb)
     fonte = str(entry.get("lightbar_source") or "desconhecida")
     if fonte == "desconhecida" or rgb is None:
         return ("Lightbar: cor desconhecida", None)
@@ -5398,6 +5414,7 @@ __all__ = [
     "LARGURA_GYRO_COMPACTO",
     "LARGURA_GYRO_UNICO",
     "MOTIVOS_DEGRADACAO_LEIGOS",
+    "ROTULO_LIGHTBAR_SEGURADA",
     "ROTULO_STICK_DIR",
     "ROTULO_STICK_ESQ",
     "STICK_SIZE_COMPACT",
