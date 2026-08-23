@@ -88,6 +88,29 @@ IGNORADO_TRAVA_MANUAL = "ignorado_trava_manual"
 #: produziu. O relatório só pode afirmar o que este código fez.
 _CATEGORIAS_SILENCIADAS_NO_APPLY = frozenset({"trigger", "led"})
 
+#: ELO-MUDO-02 (23/08/2026): do que o CONTROLLER respondeu para o que o
+#: RELATÓRIO diz. São dois vocabulários e eles não são o mesmo: o
+#: `core.controller.ResultadoDeSaida` conta o que aconteceu com os BYTES
+#: (`escreveu`/`registrado`/…); o relatório de ativação conta o que aconteceu
+#: com a SEÇÃO do perfil, no dialeto `aplicado`/`adiado_*`/`ignorado_*`/
+#: `falhou_*` que a janela, o `doctor` e o journal já leem.
+#:
+#: A tradução que importa é `registrado` → `adiado_sem_controle`: mesa vazia
+#: não é fracasso nem sucesso. O `_desired_default` do backend guardou o pedido
+#: e o hotplug o aplica quando um controle chegar — dizer `ignorado_*` ali
+#: mentiria para o outro lado, prometendo que nada vai acontecer.
+#:
+#: Resposta ausente (`None`) NÃO está no mapa de propósito: é "este backend não
+#: sabe dizer", e a leitura honesta continua sendo `aplicado` — a mesma
+#: disciplina do `_estado_da_secao` logo abaixo.
+_RESULTADO_PARA_RELATORIO: dict[str, str] = {
+    "escreveu": "aplicado",
+    "registrado": "adiado_sem_controle",
+    "falhou": "falhou_escrita",
+    "sem_alvo": "ignorado_sem_alvo",
+    "nada_a_fazer": "ignorado_sem_pedido",
+}
+
 
 @dataclass
 class ProfileManager:
@@ -404,7 +427,7 @@ class ProfileManager:
         self._configure_auto_player_colors(profile)
         # `None` num campo do OutputSpec = "não mexe nele" (o backend resolve
         # por camadas). É assim que a seção travada atravessa a ativação.
-        self.controller.apply_output_defaults(
+        resultado_da_saida = self.controller.apply_output_defaults(
             OutputSpec(
                 trigger_left=None if "trigger" in travadas else left,
                 trigger_right=None if "trigger" in travadas else right,
@@ -465,9 +488,37 @@ class ProfileManager:
         # cima é mais específico e tem de vencer. As chaves são `trigger` e `led`
         # no singular porque é o vocabulário que a trava já usa — dois nomes para
         # a mesma seção seria pior que nenhum.
+        #
+        # ELO-MUDO-02 (23/08/2026): A PALAVRA VEM DO CONTROLLER, NÃO DAQUI.
+        #
+        # A versão de 22/08 escrevia `"aplicado"` FIXO, e por isso a cura da
+        # ELO-MUDO-01 hospedou dentro de si o defeito que ela nomeia. Medido
+        # neste repositório com o perfil `Sackboy` dela e um controller de mesa
+        # vazia (a mesma volta que o backend real dá — `_for_each` sem handles
+        # loga `output_offline_noop` e retorna):
+        #
+        #     bytes escritos no aparelho: 0
+        #     relatorio: {'led': 'aplicado', 'trigger': 'aplicado'}
+        #
+        # Zero byte, duas seções dizendo que entraram. Quem lê o journal — a
+        # janela, o `doctor`, um agente numa sessão nova — não tem como
+        # distinguir isso de uma ativação que funcionou, e foi exatamente essa
+        # linha que sustentou um dia inteiro de caça a um defeito de gravação
+        # de gatilho que NÃO EXISTE (os 34 perfis dela guardam `triggers`; a
+        # medição que dizia o contrário perguntava por `trigger`, no singular).
+        #
+        # As duas seções compartilham UMA resposta porque compartilham UMA
+        # chamada: `apply_output_defaults` escreve gatilho e luz na mesma volta
+        # e sobre a mesma mesa. Quando a trava silencia uma delas, o
+        # `setdefault` preserva o `ignorado_trava_manual` e a outra fica com o
+        # veredito — que é o certo, porque o `OutputSpec` só levou a outra.
         if relatorio is not None:
+            palavra = _RESULTADO_PARA_RELATORIO.get(
+                resultado_da_saida if isinstance(resultado_da_saida, str) else "",
+                "aplicado",
+            )
             for categoria in sorted(_CATEGORIAS_SILENCIADAS_NO_APPLY):
-                relatorio.setdefault(categoria, "aplicado")
+                relatorio.setdefault(categoria, palavra)
 
     def _categorias_travadas(self) -> frozenset[str]:
         """Categorias de override MANUAL armadas no store agora.
@@ -1635,9 +1686,14 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
 
 
 
-#: Os nove appliers que um `ProfileManager` de daemon precisa para aplicar as
-#: OITO seções de um perfil. A lista é o contrato, e existe como dado — não
-#: como nove linhas repetidas — porque a repetição já custou uma leva.
+#: Os SETE appliers que um `ProfileManager` de daemon precisa para aplicar as
+#: sete seções de perfil que passam por injeção — `mouse`, `suppression`,
+#: `mode`, `rumble.policy`, `rumble.passthrough`, `speaker` e `mic`. A lista é
+#: o contrato, e existe como dado — não como sete linhas repetidas em cada
+#: rota — porque a repetição já custou uma leva.
+#:
+#: (Gatilho, luz e teclado NÃO estão aqui: o `apply`/`apply_keyboard` escreve
+#: os três direto no controller, sem applier injetado.)
 #:
 #: Cada item é `(parâmetro do construtor, atributo do daemon)`. O
 #: `keyboard_device_provider` fica de fora porque não é um atributo: é um
@@ -1654,23 +1710,28 @@ APPLIERS_DO_DAEMON: tuple[tuple[str, str], ...] = (
 )
 
 
+#: Sentinela de "não informado" para o `mode_applier` da fábrica. Precisa ser
+#: distinta de `None` porque `None` é uma escolha LEGÍTIMA e medida — ver o
+#: docstring de `gerente_do_daemon`.
+HERDA_DO_DAEMON: Any = object()
+
+
 def gerente_do_daemon(
     daemon: Any,
     *,
     controller: Any = None,
     store: Any = None,
-    **sobrescritas: Any,
+    mode_applier: Any = HERDA_DO_DAEMON,
 ) -> ProfileManager:
     """O ``ProfileManager`` COMPLETO de uma rota do daemon — uma fonte só.
 
-    POR QUE ESTA FUNÇÃO EXISTE, e o defeito que ela fecha (22/08/2026). Quatro
-    rotas montavam o próprio manager à mão, cada uma com a sua lista de
-    appliers, e **uma delas derivou**: a nota
-    ``PERFIL-REESCRITO-NA-PARTIDA-01`` item 6 (``daemon/lifecycle.py``) conta
-    que a rota de saída do Modo Nativo nascia sem três appliers, e que o efeito
-    era ela desligar o Modo Nativo e ver gatilhos e LEDs voltarem enquanto a
-    máscara do vpad, a política de vibração e o volume do alto-falante ficavam
-    como o jogo os deixou.
+    POR QUE ESTA FUNÇÃO EXISTE, e o defeito que ela fecha (22/08/2026). Cada
+    rota montava o próprio manager à mão, com a sua lista de appliers, e **uma
+    delas derivou**: a nota ``PERFIL-REESCRITO-NA-PARTIDA-01`` item 6
+    (``daemon/lifecycle.py``) conta que a rota de saída do Modo Nativo nascia
+    sem três appliers, e que o efeito era ela desligar o Modo Nativo e ver
+    gatilhos e LEDs voltarem enquanto a máscara do vpad, a política de vibração
+    e o volume do alto-falante ficavam como o jogo os deixou.
 
     **Applier ausente não levanta: a seção é ignorada em silêncio.** É esse o
     formato do defeito, e é o que faz a lista repetida ser perigosa em vez de
@@ -1680,11 +1741,35 @@ def gerente_do_daemon(
     Todos os acessos são ``getattr`` com default ``None``, e isso é contrato:
     este construtor é chamado por dublês da suíte e por rotas de CLI que não
     têm daemon nenhum, e um atributo ausente ali não pode derrubar a ativação —
-    a seção volta a ser ignorada, que é o comportamento histórico.
+    a seção volta a ser ignorada, que é o comportamento histórico. Vale também
+    para o ``daemon`` inteiro: as rotas que sobem por ``DaemonContext`` passam
+    ``daemon=None`` quando não há daemon, e por isso ``controller`` e ``store``
+    podem vir por fora.
 
-    ``sobrescritas`` existe para o caso medido do ``lifecycle``: a saída do
-    Modo Nativo passa um ``mode_applier`` EMBRULHADO, que barra só o ``native``
-    para não religar o modo que ela acabou de desligar.
+    ``mode_applier`` É O ÚNICO DESVIO DECLARADO, e é nomeado de propósito.
+    A fábrica não aceita ``**sobrescritas``: um saco genérico ao lado da lista
+    é a lista à mão de volta, com outro nome. Divergência que se justifique
+    vira PARÂMETRO NOMEADO aqui, com o porquê escrito — e o portão
+    ``test_a_fabrica_do_gerente_e_a_unica_lista_de_appliers`` reprova quem
+    montar o ``ProfileManager`` direto para fugir desta porta.
+
+    Só a seção ``mode`` precisou dela, e por duas medições distintas:
+
+    - **allowlist do Steam Input** (``daemon/launch_env.py``): o jogo está na
+      allowlist, o Steam Input já fala com o vpad, e o Hefesto não pode
+      disputar o gamepad. Passa um ``mode_applier`` EMBRULHADO que barra o
+      ``kind`` e deixa a máscara passar. ``mode_applier=None`` foi a primeira
+      versão e está REFUTADA (22/08/2026): barrar a seção inteira levava junto
+      o ``gamepad_flavor``, que não é disputa nenhuma. ``None`` continua sendo
+      um valor aceito e explícito — quem o passar está dizendo "esta rota não
+      aplica a seção ``mode``", e a sentinela existe justamente para que esse
+      pedido não seja confundido com "não opinei";
+    - **saída do Modo Nativo** (``daemon/lifecycle.py::_reapply_last_profile``):
+      precisa de um ``mode_applier`` embrulhado que barre só o
+      ``kind="native"``, senão o perfil religaria na hora o modo que ela acabou
+      de desligar. Esta rota ainda NÃO vem da fábrica — é a E1 aberta da
+      ``A-FÁBRICA-COM-UM-CLIENTE-01``, e é por isso que ela hoje passa 6 dos 7
+      appliers.
     """
     argumentos: dict[str, Any] = {
         "controller": controller if controller is not None else daemon.controller,
@@ -1694,12 +1779,14 @@ def gerente_do_daemon(
         argumentos["store"] = store
     for parametro, atributo in APPLIERS_DO_DAEMON:
         argumentos[parametro] = getattr(daemon, atributo, None)
-    argumentos.update(sobrescritas)
+    if mode_applier is not HERDA_DO_DAEMON:
+        argumentos["mode_applier"] = mode_applier
     return ProfileManager(**argumentos)
 
 
 __all__ = [
     "APPLIERS_DO_DAEMON",
+    "HERDA_DO_DAEMON",
     "MOTIVO_JOGO_SEM_PERFIL_PROPRIO",
     "MOTIVO_SELECIONADO",
     "MOTIVO_SEM_CANDIDATO",
