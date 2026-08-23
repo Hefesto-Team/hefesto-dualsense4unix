@@ -15,10 +15,25 @@ aceitar:
    máquina): com o mic desligado o controle entrega ~260 reports de input/s;
    com o mic ligado a MESMA banda passa a carregar ~106 quadros de áudio/s e
    os reports de input caem para ~170/s. O total de pacotes fica igual — o
-   áudio não é de graça, ele divide o link. 170 Hz continua muito acima do
-   poll de 60 Hz do daemon, mas quem usa gyro aiming perde resolução de
-   integração (o espelho de motion mira 250 Hz). Trade-off da usuária, não do
-   programa.
+   áudio não é de graça, ele divide o link. É por isso que a conta é POR
+   ADAPTADOR, e é ela que diz quantos microfones cabem numa mesa.
+
+   NOTA DATADA — 22/08/2026, decisão dela. Aqui estava escrito que *"quem usa
+   gyro aiming perde resolução de integração (o espelho de motion mira
+   250 Hz)"*. **Aquilo comparava réguas de transportes diferentes** e a
+   remedição de 11/08/2026 o derrubou: 250 Hz é a taxa NATIVA DO CABO, e no
+   rádio o físico nunca teve taxa — entrega em RAJADA, medida "entre ~55 e
+   ~392 Hz" com o mic DESLIGADO, p95 de intervalo em 187 ms
+   (`core/physical_report_reader.py`, "A taxa do rádio é RAJADA"). Um número
+   que oscila 55 a 392 não perde resolução por passar a valer 170 de média: a
+   premissa da frase não existia. Ela é a armadilha nº 1 desta casa — medir
+   contra a régua errada produz alarme convincente e falso.
+
+   O que fica: o microfone **não é trade-off contra giroscópio**. O alvo dela,
+   textual em 22/08, é *"a mesma experiência do controle da Sony como se
+   tivesse jogando no PS5"* — lá tudo funciona junto, e a conta de três
+   adaptadores diz que aqui também cabe. O que continua verdadeiro é a conta
+   do link, e ela é o que o orçamento da mesa mede.
 
 Gate: `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` (ou `config.bt_mic_enabled`, se algum
 dia virar campo do `DaemonConfig` — lemos por `getattr` para não exigir que
