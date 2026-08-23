@@ -254,6 +254,11 @@ install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
 # %preun, como a do broker.
 install -Dm755 -t %{buildroot}%{_datadir}/%{app_id}/scripts/ \
     scripts/bt_nosniff_now.sh \
+    scripts/bt_active_mode.sh \
+    scripts/bt_ponte_privilegiada.sh \
+    scripts/bt_bonds_autorestore.sh \
+    scripts/bt_health_watchdog.sh \
+    scripts/bt_rebind_orphans.sh \
     scripts/bt_bonds_snapshot.sh
 install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
     assets/systemd/hefesto-bt-bonds-snapshot.service
@@ -424,6 +429,11 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.service
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 %{_datadir}/%{app_id}/scripts/bt_nosniff_now.sh
+%{_datadir}/%{app_id}/scripts/bt_active_mode.sh
+%{_datadir}/%{app_id}/scripts/bt_ponte_privilegiada.sh
+%{_datadir}/%{app_id}/scripts/bt_bonds_autorestore.sh
+%{_datadir}/%{app_id}/scripts/bt_health_watchdog.sh
+%{_datadir}/%{app_id}/scripts/bt_rebind_orphans.sh
 %{_datadir}/%{app_id}/scripts/bt_bonds_snapshot.sh
 %{_datadir}/%{app_id}/systemd/hefesto-bt-bonds-snapshot.service
 
