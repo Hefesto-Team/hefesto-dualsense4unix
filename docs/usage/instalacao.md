@@ -16,7 +16,12 @@ todas as formas de instalar, o que o instalador toca no sistema, e como reverter
 
 - GTK 3 + PyGObject — sem eles não há janela, só CLI e TUI.
 - `wlrctl` em sessões Wayland (o instalador oferece instalar em COSMIC).
-- Extensão `ubuntu-appindicators@ubuntu.com` no GNOME 42+, para o ícone de bandeja.
+- Uma extensão de indicadores no GNOME 42+, para o ícone de bandeja. São **duas
+  na prática**, e qual delas você tem depende da distro:
+  `ubuntu-appindicators@ubuntu.com` na família Ubuntu/Pop!_OS, e a de origem,
+  `appindicatorsupport@rgcjonas.gmail.com`, no resto. **O instalador só conhece
+  a primeira** — com a de origem ligada e funcionando ele ainda vai avisar que
+  "a extensão não está instalada"; o aviso é dele, não seu.
 - **Teclado na tela**: `wvkbd` em sessão Wayland, `onboard` em X11. Desde
   10/08/2026 **o instalador o instala sozinho, sem flag** (passo 4f) — a linha
   aqui é para quem instalou antes disso ou pulou o passo. É ele que o **L3** do
@@ -94,12 +99,13 @@ seu `$HOME`, com os padrões de fábrica:
 | `/etc/modprobe.d/hefesto-hid-playstation.conf` | parâmetros do módulo do DualSense (retry dos feature reports da probe) |
 | `/etc/bluetooth/main.conf.d/` | dois drop-ins do BlueZ (conexão rápida, re-pareamento) |
 | `/etc/systemd/system/` | broker de hidraw, agente Bluetooth, 2 timers de resiliência BT, drop-in do `bluetooth.service` |
+| `~/.config/systemd/user/` | **cinco unidades suas, e elas ficam rodando**: o daemon (`hefesto-dualsense4unix.service`), a vigia da tempestade de botões (`hefesto-dualsense4unix-storm-watch.service`) e as **três** do vigia do Steam Input — `hefesto-steam-input-guard.path`, `hefesto-steam-input-guard.timer` e `hefesto-steam-input-guard.service`. Uma sexta, a subida da janela no hotplug (`hefesto-dualsense4unix-gui-hotplug.service`), só entra se você aceitar o prompt ou passar `--enable-hotplug-gui` |
 | `/usr/local/lib/hefesto-dualsense4unix/` | binário do broker + scripts de manutenção Bluetooth |
 | `/var/lib/hefesto-dualsense4unix/bt-bonds/` | cópias de segurança dos pareamentos Bluetooth |
 | cmdline do kernel | `usbcore.autosuspend=-1` **e** `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn`, via kernelstub ou grub (passo 3e, padrão). O passo funde o token de quirks que já existir em vez de somar um segundo, registra que a atribuição é do Hefesto e o `uninstall.sh` reverte só a nossa; um valor posto por terceiros é registrado e preservado |
 | **DKMS** | `hefesto-hid-nintendo`, `hefesto-hid-playstation` e `hefesto-rtw88-usb` — três módulos fora da árvore |
 | **teclado na tela** (passo 4f) | instala `wvkbd` (Wayland) ou `onboard` (X11) pelo gerenciador de pacotes da distro. É o programa que o **L3** do controle abre |
-| configuração da Steam | desliga o Steam Input, migra as Opções de Inicialização, trava o Proton (sempre com cópia de segurança ao lado) |
+| configuração da Steam | desliga o Steam Input, migra as Opções de Inicialização, trava o Proton (sempre com cópia de segurança ao lado). **Não é um gesto só na instalação** — veja o vigia abaixo |
 
 **O teclado na tela entra sem flag, desde 10/08/2026, e a escolha é medida.** O
 produto oferecia "Abrir teclado na tela" no L3 e não instalava nada:
@@ -119,6 +125,44 @@ software de sistema, e desinstalar o Hefesto não é motivo para tirar o teclado
 na tela de quem passou a usá-lo. O `hefesto-dualsense4unix doctor` confere e
 distingue as quatro histórias por trás de um `command -v` vazio — você pulou, o
 install tentou e falhou, o install nunca passou, ou estava instalado e sumiu.
+
+**O Steam Input não é desligado uma vez — ele fica sendo desligado.** É a parte
+que mais surpreende quem religa o Steam Input de um jogo e o vê voltar sozinho
+para desligado, então está dita aqui inteira. O passo 11 zera o `PSSupport` nos
+`localconfig.vdf` **e** instala três unidades de usuário, habilitadas na hora:
+
+| unidade | quando acorda |
+|---|---|
+| `hefesto-steam-input-guard.path` | quando a Steam **escreve** em `userdata/` — que é quando ela acaba de sair. É best-effort: escrita profunda por `rename` pode não disparar |
+| `hefesto-steam-input-guard.timer` | 3 min depois do boot e a cada **30 min**. É a rede de segurança do `.path` |
+| `hefesto-steam-input-guard.service` | o trabalho: reaplica Steam Input OFF **e** repõe o wrapper `hefesto-launch` nas Opções de Inicialização. Com a Steam viva ele **adia** em vez de fechá-la |
+
+**Se o vigia morrer, quem avisa é a janela.** Aba **Sistema**, cartão *Saúde do
+sistema*: quando o timer está habilitado e sem próximo disparo, aparece um aviso
+dizendo que a rede de segurança parou e que o conserto é rodar o `install.sh` de
+novo. Com o vigia saudável o cartão não diz nada — ele só fala quando há
+problema. Se você desabilitou o vigia de propósito (veja abaixo), também não há
+aviso.
+
+Isso existe porque o defeito é real e silencioso: até 22/08/2026 o
+`.timer` trazia um `Persistent=true`, que só tem efeito em timer com
+`OnCalendar=` e aqui **matava** a unidade — depois de um ciclo
+`uninstall.sh` → `install.sh` ela nascia `elapsed`, sem próximo disparo. Medido
+em 26/07/2026: cinco horas sem o guarda rodar, e `systemctl` respondendo
+`ActiveState=active` o tempo todo.
+
+Para o detalhe cru: `systemctl --user list-timers 'hefesto-*'` (a coluna `NEXT`
+vazia é o sintoma) e `journalctl --user -u hefesto-steam-input-guard.service`.
+
+Para desligar só o vigia, mantendo o resto:
+
+```bash
+systemctl --user disable --now hefesto-steam-input-guard.path \
+                               hefesto-steam-input-guard.timer
+```
+
+`install.sh --keep-steam-input` pula o passo inteiro, vigia incluído; o
+`uninstall.sh` remove e desabilita as três.
 
 Quatro curas de Bluetooth entram **por padrão** e merecem nome, porque mexem em
 serviço de sistema:

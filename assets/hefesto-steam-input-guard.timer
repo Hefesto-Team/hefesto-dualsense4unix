@@ -1,11 +1,27 @@
 [Unit]
-# doc: docs/process/sprints/FEAT-STEAM-INPUT-SELF-HEAL-01.md
+# doc: docs/process/sprints/2026-07-26-STEAM-INPUT-01-ela-nunca-mais-precisa-decidir.md
 Description=Hefesto — rede de segurança: reaplica Steam Input OFF periodicamente
 
 [Timer]
+# NÃO ponha `Persistent=` aqui de volta. Medido em 22/08/2026, systemd 255,
+# reproduzindo o defeito de 26/07 (o guarda passou cinco horas sem rodar):
+#
+#   Persistent= só tem efeito em timer com OnCalendar= (systemd.timer(5)).
+#   Aqui ele não agendava nada — ele MATAVA o timer. Persistent= faz o systemd
+#   ler o arquivo de carimbo (~/.local/share/systemd/timers/stamp-*) e gravá-lo
+#   em `last_trigger`. Com `last_trigger` preenchido, o OnBootSec= é tratado
+#   como disparo único que já aconteceu e é DESABILITADO; e o OnUnitActiveSec=
+#   não tem em que se ancorar enquanto o serviço não rodar uma vez neste boot.
+#   Sem nenhum dos dois, o timer não tem próximo disparo: nasce `elapsed` e
+#   nunca mais acorda.
+#
+# O gatilho é todo `install.sh` que substitui as unidades: o objeto de unidade
+# é recriado do zero (last_trigger zerado) com o carimbo antigo ainda no disco.
+# A/B na máquina dela, mesmo roteiro, só esta linha de diferença:
+#   com Persistent=true -> SubState=elapsed, NextElapseUSecMonotonic=infinity
+#   sem Persistent      -> SubState=waiting, dispara na hora, rearma em 30min
 OnBootSec=3min
 OnUnitActiveSec=30min
-Persistent=true
 Unit=hefesto-steam-input-guard.service
 
 [Install]

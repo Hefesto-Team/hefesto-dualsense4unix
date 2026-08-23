@@ -144,19 +144,27 @@ busctl --user list | grep -i StatusNotifierWatcher  # provavelmente vazio
 **Diagnóstico**:
 
 ```bash
-gnome-extensions list --enabled | grep ubuntu-appindicators
-# esperado: presente; se vazio → extension não habilitada
+gnome-extensions list --enabled | grep -i appindicator
+# esperado: uma linha; se vazio → extension não habilitada
 ```
 
-**Fix**:
+O `grep` é frouxo de propósito: **são duas extensões**, e qual você tem depende
+da distro — `ubuntu-appindicators@ubuntu.com` na família Ubuntu/Pop!_OS,
+`appindicatorsupport@rgcjonas.gmail.com` no resto. As duas servem.
+
+**Fix** — ligue a que a linha acima mostrou, ou a que `gnome-extensions list`
+listar:
 
 ```bash
-gnome-extensions enable ubuntu-appindicators@ubuntu.com
+gnome-extensions enable ubuntu-appindicators@ubuntu.com        # Ubuntu/Pop!_OS
+gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com  # Fedora, Arch, …
 # Faça logout/login do GNOME (a extension carrega no Shell startup).
 ```
 
-O `install.sh --yes` faz isso automaticamente em Pop!_OS / Ubuntu
-GNOME, mas precisa de logout/login depois.
+O `install.sh --yes` faz isso automaticamente em Pop!_OS / Ubuntu GNOME, mas
+precisa de logout/login depois. **Ele só conhece a primeira das duas**: numa
+distro com a de origem ligada e o ícone na sua frente, ele ainda vai avisar que
+a extensão está faltando.
 
 ---
 

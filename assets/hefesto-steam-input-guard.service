@@ -1,6 +1,6 @@
 [Unit]
-# doc: docs/process/sprints/FEAT-STEAM-INPUT-SELF-HEAL-01.md
-# doc: docs/process/sprints/2026-08-16-CARONA-NO-GUARD-01-o-vigia-que-ja-acordava-na-hora-certa.md
+# doc: docs/process/sprints/2026-07-26-STEAM-INPUT-01-ela-nunca-mais-precisa-decidir.md
+# doc: docs/process/sprints/2026-08-16-SENTINELA-WRAPPER-01-a-steam-guarda-uma-linha-por-jogo-e-comeu-a-nossa.md
 Description=Hefesto — desfaz o que a Steam reescreve no localconfig.vdf (Steam Input OFF, e o wrapper hefesto-launch)
 
 [Service]
