@@ -18,8 +18,15 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402
 
-_RAIZ_PADRAO = "/home/vitoriamaria/Desenvolvimento/hefesto-dualsense4unix"
-RAIZ = Path(os.environ.get("HEFESTO_RAIZ", _RAIZ_PADRAO))
+# A raiz sai do PRÓPRIO arquivo, nunca de um caminho de disco de ninguém: este
+# script mora em `scripts/gui-captura/`, dois níveis abaixo da raiz. Antes de
+# 22/08/2026 o default era o `$HOME` da mantenedora, e só resolvia aqui porque
+# há um symlink — quem clonasse o repo e seguisse o `CLAUDE.md` morria no
+# `add_from_file` do `main.glade` na primeira tentativa
+# (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01, A4). O vizinho `retratar_abas.py` já fazia
+# assim. `HEFESTO_RAIZ` continua vencendo, para quem roda de fora da árvore.
+_RAIZ_PADRAO = Path(__file__).resolve().parents[2]
+RAIZ = Path(os.environ.get("HEFESTO_RAIZ") or _RAIZ_PADRAO)
 sys.path.insert(0, str(RAIZ / "src"))
 
 GLADE = RAIZ / "src/hefesto_dualsense4unix/gui/main.glade"

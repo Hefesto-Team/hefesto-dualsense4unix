@@ -462,7 +462,10 @@ O nome do jogo vem do `appmanifest` da Steam. Quando ele não está no disco, a
 linha mostra o número e diz *"nome não encontrado"* — nunca um nome inventado.
 
 E a marca entrega a **entrada**: a sua cor, os seus gatilhos, a sua vibração e
-os seus jogadores continuam valendo.
+os seus jogadores continuam valendo. **A máscara do perfil também** — desde
+22/08/2026, marcar o jogo deixou de deixar o gamepad virtual na máscara em que
+estivesse; o que o jogo enxerga continua sendo o que você escolheu. O porquê,
+com a medição, em [jogos e máscaras](jogos-e-mascaras.md).
 
 Por último, o bloco **Avançado — só se você quiser controlar cada passo**, com
 os quatro botões que fazem cada pedaço à mão: **Aplicar correções** (não pede
@@ -792,8 +795,11 @@ vazia ou composta (`pop:GNOME`).
 
 **O ícone na barra do sistema** ganhou a linha que faltava. Quando ele sobe, a
 seção diz isso; quando não sobe, ela diz **o que fazer** em vez de sumir calada:
-no GNOME o ícone depende da extensão `ubuntu-appindicators@ubuntu.com`; no
-COSMIC, do applet "Área de status", em Configurações → Painel. **Não há caixa de
+no GNOME o ícone depende de uma extensão de indicadores — a frase da tela nomeia
+a da família Ubuntu (`ubuntu-appindicators@ubuntu.com`), e quem estiver noutra
+distro provavelmente tem a de origem, `appindicatorsupport@rgcjonas.gmail.com`,
+que serve igual; no COSMIC, do applet "Área de status", em Configurações →
+Painel. **Não há caixa de
 ligar e desligar a bandeja** — não existe chave que alguém leia, e uma caixa que
 não liga nada é decoração.
 

@@ -21,8 +21,10 @@ import sys
 
 try:
     import evdev
-except ImportError:
-    print("erro: o pacote `evdev` não está no interpretador atual.")
+
+    from hefesto_dualsense4unix.core.linhagem_nintendo import e_clone_conhecido
+except ImportError as _falta:
+    print(f"erro: `{_falta.name}` não está no interpretador atual.")
     print("      Rode pelo venv do projeto: .venv/bin/python scripts/ver_botao.py")
     raise SystemExit(2) from None
 
@@ -31,15 +33,23 @@ def rotulo(dev: evdev.InputDevice) -> str:
     """Nome curto e humano, para não confundir dois controles iguais.
 
     O 8BitDo se apresenta com o VID/PID da Nintendo, então nome não distingue:
-    o que separa é a OUI do endereço. `e0:f6:b5` é a da Nintendo; o clone traz
-    outra.
+    o que separa é a OUI do endereço, e a pergunta vai por NEGATIVA — a faixa
+    do clone é uma só e é conhecida; a da Nintendo são 82.
+
+    Antes de 22/08/2026 esta função comparava com UMA faixa e chamava de
+    "8BitDo SN30 Pro" todo Pro genuíno de outra safra, na cara de quem estava
+    operando o script (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01, A1).
     """
-    uniq = (dev.uniq or "").lower()
+    uniq = dev.uniq or ""
     nome = dev.name
     if "dualsense" in nome.lower():
         return "DualSense"
     if "pro controller" in nome.lower():
-        return "Pro (Nintendo)" if uniq.startswith("e0:f6:b5") else "8BitDo SN30 Pro"
+        if e_clone_conhecido(uniq):
+            return "8BitDo (clone)"
+        # Sem endereço legível não dá para descartar o clone — e dizer
+        # "Pro (Nintendo)" seria afirmar o que não se sabe.
+        return "Pro (Nintendo)" if uniq else "Pro (indistinguível)"
     return nome[:24]
 
 
