@@ -55,6 +55,16 @@ controle duplicado), esses jogos precisam de uma **exceção por jogo** — o bo
 jogo enxerga, e não derruba ninguém da partida: o gamepad virtual continua de pé
 e o jogador 2 permanece.
 
+**E a máscara do perfil atravessa a exceção — desde 22/08/2026.** Até esse dia
+não atravessava, e o efeito era o oposto do que a exceção promete: marcar o jogo
+fazia o produto pular a seção de modo inteira, e a máscara ficava na que estava.
+Medido no daemon dela em 22/08, com o perfil do Sackboy pedindo `DualSense (PS)`
+e quatro gamepads virtuais vivos como `Xbox 360`. Com o controle físico
+escondido, o virtual é **tudo** o que o jogo tem — então marcar o jogo estava
+**tirando** giroscópio, touchpad e acelerômetro, que não existem no relatório de
+um Xbox 360. Hoje a exceção pula só a disputa pelo controle; o que o jogo
+**enxerga** continua sendo o que você escolheu no perfil.
+
 > **NOTA DATADA — 06/08/2026, e metade dela caducou em 09/08.** Medido em jogo,
 > com o Mullet Mad Jack aberto: durante a exceção o Hefesto **continua
 > escrevendo no seu controle** — a cor que você escolheu **fica**, e a

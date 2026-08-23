@@ -402,8 +402,23 @@ hefesto-dualsense4unix test rumble --weak 128 --strong 64
 ### Os dois instrumentos de eliminação
 
 - `hefesto-dualsense4unix lightbar-reset` — manda o report `0x31` com
-  `valid_flag1 = 0x08` ("Reset LED state"), que devolve ao host o claim da
-  lightbar. Instrumento da LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026).
+  `valid_flag1 = 0x08` ("Reset LED state"). Instrumento da
+  LIGHTBAR-MEDIR-O-0X08-01 (08/08/2026), e **só instrumento**: o envio
+  automático saiu do produto em `108b711` (04/08/2026) depois de a
+  LIGHTBAR-BT-CULPADO-01 correlacionar, 7 de 7, o `0x08` mandado dentro da
+  janela de ~3,4 s pós-conexão com a barra **travada até o power-off físico** do
+  controle. Medido em 22/08/2026 no fio, com quatro DualSense no rádio: **0 de
+  776 reports** carregaram `RELEASE_LEDS` — o produto de hoje não manda este
+  byte sozinho em lugar nenhum.
+
+  Duas coisas que ninguém deve esquecer antes de usá-lo:
+
+  - a hipótese *"ele devolve o claim, e só derruba dentro da janela"* **continua
+    sem ensaio que a feche** — é justamente o que este comando existe para
+    falsificar, e o docstring do `cli/cmd_lightbar_reset.py` carrega o histórico
+    inteiro, correção datada incluída;
+  - **ele apaga TODOS os LEDs de jogador**, medido isoladamente em 03/08 (antes,
+    P1 aceso; depois, todos apagados). O nome é literal: `RELEASE_LEDS`, plural.
 - `hefesto-dualsense4unix player-leds` — liga/desliga a **escrita** do LED de
   JOGADOR, para isolar se é ela que trava a barra. Instrumento da
   LIGHTBAR-ISOLAR-OS-PLAYERS-01.
