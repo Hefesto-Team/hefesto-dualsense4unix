@@ -78,7 +78,7 @@ from hefesto_dualsense4unix.integrations.apelido_do_dongle import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "bt_active_mode.sh"
-SCRIPTS_BT = sorted(RAIZ.glob("scripts/bt_*.sh"))
+SCRIPTS_BT = [*sorted(RAIZ.glob("scripts/bt_*.sh")), RAIZ / "scripts" / "doctor.sh"]
 
 #: A OUI do Pro sai do PRODUTO, nunca escrita aqui — mesma guarda de
 #: `test_a_oui_separa_o_clone_do_genuino.py`: forma de MAC em `tests/` só nas
@@ -478,10 +478,13 @@ def test_nenhum_script_de_bluetooth_fala_por_um_adaptador_so(arquivo: Path) -> N
     e mesmo assim o `hci0` literal seguiu vivo noutros arquivos por um mês.
     Cicatriz que não vira portão é cicatriz que a casa relê e não aplica.
 
-    ESCOPO DECLARADO: só `scripts/bt_*.sh`. O `doctor.sh` tem os dois `head -1`
-    do achado A5 ainda de pé (entrega E3, de outra frente) — um portão que
-    reprova por causa do arquivo de outra pessoa é um portão que alguém
-    desliga.
+    ESCOPO: `scripts/bt_*.sh` **e o `doctor.sh`**. A frente que escreveu este
+    portão o declarou só sobre os `bt_*`, porque o `doctor.sh` era território de
+    outra pessoa e um portão que reprova pelo arquivo alheio é um portão que
+    alguém desliga. A razão era certa e caducou no mesmo dia: os dois `head -1`
+    do achado A5 foram curados em 22/08, e o exame agora confere TODOS os
+    adaptadores. Deixar o doctor fora do escopo depois disso seria guardar a
+    porta que já está fechada e deixar aberta a que acabou de fechar.
     """
     reclamacoes = _reclamacoes(arquivo.read_text(encoding="utf-8"), arquivo.name)
     assert not reclamacoes, (
