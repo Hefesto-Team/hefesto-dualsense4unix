@@ -2749,8 +2749,27 @@ check_bt_clone_ds4() {
         modalias="$(_dbus_bt_prop "${p}" org.bluez.Device1 Modalias)"
         if printf '%s' "${modalias}" | grep -q 'usb:v054Cp05C4'; then
             clone=1
-            warn "controle 'tipo DualShock 4' (054C:05C4) pareado (${mac}) — esse firmware não calcula a verificação de integridade e INUNDA o sistema de erros (já foram 211 mil numa noite), degradando o Bluetooth de TODOS os controles"
-            info "  provavelmente é um 8BitDo em modo D-input: troque o modo (Switch) ou use no cabo"
+            # NOTA DATADA — 23/08/2026. Este aviso tinha TRÊS afirmações e duas
+            # caíram com medição da própria casa:
+            #
+            # 1. a que dizia que o clone degradava o rádio dos OUTROS
+            #    controles — REFUTADA por
+            #    controle negativo em 04/08 (RADIO-BOMBARDEADO-01): na janela de
+            #    23:51 a 23:58 o clone despejou 26.884 erros de CRC e produziu
+            #    ZERO frames L2CAP corrompidos. A LUGAR-À-MESA-01 registrou a
+            #    refutação em 06/08 e o texto aqui não mudou por 17 dias.
+            # 2. "troque o modo (Switch)" — para um aparelho PAREADO, que é o
+            #    caso deste laço, o conselho manda para o modo que a casa mediu
+            #    como PIOR: Switch por rádio é "PROVADO instável" e
+            #    DirectInput/PS4 (que é justamente este 054C:05C4) é o
+            #    RECOMENDADO por rádio (docs/usage/troubleshooting-8bitdo.md:35-37).
+            #
+            # O que sobrou é verdadeiro e medido: o firmware não calcula a
+            # verificação de integridade e enche o diário do kernel de erros.
+            # Isso atrapalha quem lê o diário, não o rádio de quem joga.
+            warn "controle 'tipo DualShock 4' (054C:05C4) pareado (${mac}) — esse firmware não calcula a verificação de integridade e enche o diário do kernel de erros de CRC"
+            info "  provavelmente é um 8BitDo em modo DirectInput/PS4, que é o modo RECOMENDADO por rádio — não troque para Switch sem o cabo, que por rádio é instável"
+            info "  o barulho fica no diário: 26.884 erros de CRC mediram ZERO frames corrompidos (RADIO-BOMBARDEADO-01, 04/08)"
             info "  para desparear: bluetoothctl remove ${mac}  (se for um DS4 v1 legítimo, o journal desempata: 'hw_version=0x00000000' = clone)"
         fi
     done <<<"${paths}"
