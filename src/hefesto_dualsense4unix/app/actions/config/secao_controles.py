@@ -127,6 +127,253 @@ FRASE_SEM_RESPOSTA = (
 TITULO_SEM_NUMERO = "Sem número ainda"
 
 
+# ---------------------------------------------------------------------------
+# O gesto da luz — "A luz não acende"
+# ---------------------------------------------------------------------------
+#
+# A barra do DualSense por rádio nasce travada em ALGUMAS instâncias de conexão,
+# e a única cura conhecida é derrubar a conexão e deixar a pessoa apertar PS
+# (medido em 12/08 e de novo em 22/08/2026, com o olho dela). O `Disconnect` do
+# BlueZ tinha ZERO chamadores em `src/` — a cura estava escrita e nunca ligada.
+#
+# TRÊS REGRAS DELA, e as três estão escritas em código aqui:
+#
+# 1. *"sempre visível mas só acionável quando tiver no rádio"* — o botão existe
+#    no card do cabo também, apagado, com a dica dizendo por quê. Botão que SOME
+#    ensina que a tela é instável;
+# 2. **o produto NÃO reconecta.** O botão PS é dela. Este arquivo derruba e
+#    espera; `integrations/gesto_de_reconexao` não tem `reconectar` de propósito;
+# 3. **o fim da espera diz o que aconteceu**, e "não voltou" nunca é dito como
+#    "não deu certo": o controle continua PAREADO, e a frase precisa dizê-lo ou
+#    a pessoa acha que perdeu o pareamento.
+#
+# O QUE ESTE BOTÃO NÃO PROMETE: que a barra vai acender. Ninguém nesta casa
+# consegue LER a lâmpada — `multi_intensity` é a memória da última escrita pela
+# classe LED, e leu `[0 255 0]` com a barra apagada E com ela verde (16/08). Por
+# isso nenhuma frase daqui diz "acesa" nem "apagada".
+
+#: O rótulo do botão em repouso — a queixa dela, não o remédio. Quem vê a barra
+#: apagada procura "a luz não acende", nunca "reiniciar a conexão Bluetooth".
+TEXTO_DO_BOTAO = "A luz não acende"
+
+#: Quanto tempo o card espera o botão PS depois de derrubar o controle.
+#:
+#: Sessenta segundos porque o gesto tem DUAS pernas humanas — pegar o controle e
+#: apertar PS — e porque o custo de esperar demais é uma linha na tela, enquanto
+#: o de esperar de menos é dizer "não voltou" para um controle que voltou.
+ESPERA_PELO_PS_S = 60
+
+#: O aviso do estado de espera, palavra por palavra como no desenho aprovado.
+FRASE_APERTE_PS = "Aperte PS no controle"
+
+#: O rótulo do botão que desiste da espera. Cancelar NÃO reconecta — não existe
+#: reconexão neste produto.
+TEXTO_CANCELAR = "Cancelar"
+
+#: A dica do botão quando ele PODE ser clicado.
+DICA_NO_RADIO = (
+    "Derruba este controle do rádio. Depois aperte PS nele para ele voltar — é "
+    "a única cura conhecida para a barra que nasce travada. O Hefesto não "
+    "reconecta sozinho: o botão PS é seu."
+)
+
+#: A dica do botão apagado. Ela diz POR QUE está apagado, que é a metade que
+#: falta em todo botão insensível desta casa.
+DICA_NO_CABO = (
+    "Só vale no rádio. Pelo cabo a barra obedece — o defeito que este gesto "
+    "cura não existe no cabo, e por isso o botão fica apagado aqui."
+)
+
+#: O que se acrescenta à dica quando outro programa está segurando nó de
+#: controle AGORA. É AVISO, nunca trava: a mesa dela vive com a Steam aberta, e
+#: o experimento que fecha a célula do mapa PRECISA do gesto com ela aberta.
+AVISO_DA_MESA_SUJA = (
+    "Atenção: outro programa está segurando controle agora, e nessa condição a "
+    "conexão nova nasce travada igual. Feche-o antes para o gesto valer."
+)
+
+#: Os quatro fins possíveis da espera. Nenhum é acento — são chaves de máquina.
+ESPERA_PROCURANDO = "procurando"
+ESPERA_VOLTOU = "voltou"
+ESPERA_NAO_CAIU = "nao_caiu"  # (noqa-acento): chave de máquina
+ESPERA_NAO_VOLTOU = "nao_voltou"  # (noqa-acento): chave de máquina
+ESPERA_CANCELADA = "cancelada"
+
+#: O controle nunca sumiu do rádio — então o `Disconnect` não surtiu efeito, e
+#: mandar a pessoa apertar PS seria gastar o gesto dela à toa. É o remédio do
+#: ELO-MUDO-01 aplicado aqui: o produto respondeu pelo TRANSPORTE (o `busctl`
+#: devolveu zero) e o EFEITO não veio.
+FRASE_NAO_CAIU = (
+    "O controle não chegou a cair do rádio, então não houve o que reconectar. "
+    "Ele continua pareado."
+)
+
+
+def frase_da_procura(restantes: int) -> str:
+    """A linha que conta o tempo, do desenho: ``procurando…  38s``."""
+    return f"procurando…  {max(0, int(restantes))}s"
+
+
+def frase_nao_voltou(segundos: int) -> str:
+    """O controle caiu e não voltou no tempo.
+
+    A segunda oração é obrigatória e não é gentileza: sem ela a pessoa lê "não
+    voltou" como "perdi o pareamento" e vai reparear um controle que está
+    pareado.
+    """
+    return (
+        f"Não voltou em {int(segundos)}s. Ele continua pareado — aperte PS nele "
+        "quando quiser."
+    )
+
+
+def pode_derrubar(dados: Any) -> bool:
+    """O botão é clicável neste card?
+
+    Três condições, e a regra dela é a primeira: **no rádio**. As outras duas
+    são o que o gesto precisa para existir — um DualSense adotado (o 8BitDo não
+    tem barra) e um endereço para o BlueZ procurar.
+    """
+    return (
+        bool(getattr(dados, "adotado", False))
+        and not bool(getattr(dados, "no_cabo", False))
+        and bool(getattr(dados, "uniq", ""))
+    )
+
+
+def dica_do_botao(dados: Any, mesa_suja: bool = False) -> str:
+    """A dica do botão, e ela nunca é vazia.
+
+    No cabo diz por que está apagado; no rádio diz o que o clique faz e o que
+    ele NÃO faz. Com a mesa suja, o aviso vem junto — anexado, nunca no lugar:
+    a pessoa continua precisando saber o que o botão faz.
+    """
+    if not pode_derrubar(dados):
+        return DICA_NO_CABO
+    return f"{DICA_NO_RADIO} {AVISO_DA_MESA_SUJA}" if mesa_suja else DICA_NO_RADIO
+
+
+def uniq_normalizado(mac: Any) -> str:
+    """``AA:BB:CC:00:00:01`` → ``aabbcc000001``; o que não é MAC → ``""``."""
+    limpo = str(mac or "").replace(":", "").replace("-", "").strip().lower()
+    if len(limpo) != 12 or any(c not in "0123456789abcdef" for c in limpo):
+        return ""
+    return limpo
+
+
+def uniqs_no_radio() -> set[str] | None:
+    """Os DualSense que estão no rádio AGORA. ``None`` = não consegui olhar.
+
+    Só leitura de sysfs (`integrations/sinal_da_barra.instancias_dualsense`):
+    nada aqui abre `/dev/hidraw`, roda subprocesso ou toca o aparelho — é o que
+    a torna barata o bastante para um tique de um segundo.
+
+    **A terceira resposta é a razão desta função existir.** Uma lista vazia
+    porque `/sys` não pôde ser lido é indistinguível de uma lista vazia porque
+    todos os controles caíram — e essa confusão faria a espera anunciar "caiu"
+    sem nada ter caído. Por isso a raiz é conferida antes, e a ausência dela
+    devolve ``None``, que a espera trata como "continua esperando".
+    """
+    try:
+        import os
+
+        from hefesto_dualsense4unix.integrations.sinal_da_barra import (
+            RAIZ_UHID,
+            instancias_dualsense,
+        )
+    except ImportError:
+        return None
+    if not os.path.isdir(RAIZ_UHID):
+        return None
+    try:
+        vivas = instancias_dualsense()
+    except OSError:
+        return None
+    return {
+        uniq_normalizado(instancia.uniq)
+        for instancia in vivas
+        if instancia.no_radio and uniq_normalizado(instancia.uniq)
+    }
+
+
+class EsperaPeloPS:
+    """A espera pelo botão PS de UM controle. Sem GTK, sem IPC, sem relógio.
+
+    Quem chama dá o tique (uma vez por segundo, na janela) e recebe o estado.
+    Fazer assim é o que torna a espera inteira exercitável em teste puro — e a
+    espera é justamente onde mora a mentira fácil.
+
+    A MENTIRA QUE ESTA CLASSE EXISTE PARA IMPEDIR
+    ---------------------------------------------
+    No instante do clique o controle AINDA ESTÁ no sysfs — o `Disconnect` foi
+    pedido, e o nó leva um tempo para sumir. Uma espera que só perguntasse "ele
+    está aí?" responderia **voltou** no primeiro tique, sem nada ter acontecido:
+    o card piscaria e a pessoa nunca apertaria PS.
+
+    Por isso são DOIS marcos, nesta ordem: primeiro é preciso VER O CONTROLE
+    SUMIR, e só depois vê-lo voltar. É a mesma disciplina do ELO-MUDO-01 — não
+    tratar ausência de notícia como notícia de sucesso.
+    """
+
+    def __init__(
+        self,
+        uniq: str,
+        *,
+        total_s: int = ESPERA_PELO_PS_S,
+        sonda: Callable[[], set[str] | None] | None = None,
+    ) -> None:
+        self.alvo = uniq_normalizado(uniq)
+        self.total_s = int(total_s)
+        self.restantes = int(total_s)
+        self.estado = ESPERA_PROCURANDO
+        #: Já vi este controle SUMIR? Sem isto, "voltou" é chute.
+        self.caiu = False
+        self._sonda = sonda if sonda is not None else uniqs_no_radio
+
+    @property
+    def acabou(self) -> bool:
+        return self.estado != ESPERA_PROCURANDO
+
+    @property
+    def porque(self) -> str:
+        """A frase do fim, para a tela. Vazia enquanto ainda procura."""
+        if self.estado == ESPERA_NAO_CAIU:
+            return FRASE_NAO_CAIU
+        if self.estado == ESPERA_NAO_VOLTOU:
+            return frase_nao_voltou(self.total_s)
+        return ""
+
+    def cancelar(self) -> None:
+        """Ela desistiu. NÃO reconecta — não existe reconexão neste produto."""
+        if not self.acabou:
+            self.estado = ESPERA_CANCELADA
+
+    def tique(self) -> str:
+        """Passa um segundo e devolve o estado. Idempotente depois do fim."""
+        if self.acabou:
+            return self.estado
+        presentes = self._olhar()
+        if presentes is not None:
+            if self.alvo in presentes:
+                if self.caiu:
+                    self.estado = ESPERA_VOLTOU
+                    return self.estado
+            else:
+                self.caiu = True
+        self.restantes = max(0, self.restantes - 1)
+        if self.restantes == 0:
+            self.estado = ESPERA_NAO_VOLTOU if self.caiu else ESPERA_NAO_CAIU
+        return self.estado
+
+    def _olhar(self) -> set[str] | None:
+        """A sonda, embrulhada: uma falha dela não pode derrubar a janela."""
+        try:
+            return self._sonda()
+        except Exception:  # best-effort por contrato: a sonda não derruba a janela
+            logger.debug("config_luz_sonda_falhou", exc_info=True)
+            return None
+
+
 def montar(host: Any, caixa: Any) -> None:
     """Monta a seção dentro de `caixa` — a caixa interna da moldura.
 
@@ -167,6 +414,12 @@ class _PainelDosControles:
         #: Os cards vivos, por chave, para repintar a borda sem redesenhar tudo
         #: (redesenhar tira o foco de quem está digitando no campo livre).
         self._cards: dict[str, Any] = {}
+        #: Os blocos do gesto da luz, por chave do card.
+        self._luzes: dict[str, Any] = {}
+        #: Outro programa está segurando nó de controle agora? `None` = ainda
+        #: não perguntei, ou a sonda não pôde responder — e "não sei" NÃO vira
+        #: aviso: um alarme sem medição atrás ensina a ignorar alarmes.
+        self._mesa_suja: bool | None = None
 
     # -- montagem ----------------------------------------------------------
 
@@ -278,6 +531,7 @@ class _PainelDosControles:
         externos = _lista(bruto.get("external"))
         self._desenhar(self._cards_da_mesa(adotados, externos))
         self._perguntar_as_cores(adotados)
+        self._perguntar_pela_mesa()
 
     def _cards_da_mesa(
         self, adotados: list[dict[str, Any]], externos: list[dict[str, Any]]
@@ -417,6 +671,29 @@ class _PainelDosControles:
                 card.repintar_o_nome_da_cor(cor.nome)
         return False
 
+    def _perguntar_pela_mesa(self) -> None:
+        """Alguém está segurando nó de controle agora? Fora do tique, e uma vez.
+
+        A resposta muda só a DICA do botão da luz — nunca a sensibilidade dele.
+        A regra dela é literal (*"sempre visível mas só acionável quando tiver
+        no rádio"*), e há um segundo motivo medido: o experimento que fecha a
+        célula do mapa de canais precisa do gesto rodando **com a Steam
+        aberta** (BARRA-MUDA-01 §6). Um produto que recusasse aí tornaria a
+        própria medição impossível.
+        """
+        leitor = getattr(self._host, "_mesa_limpa_leitor", None)
+        if leitor is None and self._e_bancada_de_retrato():
+            return
+        run_in_thread(leitor or _pergunta_da_mesa, self._chegou_a_mesa)
+
+    def _chegou_a_mesa(self, resultado: Any) -> bool:
+        """Guarda o veredito e reescreve as dicas dos botões que já estão na tela."""
+        self._mesa_suja = resultado if isinstance(resultado, bool) else None
+        for bloco in self._luzes.values():
+            with contextlib.suppress(Exception):
+                bloco.reler_a_dica(bool(self._mesa_suja))
+        return False
+
     # -- desenho -----------------------------------------------------------
 
     def _desenhar(self, cards: list[DadosDoControle] | None) -> None:
@@ -430,6 +707,14 @@ class _PainelDosControles:
             return
         from gi.repository import Gtk
 
+        # Uma espera viva aponta para widgets que o `_esvaziar` vai destruir —
+        # e um tique que chegasse depois disso mexeria em widget morto. Cancelar
+        # antes é o que impede a janela de cair numa troca de aba durante a
+        # contagem.
+        for bloco in self._luzes.values():
+            with contextlib.suppress(Exception):
+                bloco.encerrar()
+        self._luzes = {}
         self._esvaziar(self._caixa)
         self._cards = {}
         if not cards:
@@ -458,6 +743,7 @@ class _PainelDosControles:
                 dados, ao_declarar=self._ao_declarar, ao_numerar=self._ao_numerar
             )
             self._cards[dados.chave] = card
+            self._pendurar_a_luz(card, dados)
             grade.attach(card, indice % COLUNAS, indice // COLUNAS, 1, 1)
         self._caixa.pack_start(grade, False, False, 0)
         self._caixa.show_all()
@@ -467,6 +753,31 @@ class _PainelDosControles:
         for filho in caixa.get_children():
             caixa.remove(filho)
             filho.destroy()
+
+    def _pendurar_a_luz(self, card: Any, dados: DadosDoControle) -> None:
+        """Encaixa o bloco do gesto da luz dentro deste card, se ele couber.
+
+        Só em DualSense adotado: o 8BitDo e o Pro não têm barra, e um botão
+        "A luz não acende" num card sem luz é promessa que o produto não pode
+        cumprir. **No cabo o botão VAI**, apagado — é a regra dela.
+        """
+        if not bool(getattr(dados, "adotado", False)) or not dados.uniq:
+            return
+        try:
+            bloco = _BlocoDaLuz(
+                dados,
+                mesa_suja=bool(self._mesa_suja),
+                ao_derrubar=getattr(self._host, "_luz_derrubador", None)
+                or _derrubar_o_controle,
+                ao_voltar=self.reexaminar,
+                agendar=getattr(self._host, "_luz_agendador", None),
+                correr=getattr(self._host, "_luz_corredor", None),
+            )
+            bloco.encaixar(card)
+        except Exception:
+            logger.debug("config_luz_bloco_nao_montou", exc_info=True)
+            return
+        self._luzes[dados.chave] = bloco
 
     # -- gestos ------------------------------------------------------------
 
@@ -521,6 +832,288 @@ class _PainelDosControles:
             return False
 
         run_in_thread(lambda: identity_number_set(uniq, numero), _fim)
+
+
+# ---------------------------------------------------------------------------
+# O bloco do gesto da luz, dentro do card
+# ---------------------------------------------------------------------------
+
+
+class _BlocoDaLuz:
+    """Os dois estados do desenho dela, encaixados no corpo de um card.
+
+    Ele NÃO é uma subclasse de widget: é um dono de widgets. Assim o arquivo do
+    card (`app/widgets/external_card.py`) continua sem saber que este gesto
+    existe — território de outra frente nesta leva, e um card que aprendesse a
+    falar com o BlueZ deixaria de ser um card.
+
+    Tudo que toca o mundo entra pelo construtor (`ao_derrubar`, `ao_voltar`,
+    `agendar`): é o que permite exercer a máquina inteira sem BlueZ, sem
+    controle e sem relógio.
+    """
+
+    def __init__(
+        self,
+        dados: DadosDoControle,
+        *,
+        mesa_suja: bool,
+        ao_derrubar: Callable[[str], Any],
+        ao_voltar: Callable[[], None],
+        agendar: Callable[[Callable[[], bool]], Any] | None = None,
+        correr: Callable[[Callable[[], Any], Callable[[Any], bool]], None] | None = None,
+    ) -> None:
+        from gi.repository import Gtk
+
+        self.dados = dados
+        self._ao_derrubar = ao_derrubar
+        self._ao_voltar = ao_voltar
+        self._agendar = agendar if agendar is not None else _agendar_um_segundo
+        #: Quem sai da thread da janela. Injetável porque o `Disconnect` pode
+        #: levar segundos, e porque um teste não pode depender do laço do GTK
+        #: para provar que o card entrou no estado certo.
+        self._correr = correr if correr is not None else run_in_thread
+        self._corpo: Any = None
+        self._escondidos: list[Any] = []
+        self._fonte: Any = None
+        self._espera: EsperaPeloPS | None = None
+
+        self.caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+
+        self.botao = Gtk.Button(label=TEXTO_DO_BOTAO)
+        self.botao.set_sensitive(pode_derrubar(dados))
+        self.botao.set_tooltip_text(dica_do_botao(dados, mesa_suja))
+        self.botao.connect("clicked", self._ao_clicar)
+        self.caixa.pack_start(self.botao, False, False, 0)
+
+        self.aviso = _oculto(_apoio_do_bloco(f"▲ {FRASE_APERTE_PS}"))
+        self.contagem = _oculto(_apoio_do_bloco(frase_da_procura(ESPERA_PELO_PS_S)))
+        self.cancelar = _oculto(Gtk.Button(label=TEXTO_CANCELAR))
+        self.cancelar.connect("clicked", self._ao_cancelar)
+        #: O recado do fim. Ele SOBREVIVE ao fim da espera de propósito: o card
+        #: volta ao normal, mas a frase fica — sem ela, "não voltou" viraria
+        #: silêncio, que é o defeito que o ELO-MUDO-01 nomeou.
+        self.recado = _oculto(_apoio_do_bloco(""))
+        for widget in (self.aviso, self.contagem, self.cancelar, self.recado):
+            self.caixa.pack_start(widget, False, False, 0)
+
+    # -- encaixe -----------------------------------------------------------
+
+    def encaixar(self, card: Any) -> None:
+        """Põe a caixa no corpo do card, ANTES do espaçador.
+
+        O espaçador é o que empurra "Jogador:" para o rodapé de todos os cards
+        (`external_card.py`, o `respiro`). Entrar depois dele jogaria o botão
+        para baixo da linha do jogador, que não é o desenho dela.
+        """
+        corpo = card.get_child()
+        if corpo is None:
+            return
+        antes = corpo.get_children()
+        corpo.pack_start(self.caixa, False, False, 0)
+        with contextlib.suppress(Exception):
+            corpo.reorder_child(self.caixa, max(0, len(antes) - 2))
+        self._corpo = corpo
+
+    def reler_a_dica(self, mesa_suja: bool) -> None:
+        """A sonda da mesa respondeu depois do desenho — a dica acompanha."""
+        with contextlib.suppress(Exception):
+            self.botao.set_tooltip_text(dica_do_botao(self.dados, mesa_suja))
+
+    def encerrar(self) -> None:
+        """Desarma o tique. Chamado antes de o card ser destruído."""
+        if self._espera is not None:
+            self._espera.cancelar()
+        self._parar_o_tique()
+
+    # -- os dois estados ---------------------------------------------------
+
+    def _ao_clicar(self, _botao: Any) -> None:
+        if self._espera is not None and not self._espera.acabou:
+            return
+        self._entrar_na_espera()
+        alvo = str(self.dados.uniq)
+        self._correr(lambda: self._ao_derrubar(alvo), self._chegou_o_gesto)
+
+    def _ao_cancelar(self, _botao: Any) -> None:
+        if self._espera is not None:
+            self._espera.cancelar()
+        self._parar_o_tique()
+        self._sair_da_espera("")
+
+    def _chegou_o_gesto(self, resultado: Any) -> bool:
+        """O `Disconnect` respondeu. Só conta o tempo se o controle CAIU.
+
+        `caiu` é falso tanto para "não achei o controle no Bluetooth" quanto
+        para "não consegui falar com o `bluetoothd`" — e nos dois casos mandar
+        a pessoa apertar PS seria gastar o gesto dela por uma coisa que não
+        aconteceu. A frase que aparece é a do próprio gesto, que sabe distinguir
+        os quatro fins.
+        """
+        if getattr(resultado, "caiu", False):
+            self._espera = EsperaPeloPS(self.dados.uniq)
+            self._mostrar_a_contagem()
+            self._fonte = self._agendar(self._tique)
+            return False
+        self._sair_da_espera(str(getattr(resultado, "porque", "")))
+        return False
+
+    def _tique(self) -> bool:
+        """Um segundo. Devolve True enquanto o relógio deve continuar."""
+        espera = self._espera
+        if espera is None or espera.acabou:
+            return False
+        estado = espera.tique()
+        if estado == ESPERA_PROCURANDO:
+            self._mostrar_a_contagem()
+            return True
+        self._fonte = None
+        if estado == ESPERA_VOLTOU:
+            # O card volta ao normal pela releitura da mesa, e não por este
+            # bloco se redesenhar: o número de jogador e a cor podem ter mudado
+            # com a instância nova, e quem sabe disso é o daemon.
+            self._sair_da_espera("")
+            with contextlib.suppress(Exception):
+                self._ao_voltar()
+            return False
+        self._sair_da_espera(espera.porque)
+        return False
+
+    def _mostrar_a_contagem(self) -> None:
+        espera = self._espera
+        if espera is None:
+            return
+        with contextlib.suppress(Exception):
+            self.contagem.set_text(frase_da_procura(espera.restantes))
+
+    def _entrar_na_espera(self) -> None:
+        """Estado 2 do desenho: some o que não interessa, entra o pedido do PS."""
+        with contextlib.suppress(Exception):
+            self.recado.hide()
+            self.botao.set_no_show_all(True)
+            self.botao.hide()
+            for widget in (self.aviso, self.contagem, self.cancelar):
+                widget.show()
+        self._esconder_os_irmaos()
+
+    def _sair_da_espera(self, recado: str) -> None:
+        """Estado 1 do desenho, com o recado do que aconteceu (ou sem nenhum)."""
+        self._espera = None
+        with contextlib.suppress(Exception):
+            for widget in (self.aviso, self.contagem, self.cancelar):
+                widget.hide()
+            self.botao.set_no_show_all(False)
+            self.botao.show()
+            if recado:
+                self.recado.set_text(recado)
+                self.recado.show()
+        self._mostrar_os_irmaos()
+
+    # -- as linhas do card que somem na espera ------------------------------
+
+    def _esconder_os_irmaos(self) -> None:
+        """Esconde "Cor:" e "Jogador:" — o desenho dela mostra só o pedido.
+
+        O espaçador FICA: é ele que segura a altura do card, e um card que
+        encolhe no clique faria a fileira inteira pular.
+        """
+        self._escondidos = []
+        if self._corpo is None:
+            return
+        for indice, filho in enumerate(self._corpo.get_children()):
+            if indice < 2 or filho is self.caixa or _e_o_respiro(filho):
+                continue
+            with contextlib.suppress(Exception):
+                if filho.get_visible():
+                    self._escondidos.append(filho)
+                    # O `no_show_all` junto com o `hide` é cinto e suspensório:
+                    # um `show_all()` que chegasse de fora durante a espera
+                    # devolveria "Cor:" e "Jogador:" por cima do pedido do PS.
+                    filho.set_no_show_all(True)
+                    filho.hide()
+
+    def _mostrar_os_irmaos(self) -> None:
+        for filho in self._escondidos:
+            with contextlib.suppress(Exception):
+                filho.set_no_show_all(False)
+                filho.show()
+        self._escondidos = []
+
+    def _parar_o_tique(self) -> None:
+        if self._fonte is None:
+            return
+        with contextlib.suppress(Exception):
+            from gi.repository import GLib
+
+            GLib.source_remove(self._fonte)
+        self._fonte = None
+
+
+def _e_o_respiro(widget: Any) -> bool:
+    """O espaçador do card: uma caixa vazia que se estica na vertical."""
+    try:
+        return not widget.get_children() and bool(widget.get_vexpand())
+    except Exception:  # um Label não tem `get_children`
+        return False
+
+
+def _oculto(widget: Any) -> Any:
+    """Nasce escondido e SOBREVIVE ao `show_all` da seção.
+
+    Sem o `no_show_all`, o `show_all()` que a seção dá depois de montar a grade
+    revelaria os quatro widgets do estado de espera — e o card nasceria pedindo
+    o botão PS sem ninguém ter clicado em nada.
+    """
+    with contextlib.suppress(Exception):
+        widget.set_no_show_all(True)
+        widget.hide()
+    return widget
+
+
+def _apoio_do_bloco(texto: str) -> Any:
+    """Um rótulo de apoio, quebrando linha — as frases do fim são compridas."""
+    rotulo = rotulo_de_apoio(texto)
+    with contextlib.suppress(Exception):
+        rotulo.set_line_wrap(True)
+    return rotulo
+
+
+def _agendar_um_segundo(passo: Callable[[], bool]) -> Any:
+    """O relógio de verdade: um tique por segundo no laço da janela."""
+    from gi.repository import GLib
+
+    return GLib.timeout_add_seconds(1, passo)
+
+
+def _derrubar_o_controle(uniq: str) -> Any:
+    """Chama o gesto de verdade. Import tardio: a seção monta sem D-Bus."""
+    from hefesto_dualsense4unix.integrations.gesto_de_reconexao import desconectar
+
+    return desconectar(uniq)
+
+
+def _pergunta_da_mesa() -> bool | None:
+    """Alguém está segurando nó de controle agora? `None` = não sei.
+
+    As três respostas são de propósito, e a terceira é a que importa: um
+    "não sei" não pode virar aviso, porque alarme sem medição atrás ensina a
+    ignorar alarme.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.sinal_da_barra import (
+            CONFIANCA_LIMPA,
+            CONFIANCA_SUSPEITA,
+            limpo_para_conectar,
+        )
+    except ImportError:
+        return None
+    try:
+        confianca, _porque, _pids = limpo_para_conectar()
+    except Exception:  # best-effort: a janela não pode cair por causa disto
+        logger.debug("config_luz_mesa_nao_respondeu", exc_info=True)
+        return None
+    if confianca == CONFIANCA_SUSPEITA:
+        return True
+    return False if confianca == CONFIANCA_LIMPA else None
 
 
 # ---------------------------------------------------------------------------
