@@ -835,6 +835,38 @@ Três leituras honestas:
    janela**, nem como média nem como mediana. O valor sustentado mais alto
    medido foi ~392 Hz.
 
+> **NOTA DATADA — 23/08/2026: os ~392 Hz não são do CONTROLE, são da METADE de
+> um adaptador.** A medição de 22/08 (QUATRO-MICROFONES-01), com a régua do
+> relógio do próprio aparelho, leu controles **sozinhos** no adaptador a
+> **796,8 e 800,8 Hz sustentados**, e controles **dividindo** um adaptador a
+> **398,3 e 400,2 Hz** — três adaptadores, duas safras, todos dentro de 0,6 %
+> de 800.
+>
+> Isso não derruba a tabela acima: **reconcilia** com ela, e por dois caminhos
+> que já estavam escritos nesta página.
+>
+> * o p05 **teimosamente 1255 us** de TODAS as janelas — o número que a leitura
+>   2 chama de "instantâneo dentro da rajada" — é 797 Hz, que é exatamente o
+>   orçamento do adaptador aparecendo por baixo;
+> * e 392,4 é **metade** de ~800. **MEDIDO em 23/08 na mesa dela:** o adaptador
+>   `ac:a7:f1:00:00:41` hospeda **dois** controles, e os outros dois hospedam
+>   **um** cada (contagem por `HID_PHYS` inteiro; truncar no OUI funde os dois
+>   adaptadores desse fabricante e produz a distribuição errada).
+>
+> **A leitura certa, que substitui a de cima:** ~800 relatórios/s é orçamento do
+> **ADAPTADOR**, repartido entre os controles que ele hospeda — não uma taxa por
+> controle. Um controle sozinho vê ~800; dois dividindo veem ~400 cada.
+>
+> **O que NÃO muda:** o colapso das janelas 4 e 5 (55 e 38 Hz) continua sem
+> explicação fechada e continua consistente com sniff mode — orçamento
+> repartido não explica cair a um décimo. E os 1000 Hz do SDL continuam não
+> aparecendo.
+>
+> **Consequência para quem for mexer no medidor:** o modelo `260,4 Hz por
+> controle, aditivo` de `integrations/radio_da_mesa.py` não é o que este
+> aparelho faz. Trocar as constantes é decisão de produto e exige o A/B refeito
+> com o microfone ligado — está registrado na QUATRO-MICROFONES-01.
+
 Isto **corrobora** a medição independente que a
 [paridade Bluetooth versus cabo](paridade-bluetooth-versus-cabo.md) já
 registrava por outra régua (contagem de bytes: "~300 Hz, 1.402.128 bytes em

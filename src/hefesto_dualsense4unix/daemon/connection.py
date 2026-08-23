@@ -9,6 +9,7 @@ import asyncio
 import contextlib
 import os
 import time
+from collections.abc import Sequence
 
 from hefesto_dualsense4unix.core.escritor_cru import (
     SentinelaDeEscritorCru,
@@ -28,6 +29,15 @@ from hefesto_dualsense4unix.core.lightbar_gatilho import (
 )
 from hefesto_dualsense4unix.daemon.battery_journal import registrar_queda_da_bateria
 from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
+from hefesto_dualsense4unix.integrations.sinal_da_barra import (
+    CONFIANCA_NAO_SEI,
+    CartorioDoNascimento,
+    Instancia,
+    Leitura,
+    instancias_dualsense,
+    ler_a_mesa,
+    mascarar,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -480,6 +490,13 @@ async def reconnect_loop(
         # (uma vez a cada 30 s), e é ele que enxerga a Steam SUBINDO sem que
         # ninguém tenha mexido em nada.
         await vigiar_escritor_cru(daemon, forcar=True)
+        # SINAL-NO-NASCIMENTO-01: e no mesmo tique, o CARIMBO — "como esta
+        # conexão NASCEU?". Vem DEPOIS do vigia de propósito e por duas razões:
+        # a linha `lightbar_escritor_cru_detectado` que o diário vai casar é
+        # escrita ali em cima, e a foto do sentinela (a régua de primeira mão
+        # que agrava um carimbo) acabou de ser tirada. Custo zero em mesa
+        # parada: sem instância nova, nem `journalctl` roda.
+        await carimbar_o_nascimento(daemon)
 
         is_connected = bool(daemon.controller.is_connected())
         if is_connected and not was_connected:
@@ -869,6 +886,184 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
         ):
             armados += 1
     return armados
+
+
+def cartorio_do_nascimento_de(daemon: DaemonProtocol) -> CartorioDoNascimento:
+    """O `CartorioDoNascimento` DESTE daemon, criado na primeira consulta.
+
+    SINAL-NO-NASCIMENTO-01. Único por daemon pela mesma razão do
+    `SentinelaDeEscritorCru` logo acima, e por uma a mais: o veredito é POR
+    INSTÂNCIA, e a BARRA-MUDA-01 mediu instâncias travadas e sãs convivendo na
+    mesma máquina, no mesmo adaptador, no mesmo minuto. Uma variável global
+    ("a mesa está suja") apagaria exatamente a distinção que a medição produziu.
+    """
+    cartorio = getattr(daemon, "_cartorio_do_nascimento", None)
+    if isinstance(cartorio, CartorioDoNascimento):
+        return cartorio
+    cartorio = CartorioDoNascimento()
+    with contextlib.suppress(Exception):
+        daemon._cartorio_do_nascimento = cartorio
+    return cartorio
+
+
+def _nos_segurados_agora(daemon: DaemonProtocol) -> frozenset[str]:
+    """Os nós que a sonda do PRÓPRIO daemon vê segurados na foto mais recente.
+
+    É a segunda régua do carimbo, e ela é de primeira mão: o
+    `vigiar_escritor_cru` roda no mesmo tique, logo antes, e deixa a foto no
+    sentinela. Sem ela o carimbo dependeria de o daemon conseguir ler o próprio
+    diário — o que não acontece quando ele roda em primeiro plano, fora da unit
+    (`daemon start --foreground`), e ali um "não achei a linha" viraria "nasceu
+    limpa".
+    """
+    with contextlib.suppress(Exception):
+        veredito = sentinela_de_escritor_cru_de(daemon).veredito
+        if veredito.sondado:
+            return frozenset(veredito.nos_segurados)
+    return frozenset()
+
+
+def _uniqs_que_o_backend_segura(daemon: DaemonProtocol) -> frozenset[str]:
+    """Os endereços dos controles que o produto tem ABERTOS agora, minúsculos.
+
+    É o mesmo `nos_hidraw_por_uniq` que o vigia de escritor cru usa — nenhum
+    segundo vigia, nenhuma segunda verdade sobre quem está na mesa. Vazio
+    quando o controller é enxuto (dublês da suíte) ou nada está aberto, e aí o
+    carimbo é no-op TOTAL.
+    """
+    mapear = getattr(daemon.controller, "nos_hidraw_por_uniq", None)
+    if not callable(mapear):
+        return frozenset()
+    try:
+        return frozenset(str(u).lower() for u in (mapear() or {}))
+    except Exception as exc:
+        logger.debug("carimbo_do_nascimento_mapa_falhou", err=str(exc))
+        return frozenset()
+
+
+def _sem_sonda_no_modo_nativo(alvos: Sequence[Instancia]) -> list[Leitura]:
+    """O veredito honesto do Modo Nativo: `nao_sei`, e nunca `limpa`.
+
+    No Modo Nativo o `vigiar_escritor_cru` é no-op TOTAL — nem sonda —, por
+    regra dela (*"no modo nativo devolvemos o controle pra steam"*). Logo o
+    diário NÃO ganha a linha `lightbar_escritor_cru_detectado`, e uma leitura do
+    diário ali devolveria "nasceu com o nó livre" para uma conexão que pode ter
+    nascido com a Steam segurando tudo. Carimbar isso seria fabricar o falso
+    "limpa" que este módulo inteiro existe para não cometer.
+    """
+    return [
+        Leitura(
+            alvo=alvo,
+            confianca=CONFIANCA_NAO_SEI,
+            porque=(
+                "o Modo Nativo devolve o controle à Steam e o produto não sonda "
+                "quem segura o nó — não dá para saber como esta conexão nasceu"
+            ),
+        )
+        for alvo in alvos
+    ]
+
+
+async def carimbar_o_nascimento(
+    daemon: DaemonProtocol, *, agora: float | None = None
+) -> int:
+    """Carimba, no tique de hotplug, como cada conexão VIVA nasceu.
+
+    SINAL-NO-NASCIMENTO-01. O produto já sabia dar o veredito
+    (`sinal_da_barra.ler_a_mesa`) e nunca o perguntava na hora em que a conexão
+    nasce — então ele só existia enquanto o diário ainda tivesse a linha, e o
+    diário rotaciona. Aqui ele passa a ser carimbado e guardado.
+
+    O CUSTO, e por que ele é quase sempre zero — três portões, do mais barato
+    ao mais caro:
+
+    1. nenhum handle aberto (`nos_hidraw_por_uniq` vazio) → sai na hora;
+    2. a enumeração é `os.listdir` de sysfs (µs, nada abre `/dev/hidraw`), e só
+       ficam as instâncias que o backend de fato segura;
+    3. o `journalctl` só roda quando sobrou instância SEM carimbo firme. Mesa
+       parada = nenhum subprocesso, tique após tique.
+
+    Uma conexão nova custa UMA leitura do diário — 0,12 s, e não os 5,21 s de
+    antes do recorte de `JANELA_DO_DIARIO_S` (MEDIDO 22/08/2026 no diário de
+    quinze dias dela) — e no máximo mais uma no tique seguinte: a janela de
+    nascimento é de 5 s e o tique online é de 30 s, então o segundo carimbo já
+    sai firme.
+
+    Devolve quantos carimbos foram gravados. Best-effort de ponta a ponta: nada
+    aqui pode derrubar o laço de reconexão.
+
+    ``agora`` entra por argumento (default = o relógio de verdade) pela mesma
+    razão do `SentinelaDeEscritorCru`: é o que permite exercitar a janela de
+    cinco segundos em microssegundos de teste.
+    """
+    cartorio = cartorio_do_nascimento_de(daemon)
+    nossos = _uniqs_que_o_backend_segura(daemon)
+    if not nossos:
+        # Nenhum handle aberto: não há controle NOSSO para carimbar. Sai antes
+        # do `listdir` e muito antes do `journalctl`.
+        return 0
+    try:
+        vivas = await daemon._run_blocking(instancias_dualsense)
+    except Exception as exc:
+        logger.debug("carimbo_do_nascimento_sysfs_falhou", err=str(exc))
+        return 0
+    # Só as instâncias que o backend de fato abriu. O sysfs enumera TODO
+    # DualSense da máquina, e carimbar um que o produto não segura seria falar
+    # de um controle que a tela nem lista — além de fazer a suíte de testes,
+    # que roda na mesa dela com quatro controles ligados, pagar `journalctl`.
+    vivas = [alvo for alvo in vivas if alvo.uniq.lower() in nossos]
+    agora = time.monotonic() if agora is None else float(agora)
+    try:
+        faltam = cartorio.observar(vivas, agora)
+    except Exception as exc:  # pragma: no cover — cartório é puro
+        logger.debug("carimbo_do_nascimento_cartorio_falhou", err=str(exc))
+        return 0
+    if not faltam:
+        return 0
+
+    nativo = False
+    with contextlib.suppress(Exception):
+        nativo = bool(daemon.is_native_mode())
+    if nativo:
+        leituras = _sem_sonda_no_modo_nativo(faltam)
+    else:
+        def _diagnosticar() -> list[Leitura]:
+            return ler_a_mesa(instancias=faltam)
+
+        try:
+            leituras = await daemon._run_blocking(_diagnosticar)
+        except Exception as exc:
+            logger.debug("carimbo_do_nascimento_diario_falhou", err=str(exc))
+            return 0
+
+    # No Modo Nativo a foto do sentinela é VELHA — o vigia nem sonda ali —, e
+    # agravar um carimbo com foto velha é a mesma desonestidade de absolver com
+    # diário incompleto. Sem sonda, sem segunda régua.
+    nos = frozenset() if nativo else _nos_segurados_agora(daemon)
+    try:
+        gravados = cartorio.carimbar(leituras, agora, nos_segurados=nos)
+    except Exception as exc:  # pragma: no cover — cartório é puro
+        logger.debug("carimbo_do_nascimento_gravacao_falhou", err=str(exc))
+        return 0
+    for carimbo in gravados:
+        if carimbo.pede_reconexao:
+            logger.info(
+                "nascimento_condenado",
+                instancia=carimbo.instancia,
+                uniq=mascarar(carimbo.uniq),
+                hw_version=carimbo.hw_version,
+                pids=list(carimbo.leitura.pids_do_escritor),
+                porque=carimbo.porque,
+            )
+        else:
+            logger.debug(
+                "nascimento_carimbado",
+                instancia=carimbo.instancia,
+                uniq=mascarar(carimbo.uniq),
+                confianca=carimbo.confianca,
+                firme=carimbo.firme,
+            )
+    return len(gravados)
 
 
 async def disparar_gatilhos_devidos(daemon: DaemonProtocol) -> int:

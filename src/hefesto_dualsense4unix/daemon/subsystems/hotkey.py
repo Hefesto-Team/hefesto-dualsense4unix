@@ -599,7 +599,7 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         import time as _time
 
         from hefesto_dualsense4unix.daemon.state_store import MANUAL_PROFILE_LOCK_SEC
-        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
         from hefesto_dualsense4unix.utils.session import save_active_marker
 
         # FEAT-NATIVE-MODE-01: em Modo Nativo o controle está solto para o jogo —
@@ -609,34 +609,13 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             logger.info("profile_cycle_skip_native_mode")
             return
 
-        # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers de
-        # emulação — paridade com o profile.switch (IPC) e o autoswitch.
-        manager = ProfileManager(
-            controller=daemon.controller,
-            store=daemon.store,
-            keyboard_device_provider=lambda: getattr(
-                daemon, "_keyboard_device", None
-            ),
-            mouse_applier=getattr(daemon, "apply_profile_mouse", None),
-            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
-            mode_applier=getattr(daemon, "apply_profile_mode", None),
-            # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
-            rumble_policy_applier=getattr(
-                daemon, "apply_profile_rumble_policy", None
-            ),
-            rumble_passthrough_applier=getattr(
-                daemon, "apply_profile_rumble_passthrough", None
-            ),
-            # SOM-02/E4: o ciclo PS+D-pad é gesto MANUAL dela — troca explícita
-            # de perfil, que limpa as categorias travadas (inclusive `audio`) e
-            # portanto aplica o volume do perfil que entra.
-            speaker_applier=getattr(daemon, "apply_profile_speaker", None),
-            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): o ciclo PS+D-pad é gesto MANUAL dela, e
-            # `origin="manual"` é o ÚNICO caminho por onde o `mic.muted` do
-            # perfil atravessa (MIC-GRAVACAO-01) — o mudo do firmware só muda
-            # quando ela troca de perfil de propósito.
-            mic_applier=getattr(daemon, "apply_profile_mic", None),
-        )
+        # A-FÁBRICA-COM-UM-CLIENTE-01 (22/08/2026): a lista de appliers vem da
+        # FÁBRICA — paridade com o `profile.switch` (IPC), o autoswitch e o
+        # lançamento por ser a MESMA lista, não por ser uma cópia fiel dela.
+        # O que este gesto tem de próprio é o `origin="manual"` lá embaixo: o
+        # ciclo PS+D-pad é troca explícita dela, e é o ÚNICO caminho por onde o
+        # `mic.muted` do perfil atravessa (MIC-GRAVACAO-01).
+        manager = gerente_do_daemon(daemon, store=daemon.store)
         profiles = await daemon._run_blocking(manager.list_profiles)
         if len(profiles) < 2:
             logger.info("profile_cycle_skip", n=len(profiles))

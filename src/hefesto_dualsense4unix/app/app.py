@@ -380,6 +380,13 @@ class HefestoApp(
             # PLAT-01: trava o CompatToolMapping da Steam na versão de Proton
             # validada pelo Hefesto (contrato integrations/proton_pin).
             "on_proton_lock": self.on_proton_lock,
+            # ENGASGO-VULKAN-01: desliga as sobreposições penduradas por dentro
+            # do prefixo Wine dos jogos (o overlay do Epic era a única camada a
+            # mais em 27 prefixos, e o jogo dela era o único que engasgava).
+            # Mora no `EmulationActionsMixin` porque a cura é da mesma família
+            # das outras que agem sobre o jogo, e o botão fica na fileira
+            # Avançado ao lado do "Travar Proton validado".
+            "on_camadas_engasgo": self.on_camadas_engasgo,
             # Emulação
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,

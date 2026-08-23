@@ -95,14 +95,31 @@ MARCADORES_DE_MIGRACAO = frozenset({
 #: O conjunto FECHADO de nomes que os dois arquivos de teste de migração
 #: escrevem no diretório temporário deles. Conferido em 07/08/2026 contra
 #: `tests/unit/test_coop_default_on_migration.py` e
-#: `tests/unit/test_preset_flavor_migration.py`. Se algum deles ganhar um nome
-#: novo, esta lista tem de ganhar junto — e até lá o diretório novo é
+#: `tests/unit/test_o_preset_nao_escolhe_a_mascara.py`. Se algum deles ganhar
+#: um nome novo, esta lista tem de ganhar junto — e até lá o diretório novo é
 #: RECUSADO, que é o lado seguro do erro.
+#:
+#: NOTA DATADA — 23/08/2026, reconferido. A segunda bancada mudou de nome
+#: (`test_preset_flavor_migration.py` foi APAGADO em 22/08) e passou a rodar
+#: TRÊS migrações em vez de uma, deixando cinco nomes que não estavam aqui:
+#: os marcadores `.coop_local_match_migrated` e `.modo_jogo_nos_presets_migrated`
+#: com seus `.lock`, e o `acao.json`. Sem eles a R3 RECUSAVA o resíduo real da
+#: bancada — medido rodando o classificador contra o diretório que ela cria —
+#: e o diretório ficava em `/tmp` para sempre quando escapa do berço.
+#:
+#: `.flavor_xbox_migrated` FICA: a migração que o escrevia saiu do `loader.py`
+#: em 22/08, mas o marcador continua no disco de quem já rodou a versão velha,
+#: e a faxina tem de saber reconhecê-lo para poder limpá-lo.
 NOMES_DA_MIGRACAO = frozenset({
     ".coop_default_on_migrated",
     ".coop_default_on_migrated.lock",
+    ".coop_local_match_migrated",
+    ".coop_local_match_migrated.lock",
     ".flavor_xbox_migrated",
     ".flavor_xbox_migrated.lock",
+    ".modo_jogo_nos_presets_migrated",
+    ".modo_jogo_nos_presets_migrated.lock",
+    "acao.json",
     "antigo.json",
     "coop_local.json",
     "meu_jogo.json",

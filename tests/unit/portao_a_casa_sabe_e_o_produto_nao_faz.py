@@ -435,9 +435,11 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "pelo instalador."
     ),
     "HEFESTO_DUALSENSE4UNIX_BT_MIC": (
-        "Liga o microfone por Bluetooth (daemon/subsystems/bt_mic.py:49). É "
-        "feature dela, e o próprio subsystems/__init__.py:14 registra que o "
-        "`BtMicSubsystem` 'nasceu órfão'. MEDIDO em 12/08/2026: sem mão."
+        "Liga o microfone por Bluetooth para TODOS os controles "
+        "(daemon/subsystems/bt_mic.py::habilitado_por_env). É feature dela. "
+        "REMEDIDO em 22/08/2026 (QUATRO-MICROFONES-01): a FEATURE ganhou mão — "
+        "o interruptor por controle da aba Configurações —, e a env virou o "
+        "atalho à mão. Ver `_MAO_FORA_DO_AMBIENTE`."
     ),
     "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS": (
         "Liga as notificações de desktop "
@@ -498,6 +500,20 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "Logo a FEATURE tem mão — a env é o atalho de quem quer forçar o degrau "
         "do meio sem gravar decisão nenhuma no disco dela.",
     ),
+    "HEFESTO_DUALSENSE4UNIX_BT_MIC": (
+        "daemon/subsystems/bt_mic.py::uniqs_declarados",
+        "REMEDIDO em 22/08/2026 (QUATRO-MICROFONES-01), e esta entrada é a "
+        "cura da lápide que estava aqui: até 22/08 o campo companheiro era "
+        "`DaemonConfig.bt_mic_enabled`, um `bool` lido por três lugares e "
+        "escrito por NENHUM. Ele saiu. O gate agora é `bt_mic_uniqs`, uma FONTE "
+        "chamável que `daemon/lifecycle.py::Daemon.run` fia com "
+        "`uniqs_declarados(self._maquina)` — e quem escreve o `maquina.json` é "
+        "o interruptor por controle de "
+        "`app/actions/config/secao_controles.py::_BlocoDoMicrofone`, gravado "
+        "pelo `machine.declare` no 'Aplicar'. A env continua sem porta que a "
+        "escreva, e continua certo que continue: ela liga a mesa INTEIRA, e a "
+        "decisão dela de 22/08 é *'por controle'*.",
+    ),
 }
 
 #: Interruptores de feature que NADA liga hoje, com o endereço da lacuna e o
@@ -537,19 +553,6 @@ _SEM_MAO_HOJE: dict[str, str] = {
         "O QUE A FECHA: um interruptor na janela ou `Environment=` na unit. É "
         "DECISÃO DELA: plugins de terceiros rodando por padrão é escolha de "
         "segurança, não de conveniência, e não é minha para tomar."
-    ),
-    "HEFESTO_DUALSENSE4UNIX_BT_MIC": (
-        "MEDIDO em 12/08/2026: nenhuma porta a escreve. O `install.sh` não a "
-        "cita; `assets/hefesto-dualsense4unix.service` só define "
-        "`Environment=PYTHONUNBUFFERED=1`; nenhum empacotamento a escreve; e a "
-        "janela apenas a CITA em texto de ajuda "
-        "(app/widgets/controller_card.py:522 e :1597), o que não é escrita. O "
-        "campo irmão `DaemonConfig.bt_mic_enabled` também só tem leitor "
-        "(bt_mic.py:79) — lifecycle.py:207 apenas declara o default False. "
-        "O QUE A FECHA: uma das quatro portas. A mais barata é `Environment=` "
-        "na unit; a mais certa é um interruptor na janela, porque ligar o "
-        "microfone por Bluetooth é escolha por sessão e ela é quem sabe. "
-        "É DECISÃO DELA qual, e por isso isto é lacuna e não conserto."
     ),
     "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS": (
         "MEDIDO em 12/08/2026: zero ocorrências em install.sh, assets/, "

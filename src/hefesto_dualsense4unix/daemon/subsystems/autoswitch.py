@@ -160,43 +160,18 @@ class AutoswitchSubsystem:
     async def start(self, ctx: DaemonContext) -> None:
         """Inicia o AutoSwitcher com as dependências do DaemonContext."""
         from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
-        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
         _ensure_display_env()
-        # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers de
-        # emulação — antes o manager nascia sem keyboard_device e o autoswitch
-        # nunca propagava key_bindings/mouse ao focar a janela do jogo.
         daemon = getattr(ctx, "daemon", None)
-        manager = ProfileManager(
-            controller=ctx.controller,
-            store=ctx.store,
-            keyboard_device_provider=lambda: getattr(
-                daemon, "_keyboard_device", None
-            ),
-            mouse_applier=getattr(daemon, "apply_profile_mouse", None),
-            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
-            mode_applier=getattr(daemon, "apply_profile_mode", None),
-            # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
-            rumble_policy_applier=getattr(
-                daemon, "apply_profile_rumble_policy", None
-            ),
-            rumble_passthrough_applier=getattr(
-                daemon, "apply_profile_rumble_passthrough", None
-            ),
-            # SOM-02/E4: volume do alto-falante por perfil. Aqui o applier vai
-            # injetado como nas outras rotas — o que protege o ajuste manual
-            # dela na troca de janela é a categoria `audio` da trava, consultada
-            # por `ProfileManager.apply_speaker` a cada tick, e NÃO a ausência
-            # do applier. Ele fala direto com o backend, sem armar a trava
-            # (armaria contra si mesmo — ver `Daemon.apply_profile_speaker`).
-            speaker_applier=getattr(daemon, "apply_profile_speaker", None),
-            # MIC-VOLUME-01 (18/08/2026): o irmão do de cima. Sem ele, trocar de
-            # perfil por JANELA não aplicava o volume do microfone do perfil —
-            # a lacuna que a lápide `_SEM_MIC_HOJE` declarava e este par fecha.
-            # O `muted` não passa por aqui: a exceção MIC-GRAVACAO-01 só o deixa
-            # em `origin="manual"`, e a troca por janela é `autoswitch`.
-            mic_applier=getattr(daemon, "apply_profile_mic", None),
-        )
+        # A-FÁBRICA-COM-UM-CLIENTE-01 (22/08/2026): a lista de appliers vem da
+        # FÁBRICA. O que protege o ajuste manual dela na troca de janela NÃO é
+        # a ausência de applier — é a categoria travada, consultada a cada tick
+        # por `ProfileManager.apply_speaker`/`apply_mic`; o `mic.muted`, em
+        # particular, só atravessa em `origin="manual"` (MIC-GRAVACAO-01), e a
+        # troca por janela é `autoswitch`. `controller`/`store` vêm por fora
+        # porque esta rota sobe pelo `DaemonContext`, e `daemon` pode ser `None`.
+        manager = gerente_do_daemon(daemon, controller=ctx.controller, store=ctx.store)
         # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
         # saúde/última wm_class útil no store a cada leitura do poll.
         # MODO-01/B3: o par do modo jogo padrão — o modo que liga quando é um
@@ -234,32 +209,12 @@ class AutoswitchSubsystem:
 async def start_autoswitch(daemon: DaemonProtocol) -> None:
     """Função utilitária: inicia o AutoSwitcher usando o Daemon diretamente."""
     from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
-    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
     _ensure_display_env()
-    # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy — a captura eager de
-    # `_keyboard_device` congelava None (autoswitch sobe antes do keyboard no
-    # boot, lifecycle.py) e ficava stale após disconnect/reload. Os appliers
-    # ligam a seção `mouse` e a supressão de modo-jogo do perfil ao daemon.
-    manager = ProfileManager(
-        controller=daemon.controller,
-        store=daemon.store,
-        keyboard_device_provider=lambda: getattr(daemon, "_keyboard_device", None),
-        mouse_applier=daemon.apply_profile_mouse,
-        suppression_applier=daemon.apply_profile_suppression,
-        mode_applier=getattr(daemon, "apply_profile_mode", None),
-        # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
-        rumble_policy_applier=getattr(daemon, "apply_profile_rumble_policy", None),
-        rumble_passthrough_applier=getattr(
-            daemon, "apply_profile_rumble_passthrough", None
-        ),
-        # SOM-02/E4: idem `AutoswitchSubsystem.start` — as DUAS rotas de subida
-        # do autoswitch precisam do applier do alto-falante.
-        speaker_applier=getattr(daemon, "apply_profile_speaker", None),
-        # MIC-VOLUME-01 (18/08/2026): idem `AutoswitchSubsystem.start` — as DUAS
-        # rotas de subida do autoswitch precisam do applier do microfone.
-        mic_applier=getattr(daemon, "apply_profile_mic", None),
-    )
+    # A-FÁBRICA-COM-UM-CLIENTE-01: idem `AutoswitchSubsystem.start` — as DUAS
+    # rotas de subida do autoswitch tiram a lista de appliers da mesma fábrica.
+    manager = gerente_do_daemon(daemon, store=daemon.store)
     # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
     # saúde/última wm_class útil no store a cada leitura do poll.
     # MODO-01/B3: idem `AutoswitchSubsystem.start` — o modo jogo padrão precisa

@@ -136,9 +136,11 @@ morriam ao fechar a janela, sem uma linha avisando. Agora as duas vão para o
 `maquina.json` pelo "Aplicar" do rodapé, como as outras seções.
 
 **A coluna "O que é" dos rádios vizinhos.** `RadioDeclarado.tipo` também nasceu
-em CONFIG-03 e ficou sem tela nenhuma — a outra metade do mesmo defeito. Um
-dongle de teclado e um de caixa de som são o mesmo `VID:PID` para o kernel; sem
-a resposta da pessoa, o exame da mesa só sabe listar um endereço em hexa.
+em CONFIG-03 e ficou sem tela nenhuma — a outra metade do mesmo defeito. O
+kernel classifica pela **classe da interface** (`03/01/01` é teclado,
+`03/01/02` é mouse), e a coluna nasce lida daí; o seletor fica para quem o
+fabricante declinou de declarar (classe `ff`), e para ela corrigir o que o
+kernel errou.
 
 ### A leva de 22/08 — quatro defeitos que a aba nova fez aparecer
 

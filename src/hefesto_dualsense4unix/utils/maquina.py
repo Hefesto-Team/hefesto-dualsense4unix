@@ -180,6 +180,19 @@ class ControleDeclarado(BaseModel):
     aparelho não informa. ``botoes`` é só o desenho que aparece na tela — nada é
     remapeado no controle. ``cor`` é texto livre porque a tela oferece os seis
     nomes de fábrica E um campo "Outra", para edição especial fora da lista.
+
+    ``microfone`` é a ponte de mic por Bluetooth DAQUELE controle
+    (``QUATRO-MICROFONES-01``, 22/08/2026, decisão dela: *"por controle"*). Mora
+    aqui, e não no perfil, pela razão do cabeçalho de
+    ``daemon/subsystems/bt_mic.py``: um microfone que liga ao trocar de jogo é
+    exatamente a surpresa que aquele módulo recusa.
+
+    **Só ``True`` chega ao disco.** Desligar escreve ``None``, porque "nunca
+    pedi" e "não quero" deixam a ponte no chão do mesmo jeito — e um ``false``
+    gravado seria um valor de catálogo para o silêncio, que é a porta pela qual o
+    default entra disfarçado de escolha dela (a regra está no cabeçalho deste
+    módulo). O campo aceita ``bool`` porque um ``false`` que já esteja em disco,
+    escrito à mão, tem de ser LIDO em vez de derrubar o documento inteiro.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -187,6 +200,7 @@ class ControleDeclarado(BaseModel):
     modo: Literal["xinput", "dinput", "switch"] | None = None
     botoes: Literal["xbox", "nintendo"] | None = None
     cor: str | None = None
+    microfone: bool | None = None
 
 
 class OrcamentoDeclarado(BaseModel):

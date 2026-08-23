@@ -266,11 +266,18 @@ def _mode_label(mode_id: object) -> str:
 #: Vibração, microfone e alto-falante NÃO estão na lista de perdas de propósito:
 #: a vibração funciona nas duas máscaras, e microfone e alto-falante nem passam
 #: pelo gamepad (são PipeWire, e seguem valendo em qualquer máscara).
+#:
+#: NOTA DATADA — 22/08/2026 (MASCARA-QUE-GRUDA-01): a lista era de DOIS e o
+#: descritor tem TRÊS buracos. O `acelerômetro` entrou, e não é frase nova: os
+#: 8 eixos do vpad uinput são ABS_X/Y/RX/RY/Z/RZ/HAT0X/HAT0Y (`uinput_gamepad.py`,
+#: contados um a um) — nenhum é IMU, então o acelerômetro cai junto com o
+#: giroscópio. É a mesma medição de `c9859ff`, que nomeia os três. Ela pediu que
+#: o perfil guardasse acelerômetro (18/08), então a palavra já é do léxico dela.
 TEXTO_CUSTO_MASCARA_XBOX: Final[str] = (
-    "Nesta máscara o jogo não recebe giroscópio nem touchpad — o controle de "
-    "Xbox não tem esses dois, então não há onde eles caberem. Vibração, "
-    "microfone e alto-falante continuam funcionando. Escolha DualSense se o "
-    "jogo usa mira por movimento ou o touchpad como botão."
+    "Nesta máscara o jogo não recebe giroscópio, acelerômetro nem touchpad — o "
+    "controle de Xbox não tem esses três, então não há onde eles caberem. "
+    "Vibração, microfone e alto-falante continuam funcionando. Escolha "
+    "DualSense se o jogo usa mira por movimento ou o touchpad como botão."
 )
 
 

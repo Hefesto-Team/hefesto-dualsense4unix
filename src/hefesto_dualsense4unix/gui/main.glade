@@ -2920,6 +2920,22 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                             <signal name="clicked" handler="on_proton_lock"/>
                           </object>
                         </child>
+                        <child>
+                          <!-- ENGASGO-VULKAN-01 (23/08/2026). Vizinho certo do
+                               "Travar Proton validado": mesma natureza (mexe no
+                               que a Steam guarda por jogo), mesma gramática
+                               (verbo na frente) e mesmo alcance (todos os
+                               jogos). O rótulo é a QUEIXA dela — "o Sackboy
+                               engasga" — e não "camada Vulkan", que é jargão
+                               que ninguém procura. Molde do "A luz não acende".
+                               O clique abre o relatório antes de agir, e é de
+                               lá que se devolve. -->
+                          <object class="GtkButton" id="btn_camadas_engasgo">
+                            <property name="label" translatable="yes">Tirar o que faz engasgar</property>
+                            <property name="tooltip-text" translatable="yes">Alguns jogos instalam uma sobreposição que entra na frente de cada quadro desenhado — o jogo mantém a média de quadros e mesmo assim picota, uma engasgada por segundo. Eu mostro o que achou em cada jogo antes de mexer, guardo cópia do arquivo, e o mesmo lugar devolve. A sobreposição da Steam e os medidores ficam.</property>
+                            <signal name="clicked" handler="on_camadas_engasgo"/>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>

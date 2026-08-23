@@ -158,6 +158,87 @@ _MODE_FLAVOR_ITEMS: list[tuple[str, str]] = [
     ("xbox", "Xbox 360"),
 ]
 
+# --- MASCARA-QUE-GRUDA-01 (22/08/2026): a etiqueta de preço fica VISÍVEL -----
+#
+# Decisão dela: *"A máscara deve vir da escolha do user. Ele escolhe como quer
+# que o jogo reconheça o controle conectado: se deve aparecer como Xbox ou
+# DualSense."* — e escolher entre dois botões sem saber o que cada um custa não
+# é escolher, é sortear.
+#
+# O preço do Xbox JÁ existia (`texto_do_custo_da_mascara`) e vivia só em
+# TOOLTIP aqui desde a ESCOLHA-DELA-VENCE-01/E4. Tooltip é para quem já
+# desconfia: ela pediu a etiqueta em 01/08 e continuou trocando a máscara à mão
+# perfil a perfil. A frase passa a ficar na tela, embaixo dos dois botões, na
+# máscara que estiver marcada — e o tooltip continua, para o botão NÃO marcado.
+#
+# O texto do Xbox é REUSADO, nunca reescrito: dois donos da mesma frase
+# derivam, e esta casa já pagou por isso.
+
+#: O que a tela diz sobre a máscara DualSense.
+#:
+#: NOTA DATADA — 23/08/2026. Esta linha nasceu em 22/08 dizendo, na tela dela,
+#: que *"há uma anotação de julho de que alguns jogos ignoravam o gamepad
+#: virtual aqui, e ela nunca foi reconferida no desenho de hoje"*. É FALSO, e a
+#: cronologia que o derruba estava toda no repositório:
+#:
+#: * **14/07** (`56564de`) — nasce o portão que impunha `xbox` aos presets,
+#:   citando a "H1 da auditoria pré-release";
+#: * **16/07** (`b0596f0`, `389e429`) — o vpad passa a subir por `uhid`, com PID
+#:   próprio de Edge. O caminho em que a H1 foi medida deixa de existir;
+#: * **22/07** — HARMONIA-MASK-01, **decisão dela**: a máscara dualsense é
+#:   *"validada em jogo real (Sackboy/Mad King/Pragmata)"*, e a razão do xbox é
+#:   *"de antes da máscara dualsense vibrar — **superado** pela validação da
+#:   Onda Harmonia"*. É por causa dessa remedição que
+#:   `DaemonConfig.gamepad_flavor` vale `dualsense` numa instalação nova.
+#:
+#: Ou seja: a H1 foi remedida em julho, em três jogos nomeados, e a tela pedia
+#: que ela pagasse de novo um custo já pago — semeando dúvida sobre a máscara
+#: que a casa validou e empurrando para a Xbox, que é a que custa giroscópio,
+#: acelerômetro e touchpad. O nome da constante carregava a mesma afirmação
+#: (`..._SEM_MEDICAO`) e saiu junto.
+#:
+#: **A REDAÇÃO PEDE O OLHO DELA** (PROVA-DE-TELA-01): o que esta leva corrigiu
+#: foi o FATO, que estava errado e é regra da casa substituir. As palavras
+#: exatas são dela.
+TEXTO_MASCARA_DUALSENSE_VALIDADA: str = (
+    "Nesta máscara o jogo recebe tudo: giroscópio, acelerômetro e touchpad. "
+    "É a máscara validada em jogo real (Sackboy, Mad King e Pragmata, julho de "
+    "2026), e a que vale numa instalação nova. Se um jogo não responder ao "
+    "controle, troque para Xbox 360 e nos conte."
+)
+
+#: E o que a tela diz quando NENHUM dos dois está marcado.
+#:
+#: Não é um estado de erro: é o que os presets de gênero passam a shipar e o
+#: que um perfil novo nasce sendo (`gamepad_flavor: null`). A frase existe para
+#: o vazio não parecer defeito — sem ela, dois botões apagados leem como "a
+#: janela não carregou".
+TEXTO_MASCARA_SEM_ESCOLHA: str = (
+    "Sem marcar nenhum dos dois, este perfil não mexe na máscara: ativar ele "
+    "mantém a que estiver valendo. É assim que os perfis de gênero vêm."
+)
+
+
+def texto_do_preco_da_mascara(flavor: object) -> str:
+    """A linha VISÍVEL embaixo dos botões de máscara, para o valor marcado.
+
+    Une as três respostas honestas do produto num só lugar, para a aba não ter
+    duas opiniões sobre a mesma escolha:
+
+    * ``"xbox"`` — o preço MEDIDO, reusado de `texto_do_custo_da_mascara`;
+    * ``"dualsense"`` — o que se ganha, e o endereço da validação de julho;
+    * qualquer outra coisa (inclusive ``None``) — o que "sem escolha" faz.
+
+    O ramo final trata `None` e valor desconhecido do MESMO jeito de propósito:
+    um payload estranho não pode virar afirmação sobre giroscópio, que é a
+    família de erro que o `or "xbox"` desta aba já causou.
+    """
+    if flavor == "xbox":
+        return texto_do_custo_da_mascara("xbox")
+    if flavor == "dualsense":
+        return TEXTO_MASCARA_DUALSENSE_VALIDADA
+    return TEXTO_MASCARA_SEM_ESCOLHA
+
 # LEIGO-06: a coluna "Quando usar" mostrava o valor CRU do schema ("any",
 # "criteria") — o nome do campo, não uma resposta. `MatchAny` é o fallback que
 # vale sempre; `MatchCriteria` casa por janela/processo.
@@ -805,6 +886,8 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
     # glade não tem o slot (fallback: o mode do perfil sobrevive por herança).
     _mode_kind_selector: Any = None
     _mode_flavor_selector: Any = None
+    #: MASCARA-QUE-GRUDA-01: a etiqueta de preço embaixo dos botões de máscara.
+    _mode_flavor_price_label: Any = None
     _mode_gamepad_opts: Any = None
     # SALVAR-NAO-REBAIXA-01: fotografia do perfil que o editor está mostrando —
     # o valor do DISCO e o que a tela conseguiu representar dele. `None` = o
@@ -1061,6 +1144,27 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._mode_flavor_selector = flavor_sel
         mask_row.pack_start(flavor_sel, True, True, 0)
         opts.pack_start(mask_row, False, False, 0)
+
+        # MASCARA-QUE-GRUDA-01: a etiqueta de preço, VISÍVEL, embaixo dos dois
+        # botões. Ela acompanha o que está marcado — inclusive o "nenhum".
+        preco = Gtk.Label(label=texto_do_preco_da_mascara(None))
+        preco.set_xalign(0.0)
+        preco.set_line_wrap(True)
+        # BUG-PERFIS-PRECO-ESTICA-01 (medido na foto, 22/08/2026): sem teto de
+        # largura o natural desta frase empurrou o painel inteiro e comeu a
+        # coluna "Perfis salvos" — de 830px para 460px, com "Só manual (nunca
+        # ativa sozin…" cortado. Um `Gtk.Label` que quebra linha só pede pouco
+        # quando alguém lhe diz onde quebrar.
+        #
+        # 64 é medido, não escolhido: com 84 a coluna ficava em 748px (melhor,
+        # ainda estreitando); com 64 a foto volta aos 830px de antes da linha
+        # existir. Quem mexer aqui refotografe com o modo "Jogar pelo Hefesto"
+        # ligado — é a única situação em que esta linha aparece.
+        preco.set_max_width_chars(64)
+        preco.get_style_context().add_class("dim-label")
+        self._mode_flavor_price_label = preco
+        opts.pack_start(preco, False, False, 0)
+
         self._mode_gamepad_opts = opts
         slot.pack_start(opts, False, False, 0)
 
@@ -1086,7 +1190,14 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         flavor_sel.connect("changed", self._on_mode_flavor_changed)
 
         kind_sel.set_active_id("none")
-        flavor_sel.set_active_id("xbox")
+        # MASCARA-QUE-GRUDA-01: a montagem nascia com **Xbox marcado**, e isso
+        # era a tela afirmando uma escolha que ninguém fez — a mesma família do
+        # `or "xbox"` que a ESCOLHA-DELA-VENCE-01/E1 arrancou das outras duas
+        # pontas. Sobrava um caminho: se algum dia o editor for mostrado sem
+        # passar por `_set_mode_editor`, o Salvar gravaria `xbox` no arquivo
+        # dela — e desde `2b11172` isso GRUDA. Nasce sem nada marcado.
+        flavor_sel.limpar_ativo()
+        self._atualizar_preco_da_mascara(None)
         self._sync_mode_options_visibility("none")
         # Os dois `set_active_id` acima são montagem, não gesto dela.
         self._modo_tocado = False
@@ -1112,9 +1223,27 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         self._modo_tocado = True
         self._sync_mode_options_visibility(kind)
 
-    def _on_mode_flavor_changed(self, _selector: Any = None) -> None:
-        """Handler da máscara: só marca o gesto (a visibilidade é do kind)."""
+    def _atualizar_preco_da_mascara(self, flavor: object) -> None:
+        """Põe na etiqueta o preço da máscara ``flavor`` (no-op sem o widget).
+
+        Um só ponto de escrita: os três chamadores (montagem, gesto dela e
+        populate) mandam o valor e não escolhem a frase — quem escolhe é
+        `texto_do_preco_da_mascara`, que é pura e testável sem GTK.
+        """
+        rotulo = getattr(self, "_mode_flavor_price_label", None)
+        if rotulo is not None:
+            rotulo.set_text(texto_do_preco_da_mascara(flavor))
+
+    def _on_mode_flavor_changed(self, selector: Any = None) -> None:
+        """Handler da máscara: marca o gesto e atualiza a etiqueta de preço.
+
+        A visibilidade continua sendo do kind — aqui só muda o texto que diz o
+        que a máscara recém-marcada custa.
+        """
         self._modo_tocado = True
+        alvo = selector if selector is not None else self._mode_flavor_selector
+        atual = alvo.get_active_id() if alvo is not None else None
+        self._atualizar_preco_da_mascara(atual)
 
     def _set_mode_editor(self, mode: ProfileModeConfig | None) -> None:
         """Preenche a seção "Modo" a partir de ``profile.mode`` (None → "none").
@@ -1147,6 +1276,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 self._mode_flavor_selector.limpar_ativo()
             else:
                 self._mode_flavor_selector.set_active_id(flavor)
+        # MASCARA-QUE-GRUDA-01: `limpar_ativo` não emite "changed", e
+        # `set_active_id` só emite quando o id MUDA — a etiqueta é atualizada
+        # aqui, explicitamente, senão ela mostraria o preço do perfil anterior.
+        self._atualizar_preco_da_mascara(flavor)
         # set_active_id só emite quando o id muda — sincroniza explicitamente
         # para a visibilidade ficar certa mesmo sem emissão.
         self._sync_mode_options_visibility(kind)

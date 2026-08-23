@@ -326,19 +326,41 @@ def test_o_conjunto_fechado_bate_com_os_testes_de_migracao() -> None:
 
     Este teste lê os dois arquivos e exige que todo `<nome>.json` que eles
     escrevem esteja declarado.
+
+    NOTA DATADA — 23/08/2026. O segundo arquivo era
+    `test_preset_flavor_migration.py`, APAGADO em 22/08 pela MASCARA-QUE-GRUDA-01
+    sem que esta lista fosse repontada — e este teste passou a estourar
+    `FileNotFoundError`, vermelho na árvore. O sucessor é
+    `test_o_preset_nao_escolhe_a_mascara.py`, declarado no cabeçalho dele.
+
+    A TERCEIRA forma de escrita (`(d / arquivo).write_text(...)`, com o nome
+    vindo das CHAVES de um dicionário) entrou junto com o sucessor. Sem ela a
+    régua lia o arquivo novo e extraía ZERO nomes — verde por cegueira, que é
+    pior que o vermelho que ela substituiu: era o `assert escritos` de baixo,
+    alimentado só pela outra bancada, que segurava o teste de pé.
     """
     import re
 
     raiz_repo = Path(__file__).resolve().parents[2]
     arquivos = [
         raiz_repo / "tests" / "unit" / "test_coop_default_on_migration.py",
-        raiz_repo / "tests" / "unit" / "test_preset_flavor_migration.py",
+        raiz_repo / "tests" / "unit" / "test_o_preset_nao_escolhe_a_mascara.py",
     ]
+    for arquivo in arquivos:
+        assert arquivo.exists(), (
+            f"bancada de migração declarada e AUSENTE do disco: {arquivo.name}. "
+            "Se ela foi renomeada ou substituída, reponte esta lista no mesmo "
+            "commit — foi essa meia-correção que deixou o portão vermelho em 22/08"
+        )
+
     escritos: set[str] = set()
     for arquivo in arquivos:
         texto = arquivo.read_text(encoding="utf-8")
         escritos |= {f"{n}.json" for n in re.findall(r'_escrever\(d, "([a-z_]+)"', texto)}
         escritos |= set(re.findall(r'\(d / "([^"]+\.json)"\)', texto))
+        # A forma por chave de dicionário: `"acao.json": None,` num literal que
+        # o teste depois percorre escrevendo `(d / arquivo)`.
+        escritos |= set(re.findall(r'^\s*"([a-z_]+\.json)":', texto, re.MULTILINE))
 
     assert escritos, "as duas bancadas de migração mudaram de forma"
     faltando = sorted(escritos - set(FAXINA.NOMES_DA_MIGRACAO))
