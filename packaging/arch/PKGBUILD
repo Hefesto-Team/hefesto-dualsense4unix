@@ -237,6 +237,11 @@ package() {
     # procura; a remoção fica no pre_remove do .install, como a do broker.
     install -Dm755 -t "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/" \
         scripts/bt_nosniff_now.sh \
+        scripts/bt_active_mode.sh \
+        scripts/bt_ponte_privilegiada.sh \
+        scripts/bt_bonds_autorestore.sh \
+        scripts/bt_health_watchdog.sh \
+        scripts/bt_rebind_orphans.sh \
         scripts/bt_bonds_snapshot.sh
     install -Dm644 -t "$pkgdir/usr/share/hefesto-dualsense4unix/systemd/" \
         assets/systemd/hefesto-bt-bonds-snapshot.service

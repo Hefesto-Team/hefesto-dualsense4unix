@@ -201,6 +201,17 @@ install -Dm755 scripts/install_snd_quirk.sh \
 # avisava. Este é o diretório que ele procura (`/usr/share/.../scripts`).
 install -Dm755 scripts/bt_nosniff_now.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_nosniff_now.sh"
+# o `bt_active_mode.sh` é o ExecStartPost do drop-in do bluetooth.service e o `bt_ponte_privilegiada.sh` é o helper que a janela chama; sem eles no pacote, os dois caminhos apontam para arquivo que nunca existe (22/08/2026)
+install -Dm755 scripts/bt_active_mode.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_active_mode.sh"
+install -Dm755 scripts/bt_ponte_privilegiada.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_ponte_privilegiada.sh"
+install -Dm755 scripts/bt_bonds_autorestore.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_bonds_autorestore.sh"
+install -Dm755 scripts/bt_health_watchdog.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_health_watchdog.sh"
+install -Dm755 scripts/bt_rebind_orphans.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_rebind_orphans.sh"
 install -Dm755 scripts/bt_bonds_snapshot.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_bonds_snapshot.sh"
 # M10 (auditoria): os scripts que a GUI/doctor executam (via _find_repo_file, que

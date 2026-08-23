@@ -335,6 +335,17 @@ modules:
       # em /usr/local/lib, quem grava é o helper rodando elevado no HOST.
       - install -Dm755 scripts/bt_nosniff_now.sh
           /app/share/hefesto-dualsense4unix/scripts/bt_nosniff_now.sh
+      # o `bt_active_mode.sh` é o ExecStartPost do drop-in do bluetooth.service e o `bt_ponte_privilegiada.sh` é o helper que a janela chama; sem eles no pacote, os dois caminhos apontam para arquivo que nunca existe (22/08/2026)
+      - install -Dm755 scripts/bt_active_mode.sh
+          /app/share/hefesto-dualsense4unix/scripts/bt_active_mode.sh
+      - install -Dm755 scripts/bt_ponte_privilegiada.sh
+          /app/share/hefesto-dualsense4unix/scripts/bt_ponte_privilegiada.sh
+      - install -Dm755 scripts/bt_bonds_autorestore.sh
+          /app/share/hefesto-dualsense4unix/scripts/bt_bonds_autorestore.sh
+      - install -Dm755 scripts/bt_health_watchdog.sh
+          /app/share/hefesto-dualsense4unix/scripts/bt_health_watchdog.sh
+      - install -Dm755 scripts/bt_rebind_orphans.sh
+          /app/share/hefesto-dualsense4unix/scripts/bt_rebind_orphans.sh
       - install -Dm755 scripts/bt_bonds_snapshot.sh
           /app/share/hefesto-dualsense4unix/scripts/bt_bonds_snapshot.sh
       - install -Dm644 assets/systemd/hefesto-bt-bonds-snapshot.service

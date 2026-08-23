@@ -457,6 +457,21 @@ _build_install_cmd() {
         cmd+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh; "
         cmd+="install -Dm755 '${BTRES_SCRIPTS_SRC}/bt_bonds_snapshot.sh' "
         cmd+="/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh; "
+        # MESMO DEFEITO, OS ÚLTIMOS DOIS (22/08/2026). O `bt_active_mode.sh` é o
+        # `ExecStartPost` do drop-in do bluetooth.service, e o
+        # `bt_ponte_privilegiada.sh` é o helper que a janela chama sem pedir
+        # senha. Os dois eram instalados só pelo `install.sh` do checkout — quem
+        # instalou por pacote tinha o drop-in apontando para arquivo que nunca
+        # existiu, e a cura BT-NINTENDO-ACTIVE-01 (a que impede o Pro de cair
+        # sob carga) nunca rodava. É a terceira vez que esta família aparece
+        # hoje; as duas primeiras foram as regras udev 82/83 e os alvos delas.
+        # `-f` na fonte: formato que não os traz apenas não os instala.
+        cmd+="[ -f '${BTRES_SCRIPTS_SRC}/bt_active_mode.sh' ] && install -Dm755 "
+        cmd+="'${BTRES_SCRIPTS_SRC}/bt_active_mode.sh' "
+        cmd+="/usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh; "
+        cmd+="[ -f '${BTRES_SCRIPTS_SRC}/bt_ponte_privilegiada.sh' ] && install -Dm755 "
+        cmd+="'${BTRES_SCRIPTS_SRC}/bt_ponte_privilegiada.sh' "
+        cmd+="/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh; "
         cmd+="install -Dm644 '${BTRES_UNIT_SRC}/hefesto-bt-bonds-snapshot.service' "
         cmd+="/etc/systemd/system/hefesto-bt-bonds-snapshot.service; "
         cmd+="install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds; "
