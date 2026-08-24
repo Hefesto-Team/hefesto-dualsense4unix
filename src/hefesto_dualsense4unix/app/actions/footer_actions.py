@@ -148,6 +148,15 @@ class FooterActionsMixin(ProfileWriterMixin):
     #: então não atropela perfil de jogo alheio.
     _PISO_ACIMA_DOS_CATCH_ALL = 15
 
+    #: CONFIG-05 (23/08/2026): o que a declaração de máquina tem a dizer,
+    #: esperando o toast FINAL do "Aplicar" para viajar junto com ele. Existe
+    #: porque a statusbar guarda UMA mensagem por contexto (``_status_toast``
+    #: faz ``pop``+``push``): escrever a frase da declaração e o resultado da
+    #: aplicação no mesmo tique do GTK apagava a primeira antes de ela receber
+    #: um quadro de tela. Contexto próprio foi medido e só troca o defeito de
+    #: lugar — a barra mostra o topo da pilha, seja qual for o contexto.
+    _recado_da_maquina: str | None = None
+
     # ------------------------------------------------------------------
     # Controle de freeze
     # ------------------------------------------------------------------
@@ -253,15 +262,20 @@ class FooterActionsMixin(ProfileWriterMixin):
         aqui em cima, e não lá dentro do ``_apply_draft_agora``.
         """
         self.pegar_carona_no_gesto(GESTO_APLICAR)
-        self._gravar_declaracao_de_maquina()
+        self._recado_da_maquina = self._gravar_declaracao_de_maquina()
         pendente = getattr(self, "_escolha_pendente", None)
         if pendente:
             self._aplicar_escolha_pendente(dict(pendente))
             return
         self._apply_draft_agora()
 
-    def _gravar_declaracao_de_maquina(self) -> None:
+    def _gravar_declaracao_de_maquina(self) -> str | None:
         """Grava o que a aba Configurações declarou. Sem declaração, sai cedo.
+
+        DEVOLVE a frase que o rodapé deve dizer sobre a declaração — ou ``None``
+        quando não havia nada a declarar. Quem a mostra é o toast FINAL do
+        "Aplicar" (``_apply_draft_agora``), e a razão está no
+        ``_recado_da_maquina``: escrever aqui perdia a frase no mesmo tique.
 
         CONFIG-03 (22/08/2026). A aba Configurações é DIFERIDA por decisão de
         produto (D-A4): clicar num seletor lá não muda nada — acumula em
@@ -287,15 +301,48 @@ class FooterActionsMixin(ProfileWriterMixin):
         """
         declaracao = self._maquina_pendente
         if not declaracao:
-            return
+            return None
         ok, motivo = ipc_bridge.machine_declare(dict(declaracao))
         if ok:
             self._maquina_pendente = None
-            return
+            return _("Configurações gravadas.")
         logger.warning("footer_declaracao_de_maquina_nao_gravada", motivo=motivo)
-        self._footer_toast(
-            motivo or _("O Hefesto está desligado — não gravei o que você declarou")
+        return motivo or _(
+            "O Hefesto está desligado — não gravei o que você declarou"
         )
+
+    def _dizer_com_o_recado_da_maquina(self, msg: str) -> None:
+        """Uma linha só: o recado da declaração seguido do resultado do Aplicar.
+
+        CONFIG-05 (23/08/2026). Os DOIS finais do ``_apply_draft_agora`` passam
+        por aqui, e o recado é consumido (zerado) na primeira frase que sair —
+        senão ele reapareceria colado no próximo Aplicar.
+        """
+        recado = self._recado_da_maquina
+        self._recado_da_maquina = None
+        self._footer_toast(f"{recado} {msg}" if recado else msg)
+
+    def _marcar_declaracao_por_aplicar(self) -> None:
+        """Diz na linha do rodapé que há escolha declarada e não aplicada.
+
+        CONFIG-05 (23/08/2026), achado A5: nada na tela distinguia "declarei e
+        não apliquei" de "está tudo gravado" — fechar a janela perdia a escolha
+        sem aviso nenhum.
+
+        **Dono único do estado:** a fonte é ``_maquina_pendente``, a MESMA que o
+        portão do fechamento (``app.on_window_delete_event``) consulta. Dois
+        donos do mesmo estado é o defeito que a sprint ABAS-01 curou.
+
+        Não apaga nada quando não há pendência: a linha do rodapé guarda UMA
+        mensagem por contexto, e quem substitui a marca é o toast final do
+        "Aplicar" — que sai no mesmo gesto que zera a declaração.
+        """
+        if getattr(self, "_maquina_pendente", None):
+            # Redação PROVISÓRIA: texto novo na tela é classe estrutural e
+            # espera o olho dela.
+            self._footer_toast(
+                _('Há escolhas declaradas por aplicar — clique em "Aplicar".')
+            )
 
     def _ha_jogo_aberto_agora(self) -> bool:
         """Relê o sinal de jogo aberto NA HORA. Devolve o que ficou em cache.
@@ -559,7 +606,7 @@ class FooterActionsMixin(ProfileWriterMixin):
                 if aceita
                 else _("ERRO ao aplicar perfil (daemon offline?).")
             )
-            self._footer_toast(msg)
+            self._dizer_com_o_recado_da_maquina(msg)
             logger.info(
                 "footer_apply_draft_resultado", ok=aplicou, aceita=aceita
             )
@@ -567,7 +614,9 @@ class FooterActionsMixin(ProfileWriterMixin):
 
         def _on_err(exc: Exception) -> bool:
             self._freeze_ui(False)
-            self._footer_toast(_("ERRO ao aplicar: {erro}").format(erro=exc))
+            self._dizer_com_o_recado_da_maquina(
+                _("ERRO ao aplicar: {erro}").format(erro=exc)
+            )
             logger.warning("footer_apply_draft_falhou", erro=str(exc))
             return False
 
