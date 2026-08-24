@@ -397,8 +397,14 @@ def no_do_controle(
     endereço, quando ele está no rádio, ou quando o que casou é o nosso próprio
     vpad. Três filtros, e nenhum é zelo:
 
-    * **cabo**: por rádio ninguém demonstrou o ``0x80``; o ensaio marca o
-      caminho como DESENHO, não como medida;
+    * **cabo**: por rádio o firmware do controle RECUSA o ``0x80``. Medido em
+      23/08/2026 nos dois DualSense desta bancada, com e sem CRC: o
+      ``SET_REPORT`` sai inteiro no canal de controle L2CAP (``btmon``: TX 65
+      bytes) e o CONTROLE responde ``HANDSHAKE 0x04``
+      (``ERR_INVALID_PARAMETER``) em ~5 ms. Não é o BlueZ, não é o uhid, não é
+      o kernel, não é o daemon — é o aparelho. O ``-EIO`` que chega ao Python é
+      máscara do uhid (``hid-playstation.c:901``). O ``GET_FEATURE 0x20`` no
+      MESMO canal responde em ~6 ms, o que prova que o fio está bom;
     * **VID:PID de DualSense**: o comando é da família de fábrica da Sony, e
       mandá-lo para o aparelho de outro fabricante é escrever às cegas;
     * **vpad**: ele forja VID/PID/bus de DualSense no cabo, então sem o filtro o
