@@ -12,6 +12,8 @@ do tamanho da tela maximizada dela e salva um PNG por aba.
                                                          # no repositório
     scripts/gui-captura/retratar_abas.py --mesa-cheia    # os QUATRO controles,
                                                          # em outra pasta
+    scripts/gui-captura/retratar_abas.py --cinco         # os CINCO — a mesa
+                                                         # real desta casa
 
 POR QUE ELE EXISTE, e por que é ele o certo para a JANELA
 ---------------------------------------------------------
@@ -82,8 +84,10 @@ ir para o repositório** — e aí o script deixa de poder gravar direto em
 O MODO MESA CHEIA, E POR QUE ELE **NÃO** ENFRAQUECE NADA (14/08/2026)
 ---------------------------------------------------------------------
 
-`--mesa-cheia` fotografa as mesmas dez abas com **quatro** controles em vez
-dos dublês de dois. A promessa acima continua **literalmente** de pé: este
+`--mesa-cheia` fotografa as mesmas abas com **quatro** controles em vez dos
+dublês de dois, e `--cinco` faz o mesmo com **cinco** — a mesa real desta casa,
+que é o pior caso de largura e o que o item 15 do `TODO-INTEGRACAO.md` da leva
+da aba Configurações pede. A promessa acima continua **literalmente** de pé: este
 script **nunca fala com o daemon**, nem neste modo.
 
 A diferença entre os dois modos é só a FONTE do dublê:
@@ -217,6 +221,30 @@ DESTINO_MESA_CHEIA = RAIZ / "docs/process/estudos/assets/mesa-cheia"
 #: o repositório, não o daemon.
 FIXTURE_MESA_CHEIA = RAIZ / "tests/fixtures/state_full_quatro_controles.json"
 
+#: O payload dos CINCO controles — a mesa real desta casa.
+#:
+#: Pedido do item 15 do `TODO-INTEGRACAO.md` da leva da aba Configurações, e a
+#: razão é de LARGURA: *"a mesa real desta casa é de cinco; a captura de quatro
+#: não mostra o pior caso"*. A seção "Os controles" da aba Configurações e a
+#: pilha de cards da Status são as duas que estouram primeiro, e é com cinco
+#: que elas estouram.
+#:
+#: Nasceu do fixture dos quatro (mesmo formato, mesmo dono), com um quinto
+#: controle no rádio: `player 5`, `player_slot 5` — a extensão R-25 da paleta,
+#: laranja — e bateria em 45% de propósito, para a foto mostrar também um card
+#: que não está cheio. O MAC segue a máscara da casa (`aabbcc0000…`) e passa
+#: pelo `test_anonimato_de_fixtures.py` como os outros quatro.
+FIXTURE_MESA_DE_CINCO = RAIZ / "tests/fixtures/state_full_cinco_controles.json"
+
+#: Onde as fotos da mesa de cinco caem. Pasta PRÓPRIA, pelas mesmas duas razões
+#: da mesa cheia: não são as imagens do README, e não podem fazer o portão da
+#: procedência dar as do README por conferidas.
+DESTINO_MESA_DE_CINCO = RAIZ / "docs/process/estudos/assets/mesa-de-cinco"
+
+#: Quantos controles a mesa de cinco tem de mostrar. Mesma dureza da mesa
+#: cheia, e pelo mesmo motivo: uma foto de cinco com quatro parece certa.
+CONTROLES_DA_MESA_DE_CINCO = 5
+
 #: Quantos controles a mesa cheia tem de mostrar. Não é número decorativo: é o
 #: teto do co-op e o que a leva "mesa cheia" existe para provar. O modo RECUSA
 #: rodar com menos — uma foto de mesa cheia com dois controles seria a mentira
@@ -249,6 +277,12 @@ NOMES = (
 #: alguém aponte o modo para a pasta da documentação.
 NOMES_MESA_CHEIA = tuple(
     nome.replace("readme_", "mesa_cheia_", 1) for nome in NOMES
+)
+
+#: Os nomes do modo de cinco. Prefixo próprio pela mesma razão do de quatro —
+#: nenhuma das duas medições pode sobrescrever a outra nem uma foto do README.
+NOMES_MESA_DE_CINCO = tuple(
+    nome.replace("readme_", "mesa_de_cinco_", 1) for nome in NOMES
 )
 
 
@@ -306,8 +340,13 @@ def _desligar_animacoes() -> str:
     return "animações desligadas (a foto não depende do relógio)"
 
 
-def _estado_da_mesa_cheia() -> dict:
-    """Lê o fixture VERSIONADO dos quatro controles.
+def _estado_da_mesa_cheia(fixture=None, quantos=None) -> dict:  # type: ignore[no-untyped-def]
+    """Lê o fixture VERSIONADO da mesa — quatro controles, ou cinco.
+
+    Os dois argumentos nascem `None` e caem nas constantes do módulo de
+    propósito: `tests/unit/test_a_mesa_cheia_na_foto.py` troca
+    `FIXTURE_MESA_CHEIA` no módulo para provar que um fixture truncado é
+    RECUSADO, e uma leitura congelada na assinatura mataria essa mordida.
 
     Isto é leitura de arquivo do repositório, e não conversa com o daemon — a
     seção de privacidade do cabeçalho explica por que a distinção é a que
@@ -318,21 +357,23 @@ def _estado_da_mesa_cheia() -> dict:
     modo existe para provar a mesa cheia, e um fixture truncado produziria uma
     foto que parece certa e não é.
     """
-    if not FIXTURE_MESA_CHEIA.is_file():
+    fixture = FIXTURE_MESA_CHEIA if fixture is None else fixture
+    quantos = CONTROLES_DA_MESA_CHEIA if quantos is None else quantos
+    if not fixture.is_file():
         raise SystemExit(
-            f"ERRO: {FIXTURE_MESA_CHEIA} não existe. O modo --mesa-cheia "
-            "depende desse arquivo versionado; ele NÃO pergunta ao daemon."
+            f"ERRO: {fixture} não existe. O modo depende desse arquivo "
+            "versionado; ele NÃO pergunta ao daemon."
         )
-    estado = json.loads(FIXTURE_MESA_CHEIA.read_text(encoding="utf-8"))
+    estado = json.loads(fixture.read_text(encoding="utf-8"))
     controles = [
         c
         for c in estado.get("controllers", [])
         if isinstance(c, dict) and c.get("connected")
     ]
-    if len(controles) < CONTROLES_DA_MESA_CHEIA:
+    if len(controles) < quantos:
         raise SystemExit(
-            f"ERRO: {FIXTURE_MESA_CHEIA.name} tem {len(controles)} controle(s) "
-            f"conectado(s), e a mesa cheia são {CONTROLES_DA_MESA_CHEIA}. "
+            f"ERRO: {fixture.name} tem {len(controles)} controle(s) "
+            f"conectado(s), e a mesa são {quantos}. "
             "Uma foto de mesa cheia com menos que isso é pior que nenhuma: "
             "ela parece certa."
         )
@@ -1066,16 +1107,22 @@ def _dongles_de_mentira():  # type: ignore[no-untyped-def]
 
 
 
-def _controles_de_mentira():  # type: ignore[no-untyped-def]
+def _controles_de_mentira(fixture=None):  # type: ignore[no-untyped-def]
     """O inventário da seção "Os controles", vindo do fixture versionado.
 
     Mesmo arquivo que o `--mesa-cheia` usa (`state_full_quatro_controles.json`),
     e pelo mesmo motivo: ele é payload real de 14/08 que JÁ passou pelos portões
     de anonimato da suíte, com MAC de fixture. Ler o daemon vivo aqui poria o
     endereço dos controles dela num PNG versionado.
+
+    O argumento existe para o `--cinco`: o item 15 do `TODO-INTEGRACAO.md` pede
+    CINCO controles simultâneos **nesta aba**, e ela era a única que continuava
+    lendo o fixture de quatro mesmo no modo de cinco — a foto do pior caso de
+    largura sairia com a seção mais larga da janela um card menor.
     """
     try:
-        return json.loads(FIXTURE_MESA_CHEIA.read_text(encoding="utf-8"))
+        alvo = FIXTURE_MESA_CHEIA if fixture is None else fixture
+        return json.loads(alvo.read_text(encoding="utf-8"))
     except Exception:
         return {}
 
@@ -1191,7 +1238,7 @@ def _pintar_o_exame_de_bancada(hospedeiro) -> None:  # type: ignore[no-untyped-d
         painel.aplicar(itens, veredito(itens), time.time())
 
 
-def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
+def _montar_aba_configuracoes(builder, fixture=None) -> str:  # type: ignore[no-untyped-def]
     """Monta a aba Configurações — o glade dela é só o container vazio.
 
     CONFIG-01 (21/08/2026). Mesmo defeito que a PERFIS-NA-FOTO-01 pagou: o
@@ -1234,7 +1281,7 @@ def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
             # `docs/usage/assets/` sem revisão humana — os portões de anonimato
             # não varrem imagem. O leitor devolve o mesmo fixture VERSIONADO que
             # a aba Status já usa, cujo MAC é falso por construção.
-            self._controles_leitor = _controles_de_mentira
+            self._controles_leitor = lambda: _controles_de_mentira(fixture)
             # A cor do plástico é lida do controle pelo cabo. Sem controle, sem
             # leitura — e a foto mostraria "Não sei" em todos os cards. Este
             # dublê devolve a cor que o card desenharia se o aparelho tivesse
@@ -1268,6 +1315,483 @@ def _montar_aba_configuracoes(builder) -> str:  # type: ignore[no-untyped-def]
         f"de bancada, nenhum desta máquina; {lidos} dos {len(mesa.radios)} "
         f"classificados pelo barramento, {len(_MESA_DONGLES)} com nome)"
     )
+
+
+# ---------------------------------------------------------------------------
+# AS CINCO ABAS QUE A FOTO PUBLICAVA CRUAS — P10 (23/08/2026)
+# ---------------------------------------------------------------------------
+#
+# O DEFEITO, medido no diagnóstico das onze abas: Lightbar, Rumble, Sistema,
+# Emulação e Navegação não tinham host nenhum aqui, e por isso o README
+# publicava o GLADE CRU delas. O que a documentação afirmava:
+#
+# * Emulação — "Device: Microsoft X-Box 360 pad" e "Buffer: 150", os dois
+#   números que a BUG-EMULATION-HOTKEY-CARD-FIXO-01 parou de contar como se
+#   fossem estado lido do daemon. A foto seguia contando;
+# * Navegação — a legenda de jargão do glade ("Formato: KEY_* … __OPEN_OSK__"),
+#   que a KBD-01 substituiu por texto de gente há levas;
+# * Sistema — "Diagnóstico ao abrir a aba…", "consultando…", "Verificando…":
+#   três estados transitórios publicados como se fossem a tela;
+# * Rumble e Lightbar — o rótulo de estado da vibração e o "Aceso agora" nunca
+#   saíram do default, e são o assunto inteiro das duas abas.
+#
+# Custo composto, e é ele que justifica este conserto vir antes de feature: a
+# regra desta casa manda OLHAR A FOTO primeiro. Uma foto que mente contamina
+# todo trabalho que vem depois dela.
+#
+# O DESENHO DOS CINCO HOSTS, e onde cada um pode desviar
+# -------------------------------------------------------
+#
+# É o mesmo dos hosts que já existiam: mínimo, com um `_get` que resolve ids do
+# builder, o MÉTODO DE PRODUÇÃO fazendo a montagem, e desvio SÓ onde a produção
+# falaria com o daemon ou leria a máquina dela. O que muda de aba para aba é
+# onde fica a costura:
+#
+# * onde a produção tem PINTOR SEPARADO (uma função que recebe o que desenhar),
+#   o desvio injeta dado de bancada e quem desenha é a produção:
+#   `_apply_daemon_view`, `_apply_storm_diag`, `_aplicar_keyboard_switch`,
+#   `_apply_policy_to_widgets`, `markup_status_steam_input`,
+#   `descrever_deteccao_de_janela`;
+# * onde o pedido de IPC e o desenho moram na MESMA função (o caso do
+#   `_refresh_gamepad_and_gamemode`), o desvio chama os pintores de produção
+#   com o argumento de "não sei" — que é exatamente o que a produção faz quando
+#   o daemon não responde. Nunca uma cópia do markup: um segundo dono do
+#   desenho é o defeito que o `test_a_foto_monta_como_o_produto_monta` existe
+#   para pegar, e que já custou uma decisão dela.
+#
+# O ATALHO QUE ESTÁ PROIBIDO, e o portão que o tranca
+# ----------------------------------------------------
+#
+# Desviar no TRANSPORTE (trocar o pedido de IPC por um dublê) seria mais curto
+# e resolveria as cinco abas de uma vez. Está proibido: o
+# `test_retrato_das_abas_nao_vaza_dado_real.py` reprova o nome do transporte no
+# código deste script, e é essa proibição que mantém a promessa de privacidade
+# do cabeçalho verificável por LEITURA, sem depender de rodar nada. Por isso o
+# desvio é sempre no método da aba.
+
+#: O estado de bancada das cinco abas. Inventado aqui, como o `_NO_JOGO_ESTADO`
+#: logo acima e pela mesma razão: o estado de verdade traz o endereço Bluetooth
+#: dos controles dela, e estas fotos vão para `docs/usage/assets/` sem revisão
+#: humana — os portões de anonimato não varrem imagem.
+#:
+#: É a mesa SAUDÁVEL, jogando pelo Hefesto com dois espelhos de pé, e conta a
+#: mesma história das outras abas (o "Pragmata" na frente é o jogo que a aba
+#: "No jogo" e a Perfis já mostram). O modo `--mesa-cheia` passa o fixture
+#: versionado no lugar deste dicionário — ver `main`.
+_ESTADO_DE_BANCADA: dict = {
+    "native_mode": False,
+    "gamepad_emulation": {"enabled": True, "flavor": "dualsense", "backend": "uhid"},
+    # A chave do teclado emulado DESENHA na aba Navegação e é lida daqui. Sem o
+    # bloco, a produção diz (com razão) "não consegui ler — o Hefesto pode
+    # estar desligado", e a foto da Navegação passaria a contradizer a da
+    # Sistema, que mostra o Hefesto funcionando. As onze fotos são lidas juntas.
+    "keyboard_emulation": {
+        "enabled": False,
+        "bloqueio": None,
+        "despachando": False,
+        "device_ativo": False,
+        "osk_disponivel": True,
+    },
+    "rumble_policy": "balanceado",
+    "rumble_policy_custom_mult": 0.7,
+    "rumble_passthrough": True,
+    "rumble_active": None,
+    "rumble_ff": {"vpads": 2, "plays": 0, "nao_nulos": 0, "descartados": 0},
+    "window_detect_backend": "xlib",
+    "window_detect_healthy": True,
+    "window_detect_seeing": True,
+    "window_detect_current_class": "pragmata.exe",
+    "window_detect_last_class": "pragmata.exe",
+    "window_detect_reason": None,
+    # NÃO há bloco `hotkey` aqui, e a ausência é deliberada: sem ele o
+    # `_sync_hotkey_card` escreve "150 (padrão)" e "Não (padrão)", que é a
+    # forma de a tela dizer "isto é fábrica, não é estado lido". Foi essa
+    # distinção que a BUG-EMULATION-HOTKEY-CARD-FIXO-01 comprou, e é ela que a
+    # foto tem de publicar — o "150" seco do glade é indistinguível de um
+    # número lido do daemon.
+}
+
+#: A máscara que a bancada declara ligada na aba Emulação. Dado, não regra: a
+#: tradução de `flavor` para máscara ativa mora na produção, e copiá-la aqui
+#: faria deste script um segundo dono dela.
+_MASCARA_DE_BANCADA = "dualsense"
+
+
+def _montar_aba_lightbar(builder) -> str:  # type: ignore[no-untyped-def]
+    """Monta a aba Lightbar — a prévia e o "Aceso agora" nascem em código.
+
+    Sem host, a foto saía com a prévia CINZA (o `draw` do `Gtk.DrawingArea` é
+    conectado em `install_lightbar_tab`, não no glade) e com o rótulo
+    "Aceso agora: consultando…", que é o texto de espera do glade.
+
+    Nada aqui fala com o daemon nem lê o disco: o `DraftConfig()` é o rascunho
+    de FÁBRICA do produto, o mesmo que a janela usa antes de qualquer perfil
+    ser carregado, e é ele que decide a cor, o brilho e as cinco luzes.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.lightbar_actions import (
+            LightbarActionsMixin,
+        )
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
+    except Exception as exc:
+        return f"aba Lightbar não montada ({exc})"
+
+    class _Host(LightbarActionsMixin):  # type: ignore[misc, valid-type]
+        def __init__(self) -> None:
+            self.builder = builder
+            self.draft = DraftConfig()
+            # O alvo de edição é mantido pela aba Status a partir do estado
+            # vivo. Sem daemon, ele é de bancada — e é o que faz a frase do
+            # "Aceso agora" sair na forma que ela vê com um controle escolhido.
+            self._edit_target_slot = 1
+            self._coop_ligado = True
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+        def _status_toast(self, _contexto: str, _msg: str) -> None:
+            return None
+
+    try:
+        host = _Host()
+        host.install_lightbar_tab()
+        host._refresh_lightbar_from_draft()
+    except Exception as exc:
+        return f"aba Lightbar não montada ({exc})"
+
+    caixa = builder.get_object("tab_lightbar_box")
+    if caixa is not None:
+        caixa.show_all()
+    rotulo = builder.get_object("player_leds_estado")
+    frase = rotulo.get_text() if rotulo is not None else "(rótulo ausente)"
+    return f"aba Lightbar montada (prévia acesa; {frase!r})"
+
+
+def _montar_aba_rumble(builder, estado=None) -> str:  # type: ignore[no-untyped-def]
+    """Monta a aba Rumble — o rótulo de estado da vibração é o assunto dela.
+
+    `install_rumble_tab` tem UMA linha, e essa linha pede o `state_full` ao
+    daemon. Sem host, tudo o que a aba desenha a partir da resposta ficava fora
+    da foto: a política acesa nos quatro botões, o multiplicador no deslizador,
+    o rótulo "Estado da vibração" e o aviso de alcance.
+
+    O DESVIO é o pedido de IPC, e só ele: `_apply_policy_to_widgets` e
+    `_update_rumble_state_label` são os pintores de PRODUÇÃO, recebendo o
+    estado de bancada em vez do estado vivo.
+
+    O aviso de alcance (`rumble_policy_aviso`) continua ESCONDIDO nesta foto, e
+    isso não é omissão: com dois espelhos de pé a produção decide esconder, e
+    quem decide o que fica escondido é ela, não este script. Fotografá-lo
+    exigiria uma segunda bancada, no quadrante sem dono do rumble.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.rumble_actions import (
+            _MULT_PADRAO,
+            RumbleActionsMixin,
+        )
+    except Exception as exc:
+        return f"aba Rumble não montada ({exc})"
+
+    fonte = dict(estado) if estado else dict(_ESTADO_DE_BANCADA)
+
+    class _Host(RumbleActionsMixin):  # type: ignore[misc, valid-type]
+        def __init__(self) -> None:
+            self.builder = builder
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+        def _status_toast(self, _contexto: str, _msg: str) -> None:
+            return None
+
+        def _sync_policy_from_state(  # type: ignore[override]
+            self, *, indicar_sem_opiniao: bool = False
+        ) -> None:
+            """O desvio: a bancada no lugar do `state_full` do daemon vivo.
+
+            Os defaults são os da produção (`_on_state` lá) — a política cai em
+            "balanceado" e o multiplicador em `_MULT_PADRAO` quando a chave não
+            vem, e é assim que a foto continua certa se a bancada mudar.
+            """
+            self._apply_policy_to_widgets(
+                str(fonte.get("rumble_policy", "balanceado")),
+                float(fonte.get("rumble_policy_custom_mult", _MULT_PADRAO)),
+            )
+            self._update_rumble_state_label(fonte)
+
+    try:
+        host = _Host()
+        host.install_rumble_tab()
+    except Exception as exc:
+        return f"aba Rumble não montada ({exc})"
+
+    caixa = builder.get_object("tab_rumble_box")
+    if caixa is not None:
+        caixa.show_all()
+    aviso = builder.get_object("rumble_policy_aviso")
+    visivel = aviso is not None and aviso.get_visible()
+    return (
+        f"aba Rumble montada (política {fonte.get('rumble_policy')!r}; aviso de "
+        f"alcance {'visível' if visivel else 'escondido pela produção'})"
+    )
+
+
+#: As linhas do cartão "Saúde do sistema" na foto da aba Sistema.
+#:
+#: INVENTADAS, e não lidas: `storm_doctor.storm_report()` varre a máquina de
+#: quem rodar o script (drop-ins do WirePlumber, regras de udev, o vdf da
+#: Steam) e o caminho de produção ainda pergunta ao daemon quantos controles
+#: estão no cabo. As duas coisas estão proibidas aqui pela seção de privacidade
+#: do cabeçalho — e uma foto de README que mudasse conforme o que está plugado
+#: na hora seria ruído em toda leva.
+_SAUDE_DE_BANCADA: tuple[tuple[str, str], ...] = (
+    ("[ OK ]", "Quirk de áudio USB ativo — sem tempestade de erro -71."),
+    ("[ OK ]", "Regra de udev do uinput instalada."),
+    ("[ OK ]", "Steam Input desligado para os jogos fora da lista de exceções."),
+    ("[INFO]", "Microfone do controle livre, com prioridade acima do eco."),
+)
+
+#: As cores do cartão de saúde. São as MESMAS do `_refresh_storm_diag`, e a
+#: repetição é conhecida: lá elas moram dentro do worker que varre a máquina, e
+#: não há como alcançá-las sem varrer junto. Se as cores mudarem lá, esta foto
+#: fica atrás — é o preço de não fotografar a máquina de quem roda o script.
+_CORES_DA_SAUDE: dict[str, str] = {
+    "[ OK ]": "#50fa7b",
+    "[WARN]": "#ffb86c",
+    "[INFO]": "#8b8fa8",
+}
+
+#: O painel "Detalhes técnicos" da aba Sistema, inventado.
+#:
+#: É o painel que JÁ VAZOU uma vez: o `README.md` registra que ele teve de ser
+#: borrado à mão porque o log mostrava o endereço Bluetooth real dos controles.
+#: Aqui ele nasce de bancada — nada de `systemctl status` da máquina de quem
+#: roda o script.
+_LOG_DE_BANCADA = (
+    "● hefesto-dualsense4unix.service - Hefesto DualSense4Unix\n"
+    "     Loaded: loaded (hefesto-dualsense4unix.service; enabled)\n"
+    "     Active: active (running)\n"
+    "   Main PID: 4242 (hefesto-dualsen)\n"
+    "\n"
+    "controle_conectado transporte=usb jogador=1\n"
+    "controle_conectado transporte=bt jogador=2\n"
+    "perfil_aplicado nome=Pragmata origem=janela\n"
+)
+
+
+def _montar_aba_sistema(builder) -> str:  # type: ignore[no-untyped-def]
+    """Monta a aba Sistema — a que publicava três estados de espera.
+
+    Os TRÊS desvios são os três lugares em que a produção sai da janela, e
+    cada um deles é obrigatório aqui:
+
+    * `_refresh_daemon_view_async` roda `systemctl is-active/is-enabled/status`
+      da máquina de quem fotografa. O desvio entrega o resultado de bancada ao
+      `_apply_daemon_view`, que é o pintor de produção — inclusive do painel
+      "Detalhes técnicos", que é o que já vazou MAC uma vez;
+    * `_refresh_storm_diag` varre o disco E pergunta ao daemon quantos
+      controles estão no cabo. O desvio entrega o markup de bancada ao
+      `_apply_storm_diag`;
+    * `_refresh_window_detect_diag` pede `daemon.state_full`. O desvio chama a
+      `descrever_deteccao_de_janela`, que é a função PURA de produção, com o
+      estado de bancada.
+
+    O que NÃO foi desviado, de propósito:
+    `_sync_restart_daemon_button_sensitivity` só olha se a unit do systemd está
+    instalada nesta máquina, e o que ela decide é se um botão fica cinza. Não
+    há identidade nisso, e desviá-la seria copiar comportamento de produção
+    para nada.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.daemon_actions import (
+            DaemonActionsMixin,
+            descrever_deteccao_de_janela,
+        )
+    except Exception as exc:
+        return f"aba Sistema não montada ({exc})"
+
+    markup_da_saude = "\n".join(
+        f'<span foreground="{_CORES_DA_SAUDE.get(tag, "#c8ccda")}">{tag}</span> {msg}'
+        for tag, msg in _SAUDE_DE_BANCADA
+    )
+
+    class _Host(DaemonActionsMixin):  # type: ignore[misc, valid-type]
+        def __init__(self) -> None:
+            self.builder = builder
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+        def _status_toast(self, _contexto: str, _msg: str) -> None:
+            return None
+
+        def _refresh_daemon_view_async(self) -> None:  # type: ignore[override]
+            self._apply_daemon_view("online_systemd", "enabled", _LOG_DE_BANCADA)
+
+        def _refresh_storm_diag(self) -> None:  # type: ignore[override]
+            self._apply_storm_diag(markup_da_saude)
+
+        def _refresh_window_detect_diag(self) -> None:  # type: ignore[override]
+            rotulo = self._get("window_detect_diag_label")
+            if rotulo is not None:
+                rotulo.set_markup(
+                    descrever_deteccao_de_janela(dict(_ESTADO_DE_BANCADA))
+                )
+
+    try:
+        host = _Host()
+        host.install_daemon_tab()
+    except Exception as exc:
+        return f"aba Sistema não montada ({exc})"
+
+    caixa = builder.get_object("daemon_box")
+    if caixa is not None:
+        caixa.show_all()
+    return (
+        f"aba Sistema montada ({len(_SAUDE_DE_BANCADA)} linhas de saúde, o log "
+        "de bancada e o detector de janela — nenhum byte desta máquina)"
+    )
+
+
+def _montar_aba_emulacao(builder) -> str:  # type: ignore[no-untyped-def]
+    """Monta a aba Emulação — a que publicava "X-Box 360 pad" e "Buffer: 150".
+
+    Os dois textos são o DEFAULT do glade, e a produção os substitui na
+    primeira linha de `install_emulation_tab`: o nome do aparelho sai da
+    constante `DEVICE_NAME` e o buffer vira "150 (padrão)" pelo
+    `_sync_hotkey_card(None)` — que é o jeito de a tela dizer que aquilo é
+    fábrica, e não estado lido. A foto contava a versão que a
+    BUG-EMULATION-HOTKEY-CARD-FIXO-01 apagou.
+
+    OS DESVIOS, e por que cada um:
+
+    * `_refresh_steam_input_status` traduz appid em NOME DE JOGO lendo o
+      `appmanifest` da Steam de quem fotografa. Ia direto para o README. O
+      desvio chama `markup_status_steam_input`, o pintor puro de produção, com
+      a bancada "Steam Input desligado";
+    * `_mic_state` lê os drop-ins do WirePlumber do `$HOME`. O desvio devolve
+      o estado ligado, e quem pinta continua sendo `_refresh_mic_status`;
+    * `_refresh_gamepad_and_gamemode` e `_refresh_keyboard_switch` pedem
+      `daemon.state_full`. Aqui não há pintor separado que receba o estado — o
+      desenho mora dentro do `_on_state` —, então o desvio chama os pintores de
+      produção (`_highlight_gamepad`, `_sync_uinput_card`, `_sync_hotkey_card`,
+      `_sync_gamemode_button`, `_aplicar_keyboard_switch`) com o dado de
+      bancada. Duas coisas ficam FORA da foto por isso, e é o limite honesto
+      deste conserto: os rótulos "Gamepad para os jogos:" e "Modo jogo:"
+      continuam no "—" do glade, porque o markup deles nasce dentro do
+      `_on_state` e copiá-lo aqui criaria um segundo dono do desenho.
+
+    O QUE **NÃO** FOI DESVIADO, e é o único ponto em que esta foto muda de
+    máquina para máquina: `_refresh_emulation_view` conta os `/dev/input/js*` e
+    olha a permissão do `/dev/uinput`. Não há identidade ali — é contagem de
+    aparelho ligado, sem nome de rede, MAC nem caminho de `$HOME` — e não há
+    costura para desviar sem copiar os quatro markups da produção. O recado
+    devolvido diz o que saiu, para quem fotografa conferir antes de commitar.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.emulation_actions import (
+            EmulationActionsMixin,
+            markup_status_steam_input,
+        )
+        from hefesto_dualsense4unix.app.actions.mode_transition import mode_of_state
+    except Exception as exc:
+        return f"aba Emulação não montada ({exc})"
+
+    class _Host(EmulationActionsMixin):  # type: ignore[misc, valid-type]
+        def __init__(self) -> None:
+            self.builder = builder
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+        def _status_toast(self, _contexto: str, _msg: str) -> None:
+            return None
+
+        def _mic_state(self) -> str:  # type: ignore[override]
+            return str(self.MIC_LIGADO)
+
+        def _refresh_steam_input_status(self) -> None:  # type: ignore[override]
+            rotulo = self._get("emulation_steam_input_status_label")
+            if rotulo is not None:
+                rotulo.set_markup(markup_status_steam_input(False, [], [], None))
+
+        def _refresh_gamepad_and_gamemode(self) -> None:  # type: ignore[override]
+            estado = dict(_ESTADO_DE_BANCADA)
+            self._highlight_gamepad(_MASCARA_DE_BANCADA)
+            self._sync_uinput_card(_MASCARA_DE_BANCADA)
+            self._sync_hotkey_card(estado)
+            self._sync_gamemode_button(mode_of_state(estado))
+
+        def _refresh_keyboard_switch(self) -> None:  # type: ignore[override]
+            self._aplicar_keyboard_switch(
+                dict(_ESTADO_DE_BANCADA).get("keyboard_emulation")
+            )
+
+    try:
+        host = _Host()
+        host.install_emulation_tab()
+    except Exception as exc:
+        return f"aba Emulação não montada ({exc})"
+
+    caixa = builder.get_object("emulation_box")
+    if caixa is not None:
+        caixa.show_all()
+    gamepads = builder.get_object("emulation_js_label")
+    lido = gamepads.get_text() if gamepads is not None else "(rótulo ausente)"
+    return (
+        "aba Emulação montada (o cartão do aparelho e o do atalho vêm do "
+        f"código). Desta máquina saiu só a contagem de gamepads: {lido!r}"
+    )
+
+
+def _montar_aba_navegacao(builder) -> str:  # type: ignore[no-untyped-def]
+    """Monta a aba Navegação — a que publicava a legenda de jargão.
+
+    O glade traz, no `key_bindings_legend`, o texto que a KBD-01 aposentou:
+    *"Formato: KEY_* (ex: KEY_C, KEY_ENTER) ou __OPEN_OSK__/__CLOSE_OSK__"*.
+    Quem escreve a legenda de verdade é `_install_key_bindings_treeview`, que
+    também é quem cria as DUAS COLUNAS da lista de atalhos — sem host, a foto
+    publicava a lista sem coluna nenhuma e a legenda em jargão.
+
+    Nada aqui fala com o daemon: o `DraftConfig()` de fábrica tem
+    `key_bindings is None`, que a produção resolve para os atalhos de FÁBRICA
+    (`DEFAULT_BUTTON_BINDINGS`) — exatamente o que ela vê ao abrir a janela sem
+    perfil carregado.
+
+    A chave do teclado emulado desta aba NÃO é montada aqui: o dono dela é o
+    mixin da Emulação (`_refresh_keyboard_switch`), e é de lá que ela vem —
+    ver a nota da `EMULACAO-NO-JOGO-01/E1` na produção.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.input_actions import (
+            InputActionsMixin,
+        )
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
+    except Exception as exc:
+        return f"aba Navegação não montada ({exc})"
+
+    class _Host(InputActionsMixin):  # type: ignore[misc, valid-type]
+        def __init__(self) -> None:
+            self.builder = builder
+            self.draft = DraftConfig()
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+        def _status_toast(self, _contexto: str, _msg: str) -> None:
+            return None
+
+    try:
+        host = _Host()
+        host.install_input_tab()
+    except Exception as exc:
+        return f"aba Navegação não montada ({exc})"
+
+    caixa = builder.get_object("tab_navegacao_dsx")
+    if caixa is not None:
+        caixa.show_all()
+    linhas = len(host._key_bindings_store) if host._key_bindings_store else 0
+    return f"aba Navegação montada ({linhas} atalhos de fábrica na lista)"
 
 
 def _injetar_modos_de_gatilho(builder) -> str:  # type: ignore[no-untyped-def]
@@ -1630,14 +2154,27 @@ def _fotografar_o_cabecalho(builder, estado, saida, nome) -> str:  # type: ignor
     )
 
 
-def main(destino: str | None = None, *, mesa_cheia: bool = False) -> int:
-    padrao = DESTINO_MESA_CHEIA if mesa_cheia else DESTINO_DOC
+def main(
+    destino: str | None = None, *, mesa_cheia: bool = False, cinco: bool = False
+) -> int:
+    # `--cinco` é um modificador da mesa cheia, não um modo solto: sozinho ele
+    # não teria fixture nenhum para ler.
+    mesa_cheia = mesa_cheia or cinco
+    if cinco:
+        padrao, nomes = DESTINO_MESA_DE_CINCO, NOMES_MESA_DE_CINCO
+        fixture, quantos = FIXTURE_MESA_DE_CINCO, CONTROLES_DA_MESA_DE_CINCO
+    else:
+        padrao, nomes = DESTINO_MESA_CHEIA, NOMES_MESA_CHEIA
+        fixture, quantos = FIXTURE_MESA_CHEIA, CONTROLES_DA_MESA_CHEIA
+    if not mesa_cheia:
+        padrao, nomes = DESTINO_DOC, NOMES
     saida = Path(destino) if destino else padrao
-    nomes = NOMES_MESA_CHEIA if mesa_cheia else NOMES
     # O fixture é lido ANTES de o GTK montar coisa alguma: se ele não estiver
     # onde deveria, ninguém perde tempo montando uma janela para descobrir isso
     # dez segundos depois.
-    estado_da_mesa = _estado_da_mesa_cheia() if mesa_cheia else None
+    estado_da_mesa = (
+        _estado_da_mesa_cheia(fixture, quantos) if mesa_cheia else None
+    )
     saida.mkdir(parents=True, exist_ok=True)
 
     builder = Gtk.Builder()
@@ -1666,7 +2203,16 @@ def main(destino: str | None = None, *, mesa_cheia: bool = False) -> int:
     print(f"  {_montar_aba_inicio(builder, estado_da_mesa)}")
     print(f"  {_montar_aba_no_jogo(builder, estado_da_mesa)}")
     print(f"  {_montar_aba_perfis(builder)}")
-    print(f"  {_montar_aba_configuracoes(builder)}")
+    print(f"  {_montar_aba_configuracoes(builder, fixture if mesa_cheia else None)}")
+    # P10 (23/08/2026): as cinco que saíam do glade cru. A Emulação vem ANTES
+    # da Navegação de propósito — a chave do teclado emulado DESENHA na
+    # Navegação e o dono dela é o mixin da Emulação; invertendo a ordem, o
+    # `install_input_tab` não teria o que acender.
+    print(f"  {_montar_aba_lightbar(builder)}")
+    print(f"  {_montar_aba_rumble(builder, estado_da_mesa)}")
+    print(f"  {_montar_aba_sistema(builder)}")
+    print(f"  {_montar_aba_emulacao(builder)}")
+    print(f"  {_montar_aba_navegacao(builder)}")
     _assentar()
 
     total = notebook.get_n_pages()
@@ -1692,27 +2238,43 @@ def main(destino: str | None = None, *, mesa_cheia: bool = False) -> int:
         kb = arquivo.stat().st_size // 1024
         print(f"  {rotulo:<22} {arquivo.name:<26} {kb:>4} KB")
 
+    # Os nomes especiais seguem o prefixo do modo: com `--cinco` a foto
+    # esticada e a do cabeçalho não podem sobrescrever as de quatro, que são
+    # outra medição.
+    prefixo = "mesa_de_cinco_" if cinco else "mesa_cheia_"
     for nome_esticado in ABAS_ESTICADAS:
-        if nome_esticado in nomes:
+        # A Configurações também estoura nos modos de mesa — mais ainda neles,
+        # que é o ponto do item 15 do TODO-INTEGRACAO: cinco controles na
+        # seção mais larga da janela. Antes desta tradução de prefixo, a foto
+        # esticada só existia no modo padrão, e a medição que a pedia era
+        # justamente a da mesa.
+        esticado = (
+            nome_esticado.replace("readme_", prefixo, 1)
+            if mesa_cheia
+            else nome_esticado
+        )
+        if esticado in nomes:
             print(
                 _fotografar_a_aba_inteira(
-                    janela, notebook, saida, nomes.index(nome_esticado), nome_esticado
+                    janela, notebook, saida, nomes.index(esticado), esticado
                 )
             )
-    if mesa_cheia and ABA_QUE_ESTOURA in nomes:
+    aba_que_estoura = ABA_QUE_ESTOURA.replace("mesa_cheia_", prefixo, 1)
+    nome_do_cabecalho = NOME_DO_CABECALHO.replace("mesa_cheia_", prefixo, 1)
+    if mesa_cheia and aba_que_estoura in nomes:
         print(
             _fotografar_a_aba_inteira(
                 janela,
                 notebook,
                 saida,
-                nomes.index(ABA_QUE_ESTOURA),
-                ABA_QUE_ESTOURA,
+                nomes.index(aba_que_estoura),
+                aba_que_estoura,
             )
         )
     if mesa_cheia and estado_da_mesa is not None:
         print(
             _fotografar_o_cabecalho(
-                builder, estado_da_mesa, saida, NOME_DO_CABECALHO
+                builder, estado_da_mesa, saida, nome_do_cabecalho
             )
         )
 
@@ -1722,15 +2284,15 @@ def main(destino: str | None = None, *, mesa_cheia: bool = False) -> int:
         print("  as imagens do README e de docs/usage/interface.md estão em dia.")
     if mesa_cheia:
         print(
-            "  mesa cheia: quatro controles do fixture versionado. Estas NÃO "
-            "são as imagens do README."
+            f"  mesa: {quantos} controles do fixture versionado "
+            f"({fixture.name}). Estas NÃO são as imagens do README."
         )
     return 0
 
 
 #: O que sai quando alguém erra a linha de comando. Em português, como o resto.
 USO = (
-    "uso: retratar_abas.py [DESTINO] [--mesa-cheia]\n"
+    "uso: retratar_abas.py [DESTINO] [--mesa-cheia] [--cinco]\n"
     "\n"
     "  sem argumento   atualiza as imagens da documentação\n"
     f"                  ({DESTINO_DOC.relative_to(RAIZ)})\n"
@@ -1738,6 +2300,9 @@ USO = (
     "  --mesa-cheia    fotografa com os QUATRO controles do fixture\n"
     f"                  versionado; destino padrão "
     f"{DESTINO_MESA_CHEIA.relative_to(RAIZ)}\n"
+    "  --cinco         idem, com o fixture de CINCO controles — a mesa real\n"
+    "                  desta casa, e o pior caso de largura; destino padrão\n"
+    f"                  {DESTINO_MESA_DE_CINCO.relative_to(RAIZ)}\n"
 )
 
 
@@ -1785,8 +2350,8 @@ def _gravar_prova_da_foto(saida: Path) -> str:
     return f"recibo do ensaio em {NOME_DA_PROVA} ({len(pngs)} soma[s])"
 
 
-def _ler_argumentos(argv: list[str]) -> tuple[str | None, bool]:
-    """Lê `[DESTINO] [--mesa-cheia]`, em qualquer ordem.
+def _ler_argumentos_completo(argv: list[str]) -> tuple[str | None, bool, bool]:
+    """Lê `[DESTINO] [--mesa-cheia] [--cinco]`, em qualquer ordem.
 
     À mão e não com `argparse` de propósito: o `argparse` imprime "usage:" e
     "positional arguments" em inglês, e esta casa escreve em português — há
@@ -1794,18 +2359,32 @@ def _ler_argumentos(argv: list[str]) -> tuple[str | None, bool]:
     """
     destino: str | None = None
     mesa_cheia = False
+    cinco = False
     for arg in argv:
         if arg == "--mesa-cheia":
             mesa_cheia = True
+        elif arg == "--cinco":
+            cinco = True
         elif arg.startswith("-"):
             raise SystemExit(f"argumento desconhecido: {arg}\n\n{USO}")
         elif destino is None:
             destino = arg
         else:
             raise SystemExit(f"destino demais: {arg}\n\n{USO}")
+    return destino, mesa_cheia, cinco
+
+
+def _ler_argumentos(argv: list[str]) -> tuple[str | None, bool]:
+    """As duas primeiras respostas do leitor acima, e não um segundo leitor.
+
+    Continua existindo com ESTA aridade porque é assim que a suíte a mede
+    (`test_a_mesa_cheia_na_foto.py`) e porque quem só quer saber "é mesa
+    cheia?" não precisa saber de quantos controles.
+    """
+    destino, mesa_cheia, _cinco = _ler_argumentos_completo(argv)
     return destino, mesa_cheia
 
 
 if __name__ == "__main__":
-    _destino, _mesa_cheia = _ler_argumentos(sys.argv[1:])
-    raise SystemExit(main(_destino, mesa_cheia=_mesa_cheia))
+    _destino, _mesa_cheia, _cinco = _ler_argumentos_completo(sys.argv[1:])
+    raise SystemExit(main(_destino, mesa_cheia=_mesa_cheia, cinco=_cinco))
