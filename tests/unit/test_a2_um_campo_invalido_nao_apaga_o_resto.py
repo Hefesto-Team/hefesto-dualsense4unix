@@ -131,7 +131,7 @@ def test_o_estrago_para_na_subarvore_ruim(arquivo: Path) -> None:
                 #
                 # A lição vale para todo dado de teste: **sequência casa com
                 # qualquer coisa por acidente.** Prefira dígitos sem padrão.
-                "controles": {"02aabbcc00d1": {"cor": "Branco"}},
+                "controles": {"02fe000000d1": {"cor": "Branco"}},
             }
         ),
         encoding="utf-8",
