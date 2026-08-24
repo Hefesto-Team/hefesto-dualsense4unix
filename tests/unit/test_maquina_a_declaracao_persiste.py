@@ -570,7 +570,7 @@ def test_o_aplicar_grava_e_so_limpa_a_pendencia_quando_o_daemon_confirma(
     )
 
     rodape = _Rodape()
-    rodape._gravar_declaracao_de_maquina()
+    assert rodape._gravar_declaracao_de_maquina() is None
     assert pedidos == []  # sem declaração, sem chamada
 
     rodape._maquina_pendente = {"mesa": {"altura_da_antena": "acima"}}
@@ -578,10 +578,13 @@ def test_o_aplicar_grava_e_so_limpa_a_pendencia_quando_o_daemon_confirma(
     assert pedidos == [{"mesa": {"altura_da_antena": "acima"}}]
     assert rodape._maquina_pendente is None
 
+    # CONFIG-05 (23/08/2026), achado A3: a frase é DEVOLVIDA, não empurrada na
+    # statusbar. Ela era apagada no mesmo tique do GTK pelo toast do
+    # `_apply_draft_agora`; quem a mostra agora é o toast FINAL do "Aplicar".
     resposta[0] = (False, "não deu")
     rodape._maquina_pendente = {"ambiente": "gnome"}
-    rodape._gravar_declaracao_de_maquina()
-    assert rodape.avisos == ["não deu"]
+    assert rodape._gravar_declaracao_de_maquina() == "não deu"
+    assert rodape.avisos == []
     assert rodape._maquina_pendente == {"ambiente": "gnome"}
 
 
