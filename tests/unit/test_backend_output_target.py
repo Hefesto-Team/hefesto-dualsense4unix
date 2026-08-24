@@ -133,12 +133,36 @@ class TestForEachRespeitaAlvo:
         assert h1.light.colors == []
         assert h2.light.colors == [(9, 9, 9)]
 
-    def test_alvo_sumido_cai_em_broadcast(self) -> None:
+    def test_alvo_sumido_nao_escreve_em_ninguem(self) -> None:
+        """Alvo fora da mesa é NO-OP — o broadcast daqui caducou em 23/08/2026.
+
+        **Nota datada (P4, 23/08/2026).** Até aqui este teste se chamava
+        `test_alvo_sumido_cai_em_broadcast` e exigia o contrário: o
+        remanescente TINHA de receber. Era decisão declarada da
+        FEAT-DSX-CONTROLLER-SELECTOR-01, com justificativa de robustez
+        (*"1 handle morto não derruba os outros"*), e por isso vira nota em
+        vez de sumir: quem a escreveu não errou de leve.
+
+        O que a derrubou foi a medição do P4 sobre co-op — que nesta casa é
+        sempre ligado. A justificativa era de ROBUSTEZ; o efeito era de
+        ENDEREÇAMENTO. Alvo = Controle 2, Controle 2 desliga, ela clica
+        "Testar": os motores que sacodem são os das outras três pessoas na
+        partida, e o reassert de 5 Hz insiste até alguém clicar "Parar".
+        Ninguém pediu que o comando fosse para os outros.
+
+        A casa já tinha decidido o oposto em dois lugares para o MESMO caso
+        (`subsystems/rumble.py`, *"Dono ausente da mesa é NO-OP, não
+        broadcast"*, e `apply_output_for`, que devolve `"registrado"`) — este
+        sítio era a exceção sobrevivente. Ver `_resolver_escopo_locked`.
+        """
         inst, h1, _h2 = _with_two_handles()
         inst.set_output_target(1)  # alvo = "b"
         del inst._handles["b"]  # alvo sumiu
-        inst.set_led((4, 5, 6))  # deve ir ao remanescente (broadcast)
-        assert h1.light.colors == [(4, 5, 6)]
+        inst.set_led((4, 5, 6))
+        assert h1.light.colors == [], (
+            "o gesto mirado no controle que saiu chegou ao remanescente — em "
+            "co-op, na mão de outra pessoa"
+        )
 
 
 class TestDescribeIndex:

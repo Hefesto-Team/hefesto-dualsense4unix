@@ -660,8 +660,8 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 >
 > | campo | onde é escrito | grau |
 > |---|---|---|
-> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:1120-1122` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1123-1130`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1127`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
+> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:1193-1195` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1196-1203`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1200`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:184` | **ALTA** — lido no código |
 > | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:338-368` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
 >
 > *(Os endereços das duas primeiras linhas foram REAPONTADOS em 13/08/2026: eles
@@ -692,6 +692,11 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > trabalho que `scripts/validar-citacoes-de-linha.py` existe para tornar
 > barato — sem ele o endereço apodrece calado, e o próximo a ler abre o arquivo
 > no lugar errado e conclui que a afirmação é falsa.)*
+>
+> *(Reaponte de 23/08/2026, mesmo motivo mecânico: o P4 pôs `_resolver_escopo`
+> e `_casar_key` como funções de módulo em `:491` e desceu o resto ~73 linhas.
+> `:1120-1122` virou `:1193-1195` e `:1123-1130`/`:1127` virou
+> `:1196-1203`/`:1200`. Nenhuma afirmação mudou.)*
 >
 > **E a medição da curva caducou junto, que é o efeito mais caro deste
 > parágrafo.** O *"mudo até 38, satura em 102"* foi levantado **sem** o
@@ -1607,9 +1612,14 @@ mais do que esta página costuma exigir para MÉDIA.
    `[1, 1]` **reseta o controle** e `[12, 1, ...]` **grava calibração na NVS**.
    O par `[1, 19]` é leitura pura — mas **byte errado no payload escreve onde
    não devia**, e não há desfazer.
-3. **Só está demonstrado POR CABO.** O `dualshock-tools` **recusa Bluetooth de
-   saída**, e ninguém publicou este caminho funcionando por rádio. Por rádio é
-   território não demonstrado — o que **não** é o mesmo que impossível.
+3. **Funciona POR CABO, e o APARELHO recusa por rádio.** Medido em 23/08/2026,
+   nos dois DualSense desta bancada, com CRC de semente `0xA3` e com a cauda
+   zerada: o `SET_REPORT` sai inteiro (`btmon`: TX 65 bytes no canal de
+   controle L2CAP) e o controle responde `HANDSHAKE 0x04`
+   (`ERR_INVALID_PARAMETER`) em ~5 ms. Não é o BlueZ, não é o uhid, não é o
+   kernel — é o firmware. O `GET_FEATURE 0x20` no mesmo canal e no mesmo
+   instante responde em ~6 ms, o que descarta o fio. O `dualshock-tools`
+   **recusa Bluetooth de saída**, e agora se sabe por quê.
 
 **O que já foi DESCARTADO como fonte de cor, com o que descartou** (15/08/2026,
 quatro unidades de quatro cores diferentes):

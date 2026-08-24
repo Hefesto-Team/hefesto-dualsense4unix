@@ -58,6 +58,15 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
 from hefesto_dualsense4unix.app.actions.rumble_actions import (
     BTN_GIVE_BACK_TO_GAME,
 )
+from hefesto_dualsense4unix.app.alvo_de_edicao import (
+    MOTIVO_DAEMON_DESLIGADO,
+    MOTIVO_MESA_VAZIA,
+    MOTIVO_SEM_ESTADO,
+    AlvoDeEdicao,
+    alvo_de_edicao,
+    definir_alvo,
+    esquecer_alvo,
+)
 from hefesto_dualsense4unix.app.constants import (
     LIVE_POLL_INTERVAL_MS,
     RECONNECT_FAIL_THRESHOLD,
@@ -425,8 +434,20 @@ class StatusActionsMixin(WidgetAccessMixin):
     # perfil (draft.controllers) e exibir os valores efetivos do alvo. Fica
     # em sync com o `output_target_index` do daemon a 2 Hz e é atualizado NA
     # HORA no clique do seletor (a próxima mexida já cai no override certo).
-    _edit_target_uniq: str | None = None
-    _edit_target_label: str | None = None
+    #
+    # P3 (23/08/2026) — **o default de classe teve de sair**. Estas duas linhas
+    # eram `= None`, e `None` quer dizer "escreva em TODOS". Com isso o
+    # `getattr(self, "_edit_target_uniq", None)` dos nove leitores NUNCA caía
+    # no default do getattr: encontrava o atributo da classe, e a janela que
+    # não sabia qual era o alvo respondia "global" com toda a confiança. O
+    # irmão `_target_uniq_by_index` sempre foi anotação sem default — some de
+    # verdade quando ninguém o preenche — e era essa assimetria o defeito.
+    # Agora quem escreve estes dois campos é `app/alvo_de_edicao.py`, que os
+    # espelha (para os leitores não migrados) e os APAGA quando o alvo é
+    # desconhecido. Ver o módulo para o porquê e para a lista do que falta.
+    _edit_target_uniq: str | None
+    _edit_target_label: str | None
+    _alvo_de_edicao: AlvoDeEdicao
     _target_uniq_by_index: dict[int, str | None]
     _target_label_by_index: dict[int, str]
     _edit_badge: Any = None
@@ -1519,8 +1540,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._externals_inflight = False
         self._externals_sig = None
         # PERFIL-04: estado do alvo de edição por-controle.
-        self._edit_target_uniq = None
-        self._edit_target_label = None
+        # P3: montar a aba não é escolher "Todos" — é ainda não saber. Antes
+        # aqui se escrevia `None` nos dois campos, que os leitores traduzem
+        # para "escreva em todos os controles"; agora o estado nasce
+        # DESCONHECIDO e só vira alvo quando o `state_full` ou o clique dela
+        # disserem qual é.
+        esquecer_alvo(self, MOTIVO_SEM_ESTADO)
         self._target_uniq_by_index = {}
         self._target_label_by_index = {}
         self._edit_badge = None
@@ -1831,7 +1856,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         caixa = getattr(self, "_numero_box", None)
         if faixa is None or caixa is None:
             return
-        uniq = getattr(self, "_edit_target_uniq", None)
+        uniq = alvo_de_edicao(self).uniq
         slot = getattr(self, "_edit_target_slot", None)
         if not uniq or total < 2:
             if self._numero_visivel:
@@ -1870,7 +1895,15 @@ class StatusActionsMixin(WidgetAccessMixin):
             return
         if not button.get_active():
             return
-        uniq = getattr(self, "_edit_target_uniq", None)
+        alvo = alvo_de_edicao(self)
+        # P3: o único leitor honesto dos nove agora separa os dois motivos de
+        # não ter endereço. "Todos" é escolha dela e a instrução cabe; alvo
+        # DESCONHECIDO não é escolha de ninguém, e mandar escolher no cabeçalho
+        # com a mesa vazia seria pedir o impossível.
+        if alvo.desconhecido:
+            self._status_toast("numero", alvo.recusa() or "")
+            return
+        uniq = alvo.uniq
         if not uniq:
             self._status_toast(
                 "numero",
@@ -1964,7 +1997,8 @@ class StatusActionsMixin(WidgetAccessMixin):
 
         Idempotente: só atualiza badge e re-popula as abas por-controle
         (lightbar/gatilhos) quando o alvo efetivamente muda. ``None`` =
-        "Todos" (edição global, badge some).
+        "Todos" (edição global, badge some) — e, desde o P3, **só** isso:
+        para "não sei qual é o alvo" existe ``_esquecer_edit_target``.
 
         PLAYER-01: o NÚMERO do alvo (``_edit_target_slot``) é atualizado
         ANTES do curto-circuito de idempotência. Hoje o rótulo carrega o
@@ -1977,6 +2011,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         uniq: str | None = None
         label: str | None = None
         slot: int | None = None
+        atual = alvo_de_edicao(self)
         if target_index is not None:
             slot = getattr(self, "_target_slot_by_index", {}).get(target_index)
         self._edit_target_slot = slot
@@ -1988,7 +2023,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             # badge sumia e o "Aplicar no controle" seguinte ia pela rota
             # global, apagando o override por-MAC dos outros. Mantemos o alvo e
             # deixamos o rótulo dizer a verdade.
-            if uniq is None and label is None and self._edit_target_uniq is not None:
+            if uniq is None and label is None and atual.uniq is not None:
                 logger.debug(
                     "edit_target_alvo_sumiu_do_estado_mantendo",
                     indice=target_index,
@@ -2000,10 +2035,29 @@ class StatusActionsMixin(WidgetAccessMixin):
                 logger.debug(
                     "edit_target_sem_mac_edita_global", indice=target_index
                 )
-        if uniq == self._edit_target_uniq and label == self._edit_target_label:
+        # P3: a comparação é com o ESTADO, não com os dois campos. Vindo de
+        # DESCONHECIDO, `uniq`/`label` valem `None` nos dois lados e o
+        # curto-circuito antigo devolvia sem gravar nada — a escolha "Todos"
+        # dela morria no caminho e o alvo continuava desconhecido.
+        novo = definir_alvo(self, uniq, label)
+        if novo == atual:
             return
-        self._edit_target_uniq = uniq
-        self._edit_target_label = label
+        self._update_edit_badge()
+        self._refresh_target_tabs()
+
+    def _esquecer_edit_target(self, motivo: str) -> None:
+        """Declara que a janela NÃO sabe qual é o alvo — e por quê (P3).
+
+        Os dois caminhos que chegam aqui (a mesa esvaziou; o daemon caiu)
+        chamavam ``_sync_edit_target(None)``, que é o MESMO valor do clique em
+        "Todos". A janela passava então a editar a mesa inteira sem ninguém ter
+        pedido: com os dois controles desligados, um pixel de arrasto no brilho
+        apagava os overrides por controle do perfil inteiro, em silêncio.
+        """
+        if alvo_de_edicao(self).desconhecido:
+            return
+        esquecer_alvo(self, motivo)
+        self._edit_target_slot = None
         self._update_edit_badge()
         self._refresh_target_tabs()
 
@@ -2017,9 +2071,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         badge = getattr(self, "_edit_badge", None)
         if badge is None:
             return
+        alvo = alvo_de_edicao(self)
         texto = self._edit_badge_text(
-            self._edit_target_label,
-            com_endereco=bool(self._edit_target_uniq),
+            alvo.label,
+            com_endereco=bool(alvo.uniq),
         )
         if texto:
             badge.set_text(texto)
@@ -2161,7 +2216,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         # (antes derivava de len(botões)-1, que assumia a linha "Todos").
         self._dualsense_count = contagem.adotados
         if total < 1:
-            self._sync_edit_target(None)
+            # P3: mesa vazia é DESCONHECIDO, não "Todos". Era daqui que saía o
+            # pior caso medido — os dois controles desligados e um gesto de
+            # brilho apagando os overrides por controle do perfil inteiro.
+            self._esquecer_edit_target(MOTIVO_MESA_VAZIA)
             # PLAYER-01: sem controle nenhum não há número para escolher.
             self._refresh_numero_selector(0)
             if self._target_combo_visible:  # só esconde na TRANSIÇÃO
@@ -2580,9 +2638,10 @@ class StatusActionsMixin(WidgetAccessMixin):
             self._target_combo_visible = False
         # PLAYER-01: sem daemon não há número para trocar — a faixa some junto.
         self._refresh_numero_selector(0)
-        # PERFIL-04: sem daemon não há alvo de edição por-controle — a edição
-        # volta ao global e o badge some (idempotente se já estava global).
-        self._sync_edit_target(None)
+        # PERFIL-04: sem daemon não há alvo de edição por-controle — o badge
+        # some. P3: e o alvo fica DESCONHECIDO, não "Todos": "o Hefesto está
+        # desligado" nunca foi ordem de escrever na mesa inteira.
+        self._esquecer_edit_target(MOTIVO_DAEMON_DESLIGADO)
         # UX-03: daemon offline não é degradação do vpad — o banner some junto.
         self._refresh_vpad_banner(None)
         # GUI-05: idem para o aviso "jogo sem wrapper".
