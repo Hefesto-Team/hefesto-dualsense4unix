@@ -67,11 +67,18 @@ RAIZ = Path(__file__).resolve().parents[2]
 FOTOS = "docs/usage/assets"
 
 #: O que, mudando, torna as fotos suspeitas. `app/` é o código das abas;
-#: `gui/` é o `main.glade` e o `theme.css`. Mudança em qualquer um dos dois
-#: pode mover um pixel.
+#: `gui/` é o `main.glade` e o `theme.css`; `scripts/gui-captura` é o
+#: INSTRUMENTO que decide o que a foto mostra.
+#:
+#: Z0-1 (24/08/2026), §2.2/M1 da sprint Z0-01: até aqui a terceira entrada não
+#: existia, e o portão era CEGO ao próprio programa que tira a foto — uma
+#: mudança de +645 linhas em `retratar_abas.py` (o commit `3de95ff`, os cinco
+#: hosts) não tornava foto nenhuma suspeita. Ver `test_o_portao_acusa_retrato_
+#: mexido_depois_da_foto` para a mordida.
 CODIGO_DA_TELA = (
     "src/hefesto_dualsense4unix/app",
     "src/hefesto_dualsense4unix/gui",
+    "scripts/gui-captura",
 )
 
 
@@ -233,6 +240,62 @@ def test_o_portao_acusa_foto_atrasada(tmp_path: Path) -> None:
         "da última foto. É a situação exata de 13/08/2026, com três commits de "
         "`app/`/`gui/` entre a foto e a tag — e é o que este arquivo existe "
         "para não deixar acontecer de novo."
+    )
+
+
+def test_o_portao_acusa_retrato_mexido_depois_da_foto(tmp_path: Path) -> None:
+    """A MORDIDA do Z0-1 (§2.2/M1): o INSTRUMENTO conta como código da tela.
+
+    Repositório de dois commits: primeiro a foto, segundo **só**
+    `scripts/gui-captura/retratar_abas.py` — nenhum arquivo em `app/` nem em
+    `gui/`. Antes desta tarefa, `CODIGO_DA_TELA` não citava o script: o
+    segundo commit não tocava nada que o comparador olhasse, `_ultimo_commit`
+    para `CODIGO_DA_TELA` saía vazio e `fotos_em_dia` devolvia `None` — que
+    vira `pytest.skip`, verde, sem acusar nada. Com `scripts/gui-captura` na
+    tupla, o mesmo repositório tem de devolver `False`.
+
+    Para morder: comente a terceira entrada de `CODIGO_DA_TELA` (a linha
+    `"scripts/gui-captura"`) e rode este teste — ele reprova com
+    `assert None is False`, porque o comparador volta a ficar cego ao
+    instrumento.
+    """
+    raiz = tmp_path / "so_retrato_mexido"
+    (raiz / FOTOS).mkdir(parents=True)
+    (raiz / "scripts" / "gui-captura").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=str(raiz), check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "portao@exemplo.invalido"],
+        cwd=str(raiz),
+        check=True,
+    )
+    subprocess.run(["git", "config", "user.name", "Portão"], cwd=str(raiz), check=True)
+    sem_hooks = tmp_path / "sem_hooks_retrato"
+    sem_hooks.mkdir(exist_ok=True)
+    subprocess.run(
+        ["git", "config", "core.hooksPath", str(sem_hooks)],
+        cwd=str(raiz),
+        check=True,
+    )
+
+    def _commitar(caminho: str, conteudo: str, mensagem: str) -> None:
+        (raiz / caminho).write_text(conteudo, encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], cwd=str(raiz), check=True)
+        subprocess.run(
+            ["git", "commit", "-q", "-m", mensagem], cwd=str(raiz), check=True
+        )
+
+    _commitar(f"{FOTOS}/readme_inicio.png", "a foto", "primeiro")
+    _commitar(
+        "scripts/gui-captura/retratar_abas.py",
+        "+645 linhas, os cinco hosts",
+        "segundo — só o instrumento",
+    )
+
+    assert fotos_em_dia(raiz, FOTOS, CODIGO_DA_TELA) is False, (
+        "o comparador não acusou uma mudança em `scripts/gui-captura` "
+        "posterior à foto. É o buraco exato do F14: o instrumento que decide "
+        "o que a foto mostra mudou +645 linhas no commit `3de95ff` e nada "
+        "acusou, porque `CODIGO_DA_TELA` não o citava."
     )
 
 
