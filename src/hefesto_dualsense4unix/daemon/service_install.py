@@ -31,11 +31,60 @@ SYSTEM_UNIT_DIRS: list[Path] = [
 
 
 def user_unit_dir() -> Path:
-    """`~/.config/systemd/user/` (cria se não existe)."""
+    """`~/.config/systemd/user/` — só RESPONDE o caminho.
+
+    T-13 (ONDA0-Z7 · O AMBIENTE PRESUMIDO 01, 24/08/2026): antes o
+    `mkdir(parents=True, exist_ok=True)` era efeito colateral de PERGUNTAR
+    onde a pasta é — numa máquina sem systemd de usuário, `status_text()` e
+    `detect_installed_unit()` (LEITURA) criavam a pasta e seguiam como se
+    estivesse tudo bem. Quem precisa que a pasta EXISTA cria —
+    `ServiceInstaller.install` é o único chamador que grava algo nela.
+    """
     base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-    target = base / "systemd" / "user"
-    target.mkdir(parents=True, exist_ok=True)
-    return target
+    return base / "systemd" / "user"
+
+
+#: T-13 (ONDA0-Z7): a mesma resposta que `status_text` já escrevia para "unit
+#: não instalada" — reaproveitada para "não há systemd de usuário para
+#: perguntar", que é um estado DIFERENTE (a unit pode até estar instalada,
+#: copiada por um `install.sh` anterior) mas leva à MESMA ação daqui.
+_SEM_SYSTEMD_DE_USUARIO = (
+    "hefesto-dualsense4unix.service não instalada.\n"
+    "Para instalar via systemd --user:\n"
+    "  hefesto-dualsense4unix daemon install-service\n"
+    "Para iniciar em foreground sem systemd:\n"
+    "  hefesto-dualsense4unix daemon start --foreground"
+)
+
+
+def _systemctl_de_usuario_disponivel() -> bool:
+    """``systemctl`` existe no ``PATH`` E responde por uma instância de usuário?
+
+    T-13 (ONDA0-Z7, 24/08/2026). Sem esta conferência, `status_text()` ou
+    deixava `RuntimeError` escapar (``systemctl`` ausente do PATH — o
+    ``FileNotFoundError`` de ``_systemctl`` não é pego aqui) ou devolvia a
+    saída CRUA de erro do systemctl (``Failed to connect to bus: ...``) em
+    vez da mensagem amigável que este arquivo já escreve para "sem systemd"
+    (`_SEM_SYSTEMD_DE_USUARIO`, acima).
+
+    ``systemctl --user is-system-running`` imprime um ESTADO em stdout
+    (``running``/``degraded``/``starting``/...) quando há bus de usuário
+    respondendo, e stdout VAZIO (erro só em stderr, retcode != 0) quando não
+    há — container/chroot/SSH sem sessão de login, distro sem systemd.
+    """
+    if shutil.which("systemctl") is None:
+        return False
+    try:
+        resultado = subprocess.run(
+            ["systemctl", "--user", "is-system-running"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return bool(resultado.stdout.strip())
 
 
 def find_assets_dir() -> Path:
@@ -81,8 +130,12 @@ class ServiceInstaller:
         if not src.exists():
             raise FileNotFoundError(f"unit source não existe: {src}")
 
-        dst = user_unit_dir() / SERVICE_NORMAL
+        unit_dir = user_unit_dir()
+        dst = unit_dir / SERVICE_NORMAL
         if not self.dry_run:
+            # T-13: quem GRAVA cria a pasta — user_unit_dir() só responde o
+            # caminho desde 24/08/2026.
+            unit_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
         logger.info("service_copied", src=str(src), dst=str(dst))
 
@@ -134,15 +187,18 @@ class ServiceInstaller:
         nem em `SYSTEM_UNIT_DIRS`), retorna mensagem clara em vez de string
         vazia — o `systemctl status <unit-inexistente>` escreve a explicação em
         stderr e fica com stdout vazio, o que confunde o usuário CLI.
+
+        T-13 (ONDA0-Z7, 24/08/2026): a MESMA mensagem agora também cobre
+        ``systemctl`` ausente do ``PATH`` ou sem instância de usuário
+        respondendo — antes esses dois casos ou explodiam (``RuntimeError``,
+        propagado de ``_systemctl``) ou devolviam a saída crua de erro do
+        systemctl, em vez da orientação de "rode em foreground" que este
+        arquivo já sabia escrever.
         """
+        if not _systemctl_de_usuario_disponivel():
+            return _SEM_SYSTEMD_DE_USUARIO
         if self.detect_installed_unit() is None:
-            return (
-                "hefesto-dualsense4unix.service não instalada.\n"
-                "Para instalar via systemd --user:\n"
-                "  hefesto-dualsense4unix daemon install-service\n"
-                "Para iniciar em foreground sem systemd:\n"
-                "  hefesto-dualsense4unix daemon start --foreground"
-            )
+            return _SEM_SYSTEMD_DE_USUARIO
         result = self._systemctl(
             "status", SERVICE_NORMAL, capture=True, check=False
         )

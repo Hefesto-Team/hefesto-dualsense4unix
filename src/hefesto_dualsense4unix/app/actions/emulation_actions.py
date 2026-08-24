@@ -999,8 +999,15 @@ class EmulationActionsMixin(WidgetAccessMixin):
     #: isolável e produção não muda. Irmão de `storm_doctor._allowlist_path`.
     @staticmethod
     def _wp_dropin_dir() -> Path:
-        """Diretório dos drop-ins do WirePlumber, resolvido a cada chamada."""
-        return Path.home() / ".config" / "wireplumber" / "wireplumber.conf.d"
+        """Diretório dos drop-ins do WirePlumber, resolvido a cada chamada.
+
+        T-05 (ONDA0-Z7, 24/08): dono único em `xdg_paths.wireplumber_config_dir`
+        — honra `XDG_CONFIG_HOME`, que o WirePlumber em si honra e este ponto
+        ignorava calado.
+        """
+        from hefesto_dualsense4unix.utils.xdg_paths import wireplumber_config_dir
+
+        return wireplumber_config_dir()
 
     _WP_DISABLE_DROPINS = (
         "52-hefesto-dualsense-disable-source.conf",

@@ -35,11 +35,15 @@ class DummyResult:
 def dummy_systemctl(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
     calls: list[list[str]] = []
 
-    def fake_run(cmd, check=True, capture_output=True, text=True):
+    def fake_run(cmd, check=True, capture_output=True, text=True, **kwargs):
+        # **kwargs: T-13 (ONDA0-Z7) acrescentou `timeout=` na sonda de
+        # `_systemctl_de_usuario_disponivel` — este dublê aceita qualquer
+        # kwarg extra em vez de travar toda chamada por causa de UMA nova.
         calls.append(list(cmd))
         return DummyResult(stdout="active (running)\n")
 
     monkeypatch.setattr(si.subprocess, "run", fake_run)
+    monkeypatch.setattr(si.shutil, "which", lambda _n: "/usr/bin/systemctl")
     return calls
 
 
@@ -133,10 +137,11 @@ def test_status_text_concatena_stdout_e_stderr(
             self.stderr = "warning: unit deprecated"
             self.returncode = 0
 
-    def fake_run(cmd, check=True, capture_output=True, text=True):
+    def fake_run(cmd, check=True, capture_output=True, text=True, **kwargs):
         return DualOutputResult()
 
     monkeypatch.setattr(si.subprocess, "run", fake_run)
+    monkeypatch.setattr(si.shutil, "which", lambda _n: "/usr/bin/systemctl")
     installer = ServiceInstaller()
     text = installer.status_text()
     assert "active (running)" in text

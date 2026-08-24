@@ -1355,7 +1355,66 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "dele é `scripts/gerar-tabela-de-curvas.py`:52, um gerador de "
         "documentação. Nada em `src/` o carrega do disco."
     ),
+    # --- ONDA0-Z7 · O AMBIENTE PRESUMIDO 01 (24/08/2026): primitivas
+    # entregues DELIBERADAMENTE sem fiação — a sprint (§10) nomeia quem
+    # pendura cada uma, para não colidir com as ondas de aba em andamento.
+    "app/actions/ambiente_na_tela.py::descrever_teclado_na_tela": (
+        "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `osk_disponivel` — "
+        "publicada por `daemon/ipc_handlers.py:2009` desde 10/08/2026 e órfã "
+        "de leitor em `app/` (medido: `grep -rn osk_disponivel app/ gui/` "
+        "devolvia vazio). ONDE O CAMINHO SE PERDE: nenhuma tela ainda chama "
+        "esta função — o arquivo nasceu vazio de dono de propósito (§5 da "
+        "sprint), para não entrar em `app/actions/input_actions.py`. O QUE "
+        "FECHA: a Onda 10 · Navegação pendura esta frase perto do binding do "
+        "L3 (§10 da sprint nomeia o gancho)."
+    ),
+    "app/actions/ambiente_na_tela.py::descrever_display_grafico": (
+        "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê "
+        "`window_detect_backend`/`window_detect_reason`, complementando (sem "
+        "substituir) `daemon_actions.descrever_deteccao_de_janela`. ONDE O "
+        "CAMINHO SE PERDE: mesma razão da irmã acima — arquivo sem dono de "
+        "propósito. O QUE FECHA: a Onda 11 · Sistema pendura esta frase perto "
+        "do cartão de saúde do ambiente gráfico (§10 da sprint)."
+    ),
+    "app/actions/ambiente_na_tela.py::descrever_steam_encontrada": (
+        "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `steam_layout_achado` — "
+        "chave que NENHUMA frente desta sprint publica ainda em `state_full` "
+        "(Z7-C não toca `daemon/ipc_handlers.py`, por posse declarada em §5). "
+        "ONDE O CAMINHO SE PERDE: falta o publicador da chave, além do leitor "
+        "de tela. O QUE FECHA: a Onda 11 · Sistema, ou quem publicar a chave "
+        "primeiro (§10 da sprint)."
+    ),
+    "integrations/proton_pin.py::steam_root_ou_recusa": (
+        "ENTREGUE em 24/08/2026 (T-09, ONDA0-Z7). `default_steam_root` "
+        "continua excluindo Flatpak/Snap por decisão medida; esta função "
+        "acrescenta o MOTIVO para a tela, no formato de recusa da Z1. ONDE O "
+        "CAMINHO SE PERDE: Z7-C não toca `app/actions/emulation_actions.py` "
+        "(posse declarada em §5) — o botão 'Travar Proton validado' ainda "
+        "chama só `default_steam_root`. O QUE FECHA: a Onda 5 · Emulação liga "
+        "o botão a esta função e decide a frase final com a Z1 (§10 da "
+        "sprint)."
+    ),
+    "utils/maquina.py::gravar_rascunho_da_mesa": (
+        "ENTREGUE em 24/08/2026 (T-07, ONDA0-Z7). Mesma gravação atômica de "
+        "`gravar_maquina`, escopada à seção `mesa`, para o gesto de "
+        "'declarar sem clicar Aplicar' ter primitiva própria. ONDE O CAMINHO "
+        "SE PERDE: Z7-B não toca `app/actions/footer_actions.py` (posse "
+        "declarada em §5) — o único escritor de `maquina.json` hoje continua "
+        "sendo o botão 'Aplicar'. O QUE FECHA: a Onda 1 · Configurações "
+        "(CONFIG-03) chama esta função no gesto de declarar, sem esperar o "
+        "clique (§10 da sprint, item 4 do aceite)."
+    ),
 }
+
+#: ONDA0-Z7 (24/08/2026): achado FORA do escopo desta sprint, durante a
+#: execução — `app/ipc_bridge.py::machine_declare` e
+#: `utils/maquina.py::gravar_maquina` JÁ estavam soltos e não-classificados
+#: ANTES de qualquer mudança desta leva (conferido contra `3e7b6cb`, o commit
+#: em que esta árvore nasceu — `git stash -u` + rodar este mesmo teste
+#: devolve os dois, sozinhos, como únicas soltas). Não são meus para
+#: declarar: nenhuma tarefa de ONDA0-Z7 os toca, e uma nota escrita às
+#: pressas por quem não mediu o caminho vale menos que "NÃO VERIFICADO".
+#: Relatado no relatório do executor para quem coordena decidir a régua 1-4.
 
 
 # ===========================================================================
@@ -2441,11 +2500,17 @@ class TestOPortaoMorde:
         produto.
         """
         soltas = promessas_sem_caminho()
-        assert len(soltas) < 75, (
+        assert len(soltas) < 80, (
             f"a varredura acusou {len(soltas)} promessas soltas — a régua "
             "quebrou. MEDIDO em 22/08/2026: 60 com a régua de alcance (eram 33 "
             "com a régua plana), e a regra ingênua ('chamador fora do próprio "
-            "arquivo') dava 846."
+            "arquivo') dava 846. REMEDIDO em 24/08/2026 (ONDA0-Z7): 72 na "
+            "árvore de então (já perto do teto antigo de 75, sem ninguém "
+            "notar — nota para quem coordena) e 76 depois das cinco primitivas "
+            "desta sprint, todas DECLARADAS em `_SEM_CAMINHO_HOJE` com o gancho "
+            "de quem as liga. O teto sobe para 80: folga sobre o crescimento "
+            "normal do registro, não sobre um scanner quebrado — se ele voltar "
+            "a subir sem `_SEM_CAMINHO_HOJE` crescer junto, É a régua quebrando."
         )
         # O fecho de import é a metade que mais engana quando quebra: se ele
         # encolher, o portão passa a acusar quem está certo, e a acusação sobe

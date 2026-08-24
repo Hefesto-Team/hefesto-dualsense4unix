@@ -38,6 +38,7 @@ from hefesto_dualsense4unix.app.actions.emulation_actions import (
     EmulationActionsMixin,
     markup_status_steam_input,
 )
+from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.integrations import storm_doctor as sd
 from hefesto_dualsense4unix.integrations.jogos_locais import (
@@ -329,3 +330,136 @@ class TestOsAtalhosSeguemOXdg:
         alvos = pastas_de_atalhos()
         assert alvos.count(casa / "applications") == 1
         assert all(p.is_dir() for p in alvos)
+
+
+# ---------------------------------------------------------------------------
+# T-10 (ONDA0-Z7, 24/08/2026) — a lista de raízes é uma só, e o portão
+# alcança o scripts/doctor.sh (não só o lado Python).
+# ---------------------------------------------------------------------------
+class TestOPortaoAlcancaOScriptsDoctorSh:
+    """Antes deste teste, o `doctor.sh` podia divergir de
+    `RAIZES_STEAM_RELATIVAS` e nada acusava — é a família **F6** (duas réguas
+    discordando) na escala de UM arquivo: `check_vdf_poison` já cobria os
+    quatro layouts, `check_proton_pin` só dois e `_steam_input_do_appid`
+    cobria dois nativos mais um terceiro caminho não-canônico
+    ("debian-installation"). T-08 igualou as três; este teste é a rede.
+    """
+
+    _FUNCOES_COM_LISTA_DE_RAIZES = (
+        "check_vdf_poison",
+        "check_proton_pin",
+        "_steam_input_do_appid",
+    )
+
+    @staticmethod
+    def _corpo_da_funcao(texto: str, nome: str) -> str:
+        """O corpo de `nome() { ... }` — do cabeçalho ao `}` na coluna 0."""
+        inicio = texto.index(f"\n{nome}() {{\n")
+        fim = texto.index("\n}\n", inicio)
+        return texto[inicio:fim]
+
+    def test_as_tres_listas_do_doctor_sh_contem_os_quatro_layouts(
+        self, repo_root: Path
+    ) -> None:
+        texto = (repo_root / "scripts" / "doctor.sh").read_text(encoding="utf-8")
+        faltando: list[str] = []
+        for nome in self._FUNCOES_COM_LISTA_DE_RAIZES:
+            corpo = self._corpo_da_funcao(texto, nome)
+            for layout in slo.RAIZES_STEAM_RELATIVAS:
+                if layout not in corpo:
+                    faltando.append(f"{nome}() não cobre '{layout}'")
+        assert not faltando, "\n".join(faltando)
+
+    def test_tirar_uma_raiz_de_uma_secao_reprova_nomeando_a_secao(
+        self, repo_root: Path
+    ) -> None:
+        """A MORDIDA de T-10: tirar o layout snap de UMA seção só (aqui,
+        `check_proton_pin`) faz o teste acima reprovar, nomeando exatamente
+        essa função — não as outras duas, que continuam com as quatro."""
+        texto = (repo_root / "scripts" / "doctor.sh").read_text(encoding="utf-8")
+        alvo = '"${HOME}/snap/steam/common/.steam/steam/config/config.vdf"'
+        assert alvo in texto  # a mutação abaixo precisa achar alguma coisa
+        mutilado = texto.replace(alvo, '"/dev/null/nao-existe-mais"')
+
+        faltando: list[str] = []
+        for nome in self._FUNCOES_COM_LISTA_DE_RAIZES:
+            corpo = self._corpo_da_funcao(mutilado, nome)
+            for layout in slo.RAIZES_STEAM_RELATIVAS:
+                if layout not in corpo:
+                    faltando.append(f"{nome}() não cobre '{layout}'")
+
+        assert faltando == ["check_proton_pin() não cobre 'snap/steam/common/.steam/steam'"]
+
+
+# ---------------------------------------------------------------------------
+# T-09 (ONDA0-Z7, 24/08/2026) — "Travar Proton validado" diz por que não
+# pode, em vez de calar.
+# ---------------------------------------------------------------------------
+class TestSteamRootOuRecusa:
+    """`default_steam_root` CONTINUA excluindo Flatpak/Snap (decisão medida).
+
+    O que muda é a TELA saber dizer por quê — nunca ``(None, None)``, que
+    seria o F1 ("aplicado" sem prova) na forma negativa.
+    """
+
+    def test_layout_nativo_devolve_raiz_sem_motivo(self, home_isolado: Path) -> None:
+        raiz = _casa_com_steam(home_isolado, _LAYOUTS["nativa"])
+        resultado = proton_pin.steam_root_ou_recusa(home_isolado)
+        assert resultado.raiz == raiz
+        assert resultado.motivo is None
+
+    def test_so_flatpak_devolve_recusa_com_motivo_nao_vazio(
+        self, home_isolado: Path
+    ) -> None:
+        """A MORDIDA central de T-09."""
+        _casa_com_steam(home_isolado, _LAYOUTS["flatpak"])
+        resultado = proton_pin.steam_root_ou_recusa(home_isolado)
+        assert resultado.raiz is None
+        assert resultado.motivo  # não vazio, não None
+        assert "Flatpak" in resultado.motivo
+        assert "caixa" in resultado.motivo
+
+    def test_so_snap_devolve_recusa_com_motivo_nao_vazio(
+        self, home_isolado: Path
+    ) -> None:
+        _casa_com_steam(home_isolado, _LAYOUTS["snap"])
+        resultado = proton_pin.steam_root_ou_recusa(home_isolado)
+        assert resultado.raiz is None
+        assert resultado.motivo
+        assert "Snap" in resultado.motivo
+
+    def test_nenhuma_steam_tambem_diz_por_que(self, home_isolado: Path) -> None:
+        resultado = proton_pin.steam_root_ou_recusa(home_isolado)
+        assert resultado.raiz is None
+        assert resultado.motivo
+        assert "nenhuma steam" in resultado.motivo.lower()
+
+    def test_flatpak_e_nativa_juntas_prefere_a_nativa(self, home_isolado: Path) -> None:
+        """Quem tem as duas pode travar na nativa -- não é recusa."""
+        raiz = _casa_com_steam(home_isolado, _LAYOUTS["nativa"])
+        _casa_com_steam(home_isolado, _LAYOUTS["flatpak"], appid="1000")
+        resultado = proton_pin.steam_root_ou_recusa(home_isolado)
+        assert resultado.raiz == raiz
+        assert resultado.motivo is None
+
+    def test_arrancar_a_propagacao_do_motivo_reprova(
+        self, home_isolado: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Arrancar a cura: uma versão que devolve `(None, None)` sempre que
+        não há raiz reproduz o F1 — o teste tem de reprovar contra ela."""
+        _casa_com_steam(home_isolado, _LAYOUTS["flatpak"])
+
+        def _versao_antiga_sem_motivo(
+            home: Path | None = None,
+        ) -> proton_pin.RaizDaSteamOuRecusa:
+            base = home or Path.home()
+            raiz = proton_pin.default_steam_root(base)
+            return proton_pin.RaizDaSteamOuRecusa(
+                raiz if raiz.is_dir() else None, None
+            )
+
+        monkeypatch.setattr(proton_pin, "steam_root_ou_recusa", _versao_antiga_sem_motivo)
+        resultado = proton_pin.steam_root_ou_recusa(home_isolado)
+        assert resultado == (None, None)  # reproduz F1: nem raiz, nem motivo
+        with pytest.raises(AssertionError):
+            assert resultado.motivo  # a régua boa reprovaria isto

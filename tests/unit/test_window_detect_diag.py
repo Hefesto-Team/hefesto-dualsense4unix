@@ -306,17 +306,32 @@ class TestSubsystemDiagReader:
     """`_build_diag_window_reader` semeia e grava no store (reader fake)."""
 
     class _FakeDiagReader:
-        """Duble do WindowReaderDiag retornado por build_window_reader."""
+        """Duble do WindowReaderDiag retornado por build_window_reader.
 
-        def __init__(self, backend_name: str, readings: list[dict[str, Any]]) -> None:
+        `provou_conexao` (T-01, ONDA0-Z7): estado que `conexao_provada()`
+        devolve — `None` por padrão, o mesmo "nenhuma tentativa ainda" do
+        `XlibBackend` real, para os dublês que não se importam com a sonda de
+        T-01 continuarem representando "sem prova" e não "conectado".
+        """
+
+        def __init__(
+            self,
+            backend_name: str,
+            readings: list[dict[str, Any]],
+            provou_conexao: bool | None = None,
+        ) -> None:
             self.backend_name = backend_name
             self._readings = readings
             self._i = 0
+            self._provou_conexao = provou_conexao
 
         def __call__(self) -> dict[str, Any]:
             reading = self._readings[min(self._i, len(self._readings) - 1)]
             self._i += 1
             return reading
+
+        def conexao_provada(self) -> bool | None:
+            return self._provou_conexao
 
     def _patch_builder(
         self, monkeypatch: pytest.MonkeyPatch, fake: _FakeDiagReader
@@ -326,11 +341,21 @@ class TestSubsystemDiagReader:
             lambda: fake,
         )
 
-    def test_seed_xlib_presume_saudavel(
+    def test_seed_xlib_com_prova_de_conexao_nasce_saudavel(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """T-01 (ONDA0-Z7): `xlib` só nasce saudável com PROVA de conexão.
+
+        Substitui `test_seed_xlib_presume_saudavel` — a presunção antiga
+        (`initial_healthy = initial_backend == "xlib"`) nascia `True` só por
+        `DISPLAY` estar presente, mesmo com o servidor recusando (medido:
+        716 falhas em 6h, `healthy=True` a sessão toda). Agora precisa da
+        sonda confirmar `conexao_provada() is True`.
+        """
         store = StateStore()
-        fake = self._FakeDiagReader("xlib", [{"wm_class": "unknown"}])
+        fake = self._FakeDiagReader(
+            "xlib", [{"wm_class": "unknown"}], provou_conexao=True
+        )
         self._patch_builder(monkeypatch, fake)
 
         _build_diag_window_reader(store)
@@ -338,6 +363,26 @@ class TestSubsystemDiagReader:
         assert store.window_detect_backend == "xlib"
         assert store.window_detect_healthy is True
         assert store.window_detect_last_class is None
+
+    def test_seed_xlib_sem_prova_de_conexao_nasce_nao_saudavel(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """T-01: `DISPLAY` presente e MORTO não basta mais (item 7 do aceite).
+
+        A sonda tentou e o servidor recusou (`conexao_provada() is False`) —
+        o caso medido na bancada dela em 23/08. `window_detect_healthy` tem
+        de nascer `False`, não `True` por presunção.
+        """
+        store = StateStore()
+        fake = self._FakeDiagReader(
+            "xlib", [{"wm_class": "unknown"}], provou_conexao=False
+        )
+        self._patch_builder(monkeypatch, fake)
+
+        _build_diag_window_reader(store)
+
+        assert store.window_detect_backend == "xlib"
+        assert store.window_detect_healthy is False
 
     def test_seed_null_nasce_nao_saudavel(
         self, monkeypatch: pytest.MonkeyPatch

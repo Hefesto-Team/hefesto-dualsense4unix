@@ -337,6 +337,31 @@ def gravar_maquina(declaracao: Mapping[str, Any]) -> bool:
     return gravar_maquina_com_descartes(declaracao).gravou
 
 
+def gravar_rascunho_da_mesa(declaracao: Mapping[str, Any]) -> bool:
+    """Grava a seção ``mesa`` como RASCUNHO — sem o gesto de "Aplicar" atrás.
+
+    T-07 (ONDA0-Z7 · O AMBIENTE PRESUMIDO 01, 24/08/2026). Hoje o único
+    escritor de ``maquina.json`` é o botão "Aplicar" do rodapé
+    (``app/actions/footer_actions.py``, via ``machine.declare``) — declarar a
+    mesa e fechar o programa sem clicar nele perde tudo, sem aviso (medido em
+    §3.7 da sprint). Esta função é a PRIMITIVA que a Onda 1 · Configurações
+    (CONFIG-03) vai pendurar no gesto de declarar: mesma gravação atômica,
+    mesmo lock (``MAQUINA_FILE_LOCK``), mesma preservação do que não entende —
+    tudo herdado de :func:`gravar_maquina_com_descartes`, sem duplicar nada.
+
+    Escopada à seção ``mesa`` de propósito: o chamador (uma seção da aba) não
+    precisa conhecer o envelope do documento inteiro, só os campos de
+    :class:`MesaDeclarada` que ela mesma editou. Um rascunho **nunca inventa**
+    valor de catálogo — campo ausente de ``declaracao`` continua sem valor,
+    porque :func:`fundir_declaracao` só sobrescreve o que veio.
+
+    Z7-B **não chama** esta função de lugar nenhum: quem liga o gesto de
+    declarar a ela é a Onda 1, em ``footer_actions.py`` ou vizinho — ver §10 da
+    sprint.
+    """
+    return gravar_maquina({"mesa": dict(declaracao)})
+
+
 def gravar_maquina_com_descartes(declaracao: Mapping[str, Any]) -> ResultadoDaGravacao:
     """Funde a declaração PARCIAL no documento do disco.
 
