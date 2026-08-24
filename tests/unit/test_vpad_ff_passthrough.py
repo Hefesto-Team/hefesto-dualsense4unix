@@ -534,20 +534,37 @@ class TestApplyGameRumble:
         assert backend.get_output_target_index() == 0  # seleção preservada
         assert backend.target_calls == []  # nem um flip sequer
 
-    def test_mac_desconhecido_cai_em_broadcast(self) -> None:
+    def test_mac_pedido_e_nao_casado_nao_vira_broadcast(self) -> None:
+        """BROADCAST-PROIBIDO-01, 24/08/2026: endereço PEDIDO e que não casa
+        nenhum handle descarta com log — NUNCA replica nos outros controles.
+        Este teste é a inversão do antigo `test_mac_desconhecido_cai_em_
+        broadcast`, que exigia (e travava, F2 na forma canônica) exatamente o
+        comportamento que esta invariante proíbe: o pulso do jogador 2 na mão
+        dos outros três."""
         backend = _FakeBackend()
         daemon = _make_daemon(controller=backend)
         gp_mod.apply_game_rumble(daemon, 90, 90, target_uniq="ffffffffffff")
-        assert backend.rumbles == [(None, 90, 90)]
+        assert backend.rumbles == []  # descartado, ninguém vibra
         assert backend.target_calls == []
 
-    def test_backend_sem_targeting_cai_em_broadcast(self) -> None:
+    def test_sem_endereco_pedido_broadcast_continua_legitimo(self) -> None:
+        """Contra-classe de `test_mac_pedido_e_nao_casado_nao_vira_broadcast`:
+        quando NENHUM endereço foi pedido (`target_uniq is None` — backend sem
+        `primary_uniq`, ex.: `FakeController`, ou mesa de um controle só),
+        broadcast e mira são a MESMA coisa, e o broadcast continua legítimo.
+        Antes de 24/08 este teste chamava com `target_uniq=MAC_2` — um
+        endereço explicitamente pedido — e por isso, junto do teste acima,
+        travava o broadcast proibido a dois nomes que a leitura não distinguia
+        (ambos "caem em broadcast"). Corrigido para o caso real: um backend
+        sem a API por-uniq nunca RECEBE um `target_uniq` — quem chama
+        (`make_primary_rumble_sink`) resolve `primary_uniq` via `getattr(...,
+        None)` e passa `None` adiante."""
         rumbles: list[tuple[int, int]] = []
         controller = SimpleNamespace(
             set_rumble=lambda weak, strong: rumbles.append((weak, strong))
         )
         daemon = _make_daemon(controller=controller)
-        gp_mod.apply_game_rumble(daemon, 80, 90, target_uniq=MAC_2)
+        gp_mod.apply_game_rumble(daemon, 80, 90, target_uniq=None)
         assert rumbles == [(80, 90)]
 
     def test_sink_do_primario_mira_o_primario(self) -> None:

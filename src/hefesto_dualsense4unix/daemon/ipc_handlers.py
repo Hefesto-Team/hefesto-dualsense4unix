@@ -1042,12 +1042,48 @@ class IpcHandlersMixin:
         U x N segue valendo — sob ``display_authority=='game'`` o jogo vence no
         reassert), e a camada do CO-OP continua acima para ``player_leds``.
 
+        BROADCAST-PROIBIDO-01 (24/08/2026): este método só existe para o caso
+        "Todos". Quando HÁ um alvo no seletor (presente OU ausente, com MAC
+        estável), a escrita clássica que roda ANTES (``set_led``/
+        ``set_player_leds``, via ``_for_each_led``/``_for_each``) já resolveu o
+        MESMO ``_output_target_key`` e ``_record_desired_locked`` já registrou
+        o override SÓ no MAC do alvo — presente ou ausente, é a mesma função
+        que grava aqui. Rodar o laço de qualquer forma era o achado mais caro
+        da frente: com o alvo AUSENTE, os três outros conectados recebiam a
+        cor de qualquer jeito (o pulso do jogador 2 na mão dos outros três, o
+        `_for_each_led` acertava e este laço desfazia por baixo); com o alvo
+        PRESENTE, ele recebia uma segunda escrita e os outros três recebiam a
+        primeira (mesmo defeito, forma mais silenciosa). Sem MAC estável (key
+        por path) nem `get_output_target_uniq` nem `alvo_de_output_ausente`
+        têm o que devolver — cai no comportamento histórico (documentado nos
+        dois getters), que é este laço de "Todos".
+
         Devolve os MACs em que o registro entrou — lista vazia quando o backend
-        não expõe ``apply_output_for``/``describe_controllers`` ou a mesa está
-        vazia. É essa lista que a resposta publica em ``aplicado_em``.
+        não expõe ``apply_output_for``/``describe_controllers``, a mesa está
+        vazia, ou o seletor já mira um alvo específico (nada a fazer aqui). É
+        essa lista que a resposta publica em ``aplicado_em``.
         """
         apply_for = getattr(self.controller, "apply_output_for", None)
         if not callable(apply_for):
+            return []
+        alvo_uniq_fn = getattr(self.controller, "get_output_target_uniq", None)
+        alvo_presente = alvo_uniq_fn() if callable(alvo_uniq_fn) else None
+        if isinstance(alvo_presente, str) and alvo_presente:
+            # A escrita clássica que roda ANTES (`set_led`/`set_player_leds`,
+            # via `_for_each_led`/`_for_each`) já resolveu o MESMO
+            # `_output_target_key`, escreveu FÍSICO só neste controle e já
+            # registrou o override dele em `_desired_by_uniq`
+            # (`_record_desired_locked` com o alvo presente). Chamar
+            # `apply_output_for` de novo seria a escrita DUPLA medida no
+            # §2.1(b) — só reporta o que já aconteceu.
+            return [alvo_presente]
+        alvo_ausente_fn = getattr(self.controller, "alvo_de_output_ausente", None)
+        alvo_ausente = alvo_ausente_fn() if callable(alvo_ausente_fn) else None
+        if isinstance(alvo_ausente, str) and alvo_ausente:
+            # Idem: a escrita clássica já registrou o override no MAC do
+            # ausente (mesmo `_record_desired_locked`) e não escreveu em
+            # ninguém (`_resolver_escopo` devolve zero handles para o
+            # ausente). Nada a fazer, nada a reportar em `aplicado_em`.
             return []
         alvos = self._uniqs_conectados()
         if not alvos:
@@ -1089,10 +1125,10 @@ class IpcHandlersMixin:
           campo fica com dono ``usuaria``; depois de um ``set_trigger``
           broadcast o override some e o dono vira ``None``. Re-registrar por
           controle desfaria o nivelamento que a própria rota promete.
-        * **Não** promete ``guardado_em`` — pelo mesmo nivelamento não há
-          promessa por-controle a publicar: o valor foi para o default, sem
-          endereço. Publicar um MAC aqui seria mandar a usuária esperar por um
-          controle que não é o dono do que ela pediu.
+        * ``guardado_em`` só é prometido no caso do alvo AUSENTE (abaixo) —
+          para "Todos" continua sem promessa por-controle: o valor foi para o
+          default, sem endereço, e publicar um MAC aqui mandaria a usuária
+          esperar por um controle que não é o dono do que ela pediu.
         * **Não** afirma nada em **Modo Nativo**: o ``report_thread`` está mudo
           e nenhum byte sai (CONSERTO 1.3). É onde a rota irmã ainda mente —
           medido em 14/08, ``led.set`` sem ``uniq`` com o output mutado responde
@@ -1102,6 +1138,17 @@ class IpcHandlersMixin:
           está nela nem onde o seletor está, ou alvo do seletor sem MAC estável
           (key por path) devolvem as duas listas vazias — o "não sei dizer em
           quem" que o comentário do ``led.set`` já fixou.
+
+        BROADCAST-PROIBIDO-01 (24/08/2026): antes de ler
+        ``get_output_target_index`` — que MASCARA "Todos" e "alvo sumiu" no
+        MESMO ``None`` (o próprio getter documenta a ambiguidade) — este
+        método pergunta ``alvo_de_output_ausente``. Alvo escolhido e FORA da
+        mesa devolve ``([], [alvo])``: a escrita clássica (``set_trigger``, via
+        ``_for_each``/``_resolver_escopo``) não foi a ninguém, e o valor ficou
+        guardado no override por-uniq dele — a mesma dupla verdade que
+        ``output_alvo_ausente_noop`` já loga. Fundir os dois destinos aqui era
+        exatamente a fusão que o F4 desfez um andar abaixo, só que nomeando os
+        TRÊS conectados como se tivessem recebido o gatilho do jogador ausente.
 
         O teto de verdade é o MESMO do ramo por-``uniq``: ``_apply_trigger`` só
         arma o estado no handle (``trigger.mode``/``setForce``, sem I/O nenhum)
@@ -1113,6 +1160,10 @@ class IpcHandlersMixin:
             return [], []
         if self.daemon is not None and self.daemon.is_native_mode():
             return [], []
+        alvo_ausente_fn = getattr(self.controller, "alvo_de_output_ausente", None)
+        alvo_ausente = alvo_ausente_fn() if callable(alvo_ausente_fn) else None
+        if isinstance(alvo_ausente, str) and alvo_ausente:
+            return [], [alvo_ausente]
         onde_mira = getattr(self.controller, "get_output_target_index", None)
         if not callable(onde_mira):
             return [], []
@@ -3896,10 +3947,24 @@ class IpcHandlersMixin:
         FICOU valendo); o que muda é o `status`, que passa a "recusado", e o
         `desfecho`, que nomeia o porquê. Mesmo desenho do `coop.set` que recusa
         desligar e do vocabulário `EMU_*` do gamepad.
+
+        BROADCAST-PROIBIDO-01 (24/08/2026): o alvo escolhido no seletor e FORA
+        da mesa também RECUSA, pela mesma ordem e o mesmo molde da recusa de
+        Modo Nativo três linhas acima — `app/ipc_bridge.py:600`
+        (`rumble_set_checked`) já lê esse molde, então nenhuma ponte precisa
+        nascer. É o chamador de produção que faltava a
+        `PyDualSenseController.alvo_de_output_ausente` (zero antes desta
+        leva): sem consultar, `daemon_cfg.rumble_active` era armado e
+        `set_rumble` chamado incondicionalmente, e o `_for_each_com_key` (já
+        curado pelo F4) escrevia zero no ausente — mas o handler respondia
+        "ok" mesmo assim, e o reassert de 5 Hz insistia num par que nunca
+        chegou a lugar nenhum.
         """
         from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            MOTIVO_ALVO_FORA_DA_MESA,
             MOTIVO_MODO_NATIVO_MANDA_NOS_MOTORES,
             RUMBLE_APLICADO,
+            RUMBLE_RECUSADO_ALVO_AUSENTE,
             RUMBLE_RECUSADO_MODO_NATIVO,
             modo_nativo_manda_nos_motores,
         )
@@ -3928,6 +3993,26 @@ class IpcHandlersMixin:
                 "desfecho": RUMBLE_RECUSADO_MODO_NATIVO,
                 "motivo": MOTIVO_MODO_NATIVO_MANDA_NOS_MOTORES,
                 # A verdade sobre o que FICOU, não sobre o que foi pedido.
+                "weak": par_de_pe[0] if par_de_pe else 0,
+                "strong": par_de_pe[1] if par_de_pe else 0,
+                "passthrough": par_de_pe is None,
+            }
+        alvo_ausente_fn = getattr(self.controller, "alvo_de_output_ausente", None)
+        alvo_ausente = alvo_ausente_fn() if callable(alvo_ausente_fn) else None
+        if isinstance(alvo_ausente, str) and alvo_ausente:
+            # Mesma ordem da recusa de Modo Nativo: nada é armado.
+            par_de_pe = getattr(daemon_cfg, "rumble_active", None)
+            logger.warning(
+                "rumble_set_recusado_alvo_ausente",
+                weak=weak,
+                strong=strong,
+                alvo=alvo_ausente,
+                par_de_pe=par_de_pe,
+            )
+            return {
+                "status": "recusado",
+                "desfecho": RUMBLE_RECUSADO_ALVO_AUSENTE,
+                "motivo": MOTIVO_ALVO_FORA_DA_MESA,
                 "weak": par_de_pe[0] if par_de_pe else 0,
                 "strong": par_de_pe[1] if par_de_pe else 0,
                 "passthrough": par_de_pe is None,

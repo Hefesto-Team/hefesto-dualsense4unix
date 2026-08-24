@@ -25,6 +25,17 @@ está ausente) tem de reprovar as classes `TestOExemplar`, `TestAInsistencia` e
 `TestOsOutrosSetores`, e NÃO pode reprovar `TestAMiraContinuaMirando` nem
 `TestOBroadcastLegitimoContinua` — que existem exatamente para a cura não
 virar "nunca manda nada".
+
+**BROADCAST-PROIBIDO-01 (Z3-6/Z3-7, 24/08/2026)**: o aceite da §0.2 pede um
+teste por família — rumble, gatilho e lightbar. Gatilho faltava
+(`TestOsOutrosSetores.test_o_gatilho_nao_vai_para_os_outros`, abaixo) mesmo
+`set_trigger` já passando pelo `_for_each` curado — "curado e sem rede" é
+exatamente o que um refactor futuro quebra em silêncio. E a rota do JOGO
+(`apply_game_rumble`, `daemon.subsystems.gamepad`) não tinha contra-classe
+NENHUMA com o backend REAL — só com dublê de backend
+(`test_vpad_ff_passthrough.py`), que já provou poder passar verde sem tocar o
+código que diz medir (§2.1(c) da sprint). `TestAReplicaDoJogoContinuaChegando`
+é a segunda régua, independente, sobre o mesmo comportamento.
 """
 from __future__ import annotations
 
@@ -38,9 +49,11 @@ import pytest
 from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+from hefesto_dualsense4unix.core.trigger_effects import rigid
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import apply_game_rumble
 from hefesto_dualsense4unix.daemon.subsystems.rumble import reassert_rumble
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
@@ -72,8 +85,20 @@ class _FakeLight:
         self.colors.append((r, g, b))
 
 
+class _FakeTrigger:
+    """Gatilho mínimo: `mode`/`forces`, no mesmo par que `_apply_trigger`
+    grava no handle real (`trigger.mode = ...`, `trigger.setForce(idx, v)`)."""
+
+    def __init__(self) -> None:
+        self.mode: object | None = None
+        self.forces: list[int] = []
+
+    def setForce(self, idx: int, value: int) -> None:  # noqa: N802 — API pydualsense
+        self.forces.append(value)
+
+
 class _FakeHandle:
-    """Handle mínimo: motores, cor e LED de mic viram listas."""
+    """Handle mínimo: motores, cor, LED de mic e gatilhos viram listas."""
 
     def __init__(self) -> None:
         self.connected = True
@@ -82,7 +107,8 @@ class _FakeHandle:
         self.light = _FakeLight()
         self.mic: list[bool] = []
         self.audio = SimpleNamespace(setMicrophoneLED=self.mic.append)
-        self.triggers: list[str] = []
+        self.triggerL = _FakeTrigger()
+        self.triggerR = _FakeTrigger()
 
     def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
         self.motors.append(("left", intensity))
@@ -154,6 +180,8 @@ class _Mesa:
             handle.motors.clear()
             handle.light.colors.clear()
             handle.mic.clear()
+            handle.triggerL.forces.clear()
+            handle.triggerR.forces.clear()
 
     def ticks(self, quantos: int = 3) -> None:
         for i in range(quantos):
@@ -161,6 +189,12 @@ class _Mesa:
 
     def quem_recebeu_motor(self) -> dict[str, list[tuple[str, int]]]:
         return {u: h.motors for u, h in self.handles.items() if h.motors}
+
+    def gatilho_tocou(self, uniq: str) -> bool:
+        """True quando ALGUM force chegou em qualquer lado do gatilho deste
+        controle — o mesmo teto de verdade do `_apply_trigger` real."""
+        h = self.handles[uniq]
+        return bool(h.triggerL.forces) or bool(h.triggerR.forces)
 
 
 @pytest.fixture
@@ -249,6 +283,24 @@ class TestOsOutrosSetores:
 
         acesos = {u: h.mic for u, h in mesa.handles.items() if h.mic}
         assert acesos == {}, f"o LED de mic dos outros mudou: {acesos}"
+
+    def test_o_gatilho_nao_vai_para_os_outros(self, mesa: _Mesa) -> None:
+        """Z3-6: a terceira família do aceite (§0.2) — faltava gatilho.
+
+        `set_trigger` passa pelo `_for_each` (já curado pelo F4) e por isso
+        NÃO tinha rede: um refactor que reintroduzisse o `else` histórico só
+        aqui não reprovaria nada, porque nenhum teste chamava `set_trigger`
+        com o alvo ausente.
+        """
+        dois = mesa.uniqs[1]
+        mesa.backend.set_output_target(mesa.indice_de(dois))
+        mesa.desligar(dois)
+        mesa.limpar()
+
+        mesa.backend.set_trigger("left", rigid(0, 128))
+
+        tocaram = {u for u in mesa.uniqs if mesa.gatilho_tocou(u)}
+        assert tocaram == set(), f"o gatilho dos outros mexeu: {tocaram}"
 
     def test_o_valor_fica_guardado_no_alvo_que_voltou(self, mesa: _Mesa) -> None:
         """Não escrever não é esquecer: o campo vira override POR-UNIQ dele.
@@ -349,6 +401,53 @@ class TestOBroadcastLegitimoContinua:
             if u == dois:
                 continue
             assert mesa.cores_de(u) == [(4, 5, 6)], f"o perfil não pintou {u}"
+
+
+class TestAReplicaDoJogoContinuaChegando:
+    """Z3-7: contra-classe da rota do JOGO, com o backend REAL.
+
+    O teste de A (`test_vpad_ff_passthrough.py`) usa dublê de BACKEND
+    (`_FakeBackend`) — e o §2.1(c) desta sprint já mediu que um dublê pode
+    passar verde sem tocar o código que diz medir (o `daemon = MagicMock()`
+    cujo `is_native_mode()` mentia verdadeiro). Esta classe usa o backend
+    REAL (`PyDualSenseController`) com handles de dublê — a MESMA régua do
+    resto deste arquivo — para provar, por uma via independente, que
+    `apply_game_rumble` continua entregando a réplica do jogo ao motor certo
+    depois de Z3-1 parar de degradar para broadcast.
+    """
+
+    def test_mac_casado_vai_so_naquele_motor(self, mesa: _Mesa) -> None:
+        tres = mesa.uniqs[2]
+        mesa.limpar()
+
+        efetivo = apply_game_rumble(mesa.daemon, 200, 180, target_uniq=tres)
+
+        assert efetivo == (200, 180)
+        assert mesa.motores_de(tres) == [("left", 180), ("right", 200)]
+        for outro in mesa.uniqs:
+            if outro == tres:
+                continue
+            assert mesa.motores_de(outro) == [], (
+                f"{outro} recebeu a réplica do jogo sem ser o alvo dela"
+            )
+
+    def test_mesa_de_um_controle_so_continua_vibrando(self, mesa: _Mesa) -> None:
+        """Sem MAC pedido (`target_uniq=None`), broadcast e mira são a MESMA
+        coisa numa mesa de um controle só — é a ressalva que Z3-1 fixou para
+        a cura não virar "nunca vibra". A MORDIDA desta classe (§5 da
+        sprint): arrancar a ressalva `target_uniq is None` de
+        `apply_game_rumble` faz este teste reprovar dizendo que o produto
+        parou de vibrar — provado em Z3-1/Z3-2, reproduzido aqui numa régua
+        independente."""
+        sobrevivente = mesa.uniqs[0]
+        for outro in mesa.uniqs[1:]:
+            mesa.desligar(outro)
+        mesa.limpar()
+
+        efetivo = apply_game_rumble(mesa.daemon, 100, 50, target_uniq=None)
+
+        assert efetivo == (100, 50)
+        assert mesa.motores_de(sobrevivente) == [("left", 50), ("right", 100)]
 
 
 class TestOReleaseLedsAchaOAlvoPeloMac:
