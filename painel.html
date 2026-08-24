@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hefesto · painel do projeto</title>
+<style>
+/* ARQUIVO GERADO por scripts/gerar-painel.py — não edite à mão.
+ * Paleta e tipografia: scripts/paleta_da_casa.py, dividida com o specs.html.
+ * Autocontido: zero rede, zero CDN, zero fonte web. */
+
+:root {
+  /* Paleta Drácula — a mesma que o produto usa em 82 lugares no código.
+     O mapa tem de parecer parte do Hefesto, não um site sobre ele. */
+  --color-paper:      #282a36;
+  --color-paper-2:    #21222c;
+  --color-paper-3:    #343746;
+  --color-rule:       #44475a;
+  --color-ink:        #f8f8f2;
+  --color-ink-quiet:  #a8b0c8;
+  --color-ink-faint:  #6272a4;
+  --color-accent:     #bd93f9;   /* o literal que set_accent() já substitui */
+  --color-ok:         #50fa7b;
+  --color-lacuna:     #ffb86c;   /* a casa sabe e o produto não faz */
+  --color-nulo:       #6272a4;
+  --color-alerta:     #ff5555;
+  --color-frio:       #8be9fd;
+
+  /* Pilha do sistema: nada de fonte web, para o arquivo abrir sem rede. */
+  --font-corpo: ui-sans-serif, system-ui, "Cantarell", "Segoe UI", Roboto, sans-serif;
+  --font-dado:  ui-monospace, "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono", monospace;
+
+  --space-3xs: .25rem; --space-2xs: .5rem;  --space-xs: .75rem;
+  --space-sm:  1rem;   --space-md:  1.5rem; --space-lg: 2.5rem;
+  --space-xl:  4rem;   --space-2xl: 6rem;
+
+  --text-xs: .75rem;  --text-sm: .8125rem; --text-base: .9375rem;
+  --text-lg: 1.125rem; --text-xl: 1.5rem;  --text-2xl: 2rem;
+  --text-display: clamp(2rem, 5vw, 3.25rem);
+
+  --rule-hair: 1px;
+  --radius-sm: 3px; --radius-md: 6px;
+  --ease-out: cubic-bezier(.22,.61,.36,1);
+  --dur-fast: 120ms; --dur-base: 200ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--color-paper); color: var(--color-ink);
+  font-family: var(--font-corpo); font-size: var(--text-base); line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.envelope { max-width: 1120px; margin: 0 auto; padding: var(--space-lg) var(--space-sm) var(--space-2xl); }
+h1 { font-size: var(--text-display); font-weight: 800; letter-spacing: -.02em; margin: 0; line-height: 1.05; }
+h1 b { color: var(--color-accent); font-weight: 800; }
+h2 {
+  font-size: var(--text-xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--color-ink-faint); margin: var(--space-xl) 0 0;
+  padding-bottom: var(--space-2xs); border-bottom: var(--rule-hair) solid var(--color-rule);
+}
+.lede { color: var(--color-ink-quiet); max-width: 66ch; margin: var(--space-sm) 0 0; font-size: var(--text-lg); }
+.selo { font-family: var(--font-dado); font-size: var(--text-xs); color: var(--color-ink-faint);
+        letter-spacing: .1em; text-transform: uppercase; margin: 0 0 var(--space-xs); }
+
+.grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+         gap: var(--rule-hair); background: var(--color-rule);
+         border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-md);
+         overflow: hidden; margin-top: var(--space-md); }
+.kpi { background: var(--color-paper-2); padding: var(--space-xs) var(--space-sm) var(--space-2xs); }
+.kpi .n { font-size: var(--text-2xl); font-weight: 800; line-height: 1;
+          font-variant-numeric: tabular-nums; letter-spacing: -.02em; font-family: var(--font-dado); }
+.kpi .l { font-size: var(--text-xs); color: var(--color-ink-quiet); margin-top: var(--space-3xs); line-height: 1.4; }
+.ok { color: var(--color-ok); } .lac { color: var(--color-lacuna); }
+.mal { color: var(--color-alerta); } .ac { color: var(--color-accent); }
+.frio { color: var(--color-frio); } .quieto { color: var(--color-ink-faint); }
+
+.rolo { overflow-x: auto; margin-top: var(--space-sm);
+        border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-md); }
+table { border-collapse: collapse; width: 100%; min-width: 520px; background: var(--color-paper-2); }
+th, td { text-align: left; padding: var(--space-2xs) var(--space-sm);
+         border-bottom: var(--rule-hair) solid var(--color-rule); font-size: var(--text-sm);
+         vertical-align: top; }
+th { font-family: var(--font-dado); font-size: var(--text-xs); letter-spacing: .08em;
+     text-transform: uppercase; color: var(--color-ink-faint); font-weight: 400;
+     background: var(--color-paper-3); }
+tr:last-child td { border-bottom: none; }
+td.dado { font-family: var(--font-dado); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.pendente {
+  background: var(--color-paper-2); border: var(--rule-hair) solid var(--color-rule);
+  border-left: 3px solid var(--color-accent); border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-sm); margin-top: var(--space-2xs);
+}
+.pendente.feita { border-left-color: var(--color-ok); opacity: .72; }
+.pendente > summary {
+  cursor: pointer; list-style: none; display: flex; gap: var(--space-2xs);
+  align-items: baseline; flex-wrap: wrap; font-weight: 600;
+}
+.pendente > summary::-webkit-details-marker { display: none; }
+.pendente > summary::before { content: "▸"; color: var(--color-accent); font-weight: 400; }
+.pendente[open] > summary::before { content: "▾"; }
+.pendente .id {
+  font-family: var(--font-dado); font-size: var(--text-xs); color: var(--color-ink-faint);
+  letter-spacing: .06em; margin-left: auto;
+}
+.pendente dl { margin: var(--space-xs) 0 0; display: grid; grid-template-columns: max-content 1fr;
+  gap: var(--space-3xs) var(--space-sm); font-size: var(--text-sm); }
+.pendente dt {
+  font-family: var(--font-dado); font-size: var(--text-xs); letter-spacing: .08em;
+  text-transform: uppercase; color: var(--color-ink-faint); padding-top: .18em;
+}
+.pendente dd { margin: 0; color: var(--color-ink-quiet); max-width: 74ch; }
+.pendente dd.rec { color: var(--color-ok); }
+.pendente dd.custo { color: var(--color-lacuna); }
+.pendente .olho { margin-top: var(--space-xs); display: flex; gap: var(--space-sm); flex-wrap: wrap; }
+.pendente .olho figure { margin: 0; max-width: 340px; }
+.pendente .olho img {
+  max-width: 100%; height: auto; border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-sm); display: block;
+}
+.pendente .olho figcaption {
+  font-family: var(--font-dado); font-size: var(--text-xs);
+  color: var(--color-ink-faint); margin-top: var(--space-3xs);
+}
+.aviso { margin-top: var(--space-sm); padding: var(--space-xs) var(--space-sm);
+         border-radius: var(--radius-md); background: var(--color-paper-2);
+         border: var(--rule-hair) solid var(--color-lacuna); font-size: var(--text-sm); }
+.aviso b { color: var(--color-lacuna); }
+.aviso p { margin: 0; max-width: 70ch; } .aviso p + p { margin-top: var(--space-2xs); }
+code { font-family: var(--font-dado); font-size: .92em; color: var(--color-frio); }
+footer { margin-top: var(--space-xl); padding-top: var(--space-sm);
+         border-top: var(--rule-hair) solid var(--color-rule);
+         font-size: var(--text-sm); color: var(--color-ink-faint); max-width: 74ch; }
+footer a { color: var(--color-accent); }
+
+</style>
+</head>
+<body>
+<div class="envelope">
+
+  <p class="selo">gerado em 23/08/2026 às 21:44 · branch dev · f0632cf</p>
+  <h1><b>Hefesto</b> · painel do projeto</h1>
+  <p class="lede">O irmão do <a href="specs.html">mapa de canais</a>. Aquele responde
+     <em>o que o aparelho entende</em>; este responde <em>onde o projeto está</em>.
+     Os números do mapa aqui não são recontados — vêm do mesmo gerador, para os dois
+     não terem como discordar.</p>
+
+  <div class="grade"><div class="kpi"><div class="n ac">8</div><div class="l">decisões esperando você</div></div><div class="kpi"><div class="n ac">272</div><div class="l">arquivos de sprint na árvore</div></div><div class="kpi"><div class="n lac">79</div><div class="l">não citados no SPRINT_ORDER</div></div><div class="kpi"><div class="n frio">110</div><div class="l">chaves no mapa de canais</div></div><div class="kpi"><div class="n lac">27</div><div class="l">features que divergem cabo × rádio</div></div><div class="kpi"><div class="n mal">243</div><div class="l">linhas sem teste que morda</div></div><div class="kpi"><div class="n mal">11/12</div><div class="l">portões verdes</div></div></div>
+  
+
+  <h2>O que espera você <span class="co">8 decisão(ões) aberta(s)</span></h2>
+  <p class="lede" style="font-size:var(--text-sm);margin-top:var(--space-2xs)">
+     Nenhuma destas é conserto de código — são escolhas de produto, e a palavra é
+     sua. Cada uma abre com <strong>o preço de decidir para o outro lado</strong>,
+     porque decidir vendo inclui ver o custo. A fonte é
+     <code>docs/data/decisoes-dela.csv</code>: responda lá, ou me diga, e o painel
+     acompanha. <strong>Decisão respondida não some</strong> — fica no fim, com a data.</p>
+<details class="pendente"><summary>Um dos seus três adaptadores está desligado por software, com 3 aparelhos pareados<span class="id">D-HCI1-BLOQUEADO</span></summary><dl><dt>a pergunta</dt><dd>Desbloquear o hci1, ou ele está assim de propósito?</dd><dt>os caminhos</dt><dd>desbloquear (rfkill unblock) · está de propósito, e o produto tem de dizer isso na tela</dd><dt>recomendo</dt><dd class="rec">desbloquear — e, nos dois casos, o produto passa a AVISAR em vez de pintar verde</dd><dt>o preço do outro lado</dt><dd class="custo">Enquanto estiver bloqueado, todo controle pareado nele simplesmente não conecta, e a aba Configurações diz &#x27;Folgada&#x27; em VERDE sobre ele. Quem for diagnosticar vai procurar o defeito no controle.</dd><dt>por que espera você</dt><dd>Desbloquear é ação na máquina dela, e a bancada é dela. O que é do produto — parar de pintar verde sobre rádio desligado — não espera decisão: é defeito.</dd><dt>custo</dt><dd>desbloquear: 1 comando. O aviso na tela: ~10 linhas, e ele é a &#x27;metade A&#x27; do portão do dado.</dd><dt>onde mora</dt><dd>medido em 23/08: rfkill diz Soft blocked: yes no hci1 (AC:A7:F1:00:00:41), que tem 3 aparelhos pareados. O dado JÁ chega ao produto: Dongle.ligado atravessa o D-Bus e entra na dataclass em integrations/apelido_do_dongle.py:217 — e morre ali, sem consumidor.</dd></dl></details><details class="pendente"><summary>Quem é dono da costura do apelido de BlueZ<span class="id">D-COSTURA-BLUEZ</span></summary><dl><dt>a pergunta</dt><dd>O produto assume a costura do prefixo Nintendo nos adaptadores, ou o script continua dono?</dd><dt>os caminhos</dt><dd>o produto assume (e o bt_active_mode.sh para de costurar) · o script continua dono (e a função é a rota que espera)</dd><dt>recomendo</dt><dd class="rec">o script continua dono, por enquanto</dd><dt>o preço do outro lado</dt><dd class="custo">Ligar a função hoje RECRIA a duplicidade que o commit e5376a0 desfez em 22/08 — dois escritores do mesmo alias de BlueZ. O commit registra isso com todas as letras.</dd><dt>por que espera você</dt><dd>Não é conserto de código: é decisão de dono. Enquanto ela não sair, dar chamador à função é regressão, não cura.</dd><dt>custo</dt><dd>a decisão é de minutos; a execução depende do lado escolhido</dd><dt>onde mora</dt><dd>integrations/apelido_do_dongle.py::costurar_a_mesa (declarada em tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py, tabela _SEM_CAMINHO_HOJE)</dd></dl></details><details class="pendente"><summary>A altura da aba Configurações<span class="id">D-ALTURA-CONFIG</span></summary><dl><dt>a pergunta</dt><dd>As duas maiores seções nascem colapsadas em Gtk.Expander?</dd><dt>os caminhos</dt><dd>colapsar as duas maiores (a aba cai de 2116px para 734px) · deixar como está · outra divisão</dd><dt>recomendo</dt><dd class="rec">colapsar as duas maiores</dd><dt>o preço do outro lado</dt><dd class="custo">Deixar como está: 43% da aba visível, e TRÊS das cinco seções nascem abaixo da dobra. A segunda aba mais alta do produto tem 936px — esta tem 2,5 vezes isso.</dd><dt>por que espera você</dt><dd>Muda o que se vê ao ABRIR a aba, e isso é PROVA-DE-TELA-01: foto antes e depois, e a palavra final é dela.</dd><dt>custo</dt><dd>~30 linhas, meio dia</dd><dt>onde mora</dt><dd>app/actions/config/secoes.py (a ordem) e moldura.py (a moldura)</dd></dl><div class="olho"><figure><img src="docs/usage/assets/readme_configuracoes_inteira.png" alt="como está hoje" loading="lazy"><figcaption>como está hoje</figcaption></figure></div></details><details class="pendente"><summary>A ordem das cinco seções da aba Configurações<span class="id">D-ORDEM-SECOES</span></summary><dl><dt>a pergunta</dt><dd>O exame continua no topo apontando para uma seção que está duas abaixo?</dd><dt>os caminhos</dt><dd>mover A mesa para logo depois do exame · deixar como está · outra ordem</dd><dt>recomendo</dt><dd class="rec">mover A mesa para logo depois do exame</dd><dt>o preço do outro lado</dt><dd class="custo">Hoje o exame termina dizendo &#x27;veja a seção A mesa&#x27; — e ela está DUAS seções abaixo, atrás da grade de cards inteira. Quem abre a aba por causa de um problema tem o caminho partido ao meio por conteúdo que não tem a ver com a queixa.</dd><dt>por que espera você</dt><dd>É a ordem da tupla — uma linha de código. Mas muda o que se vê ao abrir.</dd><dt>custo</dt><dd>1 linha, 10 minutos + refotografar</dd><dt>onde mora</dt><dd>app/actions/config/secoes.py</dd></dl><div class="olho"><figure><img src="docs/usage/assets/readme_configuracoes.png" alt="como está hoje" loading="lazy"><figcaption>como está hoje</figcaption></figure></div></details><details class="pendente"><summary>O &quot;não sei&quot; do número de Jogador<span class="id">D-JOGADOR-NAO-SEI</span></summary><dl><dt>a pergunta</dt><dd>A dica promete &quot;Sem nenhum marcado, vale a ordem de chegada&quot; — um estado que ela não consegue alcançar. Cria-se o verbo, ou corrige-se a dica?</dd><dt>os caminhos</dt><dd>verbo IPC novo de desafixar, com conceito de pino no registro · reescrever a dica para parar de prometer o inalcançável</dd><dt>recomendo</dt><dd class="rec">reescrever a dica agora; o verbo como pergunta sua</dd><dt>o preço do outro lado</dt><dd class="custo">O verbo é meio dia e mexe no registro de identidade do daemon. A dica é 1 linha e 10 minutos, mas o produto continua sem como desafixar.</dd><dt>por que espera você</dt><dd>Medido: o identity.number.set recusa número &lt; 1 e o daemon PERMUTA em vez de fixar — não existe &#x27;desafixado&#x27; para onde voltar.</dd><dt>custo</dt><dd>dica: 1 linha, 10 min | verbo: meio dia</dd><dt>onde mora</dt><dd>app/widgets/external_card.py (a dica) e daemon/ipc_handlers.py (o verbo)</dd></dl></details><details class="pendente"><summary>A redação do diálogo de fechamento e da marca de pendência<span class="id">D-TEXTO-FECHAMENTO</span></summary><dl><dt>a pergunta</dt><dd>Os textos provisórios que os agentes deixaram ficam, ou são reescritos?</dd><dt>os caminhos</dt><dd>aprovar os provisórios · reescrever · reescrever alguns</dd><dt>recomendo</dt><dd class="rec">ler e reescrever o que soar de máquina — a voz do produto é dela</dd><dt>o preço do outro lado</dt><dd class="custo">Provisório que fica sem revisão vira definitivo por inércia, e a tradução para o inglês o carrega junto.</dd><dt>por que espera você</dt><dd>Classe estrutural: texto NOVO de tela. Ela pré-aprovou só a classe cosmética.</dd><dt>custo</dt><dd>minutos de leitura</dd><dt>onde mora</dt><dd>app/app.py (diálogo), app/actions/footer_actions.py (marca e frase de sucesso), app/actions/config/secao_mesa.py (selo do medidor)</dd></dl></details><details class="pendente"><summary>A assimetria entre escrever e ler o maquina.json<span class="id">D-LEITURA-MAQUINA-JSON</span></summary><dl><dt>a pergunta</dt><dd>A LEITURA passa a resgatar campo a campo, como a escrita já faz?</dd><dt>os caminhos</dt><dd>sim, simetria · não, a leitura continua estrita</dd><dt>recomendo</dt><dd class="rec">sim — mas é invariante documentada, e mudá-la é decisão sua</dd><dt>o preço do outro lado</dt><dd class="custo">Hoje a escrita resgata o que vale e a leitura devolve documento vazio com qualquer campo inválido: o daemon sobe sem teto e sem a ponte de microfone, em silêncio.</dd><dt>por que espera você</dt><dd>Muda invariante escrita no docstring do módulo.</dd><dt>custo</dt><dd>~10 linhas + teste que morde</dd><dt>onde mora</dt><dd>utils/maquina.py</dd></dl></details><details class="pendente"><summary>O botão &quot;Outra&quot; com o campo livre vazio<span class="id">D-COR-OUTRA-VAZIA</span></summary><dl><dt>a pergunta</dt><dd>Escolher &quot;Outra&quot; e não digitar nada deixa o botão afundado declarando None. Isso fica?</dd><dt>os caminhos</dt><dd>fica (é &#x27;sei que é outra, não sei qual&#x27;) · volta para não sei · exige o texto</dd><dt>recomendo</dt><dd class="rec">fica, com a dica dizendo o que significa</dd><dt>o preço do outro lado</dt><dd class="custo">Se ficar sem explicação, a tela mostra um botão afundado que não declara nada — e a pessoa não tem como saber.</dd><dt>por que espera você</dt><dd>É comportamento de tela; o A4 não decidiu por conta própria, e fez certo.</dd><dt>custo</dt><dd>1 a 5 linhas</dd><dt>onde mora</dt><dd>app/widgets/external_card.py</dd></dl></details>
+
+
+  <h2>Os portões</h2>
+  <div class="rolo"><table>
+    <thead><tr><th>portão</th><th>estado</th><th>o que ele disse</th></tr></thead>
+    <tbody>
+<tr><td>ruff</td><td class="dado ok">verde</td><td class="quieto">All checks passed!</td></tr>
+<tr><td>mypy</td><td class="dado ok">verde</td><td class="quieto">Success: no issues found in 207 source files</td></tr>
+<tr><td>acentuação</td><td class="dado mal">VERMELHO</td><td class="quieto">tests/unit/test_a5_fechar_a_janela_nao_perde_a_declaracao.py:16:nao -&gt; sugestão não
+
+1 violação(es) de acentuação PT-BR encontrada(s).</td></tr>
+<tr><td>glifos</td><td class="dado ok">verde</td><td class="quieto"></td></tr>
+<tr><td>referências</td><td class="dado ok">verde</td><td class="quieto">OK: 401 documento(s) sem referência morta.</td></tr>
+<tr><td>palavra de tela</td><td class="dado ok">verde</td><td class="quieto"></td></tr>
+<tr><td>anonimato</td><td class="dado ok">verde</td><td class="quieto">OK: anonimato preservado.</td></tr>
+<tr><td>versão</td><td class="dado ok">verde</td><td class="quieto">OK: 12 alvo(s) versionado(s) em 0.9.4.5. Data da release corrente confere com o CHANGELOG.</td></tr>
+<tr><td>empacotamento</td><td class="dado ok">verde</td><td class="quieto">oader SVG do gdk-pixbuf (o que desenha) × o que cada formato declara ==
+[ OK ] loader SVG: declarado no .deb, </td></tr>
+<tr><td>dados de teste</td><td class="dado ok">verde</td><td class="quieto">OK: dados de teste neutros.</td></tr>
+<tr><td>paridade de transporte</td><td class="dado ok">verde</td><td class="quieto">tenta sozinha...... 36
+       desses, SEM ensaio no caderno.......... 0
+       desses, na direção de ENTRADA (</td></tr>
+<tr><td>specs.html em dia</td><td class="dado ok">verde</td><td class="quieto">specs.html: atualizado (confere com o CSV, com o caderno de ensaios e com os três desenhos)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="lede" style="font-size:var(--text-sm)">medido 23/08 às 18:36 · há 3 h.
+     Portão verde não prova que ele mede o que promete — a casa já achou três
+     instrumentos falsos num dia só. Verde aqui quer dizer <em>não acusou</em>.</p>
+
+  <h2>As sprints</h2>
+  <div class="grade">
+    <div class="kpi"><div class="n ac">272</div><div class="l">arquivos</div></div>
+    <div class="kpi"><div class="n lac">102</div><div class="l">carregam a palavra ABERTA</div></div>
+    <div class="kpi"><div class="n ok">56</div><div class="l">carregam CONCLUÍDA ou FECHADA</div></div>
+    <div class="kpi"><div class="n quieto">33</div><div class="l">índices</div></div>
+    <div class="kpi"><div class="n frio">160</div><div class="l">citadas no SPRINT_ORDER</div></div>
+    <div class="kpi"><div class="n mal">79</div><div class="l">fora da fila</div></div>
+  </div>
+  <div class="aviso"><p><b>Esta contagem NÃO classifica.</b> Ela conta arquivos e
+     conta quantos carregam a palavra — e as duas somas se sobrepõem de propósito:
+     o <code>SPRINT_ORDER.md</code> registra seis sprints com cabeçalho de concluída
+     ACIMA de um <code>Status: ABERTA</code> preservado de propósito.</p>
+     <p>Um classificador que fingisse resolver isso produziria número convincente e
+     falso, que é a armadilha mais cara desta casa. O julgamento de estado é do
+     batedor de sprints; aqui fica só o que dá para contar sem julgar.</p></div>
+
+  <h2>O mapa de canais</h2>
+  <div class="grade">
+    <div class="kpi"><div class="n ac">110</div><div class="l">chaves</div></div>
+    <div class="kpi"><div class="n frio">308</div><div class="l">linhas (chave × controle)</div></div>
+    <div class="kpi"><div class="n lac">27</div><div class="l">divergem entre cabo e rádio</div></div>
+    <div class="kpi"><div class="n mal">243</div><div class="l">sem teste que morda</div></div>
+  </div>
+  <p class="lede" style="font-size:var(--text-sm)">Enquanto a última coluna não
+     zerar, o mapa mede o que a casa <em>acredita</em>, não o que ela
+     <em>garante</em>: se aquela feature quebrar naquele transporte, a suíte
+     inteira continua verde. Os detalhes estão no <a href="specs.html">specs.html</a>.</p>
+
+  <footer>
+    <p>Gerado por <code>scripts/gerar-painel.py</code>. Autocontido de propósito —
+       um arquivo, sem rede, sem servidor, sem venv: um instrumento que só funciona
+       com internet não serve para depurar rádio.</p>
+    <p>Os números rápidos (sprints, mapa, git) são de agora, sempre. Os caros
+       (suíte, portões) vêm de <code>docs/data/painel-cache.json</code> e carregam a
+       idade ao lado. <strong>Ausência de medição é declarada, nunca preenchida com
+       zero</strong> — é a mesma regra do mapa de canais, e existe porque zero pinta
+       verde.</p>
+    <p>Árvore: 86 arquivo(s) com mudança não commitada em
+       <code>f0632cf</code> — <em>docs(fila): os dois últimos achados da madrugada, e os dois são cura desligada</em>.</p>
+  </footer>
+
+</div>
+</body>
+</html>

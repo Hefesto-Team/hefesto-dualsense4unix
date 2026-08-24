@@ -216,6 +216,34 @@ def test_a_fita_de_alvo_e_avisada_a_cada_troca_de_aba() -> None:
     )
 
 
+def test_os_tres_refreshers_da_aba_estao_no_mapa() -> None:
+    """As três seções vivas da aba têm de estar na tupla — e uma faltava.
+
+    O `_refresh_config_controles` nasceu com a seção "Os controles" e nunca
+    entrou aqui. Medido na bancada em 23/08/2026, com o daemon parado: a seção
+    nascia dizendo "O Hefesto está desligado...", e religar o daemon e reentrar
+    na aba NÃO mudava nada. Nenhum outro gatilho a redesenha — os dois
+    `self.reexaminar` da própria seção exigem um card já na tela, e o
+    `install_config_tab` é idempotente e só roda no arranque.
+
+    O teste cobra pela CONSTANTE, não por um literal: repetir a string nos dois
+    lados é exatamente como um refresher nasce morto em silêncio nesta casa.
+
+    Mordida: tirar qualquer um dos três nomes da tupla de `ABA_CONFIG`.
+    """
+    from hefesto_dualsense4unix.app.actions.config import secao_controles
+    from hefesto_dualsense4unix.app.app import HefestoApp
+
+    tupla = HefestoApp._REFRESH_POR_ABA[ABA_CONFIG]
+
+    assert secao_controles.NOME_DO_REFRESH in tupla, (
+        "o refresher de 'Os controles' não está no mapa: entrar na aba nunca "
+        f"redesenha a seção. Tupla de hoje: {tupla}"
+    )
+    assert "_refresh_saude_da_mesa" in tupla, "o refresher do exame saiu do mapa"
+    assert "_reexaminar_a_mesa" in tupla, "o refresher de 'A mesa' saiu do mapa"
+
+
 # --- 3. O mixin está na MRO ------------------------------------------------
 
 
@@ -239,8 +267,8 @@ def test_o_mixin_esta_na_mro_do_app() -> None:
 class _HospedeiroDaFita(ConfigActionsMixin):
     """Hospedeiro mínimo: só a fita do cabeçalho, dentro de um pai de verdade.
 
-    O rótulo da razão nasce ao LADO da fita, e para isso precisa de um pai —
-    daí o cabeçalho.
+    O cabeçalho existe no dublê porque é ele que o teste da largura vigia: a
+    entrada na aba não pode acrescentar filho nenhum ali.
     """
 
     def __init__(self) -> None:
@@ -272,24 +300,29 @@ def test_a_fita_esmaece_na_aba_e_volta_fora_dela() -> None:
     )
 
 
-def test_a_razao_aparece_junto_com_o_esmaecimento() -> None:
-    """Um widget que não responde sem dizer por quê é defeito, não desenho.
+def test_entrar_na_aba_nao_engorda_o_cabecalho() -> None:
+    """O cabeçalho tem de sair da troca de aba com o mesmo tamanho que entrou.
 
-    Mordida: apagar o `razao.show()` do mixin.
+    Decisão dela, 23/08/2026. A versão anterior pendurava ao lado da fita um
+    rótulo com o motivo do esmaecimento. Ele empurrava a altura e a largura do
+    cabeçalho, cobria o subtítulo do produto e deixava esta aba mais larga que
+    as outras dez — que é exatamente o defeito que a foto mostrou.
+
+    Mordida: pendurar qualquer widget no cabeçalho dentro de `set_alvo_inativo`.
     """
     host = _HospedeiroDaFita()
+    antes = list(host.cabecalho.get_children())
 
     host.set_alvo_inativo(True)
-    razao = host._alvo_inativo_label
-    assert razao is not None, "nenhum rótulo de razão foi criado"
-    assert razao.get_visible(), "a razão não apareceu junto com o esmaecimento"
-    assert razao.get_parent() is host.cabecalho, (
-        "a razão nasceu DENTRO da fita: ela sairia esmaecida junto com aquilo "
-        "que explica"
+    assert list(host.cabecalho.get_children()) == antes, (
+        "entrar na aba Configurações acrescentou widget ao cabeçalho: ele "
+        "muda de tamanho e esta aba passa a destoar das outras dez"
     )
 
     host.set_alvo_inativo(False)
-    assert not razao.get_visible(), "a razão ficou na tela fora da aba"
+    assert list(host.cabecalho.get_children()) == antes, (
+        "sair da aba Configurações deixou widget no cabeçalho"
+    )
 
 
 def test_a_fita_ausente_nao_derruba_nada() -> None:
