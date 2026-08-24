@@ -1204,7 +1204,7 @@ class HefestoApp(
     #: assim que a onda dela ligar um leitor (Z2-8, contrato §5 da
     #: Z2-O-ALVO-GANHA-DONO-01).
     _MOTIVO_ALVO_AINDA_NAO_LIGADO: ClassVar[str] = (
-        "esta aba ainda não lê o alvo de edição do cabeçalho"
+        "Esta aba não usa o controle escolhido aqui."
     )
 
     #: Z2-8 (24/08/2026): quem lê o alvo de edição, e o mapa É o instrumento.
