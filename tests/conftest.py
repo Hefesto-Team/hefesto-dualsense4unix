@@ -1536,6 +1536,32 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         target = xdg_root / sub
         target.mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv(var, str(target))
+    # BERÇO-DE-TMP-01, a cauda do `$HOME` (24/08/2026) — o isolamento acima
+    # cobre os quatro XDG_*, mas ``Path.home()``/``os.path.expanduser("~")``
+    # continuavam resolvendo o `$HOME` REAL do dev em qualquer chamada que não
+    # respeite XDG. Dois casos MEDIDOS: `utils/i18n._candidate_locale_dirs()`
+    # cai para `Path.home()/.local/share/locale` sempre que o candidato
+    # XDG_DATA_HOME isolado (vazio) não tem catálogo — e `core/system_check.
+    # _wireplumber_hijacks_mic()` lê `Path.home()/.local/state/wireplumber/
+    # default-nodes` direto, ignorando XDG_STATE_HOME. As duas leituras
+    # atingem o disco real do dev sob teste: um source-install real em
+    # `~/.local/share/locale` faz `init_locale()` carregar o catálogo DELA (e
+    # gravar o resultado num flag de módulo que persiste pela sessão inteira),
+    # e um WirePlumber real com o DualSense fixado como mic faz todo teste que
+    # sobe o daemon (`_check_system_on_boot`) avaliar um aviso que depende do
+    # estado da MÁQUINA, não do teste — a mesma classe de defeito do
+    # BUG-TEST-CONFIG-LEAK-01 acima, só que em leitura em vez de escrita.
+    #
+    # A cura é a mesma dos quatro XDG_*: isolar o `HOME` também, num diretório
+    # vazio por teste. Não precisa de escotilha própria — nenhuma suíte
+    # depende do `$HOME` real (os 7 arquivos que hoje fazem
+    # `monkeypatch.setenv("HOME", ...)` continuam livres para sobrescrever, e
+    # vencem por rodarem depois desta fixture). O CANARIO-FS-01 não é afetado:
+    # ele lê `os.environ` fresco nos hooks de sessão, fora de qualquer
+    # fixture, de propósito (comentário em `_canario_raizes`).
+    home_dir = xdg_root / "home"
+    home_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home_dir))
     # FIX-PACKAGING-SEED-PARITY-01 — desliga a semeadura automática de presets
     # (profiles.loader._maybe_seed_presets). Sem isto, o PRIMEIRO teste do
     # processo a carregar perfis receberia os JSONs de assets/profiles_default/
@@ -1572,8 +1598,17 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # (`app/actions/carona_do_wrapper.py`). Isso varre o `localconfig.vdf` e,
     # com a Steam fechada, ESCREVE nele. Dezenas de testes de GUI chamam
     # "Salvar Perfil"; sem esta linha, uma suíte rodando na máquina dela
-    # reescreveria a biblioteca inteira dela em segundo plano — e o `HOME` NÃO
-    # é isolado nesta suíte (o `discover_vdfs` resolve `Path.home()`).
+    # reescreveria a biblioteca inteira dela em segundo plano — e o
+    # `discover_vdfs` resolve `Path.home()`.
+    #
+    # CORREÇÃO 24/08/2026 (BERÇO-DE-TMP-01, cauda do `$HOME`): a frase acima
+    # dizia "e o HOME NÃO é isolado nesta suíte" como a causa — não é mais
+    # verdade, o bloco de isolamento logo acima desta fixture agora isola o
+    # `HOME` também. O desligador FICA de qualquer forma: é a segunda camada,
+    # e a que documenta a intenção ("carona é opt-in sob teste") — sem ela um
+    # `Path.home()` isolado ainda deixaria `discover_vdfs` escrever de verdade
+    # dentro do `home_dir` fake a cada "Salvar Perfil" das dezenas de testes
+    # de GUI, o que seria ruído sem propósito nenhum dessas suítes.
     #
     # Desligado em TODO teste, e quem quer exercitar a carona religa por
     # escrito, com fixtures em `tmp_path` (é o que o
