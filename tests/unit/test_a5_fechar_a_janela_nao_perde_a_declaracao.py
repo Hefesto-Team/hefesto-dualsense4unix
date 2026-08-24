@@ -74,15 +74,24 @@ def _janela(
 
     gravou: list[str] = []
 
-    def _gravar(_self: object) -> str | None:
-        """O contrato real: `None` no sucesso, a FRASE do motivo no fracasso.
+    def _gravar(_self: object) -> tuple[bool, str | None]:
+        """O contrato real: `(gravou, frase)`.
 
-        O dublê anterior devolvia sempre `None` (o retorno de `list.append`), e
-        por isso o teste não conseguia enxergar o caminho da recusa — que é
-        exatamente onde o defeito estava. Régua que só sabe passar não é régua.
+        **DUAS CORREÇÕES DE DIALETO, e as duas foram defeito de régua.**
+
+        A primeira: o dublê devolvia sempre `None` (o retorno de `list.append`),
+        e por isso o teste não enxergava o caminho da recusa — que era onde o
+        defeito estava. Régua que só sabe passar não é régua.
+
+        A segunda, em 24/08/2026: ele devolvia `str | None` e tratava qualquer
+        string como fracasso. Mas o produto passou a devolver frase TAMBÉM no
+        sucesso, e o portão do fechamento lia "há string, logo falhou" — a
+        janela recusava fechar depois de gravar. **A régua falava um dialeto
+        que o produto não falava**, e por isso o teste passava verde sobre o
+        defeito.
         """
         gravou.append("gravou")
-        return recusa
+        return (recusa is None, recusa or "Configurações gravadas.")
 
     monkeypatch.setattr(HefestoApp, "_gravar_declaracao_de_maquina", _gravar)
     monkeypatch.setattr(app_module.Gtk, "main_quit", lambda: gravou.append("quit"))
@@ -234,4 +243,78 @@ class TestARecusaSeguraAJanela:
         assert feito == ["gravou", "quit"], (
             "com a gravação aceita, 'Aplicar e fechar' tem de gravar E fechar; "
             f"saiu {feito}"
+        )
+
+
+class TestOSucessoNaoSeguraAJanela:
+    """Gravar com sucesso e RECUSAR fechar é o defeito oposto ao que o A5 cura.
+
+    **Achado pela auditoria de rastreabilidade em 24/08/2026, e era defeito
+    VIVO no uso diário dela** — criado pela cura de outra ponta no dia anterior.
+
+    A metade "e DIZ" do descarte de campo mudou o retorno de
+    `_gravar_declaracao_de_maquina`: ele passou a devolver frase TAMBÉM no
+    sucesso ("Configurações gravadas."). O portão do fechamento continuou lendo
+    o contrato antigo — `if recado is not None` — e passou a interpretar
+    sucesso como recusa.
+
+    O efeito: ela declarava, clicava "Aplicar e fechar", **o arquivo era
+    gravado, a janela NÃO fechava**, e o rodapé exibia a frase de sucesso como
+    se fosse o motivo da recusa.
+
+    **Por que passou verde:** o dublê devolvia `str | None` e nenhum teste
+    cobria "gravou com sucesso E fechou". A régua falava um dialeto que o
+    produto não falava.
+
+    MORDE: voltar a decidir o fechamento pela presença da frase em vez do
+    booleano.
+    """
+
+    def test_gravar_com_sucesso_deixa_a_janela_fechar(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O caminho que a pessoa usa todo dia, e que ninguém cobria."""
+        janela, _espia, feito = _janela(
+            monkeypatch,
+            pendente=dict(DECLARACAO),
+            bandeja=False,
+            resposta=Gtk.ResponseType.OK,
+            recusa=None,
+        )
+
+        segurou = janela.on_window_delete_event(None, None)
+
+        assert "gravou" in feito, "instrumento inválido: nem tentou gravar"
+        assert "quit" in feito, (
+            "a janela RECUSOU fechar depois de gravar com sucesso — a frase de "
+            "sucesso estava sendo lida como motivo de recusa"
+        )
+        assert segurou is not True, (
+            "o delete-event devolveu True (cancelar) sobre uma gravação que deu certo"
+        )
+
+    def test_a_frase_de_sucesso_ainda_aparece(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Fechar com sucesso não pode calar: ela tem de saber que gravou.
+
+        MORDE: apagar o toast do ramo de sucesso.
+        """
+        janela, _espia, _feito = _janela(
+            monkeypatch,
+            pendente=dict(DECLARACAO),
+            bandeja=False,
+            resposta=Gtk.ResponseType.OK,
+            recusa=None,
+        )
+        ditos: list[str] = []
+        monkeypatch.setattr(
+            type(janela), "_footer_toast", lambda _s, m: ditos.append(m), raising=False
+        )
+
+        janela.on_window_delete_event(None, None)
+
+        assert any("gravad" in d.lower() for d in ditos), (
+            "fechou em silêncio depois de gravar: a pessoa não fica sabendo que "
+            f"o que ela declarou foi guardado. Disse: {ditos}"
         )

@@ -616,15 +616,24 @@ class HefestoApp(
             # idêntico a "Fechar sem aplicar" — a declaração morria com o
             # processo, sem uma palavra.
             #
-            # `_gravar_declaracao_de_maquina` devolve `None` no sucesso e a FRASE
-            # do motivo no fracasso (contrato de `footer_actions`). Recusa segura
-            # a janela: a pessoa continua com o que declarou na tela, vê o motivo
-            # no rodapé, e decide de novo.
-            recado = self._gravar_declaracao_de_maquina()
+            # O contrato é `(gravou, frase)`, e o par existe por causa de um
+            # defeito medido em 24/08/2026: a versão anterior devolvia só a
+            # frase, e ESTA linha lia "há frase, logo falhou". Como o sucesso
+            # também tem frase ("Configurações gravadas."), "Aplicar e fechar"
+            # gravava o arquivo e RECUSAVA fechar a janela, exibindo a frase de
+            # sucesso como se fosse o motivo da recusa.
+            #
+            # Só a recusa segura a janela: a pessoa continua com o que declarou
+            # na tela, vê o motivo no rodapé, e decide de novo.
+            gravou, recado = self._gravar_declaracao_de_maquina()
+            if not gravou:
+                if recado is not None:
+                    with contextlib.suppress(Exception):
+                        self._footer_toast(recado)
+                return False
             if recado is not None:
                 with contextlib.suppress(Exception):
                     self._footer_toast(recado)
-                return False
         return True
 
     def _has_persistent_access(self) -> bool:

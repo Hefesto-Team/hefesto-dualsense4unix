@@ -86,7 +86,9 @@ janela._maquina_pendente = {{"orcamento": {{"teto": "equilibrado"}}}}
 # Este ramo é o que ENCERRA: sem bandeja e sem janela compacta.
 janela._has_persistent_access = lambda: False
 janela._get = lambda wid: barra if wid == "status_bar" else None
-janela._gravar_declaracao_de_maquina = lambda: marcas.__setitem__("gravou", True)
+janela._gravar_declaracao_de_maquina = lambda: (
+    marcas.__setitem__("gravou", True) or (True, "Configurações gravadas.")
+)
 Gtk.main_quit = lambda *a: marcas.__setitem__("saiu", True)
 
 
