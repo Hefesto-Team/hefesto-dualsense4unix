@@ -76,6 +76,18 @@ DICA: str | None = (
 #: schema justamente para que as duas listas não possam divergir.
 CHAVES: tuple[str, ...] = ("economia", "balanceado", "max", "auto")
 
+#: O quinto botão da fileira, e ele NÃO entra em `CHAVES`: `"nao_sei"` é a
+#: palavra da TELA para a ausência de escolha, que no disco é
+#: `OrcamentoDeclarado.teto = None`. Pô-lo em `CHAVES` faria o `Literal` do
+#: pydantic recusar o documento inteiro na próxima carga.
+#:
+#: Ele existe porque a `D-A1` diz que "não sei" é resposta válida, e sem um
+#: botão próprio ela não era: o `SegmentedSelector` é grupo de rádio e IGNORA o
+#: clique no botão já afundado, então quem declarasse "Economia" por engano não
+#: tinha gesto nenhum para desfazer.
+ID_DE_NAO_SEI = "nao_sei"
+ROTULO_DE_NAO_SEI = "Não sei"
+
 #: Dica por botão — o texto EXATO do desenho aprovado (`TOOLTIPS.md`), com as
 #: duas correções datadas de 22/08/2026 já dentro:
 #:
@@ -152,6 +164,36 @@ def orcamento_em_vigor(host: Any = None) -> str | None:
     return carregar_maquina().orcamento.teto
 
 
+def orcamento_na_tela(host: Any = None) -> str | None:
+    """A chave que o BOTÃO desta aba mostra — o gravado, ou o que espera o Aplicar.
+
+    **Por que ela existe ao lado de `orcamento_em_vigor`, e não no lugar dela**
+    (achado da conferência de 23/08/2026). As duas respondem perguntas
+    diferentes, e cada consumidor precisa de uma:
+
+    * a aba Rumble pergunta *"que limite o daemon está impondo AGORA?"* — e
+      responde com `orcamento_em_vigor`, que ignora o pendente de propósito.
+      Mostrar ali a escolha ainda não aplicada faria aquela linha afirmar um
+      limite que ninguém está impondo;
+    * o botão DESTA aba pergunta *"o que a pessoa escolheu?"* — e a resposta tem
+      de incluir o que ela acabou de declarar. Sem isso a tela se contradiz: o
+      rodapé diz "há escolhas por aplicar" e o botão mostra o valor do disco.
+
+    É o mesmo contrato que as seções irmãs já usam (`secao_mesa`,
+    `secao_controles`): disco por baixo, declaração por cima.
+
+    O caso que mais dói, e é novo: o "Não sei" declara ``teto: None``. Sem esta
+    função, remontar a aba traz o botão ANTIGO de volta afundado — a escolha da
+    pessoa some da tela sem nada avisar.
+    """
+    pendente = getattr(host, "_maquina_pendente", None) or {}
+    orcamento = pendente.get("orcamento") if isinstance(pendente, dict) else None
+    if isinstance(orcamento, dict) and "teto" in orcamento:
+        teto = orcamento["teto"]
+        return str(teto) if isinstance(teto, str) else None
+    return orcamento_em_vigor(host)
+
+
 def celula_do_teto(orcamento: str) -> str:
     """O que a coluna de um orçamento diz sobre a vibração.
 
@@ -178,20 +220,20 @@ def montar(host: Any, caixa: Any) -> None:
     derrubar a janela. Quem chama já embrulha em `contextlib.suppress`, mas a
     tolerância começa aqui.
     """
-    caixa.pack_start(_fileira_dos_quatro(host), False, False, 0)
+    caixa.pack_start(_fileira_dos_botoes(host), False, False, 0)
     caixa.pack_start(rotulo_de_apoio(QUANDO_VALE), False, False, 0)
     caixa.pack_start(_tabela_das_consequencias(), False, False, 0)
     caixa.pack_start(rotulo_de_apoio(ALCANCE_DE_HOJE), False, False, 0)
 
 
-def _fileira_dos_quatro(host: Any) -> Any:
-    """Os quatro botões do orçamento, deitados, com a escolha gravada marcada.
+def _fileira_dos_botoes(host: Any) -> Any:
+    """Os quatro do orçamento mais o "Não sei", deitados, com o gravado marcado.
 
     **Por que a orientação é trocada à mão.** O `SegmentedSelector` sem `wrap`
     é um `Gtk.Box` VERTICAL (`segmented_selector.py:206`) e empilharia as
-    quatro opções uma sobre a outra; com `wrap=True` ele vira grade de TRÊS
-    colunas fixas (`_WRAP_COLUNAS`), e quatro opções saem em 3 + 1, com o
-    "Auto" sozinho numa segunda linha. Nenhum dos dois é o desenho. Deitar a
+    opções uma sobre a outra; com `wrap=True` ele vira grade de TRÊS colunas
+    fixas (`_WRAP_COLUNAS`), e a fileira sairia quebrada em duas linhas.
+    Nenhum dos dois é o desenho. Deitar a
     caixa é a terceira via, e é a barata: a classe `linked` que o widget já
     aplica sem `wrap` foi feita para exatamente esta fileira de botões colados,
     e `set_orientation` é API do próprio `Gtk.Box`. Mexe só nesta instância.
@@ -206,9 +248,12 @@ def _fileira_dos_quatro(host: Any) -> Any:
     seletor = SegmentedSelector()
     with contextlib.suppress(Exception):
         seletor.set_orientation(Gtk.Orientation.HORIZONTAL)
-    seletor.set_items([(chave, ROTULOS_DO_ORCAMENTO[chave]) for chave in CHAVES])
+    seletor.set_items(
+        [(chave, ROTULOS_DO_ORCAMENTO[chave]) for chave in CHAVES]
+        + [(ID_DE_NAO_SEI, ROTULO_DE_NAO_SEI)]
+    )
     seletor.set_tooltips(dict(DICAS))
-    gravado = orcamento_em_vigor(host)
+    gravado = orcamento_na_tela(host)
     if gravado in CHAVES:
         with contextlib.suppress(Exception):
             seletor.set_active_id(str(gravado))
@@ -233,17 +278,36 @@ def _ao_escolher(host: Any, seletor: Any) -> None:
     A declaração é PARCIAL de propósito: `fundir_declaracao` desce nos
     dicionários aninhados, então mandar só `{"orcamento": {"teto": ...}}` não
     apaga o que as outras quatro seções declararam na mesma janela.
+
+    `"nao_sei"` vira `None` ANTES da guarda, e não pode virar depois: `None`
+    presente na declaração é escolha ("voltei para 'Não sei'") e SOBRESCREVE,
+    enquanto a AUSÊNCIA da chave preserva o que havia — devolver cedo aqui
+    deixaria a escolha antiga no rascunho e no disco.
     """
     from hefesto_dualsense4unix.utils.maquina import fundir_declaracao
 
     escolha = seletor.get_active_id()
-    if escolha not in CHAVES:
+    teto: str | None
+    if escolha == ID_DE_NAO_SEI:
+        teto = None
+    elif escolha in CHAVES:
+        teto = str(escolha)
+    else:
         return
     host._maquina_pendente = fundir_declaracao(
         getattr(host, "_maquina_pendente", None),
-        {"orcamento": {"teto": escolha}},
+        {"orcamento": {"teto": teto}},
     )
-    logger.info("config_orcamento_escolhido", teto=escolha)
+    # A marca "há escolhas por aplicar" no rodapé (23/08/2026). Sem esta chamada
+    # ela só acendia ao trocar de aba ou ao ir para a bandeja — quem declarava e
+    # clicava direto no X via o diálogo de fechamento sem nunca ter visto o aviso.
+    # `getattr` com guarda é o idioma da casa para fiação de aba: hospedeiro de
+    # teste sem rodapé não pode derrubar a declaração.
+    marcar = getattr(host, "_marcar_declaracao_por_aplicar", None)
+    if marcar is not None:
+        with contextlib.suppress(Exception):
+            marcar()
+    logger.info("config_orcamento_escolhido", teto=teto)
 
 
 def _tabela_das_consequencias() -> Any:

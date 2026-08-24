@@ -79,7 +79,7 @@ import tempfile
 import threading
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
@@ -90,6 +90,11 @@ logger = get_logger(__name__)
 #: Arquivo PRÓPRIO em ``config_dir()``, irmão do ``controllers.json`` e do
 #: ``controller_masks.json``. Nunca o mesmo arquivo — ver o cabeçalho.
 _MAQUINA_FILE = "maquina.json"
+
+#: Cópia dos bytes que o schema recusou, escrita ANTES de reescrever o arquivo.
+#: Sem ela o valor recusado some sem rastro, e não há como devolver à mão o que
+#: uma versão futura (ou o editor dela) tinha gravado.
+_MAQUINA_INVALIDO_SUFIXO = ".invalido"
 
 #: Versão PRÓPRIA deste esquema, independente das outras duas que vivem em
 #: ``config_dir()``. Separar as versões é o ponto: a declaração da mesa pode
@@ -313,22 +318,43 @@ def carregar_maquina() -> MaquinaConfig:
     return MaquinaConfig()
 
 
-def gravar_maquina(declaracao: Mapping[str, Any]) -> bool:
-    """Funde a declaração PARCIAL no documento do disco. ``True`` = gravou.
+class ResultadoDaGravacao(NamedTuple):
+    """O que a gravação fez — ``gravou`` e o que ela teve de deixar para trás.
 
-    ``False`` significa uma coisa só: **o arquivo em disco tem uma ``version``
-    que não é a nossa**, e então nada é lido nem escrito — os bytes ficam
-    intactos. Escolha de alguém não se destrói para registrar outra, e uma versão
-    futura é escolha de alguém.
+    ``descartados`` são os campos de TOPO que estavam em disco com valor que o
+    schema recusa: eles não voltam ao arquivo, e quem chama é o único que pode
+    dizer isso na tela. O consumidor natural é o ``machine.declare``
+    (``daemon/ipc_handlers.py``), que devolveria a lista pela ponte para a aba
+    Configurações avisar "não consegui reaproveitar X" em vez de apagar calado.
+    """
+
+    gravou: bool
+    descartados: tuple[str, ...]
+
+
+def gravar_maquina(declaracao: Mapping[str, Any]) -> bool:
+    """:func:`gravar_maquina_com_descartes` sem a lista — ``True`` = gravou."""
+    return gravar_maquina_com_descartes(declaracao).gravou
+
+
+def gravar_maquina_com_descartes(declaracao: Mapping[str, Any]) -> ResultadoDaGravacao:
+    """Funde a declaração PARCIAL no documento do disco.
+
+    ``gravou=False`` significa uma coisa só: **o arquivo em disco tem uma
+    ``version`` que não é a nossa**, e então nada é lido nem escrito — os bytes
+    ficam intactos. Escolha de alguém não se destrói para registrar outra, e uma
+    versão futura é escolha de alguém.
 
     Levanta ``ValueError`` (``ValidationError`` herda dele) quando a declaração
     não passa no schema e ``OSError`` quando a escrita falha; quem chama traduz
     as duas para recusa com motivo, que é o contrato do ``machine.declare``.
 
     O que sobrevive a esta escrita: chave de TOPO que uma versão futura tenha
-    escrito, copiada verbatim. O que NÃO sobrevive: valor de campo NOSSO que o
-    schema recusa — um valor inválido não é escolha de ninguém, é corrupção, e
-    preservá-lo travaria toda gravação futura deste arquivo para sempre.
+    escrito, copiada verbatim. O que NÃO sobrevive: o CAMPO cujo valor o schema
+    recusa — um valor inválido não é escolha de ninguém, é corrupção, e
+    preservá-lo travaria toda gravação futura deste arquivo para sempre. O
+    estrago para no campo ruim (:func:`_o_que_ainda_vale`): antes, um único
+    ``ambiente`` fora do catálogo levava junto mesa, controles e orçamento.
     """
     MaquinaConfig.model_validate(dict(declaracao))
     with MAQUINA_FILE_LOCK:
@@ -338,12 +364,18 @@ def gravar_maquina(declaracao: Mapping[str, Any]) -> bool:
                 "maquina_save_recusado_schema_desconhecido",
                 versao_arquivo=bruto.get(VERSION_FIELD),
             )
-            return False
+            return ResultadoDaGravacao(False, ())
+        descartados: tuple[str, ...] = ()
         try:
             atual = MaquinaConfig.model_validate(_so_o_que_o_schema_conhece(bruto))
         except ValidationError as exc:
-            logger.warning("maquina_documento_em_disco_invalido", err=str(exc))
-            atual = MaquinaConfig()
+            _guardar_os_bytes_recusados()
+            atual, descartados = _o_que_ainda_vale(bruto)
+            logger.warning(
+                "maquina_documento_em_disco_invalido",
+                err=str(exc),
+                descartados=list(descartados),
+            )
         fundido = MaquinaConfig.model_validate(
             fundir_declaracao(atual.model_dump(mode="json"), declaracao)
         )
@@ -356,7 +388,7 @@ def gravar_maquina(declaracao: Mapping[str, Any]) -> bool:
         documento[VERSION_FIELD] = MAQUINA_SCHEMA_VERSION
         _escrever(documento)
         logger.debug("maquina_gravada", campos=sorted(declaracao))
-    return True
+    return ResultadoDaGravacao(True, descartados)
 
 
 # ---------------------------------------------------------------------------
@@ -383,6 +415,47 @@ def _so_o_que_o_schema_conhece(bruto: Mapping[str, Any]) -> dict[str, Any]:
         for campo, valor in bruto.items()
         if campo in MaquinaConfig.model_fields
     }
+
+
+def _o_que_ainda_vale(bruto: Mapping[str, Any]) -> tuple[MaquinaConfig, tuple[str, ...]]:
+    """O documento sem os CAMPOS que o schema recusa — o resto sobrevive.
+
+    Cada campo de topo é validado sozinho, então a corrupção fica presa à sua
+    subárvore: o caminho realista para chegar aqui não é edição à mão, é uma
+    versão futura alargar um ``Literal`` e alguém voltar de versão, e nesse dia o
+    documento inteiro sumia porque UM campo tinha um valor novo demais.
+    """
+    salvo = _so_o_que_o_schema_conhece(bruto)
+    descartados = tuple(
+        campo
+        for campo in salvo
+        if campo != VERSION_FIELD and not _campo_isolado_passa(campo, salvo[campo])
+    )
+    for campo in descartados:
+        del salvo[campo]
+    return MaquinaConfig.model_validate(salvo), descartados
+
+
+def _campo_isolado_passa(campo: str, valor: Any) -> bool:
+    try:
+        MaquinaConfig.model_validate(
+            {VERSION_FIELD: MAQUINA_SCHEMA_VERSION, campo: valor}
+        )
+    except ValidationError:
+        return False
+    return True
+
+
+def _guardar_os_bytes_recusados() -> None:
+    """Copia o documento recusado para ``maquina.json.invalido``.
+
+    O campo recusado não volta ao arquivo; sem esta cópia ele é irrecuperável, e
+    devolver à mão um valor que ninguém mais tem é impossível.
+    """
+    origem = caminho_da_maquina()
+    with contextlib.suppress(OSError):
+        alvo = origem.parent / (origem.name + _MAQUINA_INVALIDO_SUFIXO)
+        alvo.write_bytes(origem.read_bytes())
 
 
 def _podar(no: Any) -> Any:

@@ -300,3 +300,55 @@ def test_a_secao_le_o_gravado_e_nunca_o_pendente() -> None:
     host = _Host("balanceado")
     host._maquina_pendente = {"orcamento": {"teto": "economia"}}
     assert secao_orcamento.orcamento_em_vigor(host) == "balanceado"
+
+
+class TestOBotaoMostraOQueElaEscolheu:
+    """Achado da conferência de 23/08/2026: a tela se contradizia.
+
+    Com a marca nova do rodapé, o defeito ficou visível: declare um orçamento,
+    troque de aba, volte — o rodapé dizia "Há escolhas declaradas por aplicar" e
+    o botão mostrava o valor do disco. O caso mais feio era o "Não sei", que
+    declara `teto: None`: na remontagem, o botão ANTIGO voltava afundado, e a
+    escolha da pessoa sumia da tela sem aviso.
+
+    As duas funções coexistem de propósito, e este teste prende as duas pontas.
+    """
+
+    def test_a_declaracao_pendente_vence_o_disco_no_botao(self) -> None:
+        """MORDE: com `orcamento_em_vigor` no lugar, o botão mostra o disco."""
+        host = _Host("economia")
+        host._maquina_pendente = {"orcamento": {"teto": "max"}}
+
+        assert secao_orcamento.orcamento_na_tela(host) == "max", (
+            "o botão desta aba tem de mostrar o que ela acabou de escolher"
+        )
+
+    def test_o_nao_sei_pendente_apaga_o_botao_antigo(self) -> None:
+        """MORDE: sem a função nova, o botão antigo volta afundado."""
+        host = _Host("economia")
+        host._maquina_pendente = {"orcamento": {"teto": None}}
+
+        assert secao_orcamento.orcamento_na_tela(host) is None, (
+            'escolher "Não sei" e remontar a aba trazia o botão antigo de volta'
+        )
+
+    def test_sem_pendencia_as_duas_concordam(self) -> None:
+        """Sem declaração de pé, a tela e o vigor são a mesma coisa."""
+        host = _Host("balanceado")
+        host._maquina_pendente = None
+
+        assert secao_orcamento.orcamento_na_tela(host) == "balanceado"
+        assert secao_orcamento.orcamento_em_vigor(host) == "balanceado"
+
+    def test_a_aba_rumble_continua_ignorando_o_pendente(self) -> None:
+        """A razão de existirem DUAS funções, presa em teste.
+
+        MORDE: se alguém fizer `orcamento_em_vigor` olhar o pendente, a aba
+        Rumble passa a afirmar um limite que o daemon não está impondo.
+        """
+        host = _Host("balanceado")
+        host._maquina_pendente = {"orcamento": {"teto": "max"}}
+
+        assert secao_orcamento.orcamento_em_vigor(host) == "balanceado", (
+            "a linha da aba Rumble descreve o que o daemon aplica AGORA"
+        )

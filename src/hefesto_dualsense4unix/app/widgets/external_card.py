@@ -44,6 +44,7 @@ from dataclasses import dataclass, replace
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.external_controllers import (
+    ID_DE_NAO_SEI,
     ID_DE_OUTRA_COR,
     MODE_SELECTOR_TOOLTIP,
     MODOS_DO_APARELHO,
@@ -115,7 +116,14 @@ DICA_DO_CAMPO_LIVRE = (
 )
 
 #: Rótulos dos botões de "Botões:", com os ids do `ControleDeclarado.botoes`.
-BOTOES_DO_APARELHO: list[tuple[str, str]] = [("xbox", "Xbox"), ("nintendo", "Nintendo")]
+#: O terceiro NÃO é um id do schema: `ID_DE_NAO_SEI` é a palavra da tela para o
+#: `None`, e o handler o traduz antes de declarar. Sem ele não havia gesto para
+#: desfazer — grupo de rádio ignora o clique no botão já afundado.
+BOTOES_DO_APARELHO: list[tuple[str, str]] = [
+    ("xbox", "Xbox"),
+    ("nintendo", "Nintendo"),
+    (ID_DE_NAO_SEI, "Não sei"),
+]
 
 #: Largura mínima de um card, em pixels. Menos que isto e a lista de cor (três
 #: colunas fixas) começa a quebrar rótulo de oito letras no meio.
@@ -285,16 +293,18 @@ if _GTK_DISPONIVEL:
                 return caixa
 
             caixa = _bloco("Cor:", DICA_DA_COR_NAO_LIDA)
-            seletor = _compacto(SegmentedSelector(wrap=True))
+            seletor = SegmentedSelector(wrap=True)
             seletor.set_items(
                 [(ident, _(rotulo)) for ident, rotulo in cores_do_plastico_items()]
             )
             # Os seis nomes de fábrica NÃO passam por `_()`: "Cosmic Red" é o
             # que está escrito na caixa e no serial do aparelho, e traduzi-lo
             # inventaria um nome que a Sony não usa e que não casa com nenhuma
-            # outra fonte. A frase do "Outra" é redação nossa, e passa.
+            # outra fonte. As frases do "Outra" e do "Não sei" são redação
+            # nossa, e passam.
             dicas = dicas_das_cores()
             dicas[ID_DE_OUTRA_COR] = _(dicas[ID_DE_OUTRA_COR])
+            dicas[ID_DE_NAO_SEI] = _(dicas[ID_DE_NAO_SEI])
             seletor.set_tooltips(dicas)
             # ANTES do connect: `set_active_id` emite "changed", e com o handler
             # ligado a montagem gravaria sozinha o que ninguém escolheu.
@@ -332,7 +342,7 @@ if _GTK_DISPONIVEL:
             mudar, muda nos dois lugares de uma vez.
             """
             caixa = _bloco("Modo:", DICA_DO_MODO)
-            seletor = _compacto(SegmentedSelector(wrap=True))
+            seletor = SegmentedSelector(wrap=True)
             seletor.set_items([(ident, _(rotulo)) for ident, rotulo in MODOS_DO_APARELHO])
             if dados.modo:
                 with contextlib.suppress(Exception):
@@ -382,6 +392,12 @@ if _GTK_DISPONIVEL:
             escolha = seletor.get_active_id()
             if self._campo_livre is not None:
                 self._campo_livre.set_visible(escolha == ID_DE_OUTRA_COR)
+            if escolha == ID_DE_NAO_SEI:
+                # Cedo e explícito: cair no `nome_oficial_da_cor` abaixo daria
+                # `None` por acidente (o id não é código de cor nenhum), e um
+                # acerto por acidente some na primeira mudança daquela função.
+                self._declarar("cor", None)
+                return
             if escolha == ID_DE_OUTRA_COR:
                 texto = "" if self._campo_livre is None else self._campo_livre.get_text()
                 self._declarar("cor", texto.strip() or None)
@@ -392,7 +408,8 @@ if _GTK_DISPONIVEL:
             self._declarar("cor", campo.get_text().strip() or None)
 
         def _ao_escolher_botoes(self, seletor: Any) -> None:
-            self._declarar("botoes", seletor.get_active_id())
+            escolha = seletor.get_active_id()
+            self._declarar("botoes", None if escolha == ID_DE_NAO_SEI else escolha)
 
         def _ao_escolher_jogador(self, seletor: Any) -> None:
             """Pede o número ao daemon — e NÃO pinta nada por conta própria.
@@ -505,22 +522,20 @@ if _GTK_DISPONIVEL:
         caixa.pack_start(rotulo, False, False, 0)
         return caixa
 
-    def _compacto(seletor: Any) -> Any:
-        """Tira o padding que o tema dá a um `GtkRadioButton` em modo toggle.
-
-        MEDIDO em 02/08/2026, na SOM-CANAL-01: o `SegmentedSelector` pede 67px de
-        altura contra os 34px de um botão comum, e a diferença é só padding. Num
-        card com quatro seletores empilhados isso são mais de 130px por card —
-        e esta seção é, segundo o índice da leva, a maior culpada pelo orçamento
-        de altura estourado da aba.
-
-        A classe já existe no tema (`theme.css`, `.hefesto-seletor-compacto`) e
-        corta padding, não fonte: encolher a letra faria o rótulo destes botões
-        divergir do resto da janela.
-        """
-        with contextlib.suppress(Exception):
-            seletor.get_style_context().add_class("hefesto-seletor-compacto")
-        return seletor
+    # NOTA DATADA — 23/08/2026: os seletores deste card SAÍRAM da classe
+    # `hefesto-seletor-compacto`.
+    #
+    # A medição que a pôs aqui continua valendo (02/08/2026, SOM-CANAL-01: o
+    # `SegmentedSelector` pede 67px contra os 34px de um botão comum, e a
+    # diferença é só padding) — não foi ela que caducou. O que a derrubou foi
+    # uma medição NOVA: este era o único lugar da aba a usar DUAS gramáticas de
+    # seletor ao mesmo tempo, e a aba saía com CINCO alturas de botão
+    # (22/24/26/32/38px) contra UMA das abas Início e Perfis. Sem a classe são
+    # três, e a fileira volta a ler como a mesma janela. Altura se recupera com
+    # rolagem; gramática visual quebrada, não.
+    #
+    # A classe segue no tema e segue em uso em `controller_card.py` — o que
+    # mudou é este card, não a receita.
 
     def _deitado() -> Any:
         """Um `SegmentedSelector` com os botões numa fileira só.
@@ -541,7 +556,7 @@ if _GTK_DISPONIVEL:
         """
         seletor = SegmentedSelector()
         seletor.set_orientation(Gtk.Orientation.HORIZONTAL)
-        return _compacto(seletor)
+        return seletor
 
     def _ajuda(dica: str) -> Any:
         """O `?` do desenho: recebe foco pelo teclado, porque a dica é a única
