@@ -1459,8 +1459,10 @@ class PyDualSenseController(IController):
         # FEAT-DSX-CONTROLLER-SELECTOR-01: ALVO das ações de output. None =
         # TODOS (broadcast, padrão e idêntico ao histórico). Guardamos a KEY
         # estável (serial/MAC) do controle escolhido — NÃO o índice — para
-        # sobreviver a hotplug/troca de porta. Se a key alvo sumir (controle
-        # desconectou), o `_for_each` cai de volta em broadcast.
+        # sobreviver a hotplug/troca de porta. P4/BROADCAST-PROIBIDO-01
+        # (24/08/2026): se a key alvo sumir (controle desconectou), o
+        # `_for_each` NÃO cai em broadcast — `_resolver_escopo` devolve zero
+        # handles, e o valor fica guardado no override por-uniq do ausente.
         self._output_target_key: str | None = None
         # FEAT-NATIVE-OUTPUT-MUTE-01: espelho no backend do mute de output
         # (Modo Nativo) — aplicado a todo handle atual E aos que abrirem
@@ -1846,15 +1848,17 @@ class PyDualSenseController(IController):
     def _record_desired_locked(self, target_key: str | None, fields: dict[str, Any]) -> None:
         """Grava campos do estado desejado no escopo CERTO. Chamar sob `_io_lock`.
 
-        `target_key=None` (broadcast — sem alvo, ou alvo que desconectou, o
-        mesmo fallback do `_for_each`): grava no default E LIMPA o campo
-        escrito de todos os overrides por-uniq — um "Todos" ao vivo da GUI
-        vale para todo mundo; sem a limpeza, "mudei todos para azul,
-        repluguei e um voltou verde". Alvo presente: grava SÓ no override do
-        MAC do alvo (era o bug provado do 4P-01 — o setter gravava no global
-        incondicionalmente e o replug de OUTRO controle herdava o ajuste).
-        Alvo sem MAC (key por path): a escrita de hardware acontece, mas não
-        há identidade estável para lembrar — log em vez de silêncio.
+        `target_key=None` (broadcast — SÓ "Todos"; P4/BROADCAST-PROIBIDO-01,
+        24/08/2026: alvo que desconectou NÃO cai mais aqui, `_resolver_escopo`
+        devolve `target_key=alvo` para o ausente também): grava no default E
+        LIMPA o campo escrito de todos os overrides por-uniq — um "Todos" ao
+        vivo da GUI vale para todo mundo; sem a limpeza, "mudei todos para
+        azul, repluguei e um voltou verde". Alvo presente OU ausente: grava
+        SÓ no override do MAC do alvo (era o bug provado do 4P-01 — o setter
+        gravava no global incondicionalmente e o replug de OUTRO controle
+        herdava o ajuste). Alvo sem MAC (key por path): a escrita de hardware
+        acontece, mas não há identidade estável para lembrar — log em vez de
+        silêncio.
         """
         if target_key is not None:
             uniq = self._key_to_uniq(target_key)
@@ -2672,22 +2676,22 @@ class PyDualSenseController(IController):
         getters: eles alimentam o seletor da GUI e a rota do rumble por dono,
         que são de outra frente.
 
-        **DÍVIDA ABERTA — a metade "e DIZ" ainda não chega à tela.** O
-        comportamento seguro já está de pé (nada é escrito), mas
-        `daemon/ipc_handlers.py::_handle_rumble_set` continua respondendo
-        `{"status": "ok", "desfecho": RUMBLE_APLICADO}` sem consultar isto —
-        e aquele arquivo é de outra frente, então não o toco. Quem o encostar
-        chama este método ANTES de `set_rumble` e devolve, no molde da
-        NATIVO-RUMBLE-01 que já existe ali logo acima:
+        **A metade "e DIZ" chegou em 24/08/2026 (BROADCAST-PROIBIDO-01,
+        Z3-5).** `daemon/ipc_handlers.py::_handle_rumble_set` chama este
+        método ANTES de `set_rumble` e recusa no molde da NATIVO-RUMBLE-01
+        que já existia ali logo acima:
 
-            {"status": "recusado", "desfecho": <novo>, "motivo": <novo>,
-             "weak": 0, "strong": 0}
+            {"status": "recusado", "desfecho": RUMBLE_RECUSADO_ALVO_AUSENTE,
+             "motivo": MOTIVO_ALVO_FORA_DA_MESA, "weak": 0, "strong": 0}
 
-        **Redação PROVISÓRIA** (a palavra final é dela): *"O Controle 2 não
-        está na mesa — nada foi enviado."*. Para led/gatilho/player não há
-        redação nova a inventar: o valor fica guardado no override por-uniq, e
-        o par `"registrado"` + *"Guardado — vai valer quando o Controle 2
-        voltar"* já é o léxico da casa (MESA-CHEIA-09).
+        A redação de `MOTIVO_ALVO_FORA_DA_MESA`
+        (`daemon/subsystems/rumble.py`) é a mesma que nasceu PROVISÓRIA aqui —
+        *"O controle escolhido não está na mesa — nada foi enviado."* — e
+        segue **PROVISÓRIA — decisão dela**: vai ao olho dela no lote da
+        Onda 9, junto de RUM-1/RUM-2. Para led/gatilho/player não há redação
+        nova: o valor fica guardado no override por-uniq, e o par
+        `"registrado"` + *"Guardado — vai valer quando o Controle 2 voltar"*
+        já é o léxico da casa (MESA-CHEIA-09).
         """
         with self._io_lock:
             alvo = self._output_target_key
