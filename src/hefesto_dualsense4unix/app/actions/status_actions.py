@@ -1525,6 +1525,16 @@ class StatusActionsMixin(WidgetAccessMixin):
         # que muda o que os botões das outras abas fazem, vivia num tooltip
         # (invisível até alguém parar o ponteiro em cima). Vira legenda fixa
         # ao lado da fita, e a fita ganha faixa própria com ela.
+        #
+        # NOTA DE 24/08/2026, e ela NÃO derruba a decisão acima: o PORQUÊ de a
+        # fita estar apagada numa aba passou a viver, sim, num tooltip (ver
+        # `config/mixin.set_alvo_inativo`). Não é volta atrás — é outra
+        # pergunta. Aqui o escondido era a FUNÇÃO do chip, e escondê-la custava
+        # a função; lá é o motivo de um estado secundário, e a alternativa fixa
+        # foi medida e reprovada por ela em 23/08 por deformar o cabeçalho.
+        # A régua que separa as duas: quando o escondido é o que a pessoa
+        # PRECISA para agir, legenda fixa; quando é o porquê do que ela já está
+        # vendo, hover.
         faixa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         faixa.set_valign(Gtk.Align.CENTER)
         legenda = Gtk.Label(label=_("Ajustes vão para:"))
@@ -1536,8 +1546,25 @@ class StatusActionsMixin(WidgetAccessMixin):
         box.show()
         faixa.set_no_show_all(True)
         faixa.hide()
-        header_bar.pack_end(faixa, False, False, 0)
+        # Z2-8 + decisão dela de 24/08: a fita ESMAECIDA explica-se por tooltip,
+        # e tooltip não dispara sobre conteúdo insensível — um widget com
+        # `set_sensitive(False)` não recebe evento de mouse no GTK3, então a
+        # propriedade ficaria posta e a frase nunca apareceria (medido antes de
+        # escrever: `has-tooltip` volta `True` e `is_sensitive()` volta `False`).
+        # O `EventBox` é a saída: ele fica SENSÍVEL e recebe o ponteiro, a faixa
+        # dentro dele continua insensível. `set_visible_window(False)` o mantém
+        # sem pintura própria — ele não muda um pixel do cabeçalho, que é a
+        # condição que ela pôs em 23/08 e repetiu hoje.
+        moldura_do_hover = Gtk.EventBox()
+        with contextlib.suppress(Exception):
+            moldura_do_hover.set_visible_window(False)
+        moldura_do_hover.add(faixa)
+        moldura_do_hover.show()
+        header_bar.pack_end(moldura_do_hover, False, False, 0)
         self._target_strip = faixa
+        #: Quem carrega o tooltip do "por que esta fita está apagada". Nunca a
+        #: própria fita — ver o comentário acima.
+        self._target_strip_hover = moldura_do_hover
         self._montar_numero_selector(header_bar)
         # PERFIL-04: badge "Editando: Controle N (BT)" — rótulo inline no
         # banner (nunca popup — cosmic-epoch#2497), visível só quando um

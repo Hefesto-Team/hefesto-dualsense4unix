@@ -31,8 +31,7 @@ ABA_CONFIG = "tab_config_box"
 #: desqualifica de propósito porque o que se declara aqui vale para a mesa
 #: inteira, não por esquecimento de ligar um leitor.
 MOTIVO_ALVO_NAO_SE_APLICA = (
-    "esta aba declara para a mesa inteira — o seletor de controle do "
-    "cabeçalho não tem o que escolher aqui"
+    "Aqui os ajustes valem para a mesa inteira — não há controle a escolher."
 )
 
 
@@ -81,8 +80,9 @@ class ConfigActionsMixin(WidgetAccessMixin):
         deixava esta aba visivelmente mais larga que as outras dez. Explicação
         que deforma a página cobra caro demais pelo que entrega.
 
-        **``motivo`` (Z2-5, 24/08/2026): guardado, NUNCA pintado** — a decisão
-        de 23/08 acima continua de pé, o cabeçalho não ganha nada. É o que o
+        **``motivo``: no HOVER, nunca pintado** (Z2-5 guardou; a decisão dela
+        de 24/08 ligou o tooltip) — a decisão de 23/08 acima continua de pé, o
+        cabeçalho não ganha um pixel. É o que o
         contrato do §5 da Z2-O-ALVO-GANHA-DONO-01 pede de toda aba que se
         desqualifica de propósito, e o que o portão da Z2-9 lê para separar
         "esta aba decidiu não ler o alvo" de "ninguém decidiu nada" — a mesma
@@ -105,3 +105,36 @@ class ConfigActionsMixin(WidgetAccessMixin):
             return
         with contextlib.suppress(Exception):
             faixa.set_sensitive(not inativo)
+        # DECISÃO DELA, 24/08/2026: o motivo deixa de ser só guardado e passa a
+        # aparecer — **no hover, nunca pintado**. A decisão de 23/08 continua
+        # inteira: o cabeçalho não ganha um pixel de altura nem de largura, que
+        # era o defeito do rótulo removido. O que muda é que quem parar o
+        # ponteiro sobre a fita apagada descobre por quê, em vez de achar que
+        # a tela quebrou.
+        #
+        # O tooltip mora no `EventBox` que embrulha a fita
+        # (`status_actions.py`, `_target_strip_hover`) e NÃO na fita: widget
+        # insensível não recebe evento de mouse no GTK3, então pô-lo aqui
+        # deixaria a frase escrita e nunca exibida — a cura morta que esta casa
+        # já pagou caro várias vezes.
+        #
+        # E VAI CONTRA UM PRECEDENTE DESTA CASA, de propósito e com a palavra
+        # dela. A PLAYER-01 (`status_actions.py`, entrega 3) tirou o
+        # SIGNIFICADO do chip de dentro de um tooltip — *"invisível até alguém
+        # parar o ponteiro em cima"* — e o transformou em legenda fixa. O
+        # precedente foi posto na mesa antes desta linha existir; ela decidiu
+        # assim mesmo: *"do jeito que mostrou é melhor. nossa solução não tá
+        # marcada em tábuas de pedra. podemos mudar. o projeto é vivo."*
+        #
+        # A diferença que sustenta os dois lados, e é ela que impede isto de ser
+        # contradição: lá o tooltip escondia o significado PRINCIPAL de um
+        # controle que a pessoa usa — esconder era perder a função. Aqui ele
+        # carrega a explicação de um estado SECUNDÁRIO, e a alternativa (rótulo
+        # fixo) já foi medida e reprovada por ela em 23/08 por deformar o
+        # cabeçalho. Quando o que se esconde é a função, legenda fixa; quando é
+        # o porquê de um estado, hover.
+        moldura = getattr(self, "_target_strip_hover", None)
+        if moldura is None:
+            return
+        with contextlib.suppress(Exception):
+            moldura.set_tooltip_text(motivo if inativo else None)
