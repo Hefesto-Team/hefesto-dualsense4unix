@@ -74,7 +74,19 @@ def arvore(tmp_path: Path) -> Path:
     # nem carrega — que é o comportamento que se quer: régua e legenda que
     # divergem publicariam uma página descrevendo um domínio que o portão não
     # aceita, e um `ImportError` grita, enquanto duas listas envelhecem caladas.
-    for script in ("gerar-mapa.py", "eliminacao.py", "check_paridade_transporte.py"):
+    # `paleta_da_casa.py` entrou nesta lista em 23/08/2026: a paleta saiu de
+    # dentro do `gerar-mapa.py` para ser DIVIDIDA com o `gerar-painel.py`, e sem
+    # ela a cópia do gerador morre com `ModuleNotFoundError` na árvore de teste.
+    #
+    # Esta lista é o preço de copiar scripts para um tmp em vez de rodá-los na
+    # árvore: toda dependência nova precisa ser lembrada aqui. O `ImportError`
+    # grita, que é o comportamento certo — foi assim que este teste avisou.
+    for script in (
+        "gerar-mapa.py",
+        "paleta_da_casa.py",
+        "eliminacao.py",
+        "check_paridade_transporte.py",
+    ):
         shutil.copy(RAIZ / "scripts" / script, tmp_path / "scripts" / script)
     for desenho in (RAIZ / "assets" / "control-svg").glob("*.svg"):
         shutil.copy(desenho, tmp_path / "assets" / "control-svg" / desenho.name)

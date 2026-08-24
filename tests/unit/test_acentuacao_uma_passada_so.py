@@ -66,7 +66,7 @@ def _do_jeito_antigo(mod, texto: str, *, eh_python: bool = False) -> set[tuple]:
 def _do_jeito_novo(mod, texto: str) -> set[tuple]:
     achados: set[tuple] = set()
     for idx, linha in enumerate(texto.splitlines()):
-        for m in mod._ALTERNANCIA.finditer(linha):
+        for m in mod._alternancia().finditer(linha):
             correta = mod._CORRECOES.get(m.group().lower())
             if correta is None:
                 continue
@@ -174,12 +174,37 @@ def test_o_laco_de_314_passadas_nao_voltou() -> None:
     pytest.fail("instrumento inválido: não achei `checar_arquivo` no script")
 
 
+def test_a_alternancia_enxerga_correcao_injetada() -> None:
+    """A cegueira que a primeira versão tinha, e que um teste alheio pegou.
+
+    A alternância era compilada UMA vez na importação e ficava cega a qualquer
+    mudança de `_CORRECOES`. A defesa de glifos ADR-011 injeta um par malicioso
+    em tempo de execução para provar que o post-pass reverte — e reprovou,
+    porque a alternância não via o par injetado. O teste estava certo e o
+    conserto estava errado.
+
+    MORDE: voltar a compilar a alternância uma vez só.
+    """
+    mod = _modulo()
+    assert not mod._alternancia().search("zzpalavrainventadazz")
+
+    mod._CORRECOES["zzpalavrainventadazz"] = "zzpalavrainventadazz-certa"
+    try:
+        assert mod._alternancia().search("olha a zzpalavrainventadazz aqui"), (
+            "a alternância não enxergou uma correção acrescentada em tempo de "
+            "execução: quem injeta em `_CORRECOES` fica sem efeito, em silêncio"
+        )
+    finally:
+        del mod._CORRECOES["zzpalavrainventadazz"]
+
+
 def test_a_alternancia_e_um_regex_so() -> None:
     """MORDE: trocar a alternância por uma lista de padrões."""
     mod = _modulo()
-    assert isinstance(mod._ALTERNANCIA, re.Pattern), (
-        "`_ALTERNANCIA` deixou de ser um único padrão compilado"
+    pat = mod._alternancia()
+    assert isinstance(pat, re.Pattern), (
+        "`_alternancia()` deixou de devolver um único padrão compilado"
     )
-    assert mod._ALTERNANCIA.flags & re.IGNORECASE, (
+    assert pat.flags & re.IGNORECASE, (
         "a alternância perdeu o IGNORECASE: `DECISAO` em maiúscula deixaria de acusar"
     )

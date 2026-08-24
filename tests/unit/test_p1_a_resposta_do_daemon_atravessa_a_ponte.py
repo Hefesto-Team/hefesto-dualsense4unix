@@ -52,8 +52,8 @@ TRIGGER_MESA_VAZIA: dict[str, Any] = {
 #: Mesa com um controle presente e outro só registrado (MESA-CHEIA-09).
 TRIGGER_UM_APLICOU_UM_GUARDOU: dict[str, Any] = {
     "status": "ok",
-    "aplicado_em": ["a1:b2:c3:00:00:f6"],
-    "guardado_em": ["11:22:33:00:00:66"],
+    "aplicado_em": ["e8:47:3a:00:00:f6"],
+    "guardado_em": ["aa:bb:cc:00:00:66"],
 }
 
 LED_MESA_VAZIA: dict[str, Any] = {
@@ -66,7 +66,7 @@ PLAYER_LEDS_GUARDADO: dict[str, Any] = {
     "status": "ok",
     "bits": [True, False, False, False, False],
     "aplicado_em": [],
-    "guardado_em": ["a1:b2:c3:00:00:f6"],
+    "guardado_em": ["e8:47:3a:00:00:f6"],
 }
 
 #: `_handle_mic_volume_set`: sem ponte de áudio no rádio não há fonte de
@@ -163,12 +163,12 @@ class TestGatilhoEntregaOsDestinos:
         daemon_diz(TRIGGER_UM_APLICOU_UM_GUARDOU)
 
         _ok, _motivo, corpo = ipc_bridge.trigger_set_detalhado(
-            "right", "Rigid", [0, 8, 8], uniq="a1:b2:c3:00:00:f6"
+            "right", "Rigid", [0, 8, 8], uniq="e8:47:3a:00:00:f6"
         )
 
         assert ipc_bridge.destinos_da_aplicacao(corpo) == (
-            ["a1:b2:c3:00:00:f6"],
-            ["11:22:33:00:00:66"],
+            ["e8:47:3a:00:00:f6"],
+            ["aa:bb:cc:00:00:66"],
         )
 
     def test_o_pedido_e_identico_ao_da_porta_antiga(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
@@ -225,17 +225,17 @@ class TestGatilhoEntregaOsDestinos:
         espiao = daemon_diz(TRIGGER_UM_APLICOU_UM_GUARDOU)
 
         ok, _motivo, corpo = ipc_bridge.trigger_reset_detalhado(
-            side="left", uniq="a1:b2:c3:00:00:f6"
+            side="left", uniq="e8:47:3a:00:00:f6"
         )
 
         assert ok is True
         assert ipc_bridge.destinos_da_aplicacao(corpo) == (
-            ["a1:b2:c3:00:00:f6"],
-            ["11:22:33:00:00:66"],
+            ["e8:47:3a:00:00:f6"],
+            ["aa:bb:cc:00:00:66"],
         )
         assert espiao.chamadas[0] == (
             "trigger.reset",
-            {"side": "left", "uniq": "a1:b2:c3:00:00:f6"},
+            {"side": "left", "uniq": "e8:47:3a:00:00:f6"},
         )
 
 
@@ -261,12 +261,12 @@ class TestLightbarEntregaOsDestinos:
         daemon_diz(PLAYER_LEDS_GUARDADO)
 
         corpo = ipc_bridge.player_leds_set_detalhado(
-            (True, False, False, False, False), uniq="a1:b2:c3:00:00:f6"
+            (True, False, False, False, False), uniq="e8:47:3a:00:00:f6"
         )
 
         assert corpo is not None
         assert corpo["bits"] == [True, False, False, False, False]
-        assert ipc_bridge.destinos_da_aplicacao(corpo) == ([], ["a1:b2:c3:00:00:f6"])
+        assert ipc_bridge.destinos_da_aplicacao(corpo) == ([], ["e8:47:3a:00:00:f6"])
 
     def test_daemon_offline_volta_none_e_nao_dict_vazio(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
         """``None`` é "não respondeu"; ``{}`` seria "respondeu nada" — diferente."""
@@ -299,7 +299,7 @@ class TestMicrofoneEntregaAResposta:
     def test_volume_lido_de_volta_chega(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
         daemon_diz(MIC_VOLUME_ALVO_HONRADO)
 
-        corpo = ipc_bridge.mic_volume_set_detalhado(99, uniq="a1:b2:c3:00:00:f6")
+        corpo = ipc_bridge.mic_volume_set_detalhado(99, uniq="e8:47:3a:00:00:f6")
 
         assert corpo is not None
         assert corpo["volume"] == 62, "a LEITURA de volta, não o número que mandamos"
@@ -307,10 +307,10 @@ class TestMicrofoneEntregaAResposta:
 
     def test_alvo_honrado_distingue_a_rota_global(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
         daemon_diz(MIC_VOLUME_ROTA_GLOBAL)
-        global_ = ipc_bridge.mic_volume_set_detalhado(62, uniq="a1:b2:c3:00:00:f6")
+        global_ = ipc_bridge.mic_volume_set_detalhado(62, uniq="e8:47:3a:00:00:f6")
 
         daemon_diz(MIC_VOLUME_ALVO_HONRADO)
-        honrado = ipc_bridge.mic_volume_set_detalhado(62, uniq="a1:b2:c3:00:00:f6")
+        honrado = ipc_bridge.mic_volume_set_detalhado(62, uniq="e8:47:3a:00:00:f6")
 
         assert ipc_bridge.alvo_honrado(global_) is False
         assert ipc_bridge.alvo_honrado(honrado) is True
@@ -329,12 +329,12 @@ class TestMicrofoneEntregaAResposta:
     def test_speaker_detalhado_entrega_o_corpo(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
         espiao = daemon_diz(SPEAKER_SEM_CONTROLE)
 
-        corpo = ipc_bridge.speaker_set_detalhado(volume=80, uniq="a1:b2:c3:00:00:f6")
+        corpo = ipc_bridge.speaker_set_detalhado(volume=80, uniq="e8:47:3a:00:00:f6")
 
         assert corpo == SPEAKER_SEM_CONTROLE
         assert espiao.chamadas[0] == (
             "speaker.set",
-            {"volume": 80, "uniq": "a1:b2:c3:00:00:f6"},
+            {"volume": 80, "uniq": "e8:47:3a:00:00:f6"},
         )
 
     def test_speaker_detalhado_mantem_a_guarda_do_release(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]

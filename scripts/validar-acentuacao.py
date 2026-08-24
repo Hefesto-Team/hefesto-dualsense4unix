@@ -538,12 +538,40 @@ _PATTERNS: dict[str, re.Pattern[str]] = {e: _compila_pattern(e) for e in _CORREC
 #: A resposta continua vindo do `_CORRECOES` — a alternância só diz ONDE olhar;
 #: a palavra certa é buscada no dicionário, como antes. Um teste de igualdade
 #: exata contra a implementação antiga é o aceite.
-_ALTERNANCIA = re.compile(
-    r"(?<![A-Za-z0-9_])(?:"
-    + "|".join(re.escape(e) for e in sorted(_CORRECOES, key=len, reverse=True))
-    + r")(?![A-Za-z0-9_])",
-    re.IGNORECASE,
-)
+#: **A alternância é RECOMPILADA quando `_CORRECOES` muda**, e isso não é zelo.
+#:
+#: A primeira versão compilava uma vez, na importação, e ficava CEGA a qualquer
+#: mudança do dicionário. A defesa de glifos ADR-011 tem um teste que injeta um
+#: par malicioso em `_CORRECOES` em tempo de execução para provar que o
+#: post-pass reverte — e ele reprovou, porque a alternância não enxergava o par
+#: injetado. **O teste estava certo e o conserto estava errado.**
+#:
+#: A chave do cache é `(id, len)`: pega tanto o dicionário SUBSTITUÍDO quanto a
+#: chave ACRESCENTADA. Não pega valor trocado sem mudar de tamanho — e não
+#: precisa: a alternância olha só as CHAVES, e o valor certo continua vindo do
+#: dicionário na hora de reportar.
+_cache_alternancia: tuple[tuple[int, int], re.Pattern[str]] | None = None
+
+
+def _alternancia() -> re.Pattern[str]:
+    """Um único padrão com as 314 palavras, em vez de 314 padrões por linha.
+
+    Ordenada da MAIS LONGA para a mais curta porque a alternância do Python é
+    *first-match*: sem isso um prefixo casaria antes do termo inteiro e o achado
+    sairia truncado.
+    """
+    global _cache_alternancia
+    chave = (id(_CORRECOES), len(_CORRECOES))
+    if _cache_alternancia is not None and _cache_alternancia[0] == chave:
+        return _cache_alternancia[1]
+    pat = re.compile(
+        r"(?<![A-Za-z0-9_])(?:"
+        + "|".join(re.escape(e) for e in sorted(_CORRECOES, key=len, reverse=True))
+        + r")(?![A-Za-z0-9_])",
+        re.IGNORECASE,
+    )
+    _cache_alternancia = (chave, pat)
+    return pat
 
 
 # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02: whitelist Unicode conforme ADR-011.
@@ -737,7 +765,7 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
             linha_busca = linhas_texto[idx]
         else:
             linha_busca = linha
-        for m in _ALTERNANCIA.finditer(linha_busca):
+        for m in _alternancia().finditer(linha_busca):
             correta = _CORRECOES.get(m.group().lower())
             if correta is None:
                 continue
@@ -823,10 +851,10 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
 
         # Coleta todas as substituições válidas (ordem reversa para preservar offsets).
         subs: list[tuple[int, int, str]] = []  # (start, end, replacement)
-        # UMA passada, como no `checar_arquivo` — ver a nota do `_ALTERNANCIA`.
+        # UMA passada, como no `checar_arquivo` — ver a nota do `_alternancia()`.
         # O `--fix` tinha o MESMO laço de 314 passadas, e curar só a metade que
         # confere deixaria o `--fix` custando o que o portão deixou de custar.
-        for m in _ALTERNANCIA.finditer(linha_busca):
+        for m in _alternancia().finditer(linha_busca):
             correta = _CORRECOES.get(m.group().lower())
             if correta is None:
                 continue

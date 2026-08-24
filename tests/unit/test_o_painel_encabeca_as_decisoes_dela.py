@@ -167,20 +167,59 @@ def test_a_foto_so_entra_se_o_arquivo_existir() -> None:
     )
 
 
-@pytest.mark.parametrize("bandeira", ["--check"])
-def test_o_painel_publicado_bate_com_o_csv(bandeira: str) -> None:
-    """O `--check` compara CONTEÚDO, e é ele que o gancho de pré-commit roda.
+def test_o_check_do_painel_MORDE() -> None:
+    """O `--check` acusa divergência — e é ele que o gancho de pré-commit roda.
 
-    MORDE: editar o CSV sem regerar o painel.
+    **ESTE TESTE NASCEU ERRADO E FOI CORRIGIDO NO MESMO DIA (23/08/2026).** A
+    primeira versão rodava `--check` contra o painel PUBLICADO e cobrava que ele
+    estivesse em dia. Ela reprovou na suíte inteira — e estava certa em reprovar:
+    entre gerar o painel e rodar a suíte, um agente escreveu cinco sprints novas,
+    e o censo saiu de 272 para 277.
+
+    O `--check` fez o trabalho dele. **Frágil era o teste**, que media a árvore
+    em MOVIMENTO — exatamente a armadilha registrada em `COMO-REGER-AGENTES.md`
+    no mesmo dia, e que já tinha me feito medir a suíte com resultado inválido.
+
+    Manter o painel publicado em dia é trabalho do GANCHO, que regenera antes de
+    cada commit. O que a suíte tem de garantir é outra coisa: **que o `--check`
+    saiba acusar.** Um check que nunca reprova é um check que não protege nada.
+
+    MORDE: fazer o `--check` comparar mtime em vez de conteúdo, ou devolver
+    sempre zero.
     """
-    p = subprocess.run(
-        ["python3", str(GERADOR), bandeira],
-        cwd=RAIZ,
-        capture_output=True,
-        text=True,
-        timeout=180,
-    )
-    assert p.returncode == 0, (
-        "o painel.html publicado não bate com as fontes — cure com "
-        f"`python3 scripts/gerar-painel.py`. Saída: {p.stdout}{p.stderr}"
-    )
+    publicado = RAIZ / "painel.html"
+    guardado = publicado.read_bytes()
+
+    def _check() -> int:
+        return subprocess.run(
+            ["python3", str(GERADOR), "--check"],
+            cwd=RAIZ, capture_output=True, text=True, timeout=180,
+        ).returncode
+
+    try:
+        # 1. Recém-gerado: tem de PASSAR.
+        subprocess.run(
+            ["python3", str(GERADOR)], cwd=RAIZ, capture_output=True, timeout=180
+        )
+        assert _check() == 0, (
+            "o `--check` reprovou um painel que ele mesmo acabou de gerar"
+        )
+
+        # 2. Sujo: tem de REPROVAR. Um número trocado é a divergência mais
+        #    difícil de pegar — se ele acusa isto, acusa qualquer coisa.
+        texto = publicado.read_text(encoding="utf-8")
+        publicado.write_text(
+            texto.replace("chaves no mapa de canais", "chaves no mapa de canaes", 1),
+            encoding="utf-8",
+        )
+        assert _check() != 0, (
+            "o `--check` NÃO acusou um painel adulterado: ele é decorativo, e o "
+            "gancho de pré-commit que o roda não protege nada"
+        )
+    finally:
+        publicado.write_bytes(guardado)
+        subprocess.run(
+            ["python3", str(GERADOR)], cwd=RAIZ, capture_output=True, timeout=180
+        )
+
+
