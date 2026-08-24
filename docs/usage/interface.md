@@ -13,6 +13,14 @@ Esta página diz o que cada uma faz e o que se ajusta nela — e, no fim, o
 > [`assets/CONFERIDO-EM.md`](assets/CONFERIDO-EM.md). A aba "No jogo" já
 > aparece na tira desde 10/08/2026, e a **Configurações** desde 22/08/2026.
 >
+> **A foto da Configurações está atrás da árvore, e isso é medido** (23/08/2026):
+> a imagem é das 18h15 e a aba mudou às 18h55. O que ela **não** mostra: o "Não
+> sei" do Orçamento e o das cores, os cards de aparelho externo mais altos, e o
+> medidor de rádio dizendo "Não sei" sem o daemon — na foto ele ainda diz
+> "Folgada 0/1600", em verde, que é justamente o defeito curado no mesmo dia.
+> Enquanto ela não for refeita, **este texto é a fonte** e a imagem é a aba de
+> uma hora antes.
+>
 > **Uma das onze ganha duas fotos.** A Configurações pede mais altura do que a
 > janela tem, então o script grava também a versão esticada
 > (`readme_configuracoes_inteira.png`) — sem ela a documentação mostraria
@@ -659,21 +667,57 @@ Três regras valem nas cinco seções:
 
 - **Todo campo nasce em "não sei", e "não sei" é resposta válida.** Nada deixa de
   funcionar por falta de declaração. Quem tem um adaptador, nenhum hub e nada
-  declarado pode não abrir esta aba na vida.
+  declarado pode não abrir esta aba na vida. **E "não sei" também é para onde se
+  volta**: desde 23/08/2026 todo seletor declarável tem esse botão — Orçamento,
+  a cor do plástico e o desenho dos botões eram os três que não tinham, e sem ele
+  não havia gesto para desfazer (um grupo de rádio ignora o clique no botão já
+  afundado).
 - **Onde a medição existe, ela pré-preenche**, e a declaração só corrige. Hub e
   painel do gabinete são lidos do barramento USB; a cor do plástico é lida do
-  próprio controle.
+  próprio controle **pelo cabo** — por rádio não há leitura possível, e ali a
+  lista é a resposta (ver "Os controles", abaixo).
 - **A escolha só vale no "Aplicar" do rodapé.** Clicar num seletor aqui **marca**
   o rascunho e não muda nada; o Aplicar grava tudo de uma vez em
   `~/.config/hefesto-dualsense4unix/maquina.json`. Recusa ou Hefesto desligado
   deixam o que você declarou marcado na tela — clicar de novo tenta de novo.
 
-> **A fita "Ajustes vão para:" fica inerte nesta aba**, esmaecida e com o motivo
-> ao lado: *"Esta aba vale para a mesa inteira, não para um controle"*. Hub,
+**E o Aplicar responde, numa linha só** (23/08/2026). Deu certo, ele diz
+*"Configurações gravadas."*; deu errado, diz o motivo — e as duas frases saem
+**coladas** ao resultado do Aplicar, no mesmo recado do rodapé. Antes o sucesso
+calava e o motivo do fracasso era escrito e apagado no mesmo instante, pelo
+próprio Aplicar que vinha em seguida.
+
+**Enquanto houver escolha declarada e não aplicada, o rodapé diz isso** — a marca
+acende no **clique**, não só na troca de aba, e some no Aplicar que grava. E
+**fechar a janela com declaração pendente pergunta**, com três botões:
+
+| botão | o que faz |
+|---|---|
+| **Cancelar** (o padrão) | não fecha nada; o que você declarou continua marcado |
+| **Fechar sem aplicar** | encerra e descarta a declaração |
+| **Aplicar e fechar** | grava e encerra — **e, se a gravação for recusada** (Hefesto desligado, por exemplo), **não fecha**: a janela fica de pé com o motivo no rodapé, para você decidir de novo |
+
+Isso vale para o ramo que **encerra** o programa. Quando a janela some para a
+bandeja do sistema o rascunho sobrevive junto com o processo, e aí não há
+pergunta nenhuma — só a marca no rodapé.
+
+> **Redação provisória.** A frase da marca e os três botões acima são texto novo
+> de tela: estão no produto na redação de trabalho e **esperam o olho dela**
+> ([PROVA-DE-TELA-01](../process/sprints/2026-07-27-PROVA-DE-TELA-01-dez-minutos-de-olho-antes-de-qualquer-leva.md)).
+> Se o que você lê na janela não bater com o que está aqui, a janela é que está
+> certa. O ramo de **sucesso** do "Aplicar e fechar" está sob conferência na
+> [CONFIGURAÇÕES-FECHA-01](../process/sprints/2026-08-24-CONFIGURACOES-FECHA-01-o-aplicar-que-nao-responde-e-o-campo-que-apaga-o-arquivo.md)
+> — a linha da tabela acima descreve o que ele deve fazer.
+
+> **A fita "Ajustes vão para:" fica inerte nesta aba**, apenas esmaecida. Hub,
 > orçamento e ambiente de área de trabalho não têm como valer "só para o Sony 2",
 > e deixar a fita ativa para ignorá-la em silêncio seria mentir para quem
 > escolheu um alvo lá em cima. A exceção mora dentro dos cards de "Os controles",
 > que é declaração **por aparelho**.
+>
+> O cabeçalho **não ganha texto nenhum** ao entrar aqui (decisão dela,
+> 23/08/2026): o rótulo que explicava o esmaecimento empurrava altura e largura,
+> cobria o subtítulo do produto e destoava das outras dez abas.
 
 ### Está tudo certo?
 
@@ -721,9 +765,9 @@ meu?"; o anel roxo por dentro marca o que está selecionado no cabeçalho.
 
 | linha do card | quem responde |
 |---|---|
-| **Cor:** | lida **do aparelho**, do serial de fábrica, quando o controle está no cabo. Quando não dá para ler, o card oferece a lista — **Branco**, **Preto**, **Vermelho**, **Rosa**, **Roxo**, **Azul** e **Outra** —, com o nome oficial de fábrica na dica de cada uma |
+| **Cor:** | lida **do aparelho**, do serial de fábrica, quando o controle está **no cabo**. Quando não dá para ler, o card oferece a lista — **Branco**, **Preto**, **Vermelho**, **Rosa**, **Roxo**, **Azul**, **Outra** e **Não sei** —, com o nome oficial de fábrica na dica de cada uma |
 | **Modo:** (só nos não-Sony) | **deduzido e mostrado, nunca declarado**: D-input, X-input, Switch e Apple. O seletor é de leitura, com a mesma dica da ficha do controle — *"a troca não é por software: é um combo de botões no próprio controle ao ligar"* |
-| **Botões:** (só nos não-Sony) | **Xbox** ou **Nintendo**. Muda só o desenho que aparece na tela; nada é remapeado no controle |
+| **Botões:** (só nos não-Sony) | **Xbox**, **Nintendo** ou **Não sei**. Muda só o desenho que aparece na tela; nada é remapeado no controle |
 | **Jogador:** | fixa este controle num número, de 1 a 5. **Sem nenhum marcado, vale a ordem de chegada**, que é como o Hefesto trabalha por padrão |
 | **Microfone** (só nos DualSense) | traz o microfone **daquele** controle pelo rádio, como no PS5. É por controle: ligar um não liga os outros |
 
@@ -734,6 +778,12 @@ DualSense não pede, e sem igualar a fileira leria como erro de montagem.
 Sem controle nenhum, a seção diz isso em uma frase em vez de mostrar uma grade
 vazia — e diz também que um controle ligado em modo D-input pode não aparecer
 ali, caso que ainda não foi medido nesta casa.
+
+**Entrar na aba relê os controles**, e desde 23/08/2026 isso é verdade: até essa
+data a seção era desenhada uma vez e ficava. Quem abrisse a janela com o Hefesto
+parado lia "O Hefesto está desligado…" nesta seção, e ligar o serviço e voltar
+aqui **não mudava nada** — não havia como sair daquela frase sem reabrir a
+janela.
 
 **"A luz não acende"** — o botão no pé de cada card, para o defeito em que a
 barra de LED nasce travada apagada. Ele fica **sempre visível** e só é acionável
@@ -749,6 +799,15 @@ o produto não toma. Cancelar não reconecta nada.
 > conexão até ela cair: matar o programa depois não cura. Se a mesa não estiver
 > limpa agora, reconectar faria a conexão nova nascer travada igual — e é isso
 > que fazia a cura parecer que funciona às vezes.
+
+> **Pelo rádio a cor não tem como ser lida, e isso é medido.** O pedido sai
+> inteiro do computador e é o **próprio controle** que o recusa —
+> `HANDSHAKE 0x04` (`ERR_INVALID_PARAMETER`) em ~5 ms, nos dois DualSense desta
+> bancada, com e sem CRC (`btmon`, 23/08/2026). Não é o Linux, não é o Bluetooth
+> desta máquina, e não é defeito a consertar depois: pelo rádio **a lista é a
+> resposta** — e a sua declaração fica gravada, valendo também quando o controle
+> voltar ao rádio. Detalhe em
+> [`../protocol/dualsense-referencia-canonica.md`](../protocol/dualsense-referencia-canonica.md).
 
 > **A aba não troca o modo de um 8BitDo, e não tem como.** O modo é uma chave
 > física, escolhida por combo de botões ao ligar; o que esta seção acrescenta é
@@ -788,6 +847,13 @@ se a antena está acima da linha das cabeças.
 **Folgada** (verde) até 60%, **Apertada** (laranja) até 85% e **Cheia** (laranja)
 acima disso. Nunca vermelho: rádio cheio é reversível, basta tirar um controle
 daquele adaptador.
+
+> **Com o Hefesto desligado a barra não diz "Folgada" — diz "Não sei"**, em
+> laranja, e o selo cala junto (`— · o daemon não respondeu`). Sem resposta do
+> daemon a trilha fica em zero, e zero pinta verde: a tela do serviço fora do ar
+> era byte a byte a de um rádio vazio, e quem entrasse aqui para diagnosticar
+> rádio cheio leria "está folgado" e iria procurar o defeito no controle
+> (medido em 23/08/2026).
 
 > **A barra diz na tela de onde vem o próprio número:** `derivado da
 > especificação`. O Bluetooth Classic divide o tempo em 1.600 fatias por segundo,
@@ -846,7 +912,9 @@ moram em `maquina.json` e não em perfil nenhum. Como o resto da aba, a escolha
 
 Um teto de recursos para a mesa inteira: **Economia**, **Balanceado**, **Máximo**
 e **Auto** — o mesmo vocabulário da aba Rumble, e de propósito: é o que os perfis
-já gravam em disco, e é uma palavra a aprender em vez de duas.
+já gravam em disco, e é uma palavra a aprender em vez de duas. O quinto botão é
+o **Não sei**, e ele é a saída: escolhido um teto, é por ele que se volta a não
+ter opinião nenhuma sobre o assunto.
 
 **Teto, não troca.** Escolher Economia não desliga nada: o jogo continua pedindo,
 a aba Rumble continua mandando, e o valor chega ao controle limitado. Nenhum

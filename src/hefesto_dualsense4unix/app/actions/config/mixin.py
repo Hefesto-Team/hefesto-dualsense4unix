@@ -12,12 +12,10 @@ zero, e o preço é este montador de trinta linhas.
 from __future__ import annotations
 
 import contextlib
-from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.config.moldura import moldura_de_secao
 from hefesto_dualsense4unix.app.actions.config.secoes import SECOES_DA_ABA
-from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -27,13 +25,6 @@ logger = get_logger(__name__)
 #: página (EST-10). Acrescentar uma aba renumera todas, e um gate por índice
 #: passaria a agir sobre a aba errada em silêncio.
 ABA_CONFIG = "tab_config_box"
-
-#: Por que o seletor de controle do cabeçalho fica inerte nesta aba.
-#:
-#: A frase é a resposta a uma pergunta que a pessoa faria em silêncio: "por que
-#: o chip do controle parou de responder?". Sem ela o seletor pareceria quebrado
-#: — e um widget que não responde sem dizer o motivo é defeito, não desenho.
-RAZAO_ALVO_INATIVO = "Esta aba vale para a mesa inteira, não para um controle"
 
 
 class ConfigActionsMixin(WidgetAccessMixin):
@@ -69,11 +60,17 @@ class ConfigActionsMixin(WidgetAccessMixin):
         O cabeçalho carrega a fita "Ajustes vão para: [1][2][3][4]", que escolhe
         a QUEM as outras abas aplicam o que fazem. Nesta aba a pergunta não tem
         sentido — o que se declara aqui vale para a mesa inteira —, então a fita
-        fica inerte e ganha, ao lado, a frase que diz por quê.
+        fica inerte.
 
         Esmaecer em vez de esconder é deliberado: sumir com a fita faria o
         cabeçalho pular de altura a cada troca de aba, e deixaria a pessoa sem
         saber que a escolha dela continua valendo nas outras abas.
+
+        **O cabeçalho não ganha nada, e é decisão dela (23/08/2026).** A versão
+        anterior pendurava ao lado da fita um rótulo com o motivo. Ele empurrava
+        a altura e a largura do cabeçalho, cobria o subtítulo do produto e
+        deixava esta aba visivelmente mais larga que as outras dez. Explicação
+        que deforma a página cobra caro demais pelo que entrega.
 
         Tolerante por dentro e por fora: hospedeiro sem cabeçalho, sem fita ou
         sem GTK não levanta. É a fiação de uma aba, não pode derrubar a janela.
@@ -83,50 +80,3 @@ class ConfigActionsMixin(WidgetAccessMixin):
             return
         with contextlib.suppress(Exception):
             faixa.set_sensitive(not inativo)
-        if not inativo:
-            # Sair da aba não é motivo para criar widget nenhum: quem nunca
-            # entrou em Configurações não ganha um rótulo invisível no
-            # cabeçalho a cada troca de aba.
-            razao = getattr(self, "_alvo_inativo_label", None)
-            if razao is not None:
-                with contextlib.suppress(Exception):
-                    razao.hide()
-            return
-        razao = self._rotulo_da_razao_do_alvo(faixa)
-        if razao is None:
-            return
-        with contextlib.suppress(Exception):
-            razao.show()
-
-    def _rotulo_da_razao_do_alvo(self, faixa: Any) -> Any:
-        """O rótulo da razão, criado na primeira vez que faz falta.
-
-        Nasce ao lado da fita e não DENTRO dela, de propósito: dentro, ele
-        herdaria a insensibilidade da fita e a explicação sairia esmaecida junto
-        com aquilo que ela explica.
-
-        Devolve ``None`` quando não há onde pendurá-lo (dublê de teste, fita
-        solta), e nunca levanta.
-        """
-        existente = getattr(self, "_alvo_inativo_label", None)
-        if existente is not None:
-            return existente
-        try:
-            from gi.repository import Gtk
-
-            cabecalho = faixa.get_parent()
-            if cabecalho is None:
-                return None
-            razao = Gtk.Label(label=_(RAZAO_ALVO_INATIVO))
-            razao.set_xalign(0.0)
-            razao.set_line_wrap(True)
-            razao.set_max_width_chars(84)
-            with contextlib.suppress(Exception):
-                razao.get_style_context().add_class("dim-label")
-            razao.set_no_show_all(True)
-            razao.hide()
-            cabecalho.pack_end(razao, False, False, 0)
-        except Exception:
-            return None
-        self._alvo_inativo_label = razao
-        return razao

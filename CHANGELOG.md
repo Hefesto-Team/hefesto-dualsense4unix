@@ -40,6 +40,120 @@ fez nascer está na `QUATRO-COMPONENTES-02`, logo abaixo.
 
 ## [Unreleased]
 
+### A leva de 23/08 — a aba Configurações passa a responder, e a cor por rádio ganha causa
+
+A aba nasceu em 22/08 sabendo declarar e sem saber dizer o que fez com a
+declaração. Esta leva fecha esse silêncio, e traz do rádio a medição que
+transforma a hipótese mais antiga da cor do plástico em fato.
+
+> **Redação PROVISÓRIA.** As frases novas de tela desta leva — a marca do rodapé
+> e os três botões do diálogo de fechamento — são classe estrutural e **esperam o
+> olho dela** ([PROVA-DE-TELA-01](docs/process/sprints/2026-07-27-PROVA-DE-TELA-01-dez-minutos-de-olho-antes-de-qualquer-leva.md)).
+> O que está no código hoje é a redação de trabalho, não a definitiva.
+
+#### Adicionado
+
+**A marca de pendência no rodapé**, e ela acende **no clique** — não só na troca
+de aba. Nada na tela distinguia "declarei e não apliquei" de "está tudo
+gravado". Dono único do estado: `_maquina_pendente`, a mesma fonte que o portão
+do fechamento lê — dois donos do mesmo estado é cicatriz que esta casa já pagou.
+
+**Fechar a janela com declaração pendente passa a perguntar.** Três botões —
+**Cancelar** (o padrão, porque um Enter distraído nunca pode custar edição não
+salva), **Fechar sem aplicar** e **Aplicar e fechar**. Só no ramo que
+**encerra**: quando a janela vai para a bandeja o rascunho sobrevive, e
+perguntar ali seria ruído. Com o Hefesto desligado o "Aplicar e fechar"
+**não fecha** — a recusa segura a janela e o motivo vai para o rodapé, senão o
+botão seria idêntico ao "Fechar sem aplicar" e a declaração morreria com o
+processo.
+
+**O "Não sei" voltou a ser alcançável** nos três seletores que não o tinham:
+**Orçamento** (4 → 5 botões), **Cor do plástico** (7 → 8) e **Botões do
+aparelho** (2 → 3). Um grupo de rádio ignora o clique no botão já afundado —
+sem o botão do "não sei" não existia gesto para desfazer, e a salvaguarda 1 da
+[D-A1](docs/process/sprints/2026-08-21-ABA-CONFIGURACOES/DECISOES-ABERTAS.md)
+(*"todo campo nasce em 'não sei', e 'não sei' é resposta válida"*) estava
+cumprida pela metade: valia no nascimento e não no arrependimento.
+
+**Três instrumentos**, e os três são autocontidos — zero rede, zero CDN, zero
+fonte web, abrem com duplo clique:
+
+- `scripts/gerar-painel.py` → `painel.html`, o irmão do `specs.html`: aquele
+  responde *"o que o aparelho entende, por qual canal"*; este, *"onde o projeto
+  está"*. **80 ms**, e separa **rápido** (censo de sprints, o CSV, o git — roda
+  sempre) de **caro** (suíte, `mypy`, portões pesados — cache com carimbo de
+  idade, e número velho aparece apagado e datado, nunca como se fosse de agora).
+  Os números do mapa de canais não são recontados: ele importa as funções do
+  `gerar-mapa.py`.
+- `scripts/paleta_da_casa.py` — a paleta com **dono único**, dividida com o
+  `specs.html`. Duas cópias do mesmo hexadecimal divergem no dia em que alguém
+  corrige uma delas.
+- `scripts/hooks/pre-commit` + `scripts/instalar-hooks.sh` — **166 ms**:
+  regenera o painel e **bloqueia** quando o `specs.html` diverge do CSV.
+  Deliberadamente não roda a suíte nem o `mypy`: gancho de sete minutos é gancho
+  que a pessoa desliga, e gancho desligado protege menos que nenhum. Rode
+  `bash scripts/instalar-hooks.sh` uma vez depois de clonar.
+
+#### Alterado
+
+**O "Aplicar" da aba Configurações responde, numa linha só.** Antes: no sucesso
+o rodapé calava, e no fracasso a frase *"o Hefesto está desligado — não gravei o
+que você declarou"* era escrita e apagada no mesmo tique, pelo toast final do
+próprio Aplicar. Agora a frase da declaração viaja até esse toast e sai colada
+ao resultado, consumida na primeira frase que sair — senão ela reapareceria no
+Aplicar seguinte.
+
+**Os seletores do card de aparelho externo saíram da classe compacta: +78 px por
+card** (364 → 442 px). A medição que pôs a classe ali continua valendo
+(02/08/2026: o seletor segmentado pede 67 px contra os 34 px de um botão comum,
+e a diferença é só padding) — não foi ela que caducou. O que a derrubou foi uma
+medição nova: este era o único ponto da aba com **duas gramáticas de seletor ao
+mesmo tempo**, e a aba saía com **cinco** alturas de botão (22/24/26/32/38 px)
+contra **uma** das abas Início e Perfis. Sem a classe são três. Altura se
+recupera com rolagem; gramática visual quebrada, não. A classe segue no tema e
+segue em uso no `controller_card.py`.
+
+**As dicas das cinco seções quebram em vez de atravessar a janela.** `xalign` e
+`halign` não são a mesma coisa, e faltar o segundo torna o `max_width_chars`
+inerte: medido com a janela em 1868 px, os onze rótulos de apoio da aba saíam
+com **1818 px cada um** — frases de ~215 caracteres numa linha só, de borda a
+borda. Com o `halign`, elas quebram na largura que o rótulo pede (~92
+caracteres).
+
+#### Corrigido
+
+**O medidor de rádio não afirma mais "Folgada" com o Hefesto desligado.** Sem
+resposta do daemon a barra fica em zero, e zero pinta **verde**: a tela do
+daemon fora do ar era byte a byte a de um rádio vazio — "Folgada", em verde,
+"0/1600" —, e quem entrava na aba para diagnosticar rádio cheio lia "está
+folgado" e ia procurar o defeito no controle. Agora a palavra é **"Não sei"** em
+laranja, o selo cala junto (`— · o daemon não respondeu`) e o texto acessível da
+trilha diz o mesmo.
+
+**A seção "Os controles" volta a se atualizar ao reentrar na aba.** Faltava
+desde que a seção nasceu: o código dela afirmava que o mapa `_REFRESH_POR_ABA`
+procurava o nome, e o mapa não o tinha. Com o daemon parado a seção nascia
+dizendo "O Hefesto está desligado…", e religar o daemon e reentrar na aba **não
+mudava nada** — nenhum outro gatilho a redesenha. Medido na bancada: 97 → 139
+rótulos com os dois DualSense reais.
+
+**Um campo inválido no `maquina.json` não apaga mais as outras declarações —
+na gravação.** Antes, um único `ambiente` fora do catálogo levava junto mesa,
+controles e orçamento. O estrago agora para no campo ruim, e os bytes recusados
+vão para `maquina.json.invalido`. **A leitura continua tudo-ou-nada** e está
+aberta: ver
+[CONFIGURAÇÕES-FECHA-01](docs/process/sprints/2026-08-24-CONFIGURACOES-FECHA-01-o-aplicar-que-nao-responde-e-o-campo-que-apaga-o-arquivo.md).
+
+**A cor do plástico por rádio NÃO funciona, e a causa é o firmware do
+controle.** Medido em 23/08/2026 com captura `btmon` nos dois DualSense desta
+bancada, com e sem CRC: o `SET_REPORT` sai **inteiro** no canal de controle
+L2CAP (TX 65 bytes) e o **controle** responde `HANDSHAKE 0x04`
+(`ERR_INVALID_PARAMETER`) em ~5 ms. Não é o BlueZ, não é o uhid, não é o kernel.
+A régua foi validada antes: `GET_FEATURE 0x20` no mesmo canal e no mesmo
+instante responde em ~6 ms. A hipótese de 15/08 virou medida, e o fato errado
+saiu de oito arquivos. Consequência de produto: pelo rádio a lista de cores do
+card **é** a resposta, e não um remendo até alguém consertar a leitura.
+
 ### A leva de 22/08 — a aba Configurações, e o que o produto não tem como medir
 
 As dez abas de hoje operam sobre o que o produto **mede**: quantos controles,
@@ -67,8 +181,9 @@ tela respondia:
   impede o verde.
 - **"Os controles"** — um card por aparelho, com a borda na cor do plástico. A
   leitura da cor saiu de `scripts/ensaios/` e entrou no produto: o código vem no
-  serial de fábrica, lido pelo cabo. O modo de um não-Sony (D-input, X-input,
-  Switch, Apple) é **deduzido e mostrado**, nunca declarado.
+  serial de fábrica, lido **pelo cabo, e só por ele** — por rádio o próprio
+  controle recusa o pedido (medido em 23/08/2026, na leva acima). O modo de um não-Sony
+  (D-input, X-input, Switch, Apple) é **deduzido e mostrado**, nunca declarado.
 - **"A mesa"** — os adaptadores com a posição lida do barramento (porta, painel
   do gabinete, hub), os rádios que dividem os 2,4 GHz, e as duas únicas perguntas
   que barramento nenhum responde: altura da antena e linha de visada.
@@ -94,7 +209,8 @@ Uma barra por adaptador, com **Folgada** até 60%, **Apertada** até 85% e
 carrega o selo `derivado da especificação` para dizer isso; o numerador usa as
 taxas do A/B de 25/07. Medir ao vivo seria pior: dois DualSense no mesmo
 adaptador entregaram 381,5 e 191,4 Hz **com a mesa folgada**, e o envelope de um
-dia foi de 157,8 a 402,9 Hz. A barra fala de ocupação e nunca de culpa.
+dia foi de 157,8 a 402,9 Hz. A barra fala de ocupação e nunca de culpa — e, sem
+resposta do daemon, ela não fala: diz "Não sei" (ver a leva de 23/08, acima).
 
 #### Alterado
 
@@ -110,9 +226,11 @@ própria tela diz que gatilhos, barra de luz, microfone e giroscópio entram qua
 ganharem esse ponto.
 
 **A aba é diferida**: clicar num seletor marca o rascunho, e quem grava é o
-**Aplicar** do rodapé. A fita "Ajustes vão para:" fica inerte ali, com o motivo
-escrito ao lado — o que se declara vale para a mesa inteira, não para um
-controle.
+**Aplicar** do rodapé. A fita "Ajustes vão para:" fica inerte ali — o que se
+declara vale para a mesa inteira, não para um controle. **Só esmaecida, sem
+rótulo ao lado** (decisão dela, 23/08/2026): a explicação escrita no cabeçalho
+empurrava altura e largura, cobria o subtítulo e deixava a aba mais larga que as
+outras dez.
 
 **As capturas passaram a ser onze**, e a Configurações ganha uma segunda foto,
 esticada até a altura que a página pede: ela é a única aba que não cabe em

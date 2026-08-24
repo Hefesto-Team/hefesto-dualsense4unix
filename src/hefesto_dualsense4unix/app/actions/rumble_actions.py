@@ -333,9 +333,8 @@ def _rotulo_do_teto(host: Any) -> Any:
 
     Nasce em código e não no Glade porque o dono do Glade nesta leva é outra
     frente, e um rótulo a mais no XML seria conflito garantido no mesmo bloco.
-    O molde é o `config_actions._rotulo_da_razao_do_alvo`: cria ao lado de um
-    widget que já existe, devolve ``None`` quando não há onde pendurá-lo, e
-    nunca levanta.
+    O molde: cria ao lado de um widget que já existe, devolve ``None`` quando não
+    há onde pendurá-lo, e nunca levanta.
 
     Vai para o fim da caixa do card "Intensidade da vibração", logo abaixo do
     `rumble_policy_aviso` — que é o último filho dela no `main.glade`. Os dois
