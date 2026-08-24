@@ -263,15 +263,24 @@ body {
   font-family: var(--font-corpo); font-size: var(--text-base); line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
-.envelope { max-width: 1120px; margin: 0 auto; padding: var(--space-lg) var(--space-sm) var(--space-2xl); }
-h1 { font-size: var(--text-display); font-weight: 800; letter-spacing: -.02em; margin: 0; line-height: 1.05; }
+.envelope {
+  max-width: 1120px; margin: 0 auto;
+  padding: var(--space-lg) var(--space-sm) var(--space-2xl);
+}
+h1 {
+  font-size: var(--text-display); font-weight: 800; letter-spacing: -.02em;
+  margin: 0; line-height: 1.05;
+}
 h1 b { color: var(--color-accent); font-weight: 800; }
 h2 {
   font-size: var(--text-xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
   color: var(--color-ink-faint); margin: var(--space-xl) 0 0;
   padding-bottom: var(--space-2xs); border-bottom: var(--rule-hair) solid var(--color-rule);
 }
-.lede { color: var(--color-ink-quiet); max-width: 66ch; margin: var(--space-sm) 0 0; font-size: var(--text-lg); }
+.lede {
+  color: var(--color-ink-quiet); max-width: 66ch;
+  margin: var(--space-sm) 0 0; font-size: var(--text-lg);
+}
 .selo { font-family: var(--font-dado); font-size: var(--text-xs); color: var(--color-ink-faint);
         letter-spacing: .1em; text-transform: uppercase; margin: 0 0 var(--space-xs); }
 
@@ -279,17 +288,29 @@ h2 {
          gap: var(--rule-hair); background: var(--color-rule);
          border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-md);
          overflow: hidden; margin-top: var(--space-md); }
-.kpi { background: var(--color-paper-2); padding: var(--space-xs) var(--space-sm) var(--space-2xs); }
-.kpi .n { font-size: var(--text-2xl); font-weight: 800; line-height: 1;
-          font-variant-numeric: tabular-nums; letter-spacing: -.02em; font-family: var(--font-dado); }
-.kpi .l { font-size: var(--text-xs); color: var(--color-ink-quiet); margin-top: var(--space-3xs); line-height: 1.4; }
+.kpi {
+  background: var(--color-paper-2);
+  padding: var(--space-xs) var(--space-sm) var(--space-2xs);
+}
+.kpi .n {
+  font-size: var(--text-2xl); font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+  font-family: var(--font-dado);
+}
+.kpi .l {
+  font-size: var(--text-xs); color: var(--color-ink-quiet);
+  margin-top: var(--space-3xs); line-height: 1.4;
+}
 .ok { color: var(--color-ok); } .lac { color: var(--color-lacuna); }
 .mal { color: var(--color-alerta); } .ac { color: var(--color-accent); }
 .frio { color: var(--color-frio); } .quieto { color: var(--color-ink-faint); }
 
 .rolo { overflow-x: auto; margin-top: var(--space-sm);
         border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-md); }
-table { border-collapse: collapse; width: 100%; min-width: 520px; background: var(--color-paper-2); }
+table {
+  border-collapse: collapse; width: 100%; min-width: 520px;
+  background: var(--color-paper-2);
+}
 th, td { text-align: left; padding: var(--space-2xs) var(--space-sm);
          border-bottom: var(--rule-hair) solid var(--color-rule); font-size: var(--text-sm);
          vertical-align: top; }
@@ -325,7 +346,10 @@ td.dado { font-family: var(--font-dado); font-variant-numeric: tabular-nums; whi
 .pendente dd { margin: 0; color: var(--color-ink-quiet); max-width: 74ch; }
 .pendente dd.rec { color: var(--color-ok); }
 .pendente dd.custo { color: var(--color-lacuna); }
-.pendente .olho { margin-top: var(--space-xs); display: flex; gap: var(--space-sm); flex-wrap: wrap; }
+.pendente .olho {
+  margin-top: var(--space-xs); display: flex;
+  gap: var(--space-sm); flex-wrap: wrap;
+}
 .pendente .olho figure { margin: 0; max-width: 340px; }
 .pendente .olho img {
   max-width: 100%; height: auto; border: var(--rule-hair) solid var(--color-rule);
@@ -349,7 +373,10 @@ footer a { color: var(--color-accent); }
 
 
 def _kpi(n: str, rotulo: str, cor: str = "ac") -> str:
-    return f'<div class="kpi"><div class="n {cor}">{n}</div><div class="l">{escape(rotulo)}</div></div>'
+    return (
+        f'<div class="kpi"><div class="n {cor}">{n}</div>'
+        f'<div class="l">{escape(rotulo)}</div></div>'
+    )
 
 
 def _bloco_das_decisoes(decisoes: list[dict]) -> str:
@@ -460,7 +487,7 @@ def monta(rapido: dict, cache: dict) -> str:
         _kpi(str(censo["arquivos"]), "arquivos de sprint na árvore", "ac"),
         _kpi(str(censo["fora_da_fila"]), "não citados no SPRINT_ORDER", "lac"),
         _kpi(str(mapa.get("chaves", "?")), "chaves no mapa de canais", "frio"),
-        _kpi(str(mapa.get("assimetrias", "?")), "features que divergem cabo × rádio", "lac"),
+        _kpi(str(mapa.get("assimetrias", "?")), "features que divergem cabo × rádio", "lac"),  # noqa: RUF001
         _kpi(str(mapa.get("sem_teste", "?")), "linhas sem teste que morda", "mal"),
     ]
     abertas = len([
@@ -513,11 +540,13 @@ def monta(rapido: dict, cache: dict) -> str:
         alerta = (
             '<div class="aviso"><p><b>Os números caros estão velhos.</b> '
             f'{escape(frase_idade)}. A árvore andou desde então; o que está abaixo '
-            'descreve o passado. Rode <code>python3 scripts/gerar-painel.py --completo</code>.</p></div>'
+            'descreve o passado. Rode <code>python3 scripts/gerar-painel.py '
+            '--completo</code>.</p></div>'
         )
     elif not cache:
         alerta = (
-            '<div class="aviso"><p><b>A suíte e os portões nunca foram medidos por este painel.</b> '
+            '<div class="aviso"><p><b>A suíte e os portões nunca foram medidos '
+            'por este painel.</b> '
             'Os números rápidos acima são de agora; os caros não existem ainda. '
             'Rode <code>python3 scripts/gerar-painel.py --completo</code>.</p>'
             '<p>Vazio aqui é <em>não medimos</em>, nunca <em>está tudo bem</em> — '
@@ -582,7 +611,7 @@ def monta(rapido: dict, cache: dict) -> str:
   <h2>O mapa de canais</h2>
   <div class="grade">
     {_kpi(str(mapa.get('chaves', '?')), 'chaves', 'ac')}
-    {_kpi(str(mapa.get('linhas', '?')), 'linhas (chave × controle)', 'frio')}
+    {_kpi(str(mapa.get('linhas', '?')), 'linhas (chave x controle)', 'frio')}
     {_kpi(str(mapa.get('assimetrias', '?')), 'divergem entre cabo e rádio', 'lac')}
     {_kpi(str(mapa.get('sem_teste', '?')), 'sem teste que morda', 'mal')}
   </div>
