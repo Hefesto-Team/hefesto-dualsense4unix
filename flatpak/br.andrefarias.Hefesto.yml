@@ -43,6 +43,28 @@ finish-args:
   # Perfis e configurações em ~/.config/hefesto-dualsense4unix/
   # Dentro do sandbox: ~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/
   - --filesystem=xdg-config/hefesto-dualsense4unix:create
+  # AMBIENTE-PRESUMIDO-01 (23/08/2026): SEM estas quatro linhas, a integração
+  # com a Steam morria INTEIRA dentro do sandbox, e em silêncio — o cartão
+  # dizia "Steam não encontrada", o catálogo de jogos saía vazio, o wrapper
+  # `hefesto-launch` não migrava e o Proton pin não achava raiz. Tudo com cara
+  # de "esta máquina não tem Steam". São os quatro layouts que
+  # `steam_launch_options.RAIZES_STEAM_RELATIVAS` procura.
+  #
+  # Steam NATIVA — leitura E escrita: é aqui que o produto grava as
+  # `LaunchOptions` do wrapper no `localconfig.vdf`. `~/.steam/steam` costuma
+  # ser link para `~/.local/share/Steam` (ou para `~/.steam/debian-installation`,
+  # que fica dentro de `~/.steam`), e o Flatpak só segue link cujo DESTINO
+  # também esteja exposto — por isso os dois caminhos, não um.
+  - --filesystem=~/.steam
+  - --filesystem=~/.local/share/Steam
+  # Steam em FLATPAK e em SNAP — só leitura, e de propósito: a migração do
+  # wrapper para esses layouts já é PROIBIDA no código (`_SANDBOXED_MARKERS`,
+  # `steam_launch_options.py`), porque o wrapper do host é invisível lá dentro.
+  # O que o produto precisa deles é LER: `localconfig.vdf` (o cartão do Steam
+  # Input) e `appmanifest_*.acf` (o nome do jogo). Dar escrita seria dar mais
+  # do que o código usa.
+  - --filesystem=~/.var/app/com.valvesoftware.Steam:ro
+  - --filesystem=~/snap/steam:ro
   # Portals do freedesktop (notificações, tray, background, window tracking)
   - --talk-name=org.freedesktop.portal.*
 

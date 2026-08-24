@@ -50,8 +50,21 @@ def _allowlist_path() -> Path:
 
     O irmão desta cura é ``EmulationActionsMixin._wp_dropin_dir``, que tinha a
     mesma forma e é DIRETÓRIO DE ESCRITA.
+
+    AMBIENTE-PRESUMIDO-01 (23/08/2026): o ``.config`` era CRAVADO aqui, e este
+    era o único dos cinco leitores da allowlist que ignorava
+    ``XDG_CONFIG_HOME`` — os outros quatro (o `disable_steam_input.sh`, o
+    `doctor.sh`, o `daemon/launch_env` e o próprio ESCRITOR, o botão "Este jogo
+    não funciona") o resolvem. Com a variável setada, o botão gravava num
+    arquivo e o cartão da aba lia outro: a exceção era escrita e a tela seguia
+    dizendo que o jogo estava fora da lista, sem erro nenhum. Agora o leitor
+    chama a MESMA função do escritor — a divergência deixa de ser possível.
     """
-    return Path.home() / ".config" / "hefesto-dualsense4unix" / "steam_input_apps.txt"
+    from hefesto_dualsense4unix.integrations.steam_launch_options import (
+        steam_input_allowlist_path,
+    )
+
+    return steam_input_allowlist_path()
 _SI_KEY_RE = re.compile(
     r'"(SteamController_PSSupport|SteamController_SwitchSupport|'
     r'UseSteamControllerConfig)"\s+"[12]"'
@@ -145,13 +158,16 @@ def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
 
 
 def find_localconfig_vdfs(home: Path) -> list[Path]:
-    """localconfig.vdf per-user em layouts comuns de Steam no Linux (dedup)."""
-    globs = [
-        ".steam/steam/userdata/*/config/localconfig.vdf",
-        ".local/share/Steam/userdata/*/config/localconfig.vdf",
-        ".var/app/com.valvesoftware.Steam/.steam/steam/userdata/*/config/localconfig.vdf",
-        "snap/steam/common/.steam/steam/userdata/*/config/localconfig.vdf",
-    ]
+    """localconfig.vdf per-user em layouts comuns de Steam no Linux (dedup).
+
+    A lista de raízes é a de `steam_launch_options.RAIZES_STEAM_RELATIVAS` —
+    uma só para o projeto inteiro (AMBIENTE-PRESUMIDO-01, 23/08/2026).
+    """
+    from hefesto_dualsense4unix.integrations.steam_launch_options import (
+        RAIZES_STEAM_RELATIVAS,
+    )
+
+    globs = [f"{raiz}/userdata/*/config/localconfig.vdf" for raiz in RAIZES_STEAM_RELATIVAS]
     seen: set[Path] = set()
     out: list[Path] = []
     for pattern in globs:

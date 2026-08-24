@@ -107,12 +107,27 @@ _PRELOAD_TOKENS = (
     "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1",
 )
 
+#: AMBIENTE-PRESUMIDO-01 (23/08/2026): as raízes de Steam que existem no Linux,
+#: relativas ao HOME e na ordem de preferência — nativa, nativa antiga (o
+#: `~/.local/share/Steam` do instalador da Valve), Flatpak e Snap. Esta é a
+#: lista ÚNICA: o glob de `localconfig.vdf`, o `find_localconfig_vdfs` do
+#: `storm_doctor` e a busca de `steamapps` derivam todos dela. Uma quinta cópia
+#: da lista é como o cartão da aba Emulação passou meses dizendo "Steam não
+#: encontrado" enquanto o `doctor` do CLI achava a mesma Steam.
+#:
+#: NÃO confundir com `proton_pin.default_steam_root`, que exclui Flatpak/Snap
+#: DE PROPÓSITO: extrair Proton no host é inútil para uma Steam em sandbox.
+#: Aquilo é "onde EXTRAIR o Proton"; isto é "onde a Steam MORA".
+RAIZES_STEAM_RELATIVAS = (
+    ".steam/steam",
+    ".local/share/Steam",
+    ".var/app/com.valvesoftware.Steam/.steam/steam",
+    "snap/steam/common/.steam/steam",
+)
+
 #: Globs de localconfig.vdf (mesma cobertura do disable_steam_input.sh).
-_VDF_GLOB_PATTERNS = (
-    ".steam/steam/userdata/*/config/localconfig.vdf",
-    ".local/share/Steam/userdata/*/config/localconfig.vdf",
-    ".var/app/com.valvesoftware.Steam/.steam/steam/userdata/*/config/localconfig.vdf",
-    "snap/steam/common/.steam/steam/userdata/*/config/localconfig.vdf",
+_VDF_GLOB_PATTERNS = tuple(
+    f"{raiz}/userdata/*/config/localconfig.vdf" for raiz in RAIZES_STEAM_RELATIVAS
 )
 
 #: Layouts sandboxed: a migração é PROIBIDA (o wrapper do host é invisível
@@ -932,17 +947,37 @@ def stop_steam() -> bool:
     return not steam_running()
 
 
-def reopen_steam() -> None:
-    """Reabre a Steam desanexada (best-effort, espelho do precedente)."""
-    if shutil.which("steam") is None:
-        return
-    subprocess.Popen(
-        ["steam"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        stdin=subprocess.DEVNULL,
-        start_new_session=True,
-    )
+def reopen_steam() -> bool:
+    """Reabre a Steam desanexada. True = o pedido saiu.
+
+    AMBIENTE-PRESUMIDO-01 (23/08/2026): isto exigia o binário ``steam`` no
+    PATH e, quando não achava, voltava MUDO. Quem instalou a Steam pela
+    Flatpak ou pela Snap não tem esse binário — então `with_steam_closed`
+    fechava a Steam dela, fazia o trabalho, e a deixava fechada sem uma
+    palavra. A URL `steam://` é o mesmo fallback que `start_steam_game` já
+    usa, e é ela que o `.desktop` da Flatpak/Snap registra.
+
+    Sobra um caso sem voz — nem ``steam`` nem ``xdg-open`` no PATH —, e é por
+    isso que o retorno virou `bool`: os três chamadores de `with_steam_closed`
+    ainda o ignoram, e enquanto ignorarem a Steam pode ficar fechada sem uma
+    palavra na tela. Fechar esse último palmo é mudar o contrato de
+    `with_steam_closed`, que mora em `app/actions/daemon_actions.py` também.
+    """
+    for cmd in (["steam"], ["xdg-open", "steam://open/main"]):
+        if shutil.which(cmd[0]) is None:
+            continue
+        try:
+            subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            return True
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return False
 
 
 #: Status possíveis de `with_steam_closed` — contrato do chamador (a GUI faz
@@ -1080,8 +1115,47 @@ def _desescapar_acf(valor: str) -> str:
     return valor.replace('\\\\', '\\').replace('\\"', '"')
 
 
+def _real(caminho: Path) -> Path:
+    """O diretório de verdade. Link ilegível vale por si mesmo."""
+    try:
+        return caminho.resolve()
+    except OSError:  # pragma: no cover - link quebrado ou permissão
+        return caminho
+
+
+def raizes_de_jogos(home: Path | None = None) -> list[Path]:
+    """TODA raiz de Steam que EXISTE neste HOME — nativa, Flatpak e Snap.
+
+    AMBIENTE-PRESUMIDO-01 (23/08/2026). "Onde a Steam mora" e "onde extrair o
+    Proton" eram a mesma função (`proton_pin.default_steam_root`), e a segunda
+    exclui Flatpak/Snap de propósito — o Proton do host é invisível dentro da
+    sandbox. Ler `appmanifest_*.acf` de dentro de ``~/.var/app/…`` é leitura
+    pura e sempre funcionou; herdar aquela exclusão fazia o catálogo de jogos
+    sair VAZIO para quem instalou a Steam pela Flatpak ou pela Snap, sem uma
+    linha de aviso. São perguntas diferentes, agora com funções diferentes.
+
+    Devolve o caminho como escrito (não o resolvido) — é ele que aparece na
+    mensagem de tela; a deduplicação é pelo diretório real, porque
+    ``~/.steam/steam`` costuma ser link para ``~/.steam/debian-installation``.
+    Lista vazia = nenhuma Steam em disco, e quem chama tem de DIZER isso.
+    """
+    base = home or Path.home()
+    achadas: list[Path] = []
+    vistas: set[Path] = set()
+    for relativo in RAIZES_STEAM_RELATIVAS:
+        caminho = base / relativo
+        if not caminho.is_dir():
+            continue
+        real = _real(caminho)
+        if real in vistas:
+            continue
+        vistas.add(real)
+        achadas.append(caminho)
+    return achadas
+
+
 def pastas_steamapps(home: Path | None = None) -> list[Path]:
-    """A `steamapps` padrão mais as bibliotecas extras do `libraryfolders.vdf`.
+    """A `steamapps` de CADA raiz de Steam mais as bibliotecas do `libraryfolders.vdf`.
 
     Best-effort e read-only: biblioteca ilegível ou ausente é pulada em
     silêncio — traduzir appid em nome é conveniência, não pode derrubar nada.
@@ -1110,26 +1184,31 @@ def pastas_steamapps(home: Path | None = None) -> list[Path]:
     except ImportError:  # pragma: no cover - executado como script avulso
         from proton_pin import default_steam_root  # type: ignore[no-redef]
 
-    def real(caminho: Path) -> Path:
-        """O diretório de verdade. Link ilegível vale por si mesmo."""
-        try:
-            return caminho.resolve()
-        except OSError:  # pragma: no cover - link quebrado ou permissão
-            return caminho
-
-    raiz = default_steam_root(home) / "steamapps"
-    pastas = [raiz]
-    vistas = {real(raiz)}
-    with contextlib.suppress(OSError):
-        texto = (raiz / "libraryfolders.vdf").read_text(encoding="utf-8", errors="replace")
-        for linha in texto.splitlines():
-            par = _PAR_ACF.match(linha)
-            if par is None or par.group("chave").lower() != "path":
-                continue
-            candidata = Path(_desescapar_acf(par.group("valor"))) / "steamapps"
-            if candidata.is_dir() and real(candidata) not in vistas:
-                pastas.append(candidata)
-                vistas.add(real(candidata))
+    raizes = raizes_de_jogos(home)
+    if not raizes:
+        # Sem Steam nenhuma em disco: devolve a pasta NATIVA mesmo inexistente.
+        # É o que `impressao_das_bibliotecas` transforma no `-1` que faz a
+        # impressão MUDAR quando a Steam for instalada depois.
+        raizes = [default_steam_root(home)]
+    pastas: list[Path] = []
+    vistas: set[Path] = set()
+    for raiz in raizes:
+        base_apps = raiz / "steamapps"
+        if _real(base_apps) not in vistas:
+            pastas.append(base_apps)
+            vistas.add(_real(base_apps))
+        with contextlib.suppress(OSError):
+            texto = (base_apps / "libraryfolders.vdf").read_text(
+                encoding="utf-8", errors="replace"
+            )
+            for linha in texto.splitlines():
+                par = _PAR_ACF.match(linha)
+                if par is None or par.group("chave").lower() != "path":
+                    continue
+                candidata = Path(_desescapar_acf(par.group("valor"))) / "steamapps"
+                if candidata.is_dir() and _real(candidata) not in vistas:
+                    pastas.append(candidata)
+                    vistas.add(_real(candidata))
     return pastas
 
 

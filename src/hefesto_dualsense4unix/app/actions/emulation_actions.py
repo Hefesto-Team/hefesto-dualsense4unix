@@ -307,6 +307,19 @@ def format_steam_input_result(
     )
 
 
+#: AMBIENTE-PRESUMIDO-01 (23/08/2026): a frase era só "Steam não encontrado", e
+#: era o que a aba dizia para quem tem a Steam em Flatpak, em Snap ou em
+#: ``~/.local/share/Steam`` — porque a busca só olhava ``~/.steam/steam``. A
+#: busca foi corrigida; a frase passou a DIZER ONDE PROCUROU, que é o que
+#: permite a pessoa responder "mas a minha está em outro lugar". Os quatro
+#: lugares citados são os de `steam_launch_options.RAIZES_STEAM_RELATIVAS` — há
+#: teste que reprova se a lista crescer e esta frase ficar para trás.
+STEAM_NAO_ENCONTRADA = (
+    "Steam não encontrada — procurei em ~/.steam, ~/.local/share/Steam, "
+    "Flatpak e Snap"
+)
+
+
 def markup_status_steam_input(
     on: bool | None,
     jogos: Sequence[str],
@@ -328,7 +341,7 @@ def markup_status_steam_input(
     = a chave GLOBAL da Steam, que não pertence a jogo nenhum.
     """
     if on is None:
-        markup = '<span foreground="#8b8fa8">Steam não encontrado</span>'
+        markup = f'<span foreground="#8b8fa8">{STEAM_NAO_ENCONTRADA}</span>'
     elif on:
         if jogos:
             sujeito = (
@@ -1525,21 +1538,27 @@ class EmulationActionsMixin(WidgetAccessMixin):
         opt-in per-app deliberado (jogos cujo DualSense é entregue pela Steam,
         ex.: MMJ na allowlist) NÃO conta como conflito; as chaves globais
         (PSSupport/SwitchSupport) e per-app fora da allowlist contam.
+
+        AMBIENTE-PRESUMIDO-01 (23/08/2026): a busca era um `glob` cravado em
+        ``~/.steam/steam``, e por isso o cartão dizia "Steam não encontrado"
+        para quem instalou a Steam pela Flatpak, pela Snap ou pelo instalador
+        que cai em ``~/.local/share/Steam`` — na MESMA máquina em que o
+        `doctor` do CLI acusava o Steam Input ligado, porque ele já usava o
+        `find_localconfig_vdfs`. Régua única agora, e é a que já era testada.
         """
         from hefesto_dualsense4unix.integrations.storm_doctor import (
+            find_localconfig_vdfs,
             steam_input_allowlist,
             steam_input_on_fora_da_allowlist,
         )
 
-        vdfs = glob.glob(
-            str(Path.home() / ".steam" / "steam" / "userdata" / "*" / "config" / "localconfig.vdf")
-        )
+        vdfs = find_localconfig_vdfs(Path.home())
         if not vdfs:
             return None
         allow = steam_input_allowlist()
         for vdf in vdfs:
             with contextlib.suppress(OSError):
-                texto = Path(vdf).read_text(encoding="utf-8", errors="ignore")
+                texto = vdf.read_text(encoding="utf-8", errors="ignore")
                 if steam_input_on_fora_da_allowlist(texto, allow):
                     return True
         return False
@@ -1557,18 +1576,19 @@ class EmulationActionsMixin(WidgetAccessMixin):
         jogo nenhum e por isso não entra aqui.
         """
         from hefesto_dualsense4unix.integrations.storm_doctor import (
+            find_localconfig_vdfs,
             steam_input_allowlist,
             steam_input_fora_da_allowlist,
         )
 
-        vdfs = glob.glob(
-            str(Path.home() / ".steam" / "steam" / "userdata" / "*" / "config" / "localconfig.vdf")
-        )
+        # A MESMA régua do `_steam_input_is_on` (AMBIENTE-PRESUMIDO-01): as
+        # quatro raízes de Steam, não só a nativa.
+        vdfs = find_localconfig_vdfs(Path.home())
         allow = steam_input_allowlist()
         achados: list[str] = []
         for vdf in vdfs:
             with contextlib.suppress(OSError):
-                texto = Path(vdf).read_text(encoding="utf-8", errors="ignore")
+                texto = vdf.read_text(encoding="utf-8", errors="ignore")
                 for appid in steam_input_fora_da_allowlist(texto, allow)[0]:
                     if appid not in achados:
                         achados.append(appid)
