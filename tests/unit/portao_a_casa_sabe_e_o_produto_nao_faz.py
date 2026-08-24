@@ -783,6 +783,57 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # --- A aba Configurações (23/08/2026): o censo mede, e a tela não pergunta
+    "integrations/censo_do_barramento.py::hub_em_comum": (
+        "MEDIDO em 23/08/2026, NA BANCADA DELA: é promessa ao produto, ela "
+        "funciona, e a tela ainda não faz a pergunta. O próprio docstring diz "
+        "qual é a pergunta — *'os três rádios de controle estão no mesmo "
+        "hub?'* — e a resposta importa porque hub em comum é disputa de "
+        "barramento, que é causa de engasgo. Rodada agora, nos três "
+        "adaptadores Bluetooth desta casa: devolve `.../usb3/3-3`, o hub que "
+        "está acima dos três; dois deles ainda dividem um segundo, o `3-3.1`. "
+        "Comparar o pai diria que não estão juntos, e diria errado — que é "
+        "exatamente o motivo de a função existir. "
+        "ONDE O CAMINHO SE PERDE: `app/actions/config/secao_mesa.py:1409-1411` "
+        "escreve a palavra `Em hub` linha a linha, a partir do "
+        "`adaptador.atras_de_hub` que o `mesa_de_radio` já traz, e nunca "
+        "compara as linhas entre si. A seção importa `ler_o_barramento` e "
+        "`GRAU_LIDO` do mesmo módulo (`:115-119`) e não importa esta função. "
+        "O QUE A FECHA: uma linha de resumo na seção 'A mesa' — 'os três estão "
+        "no mesmo hub' — alimentada por esta função. NÃO fiz porque é texto "
+        "novo na tela, e desenho é palavra dela (PROVA-DE-TELA-01): pede foto "
+        "antes e depois."
+    ),
+    "integrations/censo_do_barramento.py::filhos_de": (
+        "MEDIDO em 23/08/2026: é promessa ao produto e cai junto com "
+        "`hub_em_comum`, pela mesma leva. Ela responde 'quem pendura "
+        "DIRETAMENTE neste nó, em ordem de porta', que é a pergunta de baixo "
+        "da mesma tela: mostrado o hub em comum, a próxima é *quem mais está "
+        "nele* — o que separa 'três adaptadores num hub sobrando' de 'três "
+        "adaptadores num hub com webcam e HD externo'. "
+        "ONDE O CAMINHO SE PERDE: a seção 'A mesa' desenha uma linha por "
+        "ADAPTADOR e nunca desenha o hub como nó com filhos; não há widget "
+        "onde a resposta caberia. "
+        "O QUE A FECHA: a mesma linha de resumo de `hub_em_comum`, estendida "
+        "para dizer o que mais divide o hub. As duas entram juntas — o hub "
+        "sem os vizinhos é meia resposta."
+    ),
+    "integrations/apelido_do_dongle.py::costurar_a_mesa": (
+        "MEDIDO em 22/08/2026 e RECONFERIDO em 23/08: é promessa ao produto e "
+        "o caminho está DELIBERADAMENTE fechado — a nota datada está no "
+        "próprio docstring da função (`:587-601`), e ela diz o contrário do "
+        "que um chamador faria. Desde `e5376a0` (22/08, 21h26) o "
+        "`scripts/bt_active_mode.sh:281` itera TODOS os adaptadores que "
+        "hospedam Nintendo, e o mesmo commit registra que resolveu 'a "
+        "duplicidade … dois escritores do mesmo alias'. "
+        "ONDE O CAMINHO SE PERDE, e é de propósito: ligar esta função no "
+        "install ou no arranque do daemon RECRIA a duplicidade que aquele "
+        "commit desfez — dois escritores do mesmo alias de BlueZ. "
+        "O QUE A FECHA: uma decisão de dono, não uma linha de código. Ou o "
+        "produto assume a costura (e o script para de costurar), ou o script "
+        "continua dono (e esta função é a rota que espera). Enquanto o dono "
+        "não for declarado, dar chamador a ela é regressão, não cura."
+    ),
     # --- PONTE-NA-TELA-01 (19/08/2026): a frase certa existe, e a resposta do
     # daemon não chega a quem a escreveria --------------------------------------
     "app/actions/home_actions.py::desfecho_da_troca": (
@@ -964,6 +1015,81 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "O QUE A FECHA: descobrir por qual outra ponte a aba do mouse fala com "
         "o daemon hoje, e então unificar — duas pontes para o mesmo método IPC "
         "é como uma delas apodrece sem ninguém ver."
+    ),
+    # --- ELO-MUDO-01 / P1 (23/08/2026): a ponte já entrega, a aba ainda não pede
+    # As sete entradas abaixo nasceram JUNTAS e por decisão da leva: o conserto
+    # do lado da ponte é aditivo de propósito, porque os chamadores moram em
+    # arquivos que outras frentes estavam editando no mesmo dia. Cada uma diz
+    # qual linha a fecha — e as sete se fecham em quatro edições.
+    "app/ipc_bridge.py::trigger_set_detalhado": (
+        "MEDIDO na bancada viva em 23/08/2026: com a mesa VAZIA o daemon "
+        "respondeu `{status: ok, aplicado_em: [], guardado_em: []}` — zero "
+        "destino, nenhum byte no fio — e a aba Gatilhos disse `SimpleRigid "
+        "aplicado`. O corpo morria em `app/ipc_bridge.py::_call_checked`, cuja "
+        "linha de RPC nem atribuía o resultado a um nome. "
+        "O QUE A FECHA: `app/actions/triggers_actions.py:593` (e :609/:613/:618) "
+        "trocar `trigger_set_checked` por esta, e `_toast_trigger:658` decidir "
+        "`aplicado` x `guardado` pelas duas listas em vez de re-deduzi-las do "
+        "estado da janela — a heurística de lá cobre 2 das 3 razões do daemon e "
+        "não cobre a rota clássica de mesa vazia, que é o caso medido."
+    ),
+    "app/ipc_bridge.py::trigger_reset_detalhado": (
+        "MEDIDO em 23/08/2026: espelho do `trigger_set_detalhado`, mesmo corpo "
+        "(`aplicado_em`/`guardado_em`) e mesma perda. O `trigger.reset` é o "
+        "botão `Desligar` da aba Gatilhos, que hoje anuncia sucesso sem saber "
+        "onde pegou. "
+        "O QUE A FECHA: `app/actions/triggers_actions.py:655` — hoje "
+        "`ok, _motivo = trigger_reset(...)` seguido de `_toast_trigger(side, "
+        "'Off', ok)`. Sai da mesma edição do irmão."
+    ),
+    "app/ipc_bridge.py::led_set_detalhado": (
+        "MEDIDO em 23/08/2026: o `led.set` publica `aplicado_em`/`guardado_em` "
+        "desde a APLICAR-VERDADE-01 e o invólucro `led_set` estreitava tudo "
+        "para `bool` — a aba Lightbar re-deduzia o `guardado` do estado da "
+        "janela, como a de Gatilhos. "
+        "O QUE A FECHA: `app/actions/lightbar_actions.py:934` "
+        "(`_enviar_cor_por_mac`), o funil por onde os três chamadores de "
+        "`led_set` (:689, :801, :934) passam."
+    ),
+    "app/ipc_bridge.py::player_leds_set_detalhado": (
+        "MEDIDO em 23/08/2026: irmão do `led_set_detalhado`, mesmo corpo mais "
+        "o `bits` que o daemon ecoa (`ipc_handlers.py:1352-1356`). Mesma perda "
+        "e mesma cura. "
+        "O QUE A FECHA: `app/actions/lightbar_actions.py:965` e :969, dentro de "
+        "`_enviar_player_leds:938` — sai da mesma edição do `led_set_detalhado`."
+    ),
+    "app/ipc_bridge.py::rumble_policy_set_detalhado": (
+        "MEDIDO em 23/08/2026: terceira e última rota que passava pelo "
+        "`_call_checked` e perdia o corpo. Aqui NÃO há mentira medida — o corpo "
+        "de hoje é `{status: ok, policy: <a pedida>}` e o daemon só ecoa. O que "
+        "esta função paga é a uniformidade das três rotas. "
+        "O QUE A FECHA: `app/actions/rumble_actions.py:579`, quando a aba "
+        "quiser mostrar a política EFETIVA em vez da pedida; ou APAGAR, se até "
+        "lá o corpo continuar sendo um eco. É a candidata mais clara a `resto` "
+        "desta leva, e está escrito de propósito."
+    ),
+    "app/ipc_bridge.py::destinos_da_aplicacao": (
+        "MEDIDO em 23/08/2026: é o LEITOR de `aplicado_em`/`guardado_em`, dono "
+        "único da regra do lado da janela pelo mesmo motivo do "
+        "`aplicacao_confirmada` — quatro rotas publicam esses campos e cada aba "
+        "que os lesse sozinha seria mais uma leitura do mesmo payload. "
+        "O QUE A FECHA: ele é fiado no MESMO gesto que fia os quatro "
+        "`*_detalhado` acima (`triggers_actions.py:658` e "
+        "`lightbar_actions.py:934`); enquanto eles não passam, ninguém tem o "
+        "que ler."
+    ),
+    "app/ipc_bridge.py::alvo_honrado": (
+        "MEDIDO em 23/08/2026: lê o `por_uniq` que o `mic.volume.set` publica "
+        "em `ipc_handlers.py:4538` e que o `bool` da ponte apagava — com a mesa "
+        "cheia há DUAS placas de som, e o gesto que cai na rota global mexe no "
+        "microfone de OUTRA pessoa devolvendo o mesmo `True`. "
+        "O QUE A FECHA: `app/widgets/controller_card.py:3684`, trocando "
+        "`mic_volume_set` por `mic_volume_set_detalhado`, e "
+        "`_mic_confirmado_pelo_daemon:3993` deixando de gravar o volume no "
+        "rascunho dela quando o alvo não foi honrado. Esta é a mais cara das "
+        "sete: separar `sem_fonte` de daemon offline pede um estado NOVO na "
+        "tela (controle insensível com a dica), e isso é desenho — foto antes e "
+        "depois, e a palavra é dela."
     ),
     "app/actions/external_controllers.py::short_button_label": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. O docstring descreve uma "
