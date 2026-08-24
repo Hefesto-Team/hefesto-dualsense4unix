@@ -158,7 +158,6 @@ def test_sem_arquivo_tudo_em_nao_sei(arquivo: Path) -> None:
     assert cfg.mesa.radios == {}
     assert cfg.controles == {}
     assert cfg.orcamento.teto is None
-    assert cfg.ambiente is None
 
 
 def test_json_truncado_e_nao_objeto_caem_no_default(arquivo: Path) -> None:
@@ -181,11 +180,11 @@ def test_json_truncado_e_nao_objeto_caem_no_default(arquivo: Path) -> None:
 
     arquivo.write_text('["nem objeto é"]', encoding="utf-8")
     assert carregar_maquina().mesa.altura_da_antena is None
-    assert gravar_maquina({"ambiente": "outro"})
-    assert carregar_maquina().ambiente == "outro"
+    assert gravar_maquina({"orcamento": {"teto": "auto"}})
+    assert carregar_maquina().orcamento.teto == "auto"
 
-    arquivo.write_text('{"version": 1, "ambiente": "plan9"}', encoding="utf-8")
-    assert carregar_maquina().ambiente is None
+    arquivo.write_text('{"version": 1, "orcamento": {"teto": "plan9"}}', encoding="utf-8")
+    assert carregar_maquina().orcamento.teto is None
 
 
 # ---------------------------------------------------------------------------
@@ -204,7 +203,6 @@ def test_ida_e_volta(arquivo: Path) -> None:
         {
             "mesa": {"altura_da_antena": "acima", "linha_de_visada": "livre"},
             "orcamento": {"teto": "economia"},
-            "ambiente": "cosmic",
             "controles": {CHAVE_DE_HARDWARE: {"modo": "switch", "cor": "Volcanic Red"}},
         }
     )
@@ -213,7 +211,6 @@ def test_ida_e_volta(arquivo: Path) -> None:
     assert cfg.mesa.altura_da_antena == "acima"
     assert cfg.mesa.linha_de_visada == "livre"
     assert cfg.orcamento.teto == "economia"
-    assert cfg.ambiente == "cosmic"
     assert cfg.controles[CHAVE_DE_HARDWARE].modo == "switch"
     assert cfg.controles[CHAVE_DE_HARDWARE].cor == "Volcanic Red"
 
@@ -340,6 +337,61 @@ def test_chave_de_topo_de_uma_versao_futura_sobrevive_ao_save(arquivo: Path) -> 
     assert documento["ambiente"] == "gnome"
     assert documento["orcamento"] == {"teto": "auto"}
     assert documento["planeta"] == {"gravidade": 1}
+
+
+def test_ambiente_de_um_maquina_json_antigo_nao_apaga_a_mesa(arquivo: Path) -> None:
+    """T2, CONFIGURAÇÕES-FECHA-01: o campo saiu do esquema — um arquivo antigo
+    que ainda o tem não pode perder o resto.
+
+    `ambiente` nunca teve escritor nem leitor (achado da sprint) e saiu de
+    `MaquinaConfig`. Quem já tinha um `maquina.json` com ele gravado (a
+    mesma máquina desta bancada, antes da migração) precisa continuar
+    carregando a `mesa` — `ambiente` vira só mais uma chave que "não é
+    nossa", como qualquer campo de versão futura (ver o teste acima).
+    """
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    arquivo.write_text(
+        json.dumps(
+            {"version": 1, "ambiente": "gnome", "mesa": {"altura_da_antena": "acima"}}
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = carregar_maquina()
+
+    assert cfg.mesa.altura_da_antena == "acima"
+    assert not hasattr(cfg, "ambiente")
+
+
+def test_campo_invalido_ao_carregar_nao_apaga_o_resto(arquivo: Path) -> None:
+    """O resgate campo a campo vale na LEITURA, não só na escrita.
+
+    `gravar_maquina_com_descartes` já isolava o estrago numa subárvore desde
+    `9848c41`; `carregar_maquina` ainda tinha `except ValidationError: return
+    MaquinaConfig()` — um valor que o schema recusa em UM campo (aqui,
+    `orcamento.teto` fora do catálogo) derrubava mesa, controles e orçamento
+    juntos, mesmo que só o orçamento estivesse ruim.
+
+    MORDE: trocar o corpo do `except ValidationError` de `carregar_maquina`
+    por `return MaquinaConfig()` direto (a forma de antes desta sprint) — a
+    asserção da mesa reprova, porque o documento inteiro volta vazio.
+    """
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    arquivo.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "mesa": {"altura_da_antena": "acima"},
+                "orcamento": {"teto": "generosa"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = carregar_maquina()
+
+    assert cfg.mesa.altura_da_antena == "acima"
+    assert cfg.orcamento.teto is None
 
 
 # ---------------------------------------------------------------------------
@@ -536,17 +588,17 @@ def test_a_ponte_traduz_o_motivo_e_distingue_daemon_offline(
     )
 
     respostas.append((True, {"ok": True}))
-    assert ipc_bridge.machine_declare({"ambiente": "cosmic"}) == (True, None)
+    assert ipc_bridge.machine_declare({"orcamento": {"teto": "auto"}}) == (True, None)
 
     respostas.append((True, {"ok": False, "reason": "versao_desconhecida"}))
-    ok, motivo = ipc_bridge.machine_declare({"ambiente": "cosmic"})
+    ok, motivo = ipc_bridge.machine_declare({"orcamento": {"teto": "auto"}})
     assert ok is False
     assert motivo is not None
     assert "versao_desconhecida" not in motivo
     assert "versão mais nova" in motivo
 
     respostas.append((False, None))
-    assert ipc_bridge.machine_declare({"ambiente": "cosmic"}) == (False, None)
+    assert ipc_bridge.machine_declare({"orcamento": {"teto": "auto"}}) == (False, None)
 
 
 def test_o_aplicar_grava_e_so_limpa_a_pendencia_quando_o_daemon_confirma(
@@ -585,10 +637,10 @@ def test_o_aplicar_grava_e_so_limpa_a_pendencia_quando_o_daemon_confirma(
     # statusbar. Ela era apagada no mesmo tique do GTK pelo toast do
     # `_apply_draft_agora`; quem a mostra agora é o toast FINAL do "Aplicar".
     resposta[0] = (False, "não deu", ())
-    rodape._maquina_pendente = {"ambiente": "gnome"}
+    rodape._maquina_pendente = {"orcamento": {"teto": "auto"}}
     assert rodape._gravar_declaracao_de_maquina() == (False, "não deu")
     assert rodape.avisos == []
-    assert rodape._maquina_pendente == {"ambiente": "gnome"}
+    assert rodape._maquina_pendente == {"orcamento": {"teto": "auto"}}
 
 
 def test_o_aplicar_com_modo_pendente_tambem_grava(

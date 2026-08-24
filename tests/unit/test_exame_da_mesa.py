@@ -354,6 +354,37 @@ def test_vizinhanca_livre_fica_certa() -> None:
     assert item.estado == ESTADO_CERTO
 
 
+def test_vizinhanca_apertada_pede_a_declaracao_quando_a_mesa_esta_vazia() -> None:
+    """T3, CONFIGURAÇÕES-FECHA-01: laranja + declaração vazia = a linha PEDE.
+
+    Mordida: comente a leitura de `altura_da_antena`/`linha_de_visada` dentro
+    de `vizinhanca_das_portas` (force `nada_declarado = True` sempre) e as duas
+    curas abaixo viram byte a byte iguais — é o que este teste reprova.
+    """
+    vazio = vizinhanca_das_portas(leitura=lambda: [("a", "b")])
+    declarado = vizinhanca_das_portas(
+        leitura=lambda: [("a", "b")], altura_da_antena="abaixo"
+    )
+
+    assert vazio.cura != declarado.cura
+    assert vazio.cura is not None and "declare a altura da antena" in vazio.cura
+    assert declarado.cura is not None and "declare" not in declarado.cura
+
+
+def test_exame_repassa_a_declaracao_da_mesa_para_a_vizinhanca(tmp_path: Path) -> None:
+    """`exame()` não lê o `maquina.json` (é 100% stdlib) — só repassa."""
+    itens = exame(
+        leitura_da_vizinhanca=lambda: [("a", "b")],
+        altura_da_antena=None,
+        linha_de_visada="livre",
+        raiz_usb=tmp_path,
+    )
+    vizinhanca = next(i for i in itens if i.chave == "vizinhanca_das_portas")
+
+    assert vizinhanca.cura is not None
+    assert "declare" not in vizinhanca.cura
+
+
 # --- o veredito, que é o selo do topo ---------------------------------------
 
 

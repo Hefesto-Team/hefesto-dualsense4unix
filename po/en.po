@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: hefesto-dualsense4unix 3.4.0\n"
 "Report-Msgid-Bugs-To: [REDACTED]\n"
-"POT-Creation-Date: 2026-08-14 08:21-0300\n"
+"POT-Creation-Date: 2026-08-24 02:54-0300\n"
 "PO-Revision-Date: 2026-05-16 22:00-0300\n"
 "Last-Translator: Vitoria Maria <[REDACTED]>\n"
 "Language-Team: English <[REDACTED]>\n"
@@ -20,165 +20,183 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:414
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:336
+#, python-brace-format
+msgid "Gravei o que deu. Isto o Hefesto não entendeu e descartou: {campos}."
+msgstr ""
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:339
+msgid "Configurações gravadas."
+msgstr ""
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:342
+#, fuzzy
+msgid "O Hefesto está desligado — não gravei o que você declarou"
+msgstr "Hefesto is running, but this was not applied: {secoes}"
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:375
+msgid "Há escolhas declaradas por aplicar — clique em \"Aplicar\"."
+msgstr ""
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:549
 #, python-brace-format
 msgid ""
 "Não consegui preparar o que vale na próxima abertura ({erro}) — o resto dos "
 "ajustes foi aplicado."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:467
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:602
 msgid "Aplicando perfil inteiro..."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:503
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:638
 msgid "ERRO ao aplicar perfil (daemon offline?)."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:513
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:649
 #, python-brace-format
 msgid "ERRO ao aplicar: {erro}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:605
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:742
 msgid "Operação cancelada."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:852
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1030
 #, python-brace-format
 msgid "Falha ao salvar perfil: {erro}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:927
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1105
 #, python-brace-format
 msgid "Perfil salvo, e o modo “{alvo}” já está valendo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:937
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1115
 #, python-brace-format
 msgid ""
 "Perfil salvo, mas não consegui mudar para “{alvo}” agora ({erro}) — a "
 "escolha continua marcada."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:957
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1135
 #, python-brace-format
 msgid ""
 "Perfil salvo — o modo “{alvo}” está no arquivo e vale quando o jogo abrir de "
 "novo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1001
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1179
 #, python-brace-format
 msgid "Perfil salvo em {caminho}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1004
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1182
 #, python-brace-format
 msgid "Aplicando o modo “{alvo}”..."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1081
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1088
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1259
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1266
 msgid "Importação cancelada."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1096
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1274
 #, python-brace-format
 msgid ""
 "'{nome}' ocupa o mesmo arquivo de um perfil que já existe — escolha outro "
 "nome."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1106
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1284
 #, python-brace-format
 msgid "Nome inválido: {erro}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1112
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1290
 #, python-brace-format
 msgid "Arquivo inválido: {erro}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1136
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1314
 #, python-brace-format
 msgid "Perfil importado: {nome} -> {caminho}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1138
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1316
 #, python-brace-format
 msgid "Falha ao importar: {erro}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1160
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1338
 msgid ""
 "Asset 'meu_perfil.json' não encontrado — Restaurar Default indisponível."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1168
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1346
 msgid "Restauração cancelada."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1216
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1394
 #, python-brace-format
 msgid "meu_perfil restaurado para {destino}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1218
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1396
 #, python-brace-format
 msgid "Falha ao restaurar: {erro}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1381
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1559
 #, python-brace-format
 msgid "{primeiras} e mais {resto}"
 msgstr "{primeiras} and {resto} more"
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1433
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1440
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1611
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1618
 #, fuzzy
 msgid "Perfil aplicado ao controle."
 msgstr "Apply to controller"
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1436
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1614
 msgid "Nada foi aplicado ao controle."
 msgstr "Nothing was applied to the controller."
 
-#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1439
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py:1617
 #, python-brace-format
 msgid "Aplicado, menos: {secoes}."
 msgstr "Applied, except: {secoes}."
 
-#: src/hefesto_dualsense4unix/app/actions/lightbar_actions.py:126
+#: src/hefesto_dualsense4unix/app/actions/lightbar_actions.py:141
 #, python-brace-format
 msgid "O Hefesto está ligado, mas não entrou: {secoes}"
 msgstr "Hefesto is running, but this was not applied: {secoes}"
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:180
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:190
 #, fuzzy, python-brace-format
 msgid "{n} controles"
 msgstr "Apply to controller"
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:182
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:192
 msgid "1 externo"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:182
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:192
 #, python-brace-format
 msgid "{n} externos"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:187
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:197
 #, python-brace-format
 msgid "{ext} (nenhum do Hefesto)"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:188
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:198
 #, python-brace-format
 msgid "{n} do Hefesto + {ext}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:249
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:259
 #, python-brace-format
 msgid ""
 "Um controle está ligado, mas o sistema não conseguiu entregá-lo ao Hefesto — "
@@ -187,7 +205,7 @@ msgid ""
 "segurando o botão PS por 10 segundos e ligue de novo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:256
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:266
 #, python-brace-format
 msgid ""
 "{n} controles estão ligados, mas o sistema não conseguiu entregá-los ao "
@@ -196,16 +214,16 @@ msgid ""
 "desligue cada um segurando o botão PS por 10 segundos e ligue de novo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:321
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:331
 msgid "1 jogador saiu — não foi você; volta sozinho"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:322
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:332
 #, python-brace-format
 msgid "{n} jogadores saíram — não foi você; voltam sozinhos"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:348
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:358
 #, python-brace-format
 msgid ""
 "Neste jogo quem entrega o controle é a Steam: os controles virtuais foram "
@@ -215,7 +233,7 @@ msgid ""
 "Você não desligou nada — ele volta sozinho quando você fechar o jogo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:355
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:365
 #, python-brace-format
 msgid ""
 "Neste jogo quem entrega o controle é a Steam: os controles virtuais foram "
@@ -225,38 +243,64 @@ msgid ""
 "Você não desligou nada — os {n} voltam sozinhos quando você fechar o jogo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1424
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1500
 msgid "Todos os controles"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1429
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:2156
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1505
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:2269
 #, python-brace-format
 msgid "Controle {n} — {t}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1503
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1583
 msgid "Ajustes vão para:"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1719
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1799
 msgid "Número deste controle:"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1864
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1952
 #, python-brace-format
 msgid "Editando: {alvo}"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1865
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1953
 #, python-brace-format
 msgid "Editando: {alvo} — sem endereço fixo, vale para todos"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1894
+#: src/hefesto_dualsense4unix/app/actions/status_actions.py:1982
 #, python-brace-format
 msgid "Controle {n} ({t})"
 msgstr ""
+
+#: src/hefesto_dualsense4unix/app/actions/config/secao_mesa.py:571
+msgid "Reexaminar a mesa"
+msgstr ""
+
+#: src/hefesto_dualsense4unix/app/actions/config/secao_mesa.py:572
+msgid "Relê os adaptadores e os rádios. Não muda nada."
+msgstr ""
+
+#: src/hefesto_dualsense4unix/app/actions/config/secao_exame.py:209
+msgid "O que fazer: "
+msgstr ""
+
+#: src/hefesto_dualsense4unix/app/actions/config/secao_janela.py:339
+msgid "Abrir a aba Sistema"
+msgstr ""
+
+#: src/hefesto_dualsense4unix/app/actions/config/secao_janela.py:357
+#, fuzzy
+msgid "Ligado"
+msgstr "Disable (Off)"
+
+#: src/hefesto_dualsense4unix/app/actions/config/secao_janela.py:357
+#, fuzzy
+msgid "Desligado"
+msgstr "Disable (Off)"
 
 #: src/hefesto_dualsense4unix/app/compact_window.py:185
 msgid "Iniciando..."
@@ -275,7 +319,7 @@ msgid "Sair"
 msgstr "Quit"
 
 #: src/hefesto_dualsense4unix/app/compact_window.py:239
-#: src/hefesto_dualsense4unix/app/tray.py:428
+#: src/hefesto_dualsense4unix/app/tray.py:461
 msgid "(nenhum perfil)"
 msgstr "(no profile)"
 
@@ -287,41 +331,22 @@ msgstr "Daemon offline"
 msgid "Controle desconectado"
 msgstr "Controller disconnected"
 
-#: src/hefesto_dualsense4unix/app/tray.py:181
-msgid "Hefesto - Dualsense4Unix (carregando...)"
-msgstr "Hefesto - Dualsense4Unix (loading...)"
-
-#: src/hefesto_dualsense4unix/app/tray.py:185
-msgid "Abrir painel"
-msgstr "Open panel"
-
-#: src/hefesto_dualsense4unix/app/tray.py:191
-msgid "Perfis"
-msgstr "Profiles"
-
-#: src/hefesto_dualsense4unix/app/tray.py:202
-msgid "Sair do Hefesto - Dualsense4Unix"
-msgstr "Quit Hefesto - Dualsense4Unix"
-
-#: src/hefesto_dualsense4unix/app/tray.py:408
-#, python-format
-msgid " · %(n)d controles (%(t)s)"
+#: src/hefesto_dualsense4unix/app/app.py:98
+msgid ""
+"Não consegui mostrar a pergunta sobre o que você declarou, então não fechei "
+"a janela — nada foi perdido. Clique em Aplicar na aba Configurações e feche "
+"de novo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/app/tray.py:455
-#, python-format
-msgid "Hefesto - Dualsense4Unix - perfil: %s"
-msgstr "Hefesto - Dualsense4Unix - profile: %s"
+#: src/hefesto_dualsense4unix/app/app.py:571
+msgid "Você declarou escolhas que ainda não foram aplicadas."
+msgstr ""
 
-#: src/hefesto_dualsense4unix/app/tray.py:457
-#, python-format
-msgid "Hefesto - Dualsense4Unix - %d perfis"
-msgstr "Hefesto - Dualsense4Unix - %d profiles"
+#: src/hefesto_dualsense4unix/app/app.py:578
+msgid "Fechar agora descarta o que você escolheu na aba Configurações."
+msgstr ""
 
-#: src/hefesto_dualsense4unix/app/gui_dialogs.py:396
-msgid "Salvar Perfil"
-msgstr "Save Profile"
-
+#: src/hefesto_dualsense4unix/app/app.py:582
 #: src/hefesto_dualsense4unix/app/gui_dialogs.py:402
 #: src/hefesto_dualsense4unix/app/gui_dialogs.py:450
 #: src/hefesto_dualsense4unix/app/gui_dialogs.py:499
@@ -332,6 +357,50 @@ msgstr "Save Profile"
 #: src/hefesto_dualsense4unix/app/gui_dialogs.py:746
 msgid "Cancelar"
 msgstr "Cancel"
+
+#: src/hefesto_dualsense4unix/app/app.py:583
+msgid "Fechar sem aplicar"
+msgstr ""
+
+#: src/hefesto_dualsense4unix/app/app.py:584
+#, fuzzy
+msgid "Aplicar e fechar"
+msgstr "Apply to L2"
+
+#: src/hefesto_dualsense4unix/app/tray.py:214
+msgid "Hefesto - Dualsense4Unix (carregando...)"
+msgstr "Hefesto - Dualsense4Unix (loading...)"
+
+#: src/hefesto_dualsense4unix/app/tray.py:218
+msgid "Abrir painel"
+msgstr "Open panel"
+
+#: src/hefesto_dualsense4unix/app/tray.py:224
+msgid "Perfis"
+msgstr "Profiles"
+
+#: src/hefesto_dualsense4unix/app/tray.py:235
+msgid "Sair do Hefesto - Dualsense4Unix"
+msgstr "Quit Hefesto - Dualsense4Unix"
+
+#: src/hefesto_dualsense4unix/app/tray.py:441
+#, python-format
+msgid " · %(n)d controles (%(t)s)"
+msgstr ""
+
+#: src/hefesto_dualsense4unix/app/tray.py:488
+#, python-format
+msgid "Hefesto - Dualsense4Unix - perfil: %s"
+msgstr "Hefesto - Dualsense4Unix - profile: %s"
+
+#: src/hefesto_dualsense4unix/app/tray.py:490
+#, python-format
+msgid "Hefesto - Dualsense4Unix - %d perfis"
+msgstr "Hefesto - Dualsense4Unix - %d profiles"
+
+#: src/hefesto_dualsense4unix/app/gui_dialogs.py:396
+msgid "Salvar Perfil"
+msgstr "Save Profile"
 
 #: src/hefesto_dualsense4unix/app/gui_dialogs.py:403
 msgid "Salvar"
@@ -496,7 +565,7 @@ msgstr "Hefesto - Dualsense4Unix"
 #. estava aqui era RELATIVO à fonte da distribuição: o
 #. mesmo wordmark saía de tamanho diferente em cada
 #. máquina. As cores por trecho continuam no markup.
-#: src/hefesto_dualsense4unix/gui/main.glade:169
+#: src/hefesto_dualsense4unix/gui/main.glade:175
 msgid ""
 "<span foreground=\"#ff79c6\">Hefesto</span> <span foreground=\"#6272a4\">—</"
 "span> <span foreground=\"#f8f8f2\">DualSense</span><span "
@@ -505,49 +574,49 @@ msgstr ""
 
 #. .hefesto-subtitulo = 11px em JetBrains Mono + @comment,
 #. exatamente o subtítulo do mockup.
-#: src/hefesto_dualsense4unix/gui/main.glade:180
+#: src/hefesto_dualsense4unix/gui/main.glade:186
 msgid "Gerenciador DualSense para Linux"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:191
+#: src/hefesto_dualsense4unix/gui/main.glade:197
 #, fuzzy
 msgid "<span foreground=\"#ff5555\"> Controle Desconectado</span>"
 msgstr "<span foreground=\"#d33\"> Controller Disconnected</span>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:245
+#: src/hefesto_dualsense4unix/gui/main.glade:271
 msgid "Início"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:288
+#: src/hefesto_dualsense4unix/gui/main.glade:332
 msgid "Estado"
 msgstr "Status"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:378
+#: src/hefesto_dualsense4unix/gui/main.glade:422
 msgid "Conexão:"
 msgstr "Connection:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:385
-#: src/hefesto_dualsense4unix/gui/main.glade:454
+#: src/hefesto_dualsense4unix/gui/main.glade:429
+#: src/hefesto_dualsense4unix/gui/main.glade:498
 msgid "Consultando..."
 msgstr "Querying..."
 
-#: src/hefesto_dualsense4unix/gui/main.glade:410
+#: src/hefesto_dualsense4unix/gui/main.glade:454
 msgid "Transporte:"
 msgstr "Transport:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:426
+#: src/hefesto_dualsense4unix/gui/main.glade:470
 msgid "Perfil ativo:"
 msgstr "Active profile:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:433
+#: src/hefesto_dualsense4unix/gui/main.glade:477
 msgid "Nenhum"
 msgstr "None"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:441
+#: src/hefesto_dualsense4unix/gui/main.glade:485
 msgid "Hefesto:"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:495
+#: src/hefesto_dualsense4unix/gui/main.glade:539
 #, fuzzy
 msgid "Ouvir no controle"
 msgstr "Apply to controller"
@@ -561,370 +630,370 @@ msgstr "Apply to controller"
 #. janela ainda nao sabe onde o som esta, e
 #. prometer a acao ali seria afirmar o que um
 #. botao que pode nascer insensivel faria.
-#: src/hefesto_dualsense4unix/gui/main.glade:505
+#: src/hefesto_dualsense4unix/gui/main.glade:549
 msgid ""
 "Manda o som do sistema para o alto-falante do controle, e desfaz. O rótulo "
 "do botão diz o que o próximo clique faz, e a dica muda junto com ele assim "
 "que a janela ler a saída de áudio."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:560
+#: src/hefesto_dualsense4unix/gui/main.glade:604
 msgid "Bateria:"
 msgstr "Battery:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:658
+#: src/hefesto_dualsense4unix/gui/main.glade:704
 msgid "Status"
 msgstr "Status"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:686
+#: src/hefesto_dualsense4unix/gui/main.glade:752
 #, fuzzy
 msgid "No jogo"
 msgstr "Game name:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:700
+#: src/hefesto_dualsense4unix/gui/main.glade:814
 msgid "L2 (gatilho esquerdo)"
 msgstr "L2 (left trigger)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:713
-#: src/hefesto_dualsense4unix/gui/main.glade:874
+#: src/hefesto_dualsense4unix/gui/main.glade:827
+#: src/hefesto_dualsense4unix/gui/main.glade:991
 msgid "Modo:"
 msgstr "Mode:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:741
-#: src/hefesto_dualsense4unix/gui/main.glade:899
+#: src/hefesto_dualsense4unix/gui/main.glade:855
+#: src/hefesto_dualsense4unix/gui/main.glade:1016
 msgid "Efeito pronto:"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:823
+#: src/hefesto_dualsense4unix/gui/main.glade:937
 msgid ""
 "Envia ao controle selecionado o modo e os ajustes escolhidos aqui, no "
 "gatilho L2 (o de cima, do lado esquerdo)."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:825
+#: src/hefesto_dualsense4unix/gui/main.glade:939
 msgid "Aplicar em L2"
 msgstr "Apply to L2"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:829
+#: src/hefesto_dualsense4unix/gui/main.glade:943
 msgid "Aplicar gatilho adaptativo no L2"
 msgstr "Apply adaptive trigger on L2"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:830
+#: src/hefesto_dualsense4unix/gui/main.glade:944
 msgid "Envia configuracao do gatilho esquerdo ao controle selecionado"
 msgstr "Sends left trigger configuration to the selected controller"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:837
+#: src/hefesto_dualsense4unix/gui/main.glade:951
 msgid "Tira a resistência do L2: ele volta a ser um gatilho comum, solto."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:839
-#: src/hefesto_dualsense4unix/gui/main.glade:991
-#: src/hefesto_dualsense4unix/gui/main.glade:3256
+#: src/hefesto_dualsense4unix/gui/main.glade:953
+#: src/hefesto_dualsense4unix/gui/main.glade:1108
+#: src/hefesto_dualsense4unix/gui/main.glade:3509
 #, fuzzy
 msgid "Desligar"
 msgstr "Disable (Off)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:843
+#: src/hefesto_dualsense4unix/gui/main.glade:957
 msgid "Desligar gatilho L2"
 msgstr "Disable L2 trigger"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:844
+#: src/hefesto_dualsense4unix/gui/main.glade:958
 msgid "Restaura L2 ao modo Off (sem resistencia)"
 msgstr "Restores L2 to Off mode (no resistance)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:861
+#: src/hefesto_dualsense4unix/gui/main.glade:978
 msgid "R2 (gatilho direito)"
 msgstr "R2 (right trigger)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:975
+#: src/hefesto_dualsense4unix/gui/main.glade:1092
 msgid ""
 "Envia ao controle selecionado o modo e os ajustes escolhidos aqui, no "
 "gatilho R2 (o de cima, do lado direito)."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:977
+#: src/hefesto_dualsense4unix/gui/main.glade:1094
 msgid "Aplicar em R2"
 msgstr "Apply to R2"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:981
+#: src/hefesto_dualsense4unix/gui/main.glade:1098
 msgid "Aplicar gatilho adaptativo no R2"
 msgstr "Apply adaptive trigger on R2"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:982
+#: src/hefesto_dualsense4unix/gui/main.glade:1099
 msgid "Envia configuracao do gatilho direito ao controle selecionado"
 msgstr "Sends right trigger configuration to the selected controller"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:989
+#: src/hefesto_dualsense4unix/gui/main.glade:1106
 msgid "Tira a resistência do R2: ele volta a ser um gatilho comum, solto."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:995
+#: src/hefesto_dualsense4unix/gui/main.glade:1112
 msgid "Desligar gatilho R2"
 msgstr "Disable R2 trigger"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:996
+#: src/hefesto_dualsense4unix/gui/main.glade:1113
 msgid "Restaura R2 ao modo Off (sem resistencia)"
 msgstr "Restores R2 to Off mode (no resistance)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1013
+#: src/hefesto_dualsense4unix/gui/main.glade:1132
 msgid "Gatilhos"
 msgstr "Triggers"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1025
+#: src/hefesto_dualsense4unix/gui/main.glade:1162
 msgid "Lightbar (barra de LED)"
 msgstr "Lightbar (LED strip)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1035
+#: src/hefesto_dualsense4unix/gui/main.glade:1172
 msgid "Escolha a cor da barra de LED do DualSense."
 msgstr "Choose the color of the DualSense LED strip."
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1050
+#: src/hefesto_dualsense4unix/gui/main.glade:1187
 msgid ""
 "Dá uma cor diferente a cada controle conectado, na ordem dos jogadores. "
 "Desmarque para escolher a cor de cada um na mão."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1051
-#: src/hefesto_dualsense4unix/gui/main.glade:1054
+#: src/hefesto_dualsense4unix/gui/main.glade:1188
+#: src/hefesto_dualsense4unix/gui/main.glade:1191
 #, fuzzy
 msgid "Cores automáticas por controle"
 msgstr "Current controller version"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1055
+#: src/hefesto_dualsense4unix/gui/main.glade:1192
 msgid "Cada DualSense conectado ganha uma cor de jogador automaticamente"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1063
+#: src/hefesto_dualsense4unix/gui/main.glade:1200
 msgid "<i>Cada DualSense ganha uma cor de jogador, estilo PS5.</i>"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1082
+#: src/hefesto_dualsense4unix/gui/main.glade:1219
 msgid ""
 "Abre a paleta para escolher a cor da barra de luz. A cor só vai ao controle "
 "quando você clicar em Aplicar no controle."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1083
+#: src/hefesto_dualsense4unix/gui/main.glade:1220
 msgid "Selecione a cor"
 msgstr "Select color"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1092
+#: src/hefesto_dualsense4unix/gui/main.glade:1229
 msgid "Prévia"
 msgstr "Preview"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1119
+#: src/hefesto_dualsense4unix/gui/main.glade:1256
 msgid ""
 "Acende a barra de luz do controle selecionado com a cor e o brilho "
 "escolhidos aqui."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1120
+#: src/hefesto_dualsense4unix/gui/main.glade:1257
 msgid "Aplicar no controle"
 msgstr "Apply to controller"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1124
+#: src/hefesto_dualsense4unix/gui/main.glade:1261
 msgid "Aplicar cor na lightbar"
 msgstr "Apply color to the lightbar"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1125
+#: src/hefesto_dualsense4unix/gui/main.glade:1262
 msgid "Envia cor selecionada para a barra de LED do controle selecionado"
 msgstr "Sends the selected color to the selected controller's LED strip"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1132
+#: src/hefesto_dualsense4unix/gui/main.glade:1269
 msgid ""
 "Apaga a barra de luz do controle selecionado. A cor continua guardada: "
 "Aplicar no controle acende de novo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1133
+#: src/hefesto_dualsense4unix/gui/main.glade:1270
 msgid "Apagar"
 msgstr "Turn off"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1137
+#: src/hefesto_dualsense4unix/gui/main.glade:1274
 msgid "Apagar lightbar"
 msgstr "Turn off lightbar"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1138
+#: src/hefesto_dualsense4unix/gui/main.glade:1275
 msgid "Desliga a barra de LED do controle selecionado"
 msgstr "Turns off the selected controller's LED strip"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1160
+#: src/hefesto_dualsense4unix/gui/main.glade:1297
 msgid "Voltar ao automático"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1161
+#: src/hefesto_dualsense4unix/gui/main.glade:1298
 msgid ""
 "Remove a cor escolhida do controle selecionado no seletor acima — a cor "
 "automática volta a valer nele."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1164
+#: src/hefesto_dualsense4unix/gui/main.glade:1301
 msgid "Voltar o controle selecionado ao automático"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1165
+#: src/hefesto_dualsense4unix/gui/main.glade:1302
 msgid ""
 "Remove a cor escolhida do controle selecionado; a cor automática volta a "
 "valer nele"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1172
+#: src/hefesto_dualsense4unix/gui/main.glade:1309
 msgid "Voltar todos ao automático"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1173
+#: src/hefesto_dualsense4unix/gui/main.glade:1310
 msgid ""
 "Remove as cores escolhidas de todos os controles e religa as cores "
 "automáticas."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1176
+#: src/hefesto_dualsense4unix/gui/main.glade:1313
 msgid "Voltar todos os controles ao automático"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1177
+#: src/hefesto_dualsense4unix/gui/main.glade:1314
 msgid ""
 "Remove as cores escolhidas de todos os controles e religa as cores "
 "automáticas"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1188
+#: src/hefesto_dualsense4unix/gui/main.glade:1325
 msgid "Luminosidade (%)"
 msgstr "Brightness (%)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1202
+#: src/hefesto_dualsense4unix/gui/main.glade:1339
 msgid ""
 "Quanto a barra de luz acende, de apagada até o brilho máximo. Vale na "
 "próxima vez que você aplicar a cor."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1227
+#: src/hefesto_dualsense4unix/gui/main.glade:1364
 msgid "Desenho das 5 luzes"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1237
+#: src/hefesto_dualsense4unix/gui/main.glade:1374
 msgid ""
 "Escolha o desenho das luzes. Isto muda só a aparência — o número do controle "
 "continua sendo o do cabeçalho."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1294
+#: src/hefesto_dualsense4unix/gui/main.glade:1431
 msgid ""
 "Acende ou apaga a primeira luzinha de jogador deste controle. Muda só o "
 "desenho das luzes, não o número do jogador."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1294
+#: src/hefesto_dualsense4unix/gui/main.glade:1431
 msgid "LED 1"
 msgstr "LED 1"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1295
+#: src/hefesto_dualsense4unix/gui/main.glade:1432
 msgid ""
 "Acende ou apaga a segunda luzinha de jogador deste controle. Muda só o "
 "desenho das luzes, não o número do jogador."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1295
+#: src/hefesto_dualsense4unix/gui/main.glade:1432
 msgid "LED 2"
 msgstr "LED 2"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1296
+#: src/hefesto_dualsense4unix/gui/main.glade:1433
 msgid ""
 "Acende ou apaga a terceira luzinha de jogador deste controle. Muda só o "
 "desenho das luzes, não o número do jogador."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1296
+#: src/hefesto_dualsense4unix/gui/main.glade:1433
 msgid "LED 3"
 msgstr "LED 3"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1297
+#: src/hefesto_dualsense4unix/gui/main.glade:1434
 msgid ""
 "Acende ou apaga a quarta luzinha de jogador deste controle. Muda só o "
 "desenho das luzes, não o número do jogador."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1297
+#: src/hefesto_dualsense4unix/gui/main.glade:1434
 msgid "LED 4"
 msgstr "LED 4"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1298
+#: src/hefesto_dualsense4unix/gui/main.glade:1435
 msgid ""
 "Acende ou apaga a quinta luzinha de jogador deste controle. Muda só o "
 "desenho das luzes, não o número do jogador."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1298
+#: src/hefesto_dualsense4unix/gui/main.glade:1435
 msgid "LED 5"
 msgstr "LED 5"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1305
+#: src/hefesto_dualsense4unix/gui/main.glade:1442
 msgid "<b>Presets rápidos:</b>"
 msgstr "<b>Quick presets:</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1335
+#: src/hefesto_dualsense4unix/gui/main.glade:1472
 msgid "Desenho do P1"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1336
+#: src/hefesto_dualsense4unix/gui/main.glade:1473
 msgid ""
 "Desenho oficial do PS5 para o jogador 1: acende só a luz central. Não muda o "
 "número deste controle — para isso use \"Número deste controle\", no "
 "cabeçalho."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1342
+#: src/hefesto_dualsense4unix/gui/main.glade:1479
 msgid "Desenho do P2"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1343
+#: src/hefesto_dualsense4unix/gui/main.glade:1480
 msgid ""
 "Desenho oficial do PS5 para o jogador 2: acende as 2 luzes vizinhas do "
 "centro. Não muda o número deste controle — para isso use \"Número deste "
 "controle\", no cabeçalho."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1349
+#: src/hefesto_dualsense4unix/gui/main.glade:1486
 msgid "Desenho do P3"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1350
+#: src/hefesto_dualsense4unix/gui/main.glade:1487
 msgid ""
 "Desenho oficial do PS5 para o jogador 3: acende 3 luzes alternadas. Não muda "
 "o número deste controle — para isso use \"Número deste controle\", no "
 "cabeçalho."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1356
+#: src/hefesto_dualsense4unix/gui/main.glade:1493
 msgid "Desenho do P4"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1357
+#: src/hefesto_dualsense4unix/gui/main.glade:1494
 msgid ""
 "Desenho oficial do PS5 para o jogador 4: acende as 4 luzes externas. Não "
 "muda o número deste controle — para isso use \"Número deste controle\", no "
 "cabeçalho."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1371
+#: src/hefesto_dualsense4unix/gui/main.glade:1508
 msgid "Todas acesas"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1372
+#: src/hefesto_dualsense4unix/gui/main.glade:1509
 msgid "Acende as 5 luzes. Não é desenho de jogador nenhum — é só um atalho."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1379
+#: src/hefesto_dualsense4unix/gui/main.glade:1516
 msgid "Todas apagadas"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1380
+#: src/hefesto_dualsense4unix/gui/main.glade:1517
 msgid ""
 "Apaga as 5 luzes deste controle. Sem escolha sua, volta a valer o desenho do "
 "número deste controle."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1396
+#: src/hefesto_dualsense4unix/gui/main.glade:1533
 #, fuzzy
 msgid "Aplicar o desenho"
 msgstr "Apply to controller"
@@ -938,101 +1007,101 @@ msgstr "Apply to controller"
 #. O texto novo fala do que está à vista: os
 #. botões de desenho logo acima e o momento
 #. em que reenviar é útil.
-#: src/hefesto_dualsense4unix/gui/main.glade:1406
+#: src/hefesto_dualsense4unix/gui/main.glade:1543
 msgid ""
 "Reenvia ao controle selecionado o desenho escolhido nos botões acima. Útil "
 "quando ele se reconectou ou você trocou de perfil e quer ver as luzes "
 "voltarem ao desenho que está aqui. Não muda o número do jogador."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1410
+#: src/hefesto_dualsense4unix/gui/main.glade:1547
 #, fuzzy
 msgid "Aplicar o desenho das luzes"
 msgstr "Apply all settings"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1411
+#: src/hefesto_dualsense4unix/gui/main.glade:1548
 msgid "Reenvia ao controle selecionado o desenho das 5 luzes escolhido acima"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1431
+#: src/hefesto_dualsense4unix/gui/main.glade:1568
 msgid "Aceso agora: consultando…"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1451
+#: src/hefesto_dualsense4unix/gui/main.glade:1588
 msgid ""
 "<i>Cada botão de desenho envia na hora ao controle selecionado e fica salvo "
 "no perfil ativo. \"Aplicar o desenho\" só reenvia o que já está escolhido — "
 "útil depois de reconectar o controle selecionado ou trocar de perfil.</i>"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1471
+#: src/hefesto_dualsense4unix/gui/main.glade:1608
 msgid ""
 "<i>O desenho que você escolhe aqui vence o automático neste controle, mesmo "
 "com as cores automáticas ligadas. Sem escolha sua, vale o desenho do número "
 "deste controle. Com o co-op ligado, quem manda no desenho é o co-op.</i>"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1496
+#: src/hefesto_dualsense4unix/gui/main.glade:1635
 msgid "Lightbar"
 msgstr "Lightbar"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1509
+#: src/hefesto_dualsense4unix/gui/main.glade:1666
 #, fuzzy
 msgid "Intensidade da vibração dos jogos"
 msgstr "Global intensity:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1530
+#: src/hefesto_dualsense4unix/gui/main.glade:1687
 msgid ""
 "30% do que o jogo pede: vibração fraca em todos os jogos, poupa bateria e "
 "faz menos barulho."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1531
+#: src/hefesto_dualsense4unix/gui/main.glade:1688
 msgid "Economia"
 msgstr "Economy"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1538
+#: src/hefesto_dualsense4unix/gui/main.glade:1695
 msgid ""
 "100%: vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o "
 "padrão."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1539
+#: src/hefesto_dualsense4unix/gui/main.glade:1696
 msgid "Balanceado"
 msgstr "Balanced"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1546
+#: src/hefesto_dualsense4unix/gui/main.glade:1703
 msgid ""
 "150%: aumenta pela metade a vibração que o jogo pede. Só as cenas mais "
 "fortes batem no limite do controle e ficam parecidas entre si. Gasta bateria "
 "bem mais depressa."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1547
+#: src/hefesto_dualsense4unix/gui/main.glade:1704
 msgid "Máximo"
 msgstr "Maximum"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1554
+#: src/hefesto_dualsense4unix/gui/main.glade:1711
 msgid ""
 "O Hefesto escolhe a força sozinho, conforme a bateria do controle. Nunca "
 "aumenta a vibração além do que o jogo pediu: ele existe para poupar bateria."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1555
+#: src/hefesto_dualsense4unix/gui/main.glade:1712
 msgid "Auto"
 msgstr "Auto"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1571
+#: src/hefesto_dualsense4unix/gui/main.glade:1728
 msgid "Intensidade global:"
 msgstr "Global intensity:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1578
+#: src/hefesto_dualsense4unix/gui/main.glade:1735
 msgid ""
 "<i>Multiplica a vibração que o JOGO pede — é aqui que se aumenta ou diminui "
 "a força sem tirar o controle dele.</i>"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1622
+#: src/hefesto_dualsense4unix/gui/main.glade:1779
 msgid ""
 "Multiplica a vibração que o jogo pede: abaixo de 100 sai mais fraca, acima "
 "de 100 sai mais forte. Vai além dos quatro botões — mas de 170 para cima "
@@ -1049,7 +1118,7 @@ msgstr ""
 #. este texto dizia. "Debounce" também saiu: é
 #. jargão, e ela nunca vê jargão. A escada viva está
 #. em `core.rumble._effective_mult`.
-#: src/hefesto_dualsense4unix/gui/main.glade:1649
+#: src/hefesto_dualsense4unix/gui/main.glade:1806
 msgid ""
 "Modo Auto: ajusta a força sozinho, conforme a bateria do controle.\n"
 "Bateria acima de 50%: 100%, o que o jogo pediu.  Entre 20% e 50%: 70%.  "
@@ -1059,78 +1128,78 @@ msgid ""
 "Espera 5 segundos antes de trocar de faixa, para não ficar oscilando."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1701
+#: src/hefesto_dualsense4unix/gui/main.glade:1858
 #, fuzzy
 msgid "Testar motores (enquanto testa, o jogo não controla a vibração)"
 msgstr "Sends the blob to the controller. Requires confirmation."
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1715
+#: src/hefesto_dualsense4unix/gui/main.glade:1872
 msgid "Vibração leve"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1729
+#: src/hefesto_dualsense4unix/gui/main.glade:1886
 msgid ""
 "Força do motor leve, o que faz o tremor fino. Vale no teste e no que você "
 "aplicar."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1741
+#: src/hefesto_dualsense4unix/gui/main.glade:1898
 msgid "Vibração forte"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1752
+#: src/hefesto_dualsense4unix/gui/main.glade:1909
 msgid ""
 "Força do motor pesado, o que faz o tremor grosso. Vale no teste e no que "
 "você aplicar."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1781
+#: src/hefesto_dualsense4unix/gui/main.glade:1938
 msgid ""
 "Faz o controle selecionado vibrar por meio segundo com os valores acima, "
 "para você sentir antes de aplicar."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1782
+#: src/hefesto_dualsense4unix/gui/main.glade:1939
 msgid "Testar por 500 ms"
 msgstr "Test for 500 ms"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1788
+#: src/hefesto_dualsense4unix/gui/main.glade:1945
 msgid ""
 "Envia ao controle selecionado a vibração escolhida; passa a valer até você "
 "mudar de novo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1789
-#: src/hefesto_dualsense4unix/gui/main.glade:3790
+#: src/hefesto_dualsense4unix/gui/main.glade:1946
+#: src/hefesto_dualsense4unix/gui/main.glade:4112
 msgid "Aplicar"
 msgstr "Apply"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1795
+#: src/hefesto_dualsense4unix/gui/main.glade:1952
 #, fuzzy
 msgid "Deixar o jogo controlar a vibração"
 msgstr "Sends the blob to the controller. Requires confirmation."
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1796
+#: src/hefesto_dualsense4unix/gui/main.glade:1953
 msgid ""
 "Devolve a vibração ao jogo. Use depois de 'Parar' para o jogo voltar a fazer "
 "os controles vibrarem."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1831
+#: src/hefesto_dualsense4unix/gui/main.glade:1988
 msgid "Parar"
 msgstr "Stop"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1832
+#: src/hefesto_dualsense4unix/gui/main.glade:1989
 msgid ""
 "Trava o controle selecionado em silêncio: nada vibra, nem no jogo. Para o "
 "jogo voltar a comandar, clique em 'Deixar o jogo controlar a vibração'."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1842
+#: src/hefesto_dualsense4unix/gui/main.glade:1999
 msgid "Estado da vibração: —"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1852
+#: src/hefesto_dualsense4unix/gui/main.glade:2009
 #, fuzzy
 msgid ""
 "<i>Os valores acima ainda passam pela intensidade escolhida ali em cima "
@@ -1139,132 +1208,132 @@ msgstr ""
 "<i>Values above are processed by the selected policy before reaching the "
 "hardware. Minimum throttle: 20 ms between commands.</i>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1869
+#: src/hefesto_dualsense4unix/gui/main.glade:2028
 msgid "Rumble"
 msgstr "Rumble"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1886
+#: src/hefesto_dualsense4unix/gui/main.glade:2063
 msgid "<b>Perfis salvos</b>"
 msgstr "<b>Saved profiles</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1942
+#: src/hefesto_dualsense4unix/gui/main.glade:2119
 msgid ""
 "Cria um perfil em branco. Um perfil guarda os gatilhos, a cor e a vibração "
 "de um jogo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1943
+#: src/hefesto_dualsense4unix/gui/main.glade:2120
 msgid "Novo"
 msgstr "New"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1947
+#: src/hefesto_dualsense4unix/gui/main.glade:2124
 msgid "Criar novo perfil"
 msgstr "Create new profile"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1948
+#: src/hefesto_dualsense4unix/gui/main.glade:2125
 msgid "Abre dialogo para criar um perfil em branco"
 msgstr "Opens dialog to create a blank profile"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1955
+#: src/hefesto_dualsense4unix/gui/main.glade:2132
 msgid ""
 "Faz uma cópia do perfil selecionado, para você mexer sem perder o original."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1956
+#: src/hefesto_dualsense4unix/gui/main.glade:2133
 msgid "Duplicar"
 msgstr "Duplicate"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1962
+#: src/hefesto_dualsense4unix/gui/main.glade:2139
 msgid "Apaga o perfil selecionado para sempre. Isso não tem volta."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1967
+#: src/hefesto_dualsense4unix/gui/main.glade:2144
 msgid "Remover perfil selecionado"
 msgstr "Remove selected profile"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1968
+#: src/hefesto_dualsense4unix/gui/main.glade:2145
 msgid "Apaga permanentemente o perfil destacado na lista"
 msgstr "Permanently deletes the highlighted profile from the list"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1975
+#: src/hefesto_dualsense4unix/gui/main.glade:2152
 msgid ""
 "Passa a usar o perfil selecionado agora: os gatilhos, a cor e a vibração "
 "dele vão para os controles."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1976
+#: src/hefesto_dualsense4unix/gui/main.glade:2153
 msgid "Ativar"
 msgstr "Activate"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1980
+#: src/hefesto_dualsense4unix/gui/main.glade:2157
 msgid "Ativar perfil selecionado"
 msgstr "Activate selected profile"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1981
+#: src/hefesto_dualsense4unix/gui/main.glade:2158
 msgid "Aplica o perfil destacado e o marca como ativo"
 msgstr "Applies the highlighted profile and marks it as active"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1988
+#: src/hefesto_dualsense4unix/gui/main.glade:2165
 msgid ""
 "Relê os perfis do disco e descarta as alterações que você ainda não salvou."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:1989
+#: src/hefesto_dualsense4unix/gui/main.glade:2166
 msgid "Recarregar"
 msgstr "Reload"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2013
+#: src/hefesto_dualsense4unix/gui/main.glade:2190
 msgid "<b>Editor do perfil</b>"
 msgstr "<b>Profile editor</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2021
+#: src/hefesto_dualsense4unix/gui/main.glade:2198
 msgid "Modo avançado"
 msgstr "Advanced mode"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2031
+#: src/hefesto_dualsense4unix/gui/main.glade:2208
 msgid "Ativa campos técnicos (window_class, title_regex, process_name)"
 msgstr "Enables technical fields (window_class, title_regex, process_name)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2047
+#: src/hefesto_dualsense4unix/gui/main.glade:2224
 msgid "Nome:"
 msgstr "Name:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2060
+#: src/hefesto_dualsense4unix/gui/main.glade:2237
 msgid ""
 "Nome do perfil, o que aparece na lista ao lado. Escolha um que lembre o jogo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2067
+#: src/hefesto_dualsense4unix/gui/main.glade:2244
 msgid "Prioridade:"
 msgstr "Priority:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2088
+#: src/hefesto_dualsense4unix/gui/main.glade:2265
 #, fuzzy
 msgid "Quanto maior, mais prioritário que outros perfis (0-200)"
 msgstr "Higher values have priority over other profiles (0-100)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2114
+#: src/hefesto_dualsense4unix/gui/main.glade:2291
 msgid "<b>Aplica a:</b>"
 msgstr "<b>Applies to:</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2143
+#: src/hefesto_dualsense4unix/gui/main.glade:2320
 msgid "Nome do jogo:"
 msgstr "Game name:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2151
+#: src/hefesto_dualsense4unix/gui/main.glade:2328
 msgid "ex.: eldenring"
 msgstr "e.g.: eldenring"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2152
+#: src/hefesto_dualsense4unix/gui/main.glade:2329
 msgid "Nome do executável do jogo (sem extensão no Linux)"
 msgstr "Game executable name (no extension on Linux)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2215
-#: src/hefesto_dualsense4unix/gui/main.glade:2219
+#: src/hefesto_dualsense4unix/gui/main.glade:2392
+#: src/hefesto_dualsense4unix/gui/main.glade:2396
 msgid "Esconder os controles físicos neste jogo"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2216
+#: src/hefesto_dualsense4unix/gui/main.glade:2393
 msgid ""
 "Para jogos que mostram os seus controles DOBRADOS — um Xbox e um Sony para "
 "cada um. Marcado: o jogo vê só os controles do Hefesto, e a sua cor, os seus "
@@ -1273,7 +1342,7 @@ msgid ""
 "para valer."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2220
+#: src/hefesto_dualsense4unix/gui/main.glade:2397
 msgid ""
 "Para jogos que mostram os seus controles dobrados, um Xbox e um Sony para "
 "cada um. Marcado, o jogo vê só os controles do Hefesto, e a sua cor, os seus "
@@ -1281,57 +1350,57 @@ msgid ""
 "o jogo para a marca valer"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2228
+#: src/hefesto_dualsense4unix/gui/main.glade:2405
 msgid ""
 "<i>Marque quando o jogo mostrar os seus controles dobrados. A marca vale "
 "para o jogo inteiro, não só para este perfil.</i>"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2257
+#: src/hefesto_dualsense4unix/gui/main.glade:2454
 msgid "Simples"
 msgstr "Simple"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2272
+#: src/hefesto_dualsense4unix/gui/main.glade:2469
 msgid "window_class:"
 msgstr "window_class:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2279
+#: src/hefesto_dualsense4unix/gui/main.glade:2476
 msgid ""
 "Nomes de janela que ligam este perfil sozinho, separados por vírgula. Vazio: "
 "nunca liga sozinho por aqui."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2280
+#: src/hefesto_dualsense4unix/gui/main.glade:2477
 msgid "CSV: Steam,firefox"
 msgstr "CSV: Steam,firefox"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2287
+#: src/hefesto_dualsense4unix/gui/main.glade:2484
 msgid "title_regex:"
 msgstr "title_regex:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2294
+#: src/hefesto_dualsense4unix/gui/main.glade:2491
 msgid ""
 "Trecho do título da janela que liga este perfil sozinho. Aceita expressão "
 "regular."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2295
+#: src/hefesto_dualsense4unix/gui/main.glade:2492
 msgid "regex (re.search)"
 msgstr "regex (re.search)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2302
+#: src/hefesto_dualsense4unix/gui/main.glade:2499
 msgid "process_name:"
 msgstr "process_name:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2309
+#: src/hefesto_dualsense4unix/gui/main.glade:2506
 msgid "Nomes de programa que ligam este perfil sozinho, separados por vírgula."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2310
+#: src/hefesto_dualsense4unix/gui/main.glade:2507
 msgid "CSV: doom.x86_64,celeste"
 msgstr "CSV: doom.x86_64,celeste"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2341
+#: src/hefesto_dualsense4unix/gui/main.glade:2538
 msgid ""
 "<i>AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são "
 "ignorados.</i>"
@@ -1339,150 +1408,150 @@ msgstr ""
 "<i>AND between filled fields, OR within each list. Empty fields are ignored."
 "</i>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2351
+#: src/hefesto_dualsense4unix/gui/main.glade:2548
 msgid "Avancado"
 msgstr "Advanced"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2367
+#: src/hefesto_dualsense4unix/gui/main.glade:2564
 msgid "Modo (o que este perfil liga ao ativar)"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2402
+#: src/hefesto_dualsense4unix/gui/main.glade:2599
 #, fuzzy
 msgid "Salvar este perfil"
 msgstr "Save Profile"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2403
+#: src/hefesto_dualsense4unix/gui/main.glade:2600
 msgid ""
 "Grava o perfil que está aberto aqui no editor, com o nome e as opções destes "
 "campos. Não confunda com o \"Salvar Perfil\" do rodapé, que pede um nome e "
 "guarda tudo que você ajustou nas outras abas."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2433
+#: src/hefesto_dualsense4unix/gui/main.glade:2650
 msgid "O Hefesto está:"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2445
+#: src/hefesto_dualsense4unix/gui/main.glade:2662
 msgid "Ligar junto com o computador:"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2450
+#: src/hefesto_dualsense4unix/gui/main.glade:2667
 msgid "Ligado, o Hefesto sobe sozinho toda vez que você liga o computador."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2471
+#: src/hefesto_dualsense4unix/gui/main.glade:2688
 msgid "Liga o Hefesto: luzes, gatilhos e os seus ajustes voltam a valer."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2472
-#: src/hefesto_dualsense4unix/gui/main.glade:2476
+#: src/hefesto_dualsense4unix/gui/main.glade:2689
+#: src/hefesto_dualsense4unix/gui/main.glade:2693
 msgid "Ligar o Hefesto"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2477
+#: src/hefesto_dualsense4unix/gui/main.glade:2694
 msgid "Liga o Hefesto: luzes, gatilhos e seus ajustes voltam a valer"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2484
+#: src/hefesto_dualsense4unix/gui/main.glade:2701
 msgid ""
 "Desliga o Hefesto: os controles continuam jogando, mas sem luzes, gatilhos "
 "nem os seus ajustes."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2485
-#: src/hefesto_dualsense4unix/gui/main.glade:2489
+#: src/hefesto_dualsense4unix/gui/main.glade:2702
+#: src/hefesto_dualsense4unix/gui/main.glade:2706
 #, fuzzy
 msgid "Desligar o Hefesto"
 msgstr "Disable (Off)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2490
+#: src/hefesto_dualsense4unix/gui/main.glade:2707
 msgid ""
 "Desliga o Hefesto: os controles continuam funcionando, mas sem luzes, "
 "gatilhos nem seus ajustes"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2497
+#: src/hefesto_dualsense4unix/gui/main.glade:2714
 msgid ""
 "Relê o estado do Hefesto e atualiza o que esta aba mostra. Não muda nada nos "
 "controles."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2498
-#: src/hefesto_dualsense4unix/gui/main.glade:2981
+#: src/hefesto_dualsense4unix/gui/main.glade:2715
+#: src/hefesto_dualsense4unix/gui/main.glade:3234
 msgid "Atualizar"
 msgstr "Refresh"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2504
+#: src/hefesto_dualsense4unix/gui/main.glade:2721
 msgid "Ver detalhes"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2505
+#: src/hefesto_dualsense4unix/gui/main.glade:2722
 msgid ""
 "Mostra o registro técnico do Hefesto aqui embaixo — útil para relatar um "
 "problema."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2511
+#: src/hefesto_dualsense4unix/gui/main.glade:2728
 #, fuzzy
 msgid "Reiniciar o Hefesto"
 msgstr "Restart daemon"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2512
+#: src/hefesto_dualsense4unix/gui/main.glade:2729
 msgid "Desliga e liga o Hefesto de novo — resolve a maioria dos travamentos."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2518
+#: src/hefesto_dualsense4unix/gui/main.glade:2735
 msgid "Corrigir modo de execução"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2519
+#: src/hefesto_dualsense4unix/gui/main.glade:2736
 msgid ""
 "O Hefesto está rodando de um jeito improvisado: não liga sozinho nem se "
 "recupera se travar. Este botão o coloca no jeito certo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2536
+#: src/hefesto_dualsense4unix/gui/main.glade:2753
 #, fuzzy
 msgid "<b>Saúde do sistema</b>"
 msgstr "<b>systemctl status output</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2543
+#: src/hefesto_dualsense4unix/gui/main.glade:2760
 msgid "Diagnóstico ao abrir a aba…"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2576
+#: src/hefesto_dualsense4unix/gui/main.glade:2793
 msgid "<b>Trocar de perfil ao abrir o jogo:</b> consultando…"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2594
+#: src/hefesto_dualsense4unix/gui/main.glade:2811
 msgid "<b>Jogos da Steam</b>"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2606
-#: src/hefesto_dualsense4unix/gui/main.glade:2610
+#: src/hefesto_dualsense4unix/gui/main.glade:2823
+#: src/hefesto_dualsense4unix/gui/main.glade:2827
 msgid "Deixar tudo pronto"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2607
+#: src/hefesto_dualsense4unix/gui/main.glade:2824
 msgid ""
 "Ajusta de uma vez tudo que costuma brigar com os controles nos jogos da "
 "Steam. Se a Steam estiver aberta, eu peço sua permissão antes de fechá-la "
 "por uns 20 segundos (e abro de novo). Com um jogo aberto, não faço nada."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2611
+#: src/hefesto_dualsense4unix/gui/main.glade:2828
 msgid ""
 "Prepara todos os jogos da Steam para funcionarem com os controles, sem você "
 "precisar escolher como"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2654
-#: src/hefesto_dualsense4unix/gui/main.glade:2658
+#: src/hefesto_dualsense4unix/gui/main.glade:2871
+#: src/hefesto_dualsense4unix/gui/main.glade:2875
 msgid "Este jogo não funciona"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2655
+#: src/hefesto_dualsense4unix/gui/main.glade:2872
 msgid ""
 "Marca o jogo que você acabou de abrir: nele os controles físicos ficam "
 "escondidos, o jogo deixa de mostrá-los dobrados e passa a ver só os "
@@ -1492,36 +1561,36 @@ msgid ""
 "marca: aba Perfis, no editor do perfil, logo abaixo do jogo escolhido."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2659
+#: src/hefesto_dualsense4unix/gui/main.glade:2876
 msgid ""
 "Esconde os controles físicos no último jogo aberto: o jogo passa a ver só os "
 "controles do Hefesto. Para tirar a marca, use a caixinha no editor do "
 "perfil, na aba Perfis"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2668
+#: src/hefesto_dualsense4unix/gui/main.glade:2885
 msgid ""
 "<b>Avançado</b> <span foreground=\"#8b8fa8\">— só se você quiser controlar "
 "cada passo</span>"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2680
+#: src/hefesto_dualsense4unix/gui/main.glade:2897
 #, fuzzy
 msgid "Aplicar correções"
 msgstr "Apply to controller"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2681
+#: src/hefesto_dualsense4unix/gui/main.glade:2898
 msgid ""
 "Não pede senha e NUNCA fecha a Steam: ajusta o áudio do controle e, só se a "
 "Steam estiver fechada, desliga o Steam Input — com ela aberta eu aviso que "
 "adiei, não finjo que apliquei."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2687
+#: src/hefesto_dualsense4unix/gui/main.glade:2904
 msgid "Copiar opções para os jogos"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2688
+#: src/hefesto_dualsense4unix/gui/main.glade:2905
 msgid ""
 "Copia a Opção de Inicialização da Steam (sempre a mesma linha): o launcher "
 "do Hefesto decide na hora do jogo se esconde os controles físicos — se o "
@@ -1529,12 +1598,12 @@ msgid ""
 "→ Opções de inicialização."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2694
+#: src/hefesto_dualsense4unix/gui/main.glade:2911
 #, fuzzy
 msgid "Aplicar aos jogos da Steam"
 msgstr "Steam games"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2695
+#: src/hefesto_dualsense4unix/gui/main.glade:2912
 msgid ""
 "Troca as opções antigas do Hefesto pela linha nova do launcher em todos os "
 "jogos que as tinham — sem apagar as suas outras opções. Se a Steam estiver "
@@ -1542,135 +1611,143 @@ msgid ""
 "backup antes."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2701
+#: src/hefesto_dualsense4unix/gui/main.glade:2918
 msgid "Travar Proton validado"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2702
+#: src/hefesto_dualsense4unix/gui/main.glade:2919
 msgid ""
 "Deixa todos os jogos na versão de Proton que o Hefesto validou — assim uma "
 "atualização da Steam não muda o comportamento do controle do nada. Pede a "
 "Steam fechada e faz backup antes."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2713
+#: src/hefesto_dualsense4unix/gui/main.glade:2934
+msgid "Tirar o que faz engasgar"
+msgstr ""
+
+#: src/hefesto_dualsense4unix/gui/main.glade:2935
+msgid ""
+"Alguns jogos instalam uma sobreposição que entra na frente de cada quadro "
+"desenhado — o jogo mantém a média de quadros e mesmo assim picota, uma "
+"engasgada por segundo. Eu mostro o que achou em cada jogo antes de mexer, "
+"guardo cópia do arquivo, e o mesmo lugar devolve. A sobreposição da Steam e "
+"os medidores ficam."
+msgstr ""
+
+#: src/hefesto_dualsense4unix/gui/main.glade:2946
 msgid "Detalhes técnicos"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2757
+#: src/hefesto_dualsense4unix/gui/main.glade:2992
 msgid "Sistema"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2790
+#: src/hefesto_dualsense4unix/gui/main.glade:3043
 msgid "UINPUT:"
 msgstr "UINPUT:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2804
+#: src/hefesto_dualsense4unix/gui/main.glade:3057
 msgid "Device:"
 msgstr "Device:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2811
+#: src/hefesto_dualsense4unix/gui/main.glade:3064
 msgid "Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)"
 msgstr "Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2817
+#: src/hefesto_dualsense4unix/gui/main.glade:3070
 msgid "VID:PID:"
 msgstr "VID:PID:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2824
+#: src/hefesto_dualsense4unix/gui/main.glade:3077
 msgid "045E:028E (Xbox 360)"
 msgstr "045E:028E (Xbox 360)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2830
+#: src/hefesto_dualsense4unix/gui/main.glade:3083
 msgid "Gamepads:"
 msgstr "Gamepads:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2900
+#: src/hefesto_dualsense4unix/gui/main.glade:3153
 msgid ""
 "<b>Modo jogo</b>: PS + Options suspende mouse e teclado. Segurar o PS vem "
 "desligado."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2901
+#: src/hefesto_dualsense4unix/gui/main.glade:3154
 msgid ""
 "Quem faz o combo é o controle que comanda o PC — mouse e teclado são de um "
 "controle só, porque o PC tem um cursor e um foco de teclado. Nos outros "
 "controles, PS + Options não faz nada."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2908
+#: src/hefesto_dualsense4unix/gui/main.glade:3161
 msgid "Próximo:"
 msgstr "Next:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2915
+#: src/hefesto_dualsense4unix/gui/main.glade:3168
 msgid "PS + D-pad Cima"
 msgstr "PS + D-pad Up"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2921
+#: src/hefesto_dualsense4unix/gui/main.glade:3174
 msgid "Anterior:"
 msgstr "Previous:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2928
+#: src/hefesto_dualsense4unix/gui/main.glade:3181
 msgid "PS + D-pad Baixo"
 msgstr "PS + D-pad Down"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2934
+#: src/hefesto_dualsense4unix/gui/main.glade:3187
 msgid "Buffer:"
 msgstr "Buffer:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2947
+#: src/hefesto_dualsense4unix/gui/main.glade:3200
 msgid "Passthrough em emulação:"
 msgstr "Passthrough during emulation:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2954
+#: src/hefesto_dualsense4unix/gui/main.glade:3207
 msgid "Não"
 msgstr "No"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2973
+#: src/hefesto_dualsense4unix/gui/main.glade:3226
 msgid ""
 "Cria um controle virtual por um instante, só para conferir se o sistema "
 "deixa. Não interrompe o que estiver jogando."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2974
+#: src/hefesto_dualsense4unix/gui/main.glade:3227
 msgid "Testar o controle virtual"
 msgstr "Test the virtual controller"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2980
+#: src/hefesto_dualsense4unix/gui/main.glade:3233
 msgid ""
 "Relê o estado da emulação e atualiza o que esta aba mostra. Não muda nada "
 "nos controles."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3024
+#: src/hefesto_dualsense4unix/gui/main.glade:3277
 #, fuzzy
 msgid "Gamepad para os jogos:"
 msgstr "Gamepads:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3051
-#: src/hefesto_dualsense4unix/gui/main.glade:3123
-#: src/hefesto_dualsense4unix/gui/main.glade:3200
-#: src/hefesto_dualsense4unix/gui/main.glade:3243
+#: src/hefesto_dualsense4unix/gui/main.glade:3304
+#: src/hefesto_dualsense4unix/gui/main.glade:3376
+#: src/hefesto_dualsense4unix/gui/main.glade:3453
+#: src/hefesto_dualsense4unix/gui/main.glade:3496
 msgid "—"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3057
-#, fuzzy
-msgid "Desligado"
-msgstr "Disable (Off)"
-
-#: src/hefesto_dualsense4unix/gui/main.glade:3058
+#: src/hefesto_dualsense4unix/gui/main.glade:3311
 msgid ""
 "Volta ao Controlar o PC: o mouse e o teclado ficam com o controle que "
 "comanda o PC — o mesmo que \"Controlar o PC\" na aba Início. Desliga o "
 "gamepad virtual e também sai da \"Conexão Nativa (Sony)\"."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3064
+#: src/hefesto_dualsense4unix/gui/main.glade:3317
 msgid "DualSense (PS)"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3065
+#: src/hefesto_dualsense4unix/gui/main.glade:3318
 #, fuzzy
 msgid ""
 "O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a "
@@ -1685,18 +1762,21 @@ msgstr ""
 "controller. Note: games that only understand Xbox controllers (e.g. Mullet "
 "Mad Jack) ignore this mask — use \"Xbox 360\" for those."
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3071
+#: src/hefesto_dualsense4unix/gui/main.glade:3324
 msgid "Xbox 360"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3072
+#: src/hefesto_dualsense4unix/gui/main.glade:3325
 msgid ""
 "Máscara Xbox 360: a vibração funciona em jogo e os controles não aparecem "
 "duplicados. Os jogos mostram prompts de Xbox (A/B/X/Y). É a única máscara "
 "que jogos XInput-only entendem; nessa API não existe giroscópio."
-msgstr "Xbox 360 mask: rumble works in game and the controllers won't show up duplicated. Games show Xbox prompts (A/B/X/Y). It is the only mask XInput-only games understand; that API has no gyroscope."
+msgstr ""
+"Xbox 360 mask: rumble works in game and the controllers won't show up "
+"duplicated. Games show Xbox prompts (A/B/X/Y). It is the only mask XInput-"
+"only games understand; that API has no gyroscope."
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3081
+#: src/hefesto_dualsense4unix/gui/main.glade:3334
 #, fuzzy
 msgid ""
 "Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, "
@@ -1717,17 +1797,17 @@ msgstr ""
 "(rumble works; the gyroscope does not exist in that API). Telltale sign of "
 "an Xbox-only game: the controller navigates Steam but is dead in game."
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3109
+#: src/hefesto_dualsense4unix/gui/main.glade:3362
 #, fuzzy
 msgid "Modo jogo:"
 msgstr "Game name:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3149
-#: src/hefesto_dualsense4unix/gui/main.glade:3154
+#: src/hefesto_dualsense4unix/gui/main.glade:3402
+#: src/hefesto_dualsense4unix/gui/main.glade:3407
 msgid "Suspender mouse e teclado"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3150
+#: src/hefesto_dualsense4unix/gui/main.glade:3403
 msgid ""
 "Suspende a emulação de mouse/teclado (igual ao combo PS+Options). Só faz "
 "sentido jogando: em \"Controlar o PC\" o controle que comanda o PC ficaria "
@@ -1735,81 +1815,81 @@ msgid ""
 "sobrevive ao reboot."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3155
+#: src/hefesto_dualsense4unix/gui/main.glade:3408
 msgid ""
 "Para a emulação de mouse e teclado enquanto você joga; o botão \"Sair do "
 "modo jogo\" desfaz"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3162
+#: src/hefesto_dualsense4unix/gui/main.glade:3415
 #, fuzzy
 msgid "Sair do modo jogo"
 msgstr "Game name:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3163
+#: src/hefesto_dualsense4unix/gui/main.glade:3416
 msgid "Retoma a emulação de mouse/teclado."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3187
+#: src/hefesto_dualsense4unix/gui/main.glade:3440
 msgid "Steam Input:"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3206
+#: src/hefesto_dualsense4unix/gui/main.glade:3459
 #, fuzzy
 msgid "Verificar"
 msgstr "Check version"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3207
+#: src/hefesto_dualsense4unix/gui/main.glade:3460
 msgid ""
 "Checa se o Steam Input (PSSupport) está ligado — ele conflita com o daemon."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3213
+#: src/hefesto_dualsense4unix/gui/main.glade:3466
 msgid "Desligar Steam Input"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3214
+#: src/hefesto_dualsense4unix/gui/main.glade:3467
 msgid ""
 "Desliga o Steam Input, que sequestra os controles e briga com o Hefesto. Se "
 "a Steam estiver aberta, eu PEÇO sua permissão antes de fechá-la por uns 20 "
 "segundos — e abro de novo depois. Com um jogo aberto, não faço nada."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3230
+#: src/hefesto_dualsense4unix/gui/main.glade:3483
 msgid "Microfone do DualSense:"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3249
+#: src/hefesto_dualsense4unix/gui/main.glade:3502
 msgid "Ligar"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3250
+#: src/hefesto_dualsense4unix/gui/main.glade:3503
 msgid ""
 "Libera o mic embutido do DualSense (para jogos que pedem mic). O quirk "
 "segura o storm."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3257
+#: src/hefesto_dualsense4unix/gui/main.glade:3510
 msgid "Suprime o mic do DualSense (não vira microfone padrão, sem spam)."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3266
+#: src/hefesto_dualsense4unix/gui/main.glade:3519
 msgid ""
 "<i>Como o jogo vê o controle: <b>DualSense</b> mostra os botões de "
 "PlayStation e vibra. <b>Xbox 360</b> serve para jogos que só entendem "
 "controle de Xbox. Enquanto isso, o Hefesto é quem fala com os controles.</i>"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3287
+#: src/hefesto_dualsense4unix/gui/main.glade:3542
 msgid "Emulação"
 msgstr "Emulation"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3340
+#: src/hefesto_dualsense4unix/gui/main.glade:3613
 #, fuzzy
 msgid "<b>Emular mouse</b>"
 msgstr "<b>Emulate mouse+keyboard</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3348
+#: src/hefesto_dualsense4unix/gui/main.glade:3621
 msgid ""
 "Liga o controle que comanda o PC como mouse do computador: cursor, cliques e "
 "rolagem. O PC tem um cursor só, então quem move o mouse é sempre um controle "
@@ -1817,93 +1897,93 @@ msgid ""
 "lado. Só funciona no modo Controlar o PC."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3398
+#: src/hefesto_dualsense4unix/gui/main.glade:3671
 msgid "Velocidade do cursor:"
 msgstr "Cursor speed:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3411
+#: src/hefesto_dualsense4unix/gui/main.glade:3684
 msgid "Quão rápido o cursor anda quando você empurra o analógico esquerdo."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3423
+#: src/hefesto_dualsense4unix/gui/main.glade:3696
 msgid "Velocidade da rolagem:"
 msgstr "Scroll speed:"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3436
+#: src/hefesto_dualsense4unix/gui/main.glade:3709
 msgid "Quão rápido a página rola quando você empurra o analógico direito."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3465
+#: src/hefesto_dualsense4unix/gui/main.glade:3738
 msgid "<b>Mapeamento</b>"
 msgstr "<b>Mapping</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3476
+#: src/hefesto_dualsense4unix/gui/main.glade:3749
 msgid "Cruz (X) ou L2"
 msgstr "Cross (X) or L2"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3484
+#: src/hefesto_dualsense4unix/gui/main.glade:3757
 msgid "Botão esquerdo"
 msgstr "Left button"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3488
+#: src/hefesto_dualsense4unix/gui/main.glade:3761
 #, fuzzy
 msgid "Triângulo (△) ou R2"
 msgstr "Triangle () or R2"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3496
+#: src/hefesto_dualsense4unix/gui/main.glade:3769
 msgid "Botão direito"
 msgstr "Right button"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3500
+#: src/hefesto_dualsense4unix/gui/main.glade:3773
 msgid "R3 (clique no analógico direito)"
 msgstr "R3 (right stick click)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3508
+#: src/hefesto_dualsense4unix/gui/main.glade:3781
 msgid "Botão do meio"
 msgstr "Middle button"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3512
+#: src/hefesto_dualsense4unix/gui/main.glade:3785
 #, fuzzy
 msgid "Círculo (○)"
 msgstr "Circle ()"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3520
+#: src/hefesto_dualsense4unix/gui/main.glade:3793
 msgid "Enter"
 msgstr "Enter"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3524
+#: src/hefesto_dualsense4unix/gui/main.glade:3797
 msgid "Quadrado (□)"
 msgstr "Square (□)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3532
+#: src/hefesto_dualsense4unix/gui/main.glade:3805
 msgid "Esc"
 msgstr "Esc"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3536
+#: src/hefesto_dualsense4unix/gui/main.glade:3809
 msgid "D-pad (↑↓←→)"
 msgstr "D-pad (↑↓←→)"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3544
+#: src/hefesto_dualsense4unix/gui/main.glade:3817
 msgid "Setas do teclado"
 msgstr "Keyboard arrows"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3548
+#: src/hefesto_dualsense4unix/gui/main.glade:3821
 msgid "Analógico esquerdo"
 msgstr "Left stick"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3556
+#: src/hefesto_dualsense4unix/gui/main.glade:3829
 msgid "Movimento do cursor"
 msgstr "Cursor movement"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3560
+#: src/hefesto_dualsense4unix/gui/main.glade:3833
 msgid "Analógico direito"
 msgstr "Right stick"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3568
+#: src/hefesto_dualsense4unix/gui/main.glade:3841
 msgid "Rolagem vertical e horizontal"
 msgstr "Vertical and horizontal scrolling"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3582
+#: src/hefesto_dualsense4unix/gui/main.glade:3855
 msgid ""
 "<i>Útil para navegar o desktop, apresentações e jogos que só aceitam mouse/"
 "teclado. Requer módulo uinput carregado e regra udev (ver aba Emulação).</i>"
@@ -1912,36 +1992,36 @@ msgstr ""
 "accept mouse/keyboard. Requires the uinput module loaded and a udev rule "
 "(see Emulation tab).</i>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3627
+#: src/hefesto_dualsense4unix/gui/main.glade:3900
 #, fuzzy
 msgid "<b>Emular teclado</b>"
 msgstr "<b>Emulate mouse+keyboard</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3635
+#: src/hefesto_dualsense4unix/gui/main.glade:3908
 msgid ""
 "Liga o controle que comanda o PC como teclado do computador. Desligar tira "
 "TUDO o que esse controle digita: os atalhos da lista abaixo, o teclado na "
 "tela em L3/R3 e as três regiões do touchpad (Backspace, Enter e Delete)."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3641
+#: src/hefesto_dualsense4unix/gui/main.glade:3914
 #, fuzzy
 msgid "Emular teclado"
 msgstr "<b>Emulate mouse+keyboard</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3642
+#: src/hefesto_dualsense4unix/gui/main.glade:3915
 msgid ""
 "Liga ou desliga o controle que comanda o PC como teclado do computador; "
 "desligar tira também o teclado na tela em L3 ou R3 e as três regiões do "
 "touchpad"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3663
+#: src/hefesto_dualsense4unix/gui/main.glade:3936
 #, fuzzy
 msgid "<b>Atalhos de teclado do perfil ativo</b>"
 msgstr "<b>Active profile bindings</b>"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3671
+#: src/hefesto_dualsense4unix/gui/main.glade:3944
 msgid ""
 "Formato: KEY_* (ex: KEY_C, KEY_ENTER) ou __OPEN_OSK__/__CLOSE_OSK__. Combos "
 "com '+' (ex: KEY_LEFTALT+KEY_TAB)."
@@ -1949,65 +2029,84 @@ msgstr ""
 "Format: KEY_* (e.g.: KEY_C, KEY_ENTER) or __OPEN_OSK__/__CLOSE_OSK__. Combos "
 "with '+' (e.g.: KEY_LEFTALT+KEY_TAB)."
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3715
+#: src/hefesto_dualsense4unix/gui/main.glade:3988
 msgid ""
 "Cria um atalho novo: escolha um botão do controle e a tecla que ele vai "
 "apertar."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3716
+#: src/hefesto_dualsense4unix/gui/main.glade:3989
 msgid "Adicionar"
 msgstr "Add"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3723
+#: src/hefesto_dualsense4unix/gui/main.glade:3996
 msgid "Apaga o atalho selecionado na lista acima."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3731
+#: src/hefesto_dualsense4unix/gui/main.glade:4004
 msgid ""
 "Devolve todos os atalhos ao que vem de fábrica. As suas alterações se perdem."
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3732
+#: src/hefesto_dualsense4unix/gui/main.glade:4005
 msgid "Voltar ao padrão"
 msgstr "Back to default"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3746
+#: src/hefesto_dualsense4unix/gui/main.glade:4021
 #, fuzzy
 msgid "Navegação"
 msgstr "Browser"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3791
-msgid "Envia toda a configuração (gatilhos, LEDs, rumble, mouse) aos controles"
-msgstr "Sends the entire configuration (triggers, LEDs, rumble, mouse) to the controllers"
+#: src/hefesto_dualsense4unix/gui/main.glade:4067
+msgid "Configurações"
+msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3796
+#. PROVISÓRIO — decisão dela (T4, CONFIGURAÇÕES-FECHA-01):
+#. redação exata da sprint, para ela aprovar ou reescrever.
+#: src/hefesto_dualsense4unix/gui/main.glade:4115
+msgid ""
+"Envia a configuração aos controles e grava o que você declarou na aba "
+"Configurações"
+msgstr ""
+"Sends the configuration to the controllers and saves what you declared in "
+"the Settings tab"
+
+#: src/hefesto_dualsense4unix/gui/main.glade:4120
 msgid "Aplicar todas as configuracoes"
 msgstr "Apply all settings"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3797
-msgid "Envia gatilhos LEDs rumble e mouse aos controles"
-msgstr "Sends triggers, LEDs, rumble, and mouse to the controllers"
+#: src/hefesto_dualsense4unix/gui/main.glade:4121
+msgid "Envia a configuração aos controles e grava a aba Configurações"
+msgstr "Sends the configuration to the controllers and saves the Settings tab"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3806
+#: src/hefesto_dualsense4unix/gui/main.glade:4130
 msgid "Salva o estado atual como um perfil nomeado"
 msgstr "Saves the current state as a named profile"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3814
+#: src/hefesto_dualsense4unix/gui/main.glade:4138
 msgid "Importar"
 msgstr "Import"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3815
+#: src/hefesto_dualsense4unix/gui/main.glade:4139
 msgid "Carrega um perfil de arquivo .json"
 msgstr "Loads a profile from a .json file"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3823
+#: src/hefesto_dualsense4unix/gui/main.glade:4147
 msgid "Restaurar Default"
 msgstr "Restore Default"
 
-#: src/hefesto_dualsense4unix/gui/main.glade:3824
+#: src/hefesto_dualsense4unix/gui/main.glade:4148
 msgid "Restaura o perfil 'Meu Perfil' ao estado original"
 msgstr "Restores the 'My Profile' profile to its original state"
+
+#~ msgid ""
+#~ "Envia toda a configuração (gatilhos, LEDs, rumble, mouse) aos controles"
+#~ msgstr ""
+#~ "Sends the entire configuration (triggers, LEDs, rumble, mouse) to the "
+#~ "controllers"
+
+#~ msgid "Envia gatilhos LEDs rumble e mouse aos controles"
+#~ msgstr "Sends triggers, LEDs, rumble, and mouse to the controllers"
 
 #~ msgid ""
 #~ "<span size=\"xx-large\" weight=\"bold\">Hefesto - Dualsense4Unix</span>"

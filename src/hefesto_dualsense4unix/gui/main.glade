@@ -4110,13 +4110,15 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 <child>
                   <object class="GtkButton" id="btn_footer_apply">
                     <property name="label" translatable="yes">Aplicar</property>
-                    <property name="tooltip-text" translatable="yes">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) aos controles</property>
+                    <!-- PROVISÓRIO — decisão dela (T4, CONFIGURAÇÕES-FECHA-01):
+                         redação exata da sprint, para ela aprovar ou reescrever. -->
+                    <property name="tooltip-text" translatable="yes">Envia a configuração aos controles e grava o que você declarou na aba Configurações</property>
                     <signal name="clicked" handler="on_apply_draft"/>
                     <style><class name="btn-apply"/></style>
                   <child internal-child="accessible">
                     <object class="AtkObject">
                       <property name="AtkObject::accessible-name" translatable="yes">Aplicar todas as configuracoes</property>
-                      <property name="AtkObject::accessible-description" translatable="yes">Envia gatilhos LEDs rumble e mouse aos controles</property>
+                      <property name="AtkObject::accessible-description" translatable="yes">Envia a configuração aos controles e grava a aba Configurações</property>
                     </object>
                   </child>
                   </object>
