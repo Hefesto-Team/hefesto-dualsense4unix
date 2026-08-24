@@ -331,9 +331,20 @@ def test_os_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
     }
 
     #: O PISO — quem já traduzia e não pode parar. Cresce quando um módulo novo
-    #: entra e alguém quiser prendê-lo aqui; nunca encolhe.
+    #: entra e alguém quiser prendê-lo aqui.
+    #:
+    #: **ENCOLHEU UMA VEZ, em 23/08/2026, e a razão fica escrita.** O
+    #: `config/mixin.py` saiu daqui porque o único texto de tela que ele tinha
+    #: — o rótulo que explicava a fita de alvo esmaecida — foi REMOVIDO por
+    #: decisão dela: ele empurrava a altura e a largura do cabeçalho e deixava
+    #: a aba Configurações mais larga que as outras dez. Sem texto de tela, o
+    #: `from ... import _` vira import morto, e o `ruff` o reprova.
+    #:
+    #: **A regra continua sendo "nunca encolhe" para o caso que este portão
+    #: existe para pegar:** i18n arrancado de módulo que AINDA põe texto na
+    #: tela. Encolher só é legítimo quando o TEXTO some junto, e a prova é
+    #: mecânica — `grep -c '_('` no módulo tem de devolver zero.
     piso = {
-        "config/mixin.py",
         "config/moldura.py",
         "footer_actions.py",
         "lightbar_actions.py",
