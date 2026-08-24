@@ -144,6 +144,18 @@ FALHA (as duas mais novas)
                           `dominio_das_pontes`) — sem ela "Steam Input",
                           "steam input" e "SteamInput" viram três pontes.
 
+ 16. `causa-nao-declarada` — `aciona = não` MEDIDO (`de_onde_sei = medido`) com
+                          `*_por_que_nao_aciona` vazia. Nasceu em 24/08/2026
+                          (Z6-05): as duas colunas de causa existiam desde
+                          22/08/2026 sem NENHUMA regra que as lesse — a mesma
+                          família "a casa sabe e o produto não faz", com dois
+                          dias de idade. O domínio ganhou o quinto valor,
+                          `o-aparelho-recusa` (causa FORA do nosso código, como
+                          o `HANDSHAKE 0x04` da cor por rádio, medido em
+                          23/08/2026) — ver `DOMINIO_POR_SUFIXO["por_que_nao_aciona"]`
+                          e `CAUSA_DE_FORA` em
+                          `src/hefesto_dualsense4unix/app/fala_do_mapa.py`.
+
 Os dois degraus que faltavam (19/08/2026)
 -----------------------------------------
 Até esta data a escada de `ate_onde_foi` cobria só a IDA — produto para aparelho
@@ -253,6 +265,7 @@ import argparse
 import ast
 import csv
 import re
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -566,6 +579,18 @@ DOMINIO_POR_SUFIXO = {
     ),
     #: DERIVADO de `ESCADA`, nunca redigitado: a lista tem UM dono.
     "ate_onde_foi": frozenset({"", *VALORES_DA_ESCADA}),
+    #: `cabo_por_que_nao_aciona`/`radio_por_que_nao_aciona` nasceram em
+    #: 22/08/2026 sem domínio (Z6-05, 24/08/2026 — a família "a casa sabe e o
+    #: produto não faz" com dois dias de idade). `o-aparelho-recusa` é o quinto
+    #: valor, e o único, com `nada-a-acionar`, que nomeia causa FORA do nosso
+    #: código — ver `CAUSA_DE_FORA` em
+    #: `src/hefesto_dualsense4unix/app/fala_do_mapa.py`. `divida`,
+    #: `decisao-tomada` e `so-ela-decide` são causa NOSSA: um portão que aceita
+    #: `AFIRMA_NAO_ACIONA` para qualquer uma delas licencia a tela a culpar o
+    #: aparelho pelo que é nosso.
+    "por_que_nao_aciona": frozenset(
+        {"", "nada-a-acionar", "decisao-tomada", "so-ela-decide", "divida", "o-aparelho-recusa"}
+    ),
 }
 DOMINIO_EXISTE = frozenset({"", "tem", "nao-tem", "parcial", "desconhecido"})
 
@@ -598,6 +623,12 @@ _CAMPOS_DA_PONTE = ("kind", "mascara", "steam_input")
 #: sprint quer a rede primeiro onde a promessa é inteira.
 ACIONA_FORTE = "sim"
 DE_ONDE_SEI_FORTE = "medido"
+
+#: O valor de `aciona` que exige causa nomeada (regra 16, Z6-05). Uma célula
+#: `aciona = não` MEDIDA sem `por_que_nao_aciona` preenchida é exatamente a
+#: forma do defeito que as colunas órfãs foram feitas para fechar: a régua
+#: sabe que não aciona, mas ninguém disse de quem é a culpa.
+ACIONA_NAO = "não"
 
 #: O que, em `resultado`, conta como "aconteceu". LIDO do caderno em
 #: 12/08/2026 (`obedece`, `não obedece`, `parcial`, `inconclusivo`), não
@@ -1186,6 +1217,38 @@ def censo(
             resumo.celulas += 1
             aciona = (linha[f"{lado}_aciona"] or "").strip()
             de_onde_sei = (linha[f"{lado}_de_onde_sei"] or "").strip()
+            # A coluna não é exigida no cabeçalho de todo CSV que passa por
+            # este portão (fixtures antigas de teste não a têm, e não são
+            # fixture de Z6-05): `"por_que_nao_aciona" in pares` é a MESMA
+            # descoberta por sufixo que já guarda a checagem de domínio logo
+            # abaixo — coluna ausente quer dizer "regra 16 desligada nesta
+            # árvore", nunca `KeyError`, e nunca reprovação por engano de um
+            # CSV que não fala desta coluna.
+            por_que_nao_aciona = (linha.get(f"{lado}_por_que_nao_aciona") or "").strip()
+
+            # Regra 16 (Z6-05, 24/08/2026): `aciona = não` MEDIDO sem causa
+            # nomeada é a mesma família de "sem-mordida" aplicada à CAUSA em
+            # vez de à REDE — a régua sabe o veredito e cala sobre o motivo.
+            if (
+                "por_que_nao_aciona" in pares
+                and aciona == ACIONA_NAO
+                and de_onde_sei == DE_ONDE_SEI_FORTE
+                and not por_que_nao_aciona
+            ):
+                achados.append(
+                    Achado(
+                        FALHA,
+                        "causa-nao-declarada",
+                        numero,
+                        ident,
+                        lado,
+                        f"`{lado}_aciona = {ACIONA_NAO}` com `{lado}_de_onde_sei = "
+                        f"{DE_ONDE_SEI_FORTE}` e `{lado}_por_que_nao_aciona` está "
+                        "vazia: a régua sabe que não aciona e não sabe de quem é "
+                        "a culpa. Preencha com uma das causas do domínio "
+                        f"({sorted(DOMINIO_POR_SUFIXO['por_que_nao_aciona'] - {''})})",
+                    )
+                )
 
             for sufixo, (coluna_cabo, coluna_radio) in pares.items():
                 dominio = DOMINIO_POR_SUFIXO.get(sufixo)
@@ -1731,6 +1794,86 @@ def _regra_da_mordida_nao_provada(
     ]
 
 
+def ids_do_csv_em(contra: str, csv_relativo: str, raiz: Path) -> tuple[set[str] | None, str]:
+    """Os `id` do mapa NAQUELA ref, via `git show <ref>:<caminho>`.
+
+    `(None, motivo)` quando a ref não resolve — nunca `(set(), "")`: um clone
+    raso (`fetch-depth: 1`) faz `HEAD~1` inexistir, e devolver conjunto vazio
+    faria a regra 17 gritar que TODO `id` sumiu, ou pior, calar-se achando que
+    não havia nada antes. A distinção importa (Z6-07/P-11): a régua tem de
+    reprovar ALTO quando não consegue medir, nunca sair calada.
+    """
+    processo = subprocess.run(
+        ["git", "-C", str(raiz), "show", f"{contra}:{csv_relativo}"],
+        capture_output=True,
+        text=True,
+    )
+    if processo.returncode != 0:
+        motivo = (processo.stderr or processo.stdout or "sem saída do git").strip()
+        return None, motivo
+    try:
+        linhas = list(csv.DictReader(processo.stdout.splitlines()))
+    except csv.Error as exc:  # pragma: no cover - defensivo
+        return None, f"CSV ilegível em {contra}: {exc}"
+    return {(linha.get("id") or "").strip() for linha in linhas if linha.get("id")}, ""
+
+
+def regra_id_estavel(
+    contra: str, csv_relativo: str, raiz: Path, registros_de_hoje: list[dict[str, str]]
+) -> list[Achado]:
+    """Regra 17 (Z6-07): `id` que desaparece sem virar `id_v1` de outra linha
+    reprova, com nota datada como única saída.
+
+    Nunca compara silenciosamente: se `contra` não resolver (clone raso, ref
+    inexistente), a régua REPROVA nomeando a ref e o motivo — nunca sai 0
+    fingindo que nada mudou.
+    """
+    ids_de_ontem, motivo = ids_do_csv_em(contra, csv_relativo, raiz)
+    if ids_de_ontem is None:
+        return [
+            Achado(
+                FALHA,
+                "contra-nao-resolve",
+                0,
+                "",
+                "",
+                f"`--contra {contra}` não resolveu ({motivo!r}). Provavelmente um "
+                "clone raso sem `fetch-depth: 0`, ou a ref não existe. A régua "
+                "da estabilidade do `id` reprova em vez de sair calada — sem "
+                "histórico ela não tem como saber se um `id` sumiu.",
+            )
+        ]
+
+    ids_de_hoje = {(linha.get("id") or "").strip() for linha in registros_de_hoje if linha.get("id")}
+    ids_v1_de_hoje = {
+        (linha.get("id_v1") or "").strip()
+        for linha in registros_de_hoje
+        if (linha.get("id_v1") or "").strip()
+    }
+
+    sumidos = sorted(ids_de_ontem - ids_de_hoje)
+    achados: list[Achado] = []
+    for id_sumido in sumidos:
+        if id_sumido in ids_v1_de_hoje:
+            continue  # renomeado com nota — a `id_v1` É a nota datada
+        achados.append(
+            Achado(
+                FALHA,
+                "id-sumiu-sem-nota",
+                0,
+                id_sumido,
+                "",
+                f"`id={id_sumido!r}` existia em `--contra {contra}` e não existe "
+                "mais em nenhuma linha, nem como `id_v1` de nenhuma outra. "
+                "Renomear é legítimo — o registro é: a linha nova traz "
+                f"`id_v1={id_sumido!r}`, com nota datada dizendo por quê. Sem "
+                "isso, toda `Fala` que se apoiava neste endereço quebra em "
+                "silêncio.",
+            )
+        )
+    return achados
+
+
 def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
     """O quadro que ela lê para saber ONDE o mapa está cego."""
     print("")
@@ -1810,6 +1953,25 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="data de referência AAAA-MM-DD (só para teste do prazo de validade)",
     )
+    parser.add_argument(
+        "--exigir-id-estavel",
+        action="store_true",
+        help=(
+            "regra 17 (Z6-07): reprova `id` que sumiu sem virar `id_v1` de "
+            "outra linha, comparando contra --contra. NÃO roda por padrão — "
+            "precisa de histórico git, que fixtures de teste sem repo não têm"
+        ),
+    )
+    parser.add_argument(
+        "--contra",
+        type=str,
+        default="HEAD~1",
+        help=(
+            "ref git para a regra 17 comparar (padrão HEAD~1, só para uso "
+            "local — o CI passa a base do evento, nunca HEAD~1: ver "
+            "anonymity-check.yml)"
+        ),
+    )
     args = parser.parse_args(argv)
 
     raiz = args.raiz.resolve()
@@ -1831,6 +1993,12 @@ def main(argv: list[str] | None = None) -> int:
         hoje = lida
 
     achados, resumo, desligadas = censo(caminho_csv, raiz, hoje)
+
+    if args.exigir_id_estavel:
+        with caminho_csv.open(encoding="utf-8", newline="") as arquivo:
+            registros_de_hoje = list(csv.DictReader(arquivo))
+        csv_relativo_git = str(caminho_csv.relative_to(raiz)) if caminho_csv.is_relative_to(raiz) else CSV_RELATIVO
+        achados.extend(regra_id_estavel(args.contra, csv_relativo_git, raiz, registros_de_hoje))
     falhas = [achado for achado in achados if achado.nivel == FALHA]
     avisos = [achado for achado in achados if achado.nivel == AVISO]
 
