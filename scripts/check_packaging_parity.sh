@@ -868,6 +868,7 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
     # `continue` disparava e a regra de PAR nunca era aplicada ao Flatpak.
     # O manifesto é YAML e comenta com `#`, então o descarte de comentários
     # acima continua valendo letra por letra.
+    _bt_olhados=(); _bt_pulados=()
     for _bt_pkg in scripts/build_deb.sh flatpak/br.andrefarias.Hefesto.yml \
                    scripts/build_appimage.sh scripts/build_appimage_gui.sh \
                    packaging/fedora/hefesto-dualsense4unix.spec \
@@ -879,12 +880,30 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
         # empacotador em silêncio, e a regra de PAR da linha seguinte nunca é
         # aplicada. Medido em 13/08/2026: com o pipe de volta, um build_deb.sh
         # que leva o doctor.sh e ESQUECE o bluez_config.sh passa [ OK ].
-        grep -qF 'doctor.sh' <<< "${_bt_codigo}" || continue
+        if ! grep -qF 'doctor.sh' <<< "${_bt_codigo}"; then
+            _bt_pulados+=("$(basename "${_bt_pkg}")")
+            continue
+        fi
+        _bt_olhados+=("$(basename "${_bt_pkg}")")
         grep -qF 'bluez_config.sh' <<< "${_bt_codigo}" \
             || missing+=("${_bt_pkg} empacota doctor.sh e deixa bluez_config.sh para trás (detector CEGO no pacote: cai em 'o dono único da config do BlueZ não está aqui')")
     done
     if [[ "${#missing[@]}" -eq 0 ]]; then
-        echo "[ OK ] config do BlueZ: dono único, chamado nos dois lados, detector CHAMADO em main(), dono empacotado com o doctor, e a poda provada não-automática"
+        # A CONTA APARECE, e não é enfeite (achado do braço C do teste de viés,
+        # 24/08/2026). A regra de PAR só se aplica a quem leva o `doctor.sh`, e
+        # medido nesta árvore isso é UM de sete empacotadores — os outros seis
+        # caem na pré-condição acima. O `[ OK ]` afirmava "dono empacotado com o
+        # doctor" como se valesse para todos, e valia para um.
+        #
+        # A regra NÃO mudou: se o `bluez_config.sh` deve viajar em todo pacote é
+        # decisão dela, não deste script. O que mudou é o portão parar de
+        # afirmar mais do que mediu — a mesma doutrina que fez o medidor de
+        # rádio dizer "Não sei" em vez de "Folgada".
+        echo "[ OK ] config do BlueZ: dono único, chamado nos dois lados, detector CHAMADO em main(), e a poda provada não-automática"
+        echo "       PAR doctor+bluez conferido em ${#_bt_olhados[@]} de $(( ${#_bt_olhados[@]} + ${#_bt_pulados[@]} )) empacotadores: ${_bt_olhados[*]:-nenhum}"
+        if [[ "${#_bt_pulados[@]}" -gt 0 ]]; then
+            echo "       NÃO conferidos (não levam o doctor.sh, logo a regra de par não se aplica): ${_bt_pulados[*]}"
+        fi
     else
         echo "[FAIL] config do BlueZ: ${missing[*]}"
         echo "       JustWorksRepairing=always sem detector foi o defeito de 06/08/2026:"
