@@ -40,12 +40,31 @@ if TYPE_CHECKING:
 
 
 class TriggerDraft(BaseModel):
-    """Draft de um único trigger (L2 ou R2)."""
+    """Draft de um único trigger (L2 ou R2).
+
+    ``params`` é sempre PLANO — é a forma que os widgets de
+    ``triggers_actions.py`` leem por índice (``params[i]``), e alargar o tipo
+    para aceitar aninhado quebraria essa leitura sem tocar no mixin (Z4/T4,
+    24/08/2026 — ``draft_config.py`` é a posse desta tarefa, `app/actions/*.py`
+    não é).
+
+    ``params_aninhado_original`` é o crachá do formato que o disco tinha
+    *antes* de achatar (só quando o perfil trouxe ``list[list[int]]`` para
+    ``MultiPositionFeedback``/``MultiPositionVibration`` — ver
+    ``_triggers_config_to_draft``). Ele existe só para uma coisa: quando o
+    perfil é salvo SEM que este trigger tenha sido tocado, ``to_profile``
+    devolve o arquivo com a MESMA forma aninhada que tinha — nada muda por
+    baixo dela. Qualquer edição pela tela cria um ``TriggerDraft`` novo sem
+    este campo (`TriggerDraft(mode=..., params=...)`, sem ``model_copy``), e
+    a partir daí o arquivo passa a guardar plano — que é forma válida e é o
+    formato que a PRÓPRIA edição produz. Não é lido pelos widgets.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     mode: str = "Off"
     params: tuple[int, ...] = ()
+    params_aninhado_original: tuple[tuple[int, ...], ...] | None = None
 
 
 class TriggersDraft(BaseModel):
@@ -312,20 +331,44 @@ def _leds_draft_to_config(
     return LedsConfig(**kwargs)
 
 
-def _triggers_config_to_draft(cfg: Any) -> TriggersDraft:
-    """Converte ``TriggersConfig`` (schema) no sub-draft de gatilhos da GUI.
+def _trigger_params_para_draft(
+    raw: list[int] | list[list[int]],
+) -> tuple[tuple[int, ...], tuple[tuple[int, ...], ...] | None]:
+    """Achata ``TriggerConfig.params`` para o rascunho (Z4/T4, 24/08/2026).
 
-    Nota: TriggerConfig.params é Union[list[int], list[list[int]]];
-    TriggerDraft aceita ambos via tuple, mas mypy precisa cast.
+    O disco aceita ``list[int]`` (plano) OU ``list[list[int]]`` (aninhado,
+    canônico para ``MultiPositionFeedback``/``MultiPositionVibration`` — ver
+    ``core.trigger_effects._flatten_multi_position``). O rascunho só entende
+    plano (os widgets leem por índice). Quando a entrada é aninhada, devolve
+    também a forma original, para ``_triggers_draft_to_config`` poder
+    devolvê-la intacta se ninguém tocou no gatilho entre abrir e salvar —
+    sem isso, TODO perfil com gatilho aninhado mudaria de forma no primeiro
+    "Salvar Perfil", mesmo sem editar nada (era o defeito medido em
+    ``aventura.json``/``corrida.json``, seção 2.1 da sprint).
     """
+    from hefesto_dualsense4unix.core.trigger_effects import _flatten_multi_position
+
+    if raw and isinstance(raw[0], list):
+        nested = tuple(tuple(int(v) for v in sub) for sub in raw)
+        flat = tuple(_flatten_multi_position([list(sub) for sub in nested]))
+        return flat, nested
+    return tuple(int(v) for v in cast("list[int]", raw)), None
+
+
+def _triggers_config_to_draft(cfg: Any) -> TriggersDraft:
+    """Converte ``TriggersConfig`` (schema) no sub-draft de gatilhos da GUI."""
+    left_flat, left_nested = _trigger_params_para_draft(cfg.left.params)
+    right_flat, right_nested = _trigger_params_para_draft(cfg.right.params)
     return TriggersDraft(
         left=TriggerDraft(
             mode=cfg.left.mode,
-            params=tuple(cast("list[int]", cfg.left.params)),
+            params=left_flat,
+            params_aninhado_original=left_nested,
         ),
         right=TriggerDraft(
             mode=cfg.right.mode,
-            params=tuple(cast("list[int]", cfg.right.params)),
+            params=right_flat,
+            params_aninhado_original=right_nested,
         ),
     )
 
@@ -347,6 +390,29 @@ def _override_vazio(override: Any) -> bool:
     return all(getattr(override, nome, None) is None for nome in campos)
 
 
+def _trigger_params_para_disco(trigger: TriggerDraft) -> list[int] | list[list[int]]:
+    """Devolve ``TriggerConfig.params`` no formato que vai para o disco.
+
+    Se este trigger não foi tocado desde que veio do arquivo (o achatado
+    ainda bate com o aninhado original — ver ``params_aninhado_original`` em
+    ``TriggerDraft``), devolve a forma aninhada intacta: salvar sem editar o
+    gatilho não pode mudar a forma do arquivo dela (Z4/T4). Se foi editado —
+    ou nunca teve forma aninhada — devolve o achatado, que é forma válida
+    para ``TriggerConfig.params`` (``profiles/schema.py``) e é o que a
+    própria edição produziu.
+    """
+    from hefesto_dualsense4unix.core.trigger_effects import _flatten_multi_position
+
+    original = trigger.params_aninhado_original
+    if original is not None:
+        flat_do_original = tuple(
+            _flatten_multi_position([list(sub) for sub in original])
+        )
+        if flat_do_original == trigger.params:
+            return [list(sub) for sub in original]
+    return list(trigger.params)
+
+
 def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
     """Converte o sub-draft de gatilhos em ``TriggersConfig`` persistível."""
     from hefesto_dualsense4unix.profiles.schema import TriggerConfig, TriggersConfig
@@ -354,11 +420,11 @@ def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
     return TriggersConfig(
         left=TriggerConfig(
             mode=triggers.left.mode,
-            params=list(triggers.left.params),
+            params=_trigger_params_para_disco(triggers.left),
         ),
         right=TriggerConfig(
             mode=triggers.right.mode,
-            params=list(triggers.right.params),
+            params=_trigger_params_para_disco(triggers.right),
         ),
     )
 
@@ -436,6 +502,18 @@ class DraftConfig(BaseModel):
     # gravam via ``with_controller_leds``/``with_controller_triggers``
     # (entradas não tocadas seguem passthrough byte-idêntico).
     source_controllers: Any | None = None
+    # Z4/T8 (24/08/2026): ``source_controllers`` já colapsa "mapa vazio" e
+    # "nunca houve mapa" no MESMO ``None`` (ver ``with_override_fields_cleared``
+    # / ``with_controller_fields_cleared`` — "mapa vazio volta a None"), e essa
+    # colisão é de propósito PARA O ARQUIVO DO PERFIL (nenhuma chave fantasma
+    # no JSON). Mas o CONTRATO IPC (``_controllers_to_ipc``) precisa da
+    # distinção que o modelo já perdeu: "sem opinião" (não mexe no daemon) é
+    # diferente de "ela apagou o último override" (apague os overrides no
+    # daemon). Esta flag é o crachá dessa história, só para dentro da SESSÃO —
+    # começa False, vira True quando um "clear" esvazia o mapa, volta a False
+    # quando qualquer override novo é gravado (``_with_override_section``).
+    # Nunca vai para o disco (não é campo de ``Profile``).
+    controllers_esvaziados_nesta_edicao: bool = False
     # PONTE-CONFIRMADA-01 (19/08/2026) — passthrough SOMENTE-LEITURA do carimbo
     # `Profile.ponte`: qual ponte já foi CONFIRMADA naquele jogo, quando e por
     # qual dos três caminhos. `to_profile` reconstrói o Profile do zero e o
@@ -1208,7 +1286,14 @@ class DraftConfig(BaseModel):
         mapa: dict[str, Any] = dict(self.source_controllers or {})
         atual = self.controller_override(uniq) or ControllerOverrides()
         mapa[uniq] = atual.model_copy(update={section: value})
-        return self.model_copy(update={"source_controllers": mapa})
+        # Z4/T8: gravar um override é o oposto de apagar o último — a
+        # próxima leitura do mapa não é mais "ela esvaziou", é "tem conteúdo".
+        return self.model_copy(
+            update={
+                "source_controllers": mapa,
+                "controllers_esvaziados_nesta_edicao": False,
+            }
+        )
 
     def with_override_fields_cleared(
         self, section: str, fields: Iterable[str]
@@ -1257,7 +1342,15 @@ class DraftConfig(BaseModel):
             novo[uniq] = novo_override
         if not mudou:
             return self
-        return self.model_copy(update={"source_controllers": novo or None})
+        # Z4/T8: só entra True quando o mapa TINHA algo (o guarda do topo já
+        # garantiu isso) e ficou vazio agora — é exatamente "ela apagou o
+        # último override", a metade que ``_controllers_to_ipc`` precisa saber.
+        return self.model_copy(
+            update={
+                "source_controllers": novo or None,
+                "controllers_esvaziados_nesta_edicao": not novo,
+            }
+        )
 
     def with_controller_fields_cleared(
         self, uniq: str, section: str, fields: Iterable[str]
@@ -1291,7 +1384,15 @@ class DraftConfig(BaseModel):
             mapa.pop(uniq, None)  # entrada esvaziou — some do mapa
         else:
             mapa[uniq] = novo_override
-        return self.model_copy(update={"source_controllers": mapa or None})
+        # Z4/T8: mesma lógica de ``with_override_fields_cleared`` — aqui só o
+        # ÚLTIMO ``uniq`` do mapa podia ter sobrado, então `not mapa` é
+        # exatamente "esvaziou agora".
+        return self.model_copy(
+            update={
+                "source_controllers": mapa or None,
+                "controllers_esvaziados_nesta_edicao": not mapa,
+            }
+        )
 
     def _controllers_to_ipc(self) -> dict[str, Any] | None:
         """Seção ``controllers`` do contrato IPC ``profile.apply_draft``.
@@ -1309,10 +1410,22 @@ class DraftConfig(BaseModel):
         (o RGB pré-escalado); quando só um dos dois é escrito, o outro é
         resolvido do GLOBAL do draft aqui na borda, para o alvo receber a
         mesma cor efetiva que a ativação produziria.
+
+        Z4/T8 (24/08/2026): mapa vazio tem DUAS origens que o
+        ``DraftApplier`` do daemon já trata de formas diferentes (verificado
+        empiricamente, sem precisar de cura do lado dele — ver
+        ``tests/unit/test_z4_apagar_override.py``) — ``None`` (chave ausente,
+        ele pula a seção e não mexe) e ``{}`` (objeto vazio presente, ele
+        substitui o mapa de overrides por um vazio e arma a trava manual).
+        ``controllers_esvaziados_nesta_edicao`` é o crachá de qual das duas
+        é esta: só é ``True`` quando o mapa TINHA algo e um "clear" o
+        esvaziou nesta mesma edição (``with_override_fields_cleared`` /
+        ``with_controller_fields_cleared``) — nunca em carregamento de perfil
+        sem overrides.
         """
         mapa = self.source_controllers
         if not isinstance(mapa, dict) or not mapa:
-            return None
+            return {} if self.controllers_esvaziados_nesta_edicao else None
         out: dict[str, Any] = {}
         for uniq in mapa:
             override = self.controller_override(str(uniq))

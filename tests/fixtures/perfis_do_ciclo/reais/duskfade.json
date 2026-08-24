@@ -1,0 +1,73 @@
+{
+  "name": "Duskfade",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "steam_app_2542020"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 102,
+  "triggers": {
+    "left": {
+      "mode": "MultiPositionFeedback",
+      "params": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        8
+      ]
+    },
+    "right": {
+      "mode": "Pulse",
+      "params": []
+    }
+  },
+  "leds": {
+    "lightbar": [
+      80,
+      60,
+      220
+    ],
+    "player_leds": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ],
+    "lightbar_brightness": 0.6,
+    "auto_player_colors": true
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": "max",
+    "custom_mult": null
+  },
+  "speaker": {
+    "volume": 102,
+    "muted": false,
+    "rota": 2
+  },
+  "mode": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "coop": true
+  },
+  "suppress_desktop_emulation": true,
+  "ponte": {
+    "kind": "gamepad",
+    "gamepad_flavor": "xbox",
+    "steam_input": false,
+    "confirmada_em": "2026-08-22T03:40:22-03:00",
+    "confirmada_por": "silencio"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "fallback",
+  "version": 1,
+  "match": {
+    "type": "any"
+  },
+  "priority": 0,
+  "triggers": {
+    "left": {
+      "mode": "Off",
+      "params": []
+    },
+    "right": {
+      "mode": "Off",
+      "params": []
+    }
+  },
+  "leds": {
+    "lightbar": [
+      40,
+      40,
+      40
+    ],
+    "player_leds": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ],
+    "lightbar_brightness": 1.0,
+    "auto_player_colors": true
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": null,
+    "custom_mult": null
+  },
+  "suppress_desktop_emulation": false
+}

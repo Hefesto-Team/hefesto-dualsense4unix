@@ -1,0 +1,29 @@
+{
+  "name": "Corrida",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [],
+    "window_title_regex": ".*(Forza|Gran Turismo|Assetto Corsa|F1 20|F1 202|Dirt Rally|Need for Speed|Project CARS|Wreckfest|iRacing|BeamNG).*",
+    "process_name": [
+      "ForzaHorizon5.exe", "ForzaMotorsport.exe",
+      "GranTurismo7.exe", "AC2.exe", "AssettoCorsa.exe",
+      "F12023.exe", "F12022.exe", "F12021.exe",
+      "drt.exe", "NeedForSpeedHeat.exe", "ProjectCarsGO.exe",
+      "BeamNG.drive.exe"
+    ]
+  },
+  "priority": 55,
+  "triggers": {
+    "left":  {"mode": "Resistance", "params": [5, 6]},
+    "right": {"mode": "MultiPositionVibration", "params": [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8]]}
+  },
+  "leds": {
+    "lightbar": [0, 180, 220],
+    "player_leds": [false, false, false, true, true],
+    "lightbar_brightness": 0.8
+  },
+  "rumble": {"passthrough": true},
+  "mode": {"kind": "gamepad", "gamepad_flavor": null},
+  "key_bindings": null
+}
