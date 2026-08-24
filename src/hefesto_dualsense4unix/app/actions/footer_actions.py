@@ -262,15 +262,33 @@ class FooterActionsMixin(ProfileWriterMixin):
         aqui em cima, e não lá dentro do ``_apply_draft_agora``.
         """
         self.pegar_carona_no_gesto(GESTO_APLICAR)
-        self._recado_da_maquina = self._gravar_declaracao_de_maquina()
+        _gravou, self._recado_da_maquina = self._gravar_declaracao_de_maquina()
         pendente = getattr(self, "_escolha_pendente", None)
         if pendente:
             self._aplicar_escolha_pendente(dict(pendente))
             return
         self._apply_draft_agora()
 
-    def _gravar_declaracao_de_maquina(self) -> str | None:
-        """Grava o que a aba Configurações declarou. Sem declaração, sai cedo.
+    def _gravar_declaracao_de_maquina(self) -> tuple[bool, str | None]:
+        """Grava o que a aba Configurações declarou, e devolve ``(gravou, frase)``.
+
+        **POR QUE UM PAR, e não só a frase** (achado da auditoria de
+        rastreabilidade, 24/08/2026). A versão anterior devolvia ``str | None``,
+        e a string significava TRÊS coisas: sucesso, sucesso com descarte, e
+        fracasso. Dois chamadores fazem perguntas DIFERENTES — o rodapé quer a
+        FRASE, o fechamento da janela quer saber se GRAVOU — e o segundo lia
+        "há string, logo falhou".
+
+        O defeito era vivo no uso diário: ela declarava, clicava "Aplicar e
+        fechar", **o arquivo era gravado, a janela NÃO fechava**, e o rodapé
+        exibia *"Configurações gravadas."* como se fosse o motivo da recusa.
+
+        Nasceu de uma cura ler o contrato antigo de outra: a metade "e DIZ" do
+        descarte mudou o retorno, e o portão do fechamento continuou lendo
+        ``is not None``. **Duas perguntas exigem dois valores** — é a mesma lei
+        que separou ``orcamento_em_vigor`` de ``orcamento_na_tela``.
+
+        Sem declaração, sai cedo.
 
         DEVOLVE a frase que o rodapé deve dizer sobre a declaração — ou ``None``
         quando não havia nada a declarar. Quem a mostra é o toast FINAL do
@@ -301,7 +319,7 @@ class FooterActionsMixin(ProfileWriterMixin):
         """
         declaracao = self._maquina_pendente
         if not declaracao:
-            return None
+            return (True, None)
         ok, motivo, descartados = ipc_bridge.machine_declare_detalhado(
             dict(declaracao)
         )
@@ -314,15 +332,15 @@ class FooterActionsMixin(ProfileWriterMixin):
                 )
                 # Redação PROVISÓRIA: texto novo na tela é classe estrutural e
                 # espera o olho dela.
-                return _(
+                return (True, _(
                     "Gravei o que deu. Isto o Hefesto não entendeu e "
                     "descartou: {campos}."
-                ).format(campos=", ".join(descartados))
-            return _("Configurações gravadas.")
+                ).format(campos=", ".join(descartados)))
+            return (True, _("Configurações gravadas."))
         logger.warning("footer_declaracao_de_maquina_nao_gravada", motivo=motivo)
-        return motivo or _(
+        return (False, motivo or _(
             "O Hefesto está desligado — não gravei o que você declarou"
-        )
+        ))
 
     def _dizer_com_o_recado_da_maquina(self, msg: str) -> None:
         """Uma linha só: o recado da declaração seguido do resultado do Aplicar.

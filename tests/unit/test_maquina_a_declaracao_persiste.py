@@ -573,7 +573,7 @@ def test_o_aplicar_grava_e_so_limpa_a_pendencia_quando_o_daemon_confirma(
     )
 
     rodape = _Rodape()
-    assert rodape._gravar_declaracao_de_maquina() is None
+    assert rodape._gravar_declaracao_de_maquina() == (True, None)
     assert pedidos == []  # sem declaração, sem chamada
 
     rodape._maquina_pendente = {"mesa": {"altura_da_antena": "acima"}}
@@ -586,7 +586,7 @@ def test_o_aplicar_grava_e_so_limpa_a_pendencia_quando_o_daemon_confirma(
     # `_apply_draft_agora`; quem a mostra agora é o toast FINAL do "Aplicar".
     resposta[0] = (False, "não deu", ())
     rodape._maquina_pendente = {"ambiente": "gnome"}
-    assert rodape._gravar_declaracao_de_maquina() == "não deu"
+    assert rodape._gravar_declaracao_de_maquina() == (False, "não deu")
     assert rodape.avisos == []
     assert rodape._maquina_pendente == {"ambiente": "gnome"}
 
