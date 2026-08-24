@@ -97,8 +97,12 @@ máquina, 6 s por janela::
     MicMuted=False : 405 quadros,  97% não-silenciosos, pico médio 9.1, máx 255
     MicMuted=True  : 767 quadros,  17% não-silenciosos, pico médio 1.1, máx  14
 
-Ou seja: o flag é REAL e o áudio o segue. O ciclo de trabalho medido fica entre
-55% e 75% de MUDO, o que na prática entrega ~40% do sinal.
+Ou seja: o flag é REAL e o áudio o segue. **O ciclo de trabalho publicado antes
+aqui caducou em 07/08/2026** (medido com um desmutador acidental rodando por
+baixo — ver ``docs/data/caducos.csv`` e o estudo de 03/08/2026 em
+``docs/process/estudos/2026-08-03-a-noite-em-que-o-microfone-do-bluetooth-voltou.md``).
+Ainda não há substituto medido; o que fica é a ausência declarada, não um
+número novo.
 
 O que já está PROVADO sobre ele:
 
