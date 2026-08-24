@@ -1108,6 +1108,13 @@ _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
     "mic",
     "mode",
     "key_bindings",
+    # Z4/T14 (24/08/2026): mesmo requisito de compatibilidade — sem a
+    # omissão, TODO save gravaria `"teclado_emulado": null` e um binário
+    # anterior a esta sprint (`extra="forbid"`) rejeitaria TODOS os perfis
+    # no downgrade. Achado pela própria rede de regressão desta leva
+    # (`test_profile_speaker_section.py::test_binario_antigo_...`), não
+    # previsto pela sprint.
+    "teclado_emulado",
 )
 
 
@@ -1484,7 +1491,8 @@ def delete_profile(identifier: str) -> None:
                     candidate = path
                     break
 
-    with FileLock(str(_lock_path(candidate))):
+    lock_file = _lock_path(candidate)
+    with FileLock(str(lock_file)):
         # PERFIL-SEM-RASTRO-01: apagar é a gravação mais destrutiva de todas —
         # guarda a última versão antes de sumir com ela, e registra quem apagou.
         conteudo = _bytes_se_existe(candidate)
@@ -1492,6 +1500,15 @@ def delete_profile(identifier: str) -> None:
             _arquivar_versao(candidate.stem, conteudo) if conteudo is not None else None
         )
         candidate.unlink()
+    # Z4/T15 (24/08/2026): o `FileLock` LIBERA o lock ao sair do `with`, mas
+    # não apaga o `.lock` que ele mesmo criou — a medição de 24/08 achou 37
+    # arquivos `.lock` para 34 `.json` no diretório dela, três órfãos sem
+    # `.json` correspondente. `unlink` FORA do `with` — apagar o arquivo do
+    # lock enquanto ainda o segura é o convite para outro processo, no
+    # mesmíssimo instante, achar que destravou algo que nunca existiu.
+    # `missing_ok`: o lock pode já não existir (nunca foi tocado nesta rodada,
+    # ou outro processo o limpou primeiro) — a ausência não é erro aqui.
+    lock_file.unlink(missing_ok=True)
     with contextlib.suppress(Exception):
         logger.info(
             "profile_apagado",
