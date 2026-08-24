@@ -1176,10 +1176,22 @@ class StatusActionsMixin(WidgetAccessMixin):
         ``ContagemDeControles.adotados`` — a mesma lista filtrada. Card de
         externo NÃO existe (EXT-COUNT-01: read-only por decisão de produto), e é
         por isso que os cards contam ``adotados`` e nunca ``na_mesa``.
+
+        **Z2-7 (24/08/2026): percorre `_por_numero_de_identidade`, não mais a
+        ordem de enumeração.** M2 media a grade e a fita em ordens
+        DIFERENTES — a fita já ordenava pelo número exibido
+        (`_por_numero_de_identidade`, PLAYER-01) e a grade percorria
+        ``conectados`` na ordem em que o daemon os devolve. Com os dois
+        ligados fora de ordem — o caso normal — o primeiro card era o
+        Controle 2 e o primeiro chip era o Controle 1. O ``index`` de
+        enumeração de CADA controle continua vindo do próprio registro
+        (``c.get("index")``) e viaja intacto dentro da chave — só a ORDEM em
+        que os cards nascem muda; reordenar o índice junto seria o defeito
+        que a docstring de `_por_numero_de_identidade` já evita no seletor.
         """
         keys: list[tuple[Any, ...]] = []
         vistos: dict[tuple[Any, Any], int] = {}
-        for pos, c in enumerate(conectados):
+        for pos, c in enumerate(StatusActionsMixin._por_numero_de_identidade(conectados)):
             indice = c.get("index")
             if not isinstance(indice, int) or isinstance(indice, bool):
                 indice = pos
@@ -1765,6 +1777,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         faixa: hosts parciais de teste montam o seletor injetando
         ``_target_combo`` direto, sem passar por
         ``_init_controller_target_combo``.
+
+        **Não confundir com `ConfigActionsMixin.set_alvo_inativo` (Z2-8).**
+        Este método some/aparece com a MESA (zero controles ligados —
+        `:2238`/`:2321` — ou popup aberto — `:2649`); o outro ESMAECE por
+        ABA (`app/app.py:_ALVO_POR_ABA`), com a fita continuando visível e
+        sensível=False. Uma janela pode estar nos dois estados ao mesmo
+        tempo — mesa vazia numa aba que também não lê o alvo.
         """
         alvo = getattr(self, "_target_strip", None) or getattr(
             self, "_target_combo", None
