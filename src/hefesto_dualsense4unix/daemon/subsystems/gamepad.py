@@ -1170,9 +1170,17 @@ def apply_game_rumble(
         com o executor multi-thread (max_workers=2) e, com o estado desejado
         keyed pelo alvo lido na hora, uma escrita da GUI intercalada
         persistiria config no controle errado. O seletor da usuária nunca é
-        tocado. Sem a API (ex.: FakeController) ou com MAC que não casa
-        nenhum handle, cai no broadcast histórico — limitação documentada:
-        TODOS os controles vibram juntos.
+        tocado.
+      - BROADCAST-PROIBIDO-01 (24/08/2026): a decisão passou a ser a MESMA dos
+        três irmãos deste arquivo (`apply_game_trigger`, `apply_game_lightbar`,
+        `apply_game_player_leds`) — `target_uniq` **pedido** (não-`None`) e não
+        casado (ou backend sem a API por-uniq) **descarta com log, nunca
+        broadcast**: replicar o pulso do jogador 2 nos outros três é o próprio
+        defeito que esta invariante existe para proibir. A ressalva que
+        continua valendo: `target_uniq is None` **não** é o mesmo caso — um
+        backend sem `primary_uniq` (ex.: `FakeController`) ou uma mesa de um
+        controle só nunca pediu endereço, e ali broadcast e mira são a mesma
+        coisa. A recusa vale só quando um endereço FOI pedido e não casou.
     """
     if daemon.config.rumble_active is not None:
         return None  # rumble fixado manual vence o FF do jogo
@@ -1184,14 +1192,20 @@ def apply_game_rumble(
     # Any: o targeting por-uniq é opcional no backend (só o PyDualSense o
     # tem; IController/FakeController não) — o gate é o callable() abaixo.
     rumble_for: Any = getattr(controller, "set_rumble_for", None)
-    if target_uniq is not None and callable(rumble_for):
-        try:
-            if rumble_for(target_uniq, weak_eff, strong_eff):
-                return (weak_eff, strong_eff)
-        except Exception as exc:
-            logger.warning("game_rumble_target_failed", err=str(exc), target=target_uniq)
-            return None
-        # MAC não casou nenhum handle → broadcast histórico (documentado).
+    if target_uniq is not None:
+        # Um endereço foi pedido: mira ou descarta — NUNCA broadcast
+        # (BROADCAST-PROIBIDO-01). É a mesma decisão dos três irmãos.
+        if callable(rumble_for):
+            try:
+                if rumble_for(target_uniq, weak_eff, strong_eff):
+                    return (weak_eff, strong_eff)
+            except Exception as exc:
+                logger.warning("game_rumble_target_failed", err=str(exc), target=target_uniq)
+                return None
+        # MAC pedido não casou nenhum handle (ou backend sem a API por-uniq)
+        # → descarta com log, nunca broadcast.
+        logger.debug("game_rumble_sem_alvo_descartado", target=target_uniq)
+        return None
     try:
         controller.set_rumble(weak=weak_eff, strong=strong_eff)
     except Exception as exc:
