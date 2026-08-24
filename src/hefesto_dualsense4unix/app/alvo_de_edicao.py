@@ -3,9 +3,14 @@
 **O defeito de forma (P3, medido em 23/08/2026).** O alvo de edição por
 controle morava num atributo com *default de classe*
 (``_edit_target_uniq: str | None = None``, em ``actions/status_actions.py``) e
-era lido por nove pontos da janela via ``getattr(self, "_edit_target_uniq",
-None)``. O ``None`` do ``getattr`` nunca entrava em ação: o atributo da classe
-já respondia ``None``, e ``None`` significa **"edite tudo, globalmente"**.
+era lido por **sete pontos da janela, em seis arquivos**, via
+``getattr(self, "_edit_target_uniq", None)`` — medido com
+``grep -rn 'getattr(\\(self\\|host\\|janela\\|self\\._host\\), *"_edit_target_uniq"' src/``
+(a régua declarada da sprint ONDA0-Z2, §2.2; o "nove" de versões anteriores
+desta docstring e do briefing da leva **NÃO** era essa contagem — substituído
+aqui e na linha de F3 do ``SPRINT_ORDER``). O ``None`` do ``getattr`` nunca
+entrava em ação: o atributo da classe já respondia ``None``, e ``None``
+significa **"edite tudo, globalmente"**.
 
 Resultado medido: com a mesa vazia (os dois controles desligados), um pixel de
 arrasto no brilho da Lightbar **apagava os overrides por controle do perfil
@@ -22,20 +27,39 @@ o alvo. A regra da casa aplicada literalmente: **ausência de informação se
 declara, nunca vira ação padrão silenciosa** — a mesma decisão que a
 ``alvo_fora_da_mesa`` já tinha tomado para os toasts.
 
-**A ponte com o atributo antigo.** Os nove leitores continuam lendo
-``_edit_target_uniq``; migrá-los é de outra leva (quatro das abas estão com
-outras frentes agora). Enquanto isso:
+**A ponte com o atributo antigo, e por que ela ainda existe.** Os sete
+leitores migraram todos para ``alvo_de_edicao()``/``AlvoDeEdicao`` **nesta
+mesma leva** (ONDA0-Z2, 24/08/2026 — a frase *"migrá-los é de outra leva"* de
+versões anteriores desta docstring caducou: a leva foi esta). A ponte
+continua existindo porque dublês de teste ainda escrevem o atributo antigo
+direto (``janela._edit_target_uniq = uniq``, o molde de
+``tests/unit/test_p3_alvo_sem_dono.py``), e o portão
+``scripts/portao_alvo_tem_dono.py`` reprova a volta do atributo em código de
+produção, não em teste:
 
 * quem DEFINE o alvo passa por aqui, e aqui o atributo antigo é espelhado —
-  os leitores não migrados enxergam exatamente o que enxergavam antes;
+  os dublês que ainda o leem enxergam exatamente o que enxergavam antes;
 * quem ESQUECE o alvo (mesa vazia, daemon desligado) passa por aqui, e aqui o
-  atributo antigo é **apagado da instância** — os não migrados voltam ao
-  ``None`` de sempre (comportamento idêntico ao de hoje, sem colisão), mas o
-  estado canônico já diz ``DESCONHECIDO`` para quem souber perguntar;
+  atributo antigo é **apagado da instância** — os dublês voltam ao ``None`` de
+  sempre (comportamento idêntico ao de hoje, sem colisão), mas o estado
+  canônico já diz ``DESCONHECIDO`` para quem souber perguntar;
 * ``alvo_de_edicao()`` reconstrói o estado a partir do atributo antigo quando
-  ele existe na instância (dublês de teste, código não migrado). É por isso
-  que o default de classe teve de sair: **o atributo EXISTIR é o que separa
-  "escolheu Todos" de "ninguém escolheu nada"**.
+  ele existe na instância (dublês de teste). É por isso que o default de
+  classe teve de sair: **o atributo EXISTIR é o que separa "escolheu Todos"
+  de "ninguém escolheu nada"**.
+
+**O contrato que este módulo entrega às onze abas (§5 da sprint ONDA0-Z2):**
+
+1. Quem quer saber o alvo chama ``alvo_de_edicao(self)``. Nunca ``getattr``.
+2. Três estados, três respostas: ``CONTROLE`` → escreve no override por MAC;
+   ``TODOS`` → escreve global, como sempre; ``DESCONHECIDO`` → **não
+   escreve**, e mostra ``alvo.recusa()``.
+3. Aba para quem a pergunta não faz sentido chama
+   ``ConfigActionsMixin.set_alvo_inativo(True, motivo)`` — motivo GUARDADO,
+   nunca pintado no cabeçalho (decisão dela de 23/08/2026) — e escreve o
+   motivo na própria docstring: foi a docstring que provou, nesta sprint, que
+   aquela aba se desqualificou de propósito e não por esquecimento.
+4. Aba que ganha widget de escolha novo declara em qual dos três ele cai.
 
 Sem GTK e sem IPC de propósito: é estado puro, e o teste dele custa
 milissegundos.
@@ -50,7 +74,8 @@ from typing import Any
 
 #: Onde o estado canônico mora na instância da janela.
 ATRIBUTO_CANONICO = "_alvo_de_edicao"
-#: Os atributos legados que os nove leitores ainda consultam.
+#: Os atributos legados que só os DUBLÊS DE TESTE ainda escrevem direto
+#: (Z2, 24/08/2026 — os sete leitores de produção migraram todos).
 ATRIBUTO_LEGADO_UNIQ = "_edit_target_uniq"
 ATRIBUTO_LEGADO_LABEL = "_edit_target_label"
 
@@ -140,8 +165,8 @@ def alvo_de_edicao(host: Any) -> AlvoDeEdicao:
 def definir_alvo(host: Any, uniq: str | None, label: str | None) -> AlvoDeEdicao:
     """Grava o alvo escolhido: ``uniq`` preenchido = controle; vazio = "Todos".
 
-    Espelha os atributos legados para que os nove leitores não migrados vejam
-    exatamente o que veriam antes.
+    Espelha os atributos legados para que os dublês de teste que ainda os
+    leem direto vejam exatamente o que veriam antes.
     """
     if isinstance(uniq, str) and uniq:
         alvo = AlvoDeEdicao(EstadoDoAlvo.CONTROLE, uniq=uniq, label=label)
@@ -154,9 +179,9 @@ def definir_alvo(host: Any, uniq: str | None, label: str | None) -> AlvoDeEdicao
 def esquecer_alvo(host: Any, motivo: str) -> AlvoDeEdicao:
     """Declara que a janela NÃO sabe qual é o alvo, e por quê.
 
-    Apaga os atributos legados da instância: os leitores não migrados voltam
-    ao ``None`` de hoje (mesmo comportamento, sem colisão com outras frentes),
-    e quem já pergunta a este módulo recebe a verdade.
+    Apaga os atributos legados da instância: os dublês de teste que ainda os
+    leem direto voltam ao ``None`` de hoje (mesmo comportamento, sem colisão
+    com outras frentes), e quem já pergunta a este módulo recebe a verdade.
     """
     alvo = AlvoDeEdicao(EstadoDoAlvo.DESCONHECIDO, motivo=motivo)
     _gravar(host, alvo)

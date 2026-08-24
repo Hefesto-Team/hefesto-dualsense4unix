@@ -640,6 +640,13 @@ jobs:
           xvfb-run -a --server-args="-screen 0 1280x1024x24" \
             .venv/bin/python -m pytest $ALVOS -v \
               --continue-on-collection-errors
+      # Z2-6/Z2-9 (24/08/2026): precisa importar HefestoApp de verdade
+      # (app/app.py, GTK incluso) para conferir HefestoApp._ALVO_POR_ABA —
+      # por isso mora AQUI, no job que já montou o venv com o gi real, e não
+      # num job leve como o version-check.
+      - name: Portão do alvo tem dono (campo velho + moldura das onze abas)
+        run: |
+          xvfb-run -a .venv/bin/python scripts/portao_alvo_tem_dono.py
 
   pre-commit:
     name: pre-commit run --all-files

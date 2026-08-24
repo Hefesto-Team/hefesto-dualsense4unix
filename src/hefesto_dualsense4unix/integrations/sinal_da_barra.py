@@ -205,7 +205,8 @@ class Instancia:
     QUAL DOS DOIS É IDENTIDADE, porque confundir isso custa caro:
 
     - ``uniq`` **é**. É o endereço com que o resto do produto já chama cada
-      controle (``nos_hidraw_por_uniq``, ``_edit_target_uniq``, os perfis).
+      controle (``nos_hidraw_por_uniq``, o alvo de edição de
+      ``app/alvo_de_edicao.py``, os perfis).
       CONFERIDO em 22/08/2026 cruzando duas tabelas independentes com uma
       semana de distância: os quatro pares ``uniq``↔``hw_version`` da canônica
       (15/08, ``dualsense-referencia-canonica.md``, *"O hardware_version do
@@ -663,7 +664,8 @@ class CartorioDoNascimento:
 
     E o que serve de chave para ACHAR o carimbo de um controle na tela é o
     ``uniq`` (:meth:`do_uniq`), que é o endereço com que o resto do produto já
-    chama cada controle (``nos_hidraw_por_uniq``, ``_edit_target_uniq``).
+    chama cada controle (``nos_hidraw_por_uniq``, o alvo de edição de
+    ``app/alvo_de_edicao.py``).
     **Não é o ``hw_version``**, e isso está medido: a canônica de 15/08/2026
     registra que ele é *revisão de placa* e que *"dois controles da mesma cor
     comprados juntos teriam o mesmo valor"* — ele separa os quatro aparelhos

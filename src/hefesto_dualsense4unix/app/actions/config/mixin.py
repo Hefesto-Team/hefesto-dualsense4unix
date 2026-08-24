@@ -88,7 +88,7 @@ class ConfigActionsMixin(WidgetAccessMixin):
         "esta aba decidiu não ler o alvo" de "ninguém decidiu nada" — a mesma
         distinção que ``app/alvo_de_edicao.py`` já faz para a escrita.
         ``inativo=True`` sem ``motivo`` LEVANTA: esmaecer sem dizer por quê,
-        nem que seja só para o portão, é a mesma omissão que o P3 media do
+        nem que seja só para o portão, é a mesma omissão que o P3 mediu do
         outro lado da fita.
 
         Tolerante por dentro e por fora: hospedeiro sem cabeçalho, sem fita ou

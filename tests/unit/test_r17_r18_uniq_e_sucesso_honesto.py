@@ -26,7 +26,11 @@ class TestR17ApagarMandaOUniq:
         fonte = (
             REPO / "src/hefesto_dualsense4unix/app/actions/lightbar_actions.py"
         ).read_text(encoding="utf-8")
-        assert "led_set((0, 0, 0), uniq=self._edit_uniq())" in fonte, (
+        # Z2-1 (24/08/2026): `_edit_uniq()` devolve `AlvoDeEdicao`, não mais
+        # `str | None` — o alvo vem de `estado_alvo.uniq`, lido uma vez no
+        # topo da função. A garantia do R-17 é a mesma: o "Apagar" manda o
+        # MAC do controle selecionado, nunca broadcast.
+        assert "led_set((0, 0, 0), uniq=estado_alvo.uniq)" in fonte, (
             "apagar sem `uniq` vira broadcast: apaga a lightbar dos quatro "
             "quando ela pediu para apagar a de um"
         )

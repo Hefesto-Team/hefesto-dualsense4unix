@@ -429,24 +429,22 @@ class StatusActionsMixin(WidgetAccessMixin):
     _externals_sig: tuple[str, ...] | None = None
     # PERFIL-04 (sprint perfis-por-controle): alvo de EDIÇÃO derivado do
     # seletor — o MAC normalizado (uniq) do controle selecionado, ou None em
-    # "Todos"/alvo sem MAC (aí a edição segue GLOBAL, como sempre). As abas
-    # Lightbar/Gatilhos leem `_edit_target_uniq` para gravar no override do
-    # perfil (draft.controllers) e exibir os valores efetivos do alvo. Fica
-    # em sync com o `output_target_index` do daemon a 2 Hz e é atualizado NA
+    # "Todos"/alvo sem MAC (aí a edição segue GLOBAL, como sempre). Fica em
+    # sync com o `output_target_index` do daemon a 2 Hz e é atualizado NA
     # HORA no clique do seletor (a próxima mexida já cai no override certo).
     #
-    # P3 (23/08/2026) — **o default de classe teve de sair**. Estas duas linhas
-    # eram `= None`, e `None` quer dizer "escreva em TODOS". Com isso o
-    # `getattr(self, "_edit_target_uniq", None)` dos nove leitores NUNCA caía
-    # no default do getattr: encontrava o atributo da classe, e a janela que
-    # não sabia qual era o alvo respondia "global" com toda a confiança. O
-    # irmão `_target_uniq_by_index` sempre foi anotação sem default — some de
-    # verdade quando ninguém o preenche — e era essa assimetria o defeito.
-    # Agora quem escreve estes dois campos é `app/alvo_de_edicao.py`, que os
-    # espelha (para os leitores não migrados) e os APAGA quando o alvo é
-    # desconhecido. Ver o módulo para o porquê e para a lista do que falta.
-    _edit_target_uniq: str | None
-    _edit_target_label: str | None
+    # P3 (23/08/2026) — o alvo morava em dois atributos legados (o endereço e
+    # o rótulo) com DEFAULT DE CLASSE, ambos `= None`, e `None` quer dizer
+    # "escreva em TODOS". Um `getattr` defensivo nesses dois atributos NUNCA
+    # caía no default do próprio getattr: encontrava o atributo da classe, e
+    # a janela que não sabia qual era o alvo respondia "global" com toda a
+    # confiança.
+    #
+    # Z2 (24/08/2026) — os sete leitores por `getattr` migraram para
+    # `app/alvo_de_edicao.py`, o dono único, e os dois atributos legados
+    # SAÍRAM desta classe (nada mais os lê nem os escreve direto em `src/`;
+    # o portão `scripts/portao_alvo_tem_dono.py` reprova a volta deles). O
+    # que existe agora é só o canônico:
     _alvo_de_edicao: AlvoDeEdicao
     _target_uniq_by_index: dict[int, str | None]
     _target_label_by_index: dict[int, str]
@@ -458,8 +456,9 @@ class StatusActionsMixin(WidgetAccessMixin):
     # `identity.renumber`, que compacta todos e mora na aba Início). Estes
     # botões falam com o `identity.number.set`, criado nesta mesma sprint.
     # `_edit_target_slot` é o número de identidade do alvo, mantido em sync
-    # pelo tick lento — separado do `_edit_target_uniq` (o endereço) e do
-    # índice de enumeração, que são as outras duas coisas que o chip carrega.
+    # pelo tick lento — separado do endereço (o `.uniq` de
+    # `app/alvo_de_edicao.py`) e do índice de enumeração, que são as outras
+    # duas coisas que o chip carrega.
     _target_strip: Any = None
     _numero_faixa: Any = None
     _numero_box: Any = None
@@ -1178,7 +1177,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         por isso que os cards contam ``adotados`` e nunca ``na_mesa``.
 
         **Z2-7 (24/08/2026): percorre `_por_numero_de_identidade`, não mais a
-        ordem de enumeração.** M2 media a grade e a fita em ordens
+        ordem de enumeração.** M2 mediu a grade e a fita em ordens
         DIFERENTES — a fita já ordenava pelo número exibido
         (`_por_numero_de_identidade`, PLAYER-01) e a grade percorria
         ``conectados`` na ordem em que o daemon os devolve. Com os dois
@@ -2253,8 +2252,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         # roda no tick de 2 Hz, sem guarda de aba visível. Dois estragos:
         #
         #   1. com um único DualSense com nó no kernel (o estado medido em
-        #      23/07: o roxo estava sem uhid), `_edit_target_uniq` ficava
-        #      permanentemente None e a edição "controle a controle" estava
+        #      23/07: o roxo estava sem uhid), o alvo de edição ficava
+        #      permanentemente vazio e a edição "controle a controle" estava
         #      literalmente DESLIGADA — sem nenhuma mensagem dizendo isso;
         #   2. um controle caindo no meio da edição zerava o alvo por baixo das
         #      abas: o badge sumia e o "Aplicar no controle" seguinte ia pela
