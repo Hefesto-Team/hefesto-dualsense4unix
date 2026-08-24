@@ -24,6 +24,15 @@ arquivo dela.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# TESTE-HONESTO-01/E1 (24/08/2026): a guarda vem ANTES de qualquer import de
+# `emulation_actions`, que faz `import gi` incondicional no próprio módulo
+# (`emulation_actions.py:15`). Sem ela, este arquivo nunca plantava stub nem
+# pulava — estourava ERRO DE COLETA no CI sem PyGObject (medido: simulação do
+# job `lint-test` com `gi`/`cairo` bloqueados via `sys.meta_path`).
+exigir_gi_real("frase do censo do modo jogo")
+
 from pathlib import Path
 
 import pytest
