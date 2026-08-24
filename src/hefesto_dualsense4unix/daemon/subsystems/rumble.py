@@ -380,10 +380,16 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
 #:   - ``"solto_no_modo_nativo"``  — o pedido era calar DENTRO do modo. O Hefesto
 #:                                   não consegue calar o jogo, mas soltou o par
 #:                                   que estivesse fixado (volta ao passthrough).
+#:   - ``"recusado_alvo_ausente"`` — BROADCAST-PROIBIDO-01 (24/08/2026): o alvo
+#:                                   escolhido no seletor está FORA da mesa.
+#:                                   NADA foi armado — nem `rumble_active`, nem
+#:                                   `set_rumble` — para não replicar o pulso do
+#:                                   jogador ausente nos outros conectados.
 RUMBLE_APLICADO = "aplicado"
 RUMBLE_PARADO = "parado"
 RUMBLE_RECUSADO_MODO_NATIVO = "recusado_modo_nativo"
 RUMBLE_SOLTO_NO_MODO_NATIVO = "solto_no_modo_nativo"
+RUMBLE_RECUSADO_ALVO_AUSENTE = "recusado_alvo_ausente"
 
 #: A frase é para uma PESSOA: o que aconteceu, e o que fazer a respeito. O
 #: léxico é o que já está na tela — "Modo Nativo" e "quem manda ... é o jogo"
@@ -401,6 +407,17 @@ MOTIVO_MODO_NATIVO_SOLTOU_O_PAR = (
     "Em Modo Nativo quem manda nos motores é o jogo, e o Hefesto não consegue "
     "pará-los. A vibração fixada por aqui foi solta — ela não volta quando o "
     "Modo Nativo sair."
+)
+
+#: PROVISÓRIO — decisão dela (BROADCAST-PROIBIDO-01, 24/08/2026). A redação
+#: nasceu no docstring de `PyDualSenseController.alvo_de_output_ausente`
+#: (`core/backend_pydualsense.py`) e é citada aqui ao pé da letra: *"O
+#: Controle 2 não está na mesa — nada foi enviado."* Generalizada para
+#: qualquer alvo. Vai ao olho dela no LOTE da Onda 9 (RUM-1/RUM-2), junto das
+#: outras frases de rumble — nunca sozinha: uma frase avulsa custa a ela uma
+#: decisão inteira.
+MOTIVO_ALVO_FORA_DA_MESA = (
+    "O controle escolhido não está na mesa — nada foi enviado."
 )
 
 
@@ -464,11 +481,13 @@ class RumbleSubsystem:
 
 __all__ = [
     "AUTO_DEBOUNCE_SEC",
+    "MOTIVO_ALVO_FORA_DA_MESA",
     "MOTIVO_MODO_NATIVO_MANDA_NOS_MOTORES",
     "MOTIVO_MODO_NATIVO_SOLTOU_O_PAR",
     "RUMBLE_APLICADO",
     "RUMBLE_PARADO",
     "RUMBLE_POLICY_MULT",
+    "RUMBLE_RECUSADO_ALVO_AUSENTE",
     "RUMBLE_RECUSADO_MODO_NATIVO",
     "RUMBLE_SOLTO_NO_MODO_NATIVO",
     "RumbleSubsystem",
