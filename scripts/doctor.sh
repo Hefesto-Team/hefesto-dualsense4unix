@@ -2633,9 +2633,20 @@ _dbus_bt_prop() {
 # Adaptadores HCI, um por linha ("hci0"). Fonte viva: /sys/class/bluetooth, que
 # é o kernel e não depende de pacote nenhum. O filtro `^hci[0-9]+$` existe
 # porque ali também nascem as entradas de CONEXÃO, no formato "hci0:256".
+#
+# HEFESTO_BT_SYSFS_ROOT (opcional, env var) — raiz do sysfs, default
+# /sys/class/bluetooth. Não é parâmetro posicional porque quem chama esta
+# função em produção (`check_bt_resilience`, `check_bt_radio`) não recebe
+# root nenhum para repassar; env var atravessa a cadeia de chamada sem
+# precisar editar todo mundo no meio. Achado em 24/08/2026: sem isto, um
+# teste que só troca o PATH (`sandbox_sem_velhas`) não consegue esconder
+# Bluetooth físico de verdade — `tests/unit/test_migracao_bluez_depreciados.py`
+# vermelho numa bancada com adaptadores reais plugados, porque esta função
+# lia o sysfs REAL por baixo do sandbox de PATH do teste.
 _bt_adaptadores() {
+    local raiz="${HEFESTO_BT_SYSFS_ROOT:-/sys/class/bluetooth}"
     local p nome achou=0 lista
-    for p in /sys/class/bluetooth/hci*; do
+    for p in "${raiz}"/hci*; do
         [[ -e "${p}" ]] || continue
         nome="${p##*/}"
         [[ "${nome}" =~ ^hci[0-9]+$ ]] || continue

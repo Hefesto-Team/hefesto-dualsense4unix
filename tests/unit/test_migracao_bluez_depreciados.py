@@ -116,6 +116,20 @@ def _fake(dirbin: Path, nome: str, corpo: str) -> Path:
     return alvo
 
 
+def _sysfs_bt_hci0(tmp_path: Path) -> Path:
+    """Um `/sys/class/bluetooth` de mentira com UM adaptador: `hci0`.
+
+    `_bt_adaptadores()` (`scripts/doctor.sh`) lê `HEFESTO_BT_SYSFS_ROOT` antes
+    do sysfs real — sem isto, numa bancada com Bluetooth físico plugado, ela
+    devolve os adaptadores REAIS da máquina em vez do `hci0` único que
+    `_busctl_fake` (logo abaixo) simula, e a leitura da link policy erra o
+    adaptador certo. Achado em 24/08/2026.
+    """
+    raiz = tmp_path / "sysfs-bt"
+    (raiz / "hci0").mkdir(parents=True, exist_ok=True)
+    return raiz
+
+
 def _busctl_fake(
     dirbin: Path,
     *,
@@ -246,7 +260,13 @@ class TestLinkPolicyDoModoAtivoNintendo:
         fakes = tmp_path / "fakes"
         _busctl_fake(fakes, alias="Nintendo meowsystem", connected="true")
         self._systemctl_fake(fakes)
-        saida = _rodar_check("check_bt_resilience", fakes, sandbox_sem_velhas)
+        sysfs_bt = _sysfs_bt_hci0(tmp_path)
+        saida = _rodar_check(
+            "check_bt_resilience",
+            fakes,
+            sandbox_sem_velhas,
+            HEFESTO_BT_SYSFS_ROOT=str(sysfs_bt),
+        )
         assert "NÃO SEI dizer o estado do SNIFF" in saida, saida
         assert "modo ativo p/ Nintendo (nome" not in saida, (
             "não pode dar OK no modo ativo sem ter conferido a link policy"
@@ -265,7 +285,14 @@ class TestLinkPolicyDoModoAtivoNintendo:
             "\\tLink policy: RSWITCH HOLD SNIFF PARK\\n'\nexit 0\n",
         )
         _fake(fakes, "hcitool", "echo 'Link policy: RSWITCH'\nexit 0\n")
-        saida = _rodar_check("check_bt_resilience", fakes, "/usr/bin", "/bin")
+        sysfs_bt = _sysfs_bt_hci0(tmp_path)
+        saida = _rodar_check(
+            "check_bt_resilience",
+            fakes,
+            "/usr/bin",
+            "/bin",
+            HEFESTO_BT_SYSFS_ROOT=str(sysfs_bt),
+        )
         assert "[ OK ] modo ativo p/ Nintendo (nome 'Nintendo meowsystem'" in saida, saida
 
 
