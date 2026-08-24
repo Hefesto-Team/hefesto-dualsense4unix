@@ -335,6 +335,23 @@ def indexar(raiz: Path) -> set[str]:
     return sufixos
 
 
+def nomes_de_raiz(raiz: Path) -> set[str]:
+    """Os nomes de arquivo/pasta que moram NO TOPO do repositório.
+
+    Só ELES podem ser citados por nome solto (sem `/`) sem afirmar posição
+    nenhuma: `install.sh` não é um caminho ENCURTADO -- é o caminho INTEIRO,
+    porque o arquivo mora na raiz e não sobra diretório para encurtar. É o
+    que separa essa citação (legítima de QUALQUER documento, em qualquer
+    pasta) de um nome solto que só bate com o ÚLTIMO PEDAÇO de um caminho
+    mais fundo, tipo `2026-…-….md` para um arquivo que mora em
+    `docs/process/sprints/` -- ver AUDITORIA-DE-PERDA-01/E3.
+    """
+    try:
+        return {p.name for p in raiz.iterdir() if p.name not in DIRS_IGNORADOS}
+    except OSError:  # pragma: no cover - defensivo
+        return set()
+
+
 def indexar_envs(raiz: Path) -> set[str]:
     """Todo literal `HEFESTO_*` que aparece em código, script ou empacotamento.
 
@@ -448,15 +465,24 @@ def metodos_da_linha(linha: str, espacos_de_nomes: frozenset[str]) -> list[str]:
     return achados
 
 
-def candidatos_da_linha(linha: str) -> list[str]:
+def candidatos_da_linha(linha: str) -> list[tuple[str, bool]]:
     """Extrai da linha os textos com cara de caminho de arquivo.
 
-    A origem importa. Texto entre crases é ambíguo -- pode ser nome de módulo,
-    de comando ou de conceito -- e por isso passa pelo filtro estreito de
-    `EXTENSOES_NOME_SOLTO`. Já o alvo de um link markdown é inequívoco: quem
-    escreve [texto](alvo) está afirmando que existe algo naquele caminho. Um
-    índice de sprints apontando para arquivo que não existe é justamente um
-    dos defeitos que a sprint mandou pegar, e ele aparece só nessa forma.
+    Devolve `(texto, veio_de_crase)` -- a origem sai junto porque
+    `varrer_documento` volta a precisar dela (AUDITORIA-DE-PERDA-01/E3): um
+    nome solto entre crases é convenção desta casa, citado sem posição
+    nenhuma o tempo todo (`install.sh`, `secao_mesa.py`); o alvo de um link
+    markdown É uma posição -- `[texto](alvo)` afirma que o arquivo está bem
+    ali, relativo a quem escreveu -- e as duas formas não podem levar a
+    mesma leniência.
+
+    A origem importa também para o FILTRO: texto entre crases é ambíguo --
+    pode ser nome de módulo, de comando ou de conceito -- e por isso passa
+    pelo filtro estreito de `EXTENSOES_NOME_SOLTO`. Já o alvo de um link
+    markdown é inequívoco: quem escreve [texto](alvo) está afirmando que
+    existe algo naquele caminho. Um índice de sprints apontando para arquivo
+    que não existe é justamente um dos defeitos que a sprint mandou pegar, e
+    ele aparece só nessa forma.
 
     Desde 07/08/2026 o token pode SUBIR (`../`, `../../`). Quem confere a
     subida é `varrer_documento`, resolvendo contra a pasta do documento; aqui
@@ -466,7 +492,7 @@ def candidatos_da_linha(linha: str) -> list[str]:
     brutos = [(m.group(1), True) for m in _CRASE.finditer(linha)]
     brutos += [(m.group(1), False) for m in _LINK.finditer(linha)]
 
-    limpos: list[str] = []
+    limpos: list[tuple[str, bool]] = []
     for bruto, veio_de_crase in brutos:
         texto = bruto.strip()
         if not texto or " " in texto:
@@ -496,7 +522,7 @@ def candidatos_da_linha(linha: str) -> list[str]:
             continue
         if Path(texto).name in EXTERNOS:
             continue
-        limpos.append(texto)
+        limpos.append((texto, veio_de_crase))
     return limpos
 
 
@@ -506,6 +532,7 @@ def varrer_documento(
     sufixos: set[str],
     envs: set[str] | None = None,
     metodos_ipc: set[str] | None = None,
+    raiz_nomes: set[str] | None = None,
 ) -> list[Achado]:
     """Devolve as referências mortas de um documento -- as três regras.
 
@@ -515,6 +542,8 @@ def varrer_documento(
     distinguir variável morta de variável nova, e acusar tudo seria o oposto
     do que este portão existe para fazer.
     """
+    if raiz_nomes is None:
+        raiz_nomes = nomes_de_raiz(raiz)
     try:
         conteudo = caminho.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
@@ -543,21 +572,49 @@ def varrer_documento(
         if MARCADOR_ISENCAO in linha:
             continue
 
-        for referencia in candidatos_da_linha(linha):
-            if referencia in sufixos:
-                continue
-            # Última chance: link relativo ao diretório do próprio documento.
-            # É por aqui que passa o link que SOBE (`../`, `../../`): ele nunca
-            # casa por sufixo -- índice nenhum começa com `..` -- e por isso
-            # depende inteiramente desta resolução. Se ela sair da árvore
-            # (`ValueError`), fica achado: não há link legítimo, dentro do
-            # repositório, para acima da raiz dele.
+        for referencia, veio_de_crase in candidatos_da_linha(linha):
+            # AUDITORIA-DE-PERDA-01/E3 (24/08/2026). A resolução contra a
+            # pasta do PRÓPRIO documento roda PRIMEIRO, não como última
+            # chance -- medido: com a checagem contra `sufixos` na frente, um
+            # LINK MARKDOWN com o basename certo e a pasta errada nunca
+            # chegava até aqui, porque o basename sozinho já É um sufixo
+            # válido de algum arquivo real em QUALQUER canto da árvore. Um
+            # `[…](2026-08-22-ELO-MUDO-01-….md)` plantado sem o `sprints/`
+            # que o arquivo de verdade tem passava batido, calado, com
+            # `exit=0`.
+            #
+            # Resolver primeiro pega isso: `[texto](alvo)` afirma uma
+            # POSIÇÃO -- é o mesmo motivo que já valia para `../` -- e para
+            # um alvo sem barra a posição afirmada é "ao lado de quem cita".
+            #
+            # A leniência de sufixo (mais larga) continua valendo para TRÊS
+            # casos, e nenhum deles afirma posição:
+            #   1. o alvo leva barra -- o caminho ENCURTADO deliberado
+            #      (`gui/main.glade`) e o caminho a partir da raiz citado de
+            #      outra pasta: cobrar aqui a posição exata SERIA o ruído
+            #      puro que este portão promete não fazer (ver cabeçalho);
+            #   2. o texto veio de CRASE -- nome solto entre crases é
+            #      convenção desta casa (só .py/.sh chegam aqui, via
+            #      `EXTENSOES_NOME_SOLTO`), citado sem posição nenhuma o
+            #      tempo todo (`secao_mesa.py`, `install.sh`);
+            #   3. o alvo É o nome de algo que mora NA RAIZ do repositório
+            #      (`raiz_nomes`) -- `install.sh` não tem diretório para
+            #      encurtar, então não há "pasta errada" possível para ele.
+            #
+            # É por aqui também que passa o link que SOBE (`../`, `../../`):
+            # ele nunca casa por sufixo -- índice nenhum começa com `..` --
+            # e por isso depende inteiramente desta resolução. Se ela sair
+            # da árvore (`ValueError`), fica achado: não há link legítimo,
+            # dentro do repositório, para acima da raiz dele.
             vizinho = (caminho.parent / referencia).resolve()
             try:
                 relativo = vizinho.relative_to(raiz).as_posix()
             except ValueError:
                 relativo = None
             if relativo is not None and relativo in sufixos:
+                continue
+            leniente = "/" in referencia or veio_de_crase or referencia in raiz_nomes
+            if leniente and referencia in sufixos:
                 continue
             achados.append(Achado(relativo_doc, numero, referencia, REGRA_ARQUIVO))
 
@@ -626,11 +683,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     sufixos = indexar(raiz)
+    raiz_nomes = nomes_de_raiz(raiz)
     envs = indexar_envs(raiz)
     metodos_ipc = indexar_metodos_ipc(raiz)
     achados: list[Achado] = []
     for alvo in alvos:
-        achados.extend(varrer_documento(alvo, raiz, sufixos, envs, metodos_ipc))
+        achados.extend(
+            varrer_documento(alvo, raiz, sufixos, envs, metodos_ipc, raiz_nomes)
+        )
 
     if achados:
         print(f"{len(achados)} referência(s) morta(s) em {len(alvos)} documento(s):")

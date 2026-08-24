@@ -16,17 +16,36 @@ instrumento mente mais que o produto.** A quarta foi neste mesmo arquivo — o
 retrato montava a aba Gatilhos diferente do produto, e ela decidiu a fila de
 interface olhando aquele vazio.
 
-O QUE ELE COBRA:
+**A QUINTA FOI ESTE PRÓPRIO PORTÃO, MEDIDA EM 23/08/2026** (AUDITORIA-DE-
+PERDA-01/E1). As quatro versões anteriores destas asserções mediam o DADO da
+bancada — `_censo_de_mentira()`, `_dongles_de_mentira()`, chamadas soltas,
+fora de qualquer host — e nunca que a aba Configurações de PRODUÇÃO
+(`retratar_abas.py::_montar_aba_configuracoes`, que cria um `_Host` real e
+chama `ConfigActionsMixin.install_config_tab()`) de fato os USA. Apagar
+`self._censo_leitor = _censo_de_mentira` ou `self._dongles_leitor =
+_dongles_de_mentira` daquele `_Host` — as duas linhas que ligam a bancada ao
+retrato — fazia a coluna "O que é" inteira cair em "não sei" e a coluna "Nome"
+sumir, e as quatro versões anteriores continuavam verdes: elas recalculavam a
+mesma bancada de novo, por fora do `_Host`, e comparavam a bancada consigo
+mesma.
 
-1. **os dois graus na mesma foto** — pelo menos um rádio vizinho que o
-   barramento classificou e pelo menos um que ele não classificou;
-2. **as duas leituras casam** — todo rádio da tabela é achável no censo pelo
-   `no`. Se as duas bancadas divergirem, a coluna cai em "não sei" por defeito
-   do instrumento e a foto acusa o produto;
+A cura é medir a ÁRVORE MONTADA pelo `_Host` de produção — a mesma que o
+`main()` do retrato fotografa — e não as funções soltas.
+
+O QUE ELE COBRA, agora sobre a árvore montada:
+
+1. **os dois graus na mesma foto** — pelo menos uma linha que o barramento
+   classificou (`_SELO_LIDO` na tela) e pelo menos uma que ele não classificou
+   (`_AVISO_NAO_SABE` na tela);
+2. **as duas leituras casam** — se `_censo_leitor` e `_mesa_leitor` discordarem
+   de raiz USB, TODO rádio vira "não sei" por engano do instrumento (é a
+   guarda de `secao_mesa._celula_do_que_e`: `aparelho is None` cai no mesmo
+   ramo de "ninguém sabe"), e o item 1 já reprova sozinho — nenhuma linha
+   nasce com `_SELO_LIDO`;
 3. **o nome do adaptador aparece, e o prefixo NÃO** — a foto tem de mostrar o
    que a costura faz: alias `"Nintendo Extra"`, tela `"Extra"`;
-4. **nada disso é dado dela** — endereços forjados, e a leitura viva do BlueZ
-   não é chamada.
+4. **nada disso é dado dela** — endereços forjados na bancada, e a leitura
+   viva do BlueZ desta máquina não é chamada (a premissa de tudo acima).
 """
 from __future__ import annotations
 
@@ -35,24 +54,35 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: antes de qualquer import de `gi`. Contra o stub da suíte
+# a árvore montada sairia vazia e as asserções abaixo passariam sem widget
+# nenhum — exatamente o defeito que esta leva veio corrigir, um nível acima.
+exigir_gi_real("a bancada da foto, exercitada pelo _Host de produção")
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+
+from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG
+from hefesto_dualsense4unix.app.actions.config import secao_mesa
+from hefesto_dualsense4unix.app.widgets.segmented_selector import SegmentedSelector
+
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "gui-captura" / "retratar_abas.py"
+GLADE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
 
 
 def _retrato() -> Any:
     """O script importado como módulo — ele tem hífen na pasta, não no nome.
 
-    **A leitura é do FONTE, e não pelo `exec_module`, e o motivo é medido.**
-    O carregador de arquivo do Python guarda bytecode em `__pycache__` e o
-    invalida por `(mtime, tamanho)`. Uma mordida que troque `("ff", "ff", "ff")`
-    por `("03", "01", "01")` — o mesmo número de bytes — dentro do mesmo segundo
-    reaproveita o bytecode ANTIGO, e o teste passa a medir a versão anterior do
-    arquivo. Aconteceu em 22/08/2026, ao morder este próprio portão: a mordida
-    reprovou o teste errado, e a conclusão convincente teria sido "o portão não
-    morde".
-
-    É a família do dia: o instrumento mente mais que o produto. Compilar o
-    texto lido agora não tem cache nenhum por onde errar.
+    Leitura do FONTE, não pelo `exec_module`, pela razão medida em 22/08/2026
+    e documentada no irmão deste arquivo (`test_a_coluna_do_que_e_nasce_
+    lida.py`): compilar bytecode em cache pode reaproveitar a versão antiga do
+    arquivo quando a mordida preserva o tamanho em bytes dentro do mesmo
+    segundo. Compilar o texto lido agora não tem cache por onde errar.
     """
     fonte = SCRIPT.read_text(encoding="utf-8")
     spec = importlib.util.spec_from_file_location("_retrato_da_bancada", SCRIPT)
@@ -63,89 +93,89 @@ def _retrato() -> Any:
     return modulo
 
 
-def _graus() -> dict[str, list[str]]:
-    """`{grau: [vid:pid]}` dos rádios vizinhos da bancada, pelo censo dela."""
+def _montar_a_aba_configuracoes() -> Any:
+    """A aba Configurações pelo `_Host` de PRODUÇÃO do retrato.
+
+    É o MESMO caminho que `main()` percorre para gerar a foto: um
+    `Gtk.Builder` do `main.glade` de verdade, e
+    `_montar_aba_configuracoes(builder)` — que cria o `_Host(ConfigActionsMixin)`
+    com `_mesa_leitor`/`_censo_leitor`/`_dongles_leitor` injetados e chama
+    `install_config_tab()`. Nenhuma função solta da bancada é chamada aqui.
+    """
+    builder = Gtk.Builder()
+    builder.add_from_file(str(GLADE))
     retrato = _retrato()
-    mesa = retrato._mesa_de_mentira()
-    censo = retrato._censo_de_mentira()
-    achados: dict[str, list[str]] = {}
-    for radio in mesa.radios:
-        aparelho = censo.aparelho(radio.no)
-        grau = "ausente" if aparelho is None else aparelho.grau
-        achados.setdefault(grau, []).append(f"{radio.vid}:{radio.pid}")
+    resultado = retrato._montar_aba_configuracoes(builder)
+    assert "não montada" not in resultado, (
+        f"a aba Configurações não montou no retrato: {resultado}"
+    )
+    caixa = builder.get_object(ABA_CONFIG)
+    assert caixa is not None, "`tab_config_box` sumiu do glade"
+    return caixa
+
+
+def _textos(raiz: Any) -> list[str]:
+    """Todo texto da árvore montada, fora dos botões do seletor de tipo.
+
+    A mesma exclusão de `test_a_coluna_do_que_e_nasce_lida.py`: o seletor tem
+    um botão escrito "Teclado", a mesma palavra que a coluna usa para AFIRMAR.
+    """
+    achados: list[str] = []
+
+    def _andar(widget: Any) -> None:
+        if isinstance(widget, SegmentedSelector):
+            return
+        if isinstance(widget, Gtk.Label):
+            achados.append(widget.get_text())
+        obter = getattr(widget, "get_children", None)
+        if obter is not None:
+            for filho in obter():
+                _andar(filho)
+
+    _andar(raiz)
     return achados
 
 
-def test_a_bancada_tem_aparelho_que_o_barramento_classifica() -> None:
-    """Sem isto a foto mostra a tela velha: sete botões em toda linha.
+def test_a_foto_da_mesa_mostra_os_dois_graus_pelo_host_de_producao() -> None:
+    """Os dois graus, na árvore que o `_Host` de produção de fato monta.
 
-    Mordida: trocar a classe de todas as interfaces de `_MESA_INTERFACES` por
-    `("ff", "ff", "ff")`.
+    Mordida: apagar `self._censo_leitor = _censo_de_mentira` em
+    `_montar_aba_configuracoes` (retratar_abas.py). Sem ele, `_ler_o_censo`
+    devolve `Censo()` vazio (`secao_mesa.py`) e TODA linha cai no ramo
+    "ninguém sabe" — nenhum `_SELO_LIDO` sobra na tela.
     """
-    from hefesto_dualsense4unix.integrations.censo_do_barramento import GRAU_LIDO
-
-    graus = _graus()
-    assert graus.get(GRAU_LIDO), (
-        "nenhum rádio vizinho da bancada é classificado pelo barramento. A "
-        "foto mostraria a coluna 'O que é' inteira em 'não sei' — a tela de "
-        f"antes desta leva. Graus: {graus}"
+    textos = _textos(_montar_a_aba_configuracoes())
+    assert secao_mesa._SELO_LIDO in textos, (
+        "nenhuma linha da mesa nasceu classificada pelo barramento — a coluna "
+        "'O que é' caiu inteira em 'não sei'. Isto é o que acontece se "
+        "`_censo_leitor` sumir do `_Host` do retrato, ou se ele e "
+        f"`_mesa_leitor` discordarem de raiz USB. Textos: {textos}"
+    )
+    assert secao_mesa._AVISO_NAO_SABE in textos, (
+        "nenhuma linha ficou sem resposta — sumiram o seletor e o aviso que a "
+        f"bancada existe para exercitar. Textos: {textos}"
     )
 
 
-def test_a_bancada_tem_aparelho_que_ninguem_classifica() -> None:
-    """Sem isto somem da foto o seletor, o `▲` e a linha que precisa dela.
+def test_a_foto_da_mesa_mostra_o_nome_do_adaptador_e_esconde_o_prefixo() -> None:
+    """O que a costura do apelido faz tem de aparecer na foto de verdade.
 
-    Na bancada dela é o Wi-Fi Realtek, que sai como classe `ff` — de quatro
-    linhas de rádio vizinho, é a única que pede resposta.
-
-    Mordida: dar uma classe conhecida à interface do `1-2.2`.
+    Mordida: apagar `self._dongles_leitor = _dongles_de_mentira` em
+    `_montar_aba_configuracoes`. Sem ele, `_ler_os_dongles_de_bancada` não
+    roda e a coluna "Nome" sai vazia — os dois nomes somem da foto.
     """
-    from hefesto_dualsense4unix.integrations.censo_do_barramento import (
-        GRAU_DESCONHECIDO,
+    textos = _textos(_montar_a_aba_configuracoes())
+    assert any("Sala" in t for t in textos), (
+        f"o nome do primeiro adaptador da bancada não chegou à foto. Textos: {textos}"
     )
-
-    graus = _graus()
-    assert graus.get(GRAU_DESCONHECIDO), (
-        "todo aparelho da bancada se declara. A foto esconderia o seletor e o "
-        f"aviso — metade do que esta coluna sabe desenhar. Graus: {graus}"
+    assert any("Extra" in t for t in textos), (
+        "o alias sem o prefixo Nintendo não chegou à foto — a costura do "
+        f"apelido existe para mostrar exatamente isto. Textos: {textos}"
     )
-
-
-def test_as_duas_bancadas_falam_do_mesmo_aparelho() -> None:
-    """Todo rádio da tabela tem de ser achável no censo, pelo `no`.
-
-    Duas bancadas separadas divergiriam calado: a tabela mostraria o rádio e a
-    coluna diria "não sei" — a foto acusando o produto de um defeito do
-    instrumento.
-
-    Mordida: dar ao `_censo_de_mentira` uma raiz USB diferente da do
-    `_mesa_de_mentira`.
-    """
-    graus = _graus()
-    assert not graus.get("ausente"), (
-        "estes rádios estão na tabela e não existem no censo da mesma "
-        f"bancada: {graus.get('ausente')}"
-    )
-
-
-def test_a_foto_mostra_o_nome_do_adaptador_e_esconde_o_prefixo() -> None:
-    """O que a costura faz tem de aparecer na documentação.
-
-    Mordida: tirar o `hospeda_nintendo=True` do segundo dongle — o alias e o
-    nome passam a ser a mesma coisa, e a foto deixa de mostrar que existe uma
-    costura.
-    """
-    dongles = _retrato()._dongles_de_mentira()
-
-    assert dongles, "a bancada perdeu os adaptadores nomeados"
-    escondendo = [d for d in dongles if d.nome != d.alias]
-    assert escondendo, (
-        "nenhum adaptador da bancada carrega o prefixo Nintendo por dentro. A "
-        "foto não mostra a única coisa que o produto faz sozinho aqui: o alias "
-        "guardado é 'Nintendo Extra' e a tela diz 'Extra'."
-    )
-    assert all(d.nome for d in dongles), (
-        "adaptador de bancada sem nome nenhum: a coluna sairia vazia na foto"
+    assert not any("Nintendo Extra" in t for t in textos), (
+        "o alias COM o prefixo Nintendo vazou para a tela; a costura existe "
+        "para escondê-lo, e a foto publicaria o texto interno em vez do "
+        f"nome exibido. Textos: {textos}"
     )
 
 
