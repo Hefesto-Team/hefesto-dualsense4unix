@@ -4487,6 +4487,20 @@ class Daemon:
             # silenciosamente. O `reconnect_loop` cuida de retentar; quando
             # conectar, o tick seguinte volta a ler estado normalmente.
             if not self.controller.is_connected():
+                # ONDA0-Z5/T1: BORDA de queda (conectado → desconectado) —
+                # `was_connected` ainda guarda o valor de ANTES deste `if`.
+                # Escreve "mesa vazia" no store e apaga `_last_state` (o slot
+                # que `daemon.state_full` prioriza, CLUSTER-IPC-STATE-PROFILE-01)
+                # UMA vez por borda, nunca a cada tick — o laço roda a 100 Hz
+                # e reescrever `None` sobre `None` seria ruído. Sem isto, os
+                # três handlers de estado (`daemon.status`, `state_full`,
+                # `controller.list`) discordavam entre si porque dois deles
+                # liam a última leitura boa e nunca souberam que ela caducou
+                # (ONDA0-Z5 §2.2-2.3, medido: `connected: true, bt, 75%` com
+                # zero controles na mesa).
+                if was_connected:
+                    self.store.clear_controller_state()
+                    self._last_state = None
                 # BUG-DAEMON-CONNECT-GHOST-INPUT-01: desconexão detectada via
                 # is_connected() (probe/unplug). Zera o baseline e rearma a
                 # borda para que a próxima conexão refaça o settling.

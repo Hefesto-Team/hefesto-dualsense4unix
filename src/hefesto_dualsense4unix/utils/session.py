@@ -1,5 +1,16 @@
 """Persistência de sessão — salva e carrega o último perfil ativo do usuário.
 
+ONDA0-Z5/T13 [PROVISÓRIO — decisão dela pendente, D-N, §10 da sprint]: das
+TRÊS rotas que guardam "perfil ativo" no Hefesto, as DUAS deste módulo
+respondem "qual foi a ÚLTIMA ESCOLHA" — nunca "o que está em vigor agora no
+daemon vivo" (essa terceira rota é `store.active_profile`, publicada por
+`daemon.status`/`daemon.state_full`, rotulada em `cli/cmd_status.py`). As
+duas podem divergir do daemon vivo por decisão MEDIDA (o restauro de perfil
+de janela às vezes é pulado de propósito,
+`last_profile_restore_pulado_perfil_de_janela`, journal) — não é bug, é o
+daemon escolhendo não aplicar a última escolha automaticamente. Qual das
+três "vence" na tela quando elas divergem é D-N, ainda em aberto.
+
 O arquivo `~/.config/hefesto-dualsense4unix/session.json` guarda apenas o nome do
 último perfil explicitamente ativado — desde o PERFIL-03, SÓ o gesto manual
 (`ProfileManager.activate(origin="manual")`) o escreve; autoswitch e restores
@@ -7,8 +18,12 @@ de sistema não tocam nele. O daemon lê esse arquivo no startup (via
 `resolve_boot_profile`) e re-ativa o perfil automaticamente.
 
 CLUSTER-IPC-STATE-PROFILE-01 (Bug B): adicional `active_profile.txt` é marker
-secundário para a CLI legada (`hefesto-dualsense4unix profile current`).
-`session.json` continua sendo o canônico para o daemon restaurar no boot.
+secundário lido por `cli/cmd_profile.py:402` (`profile save --from-active`,
+que clona o perfil ativo). Fato substituído (ONDA0-Z5/T14, 24/08/2026): o
+cabeçalho dizia que o consumidor era um subcomando de leitura da CLI que
+mediu-se não existir (`typer` devolve "No such command", sugerindo `create`
+no lugar dele). `session.json` continua sendo o canônico para o daemon
+restaurar no boot.
 Ambos são escritos em paridade pelos gestos manuais (handler IPC
 `profile.switch` e ciclo por hotkey); quando divergem (herança de versões em
 que o autoswitch clobberava o session.json), o marker vence no boot — ver
@@ -93,9 +108,9 @@ def save_active_marker(name: str) -> None:
 def read_active_marker() -> str | None:
     """Lê `active_profile.txt`, ou None se ausente/vazio.
 
-    Marker secundário usado pela CLI (`hefesto-dualsense4unix profile current`).
-    Daemon usa `resolve_boot_profile` (session.json + seed do marker) no
-    restore.
+    Marker secundário lido por `cli/cmd_profile.py:402`
+    (`profile save --from-active`). Daemon usa `resolve_boot_profile`
+    (session.json + seed do marker) no restore.
 
     Import lazy de `config_dir` (mesma justificativa de `save_active_marker`).
     """

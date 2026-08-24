@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import Mapping
-from dataclasses import dataclass
 from typing import Any
 
 import gi
@@ -36,7 +35,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
-from hefesto_dualsense4unix.app import ipc_bridge
+from hefesto_dualsense4unix.app import ipc_bridge, mesa
 from hefesto_dualsense4unix.app.actions.base import (
     WidgetAccessMixin,
     numero_do_controle,
@@ -126,76 +125,13 @@ ALTURA_BERCO_DA_ROTA = 2
 _display_slot = numero_do_controle
 
 
-@dataclass(frozen=True)
-class ContagemDeControles:
-    """A contagem de controles da janela — os DOIS espaços, num só lugar.
-
-    CONTAGEM-E-COOP-01 (29/07). A mesma tela dizia números diferentes para
-    "quantos controles": o cabeçalho e a linha "Conectado (N controles)"
-    contavam só os DualSense adotados, enquanto a fita de chips do topo e a
-    faixa "Número deste controle" contavam adotados + externos. Com dois
-    DualSense e dois externos vivos, o cabeçalho dizia "2 controles" ao lado
-    de quatro chips e de uma faixa oferecendo os números 1 a 4.
-
-    A resposta certa NÃO é somar tudo em um número só: os dois espaços são
-    reais e cada um tem razão histórica registrada —
-
-    - ``adotados`` — DualSense que o Hefesto governa (tem vpad, card, bateria,
-      alvo de edição). É a base da numeração dos externos (``_dualsense_count``
-      → `external_controllers.slot_of`) e o denominador dos cards
-      (`_status_card_keys_for`, filtrado por ``connected``);
-    - ``externos`` — Nintendo Pro, 8BitDo… que o daemon NUMERA mas não adota.
-      Read-only POR DECISÃO DE PRODUTO (EXT-COUNT-01, 25/07: "numerar e acender
-      o LED certo != adotar o controle"), então eles não têm card nem bateria —
-      mas dividem o MESMO espaço de numeração dos adotados (R-24/NUM-01), e é
-      por isso que a faixa de números tem de oferecer 1..``na_mesa``.
-
-    Inflar ``adotados`` com os externos regrediria as duas coisas: os cards
-    ganhariam entradas sem controle por trás e o rótulo dos externos deslizaria
-    (o ponto cego do incidente de 14:42 citado em `slot_of`).
-
-    A cura, então, é DERIVAR tudo daqui e NOMEAR cada número na tela — ver
-    :func:`texto_de_contagem`.
-    """
-
-    adotados: int
-    externos: int
-
-    @property
-    def na_mesa(self) -> int:
-        """Quantos controles estão na mesa — o espaço de numeração (R-24/NUM-01)."""
-        return self.adotados + self.externos
-
-
-def texto_de_contagem(contagem: ContagemDeControles) -> str:
-    """Frase NOMEADA da contagem, ou ``""`` quando não há plural a explicar.
-
-    CONTAGEM-E-COOP-01: quem lê a tela precisa saber de QUAL número se trata.
-    Três regimes:
-
-    - ``na_mesa <= 1``: string vazia — não há contagem a exibir e quem chama
-      segue pelo caminho single de sempre ("Conectado Via USB");
-    - sem externos: ``"3 controles"`` — o texto de sempre, e aqui ele não
-      mente: ``na_mesa == adotados``, nenhuma ambiguidade a desfazer (mantido
-      idêntico também para não crescer a largura do cabeçalho no caso comum,
-      lição dos 12px de folga da CI de 29/07);
-    - com externos: ``"2 do Hefesto + 2 externos"`` — o número do cabeçalho
-      passa a explicar por que a fita ao lado tem quatro chips.
-    """
-    adotados = contagem.adotados
-    externos = contagem.externos
-    if contagem.na_mesa <= 1:
-        return ""
-    if externos == 0:
-        return _("{n} controles").format(n=adotados)
-    parte_ext = (
-        _("1 externo") if externos == 1 else _("{n} externos").format(n=externos)
-    )
-    if adotados == 0:
-        # Defensivo: `state["connected"]` é do DualSense primário, então este
-        # regime não deveria alcançar a tela — mas "0 do Hefesto" seria pior.
-        return _("{ext} (nenhum do Hefesto)").format(ext=parte_ext)
-    return _("{n} do Hefesto + {ext}").format(n=adotados, ext=parte_ext)
+# ONDA0-Z5/T5: `ContagemDeControles` e `texto_de_contagem` migraram para
+# `app/mesa.py` — o dono único do fato "quem está na mesa" para as onze
+# abas, não só para esta. Os nomes seguem exportados DAQUI (espelho, no
+# molde de `app/alvo_de_edicao.py`) para os leitores que ainda não migraram;
+# quem escreve código novo importa de `app.mesa` diretamente.
+ContagemDeControles = mesa.ContagemDeControles
+texto_de_contagem = mesa.texto_de_contagem
 
 
 #: CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026): de quantos em quantos minutos o
@@ -2509,36 +2445,26 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     @staticmethod
     def _connected_controllers(state: dict[str, Any]) -> list[dict[str, Any]]:
-        """Controles conectados (FEAT-DSX-MULTI-CONTROLLER-01).
+        """Espelho de `app.mesa.controles_conectados` (ONDA0-Z5/T5).
 
-        Vem de `state["controllers"]` (bloco do `daemon.state_full`); o primário
-        é o primeiro da lista (ordem de inserção). Lista vazia se o daemon não
-        expõe o bloco (versão antiga) — os renderers caem no caminho single.
+        FEAT-DSX-MULTI-CONTROLLER-01. Mora aqui só para os leitores antigos
+        que ainda chamam `self._connected_controllers(...)`; a lógica dona
+        vive em `app/mesa.py`, sem GTK, para as outras dez abas usarem.
         """
-        controllers = state.get("controllers")
-        if not isinstance(controllers, list):
-            return []
-        return [
-            c for c in controllers if isinstance(c, dict) and c.get("connected")
-        ]
+        return mesa.controles_conectados(state)
 
     def _contagem_de_controles(self, state: dict[str, Any]) -> ContagemDeControles:
-        """A ÚNICA contagem de controles da janela (CONTAGEM-E-COOP-01).
+        """Espelho de `app.mesa.contagem_de_controles` (ONDA0-Z5/T5).
 
         Todo lugar que precisa responder "quantos controles" passa por aqui —
         cabeçalho, linha "Conectado", fita de chips, faixa de números, linha de
-        bateria e a base da numeração dos externos. Antes, cada um refazia a
-        conta inline (``len(conectados)`` em quatro pontos, ``len(conectados) +
-        len(externals)`` em um) e a mesma tela divergia.
+        bateria e a base da numeração dos externos.
 
         ``getattr`` defensivo em ``_externals``: hosts parciais de teste montam
         a mixin sem passar pelo ``_init_controller_target_combo`` (que semeia a
         lista), e este caminho roda a 2 Hz.
         """
-        return ContagemDeControles(
-            adotados=len(self._connected_controllers(state)),
-            externos=len(getattr(self, "_externals", [])),
-        )
+        return mesa.contagem_de_controles(state, len(getattr(self, "_externals", [])))
 
     @staticmethod
     def _controllers_transports(conectados: list[dict[str, Any]]) -> str:
@@ -2554,8 +2480,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         `_render_slow_state` (já chamados pelos ticks rápidos). Aqui só
         firma o header de forma idempotente.
         """
-        connected = bool(state.get("connected"))
-        transport = state.get("transport") or "—"
         header = self._get("header_connection")
         conectados = self._connected_controllers(state)
         # CONTAGEM-E-COOP-01: a contagem do cabeçalho vem da MESMA função da
@@ -2566,8 +2490,34 @@ class StatusActionsMixin(WidgetAccessMixin):
         # palavra sobre o segundo controle da mesa.
         contagem = self._contagem_de_controles(state)
         texto_contagem = texto_de_contagem(contagem)
+        # ONDA0-Z5/T6 [ESTRUTURAL — muda o que se vê ao abrir a aba com a mesa
+        # vazia; a foto e a palavra final são dela, R4/PROVA-DE-TELA-01].
+        #
+        # O PORTÃO agora é a MESA (`conectados`, a lista viva de
+        # `state["controllers"]`), não `state["connected"]` (o topo — a
+        # leitura do PRIMÁRIO no último tick do poll, que CONSERTO-1.7 mede
+        # que pode DIVERGIR da lista DE PROPÓSITO). Medido em 23/08 (ONDA0-Z5
+        # §2.2/§2.4): com o topo ainda dizendo `true`/`bt`/75% e a mesa
+        # vazia, o header antigo (gate = topo) abria o ramo "conectado" para
+        # uma mesa sem ninguém.
+        #
+        # `conhece_a_mesa`: só quando o daemon publica o bloco `controllers`
+        # (lista, mesmo vazia) é que ele é a fonte confiável — daemon velho
+        # sem o bloco (`controllers` ausente) cai na regra antiga, único
+        # sinal que existe. Nenhuma palavra NOVA nasce aqui: os três textos
+        # já existiam nos três ramos de sempre.
+        controllers_bloco = state.get("controllers")
+        conhece_a_mesa = isinstance(controllers_bloco, list)
+        if conhece_a_mesa:
+            ha_alguem = bool(conectados)
+            transport_do_primario = (
+                conectados[0].get("transport") or "—" if conectados else "—"
+            )
+        else:
+            ha_alguem = bool(state.get("connected"))
+            transport_do_primario = state.get("transport") or "—"
         if header is not None:
-            if connected and texto_contagem:
+            if ha_alguem and texto_contagem:
                 # FEAT-DSX-MULTI-CONTROLLER-01: N controles — primário em negrito.
                 # Os transportes são dos ADOTADOS (só deles o daemon sabe a via);
                 # sem nenhum adotado, o corpo é só a contagem nomeada.
@@ -2581,9 +2531,10 @@ class StatusActionsMixin(WidgetAccessMixin):
                 header.set_markup(
                     f'<span foreground="#50fa7b">&#9679; {corpo}</span>'
                 )
-            elif connected:
+            elif ha_alguem:
                 header.set_markup(
-                    f'<span foreground="#50fa7b">&#9679; Conectado Via {transport.upper()}</span>'
+                    f'<span foreground="#50fa7b">&#9679; Conectado Via '
+                    f"{transport_do_primario.upper()}</span>"
                 )
             else:
                 header.set_markup(
@@ -2694,8 +2645,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._update_coop_badge(state)
         self._sync_coop_governa_luzes(state)
         self._sync_modo_nativo_manda_no_output(state)
-        connected = bool(state.get("connected"))
-        transport = state.get("transport") or "—"
         battery = state.get("battery_pct")
         active_profile = state.get("active_profile") or "Nenhum"
 
@@ -2704,6 +2653,19 @@ class StatusActionsMixin(WidgetAccessMixin):
         # as duas linhas da mesma tela não podem mais divergir.
         contagem = self._contagem_de_controles(state)
         texto_contagem = texto_de_contagem(contagem)
+        # ONDA0-Z5/T6 [ESTRUTURAL — mesma nota de `_render_online`]: `connected`
+        # vem da MESA quando o daemon a publica (o mesmo `conhece_a_mesa` de
+        # `_render_online`), nunca do topo estagnado/divergente sozinho.
+        controllers_bloco = state.get("controllers")
+        conhece_a_mesa = isinstance(controllers_bloco, list)
+        if conhece_a_mesa:
+            connected = bool(conectados)
+            transport = (
+                conectados[0].get("transport") or "—" if conectados else "—"
+            )
+        else:
+            connected = bool(state.get("connected"))
+            transport = state.get("transport") or "—"
         # `connected and` de propósito: sem DualSense conectado, `adotados` é 0 e
         # o texto só existiria por causa dos externos — dizer "Conectado" ali
         # seria mentira (a linha é do controle do Hefesto).

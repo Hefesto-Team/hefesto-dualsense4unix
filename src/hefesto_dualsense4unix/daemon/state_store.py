@@ -206,6 +206,25 @@ class StateStore:
             if state.battery_pct != self._last_battery_pct:
                 self._last_battery_pct = state.battery_pct
 
+    def clear_controller_state(self) -> None:
+        """Limpa `controller` — mesa vazia, sem repetir a última leitura boa.
+
+        ONDA0-Z5/T1: chamado pelo `lifecycle` na BORDA de queda
+        (conectado → desconectado), uma vez por borda, nunca a cada tick.
+        Antes desta chamada existir, `_controller_state` guardava a última
+        `ControllerState` para sempre — sem escrita nenhuma na queda — e a
+        bateria/transporte de um controle que já saiu da mesa continuavam
+        respondendo como se ele estivesse lá (medido: `connected: true,
+        transport: "bt", battery_pct: 75` com ZERO controles na bancada,
+        ONDA0-Z5 §2.2-2.3). `None` aqui é o "não sei" honesto — diferente de
+        escrever um `ControllerState` com campos obrigatórios (`battery_pct`,
+        `transport`) sem valor honesto para "sem controle" (§3 da sprint).
+        `_last_battery_pct` (debounce de `BATTERY_CHANGE`) fica de fora: é
+        estado interno do detector de delta, não o fato publicado.
+        """
+        with self._lock:
+            self._controller_state = None
+
     def set_active_profile(self, name: str | None) -> None:
         """Publica o perfil ativo — e ENCERRA a espera do perfil adiado.
 
@@ -490,6 +509,14 @@ class StateStore:
 
     @property
     def active_profile(self) -> str | None:
+        """O perfil EM VIGOR agora, no daemon vivo.
+
+        ONDA0-Z5/T13 [PROVISÓRIO — D-N, §10]: é a rota "em vigor" das três
+        que respondem por "perfil ativo" na casa — as outras duas
+        (`session.json`, `active_profile.txt`, ver `utils/session.py`)
+        guardam "a última escolha" e podem divergir desta por decisão
+        medida (restauro de perfil de janela às vezes pulado de propósito).
+        """
         with self._lock:
             return self._active_profile
 

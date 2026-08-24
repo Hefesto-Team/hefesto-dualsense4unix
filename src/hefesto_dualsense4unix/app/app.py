@@ -42,7 +42,11 @@ from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
 from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 from hefesto_dualsense4unix.app.actions.rumble_actions import RumbleActionsMixin
-from hefesto_dualsense4unix.app.actions.status_actions import ABA_STATUS, StatusActionsMixin
+from hefesto_dualsense4unix.app.actions.status_actions import (
+    ABA_NO_JOGO,
+    ABA_STATUS,
+    StatusActionsMixin,
+)
 from hefesto_dualsense4unix.app.actions.triggers_actions import TriggersActionsMixin
 from hefesto_dualsense4unix.app.compact_window import CompactWindow
 from hefesto_dualsense4unix.app.compact_window import is_enabled as compact_window_enabled
@@ -1164,6 +1168,35 @@ class HefestoApp(
         ),
     }
 
+    #: ONDA0-Z5/T8 — as páginas do `main_notebook` que FICAM DE FORA de
+    #: `_REFRESH_POR_ABA` de propósito, cada uma com o motivo escrito. Antes
+    #: desta lista existir, os dois testes de `test_notebook_switch_page.py`
+    #: (mapa→glade e mapa→mapa) olhavam só para um lado: tirar uma aba do
+    #: mapa não mexia em nenhum dos dois conjuntos que eles comparavam, e o
+    #: portão passava mesmo com a aba desatualizando-se em silêncio (F13).
+    #: `test_toda_pagina_do_notebook_esta_no_mapa_ou_isenta` (glade→mapa) é
+    #: quem fecha esse lado — e é ele quem cobra que toda página nova entre
+    #: aqui ou no mapa, nunca fique de fora calada.
+    _ISENTAS_DO_REFRESH_POR_ABA: ClassVar[dict[str, str]] = {
+        # Tem PULSO PRÓPRIO: os tiques de `status_actions.py`
+        # (LIVE_POLL_INTERVAL_MS/STATE_POLL_INTERVAL_MS/RECONNECT_POLL_INTERVAL_S)
+        # já repintam a aba a 100ms/500ms/reconexão. Reler ao ENTRAR duplicaria
+        # o que o tique já faz um instante depois.
+        ABA_STATUS: (
+            "tem pulso próprio — os tiques de status_actions.py "
+            "(100ms/500ms/reconexão) já repintam sem esperar a troca de aba"
+        ),
+        # Pulso EMPRESTADO da Status (`_sync_paineis_no_jogo`, chamado de
+        # DENTRO dos tiques da Status, status_actions.py:548-551) — decisão
+        # registrada: "ela NÃO ganha timer próprio". Consequência medida
+        # (ONDA0-Z5 §2.5): o pulso some junto quando a Status não está montada.
+        ABA_NO_JOGO: (
+            "pulso emprestado da Status (_sync_paineis_no_jogo); decisão "
+            "registrada de NÃO ganhar timer próprio — some junto se a Status "
+            "não estiver montada"
+        ),
+    }
+
     def _on_notebook_switch_page(
         self, notebook: Any, page: Any, _page_num: int
     ) -> None:
@@ -1193,10 +1226,26 @@ class HefestoApp(
         inativar = getattr(self, "set_alvo_inativo", None)
         if inativar is not None:
             inativar(nome == ABA_CONFIG)
+        # ONDA0-Z5/T9: um refresher que levanta não pode calar os seguintes
+        # DA MESMA aba. Antes deste `try`, uma exceção no primeiro refresher
+        # de uma aba com vários (ex.: `tab_navegacao_dsx`, três) deixava os
+        # outros dois sem rodar — sem uma linha no journal, e a aba desenhando
+        # o estado de ANTES da troca, calada (F13). O log NOMEIA o refresher:
+        # é ele, não a exceção genérica, que quem lê o journal precisa saber.
         for atributo in self._REFRESH_POR_ABA.get(nome or "", ()):
             fn = getattr(self, atributo, None)
-            if fn is not None:
+            if fn is None:
+                continue
+            try:
                 fn()
+            except Exception as exc:
+                logger.warning(
+                    "refresh_por_aba_levantou",
+                    aba=nome,
+                    refresher=atributo,
+                    err=str(exc),
+                    exc_info=True,
+                )
         # CONFIG-05/A5: sair da aba Configurações não pode apagar da tela o
         # fato de haver escolha declarada e não aplicada. A marca lê a MESMA
         # `_maquina_pendente` do portão do fechamento, e some sozinha quando o

@@ -746,8 +746,11 @@ class IpcHandlersMixin:
             (canônico — usado pelo daemon em `restore_last_profile` no
             boot/reconnect). PERFIL-03: este handler é gesto MANUAL da
             usuária (GUI/CLI) — só os origins "manual" persistem a intenção.
-          - Adicionalmente, escrevemos `active_profile.txt` para paridade com
-            a CLI legada (`hefesto-dualsense4unix profile current` ainda lê esse marker).
+          - Adicionalmente, escrevemos `active_profile.txt` — o marker que
+            `cli/cmd_profile.py:402` (`profile save --from-active`) lê para
+            clonar o perfil ativo. Fato substituído (ONDA0-Z5/T14): o
+            consumidor NÃO é o antigo subcomando de leitura citado aqui até
+            23/08 — ele nunca existiu na CLI, ver `utils/session.py:9-14`.
           - Falha em escrever o marker é best-effort: loga warning mas não
             falha o IPC. Atomicidade do conjunto: se `activate` levantar,
             `active_profile.txt` NÃO é tocado.
@@ -1890,6 +1893,19 @@ class IpcHandlersMixin:
         # correção tardia batia no gate R-04, que a recusa com o jogo aberto.
         self._agendar_arming_do_launch()
         snap = self.store.snapshot()
+        # ONDA0-Z5/T1: `snap.controller` já vira `None` na borda de queda
+        # (`StateStore.clear_controller_state`, chamado por `lifecycle.py`) —
+        # é essa escrita que faz este `bool(controller and ...)` responder
+        # `False` para uma mesa vazia, em vez de repetir a última leitura boa
+        # para sempre (ONDA0-Z5 §2.2-2.3, medido: connected: true/bt/75% com
+        # zero controles na bancada).
+        #
+        # NÃO migrado para ler `self.controller` (handles abertos AGORA,
+        # como `controller.list`): tentado nesta sprint e revertido — não há
+        # teste medindo essa divergência aqui (ao contrário do `state_full`,
+        # onde CONSERTO-1.7 mede a separação de propósito), mas manter a MESMA
+        # fonte (store) que `state_full` usa é o que evita as três rotas
+        # voltarem a divergir por um caminho novo.
         controller = snap.controller
         return {
             "connected": bool(controller and controller.connected),
@@ -2213,6 +2229,20 @@ class IpcHandlersMixin:
                 )
 
         buttons: list[str] = sorted(state.buttons_pressed) if state else []
+        # ONDA0-Z5/T1: `state` (de `daemon._last_state or snap.controller`)
+        # já vira `None` na borda de queda — as duas escritas que T1
+        # acrescentou em `lifecycle.py` (`store.clear_controller_state()` e
+        # `self._last_state = None`). Migrar `connected`/`transport`/
+        # `battery_pct` para ler `self.controller.describe_controllers()`
+        # (os handles abertos AGORA) foi tentado nesta sprint e REVERTIDO:
+        # `state` aqui tem propósito medido e testado — é a leitura do
+        # PRIMÁRIO no último tick do poll, e CONSERTO-1.7
+        # (`test_conserto_1_7_o_ramo_sem_mesa_e_o_plural_do_doctor.py`) mede
+        # que ela pode DIVERGIR do transporte de cada item de `controllers`
+        # (que sim vem dos handles); `native_bt_fragil` depende dessa
+        # separação para saber quando confiar na lista e quando cair na
+        # regra antiga (só o primário). Colapsar as duas fontes aqui
+        # reprovou três testes medidos — revertido de propósito.
         result: dict[str, Any] = {
             "connected": bool(state and state.connected),
             "transport": state.transport if state else None,
