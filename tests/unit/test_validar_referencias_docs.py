@@ -733,3 +733,97 @@ def test_readme_entra_na_varredura(repo_falso: Path) -> None:
 
     assert proc.returncode == 1, proc.stdout
     assert "README.md:1" in proc.stdout
+
+
+# ---------------------------------------------------------------------------
+# AUDITORIA-DE-PERDA-01/E3 (24/08/2026) -- o link com o basename certo e a
+# pasta errada, que casava por SUFIXO sem nunca chegar à resolução relativa.
+#
+# O DEFEITO MEDIDO: a checagem `in sufixos` sobre o alvo bruto do link
+# rodava ANTES da resolução contra a pasta do documento. Um
+# `[texto](sprints/real.md)` virado `[texto](real.md)` -- a pasta some, o
+# basename sobra -- casava por sufixo
+# com o arquivo real em QUALQUER canto da árvore, porque o basename sozinho
+# JÁ é um dos sufixos gerados por `indexar()`. A resolução relativa (que
+# pegaria o erro) nunca era alcançada.
+# ---------------------------------------------------------------------------
+
+
+def test_link_com_basename_certo_e_pasta_errada_reprova(repo_falso: Path) -> None:
+    """A MORDIDA da cura E3: a forma exata do defeito plantado na auditoria.
+
+    O arquivo real mora em `docs/process/sprints/`; quem cita está em
+    `docs/usage/` e escreve o link SEM a pasta -- por convenção de link
+    markdown, isso afirma "ao lado de quem cita", que é falso aqui.
+
+    Antes da E3 isto passava calado: o basename sozinho já é um sufixo do
+    caminho real, e a checagem `in sufixos` rodava antes de qualquer
+    resolução contra a pasta de `citante.md`.
+    """
+    pasta = repo_falso / "docs" / "process" / "sprints"
+    pasta.mkdir(parents=True)
+    (pasta / "real.md").write_text("# Sprint\n", encoding="utf-8")
+    escrever_doc(repo_falso, "citante.md", "Ver [a sprint](real.md).\n")
+
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, (
+        "o validador ACEITOU um link com o basename certo e a pasta errada -- "
+        "voltou a casar por sufixo sem resolver contra a pasta de quem cita.\n"
+        f"saída: {proc.stdout}{proc.stderr}"
+    )
+    assert "real.md" in proc.stdout
+    assert "citante.md:1" in proc.stdout
+
+
+def test_link_com_basename_e_a_pasta_certa_passa(repo_falso: Path) -> None:
+    """A contraprova: o MESMO basename, citado de onde o arquivo de fato mora."""
+    pasta = repo_falso / "docs" / "process" / "sprints"
+    pasta.mkdir(parents=True)
+    (pasta / "real.md").write_text("# Sprint\n", encoding="utf-8")
+    (pasta / "citante.md").write_text("Ver [a sprint](real.md).\n", encoding="utf-8")
+
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, (
+        "um link bare para o vizinho de verdade da mesma pasta passou a "
+        f"reprovar -- a cura ficou estreita demais.\nsaída: {proc.stdout}"
+    )
+
+
+def test_nome_solto_entre_crases_continua_leniente_de_qualquer_pasta(
+    repo_falso: Path,
+) -> None:
+    """A E3 não pode fechar a convenção que `test_caminho_encurtado_casa_por_sufixo`
+    já prova para caminho com barra -- aqui é a MESMA convenção sem barra
+    nenhuma: nome solto entre crases (`.py`/`.sh`) é citado sem posição, o
+    tempo todo, desta casa. Só o link markdown afirma posição.
+    """
+    fundo = repo_falso / "src" / "pacote" / "fundo"
+    fundo.mkdir(parents=True)
+    (fundo / "remoto.py").write_text("# módulo\n", encoding="utf-8")
+    escrever_doc(repo_falso, "cita_por_crase.md", "Veja `remoto.py` para o resto.\n")
+
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, (
+        "um nome solto entre crases, convenção desta casa, passou a "
+        f"reprovar por causa da E3.\nsaída: {proc.stdout}"
+    )
+
+
+def test_link_bare_para_arquivo_de_raiz_passa_de_qualquer_pasta(
+    repo_falso: Path,
+) -> None:
+    """`install.sh` não tem diretório para encurtar -- não há "pasta errada"
+    possível para ele, então o link bare vale de QUALQUER documento.
+    """
+    (repo_falso / "install.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    escrever_doc(repo_falso, "cita_a_raiz.md", "Rode o [instalador](install.sh).\n")
+
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, (
+        "um link bare para um arquivo que mora NA RAIZ passou a reprovar "
+        f"citado de outra pasta.\nsaída: {proc.stdout}"
+    )

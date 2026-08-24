@@ -773,6 +773,44 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "e instrumento não é caminho de produção — a mesma linha que vale para "
         "`tests/`."
     ),
+    # --- CONFIG-06 (23/08/2026) apagou o único chamador do embrulho estreito -
+    "app/ipc_bridge.py::machine_declare": (
+        "MEDIDO em 24/08/2026 (AUDITORIA-DE-PERDA-01). Mesma forma de "
+        "`led_control.py::apply_led_settings` acima: LÁPIDE COM NOTA DATADA, e "
+        "a nota já estava no próprio docstring da função, escrita quando a "
+        "CONFIG-06 nasceu — `machine_declare_detalhado` existe porque "
+        "`machine_declare` 'está no `__all__` e a dupla `(ok, motivo)` é o "
+        "contrato de quem já a chama'. Essa frase ficou falsa no mesmo dia em "
+        "que foi escrita: `footer_actions.py`:323 chama "
+        "`ipc_bridge.machine_declare_detalhado` diretamente, e é o ÚNICO lugar "
+        "do produto que declara a mesa — não sobrou segundo chamador para a "
+        "dupla estreita. O corpo de `machine_declare` (:830) CHAMA "
+        "`machine_declare_detalhado` — não o contrário —, mas nada de "
+        "produção chama `machine_declare`: ela virou uma casca que embrulha a "
+        "variante rica sem que ninguém peça a casca. É a mesma forma do par "
+        "`apply_draft`/"
+        "`apply_draft_detalhado` que o próprio docstring cita como precedente "
+        "— só que naquele par o embrulho estreito ainda tem para quem servir; "
+        "neste não tem mais. A PODA É DELA: é símbolo público, está no "
+        "`__all__` (:1293), e apagar wrapper documentado por conta própria não "
+        "é deste portão."
+    ),
+    "utils/maquina.py::gravar_maquina": (
+        "MEDIDO em 24/08/2026 (AUDITORIA-DE-PERDA-01). Irmã exata da entrada "
+        "acima, um nível abaixo na mesma pilha: `gravar_maquina` é o embrulho "
+        "que devolve só `bool`, e `gravar_maquina_com_descartes` (:340) é quem "
+        "de fato grava e devolve também o que a gravação teve de descartar. O "
+        "ÚNICO chamador de produção, `daemon/ipc_handlers.py`:4874-4889 (o "
+        "handler do `machine.declare`), escreve por que escolheu a variante "
+        "rica no próprio comentário: 'a `_com_descartes` e não a "
+        "`gravar_maquina`: o embrulho estreita o resultado para `bool` e joga "
+        "fora justamente a lista que a janela precisa mostrar' (:4885-4886). O "
+        "corpo de `gravar_maquina` (:337) CHAMA `gravar_maquina_com_descartes` "
+        "— não o contrário —, e nada de produção chama `gravar_maquina`: "
+        "mesma casca vazia do par de cima. A PODA É DELA: é símbolo público de "
+        "`utils/maquina.py`, e apagar wrapper documentado por conta própria "
+        "não é deste portão."
+    ),
 }
 
 #: As promessas públicas SEM CAMINHO de 12/08/2026 — a dívida, com endereço e
