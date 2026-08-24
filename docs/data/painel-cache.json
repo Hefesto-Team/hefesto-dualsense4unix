@@ -1,0 +1,58 @@
+{
+  "medido_em": 1787520995.1731055,
+  "portoes": {
+    "ruff": {
+      "ok": true,
+      "cauda": "All checks passed!"
+    },
+    "mypy": {
+      "ok": true,
+      "cauda": "Success: no issues found in 207 source files"
+    },
+    "acentuação": {
+      "ok": false,
+      "cauda": "tests/unit/test_a5_fechar_a_janela_nao_perde_a_declaracao.py:16:nao -> sugestão não\n\n1 violação(es) de acentuação PT-BR encontrada(s)."
+    },
+    "glifos": {
+      "ok": true,
+      "cauda": ""
+    },
+    "referências": {
+      "ok": true,
+      "cauda": "OK: 401 documento(s) sem referência morta."
+    },
+    "palavra de tela": {
+      "ok": true,
+      "cauda": ""
+    },
+    "anonimato": {
+      "ok": true,
+      "cauda": "OK: anonimato preservado."
+    },
+    "versão": {
+      "ok": true,
+      "cauda": "OK: 12 alvo(s) versionado(s) em 0.9.4.5. Data da release corrente confere com o CHANGELOG."
+    },
+    "empacotamento": {
+      "ok": true,
+      "cauda": "oader SVG do gdk-pixbuf (o que desenha) × o que cada formato declara ==\n[ OK ] loader SVG: declarado no .deb, no .spec, no PKGBUILD, no package.nix e no censo do install.sh (por EFEITO), com o flatpak coberto pelo runtime — 1 lacuna(s) declarada(s)\n─────────────────────────────────────────\nparidade de empacotamento OK"
+    },
+    "dados de teste": {
+      "ok": true,
+      "cauda": "OK: dados de teste neutros."
+    },
+    "paridade de transporte": {
+      "ok": true,
+      "cauda": "tenta sozinha...... 36\n       desses, SEM ensaio no caderno.......... 0\n       desses, na direção de ENTRADA (o jogo). 0\n  ensaios lidos do caderno de bancada......... 177\n  linhas que alcançam o jogo por `uhid`....... 16\n       dessas, com afirmação forte............ 4\n       dessas, SEM `ponte_alcanca`............ 0"
+    },
+    "specs.html em dia": {
+      "ok": true,
+      "cauda": "specs.html: atualizado (confere com o CSV, com o caderno de ensaios e com os três desenhos)"
+    }
+  },
+  "suite": {
+    "passed": null,
+    "failed": 0,
+    "ok": false
+  }
+}
