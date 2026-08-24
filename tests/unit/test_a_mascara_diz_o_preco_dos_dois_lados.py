@@ -24,6 +24,15 @@ O que este arquivo trava é o que a tela pode e não pode AFIRMAR:
 
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# TESTE-HONESTO-01/E1 (24/08/2026): a guarda vem ANTES do import de
+# `home_actions`/`profiles_actions`, que fazem `import gi` incondicional
+# (`home_actions.py:34` via `base.py:9`; `profiles_actions.py:16`). Sem ela,
+# este arquivo estourava ERRO DE COLETA no CI sem PyGObject (medido: simulação
+# do job `lint-test` com `gi`/`cairo` bloqueados via `sys.meta_path`).
+exigir_gi_real("o preço da máscara dos dois lados")
+
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.home_actions import (
