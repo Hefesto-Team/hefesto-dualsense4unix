@@ -29,6 +29,7 @@ from gi.repository import GdkPixbuf, Gtk
 from hefesto_dualsense4unix.app.actions.carona_do_wrapper import GESTO_APLICAR
 from hefesto_dualsense4unix.app.actions.config import (
     ABA_CONFIG,
+    MOTIVO_ALVO_NAO_SE_APLICA,
     ConfigActionsMixin,
 )
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
@@ -1192,7 +1193,11 @@ class HefestoApp(
         # fita ficaria esmaecida para sempre depois da primeira visita.
         inativar = getattr(self, "set_alvo_inativo", None)
         if inativar is not None:
-            inativar(nome == ABA_CONFIG)
+            # Z2-5: `set_alvo_inativo(True)` exige o motivo guardado.
+            if nome == ABA_CONFIG:
+                inativar(True, MOTIVO_ALVO_NAO_SE_APLICA)
+            else:
+                inativar(False)
         for atributo in self._REFRESH_POR_ABA.get(nome or "", ()):
             fn = getattr(self, atributo, None)
             if fn is not None:
