@@ -293,6 +293,11 @@ _DICA_DO_MEDIDOR = (
 #: barra de ser lida como medição.
 _SELO_DE_PROCEDENCIA = "derivado da especificação"
 
+#: O selo quando NINGUÉM respondeu — o par do `_PAINEL_DESCONHECIDO` na mesma
+#: fileira. Sem daemon não há número, e "0/1600" seria afirmação numérica sobre
+#: o que não se mediu. PROVISÓRIO: frase nova, pendente do olho dela.
+_SEM_RESPOSTA_DO_DAEMON = "o daemon não respondeu"
+
 #: Quanto texto cabe numa linha de apoio desta seção antes de quebrar. Menor
 #: que o padrão de 92 da moldura porque a seção já gasta largura com duas
 #: tabelas, e a rolagem horizontal não existe nesta janela.
@@ -369,6 +374,12 @@ class _PainelDaMesa:
         self._com_mic: frozenset[str] = frozenset()
         #: Impede empilhar pedidos ao daemon quando ela troca de aba rápido.
         self._estado_pedido = False
+        #: `None` = ainda não perguntei, `True` = respondeu, `False` = não
+        #: respondeu. Sem ele a tela do daemon fora do ar era byte a byte a de
+        #: um rádio vazio — "Folgada", em verde, "0/1600" (medido em
+        #: 23/08/2026) —, e quem entrava na aba para diagnosticar rádio cheio
+        #: lia "está folgado" e ia procurar o defeito no controle.
+        self._daemon_respondeu: bool | None = None
         #: A declaração dela nesta sessão, espelho de leitura do que já foi
         #: acumulado em `host._maquina_pendente`. Exposto no hospedeiro como
         #: `_mesa_declarada`.
@@ -753,14 +764,16 @@ class _PainelDaMesa:
 
         def _chegou(estado: Any) -> bool:
             self._estado_pedido = False
+            self._daemon_respondeu = True
             self._aplicar_estado(estado if isinstance(estado, dict) else None)
             return False
 
         def _falhou(_exc: Exception) -> bool:
             self._estado_pedido = False
-            # Daemon fora do ar não é "rádio folgado": é "não sei quem está no
-            # rádio". Zerar é o que a tela já mostra, e a barra em zero com o
-            # daemon parado não afirma nada que a seção não saiba.
+            # Daemon fora do ar é "não sei quem está no rádio", e zerar a barra
+            # só basta se a PALAVRA e o SELO disserem que é não-sei: zero pinta
+            # verde e "0/1600" é afirmação numérica.
+            self._daemon_respondeu = False
             self._aplicar_estado(None)
             return False
 
@@ -1127,6 +1140,9 @@ class _PainelDaMesa:
             )
         except Exception:
             logger.warning("medidor_de_radio_falhou", exc_info=True)
+            # Varredura que falhou é "não medi", nunca "medi zero" — o `{}`
+            # sozinho voltaria a pintar "Folgada" em verde.
+            self._daemon_respondeu = False
             return {}
 
     def _fileira_do_medidor(
@@ -1162,24 +1178,33 @@ class _PainelDaMesa:
         # `set_size_request` largo no widget, o mínimo da barra viraria o
         # mínimo da aba inteira — a janela abre com 1180px e não tem rolagem
         # horizontal.
+
+        # Sem resposta do daemon a barra fica em zero — e só a palavra e o selo
+        # separam esta tela da de um rádio de fato vazio.
+        sabido = self._daemon_respondeu is True
         with contextlib.suppress(Exception):
-            medidor.get_accessible().set_name(_texto_acessivel(ocupacao))
+            medidor.get_accessible().set_name(_texto_acessivel(ocupacao, sabido=sabido))
         fileira.pack_start(medidor, True, True, 0)
 
         palavra = Gtk.Label()
-        cor = _VERDE if ocupacao.rotulo == PALAVRA_FOLGADA else _LARANJA
         # Duas cores, nunca três, e NUNCA vermelho (R3): rádio cheio se resolve
         # tirando um controle daquele adaptador, e o vermelho desta casa é para
         # o que destrói e não tem volta (`theme.css:13`).
+        if sabido:
+            dizer = ocupacao.rotulo
+            cor = _VERDE if ocupacao.rotulo == PALAVRA_FOLGADA else _LARANJA
+        else:
+            dizer = _PAINEL_DESCONHECIDO
+            cor = _LARANJA
         palavra.set_markup(
-            f'<span foreground="{cor}">{markup_escape_text(_(ocupacao.rotulo))}</span>'
+            f'<span foreground="{cor}">{markup_escape_text(_(dizer))}</span>'
         )
         palavra.set_xalign(0.0)
         with contextlib.suppress(Exception):
             palavra.get_style_context().add_class("hefesto-valor-mono-peq")
         fileira.pack_start(palavra, False, False, 0)
 
-        selo = Gtk.Label(label=_selo_da_ocupacao(ocupacao))
+        selo = Gtk.Label(label=_selo_da_ocupacao(ocupacao, sabido=sabido))
         selo.set_xalign(0.0)
         with contextlib.suppress(Exception):
             selo.get_style_context().add_class("hefesto-valor-mono-peq")
@@ -1295,6 +1320,15 @@ class _PainelDaMesa:
                 getattr(self._host, "_maquina_pendente", None),
                 {"mesa": mesa},
             )
+        # A marca "há escolhas por aplicar" no rodapé (23/08/2026). Sem esta chamada
+        # ela só acendia ao trocar de aba ou ao ir para a bandeja — quem declarava e
+        # clicava direto no X via o diálogo de fechamento sem nunca ter visto o aviso.
+        # `getattr` com guarda é o idioma da casa para fiação de aba: hospedeiro de
+        # teste sem rodapé não pode derrubar a declaração.
+        marcar = getattr(self._host, "_marcar_declaracao_por_aplicar", None)
+        if marcar is not None:
+            with contextlib.suppress(Exception):
+                marcar()
 
     def _mesa_em_vigor(self) -> dict[str, Any]:
         """O que está no DISCO, com o que ainda espera o "Aplicar" por cima.
@@ -1508,7 +1542,7 @@ def _apelido_por_endereco(dongles: Sequence[Dongle]) -> dict[str, str]:
     return {d.endereco.upper(): d.nome for d in dongles if d.nome}
 
 
-def _selo_da_ocupacao(ocupacao: Ocupacao) -> str:
+def _selo_da_ocupacao(ocupacao: Ocupacao, *, sabido: bool = True) -> str:
     """`831/1600 · derivado da especificação` — o selo mono, montado aqui.
 
     Montado em Python, e não declarado no Glade, por dois motivos: os dois
@@ -1521,19 +1555,23 @@ def _selo_da_ocupacao(ocupacao: Ocupacao) -> str:
     especificação do Bluetooth Classic e **nunca foram medidas nesta máquina**.
     Sem ela, a barra seria lida como medição.
     """
+    if not sabido:
+        return f"— · {_SEM_RESPOSTA_DO_DAEMON}"
     return (
         f"{round(ocupacao.slots_total)}/{ocupacao.slots_teto} "
         f"· {_SELO_DE_PROCEDENCIA}"
     )
 
 
-def _texto_acessivel(ocupacao: Ocupacao) -> str:
+def _texto_acessivel(ocupacao: Ocupacao, *, sabido: bool = True) -> str:
     """O que o leitor de tela lê na trilha — o `aria-label` do desenho.
 
     A barra é desenhada em Cairo: sem isto ela é um retângulo sem nome nenhum
     para quem não a enxerga, e a informação inteira do medidor ficaria só na
     cor.
     """
+    if not sabido:
+        return f"{_PAINEL_DESCONHECIDO} — {_SEM_RESPOSTA_DO_DAEMON}"
     return f"{round(ocupacao.slots_total)} de {ocupacao.slots_teto}"
 
 

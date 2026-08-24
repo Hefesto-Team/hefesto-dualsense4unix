@@ -1044,6 +1044,15 @@ class _PainelDosControles:
             getattr(self._host, "_maquina_pendente", None),
             {"controles": {endereco: {campo: valor}}},
         )
+        # A marca "há escolhas por aplicar" no rodapé (23/08/2026). Sem esta chamada
+        # ela só acendia ao trocar de aba ou ao ir para a bandeja — quem declarava e
+        # clicava direto no X via o diálogo de fechamento sem nunca ter visto o aviso.
+        # `getattr` com guarda é o idioma da casa para fiação de aba: hospedeiro de
+        # teste sem rodapé não pode derrubar a declaração.
+        marcar = getattr(self._host, "_marcar_declaracao_por_aplicar", None)
+        if marcar is not None:
+            with contextlib.suppress(Exception):
+                marcar()
         logger.info("config_controle_declarado", campo=campo, tem_valor=valor is not None)
         self._repintar(chave, campo, valor)
 

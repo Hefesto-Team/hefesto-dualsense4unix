@@ -465,16 +465,26 @@ ID_DE_OUTRA_COR = "outra"
 #: A dica do "Outra", literal do desenho aprovado (``TOOLTIPS.md``).
 DICA_DE_OUTRA_COR = "Para um modelo fora da lista, ou uma edição especial."
 
+#: Id do oitavo botão — a resposta "não sei", que devolve o campo a ``None``.
+#: Não é código de cor e não é ``ID_DE_OUTRA_COR``: existe porque o
+#: ``SegmentedSelector`` é grupo de rádio e IGNORA o clique no botão já
+#: afundado, então sem um botão próprio quem declarasse a cor errada não tinha
+#: gesto nenhum para desfazer (``D-A1``: "não sei" é resposta válida).
+ID_DE_NAO_SEI = "nao_sei"
+
+#: A dica do "Não sei", em todo campo declarável do card.
+DICA_DE_NAO_SEI = "Apaga o que foi declarado aqui. O Hefesto volta a não saber."
+
 
 def cores_do_plastico_items() -> list[tuple[str, str]]:
-    """``(id, rótulo)`` dos sete botões da lista de cor — seis nomes e "Outra".
+    """``(id, rótulo)`` da lista de cor — seis nomes, "Outra" e "Não sei".
 
     O id é o CÓDIGO do firmware, não o rótulo: assim o botão marcado casa com o
     que a leitura do aparelho devolveu, sem tradução no meio. O que vai para o
     disco é o NOME oficial (``ControleDeclarado.cor`` é texto livre, decisão
     C2) — quem faz essa ponte é :func:`nome_oficial_da_cor`.
     """
-    return [*_CORES_DA_LISTA, (ID_DE_OUTRA_COR, "Outra")]
+    return [*_CORES_DA_LISTA, (ID_DE_OUTRA_COR, "Outra"), (ID_DE_NAO_SEI, "Não sei")]
 
 
 def dicas_das_cores() -> dict[str, str]:
@@ -489,6 +499,7 @@ def dicas_das_cores() -> dict[str, str]:
 
     dicas = {codigo: NOMES_DE_FABRICA[codigo] for codigo, _ in _CORES_DA_LISTA}
     dicas[ID_DE_OUTRA_COR] = DICA_DE_OUTRA_COR
+    dicas[ID_DE_NAO_SEI] = DICA_DE_NAO_SEI
     return dicas
 
 
