@@ -46,6 +46,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from hefesto_dualsense4unix.app.ipc_bridge import destinos_da_aplicacao
+
 #: A palavra. Trocá-la é trocar esta linha.
 GUARDADO = "guardado"
 
@@ -251,13 +253,114 @@ def frase_de_guardado(
     )
 
 
+#: T5/T7 (ONDA0-Z1, 24/08/2026). A frase de "o daemon respondeu e não houve
+#: nem aplicado nem guardado" — a rota clássica de mesa vazia com o alvo em
+#: "Todos", medida na bancada viva em 23/08 (`{"status":"ok","aplicado_em":
+#: [],"guardado_em":[]}` com a aba dizendo "aplicado").
+#:
+#: PROVISÓRIO — decisão dela (D3, 23/08): texto novo de tela. Enquanto não
+#: passar pelo olho dela, esta é a redação de trabalho — funcional e honesta,
+#: não a redação final.
+NADA_ACONTECEU = "nenhum controle recebeu — não há controle na mesa"
+
+
+def frase_do_desfecho(
+    assunto: str,
+    corpo: object,
+    host: object,
+    *,
+    coop_aplica: bool = False,
+) -> str:
+    """A frase de um gesto de aplicação, com o CORPO do daemon como autoridade.
+
+    ELO-MUDO-01/P1 (ONDA0-Z1, 24/08/2026, T1). Até esta função, cada aba
+    decidia "aplicado" x "guardado" pela HEURÍSTICA do estado da janela — as
+    três funções logo abaixo — que cobre só duas das três razões que o daemon
+    já conhecia, e caía exatamente na rota que a bancada mediu em 23/08: mesa
+    vazia, alvo em "Todos", corpo dizendo zero destino, tela dizendo
+    "aplicado". **A inversão é o coração da tarefa**: antes a janela deduzia e
+    o daemon era ignorado; agora o daemon manda e a janela só preenche o
+    silêncio quando ele não respondeu.
+
+    A ORDEM DE DECISÃO, e ela é a entrega:
+
+    1. o daemon RECUSOU e explicou (``corpo["motivo"]``, mesmo campo que
+       :func:`~hefesto_dualsense4unix.app.ipc_bridge._recusa_no_corpo` lê do
+       outro lado da ponte) — a frase é o motivo DELE, nunca uma dedução
+       nossa;
+    2. :func:`~hefesto_dualsense4unix.app.ipc_bridge.destinos_da_aplicacao`:
+       ``aplicado_em`` com alguém dentro é **aplicado** — a frase de sempre,
+       sem número quando é um destino só (a mordida gêmea que prova que a
+       cura não avançou longe demais); só ``guardado_em`` com alguém é
+       **guardado**, e as TRÊS razões da janela (``host``) entram como o
+       PORQUÊ, não mais como a decisão;
+    3. as duas listas vazias com corpo presente: nada aconteceu, e a frase
+       diz isso — é o caso medido em 23/08, e o motivo de esta função existir;
+    4. corpo ausente (``None``, ``_corpo_do_daemon`` não teve o que ler): só
+       aí a heurística de hoje decide, porque não há resposta do daemon a
+       ler. As três funções de leitura de ``host`` não somem — mudam de
+       AUTORIDADE (ramo 4) para EXPLICAÇÃO (ramo 2).
+
+    ``coop_aplica``: o co-op só tem opinião sobre os 5 LEDs de jogador
+    (``_COOP_LAYER_FIELDS = ("player_leds",)`` no backend) — nunca sobre a cor
+    da lightbar ou o gatilho. Quem chama por um assunto que NÃO é o desenho
+    dos 5 LEDs deixa o padrão ``False``; só o chamador de ``player_leds`` passa
+    ``True``. Ignorar isso atribuiria ao co-op uma recusa que é do Modo Nativo
+    ou do alvo fora da mesa, num assunto que o co-op nunca governou — o mesmo
+    defeito de frase errada, só que com a palavra certa por engano.
+    """
+    if isinstance(corpo, dict):
+        motivo = corpo.get("motivo")
+        if isinstance(motivo, str) and motivo:
+            # NATIVO-RUMBLE-01 já mediu (`ipc_bridge._recusa_no_corpo`): um
+            # `motivo` presente não é sinônimo de recusa — `status: "ok"` com
+            # `motivo` é sucesso PARCIAL (ex.: `rumble.stop` que solta o par
+            # mas não cala o motor que o jogo ainda segura pelo hidraw).
+            # Achado pelo advogado da premissa em 24/08/2026: sem esta
+            # distinção, um futuro consumidor de Rumble rotularia sucesso
+            # parcial como recusa — a mesma classe de mentira que esta
+            # função existe para matar, na direção oposta.
+            if corpo.get("status") == "ok":
+                return f"{assunto} — {motivo}"
+            return f"{assunto} — recusado: {motivo}"
+        aplicado_em, guardado_em = destinos_da_aplicacao(corpo)
+        if aplicado_em:
+            if len(aplicado_em) <= 1:
+                return f"{assunto} aplicado"
+            return f"{assunto} aplicado em {len(aplicado_em)} controles"
+        if guardado_em:
+            return (
+                frase_de_guardado(
+                    assunto,
+                    alvo_ausente=alvo_fora_da_mesa(host),
+                    coop=coop_aplica and coop_manda_nas_luzes(host),
+                    nativo=modo_nativo_manda_no_output(host),
+                )
+                or f"{assunto} — {GUARDADO}"
+            )
+        return f"{assunto} — {NADA_ACONTECEU}"
+    # Corpo ausente: a heurística de hoje é o que sobra, porque não há
+    # resposta do daemon a ler. Mesma ordem de sempre — o dono de AGORA
+    # (Modo Nativo, depois co-op quando aplica) antes da ausência do alvo.
+    if modo_nativo_manda_no_output(host):
+        return guardado_ate_o_nativo_sair(assunto)
+    if coop_aplica and coop_manda_nas_luzes(host):
+        return guardado_ate_o_coop_sair(assunto)
+    fora = alvo_fora_da_mesa(host)
+    if fora:
+        return guardado_ate_o_alvo_voltar(assunto, fora)
+    return f"{assunto} aplicado"
+
+
 __all__ = [
     "ALVO_SEM_NOME",
     "GUARDADO",
+    "NADA_ACONTECEU",
     "alvo_fora_da_mesa",
     "com_artigo",
     "coop_manda_nas_luzes",
     "frase_de_guardado",
+    "frase_do_desfecho",
     "guardado_ate_o_alvo_voltar",
     "guardado_ate_o_coop_sair",
     "guardado_ate_o_nativo_sair",
