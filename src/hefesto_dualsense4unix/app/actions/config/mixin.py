@@ -26,6 +26,15 @@ logger = get_logger(__name__)
 #: passaria a agir sobre a aba errada em silêncio.
 ABA_CONFIG = "tab_config_box"
 
+#: O motivo que `set_alvo_inativo(True, ...)` guarda para esta aba — Z2-5. O
+#: MOTIVO É A DOCSTRING original desta função, e não algo novo: esta aba se
+#: desqualifica de propósito porque o que se declara aqui vale para a mesa
+#: inteira, não por esquecimento de ligar um leitor.
+MOTIVO_ALVO_NAO_SE_APLICA = (
+    "esta aba declara para a mesa inteira — o seletor de controle do "
+    "cabeçalho não tem o que escolher aqui"
+)
+
 
 class ConfigActionsMixin(WidgetAccessMixin):
     """Mixin da aba Configurações (a última página do notebook)."""
@@ -54,7 +63,7 @@ class ConfigActionsMixin(WidgetAccessMixin):
 
         logger.info("config_tab_instalada", secoes=len(SECOES_DA_ABA))
 
-    def set_alvo_inativo(self, inativo: bool) -> None:
+    def set_alvo_inativo(self, inativo: bool, motivo: str = "") -> None:
         """Esmaece (ou devolve) o seletor de controle do cabeçalho.
 
         O cabeçalho carrega a fita "Ajustes vão para: [1][2][3][4]", que escolhe
@@ -72,9 +81,25 @@ class ConfigActionsMixin(WidgetAccessMixin):
         deixava esta aba visivelmente mais larga que as outras dez. Explicação
         que deforma a página cobra caro demais pelo que entrega.
 
+        **``motivo`` (Z2-5, 24/08/2026): guardado, NUNCA pintado** — a decisão
+        de 23/08 acima continua de pé, o cabeçalho não ganha nada. É o que o
+        contrato do §5 da Z2-O-ALVO-GANHA-DONO-01 pede de toda aba que se
+        desqualifica de propósito, e o que o portão da Z2-9 lê para separar
+        "esta aba decidiu não ler o alvo" de "ninguém decidiu nada" — a mesma
+        distinção que ``app/alvo_de_edicao.py`` já faz para a escrita.
+        ``inativo=True`` sem ``motivo`` LEVANTA: esmaecer sem dizer por quê,
+        nem que seja só para o portão, é a mesma omissão que o P3 media do
+        outro lado da fita.
+
         Tolerante por dentro e por fora: hospedeiro sem cabeçalho, sem fita ou
         sem GTK não levanta. É a fiação de uma aba, não pode derrubar a janela.
         """
+        if inativo and not motivo:
+            raise ValueError(
+                "set_alvo_inativo(True) exige motivo — a aba que se "
+                "desqualifica do alvo declara por quê (contrato Z2 §5)"
+            )
+        self._alvo_inativo_motivo: str | None = motivo if inativo else None
         faixa = getattr(self, "_target_strip", None)
         if faixa is None:
             return
