@@ -9,7 +9,7 @@ Esta página diz o que cada uma faz e o que se ajusta nela — e, no fim, o
 > `scripts/gui-captura/retratar_abas.py` — um comando, sem clique nenhum — e
 > por isso **acompanham a versão**: quem mexe na interface roda o script antes
 > de commitar. As desta página foram conferidas pela última vez em
-> **23/08/2026**, e cada conferência fica registrada em
+> **24/08/2026**, e cada conferência fica registrada em
 > [`assets/CONFERIDO-EM.md`](assets/CONFERIDO-EM.md). A aba "No jogo" já
 > aparece na tira desde 10/08/2026, e a **Configurações** desde 22/08/2026.
 > **Estas imagens são dublê — bancada sintética, nunca medição de nenhuma
@@ -21,11 +21,13 @@ Esta página diz o que cada uma faz e o que se ajusta nela — e, no fim, o
 > (`readme_configuracoes_inteira.png`) — sem ela a documentação mostraria
 > quatro seções e meia, e quem lê concluiria que a quinta não existe.
 >
-> **O que estas fotos NÃO mostram: o cabeçalho.** O script fotografa o
+> **O cabeçalho ganha foto própria** (24/08/2026). As fotos de aba são do
 > `main_notebook`, e a fita "Ajustes vão para:", o seletor "Número deste
-> controle:" e o selo "Editando: …" moram no `header_bar`, **fora do
-> recorte**. Por isso a seção "O cabeçalho", no fim desta página, foi escrita
-> contra o código — não contra a imagem.
+> controle:" e o selo "Editando: …" moram no `header_bar`, **fora daquele
+> recorte** — então o script grava duas imagens separadas dele
+> (`readme_cabecalho.png` e `readme_cabecalho_alvo_inativo.png`), que a seção
+> "O cabeçalho", no fim desta página, publica. Até esta data a seção era
+> escrita contra o código, sem imagem nenhuma.
 >
 > **NOTA DATADA — 10/08/2026.** Esta caixa dizia que as capturas eram de
 > 25/07/2026, com *"quatro controles conectados por Bluetooth ao mesmo
@@ -988,10 +990,11 @@ cobrando a frase de cada seção conforme o que ela faz de verdade com o clique
 
 ## O cabeçalho
 
-A faixa acima da tira de abas, e ela vale para **todas** — inclusive as que
-nenhuma das capturas desta página mostra: o script fotografa o
-`main_notebook`, e isto mora no `header_bar`, fora do recorte. Por isso esta
-seção foi escrita contra o código.
+A faixa acima da tira de abas, e ela vale para **todas** — as capturas de aba
+desta página não a alcançam (elas são do `main_notebook`, e isto mora no
+`header_bar`), então ela tem foto própria:
+
+![O cabeçalho, com a fita do alvo viva](assets/readme_cabecalho.png)
 
 | o que aparece | o que responde |
 |---|---|
@@ -1000,6 +1003,28 @@ seção foi escrita contra o código.
 | **"Editando: Controle N"** | de qual controle são os ajustes que estão à vista. Sem endereço fixo, ele diz isso: *"vale para todos"* |
 | **"Vibração em silêncio"** / **"Vibração fixa em X/Y"** | a vibração está **travada** pela aba Rumble e o jogo não a alcança. Devolve-se em Rumble → "Deixar o jogo controlar a vibração" |
 | **"N jogadores saíram — não foi você; voltam sozinhos"** | o jogo derrubou o co-op. Não é gesto seu, e eles voltam sozinhos |
+
+### A fita esmaece na aba que não lê o alvo
+
+![O cabeçalho na aba Início, com a fita do alvo esmaecida](assets/readme_cabecalho_alvo_inativo.png)
+
+A mesma faixa, na aba **Início**. A fita continua **à vista** e fica
+**inerte**: quem está nela não pode escolher o alvo, porque nada do que aquela
+aba faz é aplicado a um controle escolhido.
+
+**Esmaecer em vez de esconder é decisão medida.** Sumir com a fita faria o
+cabeçalho pular de altura a cada troca de aba, e deixaria você sem saber que a
+sua escolha continua valendo nas outras abas. E o cabeçalho **não ganha
+nenhuma explicação escrita** ao lado (decisão dela, 23/08/2026): o rótulo que
+dizia o motivo empurrava a largura da janela e cobria o subtítulo do produto.
+
+Hoje quatro abas leem o alvo — **Status, Gatilhos, Lightbar e Rumble** —, e é
+nelas que a fita fica viva. Nas outras sete a fita está esmaecida: na
+**Configurações** por definição (o que se declara lá vale para a mesa inteira),
+e em **Início, No jogo, Perfis, Sistema, Emulação e Navegação** porque elas
+**ainda** não leem o alvo — cada uma sai desta lista quando a leva dela ligar
+um leitor. A lista viva é `_ALVO_POR_ABA`, em
+`src/hefesto_dualsense4unix/app/app.py`, e é dela que estas duas fotos saem.
 
 **O "Número deste controle:" e o "Desenho das 5 luzes" da aba Lightbar não são a
 mesma coisa**, e confundi-los é o erro fácil: aqui muda-se o **número**; lá, só

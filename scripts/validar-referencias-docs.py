@@ -151,7 +151,20 @@ DIRS_IGNORADOS = frozenset(
 #: depois renomeou. Corrigir esses caminhos falsificaria o registro; cobrá-los
 #: seria cobrar do passado o presente. O que NÃO é isento ali é segurança:
 #: `tests/unit/test_saida_de_agente_sanitizada.py` varre MAC e segredo.
-PREFIXOS_IGNORADOS = ("docs/history/", "docs/research/", "docs/process/agentes/")
+#: `process/arquivo/` entrou em 24/08/2026 e herda a isenção pela mesma razão,
+#: um degrau adiante: é onde a leva de hoje passou a recolher o que ninguém
+#: mais alcança por navegação (o primeiro lote foram os 57 relatórios de agente
+#: de 06/08, órfãos havia 18 dias). Mover não é apagar — a decisão medida
+#: continua no git e no lugar novo —, mas o conteúdo movido é registro do
+#: passado pelo mesmo motivo que o de `agentes/`: cobrar dele o presente é
+#: cobrar o impossível. Sem esta linha, mover um relatório para cá o tornaria
+#: subitamente reprovável por caminhos que ele nunca teve como manter.
+PREFIXOS_IGNORADOS = (
+    "docs/history/",
+    "docs/research/",
+    "docs/process/agentes/",
+    "docs/process/arquivo/",
+)
 
 #: Arquivos que existem, mas em OUTRO projeto. Citar `pydualsense.py` é citar a
 #: biblioteca de terceiros; citar `universal-sanitizer.py` é citar a ferramenta

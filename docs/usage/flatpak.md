@@ -160,6 +160,12 @@ ao autostart do ambiente gráfico.
 > ele perderia de vista nove arquivos de uma vez. O pacote **importa** a função
 > de tradução, então a proporção passou a **17 de 29**: o quadro melhora, e a
 > promessa continua retirada até o numerador virar zero.
+>
+> **Nota datada — 24/08/2026:** são **30** módulos desde a `ONDA0-Z7`, que
+> acrescentou `ambiente_na_tela.py`. Ele **não** importa a função de tradução,
+> então a proporção passou a **18 de 30** — o quadro piora pela primeira vez
+> desde 21/08. As três frases dele ainda não estão penduradas em tela nenhuma;
+> o `_()` entra junto com a fiação, na Onda 10 e na Onda 11.
 
 A partir da v3.4.0 o bundle Flatpak embarca **EN baseline** + **PT-BR
 identidade** em `/app/share/hefesto-dualsense4unix/locale/{en,pt_BR}/

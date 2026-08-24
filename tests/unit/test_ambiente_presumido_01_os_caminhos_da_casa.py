@@ -114,9 +114,18 @@ class TestPortaoFaixaSintetica:
         self, tmp_path: Path
     ) -> None:
         """MAC de teste que NÃO é uma das três faixas proibidas não reprova —
-        o portão é sobre estas TRÊS faixas específicas, não sobre todo MAC."""
+        o portão é sobre estas TRÊS faixas específicas, não sobre todo MAC.
+
+        O valor é `3c:9d:07:00:00:0a`, a SEGUNDA faixa sintética da casa
+        (`test_anonimato_de_fixtures.py::_PREFIXOS_FORJADOS`, conferida contra
+        o registro IEEE) com a máscara nos octetos 4 e 5. Serve aqui por ser a
+        única coisa que este teste precisa — MAC-forma fora das três faixas do
+        portão — e por já ser faixa DOCUMENTADA: qualquer outro token de 12 hex
+        reprova `test_nenhum_mac_fora_das_faixas_forjadas_em_tests`, que é
+        allowlist por desenho e não sabe distinguir "forjado óbvio" de real.
+        """
         alvo = tmp_path / "controllers.json"
-        alvo.write_text('{"controles": [{"mac": "deadbeef0001"}]}\n', encoding="utf-8")
+        alvo.write_text('{"controles": [{"mac": "3c9d0700000a"}]}\n', encoding="utf-8")
 
         assert check_faixa_sintetica.achados(tmp_path) == []
 

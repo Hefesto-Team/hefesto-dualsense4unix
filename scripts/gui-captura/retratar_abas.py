@@ -380,21 +380,55 @@ def _estado_da_mesa_cheia(fixture=None, quantos=None) -> dict:  # type: ignore[n
     return estado
 
 
+#: A classe de estilo da janela do produto, a única parte do tema que é POR
+#: JANELA — o resto (`add_provider_for_screen`, a fonte, a variante escura)
+#: vale para a tela inteira e já foi aplicado pela primeira chamada.
+CLASSE_DA_JANELA = "hefesto-dualsense4unix-window"
+
+
 def _aplicar_tema(janela) -> str:  # type: ignore[no-untyped-def]
-    """Aplica o tema do produto. A assinatura mudou entre versões; tenta as duas."""
+    """Aplica o tema do produto — UMA VEZ POR EXECUÇÃO.
+
+    `apply_theme` NÃO é idempotente, e isso não é defeito dele: em produção ele
+    roda uma vez (`app/app.py:286`). Ele lê `gtk-font-name` do `Gtk.Settings`,
+    soma o delta de acessibilidade e grava de volta — então a segunda chamada
+    soma o delta sobre o nome JÁ somado, a terceira sobre o da segunda, e a
+    fonte da tela inteira cresce a cada janela nova.
+
+    MEDIDO em 24/08/2026, fotografando o `header_bar` cinco vezes seguidas
+    (cada foto criava uma `OffscreenWindow` e chamava esta função): o cabeçalho
+    saía com 117, 119, 122, 126 e 130 px de altura, com o MESMO conteúdo e os
+    MESMOS 17 widgets visíveis. A foto do cabeçalho vinha, desde 14/08/2026,
+    com a tipografia um degrau maior que as fotos de aba — e com duas fotos de
+    cabeçalho a segunda sairia maior que a primeira, sugerindo que esmaecer a
+    fita muda o tamanho do texto. Não muda.
+
+    Por isso a segunda chamada em diante só marca a janela com a classe de
+    estilo, que é a única parte do tema que é por janela.
+    """
     try:
         from hefesto_dualsense4unix.app.theme import apply_theme
     except Exception as exc:  # tema indisponível não impede a foto
         return f"tema indisponível ({exc})"
+    global _tema_ja_aplicado
+    if _tema_ja_aplicado:
+        with contextlib.suppress(Exception):
+            janela.get_style_context().add_class(CLASSE_DA_JANELA)
+        return "tema já aplicado nesta execução (só a classe da janela)"
     for tentativa in (lambda: apply_theme(janela), lambda: apply_theme()):
         try:
             tentativa()
+            _tema_ja_aplicado = True
             return "tema aplicado"
         except TypeError:
             continue
         except Exception as exc:
             return f"tema falhou ({exc})"
     return "tema não aplicado"
+
+
+#: Ver `_aplicar_tema`: a segunda chamada em diante inflaria a fonte da tela.
+_tema_ja_aplicado = False
 
 
 def _aplicar_regras_de_runtime(builder, card) -> None:  # type: ignore[no-untyped-def]
@@ -423,6 +457,48 @@ def _aplicar_regras_de_runtime(builder, card) -> None:  # type: ignore[no-untype
     # perfil e daemon. Os textos são os que o daemon dela publica hoje.
     host._set_frame_estado_visivel(False)
     card.definir_estado_global("Nenhum", "Ligado")
+
+
+def _controle_padrao(indice: int, jogador: int, *, primario: bool) -> dict:  # type: ignore[type-arg]
+    """Um dos dois controles do dublê padrão — um no cabo, um no rádio.
+
+    O `uniq` segue a máscara desta casa (octetos 4 e 5 zerados; há portão que
+    reprova MAC real em arquivo versionado) e existe por uma razão de tela: a
+    fita "Ajustes vão para:" do cabeçalho só ganha um chip por controle quando
+    ele tem endereço — sem `uniq`, a foto do cabeçalho sairia com a legenda e
+    nenhum botão, que é o retrato de uma janela que não existe.
+    """
+    return {
+        "index": indice,
+        "connected": True,
+        "transport": "usb" if primario else "bt",
+        "is_primary": primario,
+        "player": jogador,
+        "player_slot": jogador,
+        "battery_pct": 87 if primario else 64,
+        "uniq": f"aa:bb:cc:00:00:0{indice + 1}",
+    }
+
+
+#: A mesa que dez das onze fotos da documentação retratam: DOIS controles, um
+#: no cabo e um no rádio, dois jogadores.
+#:
+#: Mora aqui, e não dentro do `_montar_aba_inicio`, desde 24/08/2026: a foto do
+#: cabeçalho passou a existir no modo padrão, e ela precisa da MESMA mesa que
+#: as abas mostram. Duas cópias do dublê seriam duas mesas — a fita do
+#: cabeçalho podendo dizer "2 controles" ao lado de uma aba Início com outros
+#: dois, e ninguém percebendo.
+ESTADO_PADRAO_DE_DOIS: dict = {  # type: ignore[type-arg]
+    "connected": True,
+    "native_mode": False,
+    "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
+    "coop": {"enabled": True, "players": 2},
+    "controllers": [
+        _controle_padrao(0, 1, primario=True),
+        _controle_padrao(1, 2, primario=False),
+    ],
+    "active_profile": "coop_local",
+}
 
 
 def _montar_aba_inicio(builder, estado=None) -> str:  # type: ignore[no-untyped-def]
@@ -465,28 +541,8 @@ def _montar_aba_inicio(builder, estado=None) -> str:  # type: ignore[no-untyped-
         def _refresh_home_tab(self) -> None:
             return None
 
-    def _controle(indice: int, jogador: int, *, primario: bool) -> dict:
-        return {
-            "index": indice,
-            "connected": True,
-            "transport": "usb" if primario else "bt",
-            "is_primary": primario,
-            "player": jogador,
-            "battery_pct": 87 if primario else 64,
-        }
-
     if estado is None:
-        estado = {
-            "connected": True,
-            "native_mode": False,
-            "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
-            "coop": {"enabled": True, "players": 2},
-            "controllers": [
-                _controle(0, 1, primario=True),
-                _controle(1, 2, primario=False),
-            ],
-            "active_profile": "coop_local",
-        }
+        estado = ESTADO_PADRAO_DE_DOIS
     try:
         host = _Host()
         host.install_home_tab()
@@ -1975,7 +2031,21 @@ def _host_da_aba_status(builder):  # type: ignore[no-untyped-def]
     return _Host()
 
 
-def _injetar_cards_da_mesa_cheia(builder, estado) -> str:  # type: ignore[no-untyped-def]
+def _host_do_cabecalho(builder):  # type: ignore[no-untyped-def]
+    """O host da Status com a fita do alvo JÁ montada — e um só por execução.
+
+    `_init_controller_target_combo` **empacota** a faixa "Ajustes vão para:" no
+    `header_bar` a cada chamada: dois hosts, duas faixas empilhadas, e a foto
+    do cabeçalho mostrando uma janela que não existe. Por isso quem precisa da
+    fita — a aba Status da mesa cheia e as duas fotos do cabeçalho — recebe o
+    MESMO host, criado uma vez pelo `main`.
+    """
+    host = _host_da_aba_status(builder)
+    host._init_controller_target_combo()
+    return host
+
+
+def _injetar_cards_da_mesa_cheia(builder, estado, host=None) -> str:  # type: ignore[no-untyped-def]
     """Põe os QUATRO cards na aba Status, pelo caminho de PRODUÇÃO.
 
     O `_injetar_card` acima monta UM card à mão porque o dublê da suíte é uma
@@ -2012,8 +2082,7 @@ def _injetar_cards_da_mesa_cheia(builder, estado) -> str:  # type: ignore[no-unt
       de EXISTÊNCIA da aba poderia TIRÁ-LA da tira, e a foto dela sumiria.
     """
     try:
-        host = _host_da_aba_status(builder)
-        host._init_controller_target_combo()
+        host = _host_do_cabecalho(builder) if host is None else host
         host._render_slow_state(estado)
     except Exception as exc:
         return f"cards não injetados ({exc}) — a aba Status sai vazia"
@@ -2051,10 +2120,23 @@ ALTURA_MAXIMA_ESTICADA = 4000
 #: sem ela a foto esticada corta os últimos pixels da última seção.
 _FOLGA_DA_TIRA = 26
 
-#: A foto do cabeçalho — ver `_fotografar_o_cabecalho`. Ela existe só no modo
-#: mesa cheia porque é lá que a fita do alvo tem o que mostrar: com um controle
-#: só, o seletor não aparece.
-NOME_DO_CABECALHO = "mesa_cheia_cabecalho"
+#: A foto do cabeçalho com a fita do alvo VIVA — ver `_fotografar_o_cabecalho`.
+#:
+#: Ela nasceu só no modo mesa cheia (14/08/2026) e passou a existir em TODOS os
+#: modos em 24/08/2026, com o `readme_` da documentação: a Z2-8 fez a fita
+#: esmaecer em SEIS abas que antes ficavam sensíveis, e nenhuma foto deste
+#: repositório mostrava o cabeçalho para provar como isso ficou. O texto do
+#: `interface.md` que dizia *"esta seção foi escrita contra o código"* caducou
+#: com ela.
+NOME_DO_CABECALHO = "readme_cabecalho"
+
+#: A foto do MESMO cabeçalho numa aba que não lê o alvo — a fita esmaecida.
+#:
+#: Duas fotos e não uma porque o assunto da Z2-8 é a DIFERENÇA entre os dois
+#: estados: uma foto sozinha não diz se aquilo é a fita normal ou a inerte.
+#: Quem escolhe as duas abas é `_as_duas_abas_do_alvo`, lendo o mapa
+#: `_ALVO_POR_ABA` do produto — não uma lista repetida aqui.
+NOME_DO_CABECALHO_INERTE = "readme_cabecalho_alvo_inativo"
 
 
 def _fotografar_a_aba_inteira(janela, notebook, saida, indice, nome) -> str:  # type: ignore[no-untyped-def]
@@ -2103,18 +2185,67 @@ def _fotografar_a_aba_inteira(janela, notebook, saida, indice, nome) -> str:  # 
     )
 
 
-def _fotografar_o_cabecalho(builder, estado, saida, nome) -> str:  # type: ignore[no-untyped-def]
+def _as_duas_abas_do_alvo() -> tuple[str, str, str] | None:
+    """Uma aba que LÊ o alvo e uma que não lê, com o motivo — lidos do produto.
+
+    O mapa é `HefestoApp._ALVO_POR_ABA` (`app/app.py`): `None` = a aba lê o
+    alvo e a fita fica sensível; um texto = a aba se desqualifica, e o texto é
+    o motivo que `set_alvo_inativo` guarda. Ler o mapa em vez de repetir aqui
+    a resposta é o que impede a foto de continuar mostrando o estado de ontem
+    quando uma onda ligar o leitor de mais uma aba.
+
+    Devolve `(id da aba que lê, id da aba que não lê, motivo)`, ou `None` se o
+    produto não puder ser importado ou o mapa não tiver os dois lados — caso
+    em que a foto da fita inerte não sai, e o `main` diz por quê.
+    """
+    try:
+        from hefesto_dualsense4unix.app.app import HefestoApp
+    except Exception:
+        return None
+    mapa = getattr(HefestoApp, "_ALVO_POR_ABA", None)
+    if not isinstance(mapa, dict):
+        return None
+    le = next((aba for aba, motivo in mapa.items() if motivo is None), None)
+    # A Início é a primeira aba da tira e uma das SEIS que a Z2-8 passou a
+    # esmaecer — é a que a leitura da documentação encontra primeiro. Se ela
+    # sair do lado inerte um dia, qualquer outra aba com motivo serve.
+    inerte = next(
+        (
+            aba
+            for aba in ("tab_home_box", *mapa)
+            if isinstance(mapa.get(aba), str)
+        ),
+        None,
+    )
+    if le is None or inerte is None:
+        return None
+    return le, inerte, str(mapa[inerte])
+
+
+def _fotografar_o_cabecalho(  # type: ignore[no-untyped-def]
+    builder, estado, saida, nome, *, host=None, motivo=None
+) -> str:
     """Fotografa o `header_bar` — a fita do alvo, que NENHUMA foto mostrava.
 
     Achado de 14/08/2026, e ele é do tipo que só aparece quando alguém procura:
     o `main` deste script arranca o `main_notebook` do `root_box` e fotografa a
-    janela pelo NOTEBOOK. O `header_bar` fica de fora das dez fotos por
+    janela pelo NOTEBOOK. O `header_bar` fica de fora das onze fotos de aba por
     construção do recorte — não porque não esteja na tela dela.
 
     Isso importa porque a fita "Ajustes vão para: …" e o selo "Editando: …"
-    moram lá, e são o assunto de duas entregas da leva da mesa cheia. A
-    PROVA-DE-TELA-01 exige foto antes e depois; sem esta função, essa foto não
-    existia.
+    moram lá. A PROVA-DE-TELA-01 exige foto antes e depois; sem esta função,
+    essa foto não existia.
+
+    ``motivo`` (24/08/2026) É O ASSUNTO DA Z2-8
+    -------------------------------------------
+
+    Até a Z2-8 só a aba Configurações esmaecia a fita; agora Início, No jogo,
+    Perfis, Sistema, Emulação e Navegação esmaecem também
+    (`HefestoApp._ALVO_POR_ABA`). Sem `motivo` a fita fica como está — o
+    retrato de uma aba que LÊ o alvo. Com `motivo`, quem esmaece é
+    `ConfigActionsMixin.set_alvo_inativo`, o método de PRODUÇÃO: uma chamada a
+    `set_sensitive(False)` daqui seria um segundo dono da regra, e a foto
+    passaria a mentir no dia em que ela mudasse.
 
     A ORDEM AQUI É A CURA DE UMA MENTIRA POSSÍVEL
     ---------------------------------------------
@@ -2124,7 +2255,10 @@ def _fotografar_o_cabecalho(builder, estado, saida, nome) -> str:  # type: ignor
     tirada logo depois dele mostraria uma tela que nunca existe.
 
     Por isso o `_render_slow_state` roda DE NOVO, depois do `show_all()`: quem
-    decide o que fica escondido é a produção, não este script.
+    decide o que fica escondido é a produção, não este script. E o
+    `set_alvo_inativo` roda DEPOIS dele, pela mesma razão em espelho: o
+    `_render_slow_state` reconstrói os chips da fita, e esmaecer antes seria
+    esmaecer o que ele ainda vai refazer.
     """
     cabecalho = builder.get_object("header_bar")
     if cabecalho is None:
@@ -2138,7 +2272,7 @@ def _fotografar_o_cabecalho(builder, estado, saida, nome) -> str:  # type: ignor
         janela.set_size_request(LARGURA, -1)
         _aplicar_tema(janela)
         janela.show_all()
-        host = _host_da_aba_status(builder)
+        host = _host_do_cabecalho(builder) if host is None else host
         # `_render_online` é quem escreve a linha da direita ("Conectado (4
         # controles) · USB + USB + BT + BT"). Ela NÃO sai do `_render_slow_state`
         # — na janela dela quem a escreve é a máquina de reconexão, a 0,5 Hz —,
@@ -2146,15 +2280,21 @@ def _fotografar_o_cabecalho(builder, estado, saida, nome) -> str:  # type: ignor
         # Desconectado" em vermelho, ao lado de quatro chips de controle.
         host._render_online(estado)
         host._render_slow_state(estado)
+        from hefesto_dualsense4unix.app.actions.config import ConfigActionsMixin
+
+        ConfigActionsMixin.set_alvo_inativo(host, motivo is not None, motivo or "")
         _esperar_o_redimensionamento()
         arquivo = saida / f"{nome}.png"
         pixbuf = janela.get_pixbuf()
         pixbuf.savev(str(arquivo), "png", [], [])
     except Exception as exc:
         return f"  cabeçalho não fotografado ({exc})"
+    estado_da_fita = (
+        f"inerte — {motivo}" if motivo else "sensível: a aba lê o alvo"
+    )
     return (
         f"  {arquivo.name}: o cabeçalho com {pixbuf.get_height()} px de "
-        "altura — a fita do alvo, que não cabe em nenhuma foto de aba"
+        f"altura, fita {estado_da_fita}"
     )
 
 
@@ -2198,11 +2338,19 @@ def main(
     print(f"  {_aplicar_tema(janela)}")
     janela.show_all()
     _assentar()
+    # Um host da Status para a execução inteira: ele é o dono da fita do alvo
+    # no `header_bar` (ver `_host_do_cabecalho`), e dois donos empilhariam duas
+    # fitas. A criação vem ANTES das fotos de aba de propósito — o `header_bar`
+    # não está dentro da janela que elas retratam, então nada aqui move um
+    # pixel delas.
+    host_do_cabecalho = _host_do_cabecalho(builder)
     if estado_da_mesa is None:
         print(f"  {_injetar_card(builder)}")
     else:
         print(f"  fixture lido: {FIXTURE_MESA_CHEIA.relative_to(RAIZ)}")
-        print(f"  {_injetar_cards_da_mesa_cheia(builder, estado_da_mesa)}")
+        print(
+            f"  {_injetar_cards_da_mesa_cheia(builder, estado_da_mesa, host_do_cabecalho)}"
+        )
     print(f"  {_injetar_modos_de_gatilho(builder)}")
     print(f"  {_montar_aba_inicio(builder, estado_da_mesa)}")
     print(f"  {_montar_aba_no_jogo(builder, estado_da_mesa)}")
@@ -2245,7 +2393,7 @@ def main(
     # Os nomes especiais seguem o prefixo do modo: com `--cinco` a foto
     # esticada e a do cabeçalho não podem sobrescrever as de quatro, que são
     # outra medição.
-    prefixo = "mesa_de_cinco_" if cinco else "mesa_cheia_"
+    prefixo = "mesa_de_cinco_" if cinco else ("mesa_cheia_" if mesa_cheia else "readme_")
     for nome_esticado in ABAS_ESTICADAS:
         # A Configurações também estoura nos modos de mesa — mais ainda neles,
         # que é o ponto do item 15 do TODO-INTEGRACAO: cinco controles na
@@ -2264,7 +2412,6 @@ def main(
                 )
             )
     aba_que_estoura = ABA_QUE_ESTOURA.replace("mesa_cheia_", prefixo, 1)
-    nome_do_cabecalho = NOME_DO_CABECALHO.replace("mesa_cheia_", prefixo, 1)
     if mesa_cheia and aba_que_estoura in nomes:
         print(
             _fotografar_a_aba_inteira(
@@ -2275,11 +2422,44 @@ def main(
                 aba_que_estoura,
             )
         )
-    if mesa_cheia and estado_da_mesa is not None:
+    # As DUAS fotos do cabeçalho, e em todos os modos (24/08/2026). No padrão a
+    # mesa é o mesmo dublê de dois que as abas mostram; nos modos de mesa é o
+    # fixture. A segunda foto é a fita ESMAECIDA, que é o que a Z2-8 entregou e
+    # o que nenhuma imagem deste repositório provava.
+    estado_do_cabecalho = (
+        ESTADO_PADRAO_DE_DOIS if estado_da_mesa is None else estado_da_mesa
+    )
+    nome_do_cabecalho = NOME_DO_CABECALHO.replace("readme_", prefixo, 1)
+    print(
+        _fotografar_o_cabecalho(
+            builder,
+            estado_do_cabecalho,
+            saida,
+            nome_do_cabecalho,
+            host=host_do_cabecalho,
+        )
+    )
+    duas_abas = _as_duas_abas_do_alvo()
+    if duas_abas is None:
+        print(
+            "  fita inerte não fotografada: `HefestoApp._ALVO_POR_ABA` não "
+            "tem os dois lados (uma aba que lê e uma que não lê)"
+        )
+    else:
+        aba_que_le, aba_inerte, motivo = duas_abas
         print(
             _fotografar_o_cabecalho(
-                builder, estado_da_mesa, saida, nome_do_cabecalho
+                builder,
+                estado_do_cabecalho,
+                saida,
+                NOME_DO_CABECALHO_INERTE.replace("readme_", prefixo, 1),
+                host=host_do_cabecalho,
+                motivo=motivo,
             )
+        )
+        print(
+            f"  a fita viva é a de `{aba_que_le}`; a inerte, a de "
+            f"`{aba_inerte}` — as duas lidas de `_ALVO_POR_ABA`"
         )
 
     print(f"\n  {total} aba(s) em {saida}")

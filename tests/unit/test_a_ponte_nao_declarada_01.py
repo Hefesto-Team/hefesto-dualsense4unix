@@ -212,14 +212,26 @@ def test_o_portao_continua_verde_na_arvore_de_verdade(arvore: Path) -> None:
 def test_a_linha_uhid_que_nao_afirma_nada_continua_podendo_calar(arvore: Path) -> None:
     """Vazio é PERGUNTA ABERTA. A regra cobra promessa máxima, não silêncio."""
     mapa = arvore / "docs/data/mapa-controles.csv"
-    _escreve(mapa, LINHA_SEM_PONTE, {"cabo_de_onde_sei": "medido"})
+    # `cabo_por_que_nao_aciona` cala a regra 16 (`causa-nao-declarada`, nascida
+    # em 24/08/2026), que cobra causa de TODO `aciona = não` medido. É a mesma
+    # técnica de `_promove_sem_dizer_a_ponte`, que preenche `teste_que_morde`
+    # para a regra vizinha não roubar a medição desta. O valor é o que a
+    # própria `cabo_ressalva` desta linha já diz — "o Pro não tem lightbar nem
+    # gatilho adaptativo para onde replicar" —, e nada muda na árvore real: lá
+    # a célula segue `inferido-do-codigo`, que a regra 16 não cobra.
+    _escreve(
+        mapa,
+        LINHA_SEM_PONTE,
+        {"cabo_de_onde_sei": "medido", "cabo_por_que_nao_aciona": "nada-a-acionar"},
+    )
 
     saida = _rodar(arvore)
     assert saida.returncode == 0, (
         "`de_onde_sei = medido` com `aciona = não` não é afirmação forte, e a "
         "regra não pode cobrar ponte de quem não promete nada:\n"
-        + saida.stdout[-1500:]
+        + "\n".join(_falhas(saida.stdout))
     )
+    assert "ponte-nao-declarada" not in saida.stdout, saida.stdout[-1500:]
 
 
 # --------------------------------------------------------------------------

@@ -191,12 +191,15 @@ recado da janela continuar em português.
 **Grau: MEDIDO** em 07/08/2026, por leitura de AST dos 18 arquivos (**19**
 desde 08/08, com o `relancar.py` da `RELANCAR-01`; **20** desde 16/08, com o
 `carona_do_wrapper.py` da `CARONA-DO-WRAPPER-01` — a proporção era **17 de
-20**; **21** desde 21/08, com o `config_actions.py` da `CONFIG-01`, que
-**importa** a função de tradução e leva a proporção a **17 de 29**): conta-se
-quem importa `_` de `hefesto_dualsense4unix.utils.i18n` (ou `gettext`) e quem
-tem literal com caractere acentuado. Importam `config_actions.py`,
-`footer_actions.py`, `lightbar_actions.py` e `status_actions.py`. O portão que
-guarda esta decisão refaz essa mesma contagem a cada rodada — ver abaixo.
+20**; **29** desde 22/08, quando a aba Configurações virou o pacote
+`app/actions/config/` e o censo passou a contar subpasta — o pacote **importa**
+a função de tradução e leva a proporção a **17 de 29**; **30** desde 24/08, com
+o `ambiente_na_tela.py` da `ONDA0-Z7`, que **não** importa e leva a proporção a
+**18 de 30**): conta-se quem importa `_` de
+`hefesto_dualsense4unix.utils.i18n` (ou `gettext`) e quem tem literal com
+caractere acentuado. Importam `footer_actions.py`, `lightbar_actions.py`,
+`status_actions.py` e o pacote `config/`. O portão que guarda esta decisão
+refaz essa mesma contagem a cada rodada — ver abaixo.
 
 ### O encanamento de i18n continua vivo, e de propósito
 

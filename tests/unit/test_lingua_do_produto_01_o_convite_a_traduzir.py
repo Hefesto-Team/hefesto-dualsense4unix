@@ -275,14 +275,32 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     # próxima pasta some do mapa em silêncio. Com `rglob`, 21 viraram 29 (os 20
     # do primeiro nível mais os 9 do pacote) e o encanamento aparece em CINCO
     # arquivos: os três de sempre mais `config/mixin.py` e `config/moldura.py`.
-    assert total == 29, (
-        f"`app/actions/` tem {total} módulos, não 29. A contagem citada em "
+    #
+    # ONDA0-Z7 (24/08/2026): 29 viraram 30 com o `ambiente_na_tela.py`, e 17
+    # viraram 18 — os dois sobem JUNTOS, que é o sinal de que nada mudou de
+    # natureza. Ele põe texto de tela ("Teclado na tela: instalado…") em
+    # português direto, no molde de `daemon_actions.descrever_deteccao_de_janela`
+    # que ele copia — e esse molde também não traduz.
+    #
+    # **É uma piora, e fica escrita como tal:** desde a CONFIG-01 (21/08) o
+    # módulo novo de `actions/` nascia traduzindo, e este não nasceu. O motivo
+    # de NÃO consertar aqui é medido, não conveniência: as três frases ainda
+    # não estão penduradas em tela nenhuma (quem as pendura é a Onda 10 e a
+    # Onda 11, §10 da sprint Z7) e ainda vão ao olho dela para aprovação de
+    # redação. Embrulhar em `_()` agora congela os msgid ANTES da aprovação, e
+    # trocar o texto depois troca o msgid e deixa o inglês para trás — que é o
+    # DEFEITO C já medido em `test_mesa_cheia_11_a_janela_conta_quatro.py`,
+    # sete tooltips que voltaram ao português numa sessão `LANG=en`. O momento
+    # certo de ligar o `_()` é junto com a fiação, no mesmo passo do
+    # `i18n_extract.sh` + `i18n_compile.sh`.
+    assert total == 30, (
+        f"`app/actions/` tem {total} módulos, não 30. A contagem citada em "
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
         "`docs/usage/troubleshooting.md` precisa mudar junto."
     )
-    assert len(fora) == 17, (
+    assert len(fora) == 18, (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
-        f"tradução, não 17: {', '.join(sorted(fora))}. Se o número CAIU, é "
+        f"tradução, não 18: {', '.join(sorted(fora))}. Se o número CAIU, é "
         "trabalho bom — atualize as três páginas que o citam. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )
@@ -292,7 +310,8 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     # seria desligado na terceira vez — que é como portão vira decoração. O que
     # precisa doer é o volume DESABAR, porque aí a premissa mudou.
     assert sum(fora.values()) >= 400, (
-        f"os 16 módulos somam agora {sum(fora.values())} literais acentuados; "
+        f"os {len(fora)} módulos somam agora {sum(fora.values())} literais "
+        "acentuados; "
         "eram 561 em 07/08/2026. Uma queda desta ordem significa que o texto "
         "vivo das abas mudou de lugar, e a decisão da língua precisa ser "
         "remedida antes de continuar valendo como está escrita."
