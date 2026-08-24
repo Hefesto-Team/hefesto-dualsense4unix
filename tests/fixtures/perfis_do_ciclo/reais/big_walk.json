@@ -1,0 +1,68 @@
+{
+  "name": "Big Walk",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "steam_app_1478500"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 100,
+  "triggers": {
+    "left": {
+      "mode": "Resistance",
+      "params": [
+        3,
+        5
+      ]
+    },
+    "right": {
+      "mode": "Rigid",
+      "params": [
+        5,
+        200
+      ]
+    }
+  },
+  "leds": {
+    "lightbar": [
+      129,
+      61,
+      156
+    ],
+    "player_leds": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ],
+    "lightbar_brightness": 1.0,
+    "auto_player_colors": false
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": "balanceado",
+    "custom_mult": null
+  },
+  "speaker": {
+    "volume": 99,
+    "muted": false,
+    "rota": 3
+  },
+  "mode": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "coop": true
+  },
+  "suppress_desktop_emulation": false,
+  "ponte": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "steam_input": false,
+    "confirmada_em": "2026-08-19T21:16:55-03:00",
+    "confirmada_por": "silencio"
+  }
+}

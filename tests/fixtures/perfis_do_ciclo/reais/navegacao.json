@@ -1,0 +1,73 @@
+{
+  "name": "Navegação",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "firefox",
+      "Navigator",
+      "brave-browser",
+      "Brave-browser",
+      "chromium",
+      "chromium-browser",
+      "google-chrome",
+      "Google-chrome",
+      "gnome-terminal",
+      "gnome-terminal-server",
+      "steam",
+      "Steam"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 0,
+  "triggers": {
+    "left": {
+      "mode": "PulseA",
+      "params": [
+        2,
+        7,
+        180
+      ]
+    },
+    "right": {
+      "mode": "Resistance",
+      "params": [
+        3,
+        5
+      ]
+    }
+  },
+  "leds": {
+    "lightbar": [
+      97,
+      53,
+      131
+    ],
+    "player_leds": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ],
+    "lightbar_brightness": 0.4,
+    "auto_player_colors": false
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": null,
+    "custom_mult": null
+  },
+  "mic": {
+    "button_toggles_system": true,
+    "volume": 98,
+    "muted": false
+  },
+  "speaker": {
+    "volume": 102,
+    "muted": false,
+    "rota": 2
+  },
+  "suppress_desktop_emulation": false
+}

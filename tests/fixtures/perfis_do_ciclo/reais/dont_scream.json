@@ -1,0 +1,71 @@
+{
+  "name": "Dont Scream",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "steam_app_2497900"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 97,
+  "triggers": {
+    "left": {
+      "mode": "MultiPositionFeedback",
+      "params": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        8
+      ]
+    },
+    "right": {
+      "mode": "Pulse",
+      "params": []
+    }
+  },
+  "leds": {
+    "lightbar": [
+      129,
+      61,
+      156
+    ],
+    "player_leds": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ],
+    "lightbar_brightness": 1.0,
+    "auto_player_colors": false
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": "balanceado",
+    "custom_mult": null
+  },
+  "mic": {
+    "button_toggles_system": true,
+    "volume": 97,
+    "muted": false
+  },
+  "speaker": {
+    "volume": 99,
+    "muted": false,
+    "rota": 3
+  },
+  "mode": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "coop": true
+  },
+  "suppress_desktop_emulation": false
+}
