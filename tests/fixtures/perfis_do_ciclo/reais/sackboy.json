@@ -1,0 +1,63 @@
+{
+  "name": "Sackboy",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "steam_app_1599660"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 97,
+  "triggers": {
+    "left": {
+      "mode": "SemiAutoGun",
+      "params": [
+        3,
+        6,
+        5
+      ]
+    },
+    "right": {
+      "mode": "AutoGun",
+      "params": [
+        2,
+        6,
+        60
+      ]
+    }
+  },
+  "leds": {
+    "lightbar": [
+      255,
+      128,
+      0
+    ],
+    "player_leds": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "lightbar_brightness": 1.0,
+    "auto_player_colors": true
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": null,
+    "custom_mult": null
+  },
+  "mic": {
+    "button_toggles_system": true,
+    "volume": null,
+    "muted": false
+  },
+  "speaker": {
+    "volume": 102,
+    "muted": false,
+    "rota": 2
+  },
+  "suppress_desktop_emulation": false
+}

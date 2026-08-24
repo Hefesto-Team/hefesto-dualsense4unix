@@ -1,0 +1,61 @@
+{
+  "name": "Touhou_Luna_Nights",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "steam_app_851100"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 97,
+  "triggers": {
+    "left": {
+      "mode": "Feedback",
+      "params": [
+        5,
+        4
+      ]
+    },
+    "right": {
+      "mode": "Resistance",
+      "params": [
+        3,
+        5
+      ]
+    }
+  },
+  "leds": {
+    "lightbar": [
+      80,
+      60,
+      220
+    ],
+    "player_leds": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ],
+    "lightbar_brightness": 0.6,
+    "auto_player_colors": true
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": "custom",
+    "custom_mult": 0.66
+  },
+  "speaker": {
+    "volume": 101,
+    "muted": false,
+    "rota": 2
+  },
+  "mode": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "coop": true
+  },
+  "suppress_desktop_emulation": true
+}

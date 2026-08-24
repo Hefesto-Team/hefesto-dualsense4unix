@@ -1,0 +1,60 @@
+{
+  "name": "Pragmata",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "steam_app_3357650"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 100,
+  "triggers": {
+    "left": {
+      "mode": "SlopeFeedback",
+      "params": [
+        1,
+        8,
+        2,
+        7
+      ]
+    },
+    "right": {
+      "mode": "Pulse",
+      "params": []
+    }
+  },
+  "leds": {
+    "lightbar": [
+      97,
+      53,
+      131
+    ],
+    "player_leds": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "lightbar_brightness": 1.0,
+    "auto_player_colors": true
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": "max",
+    "custom_mult": null
+  },
+  "speaker": {
+    "volume": 102,
+    "muted": false,
+    "rota": 2
+  },
+  "mode": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "coop": true
+  },
+  "suppress_desktop_emulation": false
+}

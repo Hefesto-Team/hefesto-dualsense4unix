@@ -1,0 +1,61 @@
+{
+  "name": "Mortal Kombat",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "steam_app_1971870"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 100,
+  "triggers": {
+    "left": {
+      "mode": "Feedback",
+      "params": [
+        5,
+        4
+      ]
+    },
+    "right": {
+      "mode": "Resistance",
+      "params": [
+        3,
+        5
+      ]
+    }
+  },
+  "leds": {
+    "lightbar": [
+      80,
+      60,
+      220
+    ],
+    "player_leds": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ],
+    "lightbar_brightness": 0.6,
+    "auto_player_colors": true
+  },
+  "rumble": {
+    "passthrough": true,
+    "policy": "max",
+    "custom_mult": null
+  },
+  "speaker": {
+    "volume": 102,
+    "muted": false,
+    "rota": 2
+  },
+  "mode": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "coop": true
+  },
+  "suppress_desktop_emulation": true
+}
