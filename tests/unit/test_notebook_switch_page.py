@@ -7,6 +7,8 @@ mostrando dado velho. Estes testes trancam o contrato novo.
 """
 from __future__ import annotations
 
+from typing import ClassVar
+
 from tests.conftest import exigir_gi_real
 
 # GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
@@ -232,4 +234,146 @@ def test_nenhuma_aba_aparece_duas_vezes_no_mapa_de_refresh() -> None:
         f"chave repetida em `_REFRESH_POR_ABA`: {repetidas}. Python fica com a "
         "última e descarta as anteriores sem erro — junte os refreshers numa "
         "tupla só."
+    )
+
+
+# ---------------------------------------------------------------------------
+# ONDA0-Z5/T8 — o portão glade→mapa, que faltava
+# ---------------------------------------------------------------------------
+
+
+def _paginas_do_main_notebook_desembrulhadas() -> list[str]:
+    """Os ids de Glade das páginas do `main_notebook`, na MESMA forma que
+    `_on_notebook_switch_page` vê em runtime — desembrulhando
+    `GtkScrolledWindow`/`GtkViewport` como `home_actions.id_da_pagina` faz,
+    mas lendo o XML direto (sem montar GTK)."""
+    import xml.etree.ElementTree as ET
+
+    from hefesto_dualsense4unix.app.constants import MAIN_GLADE
+
+    def _id_desembrulhado(obj: ET.Element) -> str | None:
+        if obj.get("class") in ("GtkScrolledWindow", "GtkViewport"):
+            for filho in obj.findall("child"):
+                interno = filho.find("object")
+                if interno is not None:
+                    return _id_desembrulhado(interno)
+            return None
+        return obj.get("id")
+
+    arvore = ET.parse(str(MAIN_GLADE))
+    for nb in arvore.getroot().iter("object"):
+        if nb.get("class") == "GtkNotebook" and nb.get("id") == "main_notebook":
+            paginas = []
+            for filho in nb.findall("child"):
+                if filho.get("type") == "tab":
+                    continue
+                obj = filho.find("object")
+                if obj is not None:
+                    nome = _id_desembrulhado(obj)
+                    if nome is not None:
+                        paginas.append(nome)
+            return paginas
+    raise AssertionError("main_notebook não encontrado no glade")
+
+
+def test_toda_pagina_do_notebook_esta_no_mapa_ou_isenta() -> None:
+    """O lado que faltava (ONDA0-Z5 §2.6): tirar uma aba do mapa não mexia
+    em `set(_REFRESH_POR_ABA) - ids_no_glade` (o teste que já existia) — esse
+    conjunto só encolhe quando uma aba SAI do glade, nunca quando ela sai do
+    mapa. Este teste compara o glade CONTRA o mapa, o lado que faltava.
+
+    Hoje reprova nomeando `tab_status_box` e `tab_no_jogo_box` SE elas não
+    estiverem na lista de isenção (`_ISENTAS_DO_REFRESH_POR_ABA`) — as duas
+    têm pulso próprio/emprestado (§2.5) e por isso são as isenções vigentes.
+    """
+    paginas = _paginas_do_main_notebook_desembrulhadas()
+    no_mapa = set(HefestoApp._REFRESH_POR_ABA)
+    isentas = set(HefestoApp._ISENTAS_DO_REFRESH_POR_ABA)
+
+    sem_dono = [p for p in paginas if p not in no_mapa and p not in isentas]
+    assert not sem_dono, (
+        f"páginas do notebook fora do mapa de refresh E fora da lista de "
+        f"isenção (sem motivo escrito): {sem_dono}. Ou entram em "
+        "`_REFRESH_POR_ABA`, ou ganham uma linha nomeada em "
+        "`_ISENTAS_DO_REFRESH_POR_ABA` com o motivo — nunca ficam de fora "
+        "caladas."
+    )
+
+    # Toda isenção declarada precisa de motivo não-vazio — isenção muda ISSO
+    # (é uma frase no fonte, não uma ausência).
+    for aba, motivo in HefestoApp._ISENTAS_DO_REFRESH_POR_ABA.items():
+        assert motivo and motivo.strip(), f"isenção de '{aba}' sem motivo escrito"
+
+
+def test_mordida_tirar_uma_aba_do_mapa_reprova_nomeando_ela() -> None:
+    """A MORDIDA (ONDA0-Z5/T8): tire `tab_lightbar_box` do mapa (sem isentar)
+    e o portão tem de reprovar DIZENDO "Lightbar" — a mensagem é o produto
+    desta tarefa, não só o booleano."""
+    paginas = _paginas_do_main_notebook_desembrulhadas()
+    no_mapa_sem_lightbar = set(HefestoApp._REFRESH_POR_ABA) - {"tab_lightbar_box"}
+    isentas = set(HefestoApp._ISENTAS_DO_REFRESH_POR_ABA)
+
+    sem_dono = [
+        p for p in paginas if p not in no_mapa_sem_lightbar and p not in isentas
+    ]
+    assert sem_dono == ["tab_lightbar_box"], (
+        f"esperava reprovar nomeando 'tab_lightbar_box', achou {sem_dono!r} — "
+        "quem lê a falha tem de saber qual aba parou de atualizar"
+    )
+
+
+# ---------------------------------------------------------------------------
+# ONDA0-Z5/T9 — um refresher que levanta não cala os outros da mesma aba
+# ---------------------------------------------------------------------------
+
+
+class _AppComRefresherQueLevanta:
+    """Dois refreshers na MESMA aba, o primeiro levanta — o dublê que sabe
+    RECUSAR (armadilha A2 do COMO-REGER-AGENTES): sem o `try`/`except` do T9,
+    o segundo NUNCA roda."""
+
+    _REFRESH_POR_ABA: ClassVar[dict[str, tuple[str, ...]]] = {
+        "tab_qualquer_box": ("_primeiro_levanta", "_segundo_roda")
+    }
+    _ISENTAS_DO_REFRESH_POR_ABA: ClassVar[dict[str, str]] = {}
+    _ABA_STATUS = "tab_status_box"
+    _on_notebook_switch_page = HefestoApp._on_notebook_switch_page
+
+    def __init__(self) -> None:
+        self.segundo_rodou = False
+
+    def _primeiro_levanta(self) -> None:
+        raise RuntimeError("refresher quebrado de propósito (T9)")
+
+    def _segundo_roda(self) -> None:
+        self.segundo_rodou = True
+
+
+def test_refresher_que_levanta_nao_cala_o_seguinte_da_mesma_aba(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    app = _AppComRefresherQueLevanta()
+
+    # Não pode propagar — a troca de aba não pode quebrar a janela.
+    app._on_notebook_switch_page(None, _pagina("tab_qualquer_box"), 0)
+
+    assert app.segundo_rodou is True, (
+        "o segundo refresher NÃO rodou — um levantando calou os seguintes "
+        "da mesma aba (F13), exatamente o que o try/except do T9 impede"
+    )
+
+
+def test_mordida_sem_o_try_o_segundo_refresher_fica_calado() -> None:
+    """A mordida do T9, literal: chama o MESMO laço sem o `try`/`except` (a
+    forma de antes) e prova que o segundo refresher realmente dependia dele.
+    """
+    app = _AppComRefresherQueLevanta()
+
+    with pytest.raises(RuntimeError, match="refresher quebrado"):
+        for atributo in app._REFRESH_POR_ABA["tab_qualquer_box"]:
+            getattr(app, atributo)()  # SEM try/except — a forma antiga
+
+    assert app.segundo_rodou is False, (
+        "sem o try/except, o segundo refresher não deveria rodar — se rodou, "
+        "este teste parou de provar o que o T9 mudou"
     )
