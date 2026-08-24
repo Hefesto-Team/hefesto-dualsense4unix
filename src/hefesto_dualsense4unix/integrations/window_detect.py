@@ -306,6 +306,17 @@ class WindowReaderDiag:
             return MOTIVO_JANELA_SEM_CLASSE
         return MOTIVO_BACKEND_SEM_MOTIVO
 
+    def conexao_provada(self) -> bool | None:
+        """Delega a `XlibBackend.conexao_provada` (T-01, ONDA0-Z7).
+
+        Backends sem o conceito de conexão (portal/wlrctl/null/dublê de
+        teste) devolvem `None` — "não sei provar" é honesto, e o chamador
+        (`autoswitch._build_diag_window_reader`) já trata `None` como
+        "ainda sem prova de saúde".
+        """
+        fn = getattr(self._backend, "conexao_provada", None)
+        return fn() if callable(fn) else None
+
     def maybe_recover(self) -> bool:
         """Re-detecta o backend quando o atual é o NullBackend.
 

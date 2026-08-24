@@ -51,6 +51,13 @@ logger = get_logger(__name__)
 # passam sozinhos, cada um coerente consigo mesmo.
 _OSK_BIN_WAYLAND = "wvkbd-mobintl"
 _OSK_BIN_X11 = "onboard"
+#: T-11 (ONDA0-Z7, 24/08/2026): dois candidatos que o produto não conhecia —
+#: medido em §3.6 da sprint O AMBIENTE PRESUMIDO 01. Os dois digitam por
+#: PROTOCOLO Wayland (`virtual-keyboard-unstable-v1`/input-method), como o
+#: `wvkbd-mobintl` — nunca XTEST — então entram na mesma classe dele na ordem
+#: abaixo, nunca à frente do `onboard` em sessão X11.
+_OSK_BIN_SQUEEKBOARD = "squeekboard"  # GNOME móvel
+_OSK_BIN_MALIIT = "maliit-keyboard"  # Plasma Mobile
 
 # Candidatos de teclado virtual. Cada string aqui é um `shutil.which`-ável; o
 # argv completo para spawn fica em `_OSK_SPAWN_ARGS`.
@@ -62,11 +69,18 @@ _OSK_BIN_X11 = "onboard"
 # em foco não receberia nada: o teclado ABRE e não DIGITA, que é pior que não
 # abrir, porque parece que funcionou. Quem decide agora é `_osk_candidatos()`,
 # pela sessão viva.
-_OSK_CANDIDATES: tuple[str, ...] = (_OSK_BIN_WAYLAND, _OSK_BIN_X11)
+_OSK_CANDIDATES: tuple[str, ...] = (
+    _OSK_BIN_WAYLAND,
+    _OSK_BIN_X11,
+    _OSK_BIN_SQUEEKBOARD,
+    _OSK_BIN_MALIIT,
+)
 _OSK_SPAWN_ARGS: dict[str, list[str]] = {
     _OSK_BIN_X11: [_OSK_BIN_X11],
     # `--layer 0` ancora wvkbd no bottom (padrão); mantém footprint mínimo.
     _OSK_BIN_WAYLAND: [_OSK_BIN_WAYLAND],
+    _OSK_BIN_SQUEEKBOARD: [_OSK_BIN_SQUEEKBOARD],
+    _OSK_BIN_MALIIT: [_OSK_BIN_MALIIT],
 }
 
 #: Janela (s) do cache de resolução do binário. O `_resolve` era um cache
@@ -98,13 +112,16 @@ def _osk_candidatos() -> tuple[str, ...]:
     ainda é melhor que nada (num X11 sem onboard, um wvkbd instalado não abre —
     mas aí o `open()` falha e loga, em vez de o produto fingir que não há nada).
     """
+    # T-11 (ONDA0-Z7): squeekboard e maliit-keyboard entraram na lista — os
+    # dois digitam por protocolo Wayland, então seguem a MESMA regra do
+    # wvkbd-mobintl (vêm antes do onboard em sessão Wayland, depois em X11).
     if os.environ.get("WAYLAND_DISPLAY") or os.environ.get("XDG_SESSION_TYPE") == "wayland":
-        return (_OSK_BIN_WAYLAND, _OSK_BIN_X11)
+        return (_OSK_BIN_WAYLAND, _OSK_BIN_SQUEEKBOARD, _OSK_BIN_MALIIT, _OSK_BIN_X11)
     if os.environ.get("DISPLAY") or os.environ.get("XDG_SESSION_TYPE") == "x11":
-        return (_OSK_BIN_X11, _OSK_BIN_WAYLAND)
+        return (_OSK_BIN_X11, _OSK_BIN_WAYLAND, _OSK_BIN_SQUEEKBOARD, _OSK_BIN_MALIIT)
     # Sessão desconhecida (daemon headless, CI): a aposta é declarada — vale a
     # de Wayland, que é o padrão de todo desktop atual.
-    return (_OSK_BIN_WAYLAND, _OSK_BIN_X11)
+    return (_OSK_BIN_WAYLAND, _OSK_BIN_SQUEEKBOARD, _OSK_BIN_MALIIT, _OSK_BIN_X11)
 
 
 #: Cache (instante, resposta) da sonda de módulo abaixo. Lista de um elemento

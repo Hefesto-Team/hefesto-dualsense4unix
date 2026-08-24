@@ -44,7 +44,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NamedTuple
 
 try:  # importado como módulo do pacote (GUI/daemon/testes)
     from .steam_launch_options import steam_game_running, steam_running
@@ -165,6 +165,61 @@ def default_steam_root(home: Path | None = None) -> Path:
     if fallback.is_dir():
         return fallback
     return primary
+
+
+class RaizDaSteamOuRecusa(NamedTuple):
+    """``(raiz, motivo)`` — só um dos dois não é ``None`` (T-09, ONDA0-Z7).
+
+    Espelha o formato de recusa da Z1 (§9.1 da sprint O AMBIENTE PRESUMIDO
+    01): :func:`steam_root_ou_recusa` NUNCA silencia o motivo quando não há
+    raiz. Devolver ``(None, None)`` seria repetir o defeito **F1**
+    ("aplicado" é palavra sem prova) na sua forma negativa — um botão que não
+    pode funcionar e não diz por quê.
+    """
+
+    raiz: Path | None
+    motivo: str | None
+
+
+def steam_root_ou_recusa(home: Path | None = None) -> RaizDaSteamOuRecusa:
+    """:func:`default_steam_root`, mas dizendo POR QUE quando não há onde travar.
+
+    T-09 (ONDA0-Z7 · O AMBIENTE PRESUMIDO 01, 24/08/2026). :func:`default_steam_root`
+    CONTINUA excluindo Flatpak/Snap — decisão medida, ver o docstring dela: o
+    Proton que o Hefesto extrai no host é invisível dentro da sandbox, e
+    travar lá quebraria o launch (mesma regra do wrapper, DEDUP-04). O que
+    faltava era a TELA saber dizer por quê: medido em 23/08/2026 (§3.5 da
+    sprint), "Travar Proton validado" cala nos três layouts fora do nativo.
+
+    Devolve ``(raiz, None)`` quando há uma Steam NATIVA de verdade (o
+    diretório existe); ``(None, motivo)`` caso contrário — e o motivo
+    diferencia "achei uma Steam, mas ela está numa caixa" de "não achei
+    Steam nenhuma", porque as duas pedem ações diferentes de quem lê.
+
+    A FRASE é vocabulário de tela — a palavra final é da **Z1**, que já tem
+    o formato de recusa que esta função replica (ver §8 do protocolo de
+    execução desta casa: decisão de produto não se escolhe em silêncio).
+    Quem liga esta função ao botão "Travar Proton validado" é a **Onda 5 ·
+    Emulação** (§10 da sprint) — Z7-C só entrega a primitiva.
+    """
+    base = home or Path.home()
+    raiz = default_steam_root(base)
+    if raiz.is_dir():
+        return RaizDaSteamOuRecusa(raiz, None)
+
+    if (base / ".var/app/com.valvesoftware.Steam/.steam/steam").is_dir():
+        return RaizDaSteamOuRecusa(
+            None,
+            "a sua Steam está instalada pela Flatpak, e o Proton que o "
+            "Hefesto extrai fica fora da caixa dela",
+        )
+    if (base / "snap/steam/common/.steam/steam").is_dir():
+        return RaizDaSteamOuRecusa(
+            None,
+            "a sua Steam está instalada pela Snap, e o Proton que o "
+            "Hefesto extrai fica fora da caixa dela",
+        )
+    return RaizDaSteamOuRecusa(None, "nenhuma Steam encontrada nesta máquina")
 
 
 def default_compat_dir(home: Path | None = None) -> Path:

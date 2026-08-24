@@ -248,9 +248,11 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
 
 def check_wireplumber(dropin_dir: Path | None = None) -> tuple[str, str]:
     """Drop-in do WirePlumber (DualSense não-default / só-HID) instalado?"""
-    dropin_dir = dropin_dir or (
-        Path.home() / ".config" / "wireplumber" / "wireplumber.conf.d"
-    )
+    if dropin_dir is None:
+        # T-05 (ONDA0-Z7): dono único em xdg_paths — honra XDG_CONFIG_HOME.
+        from hefesto_dualsense4unix.utils.xdg_paths import wireplumber_config_dir
+
+        dropin_dir = wireplumber_config_dir()
     names = [
         "51-hefesto-dualsense-no-default-source.conf",
         "52-hefesto-dualsense-disable-source.conf",

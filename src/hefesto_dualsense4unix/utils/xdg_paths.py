@@ -117,6 +117,28 @@ def profiles_dir(ensure: bool = False) -> Path:
     return p
 
 
+def wireplumber_config_dir(ensure: bool = False) -> Path:
+    """Diretório dos drop-ins do WirePlumber — honra `XDG_CONFIG_HOME` (T-05,
+    ONDA0-Z7, 24/08/2026).
+
+    O WirePlumber em si HONRA `XDG_CONFIG_HOME`; dois pontos do Hefesto
+    escreviam/liam nele calados, incondicionalmente em `Path.home() /
+    ".config"` — `integrations/storm_doctor.check_wireplumber` e
+    `app/actions/emulation_actions._wp_dropin_dir` (medido em 23/08/2026,
+    §3.4 da sprint O AMBIENTE PRESUMIDO 01: quem move `XDG_CONFIG_HOME` leva
+    o drop-in do microfone, e o Hefesto continuava olhando o lugar velho).
+    Um dono só, chamado pelos dois — mesmo padrão de `${XDG_CONFIG_HOME:-
+    $HOME/.config}` que os shells desta casa já resolvem
+    (`scripts/disable_steam_input.sh:257`, `scripts/doctor.sh`).
+    """
+    base = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    raiz = Path(base) if base else Path.home() / ".config"
+    p = raiz / "wireplumber" / "wireplumber.conf.d"
+    if ensure:
+        p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
 def ipc_socket_path() -> Path:
     """Resolve o path do socket IPC.
 
@@ -143,4 +165,5 @@ __all__ = [
     "profiles_dir",
     "runtime_dir",
     "state_dir",
+    "wireplumber_config_dir",
 ]
