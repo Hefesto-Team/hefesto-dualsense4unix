@@ -413,6 +413,10 @@ WHITELIST_PATTERNS: list[str] = [
     r"^scripts/check_anonymity\.sh$",
     # O teste do validador usa fixtures com texto sem acento propositalmente.
     r"^tests/unit/test_validar_acentuacao\.py$",
+    # Idem: o teste da alternância de UMA passada compara as duas
+    # implementações sobre textos que TÊM de estar errados para haver o que
+    # comparar. Sem esta linha o portão acusa a própria régua que o mede.
+    r"^tests/unit/test_acentuacao_uma_passada_so\.py$",
     # Registro histórico: são as mensagens de tag como foram escritas na época.
     # Reescrevê-las falsificaria o histórico — o arquivo é arquivo, não texto vivo.
     r"^docs/tags-arquivo-pre-1\.0\.txt$",
@@ -513,6 +517,33 @@ def _compila_pattern(errada: str) -> re.Pattern[str]:
 
 
 _PATTERNS: dict[str, re.Pattern[str]] = {e: _compila_pattern(e) for e in _CORRECOES}
+
+#: UMA passada em vez de 314, e é a causa raiz do custo deste portão.
+#:
+#: MEDIDO em 23/08/2026: o laço de `varre_arquivo` compilava 314 regex e passava
+#: TODAS elas por CADA linha de 27,9 MB de árvore — 157,5 s de um orçamento de
+#: 181 s, ou **87% do custo de todos os portões não-pytest juntos**. Um portão
+#: que cobra dois minutos e meio é um portão que a pessoa aprende a pular, e
+#: portão pulado protege menos que portão nenhum.
+#:
+#: A alternância única faz o motor de regex percorrer a linha UMA vez. O ganho
+#: não é de constante: é de ordem — 314 passadas viram 1.
+#:
+#: **Por que isto é seguro:** os 314 padrões têm forma idêntica
+#: (`(?<![A-Za-z0-9_])PALAVRA(?![A-Za-z0-9_])`, `IGNORECASE`), então a união
+#: deles é exatamente a alternância. As palavras são ordenadas da MAIS LONGA
+#: para a mais curta porque a alternância do Python é *first-match*: sem isso,
+#: `acao` casaria antes de `acaoes` e o achado sairia truncado.
+#:
+#: A resposta continua vindo do `_CORRECOES` — a alternância só diz ONDE olhar;
+#: a palavra certa é buscada no dicionário, como antes. Um teste de igualdade
+#: exata contra a implementação antiga é o aceite.
+_ALTERNANCIA = re.compile(
+    r"(?<![A-Za-z0-9_])(?:"
+    + "|".join(re.escape(e) for e in sorted(_CORRECOES, key=len, reverse=True))
+    + r")(?![A-Za-z0-9_])",
+    re.IGNORECASE,
+)
 
 
 # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02: whitelist Unicode conforme ADR-011.
@@ -706,19 +737,20 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
             linha_busca = linhas_texto[idx]
         else:
             linha_busca = linha
-        for errada, correta in _CORRECOES.items():
-            pat = _PATTERNS[errada]
-            for m in pat.finditer(linha_busca):
-                # Skip UPPERCASE_SNAKE (IDs tipo CHORE-ACAO-01).
-                if _is_uppercase_snake_token(linha_busca, m.start(), m.end()):
-                    continue
-                # Skip identificador snake_case maior.
-                if _esta_em_identificador_snake(linha_busca, m.start(), m.end()):
-                    continue
-                # Skip se a palavra "correta" já é igual (sentinel).
-                if m.group().lower() == correta.lower():
-                    continue
-                violacoes.append((idx + 1, m.group(), correta, linha.strip()))
+        for m in _ALTERNANCIA.finditer(linha_busca):
+            correta = _CORRECOES.get(m.group().lower())
+            if correta is None:
+                continue
+            # Skip UPPERCASE_SNAKE (IDs tipo CHORE-ACAO-01).
+            if _is_uppercase_snake_token(linha_busca, m.start(), m.end()):
+                continue
+            # Skip identificador snake_case maior.
+            if _esta_em_identificador_snake(linha_busca, m.start(), m.end()):
+                continue
+            # Skip se a palavra "correta" já é igual (sentinel).
+            if m.group().lower() == correta.lower():
+                continue
+            violacoes.append((idx + 1, m.group(), correta, linha.strip()))
     return violacoes
 
 
@@ -791,23 +823,27 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
 
         # Coleta todas as substituições válidas (ordem reversa para preservar offsets).
         subs: list[tuple[int, int, str]] = []  # (start, end, replacement)
-        for errada, correta in _CORRECOES.items():
-            pat = _PATTERNS[errada]
-            for m in pat.finditer(linha_busca):
-                if _is_uppercase_snake_token(linha_busca, m.start(), m.end()):
-                    continue
-                if _esta_em_identificador_snake(linha_busca, m.start(), m.end()):
-                    continue
-                if m.group().lower() == correta.lower():
-                    continue
-                # Preserva capitalização do original (first-letter).
-                original = m.group()
-                rep = (
-                    correta[:1].upper() + correta[1:]
-                    if original[:1].isupper()
-                    else correta
-                )
-                subs.append((m.start(), m.end(), rep))
+        # UMA passada, como no `checar_arquivo` — ver a nota do `_ALTERNANCIA`.
+        # O `--fix` tinha o MESMO laço de 314 passadas, e curar só a metade que
+        # confere deixaria o `--fix` custando o que o portão deixou de custar.
+        for m in _ALTERNANCIA.finditer(linha_busca):
+            correta = _CORRECOES.get(m.group().lower())
+            if correta is None:
+                continue
+            if _is_uppercase_snake_token(linha_busca, m.start(), m.end()):
+                continue
+            if _esta_em_identificador_snake(linha_busca, m.start(), m.end()):
+                continue
+            if m.group().lower() == correta.lower():
+                continue
+            # Preserva capitalização do original (first-letter).
+            original = m.group()
+            rep = (
+                correta[:1].upper() + correta[1:]
+                if original[:1].isupper()
+                else correta
+            )
+            subs.append((m.start(), m.end(), rep))
 
         # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02 camada 1: rejeita qualquer
         # substituição cuja faixa original contém glyph protegido por ADR-011.
