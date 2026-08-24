@@ -250,8 +250,17 @@ class TestLinhaDaAbaEmulacao:
         assert "appid" not in markup
 
     def test_desligado_e_indeterminado_nao_mudaram(self) -> None:
+        from hefesto_dualsense4unix.app.actions.emulation_actions import (
+            STEAM_NAO_ENCONTRADA,
+        )
+
         assert "Desligado — tudo certo" in self._markup(on=False, jogos=[])
-        assert "Steam não encontrado" in self._markup(on=None, jogos=[])
+        # AMBIENTE-PRESUMIDO-01 (23/08/2026): a frase deixou de ser o cinza
+        # seco "Steam não encontrado" e passou a dizer ONDE se procurou — a
+        # busca agora cobre os quatro layouts, e quem não tem Steam em nenhum
+        # deles precisa saber quais foram olhados. Prova em
+        # `test_ambiente_presumido_01_a_steam_dos_quatro_layouts.py`.
+        assert STEAM_NAO_ENCONTRADA in self._markup(on=None, jogos=[])
 
     def test_nome_com_e_comercial_nao_quebra_o_markup(self) -> None:
         """Pango engasga com `&` cru — e um jogo chamado "Rick & Morty" existe."""

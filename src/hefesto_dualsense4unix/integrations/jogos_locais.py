@@ -22,7 +22,8 @@ cortado (medido: ``Name=ORPHEUS`` para o jogo que o manifest chama
 ``ORPHEUS: TO HELL AND BACK``).
 
 **Tudo local e read-only.** Nada de rede, nada de API da Steam, e nenhum
-diretório fora dos quatro do pedido dela. Máquina sem Steam, sem `.acf` ou sem
+diretório além das `steamapps` de cada Steam instalada e dos `applications` que
+a spec XDG declara (`pastas_de_atalhos`). Máquina sem Steam, sem `.acf` ou sem
 permissão devolve lista VAZIA em silêncio — o campo continua aceitando o appid
 digitado, e degradar calado aqui é requisito, não descuido.
 """
@@ -53,11 +54,65 @@ from hefesto_dualsense4unix.profiles.steam_app import (
 
 #: Os dois diretórios `.desktop` do pedido dela, nesta ordem — o dela primeiro,
 #: porque é ele que tem os atalhos dos jogos (o do sistema tinha ZERO com
-#: `rungameid` quando isto foi medido).
+#: `rungameid` quando isto foi medido). É o PISO, não a lista: o que vale é o
+#: que `pastas_de_atalhos()` devolve.
 PASTAS_DE_ATALHOS: tuple[str, ...] = (
     "~/.local/share/applications",
     "/usr/share/applications",
 )
+
+
+def pastas_de_atalhos() -> list[Path]:
+    """Os diretórios de `.desktop` DESTA máquina, na ordem da spec XDG.
+
+    AMBIENTE-PRESUMIDO-01 (23/08/2026). A lista eram os dois caminhos acima,
+    cravados — e a spec XDG diz que os `.desktop` moram em
+    ``$XDG_DATA_HOME/applications`` mais um ``applications`` para cada entrada
+    de ``$XDG_DATA_DIRS``. Medido nesta bancada: ``XDG_DATA_DIRS`` lista QUATRO
+    diretórios, o produto olhava DOIS, e um dos dois (``/usr/share``) nem
+    estava na lista da sessão. O preço foram 54 atalhos em
+    ``~/.local/share/flatpak/exports/share/applications`` (todo jogo instalado
+    por Flatpak) e 3 em ``/usr/local/share/applications`` que o campo "Nome do
+    jogo" nunca ofereceu — sem dizer nada, porque degradar calado aqui é
+    requisito.
+
+    Os dois caminhos históricos continuam entrando mesmo que a sessão não os
+    cite: um ``XDG_DATA_DIRS`` mal montado não pode ENCOLHER o que já
+    funcionava. Sem repetir diretório (comparação pelo caminho real) e sem
+    inventar caminho que não existe — a lista sai só com o que está em disco.
+    """
+    def real(caminho: Path) -> Path:
+        try:
+            return caminho.resolve()
+        except OSError:  # pragma: no cover - link quebrado ou permissão
+            return caminho
+
+    candidatos: list[Path] = []
+    data_home = os.environ.get("XDG_DATA_HOME", "").strip()
+    candidatos.append(
+        Path(data_home).expanduser() / "applications"
+        if data_home
+        else Path("~/.local/share/applications").expanduser()
+    )
+    data_dirs = os.environ.get("XDG_DATA_DIRS", "").strip()
+    for bruto in (data_dirs or "/usr/local/share:/usr/share").split(":"):
+        limpo = bruto.strip()
+        if limpo:
+            candidatos.append(Path(limpo).expanduser() / "applications")
+    candidatos.extend(Path(p).expanduser() for p in PASTAS_DE_ATALHOS)
+
+    alvos: list[Path] = []
+    vistos: set[Path] = set()
+    for candidato in candidatos:
+        if not candidato.is_dir():
+            continue
+        chave = real(candidato)
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        alvos.append(candidato)
+    return alvos
+
 
 #: `Exec=/usr/games/steam steam://rungameid/851100` — o `Exec` do atalho que a
 #: própria Steam gera, e o do gerador dela (`meow-steam-<id>.desktop`).
@@ -230,11 +285,7 @@ def jogos_dos_atalhos_desktop(
     escreve (medido em `meow-steam-851100.desktop`). `NoDisplay=true` é pulado:
     o atalho que o menu não mostra também não deve entrar na lista dela.
     """
-    alvos = (
-        list(pastas)
-        if pastas is not None
-        else [Path(p).expanduser() for p in PASTAS_DE_ATALHOS]
-    )
+    alvos = list(pastas) if pastas is not None else pastas_de_atalhos()
     achados: dict[str, JogoLocal] = {}
     for pasta in alvos:
         try:
@@ -364,4 +415,5 @@ __all__ = [
     "jogos_da_biblioteca_steam",
     "jogos_dos_atalhos_desktop",
     "nomes_por_appid",
+    "pastas_de_atalhos",
 ]
