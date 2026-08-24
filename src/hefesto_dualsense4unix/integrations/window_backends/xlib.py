@@ -22,8 +22,13 @@ _MAX_QUERY_FAILURES = 3
 
 #: Backoff entre tentativas de reconectar ao servidor X que FALHARAM — o
 #: connect é bloqueante e roda no tick do autoswitch; marretar um XWayland que
-#: ainda não voltou seria I/O inútil a 2 Hz.
+#: ainda não voltou seria I/O inútil a 2 Hz. T-03 (ONDA0-Z7, 24/08): o teto
+#: cresce (dobra a cada falha) até `_RECONNECT_BACKOFF_MAX_SEC` — a bancada
+#: mediu 716 tentativas em 6h no mesmo intervalo fixo de 30s, todas com o
+#: MESMO motivo (`sem_conexao_x`); sem crescimento, um XWayland morto por
+#: horas continua sendo sondado a cada 30s pelo resto da sessão.
 _RECONNECT_BACKOFF_SEC = 30.0
+_RECONNECT_BACKOFF_MAX_SEC = 300.0
 
 #: JANELA-CEGA-01 (28/07): os SEIS motivos distintos pelos quais este backend
 #: devolve `None`. Antes colapsavam todos no mesmo `None` — e "sem foco X"
@@ -76,6 +81,12 @@ class XlibBackend:
         self._query_failures: int = 0
         self._last_connect_fail: float = float("-inf")
         self._reconnect_pending: bool = False
+        # T-03 (ONDA0-Z7): backoff que CRESCE a cada falha de conexão
+        # consecutiva (dobra, até o teto), e guarda de episódio do warning —
+        # 1 WARNING por episódio, o resto cai para DEBUG (idem
+        # `_reconnect_pending`/`_focus_gate_active`/`_desacordo_ativo`).
+        self._connect_backoff_sec: float = _RECONNECT_BACKOFF_SEC
+        self._connect_fail_warned: bool = False
         # FOCO-01: episódio de DESACORDO entre o foco real e o
         # `_NET_ACTIVE_WINDOW` (ou de foco sem top-level identificável) em
         # curso — guarda o nome do evento para logar 1x por episódio, no mesmo
@@ -90,6 +101,22 @@ class XlibBackend:
         """Marca o motivo desta leitura cega (JANELA-CEGA-01)."""
         self.last_failure_reason = motivo
 
+    def conexao_provada(self) -> bool | None:
+        """Estado JÁ CONHECIDO da conexão — não tenta conectar (T-01, ONDA0-Z7).
+
+        `True` = conectado agora; `False` = já houve tentativa de conexão e o
+        servidor recusou; `None` = nenhuma tentativa aconteceu ainda. Puramente
+        de leitura: quem dispara a tentativa é `_ensure_connected` (via
+        `get_active_window_info`) — este método só relata o resultado dela,
+        para o autoswitch semear `window_detect_healthy` com prova em vez de
+        presunção (ver `subsystems/autoswitch.py:_build_diag_window_reader`).
+        """
+        if self._connected:
+            return True
+        if self._init_attempted:
+            return False
+        return None
+
     def _ensure_connected(self) -> bool:
         """Conecta (ou RECONECTA, com backoff) ao display X11.
 
@@ -101,11 +128,19 @@ class XlibBackend:
         documentadas (Steam e GUI são XWayland) dependem desta conexão.
         Agora `_drop_connection` zera o estado e este método tenta um Display
         novo, com backoff entre tentativas falhadas.
+
+        T-03 (ONDA0-Z7, 24/08): o backoff CRESCE a cada falha consecutiva
+        (dobra, até `_RECONNECT_BACKOFF_MAX_SEC`) — sem crescimento, um
+        XWayland morto por horas era sondado a cada 30s pelo resto da
+        sessão (716x em 6h, medido). E o `warning` do journal vira 1 por
+        EPISÓDIO — as tentativas seguintes, enquanto o motivo não mudar,
+        caem para `debug`. A tentativa em si NUNCA para: o XWayland pode
+        voltar a qualquer momento, e o detector tem de voltar com ele.
         """
         if self._connected:
             return True
         if self._init_attempted and (
-            time.monotonic() - self._last_connect_fail < _RECONNECT_BACKOFF_SEC
+            time.monotonic() - self._last_connect_fail < self._connect_backoff_sec
         ):
             return False
         self._init_attempted = True
@@ -122,15 +157,24 @@ class XlibBackend:
             self._display = xdisplay.Display()
             self._connected = True
             self._query_failures = 0
+            self._connect_backoff_sec = _RECONNECT_BACKOFF_SEC
+            self._connect_fail_warned = False
             if self._reconnect_pending:
                 self._reconnect_pending = False
                 logger.info("x11_reconnected")
             else:
                 logger.debug("x11_connected")
         except Exception as exc:
-            logger.warning("x11_connect_failed", err=str(exc))
+            if not self._connect_fail_warned:
+                logger.warning("x11_connect_failed", err=str(exc))
+                self._connect_fail_warned = True
+            else:
+                logger.debug("x11_connect_failed", err=str(exc))
             self._connected = False
             self._last_connect_fail = time.monotonic()
+            self._connect_backoff_sec = min(
+                self._connect_backoff_sec * 2, _RECONNECT_BACKOFF_MAX_SEC
+            )
 
         return self._connected
 
@@ -167,6 +211,10 @@ class XlibBackend:
         self._init_attempted = False
         self._query_failures = 0
         self._last_connect_fail = float("-inf")
+        # T-03: uma conexão que ESTAVA viva e caiu é um episódio NOVO de
+        # reconexão — reabre o warning e volta o backoff ao piso.
+        self._connect_backoff_sec = _RECONNECT_BACKOFF_SEC
+        self._connect_fail_warned = False
 
     def _logar_desacordo_uma_vez(self, evento: str, **campos: Any) -> None:
         """FOCO-01: 1 log por episódio de desacordo (o poll é de 2 Hz).

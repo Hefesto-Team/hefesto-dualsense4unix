@@ -74,10 +74,11 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
                                   leitura (a cascata Wayland pode migrar
                                   portal -> wlrctl -> null em runtime);
       window_detect_healthy    -- saudável = >= 1 leitura útil desde o boot
-                                  OU presunção inicial do xlib (só escolhido
-                                  com DISPLAY presente; cobre XWayland e
-                                  Proton mesmo antes da primeira leitura
-                                  útil — desktop vazio também dá "unknown");
+                                  OU PROVA de conexão do backend xlib (T-01,
+                                  ONDA0-Z7: sonda uma vez antes de semear —
+                                  `initial_healthy` só nasce True se o
+                                  servidor X respondeu de fato; DISPLAY
+                                  presente e morto não basta mais);
       window_detect_last_class -- última wm_class útil (captura o wm_class
                                   de um jogo direto do estado, sem journal).
 
@@ -96,10 +97,23 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
         name = getattr(reader, "backend_name", None)
         return name if isinstance(name, str) else None
 
-    # Presunção documentada: "xlib" só é escolhido com DISPLAY presente e
-    # cobre o caso de uso principal (jogos XWayland/Proton) — nasce saudável.
+    # T-01 (ONDA0-Z7, 24/08): "xlib" só é ESCOLHIDO com DISPLAY presente, mas
+    # presente não é o mesmo que vivo — a bancada mediu `DISPLAY=:1` presente
+    # e recusando conexão 716x em 6h, com `window_detect_healthy=True` a
+    # sessão toda. A sonda dispara UMA tentativa de conexão real (via
+    # `reader()`, que chama `_ensure_connected()` por baixo) antes de semear;
+    # `initial_healthy` só nasce True com PROVA (`conexao_provada() is True`).
+    # A leitura de sonda é descartada — o poll relê no primeiro tick.
     initial_backend = _backend_name()
-    initial_healthy = initial_backend == "xlib"
+    if initial_backend == "xlib":
+        reader()
+        # Defensivo, no mesmo padrão de `_backend_name()`: um reader
+        # substituto (dublê de teste, integração antiga) pode não expor
+        # `conexao_provada` — ausência do método é "sem prova", não crash.
+        conexao_provada = getattr(reader, "conexao_provada", None)
+        initial_healthy = callable(conexao_provada) and conexao_provada() is True
+    else:
+        initial_healthy = False
     store.set_window_detect_backend(initial_backend, healthy=initial_healthy)
     logger.info(
         "window_detect_diag_seeded",
