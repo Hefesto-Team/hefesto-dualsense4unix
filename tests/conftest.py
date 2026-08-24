@@ -1553,12 +1553,26 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # BUG-TEST-CONFIG-LEAK-01 acima, só que em leitura em vez de escrita.
     #
     # A cura é a mesma dos quatro XDG_*: isolar o `HOME` também, num diretório
-    # vazio por teste. Não precisa de escotilha própria — nenhuma suíte
+    # vazio por teste. Não precisa de escotilha própria — nenhuma suíte NOSSA
     # depende do `$HOME` real (os 7 arquivos que hoje fazem
     # `monkeypatch.setenv("HOME", ...)` continuam livres para sobrescrever, e
     # vencem por rodarem depois desta fixture). O CANARIO-FS-01 não é afetado:
     # ele lê `os.environ` fresco nos hooks de sessão, fora de qualquer
     # fixture, de propósito (comentário em `_canario_raizes`).
+    #
+    # CORREÇÃO 24/08/2026, achada pela suíte completa após integrar a frente
+    # 17: a frase acima estava incompleta — uma ferramenta EXTERNA depende,
+    # sim. `test_o_cargo_de_verdade_aceita_o_manifesto_real` chama `cargo`
+    # de verdade, e o `rustup`/`cargo` resolvem o toolchain default por
+    # `$HOME/.rustup`/`$HOME/.cargo` quando `RUSTUP_HOME`/`CARGO_HOME` não
+    # estão setados — com o `$HOME` isolado acima, esses dois diretórios
+    # nascem vazios e o cargo recusa com "no default toolchain configured".
+    # O Rust não é o que este isolamento protege (é o `$HOME` DELA, para o
+    # Python/GTK); então os dois apontam de volta para o `$HOME` real antes
+    # dele ser sobrescrito.
+    real_home = Path(os.environ.get("HOME", str(Path.home())))
+    monkeypatch.setenv("RUSTUP_HOME", str(real_home / ".rustup"))
+    monkeypatch.setenv("CARGO_HOME", str(real_home / ".cargo"))
     home_dir = xdg_root / "home"
     home_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("HOME", str(home_dir))
