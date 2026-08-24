@@ -197,7 +197,19 @@ def test_a_linha_lida_nao_gasta_seletor_e_a_muda_gasta() -> None:
     Bastasse "existe algum seletor", o teste passaria com a coluna inteira do
     jeito velho — sete botões em toda linha.
 
-    Mordida: apagar o degrau do `GRAU_LIDO` em `_celula_do_que_e`.
+    A segunda metade mede o WIDGET de verdade (`sel._items`, os pares
+    `(id, rótulo)` que `set_items` de fato recebeu), e não relê
+    `secao_mesa._TIPOS_DE_RADIO` outra vez do módulo — medido em 23/08/2026
+    (AUDITORIA-DE-PERDA-01/E2): reler o módulo dos dois lados da comparação
+    faz `ids.issubset(ids)`, verdadeiro mesmo que o seletor tenha nascido SEM
+    NENHUM botão. Ver a forma independente em
+    `test_a_mesa_guarda_o_que_ela_declarou.py::test_cada_radio_vizinho_ganha_o_seletor_de_tipo`.
+
+    Mordida: apagar o degrau do `GRAU_LIDO` em `_celula_do_que_e` (derruba a
+    contagem) OU trocar `seletor.set_items([(ident, _(nome)) for ident, nome
+    in _TIPOS_DE_RADIO])` por `seletor.set_items([])` em
+    `secao_mesa.py::_seletor_do_tipo` (derruba a segunda asserção, com a
+    contagem intacta — o seletor nasce, só que vazio).
     """
     caixa, _ = _montar(_Hospedeiro())
 
@@ -208,8 +220,12 @@ def test_a_linha_lida_nao_gasta_seletor_e_a_muda_gasta() -> None:
         "que o barramento já classificou não pergunta nada."
     )
     ids = {ident for ident, _ in secao_mesa._TIPOS_DE_RADIO}
-    assert ids.issubset(
-        {botao for sel in achados[2:] for botao, _ in secao_mesa._TIPOS_DE_RADIO}
+    oferecidos = {botao for sel in achados[2:] for botao, _ in sel._items}
+    assert oferecidos == ids, (
+        f"o seletor 'O que é' oferece {sorted(oferecidos)} e devia oferecer "
+        f"exatamente {sorted(ids)} — os tipos declarados em `_TIPOS_DE_RADIO`. "
+        "Um seletor vazio (ou com ids a mais) passaria batido se a régua "
+        "relesse o módulo dos dois lados da comparação."
     )
 
 
