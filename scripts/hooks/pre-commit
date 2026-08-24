@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# scripts/hooks/pre-commit — o gancho DESTE repositório.
+#
+# POR QUE ELE MORA AQUI, e não em ~/.config/git/hooks: os ganchos dela são
+# GLOBAIS e valem para todo repositório dela. Coisa deste projeto pendurada lá
+# rodaria em todos os outros. O gancho global já resolve isso: ele encadeia
+# `.git/hooks/pre-commit` do repositório quando existe e é diferente dele
+# (linhas 318-333 do global). Este arquivo é esse encadeado, versionado para
+# viajar, e `scripts/instalar-hooks.sh` o liga.
+#
+# O QUE ELE FAZ, e o que ele DELIBERADAMENTE NÃO FAZ:
+#   FAZ  — regenera o painel.html (~80 ms) e o põe no commit.
+#   FAZ  — confere que o specs.html publicado bate com o CSV.
+#   NÃO FAZ — rodar a suíte, o mypy ou os portões pesados. Gancho que demora
+#             sete minutos é gancho que a pessoa desliga, e um gancho desligado
+#             protege menos que nenhum. Esses moram no `--completo` e no CI.
+set -euo pipefail
+RAIZ="$(git rev-parse --show-toplevel)"
+cd "$RAIZ"
+
+falhou=0
+
+# 1. O painel — regenera e entra no commit. Só o RÁPIDO (sprints, CSV, git).
+#    Os números caros vêm do cache e a própria página mostra a idade deles.
+if [ -f scripts/gerar-painel.py ]; then
+  if python3 scripts/gerar-painel.py >/dev/null 2>&1; then
+    git add painel.html 2>/dev/null || true
+  else
+    echo "pre-commit: gerar-painel.py falhou — o painel.html vai velho neste commit." >&2
+  fi
+fi
+
+# 2. O specs.html — este é PORTÃO, não conveniência: uma página publicada que
+#    não bate com o CSV é o mapa mentindo, e o mapa é rede contra regressão.
+#    Regenerar sozinho seria pior: esconderia que o dado mudou.
+if [ -f scripts/gerar-mapa.py ]; then
+  if ! python3 scripts/gerar-mapa.py --check >/dev/null 2>&1; then
+    echo "pre-commit: BLOQUEADO — specs.html não bate com o mapa-controles.csv." >&2
+    echo "  cure com: python3 scripts/gerar-mapa.py" >&2
+    falhou=1
+  fi
+fi
+
+exit "$falhou"
