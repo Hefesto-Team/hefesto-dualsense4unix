@@ -302,9 +302,22 @@ class FooterActionsMixin(ProfileWriterMixin):
         declaracao = self._maquina_pendente
         if not declaracao:
             return None
-        ok, motivo = ipc_bridge.machine_declare(dict(declaracao))
+        ok, motivo, descartados = ipc_bridge.machine_declare_detalhado(
+            dict(declaracao)
+        )
         if ok:
             self._maquina_pendente = None
+            if descartados:
+                logger.warning(
+                    "footer_declaracao_de_maquina_com_descartes",
+                    descartados=list(descartados),
+                )
+                # Redação PROVISÓRIA: texto novo na tela é classe estrutural e
+                # espera o olho dela.
+                return _(
+                    "Gravei o que deu. Isto o Hefesto não entendeu e "
+                    "descartou: {campos}."
+                ).format(campos=", ".join(descartados))
             return _("Configurações gravadas.")
         logger.warning("footer_declaracao_de_maquina_nao_gravada", motivo=motivo)
         return motivo or _(

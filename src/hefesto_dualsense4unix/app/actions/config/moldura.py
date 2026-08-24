@@ -17,9 +17,28 @@ interna 10 em cima e embaixo, 12 nos lados, e 8 de espaçamento entre filhos.
 from __future__ import annotations
 
 import contextlib
+import weakref
+from collections.abc import Iterator
 from typing import Any
 
 from hefesto_dualsense4unix.utils.i18n import _
+
+#: A classe do sublinhado pontilhado — rótulo que esconde uma explicação.
+CLASSE_TEM_DICA = "hefesto-tem-dica"
+
+#: A classe do `?` em círculo — cabeçalho de seção e casos de canto.
+CLASSE_AJUDA = "hefesto-ajuda"
+
+#: O texto do glifo de ajuda. Uma constante porque `marcar_afordancias` PROCURA
+#: por ele para dar a marca ao `?` que `secao_mesa._subcabecalho` já monta à mão.
+GLIFO_DE_AJUDA = "?"
+
+#: Containers em que já se ligou o `add`. Weak porque a aba redesenha seções
+#: inteiras (`_desenhar_medidores`, `_desenhar_radios`) e os containers velhos
+#: têm de poder morrer. Guardar `id()` num `set` comum seria pior que não
+#: guardar nada: o CPython reaproveita `id` de objeto coletado, e um container
+#: novo herdaria o "já ligado" de um morto.
+_JA_LIGADOS: weakref.WeakSet[Any] = weakref.WeakSet()
 
 #: Margens internas do conteúdo de uma seção, em pixels. Cópia do molde da aba
 #: Início (`home_actions.py:1501-1505`) — não são valores novos.
@@ -50,6 +69,149 @@ QUANDO_VALE = 'A escolha passa a valer quando você clicar em "Aplicar", no roda
 VALE_JA = 'A escolha fica guardada na hora — não espera o "Aplicar".'
 
 
+def _descer(widget: Any) -> Iterator[Any]:
+    """Todo widget da subárvore, o topo incluído."""
+    from gi.repository import Gtk
+
+    yield widget
+    if isinstance(widget, Gtk.Container):
+        for filho in widget.get_children():
+            yield from _descer(filho)
+
+
+def merece_sublinhado(widget: Any) -> bool:
+    """Se este widget é um rótulo que esconde explicação e não se anuncia.
+
+    O inventário da leva
+    (`docs/process/sprints/2026-08-21-ABA-CONFIGURACOES/TOOLTIPS.md`) fixa duas
+    marcas — sublinhado pontilhado para "rótulo que tem explicação", `?` para
+    "cabeçalho de seção e casos de canto" — e a repartição entre elas é a última
+    recusa desta lista: quem já tem `?` ao lado não ganha sublinhado. Escrita
+    como pergunta sobre o IRMÃO, e não como lista de classes de cabeçalho, ela
+    vale para o sub-cabeçalho que `secao_mesa` já tinha e para qualquer par
+    rótulo+`?` que apareça depois, sem lista a manter.
+
+    As quatro recusas, cada uma por um motivo diferente:
+
+    * **não é `Gtk.Label`** — um `Gtk.Entry` já tem moldura de campo e um
+      sublinhado dentro dela vira sujeira; um `Gtk.Button` já se anuncia.
+    * **não tem dica** — não há o que anunciar.
+    * **está dentro de um botão** — o rótulo interno de um `Gtk.Button`, de um
+      `Gtk.CheckButton` ou de um segmento do `SegmentedSelector` (que é
+      `Gtk.RadioButton` em modo toggle). Quem já parece clicável não precisa de
+      marca, e o sublinhado dentro de um botão leria como link quebrado.
+    * **já tem um `?` ao lado** — a marca dele é o `?`; as duas juntas seriam a
+      mesma informação dita duas vezes.
+
+    O próprio `?` cai fora pela última condição, e também porque
+    `marcar_afordancias` o pega antes, pelo texto.
+    """
+    from gi.repository import Gtk
+
+    if not isinstance(widget, Gtk.Label):
+        return False
+    if not (widget.get_tooltip_text() or "").strip():
+        return False
+    if widget.get_ancestor(Gtk.Button) is not None:
+        return False
+    if _e_glifo_de_ajuda(widget):
+        return False
+    return not _tem_ajuda_ao_lado(widget)
+
+
+def _tem_ajuda_ao_lado(widget: Any) -> bool:
+    """Se algum irmão deste widget é o `?` de ajuda."""
+    pai = widget.get_parent()
+    if pai is None:
+        return False
+    return any(
+        irmao is not widget and _e_glifo_de_ajuda(irmao)
+        for irmao in pai.get_children()
+    )
+
+
+def marcar_afordancias(raiz: Any) -> int:
+    """Dá a marca visual a todo ponto de dica da subárvore. Devolve quantos.
+
+    POR QUE ISTO É UMA VARREDURA, E NÃO UMA LINHA EM CADA SEÇÃO.
+
+    Os pontos de dica nascem espalhados por cinco módulos de seção, e vários
+    deles nascem DEPOIS da montagem: o exame reescreve as cinco linhas quando o
+    worker responde, e a mesa redesenha medidores e rádios a cada releitura.
+    Uma chamada por ponto teria de ser escrita em cada um desses lugares e
+    lembrada em cada ponto novo — e o defeito que esta função cura é exatamente
+    o de dica que ninguém lembrou de anunciar. A varredura não tem como
+    esquecer: quem põe `set_tooltip_text` ganha a marca sem saber que ela
+    existe.
+
+    É idempotente — `add_class` numa classe que já está não faz nada.
+    """
+    marcados = 0
+    for widget in _descer(raiz):
+        with contextlib.suppress(Exception):
+            if _e_glifo_de_ajuda(widget):
+                widget.get_style_context().add_class(CLASSE_AJUDA)
+                marcados += 1
+            elif merece_sublinhado(widget):
+                widget.get_style_context().add_class(CLASSE_TEM_DICA)
+                marcados += 1
+        _ligar_o_add(widget)
+    return marcados
+
+
+def _e_glifo_de_ajuda(widget: Any) -> bool:
+    """O `?` de ajuda: rótulo cujo texto é só `?` e que carrega uma dica.
+
+    Existe para CONVERGIR a gramática, não para criar outra. O
+    `secao_mesa._subcabecalho` já montava um `?` à mão antes desta função, e
+    ele é o desenho que a casa seguiu; o que faltava era a marca visual. Achá-lo
+    pelo texto dá a ele o mesmo círculo que o `?` dos títulos de seção recebe,
+    sem tocar em `secao_mesa.py`.
+
+    Exigir a dica é o que separa o glifo de ajuda de um `?` que é CONTEÚDO — o
+    `GLIFO.get(selo, "?")` do selo do exame, por exemplo, que é o desenho de
+    "não sei" e não tem dica nenhuma.
+    """
+    from gi.repository import Gtk
+
+    if not isinstance(widget, Gtk.Label):
+        return False
+    if (widget.get_text() or "").strip() != GLIFO_DE_AJUDA:
+        return False
+    return bool((widget.get_tooltip_text() or "").strip())
+
+
+def _ligar_o_add(widget: Any) -> None:
+    """Reagenda a varredura quando algo novo entra neste container.
+
+    A dica costuma ser posta no widget ANTES de ele ser empacotado, mas nem
+    sempre — `secao_mesa` monta a grade dos adaptadores e só depois põe a dica
+    no cabeçalho da coluna. Por isso a revarredura vai para o `idle`: quando o
+    GTK atende, a pilha que montou aquele pedaço já terminou e as dicas
+    tardias já estão no lugar.
+    """
+    from gi.repository import GLib, Gtk
+
+    if not isinstance(widget, Gtk.Container) or widget in _JA_LIGADOS:
+        return
+    _JA_LIGADOS.add(widget)
+
+    def _ao_adicionar(container: Any, _filho: Any) -> None:
+        ref = weakref.ref(container)
+
+        def _revarrer() -> bool:
+            vivo = ref()
+            if vivo is not None:
+                with contextlib.suppress(Exception):
+                    marcar_afordancias(vivo)
+            return False  # `True` faria o GTK repetir para sempre.
+
+        GLib.idle_add(_revarrer)
+
+    with contextlib.suppress(Exception):
+        widget.connect("add", _ao_adicionar)
+
+
 def moldura_de_secao(titulo: str, dica: str | None = None) -> tuple[Any, Any]:
     """Devolve ``(frame, caixa)`` — a moldura e a caixa onde a seção monta.
 
@@ -69,8 +231,42 @@ def moldura_de_secao(titulo: str, dica: str | None = None) -> tuple[Any, Any]:
         rotulo.get_style_context().add_class("hefesto-titulo-secao")
     if dica is not None:
         rotulo.set_tooltip_text(_(dica))
+        # O título ganha o SUBLINHADO, e não o `?`. A decisão é de 23/08/2026 e
+        # tem uma razão medida, não de gosto.
+        #
+        # O desenho original desta cura punha o `?` ao lado do título, com a
+        # mesma gramática do `secao_mesa._subcabecalho` — caixa horizontal,
+        # `spacing=4`, o `?` com a mesma dica. Para isso o `label_widget` do
+        # frame tem de deixar de ser um `Gtk.Label` e virar um `Gtk.Box`, e é
+        # aí que a conta não fecha: **`get_label_widget().get_text()` é como
+        # SEIS arquivos de teste acham a seção pelo título**
+        # (`test_config_selo_de_saude.py:71`, `test_config_a_janela_na_tela.py:262`,
+        # `test_config_01_a_aba_nasce_vazia.py:369`, e mais três). Medido: 13
+        # testes reprovaram com `'Box' object has no attribute 'get_text'`.
+        # Pôr o `?` no texto do rótulo por markup dá no mesmo por outro caminho
+        # — `get_text()` passaria a devolver "Orçamento ?" e as comparações com
+        # o TÍTULO quebrariam igual.
+        #
+        # E o sublinhado não é um consolo: o título de seção É um "rótulo que
+        # tem explicação", que é literalmente a linha do inventário para esta
+        # marca. As duas marcas entregam a MESMA coisa aqui — dica no hover, sem
+        # foco de teclado —, porque um `Gtk.Label` solto não recebe foco no
+        # GTK3 de qualquer jeito. Escolher a que quebra treze testes de outras
+        # frentes para entregar o mesmo seria pagar caro por nada.
+        #
+        # O `?` continua sendo a marca de sub-cabeçalho e de caso de canto, que
+        # é onde ele já morava — e `marcar_afordancias` é quem lhe dá o círculo.
+        with contextlib.suppress(Exception):
+            rotulo.get_style_context().add_class(CLASSE_TEM_DICA)
     rotulo.show()
     frame.set_label_widget(rotulo)
+
+    # A varredura roda no `map`, e não aqui, por dois motivos que apontam para o
+    # mesmo lado: nesta linha o conteúdo da seção ainda não foi montado (quem
+    # chama monta DEPOIS, dentro do `caixa`), e uma aba que o notebook mostra de
+    # novo revarre sozinha o que tiver mudado enquanto estava escondida.
+    with contextlib.suppress(Exception):
+        frame.connect("map", lambda w: marcar_afordancias(w))
 
     # A seção NUNCA estica verticalmente, e a linha abaixo é o que garante isso.
     #

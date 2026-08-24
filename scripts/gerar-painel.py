@@ -207,8 +207,15 @@ def roda_os_caros() -> dict:
 
     print("· suíte inteira (pode levar ~8 min)…", flush=True)
     try:
+        # SEM `--timeout`: o `pytest-timeout` NÃO está instalado neste projeto,
+        # e o pytest recusa a flag com "unrecognized arguments" — exit 4, saída
+        # sem nenhum "N passed". O painel engolia isso e reportava `None`
+        # verdes, que é pior do que não medir: parece medição.
+        #
+        # Medido em 23/08/2026, e o defeito era do painel, não da suíte: a
+        # mesma suíte rodada à mão devolvia 11.684 verdes.
         p = subprocess.run(
-            [".venv/bin/python", "-m", "pytest", "-q", "--timeout=300"],
+            [".venv/bin/python", "-m", "pytest", "-q", "-p", "no:cacheprovider"],
             cwd=RAIZ, capture_output=True, text=True, timeout=3600,
         )
         cauda = (p.stdout or "")[-4000:]
@@ -218,6 +225,10 @@ def roda_os_caros() -> dict:
             "passed": int(m.group(1)) if m else None,
             "failed": int(f.group(1)) if f else 0,
             "ok": p.returncode == 0,
+            # Se o comando nem rodou, isto é o que separa "sem falhas" de
+            # "não consegui medir" — e a página tem de dizer a diferença.
+            "nao_mediu": m is None,
+            "porque": (cauda[-300:].strip() if m is None else ""),
         }
     except (OSError, subprocess.SubprocessError) as exc:
         achados["suite"] = {"erro": str(exc)}
@@ -461,6 +472,12 @@ def monta(rapido: dict, cache: dict) -> str:
     if suite.get("passed") is not None:
         cor = "ok" if suite.get("ok") else "mal"
         kpis.append(_kpi(f'{suite["passed"]:,}'.replace(",", "."), "testes verdes", cor))
+    elif suite.get("nao_mediu"):
+        # Ausência de medição se DECLARA. A versão anterior deixava o KPI de
+        # fora e a página ficava igual à de quem nunca rodou a suíte — que é
+        # exatamente a mentira por omissão que este painel existe para não
+        # contar.
+        kpis.append(_kpi("—", "a suíte NÃO foi medida", "lac"))
     if portoes:
         cor = "ok" if not vermelhos else "mal"
         kpis.append(_kpi(f"{len(portoes) - len(vermelhos) - len(naorodou)}/{len(portoes)}",
@@ -484,6 +501,14 @@ def monta(rapido: dict, cache: dict) -> str:
         )
 
     alerta = ""
+    if suite.get("nao_mediu"):
+        alerta += (
+            '<div class="aviso"><p><b>A suíte não pôde ser medida.</b> O comando '
+            'terminou sem dizer quantos testes passaram, então não há número — e '
+            '<em>nenhum número</em> não é o mesmo que <em>nenhuma falha</em>.</p>'
+            f'<p class="quieto">O que ele disse no fim: <code>'
+            f'{escape((suite.get("porque") or "(nada)")[-220:])}</code></p></div>'
+        )
     if not fresco and cache:
         alerta = (
             '<div class="aviso"><p><b>Os números caros estão velhos.</b> '

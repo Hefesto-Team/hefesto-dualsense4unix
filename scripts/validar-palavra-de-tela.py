@@ -6,15 +6,64 @@ PALAVRA-01 / E5, seção "E5. Um gate, para não voltar" de
 A sprint pede um portão que reprove quando:
 
 - um texto de tela começa com letra minúscula, **com lista de exceções
-  explícita e justificada, não implícita**;
-- um rótulo visível contém termo da lista de jargão banido.
+  explícita e justificada, não implícita** — regra do `.glade`, e só dele;
+  o porquê está acima de `DIVIDA_DA_PALAVRA_01_PY`;
+- um rótulo visível contém termo da lista de jargão banido — regra dos DOIS
+  corpos de texto.
 
-O ALCANCE, declarado e estreito: o `main.glade`, que é onde mora o texto
-DECLARATIVO da janela. Rótulo montado em Python (`set_label`, f-string de
-status) fica de fora **de propósito** — varrer código atrás de "isto aparece na
-tela?" produz falso positivo em cima de nome de variável, chave de perfil e
-mensagem de log, e um portão que grita falso é desligado na semana seguinte.
-O que o `.glade` não cobre está anotado como lacuna no fim deste docstring.
+O ALCANCE, declarado: DOIS corpos de texto de tela.
+
+1. o `main.glade`, onde mora o texto DECLARATIVO da janela;
+2. o texto de tela MONTADO EM PYTHON em `src/hefesto_dualsense4unix/app/`,
+   lido por AST — nunca por expressão regular sobre a linha.
+
+O item 2 entrou em 23/08/2026, e ele é o conserto de um buraco MEDIDO. Até
+aqui o portão lia um arquivo só, e o docstring dizia que rótulo montado em
+Python ficava de fora "de propósito, porque varrer código produz falso
+positivo". A premissa era verdadeira e a conclusão parou de ser no dia em que
+uma aba inteira nasceu em código: a aba Configurações tem 4.605 linhas de
+Python com CEM POR CENTO do texto de tela fora do XML. Medido nesta árvore:
+o portão via 212 rótulos do `.glade` e ZERO de `app/`, e havia CINCO rótulos
+com jargão banido em `app/` com o portão verde — entre eles um literal
+`"Daemon offline"` (`compact_window.py`), que é a palavra que a E3 da
+PALAVRA-01 aposentou primeiro.
+
+COMO O FALSO POSITIVO É EVITADO, e esta é a regra que decide se o portão
+sobrevive. A pergunta "esta string aparece na tela?" NÃO é respondida pela
+forma da string, nem pelo nome da variável, nem por estar em MAIÚSCULA. É
+respondida por FLUXO: uma string é texto de tela quando ela CHEGA A UM
+ESCOADOURO DE TELA — argumento de `set_label`/`set_text`/`set_markup`/
+`set_tooltip_text`/`set_title`/`add_button`, de `_()` (gettext), de um
+construtor de widget com texto (`Gtk.Label(label=...)`), ou de um dos ajudantes
+de tela desta casa (`moldura_de_secao`, `rotulo_de_apoio`).
+
+Consequência, e é ela que mantém o portão calado sobre o que não é tela:
+chave de dicionário, id de widget, nome de sinal, valor de enum, caminho de
+`/dev`, nome de variável e mensagem de log NÃO chegam a escoadouro nenhum, e o
+portão nunca os vê. `MODE_DESKTOP = "desktop"`, `UINPUT_DEV = "/dev/uinput"` e
+`TRAY_APP_ID = "hefesto-dualsense4unix"` moram em `app/` e são invisíveis para
+ele — de graça, sem lista de exceção.
+
+Duas afinações que a medição pediu, cada uma matando uma família de falso
+positivo que a primeira versão da regra produziu:
+
+- **a posição do argumento importa**. `add_button("Fechar", Gtk.ResponseType.CLOSE)`
+  só tem texto de tela na posição 0. Sem esse corte, `ResponseType.CANCEL` e
+  `ResponseType.OK` entravam como "nome alimentado por escoadouro" e
+  promoviam a texto de tela toda constante chamada `CANCEL` ou `OK` da árvore;
+- **`new` genérico NÃO é escoadouro**. `indicator_cls.new(TRAY_APP_ID, ...)` do
+  ícone de bandeja parecia construtor de widget e arrastava o id do aplicativo
+  para dentro do portão. Só `new_with_label` e `new_with_mnemonic` entram.
+
+A CONSTANTE QUE ATRAVESSA MÓDULO. A aba Configurações declara o título e a dica
+de cada seção como constante de módulo (`TITULO`, `DICA`) e quem monta lê por
+atributo (`moldura_de_secao(secao.TITULO, secao.DICA)`, `config/mixin.py:46`).
+O portão aprende esses nomes do próprio código, e não de uma lista escrita à
+mão: ele varre o corpo inteiro de `app/` atrás de `alguma_coisa.NOME` em
+posição de texto de tela, e daí em diante toda constante de módulo com esse
+nome conta como texto de tela. Hoje isso resolve para exatamente dois nomes —
+`TITULO` e `DICA` — e é o contrato que `config/secoes.py:23` já escrevia em
+comentário.
 
 POR QUE ELE NASCE COM DÍVIDA DECLARADA. A sprint previa que o portão entrasse
 JUNTO com a troca dos 24 rótulos (E1 a E4). A troca não veio: MEDIDO em
@@ -42,20 +91,38 @@ Uso:
 Saída: uma linha por achado, em ``arquivo:linha: motivo``. Código de saída 0 se
 limpo, 1 se houver achado.
 
-LACUNAS CONHECIDAS (13/08/2026), escritas para não serem confundidas com
-cobertura: o texto que a interface monta em Python não é varrido; os catálogos
-de tradução (`po/`) não são varridos; e a maiúscula é conferida no primeiro
-caractere do rótulo, não frase a frase dentro dele.
+LACUNAS CONHECIDAS (23/08/2026), escritas para não serem confundidas com
+cobertura:
+
+- **texto que só existe em tempo de execução** não é varrido. O portão é
+  estático: ele lê literal e constante de módulo. Rótulo que sai de uma tabela
+  de dados, de um perfil ou de um `f"{...}"` sem parte literal fica fora. Quem
+  cobre esse caso é o portão IRMÃO, de widget montado
+  (`tests/unit/test_config_a_palavra_de_tela_da_aba_montada.py`), que monta a
+  aba de verdade e anda a árvore — com o limite próprio dele, medido em
+  22/08/2026: alcança 175 textos / 101 únicos e LÊ O BARRAMENTO REAL da
+  máquina, então num CI sem adaptador o alcance dele encolhe sozinho. Os dois
+  se somam, e nenhum substitui o outro;
+- **`app/` é o alcance, não `src/` inteiro.** O texto de tela desta casa mora
+  em `app/`; `core/`, `integrations/` e `cli/` não falam com a janela;
+- os catálogos de tradução (`po/`) não são varridos;
+- a maiúscula é conferida no primeiro caractere do rótulo, não frase a frase
+  dentro dele.
 """
 from __future__ import annotations
 
 import argparse
+import ast
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from xml.parsers import expat
 
 RAIZ = Path(__file__).resolve().parents[1]
 GLADE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
+#: Onde mora o texto de tela montado em Python. Ver "O ALCANCE" no topo:
+#: `core/`, `integrations/` e `cli/` não falam com a janela.
+APP = RAIZ / "src" / "hefesto_dualsense4unix" / "app"
 
 #: As propriedades do Glade que viram texto NA TELA. `label` é o grosso; as
 #: outras três entram porque a pessoa lê as quatro do mesmo jeito.
@@ -248,11 +315,344 @@ def conferir(caminho: Path) -> list[str]:
     return achados
 
 
+#: POR QUE A REGRA DA MAIÚSCULA NÃO ATRAVESSA PARA `app/`, e ela é a decisão
+#: mais importante desta extensão. MEDIDO em 23/08/2026, com a regra ligada
+#: sobre os 347 textos de tela de `app/`: **49 reprovações, nenhum defeito.**
+#:
+#: No `.glade`, `<property name="label">` é sempre um rótulo INTEIRO, e
+#: "começa em maiúscula?" tem resposta. Em Python o mesmo escoadouro recebe
+#: PEDAÇO, e o portão estático não tem como saber qual é qual:
+#:
+#: * marcação em volta de um valor de execução — `<span foreground="{}">{}</span>`,
+#:   32 das 49. A primeira letra que existe no literal é o `s` de `span`;
+#: * contagem — `"{n} controles"`, `"1 externo"`, `"{n} do Hefesto + {ext}"`;
+#: * sufixo entre parênteses — `"{} (padrão)"`, `"{} (cópia)"`, `"(nenhum perfil)"`;
+#: * oração colada depois de um marcador — `"· %(n)d controles (%(t)s)"`.
+#:
+#: A pergunta só é respondível depois que os pedaços viram UM rótulo, e aí ela
+#: já tem dono: `tests/unit/test_config_a_palavra_de_tela_da_aba_montada.py`
+#: monta a aba de verdade e confere a maiúscula no texto COMPOSTO. Dois
+#: instrumentos, cada um medindo o que sabe medir — a lição de
+#: `portoes-em-serie-enganam` (19/08/2026).
+#:
+#: O jargão é diferente, e por isso ele atravessa: `"daemon"` dentro de um
+#: pedaço continua sendo `"daemon"` na tela, componha-se como se componha.
+
+#: O jargão que sobreviveu em `app/`, um a um, MEDIDO em 23/08/2026 — a
+#: primeira varredura de Python que este portão fez. Não é perdão: é a mesma
+#: dívida da E1-E4, agora com o endereço em código. Some daqui no commit que
+#: trocar a frase, e o portão reprova se alguém esquecer de apagar a entrada.
+#:
+#: As duas primeiras são jargão PURO, e o conserto é redação de tela — decisão
+#: dela, como a E3 da PALAVRA-01 sempre foi. As três últimas CITAM um rótulo do
+#: `.glade` que já está em `DIVIDA_DA_PALAVRA_01`: elas têm de mudar no mesmo
+#: commit que o botão, senão a frase manda clicar num botão que não existe
+#: mais.
+DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
+    "Daemon offline": (
+        "23/08/2026 — `app/compact_window.py`, o rótulo de estado da janela "
+        "compacta. Vira `O Hefesto está desligado`. Jargão puro: a janela "
+        "compacta é a que fica na tela durante o jogo, e é a última onde a "
+        "palavra `daemon` deveria aparecer."
+    ),
+    "ERRO ao aplicar perfil (daemon offline?).": (
+        "23/08/2026 — `app/actions/footer_actions.py`, o aviso de falha ao "
+        "aplicar perfil. Vira `Não consegui aplicar o perfil — o Hefesto pode "
+        "estar desligado.`"
+    ),
+    "Asset 'meu_perfil.json' não encontrado — Restaurar Default indisponível.": (
+        "23/08/2026 — `app/actions/footer_actions.py`. CITA o botão "
+        "`Restaurar Default`, que é dívida do `.glade`; muda junto com ele."
+    ),
+    (
+        '<span foreground="#ff5555">O mouse virtual está sem permissão — abra a aba '
+        'Sistema e clique em “Aplicar correções”</span>'
+    ): (
+        "23/08/2026 — `app/actions/mouse_actions.py`. CITA o botão `Aplicar "
+        "correções`, que é dívida do `.glade`; muda junto com ele."
+    ),
+    (
+        '<span foreground="#ffb86c">O mouse virtual ainda não está pronto — abra a aba '
+        'Sistema e clique em “Aplicar correções”</span>'
+    ): (
+        "23/08/2026 — `app/actions/mouse_actions.py`. CITA o botão `Aplicar "
+        "correções`, que é dívida do `.glade`; muda junto com ele."
+    ),
+}
+
+#: Os ESCOADOUROS DE TELA, e quantas posições iniciais de cada um são texto de
+#: tela. O número não é decoração: `add_button("Fechar", ResponseType.CLOSE)`
+#: tem texto na posição 0 e um valor de enum na 1, e foi essa distinção que
+#: impediu `CANCEL`/`OK` de virarem "nome de constante de tela" (ver o topo).
+#:
+#: `_` é o gettext desta casa (`utils/i18n`), e é o escoadouro mais denso:
+#: 237 chamadas em `app/`.
+ESCOADOUROS: dict[str, int] = {
+    "set_label": 1,
+    "set_text": 1,
+    "set_markup": 1,
+    "set_tooltip_text": 1,
+    "set_tooltip_markup": 1,
+    "set_title": 1,
+    "set_placeholder_text": 1,
+    "add_button": 1,
+    "new_with_label": 1,
+    "new_with_mnemonic": 1,
+    "_": 1,
+    # Os dois ajudantes de tela da aba Configurações (`app/actions/config/
+    # moldura.py`). `moldura_de_secao(titulo, dica)` tem texto nas DUAS.
+    "moldura_de_secao": 2,
+    "rotulo_de_apoio": 1,
+}
+
+#: Construtores de widget cujo primeiro argumento — ou o `label=` — é texto de
+#: tela. Casados pelo NOME DO ATRIBUTO (`Gtk.Label(...)`), que é como o código
+#: desta casa os escreve.
+CONSTRUTORES_COM_TEXTO = frozenset(
+    {"Label", "Button", "CheckButton", "RadioButton", "MenuItem", "ToggleButton", "LinkButton"}
+)
+
+#: Argumentos NOMEADOS que carregam texto de tela. Fora desta lista, um `kwarg`
+#: é ignorado — `Gtk.Label(name="x")` é id de CSS, não texto.
+NOMEADOS_DE_TELA = frozenset(
+    {"label", "text", "title", "tooltip_text", "placeholder_text", "titulo", "dica", "texto"}
+)
+
+
+def _escoadouro_de(no: ast.Call) -> int | None:
+    """Quantas posições iniciais desta chamada são texto de tela, ou None.
+
+    None significa "esta chamada não põe nada na tela" — que é o veredito para
+    a esmagadora maioria das chamadas de `app/`, e é por isso que o portão fica
+    calado sobre chave de dicionário, nome de sinal e mensagem de log.
+    """
+    alvo = no.func
+    if isinstance(alvo, ast.Name):
+        return ESCOADOUROS.get(alvo.id)
+    if isinstance(alvo, ast.Attribute):
+        if alvo.attr in ESCOADOUROS:
+            return ESCOADOUROS[alvo.attr]
+        if alvo.attr in CONSTRUTORES_COM_TEXTO:
+            return 1
+    return None
+
+
+def _argumentos_de_tela(no: ast.Call, posicoes: int) -> Iterator[ast.expr]:
+    """Só o que ocupa posição de texto de tela nesta chamada."""
+    yield from no.args[:posicoes]
+    for nomeado in no.keywords:
+        if nomeado.arg in NOMEADOS_DE_TELA:
+            yield nomeado.value
+
+
+#: O que ocupa, no texto reconstruído, o lugar de um pedaço que só existe em
+#: tempo de execução. Ele PRECISA ser visível: uma f-string remontada sem marca
+#: no buraco vira uma frase que ninguém escreveu — `f"{n} controles"` viraria
+#: `" controles"`, e o portão reprovaria por minúscula um texto que na tela
+#: começa com um número.
+BURACO = "{}"
+
+
+def _texto_reconstruido(no: ast.expr) -> str | None:
+    """A expressão remontada como a pessoa a lê, ou None se não for texto.
+
+    A f-string e a soma de literais são remontadas em UMA frase, com `{}` no
+    lugar de cada pedaço calculado. Isso não é detalhe de implementação: a
+    primeira versão desta função devolvia os pedaços SOLTOS, e o portão nasceu
+    com 35 reprovações — 12 delas contra fragmentos como `'<span foreground="'`
+    e `'%</span>'`, que são metade de uma marcação Pango partida ao meio por um
+    `{cor}`. Nenhuma delas era texto de tela; todas eram a régua quebrando o
+    texto no lugar errado.
+
+    Uma chamada aninhada vira `{}` do mesmo jeito: quem a visita é o
+    `ast.walk`, e contar o conteúdo dela aqui também duplicaria o achado.
+    """
+    if isinstance(no, ast.Constant):
+        return no.value if isinstance(no.value, str) else None
+    if isinstance(no, ast.JoinedStr):
+        pedacos: list[str] = []
+        for pedaco in no.values:
+            if isinstance(pedaco, ast.Constant) and isinstance(pedaco.value, str):
+                pedacos.append(pedaco.value)
+            else:
+                pedacos.append(BURACO)
+        return "".join(pedacos)
+    if isinstance(no, ast.BinOp) and isinstance(no.op, ast.Add):
+        esquerda = _texto_reconstruido(no.left)
+        direita = _texto_reconstruido(no.right)
+        if esquerda is None and direita is None:
+            return None
+        return (esquerda or BURACO) + (direita or BURACO)
+    return None
+
+
+def _literais(no: ast.expr) -> list[str]:
+    """O texto de tela desta expressão — zero ou um, já remontado."""
+    texto = _texto_reconstruido(no)
+    if texto is None:
+        return []
+    return [texto] if texto.replace(BURACO, "").strip() else []
+
+
+def arquivos_de_python(raiz: Path = APP) -> list[Path]:
+    """Os módulos de `app/`, em ordem estável."""
+    return [caminho for caminho in sorted(raiz.rglob("*.py")) if "__pycache__" not in caminho.parts]
+
+
+def nomes_de_constante_de_tela(arvores: dict[Path, ast.Module]) -> set[str]:
+    """Os nomes de constante que ATRAVESSAM módulo até um escoadouro.
+
+    O portão não adivinha por nome nem por MAIÚSCULA: ele procura
+    `alguma_coisa.NOME` em posição de texto de tela — hoje, o
+    `moldura_de_secao(secao.TITULO, secao.DICA)` de `config/mixin.py:46` — e é
+    daí que sai a lista. Se a aba Configurações rebatizar o contrato, o portão
+    acompanha sozinho.
+    """
+    nomes: set[str] = set()
+    for arvore in arvores.values():
+        for no in ast.walk(arvore):
+            if not isinstance(no, ast.Call):
+                continue
+            posicoes = _escoadouro_de(no)
+            if posicoes is None:
+                continue
+            for argumento in _argumentos_de_tela(no, posicoes):
+                if isinstance(argumento, ast.Attribute) and argumento.attr.isupper():
+                    nomes.add(argumento.attr)
+    return nomes
+
+
+def _constantes_de_modulo(arvore: ast.Module) -> dict[str, tuple[list[str], int]]:
+    """As atribuições de nível de módulo que são texto literal."""
+    constantes: dict[str, tuple[list[str], int]] = {}
+    for no in arvore.body:
+        nome: str | None = None
+        if isinstance(no, ast.Assign) and len(no.targets) == 1:
+            if isinstance(no.targets[0], ast.Name):
+                nome = no.targets[0].id
+        elif isinstance(no, ast.AnnAssign) and isinstance(no.target, ast.Name):
+            nome = no.target.id
+        if nome is None or no.value is None:
+            continue
+        valor = no.value
+        # `TITULO = _("Está tudo certo?")` conta como o texto de dentro.
+        if isinstance(valor, ast.Call):
+            posicoes = _escoadouro_de(valor)
+            textos = (
+                [t for arg in _argumentos_de_tela(valor, posicoes) for t in _literais(arg)]
+                if posicoes is not None
+                else []
+            )
+        else:
+            textos = _literais(valor)
+        if textos:
+            constantes[nome] = (textos, no.lineno)
+    return constantes
+
+
+def rotulos_do_python(caminho: Path, nomes_de_tela: set[str]) -> list[Rotulo]:
+    """Todo texto de tela ESTÁTICO do módulo, com a linha em que ele mora.
+
+    Duas fontes, e nenhuma delas é o nome da variável:
+
+    1. literal em posição de texto de tela numa chamada de escoadouro;
+    2. constante de módulo que CHEGA a um escoadouro — no próprio arquivo, ou
+       por atributo a partir de outro (`nomes_de_tela`).
+    """
+    arvore = ast.parse(caminho.read_text(encoding="utf-8"))
+    constantes = _constantes_de_modulo(arvore)
+    achados: list[Rotulo] = []
+    usadas: set[str] = {nome for nome in constantes if nome in nomes_de_tela}
+
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.Call):
+            continue
+        posicoes = _escoadouro_de(no)
+        if posicoes is None:
+            continue
+        for argumento in _argumentos_de_tela(no, posicoes):
+            for texto in _literais(argumento):
+                if texto.strip():
+                    achados.append(Rotulo(caminho, argumento.lineno, "texto de tela", texto))
+            if isinstance(argumento, ast.Name) and argumento.id in constantes:
+                usadas.add(argumento.id)
+
+    for nome in sorted(usadas):
+        textos, linha = constantes[nome]
+        for texto in textos:
+            if texto.strip():
+                achados.append(Rotulo(caminho, linha, f"constante {nome}", texto))
+
+    achados.sort(key=lambda rotulo: rotulo.linha)
+    return achados
+
+
+def conferir_python(caminho: Path, nomes_de_tela: set[str]) -> list[str]:
+    """As reprovações de um módulo de `app/`, em ordem de linha."""
+    if not caminho.is_file():
+        return [f"{caminho}: módulo de interface não encontrado"]
+
+    achados: list[str] = []
+    for rotulo in rotulos_do_python(caminho, nomes_de_tela):
+        # Só a regra do jargão. A da maiúscula fica de fora, e o porquê está
+        # escrito acima de `DIVIDA_DA_PALAVRA_01_PY`: 49 reprovações, nenhum
+        # defeito.
+        termo = jargao_em(rotulo.texto)
+        if termo is not None and rotulo.texto not in DIVIDA_DA_PALAVRA_01_PY:
+            achados.append(
+                f"{rotulo.arquivo}:{rotulo.linha}: o texto de tela "
+                f"{rotulo.texto!r} ({rotulo.propriedade}) contém o jargão "
+                f"{termo!r}, aposentado pela E3 da PALAVRA-01.\n"
+                f"    Diga {JARGAO_BANIDO[termo]!r}. Quem joga não é "
+                "obrigado a saber o que é um daemon."
+            )
+    return achados
+
+
+def conferir_app(raiz: Path = APP) -> list[str]:
+    """A varredura inteira de `app/`, com a checagem de lista envelhecida.
+
+    A pergunta "esta exceção ainda existe?" só tem resposta com o corpo INTEIRO
+    na mão — por isso ela mora aqui, e não em `conferir_python`, que também é
+    chamado com um arquivo só.
+    """
+    arquivos = arquivos_de_python(raiz)
+    arvores = {
+        caminho: ast.parse(caminho.read_text(encoding="utf-8")) for caminho in arquivos
+    }
+    nomes_de_tela = nomes_de_constante_de_tela(arvores)
+
+    achados: list[str] = []
+    presentes: set[str] = set()
+    for caminho in arquivos:
+        achados.extend(conferir_python(caminho, nomes_de_tela))
+        presentes.update(rotulo.texto for rotulo in rotulos_do_python(caminho, nomes_de_tela))
+
+    for declarado in DIVIDA_DA_PALAVRA_01_PY:
+        if declarado not in presentes:
+            achados.append(
+                f"{raiz}: a dívida {declarado!r} não existe mais em `app/` — a "
+                "frase foi trocada, e é uma boa notícia. APAGUE a entrada de "
+                "`DIVIDA_DA_PALAVRA_01_PY`."
+            )
+    return achados
+
+
 def mostrar_criterio() -> None:
     """Imprime o critério, para quem quiser conferir sem ler o código."""
     print("Portão da palavra de tela (PALAVRA-01 / E5)")
-    print(f"  arquivo varrido: {GLADE.relative_to(RAIZ)}")
+    print(f"  XML varrido: {GLADE.relative_to(RAIZ)}")
     print(f"  propriedades: {', '.join(sorted(PROPRIEDADES_DE_TELA))}")
+    print(f"  Python varrido: {APP.relative_to(RAIZ)}/**/*.py (por AST)")
+    print("  regra de tela do Python: a string CHEGA a um escoadouro de tela.")
+    print(f"    escoadouros: {', '.join(sorted(ESCOADOUROS))}")
+    print(f"    construtores: {', '.join(sorted(CONSTRUTORES_COM_TEXTO))}")
+    print(f"    argumentos nomeados: {', '.join(sorted(NOMEADOS_DE_TELA))}")
+    print(
+        "    NÃO é texto de tela: chave de dicionário, id de widget, nome de "
+        "sinal,\n    valor de enum, nome de variável, mensagem de log — nenhum "
+        "chega a escoadouro."
+    )
     print()
     print("Regra 1 — nenhum rótulo começa em minúscula. Exceções declaradas:")
     for rotulo, razao in EXCECOES_DE_MINUSCULA.items():
@@ -262,14 +662,28 @@ def mostrar_criterio() -> None:
     for termo, vira in JARGAO_BANIDO.items():
         print(f"  {termo!r} -> {vira!r}")
     print()
-    print("Dívida declarada da E1-E4 (rótulos que ainda não foram trocados):")
+    print("Dívida declarada da E1-E4 no .glade (rótulos ainda não trocados):")
     for rotulo, razao in DIVIDA_DA_PALAVRA_01.items():
+        print(f"  {rotulo!r}: {razao}")
+    print()
+    print("Em app/ vale a regra 2 (jargão) e NÃO a regra 1 (maiúscula):")
+    print("  o escoadouro de tela recebe PEDAÇO em Python — marcação em volta")
+    print("  de um valor, contagem, sufixo entre parênteses. Medido em")
+    print("  23/08/2026: a regra 1 ali dava 49 reprovações e nenhum defeito.")
+    print("  Quem confere maiúscula no texto COMPOSTO é o portão de widget,")
+    print("  tests/unit/test_config_a_palavra_de_tela_da_aba_montada.py.")
+    print()
+    print("Dívida declarada em app/ (frases ainda não trocadas):")
+    for rotulo, razao in DIVIDA_DA_PALAVRA_01_PY.items():
         print(f"  {rotulo!r}: {razao}")
 
 
 def main(argumentos: list[str] | None = None) -> int:
     analisador = argparse.ArgumentParser(
-        description="Portão da palavra de tela: reprova minúscula e jargão no .glade.",
+        description=(
+            "Portão da palavra de tela: reprova minúscula e jargão no .glade "
+            "e no texto de tela montado em Python."
+        ),
     )
     analisador.add_argument("--all", action="store_true", help="varre a interface da árvore")
     analisador.add_argument(
@@ -286,14 +700,29 @@ def main(argumentos: list[str] | None = None) -> int:
         return 0
 
     alvos = [Path(caminho) for caminho in (opcoes.check_file or []) + opcoes.arquivos]
-    if opcoes.all or not alvos:
-        alvos = [GLADE]
+    varredura_completa = opcoes.all or not alvos
 
     achados: list[str] = []
-    for alvo in alvos:
-        if alvo.suffix != ".glade":
-            continue
-        achados.extend(conferir(alvo))
+    if varredura_completa:
+        achados.extend(conferir(GLADE))
+        achados.extend(conferir_app())
+    else:
+        # Um arquivo por vez: os nomes que atravessam módulo continuam vindo do
+        # corpo INTEIRO — senão `TITULO` e `DICA` sumiriam justamente quando se
+        # confere a seção que os declara.
+        nomes_de_tela: set[str] | None = None
+        for alvo in alvos:
+            if alvo.suffix == ".glade":
+                achados.extend(conferir(alvo))
+            elif alvo.suffix == ".py" and APP in alvo.resolve().parents:
+                if nomes_de_tela is None:
+                    nomes_de_tela = nomes_de_constante_de_tela(
+                        {
+                            caminho: ast.parse(caminho.read_text(encoding="utf-8"))
+                            for caminho in arquivos_de_python()
+                        }
+                    )
+                achados.extend(conferir_python(alvo.resolve(), nomes_de_tela))
 
     for achado in achados:
         print(achado)

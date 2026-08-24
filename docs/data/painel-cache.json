@@ -1,17 +1,17 @@
 {
-  "medido_em": 1787520995.1731055,
+  "medido_em": 1787534197.094181,
   "portoes": {
     "ruff": {
-      "ok": true,
-      "cauda": "All checks passed!"
+      "ok": false,
+      "cauda": "R,\n65 | )\n66 | from hefesto_dualsense4unix.integrations.cor_do_plastico import (  # noqa: E402\n   |                                                                    ^^^^^^^^^^^^\n67 |     NOMES_DE_FABRICA,\n68 |     TONS,\n   |\nhelp: Remove unused `noqa` directive\n\nFound 4 errors.\n[*] 4 fixable with the `--fix` option."
     },
     "mypy": {
       "ok": true,
-      "cauda": "Success: no issues found in 207 source files"
+      "cauda": "Success: no issues found in 208 source files"
     },
     "acentuação": {
-      "ok": false,
-      "cauda": "tests/unit/test_a5_fechar_a_janela_nao_perde_a_declaracao.py:16:nao -> sugestão não\n\n1 violação(es) de acentuação PT-BR encontrada(s)."
+      "ok": true,
+      "cauda": ""
     },
     "glifos": {
       "ok": true,
@@ -19,11 +19,11 @@
     },
     "referências": {
       "ok": true,
-      "cauda": "OK: 401 documento(s) sem referência morta."
+      "cauda": "OK: 418 documento(s) sem referência morta."
     },
     "palavra de tela": {
-      "ok": true,
-      "cauda": ""
+      "ok": false,
+      "cauda": "x/src/hefesto_dualsense4unix/app/widgets/painel_no_jogo.py:615: o texto de tela '<span foreground=\"' (texto de tela) começa em minúscula. A janela fala com quem joga: comece com maiúscula.\n    Se for exceção de verdade, declare em `EXCECOES_DE_MINUSCULA_PY` com a razão e a data.\n\n35 reprovação(ões) da palavra de tela."
     },
     "anonimato": {
       "ok": true,
@@ -51,8 +51,10 @@
     }
   },
   "suite": {
-    "passed": null,
-    "failed": 0,
-    "ok": false
+    "passed": 11686,
+    "failed": 1,
+    "ok": false,
+    "nao_mediu": false,
+    "porque": ""
   }
 }

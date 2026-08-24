@@ -60,6 +60,7 @@ def _rodar(
     monkeypatch: pytest.MonkeyPatch,
     *,
     declarou: tuple[bool, str | None],
+    descartados: tuple[str, ...] = (),
     resultado: Any = None,
     erro: Exception | None = None,
 ) -> _Rodape:
@@ -67,8 +68,11 @@ def _rodar(
     rodape = _Rodape()
     monkeypatch.setattr(
         footer_actions.ipc_bridge,
-        "machine_declare",
-        lambda _payload: declarou,
+        # CONFIG-06 (23/08/2026): o rodapé passou a pedir a resposta INTEIRA
+        # (`(ok, motivo, descartados)`), porque o aviso de campo descartado só
+        # existe nela. O nome antigo continua vivo como embrulho de duas pontas.
+        "machine_declare_detalhado",
+        lambda _payload: (*declarou, descartados),
     )
 
     def _fake_async(
@@ -151,7 +155,7 @@ class TestARespostaChegaNaTela:
         rodape._maquina_pendente = None
         monkeypatch.setattr(
             footer_actions.ipc_bridge,
-            "machine_declare",
+            "machine_declare_detalhado",
             lambda _p: pytest.fail("sem declaração não se manda IPC"),
         )
         monkeypatch.setattr(
