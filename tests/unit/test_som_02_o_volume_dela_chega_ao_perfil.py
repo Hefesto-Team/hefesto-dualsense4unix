@@ -129,6 +129,10 @@ class _Janela:
 
     def __init__(self, draft: DraftConfig) -> None:
         self.draft = draft
+        # Z2-4 (24/08/2026): "Todos" precisa existir explicitamente — sem
+        # isso `alvo_de_edicao` devolve DESCONHECIDO (P3) e o registro do
+        # alto-falante é recusado, não gravado global.
+        self._edit_target_uniq = None
 
 
 class _Seletor:
@@ -645,6 +649,13 @@ class _AbaStatus(StatusActionsMixin):
         chave = (0, str(_ENTRY["uniq"]))
         self._status_cards = {chave: card}
         self._status_card_keys = [chave]
+        # Z2-4 (24/08/2026): este teste só roda `_sync_status_cards` — o
+        # tique que sincroniza o alvo (`_refresh_controller_target_combo`) é
+        # de outro relógio (2 Hz) e não corre aqui. Sem "Todos" explícito, o
+        # registro do alto-falante veria DESCONHECIDO (P3) e recusaria,
+        # embora o que este teste afira seja a fiação card->janela, não o
+        # estado do seletor de alvo.
+        self._edit_target_uniq = None
 
 
 def _estado_com_um_controle() -> dict[str, Any]:
