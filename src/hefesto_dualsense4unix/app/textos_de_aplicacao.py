@@ -46,6 +46,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from hefesto_dualsense4unix.app.alvo_de_edicao import MOTIVO_SEM_ESTADO, alvo_de_edicao
+
 #: A palavra. Trocá-la é trocar esta linha.
 GUARDADO = "guardado"
 
@@ -82,39 +84,50 @@ def nome_curto_do_alvo(label: str | None) -> str:
     return label.split("(")[0].strip() or ALVO_SEM_NOME
 
 
+class AlvoDesconhecidoNaMesa(RuntimeError):
+    """`alvo_fora_da_mesa` foi chamada com a janela sem saber o alvo.
+
+    Z2-3 (24/08/2026). Não deveria disparar em produção: os chamadores de
+    hoje (Lightbar, Gatilhos) já recusam o gesto ANTES de chegar aqui — a
+    escrita para no choke point (`_aplicar_cor_no_controle`,
+    `_apply_trigger`...) assim que `alvo_de_edicao(host).desconhecido` é
+    verdade (Z2-1/Z2-2). Esta exceção existe para o QUINTO chamador futuro
+    que esquecer esse cheque: ele quebra alto em vez de compor "guardado"
+    ou "aplicado" sobre um gesto que não devia ter acontecido — a mentira
+    que `app/alvo_de_edicao.py` documenta como o pior caso medido do P3
+    ("Cor enviada ao controle", no singular, com zero controles ligados).
+    """
+
+
 def alvo_fora_da_mesa(host: Any) -> str | None:
     """Nome do alvo de edição quando ele NÃO está na mesa; ``None`` se está.
 
-    Lê o estado de UM dono só — o mapa de conectados que a aba Status
-    recalcula do ``state_full`` a cada tique (``_target_uniq_by_index``, só
-    controles conectados) e o alvo escolhido (``_edit_target_uniq``, mantido
-    quando o controle some — R-16). ``getattr`` defensivo porque os mixins só
-    convivem de fato na instância composta.
+    Lê o estado de UM dono só — `app/alvo_de_edicao.py` — e o mapa de
+    conectados que a aba Status recalcula do ``state_full`` a cada tique
+    (``_target_uniq_by_index``, só controles conectados).
 
-    **Devolve ``None`` só quando a janela NÃO TEM o mapa** — o atributo não
-    existe (host parcial de teste, mixin instanciada sozinha). Chamar de
-    "guardado" o que talvez tenha sido aplicado seria trocar uma mentira por
-    outra.
+    **Levanta `AlvoDesconhecidoNaMesa` quando a janela não sabe o alvo.**
+    Chamar de "guardado" (ou de "aplicado") o que talvez nem devesse ter
+    escrito seria trocar uma mentira por outra — e ``None`` some em
+    silêncio dentro de um ``or`` (`frase_de_guardado(...) or
+    _TOAST_COR_ENVIADA...`), que é exatamente como a mentira do P3 chegava
+    à tela. Zero chamadores de produção precisam capturar esta exceção
+    hoje: todos já checam ``alvo_de_edicao(host).desconhecido`` antes.
+
+    **Devolve ``None``** quando ela ESCOLHEU "Todos" (não há alvo a
+    guardar) ou quando o alvo escolhido está conectado agora.
 
     **Mapa VAZIO não é "não sei": é "não tem DualSense na mesa"** (conserto
-    1.5). A guarda anterior tratava os dois como a mesma coisa e devolvia
-    ``None``, e com isso os toasts voltavam a afirmar sucesso no exato caso em
-    que o daemon responde ``guardado_em=[uniq]``. A justificativa escrita —
-    "nenhum tique do daemon ainda" — não existe no produto, e está medida:
-
-    * ``_edit_target_uniq`` só é escrito em dois lugares
-      (``status_actions.py``): ``= None`` no construtor da aba e
-      ``_sync_edit_target``, que roda DEPOIS de ``_update_target_maps`` na
-      mesma passada de ``_refresh_controller_target_combo``. Alvo preenchido
-      sem mapa preenchido nunca é "antes do primeiro tique";
-    * e o estado é alcançável de verdade: com ZERO DualSense e um externo na
-      mesa (8BitDo, Pro Controller), ``editavel = contagem.adotados >= 1`` é
-      falso, ``_sync_edit_target`` NÃO é chamado — o alvo fica de pé, como a
-      R-16 quer — e o mapa vem vazio de ``_update_target_maps([])``. É o ramo
-      que o próprio código comenta com *"Só externos conectados: nenhum radio
-      (não há alvo de edição)"*.
+    1.5). Com ZERO DualSense e um externo na mesa (8BitDo, Pro Controller),
+    ``editavel = contagem.adotados >= 1`` é falso, ``_sync_edit_target`` não
+    é chamado — o alvo fica de pé, como a R-16 quer — e o mapa vem vazio de
+    ``_update_target_maps([])``: é o ramo que o próprio código comenta com
+    *"Só externos conectados: nenhum radio (não há alvo de edição)"*.
     """
-    uniq = getattr(host, "_edit_target_uniq", None)
+    estado = alvo_de_edicao(host)
+    if estado.desconhecido:
+        raise AlvoDesconhecidoNaMesa(estado.motivo or MOTIVO_SEM_ESTADO)
+    uniq = estado.uniq
     if not isinstance(uniq, str) or not uniq:
         return None  # "Todos": a escrita é global, não há alvo a guardar
     mapa = getattr(host, "_target_uniq_by_index", None)
