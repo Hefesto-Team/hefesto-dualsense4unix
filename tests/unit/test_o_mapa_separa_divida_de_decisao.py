@@ -92,12 +92,21 @@ from __future__ import annotations
 
 import csv
 import io
+import sys
 from pathlib import Path
 
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
+
+sys.path.insert(0, str(RAIZ / "scripts"))
+# Z6-05 (24/08/2026): o domínio ganhou dono só —
+# `check_paridade_transporte.DOMINIO_POR_SUFIXO["por_que_nao_aciona"]` — e este
+# arquivo passou a IMPORTAR em vez de manter cópia própria, fechando o que o
+# cabeçalho pediu: "a lista continuar tendo UM dono". O quinto valor,
+# `o-aparelho-recusa`, entrou nesse gesto.
+from check_paridade_transporte import DOMINIO_POR_SUFIXO as _DOMINIO_DO_PORTAO
 
 LADOS = ("cabo", "radio")
 SUFIXO = "por_que_nao_aciona"
@@ -111,23 +120,28 @@ DIVIDA = "divida"
 DECISAO = "decisao-tomada"
 NADA_A_ACIONAR = "nada-a-acionar"
 SO_ELA_DECIDE = "so-ela-decide"
+#: O quinto valor (Z6-05, 24/08/2026): causa FORA do nosso código, como o
+#: `HANDSHAKE 0x04` da cor por rádio — nunca `decisao-tomada`, que diria que a
+#: escolha foi nossa.
+O_APARELHO_RECUSA = "o-aparelho-recusa"
 
 #: O domínio. Valor fora daqui reprova, de propósito: acrescentar resposta nova
-#: ao mapa é acrescentá-la aqui no mesmo gesto, senão a régua passa a aprovar o
-#: que não sabe ler.
-DOMINIO = frozenset({"", DIVIDA, DECISAO, NADA_A_ACIONAR, SO_ELA_DECIDE})
+#: ao mapa é acrescentá-la aqui no mesmo gesto — e desde Z6-05 o gesto é no
+#: portão (`DOMINIO_POR_SUFIXO["por_que_nao_aciona"]`), nunca mais aqui.
+DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 
 #: ─────────────────────────────────────────────────────────────────────────
-#: O TETO DA DÍVIDA — retrato de 22/08/2026, e ele só desce.
+#: O TETO DA DÍVIDA — retrato de 24/08/2026 (baixado de 22/08), e ele só desce.
 #: ─────────────────────────────────────────────────────────────────────────
-#: As quatro, nomeadas para ninguém precisar rodar nada para saber quais são:
+#: PAGA em 24/08/2026 (Z6-05): `identidade.cor_do_aparelho@dualsense` (rádio)
+#: saiu desta lista. Não é mais dívida — a medição de 23/08/2026 (`HANDSHAKE
+#: 0x04`, `btmon`) nomeou a causa como `o-aparelho-recusa`, e causa do
+#: APARELHO não é "ninguém escreveu o código". Ficam as três:
 #:
 #:   audio.saida_dedicada@dualsense          rádio — som no controle sem fio;
 #:                                           o canal existe e responde, o
 #:                                           conteúdo do payload não foi
 #:                                           identificado;
-#:   identidade.cor_do_aparelho@dualsense    rádio — a cor do plástico que a aba
-#:                                           Configurações mostra no cabo;
 #:   movimento.imu.perda@dualsense           cabo — o contador de reports do
 #:                                           `corpo[11..14]`, medido e nunca lido;
 #:   movimento.imu.perda@pro                 rádio — 1613 episódios num dia, e
@@ -136,7 +150,7 @@ DOMINIO = frozenset({"", DIVIDA, DECISAO, NADA_A_ACIONAR, SO_ELA_DECIDE})
 #: SUBIR ESTE NÚMERO É CONFISSÃO, não conserto: quem o subir está dizendo que a
 #: casa passou a dever mais do que devia. Pagar uma dívida é BAIXÁ-LO no mesmo
 #: commit — senão o teto vira folga e o portão para de morder.
-TETO_DA_DIVIDA = 4
+TETO_DA_DIVIDA = 3
 
 
 def _linhas(caminho: Path | str) -> list[dict[str, str]]:

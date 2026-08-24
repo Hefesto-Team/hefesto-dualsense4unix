@@ -52,6 +52,7 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     dicas_das_cores,
     nome_oficial_da_cor,
 )
+from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_ACIONA, Fala, frase_de_exibicao
 from hefesto_dualsense4unix.utils.i18n import _
 
 #: Quantos números de jogador o card oferece. Cinco, e não quatro: a mesa desta
@@ -83,7 +84,22 @@ DICA_DA_COR_NO_CABO = (
     "Lida do próprio controle: o código da cor está no firmware, nos "
     "caracteres 5 e 6 do serial de fábrica."
 )
-DICA_DA_COR_NO_RADIO = "Lida do próprio controle, por cabo ou por rádio."
+#: Z6-06 (24/08/2026) — a frase antiga ("Lida do próprio controle, por cabo ou
+#: por rádio.", 22/08/2026) prometia por rádio exatamente o que o firmware
+#: recusa: medido em 23/08/2026 (`HANDSHAKE 0x04`, `ERR_INVALID_PARAMETER`,
+#: `btmon` no canal de controle L2CAP — ver
+#: `docs/data/mapa-controles.csv:111`, `identidade.cor_do_aparelho@dualsense`).
+#: Declarada como `Fala` para o portão (`scripts/validar-fala-de-tela.py`)
+#: reprovar se este texto voltar a prometer o que o mapa mede como recusado.
+#: CLASSE DE TELA: ESTRUTURAL — muda o que se lê ao abrir; o aceite pede foto
+#: antes/depois vista por ela antes de ir ao ar (PROVA-DE-TELA-01).
+DICA_DA_COR_NO_RADIO = Fala(
+    chave="identidade.cor_do_aparelho@dualsense",
+    lado="radio",
+    aba="Configurações",
+    texto="No rádio o controle recusa o pedido da cor. Escolha na lista.",
+    afirma=AFIRMA_NAO_ACIONA,
+)
 DICA_DA_COR_NAO_LIDA = (
     "O Hefesto não conseguiu ler a cor deste controle. Escolha na lista e a "
     "borda passa a usá-la."
@@ -273,7 +289,11 @@ if _GTK_DISPONIVEL:
             """
             declarada = bool(dados.cor_id)
             if not declarada and dados.cor_lida:
-                dica = DICA_DA_COR_NO_CABO if dados.no_cabo else DICA_DA_COR_NO_RADIO
+                dica = (
+                    DICA_DA_COR_NO_CABO
+                    if dados.no_cabo
+                    else frase_de_exibicao(DICA_DA_COR_NO_RADIO)
+                )
                 caixa = _bloco("Cor:", dica)
                 valor = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
                 if dados.tom:
