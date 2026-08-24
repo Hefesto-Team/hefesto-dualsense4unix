@@ -4,6 +4,11 @@ Cobre:
 - `connect_with_retry` backoff exponencial (1s, 2s, 4s, ..., teto 30s).
 - `connect_with_retry` aborta no shutdown via `stop_event`.
 - Reset do backoff ao valor inicial após sucesso (não testado aqui, coberto indiretamente).
+- TESTE-HONESTO-01/E2: os cinco casos rodam também por Bluetooth — o
+  `_FakeController` ganha `transport` no construtor, e o payload publicado em
+  `CONTROLLER_CONNECTED` é conferido contra o transporte pedido. Antes desta
+  entrega o `get_transport()` do fake devolvia `"usb"` fixo, e nenhum teste
+  desta suíte jamais exercitava o par BT do backoff/reconexão.
 
 Usa fakes puros — sem pydualsense real.
 """
@@ -15,6 +20,7 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.daemon.connection import BACKOFF_MAX_SEC, connect_with_retry
 
 
@@ -33,9 +39,10 @@ class _FakeBus:
 
 
 class _FakeController:
-    def __init__(self, fail_until: int = 0) -> None:
+    def __init__(self, fail_until: int = 0, transport: str = "usb") -> None:
         self._calls = 0
         self._fail_until = fail_until
+        self._transport = transport
 
     def connect(self) -> None:
         self._calls += 1
@@ -43,7 +50,7 @@ class _FakeController:
             raise ConnectionError(f"tentativa {self._calls} falhou")
 
     def get_transport(self) -> str:
-        return "usb"
+        return self._transport
 
 
 @dataclass
@@ -75,23 +82,32 @@ class _SleepRecorder:
 
 
 @pytest.mark.asyncio
-async def test_connect_with_retry_sucesso_primeira_tentativa() -> None:
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+async def test_connect_with_retry_sucesso_primeira_tentativa(transporte: str) -> None:
     daemon = _FakeDaemon(
         config=_FakeConfig(reconnect_backoff_sec=1.0),
-        controller=_FakeController(fail_until=0),
+        controller=_FakeController(fail_until=0, transport=transporte),
         _stop_event=asyncio.Event(),
     )
     await connect_with_retry(daemon)
     assert daemon.controller._calls == 1
     assert any(topic for topic, _ in daemon.bus.published)
+    # O par diferencial: CONTROLLER_CONNECTED carrega o transporte de QUEM
+    # conectou, não um valor fixo — antes da E2 o fake sempre devolvia "usb".
+    topic, payload = daemon.bus.published[-1]
+    assert topic == EventTopic.CONTROLLER_CONNECTED
+    assert payload["transport"] == transporte
 
 
 @pytest.mark.asyncio
-async def test_connect_with_retry_backoff_exponencial(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+async def test_connect_with_retry_backoff_exponencial(
+    monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
     """3 falhas consecutivas → backoff vai 1s, 2s, 4s (dobra a cada falha)."""
     daemon = _FakeDaemon(
         config=_FakeConfig(reconnect_backoff_sec=1.0),
-        controller=_FakeController(fail_until=3),
+        controller=_FakeController(fail_until=3, transport=transporte),
         _stop_event=asyncio.Event(),
     )
     recorder = _SleepRecorder()
@@ -99,18 +115,24 @@ async def test_connect_with_retry_backoff_exponencial(monkeypatch: pytest.Monkey
 
     await connect_with_retry(daemon)
 
-    # 3 falhas geraram 3 esperas com backoff 1.0, 2.0, 4.0.
+    # 3 falhas geraram 3 esperas com backoff 1.0, 2.0, 4.0 — o backoff não
+    # muda com o transporte, e é isso que o par usb/bt prova.
     assert recorder.calls == [1.0, 2.0, 4.0], f"esperado [1,2,4], obtido {recorder.calls}"
     assert daemon.controller._calls == 4  # 3 falhas + 1 sucesso
+    _, payload = daemon.bus.published[-1]
+    assert payload["transport"] == transporte
 
 
 @pytest.mark.asyncio
-async def test_connect_with_retry_backoff_com_teto(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+async def test_connect_with_retry_backoff_com_teto(
+    monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
     """Após suficientes falhas, backoff cresce mas não passa de BACKOFF_MAX_SEC."""
     # Com backoff inicial 10s: 10 → 20 → 30 (teto) → 30 → 30...
     daemon = _FakeDaemon(
         config=_FakeConfig(reconnect_backoff_sec=10.0),
-        controller=_FakeController(fail_until=5),
+        controller=_FakeController(fail_until=5, transport=transporte),
         _stop_event=asyncio.Event(),
     )
     recorder = _SleepRecorder()
@@ -119,14 +141,19 @@ async def test_connect_with_retry_backoff_com_teto(monkeypatch: pytest.MonkeyPat
     await connect_with_retry(daemon)
 
     assert recorder.calls == [10.0, 20.0, BACKOFF_MAX_SEC, BACKOFF_MAX_SEC, BACKOFF_MAX_SEC]
+    _, payload = daemon.bus.published[-1]
+    assert payload["transport"] == transporte
 
 
 @pytest.mark.asyncio
-async def test_connect_with_retry_aborta_no_shutdown(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+async def test_connect_with_retry_aborta_no_shutdown(
+    monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
     """Se stop_event setar durante o backoff, connect_with_retry retorna sem conectar."""
     daemon = _FakeDaemon(
         config=_FakeConfig(reconnect_backoff_sec=1.0),
-        controller=_FakeController(fail_until=99),  # sempre falha
+        controller=_FakeController(fail_until=99, transport=transporte),  # sempre falha
         _stop_event=asyncio.Event(),
     )
 
@@ -141,19 +168,23 @@ async def test_connect_with_retry_aborta_no_shutdown(monkeypatch: pytest.MonkeyP
     await connect_with_retry(daemon)
 
     # Primeira tentativa falhou, stop_event "sinalizou" no sleep, função retornou.
+    # Nunca conectou — nenhum CONTROLLER_CONNECTED sai, em nenhum transporte.
     assert daemon.controller._calls == 1
+    assert daemon.bus.published == []
 
 
 @pytest.mark.asyncio
-async def test_connect_with_retry_sem_auto_reconnect_propaga_erro() -> None:
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+async def test_connect_with_retry_sem_auto_reconnect_propaga_erro(transporte: str) -> None:
     daemon = _FakeDaemon(
         config=_FakeConfig(reconnect_backoff_sec=1.0, auto_reconnect=False),
-        controller=_FakeController(fail_until=1),
+        controller=_FakeController(fail_until=1, transport=transporte),
         _stop_event=asyncio.Event(),
     )
     with pytest.raises(ConnectionError):
         await connect_with_retry(daemon)
     assert daemon.controller._calls == 1
+    assert daemon.bus.published == []
 
 
 # -----------------------------------------------------------------------------

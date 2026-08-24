@@ -47,6 +47,16 @@ qual promessa quebrou.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# TESTE-HONESTO-01/E1 (24/08/2026): a guarda vem ANTES do import de
+# `secao_controles`, que constrói `Gtk.Box`/`Gtk.Button` de verdade
+# (`set_no_show_all` nas mordidas acima é método real de `Gtk.Widget`) e chega
+# a `import gi` via `config/__init__.py -> mixin.py -> base.py`. Sem ela, este
+# arquivo estourava ERRO DE COLETA no CI sem PyGObject (medido: simulação do
+# job `lint-test` com `gi`/`cairo` bloqueados via `sys.meta_path`).
+exigir_gi_real("o botão A luz não acende do card externo")
+
 import os
 from typing import Any
 

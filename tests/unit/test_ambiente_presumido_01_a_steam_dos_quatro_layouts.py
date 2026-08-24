@@ -27,6 +27,15 @@ O que este arquivo trava:
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# TESTE-HONESTO-01/E1 (24/08/2026): a guarda vem ANTES do import de
+# `emulation_actions`, que faz `import gi` incondicional no próprio módulo
+# (`emulation_actions.py:15`). Sem ela, este arquivo estourava ERRO DE COLETA
+# no CI sem PyGObject (medido: simulação do job `lint-test` com `gi`/`cairo`
+# bloqueados via `sys.meta_path`).
+exigir_gi_real("a Steam nos quatro layouts")
+
 import shutil
 import subprocess
 from pathlib import Path
