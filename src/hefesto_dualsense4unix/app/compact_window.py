@@ -45,6 +45,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib, Gtk
 
+from hefesto_dualsense4unix.app import mesa as _mesa
 from hefesto_dualsense4unix.app.constants import ICON_PATH
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -289,21 +290,31 @@ class CompactWindow:
                 '<span font_family="monospace">— %</span>'
             )
             return
-        connected = bool(state.get("connected"))
-        transport = (state.get("transport") or "").upper() or "?"
         active = state.get("active_profile") or "—"
         battery = state.get("battery_pct")
-        # FEAT-DSX-MULTI-CONTROLLER-01: com 2+ controles, mostra todos os
-        # transportes (ex.: "BT + USB") no lugar do transporte do primário.
+        # ONDA0-Z5/T7: a mesma nota de `status_actions._render_online` (T6) —
+        # o portão passa a ser a MESA (`app.mesa`), não `state["connected"]`
+        # (o topo, que pode divergir da lista de propósito). Daemon sem o
+        # bloco `controllers` cai na regra antiga (compat).
         controllers = state.get("controllers")
-        if isinstance(controllers, list):
-            conectados = [
-                c for c in controllers if isinstance(c, dict) and c.get("connected")
-            ]
+        conhece_a_mesa = isinstance(controllers, list)
+        if conhece_a_mesa:
+            conectados = _mesa.controles_conectados(state)
+            connected = bool(conectados)
+            transport = (
+                (conectados[0].get("transport") or "").upper() or "?"
+                if conectados
+                else "?"
+            )
+            # FEAT-DSX-MULTI-CONTROLLER-01: com 2+ controles, mostra todos os
+            # transportes (ex.: "BT + USB") no lugar do transporte do primário.
             if len(conectados) > 1:
                 transport = " + ".join(
                     (c.get("transport") or "?").upper() for c in conectados
                 )
+        else:
+            connected = bool(state.get("connected"))
+            transport = (state.get("transport") or "").upper() or "?"
         if connected:
             self._status_label.set_markup(
                 f'<span foreground="#50fa7b">&#9679; {transport} · {active}</span>'

@@ -174,6 +174,53 @@ async def test_daemon_desconecta_no_shutdown():
     assert fc.is_connected() is False
 
 
+@pytest.mark.asyncio
+async def test_borda_de_queda_limpa_o_estado_publicado():
+    """ONDA0-Z5/T1 — mordida.
+
+    Sem controle na mesa, o daemon não pode seguir dizendo a última leitura
+    boa (medido: `connected: true, transport: "bt", battery_pct: 75` com
+    ZERO controles na bancada, ONDA0-Z5 §2.2). O FakeController conecta, lê
+    alguns estados e então "cai" (`disconnect()`, um probe/unplug real) — a
+    BORDA tem de escrever `None` no store e apagar `_last_state` uma única
+    vez, para que `daemon.status` e `daemon.state_full` parem de repetir
+    bt/75% para uma mesa vazia.
+    """
+    fc = FakeController(transport="bt", states=_mk_states(30, "bt"))
+    bus = EventBus()
+    store = StateStore()
+    daemon = Daemon(
+        controller=fc, bus=bus, store=store,
+        config=DaemonConfig(
+            poll_hz=200, auto_reconnect=False,
+            ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+        ),
+    )
+
+    run_task = asyncio.create_task(daemon.run())
+    await asyncio.sleep(0.2)
+    # Sanidade: antes da queda, o daemon LEU alguma coisa de verdade.
+    assert store.snapshot().controller is not None
+    assert daemon._last_state is not None
+
+    fc.disconnect()  # a queda: nenhum controle na mesa a partir daqui
+    await asyncio.sleep(0.2)  # tempo para o próximo tick perceber a borda
+
+    daemon.stop()
+    await run_task
+
+    snap = store.snapshot()
+    assert snap.controller is None, (
+        "o store guardou a última leitura boa em vez de limpar na queda — "
+        "é a mentira medida na ONDA0-Z5 (bt/75% sobrevivendo à desconexão)"
+    )
+    assert daemon._last_state is None, (
+        "_last_state sobreviveu à queda — daemon.state_full priorizaria "
+        "essa carga estagnada sobre o store já limpo (CLUSTER-IPC-STATE-"
+        "PROFILE-01)"
+    )
+
+
 def test_battery_debounce_constants_coerentes_com_adr008():
     # Sanidade cross-regra: ADR-008 + V2-17 exige 1%, 5s, min 100ms
     from hefesto_dualsense4unix.daemon.lifecycle import (

@@ -17,6 +17,21 @@ from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 
 console = Console()
 
+# ONDA0-Z5/T13 [PROVISÓRIO — decisão dela pendente, D-N]: das TRÊS rotas que
+# guardam "perfil ativo" (`store.active_profile`, publicado aqui; o marker
+# `session.json`; o marker `active_profile.txt`), esta tabela mostra a que
+# responde "o que está EM VIGOR agora" no daemon vivo — não "a última
+# escolha", que é o que as outras duas rotas guardam em disco (elas podem
+# divergir por decisão MEDIDA: o restauro de perfil de janela às vezes é
+# pulado de propósito, `last_profile_restore_pulado_perfil_de_janela`,
+# journal). Qual das três deveria "vencer" quando elas divergem é D-N, ainda
+# em aberto — ver ONDA0-Z5 §10 (proposta: o daemon responde "em vigor", as
+# duas rotas em disco passam a se chamar "a última escolha"). Este rótulo
+# só NOMEIA o que este campo já responde hoje; não decide nada.
+_ROTULOS_DE_CAMPO: dict[str, str] = {
+    "active_profile": "active_profile (em vigor agora)",
+}
+
 
 async def _daemon_status_via_ipc() -> dict[str, Any] | None:
     try:
@@ -41,7 +56,8 @@ def status_cmd() -> None:
     table.add_column("Valor")
     for key in ("connected", "transport", "active_profile", "battery_pct"):
         value = data.get(key)
-        table.add_row(key, str(value) if value is not None else "[dim]n/d[/dim]")
+        rotulo = _ROTULOS_DE_CAMPO.get(key, key)
+        table.add_row(rotulo, str(value) if value is not None else "[dim]n/d[/dim]")
     console.print(table)
 
 
