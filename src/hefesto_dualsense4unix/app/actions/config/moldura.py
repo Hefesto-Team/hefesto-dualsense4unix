@@ -98,14 +98,24 @@ def moldura_de_secao(titulo: str, dica: str | None = None) -> tuple[Any, Any]:
 def rotulo_de_apoio(texto: str, *, largura_max: int = 92) -> Any:
     """Rótulo explicativo no padrão da casa: alinhado à esquerda e com quebra.
 
-    As três chamadas de ``set_``  são a regra 5 do roteiro da leva, e ela nasceu
+    As quatro chamadas de ``set_`` são a regra 5 do roteiro da leva, e ela nasceu
     de um defeito medido: um título de 198 caracteres sem quebra pediu 1295px
     numa janela que abre com 1180 e não tem rolagem horizontal.
+
+    ``xalign`` e ``halign`` NÃO são a mesma coisa, e faltar o segundo torna o
+    ``max_width_chars`` inerte — medido em 23/08/2026, com a janela em 1868px:
+    os onze rótulos de apoio da aba saíam com 1818px cada um, uma frase de ~215
+    caracteres atravessando a janela inteira numa linha só. ``xalign`` alinha o
+    TEXTO dentro do rótulo; ``halign`` é o que impede o RÓTULO de se esticar
+    para a largura do pai. E ``max_width_chars`` limita apenas a largura
+    NATURAL pedida — com a largura toda entregue pelo pai, ele nunca entra em
+    ação.
     """
     from gi.repository import Gtk
 
     rotulo = Gtk.Label(label=_(texto))
     rotulo.set_xalign(0.0)
+    rotulo.set_halign(Gtk.Align.START)
     rotulo.set_line_wrap(True)
     rotulo.set_max_width_chars(largura_max)
     with contextlib.suppress(Exception):
