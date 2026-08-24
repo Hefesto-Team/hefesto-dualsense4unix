@@ -115,15 +115,26 @@ SLOTS_POR_SEGUNDO = 1600
 #: árvore. Mudar este número muda a tela inteira, e só com medição por trás.
 SLOTS_POR_RELATORIO = 1
 
+#: A chave da linha de ``docs/data/mapa-controles.csv`` de onde as três
+#: constantes de Hz abaixo vieram — T5, CONFIGURAÇÕES-FECHA-01. A célula é a
+#: coluna ``radio_ressalva``, e ``test_radio_da_mesa_bate_com_o_mapa.py`` reabre
+#: o CSV e compara: remedir o A/B sem tocar aqui (ou vice-versa) reprova.
+CHAVE_NO_MAPA_DE_CANAIS = "audio.microfone"
+
 #: Relatórios de entrada por segundo, mic desligado. A/B de 2026-07-25,
-#: ``integrations/dualsense_bt_audio.py:76``.
+#: ``integrations/dualsense_bt_audio.py:76``. Mesma medição que
+#: :data:`CHAVE_NO_MAPA_DE_CANAIS` registra em ``radio_ressalva``.
 HZ_INPUT_SEM_MIC = 260.4
 
 #: Relatórios de entrada por segundo com a ponte de microfone de pé — o input
 #: CAI, porque o áudio divide a mesma fila (``dualsense_bt_audio.py:77``).
+#: Mesma medição que :data:`CHAVE_NO_MAPA_DE_CANAIS` registra em
+#: ``radio_ressalva``.
 HZ_INPUT_COM_MIC = 170.5
 
 #: Quadros de áudio por segundo com a ponte de pé (``dualsense_bt_audio.py:77``).
+#: Mesma medição que :data:`CHAVE_NO_MAPA_DE_CANAIS` registra em
+#: ``radio_ressalva``.
 HZ_AUDIO_COM_MIC = 106.2
 
 #: Até aqui a mesa é "Folgada". Decisão R3 do PO.

@@ -7,7 +7,7 @@ ponte de microfone sumiam em silêncio — e a tela respondia "gravado".
 
 O caminho realista até o estado ruim não é editar o JSON à mão: basta um release
 futuro alargar um `Literal` mantendo `version: 1` e alguém voltar de versão. Por
-isso o último teste é um PORTÃO sobre o catálogo dos Literais — sete campos podem
+isso o último teste é um PORTÃO sobre o catálogo dos Literais — seis campos podem
 disparar o defeito, e nenhum deles muda sem bump de `MAQUINA_SCHEMA_VERSION`.
 
 Bancada: nenhum aparelho, nenhum MAC real (faixa forjada `aa:bb:cc:*`). O
@@ -40,7 +40,9 @@ from hefesto_dualsense4unix.utils.maquina import (
 CHAVE_DE_HARDWARE = "aabbcc00beef"
 
 #: O documento cheio que ela declarou ao longo de cinco sessões, com UM valor que
-#: o schema recusa no meio — o `ambiente` que uma versão futura conheceria.
+#: o schema recusa no meio — o `orcamento.teto` que uma versão futura
+#: conheceria (T2, CONFIGURAÇÕES-FECHA-01: era `ambiente`, que saiu do
+#: esquema por não ter escritor nem leitor).
 DOCUMENTO_COM_UM_CAMPO_RUIM: dict[str, Any] = {
     "version": 1,
     "mesa": {
@@ -49,8 +51,7 @@ DOCUMENTO_COM_UM_CAMPO_RUIM: dict[str, Any] = {
         "radios": {"046d:c52b": {"tipo": "mouse", "apelido": "Unifying da TV"}},
     },
     "controles": {CHAVE_DE_HARDWARE: {"microfone": True, "cor": "Roxo"}},
-    "orcamento": {"teto": "economia"},
-    "ambiente": "plasma",
+    "orcamento": {"teto": "plasma"},
 }
 
 
@@ -67,10 +68,10 @@ def _documento(arquivo: Path) -> dict[str, Any]:
     return dict(json.loads(arquivo.read_text(encoding="utf-8")))
 
 
-def test_um_campo_invalido_nao_apaga_mesa_controles_e_orcamento(
+def test_um_campo_invalido_nao_apaga_mesa_e_controles(
     arquivo: Path,
 ) -> None:
-    """A MORDIDA: o `ambiente` ruim sai sozinho; o resto sobrevive ao "Aplicar".
+    """A MORDIDA: o `orcamento` ruim sai sozinho; o resto sobrevive ao "Aplicar".
 
     MORDE: trocando `atual, descartados = _o_que_ainda_vale(bruto)` por
     `atual = MaquinaConfig()` em `gravar_maquina_com_descartes` — o arquivo
@@ -89,12 +90,11 @@ def test_um_campo_invalido_nao_apaga_mesa_controles_e_orcamento(
     assert depois["mesa"]["radios"]["046d:c52b"]["tipo"] == "mouse"
     assert depois["controles"][CHAVE_DE_HARDWARE]["microfone"] is True
     assert depois["controles"][CHAVE_DE_HARDWARE]["cor"] == "Roxo"
-    assert depois["orcamento"]["teto"] == "economia"
-    assert "ambiente" not in depois
+    assert "orcamento" not in depois
 
     cfg = carregar_maquina()
     assert cfg.controles[CHAVE_DE_HARDWARE].microfone is True
-    assert cfg.orcamento.teto == "economia"
+    assert cfg.orcamento.teto is None
 
 
 def test_o_estrago_para_na_subarvore_ruim(arquivo: Path) -> None:
@@ -186,7 +186,7 @@ def test_versao_desconhecida_continua_intocada(arquivo: Path) -> None:
     bytes_de_antes = '{"version": 99, "mesa": {"altura_da_antena": "voando"}}'
     arquivo.write_text(bytes_de_antes, encoding="utf-8")
 
-    resultado = gravar_maquina_com_descartes({"ambiente": "cosmic"})
+    resultado = gravar_maquina_com_descartes({"orcamento": {"teto": "auto"}})
 
     assert resultado == (False, ())
     assert arquivo.read_text(encoding="utf-8") == bytes_de_antes
@@ -206,12 +206,11 @@ _MODELOS = (
     RadioDeclarado,
 )
 
-#: O catálogo COMPLETO dos `Literal` do módulo na v1. Sete campos além de
+#: O catálogo COMPLETO dos `Literal` do módulo na v1. Seis campos além de
 #: `version` — cada um deles é um valor que, alargado numa versão futura sem bump
 #: e lido de volta por esta, derrubaria o campo inteiro.
 CATALOGO_V1: dict[str, tuple[str, ...]] = {
     "MaquinaConfig.version": ("1",),
-    "MaquinaConfig.ambiente": ("cosmic", "gnome", "outro"),
     "MesaDeclarada.altura_da_antena": ("acima", "abaixo"),
     "MesaDeclarada.linha_de_visada": ("livre", "com_gente"),
     "ControleDeclarado.modo": ("xinput", "dinput", "switch"),
@@ -243,12 +242,13 @@ def _valores_de_literal(anotacao: Any) -> tuple[str, ...]:
 def test_o_catalogo_dos_literais_nao_muda_sem_bump_de_versao() -> None:
     """Alargar um `Literal` na v1 é o que produz o documento que A2 cura.
 
-    Um release futuro que aceite `ambiente: "plasma"` mantendo `version: 1`
-    escreve um arquivo que ESTA versão recusa — e quem voltar de versão perde o
-    campo. O preço de aceitar isso é um número: `MAQUINA_SCHEMA_VERSION`.
+    Um release futuro que aceite `orcamento.teto: "generosa"` mantendo
+    `version: 1` escreve um arquivo que ESTA versão recusa — e quem voltar de
+    versão perde o campo. O preço de aceitar isso é um número:
+    `MAQUINA_SCHEMA_VERSION`.
 
-    MORDE: acrescentando `"plasma"` ao `Literal` de `MaquinaConfig.ambiente` —
-    reprova mostrando o campo e os dois catálogos.
+    MORDE: acrescentando `"generosa"` ao `Literal` de `OrcamentoDeclarado.teto`
+    — reprova mostrando o campo e os dois catálogos.
     """
     vivo = {
         f"{modelo.__name__}.{nome}": valores

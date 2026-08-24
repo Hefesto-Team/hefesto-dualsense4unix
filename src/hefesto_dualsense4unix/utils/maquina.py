@@ -232,9 +232,13 @@ class MaquinaConfig(BaseModel):
     mesa: MesaDeclarada = Field(default_factory=MesaDeclarada)
     controles: dict[str, ControleDeclarado] = Field(default_factory=dict)
     orcamento: OrcamentoDeclarado = Field(default_factory=OrcamentoDeclarado)
-    #: Informa só a mensagem de ajuda da bandeja, nunca o comportamento: no
-    #: COSMIC o ícone aparece sozinho, no GNOME precisa de extensão instalada.
-    ambiente: Literal["cosmic", "gnome", "outro"] | None = None
+    # NOTA DATADA (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026): ``ambiente`` saiu
+    # do esquema. O campo nasceu na v1 sem escritor NEM leitor — quem grava a
+    # correção de ambiente é ``gravar_correcao_de_ambiente``
+    # (``app/ambiente.py:101``), e sempre gravou em ``gui_preferences.json``,
+    # nunca aqui. Manter os dois seria dar ao mesmo fato um segundo dono
+    # possível, a classe de defeito que a ABAS-01 curou (ver o cabeçalho deste
+    # módulo). O campo não é reaproveitado por outro: sai, e não volta.
 
     @field_validator("controles")
     @classmethod
@@ -297,11 +301,18 @@ def fundir_declaracao(
 def carregar_maquina() -> MaquinaConfig:
     """A declaração do disco. **Nunca levanta** — no pior caso, tudo em "não sei".
 
-    Ausente, ilegível, truncado, não-objeto, de versão que não é a nossa ou com
-    um valor que o schema recusa: os seis devolvem o documento vazio, com
-    ``logger.debug``. Esta invariante é carregada por dois chamadores que não
-    podem cair — o boot do daemon e a montagem da aba —, e por isso ela é
-    asserção da bateria, não sorte.
+    Ausente, ilegível, truncado, não-objeto ou de versão que não é a nossa:
+    devolve o documento vazio, com ``logger.debug``. Esta invariante é
+    carregada por dois chamadores que não podem cair — o boot do daemon e a
+    montagem da aba —, e por isso ela é asserção da bateria, não sorte.
+
+    Um CAMPO que o schema recusa (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026) NÃO
+    esvazia o documento inteiro: o resgate é o mesmo campo-a-campo de
+    :func:`_o_que_ainda_vale`, que ``gravar_maquina_com_descartes`` já usa
+    desde `9848c41`. Sem isto, um `maquina.json` escrito por uma versão futura
+    (ou por um esquema que perdeu um campo, como `ambiente` nesta mesma
+    sprint) perderia mesa, controles e orçamento na LEITURA — o mesmo defeito
+    que `9848c41` curou, só que do outro lado do arquivo.
     """
     try:
         bruto = _ler_documento()
@@ -312,7 +323,19 @@ def carregar_maquina() -> MaquinaConfig:
             return MaquinaConfig()
         return MaquinaConfig.model_validate(_so_o_que_o_schema_conhece(bruto))
     except ValidationError as exc:
-        logger.debug("maquina_documento_invalido", err=str(exc))
+        logger.debug("maquina_documento_invalido_campo_a_campo", err=str(exc))
+        if bruto is None:  # defensivo — inatingível: só o validate acima levanta
+            return MaquinaConfig()
+        try:
+            atual, descartados = _o_que_ainda_vale(bruto)
+        except Exception as exc2:  # defensivo — resgate não pode derrubar a leitura
+            logger.debug("maquina_resgate_campo_a_campo_falhou", err=str(exc2))
+            return MaquinaConfig()
+        if descartados:
+            logger.warning(
+                "maquina_load_descartou_campos", descartados=list(descartados)
+            )
+        return atual
     except Exception as exc:  # defensivo — a leitura jamais derruba quem chama
         logger.debug("maquina_load_falhou", err=str(exc))
     return MaquinaConfig()

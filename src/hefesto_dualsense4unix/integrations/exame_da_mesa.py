@@ -429,7 +429,10 @@ def _vizinhancas_do_sistema() -> Sequence[object]:
 
 
 def vizinhanca_das_portas(
-    *, leitura: Callable[[], Sequence[object]] | None = None
+    *,
+    leitura: Callable[[], Sequence[object]] | None = None,
+    altura_da_antena: str | None = None,
+    linha_de_visada: str | None = None,
 ) -> Item:
     """Há aparelho encaixado na porta colada à de outro rádio?
 
@@ -440,6 +443,13 @@ def vizinhanca_das_portas(
     possível: uma sequência com uma entrada por par colado. Contar é tudo que
     esta linha precisa — os nós de cada par são assunto da seção que sabe
     desenhá-los.
+
+    `altura_da_antena` e `linha_de_visada` são a declaração da seção "A mesa"
+    (`utils/maquina.py:MesaDeclarada`), passada por ARGUMENTO — este módulo é
+    100% stdlib e read-only por contrato de CONFIG-09, então quem carrega o
+    `maquina.json` é sempre quem chama, nunca este arquivo (T3,
+    CONFIGURAÇÕES-FECHA-01). Os dois valores só decidem o TEXTO da cura: a cor
+    e o estado continuam vindo só da contagem de pares apertados.
 
     Qualquer falha de leitura vira `nao_sei`, e a tela DIZ que não sabe:
     inventar verde aqui seria afirmar ausência de ruído sem ter olhado, que é
@@ -465,6 +475,19 @@ def vizinhanca_das_portas(
             estado=ESTADO_CERTO,
             porque="Nenhum aparelho encaixado colado a um adaptador Bluetooth.",
         )
+    nada_declarado = altura_da_antena is None and linha_de_visada is None
+    if nada_declarado:
+        cura = (
+            "Veja a seção A mesa, logo abaixo: declare a altura da antena e "
+            "a linha de visada para o exame explicar o alcance em vez de só "
+            "medi-lo, ou mude um dos dois aparelhos para uma porta mais "
+            "longe."
+        )
+    else:
+        cura = (
+            "Veja a seção A mesa, logo abaixo, e mude um dos dois para uma "
+            "porta mais longe."
+        )
     return Item(
         chave="vizinhanca_das_portas",
         rotulo=ROTULO_VIZINHANCA,
@@ -473,10 +496,7 @@ def vizinhanca_das_portas(
             f"{len(apertadas)} par(es) de aparelhos em portas coladas: rádio "
             "ao lado de rádio é a vizinhança que mais atrapalha o controle."
         ),
-        cura=(
-            "Veja a seção A mesa, logo abaixo, e mude um dos dois para uma "
-            "porta mais longe."
-        ),
+        cura=cura,
     )
 
 
@@ -494,6 +514,8 @@ def exame(
     diretorio_do_modulo: Path | None = None,
     executar_busctl: Callable[[Sequence[str]], str | None] | None = None,
     leitura_da_vizinhanca: Callable[[], Sequence[object]] | None = None,
+    altura_da_antena: str | None = None,
+    linha_de_visada: str | None = None,
 ) -> list[Item]:
     """As cinco linhas, na ORDEM DA TELA.
 
@@ -504,6 +526,9 @@ def exame(
     Todo caminho é ``None`` por default e cai no default da checagem — assim
     esta assinatura não repete cinco caminhos do sistema real, e o retrato das
     abas continua conseguindo injetar uma bancada falsa em UMA chamada.
+
+    `altura_da_antena` e `linha_de_visada` só alimentam
+    :func:`vizinhanca_das_portas` — ver o parágrafo sobre CONFIG-09 lá.
     """
     argumentos_do_radio: dict[str, Path] = {}
     if parametro_do_radio is not None:
@@ -521,7 +546,11 @@ def exame(
         energia_das_portas(**({"raiz": raiz_usb} if raiz_usb is not None else {})),
         pareamentos(executar=executar_busctl),
         suporte_ao_controle(**argumentos_do_suporte),
-        vizinhanca_das_portas(leitura=leitura_da_vizinhanca),
+        vizinhanca_das_portas(
+            leitura=leitura_da_vizinhanca,
+            altura_da_antena=altura_da_antena,
+            linha_de_visada=linha_de_visada,
+        ),
     ]
 
 

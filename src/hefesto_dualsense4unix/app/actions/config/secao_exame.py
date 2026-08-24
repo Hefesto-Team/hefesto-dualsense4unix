@@ -332,8 +332,16 @@ class PainelDoExame:
                 from gi.repository import GLib
 
                 from hefesto_dualsense4unix.integrations import exame_da_mesa
+                from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
-                itens = exame_da_mesa.exame()
+                # T3, CONFIGURAÇÕES-FECHA-01: o exame é 100% stdlib e não lê o
+                # `maquina.json` sozinho (contrato de CONFIG-09) — quem carrega
+                # a declaração é esta seção, e passa por argumento.
+                mesa = carregar_maquina().mesa
+                itens = exame_da_mesa.exame(
+                    altura_da_antena=mesa.altura_da_antena,
+                    linha_de_visada=mesa.linha_de_visada,
+                )
                 selo = exame_da_mesa.veredito(itens)
             except Exception as exc:
                 logger.warning("exame_da_mesa_falhou", erro=str(exc))

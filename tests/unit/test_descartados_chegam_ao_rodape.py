@@ -140,12 +140,12 @@ async def test_o_handler_devolve_os_descartados_no_corpo_do_sucesso(
     """
     _corromper(arquivo)
     resposta = await _Servidor()._handle_machine_declare(
-        {"maquina": {"ambiente": "cosmic"}}
+        {"maquina": {"mesa": {"linha_de_visada": "livre"}}}
     )
     assert resposta == {"ok": True, "descartados": ["orcamento"]}
     # A cura de que esta bateria depende: o estrago parou no campo ruim.
     documento = json.loads(arquivo.read_text(encoding="utf-8"))
-    assert documento["mesa"] == {"altura_da_antena": "acima"}
+    assert documento["mesa"] == {"altura_da_antena": "acima", "linha_de_visada": "livre"}
     assert "orcamento" not in documento
 
 
@@ -160,7 +160,7 @@ async def test_sem_descarte_o_corpo_e_o_de_sempre(arquivo: Path) -> None:
     reprova aqui com ``{'ok': True, 'descartados': []}``.
     """
     assert await _Servidor()._handle_machine_declare(
-        {"maquina": {"ambiente": "cosmic"}}
+        {"maquina": {"mesa": {"linha_de_visada": "livre"}}}
     ) == {"ok": True}
 
 
@@ -202,7 +202,7 @@ async def test_a_lista_atravessa_o_fio(
         resposta = await laco.run_in_executor(
             None,
             ipc_bridge.machine_declare_detalhado,
-            {"ambiente": "cosmic"},
+            {"mesa": {"linha_de_visada": "livre"}},
         )
     finally:
         await servidor.stop()
@@ -226,7 +226,9 @@ def test_a_ponte_nunca_entrega_identificador_de_protocolo(
             {"ok": True, "descartados": ["mesa", "orcamento"]},
         ),
     )
-    ok, motivo, descartados = ipc_bridge.machine_declare_detalhado({"ambiente": "gnome"})
+    ok, motivo, descartados = ipc_bridge.machine_declare_detalhado(
+        {"mesa": {"linha_de_visada": "livre"}}
+    )
     assert (ok, motivo) == (True, None)
     assert descartados == ("A mesa", ROTULO_DO_ORCAMENTO)
 
@@ -245,7 +247,7 @@ def test_o_embrulho_de_duas_pontas_continua_valendo(
         "_safe_call",
         lambda *a, **k: (True, {"ok": True, "descartados": ["mesa"]}),
     )
-    assert ipc_bridge.machine_declare({"ambiente": "gnome"}) == (True, None)
+    assert ipc_bridge.machine_declare({"mesa": {"linha_de_visada": "livre"}}) == (True, None)
 
 
 def test_corpo_torto_do_daemon_nao_derruba_o_aplicar(
@@ -265,9 +267,9 @@ def test_corpo_torto_do_daemon_nao_derruba_o_aplicar(
     monkeypatch.setattr(
         ipc_bridge, "_safe_call", lambda *a, **k: (True, corpos.pop(0))
     )
-    assert ipc_bridge.machine_declare_detalhado({"ambiente": "gnome"})[2] == ()
-    assert ipc_bridge.machine_declare_detalhado({"ambiente": "gnome"})[2] == ()
-    assert ipc_bridge.machine_declare_detalhado({"ambiente": "gnome"})[2] == (
+    assert ipc_bridge.machine_declare_detalhado({"mesa": {"linha_de_visada": "livre"}})[2] == ()
+    assert ipc_bridge.machine_declare_detalhado({"mesa": {"linha_de_visada": "livre"}})[2] == ()
+    assert ipc_bridge.machine_declare_detalhado({"mesa": {"linha_de_visada": "livre"}})[2] == (
         ROTULO_DO_ORCAMENTO,
     )
 
@@ -307,7 +309,7 @@ def test_a_frase_do_descarte_chega_ao_rotulo_do_rodape(
         ),
     )
 
-    rodape = _Rodape({"ambiente": "cosmic"})
+    rodape = _Rodape({"mesa": {"linha_de_visada": "livre"}})
     rodape.on_apply_draft()
 
     texto = rodape.texto_da_barra
@@ -345,7 +347,7 @@ def test_sem_descarte_o_rodape_nao_inventa_aviso(
         lambda *_a, on_success=None, **_k: on_success({"status": "ok"}),
     )
 
-    rodape = _Rodape({"ambiente": "cosmic"})
+    rodape = _Rodape({"mesa": {"linha_de_visada": "livre"}})
     rodape.on_apply_draft()
 
     texto = rodape.texto_da_barra

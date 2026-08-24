@@ -261,10 +261,14 @@ Ordenado por (impacto ÷ custo):
   continua fora de escopo"* — **falso desde 25/07**, e contradiz o `README.md`
   e o `docs/usage/cli.md` no mesmo repositório. **Foi a fonte do erro de 03/08
   registrado no topo deste documento**;
-- **`README.md`** publica *"~40% do sinal, causa em aberto"* para o mic por BT —
-  número medido sob uma condição que deixou de existir quatro minutos depois;
 - **`cli/cmd_mic.py`** afirma que o install instala os drop-ins 52/53 — não
   instala (`install.sh` os deixa em opt-in, desligados).
+
+  > **Fechado em 24/08/2026 (T6, CONFIGURAÇÕES-FECHA-01):** o `README.md`
+  > publicava *"~40% do sinal, causa em aberto"* — número medido sob uma
+  > condição que deixou de existir quatro minutos depois. Substituído pelas
+  > taxas MEDIDAS (`docs/data/mapa-controles.csv`, chave `audio.microfone`):
+  > 260,4 Hz de input sem mic, 170,5 Hz + 106,2 Hz de áudio com ele.
 
 **Acrescentado em 11/08/2026:**
 
