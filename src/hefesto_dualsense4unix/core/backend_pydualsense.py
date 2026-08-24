@@ -488,6 +488,79 @@ def _centered_stick_to_raw(value: Any) -> int:
     return max(0, min(255, int(value) + 128))
 
 
+def _resolver_escopo(
+    handles: dict[str, Any], alvo: str | None, *, broadcast: bool
+) -> tuple[str | None, list[tuple[str, Any]], str | None]:
+    """Resolve o escopo de UMA escrita de output. Chamar sob o `_io_lock`.
+
+    Devolve `(escopo_do_registro, handles_a_escrever, alvo_ausente)`, e a razão
+    de existir é a terceira posição: **ausência de destinatário não é "todo
+    mundo"** (P4, 23/08/2026).
+
+    Os três casos, e só há três:
+
+    * `broadcast=True` **ou** sem alvo no seletor ("Todos") → escopo `None` (o
+      default do perfil) e TODOS os handles. É o broadcast legítimo, e continua
+      byte-idêntico ao que sempre foi.
+    * alvo escolhido e PRESENTE → escopo = a key dele, um handle só.
+    * alvo escolhido e AUSENTE (saiu da mesa entre o clique e a escrita, ou
+      nunca voltou) → escopo = a key dele (o registro ainda vale: vira override
+      por-uniq, "guardado para quando ele voltar") e **nenhum handle**. Quem
+      chama não escreve em ninguém.
+
+    **O que caducou, e por quê.** Até 23/08/2026 esta regra vivia copiada em
+    três helpers (`_for_each`, `_for_each_com_key`, `_for_each_led`) e o
+    terceiro caso caía no broadcast histórico, por escolha declarada da
+    FEAT-DSX-CONTROLLER-SELECTOR-01 (*"1 handle morto não derruba os
+    outros"*). A justificativa era de ROBUSTEZ, não de endereçamento — e o
+    preço, medido em co-op (que nesta casa é sempre ligado): ela fixa 160/220
+    no Controle 2, o Controle 2 desliga, e os motores que sacodem são os das
+    OUTRAS pessoas na partida — com o daemon respondendo "aplicado" e o
+    reassert insistindo a 5 Hz até alguém clicar "Parar". A casa já tinha
+    decidido o contrário em dois lugares (`subsystems/rumble.py`: *"Dono
+    ausente da mesa é NO-OP, não broadcast"*; `apply_output_for`, que devolve
+    `"registrado"`) — aqui o broadcast era a exceção sobrevivente, não a regra.
+
+    **É função de módulo, não método, de propósito:** os dublês de backend dos
+    testes de LED tomam emprestados os métodos REAIS do produto (`_for_each_led`
+    e companhia) num objeto mínimo — o instrumento tem de ser o do produto. Uma
+    dependência nova em `self` quebraria todos eles de uma vez.
+    """
+    if broadcast or alvo is None:
+        return None, list(handles.items()), None
+    handle = handles.get(alvo)
+    if handle is None:
+        return alvo, [], alvo
+    return alvo, [(alvo, handle)], None
+
+
+def _casar_key(handles: dict[str, Any], uniq: str) -> str | None:
+    """Key do handle endereçada por `uniq` — MAC 12-hex OU a própria key.
+
+    P4 (23/08/2026): `enviar_release_leds` indexava `handles` com o `uniq` CRU,
+    e o `uniq` que chega do IPC (`lightbar.reset`) é o MAC 12-hex, enquanto a
+    key do handle é "AA:BB:CC:...". A busca nunca casava: um controle
+    CONECTADO devolvia `{}`, que o docstring de lá manda ler como "nenhum
+    handle aberto". Falha segura, mas é instrumento mentindo — e o instrumento
+    mente mais que o produto é regra desta casa.
+
+    Aceita as duas formas porque os dois chamadores existem: o IPC manda o
+    12-hex, os testes de bancada mandam a key.
+    """
+    if uniq in handles:
+        return uniq
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    procurado = norm_mac(uniq)
+    if procurado is None or len(procurado) != 12:
+        return None
+    for key in handles:
+        normalizada = norm_mac(key)
+        if normalizada is not None and normalizada == procurado:
+            return key
+    return None
+
+
 class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     """`pydualsense` "pinada" a um hidraw `path` específico (multi-controle).
 
@@ -2227,6 +2300,13 @@ class PyDualSenseController(IController):
 
         `handle.close()` para o report_thread e fecha o `hidapi.Device` — sem
         vazar thread/handle. Chamado sob `_io_lock`.
+
+        **`_output_target_key` NÃO é zerada aqui, e é de propósito** (P4,
+        23/08/2026): zerar equivaleria a "o alvo saiu, logo agora é Todos" —
+        exatamente o broadcast que a medição do co-op derrubou. O ponteiro
+        fica apontado para quem ela escolheu, as escritas viram no-op
+        (`_resolver_escopo`) e o alvo volta a valer sozinho quando o
+        controle reconecta.
         """
         for key in [k for k in self._handles if k not in keep]:
             handle = self._handles.pop(key)
@@ -2578,6 +2658,43 @@ class PyDualSenseController(IController):
 
     # --- output (fan-out p/ TODOS os controles) -------------------------
 
+    def alvo_de_output_ausente(self) -> str | None:
+        """MAC (ou key) do alvo de output que está APONTADO mas fora da mesa.
+
+        `None` quando o alvo é "Todos" ou quando o alvo escolhido está
+        presente — ou seja: enquanto isto devolver `None`, uma escrita de
+        output chega a alguém.
+
+        Existe porque `get_output_target_index`/`get_output_target_uniq`
+        MASCARAM esse estado (devolvem `None`, indistinguível de "Todos") — e
+        quem precisa responder à usuária *"o Controle 2 não está na mesa,
+        nada foi enviado"* precisa distinguir os dois. Não altero aqueles dois
+        getters: eles alimentam o seletor da GUI e a rota do rumble por dono,
+        que são de outra frente.
+
+        **DÍVIDA ABERTA — a metade "e DIZ" ainda não chega à tela.** O
+        comportamento seguro já está de pé (nada é escrito), mas
+        `daemon/ipc_handlers.py::_handle_rumble_set` continua respondendo
+        `{"status": "ok", "desfecho": RUMBLE_APLICADO}` sem consultar isto —
+        e aquele arquivo é de outra frente, então não o toco. Quem o encostar
+        chama este método ANTES de `set_rumble` e devolve, no molde da
+        NATIVO-RUMBLE-01 que já existe ali logo acima:
+
+            {"status": "recusado", "desfecho": <novo>, "motivo": <novo>,
+             "weak": 0, "strong": 0}
+
+        **Redação PROVISÓRIA** (a palavra final é dela): *"O Controle 2 não
+        está na mesa — nada foi enviado."*. Para led/gatilho/player não há
+        redação nova a inventar: o valor fica guardado no override por-uniq, e
+        o par `"registrado"` + *"Guardado — vai valer quando o Controle 2
+        voltar"* já é o léxico da casa (MESA-CHEIA-09).
+        """
+        with self._io_lock:
+            alvo = self._output_target_key
+            if alvo is None or alvo in self._handles:
+                return None
+        return self._key_to_uniq(alvo) or alvo
+
     def _for_each(
         self,
         op: Callable[[pydualsense], None],
@@ -2588,10 +2705,10 @@ class PyDualSenseController(IController):
     ) -> None:
         """Aplica `op` ao ALVO de output (ou a cada handle aberto, em broadcast).
 
-        FEAT-DSX-CONTROLLER-SELECTOR-01: se `_output_target_key` está setada E o
-        controle ainda está presente em `_handles`, aplica SÓ a esse handle;
-        senão (sem alvo, ou alvo desconectou), volta ao broadcast histórico —
-        TODOS os controles. 1 handle morto não derruba os outros.
+        FEAT-DSX-CONTROLLER-SELECTOR-01 + P4 (23/08/2026): a resolução mora
+        toda em `_resolver_escopo` — alvo presente aplica SÓ nele, sem
+        alvo aplica em todos, e **alvo ausente não aplica em ninguém** (o
+        broadcast histórico daquele caso caducou; ver o docstring de lá).
 
         PERFIL-01: `broadcast=True` IGNORA o seletor (broadcast real — o
         caminho do perfil, que não pode ser sequestrado pelo alvo da GUI);
@@ -2604,14 +2721,19 @@ class PyDualSenseController(IController):
         crítica (não segura o lock durante a escrita no device).
         """
         with self._io_lock:
-            target = self._output_target_key
-            if not broadcast and target is not None and target in self._handles:
-                handles = [(target, self._handles[target])]
-            else:
-                target = None
-                handles = list(self._handles.items())
+            target, handles, ausente = _resolver_escopo(
+                self._handles, self._output_target_key, broadcast=broadcast
+            )
             if record:
                 self._record_desired_locked(target, record)
+        if ausente is not None:
+            # P4: o alvo saiu da mesa. O `record` (se houve) já ficou guardado
+            # no override POR-UNIQ dele — vale quando voltar —, e nenhum byte
+            # sai para os outros.
+            logger.info(
+                "output_alvo_ausente_noop", op=what, alvo=ausente, guardado=bool(record)
+            )
+            return
         if not handles:
             logger.debug("output_offline_noop", op=what)
             return
@@ -2635,13 +2757,20 @@ class PyDualSenseController(IController):
         exige: a `op` precisa saber EM QUEM está escrevendo para resolver o
         fator daquela unidade. Sem `record` de propósito — quem usa isto (o
         rumble) é TRANSITÓRIO e nunca entra no estado desejado.
+
+        P4 (23/08/2026): alvo ausente é NO-OP aqui também, e este é o sítio
+        que mais dói — é o único caminho do rumble da GUI, e o que ele mandava
+        para os outros era vibração na mão de outra pessoa. Como o rumble não
+        entra no desejado, não há nada a guardar: a resposta certa é não
+        mandar e DIZER (ver `alvo_de_output_ausente`).
         """
         with self._io_lock:
-            target = self._output_target_key
-            if not broadcast and target is not None and target in self._handles:
-                handles = [(target, self._handles[target])]
-            else:
-                handles = list(self._handles.items())
+            _target, handles, ausente = _resolver_escopo(
+                self._handles, self._output_target_key, broadcast=broadcast
+            )
+        if ausente is not None:
+            logger.info("output_alvo_ausente_noop", op=what, alvo=ausente, guardado=False)
+            return
         if not handles:
             logger.debug("output_offline_noop", op=what)
             return
@@ -2752,8 +2881,11 @@ class PyDualSenseController(IController):
 
         with self._io_lock:
             if uniq is not None:
-                handle = self._handles.get(uniq)
-                alvos = [(uniq, handle)] if handle is not None else []
+                # P4 (23/08/2026): era `self._handles.get(uniq)` CRU, e o
+                # 12-hex do IPC nunca casava a key "AA:BB:CC:...". Ver
+                # `_casar_key`.
+                key = _casar_key(self._handles, uniq)
+                alvos = [(key, self._handles[key])] if key is not None else []
             else:
                 alvos = list(self._handles.items())
         resultado: dict[str, bool] = {}
@@ -3107,16 +3239,20 @@ class PyDualSenseController(IController):
         closures. Omitidos = comportamento histórico byte-idêntico.
         """
         with self._io_lock:
-            target = self._output_target_key
-            if not broadcast and target is not None and target in self._handles:
-                items = [(target, self._handles[target])]
-            else:
-                target = None
-                items = list(self._handles.items())
+            target, items, ausente = _resolver_escopo(
+                self._handles, self._output_target_key, broadcast=broadcast
+            )
             if record:
                 self._record_desired_locked(target, record)
             sysfs_map = dict(self._sysfs)
             muted = self._output_mute
+        if ausente is not None:
+            # P4: ver `_resolver_escopo`. O valor fica guardado no
+            # override do alvo; a barra dos OUTROS não muda de cor.
+            logger.info(
+                "output_alvo_ausente_noop", op=what, alvo=ausente, guardado=bool(record)
+            )
+            return
         if not items:
             logger.debug("output_offline_noop", op=what)
             return
@@ -4863,8 +4999,15 @@ class PyDualSenseController(IController):
         """Posição atual do alvo de output, ou None (FEAT-DSX-CONTROLLER-SELECTOR-01).
 
         Mapeia a KEY guardada para a posição em `list(self._handles)`; devolve
-        None quando o alvo é "todos" (broadcast) ou quando o controle alvo sumiu
-        (desconectou) — caso em que o `_for_each` já voltou ao broadcast.
+        None quando o alvo é "todos" (broadcast) **ou** quando o controle alvo
+        sumiu (desconectou).
+
+        **Os dois casos são indistinguíveis por aqui, e isso é uma limitação**
+        (P4, 23/08/2026): quem precisa separar *"Todos"* de *"o alvo saiu da
+        mesa"* — para responder à usuária que nada foi enviado — usa
+        `alvo_de_output_ausente`. Este getter continua mascarando de propósito:
+        é o índice que alimenta o seletor da GUI, e um índice de handle que não
+        existe não é posição em lista nenhuma.
         """
         with self._io_lock:
             key = self._output_target_key

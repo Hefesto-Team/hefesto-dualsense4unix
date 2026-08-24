@@ -283,6 +283,96 @@ def profile_switch(name: str) -> bool:
     return ok
 
 
+def _corpo_do_daemon(
+    method: str,
+    params: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """RPC que entrega o CORPO da resposta, ou ``None`` quando não houve corpo.
+
+    ELO-MUDO-01 (23/08/2026). É a forma que ``apply_draft_detalhado`` já usava
+    sozinha desde 22/08, promovida a peça: ``None`` significa "NÃO HOUVE
+    RESPOSTA utilizável" (daemon offline, transporte, resposta que não é
+    dicionário) e um ``dict`` significa "o daemon falou — leia o que ele disse".
+
+    A distinção é o produto inteiro desta função: hoje meia dúzia de invólucros
+    desta ponte estreitam para ``bool`` um corpo que o daemon montou com
+    cuidado, e a tela do outro lado passa a re-DEDUZIR o que já sabia — foi
+    assim que "aplicado" apareceu com ``aplicado_em: []`` e ``guardado_em: []``
+    na mesa vazia.
+
+    **Sem parâmetro de ``timeout``, de propósito.** As cinco rotas que passam
+    por aqui são as de leitura curta (250 ms), e a chamada sai com a MESMA forma
+    de sempre — ``_safe_call(method, params)``, dois argumentos posicionais.
+    Isso não é detalhe: há dublês de ``_safe_call`` em testes de outras abas
+    escritos como uma lambda de DOIS parâmetros, e acrescentar um ``timeout=``
+    aqui os quebra sem que nada do produto tenha mudado (medido em 23/08, dois
+    testes da SOM-02). Quem precisar de folga — ``apply_draft_detalhado`` e
+    ``machine_declare``, que escrevem em disco — continua chamando o
+    ``_safe_call`` direto com o teto dele.
+    """
+    ok, result = _safe_call(method, params)
+    if ok and isinstance(result, dict):
+        return result
+    return None
+
+
+def _call_checked_detalhado(
+    method: str,
+    params: dict[str, Any],
+    timeout: float | None = 0.25,
+) -> tuple[bool, str | None, dict[str, Any] | None]:
+    """``_call_checked`` que NÃO joga fora o corpo da resposta (ELO-MUDO-01).
+
+    Retorna ``(ok, motivo, corpo)``, onde ``ok`` e ``motivo`` são exatamente os
+    de :func:`_call_checked` — que passou a ser um invólucro desta — e ``corpo``
+    é o dicionário que o daemon devolveu, ou ``None`` quando ele não respondeu
+    (ou respondeu algo que não é dicionário).
+
+    Por que a função nova em vez de trocar a assinatura de ``_call_checked``:
+    o mesmo motivo escrito em ``apply_draft_detalhado`` — a forma de hoje tem
+    chamadores vivos em arquivos que outras frentes estão editando, e uma
+    3-tupla desempacotada num ``ok, motivo = …`` levanta ``ValueError`` em
+    tempo de execução, não em tempo de revisão. Aditivo: ninguém quebra, e quem
+    precisa da verdade inteira pede por ela.
+
+    O que se perdia aqui era LITERAL: a linha do RPC era
+    ``_run_call(method, params, timeout=timeout)`` **sem atribuição** — o corpo
+    não chegava nem a ganhar um nome. Três rotas pagavam por isso
+    (``trigger.set``, ``trigger.reset``, ``rumble.policy_set``), e as duas
+    primeiras são justamente as que carregam ``aplicado_em``/``guardado_em``.
+
+    ``motivo`` aqui é SÓ o do erro JSON-RPC, igualzinho ao de ``_call_checked``:
+    esta função é a mesma, mais o corpo. A outra forma de o daemon dizer não —
+    a frase dentro de um corpo bem-sucedido, ver :func:`_recusa_no_corpo` — é
+    dobrada pelos invólucros públicos ``*_detalhado``, que nascem sem chamador e
+    por isso podem nascer com o contrato inteiro.
+
+    ``IpcError`` é capturado ANTES de ``_IPC_TRANSPORT_ERRORS``, que o contém.
+    """
+    try:
+        resultado = _run_call(method, params, timeout=timeout)
+    except IpcError as exc:
+        if exc.code == CODE_INVALID_PARAMS:
+            return False, exc.message, None
+        logger.debug(
+            "ipc_bridge falha esperada de transporte",
+            method=method,
+            erro_tipo=type(exc).__name__,
+            erro=str(exc),
+        )
+        return False, None, None
+    except _IPC_TRANSPORT_ERRORS as exc:
+        logger.debug(
+            "ipc_bridge falha esperada de transporte",
+            method=method,
+            erro_tipo=type(exc).__name__,
+            erro=str(exc),
+        )
+        return False, None, None
+    corpo = resultado if isinstance(resultado, dict) else None
+    return True, None, corpo
+
+
 def _call_checked(
     method: str,
     params: dict[str, Any],
@@ -298,30 +388,56 @@ def _call_checked(
 
     Existe porque ``_safe_call`` colapsa os dois casos em ``(False, None)``
     (ver o docstring dele) e a UI pintava recusa de validação como "daemon
-    offline?". ``IpcError`` é capturado ANTES de ``_IPC_TRANSPORT_ERRORS``, que
-    o contém.
+    offline?".
+
+    Invólucro de :func:`_call_checked_detalhado`, que é onde o RPC acontece —
+    esta aqui só descarta o corpo, para os chamadores de hoje continuarem
+    desempacotando duas coisas.
     """
-    try:
-        _run_call(method, params, timeout=timeout)
-    except IpcError as exc:
-        if exc.code == CODE_INVALID_PARAMS:
-            return False, exc.message
-        logger.debug(
-            "ipc_bridge falha esperada de transporte",
-            method=method,
-            erro_tipo=type(exc).__name__,
-            erro=str(exc),
-        )
-        return False, None
-    except _IPC_TRANSPORT_ERRORS as exc:
-        logger.debug(
-            "ipc_bridge falha esperada de transporte",
-            method=method,
-            erro_tipo=type(exc).__name__,
-            erro=str(exc),
-        )
-        return False, None
-    return True, None
+    ok, motivo, _corpo = _call_checked_detalhado(method, params, timeout=timeout)
+    return ok, motivo
+
+
+def _payload_trigger_set(
+    side: str, mode: str, params: list[int], uniq: str | None
+) -> dict[str, Any]:
+    """Payload do ``trigger.set`` — um dono só, para as duas portas não divergirem."""
+    payload: dict[str, Any] = {"side": side, "mode": mode, "params": params}
+    if uniq:
+        payload["uniq"] = uniq
+    return payload
+
+
+def trigger_set_detalhado(
+    side: str, mode: str, params: list[int], uniq: str | None = None
+) -> tuple[bool, str | None, dict[str, Any] | None]:
+    """``trigger.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
+
+    Devolve ``(ok, motivo, corpo)``. O ``corpo`` traz ``aplicado_em`` e
+    ``guardado_em`` — as duas listas que o daemon monta em
+    ``_handle_trigger_set`` e que morriam nesta ponte. Use
+    :func:`destinos_da_aplicacao` para lê-las sem repetir a regra.
+
+    Por que a existência desta função é uma dívida paga, e não um recurso novo:
+    medido na bancada viva em 23/08, com a mesa VAZIA, o daemon respondeu
+    ``{"status": "ok", "aplicado_em": [], "guardado_em": []}`` — ZERO destino,
+    nenhum byte no fio, nada guardado — e a aba Gatilhos disse *"SimpleRigid
+    aplicado"*, porque a ponte entregava ``(True, None)`` e a janela
+    re-DEDUZIA o destino do próprio estado dela. A heurística da janela cobre
+    duas das três razões que o daemon conhece; a rota clássica de mesa vazia
+    não é uma delas.
+
+    ``motivo`` junta as DUAS formas de o daemon dizer não: o erro JSON-RPC de
+    parâmetro inválido (Fim <= Início, HARM-19) e a frase no corpo de uma
+    resposta bem-sucedida (:func:`_recusa_no_corpo`).
+
+    ``uniq`` (PERFIL-05): MAC do controle selecionado no seletor — o daemon
+    aplica SÓ nele (override por-MAC); omitido = comportamento global clássico.
+    """
+    ok, motivo, corpo = _call_checked_detalhado(
+        "trigger.set", _payload_trigger_set(side, mode, params, uniq)
+    )
+    return ok, motivo or _recusa_no_corpo(corpo), corpo
 
 
 def trigger_set_checked(
@@ -332,11 +448,11 @@ def trigger_set_checked(
     Recusa típica: Fim <= Início. Ver ``_call_checked`` para o contrato.
     ``uniq`` (PERFIL-05): MAC do controle selecionado no seletor — o daemon
     aplica SÓ nele (override por-MAC); omitido = comportamento global clássico.
+
+    **Não diz ONDE aplicou** — para isso existe :func:`trigger_set_detalhado`,
+    que entrega ``aplicado_em``/``guardado_em``.
     """
-    payload: dict[str, Any] = {"side": side, "mode": mode, "params": params}
-    if uniq:
-        payload["uniq"] = uniq
-    return _call_checked("trigger.set", payload)
+    return _call_checked("trigger.set", _payload_trigger_set(side, mode, params, uniq))
 
 
 def trigger_set(side: str, mode: str, params: list[int]) -> bool:
@@ -366,13 +482,36 @@ def trigger_reset(
     "contrato deliberado" até 24/07) foi estreitado para a categoria `trigger`
     — desligar um gatilho apagava a trava de LED e de vibração de outras abas e
     reabria a troca automática para reescrever a cor recém-aplicada.
+
+    **Não diz ONDE resetou** — para isso existe :func:`trigger_reset_detalhado`.
     """
+    return _call_checked("trigger.reset", _payload_trigger_reset(side, uniq))
+
+
+def _payload_trigger_reset(side: str | None, uniq: str | None) -> dict[str, Any]:
+    """Payload do ``trigger.reset`` — um dono só, para as duas portas não divergirem."""
     payload: dict[str, Any] = {}
     if side:
         payload["side"] = side
     if uniq:
         payload["uniq"] = uniq
-    return _call_checked("trigger.reset", payload)
+    return payload
+
+
+def trigger_reset_detalhado(
+    side: str | None = None, uniq: str | None = None
+) -> tuple[bool, str | None, dict[str, Any] | None]:
+    """``trigger.reset`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
+
+    Mesmo contrato de :func:`trigger_set_detalhado` — e o mesmo corpo
+    (``status``/``aplicado_em``/``guardado_em``), porque os dois handlers foram
+    escritos como espelho um do outro. Ver :func:`trigger_reset` para o que o
+    comando faz.
+    """
+    ok, motivo, corpo = _call_checked_detalhado(
+        "trigger.reset", _payload_trigger_reset(side, uniq)
+    )
+    return ok, motivo or _recusa_no_corpo(corpo), corpo
 
 
 def led_set(
@@ -385,14 +524,43 @@ def led_set(
     ``brightness`` (0.0-1.0) é repassado ao daemon quando fornecido; omitido
     preserva o contrato v1 (sem multiplicador). Ver FEAT-LED-BRIGHTNESS-01.
     ``uniq`` (PERFIL-05): MAC do controle selecionado — aplica SÓ nele.
+
+    **Não diz ONDE acendeu** — para isso existe :func:`led_set_detalhado`.
     """
+    ok, _ = _safe_call("led.set", _payload_led_set(rgb, brightness, uniq))
+    return ok
+
+
+def _payload_led_set(
+    rgb: tuple[int, int, int], brightness: float | None, uniq: str | None
+) -> dict[str, Any]:
+    """Payload do ``led.set`` — um dono só, para as duas portas não divergirem."""
     payload: dict[str, Any] = {"rgb": list(rgb)}
     if brightness is not None:
         payload["brightness"] = float(brightness)
     if uniq:
         payload["uniq"] = uniq
-    ok, _ = _safe_call("led.set", payload)
-    return ok
+    return payload
+
+
+def led_set_detalhado(
+    rgb: tuple[int, int, int],
+    brightness: float | None = None,
+    uniq: str | None = None,
+) -> dict[str, Any] | None:
+    """``led.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
+
+    Mesmo payload e mesma rota do :func:`led_set`; o que muda é o que volta.
+    O corpo traz ``aplicado_em`` e ``guardado_em`` — leia com
+    :func:`destinos_da_aplicacao`. ``None`` = daemon não respondeu (ver
+    :func:`_corpo_do_daemon`).
+
+    O ``led.set`` e o ``led.player_set`` são o MESMO defeito do ``trigger.set``
+    noutro arquivo de aba: o daemon já publica os dois destinos desde a
+    APLICAR-VERDADE-01, e a aba Lightbar re-deduzia o "guardado" do estado da
+    janela porque o ``bool`` desta ponte não tinha como carregá-los.
+    """
+    return _corpo_do_daemon("led.set", _payload_led_set(rgb, brightness, uniq))
 
 
 def _recusa_no_corpo(resultado: Any) -> str | None:
@@ -500,6 +668,25 @@ def rumble_policy_set_checked(
     aqui seria ciclo).
     """
     return _call_checked("rumble.policy_set", {"policy": policy}, timeout=timeout)
+
+
+def rumble_policy_set_detalhado(
+    policy: str, *, timeout: float | None = 0.25
+) -> tuple[bool, str | None, dict[str, Any] | None]:
+    """``rumble.policy_set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01).
+
+    Terceira e última rota que passava por ``_call_checked`` e perdia o corpo.
+    O corpo de hoje é ``{"status": "ok", "policy": <a pedida>}`` — o daemon ecoa
+    a política, não resolve nada — então aqui não há mentira medida: o que esta
+    função paga é a UNIFORMIDADE, para as três rotas de ``_call_checked``
+    responderem com a mesma forma e a próxima pessoa não ter de descobrir qual
+    delas guarda a verdade. Devolve ``(ok, motivo, corpo)`` como
+    :func:`trigger_set_detalhado`.
+    """
+    ok, motivo, corpo = _call_checked_detalhado(
+        "rumble.policy_set", {"policy": policy}, timeout=timeout
+    )
+    return ok, motivo or _recusa_no_corpo(corpo), corpo
 
 
 def rumble_policy_set(policy: str) -> bool:
@@ -632,12 +819,32 @@ def player_leds_set(
     ``bits[0]`` = LED 1 (extremo esquerdo), ``bits[4]`` = LED 5 (extremo direito).
     Retorna True se o daemon confirmou; False se offline ou erro.
     ``uniq`` (PERFIL-05): MAC do controle selecionado — aplica SÓ nele.
+
+    **Não diz ONDE acendeu** — para isso existe :func:`player_leds_set_detalhado`.
     """
+    ok, _ = _safe_call("led.player_set", _payload_player_leds(bits, uniq))
+    return ok
+
+
+def _payload_player_leds(
+    bits: tuple[bool, bool, bool, bool, bool], uniq: str | None
+) -> dict[str, Any]:
+    """Payload do ``led.player_set`` — um dono só, para as portas não divergirem."""
     payload: dict[str, Any] = {"bits": list(bits)}
     if uniq:
         payload["uniq"] = uniq
-    ok, _ = _safe_call("led.player_set", payload)
-    return ok
+    return payload
+
+
+def player_leds_set_detalhado(
+    bits: tuple[bool, bool, bool, bool, bool], uniq: str | None = None
+) -> dict[str, Any] | None:
+    """``led.player_set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
+
+    Irmão de :func:`led_set_detalhado`, com o mesmo corpo mais o campo ``bits``
+    que o daemon ecoa. ``None`` = daemon não respondeu.
+    """
+    return _corpo_do_daemon("led.player_set", _payload_player_leds(bits, uniq))
 
 
 def apply_draft_detalhado(draft_dict: dict) -> dict | None:  # type: ignore[type-arg]
@@ -702,6 +909,55 @@ def aplicacao_confirmada(resposta: Any) -> bool:
     return True
 
 
+def destinos_da_aplicacao(resposta: Any) -> tuple[list[str], list[str]]:
+    """``(aplicado_em, guardado_em)`` de uma resposta do daemon (ELO-MUDO-01).
+
+    Dono ÚNICO da leitura desses dois campos do lado da janela, pelo mesmo
+    motivo de :func:`aplicacao_confirmada`: quatro rotas os publicam
+    (``trigger.set``, ``trigger.reset``, ``led.set``, ``led.player_set``) e cada
+    aba que os lesse por conta própria seria mais uma chance de nascerem duas
+    leituras do mesmo payload.
+
+    O vocabulário é do daemon (``_destinos_por_uniq``, MESA-CHEIA-09):
+
+    * ``aplicado_em`` — os MACs em que o byte SAIU no fio;
+    * ``guardado_em`` — os MACs em que a intenção ficou GUARDADA sem sair
+      (alvo desconectado, alvo sem MAC estável, Modo Nativo com output mutado).
+
+    **As duas vazias significam que nada aconteceu**, e é o caso que a bancada
+    mediu em 23/08 com a mesa vazia — aquele em que a tela dizia "aplicado".
+    Resposta ausente ou sem os campos volta como duas listas vazias: quem não
+    respondeu não aplicou.
+    """
+    if not isinstance(resposta, dict):
+        return [], []
+    aplicado = resposta.get("aplicado_em")
+    guardado = resposta.get("guardado_em")
+    return (
+        [m for m in aplicado if isinstance(m, str)] if isinstance(aplicado, list) else [],
+        [m for m in guardado if isinstance(m, str)] if isinstance(guardado, list) else [],
+    )
+
+
+def alvo_honrado(resposta: Any) -> bool | None:
+    """O daemon mexeu no controle ESCOLHIDO, ou caiu na rota global? (``por_uniq``).
+
+    MIC-DA-MESA-CHEIA-01: com dois DualSense no cabo há DUAS placas de som, e a
+    rota global devolve a PRIMEIRA — o microfone de outra pessoa. O daemon já
+    responde ``por_uniq`` justamente para a tela poder saber a diferença, e ele
+    morria nesta ponte.
+
+    Devolve ``True``/``False`` quando o daemon se pronunciou, e ``None`` quando
+    ele não disse nada a respeito (rota sem o campo, ou sem resposta). ``None``
+    não é ``False``: "não sei" e "não honrei" mandam a janela dizer coisas
+    diferentes.
+    """
+    if not isinstance(resposta, dict):
+        return None
+    valor = resposta.get("por_uniq")
+    return valor if isinstance(valor, bool) else None
+
+
 def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
     """Envia ``profile.apply_draft`` ao daemon via IPC (FEAT-PROFILE-STATE-01).
 
@@ -744,14 +1000,30 @@ def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
     fez a tela parecer mentirosa quando ela nunca mentiu.
 
     Retorna True se o daemon confirmou; False se offline ou sem controle.
+    **Os dois casos voltam False** — quem precisa separá-los chama
+    :func:`mic_set_detalhado`.
+    """
+    corpo = mic_set_detalhado(muted, uniq)
+    return corpo is not None and corpo.get("status") == "ok"
+
+
+def mic_set_detalhado(
+    muted: bool | None, uniq: str | None = None
+) -> dict[str, Any] | None:
+    """``mic.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
+
+    Mesmo pedido do :func:`mic_set`; o que muda é o que volta. O corpo traz
+    ``status`` (``"ok"`` ou ``"sem_controle"``), ``audio`` e
+    ``mic_mudo_desejado``. ``None`` = daemon não respondeu.
+
+    A diferença que este corpo permite é a que o ``bool`` apagava:
+    ``sem_controle`` (o Hefesto está VIVO e não há controle na mesa) chegava na
+    janela como o mesmo ``False`` de "o Hefesto está desligado".
     """
     payload: dict[str, Any] = {"muted": muted}
     if uniq:
         payload["uniq"] = uniq
-    ok, result = _safe_call("mic.set", payload)
-    if not ok or not isinstance(result, dict):
-        return False
-    return result.get("status") == "ok"
+    return _corpo_do_daemon("mic.set", payload)
 
 
 def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
@@ -791,16 +1063,44 @@ def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
     alto-falante, que escreve um byte do report.
 
     Retorna True se o daemon confirmou; False se offline, sem controle ou sem
-    fonte de captura.
+    fonte de captura — **os três colapsados no mesmo ``False``**. Quem precisa
+    separá-los (e a ressalva do rádio acima é exatamente isso) chama
+    :func:`mic_volume_set_detalhado`.
+    """
+    corpo = mic_volume_set_detalhado(volume, uniq)
+    return corpo is not None and corpo.get("status") == "ok"
+
+
+def mic_volume_set_detalhado(
+    volume: int, uniq: str | None = None
+) -> dict[str, Any] | None:
+    """``mic.volume.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
+
+    Mesmo pedido do :func:`mic_volume_set`; o que muda é o que volta. O corpo
+    traz ``status`` (``"ok"``, ``"erro"`` ou ``"sem_fonte"``), ``fonte``,
+    ``volume`` (a LEITURA de volta, não o que mandamos) e ``por_uniq`` — leia o
+    último com :func:`alvo_honrado`. ``None`` = daemon não respondeu.
+
+    As três coisas que o ``bool`` apagava, medidas na bancada em 23/08:
+
+    1. ``sem_fonte`` chegava como o mesmo ``False`` de daemon offline — e a
+       promessa escrita em :func:`mic_volume_set` (*"o controle deslizante fica
+       insensível com a dica dizendo por quê"*) não tinha por onde se cumprir,
+       porque nenhum código de janela recebia a palavra ``sem_fonte``;
+    2. o volume LIDO de volta não chegava, então a janela só podia mostrar o
+       número que ela mesma mandou;
+    3. ``por_uniq: False`` era indistinguível de ``True`` — o gesto que caiu na
+       rota global (o microfone de OUTRA pessoa) voltava ``True`` e era gravado
+       no rascunho como se o controle escolhido tivesse sido honrado.
+
+    **O que fazer com a palavra ``sem_fonte`` na tela é desenho, e é dela** —
+    esta função só faz a palavra chegar.
     """
     volume = max(0, min(100, int(volume)))
     payload: dict[str, Any] = {"volume": volume}
     if uniq:
         payload["uniq"] = uniq
-    ok, result = _safe_call("mic.volume.set", payload)
-    if not ok or not isinstance(result, dict):
-        return False
-    return result.get("status") == "ok"
+    return _corpo_do_daemon("mic.volume.set", payload)
 
 
 def speaker_set(
@@ -847,7 +1147,28 @@ def speaker_set(
     chamada vazia toma a posse e manda ZERO (armadilha 1). "Assumir sem mudar
     nada" seria uma chave nova e explícita, não o payload vazio.
 
-    Retorna True se o daemon confirmou; False se offline ou sem controle.
+    Retorna True se o daemon confirmou; False se offline ou sem controle —
+    **os dois no mesmo ``False``**. Quem precisa separá-los chama
+    :func:`speaker_set_detalhado`.
+    """
+    corpo = speaker_set_detalhado(volume, muted, uniq, release, rota)
+    return corpo is not None and corpo.get("status") == "ok"
+
+
+def speaker_set_detalhado(
+    volume: int | None = None,
+    muted: bool | None = None,
+    uniq: str | None = None,
+    release: bool = False,
+    rota: int | None = None,
+) -> dict[str, Any] | None:
+    """``speaker.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
+
+    Mesmo pedido e as MESMAS regras do :func:`speaker_set` — inclusive o
+    ``ValueError`` de ``release`` com ``volume``/``muted``, que mora aqui porque
+    é aqui que o payload se monta. O corpo traz ``status`` (``"ok"`` ou
+    ``"sem_controle"``) e ``speaker``, o bloco de posse que só existe depois do
+    primeiro pedido. ``None`` = daemon não respondeu.
     """
     if release and (volume is not None or muted is not None):
         raise ValueError(
@@ -869,10 +1190,7 @@ def speaker_set(
         # junto do volume porque é o mesmo bloco de posse — e sozinha quando o
         # seletor de canal muda sem mexer no número.
         payload["rota"] = int(rota)
-    ok, result = _safe_call("speaker.set", payload)
-    if not ok or not isinstance(result, dict):
-        return False
-    return result.get("status") == "ok"
+    return _corpo_do_daemon("speaker.set", payload)
 
 
 def mouse_emulation_set(
@@ -900,6 +1218,7 @@ def mouse_emulation_set(
 __all__ = [
     "PROFILE_SWITCH_TIMEOUT_S",
     "active_profile_name",
+    "alvo_honrado",
     "aplicacao_confirmada",
     "apply_draft",
     "apply_draft_detalhado",
@@ -907,25 +1226,34 @@ __all__ = [
     "call_async",
     "daemon_state_full",
     "daemon_status_basic",
+    "destinos_da_aplicacao",
     "identity_number_set",
     "led_set",
+    "led_set_detalhado",
     "machine_declare",
     "mic_set",
+    "mic_set_detalhado",
+    "mic_volume_set_detalhado",
     "mouse_emulation_set",
     "player_leds_set",
+    "player_leds_set_detalhado",
     "profile_list",
     "profile_switch",
     "rumble_passthrough",
     "rumble_policy_custom",
     "rumble_policy_set",
     "rumble_policy_set_checked",
+    "rumble_policy_set_detalhado",
     "rumble_set",
     "rumble_stop",
     "run_in_thread",
     "speaker_set",
+    "speaker_set_detalhado",
     "trigger_reset",
+    "trigger_reset_detalhado",
     "trigger_set",
     "trigger_set_checked",
+    "trigger_set_detalhado",
 ]
 
 # "O segredo de ter sucesso é saber o que descartar." — Charlie Munger
