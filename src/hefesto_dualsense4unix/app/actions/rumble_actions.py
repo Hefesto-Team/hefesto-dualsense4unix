@@ -34,6 +34,7 @@ from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.mode_transition import STATE_IPC_TIMEOUT_S
+from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, alvo_de_edicao
 from hefesto_dualsense4unix.app.ipc_bridge import (
     call_async,
     rumble_passthrough,
@@ -651,16 +652,16 @@ class RumbleActionsMixin(WidgetAccessMixin):
 
     # --- POR-UNIDADE-01 (10/08/2026): a intensidade é da PEÇA ---
 
-    def _rumble_edit_uniq(self) -> str | None:
-        """MAC do alvo de edição escolhido no seletor, ou None ("Todos").
+    def _rumble_edit_uniq(self) -> AlvoDeEdicao:
+        """O alvo de edição escolhido no seletor (PERFIL-04).
 
-        MESMA fonte da Lightbar e dos Gatilhos (``_edit_target_uniq``, que a
-        aba Status mantém em sincronia com o daemon) — o seletor é UM só, e o
-        selo ao lado dele já diz qual peça está sendo editada. Getattr
-        defensivo: a aba montada fora da janela completa (testes de geometria)
-        segue pela rota global, como sempre.
+        MESMA fonte da Lightbar e dos Gatilhos (`app/alvo_de_edicao.py`, o
+        dono único) — o seletor é UM só, e o selo ao lado dele já diz qual
+        peça está sendo editada. Z2-1 (24/08/2026): antes lia o atributo
+        legado por `getattr` cru — o `None` da janela que não sabia o alvo
+        virava, silenciosamente, "Todos".
         """
-        return getattr(self, "_edit_target_uniq", None)
+        return alvo_de_edicao(self)
 
     def _gravar_intensidade_no_rascunho(
         self, policy: str, mult: float | None
@@ -686,7 +687,12 @@ class RumbleActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         if draft is None:
             return
-        uniq = self._rumble_edit_uniq()
+        estado_alvo = self._rumble_edit_uniq()
+        if estado_alvo.desconhecido:
+            # Z2-1: a janela não sabe o alvo — zero escrita no rascunho, e
+            # nunca cai no ramo "Todos" (que limparia os overrides de peça).
+            return
+        uniq = estado_alvo.uniq
         if uniq is None:
             new_rumble = draft.rumble.model_copy(
                 update={"policy": policy, "custom_mult": mult}
@@ -882,7 +888,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
         # no seletor — o override da peça quando existe, senão o global. Mesma
         # regra de `_refresh_lightbar_from_draft`. `weak`/`strong` (o teste de
         # motores) vêm sempre do global: nunca foram do perfil.
-        rumble = draft.effective_rumble_for(self._rumble_edit_uniq())
+        rumble = draft.effective_rumble_for(self._rumble_edit_uniq().uniq)
         self._rumble_guard_refresh = True
         try:
             weak_scale: Gtk.Scale = self._get("rumble_weak_scale")

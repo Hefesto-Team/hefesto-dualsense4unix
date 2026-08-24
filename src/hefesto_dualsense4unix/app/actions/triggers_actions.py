@@ -22,6 +22,7 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import (
     preset_to_factory_args,
     preset_to_positional_params,
 )
+from hefesto_dualsense4unix.app.alvo_de_edicao import alvo_de_edicao
 from hefesto_dualsense4unix.app.ipc_bridge import trigger_reset, trigger_set_checked
 from hefesto_dualsense4unix.app.textos_de_aplicacao import (
     alvo_fora_da_mesa,
@@ -167,9 +168,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         if draft is None:
             return
-        triggers_draft = draft.effective_triggers_for(
-            getattr(self, "_edit_target_uniq", None)
-        )
+        triggers_draft = draft.effective_triggers_for(alvo_de_edicao(self).uniq)
         self._triggers_guard_refresh = True
         try:
             for side in ("left", "right"):
@@ -356,7 +355,13 @@ class TriggersActionsMixin(WidgetAccessMixin):
         values = self._collect_values(side)
         params_list: list[int] = preset_to_positional_params(spec, values)
         new_trigger = TriggerDraft(mode=preset_id, params=tuple(params_list))
-        uniq = getattr(self, "_edit_target_uniq", None)
+        estado_alvo = alvo_de_edicao(self)
+        if estado_alvo.desconhecido:
+            # Z2-1: a janela não sabe o alvo — zero escrita no rascunho, e
+            # NUNCA cai no ramo "Todos" (que limparia o lado editado dos
+            # overrides por-controle de todo mundo).
+            return
+        uniq = estado_alvo.uniq
         if uniq is None:
             new_triggers = draft.triggers.model_copy(update={side: new_trigger})
             draft = draft.model_copy(update={"triggers": new_triggers})
@@ -582,9 +587,15 @@ class TriggersActionsMixin(WidgetAccessMixin):
         self._persist_params_to_draft(side)
 
         # PERFIL-05: com um controle selecionado, o MAC viaja no pedido.
-        # getattr defensivo: hosts de teste parciais montam o mixin sem o
-        # seletor (sem `_edit_uniq`) — segue global, como antes.
-        uniq = getattr(self, "_edit_uniq", lambda: None)()
+        # Z2-1 (24/08/2026): o alvo vem do dono único, não mais de um
+        # `getattr` no método da Lightbar — `alvo_de_edicao` funciona em
+        # qualquer host, com ou sem o mixin da Lightbar montado.
+        estado_alvo = alvo_de_edicao(self)
+        if estado_alvo.desconhecido:
+            # Z2-2: recusa em vez de IPC às cegas — a janela não sabe o alvo.
+            self._toast_trigger(side, preset_id, False, motivo=estado_alvo.recusa())
+            return
+        uniq = estado_alvo.uniq
         if isinstance(args, dict):
             # Custom e MultiPosition_* usam dict; IPC espera posicional
             # no formato aceito por build_from_name nomeado.
@@ -631,8 +642,9 @@ class TriggersActionsMixin(WidgetAccessMixin):
         como já viajava no "Aplicar" ao lado (PERFIL-05) e no "Apagar" da aba
         Lightbar (R-17). Este era o último comando de saída da janela que ia em
         broadcast: com "Controle 2" selecionado, "Desligar" zerava o gatilho dos
-        QUATRO. `getattr` defensivo pelo mesmo motivo do `_apply_trigger` —
-        hosts de teste parciais montam o mixin sem o seletor.
+        QUATRO. Z2-1 (24/08/2026): o alvo vem de `alvo_de_edicao(self)`, o
+        dono único — com a janela sem saber o alvo (`DESCONHECIDO`), o
+        "Desligar" recusa em vez de zerar o gatilho de todo mundo.
         """
         combo = self._trigger_mode.get(side)
         if combo is not None:
@@ -651,8 +663,12 @@ class TriggersActionsMixin(WidgetAccessMixin):
         # para não cair depois dele e re-armar a trava, que é uma só para os
         # dois lados. Ver `_adiantar_live_preview`.
         self._adiantar_live_preview("right" if side == "left" else "left")
-        uniq = getattr(self, "_edit_uniq", lambda: None)()
-        ok, _motivo = trigger_reset(side, uniq=uniq)
+        estado_alvo = alvo_de_edicao(self)
+        if estado_alvo.desconhecido:
+            # Z2-2: recusa em vez de IPC às cegas.
+            self._toast_trigger(side, "Off", False, motivo=estado_alvo.recusa())
+            return
+        ok, _motivo = trigger_reset(side, uniq=estado_alvo.uniq)
         self._toast_trigger(side, "Off", ok)
 
     def _toast_trigger(
