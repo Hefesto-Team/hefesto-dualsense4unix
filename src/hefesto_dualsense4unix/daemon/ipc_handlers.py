@@ -4842,6 +4842,18 @@ class IpcHandlersMixin:
         motivos: `declaracao_invalida`, `versao_desconhecida` e
         `falha_ao_gravar`.
 
+        **`descartados`** (CONFIG-06, 23/08/2026) entra no sucesso quando o
+        `maquina.json` em disco tinha CAMPO de topo com valor que o schema
+        recusa: a gravação resgata o resto e deixa aquele campo para trás
+        (`utils/maquina.py:_o_que_ainda_vale`), e a lista é o único jeito de a
+        janela dizer O QUE se perdeu em vez de apagar calado. A chave é
+        **aditiva e só aparece quando há algo a dizer**: lista vazia não vai no
+        corpo, porque "descartei zero campos" é ruído — e assim o
+        `{"ok": True}` de sempre continua sendo o corpo do caso comum. Nomes
+        CRUS do schema; a tradução para o rótulo da tela é da ponte da GUI
+        (`_CAMPOS_DA_MAQUINA`, `app/ipc_bridge.py`), pela mesma razão do
+        `_MOTIVOS_MAQUINA`: o daemon não conhece o texto da janela.
+
         **Toda recusa vem no CORPO, nunca como erro JSON-RPC**, e as três pela
         mesma razão: a ponte da GUI usa `_safe_call`, que colapsa erro de
         protocolo e daemon morto em `(False, None)` — a janela anunciaria
@@ -4859,7 +4871,7 @@ class IpcHandlersMixin:
         """
         from hefesto_dualsense4unix.utils.maquina import (
             carregar_maquina,
-            gravar_maquina,
+            gravar_maquina_com_descartes,
         )
 
         declaracao = params.get("maquina")
@@ -4869,14 +4881,20 @@ class IpcHandlersMixin:
             # Disco em thread: o handler roda no loop do daemon, e o
             # read-modify-write pega um lock de módulo que outra thread pode
             # estar segurando.
-            gravou = await asyncio.to_thread(gravar_maquina, declaracao)
+            #
+            # A variante `_com_descartes` e não a `gravar_maquina`: o embrulho
+            # estreita o resultado para `bool` e joga fora justamente a lista
+            # que a janela precisa mostrar.
+            resultado = await asyncio.to_thread(
+                gravar_maquina_com_descartes, declaracao
+            )
         except ValueError as exc:  # `ValidationError` do pydantic herda daqui
             logger.info("machine_declare_recusada_schema", err=str(exc))
             return {"ok": False, "reason": "declaracao_invalida"}
         except OSError as exc:
             logger.warning("machine_declare_falha_de_escrita", err=str(exc))
             return {"ok": False, "reason": "falha_ao_gravar"}
-        if not gravou:
+        if not resultado.gravou:
             return {"ok": False, "reason": "versao_desconhecida"}
         # O daemon vivo passa a valer o que está no disco. Relê em vez de
         # aproveitar o payload: o que vale é o documento FUNDIDO, não o pedaço
@@ -4906,6 +4924,8 @@ class IpcHandlersMixin:
                     await resultado
             except Exception as exc:  # a gravação já terminou; a ponte é extra
                 logger.warning("machine_declare_bt_mic_nao_reconciliou", err=str(exc))
+        if resultado.descartados:
+            return {"ok": True, "descartados": list(resultado.descartados)}
         return {"ok": True}
 
     async def _handle_plugin_list(self, params: dict[str, Any]) -> list[dict[str, Any]]:

@@ -21,9 +21,8 @@ from __future__ import annotations
 import csv
 import importlib.util
 import subprocess
+import time
 from pathlib import Path
-
-import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 CSV_ = RAIZ / "docs" / "data" / "decisoes-dela.csv"
@@ -167,16 +166,16 @@ def test_a_foto_so_entra_se_o_arquivo_existir() -> None:
     )
 
 
-def test_o_check_do_painel_MORDE() -> None:
+def test_o_check_do_painel_sabe_reprovar() -> None:
     """O `--check` acusa divergência — e é ele que o gancho de pré-commit roda.
 
     **ESTE TESTE NASCEU ERRADO E FOI CORRIGIDO NO MESMO DIA (23/08/2026).** A
     primeira versão rodava `--check` contra o painel PUBLICADO e cobrava que ele
-    estivesse em dia. Ela reprovou na suíte inteira — e estava certa em reprovar:
+    estivesse em dia, e reprovou na suíte inteira — e estava certa em reprovar:
     entre gerar o painel e rodar a suíte, um agente escreveu cinco sprints novas,
     e o censo saiu de 272 para 277.
 
-    O `--check` fez o trabalho dele. **Frágil era o teste**, que media a árvore
+    O `--check` fez o trabalho dele. **Frágil era o teste**, que olhava a árvore
     em MOVIMENTO — exatamente a armadilha registrada em `COMO-REGER-AGENTES.md`
     no mesmo dia, e que já tinha me feito medir a suíte com resultado inválido.
 
@@ -223,3 +222,75 @@ def test_o_check_do_painel_MORDE() -> None:
         )
 
 
+
+
+def test_a_suite_nao_medida_e_declarada_e_nao_omitida() -> None:
+    """Nenhum número NÃO é o mesmo que nenhuma falha — e a página tem de dizer.
+
+    **O DEFEITO, medido em 23/08/2026, e ele era do próprio painel.** O comando
+    da suíte trazia `--timeout=300`, e o `pytest-timeout` não está instalado
+    neste projeto: o pytest recusa a flag, sai com código 4 e não imprime
+    "N passed". O painel engolia isso, gravava `passed: None` no cache e
+    **simplesmente omitia o KPI** — a página ficava idêntica à de quem nunca
+    rodou a suíte.
+
+    A mesma suíte, rodada à mão, devolvia 11.684 verdes. Ou seja: a régua estava
+    quebrada e a página não dizia, que é a mentira por omissão que este painel
+    existe para não contar.
+
+    MORDE: voltar a omitir o KPI quando a medição falha.
+    """
+    mod = _painel()
+    rapido = {
+        "censo": {
+            "arquivos": 1, "diz_aberta": 0, "diz_concluida": 0,
+            "indices": 0, "citadas_na_fila": 0, "fora_da_fila": 0,
+        },
+        "mapa": {"linhas": 1, "chaves": 1, "assimetrias": 0, "sem_teste": 0},
+        "git": {"branch": "x", "head": "y", "assunto": "z", "sujos": 0},
+        "decisoes": [],
+    }
+    cache = {
+        "medido_em": time.time(),
+        "portoes": {},
+        "suite": {
+            "passed": None, "failed": 0, "ok": False,
+            "nao_mediu": True, "porque": "unrecognized arguments: --timeout=300",
+        },
+    }
+
+    pagina = mod.monta(rapido, cache)
+
+    assert "NÃO foi medida" in pagina, (
+        "a página não declarou que a suíte não pôde ser medida — ela fica "
+        "igual à de quem nunca rodou, e ausência vira aparência de sucesso"
+    )
+    assert "unrecognized arguments" in pagina, (
+        "a página não mostrou POR QUE não mediu: sem isso ninguém conserta"
+    )
+
+
+def test_a_suite_medida_mostra_o_numero() -> None:
+    """O caminho feliz não pode ter sido estragado pela declaração de ausência."""
+    mod = _painel()
+    rapido = {
+        "censo": {
+            "arquivos": 1, "diz_aberta": 0, "diz_concluida": 0,
+            "indices": 0, "citadas_na_fila": 0, "fora_da_fila": 0,
+        },
+        "mapa": {"linhas": 1, "chaves": 1, "assimetrias": 0, "sem_teste": 0},
+        "git": {"branch": "x", "head": "y", "assunto": "z", "sujos": 0},
+        "decisoes": [],
+    }
+    cache = {
+        "medido_em": time.time(),
+        "portoes": {},
+        "suite": {"passed": 11684, "failed": 0, "ok": True, "nao_mediu": False},
+    }
+
+    pagina = mod.monta(rapido, cache)
+
+    assert "11.684" in pagina, "o número dos testes verdes sumiu da página"
+    assert "NÃO foi medida" not in pagina, (
+        "a página declarou ausência sobre uma suíte que FOI medida"
+    )

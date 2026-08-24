@@ -48,7 +48,7 @@ from hefesto_dualsense4unix.app.compact_window import CompactWindow
 from hefesto_dualsense4unix.app.compact_window import is_enabled as compact_window_enabled
 from hefesto_dualsense4unix.app.constants import ICON_PATH, MAIN_GLADE
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
-from hefesto_dualsense4unix.app.gui_dialogs import executar_dialogo
+from hefesto_dualsense4unix.app.gui_dialogs import executar_dialogo, ultimo_socorro
 from hefesto_dualsense4unix.app.ipc_bridge import profile_list, profile_switch
 from hefesto_dualsense4unix.app.theme import apply_theme
 from hefesto_dualsense4unix.app.tray import AppTray, _desktop_is_cosmic
@@ -71,6 +71,34 @@ logger = get_logger(__name__)
 #: ANTERIOR pelo resto da sessão. O prazo é lido no próprio tick, por carimbo de
 #: tempo — sem thread nem timer novo.
 DRAFT_RELOAD_INFLIGHT_TIMEOUT_S = 3.0
+
+#: Nome do diálogo de fechamento no envelope de `gui_dialogs`. Constante porque
+#: dois lugares precisam do MESMO literal: quem arma o diálogo e quem, depois,
+#: pergunta a `ultimo_socorro()` se foi ELA que respondeu ou a casa.
+DIALOGO_DECLARACAO_AO_FECHAR = "declaracao_pendente_ao_fechar"
+
+
+def frase_do_socorro_ao_fechar() -> str:
+    """O que o rodapé diz quando o X não fecha porque a pergunta não apareceu.
+
+    PROVISÓRIA — classe estrutural, espera o olho dela (PROVA-DE-TELA-01).
+
+    Uma janela que não fecha e não explica é indistinguível de uma janela
+    travada — que é literalmente o quadro de 06/08/2026, o defeito que o
+    envelope de `gui_dialogs` existe para curar. O socorro responder CANCELAR
+    está CERTO e é decisão declarada (um Enter distraído nunca pode custar
+    edição não salva); o que faltava era a frase.
+
+    A SAÍDA OFERECIDA É O "APLICAR", E NÃO O "SAIR" DA BANDEJA: este ramo só
+    roda com `_has_persistent_access()` FALSO — sem janela compacta e sem
+    ícone de bandeja utilizável. Mandá-la à bandeja aqui seria mandá-la a um
+    lugar que, por construção, não existe neste caminho.
+    """
+    return _(
+        "Não consegui mostrar a pergunta sobre o que você declarou, então não "
+        "fechei a janela — nada foi perdido. Clique em Aplicar na aba "
+        "Configurações e feche de novo."
+    )
 
 
 class CaixaDeTetoDePagina(CaixaDeTetoElastico):
@@ -522,6 +550,14 @@ class HefestoApp(
 
         Fonte ÚNICA do estado: ``_maquina_pendente``, a mesma que a marca do
         rodapé (``footer_actions._marcar_declaracao_por_aplicar``) lê.
+
+        O SOCORRO TAMBÉM CANCELA — E AGORA DIZ ISSO (23/08/2026)
+        --------------------------------------------------------
+        ``resposta_de_socorro=CANCEL`` significa que um diálogo inalcançável
+        (o quadro de 06/08/2026) faz o X **parar de fechar a janela**. Os dois
+        cancelamentos são coisas diferentes e só o segundo pede explicação, e
+        ``gui_dialogs.ultimo_socorro()`` é o que os separa — mesmo canal que o
+        ``profiles_actions._motivo_do_cancelamento`` já usava.
         """
         if not getattr(self, "_maquina_pendente", None):
             return True
@@ -550,12 +586,28 @@ class HefestoApp(
 
         resposta = executar_dialogo(
             dialog,
-            nome="declaracao_pendente_ao_fechar",
+            nome=DIALOGO_DECLARACAO_AO_FECHAR,
             resposta_de_socorro=Gtk.ResponseType.CANCEL,
         )
+        # ANTES de `destroy()`: `ultimo_socorro()` é zerado a cada
+        # `executar_dialogo`, então esta leitura só é verdadeira sobre o
+        # diálogo que acabou de fechar.
+        foi_socorro = ultimo_socorro() == DIALOGO_DECLARACAO_AO_FECHAR
         dialog.destroy()
 
         if resposta == Gtk.ResponseType.CANCEL:
+            if foi_socorro:
+                # DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026), continuação de
+                # 23/08: cancelar porque ela clicou e cancelar porque a
+                # pergunta não conseguiu aparecer são coisas diferentes, e só
+                # a segunda pede explicação. Sem a frase, o X para de fechar a
+                # janela sem uma palavra — indistinguível de janela travada.
+                logger.error(
+                    "fechamento_cancelado_por_socorro",
+                    dialogo=DIALOGO_DECLARACAO_AO_FECHAR,
+                )
+                with contextlib.suppress(Exception):
+                    self._footer_toast(frase_do_socorro_ao_fechar())
             return False
         if resposta == Gtk.ResponseType.OK:
             # CONFERÊNCIA de 23/08/2026: a versão anterior IGNORAVA o resultado, e

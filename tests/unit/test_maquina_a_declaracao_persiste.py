@@ -562,10 +562,13 @@ def test_o_aplicar_grava_e_so_limpa_a_pendencia_quando_o_daemon_confirma(
     silêncio o que ela declarou.
     """
     pedidos: list[dict[str, Any]] = []
-    resposta: list[tuple[bool, str | None]] = [(True, None)]
+    # CONFIG-06 (23/08/2026): o rodapé pede a resposta INTEIRA
+    # (`(ok, motivo, descartados)`) — o aviso de campo descartado só existe
+    # nela. `machine_declare` segue viva como embrulho de duas pontas.
+    resposta: list[tuple[bool, str | None, tuple[str, ...]]] = [(True, None, ())]
     monkeypatch.setattr(
         ipc_bridge,
-        "machine_declare",
+        "machine_declare_detalhado",
         lambda m: (pedidos.append(m), resposta[0])[1],
     )
 
@@ -581,7 +584,7 @@ def test_o_aplicar_grava_e_so_limpa_a_pendencia_quando_o_daemon_confirma(
     # CONFIG-05 (23/08/2026), achado A3: a frase é DEVOLVIDA, não empurrada na
     # statusbar. Ela era apagada no mesmo tique do GTK pelo toast do
     # `_apply_draft_agora`; quem a mostra agora é o toast FINAL do "Aplicar".
-    resposta[0] = (False, "não deu")
+    resposta[0] = (False, "não deu", ())
     rodape._maquina_pendente = {"ambiente": "gnome"}
     assert rodape._gravar_declaracao_de_maquina() == "não deu"
     assert rodape.avisos == []
@@ -604,8 +607,8 @@ def test_o_aplicar_com_modo_pendente_tambem_grava(
     pedidos: list[dict[str, Any]] = []
     monkeypatch.setattr(
         ipc_bridge,
-        "machine_declare",
-        lambda m: (pedidos.append(m), (True, None))[1],
+        "machine_declare_detalhado",
+        lambda m: (pedidos.append(m), (True, None, ()))[1],
     )
 
     rodape = _Rodape()

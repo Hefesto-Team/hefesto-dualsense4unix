@@ -1321,3 +1321,81 @@ textview.hefesto-dualsense4unix-log text selection,
     border: 1px solid @current_line;
     border-radius: 3px;
 }
+
+/* ===========================================================================
+ * AS DUAS AFORDÂNCIAS DE DICA — o que faz a explicação ser PROCURADA.
+ *
+ * O DEFEITO QUE ELAS CURAM, medido em 23/08/2026 na aba Configurações montada
+ * com a bancada viva (2 DualSense no rádio, 3 adaptadores): a aba tinha **33
+ * pontos de dica** e **25 deles eram rótulos sem marca nenhuma**. O texto das
+ * dicas estava escrito, revisado e no lugar — e invisível. Quem não sabe que
+ * há explicação não passa o mouse para procurá-la, então a redação inteira de
+ * uma leva não chegava a ninguém.
+ *
+ * As duas marcas NÃO são escolha desta folha: vêm fixadas do inventário da
+ * leva (`docs/process/sprints/2026-08-21-ABA-CONFIGURACOES/TOOLTIPS.md`, a
+ * tabela "Duas afordâncias, e só duas"). Aqui só se executa o que lá foi
+ * escolhido — sublinhado pontilhado em rótulo, `?` em cabeçalho.
+ *
+ * POR QUE `border-bottom` E NÃO `text-decoration`, e este é um fato medido
+ * contra o GTK 3.24.41 desta máquina, não uma preferência:
+ *
+ *     text-decoration-line: underline; text-decoration-style: dotted;
+ *         -> "unknown value for property" (o parser do GTK3 recusa)
+ *     text-decoration: underline dotted;
+ *         -> "'dotted' is not a valid color name" (lê o 2º valor como cor)
+ *     border-bottom: 1px dotted <cor>;
+ *         -> OK
+ *
+ * O GTK3 implementa `text-decoration-style` só com `solid`/`double`/`wavy` —
+ * `dotted` não existe lá. A marca escolhida continua sendo a mesma (uma linha
+ * pontilhada sob o rótulo); o que muda é a propriedade que o GTK3 aceita para
+ * desenhá-la. Quem migrar para GTK4 pode reconferir e trocar.
+ *
+ * @text_muted, e não @purple ou @cyan: a marca é uma DICA de que há mais texto,
+ * não um chamado. Sublinhado colorido em 25 rótulos de uma aba só viraria
+ * ruído e competiria com o roxo de seleção, que já tem dono nesta folha.
+ * =========================================================================== */
+
+/* 1. SUBLINHADO PONTILHADO — rótulo que tem explicação.
+ *
+ * Só em `label`: um botão já se anuncia como clicável e não precisa de marca
+ * (é por isso que os 4 botões e os 4 segmentos do orçamento ficam de fora).
+ * O `padding-bottom` afasta a linha das descidas de "g", "p" e "ç" — sem ele
+ * a pontilhada corta o rabo da letra, e a palavra "Configurações" era o caso
+ * pior desta aba. */
+label.hefesto-tem-dica,
+.hefesto-dualsense4unix-window label.hefesto-tem-dica {
+    border-bottom: 1px dotted @text_muted;
+    padding-bottom: 2px;
+}
+
+/* 2. O `?` — cabeçalho de seção, e os casos de canto.
+ *
+ * O círculo vem do inventário ("`?` em círculo"). Ele acompanha `.dim-label`
+ * em vez de substituí-la: a cor e o degrau de texto secundário já estão
+ * resolvidos lá, e repeti-los aqui criaria duas fontes para a mesma cor.
+ *
+ * `border-radius: 999px` em vez de `50%`: o GTK3 aceita os dois, e o valor
+ * grande fica certo mesmo quando a escala de fonte da casa (+3 na máquina
+ * dela) cresce a caixa e o raio de 50% já não fecha o círculo. */
+label.hefesto-ajuda,
+.hefesto-dualsense4unix-window label.hefesto-ajuda {
+    min-width: 13px;
+    min-height: 13px;
+    padding: 0;
+    border: 1px solid @text_muted;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* Contraparte HighContrast: no modo preto-e-amarelo o @text_muted some. As duas
+ * marcas passam a amarelo, que é a cor de estrutura daquele modo. */
+.hefesto-dualsense4unix-high-contrast label.hefesto-tem-dica {
+    border-bottom-color: #ff0;
+}
+.hefesto-dualsense4unix-high-contrast label.hefesto-ajuda {
+    border-color: #ff0;
+    color: #ff0;
+}

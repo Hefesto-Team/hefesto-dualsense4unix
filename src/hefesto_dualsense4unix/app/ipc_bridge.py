@@ -784,8 +784,57 @@ _MOTIVOS_MAQUINA: dict[str, str] = {
 }
 
 
+#: CONFIG-06 (23/08/2026): campo de topo do ``MaquinaConfig`` traduzido para o
+#: rótulo da seção que o declara na aba Configurações. Mesma fronteira e mesma
+#: razão do :data:`_MOTIVOS_MAQUINA`: quando um campo é descartado, a frase do
+#: rodapé precisa nomear o que se perdeu, e ela nunca pode nomeá-lo
+#: ``orcamento``. Os rótulos são os ``TITULO`` de ``app/actions/config/`` —
+#: ``secao_mesa``, ``secao_controles``, ``secao_orcamento`` — e, para
+#: ``ambiente``, o rótulo da fileira dele dentro de "A janela".
+#:
+#: Campo sem entrada aqui cai no nome cru: feio, e por isso há teste que exige
+#: uma entrada para cada campo do schema. Esconder seria pior — a pessoa
+#: perderia o único aviso do que sumiu do arquivo dela.
+_CAMPOS_DA_MAQUINA: dict[str, str] = {
+    "mesa": "A mesa",
+    "controles": "Os controles",
+    "orcamento": "Orçamento",
+    "ambiente": "Ambiente",
+}
+
+
+def _rotulos_dos_descartados(result: dict[str, Any]) -> tuple[str, ...]:
+    """Os campos descartados do corpo do daemon, já em rótulo de tela.
+
+    Defensiva por contrato de fronteira: o corpo vem de outro processo, e um
+    daemon mais velho (que não conhece a chave) ou um valor torto não podem
+    derrubar o "Aplicar" de quem gravou com sucesso.
+    """
+    descartados = result.get("descartados")
+    if not isinstance(descartados, list):
+        return ()
+    return tuple(
+        _CAMPOS_DA_MAQUINA.get(campo, campo)
+        for campo in descartados
+        if isinstance(campo, str) and campo
+    )
+
+
 def machine_declare(maquina: dict[str, Any]) -> tuple[bool, str | None]:
     """Grava a declaração de MESA (CONFIG-03, 22/08). Devolve ``(ok, motivo)``.
+
+    **Não diz o que foi DESCARTADO** — para isso existe
+    :func:`machine_declare_detalhado`, e este invólucro estreita o resultado
+    dela para a dupla de sempre.
+    """
+    ok, motivo, _descartados = machine_declare_detalhado(maquina)
+    return ok, motivo
+
+
+def machine_declare_detalhado(
+    maquina: dict[str, Any],
+) -> tuple[bool, str | None, tuple[str, ...]]:
+    """``machine.declare`` inteiro: ``(ok, motivo, descartados)``.
 
     ``maquina`` é uma declaração **parcial** no formato do ``MaquinaConfig``
     (``utils/maquina.py``) — só o que mudou. O daemon funde contra o disco sob
@@ -793,8 +842,19 @@ def machine_declare(maquina: dict[str, Any]) -> tuple[bool, str | None]:
 
     ``motivo`` só vem preenchido quando o daemon RESPONDEU e RECUSOU, já
     traduzido para a frase da janela (:data:`_MOTIVOS_MAQUINA`). Daemon offline
-    volta ``(False, None)``: a tela diz coisas diferentes em "o Hefesto está
+    volta ``(False, None, ())``: a tela diz coisas diferentes em "o Hefesto está
     desligado" e "não vou sobrescrever o que está lá".
+
+    ``descartados`` (CONFIG-06, 23/08/2026) é o que a gravação teve de deixar
+    para trás — campo de topo que já estava em disco com valor que o schema
+    recusa. Vem em RÓTULO de tela (:data:`_CAMPOS_DA_MAQUINA`), e é **vazio no
+    caso comum**: a chave nem aparece no corpo quando não há nada a dizer.
+
+    Duas funções em vez de trocar o tipo de retorno da :func:`machine_declare`
+    pela mesma razão do par ``apply_draft``/``apply_draft_detalhado``: a
+    ``machine_declare`` está no ``__all__`` e a dupla ``(ok, motivo)`` é o
+    contrato de quem já a chama. Aditivo — ninguém quebra, e quem precisa da
+    verdade inteira pede por ela.
 
     ``_safe_call`` e não ``_call_checked`` pela razão de sempre nesta fronteira:
     a recusa vem no CORPO, não como ``CODE_INVALID_PARAMS`` — ver
@@ -803,12 +863,12 @@ def machine_declare(maquina: dict[str, Any]) -> tuple[bool, str | None]:
     """
     ok, result = _safe_call("machine.declare", {"maquina": maquina}, timeout=1.0)
     if not ok or not isinstance(result, dict):
-        return False, None
+        return False, None, ()
     if result.get("ok"):
-        return True, None
+        return True, None, _rotulos_dos_descartados(result)
     reason = result.get("reason")
     motivo = _MOTIVOS_MAQUINA.get(reason) if isinstance(reason, str) else None
-    return False, motivo or "Não consegui gravar o que você declarou"
+    return False, motivo or "Não consegui gravar o que você declarou", ()
 
 
 def player_leds_set(
@@ -1231,6 +1291,7 @@ __all__ = [
     "led_set",
     "led_set_detalhado",
     "machine_declare",
+    "machine_declare_detalhado",
     "mic_set",
     "mic_set_detalhado",
     "mic_volume_set_detalhado",
