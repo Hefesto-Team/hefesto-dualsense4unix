@@ -53,6 +53,7 @@ from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.actions.config import (
     ABA_CONFIG,
+    MOTIVO_ALVO_NAO_SE_APLICA,
     SECOES,
     SECOES_DA_ABA,
     ConfigActionsMixin,
@@ -288,7 +289,7 @@ def test_a_fita_esmaece_na_aba_e_volta_fora_dela() -> None:
 
     assert faixa.get_sensitive(), "instrumento inválido: a fita já nasceu inerte"
 
-    host.set_alvo_inativo(True)
+    host.set_alvo_inativo(True, MOTIVO_ALVO_NAO_SE_APLICA)
     assert not faixa.get_sensitive(), (
         "a fita continuou respondendo na aba Configurações"
     )
@@ -313,7 +314,7 @@ def test_entrar_na_aba_nao_engorda_o_cabecalho() -> None:
     host = _HospedeiroDaFita()
     antes = list(host.cabecalho.get_children())
 
-    host.set_alvo_inativo(True)
+    host.set_alvo_inativo(True, MOTIVO_ALVO_NAO_SE_APLICA)
     assert list(host.cabecalho.get_children()) == antes, (
         "entrar na aba Configurações acrescentou widget ao cabeçalho: ele "
         "muda de tamanho e esta aba passa a destoar das outras dez"
@@ -334,7 +335,24 @@ def test_a_fita_ausente_nao_derruba_nada() -> None:
     class _SemFita(ConfigActionsMixin):
         pass
 
-    _SemFita().set_alvo_inativo(True)
+    _SemFita().set_alvo_inativo(True, MOTIVO_ALVO_NAO_SE_APLICA)
+
+
+def test_inativar_sem_motivo_levanta() -> None:
+    """Z2-5: esmaecer sem dizer por quê é a mesma omissão que o P3 media.
+
+    Mordida: tirar o `if inativo and not motivo: raise ...` do corpo.
+    """
+    host = _HospedeiroDaFita()
+    with pytest.raises(ValueError):
+        host.set_alvo_inativo(True)
+
+
+def test_reativar_nao_exige_motivo() -> None:
+    """A2: o lado que ACEITA — sair da aba não precisa de explicação nenhuma."""
+    host = _HospedeiroDaFita()
+    host.set_alvo_inativo(True, MOTIVO_ALVO_NAO_SE_APLICA)
+    host.set_alvo_inativo(False)  # não levanta
 
 
 # --- 5. A aba MONTADA cabe na janela ---------------------------------------

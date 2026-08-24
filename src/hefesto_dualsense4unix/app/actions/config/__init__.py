@@ -27,12 +27,14 @@ from __future__ import annotations
 
 from hefesto_dualsense4unix.app.actions.config.mixin import (
     ABA_CONFIG,
+    MOTIVO_ALVO_NAO_SE_APLICA,
     ConfigActionsMixin,
 )
 from hefesto_dualsense4unix.app.actions.config.secoes import SECOES, SECOES_DA_ABA
 
 __all__ = [
     "ABA_CONFIG",
+    "MOTIVO_ALVO_NAO_SE_APLICA",
     "SECOES",
     "SECOES_DA_ABA",
     "ConfigActionsMixin",

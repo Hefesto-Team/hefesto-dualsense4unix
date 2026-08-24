@@ -29,6 +29,7 @@ from gi.repository import GdkPixbuf, Gtk
 from hefesto_dualsense4unix.app.actions.carona_do_wrapper import GESTO_APLICAR
 from hefesto_dualsense4unix.app.actions.config import (
     ABA_CONFIG,
+    MOTIVO_ALVO_NAO_SE_APLICA,
     ConfigActionsMixin,
 )
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
@@ -1197,6 +1198,37 @@ class HefestoApp(
         ),
     }
 
+    #: O motivo genérico das seis abas que ainda não ligaram um leitor —
+    #: DIFERENTE do motivo da Configurações (que se desqualifica de
+    #: propósito): esta frase é PROVISÓRIA, e a linha da aba sai do "não lê"
+    #: assim que a onda dela ligar um leitor (Z2-8, contrato §5 da
+    #: Z2-O-ALVO-GANHA-DONO-01).
+    _MOTIVO_ALVO_AINDA_NAO_LIGADO: ClassVar[str] = (
+        "esta aba ainda não lê o alvo de edição do cabeçalho"
+    )
+
+    #: Z2-8 (24/08/2026): quem lê o alvo de edição, e o mapa É o instrumento.
+    #: ``None`` = lê — a fita fica sensível. Um texto = inerte, com o motivo
+    #: guardado por ``set_alvo_inativo`` (Z2-5) — NUNCA pintado no cabeçalho
+    #: (decisão dela de 23/08). Nasce com as quatro leitoras de hoje
+    #: (Status/Gatilhos/Lightbar/Rumble — M3 do censo da sprint); as outras
+    #: sete abas de `app/actions/` — inclusive a Configurações, que se
+    #: desqualifica de propósito — ficam inertes até a onda delas ligar um
+    #: leitor. O portão da Z2-9 reprova módulo de aba ausente daqui.
+    _ALVO_POR_ABA: ClassVar[dict[str, str | None]] = {
+        ABA_STATUS: None,
+        "tab_triggers_box": None,
+        "tab_lightbar_box": None,
+        "tab_rumble_box": None,
+        ABA_CONFIG: MOTIVO_ALVO_NAO_SE_APLICA,
+        "tab_home_box": _MOTIVO_ALVO_AINDA_NAO_LIGADO,
+        ABA_NO_JOGO: _MOTIVO_ALVO_AINDA_NAO_LIGADO,
+        "profiles_paned": _MOTIVO_ALVO_AINDA_NAO_LIGADO,
+        "daemon_box": _MOTIVO_ALVO_AINDA_NAO_LIGADO,
+        "emulation_box": _MOTIVO_ALVO_AINDA_NAO_LIGADO,
+        "tab_navegacao_dsx": _MOTIVO_ALVO_AINDA_NAO_LIGADO,
+    }
+
     def _on_notebook_switch_page(
         self, notebook: Any, page: Any, _page_num: int
     ) -> None:
@@ -1223,9 +1255,19 @@ class HefestoApp(
         # é simétrica à de cima, e mora AQUI e não no `_REFRESH_POR_ABA` de
         # propósito: aquele mapa só dispara ao ENTRAR na aba destino, então a
         # fita ficaria esmaecida para sempre depois da primeira visita.
+        # Z2-8 (24/08/2026): generaliza o que a Configurações já fazia
+        # sozinha — CADA aba esmaece se o mapa `_ALVO_POR_ABA` disser que
+        # ela não lê, com o motivo dela (Z2-5), não só a Configurações. Aba
+        # fora do mapa é tratada como "ainda não lê" (mesmo motivo
+        # genérico): o portão da Z2-9 é quem reprova a AUSÊNCIA na fonte;
+        # em runtime a fita não pode ficar sensível por omissão.
         inativar = getattr(self, "set_alvo_inativo", None)
         if inativar is not None:
-            inativar(nome == ABA_CONFIG)
+            motivo = self._ALVO_POR_ABA.get(nome or "", self._MOTIVO_ALVO_AINDA_NAO_LIGADO)
+            if motivo is None:
+                inativar(False)
+            else:
+                inativar(True, motivo)
         # ONDA0-Z5/T9: um refresher que levanta não pode calar os seguintes
         # DA MESMA aba. Antes deste `try`, uma exceção no primeiro refresher
         # de uma aba com vários (ex.: `tab_navegacao_dsx`, três) deixava os

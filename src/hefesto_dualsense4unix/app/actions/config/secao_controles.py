@@ -53,6 +53,7 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     slot_of,
     via_do_controle,
 )
+from hefesto_dualsense4unix.app.alvo_de_edicao import alvo_de_edicao
 from hefesto_dualsense4unix.app.ipc_bridge import (
     call_async,
     identity_number_set,
@@ -730,7 +731,12 @@ class _PainelDosControles:
     ) -> list[DadosDoControle]:
         """Os dados de cada card, ordenados pelo número de jogador."""
         declarado = self._declaracoes()
-        alvo = getattr(self._host, "_edit_target_uniq", None)
+        # Z2-5 (24/08/2026): o dono único, não mais o campo legado por
+        # getattr. `selecionado=bool(alvo) and alvo == uniq` já era imune ao
+        # defeito do P3 (`None` — TODOS ou DESCONHECIDO — nunca marca card
+        # nenhum), então a migração é byte-idêntica na tela; o que muda é a
+        # fonte deixar de ser o campo que o portão da Z2-6 apaga.
+        alvo = alvo_de_edicao(self._host).uniq
         cards: list[DadosDoControle] = []
         for entrada in adotados:
             cards.append(

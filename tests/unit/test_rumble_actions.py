@@ -153,6 +153,11 @@ class _FakeRumbleMixin:
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         self.draft = DraftConfig.default()
+        # Z2-1 (24/08/2026): o alvo "Todos" precisa existir explicitamente —
+        # sem isso `alvo_de_edicao` devolve DESCONHECIDO (P3) e a escrita no
+        # rascunho é recusada, o mesmo comportamento que a fixture da
+        # Lightbar (`test_lightbar_todos_por_mac_r14.py`) já fixava.
+        self._edit_target_uniq = None
         # M1: guard renomeado por mixin (era _guard_refresh compartilhado).
         self._rumble_guard_refresh = False
         self._rumble_policy = "balanceado"

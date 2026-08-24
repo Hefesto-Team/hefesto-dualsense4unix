@@ -12,6 +12,7 @@ from gi.repository import Gdk, Gtk
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions import footer_actions
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, alvo_de_edicao
 from hefesto_dualsense4unix.app.ipc_bridge import led_set, player_leds_set
 from hefesto_dualsense4unix.app.textos_de_aplicacao import (
     alvo_fora_da_mesa,
@@ -71,7 +72,7 @@ _ASSUNTO_COR = "Cor ({pct}% de brilho)"
 #: continuava afirmando fato consumado — "Lightbar apagada" — com o alvo fora
 #: da mesa ou em Modo Nativo, onde nenhum byte sai. Ele escreve pela MESMA rota
 #: por-MAC do "Aplicar no controle" logo ao lado (`led_set((0, 0, 0),
-#: uniq=self._edit_uniq())` -> `led.set` -> `apply_output_for` -> "registrado"
+#: uniq=estado_alvo.uniq)` -> `led.set` -> `apply_output_for` -> "registrado"
 #: -> `guardado_em: [uniq]`), então mentia pelo mesmo motivo — e o comentário
 #: dentro do próprio método já registrava isso desde a APLICAR-VERDADE-01.
 #:
@@ -256,14 +257,18 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 saida.append(uniq)
         return saida
 
-    def _edit_uniq(self) -> str | None:
-        """MAC do controle em edição (PERFIL-04); None = edição global.
+    def _edit_uniq(self) -> AlvoDeEdicao:
+        """O alvo de edição (PERFIL-04), com o estado explícito ao lado do MAC.
 
-        Vem do seletor de alvo do banner (``StatusActionsMixin`` mantém
-        ``_edit_target_uniq`` em sync com o daemon). getattr defensivo: o
-        mixin pode ser instanciado sozinho em testes.
+        Vem do dono único (``app/alvo_de_edicao.py``) — nunca mais um
+        ``getattr`` cru no atributo legado. Z2-1 (24/08/2026): antes disto o
+        ``None`` do ``getattr`` respondia por DUAS coisas diferentes — "ela
+        escolheu Todos" e "a janela ainda não sabe" — e a segunda escrevia
+        global em silêncio. Quem só quer o endereço lê ``.uniq`` (``None`` nos
+        dois casos, como sempre); quem VAI ESCREVER verifica
+        ``.desconhecido`` primeiro.
         """
-        return getattr(self, "_edit_target_uniq", None)
+        return alvo_de_edicao(self)
 
     def _auto_preview_slot(self) -> int | None:
         """Slot do controle em edição QUANDO a prévia deve mostrar a cor
@@ -281,7 +286,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         if draft is None or not draft.leds.auto_player_colors:
             return None
-        if self._edit_uniq() is None:
+        if self._edit_uniq().uniq is None:
             return None
         label = getattr(self, "_edit_target_label", None)
         if not isinstance(label, str):
@@ -351,7 +356,13 @@ class LightbarActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         if draft is None:
             return False
-        uniq = self._edit_uniq()
+        estado_alvo = self._edit_uniq()
+        if estado_alvo.desconhecido:
+            # Z2-1: a janela não sabe o alvo — zero escrita no rascunho.
+            # Nunca cai no ramo "Todos" (que apagaria os overrides por
+            # controle do perfil inteiro, o defeito que o P3 mediu).
+            return False
+        uniq = estado_alvo.uniq
         if uniq is None:
             campos: set[str] = set()
             if "lightbar_rgb" in update:
@@ -410,7 +421,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
             return
         self._refresh_guard = True
         try:
-            leds = draft.effective_leds_for(self._edit_uniq())
+            leds = draft.effective_leds_for(self._edit_uniq().uniq)
             # COR-04: o checkbox "Cores automáticas por controle" reflete o
             # GLOBAL do draft (campo do PERFIL), nunca o efetivo do alvo — um
             # override por-controle não tem opinião sobre o toggle.
@@ -658,6 +669,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         por-controle clássico permanece: ``led.set`` respeita o alvo do
         seletor e não mexe no toggle.
         """
+        estado_alvo = self._edit_uniq()
+        if estado_alvo.desconhecido:
+            # Z2-2: a recusa chega à tela em vez de a cor viajar às cegas —
+            # zero IPC. A frase já existe pronta em `alvo_de_edicao.py`.
+            self._toast_light(estado_alvo.recusa() or _AVISO_HEFESTO_DESLIGADO)
+            return False
         pct = round(self._current_brightness * 100)
         draft = getattr(self, "draft", None)
         d4_disparou = False
@@ -665,12 +682,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # `None` nos caminhos que não passam pelo `apply_draft` (led.set), e é
         # o que separa "o Hefesto está desligado" de "a seção de luzes caiu".
         resposta: Any = None
-        alvos = self._uniqs_conectados() if self._edit_uniq() is None else []
-        if self._edit_uniq() is None and alvos:
+        alvos = self._uniqs_conectados() if estado_alvo.uniq is None else []
+        if estado_alvo.uniq is None and alvos:
             ok = self._enviar_led_em_todos(
                 self._current_rgb, self._current_brightness, alvos
             )
-        elif self._edit_uniq() is None and draft is not None:
+        elif estado_alvo.uniq is None and draft is not None:
             d4_disparou = self._d4_disable_auto_for_single_color()
             resposta = ipc_bridge.apply_draft_detalhado(
                 {
@@ -689,7 +706,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
             ok = led_set(
                 self._current_rgb,
                 brightness=self._current_brightness,
-                uniq=self._edit_uniq(),
+                uniq=estado_alvo.uniq,
             )
         if not ok:
             msg = mensagem_de_secao_fora(resposta) or _AVISO_HEFESTO_DESLIGADO
@@ -751,6 +768,11 @@ class LightbarActionsMixin(WidgetAccessMixin):
             preview.queue_draw()
 
     def on_lightbar_off(self, _btn: Gtk.Button) -> None:
+        estado_alvo = self._edit_uniq()
+        if estado_alvo.desconhecido:
+            # Z2-2: mesma recusa do "Aplicar" — zero IPC, zero rascunho.
+            self._toast_light(estado_alvo.recusa() or _AVISO_HEFESTO_DESLIGADO)
+            return
         self._current_rgb = (0, 0, 0)
         rgba = Gdk.RGBA()
         rgba.red = 0.0
@@ -776,12 +798,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # `_aplicar_cor_no_controle` — "Apagar" é aplicar a cor preta e mente
         # pelo mesmo motivo.
         resposta: Any = None
-        alvos = self._uniqs_conectados() if self._edit_uniq() is None else []
-        if self._edit_uniq() is None and alvos:
+        alvos = self._uniqs_conectados() if estado_alvo.uniq is None else []
+        if estado_alvo.uniq is None and alvos:
             # R-14: apagar é aplicar a cor única preta — mesma rota por-MAC do
             # "Aplicar", sem desligar a paleta automática de ninguém.
             ok = self._enviar_led_em_todos((0, 0, 0), None, alvos)
-        elif self._edit_uniq() is None and draft is not None:
+        elif estado_alvo.uniq is None and draft is not None:
             resposta = ipc_bridge.apply_draft_detalhado(
                 {
                     "leds": {
@@ -798,7 +820,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
             # abandonou: apagava a lightbar dos QUATRO controles quando ela
             # pediu para apagar a de UM, e ainda derrubava o override por-MAC
             # dos outros.
-            ok = led_set((0, 0, 0), uniq=self._edit_uniq())
+            ok = led_set((0, 0, 0), uniq=estado_alvo.uniq)
         if not ok:
             # E2: o "Falha (daemon offline?)" continua palavra por palavra para
             # o daemon REALMENTE offline; com ele vivo, quem fala é a seção.
@@ -865,7 +887,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         if draft is None:
             return
-        uniq = self._edit_uniq()
+        uniq = self._edit_uniq().uniq
         if uniq is None:
             self._toast_light(
                 'Sem um controle escolhido, use o botão '
@@ -960,9 +982,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         honesta; o mapa de conectados chega no próximo tique do daemon e o
         clique seguinte funciona.
         """
-        uniq = self._edit_uniq()
-        if uniq is not None:
-            return bool(player_leds_set(bits, uniq=uniq)), None
+        estado_alvo = self._edit_uniq()
+        if estado_alvo.desconhecido:
+            # Z2-2: mesma família da recusa acima — motivo próprio, sem IPC.
+            return False, estado_alvo.recusa()
+        if estado_alvo.uniq is not None:
+            return bool(player_leds_set(bits, uniq=estado_alvo.uniq)), None
         alvos = self._uniqs_conectados()
         if not alvos:
             return False, _AVISO_SEM_DESTINATARIO

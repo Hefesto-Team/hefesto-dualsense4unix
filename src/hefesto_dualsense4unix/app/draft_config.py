@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # "Salvar Perfil", com erro de validação. Import em tempo de execução (e não sob
 # TYPE_CHECKING como o `Profile` abaixo) porque o pydantic precisa do valor na
 # hora de construir a classe.
+from hefesto_dualsense4unix.app.alvo_de_edicao import alvo_de_edicao
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 
 if TYPE_CHECKING:
@@ -1599,11 +1600,14 @@ def registrar_alto_falante_no_rascunho(
     dele já sai com ``uniq``); o que faltava era o perfil ter onde guardar isso.
 
     QUEM DECIDE se a anotação é da casa ou da peça é o SELETOR DE ALVO, o
-    mesmo ``_edit_target_uniq`` que a Lightbar, os Gatilhos e agora a Rumble
-    já obedecem — e o mesmo selo ao lado dele que diz, na tela, qual peça está
-    sendo editada. Só quando ela ESCOLHEU aquela peça no seletor a anotação
-    vira override; com o seletor em "Todos" (o padrão, e o caso de quem tem um
-    controle só) nada muda: a escrita é a GLOBAL de sempre, byte-idêntica.
+    mesmo dono único (``app/alvo_de_edicao.py``) que a Lightbar, os Gatilhos
+    e a Rumble já obedecem (Z2-1) — e o mesmo selo ao lado dele que diz, na
+    tela, qual peça está sendo editada. Só quando ela ESCOLHEU aquela peça no
+    seletor a anotação vira override; com o seletor em "Todos" (o padrão, e o
+    caso de quem tem um controle só) nada muda: a escrita é a GLOBAL de
+    sempre, byte-idêntica. **Com a janela sem saber o alvo (DESCONHECIDO),
+    Z2-4 (24/08/2026) faz o registro recusar — zero escrita —, em vez de
+    cair no mesmo ramo GLOBAL de "Todos" e anotar a peça errada.**
 
     A alternativa — deduzir a peça do card em que ela encostou — foi medida e
     RECUSADA: com um controle só, todo gesto de volume viraria um override por
@@ -1627,7 +1631,13 @@ def registrar_alto_falante_no_rascunho(
             "speaker", {"volume", "muted", "rota"}
         )
         return
-    alvo = getattr(janela, "_edit_target_uniq", None)
+    estado_alvo = alvo_de_edicao(janela)
+    if estado_alvo.desconhecido:
+        # Z2-4: a janela não sabe o alvo — zero escrita no rascunho. Nunca
+        # cai no ramo GLOBAL (que anotaria o volume na peça errada: a que
+        # ninguém escolheu, não a que gerou o gesto).
+        return
+    alvo = estado_alvo.uniq
     if uniq and alvo and str(alvo) == str(uniq):
         atual = draft.effective_speaker_for(uniq)
         update: dict[str, Any] = {

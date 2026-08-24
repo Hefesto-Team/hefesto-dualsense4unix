@@ -100,6 +100,10 @@ class _Janela:
 
     def __init__(self, draft: DraftConfig) -> None:
         self.draft = draft
+        # Z2-4 (24/08/2026): "Todos" precisa existir explicitamente — sem
+        # isso `alvo_de_edicao` devolve DESCONHECIDO (P3) e o registro do
+        # alto-falante é recusado, não gravado global.
+        self._edit_target_uniq = None
 
 
 def _perfil_com_som(volume: int) -> Profile:
