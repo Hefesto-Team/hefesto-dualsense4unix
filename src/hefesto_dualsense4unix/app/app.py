@@ -48,6 +48,7 @@ from hefesto_dualsense4unix.app.compact_window import CompactWindow
 from hefesto_dualsense4unix.app.compact_window import is_enabled as compact_window_enabled
 from hefesto_dualsense4unix.app.constants import ICON_PATH, MAIN_GLADE
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
+from hefesto_dualsense4unix.app.gui_dialogs import executar_dialogo
 from hefesto_dualsense4unix.app.ipc_bridge import profile_list, profile_switch
 from hefesto_dualsense4unix.app.theme import apply_theme
 from hefesto_dualsense4unix.app.tray import AppTray, _desktop_is_cosmic
@@ -58,6 +59,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
 from hefesto_dualsense4unix.integrations.desktop_notifications import (
     statusnotifierwatcher_available,
 )
+from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -490,10 +492,88 @@ class HefestoApp(
         # fechar = encerrar — senão o app ficaria órfão e invisível no COSMIC
         # sem o applet de status (BUG-COMPACT-WINDOW-ORPHAN-ON-CLOSE-01).
         if self._has_persistent_access():
+            # A janela vai para a bandeja: o rascunho da aba Configurações
+            # SOBREVIVE, então aqui não cabe pergunta nenhuma — no máximo a
+            # marca na linha do rodapé, que já é o que ela é.
+            self._marcar_declaracao_por_aplicar()
             self.window.hide()
+            return True
+        if not self._deixar_encerrar_com_declaracao_pendente():
             return True
         Gtk.main_quit()
         return False
+
+    def _deixar_encerrar_com_declaracao_pendente(self) -> bool:
+        """Pergunta antes de encerrar com escolha declarada e não aplicada.
+
+        CONFIG-05 (23/08/2026), achado A5. A aba Configurações é DIFERIDA: o
+        clique acumula em ``_maquina_pendente`` e só o "Aplicar" grava. Nenhum
+        dos dois ramos do fechamento olhava para isso — encerrar jogava a
+        declaração fora em silêncio. O que salvava o caso comum nesta máquina
+        era acidente de ambiente (a bandeja do COSMIC viva faz o X esconder em
+        vez de sair), não cura.
+
+        SÓ no ramo que ENCERRA. Devolve ``True`` para deixar o encerramento
+        seguir, ``False`` para cancelá-lo.
+
+        O default é CANCELAR, pela regra já escrita em
+        ``gui_dialogs.confirm_discard_pending_edits``: um Enter distraído nunca
+        pode custar edição não salva.
+
+        Fonte ÚNICA do estado: ``_maquina_pendente``, a mesma que a marca do
+        rodapé (``footer_actions._marcar_declaracao_por_aplicar``) lê.
+        """
+        if not getattr(self, "_maquina_pendente", None):
+            return True
+        # Textos PROVISÓRIOS: são classe estrutural e esperam o olho dela.
+        dialog = Gtk.MessageDialog(
+            parent=self.window,
+            modal=True,
+            destroy_with_parent=True,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE,
+            text=_("Você declarou escolhas que ainda não foram aplicadas."),
+        )
+        # GUI-05/P5: classe de tema (precedente gui_dialogs._apply_app_theme).
+        with contextlib.suppress(Exception):
+            dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
+        dialog.format_secondary_text(
+            _(
+                "Fechar agora descarta o que você escolheu na aba "
+                "Configurações."
+            )
+        )
+        dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
+        dialog.add_button(_("Fechar sem aplicar"), Gtk.ResponseType.CLOSE)
+        dialog.add_button(_("Aplicar e fechar"), Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.CANCEL)
+
+        resposta = executar_dialogo(
+            dialog,
+            nome="declaracao_pendente_ao_fechar",
+            resposta_de_socorro=Gtk.ResponseType.CANCEL,
+        )
+        dialog.destroy()
+
+        if resposta == Gtk.ResponseType.CANCEL:
+            return False
+        if resposta == Gtk.ResponseType.OK:
+            # CONFERÊNCIA de 23/08/2026: a versão anterior IGNORAVA o resultado, e
+            # com isso reintroduzia o próprio defeito que este diálogo cura. Com o
+            # Hefesto desligado a gravação recusa, e "Aplicar e fechar" ficava
+            # idêntico a "Fechar sem aplicar" — a declaração morria com o
+            # processo, sem uma palavra.
+            #
+            # `_gravar_declaracao_de_maquina` devolve `None` no sucesso e a FRASE
+            # do motivo no fracasso (contrato de `footer_actions`). Recusa segura
+            # a janela: a pessoa continua com o que declarou na tela, vê o motivo
+            # no rodapé, e decide de novo.
+            recado = self._gravar_declaracao_de_maquina()
+            if recado is not None:
+                with contextlib.suppress(Exception):
+                    self._footer_toast(recado)
+                return False
+        return True
 
     def _has_persistent_access(self) -> bool:
         """True se o usuário consegue reabrir/controlar o app após fechar a
@@ -1009,7 +1089,18 @@ class HefestoApp(
         # desta leva querem esta chave; a tupla é o lugar de todas.
         # `tests/unit/test_notebook_switch_page.py` passou a reprovar a chave
         # repetida, para o próximo acréscimo não sumir em silêncio.
-        ABA_CONFIG: ("_reexaminar_a_mesa", "_refresh_saude_da_mesa"),
+        # `_refresh_config_controles` entrou em 23/08/2026, e ele FALTAVA
+        # desde que a seção nasceu: `secao_controles.py:86-89` afirmava que
+        # este mapa procurava o nome, e o mapa não o tinha. Medido na bancada
+        # com o daemon parado — a seção nascia dizendo "O Hefesto está
+        # desligado...", e religar o daemon e reentrar na aba NÃO mudava nada,
+        # porque nenhum outro gatilho a redesenha: os dois `self.reexaminar`
+        # da seção (`:974` e `:1075`) exigem um card já na tela.
+        ABA_CONFIG: (
+            "_reexaminar_a_mesa",
+            "_refresh_saude_da_mesa",
+            "_refresh_config_controles",
+        ),
     }
 
     def _on_notebook_switch_page(
@@ -1045,6 +1136,14 @@ class HefestoApp(
             fn = getattr(self, atributo, None)
             if fn is not None:
                 fn()
+        # CONFIG-05/A5: sair da aba Configurações não pode apagar da tela o
+        # fato de haver escolha declarada e não aplicada. A marca lê a MESMA
+        # `_maquina_pendente` do portão do fechamento, e some sozinha quando o
+        # "Aplicar" escreve o resultado na linha. `getattr` pelo mesmo motivo
+        # das duas chamadas acima: quem não tem o mixin do rodapé segue reto.
+        marcar = getattr(self, "_marcar_declaracao_por_aplicar", None)
+        if marcar is not None:
+            marcar()
 
     # --- run ---
 
