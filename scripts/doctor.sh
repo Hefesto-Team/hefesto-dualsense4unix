@@ -1859,6 +1859,13 @@ PY
 # UX-04: ACUSA (nunca recomenda) o veneno estático persistido nos
 # localconfig.vdf — a assinatura `SDL_GAMECONTROLLER_IGNORE_DEVICES=
 # 0x054c/0x0ce6` colada por jogo esconde físico E vpad quando o vpad degrada.
+#
+# T-08 (ONDA0-Z7, 24/08/2026): esta é UMA de TRÊS listas de raízes de Steam
+# neste arquivo (as outras duas: check_proton_pin, _steam_input_do_appid) —
+# as três têm de andar juntas, e são a versão em bash de
+# `steam_launch_options.RAIZES_STEAM_RELATIVAS` (a lista única do lado
+# Python). `test_a_lista_de_raizes_e_uma_so` (T-10) reprova se alguma
+# divergir.
 check_vdf_poison() {
     shopt -s nullglob
     local vdfs=(
@@ -3496,8 +3503,12 @@ check_proton_pin() {
         info "proton_pin.py/proton-pin.conf ausentes ou sem python3 — pulo o check do Proton pinado"
         return
     fi
+    # T-08 (ONDA0-Z7): os quatro layouts de check_vdf_poison — antes só os
+    # dois nativos, e a Steam Flatpak/Snap passava por "não detectada".
     if [[ ! -f "${HOME}/.steam/steam/config/config.vdf" \
-          && ! -f "${HOME}/.local/share/Steam/config/config.vdf" ]]; then
+          && ! -f "${HOME}/.local/share/Steam/config/config.vdf" \
+          && ! -f "${HOME}/.var/app/com.valvesoftware.Steam/.steam/steam/config/config.vdf" \
+          && ! -f "${HOME}/snap/steam/common/.steam/steam/config/config.vdf" ]]; then
         info "Steam não detectada (sem config.vdf) — pulo o check do Proton pinado"
         return
     fi
@@ -4167,9 +4178,13 @@ PY
 _steam_input_do_appid() {
     local appid="$1" vdf linha
     shopt -s nullglob
+    # T-08 (ONDA0-Z7): os quatro layouts de check_vdf_poison — a lista antiga
+    # cobria só dois nativos mais um terceiro caminho não-canônico
+    # ("debian-installation", fora de RAIZES_STEAM_RELATIVAS).
     for vdf in "${HOME}/.steam/steam/userdata/"*/config/localconfig.vdf \
-               "${HOME}/.steam/debian-installation/userdata/"*/config/localconfig.vdf \
-               "${HOME}/.local/share/Steam/userdata/"*/config/localconfig.vdf; do
+               "${HOME}/.local/share/Steam/userdata/"*/config/localconfig.vdf \
+               "${HOME}/.var/app/com.valvesoftware.Steam/.steam/steam/userdata/"*/config/localconfig.vdf \
+               "${HOME}/snap/steam/common/.steam/steam/userdata/"*/config/localconfig.vdf; do
         [[ -f "${vdf}" ]] || continue
         linha="$(awk -v alvo="${appid}" '
             /^[[:space:]]*"[^"]*"[[:space:]]*$/ { nome = $0; gsub(/^[[:space:]]*"|"[[:space:]]*$/, "", nome); pend = nome; next }

@@ -11,8 +11,38 @@ import time
 from typing import TYPE_CHECKING
 
 
+def _x11_alcancavel(display: str, timeout: float = 0.2) -> bool:
+    """Confere BARATO se há servidor X ouvindo em `display` (T-02, ONDA0-Z7).
+
+    Sem abrir janela, sem `gi` — roda no topo do módulo, antes do import de
+    `HefestoApp` (ver comentário logo abaixo: a cadeia de imports do
+    `gi.repository` já abre um `GdkDisplay`, e `gi` aqui dentro faria o
+    remédio virar a doença). Só sabe testar o caminho comum de displays
+    LOCAIS (`:N` ou `:N.M`, socket UNIX em `/tmp/.X11-unix/X<N>`, medido ao
+    vivo em 23/08). Um display remoto (`host:N`) devolve `True` — a régua
+    desta função é só RECUSAR diante de PROVA de que não há ninguém do outro
+    lado; incerteza não é prova, e o padrão da casa é não mexer no ambiente
+    sem saber.
+    """
+    numero = display[1:].split(".", 1)[0] if display.startswith(":") else ""
+    if not numero.isdigit():
+        return True
+    import socket
+
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    try:
+        sock.connect(f"/tmp/.X11-unix/X{numero}")
+    except OSError:
+        return False
+    else:
+        return True
+    finally:
+        sock.close()
+
+
 def _force_xwayland_on_cosmic() -> bool:
-    """Força GDK_BACKEND=x11 (XWayland) quando a sessão é COSMIC.
+    """Força GDK_BACKEND=x11 (XWayland) quando a sessão é COSMIC E há X vivo.
 
     No cosmic-comp (Wayland nativo), os popups de GtkComboBox/GtkMenu abrem
     com fundo claro, mal-posicionados e com grab quebrado (fecham sozinhos,
@@ -25,6 +55,14 @@ def _force_xwayland_on_cosmic() -> bool:
     `HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND=1` (ex.: um COSMIC futuro que conserte
     o grab de popups e queira Wayland nativo de volta).
 
+    T-02 (ONDA0-Z7, 24/08): a bancada mediu a janela NÃO ABRIR nesta máquina —
+    `Gtk.init_check()` devolve `False` sob `GDK_BACKEND=x11` quando não há
+    XWayland do outro lado, e o produto forçava sem conferir. Agora, antes de
+    sobrescrever, confere se `DISPLAY` existe E se há alguém ouvindo nele
+    (`_x11_alcancavel`, barata, sem abrir janela). Sem prova de X vivo, NÃO
+    mexe em `GDK_BACKEND` — a GUI sobe em Wayland nativo, com o bug de popup
+    do cosmic-comp, que é infinitamente melhor que não subir.
+
     Retorna True se aplicou (para logar depois que o logging subir).
     """
     if os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND") == "1":
@@ -35,10 +73,15 @@ def _force_xwayland_on_cosmic() -> bool:
         os.environ.get("XDG_CURRENT_DESKTOP", "")
         + os.environ.get("XDG_SESSION_DESKTOP", "")
     ).lower()
-    if "cosmic" in desktop:
-        os.environ["GDK_BACKEND"] = "x11"
-        return True
-    return False
+    if "cosmic" not in desktop:
+        return False
+    display = os.environ.get("DISPLAY")
+    if not display:
+        return False  # sem DISPLAY: não há X para forçar
+    if not _x11_alcancavel(display):
+        return False  # DISPLAY presente e MORTO conta como inválido (item 7)
+    os.environ["GDK_BACKEND"] = "x11"
+    return True
 
 
 # CRÍTICO: setar GDK_BACKEND ANTES de importar HefestoApp. A cadeia de imports
