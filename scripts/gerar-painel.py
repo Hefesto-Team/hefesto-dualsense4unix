@@ -233,7 +233,10 @@ def _bloco_da_fila(fila: dict) -> str:
             f'<code>{escape(str(fila["erro"])[:220])}</code></p></div>'
         )
     if not itens:
-        return '<p class="quieto">Nenhum placeholder aberto — o registro `Fala` não deve nada à bancada agora.</p>'
+        return (
+            '<p class="quieto">Nenhum placeholder aberto — o registro '
+            '`Fala` não deve nada à bancada agora.</p>'
+        )
     linhas = ""
     for item in sorted(itens, key=lambda i: str(i.get("aberta_em") or "")):
         linhas += (

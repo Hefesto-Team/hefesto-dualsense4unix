@@ -1844,7 +1844,11 @@ def regra_id_estavel(
             )
         ]
 
-    ids_de_hoje = {(linha.get("id") or "").strip() for linha in registros_de_hoje if linha.get("id")}
+    ids_de_hoje = {
+        (linha.get("id") or "").strip()
+        for linha in registros_de_hoje
+        if linha.get("id")
+    }
     ids_v1_de_hoje = {
         (linha.get("id_v1") or "").strip()
         for linha in registros_de_hoje
@@ -1997,7 +2001,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.exigir_id_estavel:
         with caminho_csv.open(encoding="utf-8", newline="") as arquivo:
             registros_de_hoje = list(csv.DictReader(arquivo))
-        csv_relativo_git = str(caminho_csv.relative_to(raiz)) if caminho_csv.is_relative_to(raiz) else CSV_RELATIVO
+        csv_relativo_git = (
+            str(caminho_csv.relative_to(raiz))
+            if caminho_csv.is_relative_to(raiz)
+            else CSV_RELATIVO
+        )
         achados.extend(regra_id_estavel(args.contra, csv_relativo_git, raiz, registros_de_hoje))
     falhas = [achado for achado in achados if achado.nivel == FALHA]
     avisos = [achado for achado in achados if achado.nivel == AVISO]

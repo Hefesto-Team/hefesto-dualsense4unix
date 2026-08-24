@@ -789,17 +789,17 @@ _MOTIVOS_MAQUINA: dict[str, str] = {
 #: razão do :data:`_MOTIVOS_MAQUINA`: quando um campo é descartado, a frase do
 #: rodapé precisa nomear o que se perdeu, e ela nunca pode nomeá-lo
 #: ``orcamento``. Os rótulos são os ``TITULO`` de ``app/actions/config/`` —
-#: ``secao_mesa``, ``secao_controles``, ``secao_orcamento`` — e, para
-#: ``ambiente``, o rótulo da fileira dele dentro de "A janela".
+#: ``secao_mesa``, ``secao_controles``, ``secao_orcamento``.
 #:
 #: Campo sem entrada aqui cai no nome cru: feio, e por isso há teste que exige
-#: uma entrada para cada campo do schema. Esconder seria pior — a pessoa
-#: perderia o único aviso do que sumiu do arquivo dela.
+#: uma entrada para cada campo do schema (e reprova entrada SOBRANDO — é o que
+#: pegou ``ambiente`` quando ele saiu do schema em T2, CONFIGURAÇÕES-FECHA-01,
+#: 24/08/2026). Esconder seria pior — a pessoa perderia o único aviso do que
+#: sumiu do arquivo dela.
 _CAMPOS_DA_MAQUINA: dict[str, str] = {
     "mesa": "A mesa",
     "controles": "Os controles",
     "orcamento": "Orçamento",
-    "ambiente": "Ambiente",
 }
 
 
