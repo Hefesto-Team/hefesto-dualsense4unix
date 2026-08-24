@@ -168,6 +168,13 @@ def test_sem_binario_notifica_a_usuaria(
     sessão: a frase é "instale X ou Y", e qual vem primeiro é a diferença entre
     um conselho que resolve e um que faz ela instalar o programa que abre sem
     digitar. Aqui a sessão é forçada para Wayland — o caso da máquina dela.
+
+    A afirmação era sobre a lista LITERAL (`["wvkbd-mobintl", "onboard"]`) até
+    24/08/2026, quando T-11 da ONDA0-Z7 acrescentou `squeekboard` e
+    `maliit-keyboard` aos candidatos. Travar a lista inteira cobrava este teste
+    por candidato novo sem medir nada a mais: quem manda é a ORDEM, e é ela que
+    ficou. A composição da lista tem mordida própria em
+    `test_ambiente_presumido_01_o_que_a_maquina_nao_tem.py`.
     """
     monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-1")
     monkeypatch.setattr(
@@ -176,9 +183,19 @@ def test_sem_binario_notifica_a_usuaria(
     )
     ctrl = _OSKController()
     ctrl.dispatch_token(TOKEN_OPEN_OSK, "press")
-    assert _sem_notificacao_de_verdade == [["wvkbd-mobintl", "onboard"]], (
-        "L3 sem binário voltou a falhar em silêncio (ou o wvkbd deixou de vir "
-        "primeiro em Wayland — e aí o conselho manda instalar o que não digita)"
+    assert len(_sem_notificacao_de_verdade) == 1, (
+        "L3 sem binário voltou a falhar em silêncio: um aperto tem de virar "
+        f"exatamente um aviso na tela, e vieram {_sem_notificacao_de_verdade!r}"
+    )
+    nomes = _sem_notificacao_de_verdade[0]
+    assert nomes[0] == "wvkbd-mobintl", (
+        "o primeiro nome da frase em Wayland tem de ser o que DIGITA por "
+        f"protocolo — veio {nomes!r}, e aí o conselho manda instalar o que abre "
+        "sem digitar"
+    )
+    assert "onboard" in nomes and nomes.index("onboard") > nomes.index("wvkbd-mobintl"), (
+        "o onboard continua na frase (X11 sem ele não teria conselho nenhum), "
+        f"mas nunca à frente do wvkbd em Wayland — veio {nomes!r}"
     )
 
 

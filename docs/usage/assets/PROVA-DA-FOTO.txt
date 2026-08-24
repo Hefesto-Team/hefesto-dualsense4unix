@@ -5,11 +5,18 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho para
 # sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
 
-ensaio: 2026-08-24 04:24
-abas:   14
+ensaio:  2026-08-24 10:51
+abas:    16
+modo:    padrão
+fixture: nenhum — os dublês nascem fixos no próprio script (padrão de dois controles)
+
+# toda linha destas imagens é dublê — nenhuma delas é medição desta ou
+# de qualquer máquina. Ver docs/usage/interface.md, "Sobre as capturas".
 
 # soma sha256 de cada foto, em ordem alfabética
 b7016b2cc75aab92ba658e195bd815ebd73ef375b21324bb33c733af70c57b02  perfis-jogo-da-steam.png
+1fbbb73f24b101d1888c1b6aa18d7703612b90e16f0f5c385a8ef92e5e2263ed  readme_cabecalho.png
+cdded7497f0a96227ec9cbb9f3b9da1629bea017f3c2f968cf6d2bac9684a48f  readme_cabecalho_alvo_inativo.png
 e8945028ba3953edb6b63dee9084efd7c0ddce06c3ecea29ecc0e037920ecd1b  readme_configuracoes.png
 b867aae44437d4fc77b96068ea2d63861589bd2fd26e47636cec6948494d1a65  readme_configuracoes_inteira.png
 daf3144d237945f2df00f2e540186c4f6df6c6aad2438bc117a71641acc62e13  readme_emulacao.png

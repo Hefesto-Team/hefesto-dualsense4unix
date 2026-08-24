@@ -409,6 +409,13 @@ WHITELIST_PATTERNS: list[str] = [
     # sanitizada.py` varre MAC real e segredo, e o `validar-glifos.py` continua
     # valendo (o sanitizador normaliza emoji para texto antes de entrar).
     r"^docs/process/agentes/.*",
+    # `process/arquivo/` (24/08/2026) herda a isenção: é para onde a saída bruta
+    # de agente vai quando deixa de ser alcançável por navegação — o conteúdo é
+    # o mesmo, e o motivo de não corrigir a grafia dele também. Ver
+    # `docs/process/arquivo/README.md`. Sem esta linha, MOVER um relatório o
+    # tornaria subitamente reprovável por um texto que ninguém pode reescrever
+    # sem falsificar o registro.
+    r"^docs/process/arquivo/.*",
     r"^scripts/validar-acentuacao\.py$",
     r"^scripts/check_anonymity\.sh$",
     # O teste do validador usa fixtures com texto sem acento propositalmente.

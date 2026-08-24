@@ -11,6 +11,10 @@
 # O QUE ELE FAZ, e o que ele DELIBERADAMENTE NÃO FAZ:
 #   FAZ  — regenera o painel.html (~80 ms) e o põe no commit.
 #   FAZ  — confere que o specs.html publicado bate com o CSV.
+#   FAZ  — confere os dois documentos DERIVADOS do código: o contrato IPC e as
+#          citações `arquivo:linha` de docs/protocol/ (~110 ms os dois juntos).
+#   FAZ  — cobra a FOTO quando o commit mexe no código da tela (~40 ms; não
+#          monta GTK, só lê o índice). É o item 3 do checklist de fim de leva.
 #   NÃO FAZ — rodar a suíte, o mypy ou os portões pesados. Gancho que demora
 #             sete minutos é gancho que a pessoa desliga, e um gancho desligado
 #             protege menos que nenhum. Esses moram no `--completo` e no CI.
@@ -37,6 +41,53 @@ if [ -f scripts/gerar-mapa.py ]; then
   if ! python3 scripts/gerar-mapa.py --check >/dev/null 2>&1; then
     echo "pre-commit: BLOQUEADO — specs.html não bate com o mapa-controles.csv." >&2
     echo "  cure com: python3 scripts/gerar-mapa.py" >&2
+    falhou=1
+  fi
+fi
+
+# 3. Os dois documentos DERIVADOS do código. MEDIDO em 24/08/2026: eles estavam
+#    declarados no `.pre-commit-config.yaml`, mas o `core.hooksPath` global dela
+#    desvia o git para o gancho global, que encadeia ESTE arquivo — e a
+#    ferramenta `pre-commit` não está instalada nesta máquina. Resultado: os dois
+#    só rodavam no CI. O commit 913f422 (ONDA0-Z5) mexeu +32/-2 linhas no
+#    `ipc_handlers.py`, deslocando 38 dos 39 endereços do bloco gerado de 3 a 50
+#    linhas de uma vez, e a podridão viajou por SETE merges até a integração.
+#    Custam 0,11 s somados — menos que o specs.html logo acima.
+#
+#    Os dois BLOQUEIAM em vez de curar sozinhos, e por motivos diferentes: o
+#    bloco IPC vive dentro de um documento escrito à mão, então um `git add`
+#    automático varreria prosa não preparada para dentro do commit; e o endereço
+#    escrito à mão nenhum gerador sabe reapontar — quem escreveu é que sabe.
+if [ -f scripts/gerar-contrato-ipc.py ]; then
+  if ! python3 scripts/gerar-contrato-ipc.py --check >/dev/null 2>&1; then
+    echo "pre-commit: BLOQUEADO — o bloco gerado de ipc-unix-socket.md não bate" >&2
+    echo "  com o dispatcher. Cure com: python3 scripts/gerar-contrato-ipc.py" >&2
+    falhou=1
+  fi
+fi
+
+if [ -f scripts/validar-citacoes-de-linha.py ]; then
+  if ! python3 scripts/validar-citacoes-de-linha.py --all >/dev/null 2>&1; then
+    echo "pre-commit: BLOQUEADO — citação \`arquivo:linha\` de docs/protocol/ que" >&2
+    echo "  não abre no que promete. Veja quais, e reaponte cada uma:" >&2
+    echo "    python3 scripts/validar-citacoes-de-linha.py --all" >&2
+    falhou=1
+  fi
+fi
+
+# 4. A FOTO da tela. MEDIDO em 24/08/2026: a regra "fotografe se a mudança
+#    tocou a tela" está escrita em três documentos e é do coordenador — e o
+#    coordenador integrou NOVE branches de interface sem abrir a tela uma vez,
+#    furando a ORDEM do próprio checklist (commitou no passo 5 antes de
+#    fotografar no passo 3). O portão da suíte pegou o erro, mas só roda na
+#    suíte inteira, de ~8 min, que ele roda DEPOIS de commitar: portão certo,
+#    hora errada. Aqui a mesma pergunta custa ~40 ms, porque não monta GTK
+#    nenhum — só compara o que o índice carrega.
+#
+#    BLOQUEIA em vez de avisar porque avisar é o que a prosa já fazia. Sem
+#    chave própria de propósito: `--no-verify` passa, e aí a suíte cobra.
+if [ -f scripts/check_fotos_da_tela.py ]; then
+  if ! python3 scripts/check_fotos_da_tela.py; then
     falhou=1
   fi
 fi

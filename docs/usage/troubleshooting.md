@@ -374,6 +374,12 @@ Se já está em v3.2.0+ e o problema persiste, abra issue com o output de
 > de tradução, então a proporção passou a **17 de 29**: o quadro melhora, e a
 > promessa continua retirada até o numerador virar zero.
 >
+> **Nota datada — 24/08/2026:** são **30** módulos desde a `ONDA0-Z7`, que
+> acrescentou `ambiente_na_tela.py`. Ele **não** importa a função de tradução,
+> então a proporção passou a **18 de 30** — o quadro piora pela primeira vez
+> desde 21/08. As três frases dele ainda não estão penduradas em tela nenhuma;
+> o `_()` entra junto com a fiação, na Onda 10 e na Onda 11.
+>
 > Se você chegou aqui esperando uma janela inteiramente em inglês, o problema
 > não é a sua instalação — é a promessa antiga, e ela foi retirada. Registro em
 > `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.

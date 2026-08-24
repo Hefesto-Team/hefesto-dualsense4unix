@@ -204,3 +204,34 @@ def test_o_portao_esta_ligado_no_ci_e_no_pre_commit() -> None:
     ]
     assert any(COMANDO in entrada for entrada in entradas), (
         f"nenhum hook do pre-commit roda `{COMANDO}`")
+
+
+def test_o_portao_esta_no_gancho_que_de_fato_roda() -> None:
+    """PORTÃO-VIVO-01, a metade que faltava — MEDIDA em 24/08/2026.
+
+    O teste acima confere o `.pre-commit-config.yaml`. Ele passava, e mesmo
+    assim o portão não rodou uma única vez nesta máquina em toda a Onda 0:
+
+    - `core.hooksPath` global aponta para `~/.config/git/hooks`, então o git
+      nem olha para `.git/hooks/`; o gancho global é que encadeia o do repo.
+    - o encadeado é `scripts/hooks/pre-commit`, escrito à mão, que rodava só
+      `gerar-painel.py` e `gerar-mapa.py --check`.
+    - a ferramenta `pre-commit` não está instalada aqui (nem no PATH, nem na
+      `.venv`), então o `.pre-commit-config.yaml` não roda em lugar nenhum
+      fora do CI.
+
+    O preço: `913f422` (ONDA0-Z5) mexeu +32/-2 linhas em `ipc_handlers.py` e
+    deslocou 38 dos 39 endereços do bloco gerado — de 3 a 50 linhas cada — de
+    uma vez só. A podridão viajou por SETE merges até a integração, e lá os
+    deslocamentos já iam a 115 linhas. Sete chances de pegar o defeito no
+    commit que o produziu, todas perdidas por um gancho que declarava o
+    portão num arquivo que ninguém executa.
+
+    Conferir a DECLARAÇÃO e não a EXECUÇÃO é o defeito que este teste mata.
+    """
+    gancho = RAIZ_REAL / "scripts" / "hooks" / "pre-commit"
+    texto = gancho.read_text(encoding="utf-8")
+    assert COMANDO in texto, (
+        f"`{COMANDO}` está no .pre-commit-config.yaml, mas NÃO no gancho que de "
+        f"fato roda ({gancho.relative_to(RAIZ_REAL)}) — e é ele que o "
+        "`core.hooksPath` global encadeia. Portão declarado não é portão vivo.")

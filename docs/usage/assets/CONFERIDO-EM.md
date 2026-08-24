@@ -32,6 +32,7 @@ portão volta ao verde e fica escrito quem conferiu, quando, e contra qual commi
 | 22/08/2026 | `2a614c3` — a VAO-01, e a foto que montava a aba diferente do produto | **Só a `readme_gatilhos.png` mudou**, e ela mudou por DOIS motivos: a moldura da seção parou de esticar (`vexpand=False` mais `valign=start`, porque o pai é um Box horizontal e o `expand` do packing só distribui largura) e o retrato passou a montar os 19 modos pelo método de PRODUÇÃO. A montagem à mão pedia 1016px; o produto pede 482px. A foto ganhou a linha *"Sem resistência."*, que nunca tinha aparecido na documentação. |
 | 22/08/2026 | `49797f8` — a central ganha tela | **As duas fotos da Configurações mudaram**, e é o caso que a nota abaixo descreve: a de 1920x1080 e a esticada. Entraram a coluna "O que é" nascendo LIDA do kernel (com `Corrigir` ao lado) e o campo de nome por adaptador. A bancada de mentira do retrato ganhou um aparelho que o kernel classifica e um que ele não classifica — sem os dois, a documentação mostraria só o caminho feliz. |
 | 23/08/2026 | `3de95ff` — cinco abas paravam de fotografar o glade cru | **Sete PNGs mudaram** (Configurações, Configurações inteira, Emulação, Lightbar, Navegação, Rumble, Sistema) — a P10 (§ da própria sprint) deu host de produção às cinco que ainda saíam do XML cru. Este registro faltava: o ensaio rodou (`PROVA-DA-FOTO.txt` traz `ensaio: 2026-08-23 21:12`) e ninguém escreveu a linha aqui, o que a Z0-01 (24/08/2026, §2.2/M8) mediu como fato caduco na §"conferidas pela última vez em 22/08/2026" do `interface.md`. |
+| 24/08/2026 | `cf78346` — a Onda 0 inteira (Z0-Z7 + CONFIGURACOES-FECHA) | **As onze abas saíram byte a byte idênticas, e duas fotos NOVAS entraram.** A Z2-8 fez a fita "Ajustes vão para:" esmaecer em seis abas além da Configurações (`_ALVO_POR_ABA`, em `app/app.py`) — e isso mora no `header_bar`, que **nenhuma** foto deste repositório mostrava: o portão cobrava um ensaio que, rodado, não movia um pixel, porque a mudança estava fora do recorte de toda foto. O retrato passou a gravar `readme_cabecalho.png` (fita viva) e `readme_cabecalho_alvo_inativo.png` (fita esmaecida) no modo padrão, escolhendo as duas abas pelo mapa do produto. Conferido rodando `retratar_abas.py` e comparando as somas do `PROVA-DA-FOTO.txt`: das doze imagens antigas, zero diferentes. |
 
 ## A décima primeira quebra a regra de um PNG por aba
 
@@ -44,3 +45,17 @@ Quem conferir e vir só a primeira mudar não está diante de um erro: a segunda
 muda quando muda o que está **abaixo** da dobra. As duas nascem da mesma
 execução, e commitar uma sem a outra deixa a documentação mostrando duas versões
 da mesma tela.
+
+## E o cabeçalho não é aba nenhuma
+
+Desde 24/08/2026 o mesmo comando grava mais duas imagens que **não** são de aba:
+`readme_cabecalho.png` e `readme_cabecalho_alvo_inativo.png`. Elas existem
+porque o script fotografa o `main_notebook`, e a fita "Ajustes vão para:" mora
+no `header_bar` — fora daquele recorte. Enquanto elas não existiam, uma mudança
+só do cabeçalho deixava o portão vermelho cobrando um ensaio que, rodado, não
+movia um pixel.
+
+São **duas** e não uma porque o assunto é a diferença: numa aba que lê o alvo a
+fita fica sensível, e numa que não lê ela fica esmaecida. Quem escolhe as duas
+abas é o mapa `_ALVO_POR_ABA` do produto, lido pelo script — não uma lista
+repetida nele.
