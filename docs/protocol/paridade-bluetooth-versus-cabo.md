@@ -263,10 +263,20 @@ Ordenado por (impacto ÷ custo):
   registrado no topo deste documento**;
 - **`README.md`** publicava um número para o mic por BT medido sob uma condição
   que deixou de existir quatro minutos depois — **caducou em 07/08/2026** e
-  saiu do README no mesmo commit que criou `docs/data/caducos.csv` (Z6-09,
-  24/08/2026). Fica a ausência declarada, não um número novo;
+  saiu do README (Z6-09, 24/08/2026, no commit que criou
+  `docs/data/caducos.csv`). **Fechado no mesmo dia, e não pela ausência:** a
+  CONFIGURAÇÕES-FECHA-01/T6 mediu as taxas novas horas depois, e o README
+  ficou com elas — ver a nota logo abaixo. As duas frentes nasceram do mesmo
+  commit-base e não se viram; a escolha entre as duas redações foi dela,
+  24/08/2026;
 - **`cli/cmd_mic.py`** afirma que o install instala os drop-ins 52/53 — não
   instala (`install.sh` os deixa em opt-in, desligados).
+
+  > **Fechado em 24/08/2026 (T6, CONFIGURAÇÕES-FECHA-01):** o `README.md`
+  > publicava *"~40% do sinal, causa em aberto"* — número medido sob uma
+  > condição que deixou de existir quatro minutos depois. Substituído pelas
+  > taxas MEDIDAS (`docs/data/mapa-controles.csv`, chave `audio.microfone`):
+  > 260,4 Hz de input sem mic, 170,5 Hz + 106,2 Hz de áudio com ele.
 
 **Acrescentado em 11/08/2026:**
 

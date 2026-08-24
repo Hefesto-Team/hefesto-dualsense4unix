@@ -763,7 +763,8 @@ class TestAsFrasesNoSingular:
              "Desligar: são quatro que continuam jogando"),
             ("Esconder os controles físicos neste jogo",
              "a máscara esconde TODO Sony físico, não um"),
-            ("Envia toda a configuração (gatilhos, LEDs, rumble, mouse) aos controles",
+            ("Envia a configuração aos controles e grava o que você declarou "
+             "na aba Configurações",
              "o Aplicar do rodapé manda o rascunho inteiro, que é de todos"),
             ("Esconde os controles físicos no último jogo aberto",
              "o mesmo gesto pelo atalho da aba Sistema"),
@@ -1283,8 +1284,9 @@ class TestOInglesNaoFicaParaTras:
         "Desliga a barra de LED do controle selecionado",
         "Máscara Xbox 360: a vibração funciona em jogo e os controles não "
         "aparecem duplicados.",
-        "Envia toda a configuração (gatilhos, LEDs, rumble, mouse) aos controles",
-        "Envia gatilhos LEDs rumble e mouse aos controles",
+        "Envia a configuração aos controles e grava o que você declarou na "
+        "aba Configurações",
+        "Envia a configuração aos controles e grava a aba Configurações",
     )
 
     def _catalogo(self) -> gettext.NullTranslations:
