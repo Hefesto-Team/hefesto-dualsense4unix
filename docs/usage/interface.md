@@ -9,17 +9,12 @@ Esta página diz o que cada uma faz e o que se ajusta nela — e, no fim, o
 > `scripts/gui-captura/retratar_abas.py` — um comando, sem clique nenhum — e
 > por isso **acompanham a versão**: quem mexe na interface roda o script antes
 > de commitar. As desta página foram conferidas pela última vez em
-> **22/08/2026**, e cada conferência fica registrada em
+> **23/08/2026**, e cada conferência fica registrada em
 > [`assets/CONFERIDO-EM.md`](assets/CONFERIDO-EM.md). A aba "No jogo" já
 > aparece na tira desde 10/08/2026, e a **Configurações** desde 22/08/2026.
->
-> **A foto da Configurações está atrás da árvore, e isso é medido** (23/08/2026):
-> a imagem é das 18h15 e a aba mudou às 18h55. O que ela **não** mostra: o "Não
-> sei" do Orçamento e o das cores, os cards de aparelho externo mais altos, e o
-> medidor de rádio dizendo "Não sei" sem o daemon — na foto ele ainda diz
-> "Folgada 0/1600", em verde, que é justamente o defeito curado no mesmo dia.
-> Enquanto ela não for refeita, **este texto é a fonte** e a imagem é a aba de
-> uma hora antes.
+> **Estas imagens são dublê — bancada sintética, nunca medição de nenhuma
+> máquina real** (proveniência completa em
+> [`assets/PROVA-DA-FOTO.txt`](assets/PROVA-DA-FOTO.txt)).
 >
 > **Uma das onze ganha duas fotos.** A Configurações pede mais altura do que a
 > janela tem, então o script grava também a versão esticada

@@ -132,6 +132,16 @@ _ROTULOS_QUE_O_CODIGO_REESCREVE: tuple[tuple[str, str, str, str], ...] = (
         "o veredito do Steam Input, que é o assunto da linha",
     ),
     (
+        # Z0-4 (24/08/2026) — a metade do aceite da Z0 que não tinha régua: a
+        # foto publicava `054C:0DF2 (DualSense)` só porque o host escreve, e
+        # nada cobrava. Ver §2.2/M4 da sprint Z0-01.
+        "Emulação",
+        "emulation_box",
+        "emulation_vidpid_label",
+        "o VID:PID do aparelho que a máscara ATIVA cria — o XML publica "
+        "“045E:028E (Xbox 360)”",
+    ),
+    (
         "Navegação",
         "tab_navegacao_dsx",
         "key_bindings_legend",
@@ -289,14 +299,64 @@ def test_nenhuma_aba_e_fotografada_com_o_texto_do_glade_cru() -> None:
     )
 
 
+#: Qual função do `main` HOSPEDA cada aba de `NOMES`. Nem toda aba tem
+#: `_montar_aba_*` próprio: Status vem de `_injetar_card` (`:2198`) e Gatilhos
+#: de `_injetar_modos_de_gatilho` (`:2202`) — são os métodos de produção que
+#: armam a aba, mesmo sem esse prefixo. Uma régua que exigisse o prefixo
+#: reprovaria quem fez a coisa certa, e esta casa já pagou isso em 13/08.
+#:
+#: Z0-3 (24/08/2026), §2.2/M3 da sprint Z0-01: até aqui `esperadas` era uma
+#: lista literal de CINCO — Início, Status, No jogo, Perfis e Configurações
+#: podiam sumir do `main` sem que nada acusasse. O CONJUNTO de abas a cobrir
+#: agora vem de `MIXINS_DE_ABA` (uma fonte só); esta tabela só acrescenta o
+#: NOME da função, que `MIXINS_DE_ABA` não guarda.
+_FUNCAO_QUE_HOSPEDA_A_ABA: dict[str, str] = {
+    "readme_inicio": "_montar_aba_inicio",
+    "readme_status": "_injetar_card",
+    "readme_no_jogo": "_montar_aba_no_jogo",
+    "readme_gatilhos": "_injetar_modos_de_gatilho",
+    "readme_lightbar": "_montar_aba_lightbar",
+    "readme_rumble": "_montar_aba_rumble",
+    "readme_perfis": "_montar_aba_perfis",
+    "readme_sistema": "_montar_aba_sistema",
+    "readme_emulacao": "_montar_aba_emulacao",
+    "readme_navegacao_dsx": "_montar_aba_navegacao",
+    "readme_configuracoes": "_montar_aba_configuracoes",
+}
+
+#: Só para a mensagem de erro ficar legível — o nome que aparece na aba, não o
+#: nome do arquivo. Não é fonte de verdade nenhuma: a fonte é `MIXINS_DE_ABA`.
+_NOME_BONITO_DA_ABA: dict[str, str] = {
+    "readme_inicio": "Início",
+    "readme_status": "Status",
+    "readme_no_jogo": "No jogo",
+    "readme_gatilhos": "Gatilhos",
+    "readme_lightbar": "Lightbar",
+    "readme_rumble": "Rumble",
+    "readme_perfis": "Perfis",
+    "readme_sistema": "Sistema",
+    "readme_emulacao": "Emulação",
+    "readme_navegacao_dsx": "Navegação",
+    "readme_configuracoes": "Configurações",
+}
+
+
 def test_o_main_monta_as_onze_abas() -> None:
-    """As cinco funções podem existir e não ser chamadas — foi assim por meses.
+    """As funções podem existir e não ser chamadas — foi assim por meses.
 
     Verificação sobre o AST do `main`: uma menção em comentário ou em docstring
     não monta aba nenhuma. É o irmão do
     `test_a_aba_perfis_na_foto.test_o_main_monta_a_aba_perfis`, e nasce da mesma
     história — a função da aba Perfis existiu antes de ser chamada.
     """
+    from tests.unit.test_a_foto_monta_como_o_produto_monta import MIXINS_DE_ABA
+
+    sem_funcao = set(MIXINS_DE_ABA) - set(_FUNCAO_QUE_HOSPEDA_A_ABA)
+    assert not sem_funcao, (
+        "estas abas de `MIXINS_DE_ABA` não têm função hospedeira declarada em "
+        f"`_FUNCAO_QUE_HOSPEDA_A_ABA`: {sorted(sem_funcao)}"
+    )
+
     arvore = ast.parse(SCRIPT.read_text(encoding="utf-8"))
     main = next(
         (
@@ -314,11 +374,8 @@ def test_o_main_monta_as_onze_abas() -> None:
         if isinstance(no, ast.Call) and isinstance(no.func, ast.Name)
     }
     esperadas = {
-        "_montar_aba_lightbar": "Lightbar",
-        "_montar_aba_rumble": "Rumble",
-        "_montar_aba_sistema": "Sistema",
-        "_montar_aba_emulacao": "Emulação",
-        "_montar_aba_navegacao": "Navegação",
+        _FUNCAO_QUE_HOSPEDA_A_ABA[aba]: _NOME_BONITO_DA_ABA.get(aba, aba)
+        for aba in MIXINS_DE_ABA
     }
     faltando = {f: aba for f, aba in esperadas.items() if f not in chamadas}
     assert not faltando, (
