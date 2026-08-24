@@ -145,10 +145,14 @@ def steam_aberta(monkeypatch: pytest.MonkeyPatch) -> None:
 def carona_ligada(monkeypatch: pytest.MonkeyPatch) -> None:
     """Religa a carona, que o `conftest.py` desliga em toda a suíte.
 
-    O desligador global existe porque o `HOME` da suíte NÃO é isolado: sem ele,
-    qualquer teste de GUI que clicasse "Salvar" varreria — e reescreveria — o
-    `localconfig.vdf` de verdade dela. Aqui a religamos por escrito, com o
-    `discover_vdfs` já desviado para o `tmp_path` pela fixture `biblioteca`.
+    O desligador global nasceu porque o `HOME` da suíte não era isolado: sem
+    ele, qualquer teste de GUI que clicasse "Salvar" varreria — e reescreveria
+    — o `localconfig.vdf` de verdade dela. Desde 24/08/2026 (cauda de
+    BERÇO-DE-TMP-01) o `HOME` também é isolado num diretório vazio por teste,
+    mas o desligador FICA como segunda camada: carona é opt-in sob teste, não
+    ruído incidental em dezenas de testes de GUI que só clicam "Salvar" por
+    outro motivo. Aqui a religamos por escrito, com o `discover_vdfs` já
+    desviado para o `tmp_path` pela fixture `biblioteca`.
     """
     monkeypatch.delenv(carona.CARONA_ENV, raising=False)
 

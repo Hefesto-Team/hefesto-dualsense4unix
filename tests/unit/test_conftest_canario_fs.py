@@ -2,11 +2,17 @@
 
 O PORQUÊ, medido em 04/08/2026: os perfis dela foram encontrados corrompidos e
 a pergunta que ficou sem resposta foi *"como sabemos se algum teste ou algo a
-mais corrompeu algo?"*. A fixture `_hefesto_fake_env` isola os diretórios XDG,
-mas NÃO isola o ``HOME``, e há constantes de módulo com `Path.home()` avaliadas
-na importação (`integrations/storm_doctor.py:34`,
-`app/actions/emulation_actions.py:718`) — nenhuma fixture alcança um valor que
-já foi calculado no import.
+mais corrompeu algo?"*. Havia (e continua havendo) constantes de módulo com
+`Path.home()` avaliadas na importação
+(`integrations/storm_doctor.py:34`, `app/actions/emulation_actions.py:718`) —
+nenhuma fixture alcança um valor que já foi calculado no import, isolar o
+``HOME`` incluído.
+
+CORRIGIDO 24/08/2026 (BERÇO-DE-TMP-01, cauda do `$HOME`): esta seção dizia que
+a fixture `_hefesto_fake_env` "isola os diretórios XDG, mas NÃO isola o
+``HOME``" — não é mais verdade, ela isola os dois desde essa cauda. O canário
+continua existindo pelo motivo do parágrafo acima (constante de módulo) e por
+cobrir o que nenhum instrumento mapeou ainda — não por o `HOME` seguir aberto.
 
 O canário responde a pergunta por medição. Estes testes provam as duas metades
 do contrato dele: ele PEGA a escrita, e ele NÃO reclama do que a máquina viva
