@@ -4919,9 +4919,9 @@ class IpcHandlersMixin:
         reconciliar = getattr(vivo, "reconciliar_bt_mic", None)
         if callable(reconciliar):
             try:
-                resultado = reconciliar()
-                if inspect.isawaitable(resultado):
-                    await resultado
+                _reconciliacao = reconciliar()
+                if inspect.isawaitable(_reconciliacao):
+                    await _reconciliacao
             except Exception as exc:  # a gravação já terminou; a ponte é extra
                 logger.warning("machine_declare_bt_mic_nao_reconciliou", err=str(exc))
         if resultado.descartados:
