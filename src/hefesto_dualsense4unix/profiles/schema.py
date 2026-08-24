@@ -961,6 +961,22 @@ class Profile(BaseModel):
     # - Preenchida = ativar o perfil liga/desliga a emulação com as velocidades
     #   dadas (via `mouse_applier` injetado no ProfileManager).
     mouse: ProfileMouseConfig | None = None
+    # Z4/T14 (24/08/2026), PROVISÓRIO — decisão dela em aberto (D-A do
+    # 2026-08-24-ONDA0-Z4). Hoje o liga/desliga do TECLADO emulado mora só na
+    # flag global `keyboard_emulation.flag` (utils/session.py:372), enquanto o
+    # `mouse` logo acima — o interruptor VIZINHO na mesma aba — é por perfil
+    # desde a FEAT-POINT-AND-CLICK-01. Mesmo contrato dos outros opcionais
+    # desta classe: None = sem opinião (a ativação NÃO mexe na flag; ela
+    # continua mandando). Preenchido = a ativação IMPÕE este valor, e vence a
+    # flag (a precedência mora em
+    # ``hefesto_dualsense4unix.profiles.schema.resolver_teclado_emulado`` —
+    # pura, testada, e ainda NÃO chamada por nenhum caminho de ativação real:
+    # a T14 entrega o campo e a régua, não o fio. Quem liga o fio (o widget na
+    # Onda 9/Emulação e Onda 10/Navegação, e a chamada em
+    # ``daemon/lifecycle.py`` na ativação) é de outra frente — ligar aqui,
+    # sem a palavra dela sobre a frase de tela, seria "escolher em silêncio"
+    # (regra da casa, COMO-EXECUTAR-UMA-SPRINT.md §8).
+    teclado_emulado: bool | None = None
     # MIC-EXPOSE-01: comportamento do botão de mic por perfil. None = sem
     # opinião (ativar o perfil não mexe no `mic_button_toggles_system`).
     mic: ProfileMicConfig | None = None
@@ -1281,6 +1297,27 @@ def perfil_declara_modo_de_jogo(profile: Profile | None) -> bool:
     return kind in ("gamepad", "native")
 
 
+def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool:
+    """A precedência da T14 (Z4, 24/08/2026), PURA: perfil com opinião VENCE.
+
+    ``Profile.teclado_emulado`` é ``None`` por padrão — "sem opinião", e nesse
+    caso a flag global (``utils.session.load_keyboard_emulation`` hoje) segue
+    mandando, o comportamento de sempre. Quando o perfil TEM opinião
+    (``True``/``False``), ele vence — mesma regra do ``mouse``/``mic``/
+    ``speaker`` desta classe (contrato ``None`` = sem opinião), e a MESMA
+    proteção do ``mic.muted`` (MIC-GRAVACAO-01, ``schema.py``): perfil SEM
+    opinião nunca pode apagar o que a flag diz.
+
+    NÃO É CHAMADA por nenhum caminho de ativação real ainda — ver a nota
+    datada no campo ``Profile.teclado_emulado``. É a metade "régua" da T14; a
+    metade "fio" (o widget e a chamada em ``daemon/lifecycle.py`` na
+    ativação) é de outra frente.
+    """
+    if profile is None or profile.teclado_emulado is None:
+        return flag_global
+    return profile.teclado_emulado
+
+
 __all__ = [
     "CONFIRMADA_POR_ESCOLHA",
     "CONFIRMADA_POR_GESTO",
@@ -1305,4 +1342,5 @@ __all__ = [
     "normalizar_gamepad_flavor",
     "perfil_declara_modo_de_jogo",
     "perfil_e_regra_de_jogo",
+    "resolver_teclado_emulado",
 ]

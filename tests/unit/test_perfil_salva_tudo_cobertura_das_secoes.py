@@ -83,6 +83,17 @@ ISENTOS: dict[str, str] = {
         "passthrough tem testemunha própria em "
         "`test_o_carimbo_de_ponte_sobrevive_ao_salvar.py`."
     ),
+    "teclado_emulado": (
+        "Z4/T14 (24/08/2026), PROVISÓRIO — decisão dela em aberto (D-A do "
+        "2026-08-24-ONDA0-Z4). O campo e a precedência pura "
+        "(`profiles.schema.resolver_teclado_emulado`) já existem e têm "
+        "testemunha própria em `test_z4_perfil_sem_modo.py`, mas NENHUM "
+        "mixin escreve nele ainda — o widget é da Onda 9 (Emulação) e da "
+        "Onda 10 (Navegação), e ligar o fio sem a palavra dela sobre a "
+        "frase de tela seria escolher em silêncio (regra da casa). Este "
+        "isento sai no dia em que o widget nascer — aí ele vira caso de "
+        "ida e volta aqui, não isenção."
+    ),
 }
 
 #: Seções que a JANELA escreve no rascunho, e os sinais no código-fonte que
