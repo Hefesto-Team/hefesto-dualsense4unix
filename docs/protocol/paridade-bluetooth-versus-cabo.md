@@ -261,8 +261,10 @@ Ordenado por (impacto ÷ custo):
   continua fora de escopo"* — **falso desde 25/07**, e contradiz o `README.md`
   e o `docs/usage/cli.md` no mesmo repositório. **Foi a fonte do erro de 03/08
   registrado no topo deste documento**;
-- **`README.md`** publica *"~40% do sinal, causa em aberto"* para o mic por BT —
-  número medido sob uma condição que deixou de existir quatro minutos depois;
+- **`README.md`** publicava um número para o mic por BT medido sob uma condição
+  que deixou de existir quatro minutos depois — **caducou em 07/08/2026** e
+  saiu do README no mesmo commit que criou `docs/data/caducos.csv` (Z6-09,
+  24/08/2026). Fica a ausência declarada, não um número novo;
 - **`cli/cmd_mic.py`** afirma que o install instala os drop-ins 52/53 — não
   instala (`install.sh` os deixa em opt-in, desligados).
 

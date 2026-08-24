@@ -126,6 +126,25 @@ HZ_INPUT_COM_MIC = 170.5
 #: Quadros de áudio por segundo com a ponte de pé (``dualsense_bt_audio.py:77``).
 HZ_AUDIO_COM_MIC = 106.2
 
+#: Z6-08 (24/08/2026) — o número medido ganha um dono só. As três constantes
+#: acima e a célula ``radio_ressalva`` da linha 23 de
+#: ``docs/data/mapa-controles.csv`` (``audio.microfone@dualsense``) eram a
+#: MESMA medição escrita duas vezes, sem nada entre elas: trocar a constante
+#: passava em 36 testes sem que a prosa do mapa se movesse (§0.1 do
+#: SPRINT_ORDER, F9). Esta tupla é o que
+#: ``scripts/validar-fala-de-tela.py`` lê POR AST (nunca importando este
+#: módulo — ele puxa ``structlog`` por ``core.sysfs_leds``) para reprovar
+#: quando a constante e a célula divergirem: cada item é
+#: ``(nome_da_constante, valor, chave_do_mapa, coluna_do_mapa)``, e o
+#: ``valor`` é a MESMA referência de nome acima — nunca um literal copiado —
+#: para as duas nunca poderem divergir sem alguém precisar editar as duas
+#: linhas.
+NUMEROS_MEDIDOS_NO_MAPA: tuple[tuple[str, float, str, str], ...] = (
+    ("HZ_INPUT_SEM_MIC", HZ_INPUT_SEM_MIC, "audio.microfone@dualsense", "radio_ressalva"),
+    ("HZ_INPUT_COM_MIC", HZ_INPUT_COM_MIC, "audio.microfone@dualsense", "radio_ressalva"),
+    ("HZ_AUDIO_COM_MIC", HZ_AUDIO_COM_MIC, "audio.microfone@dualsense", "radio_ressalva"),
+)
+
 #: Até aqui a mesa é "Folgada". Decisão R3 do PO.
 CORTE_FOLGADA = 0.60
 

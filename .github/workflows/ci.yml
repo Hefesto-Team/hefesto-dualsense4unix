@@ -173,12 +173,48 @@ jobs:
     # no runner e na máquina de quem edita. O censo do passo seguinte continua,
     # com outro alcance: ele confere o CSV linha a linha e o resto do mapa.
     steps:
+      # Z6-07 (24/08/2026, P-11 da PAREAMENTO-01): SEM `fetch-depth: 0` o
+      # padrão do `actions/checkout` é profundidade 1 — `HEAD~1` NÃO EXISTE
+      # no runner, e a regra 17 (`id-sumiu-sem-nota`, abaixo) nasceria verde
+      # sem medir nada. O mesmo defeito já pago pelo `anonymity-check.yml`
+      # (`:36`), agora no job do mapa.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # A referência vem do EVENTO, nunca de `HEAD~1` fixo — o mesmo desenho
+      # de `anonymity-check.yml:41-49`: num PR de vários commits, `HEAD~1`
+      # compararia contra o commit anterior em vez da base, e um renome feito
+      # no primeiro commit do PR passaria despercebido.
+      - name: Definir ref de comparação (id estável)
+        id: contra
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -u
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "ref=${PR_BASE_SHA}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${PUSH_BEFORE:-}" ] && [ "$PUSH_BEFORE" != '0000000000000000000000000000000000000000' ]; then
+            echo "ref=${PUSH_BEFORE}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=HEAD~1" >> "$GITHUB_OUTPUT"
+          fi
       - name: O specs.html publicado reflete o CSV e os desenhos
         run: python3 scripts/gerar-mapa.py --check
+      # Z6-02 (24/08/2026): o mesmo desenho do `gerar-mapa.py --check` acima,
+      # para o módulo Python que o CSV vira em build time.
+      - name: Os fatos de tela refletem o CSV
+        run: python3 scripts/gerar-fatos-de-tela.py --check
+      # Z6-04 (24/08/2026): a Fala de tela promete só o que o mapa mede.
+      - name: A fala da tela bate com o mapa
+        run: python3 scripts/validar-fala-de-tela.py --all
+      # Z6-09 (24/08/2026): fato declarado caduco não pode continuar publicado.
+      - name: Nenhum fato caduco publicado nas superfícies vivas
+        run: python3 scripts/validar-caducos.py --all
       # A DÍVIDA FOI PAGA EM 15/08/2026, e por isso este passo REPROVA.
       #
       # Ele nasceu informativo (`continue-on-error: true`) contra o CSV de
@@ -205,6 +241,10 @@ jobs:
       # mordida ou baixar o `de_onde_sei` — NÃO devolver o `continue-on-error`.
       - name: Censo do mapa (afirmação forte sem teste que morda)
         run: python3 scripts/check_paridade_transporte.py
+      # Z6-07: a regra 17. Referência que não resolve REPROVA alto (nunca sai
+      # 0 calada) — é o `contra-nao-resolve` do próprio script.
+      - name: O id do mapa não sumiu em silêncio
+        run: python3 scripts/check_paridade_transporte.py --exigir-id-estavel --contra "${{ steps.contra.outputs.ref }}"
 
   shellcheck:
     name: Shellcheck (severidade error)
@@ -335,7 +375,12 @@ jobs:
       matrix:
         python: ["3.10", "3.11", "3.12"]
     steps:
+      # Z6-07 (24/08/2026, P-11): histórico completo — este é o outro job que
+      # a PAREAMENTO-01 nomeia como precisando dele (portões futuros que
+      # comparam com o passado, como o P-09 desta família, nascem aqui).
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}

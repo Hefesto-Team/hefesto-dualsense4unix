@@ -212,11 +212,14 @@ quando o controle conecta, ela repinta a barra de todos os DualSense e a sua cor
 não fica. O contorno é ligar os controles antes de abrir a Steam. No cabo o
 problema não aparece.
 
-**O microfone por Bluetooth entrega metade do sinal.** O DualSense não fala
-A2DP/HFP — manda o áudio como agente dentro dos relatórios HID, e o Hefesto tem a
-ponte que decodifica e publica no PipeWire. Duas ressalvas: a ponte é opt-in
-(ligá-la custa ~35% dos relatórios de input) e o firmware marca o mic como mudo
-boa parte do tempo, sobrando por volta de 40% do sinal. O fone por Bluetooth
+**O microfone por Bluetooth perde sinal quando o firmware marca o mic como
+mudo.** O DualSense não fala A2DP/HFP — manda o áudio como agente dentro dos
+relatórios HID, e o Hefesto tem a ponte que decodifica e publica no PipeWire.
+Duas ressalvas: a ponte é opt-in (ligá-la custa ~35% dos relatórios de input) e
+o firmware marca o mic como mudo por uma fração do tempo que **este README não
+afirma mais** — o ciclo de mudo publicado antes caducou em 07/08/2026: foi
+medido com um desmutador acidental rodando por baixo (ver
+`docs/data/caducos.csv`). Ainda não há substituto medido. O fone por Bluetooth
 está fora de escopo. Por USB, mic e fone funcionam normalmente.
 
 **A troca automática de perfil não vê janelas Wayland nativas.** No COSMIC o

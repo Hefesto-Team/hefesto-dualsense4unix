@@ -180,6 +180,82 @@ def numeros_do_mapa() -> dict:
         return {"erro": f"{type(exc).__name__}: {exc}"}
 
 
+def fila_da_bancada() -> dict:
+    """Z6-11 (24/08/2026): a lista de placeholders abertos, DIRETO do
+    `validar-fala-de-tela.py --fila` — a tela passa a *pedir* a medição de
+    que precisa, em vez de esperar que alguém lembre (PAREAMENTO-01, "O
+    PLACEHOLDER", item b). Mesma disciplina de `numeros_do_mapa`: importa em
+    vez de reimplementar, para nunca discordar do portão que é dono da conta.
+    """
+    try:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "validar_fala_de_tela_do_painel", RAIZ / "scripts" / "validar-fala-de-tela.py"
+        )
+        if spec is None or spec.loader is None:
+            return {"erro": "não consegui carregar o validar-fala-de-tela.py"}
+        mod = importlib.util.module_from_spec(spec)
+        # Registrar ANTES de `exec_module` não é enfeite: o `@dataclass` do
+        # módulo (com `from __future__ import annotations`) resolve a
+        # anotação em STRING procurando o módulo pelo nome em `sys.modules`
+        # — sem isto ele estoura `AttributeError: 'NoneType' object has no
+        # attribute '__dict__'`. Medido aqui em 24/08/2026, mesma causa já
+        # documentada em `test_check_paridade_transporte.py`.
+        sys.modules[spec.name] = mod
+        spec.loader.exec_module(mod)
+        falas = mod.descobre_falas(RAIZ / mod.APP_RELATIVO, RAIZ)
+        fila = mod.monta_fila(falas)
+        return {
+            "itens": [
+                {
+                    "chave": f.chave,
+                    "lado": f.lado,
+                    "aba": f.aba,
+                    "origem": f.origem,
+                    "aberta_em": (f.pendente or {}).get("aberta_em"),
+                    "prazo_dias": (f.pendente or {}).get("prazo_dias"),
+                    "quem_fecha": (f.pendente or {}).get("quem_fecha"),
+                    "o_que_falta": (f.pendente or {}).get("o_que_falta"),
+                }
+                for f in fila
+            ]
+        }
+    except Exception as exc:  # o painel nunca pode morrer por causa de uma fonte
+        return {"erro": f"{type(exc).__name__}: {exc}"}
+
+
+def _bloco_da_fila(fila: dict) -> str:
+    itens = fila.get("itens") or []
+    if fila.get("erro"):
+        return (
+            '<div class="aviso"><p><b>A fila da bancada não pôde ser medida.</b> '
+            f'<code>{escape(str(fila["erro"])[:220])}</code></p></div>'
+        )
+    if not itens:
+        return '<p class="quieto">Nenhum placeholder aberto — o registro `Fala` não deve nada à bancada agora.</p>'
+    linhas = ""
+    for item in sorted(itens, key=lambda i: str(i.get("aberta_em") or "")):
+        linhas += (
+            "<tr>"
+            f'<td>{escape(str(item.get("chave") or ""))}</td>'
+            f'<td>{escape(str(item.get("lado") or ""))}</td>'
+            f'<td>{escape(str(item.get("aba") or ""))}</td>'
+            f'<td class="quieto">{escape(str(item.get("origem") or ""))}</td>'
+            f'<td>{escape(str(item.get("aberta_em") or ""))}</td>'
+            f'<td>{escape(str(item.get("prazo_dias") or ""))}</td>'
+            f'<td>{escape(str(item.get("quem_fecha") or ""))}</td>'
+            f'<td>{escape(str(item.get("o_que_falta") or ""))}</td>'
+            "</tr>\n"
+        )
+    return (
+        f'<p>{len(itens)} placeholder(s) aberto(s) — a lista de compras da bancada:</p>'
+        '<table class="fila"><thead><tr><th>Chave</th><th>Lado</th><th>Aba</th>'
+        "<th>Onde</th><th>Aberta em</th><th>Prazo (dias)</th><th>Quem fecha</th>"
+        f"<th>O que falta</th></tr></thead><tbody>{linhas}</tbody></table>"
+    )
+
+
 def estado_do_git() -> dict:
     def git(*a: str) -> str:
         try:
@@ -476,6 +552,7 @@ def _idade(medido_em: float | None) -> tuple[str, bool]:
 def monta(rapido: dict, cache: dict) -> str:
     censo, mapa, git = rapido["censo"], rapido["mapa"], rapido["git"]
     bloco_decisoes = _bloco_das_decisoes(rapido.get("decisoes") or [])
+    bloco_fila = _bloco_da_fila(rapido.get("fila") or {})
     suite = cache.get("suite") or {}
     portoes = cache.get("portoes") or {}
     frase_idade, fresco = _idade(cache.get("medido_em"))
@@ -591,6 +668,13 @@ def monta(rapido: dict, cache: dict) -> str:
      Portão verde não prova que ele mede o que promete — a casa já achou três
      instrumentos falsos num dia só. Verde aqui quer dizer <em>não acusou</em>.</p>
 
+  <h2>A fila da bancada</h2>
+  <p class="lede">Cada <code>Fala</code> declarada com <code>pendente=</code>
+     — a tela ainda não sabe o que dizer porque a medição não chegou. Gerado
+     direto de <code>scripts/validar-fala-de-tela.py --fila</code>; a lista de
+     compras que a interface pede sozinha, sem precisar que alguém lembre.</p>
+  <div class="rolo">{bloco_fila}</div>
+
   <h2>As sprints</h2>
   <div class="grade">
     {_kpi(str(censo['arquivos']), 'arquivos', 'ac')}
@@ -664,6 +748,7 @@ def main() -> int:
         "mapa": numeros_do_mapa(),
         "git": estado_do_git(),
         "decisoes": decisoes_dela(),
+        "fila": fila_da_bancada(),
     }
     pagina = monta(rapido, le_cache())
 
