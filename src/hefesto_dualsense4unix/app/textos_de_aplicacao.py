@@ -84,7 +84,7 @@ def nome_curto_do_alvo(label: str | None) -> str:
     return label.split("(")[0].strip() or ALVO_SEM_NOME
 
 
-class AlvoDesconhecidoNaMesa(RuntimeError):
+class AlvoDesconhecidoNaMesaError(RuntimeError):
     """`alvo_fora_da_mesa` foi chamada com a janela sem saber o alvo.
 
     Z2-3 (24/08/2026). Não deveria disparar em produção: os chamadores de
@@ -106,7 +106,7 @@ def alvo_fora_da_mesa(host: Any) -> str | None:
     conectados que a aba Status recalcula do ``state_full`` a cada tique
     (``_target_uniq_by_index``, só controles conectados).
 
-    **Levanta `AlvoDesconhecidoNaMesa` quando a janela não sabe o alvo.**
+    **Levanta `AlvoDesconhecidoNaMesaError` quando a janela não sabe o alvo.**
     Chamar de "guardado" (ou de "aplicado") o que talvez nem devesse ter
     escrito seria trocar uma mentira por outra — e ``None`` some em
     silêncio dentro de um ``or`` (`frase_de_guardado(...) or
@@ -126,7 +126,7 @@ def alvo_fora_da_mesa(host: Any) -> str | None:
     """
     estado = alvo_de_edicao(host)
     if estado.desconhecido:
-        raise AlvoDesconhecidoNaMesa(estado.motivo or MOTIVO_SEM_ESTADO)
+        raise AlvoDesconhecidoNaMesaError(estado.motivo or MOTIVO_SEM_ESTADO)
     uniq = estado.uniq
     if not isinstance(uniq, str) or not uniq:
         return None  # "Todos": a escrita é global, não há alvo a guardar

@@ -25,7 +25,7 @@ from hefesto_dualsense4unix.app.alvo_de_edicao import (
 )
 from hefesto_dualsense4unix.app.draft_config import registrar_alto_falante_no_rascunho
 from hefesto_dualsense4unix.app.textos_de_aplicacao import (
-    AlvoDesconhecidoNaMesa,
+    AlvoDesconhecidoNaMesaError,
     alvo_fora_da_mesa,
 )
 
@@ -42,7 +42,7 @@ def test_desconhecido_recusa_alto_em_vez_de_devolver_none() -> None:
     host = _Janela()
     esquecer_alvo(host, MOTIVO_MESA_VAZIA)
 
-    with pytest.raises(AlvoDesconhecidoNaMesa) as excinfo:
+    with pytest.raises(AlvoDesconhecidoNaMesaError) as excinfo:
         alvo_fora_da_mesa(host)
     assert MOTIVO_MESA_VAZIA in str(excinfo.value)
 
