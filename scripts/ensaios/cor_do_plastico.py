@@ -71,12 +71,24 @@ ele é o byte 0 do buffer. Daí o nosso buffer começar em `80 01 13`.
 
 O QUE ESTE INSTRUMENTO NÃO SABE FAZER, E DIZ
 ---------------------------------------------
-Por rádio, ninguém demonstrou. O canal existe (o `0x80`/`0x81` está no
-descritor destes controles, conferido pelo parser de `comum.py`), e o envelope
-de Bluetooth desta casa já é conhecido — CRC-32 de semente `0xA3` nos quatro
-últimos bytes, `ps_check_crc32` do `hid-playstation`. O caminho está escrito
-aqui (`envelope_de_radio`), atrás de `--radio-a-serio`, e **não foi exercido**:
-está marcado como DESENHO, não como medida, e a tela diz isso.
+Por rádio, o APARELHO recusa — medido em 23/08/2026, nos dois DualSense desta
+bancada, com CRC-32 de semente `0xA3` e com a cauda zerada. O canal existe (o
+`0x80`/`0x81` está no descritor destes controles, conferido pelo parser de
+`comum.py`) e o pacote sai inteiro: `btmon` mostra TX de 65 bytes no canal de
+controle L2CAP e, ~5 ms depois, RX `04` — `HANDSHAKE`, `ERR_INVALID_PARAMETER`,
+do próprio controle. O `-EIO` que o Python vê é máscara do uhid
+(`hid-playstation.c:901`), não a causa.
+
+Que o fio está bom, prova o `GET_FEATURE 0x20` no MESMO canal e no MESMO
+instante: responde em ~6 ms, com as três âncoras batendo (firmware, hardware e
+CRC contra o sysfs). O caminho continua aqui (`envelope_de_radio`), atrás de
+`--radio-a-serio`, agora como MEDIDA e não como desenho: ele não funciona, e a
+razão é o firmware.
+
+**O galho que segue sem medição:** as duas caudas tentadas (semente `0xA3` e
+zeros) são ambas inválidas para um firmware que valide CRC no sentido de
+ESCRITA. Semente `0xA2` (saída), `0xA1` (entrada) e buffer curto de 3 bytes
+seguem por tentar — e escrita na família de fábrica é decisão dela.
 """
 
 from __future__ import annotations
