@@ -34,6 +34,7 @@ import ast
 from pathlib import Path
 
 from hefesto_dualsense4unix.app.actions.external_controllers import (
+    ID_DE_NAO_SEI,
     ID_DE_OUTRA_COR,
     MODOS_DO_APARELHO,
     chave_de_maquina,
@@ -199,11 +200,17 @@ class TestAChaveDoDisco:
 
 
 class TestAListaDeCor:
-    def test_sete_botoes_seis_cores_e_outra(self) -> None:
+    def test_oito_botoes_seis_cores_outra_e_nao_sei(self) -> None:
+        """O oitavo entrou em 23/08/2026: sem ele, "não sei" não era resposta.
+
+        Grupo de rádio ignora o clique no botão já afundado — quem declarasse a
+        cor errada não tinha gesto nenhum para desfazer (`D-A1`).
+        """
         itens = cores_do_plastico_items()
-        assert len(itens) == 7
+        assert len(itens) == 8
         assert [ident for ident, _ in itens[:6]] == ["00", "01", "02", "03", "04", "05"]
-        assert itens[-1][0] == ID_DE_OUTRA_COR
+        assert itens[6][0] == ID_DE_OUTRA_COR
+        assert itens[-1][0] == ID_DE_NAO_SEI
 
     def test_todo_rotulo_de_cor_comeca_em_maiuscula(self) -> None:
         for _ident, rotulo in cores_do_plastico_items():
