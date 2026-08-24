@@ -5,13 +5,13 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho para
 # sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
 
-ensaio: 2026-08-23 21:12
+ensaio: 2026-08-24 04:24
 abas:   14
 
 # soma sha256 de cada foto, em ordem alfabética
 b7016b2cc75aab92ba658e195bd815ebd73ef375b21324bb33c733af70c57b02  perfis-jogo-da-steam.png
-4fb54ab07f771eb105eed09389006836941102e898ab5ae05d62114fbd4ea063  readme_configuracoes.png
-df1e6b62efb3eb9fd77e566d0aec9bf286590845455505a5f8ccdc402d17ec76  readme_configuracoes_inteira.png
+e8945028ba3953edb6b63dee9084efd7c0ddce06c3ecea29ecc0e037920ecd1b  readme_configuracoes.png
+b867aae44437d4fc77b96068ea2d63861589bd2fd26e47636cec6948494d1a65  readme_configuracoes_inteira.png
 daf3144d237945f2df00f2e540186c4f6df6c6aad2438bc117a71641acc62e13  readme_emulacao.png
 b012924afb3abbf093c62d3a2d3e97ebc13ba1906aec92cd5338daab01c7ece9  readme_gatilhos.png
 72234e7c618fb612d709ad9a579322416669e0d7afbb62446e82f6cd9b085db0  readme_inicio.png
