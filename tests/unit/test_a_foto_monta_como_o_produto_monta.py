@@ -35,22 +35,93 @@ _RETRATO = (
     Path(__file__).resolve().parents[2] / "scripts" / "gui-captura" / "retratar_abas.py"
 )
 
-#: Os mixins que montam aba em código, e que o retrato TEM de chamar em vez de
-#: reimplementar. Cada entrada é `(módulo do produto, o que a foto perderia)`.
+#: Os NOMES citados pela documentação — cópia por VALOR do `NOMES` do
+#: retrato, lida por AST em `_nomes_da_documentacao()` para não depender de
+#: `gi` neste arquivo. A ORDEM não importa aqui; o que importa é o conjunto.
 #:
-#: A lista cresce quando uma aba nova passa a ser montada em código. Ela NÃO é a
-#: régua sozinha — o teste também cobra que ninguém construa widget de aba à mão
-#: (ver `test_o_retrato_nao_monta_widget_de_aba_a_mao`), que é o que pega a aba
-#: que ainda não está aqui.
-MIXINS_DE_ABA: dict[str, str] = {
-    "TriggersActionsMixin": "os 19 modos de gatilho e a área de parâmetros",
-    "ProfilesActionsMixin": 'o "Aplica a", o "Modo" e a lista do Steam Input',
-    "ConfigActionsMixin": "as cinco seções da aba Configurações",
+#: Z0-2 (24/08/2026), §2.2/M2 da sprint Z0-01: até aqui `MIXINS_DE_ABA` listava
+#: "as três abas que já deram problema" — três mixins soltos, sem ligação com
+#: nome de foto nenhum — e o retrato já monta DEZ em código. Início, Status e
+#: No jogo não tinham régua nenhuma: nenhuma linha aqui, nenhuma na tabela do
+#: F14 (`test_p10_...`), nenhuma no AST do `main` (`test_o_main_monta_...`).
+#:
+#: Agora a chave é o NOME DA FOTO (`NOMES`), uma linha por aba, e o valor é
+#: `(mixin de produção que a monta, o que a foto perderia sem ele)`. Duas abas
+#: — Status e No jogo — compartilham o mesmo mixin (`StatusActionsMixin` monta
+#: as duas, `status_actions.py`), e é assim mesmo: o retrato usa o MESMO método
+#: de produção duas vezes, não uma cópia.
+MIXINS_DE_ABA: dict[str, tuple[str, str]] = {
+    "readme_inicio": (
+        "HomeActionsMixin",
+        "a mesa de jogadores (Modo Nativo/co-op, quem é primário, bateria)",
+    ),
+    "readme_status": (
+        "StatusActionsMixin",
+        "o card do controle — sem ele a aba mais densa da janela sai vazia",
+    ),
+    "readme_no_jogo": (
+        "StatusActionsMixin",
+        "os painéis por jogador e o aviso do perfil que não entrou",
+    ),
+    "readme_gatilhos": (
+        "TriggersActionsMixin",
+        "os 19 modos de gatilho e a área de parâmetros",
+    ),
+    "readme_lightbar": (
+        "LightbarActionsMixin",
+        "a prévia de cor e a frase de quem acendeu o desenho",
+    ),
+    "readme_rumble": (
+        "RumbleActionsMixin",
+        "o estado da vibração e quem a controla (jogo ou janela)",
+    ),
+    "readme_perfis": (
+        "ProfilesActionsMixin",
+        'o "Aplica a", o "Modo" e a lista do Steam Input',
+    ),
+    "readme_sistema": (
+        "DaemonActionsMixin",
+        "o diagnóstico e a resposta a \"o Hefesto está funcionando?\"",
+    ),
+    "readme_emulacao": (
+        "EmulationActionsMixin",
+        "o cartão do aparelho, o VID:PID e o do atalho",
+    ),
+    "readme_navegacao_dsx": (
+        "InputActionsMixin",
+        "as duas colunas e a legenda de atalhos em português",
+    ),
+    "readme_configuracoes": (
+        "ConfigActionsMixin",
+        "as cinco seções da aba Configurações",
+    ),
 }
 
 
 def _arvore() -> ast.Module:
     return ast.parse(_RETRATO.read_text(encoding="utf-8"))
+
+
+def _nomes_da_documentacao() -> tuple[str, ...]:
+    """Os valores literais de `NOMES`, lidos por AST — sem importar o script.
+
+    Nunca importa `retratar_abas.py` (que puxa `gi`): este arquivo mede o
+    TEXTO-FONTE, e a régua de Z0-2 (`test_toda_aba_de_nomes_tem_mixin_declarado`)
+    não pode depender de GTK estar instalado para rodar.
+    """
+    for no in ast.walk(_arvore()):
+        if not isinstance(no, ast.Assign):
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "NOMES" for t in no.targets):
+            continue
+        valor = no.value
+        assert isinstance(valor, ast.Tuple), "`NOMES` deixou de ser uma tupla literal"
+        return tuple(
+            elt.value
+            for elt in valor.elts
+            if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+        )
+    raise AssertionError("`NOMES` sumiu do `retratar_abas.py`")
 
 
 def _nomes_usados() -> set[str]:
@@ -76,9 +147,10 @@ def _nomes_usados() -> set[str]:
 def test_o_retrato_chama_o_mixin_de_cada_aba_montada_em_codigo() -> None:
     """Mordida: trocar a chamada de `install_triggers_tab` por uma montagem à mão."""
     citados = _nomes_usados()
+    mixins_declarados = {mixin for mixin, _perda in MIXINS_DE_ABA.values()}
     faltando = {
         mixin: perda
-        for mixin, perda in MIXINS_DE_ABA.items()
+        for aba, (mixin, perda) in MIXINS_DE_ABA.items()
         if mixin not in citados
     }
     assert not faltando, (
@@ -86,6 +158,26 @@ def test_o_retrato_chama_o_mixin_de_cada_aba_montada_em_codigo() -> None:
         + "; ".join(f"{m} (a foto perde {p})" for m, p in faltando.items())
         + ". Montar à mão faz a foto mentir sobre o layout, e é olhando a foto "
         "que ela decide."
+    )
+    assert mixins_declarados, "MIXINS_DE_ABA ficou vazio — a régua parou de medir"
+
+
+def test_toda_aba_de_nomes_tem_mixin_declarado() -> None:
+    """O portão novo do aceite da Z0-01: `NOMES` sem linha em `MIXINS_DE_ABA`.
+
+    Até 24/08/2026 a lista cobria 3 das 11 abas (§2.2/M2 da sprint Z0-01) —
+    Início, Status e No jogo ficavam sem régua nenhuma, e nada acusava.
+
+    Mordida: tire `HomeActionsMixin` (ou a linha `readme_inicio`) da lista e
+    este teste reprova nomeando `readme_inicio`.
+    """
+    nomes = _nomes_da_documentacao()
+    assert nomes, "`NOMES` saiu vazio — nada para conferir"
+    sem_regua = [nome for nome in nomes if nome not in MIXINS_DE_ABA]
+    assert not sem_regua, (
+        "estas abas de `NOMES` não têm linha em `MIXINS_DE_ABA`, e por isso "
+        "podem perder o host de produção sem que nada acuse: "
+        + ", ".join(sem_regua)
     )
 
 
@@ -139,20 +231,39 @@ def test_a_regua_deste_portao_nao_confere_a_si_mesma() -> None:
     o primeiro teste passaria por acidente.
     """
     from hefesto_dualsense4unix.app.actions import (
+        daemon_actions,
+        emulation_actions,
+        home_actions,
+        input_actions,
+        lightbar_actions,
         profiles_actions,
+        rumble_actions,
+        status_actions,
         triggers_actions,
     )
     from hefesto_dualsense4unix.app.actions import config as config_pkg
 
     vivos = set()
-    for modulo in (triggers_actions, profiles_actions, config_pkg):
+    for modulo in (
+        triggers_actions,
+        profiles_actions,
+        config_pkg,
+        home_actions,
+        status_actions,
+        lightbar_actions,
+        rumble_actions,
+        daemon_actions,
+        emulation_actions,
+        input_actions,
+    ):
         vivos.update(
             nome
             for nome, obj in vars(modulo).items()
             if inspect.isclass(obj) and nome.endswith("Mixin")
         )
 
-    fantasmas = set(MIXINS_DE_ABA) - vivos
+    mixins_declarados = {mixin for mixin, _perda in MIXINS_DE_ABA.values()}
+    fantasmas = mixins_declarados - vivos
     assert not fantasmas, (
         f"a lista deste portão nomeia mixin que não existe no produto: "
         f"{sorted(fantasmas)}. Régua que aponta para o vazio aprova qualquer coisa."

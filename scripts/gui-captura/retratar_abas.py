@@ -1718,6 +1718,10 @@ def _montar_aba_emulacao(builder) -> str:  # type: ignore[no-untyped-def]
         def _refresh_gamepad_and_gamemode(self) -> None:  # type: ignore[override]
             estado = dict(_ESTADO_DE_BANCADA)
             self._highlight_gamepad(_MASCARA_DE_BANCADA)
+            # É esta chamada que escreve `emulation_vidpid_label` com o
+            # VID:PID da máscara ATIVA, não o do glade cru ("045E:028E (Xbox
+            # 360)"). Régua em `test_p10_..._ROTULOS_QUE_O_CODIGO_REESCREVE`
+            # (Z0-4, §2.2/M4 da sprint Z0-01) — mordida provada em 24/08.
             self._sync_uinput_card(_MASCARA_DE_BANCADA)
             self._sync_hotkey_card(estado)
             self._sync_gamemode_button(mode_of_state(estado))
@@ -2279,8 +2283,17 @@ def main(
         )
 
     print(f"\n  {total} aba(s) em {saida}")
+    # Z0-5 (24/08/2026): o recibo passa a nascer nos TRÊS destinos canônicos —
+    # antes só o do README ganhava um. Um `destino` arbitrário (o argumento
+    # posicional) continua sem recibo, pela mesma razão de sempre: "não toca
+    # no repositório" (ver `USO`).
+    modo = "--cinco" if cinco else ("--mesa-cheia" if mesa_cheia else "padrão")
+    fixture_da_prova = fixture if mesa_cheia else None
+    if saida in (DESTINO_DOC, DESTINO_MESA_CHEIA, DESTINO_MESA_DE_CINCO):
+        print(
+            f"  {_gravar_prova_da_foto(saida, modo=modo, fixture=fixture_da_prova)}"
+        )
     if saida == DESTINO_DOC:
-        print(f"  {_gravar_prova_da_foto(saida)}")
         print("  as imagens do README e de docs/usage/interface.md estão em dia.")
     if mesa_cheia:
         print(
@@ -2311,7 +2324,9 @@ USO = (
 NOME_DA_PROVA = "PROVA-DA-FOTO.txt"
 
 
-def _gravar_prova_da_foto(saida: Path) -> str:
+def _gravar_prova_da_foto(
+    saida: Path, *, modo: str = "padrão", fixture: Path | None = None
+) -> str:
     """Grava o recibo do ensaio: quando rodou, contra qual tela, e o que saiu.
 
     FOTO-QUE-NAO-MOVE-PIXEL-01 (19/08/2026). O portão
@@ -2328,9 +2343,21 @@ def _gravar_prova_da_foto(saida: Path) -> str:
     e o commit da tela mudaram, então o commit dele É a prova de que o ensaio
     rodou. E as somas dizem o que saiu — se um PNG for editado à mão depois,
     a soma não bate mais.
+
+    Z0-5 (24/08/2026), §2.2/M5 da sprint Z0-01: até aqui o recibo dizia QUANDO
+    e O QUÊ, e nunca CONTRA QUE BANCADA. As fotos são dublê desde sempre — é a
+    privacidade dela que exige isso — mas nada nelas ou ao lado delas dizia
+    isso com todas as letras. `modo` e `fixture` são essa proveniência: qual
+    dos quatro modos rodou, e qual arquivo (se algum) alimentou os dublês.
     """
 
     pngs = sorted(q for q in saida.glob("*.png") if q.is_file())
+    fixture_txt = (
+        str(fixture.relative_to(RAIZ))
+        if fixture is not None
+        else "nenhum — os dublês nascem fixos no próprio script (padrão de dois "
+        "controles)"
+    )
     linhas = [
         "# Recibo do ensaio de fotos — gerado por scripts/gui-captura/retratar_abas.py",
         "#",
@@ -2339,8 +2366,13 @@ def _gravar_prova_da_foto(saida: Path) -> str:
         "# idênticas, e sem este recibo o portão das fotos ficaria vermelho para",
         "# sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.",
         "",
-        f"ensaio: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-        f"abas:   {len(pngs)}",
+        f"ensaio:  {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"abas:    {len(pngs)}",
+        f"modo:    {modo}",
+        f"fixture: {fixture_txt}",
+        "",
+        "# toda linha destas imagens é dublê — nenhuma delas é medição desta ou",
+        "# de qualquer máquina. Ver docs/usage/interface.md, \"Sobre as capturas\".",
         "",
         "# soma sha256 de cada foto, em ordem alfabética",
     ]
