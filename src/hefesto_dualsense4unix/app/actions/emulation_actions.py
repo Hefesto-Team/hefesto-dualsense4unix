@@ -1094,6 +1094,28 @@ class EmulationActionsMixin(WidgetAccessMixin):
     MIC_SEM_PROMOTOR = "sem-promotor"
     MIC_LIGADO = "ligado"
 
+    #: EMULACAO-UM-DONO-SO-01/E3 (25/08/2026) — o QUARTO estado: não há alvo
+    #: que este botão alcance. Os três de cima decidiam olhando SÓ a presença de
+    #: arquivos em `~/.config/wireplumber/wireplumber.conf.d/`. Sem nenhuma
+    #: placa de áudio do controle no sistema o ramo era o mesmo, e a tela
+    #: escrevia **Ligado** em `#50fa7b` com a dica "o microfone do controle está
+    #: livre e com prioridade acima do eco da saída" — verde sobre um alvo que a
+    #: aba nunca olhou.
+    MIC_SEM_ALVO = "sem-alvo"
+
+    #: A régua do alvo, DECLARADA porque a sprint exige que ela seja: a presença
+    #: de PLACA ALSA do DualSense em `/proc/asound/cards`, contada pela função
+    #: pura `storm_doctor.contar_placas_dualsense` (não redigitada aqui — o
+    #: cabeçalho dela registra por que contar a palavra dá o dobro).
+    #:
+    #: O QUE ELA PROVA, E O QUE NÃO PROVA — a distinção é do próprio mapa
+    #: (`audio.microfone@dualsense`, `assimetria_declarada`, medido 15/08/2026)
+    #: e escrevê-la errada vira fato falso amanhã: os controles do RÁDIO não têm
+    #: placa ALSA nenhuma, e isso prova que **a ROTA ALSA não existe no rádio —
+    #: NÃO prova que o aparelho não capta por rádio**. Por isso a frase da tela
+    #: fala de "placa de áudio neste computador", nunca do microfone do aparelho.
+    _PLACAS_ALSA = "/proc/asound/cards"
+
     def _mic_script(self) -> Path | None:
         for cand in (
             ROOT_DIR / "scripts" / "fix_wireplumber_default_source.sh",
@@ -1107,17 +1129,45 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 return cand
         return None
 
+    @staticmethod
+    def _placas_de_microfone() -> int:
+        """Quantas placas ALSA de DualSense este computador tem AGORA.
+
+        Zero também quando `/proc/asound/cards` não dá para ler — e é honesto
+        chamar isso de zero na frase que a tela mostra, porque ela diz que o
+        Hefesto **não encontrou** placa nenhuma, não que não exista nenhuma.
+        """
+        from hefesto_dualsense4unix.integrations.storm_doctor import (
+            contar_placas_dualsense,
+        )
+
+        try:
+            texto = Path(EmulationActionsMixin._PLACAS_ALSA).read_text(
+                encoding="utf-8", errors="ignore"
+            )
+        except OSError:
+            return 0
+        return contar_placas_dualsense(texto)
+
     def _mic_state(self) -> str:
-        """O que os drop-ins do WirePlumber dizem sobre o mic, em três estados.
+        """O que os drop-ins do WirePlumber dizem sobre o mic, em quatro estados.
 
         Só LÊ arquivo — é chamada a cada entrada na aba Emulação e não pode ter
         efeito colateral nenhum (ver `_refresh_emulation_tab`).
+
+        POR QUE O ALVO SÓ FECHA O RAMO VERDE (E3, 25/08/2026). Os dois estados
+        laranja descrevem a NOSSA configuração — um drop-in que escrevemos está
+        lá, ou o promotor está faltando — e isso é verdade com placa ou sem
+        placa. O ramo verde descreve **o aparelho** ("o microfone do controle
+        está livre"), e é só esse que precisa de um alvo para não mentir.
         """
         dropins = self._wp_dropin_dir()
         if any((dropins / name).exists() for name in self._WP_DISABLE_DROPINS):
             return self.MIC_SUPRIMIDO
         if not (dropins / self._WP_PROMOTER_DROPIN).exists():
             return self.MIC_SEM_PROMOTOR
+        if self._placas_de_microfone() == 0:
+            return self.MIC_SEM_ALVO
         return self.MIC_LIGADO
 
     def _mic_is_on(self) -> bool:
@@ -1179,7 +1229,45 @@ class EmulationActionsMixin(WidgetAccessMixin):
             "O microfone do controle está desligado por escolha — clique em "
             "“Ligar” para liberá-lo.",
         ),
+        # E3 (25/08/2026). Laranja, e não uma cor nova: a linha já ensina duas
+        # cores (verde = tudo certo, laranja = olhe isto), e inventar uma
+        # terceira é vocabulário visual novo, que é decisão dela.
+        #
+        # A FRASE NÃO PODE DIZER MAIS DO QUE A RÉGUA MEDE — ver o cabeçalho de
+        # `_PLACAS_ALSA`: ausência de placa prova que a ROTA ALSA não existe,
+        # não que o aparelho não capte. Por isso ela fala de "placa de áudio
+        # neste computador" e nomeia o rádio como o caso comum, em vez de
+        # concluir que o microfone está mudo.
+        MIC_SEM_ALVO: (
+            "#ffb86c",
+            "Sem microfone à vista",
+            "Os ajustes estão no lugar, mas o Hefesto não encontrou a placa de "
+            "áudio de nenhum DualSense neste computador — então não há o que "
+            "estes dois botões liguem agora. É o normal quando o controle está "
+            "no rádio: por Bluetooth ele não cria placa de áudio. Ligue o "
+            "controle no cabo e clique em “Atualizar”.",
+        ),
     }
+
+    #: EMULACAO-UM-DONO-SO-01/E4, metade de tela (25/08/2026). A palavra
+    #: "microfone" nomeia TRÊS coisas em três abas, e nenhuma dizia de qual não
+    #: estava falando: aqui é a ROTA DE ÁUDIO DA MÁQUINA (drop-ins do
+    #: WirePlumber, `_run_mic`); em Status/Perfis é o `ProfileMicConfig` —
+    #: volume de captura e mudo de FIRMWARE, que entram no perfil do jogo; em
+    #: Configurações é o interruptor da ponte por Bluetooth. Ela ajustava aqui,
+    #: salvava o perfil e na sessão seguinte voltava ao que estava.
+    #:
+    #: Vai no fim de TODA dica desta linha, e não só na do estado novo: o
+    #: escopo não muda com o estado, e uma frase que só aparece num ramo é uma
+    #: frase que a maioria das visitas não lê.
+    #:
+    #: A DECISÃO DE ENTRAR NO PERFIL É DELA (§9 da sprint) e este texto não a
+    #: antecipa — ele diz o que o botão faz HOJE, que é fato medido.
+    ESCOPO_DO_MICROFONE_DESTA_ABA = (
+        "Isto vale para o computador inteiro, não para este jogo: não entra no "
+        "perfil e não mexe na ponte de microfone por Bluetooth (aba "
+        "Configurações)."
+    )
 
     def _refresh_mic_status(self) -> None:
         label = self._get("emulation_mic_status_label")
@@ -1188,7 +1276,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         cor, texto, dica = self._MIC_ROTULOS[self._mic_state()]
         label.set_markup(f'<span foreground="{cor}">{texto}</span>')
         with contextlib.suppress(Exception):
-            label.set_tooltip_text(dica)
+            label.set_tooltip_text(f"{dica} {self.ESCOPO_DO_MICROFONE_DESTA_ABA}")
 
     def _run_mic(self, flag: str, done_msg: str) -> None:
         script = self._mic_script()
