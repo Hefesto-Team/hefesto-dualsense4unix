@@ -1575,6 +1575,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         try:
             if frase is None:
                 rotulo.set_text("")
+                # §P9: rearmado ao apagar, pela mesma razão dos outros três
+                # widgets desta aba — ver `_mostrar_caixa_do_steam_input`.
+                with contextlib.suppress(Exception):
+                    rotulo.set_no_show_all(True)
                 rotulo.set_visible(False)
                 return
             rotulo.set_markup(
@@ -2102,6 +2106,20 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         é a cura da CAMPO-QUE-NAO-NASCIA-01 — `no_show_all` faz o `show_all()`
         ignorar o widget INCLUSIVE quando chamado nele mesmo, e um `show()` seco
         revelaria a caixa sem descer nos filhos (ela veria um vão vazio).
+
+        E o `set_no_show_all(True)` de volta ao esconder é a OUTRA metade dessa
+        mesma cura, medida em 25/08/2026 (§P9). Sem ela o desarme era
+        PERMANENTE: `app.py:show_window()` — o caminho do ícone da bandeja, da
+        notificação e do `kill -USR1` — chama `window.show_all()`, e um
+        `show_all()` da janela reexibe todo widget que não estiver com o
+        `no_show_all` armado. O resultado é a caixinha do Steam Input
+        reaparecendo sob um "Aplica a:" que não é "Jogo da Steam", com a lista
+        de outros marcados que pertence a outra escolha.
+
+        O molde certo já estava neste arquivo, uma seção acima:
+        `_sync_mode_options_visibility` faz `set_no_show_all(not is_gamepad)`.
+        O glade também já dizia a intenção — `no-show-all: True` nos dois
+        widgets. O que faltava era rearmar.
         """
         box = self._get("profile_steam_input_box")
         if box is None:
@@ -2117,6 +2135,8 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 box.set_no_show_all(False)
             box.show_all()
         else:
+            with contextlib.suppress(Exception):
+                box.set_no_show_all(True)
             box.hide()
 
     def _sincronizar_exigencia_invisivel(self) -> None:
@@ -2156,6 +2176,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 rotulo.set_no_show_all(False)
         else:
             rotulo.set_text("")
+            # §P9: e rearmado ao apagar, senão o `show_all()` da janela devolve
+            # à tela um rótulo VAZIO. Ver `_mostrar_caixa_do_steam_input`.
+            with contextlib.suppress(Exception):
+                rotulo.set_no_show_all(True)
         rotulo.set_visible(bool(texto))
 
     @staticmethod
@@ -2254,6 +2278,11 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         deste = self._appid_do_editor()
         outros = sorted(self._appids_do_steam_input() - {deste or ""})
         if not outros:
+            # §P9 (25/08/2026): rearmar antes de esconder — sem isto o
+            # `window.show_all()` do `show_window()` traz de volta uma lista
+            # VAZIA com título. Ver `_mostrar_caixa_do_steam_input`.
+            with contextlib.suppress(Exception):
+                caixa.set_no_show_all(True)
             caixa.hide()
             return
 
