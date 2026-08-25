@@ -805,6 +805,148 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # --- 25/08/2026: O CATÁLOGO DE ORDENS DE SERVIÇO NASCEU SEM A SEÇÃO
+    # ORDEM-DE-SERVIÇO-01. O módulo inteiro é a metade de baixo de uma sprint
+    # cuja metade de cima é TELA, e tela não fecha sem o olho dela
+    # (PROVA-DE-TELA-01). As seis regras estão medidas e com bateria própria
+    # (`test_ordens_da_mesa.py`, `test_o_selo_de_procedencia_nunca_falta.py`,
+    # `test_a_ordem_confirma_que_ela_moveu.py` e
+    # `test_o_estado_bom_nao_e_o_estado_vazio.py`); o que não existe é o
+    # chamador.
+    #
+    # ONDE O CAMINHO SE PERDE, para todo símbolo deste bloco: nem
+    # `integrations/exame_da_mesa.py` (ORDEM-4: o campo `Item.ordem` e a chave
+    # nova em `como_dicionario`) nem `app/actions/config/secao_exame.py`
+    # (ORDEM-5: os cards e as duas zonas) foram escritos. Enquanto os dois
+    # faltarem, o catálogo é dado que ninguém pede.
+    #
+    # O QUE FECHA: ORDEM-4 liga o catálogo ao exame e ORDEM-5 publica os cards.
+    # ORDEM-5 é texto novo na tela e passa pelo olho dela ANTES.
+    # DONO: a própria ORDEM-DE-SERVIÇO-01, frente B da leva Configurações.
+    "integrations/ordens_da_mesa.py::catalogo": (
+        "MEDIDO em 25/08/2026: é a porta do módulo — as seis regras entram por "
+        "aqui, e o que sai não é consumido por ninguém. Ver o bloco acima para "
+        "onde o caminho se perde e o que o fecha."
+    ),
+    "integrations/ordens_da_mesa.py::radio_largo_no_mesmo_hub": (
+        "MEDIDO em 25/08/2026: R1, a regra que só existe porque o `peer` "
+        "atravessa o `busnum`. Cai junto com `catalogo` e pelo mesmo motivo — e "
+        "é por isso que não ganha entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::dois_radios_colados": (
+        "MEDIDO em 25/08/2026: R2, a que filtra a webcam de cabo. Cai junto com "
+        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
+        "própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::dongle_atras_de_hub": (
+        "MEDIDO em 25/08/2026: R3, com a contra-regra que nunca acusa dongle de "
+        "dongle. Cai junto com `catalogo` e pelo mesmo motivo — e é por isso "
+        "que não ganha entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::teclado_so_no_hub": (
+        "MEDIDO em 25/08/2026: R4, a única que não fala de rádio. Cai junto com "
+        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
+        "própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::dongle_dorme": (
+        "MEDIDO em 25/08/2026: R5, que CALA nesta bancada, e isso é resultado. "
+        "Cai junto com `catalogo` e pelo mesmo motivo — e é por isso que não "
+        "ganha entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::entrada_reclamou_de_corrente": (
+        "MEDIDO em 25/08/2026: R6, que CALA pelo mesmo motivo. Cai junto com "
+        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
+        "própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::cabecalho": (
+        "MEDIDO em 25/08/2026: os quatro cabeçalhos da §8.3, derivados num "
+        "lugar só. Cai junto com `catalogo` e pelo mesmo motivo — e é por isso "
+        "que não ganha entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::Cabecalho": (
+        "MEDIDO em 25/08/2026: o tipo que `cabecalho` devolve. Cai junto com "
+        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
+        "própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::identidades": (
+        "MEDIDO em 25/08/2026: a tripla que decide a ambiguidade, e onde o "
+        "serial morre. Cai junto com `catalogo` e pelo mesmo motivo — e é por "
+        "isso que não ganha entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::Identidade": (
+        "MEDIDO em 25/08/2026: o que `identidades` devolve, já sem o serial. "
+        "Cai junto com `catalogo` e pelo mesmo motivo — e é por isso que não "
+        "ganha entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::mesmo_hub_fisico": (
+        "MEDIDO em 25/08/2026: a régua de plástico que R1 consome. Cai junto "
+        "com `catalogo` e pelo mesmo motivo — e é por isso que não ganha "
+        "entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::ordens_novas": (
+        "MEDIDO em 25/08/2026: o leitor de `MesaDeclarada.ordens_dispensadas`. "
+        "Cai junto com `catalogo` e pelo mesmo motivo — e é por isso que não "
+        "ganha entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::ordens_caladas": (
+        "MEDIDO em 25/08/2026: o irmão dele, que CONTA a decisão dela. Cai "
+        "junto com `catalogo` e pelo mesmo motivo — e é por isso que não ganha "
+        "entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::resposta_ao_ja_movi": (
+        "MEDIDO em 25/08/2026: as quatro respostas do botão que a seção ainda "
+        "não desenhou. Cai junto com `catalogo` e pelo mesmo motivo — e é por "
+        "isso que não ganha entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::Ordem": (
+        "MEDIDO em 25/08/2026: o tipo que todas as regras devolvem. Cai junto "
+        "com `catalogo` e pelo mesmo motivo — e é por isso que não ganha "
+        "entrada própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::Linha": (
+        "MEDIDO em 25/08/2026: a frase com selo de procedência. Cai junto com "
+        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
+        "própria de conserto."
+    ),
+    "integrations/ordens_da_mesa.py::Leitura": (
+        "MEDIDO em 25/08/2026: o ponto único de injeção que as regras recebem. "
+        "Cai junto com `catalogo` e pelo mesmo motivo — e é por isso que não "
+        "ganha entrada própria de conserto."
+    ),
+    # `portas_do_barramento.py` é a camada de sysfs que `ordens_da_mesa`
+    # consome. Ela tem chamador de produção (`mesmo_hub_fisico` importa
+    # `hubs_do_mesmo_plastico` desde 25/08), mas esse chamador é o próprio
+    # catálogo — que também não chega à tela. Cai tudo junto, e pela mesma
+    # ORDEM-4/ORDEM-5.
+    "integrations/portas_do_barramento.py::hubs_do_mesmo_plastico": (
+        "MEDIDO em 25/08/2026: a régua de `peer` que "
+        "`ordens_da_mesa.mesmo_hub_fisico` consome. Cai junto com o catálogo de "
+        "ordens, que é quem a consumiria até a tela."
+    ),
+    "integrations/portas_do_barramento.py::hubs_de": (
+        "MEDIDO em 25/08/2026: os hubs que hospedam o buraco onde um aparelho "
+        "está. Cai junto com o catálogo de ordens, que é quem a consumiria até "
+        "a tela."
+    ),
+    "integrations/portas_do_barramento.py::mesmo_hub_fisico": (
+        "MEDIDO em 25/08/2026: a pergunta de plástico em forma de par de "
+        "caminhos. Cai junto com o catálogo de ordens, que é quem a consumiria "
+        "até a tela."
+    ),
+    "integrations/portas_do_barramento.py::mesmo_soquete_fisico": (
+        "MEDIDO em 25/08/2026: o caso em que 'mude um dos dois de entrada' é a "
+        "ordem errada. Cai junto com o catálogo de ordens, que é quem a "
+        "consumiria até a tela."
+    ),
+    "integrations/portas_do_barramento.py::livres": (
+        "MEDIDO em 25/08/2026: os buracos vazios que uma pessoa alcança com a "
+        "mão. Cai junto com o catálogo de ordens, que é quem a consumiria até a "
+        "tela."
+    ),
+    "integrations/portas_do_barramento.py::livres_fora_de": (
+        "MEDIDO em 25/08/2026: a contra-regra de R3 virada em função. Cai junto "
+        "com o catálogo de ordens, que é quem a consumiria até a tela."
+    ),
     # --- 25/08/2026: TRÊS CURAS DA ONDA 0 NASCERAM SEM CHAMADOR
     # Achado por quem coordena a leva de 25/08, ao consertar duas lápides
     # caducas e ver o portão apontar outros quatro símbolos. Cada um destes é
