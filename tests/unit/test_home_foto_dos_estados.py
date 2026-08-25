@@ -23,6 +23,12 @@ feliz, byte a byte.** Se dois estados saem iguais, ou o produto não os
 distingue, ou o instrumento não os alcança — e nos dois casos a foto não serve
 de prova.
 
+A ÚNICA saída dessa régua é a DECLARADA (25/08/2026): um estado que a aba, por
+decisão medida, não distingue entra em `ESTADOS_SEM_EFEITO_NA_ABA`, no próprio
+instrumento, com a razão datada — e passa a ser cobrado pela régua contrária,
+que reprova se um dia ele sair diferente. Sem essa segunda régua, a declaração
+seria a porta por onde a foto volta a não provar nada.
+
 E a régua sabe RECUSAR (A2, "o dublê que só sabe passar"): o
 `test_a_regua_sabe_dizer_que_dois_estados_sao_iguais` fotografa o caminho feliz
 DUAS vezes e exige as duas somas idênticas. Sem ele, uma régua que sempre
@@ -40,6 +46,7 @@ exigir_gi_real("a foto dos estados da aba Início")
 import functools
 import hashlib
 import importlib.util
+import re
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +62,10 @@ pytest.importorskip("cairo")
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "gui-captura" / "retratar_abas.py"
 
+#: Toda razão declarada carrega data — mesma régua do portão do par
+#: assimétrico e do `portao_a_casa_sabe_e_o_produto_nao_faz`.
+_DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
+
 #: Os cinco estados que a sprint nomeia como NUNCA fotografados, mais a mesa
 #: vazia do §2.1 (o payload medido com zero controle na casa). O caminho feliz
 #: não entra: ele é a régua, não um dos medidos.
@@ -62,10 +73,16 @@ _ESTADOS_QUE_TEM_DE_DIFERIR = (
     "em_pausa",
     "grab_falhou",
     "externo_na_mesa",
-    "steam_input",
     "mascara_divergente",
     "mesa_vazia",
 )
+
+#: O `steam_input` saiu da lista acima em 25/08/2026 e não sumiu: ele passou
+#: para `ESTADOS_SEM_EFEITO_NA_ABA`, no próprio instrumento, com a razão datada
+#: e a régua CONTRÁRIA (`test_os_estados_declarados_iguais_saem_iguais`). A
+#: exceção de Steam Input não muda a linha da Ponte porque, desde a
+#: ESCONDER-EM-VEZ-DE-SAIR-01, quem alimenta o jogo durante ela continua sendo
+#: o gamepad do Hefesto — ver o ramo 2 de `texto_da_ponte`.
 
 
 @functools.lru_cache(maxsize=1)
@@ -188,6 +205,41 @@ def test_cada_estado_produz_uma_foto_diferente_do_caminho_feliz(
         "de novo, com os papéis trocados: lá o instrumento era cego, aqui é a "
         "aba que não fala. Cada nome desta lista é uma tarefa da sprint INÍCIO "
         "NÃO MENTE-01 que ainda não entrou."
+    )
+
+
+def test_os_estados_declarados_iguais_saem_iguais(_somas: dict[str, str]) -> None:
+    """A régua contrária — e ela é o que impede a declaração de virar desculpa.
+
+    Um estado só sai da régua da diferença DECLARADO em
+    `ESTADOS_SEM_EFEITO_NA_ABA`, com razão datada. Este teste cobra o outro
+    lado: se a aba passar a distinguir o estado, a foto muda, este teste
+    reprova, e quem mexeu é obrigado a devolver o nome à régua da diferença em
+    vez de deixar uma declaração que virou mentira.
+
+    É a mesma disciplina do `_PAR_ACEITO` do portão do par assimétrico
+    (`test_nenhuma_declaracao_ficou_obsoleta`): declaração sem régua que a
+    derrube envelhece em silêncio.
+    """
+    modulo = _script()
+    declarados = modulo.ESTADOS_SEM_EFEITO_NA_ABA
+    referencia = _somas["caminho_feliz"]
+
+    desconhecidos = [n for n in declarados if n not in modulo.ESTADOS_DO_INICIO]
+    assert not desconhecidos, (
+        f"declarados como sem efeito e ausentes do instrumento: {desconhecidos}"
+    )
+    for nome, razao in declarados.items():
+        assert _DATA.search(razao), (
+            f"a razão de {nome!r} não tem data. Razão sem idade vira paisagem — "
+            "é a régua que esta casa já escreveu duas vezes."
+        )
+    diferentes = [n for n in declarados if _somas.get(n) != referencia]
+    assert not diferentes, (
+        f"estes estados foram DECLARADOS sem efeito na aba e a foto mostra "
+        f"outra coisa: {diferentes}. A aba passou a distingui-los — mova o nome "
+        "para `_ESTADOS_QUE_TEM_DE_DIFERIR` e apague a declaração, senão a "
+        "razão datada fica no disco afirmando o que a tela já desmente."
     )
 
 
