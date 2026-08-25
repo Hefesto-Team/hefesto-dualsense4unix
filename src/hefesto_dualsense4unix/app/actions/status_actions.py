@@ -831,11 +831,21 @@ class StatusActionsMixin(WidgetAccessMixin):
     def set_status_tab_visivel(self, visivel: bool) -> None:
         """Liga/desliga a captura de áudio do microfone dos controles.
 
-        Chamado pelo `switch-page` do notebook (que identifica a aba pelo id
-        do Glade, não pela posição). Sair da aba MATA o `parec` de cada
-        controle: manter um processo capturando o microfone da usuária com a
-        janela em outra aba — ou minimizada — seria custo e intromissão sem
-        ninguém olhando o medidor.
+        Sair da aba MATA o `parec` de cada controle: manter um processo
+        capturando o microfone da usuária sem ninguém olhando o medidor seria
+        custo e intromissão.
+
+        **Os TRÊS gatilhos, e por que são três** (o terceiro é de
+        25/08/2026, STATUS-DIZ-O-QUE-VÊ-01/T8):
+
+        * `switch-page` do notebook — trocar de aba. Identifica a aba pelo id
+          do Glade, nunca pela posição;
+        * `delete-event` — a janela indo para a bandeja;
+        * `window-state-event` com o bit `ICONIFIED` — minimizar. Ele faltava,
+          e a palavra "minimizada" estava nesta docstring desde o primeiro
+          dia: com a aba Status à vista e a janela minimizada, a captura
+          continuava viva. Restaurar devolve a captura se a aba à vista for a
+          Status (`HefestoApp._on_window_state_event`).
 
         O monitor nasce na primeira vez que a aba é aberta; antes disso não
         existe thread nenhuma. Falha de import/inicialização é silenciosa
