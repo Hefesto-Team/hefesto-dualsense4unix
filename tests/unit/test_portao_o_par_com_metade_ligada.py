@@ -302,10 +302,23 @@ def _indexar(raiz: Path) -> _Indice:
                 isinstance(no, ast.Constant)
                 and isinstance(no.value, str)
                 and id(no) not in fora
+                and no.value.isidentifier()
             ):
                 # Despacho por string (`getattr(x, "nome")`) é caminho de produção,
                 # e ignorá-lo pegou a varredura do irmão CINCO vezes numa medição só.
-                palavras.update(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", no.value))
+                #
+                # O `isidentifier()` NASCEU EM 25/08/2026, e nasceu de um defeito
+                # reproduzido pelo agente da aba Emulação: sem ele, a régua fazia
+                # `findall` de TODA palavra de TODA string — e uma FRASE DE TELA que
+                # citasse o nome do símbolo bastava para o portão declarar "tem
+                # chamador" e se calar. Ele mesmo silenciou este portão sem querer,
+                # escrevendo o nome numa mensagem de erro.
+                #
+                # Despacho por string é sempre o nome INTEIRO e sozinho
+                # (`getattr(x, "meu_metodo")`, `_HANDLERS["meu_metodo"]`); prosa
+                # nunca é. Descartar a prosa é o que separa uma régua que mede de
+                # uma que se desliga quando alguém escreve bem.
+                palavras.add(no.value)
     return _Indice(chamadas=chamadas, corpos=corpos, palavras=palavras)
 
 
@@ -696,3 +709,40 @@ class TestOPortaoMorde:
         assert "getattr(daemon" not in muda, "o plantio mudo ainda lê a flag"
         (copia / _PLANTIO).write_text(muda, encoding="utf-8")
         assert "_plantio_da_mordida" not in pares_com_metade_ligada(copia)
+
+    def test_uma_frase_de_tela_nao_desliga_o_portao(self, tmp_path: Path) -> None:
+        """A TERCEIRA armadilha, achada em 25/08/2026 — e a que quase passou.
+
+        As duas do teste acima são docstring e ``__all__``, e a varredura já as
+        descarta. **Esta é outra: uma FRASE COMUM.** Enquanto a régua fazia
+        ``findall`` de toda palavra de toda string, bastava um texto de tela, uma
+        mensagem de erro ou um comentário-em-string citar o nome do símbolo para
+        a varredura declarar "tem chamador" e se calar.
+
+        Foi um agente que a achou, e do pior jeito possível: **ele silenciou este
+        portão sem querer**, escrevendo o nome do símbolo numa mensagem para o
+        usuário. A régua não reprovou, e não reprovar era o defeito.
+
+        A cura é uma linha — ``no.value.isidentifier()``. Despacho por string é
+        sempre o nome INTEIRO e sozinho (``getattr(x, "meu_metodo")``); prosa
+        nunca é.
+
+        **Este teste é o que impede a cura de ser desfeita:** arranque o
+        ``isidentifier()`` e ele reprova, porque a frase abaixo volta a valer
+        como chamador.
+        """
+        frase = (
+            "Não consegui aplicar: o armar_o_plantio do daemon recusou o pedido."
+        )
+        assert not frase.isidentifier(), "a frase de prova deixou de ser prosa"
+        assert "armar_o_plantio" in frase, (
+            "a frase de prova parou de citar o símbolo e não exerce mais a armadilha"
+        )
+        com_frase = _ARMADOR_SEM_CHAMADOR + f'\n\nAVISO_DA_TELA = {frase!r}\n'
+        copia = _copia_de_src(tmp_path)
+        (copia / _PLANTIO).write_text(com_frase, encoding="utf-8")
+        assert "_plantio_da_mordida" in pares_com_metade_ligada(copia), (
+            "uma frase de tela citando o símbolo DESLIGOU o portão — a régua "
+            "voltou a contar prosa como despacho, e ela para de medir "
+            "exatamente quando alguém escreve uma mensagem boa"
+        )
