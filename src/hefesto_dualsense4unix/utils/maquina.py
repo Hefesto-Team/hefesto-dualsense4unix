@@ -160,6 +160,25 @@ _NUMERO_DE_ENTRADA = re.compile(r"^[0-9]{1,3}[a-z]?$")
 _MAXIMO_DE_FACES = 8
 _MAXIMO_DE_ENTRADAS = 64
 
+#: A chave de ``ordens_dispensadas`` é o slug da regra que produziu a ordem
+#: (``radio_largo_no_mesmo_hub``), que é a mesma chave de teste do catálogo em
+#: ``integrations/ordens_da_mesa.py``. ASCII com sublinhado, nunca o texto de
+#: tela: o texto tem dono e muda, a chave é contrato.
+_CHAVE_DE_ORDEM = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+
+#: Só a data, nunca a hora. A hora não muda nenhuma decisão do produto e é um
+#: dado a mais sobre a rotina dela num arquivo que ela cola em relato de defeito.
+_DATA_ISO = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+
+#: Teto da assinatura de arranjo. Seis pares de caminho de barramento já é uma
+#: mesa mais cheia que qualquer uma desta casa.
+_MAXIMO_DO_ARRANJO = 256
+
+#: Doze hex seguidos é a forma em que serial e endereço de rádio aparecem. A
+#: assinatura de arranjo é caminho de barramento (``4-1.1.2``) e nunca chega
+#: perto disso — ver ``OrdemDispensada._assinatura_sem_identidade``.
+_DOZE_HEX = re.compile(r"[0-9a-fA-F]{12}")
+
 
 class RadioDeclarado(BaseModel):
     """Um aparelho vizinho que divide a faixa de 2,4 GHz com os controles.
@@ -177,12 +196,64 @@ class RadioDeclarado(BaseModel):
     apelido: str | None = None
 
 
+class OrdemDispensada(BaseModel):
+    """Uma recomendação que ela mandou calar — e o arranjo em que ela calou.
+
+    ``arranjo`` é o que faz a dispensa ser sobre um FATO, e não sobre uma
+    palavra. Ela vale para a mesa que ela viu; se ela mudar os cabos e a mesma
+    regra disparar com arranjo novo, é fato novo e a ordem volta. Chavear a
+    dispensa só pelo nome da regra faria a decisão de ontem calar uma medição de
+    hoje.
+
+    A assinatura carrega caminho de barramento (``4-1.1.2|3-1.1.4``) e nada
+    mais: nunca serial, nunca endereço. Ela precisa mudar quando os CABOS mudam,
+    e o número da entrada é o desenho dela, que muda sem nenhum cabo sair do
+    lugar.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    quando: str = ""
+    arranjo: str = ""
+
+    @field_validator("quando")
+    @classmethod
+    def _so_a_data(cls, valor: str) -> str:
+        """Só a data, em ISO. Hora não acrescenta nada e é um dado a mais dela."""
+        if valor and not _DATA_ISO.match(valor):
+            raise ValueError(f"data {valor!r} não é AAAA-MM-DD")
+        return valor
+
+    @field_validator("arranjo")
+    @classmethod
+    def _assinatura_sem_identidade(cls, valor: str) -> str:
+        """Teto de tamanho, e nenhuma sequência com cara de endereço.
+
+        ``check_anonymity.sh`` diz por escrito que o serial identifica a unidade
+        dela tão bem quanto o MAC, e este arquivo é gravado no ``$HOME`` dela e
+        lido pelo ``doctor.sh --censo``, que ela cola em relato de defeito.
+        """
+        if len(valor) > _MAXIMO_DO_ARRANJO:
+            raise ValueError("assinatura de arranjo longa demais")
+        if _DOZE_HEX.search(valor):
+            raise ValueError(
+                "assinatura de arranjo com cara de serial ou endereço"
+            )
+        return valor
+
+
 class MesaDeclarada(BaseModel):
     """Onde a antena está — o que nenhum barramento sabe.
 
     Corpo humano absorve 2,4 GHz, e nem a altura nem o obstáculo aparecem em
     lugar nenhum do sistema. As duas escolhas existem para que o exame da mesa
     possa explicar um alcance ruim em vez de apenas medi-lo.
+
+    ``ordens_dispensadas`` mora aqui, e não no ``gui_preferences.json``, porque
+    dispensar uma ordem é uma afirmação sobre a TOPOLOGIA desta casa — o mesmo
+    assunto de ``radios`` e ``altura_da_antena``. O arquivo da janela é da
+    JANELA, e dar dois donos possíveis ao mesmo fato é o defeito que a
+    CONFIGURAÇÕES-FECHA-01 acabou de curar.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -190,6 +261,26 @@ class MesaDeclarada(BaseModel):
     altura_da_antena: Literal["acima", "abaixo"] | None = None
     linha_de_visada: Literal["livre", "com_gente"] | None = None
     radios: dict[str, RadioDeclarado] = Field(default_factory=dict)
+    ordens_dispensadas: dict[str, OrdemDispensada] = Field(default_factory=dict)
+
+    @field_validator("ordens_dispensadas")
+    @classmethod
+    def _chave_de_ordem_e_o_slug_da_regra(
+        cls, valor: dict[str, OrdemDispensada]
+    ) -> dict[str, OrdemDispensada]:
+        """A chave é o slug da regra, e ``extra="forbid"`` não protege chave.
+
+        Mesma lição do ``_chave_de_radio_e_vid_pid``: sem este validador o disco
+        aceitaria ``{"aquela recomendação chata": {...}}`` e a próxima versão
+        herdaria lixo que nenhuma regra reclama.
+        """
+        for chave in valor:
+            if not _CHAVE_DE_ORDEM.match(chave):
+                raise ValueError(
+                    f"chave de ordem {chave!r} não é o slug de uma regra "
+                    "(minúsculas ASCII e sublinhado)"
+                )
+        return valor
 
     @field_validator("radios")
     @classmethod

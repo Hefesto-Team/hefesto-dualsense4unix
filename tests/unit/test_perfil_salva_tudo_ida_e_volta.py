@@ -527,9 +527,42 @@ def _gesto_key_bindings(janela: Any) -> None:
 
 
 def _confere_key_bindings(perfil: Profile) -> None:
-    assert perfil.key_bindings == {"triangle": ["KEY_C"]}, (
+    """O gesto da aba CHEGOU, e o que a aba não mostra CONTINUA lá.
+
+    NOTA DATADA, 25/08/2026 (NAVEGACAO-UM-CONTROLE-SO-01/N1, `ba94ff1`): esta
+    asserção era `== {"triangle": ["KEY_C"]}` — igualdade exata —, e por isso
+    ela FOSSILIZAVA UM DEFEITO. O `_persist_key_bindings_to_draft`
+    SUBSTITUÍA o rascunho pela lista da tela, e a aba Teclado nunca mostrou os
+    três atalhos de toque do touchpad: um gesto qualquer na aba **apagava do
+    perfil dela** o que ela nunca tinha visto. O commit da cura diz isso no
+    título: *"um gesto na aba apagava três atalhos do perfil dela, e a lista
+    nunca os mostrou"*.
+
+    Hoje a escrita FUNDE. A régua acompanha, e passa a medir as duas metades —
+    que é o que ela sempre quis dizer: o gesto chega ao disco, **e** o que a
+    aba não mostra sobrevive. Medir só a primeira metade com `==` deixava a
+    segunda livre para regredir em silêncio.
+
+    Isto é a `O-PERFIL-TEM-DE-GUARDAR-TUDO` (decisão dela, 18/08) aplicada à
+    própria régua.
+    """
+    # `key_bindings` é `None` quando o perfil não tem opinião nenhuma — e o
+    # teste que mede ESTA régua (`test_sem_o_gesto_a_conferencia_reprova`)
+    # chega exatamente assim. `or {}` mantém a reprovação sendo a MENSAGEM
+    # honesta abaixo, em vez de um `AttributeError` que não diz nada.
+    bindings = perfil.key_bindings or {}
+    assert bindings.get("triangle") == ["KEY_C"], (
         f"os bindings no arquivo são {perfil.key_bindings!r} — o teclado que "
         "ela montou não sobreviveu ao salvar"
+    )
+    intocados = {
+        chave: valor
+        for chave, valor in bindings.items()
+        if chave != "triangle"
+    }
+    assert intocados, (
+        "o perfil ficou SÓ com o que a aba mostra. O gesto voltou a apagar o "
+        "que a lista não exibe — é a N1 desfeita, e o preço é o perfil dela"
     )
 
 

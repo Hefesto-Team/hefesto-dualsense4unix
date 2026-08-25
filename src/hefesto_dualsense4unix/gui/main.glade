@@ -1725,6 +1725,17 @@
                         <property name="spacing">10</property>
                         <property name="margin">14</property>
 
+                        <!-- RUM-7, 25/08/2026: as quatro dicas nomeiam o TETO
+                             DE MESA. Economia/Balanceado/Máximo querem dizer
+                             PEDIDO aqui e TETO na aba Configurações, e as
+                             dicas não diziam uma palavra sobre a existência
+                             dele — a linha que avisa quando ele MORDE já
+                             existe desde a CONFIG-05 (22/08), mas ela só
+                             aparece quando morde, e por isso nunca ensinou que
+                             o teto existe. A oração é derivada do léxico da
+                             Configurações ("Um teto para a mesa inteira. As
+                             abas continuam mandando no que fazem — só não
+                             passam daqui"), não inventada aqui. -->
                         <!-- Linha de toggles de política -->
                         <child>
                           <object class="GtkBox">
@@ -1739,7 +1750,7 @@
 
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_economia">
-                                <property name="tooltip-text" translatable="yes">30% do que o jogo pede: vibração fraca em todos os jogos, poupa bateria e faz menos barulho.</property>
+                                <property name="tooltip-text" translatable="yes">30% do que o jogo pede: vibração fraca em todos os jogos, poupa bateria e faz menos barulho. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Economia</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_economia"/>
@@ -1747,7 +1758,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_balanceado">
-                                <property name="tooltip-text" translatable="yes">100%: vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão.</property>
+                                <property name="tooltip-text" translatable="yes">100%: vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Balanceado</property>
                                 <property name="active">True</property>
                                 <signal name="toggled" handler="on_rumble_policy_balanceado"/>
@@ -1755,7 +1766,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_max">
-                                <property name="tooltip-text" translatable="yes">150%: aumenta pela metade a vibração que o jogo pede. Só as cenas mais fortes batem no limite do controle e ficam parecidas entre si. Gasta bateria bem mais depressa.</property>
+                                <property name="tooltip-text" translatable="yes">150%: aumenta pela metade a vibração que o jogo pede. Só as cenas mais fortes batem no limite do controle e ficam parecidas entre si. Gasta bateria bem mais depressa. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Máximo</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_max"/>
@@ -1763,7 +1774,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_auto">
-                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle. Nunca aumenta a vibração além do que o jogo pediu: ele existe para poupar bateria.</property>
+                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle principal — e a força escolhida vale para todos os controles da mesa. Nunca aumenta a vibração além do que o jogo pediu: ele existe para poupar bateria. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Auto</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_auto"/>
@@ -1848,6 +1859,17 @@
                         <!-- Label educativo do modo Auto (oculto por padrão) -->
                         <child>
                           <object class="GtkLabel" id="rumble_policy_auto_label">
+                            <!-- RUM-4, 25/08/2026: "a bateria do controle",
+                                 no singular e sem dizer qual, prometia com
+                                 quatro na mesa um comportamento por jogador
+                                 que o produto NÃO faz. Quem lê a bateria é
+                                 `core.rumble._effective_mult`, a partir de
+                                 `store.snapshot().controller` — o PRIMÁRIO, um
+                                 só; e é a mesma medição que faz o esquema
+                                 recusar `auto` por unidade
+                                 (`profiles/schema.py`). Não é a granularidade
+                                 que entra aqui (essa é da 1.0): é a tela
+                                 parar de prometê-la. -->
                             <!-- DECISÃO, 11/08/2026: o Auto NUNCA amplifica — ele
                                  existe para poupar bateria, e amplificar sozinho
                                  seria o oposto do que ele promete. A escada dele
@@ -1858,7 +1880,7 @@
                                  este texto dizia. "Debounce" também saiu: é
                                  jargão, e ela nunca vê jargão. A escada viva está
                                  em `core.rumble._effective_mult`. -->
-                            <property name="label" translatable="yes">Modo Auto: ajusta a força sozinho, conforme a bateria do controle.
+                            <property name="label" translatable="yes">Modo Auto: ajusta a força sozinho, conforme a bateria do controle principal — e a força escolhida vale para todos os controles da mesa.
 Bateria acima de 50%: 100%, o que o jogo pediu.  Entre 20% e 50%: 70%.  Abaixo de 20%: 30%.
 O Auto nunca passa de 100%: ele existe para poupar bateria, não para aumentar a vibração.
 Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property>
@@ -3370,14 +3392,14 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_dualsense_button">
                         <property name="label" translatable="yes">DualSense (PS)</property>
-                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções para os jogos' (aba Sistema) os controles também não aparecem duplicados — layout PS sem o controle dobrado. Atenção: jogos que só entendem controle de Xbox ignoram esta máscara — neles use "Xbox 360".</property>
+                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo). A vibração ainda não foi conferida no aparelho — nem no cabo, nem no rádio: o caminho está montado, e se ela não vier não é erro seu. Com o botão 'Copiar opções para os jogos' (aba Sistema) os controles também não aparecem duplicados — layout PS sem o controle dobrado. Atenção: jogos que só entendem controle de Xbox ignoram esta máscara — neles use "Xbox 360".</property>
                         <signal name="clicked" handler="on_emulation_gamepad_dualsense"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_xbox_button">
                         <property name="label" translatable="yes">Xbox 360</property>
-                        <property name="tooltip-text" translatable="yes">Máscara Xbox 360: a vibração funciona em jogo e os controles não aparecem duplicados. Os jogos mostram prompts de Xbox (A/B/X/Y). É a única máscara que jogos XInput-only entendem; nessa API não existe giroscópio.</property>
+                        <property name="tooltip-text" translatable="yes">Máscara Xbox 360: os controles não aparecem duplicados e os jogos mostram prompts de Xbox (A/B/X/Y). A vibração ainda não foi conferida no aparelho — nem no cabo, nem no rádio: o caminho está montado. É a única máscara que jogos XInput-only entendem; nessa API não existe giroscópio.</property>
                         <signal name="clicked" handler="on_emulation_gamepad_xbox"/>
                       </object>
                     </child>
@@ -3386,7 +3408,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_gamepad_hint_label">
-                    <property name="label" translatable="yes">Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, Pragmata, Mad King Redemption, Mullet Mad Jack) funcionam completos com "DualSense (PS)": vibração, giroscópio e lightbar. Jogos que só entendem controle de Xbox ignoram a máscara DualSense — neles escolha "Xbox 360" (vibração funciona; giroscópio não existe nessa API). Sinal típico de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do jogo. Quando o suporte a DualSense do jogo vem PELA Steam (é o caso do Mullet Mad Jack), o jogo precisa enxergar os controles físicos: use a exceção por jogo em "Steam Input" na aba Emulação. Guia completo: docs/usage/jogos-e-mascaras.md</property>
+                    <property name="label" translatable="yes">Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, Pragmata, Mad King Redemption, Mullet Mad Jack) usam "DualSense (PS)": o giroscópio chega ao jogo e a lightbar obedece, e os dois estão medidos no cabo e no rádio. A vibração ainda não foi conferida no aparelho — nem no cabo, nem no rádio: o caminho está montado, e se ela não vier não é erro seu. Jogos que só entendem controle de Xbox ignoram a máscara DualSense — neles escolha "Xbox 360" (nessa API não existe giroscópio). Sinal típico de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do jogo. Quando o suporte a DualSense do jogo vem PELA Steam (é o caso do Mullet Mad Jack), marque "Esconder os controles físicos neste jogo" no editor de perfil, na aba Perfis. Guia completo: docs/usage/jogos-e-mascaras.md</property>
                     <property name="wrap">True</property>
                     <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
                          este paragrafo estica ate a largura da aba (medido: 1869px na
@@ -3571,7 +3593,7 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_hint">
-                    <property name="label" translatable="yes">&lt;i&gt;Como o jogo vê o controle: &lt;b&gt;DualSense&lt;/b&gt; mostra os botões de PlayStation e vibra. &lt;b&gt;Xbox 360&lt;/b&gt; serve para jogos que só entendem controle de Xbox. Enquanto isso, o Hefesto é quem fala com os controles.&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Como o jogo vê o controle: &lt;b&gt;DualSense&lt;/b&gt; mostra os botões de PlayStation. &lt;b&gt;Xbox 360&lt;/b&gt; serve para jogos que só entendem controle de Xbox. Enquanto isso, o Hefesto é quem fala com os controles.&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>

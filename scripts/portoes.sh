@@ -63,6 +63,7 @@ rapido|paridade-transporte|py|scripts/check_paridade_transporte.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
 rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
+completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 rapido|colisao-de-sprints|py|scripts/check_colisao_de_sprints.py
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
@@ -84,7 +85,6 @@ TABELA
 # ---------------------------------------------------------------------------
 _DIVERGENCIAS() {
   cat <<'DIV'
-FORA-DO-CI|scripts/check_colisao_de_sprints.py|nasceu em 25/08/2026 e o job dele ainda não existe: o `.github/workflows/ci.yml` NÃO é posse do agente que o escreveu nesta leva. É DÍVIDA DECLARADA, não divergência calada -- quem coordena acrescenta o job na integração, e este bloco some. Roda no `python3` pelado de propósito, sem dependência nenhuma, para que o job seja uma linha.
 FORA-DO-LOCAL|scripts/ci/instalar_como_usuaria.sh|ensaio de instalação em máquina descartável; rodar na máquina dela mexeria no sistema vivo.
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
 FORA-DO-LOCAL|scripts/portao_alvo_tem_dono.py|precisa de Xvfb. Fica na camada de tela, não no bloco de fechar leva.
@@ -181,6 +181,12 @@ while IFS='|' read -r camada id runner argv; do
     py)   cmd="$PY $argv" ;;
     bash) cmd="bash $argv" ;;
     bin)  cmd="$(_bin "${argv%% *}") ${argv#* }" ;;
+    # `pytest` como runner nasceu em 25/08/2026, e por um defeito medido: o
+    # `portao_a_casa_sabe_e_o_produto_nao_faz.py` RODA NO CI, ficou VERMELHO no
+    # `dev` por horas, e ninguém viu — porque a lista local não o continha e o
+    # portão da lista só compara `scripts/*`. Portão do CI que não cabe em
+    # `scripts/` precisa caber aqui, ou o buraco continua aberto.
+    pytest) cmd="$PY -m pytest -q $argv" ;;
     *)    echo "ERRO: runner desconhecido '$runner' no portão '$id'" >&2; exit 2 ;;
   esac
 

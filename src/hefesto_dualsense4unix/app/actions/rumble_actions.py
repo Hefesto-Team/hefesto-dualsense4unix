@@ -34,7 +34,11 @@ from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.mode_transition import STATE_IPC_TIMEOUT_S
-from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, alvo_de_edicao
+from hefesto_dualsense4unix.app.alvo_de_edicao import (
+    AlvoDeEdicao,
+    EstadoDoAlvo,
+    alvo_de_edicao,
+)
 from hefesto_dualsense4unix.app.ipc_bridge import (
     call_async,
     rumble_passthrough,
@@ -109,6 +113,76 @@ _BTN_GIVE_BACK_TO_GAME = BTN_GIVE_BACK_TO_GAME
 _MSG_HEFESTO_OFF = "não consegui — o Hefesto pode estar desligado (ligue na aba Sistema)."
 
 
+def _pedidos_por_jogador(ff: dict[str, Any]) -> str | None:
+    """A contagem de pedidos POR JOGADOR; ``None`` = a soma responde melhor.
+
+    RUM-9 (25/08/2026). O ``rumble_ff`` tem duas metades: o agregado (``plays``,
+    ``nao_nulos``), que esta aba sempre leu, e o ``per_vpad``, que existe desde a
+    RUMBLE-QUE-NÃO-SE-SENTE-01 e que **só o card do controle** lia
+    (``widgets.controller_card._item_do_vpad``). Com a mesa cheia a soma manda
+    caçar no lugar errado: *"o jogo pediu vibração 40x"* com o Jogador 2 mudo é
+    verdade sobre a mesa e mentira sobre o jogador que reclamou.
+
+    ``None`` nos quatro casos em que somar não perde nada — e afirmar por
+    jogador perderia:
+
+    1. **Não há lista** (``per_vpad`` ausente ou não-lista): daemon mais velho.
+       Inventar jogadores a partir do agregado seria dado fabricado;
+    2. **Um jogador só** (0 ou 1 entrada): a frase de hoje já é sobre ele, e a
+       casa exige que ela fique **byte-idêntica** — quem joga sozinho não vê
+       mudança nenhuma nesta leva;
+    3. **Alguma entrada não traz ``ff_nao_nulo_count``** (daemon mais velho, ou
+       vpad que não respondeu): a frase por jogador teria um buraco no meio, e
+       "não sei" viraria "nenhuma" — as duas mandam caçar em lugares opostos;
+    4. **Ninguém pediu nada** (nenhum ``play`` e nenhum ``nao_nulo``): a frase
+       agregada *"o jogo ainda não pediu vibração nenhuma"* diz o mesmo com
+       menos ruído, e repetir "nenhuma" por jogador não acrescenta um fato.
+
+    A **ordem da verdade** de :func:`texto_dos_pedidos_de_vibracao` não muda:
+    esta função entra depois de ``estranhos`` e ``descartados`` (que são defeito
+    NOSSO e valem para a mesa inteira) e antes do ramo agregado — só o ESCOPO da
+    resposta muda, nunca a ordem das perguntas.
+
+    Cada jogador responde à mesma pergunta 5/6 do agregado, com as mesmas
+    palavras: pediu FORÇA (``nao_nulo``), falou e pediu zero (``play`` sem
+    ``nao_nulo``), ou não falou.
+    """
+    per_vpad = ff.get("per_vpad")
+    if not isinstance(per_vpad, list) or len(per_vpad) < 2:
+        return None
+    linhas: list[tuple[int, str]] = []
+    algum_pedido = False
+    algum_nao_nulo = False
+    for item in per_vpad:
+        if not isinstance(item, dict):
+            return None
+        player = _inteiro(item.get("player"))
+        nao_nulo = _inteiro(item.get("ff_nao_nulo_count"))
+        plays = _inteiro(item.get("ff_play_count"))
+        if player is None or nao_nulo is None or plays is None:
+            return None
+        if nao_nulo > 0:
+            algum_pedido = True
+            algum_nao_nulo = True
+            linhas.append((player, f"Jogador {player}: {nao_nulo}x"))
+        elif plays > 0:
+            algum_pedido = True
+            linhas.append(
+                (player, f"Jogador {player}: {plays}x, todas com força zero")
+            )
+        else:
+            linhas.append((player, f"Jogador {player}: nenhuma"))
+    if not algum_pedido:
+        return None
+    linhas.sort(key=lambda par: par[0])
+    corpo = " · ".join(texto for _, texto in linhas)
+    if algum_nao_nulo:
+        # A mesma oração final do agregado, e pelo mesmo motivo: quem pediu
+        # força e não sentiu tem de saber que a caça é do nosso lado.
+        return f"o jogo pediu vibração — {corpo} — se não sentiu, é aqui dentro"
+    return f"o jogo pediu vibração — {corpo}"
+
+
 def texto_dos_pedidos_de_vibracao(state: dict[str, Any]) -> str | None:
     """O pedaço da linha que conta os pedidos de vibração DO JOGO.
 
@@ -167,6 +241,11 @@ def texto_dos_pedidos_de_vibracao(state: dict[str, Any]) -> str | None:
     volta EXATAMENTE ao texto antigo (o número de ``plays``): com o campo
     ausente não se sabe qual das duas causas é, e inventar uma seria repetir o
     defeito que esta função existe para curar.
+
+    **RUM-9 (25/08/2026): as perguntas 5 e 6 passaram a ter ESCOPO.** Com dois
+    ou mais gamepads virtuais na mesa, quem responde é
+    :func:`_pedidos_por_jogador` — a ordem acima fica inteira, e só o escopo da
+    resposta muda. Com um jogador só a frase é byte-idêntica à de sempre.
     """
     if bool(state.get("native_mode")):
         return "Conexão Nativa (Sony): o jogo fala direto com o controle"
@@ -188,6 +267,12 @@ def texto_dos_pedidos_de_vibracao(state: dict[str, Any]) -> str | None:
             f"o jogo pediu vibração {descartados}x num formato que o Hefesto "
             "não reconheceu — é defeito nosso, mande esta tela para o suporte"
         )
+    # RUM-9: com a mesa cheia, a resposta é POR JOGADOR. `None` = a soma
+    # responde melhor (os quatro casos estão no docstring de lá), e aí a função
+    # segue exatamente como sempre foi.
+    por_jogador = _pedidos_por_jogador(ff)
+    if por_jogador is not None:
+        return por_jogador
     nao_nulos = _inteiro(ff.get("nao_nulos"))
     if nao_nulos is None:
         # Daemon antigo: só o número ambíguo, e nenhuma afirmação além dele.
@@ -329,6 +414,68 @@ def texto_do_teto_do_orcamento(
     )
 
 
+#: RUM-1 (25/08/2026) — a frase que a docstring de
+#: :meth:`RumbleActionsMixin._gravar_intensidade_no_rascunho` já escreveu em
+#: 10/08 e que nunca chegou à tela: *"o que ela ouve na hora é o global; o que
+#: ela SALVA é da peça"*.
+#:
+#: **O defeito que ela confessa.** Com um controle escolhido no seletor, o
+#: clique grava a intensidade no override daquela peça E manda
+#: ``rumble.policy_set`` **sem endereço** — que é da máquina inteira. A tela
+#: afirmava o alvo três centímetros acima e não dizia uma palavra sobre isso.
+#:
+#: **Isto é o ramo "rótulo honesto agora" da D-G dela**, e não a cura da
+#: divergência: a intensidade por peça ao vivo é a E1 da MESA-CHEIA-05
+#: (~11 h medidas) e a palavra é dela. A mentira é o que fere; a granularidade
+#: é conforto.
+#:
+#: Público porque a mordida de ``tests/unit/test_rumble_por_jogador_01.py`` o
+#: lê daqui em vez de redigitar a frase — duas cópias de um texto de tela
+#: divergem na primeira edição, e esta casa já pagou por isso.
+TEXTO_ONDE_GRAVA_E_ONDE_MANDA = (
+    "Com um controle escolhido: a intensidade acima vale agora para todos os "
+    "controles ligados — só o que você salvar no perfil fica deste controle."
+)
+
+
+#: RUM-3 (25/08/2026) — a oração que o toast ganha quando o gesto APAGOU o
+#: ajuste próprio da peça escolhida.
+#:
+#: **O defeito, medido em 24/08.** Com uma peça no seletor, clicar "Auto"
+#: limpa o override dela (``draft_config.with_controller_rumble``: o esquema
+#: recusa ``auto`` por unidade, porque ele escala pela bateria do controle
+#: PRINCIPAL). A regra está certa e é deliberada; o que a tela fazia era
+#: afundar o botão, mandar ``auto`` global e dizer só *"Intensidade da
+#: vibração: Auto"* — indistinguível do caso "Todos", com o ajuste daquela
+#: peça apagado em silêncio.
+#:
+#: Começa com " — " porque é sufixo do toast, e o toast é uma linha só.
+TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL = (
+    " — e este controle voltou ao ajuste geral: o Auto escala pela bateria do "
+    "controle principal, então ele vale para a mesa toda, nunca para um só."
+)
+
+
+def texto_de_onde_grava_e_onde_manda(alvo: AlvoDeEdicao) -> str | None:
+    """O aviso de alcance do GESTO; ``None`` = não há divergência a confessar.
+
+    Três estados, três respostas — o contrato do
+    :mod:`app.alvo_de_edicao`, na letra:
+
+    * ``CONTROLE`` → a frase. É o único estado em que a aba grava num lugar
+      (o override da peça) e manda em outro (a política global do daemon);
+    * ``TODOS`` → ``None``. Ali o que ela grava e o que ela manda são a mesma
+      coisa: não há divergência, e um aviso permanente viraria ruído crônico —
+      a mesma disciplina do :func:`texto_do_alcance_da_intensidade`;
+    * ``DESCONHECIDO`` → ``None``. A janela não sabe o alvo, e portanto não
+      escreve nada no rascunho (``_gravar_intensidade_no_rascunho`` recusa).
+      Prometer "fica deste controle" sem saber qual seria inventar um fato.
+    """
+    if alvo.estado is EstadoDoAlvo.CONTROLE:
+        return TEXTO_ONDE_GRAVA_E_ONDE_MANDA
+    return None
+
+
 def _rotulo_do_teto(host: Any) -> Any:
     """O rótulo da linha de teto, criado na primeira vez que faz falta.
 
@@ -396,6 +543,69 @@ def _pintar_a_linha_do_teto(host: Any, policy: str, custom_mult: float | None) -
     # de alcance logo acima. O texto não leva `<`, `&` nem aspas, então entra
     # inteiro no markup do Pango — mesma costura do rótulo de estado.
     rotulo.set_markup(f'<span foreground="#ffb86c">{texto}</span>')
+    rotulo.set_visible(True)
+
+
+def _rotulo_do_alcance_do_gesto(host: Any) -> Any:
+    """O rótulo da frase de RUM-1, criado na primeira vez que faz falta.
+
+    Nasce em código e não no Glade pelo motivo já registrado no
+    :func:`_rotulo_do_teto`: ``main.glade`` é XML único, sem seções nomeadas, e
+    conflito de merge nele é irrecuperável na prática. O molde é o mesmo — cria
+    ao lado de um widget que já existe, devolve ``None`` quando não há onde
+    pendurá-lo, e nunca levanta.
+
+    Vizinho dos outros dois avisos do card "Intensidade da vibração", e a
+    ordem entre eles é a ordem das perguntas: *"ela alcança o jogo?"*
+    (``rumble_policy_aviso``), *"ela chega inteira?"* (o teto) e *"ela vale
+    para quem?"* (esta). As três metades da mesma dúvida.
+    """
+    existente = getattr(host, "_rumble_alcance_do_gesto_label", None)
+    if existente is not None:
+        return existente
+    try:
+        aviso = host._get("rumble_policy_aviso")
+        if aviso is None:
+            return None
+        caixa = aviso.get_parent()
+        if caixa is None:
+            return None
+        rotulo = Gtk.Label()
+        rotulo.set_use_markup(True)
+        rotulo.set_xalign(0.0)
+        rotulo.set_line_wrap(True)
+        rotulo.set_no_show_all(True)
+        caixa.pack_start(rotulo, False, False, 0)
+        rotulo.hide()
+    except Exception:
+        return None
+    host._rumble_alcance_do_gesto_label = rotulo
+    return rotulo
+
+
+def _pintar_a_linha_do_alcance_do_gesto(host: Any) -> None:
+    """Acende (ou apaga) a frase de RUM-1 na aba Rumble.
+
+    Função de módulo, e não método do mixin, pela razão medida que já está no
+    :func:`_pintar_a_linha_do_teto`: o dublê de ``test_rumble_actions.py`` monta
+    a aba por COMPOSIÇÃO, ligando uma lista EXPLÍCITA de métodos, e todo método
+    novo no mixin nasce ausente lá.
+
+    O alvo é lido pelo dono único (``alvo_de_edicao``), nunca pelo ``getattr``
+    do atributo legado — a queda silenciosa que o P3 curou.
+    """
+    rotulo = _rotulo_do_alcance_do_gesto(host)
+    if rotulo is None:
+        return
+    texto = texto_de_onde_grava_e_onde_manda(alvo_de_edicao(host))
+    if texto is None:
+        rotulo.set_visible(False)
+        return
+    # `#8be9fd` é o token de INFO da casa (`gui/theme.css`): a frase explica,
+    # não alarma — quem alarma é o aviso de alcance, em laranja, logo acima. O
+    # texto não leva `<`, `&` nem aspas retas, então entra inteiro no markup do
+    # Pango, mesma costura dos outros dois rótulos deste card.
+    rotulo.set_markup(f'<span foreground="#8be9fd">{texto}</span>')
     rotulo.set_visible(True)
 
 
@@ -513,6 +723,10 @@ class RumbleActionsMixin(WidgetAccessMixin):
         # exceção da pintura deixaria o guard preso em True e a aba inteira
         # muda para sempre.
         _pintar_a_linha_do_teto(self, policy, custom_mult)
+        # RUM-1: e a mesma pintura para o alcance do GESTO — é aqui que a aba
+        # se monta, e é montada que ela precisa confessar onde grava e onde
+        # manda. Sem esta linha a frase só apareceria depois de um clique.
+        _pintar_a_linha_do_alcance_do_gesto(self)
 
     # --- handlers dos toggles de política ---
 
@@ -568,18 +782,26 @@ class RumbleActionsMixin(WidgetAccessMixin):
         # deixar de bater), e a linha tem de acompanhar o clique — não só a
         # entrada na aba.
         _pintar_a_linha_do_teto(self, policy, None)
+        # RUM-1: o seletor pode ter mudado desde a montagem, e a confissão de
+        # alcance vale para o clique de AGORA.
+        _pintar_a_linha_do_alcance_do_gesto(self)
 
         # FEAT-RUMBLE-POLICY-PROFILE-01: além do daemon vivo, grava a escolha
         # no draft — o "Salvar Perfil" do rodapé persiste a política que a
         # usuária vê. Preset zera custom_mult (o valor só faz sentido em
         # policy="custom"; o schema do perfil rejeita a combinação).
-        self._gravar_intensidade_no_rascunho(policy, None)
+        apagou_o_ajuste_da_peca = self._gravar_intensidade_no_rascunho(policy, None)
 
         # HARM-19: recusa do daemon VIVO (motivo preenchido) não pode virar
         # acusação de daemon morto — é o tratamento que os gatilhos já têm.
         ok, motivo = rumble_policy_set_checked(policy, timeout=STATE_IPC_TIMEOUT_S)
         if ok:
             texto = f"Intensidade da vibração: {_POLICY_LABEL.get(policy, policy)}"
+            # RUM-3: o gesto apagou o ajuste próprio daquela peça. O toast tem
+            # de NOMEAR o apagamento — sem esta oração ele é indistinguível do
+            # caso "Todos", e o override some sem uma palavra.
+            if apagou_o_ajuste_da_peca:
+                texto += TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL
         elif motivo:
             texto = f"O Hefesto não aceitou essa intensidade: {motivo}"
         else:
@@ -639,6 +861,9 @@ class RumbleActionsMixin(WidgetAccessMixin):
         # CONFIG-05: o deslizador é o caminho que mais bate no teto — ele sobe
         # até 200%, e o Economia da mesa limita em 30%.
         _pintar_a_linha_do_teto(self, "custom", mult)
+        # RUM-1: o ajuste do deslizador grava na peça e manda na mesa pelo
+        # MESMO par de caminhos do clique num botão — a confissão vale igual.
+        _pintar_a_linha_do_alcance_do_gesto(self)
         # FEAT-RUMBLE-POLICY-PROFILE-01: persiste o custom no draft (mesma
         # razão do preset em `_set_policy` — o rodapé salva o que ela vê).
         self._gravar_intensidade_no_rascunho("custom", mult)
@@ -665,8 +890,14 @@ class RumbleActionsMixin(WidgetAccessMixin):
 
     def _gravar_intensidade_no_rascunho(
         self, policy: str, mult: float | None
-    ) -> None:
+    ) -> bool:
         """Anota a intensidade escolhida no rascunho — global ou da peça.
+
+        Devolve **``True`` quando o gesto APAGOU o ajuste próprio da peça**
+        escolhida (RUM-3, 25/08/2026) — a única informação que o chamador não
+        tem como recuperar depois, e a que ele precisa para dizer o que
+        aconteceu. ``False`` em todos os outros caminhos, inclusive no "Todos"
+        e no alvo desconhecido.
 
         POR-UNIDADE-01, pedido dela em 10/08/2026: *"uma guia específica do
         perfil X pro controle branco e outra pro mesmo perfil pra um controle
@@ -682,16 +913,18 @@ class RumbleActionsMixin(WidgetAccessMixin):
         vale por peça chega ao hardware pelo "Aplicar" do rodapé e pela
         ativação do perfil (a escala do backend, ``set_rumble_scales``). Com
         uma peça selecionada, portanto, o que ela ouve na hora é o global; o
-        que ela SALVA é da peça.
+        que ela SALVA é da peça. **Essa frase virou tela em RUM-1**
+        (:data:`TEXTO_ONDE_GRAVA_E_ONDE_MANDA`); ela passou de 10/08 a 25/08
+        escrita só aqui dentro, onde nenhuma usuária lê.
         """
         draft = getattr(self, "draft", None)
         if draft is None:
-            return
+            return False
         estado_alvo = self._rumble_edit_uniq()
         if estado_alvo.desconhecido:
             # Z2-1: a janela não sabe o alvo — zero escrita no rascunho, e
             # nunca cai no ramo "Todos" (que limparia os overrides de peça).
-            return
+            return False
         uniq = estado_alvo.uniq
         if uniq is None:
             new_rumble = draft.rumble.model_copy(
@@ -701,11 +934,22 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self.draft = draft.with_override_fields_cleared(
                 "rumble", {"policy", "custom_mult"}
             )
-            return
+            return False
+        # RUM-3: o ANTES da peça, lido antes de escrever. `with_controller_rumble`
+        # LIMPA o override em três casos (igual ao global, `policy=None` e
+        # `auto`), e o "Auto" é o que a tela não contava: o botão afunda, o
+        # daemon recebe `auto` global, o toast diz "Auto" — e o ajuste próprio
+        # daquela peça sumiu sem uma palavra. A regra está certa (o esquema
+        # recusa `auto` por unidade, porque ele escala pela bateria do controle
+        # PRINCIPAL); o que faltava era contar.
+        antes = getattr(draft.controller_override(uniq), "rumble", None)
         base = draft.effective_rumble_for(uniq)
-        self.draft = draft.with_controller_rumble(
+        novo = draft.with_controller_rumble(
             uniq, base.model_copy(update={"policy": policy, "custom_mult": mult})
         )
+        self.draft = novo
+        depois = getattr(novo.controller_override(uniq), "rumble", None)
+        return antes is not None and depois is None
 
     def _activate_policy_toggle(self, policy: str) -> None:
         """Ativa o toggle correspondente à política (sem guard)."""

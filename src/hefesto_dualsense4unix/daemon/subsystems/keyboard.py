@@ -282,8 +282,25 @@ def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     """Cria device virtual de teclado + touchpad reader. Idempotente.
 
     Retorna True se ativo ao final; False se falhou ao iniciar o device
-    principal. O `TouchpadReader` é best-effort: se o device evdev do
-    touchpad não existir (controle BT, kernel velho), não quebra o fluxo.
+    principal. O `TouchpadReader` é best-effort: se o nó evdev do touchpad não
+    existir, não quebra o fluxo.
+
+    CORREÇÃO DE FATO — 25/08/2026. Esta linha dizia que o nó podia faltar "(
+    controle BT, kernel velho)", e o **BT saiu**: o `hid_playstation` cria o nó
+    de touchpad nos dois transportes, e ele foi medido no rádio em 21/07/2026
+    (o nome muda, não a existência — o BlueZ o batiza sem o prefixo do
+    fabricante, e é por isso que o casamento por nome exato falhava; ver o
+    cabeçalho de `assets/76-dualsense-touchpad-libinput-ignore.rules`). Nem a
+    descoberta olha transporte: `_discover_dualsense_por_nome` filtra por
+    vendor/product e marcador de nome, sem uma linha sobre `bustype`. Medido de
+    novo em 25/08 no DualSense do CABO desta bancada: gamepad em `event21` e
+    touchpad em `event23`, a mesma identidade nos dois.
+
+    O que faz as três regiões não dispararem tecla HOJE é outra coisa, e é
+    decisão dela: o touchpad voltou a ser ponteiro do SISTEMA
+    (TOUCHPAD-DO-SISTEMA-01), e quem se cala é o `_combine_with_touchpad`
+    abaixo, pelo `ponteiro_do_sistema` do reader. Medido na mesma leitura:
+    `LIBINPUT_IGNORE_DEVICE` ausente no nó do touchpad físico.
 
     EMULACAO-NO-JOGO-01: o gate de `keyboard_emulation_enabled` mora AQUI,
     espelhando `subsystems/mouse.py` (`if not cfg.mouse_emulation_enabled:

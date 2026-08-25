@@ -64,9 +64,18 @@ condição que ninguém estava medindo.
 Daí as duas perguntas serem SEPARADAS neste arquivo, e nunca respondidas pela
 mesma função:
 
-- :func:`ler_a_mesa` — *"esta instância que já existe nasceu limpa?"*. É
+- :func:`veredito_do_nascimento` — *"esta instância que já existe nasceu limpa?"*. É
   DIAGNÓSTICO, e só a responde para instâncias cujo nascimento esteja no diário.
-  Sem diário, ``CONFIANCA_NAO_SEI`` — jamais ``limpa``;
+  Sem diário, ``CONFIANCA_NAO_SEI`` — jamais ``limpa``.
+
+  **Ela se chamava ``ler_a_mesa`` até 25/08/2026, e o nome saiu porque custou.**
+  ``integrations/mesa_de_radio`` tem uma ``ler_a_mesa`` também, e aquela LÊ a
+  mesa de verdade (ocupação de adaptador, para a seção "A mesa"); esta lê o
+  DIÁRIO e dá um veredito. A homonímia fez a primeira varredura da
+  ``SINAL-NO-NASCIMENTO-01`` parecer dizer que o veredito já estava ligado no
+  produto — um ``grep`` achava a função errada. Não há alias de compatibilidade
+  de propósito: um manteria a colisão viva, que é o defeito que o nome novo
+  existe para matar;
 - :func:`limpo_para_conectar` — *"se um controle conectar AGORA, vai nascer
   limpo?"*. É PROGNÓSTICO, e é a que tem de guardar o botão de reconectar. Um
   produto que oferece a cura sem consultar esta função entrega à pessoa o gesto
@@ -194,6 +203,30 @@ def mascarar(mac: str) -> str:
     return ":".join(partes)
 
 
+def endereco_normalizado(valor: object) -> str:
+    """O endereço numa grafia SÓ — os hexa, minúsculos. ``""`` quando não há.
+
+    As duas metades desta casa escrevem o mesmo MAC de jeitos diferentes, e a
+    diferença está MEDIDA na bancada em 25/08/2026:
+
+    * o sysfs devolve ``HID_UNIQ=a0:fa:9c:…`` — COM os dois-pontos (lido no
+      ``uevent`` do DualSense que está no cabo desta máquina), e é daí que sai
+      o ``Instancia.uniq`` deste módulo;
+    * o backend chaveia por ``core/sysfs_leds.norm_mac``, que os TIRA:
+      ``nos_hidraw_por_uniq`` → ``_key_to_uniq`` → ``a0fa9c…``. É essa grafia
+      que chega ao payload de IPC e, por ele, à tela.
+
+    Comparar as duas sem normalizar não casa NUNCA — e foi assim que o carimbo
+    do nascimento ficou de 22/08 a 25/08 declarado "entregue" e sem carimbar
+    nada em produção: o filtro de "só os controles NOSSOS" descartava as seis
+    instâncias, e o tique saía com zero.
+
+    A regra é a mesma do ``norm_mac``, escrita aqui porque este módulo roda
+    como CLI solta (``python -m …sinal_da_barra``) e não importa ``core/``.
+    """
+    return "".join(ch for ch in str(valor or "").lower() if ch in "0123456789abcdef")
+
+
 @dataclass(frozen=True)
 class Instancia:
     """Uma conexão viva, como o sysfs a descreve — sem tocar o aparelho.
@@ -282,7 +315,7 @@ class Nascimento:
 class Carimbo:
     """O veredito de nascimento de UMA instância, guardado na hora em que ela nasceu.
 
-    Existe porque o veredito de :func:`ler_a_mesa` custa dois ``journalctl`` e
+    Existe porque o veredito de :func:`veredito_do_nascimento` custa dois ``journalctl`` e
     depende de o diário AINDA ter a linha. Carimbado no nascimento, ele vira
     resposta de memória, e sobrevive à rotação do diário — a primeira das três
     fragilidades que a ``SINAL-NO-NASCIMENTO-01`` listou.
@@ -559,7 +592,7 @@ def _linhas_do_diario(
     return linhas
 
 
-def ler_a_mesa(
+def veredito_do_nascimento(
     *,
     instancias: Sequence[Instancia] | None = None,
     nascimentos: Mapping[str, Nascimento] | None = None,
@@ -784,10 +817,18 @@ class CartorioDoNascimento:
 
         Um controle só tem UMA conexão viva por vez, então não há ambiguidade —
         e as conexões mortas já foram esquecidas por :meth:`observar`.
+
+        Os DOIS lados passam por :func:`endereco_normalizado`, e não é zelo: o
+        carimbo é guardado com o endereço do sysfs (``aa:bb:cc:…``) e quem
+        pergunta é a tela, que só conhece a grafia do backend (``aabbcc…``).
+        Comparar as duas cruas devolveria ``None`` em todo card — que a tela lê
+        como *"não carimbei"*, e é a mentira mais cara deste módulo.
         """
-        alvo = str(uniq).lower()
+        alvo = endereco_normalizado(uniq)
+        if not alvo:
+            return None
         for carimbo in self._carimbos.values():
-            if carimbo.uniq.lower() == alvo:
+            if endereco_normalizado(carimbo.uniq) == alvo:
                 return carimbo
         return None
 
@@ -816,7 +857,7 @@ def limpo_para_conectar(
 ) -> tuple[str, str, tuple[int, ...]]:
     """PROGNÓSTICO: se um controle conectar AGORA, ele nasce limpo?
 
-    É esta — e não :func:`ler_a_mesa` — que tem de guardar o botão de
+    É esta — e não :func:`veredito_do_nascimento` — que tem de guardar o botão de
     reconectar. Oferecer a cura com a mesa suja gasta o gesto do botão PS dela
     para produzir outra instância travada, que é a forma exata do "falso
     positivo recorrente" que ela nomeou em 12/08/2026.
@@ -909,7 +950,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"{confianca}: {porque}")
         return 0 if confianca == CONFIANCA_LIMPA else 1
 
-    leituras = ler_a_mesa()
+    leituras = veredito_do_nascimento()
     if opcoes.json:
         print(
             json.dumps(

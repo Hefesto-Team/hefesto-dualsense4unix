@@ -65,6 +65,81 @@ fez nascer está na `QUATRO-COMPONENTES-02`, logo abaixo.
 
 ## [Unreleased]
 
+### A leva da madrugada de 25/08 — vinte e duas frentes, e o que apareceu quando elas se encontraram
+
+**164 commits, 278 arquivos.** Ela saiu por sete horas e delegou: *"aja como PO e
+orquestrador… conto contigo"*. O que segue é o que fechou, o que ficou aberto, e
+os erros que a integração encontrou — inclusive os de quem coordenou.
+
+#### Três defeitos VIVOS na máquina dela
+
+- **A cura HARM-16 estava desarmada.** Um clique em "Parar" e ela virava no-op
+  **pelo resto da sessão** — o controle podia ficar vibrando ao sair de um modo.
+  A guarda de `zero_motors_on_mode_exit` exigia `rumble_active is None`, e
+  `rumble.stop` gravava `(0, 0)`, que também não é `None`.
+- **A troca de perfil por jogo estava cega.** O detector escolhia `xlib` sempre
+  que havia `DISPLAY`, e numa sessão Wayland com XWayland morto **não havia
+  saída** — a cascata que o COSMIC atende ficava ao lado, nunca tentada. Junto,
+  o `healthy` mentia em DOIS lugares: a Onda 0 curou um em 24/08 e o segundo
+  seguia 40 linhas abaixo, intocado.
+- **O `doctor.sh` mentia sobre a própria cura**, afirmando em verde que *"o jogo
+  só vê o vpad"* com `evdev` e `joydev` do mesmo controle abertos.
+
+E um quarto, que a suíte revelou: **um gesto na aba Teclado apagava do perfil
+dela três atalhos que a lista nunca mostrou.** A escrita substituía o rascunho
+pela tela; hoje funde.
+
+#### O que nasceu
+
+`integrations/mapa_das_portas.py`, `arranjo_da_mesa.py` (o motor do arranjo,
+portado do mockup com **114 testes de equivalência** que rodam o original em
+`node`), `entradas_do_gabinete.py` (sabe quais entradas USB existem — inclusive
+as **vazias**), `lugar_declarado.py` (grava no `maquina.json` **sem o daemon**),
+`app/actions/contrato_da_mascara.py`, e a infra de execução: `scripts/portoes.sh`
+(24 portões numa peça), `bancada.sh`, `costurar.sh`, `check_colisao_de_sprints.py`.
+
+#### Réguas que não mediam o que prometiam
+
+- **Uma frase de tela desligava um portão.** A varredura contava toda palavra de
+  toda string como "despacho", e um agente **silenciou o portão sem querer**
+  escrevendo o nome de um símbolo numa mensagem de erro. E a cura passava nos dois
+  estados: **nenhum teste a protegia**.
+- **O portão `casa-sabe` roda no CI e ficou vermelho no `dev` por horas** — pela
+  mesma causa que o `validar-caducos.py` cometeu antes: portão do CI que não está
+  no bloco local. O `portoes.sh` ganhou runner `pytest`.
+- **19 lápides caducas** declaravam "sem caminho hoje" sobre módulos que a
+  produção passou a alcançar; **51 promessas novas** entraram declaradas, com
+  onde o caminho se perde e o que o fecha.
+- **O piso do emblema de testes nunca foi verdadeiro:** repintado para 12.000 em
+  25/08 às 02h52, quando a contagem real era 10.346. Foi para 10.000, com a folga
+  de 10,7% que os dois precedentes desta casa usam.
+
+#### Regras novas, e as três nasceram de estrago medido
+
+- **R5 — a mordida é destrutiva enquanto dura.** Entre arrancar a cura e devolvê-la
+  a árvore está inválida; dois agentes na mesma árvore produziram um commit com os
+  testes e **sem o produto**. O worktree isola o índice do git, não a árvore.
+- **R6 — a árvore dela fica em `dev`.** Quem coordena integra em árvore própria:
+  trocar a branch da principal fez um mockup **sumir do disco na frente dela**.
+- **A suíte inteira não termina com seis frentes em voo** — parou nos 13% com
+  `load average` 6,7. Os portões decidem a integração; a suíte roda no fim.
+
+#### Erros de quem coordenou, corrigidos e escritos
+
+- **Decidi o microfone no rádio sem ler as specs.** O mapa de canais registra,
+  medido, que ele *"nasce desligado por opt-in — privacidade e banda"*, e a prova
+  dela era um print do **cabo**. A decisão voltou a ser dela.
+- **Passei premissas caducas a três agentes** — um campo que não existe mais desde
+  23/08, e dois módulos que não existem. Os três mediram e me corrigiram.
+- **Escrevi uma receita de mordida que não mordia.** O conferente refez e provou.
+
+#### O que ficou para ela
+
+A **bancada inteira**: o hub USB dela saiu do barramento às 02:36 (ela confirmou
+que o cabo está fora) e `/sys/class/bluetooth/` ficou **vazio** — nenhuma medição
+de rádio foi possível a noite inteira. Toda tarefa que dependia disso está
+registrada com o comando exato. E o **carimbo D3** de todo texto novo de tela.
+
 ### A leva de 23/08 — a aba Configurações passa a responder, e a cor por rádio ganha causa
 
 A aba nasceu em 22/08 sabendo declarar e sem saber dizer o que fez com a

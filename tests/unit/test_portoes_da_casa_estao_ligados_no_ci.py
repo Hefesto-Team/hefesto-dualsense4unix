@@ -102,6 +102,16 @@ RAIZ = Path(__file__).resolve().parents[2]
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
 CLAUDE_MD = RAIZ / "CLAUDE.md"
 
+#: A LISTA DE PORTÕES, VERSIONADA — e é a cura que o `_AUSENTE` abaixo pedia
+#: desde 13/08/2026, com todas as letras: *"mova a lista de portões para um
+#: arquivo VERSIONADO e aponte esta guarda para ele"*. Ela chegou em 25/08 como
+#: `scripts/portoes.sh`, e por um motivo que esta guarda já conhecia: o
+#: `CLAUDE.md` é `.gitignore:90`, não chega ao CI **nem à árvore de agente
+#: nenhuma** — `git worktree add` não copia arquivo ignorado.
+#:
+#: A guarda deixa de ser cega no CI: a fonte agora viaja com o repositório.
+PORTOES_SH = RAIZ / "scripts" / "portoes.sh"
+
 #: O cabeçalho que abre o bloco de portões do `CLAUDE.md`. Se ele mudar, esta
 #: guarda tem de saber — daí o teste da âncora logo abaixo.
 CABECALHO = "## Antes de fechar qualquer leva"
@@ -145,18 +155,28 @@ _AUSENTE = (
 
 
 def bloco_de_portoes() -> str:
-    """O trecho de shell do `CLAUDE.md` que lista o que rodar antes da leva."""
-    if not CLAUDE_MD.is_file():
-        pytest.skip(_AUSENTE)
-    texto = CLAUDE_MD.read_text(encoding="utf-8")
-    inicio = texto.find(CABECALHO)
+    """A tabela `_LISTA` do `scripts/portoes.sh` — a fonte versionada.
+
+    ATÉ 25/08/2026 esta função lia o bloco de shell do `CLAUDE.md`, e o
+    `_AUSENTE` abaixo declarava o preço disso: no CI o arquivo não chega, e a
+    guarda ficava cega no único lugar onde ela precisa morder. A cura que
+    aquele texto pedia chegou — a lista virou `scripts/portoes.sh`, versionada
+    — e esta função aponta para ela.
+
+    O formato da tabela é `camada|id|runner|comando`, e o que interessa aqui
+    são os comandos: é deles que sai a lista de scripts.
+    """
+    if not PORTOES_SH.is_file():
+        pytest.skip(
+            "scripts/portoes.sh não existe nesta árvore — sem a lista "
+            "versionada esta guarda não tem o que conferir."
+        )
+    texto = PORTOES_SH.read_text(encoding="utf-8")
+    inicio = texto.find("_LISTA()")
     if inicio < 0:
         return ""
-    cerca = texto.find("```", inicio)
-    if cerca < 0:
-        return ""
-    fim = texto.find("```", cerca + 3)
-    return texto[cerca:fim] if fim > 0 else ""
+    fim = texto.find("TABELA", texto.find("<<'TABELA'", inicio) + 10)
+    return texto[inicio:fim] if fim > 0 else ""
 
 
 def portoes_da_casa() -> list[str]:

@@ -224,29 +224,14 @@ from hefesto_dualsense4unix.app.actions import triggers_actions
 # --- Fakes de widgets GTK ---------------------------------------------
 
 
-class _FakeComboBox:
-    def __init__(self, active_id: str | None = None) -> None:
-        self._entries: list[tuple[str, str]] = []
-        self._active_id: str | None = active_id
-        self._visible = True
-
-    def remove_all(self) -> None:
-        self._entries.clear()
-
-    def append(self, id_: str, label: str) -> None:
-        self._entries.append((id_, label))
-
-    def set_active_id(self, id_: str) -> None:
-        self._active_id = id_
-
-    def get_active_id(self) -> str | None:
-        return self._active_id
-
-    def get_visible(self) -> bool:
-        return self._visible
-
-    def set_visible(self, v: bool) -> None:
-        self._visible = bool(v)
+# GATILHO-NÃO-PERDIDO-01 (25/08/2026): aqui morava `_FakeComboBox`, e ele saiu
+# junto com o último uso — o id órfão `trigger_{side}_preset_combo` em
+# `_mk_widgets`. A aba não tem mais combo nenhum desde a
+# FEAT-DSX-COMBO-TO-SEGMENTED-01; guardar um dublê de combo ao lado do de
+# segmentado convidava o próximo teste a escolher o errado, que é exatamente o
+# que aconteceu com os três testes de preset. Apagar não faz ninguém repetir
+# trabalho: o `_FakeSegmentedSelector` cobre a mesma API por-ID, e cobre melhor
+# — ele sabe RECUSAR.
 
 
 class _FakeSegmentedSelector:
@@ -362,7 +347,25 @@ def _mk_widgets() -> dict[str, Any]:
         widgets[f"trigger_{side}_mode_slot"] = _Box()
         widgets[f"trigger_{side}_desc"] = _Label()
         widgets[f"trigger_{side}_params_box"] = _Box()
-        widgets[f"trigger_{side}_preset_combo"] = _FakeComboBox()
+        # GATILHO-NÃO-PERDIDO-01 (25/08/2026): aqui morava
+        # `trigger_{side}_preset_combo` — **um id que o glade não tem e que o
+        # produto nunca pede**. Sobrou da FEAT-DSX-COMBO-TO-SEGMENTED-01, que
+        # trocou o combo do preset por um segmentado empacotado num SLOT
+        # (`trigger_{side}_preset_slot`, `triggers_actions.py:146`): a troca foi
+        # feita no seletor de MODO e esquecida no de PRESET.
+        #
+        # O preço não era cosmético. O órfão era um `_FakeComboBox`, cujo
+        # `set_active_id` aceita QUALQUER id; o `_FakeSegmentedSelector` — como
+        # o widget real — RECUSA id que não está entre os itens. Três testes
+        # pegavam o órfão, mandavam "rampa_crescente" nele e ficavam verdes
+        # **sem que a aba tivesse publicado esse preset**. É "o dublê que só
+        # sabe passar" (COMO-REGER-AGENTES.md, A2) dentro do arquivo cuja
+        # própria docstring de dublê cita essa regra.
+        #
+        # Com o SLOT no lugar do órfão, o segmentado de preset também é
+        # empacotado e mostrado, como o de modo — e os testes passam a falar
+        # com `self._trigger_preset[side]`, que é o widget que a aba wira.
+        widgets[f"trigger_{side}_preset_slot"] = _Box()
         widgets[f"trigger_{side}_preset_row"] = _Box()
     widgets["status_bar"] = _FakeStatusBar()
     return widgets
@@ -875,6 +878,42 @@ def test_reset_trigger_leva_o_controle_escolhido(
     )
 
 
+def test_os_dois_seletores_chegam_ao_slot_que_o_glade_tem(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Modo e preset têm de ser EMPACOTADOS, não só guardados num atributo.
+
+    GATILHO-NÃO-PERDIDO-01 (25/08/2026), e é a metade que faltava: a aba
+    guarda os dois segmentados em `self._trigger_mode` / `self._trigger_preset`
+    **e** os empacota nos slots do glade (`triggers_actions.py:134` e `:148`).
+    Guardar sem empacotar deixa um seletor que existe para o código e não
+    existe para ela — a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na tela.
+
+    Nenhuma régua desta casa olhava para isso: `install_triggers_tab` pula o
+    `pack_start` em silêncio quando o slot não vem (`if slot is not None`), que
+    é exatamente o caminho que o dublê antigo tomava — ele não trazia o
+    `trigger_{side}_preset_slot`, então o segmentado de preset NUNCA era
+    empacotado em teste nenhum deste arquivo.
+
+    Mordida: apagar `preset_slot.pack_start(preset_sel, True, True, 0)` (ou o
+    par dele no modo) em `install_triggers_tab`.
+    """
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+
+    for side in ("left", "right"):
+        for papel, slot_id, guardado in (
+            ("modo", f"trigger_{side}_mode_slot", mixin._trigger_mode[side]),
+            ("preset", f"trigger_{side}_preset_slot", mixin._trigger_preset[side]),
+        ):
+            slot = mixin._widgets[slot_id]
+            assert guardado in slot.get_children(), (
+                f"o segmentado de {papel} do lado {side} ficou fora de "
+                f"`{slot_id}`: a aba o guarda no atributo e ela não o vê na "
+                f"tela"
+            )
+
+
 def test_on_preset_changed_feedback_popula_sliders(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -886,10 +925,16 @@ def test_on_preset_changed_feedback_popula_sliders(
     mode_combo.set_active_id("MultiPositionFeedback")
     mixin.on_trigger_left_mode_changed(mode_combo)
 
-    preset_combo = mixin._widgets["trigger_left_preset_combo"]
-    preset_combo.set_active_id("rampa_crescente")
+    preset_sel = mixin._trigger_preset["left"]
+    preset_sel.set_active_id("rampa_crescente")
+    assert preset_sel.get_active_id() == "rampa_crescente", (
+        "o segmentado de preset RECUSA id que a aba não publicou — se esta "
+        "linha cai, `_populate_preset_combo` deixou de pôr a Rampa crescente "
+        "na aba, e o resto do teste estaria medindo um preset que a usuária "
+        "não tem como escolher"
+    )
 
-    mixin.on_trigger_left_preset_changed(preset_combo)
+    mixin.on_trigger_left_preset_changed(preset_sel)
 
     # Pelo menos um slider foi alterado (valor != 0 em pos_0).
     widgets = mixin._trigger_param_widgets["left"]
@@ -908,9 +953,14 @@ def test_on_preset_changed_custom_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     for i in range(10):
         widgets[f"pos_{i}"].set_value(0)
 
-    preset_combo = mixin._widgets["trigger_left_preset_combo"]
-    preset_combo.set_active_id("custom")
-    mixin.on_trigger_left_preset_changed(preset_combo)
+    preset_sel = mixin._trigger_preset["left"]
+    assert preset_sel.get_active_id() == "custom", (
+        "a aba nasce com 'Personalizar' selecionado "
+        "(`_populate_preset_combo`) — é esse o estado que este teste diz que "
+        "não mexe em slider nenhum"
+    )
+    preset_sel.set_active_id("custom")
+    mixin.on_trigger_left_preset_changed(preset_sel)
 
     # Todos continuam 0.
     for i in range(10):
@@ -1177,9 +1227,13 @@ def test_preset_changed_atualiza_draft_e_agenda_preview(
     mixin.on_trigger_left_mode_changed(mode_combo)
     agendados.clear()
 
-    preset_combo = mixin._widgets["trigger_left_preset_combo"]
-    preset_combo.set_active_id("rampa_crescente")
-    mixin.on_trigger_left_preset_changed(preset_combo)
+    preset_sel = mixin._trigger_preset["left"]
+    preset_sel.set_active_id("rampa_crescente")
+    assert preset_sel.get_active_id() == "rampa_crescente", (
+        "o segmentado de preset RECUSA id que a aba não publicou — sem esta "
+        "linha o teste mediria o rascunho de um preset que a aba não oferece"
+    )
+    mixin.on_trigger_left_preset_changed(preset_sel)
 
     esperado = tuple(FEEDBACK_POSITION_PRESETS["rampa_crescente"])
     assert mixin.draft.triggers.left.mode == "MultiPositionFeedback"
