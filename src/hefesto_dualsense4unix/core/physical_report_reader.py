@@ -408,6 +408,74 @@ def _struct_base(report: bytes) -> int | None:
     return None
 
 
+# --- os quatro campos, JÁ com a base na mão ---------------------------------
+#
+# DAEMON-ACORDADO-01 (25/08/2026) — POR QUE ESTA CAMADA EXISTE.
+#
+# O laço de leitura precisa de QUATRO campos do mesmo report (clique, jack,
+# bateria e a janela de motion), e cada extrator público começava chamando o
+# `_struct_base` por conta própria. Num report de BT o `_struct_base` valida
+# CRC-32 — logo o laço pagava **quatro** CRC-32 por report onde um basta, mais
+# as três cópias de buffer que cada `bt_crc32` faz (`report[:-4]`, o `bytes()`
+# de dentro e a concatenação com o byte de seed).
+#
+# A conta, medida em 25/08/2026 nesta bancada (Ryzen 5800X, CPython 3.13,
+# report BT de 78 B; `timeit`, mínimo de 5 repetições de 200 mil chamadas):
+#
+#   quatro extratores............ 3,10 us por report
+#   `_struct_base` sozinho....... 0,68 us
+#   base uma vez + os 4 `_com_base`  1,11 us
+#
+# Na mesa dela — quatro DualSense por rádio, ~2.400 relatórios/s no total
+# (QUATRO-MICROFONES-01, 22/08) — isso é **0,74 % de um núcleo contra 0,27 %**,
+# e são 9.600 validações de CRC por segundo viradas em 2.400.
+#
+# Não é o defeito inteiro dos 15,2 % medidos em 23/08 — aquilo é contado em
+# SYSCALLS (6.393 `read`/s) e isto é CPU de usuário, que syscall nenhuma
+# explica. É a fatia que este arquivo responde, e é a única que se prova sem o
+# aparelho dela. O portão que trava a economia é
+# `tests/unit/test_daemon_acordado_01_o_laco_que_valida_quatro_vezes.py`, que
+# CONTA as validações por report em vez de cronometrar — número estável em
+# máquina de CI.
+#
+# Os quatro extratores públicos continuam existindo e continuam calculando a
+# base sozinhos: eles são a porta de quem tem UM report na mão (testes, CLI,
+# quem lê um dump). Quem está no caminho quente usa as funções `_..._com_base`.
+
+
+def _janela_com_base(report: bytes, base: int) -> bytes | None:
+    """Janela de motion (25 B) a partir da base já resolvida."""
+    start = base + MOTION_WINDOW_OFFSET
+    end = start + MOTION_WINDOW_LEN
+    if len(report) < end:
+        return None
+    return bytes(report[start:end])
+
+
+def _clique_com_base(report: bytes, base: int) -> bool | None:
+    """Clique do touchpad a partir da base já resolvida."""
+    idx = base + BUTTONS2_OFFSET
+    if len(report) <= idx:
+        return None
+    return bool(report[idx] & TOUCHPAD_CLICK_BIT)
+
+
+def _jack_com_base(report: bytes, base: int) -> int | None:
+    """Byte de fone/microfone a partir da base já resolvida."""
+    idx = base + JACK_STATUS_OFFSET
+    if len(report) <= idx:
+        return None
+    return int(report[idx])
+
+
+def _bateria_com_base(report: bytes, base: int) -> int | None:
+    """Byte de bateria a partir da base já resolvida."""
+    idx = base + BATTERY_STATUS_OFFSET
+    if len(report) <= idx:
+        return None
+    return int(report[idx])
+
+
 def extract_motion_window(report: bytes) -> bytes | None:
     """Janela de motion (25 B) de um report CRU do físico, ou None.
 
@@ -418,11 +486,7 @@ def extract_motion_window(report: bytes) -> bytes | None:
     base = _struct_base(report)
     if base is None:
         return None
-    start = base + MOTION_WINDOW_OFFSET
-    end = start + MOTION_WINDOW_LEN
-    if len(report) < end:
-        return None
-    return bytes(report[start:end])
+    return _janela_com_base(report, base)
 
 
 def extract_touchpad_click(report: bytes) -> bool | None:
@@ -437,10 +501,7 @@ def extract_touchpad_click(report: bytes) -> bool | None:
     base = _struct_base(report)
     if base is None:
         return None
-    idx = base + BUTTONS2_OFFSET
-    if len(report) <= idx:
-        return None
-    return bool(report[idx] & TOUCHPAD_CLICK_BIT)
+    return _clique_com_base(report, base)
 
 
 def extract_jack_status(report: bytes) -> int | None:
