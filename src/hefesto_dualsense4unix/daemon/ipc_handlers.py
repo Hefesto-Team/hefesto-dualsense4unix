@@ -28,6 +28,7 @@ from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
     apply_rumble_policy,
     uniq_do_alvo_de_output,
 )
+from hefesto_dualsense4unix.integrations import sinal_da_barra as _sinal_da_barra
 from hefesto_dualsense4unix.integrations.no_do_vpad import (
     NO_DESCONHECIDO,
     no_ainda_vale,
@@ -3105,6 +3106,13 @@ class IpcHandlersMixin:
           exigiria refactor do estado desejado fora do escopo; a legibilidade
           de cor escura (objetivo do D8) é da GUI via
           `utils/color_contrast.ensure_min_contrast`.
+        - ``nascimento`` (SINAL-NO-NASCIMENTO-01/E2): como a CONEXÃO deste
+          controle nasceu, ou ``None`` = **não carimbei** (nunca "limpa"). É a
+          RAZÃO que faltava ao botão "A luz não acende" do card: enquanto o
+          veredito condena esta instância, a tela pode dizer por quê. Sai do
+          cartório que o tique de hotplug já carimbou — ver
+          :meth:`_nascimento_para` para as chaves e para o custo (zero).
+
         - ``inputs``: ``{lx,ly,rx,ry,l2_raw,r2_raw,buttons}`` — mais as chaves
           OPCIONAIS ``gyro`` (``{x,y,z}`` em graus/s) e ``touchpad``
           (``{touching,x,y,width,height}``) quando o controle tem os nodes
@@ -3175,6 +3183,7 @@ class IpcHandlersMixin:
             entry["lightbar_on"] = on
             entry["lightbar_source"] = source
             entry["lightbar_disputada"] = self._lightbar_disputada(uniq, nos_por_uniq)
+            entry["nascimento"] = self._nascimento_para(uniq)
 
             if entry.get("is_primary") and state is not None:
                 entry["inputs"] = self._inputs_from_state(state)
@@ -3357,6 +3366,55 @@ class IpcHandlersMixin:
         if not isinstance(sentinela, _escritor_cru.SentinelaDeEscritorCru):
             return False
         return bool(sentinela.veredito.segurado(no))
+
+    def _nascimento_para(self, uniq: str | None) -> dict[str, Any] | None:
+        """Como a conexão DESTE controle nasceu; ``None`` = **não carimbei**.
+
+        SINAL-NO-NASCIMENTO-01/E2 — a porta de IPC do cartório. O veredito já
+        era tirado no tique de hotplug (`connection.carimbar_o_nascimento`) e
+        vivia só dentro do daemon: a tela tinha o botão da cura ("A luz não
+        acende") e não tinha a RAZÃO para oferecê-la.
+
+        As chaves são as do `Carimbo`: ``confianca`` (`limpa`/`suspeita`/
+        `nao_sei`), ``porque`` (a frase em português, pronta para a tela — e
+        ela nunca diz "acesa" nem "apagada", que é o que este módulo não sabe),
+        ``pede_reconexao`` (só em `suspeita` — é quando a cura se aplica),
+        ``instancia`` (o sufixo `.NNNN`, a identidade da CONEXÃO), ``hw_version``
+        (revisão de placa: diagnóstico, NUNCA identidade — dois controles do
+        mesmo lote colidem) e ``firme`` (`False` = ainda na janela de
+        nascimento; o veredito pode PIORAR no tique seguinte, nunca melhorar).
+
+        Leitura PURA, e é ela que torna o campo pagável no tique de 1 s da GUI:
+        tirar o veredito custa dois `journalctl`, e aqui ele já está tirado —
+        este método lê um dicionário em memória. Nada de `/proc`, nada de
+        sysfs, nenhum subprocesso.
+
+        ``None`` é "não carimbei", e nunca "nasceu limpa". Ler a ausência como
+        inocência é o defeito que a BARRA-MUDA-01 §5 nomeou. Ele sai quando o
+        daemon subiu e ainda não carimbou, quando nenhum handle está aberto, e
+        quando esta conexão não está no cartório.
+
+        `isinstance`, e não pato, pela mesma razão do `_lightbar_disputada`: o
+        daemon é `MagicMock` em boa parte da suíte, e `getattr(...).do_uniq(x)`
+        devolveria outro mock — uma acusação na tela dela nascida de um dublê
+        de teste seria a pior estreia possível.
+        """
+        if uniq is None or self.daemon is None:
+            return None
+        cartorio = getattr(self.daemon, "_cartorio_do_nascimento", None)
+        if not isinstance(cartorio, _sinal_da_barra.CartorioDoNascimento):
+            return None
+        carimbo = cartorio.do_uniq(uniq)
+        if carimbo is None:
+            return None
+        return {
+            "confianca": str(carimbo.confianca),
+            "porque": str(carimbo.porque),
+            "pede_reconexao": bool(carimbo.pede_reconexao),
+            "instancia": str(carimbo.instancia),
+            "hw_version": str(carimbo.hw_version),
+            "firme": bool(carimbo.firme),
+        }
 
     def _lightbar_read_cached(
         self, node: Any
