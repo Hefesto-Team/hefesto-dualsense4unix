@@ -2216,8 +2216,8 @@ _RAZAO_MINIMA = 120
 # `test_nenhuma_lapide_sobreviveu_a_propria_cura` varria os dois registros com
 # o `assert` DENTRO do laço, e a primeira falha cortava o laço — o segundo
 # registro nunca era lido. Foi assim que DUAS lápides caducas
-# (`utils/maquina.py::gravar_maquina` e `app/ipc_bridge.py::destinos_da_
-# aplicacao`) conviveram meses sem que ninguém soubesse que eram duas: quem
+# (`utils/maquina.py::gravar_maquina` e `app/ipc_bridge.py::destinos_da_aplicacao`)
+# conviveram meses sem que ninguém soubesse que eram duas: quem
 # via o vermelho consertava a primeira, rodava de novo, e só então descobria
 # a segunda — se rodasse de novo.
 #
