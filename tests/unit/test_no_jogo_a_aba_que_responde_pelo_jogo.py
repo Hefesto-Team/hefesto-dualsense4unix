@@ -90,6 +90,31 @@ def _vpad(**extra: Any) -> dict[str, Any]:
     return base
 
 
+def _pedido_de_vibracao(ha_s: float = 0.2) -> list[dict[str, Any]]:
+    """Um anel de vibração com um PEDIDO de verdade: motor não-nulo e fresco.
+
+    NO-JOGO-SEM-FALSO-VERDE-01/T1 (25/08/2026). Desde esta leva a linha
+    "vibração" só fica verde com PROVA de pedido: o carimbo `rumble` sozinho
+    sai também da PARADA do SDL, que chega sem jogo nenhum na mesa — medido na
+    bancada dela em 23/08, com zero DualSense e nenhum jogo aberto
+    (`ff_parada_sdl_count: 1`, `ff_nao_nulo_count: 0`), e a linha ficou verde
+    por três segundos. Todo teste que quer dizer "o jogo está vibrando" passa a
+    dizê-lo pelo anel, que é onde o payload guarda a diferença — e sempre
+    guardou.
+    """
+    return [
+        {
+            "ha_s": ha_s,
+            "flag0": 4,
+            "flag1": 0,
+            "flag2": 0,
+            "weak": 40,
+            "strong": 90,
+            "ramo": "v1",
+        }
+    ]
+
+
 def _por_recurso(estado: dict[str, Any]) -> dict[str, Any]:
     return {
         linha.recurso: linha for linha in linhas_do_controle(_PRIMARIO, estado)
@@ -242,7 +267,12 @@ def test_mascara_xbox_explica_em_vez_de_acusar() -> None:
     primeira asserção reprovar.
     """
     estado = _estado(
-        _vpad(visto_ha_s={"rumble": 0.3}, motion_forwards=0), flavor="xbox"
+        _vpad(
+            visto_ha_s={"rumble": 0.3},
+            ff_ultimos_reports=_pedido_de_vibracao(0.3),
+            motion_forwards=0,
+        ),
+        flavor="xbox",
     )
     linhas = _por_recurso(estado)
 

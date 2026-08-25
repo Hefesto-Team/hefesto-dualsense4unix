@@ -43,6 +43,29 @@ def _estado(visto: dict[str, float] | None = None, **extra: Any) -> dict[str, An
     return {"rumble_ff": {"per_vpad": [vpad]}}
 
 
+def _pedido_de_vibracao(ha_s: float = 0.2) -> list[dict[str, Any]]:
+    """Um anel de vibração com um PEDIDO de verdade: motor não-nulo e fresco.
+
+    NO-JOGO-SEM-FALSO-VERDE-01/T1 (25/08/2026). O carimbo `rumble` sozinho não
+    prova pedido nenhum — ele sai também da PARADA do SDL, que chega sem jogo
+    nenhum na mesa (medido em 23/08: `ff_parada_sdl_count: 1` com
+    `ff_nao_nulo_count: 0`, e a linha ficou verde por três segundos). Quem
+    separa os dois é o anel `ff_ultimos_reports`, que o payload publica desde a
+    QUEM ESCREVEU-01 e ninguém lia.
+    """
+    return [
+        {
+            "ha_s": ha_s,
+            "flag0": 4,
+            "flag1": 0,
+            "flag2": 0,
+            "weak": 40,
+            "strong": 90,
+            "ramo": "v1",
+        }
+    ]
+
+
 # ---------------------------------------------------------------------------
 # E1 — o vpad ganha recência, e não só contagem
 # ---------------------------------------------------------------------------
@@ -200,9 +223,18 @@ def test_a_idade_do_carimbo_decide_a_situacao(idade: Any, esperado: str) -> None
     no meio de uma partida.
 
     Mordida: trocar o `<=` por `<`. O caso exato do teto cai.
+
+    O anel vai junto e com a MESMA idade do carimbo, porque desde a
+    NO-JOGO-SEM-FALSO-VERDE-01/T1 a vibração faz duas perguntas: *houve
+    conversa?* (o carimbo) e *houve pedido?* (o anel). Este teste mede a
+    fronteira da PRIMEIRA — por isso o pedido está sempre presente, e o que
+    varia é só a idade.
     """
     visto = {} if idade is None else {"rumble": idade}
-    estado = estado_do_recurso("vibracao", _PRIMARIO, _estado(visto))
+    anel = [] if idade is None else _pedido_de_vibracao(idade)
+    estado = estado_do_recurso(
+        "vibracao", _PRIMARIO, _estado(visto, ff_ultimos_reports=anel)
+    )
 
     assert estado is not None
     assert estado.situacao == esperado
@@ -296,6 +328,7 @@ def test_a_frase_separa_chegando_de_parado_de_nunca() -> None:
     """
     estado = _estado(
         {"rumble": 0.2, "trigger": 40.0},
+        ff_ultimos_reports=_pedido_de_vibracao(0.2),
         motion_streaming=True,
         motion_hz=194.0,
     )

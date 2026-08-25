@@ -111,6 +111,22 @@ ABA_STATUS = "tab_status_box"
 #: pintar a aba errada em silêncio (EST-10 / JANELA-FIEL-01).
 ABA_NO_JOGO = "tab_no_jogo_box"
 
+#: Quantas falhas SEGUIDAS do tique lento até a aba "No jogo" esvaziar.
+#:
+#: NO-JOGO-SEM-FALSO-VERDE-01 T4 (25/08/2026). Não é 1 e não é 10, e os dois
+#: extremos têm preço medido:
+#:
+#: * **1** faria a aba piscar — o tique é de 2 Hz e um `daemon.state_full` que
+#:   estoura o tempo uma vez sozinho é rotina nesta casa (o executor tem UM
+#:   worker para os três pollers, e o guard de inflight existe por isso);
+#: * **muitas** deixaria a mentira confortável de pé pelo tempo todo, que é
+#:   exatamente o que a docstring de `_sync_paineis_no_jogo` promete não fazer.
+#:
+#: Três a 2 Hz é 1,5 s — mais que o suficiente para atravessar um poll perdido,
+#: e menos que o `ATIVIDADE_FRESCA_S` (3,0 s) que decide se a linha diz "no jogo
+#: agora". O teto do painel nunca sobrevive à régua que o pinta.
+FALHAS_ATE_ESVAZIAR_NO_JOGO = 3
+
 #: A coluna e a altura do botão da rota de som NO BERÇO (o `status_grid` do
 #: frame Estado). Elas repetem o empacotamento do Glade porque a devolução
 #: acontece em código — o botão sai do berço para o card e pode voltar, e
@@ -343,6 +359,13 @@ class StatusActionsMixin(WidgetAccessMixin):
     # 1 worker que os 3 pollers de `daemon.state_full` compartilham.
     _profile_inflight: bool = False
     _reconnect_inflight: bool = False
+    #: NO-JOGO-SEM-FALSO-VERDE-01 T4: falhas SEGUIDAS do tique lento (2 Hz).
+    #: Zerado em toda resposta boa; ao bater
+    #: :data:`FALHAS_ATE_ESVAZIAR_NO_JOGO` a aba "No jogo" esvazia, em vez de
+    #: manter "no jogo agora" ao lado de um número que ninguém mediu desde
+    #: então. Antes desta leva o caminho de falha só soltava o guard de
+    #: inflight e não fazia mais nada.
+    _profile_falhas_seguidas: int = 0
     # STATUS-02: cards por controle, keyed por `(index, uniq)` (com sufixo
     # posicional defensivo em duplicata). Os caches de diff dos widgets de
     # live-state (R3) migraram para DENTRO de cada ControllerCard.
@@ -751,6 +774,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         # ABA-DO-JOGO-01: a EXISTÊNCIA da aba se decide aqui, uma linha ACIMA do
         # gate de pintura, e a ordem é a cura inteira — atrás dele esta chamada
         # nunca aconteceria com a aba escondida, e a aba escondida nunca voltaria.
+        #
+        # T4 (25/08/2026): o `_render_slow_state` chama o MESMO gate antes do
+        # gate de popup, e esta linha continua aqui — não é redundância. Este é
+        # o ponto de entrada que o `_render_offline` e a bancada de teste usam,
+        # e um gate que só existisse no chamador de cima deixaria os dois sem
+        # ele. A chamada é idempotente: mostrar o que já está na tira e esconder
+        # o que já saiu dela não fazem nada.
         self._sync_visibilidade_no_jogo(state)
         notebook = self._get("main_notebook")
         if (
@@ -2486,12 +2516,41 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._profile_inflight = False
         if isinstance(state, dict):
             self._first_poll_succeeded = True
+            # T4: a contagem só zera com resposta APROVEITADA. Um `state` que
+            # não é dict é uma resposta que não deu para usar, e tratá-la como
+            # sucesso manteria o painel congelado para sempre.
+            self._profile_falhas_seguidas = 0
             self._render_slow_state(state)
         return False  # não repetir via GLib
 
     def _on_profile_state_failure(self, _exc: Exception) -> bool:
-        """Callback de falha do tick lento — libera o guard de inflight."""
+        """Callback de falha do tick lento — libera o guard e conta a falha.
+
+        NO-JOGO-SEM-FALSO-VERDE-01 T4 (25/08/2026). Até esta leva ele soltava o
+        guard de inflight e **não fazia mais nada** — um poll que falha não
+        esvaziava painel nenhum, e a aba "No jogo" ficava com o último estado
+        bom na tela, com "no jogo agora" ao lado de um número que já era de
+        minutos atrás. É a mesma "mentira confortável" que a docstring de
+        `_sync_paineis_no_jogo` diz que esta aba existe para não contar, pela
+        outra porta.
+
+        Ao bater :data:`FALHAS_ATE_ESVAZIAR_NO_JOGO` faz o mesmo que o
+        `_render_offline` já fazia com o daemon declarado morto:
+        `_sync_paineis_no_jogo(None)`, que troca os painéis pela frase de
+        desligado. Continua chamando a cada falha depois disso — é idempotente,
+        e parar de chamar deixaria a aba muda se ela trocasse de aba no meio da
+        pane.
+
+        **A tira não se mexe**, e é de propósito: `jogo_steam_aberto(None)`
+        devolve `None`, o tri-estado de "ninguém sabe", e o gate de existência
+        não toca em nada. Sumir com a aba porque o IPC falhou seria afirmar que
+        o jogo dela fechou a partir de um silêncio nosso.
+        """
         self._profile_inflight = False
+        self._profile_falhas_seguidas += 1
+        if self._profile_falhas_seguidas >= FALHAS_ATE_ESVAZIAR_NO_JOGO:
+            with contextlib.suppress(Exception):
+                self._sync_paineis_no_jogo(None)
         return False  # não repetir via GLib
 
     def _tick_reconnect_state(self) -> bool:
@@ -2788,6 +2847,19 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._sync_status_cards(state)
 
     def _render_slow_state(self, state: dict[str, Any]) -> None:
+        # ABA-DO-JOGO-01 / NO-JOGO-SEM-FALSO-VERDE-01 T4 (25/08/2026): o gate de
+        # EXISTÊNCIA da aba "No jogo" roda ANTES do gate de popup, e a ordem é a
+        # cura. Ele já rodava antes do gate de PINTURA (dentro de
+        # `_sync_paineis_no_jogo`), mas o caminho inteiro morria aqui em cima
+        # quando havia um combo aberto em QUALQUER aba — e com o jogo fechado a
+        # aba ficava na tira, com os painéis congelados no último estado bom.
+        #
+        # Pôr esta chamada acima do `return` não reabre o
+        # BUG-COMBO-POPUP-FLICKER-02: aquele defeito é RE-LAYOUT da janela
+        # fechando o popup, e mostrar/esconder uma página do notebook não toca a
+        # árvore de widgets do popup — o grab é de outra hierarquia. O que
+        # continua atrás do gate é tudo o que escreve em widget da aba.
+        self._sync_visibilidade_no_jogo(state)
         # Mesma proteção do render vivo (BUG-COMBO-POPUP-FLICKER-02): não mexe nos
         # widgets enquanto um popup está aberto, para não fechá-lo via re-layout.
         if self._popup_is_open():

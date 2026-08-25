@@ -1344,12 +1344,24 @@ _CATEGORIA_DO_RECURSO: Final[dict[str, str]] = {
     # uma espada, o efeito de uma lâmina cortando o ar sai pelo speaker do
     # próprio controle. A Sony fez o mesmo pro DualSense."*
     #
-    # O carimbo é EXATAMENTE a pergunta da linha, e por construção: ele só sai
-    # quando o escritor liga um dos quatro bits de áudio, manda byte não-nulo
-    # E há sessão de jogo aberta (`_replicating()`) — o áudio que o PROBE do
-    # `hid-playstation` escreve ao nascer do vpad não entra, que foi a
-    # correção de 02/08. Por isso "sem pedido ainda" aqui significa mesmo
-    # "nenhum jogo pediu", e não "o kernel ainda não passou por aqui".
+    # O QUE O CARIMBO PROVA, exatamente — NO-JOGO-SEM-FALSO-VERDE-01/T2
+    # (25/08/2026). Ele sai quando o escritor liga um dos quatro bits de áudio,
+    # manda byte não-nulo E há sessão uhid aberta (`_replicating()`, que é
+    # `game_open` mais meio segundo de graça). Isto é: **alguém com o hidraw
+    # deste vpad aberto mandou bytes de áudio não nulos** — e "alguém" não é
+    # necessariamente um jogo. A própria árvore o declara como VETO PERMANENTE,
+    # na docstring de `uhid_gamepad.game_open`: *"sessão aberta JAMAIS é
+    # evidência de jogo (o CLIENTE Steam também abre — mecanismo do incidente
+    # 14:42)"*. Medido na bancada dela em 23/08, sem jogo nenhum:
+    # `game_open: true`, `jogo_steam: {"lido": true, "appid": null}`.
+    #
+    # A condição do carimbo continua sendo a certa para o que ele significa — o
+    # gate de `_replicating()` foi a correção de 02/08, e é ele que mantém de
+    # fora o áudio que o PROBE do `hid-playstation` escreve ao nascer do vpad.
+    # O que estava errado era a leitura escrita aqui: até esta leva este
+    # comentário afirmava que "sem pedido ainda" significava mesmo "nenhum jogo
+    # pediu", e não significa — significa que ninguém com a sessão aberta
+    # mandou bytes de áudio, e o cliente da Steam conta como "alguém".
     "alto_falante": "audio_do_jogo",
 }
 
@@ -1501,6 +1513,75 @@ def motores_no_fisico(item: Any) -> tuple[int, int] | None:
     return (int(par[0]), int(par[1]))
 
 
+#: O nome do ramo de DESCARTE no anel de vibração do vpad
+#: (``uhid_gamepad.RAMO_DESCARTADO``). Mesmo contrato por string das chaves de
+#: :data:`_CATEGORIA_DO_RECURSO`: a janela é outro processo e não importa nada
+#: do daemon; o que viaja entre os dois é o nome.
+_RAMO_DESCARTADO: Final[str] = "descartado"
+
+
+def pedido_de_vibracao_fresco(item: Any) -> bool:
+    """Algum jogo PEDIU vibração de verdade nos últimos ``ATIVIDADE_FRESCA_S``?
+
+    NO-JOGO-SEM-FALSO-VERDE-01/T1 (25/08/2026). Esta é a pergunta que a linha
+    "vibração" faz, e até esta leva ela era respondida pelo carimbo errado.
+
+    **O que estava medido, e é o defeito inteiro em três linhas.** O vpad
+    carimba ``visto_ha_s["rumble"]`` nos DOIS ramos — no pedido de verdade
+    (``uhid_gamepad:2159``) e na PARADA do SDL (``:2091``, flags zerados e
+    motores zerados) —, e carimbar a parada está certo: ela é prova de que o
+    jogo está falando conosco, e é para isso que o ``ff_parada_sdl_count``
+    existe. O que estava errado era a TELA ler aquele carimbo como se ele
+    respondesse "o jogo pediu vibração". Na bancada dela, às 21h50 de 23/08,
+    com **zero** DualSense na mesa e nenhum jogo aberto, uma parada solta
+    (``ff_parada_sdl_count: 1``, ``ff_nao_nulo_count: 0``) deixou a linha verde
+    e escrita "no jogo agora" por três segundos.
+
+    **Por que a resposta sai do anel e não de um carimbo novo.** O
+    ``ff_ultimos_reports`` (QUEM ESCREVEU-01) já viaja no ``state_full``, com
+    ``ha_s``, ``weak``, ``strong`` e o ``ramo`` de cada um dos últimos oito
+    reports — ou seja, o payload de HOJE já separa o pedido da parada, e
+    ninguém lia. Um carimbo novo no vpad daria a mesma resposta e só a partir
+    do **próximo start do daemon**: nesta casa "o daemon vivo é mais velho que
+    o código" é rotina (install editable), e a cura que precisa de restart é a
+    cura que não vale na mesa dela hoje.
+
+    As três provas que a função aceita, todas positivas — a ausência de prova
+    nunca vira "chegando":
+
+    1. ``rumble_no_fisico`` fresco e não-nulo (:func:`motores_no_fisico`): o par
+       chegou aos motores, então houve pedido. É a prova mais forte, e é a
+       única que sobrevive a um anel que já rodou;
+    2. um report do anel com ``weak`` ou ``strong`` não-nulo e ``ha_s`` dentro
+       do teto. O ramo ``descartado`` fica de fora: aquele report chegou e nós
+       o recusamos na porta, então o jogo pediu e a vibração **não** saiu — quem
+       conta essa história é o ``ff_descartado_count``, não esta linha;
+    3. nada disso: ``False``. Inclusive quando o anel não vem no payload — que
+       é o caso do dublê da foto e de um vpad uinput. Dizer "no jogo agora"
+       sem uma prova é exatamente o que esta função existe para impedir.
+    """
+    if not isinstance(item, dict):
+        return False
+    if motores_no_fisico(item) is not None:
+        return True
+    anel = item.get("ff_ultimos_reports")
+    if not isinstance(anel, list):
+        return False
+    for report in anel:
+        if not isinstance(report, dict) or report.get("ramo") == _RAMO_DESCARTADO:
+            continue
+        if not (_contagem(report, "weak") or _contagem(report, "strong")):
+            continue
+        idade = report.get("ha_s")
+        if (
+            isinstance(idade, (int, float))
+            and not isinstance(idade, bool)
+            and idade <= ATIVIDADE_FRESCA_S
+        ):
+            return True
+    return False
+
+
 def estado_do_recurso(
     recurso: str, entry: dict[str, Any], state_global: dict[str, Any]
 ) -> EstadoDoRecurso | None:
@@ -1597,9 +1678,19 @@ def estado_do_recurso(
     # casos. Mesmo desenho do `(~250 Hz)` do giroscópio: o número entra na
     # frase só quando ele existe e é fresco.
     if recurso == "vibracao" and situacao == SITUACAO_CHEGANDO:
-        motores = motores_no_fisico(item)
-        if motores is not None:
-            nome = f"{nome} (motores: {motores[0]}/{motores[1]})"
+        # NO-JOGO-SEM-FALSO-VERDE-01/T1 (25/08/2026): o carimbo `rumble` diz
+        # que o jogo FALOU de vibração, e só isso. Quem diz que ele PEDIU
+        # vibração é :func:`pedido_de_vibracao_fresco` — sem essa prova a linha
+        # cai para "parou", que é o que ela já dizia neste vocabulário desde a
+        # PAINEL-DA-VERDADE-01. Cair para "sem pedido ainda" seria pior e
+        # falso: houve carimbo, logo houve conversa, e a linha estaria
+        # afirmando que o jogo nunca abriu a boca.
+        if not pedido_de_vibracao_fresco(item):
+            situacao = SITUACAO_PARADO
+        else:
+            motores = motores_no_fisico(item)
+            if motores is not None:
+                nome = f"{nome} (motores: {motores[0]}/{motores[1]})"
 
     return EstadoDoRecurso(situacao, nome)
 
