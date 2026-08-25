@@ -332,5 +332,12 @@ data e quem mediu.
 | a escada `0x32`–`0x39` carrega áudio | **hipótese viva** | o canal existe; provar exige escrever |
 | `hardware_version` distingue os quatro controles | **medido** 15/08, mas **não é a cor** | o byte *Variation* é `0x00` nos quatro; o que varia é a revisão de placa. Dois controles da mesma cor comprados juntos teriam o mesmo valor — é chave de diagnóstico, não fonte de cor |
 
-Nesta pasta, os MACs aparecem **mascarados pela convenção da casa** (octetos 4 e
-5 zerados): `14:3a:00:00:eb:ab`.
+Nesta pasta, os MACs aparecem **mascarados pela convenção da casa** — octetos 4
+e 5 zerados, como em `AA:BB:CC:00:00:FF`.
+
+<!-- 25/08/2026: este parágrafo trazia um endereço real como exemplo, e a
+     máscara estava aplicada nos octetos ERRADOS — 3 e 4 em vez de 4 e 5. O
+     efeito era o inverso do pretendido: escondia um byte do OUI, que é público
+     e identifica só o fabricante, e deixava à mostra o sufixo, que é o que
+     identifica a UNIDADE. Trocado pelo endereço didático da casa, que não é de
+     ninguém. Achado pela auditoria de melhorias da aba Conexões. -->

@@ -36,6 +36,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash scripts/check_anonymity.sh
+      # PORTAO-DE-ENDERECO-01 (25/08/2026): o irmão acima procura nomes de
+      # fornecedor e frases de autoria; ele NUNCA olhou um endereço de rádio,
+      # embora o CLAUDE.md prometesse um portão para isso desde sempre. Medido
+      # no dia: um arquivo com um MAC real E com o mesmo endereço na forma de
+      # serial USB de doze hexadecimais passava verde por todo o bloco de fim
+      # de leva. Duas sprints escritas por agente já tinham copiado o endereço
+      # da mantenedora quando este portão nasceu.
+      - run: python3 scripts/check_endereco_de_radio.py
       # BUG-GATE-TEST-DATA-NAO-RODAVA-01 (25/07): o check_test_data.sh existia,
       # reprovava, e NÃO era executado por workflow nenhum — o único jeito de
       # descobrir era rodá-lo à mão. Ele reprovava porque contradizia o gate de

@@ -25,6 +25,31 @@ literal:
 | `0.9.5` | mapa de canais completo **+** todos os canais construídos **+** nenhuma sprint aberta |
 | `1.0.0` | **duas semanas sem sprint nova**, contadas depois da `0.9.5`, jogando e ajustando layout |
 
+> **Nota de 24/08/2026 — a tabela acima virou uma escada de cinco degraus.**
+> Ela pediu: *"me ajuda a fazer a escadinha de releases pra mim .95 quando
+> terminarmos a bancada do specs em bt, 96 terminarmos todas as sprints e
+> tal...e depois?"* A escada está em
+> [`docs/process/2026-08-24-A-ESCADA-DE-RELEASES.md`](docs/process/2026-08-24-A-ESCADA-DE-RELEASES.md)
+> e **substitui** as duas últimas linhas desta tabela. Nada aqui se apaga: os
+> números continuam sendo dela, e o motivo da troca é medido.
+>
+> **Por que a linha da `0.9.5` foi partida.** Ela junta três eixos independentes
+> — mapa, canais e sprints — e por isso qualquer um atrasa os outros dois. A
+> própria frase dela de 24/08 já os separa. Na escada nova, `0.9.5` é só o
+> rádio parar de mentir (a bancada de BT), `0.9.6` é a fila de sprints acabar, e
+> os canais construídos ficam distribuídos onde cada um é medido.
+>
+> **Por que o contador da `1.0.0` mudou.** *"Duas semanas sem sprint nova"* é
+> inalcançável por construção nesta casa: em **31 dias de projeto nasceu sprint
+> em 30 deles**, o maior intervalo já observado foi de **um dia**, e a média é de
+> **9,3 sprints por dia**. O contador mede vazão de agente, não qualidade de
+> produto — enquanto houver agente lendo código, haverá sprint nova. **As duas
+> semanas continuam sendo dela**; o que muda é o que se conta dentro da janela:
+> *sprint nascida da voz dela* (marcador já em uso, 51 arquivos hoje), cujo maior
+> intervalo observado é de **quatro dias**. É o único dos dois números que cai
+> quando o produto melhora. Aguarda a palavra dela (pergunta **P3** do documento
+> da escada).
+
 O critério anterior — *"ver funcionando num PC novo"* — **não vale mais**. Ele
 foi substituído, não contrariado: *"nenhuma sprint aberta"* e *"duas semanas sem
 sprint nova"* são contáveis nos índices de `docs/process/sprints/`; *"PC novo"*
