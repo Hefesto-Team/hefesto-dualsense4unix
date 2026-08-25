@@ -6,8 +6,7 @@
     "window_class": [
       "firefox", "Navigator", "brave-browser", "Brave-browser",
       "chromium", "chromium-browser", "google-chrome", "Google-chrome",
-      "gnome-terminal", "gnome-terminal-server",
-      "steam", "Steam"
+      "gnome-terminal", "gnome-terminal-server"
     ],
     "window_title_regex": null,
     "process_name": []

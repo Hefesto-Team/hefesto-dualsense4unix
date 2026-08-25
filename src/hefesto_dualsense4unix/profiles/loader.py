@@ -692,12 +692,23 @@ def perfis_que_casam_com_o_cliente_steam(
     O defeito irmão, decisão dela na mesma rodada: *"tirar 'steam' e 'Steam' do
     perfil Navegação"*. Treze trocas de perfil no meio da partida em 54
     minutos, porque uma janela invisível do `steamwebhelper` se anuncia com a
-    `wm_class` ``steam`` — e o preset ``navegacao`` de fábrica lista ``steam``
-    e ``Steam``.
+    `wm_class` ``steam``.
 
-    **O arquivo é dela e o produto não o edita.** O que o produto faz é DIZER,
-    que é o que faltava: até aqui a troca de perfil acontecia em silêncio, e
-    ela levou 54 minutos de partida para descobrir de onde vinha.
+    **A FÁBRICA FOI CURADA em 25/08/2026** (``D-STEAM-SAI-DA-NAVEGACAO``,
+    decidida por ela em 22/08): ``assets/profiles_default/navegacao.json`` não
+    lista mais ``steam`` nem ``Steam``, e quem instalar daqui em diante nasce
+    sem o defeito. A mordida que impede o retorno é
+    ``tests/unit/test_a_fabrica_nao_casa_com_a_loja.py``.
+
+    **Esta função continua necessária, e é por isso que ela não foi apagada
+    junto:** ela olha o diretório VIVO, não a fábrica. Perfil que a pessoa
+    escreveu à mão, perfil de instalação antiga que já tem ``steam`` gravado, e
+    perfil copiado de outra máquina continuam alcançando o defeito — a fábrica
+    curada só protege quem nasce hoje.
+
+    **O arquivo vivo é dela e o produto não o edita.** O que o produto faz é
+    DIZER, que é o que faltava: até aqui a troca de perfil acontecia em
+    silêncio, e ela levou 54 minutos de partida para descobrir de onde vinha.
 
     O predicado é `profiles/steam_app.e_janela_do_cliente_steam`, o mesmo que o
     `lifecycle` usa para proteger a partida — não uma segunda lista de nomes.
