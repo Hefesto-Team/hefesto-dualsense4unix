@@ -9,14 +9,45 @@
 # o primeiro tick é justamente onde o link negocia sniff e cai sob carga
 # (rumble + IMU com vários jogadores).
 #
-# ESCOPO: só a OUI `e0:f6:b5`, do Pro genuíno. O 8BitDo clone
-# (`e4:17:d8`) PRECISA do sniff para completar a probe: sem ele a probe morre em
-# `Failed to get joycon info; ret=-110` (medido no A/B de 23/07). Por isso o
-# default do adaptador continua COM sniff e a recusa é por-link.
+# ESCOPO — E POR QUE ELE DEIXOU DE SER UMA FAIXA (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01
+# / E1, 25/08/2026).
 #
-# O MAC vem do `HID_UNIQ`, que o kernel preenche com o endereço Bluetooth do
-# device HID remoto. O helper revalida a OUI antes de agir — a regra e o script
-# não podem discordar sobre quem recebe o tratamento.
+# Até 25/08 esta regra casava SÓ `e0:f6:b5:*`, a faixa do Pro desta bancada. A
+# Nintendo tem OITENTA E DUAS faixas MA-L registradas e a 8BitDo tem UMA (medido
+# contra `/usr/share/ieee-data/oui.csv` em 22/08/2026): uma amostra de tamanho um
+# tinha virado a definição de "Pro", e quem tem um Pro de outra safra não recebia
+# a cura — o link caindo sob carga, sem uma linha de journal dizendo por quê.
+#
+# A sprint pôs a decisão em duas opções, e ela tinha um preço em cada: gerar 82
+# linhas (uma lista que envelhece calada) ou tirar o filtro (um `RUN+=` em TODO
+# device HID por Bluetooth). Existe uma terceira, e é a que está escrita aqui:
+# **casar por NOME**. O conjunto "device HID cujo `HID_NAME` diz Pro Controller"
+# tem exatamente dois membros no mundo — o Pro genuíno e o clone 8BitDo, que
+# mente o mesmo nome —, então o filtro continua estreito sem conhecer faixa
+# nenhuma, e não há lista para envelhecer.
+#
+# QUEM DECIDE DE VERDADE É O HELPER, e ele decide por NEGATIVA: `e4:17:d8` é
+# clone e recusa; qualquer outra faixa com cara de Pro aplica. O clone PRECISA do
+# sniff para completar a probe — sem ele a probe morre em `Failed to get joycon
+# info; ret=-110` (A/B de 23/07) —, e por isso o default do adaptador continua COM
+# sniff e a recusa é por-link. A regra casar o clone não é descuido: é o que faz
+# o journal ganhar a linha "recusei, e este é o motivo" onde antes havia silêncio.
+#
+# O `?` DE `??:??:??:??:??:??` NÃO É ENFEITE: pelo CABO o `HID_UNIQ` do Pro é o
+# serial `000000000001` (e o clone mente o MESMO serial — ver a 84), e cabo não
+# tem link BR/EDR para tirar do sniff. Sem essa linha, casar por nome levaria o
+# Pro no cabo ao `hcitool lp` contra um "endereço" que não é endereço. O helper
+# repete a guarda do seu lado; duas réguas, de propósito.
+#
+# O NOME NÃO VAI NO `RUN+=`, vai no AMBIENTE. O udev exporta as propriedades do
+# device para o programa do `RUN+=`, e `HID_NAME` é uma delas — o helper a lê de
+# lá. Pôr `$env{HID_NAME}` na linha de comando quebraria o nome em cinco
+# argumentos, porque o udev separa o argv por espaço DEPOIS de substituir.
+#
+# AS DUAS LINHAS DE FAIXA CONTINUAM, e continuam ANTES da linha do nome: quem já
+# recebia a cura não passa a depender de um dado novo. Elas existem também para
+# o caso de o nome não ter sido resolvido no instante do `add`. O `GOTO` é o que
+# impede o Pro desta bancada de casar as duas rotas e chamar o helper duas vezes.
 #
 # Reverter: remover este arquivo, `udevadm control --reload`, e devolver o link
 # com `hcitool lp <MAC> RSWITCH,HOLD,SNIFF,PARK`.
@@ -47,5 +78,20 @@
 # `install.sh`, chamado nos dois lados da bifurcação de formato) e SAI quando ela
 # sai (`uninstall.sh`, BUG-UNINSTALL-KEEP-UDEV-ALVO-ORFAO-01). Portão:
 # `tests/unit/test_regra_udev_nao_fica_orfa_do_alvo_do_run.py`.
-ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="e0:f6:b5:*", TEST=="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh", RUN+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh $env{HID_UNIQ}"
-ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="E0:F6:B5:*", TEST=="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh", RUN+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh $env{HID_UNIQ}"
+ACTION!="add", GOTO="hefesto_nosniff_fim"
+SUBSYSTEM!="hid", GOTO="hefesto_nosniff_fim"
+
+# Rota 1 — a faixa que esta casa já viu num aparelho, nas duas caixas em que o
+# `HID_UNIQ` chega. Não consulta nome nenhum: é o comportamento de antes da cura.
+ENV{HID_UNIQ}=="e0:f6:b5:*", GOTO="hefesto_nosniff_aplica"
+ENV{HID_UNIQ}=="E0:F6:B5:*", GOTO="hefesto_nosniff_aplica"
+
+# Rota 2 — qualquer OUTRA faixa, por rádio, que se ANUNCIE como Pro Controller.
+# É por aqui que o Pro de outra safra entra. Quem separa o genuíno do clone é o
+# helper, pela OUI.
+ENV{HID_UNIQ}!="??:??:??:??:??:??", GOTO="hefesto_nosniff_fim"
+ENV{HID_NAME}!="*[Pp]ro [Cc]ontroller*", GOTO="hefesto_nosniff_fim"
+
+LABEL="hefesto_nosniff_aplica"
+TEST=="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh", RUN+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh $env{HID_UNIQ}"
+LABEL="hefesto_nosniff_fim"
