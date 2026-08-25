@@ -767,6 +767,96 @@ def mensagem_do_salvar(
     return f"{cabeca} — {_mensagem_de_aplicacao(relato)}"
 
 
+# --- P2: o carimbo de ponte aparece NESTA aba ------------------------------
+# PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/1 (24/08/2026). O daemon PUBLICA
+# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1971`), com o
+# comentário dizendo a intenção em letra: *"para a janela dizer 'este jogo já
+# sabe por onde entra'"*. Medido:
+#
+#     $ grep -rn "pontes_confirmadas" src/hefesto_dualsense4unix/app/
+#     app/draft_config.py:445:    # `manager.pontes_confirmadas()` …  <- comentário
+#     app/actions/profiles_actions.py:3771: # carimbo viaja junto …    <- comentário
+#
+# Dois hits, os dois em COMENTÁRIO. Zero leitores. A aba PRESERVA o carimbo no
+# Salvar e nunca o mostrou — é a cura escrita, o dado publicado, e a tela muda.
+# E é a decisão dela de 19/08: *"o produto CONSTRÓI a ponte, não só preserva"*,
+# parada na última perna.
+#
+# DOIS perfis dela já têm o carimbo hoje (`big_walk.json`, `duskfade.json`), o
+# que dá dado real para provar contra, sem inventar fixture.
+
+#: Como cada `kind` de ponte se chama NA TELA. São os rótulos de
+#: `_MODE_KIND_ITEMS`, que são os mesmos da aba Início (UX-MODE-TERMS-01/02):
+#: um segundo vocabulário para o mesmo fato é como esta casa ganhou os oito
+#: pares da F5.
+_ROTULO_DA_PONTE: dict[str, str] = dict(_MODE_KIND_ITEMS)
+
+#: E como se chama a máscara, quando a ponte é de gamepad.
+_ROTULO_DA_MASCARA: dict[str, str] = dict(_MODE_FLAVOR_ITEMS)
+
+#: COMO a ponte foi confirmada. O vocabulário do esquema
+#: (`gesto`/`silencio`/`escolha_dela`) traduzido para o que ela reconhece.
+_COMO_FOI_CONFIRMADA: dict[str, str] = {
+    "gesto": "quando você aplicou o perfil",
+    "silencio": "porque funcionou e ninguém precisou mexer",
+    "escolha_dela": "porque você escolheu assim",
+}
+
+
+def _dia_do_carimbo(iso: object) -> str | None:
+    """``2026-08-19T21:16:55-03:00`` -> ``19/08/2026``. Lixo -> ``None``.
+
+    Só o DIA: a hora do carimbo não muda decisão nenhuma dela, e uma data com
+    segundos numa linha de apoio é ruído que se aprende a não ler.
+    """
+    from datetime import datetime
+
+    if not isinstance(iso, str) or not iso:
+        return None
+    with contextlib.suppress(ValueError):
+        return datetime.fromisoformat(iso).strftime("%d/%m/%Y")
+    return None
+
+
+def frase_da_ponte_confirmada(pontes: Any, appid: object) -> str | None:
+    """O carimbo deste jogo, em uma linha. ``None`` é SILÊNCIO, e é de propósito.
+
+    Sem carimbo a linha **não diz nada** — nunca "ponte desconhecida", nunca
+    "ainda não sei". É a mesma disciplina do P1: a ausência da chave já
+    significa "não sei", e escrever isso na tela transforma a falta de
+    informação em aviso. `pontes_confirmadas` só publica os appids COM
+    carimbo, exatamente por isso.
+
+    Função PURA — o teste lê o texto sem daemon e sem GTK.
+    """
+    if not isinstance(pontes, dict):
+        return None
+    chave = normalize_appid(str(appid) if appid is not None else None)
+    ponte = pontes.get(chave) if chave else None
+    if not isinstance(ponte, dict):
+        return None
+    kind = str(ponte.get("kind") or "")
+    por_onde = _ROTULO_DA_PONTE.get(kind)
+    if por_onde is None:
+        # `kind` que esta versão não conhece: calar é melhor que inventar um
+        # rótulo. O carimbo continua no disco e o Salvar continua o preservando.
+        return None
+    if kind == "gamepad":
+        mascara = _ROTULO_DA_MASCARA.get(str(ponte.get("gamepad_flavor") or ""))
+        if mascara:
+            por_onde = f"{por_onde}, como {mascara}"
+    if ponte.get("steam_input") is True:
+        por_onde = f"{por_onde}, com o jogo marcado no Steam Input"
+    partes = [f"Este jogo já sabe por onde entra: {por_onde}."]
+    dia = _dia_do_carimbo(ponte.get("confirmada_em"))
+    como = _COMO_FOI_CONFIRMADA.get(str(ponte.get("confirmada_por") or ""))
+    if dia and como:
+        partes.append(f"Confirmado em {dia}, {como}.")
+    elif dia:
+        partes.append(f"Confirmado em {dia}.")
+    return " ".join(partes)
+
+
 def texto_da_marca_do_steam_input(
     status: str, appid: object = None, controles: int | None = None
 ) -> str:
@@ -1843,6 +1933,9 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             self._sincronizar_caixa_do_steam_input()
             self._sincronizar_outros_marcados()
             self._sincronizar_exigencia_invisivel()
+            # P2: e o carimbo de ponte do jogo, buscado no daemon por GESTO.
+            # Ver `_buscar_as_pontes_confirmadas` para por que não vem no tique.
+            self._buscar_as_pontes_confirmadas()
             with contextlib.suppress(Exception):
                 box.set_no_show_all(False)
             box.show_all()
@@ -2278,22 +2371,81 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             texto = (entry.get_text() or "") if entry is not None else ""
             nomes = getattr(self, "_nomes_dos_jogos", {})
             decisao = frase_do_campo_do_jogo(texto, nomes)
-            if decisao is None:
+            # P2 (25/08/2026): o carimbo de ponte entra AQUI, no mesmo rótulo e
+            # logo abaixo, porque é o MESMO jogo do campo ao lado — e é onde
+            # ela escolhe o jogo. Rótulo próprio no glade seria o certo (é o
+            # que a sprint pede), e o arquivo é de outra frente nesta leva;
+            # esta costura entrega o dado sem tocar o XML.
+            do_carimbo = frase_da_ponte_confirmada(
+                getattr(self, "_pontes_confirmadas", None), texto
+            )
+            if decisao is None and do_carimbo is None:
                 rotulo.set_text("")
                 rotulo.set_visible(False)
                 return
-            frase, e_alerta = decisao
-            # `#ffb86c` é o ALERTA da casa; `#8be9fd` é o `cyan` do
-            # `theme.css:25`, cujo comentário o define como "info, valores
-            # numéricos" — que é exatamente o que o nome do jogo é aqui: a
-            # leitura humana do número que está no campo ao lado.
-            cor = "#ffb86c" if e_alerta else "#8be9fd"
-            rotulo.set_markup(f'<span foreground="{cor}">{escapar_markup(frase)}</span>')
+            linhas: list[str] = []
+            if decisao is not None:
+                frase, e_alerta = decisao
+                # `#ffb86c` é o ALERTA da casa; `#8be9fd` é o `cyan` do
+                # `theme.css:25`, cujo comentário o define como "info, valores
+                # numéricos" — que é exatamente o que o nome do jogo é aqui: a
+                # leitura humana do número que está no campo ao lado.
+                cor = "#ffb86c" if e_alerta else "#8be9fd"
+                linhas.append(
+                    f'<span foreground="{cor}">{escapar_markup(frase)}</span>'
+                )
+            if do_carimbo is not None:
+                # Itálico e sem cor própria: o carimbo é informação de APOIO —
+                # confirmação, não alerta —, e inventar um quarto token de cor
+                # nesta tela seria a aba escrevendo o próprio vocabulário
+                # visual. É o mesmo tratamento de "Outros jogos marcados".
+                linhas.append(f"<i>{escapar_markup(do_carimbo)}</i>")
+            rotulo.set_markup("\n".join(linhas))
             with contextlib.suppress(Exception):
-                rotulo.set_tooltip_text(frase)
+                rotulo.set_tooltip_text(
+                    "\n".join(
+                        p
+                        for p in (
+                            decisao[0] if decisao is not None else None,
+                            do_carimbo,
+                        )
+                        if p
+                    )
+                )
             rotulo.set_visible(True)
         except Exception as exc:
             logger.debug("frase_do_jogo_falhou", err=str(exc))
+
+    def _buscar_as_pontes_confirmadas(self) -> None:
+        """Pede ao daemon o carimbo de cada jogo — por GESTO, nunca por tique.
+
+        **Por que `daemon.status` e não o `state_full` que a janela já lê a cada
+        tique:** medido em 25/08/2026, `pontes_confirmadas` é publicado por
+        `_handle_daemon_status` (`daemon/ipc_handlers.py:1971`) e **não existe
+        no `daemon.state_full`** — que é o payload do tique. Publicá-lo lá é o
+        conserto de fundo e mora no `daemon/`, que é de outra frente nesta leva.
+        Enquanto isso, uma leitura por gesto entrega o dado sem somar um segundo
+        poller: o carimbo só muda quando um perfil é salvo ou confirmado, então
+        uma busca ao abrir a caixa do jogo é atual o bastante.
+
+        Best-effort inteiro: daemon offline deixa o cache como está e a linha
+        simplesmente não aparece — que é o silêncio já contratado no §P2.
+        """
+        call_async(
+            method="daemon.status",
+            params={},
+            on_success=self._ao_chegar_o_carimbo_das_pontes,
+            on_failure=lambda _exc: False,
+        )
+
+    def _ao_chegar_o_carimbo_das_pontes(self, result: Any = None) -> bool:
+        """Callback GTK: guarda o carimbo e repinta a linha do jogo."""
+        if isinstance(result, dict):
+            pontes = result.get("pontes_confirmadas")
+            self._pontes_confirmadas = pontes if isinstance(pontes, dict) else {}
+            with contextlib.suppress(Exception):
+                self._atualizar_frase_do_jogo()
+        return False  # GLib.idle_add: não repetir
 
     def on_profile_steam_input_toggled(self, check: Any = None) -> None:
         """Marca/desmarca ESTE jogo na allowlist do Steam Input.
