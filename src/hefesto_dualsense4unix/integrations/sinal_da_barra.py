@@ -64,9 +64,18 @@ condição que ninguém estava medindo.
 Daí as duas perguntas serem SEPARADAS neste arquivo, e nunca respondidas pela
 mesma função:
 
-- :func:`ler_a_mesa` — *"esta instância que já existe nasceu limpa?"*. É
+- :func:`veredito_do_nascimento` — *"esta instância que já existe nasceu limpa?"*. É
   DIAGNÓSTICO, e só a responde para instâncias cujo nascimento esteja no diário.
-  Sem diário, ``CONFIANCA_NAO_SEI`` — jamais ``limpa``;
+  Sem diário, ``CONFIANCA_NAO_SEI`` — jamais ``limpa``.
+
+  **Ela se chamava ``ler_a_mesa`` até 25/08/2026, e o nome saiu porque custou.**
+  ``integrations/mesa_de_radio`` tem uma ``ler_a_mesa`` também, e aquela LÊ a
+  mesa de verdade (ocupação de adaptador, para a seção "A mesa"); esta lê o
+  DIÁRIO e dá um veredito. A homonímia fez a primeira varredura da
+  ``SINAL-NO-NASCIMENTO-01`` parecer dizer que o veredito já estava ligado no
+  produto — um ``grep`` achava a função errada. Não há alias de compatibilidade
+  de propósito: um manteria a colisão viva, que é o defeito que o nome novo
+  existe para matar;
 - :func:`limpo_para_conectar` — *"se um controle conectar AGORA, vai nascer
   limpo?"*. É PROGNÓSTICO, e é a que tem de guardar o botão de reconectar. Um
   produto que oferece a cura sem consultar esta função entrega à pessoa o gesto
@@ -306,7 +315,7 @@ class Nascimento:
 class Carimbo:
     """O veredito de nascimento de UMA instância, guardado na hora em que ela nasceu.
 
-    Existe porque o veredito de :func:`ler_a_mesa` custa dois ``journalctl`` e
+    Existe porque o veredito de :func:`veredito_do_nascimento` custa dois ``journalctl`` e
     depende de o diário AINDA ter a linha. Carimbado no nascimento, ele vira
     resposta de memória, e sobrevive à rotação do diário — a primeira das três
     fragilidades que a ``SINAL-NO-NASCIMENTO-01`` listou.
@@ -583,7 +592,7 @@ def _linhas_do_diario(
     return linhas
 
 
-def ler_a_mesa(
+def veredito_do_nascimento(
     *,
     instancias: Sequence[Instancia] | None = None,
     nascimentos: Mapping[str, Nascimento] | None = None,
@@ -848,7 +857,7 @@ def limpo_para_conectar(
 ) -> tuple[str, str, tuple[int, ...]]:
     """PROGNÓSTICO: se um controle conectar AGORA, ele nasce limpo?
 
-    É esta — e não :func:`ler_a_mesa` — que tem de guardar o botão de
+    É esta — e não :func:`veredito_do_nascimento` — que tem de guardar o botão de
     reconectar. Oferecer a cura com a mesa suja gasta o gesto do botão PS dela
     para produzir outra instância travada, que é a forma exata do "falso
     positivo recorrente" que ela nomeou em 12/08/2026.
@@ -941,7 +950,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"{confianca}: {porque}")
         return 0 if confianca == CONFIANCA_LIMPA else 1
 
-    leituras = ler_a_mesa()
+    leituras = veredito_do_nascimento()
     if opcoes.json:
         print(
             json.dumps(

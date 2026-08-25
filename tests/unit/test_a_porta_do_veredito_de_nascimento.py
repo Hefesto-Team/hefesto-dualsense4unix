@@ -71,7 +71,7 @@ def _cartorio_com(*, sujo: bool) -> sb.CartorioDoNascimento:
         )
     }
     cartorio.carimbar(
-        sb.ler_a_mesa(instancias=[alvo], nascimentos=nascimentos), agora=100.0
+        sb.veredito_do_nascimento(instancias=[alvo], nascimentos=nascimentos), agora=100.0
     )
     return cartorio
 
@@ -153,7 +153,7 @@ class TestPerguntarNaoCustaDiario:
         handler = _Handler(_daemon_com(_cartorio_com(sujo=True)))
 
         monkeypatch.setattr(
-            sb, "ler_a_mesa", lambda **_k: chamadas.append("diario") or []
+            sb, "veredito_do_nascimento", lambda **_k: chamadas.append("diario") or []
         )
         monkeypatch.setattr(
             sb.subprocess,
