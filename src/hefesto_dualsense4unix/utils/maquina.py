@@ -81,7 +81,14 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -134,6 +141,25 @@ _OCTETO_SINTETIZADO = "02"
 #: próxima versão herdaria lixo.
 _CHAVE_DE_RADIO = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}$")
 
+#: O caminho de barramento na palavra do kernel — ``3-1.1.4`` é o barramento
+#: mais a cadeia de portas até o aparelho, e é o nome do diretório em
+#: ``/sys/bus/usb/devices``. É a ÂNCORA do mapa, e é ele e não o ``vid:pid``
+#: por uma medição: os adaptadores Bluetooth desta bancada são todos
+#: ``2357:0604``, e a pergunta "onde ele está" precisa de uma chave que os
+#: separe. Mesma lição do ``_CHAVE_DE_RADIO``: chave sem validador herda lixo.
+_CAMINHO_DE_BARRAMENTO = re.compile(r"^[0-9]+-[0-9]+(\.[0-9]+)*$")
+
+#: O número que ELA escreveu no gabinete: até três dígitos, e uma letra
+#: opcional para a entrada que nasce de uma extensão (``15a``). Sem o teto, um
+#: arquivo torto vira uma grade de mil quadrados na tela.
+_NUMERO_DE_ENTRADA = re.compile(r"^[0-9]{1,3}[a-z]?$")
+
+#: Tetos do desenho, pelo mesmo motivo. Oito faces e 64 entradas cobrem com
+#: folga o gabinete mais cheio desta casa (três faces, quinze entradas) e o
+#: notebook de duas ou três entradas que é o alvo declarado.
+_MAXIMO_DE_FACES = 8
+_MAXIMO_DE_ENTRADAS = 64
+
 
 class RadioDeclarado(BaseModel):
     """Um aparelho vizinho que divide a faixa de 2,4 GHz com os controles.
@@ -176,6 +202,143 @@ class MesaDeclarada(BaseModel):
                     f"chave de rádio {chave!r} não é 'vid:pid' em hex minúsculo"
                 )
         return valor
+
+
+class FaceDeclarada(BaseModel):
+    """Um conjunto de entradas que a pessoa enxerga JUNTO — "Frente", "Hub".
+
+    A ordem da lista é a ordem do desenho: os quadrados saem na tela na ordem
+    em que os números estão aqui, e reordenar se faz apagando e pondo de novo.
+
+    **Nenhuma face nasce sozinha.** O produto nunca cria "Frente" e "Traseira"
+    por conta própria: um notebook declara "Esquerda" e "Direita", e ponto.
+    Face inventada é a presunção que a ``ONDA0-Z7 · O AMBIENTE PRESUMIDO``
+    existe para caçar.
+
+    A entrada que nasce de uma extensão (a ``15a``) **não entra nesta lista**:
+    ela desenha dentro do quadrado da entrada que a hospeda, e pô-la na fileira
+    faria a fileira de sete do hub virar oito — o desenho deixaria de bater com
+    o metal.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    nome: str = ""
+    portas: list[str] = Field(default_factory=list)
+
+    @field_validator("portas")
+    @classmethod
+    def _numeros_de_entrada(cls, valor: list[str]) -> list[str]:
+        for numero in valor:
+            if not _NUMERO_DE_ENTRADA.match(numero):
+                raise ValueError(
+                    f"número de entrada {numero!r} não é até três dígitos com "
+                    "uma letra opcional"
+                )
+        return valor
+
+
+class PortaDeclarada(BaseModel):
+    """Uma entrada do gabinete, pelo número DELA — e o que está nela.
+
+    ``caminho`` é o nome do kernel (``3-1.1.4``), que é determinístico pelo
+    soquete físico: enquanto o cabo não mudar de buraco, ele é o mesmo em todo
+    boot. É a única amarração entre o número que ela enxerga e o aparelho que o
+    barramento enumera.
+
+    ``filha_de`` é o número da entrada que hospeda a EXTENSÃO. Cabo de extensão
+    passivo não tem descritor USB — o dongle na ponta enumera como se estivesse
+    na entrada do hub, e nenhuma leitura de ``/sys``, hoje ou nunca, distingue
+    os dois casos. Quem sabe é ela, porque ela disse; não há detecção e não há
+    palpite.
+
+    O nome é ``filha_de`` e não "mãe" por construção: "mãe" escrito sem acento
+    dentro de string é exatamente o que o portão de acentuação reprova (ver o
+    cabeçalho deste módulo).
+
+    **Entrada vazia não tem entrada aqui.** ``_podar`` tira ``None`` e vazio do
+    documento antes de escrever, e a ausência é a resposta "aqui não tem nada"
+    — a mesma gramática de "não sei" do arquivo inteiro.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    caminho: str | None = None
+    filha_de: str | None = None
+
+    @field_validator("caminho")
+    @classmethod
+    def _caminho_e_o_nome_do_kernel(cls, valor: str | None) -> str | None:
+        if valor is not None and not _CAMINHO_DE_BARRAMENTO.match(valor):
+            raise ValueError(
+                f"caminho {valor!r} não é o nome do kernel "
+                "('3-1.1.4': barramento, traço, e a cadeia de portas)"
+            )
+        return valor
+
+    @field_validator("filha_de")
+    @classmethod
+    def _filha_de_e_numero_de_entrada(cls, valor: str | None) -> str | None:
+        if valor is not None and not _NUMERO_DE_ENTRADA.match(valor):
+            raise ValueError(
+                f"número de entrada {valor!r} não é até três dígitos com uma "
+                "letra opcional"
+            )
+        return valor
+
+
+class MapaDaMesa(BaseModel):
+    """O gabinete dela, desenhado por ela — o que ``/sys`` não tem como saber.
+
+    MEDIDO em 24 e 25/08/2026, e é a prova de que o mapa tem de ser DECLARADO:
+    as duas entradas da frente do gabinete desta bancada (``usb1-port3`` e
+    ``usb1-port6``) respondem ``panel=right``, ``horizontal_position=left`` e
+    ``vertical_position=lower`` — idênticos —, e a ACPI desta placa nunca diz
+    "front" nem "back". Deduzir o mapa daria duas entradas iguais para dois
+    buracos que ficam em faces diferentes do metal.
+
+    **Um dono para cada fato.** A face lista os números; a entrada guarda a
+    amarração. A face não repete o caminho e a entrada não repete a face —
+    essa duplicação é a classe de defeito que a ``ABAS-01`` curou.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    faces: list[FaceDeclarada] = Field(default_factory=list)
+    portas: dict[str, PortaDeclarada] = Field(default_factory=dict)
+
+    @field_validator("faces")
+    @classmethod
+    def _teto_de_faces(cls, valor: list[FaceDeclarada]) -> list[FaceDeclarada]:
+        if len(valor) > _MAXIMO_DE_FACES:
+            raise ValueError(
+                f"{len(valor)} faces declaradas, e o teto é {_MAXIMO_DE_FACES}"
+            )
+        return valor
+
+    @field_validator("portas")
+    @classmethod
+    def _chave_e_numero_de_entrada(
+        cls, valor: dict[str, PortaDeclarada]
+    ) -> dict[str, PortaDeclarada]:
+        for chave in valor:
+            if not _NUMERO_DE_ENTRADA.match(chave):
+                raise ValueError(
+                    f"número de entrada {chave!r} não é até três dígitos com "
+                    "uma letra opcional"
+                )
+        return valor
+
+    @model_validator(mode="after")
+    def _teto_de_entradas(self) -> MapaDaMesa:
+        numeros = {numero for face in self.faces for numero in face.portas}
+        numeros.update(self.portas)
+        if len(numeros) > _MAXIMO_DE_ENTRADAS:
+            raise ValueError(
+                f"{len(numeros)} entradas declaradas, e o teto é "
+                f"{_MAXIMO_DE_ENTRADAS}"
+            )
+        return self
 
 
 class ControleDeclarado(BaseModel):
@@ -232,6 +395,16 @@ class MaquinaConfig(BaseModel):
     mesa: MesaDeclarada = Field(default_factory=MesaDeclarada)
     controles: dict[str, ControleDeclarado] = Field(default_factory=dict)
     orcamento: OrcamentoDeclarado = Field(default_factory=OrcamentoDeclarado)
+    # CONEXÕES · MAPA 2D 01 (25/08/2026): o gabinete dela, e a ``version``
+    # NÃO sobe. Campo novo sem bump É a migração, e o caminho já estava
+    # construído nos dois sentidos: arquivo antigo lido por código novo cai no
+    # ``default_factory`` e nada se perde; arquivo novo lido por código antigo
+    # tem ``mapa`` tirado da validação por ``_so_o_que_o_schema_conhece`` e
+    # copiado VERBATIM de volta ao disco por ``gravar_maquina_com_descartes``.
+    # Subir para ``2`` faria, em toda máquina que já declarou, a leitura
+    # devolver "não sei" em mesa, controles e orçamento, e a gravação dizer
+    # "não gravei" para sempre. Não há passo de migração a escrever.
+    mapa: MapaDaMesa = Field(default_factory=MapaDaMesa)
     # NOTA DATADA (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026): ``ambiente`` saiu
     # do esquema. O campo nasceu na v1 sem escritor NEM leitor — quem grava a
     # correção de ambiente é ``gravar_correcao_de_ambiente``
@@ -507,18 +680,24 @@ def _guardar_os_bytes_recusados() -> None:
 
 
 def _podar(no: Any) -> Any:
-    """Tira do documento o que é silêncio: ``None`` e dicionário vazio.
+    """Tira do documento o que é silêncio: ``None``, dicionário e lista vazios.
 
     ``None`` e chave ausente querem dizer a MESMA coisa aqui ("não sei"), então
     escrever os dois é escrever duas vezes. O arquivo que ela abre no editor tem
     o tamanho do que ela declarou, não o tamanho do schema.
+
+    A lista vazia entrou em 25/08/2026, com ``MapaDaMesa.faces``, e pelo mesmo
+    motivo: sem ela, quem NUNCA desenhou a mesa passaria a carregar um
+    ``"mapa": {"faces": []}`` em disco — silêncio escrito por extenso, que é o
+    que esta função existe para não deixar acontecer. Nenhum outro campo do
+    documento é lista, então a regra nova não alcança nada que já estivesse lá.
     """
     if not isinstance(no, dict):
         return no
     podado: dict[str, Any] = {}
     for chave, valor in no.items():
         filho = _podar(valor)
-        if filho is None or filho == {}:
+        if filho is None or filho == {} or filho == []:
             continue
         podado[chave] = filho
     return podado

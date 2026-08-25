@@ -800,6 +800,12 @@ _CAMPOS_DA_MAQUINA: dict[str, str] = {
     "mesa": "A mesa",
     "controles": "Os controles",
     "orcamento": "Orçamento",
+    # CONEXÕES · MAPA 2D 01 (25/08/2026). Este não é um ``TITULO`` de seção, e
+    # é o único assim: o mapa não tem seção própria — ele mora numa janela que
+    # abre de dentro de "A mesa". O rótulo nomeia o que se PERDE, que é o
+    # desenho do gabinete, e não a seção de onde ele é aberto: dizer "A mesa"
+    # aqui faria a frase do rodapé acusar a perda de outra coisa.
+    "mapa": "O desenho da mesa",
 }
 
 
