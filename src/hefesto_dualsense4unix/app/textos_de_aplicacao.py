@@ -273,7 +273,44 @@ def frase_de_guardado(
 #: PROVISÓRIO — decisão dela (D3, 23/08): texto novo de tela. Enquanto não
 #: passar pelo olho dela, esta é a redação de trabalho — funcional e honesta,
 #: não a redação final.
-NADA_ACONTECEU = "nenhum controle recebeu — não há controle na mesa"
+#:
+#: CORREÇÃO DE FATO — 25/08/2026, achada pela conferência da frente C1.
+#: Esta constante era UMA só e afirmava a causa: *"não há controle na mesa"*.
+#: **`_destinos_do_broadcast` (daemon/ipc_handlers.py:1158-1183) devolve duas
+#: listas vazias em CINCO situações, e só UMA é mesa vazia** — as outras são
+#: Modo Nativo ligado COM controle na mesa (:1162), `get_output_target_index`
+#: ausente (:1168), exceção ao ler o índice (:1173) e alvo sem uniq estável
+#: (:1183). Nas quatro últimas a barra afirmava um fato falso, e no Modo
+#: Nativo era REGRESSÃO: o código anterior a `41541a7` acertava, dizendo
+#: *"guardado; em Modo Nativo quem manda no controle é o jogo"*.
+#:
+#: São três agora porque a janela distingue três estados e não mais:
+#: ela SABE o Modo Nativo (`_modo_nativo_ligado`), SABE se a mesa está vazia
+#: (`_target_uniq_by_index`), e NÃO TEM COMO SABER os outros três casos.
+#: A terceira frase existe para esse não-saber — "olhei e não sei por quê" é
+#: uma resposta, e disfarçá-la de diagnóstico é o defeito de forma que esta
+#: função inteira existe para matar.
+NADA_ACONTECEU = "nenhum controle recebeu"
+NADA_ACONTECEU_MESA_VAZIA = "nenhum controle recebeu — não há controle na mesa"
+NADA_ACONTECEU_NATIVO = f"nenhum controle recebeu — {_MOTIVO_NATIVO}"
+
+
+def mesa_vazia(host: Any) -> bool:
+    """A mesa não tem DualSense conectado AGORA — e a janela sabe disso.
+
+    Mesmo mapa que :func:`alvo_fora_da_mesa` já lê (`_target_uniq_by_index`,
+    que a aba Status recalcula do ``state_full`` a cada tique, só com
+    controles conectados).
+
+    **O padrão é ``False``, e é o seguro**: sem o mapa, a janela não sabe se
+    a mesa está vazia — e afirmar que está seria inventar o diagnóstico que
+    a `NADA_ACONTECEU_MESA_VAZIA` só pode dar quando é verdade. Mesmo
+    critério do ``getattr`` defensivo de :func:`modo_nativo_manda_no_output`.
+    """
+    mapa = getattr(host, "_target_uniq_by_index", None)
+    if not isinstance(mapa, dict):
+        return False
+    return not any(isinstance(v, str) and v for v in mapa.values())
 
 
 def frase_do_desfecho(
@@ -350,6 +387,14 @@ def frase_do_desfecho(
                 )
                 or f"{assunto} — {GUARDADO}"
             )
+        # Duas listas vazias: NADA foi escrito e NADA foi guardado. A frase
+        # diz o PORQUÊ apenas quando a janela o conhece — a mesma ordem do
+        # ramo 4, e pela mesma razão. O daemon colapsa cinco caminhos neste
+        # par vazio; a janela enxerga dois deles e cala sobre os outros três.
+        if modo_nativo_manda_no_output(host):
+            return f"{assunto} — {NADA_ACONTECEU_NATIVO}"
+        if mesa_vazia(host):
+            return f"{assunto} — {NADA_ACONTECEU_MESA_VAZIA}"
         return f"{assunto} — {NADA_ACONTECEU}"
     # Corpo ausente: a heurística de hoje é o que sobra, porque não há
     # resposta do daemon a ler. Mesma ordem de sempre — o dono de AGORA
@@ -368,6 +413,8 @@ __all__ = [
     "ALVO_SEM_NOME",
     "GUARDADO",
     "NADA_ACONTECEU",
+    "NADA_ACONTECEU_MESA_VAZIA",
+    "NADA_ACONTECEU_NATIVO",
     "alvo_fora_da_mesa",
     "com_artigo",
     "coop_manda_nas_luzes",
@@ -376,6 +423,7 @@ __all__ = [
     "guardado_ate_o_alvo_voltar",
     "guardado_ate_o_coop_sair",
     "guardado_ate_o_nativo_sair",
+    "mesa_vazia",
     "modo_nativo_manda_no_output",
     "nome_curto_do_alvo",
 ]
