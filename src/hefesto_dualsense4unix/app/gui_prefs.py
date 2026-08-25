@@ -6,6 +6,7 @@ Tolerante a ausência do arquivo (retorna defaults).
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.utils import xdg_paths
@@ -18,8 +19,28 @@ logger = get_logger(__name__)
 # caminho curto legado `~/.config/hefesto`, divergindo de perfis/sessão e
 # deixando as preferências órfãs após reinstalar. A migração curto→longo
 # (`utils.migrate_legacy_paths`) traz preferências antigas para cá.
-_CONFIG_DIR = xdg_paths.config_dir()
-_PREFS_FILE = _CONFIG_DIR / "gui_preferences.json"
+_PREFS_NOME = "gui_preferences.json"
+
+
+def _prefs_file() -> Path:
+    """Caminho do arquivo de preferências, resolvido NA CHAMADA.
+
+    LUZ-CEGA-01/E8 (25/08/2026) — era constante de módulo
+    (``_CONFIG_DIR = xdg_paths.config_dir()``), e constante de módulo é
+    avaliada na IMPORTAÇÃO. Sob a suíte isso vaza o ``$HOME`` REAL de quem
+    roda: o ``tests/conftest.py`` isola ``XDG_CONFIG_HOME`` numa fixture de
+    FUNÇÃO, que só corre DEPOIS da coleta — quando este módulo já congelou o
+    caminho verdadeiro. Qualquer ``save_gui_prefs`` num teste escrevia em
+    ``~/.config/hefesto-dualsense4unix/gui_preferences.json`` da máquina.
+
+    É exatamente a classe de defeito que o CANARIO-FS-01 (05/08/2026)
+    nomeia no próprio texto de reprovação — *"procure constante de módulo
+    com Path.home() avaliada no import"* — e que aquele dia curou em
+    ``storm_doctor._allowlist_path`` e ``EmulationActionsMixin._wp_dropin_dir``.
+    Esta terceira passou. Em produção nada muda: ``config_dir()`` já resolve
+    ``XDG_CONFIG_HOME`` a cada chamada.
+    """
+    return xdg_paths.config_dir() / _PREFS_NOME
 
 _DEFAULTS: dict[str, Any] = {
     "advanced_editor": False,
@@ -37,10 +58,11 @@ def load_gui_prefs() -> dict[str, Any]:
 
     Retorna dict com defaults se o arquivo não existir ou estiver corrompido.
     """
-    if not _PREFS_FILE.exists():
+    prefs_file = _prefs_file()
+    if not prefs_file.exists():
         return dict(_DEFAULTS)
     try:
-        raw = _PREFS_FILE.read_text(encoding="utf-8")
+        raw = prefs_file.read_text(encoding="utf-8")
         data: dict[str, Any] = json.loads(raw)
         prefs = dict(_DEFAULTS)
         prefs.update(data)
@@ -56,8 +78,9 @@ def save_gui_prefs(prefs: dict[str, Any]) -> None:
     Cria o diretório pai se necessário. Falha silenciosa com log de aviso.
     """
     try:
-        _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        _PREFS_FILE.write_text(
+        prefs_file = _prefs_file()
+        prefs_file.parent.mkdir(parents=True, exist_ok=True)
+        prefs_file.write_text(
             json.dumps(prefs, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )

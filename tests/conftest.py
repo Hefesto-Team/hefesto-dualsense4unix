@@ -458,6 +458,115 @@ def _canario_ligado() -> bool:
     return os.environ.get(_CANARIO_DESLIGADO_ENV) != "1"
 
 
+# ---------------------------------------------------------------------------
+# FAIXA-NO-BERCO-01 — a segunda régua sobre o `~/.config` REAL
+# ---------------------------------------------------------------------------
+# O PORQUÊ, medido em 25/08/2026 (LUZ-CEGA-01/E8). Quatro endereços da faixa de
+# fixture `aa:bb:cc:*` moram no `controllers.json` de PRODUÇÃO dela desde
+# 22/08 — o journal dela datou a escrita dentro do boot `df8018bc`
+# (21/08 15:56 → 22/08 01:55): antes dela a fila gravada tinha os quatro
+# DualSense REAIS; depois, só os quatro forjados.
+#
+# O CANARIO-FS-01 acima deveria ter pego, e não pegou. Duas razões, e as duas
+# são estruturais:
+#
+# 1. **ele é DELTA de conteúdo, e a mesa dela já nasce suja.** De 22/08 em
+#    diante toda sessão COMEÇA com a poluição no lugar: a foto inicial e a
+#    final concordam, e o canário fica calado para sempre sobre um defeito que
+#    continua no disco;
+# 2. **ele é rotineiramente DESLIGADO justamente onde importa.** Com o daemon
+#    e a janela DELA vivos ao lado, o canário acusa a escrita do produto como
+#    se fosse da suíte (medido em 06/08: seis escritas em `profiles/` num run
+#    que só rodou `test_bluez_config_sh.py`), e a própria mensagem dele oferece
+#    `HEFESTO_SEM_CANARIO_FS=1`. Um portão que se aprende a desligar não é a
+#    régua que pega o dia ruim.
+#
+# Esta régua não tem nenhum dos dois defeitos: ela não pergunta "mudou?", e sim
+# "apareceu ENDEREÇO DE FIXTURE que não estava aqui quando a suíte começou?".
+# A daemon dela escrevendo os MACs REAIS dela nunca a dispara — então ela pode
+# ficar LIGADA na máquina em que o canário fica desligado, que é o ponto todo.
+# É a regra da casa: duas réguas independentes é o que revela.
+#
+# O dono da régua é um só: `scripts/check_faixa_sintetica.py`. Aqui só se
+# compara o começo com o fim.
+#
+# O QUE ELA NÃO PEGA, e está escrito para ninguém confiar demais: um vazamento
+# que reescreva EXATAMENTE os mesmos endereços nos mesmos arquivos que já
+# estavam sujos passa em branco (delta vazio). Quem pega esse é o CANARIO-FS-01,
+# que compara conteúdo. As duas juntas cobrem o que nenhuma cobre sozinha — e é
+# por isso que esta não substitui aquela.
+
+#: Escotilha PRÓPRIA — de propósito não é a do canário. Foi a escotilha do
+#: canário que deixou 21/08 passar; herdar o mesmo interruptor seria herdar o
+#: mesmo buraco.
+_FAIXA_DESLIGADA_ENV = "HEFESTO_SEM_FAIXA_SINTETICA"
+
+#: `{"<arquivo>::<endereço>"}` no início da sessão. O que já estava lá é dela.
+_FAIXA_NO_INICIO: set[str] = set()
+
+#: Selo, pelo mesmo motivo do `_CANARIO_ARMADO`: sem a foto inicial, comparar
+#: contra um conjunto vazio acusaria a poluição VELHA como se fosse desta
+#: sessão — o alarme mais falso que existe.
+_FAIXA_ARMADA = False
+
+
+def _faixa_ligada() -> bool:
+    return os.environ.get(_FAIXA_DESLIGADA_ENV) != "1"
+
+
+def _faixa_config_dir_real() -> Path:
+    """O `config_dir()` de produção, resolvido do ambiente NA HORA da chamada.
+
+    Sem importar o produto: este arquivo é carregado também pelo job leve do
+    CI, que instala só o pytest (ver `_nenhum_sysfs_vivo_na_varredura_de_vpad`).
+    A regra é a do `platformdirs`, e é a mesma que `utils/xdg_paths.config_dir`
+    aplica: `$XDG_CONFIG_HOME` quando existe, `~/.config` quando não.
+    """
+    base = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    raiz = Path(base) if base else Path(os.path.expanduser("~")) / ".config"
+    return raiz / "hefesto-dualsense4unix"
+
+
+def _faixa_enderecos() -> set[str]:
+    """Endereços sintéticos hoje no `config_dir()` real. Vazio se algo faltar.
+
+    Nunca levanta: uma régua que derruba a sessão quando não consegue medir
+    ensina a desligá-la, e é assim que se perde a régua.
+    """
+    try:
+        raiz_do_repo = Path(__file__).resolve().parents[1]
+        pasta_de_scripts = str(raiz_do_repo / "scripts")
+        if pasta_de_scripts not in sys.path:
+            sys.path.insert(0, pasta_de_scripts)
+        import check_faixa_sintetica
+
+        return check_faixa_sintetica.enderecos(_faixa_config_dir_real())
+    except Exception:
+        return set()
+
+
+def _faixa_no_fim_da_sessao(session: Any) -> None:
+    """Reprova se um endereço de fixture APARECEU no `config_dir()` real."""
+    if not _faixa_ligada() or not _FAIXA_ARMADA:
+        return
+    novos = sorted(_faixa_enderecos() - _FAIXA_NO_INICIO)
+    if not novos:
+        return
+    _escrever_no_terminal(session, [
+        "",
+        "FAIXA-NO-BERCO-01: endereço de FIXTURE apareceu no config_dir REAL "
+        f"durante esta sessão ({len(novos)}):",
+        *[f"  - {n}" for n in novos],
+        "  Isto é a mesa de produção, não um dublê. Algum teste (ou um processo",
+        "  que ele acordou) resolveu o `config_dir()` verdadeiro: procure",
+        "  constante de módulo avaliada no import, registro singleton que",
+        "  sobrevive ao teste e grava depois do teardown do monkeypatch, e",
+        "  subprocesso que não herdou o XDG_CONFIG_HOME isolado.",
+        f"  Escotilha: {_FAIXA_DESLIGADA_ENV}=1 (e ela NÃO é a do canário).",
+    ])
+    session.exitstatus = 1
+
+
 def _canario_raizes() -> list[Path]:
     """Os alvos resolvidos contra o ``HOME`` REAL do processo.
 
@@ -845,8 +954,14 @@ def pytest_sessionstart(session: Any) -> None:
     E BERCO-DE-TMP-01: a partir daqui, todo temporário desta sessão nasce
     dentro de um diretório que só esta sessão conhece.
     """
-    global _CANARIO_ARMADO
+    global _CANARIO_ARMADO, _FAIXA_ARMADA
     _armar_berco(session)
+    # FAIXA-NO-BERCO-01: a foto do que JÁ estava sujo. Fora do `if` do canário
+    # de propósito — esta régua fica de pé mesmo com aquele desligado, que é a
+    # razão de ela existir.
+    if _faixa_ligada():
+        _FAIXA_NO_INICIO.update(_faixa_enderecos())
+        _FAIXA_ARMADA = True
     # VIGIA-DE-APARELHO-01: antes da COLETA, porque um módulo de teste que
     # criasse aparelho na importação passaria por baixo de qualquer fixture
     # (fixture de sessão só nasce no primeiro teste, depois de importar tudo).
@@ -941,7 +1056,7 @@ def _vigia_no_fim_da_sessao(session: Any) -> None:
 
 
 def _sessionfinish_das_guardas(session: Any) -> None:
-    """GUARDA-GI-REAL-01 + ARVORE-CONGELADA-01 + CANARIO-FS-01, nesta ordem."""
+    """GUARDA-GI-REAL-01, ARVORE-CONGELADA-01, FAIXA-NO-BERCO-01, CANARIO-FS-01."""
     if EXIGE_GTK_REAL and _MODULOS_PULADOS_SEM_GI:
         session.exitstatus = 1
 
@@ -970,6 +1085,10 @@ def _sessionfinish_das_guardas(session: Any) -> None:
     # atribui) e o AVISO (o journal do kernel, que enxerga o que a vigia não
     # alcança — processo filho — e não sabe de quem é).
     _vigia_no_fim_da_sessao(session)
+
+    # FAIXA-NO-BERCO-01 ANTES do canário, e fora do `return` dele: é a régua
+    # que precisa valer justamente quando o canário está desligado.
+    _faixa_no_fim_da_sessao(session)
 
     if not _canario_ligado() or not _CANARIO_ARMADO:
         return
