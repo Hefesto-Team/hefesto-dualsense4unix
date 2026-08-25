@@ -1373,25 +1373,33 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._espelhar_estado_global_nos_cards()
 
     def _alojar_botao_da_rota(self) -> None:
-        """Muda o botão da rota de som para o bloco Alto-falante do 1º card.
+        """Garante que o botão da rota de som tem pai — hoje, sempre o berço.
 
-        SOM-ROTA-NO-CARD-01, pedido dela em 01/08: *"aquele botão de voltar ao
-        anterior sai de lá de cima e fica no espaço onde tem 'não ajustado' no
-        alto-falante"*.
+        CORREÇÃO DE FATO (25/08/2026, STATUS-DIZ-O-QUE-VÊ-01). Esta docstring
+        afirmava entregar a SOM-ROTA-NO-CARD-01 — o botão migrando para o
+        bloco "Alto-falante" do primeiro card. **Ficou falsa em 02/08/2026**,
+        e por decisão dela: a SOM-CANAL-01/E3 aposentou o botão isolado —
+        *"ele deixa de existir como botão isolado. Vira o estado 'Todo o som
+        do PC' do seletor"*. O comando nasce dentro do card, no seletor de
+        canal, e o `_speaker_rota_slot` do `ControllerCard` passou a ser
+        `None` justamente para dizer "não reparente".
 
-        O botão é o do GLADE, e continua sendo UM só. A segunda razão da
-        SOM-04 para ele morar no frame Estado — a saída padrão do sistema é um
-        fato do SISTEMA, e com dois cards haveria dois botões para um único
-        interruptor global — continua inteira. Por isso ele é REPARENTADO para
-        o card primário em vez de cada card ganhar o seu: com 2+ controles o
-        sink sequer é resolvido (`_sink_do_controle_para_a_rota` devolve "" de
-        propósito) e o botão nasce insensível, então um botão só, no primeiro
-        card, é também o mais honesto.
+        O que este método FAZ hoje: lê o slot do card primário e, como ele é
+        `None`, devolve o botão do Glade ao berço. O caminho de reparentar
+        continua escrito, e é o caminho de volta caso ela decida trazer o
+        botão para o card — mas ele não corre, e afirmar o contrário aqui
+        custou uma sprint inteira lendo o código como um contrato quebrado.
 
-        Idempotente: sai cedo se o botão já está no slot certo. Os cards são
-        reconstruídos a cada troca de conjunto, e o `Gtk.Container.remove` do
-        pai antigo é obrigatório — um widget com dois pais é erro de GTK, não
-        de desenho.
+        **A trava, que é o motivo de o método existir mesmo assim:** a
+        ROTA-ÓRFÃ-01, paga em 01/08/2026 nesta árvore com GTK 3.24 e o Glade
+        real. Sem alguém garantindo um pai, plugar um segundo controle
+        recriava os cards e o `child.destroy()` deixava o botão ÓRFÃO — vivo,
+        porque o Builder guarda a referência, mas fora da tela e sem casa. Ela
+        perdia o desfazer da rota exatamente no co-op.
+
+        Idempotente: sai cedo se o botão já está onde deve. O
+        `Gtk.Container.remove` do pai antigo é obrigatório — um widget com
+        dois pais é erro de GTK, não de desenho.
         """
         botao = self._get("btn_som_no_controle")
         if botao is None or not hasattr(botao, "get_parent"):
