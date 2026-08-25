@@ -589,12 +589,9 @@ ESTADOS_DO_INICIO: dict[str, tuple[dict, str | None, str]] = {  # type: ignore[t
         "um controle que o Hefesto VÊ e não adota, na mesma mesa dos DualSense",
     ),
     "steam_input": (
-        {
-            "steam_input": {"excecao_ativa": True, "vpad_suspenso": True},
-            "gamepad_emulation": {"enabled": False, "flavor": "dualsense"},
-        },
+        {"steam_input": {"excecao_ativa": True, "vpad_suspenso": False}},
         None,
-        "a exceção de Steam Input — a ponte que não é o gamepad do Hefesto",
+        "a exceção de Steam Input ligada — e a aba, de propósito, igualzinha",
     ),
     "mascara_divergente": (
         {},
@@ -605,6 +602,32 @@ ESTADOS_DO_INICIO: dict[str, tuple[dict, str | None, str]] = {  # type: ignore[t
         {"controllers": [], "coop": {"enabled": True, "players": 0}},
         None,
         "o payload MEDIDO em 23/08 com zero controle na casa (§2.1 da sprint)",
+    ),
+}
+
+#: Os estados que a aba, HOJE, **não** distingue — e que por isso saem byte a
+#: byte iguais ao caminho feliz. A declaração existe porque a régua da I10
+#: (`test_cada_estado_produz_uma_foto_diferente_do_caminho_feliz`) trata foto
+#: repetida como defeito, e ela está certa: em 14/08/2026 nove de dez PNGs
+#: saíram idênticos e o instrumento era cego. Um estado só sai daquela régua
+#: DECLARADO, com a razão e a data — e entra nesta, que cobra o contrário.
+#:
+#: Quem fizer a aba reagir a um destes tem o teste avisando: o estado passa a
+#: sair diferente, a régua de igualdade reprova, e a resposta é mover o nome de
+#: volta. É a mesma disciplina do `_PAR_ACEITO` do portão do par assimétrico.
+ESTADOS_SEM_EFEITO_NA_ABA: dict[str, str] = {
+    "steam_input": (
+        "25/08/2026, I6/ramo 2. A exceção de Steam Input NÃO muda a linha da "
+        "Ponte, e é medição, não descuido: desde a ESCONDER-EM-VEZ-DE-SAIR-01 "
+        "(09/08/2026, decisão dela) a exceção esconde o FÍSICO e mantém o vpad "
+        "de pé, e em 11/08/2026, com um appid da allowlist dela em sessão, a "
+        "medição em jogo achou ZERO espelhos da Steam e os vpads do Hefesto "
+        "alimentando quatro controles (pilha-steam-input-xpad-sdl.md, §2.4-bis). "
+        "Quem entrega o controle durante a exceção continua sendo o Hefesto — "
+        "logo a resposta certa da aba é a mesma do caminho feliz. A foto existe "
+        "para ela poder VER que é a mesma; se um dia a aba nomear a exceção "
+        "(texto novo na primeira tela, e isso é palavra DELA), este nome volta "
+        "para a régua da diferença."
     ),
 }
 

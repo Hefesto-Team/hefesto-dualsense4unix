@@ -22,12 +22,17 @@ O QUE FICOU DE FORA, E POR QUÊ (não é esquecimento)
   que as cobra existe abaixo e está ``xfail(strict=True)``: no dia em que elas
   falarem a mesma língua, ela PASSA e o strict reprova, obrigando quem integrar
   a apagar o xfail;
-* **o texto do aviso de grab** (*"Grab falhou — input pode dobrar no jogo"*)
-  continua o de sempre. Ele é jargão de kernel, e a I9 o reescreveria para
-  dizer o que acontece com ela — mas o que exatamente acontece depende do que a
-  ``ESCONDE-SO-O-HIDRAW-01`` (aberta) concluir sobre o que o jogo continua
-  vendo pelo evdev. Trocar a frase antes disso é trocar um jargão CERTO por uma
-  promessa não apurada.
+* **o texto do aviso de grab** estava bloqueado por aqui e **nasceu em
+  25/08/2026**, quando a ``ESCONDE-SÓ-O-HIDRAW-01`` fechou e mediu o que o jogo
+  continua vendo: o `hide` age em UMA superfície (`hidraw`) e o mesmo controle
+  mora em TRÊS — `event*` e `js*` seguem alcançáveis. O `EVIOCGRAB` é o que
+  impede o físico de produzir entrada nelas, então com ele recusado a
+  duplicação não é hipótese, é o que sobra. Ver `TestOAvisoDeGrabFalaComEla`
+  abaixo;
+* **a palavra "primário"** no subtítulo do card continua. É o outro jargão que
+  a I9 nomeia, e trocá-la é decisão DELA: o card já mostra o número do jogador,
+  então qualquer substituto ou repete o que está ali ou inventa um conceito
+  novo na primeira tela.
 """
 from __future__ import annotations
 
@@ -63,6 +68,7 @@ class _Widget:
         self.visivel = True
         self.filhos: list[Any] = []
         self.classes: list[str] = []
+        self.dica: str | None = None
 
     def set_text(self, v: str) -> None:
         self.texto = v
@@ -96,6 +102,12 @@ class _Widget:
 
     def set_xalign(self, _v: float) -> None:
         pass
+
+    def set_tooltip_text(self, v: str) -> None:
+        # O hover é METADE do aviso de grab (I9): a linha diz o que acontece
+        # com ela, o tooltip diz por quê e o que fazer. Um dublê que jogasse o
+        # tooltip fora mediria só metade da frase.
+        self.dica = v
 
     def set_margin_end(self, _v: int) -> None:
         pass
@@ -434,3 +446,120 @@ class TestOCardFalaALinguaDoMapa:
             },
         }
         assert dialetos["Início"] == dialetos["externos"], dialetos
+
+
+# ----------------------------------------------------------------------
+# I9, segunda metade — o aviso de duplicação fala com ELA
+# ----------------------------------------------------------------------
+
+
+class TestOAvisoDeGrabFalaComEla:
+    """25/08/2026 — a metade da I9 que a ``ESCONDE-SÓ-O-HIDRAW-01`` destravou.
+
+    A linha dizia *"Grab falhou — input pode dobrar no jogo"*. `grab` é o nome
+    da chamada de sistema (`EVIOCGRAB`) e `input` é o que ela chama de botão:
+    a frase contava o que aconteceu com o KERNEL numa tela para quem quer
+    jogar. Ela não podia ser trocada antes porque a consequência — *o jogo
+    continua vendo o físico?* — não estava medida.
+
+    **Agora está**, e nos dois pedaços de que a frase precisa:
+
+    * o QUE ACONTECE — `ESCONDE-SÓ-O-HIDRAW-01`, medido nesta bancada em
+      25/08/2026: o `hide` do broker age em `/dev/hidraw*` e o mesmo controle
+      mora em três superfícies; `event*` e `js*` seguem alcançáveis por
+      qualquer processo dela. O `EVIOCGRAB` é o que impede o físico de produzir
+      entrada nessas duas, então com ele recusado quem enumerar `/dev/input`
+      acha o controle dobrado;
+    * o QUE FAZER — `GRAB-DOBRADO-01`, medido em 15/08/2026: as quatro recusas
+      do journal são `Errno 16` (outro leitor já tem o dispositivo), o daemon
+      retoma sozinho a cada 2 s (`GRAB_RECONCILE_SEC`), e o que curou naquele
+      dia foi reiniciar o Hefesto.
+
+    A REDAÇÃO continua sendo dela (PROVA-DE-TELA-01). O que esta classe mede é
+    o que a frase não pode fazer: falar a língua do kernel, acender fora do
+    caso, ou acusar um culpado que a medição não nomeou.
+    """
+
+    def test_a_linha_nao_fala_a_lingua_do_kernel(self) -> None:
+        """A MORDIDA: devolva o texto antigo e este teste reprova."""
+        linha, _porque = home_actions.aviso_de_grab(
+            "failed", is_primary=True, gamepad_on=True
+        )
+
+        for jargao in ("grab", "input", "eviocgrab", "evdev", "hidraw"):
+            assert jargao not in linha.lower(), (
+                f"a linha do card voltou a dizer {jargao!r}. É o nome da peça "
+                "do sistema que falhou — e o card é a primeira tela de quem "
+                f"quer jogar: {linha!r}"
+            )
+        assert "duas vezes" in linha
+
+    def test_o_porque_diz_o_que_fazer_e_nao_acusa_ninguem(self) -> None:
+        """Diagnóstico desta casa diz o quê, por quê e o que fazer.
+
+        E não nomeia culpado: a `GRAB-DOBRADO-01` mediu que OUTRO leitor tem o
+        dispositivo (`Errno 16`), e registrou por escrito que **quem** não está
+        provado — a Steam é candidata sem prova. Uma tela que a acusasse
+        mandaria ela fechar o programa por onde ela joga.
+        """
+        _linha, porque = home_actions.aviso_de_grab(
+            "failed", is_primary=True, gamepad_on=True
+        )
+
+        assert "ao mesmo tempo" in porque, "o porquê não diz o que acontece"
+        assert "2 segundos" in porque, "o porquê não diz que o Hefesto insiste"
+        assert "feche" in porque.lower(), "o porquê não diz o que fazer"
+        assert "Steam" not in porque, (
+            "o aviso passou a acusar a Steam, que a GRAB-DOBRADO-01 registra "
+            "como candidata SEM PROVA (§2)"
+        )
+
+    def test_so_acende_no_primario_com_gamepad_de_pe_e_recusa(self) -> None:
+        """A condição é a que já estava certa — e agora é testável sem GTK.
+
+        `pending` é o estado de quem ainda não abriu o dispositivo: acender ali
+        seria alarme na partida inteira de quem acabou de ligar o controle.
+        """
+        assert home_actions.aviso_de_grab(
+            "failed", is_primary=True, gamepad_on=True
+        ) is not None
+        for estado in ("held", "pending", "off", None, ""):
+            assert (
+                home_actions.aviso_de_grab(
+                    estado, is_primary=True, gamepad_on=True
+                )
+                is None
+            ), f"o aviso acendeu com grab_state={estado!r}"
+        assert (
+            home_actions.aviso_de_grab("failed", is_primary=False, gamepad_on=True)
+            is None
+        )
+        assert (
+            home_actions.aviso_de_grab("failed", is_primary=True, gamepad_on=False)
+            is None
+        )
+
+    def test_o_card_leva_a_linha_e_o_porque_no_hover(self, fake_gtk: None) -> None:
+        """A MORDIDA do hover: arranque o `set_tooltip_text` e isto reprova.
+
+        A fileira tem até quatro cards e o aviso mora DENTRO de um deles — o
+        porquê inteiro na tela roubaria a largura dos vizinhos. O hover é o
+        mesmo desenho da fita apagada do cabeçalho, do mesmo dia.
+        """
+        host = _HomeStub()
+        estado = _estado_da_mesa_mista()
+        estado["primary_grab_state"] = "failed"
+
+        host._render_home(estado)
+
+        avisos = [
+            filho
+            for card in host._home_controllers_box.get_children()
+            for filho in card.get_children()
+            if getattr(filho, "texto", "") == home_actions.AVISO_DE_GRAB_LINHA
+        ]
+        assert len(avisos) == 1, "o aviso de duplicação não saiu no card do primário"
+        assert avisos[0].dica == home_actions.AVISO_DE_GRAB_PORQUE, (
+            "o card mostra a linha e não carrega o porquê. Sem o hover, a frase "
+            "diz o que aconteceu e não diz o que fazer."
+        )

@@ -442,13 +442,30 @@ class TestRenderDaDivergencia:
 
 
 class TestTextoDaPonte:
-    def test_steam_input_suspenso_nao_e_controlar_o_pc(self) -> None:
-        """O caso mais enganoso: `mode_of_state` chama isto de desktop.
+    def test_a_excecao_de_steam_input_nao_produz_frase_propria(self) -> None:
+        """NOTA DATADA — 25/08/2026 (INÍCIO NÃO MENTE-01, I6, ramo 2).
 
-        Com a exceção ativa o vpad é suspenso e `gamepad_emulation.enabled` cai
-        para False — a aba mostrava "Controlar o PC" com o jogo jogando pelo
-        espelho da Steam. O dado (`_steam_input_payload`) já era publicado para
-        isto e ninguém consumia.
+        Este teste exigia o contrário: *"Steam Input in frase"*. Ele nasceu na
+        PONTE-NA-TELA-01 para o mundo de então, em que a exceção SUSPENDIA o
+        vpad e `gamepad_emulation.enabled` caía para False — daí "Controlar o
+        PC" com o jogo jogando pelo espelho da Steam.
+
+        **Esse mundo acabou em 09/08/2026**, por decisão dela
+        (ESCONDER-EM-VEZ-DE-SAIR-01: *a allowlist do Steam Input NÃO tira o
+        Hefesto da frente*): a exceção passou a ESCONDER O FÍSICO e a MANTER O
+        VPAD DE PÉ. A VPAD-SUSPENSO-MORTO-01/E1 mediu em 25/08 que
+        `vpad_suspenso` só anda para `False` desde então, e a medição EM JOGO de
+        11/08 (pilha-steam-input-xpad-sdl.md, §2.4-bis, appid da allowlist dela
+        em sessão) achou ZERO espelhos da Steam, com os vpads do Hefesto
+        alimentando quatro controles.
+
+        O que ficou: com a exceção ativa quem entrega o controle continua sendo
+        o Hefesto, então a linha da Ponte responde pelas outras perguntas. Aqui
+        `enabled=False` é o caso de ela ter DESLIGADO o gamepad — e nesse caso
+        "nenhuma" é a verdade, porque o Hefesto não está entregando nada.
+
+        As réguas da frase nova estão em
+        `test_home_para_de_afirmar_o_que_nao_sabe.py::TestAExcecaoDeSteamInputNaoInventaUmaPonte`.
         """
         estado = _estado(
             enabled=False,
@@ -457,8 +474,8 @@ class TestTextoDaPonte:
 
         frase = home_actions.texto_da_ponte(estado)
 
-        assert "Steam Input" in frase
-        assert "nenhuma" not in frase
+        assert "Steam Input" not in frase
+        assert "nenhuma" in frase
 
     def test_nativo(self) -> None:
         frase = home_actions.texto_da_ponte(_estado(native_mode=True))

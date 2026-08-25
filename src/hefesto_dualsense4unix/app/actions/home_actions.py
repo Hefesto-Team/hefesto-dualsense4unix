@@ -864,14 +864,22 @@ def reconciliar_toast(jogadores: object, resultado_renumber: object) -> str:
 #    `set_gamepad_emulation` devolve o MESMO ``True`` para "apliquei", "já
 #    estava" e "recusei" (o contrato de retorno é "ativo ao final", não
 #    "apliquei o pedido" — está escrito no próprio `start_gamepad_emulation`);
-# 2. a janela não dizia por ONDE o jogo estava recebendo o controle. Com a
+# 2. a janela não dizia por ONDE o jogo estava recebendo o controle.
+#
+#    CORREÇÃO DE FATO — 25/08/2026 (I6, ramo 2). Este parágrafo dizia: *"com a
 #    exceção de Steam Input ativa o vpad é suspenso, `gamepad_emulation.enabled`
-#    cai para False e `mode_of_state` chama isso de "Controlar o PC" — a aba
-#    mostrava o modo desktop com o jogo jogando pelo espelho da Steam. O dado
-#    que desfaz o engano já era publicado: o `_steam_input_payload` do
-#    `ipc_handlers` existe exatamente para isso e sua docstring diz, com todas
-#    as letras, "a correção mora na GUI (dono diferente); o dado sai daqui para
-#    ela não precisar adivinhar". Ninguém o consumia.
+#    cai para False e `mode_of_state` chama isso de Controlar o PC — a aba
+#    mostrava o modo desktop com o jogo jogando pelo espelho da Steam"*. Aquilo
+#    era verdade até **09/08/2026**, e a decisão dela naquele dia
+#    (ESCONDER-EM-VEZ-DE-SAIR-01) trocou o mecanismo: a exceção passou a
+#    ESCONDER O FÍSICO e a MANTER O VPAD DE PÉ, então a emulação NÃO cai, o modo
+#    NÃO vira desktop, e quem alimenta o jogo durante a exceção continua sendo o
+#    gamepad do Hefesto (medição em jogo de 11/08: zero espelhos da Steam —
+#    `docs/protocol/pilha-steam-input-xpad-sdl.md`, §2.4-bis).
+#
+#    O defeito de ONDE continuou existindo, e é o que esta aba curou: a linha da
+#    ponte respondia sobre o VPAD e a pessoa lia como resposta sobre o JOGO —
+#    daí o verde com a mesa vazia (I6, o veredito que faltava).
 #
 # A voz é a do diagnóstico da aba Sistema (`descrever_deteccao_de_janela`):
 # prefixo fixo, o veredito em cor, e a frase em português de quem usa. As cores
@@ -1119,36 +1127,49 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
 
     1. sem daemon não há o que afirmar (mesma disciplina do `autoswitch_lock_
        text`: offline é "não sei", nunca "nenhuma");
-    2. exceção de Steam Input com o vpad suspenso — este caso PRECISA vir antes
-       do gamepad e do desktop, porque é exatamente ele que `mode_of_state`
-       chama de "Controlar o PC" (o `stop_gamepad_emulation` zera
-       `gamepad_emulation_enabled` mesmo com `persist=False`). Era a leitura
-       mais enganosa da aba: jogo jogando pelo espelho da Steam, aba dizendo
-       que o controle estava mexendo no mouse;
-    3. Modo Nativo — o físico sai para o jogo e o Hefesto não está no caminho;
-    4. gamepad do Hefesto, dizendo QUAL máscara o jogo vê;
-    5. nenhuma — e aí a frase aponta o botão que constrói uma.
+    2. Modo Nativo — o físico vai para o jogo e o Hefesto não está no caminho;
+    3. gamepad do Hefesto, dizendo QUAL máscara o jogo vê — e, com a mesa
+       vazia, dizendo que a ponte está de pé e sem quem a atravesse;
+    4. nenhuma — e aí a frase aponta o botão que constrói uma.
+
+    ERAM CINCO, e a segunda saiu — I6, ramo 2, 25/08/2026
+    -----------------------------------------------------
+
+    A pergunta que saiu era *"exceção de Steam Input com o vpad suspenso"*, e a
+    frase dela dizia: *"pelo Steam Input — neste jogo a Steam entrega os botões,
+    e o Hefesto segue cuidando dos gatilhos, da cor e da vibração."* Ela nunca
+    apareceu na tela, e não pode voltar como estava. Três medições, nesta ordem:
+
+    1. **A condição é inalcançável** — `VPAD-SUSPENSO-MORTO-01`/E1, MEDIDO em
+       25/08/2026: `daemon._steam_input_vpad_suspenso` só anda para `False`
+       desde o commit `d8022ea` (09/08/2026), e esta era uma das CINCO leituras
+       de produção de um valor impossível. O portão que guarda o achado é
+       `tests/unit/test_portao_o_par_com_metade_ligada.py`.
+    2. **Trocar a condição por `excecao_ativa` sozinho — a saída recomendada
+       para o PAR — publicaria aqui uma frase que a medição derruba.** Desde a
+       `ESCONDER-EM-VEZ-DE-SAIR-01` (09/08/2026, decisão dela: *a allowlist do
+       Steam Input NÃO tira o Hefesto da frente*), a exceção **esconde o
+       físico** (`esconder_o_fisico_para_o_jogo`) e **mantém o vpad de pé**. Ou
+       seja: na exceção quem alimenta o jogo continua sendo o gamepad do
+       Hefesto — o oposto do que a frase dizia.
+    3. **E há medição em jogo, não só leitura de código** —
+       `docs/protocol/pilha-steam-input-xpad-sdl.md`, §2.4-bis, MEDIDO em
+       11/08/2026 com um appid da allowlist DELA em sessão: **zero espelhos**
+       da Steam no sistema, os dois vpads do Hefesto de pé, quatro controles
+       com jogador e vibração, e o aceite dela. A Steam não estava entregando
+       botão nenhum.
+
+    Logo, com a exceção ativa, a resposta verdadeira é a da terceira pergunta —
+    que é a que a aba já dá. **Silêncio aqui não é buraco:** quem tem a fita da
+    exceção de Steam Input é a aba Emulação (`markup_status_steam_input`), e é
+    lá que ela é nomeada.
+
+    O que fica em aberto, e é DELA: se a Início deve NOMEAR a exceção (algo
+    como "…e a Steam está no meio neste jogo"). É texto novo na primeira tela,
+    e texto de tela é palavra dela — PROVA-DE-TELA-01.
     """
     if not isinstance(state, dict):
         return PONTE_PREFIXO + "não sei — o Hefesto está desligado."
-    steam_input = state.get("steam_input")
-    if (
-        isinstance(steam_input, dict)
-        and steam_input.get("excecao_ativa")
-        and steam_input.get("vpad_suspenso")
-    ):
-        # A frase daqui NÃO pode dizer que o Hefesto "sai da frente": ela foi
-        # refutada por ela em 06/08/2026 e há portão que reprova
-        # (`test_a_frase_refutada_da_allowlist`). O que a medição
-        # CONTROLE-SONY-MEDIDO-01 (seção A INVERSÃO) mostra é uma DIVISÃO: na
-        # exceção o Steam Input passa a entregar a ENTRADA ao jogo, e o Hefesto
-        # MANTÉM A SAÍDA — os gatilhos dela seguraram e a cor dela ficou.
-        return (
-            PONTE_PREFIXO
-            + f'<span foreground="{_COR_OK}">pelo Steam Input</span> — neste '
-            "jogo a Steam entrega os botões, e o Hefesto segue cuidando dos "
-            "gatilhos, da cor e da vibração."
-        )
     if state.get("native_mode"):
         return (
             PONTE_PREFIXO
@@ -1157,7 +1178,7 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
         )
     gamepad = state.get("gamepad_emulation")
     if isinstance(gamepad, dict) and gamepad.get("enabled"):
-        # I6 (25/08/2026) — O QUARTO VEREDITO: a ponte de pé sem quem a
+        # I6 (25/08/2026) — O VEREDITO QUE FALTAVA: a ponte de pé sem quem a
         # atravesse. MEDIDO na bancada de 23/08 com ZERO DualSense na casa: o
         # frame de Controles dizia "Nenhum controle conectado." e esta linha,
         # logo acima, dizia em VERDE "pelo Hefesto — o jogo recebe o controle".
@@ -1165,9 +1186,9 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
         # JOGO. É a forma exata do defeito F7 nesta aba: o estado vazio pintado
         # com a cor do estado bom.
         #
-        # A ordem das cinco perguntas NÃO muda — isto é uma bifurcação DENTRO
-        # da quarta, e vem antes de nomear a máscara porque não há a quem a
-        # máscara se aplique.
+        # A ordem das perguntas NÃO muda — isto é uma bifurcação DENTRO da
+        # pergunta do gamepad, e vem antes de nomear a máscara porque não há a
+        # quem a máscara se aplique.
         if not controles_na_mesa(state):
             return (
                 PONTE_PREFIXO
@@ -1326,6 +1347,70 @@ def palavra_do_transporte(transporte: object) -> str:
         return PALAVRA_DE_TRANSPORTE_DESCONHECIDO
     bruto = str(transporte).strip()
     return _PALAVRA_DO_TRANSPORTE.get(bruto.lower(), bruto)
+
+
+#: O aviso do card quando o Hefesto NÃO conseguiu ficar com o controle só para
+#: si. Duas metades: a linha, que fica à vista, e o porquê, que só aparece no
+#: hover — o mesmo desenho da fita apagada do cabeçalho, e pela mesma razão:
+#: a fileira tem até quatro cards, e o aviso mora DENTRO de um deles.
+#:
+#: I9 (25/08/2026), a metade que estava bloqueada. Até hoje a linha dizia
+#: *"Grab falhou — input pode dobrar no jogo"*: `grab` é o nome da chamada de
+#: sistema que falhou (`EVIOCGRAB`), e `input` é o que ela chama de botão. Numa
+#: tela para quem quer jogar, isso conta o que aconteceu com o KERNEL e cala o
+#: que aconteceu com ELA.
+#:
+#: A frase só pôde nascer agora porque dependia de duas medições, e as duas
+#: existem:
+#:
+#: 1. **o que o jogo continua vendo** — `ESCONDE-SÓ-O-HIDRAW-01`, MEDIDO nesta
+#:    bancada em 25/08/2026: o `hide` do broker age em UMA superfície
+#:    (`/dev/hidraw*`) e o mesmo controle mora em TRÊS; `event*` e `js*` seguem
+#:    alcançáveis. O `EVIOCGRAB` é o que impede o físico de PRODUZIR entrada
+#:    nessas duas — logo, com ele recusado, quem enumerar `/dev/input` acha o
+#:    controle dobrado. A duplicação não é hipótese: é o que sobra;
+#: 2. **o que fazer** — `GRAB-DOBRADO-01`, MEDIDO em 15/08/2026: as quatro
+#:    recusas do journal (13, 14 e 15/08) trazem **Errno 16**, que só existe
+#:    quando OUTRO leitor já tem o dispositivo — quem, não está provado, e por
+#:    isso a frase não acusa ninguém. O daemon retoma sozinho a cada
+#:    `GRAB_RECONCILE_SEC` = 2 s (`daemon/lifecycle.py:84`), e o que curou na
+#:    medição daquele dia foi reiniciar o Hefesto.
+#:
+#: PROVISÓRIO — decisão dela (o texto exato é palavra dela, PROVA-DE-TELA-01).
+#: CLASSE DE TELA: ESTRUTURAL — frase reescrita, e um hover onde não havia.
+AVISO_DE_GRAB_LINHA: Final[str] = "O jogo pode receber cada botão duas vezes"
+
+#: O porquê, no hover. Diz o que é, o que causa e o que fazer — nessa ordem, e
+#: sem nomear culpado que a medição não nomeou.
+AVISO_DE_GRAB_PORQUE: Final[str] = (
+    "Outro programa pegou este controle antes e não solta, então o Hefesto não "
+    "conseguiu ficar com ele só para si. Enquanto isso durar, o jogo pode "
+    "enxergar o controle físico E o do Hefesto ao mesmo tempo. O Hefesto tenta "
+    "de novo sozinho a cada 2 segundos; se o aviso não sair, feche os outros "
+    "programas que usam controle e ligue o Hefesto de novo."
+)
+
+
+def aviso_de_grab(
+    grab_state: object, *, is_primary: bool, gamepad_on: bool
+) -> tuple[str, str] | None:
+    """A linha e o porquê do aviso de duplicação — função pura (I9).
+
+    Devolve ``(linha, porquê)`` ou ``None`` quando não há o que avisar. A
+    CONDIÇÃO mora aqui junto do texto de propósito: ela é a parte que já estava
+    certa (`is_primary and gamepad_on and grab_state == "failed"`) e tirá-la do
+    meio do montador de widgets é o que torna a frase testável sem GTK.
+
+    Só ``"failed"`` acende. ``"pending"`` é o estado de quem ainda não abriu o
+    dispositivo — acender ali seria alarme na partida inteira de quem acabou de
+    ligar o controle. E o aviso é do PRIMÁRIO com o gamepad de pé: sem gamepad
+    do Hefesto no caminho não há segundo dispositivo para dobrar com o físico.
+    """
+    if not is_primary or not gamepad_on:
+        return None
+    if grab_state != "failed":
+        return None
+    return AVISO_DE_GRAB_LINHA, AVISO_DE_GRAB_PORQUE
 
 
 def _format_controller_subtitle(
@@ -2798,10 +2883,17 @@ class HomeActionsMixin(WidgetAccessMixin):
         pedido = getattr(self, "_home_flavor_pedido", None)
         if pedido and no_aparelho and pedido == no_aparelho:
             self._home_flavor_pedido = None
-        # Fora do modo gamepad não há máscara valendo: no Modo Nativo e sob a
-        # exceção de Steam Input quem entrega o controle não é o vpad, e cobrar
-        # a máscara ali seria aviso sobre coisa que não está em uso. Mesmo gate
-        # do `vpad_degradation_text`.
+        # Fora do modo gamepad não há máscara valendo: no Modo Nativo quem
+        # entrega o controle é o físico, e cobrar a máscara ali seria aviso
+        # sobre coisa que não está em uso. Mesmo gate do
+        # `vpad_degradation_text`.
+        #
+        # CORREÇÃO DE FATO — 25/08/2026: esta linha citava também "a exceção de
+        # Steam Input" como caso em que o vpad não entrega. Desde a
+        # ESCONDER-EM-VEZ-DE-SAIR-01 (09/08/2026) é o contrário — a exceção
+        # esconde o FÍSICO e mantém o vpad de pé, o modo continua sendo gamepad
+        # e a máscara continua valendo. Nada muda no código: o gate sempre foi
+        # `mode_of_state`, e é ele que continua decidindo.
         # I3 (25/08/2026): duas leituras, e o daemon tem a palavra sobre o jogo
         # em cena. `mascara_divergente` é o ALARME que ele já publicava e que
         # esta janela nunca leu — quando ele existe, quem nomeia o perfil é o
@@ -2892,17 +2984,19 @@ class HomeActionsMixin(WidgetAccessMixin):
             # físico, então não há como casar card com aparelho por ele. Quem
             # distingue os controles na mesa é a COR da lightbar e o LED de
             # jogador — o card já mostra o número do jogador.
-            if is_primary and gamepad_on and grab_state == "failed":
-                # NOTA — o TEXTO desta linha continua sendo o de sempre, e é de
-                # propósito. Ele é jargão de kernel numa tela para quem quer
-                # jogar ("grab" é a chamada de sistema que falhou), e a I9 da
-                # sprint o reescreveria para dizer o que acontece com ela — mas
-                # o que exatamente acontece depende do que a
-                # ESCONDE-SO-O-HIDRAW-01 (aberta, Onda 12) concluir sobre o que
-                # o jogo continua vendo pelo evdev. Trocar a frase antes disso
-                # seria trocar um jargão certo por uma promessa não apurada.
-                warn = Gtk.Label(label="Grab falhou — input pode dobrar no jogo")
+            # I9 (25/08/2026): a CONDIÇÃO e o TEXTO saíram daqui para
+            # `aviso_de_grab` — função pura, testável sem GTK. A linha dizia
+            # "Grab falhou — input pode dobrar no jogo", que é o que aconteceu
+            # com o kernel; agora diz o que acontece com ela, e o porquê vai no
+            # hover, sem custar um pixel da fileira.
+            aviso = aviso_de_grab(
+                grab_state, is_primary=is_primary, gamepad_on=gamepad_on
+            )
+            if aviso is not None:
+                linha, porque = aviso
+                warn = Gtk.Label(label=linha)
                 warn.set_xalign(0.0)
+                warn.set_tooltip_text(porque)
                 warn.get_style_context().add_class("hefesto-dualsense4unix-status-err")
                 card.pack_start(warn, False, False, 0)
             box.pack_start(card, True, True, 0)
