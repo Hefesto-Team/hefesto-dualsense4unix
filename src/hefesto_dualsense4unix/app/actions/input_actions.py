@@ -542,10 +542,10 @@ class InputActionsMixin(MouseActionsMixin):
             except ValueError:
                 continue
             new_bindings[button] = tokens
-        for button, tokens in self._resolve_effective_bindings().items():
+        for button, guardados in self._resolve_effective_bindings().items():
             if button in CANONICAL_BUTTONS or button in new_bindings:
                 continue
-            new_bindings[button] = list(tokens)
+            new_bindings[button] = list(guardados)
         self.draft = draft.model_copy(
             update={"key_bindings": new_bindings or None}
         )
