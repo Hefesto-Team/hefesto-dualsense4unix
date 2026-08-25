@@ -298,7 +298,6 @@ def ligar_o_save(editor: Editor, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pa, "save_profile", lambda p: editor.salvos.append(p))
     monkeypatch.setattr(pa, "delete_profile", lambda n: None)
     monkeypatch.setattr(pa, "active_profile_name", lambda: None)
-    monkeypatch.setattr(pa, "profile_switch", lambda n: True)
     monkeypatch.setattr(pa, "call_async", lambda **_kw: None)
 
 
