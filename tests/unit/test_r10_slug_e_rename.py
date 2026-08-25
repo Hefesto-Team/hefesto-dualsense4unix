@@ -262,9 +262,24 @@ def _rodar_save(
     monkeypatch.setattr(pa, "save_profile", lambda p: editor.salvos.append(p))
     monkeypatch.setattr(pa, "delete_profile", lambda n: editor.deletados.append(n))
     monkeypatch.setattr(pa, "active_profile_name", lambda: editor.ativo)
-    monkeypatch.setattr(
-        pa, "profile_switch", lambda n: bool(editor.switches.append(n)) or True
-    )
+    # P3 (25/08/2026): o `profile.switch` do Salvar saiu da thread do GTK e
+    # passou pelo MESMO `call_async` do botão Ativar — o dublê acompanha, e
+    # roda o `on_success` na hora porque num teste não há laço do GLib.
+    def _call_async_sincrono(
+        method: str,
+        params: dict[str, object] | None = None,
+        on_success: Any = None,
+        on_failure: Any = None,
+        timeout_s: float = 0.25,
+    ) -> None:
+        if method != "profile.switch":
+            return
+        nome = (params or {}).get("name")
+        editor.switches.append(str(nome))
+        if on_success is not None:
+            on_success({})
+
+    monkeypatch.setattr(pa, "call_async", _call_async_sincrono)
     editor.on_profile_save(None)
 
 
