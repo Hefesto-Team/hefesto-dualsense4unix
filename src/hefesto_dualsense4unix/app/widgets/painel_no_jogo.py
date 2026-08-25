@@ -80,11 +80,14 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
 )
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     _NOME_NA_FRASE,
+    LADO_DO_SWATCH,
     SITUACAO_CHEGANDO,
     SITUACAO_IMPOSSIVEL,
     SITUACAO_NATIVO,
     SITUACAO_NUNCA,
     SITUACAO_PARADO,
+    cor_do_swatch,
+    desenhar_swatch,
     estado_do_recurso,
     titulo_do_card,
 )
@@ -509,10 +512,37 @@ if _GTK_DISPONIVEL:
 
         def __init__(self) -> None:
             super().__init__()
-            self.set_label(" ")
             self._titulo = ""
+            self._swatch_rgb: Any = None
             self._ultimo: tuple[Any, ...] | None = None
             self._linhas: dict[str, Any] = {}
+
+            # MESA-CHEIA-07/E2 -> T5: o quadradinho da cor DESTE controle, ao
+            # lado de um título que já era o mesmo do card. Sem ele, quatro
+            # painéis idênticos ficam na frente de quatro barras acesas em
+            # quatro cores, e a pessoa tem de contar molduras para saber de
+            # quem é cada uma.
+            #
+            # Mesmo cabeçalho do card, e de propósito: `Gtk.Box` no
+            # `label_widget` do frame, swatch de `LADO_DO_SWATCH` px à
+            # esquerda do rótulo. A cor e o desenho vêm de
+            # `cor_do_swatch`/`desenhar_swatch` — este módulo CHAMA aquelas
+            # funções e não reimplementa nem uma linha delas, que é a promessa
+            # do cabeçalho deste arquivo e a mordida 1 da MESA-CHEIA-07 §3.
+            cabecalho = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL, spacing=6
+            )
+            swatch = Gtk.DrawingArea()
+            swatch.set_size_request(LADO_DO_SWATCH, LADO_DO_SWATCH)
+            swatch.set_valign(Gtk.Align.CENTER)
+            swatch.connect("draw", self._on_draw_swatch)
+            self._swatch = swatch
+            cabecalho.pack_start(swatch, False, False, 0)
+            self._titulo_label = Gtk.Label(label=" ")
+            self._titulo_label.set_xalign(0.0)
+            cabecalho.pack_start(self._titulo_label, False, False, 0)
+            cabecalho.show_all()
+            self.set_label_widget(cabecalho)
             # O par que vira teto de largura: pedido MÍNIMO + `halign=START`.
             # Ver :data:`LARGURA_PAINEL` para o porquê de não ser só o pedido.
             self.set_size_request(LARGURA_PAINEL, -1)
@@ -589,14 +619,24 @@ if _GTK_DISPONIVEL:
             titulo = titulo_do_painel(entry)
             recado = recado_do_controle(entry, state_global)
             linhas = [] if recado else linhas_do_controle(entry, state_global)
-            assinatura = (titulo, recado, tuple(linhas))
+            # A cor entra na ASSINATURA, e essa metade é a que se esquece: o
+            # diff existe para não tocar em widget à toa, e uma cor fora dele
+            # ficaria congelada na primeira pintura — ela troca a lightbar na
+            # aba Início e este painel continuaria com o quadradinho velho até
+            # que uma LINHA mudasse por outro motivo.
+            cor_do_controle = cor_do_swatch(entry)
+            assinatura = (titulo, cor_do_controle, recado, tuple(linhas))
             if assinatura == self._ultimo:
                 return
             self._ultimo = assinatura
 
             if titulo != self._titulo:
                 self._titulo = titulo
-                self.set_label(titulo)
+                self._titulo_label.set_text(titulo)
+
+            if cor_do_controle != self._swatch_rgb:
+                self._swatch_rgb = cor_do_controle
+                self._swatch.queue_draw()
 
             self._recado.set_text(recado or "")
             self._recado.set_visible(recado is not None)
@@ -621,6 +661,16 @@ if _GTK_DISPONIVEL:
                         f"{escapar_markup(linha.texto)}</span>"
                     )
 
+        def _on_draw_swatch(self, widget: Any, ctx: Any) -> bool:
+            """Ponte com o widget. O desenho é do card, e é um só."""
+            desenhar_swatch(
+                ctx,
+                widget.get_allocated_width(),
+                widget.get_allocated_height(),
+                self._swatch_rgb,
+            )
+            return False
+
 else:
 
     class PainelNoJogo:  # type: ignore[no-redef]
@@ -633,6 +683,7 @@ else:
 
         def __init__(self) -> None:
             self.titulo: str | None = None
+            self.cor: Any = None
             self.recado: str | None = None
             self.linhas: list[LinhaDoJogo] = []
 
@@ -640,6 +691,7 @@ else:
             self, entry: dict[str, Any], state_global: dict[str, Any]
         ) -> None:
             self.titulo = titulo_do_painel(entry)
+            self.cor = cor_do_swatch(entry)
             self.recado = recado_do_controle(entry, state_global)
             self.linhas = (
                 [] if self.recado else linhas_do_controle(entry, state_global)
