@@ -267,13 +267,28 @@ def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
     2. o que continua valendo — o jogo que TEM perfil próprio ainda entra
        (senão "o modo jogo não ativa" volta a ser um mistério sem causa).
 
-    O nome do perfil ativo entra quando o daemon o reporta: "o perfil não troca
-    sozinho" sem dizer QUAL perfil ficou é meia informação.
+    O nome do perfil ativo entra quando ALGUÉM sabe dizer qual é: "o perfil não
+    troca sozinho" sem dizer QUAL perfil ficou é meia informação.
+
+    P1 (25/08/2026) — o dono da pergunta. Esta linha lia `state["active_profile"]`
+    direto, e na máquina dela esse campo é ``null`` enquanto o marcador em disco
+    diz ``Sackboy``: a frase saía sem o nome, e a aba Perfis, ao lado, mostrava
+    o nome em verde. Quatro superfícies, duas respostas, o mesmo fato
+    (§2.1/1 da sprint). Agora quem responde é `perfil_que_esta_valendo` —
+    daemon primeiro, disco como segunda perna DECLARADA —, e o silêncio ficou
+    reservado para o caso em que ninguém sabe.
+
+    **Import adiado de propósito:** `profiles_actions` importa deste módulo
+    (`texto_do_custo_da_mascara`), então um import no topo fecharia o ciclo.
     """
     if not state or not state.get("autoswitch_locked"):
         return ""
-    ativo = state.get("active_profile")
-    alvo = f" — vale o perfil “{ativo}”" if isinstance(ativo, str) and ativo else ""
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        perfil_que_esta_valendo,
+    )
+
+    ativo = perfil_que_esta_valendo(state).nome
+    alvo = f" — vale o perfil “{ativo}”" if ativo else ""
     return (
         f"Cadeado ligado: o perfil não troca sozinho{alvo}. "
         "Jogos com perfil próprio ainda entram; qualquer outra janela é ignorada."
