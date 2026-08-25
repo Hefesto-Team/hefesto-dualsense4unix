@@ -1725,6 +1725,17 @@
                         <property name="spacing">10</property>
                         <property name="margin">14</property>
 
+                        <!-- RUM-7, 25/08/2026: as quatro dicas nomeiam o TETO
+                             DE MESA. Economia/Balanceado/Máximo querem dizer
+                             PEDIDO aqui e TETO na aba Configurações, e as
+                             dicas não diziam uma palavra sobre a existência
+                             dele — a linha que avisa quando ele MORDE já
+                             existe desde a CONFIG-05 (22/08), mas ela só
+                             aparece quando morde, e por isso nunca ensinou que
+                             o teto existe. A oração é derivada do léxico da
+                             Configurações ("Um teto para a mesa inteira. As
+                             abas continuam mandando no que fazem — só não
+                             passam daqui"), não inventada aqui. -->
                         <!-- Linha de toggles de política -->
                         <child>
                           <object class="GtkBox">
@@ -1739,7 +1750,7 @@
 
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_economia">
-                                <property name="tooltip-text" translatable="yes">30% do que o jogo pede: vibração fraca em todos os jogos, poupa bateria e faz menos barulho.</property>
+                                <property name="tooltip-text" translatable="yes">30% do que o jogo pede: vibração fraca em todos os jogos, poupa bateria e faz menos barulho. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Economia</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_economia"/>
@@ -1747,7 +1758,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_balanceado">
-                                <property name="tooltip-text" translatable="yes">100%: vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão.</property>
+                                <property name="tooltip-text" translatable="yes">100%: vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Balanceado</property>
                                 <property name="active">True</property>
                                 <signal name="toggled" handler="on_rumble_policy_balanceado"/>
@@ -1755,7 +1766,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_max">
-                                <property name="tooltip-text" translatable="yes">150%: aumenta pela metade a vibração que o jogo pede. Só as cenas mais fortes batem no limite do controle e ficam parecidas entre si. Gasta bateria bem mais depressa.</property>
+                                <property name="tooltip-text" translatable="yes">150%: aumenta pela metade a vibração que o jogo pede. Só as cenas mais fortes batem no limite do controle e ficam parecidas entre si. Gasta bateria bem mais depressa. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Máximo</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_max"/>
@@ -1763,7 +1774,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_auto">
-                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle principal — e a força escolhida vale para todos os controles da mesa. Nunca aumenta a vibração além do que o jogo pediu: ele existe para poupar bateria.</property>
+                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle principal — e a força escolhida vale para todos os controles da mesa. Nunca aumenta a vibração além do que o jogo pediu: ele existe para poupar bateria. A mesa pode ter um teto (aba Configurações): esta escolha continua valendo, só não passa dele.</property>
                                 <property name="label" translatable="yes">Auto</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_auto"/>
