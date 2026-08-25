@@ -229,6 +229,43 @@ def frase_nao_voltou(segundos: int) -> str:
     )
 
 
+#: A razão de reserva, quando o daemon condena a conexão e não manda a frase.
+#: Nunca diz "acesa" nem "apagada" — ninguém nesta casa consegue LER a lâmpada,
+#: e há teste que reprova se alguma frase daqui passar a dizer.
+FRASE_NASCEU_CONDENADO = (
+    "Esta conexão nasceu com outro programa segurando o controle, e nessa "
+    "condição a barra não obedece."
+)
+
+
+def frase_do_nascimento(nascimento: Any) -> str | None:
+    """A razão que o card mostra; ``None`` = o card não diz nada.
+
+    SINAL-NO-NASCIMENTO-01/E2. O botão da cura existe desde 22/08 e não dizia
+    POR QUE oferecia a cura. A razão vem PRONTA do daemon
+    (`integrations/sinal_da_barra.Carimbo.porque`, no campo `nascimento` do
+    payload por controle): a tela não reescreve diagnóstico, e é isso que
+    mantém uma frase só para as duas superfícies.
+
+    **Só a condenação fala.** Os outros três casos calam, e cada um por um
+    motivo medido:
+
+    * ``None`` — o daemon não carimbou esta conexão. Ausência NÃO é inocência,
+      e também não é acusação: a tela não afirma o que ninguém mediu;
+    * ``limpa`` — dizer "nasceu bem" em todo card é ruído crônico, e ruído
+      crônico ensina a ignorar o card no dia em que ele acusa;
+    * ``nao_sei`` — é o terceiro estado honesto do módulo (Modo Nativo, diário
+      rotacionado). Um alarme sem medição atrás treina a pessoa a ignorar
+      alarmes, que é o defeito que a `_mesa_suja` já evita logo acima.
+    """
+    if not isinstance(nascimento, dict):
+        return None
+    if not bool(nascimento.get("pede_reconexao")):
+        return None
+    porque = str(nascimento.get("porque") or "").strip()
+    return f"▲ {porque or FRASE_NASCEU_CONDENADO}"
+
+
 def pode_derrubar(dados: Any) -> bool:
     """O botão é clicável neste card?
 
@@ -606,6 +643,12 @@ class _PainelDosControles:
         #: não perguntei, ou a sonda não pôde responder — e "não sei" NÃO vira
         #: aviso: um alarme sem medição atrás ensina a ignorar alarmes.
         self._mesa_suja: bool | None = None
+        #: `{uniq: veredito}` — como a CONEXÃO de cada controle nasceu, do campo
+        #: `nascimento` do payload por controle (SINAL-NO-NASCIMENTO-01/E2).
+        #: Vive fora do `DadosDoControle` pela mesma razão do `_mic_declarado`:
+        #: o card (`app/widgets/external_card.py`) é território de outra frente,
+        #: e um campo novo lá obrigaria as duas a mexerem no mesmo arquivo.
+        self._nascimentos: dict[str, Any] = {}
 
     # -- montagem ----------------------------------------------------------
 
@@ -722,6 +765,12 @@ class _PainelDosControles:
         bruto = payload if isinstance(payload, dict) else {}
         adotados = [c for c in _lista(bruto.get("controllers")) if c.get("connected")]
         externos = _lista(bruto.get("external"))
+        self._nascimentos = {
+            uniq_normalizado(entrada.get("uniq")): entrada.get("nascimento")
+            for entrada in adotados
+            if uniq_normalizado(entrada.get("uniq"))
+            and isinstance(entrada.get("nascimento"), dict)
+        }
         self._desenhar(self._cards_da_mesa(adotados, externos))
         self._perguntar_as_cores(adotados)
         self._perguntar_pela_mesa()
@@ -975,6 +1024,7 @@ class _PainelDosControles:
             bloco = _BlocoDaLuz(
                 dados,
                 mesa_suja=bool(self._mesa_suja),
+                nascimento=self._nascimentos.get(uniq_normalizado(dados.uniq)),
                 ao_derrubar=getattr(self._host, "_luz_derrubador", None)
                 or _derrubar_o_controle,
                 ao_voltar=self.reexaminar,
@@ -1116,6 +1166,7 @@ class _BlocoDaLuz:
         dados: DadosDoControle,
         *,
         mesa_suja: bool,
+        nascimento: Any = None,
         ao_derrubar: Callable[[str], Any],
         ao_voltar: Callable[[], None],
         agendar: Callable[[Callable[[], bool]], Any] | None = None,
@@ -1143,6 +1194,15 @@ class _BlocoDaLuz:
         self.botao.set_tooltip_text(dica_do_botao(dados, mesa_suja))
         self.botao.connect("clicked", self._ao_clicar)
         self.caixa.pack_start(self.botao, False, False, 0)
+
+        #: A RAZÃO, logo abaixo do botão: por que a cura se aplica a ESTA
+        #: conexão. Vem do carimbo que o daemon tirou no nascimento dela; sem
+        #: carimbo, ou com carimbo que não condena, a linha não existe.
+        self._tem_razao = frase_do_nascimento(nascimento)
+        self.razao = _apoio_do_bloco(self._tem_razao or "")
+        if not self._tem_razao:
+            _oculto(self.razao)
+        self.caixa.pack_start(self.razao, False, False, 0)
 
         self.aviso = _oculto(_apoio_do_bloco(f"▲ {FRASE_APERTE_PS}"))
         self.contagem = _oculto(_apoio_do_bloco(frase_da_procura(ESPERA_PELO_PS_S)))
@@ -1248,8 +1308,12 @@ class _BlocoDaLuz:
         """Estado 2 do desenho: some o que não interessa, entra o pedido do PS."""
         with contextlib.suppress(Exception):
             self.recado.hide()
-            self.botao.set_no_show_all(True)
-            self.botao.hide()
+            # A razão some junto com o botão: durante a espera o desenho dela
+            # mostra SÓ o pedido do PS, e a razão é o argumento do botão que
+            # acabou de sair da tela.
+            for widget in (self.botao, self.razao):
+                widget.set_no_show_all(True)
+                widget.hide()
             for widget in (self.aviso, self.contagem, self.cancelar):
                 widget.show()
         self._esconder_os_irmaos()
@@ -1262,6 +1326,9 @@ class _BlocoDaLuz:
                 widget.hide()
             self.botao.set_no_show_all(False)
             self.botao.show()
+            if self._tem_razao:
+                self.razao.set_no_show_all(False)
+                self.razao.show()
             if recado:
                 self.recado.set_text(recado)
                 self.recado.show()
