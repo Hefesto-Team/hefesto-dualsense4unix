@@ -2217,9 +2217,26 @@ _RAZAO_MINIMA = 120
 # o `assert` DENTRO do laço, e a primeira falha cortava o laço — o segundo
 # registro nunca era lido. Foi assim que DUAS lápides caducas
 # (`utils/maquina.py::gravar_maquina` e `app/ipc_bridge.py::destinos_da_aplicacao`)
-# conviveram meses sem que ninguém soubesse que eram duas: quem
-# via o vermelho consertava a primeira, rodava de novo, e só então descobria
-# a segunda — se rodasse de novo.
+# conviveram sem que ninguém soubesse que eram duas: quem via o vermelho
+# consertava a primeira, rodava de novo, e só então descobria a segunda — se
+# rodasse de novo.
+#
+# CORREÇÃO DE FATO (25/08/2026, medida por `git log`): a primeira versão desta
+# nota dizia que as duas "conviveram MESES". Não conviveram, e a diferença
+# importa porque muda o diagnóstico. As datas:
+#   - `app/ipc_bridge.py::destinos_da_aplicacao` — lápide escrita em `c4b80da`
+#     (23/08 21:50), VERDADEIRA na hora; o chamador de
+#     `app/textos_de_aplicacao.py` nasceu em `12af679` (24/08 09:45). Caduca
+#     por ~17h44.
+#   - `utils/maquina.py::gravar_maquina` — o chamador `gravar_rascunho_da_mesa`
+#     nasceu em `565a70d` (24/08 03:27) e a lápide foi escrita em `300656c`
+#     (24/08 04:11), QUARENTA E QUATRO MINUTOS DEPOIS. Ela nunca descreveu uma
+#     árvore anterior: nasceu contra um chamador que já estava no disco.
+#   - as duas saíram em `ca481af` (25/08 03:29).
+# O que isto muda: o buraco não é uma lápide que envelheceu no escuro por
+# meses — é uma lápide escrita sobre uma árvore que mudou NA MESMA MADRUGADA,
+# por outra frente. Numa leva com nove árvores em voo, "medi e classifiquei"
+# vale por horas, não por semanas.
 #
 # O custo do defeito não é o laço: é que um portão que mostra metade do que vê
 # ENSINA a subestimar a dívida. Quem lê "1 símbolo acusado" fecha a tarefa; a
@@ -2501,8 +2518,10 @@ class TestTodaPromessaPublicaTemCaminho:
         dois registros com o ``assert`` DENTRO do laço, e a primeira falha
         cortava o laço — o segundo registro nunca era lido. Duas lápides
         caducas (``utils/maquina.py::gravar_maquina`` e
-        ``app/ipc_bridge.py::destinos_da_aplicacao``) conviveram meses sem que
+        ``app/ipc_bridge.py::destinos_da_aplicacao``) conviveram sem que
         ninguém soubesse que eram DUAS. Agora acumula e acusa uma vez só.
+        As datas medidas das duas estão no topo deste arquivo, na regra de
+        varredura.
         """
         soltas = set(promessas_sem_caminho())
         curadas = [
@@ -3186,7 +3205,10 @@ class TestOPortaoNaoEscondeMetadeDoQueVe:
     ``app/ipc_bridge.py::destinos_da_aplicacao`` eram DUAS lápides caducas, em
     registros diferentes, e ninguém soube que eram duas. Quem lê "1 símbolo
     acusado" fecha a tarefa; a fila real tinha dois. É a família
-    "o portão que não mede o que promete", vista de dentro.
+    "o portão que não mede o que promete", vista de dentro. As datas medidas
+    das duas estão no topo deste arquivo, na regra de varredura — elas
+    conviveram HORAS, não meses, e é isso que aponta a causa para "árvore que
+    mudou na mesma madrugada, por outra frente".
 
     MORDIDA de todas as três: devolver o ``assert`` para dentro do laço (ou
     voltar `_confere_razoes` a levantar na primeira queixa). O caso reprova
