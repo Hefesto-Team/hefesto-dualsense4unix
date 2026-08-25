@@ -50,6 +50,18 @@ jobs:
       # anonimato (exigia MAC neutro onde a convenção da casa manda OUI:00:00:NN);
       # corrigida a contradição, ele volta a valer aqui, ao lado do irmão.
       - run: bash scripts/check_test_data.sh
+      # LUZ-CEGA-01/E8 (25/08/2026): o `check_faixa_sintetica.py` nasceu em
+      # 24/08 e ficou sem chamador NENHUM — nem aqui, nem em gancho, nem na
+      # lista do CLAUDE.md. Portão que ninguém chama é o defeito
+      # `A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ`, e foi assim que quatro endereços de
+      # fixture ficaram três dias no `controllers.json` de produção dela sem
+      # ninguém saber. Aqui roda o modo `--arvore` (o default), que varre a
+      # ÁRVORE VERSIONADA atrás de artefato de tempo de execução commitado: é
+      # determinístico e não depende de `$HOME`. O modo `--casa`, que olha o
+      # `config_dir()` real, NÃO roda no CI de propósito — lá o `~/.config`
+      # está vazio e a resposta seria verde por vacuidade. Quem vigia o
+      # `config_dir()` real é a FAIXA-NO-BERCO-01 do `tests/conftest.py`.
+      - run: python3 scripts/check_faixa_sintetica.py
 
   acentuacao:
     name: Acentuação PT-BR estrita (py${{ matrix.python }})

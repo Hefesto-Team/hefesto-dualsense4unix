@@ -795,22 +795,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`__all__` (:1293), e apagar wrapper documentado por conta própria não "
         "é deste portão."
     ),
-    "utils/maquina.py::gravar_maquina": (
-        "MEDIDO em 24/08/2026 (AUDITORIA-DE-PERDA-01). Irmã exata da entrada "
-        "acima, um nível abaixo na mesma pilha: `gravar_maquina` é o embrulho "
-        "que devolve só `bool`, e `gravar_maquina_com_descartes` (:340) é quem "
-        "de fato grava e devolve também o que a gravação teve de descartar. O "
-        "ÚNICO chamador de produção, `daemon/ipc_handlers.py`:4874-4889 (o "
-        "handler do `machine.declare`), escreve por que escolheu a variante "
-        "rica no próprio comentário: 'a `_com_descartes` e não a "
-        "`gravar_maquina`: o embrulho estreita o resultado para `bool` e joga "
-        "fora justamente a lista que a janela precisa mostrar' (:4885-4886). O "
-        "corpo de `gravar_maquina` (:337) CHAMA `gravar_maquina_com_descartes` "
-        "— não o contrário —, e nada de produção chama `gravar_maquina`: "
-        "mesma casca vazia do par de cima. A PODA É DELA: é símbolo público de "
-        "`utils/maquina.py`, e apagar wrapper documentado por conta própria "
-        "não é deste portão."
-    ),
 }
 
 #: As promessas públicas SEM CAMINHO de 12/08/2026 — a dívida, com endereço e
@@ -821,6 +805,48 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # --- 25/08/2026: TRÊS CURAS DA ONDA 0 NASCERAM SEM CHAMADOR
+    # Achado por quem coordena a leva de 25/08, ao consertar duas lápides
+    # caducas e ver o portão apontar outros quatro símbolos. Cada um destes é
+    # a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` dentro da própria cura que a
+    # combatia, e nenhum é destas frentes: quem liga cada um está nomeado.
+    "app/textos_de_aplicacao.py::frase_do_desfecho": (
+        "MEDIDO em 25/08/2026: está no `__all__` (:375) e NADA em produção a "
+        "chama. É a entrega central da ONDA0-Z1 (`12af679`, 24/08) — a frase "
+        "que passa a obedecer o CORPO do daemon em vez da heurística da "
+        "janela. A função existe, foi testada, e a tela continua montando a "
+        "frase do jeito antigo. "
+        "ONDE O CAMINHO SE PERDE: nenhum módulo de `app/` a importa. "
+        "O QUE A FECHA: o rodapé passar a chamá-la no lugar da montagem "
+        "atual. NÃO fiz porque `app/app.py` e `app/actions/footer_actions.py` "
+        "são posse de outras frentes nesta madrugada (A2 e A3), e sobrescrita "
+        "silenciosa entre agentes é o defeito que o isolamento existe para "
+        "matar. DONO: a próxima leva, e a mordida é 'a frase muda quando o "
+        "corpo do daemon muda'."
+    ),
+    "app/fala_do_mapa.py::formata_pt_br": (
+        "MEDIDO em 25/08/2026: irmã do `Numero` abaixo, mesma leva. Nasceu na "
+        "ONDA0-Z6 (`26e0ccc`, 24/08) — 'a medição chega à tela por portão, "
+        "não por lembrança' — e nenhuma tela a chama. "
+        "ONDE O CAMINHO SE PERDE: as abas continuam formatando número à mão. "
+        "O QUE A FECHA: as frases que publicam medição passarem por aqui. "
+        "DONO: a frente do léxico (CONFIGURACOES-O-LEXICO-01), que é a dona "
+        "única do texto e entra por último de propósito."
+    ),
+    "app/fala_do_mapa.py::Numero": (
+        "MEDIDO em 25/08/2026: o tipo que `formata_pt_br` recebe, órfão pelo "
+        "mesmo motivo e pela mesma leva. Cai junto com ela — e é por isso que "
+        "não ganha entrada própria de conserto."
+    ),
+    "profiles/schema.py::resolver_teclado_emulado": (
+        "MEDIDO em 25/08/2026: está no `__all__` (:1345), o próprio módulo a "
+        "cita em comentário (:972), e nenhum caminho de produção a executa. "
+        "ONDE O CAMINHO SE PERDE: a resolução de teclado emulado continua "
+        "acontecendo onde acontecia antes. "
+        "O QUE A FECHA: o carregador de perfil chamá-la. NÃO fiz porque "
+        "`profiles/schema.py` é posse da frente B2 (Onda 11 - Sistema) nesta "
+        "madrugada. DONO: B2, ou a Onda 6 - Perfis na leva seguinte."
+    ),
     # --- A aba Configurações (23/08/2026): o censo mede, e a tela não pergunta
     "integrations/censo_do_barramento.py::hub_em_comum": (
         "MEDIDO em 23/08/2026, NA BANCADA DELA: é promessa ao produto, ela "
@@ -1105,16 +1131,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "quiser mostrar a política EFETIVA em vez da pedida; ou APAGAR, se até "
         "lá o corpo continuar sendo um eco. É a candidata mais clara a `resto` "
         "desta leva, e está escrito de propósito."
-    ),
-    "app/ipc_bridge.py::destinos_da_aplicacao": (
-        "MEDIDO em 23/08/2026: é o LEITOR de `aplicado_em`/`guardado_em`, dono "
-        "único da regra do lado da janela pelo mesmo motivo do "
-        "`aplicacao_confirmada` — quatro rotas publicam esses campos e cada aba "
-        "que os lesse sozinha seria mais uma leitura do mesmo payload. "
-        "O QUE A FECHA: ele é fiado no MESMO gesto que fia os quatro "
-        "`*_detalhado` acima (`triggers_actions.py:658` e "
-        "`lightbar_actions.py:934`); enquanto eles não passam, ninguém tem o "
-        "que ler."
     ),
     "app/ipc_bridge.py::alvo_honrado": (
         "MEDIDO em 23/08/2026: lê o `por_uniq` que o `mic.volume.set` publica "
