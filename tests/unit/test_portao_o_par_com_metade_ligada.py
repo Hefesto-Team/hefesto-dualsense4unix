@@ -727,9 +727,22 @@ class TestOPortaoMorde:
         sempre o nome INTEIRO e sozinho (``getattr(x, "meu_metodo")``); prosa
         nunca é.
 
-        **Este teste é o que impede a cura de ser desfeita:** arranque o
-        ``isidentifier()`` e ele reprova, porque a frase abaixo volta a valer
-        como chamador.
+        **A RECEITA DE REPRODUÇÃO, corrigida em 25/08/2026 pelo conferente da
+        leva — e a correção importa.** A primeira versão desta docstring dizia
+        *"arranque o ``isidentifier()`` e ele reprova"*. **Não reprova**, e quem
+        escreveu não conferiu: a cura são DUAS linhas no mesmo trecho, e sozinho
+        o ``isidentifier()`` não faz nada, porque a linha de baixo guarda o
+        literal INTEIRO (``palavras.add(no.value)``) — e a frase inteira nunca
+        casa com o nome do símbolo.
+
+        **O defeito volta com a linha de baixo**, que era
+        ``palavras.update(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", no.value))``:
+        é o ``findall`` que quebra a frase em palavras soltas e faz uma delas
+        casar. Para reproduzir, troque as DUAS.
+
+        Fica escrito porque receita de mordida que não morde é pior que receita
+        nenhuma: ela dá a quem vier depois a confiança de que a régua está
+        protegida quando não está.
         """
         frase = (
             "Não consegui aplicar: o armar_o_plantio do daemon recusou o pedido."

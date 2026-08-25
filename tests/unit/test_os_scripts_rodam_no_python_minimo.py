@@ -40,10 +40,13 @@ from __future__ import annotations
 
 import ast
 import re
+import shutil
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.conftest import binario_do_venv
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -125,11 +128,28 @@ def test_o_ruff_cobre_scripts_tambem() -> None:
 
     MORDE: escrever sintaxe de 3.12 em `scripts/`. A metade do `ast` não pega,
     e sem esta chamada nada mais pega.
+
+    BINARIO-QUE-SO-EXISTE-NA-ARVORE-DELA-01 (25/08/2026): a chamada era
+    `[".venv/bin/ruff", ...]` — caminho FIXO, relativo à raiz. `git worktree
+    add` não copia `.venv/` (é ignorado), então em toda árvore de agente este
+    teste estourava com `FileNotFoundError` desde 23/08/2026, e o ÚNICO portão
+    de sintaxe sobre `scripts/` ficava calado justo onde o código novo nasce.
+    Agora o binário é resolvido como o `scripts/portoes.sh` já resolvia —
+    venv local, venv da árvore principal, PATH — e o `skip` só entra quando
+    não há `ruff` nenhum ao alcance. Pular sempre seria trocar um vermelho
+    honesto por um verde que não mede nada.
     """
     import subprocess
 
+    ruff = binario_do_venv("ruff") or shutil.which("ruff")
+    if ruff is None:
+        pytest.skip(
+            "não há `ruff` no venv desta árvore, no da árvore principal, nem "
+            "no PATH — sem ele não há o que medir em `scripts/`"
+        )
+
     p = subprocess.run(
-        [".venv/bin/ruff", "check", "scripts/", "--output-format", "concise"],
+        [str(ruff), "check", "scripts/", "--output-format", "concise"],
         cwd=RAIZ,
         capture_output=True,
         text=True,

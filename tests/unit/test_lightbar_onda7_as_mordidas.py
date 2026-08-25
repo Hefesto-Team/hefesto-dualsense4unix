@@ -197,7 +197,13 @@ class _HostSoGatilhos(TriggersActionsMixin):
         *,
         motivo: str | None = None,
         spec: Any = None,
+        corpo: dict[str, Any] | None = None,
     ) -> None:
+        # `corpo` entrou na assinatura real em 25/08/2026 (ELO-MUDO-01/T3): o
+        # caminho de SUCESSO do `_reset_trigger` o passa. O dublê tem de
+        # aceitá-lo, senão a mordida deste arquivo morre de `TypeError` em vez
+        # de reprovar dizendo que o gatilho foi escrito às cegas — que é a
+        # diferença entre uma régua que mede e um erro que se lê como bug.
         self._toasts.append((side, ok, motivo))
 
     def _cancelar_live_preview(self, _side: str) -> None:
@@ -292,12 +298,27 @@ def test_gatilhos_sem_o_mixin_da_lightbar_recusam_em_vez_de_escrever_global(
     **Com a cura arrancada** (``alvo_de_edicao`` devolvendo o ``None`` do
     atributo legado em vez de ``DESCONHECIDO``) este teste reprova: o
     ``trigger.reset`` sai, sem ``uniq``, e ninguém é avisado.
+
+    NOTA DATADA (25/08/2026) — POR QUE O ALVO DO ``monkeypatch`` MUDOU. Esta
+    régua nasceu nesta mesma madrugada dublando ``triggers_actions.trigger_reset``.
+    Horas depois, na mesma madrugada, a frente dos Gatilhos (ELO-MUDO-01/T3,
+    ``41541a7``) trocou a chamada de ``_reset_trigger`` por
+    ``trigger_reset_detalhado``, que devolve ``(ok, motivo, corpo)`` em vez de
+    ``(ok, motivo)`` — porque *"aplicado" tem de vir de quem viu o byte*, e o
+    corpo da resposta do daemon é quem sabe disso. O símbolo antigo deixou de
+    existir neste módulo e o ``monkeypatch.setattr`` passou a levantar
+    ``AttributeError``.
+
+    **Quem estava errado era o TESTE, e isso foi conferido no produto antes de
+    mexer aqui:** o ``if estado_alvo.desconhecido: ... return`` de
+    ``triggers_actions._reset_trigger`` continua ANTES de qualquer IPC. A
+    recusa da L2 está viva; o que fossilizou foi o nome da função dublada.
     """
     resets: list[Any] = []
     monkeypatch.setattr(
         triggers_actions,
-        "trigger_reset",
-        lambda side, uniq=None: resets.append((side, uniq)) or (True, None),
+        "trigger_reset_detalhado",
+        lambda side, uniq=None: resets.append((side, uniq)) or (True, None, None),
     )
     host = _HostSoGatilhos()
     assert not hasattr(host, "_edit_uniq"), (

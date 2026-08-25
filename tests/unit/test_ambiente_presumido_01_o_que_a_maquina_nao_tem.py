@@ -210,6 +210,20 @@ class TestDescreverSteamEncontrada:
                 assert termo not in texto, f"{termo!r} vazou para {texto!r}"
 
 
+def _leitores_de_osk(raiz_app: Path) -> list[Path]:
+    """Os arquivos de `app/` que mencionam a chave. DONO ÚNICO da varredura.
+
+    O portão e a mordida faziam a mesma busca escrita duas vezes — e foi por
+    isso que elas puderam divergir sem ninguém notar. Ver a nota de 25/08 na
+    mordida abaixo.
+    """
+    return sorted(
+        p
+        for p in raiz_app.rglob("*.py")
+        if "osk_disponivel" in p.read_text(encoding="utf-8")
+    )
+
+
 class TestOPortaoDeCompletudeDoOskDisponivel:
     """T-12: `osk_disponivel` deixa de ser chave órfã (item 8 do aceite §9.2).
 
@@ -219,11 +233,7 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
 
     def test_ha_leitor_de_osk_disponivel_em_app(self, repo_root: Path) -> None:
         alvo = repo_root / "src" / "hefesto_dualsense4unix" / "app"
-        achados = [
-            p
-            for p in alvo.rglob("*.py")
-            if "osk_disponivel" in p.read_text(encoding="utf-8")
-        ]
+        achados = _leitores_de_osk(alvo)
         assert achados, (
             "nenhum arquivo em app/ lê 'osk_disponivel' -- a chave publicada "
             "em daemon/ipc_handlers.py:2009 continua órfã (F2)"
@@ -233,21 +243,57 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
     def test_arrancar_o_leitor_reprova_nomeando_a_chave(
         self, repo_root: Path, tmp_path: Path
     ) -> None:
-        """A MORDIDA: sem o arquivo (ou com a chave removida dele), a
-        varredura volta a não achar leitor nenhum."""
+        """A MORDIDA: sem leitor nenhum em `app/`, o portão acima reprova.
+
+        NOTA DATADA (25/08/2026) — POR QUE ESTA MORDIDA MUDOU DE FORMA. Ela
+        apagava UM arquivo (`actions/ambiente_na_tela.py`) e exigia que a
+        varredura voltasse a VAZIO. Isso fossilizava uma premissa que era
+        verdade em 24/08 e deixou de ser: *"`ambiente_na_tela.py` é o único
+        leitor de `osk_disponivel` em `app/`"*.
+
+        O que mudou, e é o CONTRÁRIO de uma regressão: em 25/08 a frente da
+        Navegação (`e909b62`, TECLADO-NA-TELA-QUE-A-JANELA-NAO-LE-01/N12) deu
+        mais dois leitores à chave — `actions/mouse_actions.py`, que a lê do
+        `state_full` vivo, e `actions/input_actions.py`, que a transforma na
+        frase da legenda. A chave ficou MENOS órfã, e a mordida reprovava
+        justamente por isso. Um teste que reprova quando o defeito é curado
+        duas vezes não estava medindo o defeito.
+
+        **A cura é no TESTE, e ela não afrouxa nada** — ao contrário: a régua
+        antiga só falsificava a PRIMEIRA asserção do portão, e por um caminho
+        que dependia de contar leitores. Esta falsifica as DUAS, sem
+        depender de quantos leitores existam hoje:
+
+        1. sem `ambiente_na_tela.py`, a segunda asserção do portão (a que
+           nomeia o dono da frase) cai;
+        2. com a chave arrancada de TODOS os leitores, a primeira cai.
+        """
         import shutil as _shutil
 
         alvo = repo_root / "src" / "hefesto_dualsense4unix" / "app"
-        copia = tmp_path / "app_sem_ambiente_na_tela"
+        copia = tmp_path / "app_sem_leitor_de_osk"
         _shutil.copytree(alvo, copia)
-        (copia / "actions" / "ambiente_na_tela.py").unlink()
 
-        achados = [
-            p for p in copia.rglob("*.py") if "osk_disponivel" in p.read_text(encoding="utf-8")
-        ]
-        assert achados == [], (
-            "a mordida não reprovou -- outro leitor de 'osk_disponivel' já "
-            "existia em app/ antes de T-12, e a alegação de F2 estava errada"
+        # (1) o dono da frase sai: a asserção que o NOMEIA deixa de valer.
+        (copia / "actions" / "ambiente_na_tela.py").unlink()
+        sobraram = _leitores_de_osk(copia)
+        assert not any(p.name == "ambiente_na_tela.py" for p in sobraram), (
+            "a mordida não conseguiu arrancar o dono da frase -- "
+            "`actions/ambiente_na_tela.py` mudou de lugar?"
+        )
+
+        # (2) e agora TODOS os outros: a asserção de existência cai também.
+        for arquivo in sobraram:
+            arquivo.write_text(
+                arquivo.read_text(encoding="utf-8").replace(
+                    "osk_disponivel", "chave_arrancada_pela_mordida"
+                ),
+                encoding="utf-8",
+            )
+        assert _leitores_de_osk(copia) == [], (
+            "a mordida não reprovou -- sobrou leitor de 'osk_disponivel' em "
+            "app/ depois de arrancar todos os que a varredura achou: "
+            f"{[str(p.relative_to(copia)) for p in _leitores_de_osk(copia)]}"
         )
 
 

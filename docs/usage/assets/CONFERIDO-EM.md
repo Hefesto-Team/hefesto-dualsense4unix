@@ -59,3 +59,29 @@ São **duas** e não uma porque o assunto é a diferença: numa aba que lê o al
 fita fica sensível, e numa que não lê ela fica esmaecida. Quem escolhe as duas
 abas é o mapa `_ALVO_POR_ABA` do produto, lido pelo script — não uma lista
 repetida nele.
+
+---
+
+## 25/08/2026 — a leva da madrugada, e por que as CATORZE mudaram
+
+Retrato rodado por quem coordenou, **uma execução, no fim da leva**, com todas
+as vinte e duas frentes integradas e nenhuma em voo — que é a regra R4 desta
+casa, e ela existe porque onze PNGs gravados por cima do trabalho de quem ainda
+escreve é o defeito que ela mata.
+
+**As catorze imagens mudaram, e nenhuma aba tinha zero commits de tela à frente
+da foto anterior.** O censo, medido antes de rodar:
+
+```
+Status 8 · Início 6 · Perfis 6 · Emulação 5 · No jogo 3 · Navegação 3 ·
+Configurações 3 · Lightbar 2 · Gatilhos 1 · Rumble 1 · Sistema 1
+cabeçalho 2 · o INSTRUMENTO 2 (+258 linhas em retratar_abas.py)
+```
+
+**O instrumento também mudou**, e pela régua que entrou em 24/08 isso torna toda
+foto suspeita, aba por aba — não só as três cujo `.glade` mudou (Emulação,
+Rumble e Lightbar).
+
+**O que estas fotos NÃO são: aprovação.** Elas são o estado do código; a palavra
+final sobre o desenho é dela (PROVA-DE-TELA-01). A lista do que mudou de TEXTO
+e espera o olho dela saiu junto com esta leva.
