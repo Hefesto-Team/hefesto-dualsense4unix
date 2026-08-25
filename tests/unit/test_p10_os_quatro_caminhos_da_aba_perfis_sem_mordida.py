@@ -162,7 +162,7 @@ class TestRemover:
         aba = _Aba()
         apagados: list[str] = []
         monkeypatch.setattr(
-            gui_dialogs, "confirm_delete_profile", lambda parent, name: False
+            gui_dialogs, "confirm_delete_profile", lambda parent, name, aviso=None: False
         )
         monkeypatch.setattr(pa, "delete_profile", lambda n: apagados.append(n))
 
@@ -183,7 +183,7 @@ class TestRemover:
         aba = _Aba()
         apagados: list[str] = []
         monkeypatch.setattr(
-            gui_dialogs, "confirm_delete_profile", lambda parent, name: True
+            gui_dialogs, "confirm_delete_profile", lambda parent, name, aviso=None: True
         )
         monkeypatch.setattr(pa, "delete_profile", lambda n: apagados.append(n))
 
@@ -206,7 +206,7 @@ class TestRemover:
         """
         aba = _Aba()
         monkeypatch.setattr(
-            gui_dialogs, "confirm_delete_profile", lambda parent, name: True
+            gui_dialogs, "confirm_delete_profile", lambda parent, name, aviso=None: True
         )
         monkeypatch.setattr(pa, "delete_profile", lambda _n: None)
 
@@ -224,7 +224,7 @@ class TestRemover:
             raise OSError("permissão negada")
 
         monkeypatch.setattr(
-            gui_dialogs, "confirm_delete_profile", lambda parent, name: True
+            gui_dialogs, "confirm_delete_profile", lambda parent, name, aviso=None: True
         )
         monkeypatch.setattr(pa, "delete_profile", _explode)
 
@@ -240,7 +240,7 @@ class TestRemover:
         monkeypatch.setattr(
             gui_dialogs,
             "confirm_delete_profile",
-            lambda parent, name: pytest.fail("perguntou sem perfil selecionado"),
+            lambda parent, name, aviso=None: pytest.fail("perguntou sem perfil selecionado"),
         )
         aba.on_profile_remove(None)
         assert aba.toasts == ["Selecione um perfil para remover"]

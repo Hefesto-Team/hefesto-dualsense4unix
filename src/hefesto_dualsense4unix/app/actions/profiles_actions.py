@@ -569,6 +569,63 @@ def perfil_que_esta_valendo(state: Any = None) -> PerfilQueVale:
     return PerfilQueVale(None, "nenhum" if houve_resposta else "nao_sei")
 
 
+# --- P7: Remover não sabia que estava apagando o que está valendo ----------
+# PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/7 (24/08/2026). `on_profile_remove` confirma
+# pelo NOME e nunca pergunta se aquele é o perfil ativo. Com o
+# `active_profile.txt` valendo `Sackboy`, apagar o Sackboy é um clique — e
+# depois dele: o daemon segue com as seções daquele perfil aplicadas no
+# controle, o marcador em disco continua apontando para um arquivo que não
+# existe mais, e NADA na tela diz isso. A remoção parece inconsequente.
+#
+# A METADE DO RASTRO JÁ ESTÁ FECHADA, e não é desta frente: `delete_profile`
+# apagava o `.json` e deixava o `.lock` (três órfãos no disco dela). A Z4/T15
+# curou em 24/08 (`profiles/loader.py`, o `unlink` FORA do `with`) e tem régua
+# própria em `tests/unit/test_z4_locks_orfaos.py`. Conferido em 25/08 antes de
+# escrever uma linha — refazer teria sido a segunda cura para o mesmo fato.
+
+#: O que a remoção do perfil ATIVO faz, e o que ela NÃO desfaz. Três frases,
+#: na ordem que a casa exige de toda frase de diagnóstico (o quê, por quê, o
+#: que fazer) — ver "Quem é o usuário, e por que a aba ensina".
+_AVISO_DA_REMOCAO_DO_ATIVO = (
+    "Este é o perfil que está valendo agora.\n"
+    "Remover o arquivo não desfaz o que já está no controle: a cor, os "
+    "gatilhos e a vibração dele seguem aplicados até você ativar outro perfil.\n"
+    "E o marcador em disco vai apontar para um perfil que não existe mais — "
+    "ative outro perfil em seguida para acertar os dois."
+)
+
+
+def frase_da_remocao_do_perfil_ativo(nome: str, valendo: Any) -> str | None:
+    """O aviso extra do diálogo de Remover. ``None`` é silêncio, e é a regra.
+
+    Só fala quando o perfil que ela mandou remover é **o que está valendo** —
+    e quem responde isso é o dono do §P1 (`perfil_que_esta_valendo`), nunca uma
+    segunda leitura do disco aqui.
+
+    **O ``nao_sei`` cala.** Se ninguém soube dizer qual perfil está valendo, a
+    tela não pode afirmar que este é. É a mesma disciplina do §P1: *"não sei"*
+    e *"não há"* são fatos diferentes, e transformar o primeiro em aviso é o
+    alarme falso que esta casa recusa.
+
+    Compara por SLUG porque é o slug que nomeia o arquivo: o marcador em disco
+    pode guardar `Sackboy` enquanto a lista mostra `sackboy`, e um `==` cru
+    deixaria o aviso mudo exatamente no caso que ele existe para cobrir.
+
+    Função PURA — o teste lê o texto sem GTK e sem disco.
+    """
+    if not nome:
+        return None
+    do_dono = getattr(valendo, "nome", None)
+    fonte = getattr(valendo, "fonte", "nao_sei")
+    if not isinstance(do_dono, str) or not do_dono or fonte == "nao_sei":
+        return None
+    from hefesto_dualsense4unix.profiles.slug import slugify
+
+    if slugify(do_dono) != slugify(nome):
+        return None
+    return _AVISO_DA_REMOCAO_DO_ATIVO
+
+
 def ordem_de_exibicao(perfis: list[Any], ativo: str | None) -> list[Any]:
     """A ordem em que as linhas aparecem: o ativo primeiro, o resto como veio.
 
@@ -2889,7 +2946,14 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         from hefesto_dualsense4unix.app import gui_dialogs
 
         window = self._get("main_window")
-        if not gui_dialogs.confirm_delete_profile(parent=window, name=name):
+        # P7: e o diálogo diz quando o alvo é o perfil que está VALENDO. Sem
+        # `state`, de propósito: esta aba não fala com o daemon, e o dono do
+        # §P1 já cai no disco — que é a fonte certa aqui e o caso vivo da
+        # máquina dela (`active_profile: null` no daemon, `Sackboy` no disco).
+        aviso = frase_da_remocao_do_perfil_ativo(name, perfil_que_esta_valendo())
+        if not gui_dialogs.confirm_delete_profile(
+            parent=window, name=name, aviso=aviso
+        ):
             self._toast_profile("Remoção cancelada.")
             return
         try:
