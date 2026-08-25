@@ -330,9 +330,8 @@ def _ligar(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pa, "save_profile", janela._disco.salvar)
     monkeypatch.setattr(pa, "delete_profile", janela._disco.apagar)
     monkeypatch.setattr(pa, "active_profile_name", lambda: janela.ativo_no_daemon)
-    monkeypatch.setattr(
-        pa, "profile_switch", lambda n: bool(janela.switches.append(n)) or True
-    )
+    # P3 (25/08/2026): o `profile.switch` do Salvar saiu da thread do GTK e
+    # passou pelo `call_async` do botão Ativar, que a linha abaixo já engole.
     monkeypatch.setattr(pa, "call_async", lambda *_a, **_kw: None)
     monkeypatch.setattr(pw, "save_profile", janela._disco.salvar)
     monkeypatch.setattr(fa, "load_all_profiles", janela._disco.todos)
