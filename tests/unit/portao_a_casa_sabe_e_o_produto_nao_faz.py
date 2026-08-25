@@ -2208,19 +2208,92 @@ _DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
 _RAZAO_MINIMA = 120
 
 
-def _confere_razoes(registro: dict[str, str], rotulo: str) -> None:
+# ---------------------------------------------------------------------------
+# A REGRA DE VARREDURA DESTE ARQUIVO — 25/08/2026 (AUDITORIA-DE-PERDA-01/C2)
+#
+# Toda régua que varre MAIS DE UM registro acumula e falha UMA VEZ, nomeando
+# tudo. `assert` dentro do laço é proibido aqui, e a cicatriz é medida:
+# `test_nenhuma_lapide_sobreviveu_a_propria_cura` varria os dois registros com
+# o `assert` DENTRO do laço, e a primeira falha cortava o laço — o segundo
+# registro nunca era lido. Foi assim que DUAS lápides caducas
+# (`utils/maquina.py::gravar_maquina` e `app/ipc_bridge.py::destinos_da_aplicacao`)
+# conviveram sem que ninguém soubesse que eram duas: quem via o vermelho
+# consertava a primeira, rodava de novo, e só então descobria a segunda — se
+# rodasse de novo.
+#
+# CORREÇÃO DE FATO (25/08/2026, medida por `git log`): a primeira versão desta
+# nota dizia que as duas "conviveram MESES". Não conviveram, e a diferença
+# importa porque muda o diagnóstico. As datas:
+#   - `app/ipc_bridge.py::destinos_da_aplicacao` — lápide escrita em `c4b80da`
+#     (23/08 21:50), VERDADEIRA na hora; o chamador de
+#     `app/textos_de_aplicacao.py` nasceu em `12af679` (24/08 09:45). Caduca
+#     por ~17h44.
+#   - `utils/maquina.py::gravar_maquina` — o chamador `gravar_rascunho_da_mesa`
+#     nasceu em `565a70d` (24/08 03:27) e a lápide foi escrita em `300656c`
+#     (24/08 04:11), QUARENTA E QUATRO MINUTOS DEPOIS. Ela nunca descreveu uma
+#     árvore anterior: nasceu contra um chamador que já estava no disco.
+#   - as duas saíram em `ca481af` (25/08 03:29).
+# O que isto muda: o buraco não é uma lápide que envelheceu no escuro por
+# meses — é uma lápide escrita sobre uma árvore que mudou NA MESMA MADRUGADA,
+# por outra frente. Numa leva com nove árvores em voo, "medi e classifiquei"
+# vale por horas, não por semanas.
+#
+# O custo do defeito não é o laço: é que um portão que mostra metade do que vê
+# ENSINA a subestimar a dívida. Quem lê "1 símbolo acusado" fecha a tarefa; a
+# fila real tinha dois.
+#
+# `TestOPortaoNaoEscondeMetadeDoQueVe` é a régua desta regra, e ela morde: com
+# o `assert` de volta dentro do laço, ela reprova nomeando qual registro ficou
+# escondido.
+# ---------------------------------------------------------------------------
+
+
+def _razoes_mal_escritas(registro: dict[str, str], rotulo: str) -> list[str]:
+    """TODA razão de um registro que não diz onde o caminho se perde.
+
+    Devolve a lista inteira e não levanta: quem levanta é quem chama, uma vez
+    só, depois de somar todos os registros.
+    """
+    queixas: list[str] = []
     for chave, razao in registro.items():
-        assert len(razao) > _RAZAO_MINIMA, (
-            f"a razão de {chave!r} em {rotulo} tem {len(razao)} caracteres e "
-            f"não diz onde o caminho se perde: {razao!r}\n"
-            "ESCREVA o endereço (arquivo:linha) e o que fecharia a lacuna. "
-            "Razão curta é uma isenção fingindo ser decisão."
-        )
-        assert _DATA.search(razao), (
-            f"a razão de {chave!r} em {rotulo} não tem data.\n"
-            "ESCREVA a data da medição (DD/MM/AAAA). Sem data ninguém sabe se "
-            "ela envelheceu — e uma lacuna sem idade vira paisagem."
-        )
+        if len(razao) <= _RAZAO_MINIMA:
+            queixas.append(
+                f"a razão de {chave!r} em {rotulo} tem {len(razao)} caracteres "
+                f"e não diz onde o caminho se perde: {razao!r}"
+            )
+        if not _DATA.search(razao):
+            queixas.append(f"a razão de {chave!r} em {rotulo} não tem data.")
+    return queixas
+
+
+def _confere_razoes(*registros: tuple[str, dict[str, str]]) -> None:
+    """As razões de TODOS os registros passados, numa acusação só."""
+    queixas = [
+        queixa
+        for rotulo, registro in registros
+        for queixa in _razoes_mal_escritas(registro, rotulo)
+    ]
+    assert not queixas, (
+        "há razões que não sustentam a isenção que carregam "
+        f"({len(queixas)} em {len(registros)} registro(s)):\n"
+        + "\n".join(f"  - {q}" for q in queixas)
+        + "\nESCREVA o endereço (arquivo:linha), o que fecharia a lacuna, e a "
+        "data da medição (DD/MM/AAAA). Razão curta é uma isenção fingindo ser "
+        "decisão; lacuna sem idade vira paisagem."
+    )
+
+
+def _registros_de_promessa() -> tuple[tuple[str, dict[str, str]], ...]:
+    """Os dois registros de classificação de promessa pública.
+
+    Função, e não constante, de propósito: ela relê os globais a cada chamada,
+    e é isso que deixa `TestOPortaoNaoEscondeMetadeDoQueVe` trocá-los por
+    registros fabricados sem tocar na árvore de verdade.
+    """
+    return (
+        ("_NAO_E_PROMESSA", _NAO_E_PROMESSA),
+        ("_SEM_CAMINHO_HOJE", _SEM_CAMINHO_HOJE),
+    )
 
 
 # ===========================================================================
@@ -2354,12 +2427,17 @@ class TestTodoInterruptorTemMao:
 
     def test_as_razoes_de_ambiente_nao_envelhecem_caladas(self) -> None:
         """Toda razão de ambiente é longa e datada — as quatro famílias."""
-        _confere_razoes(_INSTRUMENTO_DE_AMBIENTE, "_INSTRUMENTO_DE_AMBIENTE")
-        _confere_razoes(_PROMESSA_DE_AMBIENTE, "_PROMESSA_DE_AMBIENTE")
-        _confere_razoes(_SEM_MAO_HOJE, "_SEM_MAO_HOJE")
         _confere_razoes(
-            {env: razao for env, (_alvo, razao) in _MAO_FORA_DO_AMBIENTE.items()},
-            "_MAO_FORA_DO_AMBIENTE",
+            ("_INSTRUMENTO_DE_AMBIENTE", _INSTRUMENTO_DE_AMBIENTE),
+            ("_PROMESSA_DE_AMBIENTE", _PROMESSA_DE_AMBIENTE),
+            ("_SEM_MAO_HOJE", _SEM_MAO_HOJE),
+            (
+                "_MAO_FORA_DO_AMBIENTE",
+                {
+                    env: razao
+                    for env, (_alvo, razao) in _MAO_FORA_DO_AMBIENTE.items()
+                },
+            ),
         )
 
 
@@ -2410,19 +2488,24 @@ class TestTodaPromessaPublicaTemCaminho:
         )
 
     def test_nenhuma_declaracao_cita_simbolo_que_nao_existe(self) -> None:
-        """Registro que cita símbolo apagado é cemitério, não registro."""
+        """Registro que cita símbolo apagado é cemitério, não registro.
+
+        Acumula os DOIS registros e acusa uma vez só — ver a regra de varredura
+        de 25/08/2026 no topo de `_razoes_mal_escritas`.
+        """
         publicas = _promessas_publicas_por_chave()
-        for rotulo, registro in (
-            ("_NAO_E_PROMESSA", _NAO_E_PROMESSA),
-            ("_SEM_CAMINHO_HOJE", _SEM_CAMINHO_HOJE),
-        ):
-            fantasmas = sorted(set(registro) - publicas)
-            assert not fantasmas, (
-                f"{rotulo} cita símbolos que não existem mais como promessa "
-                f"pública de módulo: {fantasmas}\n"
-                "APAGUE a entrada (o símbolo saiu da árvore), ou corrija o "
-                "endereço se ele só mudou de arquivo."
-            )
+        fantasmas = [
+            f"{rotulo}: {chave}"
+            for rotulo, registro in _registros_de_promessa()
+            for chave in sorted(set(registro) - publicas)
+        ]
+        assert not fantasmas, (
+            f"há {len(fantasmas)} declaração(ões) citando símbolo que não "
+            "existe mais como promessa pública de módulo:\n"
+            + "\n".join(f"  - {f}" for f in fantasmas)
+            + "\nAPAGUE a entrada (o símbolo saiu da árvore), ou corrija o "
+            "endereço se ele só mudou de arquivo."
+        )
 
     def test_nenhuma_lapide_sobreviveu_a_propria_cura(self) -> None:
         """O dia em que o caminho nasce é o dia de apagar a entrada.
@@ -2430,20 +2513,30 @@ class TestTodaPromessaPublicaTemCaminho:
         É o equivalente do ``xfail(strict=True)`` do molde: a lacuna que passou
         a ser alcançada REPROVA, para que ninguém herde um registro que
         descreve uma árvore que não existe mais.
+
+        MEDIDO em 25/08/2026 (AUDITORIA-DE-PERDA-01/C2): esta régua varria os
+        dois registros com o ``assert`` DENTRO do laço, e a primeira falha
+        cortava o laço — o segundo registro nunca era lido. Duas lápides
+        caducas (``utils/maquina.py::gravar_maquina`` e
+        ``app/ipc_bridge.py::destinos_da_aplicacao``) conviveram sem que
+        ninguém soubesse que eram DUAS. Agora acumula e acusa uma vez só.
+        As datas medidas das duas estão no topo deste arquivo, na regra de
+        varredura.
         """
         soltas = set(promessas_sem_caminho())
-        for rotulo, registro in (
-            ("_NAO_E_PROMESSA", _NAO_E_PROMESSA),
-            ("_SEM_CAMINHO_HOJE", _SEM_CAMINHO_HOJE),
-        ):
-            curadas = sorted(set(registro) - soltas)
-            assert not curadas, (
-                f"{rotulo} declara estes símbolos como sem caminho, e ALGO em "
-                f"produção já os alcança: {curadas}\n"
-                "APAGUE a entrada. A cura chegou e a lápide ficou — é assim "
-                "que um registro honesto vira mentira, e a próxima pessoa "
-                "perde uma tarde descobrindo que o texto está velho."
-            )
+        curadas = [
+            f"{rotulo}: {chave}"
+            for rotulo, registro in _registros_de_promessa()
+            for chave in sorted(set(registro) - soltas)
+        ]
+        assert not curadas, (
+            f"há {len(curadas)} lápide(s) declarando símbolo como sem caminho "
+            "enquanto ALGO em produção já o alcança:\n"
+            + "\n".join(f"  - {c}" for c in curadas)
+            + "\nAPAGUE a entrada. A cura chegou e a lápide ficou — é assim "
+            "que um registro honesto vira mentira, e a próxima pessoa perde "
+            "uma tarde descobrindo que o texto está velho."
+        )
 
     def test_nenhum_simbolo_esta_nos_dois_registros(self) -> None:
         """Ou não é promessa, ou é dívida. Estar nos dois é não ter decidido."""
@@ -2455,8 +2548,7 @@ class TestTodaPromessaPublicaTemCaminho:
 
     def test_as_razoes_dos_simbolos_nao_envelhecem_caladas(self) -> None:
         """Sem isto, os registros viram o lugar onde se esconde o que incomoda."""
-        _confere_razoes(_NAO_E_PROMESSA, "_NAO_E_PROMESSA")
-        _confere_razoes(_SEM_CAMINHO_HOJE, "_SEM_CAMINHO_HOJE")
+        _confere_razoes(*_registros_de_promessa())
 
     def test_todo_ponto_de_entrada_tem_fonte_viva(self) -> None:
         """A lista de entradas é o chão da régua — e chão apodrece calado.
@@ -3061,21 +3153,153 @@ class TestOPortaoMorde:
         coisa e os registros virariam ``{"x": "ok"}`` sem ninguém notar.
         """
         with pytest.raises(AssertionError, match="não diz onde o caminho se perde"):
-            _confere_razoes({"exemplo": "porque sim"}, "_REGISTRO_FABRICADO")
+            _confere_razoes(("_REGISTRO_FABRICADO", {"exemplo": "porque sim"}))
 
     def test_a_razao_sem_data_reprova(self) -> None:
         """Idem para a data: lacuna sem idade vira paisagem."""
         with pytest.raises(AssertionError, match="não tem data"):
             _confere_razoes(
-                {
-                    "exemplo": (
-                        "uma razão suficientemente longa para passar do piso de "
-                        "cento e vinte caracteres, com endereço em arquivo.py:1 "
-                        "e com o que a fecharia, mas sem nenhuma data escrita."
-                    )
-                },
-                "_REGISTRO_FABRICADO",
+                (
+                    "_REGISTRO_FABRICADO",
+                    {
+                        "exemplo": (
+                            "uma razão suficientemente longa para passar do "
+                            "piso de cento e vinte caracteres, com endereço em "
+                            "arquivo.py:1 e com o que a fecharia, mas sem "
+                            "nenhuma data escrita."
+                        )
+                    },
+                )
             )
+
+
+# ===========================================================================
+# P5 — o portão não esconde metade do que vê
+# ===========================================================================
+
+#: Duas lápides fabricadas, uma para cada registro. Os caminhos NÃO existem em
+#: `src/`, e é isso que as faz contar como "curadas" (fora de
+#: `promessas_sem_caminho`) e como "fantasmas" (fora de
+#: `_promessas_publicas_por_chave`) ao mesmo tempo.
+_LAPIDE_FABRICADA_A = "fabricado/primeiro.py::cura_alfa_que_nunca_existiu"
+_LAPIDE_FABRICADA_B = "fabricado/segundo.py::cura_beta_que_nunca_existiu"
+
+_RAZAO_FABRICADA = (
+    "razão fabricada só para esta mordida, longa o bastante para passar do "
+    "piso de cento e vinte caracteres, com endereço em fabricado/x.py:1, com "
+    "o que a fecharia, e com data 25/08/2026."
+)
+
+
+class TestOPortaoNaoEscondeMetadeDoQueVe:
+    """As réguas que varrem DOIS registros nomeiam os dois, não só o primeiro.
+
+    POR QUE ESTA CLASSE EXISTE — MEDIDO em 25/08/2026 (AUDITORIA-DE-PERDA-01,
+    agente C2). As três réguas abaixo varriam mais de um registro com o
+    ``assert`` DENTRO do laço. Em Python, o ``assert`` levanta: a primeira
+    falha aborta o laço e o resto dos registros nunca é lido. O portão ficava
+    vermelho — então parecia estar funcionando — e mostrava METADE do que
+    tinha visto.
+
+    O preço já foi pago: ``utils/maquina.py::gravar_maquina`` e
+    ``app/ipc_bridge.py::destinos_da_aplicacao`` eram DUAS lápides caducas, em
+    registros diferentes, e ninguém soube que eram duas. Quem lê "1 símbolo
+    acusado" fecha a tarefa; a fila real tinha dois. É a família
+    "o portão que não mede o que promete", vista de dentro. As datas medidas
+    das duas estão no topo deste arquivo, na regra de varredura — elas
+    conviveram HORAS, não meses, e é isso que aponta a causa para "árvore que
+    mudou na mesma madrugada, por outra frente".
+
+    MORDIDA de todas as três: devolver o ``assert`` para dentro do laço (ou
+    voltar `_confere_razoes` a levantar na primeira queixa). O caso reprova
+    dizendo exatamente qual registro ficou escondido.
+    """
+
+    def test_a_lapide_curada_nomeia_os_dois_registros(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Uma lápide caduca em CADA registro; as duas têm de sair na acusação."""
+        monkeypatch.setitem(
+            globals(), "_NAO_E_PROMESSA", {_LAPIDE_FABRICADA_A: _RAZAO_FABRICADA}
+        )
+        monkeypatch.setitem(
+            globals(), "_SEM_CAMINHO_HOJE", {_LAPIDE_FABRICADA_B: _RAZAO_FABRICADA}
+        )
+        monkeypatch.setitem(
+            globals(), "promessas_sem_caminho", lambda raiz=None: {}
+        )
+
+        with pytest.raises(AssertionError) as erro:
+            TestTodaPromessaPublicaTemCaminho().test_nenhuma_lapide_sobreviveu_a_propria_cura()
+
+        _os_dois_registros_saem_na_acusacao(str(erro.value), "lápide curada")
+
+    def test_o_simbolo_fantasma_nomeia_os_dois_registros(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Idem para o cemitério: citar símbolo apagado, nos dois registros."""
+        monkeypatch.setitem(
+            globals(), "_NAO_E_PROMESSA", {_LAPIDE_FABRICADA_A: _RAZAO_FABRICADA}
+        )
+        monkeypatch.setitem(
+            globals(), "_SEM_CAMINHO_HOJE", {_LAPIDE_FABRICADA_B: _RAZAO_FABRICADA}
+        )
+        monkeypatch.setitem(
+            globals(), "_promessas_publicas_por_chave", lambda raiz=None: set()
+        )
+
+        with pytest.raises(AssertionError) as erro:
+            TestTodaPromessaPublicaTemCaminho().test_nenhuma_declaracao_cita_simbolo_que_nao_existe()
+
+        _os_dois_registros_saem_na_acusacao(str(erro.value), "símbolo fantasma")
+
+    def test_a_razao_mal_escrita_nomeia_os_dois_registros(self) -> None:
+        """E a guarda das razões: uma queixa em cada registro, as duas na conta.
+
+        Aqui a perda era DUPLA — o ``assert`` cortava dentro do registro E os
+        quatro registros de ambiente eram conferidos em quatro chamadas
+        sequenciais, então a primeira queixa escondia as outras três listas
+        inteiras.
+        """
+        with pytest.raises(AssertionError) as erro:
+            _confere_razoes(
+                ("_REGISTRO_FABRICADO_A", {_LAPIDE_FABRICADA_A: "porque sim"}),
+                ("_REGISTRO_FABRICADO_B", {_LAPIDE_FABRICADA_B: "porque sim"}),
+            )
+
+        _os_dois_registros_saem_na_acusacao(str(erro.value), "razão mal escrita")
+
+    def test_a_regua_da_acusacao_dupla_sabe_recusar(self) -> None:
+        """O dublê que só sabe passar não é dublê.
+
+        Se `_os_dois_registros_saem_na_acusacao` aceitasse qualquer texto, as
+        três provas acima passariam com o defeito de volta. Aqui ela vê uma
+        mensagem que nomeia SÓ o primeiro — que é exatamente o que o `assert`
+        dentro do laço produzia — e tem de recusar.
+        """
+        with pytest.raises(AssertionError, match="escondeu"):
+            _os_dois_registros_saem_na_acusacao(
+                f"_NAO_E_PROMESSA declara: {_LAPIDE_FABRICADA_A}", "fabricado"
+            )
+
+
+def _os_dois_registros_saem_na_acusacao(mensagem: str, regua: str) -> None:
+    """As duas lápides fabricadas têm de estar na MESMA mensagem de falha."""
+    faltando = [
+        alvo
+        for alvo in (_LAPIDE_FABRICADA_A, _LAPIDE_FABRICADA_B)
+        if alvo not in mensagem
+    ]
+    assert not faltando, (
+        f"a régua da {regua} escondeu {len(faltando)} de 2 achados: "
+        f"{faltando}\n"
+        "O `assert` voltou para DENTRO do laço que varre os registros: a "
+        "primeira falha aborta o laço e o resto nunca é lido. ACUMULE e "
+        "falhe uma vez só, nomeando tudo — ver a regra de varredura de "
+        "25/08/2026 no topo deste arquivo.\n"
+        f"Mensagem que saiu: {mensagem}"
+    )
+
 
 # ─────────────────────────────────────────────────────────────────────────
 # POR QUE ESTE ARQUIVO NÃO SE CHAMA `test_*` — 12/08/2026
