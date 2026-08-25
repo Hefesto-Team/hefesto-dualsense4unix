@@ -268,7 +268,6 @@ def _janela(monkeypatch: pytest.MonkeyPatch) -> Any:
     # O daemon não participa de nenhum destes testes.
     monkeypatch.setattr(profiles_actions, "call_async", lambda **k: None)
     monkeypatch.setattr(profiles_actions, "active_profile_name", lambda: None)
-    monkeypatch.setattr(profiles_actions, "profile_switch", lambda name: False)
     return _Janela()
 
 
