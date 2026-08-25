@@ -102,3 +102,49 @@ def test_a_docstring_do_card_nao_ensina_o_modo_que_ninguem_constroi() -> None:
         "card. O exemplo é o que a próxima pessoa copia — ele precisa ser o "
         "que produção faz"
     )
+
+
+# ---------------------------------------------------------------------------
+# T9 — a docstring que prometia o reparenteamento que ela aposentou
+# ---------------------------------------------------------------------------
+
+
+def test_o_alojar_da_rota_nao_promete_o_que_ela_aposentou() -> None:
+    """A T9 da sprint parte de uma premissa FALSA, e este teste a fixa.
+
+    §2.10 leu `self._speaker_rota_slot = None` como contrato quebrado — "a
+    cura escrita e nunca ligada" — e mandou dar corpo ao slot. Mas o `None` é
+    **decisão dela**, de 02/08/2026 (SOM-CANAL-01/E3): *"ele deixa de existir
+    como botão isolado. Vira o estado 'Todo o som do PC' do seletor"*. O
+    comando está na tela com um controle na mesa; o que não está é o botão
+    avulso do Glade, e é assim porque ela pediu.
+
+    O que a §2.10 pegou de verdade foi a **docstring** de
+    `_alojar_botao_da_rota`, que continuava prometendo entregar a
+    SOM-ROTA-NO-CARD-01 — o reparenteamento — três semanas depois de ele
+    parar de acontecer. Foi essa promessa que fez a sprint ler o código como
+    defeito e propor desfazer a decisão dela.
+
+    **A mordida:** devolva a promessa à docstring e o teste reprova. Dar
+    corpo ao `_speaker_rota_slot` faz reprovar
+    `test_o_botao_da_rota_nao_migra_mais_para_o_card`, que é a régua de
+    comportamento da mesma decisão — as duas juntas fecham o cerco.
+    """
+    import inspect
+
+    from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
+
+    doc = inspect.getdoc(StatusActionsMixin._alojar_botao_da_rota) or ""
+
+    assert "SOM-ROTA-NO-CARD-01" not in doc or "CORREÇÃO DE FATO" in doc, (
+        "a docstring de `_alojar_botao_da_rota` volta a afirmar que entrega a "
+        "SOM-ROTA-NO-CARD-01 sem dizer que aquilo caducou em 02/08/2026. Foi "
+        "essa frase que fez uma sprint inteira propor desfazer uma decisão "
+        "dela"
+    )
+    assert "SOM-CANAL-01" in doc, (
+        "a docstring de `_alojar_botao_da_rota` não nomeia a decisão que "
+        "aposentou o reparenteamento (SOM-CANAL-01/E3, 02/08/2026). Sem o "
+        "ponteiro, a próxima pessoa relê o `None` como defeito — foi o que "
+        "aconteceu"
+    )

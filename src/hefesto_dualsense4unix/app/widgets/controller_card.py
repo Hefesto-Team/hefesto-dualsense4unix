@@ -3583,6 +3583,21 @@ if _GTK_DISPONIVEL:
                 # Ele continua existindo e continua funcionando — quem o
                 # explica agora é a dica do bloco. Quando a paridade for
                 # confirmada, ele volta para a tela.
+                #
+                # **O slot da rota é `None` DE PROPÓSITO, e isto é decisão
+                # dela** (SOM-CANAL-01/E3, 02/08/2026): *"ele deixa de existir
+                # como botão isolado. Vira o estado 'Todo o som do PC' do
+                # seletor"*. O comando NASCE aqui, no seletor de canal logo
+                # acima — não há para onde migrar, e o botão do Glade fica no
+                # berço dele.
+                #
+                # `None` é o que o `status_actions._alojar_botao_da_rota` lê
+                # para saber que não deve reparentar nada. Dar corpo a este
+                # slot devolve o defeito da ROTA-ÓRFÃ-01, pago em 01/08:
+                # plugar um segundo controle recria os cards, o
+                # `child.destroy()` do card antigo deixa o botão órfão, e ela
+                # perde o desfazer da rota exatamente no co-op.
+                # `test_o_botao_da_rota_nao_migra_mais_para_o_card` trava isso.
                 self._speaker_rota_slot = None
                 miolo.pack_start(linha_acoes, False, False, 0)
             # O selo da camada 1 fica por último nos dois cards: ele é a
