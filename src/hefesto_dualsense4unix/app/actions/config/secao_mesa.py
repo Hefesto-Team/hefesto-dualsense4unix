@@ -117,6 +117,10 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     Censo,
     ler_o_barramento,
 )
+from hefesto_dualsense4unix.integrations.mapa_das_portas import (
+    porta_de,
+    resumo_do_mapa,
+)
 from hefesto_dualsense4unix.integrations.mesa_de_radio import (
     Adaptador,
     Mesa,
@@ -131,7 +135,11 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
 )
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.maquina import carregar_maquina, fundir_declaracao
+from hefesto_dualsense4unix.utils.maquina import (
+    MapaDaMesa,
+    carregar_maquina,
+    fundir_declaracao,
+)
 
 logger = get_logger(__name__)
 
@@ -355,6 +363,14 @@ class _PainelDaMesa:
         #: coluna "O que é" sem perguntar nada a ela. Censo vazio é resposta:
         #: toda linha cai em "não sei" e o seletor abre sozinho.
         self._censo = Censo()
+        #: O gabinete que ELA desenhou — o disco com o rascunho por cima. Mapa
+        #: vazio é o estado mais comum lá fora e não regride nada: sem ele a
+        #: seção fala exatamente como falava antes desta leva.
+        self._mapa = MapaDaMesa()
+        #: A caixa da linha-resumo do mapa. Ela vive numa caixa própria pelo
+        #: mesmo motivo das outras três: reexaminar esvazia e preenche de novo,
+        #: e a ordem dos filhos da seção nunca muda.
+        self._caixa_do_mapa: Any = None
         #: Os adaptadores pela ótica do BlueZ — endereço, alias e quem hospeda
         #: Nintendo. Tupla vazia é o caso comum e legítimo: sem `busctl`, com o
         #: `bluetoothd` parado, no Flatpak, ou em máquina sem adaptador.
@@ -407,6 +423,12 @@ class _PainelDaMesa:
 
         self._caixa_adaptadores = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         caixa.pack_start(self._caixa_adaptadores, False, False, 0)
+
+        # A linha do mapa fica colada na tabela que ela explica: é a coluna
+        # "Onde está" que passa a falar o número dela. PROVISÓRIO — o lugar da
+        # linha é decisão dela, e a prova de tela desta leva não fechou.
+        self._caixa_do_mapa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        caixa.pack_start(self._caixa_do_mapa, False, False, 0)
 
         caixa.pack_start(self._declaracoes(), False, False, 0)
 
@@ -606,8 +628,10 @@ class _PainelDaMesa:
             mesa = self._ler()
             self._mesa = mesa
             self._censo = self._ler_o_censo()
+            self._mapa = self._mapa_em_vigor()
             self._ler_os_dongles_de_bancada()
             self._desenhar_adaptadores(mesa)
+            self._desenhar_o_mapa()
             self._desenhar_radios(mesa)
             self._desenhar_medidores()
         except Exception:
@@ -863,7 +887,7 @@ class _PainelDaMesa:
             grade.attach(
                 self._celula_mono(_nome_do_adaptador(adaptador)), coluna, linha, 1, 1
             )
-            texto, dica = _onde_esta_o_adaptador(adaptador)
+            texto, dica = _onde_esta_o_adaptador(adaptador, self._mapa)
             grade.attach(self._celula(texto, dica=dica), coluna + 1, linha, 1, 1)
         self._caixa_adaptadores.pack_start(grade, False, False, 0)
 
@@ -942,7 +966,7 @@ class _PainelDaMesa:
             aviso = avisos.get(radio.no)
             grade.attach(
                 self._celula(
-                    _onde_esta_o_radio(radio, aviso),
+                    _onde_esta_o_radio(radio, aviso, self._mapa),
                     dica=None if aviso is None else aviso[1],
                     alerta=aviso is not None,
                 ),
@@ -1330,6 +1354,63 @@ class _PainelDaMesa:
             with contextlib.suppress(Exception):
                 marcar()
 
+    def _desenhar_o_mapa(self) -> None:
+        """A linha-resumo do gabinete dela, mais o botão que abre o desenho.
+
+        UMA linha de altura, e é o teto declarado da tarefa: a seção já pede
+        2465 px numa janela de 1080, e uma grade de faces aqui dentro nasceria
+        abaixo da dobra — que é construir a feature e escondê-la.
+        """
+        if self._caixa_do_mapa is None:
+            return
+        self._esvaziar(self._caixa_do_mapa)
+        self._caixa_do_mapa.pack_start(
+            _linha_do_mapa(self._mapa, self._censo, self._abrir_o_desenho),
+            False,
+            False,
+            0,
+        )
+        self._caixa_do_mapa.show_all()
+
+    def _abrir_o_desenho(self, _botao: Any = None) -> None:
+        """Abre a janela do mapa 2D — e ela grava no rascunho, não no disco.
+
+        Janela PRÓPRIA, e o número é que decide: a seção já pede 2465 px numa
+        janela de 1080. O import é local pelo idioma da casa — a seção monta em
+        ambiente sem GTK durante os testes puros.
+        """
+        from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import (
+            JanelaDoMapaDaMesa,
+        )
+
+        janela = JanelaDoMapaDaMesa(
+            self._host, self._mapa, self._censo, ao_fechar=self.reexaminar
+        )
+        janela.show_all()
+
+    def _mapa_em_vigor(self) -> MapaDaMesa:
+        """O mapa do DISCO, com o rascunho que espera o "Aplicar" por cima.
+
+        Mesma ordem de `_mesa_em_vigor`, e pelo mesmo motivo: o pendente é mais
+        novo que o disco, e mostrar o antigo faria o desenho dela parecer
+        perdido ao trocar de aba e voltar.
+        """
+        bruto: dict[str, Any] = {}
+        with contextlib.suppress(Exception):
+            bruto = carregar_maquina().mapa.model_dump(mode="json")
+        pendente = getattr(self._host, "_maquina_pendente", None)
+        if isinstance(pendente, dict):
+            mapa = pendente.get("mapa")
+            if isinstance(mapa, dict):
+                bruto = fundir_declaracao(bruto, mapa)
+        try:
+            return MapaDaMesa.model_validate(bruto)
+        except Exception:
+            # Rascunho torto não pode derrubar a seção: sem mapa a tela volta a
+            # falar como falava antes desta leva, que é uma resposta.
+            logger.debug("mapa_em_vigor_invalido", exc_info=True)
+            return MapaDaMesa()
+
     def _mesa_em_vigor(self) -> dict[str, Any]:
         """O que está no DISCO, com o que ainda espera o "Aplicar" por cima.
 
@@ -1430,12 +1511,95 @@ def _nome_do_adaptador(adaptador: Adaptador) -> str:
     return f"{adaptador.vid}:{adaptador.pid}"
 
 
-def _onde_esta_o_adaptador(adaptador: Adaptador) -> tuple[str, str | None]:
-    """`(texto, dica)` da coluna "Onde está"."""
+#: A palavra da entrada do gabinete. "Entrada", nunca "porta" — é a decisão
+#: `D-A-PALAVRA-ENTRADA`, e ela sai da frase dela: *"o número da entrada usb
+#: salvaria muito como coluna"*. O identificador de código continua `porta`; o
+#: que a tela mostra é isto.
+#: PROVISÓRIO — decisão dela: a frase é nova e ainda não passou pelo olho dela.
+_ENTRADA_DELA = "Entrada {numero}"
+
+#: A dica da entrada declarada. Ela carrega a PROCEDÊNCIA, que é o padrão desta
+#: casa: a tela afirma o número dela, e o hover diz de onde ele veio e como o
+#: sistema chama o mesmo aparelho. Sem isto, quem procurar o aparelho num log
+#: do sistema não acha o número que a tela mostrou.
+#: PROVISÓRIO — decisão dela.
+_PROCEDENCIA_DA_ENTRADA = (
+    "Foi você quem desenhou esta mesa: este aparelho está na entrada {numero}. "
+    "O sistema o enumera como {caminho}."
+)
+
+#: A linha-resumo do mapa dentro de "Conexões", e o botão que abre o desenho.
+#: UMA linha de altura, e é o teto: a seção já pede 2465 px numa janela de
+#: 1080 (`CONFIGURAÇÕES-FECHA-01` §2.4), e qualquer grade de quadrados aqui
+#: dentro nasceria abaixo da dobra — construir a feature e escondê-la.
+#: PROVISÓRIO — decisão dela: texto novo, e o lugar da linha é escolha dela.
+_RESUMO_DO_MAPA = "Mesa: {faces} faces, {entradas} entradas, {colocados} aparelhos colocados."
+
+#: O que a linha diz para quem nunca desenhou. Ela é o estado mais comum lá
+#: fora, e diz o preço de não desenhar em vez de cobrar o desenho.
+#: PROVISÓRIO — decisão dela.
+_SEM_MAPA = (
+    "Você ainda não desenhou a sua mesa. Enquanto isso o Hefesto diz o caminho "
+    "do sistema (3-1.1.4) em vez do número da sua entrada."
+)
+
+#: O botão que abre a janela do desenho.
+#: PROVISÓRIO — decisão dela.
+_BOTAO_DESENHAR = "Desenhar a minha mesa"
+
+
+def _linha_do_mapa(
+    mapa: MapaDaMesa, censo: Censo, ao_clicar: Any
+) -> Any:
+    """A linha-resumo mais o botão, numa fileira — o widget que a seção ganha.
+
+    Função de MÓDULO e não método porque é o que a régua de altura mede: o
+    teste monta a seção duas vezes, uma com esta linha e outra com ela trocada
+    por uma caixa vazia, e a diferença é exatamente o que a tarefa gastou.
+    """
+    from gi.repository import Gtk
+
+    resumo = resumo_do_mapa(mapa, censo)
+    fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    fileira.set_margin_top(6)
+    texto = (
+        _SEM_MAPA
+        if resumo.vazio
+        else _RESUMO_DO_MAPA.format(
+            faces=resumo.faces,
+            entradas=resumo.entradas,
+            colocados=resumo.colocados,
+        )
+    )
+    fileira.pack_start(
+        rotulo_de_apoio(texto, largura_max=_LARGURA_DA_FRASE), False, False, 0
+    )
+    botao = Gtk.Button(label=_(_BOTAO_DESENHAR))
+    botao.connect("clicked", ao_clicar)
+    fileira.pack_start(botao, False, False, 0)
+    return fileira
+
+
+def _onde_esta_o_adaptador(
+    adaptador: Adaptador, mapa: MapaDaMesa | None = None
+) -> tuple[str, str | None]:
+    """`(texto, dica)` da coluna "Onde está".
+
+    COM o mapa dela, a coluna diz o número que ela escreveu no gabinete —
+    "Entrada 9" — e o caminho do sistema desce para a dica, que é onde a
+    procedência mora nesta casa. SEM o mapa, o texto é exatamente o de hoje,
+    sem uma vírgula de diferença: quem nunca desenhou a mesa não pode perder o
+    pouco que a tela já sabia dizer.
+    """
     if not adaptador.no:
-        # Sem nó USB o adaptador não pendura em porta nenhuma: é PCIe, UART ou
-        # SDIO, ou seja, faz parte da máquina. Não há porta para trocar.
+        # Sem nó USB o adaptador não pendura em entrada nenhuma: é PCIe, UART
+        # ou SDIO, ou seja, faz parte da máquina. Não há o que trocar de lugar.
         return "Dentro da máquina", None
+    numero = None if mapa is None else porta_de(mapa, adaptador.caminho)
+    if numero is not None:
+        return _ENTRADA_DELA.format(numero=numero), _PROCEDENCIA_DA_ENTRADA.format(
+            numero=numero, caminho=adaptador.caminho
+        )
     partes = [
         f"Barramento {adaptador.busnum}, porta {adaptador.devpath}",
         _painel_em_portugues(adaptador.painel),
@@ -1575,9 +1739,22 @@ def _texto_acessivel(ocupacao: Ocupacao, *, sabido: bool = True) -> str:
     return f"{round(ocupacao.slots_total)} de {ocupacao.slots_teto}"
 
 
-def _onde_esta_o_radio(radio: RadioUsb, aviso: tuple[str, str] | None) -> str:
-    """O painel do rádio, mais o aviso de vizinhança quando há um."""
-    onde = _painel_em_portugues(radio.painel)
+def _onde_esta_o_radio(
+    radio: RadioUsb,
+    aviso: tuple[str, str] | None,
+    mapa: MapaDaMesa | None = None,
+) -> str:
+    """O painel do rádio, mais o aviso de vizinhança quando há um.
+
+    Com o mapa, o painel do kernel dá lugar ao número dela — que é a diferença
+    entre "Direita" e "Entrada 7". Sem o mapa, o texto é o de hoje.
+    """
+    numero = None if mapa is None else porta_de(mapa, radio.caminho)
+    onde = (
+        _painel_em_portugues(radio.painel)
+        if numero is None
+        else _ENTRADA_DELA.format(numero=numero)
+    )
     return onde if aviso is None else f"{onde} · {aviso[0]}"
 
 
