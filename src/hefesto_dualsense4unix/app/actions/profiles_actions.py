@@ -11,7 +11,7 @@ gui_prefs.load_gui_prefs / gui_prefs.set_pref.
 from __future__ import annotations
 
 import contextlib
-from typing import Any
+from typing import Any, NamedTuple
 
 import gi
 from pydantic import ValidationError
@@ -32,7 +32,6 @@ from hefesto_dualsense4unix.app.ipc_bridge import (
     PROFILE_SWITCH_TIMEOUT_S,
     active_profile_name,
     call_async,
-    profile_switch,
     run_in_thread,
 )
 from hefesto_dualsense4unix.app.widgets import SegmentedSelector
@@ -478,6 +477,98 @@ def perfil_que_ela_ativou() -> str | None:
     return None
 
 
+# --- P1: um dono só para "qual perfil está valendo" ------------------------
+# PERFIS-ABRE-O-QUE-GUARDA-01/§2.1/1 (24/08/2026). QUATRO superfícies da mesma
+# janela, DUAS respostas para o mesmo fato, medidas com o daemon vivo:
+#
+#     aba Perfis   lê o DISCO   -> "Sackboy", em verde e no topo   (CERTO)
+#     aba Status   lê o daemon  -> "Nenhum"
+#     aba Início   lê o daemon  -> vazio
+#     aba No jogo  lê o daemon  -> vazio
+#
+# A aba Perfis estava certa e sozinha: a cura é da PERFIL-ATUAL-01 (10/08), e o
+# comentário dela já nomeava o caso — "não é o `active_profile` do daemon
+# quando ele está vazio, que é o caso VIVO da máquina dela". As outras três
+# nunca receberam essa cura, e copiar a lógica para cada uma daria QUATRO
+# respostas em vez de duas. Então o resolvedor vira DONO, e as leitoras o
+# chamam.
+#
+# A DISTINÇÃO QUE A TELA PRECISA CARREGAR, e que não existia em lugar nenhum:
+# *"nenhum perfil ativo"* e *"o daemon não sabe dizer"* são fatos diferentes.
+# O `or "Nenhum"` sobre um `null` funde os dois — é a tela confundindo "não
+# sei" com "não há", e é a mesma disciplina que `secao_controles.py` já aplica
+# ("um 'não sei' não pode virar aviso").
+
+#: O rótulo de "ninguém soube responder". É o travessão que a aba Status já usa
+#: quando o daemon está offline — vocabulário existente, não inventado aqui.
+ROTULO_NAO_SEI = "—"
+
+#: E o rótulo de "o daemon respondeu, e não há perfil ativo".
+ROTULO_NENHUM = "Nenhum"
+
+
+class PerfilQueVale(NamedTuple):
+    """Quem está valendo, de onde veio a resposta, e se houve resposta.
+
+    ``fonte`` é o que separa os quatro casos, e existe para a tela poder
+    escolher palavras diferentes para fatos diferentes:
+
+    - ``"daemon"`` — o daemon respondeu com um nome. É a verdade mais fresca.
+    - ``"disco"``  — o daemon respondeu ``null`` (ou não respondeu) e o
+      marcador em disco tem um nome. **É o caso VIVO da máquina dela.**
+    - ``"nenhum"`` — o daemon respondeu, ninguém tem nome: não há perfil ativo.
+    - ``"nao_sei"`` — não houve resposta e não há marcador. A tela não sabe.
+    """
+
+    nome: str | None
+    fonte: str
+
+    @property
+    def sabe(self) -> bool:
+        """Alguém soube responder? ``False`` só no ``nao_sei``."""
+        return self.fonte != "nao_sei"
+
+    @property
+    def rotulo(self) -> str:
+        """O que a tela escreve quando precisa de UMA palavra."""
+        if self.nome:
+            return self.nome
+        return ROTULO_NENHUM if self.fonte == "nenhum" else ROTULO_NAO_SEI
+
+
+def perfil_que_esta_valendo(state: Any = None) -> PerfilQueVale:
+    """O DONO da pergunta "qual perfil está valendo agora?".
+
+    A ordem é deliberada e cada perna tem motivo:
+
+    1. **o daemon primeiro** — ele é quem aplicou as seções no controle, e um
+       autoswitch por janela só existe lá;
+    2. **o disco depois, declarado** — `perfil_que_ela_ativou` lê
+       `session.json` + `active_profile.txt` pelo MESMO caminho que o daemon
+       usa no boot (`resolve_boot_profile`). Sobrevive ao daemon responder
+       ``active_profile: null``, que é o estado da máquina dela hoje, e
+       sobrevive a fechar e reabrir a janela.
+
+    ``state`` ausente (ou que não é dicionário) significa "o daemon não falou"
+    — nunca "não há perfil". Best-effort em tudo: qualquer falha de I/O do
+    disco vira ``nao_sei``, jamais uma exceção na thread do GTK.
+    """
+    houve_resposta = isinstance(state, dict)
+    if houve_resposta:
+        do_daemon = state.get("active_profile")
+        if isinstance(do_daemon, str) and do_daemon:
+            return PerfilQueVale(do_daemon, "daemon")
+    do_disco: str | None = None
+    # Best-effort, e a garantia é DAQUI: `perfil_que_ela_ativou` engole as
+    # falhas dele, mas quem chama este dono é repintura de tela, e uma exceção
+    # aqui derrubaria a thread do GTK por causa de um arquivo de sessão.
+    with contextlib.suppress(Exception):
+        do_disco = perfil_que_ela_ativou()
+    if do_disco:
+        return PerfilQueVale(do_disco, "disco")
+    return PerfilQueVale(None, "nenhum" if houve_resposta else "nao_sei")
+
+
 def ordem_de_exibicao(perfis: list[Any], ativo: str | None) -> list[Any]:
     """A ordem em que as linhas aparecem: o ativo primeiro, o resto como veio.
 
@@ -623,6 +714,57 @@ def mensagem_de_ativacao(name: str, result: Any = None) -> str:
     )
 
     return f"Perfil ativado: {name} — {_mensagem_de_aplicacao(relato)}"
+
+
+def mensagem_do_salvar(
+    name: str,
+    renomeado_de: str | None = None,
+    reaplicou: bool = False,
+    result: Any = None,
+) -> str:
+    """O que o rodapé diz depois do Salvar — e o que ele PARA de prometer.
+
+    PERFIS-ABRE-O-QUE-GUARDA-01/P3b (25/08/2026). O Salvar lia o booleano de
+    `profile_switch` — que a própria docstring dele declara ser "o daemon não
+    confirmou", nunca "as seções entraram" — e escrevia **"Perfil salvo e
+    reaplicado no controle"**. Com o jogo aberto, o gate R-04 recusa seções: o
+    daemon respondia, o booleano era `True`, nenhuma seção chegava ao controle,
+    e a janela comemorava. O botão vizinho — o **Ativar** — já sabia dizer a
+    verdade desde a ATIVAR-NAO-MENTE-01, cem linhas acima, no mesmo arquivo.
+
+    **Reuso, nunca frase nova.** A metade que nomeia o que ficou de fora é
+    `_mensagem_de_aplicacao` do rodapé — a MESMA função, com as MESMAS
+    palavras, que `mensagem_de_ativacao` usa. Dois donos da mesma frase
+    derivam, e esta casa tem a regra escrita.
+
+    Os três estados, e cada um diz só o que sabe:
+
+    - **nada a reaplicar** (o perfil salvo não era o ativo) → "Perfil salvo",
+      sem uma palavra sobre o controle;
+    - **reaplicado sem relatório ou com tudo dentro** → a frase de sempre, que
+      ela já aprovou;
+    - **reaplicado com seção de fora** → "Perfil salvo: X — Aplicado, menos:
+      …", no vocabulário do rodapé.
+
+    Função PURA: os testes leem o texto sem subir GTK nem daemon.
+    """
+    cabeca = (
+        f"Perfil renomeado: {renomeado_de} → {name}"
+        if renomeado_de is not None
+        else f"Perfil salvo: {name}"
+    )
+    if not reaplicou:
+        return cabeca
+    relato = relato_da_ativacao(result)
+    if relato is None or not relato["failed"]:
+        if renomeado_de is not None:
+            return f"{cabeca} (reaplicado no controle)"
+        return f"Perfil salvo e reaplicado no controle: {name}"
+    from hefesto_dualsense4unix.app.actions.footer_actions import (
+        _mensagem_de_aplicacao,
+    )
+
+    return f"{cabeca} — {_mensagem_de_aplicacao(relato)}"
 
 
 def texto_da_marca_do_steam_input(
@@ -2930,25 +3072,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         # ativo — e o arquivo dele acabou de ser apagado. Sem migrar o marker,
         # o boot seguinte procuraria um perfil que não existe mais e cairia no
         # fallback (catch-all), que é justamente o cenário da queixa (1).
-        reaplicado = False
-        try:
-            if ativo_antes is not None and (
-                ativo_antes == profile.name or ativo_antes == renomeando_de
-            ):
-                reaplicado = profile_switch(profile.name)
-        except Exception:
-            reaplicado = False
-        if renomeando_de is not None:
-            self._toast_profile(
-                f"Perfil renomeado: {renomeando_de} → {profile.name}"
-                + (" (reaplicado no controle)" if reaplicado else "")
-            )
-        else:
-            self._toast_profile(
-                f"Perfil salvo e reaplicado no controle: {profile.name}"
-                if reaplicado
-                else f"Perfil salvo: {profile.name}"
-            )
+        precisa_reaplicar = ativo_antes is not None and (
+            ativo_antes == profile.name or ativo_antes == renomeando_de
+        )
+        self._reaplicar_e_dizer(profile.name, renomeando_de, precisa_reaplicar)
         # DEDUP-04: perfil novo/editado pode ter steam_app_<id> no match — o
         # daemon rematerializa a antecipação por appid do launch_env AGORA
         # (sem isso, o primeiro launch do jogo cairia no default.env rançoso).
@@ -2959,6 +3086,73 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         # bilhete que ninguém vai abrir — foi exatamente esse o defeito do
         # Pragmata em 16/08. As duas linhas andam juntas por isso.
         self.pegar_carona_no_gesto(GESTO_SALVAR)
+
+    # --- O Salvar solta a thread, e para de prometer (P3 + P3b) -------------
+    # PERFIS-ABRE-O-QUE-GUARDA-01, 25/08/2026. Duas curas na mesma costura,
+    # porque separá-las produziria uma terceira falha:
+    #
+    # **P3 — a thread.** `profile_switch()` é síncrono e o handler `profile.
+    # switch` levou **~1,2 s MEDIDOS no journal dela** — o número está escrito
+    # no comentário do botão vizinho (`on_profile_activate`), e foi por ele que
+    # o **Ativar** virou `call_async` na ATIVAR-NAO-MENTE-01. O Salvar ficou
+    # para trás: cada clique congelava a janela inteira por mais de um segundo.
+    # Aqui ele passa a usar EXATAMENTE o caminho do Ativar.
+    #
+    # **P3b — a promessa.** Ver `mensagem_do_salvar`.
+    #
+    # **Por que juntas, e não uma de cada vez:** a peça que devolve o corpo do
+    # daemon numa chamada síncrona (`_corpo_do_daemon`) sai com o teto de
+    # LEITURA de 250 ms, e o `profile.switch` não cabe nele. Trocar só o texto,
+    # mantendo a chamada síncrona, ressuscitaria a ATIVAR-NAO-MENTE-01 pelo
+    # outro lado: todo Salvar cairia no caminho de falha por timeout, com a
+    # ativação acontecendo. `call_async` com `PROFILE_SWITCH_TIMEOUT_S` é o
+    # único caminho que entrega as duas.
+    #
+    # **O que NÃO mudou:** `save_profile` continua na thread do GTK e continua
+    # sendo a exceção DATADA ao `ProfileWriterMixin` (o teste
+    # `test_gravacao_de_perfil_passa_pelo_funil` trava a lista, que só pode
+    # encolher). Esta costura move a chamada de THREAD, nunca de módulo.
+
+    def _reaplicar_e_dizer(
+        self, nome: str, renomeando_de: str | None, reaplicar: bool
+    ) -> None:
+        """Reaplica no controle (se for o caso) e diz o que de fato aconteceu."""
+        if not reaplicar:
+            self._toast_profile(mensagem_do_salvar(nome, renomeando_de))
+            return
+        call_async(
+            method="profile.switch",
+            params={"name": nome},
+            on_success=lambda result: self._ao_reaplicar_o_salvo(
+                nome, renomeando_de, result
+            ),
+            on_failure=lambda exc: self._ao_nao_reaplicar_o_salvo(
+                nome, renomeando_de, exc
+            ),
+            timeout_s=PROFILE_SWITCH_TIMEOUT_S,
+        )
+
+    def _ao_reaplicar_o_salvo(
+        self, nome: str, renomeando_de: str | None, result: Any = None
+    ) -> bool:
+        """Callback GTK: o daemon aceitou — o toast lê o relatório `secoes`."""
+        self._toast_profile(
+            mensagem_do_salvar(nome, renomeando_de, reaplicou=True, result=result)
+        )
+        return False  # GLib.idle_add: não repetir
+
+    def _ao_nao_reaplicar_o_salvo(
+        self, nome: str, renomeando_de: str | None, exc: Exception
+    ) -> bool:
+        """Callback GTK: o daemon não confirmou. O disco mudou; o controle não.
+
+        Sem `reaplicou`: o arquivo foi gravado (isso é fato, e já aconteceu) e
+        a frase para por aí. Dizer "falhou" aqui seria pior que calar — o
+        Salvar CUMPRIU, e quem não respondeu foi o daemon.
+        """
+        logger.debug("salvar_reaplicar_falhou", perfil=nome, err=str(exc))
+        self._toast_profile(mensagem_do_salvar(nome, renomeando_de))
+        return False  # GLib.idle_add: não repetir
 
     # --- helpers internos ---
 

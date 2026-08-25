@@ -111,6 +111,22 @@ ABA_STATUS = "tab_status_box"
 #: pintar a aba errada em silêncio (EST-10 / JANELA-FIEL-01).
 ABA_NO_JOGO = "tab_no_jogo_box"
 
+#: Quantas falhas SEGUIDAS do tique lento até a aba "No jogo" esvaziar.
+#:
+#: NO-JOGO-SEM-FALSO-VERDE-01 T4 (25/08/2026). Não é 1 e não é 10, e os dois
+#: extremos têm preço medido:
+#:
+#: * **1** faria a aba piscar — o tique é de 2 Hz e um `daemon.state_full` que
+#:   estoura o tempo uma vez sozinho é rotina nesta casa (o executor tem UM
+#:   worker para os três pollers, e o guard de inflight existe por isso);
+#: * **muitas** deixaria a mentira confortável de pé pelo tempo todo, que é
+#:   exatamente o que a docstring de `_sync_paineis_no_jogo` promete não fazer.
+#:
+#: Três a 2 Hz é 1,5 s — mais que o suficiente para atravessar um poll perdido,
+#: e menos que o `ATIVIDADE_FRESCA_S` (3,0 s) que decide se a linha diz "no jogo
+#: agora". O teto do painel nunca sobrevive à régua que o pinta.
+FALHAS_ATE_ESVAZIAR_NO_JOGO = 3
+
 #: A coluna e a altura do botão da rota de som NO BERÇO (o `status_grid` do
 #: frame Estado). Elas repetem o empacotamento do Glade porque a devolução
 #: acontece em código — o botão sai do berço para o card e pode voltar, e
@@ -343,6 +359,13 @@ class StatusActionsMixin(WidgetAccessMixin):
     # 1 worker que os 3 pollers de `daemon.state_full` compartilham.
     _profile_inflight: bool = False
     _reconnect_inflight: bool = False
+    #: NO-JOGO-SEM-FALSO-VERDE-01 T4: falhas SEGUIDAS do tique lento (2 Hz).
+    #: Zerado em toda resposta boa; ao bater
+    #: :data:`FALHAS_ATE_ESVAZIAR_NO_JOGO` a aba "No jogo" esvazia, em vez de
+    #: manter "no jogo agora" ao lado de um número que ninguém mediu desde
+    #: então. Antes desta leva o caminho de falha só soltava o guard de
+    #: inflight e não fazia mais nada.
+    _profile_falhas_seguidas: int = 0
     # STATUS-02: cards por controle, keyed por `(index, uniq)` (com sufixo
     # posicional defensivo em duplicata). Os caches de diff dos widgets de
     # live-state (R3) migraram para DENTRO de cada ControllerCard.
@@ -751,6 +774,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         # ABA-DO-JOGO-01: a EXISTÊNCIA da aba se decide aqui, uma linha ACIMA do
         # gate de pintura, e a ordem é a cura inteira — atrás dele esta chamada
         # nunca aconteceria com a aba escondida, e a aba escondida nunca voltaria.
+        #
+        # T4 (25/08/2026): o `_render_slow_state` chama o MESMO gate antes do
+        # gate de popup, e esta linha continua aqui — não é redundância. Este é
+        # o ponto de entrada que o `_render_offline` e a bancada de teste usam,
+        # e um gate que só existisse no chamador de cima deixaria os dois sem
+        # ele. A chamada é idempotente: mostrar o que já está na tira e esconder
+        # o que já saiu dela não fazem nada.
         self._sync_visibilidade_no_jogo(state)
         notebook = self._get("main_notebook")
         if (
@@ -791,7 +821,19 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._no_jogo_vazio.set_visible(
             recado is None and isinstance(state, dict) and not conectados
         )
-        for key, entry in zip(keys, conectados, strict=True):
+        # Mesma correção de T4 aplicada aos cards (25/08/2026): a chave sai da
+        # lista ORDENADA e o registro tem de sair da mesma — casá-los por
+        # posição na lista crua alimentava o painel do jogador errado.
+        # Pela CLASSE e não por `self`: hosts parciais de teste montam a
+        # mixin método a método (o `_Janela` do `no_jogo` é um), e um `self._`
+        # novo aqui quebraria a bancada de quem não sabia que ele nasceu — a
+        # mesma razão pela qual `_status_card_keys_for` já chamava
+        # `StatusActionsMixin._por_numero_de_identidade` assim.
+        for key, entry in zip(
+            keys,
+            StatusActionsMixin._conectados_na_ordem_dos_cards(conectados),
+            strict=True,
+        ):
             painel = self._no_jogo_paineis.get(key)
             if painel is not None and isinstance(state, dict):
                 painel.atualizar(entry, state)
@@ -826,11 +868,21 @@ class StatusActionsMixin(WidgetAccessMixin):
     def set_status_tab_visivel(self, visivel: bool) -> None:
         """Liga/desliga a captura de áudio do microfone dos controles.
 
-        Chamado pelo `switch-page` do notebook (que identifica a aba pelo id
-        do Glade, não pela posição). Sair da aba MATA o `parec` de cada
-        controle: manter um processo capturando o microfone da usuária com a
-        janela em outra aba — ou minimizada — seria custo e intromissão sem
-        ninguém olhando o medidor.
+        Sair da aba MATA o `parec` de cada controle: manter um processo
+        capturando o microfone da usuária sem ninguém olhando o medidor seria
+        custo e intromissão.
+
+        **Os TRÊS gatilhos, e por que são três** (o terceiro é de
+        25/08/2026, STATUS-DIZ-O-QUE-VÊ-01/T8):
+
+        * `switch-page` do notebook — trocar de aba. Identifica a aba pelo id
+          do Glade, nunca pela posição;
+        * `delete-event` — a janela indo para a bandeja;
+        * `window-state-event` com o bit `ICONIFIED` — minimizar. Ele faltava,
+          e a palavra "minimizada" estava nesta docstring desde o primeiro
+          dia: com a aba Status à vista e a janela minimizada, a captura
+          continuava viva. Restaurar devolve a captura se a aba à vista for a
+          Status (`HefestoApp._on_window_state_event`).
 
         O monitor nasce na primeira vez que a aba é aberta; antes disso não
         existe thread nenhuma. Falha de import/inicialização é silenciosa
@@ -899,6 +951,46 @@ class StatusActionsMixin(WidgetAccessMixin):
     #: sessão) veriam o estado uma da outra. A reatribuição cria o de
     #: instância na primeira escrita, que é o comportamento pretendido.
     _ultimo_estado_global: dict[str, str] = {}  # noqa: RUF012
+
+    @staticmethod
+    def _bateria_da_mesa(state: dict[str, Any]) -> tuple[float, str]:
+        """``(fração, texto)`` da barra de bateria — ``"— %"`` quando não há fonte.
+
+        STATUS-DIZ-O-QUE-VÊ-01/T12 (25/08/2026). **É a afirmação mais
+        silenciosa e mais crível da aba, e por isso a mais cara quando erra.**
+
+        Duas medições se somam para exigir esta guarda:
+
+        * o mapa de canais rebaixou `energia.bateria.percentual` do DualSense
+          de **medido** para **inferência de código** em 15/08/2026 (D-14) —
+          *"a evidência registrada descreve LEITURA DE FONTE (arquivo, linha,
+          grep), não medição no aparelho"*;
+        * e o daemon publica, no MESMO payload, um topo que discorda da
+          lista. Medido em 23/08 às 21h53, com **zero** DualSense no sistema:
+          ``daemon.status`` e o topo do ``state_full`` diziam
+          ``connected: true, battery_pct: 75``, enquanto
+          ``controllers[0]`` dizia ``connected: false``. A barra afirmava
+          **75 %** de um controle que não existe.
+
+        A régua de "quem está na mesa" é a da Z5 (`app/mesa.py`, dono único),
+        e esta função a CONSOME: quando o daemon publica a lista de
+        controles, é ela que manda. Quando não publica — daemon antigo, ou
+        payload parcial —, o topo continua valendo: recusar o número aí seria
+        trocar um erro por outro, e a ausência de lista não é evidência de
+        mesa vazia.
+
+        Não é para tirar o número. É para o número parar de aparecer quando a
+        fonte dele não existe.
+        """
+        bruto = state.get("battery_pct")
+        tem_numero = isinstance(bruto, (int, float)) and not isinstance(bruto, bool)
+        mesa_publicada = isinstance(state.get("controllers"), list)
+        if mesa_publicada and not StatusActionsMixin._connected_controllers(state):
+            return (0.0, "— %")
+        if not tem_numero:
+            return (0.0, "— %")
+        assert isinstance(bruto, (int, float))
+        return (bruto / 100, f"{bruto} %")
 
     def _set_battery_text(self, texto: str) -> None:
         """Escreve o número da bateria na barra E no rótulo ao lado dela.
@@ -1094,6 +1186,30 @@ class StatusActionsMixin(WidgetAccessMixin):
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _conectados_na_ordem_dos_cards(
+        conectados: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """A mesa na ordem em que os cards nascem — a MESMA ordem da fita.
+
+        Existe por um defeito medido em 25/08/2026
+        (STATUS-DIZ-O-QUE-VÊ-01/T4). A Z2-7 pôs `_status_card_keys_for` a
+        percorrer `_por_numero_de_identidade`, e as duas grades que consomem
+        as chaves continuaram casando ``keys`` com ``conectados`` na ordem
+        CRUA do daemon, posição a posição — ``zip(keys, conectados)``. Com a
+        mesa fora de ordem (o caso normal), o card do Controle 1 passou a
+        receber o registro do Controle 2: bateria, analógicos, luz e
+        microfone do vizinho, sob o título certo. Trocar a ordem de nascimento
+        sem trocar a ordem de alimentação é pior que o defeito original — lá a
+        pessoa clicava no chip errado, aqui ela lê o controle errado.
+
+        Uma função só, chamada pelas TRÊS pontas (a que faz as chaves, a que
+        alimenta os cards e a que alimenta os painéis do "No jogo"), é o que
+        impede a divergência de voltar: enquanto houver dois lugares
+        ordenando, o defeito é questão de tempo.
+        """
+        return StatusActionsMixin._por_numero_de_identidade(conectados)
+
+    @staticmethod
     def _status_card_keys_for(
         conectados: list[dict[str, Any]],
     ) -> list[tuple[Any, ...]]:
@@ -1126,7 +1242,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         """
         keys: list[tuple[Any, ...]] = []
         vistos: dict[tuple[Any, Any], int] = {}
-        for pos, c in enumerate(StatusActionsMixin._por_numero_de_identidade(conectados)):
+        for pos, c in enumerate(
+            StatusActionsMixin._conectados_na_ordem_dos_cards(conectados)
+        ):
             indice = c.get("index")
             if not isinstance(indice, int) or isinstance(indice, bool):
                 indice = pos
@@ -1171,7 +1289,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         # dicionário — nada de subprocess a 10 Hz. Quem foi ao PipeWire foi o
         # `mic_monitor`, na cadência de 3 s dele.
         self._rota_sink = self._sink_do_controle_para_a_rota(monitor, uniqs)
-        for key, entry in zip(keys, conectados, strict=True):
+        # T4 (25/08/2026): `keys` nasce ORDENADA (Z2-7) e `conectados` chega
+        # na ordem crua do daemon. Casar as duas por posição alimentava cada
+        # card com o registro do vizinho — ver
+        # `_conectados_na_ordem_dos_cards`.
+        # Pela CLASSE e não por `self`: hosts parciais de teste montam a
+        # mixin método a método (o `_Janela` do `no_jogo` é um), e um `self._`
+        # novo aqui quebraria a bancada de quem não sabia que ele nasceu — a
+        # mesma razão pela qual `_status_card_keys_for` já chamava
+        # `StatusActionsMixin._por_numero_de_identidade` assim.
+        for key, entry in zip(
+            keys,
+            StatusActionsMixin._conectados_na_ordem_dos_cards(conectados),
+            strict=True,
+        ):
             card = self._status_cards.get(key)
             if card is None:
                 continue
@@ -1286,25 +1417,33 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._espelhar_estado_global_nos_cards()
 
     def _alojar_botao_da_rota(self) -> None:
-        """Muda o botão da rota de som para o bloco Alto-falante do 1º card.
+        """Garante que o botão da rota de som tem pai — hoje, sempre o berço.
 
-        SOM-ROTA-NO-CARD-01, pedido dela em 01/08: *"aquele botão de voltar ao
-        anterior sai de lá de cima e fica no espaço onde tem 'não ajustado' no
-        alto-falante"*.
+        CORREÇÃO DE FATO (25/08/2026, STATUS-DIZ-O-QUE-VÊ-01). Esta docstring
+        afirmava entregar a SOM-ROTA-NO-CARD-01 — o botão migrando para o
+        bloco "Alto-falante" do primeiro card. **Ficou falsa em 02/08/2026**,
+        e por decisão dela: a SOM-CANAL-01/E3 aposentou o botão isolado —
+        *"ele deixa de existir como botão isolado. Vira o estado 'Todo o som
+        do PC' do seletor"*. O comando nasce dentro do card, no seletor de
+        canal, e o `_speaker_rota_slot` do `ControllerCard` passou a ser
+        `None` justamente para dizer "não reparente".
 
-        O botão é o do GLADE, e continua sendo UM só. A segunda razão da
-        SOM-04 para ele morar no frame Estado — a saída padrão do sistema é um
-        fato do SISTEMA, e com dois cards haveria dois botões para um único
-        interruptor global — continua inteira. Por isso ele é REPARENTADO para
-        o card primário em vez de cada card ganhar o seu: com 2+ controles o
-        sink sequer é resolvido (`_sink_do_controle_para_a_rota` devolve "" de
-        propósito) e o botão nasce insensível, então um botão só, no primeiro
-        card, é também o mais honesto.
+        O que este método FAZ hoje: lê o slot do card primário e, como ele é
+        `None`, devolve o botão do Glade ao berço. O caminho de reparentar
+        continua escrito, e é o caminho de volta caso ela decida trazer o
+        botão para o card — mas ele não corre, e afirmar o contrário aqui
+        custou uma sprint inteira lendo o código como um contrato quebrado.
 
-        Idempotente: sai cedo se o botão já está no slot certo. Os cards são
-        reconstruídos a cada troca de conjunto, e o `Gtk.Container.remove` do
-        pai antigo é obrigatório — um widget com dois pais é erro de GTK, não
-        de desenho.
+        **A trava, que é o motivo de o método existir mesmo assim:** a
+        ROTA-ÓRFÃ-01, paga em 01/08/2026 nesta árvore com GTK 3.24 e o Glade
+        real. Sem alguém garantindo um pai, plugar um segundo controle
+        recriava os cards e o `child.destroy()` deixava o botão ÓRFÃO — vivo,
+        porque o Builder guarda a referência, mas fora da tela e sem casa. Ela
+        perdia o desfazer da rota exatamente no co-op.
+
+        Idempotente: sai cedo se o botão já está onde deve. O
+        `Gtk.Container.remove` do pai antigo é obrigatório — um widget com
+        dois pais é erro de GTK, não de desenho.
         """
         botao = self._get("btn_som_no_controle")
         if botao is None or not hasattr(botao, "get_parent"):
@@ -2377,12 +2516,41 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._profile_inflight = False
         if isinstance(state, dict):
             self._first_poll_succeeded = True
+            # T4: a contagem só zera com resposta APROVEITADA. Um `state` que
+            # não é dict é uma resposta que não deu para usar, e tratá-la como
+            # sucesso manteria o painel congelado para sempre.
+            self._profile_falhas_seguidas = 0
             self._render_slow_state(state)
         return False  # não repetir via GLib
 
     def _on_profile_state_failure(self, _exc: Exception) -> bool:
-        """Callback de falha do tick lento — libera o guard de inflight."""
+        """Callback de falha do tick lento — libera o guard e conta a falha.
+
+        NO-JOGO-SEM-FALSO-VERDE-01 T4 (25/08/2026). Até esta leva ele soltava o
+        guard de inflight e **não fazia mais nada** — um poll que falha não
+        esvaziava painel nenhum, e a aba "No jogo" ficava com o último estado
+        bom na tela, com "no jogo agora" ao lado de um número que já era de
+        minutos atrás. É a mesma "mentira confortável" que a docstring de
+        `_sync_paineis_no_jogo` diz que esta aba existe para não contar, pela
+        outra porta.
+
+        Ao bater :data:`FALHAS_ATE_ESVAZIAR_NO_JOGO` faz o mesmo que o
+        `_render_offline` já fazia com o daemon declarado morto:
+        `_sync_paineis_no_jogo(None)`, que troca os painéis pela frase de
+        desligado. Continua chamando a cada falha depois disso — é idempotente,
+        e parar de chamar deixaria a aba muda se ela trocasse de aba no meio da
+        pane.
+
+        **A tira não se mexe**, e é de propósito: `jogo_steam_aberto(None)`
+        devolve `None`, o tri-estado de "ninguém sabe", e o gate de existência
+        não toca em nada. Sumir com a aba porque o IPC falhou seria afirmar que
+        o jogo dela fechou a partir de um silêncio nosso.
+        """
         self._profile_inflight = False
+        self._profile_falhas_seguidas += 1
+        if self._profile_falhas_seguidas >= FALHAS_ATE_ESVAZIAR_NO_JOGO:
+            with contextlib.suppress(Exception):
+                self._sync_paineis_no_jogo(None)
         return False  # não repetir via GLib
 
     def _tick_reconnect_state(self) -> bool:
@@ -2679,6 +2847,19 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._sync_status_cards(state)
 
     def _render_slow_state(self, state: dict[str, Any]) -> None:
+        # ABA-DO-JOGO-01 / NO-JOGO-SEM-FALSO-VERDE-01 T4 (25/08/2026): o gate de
+        # EXISTÊNCIA da aba "No jogo" roda ANTES do gate de popup, e a ordem é a
+        # cura. Ele já rodava antes do gate de PINTURA (dentro de
+        # `_sync_paineis_no_jogo`), mas o caminho inteiro morria aqui em cima
+        # quando havia um combo aberto em QUALQUER aba — e com o jogo fechado a
+        # aba ficava na tira, com os painéis congelados no último estado bom.
+        #
+        # Pôr esta chamada acima do `return` não reabre o
+        # BUG-COMBO-POPUP-FLICKER-02: aquele defeito é RE-LAYOUT da janela
+        # fechando o popup, e mostrar/esconder uma página do notebook não toca a
+        # árvore de widgets do popup — o grab é de outra hierarquia. O que
+        # continua atrás do gate é tudo o que escreve em widget da aba.
+        self._sync_visibilidade_no_jogo(state)
         # Mesma proteção do render vivo (BUG-COMBO-POPUP-FLICKER-02): não mexe nos
         # widgets enquanto um popup está aberto, para não fechá-lo via re-layout.
         if self._popup_is_open():
@@ -2690,7 +2871,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._update_coop_badge(state)
         self._sync_coop_governa_luzes(state)
         self._sync_modo_nativo_manda_no_output(state)
-        battery = state.get("battery_pct")
         active_profile = state.get("active_profile") or "Nenhum"
 
         conectados = self._connected_controllers(state)
@@ -2740,12 +2920,13 @@ class StatusActionsMixin(WidgetAccessMixin):
             # UX-BATTERY-LABEL-01: o texto precisa estar VISÍVEL. Desde a
             # ESTADO-TRES-LINHAS-01 quem o mostra é o rótulo ao lado da barra,
             # e não a barra — ver `_set_battery_text`.
-            if battery is None:
-                battery_bar.set_fraction(0.0)
-                self._set_battery_text("— %")
-            else:
-                battery_bar.set_fraction(battery / 100)
-                self._set_battery_text(f"{battery} %")
+            # T12: a decisão de mostrar ou calar o número mora em
+            # `_bateria_da_mesa`, e não aqui. Ela é pura e mede o payload
+            # inteiro — o topo E a lista —, porque foi a divergência entre os
+            # dois que fez esta barra afirmar 75 % de ninguém.
+            fracao, texto = self._bateria_da_mesa(state)
+            battery_bar.set_fraction(fracao)
+            self._set_battery_text(texto)
 
         # FEAT-DSX-CONTROLLER-SELECTOR-01: atualiza o seletor de controle-alvo
         # (aparece só com 2+ controles).

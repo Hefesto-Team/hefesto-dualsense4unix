@@ -106,7 +106,16 @@ class _HostDoOrcamento:
 def test_o_orcamento_declarado_volta_a_nao_sei_e_o_disco_esvazia(
     arquivo: Path,
 ) -> None:
-    """MORDIDA 1. Declarou "Economia" por engano; "Não sei" desfaz até o disco."""
+    """MORDIDA 1. Declarou "Bateria longa" por engano; um clique desfaz até o disco.
+
+    NOTA DATADA — 25/08/2026, `D-PERFIL-DE-DESEMPENHO`. Nesta seção o botão
+    deixou de se chamar "Não sei" e passou a se chamar **"Eu escolho"**: os
+    cinco degraus viraram um perfil de três, e "Eu escolho" é o que significa a
+    ausência de teto de mesa (cada aba manda na sua). O que a `D-A1` protege
+    **não é o rótulo, é o gesto** — e o gesto continua aqui, gravando `None`
+    EXPLÍCITO no rascunho. Nos outros dois campos o rótulo "Não sei" continua
+    valendo letra por letra.
+    """
     assert gravar_maquina({"orcamento": {"teto": "economia"}})
     assert carregar_maquina().orcamento.teto == "economia"
 
@@ -115,20 +124,27 @@ def test_o_orcamento_declarado_volta_a_nao_sei_e_o_disco_esvazia(
     secao_orcamento.montar(host, host._caixa)
 
     seletor = host._config_orcamento_seletor  # type: ignore[attr-defined]
-    assert seletor.get_active_id() == "economia", "a montagem não marcou o gravado"
-    seletor.set_active_id(secao_orcamento.ID_DE_NAO_SEI)
+    assert seletor.get_active_id() == secao_orcamento.PERFIL_BATERIA_LONGA, (
+        "a montagem não migrou o `economia` gravado para o perfil dele"
+    )
+    seletor.set_active_id(secao_orcamento.PERFIL_EU_ESCOLHO)
 
     assert host._maquina_pendente == {"orcamento": {"teto": None}}, (
-        "o clique em 'Não sei' tem de acumular `None` EXPLÍCITO: a ausência da "
-        "chave preservaria a escolha antiga na fusão"
+        "o clique em 'Eu escolho' tem de acumular `None` EXPLÍCITO: a ausência "
+        "da chave preservaria a escolha antiga na fusão"
     )
     assert gravar_maquina(host._maquina_pendente or {})
     assert carregar_maquina().orcamento.teto is None
 
 
 def test_nao_sei_nao_entra_nas_chaves_do_schema() -> None:
-    """O botão é palavra de TELA; em `CHAVES` o `Literal` recusaria o documento."""
-    assert secao_orcamento.ID_DE_NAO_SEI not in secao_orcamento.CHAVES
+    """Perfil é palavra de TELA; em `CHAVES` o `Literal` recusaria o documento.
+
+    Os três ids de perfil (`tudo_ligado`, `bateria_longa`, `eu_escolho`) nunca
+    chegam ao disco: quem chega é o valor de `TETO_POR_PERFIL`.
+    """
+    for perfil in secao_orcamento.PERFIS:
+        assert perfil not in secao_orcamento.CHAVES
 
 
 # ---------------------------------------------------------------------------
@@ -227,8 +243,21 @@ def test_a_cor_declarada_volta_a_nao_sei_e_o_disco_esvazia(arquivo: Path) -> Non
 
 
 def test_os_tres_seletores_oferecem_o_mesmo_botao() -> None:
-    """Uma palavra só na tela inteira: "Não sei", com o mesmo id nos três."""
+    """Os três campos têm gesto de desfazer — e dois deles com a mesma palavra.
+
+    NOTA DATADA — 25/08/2026, `D-PERFIL-DE-DESEMPENHO`. Este nó afirmava "uma
+    palavra só na tela inteira". A decisão dela quebrou isso de propósito na
+    seção do perfil: lá o botão é **"Eu escolho"**, porque a ausência de teto
+    de mesa não é ignorância ("não sei o que quero"), é uma escolha ("quero
+    decidir aba por aba"). O que a `D-A1` protege é o GESTO, e o teste passa a
+    afirmar o gesto nos três: **todo seletor de declaração oferece um último
+    item que devolve o campo a `None`.**
+    """
     assert cores_do_plastico_items()[-1] == (ID_DE_NAO_SEI, "Não sei")
     assert BOTOES_DO_APARELHO[-1] == (ID_DE_NAO_SEI, "Não sei")
-    assert secao_orcamento.ID_DE_NAO_SEI == ID_DE_NAO_SEI
-    assert secao_orcamento.ROTULO_DE_NAO_SEI == "Não sei"
+    assert secao_orcamento.PERFIS[-1] == secao_orcamento.PERFIL_EU_ESCOLHO
+    assert secao_orcamento.TETO_POR_PERFIL[secao_orcamento.PERFIL_EU_ESCOLHO] is None
+    assert (
+        secao_orcamento.ROTULOS_DOS_PERFIS[secao_orcamento.PERFIL_EU_ESCOLHO]
+        == "Eu escolho"
+    )

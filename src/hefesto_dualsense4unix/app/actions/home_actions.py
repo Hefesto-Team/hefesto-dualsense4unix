@@ -198,6 +198,45 @@ _MODE_DESCRIPTIONS = {
     ),
 }
 
+#: O que a aba diz quando o Hefesto está PARADO. Substitui a descrição do modo,
+#: não a acompanha: com o produto em pausa, "o Hefesto acende as luzes, faz o
+#: controle vibrar e dá um jogador para cada controle" é uma promessa que nada
+#: está cumprindo.
+#:
+#: PROVISÓRIO — decisão dela (texto de tela é palavra dela).
+#: CLASSE DE TELA: ESTRUTURAL — estado novo.
+TEXTO_EM_PAUSA: Final[str] = (
+    "O Hefesto está em pausa: nada disto está acontecendo agora — sem luzes, "
+    "sem vibração e sem os seus ajustes. O controle segue funcionando nos "
+    "jogos como um controle comum. Para voltar, use o atalho do controle "
+    "(PS + Options) ou a aba Emulação."
+)
+
+
+def texto_da_pausa(state: dict[str, Any] | None) -> str | None:
+    """O produto está PARADO? — função pura (I4, 25/08/2026).
+
+    O ``_render_home`` tinha exatamente DOIS estados: daemon vivo e daemon
+    morto. Com o Hefesto em pausa — decisão tomada noutra aba, ou noutra
+    sessão — o payload continua ``connected: true`` e a aba pintava o caminho
+    feliz inteiro, prometendo luz, vibração e um jogador por controle enquanto
+    nada disso acontecia.
+
+    A regra da casa, e é a que separa este estado do offline: **sem daemon é
+    "não sei"; em pausa é "sei, e está parado" — nunca o verde.**
+
+    Só o ``True`` LITERAL acende, a mesma disciplina do ``wrapper_used``: chave
+    ausente (daemon antigo) ou valor de outro tipo não viram aviso.
+
+    O MESMO campo que a aba Emulação já lê (`emulation_actions`, o rótulo "O
+    Hefesto está em pausa") — uma fonte só, nunca duas leituras do mesmo fato
+    que possam discordar.
+    """
+    if not isinstance(state, dict):
+        return None
+    return TEXTO_EM_PAUSA if state.get("paused") is True else None
+
+
 # LEIGO-02: o glossário enfileirava 4 conceitos, dois deles mortos — "Pausar"
 # não é mais botão de lugar nenhum e "Conexão Nativa (Sony)" já é um dos botões
 # logo acima (com descrição própria). Sobram os dois que a aba NÃO explica por
@@ -228,17 +267,79 @@ def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
     2. o que continua valendo — o jogo que TEM perfil próprio ainda entra
        (senão "o modo jogo não ativa" volta a ser um mistério sem causa).
 
-    O nome do perfil ativo entra quando o daemon o reporta: "o perfil não troca
-    sozinho" sem dizer QUAL perfil ficou é meia informação.
+    O nome do perfil ativo entra quando ALGUÉM sabe dizer qual é: "o perfil não
+    troca sozinho" sem dizer QUAL perfil ficou é meia informação.
+
+    P1 (25/08/2026) — o dono da pergunta. Esta linha lia `state["active_profile"]`
+    direto, e na máquina dela esse campo é ``null`` enquanto o marcador em disco
+    diz ``Sackboy``: a frase saía sem o nome, e a aba Perfis, ao lado, mostrava
+    o nome em verde. Quatro superfícies, duas respostas, o mesmo fato
+    (§2.1/1 da sprint). Agora quem responde é `perfil_que_esta_valendo` —
+    daemon primeiro, disco como segunda perna DECLARADA —, e o silêncio ficou
+    reservado para o caso em que ninguém sabe.
+
+    **Import adiado de propósito:** `profiles_actions` importa deste módulo
+    (`texto_do_custo_da_mascara`), então um import no topo fecharia o ciclo.
     """
     if not state or not state.get("autoswitch_locked"):
         return ""
-    ativo = state.get("active_profile")
-    alvo = f" — vale o perfil “{ativo}”" if isinstance(ativo, str) and ativo else ""
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        perfil_que_esta_valendo,
+    )
+
+    ativo = perfil_que_esta_valendo(state).nome
+    alvo = f" — vale o perfil “{ativo}”" if ativo else ""
     return (
         f"Cadeado ligado: o perfil não troca sozinho{alvo}. "
         "Jogos com perfil próprio ainda entram; qualquer outra janela é ignorada."
     )
+
+
+#: O que a caixa "Não trocar de perfil sozinho ao abrir um jogo" NÃO vai fazer
+#: quando o mecanismo que ela governa está cego.
+#:
+#: PROVISÓRIO — decisão dela (o texto exato é palavra dela, PROVA-DE-TELA-01).
+#: CLASSE DE TELA: ESTRUTURAL — linha nova onde antes não havia nada.
+TEXTO_DETECTOR_CEGO: Final[str] = (
+    "O Hefesto não está conseguindo ver qual programa está na frente, então o "
+    "perfil não vai trocar sozinho de qualquer jeito — isto não é escolha sua. "
+    "A aba Sistema diz por quê."
+)
+
+
+def texto_do_cadeado_cego(state: dict[str, Any] | None) -> str:
+    """O mecanismo do cadeado está cego? — função PURA (I11, 25/08/2026).
+
+    A caixa "Não trocar de perfil sozinho ao abrir um jogo" governa a troca
+    automática POR JANELA. **Na máquina dela, medido em 23/08/2026**, essa
+    troca está cega — ``window_detect_seeing=False``,
+    ``reason='sem_conexao_x'`` — e o produto ainda publica
+    ``window_detect_healthy=True``. Com a caixa desmarcada, que é o padrão, a
+    linha ao lado era **vazia**: a aba não dizia nem que o mecanismo existia,
+    nem que ele tinha parado.
+
+    Devolve ``""`` quando não há o que dizer, e a AUSÊNCIA DA CHAVE conta como
+    "não sei" — nunca como "está cego". Um daemon mais velho não afirma nada
+    sobre um detector que ele não publica, e acender um aviso a partir de
+    payload incompleto é o alarme falso que os outros avisos desta aba evitam
+    de propósito.
+
+    **Isto NÃO conserta o vigia.** O ``healthy=True`` mentindo é da Z7
+    (`NO-MEU-FUNCIONA-01`); esta função faz a aba parar de calar, e só.
+
+    POR QUE UMA FUNÇÃO NOVA, e não uma linha dentro de `autoswitch_lock_text`
+    ------------------------------------------------------------------------
+
+    Porque o retorno de `autoswitch_lock_text` tem DOIS consumidores com
+    contratos diferentes: a linha da aba e — por BORDA, quando o valor muda —
+    o toast do rodapé (`_render_home`, AVISO-VIVO-01). Enfiar a cegueira ali
+    faria o rodapé anunciar o detector toda vez que ele piscasse, que é ruído
+    sobre um fato que já está escrito na tela. Duas perguntas, dois valores: é
+    a mesma lei que separou ``orcamento_em_vigor`` de ``orcamento_na_tela``.
+    """
+    if not isinstance(state, dict) or "window_detect_seeing" not in state:
+        return ""
+    return "" if state.get("window_detect_seeing") else TEXTO_DETECTOR_CEGO
 
 
 def _mode_label(mode_id: object) -> str:
@@ -837,8 +938,57 @@ def mascara_do_aparelho(state: dict[str, Any] | None) -> str | None:
     return valor if isinstance(valor, str) and valor else None
 
 
+#: As duas origens possíveis de uma máscara "escolhida" — I3 (25/08/2026).
+#:
+#: São DOIS FATOS diferentes, e a frase que os confundia acusava a pessoa de um
+#: gesto que ela não deu: com a fonte 1 morta (§2.2c da sprint), a divergência
+#: era SEMPRE medida contra `draft.source_mode.gamepad_flavor` — a máscara do
+#: PERFIL, que entra sozinho pelo autoswitch — e a tela dizia "você escolheu
+#: Xbox 360" sobre um valor que ela nunca clicou.
+FONTE_GESTO_DELA: Final[str] = "gesto"
+FONTE_PERFIL: Final[str] = "perfil"
+
+#: Prefixo da linha quando a máscara veio do PERFIL, e não do dedo dela. Mesmo
+#: formato dos outros ("assunto: veredito — explicação").
+#:
+#: PROVISÓRIO — decisão dela. CLASSE DE TELA: ESTRUTURAL.
+DIVERGENCIA_DO_PERFIL_PREFIXO: Final[str] = "O perfil ativo: "
+
+
+def mascara_divergente_do_daemon(
+    state: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """A divergência que o daemon apontou para o jogo EM CENA; ``None`` se não há.
+
+    I3 (25/08/2026). O daemon publica isto desde a MASCARA-01
+    (`daemon/ipc_handlers.py`, `gamepad_emulation.mascara_divergente`) e a
+    janela **não tinha um leitor** — `grep -rn "mascara_divergente" src/` só
+    achava o escritor. Ele é o ALARME: o jogo está em cena AGORA e vê máscara
+    diferente da que o perfil dele pede. A lista irmã
+    (`mascara_divergencias`) é antecipação de jogo fechado, e esta função
+    deliberadamente NÃO a lê — mostrar divergência de jogo que não está aberto
+    seria aviso sobre coisa que não está em uso.
+
+    Shape publicado: ``{appid, profile, mascara_perfil, mascara_viva, motivo,
+    em_cena}``. Leitura defensiva em tudo: payload de outro formato devolve
+    ``None`` em vez de estourar dentro de um render.
+    """
+    if not isinstance(state, dict):
+        return None
+    gamepad = state.get("gamepad_emulation")
+    if not isinstance(gamepad, dict):
+        return None
+    alarme = gamepad.get("mascara_divergente")
+    return alarme if isinstance(alarme, dict) and alarme else None
+
+
 def texto_da_divergencia(
-    escolhida: object, no_aparelho: object, *, jogo_aberto: bool
+    escolhida: object,
+    no_aparelho: object,
+    *,
+    jogo_aberto: bool,
+    fonte: object = FONTE_GESTO_DELA,
+    perfil: object = None,
 ) -> str | None:
     """A frase da divergência entre o que ela escolheu e o que o jogo vê.
 
@@ -854,6 +1004,22 @@ def texto_da_divergencia(
     - **sem jogo aberto** não há gate nenhum — a escolha simplesmente não
       chegou, e o que resta a dizer é a verdade nua mais o gesto que tenta de
       novo.
+
+    ``fonte`` E ``perfil`` — I3 (25/08/2026), e são a metade que faltava
+    ---------------------------------------------------------------------
+
+    Duas verdades viraram QUATRO frases, porque quem pediu a máscara também é
+    fato. Com a fonte 1 morta (`_home_flavor_pedido` sem escritor — §2.2c da
+    sprint), a divergência era sempre medida contra
+    ``draft.source_mode.gamepad_flavor``, que é **a máscara do PERFIL** — e o
+    perfil entra sozinho pelo autoswitch. A tela dizia *"você escolheu Xbox
+    360"* sobre um valor que ela nunca clicou, e quatro dos perfis desta casa
+    pedem ``xbox`` (MASCARA-QUE-GRUDA-01).
+
+    ``FONTE_GESTO_DELA`` mantém "você escolheu"; ``FONTE_PERFIL`` nomeia o
+    perfil. O default continua sendo o gesto — quem não declara a origem está
+    afirmando a mesma coisa que afirmava antes, e nenhum chamador antigo passa
+    a mentir por causa desta mudança.
 
     Devolve MARKUP, e o veredito vai colorido por `<span>` em vez de por classe
     de CSS. Não é preferência: `.hefesto-dualsense4unix-window label
@@ -872,19 +1038,52 @@ def texto_da_divergencia(
         return None
     quero = _escapar(_flavor_label(escolhida))
     tenho = _escapar(_flavor_label(no_aparelho))
+    # I3 (25/08/2026): quem PEDIU decide a voz. "Você escolheu" só sobre gesto
+    # dela; vindo do perfil, a frase nomeia o perfil — porque o perfil entra
+    # sozinho pelo autoswitch e acusar a pessoa de um gesto que ela não deu é
+    # pior que não dizer nada.
+    if fonte == FONTE_PERFIL:
+        nome = _escapar(perfil) if isinstance(perfil, str) and perfil else None
+        quem = f"o perfil “{nome}” pede" if nome else "o perfil ativo pede"
+        prefixo = DIVERGENCIA_DO_PERFIL_PREFIXO
+    else:
+        quem = "você escolheu"
+        prefixo = DIVERGENCIA_PREFIXO
     if jogo_aberto:
         return (
-            DIVERGENCIA_PREFIXO
+            prefixo
             + f'<span foreground="{_COR_AVISO}">ainda não chegou ao '
-            f"aparelho</span> — você escolheu {quero}; o jogo aberto ainda vê "
+            f"aparelho</span> — {quem} {quero}; o jogo aberto ainda vê "
             f"{tenho}. Trocar agora arrancaria o controle do jogo no meio da "
-            "partida, então a sua escolha vale quando o jogo fechar e abrir "
+            "partida, então a escolha vale quando o jogo fechar e abrir "
             "de novo."
         )
     return (
-        DIVERGENCIA_PREFIXO
+        prefixo
         + f'<span foreground="{_COR_AVISO}">não chegou ao aparelho</span> — '
-        f"você escolheu {quero}; o Hefesto está com {tenho}. Escolha de novo."
+        f"{quem} {quero}; o Hefesto está com {tenho}. Escolha de novo."
+    )
+
+
+def controles_na_mesa(state: dict[str, Any] | None) -> int:
+    """Quantos controles CONECTADOS o daemon reporta — função pura.
+
+    O filtro por ``connected`` não é escolha desta função: é o do produto.
+    ``describe_controllers`` devolve UMA entrada com ``connected=False`` quando
+    não há controle nenhum, e a aba filtra exatamente assim desde a
+    HARM-CARD-FANTASMA-01. Contar sem o filtro daria "1 controle" com a mesa
+    vazia — que é o card fantasma de volta, por outra porta.
+
+    Uma contagem, um lugar: a linha da ponte (I6) e o frame de Controles têm de
+    concordar sobre quantos controles há, senão a aba volta a dizer duas coisas
+    no mesmo instante — que é o defeito que esta onda inteira existe para
+    fechar.
+    """
+    if not isinstance(state, dict):
+        return 0
+    entradas = state.get("controllers") or []
+    return len(
+        [c for c in entradas if isinstance(c, dict) and c.get("connected")]
     )
 
 
@@ -935,6 +1134,25 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
         )
     gamepad = state.get("gamepad_emulation")
     if isinstance(gamepad, dict) and gamepad.get("enabled"):
+        # I6 (25/08/2026) — O QUARTO VEREDITO: a ponte de pé sem quem a
+        # atravesse. MEDIDO na bancada de 23/08 com ZERO DualSense na casa: o
+        # frame de Controles dizia "Nenhum controle conectado." e esta linha,
+        # logo acima, dizia em VERDE "pelo Hefesto — o jogo recebe o controle".
+        # A função respondia sobre o VPAD e a pessoa lia como resposta sobre o
+        # JOGO. É a forma exata do defeito F7 nesta aba: o estado vazio pintado
+        # com a cor do estado bom.
+        #
+        # A ordem das cinco perguntas NÃO muda — isto é uma bifurcação DENTRO
+        # da quarta, e vem antes de nomear a máscara porque não há a quem a
+        # máscara se aplique.
+        if not controles_na_mesa(state):
+            return (
+                PONTE_PREFIXO
+                + f'<span foreground="{_COR_AVISO}">de pé, e vazia</span> — o '
+                "gamepad do Hefesto está montado, e não há nenhum controle na "
+                "mesa para alimentá-lo. Ligue um controle para o jogo receber "
+                "alguma coisa."
+            )
         no_aparelho = mascara_do_aparelho(state)
         visto = (
             _escapar(_flavor_label(no_aparelho)) if no_aparelho else "um controle"
@@ -1047,6 +1265,46 @@ def toast_da_troca_de_mascara(desfecho: str, pedida: object) -> str:
     return f"O jogo agora vê: {alvo}"
 
 
+#: O vocabulário de transporte da casa, e ele tem UM dono: o mapa de canais
+#: (`docs/data/mapa-controles.csv`), que fala **cabo** e **rádio**.
+#:
+#: I9 (25/08/2026). Medido no §2.2h da sprint: QUATRO dialetos para o mesmo
+#: fato, na mesma janela — a Início dizia `USB`/`BT`, os externos `cabo`/`BT`, a
+#: Configurações `Rádio em uso`, e o mapa, que é o PORTÃO, `cabo`/`rádio`.
+#: Nenhum deles estava errado sozinho; juntos ensinavam que são coisas
+#: diferentes.
+#:
+#: "USB" e "BT" não são palavras de quem quer jogar: são o nome do barramento e
+#: a sigla do protocolo. Ela tem um cabo e tem um controle sem fio — é isso que
+#: a tela passa a dizer.
+_PALAVRA_DO_TRANSPORTE: Final[dict[str, str]] = {
+    "usb": "cabo",
+    "cabo": "cabo",
+    "bt": "rádio",
+    "bluetooth": "rádio",
+    "radio": "rádio",
+    "rádio": "rádio",
+}
+
+#: O que se diz quando o daemon não disse por onde o controle fala. "?" era o
+#: que a aba mostrava, e "?" não é resposta — é a tela encolhendo os ombros.
+PALAVRA_DE_TRANSPORTE_DESCONHECIDO: Final[str] = "não sei por onde"
+
+
+def palavra_do_transporte(transporte: object) -> str:
+    """O transporte na língua do mapa de canais — função pura (I9).
+
+    Valor que o mapa não conhece volta CRU, e não vira "não sei": um transporte
+    novo (um daemon mais recente) tem de aparecer na tela para alguém o ver, em
+    vez de ser escondido atrás de uma frase genérica. Só a AUSÊNCIA de valor
+    cai na frase de "não sei".
+    """
+    if transporte is None or transporte == "":
+        return PALAVRA_DE_TRANSPORTE_DESCONHECIDO
+    bruto = str(transporte).strip()
+    return _PALAVRA_DO_TRANSPORTE.get(bruto.lower(), bruto)
+
+
 def _format_controller_subtitle(
     transport: object, *, is_primary: bool, battery_pct: object
 ) -> str:
@@ -1057,7 +1315,7 @@ def _format_controller_subtitle(
     "0%" falso em controle recém-plugado). `bool` é rejeitado (subclasse de
     int) por blindagem contra payload malformado.
     """
-    parts = [str(transport or "?").upper()]
+    parts = [palavra_do_transporte(transport)]
     if is_primary:
         parts.append("primário")
     if isinstance(battery_pct, int) and not isinstance(battery_pct, bool):
@@ -1065,21 +1323,127 @@ def _format_controller_subtitle(
     return "  ·  ".join(parts)
 
 
-def _format_players_hint(controllers: list[dict[str, Any]]) -> str:
+def _format_external_title(entry: dict[str, Any]) -> str:
+    """Título do card de um externo — "Controle 3 — 8BitDo" (I5, 25/08/2026).
+
+    O número é o SLOT GLOBAL de co-op, que é o mesmo que o Hefesto escreve no
+    LED de player do próprio controle: sem ele, a GUI e o aparelho diriam
+    números diferentes sobre a mesma coisa. A marca vem de
+    ``external_controllers.brand_of``, que é a dona da palavra — copiar o nome
+    para cá criaria um segundo dono e faria esta aba dizer "Pro Controller"
+    sobre um 8BitDo no dia em que a outra aprendesse a desmentir o VID.
+
+    ``None`` de slot vira "—" (NUMA-05: nulo honesto vale mais que número
+    errado), pela função da casa que já decide isso.
+    """
+    from hefesto_dualsense4unix.app.actions.external_controllers import (
+        brand_of,
+        slot_label,
+        slot_of,
+    )
+
+    slot = slot_of(entry, 0, 0)
+    marca = brand_of(entry)
+    return f"Controle {slot_label(slot)} — {marca}"
+
+
+def _format_external_subtitle(entry: dict[str, Any]) -> str:
+    """Linha secundária do card de um externo, no MESMO formato do adotado.
+
+    Mesma pontuação e mesmo vocabulário de transporte do card do DualSense — é
+    o mesmo frame, e dois dialetos lado a lado é o defeito de forma que a I9
+    fecha. A segunda metade diz o que o Hefesto NÃO faz com este aparelho, que
+    é a informação que a pessoa procura ao ver um controle que não acende.
+
+    PROVISÓRIO — decisão dela.
+    """
+    bus = entry.get("bus")
+    return "  ·  ".join([palavra_do_transporte(bus), "o Hefesto só vê"])
+
+
+def externos_na_mesa(
+    state: dict[str, Any] | None, cache: Sequence[dict[str, Any]] = ()
+) -> list[dict[str, Any]]:
+    """Os controles que o Hefesto VÊ e não adota — I5 (25/08/2026).
+
+    Duas fontes, nesta ordem, e a primeira é a que a foto usa:
+
+    1. ``state_full["external"]``, quando o payload o trouxer. **Medido por
+       leitura de código em 25/08/2026: o `daemon.state_full` de HOJE não
+       publica essa chave** — ela existe só na resposta de ``controller.list
+       {"external": true}``. Isto resolve a hipótese 3 do §2.5 da sprint ("o
+       daemon publica `external` quando há um externo na mesa?"): **não
+       publica**, e o `external=null` medido na bancada não distinguia as duas
+       coisas porque a chave nunca existiu ali. O ramo fica porque é por ele
+       que o dublê da foto alimenta a aba, e porque um daemon mais novo que
+       passe a publicá-la é atendido sem uma linha a mais;
+    2. o inventário que a própria aba pediu ao daemon no tique lento
+       (``_maybe_fetch_externos``), que é como a aba Configurações e a aba
+       Status já fazem — a enumeração de evdev mais a sonda de holders custa
+       10-40 ms e um subprocess, e não pode entrar no caminho quente.
+
+    Lista vazia é "não há" **ou** "ainda não perguntei", e quem chama trata as
+    duas do mesmo jeito: não desenha card nenhum. A diferença só importaria
+    para acusar ausência, e esta aba não acusa.
+    """
+    if isinstance(state, dict):
+        do_payload = state.get("external")
+        if isinstance(do_payload, list):
+            return [e for e in do_payload if isinstance(e, dict)]
+    return [e for e in (cache or ()) if isinstance(e, dict)]
+
+
+def _format_players_hint(
+    controllers: list[dict[str, Any]],
+    externos: Sequence[dict[str, Any]] = (),
+) -> str:
     """Frase que substituiu o checkbox de co-op (LEIGO-01) — função pura.
 
     Só fala quando há o que dizer: com um controle só não existe pergunta a
     responder. E só afirma "N jogadores" quando o daemon de fato numerou N
     jogadores distintos (campo `player`) — enquanto o segundo jogador não subiu,
     o jogo ainda vê um gamepad só e a frase seria mentira.
+
+    I5 (25/08/2026) — A CONTA PASSOU A CONTAR QUEM ESTÁ NA MESA
+    ------------------------------------------------------------
+
+    A Início não lia ``external`` e não desenhava um único controle externo
+    (§2.2g da sprint). Com dois DualSense e um 8BitDo na mesa, esta aba dizia
+    "2 controles = 2 jogadores" enquanto a aba Configurações mostrava TRÊS
+    cards. Era a pergunta dela — *"o produto funciona com 4 controles ao mesmo
+    tempo?"* — respondida com **não, a primeira tela nem os enxerga**.
+
+    A frase distingue os dois grupos, e a distinção NÃO é cosmética: o §6 desta
+    sprint proíbe somar o externo na conta de jogadores sem qualificar,
+    porque ``plataforma.vpad@sn30`` está em ``existe: desconhecido`` no mapa de
+    canais. O que se afirma é o que se mediu — quantos estão na mesa, e quais
+    o Hefesto adotou.
+
+    PROVISÓRIO — decisão dela: o texto exato é palavra dela (PROVA-DE-TELA-01).
     """
-    if len(controllers) < 2:
-        return ""
+    validos = [e for e in externos if isinstance(e, dict)]
     players = {
         c.get("player")
         for c in controllers
         if isinstance(c.get("player"), int) and not isinstance(c.get("player"), bool)
     }
+    if validos:
+        total = len(controllers) + len(validos)
+        if total < 2:
+            return ""
+        quantos_veem = (
+            f"{len(validos)} que ele só vê"
+            if len(validos) > 1
+            else "1 que ele só vê"
+        )
+        pelo_hefesto = (
+            f"{len(controllers)} pelo Hefesto ({len(players)} jogadores)"
+            if len(players) >= 2
+            else f"{len(controllers)} pelo Hefesto"
+        )
+        return f"{total} controles na mesa: {pelo_hefesto} e {quantos_veem}"
+    if len(controllers) < 2:
+        return ""
     if len(players) < 2:
         return ""
     return f"{len(controllers)} controles = {len(players)} jogadores"
@@ -1315,6 +1679,37 @@ def registrar_modo_no_rascunho(
         janela.draft = novo
 
 
+def lembrar_mascara_recusada(janela: Any, mascara: object) -> None:
+    """Guarda a máscara que ela pediu e o daemon NÃO entregou. Escritor único.
+
+    INÍCIO NÃO MENTE-01 / I2 (25/08/2026). O campo ``_home_flavor_pedido``
+    existe desde a PONTE-NA-TELA-01 e é a ÚNICA memória de um pedido que o
+    daemon recusou — e, medido no §2.2c da sprint, **ninguém o escrevia com
+    valor**: em ``src/`` havia só o nascimento (``= None``) e a limpeza
+    (``= None``), e os únicos escritores de verdade eram quatro linhas de
+    teste.
+
+    O preço na tela era exato: o ``_render_home`` reescreve o seletor com o
+    valor do daemon a cada 2 s, então a escolha recusada dela sumia da tela em
+    dois segundos, sem uma palavra — e a linha de divergência, que é quem a
+    contaria, não tinha o que ler.
+
+    Função de MÓDULO, e não método de mixin, pelas três razões já pagas por
+    esta base em ``registrar_modo_no_rascunho`` e
+    ``recolher_escolha_pendente_no_rascunho``: dois mixins da mesma classe se
+    sombreariam pela MRO; chamada entre mixins quebra dublê PARCIAL de teste; e
+    quem chama é o RODAPÉ, que não é a aba dona do campo — se ele o escrevesse
+    por conta própria seria o segundo escritor.
+
+    Só grava máscara de verdade: ``None``, ``""`` ou não-texto não viram
+    pedido. Um pedido vazio acenderia a divergência contra nada.
+    """
+    if not isinstance(mascara, str) or not mascara:
+        return
+    janela._home_flavor_pedido = mascara
+    logger.info("home_lembrou_mascara_recusada", mascara=mascara)
+
+
 def recolher_escolha_pendente_no_rascunho(janela: Any) -> dict[str, str] | None:
     """Leva ao rascunho o que ela marcou na Início e ainda não aplicou.
 
@@ -1434,6 +1829,10 @@ class HomeActionsMixin(WidgetAccessMixin):
         # `None` = ainda não escrevemos nenhuma (não há afirmação nossa a
         # desfazer); `""` = escrevemos e depois limpamos.
         self._home_lock_toast: str | None = None
+        # I5 (25/08/2026): o inventário de externos e o teto do pedido.
+        self._home_externos = []
+        self._home_externos_ts = 0.0
+        self._home_externos_inflight = False
 
         # --- Banner: degradação do vpad (UX-03) -----------------------------
         # Rótulo simples e sempre inline no topo da aba — nada de popup nem
@@ -1813,8 +2212,81 @@ class HomeActionsMixin(WidgetAccessMixin):
 
                 preferencia, _flavor = load_gamepad_preference()
                 self._home_opt_out_cache = preferencia is False
+            # I5 (25/08/2026): o inventário de externos, no tique LENTO e com
+            # teto próprio — nunca no caminho quente. A enumeração de evdev
+            # mais a sonda de holders custa 10-40 ms e um subprocess, e a aba
+            # Status já paga esse preço no lugar certo (`_maybe_fetch_externals`).
+            self._maybe_fetch_externos()
             self._refresh_home_tab()
         return True  # timer permanente
+
+    #: I5: o inventário de externos que a aba desenhou por último. Só ANOTADO
+    #: aqui — quem o cria é `install_home_tab`, como todo estado desta aba: uma
+    #: lista como default de classe seria compartilhada por toda instância.
+    #: Vazio nasce e vazio fica enquanto ninguém responder — a lista vazia não
+    #: é afirmação de ausência, e por isso ninguém acusa nada com ela.
+    _home_externos: list[dict[str, Any]]
+
+    #: Quando o inventário foi pedido pela última vez (relógio monotônico) e se
+    #: há um pedido em voo. Mesmo par, mesmo teto e mesma razão do
+    #: `status_actions._maybe_fetch_externals`.
+    _home_externos_ts: float
+    _home_externos_inflight: bool
+
+    #: Teto entre dois pedidos de inventário. Quatro segundos, o mesmo da aba
+    #: Status — e o tique desta aba é de dois, então na prática ela pergunta a
+    #: cada dois tiques.
+    EXTERNOS_THROTTLE_S = 4.0
+
+    def _maybe_fetch_externos(self) -> None:
+        """Pede o inventário de externos ao daemon, com teto. I5 (25/08/2026).
+
+        Por que um IPC a mais, e não uma chave a mais no ``state_full``:
+        **medido por leitura de código** — o ``daemon.state_full`` não publica
+        ``external`` (só ``coop.externals``, que é uma CONTAGEM e não diz
+        quem), e o ``state_full`` roda a 10-20 Hz. Enfiar a enumeração de evdev
+        ali dentro poria um subprocess no caminho quente do input, que é o
+        oposto do que esta casa aceita. A aba Configurações e a aba Status já
+        resolvem isso do mesmo jeito, pelo mesmo motivo.
+
+        Falha em silêncio: sem resposta a aba desenha o que já tinha, que é o
+        comportamento de antes desta cura e nunca pior que ele.
+        """
+        agora = time.monotonic()
+        # `getattr` pelo mesmo motivo do resto desta aba: dublê parcial de
+        # teste não passa pelo `install_home_tab`, e um atributo novo aqui já
+        # derrubou 51 testes de cinco arquivos uma vez.
+        if getattr(self, "_home_externos_inflight", False):
+            return
+        if agora - getattr(self, "_home_externos_ts", 0.0) < self.EXTERNOS_THROTTLE_S:
+            return
+        self._home_externos_ts = agora
+        self._home_externos_inflight = True
+
+        def _ok(resultado: Any) -> bool:
+            self._home_externos_inflight = False
+            bruto = resultado.get("external") if isinstance(resultado, dict) else None
+            self._home_externos = (
+                [e for e in bruto if isinstance(e, dict)]
+                if isinstance(bruto, list)
+                else []
+            )
+            return False
+
+        def _fail(_exc: Exception) -> bool:
+            self._home_externos_inflight = False
+            return False
+
+        call_async(
+            "controller.list",
+            {"external": True},
+            _ok,
+            _fail,
+            # Folga grande de propósito: o inventário enumera TODOS os
+            # /dev/input e roda a sonda de holders (subprocess). O default de
+            # 0,25 s do `call_async` estouraria sempre. Mesmo teto da Status.
+            timeout_s=3.0,
+        )
 
     def _refresh_home_tab(self) -> None:
         """Reconcilia o comutador/cards com o estado VIVO do daemon.
@@ -1962,7 +2434,19 @@ class HomeActionsMixin(WidgetAccessMixin):
             # UX-05: a CAUSA fica visível junto do efeito, em texto.
             _lock_hint = getattr(self, "_home_autoswitch_lock_hint", None)
             if _lock_hint is not None:
-                aviso_lock = autoswitch_lock_text(state)
+                # I11 (25/08/2026): a linha passa a ter DUAS metades, e a
+                # segunda fala mesmo com o cadeado destravado — que é o estado
+                # padrão, e o estado em que a linha era vazia. O cadeado diz o
+                # que ELA escolheu; o detector diz o que não vai acontecer de
+                # qualquer jeito, e que não é escolha dela.
+                aviso_lock = " ".join(
+                    parte
+                    for parte in (
+                        autoswitch_lock_text(state),
+                        texto_do_cadeado_cego(state),
+                    )
+                    if parte
+                )
                 _lock_hint.set_text(aviso_lock)
                 _lock_hint.set_visible(bool(aviso_lock))
             self._home_session_label.set_text("")
@@ -2012,7 +2496,17 @@ class HomeActionsMixin(WidgetAccessMixin):
             pendente = reconciliar_pendente(self)
             modo_exibido = pendente.get("modo") or mode
             selector.set_active_id(modo_exibido)
-            self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(modo_exibido, ""))
+            # I4 (25/08/2026) — O TERCEIRO ESTADO. Em pausa, a promessa do modo
+            # SAI da tela e a frase da pausa entra no lugar dela. Não é banner
+            # ao lado: enquanto o produto está parado, "o Hefesto acende as
+            # luzes, faz o controle vibrar e dá um jogador para cada controle"
+            # não é uma promessa com ressalva — é uma promessa que nada está
+            # cumprindo, e deixá-la na tela ao lado do aviso faria a aba dizer
+            # duas coisas no mesmo instante (o defeito desta onda inteira).
+            aviso_pausa = texto_da_pausa(state)
+            self._home_mode_desc.set_text(
+                aviso_pausa or _MODE_DESCRIPTIONS.get(modo_exibido, "")
+            )
             # MODO-QUE-NAO-CONTROLA-01: e, logo abaixo da descrição, a ressalva
             # — "Controlar o PC" de pé com o mouse (ou o teclado) emulado
             # desligado. Quem decide é a função pura; a aba só escreve.
@@ -2146,7 +2640,11 @@ class HomeActionsMixin(WidgetAccessMixin):
             # lugar do botão "Preparar co-op" — e a contagem sai dos MESMOS
             # controles conectados que os cards mostram (`state_full`), uma
             # fonte só, nunca o cache assíncrono de outra aba.
-            self._home_players_hint.set_text(_format_players_hint(connected))
+            # I5 (25/08/2026): a mesa inteira, e não só quem o Hefesto adotou.
+            externos = externos_na_mesa(state, getattr(self, "_home_externos", ()))
+            self._home_players_hint.set_text(
+                _format_players_hint(connected, externos)
+            )
             # QUEM-DÁ-O-JOGADOR-2-01 (08/08/2026): a caixinha do Steam Input, na
             # aba Perfis, precisa saber quantos controles há para avisar que a
             # marca troca o dono do jogador 2 — e o toast dela é SÍNCRONO, sem
@@ -2179,6 +2677,7 @@ class HomeActionsMixin(WidgetAccessMixin):
                 connected,
                 grab_state=state.get("primary_grab_state"),
                 gamepad_on=bool(gamepad.get("enabled")),
+                externos=externos,
             )
             # AGORA-E-DEPOIS-01: a linha do pendente é reescrita a cada tique,
             # como todo o resto desta aba. Isso não é desperdício — é o que faz
@@ -2217,19 +2716,40 @@ class HomeActionsMixin(WidgetAccessMixin):
         janela sem `draft` (dublê de teste, bootstrap em voo) não pode virar
         `AttributeError` dentro de um render.
         """
+        mascara, _fonte = self._mascara_escolhida_com_fonte()
+        return mascara
+
+    def _mascara_escolhida_com_fonte(self) -> tuple[str | None, str]:
+        """A mesma máscara da função acima, e DE ONDE ela veio (I3, 25/08/2026).
+
+        Devolve ``(mascara, fonte)`` com ``fonte`` em
+        ``FONTE_GESTO_DELA``/``FONTE_PERFIL``. Sem máscara a fonte é o gesto,
+        por convenção — não há frase a escrever, e o valor não é lido.
+
+        Existe porque a frase da divergência precisa saber QUEM pediu: a fonte
+        1 é o dedo dela; a 2 é o perfil, que entra sozinho pelo autoswitch.
+        Confundir as duas é acusar a pessoa de um gesto que ela não deu, que é
+        o defeito que a I3 fecha.
+
+        A função de UMA resposta continua existindo e delega para esta: ela tem
+        chamador em dublê parcial de teste, e duas implementações da mesma
+        leitura seriam dois donos.
+        """
         pedido = getattr(self, "_home_flavor_pedido", None)
         if isinstance(pedido, str) and pedido:
-            return pedido
+            return pedido, FONTE_GESTO_DELA
         draft = getattr(self, "draft", None)
         origem = getattr(draft, "source_mode", None) if draft is not None else None
         if origem is None:
-            return None
+            return None, FONTE_GESTO_DELA
         valor = (
             origem.get("gamepad_flavor")
             if isinstance(origem, dict)
             else getattr(origem, "gamepad_flavor", None)
         )
-        return valor if isinstance(valor, str) and valor else None
+        if isinstance(valor, str) and valor:
+            return valor, FONTE_PERFIL
+        return None, FONTE_GESTO_DELA
 
     def _render_ponte_e_divergencia(self, state: dict[str, Any] | None) -> None:
         """Pinta a linha da ponte e o aviso de divergência (PONTE-NA-TELA-01).
@@ -2259,11 +2779,25 @@ class HomeActionsMixin(WidgetAccessMixin):
         # exceção de Steam Input quem entrega o controle não é o vpad, e cobrar
         # a máscara ali seria aviso sobre coisa que não está em uso. Mesmo gate
         # do `vpad_degradation_text`.
+        # I3 (25/08/2026): duas leituras, e o daemon tem a palavra sobre o jogo
+        # em cena. `mascara_divergente` é o ALARME que ele já publicava e que
+        # esta janela nunca leu — quando ele existe, quem nomeia o perfil é o
+        # daemon (que enxerga o jogo aberto) e não o rascunho da janela.
+        escolhida, fonte = self._mascara_escolhida_com_fonte()
+        alarme = mascara_divergente_do_daemon(state)
+        perfil = None
+        if alarme is not None:
+            do_perfil = alarme.get("mascara_perfil")
+            if isinstance(do_perfil, str) and do_perfil:
+                escolhida, fonte = do_perfil, FONTE_PERFIL
+                perfil = alarme.get("profile")
         aviso = (
             texto_da_divergencia(
-                self._mascara_escolhida_por_ela(),
+                escolhida,
                 no_aparelho,
                 jogo_aberto=jogo_com_autoridade(state),
+                fonte=fonte,
+                perfil=perfil,
             )
             if mode_of_state(state) == MODE_GAMEPAD
             else None
@@ -2278,13 +2812,30 @@ class HomeActionsMixin(WidgetAccessMixin):
         *,
         grab_state: str | None = None,
         gamepad_on: bool = False,
+        externos: Sequence[dict[str, Any]] = (),
     ) -> None:
         from gi.repository import Gtk
 
         box = self._home_controllers_box
         for child in box.get_children():
             box.remove(child)
-        if not controllers:
+        # I5 (25/08/2026): os externos entram no MESMO frame, DEPOIS dos
+        # adotados. A ordem é a do número de jogador (os adotados ocupam 1..N e
+        # os externos continuam a fila), e é a mesma que o LED de player mostra
+        # — a fileira lê como a mesa.
+        #
+        # O card é montado AQUI, na mesma gramática visual dos adotados, e não
+        # com o `ExternalCard` da aba Configurações. A razão é medida e vale
+        # registro: aquele widget é um `Gtk.Frame` com seletor de jogador e
+        # seletor de modo que ESCREVEM, e trazê-lo para cá daria à primeira
+        # tela um poder de edição que ela nunca teve — decisão de produto, e
+        # dela. Além disso a fileira passaria a ter DUAS gramáticas de card lado
+        # a lado (o `Gtk.Box` daqui e o `Gtk.Frame` de lá), que é exatamente o
+        # que a regra "aba nova copia a gramática visual das antigas" evita. O
+        # que NÃO se copia é o vocabulário: marca, slot e transporte saem das
+        # funções donas (`external_controllers`, `palavra_do_transporte`).
+        validos = [e for e in externos if isinstance(e, dict)]
+        if not controllers and not validos:
             empty = Gtk.Label(label="Nenhum controle conectado.")
             empty.get_style_context().add_class("dim-label")
             box.pack_start(empty, False, False, 0)
@@ -2319,10 +2870,31 @@ class HomeActionsMixin(WidgetAccessMixin):
             # distingue os controles na mesa é a COR da lightbar e o LED de
             # jogador — o card já mostra o número do jogador.
             if is_primary and gamepad_on and grab_state == "failed":
+                # NOTA — o TEXTO desta linha continua sendo o de sempre, e é de
+                # propósito. Ele é jargão de kernel numa tela para quem quer
+                # jogar ("grab" é a chamada de sistema que falhou), e a I9 da
+                # sprint o reescreveria para dizer o que acontece com ela — mas
+                # o que exatamente acontece depende do que a
+                # ESCONDE-SO-O-HIDRAW-01 (aberta, Onda 12) concluir sobre o que
+                # o jogo continua vendo pelo evdev. Trocar a frase antes disso
+                # seria trocar um jargão certo por uma promessa não apurada.
                 warn = Gtk.Label(label="Grab falhou — input pode dobrar no jogo")
                 warn.set_xalign(0.0)
                 warn.get_style_context().add_class("hefesto-dualsense4unix-status-err")
                 card.pack_start(warn, False, False, 0)
+            box.pack_start(card, True, True, 0)
+        for ext in validos:
+            card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            card.get_style_context().add_class("hefesto-dualsense4unix-card")
+            card.set_margin_end(6)
+            title = Gtk.Label()
+            title.set_markup(_escapar(_format_external_title(ext)))
+            title.set_xalign(0.0)
+            card.pack_start(title, False, False, 0)
+            sub = Gtk.Label(label=_format_external_subtitle(ext))
+            sub.set_xalign(0.0)
+            sub.get_style_context().add_class("dim-label")
+            card.pack_start(sub, False, False, 0)
             box.pack_start(card, True, True, 0)
         box.show_all()
 
@@ -2588,29 +3160,42 @@ __all__ = [
     "DESFECHO_FALHOU",
     "DESFECHO_INCERTO",
     "DESFECHO_JA_ESTAVA",
+    "DIVERGENCIA_DO_PERFIL_PREFIXO",
     "DIVERGENCIA_PREFIXO",
+    "FONTE_GESTO_DELA",
+    "FONTE_PERFIL",
     "HOME_POLL_INTERVAL_MS",
+    "PALAVRA_DE_TRANSPORTE_DESCONHECIDO",
     "PONTE_PREFIXO",
     "RECONCILIAR_JOGO_ABERTO_TEXT",
     "RECONCILIAR_LABEL",
     "TEXTO_DESKTOP_SEM_MOUSE",
     "TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO",
     "TEXTO_DESKTOP_SEM_TECLADO",
+    "TEXTO_DETECTOR_CEGO",
+    "TEXTO_EM_PAUSA",
     "VPAD_DEGRADED_TEXT",
     "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",
     "controles_bt_frageis",
+    "controles_na_mesa",
     "desfecho_da_troca",
+    "externos_na_mesa",
     "id_da_pagina",
     "id_da_pagina_corrente",
     "jogadores_degradados",
     "jogo_com_autoridade",
+    "lembrar_mascara_recusada",
+    "mascara_divergente_do_daemon",
     "mascara_do_aparelho",
     "mascara_viva",
+    "palavra_do_transporte",
     "reconciliar_toast",
     "texto_coop_degradado",
     "texto_da_divergencia",
+    "texto_da_pausa",
     "texto_da_ponte",
+    "texto_do_cadeado_cego",
     "texto_do_desktop_sem_emulacao",
     "texto_native_bt_fragil",
     "toast_da_troca_de_mascara",

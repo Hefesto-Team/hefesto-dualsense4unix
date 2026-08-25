@@ -82,6 +82,12 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
       window_detect_last_class -- última wm_class útil (captura o wm_class
                                   de um jogo direto do estado, sem journal).
 
+    D-TROCA-DE-PERFIL-CEGA (25/08): a saúde é semeada por `_saude_com_prova`
+    nos DOIS caminhos (arranque e resgate), e o gate do resgate pergunta ao
+    leitor (`precisa_de_resgate`) em vez de olhar só para o backend `null` —
+    um `xlib` com a conexão provada morta numa sessão Wayland agora tem para
+    onde ir.
+
     Retorna um callable compatível com `AutoSwitcher.window_reader` (API
     legada de dict). O envelope fica AQUI (e não no AutoSwitcher) para o
     diagnóstico existir mesmo se alguém instanciar o AutoSwitcher com outro
@@ -104,16 +110,33 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
     # `reader()`, que chama `_ensure_connected()` por baixo) antes de semear;
     # `initial_healthy` só nasce True com PROVA (`conexao_provada() is True`).
     # A leitura de sonda é descartada — o poll relê no primeiro tick.
-    initial_backend = _backend_name()
-    if initial_backend == "xlib":
+    def _saude_com_prova(backend: str | None) -> bool:
+        """`healthy` inicial de um backend recém-escolhido, com PROVA.
+
+        Extraído em 25/08 (D-TROCA-DE-PERFIL-CEGA) porque a régua existia em
+        DOIS lugares e só um tinha sido corrigido: a T-01 curou a semeadura
+        inicial e deixou intacta a re-semeadura do resgate
+        (AUTOSWITCH-HEAL-01), que seguia fazendo `healthy=(nome == "xlib")` —
+        presunção pura, a MESMA que a T-01 derrubou, 40 linhas abaixo. É a
+        correção pela metade que a regra da casa existe para matar: o defeito
+        sai de todos os lugares onde aparece, não só de onde foi notado.
+
+        Só `xlib` tem o que provar (os outros nascem não-saudáveis até a
+        primeira leitura útil). A sonda dispara UMA tentativa de conexão real
+        via `reader()` — que chama `_ensure_connected()` por baixo — e a
+        leitura é descartada: o poll relê no tick seguinte.
+        """
+        if backend != "xlib":
+            return False
         reader()
         # Defensivo, no mesmo padrão de `_backend_name()`: um reader
         # substituto (dublê de teste, integração antiga) pode não expor
         # `conexao_provada` — ausência do método é "sem prova", não crash.
         conexao_provada = getattr(reader, "conexao_provada", None)
-        initial_healthy = callable(conexao_provada) and conexao_provada() is True
-    else:
-        initial_healthy = False
+        return callable(conexao_provada) and conexao_provada() is True
+
+    initial_backend = _backend_name()
+    initial_healthy = _saude_com_prova(initial_backend)
     store.set_window_detect_backend(initial_backend, healthy=initial_healthy)
     logger.info(
         "window_detect_diag_seeded",
@@ -132,8 +155,18 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
         # `systemctl --user show-environment` e re-roda a detecção — até sair
         # do Null. Cura a sessão atual sem restart; custo zero quando o
         # backend já é saudável.
+        #
+        # D-TROCA-DE-PERFIL-CEGA (25/08): o gate deixou de ser "o backend é
+        # null" e passou a ser a PERGUNTA do leitor (`precisa_de_resgate`),
+        # que conhece o segundo caso cego — `xlib` com a conexão provada
+        # morta numa sessão Wayland. Sem isto, a máquina dela ficava presa
+        # num XWayland recusando conexão com a cascata `wlrctl` (que o COSMIC
+        # atende) ao lado, nunca tentada. O `== "null"` fica como retaguarda
+        # para reader substituto que não expõe a pergunta nova.
         recover = getattr(reader, "maybe_recover", None)
-        if callable(recover) and _backend_name() == "null":
+        precisa = getattr(reader, "precisa_de_resgate", None)
+        cego = precisa() if callable(precisa) else (_backend_name() == "null")
+        if callable(recover) and cego:
             import time
 
             agora = time.monotonic()
@@ -143,7 +176,7 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
                 if recover():
                     nome = _backend_name()
                     store.set_window_detect_backend(
-                        nome, healthy=(nome == "xlib")
+                        nome, healthy=_saude_com_prova(nome)
                     )
                     logger.info(
                         "window_detect_backend_recuperado", backend=nome

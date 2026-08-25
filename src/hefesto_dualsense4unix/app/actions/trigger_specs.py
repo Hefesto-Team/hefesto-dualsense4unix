@@ -14,12 +14,28 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class TriggerParamSpec:
+    """Um slider da aba Gatilhos: o kwarg da factory e como ele se mostra.
+
+    **`help_text` saiu em 25/08/2026 (T8), e a nota é a data.** O campo existiu
+    desde o nascimento deste arquivo com `""` de padrão: **73 parâmetros, 73
+    vazios, zero leitores** — nenhum construtor o preenchia e nenhuma tela o
+    lia. Campo morto com nome de promessa é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ`
+    em miniatura: quem chega lê "existe dica fina por parâmetro" e não existe.
+
+    A dica que a aba passou a ter é OUTRA, e é por modo, não por parâmetro:
+    `TriggerPresetSpec.description` no botão de cada um dos 19 modos
+    (`triggers_actions.install_triggers_tab`). Se ela quiser dica por
+    parâmetro, são 73 frases novas — texto de tela, e portanto decisão dela.
+
+    Apagar isto não faz ninguém repetir trabalho nem pagar custo já pago: não
+    havia texto guardado no campo para se perder.
+    """
+
     name: str          # nome do kwarg na factory
     label: str         # rótulo visível
     min_value: int
     max_value: int
     default: int = 0
-    help_text: str = ""
 
 
 @dataclass(frozen=True)

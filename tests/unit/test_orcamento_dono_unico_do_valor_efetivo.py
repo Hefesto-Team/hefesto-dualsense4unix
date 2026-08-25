@@ -42,6 +42,7 @@ from tests.conftest import exigir_gi_real
 # tenho GTK" é reprovação no job `gtk-real`. Vem antes do bloco de imports.
 exigir_gi_real("a seção Orçamento da aba Configurações")
 
+import ast
 import inspect
 from pathlib import Path
 from typing import Any, get_args
@@ -177,15 +178,32 @@ def test_nenhum_modulo_de_app_recalcula_a_escada() -> None:
     )
 
 
-def test_os_rotulos_da_secao_sao_os_da_aba_de_origem() -> None:
-    """Redigitar os quatro criaria duas listas para divergirem na primeira edição."""
-    assert secao_orcamento.ROTULOS_DO_ORCAMENTO is ROTULOS_DO_ORCAMENTO
-    assert [ROTULOS_DO_ORCAMENTO[c] for c in secao_orcamento.CHAVES] == [
-        "Economia",
-        "Balanceado",
-        "Máximo",
-        "Auto",
-    ]
+def test_a_migracao_cobre_toda_chave_que_o_disco_aceita() -> None:
+    """Nenhum valor gravado fica sem perfil — a migração é 1-para-1 e total.
+
+    NOTA DATADA — 25/08/2026, `D-PERFIL-DE-DESEMPENHO`. Este nó afirmava que os
+    RÓTULOS da seção eram os da aba Rumble ("Economia", "Balanceado", "Máximo",
+    "Auto"), e o que ele protegia era não redigitar quatro palavras em dois
+    lugares. A decisão dela tirou os quatro botões da tela: eles viraram três
+    perfis, cujos rótulos são dela e não da aba Rumble. O que sobrevive da
+    proteção — e é a metade que morde — é que **nenhuma chave do disco pode
+    ficar órfã**: uma chave sem entrada em `PERFIL_POR_TETO` nasceria com a
+    fileira sem botão afundado, e a escolha da pessoa sumiria da tela sem nada
+    avisar.
+
+    O RÓTULO da aba Rumble continua tendo um dono só, e é o `ROTULOS_DO_ORCAMENTO`
+    de `rumble_actions` — este teste só deixa de ser o lugar que o afirma.
+    """
+    assert set(secao_orcamento.PERFIL_POR_TETO) == set(secao_orcamento.CHAVES), (
+        "uma chave do disco ficou sem perfil na migração — quem a tiver "
+        "gravada abriria a aba com a fileira em branco"
+    )
+    assert set(secao_orcamento.PERFIL_POR_TETO.values()) <= set(
+        secao_orcamento.PERFIS
+    )
+    assert ROTULOS_DO_ORCAMENTO["economia"] == "Economia", (
+        "o dono dos rótulos da aba Rumble continua sendo o `rumble_actions`"
+    )
 
 
 def test_a_celula_da_tabela_vem_da_mesma_conta_do_daemon() -> None:
@@ -213,7 +231,10 @@ def test_a_dica_aprovada_diz_o_numero_que_o_produto_entrega() -> None:
     de a usuária descobrir sentindo. Foi assim que o "40%" do desenho caiu, em
     22/08/2026: o produto entrega 30%, e o número tem dono.
     """
-    assert f"{PCT_ECONOMIA}%" in secao_orcamento.DICAS["economia"]
+    assert (
+        f"{PCT_ECONOMIA}%"
+        in secao_orcamento.DICAS[secao_orcamento.PERFIL_BATERIA_LONGA]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -240,11 +261,18 @@ def test_as_chaves_sao_as_do_schema() -> None:
 
 
 def test_o_clique_acumula_a_chave_e_nunca_o_rotulo() -> None:
-    """O rascunho leva `max`; gravar "Máximo" recusaria o documento inteiro."""
+    """O rascunho leva a CHAVE do disco, nunca o id do botão nem o rótulo.
+
+    Gravar `"tudo_ligado"` (o id do botão) ou `"Tudo ligado"` (o rótulo) faria
+    o `extra="forbid"` do pydantic recusar o DOCUMENTO INTEIRO na próxima
+    carga — e o sintoma na tela seria "não consegui gravar".
+    """
     host = _Host()
     _montar(host)
-    host._config_orcamento_seletor.set_active_id("max")  # type: ignore[attr-defined]
-    assert host._maquina_pendente == {"orcamento": {"teto": "max"}}
+    host._config_orcamento_seletor.set_active_id(  # type: ignore[attr-defined]
+        secao_orcamento.PERFIL_TUDO_LIGADO
+    )
+    assert host._maquina_pendente == {"orcamento": {"teto": "balanceado"}}
 
 
 def test_a_declaracao_e_parcial_e_nao_apaga_as_outras_secoes() -> None:
@@ -252,7 +280,9 @@ def test_a_declaracao_e_parcial_e_nao_apaga_as_outras_secoes() -> None:
     host = _Host()
     host._maquina_pendente = {"mesa": {"altura_da_antena": "acima"}}
     _montar(host)
-    host._config_orcamento_seletor.set_active_id("economia")  # type: ignore[attr-defined]
+    host._config_orcamento_seletor.set_active_id(  # type: ignore[attr-defined]
+        secao_orcamento.PERFIL_BATERIA_LONGA
+    )
     assert host._maquina_pendente == {
         "mesa": {"altura_da_antena": "acima"},
         "orcamento": {"teto": "economia"},
@@ -269,18 +299,70 @@ def test_o_clique_nao_grava_nada() -> None:
     codigo = "\n".join(
         linha for linha in fonte.splitlines() if not linha.lstrip().startswith("#")
     )
-    for proibido in ("machine_declare", "gravar_maquina", "call_async", "_safe_call"):
+    for proibido in ("machine_declare", "gravar_maquina", "_safe_call"):
         assert proibido not in codigo, (
-            f"a seção Orçamento passou a chamar `{proibido}` — o gesto de "
-            "gravar tem um dono, e é o 'Aplicar' do rodapé"
+            f"a seção passou a chamar `{proibido}` — o gesto de gravar tem um "
+            "dono, e é o 'Aplicar' do rodapé"
         )
 
+    # NOTA DATADA — 25/08/2026. `call_async` saiu da lista acima e ganhou régua
+    # PRÓPRIA, mais estreita. A conta de fatias precisa de UMA coisa que o
+    # sysfs desta seção não tem — quem está no rádio —, e ela mora no
+    # `daemon.state_full`. Banir a palavra inteira empurraria essa leitura para
+    # outro módulo só para escapar do portão, que é a meia-honestidade que esta
+    # casa não aceita. O que a `D-A4` proíbe é ESCRITOR, e é isso que a régua
+    # abaixo mede: toda chamada assíncrona desta seção nomeia `daemon.state_full`
+    # e nada mais.
+    arvore = ast.parse(fonte)
+    metodos = sorted(
+        {
+            no.args[0].value
+            for no in ast.walk(arvore)
+            if isinstance(no, ast.Call)
+            and isinstance(no.func, ast.Name)
+            and no.func.id == "call_async"
+            and no.args
+            and isinstance(no.args[0], ast.Constant)
+            and isinstance(no.args[0].value, str)
+        }
+    )
+    assert metodos == ["daemon.state_full"] or metodos == [], (
+        "a seção passou a chamar um método IPC que não é a leitura do estado: "
+        f"{metodos}. Ler é permitido e nomeado; escrever tem um dono, e é o "
+        "'Aplicar' do rodapé"
+    )
+    chamadas = sum(
+        1
+        for no in ast.walk(arvore)
+        if isinstance(no, ast.Call)
+        and isinstance(no.func, ast.Name)
+        and no.func.id == "call_async"
+    )
+    assert chamadas == len(metodos), (
+        "há `call_async` cujo método não é literal — um método montado em "
+        "tempo de execução escapa desta régua"
+    )
 
-def test_montar_com_a_escolha_gravada_afunda_o_botao_certo() -> None:
-    """E não deixa declaração pendente: abrir a janela não é gesto dela."""
-    host = _Host("economia")
+
+@pytest.mark.parametrize(
+    ("gravado", "perfil"),
+    [
+        ("economia", secao_orcamento.PERFIL_BATERIA_LONGA),
+        ("balanceado", secao_orcamento.PERFIL_TUDO_LIGADO),
+        ("max", secao_orcamento.PERFIL_TUDO_LIGADO),
+        ("auto", secao_orcamento.PERFIL_TUDO_LIGADO),
+    ],
+)
+def test_montar_com_a_escolha_gravada_afunda_o_botao_certo(
+    gravado: str, perfil: str
+) -> None:
+    """A migração da `D-PERFIL-DE-DESEMPENHO`, campo a campo, sem perder nada.
+
+    E não deixa declaração pendente: abrir a janela não é gesto dela.
+    """
+    host = _Host(gravado)
     _montar(host)
-    assert host._config_orcamento_seletor.get_active_id() == "economia"  # type: ignore[attr-defined]
+    assert host._config_orcamento_seletor.get_active_id() == perfil  # type: ignore[attr-defined]
     assert host._maquina_pendente is None
 
 

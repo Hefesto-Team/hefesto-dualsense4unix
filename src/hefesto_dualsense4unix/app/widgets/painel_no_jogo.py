@@ -50,22 +50,27 @@ from __future__ import annotations
 
 from typing import Any, Final, NamedTuple
 
-# Três nomes "privados" atravessam a fronteira de módulo aqui — `_MODE_ITEMS`,
-# `_FLAVOR_ITEMS` e `_NOME_NA_FRASE` —, e é deliberado: a alternativa é pior.
+# NOTA DATADA — 25/08/2026 (I12 da INÍCIO NÃO MENTE-01). Até aqui estes três
+# nomes vinham PRIVADOS da aba Início (`_MODE_ITEMS`, `_FLAVOR_ITEMS`,
+# `RECONCILIAR_LABEL`), e o comentário que ocupava este lugar defendia a
+# travessia: copiar as listas criaria um SEGUNDO dono do vocabulário, e no dia
+# em que um rótulo mudasse na Início esta aba continuaria dizendo o nome velho.
 #
-# `_NOME_NA_FRASE` é a lista-dona dos recursos e da ORDEM deles; `_MODE_ITEMS` e
-# `_FLAVOR_ITEMS` são as listas-donas dos rótulos de modo e de máscara (o
-# `test_vocabulario_das_quatro_superficies` chama a primeira de "frase-dona" com
-# todas as letras). Copiar qualquer uma das três para cá criaria um SEGUNDO
-# dono: no dia em que um rótulo mudasse na aba Início, esta aba continuaria
-# dizendo o nome velho — em silêncio, que é como esta casa já perdeu um dia.
+# O argumento continua inteiro; o que mudou é que ele não precisa mais furar o
+# `_` de ninguém. O `contrato_da_mascara` declara o dono e reexporta os MESMOS
+# objetos (alias, nunca cópia) com nome público — então a lista-dona segue
+# sendo a da Início e a fronteira de módulo deixa de ser furada por convenção.
 #
-# Um `_` no começo do nome é convenção de módulo; um segundo dono de vocabulário
-# é defeito medido. Entre os dois, escolhe-se o `_`.
-from hefesto_dualsense4unix.app.actions.home_actions import (
-    _FLAVOR_ITEMS,
-    _MODE_ITEMS,
-    RECONCILIAR_LABEL,
+# `_NOME_NA_FRASE`, do card, continua privado e continua deliberado, pela mesma
+# razão de sempre: é a lista-dona dos recursos e da ORDEM deles.
+from hefesto_dualsense4unix.app.actions.contrato_da_mascara import (
+    ITENS_DE_MASCARA as _FLAVOR_ITEMS,
+)
+from hefesto_dualsense4unix.app.actions.contrato_da_mascara import (
+    ITENS_DE_MODO as _MODE_ITEMS,
+)
+from hefesto_dualsense4unix.app.actions.contrato_da_mascara import (
+    ROTULO_RECONCILIAR as RECONCILIAR_LABEL,
 )
 from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_DESKTOP,

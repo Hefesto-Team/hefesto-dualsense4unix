@@ -35,7 +35,11 @@ from hefesto_dualsense4unix.app.actions.config import (
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
-from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin, id_da_pagina
+from hefesto_dualsense4unix.app.actions.home_actions import (
+    HomeActionsMixin,
+    id_da_pagina,
+    id_da_pagina_corrente,
+)
 from hefesto_dualsense4unix.app.actions.input_actions import InputActionsMixin
 from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
     LaunchWrapperDialogMixin,
@@ -1503,6 +1507,7 @@ class HefestoApp(
         notebook = self.builder.get_object("main_notebook")
         if notebook is not None:
             notebook.connect("switch-page", self._on_notebook_switch_page)
+        self._ligar_gancho_de_minimizacao()
         self._caber_na_area_util()
         self.window.show_all()
         self._force_initial_repaint()
@@ -1512,6 +1517,68 @@ class HefestoApp(
         self.ensure_daemon_running()
         # BUG-DRAFT-NEVER-LOADED-01: carrega o draft do perfil ativo (worker).
         self._bootstrap_draft_async()
+
+    def _ligar_gancho_de_minimizacao(self) -> None:
+        """Minimizar a janela mata a captura de microfone; restaurar devolve.
+
+        STATUS-DIZ-O-QUE-VÊ-01/T8 (25/08/2026). A promessa estava escrita em
+        dois lugares — a docstring de `set_status_tab_visivel` e o
+        `docs/usage/interface.md` — e o código só tinha DOIS gatilhos:
+        `switch-page` (trocar de aba) e `delete-event` (janela indo para a
+        bandeja). Nenhum dos dois dispara ao minimizar:
+
+            $ grep -rn "window-state-event\\|iconified" src/.../app/
+            (nada)
+
+        Com a aba Status à vista e a janela minimizada, o `parec` de cada
+        controle continuava capturando o microfone da usuária sem ninguém
+        olhando o medidor — exatamente o que a docstring prometia impedir.
+
+        **Simétrico ao `delete-event`, e com o mesmo `getattr` defensivo:** a
+        `HefestoApp` monta as mixins por herança e hosts parciais de teste
+        podem não trazer a de Status.
+
+        **Restaurar devolve a captura, e essa metade não é cortesia:** sem
+        ela, minimizar uma vez desligaria o medidor até a próxima troca de
+        aba — a pessoa voltaria para uma aba Status com o microfone morto e
+        nenhuma explicação. Quem decide na volta é a MESMA pergunta do
+        `switch-page`: a página à vista é a Status?
+        """
+        janela = getattr(self, "window", None)
+        if janela is None or not hasattr(janela, "connect"):
+            return
+        with contextlib.suppress(Exception):
+            janela.connect("window-state-event", self._on_window_state_event)
+
+    def _on_window_state_event(self, _widget: Any, event: Any) -> bool:
+        """``False`` sempre: este gancho observa, nunca consome o evento."""
+        visivel = getattr(self, "set_status_tab_visivel", None)
+        if visivel is None:
+            return False
+        estado = getattr(event, "new_window_state", None)
+        if estado is None:
+            return False
+        from gi.repository import Gdk
+
+        iconificada = bool(estado & Gdk.WindowState.ICONIFIED)
+        # Minimizada: desliga, sem perguntar mais nada. Restaurada: só
+        # religa se a aba à vista for a Status — senão a volta do ícone
+        # ligaria uma captura que a troca de aba tinha desligado.
+        with contextlib.suppress(Exception):
+            visivel(False if iconificada else self._aba_status_esta_a_vista())
+        return False
+
+    def _aba_status_esta_a_vista(self) -> bool:
+        """A página atual do notebook é a aba Status?
+
+        `id_da_pagina_corrente`, e não a POSIÇÃO da página: a ordem das abas
+        já mudou nesta casa, e um índice fixo aqui viraria "a aba de trás
+        liga o microfone" no dia em que alguém inserisse uma página no Glade
+        (EST-10). É a mesma régua que o `switch-page` e os pollers usam — a
+        função é a dona, e não há uma segunda cópia dela aqui.
+        """
+        notebook = self.builder.get_object("main_notebook")
+        return bool(id_da_pagina_corrente(notebook) == self._ABA_STATUS)
 
     def _teto_da_area_util(self) -> tuple[int, int] | None:
         """Largura/altura máximas que a janela pode ocupar neste monitor.

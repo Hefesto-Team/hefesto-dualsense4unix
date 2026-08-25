@@ -233,7 +233,7 @@ def test_o_auto_nunca_amplifica(bateria: int) -> None:
 def test_o_texto_do_auto_na_tela_nao_promete_o_que_ele_nao_faz() -> None:
     """O rótulo dizia "100% (Máximo)" e "70% (Balanceado)".
 
-    Os dois viraram mentira no dia em que Máximo passou a valer 200% e
+    Os dois viraram mentira no dia em que Máximo passou a valer 150% e
     Balanceado 100%. E "debounce" é jargão, que ela nunca vê.
     """
     fonte = _GLADE.read_text(encoding="utf-8")

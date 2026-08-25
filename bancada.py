@@ -145,11 +145,14 @@ _ESTADO_RUMBLE_SIMULTANEO = (
     "aberto por que o cancelamento e total com dois alvos e apenas parcial com quatro."
 )
 _ESTADO_RUMBLE_FF = (
-    "MEDIDO nos dois transportes em 11/08/2026 com quatro controles na mesa, e a causa "
-    "esta FECHADA: o keepalive do daemon cancela o rumble alheio, e o faz pelos BYTES de "
-    "motor, não pelos bits — provado por dose-resposta (0,5s -> pulso; 8,0s -> oito "
-    "segundos) e por troca de lado (bits desligados trocaram o motor que vibra). A cura "
-    "ainda NAO foi escrita."
+    "MEDIDO nos dois transportes em 11/08/2026 com quatro controles na mesa, e a causa esta "
+    "FECHADA: o keepalive do daemon cancela o rumble alheio, e o faz pelos BYTES de motor, "
+    "não pelos bits — provado por dose-resposta (0,5s -> pulso; 8,0s -> oito segundos) e "
+    "por troca de lado (bits desligados trocaram o motor que vibra). A cura ESTA escrita e "
+    "LIGADA: `OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC = 2.0` "
+    "(core/backend_pydualsense.py:264), consumida no laco vivo em :844-851, com mordida em "
+    "tests/unit/test_rumble_sem_dono_01.py. O que ela NAO tem e medicao de radio: a mordida "
+    "prova o LACO, nunca o motor."
 )
 #: BANCADA-ESTADOS-02 (15/08/2026): mais TRÊS, e a lista cresceu por medição, não
 #: por gosto. O `estado_hoje` recebeu neste dia o bias do giroscópio em repouso, a

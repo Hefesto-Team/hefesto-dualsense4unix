@@ -284,8 +284,10 @@ def disco(monkeypatch: pytest.MonkeyPatch) -> Path:
     """O disco dela, reduzido ao que a queixa envolve. XDG já é tmp (conftest)."""
     monkeypatch.setattr(pa, "run_in_thread", _sincrono)
     monkeypatch.setattr(ipc_bridge, "run_in_thread", _sincrono)
+    # P3 (25/08/2026): o `profile.switch` do Salvar saiu da thread do GTK e
+    # passou pelo `call_async` do botão Ativar. O dublê de `call_async` já
+    # engolia toda RPC desta aba; o de `profile_switch` deixou de ter alvo.
     monkeypatch.setattr(pa, "call_async", lambda **kw: None)
-    monkeypatch.setattr(pa, "profile_switch", lambda name: False)
     monkeypatch.setattr(pa, "active_profile_name", lambda: None)
 
     save_profile(

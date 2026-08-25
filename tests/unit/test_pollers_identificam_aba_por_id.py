@@ -86,6 +86,7 @@ class _AppFalsa:
         self._notebook = notebook
         self._live_inflight = False
         self.home_refreshes = 0
+        self.inventarios_de_externos = 0
         self._tick_live_state = StatusActionsMixin._tick_live_state.__get__(self)
         self._tick_home_state = HomeActionsMixin._tick_home_state.__get__(self)
 
@@ -94,6 +95,16 @@ class _AppFalsa:
 
     def _refresh_home_tab(self) -> None:
         self.home_refreshes += 1
+
+    def _maybe_fetch_externos(self) -> None:
+        """I5 (25/08/2026): o tique lento da Início passou a inventariar externos.
+
+        Este dublê existe para medir QUAL ABA o tique reconcilia, e nada mais —
+        então o inventário é um contador, não um no-op: se alguém mudar o tique
+        e parar de pedir o inventário, o número para de subir e o defeito fica
+        visível aqui, em vez de virar silêncio.
+        """
+        self.inventarios_de_externos += 1
 
     def _on_live_state_result(self, _state: Any) -> bool:
         return False

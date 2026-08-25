@@ -93,10 +93,14 @@ Detalhe dos modos em [`modos.md`](modos.md).
 ![Aba Status](assets/readme_status.png)
 
 O painel ao vivo, **um cartão por controle**. No alto do cartão: o nome e o
-transporte (`Controle 1 — USB`), **Perfil ativo**, **Hefesto** (ligado ou não) e
-a **Bateria** em porcentagem. Logo abaixo, a linha **"No jogo agora: …"**, que é
-o resumo em uma frase do que a aba **No jogo** detalha por linha — e que diz
-"sem pedido ainda" para o que o jogo nunca pediu.
+transporte (`Controle 1 — USB`), **Perfil ativo** e **Hefesto** (ligado ou não).
+Na linha seguinte, à esquerda, **o giroscópio quando ele está fluindo para o
+jogo** (`Giroscópio: fluindo para o jogo (~194 Hz)`) e, ancorada na direita, a
+**Bateria** em porcentagem. Sem espelho de movimento ativo a linha do
+giroscópio simplesmente não aparece — ela nunca inventa um zero.
+
+Os cartões nascem na **mesma ordem da fita de controles do cabeçalho**: o
+segundo chip é o segundo cartão.
 
 Depois vêm os blocos, sempre nos mesmos lugares:
 
@@ -112,7 +116,8 @@ Depois vêm os blocos, sempre nos mesmos lugares:
 | a grade de botões | acende o botão que você pressiona |
 
 Os sensores só são lidos enquanto a aba está visível — as threads morrem quando
-você sai dela.
+você sai dela, quando fecha a janela para a bandeja e quando **minimiza**. Ao
+restaurar a janela com a aba Status à vista, a leitura volta sozinha.
 
 Um controle sem nó de movimento (externo, kernel antigo) simplesmente não mostra
 o sensor. Nunca aparece um zero fingindo repouso. A mesma disciplina vale para a
