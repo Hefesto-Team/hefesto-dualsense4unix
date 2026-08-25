@@ -140,6 +140,23 @@ class Adaptador:
     atras_de_hub: bool = False
     controlador_pci: str = ""
 
+    @property
+    def caminho(self) -> str:
+        """``3-1.1.4`` — a palavra COMUM com ``censo_do_barramento``.
+
+        É ``f"{busnum}-{devpath}"``, que é exatamente o ``nome_do_kernel`` do
+        censo (``censo_do_barramento.py``) e o nome do diretório em
+        ``/sys/bus/usb/devices``. Os dois módulos já tinham as duas metades e
+        nenhum montava a palavra inteira: era a única peça que faltava para
+        eles falarem do mesmo aparelho com o mesmo nome.
+
+        ``""`` quando falta qualquer metade — o adaptador embutido, que não
+        pendura em USB nenhum. Ausência é resposta, e o mapa lê ``""`` como
+        "este não está em entrada nenhuma", nunca como uma entrada chamada
+        ``0-``.
+        """
+        return _caminho_de_barramento(self.busnum, self.devpath)
+
 
 @dataclass(frozen=True)
 class RadioUsb:
@@ -159,6 +176,11 @@ class RadioUsb:
     atras_de_hub: bool = False
     controlador_pci: str = ""
     usb3: bool = False
+
+    @property
+    def caminho(self) -> str:
+        """``3-1.1.4`` — o mesmo de :attr:`Adaptador.caminho`, pelo mesmo motivo."""
+        return _caminho_de_barramento(self.busnum, self.devpath)
 
 
 @dataclass(frozen=True)
@@ -361,6 +383,18 @@ def vizinhancas_apertadas(
                 continue
             pares.append((primeiro.no, segundo.no))
     return pares
+
+
+def _caminho_de_barramento(busnum: int, devpath: str) -> str:
+    """``busnum-devpath``, ou ``""`` quando falta metade.
+
+    Uma função e não duas cópias: as duas classes respondem a mesma pergunta,
+    e o ponto do caminho é ser a MESMA palavra em toda a casa. Duas montagens
+    independentes é como se produzem duas palavras que quase batem.
+    """
+    if not busnum or not devpath:
+        return ""
+    return f"{busnum}-{devpath}"
 
 
 def _portas_vizinhas(uma: str, outra: str) -> bool:
