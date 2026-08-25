@@ -162,16 +162,39 @@ def test_on_key_binding_restore_defaults_zera_key_bindings_no_draft() -> None:
 
 
 def test_persist_serializa_store_em_dict() -> None:
+    """O que está na TELA é serializado cru — e só isso é assunto deste teste.
+
+    NOTA DATADA — 25/08/2026 (ATALHO-FORA-DA-LISTA-01). Este teste exigia que o
+    rascunho ficasse **exatamente** com as duas linhas da store, e essa
+    igualdade era a poda: o `_persist` escrevia a lista da tela por cima do
+    rascunho, e as chaves fora de `CANONICAL_BUTTONS` (as três regiões do
+    touchpad, que continuam em `DEFAULT_BUTTON_BINDINGS` desde
+    TOUCHPAD-DO-SISTEMA-01) sumiam no primeiro gesto da aba. O teste passava
+    verde por cima da perda medida no perfil dela.
+
+    A asserção que ele existe para fazer — "a store vira dict, com os tokens
+    partidos no `+`" — continua aqui, palavra por palavra. O que mudou é que
+    agora ela olha as duas linhas em vez de exigir que o rascunho não tenha mais
+    nada. A rede da fusão fica em `test_atalho_fora_da_lista_nao_some.py`.
+    """
     mixin = _build_mixin()
     mixin._key_bindings_store.rows = [
         ["triangle", "KEY_C"],
         ["r1", "KEY_LEFTALT+KEY_TAB"],
     ]
     mixin._persist_key_bindings_to_draft()
-    assert mixin.draft.key_bindings == {
-        "triangle": ["KEY_C"],
-        "r1": ["KEY_LEFTALT", "KEY_TAB"],
-    }
+    gravado = mixin.draft.key_bindings or {}
+    assert gravado["triangle"] == ["KEY_C"]
+    assert gravado["r1"] == ["KEY_LEFTALT", "KEY_TAB"]
+    fora_da_tela = set(gravado) - {"triangle", "r1"}
+    assert fora_da_tela == {
+        "touchpad_left_press",
+        "touchpad_middle_press",
+        "touchpad_right_press",
+    }, (
+        "o rascunho ganhou (ou perdeu) chave que a tela não mostra — a fusão só "
+        f"pode preservar o que está fora de CANONICAL_BUTTONS: {fora_da_tela}"
+    )
 
 
 def test_persist_store_vazia_resulta_em_none() -> None:
