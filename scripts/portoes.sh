@@ -85,7 +85,6 @@ TABELA
 # ---------------------------------------------------------------------------
 _DIVERGENCIAS() {
   cat <<'DIV'
-FORA-DO-CI|scripts/check_colisao_de_sprints.py|nasceu em 25/08/2026 e o job dele ainda não existe: o `.github/workflows/ci.yml` NÃO é posse do agente que o escreveu nesta leva. É DÍVIDA DECLARADA, não divergência calada -- quem coordena acrescenta o job na integração, e este bloco some. Roda no `python3` pelado de propósito, sem dependência nenhuma, para que o job seja uma linha.
 FORA-DO-LOCAL|scripts/ci/instalar_como_usuaria.sh|ensaio de instalação em máquina descartável; rodar na máquina dela mexeria no sistema vivo.
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
 FORA-DO-LOCAL|scripts/portao_alvo_tem_dono.py|precisa de Xvfb. Fica na camada de tela, não no bloco de fechar leva.

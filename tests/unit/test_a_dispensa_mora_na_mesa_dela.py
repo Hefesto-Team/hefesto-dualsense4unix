@@ -151,11 +151,20 @@ def test_a_assinatura_nao_aceita_serial_nem_endereco() -> None:
     `check_anonymity.sh` diz por escrito que o serial identifica a unidade dela
     tão bem quanto o MAC, e este arquivo vai para o `$HOME` dela e para o
     `doctor.sh --censo`.
+
+    NOTA DATADA — 25/08/2026. O segundo caso citava o OUI REAL do adaptador
+    Bluetooth desta bancada (`d8:44:89`), mascarado. A máscara da casa o
+    autoriza em documento, e o portão autoritativo
+    (`test_docs_mac_anonimato.py`) o aprovava — mas o portão de fixtures
+    (`test_anonimato_de_fixtures.py`) é mais duro dentro de `tests/` de
+    propósito, e só admite OUI de fabricante quando o LITERAL é o que faz a
+    régua medir. Aqui ele não era: o que morde é a FORMA (doze hex), e ela
+    morde igual com faixa sintética. Endereço real que não paga aluguel sai.
     """
     with pytest.raises(ValidationError):
         OrdemDispensada(arranjo="d0f1a2b3c4d5")
     with pytest.raises(ValidationError):
-        OrdemDispensada(arranjo="4-1.1.2|D844890000C4")
+        OrdemDispensada(arranjo="4-1.1.2|D0F1A20000C4")
 
 
 def test_a_assinatura_de_caminho_de_barramento_passa() -> None:

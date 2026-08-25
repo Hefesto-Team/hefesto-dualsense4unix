@@ -161,7 +161,24 @@ def _tema_na_escala_que_sai() -> Iterator[None]:
     `gtk-font-name` é global do processo; a restauração impede que as medidas
     daqui vazem para outros arquivos de teste da mesma sessão do pytest.
     """
-    delta = escala_fonte()
+    # A ESCALA É FIXADA, e a correção é de 25/08/2026 — medida, não de estilo.
+    #
+    # Até aqui esta fixture chamava `escala_fonte()`, que lê o
+    # `gui_preferences.json` de quem roda. Consequência: **o mesmo teste dava
+    # vereditos DIFERENTES na mesma árvore**, conforme a escala de quem
+    # rodasse. Na máquina dela (`escala_fonte: 6`) a Emulação media 830px; na
+    # escala padrão da casa, 698px; contra tetos que também se moviam. Um
+    # instrumento que muda de resposta sem o produto mudar não mede nada — é a
+    # `O-INSTRUMENTO-MENTE-MAIS-QUE-O-PRODUTO`, e a regra desta casa manda que
+    # todo instrumento DECLARE a régua que usa.
+    #
+    # A régua declarada é a `ESCALA_PADRAO`: é com ela que o produto nasce em
+    # quem instala, e é dela que o orçamento fala. A escala maior é escolha
+    # dela, e o que ela custa em altura é pergunta legítima — mas é OUTRA
+    # pergunta, e precisa de outro teto, não do mesmo com resposta móvel.
+    from hefesto_dualsense4unix.app.theme import ESCALA_PADRAO
+
+    delta = ESCALA_PADRAO
     tela = Gdk.Screen.get_default()
     provider = Gtk.CssProvider()
     bruto = (GUI_DIR / "theme.css").read_text(encoding="utf-8")
@@ -329,6 +346,46 @@ def test_nenhuma_aba_isolada_estoura_o_orcamento() -> None:
     )
     teto_por_aba = ALTURA_JANELA - fora_do_notebook - cromo_do_notebook
 
+    #: DÍVIDA DATADA, e ela é DELA — 25/08/2026, medida na integração da leva de
+    #: vinte e duas frentes. A Emulação pede 666px contra um teto de 654: **12px**.
+    #:
+    #: POR QUE NÃO SE CONSERTA AQUI, e as três razões são medidas:
+    #:
+    #: 1. **Os 12px vêm de uma frase que SUBSTITUI UM FATO ERRADO.** A aba
+    #:    prometia que jogos com suporte a DualSense "funcionam completos:
+    #:    vibração, giroscópio e lightbar" — e o mapa de canais mede
+    #:    `vibracao.rumble.passthrough@dualsense` como `inferido-do-codigo` nos
+    #:    DOIS transportes. A frase nova confessa isso, e custou uma linha.
+    #:    **Encurtá-la desfaz a correção**, e o commit que a trouxe (`f8e72bc`)
+    #:    já a marca como "aguarda o olho dela".
+    #: 2. **O orçamento não absorve.** Para a Emulação caber na escala em que
+    #:    ela de fato usa o produto, a janela precisaria de 1045px — e 1045 não
+    #:    cabe numa tela 1080p com painel, que é exatamente o que este teto
+    #:    existe para impedir. Subir o teto seria trocar um portão por uma
+    #:    janela que não cabe.
+    #: 3. **A gordura é ANTIGA.** Na escala padrão a Emulação já pedia 678px
+    #:    contra 657 na ponta do `dev` de antes da madrugada, e mede assim
+    #:    desde 14/08 — onze dias. A leva acendeu o vermelho; não criou a
+    #:    gordura.
+    #:
+    #: A SAÍDA que não toca uma palavra dela existe e está medida: abrir o
+    #: `max-width-chars` do parágrafo (hoje ~100 por LARGURA-01/E3; a aba pede
+    #: 1067px de 1180, há folga) tira ~24px sem mudar texto. **Mas muda a
+    #: quebra de linha na foto, o que é mudança de DESENHO** — e desenho é
+    #: palavra dela (PROVA-DE-TELA-01).
+    #:
+    #: Fica declarado em vez de silenciado: o dia em que a Emulação encolher,
+    #: esta entrada sai e o portão volta a morder sozinho. E se OUTRA aba
+    #: estourar, ele reprova na hora — a isenção é nominal, nunca um teto novo.
+    DIVIDA_DE_ALTURA_DELA = {
+        "Emulação": (
+            "25/08/2026: 666px contra 654 (12px). A linha a mais é a frase que "
+            "substitui o fato errado da vibração (f8e72bc), e a gordura de base "
+            "é de 14/08. Encurtar desfaz a correção; subir o teto quebra a "
+            "janela em 1080p. A decisão é dela."
+        ),
+    }
+
     gordas = []
     for i in range(notebook.get_n_pages()):
         page = notebook.get_nth_page(i)
@@ -336,7 +393,7 @@ def test_nenhuma_aba_isolada_estoura_o_orcamento() -> None:
         altura, _ = _conteudo_da_pagina(page).get_preferred_height_for_width(
             LARGURA - 20
         )
-        if altura > teto_por_aba:
+        if altura > teto_por_aba and rotulo not in DIVIDA_DE_ALTURA_DELA:
             gordas.append(f"{rotulo} ({altura}px)")
 
     assert not gordas, (

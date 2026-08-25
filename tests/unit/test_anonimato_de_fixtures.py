@@ -45,6 +45,26 @@ _PREFIXOS_FORJADOS = (
     # 22/08/2026 contra `/usr/share/ieee-data/oui.csv`: não é atribuída a
     # fabricante nenhum, igual a `e8473a`.
     "3c9d07",
+    # NOTA DATADA — 25/08/2026. A leva da madrugada trouxe mesas de mentira
+    # NOVAS, e cada uma precisou de faixa própria porque `aabbcc` está proibida
+    # em teste novo desde 23/08 (`scripts/check_faixa_sintetica.py`: quatro
+    # registros dessa faixa vazaram para o `controllers.json` VIVO dela). As
+    # faixas entraram nas fixtures e ninguém as trouxe para cá — por isso este
+    # portão ficou vermelho com oito violações, TODAS sintéticas.
+    #
+    # O CRITÉRIO, escrito para poder ser refeito por quem vier: uma faixa só
+    # entra aqui depois de (1) não casar em `/usr/share/ieee-data/oui.csv`
+    # (`grep -i ",<OUI>," oui.csv` vazio) e (2) não estar em
+    # `_OUIS_REAIS_OCTETOS` do `test_docs_mac_anonimato.py`, que é a lista dos
+    # aparelhos DESTA bancada. As quatro abaixo passaram nos dois em 25/08.
+    #
+    # `f7e6d5` e `a1b2c3` têm o bit 0 do primeiro octeto ligado (f7 e a1 são
+    # ímpares): são endereços de GRUPO, e nenhum aparelho pode carregá-los.
+    # `d0f1a2` é global e não atribuído; `d2c1b0` é local (bit 1 ligado).
+    "d0f1a2",  # seriais USB da bancada de ordens (`bancada_das_ordens.py`)
+    "f7e6d5",  # o serial do teclado da mesma bancada
+    "a1b2c3",  # o DualSense físico por rádio (`…marca_do_vpad_no_nome…`)
+    "d2c1b0",  # a mesa de mentira do no-sniff (`…no_sniff_alcanca_todo_pro…`)
 )
 
 #: OUIs de FABRICANTE que aparecem de propósito em fixture, e só valem com a

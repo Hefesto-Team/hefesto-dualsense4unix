@@ -2182,3 +2182,71 @@ def _nenhum_sysfs_vivo_na_varredura_de_vpad(
             no_do_vpad.RAIZ_DEV_INPUT,
             no_do_vpad.RAIZ_DEV,
         ) = antes
+
+
+# ---------------------------------------------------------------------------
+# BINARIO-QUE-SO-EXISTE-NA-ARVORE-DELA-01 (25/08/2026)
+# ---------------------------------------------------------------------------
+#
+# DEFEITO MEDIDO: dois testes desta suíte apontavam para `.venv/bin/<coisa>`
+# **relativo à raiz da árvore**, e `git worktree add` não copia `.venv/` (é
+# ignorado). Numa árvore de agente os dois reprovavam sem que nada do produto
+# estivesse errado:
+#
+#   * `test_os_scripts_rodam_no_python_minimo.py` estourava com
+#     `FileNotFoundError: '.venv/bin/ruff'` — o único portão de sintaxe sobre
+#     `scripts/`, calado em toda árvore de agente desde 23/08/2026;
+#   * `test_doctor_cobra_as_duas_obrigatorias.py` mandava o `doctor.sh` procurar
+#     um python que não existe; ele caía no `python3` do PATH, que aqui é um
+#     venv sem PyGObject, e o `check_loader_svg` reprovava por falta de `gi` —
+#     lido como "a régua do doctor quebrou", quando a máquina carrega SVG.
+#
+# A RESPOSTA JÁ EXISTIA EM BASH: `scripts/portoes.sh:_venv_bin` (25/08/2026)
+# resolve venv local → venv da árvore PRINCIPAL do worktree. Esta função é a
+# gêmea em Python, e as duas TÊM DE CONCORDAR: são a mesma decisão escrita duas
+# vezes porque uma tabela de portões em bash não pode ser importada por um
+# teste. Quem mudar a ordem de busca aqui muda lá também.
+#
+# Vale para os BINÁRIOS (ruff, mypy, pytest, o python que carrega `gi`). O
+# código sob teste continua vindo do `PYTHONPATH`, nunca daqui.
+
+#: Ordem de busca, relativa a cada raiz candidata. `.venv` antes de `venv`
+#: porque é o nome que o `CLAUDE.md` e o CI usam.
+_NOMES_DE_VENV = (".venv", "venv")
+
+
+def _raizes_de_venv() -> list[Path]:
+    """A árvore de hoje, e depois a árvore PRINCIPAL do worktree."""
+    raiz = Path(__file__).resolve().parents[1]
+    raizes = [raiz]
+    import subprocess as _sp
+
+    with contextlib.suppress(Exception):
+        saida = _sp.run(
+            ["git", "-C", str(raiz), "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        ).stdout
+        primeira = saida.splitlines()[0].split(maxsplit=1) if saida else []
+        if len(primeira) == 2 and primeira[0] == "worktree":
+            principal = Path(primeira[1])
+            if principal != raiz:
+                raizes.append(principal)
+    return raizes
+
+
+def binario_do_venv(nome: str) -> Path | None:
+    """O caminho de `nome` no venv desta árvore, ou no da árvore principal.
+
+    Devolve ``None`` quando não há venv nenhum ao alcance — e aí quem chama
+    decide entre o PATH e o `pytest.skip`. Nunca devolve um caminho que não
+    existe: foi um caminho inexistente que virou `FileNotFoundError` e apagou
+    um portão inteiro.
+    """
+    for raiz in _raizes_de_venv():
+        for venv in _NOMES_DE_VENV:
+            candidato = raiz / venv / "bin" / nome
+            if candidato.is_file() and os.access(candidato, os.X_OK):
+                return candidato
+    return None

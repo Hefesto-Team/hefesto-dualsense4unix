@@ -238,11 +238,24 @@ class TestPlayerPorControle:
         # sem sysfs/desired, sem coop, sem registry, `_last_state` None).
         # ESCRITOR-CRU-01: `lightbar_disputada` entra `False` — sem sonda não
         # se acende aviso nenhum, e "não sondado" nunca vira alarme.
+        #
+        # NOTA DATADA — 25/08/2026 (SINAL-NO-NASCIMENTO-01/E2). Entrou
+        # `nascimento`, e o `==` abaixo ficou vermelho porque ele é EXAUSTIVO —
+        # que é o que ele existe para ser. A régua está certa e o valor
+        # esperado é que estava velho: campo por controle que aparece sem esta
+        # linha saber é contrato mudando calado, e o `state_full` é lido pelo
+        # tique de 1 s da GUI inteira. Por isso o campo entra na lista, e não
+        # se afrouxa a comparação para subconjunto.
+        #
+        # `None` aqui é "NÃO CARIMBEI", nunca "nasceu limpa" — o daemon é
+        # dublê nesta bancada e não há cartório para consultar. Ler a ausência
+        # como inocência é o defeito que a BARRA-MUDA-01 §5 nomeou.
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,
              "player_slot": None, "lightbar_rgb": None, "lightbar_on": False,
              "lightbar_source": "desconhecida", "lightbar_disputada": False,
+             "nascimento": None,
              "inputs": None, "vpad_backend": None, "vpad_motivo": None},
         ]
 
