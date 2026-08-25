@@ -2091,9 +2091,23 @@ if _GTK_DISPONIVEL:
 
         Uso (a mixin de status monta e distribui — STATUS-02)::
 
-            card = ControllerCard(compact=True)   # compact = 2+ cards
+            card = ControllerCard(compact=False, mostrar_estado_global=True)
             card.update(entry, state_full)        # diff interno por seção
             card.reset_inputs()                   # IPC falhou → mostra "—"
+
+        **`compact=False` não é um exemplo entre outros: é o único que
+        produção constrói.** Desde a EMPILHA-02 (02/08/2026, decisão dela —
+        um card por linha, com rolagem) a aba dá a largura inteira a todo
+        card, e `status_actions._rebuild_status_cards` passa `compact=False`
+        sempre. O que continua dependendo da quantidade é
+        `mostrar_estado_global`: com 2+ controles quem responde por perfil e
+        daemon é o frame "Estado", e repeti-lo em cada card seria a
+        duplicação que a STATUS-SIMETRIA-02 curou na bateria.
+
+        CORREÇÃO DE FATO (25/08/2026, STATUS-DIZ-O-QUE-VÊ-01/T5): este
+        exemplo dizia que `compact` era o modo de 2+ cards. Ficou falso
+        naquele 02/08 e atravessou 23 dias, com sete arquivos de teste
+        medindo — e travando — um desenho que nenhuma janela monta.
 
         ``entry`` é uma entrada de ``state_full.controllers`` (contrato em
         ``daemon/ipc_handlers._enrich_controllers_per_controller``);
