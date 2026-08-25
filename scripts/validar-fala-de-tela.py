@@ -38,7 +38,9 @@ from __future__ import annotations
 import argparse
 import ast
 import importlib.util
+import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -192,11 +194,30 @@ def _le_fala(no: ast.Call, caminho: Path, raiz: Path) -> FalaEncontrada:
 def descobre_falas(app_dir: Path, raiz: Path) -> list[FalaEncontrada]:
     """Toda chamada `Fala(...)` em `app/**.py`, por AST — nunca por `grep`.
 
-    `grep` por palavra (cabo/rádio/Bluetooth) foi TENTADO e MEDIU
-    falso-negativo perto de 100% (PAREAMENTO-01, "O QUE JÁ ESTÁ MEDIDO"). A
-    população que importa é a de `Fala` DECLARADA, não a de frase que cita
-    transporte — essa é a fronteira que faz este portão crescer sem gritar
-    falso (ver Z6-10).
+    A população desta função é a de `Fala` DECLARADA, e é ela que o portão
+    compara contra `FATOS`. Uma frase que cita transporte e não declarou nada
+    é assunto de `descobre_frases_de_transporte` (P-09), e só nas abas
+    promovidas.
+
+    CORREÇÃO DE FATO, 25/08/2026: até esta data este docstring dizia que
+    "`grep` por palavra (cabo/rádio/Bluetooth) foi TENTADO e MEDIU
+    falso-negativo perto de 100%". Isso trocava duas medições da
+    PAREAMENTO-01. O falso-negativo de ~100% foi da régua que tentou casar as
+    37 linhas fortes do mapa com o texto da tela **pela palavra do `rotulo`**
+    (a direção "o mapa sabe e a tela não oferece"), e essa régua está
+    descartada. A régua por palavra de transporte SOBRE O TEXTO DA TELA é
+    outra coisa, e a própria sprint a publica como **piso** medido: 31 frases
+    em 23/08. Recontada aqui com régua independente (AST, literal de texto
+    fora de docstring, fora de `Fala(...)`, com fronteira de palavra): **38
+    frases em 10 arquivos** na base de 25/08/2026 com as oito frentes da
+    madrugada integradas. Ela não tem falso-negativo perto de 100%; tem
+    falso-POSITIVO alto — a maioria é rótulo ou relato de estado, não
+    afirmação de capacidade — e é por isso que P-09 vem com `FRASES_SEM_FALA`,
+    linha a linha e com razão escrita, em vez de exigir `Fala` para todas.
+
+    **O número acima envelhece, e por isso não é régua de nada.** Quem quiser
+    o de hoje roda `--censo-de-transporte`, que o conta na árvore viva; nenhum
+    portão desta casa o lê daqui.
     """
     encontradas: list[FalaEncontrada] = []
     for caminho in sorted(app_dir.rglob("*.py")):
@@ -513,8 +534,22 @@ def _le_celulas_do_mapa(raiz: Path) -> dict[str, dict[str, str]]:
 
 
 def valida_numeros(
-    numeros: list[NumeroEncontrado], celulas: dict[str, dict[str, str]]
+    numeros: list[NumeroEncontrado],
+    celulas: dict[str, dict[str, str]],
+    formata_pt_br: Callable[[float], str],
 ) -> list[str]:
+    """`formata_pt_br` vem de `app/fala_do_mapa.py`, NUNCA redigitado aqui.
+
+    A régua e a legenda têm de ser a mesma peça — é a regra que P-01 da
+    PAREAMENTO-01 escreveu para o vocabulário e que vale igual para o
+    FORMATO. Até 25/08/2026 esta função trazia a sua própria cópia de
+    `f"{v:.1f}".replace(".", ",")`, e era a QUARTA da árvore (as outras três:
+    `app/fala_do_mapa.py:228`, `app/actions/config/secao_controles.py:434` e
+    `integrations/plano_de_radio.py:214`). Com a cópia, mudar
+    `formata_pt_br` para duas casas deixava este portão conferindo uma casa —
+    verde por cima de uma divergência entre a constante e a célula, que é
+    exatamente o que ele existe para pegar.
+    """
     problemas: list[str] = []
     for numero in numeros:
         origem = f"{numero.arquivo}:{numero.linha}"
@@ -532,7 +567,7 @@ def valida_numeros(
             )
             continue
         celula = linha.get(numero.coluna, "")
-        esperado = f"{numero.valor:.1f}".replace(".", ",")
+        esperado = formata_pt_br(numero.valor)
         if esperado not in celula:
             problemas.append(
                 f"{origem}: {numero.constante} = {numero.valor} (formatado "
@@ -540,6 +575,241 @@ def valida_numeros(
                 f"{numero.chave!r} ({MAPA_RELATIVO}). A constante e a célula "
                 "são a MESMA medição — atualize a célula (ou a nota de "
                 "porque mudou) no mesmo commit que a constante"
+            )
+    return problemas
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# P-09 — O PORTÃO CRESCE DE "AVISA" PARA "REPROVA", UMA ABA POR VEZ
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Até aqui o portão só enxerga o que ALGUÉM LEMBROU de declarar: `Fala` é
+# opt-in, e uma frase de transporte nova entra na tela sem nada acusar. É o
+# defeito que dá título à PAREAMENTO-01 — "a medição nova tem de chegar
+# SOZINHA na tela" — visto do outro lado: a tela afirma, e o mapa não fica
+# sabendo.
+#
+# A trava é por ABA, e nunca por árvore inteira, porque a árvore inteira
+# reprovaria hoje em 40 frases e seria desligada na semana seguinte (o motivo
+# está escrito na PAREAMENTO-01, "onde a migração pode dar errado", e é o
+# mesmo de `scripts/validar-palavra-de-tela.py`). Aba FORA de
+# `ABAS_COM_FALA_DECLARADA` é livre; aba DENTRO tem de ter 100% das frases de
+# transporte ou declaradas como `Fala`, ou isentas uma a uma com razão
+# escrita.
+
+#: As abas em que toda frase de tela que cita transporte tem de estar
+#: declarada. **Nasce vazio de propósito** (Z6, "o que fica aberto"): no dia 1
+#: o registro tem uma `Fala` só, e promover uma aba agora exigiria editar
+#: arquivos de outras frentes.
+#:
+#: **O conjunto SÓ CRESCE.** Quem trava isso é
+#: `tests/unit/test_abas_promovidas_so_crescem_p09.py`, e o conjunto de
+#: referência dele é literal DO PRÓPRIO ARQUIVO DE TESTE — nunca lido daqui.
+#: Um teto lido da própria fonte passa sempre, e é o defeito que a ADR-016
+#: pagou por um mês (a lição está em
+#: `tests/unit/test_o_mapa_separa_divida_de_decisao.py`).
+#:
+#: As duas primeiras a promover, quando as abas tiverem dono livre: **Início**
+#: e **Status** — é onde morava a frase falsa de 17/08 e onde a pessoa lê
+#: "isto funciona?".
+ABAS_COM_FALA_DECLARADA: frozenset[str] = frozenset()
+
+#: Quais arquivos de `app/` desenham cada aba promovida, relativos a
+#: `src/hefesto_dualsense4unix/app/`. Só é preciso declarar a aba que foi
+#: promovida: aba livre não precisa de linha aqui.
+#:
+#: É mapa escrito à mão, e isso é uma escolha: o produto identifica aba pelo
+#: **id do Glade** (`app/app.py::_REFRESH_POR_ABA`, chaves `tab_home_box` e
+#: companhia) e `Fala.aba` fala o nome que a pessoa lê ("Início"). Não há hoje
+#: nenhuma peça que case os dois, e inventar uma casaria por heurística o que
+#: precisa ser declarado.
+#:
+#: Aba promovida SEM linha aqui **reprova alto** — nunca passa calada. Um
+#: portão que se desliga por omissão de configuração é a forma silenciosa de
+#: portão nenhum (a mesma razão escrita em `anonymity-check.yml:67-70`).
+ARQUIVOS_DA_ABA: dict[str, tuple[str, ...]] = {}
+
+#: As frases de aba promovida que citam transporte e NÃO precisam de `Fala`,
+#: uma a uma, com a razão escrita. Chaveada pelo TEXTO EXATO, no molde de
+#: `DIVIDA_DA_PALAVRA_01` de `scripts/validar-palavra-de-tela.py`: mexer no
+#: texto derruba a isenção e obriga a rejustificá-la, que é o que se quer.
+#:
+#: **Entrada que não casa mais com nenhuma frase de aba promovida REPROVA.**
+#: Lápide que sobrevive à própria cura é o defeito que este tipo de lista
+#: existe para matar — medido em 25/08/2026 no
+#: `portao_a_casa_sabe_e_o_produto_nao_faz`, onde duas notas datadas seguiram
+#: dizendo "nada de produção chama" sobre funções que a produção passou a
+#: chamar.
+FRASES_SEM_FALA: dict[str, str] = {}
+
+#: As palavras que fazem uma frase "citar transporte". Casadas com fronteira
+#: de palavra: sem ela, `cabo` casa dentro de `acabou`.
+#:
+#: `usb` entra e engorda a lista de propósito — no cabo o transporte É USB, e
+#: uma régua que o deixasse de fora perderia "pelo barramento USB". O preço é
+#: falso-positivo, e o preço é pago pela `FRASES_SEM_FALA`, que é declarada e
+#: envelhece; o preço do contrário seria falso-negativo, que é mudo.
+PALAVRAS_DE_TRANSPORTE: frozenset[str] = frozenset(
+    {"cabo", "cabos", "rádio", "rádios", "bluetooth", "usb", "sem fio", "sem-fio"}
+)
+
+#: A blindagem declarada da régua, para ninguém a ler como censo completo:
+#: literal curto ou sem espaço fica de fora (é identificador, chave de
+#: dicionário, fragmento de formatação), e f-string montada em tempo de
+#: execução também — o `ast.JoinedStr` só entrega os pedaços literais.
+_MINIMO_DE_FRASE = 12
+
+_TRANSPORTE = re.compile(
+    "(?<!\\w)(" + "|".join(sorted(map(re.escape, PALAVRAS_DE_TRANSPORTE))) + ")(?!\\w)",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class FraseDeTransporte:
+    arquivo: str
+    linha: int
+    texto: str
+
+    @property
+    def origem(self) -> str:
+        return f"{self.arquivo}:{self.linha}"
+
+
+def _nos_de_docstring(arvore: ast.Module) -> set[int]:
+    """`id()` de cada `ast.Constant` que é docstring de módulo/função/classe.
+
+    Docstring é prosa para quem lê o código, não fala de tela — contá-la
+    levaria o censo de 40 para bem mais de cem (a PAREAMENTO-01 mediu 31 de
+    piso e 135 de teto justamente por causa disto).
+    """
+    fora: set[int] = set()
+    for no in ast.walk(arvore):
+        if not isinstance(no, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        corpo = getattr(no, "body", [])
+        if not corpo:
+            continue
+        primeiro = corpo[0]
+        if (
+            isinstance(primeiro, ast.Expr)
+            and isinstance(primeiro.value, ast.Constant)
+            and isinstance(primeiro.value.value, str)
+        ):
+            fora.add(id(primeiro.value))
+    return fora
+
+
+def _nos_dentro_de_fala(arvore: ast.Module) -> set[int]:
+    """`id()` de cada `ast.Constant` que mora DENTRO de uma chamada `Fala(...)`.
+
+    É o que faz declarar uma `Fala` resolver a reprovação: o texto sai da
+    população de "frase não declarada" por estar onde deveria estar.
+    """
+    dentro: set[int] = set()
+    for no in ast.walk(arvore):
+        if not _e_chamada_de(no, "Fala"):
+            continue
+        for filho in ast.walk(no):
+            if isinstance(filho, ast.Constant):
+                dentro.add(id(filho))
+    return dentro
+
+
+def frases_de_um_arquivo(caminho: Path, raiz: Path) -> list[FraseDeTransporte]:
+    """As frases de tela deste arquivo que citam transporte."""
+    try:
+        fonte = caminho.read_text(encoding="utf-8")
+        arvore = ast.parse(fonte, filename=str(caminho))
+    except (OSError, SyntaxError):
+        return []
+    fora = _nos_de_docstring(arvore) | _nos_dentro_de_fala(arvore)
+    achadas: list[FraseDeTransporte] = []
+    for no in ast.walk(arvore):
+        if not (isinstance(no, ast.Constant) and isinstance(no.value, str)):
+            continue
+        if id(no) in fora:
+            continue
+        texto = no.value
+        if len(texto) < _MINIMO_DE_FRASE or " " not in texto:
+            continue
+        if not _TRANSPORTE.search(texto):
+            continue
+        achadas.append(
+            FraseDeTransporte(
+                arquivo=str(caminho.relative_to(raiz)), linha=no.lineno, texto=texto
+            )
+        )
+    return sorted(achadas, key=lambda f: (f.arquivo, f.linha))
+
+
+def descobre_frases_de_transporte(app_dir: Path, raiz: Path) -> list[FraseDeTransporte]:
+    """O censo inteiro de `app/**.py` — o que `--censo-de-transporte` imprime."""
+    achadas: list[FraseDeTransporte] = []
+    for caminho in sorted(app_dir.rglob("*.py")):
+        if "__pycache__" in caminho.parts:
+            continue
+        if str(caminho.relative_to(raiz)) in _MODULOS_QUE_ESTE_PORTAO_IMPORTA:
+            continue  # o registro declara TIPOS, não frase de tela
+        achadas.extend(frases_de_um_arquivo(caminho, raiz))
+    return achadas
+
+
+def valida_abas_promovidas(raiz: Path) -> list[str]:
+    """Toda frase de transporte de aba promovida está declarada ou isenta?"""
+    problemas: list[str] = []
+    vistas: list[FraseDeTransporte] = []
+
+    for aba in sorted(ABAS_COM_FALA_DECLARADA):
+        arquivos = ARQUIVOS_DA_ABA.get(aba)
+        if not arquivos:
+            problemas.append(
+                f"a aba {aba!r} está em ABAS_COM_FALA_DECLARADA e não tem linha "
+                "em ARQUIVOS_DA_ABA — promover sem dizer quais arquivos são da "
+                "aba desliga a trava em silêncio. Declare os arquivos ou tire a "
+                "aba do conjunto"
+            )
+            continue
+        for relativo in arquivos:
+            caminho = raiz / APP_RELATIVO / relativo
+            if not caminho.is_file():
+                problemas.append(
+                    f"ARQUIVOS_DA_ABA[{aba!r}] cita {relativo!r}, que não existe "
+                    f"em {APP_RELATIVO}/ — o arquivo foi renomeado ou apagado, e "
+                    "a aba ficou sem cobertura sem ninguém notar"
+                )
+                continue
+            for frase in frases_de_um_arquivo(caminho, raiz):
+                vistas.append(frase)
+                razao = FRASES_SEM_FALA.get(frase.texto)
+                if razao is not None and razao.strip():
+                    continue
+                if razao is not None:
+                    problemas.append(
+                        f"{frase.origem}: a isenção desta frase está em "
+                        "FRASES_SEM_FALA com razão VAZIA — isenção sem razão "
+                        "escrita é a mesma coisa que não ter portão"
+                    )
+                    continue
+                problemas.append(
+                    f"{frase.origem}: a aba {aba!r} está promovida e esta frase "
+                    f"cita transporte sem declarar de que célula do mapa fala: "
+                    f"{frase.texto[:90]!r}. Declare uma `Fala` (chave, lado, "
+                    "afirma) ou ponha o texto em FRASES_SEM_FALA com a razão"
+                )
+
+    textos_vistos = {f.texto for f in vistas}
+    for texto, razao in FRASES_SEM_FALA.items():
+        if texto not in textos_vistos:
+            problemas.append(
+                f"FRASES_SEM_FALA tem entrada que não casa com frase nenhuma de "
+                f"aba promovida: {texto[:90]!r}. A frase mudou ou sumiu — APAGUE "
+                "a entrada. Lápide que sobrevive à própria cura é o que esta "
+                "lista existe para matar"
+            )
+        elif not razao.strip():
+            problemas.append(
+                f"FRASES_SEM_FALA[{texto[:60]!r}] está sem razão escrita."
             )
     return problemas
 
@@ -558,6 +828,11 @@ def main(argv: list[str] | None = None) -> int:
         "--exigir-prazo",
         action="store_true",
         help="como --all, mas prazo vencido é FALHA (o modo do release)",
+    )
+    modo.add_argument(
+        "--censo-de-transporte",
+        action="store_true",
+        help="imprime as frases de tela que citam transporte (sempre sai 0)",
     )
     parser.add_argument("--raiz", type=Path, default=RAIZ)
     parser.add_argument("--hoje", type=str, default=None, help="AAAA-MM-DD, só para teste")
@@ -581,8 +856,21 @@ def main(argv: list[str] | None = None) -> int:
         imprime_fila(monta_fila(falas))
         return 0
 
+    if args.censo_de_transporte:
+        frases = descobre_frases_de_transporte(raiz / APP_RELATIVO, raiz)
+        arquivos = len({f.arquivo for f in frases})
+        for frase in frases:
+            print(f"{frase.origem}: {frase.texto}")
+        print(f"\n{len(frases)} frase(s) de transporte em {arquivos} arquivo(s).")
+        return 0
+
     problemas = valida(falas, fatos, afirma_por_nome, causa_de_fora)
-    problemas.extend(valida_numeros(descobre_numeros(raiz), _le_celulas_do_mapa(raiz)))
+    problemas.extend(
+        valida_numeros(
+            descobre_numeros(raiz), _le_celulas_do_mapa(raiz), fala_do_mapa.formata_pt_br
+        )
+    )
+    problemas.extend(valida_abas_promovidas(raiz))
     vencidos = prazos_vencidos(falas, hoje)
 
     if vencidos:
@@ -601,7 +889,7 @@ def main(argv: list[str] | None = None) -> int:
         print("")
 
     if problemas:
-        print(f"FALHA: {len(problemas)} `Fala` em desacordo com o mapa:")
+        print(f"FALHA: {len(problemas)} desacordo(s) entre a tela e o mapa:")
         for problema in problemas:
             print(f"  {problema}")
         return 1
