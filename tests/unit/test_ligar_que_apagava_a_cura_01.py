@@ -299,10 +299,33 @@ class _RotuloFalso:
         self.tooltip = texto
 
 
+#: NOTA DATADA — 25/08/2026 (EMULACAO-UM-DONO-SO-01/E3). `_mic_state` ganhou um
+#: QUARTO estado, `MIC_SEM_ALVO`: sem placa ALSA de DualSense em
+#: `/proc/asound/cards` a tela não pode mais escrever "Ligado" em verde. Isso
+#: fez o `test_ligado_de_verdade_continua_verde` passar a depender de haver um
+#: controle no cabo da bancada — MEDIDO no mesmo dia, apontando o
+#: `_PLACAS_ALSA` para um caminho inexistente: ele reprovava em
+#: `assert obj._mic_is_on() is True`, e só passava aqui porque havia um
+#: DualSense no cabo desta máquina. É o vício de bancada da NO-MEU-FUNCIONA-01,
+#: e a cura é declarar o alvo em vez de herdá-lo da sala.
+#:
+#: Uma placa, e não zero: o assunto DESTE arquivo é o promotor (o drop-in 51),
+#: e todos os casos dele pressupõem que existe um microfone a promover.
+_CARDS_COM_UM_DUALSENSE = """\
+ 0 [HDMI           ]: HDA-Intel - HDA ATI HDMI
+                      HDA ATI HDMI at 0xfe960000 irq 66
+ 2 [Controller     ]: USB-Audio - DualSense Wireless Controller
+                      Sony Interactive Entertainment DualSense Wireless Controller at usb-0000:0d
+"""
+
+
 def _tela(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[object, _RotuloFalso]:
     dropins = tmp_path / "wireplumber.conf.d"
     dropins.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(Mixin, "_wp_dropin_dir", staticmethod(lambda: dropins))
+    cards = tmp_path / "cards"
+    cards.write_text(_CARDS_COM_UM_DUALSENSE, encoding="utf-8")
+    monkeypatch.setattr(Mixin, "_PLACAS_ALSA", str(cards))
     obj = Mixin()
     rotulo = _RotuloFalso()
     monkeypatch.setattr(obj, "_get", lambda _id: rotulo, raising=False)
