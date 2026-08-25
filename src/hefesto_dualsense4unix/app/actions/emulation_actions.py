@@ -495,10 +495,63 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     "modo_jogo": (
         "Ligado, em pausa agora: o modo jogo está suspendendo mouse e teclado."
     ),
+    # ── INALCANÇÁVEL HOJE, e a decisão de apagar ou reviver é DELA ──────────
+    #
+    # 25/08/2026 (EMULACAO-UM-DONO-SO-01/E15). Esta frase NUNCA apareceu na tela
+    # e não pode aparecer: `lifecycle._jogo_no_controle_do_desktop` (`:2209`) só
+    # devolve `CALADA_VPAD_SUSPENSO` sob `if steam_input_vpad_suspenso(self)`, e
+    # nada em produção põe essa flag em `True` — o armador
+    # `suspend_vpads_for_steam_input` tem ZERO chamadores em `src/`. Cadeia
+    # conferida ponta a ponta pela VPAD-SUSPENSO-MORTO-01/E1 (25/08); daqui
+    # `bloqueio` só pode ser `"desligada"`, `"sem_device"`, `"modo_jogo"` ou
+    # `None`.
+    #
+    # NÃO É DESCUIDO, E POR ISSO A FRASE FICA. O commit `d8022ea` (09/08/2026)
+    # tirou a suspensão da borda de entrada da exceção de Steam Input e pôs
+    # `esconder_o_fisico_para_o_jogo` no lugar, por decisão DELA
+    # (ESCONDER-EM-VEZ-DE-SAIR-01: *a allowlist do Steam Input NÃO tira o
+    # Hefesto da frente*), depois do preço medido em 08/08 — derrubar os
+    # virtuais para curar o duplicado do P1 derrubava o JOGADOR 2 junto.
+    #
+    # POR QUE MARCAR EM VEZ DE APAGAR, e é escolha declarada: apagar decide por
+    # ela. A `VPAD-SUSPENSO-MORTO-01` está ABERTA e a pergunta que ela deixou —
+    # *"o par (excecao_ativa, vpad_suspenso) vira um estado só?"* — é da
+    # mantenedora; se a resposta reviver a suspensão, esta frase volta a valer
+    # inteira, com a nota datada de 07/08 que ela já custou (abaixo). Marcar
+    # custa este comentário; apagar custa a frase e a medição junto. O que a
+    # marca tem de garantir é que ninguém mais acredite que ela aparece — e é o
+    # que `tests/unit/test_a_frase_do_teclado_fala_de_um_estado_que_existe.py`
+    # cobra, dos dois lados: reprova se a frase deixar de estar declarada morta,
+    # E reprova no dia em que a suspensão religar, mandando revisitar o texto.
     "vpad_suspenso_pelo_steam_input": (
         "Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, "
         "e o controle virtual foi recolhido. Não foi desligado — volta sozinho "
         "quando você fechar o jogo."
+    ),
+}
+
+#: As entradas de `BLOQUEIO_DO_TECLADO_EM_PORTUGUES` que descrevem um estado que
+#: NENHUM caminho de produção alcança hoje, cada uma com a razão e quem decide.
+#: Nasce com uma, e é para encolher — não para crescer.
+#:
+#: OS VALORES DESTE DICIONÁRIO NÃO NOMEIAM FUNÇÃO DO DAEMON, e não é estilo:
+#: MEDIDO em 25/08/2026. O portão irmão
+#: (`tests/unit/test_portao_o_par_com_metade_ligada.py`) trata TODA string
+#: constante que não seja docstring como possível despacho por nome — é a cura
+#: que ele precisa para enxergar `getattr(x, "nome")`. Escrever o nome do
+#: armador aqui o pôs na lista de "palavras", e o portão passou a responder que
+#: a função TEM chamador: as três reprovações dele viraram verde por causa
+#: desta frase. Os endereços (`arquivo:linha`) dizem a mesma coisa e não
+#: acionam a heurística. O defeito do instrumento está relatado a quem coordena.
+BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO: dict[str, str] = {
+    "vpad_suspenso_pelo_steam_input": (
+        "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1, reconferido aqui). O "
+        "predicado de daemon/lifecycle.py:2209 só devolve esta constante sob a "
+        "flag do vpad suspenso, e nada em produção a põe em True: o armador de "
+        "daemon/subsystems/gamepad.py:796 tem zero chamadores em src/. A causa "
+        "é decisão dela (ESCONDER-EM-VEZ-DE-SAIR-01, `d8022ea`, 09/08/2026), e "
+        "reviver ou apagar a frase é da mantenedora — a pergunta aberta é se o "
+        "par (excecao ativa, vpad suspenso) vira um estado só."
     ),
 }
 
