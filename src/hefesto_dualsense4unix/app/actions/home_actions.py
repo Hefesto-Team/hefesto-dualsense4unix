@@ -586,6 +586,30 @@ def wrapper_banner_text(state: dict[str, Any] | None) -> str | None:
     return None
 
 
+def texto_do_radio_fragil(state: dict[str, Any] | None) -> str | None:
+    """O aviso de rádio frágil no Modo Nativo, ou ``None``. **UM dono.**
+
+    Extraído de `vpad_degradation_text` em 25/08/2026
+    (PERFIS-ABRE-O-QUE-GUARDA-01/§P8) porque ganhou a **segunda** aba: a Perfis
+    é quem OFERECE o Modo Nativo (um dos quatro botões do editor) e não dizia
+    uma palavra sobre a fragilidade — `native_bt_fragil` tinha leitor num
+    arquivo só, medido com `grep -rln` em 24/08. Duas leitoras e uma frase
+    escrita duas vezes é exatamente como esta casa ganhou os oito pares da F5;
+    então a decisão virou função com nome, e as duas a chamam.
+
+    O comportamento é o mesmo, byte a byte: a LISTA manda quando existe (nomeia
+    quem está frágil) e o booleano continua acendendo o aviso genérico, que é o
+    que um daemon mais VELHO que esta janela sabe dizer — install editable
+    deixa os dois convivendo até o próximo start (MESA-CHEIA-11/E1).
+    """
+    if not isinstance(state, dict):
+        return None
+    frageis = controles_bt_frageis(state)
+    if frageis or state.get("native_bt_fragil") is True:
+        return texto_native_bt_fragil(frageis)
+    return None
+
+
 def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
     """Texto do banner de degradação do vpad; ``None`` quando não há aviso.
 
@@ -610,13 +634,12 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
     """
     if not isinstance(state, dict):
         return None
-    frageis = controles_bt_frageis(state)
-    if frageis or state.get("native_bt_fragil") is True:
-        # MESA-CHEIA-11/E1: a lista manda quando existe (nomeia quem está
-        # frágil); o booleano continua acendendo o aviso genérico, que é o que
-        # um daemon mais VELHO que esta janela sabe dizer — install editable
-        # deixa os dois convivendo até o próximo start.
-        return texto_native_bt_fragil(frageis)
+    # §P8 (25/08/2026): a decisão do rádio frágil saiu daqui e virou
+    # `texto_do_radio_fragil`, porque a aba Perfis passou a precisar da MESMA
+    # frase. O banner desta aba não mudou — ele só parou de ser o dono.
+    do_radio = texto_do_radio_fragil(state)
+    if do_radio is not None:
+        return do_radio
     if mode_of_state(state) != MODE_GAMEPAD:
         return None
     gamepad = state.get("gamepad_emulation")
@@ -3197,6 +3220,7 @@ __all__ = [
     "texto_da_ponte",
     "texto_do_cadeado_cego",
     "texto_do_desktop_sem_emulacao",
+    "texto_do_radio_fragil",
     "texto_native_bt_fragil",
     "toast_da_troca_de_mascara",
     "vpad_degradation_text",
