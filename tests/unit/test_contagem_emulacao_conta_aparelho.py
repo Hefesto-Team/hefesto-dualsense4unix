@@ -7,8 +7,8 @@ UM DualSense no cabo, o vpad do Hefesto de pé e a Steam aberta, ele dizia
 
     js0  Sony … DualSense Wireless Controller          uniq=<MAC dela>
     js1  Sony … DualSense … Motion Sensors             uniq=<O MESMO MAC>
-    js2  Hefesto Virtual DualSense P1                  uniq=02:fe:00:00:00:01
-    js3  Hefesto Virtual DualSense P1 Motion Sensors   uniq=<O MESMO>
+    js2  DualSense Wireless Controller (Hefesto P1)   uniq=02:fe:00:00:00:01
+    js3  DualSense … (Hefesto P1) Motion Sensors       uniq=<O MESMO>
     js4  Microsoft X-Box 360 pad 0   /devices/virtual/input/input329/js4
     js5  Microsoft X-Box 360 pad 1   /devices/virtual/input/input61/js5
 
@@ -80,13 +80,13 @@ def _mesa_de_hoje() -> list[dict[str, str]]:
         ),
         _no(
             "/dev/input/js2",
-            "Hefesto Virtual DualSense P1",
+            "DualSense Wireless Controller (Hefesto P1)",
             "02:fe:00:00:00:01",
             f"{_HID_UHID}/input/input325/js2",
         ),
         _no(
             "/dev/input/js3",
-            "Hefesto Virtual DualSense P1 Motion Sensors",
+            "DualSense Wireless Controller (Hefesto P1) Motion Sensors",
             "02:fe:00:00:00:01",
             f"{_HID_UHID}/input/input326/js3",
         ),
@@ -153,7 +153,7 @@ class TestQuemESeparadoPelaIdentidade:
         propósito da máscara. Quem decide dentro de `/devices/virtual/misc/uhid/`
         é a IDENTIDADE, e é ela que este caso trava: um nó com o MAC forjado e
         o nome de um DualSense de verdade continua sendo NOSSO. Um teste com o
-        nome "Hefesto Virtual" junto não pinaria nada — a segunda regra o
+        nome com a marca do vpad junto não pinaria nada — a segunda regra o
         salvaria e a troca do prefixo passaria batida.
         """
         nos = [
@@ -164,9 +164,18 @@ class TestQuemESeparadoPelaIdentidade:
         assert classificar_joysticks(nos) == (0, 1, 0)
 
     def test_o_vpad_uhid_e_reconhecido_pelo_nome_quando_o_uniq_falta(self) -> None:
-        """A outra regra, também isolada: `uniq` ilegível não perde o vpad."""
+        """A outra regra, também isolada: `uniq` ilegível não perde o vpad.
+
+        NOTA DATADA — 25/08/2026 (EMULACAO-UM-DONO-SO-01/E11). Este caso
+        alimentava o dublê com `Hefesto Virtual DualSense P1`, nome que o vpad
+        NÃO publica desde a BT-E-VPAD-01 (furo 1). Era este teste que escondia
+        o defeito: a segunda regra estava morta, a contagem só acertava pelo
+        `uniq`, e a suíte continuava verde. O nome vem agora do que
+        `uhid_gamepad.name` realmente devolve, e as três pontas ficam amarradas
+        em `tests/unit/test_a_marca_do_vpad_no_nome_e_a_de_hoje.py`.
+        """
         nos = [
-            _no("/dev/input/js0", "Hefesto Virtual DualSense P1", "",
+            _no("/dev/input/js0", "DualSense Wireless Controller (Hefesto P1)", "",
                 f"{_HID_UHID}/input/input325/js0")
         ]
         assert classificar_joysticks(nos) == (0, 1, 0)
@@ -196,7 +205,7 @@ class TestQuemESeparadoPelaIdentidade:
 class TestAQuartaRegra:
     """O buraco do porte: o vpad em uinput (fallback VPAD-05).
 
-    Ele não publica `uniq` e o nome não começa com "Hefesto Virtual" —
+    Ele não publica `uniq` e o nome não traz a marca `(Hefesto P` —
     na máscara dualsense o nome não contém "Hefesto" em lugar nenhum. Sem esta
     regra o classificador do `0c08e77` responderia "de outro programa (Steam
     Input)" sobre o NOSSO PRÓPRIO vpad: trocaria o silêncio por uma acusação
@@ -208,12 +217,16 @@ class TestAQuartaRegra:
         nos = [_no("/dev/input/js0", nome, "", f"{_UINPUT}/input400/js0")]
         assert classificar_joysticks(nos) == (0, 1, 0)
 
-    def test_a_mascara_xbox_contem_hefesto_mas_nao_comeca_com_hefesto_virtual(
+    def test_a_mascara_xbox_contem_hefesto_mas_nao_traz_a_marca_do_vpad(
         self,
     ) -> None:
         """Trava a premissa: é por isso que a terceira regra não bastava."""
+        from hefesto_dualsense4unix.app.actions.emulation_actions import (
+            _VPAD_MARCA_NO_NOME,
+        )
+
         assert "Hefesto" in XBOX360_NAME
-        assert not XBOX360_NAME.startswith("Hefesto Virtual")
+        assert _VPAD_MARCA_NO_NOME not in XBOX360_NAME
 
     def test_a_mascara_dualsense_nao_menciona_hefesto(self) -> None:
         assert "Hefesto" not in DUALSENSE_EDGE_NAME
@@ -233,7 +246,8 @@ class TestAQuartaRegra:
 
     def test_o_vpad_uinput_e_nosso_nos_dois_backends_juntos(self) -> None:
         nos = [
-            _no("/dev/input/js0", "Hefesto Virtual DualSense P1", "02:fe:00:00:00:01",
+            _no("/dev/input/js0", "DualSense Wireless Controller (Hefesto P1)",
+                "02:fe:00:00:00:01",
                 f"{_HID_UHID}/input/input325/js0"),
             _no("/dev/input/js1", DUALSENSE_EDGE_NAME, "", f"{_UINPUT}/input400/js1"),
         ]
