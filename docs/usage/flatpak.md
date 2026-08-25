@@ -163,7 +163,7 @@ ao autostart do ambiente gráfico.
 >
 > **Nota datada — 24/08/2026:** são **30** módulos desde a `ONDA0-Z7`, que
 > acrescentou `ambiente_na_tela.py`. Ele **não** importa a função de tradução,
-> então a proporção passou a **18 de 30** — o quadro piora pela primeira vez
+> então a proporção passou a **19 de 31** — o quadro piora pela primeira vez
 > desde 21/08. As três frases dele ainda não estão penduradas em tela nenhuma;
 > o `_()` entra junto com a fiação, na Onda 10 e na Onda 11.
 
