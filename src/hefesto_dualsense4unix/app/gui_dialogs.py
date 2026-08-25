@@ -725,11 +725,19 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
     return bool(response == Gtk.ResponseType.OK)
 
 
-def confirm_delete_profile(parent: Gtk.Window, name: str) -> bool:
+def confirm_delete_profile(
+    parent: Gtk.Window, name: str, aviso: str | None = None
+) -> bool:
     """Pede confirmação antes de remover PERMANENTEMENTE um perfil.
 
     Retorna True se o usuário confirmou a remoção, False se cancelou.
     BUG-DELETE-NO-CONFIRM-01: antes a remoção era 1-clique sem aviso.
+
+    `aviso` (PERFIS-ABRE-O-QUE-GUARDA-01/§P7) é a consequência que só quem
+    chama sabe calcular — hoje, "este é o perfil que está valendo agora". O
+    diálogo não a descobre e não a inventa: **quem sabe o fato escreve a
+    frase**, e este arquivo só a encaixa. `None` deixa o diálogo idêntico ao
+    de ontem, que é o caso da esmagadora maioria das remoções.
     """
     dialog = Gtk.MessageDialog(
         parent=parent,
@@ -740,8 +748,12 @@ def confirm_delete_profile(parent: Gtk.Window, name: str) -> bool:
         text=_("Remover o perfil '%s'?") % name,
     )
     _apply_app_theme(dialog)
+    permanente = _("Esta ação é permanente e não pode ser desfeita.")
+    # O aviso vem PRIMEIRO: ele é o que ela ainda não sabe. "Permanente e não
+    # pode ser desfeita" ela já leu em todo diálogo desta casa, e uma linha
+    # que se aprende a pular não pode ficar na frente da que muda a decisão.
     dialog.format_secondary_text(
-        _("Esta ação é permanente e não pode ser desfeita.")
+        f"{aviso}\n\n{permanente}" if aviso else permanente
     )
     dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
     dialog.add_button(_("Remover"), Gtk.ResponseType.OK)
