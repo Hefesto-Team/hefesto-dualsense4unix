@@ -271,9 +271,14 @@ class _FakeSegmentedSelector:
         self._active_id: str | None = None
         self._visible = True
         self.handlers: list[tuple[str, Any]] = []
+        self.dicas: dict[str, str] = {}
 
     def set_items(self, items: list[tuple[str, str]]) -> None:
         self._items = list(items)
+
+    def set_tooltips(self, dicas: dict[str, str]) -> None:
+        """Dica por BOTÃO — a T8 passa uma por modo (`{id: description}`)."""
+        self.dicas = dict(dicas)
 
     def get_active_id(self) -> str | None:
         return self._active_id
@@ -386,16 +391,29 @@ class _FakeTriggersMixin:
         return self._widgets.get(key)
 
 
+#: O corpo que o daemon devolve quando o byte SAIU num destino
+#: (`_destinos_por_uniq`, MESA-CHEIA-09). O dublê precisa devolver um destino
+#: de verdade: com as duas listas vazias a aba diz, corretamente, que nada
+#: aconteceu (T3) — e todo teste daqui que só quer "o pedido saiu" passaria a
+#: medir a frase da mesa vazia sem querer.
+_CORPO_APLICADO: dict[str, Any] = {"status": "ok", "aplicado_em": ["02:fe:00:00:00:33"]}
+
+
 def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
     calls: list[tuple[str, str, list[int]]] = []
 
     def fake_trigger_set(
         side: str, mode: str, params: list[int], uniq: str | None = None
-    ) -> tuple[bool, str | None]:
+    ) -> tuple[bool, str | None, dict[str, Any] | None]:
         calls.append((side, mode, list(params)))
-        return True, None
+        return True, None, _CORPO_APLICADO
 
-    monkeypatch.setattr(triggers_actions, "trigger_set_checked", fake_trigger_set)
+    # T3 (25/08/2026): a aba trocou os invólucros que estreitavam a resposta
+    # para `bool` pelos `_detalhado`, que entregam o CORPO do daemon. O dublê
+    # segue o produto — se ele continuasse dublando `trigger_set_checked`, o
+    # `monkeypatch.setattr` explodiria em atributo inexistente, que é como esta
+    # troca se anuncia em vez de passar batida.
+    monkeypatch.setattr(triggers_actions, "trigger_set_detalhado", fake_trigger_set)
 
     # R-19: o botão "Desligar" passou a usar `trigger.reset` (LIBERA a trava)
     # em vez de mandar outro `trigger.set` (que a RE-ARMAVA).
@@ -404,11 +422,13 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
 
     def fake_trigger_reset(
         side: str | None = None, uniq: str | None = None
-    ) -> tuple[bool, str | None]:
+    ) -> tuple[bool, str | None, dict[str, Any] | None]:
         resets.append((side, uniq))
-        return True, None
+        return True, None, _CORPO_APLICADO
 
-    monkeypatch.setattr(triggers_actions, "trigger_reset", fake_trigger_reset)
+    monkeypatch.setattr(
+        triggers_actions, "trigger_reset_detalhado", fake_trigger_reset
+    )
     # FEAT-DSX-COMBO-TO-SEGMENTED-01: install_triggers_tab instancia o
     # SegmentedSelector real (precisa de display). Troca pelo stub headless.
     monkeypatch.setattr(
@@ -689,8 +709,8 @@ def _espiar_ordem(
     o que se mede é a sequência que o daemon veria no socket.
     """
     ordem: list[str] = []
-    set_instalado = triggers_actions.trigger_set_checked
-    reset_instalado = triggers_actions.trigger_reset
+    set_instalado = triggers_actions.trigger_set_detalhado
+    reset_instalado = triggers_actions.trigger_reset_detalhado
 
     def espia_set(*a: Any, **kw: Any) -> Any:
         ordem.append("set")
@@ -700,8 +720,8 @@ def _espiar_ordem(
         ordem.append("reset")
         return reset_instalado(*a, **kw)
 
-    monkeypatch.setattr(triggers_actions, "trigger_set_checked", espia_set)
-    monkeypatch.setattr(triggers_actions, "trigger_reset", espia_reset)
+    monkeypatch.setattr(triggers_actions, "trigger_set_detalhado", espia_set)
+    monkeypatch.setattr(triggers_actions, "trigger_reset_detalhado", espia_reset)
     return ordem
 
 
@@ -1217,8 +1237,8 @@ def test_toast_de_validacao_explica_e_nao_culpa_o_daemon(
     motivo = _mensagem_real_do_daemon("Bow", [5, 3, 4, 4])
     monkeypatch.setattr(
         triggers_actions,
-        "trigger_set_checked",
-        lambda *_a, **_kw: (False, motivo),
+        "trigger_set_detalhado",
+        lambda *_a, **_kw: (False, motivo, None),
     )
     mixin.install_triggers_tab()
     combo = mixin._trigger_mode["left"]
@@ -1245,7 +1265,9 @@ def test_toast_de_daemon_offline_aponta_para_a_aba_sistema(
     o leigo é mandado ligar o Hefesto na aba Sistema."""
     mixin = _build_mixin(monkeypatch)
     monkeypatch.setattr(
-        triggers_actions, "trigger_set_checked", lambda *_a, **_kw: (False, None)
+        triggers_actions,
+        "trigger_set_detalhado",
+        lambda *_a, **_kw: (False, None, None),
     )
     mixin.install_triggers_tab()
     combo = mixin._trigger_mode["left"]
@@ -1269,8 +1291,8 @@ def test_toast_de_motivo_desconhecido_mostra_o_texto_cru(
     mixin = _build_mixin(monkeypatch)
     monkeypatch.setattr(
         triggers_actions,
-        "trigger_set_checked",
-        lambda *_a, **_kw: (False, "formato novo de recusa"),
+        "trigger_set_detalhado",
+        lambda *_a, **_kw: (False, "formato novo de recusa", None),
     )
     mixin.install_triggers_tab()
     combo = mixin._trigger_mode["left"]
