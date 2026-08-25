@@ -293,12 +293,26 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     # sete tooltips que voltaram ao português numa sessão `LANG=en`. O momento
     # certo de ligar o `_()` é junto com a fiação, no mesmo passo do
     # `i18n_extract.sh` + `i18n_compile.sh`.
-    assert total == 30, (
-        f"`app/actions/` tem {total} módulos, não 30. A contagem citada em "
+    #
+    # I12 da INÍCIO NÃO MENTE-01 (25/08/2026): 30 viraram 31 com o
+    # `contrato_da_mascara.py`, e 18 viraram 19 — os dois sobem JUNTOS, que é o
+    # sinal de que nada mudou de natureza.
+    #
+    # CORREÇÃO DE FATO, e ela é a lição desta linha: a primeira versão desta
+    # nota afirmou que o módulo "não põe uma frase em tela nenhuma, logo não tem
+    # o que traduzir". **A régua derrubou a afirmação na hora** — o módulo tem
+    # prosa em português dentro das constantes (a explicação de O QUE FECHA o
+    # contrato, escrita para quem lê o código). Não é texto de tela, mas a régua
+    # deste teste conta português fora de `_()`, e conta certo: a diferença
+    # entre "texto que a pessoa lê na janela" e "texto que o próximo dev lê no
+    # fonte" não está no dado, e afirmar que está seria pintar o número.
+    # O 19 é honesto; a proporção 19 de 31 é o que a árvore tem.
+    assert total == 31, (
+        f"`app/actions/` tem {total} módulos, não 31. A contagem citada em "
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
         "`docs/usage/troubleshooting.md` precisa mudar junto."
     )
-    assert len(fora) == 18, (
+    assert len(fora) == 19, (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
         f"tradução, não 18: {', '.join(sorted(fora))}. Se o número CAIU, é "
         "trabalho bom — atualize as três páginas que o citam. Se chegou a "

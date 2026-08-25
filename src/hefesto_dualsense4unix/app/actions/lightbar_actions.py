@@ -592,7 +592,14 @@ class LightbarActionsMixin(WidgetAccessMixin):
         ``_refresh_lightbar_from_draft``, que roda ao ENTRAR na aba
         (``app._REFRESH_POR_ABA``), ao trocar de alvo, ao trocar de perfil e
         na transição do co-op. A chamada síncrona ao ``daemon.state_full``
-        segue o precedente de ``daemon_actions._query_gamepad_state``.
+        segue o precedente de
+        ``daemon_actions._refresh_window_detect_diag``: leitura read-only do
+        ``state_full``, feita de dentro do refresh da aba, com o corpo inteiro
+        num ``try`` — porque linha informativa não derruba aba
+        (DIAGNÓSTICO-NAO-DERRUBA-A-ABA-01). O precedente que esta linha citava
+        antes foi apagado pela T-12 em 25/08/2026, por ser código sem chamador;
+        o nome dele não se repete aqui de propósito — há portão que reprova
+        símbolo morto ressuscitado em prosa.
         """
         from hefesto_dualsense4unix.app.mesa import controles_conectados
         from hefesto_dualsense4unix.app.widgets.controller_card import (

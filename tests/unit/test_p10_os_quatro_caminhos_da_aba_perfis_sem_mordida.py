@@ -27,6 +27,8 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import skip_sem_gi_real
+
 
 def _instalar_gi_falso() -> None:
     """GTK de mentira: a suíte não pode criar janela nem nó de uinput."""
@@ -69,6 +71,13 @@ def _instalar_gi_falso() -> None:
     sys.modules["gi.repository.GLib"] = glib_mod
     sys.modules["gi.repository.GObject"] = gobject_mod
 
+
+# GUARDA-GI-REAL-01 (posto na integração de 25/08/2026): este arquivo planta um
+# `gi` FALSO de propósito. Sem guarda declarada ele roda verde contra widgets de
+# mentira no `lint-test` e NUNCA entra no `gtk-real`, que seleciona os arquivos
+# de interface por `grep -rlE 'exigir_gi_real|skip_sem_gi_real'`. O marcador é o
+# que o portão aceita por AST — menção em comentário não vale, de propósito.
+pytestmark = skip_sem_gi_real
 
 _instalar_gi_falso()
 

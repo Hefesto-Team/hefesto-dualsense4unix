@@ -38,6 +38,9 @@ from typing import Any
 import pytest
 
 
+from tests.conftest import skip_sem_gi_real
+
+
 def _instalar_gi_falso() -> None:
     """GTK de mentira: nada aqui desenha, e a suíte não pode criar janela."""
     existente = sys.modules.get("gi")
@@ -79,6 +82,15 @@ def _instalar_gi_falso() -> None:
     sys.modules["gi.repository.GLib"] = glib_mod
     sys.modules["gi.repository.GObject"] = gobject_mod
 
+
+# GUARDA-GI-REAL-01 (posto na integração de 25/08/2026): este arquivo planta um
+# `gi` FALSO para medir o handler sem GTK de verdade. Sem uma guarda declarada
+# ele rodaria verde contra widgets de mentira no job `lint-test` e NUNCA entraria
+# no `gtk-real`, que seleciona os arquivos de interface por
+# `grep -rlE 'exigir_gi_real|skip_sem_gi_real'`. O marcador abaixo é o que o
+# portão `test_guarda_gi_falso_precisa_de_exigir_gi_real` aceita por AST —
+# menção em comentário não vale, e é de propósito.
+pytestmark = skip_sem_gi_real
 
 _instalar_gi_falso()
 

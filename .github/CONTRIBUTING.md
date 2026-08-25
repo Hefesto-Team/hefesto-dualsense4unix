@@ -195,7 +195,7 @@ desde 08/08, com o `relancar.py` da `RELANCAR-01`; **20** desde 16/08, com o
 `app/actions/config/` e o censo passou a contar subpasta — o pacote **importa**
 a função de tradução e leva a proporção a **17 de 29**; **30** desde 24/08, com
 o `ambiente_na_tela.py` da `ONDA0-Z7`, que **não** importa e leva a proporção a
-**18 de 30**): conta-se quem importa `_` de
+**19 de 31**): conta-se quem importa `_` de
 `hefesto_dualsense4unix.utils.i18n` (ou `gettext`) e quem tem literal com
 caractere acentuado. Importam `footer_actions.py`, `lightbar_actions.py`,
 `status_actions.py` e o pacote `config/`. O portão que guarda esta decisão
