@@ -1,0 +1,47 @@
+{
+  "_comentario": [
+    "O payload MEDIDO na bancada em 23/08/2026, com o daemon vivo e ZERO",
+    "DualSense no sistema. Régua declarada: um socket cru contra o socket do",
+    "daemon, chamando daemon.state_full sem passar por nenhuma camada da GUI.",
+    "É o §2.1 da sprint INÍCIO NÃO MENTE-01.",
+    "",
+    "Ele existe porque a mesma tela diz, no mesmo instante, TRÊS coisas",
+    "diferentes sobre a mesma mesa: o topo diz conectado com 75% de bateria, a",
+    "lista diz que a única entrada está desconectada, e o controller.list",
+    "concorda com a lista. Nenhum teste desta casa reprovava essa contradição —",
+    "ela sobreviveu até ser medida à mão.",
+    "",
+    "Nada aqui é endereço: o payload real não trazia uniq nenhum com a mesa",
+    "vazia, e nenhum campo foi acrescentado."
+  ],
+  "connected": true,
+  "transport": "bt",
+  "battery_pct": 75,
+  "controllers": [
+    {
+      "index": 0,
+      "connected": false,
+      "transport": null,
+      "player": null,
+      "battery_pct": null,
+      "is_primary": false
+    }
+  ],
+  "paused": false,
+  "native_mode": false,
+  "gamepad_emulation": {
+    "enabled": true,
+    "flavor": "dualsense",
+    "backend": "uhid",
+    "mascara_divergente": null,
+    "mascara_divergencias": []
+  },
+  "external": null,
+  "active_profile": null,
+  "autoswitch_locked": false,
+  "primary_grab_state": "pending",
+  "window_detect_backend": "xlib",
+  "window_detect_seeing": false,
+  "window_detect_reason": "sem_conexao_x",
+  "window_detect_healthy": true
+}
