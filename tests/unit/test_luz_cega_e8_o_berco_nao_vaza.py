@@ -235,3 +235,66 @@ class TestOPortaoDaArvoreVersionada:
             json.dumps({"order": [{"addr": "aabbcc000001"}]}), encoding="utf-8"
         )
         assert check_faixa_sintetica.achados_na_arvore(tmp_path) == []
+
+
+class TestAReguaEnxergaBackup:
+    """Todo backup carrega sufixo próprio, e era essa a classe que escapava.
+
+    PONTO CEGO MEDIDO em 25/08/2026, e a forma como ele apareceu é o próprio
+    argumento: quem coordenava fez um backup do `controllers.json` VIVO dela
+    antes de limpar os quatro endereços de fixture, salvou-o ao lado do
+    original como `controllers.json.antes-de-tirar-fixtures-20260825` — e a
+    régua devolveu VERDE sobre um arquivo com os quatro endereços dentro.
+
+    `Path.suffix` devolve só o ÚLTIMO sufixo. `.bak`, `.old`, `.orig`,
+    `.2026-08-25`, `.antes-de-X`: **backup era exatamente o que esta régua não
+    conseguia ver.** É a pior forma de ponto cego — some justamente onde alguém
+    guardou uma cópia do estado que a régua existe para vigiar, e a cópia é o
+    que sobrevive a uma limpeza.
+
+    A MORDIDA: troque `_vale_varrer(caminho)` por
+    `caminho.suffix.lower() in _EXTENSOES_VARRIDAS` em `achados()` e
+    `test_o_backup_do_controllers_nao_escapa` reprova.
+    """
+
+    def test_o_backup_do_controllers_nao_escapa(self, tmp_path: Path) -> None:
+        alvo = tmp_path / "controllers.json.antes-de-tirar-fixtures-20260825"
+        alvo.write_text(
+            json.dumps({"order": [{"addr": "aabbcc000001", "rank": 1}]}),
+            encoding="utf-8",
+        )
+        achados = check_faixa_sintetica.achados(tmp_path)
+        assert achados, (
+            "a régua devolveu VERDE sobre um BACKUP do controllers.json com "
+            "endereço de fixture dentro. Todo backup tem sufixo próprio, e "
+            "`Path.suffix` só devolve o último — era a classe inteira dos "
+            "backups escapando da vigilância."
+        )
+        assert "aabbcc000001" in achados[0]
+
+    @pytest.mark.parametrize(
+        ("nome", "esperado", "porque"),
+        [
+            ("controllers.json", True, "o caso de sempre"),
+            ("controllers.json.bak", True, "o sufixo de backup mais comum"),
+            ("session.json.2026-08-25", True, "backup datado"),
+            ("maquina.json.orig", True, "sufixo de conflito de merge"),
+            ("notas.txt.old", True, "texto com sufixo de backup"),
+            ("semponto", True, "arquivo sem sufixo continua varrido"),
+            ("icone.png", False, "binário conhecido continua de fora"),
+            ("dump.sqlite", False, "sufixo desconhecido e sozinho fica de fora"),
+        ],
+    )
+    def test_a_regua_escolhe_pelo_conjunto_de_sufixos(
+        self, nome: str, esperado: bool, porque: str
+    ) -> None:
+        assert check_faixa_sintetica._vale_varrer(Path(nome)) is esperado, porque
+
+    def test_a_regua_continua_recusando_binario(self, tmp_path: Path) -> None:
+        """A cura não pode ter aberto a porta para tudo.
+
+        Sem esta guarda passaria um "conserto" que varresse todo arquivo — e a
+        régua começaria a ler PNG e a acusar coincidência de bytes.
+        """
+        (tmp_path / "captura.png").write_bytes(b"\x89PNG\r\n\x1a\naabbcc000001")
+        assert check_faixa_sintetica.achados(tmp_path) == []

@@ -67,6 +67,30 @@ _PADROES = {faixa: _padrao_para(faixa) for faixa in FAIXAS_SINTETICAS}
 _EXTENSOES_VARRIDAS = {".json", ".txt", ".log", ".conf", ".ini", ""}
 
 
+def _vale_varrer(caminho: Path) -> bool:
+    """Basta UM sufixo conhecido, em qualquer posição, e não só o último.
+
+    PONTO CEGO MEDIDO — 25/08/2026, e quem o achou foi quem coordena, ao ver a
+    própria régua ficar VERDE sobre um arquivo que ele mesmo acabara de criar:
+    ``controllers.json.antes-de-tirar-fixtures-20260825``, com quatro endereços
+    de fixture dentro, na config viva dela.
+
+    ``Path.suffix`` devolve só o ÚLTIMO sufixo. Todo backup carrega um sufixo
+    próprio — ``.bak``, ``.old``, ``.orig``, ``.2026-08-25``, ``.antes-de-X`` —,
+    e por isso **backup era exatamente a classe de arquivo que esta régua não
+    enxergava**. É a pior forma de ponto cego: some justamente onde alguém
+    guardou uma cópia do estado que a régua existe para vigiar.
+
+    ``Path.suffixes`` parte o nome em todos os pontos, então
+    ``controllers.json.antes-de-X`` traz ``['.json', '.antes-de-X']`` e o
+    ``.json`` basta. Um arquivo sem ponto nenhum continua varrido (o ``""`` da
+    lista), e binário sem sufixo conhecido continua de fora.
+    """
+    if not caminho.suffixes:
+        return "" in _EXTENSOES_VARRIDAS
+    return any(s.lower() in _EXTENSOES_VARRIDAS for s in caminho.suffixes)
+
+
 def _config_dir() -> Path:
     from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
@@ -81,7 +105,7 @@ def achados(diretorio: Path) -> list[str]:
     for caminho in sorted(diretorio.rglob("*")):
         if not caminho.is_file():
             continue
-        if caminho.suffix.lower() not in _EXTENSOES_VARRIDAS:
+        if not _vale_varrer(caminho):
             continue
         try:
             texto = caminho.read_text(encoding="utf-8", errors="ignore")
