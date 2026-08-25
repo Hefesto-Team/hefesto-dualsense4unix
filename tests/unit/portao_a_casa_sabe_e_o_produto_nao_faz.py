@@ -810,20 +810,13 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # caducas e ver o portão apontar outros quatro símbolos. Cada um destes é
     # a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` dentro da própria cura que a
     # combatia, e nenhum é destas frentes: quem liga cada um está nomeado.
-    "app/textos_de_aplicacao.py::frase_do_desfecho": (
-        "MEDIDO em 25/08/2026: está no `__all__` (:375) e NADA em produção a "
-        "chama. É a entrega central da ONDA0-Z1 (`12af679`, 24/08) — a frase "
-        "que passa a obedecer o CORPO do daemon em vez da heurística da "
-        "janela. A função existe, foi testada, e a tela continua montando a "
-        "frase do jeito antigo. "
-        "ONDE O CAMINHO SE PERDE: nenhum módulo de `app/` a importa. "
-        "O QUE A FECHA: o rodapé passar a chamá-la no lugar da montagem "
-        "atual. NÃO fiz porque `app/app.py` e `app/actions/footer_actions.py` "
-        "são posse de outras frentes nesta madrugada (A2 e A3), e sobrescrita "
-        "silenciosa entre agentes é o defeito que o isolamento existe para "
-        "matar. DONO: a próxima leva, e a mordida é 'a frase muda quando o "
-        "corpo do daemon muda'."
-    ),
+    #
+    # `app/textos_de_aplicacao.py::frase_do_desfecho` SAIU daqui em 25/08/2026,
+    # na mesma edição que a ligou: `app/actions/triggers_actions.py` a importa
+    # e o `_toast_trigger` a chama (GATILHOS-APLICADO-COM-PROVA/T3). A entrada
+    # apontava o rodapé como quem a fecharia; quem fechou foi a aba Gatilhos, e
+    # tanto faz — a promessa era ter caminho de produção. Lápide que sobrevive
+    # à própria cura é o defeito que este portão existe para matar.
     "app/fala_do_mapa.py::formata_pt_br": (
         "MEDIDO em 25/08/2026: irmã do `Numero` abaixo, mesma leva. Nasceu na "
         "ONDA0-Z6 (`26e0ccc`, 24/08) — 'a medição chega à tela por portão, "
@@ -1067,30 +1060,34 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "é como uma delas apodrece sem ninguém ver."
     ),
     # --- ELO-MUDO-01 / P1 (23/08/2026): a ponte já entrega, a aba ainda não pede
-    # As sete entradas abaixo nasceram JUNTAS e por decisão da leva: o conserto
-    # do lado da ponte é aditivo de propósito, porque os chamadores moram em
+    # As entradas desta leva nasceram JUNTAS e por decisão dela: o conserto do
+    # lado da ponte é aditivo de propósito, porque os chamadores moram em
     # arquivos que outras frentes estavam editando no mesmo dia. Cada uma diz
-    # qual linha a fecha — e as sete se fecham em quatro edições.
-    "app/ipc_bridge.py::trigger_set_detalhado": (
-        "MEDIDO na bancada viva em 23/08/2026: com a mesa VAZIA o daemon "
-        "respondeu `{status: ok, aplicado_em: [], guardado_em: []}` — zero "
-        "destino, nenhum byte no fio — e a aba Gatilhos disse `SimpleRigid "
-        "aplicado`. O corpo morria em `app/ipc_bridge.py::_call_checked`, cuja "
-        "linha de RPC nem atribuía o resultado a um nome. "
-        "O QUE A FECHA: `app/actions/triggers_actions.py:593` (e :609/:613/:618) "
-        "trocar `trigger_set_checked` por esta, e `_toast_trigger:658` decidir "
-        "`aplicado` x `guardado` pelas duas listas em vez de re-deduzi-las do "
-        "estado da janela — a heurística de lá cobre 2 das 3 razões do daemon e "
-        "não cobre a rota clássica de mesa vazia, que é o caso medido."
-    ),
-    "app/ipc_bridge.py::trigger_reset_detalhado": (
-        "MEDIDO em 23/08/2026: espelho do `trigger_set_detalhado`, mesmo corpo "
-        "(`aplicado_em`/`guardado_em`) e mesma perda. O `trigger.reset` é o "
-        "botão `Desligar` da aba Gatilhos, que hoje anuncia sucesso sem saber "
-        "onde pegou. "
-        "O QUE A FECHA: `app/actions/triggers_actions.py:655` — hoje "
-        "`ok, _motivo = trigger_reset(...)` seguido de `_toast_trigger(side, "
-        "'Off', ok)`. Sai da mesma edição do irmão."
+    # qual linha a fecha.
+    #
+    # `trigger_set_detalhado` e `trigger_reset_detalhado` SAÍRAM daqui em
+    # 25/08/2026, na mesma edição que os ligou
+    # (GATILHOS-APLICADO-COM-PROVA/T3): `_apply_trigger`, `_send_trigger_named`
+    # e `_reset_trigger` de `app/actions/triggers_actions.py` chamam os dois, e
+    # o `_toast_trigger` decide pelo CORPO do daemon, via `frase_do_desfecho`.
+    # Restam as QUATRO abaixo — Lightbar (duas), Rumble e o mic da mesa cheia.
+    # E a troca criou UMA entrada nova, logo aqui: o invólucro estreito que
+    # ficou sem chamador. Era previsível e está declarado em vez de escondido.
+    "app/ipc_bridge.py::trigger_reset": (
+        "MEDIDO em 25/08/2026, e é EFEITO da própria cura: o único chamador de "
+        "produção era `app/actions/triggers_actions.py:671`, o botão `Desligar` "
+        "da aba Gatilhos, que a T3 trocou por `trigger_reset_detalhado`. Ficou "
+        "o invólucro que descarta o corpo, com zero chamadores — a mesma forma "
+        "do par `apply_draft`/`apply_draft_detalhado` que já mora nesta lista. "
+        "O IRMÃO NÃO CAIU JUNTO, e a diferença importa: `trigger_set_checked` "
+        "continua com caminho porque `trigger_set` o chama dentro do próprio "
+        "`ipc_bridge.py` — a cadeia dele é que teria de ser desfeita inteira. "
+        "O QUE A FECHA: apagar `trigger_reset` e deixar só o `_detalhado`, com "
+        "o docstring de R-19/ABAS-06/ABAS-05 mudando de casa (é lá que está a "
+        "medição de por que `trigger.reset` não é `trigger.set` com `Off`). "
+        "NÃO fiz porque `app/ipc_bridge.py` é posse da frente B8 nesta "
+        "madrugada, e porque é símbolo público no `__all__` (:1319) — poda de "
+        "símbolo público é dela. DONO: a próxima leva."
     ),
     "app/ipc_bridge.py::led_set_detalhado": (
         "MEDIDO em 23/08/2026: o `led.set` publica `aplicado_em`/`guardado_em` "

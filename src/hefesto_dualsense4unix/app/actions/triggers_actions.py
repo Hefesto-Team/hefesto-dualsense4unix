@@ -23,13 +23,11 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import (
     preset_to_positional_params,
 )
 from hefesto_dualsense4unix.app.alvo_de_edicao import alvo_de_edicao
-from hefesto_dualsense4unix.app.ipc_bridge import trigger_reset, trigger_set_checked
-from hefesto_dualsense4unix.app.textos_de_aplicacao import (
-    alvo_fora_da_mesa,
-    guardado_ate_o_alvo_voltar,
-    guardado_ate_o_nativo_sair,
-    modo_nativo_manda_no_output,
+from hefesto_dualsense4unix.app.ipc_bridge import (
+    trigger_reset_detalhado,
+    trigger_set_detalhado,
 )
+from hefesto_dualsense4unix.app.textos_de_aplicacao import frase_do_desfecho
 from hefesto_dualsense4unix.app.widgets import SegmentedSelector
 from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
@@ -113,11 +111,23 @@ class TriggersActionsMixin(WidgetAccessMixin):
             "right": self.on_trigger_right_mode_changed,
         }
         mode_items = [(spec.name, spec.label) for spec in PRESETS]
+        # T8 (25/08/2026): a descrição de CADA modo vira dica do botão dele.
+        # Até aqui a aba mostrava a frase de UM modo por vez — o selecionado
+        # (`_rebuild_params` -> `trigger_<side>_desc`) — e ler a de outro
+        # custava clicá-lo, o que APLICA no controle 300 ms depois
+        # (`_schedule_live_preview`). São 38 botões e uma frase visível.
+        #
+        # A fonte é o `PRESETS`, nunca uma cópia: uma cópia seria um segundo
+        # dono dos rótulos, que é como as duas versões divergem. E o texto NÃO
+        # é novo — é a mesma frase que a aba já mostra para o modo selecionado,
+        # que é o que mantém isto na classe cosmética pré-aprovada.
+        dicas_dos_modos = {spec.name: spec.description for spec in PRESETS}
         for side in ("left", "right"):
             # FEAT-DSX-COMBO-TO-SEGMENTED-01: botões segmentados no lugar do combo.
             # wrap=True para os 19 modos quebrarem linha sem estourar a coluna.
             sel = SegmentedSelector(wrap=True)
             sel.set_items(mode_items)
+            sel.set_tooltips(dicas_dos_modos)
             sel.connect("changed", mode_handlers[side])
             slot = self._get(f"trigger_{side}_mode_slot")
             if slot is not None:
@@ -599,11 +609,15 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if isinstance(args, dict):
             # Custom e MultiPosition_* usam dict; IPC espera posicional
             # no formato aceito por build_from_name nomeado.
-            ok, motivo = self._send_trigger_named(side, preset_id, args, uniq=uniq)
+            ok, motivo, corpo = self._send_trigger_named(side, preset_id, args, uniq=uniq)
         else:
-            ok, motivo = trigger_set_checked(side, preset_id, args, uniq=uniq)
+            # ELO-MUDO-01/T3: `trigger_set_detalhado` no lugar do
+            # `trigger_set_checked`. O que muda é o CORPO — `aplicado_em` e
+            # `guardado_em`, que o daemon publica desde a MESA-CHEIA-09 e que
+            # o invólucro estreito jogava fora. Ver `_toast_trigger`.
+            ok, motivo, corpo = trigger_set_detalhado(side, preset_id, args, uniq=uniq)
 
-        self._toast_trigger(side, preset_id, ok, motivo=motivo, spec=spec)
+        self._toast_trigger(side, preset_id, ok, motivo=motivo, spec=spec, corpo=corpo)
 
     def _send_trigger_named(
         self,
@@ -611,23 +625,31 @@ class TriggersActionsMixin(WidgetAccessMixin):
         preset_id: str,
         kwargs: dict[str, object],
         uniq: str | None = None,
-    ) -> tuple[bool, str | None]:
-        """Formato alternativo pra presets com kwargs (custom, multi_pos)."""
+    ) -> tuple[bool, str | None, dict[str, Any] | None]:
+        """Formato alternativo pra presets com kwargs (custom, multi_pos).
+
+        ELO-MUDO-01/T3: devolve TRÊS coisas, e a terceira é o corpo do daemon.
+        Era `(ok, motivo)`, e por esta porta passam os dois modos por posição —
+        os mesmos que os perfis ``aventura`` e ``corrida`` usam. Deixá-la
+        estreita faria a rota mais usada da aba continuar sem resposta do
+        daemon enquanto a outra já a tinha, que é como uma cura volta pela
+        metade.
+        """
         if preset_id == "Custom":
             mode_val = int(kwargs.get("mode", 0) or 0)  # type: ignore[call-overload]
             forces_obj = kwargs.get("forces", ())
             forces = list(forces_obj) if isinstance(forces_obj, (list, tuple)) else []
-            return trigger_set_checked(side, preset_id, [mode_val, *forces], uniq=uniq)
+            return trigger_set_detalhado(side, preset_id, [mode_val, *forces], uniq=uniq)
         if preset_id == "MultiPositionFeedback":
             strengths_obj = kwargs.get("strengths", [])
             strengths = list(strengths_obj) if isinstance(strengths_obj, (list, tuple)) else []
-            return trigger_set_checked(side, preset_id, strengths, uniq=uniq)
+            return trigger_set_detalhado(side, preset_id, strengths, uniq=uniq)
         if preset_id == "MultiPositionVibration":
             freq = int(kwargs.get("frequency", 0) or 0)  # type: ignore[call-overload]
             strengths_obj = kwargs.get("strengths", [])
             strengths = list(strengths_obj) if isinstance(strengths_obj, (list, tuple)) else []
-            return trigger_set_checked(side, preset_id, [freq, *strengths], uniq=uniq)
-        return False, f"preset sem formato nomeado conhecido: {preset_id}"
+            return trigger_set_detalhado(side, preset_id, [freq, *strengths], uniq=uniq)
+        return False, f"preset sem formato nomeado conhecido: {preset_id}", None
 
     def _reset_trigger(self, side: str) -> None:
         """Botão "Desligar" — LIBERA a trava, não a re-arma (R-19).
@@ -668,8 +690,12 @@ class TriggersActionsMixin(WidgetAccessMixin):
             # Z2-2: recusa em vez de IPC às cegas.
             self._toast_trigger(side, "Off", False, motivo=estado_alvo.recusa())
             return
-        ok, _motivo = trigger_reset(side, uniq=estado_alvo.uniq)
-        self._toast_trigger(side, "Off", ok)
+        # ELO-MUDO-01/T3: espelho do "Aplicar" — o "Desligar" também anunciava
+        # sucesso sem saber ONDE pegou. O `motivo`, que aqui era descartado num
+        # `_`, passa a chegar à tela: o daemon vivo que recusa por parâmetro
+        # deixa de ser lido como "o Hefesto pode estar desligado" (HARM-19).
+        ok, motivo, corpo = trigger_reset_detalhado(side, uniq=estado_alvo.uniq)
+        self._toast_trigger(side, "Off", ok, motivo=motivo, corpo=corpo)
 
     def _toast_trigger(
         self,
@@ -679,12 +705,26 @@ class TriggersActionsMixin(WidgetAccessMixin):
         *,
         motivo: str | None = None,
         spec: Any = None,
+        corpo: dict[str, Any] | None = None,
     ) -> None:
         """Mostra o resultado do apply na statusbar.
 
         HARM-19: `motivo` preenchido = o daemon está VIVO e recusou o pedido
         (ex.: Fim <= Início). Culpar o daemon aí ("offline?") mandava a usuária
         caçar o problema no lugar errado — o problema está nos sliders dela.
+
+        ELO-MUDO-01/T3 (25/08/2026): `corpo` é a RESPOSTA do daemon, e com ela
+        a escolha entre aplicado, adiado e nada-aconteceu deixa de ser deduzida
+        do estado da janela. A heurística de antes cobria duas das três razões
+        que o daemon conhece e **não** cobria a rota clássica de mesa vazia —
+        medido na bancada viva em 23/08: o daemon respondeu
+        ``{status: ok, aplicado_em: [], guardado_em: []}`` e esta barra disse
+        *"SimpleRigid aplicado"*.
+
+        As três razões da janela não sumiram: com `corpo` presente elas viram
+        o PORQUÊ do guardado; com `corpo` ausente (daemon mudo, sem resposta a
+        ler) elas voltam a decidir, palavra por palavra como antes. Quem faz
+        essa escolha é `frase_do_desfecho`, dona única do vocabulário.
         """
         bar: Any = self._get("status_bar")
         if bar is None:
@@ -704,17 +744,19 @@ class TriggersActionsMixin(WidgetAccessMixin):
             #
             # Conserto 1.3: e o MODO NATIVO é a outra — o backend muta toda
             # escrita (o jogo é o dono do hidraw), guarda o desejado e o
-            # re-escreve no desmute. A ordem espelha a da aba Lightbar com o
-            # co-op: o dono de AGORA vem primeiro, porque ele vale mesmo com o
-            # controle na mesa.
-            assunto = f"{lado}: {preset_id}"
-            fora = alvo_fora_da_mesa(self)
-            if modo_nativo_manda_no_output(self):
-                msg = guardado_ate_o_nativo_sair(assunto)
-            elif fora:
-                msg = guardado_ate_o_alvo_voltar(assunto, fora)
-            else:
-                msg = f"{assunto} aplicado"
+            # re-escreve no desmute.
+            #
+            # ELO-MUDO-01/T3: as duas continuam valendo — como EXPLICAÇÃO,
+            # dentro de `frase_do_desfecho`, e não mais como a DECISÃO. O
+            # `coop_aplica` fica no padrão `False` de propósito: a camada do
+            # co-op tem vocabulário de um campo só (`player_leds`) e nunca
+            # governou gatilho.
+            #
+            # O que a aba NÃO passa a dizer: "confirmado no aparelho".
+            # `gatilho.leitura` é `não/não` nos dois transportes no mapa de
+            # canais — não existe leitura de estado de gatilho. Isto aqui
+            # entrega "o daemon escreveu", nunca "o controle obedeceu".
+            msg = frase_do_desfecho(f"{lado}: {preset_id}", corpo, self)
         elif motivo:
             msg = (
                 f"{lado}: {preset_id} não aplicado — "
