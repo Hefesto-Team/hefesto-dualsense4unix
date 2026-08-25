@@ -194,6 +194,30 @@ def mascarar(mac: str) -> str:
     return ":".join(partes)
 
 
+def endereco_normalizado(valor: object) -> str:
+    """O endereço numa grafia SÓ — os hexa, minúsculos. ``""`` quando não há.
+
+    As duas metades desta casa escrevem o mesmo MAC de jeitos diferentes, e a
+    diferença está MEDIDA na bancada em 25/08/2026:
+
+    * o sysfs devolve ``HID_UNIQ=a0:fa:9c:…`` — COM os dois-pontos (lido no
+      ``uevent`` do DualSense que está no cabo desta máquina), e é daí que sai
+      o ``Instancia.uniq`` deste módulo;
+    * o backend chaveia por ``core/sysfs_leds.norm_mac``, que os TIRA:
+      ``nos_hidraw_por_uniq`` → ``_key_to_uniq`` → ``a0fa9c…``. É essa grafia
+      que chega ao payload de IPC e, por ele, à tela.
+
+    Comparar as duas sem normalizar não casa NUNCA — e foi assim que o carimbo
+    do nascimento ficou de 22/08 a 25/08 declarado "entregue" e sem carimbar
+    nada em produção: o filtro de "só os controles NOSSOS" descartava as seis
+    instâncias, e o tique saía com zero.
+
+    A regra é a mesma do ``norm_mac``, escrita aqui porque este módulo roda
+    como CLI solta (``python -m …sinal_da_barra``) e não importa ``core/``.
+    """
+    return "".join(ch for ch in str(valor or "").lower() if ch in "0123456789abcdef")
+
+
 @dataclass(frozen=True)
 class Instancia:
     """Uma conexão viva, como o sysfs a descreve — sem tocar o aparelho.
@@ -784,10 +808,18 @@ class CartorioDoNascimento:
 
         Um controle só tem UMA conexão viva por vez, então não há ambiguidade —
         e as conexões mortas já foram esquecidas por :meth:`observar`.
+
+        Os DOIS lados passam por :func:`endereco_normalizado`, e não é zelo: o
+        carimbo é guardado com o endereço do sysfs (``aa:bb:cc:…``) e quem
+        pergunta é a tela, que só conhece a grafia do backend (``aabbcc…``).
+        Comparar as duas cruas devolveria ``None`` em todo card — que a tela lê
+        como *"não carimbei"*, e é a mentira mais cara deste módulo.
         """
-        alvo = str(uniq).lower()
+        alvo = endereco_normalizado(uniq)
+        if not alvo:
+            return None
         for carimbo in self._carimbos.values():
-            if carimbo.uniq.lower() == alvo:
+            if endereco_normalizado(carimbo.uniq) == alvo:
                 return carimbo
         return None
 

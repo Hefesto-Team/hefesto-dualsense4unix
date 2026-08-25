@@ -34,6 +34,7 @@ from hefesto_dualsense4unix.integrations.sinal_da_barra import (
     CartorioDoNascimento,
     Instancia,
     Leitura,
+    endereco_normalizado,
     instancias_dualsense,
     ler_a_mesa,
     mascarar,
@@ -924,18 +925,27 @@ def _nos_segurados_agora(daemon: DaemonProtocol) -> frozenset[str]:
 
 
 def _uniqs_que_o_backend_segura(daemon: DaemonProtocol) -> frozenset[str]:
-    """Os endereços dos controles que o produto tem ABERTOS agora, minúsculos.
+    """Os endereços dos controles que o produto tem ABERTOS agora, NORMALIZADOS.
 
     É o mesmo `nos_hidraw_por_uniq` que o vigia de escritor cru usa — nenhum
     segundo vigia, nenhuma segunda verdade sobre quem está na mesa. Vazio
     quando o controller é enxuto (dublês da suíte) ou nada está aberto, e aí o
     carimbo é no-op TOTAL.
+
+    A normalização é a cura de 25/08/2026, e ela vale por si: o backend chaveia
+    sem os dois-pontos (`_key_to_uniq` → `norm_mac` → `a0fa9c…`) e o sysfs
+    devolve com (`HID_UNIQ=a0:fa:9c:…`, MEDIDO no `uevent` do DualSense do cabo
+    desta máquina). Enquanto os dois lados eram comparados crus, o filtro logo
+    abaixo descartava TODAS as instâncias e o tique carimbava zero — a E1 da
+    SINAL-NO-NASCIMENTO-01 estava declarada entregue e não rodava em produção.
     """
     mapear = getattr(daemon.controller, "nos_hidraw_por_uniq", None)
     if not callable(mapear):
         return frozenset()
     try:
-        return frozenset(str(u).lower() for u in (mapear() or {}))
+        return frozenset(
+            chave for chave in (endereco_normalizado(u) for u in (mapear() or {})) if chave
+        )
     except Exception as exc:
         logger.debug("carimbo_do_nascimento_mapa_falhou", err=str(exc))
         return frozenset()
@@ -1011,7 +1021,7 @@ async def carimbar_o_nascimento(
     # DualSense da máquina, e carimbar um que o produto não segura seria falar
     # de um controle que a tela nem lista — além de fazer a suíte de testes,
     # que roda na mesa dela com quatro controles ligados, pagar `journalctl`.
-    vivas = [alvo for alvo in vivas if alvo.uniq.lower() in nossos]
+    vivas = [alvo for alvo in vivas if endereco_normalizado(alvo.uniq) in nossos]
     agora = time.monotonic() if agora is None else float(agora)
     try:
         faltam = cartorio.observar(vivas, agora)
