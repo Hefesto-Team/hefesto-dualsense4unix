@@ -69,7 +69,7 @@ from gi.repository import Gdk, Gtk
 
 from hefesto_dualsense4unix.app.constants import GUI_DIR
 from hefesto_dualsense4unix.app.theme import (
-    escala_fonte,
+    ESCALA_PADRAO,
     escalar_css,
     escalar_nome_da_fonte,
 )
@@ -193,7 +193,19 @@ def _tema_na_escala_que_sai() -> Iterator[None]:
     `gtk-font-name` que encontrar, e uma segunda chamada na mesma sessão do
     pytest mediria uma fonte maior. Ver a armadilha 1 do docstring.
     """
-    delta = escala_fonte()
+
+    # A ESCALA É FIXADA — 25/08/2026. Esta fixture chamava `escala_fonte()`,
+    # que lê o `gui_preferences.json` de QUEM RODA (nesta máquina, 6), e mexe
+    # em `Gtk.Settings`, que é singleton do PROCESSO. Dois efeitos, os dois
+    # medidos: o teste muda de veredito conforme a escala de quem roda, e a
+    # escala vaza para os arquivos que rodam depois na mesma sessão do pytest.
+    # Foi assim que dois testes de `test_layout_orcamento_altura.py`
+    # reprovavam em lote e passavam sozinhos.
+    #
+    # A régua declarada é a `ESCALA_PADRAO`: é com ela que o produto nasce em
+    # quem instala. A escala maior é escolha dela, e o que ela custa é OUTRA
+    # pergunta, com outro teto.
+    delta = ESCALA_PADRAO
     tela = Gdk.Screen.get_default()
     provider = Gtk.CssProvider()
     bruto = (GUI_DIR / "theme.css").read_text(encoding="utf-8")
