@@ -2685,10 +2685,75 @@ _bt_adaptadores() {
 #      quando o Pro precisa dela.
 #
 # A régua de "é da linhagem" é do produto, não deste arquivo:
-# `core/linhagem_nintendo.py` é o dono, e há portão de paridade entre os dois.
+# `core/linhagem_nintendo.py` é o dono, e o portão de paridade entre os dois é
+# `tests/unit/test_o_no_sniff_alcanca_todo_pro.py`.
+#
+# ATÉ 25/08/2026 A FRASE ACIMA ERA FALSA, e é por isso que ela ganhou o nome do
+# arquivo: o comentário afirmava o portão, portão nenhum lia estas listas, e elas
+# JÁ TINHAM DERIVADO — havia aqui um `98:B6:E9:*` escrito à mão que não existe em
+# lugar nenhum do produto. Um comentário que promete um portão inexistente é pior
+# que nenhum comentário: ele desencoraja a conferência que teria achado a
+# divergência. A faixa saiu (um Pro dela entra pelo NOME, como qualquer Pro de
+# safra que esta bancada nunca viu) e as listas viraram cópia pinada.
+#
 # Sem privilégio: o D-Bus responde a uid 1000, e o `/var/lib/bluetooth` é lido
 # best-effort — quando ele não abre, sobra a primeira fonte e o exame diz o que
 # sabe em vez de inventar.
+#
+# CÓPIA PINADA, e o motivo de existir cópia: o doctor roda como usuário comum,
+# em máquina que pode não ter o venv da casa de pé — é o exame que a pessoa roda
+# JUSTAMENTE quando algo não está de pé.
+OUIS_CLONE=("e4:17:d8")
+OUIS_NINTENDO_VISTAS=("e0:f6:b5")
+NOMES_PRO=("pro controller")
+NOMES_LINHAGEM=("pro controller" "nintendo" "8bitdo")
+
+# Genuíno OU clone — os dois leem o nome Bluetooth do host, e é essa a pergunta
+# que decide se um adaptador precisa do prefixo.
+_bt_e_da_linhagem() {  # $1 = MAC · $2 = nome
+    local mac="${1,,}" nome="${2,,}" marca
+    for marca in "${OUIS_NINTENDO_VISTAS[@]}" "${OUIS_CLONE[@]}"; do
+        [[ "${mac}" == "${marca}"* ]] && return 0
+    done
+    for marca in "${NOMES_LINHAGEM[@]}"; do
+        [[ "${nome}" == *"${marca}"* ]] && return 0
+    done
+    return 1
+}
+
+# SÓ o genuíno — a pergunta do NO-SNIFF, por NEGATIVA. Mesma ordem do
+# `bt_nosniff_now.sh` e do `bt_active_mode.sh`: clone recusa, faixa já vista
+# aplica sem nome, nome com cara de Pro aplica.
+_bt_e_pro_genuino() {  # $1 = MAC · $2 = nome
+    local mac="${1,,}" nome="${2,,}" marca
+    for marca in "${OUIS_CLONE[@]}"; do
+        [[ "${mac}" == "${marca}"* ]] && return 1
+    done
+    for marca in "${OUIS_NINTENDO_VISTAS[@]}"; do
+        [[ "${mac}" == "${marca}"* ]] && return 0
+    done
+    for marca in "${NOMES_PRO[@]}"; do
+        [[ "${nome}" == *"${marca}"* ]] && return 0
+    done
+    return 1
+}
+
+# O nome deste controle, para quem só tem o endereço. Vazio quando não há de
+# onde tirar — e vazio NÃO é "não é um Pro".
+_bt_nome_do_controle() {  # $1 = MAC -> nome, ou vazio
+    local mac="${1^^}" caminho nome
+    if command -v busctl >/dev/null 2>&1; then
+        caminho="$(busctl tree org.bluez --list 2>/dev/null \
+            | grep -oE "/org/bluez/hci[0-9]+/dev_${mac//:/_}$" | head -1 || true)"
+        if [[ -n "${caminho}" ]]; then
+            nome="$(busctl get-property org.bluez "${caminho}" org.bluez.Device1 Alias 2>/dev/null \
+                | sed -E 's/^s "?//; s/"?$//' || true)"
+            [[ -n "${nome}" ]] && { printf '%s\n' "${nome}"; return 0; }
+        fi
+    fi
+    sed -n 's/^Name=//p' /var/lib/bluetooth/*/"${mac}"/info 2>/dev/null | head -1 || true
+}
+
 _bt_hospeda_linhagem() {
     local alvo="$1" caminho mac nome dir end
     [[ -n "${alvo}" ]] || return 1
@@ -2699,10 +2764,7 @@ _bt_hospeda_linhagem() {
             mac="${caminho##*/dev_}"; mac="${mac//_/:}"
             nome="$(busctl get-property org.bluez "${caminho}" org.bluez.Device1 Alias 2>/dev/null \
                 | sed -E 's/^s "?//; s/"?$//' || true)"
-            if [[ "${mac^^}" == E0:F6:B5:* || "${mac^^}" == 98:B6:E9:* \
-               || "${nome}" == *"Pro Controller"* || "${nome}" == *8BitDo* ]]; then
-                return 0
-            fi
+            _bt_e_da_linhagem "${mac}" "${nome}" && return 0
         done <<<"$(busctl tree org.bluez --list 2>/dev/null \
             | grep -oE "/org/bluez/${alvo}/dev_[0-9A-Fa-f_]+$" | sort -u || true)"
     fi
@@ -2714,10 +2776,7 @@ _bt_hospeda_linhagem() {
         [[ -e "${caminho}" ]] || continue
         mac="${caminho%/info}"; mac="${mac##*/}"
         nome="$(grep -m1 '^Name=' "${caminho}" 2>/dev/null | cut -d= -f2- || true)"
-        if [[ "${mac^^}" == E0:F6:B5:* || "${mac^^}" == 98:B6:E9:* \
-           || "${nome}" == *"Pro Controller"* || "${nome}" == *8BitDo* ]]; then
-            return 0
-        fi
+        _bt_e_da_linhagem "${mac}" "${nome}" && return 0
     done
     return 1
 }
@@ -3192,7 +3251,7 @@ check_bt_resilience() {
     # N-IGUAL-A-UM-01 (22/08/2026): idem — a cura BT-NINTENDO-ACTIVE-01 passou a
     # valer em TODO adaptador que hospeda a linhagem, e um exame que olha um só
     # daria `[ OK ]` verde sobre os outros dois. O laço confere cada um.
-    local _hci _lp _alias _pro_mac _pro_lp _hcis=()
+    local _hci _lp _alias _mac _pro_mac _pro_lp _hcis=()
     mapfile -t _hcis < <(_bt_adaptadores)
     for _hci in "${_hcis[@]}"; do
     # E SÓ OS QUE HOSPEDAM A LINHAGEM, que é a outra metade da mesma cura.
@@ -3213,18 +3272,38 @@ check_bt_resilience() {
         else
             _lp="?"
         fi
-        # Pro Nintendo genuíno conectado (OUI E0:F6:B5) — se houver, checa a
-        # policy DELE (deve ser sem SNIFF). Quem está conectado agora sai do
-        # D-Bus; só a POLICY dele ainda depende do `hcitool`.
+        # Pro genuíno conectado — se houver, checa a policy DELE (deve ser sem
+        # SNIFF). Quem está conectado agora sai do D-Bus; só a POLICY dele ainda
+        # depende do `hcitool`.
+        #
+        # QUEM É "GENUÍNO" DEIXOU DE SER UMA FAIXA (25/08/2026,
+        # UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 / A1). Até esta data a linha aqui era
+        # um `grep -oiE` da faixa do Pro DESTA bancada, e o preço era um FALSO
+        # VERDE, reproduzido em bancada de mentira: com um Pro de outra safra
+        # conectado e COM sniff — a cura furada, que é o defeito — o grep não o
+        # achava, `_pro_lp` ficava "ausente", e o exame imprimia
+        # `[ OK ] ... no-sniff só no Pro genuíno` sem ter olhado controle nenhum.
+        # Um exame que aprova a cura ausente é pior que exame nenhum.
+        #
+        # BASTA UM COM SNIFF para a cura estar furada: numa mesa com dois Pros o
+        # laço para no primeiro que estiver errado, porque é ele que a pessoa
+        # precisa consertar.
         _pro_lp="ausente"
-        _pro_mac="$(_bt_macs_conectados | grep -oiE 'E0:F6:B5(:[0-9A-F]{2}){3}' | head -1 || true)"
-        if [[ -n "${_pro_mac}" ]]; then
-            if command -v hcitool >/dev/null 2>&1; then
-                _pro_lp="$(hcitool lp "${_pro_mac}" 2>/dev/null | grep -o 'SNIFF' || echo 'sem-sniff')"
-            else
+        _pro_mac=""
+        while IFS= read -r _mac; do
+            [[ -n "${_mac}" ]] || continue
+            _bt_e_pro_genuino "${_mac}" "$(_bt_nome_do_controle "${_mac}")" || continue
+            _pro_mac="${_mac}"
+            if ! command -v hcitool >/dev/null 2>&1; then
                 _pro_lp="?"
+                break
             fi
-        fi
+            if hcitool lp "${_mac}" 2>/dev/null | grep -q 'SNIFF'; then
+                _pro_lp="SNIFF"
+                break
+            fi
+            _pro_lp="sem-sniff"
+        done <<<"$(_bt_macs_conectados)"
         if [[ "${_lp}" == "?" || "${_pro_lp}" == "?" ]]; then
             if [[ "${_alias}" == Nintendo* ]]; then
                 warn "modo ativo p/ Nintendo pela METADE do que dá para conferir: o nome do adaptador está certo ('${_alias}'), mas NÃO SEI dizer o estado do SNIFF (nem do adaptador, nem do Pro genuíno) — a link policy só sai de 'hciconfig lp'/'hcitool lp', que o BlueZ depreciou e não estão nesta máquina, e a mgmt API (btmgmt/bluetoothctl) não a expõe. Instale bluez-deprecated (ou bluez-deprecated-tools) para esta conferência voltar"

@@ -35,13 +35,17 @@ from __future__ import annotations
 
 import contextlib
 import os
-import re
 import shutil
 import stat
 import subprocess
 from pathlib import Path
 
 import pytest
+
+from hefesto_dualsense4unix.core.linhagem_nintendo import (
+    OUIS_NINTENDO_VISTAS,
+    com_dois_pontos,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = REPO_ROOT / "scripts" / "doctor.sh"
@@ -61,14 +65,16 @@ def _oui_do_pro_genuino() -> str:
 
     Mesma guarda de `test_a_oui_separa_o_clone_do_genuino.py`: forma de MAC em
     `tests/` só nas faixas forjadas (test_anonimato_de_fixtures.py), e OUI real
-    não é faixa forjada. Ler do script tem um bônus: se a fonte da verdade
-    mudar, este teste segue a mudança em vez de fossilizar a antiga.
+    não é faixa forjada.
+
+    Até 25/08/2026 ela era lida do `OUI_NINTENDO_REAL` do `bt_active_mode.sh`.
+    Aquela constante MORREU com a UMA-FAIXA-NÃO-É-UM-FABRICANTE-01: decidir
+    "quem é um Pro" por uma faixa era o defeito, e o script passou a decidir por
+    negativa. O dono da resposta agora é `core/linhagem_nintendo`, e é de lá que
+    ela sai — este teste não precisa da definição de Pro, só de um endereço de
+    Pro plausível para a bancada dele.
     """
-    achado = re.search(
-        r'^OUI_NINTENDO_REAL="([0-9A-Fa-f:]+)"', ACTIVE_MODE.read_text(encoding="utf-8"), re.M
-    )
-    assert achado, "bt_active_mode.sh perdeu o OUI_NINTENDO_REAL"
-    return achado.group(1)
+    return sorted(com_dois_pontos(OUIS_NINTENDO_VISTAS))[0].upper()
 
 
 #: MAC do Pro Controller genuíno na máscara da casa (octetos 4 e 5 zerados —
