@@ -52,8 +52,12 @@ UINPUT_DEV = "/dev/uinput"
 #
 #   js0  Sony … DualSense Wireless Controller           uniq=<MAC dela>
 #   js1  Sony … DualSense … Motion Sensors              uniq=<O MESMO MAC>
-#   js2  Hefesto Virtual DualSense P1                   uniq=02:fe:00:00:00:01
-#   js3  Hefesto Virtual DualSense P1 Motion Sensors    uniq=<O MESMO>
+#   js2  DualSense Wireless Controller (Hefesto P1)    uniq=02:fe:00:00:00:01
+#   js3  DualSense … (Hefesto P1) Motion Sensors        uniq=<O MESMO>
+#
+#   (o nome do vpad era `Hefesto Virtual DualSense P1` quando isto foi medido;
+#    a BT-E-VPAD-01, furo 1, o trocou pelo de hoje — `uhid_gamepad.py:1065`.
+#    Os números da medição não mudam: o que se conta é aparelho, não nome.)
 #   js4  Microsoft X-Box 360 pad 0    /devices/virtual/input/input329/js4
 #   js5  Microsoft X-Box 360 pad 1    /devices/virtual/input/input61/js5
 #
@@ -72,14 +76,14 @@ UINPUT_DEV = "/dev/uinput"
 #
 # Duas correções ao código de origem, medidas aqui e não lá:
 #
-# (a) o `0c08e77` reconhecia o vpad por DUAS assinaturas (`uniq` `02:fe:` e
-#     nome `Hefesto Virtual`), as duas do backend **uhid**. O fallback
-#     degradado do VPAD-05 é **uinput**, não publica `uniq` e usa as máscaras
-#     de `integrations.uinput_gamepad`: a xbox contém "Hefesto" mas não começa
-#     com "Hefesto Virtual", e a dualsense (`DUALSENSE_EDGE_NAME`) não contém
-#     "Hefesto" em lugar nenhum. Sem a quarta regra o nosso próprio vpad seria
-#     acusado de "gamepad virtual de outro programa" — troca do silêncio de
-#     hoje por uma mentira nova;
+# (a) o `0c08e77` reconhecia o vpad por DUAS assinaturas (`uniq` `02:fe:` e a
+#     marca no nome), as duas do backend **uhid**. O fallback degradado do
+#     VPAD-05 é **uinput**, não publica `uniq` e usa as máscaras de
+#     `integrations.uinput_gamepad`: nenhuma das duas carrega a marca
+#     `(Hefesto P` — a xbox contém "Hefesto" noutra forma, e a dualsense
+#     (`DUALSENSE_EDGE_NAME`) não contém "Hefesto" em lugar nenhum. Sem a
+#     quarta regra o nosso próprio vpad seria acusado de "gamepad virtual de
+#     outro programa" — troca do silêncio de hoje por uma mentira nova;
 # (b) o agrupamento sem `uniq` subia TRÊS níveis do nó (`<hid>/input/inputNN/
 #     jsN` → `<hid>`), o que está certo para device HID e erra para uinput:
 #     `/devices/virtual/input/inputNN/jsN` não tem a camada `input/` do HID, e
@@ -94,8 +98,30 @@ UINPUT_DEV = "/dev/uinput"
 #: `test_contagem_emulacao_conta_aparelho.py` trava as duas pontas.
 _VPAD_UNIQ_PREFIX = "02:fe:"
 
-#: Nome que o vpad uhid publica no evdev ("Hefesto Virtual DualSense P1").
-_VPAD_NAME_PREFIX = "Hefesto Virtual"
+#: A marca humana no nome do vpad uhid — SUBSTRING, nunca prefixo.
+#:
+#: FATO ERRADO SUBSTITUÍDO em 25/08/2026 (EMULACAO-UM-DONO-SO-01/E11). Esta
+#: constante dizia `"Hefesto Virtual"` e a docstring afirmava ser "o nome que o
+#: vpad uhid publica no evdev". Não era desde a BT-E-VPAD-01 (furo 1): o vpad
+#: publica `DualSense Wireless Controller (Hefesto P{n})`
+#: (`integrations/uhid_gamepad.py:1065`), porque jogos sob Proton casam pela
+#: substring "Wireless Controller". A segunda das duas regras que separam "o
+#: nosso" de "o de outro programa" estava MORTA, e ninguém soube porque o teste
+#: alimentava o dublê com o nome antigo.
+#:
+#: POR QUE SUBSTRING E NÃO PREFIXO: o nome de hoje COMEÇA por "DualSense
+#: Wireless Controller", que é o que um aparelho de verdade também publica.
+#: Casar por prefixo aqui seria trocar uma regra morta por uma regra ERRADA —
+#: pior que o defeito. O que só este produto escreve é `(Hefesto P`.
+#:
+#: A REDAÇÃO NÃO É NOVA: é a `VPAD_MARCA_NO_NOME` de
+#: `scripts/identidade_do_vpad.py`, a régua única desta casa para a pergunta
+#: "este nó é um vpad nosso?" — cujo próprio cabeçalho já registrava que "há
+#: código nesta casa que ainda procura o nome velho". Era este. Não se importa
+#: de lá porque `scripts/` não é pacote; o portão
+#: `test_a_marca_do_vpad_no_nome_e_a_de_hoje.py` amarra as duas pontas, e mais
+#: a terceira: o nome que o `uhid_gamepad` REALMENTE publica.
+_VPAD_MARCA_NO_NOME = "(Hefesto P"
 
 #: Subárvore dos devices criados por uinput — Steam Input, teclado virtual do
 #: daemon, qualquer programa. NÃO inclui `/devices/virtual/misc/uhid/`, que
@@ -202,7 +228,7 @@ def _e_vpad_do_hefesto(no: dict[str, str]) -> bool:
     """True quando o aparelho é um gamepad virtual NOSSO — nos dois backends."""
     uniq = no.get("uniq", "").strip().lower()
     nome = no.get("name", "").strip()
-    if uniq.startswith(_VPAD_UNIQ_PREFIX) or nome.startswith(_VPAD_NAME_PREFIX):
+    if uniq.startswith(_VPAD_UNIQ_PREFIX) or _VPAD_MARCA_NO_NOME in nome:
         return True
     return (
         _UINPUT_SUBTREE in no.get("sys", "") and nome in _VPAD_NOMES_EM_UINPUT
