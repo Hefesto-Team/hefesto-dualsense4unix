@@ -915,6 +915,46 @@ class StatusActionsMixin(WidgetAccessMixin):
     #: instância na primeira escrita, que é o comportamento pretendido.
     _ultimo_estado_global: dict[str, str] = {}  # noqa: RUF012
 
+    @staticmethod
+    def _bateria_da_mesa(state: dict[str, Any]) -> tuple[float, str]:
+        """``(fração, texto)`` da barra de bateria — ``"— %"`` quando não há fonte.
+
+        STATUS-DIZ-O-QUE-VÊ-01/T12 (25/08/2026). **É a afirmação mais
+        silenciosa e mais crível da aba, e por isso a mais cara quando erra.**
+
+        Duas medições se somam para exigir esta guarda:
+
+        * o mapa de canais rebaixou `energia.bateria.percentual` do DualSense
+          de **medido** para **inferência de código** em 15/08/2026 (D-14) —
+          *"a evidência registrada descreve LEITURA DE FONTE (arquivo, linha,
+          grep), não medição no aparelho"*;
+        * e o daemon publica, no MESMO payload, um topo que discorda da
+          lista. Medido em 23/08 às 21h53, com **zero** DualSense no sistema:
+          ``daemon.status`` e o topo do ``state_full`` diziam
+          ``connected: true, battery_pct: 75``, enquanto
+          ``controllers[0]`` dizia ``connected: false``. A barra afirmava
+          **75 %** de um controle que não existe.
+
+        A régua de "quem está na mesa" é a da Z5 (`app/mesa.py`, dono único),
+        e esta função a CONSOME: quando o daemon publica a lista de
+        controles, é ela que manda. Quando não publica — daemon antigo, ou
+        payload parcial —, o topo continua valendo: recusar o número aí seria
+        trocar um erro por outro, e a ausência de lista não é evidência de
+        mesa vazia.
+
+        Não é para tirar o número. É para o número parar de aparecer quando a
+        fonte dele não existe.
+        """
+        bruto = state.get("battery_pct")
+        tem_numero = isinstance(bruto, (int, float)) and not isinstance(bruto, bool)
+        mesa_publicada = isinstance(state.get("controllers"), list)
+        if mesa_publicada and not StatusActionsMixin._connected_controllers(state):
+            return (0.0, "— %")
+        if not tem_numero:
+            return (0.0, "— %")
+        assert isinstance(bruto, (int, float))
+        return (bruto / 100, f"{bruto} %")
+
     def _set_battery_text(self, texto: str) -> None:
         """Escreve o número da bateria na barra E no rótulo ao lado dela.
 
@@ -2737,7 +2777,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._update_coop_badge(state)
         self._sync_coop_governa_luzes(state)
         self._sync_modo_nativo_manda_no_output(state)
-        battery = state.get("battery_pct")
         active_profile = state.get("active_profile") or "Nenhum"
 
         conectados = self._connected_controllers(state)
@@ -2787,12 +2826,13 @@ class StatusActionsMixin(WidgetAccessMixin):
             # UX-BATTERY-LABEL-01: o texto precisa estar VISÍVEL. Desde a
             # ESTADO-TRES-LINHAS-01 quem o mostra é o rótulo ao lado da barra,
             # e não a barra — ver `_set_battery_text`.
-            if battery is None:
-                battery_bar.set_fraction(0.0)
-                self._set_battery_text("— %")
-            else:
-                battery_bar.set_fraction(battery / 100)
-                self._set_battery_text(f"{battery} %")
+            # T12: a decisão de mostrar ou calar o número mora em
+            # `_bateria_da_mesa`, e não aqui. Ela é pura e mede o payload
+            # inteiro — o topo E a lista —, porque foi a divergência entre os
+            # dois que fez esta barra afirmar 75 % de ninguém.
+            fracao, texto = self._bateria_da_mesa(state)
+            battery_bar.set_fraction(fracao)
+            self._set_battery_text(texto)
 
         # FEAT-DSX-CONTROLLER-SELECTOR-01: atualiza o seletor de controle-alvo
         # (aparece só com 2+ controles).
