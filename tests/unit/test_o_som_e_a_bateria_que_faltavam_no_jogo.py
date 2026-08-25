@@ -229,6 +229,26 @@ def _estado(**vpad: Any) -> dict[str, Any]:
     return {"rumble_ff": {"per_vpad": [item]}}
 
 
+def _pedido_de_vibracao(ha_s: float = 0.2) -> list[dict[str, Any]]:
+    """Um anel de vibração com um PEDIDO de verdade: motor não-nulo e fresco.
+
+    NO-JOGO-SEM-FALSO-VERDE-01/T1 (25/08/2026). O carimbo `rumble` sozinho sai
+    também da PARADA do SDL, que chega sem jogo nenhum na mesa — quem separa os
+    dois é o anel `ff_ultimos_reports`.
+    """
+    return [
+        {
+            "ha_s": ha_s,
+            "flag0": 4,
+            "flag1": 0,
+            "flag2": 0,
+            "weak": 40,
+            "strong": 90,
+            "ramo": "v1",
+        }
+    ]
+
+
 class TestOSomDoJogoNaLinhaDeRecursos:
     def test_som_chegando_agora(self) -> None:
         """MORDIDA: apagar a entrada `alto_falante` de `_CATEGORIA_DO_RECURSO`.
@@ -253,13 +273,19 @@ class TestOSomDoJogoNaLinhaDeRecursos:
         assert estado is not None
         assert estado.situacao == SITUACAO_PARADO
 
-    def test_jogo_que_nunca_pediu_som(self) -> None:
-        """"Sem pedido ainda" aqui significa mesmo *nenhum jogo pediu*.
+    def test_ninguem_com_a_sessao_aberta_mandou_audio(self) -> None:
+        """Categoria ausente = ninguém com a sessão aberta mandou bytes de áudio.
 
-        E não "o kernel ainda não passou por aqui": o carimbo exige sessão de
-        jogo aberta (`_replicating()`), que foi a correção de 02/08 — o probe
-        do `hid-playstation` escreve áudio no nascimento do vpad e carimbava
-        "sim" sem jogo nenhum.
+        **Não** é "nenhum jogo pediu", e este teste dizia que era até
+        25/08/2026 (NO-JOGO-SEM-FALSO-VERDE-01/T2). O gate do carimbo é
+        `_replicating()` — sessão uhid aberta —, e sessão aberta não é jogo: a
+        docstring de `uhid_gamepad.game_open` chama isso de VETO PERMANENTE,
+        *"o CLIENTE Steam também abre"*. O que a correção de 02/08 tirou de
+        dentro do carimbo foi o probe do `hid-playstation`, que escreve áudio
+        no nascimento do vpad; ela não transformou sessão em jogo.
+
+        O que o silêncio prova, então, e é bastante: ninguém escreveu áudio
+        neste vpad. Não prova quem teria escrito se tivesse escrito.
         """
         estado = estado_do_recurso("alto_falante", _entry(), _estado())
         assert estado is not None
@@ -288,6 +314,7 @@ class TestOSomDoJogoNaLinhaDeRecursos:
             _entry(),
             _estado(
                 visto_ha_s={"audio_do_jogo": 0.4, "rumble": 0.2},
+                ff_ultimos_reports=_pedido_de_vibracao(0.2),
                 motion_streaming=False,
                 motion_forwards=0,
             ),
