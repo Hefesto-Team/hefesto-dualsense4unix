@@ -2,11 +2,31 @@
 
 O DEFEITO, MEDIDO: **existe quem retoma e não existe quem suspende.** A flag
 ``daemon._steam_input_vpad_suspenso`` só pode andar para ``False`` desde
-``d8022ea`` (09/08/2026), e o produto continua LENDO os dois valores dela em
-``daemon/lifecycle.py``, ``daemon/subsystems/hotkey.py`` e no bloco
-``steam_input`` que a janela consome. Uma das duas respostas é impossível, e
-nada no produto diz isso: **é pior que ausência de dado, é dado que mente
-sempre para o mesmo lado.**
+``d8022ea`` (09/08/2026), e o produto continua LENDO os dois valores dela. Uma
+das duas respostas é impossível, e nada no produto diz isso: **é pior que
+ausência de dado, é dado que mente sempre para o mesmo lado.**
+
+O RAIO DO ESTRAGO — cinco leitores em produção, e DOIS estão na tela
+--------------------------------------------------------------------
+Censo de 25/08/2026. Nenhum destes cinco pode responder ``True``:
+
+1. ``daemon/lifecycle.py:2254`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
+   do gate do desktop, e ela **nunca é devolvida**;
+2. ``daemon/subsystems/hotkey.py:261`` — ramo de modo, num ``or`` cujo outro
+   lado (``steam_input_excecao_ativa``) carrega a decisão sozinho;
+3. ``daemon/ipc_handlers.py:2107`` — publica ``vpad_suspenso`` no ``state_full``
+   sempre ``False``, e a docstring ao lado documenta um contrato de DOIS estados
+   dos quais um é inalcançável;
+4. ``app/actions/home_actions.py:1115`` (**Onda 2 · Início**) — a frase da
+   ponte exige ``excecao_ativa and vpad_suspenso``: a aba **nunca** consegue
+   dizer "pelo Steam Input";
+5. ``app/actions/emulation_actions.py:408`` (**Onda 5 · Emulação**) — a frase
+   *"Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, e o
+   controle virtual foi recolhido"* está escrita, revisada, e é **inalcançável**:
+   a chave dela É a constante do item 1.
+
+Os três primeiros este portão nomeia sozinho (ver ``_leituras``). Os dois da
+tela atravessam o dicionário do IPC, e a fronteira está declarada lá.
 
 O QUE ESTE PORTÃO PERGUNTA, e por que não é a pergunta do irmão
 ---------------------------------------------------------------
@@ -133,8 +153,11 @@ _PAR_ACEITO: dict[str, str] = {
         "medido na máquina dela em 08/08: o jogador 2 É um gamepad virtual, e derrubar "
         "os virtuais para curar o duplicado do P1 derrubava o P2 junto "
         "(`coop_derrubado_pela_excecao_steam_input`, 20 ocorrências num dia). "
-        "A ENTRADA FICA ATÉ A DECISÃO DELA, e o que falta está escrito: o produto lê "
-        "`vpad_suspenso` em lifecycle.py:2254 (CALADA_VPAD_SUSPENSO), hotkey.py:261 e "
+        "A ENTRADA FICA ATÉ A DECISÃO DELA, e o que falta está escrito: são CINCO os "
+        "leitores em produção, e DOIS deles estão na tela — a frase da ponte em "
+        "app/actions/home_actions.py:1115 (Início) e a frase do vpad recolhido em "
+        "app/actions/emulation_actions.py:408 (Emulação) são inalcançáveis. Os outros "
+        "três: lifecycle.py:2254 (CALADA_VPAD_SUSPENSO), hotkey.py:261 e "
         "ipc_handlers.py:2107, e nenhuma dessas leituras pode ser verdadeira. Ou as "
         "leituras saem, ou a suspensão ganha caminho de volta — as duas mexem em "
         "arquivo de outra frente e a escolha é DELA, não deste portão."
@@ -173,11 +196,16 @@ class Par:
     def descreva(self) -> str:
         vivos = self.desarmadores if self.metade_morta == "True" else self.armadores
         mortos = self.armadores if self.metade_morta == "True" else self.desarmadores
+        # As leituras vão INTEIRAS, uma por linha. Truncar a lista era o defeito
+        # do próprio instrumento: quem lê a reprovação precisa do endereço de
+        # CADA sítio que vai passar a mentir, e é essa lista que roteia o
+        # conserto entre as frentes. Cortar no sexto escondia `hotkey.py`.
+        enderecos = "\n".join(f"        {onde}" for onde in self.leituras)
         return (
             f"{self.flag}: nenhum caminho de produção põe {self.metade_morta}.\n"
             f"    sem chamador: {sorted(nome for nome in mortos)}\n"
             f"    vivos       : {sorted(nome for nome, ok in vivos.items() if ok)}\n"
-            f"    lida em     : {self.leituras[:6]}"
+            f"    lida em ({len(self.leituras)}):\n{enderecos}"
         )
 
 
@@ -302,9 +330,28 @@ def _tem_chamador(nome: str, indice: _Indice) -> bool:
     return False
 
 
-def _leituras(flag: str, raiz: Path) -> list[str]:
-    """Onde ``src/`` LÊ a flag — atributo em ``Load`` ou ``getattr`` com literal."""
-    achados: list[str] = []
+def _le_a_flag(no: ast.AST, flag: str) -> bool:
+    """Este nó lê a flag — ``daemon._x`` em ``Load`` ou ``getattr(daemon, "_x")``?"""
+    if isinstance(no, ast.Attribute) and no.attr == flag and isinstance(no.ctx, ast.Load):
+        return True
+    if isinstance(no, ast.Call):
+        alvo = no.func
+        if (getattr(alvo, "id", None) or getattr(alvo, "attr", None)) == "getattr":
+            return any(
+                isinstance(arg, ast.Constant) and arg.value == flag for arg in no.args
+            )
+    return False
+
+
+def _acessores(flag: str, raiz: Path) -> set[str]:
+    """As funções de ``src/`` que DEVOLVEM a flag.
+
+    ``steam_input_vpad_suspenso`` é o caso de hoje: ela envelopa
+    ``getattr(daemon, "_steam_input_vpad_suspenso", False)`` num ``return``, e
+    é por ela que passam TRÊS dos cinco leitores. Sem este salto o portão
+    encontrava dois endereços e o defeito tinha cinco.
+    """
+    nomes: set[str] = set()
     for caminho in _modulos(raiz):
         texto = caminho.read_text(encoding="utf-8")
         if flag not in texto:
@@ -314,20 +361,62 @@ def _leituras(flag: str, raiz: Path) -> list[str]:
         except SyntaxError:  # pragma: no cover - árvore em movimento
             continue
         for no in ast.walk(arvore):
-            if (
-                isinstance(no, ast.Attribute)
-                and no.attr == flag
-                and isinstance(no.ctx, ast.Load)
-            ):
+            if not isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for dentro in ast.walk(no):
+                if (
+                    isinstance(dentro, ast.Return)
+                    and dentro.value is not None
+                    and any(_le_a_flag(sub, flag) for sub in ast.walk(dentro.value))
+                ):
+                    nomes.add(no.name)
+                    break
+    return nomes
+
+
+def _leituras(flag: str, raiz: Path) -> list[str]:
+    """Onde ``src/`` LÊ a flag — direto, e um SALTO pelo acessor que a devolve.
+
+    UM salto, e não mais, e a fronteira é declarada: quem lê o valor depois de
+    ele virar chave de dicionário no IPC (``"vpad_suspenso"`` no ``state_full``)
+    fica de fora. Seguir string por travessia de serialização seria adivinhar, e
+    o cabeçalho já recusou adivinhação uma vez. **O preço, medido em 25/08/2026:
+    os dois leitores da JANELA — a frase da ponte em ``app/actions/home_actions.py``
+    e a frase do vpad recolhido em ``app/actions/emulation_actions.py`` — não
+    aparecem nesta lista, e são justamente os dois que a pessoa lê na tela.**
+    Estão escritos no relatório da sprint; o portão não os alcança sozinho.
+    """
+    acessores = _acessores(flag, raiz)
+    achados: list[str] = []
+    for caminho in _modulos(raiz):
+        texto = caminho.read_text(encoding="utf-8")
+        if flag not in texto and not any(nome in texto for nome in acessores):
+            continue
+        try:
+            arvore = ast.parse(texto)
+        except SyntaxError:  # pragma: no cover - árvore em movimento
+            continue
+        fora = _prosa(arvore)
+        corpos = {
+            no.name: (no.lineno, no.end_lineno or no.lineno)
+            for no in ast.walk(arvore)
+            if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        for no in ast.walk(arvore):
+            if _le_a_flag(no, flag):
                 achados.append(f"{caminho.relative_to(raiz)}:{no.lineno}")
-            elif isinstance(no, ast.Call):
-                alvo = no.func
-                if (getattr(alvo, "id", None) or getattr(alvo, "attr", None)) == "getattr":
-                    for arg in no.args:
-                        if isinstance(arg, ast.Constant) and arg.value == flag:
-                            achados.append(
-                                f"{caminho.relative_to(raiz)}:{no.lineno} (getattr)"
-                            )
+                continue
+            if not isinstance(no, ast.Call):
+                continue
+            alvo = no.func
+            nome = getattr(alvo, "id", None) or getattr(alvo, "attr", None)
+            if nome not in acessores or id(no) in fora:
+                continue
+            faixa = corpos.get(str(nome))
+            if faixa and faixa[0] <= no.lineno <= faixa[1]:
+                # A chamada está DENTRO do próprio acessor: recursão, não leitor.
+                continue
+            achados.append(f"{caminho.relative_to(raiz)}:{no.lineno} (via {nome})")
     return sorted(set(achados))
 
 
@@ -511,6 +600,27 @@ class TestOPortaoMorde:
             "a régua não vê o chamador direto de `resume_vpads_after_steam_input` "
             "(gamepad.py:526) — sem isso ela acusaria as duas metades e o portão "
             "estaria medindo ausência, não assimetria."
+        )
+
+    def test_a_lista_de_leituras_atravessa_o_acessor(self) -> None:
+        """O endereço é o que roteia o conserto, e ele estava faltando.
+
+        A flag ``_steam_input_vpad_suspenso`` é tocada DIRETO em dois lugares, e
+        os leitores que decidem comportamento chamam ``steam_input_vpad_suspenso``
+        — o acessor que a devolve. Medindo só o toque direto, o portão acusava o
+        par e apontava dois endereços quando o defeito tinha cinco: a razão de
+        calada em ``lifecycle.py`` e o ramo de modo em ``hotkey.py`` ficavam
+        invisíveis para quem lesse a reprovação.
+        """
+        par = pares_com_metade_ligada()["_steam_input_vpad_suspenso"]
+        for endereco in ("daemon/lifecycle.py:2254", "daemon/subsystems/hotkey.py:261"):
+            assert any(onde.startswith(endereco) for onde in par.leituras), (
+                f"o portão não nomeia {endereco}, que LÊ a flag pelo acessor. "
+                f"Ele listou: {par.leituras}"
+            )
+        assert any("(via " in onde for onde in par.leituras), (
+            "nenhuma leitura foi marcada como indireta — o salto pelo acessor "
+            "morreu e o portão voltou a medir só o toque direto"
         )
 
     def test_a_regua_nao_acusa_os_pares_simetricos(self) -> None:
