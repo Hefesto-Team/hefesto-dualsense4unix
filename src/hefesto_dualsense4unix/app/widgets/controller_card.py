@@ -2091,9 +2091,23 @@ if _GTK_DISPONIVEL:
 
         Uso (a mixin de status monta e distribui — STATUS-02)::
 
-            card = ControllerCard(compact=True)   # compact = 2+ cards
+            card = ControllerCard(compact=False, mostrar_estado_global=True)
             card.update(entry, state_full)        # diff interno por seção
             card.reset_inputs()                   # IPC falhou → mostra "—"
+
+        **`compact=False` não é um exemplo entre outros: é o único que
+        produção constrói.** Desde a EMPILHA-02 (02/08/2026, decisão dela —
+        um card por linha, com rolagem) a aba dá a largura inteira a todo
+        card, e `status_actions._rebuild_status_cards` passa `compact=False`
+        sempre. O que continua dependendo da quantidade é
+        `mostrar_estado_global`: com 2+ controles quem responde por perfil e
+        daemon é o frame "Estado", e repeti-lo em cada card seria a
+        duplicação que a STATUS-SIMETRIA-02 curou na bateria.
+
+        CORREÇÃO DE FATO (25/08/2026, STATUS-DIZ-O-QUE-VÊ-01/T5): este
+        exemplo dizia que `compact` era o modo de 2+ cards. Ficou falso
+        naquele 02/08 e atravessou 23 dias, com sete arquivos de teste
+        medindo — e travando — um desenho que nenhuma janela monta.
 
         ``entry`` é uma entrada de ``state_full.controllers`` (contrato em
         ``daemon/ipc_handlers._enrich_controllers_per_controller``);
@@ -2474,47 +2488,51 @@ if _GTK_DISPONIVEL:
                 # CARD-ÚNICO-01, anotação 1 do print dela: *"a bateria fica ao
                 # lado do hertz do giroscópio até o final"*.
                 #
-                # **Quem mora aqui é a linha da VERDADE, e não o rótulo do
-                # giroscópio** — e isso não contraria o pedido dela, cumpre-o:
-                # desde a PAINEL-DA-VERDADE-01 é a linha da verdade que traz o
-                # hertz do giroscópio ("No jogo agora: giroscópio (~194 Hz),
-                # vibração, luz"). Com os dois na tela, o card dizia a mesma
-                # coisa duas vezes, uma embaixo da outra — a duplicação que
-                # esta aba já corrigiu na bateria.
+                # **PROVISÓRIO — decisão dela** (STATUS-DIZ-O-QUE-VÊ-01/T2,
+                # 25/08/2026). Há duas saídas para devolver o hertz à tela e a
+                # escolha é dela: **(a)** esta, a linha do giroscópio ao lado
+                # da bateria; **(b)** o hertz no rótulo da moldura
+                # ("Giroscópio (graus/s) · ~194 Hz", `_montar_gyro`), sem
+                # linha nova. Enquanto ela não olhar, vale (a) — é a que
+                # cumpre o pedido literal dela de 01/08.
                 #
-                # O `_motion_label` continua existindo e continua sendo o dono
-                # do texto no card COMPACTO, onde não há linha da verdade.
+                # **O que estava aqui até 25/08, e por que saiu.** Um
+                # `slot_motion`: um `Gtk.Box` SEM NENHUM FILHO, com
+                # `expand=True, fill=True`. Ele reservava o lugar da linha da
+                # VERDADE, que a SEM-BARRA-DA-VERDADE-01 (17/08/2026)
+                # desempacotou a pedido dela — *"remover guia dos status em
+                # tempo real"* —, e ninguém notou que aquela linha era a
+                # ÚNICA portadora do hertz do giroscópio na tela do card
+                # único. De 17/08 a 25/08 o número não apareceu em
+                # configuração nenhuma da janela.
                 #
-                # O slot fica SEMPRE visível e é ele quem expande; quem se
-                # esconde é o rótulo dentro dele. Um widget oculto não ocupa
-                # espaço, e sem o slot a bateria saltaria da direita para a
-                # esquerda no instante em que a linha ficasse sem o que
-                # afirmar. É o mesmo mecanismo do `_gyro_slot` da linha de
-                # cima, e pelo mesmo motivo.
+                # O preço da caixa vazia, medido na foto de 23/08 (18h15,
+                # `readme_status.png`, `GdkPixbuf`): o corpo do card começa em
+                # x=289 e "Bateria:" em x=1211 — **910px de alocação pagos a
+                # um widget que não tem filho**.
+                #
+                # **Quem mora aqui agora é o `_motion_label`** (GYRO-03), que
+                # já era alimentado a cada tique e nunca era empacotado fora
+                # do card compacto. Ele NÃO é a guia que ela mandou remover:
+                # é uma linha só, do giroscópio, com o número que ela pediu
+                # ao lado da bateria — *"a bateria fica ao lado do hertz do
+                # giroscópio até o final"* (CARD-ÚNICO-01, anotação 1).
+                #
+                # **`pack_end` na bateria, e não um slot que expande.** O
+                # único serviço que o slot vazio prestava era impedir a
+                # bateria de saltar para a esquerda quando a linha ficasse
+                # sem o que afirmar; o `pack_end` a ancora na direita SEMPRE,
+                # com ou sem a linha visível, e não cobra largura por isso.
+                #
+                # A linha da verdade (`_verdade_label`) continua existindo,
+                # alimentada e fora da tela — é decisão dela de 17/08, e não
+                # se apaga.
                 faixa = Gtk.Box(
                     orientation=Gtk.Orientation.HORIZONTAL, spacing=12
                 )
-                slot_motion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-                slot_motion.set_valign(Gtk.Align.CENTER)
-                # SEM-BARRA-DA-VERDADE-01 (17/08/2026), pedido dela olhando a
-                # aba: *"remover guia dos status em tempo real"*.
-                #
-                # A linha ("No jogo agora: giroscópio (~199 Hz) · pararam:
-                # vibração, gatilho, luz, som do controle · sem pedido ainda:
-                # clique do touchpad") ocupava uma faixa inteira do card e
-                # mudava de texto a cada tique. O card já mostra CADA um desses
-                # canais no bloco próprio — a linha repetia em prosa o que os
-                # medidores dizem em desenho.
-                #
-                # **O rótulo continua existindo e continua sendo alimentado.**
-                # Só não é EMPACOTADO. Assim `_update_verdade` segue rodando
-                # sem `if` novo, o `RotuloDeAlturaReservada` e o
-                # `_VERDADE_MAX_CHARS` continuam cobertos pelos testes que os
-                # travam, e devolver a linha é uma linha de código — este
-                # `pack_start` de volta. Arrancar tudo custaria mais e
-                # apagaria o caminho de volta.
-                faixa.pack_start(slot_motion, True, True, 0)
-                faixa.pack_start(linha_bateria, False, False, 0)
+                faixa.pack_start(motion, False, False, 0)
+                linha_bateria.set_halign(Gtk.Align.END)
+                faixa.pack_end(linha_bateria, False, False, 0)
                 corpo.pack_start(faixa, False, False, 0)
                 self._faixa_gyro_bateria = faixa
                 # As duas linhas novas são as duas PRIMEIRAS do corpo (o
@@ -2581,11 +2599,17 @@ if _GTK_DISPONIVEL:
             if self._compact:
                 return
 
-            # A linha da VERDADE é por CONTROLE, e não global — ela diz o que
-            # chega ao jogo NAQUELE controle, com o hertz do giroscópio dele.
-            # Por isso ela é montada antes do par perfil/daemon, e não depende
-            # do `mostrar_estado_global`: com dois controles, cada card tem a
-            # sua.
+            # A linha da VERDADE é por CONTROLE, e não global — o texto dela
+            # diz o que chega ao jogo NAQUELE controle. Por isso ela é montada
+            # antes do par perfil/daemon, e não depende do
+            # `mostrar_estado_global`: com dois controles, cada card tem a sua.
+            #
+            # **Ela NÃO está na tela desde 17/08/2026** (decisão dela,
+            # SEM-BARRA-DA-VERDADE-01), e continua criada e alimentada porque
+            # devolvê-la é um `pack_start` — o caminho de volta que a leva
+            # daquele dia guardou de propósito. O hertz do giroscópio, que
+            # esta linha carregava sozinha, voltou à tela pelo `_motion_label`
+            # em 25/08 (T1/T2).
             #
             # `line_wrap` LIGADO com `max_width_chars` e `halign=start`: os
             # três juntos, e não um deles. Medido nesta casa em 01/08 — o
@@ -2646,10 +2670,18 @@ if _GTK_DISPONIVEL:
             # `max-width-chars` sozinho limita a largura NATURAL (o que o
             # widget pede) e o pai continua livre para alocar mais; um
             # parágrafo de 1869px ficou intacto até o `halign=start` entrar.
-            # A linha da verdade NÃO é empacotada aqui: o lugar dela é a faixa
-            # da linha 2, ao lado da bateria, e quem a empacota é o bloco do
-            # motion. Criá-la acima é o que permite aquele bloco encontrá-la
-            # pronta — a ordem de montagem do corpo é a ordem do desenho.
+            # **A linha da verdade não é empacotada por ninguém, em lugar
+            # nenhum.** Ela é criada aqui, alimentada por `_update_verdade` e
+            # não chega à tela desde 17/08/2026, quando a
+            # SEM-BARRA-DA-VERDADE-01 a tirou da faixa a pedido dela
+            # (*"remover guia dos status em tempo real"*). Quem ocupa a faixa
+            # ao lado da bateria é o `_motion_label` (T1/T2, 25/08/2026).
+            #
+            # CORREÇÃO DE FATO (25/08/2026, STATUS-DIZ-O-QUE-VÊ-01/T3): o que
+            # estava escrito aqui nomeava um empacotador para ela e ficou
+            # falso naquele 17/08, por oito dias, porque nenhuma régua olhava
+            # para a afirmação. Agora olha:
+            # `test_status_o_hertz_e_a_caixa_vazia.py`.
 
         def definir_estado_global(self, perfil: str, daemon: str) -> None:
             """Escreve o par ``Perfil ativo``/``Hefesto`` — chamada pela aba.
@@ -3551,6 +3583,21 @@ if _GTK_DISPONIVEL:
                 # Ele continua existindo e continua funcionando — quem o
                 # explica agora é a dica do bloco. Quando a paridade for
                 # confirmada, ele volta para a tela.
+                #
+                # **O slot da rota é `None` DE PROPÓSITO, e isto é decisão
+                # dela** (SOM-CANAL-01/E3, 02/08/2026): *"ele deixa de existir
+                # como botão isolado. Vira o estado 'Todo o som do PC' do
+                # seletor"*. O comando NASCE aqui, no seletor de canal logo
+                # acima — não há para onde migrar, e o botão do Glade fica no
+                # berço dele.
+                #
+                # `None` é o que o `status_actions._alojar_botao_da_rota` lê
+                # para saber que não deve reparentar nada. Dar corpo a este
+                # slot devolve o defeito da ROTA-ÓRFÃ-01, pago em 01/08:
+                # plugar um segundo controle recria os cards, o
+                # `child.destroy()` do card antigo deixa o botão órfão, e ela
+                # perde o desfazer da rota exatamente no co-op.
+                # `test_o_botao_da_rota_nao_migra_mais_para_o_card` trava isso.
                 self._speaker_rota_slot = None
                 miolo.pack_start(linha_acoes, False, False, 0)
             # O selo da camada 1 fica por último nos dois cards: ele é a
@@ -4549,10 +4596,22 @@ if _GTK_DISPONIVEL:
                 return
             self._last_motion = texto
             # O texto é ESCRITO sempre — ele é o dono do valor e é o que os
-            # testes leem. Quem só aparece no card compacto é o widget: no
-            # card único o giroscópio é dito pela linha da verdade, que o
-            # contém e amplia (ver `_montar_ui`), e mostrar os dois seria o
-            # card falando duas vezes a mesma coisa.
+            # testes leem.
+            #
+            # **Quem diz o giroscópio na tela é este widget, nos DOIS modos**
+            # (`_montar_ui`).
+            #
+            # CORREÇÃO DE FATO (25/08/2026, STATUS-DIZ-O-QUE-VÊ-01/T3): o que
+            # estava escrito aqui atribuía esse papel à linha da verdade no
+            # card único e servia de justificativa para não pintar. **Deixou
+            # de ser verdade em 17/08/2026**, quando a SEM-BARRA-DA-VERDADE-01
+            # desempacotou o `_verdade_label` a pedido dela e levou junto o
+            # único hertz da tela; o comentário sobreviveu à mudança em dois
+            # lugares e o número ficou oito dias fora da janela.
+            #
+            # O `get_parent()` abaixo FICA: ele é a guarda de quem chama o
+            # `update` antes de montar a árvore, e um `show()` em widget sem
+            # pai é no-op silencioso — o defeito que escondeu o de cima.
             if texto:
                 self._motion_label.set_text(texto)
             if self._motion_label.get_parent() is None:
