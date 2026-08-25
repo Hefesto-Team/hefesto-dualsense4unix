@@ -467,7 +467,12 @@ class FooterActionsMixin(ProfileWriterMixin):
         ao daemon.
         """
         from hefesto_dualsense4unix.app.actions.home_actions import (
+            DESFECHO_BLOQUEADO,
+            DESFECHO_FALHOU,
+            desfecho_da_troca,
+            lembrar_mascara_recusada,
             registrar_modo_no_rascunho,
+            toast_da_troca_de_mascara,
         )
 
         # O alvo do modo: a escolha dela, ou — quando só a máscara mudou — o que
@@ -486,7 +491,7 @@ class FooterActionsMixin(ProfileWriterMixin):
             self._apply_draft_agora()
             return
 
-        def _done() -> None:
+        def _done(resultado: Any) -> None:
             # Decisão 3 dela (08/08, noite): o modo entra no rascunho AQUI —
             # quando o Aplicar confirma —, nunca no clique. O rascunho descreve
             # o que ficou DE PÉ; uma intenção que falhou não pode virar perfil
@@ -517,7 +522,57 @@ class FooterActionsMixin(ProfileWriterMixin):
                 modo_alvo,
                 mascara_alvo or getattr(self, "_mascara_vigente_do_daemon", None),
             )
-            _esquecer_a_pendencia(self)
+            # I1 (25/08/2026) — A RECUSA DO DAEMON CHEGA À TELA.
+            #
+            # `desfecho_da_troca` separa apliquei / já-estava / recusei-pelo-
+            # gate a partir do payload que o daemon já mandava: a MÁSCARA
+            # DEVOLVIDA. O handler responde `flavor: config.gamepad_flavor`, e
+            # o daemon só grava esse campo DEPOIS de o vpad novo nascer — uma
+            # troca recusada volta com a máscara ANTIGA. Era só ninguém olhar.
+            #
+            # Só quando ela escolheu máscara EXPLICITAMENTE: sem escolha, o
+            # passo reportado é o do modo e não há troca de máscara sobre a qual
+            # ter desfecho. Inventar um aqui seria a mesma família de alarme
+            # falso que os banners desta aba evitam de propósito.
+            desfecho = (
+                desfecho_da_troca(resultado, pedida=mascara_alvo)
+                if mascara_alvo
+                else None
+            )
+            if desfecho is not None:
+                # O recado vai JUNTO do toast final do "Aplicar", e não em vez
+                # dele: o `_apply_draft_agora` logo abaixo escreve a frase das
+                # sete seções, e um toast escrito aqui seria apagado por ela no
+                # mesmo tique. Ver `_dizer_com_o_recado_da_maquina`.
+                self._recado_da_maquina = " ".join(
+                    parte
+                    for parte in (
+                        self._recado_da_maquina,
+                        toast_da_troca_de_mascara(desfecho, mascara_alvo),
+                    )
+                    if parte
+                )
+            # I2 (25/08/2026) — A ESCOLHA RECUSADA SOBREVIVE AO PRÓXIMO TIQUE.
+            #
+            # Recusa EXPLÍCITA (o gate R-04 bloqueou, ou o daemon falhou) é a
+            # única situação em que a escolha dela precisa de memória: o
+            # `_render_home` reescreve o seletor com o valor do daemon a cada
+            # 2 s, e sem isto a escolha sumiria da tela em dois segundos.
+            #
+            # `incerto` NÃO entra: ali não se sabe se aplicou, e guardar um
+            # pedido sobre o que não se sabe acenderia a divergência contra o
+            # aparelho sem base — a frase do desfecho incerto já manda ela
+            # conferir na linha "Ponte com o jogo", que é quem sabe responder.
+            if desfecho in (DESFECHO_BLOQUEADO, DESFECHO_FALHOU):
+                lembrar_mascara_recusada(self, mascara_alvo)
+                # A pendência FICA, pela mesma regra do `_fail`: ela descreve o
+                # que o daemon ainda não alcançou, e ele não alcançou.
+                logger.info(
+                    "aplicar_mascara_recusada", desfecho=desfecho,
+                    mascara=mascara_alvo,
+                )
+            else:
+                _esquecer_a_pendencia(self)
             # E só agora o AGORA: as sete seções do rascunho. Emendado no
             # sucesso, não disparado em paralelo — duas transações concorrentes
             # sobre o mesmo controle é como se recria vpad no meio de uma
@@ -1095,7 +1150,42 @@ class FooterActionsMixin(ProfileWriterMixin):
             return
         alvo = _rotulo_do_modo(gravado)
 
-        def _aplicou() -> None:
+        def _aplicou(resultado: Any) -> None:
+            # I1 (25/08/2026): o Salvar herda a mesma leitura do verde. Sem ela
+            # esta frase — *"o modo já está valendo"* — era a instância deste
+            # botão do defeito que a APLICAR-VERDADE-01 curou no outro: dizer
+            # "pronto" sobre uma resposta que nunca foi olhada.
+            from hefesto_dualsense4unix.app.actions.home_actions import (
+                DESFECHO_BLOQUEADO,
+                DESFECHO_FALHOU,
+                desfecho_da_troca,
+                lembrar_mascara_recusada,
+                toast_da_troca_de_mascara,
+            )
+
+            desfecho = (
+                desfecho_da_troca(resultado, pedida=mascara_escolhida)
+                if mascara_escolhida
+                else None
+            )
+            if desfecho in (DESFECHO_BLOQUEADO, DESFECHO_FALHOU):
+                # O ARQUIVO ficou com a escolha dela — é o que este botão
+                # promete e o que ele acabou de fazer. A MÁQUINA não. As duas
+                # metades vão na mesma frase, e a pendência fica de pé: ela é a
+                # única coisa na tela que ainda diz que o daemon está atrasado
+                # em relação ao arquivo.
+                lembrar_mascara_recusada(self, mascara_escolhida)
+                logger.info(
+                    "salvar_gravou_e_a_mascara_foi_recusada",
+                    desfecho=desfecho,
+                    mascara=mascara_escolhida,
+                )
+                self._footer_toast(
+                    _("Perfil salvo. {recado}").format(
+                        recado=toast_da_troca_de_mascara(desfecho, mascara_escolhida)
+                    )
+                )
+                return
             # A linha "vai mudar para:" APAGA aqui, e só aqui: é o único ponto
             # em que o daemon confirmou que já mudou. Mesmo gesto do verde, pela
             # mesma função.
@@ -1466,7 +1556,7 @@ def _transicao_de_modo(
     *,
     modo: str,
     mascara: str | None,
-    ao_aplicar: Callable[[], None],
+    ao_aplicar: Callable[[Any], None],
     ao_falhar: Callable[[Exception], None],
     ao_nao_relancar: Callable[[str], None],
 ) -> None:
@@ -1502,6 +1592,24 @@ def _transicao_de_modo(
     A MÁSCARA que chega aqui é a **escolha explícita** dela, ou `None`. Ecoar de
     volta a máscara vigente do daemon recria o "segundo dono do valor" que a
     AUTO-01.3 enterrou: sem o campo, o daemon preserva a que já está lá.
+
+    ``ao_aplicar`` RECEBE O RESULTADO — I1 da INÍCIO NÃO MENTE-01 (25/08/2026)
+    ------------------------------------------------------------------------
+
+    NOTA DATADA. Até aqui a assinatura era ``Callable[[], None]`` e o
+    ``_done(_resultado)`` abaixo **descartava a resposta do daemon**. Não era
+    detalhe: ``set_gamepad_emulation`` devolve o MESMO ``True`` para três
+    desfechos diferentes — apliquei / já estava / **recusei pelo gate R-04** — e
+    o handler traduz os três em ``status: "ok"``. Com o jogo aberto, o daemon
+    RECUSAVA a troca de máscara e o rodapé anunciava *"O jogo agora vê: Xbox
+    360"*, com o journal registrando ``vpad_recriacao_bloqueada_por_jogo`` sete
+    milissegundos antes (medido na noite de 18→19/08/2026).
+
+    A cura já estava escrita e nunca ligada: ``home_actions.desfecho_da_troca``
+    e ``home_actions.toast_da_troca_de_mascara`` existiam desde 19/08 sem um
+    único chamador de produção — o defeito-mãe desta casa. O que faltava era
+    esta assinatura. Quem lê o desfecho são os dois chamadores; aqui só se
+    entrega o que o daemon respondeu.
     """
     from hefesto_dualsense4unix.app.actions.home_actions import (
         _flavor_label,
@@ -1512,8 +1620,8 @@ def _transicao_de_modo(
     # JOGO-ABERTO-SO-NA-INICIO-01 (09/08/2026): confere ANTES de decidir.
     janela._ha_jogo_aberto_agora()
 
-    def _done(_resultado: Any) -> bool:
-        ao_aplicar()
+    def _done(resultado: Any) -> bool:
+        ao_aplicar(resultado)
         return False  # GLib.idle_add não repete
 
     def _fail(exc: Exception) -> bool:

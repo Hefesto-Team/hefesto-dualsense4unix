@@ -317,6 +317,10 @@ class _HomeStub:
     # de máscara (cobertos em `test_home_ponte_e_divergencia.py`).
     _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
     _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
+    # I3 (25/08/2026): o render passou a perguntar TAMBÉM de onde a máscara
+    # veio (gesto dela x perfil). O dublê empresta o método do mixin, como
+    # empresta os outros — reimplementá-lo aqui mediria o dublê.
+    _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
 
     def __init__(self) -> None:
         self._home_installed = True
