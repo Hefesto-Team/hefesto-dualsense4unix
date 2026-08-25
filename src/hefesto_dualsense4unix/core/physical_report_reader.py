@@ -408,6 +408,74 @@ def _struct_base(report: bytes) -> int | None:
     return None
 
 
+# --- os quatro campos, JÁ com a base na mão ---------------------------------
+#
+# DAEMON-ACORDADO-01 (25/08/2026) — POR QUE ESTA CAMADA EXISTE.
+#
+# O laço de leitura precisa de QUATRO campos do mesmo report (clique, jack,
+# bateria e a janela de motion), e cada extrator público começava chamando o
+# `_struct_base` por conta própria. Num report de BT o `_struct_base` valida
+# CRC-32 — logo o laço pagava **quatro** CRC-32 por report onde um basta, mais
+# as três cópias de buffer que cada `bt_crc32` faz (`report[:-4]`, o `bytes()`
+# de dentro e a concatenação com o byte de seed).
+#
+# A conta, medida em 25/08/2026 nesta bancada (Ryzen 5800X, CPython 3.13,
+# report BT de 78 B; `timeit`, mínimo de 5 repetições de 200 mil chamadas):
+#
+#   quatro extratores............ 3,10 us por report
+#   `_struct_base` sozinho....... 0,68 us
+#   base uma vez + os 4 `_com_base`  1,11 us
+#
+# Na mesa dela — quatro DualSense por rádio, ~2.400 relatórios/s no total
+# (QUATRO-MICROFONES-01, 22/08) — isso é **0,74 % de um núcleo contra 0,27 %**,
+# e são 9.600 validações de CRC por segundo viradas em 2.400.
+#
+# Não é o defeito inteiro dos 15,2 % medidos em 23/08 — aquilo é contado em
+# SYSCALLS (6.393 `read`/s) e isto é CPU de usuário, que syscall nenhuma
+# explica. É a fatia que este arquivo responde, e é a única que se prova sem o
+# aparelho dela. O portão que trava a economia é
+# `tests/unit/test_daemon_acordado_01_o_laco_que_valida_quatro_vezes.py`, que
+# CONTA as validações por report em vez de cronometrar — número estável em
+# máquina de CI.
+#
+# Os quatro extratores públicos continuam existindo e continuam calculando a
+# base sozinhos: eles são a porta de quem tem UM report na mão (testes, CLI,
+# quem lê um dump). Quem está no caminho quente usa as funções `_..._com_base`.
+
+
+def _janela_com_base(report: bytes, base: int) -> bytes | None:
+    """Janela de motion (25 B) a partir da base já resolvida."""
+    start = base + MOTION_WINDOW_OFFSET
+    end = start + MOTION_WINDOW_LEN
+    if len(report) < end:
+        return None
+    return bytes(report[start:end])
+
+
+def _clique_com_base(report: bytes, base: int) -> bool | None:
+    """Clique do touchpad a partir da base já resolvida."""
+    idx = base + BUTTONS2_OFFSET
+    if len(report) <= idx:
+        return None
+    return bool(report[idx] & TOUCHPAD_CLICK_BIT)
+
+
+def _jack_com_base(report: bytes, base: int) -> int | None:
+    """Byte de fone/microfone a partir da base já resolvida."""
+    idx = base + JACK_STATUS_OFFSET
+    if len(report) <= idx:
+        return None
+    return int(report[idx])
+
+
+def _bateria_com_base(report: bytes, base: int) -> int | None:
+    """Byte de bateria a partir da base já resolvida."""
+    idx = base + BATTERY_STATUS_OFFSET
+    if len(report) <= idx:
+        return None
+    return int(report[idx])
+
+
 def extract_motion_window(report: bytes) -> bytes | None:
     """Janela de motion (25 B) de um report CRU do físico, ou None.
 
@@ -418,11 +486,7 @@ def extract_motion_window(report: bytes) -> bytes | None:
     base = _struct_base(report)
     if base is None:
         return None
-    start = base + MOTION_WINDOW_OFFSET
-    end = start + MOTION_WINDOW_LEN
-    if len(report) < end:
-        return None
-    return bytes(report[start:end])
+    return _janela_com_base(report, base)
 
 
 def extract_touchpad_click(report: bytes) -> bool | None:
@@ -437,10 +501,7 @@ def extract_touchpad_click(report: bytes) -> bool | None:
     base = _struct_base(report)
     if base is None:
         return None
-    idx = base + BUTTONS2_OFFSET
-    if len(report) <= idx:
-        return None
-    return bool(report[idx] & TOUCHPAD_CLICK_BIT)
+    return _clique_com_base(report, base)
 
 
 def extract_jack_status(report: bytes) -> int | None:
@@ -869,35 +930,54 @@ class PhysicalReportReader:
             if not data:
                 return
             self._reports_seen += 1
+            # DAEMON-ACORDADO-01 (25/08/2026): a base do report sai UMA vez, e
+            # os quatro consumidores abaixo a recebem pronta. Antes, cada um
+            # chamava `_struct_base` por conta própria — quatro validações de
+            # CRC-32 por report de BT onde uma basta. Ver o bloco
+            # "os quatro campos, JÁ com a base na mão" e o portão
+            # `test_daemon_acordado_01_o_laco_que_valida_quatro_vezes.py`, que
+            # CONTA as validações por report.
+            #
+            # `None` aqui é o report que não é estado de input — id estranho,
+            # tamanho errado, CRC ruim, ou o report de ÁUDIO do BT (PS-PRESO-01).
+            # Os quatro consumidores já o tratavam como "não sei" e não mexiam
+            # em estado nenhum; sair antes deles preserva isso exatamente, e é
+            # o que mantém a contagem de `bt_drops` idêntica.
+            base = _struct_base(data)
+            if base is None:
+                if data[0] == INPUT_REPORT_BT:
+                    self._bt_drops += 1
+                continue
             # TOUCH-CLICK-01: o clique sai ANTES do motion e por caminho
             # próprio. Não pode entrar no `_maybe_emit`: aquele dedupa e capa
             # pela JANELA, e o clique não está nela — um controle parado
             # (janela repetida) engoliria a pressionada. Aqui é por borda e na
             # hora; o custo é 2 writes extras por clique, contra os 250/s que
             # o throttle já governa.
-            self._observe_touchpad_click(data)
+            self._observe_touchpad_click(data, base)
             # JACK-QUE-NAO-LIGOU-01: o fone/microfone sai pelo mesmo caminho e
             # pelo mesmo motivo do clique — mora fora da janela de motion, e o
             # `_maybe_emit` dedupa e capa POR JANELA. Um controle parado na
             # mesa (janela repetida, ou BT em repouso) engoliria o "plugou o
             # fone" se ele dependesse da janela para viajar. Por BORDA: o byte
             # muda uma vez por plugada, não 250 vezes por segundo.
-            self._observe_jack(data)
+            self._observe_jack(data, base)
             # BATERIA-QUE-NAO-CHEGOU-01: e a bateria, pelo terceiro motivo
             # idêntico. Ela muda ~11 vezes numa descarga inteira, então o custo
             # de olhar por report é uma comparação de inteiro, e o de entregar
             # por borda é irrisório perto dos 250/s do motion.
-            self._observe_battery(data)
-            window = extract_motion_window(data)
+            self._observe_battery(data, base)
+            window = _janela_com_base(data, base)
             if window is None:
-                if data[0] == INPUT_REPORT_BT:
-                    self._bt_drops += 1
+                # Com a base RESOLVIDA, isto é só "o report é curto demais para
+                # a janela" — e no BT não acontece, porque a base só sai com os
+                # 78 bytes exatos. O `bt_drops` do CRC/áudio já subiu acima.
                 continue
             self._maybe_emit(window)
 
     # -- clique do touchpad (TOUCH-CLICK-01) ------------------------------
 
-    def _observe_touchpad_click(self, report: bytes) -> None:
+    def _observe_touchpad_click(self, report: bytes, base: int | None = None) -> None:
         """Entrega ao vpad a BORDA do clique do touchpad deste report cru.
 
         Só borda: o report vem a 250 Hz no cabo e em rajada no rádio (pico de
@@ -909,8 +989,17 @@ class PhysicalReportReader:
         "não sei" e NÃO mexe no estado — nem entrega, nem solta. Vpad sem o
         método (uinput, fakes de teste) degrada calado: é o mesmo contrato
         duck-typed do `forward_motion`.
+
+        `base` é a saída de `_struct_base` para ESTE report, quando quem chama
+        já a tem (DAEMON-ACORDADO-01: o laço quente resolve uma vez e passa
+        para os quatro consumidores). Omitir é a forma de quem só tem o report
+        na mão — e ela resolve a base aqui, como sempre fez.
         """
-        pressed = extract_touchpad_click(report)
+        pressed = (
+            _clique_com_base(report, base)
+            if base is not None
+            else extract_touchpad_click(report)
+        )
         if pressed is None or pressed == self._touchpad_click:
             return
         forward = getattr(self._vpad, "forward_touchpad_click", None)
@@ -936,7 +1025,7 @@ class PhysicalReportReader:
 
     # -- fone e microfone do controle (JACK-QUE-NAO-LIGOU-01) -------------
 
-    def _observe_jack(self, report: bytes) -> None:
+    def _observe_jack(self, report: bytes, base: int | None = None) -> None:
         """Entrega ao vpad a MUDANÇA de fone/microfone deste report cru.
 
         Irmão exato do `_observe_touchpad_click`, e as três defesas dele valem
@@ -952,8 +1041,15 @@ class PhysicalReportReader:
         cache muda, o `forward_jack` reconhece que o valor filtrado é o mesmo e
         sai cedo — nenhum report a mais no /dev/uhid, e nenhuma entrega perdida
         se o bit conhecido mudar junto.
+
+        `base` tem o mesmo contrato do `_observe_touchpad_click`: quem já a
+        resolveu passa, quem só tem o report omite.
         """
-        status = extract_jack_status(report)
+        status = (
+            _jack_com_base(report, base)
+            if base is not None
+            else extract_jack_status(report)
+        )
         if status is None or status == self._jack_status:
             return
         forward = getattr(self._vpad, "forward_jack", None)
@@ -978,7 +1074,7 @@ class PhysicalReportReader:
 
     # -- bateria do controle (BATERIA-QUE-NAO-CHEGOU-01) ------------------
 
-    def _observe_battery(self, report: bytes) -> None:
+    def _observe_battery(self, report: bytes, base: int | None = None) -> None:
         """Entrega ao vpad a MUDANÇA de bateria deste report cru.
 
         Terceiro irmão do `_observe_touchpad_click`, com as três defesas dele
@@ -994,8 +1090,15 @@ class PhysicalReportReader:
         se o firmware mexer num bit que não sabemos ler, o cache muda, a
         tradução dá o mesmo par e o `forward_battery` sai cedo — nenhum report
         a mais no /dev/uhid.
+
+        `base` tem o mesmo contrato do `_observe_touchpad_click`: quem já a
+        resolveu passa, quem só tem o report omite.
         """
-        status = extract_battery_status(report)
+        status = (
+            _bateria_com_base(report, base)
+            if base is not None
+            else extract_battery_status(report)
+        )
         if status is None or status == self._battery_status:
             return
         forward = getattr(self._vpad, "forward_battery", None)
