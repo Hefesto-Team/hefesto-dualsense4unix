@@ -63,6 +63,23 @@ jobs:
       # `config_dir()` real é a FAIXA-NO-BERCO-01 do `tests/conftest.py`.
       - run: python3 scripts/check_faixa_sintetica.py
 
+      # INFRA-DE-EXECUCAO-01/I15 (25/08/2026): a posse de arquivo de cada
+      # sprint tem UM formato, e uma máquina o lê. O defeito que ele fecha foi
+      # medido sobre as vinte e três sprints de 24/08 — o mesmo campo aparecia
+      # com DEZ rótulos diferentes, e nenhuma máquina os lia. Custou quatro
+      # colisões de posse não declaradas em 23/08, e duas frentes
+      # reivindicando os MESMOS quatro arquivos sem que ninguém visse.
+      #
+      # Ele nasce reprovando ZERO de propósito: sprint sem frontmatter entra
+      # numa lista de DÍVIDA, não numa reprovação — um portão que reprova
+      # vinte e três de uma vez é um portão que alguém desliga na segunda.
+      # A pressão fica no DESPACHO, e funciona: em 25/08 ele recusou quatro
+      # despachos de quem coordenava a leva, que teve de declarar a posse.
+      #
+      # Roda no `python3` pelado, sem PyYAML: analisador próprio, estrito, que
+      # RECUSA o que não entende dizendo a linha.
+      - run: python3 scripts/check_colisao_de_sprints.py
+
   acentuacao:
     name: Acentuação PT-BR estrita (py${{ matrix.python }})
     runs-on: ubuntu-latest

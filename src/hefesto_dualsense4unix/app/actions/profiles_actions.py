@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.app.actions.carona_do_wrapper import (
 )
 from hefesto_dualsense4unix.app.actions.home_actions import (
     texto_do_custo_da_mascara,
+    texto_do_radio_fragil,
 )
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
 from hefesto_dualsense4unix.app.ipc_bridge import (
@@ -150,6 +151,38 @@ _MODE_KIND_ITEMS: list[tuple[str, str]] = [
     ("gamepad", "Jogar pelo Hefesto"),
     ("native", "Conexão Nativa (Sony)"),
 ]
+
+#: O `kind` que esta aba OFERECE e que o rádio pode não aguentar. Sai da lista
+#: acima de propósito: o dia em que o id mudar, muda nos dois lugares juntos.
+_KIND_NATIVO = "native"
+
+
+def frase_do_radio_fragil_no_modo(kind: object, state: Any) -> str | None:
+    """O aviso de rádio frágil, **quando o modo escolhido aqui é o Nativo**.
+
+    PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/8 (24/08/2026), medido:
+
+        $ grep -rln "native_bt_fragil" src/hefesto_dualsense4unix/app/
+        src/hefesto_dualsense4unix/app/actions/home_actions.py
+
+    **Um arquivo só.** E é ESTA aba que oferece "Conexão Nativa (Sony)" como um
+    dos quatro botões do editor, sem uma palavra sobre o limite do SDL —
+    inclusive num perfil de co-op, onde Modo Nativo com dois ou mais controles
+    no rádio é exatamente a pergunta que ninguém mediu.
+
+    **A frase é a MESMA da Início, e vem de lá** (`texto_do_radio_fragil`).
+    Escrever uma segunda aqui daria o nono par da F5 na mesma noite em que oito
+    estão sendo curados — e o teste desta função afirma IGUALDADE com a da
+    outra aba, não semelhança.
+
+    O que é próprio daqui é só o gatilho: fora do Modo Nativo o editor cala,
+    porque o aviso fala do modo que ela está escolhendo, não do que o sistema
+    está fazendo agora — esse já tem banner na Início.
+    """
+    if kind != _KIND_NATIVO:
+        return None
+    return texto_do_radio_fragil(state if isinstance(state, dict) else None)
+
 
 # Máscara do gamepad virtual (só faz sentido com kind == "gamepad").
 _MODE_FLAVOR_ITEMS: list[tuple[str, str]] = [
@@ -569,6 +602,63 @@ def perfil_que_esta_valendo(state: Any = None) -> PerfilQueVale:
     return PerfilQueVale(None, "nenhum" if houve_resposta else "nao_sei")
 
 
+# --- P7: Remover não sabia que estava apagando o que está valendo ----------
+# PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/7 (24/08/2026). `on_profile_remove` confirma
+# pelo NOME e nunca pergunta se aquele é o perfil ativo. Com o
+# `active_profile.txt` valendo `Sackboy`, apagar o Sackboy é um clique — e
+# depois dele: o daemon segue com as seções daquele perfil aplicadas no
+# controle, o marcador em disco continua apontando para um arquivo que não
+# existe mais, e NADA na tela diz isso. A remoção parece inconsequente.
+#
+# A METADE DO RASTRO JÁ ESTÁ FECHADA, e não é desta frente: `delete_profile`
+# apagava o `.json` e deixava o `.lock` (três órfãos no disco dela). A Z4/T15
+# curou em 24/08 (`profiles/loader.py`, o `unlink` FORA do `with`) e tem régua
+# própria em `tests/unit/test_z4_locks_orfaos.py`. Conferido em 25/08 antes de
+# escrever uma linha — refazer teria sido a segunda cura para o mesmo fato.
+
+#: O que a remoção do perfil ATIVO faz, e o que ela NÃO desfaz. Três frases,
+#: na ordem que a casa exige de toda frase de diagnóstico (o quê, por quê, o
+#: que fazer) — ver "Quem é o usuário, e por que a aba ensina".
+_AVISO_DA_REMOCAO_DO_ATIVO = (
+    "Este é o perfil que está valendo agora.\n"
+    "Remover o arquivo não desfaz o que já está no controle: a cor, os "
+    "gatilhos e a vibração dele seguem aplicados até você ativar outro perfil.\n"
+    "E o marcador em disco vai apontar para um perfil que não existe mais — "
+    "ative outro perfil em seguida para acertar os dois."
+)
+
+
+def frase_da_remocao_do_perfil_ativo(nome: str, valendo: Any) -> str | None:
+    """O aviso extra do diálogo de Remover. ``None`` é silêncio, e é a regra.
+
+    Só fala quando o perfil que ela mandou remover é **o que está valendo** —
+    e quem responde isso é o dono do §P1 (`perfil_que_esta_valendo`), nunca uma
+    segunda leitura do disco aqui.
+
+    **O ``nao_sei`` cala.** Se ninguém soube dizer qual perfil está valendo, a
+    tela não pode afirmar que este é. É a mesma disciplina do §P1: *"não sei"*
+    e *"não há"* são fatos diferentes, e transformar o primeiro em aviso é o
+    alarme falso que esta casa recusa.
+
+    Compara por SLUG porque é o slug que nomeia o arquivo: o marcador em disco
+    pode guardar `Sackboy` enquanto a lista mostra `sackboy`, e um `==` cru
+    deixaria o aviso mudo exatamente no caso que ele existe para cobrir.
+
+    Função PURA — o teste lê o texto sem GTK e sem disco.
+    """
+    if not nome:
+        return None
+    do_dono = getattr(valendo, "nome", None)
+    fonte = getattr(valendo, "fonte", "nao_sei")
+    if not isinstance(do_dono, str) or not do_dono or fonte == "nao_sei":
+        return None
+    from hefesto_dualsense4unix.profiles.slug import slugify
+
+    if slugify(do_dono) != slugify(nome):
+        return None
+    return _AVISO_DA_REMOCAO_DO_ATIVO
+
+
 def ordem_de_exibicao(perfis: list[Any], ativo: str | None) -> list[Any]:
     """A ordem em que as linhas aparecem: o ativo primeiro, o resto como veio.
 
@@ -765,6 +855,96 @@ def mensagem_do_salvar(
     )
 
     return f"{cabeca} — {_mensagem_de_aplicacao(relato)}"
+
+
+# --- P2: o carimbo de ponte aparece NESTA aba ------------------------------
+# PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/1 (24/08/2026). O daemon PUBLICA
+# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1971`), com o
+# comentário dizendo a intenção em letra: *"para a janela dizer 'este jogo já
+# sabe por onde entra'"*. Medido:
+#
+#     $ grep -rn "pontes_confirmadas" src/hefesto_dualsense4unix/app/
+#     app/draft_config.py:445:    # `manager.pontes_confirmadas()` …  <- comentário
+#     app/actions/profiles_actions.py:3771: # carimbo viaja junto …    <- comentário
+#
+# Dois hits, os dois em COMENTÁRIO. Zero leitores. A aba PRESERVA o carimbo no
+# Salvar e nunca o mostrou — é a cura escrita, o dado publicado, e a tela muda.
+# E é a decisão dela de 19/08: *"o produto CONSTRÓI a ponte, não só preserva"*,
+# parada na última perna.
+#
+# DOIS perfis dela já têm o carimbo hoje (`big_walk.json`, `duskfade.json`), o
+# que dá dado real para provar contra, sem inventar fixture.
+
+#: Como cada `kind` de ponte se chama NA TELA. São os rótulos de
+#: `_MODE_KIND_ITEMS`, que são os mesmos da aba Início (UX-MODE-TERMS-01/02):
+#: um segundo vocabulário para o mesmo fato é como esta casa ganhou os oito
+#: pares da F5.
+_ROTULO_DA_PONTE: dict[str, str] = dict(_MODE_KIND_ITEMS)
+
+#: E como se chama a máscara, quando a ponte é de gamepad.
+_ROTULO_DA_MASCARA: dict[str, str] = dict(_MODE_FLAVOR_ITEMS)
+
+#: COMO a ponte foi confirmada. O vocabulário do esquema
+#: (`gesto`/`silencio`/`escolha_dela`) traduzido para o que ela reconhece.
+_COMO_FOI_CONFIRMADA: dict[str, str] = {
+    "gesto": "quando você aplicou o perfil",
+    "silencio": "porque funcionou e ninguém precisou mexer",
+    "escolha_dela": "porque você escolheu assim",
+}
+
+
+def _dia_do_carimbo(iso: object) -> str | None:
+    """``2026-08-19T21:16:55-03:00`` -> ``19/08/2026``. Lixo -> ``None``.
+
+    Só o DIA: a hora do carimbo não muda decisão nenhuma dela, e uma data com
+    segundos numa linha de apoio é ruído que se aprende a não ler.
+    """
+    from datetime import datetime
+
+    if not isinstance(iso, str) or not iso:
+        return None
+    with contextlib.suppress(ValueError):
+        return datetime.fromisoformat(iso).strftime("%d/%m/%Y")
+    return None
+
+
+def frase_da_ponte_confirmada(pontes: Any, appid: object) -> str | None:
+    """O carimbo deste jogo, em uma linha. ``None`` é SILÊNCIO, e é de propósito.
+
+    Sem carimbo a linha **não diz nada** — nunca "ponte desconhecida", nunca
+    "ainda não sei". É a mesma disciplina do P1: a ausência da chave já
+    significa "não sei", e escrever isso na tela transforma a falta de
+    informação em aviso. `pontes_confirmadas` só publica os appids COM
+    carimbo, exatamente por isso.
+
+    Função PURA — o teste lê o texto sem daemon e sem GTK.
+    """
+    if not isinstance(pontes, dict):
+        return None
+    chave = normalize_appid(str(appid) if appid is not None else None)
+    ponte = pontes.get(chave) if chave else None
+    if not isinstance(ponte, dict):
+        return None
+    kind = str(ponte.get("kind") or "")
+    por_onde = _ROTULO_DA_PONTE.get(kind)
+    if por_onde is None:
+        # `kind` que esta versão não conhece: calar é melhor que inventar um
+        # rótulo. O carimbo continua no disco e o Salvar continua o preservando.
+        return None
+    if kind == "gamepad":
+        mascara = _ROTULO_DA_MASCARA.get(str(ponte.get("gamepad_flavor") or ""))
+        if mascara:
+            por_onde = f"{por_onde}, como {mascara}"
+    if ponte.get("steam_input") is True:
+        por_onde = f"{por_onde}, com o jogo marcado no Steam Input"
+    partes = [f"Este jogo já sabe por onde entra: {por_onde}."]
+    dia = _dia_do_carimbo(ponte.get("confirmada_em"))
+    como = _COMO_FOI_CONFIRMADA.get(str(ponte.get("confirmada_por") or ""))
+    if dia and como:
+        partes.append(f"Confirmado em {dia}, {como}.")
+    elif dia:
+        partes.append(f"Confirmado em {dia}.")
+    return " ".join(partes)
 
 
 def texto_da_marca_do_steam_input(
@@ -1320,6 +1500,26 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         hint.set_line_wrap(True)
         hint.get_style_context().add_class("dim-label")
         slot.pack_start(hint, False, False, 0)
+
+        # §P8: o aviso de rádio frágil, na seção onde ela escolhe o Modo
+        # Nativo. Nasce em código, como o preço da máscara logo acima — a
+        # seção "Modo" inteira é montada aqui, e um rótulo novo no XML não é
+        # necessário para o dado chegar à tela.
+        #
+        # `#ffb86c` é o token de ALERTA da casa, o mesmo do
+        # `profile_process_name_aviso` e da frase do jogo. E `set_markup` em
+        # vez de classe CSS pela razão já medida nesta janela: classe não
+        # pinta rótulo aqui.
+        aviso_radio = Gtk.Label()
+        aviso_radio.set_xalign(0.0)
+        aviso_radio.set_line_wrap(True)
+        # 64, o mesmo teto medido do preço da máscara — pelo mesmo motivo: uma
+        # frase longa sem onde quebrar come a coluna "Perfis salvos".
+        aviso_radio.set_max_width_chars(64)
+        aviso_radio.set_visible(False)
+        aviso_radio.set_no_show_all(True)
+        self._aviso_do_radio_fragil = aviso_radio
+        slot.pack_start(aviso_radio, False, False, 0)
         slot.show_all()
 
         # Contrato do sinal (BUG-HOME-SEGMENTED-SIGNATURE-01): "changed" do
@@ -1346,6 +1546,9 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 
     def _sync_mode_options_visibility(self, kind: str) -> None:
         """Mostra/habilita a máscara apenas com kind == "gamepad"."""
+        # §P8: o aviso do rádio acompanha o MESMO gesto — é o único ponto por
+        # onde os três caminhos (montagem, gesto dela e populate) passam.
+        self._sincronizar_aviso_do_radio(kind)
         opts = self._mode_gamepad_opts
         if opts is None:
             return
@@ -1356,9 +1559,77 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         opts.set_no_show_all(not is_gamepad)
         opts.set_sensitive(is_gamepad)
 
+    def _sincronizar_aviso_do_radio(self, kind: str) -> None:
+        """Escreve (ou apaga) o aviso de rádio frágil da seção "Modo".
+
+        Best-effort inteiro: sem o rótulo, sem o estado, ou com o daemon calado,
+        a linha simplesmente não aparece — nunca uma exceção na thread do GTK
+        por causa de um aviso.
+        """
+        rotulo = getattr(self, "_aviso_do_radio_fragil", None)
+        if rotulo is None:
+            return
+        frase = frase_do_radio_fragil_no_modo(
+            kind, getattr(self, "_estado_do_radio", None)
+        )
+        try:
+            if frase is None:
+                rotulo.set_text("")
+                # §P9: rearmado ao apagar, pela mesma razão dos outros três
+                # widgets desta aba — ver `_mostrar_caixa_do_steam_input`.
+                with contextlib.suppress(Exception):
+                    rotulo.set_no_show_all(True)
+                rotulo.set_visible(False)
+                return
+            rotulo.set_markup(
+                f'<span foreground="#ffb86c">{escapar_markup(frase)}</span>'
+            )
+            with contextlib.suppress(Exception):
+                rotulo.set_tooltip_text(frase)
+            with contextlib.suppress(Exception):
+                rotulo.set_no_show_all(False)
+            rotulo.set_visible(True)
+        except Exception as exc:
+            logger.debug("aviso_do_radio_falhou", err=str(exc))
+
+    def _buscar_o_estado_do_radio(self) -> None:
+        """Pede o `state_full` ao daemon — por GESTO, e só quando faz falta.
+
+        `native_bt_fragil` mora no `daemon.state_full`
+        (`daemon/ipc_handlers.py`), e esta aba não tem tique próprio: ela não
+        fala com o daemon em lugar nenhum. Uma busca ao escolher o Modo Nativo
+        é atual o bastante — o que decide o aviso é quantos controles estão no
+        rádio AGORA, e a resposta chega antes de ela terminar de ler a linha.
+
+        Daemon offline deixa o cache como está e a linha não aparece.
+        """
+        call_async(
+            method="daemon.state_full",
+            params={},
+            on_success=self._ao_chegar_o_estado_do_radio,
+            on_failure=lambda _exc: False,
+        )
+
+    def _ao_chegar_o_estado_do_radio(self, result: Any = None) -> bool:
+        """Callback GTK: guarda o estado e repinta o aviso do modo escolhido."""
+        if isinstance(result, dict):
+            self._estado_do_radio = result
+            with contextlib.suppress(Exception):
+                selector = getattr(self, "_mode_kind_selector", None)
+                if selector is not None:
+                    self._sincronizar_aviso_do_radio(
+                        selector.get_active_id() or "none"
+                    )
+        return False  # GLib.idle_add: não repetir
+
     def _on_mode_kind_changed(self, selector: Any) -> None:
         """Handler do kind: sincroniza a visibilidade das opções do modo."""
         kind = selector.get_active_id() or "none"
+        # §P8: escolher o Modo Nativo é o gesto que faz a pergunta ao daemon.
+        # Fora dele não há aviso a dar, e um poller a mais nesta janela seria
+        # custo permanente por uma linha que quase nunca acende.
+        if kind == _KIND_NATIVO:
+            self._buscar_o_estado_do_radio()
         # PERFIL-SALVA-TUDO-01: gesto no seletor conta. O populate programático
         # (`_set_mode_editor`) também dispara este handler — ele BAIXA a marca
         # depois, então o que sobra ligado aqui é toque dela.
@@ -1835,6 +2106,20 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         é a cura da CAMPO-QUE-NAO-NASCIA-01 — `no_show_all` faz o `show_all()`
         ignorar o widget INCLUSIVE quando chamado nele mesmo, e um `show()` seco
         revelaria a caixa sem descer nos filhos (ela veria um vão vazio).
+
+        E o `set_no_show_all(True)` de volta ao esconder é a OUTRA metade dessa
+        mesma cura, medida em 25/08/2026 (§P9). Sem ela o desarme era
+        PERMANENTE: `app.py:show_window()` — o caminho do ícone da bandeja, da
+        notificação e do `kill -USR1` — chama `window.show_all()`, e um
+        `show_all()` da janela reexibe todo widget que não estiver com o
+        `no_show_all` armado. O resultado é a caixinha do Steam Input
+        reaparecendo sob um "Aplica a:" que não é "Jogo da Steam", com a lista
+        de outros marcados que pertence a outra escolha.
+
+        O molde certo já estava neste arquivo, uma seção acima:
+        `_sync_mode_options_visibility` faz `set_no_show_all(not is_gamepad)`.
+        O glade também já dizia a intenção — `no-show-all: True` nos dois
+        widgets. O que faltava era rearmar.
         """
         box = self._get("profile_steam_input_box")
         if box is None:
@@ -1843,10 +2128,15 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             self._sincronizar_caixa_do_steam_input()
             self._sincronizar_outros_marcados()
             self._sincronizar_exigencia_invisivel()
+            # P2: e o carimbo de ponte do jogo, buscado no daemon por GESTO.
+            # Ver `_buscar_as_pontes_confirmadas` para por que não vem no tique.
+            self._buscar_as_pontes_confirmadas()
             with contextlib.suppress(Exception):
                 box.set_no_show_all(False)
             box.show_all()
         else:
+            with contextlib.suppress(Exception):
+                box.set_no_show_all(True)
             box.hide()
 
     def _sincronizar_exigencia_invisivel(self) -> None:
@@ -1886,6 +2176,10 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
                 rotulo.set_no_show_all(False)
         else:
             rotulo.set_text("")
+            # §P9: e rearmado ao apagar, senão o `show_all()` da janela devolve
+            # à tela um rótulo VAZIO. Ver `_mostrar_caixa_do_steam_input`.
+            with contextlib.suppress(Exception):
+                rotulo.set_no_show_all(True)
         rotulo.set_visible(bool(texto))
 
     @staticmethod
@@ -1984,6 +2278,11 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         deste = self._appid_do_editor()
         outros = sorted(self._appids_do_steam_input() - {deste or ""})
         if not outros:
+            # §P9 (25/08/2026): rearmar antes de esconder — sem isto o
+            # `window.show_all()` do `show_window()` traz de volta uma lista
+            # VAZIA com título. Ver `_mostrar_caixa_do_steam_input`.
+            with contextlib.suppress(Exception):
+                caixa.set_no_show_all(True)
             caixa.hide()
             return
 
@@ -2278,22 +2577,81 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             texto = (entry.get_text() or "") if entry is not None else ""
             nomes = getattr(self, "_nomes_dos_jogos", {})
             decisao = frase_do_campo_do_jogo(texto, nomes)
-            if decisao is None:
+            # P2 (25/08/2026): o carimbo de ponte entra AQUI, no mesmo rótulo e
+            # logo abaixo, porque é o MESMO jogo do campo ao lado — e é onde
+            # ela escolhe o jogo. Rótulo próprio no glade seria o certo (é o
+            # que a sprint pede), e o arquivo é de outra frente nesta leva;
+            # esta costura entrega o dado sem tocar o XML.
+            do_carimbo = frase_da_ponte_confirmada(
+                getattr(self, "_pontes_confirmadas", None), texto
+            )
+            if decisao is None and do_carimbo is None:
                 rotulo.set_text("")
                 rotulo.set_visible(False)
                 return
-            frase, e_alerta = decisao
-            # `#ffb86c` é o ALERTA da casa; `#8be9fd` é o `cyan` do
-            # `theme.css:25`, cujo comentário o define como "info, valores
-            # numéricos" — que é exatamente o que o nome do jogo é aqui: a
-            # leitura humana do número que está no campo ao lado.
-            cor = "#ffb86c" if e_alerta else "#8be9fd"
-            rotulo.set_markup(f'<span foreground="{cor}">{escapar_markup(frase)}</span>')
+            linhas: list[str] = []
+            if decisao is not None:
+                frase, e_alerta = decisao
+                # `#ffb86c` é o ALERTA da casa; `#8be9fd` é o `cyan` do
+                # `theme.css:25`, cujo comentário o define como "info, valores
+                # numéricos" — que é exatamente o que o nome do jogo é aqui: a
+                # leitura humana do número que está no campo ao lado.
+                cor = "#ffb86c" if e_alerta else "#8be9fd"
+                linhas.append(
+                    f'<span foreground="{cor}">{escapar_markup(frase)}</span>'
+                )
+            if do_carimbo is not None:
+                # Itálico e sem cor própria: o carimbo é informação de APOIO —
+                # confirmação, não alerta —, e inventar um quarto token de cor
+                # nesta tela seria a aba escrevendo o próprio vocabulário
+                # visual. É o mesmo tratamento de "Outros jogos marcados".
+                linhas.append(f"<i>{escapar_markup(do_carimbo)}</i>")
+            rotulo.set_markup("\n".join(linhas))
             with contextlib.suppress(Exception):
-                rotulo.set_tooltip_text(frase)
+                rotulo.set_tooltip_text(
+                    "\n".join(
+                        p
+                        for p in (
+                            decisao[0] if decisao is not None else None,
+                            do_carimbo,
+                        )
+                        if p
+                    )
+                )
             rotulo.set_visible(True)
         except Exception as exc:
             logger.debug("frase_do_jogo_falhou", err=str(exc))
+
+    def _buscar_as_pontes_confirmadas(self) -> None:
+        """Pede ao daemon o carimbo de cada jogo — por GESTO, nunca por tique.
+
+        **Por que `daemon.status` e não o `state_full` que a janela já lê a cada
+        tique:** medido em 25/08/2026, `pontes_confirmadas` é publicado por
+        `_handle_daemon_status` (`daemon/ipc_handlers.py:1971`) e **não existe
+        no `daemon.state_full`** — que é o payload do tique. Publicá-lo lá é o
+        conserto de fundo e mora no `daemon/`, que é de outra frente nesta leva.
+        Enquanto isso, uma leitura por gesto entrega o dado sem somar um segundo
+        poller: o carimbo só muda quando um perfil é salvo ou confirmado, então
+        uma busca ao abrir a caixa do jogo é atual o bastante.
+
+        Best-effort inteiro: daemon offline deixa o cache como está e a linha
+        simplesmente não aparece — que é o silêncio já contratado no §P2.
+        """
+        call_async(
+            method="daemon.status",
+            params={},
+            on_success=self._ao_chegar_o_carimbo_das_pontes,
+            on_failure=lambda _exc: False,
+        )
+
+    def _ao_chegar_o_carimbo_das_pontes(self, result: Any = None) -> bool:
+        """Callback GTK: guarda o carimbo e repinta a linha do jogo."""
+        if isinstance(result, dict):
+            pontes = result.get("pontes_confirmadas")
+            self._pontes_confirmadas = pontes if isinstance(pontes, dict) else {}
+            with contextlib.suppress(Exception):
+                self._atualizar_frase_do_jogo()
+        return False  # GLib.idle_add: não repetir
 
     def on_profile_steam_input_toggled(self, check: Any = None) -> None:
         """Marca/desmarca ESTE jogo na allowlist do Steam Input.
@@ -2737,7 +3095,14 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         from hefesto_dualsense4unix.app import gui_dialogs
 
         window = self._get("main_window")
-        if not gui_dialogs.confirm_delete_profile(parent=window, name=name):
+        # P7: e o diálogo diz quando o alvo é o perfil que está VALENDO. Sem
+        # `state`, de propósito: esta aba não fala com o daemon, e o dono do
+        # §P1 já cai no disco — que é a fonte certa aqui e o caso vivo da
+        # máquina dela (`active_profile: null` no daemon, `Sackboy` no disco).
+        aviso = frase_da_remocao_do_perfil_ativo(name, perfil_que_esta_valendo())
+        if not gui_dialogs.confirm_delete_profile(
+            parent=window, name=name, aviso=aviso
+        ):
             self._toast_profile("Remoção cancelada.")
             return
         try:

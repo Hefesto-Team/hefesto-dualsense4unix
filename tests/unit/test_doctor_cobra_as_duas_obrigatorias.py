@@ -20,10 +20,11 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
+
+from tests.conftest import binario_do_venv
 
 RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
@@ -34,6 +35,47 @@ def _funcao(nome: str) -> str:
     m = re.search(rf"\n{nome}\(\) \{{.*?\n\}}\n", texto, re.S)
     assert m is not None, f"`{nome}` sumiu do doctor.sh"
     return m.group(0)
+
+
+def _venv_python_ao_alcance() -> str:
+    """O python de venv que o doctor vai achar — resolvido, nunca presumido.
+
+    BINARIO-QUE-SO-EXISTE-NA-ARVORE-DELA-01 (25/08/2026): esta substituição
+    apontava para `${HEFESTO_RAIZ}/.venv/bin/python`, e `git worktree add` não
+    copia `.venv/`. Em árvore de agente o caminho não existia, o
+    `_python_do_produto` caía no `python3` do PATH — aqui um venv SEM
+    PyGObject — e o `check_loader_svg` reprovava por falta de `gi` numa
+    máquina que carrega SVG sem problema nenhum. Ver `binario_do_venv`.
+
+    Quando não há venv ao alcance, devolve o caminho antigo (inexistente): o
+    doctor simplesmente pula essa entrada, exatamente como fazia.
+    """
+    achado = binario_do_venv("python")
+    return str(achado) if achado is not None else str(RAIZ / ".venv/bin/python")
+
+
+def _corpo_do_python_do_produto() -> str:
+    return _funcao("_python_do_produto").replace(
+        '"$(dirname "$0")/../.venv/bin/python"', f'"{_venv_python_ao_alcance()}"'
+    )
+
+
+def _python_que_o_doctor_usa() -> str:
+    """O interpretador que as checagens do doctor vão de fato rodar.
+
+    MEDIR CONTRA A BIBLIOTECA ERRADA é a armadilha nº 1 desta casa, e esta
+    régua caía nela ao contrário: a PREMISSA (`_tem_loader_svg`) perguntava a
+    `sys.executable`, o python da bancada; a AFIRMAÇÃO rodava o doctor, que
+    escolhe outro interpretador. Premissa e afirmação sobre interpretadores
+    diferentes produzem um vermelho que se lê como "a régua do doctor
+    quebrou". Agora a premissa pergunta a ESTE.
+    """
+    saida = subprocess.run(
+        ["/usr/bin/bash", "-c", _corpo_do_python_do_produto() + "\n_python_do_produto\n"],
+        capture_output=True,
+        text=True,
+    )
+    return saida.stdout.strip()
 
 
 def _rodar(nome: str, *, mascarar: list[str] | None = None) -> int:
@@ -50,9 +92,7 @@ def _rodar(nome: str, *, mascarar: list[str] | None = None) -> int:
         "warn() { printf '[WARN] %s\\n' \"$*\"; exit 8; }\n"
         f'HEFESTO_RAIZ="{RAIZ}"\n'
     )
-    corpo = _funcao("_python_do_produto").replace(
-        '"$(dirname "$0")/../.venv/bin/python"', '"${HEFESTO_RAIZ}/.venv/bin/python"'
-    )
+    corpo = _corpo_do_python_do_produto()
     script = prelude + corpo + _funcao(nome) + f"\n{nome}\n"
     cmd = ["/usr/bin/bash", "-c", script]
     if mascarar:
@@ -143,7 +183,14 @@ def _tem_loader_svg() -> bool:
     `lint-test` do CI não instala o loader, então "com o loader passa" ali não
     tinha premissa. Reprovava dizendo que a régua estava errada, quando o que
     faltava era a coisa medida.
+
+    E ela pergunta ao MESMO python que o doctor vai usar (25/08/2026). Ver
+    `_python_que_o_doctor_usa`: perguntar a `sys.executable` era medir um
+    interpretador e afirmar sobre outro.
     """
+    py = _python_que_o_doctor_usa()
+    if not py:
+        return False
     codigo = (
         "import gi; gi.require_version('GdkPixbuf','2.0');"
         "from gi.repository import GdkPixbuf;"
@@ -160,10 +207,7 @@ def _tem_loader_svg() -> bool:
         "    p.unlink(missing_ok=True)"
     )
     return (
-        subprocess.run(
-            [sys.executable, "-c", codigo], capture_output=True
-        ).returncode
-        == 0
+        subprocess.run([py, "-c", codigo], capture_output=True).returncode == 0
     )
 
 
@@ -178,7 +222,16 @@ class TestOhDoctorCobraOLoaderSVG:
 
         Se alguém trocar o carregamento por `Pixbuf.get_formats()`, este teste
         volta a dar verde com o loader mascarado — medido em 19/08.
+
+        A PREMISSA VEM ANTES DA MORDIDA (25/08/2026), e ela faltava aqui: sem
+        ela esta mordida dava VERDE PELO MOTIVO ERRADO. Medido nesta árvore de
+        agente — o `_python_do_produto` caía num python sem PyGObject, o
+        `check_loader_svg` saía 7 **com ou sem a máscara**, e a asserção de
+        baixo comemorava uma recusa que a máscara não causou. Um verde que não
+        depende da coisa medida não é mordida nenhuma.
         """
+        if not _tem_loader_svg():
+            pytest.skip("esta máquina não carrega SVG — não há loader a aferir")
         alvos = _existe(
             *[
                 str(p)

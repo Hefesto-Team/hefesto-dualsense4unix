@@ -181,10 +181,45 @@ class TestDropinResilience:
         assert "lp rswitch 2" not in codigo and "lp rswitch\n" not in codigo, (
             "no-sniff como default do ADAPTADOR é a regressão medida em 23/07"
         )
-        # E o no-sniff por-conexão tem de ser filtrado pela OUI do Pro genuíno.
-        assert "OUI_NINTENDO_REAL" in codigo
-        assert "E0:F6:B5" in codigo, "a OUI é a fonte da verdade, nunca VID/PID"
-        assert 'hcitool lp "${MAC}" RSWITCH' in codigo
+        # E o no-sniff por-conexão tem de mirar o ENDEREÇO do controle — é isto
+        # que faz dele "por dispositivo" e não "do adaptador".
+        assert 'hcitool lp "${MAC}" RSWITCH' in codigo, (
+            "o no-sniff deixou de mirar o endereço do controle: se o alvo virar "
+            "um `hciN`, ele volta a ser default do adaptador e a probe do "
+            "8BitDo morre de novo em ret=-110"
+        )
+        # NOTA DATADA — 25/08/2026 (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01).
+        #
+        # Aqui havia mais duas asserções, e as duas FOSSILIZARAM o defeito que
+        # aquela frente curou:
+        #
+        #   - uma exigia a constante `OUI_NINTENDO_REAL` no script;
+        #   - a outra exigia a faixa do Pro DESTA bancada escrita por extenso,
+        #     com a mensagem "a OUI é a fonte da verdade, nunca VID/PID".
+        #
+        # (a faixa não se repete aqui, nem como exemplo: escrevê-la de novo é
+        # o convite para ela voltar a ser a definição.)
+        #
+        # A faixa do Pro DESTA bancada tinha virado a DEFINIÇÃO de "Pro". A
+        # Nintendo tem 82 faixas MA-L registradas: quem tem um Pro de outra
+        # safra ficava com o link caindo sob carga a cada sessão de quatro
+        # jogadores, calado, com o `doctor` aprovando a cura. A constante foi
+        # apagada e ganhou LÁPIDE própria — `test_a_oui_separa_o_clone_do_
+        # genuino.py::test_a_faixa_desta_bancada_nao_voltou_a_ser_a_definicao_
+        # de_pro` reprova se ela voltar. Ou seja: as duas réguas desta árvore
+        # estavam exigindo o contrário uma da outra, e esta era a errada.
+        #
+        # O QUE NÃO CADUCOU é o que este teste sempre mediu: o ESCOPO. Quem
+        # decide agora é `_e_pro_genuino`, POR CONTROLE, e é a existência desse
+        # filtro guardando o laço que separa "por dispositivo" de "no adaptador
+        # inteiro". O comportamento — que Pro entra e que clone fica de fora —
+        # é medido ao vivo em `test_o_no_sniff_alcanca_todo_pro.py`, que roda o
+        # script de verdade contra uma mesa de mentira.
+        assert re.search(r"^\s*_e_pro_genuino\b.*\|\|\s*continue\s*$", codigo, re.M), (
+            "o laço por-conexão perdeu o filtro por controle: sem ele o "
+            "`hcitool lp` alcança TODO mundo que estiver conectado, e o clone "
+            "8BitDo — que precisa do sniff — volta a levar o no-sniff junto"
+        )
 
     def test_watchdog_reafirma_modo_ativo(self) -> None:
         """O watchdog (2 min) delega ao bt_active_mode.sh — cobre adaptador que

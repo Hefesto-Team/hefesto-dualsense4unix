@@ -2141,6 +2141,59 @@ def accent_do_card(entry: dict[str, Any], state_global: dict[str, Any]) -> RGB:
     return ensure_min_contrast(base if base is not None else ACCENT_NEUTRO)
 
 
+def cor_do_swatch(entry: Any) -> RGB | None:
+    """A cor CRUA do quadradinho ao lado do título. ``None`` = desconhecida.
+
+    **D8, e é o que separa esta função da** :func:`accent_do_card`: o swatch
+    mostra a cor CRUA — ele é a IDENTIDADE da cor, o "este controle é o azul" —
+    e só os TRAÇOS passam por ``ensure_min_contrast``. A razão é de desenho e
+    está medida: um traço escuro sobre fundo escuro some, e por isso o traço
+    precisa do piso de contraste; um quadrado PREENCHIDO com contorno neutro
+    continua visível em qualquer cor, e ajustá-lo faria a tela mostrar uma cor
+    que a barra não tem.
+
+    Existe como função separada — em vez de um ``_rgb3`` repetido em cada
+    chamador — desde a NO-JOGO-SEM-FALSO-VERDE-01/T5 (25/08/2026), quando a aba
+    "No jogo" passou a desenhar o mesmo quadradinho: com duas leituras do
+    ``lightbar_rgb``, as duas abas divergiriam no primeiro caso de borda, e o
+    quadradinho do mesmo controle teria uma cor em cada tela.
+    """
+    return _rgb3(entry.get("lightbar_rgb") if isinstance(entry, dict) else None)
+
+
+def desenhar_swatch(
+    ctx: Any, largura: int, altura: int, rgb: RGB | None
+) -> None:
+    """Desenha o quadradinho de cor num contexto cairo já posicionado.
+
+    Dona única do DESENHO do swatch, pela mesma razão que
+    :func:`cor_do_swatch` é dona da cor: o card da aba Status e o painel da aba
+    "No jogo" desenham o mesmo elemento, e duas implementações divergiriam.
+
+    O contorno neutro é o que delimita o quadrado sem trair a cor crua — e é o
+    único traço visível quando a cor é desconhecida (``rgb`` ``None``), que é o
+    caso do controle cuja lightbar ninguém leu ainda.
+    """
+    if rgb is not None:
+        ctx.set_source_rgb(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255)
+        ctx.rectangle(0, 0, largura, altura)
+        ctx.fill()
+    ctx.set_source_rgb(
+        ACCENT_NEUTRO[0] / 255,
+        ACCENT_NEUTRO[1] / 255,
+        ACCENT_NEUTRO[2] / 255,
+    )
+    ctx.set_line_width(1)
+    ctx.rectangle(0.5, 0.5, largura - 1, altura - 1)
+    ctx.stroke()
+
+
+#: Lado do quadradinho de cor, em px. O card já usava 14; o painel da aba "No
+#: jogo" usa o MESMO número pela razão de sempre — é o mesmo elemento, e dois
+#: tamanhos leriam como duas coisas diferentes.
+LADO_DO_SWATCH: Final[int] = 14
+
+
 # ---------------------------------------------------------------------------
 # Resolução condicional de GTK (padrão da casa: real + stub)
 # ---------------------------------------------------------------------------
@@ -2445,7 +2498,7 @@ if _GTK_DISPONIVEL:
                 self.set_hexpand(True)
             header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             swatch = Gtk.DrawingArea()
-            swatch.set_size_request(14, 14)
+            swatch.set_size_request(LADO_DO_SWATCH, LADO_DO_SWATCH)
             swatch.set_valign(Gtk.Align.CENTER)
             swatch.connect("draw", self._on_draw_swatch)
             self._swatch = swatch
@@ -4619,7 +4672,7 @@ if _GTK_DISPONIVEL:
         def _update_lightbar(
             self, entry: dict[str, Any], state_global: dict[str, Any]
         ) -> None:
-            cru = _rgb3(entry.get("lightbar_rgb"))
+            cru = cor_do_swatch(entry)
             rotulo, base = rotulo_lightbar(entry, state_global)
             accent = ensure_min_contrast(
                 base if base is not None else ACCENT_NEUTRO
@@ -5233,23 +5286,15 @@ if _GTK_DISPONIVEL:
         # ------------------------------------------------------------------
 
         def _on_draw_swatch(self, widget: Any, ctx: Any) -> bool:
-            largura = widget.get_allocated_width()
-            altura = widget.get_allocated_height()
-            rgb = self._swatch_rgb
-            if rgb is not None:
-                ctx.set_source_rgb(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255)
-                ctx.rectangle(0, 0, largura, altura)
-                ctx.fill()
-            # Contorno neutro delimita o swatch sem trair a cor crua (e é o
-            # único traço visível quando a cor é desconhecida).
-            ctx.set_source_rgb(
-                ACCENT_NEUTRO[0] / 255,
-                ACCENT_NEUTRO[1] / 255,
-                ACCENT_NEUTRO[2] / 255,
+            # O desenho mora em `desenhar_swatch` desde a T5 de 25/08/2026: a
+            # aba "No jogo" desenha o MESMO quadradinho, e o dono passou a ser
+            # um só. O que sobra aqui é a ponte com o widget.
+            desenhar_swatch(
+                ctx,
+                widget.get_allocated_width(),
+                widget.get_allocated_height(),
+                self._swatch_rgb,
             )
-            ctx.set_line_width(1)
-            ctx.rectangle(0.5, 0.5, largura - 1, altura - 1)
-            ctx.stroke()
             return False
 
     class CaixaDeTetoElastico(Gtk.Bin):  # type: ignore[misc]
@@ -5571,6 +5616,7 @@ __all__ = [
     "GLYPH_SIZE_BASE",
     "GRID_BOTOES",
     "L2_R2_THRESHOLD",
+    "LADO_DO_SWATCH",
     "LARGURA_BARRA_GATILHO_COMPACTO",
     "LARGURA_BARRA_GATILHO_UNICO",
     "LARGURA_CARD_ELASTICA",
@@ -5610,6 +5656,8 @@ __all__ = [
     "acao_speaker_mudo",
     "accent_do_card",
     "audio_sem_endereco",
+    "cor_do_swatch",
+    "desenhar_swatch",
     "dica_do_titulo",
     "frase_mais_longa_do_que_chega_ao_jogo",
     "glyph_size",

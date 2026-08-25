@@ -39,6 +39,35 @@ funções e 6408 itens coletados). Repintá-lo é opcional e vale uma vez por
 milhar. O estado VIVO da suíte já é publicado ao lado, pelo emblema de CI, que
 é derivado de verdade — o número exato mora onde é medido, não na capa.
 
+QUANTA FOLGA O PISO LEVA, E POR QUÊ — medido em 25/08/2026
+----------------------------------------------------------
+
+O piso foi repintado de 7000 para **12000** no `1835f3b` (25/08, 02:52). Naquele
+commit a contagem real era **10346**: o número nasceu ~1650 acima da verdade e
+nunca foi verdadeiro um só dia. Não é decisão medida a preservar — é fato
+errado, e fato errado se SUBSTITUI. A capa voltou para "mais de 10000".
+
+A folga não é gosto; é o que as duas repinturas anteriores desta casa mediram,
+e as duas caem no mesmo lugar:
+
+* `aba7f00` (13/08) pintou **7000** com **7777** funções — 777 de folga, 10%;
+* a repintura anterior pintou **5000** com **5694** — 694 de folga, 12%.
+
+O gesto das duas é o mesmo: arredondar para o milhar de BAIXO. Aplicado à
+contagem de hoje (**11204** funções), o milhar de baixo seria 11000 — e 204 de
+folga é 1,8%, um quinto do que o precedente mediu. Uma poda legítima de um
+módulo grande e duplicado passa dos 204 sem esforço, e aí o portão reprova por
+higiene, não por defeito — que é exatamente o portão-ruído que o item 3 acima
+diz que alguém desliga.
+
+Então o piso é **10000**: 1204 de folga (10,7%), a mesma ordem dos dois
+precedentes. E há uma segunda razão, própria de hoje: o número foi escolhido
+numa árvore de INTEGRAÇÃO, com a leva ainda sendo mesclada. A ponta do `dev`
+antes desta madrugada (`f475b2a`) tinha **10346** funções; um piso de 11000
+reprovaria se quem coordena precisasse largar uma frente da leva. 10000
+sobrevive a isso, e o portão continua pegando o que ele existe para pegar — a
+suíte encolhendo de verdade.
+
 Estes testes são o portão: o job `lint-test` do ci.yml roda `pytest tests/unit`,
 então não foi preciso mexer no ci.yml.
 """
