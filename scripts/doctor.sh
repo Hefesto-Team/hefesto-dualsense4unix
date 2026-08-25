@@ -3556,6 +3556,148 @@ print("leaky=" + " ".join(f"{a}:{t}" for a, t in leaky))
     fi
 }
 
+# ---------------------------------------------------------------------------
+# ESCONDE-SÓ-O-HIDRAW-01 (23/08/2026) — as TRÊS superfícies do MESMO controle.
+# ---------------------------------------------------------------------------
+# O `hide` do broker age em UMA superfície: `/dev/hidraw*`. O mesmo controle
+# aparece em TRÊS — `hidraw`, `evdev` (`/dev/input/event*`) e `joydev`
+# (`/dev/input/js*`) — e as duas de baixo continuam com a ACL da sessão dela;
+# o `jsN` ainda com o bit de leitura de `other`, legível pelo mundo inteiro.
+# Medido nesta bancada em 25/08/2026, um DualSense no cabo, o hidraw escondido:
+#
+#   /dev/hidraw4        crw-------   root root       <- escondido (0600, sem ACL)
+#   /dev/input/event21  crw-rw----+  user:<ela>:rw-  <- qualquer processo dela
+#   /dev/input/js0      crw-rw-r--+  other::r--      <- e mais o mundo inteiro
+#
+# Até 25/08/2026 este check respondia a essa cena com `pass` e o texto "o jogo
+# só vê o vpad" — contagem de nós hidraw lida como resposta a uma pergunta
+# sobre três superfícies. É a família O-PORTAO-QUE-NAO-MEDE-O-QUE-PROMETE no
+# pior lugar possível: quem investiga "por que o Steam mostra controle
+# dobrado" — o terceiro controle dela — começava lendo um verde.
+#
+# CONFERE E NÃO CURA, e aqui a regra é dura: nenhuma destas funções escreve
+# permissão nenhuma. QUAL das três saídas o produto vai tomar (EVIOCGRAB no
+# evdev, estender o `hide` a evdev/joydev, ou seguir só na env do wrapper) é
+# decisão DELA — a E2 da sprint, com o preço de cada caminho na mesa. O
+# instrumento só para de mentir.
+
+#: Os nós de `/dev/input` (evdev e joydev) do MESMO device HID de um nó hidraw.
+#: Um basename por linha; NADA se o sysfs não souber responder — e "nada" é
+#: resposta legítima (nó recém-sumido, replug no meio da leitura), nunca
+#: "está tudo fechado".
+_nos_de_entrada_do_hidraw() {
+    local no="$1" base hid alvo
+    base="$(basename "${no}")"
+    hid="$(readlink -f "/sys/class/hidraw/${base}/device" 2>/dev/null || true)"
+    [[ -n "${hid}" && -d "${hid}" ]] || return 0
+    for alvo in "${hid}"/input/input*/event* "${hid}"/input/input*/js*; do
+        [[ -e "${alvo}" ]] || continue
+        basename "${alvo}"
+    done
+}
+
+#: rc=0 se um processo DELA consegue `open(2)` o nó — que é a pergunta que o
+#: jogo faz. NÃO se usa `[[ -r ]]` sozinho: rodando como root ele responde
+#: "sim" para tudo e o instrumento viraria outro falso verde. As três formas
+#: de o nó estar alcançável, cada uma medida nesta casa:
+#:   1. bit de leitura de `other` — o estado de fábrica do `jsN`;
+#:   2. ACL nomeada (`user:<alguém>:r`) — a que o `uaccess` dá no login;
+#:   3. grupo do nó com leitura E a sessão nesse grupo — o acidente do grupo
+#:      `input`, medido na OQ-6 (funciona aqui e não numa máquina limpa).
+_entrada_alcancavel_pelo_jogo() {
+    local no="$1" modo grupo_no g
+    [[ -e "${no}" ]] || return 1
+    modo="$(stat -c '%04a' "${no}" 2>/dev/null || true)"
+    [[ -n "${modo}" ]] || return 1
+    case "${modo: -1}" in
+        [4567]) return 0 ;;
+    esac
+    if command -v getfacl >/dev/null 2>&1 \
+       && getfacl -p "${no}" 2>/dev/null | grep -Eq '^user:[^:]+:r'; then
+        return 0
+    fi
+    case "${modo: -2:1}" in
+        [4567])
+            grupo_no="$(stat -c '%G' "${no}" 2>/dev/null || true)"
+            if [[ -n "${grupo_no}" ]]; then
+                for g in $(id -nG 2>/dev/null); do
+                    [[ "${g}" == "${grupo_no}" ]] && return 0
+                done
+            fi
+            ;;
+    esac
+    return 1
+}
+
+#: O veredito POR CONTROLE (E3 da sprint, e o item 3.1 do O-QUE-FICOU-ABERTO-01
+#: desde 16/08): não "quantos nós hidraw estão 0600", e sim "este controle está
+#: escondido DO JOGO?". Preenche quatro globais porque bash não devolve lista:
+#:   TRES_SUP_CONTROLES  quantos nós hidraw escondidos entraram na conta
+#:   TRES_SUP_ESCONDIDOS quantos deles têm as três superfícies fechadas
+#:   TRES_SUP_ABERTOS    os nós de entrada alcançáveis, por nome
+#:   TRES_SUP_SEM_MAPA   quantos o sysfs não soube mapear (não contam como bons)
+_tres_superficies_medir() {
+    TRES_SUP_CONTROLES=0
+    TRES_SUP_ESCONDIDOS=0
+    TRES_SUP_ABERTOS=""
+    TRES_SUP_N_ABERTOS=0
+    TRES_SUP_SEM_MAPA=0
+    local no base entradas aberto_deste
+    for no in "$@"; do
+        [[ -n "${no}" ]] || continue
+        TRES_SUP_CONTROLES=$((TRES_SUP_CONTROLES + 1))
+        entradas="$(_nos_de_entrada_do_hidraw "${no}")"
+        if [[ -z "${entradas}" ]]; then
+            TRES_SUP_SEM_MAPA=$((TRES_SUP_SEM_MAPA + 1))
+            continue
+        fi
+        aberto_deste=0
+        for base in ${entradas}; do
+            if _entrada_alcancavel_pelo_jogo "/dev/input/${base}"; then
+                aberto_deste=1
+                TRES_SUP_ABERTOS="${TRES_SUP_ABERTOS} ${base}"
+                TRES_SUP_N_ABERTOS=$((TRES_SUP_N_ABERTOS + 1))
+            fi
+        done
+        [[ "${aberto_deste}" -eq 0 ]] && TRES_SUP_ESCONDIDOS=$((TRES_SUP_ESCONDIDOS + 1))
+    done
+    TRES_SUP_ABERTOS="${TRES_SUP_ABERTOS# }"
+}
+
+#: O veredito do hide, separado do `check_hidraw_broker` para ser TESTÁVEL sem
+#: systemd, sem socket e sem aparelho — a régua que mentia nunca teve teste
+#: justamente porque vivia soldada dentro de uma função de 220 linhas.
+#: $1 = nós hidraw escondidos (contagem do broker); $2 = 1 se o daemon responde
+#: IPC; $3 = native_mode como o IPC o devolve; $4.. = os nós escondidos.
+_veredito_do_hide() {
+    local hidden_count="$1" daemon_vivo="$2" native_mode="$3"
+    shift 3
+    if [[ "${hidden_count}" -le 0 ]]; then
+        info "broker sem nós escondidos no momento (emulação desligada ou nenhum grab ativo)"
+        return
+    fi
+    if [[ "${daemon_vivo}" != "1" ]]; then
+        fail "broker com ${hidden_count} nó(s) escondido(s) e o daemon PARADO — invariante quebrada (belts falharam); cura: sudo systemctl restart hefesto-hidraw-broker.service"
+        return
+    fi
+    if [[ "${native_mode}" == "True" ]]; then
+        warn "broker com ${hidden_count} nó(s) escondido(s) em Modo Nativo — o físico deveria estar exposto ao jogo"
+        return
+    fi
+    _tres_superficies_medir "$@"
+    if [[ "${TRES_SUP_CONTROLES}" -eq 0 || "${TRES_SUP_SEM_MAPA}" -eq "${TRES_SUP_CONTROLES}" ]]; then
+        pass "broker escondendo ${hidden_count} nó(s) hidraw físico(s) (giroscópio sobrevive via fd-injection)"
+        info "as superfícies evdev/joydev desses nós não estão legíveis no sysfs agora — este check NÃO afirma que o jogo só vê o vpad"
+        return
+    fi
+    [[ "${TRES_SUP_SEM_MAPA}" -gt 0 ]] && info "${TRES_SUP_SEM_MAPA} nó(s) escondido(s) sem mapa no sysfs — ficaram fora do veredito abaixo"
+    if [[ -n "${TRES_SUP_ABERTOS}" ]]; then
+        warn "o hide cobre SÓ o hidraw: ${TRES_SUP_ESCONDIDOS} de ${TRES_SUP_CONTROLES} controle(s) escondido(s) do jogo — o FÍSICO segue alcançável em ${TRES_SUP_N_ABERTOS} nó(s) de entrada (${TRES_SUP_ABERTOS}), e quem enumerar /dev/input em vez de hidraw acha o controle dobrado. O que separa os dois hoje é a env do wrapper (SDL_GAMECONTROLLER_IGNORE_DEVICES/PROTON_DISABLE_HIDRAW) — veja o check do wrapper de launch acima; estender o hide a evdev/joydev é decisão em aberto (ESCONDE-SÓ-O-HIDRAW-01, E2)"
+        return
+    fi
+    pass "broker escondendo ${hidden_count} nó(s) físico(s), e as TRÊS superfícies dos ${TRES_SUP_CONTROLES} controle(s) fechadas (hidraw + evdev + joydev) — o jogo só vê o vpad (giroscópio sobrevive via fd-injection)"
+}
+
 # BROKER-01 (Onda S — fd-injection): o broker root que esconde o hidraw
 # FÍSICO do DualSense do JOGO (cura de raiz do duplicado, complementar ao
 # wrapper de launch acima). Verifica a unit de SISTEMA (não --user), o ping
@@ -3612,6 +3754,10 @@ while not buf.endswith(b"\n"):
 resp = json.loads(buf.decode("utf-8"))
 hidden = resp.get("hidden") or []
 print(f"hidden_count={len(hidden)}")
+# ESCONDE-SÓ-O-HIDRAW-01: a contagem não responde "o jogo está vendo o
+# físico?" — o veredito precisa dos NOMES para achar, no sysfs, as outras
+# duas superfícies (evdev/joydev) do MESMO device HID.
+print("hidden_nodes=" + " ".join(hidden))
 
 # Onda S (achado #9): teste FUNCIONAL do cmd `open` — a rede de segurança que
 # a tabela de riscos do desenho (§9) promete para DeviceAllow=char-hidraw e
@@ -3674,11 +3820,12 @@ PYEOF
         return
     fi
 
-    local ok peer_uid hidden_count
+    local ok peer_uid hidden_count hidden_nodes
     ok="$(sed -n 's/^ok=//p' <<<"${ping_out}")"
     peer_uid="$(sed -n 's/^peer_uid=//p' <<<"${ping_out}")"
     hidden_count="$(sed -n 's/^hidden_count=//p' <<<"${ping_out}")"
     hidden_count="${hidden_count:-0}"
+    hidden_nodes="$(sed -n 's/^hidden_nodes=//p' <<<"${ping_out}")"
 
     if [[ "${ok}" != "True" ]]; then
         warn "broker recusou o ping (autorização por SO_PEERCRED/uid falhou)"
@@ -3747,17 +3894,10 @@ PYEOF
 )"
     fi
 
-    if [[ "${hidden_count}" -gt 0 ]]; then
-        if [[ ! -S "${sock}" ]]; then
-            fail "broker com ${hidden_count} nó(s) escondido(s) e o daemon PARADO — invariante quebrada (belts falharam); cura: sudo systemctl restart hefesto-hidraw-broker.service"
-        elif [[ "${native_mode}" == "True" ]]; then
-            warn "broker com ${hidden_count} nó(s) escondido(s) em Modo Nativo — o físico deveria estar exposto ao jogo"
-        else
-            pass "broker escondendo ${hidden_count} nó(s) físico(s) — o jogo só vê o vpad (giroscópio sobrevive via fd-injection)"
-        fi
-    else
-        info "broker sem nós escondidos no momento (emulação desligada ou nenhum grab ativo)"
-    fi
+    local daemon_vivo=0
+    [[ -S "${sock}" ]] && daemon_vivo=1
+    # shellcheck disable=SC2086  # a lista de nós é gerada aqui e não tem espaço no nome
+    _veredito_do_hide "${hidden_count}" "${daemon_vivo}" "${native_mode}" ${hidden_nodes}
 
     # Recusa a outro uid — best-effort (só roda com sudo -n disponível e o
     # usuário nobody presente); nunca falha o doctor por esta checagem.
