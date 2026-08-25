@@ -10,7 +10,7 @@ dublê**, e o censo era literal::
 Os dois testes de ``with_controller_rumble`` que existiam
 (``test_por_unidade_01_todas_as_abas.py``) exercitam o **modelo**, não a aba.
 
-Quatro mordidas, uma por defeito medido:
+Cinco mordidas, uma por defeito medido:
 
 1. **RUM-1** — com um controle escolhido no seletor, a aba grava no override
    daquela peça e manda ``rumble.policy_set`` **sem endereço**, que é da máquina
@@ -29,14 +29,17 @@ Quatro mordidas, uma por defeito medido:
    "Todos", com o ajuste da peça apagado em silêncio;
 4. **RUM-9** — a linha de pedidos somava os quatro jogadores. *"O jogo pediu
    vibração 40x"* com o Jogador 2 mudo é verdade sobre a mesa e mentira sobre
-   quem reclamou.
+   quem reclamou;
+5. **RUM-4** — *"conforme a bateria do controle"*, no singular e sem dizer
+   qual, promete com quatro na mesa um comportamento por jogador que o produto
+   não faz: quem escala é sempre o PRIMÁRIO.
 
-**Por que os quatro num arquivo só, sendo que a 2 não precisa de GTK.** A RUM-11
-nomeia UM arquivo, e o motivo é que as quatro mordidas descrevem UM gesto — o
-clique com uma peça no seletor — da tela ao daemon. O preço é declarado: a
-mordida 2 herda a guarda de `gi` real e só roda no job `gtk-real`. A prova de
-que ela **não escreve** não paga esse preço, porque mora no `test_p4`, que não
-importa `gi`.
+**Por que num arquivo só, sendo que a 2 e a 5 não precisam de GTK.** A RUM-11
+nomeia UM arquivo, e o motivo é que as mordidas descrevem UM gesto — o clique
+com uma peça no seletor — da tela ao daemon. O preço é declarado: as duas
+herdam a guarda de `gi` real e só rodam no job `gtk-real`. A prova de que o
+`rumble.set` **não escreve** não paga esse preço, porque mora no `test_p4`, que
+não importa `gi`.
 
 **Endereços:** faixa sintética ``02:fe:00`` da casa, nunca a ``aabbcc`` — foi a
 `aabbcc` que vazou para o ``controllers.json`` VIVO dela em 23/08.
@@ -497,6 +500,71 @@ def test_entrada_sem_o_contador_cai_para_a_soma_em_vez_de_mentir() -> None:
         "uma entrada sem `ff_nao_nulo_count` virou 'nenhuma' — o produto "
         f"afirmou o que não sabe: {texto!r}"
     )
+
+
+# ===========================================================================
+# Mordida 5 — RUM-4: o "Auto" diz de QUAL bateria
+# ===========================================================================
+
+
+def _glade() -> str:
+    from pathlib import Path
+
+    import hefesto_dualsense4unix
+
+    caminho = Path(hefesto_dualsense4unix.__file__).parent / "gui" / "main.glade"
+    return caminho.read_text(encoding="utf-8")
+
+
+def _texto_visivel_do_widget(widget: str) -> str:
+    """O que o widget MOSTRA — comentário de XML fora.
+
+    O corte por comentário não é zelo: a nota datada que explica RUM-4 mora
+    entre o ``id=`` e o rótulo, e ela CITA a frase velha. Sem tirá-la, plantar
+    o singular de volta continuaria verde pela nota que explica por que ele
+    saiu — o falso verde perfeito.
+    """
+    import re
+
+    xml = _glade()
+    inicio = xml.index(f'id="{widget}"')
+    fim = xml.index("</object>", inicio)
+    return re.sub(r"<!--.*?-->", "", xml[inicio:fim], flags=re.DOTALL)
+
+
+@pytest.mark.parametrize(
+    "widget",
+    ["rumble_policy_auto", "rumble_policy_auto_label"],
+    ids=["a dica do botão Auto", "o rótulo educativo do Auto"],
+)
+def test_a_promessa_de_bateria_nomeia_de_qual_controle(widget: str) -> None:
+    """*"A bateria do controle"* — no singular e sem dizer qual — promete
+    por jogador o que o produto faz pela mesa.
+
+    Quem lê a bateria é ``core.rumble._effective_mult``, a partir de
+    ``store.snapshot().controller``: o PRIMÁRIO, um só. Com quatro na mesa, o
+    Jogador 1 decide a força dos outros três — e a tela dizia *"do controle"*.
+
+    É a MESMA medição que faz o esquema recusar ``auto`` por unidade
+    (``profiles/schema.py::ControllerRumbleOverride``), e por isso os dois
+    textos não podem divergir dela.
+
+    Plantar de volta o singular reprova nomeando o ``id`` do widget.
+    """
+    trecho = _texto_visivel_do_widget(widget)
+    assert "bateria" in trecho, f"{widget}: a bancada mirou o widget errado"
+    assert "controle principal" in trecho, (
+        f'{widget}: a tela promete "a bateria do controle" sem dizer qual. '
+        "Com quatro na mesa isso é uma promessa por jogador que o produto não "
+        "cumpre — quem escala é sempre o primário"
+    )
+
+
+def test_a_promessa_de_bateria_nao_afirma_transporte() -> None:
+    """§6 da sprint: o rádio não está medido, e a aba não pode afirmá-lo."""
+    trecho = _texto_visivel_do_widget("rumble_policy_auto_label")
+    for palavra in ("Bluetooth", "cabo", "USB"):
+        assert palavra.lower() not in trecho.lower()
 
 
 def test_a_ordem_da_verdade_nao_mudou_o_descartado_vem_antes() -> None:
