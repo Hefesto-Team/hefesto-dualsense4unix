@@ -27,6 +27,7 @@ tem de deixar de calar — nunca a redação.
 """
 from __future__ import annotations
 
+import ast
 import json
 import sys
 import types
@@ -325,29 +326,147 @@ class TestAPonteNaoAcendeSobreMesaVazia:
         )
         assert home_actions.controles_na_mesa(None) == 0
 
-    def test_a_ordem_das_cinco_perguntas_nao_mudou(self) -> None:
-        """Steam Input e Nativo continuam vencendo o gamepad, com mesa vazia.
+    def test_a_ordem_das_perguntas_nao_mudou(self) -> None:
+        """O Modo Nativo continua vencendo o gamepad, com mesa vazia.
 
-        A bifurcação da I6 mora DENTRO da quarta pergunta. Se ela tivesse
-        subido, a exceção de Steam Input com mesa vazia passaria a dizer "de pé
-        e vazia" — apagando o único veredito que explica por que o jogo está
-        jogando sem o vpad.
+        A bifurcação da I6 mora DENTRO da pergunta do gamepad. Se ela tivesse
+        subido, o Modo Nativo com mesa vazia passaria a dizer "de pé e vazia" —
+        apagando o veredito que explica que o jogo fala direto com o DualSense,
+        sem o Hefesto no meio.
         """
         vazio: list[dict[str, Any]] = []
-        steam = home_actions.texto_da_ponte(
-            {
-                "gamepad_emulation": {"enabled": False},
-                "steam_input": {"excecao_ativa": True, "vpad_suspenso": True},
-                "controllers": vazio,
-            }
-        )
         nativo = home_actions.texto_da_ponte(
             {"native_mode": True, "gamepad_emulation": {"enabled": True},
              "controllers": vazio}
         )
 
-        assert "Steam Input" in steam
         assert "direto (Sony)" in nativo
+
+
+# ----------------------------------------------------------------------
+# I6, ramo 2 — a exceção de Steam Input, e a frase que a medição derrubou
+# ----------------------------------------------------------------------
+
+
+class TestAExcecaoDeSteamInputNaoInventaUmaPonte:
+    """25/08/2026 — o ramo que a sprint mandou "registrar e seguir", fechado.
+
+    O ramo 2 de ``texto_da_ponte`` exigia ``excecao_ativa AND vpad_suspenso`` e
+    **nunca** rodou: a `VPAD-SUSPENSO-MORTO-01`/E1 mediu que
+    ``_steam_input_vpad_suspenso`` só anda para ``False`` desde o commit
+    ``d8022ea`` (09/08/2026).
+
+    A saída recomendada para o PAR era trocar a condição por ``excecao_ativa``
+    sozinho, *"sem inventar texto novo"*. **Nesta aba isso publicaria uma frase
+    que a medição derruba**, e é isto que esta classe trava:
+
+    * a frase dizia *"a Steam entrega os botões"*. Desde a
+      `ESCONDER-EM-VEZ-DE-SAIR-01` (09/08/2026, decisão dela) a exceção
+      **esconde o físico** e **mantém o vpad de pé** — na exceção quem alimenta
+      o jogo continua sendo o gamepad do Hefesto;
+    * e há medição em jogo, não só leitura de código:
+      ``docs/protocol/pilha-steam-input-xpad-sdl.md`` §2.4-bis, 11/08/2026, com
+      um appid da allowlist DELA em sessão — **zero espelhos** da Steam, os dois
+      vpads de pé, quatro controles com jogador e vibração, e o aceite dela.
+
+    A mordida desta classe é a saída recomendada: reponha o ramo lendo
+    ``excecao_ativa`` e os dois primeiros testes reprovam.
+    """
+
+    @staticmethod
+    def _mesa_de_um(**delta: Any) -> dict[str, Any]:
+        """Um controle no cabo, emulação de pé — o caminho feliz mínimo."""
+        estado: dict[str, Any] = {
+            "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
+            "controllers": [
+                {"index": 0, "connected": True, "transport": "usb", "is_primary": True}
+            ],
+        }
+        estado.update(delta)
+        return estado
+
+    def test_com_a_excecao_ativa_a_ponte_continua_sendo_o_hefesto(self) -> None:
+        """O payload de HOJE: exceção ligada, vpad de pé (o único possível)."""
+        linha = home_actions.texto_da_ponte(
+            self._mesa_de_um(
+                steam_input={"excecao_ativa": True, "vpad_suspenso": False}
+            )
+        )
+
+        assert "pelo Hefesto" in linha
+        assert "Steam" not in linha
+
+    def test_a_aba_nao_diz_que_a_steam_entrega_os_botoes(self) -> None:
+        """Nem pelo payload impossível de ontem.
+
+        Um daemon velho ainda pode publicar ``vpad_suspenso: true`` — o campo
+        existe no contrato desde 25/07. A aba não pode acreditar nele: a
+        suspensão não acontece mais, e a frase que ela justificava está
+        refutada pela medição de 11/08.
+        """
+        linha = home_actions.texto_da_ponte(
+            self._mesa_de_um(
+                steam_input={"excecao_ativa": True, "vpad_suspenso": True}
+            )
+        )
+
+        assert "entrega os botões" not in linha
+        assert "pelo Steam Input" not in linha
+
+    def test_com_a_excecao_ativa_e_a_mesa_vazia_a_ponte_nao_acende(self) -> None:
+        """A exceção não pode reacender o verde que a I6 apagou.
+
+        Era este o preço de repor o ramo acima da bifurcação da mesa vazia: com
+        zero controle na casa e a exceção ligada, a primeira tela voltaria a
+        pintar um veredito bom sobre uma mesa que não tem ninguém.
+        """
+        estado = _payload_medido()
+        estado["steam_input"] = {"excecao_ativa": True, "vpad_suspenso": False}
+
+        linha = home_actions.texto_da_ponte(estado)
+
+        assert "#50fa7b" not in linha
+        assert "de pé, e vazia" in linha
+
+    def test_a_aba_nao_le_uma_flag_que_so_anda_para_um_lado(self) -> None:
+        """O portão de forma, e ele é o que impede a volta silenciosa.
+
+        Os dois de cima medem o TEXTO; este mede a LEITURA. Sem ele, alguém
+        pode repor a condição com uma frase diferente e a aba volta a decidir
+        por um valor que nenhum caminho de produção consegue escrever — que é
+        o defeito inteiro da `VPAD-SUSPENSO-MORTO-01`, de volta por outra porta.
+        """
+        arvore = ast.parse(
+            (
+                RAIZ / "src/hefesto_dualsense4unix/app/actions/home_actions.py"
+            ).read_text(encoding="utf-8")
+        )
+        # A régua pergunta ao CÓDIGO, não ao texto: prosa (docstring) e
+        # comentário PRECISAM poder nomear a flag — é onde a lápide mora. Medido
+        # aqui mesmo: um filtro por linha acusava a própria explicação.
+        prosa = {
+            id(no.body[0].value)
+            for no in ast.walk(arvore)
+            if isinstance(
+                no, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+            )
+            and no.body
+            and isinstance(no.body[0], ast.Expr)
+            and isinstance(no.body[0].value, ast.Constant)
+            and isinstance(no.body[0].value.value, str)
+        }
+        codigo: list[str] = []
+        for no in ast.walk(arvore):
+            if isinstance(no, ast.Constant) and isinstance(no.value, str):
+                if id(no) not in prosa and "vpad_suspenso" in no.value:
+                    codigo.append(f"linha {no.lineno}: literal {no.value!r}")
+            elif isinstance(no, ast.Attribute) and "vpad_suspenso" in no.attr:
+                codigo.append(f"linha {no.lineno}: atributo .{no.attr}")
+
+        assert not codigo, (
+            "a aba Início voltou a LER `vpad_suspenso`, e ela só anda para "
+            f"False desde 09/08/2026 (VPAD-SUSPENSO-MORTO-01/E1): {codigo}"
+        )
 
 
 # ----------------------------------------------------------------------
