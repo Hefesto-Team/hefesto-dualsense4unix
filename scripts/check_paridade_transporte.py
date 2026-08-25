@@ -156,6 +156,17 @@ FALHA (as duas mais novas)
                           e `CAUSA_DE_FORA` em
                           `src/hefesto_dualsense4unix/app/fala_do_mapa.py`.
 
+ 18. `escada-de-vibracao` — número de multiplicador citado em célula que NÃO
+                          bate com `RUMBLE_POLICY_MULT`, lido por AST do dono
+                          (`daemon/subsystems/rumble.py`). Nasceu em
+                          25/08/2026: duas células contavam a escada
+                          `0,3 / 0,7 / 1,0`, de ANTES de 11/08/2026 — dia em que
+                          ela a trocou para `0,3 / 1,0 / 1,5`. Corrigir as
+                          células sem deixar régua seria faxina, e faxina volta.
+                          A regra não guarda número: ela compara com o dono, e a
+                          conta de citações vai ao resumo para que um zero
+                          (= parou de olhar) apareça sem ninguém desconfiar.
+
 Os dois degraus que faltavam (19/08/2026)
 -----------------------------------------
 Até esta data a escada de `ate_onde_foi` cobria só a IDA — produto para aparelho
@@ -267,6 +278,7 @@ import csv
 import re
 import subprocess
 import sys
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -332,6 +344,46 @@ PASTA_DE_TESTES = "tests"
 #: runner. Por isso ele é LIDO POR AST, exatamente como `indexar_testes` lê
 #: `tests/` e pelo mesmo motivo escrito lá.
 PONTE_ESCADA_RELATIVO = "src/hefesto_dualsense4unix/integrations/ponte_escada.py"
+
+#: O dono executável da escada de intensidade da vibração, e a régua da regra
+#: 18. Lido POR AST pelo mesmo motivo escrito acima para `ponte_escada.py`: o
+#: job `mapa-de-canais` do CI não instala dependência nenhuma, e `daemon/
+#: subsystems/rumble.py` importa a árvore inteira do daemon.
+RUMBLE_ESCADA_RELATIVO = "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py"
+
+#: O nome do dicionário que manda. Mudou de arquivo uma vez (era `lifecycle.py`)
+#: e o teste que o citava ficou apontando para o lugar errado — por isso a regra
+#: procura o NOME em qualquer parte do arquivo declarado, e se desliga em voz
+#: alta quando não o acha.
+RUMBLE_ESCADA_DICIONARIO = "RUMBLE_POLICY_MULT"
+
+#: Como a tela e o mapa CHAMAM cada degrau -> a chave do dono. "Auto" fica de
+#: fora de propósito: ele não é degrau fixo, é a escala por bateria, e nenhum
+#: número citado ao lado dele seria conferível contra este dicionário.
+#: Escrito ACENTUADO, que é a língua desta casa; quem faz a ponte com a grafia
+#: sem acento — que aparece nas células antigas do CSV — é `sem_acento`, logo
+#: abaixo. Repetir a chave nas duas grafias aqui reprovaria o portão de
+#: acentuação, e com razão.
+ROTULO_DO_DEGRAU_DE_VIBRACAO = {
+    "economia": "economia",
+    "balanceado": "balanceado",
+    "máximo": "max",
+    "max": "max",
+}
+
+#: `Economia 0,3x`, `Balanceado 1,0x`, `máximo 1,5x` — o degrau pelo nome, o
+#: multiplicador logo depois, e o `x` que diz que é multiplicador e não outra
+#: coisa. Vírgula OU ponto: o CSV é pt-BR, o código é Python, e as duas grafias
+#: já apareceram lado a lado na mesma célula.
+#:
+#: **As DUAS grafias do sinal**, e não é zelo: `docs/process/2026-08-07-PAINEL`
+#: escreve `0,3×` com o sinal de multiplicação (U+00D7) e o CSV escreve `0,3x`
+#: com a letra. Uma régua que só conhecesse a letra ficaria cega para metade da
+#: casa — e cegueira de instrumento passa sempre, calada.
+CITACAO_DE_DEGRAU_DE_VIBRACAO = re.compile(
+    r"\b(economia|balanceado|m[áa]ximo|max)\s*[:=]?\s*(\d+[,.]\d+)\s*[x×]",
+    re.IGNORECASE,
+)
 
 #: Colunas sem as quais este portão não tem o que medir. A ausência de qualquer
 #: uma é FALHA de integridade, não motivo para o portão se desligar calado.
@@ -736,6 +788,10 @@ class Resumo:
     linhas_que_alcancam_por_uhid: int = 0
     linhas_uhid_com_afirmacao_forte: int = 0
     pontes_nao_declaradas: int = 0
+    #: O número que diz se a regra 18 ENXERGA, pelo mesmo motivo dos três de
+    #: cima: se ele zerar, ninguém mais cita a escada de vibração no mapa — e
+    #: uma regra que não acha nada passa sempre, calada.
+    citacoes_da_escada_de_vibracao: int = 0
 
 
 def e_arquivo_que_pytest_coleta(nome: str) -> bool:
@@ -1028,6 +1084,133 @@ def dominio_das_pontes(raiz: Path) -> tuple[frozenset[str] | None, str]:
     return frozenset(chaves), ""
 
 
+def sem_acento(texto: str) -> str:
+    """Tira os acentos: `máximo` com e sem o agudo é a MESMA palavra aqui.
+
+    O CSV tem células escritas sem acentuação nenhuma (as antigas, de antes do
+    portão) e células escritas com. Uma régua que só conhecesse uma das grafias
+    ficaria cega para metade delas — e cegueira de instrumento passa sempre,
+    calada.
+    """
+    return "".join(
+        letra
+        for letra in unicodedata.normalize("NFD", texto)
+        if unicodedata.category(letra) != "Mn"
+    )
+
+
+#: O índice que a regra 18 consulta: uma cópia de `ROTULO_DO_DEGRAU_DE_VIBRACAO`
+#: com as chaves já sem acento, montada uma vez. Derivada, nunca redigitada — a
+#: segunda cópia à mão é o defeito que este arquivo inteiro existe para não ter.
+_DEGRAU_POR_ROTULO_SEM_ACENTO = {
+    sem_acento(rotulo): chave for rotulo, chave in ROTULO_DO_DEGRAU_DE_VIBRACAO.items()
+}
+
+
+def escada_de_vibracao(raiz: Path) -> tuple[dict[str, float] | None, str]:
+    """`RUMBLE_POLICY_MULT`, lido por AST do dono declarado.
+
+    Devolve `(escada, motivo)`, e com `None` na escada o `motivo` diz por que a
+    regra 18 se desligou — em voz alta no resumo, como todas as outras deste
+    arquivo. Ler por AST, e não importar, é a mesma disciplina de
+    `dominio_das_pontes` logo acima, pelo mesmo motivo escrito lá.
+    """
+    caminho = raiz / RUMBLE_ESCADA_RELATIVO
+    try:
+        arvore = ast.parse(caminho.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, UnicodeDecodeError) as erro:
+        return None, (
+            f"escada-de-vibracao ({RUMBLE_ESCADA_RELATIVO} ilegível: {erro!r} "
+            "— sem o dono não há régua a conferir)"
+        )
+
+    bruto: ast.expr | None = None
+    for no in ast.walk(arvore):
+        if not isinstance(no, (ast.Assign, ast.AnnAssign)):
+            continue
+        alvos = no.targets if isinstance(no, ast.Assign) else [no.target]
+        for alvo in alvos:
+            if isinstance(alvo, ast.Name) and alvo.id == RUMBLE_ESCADA_DICIONARIO:
+                bruto = no.value
+
+    if not isinstance(bruto, ast.Dict):
+        return None, (
+            f"escada-de-vibracao (não achei o dicionário "
+            f"`{RUMBLE_ESCADA_DICIONARIO}` em {RUMBLE_ESCADA_RELATIVO})"
+        )
+
+    escada: dict[str, float] = {}
+    for chave, valor in zip(bruto.keys, bruto.values, strict=True):
+        if not (isinstance(chave, ast.Constant) and isinstance(chave.value, str)):
+            continue
+        if isinstance(valor, ast.Constant) and isinstance(valor.value, (int, float)):
+            escada[chave.value] = float(valor.value)
+
+    if not escada:
+        return None, (
+            f"escada-de-vibracao (`{RUMBLE_ESCADA_DICIONARIO}` existe e este "
+            "leitor não resolveu nenhum degrau dele)"
+        )
+    return escada, ""
+
+
+def _regra_da_escada_de_vibracao(
+    linha: dict[str, str],
+    numero: int,
+    ident: str,
+    escada: dict[str, float],
+    resumo: Resumo,
+) -> list[Achado]:
+    """Regra 18: número de multiplicador citado em célula tem de bater com o dono.
+
+    **Por que ela existe** (25/08/2026, RUMBLE — POR JOGADOR-01): duas células
+    deste mapa diziam *"o multiplicador de intensidade da GUI (Economia 0,3x /
+    Balanceado 0,7x / máximo 1,0x)"* — a escada de ANTES de 11/08/2026, dia em
+    que ela a trocou para 0,3 / 1,0 / 1,5. Corrigir as duas células sem deixar
+    régua é faxina, e faxina volta: foi exatamente esse o buraco que a
+    AUDITORIA-DE-PERDA-01 mediu em 23/08.
+
+    A régua não guarda número nenhum: ela lê `RUMBLE_POLICY_MULT` do dono e
+    compara. Trocar a escada no código faz esta regra cobrar as células no mesmo
+    commit, que é o comportamento desejado — o mapa não pode ficar contando uma
+    escada que o produto não usa mais.
+
+    O que ela NÃO faz: cobrar que as células CITEM a escada. Célula que não a
+    menciona passa em silêncio; `Auto` fica de fora porque não é degrau fixo.
+    """
+    achados: list[Achado] = []
+    for coluna, celula in linha.items():
+        if not coluna or not celula:
+            continue
+        for casamento in CITACAO_DE_DEGRAU_DE_VIBRACAO.finditer(celula):
+            rotulo = sem_acento(casamento.group(1).lower())
+            chave = _DEGRAU_POR_ROTULO_SEM_ACENTO.get(rotulo)
+            if chave is None or chave not in escada:
+                continue
+            resumo.citacoes_da_escada_de_vibracao += 1
+            citado = float(casamento.group(2).replace(",", "."))
+            canonico = escada[chave]
+            if abs(citado - canonico) < 1e-9:
+                continue
+            achados.append(
+                Achado(
+                    FALHA,
+                    "escada-de-vibracao",
+                    numero,
+                    ident,
+                    "",
+                    f"a célula `{coluna}` diz `{casamento.group(0)}`, e "
+                    f"`{RUMBLE_ESCADA_DICIONARIO}[{chave!r}]` vale "
+                    # pt-BR na saída, como o resto do mapa: a célula errada e a
+                    # certa têm de se ler lado a lado sem tradução no meio.
+                    f"{canonico:.1f}".replace(".", ",")
+                    + f"x em {RUMBLE_ESCADA_RELATIVO} — o mapa está contando "
+                    "uma escada que o produto não usa",
+                )
+            )
+    return achados
+
+
 def censo(
     caminho_csv: Path, raiz: Path, hoje: date
 ) -> tuple[list[Achado], Resumo, list[str]]:
@@ -1087,6 +1270,12 @@ def censo(
     dominio_das_pontes_lido, motivo_sem_escada = dominio_das_pontes(raiz)
     if dominio_das_pontes_lido is None:
         desligadas.append(motivo_sem_escada)
+
+    #: A régua da regra 18 mora no produto, e é lida por AST. Sem o dono não há
+    #: com o que comparar, e a regra se desliga DIZENDO — nunca aprovando calada.
+    escada_de_vibracao_canonica, motivo_sem_escada_de_vibracao = escada_de_vibracao(raiz)
+    if escada_de_vibracao_canonica is None:
+        desligadas.append(motivo_sem_escada_de_vibracao)
 
     #: A regra 11 é AVISO, e regra mole se DESLIGA quando falta a coluna (a dura
     #: reprova — ver SUFIXOS_EXIGIDOS). Cobrar `mordida_provada_em` no cabeçalho
@@ -1335,6 +1524,13 @@ def censo(
 
         achados.extend(_regra_da_validade(linha, numero, ident, hoje))
         achados.extend(_regra_da_assimetria(linha, numero, ident, resumo))
+
+        if escada_de_vibracao_canonica is not None:
+            achados.extend(
+                _regra_da_escada_de_vibracao(
+                    linha, numero, ident, escada_de_vibracao_canonica, resumo
+                )
+            )
 
         if texto_do_specs is not None and ident and ident not in texto_do_specs:
             nao_publicados.append(ident)
@@ -1926,6 +2122,10 @@ def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
         (
             f"     dessas, SEM `{COLUNA_DA_PONTE}`",
             resumo.pontes_nao_declaradas,
+        ),
+        (
+            "citações da escada de vibração conferidas contra o dono",
+            resumo.citacoes_da_escada_de_vibracao,
         ),
     ]
     largura = max(len(rotulo) for rotulo, _ in linhas)

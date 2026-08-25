@@ -313,12 +313,44 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
     reassert do poll loop é no-op justamente em passthrough, então o controle
     fica vibrando para sempre (e o jogo perde a vibração).
 
-    No-op com rumble FIXADO (`rumble_active` não-None): ali o dono é a usuária
-    (aba Rumble), o reassert re-afirmaria o valor em 200ms de qualquer forma e
-    zerar seria desfazer o gesto dela. Best-effort: falha de hardware não pode
+    No-op com rumble FIXADO em par NÃO-NULO: ali o dono é a usuária (aba
+    Rumble), o reassert re-afirmaria o valor em 200ms de qualquer forma e zerar
+    seria desfazer o gesto dela. Best-effort: falha de hardware não pode
     abortar a troca de modo.
+
+    **`(0, 0)` NÃO é par fixado para esta guarda** (25/08/2026). A guarda era
+    `rumble_active is not None`, e `rumble.stop` — o botão "Parar" da aba —
+    grava `(0, 0)`, que também não é `None`: **um clique em "Parar" desarmava
+    a HARM-16 para o resto da sessão**. E o estado é vitalício por decisão
+    medida: `lifecycle.apply_profile_rumble_passthrough` preserva o `(0, 0)`
+    de propósito (nota M2), então nem a troca de perfil o solta — só
+    "Devolver ao jogo" ou um rumble novo.
+
+    Os dois motivos do no-op caem no `(0, 0)`, e é por isso que ele passa a
+    zerar:
+
+    - *"zerar seria desfazer o gesto dela"* — com `(0, 0)` zerar **é** o gesto
+      dela, palavra por palavra;
+    - *"o reassert re-afirmaria o valor de qualquer forma"* — não afirma: o
+      reassert manda `set_rumble(0, 0)` e o dedup do `sendReport` come o
+      report que não muda. É exatamente o buraco que `force_rumble_stop()`
+      existe para tapar, e ele ficava sem chamador.
+
+    É a mesma forma que a NATIVO-RUMBLE-01 já reconheceu numa porta e deixou
+    aberta nesta (*"`(0,0)` não é `None`"*, `ipc_handlers._handle_rumble_stop`),
+    e o mesmo teste de "vibrava por NOSSA conta" que `_handle_rumble_stop` e
+    `_lembrar_dono_vibrando` já usam: `any(par)`.
+
+    **O que foi medido e o que NÃO foi** (25/08/2026): medido que a guarda
+    vira no-op após um `rumble.stop` e que os dois chamadores deixam de mandar
+    o único report de parada que chega ao fio. **NÃO medido** que um motor
+    fique girando por esse buraco: pelos escritores do próprio daemon ele não
+    fica — `apply_game_rumble` ignora o FF do jogo com par fixado, e a entrada
+    do Modo Nativo solta o par. Quem alcança o buraco é escritor de FORA
+    (jogo no hidraw direto, Steam Input), que esta bancada não tem como medir.
     """
-    if daemon.config.rumble_active is not None:
+    par = daemon.config.rumble_active
+    if par is not None and any(par):
         return
     try:
         # RUMBLE-SEM-DONO-01: `set_rumble(0, 0)` com os motores do backend JÁ
