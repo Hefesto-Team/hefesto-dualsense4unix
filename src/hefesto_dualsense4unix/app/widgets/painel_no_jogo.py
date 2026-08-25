@@ -450,6 +450,19 @@ def texto_do_contexto(state_global: dict[str, Any] | None) -> str:
     Sem daemon, devolve a frase de desligado: afirmar máscara nenhuma a partir
     de um payload que não existe é a família de erro que esta casa já removeu
     do `texto_do_custo_da_mascara`.
+
+    **A DIVERGÊNCIA, quando o daemon a publica** (T3 desta sprint). O
+    ``mascara_divergente`` existe no ``state_full`` desde a MASCARA-01 (19/08)
+    e **não tinha um leitor na janela inteira** — o comentário que o publica
+    diz *"e a GUI decide se mostra"*, e a GUI não sabia que ele existia. Ele é
+    o alarme: o jogo está em cena AGORA e vê máscara diferente da que o perfil
+    dele pedia. É exatamente a pergunta que esta aba existe para responder, e
+    ela estava sendo respondida pela metade — a linha afirmava a máscara viva
+    como se ninguém tivesse pedido outra.
+
+    A LISTA (``mascara_divergencias``) fica de fora de propósito, e o daemon
+    separa as duas chaves por isso: divergência de jogo FECHADO é antecipação,
+    é normal, e escrevê-la no topo da aba ensinaria a ignorar o aviso.
     """
     if not isinstance(state_global, dict):
         return TEXTO_OFFLINE
@@ -463,7 +476,37 @@ def texto_do_contexto(state_global: dict[str, Any] | None) -> str:
     if not rotulo_da_mascara:
         # Máscara ausente ou desconhecida: diz o modo e cala sobre o resto.
         return rotulo_do_modo
-    return f"{rotulo_do_modo} · O jogo vê o controle como: {rotulo_da_mascara}"
+    linha = f"{rotulo_do_modo} · O jogo vê o controle como: {rotulo_da_mascara}"
+    pedida = mascara_pedida_pelo_jogo_em_cena(state_global)
+    if pedida is not None and pedida != rotulo_da_mascara:
+        linha = f"{linha} — o perfil deste jogo pedia {pedida}"
+    return linha
+
+
+def mascara_pedida_pelo_jogo_em_cena(
+    state_global: dict[str, Any] | None,
+) -> str | None:
+    """O rótulo da máscara que o perfil do jogo EM CENA pedia. ``None`` = sem
+    divergência, ou sem como nomeá-la.
+
+    Lê só ``gamepad_emulation.mascara_divergente`` — o alarme —, nunca a lista
+    ``mascara_divergencias``.
+
+    ``None`` também quando o rótulo não é nomeável: a máscara do perfil vem do
+    disco e um valor fora de :data:`_FLAVOR_ITEMS` é payload de um Hefesto mais
+    novo (ou mais velho) que esta janela. Escrever o identificador cru no topo
+    da aba seria pior que calar — a regra desta casa é que onde não há dado
+    nomeável, a tela cala.
+    """
+    if not isinstance(state_global, dict):
+        return None
+    gamepad = state_global.get("gamepad_emulation")
+    if not isinstance(gamepad, dict):
+        return None
+    divergente = gamepad.get("mascara_divergente")
+    if not isinstance(divergente, dict):
+        return None
+    return dict(_FLAVOR_ITEMS).get(str(divergente.get("mascara_perfil"))) or None
 
 
 def titulo_do_painel(entry: dict[str, Any]) -> str:
@@ -716,6 +759,7 @@ __all__ = [
     "aviso_do_perfil",
     "jogo_steam_aberto",
     "linhas_do_controle",
+    "mascara_pedida_pelo_jogo_em_cena",
     "recado_do_controle",
     "recado_global",
     "tem_controle_no_jogo",
