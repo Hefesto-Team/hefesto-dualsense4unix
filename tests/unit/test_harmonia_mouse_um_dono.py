@@ -103,13 +103,32 @@ def test_switch_do_mouse_bloqueado_jogando_com_a_razao_ao_lado(mode: str) -> Non
     assert "Controlar o PC" in stub.hint.text
 
 
-def test_switch_do_mouse_bloqueado_com_daemon_offline_e_sem_texto() -> None:
-    """Sem estado não dá para saber se ligar derrubaria um jogo em andamento."""
+def test_switch_do_mouse_bloqueado_com_daemon_offline_diz_por_que() -> None:
+    """Sem estado não dá para saber se ligar derrubaria um jogo em andamento.
+
+    NOTA DATADA — 25/08/2026 (INTERRUPTOR-APAGADO-MUDO-01, N4). Este teste se
+    chamava `..._e_sem_texto` e exigia `hint.text == ""`. O BLOQUEIO continua
+    certo e continua medido aqui; o SILÊNCIO caiu: na foto oficial das 18h15 de
+    23/08 o interruptor do mouse aparece cinza sem uma palavra ao lado, e um
+    interruptor apagado e mudo é lido como defeito do produto.
+
+    A frase tem de ser OUTRA que a do modo jogo — aquela afirma "o controle é do
+    jogo", que é exatamente o que aqui não se sabe.
+    """
+    from hefesto_dualsense4unix.app.actions.mouse_actions import (
+        MODO_DESCONHECIDO_HINT,
+    )
+
     stub = _MouseTabStub()
     stub._sync_mouse_mode_gate(None)
 
     assert stub.toggle.sensitive is False
-    assert stub.hint.text == ""
+    assert stub.hint.text == MODO_DESCONHECIDO_HINT
+    assert stub.hint.visible is True
+    assert stub.hint.text != MODE_GATE_HINT, (
+        "o caso “não sei” herdou a frase do modo jogo — ela AFIRMA que há jogo "
+        "em andamento, que é o que não se sabe aqui"
+    )
 
 
 def test_gate_do_modo_aplicado_mesmo_com_edicao_pendente(

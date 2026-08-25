@@ -35,6 +35,87 @@ MODE_GATE_HINT = (
     "os jogadores do co-op no meio da partida."
 )
 
+#: INTERRUPTOR-APAGADO-MUDO-01 (25/08/2026, N4) — o interruptor sem estado.
+#:
+#: `texto = MODE_GATE_HINT if blocked and mode is not None else ""` deixava o
+#: caso `mode is None` (Hefesto sem resposta) com o interruptor APAGADO e
+#: NENHUMA palavra ao lado. É o que a foto oficial das 18h15 de 23/08 mostra: um
+#: interruptor cinza que não diz por quê — e o silêncio é lido como defeito do
+#: produto, não como ausência de resposta.
+#:
+#: A frase é OUTRA, e tem de ser: a do modo jogo afirma o que aqui não se sabe
+#: ("o controle é do jogo"). Esta diz só o que é verdade — não sei — e para onde
+#: ir. O `blocked` continua igual; o que muda é a tela deixar de emudecer.
+MODO_DESCONHECIDO_HINT = (
+    "Não consegui falar com o Hefesto agora, então não sei se ligar o mouse "
+    "derrubaria um jogo em andamento — por isso o interruptor está apagado. "
+    "Veja como está o Hefesto na aba Sistema."
+)
+
+#: RECUSA-NAO-E-QUEDA-DE-LINHA-01 (25/08/2026, N6) — os motivos, em português.
+#:
+#: Mesmo vocabulário do bloco `keyboard_emulation` do daemon
+#: (`ipc_handlers._keyboard_emulation_payload`), porque é a MESMA conjunção: a
+#: emulação de mouse e a de teclado são suspensas pelo mesmo gate do poll loop.
+#: Duplicar as chaves aqui é de propósito — a tabela do teclado descreve um
+#: ESTADO ("Ligado, em pausa agora…") e esta descreve o desfecho de um CLIQUE,
+#: e um texto que serve para os dois não serve direito para nenhum.
+#:
+#: Enquanto a N5 não publicar `bloqueio` na resposta de `mouse.emulation.set`,
+#: esta tabela só é alcançada por um daemon mais novo que esta janela. A recusa
+#: sem motivo cai em `RECUSA_SEM_MOTIVO`, que DIZ que o motivo faltou em vez de
+#: inventar um.
+BLOQUEIO_DO_MOUSE_EM_PORTUGUES: dict[str, str] = {
+    "desligada": "a emulação de mouse está desligada no Hefesto",
+    "sem_device": (
+        "o mouse virtual não subiu — abra a aba Sistema e clique em "
+        "“Aplicar correções”"
+    ),
+    "modo_jogo": "o modo jogo está suspendendo mouse e teclado",
+    "vpad_suspenso_pelo_steam_input": (
+        "neste jogo quem entrega o controle é a Steam, e o controle virtual foi "
+        "recolhido"
+    ),
+}
+
+#: O Hefesto respondeu, e a resposta foi "não" — sem dizer por quê.
+RECUSA_SEM_MOTIVO = (
+    "O Hefesto recusou o pedido e não disse por quê. O mouse emulado não foi "
+    "alterado."
+)
+
+#: Ninguém respondeu. É o único caso em que a comunicação é o assunto.
+SEM_RESPOSTA_DO_HEFESTO = (
+    "Não obtive resposta do Hefesto. O mouse emulado não foi alterado — veja "
+    "como ele está na aba Sistema."
+)
+
+
+def frase_da_recusa_do_mouse(resposta: object) -> str:
+    """Texto do toast quando o Hefesto RESPONDE que não vai ligar/desligar.
+
+    N6. `_on_ok` desviava toda resposta `status != "ok"` para o `_on_err` do
+    timeout, cujo texto era *"Falha ao comunicar com o daemon"* — a janela
+    acusando um defeito de comunicação que não houve. É a
+    [ELO-MUDO-01](2026-08-22-ELO-MUDO-01-o-ok-que-nao-sabe-dizer-nao.md) ao
+    contrário: em vez de comemorar o que não fez, culpar a rede.
+
+    Pura de propósito — é o miolo do que ela lê, e precisa de teste sem montar
+    janela (mesma disciplina de `descrever_teclado_emulado`).
+    """
+    bloqueio = resposta.get("bloqueio") if isinstance(resposta, dict) else None
+    if not isinstance(bloqueio, str) or not bloqueio:
+        return RECUSA_SEM_MOTIVO
+    motivo = BLOQUEIO_DO_MOUSE_EM_PORTUGUES.get(bloqueio)
+    if motivo is None:
+        # Motivo NOVO, de um daemon mais novo que esta janela: dizer o código
+        # cru é feio, mas é honesto — e é melhor que culpar a rede.
+        return (
+            f"O Hefesto recusou o pedido (motivo: {bloqueio}). O mouse emulado "
+            "não foi alterado."
+        )
+    return f"O Hefesto recusou: {motivo}. O mouse emulado não foi alterado."
+
 
 
 class MouseActionsMixin(WidgetAccessMixin):
@@ -104,8 +185,10 @@ class MouseActionsMixin(WidgetAccessMixin):
         mútua do daemon é silenciosa): a exclusão continua, mas agora é visível
         ANTES do clique, com a razão ao lado.
 
-        Modo desconhecido (daemon offline) também bloqueia, mas sem texto: não
-        dá para saber o que explicar, e oferecer às cegas é o que mentia.
+        Modo desconhecido (Hefesto sem resposta) também bloqueia, e desde
+        25/08/2026 (N4) com uma frase PRÓPRIA — ver `MODO_DESCONHECIDO_HINT`.
+        Bloquear continua certo: sem estado não dá para saber se ligar o mouse
+        derrubaria um jogo em andamento. Emudecer é que não era.
         """
         blocked = mode != MODE_DESKTOP
         toggle = self._get("mouse_emulation_toggle")
@@ -114,7 +197,12 @@ class MouseActionsMixin(WidgetAccessMixin):
         hint = self._get("mouse_mode_hint_label")
         if hint is None:
             return
-        texto = MODE_GATE_HINT if blocked and mode is not None else ""
+        if not blocked:
+            texto = ""
+        elif mode is None:
+            texto = MODO_DESCONHECIDO_HINT
+        else:
+            texto = MODE_GATE_HINT
         hint.set_text(texto)
         hint.set_visible(bool(texto))
 
@@ -195,8 +283,11 @@ class MouseActionsMixin(WidgetAccessMixin):
         scroll = self._read_speed("mouse_scroll_speed_scale", DEFAULT_SCROLL_SPEED)
 
         def _on_ok(result: Any) -> bool:
+            # N6: a resposta "não" tem saída PRÓPRIA. Antes ela caía no
+            # `_on_err` do timeout e a janela acusava a rede por um defeito que
+            # não houve.
             if isinstance(result, dict) and result.get("status") != "ok":
-                return _on_err(RuntimeError("daemon respondeu status=failed"))
+                return _on_recusa(result)
             draft = getattr(self, "draft", None)
             if draft is not None:
                 # HARM-05: `dirty=False` — o daemon ACABOU de aplicar, não há nada
@@ -220,18 +311,28 @@ class MouseActionsMixin(WidgetAccessMixin):
             self._refresh_mouse_view()
             return False
 
-        def _on_err(_exc: Exception) -> bool:
-            self._toast_mouse(
-                "Falha ao comunicar com o daemon. Mouse não alterado."
-            )
+        def _voltar_ao_confirmado() -> None:
             # BUG-MOUSE-TOGGLE-STALE-REVERT-01: reverte para o último estado
             # CONFIRMADO (draft.mouse.enabled só muda no sucesso), não para
             # ``not enabled`` capturado no clique — com dois toggles rápidos e
             # daemon travado, ``not enabled`` do 2º RPC deixava o switch preso
             # ON. Reverter para o confirmado converge ao estado real do daemon.
+            # A reversão é IDÊNTICA nas duas saídas de insucesso (N6 separou os
+            # TEXTOS, não o comportamento do interruptor).
             draft = getattr(self, "draft", None)
             confirmed = draft.mouse.enabled if draft is not None else not enabled
             self._revert_mouse_toggle(confirmed)
+
+        def _on_recusa(resposta: Any) -> bool:
+            """O Hefesto respondeu, e a resposta foi não (N6)."""
+            self._toast_mouse(frase_da_recusa_do_mouse(resposta))
+            _voltar_ao_confirmado()
+            return False
+
+        def _on_err(_exc: Exception) -> bool:
+            """Ninguém respondeu — o único caso em que a rede é o assunto."""
+            self._toast_mouse(SEM_RESPOSTA_DO_HEFESTO)
+            _voltar_ao_confirmado()
             return False
 
         ipc_bridge.call_async(
@@ -389,6 +490,15 @@ class MouseActionsMixin(WidgetAccessMixin):
         self._status_toast("mouse", msg)
 
 
-__all__ = ["UINPUT_DEV", "MouseActionsMixin"]
+__all__ = [
+    "BLOQUEIO_DO_MOUSE_EM_PORTUGUES",
+    "MODE_GATE_HINT",
+    "MODO_DESCONHECIDO_HINT",
+    "RECUSA_SEM_MOTIVO",
+    "SEM_RESPOSTA_DO_HEFESTO",
+    "UINPUT_DEV",
+    "MouseActionsMixin",
+    "frase_da_recusa_do_mouse",
+]
 
 # "Conhece-te a ti mesmo." — Sócrates
