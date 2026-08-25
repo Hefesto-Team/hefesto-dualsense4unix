@@ -52,8 +52,12 @@ UINPUT_DEV = "/dev/uinput"
 #
 #   js0  Sony … DualSense Wireless Controller           uniq=<MAC dela>
 #   js1  Sony … DualSense … Motion Sensors              uniq=<O MESMO MAC>
-#   js2  Hefesto Virtual DualSense P1                   uniq=02:fe:00:00:00:01
-#   js3  Hefesto Virtual DualSense P1 Motion Sensors    uniq=<O MESMO>
+#   js2  DualSense Wireless Controller (Hefesto P1)    uniq=02:fe:00:00:00:01
+#   js3  DualSense … (Hefesto P1) Motion Sensors        uniq=<O MESMO>
+#
+#   (o nome do vpad era `Hefesto Virtual DualSense P1` quando isto foi medido;
+#    a BT-E-VPAD-01, furo 1, o trocou pelo de hoje — `uhid_gamepad.py:1065`.
+#    Os números da medição não mudam: o que se conta é aparelho, não nome.)
 #   js4  Microsoft X-Box 360 pad 0    /devices/virtual/input/input329/js4
 #   js5  Microsoft X-Box 360 pad 1    /devices/virtual/input/input61/js5
 #
@@ -72,14 +76,14 @@ UINPUT_DEV = "/dev/uinput"
 #
 # Duas correções ao código de origem, medidas aqui e não lá:
 #
-# (a) o `0c08e77` reconhecia o vpad por DUAS assinaturas (`uniq` `02:fe:` e
-#     nome `Hefesto Virtual`), as duas do backend **uhid**. O fallback
-#     degradado do VPAD-05 é **uinput**, não publica `uniq` e usa as máscaras
-#     de `integrations.uinput_gamepad`: a xbox contém "Hefesto" mas não começa
-#     com "Hefesto Virtual", e a dualsense (`DUALSENSE_EDGE_NAME`) não contém
-#     "Hefesto" em lugar nenhum. Sem a quarta regra o nosso próprio vpad seria
-#     acusado de "gamepad virtual de outro programa" — troca do silêncio de
-#     hoje por uma mentira nova;
+# (a) o `0c08e77` reconhecia o vpad por DUAS assinaturas (`uniq` `02:fe:` e a
+#     marca no nome), as duas do backend **uhid**. O fallback degradado do
+#     VPAD-05 é **uinput**, não publica `uniq` e usa as máscaras de
+#     `integrations.uinput_gamepad`: nenhuma das duas carrega a marca
+#     `(Hefesto P` — a xbox contém "Hefesto" noutra forma, e a dualsense
+#     (`DUALSENSE_EDGE_NAME`) não contém "Hefesto" em lugar nenhum. Sem a
+#     quarta regra o nosso próprio vpad seria acusado de "gamepad virtual de
+#     outro programa" — troca do silêncio de hoje por uma mentira nova;
 # (b) o agrupamento sem `uniq` subia TRÊS níveis do nó (`<hid>/input/inputNN/
 #     jsN` → `<hid>`), o que está certo para device HID e erra para uinput:
 #     `/devices/virtual/input/inputNN/jsN` não tem a camada `input/` do HID, e
@@ -94,8 +98,30 @@ UINPUT_DEV = "/dev/uinput"
 #: `test_contagem_emulacao_conta_aparelho.py` trava as duas pontas.
 _VPAD_UNIQ_PREFIX = "02:fe:"
 
-#: Nome que o vpad uhid publica no evdev ("Hefesto Virtual DualSense P1").
-_VPAD_NAME_PREFIX = "Hefesto Virtual"
+#: A marca humana no nome do vpad uhid — SUBSTRING, nunca prefixo.
+#:
+#: FATO ERRADO SUBSTITUÍDO em 25/08/2026 (EMULACAO-UM-DONO-SO-01/E11). Esta
+#: constante dizia `"Hefesto Virtual"` e a docstring afirmava ser "o nome que o
+#: vpad uhid publica no evdev". Não era desde a BT-E-VPAD-01 (furo 1): o vpad
+#: publica `DualSense Wireless Controller (Hefesto P{n})`
+#: (`integrations/uhid_gamepad.py:1065`), porque jogos sob Proton casam pela
+#: substring "Wireless Controller". A segunda das duas regras que separam "o
+#: nosso" de "o de outro programa" estava MORTA, e ninguém soube porque o teste
+#: alimentava o dublê com o nome antigo.
+#:
+#: POR QUE SUBSTRING E NÃO PREFIXO: o nome de hoje COMEÇA por "DualSense
+#: Wireless Controller", que é o que um aparelho de verdade também publica.
+#: Casar por prefixo aqui seria trocar uma regra morta por uma regra ERRADA —
+#: pior que o defeito. O que só este produto escreve é `(Hefesto P`.
+#:
+#: A REDAÇÃO NÃO É NOVA: é a `VPAD_MARCA_NO_NOME` de
+#: `scripts/identidade_do_vpad.py`, a régua única desta casa para a pergunta
+#: "este nó é um vpad nosso?" — cujo próprio cabeçalho já registrava que "há
+#: código nesta casa que ainda procura o nome velho". Era este. Não se importa
+#: de lá porque `scripts/` não é pacote; o portão
+#: `test_a_marca_do_vpad_no_nome_e_a_de_hoje.py` amarra as duas pontas, e mais
+#: a terceira: o nome que o `uhid_gamepad` REALMENTE publica.
+_VPAD_MARCA_NO_NOME = "(Hefesto P"
 
 #: Subárvore dos devices criados por uinput — Steam Input, teclado virtual do
 #: daemon, qualquer programa. NÃO inclui `/devices/virtual/misc/uhid/`, que
@@ -113,6 +139,70 @@ _VPAD_NOMES_EM_UINPUT = (XBOX360_NAME, DUALSENSE_EDGE_NAME)
 #: de `_refresh_emulation_view`: ele existe para a frase longa não inflar a
 #: largura NATURAL do cartão de diagnóstico (LARGURA-01).
 LARGURA_MAXIMA_DO_ROTULO_DE_GAMEPADS = 52
+
+
+# ── EMULACAO-UM-DONO-SO-01/E8 — o transporte por trás de cada promessa ──────
+#
+# 25/08/2026. As quatro frases desta aba afirmavam que a vibração funciona sem
+# uma palavra de transporte, e a mais forte delas dizia que jogos com suporte a
+# DualSense "funcionam completos: vibração, giroscópio e lightbar". O mapa de
+# canais não sustenta a parte da vibração — e NÃO SUSTENTA EM NENHUM DOS DOIS
+# TRANSPORTES, que é onde a própria sprint errou ao propor a cura:
+#
+#   `vibracao.rumble.passthrough@dualsense` — cabo `de_onde_sei` =
+#   `inferido-do-codigo` (rebaixado de `medido` em 15/08/2026, D-14: a
+#   evidência da célula descrevia LEITURA DE FONTE, não medição no aparelho) e
+#   rádio idem, com a ressalva escrita: *"Implementado sem gate, mas NÃO MEDIDO
+#   por Bluetooth […] o aparelho ainda não confirmou"*. A coluna `mordida`
+#   fecha a conta: *"não desce até o envelope do físico, então nem o cabo nem o
+#   rádio são provados de ponta a ponta"*.
+#
+# As outras duas SUSTENTAM, e por isso a frase pode afirmá-las:
+# `movimento.giroscopio.jogo@dualsense` e `luz.lightbar.cor@dualsense` têm
+# `de_onde_sei = medido` e `aciona = sim` nos DOIS lados.
+#
+# O que este bloco declara não é o texto — o texto mora no `gui/main.glade`,
+# que é onde ela o lê. Declara-se aqui a AMARRA: qual frase fala de qual célula
+# do mapa, e a ressalva única que a frase tem de carregar enquanto a célula não
+# tiver lastro nos dois lados. O portão
+# `tests/unit/test_a_aba_emulacao_nao_promete_transporte_sem_lastro.py` cruza os
+# três: este bloco (por AST), o `gui/main.glade` e o CSV do mapa.
+
+#: A ressalva única da vibração. UMA, e verbatim nas três frases que a afirmam:
+#: correção pela metade deixa duas versões vivas, que é o defeito que a regra
+#: da casa sobre fato errado existe para matar. Sem artigo na frente de
+#: propósito, para casar tanto com "A vibração…" quanto com "…a vibração…".
+RESSALVA_DE_TRANSPORTE: dict[str, str] = {
+    "vibracao.rumble.passthrough@dualsense": (
+        "vibração ainda não foi conferida no aparelho — nem no cabo, nem no rádio"
+    ),
+}
+
+#: Que célula do mapa cada texto desta aba afirma. O portão exige as DUAS
+#: direções: uma célula declarada sem lastro obriga a ressalva no texto; e um
+#: texto que cite um dos radicais de `RADICAIS_DE_TRANSPORTE` sem estar
+#: declarado aqui também reprova — declaração que só cobre o que alguém lembrou
+#: de declarar é lembrança, não portão.
+AFIRMACOES_DE_TRANSPORTE_DA_ABA: dict[str, tuple[str, ...]] = {
+    "emulation_gamepad_dualsense_button": ("vibracao.rumble.passthrough@dualsense",),
+    "emulation_gamepad_xbox_button": (
+        "vibracao.rumble.passthrough@dualsense",
+        "movimento.giroscopio.jogo@dualsense",
+    ),
+    "emulation_gamepad_hint_label": (
+        "vibracao.rumble.passthrough@dualsense",
+        "movimento.giroscopio.jogo@dualsense",
+        "luz.lightbar.cor@dualsense",
+    ),
+}
+
+#: O radical que denuncia uma afirmação sobre cada célula. Radical e não
+#: palavra inteira: "vibra", "vibração" e "vibrar" são a mesma promessa.
+RADICAIS_DE_TRANSPORTE: dict[str, str] = {
+    "vibracao.rumble.passthrough@dualsense": "vibra",
+    "movimento.giroscopio.jogo@dualsense": "giroscóp",
+    "luz.lightbar.cor@dualsense": "lightbar",
+}
 
 
 def _chave_do_aparelho(no: dict[str, str]) -> str:
@@ -138,7 +228,7 @@ def _e_vpad_do_hefesto(no: dict[str, str]) -> bool:
     """True quando o aparelho é um gamepad virtual NOSSO — nos dois backends."""
     uniq = no.get("uniq", "").strip().lower()
     nome = no.get("name", "").strip()
-    if uniq.startswith(_VPAD_UNIQ_PREFIX) or nome.startswith(_VPAD_NAME_PREFIX):
+    if uniq.startswith(_VPAD_UNIQ_PREFIX) or _VPAD_MARCA_NO_NOME in nome:
         return True
     return (
         _UINPUT_SUBTREE in no.get("sys", "") and nome in _VPAD_NOMES_EM_UINPUT
@@ -405,10 +495,63 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     "modo_jogo": (
         "Ligado, em pausa agora: o modo jogo está suspendendo mouse e teclado."
     ),
+    # ── INALCANÇÁVEL HOJE, e a decisão de apagar ou reviver é DELA ──────────
+    #
+    # 25/08/2026 (EMULACAO-UM-DONO-SO-01/E15). Esta frase NUNCA apareceu na tela
+    # e não pode aparecer: `lifecycle._jogo_no_controle_do_desktop` (`:2209`) só
+    # devolve `CALADA_VPAD_SUSPENSO` sob `if steam_input_vpad_suspenso(self)`, e
+    # nada em produção põe essa flag em `True` — o armador
+    # `suspend_vpads_for_steam_input` tem ZERO chamadores em `src/`. Cadeia
+    # conferida ponta a ponta pela VPAD-SUSPENSO-MORTO-01/E1 (25/08); daqui
+    # `bloqueio` só pode ser `"desligada"`, `"sem_device"`, `"modo_jogo"` ou
+    # `None`.
+    #
+    # NÃO É DESCUIDO, E POR ISSO A FRASE FICA. O commit `d8022ea` (09/08/2026)
+    # tirou a suspensão da borda de entrada da exceção de Steam Input e pôs
+    # `esconder_o_fisico_para_o_jogo` no lugar, por decisão DELA
+    # (ESCONDER-EM-VEZ-DE-SAIR-01: *a allowlist do Steam Input NÃO tira o
+    # Hefesto da frente*), depois do preço medido em 08/08 — derrubar os
+    # virtuais para curar o duplicado do P1 derrubava o JOGADOR 2 junto.
+    #
+    # POR QUE MARCAR EM VEZ DE APAGAR, e é escolha declarada: apagar decide por
+    # ela. A `VPAD-SUSPENSO-MORTO-01` está ABERTA e a pergunta que ela deixou —
+    # *"o par (excecao_ativa, vpad_suspenso) vira um estado só?"* — é da
+    # mantenedora; se a resposta reviver a suspensão, esta frase volta a valer
+    # inteira, com a nota datada de 07/08 que ela já custou (abaixo). Marcar
+    # custa este comentário; apagar custa a frase e a medição junto. O que a
+    # marca tem de garantir é que ninguém mais acredite que ela aparece — e é o
+    # que `tests/unit/test_a_frase_do_teclado_fala_de_um_estado_que_existe.py`
+    # cobra, dos dois lados: reprova se a frase deixar de estar declarada morta,
+    # E reprova no dia em que a suspensão religar, mandando revisitar o texto.
     "vpad_suspenso_pelo_steam_input": (
         "Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, "
         "e o controle virtual foi recolhido. Não foi desligado — volta sozinho "
         "quando você fechar o jogo."
+    ),
+}
+
+#: As entradas de `BLOQUEIO_DO_TECLADO_EM_PORTUGUES` que descrevem um estado que
+#: NENHUM caminho de produção alcança hoje, cada uma com a razão e quem decide.
+#: Nasce com uma, e é para encolher — não para crescer.
+#:
+#: OS VALORES DESTE DICIONÁRIO NÃO NOMEIAM FUNÇÃO DO DAEMON, e não é estilo:
+#: MEDIDO em 25/08/2026. O portão irmão
+#: (`tests/unit/test_portao_o_par_com_metade_ligada.py`) trata TODA string
+#: constante que não seja docstring como possível despacho por nome — é a cura
+#: que ele precisa para enxergar `getattr(x, "nome")`. Escrever o nome do
+#: armador aqui o pôs na lista de "palavras", e o portão passou a responder que
+#: a função TEM chamador: as três reprovações dele viraram verde por causa
+#: desta frase. Os endereços (`arquivo:linha`) dizem a mesma coisa e não
+#: acionam a heurística. O defeito do instrumento está relatado a quem coordena.
+BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO: dict[str, str] = {
+    "vpad_suspenso_pelo_steam_input": (
+        "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1, reconferido aqui). O "
+        "predicado de daemon/lifecycle.py:2209 só devolve esta constante sob a "
+        "flag do vpad suspenso, e nada em produção a põe em True: o armador de "
+        "daemon/subsystems/gamepad.py:796 tem zero chamadores em src/. A causa "
+        "é decisão dela (ESCONDER-EM-VEZ-DE-SAIR-01, `d8022ea`, 09/08/2026), e "
+        "reviver ou apagar a frase é da mantenedora — a pergunta aberta é se o "
+        "par (excecao ativa, vpad suspenso) vira um estado só."
     ),
 }
 
@@ -1030,6 +1173,28 @@ class EmulationActionsMixin(WidgetAccessMixin):
     MIC_SEM_PROMOTOR = "sem-promotor"
     MIC_LIGADO = "ligado"
 
+    #: EMULACAO-UM-DONO-SO-01/E3 (25/08/2026) — o QUARTO estado: não há alvo
+    #: que este botão alcance. Os três de cima decidiam olhando SÓ a presença de
+    #: arquivos em `~/.config/wireplumber/wireplumber.conf.d/`. Sem nenhuma
+    #: placa de áudio do controle no sistema o ramo era o mesmo, e a tela
+    #: escrevia **Ligado** em `#50fa7b` com a dica "o microfone do controle está
+    #: livre e com prioridade acima do eco da saída" — verde sobre um alvo que a
+    #: aba nunca olhou.
+    MIC_SEM_ALVO = "sem-alvo"
+
+    #: A régua do alvo, DECLARADA porque a sprint exige que ela seja: a presença
+    #: de PLACA ALSA do DualSense em `/proc/asound/cards`, contada pela função
+    #: pura `storm_doctor.contar_placas_dualsense` (não redigitada aqui — o
+    #: cabeçalho dela registra por que contar a palavra dá o dobro).
+    #:
+    #: O QUE ELA PROVA, E O QUE NÃO PROVA — a distinção é do próprio mapa
+    #: (`audio.microfone@dualsense`, `assimetria_declarada`, medido 15/08/2026)
+    #: e escrevê-la errada vira fato falso amanhã: os controles do RÁDIO não têm
+    #: placa ALSA nenhuma, e isso prova que **a ROTA ALSA não existe no rádio —
+    #: NÃO prova que o aparelho não capta por rádio**. Por isso a frase da tela
+    #: fala de "placa de áudio neste computador", nunca do microfone do aparelho.
+    _PLACAS_ALSA = "/proc/asound/cards"
+
     def _mic_script(self) -> Path | None:
         for cand in (
             ROOT_DIR / "scripts" / "fix_wireplumber_default_source.sh",
@@ -1043,17 +1208,45 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 return cand
         return None
 
+    @staticmethod
+    def _placas_de_microfone() -> int:
+        """Quantas placas ALSA de DualSense este computador tem AGORA.
+
+        Zero também quando `/proc/asound/cards` não dá para ler — e é honesto
+        chamar isso de zero na frase que a tela mostra, porque ela diz que o
+        Hefesto **não encontrou** placa nenhuma, não que não exista nenhuma.
+        """
+        from hefesto_dualsense4unix.integrations.storm_doctor import (
+            contar_placas_dualsense,
+        )
+
+        try:
+            texto = Path(EmulationActionsMixin._PLACAS_ALSA).read_text(
+                encoding="utf-8", errors="ignore"
+            )
+        except OSError:
+            return 0
+        return contar_placas_dualsense(texto)
+
     def _mic_state(self) -> str:
-        """O que os drop-ins do WirePlumber dizem sobre o mic, em três estados.
+        """O que os drop-ins do WirePlumber dizem sobre o mic, em quatro estados.
 
         Só LÊ arquivo — é chamada a cada entrada na aba Emulação e não pode ter
         efeito colateral nenhum (ver `_refresh_emulation_tab`).
+
+        POR QUE O ALVO SÓ FECHA O RAMO VERDE (E3, 25/08/2026). Os dois estados
+        laranja descrevem a NOSSA configuração — um drop-in que escrevemos está
+        lá, ou o promotor está faltando — e isso é verdade com placa ou sem
+        placa. O ramo verde descreve **o aparelho** ("o microfone do controle
+        está livre"), e é só esse que precisa de um alvo para não mentir.
         """
         dropins = self._wp_dropin_dir()
         if any((dropins / name).exists() for name in self._WP_DISABLE_DROPINS):
             return self.MIC_SUPRIMIDO
         if not (dropins / self._WP_PROMOTER_DROPIN).exists():
             return self.MIC_SEM_PROMOTOR
+        if self._placas_de_microfone() == 0:
+            return self.MIC_SEM_ALVO
         return self.MIC_LIGADO
 
     def _mic_is_on(self) -> bool:
@@ -1115,7 +1308,45 @@ class EmulationActionsMixin(WidgetAccessMixin):
             "O microfone do controle está desligado por escolha — clique em "
             "“Ligar” para liberá-lo.",
         ),
+        # E3 (25/08/2026). Laranja, e não uma cor nova: a linha já ensina duas
+        # cores (verde = tudo certo, laranja = olhe isto), e inventar uma
+        # terceira é vocabulário visual novo, que é decisão dela.
+        #
+        # A FRASE NÃO PODE DIZER MAIS DO QUE A RÉGUA MEDE — ver o cabeçalho de
+        # `_PLACAS_ALSA`: ausência de placa prova que a ROTA ALSA não existe,
+        # não que o aparelho não capte. Por isso ela fala de "placa de áudio
+        # neste computador" e nomeia o rádio como o caso comum, em vez de
+        # concluir que o microfone está mudo.
+        MIC_SEM_ALVO: (
+            "#ffb86c",
+            "Sem microfone à vista",
+            "Os ajustes estão no lugar, mas o Hefesto não encontrou a placa de "
+            "áudio de nenhum DualSense neste computador — então não há o que "
+            "estes dois botões liguem agora. É o normal quando o controle está "
+            "no rádio: por Bluetooth ele não cria placa de áudio. Ligue o "
+            "controle no cabo e clique em “Atualizar”.",
+        ),
     }
+
+    #: EMULACAO-UM-DONO-SO-01/E4, metade de tela (25/08/2026). A palavra
+    #: "microfone" nomeia TRÊS coisas em três abas, e nenhuma dizia de qual não
+    #: estava falando: aqui é a ROTA DE ÁUDIO DA MÁQUINA (drop-ins do
+    #: WirePlumber, `_run_mic`); em Status/Perfis é o `ProfileMicConfig` —
+    #: volume de captura e mudo de FIRMWARE, que entram no perfil do jogo; em
+    #: Configurações é o interruptor da ponte por Bluetooth. Ela ajustava aqui,
+    #: salvava o perfil e na sessão seguinte voltava ao que estava.
+    #:
+    #: Vai no fim de TODA dica desta linha, e não só na do estado novo: o
+    #: escopo não muda com o estado, e uma frase que só aparece num ramo é uma
+    #: frase que a maioria das visitas não lê.
+    #:
+    #: A DECISÃO DE ENTRAR NO PERFIL É DELA (§9 da sprint) e este texto não a
+    #: antecipa — ele diz o que o botão faz HOJE, que é fato medido.
+    ESCOPO_DO_MICROFONE_DESTA_ABA = (
+        "Isto vale para o computador inteiro, não para este jogo: não entra no "
+        "perfil e não mexe na ponte de microfone por Bluetooth (aba "
+        "Configurações)."
+    )
 
     def _refresh_mic_status(self) -> None:
         label = self._get("emulation_mic_status_label")
@@ -1124,7 +1355,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         cor, texto, dica = self._MIC_ROTULOS[self._mic_state()]
         label.set_markup(f'<span foreground="{cor}">{texto}</span>')
         with contextlib.suppress(Exception):
-            label.set_tooltip_text(dica)
+            label.set_tooltip_text(f"{dica} {self.ESCOPO_DO_MICROFONE_DESTA_ABA}")
 
     def _run_mic(self, flag: str, done_msg: str) -> None:
         script = self._mic_script()
