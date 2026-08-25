@@ -273,8 +273,9 @@ Ordenado por (impacto ÷ custo):
   instala (`install.sh` os deixa em opt-in, desligados).
 
   > **Fechado em 24/08/2026 (T6, CONFIGURAÇÕES-FECHA-01):** o `README.md`
-  > publicava *"~40% do sinal, causa em aberto"* — número medido sob uma
-  > condição que deixou de existir quatro minutos depois. Substituído pelas
+  > publicava uma **fração de sinal com "causa em aberto"** — número medido sob
+  > uma condição que deixou de existir quatro minutos depois, e que por isso não
+  > se repete aqui. Substituído pelas
   > taxas MEDIDAS (`docs/data/mapa-controles.csv`, chave `audio.microfone`):
   > 260,4 Hz de input sem mic, 170,5 Hz + 106,2 Hz de áudio com ele.
 
