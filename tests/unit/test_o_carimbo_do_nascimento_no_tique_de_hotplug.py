@@ -117,7 +117,7 @@ _MAPA_DA_BANCADA: dict[str, str] = {
 
 def _leituras_da_bancada() -> list[sb.Leitura]:
     """O que o lado de DIAGNÓSTICO do módulo responde para a bancada inteira."""
-    return sb.ler_a_mesa(
+    return sb.veredito_do_nascimento(
         instancias=_instancias_da_bancada(), nascimentos=_nascimentos_da_bancada()
     )
 
@@ -186,14 +186,14 @@ class TestSuspeitaNaoVoltaAtras:
         alvo = _instancia(_BANCADA[0])
         cartorio.observar([alvo], agora=100.0)
         cartorio.carimbar(
-            sb.ler_a_mesa(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
+            sb.veredito_do_nascimento(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
             agora=100.0,
         )
         assert cartorio.da_instancia("0028").pede_reconexao is True
 
         # Agora o diário rotacionou e a instância sumiu dele: `nao_sei`.
         cartorio.carimbar(
-            sb.ler_a_mesa(instancias=[alvo], nascimentos={}), agora=101.0
+            sb.veredito_do_nascimento(instancias=[alvo], nascimentos={}), agora=101.0
         )
         assert cartorio.da_instancia("0028").confianca == sb.CONFIANCA_SUSPEITA
 
@@ -203,7 +203,7 @@ class TestSuspeitaNaoVoltaAtras:
         alvo = _instancia(_BANCADA[0])
         cartorio.observar([alvo], agora=100.0)
         cartorio.carimbar(
-            sb.ler_a_mesa(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
+            sb.veredito_do_nascimento(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
             agora=100.0,
         )
         assert cartorio.observar([alvo], agora=100.5) == []
@@ -217,7 +217,7 @@ class TestASondaAoVivoSoAgrava:
 
     def _limpa(self) -> tuple[sb.Instancia, list[sb.Leitura]]:
         alvo = _instancia(_BANCADA[4])  # a `.0033`, que nasceu com o nó livre
-        return alvo, sb.ler_a_mesa(
+        return alvo, sb.veredito_do_nascimento(
             instancias=[alvo], nascimentos=_nascimentos_da_bancada()
         )
 
@@ -291,7 +291,7 @@ class TestOHwVersionNaoEIdentidade:
         cartorio = sb.CartorioDoNascimento()
         cartorio.observar(vivas, agora=100.0)
         cartorio.carimbar(
-            sb.ler_a_mesa(instancias=vivas, nascimentos=_nascimentos_da_bancada()),
+            sb.veredito_do_nascimento(instancias=vivas, nascimentos=_nascimentos_da_bancada()),
             agora=100.0,
         )
         assert cartorio.do_uniq("aa:bb:cc:11:22:02").instancia == "0029"
@@ -315,7 +315,7 @@ class TestMeiaReguaNaoAbsolve:
                 escritor_conhecido=False,
             )
         }
-        (leitura,) = sb.ler_a_mesa(instancias=[alvo], nascimentos=nascimentos)
+        (leitura,) = sb.veredito_do_nascimento(instancias=[alvo], nascimentos=nascimentos)
         assert leitura.confianca == sb.CONFIANCA_NAO_SEI
         assert not leitura.pede_reconexao
 
@@ -388,7 +388,7 @@ def bancada_no_sysfs(monkeypatch):
 def diario_da_bancada(monkeypatch):
     """O diagnóstico do módulo, sem `journalctl`. Conta quantas vezes foi lido."""
     chamadas: list[int] = []
-    real = sb.ler_a_mesa
+    real = sb.veredito_do_nascimento
 
     def _ler(**kwargs: Any) -> list[sb.Leitura]:
         chamadas.append(1)
@@ -397,7 +397,7 @@ def diario_da_bancada(monkeypatch):
             nascimentos=_nascimentos_da_bancada(),
         )
 
-    monkeypatch.setattr(cx, "ler_a_mesa", _ler)
+    monkeypatch.setattr(cx, "veredito_do_nascimento", _ler)
     return chamadas
 
 
@@ -451,7 +451,7 @@ class TestOTiqueDeHotplugCarimba:
                 "escritor, porque o produto não sonda por regra dela"
             )
 
-        monkeypatch.setattr(cx, "ler_a_mesa", _bomba)
+        monkeypatch.setattr(cx, "veredito_do_nascimento", _bomba)
         daemon = _DaemonFalso(nativo=True)
         assert _carimbar(daemon) == 6
         cartorio = cx.cartorio_do_nascimento_de(daemon)

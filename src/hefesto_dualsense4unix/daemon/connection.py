@@ -36,8 +36,8 @@ from hefesto_dualsense4unix.integrations.sinal_da_barra import (
     Leitura,
     endereco_normalizado,
     instancias_dualsense,
-    ler_a_mesa,
     mascarar,
+    veredito_do_nascimento,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -980,7 +980,7 @@ async def carimbar_o_nascimento(
     """Carimba, no tique de hotplug, como cada conexão VIVA nasceu.
 
     SINAL-NO-NASCIMENTO-01. O produto já sabia dar o veredito
-    (`sinal_da_barra.ler_a_mesa`) e nunca o perguntava na hora em que a conexão
+    (`sinal_da_barra.veredito_do_nascimento`) e nunca o perguntava na hora em que a conexão
     nasce — então ele só existia enquanto o diário ainda tivesse a linha, e o
     diário rotaciona. Aqui ele passa a ser carimbado e guardado.
 
@@ -1038,7 +1038,7 @@ async def carimbar_o_nascimento(
         leituras = _sem_sonda_no_modo_nativo(faltam)
     else:
         def _diagnosticar() -> list[Leitura]:
-            return ler_a_mesa(instancias=faltam)
+            return veredito_do_nascimento(instancias=faltam)
 
         try:
             leituras = await daemon._run_blocking(_diagnosticar)
