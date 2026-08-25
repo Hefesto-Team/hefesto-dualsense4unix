@@ -54,6 +54,7 @@ from pathlib import Path
 
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 APP_REAL = RAIZ_REAL / "src" / "hefesto_dualsense4unix" / "app"
+PORTAO_REAL = RAIZ_REAL / "scripts" / "validar-fala-de-tela.py"
 
 #: O módulo que é DONO do campo `texto` — o único lugar onde lê-lo é legítimo,
 #: porque é ele quem implementa `frase_de_exibicao`.
@@ -206,6 +207,43 @@ def test_ninguem_le_o_texto_cru_de_uma_fala() -> None:
         "`NAO_MEDIDO`, que NÃO é uma string: lido cru, ele chega à tela como "
         "`<_NaoMedidoSentinela object at 0x…>` em vez da frase única da casa. "
         "Use `frase_de_exibicao(fala)`."
+    )
+
+
+# ── o mesmo defeito, aplicado ao PRÓPRIO portão ──────────────────────────
+
+
+def test_toda_checagem_do_portao_e_chamada_pelo_main() -> None:
+    """Uma checagem escrita e nunca ligada é o defeito-mãe dentro da cura.
+
+    MEDIDO em 25/08/2026, e é por isso que este teste existe: a árvore
+    amanheceu com ``valida_abas_promovidas`` escrita, testada em prosa no
+    próprio docstring e **nunca chamada** por ``main()``. Promover uma aba não
+    teria feito nada, e o portão diria OK. Uma checagem que ninguém chama é
+    indistinguível de uma checagem que não existe — só custa mais caro,
+    porque quem lê o arquivo acredita nela.
+    """
+    arvore = ast.parse(PORTAO_REAL.read_text(encoding="utf-8"), filename=str(PORTAO_REAL))
+    checagens = {
+        no.name
+        for no in arvore.body
+        if isinstance(no, ast.FunctionDef) and no.name.startswith("valida")
+    }
+    main = next(
+        (no for no in arvore.body if isinstance(no, ast.FunctionDef) and no.name == "main"),
+        None,
+    )
+    assert main is not None, "o portão perdeu o `main()`"
+    chamadas = {
+        no.func.id
+        for no in ast.walk(main)
+        if isinstance(no, ast.Call) and isinstance(no.func, ast.Name)
+    }
+    soltas = sorted(checagens - chamadas)
+    assert not soltas, (
+        f"estas checagens de {PORTAO_REAL.name} não são chamadas por `main()`: "
+        f"{soltas}. Ligue-as ou apague-as: uma checagem que ninguém roda deixa o "
+        "portão verde sobre exatamente o que ela media."
     )
 
 

@@ -32,6 +32,7 @@ Uso:
     python3 scripts/validar-fala-de-tela.py --all            # roda no CI
     python3 scripts/validar-fala-de-tela.py --fila           # placeholders abertos
     python3 scripts/validar-fala-de-tela.py --exigir-prazo   # prazo vencido é FALHA
+    python3 scripts/validar-fala-de-tela.py --censo-de-transporte  # o número de hoje
 """
 from __future__ import annotations
 
