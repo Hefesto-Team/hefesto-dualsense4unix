@@ -239,9 +239,26 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
         v for v in vdfs if _STEAM_INPUT_RE.search(_safe_read(v))
     ]
     if excecoes:
+        # T-07 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026). Esta linha É PINTADA NA
+        # TELA, e dizia *"jogos cujo DualSense é entregue pela Steam"* — o
+        # enquadramento que ela DERRUBOU em 09/08/2026
+        # (ESCONDER-EM-VEZ-DE-SAIR-01). A marca inverteu de lado: em vez de
+        # tirar o Hefesto da frente, ela ESCONDE o controle físico do jogo, e
+        # os controles virtuais do Hefesto ficam de pé — que é justamente o
+        # que o texto velho tinha de omitir.
+        #
+        # O `main.glade` recebeu o recado naquele dia (a nota datada em volta
+        # do `btn_steam_game_broken`); o código que pinta, não. Fato errado
+        # sai de TODOS os lugares onde aparece, e este era o último em `src/`
+        # que ainda chegava aos olhos dela.
+        #
+        # A redação abaixo é a da caixinha da aba Perfis (`profiles_actions.
+        # _frase_da_marca`), palavra por palavra, porque as duas marcam a
+        # MESMA coisa — e duas maneiras de dizer o mesmo gesto obrigam quem lê
+        # a descobrir que são o mesmo gesto.
         return OK, (
-            "Steam Input desligado (exceções per-app da allowlist ativas — "
-            "ex.: jogos cujo DualSense é entregue pela Steam)"
+            "Steam Input desligado (com exceções por jogo, marcadas por "
+            "você — nesses o controle físico fica escondido)"
         )
     return OK, "Steam Input desligado para o DualSense"
 

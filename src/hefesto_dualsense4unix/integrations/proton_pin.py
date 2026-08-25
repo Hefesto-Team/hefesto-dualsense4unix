@@ -950,10 +950,20 @@ def lock_proton_for_all_games(
         locked = 0
         preservados = 0
     status = result.get("status")
+    # T-04 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026): `status` e `reason` passam
+    # para fora. Antes só sobrevivia `errors = 1 if status == "erro" else 0`, e
+    # RECUSA não é erro para essa contagem — então uma recusa chegava à tela
+    # como `{locked:0, skipped:0, errors:0}`, indistinguível de "não havia
+    # nada a fazer". `format_proton_lock_result` caía no ramo `elif errors ==
+    # 0` e comemorava *"os jogos já estão no Proton validado"* logo depois de
+    # o gate ter recusado por causa de um jogo aberto. A verdade já estava
+    # calculada aqui dentro; a ponte é que a jogava fora.
     return {
         "locked": locked,
         "skipped": preservados,
         "errors": 1 if status == "erro" else 0,
+        "status": status,
+        "reason": result.get("reason"),
         "tool": tool_name,
         "detail": result,
     }

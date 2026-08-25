@@ -602,19 +602,31 @@ def steam_input_appids(path: Path | None = None) -> set[int]:
     formato: uma linha por appid, `#` comenta) e converte para int — appid é
     número; token não-numérico no arquivo é ignorado em vez de virar erro.
 
-    O caminho default sai de `config_dir()` (XDG), como no
-    `disable_steam_input.sh`, e não do `Path.home()` fixo do `storm_doctor` —
-    assim os testes ficam herméticos com `XDG_CONFIG_HOME` e a leitura segue a
-    convenção do resto do projeto.
+    O caminho default sai de `steam_input_allowlist_path()` — a MESMA função
+    do escritor (o botão "Este jogo não funciona") e, desde 23/08, também do
+    `storm_doctor`.
+
+    **Substitui o que estava escrito aqui.** Esta docstring dizia que o
+    caminho vinha de `config_dir()` *"e não do `Path.home()` fixo do
+    `storm_doctor`"*. O `Path.home()` fixo do `storm_doctor` deixou de existir
+    na AMBIENTE-PRESUMIDO-01 (23/08): ele passou a delegar no escritor. A
+    justificativa caducou, e o que restava era um **sexto resolvedor
+    independente** do mesmo caminho — três linhas que ninguém precisava e que
+    voltariam a divergir na primeira vez que o `STEAM_INPUT_ALLOWLIST_RELPATH`
+    mudasse, em silêncio e sem erro, que é exatamente a forma do defeito que a
+    DUPLO-REGISTRO-01 mediu. Régua em
+    `tests/unit/test_t15_a_allowlist_tem_um_caminho_so.py` (T-15, 25/08/2026).
     """
     try:
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            steam_input_allowlist_path,
+        )
         from hefesto_dualsense4unix.integrations.storm_doctor import (
             steam_input_allowlist,
         )
-        from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
         tokens = steam_input_allowlist(
-            path if path is not None else config_dir() / "steam_input_apps.txt"
+            path if path is not None else steam_input_allowlist_path()
         )
     except Exception:  # arquivo ilegível/import quebrado: allowlist vazia
         logger.debug("steam_input_allowlist_indisponivel", exc_info=True)

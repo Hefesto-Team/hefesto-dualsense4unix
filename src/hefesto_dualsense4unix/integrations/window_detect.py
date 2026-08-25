@@ -317,8 +317,51 @@ class WindowReaderDiag:
         fn = getattr(self._backend, "conexao_provada", None)
         return fn() if callable(fn) else None
 
+    def _xwayland_morto_com_wayland_vivo(self) -> bool:
+        """O backend é `xlib`, a conexão está PROVADA morta, e há Wayland?
+
+        D-TROCA-DE-PERFIL-CEGA (25/08/2026). As três condições juntas, e só
+        elas, descrevem a máquina dela na medição de 23/08 às 22h21: 60
+        `x11_connect_failed` em 30 min, `err=Can't connect to display :1`,
+        sessão COSMIC/Wayland. `detect_window_backend` escolhe `xlib` sempre
+        que `DISPLAY` existe (é o único backend que resolve `exe_basename` —
+        ver `BACKENDS_QUE_VEEM_O_PROCESSO`), e essa preferência estava certa
+        enquanto o XWayland estivesse vivo. Com ele morto, o produto ficava
+        preso a um backend cego tendo a cascata Wayland — que funciona no
+        COSMIC via `wlrctl` — ao lado, nunca tentada.
+
+        `conexao_provada() is False` é PROVA, não presunção: só devolve False
+        depois de uma tentativa de conexão real que o servidor recusou
+        (`None` = ainda não tentou; `True` = conectado agora). É a mesma régua
+        que a T-01 da ONDA0-Z7 usou para semear `window_detect_healthy`.
+        """
+        if not isinstance(self._backend, XlibBackend):
+            return False
+        if not os.environ.get("WAYLAND_DISPLAY"):
+            return False
+        return self._backend.conexao_provada() is False
+
+    def precisa_de_resgate(self) -> bool:
+        """O backend atual está cego de um jeito que a re-detecção cura?
+
+        Dois casos, e só dois — quem os conserta é `maybe_recover`:
+
+        * **backend Null** (AUTOSWITCH-HEAL-01): o daemon nasceu antes do env
+          gráfico e o env pode ter aparecido desde então;
+        * **xlib com a conexão provada morta numa sessão Wayland**
+          (D-TROCA-DE-PERFIL-CEGA): existe outro backend viável e ninguém o
+          tentou.
+
+        Existe separado de `maybe_recover` porque o chamador precisa saber se
+        vale gastar o `systemctl --user show-environment` do
+        `_ensure_display_env()` ANTES de tentar — o poll roda a 2 Hz.
+        """
+        if isinstance(self._backend, NullBackend):
+            return True
+        return self._xwayland_morto_com_wayland_vivo()
+
     def maybe_recover(self) -> bool:
-        """Re-detecta o backend quando o atual é o NullBackend.
+        """Troca o backend em-place quando o atual está cego e há alternativa.
 
         AUTOSWITCH-HEAL-01 (22/07): no login o daemon pode nascer ANTES de o
         compositor exportar WAYLAND_DISPLAY/DISPLAY para o systemd --user —
@@ -328,14 +371,43 @@ class WindowReaderDiag:
         (rate-limitado no chamador) DEPOIS de re-importar o env; quando a
         re-detecção sai do Null, o backend é trocado em-place e o autoswitch
         volta à vida sem restart. Retorna True quando recuperou.
+
+        D-TROCA-DE-PERFIL-CEGA (25/08/2026): o segundo caso é o XWayland
+        MORTO numa sessão Wayland (ver `_xwayland_morto_com_wayland_vivo`).
+        Aqui NÃO se chama `detect_window_backend()` — ela devolveria `xlib` de
+        novo, porque `DISPLAY` continua no ambiente; o resgate constrói a
+        cascata Wayland direto.
+
+        **A troca é de mão única dentro do episódio, e é escolha declarada.**
+        A cascata é CEGA ao nome do processo (`BACKENDS_CEGOS_AO_PROCESSO`),
+        então perfis que casam por `process_name` seguem sem casar — mas eles
+        já não casavam com o xlib morto, que não devolvia janela nenhuma.
+        Enxergar `wm_class` e `wm_name` é estritamente mais do que enxergar
+        nada, e o `window_detect_backend` publicado no `state_full` continua
+        dizendo qual backend está valendo (é o que
+        `backend_ve_nome_do_processo` lê para a tela). Se o XWayland voltar, o
+        backend certo volta no próximo start do daemon.
         """
-        if not isinstance(self._backend, NullBackend):
-            return False
-        novo = detect_window_backend()
-        if isinstance(novo, NullBackend):
-            return False
-        self._backend = novo
-        return True
+        if isinstance(self._backend, NullBackend):
+            novo = detect_window_backend()
+            if isinstance(novo, NullBackend):
+                return False
+            self._backend = novo
+            return True
+        if self._xwayland_morto_com_wayland_vivo():
+            self._backend = _WaylandCascadeBackend()
+            logger.warning(
+                "window_backend_xwayland_morto_resgate_wayland",
+                hint=(
+                    "o servidor X recusou conexão e a sessão é Wayland; "
+                    "a detecção de janela passa para a cascata "
+                    "portal/wlrctl. O nome do processo deixa de ser "
+                    "visível (perfis que casam por process_name não "
+                    "entram); wm_class e título continuam."
+                ),
+            )
+            return True
+        return False
 
 
 def build_window_reader() -> WindowReaderDiag:
