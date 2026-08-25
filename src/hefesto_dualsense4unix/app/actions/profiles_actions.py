@@ -11,7 +11,7 @@ gui_prefs.load_gui_prefs / gui_prefs.set_pref.
 from __future__ import annotations
 
 import contextlib
-from typing import Any
+from typing import Any, NamedTuple
 
 import gi
 from pydantic import ValidationError
@@ -475,6 +475,98 @@ def perfil_que_ela_ativou() -> str | None:
     with contextlib.suppress(Exception):
         return resolve_boot_profile()
     return None
+
+
+# --- P1: um dono só para "qual perfil está valendo" ------------------------
+# PERFIS-ABRE-O-QUE-GUARDA-01/§2.1/1 (24/08/2026). QUATRO superfícies da mesma
+# janela, DUAS respostas para o mesmo fato, medidas com o daemon vivo:
+#
+#     aba Perfis   lê o DISCO   -> "Sackboy", em verde e no topo   (CERTO)
+#     aba Status   lê o daemon  -> "Nenhum"
+#     aba Início   lê o daemon  -> vazio
+#     aba No jogo  lê o daemon  -> vazio
+#
+# A aba Perfis estava certa e sozinha: a cura é da PERFIL-ATUAL-01 (10/08), e o
+# comentário dela já nomeava o caso — "não é o `active_profile` do daemon
+# quando ele está vazio, que é o caso VIVO da máquina dela". As outras três
+# nunca receberam essa cura, e copiar a lógica para cada uma daria QUATRO
+# respostas em vez de duas. Então o resolvedor vira DONO, e as leitoras o
+# chamam.
+#
+# A DISTINÇÃO QUE A TELA PRECISA CARREGAR, e que não existia em lugar nenhum:
+# *"nenhum perfil ativo"* e *"o daemon não sabe dizer"* são fatos diferentes.
+# O `or "Nenhum"` sobre um `null` funde os dois — é a tela confundindo "não
+# sei" com "não há", e é a mesma disciplina que `secao_controles.py` já aplica
+# ("um 'não sei' não pode virar aviso").
+
+#: O rótulo de "ninguém soube responder". É o travessão que a aba Status já usa
+#: quando o daemon está offline — vocabulário existente, não inventado aqui.
+ROTULO_NAO_SEI = "—"
+
+#: E o rótulo de "o daemon respondeu, e não há perfil ativo".
+ROTULO_NENHUM = "Nenhum"
+
+
+class PerfilQueVale(NamedTuple):
+    """Quem está valendo, de onde veio a resposta, e se houve resposta.
+
+    ``fonte`` é o que separa os quatro casos, e existe para a tela poder
+    escolher palavras diferentes para fatos diferentes:
+
+    - ``"daemon"`` — o daemon respondeu com um nome. É a verdade mais fresca.
+    - ``"disco"``  — o daemon respondeu ``null`` (ou não respondeu) e o
+      marcador em disco tem um nome. **É o caso VIVO da máquina dela.**
+    - ``"nenhum"`` — o daemon respondeu, ninguém tem nome: não há perfil ativo.
+    - ``"nao_sei"`` — não houve resposta e não há marcador. A tela não sabe.
+    """
+
+    nome: str | None
+    fonte: str
+
+    @property
+    def sabe(self) -> bool:
+        """Alguém soube responder? ``False`` só no ``nao_sei``."""
+        return self.fonte != "nao_sei"
+
+    @property
+    def rotulo(self) -> str:
+        """O que a tela escreve quando precisa de UMA palavra."""
+        if self.nome:
+            return self.nome
+        return ROTULO_NENHUM if self.fonte == "nenhum" else ROTULO_NAO_SEI
+
+
+def perfil_que_esta_valendo(state: Any = None) -> PerfilQueVale:
+    """O DONO da pergunta "qual perfil está valendo agora?".
+
+    A ordem é deliberada e cada perna tem motivo:
+
+    1. **o daemon primeiro** — ele é quem aplicou as seções no controle, e um
+       autoswitch por janela só existe lá;
+    2. **o disco depois, declarado** — `perfil_que_ela_ativou` lê
+       `session.json` + `active_profile.txt` pelo MESMO caminho que o daemon
+       usa no boot (`resolve_boot_profile`). Sobrevive ao daemon responder
+       ``active_profile: null``, que é o estado da máquina dela hoje, e
+       sobrevive a fechar e reabrir a janela.
+
+    ``state`` ausente (ou que não é dicionário) significa "o daemon não falou"
+    — nunca "não há perfil". Best-effort em tudo: qualquer falha de I/O do
+    disco vira ``nao_sei``, jamais uma exceção na thread do GTK.
+    """
+    houve_resposta = isinstance(state, dict)
+    if houve_resposta:
+        do_daemon = state.get("active_profile")
+        if isinstance(do_daemon, str) and do_daemon:
+            return PerfilQueVale(do_daemon, "daemon")
+    do_disco: str | None = None
+    # Best-effort, e a garantia é DAQUI: `perfil_que_ela_ativou` engole as
+    # falhas dele, mas quem chama este dono é repintura de tela, e uma exceção
+    # aqui derrubaria a thread do GTK por causa de um arquivo de sessão.
+    with contextlib.suppress(Exception):
+        do_disco = perfil_que_ela_ativou()
+    if do_disco:
+        return PerfilQueVale(do_disco, "disco")
+    return PerfilQueVale(None, "nenhum" if houve_resposta else "nao_sei")
 
 
 def ordem_de_exibicao(perfis: list[Any], ativo: str | None) -> list[Any]:
