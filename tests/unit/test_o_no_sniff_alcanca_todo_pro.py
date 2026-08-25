@@ -663,3 +663,167 @@ class TestAVigiaDeDoisMinutosTambemAlcancaTodoPro:
             "um controle passa a receber o prefixo e não o no-sniff, ou o "
             "contrário"
         )
+
+
+# ---------------------------------------------------------------------------
+# 5. O exame — o que ele AFIRMA sobre um controle que não olhou
+# ---------------------------------------------------------------------------
+#
+# `scripts/doctor.sh` procurava o "Pro genuíno conectado" com um `grep` da faixa
+# desta bancada. Com um Pro de outra safra conectado e COM sniff — a cura
+# FURADA, que é o defeito — o grep não o achava, e o exame imprimia
+# `[ OK ] ... no-sniff só no Pro genuíno` sem ter olhado controle nenhum.
+#
+# Um exame que aprova a cura ausente é pior que exame nenhum: ele é a razão pela
+# qual ninguém foi procurar.
+
+DOCTOR = RAIZ / "scripts" / "doctor.sh"
+
+
+class ExameDeMentira:
+    """Um adaptador com alias `Nintendo*`, um controle conectado, e dublês.
+
+    Roda UMA função do `doctor.sh` (`source` + chamada), como já faz
+    `tests/unit/test_migracao_bluez_depreciados.py`. Nada toca o rádio: o
+    `hcitool` dublê responde a link policy que o teste mandar.
+    """
+
+    def __init__(self, tmp: Path, *, mac: str, nome: str, sniff_no_controle: bool) -> None:
+        self.tmp = tmp
+        self.fakes = tmp / "fakes"
+        self.fakes.mkdir(parents=True, exist_ok=True)
+        dev = "/org/bluez/hci0/dev_" + mac.upper().replace(":", "_")
+        self._escrever(
+            "busctl",
+            f"""
+case "$1" in
+  tree) printf '%s\\n' '/org/bluez/hci0' '{dev}' ;;
+  get-property)
+    case "$4" in
+      org.bluez.Adapter1)
+        case "$5" in
+          Alias)   printf 's "%s"\\n' 'Nintendo Mesa' ;;
+          Address) printf 's "%s"\\n' '{_ADAPTADOR.upper()}' ;;
+          *)       printf 's ""\\n' ;;
+        esac ;;
+      org.bluez.Device1)
+        case "$5" in
+          Alias)     printf 's "%s"\\n' '{nome}' ;;
+          Connected) echo 'b true' ;;
+          *)         printf 's ""\\n' ;;
+        esac ;;
+    esac ;;
+esac
+exit 0
+""",
+        )
+        self._escrever(
+            "hciconfig",
+            "if [[ \"${2:-}\" == \"lp\" ]]; then\n"
+            "    echo 'Link policy: RSWITCH HOLD SNIFF PARK'\n    exit 0\nfi\n"
+            "echo 'hci0: errors:0'\nexit 0\n",
+        )
+        politica = "RSWITCH HOLD SNIFF PARK" if sniff_no_controle else "RSWITCH HOLD PARK"
+        self._escrever(
+            "hcitool",
+            'if [[ "${1:-}" == "lp" ]]; then\n'
+            f"    echo 'Link policy: {politica}'\n"
+            "    exit 0\nfi\nexit 0\n",
+        )
+
+    def _escrever(self, nome: str, corpo: str) -> None:
+        alvo = self.fakes / nome
+        alvo.write_text("#!/usr/bin/env bash\n" + corpo, encoding="utf-8")
+        alvo.chmod(0o755)
+
+    def linha_do_modo_ativo(self) -> str:
+        proc = subprocess.run(
+            ["bash", "-c", 'set --; source "$DOCTOR_SH"; check_bt_resilience'],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+            env={
+                "PATH": ":".join([str(self.fakes), "/usr/bin", "/bin"]),
+                "HOME": str(self.tmp),
+                "DOCTOR_SH": str(DOCTOR),
+                "LANG": os.environ.get("LANG", "pt_BR.UTF-8"),
+            },
+        )
+        for linha in proc.stdout.splitlines():
+            if "modo ativo p/ Nintendo" in linha:
+                return linha
+        return ""
+
+
+class TestOExameNaoAprovaOQueNaoOlhou:
+    def test_o_pro_de_outra_safra_com_sniff_faz_o_exame_reclamar(
+        self, tmp_path: Path
+    ) -> None:
+        """O FALSO VERDE, em um teste.
+
+        MORDIDA: devolva o
+        `_pro_mac="$(_bt_macs_conectados | grep -oiE 'E0:F6:B5(:[0-9A-F]{2}){3}' ...)"`
+        ao `check_bt_resilience` e este teste reprova com um `[ OK ]` — o mesmo
+        `[ OK ]` que a pessoa com um Pro de outra safra recebia enquanto o link
+        dela caía sob carga.
+        """
+        exame = ExameDeMentira(
+            tmp_path, mac=MAC_DE_OUTRA_SAFRA, nome=NOME_PRO, sniff_no_controle=True
+        )
+        linha = exame.linha_do_modo_ativo()
+        assert linha, "o exame não falou do modo ativo p/ Nintendo"
+        assert "[WARN]" in linha, (
+            "o exame APROVOU a cura sem ter olhado o controle: há um Pro "
+            "Controller conectado e COM sniff, que é exatamente o estado que a "
+            f"cura existe para impedir.\n{linha}"
+        )
+        assert "COM sniff" in linha, f"o WARN não diz qual é o estado errado:\n{linha}"
+
+    def test_o_pro_de_outra_safra_sem_sniff_continua_aprovado(
+        self, tmp_path: Path
+    ) -> None:
+        """A outra ponta: alargar a régua não pode virar barulho.
+
+        Barulho em exame é o que ensina a ignorar exame.
+        """
+        exame = ExameDeMentira(
+            tmp_path, mac=MAC_DE_OUTRA_SAFRA, nome=NOME_PRO, sniff_no_controle=False
+        )
+        linha = exame.linha_do_modo_ativo()
+        assert "[ OK ]" in linha, (
+            f"a cura está aplicada e o exame reclamou assim mesmo:\n{linha}"
+        )
+
+    def test_o_clone_com_sniff_nao_faz_o_exame_reclamar(self, tmp_path: Path) -> None:
+        """O clone DEVE estar com sniff — reclamar dele seria cobrar o defeito.
+
+        Ele anuncia o mesmo "Pro Controller"; quem o separa é a OUI.
+        """
+        exame = ExameDeMentira(
+            tmp_path, mac=_mac_do_clone(), nome=NOME_PRO, sniff_no_controle=True
+        )
+        linha = exame.linha_do_modo_ativo()
+        assert "[ OK ]" in linha, (
+            "o exame passou a reclamar do 8BitDo estar com sniff — e sem sniff "
+            f"a probe dele morre em ret=-110 (A/B de 23/07/2026).\n{linha}"
+        )
+
+    def test_as_listas_do_exame_nao_se_separam_do_dono(self) -> None:
+        """O comentário do `doctor.sh` prometia este portão, e ele não existia.
+
+        Medido em 25/08/2026: as listas do exame já tinham DERIVADO — havia um
+        `98:B6:E9` escrito à mão que não existe em lugar nenhum do produto.
+        """
+        texto = DOCTOR.read_text(encoding="utf-8")
+
+        def lista(nome: str) -> set[str]:
+            achado = re.search(rf"^{nome}=\(([^)]*)\)", texto, re.MULTILINE)
+            assert achado, f"o `doctor.sh` não declara mais `{nome}`"
+            return {
+                o.replace(":", "").lower() for o in re.findall(r'"([^"]*)"', achado.group(1))
+            }
+
+        assert lista("OUIS_CLONE") == set(OUIS_CLONE)
+        assert lista("OUIS_NINTENDO_VISTAS") == set(OUIS_NINTENDO_VISTAS)
+        assert lista("NOMES_PRO") == {n.lower() for n in NOMES_PRO}
