@@ -567,6 +567,62 @@ def test_a_promessa_de_bateria_nao_afirma_transporte() -> None:
         assert palavra.lower() not in trecho.lower()
 
 
+# ===========================================================================
+# Mordida 6 — RUM-7: a aba admite que existe um teto de mesa
+# ===========================================================================
+
+
+@pytest.mark.parametrize(
+    "widget",
+    [
+        "rumble_policy_economia",
+        "rumble_policy_balanceado",
+        "rumble_policy_max",
+        "rumble_policy_auto",
+    ],
+)
+def test_a_dica_de_cada_botao_nomeia_o_teto_de_mesa(widget: str) -> None:
+    """Economia/Balanceado/Máximo são PEDIDO aqui e TETO na Configurações.
+
+    A linha que avisa quando o teto MORDE já existe desde a CONFIG-05 (22/08) e
+    está correta — mas ela só aparece quando morde, e por isso nunca ensinou
+    que o teto existe. Um botão que promete 150% sem uma palavra sobre o teto
+    de mesa promete o que a mesa pode não deixar passar.
+
+    **Os QUATRO, e não os três de PEDIDO**: o teto de mesa cobre o Auto
+    também. Uma regra que vale para 3 de 4 botões é o buraco por onde ela volta.
+
+    Apagar a oração de qualquer um reprova nomeando o ``id`` daquele botão.
+    """
+    trecho = _texto_visivel_do_widget(widget)
+    assert "teto" in trecho, (
+        f"{widget}: a dica fala de força e cala que a mesa pode ter um teto — "
+        "o mesmo número quer dizer PEDIDO nesta aba e TETO na Configurações"
+    )
+
+
+def test_a_dica_do_teto_nao_promete_numero_que_a_aba_nao_sabe() -> None:
+    """A oração diz que o teto EXISTE; quem diz QUANTO é a linha que morde.
+
+    ``texto_do_teto_do_orcamento`` só afirma um número quando ele foi lido de
+    verdade — e devolve ``None`` nos quatro silêncios. Uma dica ESTÁTICA no XML
+    não pode saber o número: ela seria a mesma na máquina sem
+    ``maquina.json``, onde teto nenhum está em vigor (§2.2/11 da sprint).
+    """
+    import re
+
+    for widget in ("rumble_policy_economia", "rumble_policy_auto"):
+        trecho = _texto_visivel_do_widget(widget)
+        # A ausência da oração é o teste ACIMA; aqui ela é só "nada a medir".
+        if "teto" not in trecho:
+            continue
+        oracao = trecho[max(0, trecho.index("teto") - 40) : trecho.index("teto") + 120]
+        assert not re.search(r"teto de \d", oracao), (
+            f"{widget}: a dica estática afirmou um número de teto que ela não "
+            "tem como saber"
+        )
+
+
 def test_a_ordem_da_verdade_nao_mudou_o_descartado_vem_antes() -> None:
     """O escopo mudou; a ORDEM das perguntas, não.
 
