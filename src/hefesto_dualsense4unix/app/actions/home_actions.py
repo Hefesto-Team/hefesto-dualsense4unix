@@ -864,14 +864,22 @@ def reconciliar_toast(jogadores: object, resultado_renumber: object) -> str:
 #    `set_gamepad_emulation` devolve o MESMO ``True`` para "apliquei", "já
 #    estava" e "recusei" (o contrato de retorno é "ativo ao final", não
 #    "apliquei o pedido" — está escrito no próprio `start_gamepad_emulation`);
-# 2. a janela não dizia por ONDE o jogo estava recebendo o controle. Com a
+# 2. a janela não dizia por ONDE o jogo estava recebendo o controle.
+#
+#    CORREÇÃO DE FATO — 25/08/2026 (I6, ramo 2). Este parágrafo dizia: *"com a
 #    exceção de Steam Input ativa o vpad é suspenso, `gamepad_emulation.enabled`
-#    cai para False e `mode_of_state` chama isso de "Controlar o PC" — a aba
-#    mostrava o modo desktop com o jogo jogando pelo espelho da Steam. O dado
-#    que desfaz o engano já era publicado: o `_steam_input_payload` do
-#    `ipc_handlers` existe exatamente para isso e sua docstring diz, com todas
-#    as letras, "a correção mora na GUI (dono diferente); o dado sai daqui para
-#    ela não precisar adivinhar". Ninguém o consumia.
+#    cai para False e `mode_of_state` chama isso de Controlar o PC — a aba
+#    mostrava o modo desktop com o jogo jogando pelo espelho da Steam"*. Aquilo
+#    era verdade até **09/08/2026**, e a decisão dela naquele dia
+#    (ESCONDER-EM-VEZ-DE-SAIR-01) trocou o mecanismo: a exceção passou a
+#    ESCONDER O FÍSICO e a MANTER O VPAD DE PÉ, então a emulação NÃO cai, o modo
+#    NÃO vira desktop, e quem alimenta o jogo durante a exceção continua sendo o
+#    gamepad do Hefesto (medição em jogo de 11/08: zero espelhos da Steam —
+#    `docs/protocol/pilha-steam-input-xpad-sdl.md`, §2.4-bis).
+#
+#    O defeito de ONDE continuou existindo, e é o que esta aba curou: a linha da
+#    ponte respondia sobre o VPAD e a pessoa lia como resposta sobre o JOGO —
+#    daí o verde com a mesa vazia (I6, o veredito que faltava).
 #
 # A voz é a do diagnóstico da aba Sistema (`descrever_deteccao_de_janela`):
 # prefixo fixo, o veredito em cor, e a frase em português de quem usa. As cores
@@ -2875,10 +2883,17 @@ class HomeActionsMixin(WidgetAccessMixin):
         pedido = getattr(self, "_home_flavor_pedido", None)
         if pedido and no_aparelho and pedido == no_aparelho:
             self._home_flavor_pedido = None
-        # Fora do modo gamepad não há máscara valendo: no Modo Nativo e sob a
-        # exceção de Steam Input quem entrega o controle não é o vpad, e cobrar
-        # a máscara ali seria aviso sobre coisa que não está em uso. Mesmo gate
-        # do `vpad_degradation_text`.
+        # Fora do modo gamepad não há máscara valendo: no Modo Nativo quem
+        # entrega o controle é o físico, e cobrar a máscara ali seria aviso
+        # sobre coisa que não está em uso. Mesmo gate do
+        # `vpad_degradation_text`.
+        #
+        # CORREÇÃO DE FATO — 25/08/2026: esta linha citava também "a exceção de
+        # Steam Input" como caso em que o vpad não entrega. Desde a
+        # ESCONDER-EM-VEZ-DE-SAIR-01 (09/08/2026) é o contrário — a exceção
+        # esconde o FÍSICO e mantém o vpad de pé, o modo continua sendo gamepad
+        # e a máscara continua valendo. Nada muda no código: o gate sempre foi
+        # `mode_of_state`, e é ele que continua decidindo.
         # I3 (25/08/2026): duas leituras, e o daemon tem a palavra sobre o jogo
         # em cena. `mascara_divergente` é o ALARME que ele já publicava e que
         # esta janela nunca leu — quando ele existe, quem nomeia o perfil é o
