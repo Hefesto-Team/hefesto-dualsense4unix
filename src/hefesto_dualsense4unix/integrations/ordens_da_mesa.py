@@ -101,6 +101,9 @@ from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
     NoDeEntrada,
     furos,
 )
+from hefesto_dualsense4unix.integrations.portas_do_barramento import (
+    hubs_do_mesmo_plastico,
+)
 
 # ---------------------------------------------------------------------------
 # Os três selos.
@@ -317,7 +320,9 @@ class Leitura:
 # ---------------------------------------------------------------------------
 
 
-def mesmo_hub_fisico(censo: Censo, primeiro: Aparelho, segundo: Aparelho) -> bool:
+def mesmo_hub_fisico(
+    leitura: Leitura, primeiro: Aparelho, segundo: Aparelho
+) -> bool:
     """Os dois aparelhos penduram no MESMO plástico de hub?
 
     **É a função que faz R1 enxergar.** ``mesa_de_radio.vizinhancas_apertadas``
@@ -326,41 +331,56 @@ def mesmo_hub_fisico(censo: Censo, primeiro: Aparelho, segundo: Aparelho) -> boo
     adaptador Bluetooth em ``3-1.1.4`` — dois buracos do MESMO chip de hub, em
     barramentos diferentes porque o hub tem um lado 2.0 e um lado 3.0.
 
-    A assinatura do "mesmo plástico", medida nesta bancada em 24/08/2026: mesmo
-    ``devpath``, ``busnum`` diferente, e o mesmo controlador PCI nos dois. É a
-    mesma régua de ``mapa_das_portas._mesmo_plastico_em_dois_barramentos``, e
-    ela mora em dois lugares porque lá ela evita uma acusação FALSA e aqui ela
-    autoriza uma acusação VERDADEIRA — o dia em que uma mudar, a outra tem de
-    ser reconferida à mão, e é isso que este parágrafo existe para dizer.
+    QUEM DIZ QUE DOIS HUBS SÃO O MESMO PLÁSTICO É O KERNEL, E NÃO UMA CONTA
+    ----------------------------------------------------------------------
+
+    A resposta sai de ``portas_do_barramento.hubs_do_mesmo_plastico``, que
+    agrupa os hubs pelo symlink ``peer`` das entradas deles. **Não** de uma
+    comparação de ``devpath``, e a diferença foi medida nesta máquina em
+    25/08/2026::
+
+        usb1-port5  peer -> usb2-port1
+        usb1-port6  peer -> usb2-port2
+        usb1-port7  peer -> usb2-port3
+
+    **Os números dos dois lados divergem.** Um hub encaixado no buraco que é
+    ``usb1-port5`` do lado 2.0 enumera como ``1-5`` (``devpath`` ``"5"``) e como
+    ``2-1`` (``devpath`` ``"1"``) do lado 3.0 — e uma régua que compara
+    ``devpath`` declara que os dois lados do MESMO hub são plásticos diferentes.
+    R1 ficaria cega exatamente no buraco que ela recomenda como destino, porque
+    ``usb1-port5``, ``-port6`` e ``-port7`` são ``hotplug``: são as entradas que
+    uma pessoa alcança com a mão. Há teste que reprova se a conta voltar.
+
+    O ``peer`` não tem esse ponto cego: ele é o que o kernel costurou a partir
+    do firmware, buraco a buraco, e não depende de os números baterem.
     """
-    por_no = {aparelho.no: aparelho for aparelho in censo.aparelhos}
-    de_um = _hubs_de(censo, por_no, primeiro)
-    de_outro = _hubs_de(censo, por_no, segundo)
-    return any(
-        _mesmo_plastico(um, outro) for um in de_um for outro in de_outro
-    )
+    classes = hubs_do_mesmo_plastico(leitura.entradas)
+    de_um = _plastico_dos_hubs(leitura.censo, primeiro, classes)
+    de_outro = _plastico_dos_hubs(leitura.censo, segundo, classes)
+    return bool(de_um & de_outro)
 
 
-def _hubs_de(
-    censo: Censo, por_no: Mapping[str, Aparelho], aparelho: Aparelho
-) -> tuple[Aparelho, ...]:
-    """Os hubs acima deste aparelho, já como ``Aparelho`` — sem os hubs-raiz."""
-    return tuple(
-        por_no[no] for no in cadeia_de_hubs(censo, aparelho.no) if no in por_no
-    )
+def _plastico_dos_hubs(
+    censo: Censo, aparelho: Aparelho, classes: Mapping[str, frozenset[str]]
+) -> set[str]:
+    """Os hubs acima deste aparelho, cada um expandido no plástico dele.
 
+    ``cadeia_de_hubs`` já deixa os hubs-raiz de fora: eles não são aparelho de
+    bancada, e incluí-los faria dois aparelhos quaisquer do mesmo controlador
+    parecerem "no mesmo hub".
 
-def _mesmo_plastico(primeiro: Aparelho, segundo: Aparelho) -> bool:
-    """Dois nós de hub que são o mesmo aparelho de bancada."""
-    if primeiro.no == segundo.no:
-        return True
-    if primeiro.devpath != segundo.devpath:
-        return False
-    if primeiro.busnum == segundo.busnum:
-        return False
-    return bool(primeiro.controlador_pci) and (
-        primeiro.controlador_pci == segundo.controlador_pci
-    )
+    Um hub que o ``peer`` não costurou a ninguém responde por si mesmo — não
+    saber que ele tem outro lado não é o mesmo que saber que ele não tem.
+    """
+    por_no = {a.no: a for a in censo.aparelhos}
+    saida: set[str] = set()
+    for no in cadeia_de_hubs(censo, aparelho.no):
+        hub = por_no.get(no)
+        if hub is None:
+            continue
+        nome = hub.nome_do_kernel
+        saida |= classes.get(nome, frozenset({nome}))
+    return saida
 
 
 # ---------------------------------------------------------------------------
@@ -467,7 +487,7 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
         (largo, dongle)
         for largo in largos
         for dongle in adaptadores
-        if mesmo_hub_fisico(leitura.censo, largo, dongle)
+        if mesmo_hub_fisico(leitura, largo, dongle)
     ]
     if not pares:
         return None
