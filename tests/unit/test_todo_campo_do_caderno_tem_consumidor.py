@@ -64,6 +64,19 @@ ISENTOS: dict[str, str] = {
         "achado NOVO da T11 desta sprint, fora do censo original da T1: a "
         "cor declarada nunca chega a um consumidor fora da seção"
     ),
+    # ORDEM-DE-SERVIÇO-01 · ORDEM-6 (25/08/2026). ISENÇÃO COM PRAZO, e o
+    # consumidor já existe — só não está LIGADO ainda:
+    # `ordens_da_mesa.ordens_novas` e `ordens_caladas` leem exatamente este
+    # campo, e têm bateria própria em `test_a_ordem_confirma_que_ela_moveu.py`.
+    # O que falta é a seção chamá-las, e isso é `secao_exame.py` — texto novo
+    # na tela e dois botões, que PROVA-DE-TELA-01 manda passar pelo olho dela
+    # ANTES. Quando a seção ligar, esta entrada sai daqui e vira
+    # CONSUMIDOR_DE_PRODUCAO apontando para `integrations/ordens_da_mesa.py`.
+    "mesa.ordens_dispensadas": (
+        "o leitor existe e é testado (ordens_da_mesa.ordens_novas / "
+        "ordens_caladas) — falta a seção do exame chamá-lo, e essa metade "
+        "aguarda o olho dela (PROVA-DE-TELA-01)"
+    ),
 }
 
 
