@@ -57,7 +57,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import id_da_pagina
 from hefesto_dualsense4unix.app.app import HefestoApp
 from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE
 from hefesto_dualsense4unix.app.theme import (
-    escala_fonte,
+    ESCALA_PADRAO,
     escalar_css,
     escalar_nome_da_fonte,
 )
@@ -141,10 +141,32 @@ def _tema_na_escala_que_sai() -> Iterator[None]:
     """Aplica o tema pelos DOIS canais de `app.theme.apply_theme`, e desfaz.
 
     Sem o `gtk-font-name`, quase toda a janela mediria os 13,33px padrão do
-    Pango e os números não seriam os da tela dela. A restauração impede que a
+    Pango e os números não seriam os da janela real. A restauração impede que a
     escala vaze para outros arquivos da mesma sessão do pytest.
+
+    A ESCALA É FIXADA, e a correção é de 25/08/2026 — a MESMA que
+    `test_layout_orcamento_altura.py` já tinha recebido, e que aqui ficou por
+    fazer. Uma correção pela metade deixa as duas versões vivas, que é o
+    defeito que a regra desta casa existe para matar.
+
+    O que a metade que faltava custava, medido: esta fixture chamava
+    `escala_fonte()`, que lê o `gui_preferences.json` de quem roda — nesta
+    máquina, `escala_fonte: 6`. Ela é `scope="module"` e mexe em
+    `Gtk.Settings`, que é **singleton do processo**. Rodando ANTES do
+    `test_layout_orcamento_altura.py` — e roda, porque "largura" vem antes de
+    "layout" na coleta —, ela deixava a janela medindo na escala DELA enquanto
+    o outro arquivo esperava a `ESCALA_PADRAO`. Resultado: dois testes de
+    layout reprovavam em lote e passavam sozinhos.
+
+    **Nenhum dos dois estava errado sobre o produto.** Era o instrumento
+    respondendo coisas diferentes conforme o que rodara antes — a
+    `O-INSTRUMENTO-MENTE-MAIS-QUE-O-PRODUTO`, e desta vez pela porta da ORDEM
+    de execução.
+
+    A escala maior é escolha dela, e o que ela custa em largura é pergunta
+    legítima — mas é OUTRA pergunta, e precisa do próprio teto.
     """
-    delta = escala_fonte()
+    delta = ESCALA_PADRAO
     tela = Gdk.Screen.get_default()
     provider = Gtk.CssProvider()
     bruto = (GUI_DIR / "theme.css").read_text(encoding="utf-8")

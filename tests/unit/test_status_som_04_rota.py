@@ -53,7 +53,7 @@ from hefesto_dualsense4unix.app.audio_saida import (
 )
 from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE
 from hefesto_dualsense4unix.app.theme import (
-    escala_fonte,
+    ESCALA_PADRAO,
     escalar_css,
     escalar_nome_da_fonte,
 )
@@ -108,7 +108,19 @@ def _tema_na_escala_que_sai() -> Any:
     Sem isto, ~90% da janela mediria os 13,33px do padrão do Pango e o número
     aferido não seria o da tela dela (a sessão desta bancada roda em +3).
     """
-    delta = escala_fonte()
+
+    # A ESCALA É FIXADA — 25/08/2026. Esta fixture chamava `escala_fonte()`,
+    # que lê o `gui_preferences.json` de QUEM RODA (nesta máquina, 6), e mexe
+    # em `Gtk.Settings`, que é singleton do PROCESSO. Dois efeitos, os dois
+    # medidos: o teste muda de veredito conforme a escala de quem roda, e a
+    # escala vaza para os arquivos que rodam depois na mesma sessão do pytest.
+    # Foi assim que dois testes de `test_layout_orcamento_altura.py`
+    # reprovavam em lote e passavam sozinhos.
+    #
+    # A régua declarada é a `ESCALA_PADRAO`: é com ela que o produto nasce em
+    # quem instala. A escala maior é escolha dela, e o que ela custa é OUTRA
+    # pergunta, com outro teto.
+    delta = ESCALA_PADRAO
     tela = Gdk.Screen.get_default()
     provider = Gtk.CssProvider()
     provider.load_from_data(
