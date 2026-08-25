@@ -114,6 +114,71 @@ def test_entrar_na_aba_perfis_rele_a_caixinha_do_steam_input() -> None:
     ]
 
 
+def test_entrar_na_aba_sistema_chama_o_refresher_dela() -> None:
+    """T-09 (SISTEMA-O-VIGIA-VIVO-01): a aba que declara saúde relê ao abrir.
+
+    **Correção de fato sobre o que a sprint mediu em 23/08.** Ela dizia que
+    *"arrancar a entrada `daemon_box` do mapa não deixa nada vermelho"*. Isso
+    caducou: medido em 25/08, comentar a entrada reprova DOIS testes deste
+    arquivo (`test_toda_pagina_do_notebook_esta_no_mapa_ou_isenta` e a mordida
+    dele), porque a Z0/Z5 passou a exigir que toda página do notebook esteja
+    no mapa ou declarada isenta.
+
+    O buraco que sobrou — e que este teste fecha — é OUTRO, e mais fino: o
+    portão de hoje confere que o id **está** no mapa, nunca **qual** refresher
+    está atrás dele. Medido trocando `_refresh_daemon_tab_on_show` por
+    `_refresh_emulation_tab` na tupla do `daemon_box`: os 13 testes deste
+    arquivo passaram, e a aba Sistema passaria a rodar o refresher da
+    Emulação — mostrando a foto do bootstrap para sempre, calada, que é
+    exatamente o defeito F13 que o `_REFRESH_POR_ABA` existe para impedir.
+    """
+    app = _AppFalso()
+
+    app._on_notebook_switch_page(None, _pagina("daemon_box"), 0)
+
+    assert app.chamados == ["_refresh_daemon_tab_on_show"]
+
+
+def test_o_refresher_da_aba_sistema_rele_as_tres_coisas_que_ela_mostra() -> None:
+    """O nome no mapa só vale se o que está atrás dele fizer o trabalho.
+
+    A aba Sistema mostra TRÊS coisas que envelhecem por caminhos diferentes:
+
+    * o status do daemon — que sobe e cai por fora, pela CLI ou pelo systemd
+      (BUG-DAEMON-TAB-STALE-01);
+    * o cartão anti-storm — que antes só era populado no bootstrap da aba, e
+      ficava obsoleto a sessão inteira quando a cura era instalada por fora;
+    * o diagnóstico do detector de janela — que CEGA e VOLTA a ver conforme a
+      janela em foco (`window_detect_seeing` decai e volta, JANELA-CEGA-01).
+
+    Sem esta mordida, `_refresh_daemon_tab_on_show` podia perder qualquer uma
+    das três e nenhum teste notava.
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
+
+    chamados: list[str] = []
+
+    class _AbaSistemaFalsa:
+        _refresh_daemon_tab_on_show = DaemonActionsMixin._refresh_daemon_tab_on_show
+
+        def _refresh_daemon_view_async(self) -> None:
+            chamados.append("_refresh_daemon_view_async")
+
+        def _refresh_storm_diag(self) -> None:
+            chamados.append("_refresh_storm_diag")
+
+        def _refresh_window_detect_diag(self) -> None:
+            chamados.append("_refresh_window_detect_diag")
+
+    _AbaSistemaFalsa()._refresh_daemon_tab_on_show()
+
+    assert chamados == [
+        "_refresh_daemon_view_async",
+        "_refresh_storm_diag",
+        "_refresh_window_detect_diag",
+    ]
+
+
 def test_pagina_dentro_de_scrolledwindow_ainda_e_reconhecida() -> None:
     """`_wrap_notebook_pages_in_scroll` embrulha cada página; o id fica no filho.
 
