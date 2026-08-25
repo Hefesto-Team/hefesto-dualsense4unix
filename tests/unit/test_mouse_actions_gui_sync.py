@@ -132,7 +132,16 @@ def test_toggle_offline_um_ipc_um_revert_sem_reentrada(
     # 2 set_active no total: 1 do gesto da usuária + 1 do revert (sem cascata).
     assert switch.set_active_calls == 2
     assert switch.get_active() is False, "switch revertido ao estado anterior"
-    assert any("Falha" in t for t in harness.toasts)
+    # NOTA DATADA — 25/08/2026 (RECUSA-NAO-E-QUEDA-DE-LINHA-01, N6): a asserção
+    # era `any("Falha" in t ...)`, e aquela palavra vinha de um texto único
+    # ("Falha ao comunicar com o daemon") que servia às DUAS saídas de
+    # insucesso — a queda de linha e a recusa do Hefesto. Agora só a queda de
+    # linha chega aqui; o teste passa a exigir a frase DESTA saída.
+    from hefesto_dualsense4unix.app.actions.mouse_actions import (
+        SEM_RESPOSTA_DO_HEFESTO,
+    )
+
+    assert harness.toasts == [SEM_RESPOSTA_DO_HEFESTO]
     # Draft intocado (nada aplicado) e seção mouse continua limpa.
     assert harness.draft.mouse.enabled is False
     assert harness.draft.mouse.dirty is False
