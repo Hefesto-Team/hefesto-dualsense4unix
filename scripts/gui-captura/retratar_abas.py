@@ -501,7 +501,133 @@ ESTADO_PADRAO_DE_DOIS: dict = {  # type: ignore[type-arg]
 }
 
 
-def _montar_aba_inicio(builder, estado=None) -> str:  # type: ignore[no-untyped-def]
+#: Onde caem as fotos dos estados da aba Início que nenhuma imagem mostrava.
+#:
+#: Pasta PRÓPRIA, fora de `docs/usage/assets/`, pelas MESMAS duas razões da
+#: mesa cheia: estas são MEDIÇÃO, não o retrato que a documentação publica, e
+#: commitá-las junto das do README faria o portão da procedência
+#: (`test_as_fotos_acompanham_a_versao.py`) dar as do README por conferidas sem
+#: ninguém as ter regerado.
+DESTINO_ESTADOS_DO_INICIO = RAIZ / "docs/process/estudos/assets/estados-do-inicio"
+
+#: O inventário de externos, VERSIONADO e anonimizado pelos portões de
+#: `tests/`. Lido do disco em vez de escrito à mão aqui pela mesma razão do
+#: fixture da mesa cheia: um endereço digitado neste script é um endereço que
+#: nenhum portão de anonimato de `tests/` confere.
+FIXTURE_DOS_EXTERNOS = RAIZ / "tests/fixtures/inventario_externos.json"
+
+
+def _um_externo_versionado() -> dict:  # type: ignore[type-arg]
+    """O primeiro externo do inventário versionado; ``{}`` se ele sumir.
+
+    Ler é ler o repositório, não falar com o daemon — a mesma distinção que a
+    seção de privacidade do cabeçalho faz para o fixture da mesa cheia.
+    """
+    if not FIXTURE_DOS_EXTERNOS.is_file():
+        return {}
+    with contextlib.suppress(Exception):
+        bruto = json.loads(FIXTURE_DOS_EXTERNOS.read_text(encoding="utf-8"))
+        externos = bruto.get("external") if isinstance(bruto, dict) else None
+        if isinstance(externos, list) and externos:
+            primeiro = externos[0]
+            if isinstance(primeiro, dict):
+                return dict(primeiro)
+    return {}
+
+
+def _mesa_com(**delta) -> dict:  # type: ignore[no-untyped-def,type-arg]
+    """A mesa padrão de dois com as chaves de `delta` por cima. Cópia rasa.
+
+    Cópia, e nunca mutação: `ESTADO_PADRAO_DE_DOIS` é a mesa que DEZ fotos da
+    documentação retratam, e um estado que a alterasse no lugar mudaria as
+    outras fotos da mesma execução — o defeito de instrumento mais difícil de
+    ver, porque a foto continua saindo.
+    """
+    estado = dict(ESTADO_PADRAO_DE_DOIS)
+    estado["controllers"] = [dict(c) for c in ESTADO_PADRAO_DE_DOIS["controllers"]]
+    estado["gamepad_emulation"] = dict(ESTADO_PADRAO_DE_DOIS["gamepad_emulation"])
+    estado["coop"] = dict(ESTADO_PADRAO_DE_DOIS["coop"])
+    estado.update(delta)
+    return estado
+
+
+#: OS CINCO ESTADOS QUE NENHUMA FOTO DESTA CASA JAMAIS MOSTROU (25/08/2026)
+#: ------------------------------------------------------------------------
+#:
+#: I10 da sprint INÍCIO NÃO MENTE-01. Medido no §2.4 dela: o dublê da foto não
+#: traz `paused`, nem `primary_grab_state`, nem `external`, nem `steam_input`,
+#: nem `draft` — e são justamente esses cinco que as outras tarefas da onda
+#: mudam. Uma prova de tela feita só sobre o caminho feliz é prova sobre
+#: ficção.
+#:
+#: Cada valor é `(delta do state_full, máscara do rascunho, o que a foto passa
+#: a mostrar)`. A máscara do rascunho é o que alimenta `draft.source_mode` —
+#: a fonte 2 de `_mascara_escolhida_por_ela`, e a única forma de a linha de
+#: divergência aparecer numa foto.
+ESTADOS_DO_INICIO: dict[str, tuple[dict, str | None, str]] = {  # type: ignore[type-arg]
+    "caminho_feliz": (
+        {},
+        None,
+        "a mesa de dois do README — a régua contra a qual os outros se comparam",
+    ),
+    "em_pausa": (
+        {"paused": True},
+        None,
+        "o Hefesto parado por decisão de outra aba ou de outra sessão",
+    ),
+    "grab_falhou": (
+        {"primary_grab_state": "failed"},
+        None,
+        "o aviso de grab dentro do card do primário",
+    ),
+    "externo_na_mesa": (
+        {
+            "external": [_um_externo_versionado()],
+            "coop": {"enabled": True, "players": 2, "externals": 1},
+        },
+        None,
+        "um controle que o Hefesto VÊ e não adota, na mesma mesa dos DualSense",
+    ),
+    "steam_input": (
+        {
+            "steam_input": {"excecao_ativa": True, "vpad_suspenso": True},
+            "gamepad_emulation": {"enabled": False, "flavor": "dualsense"},
+        },
+        None,
+        "a exceção de Steam Input — a ponte que não é o gamepad do Hefesto",
+    ),
+    "mascara_divergente": (
+        {},
+        "xbox",
+        "a divergência entre a máscara do perfil e a que o aparelho tem",
+    ),
+    "mesa_vazia": (
+        {"controllers": [], "coop": {"enabled": True, "players": 0}},
+        None,
+        "o payload MEDIDO em 23/08 com zero controle na casa (§2.1 da sprint)",
+    ),
+}
+
+
+def _rascunho_com_mascara(mascara):  # type: ignore[no-untyped-def]
+    """Um `DraftConfig` cujo perfil de origem pede ``mascara``; ``None`` sem ela.
+
+    Usa o construtor de PRODUÇÃO (`DraftConfig.with_mode`) em vez de um dublê
+    local: um segundo montador do rascunho passaria a mentir no dia em que o
+    esquema mudasse, e a foto é justamente o instrumento que deveria acusar.
+    """
+    if not mascara:
+        return None
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+        return DraftConfig().with_mode(
+            {"kind": "gamepad", "gamepad_flavor": str(mascara)}
+        )
+    return None
+
+
+def _montar_aba_inicio(builder, estado=None, *, draft=None) -> str:  # type: ignore[no-untyped-def]
     """Monta a aba Início e a preenche com um estado plausível do daemon.
 
     COOP-SEM-INTERRUPTOR-01 (06/08/2026) — a cura que a `PEDIDOS-DELA-01`
@@ -520,6 +646,13 @@ def _montar_aba_inicio(builder, estado=None) -> str:  # type: ignore[no-untyped-
     `--mesa-cheia` traz o fixture dos quatro). Sem ele, nada muda: o padrão
     continua produzindo o MESMO pixel de sempre, que é o que a documentação
     publica.
+
+    ``draft`` (25/08/2026, I10) é o rascunho do perfil em edição. Ele existe
+    porque a linha de divergência de máscara lê `draft.source_mode.
+    gamepad_flavor` (`_mascara_escolhida_por_ela`, fonte 2) — sem rascunho no
+    host, esse aviso é INALCANÇÁVEL por foto, e foi por isso que ele nunca
+    apareceu em imagem nenhuma deste repositório. ``None`` deixa o host como
+    sempre foi.
     """
     try:
         from hefesto_dualsense4unix.app.actions.home_actions import (
@@ -531,6 +664,8 @@ def _montar_aba_inicio(builder, estado=None) -> str:  # type: ignore[no-untyped-
     class _Host(HomeActionsMixin):  # type: ignore[misc]
         def __init__(self) -> None:
             self.builder = builder
+            if draft is not None:
+                self.draft = draft
 
         def _get(self, nome: str):  # type: ignore[no-untyped-def]
             return self.builder.get_object(nome)
@@ -2298,6 +2433,85 @@ def _fotografar_o_cabecalho(  # type: ignore[no-untyped-def]
     )
 
 
+def _fotografar_um_estado_do_inicio(saida: Path, nome: str) -> tuple[Path, str]:
+    """Uma janela nova, um estado nomeado, um PNG. Devolve `(arquivo, recado)`.
+
+    UMA JANELA POR ESTADO, e isso não é desperdício: `install_home_tab` é
+    idempotente por `_home_installed`, então reusar o builder pintaria o
+    segundo estado por cima dos widgets do primeiro — e o `_render_home` não
+    desmonta card nenhum do frame de Controles que já esteja lá. Duas fotos
+    saindo do MESMO conjunto de widgets é precisamente o defeito que este modo
+    existe para medir.
+
+    Fotografa o NOTEBOOK inteiro, como o `main` fotografa as abas, e não só o
+    `tab_home_box`: assim a imagem é comparável, pixel a pixel, com a
+    `readme_inicio.png` que a documentação publica.
+    """
+    delta, mascara, _oque = ESTADOS_DO_INICIO[nome]
+    estado = _mesa_com(**delta)
+
+    builder = Gtk.Builder()
+    builder.add_from_file(str(GLADE))
+    notebook = builder.get_object("main_notebook")
+    if notebook is None:
+        raise SystemExit("ERRO: `main_notebook` não existe no glade")
+    janela = Gtk.OffscreenWindow()
+    pai = notebook.get_parent()
+    if pai is not None:
+        pai.remove(notebook)
+    janela.add(notebook)
+    janela.set_size_request(LARGURA, ALTURA)
+    _aplicar_tema(janela)
+    janela.show_all()
+    _assentar()
+
+    recado = _montar_aba_inicio(
+        builder, estado, draft=_rascunho_com_mascara(mascara)
+    )
+    notebook.set_current_page(0)
+    _assentar()
+    _esperar_o_redimensionamento()
+
+    arquivo = saida / f"inicio_{nome}.png"
+    janela.get_pixbuf().savev(str(arquivo), "png", [], [])
+    janela.destroy()
+    _assentar()
+    return arquivo, recado
+
+
+def fotografar_os_estados_do_inicio(destino: Path | None = None) -> int:
+    """Um PNG por estado de `ESTADOS_DO_INICIO`, e o recibo do que cada um mostra.
+
+    I10 (25/08/2026). Antes desta função a aba Início tinha UMA foto — a do
+    caminho feliz, com dois controles de dublê — e cinco estados que nunca
+    foram vistos por ninguém: a pausa, o aviso de grab, o controle externo, a
+    exceção de Steam Input e a divergência de máscara. Uma prova de tela feita
+    sobre a única foto que existe é prova sobre o caso que já estava certo.
+
+    A promessa de privacidade do cabeçalho continua LITERALMENTE de pé: nada
+    aqui fala com o daemon. Os dublês nascem no próprio script (o padrão de
+    dois) e no `tests/fixtures/inventario_externos.json`, que é arquivo
+    versionado e já passou pelos portões de anonimato de `tests/`.
+    """
+    saida = destino or DESTINO_ESTADOS_DO_INICIO
+    saida.mkdir(parents=True, exist_ok=True)
+    print(f"  {_desligar_animacoes()}")
+    print(f"\n  {'estado':<22} {'arquivo':<32} tamanho")
+    print("  " + "-" * 66)
+    for nome in ESTADOS_DO_INICIO:
+        arquivo, _recado = _fotografar_um_estado_do_inicio(saida, nome)
+        kb = arquivo.stat().st_size // 1024
+        print(f"  {nome:<22} {arquivo.name:<32} {kb:>4} KB")
+    print("\n  o que cada estado passou a mostrar:")
+    for nome, (_delta, _mascara, oque) in ESTADOS_DO_INICIO.items():
+        print(f"    {nome:<22} {oque}")
+    print(
+        f"\n  {len(ESTADOS_DO_INICIO)} estado(s) em {saida}. "
+        "Estas NÃO são as imagens do README."
+    )
+    return 0
+
+
 def main(
     destino: str | None = None, *, mesa_cheia: bool = False, cinco: bool = False
 ) -> int:
@@ -2485,7 +2699,7 @@ def main(
 
 #: O que sai quando alguém erra a linha de comando. Em português, como o resto.
 USO = (
-    "uso: retratar_abas.py [DESTINO] [--mesa-cheia] [--cinco]\n"
+    "uso: retratar_abas.py [DESTINO] [--mesa-cheia] [--cinco] [--estados-do-inicio]\n"
     "\n"
     "  sem argumento   atualiza as imagens da documentação\n"
     f"                  ({DESTINO_DOC.relative_to(RAIZ)})\n"
@@ -2496,6 +2710,11 @@ USO = (
     "  --cinco         idem, com o fixture de CINCO controles — a mesa real\n"
     "                  desta casa, e o pior caso de largura; destino padrão\n"
     f"                  {DESTINO_MESA_DE_CINCO.relative_to(RAIZ)}\n"
+    "  --estados-do-inicio\n"
+    "                  um PNG por estado da aba Início — a pausa, o aviso de\n"
+    "                  grab, o externo, o Steam Input, a divergência e a mesa\n"
+    "                  vazia; destino padrão\n"
+    f"                  {DESTINO_ESTADOS_DO_INICIO.relative_to(RAIZ)}\n"
 )
 
 
@@ -2562,8 +2781,10 @@ def _gravar_prova_da_foto(
     return f"recibo do ensaio em {NOME_DA_PROVA} ({len(pngs)} soma[s])"
 
 
-def _ler_argumentos_completo(argv: list[str]) -> tuple[str | None, bool, bool]:
-    """Lê `[DESTINO] [--mesa-cheia] [--cinco]`, em qualquer ordem.
+def _ler_argumentos_completo(
+    argv: list[str],
+) -> tuple[str | None, bool, bool, bool]:
+    """Lê `[DESTINO] [--mesa-cheia] [--cinco] [--estados-do-inicio]`, em qualquer ordem.
 
     À mão e não com `argparse` de propósito: o `argparse` imprime "usage:" e
     "positional arguments" em inglês, e esta casa escreve em português — há
@@ -2572,18 +2793,21 @@ def _ler_argumentos_completo(argv: list[str]) -> tuple[str | None, bool, bool]:
     destino: str | None = None
     mesa_cheia = False
     cinco = False
+    estados = False
     for arg in argv:
         if arg == "--mesa-cheia":
             mesa_cheia = True
         elif arg == "--cinco":
             cinco = True
+        elif arg == "--estados-do-inicio":
+            estados = True
         elif arg.startswith("-"):
             raise SystemExit(f"argumento desconhecido: {arg}\n\n{USO}")
         elif destino is None:
             destino = arg
         else:
             raise SystemExit(f"destino demais: {arg}\n\n{USO}")
-    return destino, mesa_cheia, cinco
+    return destino, mesa_cheia, cinco, estados
 
 
 def _ler_argumentos(argv: list[str]) -> tuple[str | None, bool]:
@@ -2593,10 +2817,14 @@ def _ler_argumentos(argv: list[str]) -> tuple[str | None, bool]:
     (`test_a_mesa_cheia_na_foto.py`) e porque quem só quer saber "é mesa
     cheia?" não precisa saber de quantos controles.
     """
-    destino, mesa_cheia, _cinco = _ler_argumentos_completo(argv)
+    destino, mesa_cheia, _cinco, _estados = _ler_argumentos_completo(argv)
     return destino, mesa_cheia
 
 
 if __name__ == "__main__":
-    _destino, _mesa_cheia, _cinco = _ler_argumentos_completo(sys.argv[1:])
+    _destino, _mesa_cheia, _cinco, _estados = _ler_argumentos_completo(sys.argv[1:])
+    if _estados:
+        raise SystemExit(
+            fotografar_os_estados_do_inicio(Path(_destino) if _destino else None)
+        )
     raise SystemExit(main(_destino, mesa_cheia=_mesa_cheia, cinco=_cinco))

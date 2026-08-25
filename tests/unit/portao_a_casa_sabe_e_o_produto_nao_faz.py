@@ -898,34 +898,20 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "continua dono (e esta função é a rota que espera). Enquanto o dono "
         "não for declarado, dar chamador a ela é regressão, não cura."
     ),
-    # --- PONTE-NA-TELA-01 (19/08/2026): a frase certa existe, e a resposta do
-    # daemon não chega a quem a escreveria --------------------------------------
-    "app/actions/home_actions.py::desfecho_da_troca": (
-        "MEDIDO em 19/08/2026: é promessa ao produto, e o caminho ainda não "
-        "existe. Ela lê o payload de um `gamepad.emulation.set` e separa "
-        "aplicou / já-estava / recusado-pelo-gate — inclusive sem campo novo, "
-        "comparando a máscara DEVOLVIDA com a pedida, porque o daemon só grava "
-        "esse campo depois de o vpad nascer. "
-        "ONDE O CAMINHO SE PERDE: `app/actions/footer_actions.py`, no "
-        "`_transicao_de_modo` — o `_done(_resultado)` RECEBE a resposta do "
-        "daemon e a descarta, porque `ao_aplicar` é um callback de ZERO "
-        "argumentos nos dois chamadores (`:456` e `:975`). "
-        "O QUE A FECHA: `ao_aplicar` passar a receber o resultado, e os dois "
-        "chamadores repassarem. NÃO fiz porque muda assinatura e o texto que "
-        "sai na tela dela — desenho é palavra dela (PROVA-DE-TELA-01), e a "
-        "mudança pede foto antes e depois."
-    ),
-    "app/actions/home_actions.py::toast_da_troca_de_mascara": (
-        "MEDIDO em 19/08/2026: a irmã da de cima, e cai no mesmo lugar. Ela dá "
-        "a frase de CADA desfecho, e a do bloqueio diz o motivo E o caminho "
-        "(\"Ainda não: o jogo aberto está com o controle\"). Existe para "
-        "impedir o rodapé de dizer \"pronto\" sobre uma troca recusada — que é "
-        "o que ele fez na noite de 18->19/08, com o journal registrando "
-        "`vpad_recriacao_bloqueada_por_jogo` sete milissegundos antes. "
-        "ONDE O CAMINHO SE PERDE e O QUE A FECHA: idem `desfecho_da_troca`. As "
-        "duas entram juntas ou nenhuma entra — meia cura escreveria a frase "
-        "certa sobre um desfecho que ninguém apurou."
-    ),
+    # LÁPIDE — PONTE-NA-TELA-01, e a cura chegou em 25/08/2026.
+    #
+    # Aqui moravam `app/actions/home_actions.py::desfecho_da_troca` e
+    # `::toast_da_troca_de_mascara`, declaradas como dívida em 19/08/2026 com a
+    # razão escrita: *"NÃO fiz porque muda assinatura e o texto que sai na tela
+    # dela"*. A assinatura mudou (I1 da INÍCIO NÃO MENTE-01): o `ao_aplicar` do
+    # `footer_actions._transicao_de_modo` passou a RECEBER o resultado, e os
+    # dois chamadores — o "Aplicar" e o "Salvar Perfil" — repassam. As duas
+    # entraram juntas, como a declaração dizia que teria de ser.
+    #
+    # As entradas SAÍRAM porque o `test_nenhuma_lapide_sobreviveu_a_propria_cura`
+    # as reprovaria: registro que sobrevive à cura vira mentira. O texto que sai
+    # na tela continua sendo palavra dela — mas isso é prova de tela, não
+    # dívida de caminho, e não é aqui que se registra.
     # --- a família mais numerosa: o desligar que ninguém chama --------------
     "daemon/subsystems/ipc.py::stop_ipc": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. É a terceira instância de "

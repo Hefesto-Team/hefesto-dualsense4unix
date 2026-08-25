@@ -110,6 +110,10 @@ class _HomeStub:
     # `test_home_ponte_e_divergencia.py`; aqui o dublê só precisa deles de pé).
     _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
     _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
+    # I3 (25/08/2026): o render passou a perguntar TAMBÉM de onde a máscara
+    # veio (gesto dela x perfil). O dublê empresta o método do mixin, como
+    # empresta os outros — reimplementá-lo aqui mediria o dublê.
+    _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
     # NOTA DATADA: até 06/08/2026 o dublê também emprestava o
     # `_render_coop_prep` (AUTO-01.2, 25/07). O botão "Preparar co-op" saiu da
     # aba por decisão dela — `TestOBotaoDeCoopSaiuDaAbaInicio`, no fim deste
@@ -204,7 +208,9 @@ class TestCardFantasma:
 
         cards = host._home_controllers_box.get_children()
         assert len(cards) == 1
-        assert any("USB" in label for label in _card_labels(host))
+        # I9 (25/08/2026): o card fala a língua do mapa de canais — `cabo`
+        # e `rádio`, nunca `USB`/`BT`.
+        assert any("cabo" in label for label in _card_labels(host))
 
     def test_controles_conectados_seguem_renderizando(self, fake_gtk: None) -> None:
         host = _HomeStub()
