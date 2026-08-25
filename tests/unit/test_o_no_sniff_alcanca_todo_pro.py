@@ -481,3 +481,185 @@ class TestARegra82ChamaOHelperParaTodoPro:
             "o `udevadm verify` aprovou uma chave inventada: a régua não está "
             "medindo nada, e o verde da regra de verdade não vale"
         )
+
+
+# ---------------------------------------------------------------------------
+# 4. A vigia de 2 min — o mesmo defeito no caminho SUSTENTADO
+# ---------------------------------------------------------------------------
+#
+# A borda cobre o instante do connect. Quem mantém o Pro fora do sniff pela
+# sessão inteira é o `bt_active_mode.sh`, no `ExecStartPost` do bluetoothd e a
+# cada tick da vigia. Ele decidia pela MESMA faixa única — e é o caminho que
+# importa numa partida de quatro jogadores, que é onde o link cai.
+
+MODO_ATIVO = RAIZ / "scripts" / "bt_active_mode.sh"
+
+#: Faixa sintética desta mesa de mentira, fora da faixa de fixture da casa.
+_ADAPTADOR = "d2:c1:b0:00:00:01"
+_DUALSENSE = "d2:c1:b0:00:00:12"
+
+
+class MesaDeMentira:
+    """Um adaptador, os controles que eu mandar, e um registro do `hcitool lp`.
+
+    Sem aparelho: `busctl`, `hciconfig`, `hcitool` e `id` são dublês. O `hcitool`
+    só anota o argv — não sabe de OUI nenhuma, e por isso não pode concordar com
+    o script por engano.
+    """
+
+    def __init__(self, tmp: Path, controles: dict[str, str]) -> None:
+        self.tmp = tmp
+        self.fakes = tmp / "fakes"
+        self.fakes.mkdir(parents=True, exist_ok=True)
+        self.lp = tmp / "link-policy.tsv"
+        self.log = tmp / "diario.log"
+        sys_bt = tmp / "sys-class-bluetooth"
+        (sys_bt / "hci0").mkdir(parents=True)
+        self.lib = tmp / "var-lib-bluetooth"
+        self.lib.mkdir()
+        self.sys_bt = sys_bt
+
+        caminhos = ["/org/bluez/hci0"] + [
+            "/org/bluez/hci0/dev_" + mac.upper().replace(":", "_") for mac in controles
+        ]
+        nomes = {
+            "/org/bluez/hci0/dev_" + mac.upper().replace(":", "_"): nome
+            for mac, nome in controles.items()
+        }
+
+        def mapa(nome: str, pares: dict[str, str]) -> str:
+            corpo = " ".join(f'["{k}"]="{v}"' for k, v in pares.items())
+            return f"declare -A {nome}=({corpo})\n"
+
+        self._escrever("id", "echo 0\n")
+        self._escrever(
+            "busctl",
+            mapa("NOME", nomes)
+            + f"""
+case "$1" in
+  tree) printf '%s\\n' {" ".join(f"'{c}'" for c in caminhos)} ;;
+  get-property)
+    case "$4" in
+      org.bluez.Adapter1)
+        case "$5" in
+          Alias)   printf 's "%s"\\n' 'Mesa' ;;
+          Address) printf 's "%s"\\n' '{_ADAPTADOR.upper()}' ;;
+        esac ;;
+      org.bluez.Device1)
+        case "$5" in
+          Alias)     printf 's "%s"\\n' "${{NOME[$3]:-}}" ;;
+          Connected) echo 'b true' ;;
+        esac ;;
+    esac ;;
+esac
+exit 0
+""",
+        )
+        self._escrever(
+            "hciconfig",
+            "if [[ \"${2:-}\" == \"lp\" && -z \"${3:-}\" ]]; then\n"
+            "    echo 'Link policy: RSWITCH HOLD SNIFF PARK'\n"
+            "    exit 0\nfi\nexit 0\n",
+        )
+        self._escrever("hcitool", f"printf '%s\\n' \"$*\" >> '{self.lp}'\nexit 0\n")
+
+    def _escrever(self, nome: str, corpo: str) -> None:
+        alvo = self.fakes / nome
+        alvo.write_text("#!/usr/bin/env bash\n" + corpo, encoding="utf-8")
+        alvo.chmod(0o755)
+
+    def rodar(self) -> set[str]:
+        """Roda o script e devolve os MACs que receberam `lp ... RSWITCH`."""
+        subprocess.run(
+            ["bash", str(MODO_ATIVO), "--quiet"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+            env={
+                "PATH": ":".join([str(self.fakes), "/usr/bin", "/bin"]),
+                "HOME": str(self.tmp),
+                "LANG": os.environ.get("LANG", "pt_BR.UTF-8"),
+                "HEFESTO_SYS_BLUETOOTH": str(self.sys_bt),
+                "HEFESTO_BT_LIB": str(self.lib),
+                "HEFESTO_BT_LOG_DEST": str(self.log),
+            },
+        )
+        if not self.lp.exists():
+            return set()
+        return {
+            linha.split()[1].lower()
+            for linha in self.lp.read_text(encoding="utf-8").splitlines()
+            if linha.strip().startswith("lp ") and "RSWITCH" in linha
+        }
+
+
+class TestAVigiaDeDoisMinutosTambemAlcancaTodoPro:
+    def test_o_pro_de_outra_safra_e_tirado_do_sniff_a_cada_tique(
+        self, tmp_path: Path
+    ) -> None:
+        """MORDIDA: devolva o `[[ "${MAC^^}" != "${OUI_NINTENDO_REAL}"* ]] &&
+        continue` ao laço por-conexão e este teste reprova.
+
+        É o caminho SUSTENTADO — o que mantém o link de pé pela sessão inteira.
+        A borda cobre o instante do connect; esta é a que importa quando o Pro
+        cai no meio da partida.
+        """
+        mesa = MesaDeMentira(
+            tmp_path,
+            {_DUALSENSE: "DualSense Wireless Controller", MAC_DE_OUTRA_SAFRA: NOME_PRO},
+        )
+        tirados = mesa.rodar()
+        assert MAC_DE_OUTRA_SAFRA in tirados, (
+            "a vigia não tirou do sniff um Pro Controller de faixa Nintendo que "
+            f"esta bancada nunca viu. Recebeu `lp RSWITCH`: {sorted(tirados)}"
+        )
+
+    def test_o_clone_continua_com_o_sniff_que_a_probe_dele_precisa(
+        self, tmp_path: Path
+    ) -> None:
+        """A contraprova: o clone anuncia o MESMO nome, e não pode entrar."""
+        clone = _mac_do_clone()
+        mesa = MesaDeMentira(tmp_path, {clone: NOME_PRO})
+        assert clone not in mesa.rodar(), (
+            "a vigia tirou o clone 8BitDo do sniff a cada 2 minutos: a probe "
+            "dele morre em ret=-110 sem sniff (A/B de 23/07/2026)"
+        )
+
+    def test_a_faixa_ja_conhecida_dispensa_o_nome_como_sempre(
+        self, tmp_path: Path
+    ) -> None:
+        """Não-regressão: sem nome nenhum, a faixa já vista continua bastando."""
+        conhecido = _mac_da_faixa_conhecida()
+        mesa = MesaDeMentira(tmp_path, {conhecido: ""})
+        assert conhecido in mesa.rodar()
+
+    def test_o_dualsense_nunca_recebe_o_no_sniff(self, tmp_path: Path) -> None:
+        """O no-sniff é do Pro. Alargar a régua não pode alcançar o resto da mesa."""
+        mesa = MesaDeMentira(tmp_path, {_DUALSENSE: "DualSense Wireless Controller"})
+        assert _DUALSENSE not in mesa.rodar()
+
+    def test_as_listas_do_modo_ativo_nao_se_separam_do_dono_nem_de_si(self) -> None:
+        """Três arrays no script, e a `OUIS_LINHAGEM` é a união das outras duas.
+
+        As duas perguntas — "é da linhagem?" (prefixo do adaptador, genuíno E
+        clone) e "é um Pro genuíno?" (no-sniff, só o genuíno) — moram no mesmo
+        arquivo. Sem este portão elas se separam em silêncio, e o dia em que uma
+        faixa nova entrar em uma e não na outra o aparelho recebe o tratamento
+        do outro.
+        """
+        texto = MODO_ATIVO.read_text(encoding="utf-8")
+
+        def lista(nome: str) -> set[str]:
+            achado = re.search(rf"^{nome}=\(([^)]*)\)", texto, re.MULTILINE)
+            assert achado, f"o `bt_active_mode.sh` não declara mais `{nome}`"
+            return {o.replace(":", "").lower() for o in re.findall(r'"([^"]*)"', achado.group(1))}
+
+        assert lista("OUIS_CLONE") == set(OUIS_CLONE)
+        assert lista("OUIS_NINTENDO_VISTAS") == set(OUIS_NINTENDO_VISTAS)
+        assert lista("OUIS_LINHAGEM") == set(OUIS_CLONE) | set(OUIS_NINTENDO_VISTAS), (
+            "a `OUIS_LINHAGEM` deixou de ser a união de `OUIS_CLONE` com "
+            "`OUIS_NINTENDO_VISTAS`. As três moram no mesmo arquivo: separadas, "
+            "um controle passa a receber o prefixo e não o no-sniff, ou o "
+            "contrário"
+        )

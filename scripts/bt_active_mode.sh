@@ -178,6 +178,34 @@ _macs_conectados() {
 OUIS_LINHAGEM=("e0:f6:b5" "e4:17:d8")
 NOMES_LINHAGEM=("pro controller" "nintendo")
 
+# E A OUTRA PERGUNTA, que NÃO é esta: "quem é um PRO GENUÍNO?"
+#
+# São duas perguntas com duas respostas diferentes para o MESMO aparelho, e
+# misturá-las troca o tratamento dos dois controles:
+#
+#   - LINHAGEM (acima) -> genuíno E clone respondem SIM. É quem lê o nome
+#     Bluetooth do host, e por isso decide o PREFIXO do adaptador. O A/B de
+#     23/07/2026 mediu que o nome não atrapalha o clone.
+#   - PRO GENUÍNO (aqui) -> só o genuíno. É quem recebe o NO-SNIFF, que para o
+#     clone é veneno: sem sniff a probe dele morre em `ret=-110`, mesmo A/B.
+#
+# A resposta vai por NEGATIVA, e é a de `core/linhagem_nintendo.e_pro_genuino`:
+# `e4:17:d8` é clone; qualquer outra faixa com cara de Pro é genuíno. A 8BitDo
+# tem UMA faixa MA-L registrada e a Nintendo tem 82 (medido contra
+# `/usr/share/ieee-data/oui.csv` em 22/08/2026), então a lista fechada que
+# funciona é a do clone.
+#
+# AS LISTAS SE REPETEM NESTE ARQUIVO de propósito, e há portão para isso: a
+# `OUIS_LINHAGEM` acima é a UNIÃO das duas de baixo, e
+# `tests/unit/test_o_no_sniff_alcanca_todo_pro.py` reprova se elas se separarem
+# — aqui dentro ou do dono em `core/linhagem_nintendo.py`. Escrever a união como
+# derivação (`("${OUIS_NINTENDO_VISTAS[@]}" ...)`) esconderia os literais do
+# portão que já vigia a `OUIS_LINHAGEM`, e um portão cego é pior que uma cópia
+# vigiada.
+OUIS_CLONE=("e4:17:d8")
+OUIS_NINTENDO_VISTAS=("e0:f6:b5")
+NOMES_PRO=("pro controller")
+
 #: Teto do alias em BYTES UTF-8, MEDIDO em 22/08/2026 no BlueZ 5.86 desta
 #: bancada — o mesmo `TETO_DE_BYTES` de `integrations/apelido_do_dongle.py`.
 TETO_DE_BYTES=247
@@ -197,6 +225,47 @@ _e_linhagem_nintendo() {  # $1 = MAC do controle · $2 = nome do controle
         [[ "${mac}" == "${marca}"* ]] && return 0
     done
     for marca in "${NOMES_LINHAGEM[@]}"; do
+        [[ "${nome}" == *"${marca}"* ]] && return 0
+    done
+    return 1
+}
+
+# O nome deste controle, para quem só tem o endereço na mão. Vazio quando não
+# há de onde tirar — e vazio NÃO é "não é um Pro": ver `_e_pro_genuino`.
+_nome_do_controle() {  # $1 = MAC do controle -> nome, ou vazio
+    local mac="${1^^}" alvo caminho nome
+    alvo="dev_${mac//:/_}"
+    if command -v busctl >/dev/null 2>&1; then
+        caminho="$(busctl tree org.bluez --list 2>/dev/null \
+            | grep -oE "/org/bluez/hci[0-9]+/${alvo}$" | head -1 || true)"
+        if [[ -n "${caminho}" ]]; then
+            nome="$(busctl get-property org.bluez "${caminho}" org.bluez.Device1 Alias 2>/dev/null \
+                | sed -E 's/^s "?//; s/"?$//' || true)"
+            [[ -n "${nome}" ]] && { printf '%s\n' "${nome}"; return 0; }
+        fi
+    fi
+    # Plano B: a árvore de bonds em disco, que é onde o nome fica GRAVADO — o
+    # mesmo lugar de onde `_hci_com_nintendo` já o lê quando o bluetoothd ainda
+    # está povoando o D-Bus.
+    sed -n 's/^Name=//p' "${LIB}"/*/"${mac}"/info 2>/dev/null | head -1 || true
+}
+
+# Este controle é um Pro GENUÍNO — o único que recebe o no-sniff? Por NEGATIVA.
+#
+# A ordem é a mesma do `bt_nosniff_now.sh`, e cada degrau responde uma pergunta
+# distinta: faixa de clone conhecida recusa (a recusa É a cura dele); faixa que
+# esta casa já viu num aparelho aplica sem consultar nome nenhum (nada que já
+# funcionava passa a depender de um dado novo); nome com cara de Pro aplica, e é
+# por AQUI que o Pro de outra safra entra.
+_e_pro_genuino() {  # $1 = MAC do controle · $2 = nome do controle
+    local mac="${1,,}" nome="${2,,}" marca
+    for marca in "${OUIS_CLONE[@]}"; do
+        [[ "${mac}" == "${marca}"* ]] && return 1
+    done
+    for marca in "${OUIS_NINTENDO_VISTAS[@]}"; do
+        [[ "${mac}" == "${marca}"* ]] && return 0
+    done
+    for marca in "${NOMES_PRO[@]}"; do
         [[ "${nome}" == *"${marca}"* ]] && return 0
     done
     return 1
@@ -333,12 +402,6 @@ fi
 # durou muito mais, "mas sob carga pesada ele ainda caiu. Não é cura completa
 # sozinho" (docs/process/estudos/2026-07-22-pesquisa-pro-controller-bt-*).
 
-#: OUI (maiúsculas, com ':') do Nintendo Pro Controller GENUÍNO — o ÚNICO que
-#: recebe o no-sniff. Mesma fonte da verdade do `NINTENDO_REAL_OUI` do
-#: external_identity.py: a OUI, nunca VID/PID (o clone se anuncia como
-#: 057E:2009 igualzinho).
-OUI_NINTENDO_REAL="E0:F6:B5"
-
 # SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026): link policy —
 # ler ou escrever, no adaptador ou na conexão — NÃO existe na mgmt API do BlueZ,
 # e por isso não existe em `btmgmt` nem em `bluetoothctl` (conferido nos dois
@@ -375,11 +438,31 @@ fi
 # (2 min), o que cobre reconexão sem precisar caçar a borda. Quem está
 # conectado sai do D-Bus (`_macs_conectados`); só o ATO de mudar a policy
 # depende do `hcitool`.
+#
+# QUEM É "O PRO GENUÍNO" DEIXOU DE SER UMA FAIXA (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01
+# / E1, 25/08/2026). Até esta data a linha aqui era
+# `[[ "${MAC^^}" != "${OUI_NINTENDO_REAL}"* ]] && continue`, e aquela constante
+# guardava a faixa do Pro DESTA bancada, promovida a definição de "Pro". Quem tem
+# um Pro de outra safra ficava com o link caindo sob carga a cada sessão de
+# quatro jogadores, e o `doctor` aprovando a cura.
+#
+# A FAIXA NÃO SE ESCREVE AQUI, nem como exemplo: um portão desta casa procurava
+# a declaração dela por regex, e o comentário que a citasse por inteiro faria o
+# portão passar verde lendo um COMENTÁRIO — que é a cicatriz
+# "o portão pode olhar para o lugar errado" (16/08/2026), aplicada a si mesma.
+#
+# FATO ERRADO, SUBSTITUÍDO: o comentário daquela constante dizia ser a "mesma
+# fonte da verdade" do `NINTENDO_REAL_OUI` do `external_identity.py`. Aquele
+# módulo parou de decidir por ela em 22/08 (passou a chamar `e_pro_genuino`), e a
+# frase ficou descrevendo uma comunhão que não existia mais.
+#
+# ESTE LAÇO É SILENCIOSO QUANDO RECUSA, e isso é decisão, não descuido: ele roda
+# a cada 2 minutos, e uma linha de journal por recusa seriam ~720 por dia por
+# controle. Quem DIZ o motivo, uma vez por connect, é o `bt_nosniff_now.sh` na
+# borda — o lugar onde a informação é nova.
 while read -r MAC; do
     [[ -z "${MAC}" ]] && continue
-    if [[ "${MAC^^}" != "${OUI_NINTENDO_REAL}"* ]]; then
-        continue
-    fi
+    _e_pro_genuino "${MAC}" "$(_nome_do_controle "${MAC}")" || continue
     if ! command -v hcitool >/dev/null 2>&1; then
         log "Pro genuíno ${MAC} conectado e NÃO consegui tirá-lo do SNIFF: o 'hcitool' foi depreciado pelo BlueZ e não está nesta máquina (pacote bluez-deprecated / bluez-deprecated-tools), e a mgmt API não escreve link policy. Ele vai cair sob carga até isso ser resolvido"
         continue
