@@ -626,13 +626,45 @@ class TestApplierAutoColors:
 
 class TestPreviaHonestaAuto:
     """Achado ao vivo 2026-07-17: com auto ON + um controle específico em
-    edição, a prévia mostra a cor REAL da paleta (não a manual global)."""
+    edição, a prévia mostra a cor REAL da paleta (não a manual global).
+
+    L7 (25/08/2026) — os casos abaixo foram RE-APONTADOS, não apagados. O que
+    eles mediam continua valendo palavra por palavra (auto ligado + alvo
+    específico = cor da paleta; auto desligado ou "Todos" = cor manual); o que
+    caducou é de ONDE o número saía. Ele vinha de uma expressão regular sobre
+    o TEXTO do rótulo do cabeçalho, e esse rótulo é ``translatable="yes"``:
+    em inglês vira "Controller 2", a busca falha e a prévia volta a mostrar a
+    cor manual — o defeito de 17/07 ressuscitado por um idioma. Agora o número
+    vem de ``_edit_target_slot``, o número canônico que a aba Status mantém.
+    """
 
     def test_le_o_slot_do_alvo(self) -> None:
         draft = DraftConfig.default()  # auto_player_colors=True (default COR-04)
         host = _Host(draft, uniq="aabbcc000002")
         host._edit_target_label = "Controle 2 — BT"
+        host._edit_target_slot = 2
         assert host._auto_preview_slot() == 2
+
+    def test_o_idioma_da_fita_nao_decide_a_previa(self) -> None:
+        """A MORDIDA do L7: rótulo em INGLÊS, slot conhecido → paleta do P2.
+
+        Com a leitura por expressão regular esta asserção devolve ``None`` — a
+        prévia volta a pintar a cor manual, que é exatamente o defeito de
+        17/07. Traduzir a interface não pode ressuscitar defeito curado.
+        """
+        draft = DraftConfig.default()
+        host = _Host(draft, uniq="aabbcc000002")
+        host._edit_target_label = "Controller 2 — BT"
+        host._edit_target_slot = 2
+        assert host._auto_preview_slot() == 2
+
+    def test_sem_slot_conhecido_o_defensivo_sobrevive(self) -> None:
+        """Rótulo em português e slot ``None`` → ``None``, como sempre."""
+        draft = DraftConfig.default()
+        host = _Host(draft, uniq="aabbcc000002")
+        host._edit_target_label = "Controle 2 — BT"
+        host._edit_target_slot = None
+        assert host._auto_preview_slot() is None
 
     def test_none_quando_auto_desligado(self) -> None:
         draft = DraftConfig.default()
@@ -640,10 +672,12 @@ class TestPreviaHonestaAuto:
         draft = draft.model_copy(update={"leds": leds})
         host = _Host(draft, uniq="aabbcc000002")
         host._edit_target_label = "Controle 2 — BT"
+        host._edit_target_slot = 2
         assert host._auto_preview_slot() is None
 
     def test_none_no_alvo_todos(self) -> None:
         draft = DraftConfig.default()
         host = _Host(draft, uniq=None)  # "Todos" — sem controle específico
         host._edit_target_label = "Todos os controles"
+        host._edit_target_slot = None
         assert host._auto_preview_slot() is None

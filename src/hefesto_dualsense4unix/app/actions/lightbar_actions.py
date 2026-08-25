@@ -101,6 +101,29 @@ _AVISO_SEM_DESTINATARIO = (
     "automática)"
 )
 
+#: L12 (25/08/2026) — a frase que PARA DE ESCONDER o efeito do "Todos".
+#:
+#: **O fato (M7).** Clicar "Desenho do P2" com o alvo em "Todos" manda o MESMO
+#: bitmask para cada MAC da mesa, e grava esse mesmo desenho no override de
+#: cada um: os quatro controles passam a exibir o desenho do jogador 2, e o
+#: perfil dela guarda assim. É a invariante do co-op quebrada exatamente na
+#: superfície que existe para distinguir jogadores — e **nada na tela avisava**.
+#:
+#: **O que esta frase NÃO é:** o conserto. As duas respostas possíveis — (a) os
+#: botões P1..P4 recusarem com o alvo em "Todos", como ``_enviar_player_leds``
+#: já sabe recusar; (b) "Todos" passar a significar *cada um com o desenho do
+#: próprio número*, que ``player_led_pattern(slot)`` já sabe produzir — são
+#: escolha DELA, e estão no §8 da sprint. Enquanto a resposta não vem, o
+#: mínimo honesto é a tela contar o que o clique fez. A frase sai da tela junto
+#: com a resposta dela, seja qual for.
+#:
+#: "Todas acesas"/"Todas apagadas" também a recebem, e está certo: lá o
+#: para-todos é o sentido do botão, e dizer em quantos controles ele pegou
+#: continua sendo informação, não aviso.
+_AVISO_MESMO_DESENHO_NOS_QUATRO = (
+    "O mesmo desenho foi para os {n} controles da mesa."
+)
+
 #: PLAYER-01: desenho vazio = SEM opinião. Um ``player_leds`` todo apagado no
 #: perfil nunca chega ao hardware — a camada automática (o padrão do NÚMERO do
 #: controle) vence o default global no merge por campo, e um override por-MAC
@@ -163,6 +186,26 @@ def nome_do_desenho(bits: tuple[bool, ...] | list[bool]) -> str | None:
     return None
 
 
+#: L5 (25/08/2026) — o PREFIXO do rótulo de estado das 5 luzes, e ele é o
+#: conserto inteiro desta tarefa.
+#:
+#: A frase dizia **"Aceso agora:"**, e isso é uma leitura de volta que o
+#: produto NÃO TEM. ``texto_do_desenho_aceso`` é função PURA do rascunho —
+#: nada nela consulta o aparelho — e o mapa de canais mede que consultar não é
+#: possível: ``luz.led_jogador.leitura@dualsense`` tem ``cabo_aceita = não`` e
+#: ``radio_aceita = não``. Não há canal de leitura em transporte nenhum.
+#:
+#: O vocabulário não é inventado: é o mesmo que esta casa já usa para separar
+#: o pedido do efeito — ``_TOAST_COR_ENVIADA`` diz *"Cor enviada ao
+#: controle"* (nunca "acesa"), e o ``lightbar_source == "desired"`` do daemon
+#: significa, literalmente, *a última cor que mandamos*.
+#:
+#: Quem cobra isto é ``tests/unit/test_lightbar_lexico_sem_leitura.py``: um
+#: rótulo desta aba não pode afirmar estado de barra enquanto o mapa não
+#: registrar canal de leitura para a chave correspondente.
+_PREFIXO_DESENHO = "Desenho que mandamos"
+
+
 def texto_do_desenho_aceso(
     player_leds: tuple[bool, ...] | list[bool],
     slot: int | None,
@@ -170,13 +213,18 @@ def texto_do_desenho_aceso(
     coop_ligado: bool = False,
     descricao_livre: str = "",
 ) -> str:
-    """Frase da LEITURA DE VOLTA do desenho das 5 luzes (PLAYER-01 entrega 5).
+    """A frase do desenho das 5 luzes EM VIGOR (PLAYER-01 entrega 5, L5).
 
     Função PURA: a moldura só sabia mostrar o RASCUNHO, e a camada automática
     nunca entra nele — num perfil recém-criado ela via "nada escolhido"
     enquanto o controle exibia três luzes acesas. Aqui a janela responde a
-    pergunta que ela de fato faz olhando para o controle: *o que está aceso
-    agora, e por ordem de quem?*
+    pergunta útil: *qual desenho o produto está mandando, e por ordem de
+    quem?*
+
+    **O que ela NÃO responde, e por quê (L5):** *o que está aceso*. Ver
+    ``_PREFIXO_DESENHO`` — não existe canal de leitura de LED de jogador, em
+    transporte nenhum, e a frase antiga afirmava um estado do aparelho que
+    ninguém pode conferir.
 
     As três respostas possíveis, na ordem em que o backend resolve:
 
@@ -192,21 +240,21 @@ def texto_do_desenho_aceso(
     """
     if coop_ligado:
         return (
-            "Aceso agora: o desenho do co-op — com o co-op ligado, é ele que "
+            f"{_PREFIXO_DESENHO}: o do co-op — com o co-op ligado, é ele que "
             "manda nas 5 luzes."
         )
     bits = tuple(bool(b) for b in player_leds)
     if bits != _DESENHO_VAZIO:
         nome = nome_do_desenho(bits) or descricao_livre or "desenho próprio"
-        return f"Aceso agora: {nome} — escolha sua."
+        return f"{_PREFIXO_DESENHO}: {nome} — escolha sua."
     if isinstance(slot, int) and slot >= 1:
         return (
-            f"Aceso agora: desenho do P{slot} — automático, do número deste "
-            "controle."
+            f"{_PREFIXO_DESENHO}: desenho do P{slot} — automático, do número "
+            "deste controle."
         )
     return (
-        "Aceso agora: o desenho automático do número do controle (nenhuma "
-        "escolha sua)."
+        f"{_PREFIXO_DESENHO}: o desenho automático do número do controle "
+        "(nenhuma escolha sua)."
     )
 
 
@@ -277,22 +325,33 @@ class LightbarActionsMixin(WidgetAccessMixin):
         Com "Cores automáticas por controle" LIGADO e um controle específico
         selecionado no seletor do banner, o que ele EXIBE é a cor da paleta
         (azul/vermelho...), não a cor manual global — mas a prévia mostrava a
-        manual (roxo), MENTINDO. O número vem do rótulo do alvo mantido pela
-        aba Status (``_edit_target_label`` = "Controle N — BT"). ``None`` =
-        mostrar a cor manual (automático desligado, ou alvo "Todos").
-        """
-        import re
+        manual (roxo), MENTINDO. ``None`` = mostrar a cor manual (automático
+        desligado, alvo "Todos", ou número desconhecido).
 
+        L7 (25/08/2026) — o número vem de ``_edit_target_slot``, o número
+        CANÔNICO do alvo, mantido pela aba Status a partir do ``state_full``
+        (``status_actions.py:1998``) e já usado por
+        ``_atualizar_estado_das_luzes`` sete linhas abaixo. A leitura anterior
+        era uma expressão regular sobre o TEXTO do rótulo do cabeçalho
+        (``re.search(r"Controle\\s+(\\d+)", _edit_target_label)``), e esse
+        rótulo é ``translatable="yes"``: em inglês ele vira "Controller 2", a
+        busca falha, a função devolve ``None`` e a prévia volta a mostrar a
+        cor manual — **o defeito exato de 17/07 ressuscitado por um idioma**.
+        Uma cura que morre ao traduzir a interface não é cura.
+
+        O ``getattr`` defensivo FICA: os mixins só convivem de fato na
+        instância composta, e sem slot conhecido a resposta continua sendo
+        ``None`` (mostrar a cor manual), exatamente como antes.
+        """
         draft = getattr(self, "draft", None)
         if draft is None or not draft.leds.auto_player_colors:
             return None
         if self._edit_uniq().uniq is None:
             return None
-        label = getattr(self, "_edit_target_label", None)
-        if not isinstance(label, str):
-            return None
-        match = re.search(r"Controle\s+(\d+)", label)
-        return int(match.group(1)) if match else None
+        slot = getattr(self, "_edit_target_slot", None)
+        if isinstance(slot, int) and not isinstance(slot, bool) and slot >= 1:
+            return slot
+        return None
 
     def _persist_leds_update(self, update: dict[str, Any]) -> bool:
         """Grava campos de LEDs no draft — no GLOBAL ou no override do alvo.
@@ -476,12 +535,84 @@ class LightbarActionsMixin(WidgetAccessMixin):
             # automática num override por-MAC seria o defeito que o R-14
             # desfez). O estado resolvido vive neste rótulo.
             self._atualizar_estado_das_luzes(leds.player_leds)
+            # L6: o que o DAEMON sabe da barra deste controle chega à aba da
+            # cor. Fica DENTRO do guard, e depois de tudo, porque é a única
+            # linha desta função que sai da janela para buscar dado.
+            self._atualizar_estado_da_barra()
             # Repinta preview
             preview: Gtk.DrawingArea = self._get("lightbar_preview")
             if preview is not None:
                 preview.queue_draw()
         finally:
             self._refresh_guard = False
+
+    def _atualizar_estado_da_barra(self) -> None:
+        """Escreve no rótulo ``lightbar_estado_no_controle`` o que o daemon sabe.
+
+        **L6 (25/08/2026) — a aba da barra era a ÚNICA do produto que não lia
+        nada do que o produto já sabe sobre a barra.** Medido:
+
+        ``grep -rln "lightbar_source\\|lightbar_disputada\\|lightbar_on"
+        src/hefesto_dualsense4unix/app/`` devolvia **um** arquivo, e era
+        ``widgets/controller_card.py`` — o card, que mora na Status, na Início
+        e na "No jogo". Consequência direta: quem está na aba da COR era
+        justamente quem não era avisado de que a Steam segura o ``hidraw``
+        deste controle (``lightbar_disputada``, ESCRITOR-CRU-01) nem de que o
+        valor exibido é o que o Hefesto PEDIU, não o que a lâmpada faz
+        (``lightbar_source``).
+
+        **A interpretação é REUSADA, não reescrita.** A frase sai de
+        ``widgets/controller_card.rotulo_lightbar``, a mesma que os cards já
+        usam, com a mesma ordem de precedência (Modo Nativo → disputa →
+        fonte desconhecida → apagada). Escrever uma segunda leitura destes
+        campos aqui seria o defeito F5 nascendo dentro da própria cura: duas
+        semânticas para ``lightbar_source`` no mesmo produto.
+
+        **Quando o rótulo SOME**, e é regra, não descuido: sem alvo por
+        controle ("Todos" ou alvo desconhecido), sem daemon, com o controle
+        fora do bloco ``controllers``, ou quando ``rotulo_lightbar`` não tem
+        aviso a dar (cor conhecida e acesa) — aí a prévia ao lado já diz tudo,
+        e um aviso sem conteúdo é ruído. Um "não sei" **não** vira aviso: é a
+        mesma disciplina que a `secao_controles` já aplica.
+        """
+        rotulo = self._get("lightbar_estado_no_controle")
+        if rotulo is None:
+            return
+        texto = self._texto_do_estado_da_barra()
+        rotulo.set_text(texto or "")
+        if texto:
+            rotulo.show()
+        else:
+            rotulo.hide()
+
+    def _texto_do_estado_da_barra(self) -> str | None:
+        """O aviso da barra para o controle EM EDIÇÃO; ``None`` = nenhum (L6).
+
+        Uma leitura por repintura da aba, nunca por tique: quem chama é
+        ``_refresh_lightbar_from_draft``, que roda ao ENTRAR na aba
+        (``app._REFRESH_POR_ABA``), ao trocar de alvo, ao trocar de perfil e
+        na transição do co-op. A chamada síncrona ao ``daemon.state_full``
+        segue o precedente de ``daemon_actions._query_gamepad_state``.
+        """
+        from hefesto_dualsense4unix.app.mesa import controles_conectados
+        from hefesto_dualsense4unix.app.widgets.controller_card import (
+            rotulo_lightbar,
+        )
+
+        uniq = self._edit_uniq().uniq
+        if uniq is None:
+            return None
+        try:
+            state = ipc_bridge.daemon_state_full()
+        except Exception:
+            return None
+        if not isinstance(state, dict):
+            return None
+        for entrada in controles_conectados(state):
+            if entrada.get("uniq") == uniq:
+                texto, _cor = rotulo_lightbar(entrada, state)
+                return texto
+        return None
 
     def _atualizar_estado_das_luzes(
         self, player_leds: tuple[bool, ...] | list[bool]
@@ -1026,22 +1157,46 @@ class LightbarActionsMixin(WidgetAccessMixin):
 
     # --- signals player leds ---
 
+    def aplicar_desenho_do_jogador(self, numero: int) -> None:
+        """Aplica o desenho CANÔNICO do jogador ``numero`` (L9, 25/08/2026).
+
+        **A fiação que faltava.** Os quatro botões "Desenho do P1..P4" traziam
+        o padrão escrito à mão — ``[False, True, False, True, False]`` e os
+        outros três — enquanto ``core/led_control.player_led_pattern`` já é a
+        tabela canônica que o DAEMON usa para acender, cobre **1..8** (R-25,
+        porque o espaço de numeração é único entre DualSense, externos e co-op
+        — R-24) e ainda tem padrão de overflow para ≥9. Literal e tabela eram
+        duas cópias independentes que nada amarrava: mudar a tabela deixava os
+        botões pintando o desenho antigo, sem um único teste vermelho. O mesmo
+        arquivo já lia a tabela em ``nome_do_desenho`` para BATIZAR o desenho —
+        então a aba nomeava por uma fonte e pintava por outra.
+
+        Ela também é o que torna baratas as duas respostas possíveis da
+        pergunta que é DELA (§8 da sprint): quantos botões de desenho aparecem
+        — sempre oito, ou só até o maior número vivo na mesa. Esta entrega é a
+        fiação; **quantos botões existem na tela continua sendo escolha dela**,
+        e por isso o glade segue com os mesmos quatro.
+        """
+        from hefesto_dualsense4unix.core.led_control import player_led_pattern
+
+        self._set_player_leds(list(player_led_pattern(numero)))
+
     def on_player_leds_preset_all(self, _btn: Gtk.Button) -> None:
         self._set_player_leds([True] * 5)
 
     def on_player_leds_preset_p1(self, _btn: Gtk.Button) -> None:
-        self._set_player_leds([False, False, True, False, False])
+        self.aplicar_desenho_do_jogador(1)
 
     def on_player_leds_preset_p2(self, _btn: Gtk.Button) -> None:
-        self._set_player_leds([False, True, False, True, False])
+        self.aplicar_desenho_do_jogador(2)
 
     def on_player_leds_preset_p3(self, _btn: Gtk.Button) -> None:
         # FEAT-COOP-PLAYER-LED-01: padrões canônicos P3/P4 (os mesmos que o
         # co-op local aplica por controle) também disponíveis como preset.
-        self._set_player_leds([True, False, True, False, True])
+        self.aplicar_desenho_do_jogador(3)
 
     def on_player_leds_preset_p4(self, _btn: Gtk.Button) -> None:
-        self._set_player_leds([True, True, False, True, True])
+        self.aplicar_desenho_do_jogador(4)
 
     def on_player_leds_preset_none(self, _btn: Gtk.Button) -> None:
         self._set_player_leds([False] * 5)
@@ -1070,6 +1225,10 @@ class LightbarActionsMixin(WidgetAccessMixin):
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
         self._toast_light(msg)
+        # L4: o MESMO tratamento dos presets — o rótulo acompanha o reenvio
+        # quando ele deu certo, e fica onde está quando o produto recusou.
+        if ok:
+            self._atualizar_estado_das_luzes(bits)
 
     def on_player_led_toggled(self, _checkbox: Gtk.CheckButton) -> None:
         """Sinal de toggle de qualquer checkbox de player LED.
@@ -1137,7 +1296,20 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # PLAYER-01: o rótulo de leitura de volta acompanha o preset na hora —
         # o `_refresh_lightbar_from_draft` não roda neste caminho (ele é o
         # sentido inverso: draft → widgets).
-        self._atualizar_estado_das_luzes(bits)
+        #
+        # L4 (25/08/2026): SÓ quando o envio deu certo. O rótulo dizia o
+        # desenho novo mesmo depois de uma RECUSA nossa — com a mesa vazia o
+        # `_enviar_player_leds` devolve `_AVISO_SEM_DESTINATARIO`, o toast
+        # dizia que não deu, e o rótulo três centímetros acima passava a
+        # anunciar o desenho como se estivesse valendo. Duas afirmações
+        # contraditórias, na mesma aba, do mesmo clique.
+        #
+        # Na recusa o rótulo MANTÉM o que estava — que continua sendo o último
+        # desenho que o produto de fato mandou. Escolha deliberada de não
+        # inventar frase nova de tela: "não foi aplicado" seria texto novo, e
+        # texto novo é dela.
+        if ok:
+            self._atualizar_estado_das_luzes(bits)
 
     def get_current_player_leds(self) -> tuple[bool, bool, bool, bool, bool]:
         states: list[bool] = []
@@ -1180,12 +1352,28 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 "estar desligado (ligue na aba Sistema)"
             )
         assunto = f"Desenho das luzes ({descricao})"
-        return frase_de_guardado(
+        frase = frase_de_guardado(
             assunto,
             alvo_ausente=alvo_fora_da_mesa(self),
             coop=coop_manda_nas_luzes(self),
             nativo=modo_nativo_manda_no_output(self),
         ) or f"Desenho das luzes {feito} — {descricao}"
+        quantos = self._quantos_recebem_o_desenho()
+        if quantos >= 2:
+            frase = f"{frase} {_AVISO_MESMO_DESENHO_NOS_QUATRO.format(n=quantos)}"
+        return frase
+
+    def _quantos_recebem_o_desenho(self) -> int:
+        """Quantos controles um clique de desenho atinge; 0 se for um só (L12).
+
+        Só o "Todos" DELIBERADO conta: com alvo por controle o gesto vale para
+        um, e com alvo desconhecido nada sai (a escrita já foi recusada antes
+        de chegar aqui).
+        """
+        estado_alvo = self._edit_uniq()
+        if estado_alvo.desconhecido or estado_alvo.uniq is not None:
+            return 0
+        return len(self._uniqs_conectados())
 
     @staticmethod
     def _descreve_player_leds(bits: list[bool] | tuple[bool, ...]) -> str:
