@@ -25,9 +25,9 @@ vigiada por `test_portao_a_ponte_do_mic_espera_a_arbitragem.py`.
 COMO MORDE (exercido em 25/08/2026)
 ------------------------------------
 Arranque, por LINHA, o bloco da arbitragem em `cli/cmd_mic.py::_mic_bt` (o
-`if situacao == _DAEMON_VELHO:` e o `_livres(...)`/`if not livres:` logo
-abaixo) e devolva o `gerenciador.reconciliar(alvos)` ao `reconciliar()` sem
-argumento. Reprovam:
+teste contra `_DAEMON_VELHO` e o `_livres(...)`/`if not livres:` logo abaixo) e
+devolva o `gerenciador.reconciliar(alvos)` ao `reconciliar()` sem argumento.
+Reprovam:
 
 * `test_recusa_quando_o_daemon_nao_diz_de_quem_sao_as_pontes`
 * `test_recusa_quando_todo_controle_ja_tem_ponte_do_daemon`
