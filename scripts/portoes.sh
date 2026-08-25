@@ -64,6 +64,10 @@ rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
 rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
 completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
+# 25/08/2026: o portão que exige que TODO portão tenha quem o rode não era
+# rodado por esta lista — só pela camada `suite`, que é de quem coordena e
+# roda no fim. Achado pela conferência da frente C2, e a ironia é o ponto.
+completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chamador.py
 rapido|colisao-de-sprints|py|scripts/check_colisao_de_sprints.py
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
