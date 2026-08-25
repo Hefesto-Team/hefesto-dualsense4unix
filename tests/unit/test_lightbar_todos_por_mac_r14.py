@@ -167,7 +167,26 @@ def test_player_leds_em_todos_nao_desliga_o_auto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """U9 sem o martelo: o padrão manual vence por override por-MAC, não
-    desligando a identidade automática de todo mundo."""
+    desligando a identidade automática de todo mundo.
+
+    **NOTA DATADA — 25/08/2026 (L12 da LIGHTBAR-COR-DE-CADA-UM-01).** Este
+    teste mede DUAS coisas, e só a primeira é decisão medida:
+
+    1. **que o automático NÃO é desligado** (U9/R-14, auditoria de 23/07) —
+       desligar ``auto_player_colors`` é o martelo mais pesado que a aba tem:
+       o flag governava também a numeração dos DualSense e a dos externos, e
+       ia para o JSON do perfil. **Esta metade fica**, e é o que o nome do
+       teste promete;
+    2. **que o P3 vai igual para os dois controles** — isto é INCIDENTAL. O
+       M7 mediu que é justamente o defeito: os quatro passam a exibir o
+       desenho do jogador 3, e o perfil guarda assim. A pergunta "recusar ou
+       dar a cada um o desenho do próprio número" é DELA (§8 da sprint), e a
+       mordida vermelha dos dois caminhos está em
+       ``tests/unit/test_lightbar_todos_o_desenho_de_cada_um.py``.
+
+    Quando a resposta dela vier, a asserção do bloco 2 muda **aqui**; a do
+    bloco 1 não se toca.
+    """
     enviados: list[tuple[Any, str | None]] = []
     monkeypatch.setattr(
         lightbar_actions,
@@ -177,8 +196,11 @@ def test_player_leds_em_todos_nao_desliga_o_auto(
     host = _host()
     host.on_player_leds_preset_p3(None)
 
+    # Bloco 1 — a decisão medida do U9/R-14. Não muda com a resposta dela.
     assert host.draft.leds.auto_player_colors is True
     assert [uniq for _bits, uniq in enviados] == [UNIQ_1, UNIQ_2]
+
+    # Bloco 2 — INCIDENTAL, e é o defeito do M7. Ver a nota datada acima.
     p3 = (True, False, True, False, True)
     for uniq in (UNIQ_1, UNIQ_2):
         assert tuple(host.draft.effective_leds_for(uniq).player_leds) == p3
