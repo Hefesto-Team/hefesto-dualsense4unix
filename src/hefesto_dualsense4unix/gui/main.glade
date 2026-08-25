@@ -1158,9 +1158,24 @@
                 <property name="margin">12</property>
 
                 <child>
-                  <object class="GtkFrame">
+                  <!-- L8 (25/08/2026) — os ~600 px mortos. Medido na foto de 23/08
+                         (1920x1080): o conteudo da coluna esquerda terminava em
+                         y~460 e o da direita em y~455, e as duas molduras iam ate
+                         y~1065. Numa `GtkBox` horizontal o `valign` padrao e
+                         `fill`, entao cada moldura esticava ate o fim da pagina e
+                         desenhava borda em volta de vazio.
+
+                         `valign=start` para as duas: elas param na altura NATURAL
+                         e a aba deixa de ter duas caixas vazias de meio metro. E a
+                         mesma classe de conserto do teto elastico que a
+                         LARGURA-01/E5 ja aplicou na LARGURA desta aba
+                         (`app.py:_PAGINAS_COM_TETO_ELASTICO` ja lista
+                         `tab_lightbar_box`), e fecha a queixa da VAO-01 aqui.
+                         Regua: `tests/unit/test_lightbar_vao_vertical.py`. -->
+                    <object class="GtkFrame">
                     <property name="label" translatable="yes">Lightbar (barra de LED)</property>
                     <property name="hexpand">True</property>
+                    <property name="valign">start</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
@@ -1237,6 +1252,36 @@
                               </object>
                               <packing><property name="expand">True</property></packing>
                             </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- L6 (25/08/2026): o que o DAEMON sabe da barra deste
+                             controle. Até hoje o ÚNICO leitor de
+                             `lightbar_source`/`lightbar_on`/`lightbar_disputada`
+                             em toda a `app/` era o card do controle — que mora na
+                             Status, na Início e na "No jogo". Quem estava na aba
+                             da COR era justamente quem não era avisado de que a
+                             Steam segura o `hidraw` deste controle.
+
+                             Nasce OCULTO (`visible=False` + `no-show-all`) e só
+                             aparece quando há aviso a dar: `_atualizar_estado_da_barra`
+                             o mostra/esconde. Cor conhecida e acesa não é aviso —
+                             a prévia logo acima já diz. A frase é a MESMA de
+                             `widgets/controller_card.rotulo_lightbar`, nunca uma
+                             segunda leitura dos mesmos campos. -->
+                        <child>
+                          <object class="GtkLabel" id="lightbar_estado_no_controle">
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
+                            <property name="label" translatable="yes"></property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <!-- LARGURA-01/E3: teto de ~100 caracteres por linha, e o
+                                 `halign=start` vai JUNTO — sozinho, o teto só limita a
+                                 largura NATURAL e o pai segue esticando o rótulo. -->
+                            <property name="max-width-chars">100</property>
+                            <property name="halign">start</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
@@ -1363,6 +1408,8 @@
                   <object class="GtkFrame">
                     <property name="label" translatable="yes">Desenho das 5 luzes</property>
                     <property name="hexpand">True</property>
+                    <!-- L8: ver a nota da moldura irma, acima. -->
+                    <property name="valign">start</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
@@ -1555,17 +1602,25 @@
                           <packing><property name="expand">False</property></packing>
                         </child>
 
-                        <!-- PLAYER-01 entrega 5: LEITURA DE VOLTA. A moldura só
+                        <!-- PLAYER-01 entrega 5: o desenho EM VIGOR. A moldura só
                              sabia mostrar o RASCUNHO, e a camada automática nunca
                              entra nele — num perfil recém-criado ela via "nada
                              escolhido" aqui enquanto o controle exibia três luzes
                              acesas. Este rótulo é escrito por
-                             `_refresh_lightbar_from_draft` com o desenho que está
-                             ACESO de verdade, dizendo de quem é a última palavra
-                             (automático, escolha dela ou co-op). -->
+                             `_refresh_lightbar_from_draft` com o desenho que o
+                             produto está MANDANDO, dizendo de quem é a última
+                             palavra (automático, escolha dela ou co-op).
+
+                             L5 (25/08/2026): o prefixo era "Aceso agora:" e isso
+                             afirmava uma LEITURA DE VOLTA que não existe — o mapa
+                             mede `luz.led_jogador.leitura@dualsense` com
+                             `cabo_aceita = não` e `radio_aceita = não`. O texto de
+                             espera acompanha o prefixo novo, e o portão
+                             `tests/unit/test_lightbar_lexico_sem_leitura.py` lê
+                             ESTA linha do XML. -->
                         <child>
                           <object class="GtkLabel" id="player_leds_estado">
-                            <property name="label" translatable="yes">Aceso agora: consultando…</property>
+                            <property name="label" translatable="yes">Desenho que mandamos: lendo o perfil…</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
                             <property name="margin-top">8</property>

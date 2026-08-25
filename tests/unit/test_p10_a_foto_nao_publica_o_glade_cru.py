@@ -17,7 +17,7 @@ O que a documentação publicava, medido no glade:
   texto de gente;
 * Sistema — ``Diagnóstico ao abrir a aba…`` e ``consultando…``, estados de
   ESPERA publicados como se fossem a tela;
-* Lightbar — ``Aceso agora: consultando…``, idem;
+* Lightbar — ``Desenho que mandamos: lendo o perfil…``, idem;
 * Rumble — ``Estado da vibração: —``, o rótulo que é o assunto da aba.
 
 Custo composto, e é por ele que este portão existe: a regra desta casa manda
@@ -81,8 +81,8 @@ _ROTULOS_QUE_O_CODIGO_REESCREVE: tuple[tuple[str, str, str, str], ...] = (
         "Lightbar",
         "tab_lightbar_box",
         "player_leds_estado",
-        "a frase que diz QUAL desenho está aceso e por decisão de quem "
-        "(o XML publica “Aceso agora: consultando…”)",
+        "a frase que diz QUAL desenho o produto está mandando e por decisão "
+        "de quem (o XML publica “Desenho que mandamos: lendo o perfil…”)",
     ),
     (
         "Rumble",

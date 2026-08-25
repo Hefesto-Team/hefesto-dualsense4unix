@@ -714,8 +714,14 @@ def test_moldura_mostra_o_desenho_automatico_num_perfil_novo() -> None:
     três luzes acesas". Três luzes é o desenho do P3 — o do NÚMERO dele."""
     host = _host_lightbar(DraftConfig.from_profile(_perfil_novo()), UNIQ_A, 3)
     host._refresh_lightbar_from_draft()
+    # L5 (25/08/2026): o prefixo deixou de ser "Aceso agora:" — não há canal de
+    # leitura de LED de jogador (`luz.led_jogador.leitura@dualsense`:
+    # `cabo_aceita = não`, `radio_aceita = não`), e a frase afirmava um estado
+    # do aparelho que ninguém pode conferir. O que a linha mede — QUAL desenho
+    # e por ordem de quem — não mudou.
     assert host.rotulo.texto == (
-        "Aceso agora: desenho do P3 — automático, do número deste controle."
+        "Desenho que mandamos: desenho do P3 — automático, do número deste "
+        "controle."
     )
 
 
@@ -731,7 +737,9 @@ def test_moldura_diz_quando_a_escolha_e_dela() -> None:
     )
     host = _host_lightbar(draft, UNIQ_A, 3)
     host._refresh_lightbar_from_draft()
-    assert host.rotulo.texto == "Aceso agora: desenho do P2 — escolha sua."
+    assert host.rotulo.texto == (
+        "Desenho que mandamos: desenho do P2 — escolha sua."
+    )
 
 
 def test_moldura_avisa_que_o_co_op_governa_o_desenho() -> None:
