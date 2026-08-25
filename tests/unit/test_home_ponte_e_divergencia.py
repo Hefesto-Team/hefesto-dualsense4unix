@@ -118,6 +118,10 @@ class _HomeStub:
     # ausência dos dois. Não reponha.
     _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
     _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
+    # I3 (25/08/2026): o render passou a perguntar TAMBÉM de onde a máscara
+    # veio (gesto dela x perfil). O dublê empresta o método do mixin, como
+    # empresta os outros — reimplementá-lo aqui mediria o dublê.
+    _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
 
     def __init__(self) -> None:
         self._home_installed = True
@@ -157,17 +161,33 @@ def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "gi.repository", repo)
 
 
+#: Um controle de verdade na mesa. NOTA DATADA — 25/08/2026 (I6 da INÍCIO NÃO
+#: MENTE-01): até aqui o `_estado` deste arquivo nascia com `controllers: []`,
+#: e os testes da ponte afirmavam "pelo Hefesto" sobre uma mesa VAZIA. Eles
+#: estavam medindo o defeito e chamando-o de contrato: com zero controle na
+#: casa, a linha dizia em VERDE que o jogo estava recebendo o controle — foi
+#: exatamente o que a bancada de 23/08 mediu. Agora a mesa é explícita, e há
+#: teste próprio para a mesa vazia.
+_UM_CONTROLE: dict[str, Any] = {
+    "index": 0,
+    "connected": True,
+    "transport": "usb",
+    "is_primary": True,
+}
+
+
 def _estado(
     *,
     flavor: str = "dualsense",
     enabled: bool = True,
     jogo_aberto: bool = False,
+    mesa: list[dict[str, Any]] | None = None,
     **extra: Any,
 ) -> dict[str, Any]:
     estado: dict[str, Any] = {
         "gamepad_emulation": {"enabled": enabled, "flavor": flavor},
         "native_mode": False,
-        "controllers": [],
+        "controllers": [dict(_UM_CONTROLE)] if mesa is None else mesa,
     }
     if jogo_aberto:
         estado["game_signal"] = {"authority": "game"}
