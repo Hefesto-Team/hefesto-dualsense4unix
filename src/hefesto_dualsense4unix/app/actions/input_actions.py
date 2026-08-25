@@ -262,6 +262,41 @@ def frase_dos_botoes_sem_tecla(bindings: dict[str, tuple[str, ...]]) -> str:
     return frase
 
 
+def frase_do_teclado_na_tela(osk_disponivel: bool | None) -> str:
+    """O que ESTA máquina tem, sobre o teclado na tela (N12).
+
+    TECLADO-NA-TELA-QUE-A-JANELA-NAO-LE-01. `BINDINGS_LEGEND` diz o que o L3
+    PRECISA (`onboard` ou `wvkbd-mobintl` instalados) e nunca disse se algum
+    está — e a resposta viaja no fio desde 10/08, no `osk_disponivel` do bloco
+    `keyboard_emulation`. Como nenhum atalho de fábrica digita letra, esta é a
+    frase que decide se existe ALGUM caminho para escrever texto com o
+    controle.
+
+    Aditiva, e não uma reescrita da legenda: com `None` devolve `""` e a tela
+    fica exatamente como estava. "Não sei" já está dito no texto fixo, e
+    substituí-lo por "não tem" porque ninguém respondeu mandaria ela instalar um
+    pacote que talvez já esteja lá.
+
+    Os dois nomes saem com o ambiente ao lado porque a ORDEM importa e a janela
+    não a conhece: o `onboard` digita por XTEST e não alcança cliente Wayland
+    nativo; o daemon já escolhe pela sessão viva (`_osk_candidatos`), mas quem
+    lê a legenda está prestes a instalar à mão.
+    """
+    if osk_disponivel is None:
+        return ""
+    if osk_disponivel:
+        return (
+            "<b>Neste computador:</b> o teclado na tela está instalado — o L3 "
+            "abre."
+        )
+    return (
+        "<b>Neste computador:</b> não há teclado na tela instalado, então o L3 "
+        "não vai abrir nada — e, como nenhum atalho de fábrica digita letra, "
+        "hoje não há como escrever texto com o controle. Instale um: "
+        "<tt>wvkbd-mobintl</tt> (Wayland) ou <tt>onboard</tt> (X11)."
+    )
+
+
 #: As três chaves que o perfil guarda e a lista da aba NÃO mostra. Não é uma
 #: lista de exceções: é o conjunto exato que saiu de `CANONICAL_BUTTONS` em
 #: 09/08 (TOUCHPAD-DO-SISTEMA-01) e continua em `DEFAULT_BUTTON_BINDINGS`.
@@ -407,12 +442,26 @@ class InputActionsMixin(MouseActionsMixin):
         partes += [
             frase
             for frase in (
+                # `getattr` porque `_osk_disponivel` mora no mixin do MOUSE, e
+                # há hospedeiro que monta só os métodos desta aba por composição
+                # (os testes puros da legenda). Sem o atributo vale "não sei",
+                # que é o mesmo que a aba mostrava antes da N12.
+                frase_do_teclado_na_tela(getattr(self, "_osk_disponivel", None)),
                 frase_dos_botoes_sem_tecla(bindings),
                 frase_dos_atalhos_fora_da_lista(bindings),
             )
             if frase
         ]
         legend.set_markup("\n".join(partes))
+
+    def _repintar_legenda_do_teclado(self) -> None:
+        """Gancho do `_anotar_teclado_na_tela` (N12): repinta SÓ a legenda.
+
+        A lista de atalhos não muda com o `osk_disponivel`, e reconstruí-la
+        aqui derrubaria a seleção da linha em que ela está no meio de uma
+        edição. Tolera ser chamado antes de a aba existir.
+        """
+        self._atualizar_legenda(self._resolve_effective_bindings())
 
     def _resolve_effective_bindings(self) -> dict[str, tuple[str, ...]]:
         """Resolve o draft atual em mapping de botões → tupla de tokens."""
@@ -564,5 +613,6 @@ __all__ = [
     "CANONICAL_BUTTONS",
     "REGIOES_DO_TOUCHPAD",
     "InputActionsMixin",
+    "frase_do_teclado_na_tela",
     "frase_dos_atalhos_fora_da_lista",
 ]

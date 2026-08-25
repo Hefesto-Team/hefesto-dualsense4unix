@@ -130,6 +130,43 @@ class MouseActionsMixin(WidgetAccessMixin):
     _mouse_inflight: dict[str, bool] | None = None
     _mouse_pending: dict[str, int] | None = None
 
+    #: N12 — há teclado na tela instalado NA MÁQUINA, segundo o último
+    #: `state_full`. TRI-ESTADO de propósito: `None` é "ainda não sei", e ele
+    #: **não** pode virar `False`. A frase de "não tem" manda instalar um
+    #: pacote; dizê-la porque ninguém respondeu é a janela afirmando sobre uma
+    #: máquina que ela não olhou.
+    _osk_disponivel: bool | None = None
+
+    def _anotar_teclado_na_tela(self, state: Any) -> None:
+        """Lê `keyboard_emulation.osk_disponivel` do estado vivo e avisa a aba.
+
+        TECLADO-NA-TELA-QUE-A-JANELA-NAO-LE-01 (25/08/2026, N12). O dado é
+        publicado pelo daemon desde 10/08 (`_keyboard_emulation_payload`) e
+        `grep -rn "osk_disponivel" src/hefesto_dualsense4unix/app/` devolvia
+        VAZIO: a janela nunca o leu. Enquanto isso a legenda da aba recitava
+        `onboard` e `wvkbd-mobintl` como texto fixo, sem nunca dizer se algum
+        estava instalado — e o L3 é o único caminho do produto para ESCREVER
+        texto, porque nenhum atalho de fábrica digita letra.
+
+        Mora aqui, e não na aba de atalhos, porque é aqui que o `state_full`
+        chega. A repintura é um gancho opcional (`_repintar_legenda_do_teclado`)
+        para o mixin de mouse não depender do de atalhos: quem herda os dois
+        (`InputActionsMixin`) o implementa; quem herda só este segue sem ele.
+
+        A janela não faz o `shutil.which` por conta própria de propósito: num
+        Flatpak ela olharia dentro do sandbox e responderia sobre uma máquina
+        que não é a dela.
+        """
+        bloco = state.get("keyboard_emulation") if isinstance(state, dict) else None
+        bruto = bloco.get("osk_disponivel") if isinstance(bloco, dict) else None
+        novo = bruto if isinstance(bruto, bool) else None
+        if novo == self._osk_disponivel:
+            return
+        self._osk_disponivel = novo
+        repintar = getattr(self, "_repintar_legenda_do_teclado", None)
+        if callable(repintar):
+            repintar()
+
     def _refresh_mouse_from_draft(self) -> None:
         """Popula widgets da aba Mouse a partir de self.draft.mouse.
 
@@ -222,6 +259,11 @@ class MouseActionsMixin(WidgetAccessMixin):
             self._sync_mouse_mode_gate(
                 mode_of_state(state if isinstance(state, dict) else None)
             )
+            # N12: pela mesma razão, e pelo mesmo motivo de estar ANTES dos
+            # returns — o `osk_disponivel` não tem nada a ver com o rascunho do
+            # mouse, e perdê-lo porque a seção do perfil está preenchida seria
+            # o dado chegar no fio e a tela continuar sem ele.
+            self._anotar_teclado_na_tela(state)
             me = state.get("mouse_emulation") if isinstance(state, dict) else None
             if not isinstance(me, dict):
                 return False
@@ -260,6 +302,10 @@ class MouseActionsMixin(WidgetAccessMixin):
             # fecha (HARM-05) — sem estado não dá para saber se ligar o mouse
             # derrubaria um jogo em andamento.
             self._sync_mouse_mode_gate(None)
+            # N12: sem resposta, a aba volta a "não sei" sobre o teclado na
+            # tela. Guardar o último valor conhecido seria afirmar sobre uma
+            # máquina que ninguém acabou de olhar.
+            self._anotar_teclado_na_tela(None)
             return False
 
         ipc_bridge.call_async(
