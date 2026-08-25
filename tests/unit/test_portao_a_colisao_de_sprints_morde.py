@@ -249,3 +249,63 @@ def test_exigir_recusa_sprint_sem_frontmatter_e_aceita_a_que_tem() -> None:
     )
     assert r.returncode == 1
     assert "SPRINT-QUE-NAO-EXISTE" in r.stderr
+
+
+def test_o_comentario_inline_nao_gruda_no_caminho() -> None:
+    """Um `# dona: A` no fim da linha cegava o portão INTEIRO.
+
+    MEDIDO em 25/08/2026. A linha de comentário SOZINHA já era pulada; a
+    anotação no fim de um caminho, não — o caminho entrava no conjunto com o
+    comentário grudado, e por isso **nunca casava com o mesmo arquivo declarado
+    por outra sprint**.
+
+    O estrago não era hipotético: a `CONFIGURACOES-O-LEXICO-01` anota assim
+    exatamente os quatro caminhos que ela CEDE — que são, por definição, os
+    disputados. O portão devolvia *"nenhuma colisão não declarada"* enquanto
+    duas sprints reivindicavam `secao_mesa.py`, e quem coordenava usou esse
+    verde para autorizar uma leva.
+
+    É o defeito que esta casa chama de *o instrumento mente mais que o
+    produto*: a régua desliga sozinha exatamente quando alguém documenta bem.
+    """
+    dados = colisao.le_frontmatter(
+        _sprint(
+            "COM-COMENTARIO",
+            posse={"A1": ["src/alvo.py       # dona: outra frente", "src/limpo.py"]},
+        ),
+        "COM-COMENTARIO",
+    )
+    assert dados is not None
+    assert dados["posse"]["A1"] == ["src/alvo.py", "src/limpo.py"], (
+        "o comentário inline entrou no caminho. Enquanto ele estiver ali, este "
+        f"caminho não casa com nenhum outro e a colisão fica invisível: "
+        f"{dados['posse']['A1']!r}"
+    )
+
+
+def test_a_colisao_com_comentario_inline_e_acusada() -> None:
+    """A prova de ponta a ponta: duas sprints, uma anotando o caminho."""
+    achados = _confere(
+        UMA=_sprint("UMA", posse={"A1": ["src/disputado.py"]}),
+        OUTRA=_sprint(
+            "OUTRA", posse={"B1": ["src/disputado.py   # cedo, mas edito"]}
+        ),
+    )
+    assert any("src/disputado.py" in a for a in achados), (
+        "as duas reivindicam o mesmo arquivo e uma o anotou — a colisão tem de "
+        f"ser acusada mesmo assim. Achados: {achados!r}"
+    )
+
+
+def test_o_hash_colado_no_caminho_sobrevive() -> None:
+    """A cura não pode ter começado a cortar caminho legítimo.
+
+    Nome de arquivo com `#` colado é esquisito e legal. Exigir o espaço antes
+    do `#` é o que separa "anotação" de "parte do nome" — sem esta guarda, o
+    conserto trocaria um erro de leitura por outro, mais silencioso.
+    """
+    dados = colisao.le_frontmatter(
+        _sprint("HASH", posse={"A1": ["src/rel#1.py"]}), "HASH"
+    )
+    assert dados is not None
+    assert dados["posse"]["A1"] == ["src/rel#1.py"]
