@@ -1341,6 +1341,70 @@ def palavra_do_transporte(transporte: object) -> str:
     return _PALAVRA_DO_TRANSPORTE.get(bruto.lower(), bruto)
 
 
+#: O aviso do card quando o Hefesto NÃO conseguiu ficar com o controle só para
+#: si. Duas metades: a linha, que fica à vista, e o porquê, que só aparece no
+#: hover — o mesmo desenho da fita apagada do cabeçalho, e pela mesma razão:
+#: a fileira tem até quatro cards, e o aviso mora DENTRO de um deles.
+#:
+#: I9 (25/08/2026), a metade que estava bloqueada. Até hoje a linha dizia
+#: *"Grab falhou — input pode dobrar no jogo"*: `grab` é o nome da chamada de
+#: sistema que falhou (`EVIOCGRAB`), e `input` é o que ela chama de botão. Numa
+#: tela para quem quer jogar, isso conta o que aconteceu com o KERNEL e cala o
+#: que aconteceu com ELA.
+#:
+#: A frase só pôde nascer agora porque dependia de duas medições, e as duas
+#: existem:
+#:
+#: 1. **o que o jogo continua vendo** — `ESCONDE-SÓ-O-HIDRAW-01`, MEDIDO nesta
+#:    bancada em 25/08/2026: o `hide` do broker age em UMA superfície
+#:    (`/dev/hidraw*`) e o mesmo controle mora em TRÊS; `event*` e `js*` seguem
+#:    alcançáveis. O `EVIOCGRAB` é o que impede o físico de PRODUZIR entrada
+#:    nessas duas — logo, com ele recusado, quem enumerar `/dev/input` acha o
+#:    controle dobrado. A duplicação não é hipótese: é o que sobra;
+#: 2. **o que fazer** — `GRAB-DOBRADO-01`, MEDIDO em 15/08/2026: as quatro
+#:    recusas do journal (13, 14 e 15/08) trazem **Errno 16**, que só existe
+#:    quando OUTRO leitor já tem o dispositivo — quem, não está provado, e por
+#:    isso a frase não acusa ninguém. O daemon retoma sozinho a cada
+#:    `GRAB_RECONCILE_SEC` = 2 s (`daemon/lifecycle.py:84`), e o que curou na
+#:    medição daquele dia foi reiniciar o Hefesto.
+#:
+#: PROVISÓRIO — decisão dela (o texto exato é palavra dela, PROVA-DE-TELA-01).
+#: CLASSE DE TELA: ESTRUTURAL — frase reescrita, e um hover onde não havia.
+AVISO_DE_GRAB_LINHA: Final[str] = "O jogo pode receber cada botão duas vezes"
+
+#: O porquê, no hover. Diz o que é, o que causa e o que fazer — nessa ordem, e
+#: sem nomear culpado que a medição não nomeou.
+AVISO_DE_GRAB_PORQUE: Final[str] = (
+    "Outro programa pegou este controle antes e não solta, então o Hefesto não "
+    "conseguiu ficar com ele só para si. Enquanto isso durar, o jogo pode "
+    "enxergar o controle físico E o do Hefesto ao mesmo tempo. O Hefesto tenta "
+    "de novo sozinho a cada 2 segundos; se o aviso não sair, feche os outros "
+    "programas que usam controle e ligue o Hefesto de novo."
+)
+
+
+def aviso_de_grab(
+    grab_state: object, *, is_primary: bool, gamepad_on: bool
+) -> tuple[str, str] | None:
+    """A linha e o porquê do aviso de duplicação — função pura (I9).
+
+    Devolve ``(linha, porquê)`` ou ``None`` quando não há o que avisar. A
+    CONDIÇÃO mora aqui junto do texto de propósito: ela é a parte que já estava
+    certa (`is_primary and gamepad_on and grab_state == "failed"`) e tirá-la do
+    meio do montador de widgets é o que torna a frase testável sem GTK.
+
+    Só ``"failed"`` acende. ``"pending"`` é o estado de quem ainda não abriu o
+    dispositivo — acender ali seria alarme na partida inteira de quem acabou de
+    ligar o controle. E o aviso é do PRIMÁRIO com o gamepad de pé: sem gamepad
+    do Hefesto no caminho não há segundo dispositivo para dobrar com o físico.
+    """
+    if not is_primary or not gamepad_on:
+        return None
+    if grab_state != "failed":
+        return None
+    return AVISO_DE_GRAB_LINHA, AVISO_DE_GRAB_PORQUE
+
+
 def _format_controller_subtitle(
     transport: object, *, is_primary: bool, battery_pct: object
 ) -> str:
@@ -2905,17 +2969,19 @@ class HomeActionsMixin(WidgetAccessMixin):
             # físico, então não há como casar card com aparelho por ele. Quem
             # distingue os controles na mesa é a COR da lightbar e o LED de
             # jogador — o card já mostra o número do jogador.
-            if is_primary and gamepad_on and grab_state == "failed":
-                # NOTA — o TEXTO desta linha continua sendo o de sempre, e é de
-                # propósito. Ele é jargão de kernel numa tela para quem quer
-                # jogar ("grab" é a chamada de sistema que falhou), e a I9 da
-                # sprint o reescreveria para dizer o que acontece com ela — mas
-                # o que exatamente acontece depende do que a
-                # ESCONDE-SO-O-HIDRAW-01 (aberta, Onda 12) concluir sobre o que
-                # o jogo continua vendo pelo evdev. Trocar a frase antes disso
-                # seria trocar um jargão certo por uma promessa não apurada.
-                warn = Gtk.Label(label="Grab falhou — input pode dobrar no jogo")
+            # I9 (25/08/2026): a CONDIÇÃO e o TEXTO saíram daqui para
+            # `aviso_de_grab` — função pura, testável sem GTK. A linha dizia
+            # "Grab falhou — input pode dobrar no jogo", que é o que aconteceu
+            # com o kernel; agora diz o que acontece com ela, e o porquê vai no
+            # hover, sem custar um pixel da fileira.
+            aviso = aviso_de_grab(
+                grab_state, is_primary=is_primary, gamepad_on=gamepad_on
+            )
+            if aviso is not None:
+                linha, porque = aviso
+                warn = Gtk.Label(label=linha)
                 warn.set_xalign(0.0)
+                warn.set_tooltip_text(porque)
                 warn.get_style_context().add_class("hefesto-dualsense4unix-status-err")
                 card.pack_start(warn, False, False, 0)
             box.pack_start(card, True, True, 0)
