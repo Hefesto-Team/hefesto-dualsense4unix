@@ -794,8 +794,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         # Mesma correção de T4 aplicada aos cards (25/08/2026): a chave sai da
         # lista ORDENADA e o registro tem de sair da mesma — casá-los por
         # posição na lista crua alimentava o painel do jogador errado.
+        # Pela CLASSE e não por `self`: hosts parciais de teste montam a
+        # mixin método a método (o `_Janela` do `no_jogo` é um), e um `self._`
+        # novo aqui quebraria a bancada de quem não sabia que ele nasceu — a
+        # mesma razão pela qual `_status_card_keys_for` já chamava
+        # `StatusActionsMixin._por_numero_de_identidade` assim.
         for key, entry in zip(
-            keys, self._conectados_na_ordem_dos_cards(conectados), strict=True
+            keys,
+            StatusActionsMixin._conectados_na_ordem_dos_cards(conectados),
+            strict=True,
         ):
             painel = self._no_jogo_paineis.get(key)
             if painel is not None and isinstance(state, dict):
@@ -1256,8 +1263,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         # na ordem crua do daemon. Casar as duas por posição alimentava cada
         # card com o registro do vizinho — ver
         # `_conectados_na_ordem_dos_cards`.
+        # Pela CLASSE e não por `self`: hosts parciais de teste montam a
+        # mixin método a método (o `_Janela` do `no_jogo` é um), e um `self._`
+        # novo aqui quebraria a bancada de quem não sabia que ele nasceu — a
+        # mesma razão pela qual `_status_card_keys_for` já chamava
+        # `StatusActionsMixin._por_numero_de_identidade` assim.
         for key, entry in zip(
-            keys, self._conectados_na_ordem_dos_cards(conectados), strict=True
+            keys,
+            StatusActionsMixin._conectados_na_ordem_dos_cards(conectados),
+            strict=True,
         ):
             card = self._status_cards.get(key)
             if card is None:
