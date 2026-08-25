@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.app.actions.carona_do_wrapper import (
 )
 from hefesto_dualsense4unix.app.actions.home_actions import (
     texto_do_custo_da_mascara,
+    texto_do_radio_fragil,
 )
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
 from hefesto_dualsense4unix.app.ipc_bridge import (
@@ -150,6 +151,38 @@ _MODE_KIND_ITEMS: list[tuple[str, str]] = [
     ("gamepad", "Jogar pelo Hefesto"),
     ("native", "Conexão Nativa (Sony)"),
 ]
+
+#: O `kind` que esta aba OFERECE e que o rádio pode não aguentar. Sai da lista
+#: acima de propósito: o dia em que o id mudar, muda nos dois lugares juntos.
+_KIND_NATIVO = "native"
+
+
+def frase_do_radio_fragil_no_modo(kind: object, state: Any) -> str | None:
+    """O aviso de rádio frágil, **quando o modo escolhido aqui é o Nativo**.
+
+    PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/8 (24/08/2026), medido:
+
+        $ grep -rln "native_bt_fragil" src/hefesto_dualsense4unix/app/
+        src/hefesto_dualsense4unix/app/actions/home_actions.py
+
+    **Um arquivo só.** E é ESTA aba que oferece "Conexão Nativa (Sony)" como um
+    dos quatro botões do editor, sem uma palavra sobre o limite do SDL —
+    inclusive num perfil de co-op, onde Modo Nativo com dois ou mais controles
+    no rádio é exatamente a pergunta que ninguém mediu.
+
+    **A frase é a MESMA da Início, e vem de lá** (`texto_do_radio_fragil`).
+    Escrever uma segunda aqui daria o nono par da F5 na mesma noite em que oito
+    estão sendo curados — e o teste desta função afirma IGUALDADE com a da
+    outra aba, não semelhança.
+
+    O que é próprio daqui é só o gatilho: fora do Modo Nativo o editor cala,
+    porque o aviso fala do modo que ela está escolhendo, não do que o sistema
+    está fazendo agora — esse já tem banner na Início.
+    """
+    if kind != _KIND_NATIVO:
+        return None
+    return texto_do_radio_fragil(state if isinstance(state, dict) else None)
+
 
 # Máscara do gamepad virtual (só faz sentido com kind == "gamepad").
 _MODE_FLAVOR_ITEMS: list[tuple[str, str]] = [
@@ -1467,6 +1500,26 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         hint.set_line_wrap(True)
         hint.get_style_context().add_class("dim-label")
         slot.pack_start(hint, False, False, 0)
+
+        # §P8: o aviso de rádio frágil, na seção onde ela escolhe o Modo
+        # Nativo. Nasce em código, como o preço da máscara logo acima — a
+        # seção "Modo" inteira é montada aqui, e um rótulo novo no XML não é
+        # necessário para o dado chegar à tela.
+        #
+        # `#ffb86c` é o token de ALERTA da casa, o mesmo do
+        # `profile_process_name_aviso` e da frase do jogo. E `set_markup` em
+        # vez de classe CSS pela razão já medida nesta janela: classe não
+        # pinta rótulo aqui.
+        aviso_radio = Gtk.Label()
+        aviso_radio.set_xalign(0.0)
+        aviso_radio.set_line_wrap(True)
+        # 64, o mesmo teto medido do preço da máscara — pelo mesmo motivo: uma
+        # frase longa sem onde quebrar come a coluna "Perfis salvos".
+        aviso_radio.set_max_width_chars(64)
+        aviso_radio.set_visible(False)
+        aviso_radio.set_no_show_all(True)
+        self._aviso_do_radio_fragil = aviso_radio
+        slot.pack_start(aviso_radio, False, False, 0)
         slot.show_all()
 
         # Contrato do sinal (BUG-HOME-SEGMENTED-SIGNATURE-01): "changed" do
@@ -1493,6 +1546,9 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 
     def _sync_mode_options_visibility(self, kind: str) -> None:
         """Mostra/habilita a máscara apenas com kind == "gamepad"."""
+        # §P8: o aviso do rádio acompanha o MESMO gesto — é o único ponto por
+        # onde os três caminhos (montagem, gesto dela e populate) passam.
+        self._sincronizar_aviso_do_radio(kind)
         opts = self._mode_gamepad_opts
         if opts is None:
             return
@@ -1503,9 +1559,73 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         opts.set_no_show_all(not is_gamepad)
         opts.set_sensitive(is_gamepad)
 
+    def _sincronizar_aviso_do_radio(self, kind: str) -> None:
+        """Escreve (ou apaga) o aviso de rádio frágil da seção "Modo".
+
+        Best-effort inteiro: sem o rótulo, sem o estado, ou com o daemon calado,
+        a linha simplesmente não aparece — nunca uma exceção na thread do GTK
+        por causa de um aviso.
+        """
+        rotulo = getattr(self, "_aviso_do_radio_fragil", None)
+        if rotulo is None:
+            return
+        frase = frase_do_radio_fragil_no_modo(
+            kind, getattr(self, "_estado_do_radio", None)
+        )
+        try:
+            if frase is None:
+                rotulo.set_text("")
+                rotulo.set_visible(False)
+                return
+            rotulo.set_markup(
+                f'<span foreground="#ffb86c">{escapar_markup(frase)}</span>'
+            )
+            with contextlib.suppress(Exception):
+                rotulo.set_tooltip_text(frase)
+            with contextlib.suppress(Exception):
+                rotulo.set_no_show_all(False)
+            rotulo.set_visible(True)
+        except Exception as exc:
+            logger.debug("aviso_do_radio_falhou", err=str(exc))
+
+    def _buscar_o_estado_do_radio(self) -> None:
+        """Pede o `state_full` ao daemon — por GESTO, e só quando faz falta.
+
+        `native_bt_fragil` mora no `daemon.state_full`
+        (`daemon/ipc_handlers.py`), e esta aba não tem tique próprio: ela não
+        fala com o daemon em lugar nenhum. Uma busca ao escolher o Modo Nativo
+        é atual o bastante — o que decide o aviso é quantos controles estão no
+        rádio AGORA, e a resposta chega antes de ela terminar de ler a linha.
+
+        Daemon offline deixa o cache como está e a linha não aparece.
+        """
+        call_async(
+            method="daemon.state_full",
+            params={},
+            on_success=self._ao_chegar_o_estado_do_radio,
+            on_failure=lambda _exc: False,
+        )
+
+    def _ao_chegar_o_estado_do_radio(self, result: Any = None) -> bool:
+        """Callback GTK: guarda o estado e repinta o aviso do modo escolhido."""
+        if isinstance(result, dict):
+            self._estado_do_radio = result
+            with contextlib.suppress(Exception):
+                selector = getattr(self, "_mode_kind_selector", None)
+                if selector is not None:
+                    self._sincronizar_aviso_do_radio(
+                        selector.get_active_id() or "none"
+                    )
+        return False  # GLib.idle_add: não repetir
+
     def _on_mode_kind_changed(self, selector: Any) -> None:
         """Handler do kind: sincroniza a visibilidade das opções do modo."""
         kind = selector.get_active_id() or "none"
+        # §P8: escolher o Modo Nativo é o gesto que faz a pergunta ao daemon.
+        # Fora dele não há aviso a dar, e um poller a mais nesta janela seria
+        # custo permanente por uma linha que quase nunca acende.
+        if kind == _KIND_NATIVO:
+            self._buscar_o_estado_do_radio()
         # PERFIL-SALVA-TUDO-01: gesto no seletor conta. O populate programático
         # (`_set_mode_editor`) também dispara este handler — ele BAIXA a marca
         # depois, então o que sobra ligado aqui é toque dela.
