@@ -42,17 +42,144 @@ MENSAGENS_DE_GENTE: frozenset[str] = frozenset(
     {MSG_JOGO_SEM_NOME, MSG_STEAM_SEM_APPID, MSG_STEAM_APPID_INVALIDO}
 )
 
+# --- Os três botões de programa, e por que a lista cresceu ------------------
+# PERFIS-ABRE-O-QUE-GUARDA-01/P5 (25/08/2026). As três listas tinham DOZE
+# programas ao todo, e eram os programas DESTA BANCADA em julho. O preço não
+# era teórico: quem instalasse outro terminal, clicasse "Terminal" e salvasse
+# ganhava um perfil que **nunca casa**, sem uma palavra na tela — o perfil não
+# entra, `matches()` devolve `False` em silêncio, e não há erro nenhum a ler.
+#
+# Medido em 25/08, antes de qualquer linha de cura, com o `matches()` do
+# esquema: `ptyxis` (o terminal padrão do COSMIC, que é o desktop DESTA
+# máquina), `foot`, `wezterm`, `xterm`, `vivaldi`, `zen`, `org.gnome.Epiphany`,
+# `gedit`, `org.kde.kate`, `emacs` e `vim` — os ONZE reprovavam.
+#
+# **Lista declarada, nunca detecção mágica.** Adivinhar "isto é um editor" pelo
+# nome do processo é a classe de contorno que esta casa recusa: acerta na
+# bancada de quem escreveu e erra no computador de quem usa, sem jeito de a
+# pessoa ver por quê. Aqui é lista, com dono e com data.
+#
+# A comparação é SEM CAIXA (`schema._casa_sem_caixa`), então cada programa
+# aparece uma vez só — `Navigator` e `navigator` são a mesma entrada. O que
+# muda de verdade entre as grafias é o SUFIXO do empacotamento
+# (`chromium-browser`, `brave-browser`) e o identificador em ponto do Wayland
+# (`org.gnome.Epiphany`), e esses são nomes diferentes, não caixas diferentes.
+
+#: Navegadores. `Navigator` é a `wm_class` do Firefox sob XWayland — a mesma
+#: janela chega como `firefox` no Wayland nativo e como `Navigator` no X, e sem
+#: as duas o preset cobre metade das sessões.
+_NAVEGADORES = [
+    "firefox",
+    "Navigator",
+    "librewolf",
+    "waterfox",
+    "zen",
+    "zen-alpha",
+    "chromium",
+    "chromium-browser",
+    "brave",
+    "brave-browser",
+    "google-chrome",
+    "google-chrome-stable",
+    "vivaldi",
+    "vivaldi-stable",
+    "microsoft-edge",
+    "opera",
+    "falkon",
+    "org.gnome.Epiphany",
+    "epiphany",
+    "qutebrowser",
+    "org.qutebrowser.qutebrowser",
+]
+
+#: Terminais. `ptyxis` encabeça por medição, não por gosto: é o terminal padrão
+#: do COSMIC, o desktop desta máquina, e era o buraco mais caro dos três.
+#: `gnome-terminal-server` é o processo que carrega as janelas do
+#: `gnome-terminal` — quem some da lista some da detecção.
+_TERMINAIS = [
+    "ptyxis",
+    "org.gnome.Ptyxis",
+    "gnome-terminal",
+    "gnome-terminal-server",
+    "org.gnome.Terminal",
+    "alacritty",
+    "org.alacritty.Alacritty",
+    "kitty",
+    "konsole",
+    "org.kde.konsole",
+    "foot",
+    "footclient",
+    "wezterm",
+    "org.wezfurlong.wezterm",
+    "xterm",
+    "urxvt",
+    "st",
+    "terminator",
+    "tilix",
+    "xfce4-terminal",
+    "io.elementary.terminal",
+    "org.contourterminal.Contour",
+]
+
+#: Editores — de código e de texto. O critério de entrada é "programa em que se
+#: escreve", não "IDE": `gedit` e `kate` são o editor de muita gente, e deixá-los
+#: de fora era a mesma omissão do `ptyxis`.
+_EDITORES = [
+    "code",
+    "code-oss",
+    "vscodium",
+    "cursor",
+    "zed",
+    "dev.zed.Zed",
+    "neovide",
+    "nvim",
+    "vim",
+    "gvim",
+    "emacs",
+    "gedit",
+    "org.gnome.gedit",
+    "org.gnome.TextEditor",
+    "kate",
+    "org.kde.kate",
+    "kwrite",
+    "sublime_text",
+    "org.gnome.Builder",
+    "jetbrains-idea",
+    "jetbrains-idea-ce",
+    "jetbrains-pycharm",
+    "jetbrains-pycharm-ce",
+    "jetbrains-clion",
+    "jetbrains-rider",
+    "jetbrains-webstorm",
+]
+
 # Presets prontos, indexados pela chave do radio.
 SIMPLE_MATCH_PRESETS: dict[str, MatchCriteria | MatchAny] = {
     "any": MatchAny(),
     "steam": MatchCriteria(process_name=["steam"]),
-    "browser": MatchCriteria(
-        window_class=["firefox", "chromium", "brave", "google-chrome"]
-    ),
-    "terminal": MatchCriteria(
-        window_class=["gnome-terminal", "alacritty", "kitty", "konsole"]
-    ),
-    "editor": MatchCriteria(window_class=["code", "zed", "neovide"]),
+    "browser": MatchCriteria(window_class=list(_NAVEGADORES)),
+    "terminal": MatchCriteria(window_class=list(_TERMINAIS)),
+    "editor": MatchCriteria(window_class=list(_EDITORES)),
+}
+
+#: As listas de ANTES de 25/08/2026, guardadas para a LEITURA continuar
+#: reconhecendo o que já está no disco.
+#:
+#: Sem isto, crescer as listas quebraria o round-trip que o R-12 existe para
+#: proteger: um perfil salvo em julho com "Terminal" tem os quatro nomes
+#: daquele dia gravados, `_criteria_equal` compara por igualdade EXATA de
+#: conjunto, e reabrir o perfil o jogaria no editor avançado — o seletor
+#: rebaixado, sem ninguém ter mexido em nada. É o mesmo defeito que a
+#: `ESCONDER-EM-VEZ-DE-SAIR-01` mediu pelo outro lado.
+#:
+#: **Só a LEITURA é tolerante.** A escrita (`from_simple_choice`) grava sempre
+#: a lista de hoje: reabrir um "Terminal" de julho e salvar ALARGA o perfil
+#: para os terminais de hoje, que é exatamente o que o rótulo "Terminal"
+#: promete — e alargar nunca tira dela um casamento que ela já tinha.
+_PRESETS_HISTORICOS: dict[str, tuple[list[str], ...]] = {
+    "browser": (["firefox", "chromium", "brave", "google-chrome"],),
+    "terminal": (["gnome-terminal", "alacritty", "kitty", "konsole"],),
+    "editor": (["code", "zed", "neovide"],),
 }
 
 
@@ -159,6 +286,11 @@ def detect_simple_preset(
             continue
         if isinstance(preset, MatchCriteria) and _criteria_equal(match, preset):
             return key
+    # P5 (25/08/2026): e as listas de ANTES, para o perfil que já está no disco
+    # continuar abrindo na página simples. Ver `_PRESETS_HISTORICOS`.
+    historico = _preset_historico(match)
+    if historico is not None:
+        return historico
     # Tenta detectar "jogo específico": process_name com 1 elemento, demais vazios
     if (
         isinstance(match, MatchCriteria)
@@ -277,6 +409,28 @@ def _criteria_equal(a: MatchCriteria, b: MatchCriteria) -> bool:
         and a.window_title_regex == b.window_title_regex
         and sorted(a.process_name) == sorted(b.process_name)
     )
+
+
+def _preset_historico(match: MatchCriteria) -> str | None:
+    """A chave do preset quando o perfil guarda uma lista ANTIGA. Senão None.
+
+    P5 (25/08/2026). Ver `_PRESETS_HISTORICOS` para o porquê: crescer as três
+    listas sem isto rebaixaria para o editor avançado todo perfil "Navegador",
+    "Terminal" ou "Editor" que ela já tem no disco — sem ninguém ter mexido em
+    nada, e sem uma palavra na tela.
+
+    A comparação é a MESMA do laço dos presets de hoje (`_criteria_equal`, por
+    conjunto), e por isso um perfil histórico só é reconhecido quando os
+    OUTROS campos também batem: `process_name` e `window_title_regex` vazios.
+    Um "Terminal" de julho com um `process_name` somado à mão continua caindo
+    no editor avançado — que é o certo, porque a página simples não sabe
+    mostrar esse campo (é a mesma disciplina do `exigencia_invisivel`).
+    """
+    for key, listas in _PRESETS_HISTORICOS.items():
+        for window_class in listas:
+            if _criteria_equal(match, MatchCriteria(window_class=list(window_class))):
+                return key
+    return None
 
 
 def exigencia_invisivel(match: Match) -> str:
