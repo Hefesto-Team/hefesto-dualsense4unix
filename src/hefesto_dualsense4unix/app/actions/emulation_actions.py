@@ -115,6 +115,70 @@ _VPAD_NOMES_EM_UINPUT = (XBOX360_NAME, DUALSENSE_EDGE_NAME)
 LARGURA_MAXIMA_DO_ROTULO_DE_GAMEPADS = 52
 
 
+# ── EMULACAO-UM-DONO-SO-01/E8 — o transporte por trás de cada promessa ──────
+#
+# 25/08/2026. As quatro frases desta aba afirmavam que a vibração funciona sem
+# uma palavra de transporte, e a mais forte delas dizia que jogos com suporte a
+# DualSense "funcionam completos: vibração, giroscópio e lightbar". O mapa de
+# canais não sustenta a parte da vibração — e NÃO SUSTENTA EM NENHUM DOS DOIS
+# TRANSPORTES, que é onde a própria sprint errou ao propor a cura:
+#
+#   `vibracao.rumble.passthrough@dualsense` — cabo `de_onde_sei` =
+#   `inferido-do-codigo` (rebaixado de `medido` em 15/08/2026, D-14: a
+#   evidência da célula descrevia LEITURA DE FONTE, não medição no aparelho) e
+#   rádio idem, com a ressalva escrita: *"Implementado sem gate, mas NÃO MEDIDO
+#   por Bluetooth […] o aparelho ainda não confirmou"*. A coluna `mordida`
+#   fecha a conta: *"não desce até o envelope do físico, então nem o cabo nem o
+#   rádio são provados de ponta a ponta"*.
+#
+# As outras duas SUSTENTAM, e por isso a frase pode afirmá-las:
+# `movimento.giroscopio.jogo@dualsense` e `luz.lightbar.cor@dualsense` têm
+# `de_onde_sei = medido` e `aciona = sim` nos DOIS lados.
+#
+# O que este bloco declara não é o texto — o texto mora no `gui/main.glade`,
+# que é onde ela o lê. Declara-se aqui a AMARRA: qual frase fala de qual célula
+# do mapa, e a ressalva única que a frase tem de carregar enquanto a célula não
+# tiver lastro nos dois lados. O portão
+# `tests/unit/test_a_aba_emulacao_nao_promete_transporte_sem_lastro.py` cruza os
+# três: este bloco (por AST), o `gui/main.glade` e o CSV do mapa.
+
+#: A ressalva única da vibração. UMA, e verbatim nas três frases que a afirmam:
+#: correção pela metade deixa duas versões vivas, que é o defeito que a regra
+#: da casa sobre fato errado existe para matar. Sem artigo na frente de
+#: propósito, para casar tanto com "A vibração…" quanto com "…a vibração…".
+RESSALVA_DE_TRANSPORTE: dict[str, str] = {
+    "vibracao.rumble.passthrough@dualsense": (
+        "vibração ainda não foi conferida no aparelho — nem no cabo, nem no rádio"
+    ),
+}
+
+#: Que célula do mapa cada texto desta aba afirma. O portão exige as DUAS
+#: direções: uma célula declarada sem lastro obriga a ressalva no texto; e um
+#: texto que cite um dos radicais de `RADICAIS_DE_TRANSPORTE` sem estar
+#: declarado aqui também reprova — declaração que só cobre o que alguém lembrou
+#: de declarar é lembrança, não portão.
+AFIRMACOES_DE_TRANSPORTE_DA_ABA: dict[str, tuple[str, ...]] = {
+    "emulation_gamepad_dualsense_button": ("vibracao.rumble.passthrough@dualsense",),
+    "emulation_gamepad_xbox_button": (
+        "vibracao.rumble.passthrough@dualsense",
+        "movimento.giroscopio.jogo@dualsense",
+    ),
+    "emulation_gamepad_hint_label": (
+        "vibracao.rumble.passthrough@dualsense",
+        "movimento.giroscopio.jogo@dualsense",
+        "luz.lightbar.cor@dualsense",
+    ),
+}
+
+#: O radical que denuncia uma afirmação sobre cada célula. Radical e não
+#: palavra inteira: "vibra", "vibração" e "vibrar" são a mesma promessa.
+RADICAIS_DE_TRANSPORTE: dict[str, str] = {
+    "vibracao.rumble.passthrough@dualsense": "vibra",
+    "movimento.giroscopio.jogo@dualsense": "giroscóp",
+    "luz.lightbar.cor@dualsense": "lightbar",
+}
+
+
 def _chave_do_aparelho(no: dict[str, str]) -> str:
     """Identidade do APARELHO por trás de um nó de joystick.
 

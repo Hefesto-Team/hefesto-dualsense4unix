@@ -1282,8 +1282,14 @@ class TestOInglesNaoFicaParaTras:
         "do gatilho direito ao controle selecionado",
         "Envia cor selecionada para a barra de LED do controle selecionado",
         "Desliga a barra de LED do controle selecionado",
-        "Máscara Xbox 360: a vibração funciona em jogo e os controles não "
-        "aparecem duplicados.",
+        # NOTA DATADA — 25/08/2026 (EMULACAO-UM-DONO-SO-01/E8). O trecho era
+        # "Máscara Xbox 360: a vibração funciona em jogo e os controles não
+        # aparecem duplicados." A afirmação de vibração saiu da tela: o mapa
+        # tem `vibracao.rumble.passthrough@dualsense` em `inferido-do-codigo`
+        # nos DOIS transportes. O que este bloco guarda é o INGLÊS do tooltip,
+        # não a frase — então ele segue o msgid de hoje.
+        "Máscara Xbox 360: os controles não aparecem duplicados e os jogos "
+        "mostram prompts de Xbox",
         "Envia a configuração aos controles e grava o que você declarou na "
         "aba Configurações",
         "Envia a configuração aos controles e grava a aba Configurações",
