@@ -62,6 +62,7 @@ rapido|curvas|py|scripts/gerar-tabela-de-curvas.py --check
 rapido|paridade-transporte|py|scripts/check_paridade_transporte.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
+rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
 rapido|colisao-de-sprints|py|scripts/check_colisao_de_sprints.py
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
