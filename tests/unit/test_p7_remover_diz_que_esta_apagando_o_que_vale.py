@@ -190,7 +190,7 @@ class TestADialogoCarregaAFrase:
                 registro["titulo"] = kw.get("text")
 
             def format_secondary_text(self, texto: str) -> None:
-                registro["secundario"] = texto
+                registro["secundário"] = texto
 
             def add_button(self, *_a: Any) -> None:
                 return None
@@ -226,7 +226,7 @@ class TestADialogoCarregaAFrase:
             parent=None, name="Sackboy", aviso="ESTE É O AVISO"
         )
 
-        texto = registro["secundario"]
+        texto = registro["secundário"]
         assert "ESTE É O AVISO" in texto, "o diálogo jogou o aviso fora"
         assert "permanente" in texto, "a linha de sempre não pode sumir"
         assert texto.index("ESTE É O AVISO") < texto.index("permanente")
@@ -243,6 +243,6 @@ class TestADialogoCarregaAFrase:
 
         gui_dialogs.confirm_delete_profile(parent=None, name="Sackboy")
 
-        assert registro["secundario"] == (
+        assert registro["secundário"] == (
             "Esta ação é permanente e não pode ser desfeita."
         )
