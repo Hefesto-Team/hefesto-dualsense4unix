@@ -1542,9 +1542,16 @@ class EmulationActionsMixin(WidgetAccessMixin):
         """True/False se Steam Input CONFLITANTE está ligado; None se indeterminado.
 
         STEAM-INPUT-ALLOWLIST-01: usa o mesmo walker de blocos do storm_doctor —
-        opt-in per-app deliberado (jogos cujo DualSense é entregue pela Steam,
-        ex.: MMJ na allowlist) NÃO conta como conflito; as chaves globais
-        (PSSupport/SwitchSupport) e per-app fora da allowlist contam.
+        opt-in per-app deliberado (os jogos que ela marcou, e nos quais o
+        controle físico fica escondido; ex.: MMJ na allowlist) NÃO conta como
+        conflito; as chaves globais (PSSupport/SwitchSupport) e per-app fora
+        da allowlist contam.
+
+        T-07 (25/08/2026): esta docstring dizia *"jogos cujo DualSense é
+        entregue pela Steam"*, o enquadramento que ela derrubou em 09/08
+        (ESCONDER-EM-VEZ-DE-SAIR-01). Docstring não é tela, mas é o que a
+        próxima pessoa lê antes de escrever a próxima frase de tela — deixar
+        a versão morta aqui é como o defeito volta.
 
         AMBIENTE-PRESUMIDO-01 (23/08/2026): a busca era um `glob` cravado em
         ``~/.steam/steam``, e por isso o cartão dizia "Steam não encontrado"

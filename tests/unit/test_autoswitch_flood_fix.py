@@ -196,5 +196,14 @@ def test_diag_reader_recupera_no_poll(monkeypatch: pytest.MonkeyPatch) -> None:
     # Env aparece (compositor exportou) — a leitura seguinte recupera.
     monkeypatch.setenv("DISPLAY", ":9")
     read()
-    assert ("xlib", True) in store.seeds
+    # D-TROCA-DE-PERFIL-CEGA (25/08): a re-semeadura do resgate agora exige
+    # PROVA, como a semeadura inicial já exigia desde a T-01 (ONDA0-Z7).
+    # Esta linha pedia `("xlib", True)` e passava por PRESUNÇÃO: o `:9` deste
+    # teste nunca existiu — o próprio log da suíte imprime
+    # `x11_connect_failed err='Can't connect to display ":9"'` — e mesmo assim
+    # o store era semeado saudável. É a MESMA forma do defeito medido na
+    # máquina dela (`Can't connect to display :1`, `healthy=True`), viva num
+    # segundo lugar depois de a T-01 curar o primeiro.
+    assert ("xlib", False) in store.seeds
+    assert ("xlib", True) not in store.seeds
     assert store.reads[-1][0] == "xlib"

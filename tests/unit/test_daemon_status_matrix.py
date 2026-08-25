@@ -183,9 +183,20 @@ class _FakeSwitchObj:
 class _FakeButtonObj:
     def __init__(self) -> None:
         self.visible: bool = False
+        # T-06: `None` = nunca recebeu `set_sensitive`. É esse valor que
+        # distingue "o produto decidiu deixar sensível" de "ninguém decidiu
+        # nada" — e era o segundo caso que valia para os dois botões.
+        self.sensitive: bool | None = None
+        self.tooltip: str = ""
 
     def set_visible(self, v: bool) -> None:
         self.visible = v
+
+    def set_sensitive(self, v: bool) -> None:
+        self.sensitive = v
+
+    def set_tooltip_text(self, t: str) -> None:
+        self.tooltip = t
 
 
 class _Host(DaemonActionsMixin):
@@ -198,6 +209,8 @@ class _Host(DaemonActionsMixin):
         self._label = _FakeLabelObj()
         self._sw = _FakeSwitchObj()
         self._btn_migrate = _FakeButtonObj()
+        self._btn_start = _FakeButtonObj()
+        self._btn_stop = _FakeButtonObj()
 
     def _get(self, widget_id: str) -> Any:
         if widget_id == "daemon_status_label":
@@ -206,6 +219,10 @@ class _Host(DaemonActionsMixin):
             return self._sw
         if widget_id == "btn_migrate_to_systemd":
             return self._btn_migrate
+        if widget_id == "daemon_start_button":
+            return self._btn_start
+        if widget_id == "daemon_stop_button":
+            return self._btn_stop
         if widget_id == "daemon_status_text":
             return _FakeTextViewObj()
         return None
@@ -361,3 +378,231 @@ def test_botao_migrate_visivel_apenas_em_avulso(
     host._refresh_daemon_view()
 
     assert host._btn_migrate.visible is False
+
+
+# ---------------------------------------------------------------------------
+# T-06 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026) — "Ligar" e "Desligar" por estado
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "status, ligar_sensivel, desligar_sensivel",
+    [
+        ("online_systemd", False, True),
+        ("online_avulso", False, True),
+        ("iniciando", False, True),
+        ("offline", True, False),
+    ],
+)
+def test_ligar_e_desligar_ficam_cinzas_conforme_o_estado(
+    status: str, ligar_sensivel: bool, desligar_sensivel: bool
+) -> None:
+    """A matriz que faltava: o botão sem trabalho a fazer fica cinza.
+
+    Medido em 23/08: `set_sensitive` aparecia DUAS vezes em
+    `daemon_actions.py`, as duas do botão de reiniciar. Os dois botões de
+    ligar/desligar ficavam clicáveis nos quatro estados — e o clique inútil
+    não era inofensivo: `systemctl start` numa unidade já ativa devolve
+    `rc=0`, o toast responde "Pronto." e a tela confirma um trabalho que não
+    aconteceu.
+
+    `online_avulso` e `iniciando` contam como LIGADO de propósito: no
+    primeiro há um daemon vivo (fora do systemd) para desligar; no segundo a
+    unidade já está `active`, e "Ligar" ali é exatamente o clique que não faz
+    nada.
+    """
+    host = _Host()
+
+    host._apply_daemon_view(status, "disabled", "(texto)")  # type: ignore[arg-type]
+
+    assert host._btn_start.sensitive is ligar_sensivel
+    assert host._btn_stop.sensitive is desligar_sensivel
+
+
+@pytest.mark.parametrize("status", ["online_systemd", "offline"])
+def test_o_botao_cinza_diz_por_que_esta_cinza(status: str) -> None:
+    """Botão cinza sem explicação manda procurar defeito onde não há.
+
+    Regra desta casa: toda frase de diagnóstico diz o quê, por quê e o que
+    fazer. Um botão apagado e mudo falha na segunda parte.
+    """
+    host = _Host()
+
+    host._apply_daemon_view(status, "disabled", "(texto)")  # type: ignore[arg-type]
+
+    apagado = host._btn_start if status == "online_systemd" else host._btn_stop
+    assert apagado.sensitive is False
+    assert apagado.tooltip.strip(), "botão cinza precisa dizer por quê"
+    assert "já está" in apagado.tooltip
+
+
+def test_desligar_com_sucesso_arma_o_flag_que_impede_a_ressurreicao() -> None:
+    """T-06(b): o "Desligar" desta aba passa a durar além do próximo F5.
+
+    Sem o flag, `ensure_daemon_running` religa o daemon na abertura seguinte
+    da janela — e a aba Início, quando o desligamento dela falha, manda a
+    pessoa *"tentar pela aba Sistema"*, ou seja, para o caminho que não
+    armava nada.
+    """
+    host = _Host()
+    host._toast_daemon = lambda *_a, **_kw: None  # type: ignore[assignment]
+    host._refresh_daemon_view_async = lambda *_a, **_kw: None  # type: ignore[assignment]
+
+    host._on_systemctl_done("stop", "unit", 0)
+
+    assert host._user_stopped_daemon is True
+
+
+def test_desligar_que_falhou_nao_arma_o_flag() -> None:
+    """A lição da BUG-HOME-SHUTDOWN-FALSE-OK-01, agora dos dois lados.
+
+    `rc != 0` = nada foi desligado. Armar aí faria a GUI recusar-se a
+    ressuscitar um daemon que nunca parou — a régua tem de saber RECUSAR.
+    """
+    host = _Host()
+    host._toast_daemon = lambda *_a, **_kw: None  # type: ignore[assignment]
+    host._refresh_daemon_view_async = lambda *_a, **_kw: None  # type: ignore[assignment]
+
+    host._on_systemctl_done("stop", "unit", 1)
+
+    assert getattr(host, "_user_stopped_daemon", False) is False
+
+
+def test_ligar_com_sucesso_nao_arma_o_flag_de_desligamento() -> None:
+    """Só o "stop" arma. Um "start" bem-sucedido não pode marcar desligamento."""
+    host = _Host()
+    host._toast_daemon = lambda *_a, **_kw: None  # type: ignore[assignment]
+    host._refresh_daemon_view_async = lambda *_a, **_kw: None  # type: ignore[assignment]
+
+    host._on_systemctl_done("start", "unit", 0)
+
+    assert getattr(host, "_user_stopped_daemon", False) is False
+
+
+# ---------------------------------------------------------------------------
+# T-08 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026) — o painel "Detalhes técnicos"
+# ---------------------------------------------------------------------------
+
+
+class _TextViewQueGuarda:
+    """Dublê de `daemon_status_text` que LEMBRA o que foi escrito.
+
+    O dublê do topo deste arquivo descarta o texto (`set_text` é `pass`), e
+    por isso nenhum teste conseguia perguntar *"o que está no painel?"* — que
+    é a pergunta inteira da T-08.
+    """
+
+    def __init__(self) -> None:
+        self.texto: str = ""
+
+    def get_buffer(self) -> Any:
+        return self
+
+    # --- API de TextBuffer usada por `_pintar_painel_tecnico` ---
+    def set_text(self, t: str) -> None:
+        self.texto = t
+
+    def get_end_iter(self) -> None:
+        return None
+
+    def create_mark(self, *_a: Any) -> None:
+        return None
+
+    def delete_mark(self, _m: Any) -> None:
+        pass
+
+    # --- API de TextView ---
+    def scroll_to_mark(self, *_a: Any, **_kw: Any) -> None:
+        pass
+
+    def scroll_to_iter(self, *_a: Any, **_kw: Any) -> None:
+        pass
+
+
+class _HostComPainel(_Host):
+    def __init__(self) -> None:
+        super().__init__()
+        self._painel = _TextViewQueGuarda()
+
+    def _get(self, widget_id: str) -> Any:
+        if widget_id == "daemon_status_text":
+            return self._painel
+        return super()._get(widget_id)
+
+
+def test_o_detalhe_do_erro_aparece_no_painel() -> None:
+    """A promessa que a frase faz, cumprida pela primeira vez.
+
+    Quinze frases desta aba mandam "ver os 'Detalhes técnicos'". Três tinham
+    o detalhe naquele painel — as de `systemctl`. As outras onze nascem no
+    processo da JANELA, cujo log vai para o `stderr` dela e não entra na
+    unidade do daemon: o painel mostrava `systemctl status` do daemon
+    enquanto o erro acontecia noutro processo.
+    """
+    host = _HostComPainel()
+
+    host._set_daemon_text("(systemctl status do daemon)")
+    host._detalhe_tecnico("Traceback: ValueError('vdf ilegível')", assunto="teste")
+
+    assert "systemctl status do daemon" in host._painel.texto
+    assert "vdf ilegível" in host._painel.texto
+    assert "--- teste ---" in host._painel.texto
+
+
+def test_o_detalhe_sobrevive_ao_refresh_que_vem_logo_depois() -> None:
+    """A metade que faz a cura funcionar de verdade.
+
+    `_on_systemctl_done` chama `_refresh_daemon_view_async()` logo após o
+    toast, e o refresh reescreve o painel com o `systemctl status`. No
+    primeiro desenho desta cura o detalhe era pintado por cima e durava
+    segundos — tempo menor do que o de ler a frase e olhar para baixo.
+    """
+    host = _HostComPainel()
+
+    host._detalhe_tecnico("motivo que importa", assunto="falha")
+    host._set_daemon_text("(status novo, vindo do refresh)")
+
+    assert "status novo" in host._painel.texto
+    assert "motivo que importa" in host._painel.texto
+
+
+def test_limpar_tira_o_detalhe_e_mantem_o_corpo() -> None:
+    host = _HostComPainel()
+    host._set_daemon_text("(corpo)")
+    host._detalhe_tecnico("erro velho")
+
+    host._limpar_detalhe_tecnico()
+
+    assert "(corpo)" in host._painel.texto
+    assert "erro velho" not in host._painel.texto
+
+
+def test_detalhe_vazio_nao_suja_o_painel_com_cabecalho_solto() -> None:
+    """Régua que sabe RECUSAR: sem saída crua não há detalhe a mostrar.
+
+    Um cabeçalho "detalhe do erro" com nada embaixo é a mesma promessa
+    quebrada, só que menor.
+    """
+    host = _HostComPainel()
+    host._set_daemon_text("(corpo)")
+
+    assert host._detalhe_tecnico("   ") is False
+    assert host._detalhe_tecnico(None) is False
+    assert host._painel.texto == "(corpo)"
+
+
+def test_o_painel_continua_sem_escapes_ansi() -> None:
+    """O `systemctl status` vem colorido; o TextView não entende ANSI.
+
+    A limpeza já existia em `_set_daemon_text` e não podia ter se perdido na
+    mudança — ela agora mora em `_pintar_painel_tecnico`, e o detalhe cru
+    passa pela MESMA limpeza (é ele que traz saída de terminal).
+    """
+    host = _HostComPainel()
+
+    host._set_daemon_text("\x1b[32mativo\x1b[0m")
+    host._detalhe_tecnico("\x1b[31mfalhou\x1b[0m")
+
+    assert "\x1b[" not in host._painel.texto
+    assert "ativo" in host._painel.texto
+    assert "falhou" in host._painel.texto
