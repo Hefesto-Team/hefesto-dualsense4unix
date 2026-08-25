@@ -92,13 +92,26 @@ class TestAllowlistNoArquivo:
     def test_le_appids_do_arquivo_xdg(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        (tmp_path / "steam_input_apps.txt").write_text(
+        """T-15 (25/08/2026): passou a medir o CONTRATO, não o mecanismo.
+
+        Este teste substituía `xdg_paths.config_dir` por um dublê — e por
+        isso ficava verde qualquer que fosse o resolvedor que o
+        `steam_input_appids` usasse por dentro. Era ele o combinado errado:
+        `launch_env` montava `config_dir() / "steam_input_apps.txt"` por conta
+        própria, um SEXTO resolvedor do mesmo caminho, e o teste protegia essa
+        duplicação em vez de a denunciar.
+
+        Agora a régua é a variável de ambiente que a janela, o daemon, o
+        `disable_steam_input.sh` e o `doctor.sh` todos obedecem — o único
+        combinado que existe fora do código.
+        """
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+        destino = tmp_path / "hefesto-dualsense4unix" / "steam_input_apps.txt"
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(
             "# comentário\n2111190\n\nlixo\n620 \n", encoding="utf-8"
         )
-        monkeypatch.setattr(
-            "hefesto_dualsense4unix.utils.xdg_paths.config_dir",
-            lambda ensure=False: tmp_path,
-        )
+
         assert le.steam_input_appids() == {MMJ, 620}
 
     def test_arquivo_ausente_nao_levanta(self, tmp_path: Path) -> None:

@@ -52,9 +52,15 @@ def test_o_orcamento_acende_a_marca() -> None:
     """MORDE: sem a chamada, declarar orçamento não avisa que há pendência."""
     host = _HostQueConta()
 
-    secao_orcamento._ao_escolher(host, _Seletor("max"))
+    # NOTA DATADA — 25/08/2026, `D-PERFIL-DE-DESEMPENHO`: o seletor devolve o
+    # id do PERFIL, e quem traduz para a chave de disco é `TETO_POR_PERFIL`.
+    # Passar "max" aqui (o id antigo) faria o dublê mentir sobre o que o widget
+    # entrega, e o teste mediria uma tela que não existe mais.
+    secao_orcamento._ao_escolher(
+        host, _Seletor(secao_orcamento.PERFIL_TUDO_LIGADO)
+    )
 
-    assert host._maquina_pendente == {"orcamento": {"teto": "max"}}, (
+    assert host._maquina_pendente == {"orcamento": {"teto": "balanceado"}}, (
         "instrumento inválido: a declaração nem foi acumulada"
     )
     assert host.marcas == 1, (
@@ -77,7 +83,9 @@ def test_hospedeiro_sem_rodape_nao_derruba_a_declaracao() -> None:
             return None
 
     host = _SemRodape()
-    secao_orcamento._ao_escolher(host, _Seletor("economia"))
+    secao_orcamento._ao_escolher(
+        host, _Seletor(secao_orcamento.PERFIL_BATERIA_LONGA)
+    )
 
     assert host._maquina_pendente == {"orcamento": {"teto": "economia"}}, (
         "a ausência do rodapé derrubou a declaração — a fiação de uma aba não "
