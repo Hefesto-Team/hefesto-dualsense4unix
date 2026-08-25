@@ -18,12 +18,18 @@ TRÊS COISAS QUE ESTE ARQUIVO NÃO DEIXA VOLTAR, cada uma com preço medido:
    é síncrona com dois segundos de teto (`desktop_notifications.py:33`) — na
    thread que desenha, ela congela a janela inteira ao abrir a aba.
 
-POR QUE NADA AQUI ESCREVE NO DISCO. `gui_prefs._CONFIG_DIR` é constante de
-módulo, resolvida na IMPORTAÇÃO contra o `$HOME` de verdade: o isolamento de
-`XDG_CONFIG_HOME` do conftest não a alcança. Um `set_pref` real neste arquivo
-editaria as preferências DELA — por isso as duas pontas de gravação
+POR QUE NADA AQUI ESCREVE NO DISCO. As duas pontas de gravação
 (`secao_janela.set_pref` e `ambiente.set_pref`) entram como dublê que escreve
-num dicionário, e o dicionário é o mesmo que o `load_gui_prefs` dublê lê.
+num dicionário, e o dicionário é o mesmo que o `load_gui_prefs` dublê lê — é
+assim que o teste afirma sobre o VALOR gravado sem depender de arquivo.
+
+CORREÇÃO DE FATO (25/08/2026, LUZ-CEGA-01/E8): este parágrafo dizia que o
+dublê existia porque `gui_prefs._CONFIG_DIR` era constante de módulo resolvida
+na IMPORTAÇÃO, fora do alcance do isolamento do conftest. A descrição estava
+CERTA e o defeito era real — `gui_prefs` agora resolve o caminho na chamada
+(`_prefs_file()`), e o portão `test_luz_cega_e8_o_berco_nao_vaza.py` reprova a
+volta da constante. O dublê fica pelo motivo do parágrafo acima, não mais por
+medo do `$HOME`.
 
 AS MORDIDAS, todas arrancadas e devolvidas em 22/08/2026 nesta árvore:
 
