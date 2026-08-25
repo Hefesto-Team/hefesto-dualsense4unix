@@ -791,7 +791,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._no_jogo_vazio.set_visible(
             recado is None and isinstance(state, dict) and not conectados
         )
-        for key, entry in zip(keys, conectados, strict=True):
+        # Mesma correção de T4 aplicada aos cards (25/08/2026): a chave sai da
+        # lista ORDENADA e o registro tem de sair da mesma — casá-los por
+        # posição na lista crua alimentava o painel do jogador errado.
+        for key, entry in zip(
+            keys, self._conectados_na_ordem_dos_cards(conectados), strict=True
+        ):
             painel = self._no_jogo_paineis.get(key)
             if painel is not None and isinstance(state, dict):
                 painel.atualizar(entry, state)
@@ -1094,6 +1099,30 @@ class StatusActionsMixin(WidgetAccessMixin):
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _conectados_na_ordem_dos_cards(
+        conectados: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """A mesa na ordem em que os cards nascem — a MESMA ordem da fita.
+
+        Existe por um defeito medido em 25/08/2026
+        (STATUS-DIZ-O-QUE-VÊ-01/T4). A Z2-7 pôs `_status_card_keys_for` a
+        percorrer `_por_numero_de_identidade`, e as duas grades que consomem
+        as chaves continuaram casando ``keys`` com ``conectados`` na ordem
+        CRUA do daemon, posição a posição — ``zip(keys, conectados)``. Com a
+        mesa fora de ordem (o caso normal), o card do Controle 1 passou a
+        receber o registro do Controle 2: bateria, analógicos, luz e
+        microfone do vizinho, sob o título certo. Trocar a ordem de nascimento
+        sem trocar a ordem de alimentação é pior que o defeito original — lá a
+        pessoa clicava no chip errado, aqui ela lê o controle errado.
+
+        Uma função só, chamada pelas TRÊS pontas (a que faz as chaves, a que
+        alimenta os cards e a que alimenta os painéis do "No jogo"), é o que
+        impede a divergência de voltar: enquanto houver dois lugares
+        ordenando, o defeito é questão de tempo.
+        """
+        return StatusActionsMixin._por_numero_de_identidade(conectados)
+
+    @staticmethod
     def _status_card_keys_for(
         conectados: list[dict[str, Any]],
     ) -> list[tuple[Any, ...]]:
@@ -1126,7 +1155,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         """
         keys: list[tuple[Any, ...]] = []
         vistos: dict[tuple[Any, Any], int] = {}
-        for pos, c in enumerate(StatusActionsMixin._por_numero_de_identidade(conectados)):
+        for pos, c in enumerate(
+            StatusActionsMixin._conectados_na_ordem_dos_cards(conectados)
+        ):
             indice = c.get("index")
             if not isinstance(indice, int) or isinstance(indice, bool):
                 indice = pos
@@ -1171,7 +1202,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         # dicionário — nada de subprocess a 10 Hz. Quem foi ao PipeWire foi o
         # `mic_monitor`, na cadência de 3 s dele.
         self._rota_sink = self._sink_do_controle_para_a_rota(monitor, uniqs)
-        for key, entry in zip(keys, conectados, strict=True):
+        # T4 (25/08/2026): `keys` nasce ORDENADA (Z2-7) e `conectados` chega
+        # na ordem crua do daemon. Casar as duas por posição alimentava cada
+        # card com o registro do vizinho — ver
+        # `_conectados_na_ordem_dos_cards`.
+        for key, entry in zip(
+            keys, self._conectados_na_ordem_dos_cards(conectados), strict=True
+        ):
             card = self._status_cards.get(key)
             if card is None:
                 continue
