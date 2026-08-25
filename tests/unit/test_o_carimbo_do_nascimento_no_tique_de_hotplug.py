@@ -87,16 +87,37 @@ def _nascimentos_da_bancada() -> dict[str, sb.Nascimento]:
     }
 
 
-#: `{uniq: nó}` — o que o backend diria estar segurando. É o portão que separa
-#: "todo DualSense da máquina" de "os controles que o produto abriu".
+def como_o_backend_escreve(uniq: str) -> str:
+    """O MESMO endereço na grafia do backend: só os hexa, sem os dois-pontos.
+
+    NÃO é cosmético, e por isso está aqui em cima com nome próprio. As duas
+    metades desta casa escrevem o mesmo MAC de jeitos diferentes, e isso está
+    MEDIDO na bancada em 25/08/2026:
+
+    * o sysfs devolve ``HID_UNIQ=a0:fa:9c:…`` — COM os dois-pontos (lido no
+      ``uevent`` do DualSense do cabo desta máquina);
+    * o backend chaveia por ``core/sysfs_leds.norm_mac``, que os TIRA
+      (``nos_hidraw_por_uniq`` → ``_key_to_uniq`` → ``a0fa9c…``).
+
+    Um fixture que devolvesse a grafia do sysfs onde o produto lê a do backend
+    seria régua falsa: ela aprovaria um casamento que em produção não acontece
+    NUNCA. Foi assim que o carimbo do nascimento passou de 22/08 a 25/08
+    "entregue" e sem carimbar nada na máquina dela.
+    """
+    return "".join(ch for ch in uniq.lower() if ch in "0123456789abcdef")
+
+
+#: `{uniq: nó}` — o que o backend diria estar segurando, NA GRAFIA DELE. É o
+#: portão que separa "todo DualSense da máquina" de "os controles que o produto
+#: abriu".
 _MAPA_DA_BANCADA: dict[str, str] = {
-    uniq: no for _i, uniq, _hw, no, _q, _s in _BANCADA
+    como_o_backend_escreve(uniq): no for _i, uniq, _hw, no, _q, _s in _BANCADA
 }
 
 
 def _leituras_da_bancada() -> list[sb.Leitura]:
     """O que o lado de DIAGNÓSTICO do módulo responde para a bancada inteira."""
-    return sb.ler_a_mesa(
+    return sb.veredito_do_nascimento(
         instancias=_instancias_da_bancada(), nascimentos=_nascimentos_da_bancada()
     )
 
@@ -165,14 +186,14 @@ class TestSuspeitaNaoVoltaAtras:
         alvo = _instancia(_BANCADA[0])
         cartorio.observar([alvo], agora=100.0)
         cartorio.carimbar(
-            sb.ler_a_mesa(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
+            sb.veredito_do_nascimento(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
             agora=100.0,
         )
         assert cartorio.da_instancia("0028").pede_reconexao is True
 
         # Agora o diário rotacionou e a instância sumiu dele: `nao_sei`.
         cartorio.carimbar(
-            sb.ler_a_mesa(instancias=[alvo], nascimentos={}), agora=101.0
+            sb.veredito_do_nascimento(instancias=[alvo], nascimentos={}), agora=101.0
         )
         assert cartorio.da_instancia("0028").confianca == sb.CONFIANCA_SUSPEITA
 
@@ -182,7 +203,7 @@ class TestSuspeitaNaoVoltaAtras:
         alvo = _instancia(_BANCADA[0])
         cartorio.observar([alvo], agora=100.0)
         cartorio.carimbar(
-            sb.ler_a_mesa(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
+            sb.veredito_do_nascimento(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
             agora=100.0,
         )
         assert cartorio.observar([alvo], agora=100.5) == []
@@ -196,7 +217,7 @@ class TestASondaAoVivoSoAgrava:
 
     def _limpa(self) -> tuple[sb.Instancia, list[sb.Leitura]]:
         alvo = _instancia(_BANCADA[4])  # a `.0033`, que nasceu com o nó livre
-        return alvo, sb.ler_a_mesa(
+        return alvo, sb.veredito_do_nascimento(
             instancias=[alvo], nascimentos=_nascimentos_da_bancada()
         )
 
@@ -270,7 +291,7 @@ class TestOHwVersionNaoEIdentidade:
         cartorio = sb.CartorioDoNascimento()
         cartorio.observar(vivas, agora=100.0)
         cartorio.carimbar(
-            sb.ler_a_mesa(instancias=vivas, nascimentos=_nascimentos_da_bancada()),
+            sb.veredito_do_nascimento(instancias=vivas, nascimentos=_nascimentos_da_bancada()),
             agora=100.0,
         )
         assert cartorio.do_uniq("aa:bb:cc:11:22:02").instancia == "0029"
@@ -294,7 +315,7 @@ class TestMeiaReguaNaoAbsolve:
                 escritor_conhecido=False,
             )
         }
-        (leitura,) = sb.ler_a_mesa(instancias=[alvo], nascimentos=nascimentos)
+        (leitura,) = sb.veredito_do_nascimento(instancias=[alvo], nascimentos=nascimentos)
         assert leitura.confianca == sb.CONFIANCA_NAO_SEI
         assert not leitura.pede_reconexao
 
@@ -367,7 +388,7 @@ def bancada_no_sysfs(monkeypatch):
 def diario_da_bancada(monkeypatch):
     """O diagnóstico do módulo, sem `journalctl`. Conta quantas vezes foi lido."""
     chamadas: list[int] = []
-    real = sb.ler_a_mesa
+    real = sb.veredito_do_nascimento
 
     def _ler(**kwargs: Any) -> list[sb.Leitura]:
         chamadas.append(1)
@@ -376,7 +397,7 @@ def diario_da_bancada(monkeypatch):
             nascimentos=_nascimentos_da_bancada(),
         )
 
-    monkeypatch.setattr(cx, "ler_a_mesa", _ler)
+    monkeypatch.setattr(cx, "veredito_do_nascimento", _ler)
     return chamadas
 
 
@@ -430,7 +451,7 @@ class TestOTiqueDeHotplugCarimba:
                 "escritor, porque o produto não sonda por regra dela"
             )
 
-        monkeypatch.setattr(cx, "ler_a_mesa", _bomba)
+        monkeypatch.setattr(cx, "veredito_do_nascimento", _bomba)
         daemon = _DaemonFalso(nativo=True)
         assert _carimbar(daemon) == 6
         cartorio = cx.cartorio_do_nascimento_de(daemon)
@@ -448,7 +469,7 @@ class TestOTiqueDeHotplugCarimba:
         daemon = _DaemonFalso(
             nativo=True,
             nos=("/dev/hidraw6",),
-            segura={chegada.uniq: "/dev/hidraw6"},
+            segura={como_o_backend_escreve(chegada.uniq): "/dev/hidraw6"},
         )
         assert _carimbar(daemon, agora=0.0) == 0
         vivas.append(chegada)
@@ -467,7 +488,7 @@ class TestOTiqueDeHotplugCarimba:
 
         daemon = _DaemonFalso(
             nos=("/dev/hidraw6",),
-            segura={chegada.uniq: "/dev/hidraw6"},
+            segura={como_o_backend_escreve(chegada.uniq): "/dev/hidraw6"},
         )
         assert _carimbar(daemon, agora=0.0) == 0  # mesa vazia: a primeira passada
         vivas.append(chegada)
@@ -500,10 +521,73 @@ class TestOCarimboSoFalaDosControlesDoProduto:
     def test_o_dualsense_do_vizinho_nao_e_carimbado(
         self, bancada_no_sysfs, diario_da_bancada
     ) -> None:
-        daemon = _DaemonFalso(segura={"aa:bb:cc:11:22:02": "/dev/hidraw7"})
+        daemon = _DaemonFalso(
+            segura={como_o_backend_escreve("aa:bb:cc:11:22:02"): "/dev/hidraw7"}
+        )
         assert _carimbar(daemon) == 1
         cartorio = cx.cartorio_do_nascimento_de(daemon)
         assert [c.instancia for c in cartorio.todos()] == ["0029"]
+
+
+class TestOEnderecoCasaAsDuasGrafias:
+    """O defeito de 25/08/2026: o carimbo NUNCA carimbou em produção.
+
+    O filtro de "só os controles NOSSOS" comparava o ``uniq`` do sysfs
+    (``aa:bb:cc:11:22:01``, com os dois-pontos — MEDIDO no ``uevent`` do
+    DualSense do cabo desta máquina) com a chave do backend
+    (``aabbcc112201``, sem, porque ``_key_to_uniq`` passa por ``norm_mac``).
+    A comparação não casa nunca: a lista de instâncias saía VAZIA, o tique
+    devolvia zero e a E1 estava declarada entregue havia três dias.
+
+    A régua que escondia isso era o fixture, que devolvia a grafia do sysfs
+    onde o produto lê a do backend — o instrumento mentindo mais que o
+    produto, que é a armadilha nº 1 desta casa.
+    """
+
+    def test_as_duas_grafias_do_mesmo_endereco_colapsam_numa_so(self) -> None:
+        do_sysfs = "AA:bb:CC:11:22:01"
+        do_backend = como_o_backend_escreve(do_sysfs)
+        assert do_backend == "aabbcc112201"
+        assert sb.endereco_normalizado(do_sysfs) == sb.endereco_normalizado(do_backend)
+
+    def test_o_tique_carimba_com_o_backend_na_grafia_dele(
+        self, bancada_no_sysfs, diario_da_bancada
+    ) -> None:
+        """A mordida principal: o fixture fala como o backend REAL fala."""
+        daemon = _DaemonFalso()
+        assert _carimbar(daemon) == 6, (
+            "o tique voltou a comparar as duas grafias cruas — em produção isso "
+            "é zero carimbo por tique, para sempre"
+        )
+
+    def test_a_tela_acha_o_carimbo_pela_grafia_que_ela_conhece(self) -> None:
+        """A tela só tem o ``uniq`` do payload de IPC, que vem do backend."""
+        cartorio = sb.CartorioDoNascimento()
+        cartorio.observar(_instancias_da_bancada(), agora=100.0)
+        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+
+        pela_tela = cartorio.do_uniq(como_o_backend_escreve("aa:bb:cc:11:22:02"))
+        assert pela_tela is not None, (
+            "`do_uniq` devolveu None para um controle carimbado — a tela lê "
+            "isso como \"não carimbei\", e some com a razão de todo card"
+        )
+        assert pela_tela.instancia == "0029"
+
+    def test_a_grafia_do_sysfs_continua_achando(self) -> None:
+        """A cura normaliza os DOIS lados; nenhum chamador antigo se perde."""
+        cartorio = sb.CartorioDoNascimento()
+        cartorio.observar(_instancias_da_bancada(), agora=100.0)
+        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+        achado = cartorio.do_uniq("aa:bb:cc:11:22:02")
+        assert achado is not None and achado.instancia == "0029"
+
+    def test_endereco_vazio_nao_acha_o_primeiro_da_fila(self) -> None:
+        """Normalizar sem esta guarda faria ``""`` casar com qualquer coisa."""
+        cartorio = sb.CartorioDoNascimento()
+        cartorio.observar(_instancias_da_bancada(), agora=100.0)
+        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+        assert cartorio.do_uniq("") is None
+        assert cartorio.do_uniq("sem-hexa-nenhum") is None
 
 
 class TestOTiqueDeHotplugChamaOCarimbo:

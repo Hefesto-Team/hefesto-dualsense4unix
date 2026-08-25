@@ -93,7 +93,7 @@ class TestOModuloNaoLeALampada:
             frases.append(sb._veredito(alvo, nascimentos).porque)
         frases.append(sb.limpo_para_conectar(sonda=lambda _: {"/dev/hidraw7": [1]})[1])
         frases.append(sb.limpo_para_conectar(sonda=lambda _: {})[1])
-        frases.append(sb.relatorio([sb.ler_a_mesa(
+        frases.append(sb.relatorio([sb.veredito_do_nascimento(
             instancias=[_no_radio()],
             nascimentos={"0029": _nascimento("0029", sujo=True)},
         )[0]]))
@@ -204,7 +204,7 @@ class TestAMascara:
     def test_o_relatorio_nao_carrega_endereco_inteiro(self) -> None:
         """O retrato das abas versiona PNG do que aparece na tela."""
         texto = sb.relatorio(
-            sb.ler_a_mesa(
+            sb.veredito_do_nascimento(
                 instancias=[_no_radio()],
                 nascimentos={"0029": _nascimento("0029", sujo=True)},
             )
