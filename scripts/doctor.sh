@@ -3708,13 +3708,36 @@ _entrada_alcancavel_pelo_jogo() {
     return 1
 }
 
-#: O veredito POR CONTROLE (E3 da sprint, e o item 3.1 do O-QUE-FICOU-ABERTO-01
-#: desde 16/08): não "quantos nós hidraw estão 0600", e sim "este controle está
-#: escondido DO JOGO?". Preenche quatro globais porque bash não devolve lista:
-#:   TRES_SUP_CONTROLES  quantos nós hidraw escondidos entraram na conta
+#: O veredito POR CONTROLE (E3 da sprint): não "quantos nós hidraw estão 0600",
+#: e sim "este controle está escondido DO JOGO?".
+#:
+#: CORREÇÃO DE FATO — 25/08/2026, conferência da frente C4. Este comentário
+#: dizia que isto fecha "o item 3.1 do O-QUE-FICOU-ABERTO-01, aberto desde
+#: 16/08". **NÃO FECHA, e é METADE da E3.** O 3.1 pede o veredito por
+#: comparação com o CENSO DE FÍSICOS — "o `pass` só é honesto quando
+#: `escondidos == físicos`" (2026-08-16-O-QUE-FICOU-ABERTO-01:288-291). Aqui o
+#: denominador é "o que o broker escondeu", não "o que está na mesa": um
+#: DualSense físico que o broker NUNCA escondeu é invisível para esta função, e
+#: a cena exata de 16/08 (dois físicos, um escondido) continua saindo verde.
+#: O que falta é barato e está a poucas linhas daqui — o bloco python de
+#: `check_hidraw_broker` já monta `candidatos` varrendo
+#: `/sys/class/hidraw/hidraw*/device/uevent` por `054C`, e só o usa para o teste
+#: do `cmd open`. Publicar essa lista e comparar os conjuntos fecha o 3.1.
+#: NÃO foi feito aqui porque não há DualSense nesta bancada para medir, e régua
+#: de esconder que ninguém exerceu com aparelho é como a que já mentiu.
+#:
+#: Preenche CINCO globais porque bash não devolve lista (esta lista dizia
+#: quatro e o código escrevia cinco — o `TRES_SUP_N_ABERTOS` sai na tela dentro
+#: do `warn` e não estava aqui):
+#:   TRES_SUP_CONTROLES  quantos nós hidraw escondidos ENTRARAM na varredura.
+#:                       Inclui os sem mapa, logo NÃO é o número de medidos
 #:   TRES_SUP_ESCONDIDOS quantos deles têm as três superfícies fechadas
 #:   TRES_SUP_ABERTOS    os nós de entrada alcançáveis, por nome
+#:   TRES_SUP_N_ABERTOS  quantos são esses nós
 #:   TRES_SUP_SEM_MAPA   quantos o sysfs não soube mapear (não contam como bons)
+#:
+#: `CONTROLES - SEM_MAPA` é o que foi de fato medido, e é esse — e só esse — o
+#: número que uma frase de veredito pode afirmar.
 _tres_superficies_medir() {
     TRES_SUP_CONTROLES=0
     TRES_SUP_ESCONDIDOS=0
@@ -3774,7 +3797,19 @@ _veredito_do_hide() {
         warn "o hide cobre SÓ o hidraw: ${TRES_SUP_ESCONDIDOS} de ${TRES_SUP_CONTROLES} controle(s) escondido(s) do jogo — o FÍSICO segue alcançável em ${TRES_SUP_N_ABERTOS} nó(s) de entrada (${TRES_SUP_ABERTOS}), e quem enumerar /dev/input em vez de hidraw acha o controle dobrado. O que separa os dois hoje é a env do wrapper (SDL_GAMECONTROLLER_IGNORE_DEVICES/PROTON_DISABLE_HIDRAW) — veja o check do wrapper de launch acima; estender o hide a evdev/joydev é decisão em aberto (ESCONDE-SÓ-O-HIDRAW-01, E2)"
         return
     fi
-    pass "broker escondendo ${hidden_count} nó(s) físico(s), e as TRÊS superfícies dos ${TRES_SUP_CONTROLES} controle(s) fechadas (hidraw + evdev + joydev) — o jogo só vê o vpad (giroscópio sobrevive via fd-injection)"
+    # A conta é sobre o que foi MEDIDO, não sobre o que entrou na varredura.
+    # `TRES_SUP_CONTROLES` inclui os nós sem mapa (é incrementado antes do
+    # `continue` lá em cima), e usá-lo aqui fazia o `pass` afirmar as três
+    # superfícies fechadas de controles que a linha `info` acima acabara de
+    # declarar FORA do veredito. Achado pela conferência da frente C4 em
+    # 25/08/2026 — é a mesma família do defeito que este bloco inteiro veio
+    # curar: a régua mentindo sobre a própria cura.
+    local medidos=$((TRES_SUP_CONTROLES - TRES_SUP_SEM_MAPA))
+    if [[ "${TRES_SUP_SEM_MAPA}" -gt 0 ]]; then
+        pass "broker escondendo ${hidden_count} nó(s) físico(s), e as TRÊS superfícies dos ${medidos} controle(s) MEDIDO(S) fechadas (hidraw + evdev + joydev). NÃO afirmo nada sobre ${TRES_SUP_SEM_MAPA} outro(s), que o sysfs não soube mapear (giroscópio sobrevive via fd-injection)"
+        return
+    fi
+    pass "broker escondendo ${hidden_count} nó(s) físico(s), e as TRÊS superfícies dos ${medidos} controle(s) fechadas (hidraw + evdev + joydev) — o jogo só vê o vpad (giroscópio sobrevive via fd-injection)"
 }
 
 # BROKER-01 (Onda S — fd-injection): o broker root que esconde o hidraw

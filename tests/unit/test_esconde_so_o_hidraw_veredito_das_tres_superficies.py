@@ -447,3 +447,83 @@ class TestAMordidaDaCuraArrancada:
         r = _roda(tmp_path, cena, doctor=arrancado)
         assert "[PASS]" in r.stdout, r.stdout
         assert "event21" not in r.stdout
+
+
+class TestOPassNaoAfirmaSobreOQueNaoMediu:
+    """O `pass` só pode falar dos controles que ele MEDIU.
+
+    ACRESCENTADO em 25/08/2026 pela conferência da frente C4, e o defeito era
+    real: `TRES_SUP_CONTROLES` é incrementado ANTES do `continue` que manda o
+    nó sem mapa embora, então ele conta quem entrou na varredura, não quem foi
+    medido. O `pass` usava esse número e afirmava as três superfícies fechadas
+    de controles que a linha `info` logo acima acabara de declarar **fora do
+    veredito**.
+
+    É a mesma família do defeito que este bloco inteiro veio curar — a régua
+    mentindo sobre a própria cura —, só que uma camada acima.
+    """
+
+    def _cena_uma_fechada_uma_sem_mapa(self) -> dict[str, list[Entrada] | None]:
+        """Um controle com tudo fechado; outro que o sysfs não soube mapear.
+
+        `None` encena o nó recém-sumido ou o replug no meio da leitura, que é
+        diferente de "está tudo fechado" — a distinção que o `_monta_cena` já
+        modelava e que o `pass` apagava.
+        """
+        return {
+            "hidraw4": [Entrada("event21", 0o600), Entrada("js0", 0o600)],
+            "hidraw5": None,
+        }
+
+    def test_o_pass_conta_os_medidos_e_nao_os_varridos(self, tmp_path: Path) -> None:
+        r = _roda(tmp_path, self._cena_uma_fechada_uma_sem_mapa())
+        assert "[PASS]" in r.stdout, r.stdout
+        assert "dos 1 controle(s)" in r.stdout, (
+            "o `pass` devia contar UM controle — o único que foi medido —, e "
+            f"não os dois que entraram na varredura. Saiu:\n{r.stdout}"
+        )
+        assert "dos 2 controle(s)" not in r.stdout, (
+            "o `pass` afirmou as três superfícies fechadas de DOIS controles, "
+            "e um deles o sysfs não soube mapear. É o achado ALTA da "
+            f"conferência da frente C4.\n{r.stdout}"
+        )
+
+    def test_o_pass_confessa_o_que_ficou_de_fora(self, tmp_path: Path) -> None:
+        """Contar certo não basta: quem lê tem de saber que houve um não-medido.
+
+        Sem esta linha, o `pass` "dos 1 controle(s)" seria verdadeiro e ainda
+        assim enganoso — some o segundo controle sem dizer que ele existiu.
+        """
+        r = _roda(tmp_path, self._cena_uma_fechada_uma_sem_mapa())
+        assert "NÃO afirmo nada sobre 1" in r.stdout, (
+            f"o `pass` contou certo mas não disse o que ficou de fora:\n{r.stdout}"
+        )
+        assert "o jogo só vê o vpad" not in r.stdout, (
+            "com um nó fora do veredito, o `pass` NÃO pode concluir que o jogo "
+            f"só vê o vpad — ele não olhou para todos.\n{r.stdout}"
+        )
+
+    def test_sem_nenhum_sem_mapa_a_frase_forte_continua(self, tmp_path: Path) -> None:
+        """A cura não pode ter custado a conclusão quando ela é VERDADE.
+
+        Sem esta guarda passaria um "conserto" que apagasse a frase forte
+        sempre — e o `pass` deixaria de dizer o que a pessoa precisa saber no
+        caso em que tudo foi medido e tudo está fechado.
+        """
+        r = _roda(tmp_path, _cena_fechada())
+        assert "[PASS]" in r.stdout, r.stdout
+        assert "o jogo só vê o vpad" in r.stdout, (
+            f"tudo medido e tudo fechado: a frase forte é honesta aqui.\n{r.stdout}"
+        )
+        assert "NÃO afirmo nada" not in r.stdout, r.stdout
+
+    def test_a_mordida_o_pass_volta_a_contar_os_varridos(self, tmp_path: Path) -> None:
+        """Arrancada a cura, o `pass` volta a afirmar sobre o não-medido."""
+        alvo = "local medidos=$((TRES_SUP_CONTROLES - TRES_SUP_SEM_MAPA))"
+        assert alvo in DOCTOR, "a linha da cura mudou de forma"
+        arrancado = DOCTOR.replace(alvo, "local medidos=${TRES_SUP_CONTROLES}")
+        r = _roda(tmp_path, self._cena_uma_fechada_uma_sem_mapa(), doctor=arrancado)
+        assert "dos 2 controle(s)" in r.stdout, (
+            "com a cura arrancada o `pass` devia voltar a contar os dois "
+            f"varridos — se não voltou, esta régua não está medindo.\n{r.stdout}"
+        )
