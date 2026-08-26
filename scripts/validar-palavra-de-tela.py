@@ -158,7 +158,44 @@ JARGAO_BANIDO: dict[str, str] = {
     "Aplicar correções": "Consertar problemas conhecidos",
     "Testar criação de device virtual": "Testar o controle virtual",
     "Gamepads:": "Controles detectados:",
+    # CONFIGURAÇÕES-O-LÉXICO-01 / LEX-10, dente 2 (25/08/2026). A aba
+    # Configurações fala a língua do barramento com quem enxerga um gabinete e
+    # um número de entrada. Ela: *"vizinhança das portas, qual porta?"*.
+    #
+    # ENTRAM SEM DÍVIDA, e a medição é o que autoriza: `devpath` e `vid:pid` não
+    # são texto de tela em lugar nenhum desta árvore hoje — aparecem só em
+    # docstring e comentário, e o `_texto_reconstruido` remonta
+    # `f"Barramento {n}, porta {devpath}"` como `"Barramento {}, porta {}"`, sem
+    # a palavra. São, portanto, proibição PREVENTIVA de custo zero: nada fica
+    # vermelho, e a próxima frase que tentar pôr o identificador do fabricante
+    # na tela reprova.
+    "devpath": "diga a entrada USB: 'Entrada 4 do hub'",
+    "vid:pid": "o código do fabricante não é palavra de tela — põe na dica",
 }
+
+#: A TERCEIRA ENTRADA DESTA LISTA AINDA NÃO ESTÁ AQUI, E A AUSÊNCIA É MEDIDA.
+#:
+#: A LEX-10 pede também::
+#:
+#:     "barramento": "diga a entrada USB: 'Entrada 4 do hub'",
+#:
+#: Ela NÃO entra hoje porque cinco frases de tela de
+#: `app/actions/config/secao_mesa.py` ainda dizem a palavra — a dica do selo
+#: `(lido)` (`:193`), a tabela vazia (`:949`), a dica do hub, a das duas
+#: perguntas de rádio (`:486`) e a coluna "Onde está" (`:1604`). Elas saem nas
+#: LEX-6 e LEX-11, que moram naquele arquivo, e ele é de outra frente desta leva
+#: (R1: quem edita arquivo alheio desfaz o vizinho em silêncio).
+#:
+#: Pôr a palavra na lista antes da troca deixaria DOIS portões vermelhos — este
+#: e o `test_config_a_palavra_de_tela_da_aba_montada.py`, que importa esta lista
+#: — e a única saída seria declarar cinco dívidas que nascem para ser apagadas
+#: na semana seguinte. Lista de dívida que nasce cheia vira paisagem, e este
+#: portão já pagou essa lição em 13/08.
+#:
+#: **A linha acima é para colar em `JARGAO_BANIDO` no MESMO commit que trocar a
+#: última das cinco frases.** Colada antes, ela reprova; colada depois, ela é o
+#: que impede a palavra de voltar.
+_A_PALAVRA_QUE_ESPERA_A_LEX_6 = "barramento"
 
 #: Os rótulos que AINDA carregam jargão nesta árvore, um a um, medidos em
 #: 13/08/2026. Não é perdão: é a dívida da E1-E4 escrita com nome e endereço,
@@ -181,6 +218,17 @@ DIVIDA_DA_PALAVRA_01: dict[str, str] = {
     "Restaurar Default": (
         "13/08/2026 — sobrevivente da E3 da PALAVRA-01, que ainda não foi "
         "executada. Vira `Voltar ao padrão`."
+    ),
+    "VID:PID:": (
+        "25/08/2026 — `main.glade:3147`, o rótulo do par de códigos do gamepad "
+        "virtual na aba Sistema. É o ÚNICO texto de tela desta árvore que a "
+        "entrada `vid:pid` da LEX-10 pegou, e a medição foi feita ao ligá-la: "
+        "uma reprovação, num rótulo real, numa aba que não é a Configurações — "
+        "que é a prova de que o termo morde fora do território que o criou. "
+        "O conserto é redação de tela e o `.glade` não é da CONFIGURAÇÕES-O-"
+        "LÉXICO-01: o par vira `Código do fabricante:`, com o `045E:028E` "
+        "abaixo intacto. Apague esta entrada no commit que trocar o rótulo — o "
+        "portão reprova se alguém esquecer."
     ),
 }
 
