@@ -268,7 +268,17 @@ def test_tudo_certo_ganha_o_sinal_de_conferido_em_verde() -> None:
 
     assert secao.COR[ESTADO_CERTO] in painel.selo.get_label()
     assert painel.selo.get_text().startswith(secao.GLIFO[ESTADO_CERTO])
-    assert secao.FRASE_DO_SELO[ESTADO_CERTO] in painel.selo.get_text()
+
+    # CORRIGIDO em 26/08/2026, e o que mudou foi o PRODUTO, não o teste.
+    # Esta linha exigia a frase FIXA `FRASE_DO_SELO[ESTADO_CERTO]` ("Pronto
+    # para jogar"). Com a ORDEM-DE-SERVICO-01 o selo passa a repetir o texto do
+    # CABEÇALHO quando os dois concordam no estado — e o do cabeçalho CONTA
+    # ("Nada a mudar. Conferi 5 coisas agora."), que diz mais do que a frase
+    # fixa dizia. Exigir a fixa aqui travaria a contagem.
+    texto = painel.selo.get_text()
+    assert any(str(n) in texto for n in (len(itens),)), (
+        f"o selo verde deixou de contar o que conferiu: {texto!r}"
+    )
 
 
 def test_uma_linha_nao_medida_impede_o_verde_do_topo() -> None:
