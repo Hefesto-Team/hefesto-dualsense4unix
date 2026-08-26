@@ -60,7 +60,22 @@ _GAMEPAD = _SRC / "daemon" / "subsystems" / "gamepad.py"
 #: `bloqueio` de outro lugar cria um segundo dono do contrato, e este portão
 #: passa a olhar para o lugar errado — por isso o primeiro caso confere que ela
 #: continua sendo a única.
-_MONTADOR = "_keyboard_emulation_payload"
+#: Quem DECIDE o valor de `bloqueio` hoje.
+#:
+#: REAPONTADO em 25/08/2026, e a régua estava certa em reclamar. Até a frente
+#: BG-02 quem montava o `bloqueio` por ramos era `_keyboard_emulation_payload`,
+#: e esta régua lia os ramos DELE. A BG-02 extraiu a decisão para um DONO ÚNICO
+#: — `_bloqueio_da_emulacao_de_desktop` —, porque o mouse precisava da MESMA
+#: conjunção e duas cópias divergiriam na primeira edição.
+#:
+#: A régua não cegou em silêncio: `test_o_montador_do_bloqueio_continua_tendo_um_dono_so`
+#: reprovou dizendo "deixou de montar o `bloqueio` por ramos (1)", e o outro
+#: caso reprovou com "a régua não achou NENHUM valor produzível — ela cegou".
+#: **É assim que um portão deve morrer** — avisando, não passando verde.
+_MONTADOR = "_bloqueio_da_emulacao_de_desktop"
+
+#: O montador do payload, que agora CHAMA o dono acima em vez de decidir.
+_PAYLOAD = "_keyboard_emulation_payload"
 
 
 def _corpo(caminho: Path, nome: str) -> ast.FunctionDef:
@@ -106,6 +121,16 @@ def valores_que_o_daemon_consegue_publicar() -> set[str]:
     montador = _corpo(_IPC, _MONTADOR)
     alcancaveis: set[str] = set()
     for no in ast.walk(montador):
+        # O dono único devolve o literal em vez de atribuí-lo (ver a nota do
+        # contador de ramos acima). Sem este ramo a régua não acha valor
+        # nenhum e reprova dizendo que cegou — o que ela fez, e bem.
+        if (
+            isinstance(no, ast.Return)
+            and isinstance(no.value, ast.Constant)
+            and isinstance(no.value.value, str)
+        ):
+            alcancaveis.add(no.value.value)
+            continue
         if not isinstance(no, ast.Assign):
             continue
         if not (isinstance(no.value, ast.Constant) and isinstance(no.value.value, str)):
@@ -198,15 +223,43 @@ def test_o_montador_do_bloqueio_continua_tendo_um_dono_so() -> None:
     donos = re.findall(r'^\s*"bloqueio":', fonte, re.MULTILINE)
     donos += re.findall(r"^\s*bloqueio\s*=", fonte, re.MULTILINE)
     montador = _corpo(_IPC, _MONTADOR)
+    # DUAS FORMAS, e a régua conta as duas de propósito. O montador antigo
+    # atribuía (`bloqueio = "modo_jogo"`); o dono único de 25/08 é uma função
+    # de decisão e RETORNA (`return "modo_jogo"`). Contar só uma faria a régua
+    # cegar na próxima vez que alguém trocasse o estilo — que é exatamente o
+    # que acabou de acontecer.
     dentro = sum(
         1
         for no in ast.walk(montador)
         if isinstance(no, ast.Assign)
         and any(isinstance(a, ast.Name) and a.id == "bloqueio" for a in no.targets)
     )
+    dentro += sum(
+        1
+        for no in ast.walk(montador)
+        if isinstance(no, ast.Return)
+        and isinstance(no.value, ast.Constant)
+        and isinstance(no.value.value, str)
+    )
     assert dentro >= 3, (
         f"{_MONTADOR} deixou de montar o `bloqueio` por ramos ({dentro}) — a "
-        "régua deste portão presume que é ele quem decide o valor"
+        "régua deste portão presume que é ele quem decide o valor. Se a "
+        "decisão mudou de dono outra vez, reaponte `_MONTADOR` para o novo; "
+        "se ela se ESPALHOU por dois lugares, o defeito é esse, e é o que "
+        "esta asserção existe para pegar."
+    )
+
+    # E o payload tem de CHAMAR o dono, senão haveria dois caminhos vivos: o
+    # dono único decidindo para ninguém, e o payload decidindo por conta.
+    payload = _corpo(_IPC, _PAYLOAD)
+    chama = any(
+        isinstance(no, ast.Attribute) and no.attr == _MONTADOR
+        for no in ast.walk(payload)
+    )
+    assert chama, (
+        f"{_PAYLOAD} não chama {_MONTADOR}: ou voltou a decidir por conta "
+        "própria, ou passou a ler de um terceiro lugar. Nos dois casos o "
+        "`bloqueio` deixou de ter um dono só."
     )
 
 

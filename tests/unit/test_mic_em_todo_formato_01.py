@@ -217,6 +217,11 @@ def test_as_flags_sao_definidas_antes_da_bifurcacao() -> None:
     assert max(definicoes) < _linha_do_exit_da_bifurcacao()
 
 
+#: O drop-in PROMOTOR — quem põe a entrada do controle acima de qualquer monitor.
+#: O nome aparece LITERAL em cinco superfícies que precisam concordar.
+PROMOTOR = "51-hefesto-dualsense-no-default-source.conf"
+
+
 def test_nenhum_formato_empacota_os_dropins_do_wireplumber() -> None:
     """A PREMISSA da cura, travada — se ela cair, a cura vira ruído.
 
@@ -244,7 +249,24 @@ def test_nenhum_formato_empacota_os_dropins_do_wireplumber() -> None:
         if not caminho.is_file():
             continue
         conferidas += 1
-        if "wireplumber" in caminho.read_text(encoding="utf-8", errors="ignore").lower():
+        texto = caminho.read_text(encoding="utf-8", errors="ignore").lower()
+        # O QUE CONTA É O DROP-IN, NÃO A PALAVRA — corrigido em 25/08/2026, e
+        # é a SEGUNDA vez que esta régua confunde vizinhança com ato.
+        #
+        # A primeira foi `app.rs`, que apenas LÊ os drop-ins: "ler não é
+        # empacotar". A segunda é a frente BG-04, que passou a empacotar o
+        # SCRIPT `fix_wireplumber_default_source.sh` nos cinco formatos — e o
+        # NOME dele contém "wireplumber". **Consertar não é empacotar**, e a
+        # régua acusou os quatro formatos de uma vez.
+        #
+        # A pergunta que ela faz é sobre o ARQUIVO DE CONFIGURAÇÃO: o `.conf`
+        # que vai para `wireplumber.conf.d`. Quem empacota um drop-in cita o
+        # diretório dele ou o nome do arquivo; quem empacota o script cita só
+        # o `.sh`. Duas coisas diferentes, duas escritas diferentes.
+        if any(marca in texto for marca in ("wireplumber.conf.d", ".conf.d/wireplumber")):
+            achados.append(str(caminho.relative_to(RAIZ)))
+            continue
+        if PROMOTOR.lower() in texto:
             achados.append(str(caminho.relative_to(RAIZ)))
     assert conferidas >= 4, (
         "as receitas de empacotamento mudaram de caminho — este teste ficou "
@@ -257,9 +279,6 @@ def test_nenhum_formato_empacota_os_dropins_do_wireplumber() -> None:
     )
 
 
-#: O drop-in PROMOTOR — quem põe a entrada do controle acima de qualquer monitor.
-#: O nome aparece LITERAL em cinco superfícies que precisam concordar.
-PROMOTOR = "51-hefesto-dualsense-no-default-source.conf"
 
 #: As cinco, e o que cada uma faz com ele.
 _SUPERFICIES_DO_PROMOTOR = (
