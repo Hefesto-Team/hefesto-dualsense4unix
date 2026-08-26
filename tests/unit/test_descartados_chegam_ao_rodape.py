@@ -40,6 +40,11 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.app.actions.config import (
+    secao_mesa,
+    secao_orcamento,
+)
+
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app import ipc_bridge
@@ -66,9 +71,14 @@ DISCO_COM_CAMPO_INVALIDO: dict[str, Any] = {
     "mesa": {"altura_da_antena": "acima"},
 }
 
-#: O rótulo de tela do campo descartado — o ``TITULO`` de
-#: ``app/actions/config/secao_orcamento.py``.
-ROTULO_DO_ORCAMENTO = "Orçamento"
+#: O rótulo de tela do campo descartado. LIDO da seção, nunca digitado —
+#: corrigido em 26/08/2026, e o defeito era de FORMA: o comentário já dizia que
+#: este valor É o ``TITULO`` da seção, e mesmo assim a linha abaixo o digitava à
+#: mão. Quando a LEX-1 renomeou as duas seções para o léxico dela ("Conexões" e
+#: "Desempenho"), quatro testes ficaram vermelhos acusando o RENOMEIO, que
+#: estava certo — a régua prendia a palavra em vez de prender o vínculo.
+ROTULO_DO_ORCAMENTO = secao_orcamento.TITULO
+ROTULO_DA_MESA = secao_mesa.TITULO
 
 
 @pytest.fixture
@@ -212,7 +222,7 @@ async def test_a_lista_atravessa_o_fio(
 def test_a_ponte_nunca_entrega_identificador_de_protocolo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``orcamento`` vira "Orçamento"; ``mesa`` vira "A mesa".
+    """``orcamento`` vira "Orçamento"; ``mesa`` vira ROTULO_DA_MESA.
 
     MORDE: devolvendo ``tuple(descartados)`` cru em vez de passar pelo
     ``_CAMPOS_DA_MAQUINA`` — reprova, e a barra de status passaria a mostrar o
@@ -230,7 +240,7 @@ def test_a_ponte_nunca_entrega_identificador_de_protocolo(
         {"mesa": {"linha_de_visada": "livre"}}
     )
     assert (ok, motivo) == (True, None)
-    assert descartados == ("A mesa", ROTULO_DO_ORCAMENTO)
+    assert descartados == (ROTULO_DA_MESA, ROTULO_DO_ORCAMENTO)
 
 
 def test_o_embrulho_de_duas_pontas_continua_valendo(
