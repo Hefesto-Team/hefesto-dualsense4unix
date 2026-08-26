@@ -54,6 +54,7 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     via_do_controle,
 )
 from hefesto_dualsense4unix.app.alvo_de_edicao import alvo_de_edicao
+from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.app.ipc_bridge import (
     call_async,
     identity_number_set,
@@ -467,8 +468,16 @@ DICA_MIC_SEM_ENDERECO = (
 
 
 def _numero(valor: float) -> str:
-    """Uma casa decimal, com vírgula — é assim que ela lê número nesta casa."""
-    return f"{valor:.1f}".replace(".", ",")
+    """Uma casa decimal, com vírgula — é assim que ela lê número nesta casa.
+
+    Delega ao DONO ÚNICO (`app/fala_do_mapa.formata_pt_br`) desde 26/08/2026.
+    Até então era uma segunda implementação da mesma regra, e a saída idêntica
+    é o que fazia ninguém notar: no dia em que uma delas mudasse de
+    arredondamento, esta seção e a célula do mapa passariam a dizer números
+    diferentes sobre o mesmo fato. O nome local fica porque as quatro chamadas
+    abaixo o usam e ele diz o que faz nesta seção.
+    """
+    return formata_pt_br(valor)
 
 
 def frase_da_capacidade_do_mic() -> str:

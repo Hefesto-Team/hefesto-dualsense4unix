@@ -85,6 +85,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_AUDIO_COM_MIC,
@@ -110,9 +111,16 @@ ENSAIO_MAXIMO_DESTA_CASA = 2
 MESA_CHEIA_DESTA_CASA = 4
 
 #: O que a tela diz de um controle sem número de jogador. É a MESMA frase de
-#: ``secao_controles.TITULO_SEM_NUMERO`` — repetida aqui, e não importada, para
-#: que ``integrations/`` não passe a depender de ``app/``. Se as duas
-#: divergirem, o teste ``test_o_sem_numero_e_a_mesma_frase_do_card`` reprova.
+#: ``secao_controles.TITULO_SEM_NUMERO`` — repetida aqui, e não importada,
+#: porque ``secao_controles`` **importa GTK**: puxá-lo daqui traria a biblioteca
+#: de janelas para dentro de ``integrations/``. Se as duas divergirem, o teste
+#: ``test_o_sem_numero_e_a_mesma_frase_do_card`` reprova.
+#:
+#: (26/08/2026: esta razão era escrita como *"para que `integrations/` não passe
+#: a depender de `app/`"*, e o ``_numero`` logo abaixo passou a importar
+#: ``app/fala_do_mapa.py``. Não é contradição — é a razão dita com precisão:
+#: ``fala_do_mapa`` é zero-dependência por contrato, só stdlib, e
+#: ``secao_controles`` não é.)
 SEM_NUMERO = "Sem número ainda"
 
 #: O que a tela diz de um adaptador que o produto não soube nomear. ``hciN``
@@ -206,12 +214,26 @@ POR_QUE_IMPORTA = (
 def _numero(valor: float) -> str:
     """Uma casa decimal, com vírgula — é assim que ela lê número nesta casa.
 
-    Mesma forma que ``app/fala_do_mapa.formata_pt_br`` e que o ``_numero`` de
-    ``secao_controles.py`` produzem. Repetida aqui, e não importada, porque
-    ``integrations/`` não pode passar a depender de ``app/`` — a dependência
-    correria ao contrário da que já existe.
+    Delega ao DONO ÚNICO (``app/fala_do_mapa.formata_pt_br``) desde 26/08/2026.
+
+    **FATO ERRADO, SUBSTITUÍDO:** estas linhas diziam *"repetida aqui, e não
+    importada, porque `integrations/` não pode passar a depender de `app/`"* — e
+    mesmo assim prometiam, no comentário, a *"mesma forma"* que as outras duas.
+    Comentário não é régua: era a terceira implementação independente da mesma
+    conta, e as três divergiriam na primeira mudança de arredondamento.
+
+    **O preço da importação, medido em 26/08/2026, e por que ele é zero aqui:**
+    ``app/fala_do_mapa.py`` é zero-dependência de propósito — só stdlib, sem
+    GTK, sem nada do pacote (o ``scripts/validar-fala-de-tela.py`` depende
+    disso: ele carrega o arquivo por CAMINHO, sem passar pelo ``__init__``
+    de ``app/``, exatamente para não transformar ``ImportError`` em "zero
+    ``Fala`` encontradas"). E este módulo já é consumido só pela tela: o único
+    importador dele em ``src/`` é
+    ``app/actions/config/secao_orcamento.py``. Nada headless ganha dependência
+    de ``app/`` por causa desta linha, e não há ciclo — ``fala_do_mapa`` não
+    importa nada do projeto.
     """
-    return f"{valor:.1f}".replace(".", ",")
+    return formata_pt_br(valor)
 
 
 def _hex(valor: str) -> str:
