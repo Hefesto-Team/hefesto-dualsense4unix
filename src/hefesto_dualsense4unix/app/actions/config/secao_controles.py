@@ -211,6 +211,8 @@ FRASE_NAO_CAIU = (
     "Ele continua pareado."
 )
 
+from hefesto_dualsense4unix.app.actions.config import secao_mesa
+
 
 def frase_da_procura(restantes: int) -> str:
     """A linha que conta o tempo, do desenho: ``procurando…  38s``."""
@@ -490,7 +492,14 @@ def frase_da_capacidade_do_mic() -> str:
     coisas diferentes sobre o mesmo fato.
 
     É CAPACIDADE, não advertência: diz o que o rádio carrega, e a pergunta
-    "cabe?" quem responde é a barra da seção "A mesa".
+    "cabe?" quem responde é a barra da seção vizinha.
+
+    **O NOME DA SEÇÃO É LIDO, nunca digitado — corrigido em 26/08/2026.** Esta
+    frase mandava a pessoa procurar uma seção chamada "A mesa"; a LEX-1 renomeou
+    a seção para o léxico dela no mesmo dia, e a frase passou a apontar para um
+    nome que não existe mais na tira. Quem lesse procuraria "A mesa" e leria
+    "Conexões" — a tela mandando para um lugar que ela mesma renomeou. Ler o
+    ``TITULO`` faz o ponteiro seguir o renomeio de graça, para sempre.
     """
     from hefesto_dualsense4unix.integrations.radio_da_mesa import (
         HZ_AUDIO_COM_MIC,
@@ -505,7 +514,7 @@ def frase_da_capacidade_do_mic() -> str:
         f"relatórios de entrada por segundo por {_numero(HZ_INPUT_COM_MIC)} mais "
         f"{_numero(HZ_AUDIO_COM_MIC)} quadros de áudio: {_numero(total)} das "
         f"{SLOTS_POR_SEGUNDO} fatias daquele adaptador. Quanto já está em uso "
-        'está na seção "A mesa".'
+        f'está na seção "{secao_mesa.TITULO}".'
     )
 
 

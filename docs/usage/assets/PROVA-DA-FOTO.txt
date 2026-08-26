@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho para
 # sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
 
-ensaio:  2026-08-26 11:40
+ensaio:  2026-08-26 11:41
 abas:    16
 modo:    padrão
 fixture: nenhum — os dublês nascem fixos no próprio script (padrão de dois controles)
@@ -17,8 +17,8 @@ fixture: nenhum — os dublês nascem fixos no próprio script (padrão de dois 
 b7016b2cc75aab92ba658e195bd815ebd73ef375b21324bb33c733af70c57b02  perfis-jogo-da-steam.png
 1fbbb73f24b101d1888c1b6aa18d7703612b90e16f0f5c385a8ef92e5e2263ed  readme_cabecalho.png
 cdded7497f0a96227ec9cbb9f3b9da1629bea017f3c2f968cf6d2bac9684a48f  readme_cabecalho_alvo_inativo.png
-09021d3b51363e4d5d35c06a7992eb4474e9091f49f5574ea8fe03aca410a27f  readme_configuracoes.png
-3a7ef1c536a200386d4863dc957123510b2923391e9ce2b676b5825e94f4ed13  readme_configuracoes_inteira.png
+e75652be0c057901824ec7ffddd4bbb1c2494af2ff2865f9d760b8dcae814974  readme_configuracoes.png
+11f5b15814746aea7d3c299918cfdf0746274030a403af77fb09c50f59a0b79c  readme_configuracoes_inteira.png
 d76444d2a65ac535b7a67d4e820d2fbf021ac59a1b66287968917bb0abd37802  readme_emulacao.png
 b012924afb3abbf093c62d3a2d3e97ebc13ba1906aec92cd5338daab01c7ece9  readme_gatilhos.png
 f58f792a2cf6fa63c95ba5800241f48ad7ea3b761fae3e2f4e6de58abc7dd252  readme_inicio.png
