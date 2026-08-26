@@ -58,8 +58,11 @@ def test_nenhum_preset_shipado_escolhe_a_mascara() -> None:
 
     # Régua contra o filtro errado: se o glob ou o `kind` mudarem de forma, a
     # lista de ofensores fica vazia por AUSÊNCIA de dado e o teste passaria sem
-    # ter olhado nada. Os sete presets de jogo são contados em 22/08/2026.
-    assert len(gamepads) >= 7, (
+    # ter olhado nada. Eram SETE presets de jogo em 22/08/2026; a poda de
+    # 26/08 levou `coop_local` e `sackboy_nativo`, e sobraram CINCO — os cinco
+    # de gênero (`fps`, `aventura`, `acao`, `corrida`, `esportes`). O piso
+    # desce com a fábrica, senão vira trava contra o que já aconteceu.
+    assert len(gamepads) >= 5, (
         "o portão não achou os presets de jogo — filtro errado, não aprovação. "
         f"achados: {gamepads}"
     )
@@ -79,7 +82,10 @@ def test_o_null_do_preset_atravessa_o_esquema_intacto() -> None:
     """
     from hefesto_dualsense4unix.profiles.schema import Profile
 
-    for nome in ("acao", "coop_local", "sackboy_nativo"):  # (noqa-acento) arquivos
+    # Os três eram `acao`, `coop_local` e `sackboy_nativo`; os dois últimos
+    # foram podados da fábrica em 26/08/2026 e deram lugar a dois presets de
+    # gênero que continuam shipando `mode: gamepad`.
+    for nome in ("acao", "aventura", "fps"):  # (noqa-acento) nomes de arquivo
         bruto = json.loads((_PRESETS_DIR / f"{nome}.json").read_text(encoding="utf-8"))
         perfil = Profile.model_validate(bruto)
         assert perfil.mode is not None and perfil.mode.kind == "gamepad", nome

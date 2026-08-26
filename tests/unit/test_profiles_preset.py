@@ -1,11 +1,21 @@
 """Testes dos perfis preset em assets/profiles_default/.
 
 Valida que cada JSON é aceito pelo schema pydantic e que os params de
-trigger são reconhecidos por build_from_name. Cobre os 10 arquivos após
-a sprint FEAT-POINT-AND-CLICK-01:
-  acao.json, aventura.json, bow.json, corrida.json, esportes.json,
-  fallback.json, fps.json, meu_perfil.json, navegacao.json,
-  point_and_click.json.
+trigger são reconhecidos por build_from_name. Cobre os 9 arquivos que a
+fábrica embarca depois da poda de 26/08/2026:
+  acao.json, aventura.json, corrida.json, esportes.json, fallback.json,
+  fps.json, meu_perfil.json, navegacao.json, point_and_click.json.
+
+A PODA DE 26/08/2026
+---------------------
+`bow.json`, `coop_local.json` e `sackboy_nativo.json` saíram da fábrica.
+Palavra dela: *"em termos de perfis de jogo vamos manter os que temos ativos
+apenas"* — e o disco já tinha executado o gesto antes da ordem: os três
+estavam em `.historico/` no diretório de perfis dela, nenhum ativo.
+
+`TestOsPodadosNaoVoltam`, no fim deste arquivo, é a mordida que impede o
+retorno por descuido — a mesma forma que `shooter.json` e `driving.json` já
+tinham desde que foram apagados.
 """
 from __future__ import annotations
 
@@ -37,14 +47,6 @@ EXPECTED_PRESETS = {
         "triggers_right_mode": "MultiPositionFeedback",
         "lightbar": (220, 170, 30),
         "lightbar_brightness": 0.7,
-    },
-    "bow": {
-        "name": "bow",
-        "priority": 10,
-        "triggers_left_mode": "Off",
-        "triggers_right_mode": "Bow",
-        "lightbar": (0, 180, 100),
-        "lightbar_brightness": 1.0,
     },
     "corrida": {
         "name": "Corrida",
@@ -458,3 +460,49 @@ class TestArquivosNaoExistem:
         for nome in nomes:
             path = ASSETS_DIR / f"{nome}.json"
             assert path.exists(), f"{nome}.json deve existir"
+
+
+class TestOsPodadosNaoVoltam:
+    """A poda de 26/08/2026, presa em régua.
+
+    Sem isto a poda é uma linha de `git rm`, e uma linha de `git rm` volta
+    sozinha na próxima vez que alguém "restaurar" a fábrica de um backup ou
+    de uma release antiga. Foi o mesmo raciocínio que criou
+    `TestArquivosNaoExistem` para `shooter.json` e `driving.json`.
+
+    MORDE: devolver qualquer um dos três a `assets/profiles_default/`.
+    """
+
+    @pytest.mark.parametrize(
+        # Slugs literais dos arquivos apagados (noqa-acento).
+        "nome", ["bow", "coop_local", "sackboy_nativo"]
+    )
+    def test_o_preset_podado_nao_esta_na_fabrica(self, nome: str) -> None:
+        path = ASSETS_DIR / f"{nome}.json"
+        assert not path.exists(), (
+            f"{nome}.json voltou à fábrica. Ele foi podado em 26/08/2026 a "
+            "pedido dela — *\"em termos de perfis de jogo vamos manter os que "
+            "temos ativos apenas\"* —, e nenhum dos três estava ativo no "
+            "disco dela. Devolver um deles é o produto reinstalando um perfil "
+            "que ela já tinha mandado para o histórico."
+        )
+
+    def test_a_fabrica_embarca_nove(self) -> None:
+        """Guarda do instrumento: régua que não acha nada passa sempre.
+
+        Se o diretório sumir ou o glob mudar de forma, o teste acima fica
+        verde por AUSÊNCIA de dado — e é exatamente o modo de falha que esta
+        casa chama de "a régua confunde a palavra com o ato".
+        """
+        presets = sorted(p.name for p in ASSETS_DIR.glob("*.json"))
+        assert presets == [
+            "acao.json",  # (noqa-acento) nome literal de arquivo
+            "aventura.json",
+            "corrida.json",
+            "esportes.json",
+            "fallback.json",
+            "fps.json",
+            "meu_perfil.json",
+            "navegacao.json",  # (noqa-acento) nome literal de arquivo
+            "point_and_click.json",
+        ], f"a fábrica mudou de tamanho sem passar por aqui: {presets}"
