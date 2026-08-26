@@ -88,6 +88,93 @@ warn() { printf '[WARN] %s\n' "$*"; WARNS=$((WARNS + 1)); }
 info() { [[ "${QUIET}" -eq 1 ]] || printf '       %s\n' "$*"; }
 hdr()  { [[ "${QUIET}" -eq 1 ]] || printf '\n== %s ==\n' "$*"; }
 
+# ---------------------------------------------------------------------------
+# BG-06 (25/08/2026) — O CONSELHO IMPOSSÍVEL.
+#
+# Trinta e três frases deste exame mandavam "rode ./install.sh" como gesto, e
+# o `install.sh` só existe para quem CLONOU o repositório. A tabela é da T-03
+# (medida em 23/08/2026, por formato de pacote):
+#
+#   checkout ............................. tem o instalador: SIM
+#   .deb ................................. tem o instalador: não (leva os scripts)
+#   Flatpak/AppImage/Arch/Fedora/Nix ..... tem o instalador: não (nem os scripts)
+#
+# Em CINCO dos SEIS formatos a pessoa via a frase com MAIS frequência — porque
+# as coisas realmente faltavam — e a instrução que recebia era a única que ela
+# não tinha como cumprir.
+#
+# ONDE ESTE RACIOCÍNIO JÁ MORAVA: `esta_instalacao_e_um_checkout()` e
+# `como_atualizar_esta_instalacao()`, em
+# `src/hefesto_dualsense4unix/app/actions/daemon_actions.py`, escritas na T-03
+# e já usadas pela aba Sistema. Este script é shell e não importa Python: a
+# lógica NASCE aqui de novo. É DUPLICAÇÃO DECLARADA, não descuido — está
+# escrita no relatório da BG-06 para quem for resolvê-la. A régua das duas é a
+# mesma pergunta, e é a pergunta inteira: existe um instalador ao lado deste
+# código?
+#
+# NO CHECKOUT A TELA NÃO MUDA. `conselho_de_instalacao` devolve exatamente
+# "rode ./install.sh" (mais o que o chamador passar) e `so_no_checkout` some
+# fora dele: o texto novo aparece SÓ onde o texto velho era impossível.
+esta_instalacao_e_um_checkout() {
+    [[ -f "${ROOT_DIR}/install.sh" ]]
+}
+
+#: O que dizer a quem NÃO tem checkout, quando não há gesto melhor. A T-03
+#: redigiu este mínimo e o carimbou PROVISÓRIO (aguarda o olho dela): ele é
+#: honesto e universal, mas não nomeia o gesto do formato — um `flatpak
+#: update`, um `apt upgrade`. Nomear é texto novo de tela, e isso é decisão
+#: dela. É a MESMA frase que já está no produto, palavra por palavra — não uma
+#: segunda redação com o mesmo sentido, que é como duas verdades começam.
+#: `tests/unit/test_bg06_o_grau_e_o_conselho_que_serve_para_esta_instalacao.py`
+#: compara as duas e reprova se divergirem.
+#:
+#: ELA É UM GESTO, não uma explicação, e isso é de propósito: entra no MESMO
+#: lugar da frase onde entrava "rode ./install.sh" ("…, ou <isto>", "traga o
+#: alvo: <isto>"). A primeira redação era uma oração inteira ("este passo é do
+#: ./install.sh, que só existe…") e quebrava a gramática de sete frases —
+#: visto renderando as 33 lado a lado, não lendo o fonte.
+_CONSELHO_GESTO_GENERICO="atualize o Hefesto pelo mesmo caminho por onde você o instalou"
+
+# O gesto de instalar/reparar que serve para ESTA máquina.
+#   $1 — o que vem DEPOIS de `./install.sh` no checkout (as flags). Opcional.
+#   $2 — o CAMINHO de um reparador que os pacotes levam e que refaz este passo
+#        (o `install-host-udev.sh`, hoje). Opcional — e MEDIDO, não presumido:
+#        só entra na frase se o arquivo existir nesta máquina. É a mesma
+#        pergunta do checkout, um andar abaixo: quem instalou por Flatpak não
+#        tem `/usr/share/hefesto-dualsense4unix` nenhum, e mandá-lo ali seria
+#        trocar um conselho impossível por outro.
+#   $3 — ressalva que anda JUNTO do reparador, e só com ele (opcional). O
+#        `install-host-udev.sh` não faz tudo o que o instalador faz — não
+#        instala os timers de resiliência, por exemplo —, e a ressalva não
+#        pode aparecer numa máquina que nem o reparador tem. Amarrá-la ao
+#        ramo é o que impede a frase de prometer o que ninguém vai rodar.
+conselho_de_instalacao() {
+    local flags="${1:-}" reparador="${2:-}" ressalva="${3:-}"
+    if esta_instalacao_e_um_checkout; then
+        printf 'rode ./install.sh%s' "${flags:+ ${flags}}"
+    elif [[ -n "${reparador}" && -f "${reparador}" ]]; then
+        printf 'rode o reparador que veio no seu pacote: sudo %s%s' \
+            "${reparador}" "${ressalva:+ ${ressalva}}"
+    else
+        printf '%s' "${_CONSELHO_GESTO_GENERICO}"
+    fi
+}
+
+# Um aparte que SÓ faz sentido para quem tem o repositório: o nome de uma flag,
+# o número de um passo do instalador. Fora do checkout devolve NADA — é o que
+# mantém a frase de hoje intacta na máquina dela e limpa nas outras.
+#
+# ELE JÁ VEM COM O ESPAÇO NA FRENTE, e por isso o aparte NÃO pode começar por
+# pontuação: `"; opt-out: --no-dkms"` sai como "install.sh ; opt-out", com o
+# espaço solto antes do ponto e vírgula. Medido em 25/08/2026 renderando as 33
+# frases em paralelo, que é o único jeito de ver isto — no fonte não aparece.
+# Comece o aparte por travessão ou por parêntese.
+so_no_checkout() {
+    esta_instalacao_e_um_checkout || return 0
+    printf ' %s' "${1:-}"
+}
+# ---------------------------------------------------------------------------
+
 runtime_socket() {
     printf '%s/%s/%s.sock' "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" "${APP_ID}" "${APP_ID}"
 }
@@ -116,7 +203,7 @@ check_daemon_installed() {
     if [[ -n "${found}" ]]; then
         pass "daemon/CLI instalado (${found})"
     else
-        fail "CLI hefesto-dualsense4unix não encontrado — instale: ./install.sh --native"
+        fail "CLI hefesto-dualsense4unix não encontrado — $(conselho_de_instalacao --native)"
     fi
 }
 
@@ -154,7 +241,7 @@ for so in ('libhidapi-hidraw.so.0','libhidapi-libusb.so.0','libhidapi-hidraw.so'
 sys.exit(1)" 2>/dev/null; then
         pass "libhidapi presente (o backend do controle consegue abrir aparelho)"
     else
-        fail "libhidapi AUSENTE — sem ela o backend não abre NENHUM aparelho (o pydualsense faz dlopen dela; a wheel do pip não traz o .so). Rode ./install.sh, que agora a garante"
+        fail "libhidapi AUSENTE — sem ela o backend não abre NENHUM aparelho (o pydualsense faz dlopen dela; a wheel do pip não traz o .so); a libhidapi entra por default no instalador desta casa: $(conselho_de_instalacao)"
     fi
 }
 
@@ -187,7 +274,7 @@ finally:
     os.unlink(caminho)" 2>/dev/null; then
         pass "loader SVG do gdk-pixbuf presente (os glifos e o ícone da bandeja desenham)"
     else
-        fail "loader SVG AUSENTE — o ícone some da barra e os 38 glifos dos botões saem vazios (BUG-TRAY-ICONE-INVISIVEL-01). Instale o loader do librsvg (Debian: librsvg2-common) ou rode ./install.sh"
+        fail "loader SVG AUSENTE — o ícone some da barra e os 38 glifos dos botões saem vazios (BUG-TRAY-ICONE-INVISIVEL-01). Instale o loader do librsvg (Debian: librsvg2-common), ou $(conselho_de_instalacao)"
     fi
 }
 
@@ -200,7 +287,7 @@ check_service() {
     elif systemctl --user cat "${APP_ID}.service" >/dev/null 2>&1; then
         warn "serviço instalado mas ${state:-inativo} (start: systemctl --user start ${APP_ID}.service, ou abra a GUI)"
     else
-        warn "serviço não instalado (autostart é opt-in: ./install.sh --enable-autostart)"
+        warn "serviço não instalado (autostart é opt-in — $(conselho_de_instalacao --enable-autostart))"
     fi
 }
 
@@ -300,12 +387,12 @@ check_udev() {
     if { [[ -e /etc/udev/rules.d/82-nintendo-pro-nosniff.rules ]] \
          || [[ -e /usr/lib/udev/rules.d/82-nintendo-pro-nosniff.rules ]]; } \
        && [[ ! -f /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh ]]; then
-        warn "82-nintendo-pro-nosniff.rules instalada e o alvo do RUN+= dela NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh) — a regra fica inerte (o TEST== dela não acha o alvo) e o Pro genuíno não perde o sniff na borda da conexão; traga o alvo: ./install.sh no checkout do repo, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+        warn "82-nintendo-pro-nosniff.rules instalada e o alvo do RUN+= dela NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh) — a regra fica inerte (o TEST== dela não acha o alvo) e o Pro genuíno não perde o sniff na borda da conexão; traga o alvo: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")"
     fi
     if { [[ -e /etc/udev/rules.d/83-hefesto-bond-snapshot.rules ]] \
          || [[ -e /usr/lib/udev/rules.d/83-hefesto-bond-snapshot.rules ]]; } \
        && [[ ! -f /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh ]]; then
-        warn "83-hefesto-bond-snapshot.rules instalada e o alvo do RUN+= dela NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh, o ExecStart da unit de snapshot) — a regra fica inerte e o salva-vidas de bonds não grava nada quando um controle Bluetooth chega; traga o alvo: ./install.sh no checkout do repo, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+        warn "83-hefesto-bond-snapshot.rules instalada e o alvo do RUN+= dela NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh, o ExecStart da unit de snapshot) — a regra fica inerte e o salva-vidas de bonds não grava nada quando um controle Bluetooth chega; traga o alvo: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")"
     fi
 }
 
@@ -801,7 +888,7 @@ check_usb_storm_config_conflict() {
 
 check_applet() {
     if [[ ! -e "${APPLET_DESKTOP}" ]]; then
-        warn "applet COSMIC não instalado (.desktop ausente) — opcional: ./install.sh --enable-cosmic-applet"
+        warn "applet COSMIC não instalado (.desktop ausente) — opcional: $(conselho_de_instalacao --enable-cosmic-applet)"
         return
     fi
     if grep -q '^X-CosmicApplet=true' "${APPLET_DESKTOP}"; then
@@ -1598,7 +1685,7 @@ check_launch_wrapper() {
     elif [[ -e "${wrapper}" ]]; then
         fail "wrapper hefesto-launch presente mas NÃO executável — rode: chmod +x ${wrapper}"
     else
-        fail "wrapper hefesto-launch ausente — rode ./install.sh (entra por default, sem flag)"
+        fail "wrapper hefesto-launch ausente — $(conselho_de_instalacao)$(so_no_checkout "(entra por default, sem flag)")"
     fi
     # PATH-06: o install cria ~/.local/bin/hefesto-launch — `hefesto-launch
     # %command%` digitado à mão passa a funcionar (a string canônica do botão
@@ -1609,7 +1696,7 @@ check_launch_wrapper() {
     elif [[ -x "${pathlink}" ]]; then
         warn "symlink ${pathlink} existe mas ~/.local/bin não está no PATH desta sessão — 'hefesto-launch %command%' digitado à mão só funciona com o PATH ajustado"
     else
-        warn "wrapper fora do PATH (${pathlink} ausente) — rode ./install.sh (o passo 5 cria o symlink, sem flag)"
+        warn "wrapper fora do PATH (${pathlink} ausente) — $(conselho_de_instalacao)$(so_no_checkout "(o passo 5 cria o symlink, sem flag)")"
     fi
     local envdir="${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
     if [[ -f "${envdir}/default.env" ]]; then
@@ -2411,7 +2498,7 @@ check_btusb_autosuspend() {
             info "modprobe.d do btusb instalado, mas o módulo ainda está com enable_autosuspend=${val} — vale no próximo probe (replug do adaptador BT ou reboot); o runtime já é coberto pela regra 81"
         fi
     else
-        warn "btusb com autosuspend LIGADO (enable_autosuspend=${val:-?}) e sem o conf do hefesto — em máquina sem usbcore.autosuspend=-1 global o rádio dos controles dorme; rode ./install.sh (o conf entra por default)"
+        warn "btusb com autosuspend LIGADO (enable_autosuspend=${val:-?}) e sem o conf do hefesto — em máquina sem usbcore.autosuspend=-1 global o rádio dos controles dorme; $(conselho_de_instalacao)$(so_no_checkout "(o conf entra por default)")"
     fi
 }
 
@@ -2435,7 +2522,7 @@ check_bluez_fastconnectable() {
     elif [[ ! -e /etc/bluetooth/main.conf ]]; then
         info "sem /etc/bluetooth/main.conf (BlueZ ausente?) — pulo o check de FastConnectable"
     else
-        warn "reconexão rápida BT (FastConnectable) não configurada — rode ./install.sh (entra por default, SEM restart do bluetoothd)"
+        warn "reconexão rápida BT (FastConnectable) não configurada — $(conselho_de_instalacao)$(so_no_checkout "(entra por default, SEM restart do bluetoothd)")"
     fi
 }
 
@@ -2559,14 +2646,33 @@ check_bluez_justworks_repairing() {
             fi
             state="$(systemctl is-active hefesto-bt-agent.service 2>/dev/null || true)"
             if [[ "${state}" != "active" ]]; then
-                warn "JustWorksRepairing=confirm depende de um agente registrado, e o hefesto-bt-agent.service está ${state:-ausente} — re-pareamento legítimo pode ser RECUSADO ('Refusing connection from ...'); ligue: sudo systemctl enable --now hefesto-bt-agent.service"
+                # BG-06 (25/08/2026) — O GRAU ESTAVA ERRADO, E O CUSTO ERA
+                # CONCRETO. Esta cena saía `warn`, e um aviso no meio de
+                # centenas de linhas SOME. Mas o que ela descreve não é um
+                # risco à espreita: é o produto parado na coisa principal.
+                # `confirm` só aceita o Just Works repairing se um agente
+                # registrado confirmar; sem agente não há quem confirme, e o
+                # BlueZ recusa. O par (`confirm` + agente morto) é o ÚNICO
+                # lugar do exame que conhece os dois fatos ao mesmo tempo —
+                # `check_bt_agent_service` vê só o agente, e por isso segue
+                # avisando sobre o bond meio-salvo em vez de reprovar aqui de
+                # novo (duas réguas para o mesmo veredito é a duplicação que
+                # esta casa persegue).
+                #
+                # DECLARADO COMO INFERÊNCIA: não há DualSense nesta bancada
+                # (25/08/2026, os quatro hidraw são teclado e mouse). O
+                # veredito vem do contrato do BlueZ e do histórico desta unit
+                # (BT-AGENT-TRAVA-O-RESTART-01 e BT-AGENT-MORTO-FICA-MORTO-01,
+                # 04/08), não de um pareamento medido com o agente morto. A
+                # frase diz o que o BlueZ FAZ, não o que o controle dela fez.
+                fail "pareamento por rádio PARADO: JustWorksRepairing=confirm só aceita com um agente registrado para confirmar, e o hefesto-bt-agent.service está ${state:-ausente} — sem ele o BlueZ RECUSA o re-pareamento ('Refusing connection from ...') e nenhum controle volta a entrar por Bluetooth. Ligue: sudo systemctl enable --now hefesto-bt-agent.service"
             fi
             ;;
         always)
-            fail "JustWorksRepairing=always ATIVO no ${etc_bt}/main.conf — remove a última recusa do BlueZ ao re-pareamento por Just Works de quem já tem bond; com o agente NoInputNoOutput isso termina em injeção de teclas (RADIO-ABERTO-01). Cura: rode ./install.sh SEM --no-udev (a flag pula este passo inteiro) ou, direto, sudo bash scripts/bluez_config.sh aplicar — os dois corrigem o bloco antigo do hefesto SEM reiniciar o bluetoothd"
+            fail "JustWorksRepairing=always ATIVO no ${etc_bt}/main.conf — remove a última recusa do BlueZ ao re-pareamento por Just Works de quem já tem bond; com o agente NoInputNoOutput isso termina em injeção de teclas (RADIO-ABERTO-01). Cura, em qualquer formato: sudo bash ${dono} aplicar — corrige o bloco antigo do hefesto SEM reiniciar o bluetoothd$(so_no_checkout "— o ./install.sh SEM --no-udev faz o mesmo (a flag pula este passo inteiro)")"
             ;;
         ausente|"")
-            warn "JustWorksRepairing não está declarado no main.conf — o BlueZ cai no default da distro, que não é decisão desta casa; rode ./install.sh (entra por default, e NÃO com --no-udev, que pula este passo)"
+            warn "JustWorksRepairing não está declarado no main.conf — o BlueZ cai no default da distro, que não é decisão desta casa; cura em qualquer formato: sudo bash ${dono} aplicar$(so_no_checkout "— o ./install.sh também aplica, por default, mas NÃO com --no-udev, que pula este passo")"
             ;;
         ilegível)
             warn "não consigo LER ${etc_bt}/main.conf — sem leitura não sei o valor de JustWorksRepairing; rode: sudo bash ${dono} verificar"
@@ -2587,10 +2693,10 @@ check_bluez_justworks_repairing() {
             # `remover` entrega o arquivo SEM a chave. O `aplicar` sabe dizer
             # qual dos dois casos é o dela (ele lê a posição da linha que vence);
             # o doctor não precisa saber, precisa é não prometer o que não pode.
-            warn "JustWorksRepairing=never no main.conf — é MAIS restritivo que o 'confirm' desta casa (recusa todo re-pareamento de quem já tem bond). Se foi escolha sua, NÃO rode ./install.sh: ele rebaixa para 'confirm'. E confira ONDE a sua linha está: FORA das sentinelas do hefesto ela é neutralizada e o 'bluez_config.sh remover' a devolve inteira; DENTRO do bloco ela é reescrita junto com o bloco e não volta (só o backup guarda)"
+            warn "JustWorksRepairing=never no main.conf — é MAIS restritivo que o 'confirm' desta casa (recusa todo re-pareamento de quem já tem bond). Se foi escolha sua, NÃO deixe esta casa reescrever o valor: 'sudo bash ${dono} aplicar' rebaixa para 'confirm'$(so_no_checkout "— e o ./install.sh também"). E confira ONDE a sua linha está: FORA das sentinelas do hefesto ela é neutralizada e o 'bluez_config.sh remover' a devolve inteira; DENTRO do bloco ela é reescrita junto com o bloco e não volta (só o backup guarda)"
             ;;
         *)
-            warn "JustWorksRepairing=${valor} no main.conf — esta casa instala 'confirm'; rode ./install.sh se o valor não foi escolha sua"
+            warn "JustWorksRepairing=${valor} no main.conf — esta casa instala 'confirm'; se o valor não foi escolha sua, $(conselho_de_instalacao)"
             ;;
     esac
 }
@@ -3007,7 +3113,7 @@ check_kernel_watch() {
         elif systemctl --user cat "${unit}" >/dev/null 2>&1; then
             warn "kernel-watch instalado mas parado — ligue: systemctl --user enable --now ${unit}"
         else
-            warn "kernel-watch não instalado — rode ./install.sh (entra por default; --no-kernel-watch é o opt-out)"
+            warn "kernel-watch não instalado — $(conselho_de_instalacao)$(so_no_checkout "(entra por default; --no-kernel-watch é o opt-out)")"
         fi
     fi
     local log="${HOME}/.local/state/hefesto-dualsense4unix/kernel.log"
@@ -3068,14 +3174,14 @@ check_cmdline_platform() {
         elif [[ "${agendado}" -eq 1 ]]; then
             warn "cmdline: ${tok} agendado mas NÃO ativo — pendente de reboot"
         else
-            warn "cmdline: ${tok} ausente — rode ./install.sh (o passo 3e aplica com MERGE no token único e registro de dono)"
+            warn "cmdline: ${tok} ausente — $(conselho_de_instalacao)$(so_no_checkout "(o passo 3e aplica com MERGE no token único e registro de dono)")"
         fi
     done
     # O kernel respeita SÓ UM token usbcore.quirks= — mais de um é bug de merge.
     local n_tokens
     n_tokens="$(grep -o 'usbcore\.quirks=' /proc/cmdline 2>/dev/null | wc -l || true)"
     if [[ "${n_tokens:-0}" -gt 1 ]]; then
-        warn "MAIS DE UM token usbcore.quirks= no cmdline (${n_tokens}) — o kernel respeita só um; rode ./install.sh (o passo 3e funde num token único)"
+        warn "MAIS DE UM token usbcore.quirks= no cmdline (${n_tokens}) — o kernel respeita só um; $(conselho_de_instalacao)$(so_no_checkout "(o passo 3e funde num token único)")"
     fi
     if [[ -f "${owners}" ]]; then
         info "donos registrados: $(tr '\n' ' ' < "${owners}")"
@@ -3174,10 +3280,10 @@ check_bluez_backport_version() {
             pass "bluez ${ver}${origem} >= ${_BZ_PISO} e < ${_BZ_TETO} (sem os crashes crônicos de input/HIDP do 5.72, e sem o UAF do 5.87)"
             ;;
         nova)
-            warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo desta casa é o backport 5.86 (./install.sh, passo 3f); o porquê está em docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md §D"
+            warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo desta casa é o backport 5.86$(so_no_checkout "(./install.sh, passo 3f)"); o porquê está em docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md §D"
             ;;
         old)
-            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: ./install.sh (passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os pela receita em docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md, seção 3, caminho 1)"
+            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: $(conselho_de_instalacao)$(so_no_checkout "(passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os pela receita em docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md, seção 3, caminho 1)")"
             ;;
         *)
             info "bluez não encontrado (nem daemon em execução, nem pacote) — pulo o check de versão"
@@ -3200,7 +3306,7 @@ check_bt_agent_service() {
     elif systemctl cat hefesto-bt-agent.service >/dev/null 2>&1; then
         warn "hefesto-bt-agent.service instalado mas ${state:-inativo} — bond meio-salvo à espreita (Paired sem Bonded); ligue: sudo systemctl enable --now hefesto-bt-agent.service"
     else
-        warn "hefesto-bt-agent.service não instalado — pareamento fora da GUI/daemon pode ficar meio-salvo (Paired sem Bonded, 'No agent available for request type 2'); rode ./install.sh (ONDA-R aplica por default)"
+        warn "hefesto-bt-agent.service não instalado — pareamento fora da GUI/daemon pode ficar meio-salvo (Paired sem Bonded, 'No agent available for request type 2'); $(conselho_de_instalacao)$(so_no_checkout "(ONDA-R aplica por default)")"
     fi
 }
 
@@ -3226,7 +3332,7 @@ check_bt_resilience() {
         # nos dois lados da cerca, e quem instalou por pacote sem checkout tem
         # o caminho próprio — o mesmo par de endereços que os checks de DKMS
         # já usam.
-        warn "resiliência do bluetoothd não instalada (crash do bluetoothd destrói bonds sem backup): ./install.sh no checkout do repo — em QUALQUER formato, inclusive --flatpak/--appimage/--deb —, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh (que traz os alvos das regras 82/83, mas não os timers)"
+        warn "resiliência do bluetoothd não instalada (crash do bluetoothd destrói bonds sem backup): $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh" "— atenção: ele traz os alvos das regras 82/83, mas NÃO os timers")$(so_no_checkout "— em QUALQUER formato, inclusive --flatpak/--appimage/--deb")"
     fi
     if [[ ! -f /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf ]]; then
         warn "drop-in 10-hefesto-resilience.conf ausente — sem o desarme do watchdog do systemd (BLUETOOTHD-MORTO-POR-NOS-01) e sem snapshot na parada do serviço"
@@ -3620,14 +3726,14 @@ print("leaky=" + " ".join(f"{a}:{t}" for a, t in leaky))
     if [[ "${present}" == "1" && "${manifest}" == "1" ]]; then
         pass "Proton pinado presente e íntegro (${nome})"
     elif [[ "${present}" == "1" ]]; then
-        warn "Proton pinado presente (${nome}) mas o manifesto do hefesto não bate — reinstale: ./install.sh (re-verifica o SHA256)"
+        warn "Proton pinado presente (${nome}) mas o manifesto do hefesto não bate — $(conselho_de_instalacao)$(so_no_checkout "(re-verifica o SHA256)")"
     else
-        warn "Proton pinado AUSENTE (${nome}) — rode ./install.sh (baixa, verifica o SHA256 e extrai por default)"
+        warn "Proton pinado AUSENTE (${nome}) — $(conselho_de_instalacao)$(so_no_checkout "(baixa, verifica o SHA256 e extrai por default)")"
     fi
     if [[ "${glob}" == "1" && "${off:-0}" -eq 0 ]]; then
         pass "todos os jogos travados no Proton pinado (default global + por jogo)"
     else
-        [[ "${glob}" != "1" ]] && warn "default global da Steam NÃO aponta pro Proton pinado — use o botão 'Travar Proton validado' (aba Sistema da GUI, com a Steam fechada) ou rode ./install.sh"
+        [[ "${glob}" != "1" ]] && warn "default global da Steam NÃO aponta pro Proton pinado — use o botão 'Travar Proton validado' (aba Sistema da GUI, com a Steam fechada); ou, para refazer pela linha de comando, $(conselho_de_instalacao)"
         [[ "${off:-0}" -gt 0 ]] && warn "${off} jogo(s) fora do Proton pinado — um upgrade de Proton pode reintroduzir o controle duplicado nesses jogos"
     fi
     if [[ -n "${leaky}" ]]; then
@@ -3821,7 +3927,7 @@ _veredito_do_hide() {
 check_hidraw_broker() {
     command -v systemctl >/dev/null 2>&1 || { info "systemctl ausente — não checo o broker hide-hidraw"; return; }
     if ! systemctl cat hefesto-hidraw-broker.socket >/dev/null 2>&1; then
-        info "broker hide-hidraw não instalado (rode ./install.sh — BROKER-01 é DEFAULT, sem flag)"
+        info "broker hide-hidraw não instalado ($(conselho_de_instalacao)$(so_no_checkout "— BROKER-01 é DEFAULT, sem flag"))"
         return
     fi
     local sock_state
@@ -4172,7 +4278,7 @@ check_teclado_na_tela() {
             info "é o ÚNICO caminho de fábrica para ESCREVER TEXTO com o controle:"
             info "nenhum dos nove atalhos padrão digita letra (Super, PrintScreen,"
             info "Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois de OSK)"
-            info "rode: ${comando}    — ou reinstale: ./install.sh"
+            info "rode: ${comando}    — ou $(conselho_de_instalacao)"
             ;;
     esac
 }
@@ -4814,7 +4920,7 @@ check_perms_soft() {
             esac
         done <<< "${causas}"
         if [[ -z "${_rules_nossas}" ]]; then
-            info "  as regras do Hefesto NÃO estão instaladas aqui — então nada devolve esses nós ao esperado; rode ./install.sh."
+            info "  as regras do Hefesto NÃO estão instaladas aqui — então nada devolve esses nós ao esperado; $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")."
         elif [[ "${_culpado_tardio}" -eq 1 ]]; then
             info "  ATENÇÃO: a regra acima roda DEPOIS das do Hefesto (ou usa 'MODE:='), então ela vence — os nós dos controles também ficam abertos."
         else
@@ -4942,7 +5048,7 @@ restaurar_hidraw_uaccess() {
     done
     info "nenhuma regra udev é criada, nada é escrito em /etc, e nenhum acesso é concedido a ninguém."
     info "o que isto NÃO resolve: não IMPEDE o nó de reabrir. Se ele voltar a abrir, existe regra que este diagnóstico não lê (ENV{...}, GOTO, ou programa fora do udev) — e aí o conserto não dura."
-    info "quem CONCEDE o uaccess aos nós do Hefesto é a regra udev, não este comando: ./install.sh ou scripts/doctor.sh --fix."
+    info "quem CONCEDE o uaccess aos nós do Hefesto é a regra udev, não este comando: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"), ou scripts/doctor.sh --fix."
 
     for i in "${!alvos[@]}"; do
         alvo="${alvos[$i]}"
@@ -5127,14 +5233,14 @@ _check_hid_nintendo_exceeded_dense_signature() {
 # NUNCA chama modprobe/rmmod/dkms install aqui (isso é do install.sh).
 check_hefesto_hid_nintendo_dkms() {
     if ! command -v dkms >/dev/null 2>&1; then
-        info "dkms ausente — patch DKMS do hid-nintendo (Onda T) não instalado (opcional; ./install.sh instala por default, ou: sudo apt install dkms)"
+        info "dkms ausente — patch DKMS do hid-nintendo (Onda T) não instalado (opcional: sudo apt install dkms$(so_no_checkout "— ou ./install.sh, que o instala por default"))"
         return
     fi
     local kver status
     kver="$(uname -r)"
     status="$(dkms status "${HEFESTO_DKMS_HID_NINTENDO_PKG}/${HEFESTO_DKMS_HID_NINTENDO_VER}" 2>/dev/null)"
     if [[ -z "${status}" ]]; then
-        info "patch DKMS do hid-nintendo (Onda T) não instalado — driver in-tree em uso (cura de raiz do probe BT: ./install.sh no checkout do repo, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh; opt-out: --no-dkms)"
+        info "patch DKMS do hid-nintendo (Onda T) não instalado — driver in-tree em uso (cura de raiz do probe BT: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")$(so_no_checkout "— opt-out: --no-dkms"))"
         return
     fi
     if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
@@ -5187,14 +5293,14 @@ readonly HEFESTO_DKMS_RTW88_VER="1.0.0"
 # NUNCA chama modprobe/rmmod/dkms install aqui (isso é do install.sh).
 check_hefesto_rtw88_usb_dkms() {
     if ! command -v dkms >/dev/null 2>&1; then
-        info "dkms ausente — patch DKMS do rtw88_usb (Onda W) não instalado (opcional; ./install.sh instala por default, ou: sudo apt install dkms)"
+        info "dkms ausente — patch DKMS do rtw88_usb (Onda W) não instalado (opcional: sudo apt install dkms$(so_no_checkout "— ou ./install.sh, que o instala por default"))"
         return
     fi
     local kver status
     kver="$(uname -r)"
     status="$(dkms status "${HEFESTO_DKMS_RTW88_PKG}/${HEFESTO_DKMS_RTW88_VER}" 2>/dev/null)"
     if [[ -z "${status}" ]]; then
-        info "patch DKMS do rtw88_usb (Onda W) não instalado — driver in-tree em uso (cura de raiz do fantasma USB do dongle WiFi: ./install.sh no checkout do repo, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh; opt-out: --no-dkms)"
+        info "patch DKMS do rtw88_usb (Onda W) não instalado — driver in-tree em uso (cura de raiz do fantasma USB do dongle WiFi: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")$(so_no_checkout "— opt-out: --no-dkms"))"
         return
     fi
     if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
