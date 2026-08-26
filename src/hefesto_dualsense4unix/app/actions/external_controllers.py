@@ -449,6 +449,14 @@ def external_key(entry: dict[str, Any]) -> str:
 #: arbitrário: ``00``-``05`` são as cores de catálogo do DualSense, e as outras
 #: quinze são edições especiais e coleções, que caberiam na lista do jeito que
 #: cabem na vida — pelo nome, no campo livre.
+#:
+#: O PAPEL DELA MUDOU EM 25/08/2026 (LEX-5), e ela não caducou. O card deixou de
+#: mostrar estes seis como BOTÕES — quem lista agora é :func:`cores_para_busca`,
+#: com as vinte e uma. O que estes seis pares passaram a ser é a tradução para o
+#: PORTUGUÊS das cores de catálogo, e ela virou o SINÔNIMO de busca
+#: (:func:`sinonimos_da_busca`): quem digita "vermelho" acha "Cosmic Red" sem
+#: que a tela deixe de dizer "Cosmic Red". Sem isso, trocar a lista pela busca
+#: teria tirado da tela a única palavra em português que a cor já tinha.
 _CORES_DA_LISTA: tuple[tuple[str, str], ...] = (
     ("00", "Branco"),
     ("01", "Preto"),
@@ -475,6 +483,20 @@ ID_DE_NAO_SEI = "nao_sei"
 #: A dica do "Não sei", em todo campo declarável do card.
 DICA_DE_NAO_SEI = "Apaga o que foi declarado aqui. O Hefesto volta a não saber."
 
+#: Os códigos que a Sony vende no catálogo corrente do DualSense. São os seis
+#: de :data:`_CORES_DA_LISTA` mais os que entraram depois — todo código de dois
+#: DÍGITOS até `12`. `30` e a família `Z*` são aniversário e edição de jogo.
+_CODIGOS_DE_CATALOGO = frozenset(
+    {"00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}
+)
+
+#: As duas dicas da busca de cor (LEX-5). Elas dizem o que a linha não mostra:
+#: de que família aquele nome é. Ver :func:`dicas_da_busca`.
+#:
+#: PROVISÓRIO — decisão dela (PROVA-DE-TELA-01). Texto novo de tela.
+DICA_DE_CATALOGO = "Cor de catálogo do DualSense."
+DICA_DE_EDICAO = "Edição especial ou coleção."
+
 
 def cores_do_plastico_items() -> list[tuple[str, str]]:
     """``(id, rótulo)`` da lista de cor — seis nomes, "Outra" e "Não sei".
@@ -485,6 +507,91 @@ def cores_do_plastico_items() -> list[tuple[str, str]]:
     C2) — quem faz essa ponte é :func:`nome_oficial_da_cor`.
     """
     return [*_CORES_DA_LISTA, (ID_DE_OUTRA_COR, "Outra"), (ID_DE_NAO_SEI, "Não sei")]
+
+
+def cores_para_busca() -> list[tuple[str, str]]:
+    """``(id, nome)`` de TODAS as cores de fábrica, mais "Outra" e "Não sei".
+
+    LEX-5 (25/08/2026). Enquanto a cor era uma fileira de botões, mostrar as
+    vinte e uma custava sete fileiras por card, e o recorte de seis
+    (:data:`_CORES_DA_LISTA`) era o preço para o card caber. Com a busca o preço
+    sumiu — a lista só existe enquanto ela digita —, e o recorte deixa de ter
+    razão de ser: quem tem uma "Galactic Purple" ou uma edição especial passa a
+    achar o próprio controle pelo nome que está escrito na caixa dele.
+
+    NADA AQUI PASSA POR ``_()``, e é a mesma fronteira da
+    :func:`cores_do_plastico_items`: este módulo devolve a tabela, e quem
+    traduz é o call site — que sabe quais linhas são redação nossa ("Outra",
+    "Não sei") e quais são nome de fábrica. "Cosmic Red" é o que está na caixa e
+    no serial do aparelho; traduzi-lo inventaria um nome que a Sony não usa e
+    que não casa com nenhuma outra fonte.
+
+    A ORDEM É A DA TABELA, que é a ordem do CÓDIGO no firmware — as de catálogo
+    (``00``-``12``) antes das edições especiais (``30``, ``Z*``). Ordenar por
+    nome misturaria as duas famílias sem ganhar nada: quem busca digita.
+    """
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
+
+    return [
+        *NOMES_DE_FABRICA.items(),
+        (ID_DE_OUTRA_COR, "Outra"),
+        (ID_DE_NAO_SEI, "Não sei"),
+    ]
+
+
+def sinonimos_da_busca() -> dict[str, str]:
+    """``{código: palavra em português}`` — o que também ACHA, sem se mostrar.
+
+    ESTA FUNÇÃO EXISTE PORQUE A BUSCA CRIARIA UMA REGRESSÃO SEM ELA, e a
+    regressão tem nome: a lista de botões que ela substituiu mostrava seis
+    rótulos em PORTUGUÊS ("Vermelho", "Azul"...), e os vinte e um nomes de
+    fábrica são todos em inglês. Quem sabe o nome do próprio controle digita
+    "Cosmic Red" — que é o gesto que ela descreveu. Quem só sabe que *é
+    vermelho* digitaria "vermelho" e não acharia nada, e essa pessoa era
+    exatamente quem a lista de seis atendia.
+
+    A palavra casa e não aparece: a linha continua dizendo "Cosmic Red", que é o
+    que está escrito na caixa e no serial do aparelho.
+
+    Ela lê :func:`cores_do_plastico_items` em vez de repetir os seis pares —
+    aquela função é a dona da tradução, e duas cópias divergiriam na primeira
+    revisão de redação. Os dois ids que não são cor ficam de fora: "Outra" e
+    "Não sei" já são as próprias palavras em português.
+    """
+    return {
+        ident: rotulo
+        for ident, rotulo in cores_do_plastico_items()
+        if ident not in (ID_DE_OUTRA_COR, ID_DE_NAO_SEI)
+    }
+
+
+def dicas_da_busca() -> dict[str, str]:
+    """``{id: dica}`` da busca de cor — a dica é a FAMÍLIA da cor.
+
+    Na lista de seis botões a dica servia para dizer o nome de fábrica que o
+    rótulo em português escondia ("Vermelho" → "Cosmic Red"). Na busca o rótulo
+    JÁ é o nome de fábrica, então repeti-lo na dica não diria nada. O que ela
+    diz agora é a única coisa que a linha não mostra: se aquela cor é de
+    catálogo ou edição especial — que é a diferença entre "a minha é essa" e "a
+    minha se parece com essa".
+
+    As duas linhas que NÃO são cor continuam com a dica que sempre tiveram, e
+    vêm de :func:`dicas_das_cores` em vez de serem repetidas aqui: aquela função
+    é a dona delas, e "Não sei" tem de dizer a mesma coisa em todo campo
+    declarável do card (D-A1).
+    """
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
+
+    dicas = {
+        codigo: (
+            DICA_DE_CATALOGO if codigo in _CODIGOS_DE_CATALOGO else DICA_DE_EDICAO
+        )
+        for codigo in NOMES_DE_FABRICA
+    }
+    das_cores = dicas_das_cores()
+    dicas[ID_DE_OUTRA_COR] = das_cores[ID_DE_OUTRA_COR]
+    dicas[ID_DE_NAO_SEI] = das_cores[ID_DE_NAO_SEI]
+    return dicas
 
 
 def dicas_das_cores() -> dict[str, str]:

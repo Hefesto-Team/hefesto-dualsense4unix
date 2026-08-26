@@ -66,7 +66,32 @@ QUANDO_VALE = 'A escolha passa a valer quando você clicar em "Aplicar", no roda
 
 #: A contraparte, para a seção que grava NA HORA. Sem ela, "A janela" seria a
 #: única sem resposta à pergunta "isto ficou guardado?".
+#:
+#: DESDE A LEX-2/LEX-3 (25/08/2026) ELA NÃO NASCE MAIS NA PÁGINA. Ela é uma
+#: EXPLICAÇÃO — diria a mesma coisa com a seção intocada e com a seção toda
+#: mexida —, e a regra do léxico manda explicação para o hover: hoje ela é a
+#: dica dos rótulos das duas fileiras que gravam na hora ("Tamanho do texto:" e
+#: "Ambiente:"). O lugar dela na página foi tomado pelo :data:`RECIBO_GUARDADO`,
+#: que é ESTADO: nasce vazio e só aparece depois do clique.
+#:
+#: Por que a troca: como parágrafo estático a frase estava na tela ANTES do
+#: clique, então não distinguia "cliquei" de "não cliquei" — que é exatamente a
+#: pergunta que ela existe para responder. Ela relatou o sintoma pelo lado de
+#: fora: *"janela ok, muito bom mas os botões não funcionam"*. Os handlers
+#: estavam todos lá; o que faltava era recibo.
 VALE_JA = 'A escolha fica guardada na hora — não espera o "Aplicar".'
+
+#: O RECIBO: a frase curta que aparece DEPOIS do clique, em verde, ao lado da
+#: fileira que recebeu o gesto. Some no clique seguinte em outra fileira.
+#:
+#: Curta de propósito. A frase longa continua existindo e explica o mecanismo
+#: (:data:`VALE_JA`, agora no hover); o recibo não explica nada — ele CONFIRMA,
+#: e confirmação que ocupa duas linhas deixa de ser confirmação e vira mais um
+#: parágrafo de apoio, que é o defeito que esta leva está pagando.
+#:
+#: PROVISÓRIO — decisão dela (PROVA-DE-TELA-01). Texto novo de tela; entra na
+#: lista de `docs/process/2026-08-25-AS-FRASES-DE-TELA-QUE-ESPERAM-ELA.md`.
+RECIBO_GUARDADO = "Guardado."
 
 
 def _descer(widget: Any) -> Iterator[Any]:
