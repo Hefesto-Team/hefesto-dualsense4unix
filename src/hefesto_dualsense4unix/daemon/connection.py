@@ -104,8 +104,10 @@ async def connect_with_retry(daemon: DaemonProtocol) -> None:
             # depois de um erro de leitura — a troca de cabo dela), e sem a
             # reaplicação aqui o volume do perfil ativo volta ao do firmware sem
             # dizer nada. Best-effort: nunca derruba a conexão.
-            with contextlib.suppress(Exception):
-                await reapply_speaker_after_connect(daemon)
+            #
+            # BORDA-DE-QUEDA-01: e vai em TODOS os controles da mesa, não
+            # só no primário — ver `reaplicar_som_em_todos_os_alvos`.
+            await reaplicar_som_em_todos_os_alvos(daemon)
             return
         except Exception as exc:
             logger.warning("controller_connect_failed", err=str(exc), exc_info=True)
@@ -168,6 +170,103 @@ async def reapply_speaker_after_connect(
     )
     if estado is not None:
         logger.info("speaker_reaplicado_no_connect", estado=estado, uniq=uniq)
+
+
+def alvos_conectados_de(daemon: DaemonProtocol) -> dict[str, str | None] | None:
+    """`{key: uniq}` dos controles conectados AGORA, ou None se ninguém sabe.
+
+    BORDA-DE-QUEDA-01 — a ponte entre este laço e o `alvos_conectados()` do
+    backend, que é a única fonte por ALVO que existe. O `is_connected()` que
+    este laço sempre consultou é um `any(...)` sobre os handles: com dois ou
+    mais na mesa, a queda de um não muda a resposta, a transição não acontece,
+    e o controle que caiu some sem uma linha sequer.
+
+    **None não é mesa vazia.** Backend enxuto (o `FakeController` dos testes,
+    um dublê, o backend legado) simplesmente não tem o método, e a resposta
+    honesta para ele é "não pergunte por alvo" — que é None. Um dicionário
+    vazio significaria "olhei e não há ninguém", e confundir os dois publicaria
+    uma queda falsa a cada tique em toda instalação com backend enxuto.
+    """
+    metodo = getattr(getattr(daemon, "controller", None), "alvos_conectados", None)
+    if not callable(metodo):
+        return None
+    try:
+        alvos = metodo()
+    except Exception as exc:
+        # Best-effort como todo o resto deste laço: a observação por alvo é um
+        # acréscimo, e nunca pode derrubar o probe que reconecta o controle.
+        logger.debug("alvos_conectados_falhou", err=str(exc), exc_info=True)
+        return None
+    if not isinstance(alvos, dict):
+        return None
+    return dict(alvos)
+
+
+async def reaplicar_som_em_todos_os_alvos(daemon: DaemonProtocol) -> None:
+    """Reaplica o volume/rota do perfil ativo em CADA controle da mesa.
+
+    BORDA-DE-QUEDA-01. `reapply_speaker_after_connect(daemon)` sem `uniq` cai
+    no `_handle_for(None)` do backend, que é **o primário e mais ninguém**:
+    quando o Controle 3 caía no rádio e voltava, quem recebia o volume dela era
+    o Controle 1 — que nem tinha perdido a posse dos bytes. O volume do que
+    voltou ficava o do firmware, calado, que é exatamente o sintoma "a config
+    que eu deixo nunca é respeitada" do lado do som.
+
+    Sem enumeração por alvo (backend enxuto) ou com a mesa vazia, mantém o
+    comportamento de antes desta linha — uma chamada com `uniq=None`. Chaves
+    de fallback por path não têm MAC e também viram `None`; o `dict.fromkeys`
+    faz a deduplicação para que duas delas não escrevam duas vezes no mesmo
+    primário.
+
+    Best-effort por alvo, e de propósito: um controle que falhe a escrita não
+    pode impedir os outros de receberem o volume.
+    """
+    alvos = alvos_conectados_de(daemon)
+    uniqs: list[str | None] = (
+        [None] if not alvos else list(dict.fromkeys(alvos.values()))
+    )
+    for uniq in uniqs:
+        with contextlib.suppress(Exception):
+            await reapply_speaker_after_connect(daemon, uniq=uniq)
+
+
+async def anunciar_bordas_por_alvo(
+    daemon: DaemonProtocol,
+    antes: dict[str, str | None],
+    agora: dict[str, str | None],
+) -> None:
+    """As bordas que o agregado esconde: quem saiu da mesa e quem voltou a ela.
+
+    BORDA-DE-QUEDA-01 — chamado SÓ quando o agregado não se mexeu (a mesa não
+    esvaziou nem nasceu). O ramo agregado continua dono das bordas dele: a
+    primeira conexão e a mesa que fica vazia publicam o que sempre publicaram,
+    com o mesmo motivo, e este aqui não duplica nada.
+
+    A queda vira `controller_disconnected` com o motivo `alvo_sumiu` e o `uniq`
+    de quem caiu — a chave que casa a linha com o card da GUI, com o perfil e
+    com o diário da bateria. **Não chama `registrar_queda_da_bateria`**: aquela
+    é agregada (escreve a última carga de TODOS) e o `DiarioDaBateria` já
+    escreve a queda deste controle sozinho, pelo caminho `sumiu_do_backend`;
+    chamar as duas daria duas linhas contando a mesma coisa.
+
+    **Não notifica o desktop**, e isto é decisão de forma: "controle
+    desconectado" numa mesa em que três seguem de pé leria como a mesa inteira
+    ter caído. Quem quiser a notícia por controle precisa de uma frase nova, e
+    frase nova de tela é decisão dela.
+
+    A volta reaplica o som DAQUELE controle, pelo `uniq` dele — é a metade da
+    entrega que o `reaplicar_som_em_todos_os_alvos` cobre no outro caminho.
+    """
+    for key in [k for k in antes if k not in agora]:
+        uniq = antes[key]
+        daemon.bus.publish(
+            EventTopic.CONTROLLER_DISCONNECTED,
+            {"reason": "alvo_sumiu", "uniq": uniq},
+        )
+        logger.info("controller_disconnected", reason="alvo_sumiu", uniq=uniq)
+    for key in [k for k in agora if k not in antes]:
+        with contextlib.suppress(Exception):
+            await reapply_speaker_after_connect(daemon, uniq=agora[key])
 
 
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
@@ -463,6 +562,11 @@ async def reconnect_loop(
     initial_connected = bool(daemon.controller.is_connected())
     restored = initial_connected
     was_connected = initial_connected
+    # BORDA-DE-QUEDA-01: a memória POR ALVO, ao lado da agregada. Ela nasce com
+    # a foto de agora, e não vazia: com um controle já de pé no boot, uma
+    # memória vazia leria a primeira volta do laço como "chegou alguém" e
+    # reaplicaria o som sem que nada tivesse acontecido.
+    alvos_antes = alvos_conectados_de(daemon) or {}
     while not daemon._is_stopping():
         try:
             await daemon._run_blocking(daemon.controller.connect)
@@ -500,6 +604,10 @@ async def reconnect_loop(
         await carimbar_o_nascimento(daemon)
 
         is_connected = bool(daemon.controller.is_connected())
+        # BORDA-DE-QUEDA-01: a foto por alvo do MESMO tique do agregado — as
+        # duas têm de vir do mesmo instante, senão a comparação atribui a um
+        # tique uma borda que aconteceu no outro.
+        alvos_agora = alvos_conectados_de(daemon)
         if is_connected and not was_connected:
             # BUG-DAEMON-CONNECT-GHOST-INPUT-01: transição offline→online
             # detectada pelo probe. Rearma o settling antes de qualquer outra
@@ -553,8 +661,11 @@ async def reconnect_loop(
             # (Modo Nativo, perfil de janela, marker órfão) em que o volume do
             # perfil ativo se perderia em silêncio. Preferimos a escrita repetida
             # à perda calada.
-            with contextlib.suppress(Exception):
-                await reapply_speaker_after_connect(daemon)
+            #
+            # BORDA-DE-QUEDA-01: e num controle POR CONTROLE, não só no
+            # primário — `reapply_speaker_after_connect` sem `uniq` escreve no
+            # primário e em mais ninguém.
+            await reaplicar_som_em_todos_os_alvos(daemon)
             was_connected = True
         elif not is_connected and was_connected:
             # Transição online→offline detectada pelo probe (poll_loop também
@@ -579,6 +690,19 @@ async def reconnect_loop(
                 )
                 notify_controller_disconnected("probe offline")
             was_connected = False
+        elif alvos_agora is not None:
+            # BORDA-DE-QUEDA-01: o agregado não se mexeu — e é justamente aqui
+            # que mora a queda que ninguém via. Com dois ou mais na mesa,
+            # `is_connected()` é `any(...)` e continua dizendo "sim" depois de
+            # um cair: nenhum dos dois ramos acima dispara, e o Controle 2 some
+            # sem evento, sem linha e sem o som de volta quando retorna.
+            await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora)
+
+        # A memória por alvo avança em TODOS os caminhos (inclusive nos dois
+        # ramos agregados, que são donos das bordas deles): deixá-la para trás
+        # faria o tique seguinte reanunciar a mesma borda.
+        if alvos_agora is not None:
+            alvos_antes = alvos_agora
 
         if is_connected:
             # BROKER-01 §2.2: re-hide do físico a cada reconciliação online —
