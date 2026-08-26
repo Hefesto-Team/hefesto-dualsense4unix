@@ -6,6 +6,8 @@ systemd de usuário deixa de ser presumido).
 """
 from __future__ import annotations
 
+from typing import ClassVar
+
 from pathlib import Path
 
 import pytest
@@ -163,7 +165,9 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
     #: Não é dublê de conveniência — é a forma que
     #: `tests/fixtures/state_full_quatro_controles.json` traz, e a que
     #: `mouse_actions._anotar_teclado_na_tela` lê.
-    PAYLOAD_REAL = {"keyboard_emulation": {"osk_disponivel": True}}
+    PAYLOAD_REAL: ClassVar[dict[str, dict[str, bool]]] = {
+        "keyboard_emulation": {"osk_disponivel": True}
+    }
 
     def test_a_chave_nao_mora_no_topo_do_state_full(self) -> None:
         """A prova de que o payload acima é o de verdade, e não invenção minha."""
