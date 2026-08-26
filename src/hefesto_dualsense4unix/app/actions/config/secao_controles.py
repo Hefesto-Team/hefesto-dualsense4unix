@@ -744,7 +744,7 @@ class _PainelDosControles:
         """O hospedeiro é o de `scripts/gui-captura/retratar_abas.py`?
 
         O sinal é o `_mesa_leitor`, que aquele host monta para a seção da mesa
-        (`secao_mesa.py:333`) e que nenhum hospedeiro de produção tem. Usar um
+        (`secao_mesa.py:772`, `_mesa_leitor`) e que nenhum hospedeiro de produção tem. Usar um
         sinal que já existe é melhor que inventar uma segunda bandeira: uma
         bandeira nova precisaria ser posta em `retratar_abas.py`, que é
         território de outra frente nesta leva, e até lá a captura sairia falando
