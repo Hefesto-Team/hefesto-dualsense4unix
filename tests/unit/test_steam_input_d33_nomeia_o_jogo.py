@@ -176,7 +176,7 @@ class TestMensagemDoDoctor:
         _, msg = sd.check_steam_input(casa)
 
         assert "'Este jogo não funciona'" in msg
-        assert "'Aplicar correções'" not in msg
+        assert f"'{sd.rotulo_do_botao('btn_storm_fix_safe', '?')}'" not in msg
 
     def test_sem_manifest_mostra_o_appid_cru(self, casa: Path) -> None:
         _localconfig(casa, _vdf([_SACKBOY]))
@@ -207,7 +207,14 @@ class TestMensagemDoDoctor:
         tag, msg = sd.check_steam_input(casa)
 
         assert tag == sd.WARN
-        assert "'Aplicar correções'" in msg
+        # 26/08/2026: esta linha prendia o rótulo "Aplicar correções" letra por
+        # letra, e ficou vermelha quando a leva daquele dia renomeou o botão
+        # para o texto que diz o que ele FAZ. O renomeio estava certo; a régua é
+        # que digitava o que devia LER. Agora ela pergunta ao glade, que é o
+        # dono único do rótulo — e continua provando o que sempre provou: que a
+        # frase aponta ESTE botão, e não o "Este jogo não funciona", que apagaria
+        # a escolha dela.
+        assert f"'{sd.rotulo_do_botao('btn_storm_fix_safe', '?')}'" in msg
         assert "aba Sistema" in msg
 
     def test_jogo_da_allowlist_nao_e_acusado(self, casa: Path) -> None:
