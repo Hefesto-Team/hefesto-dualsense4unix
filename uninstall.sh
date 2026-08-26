@@ -139,6 +139,13 @@ readonly WIREPLUMBER_DROPIN_OUTPUT="${HOME}/.config/wireplumber/wireplumber.conf
 # incondicionalmente, como o 52 e o 53. Sem esta linha a máquina dela ficaria
 # com uma regra de áudio do Hefesto depois de desinstalar o Hefesto.
 readonly WIREPLUMBER_DROPIN_ACORDADO="${HOME}/.config/wireplumber/wireplumber.conf.d/54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
+# DROPIN-AMBIGUO-01 (26/08/2026): a MARCA DO GESTO do microfone. Artefato
+# nosso, escrito pelo gesto de LIGAR o mic do controle — sai com o resto, e por
+# um motivo de contrato, não só de simetria: a marca diz "a ausência do drop-in
+# 51 aqui foi pedido dela". Depois do uninstall o 51 também sai, e a ausência
+# volta a ter DUAS origens; deixar a marca de pé faria a próxima instalação
+# herdar uma promoção que ninguém pediu nesta vida.
+readonly MARCA_MIC_PEDIDO="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/mic-do-dualsense-pedido.conf"
 # environment.d do modo-jogo (PS_LONG_PRESS_MS=0). Hoje redundante (o default do
 # código é 0), mas é artefato do hefesto — remove na desinstalação por simetria.
 readonly ENVIRONMENTD_GAMEMODE="${HOME}/.config/environment.d/91-hefesto-dualsense-gamemode.conf"
@@ -516,6 +523,12 @@ if [[ -f "${WIREPLUMBER_DROPIN_ACORDADO}" ]]; then
     log "removendo drop-in WirePlumber (nunca-dorme): ${WIREPLUMBER_DROPIN_ACORDADO}"
     rm -f "${WIREPLUMBER_DROPIN_ACORDADO}"
     systemctl --user restart wireplumber >/dev/null 2>&1 || true
+fi
+
+# DROPIN-AMBIGUO-01: a marca do gesto do microfone sai junto do 51 (acima).
+if [[ -f "${MARCA_MIC_PEDIDO}" ]]; then
+    log "removendo a marca do gesto do microfone: ${MARCA_MIC_PEDIDO}"
+    rm -f "${MARCA_MIC_PEDIDO}"
 fi
 
 # environment.d do modo-jogo (91): artefato do hefesto — remove por simetria.
