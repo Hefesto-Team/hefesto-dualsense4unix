@@ -866,10 +866,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     problemas = valida(falas, fatos, afirma_por_nome, causa_de_fora)
+    numeros = descobre_numeros(raiz)
     problemas.extend(
-        valida_numeros(
-            descobre_numeros(raiz), _le_celulas_do_mapa(raiz), fala_do_mapa.formata_pt_br
-        )
+        valida_numeros(numeros, _le_celulas_do_mapa(raiz), fala_do_mapa.formata_pt_br)
     )
     problemas.extend(valida_abas_promovidas(raiz))
     vencidos = prazos_vencidos(falas, hoje)
@@ -895,7 +894,29 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {problema}")
         return 1
 
-    print(f"OK: {len(falas)} `Fala` declarada(s), todas de acordo com {FATOS_DO_MAPA_RELATIVO}.")
+    # O TAMANHO DO CONJUNTO MEDIDO VAI NA FRASE DE SUCESSO — 26/08/2026
+    # (LEVA-4-E). Até aqui esta linha dizia só `OK: 1 Fala declarada(s)`, e
+    # quem lia o verde do `portoes.sh` não tinha como saber que o produto
+    # inteiro tem UMA `Fala` (`app/widgets/external_card.py`) contra um mapa de
+    # 308 células. Com um conjunto desse tamanho, "nenhum desacordo" não é
+    # prova de acordo — é a régua confundindo a PALAVRA com o ATO, que é o
+    # padrão que a casa nomeou em 25/08. `rc` continua 0 de propósito: o
+    # tamanho do conjunto é decisão de produto (quantas abas foram promovidas),
+    # e portão não reprova ninguém por uma fila que ele não enche.
+    tamanho = (
+        f"{len(falas)} `Fala` declarada(s), {len(numeros)} número(s) de tela e "
+        f"{len(ABAS_COM_FALA_DECLARADA)} aba(s) promovida(s), contra as "
+        f"{len(fatos)} célula(s) de {FATOS_DO_MAPA_RELATIVO}"
+    )
+    if len(falas) <= 1:
+        print(
+            f"A RÉGUA QUASE NÃO MEDIU: {tamanho}. Um conjunto deste tamanho "
+            "não distingue uma tela em acordo com o mapa de uma tela que "
+            "simplesmente não declara nada — promova mais abas em "
+            "`ABAS_COM_FALA_DECLARADA` e o verde daqui passa a valer."
+        )
+        return 0
+    print(f"OK: {tamanho}, todas de acordo.")
     return 0
 
 
