@@ -20,11 +20,23 @@ substring, sem diferenciar maiúsculas.
 
 AS SUPERFÍCIES VIVAS, E SÓ ELAS
 ----------------------------------
-`README.md`, `docs/usage/**`, `docs/protocol/**`, `src/**`. NUNCA
+`README.md`, `docs/usage/**`, `docs/protocol/**`, `src/**` e `po/**`. NUNCA
 `docs/process/**` (narrativa histórica — a regra da casa é *"não se apaga
 decisão medida"*) nem `docs/data/mapa-controles*.csv`/`specs.html` (a célula
 que DECLARA a caducidade cita o literal caduco de propósito, e o `specs.html`
 é gerado a partir dela).
+
+**O `.glade` e o `.po` entraram em 26/08/2026** (LEVA-4-E). `src` já estava na
+lista, mas a lista de extensões descartava o `main.glade` antes de abri-lo — e
+`<property name="label">` é literalmente o texto que ela LÊ. Um fato caduco
+publicado ali chegava à tela com este portão verde, e isso foi medido.
+
+E O PORTÃO NÃO SE DESARMA MAIS SOZINHO
+-----------------------------------------
+Até 26/08/2026, `mv docs/data/caducos.csv /tmp/` fazia este script imprimir
+`OK` e sair `rc=0`. Ledger ausente agora é `rc=1` nomeando o arquivo, como o
+`scripts/portoes.sh` já faz para portão ausente. Ledger PRESENTE e vazio
+continua `rc=0` — mas dizendo que não mediu nada, não `OK`.
 
 Uso:
     python3 scripts/validar-caducos.py --all
@@ -43,10 +55,21 @@ CADUCOS_CAMINHO = RAIZ / CADUCOS_RELATIVO
 #: As superfícies VIVAS, e só elas — nunca `docs/process/`, nunca
 #: `docs/data/mapa-controles*.csv`, nunca `specs.html` (gerado, e cita o
 #: literal caduco na própria declaração de caducidade).
-RAIZES_VIVAS = ("README.md", "docs/usage", "docs/protocol", "src")
+#:
+#: `po/` ENTROU em 26/08/2026 (LEVA-4-E), junto com a extensão `.po` abaixo:
+#: a tradução é a frase que chega à tela de quem não lê inglês, e a extensão
+#: sozinha seria vacuidade — nenhum `.po` mora sob as outras quatro raízes.
+RAIZES_VIVAS = ("README.md", "docs/usage", "docs/protocol", "src", "po")
 
 #: Extensões que valem a pena varrer — texto, não binário.
-EXTENSOES = {".md", ".py", ".html", ".rst", ".txt"}
+#:
+#: `.glade` e `.po` ENTRARAM em 26/08/2026 (LEVA-4-E), e o motivo é medido: o
+#: `main.glade` é a superfície MAIS viva que existe — um fato caduco escrito
+#: num `<property name="label">` chega à TELA — e ele ficava de fora apesar de
+#: `src` já estar em `RAIZES_VIVAS`, porque a lista de extensões o descartava
+#: antes. `.pot` fica de fora de propósito: é o gabarito gerado por `xgettext`
+#: a partir do código, não uma superfície que alguém escreve.
+EXTENSOES = {".md", ".py", ".html", ".rst", ".txt", ".glade", ".po"}
 
 
 @dataclass(frozen=True)
@@ -59,9 +82,20 @@ class Caduco:
     onde_pode_ficar: str
 
 
+class LedgerAusente(Exception):
+    """O livro-caixa não está no disco — e isso NÃO é uma varredura limpa.
+
+    Medido em 26/08/2026 (LEVA-4-E): `mv docs/data/caducos.csv /tmp/` fazia
+    este portão imprimir `OK` e sair `rc=0`. Um portão que se desarma quando a
+    fonte dele some é pior que portão nenhum, porque publica um selo verde por
+    ele. O `scripts/portoes.sh` já trata portão AUSENTE como vermelho; a fonte
+    de um portão merece a mesma régua.
+    """
+
+
 def carrega_caducos(caminho: Path) -> list[Caduco]:
     if not caminho.exists():
-        return []
+        raise LedgerAusente(str(caminho))
     with caminho.open(encoding="utf-8", newline="") as arquivo:
         linhas = list(csv.DictReader(arquivo))
     caducos: list[Caduco] = []
@@ -142,9 +176,22 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("passe --all")
 
     raiz = args.raiz.resolve()
-    caducos = carrega_caducos(raiz / CADUCOS_RELATIVO)
+    try:
+        caducos = carrega_caducos(raiz / CADUCOS_RELATIVO)
+    except LedgerAusente:
+        print(
+            f"FALHA: {CADUCOS_RELATIVO} não existe em '{raiz}' — este portão "
+            "acabou de ficar CEGO, e sem o livro-caixa ele não tem o que "
+            "procurar. Devolva o arquivo (ou aponte --raiz para a árvore certa); "
+            "verde por ausência de fonte é o selo mais caro desta casa."
+        )
+        return 1
     if not caducos:
-        print(f"OK: {CADUCOS_RELATIVO} vazio ou ausente — nada a varrer.")
+        print(
+            f"A RÉGUA NÃO MEDIU NADA: {CADUCOS_RELATIVO} existe e está SEM "
+            "LINHA nenhuma. Nenhum fato caduco declarado significa nenhuma "
+            "busca feita — não confunda isto com uma árvore limpa."
+        )
         return 0
 
     problemas = varre(raiz, caducos)
