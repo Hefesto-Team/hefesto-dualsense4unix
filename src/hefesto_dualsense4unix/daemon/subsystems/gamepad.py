@@ -1058,9 +1058,11 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
     final achado #6): o cliente faz I/O de socket com timeout de 2 s por nó —
     nunca no event loop E nunca no pool compartilhado 'hefesto-hid' de
     read_state (o padrão que o HANG-01 baniu). Gates espelham o hide do grab: emulação
-    ligada, vpad VIVO (não só existente), fora do Modo Nativo, backend com
-    `hidraw_path`. Jogador de co-op sem vpad vivo ou externo (`path:*`) NUNCA
-    autoriza hide do próprio nó.
+    ligada, fora do Modo Nativo, backend com `hidraw_path` — esses três valem
+    para a mesa inteira. O gate de vpad VIVO (não só existente) é **por nó**:
+    o vpad do P1 responde pelo nó do P1 e o vpad de cada jogador de co-op
+    responde pelo dele (BORDA-DE-QUEDA-01, abaixo). Jogador de co-op sem vpad
+    vivo ou externo (`path:*`) NUNCA autoriza hide do próprio nó.
     """
     if daemon.is_native_mode():
         return
@@ -1073,20 +1075,22 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
     # (§2.2 do BROKER-01). Não há mais nada a desfazer.
     if not getattr(daemon.config, "gamepad_emulation_enabled", False):
         return
-    if not _vpad_vivo(daemon):
-        return
     hidraw_fn = getattr(daemon.controller, "hidraw_path", None)
     if not callable(hidraw_fn):
         return
-    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
-        broker_client_for,
-    )
-
-    client = broker_client_for(daemon)
     nodes: set[str] = set()
-    node = hidraw_fn()
-    if isinstance(node, str) and node:
-        nodes.add(node)
+    # BORDA-DE-QUEDA-01 (26/08/2026): o gate do P1 guarda SÓ o nó do P1.
+    # Ele estava no TOPO da função, antes do laço dos secundários: com o vpad
+    # do Jogador 1 morto (UHID_STOP de um probe, uhid derrubado), a função
+    # inteira devolvia — e os jogadores 2, 3 e 4, cada um com o vpad DELE bem
+    # vivo, tinham o físico reaparecendo VISÍVEL a cada replug/wake BT. O jogo
+    # passava a ver físico + vpad de cada um: os controles duplicados, que é o
+    # defeito histórico mais caro desta casa. Cada jogador é guardado pelo vpad
+    # DELE (`vpad_vivo` no laço abaixo) — o do P1 nunca respondeu pelos outros.
+    if _vpad_vivo(daemon):
+        node = hidraw_fn()
+        if isinstance(node, str) and node:
+            nodes.add(node)
     coop = getattr(daemon, "_coop_manager", None)
     players = getattr(coop, "_players", None) or {}
     # S-6 (auditoria 21/07): snapshot — esta função roda no executor do broker
@@ -1101,6 +1105,13 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
         n = hidraw_fn(identity)
         if isinstance(n, str) and n:
             nodes.add(n)
+    if not nodes:
+        return  # nada a esconder: não vale abrir lease de broker à toa
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+        broker_client_for,
+    )
+
+    client = broker_client_for(daemon)
     for n in sorted(nodes):
         client.hide(n)
 
