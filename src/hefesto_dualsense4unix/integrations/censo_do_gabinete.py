@@ -756,6 +756,57 @@ def resumo(censo: dict[str, object]) -> str:
     return " · ".join(partes)
 
 
+# ══ 9b. O QUE A ABA LÊ ═══════════════════════════════════════════════════
+#
+# As duas funções abaixo existem para que a aba NÃO precise conhecer a forma
+# `{valor, de_onde_sei}` deste arquivo. Sem elas, a seção "A mesa" repetiria o
+# desempacotamento em código de tela, e no dia em que o par ganhasse um terceiro
+# campo haveria DUAS verdades sobre o mesmo JSON — que é o defeito que o par
+# existe para não deixar acontecer.
+
+
+#: As três rotas por onde uma contagem de entrada chega até a aba, na ordem em
+#: que a tela as publica. A chave é a do JSON; a frase de tela é da seção, nunca
+#: deste arquivo.
+FONTES_DA_CONTAGEM = ("firmware", "kernel_buracos", "declarado_por_ela")
+
+
+def contagens_declaradas(censo: dict[str, object]) -> dict[str, int]:
+    """``{fonte: número}`` — só as fontes que RESPONDERAM.
+
+    Devolve zero, uma, duas ou três entradas de :data:`FONTES_DA_CONTAGEM`, e
+    **nunca elege**: quando as fontes divergem elas saem todas, lado a lado, e
+    quem escolhe é ela. Eleger aqui seria o §7.4 desmontado no último passo —
+    a aba desenharia cinco entradas para quem tem oito, e a pessoa procuraria no
+    gabinete três buracos que o mapa não mostra.
+
+    Fonte que não respondeu simplesmente não aparece. ``0`` continua sendo uma
+    resposta legítima e distinta da ausência, como em todo este arquivo.
+    """
+    contagens = censo.get("contagens")
+    if not isinstance(contagens, dict):
+        return {}
+    achadas = {fonte: _numero(contagens.get(fonte)) for fonte in FONTES_DA_CONTAGEM}
+    return {fonte: n for fonte, n in achadas.items() if n is not None}
+
+
+def pergunta_pendente(censo: dict[str, object]) -> str:
+    """A pergunta que a aba tem de fazer — ``""`` quando ela já respondeu.
+
+    Quem decide é ``precisa_da_palavra_dela``, e ele é ``True`` mesmo quando as
+    três contagens batem: nenhuma delas viu o gabinete por fora. Ele só vira
+    ``False`` em :func:`preservar_o_que_ela_disse`, depois que ela respondeu.
+
+    O TEXTO é PROVISÓRIO e o dono dele é o léxico — ver :func:`_pergunta`. A aba
+    o publica como está; o que ela não pode é escondê-lo, que é o F6.
+    """
+    contagens = censo.get("contagens")
+    if not isinstance(contagens, dict) or not contagens.get("precisa_da_palavra_dela"):
+        return ""
+    pergunta = contagens.get("pergunta")
+    return pergunta if isinstance(pergunta, str) else ""
+
+
 # ══ 10. Interno ══════════════════════════════════════════════════════════
 
 
