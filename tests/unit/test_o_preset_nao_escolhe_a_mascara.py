@@ -60,7 +60,7 @@ def test_nenhum_preset_shipado_escolhe_a_mascara() -> None:
     # lista de ofensores fica vazia por AUSÊNCIA de dado e o teste passaria sem
     # ter olhado nada. Eram SETE presets de jogo em 22/08/2026; a poda de
     # 26/08 levou `coop_local` e `sackboy_nativo`, e sobraram CINCO — os cinco
-    # de gênero (`fps`, `aventura`, `acao`, `corrida`, `esportes`). O piso
+    # de gênero (`fps`, `aventura`, `acao`, `corrida`, `esportes`). O piso  # noqa: acentuacao — slug de perfil, sem acento por desenho
     # desce com a fábrica, senão vira trava contra o que já aconteceu.
     assert len(gamepads) >= 5, (
         "o portão não achou os presets de jogo — filtro errado, não aprovação. "
@@ -82,7 +82,7 @@ def test_o_null_do_preset_atravessa_o_esquema_intacto() -> None:
     """
     from hefesto_dualsense4unix.profiles.schema import Profile
 
-    # Os três eram `acao`, `coop_local` e `sackboy_nativo`; os dois últimos
+    # Os três eram `acao`, `coop_local` e `sackboy_nativo`; os dois últimos  # noqa: acentuacao — slug de perfil, sem acento por desenho
     # foram podados da fábrica em 26/08/2026 e deram lugar a dois presets de
     # gênero que continuam shipando `mode: gamepad`.
     for nome in ("acao", "aventura", "fps"):  # (noqa-acento) nomes de arquivo
