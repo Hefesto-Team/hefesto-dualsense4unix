@@ -515,14 +515,23 @@ def esta_instalacao_e_um_checkout() -> bool:
 def como_atualizar_esta_instalacao() -> str:
     """O gesto de atualizar que serve para ESTA instalação, sem jargão.
 
-    O texto é de `utils/repo_files.FRASE_DE_ATUALIZAR` — um lugar só, e
-    comparado palavra por palavra com o do `scripts/doctor.sh` por portão.
-    A **pergunta** é a deste módulo, para que trocar
-    `esta_instalacao_e_um_checkout` aqui mude a resposta aqui.
+    O texto NÃO se redige aqui — os dois extremos da escada moram em
+    `utils/repo_files.FRASE_DE_ATUALIZAR` e os cinco degraus do meio em
+    `integrations/storm_doctor.GESTO_DE_ATUALIZAR`, comparados palavra por
+    palavra com os do `scripts/doctor.sh` por portão. A **pergunta** é a deste
+    módulo, para que trocar `esta_instalacao_e_um_checkout` aqui mude a
+    resposta aqui.
+
+    BG-06b (26/08/2026): antes desta linha a resposta parava em dois casos —
+    "rode ./install.sh" para quem clonou, e a genérica *"pelo mesmo caminho por
+    onde você o instalou"* para todo o resto. Honesta e universal, ela não
+    dizia o GESTO; agora o formato é medido e o gesto tem nome
+    (`flatpak update`, `pacman -Syu`, …), com a genérica de último degrau para
+    o formato que ninguém assume.
     """
-    return repo_files.como_atualizar_esta_instalacao(
-        e_checkout=esta_instalacao_e_um_checkout()
-    )
+    from hefesto_dualsense4unix.integrations.storm_doctor import gesto_de_atualizar
+
+    return gesto_de_atualizar(e_checkout=esta_instalacao_e_um_checkout())
 
 
 def format_steam_ready_result(
@@ -709,11 +718,17 @@ def interpretar_guarda_do_steam_input(saida: object) -> tuple[str, str] | None:
         motivo = "está habilitada, mas não está rodando"
     else:
         motivo = "consta ligada, mas não tem próximo disparo"
+    # BG-SAUDE-01 (26/08/2026): esta linha é a 13ª do MESMO cartão, e tinha os
+    # dois defeitos das outras doze juntos — dizia "Conserto:" onde as outras
+    # doze passaram a dizer "O que fazer:" (duas palavras para o mesmo papel na
+    # mesma tela), e cravava `bash install.sh`, que não existe em cinco dos
+    # seis formatos. O `./` ausente é o que a escondeu da varredura sintática
+    # da BG-INSTALL-01, que procura `./install.sh`.
     return (
         storm_doctor.WARN,
         "Steam Input: a rede de segurança "
         f"{motivo} — a Steam pode religar a entrada Steam nos jogos e nada vai "
-        "desfazer. Conserto: rode `bash install.sh` de novo (sem sudo).",
+        f"desfazer. {storm_doctor.PREFIXO_DA_CURA}{como_atualizar_esta_instalacao()}.",
     )
 
 
@@ -765,6 +780,8 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
     bastante para nunca rodar na linha do GTK, e uma função pura é o que
     permite a mordida existir sem plantar uma biblioteca Steam inteira.
     """
+    from hefesto_dualsense4unix.integrations.storm_doctor import PREFIXO_DA_CURA
+
     jogos = getattr(censo, "jogos", None)
     if not jogos:
         return None
@@ -778,8 +795,12 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
     return (
         "[WARN]",
         f"Ponte confirmada que não bate com a lista de hoje: {nomes}{resto} — "
-        "o jogo foi marcado (ou desmarcado) depois que a ponte pegou. Abra o "
-        "perfil dele na aba Perfis e confira a caixinha do Steam Input.",
+        "o jogo foi marcado (ou desmarcado) depois que a ponte pegou. "
+        # BG-SAUDE-01 (26/08/2026): o gesto já estava escrito; o que faltava
+        # era estar no MESMO lugar da frase que as outras treze linhas deste
+        # cartão, para a pessoa não ter de caçá-lo em cada uma.
+        f"{PREFIXO_DA_CURA}abra o perfil dele na aba Perfis e "
+        "confira a caixinha do Steam Input.",
     )
 
 

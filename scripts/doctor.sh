@@ -135,6 +135,87 @@ esta_instalacao_e_um_checkout() {
 #: visto renderando as 33 lado a lado, não lendo o fonte.
 _CONSELHO_GESTO_GENERICO="atualize o Hefesto pelo mesmo caminho por onde você o instalou"
 
+# ---------------------------------------------------------------------------
+# BG-06b (26/08/2026) — O GESTO GANHA NOME, POR FORMATO.
+#
+# A frase acima é honesta e universal, e é o ÚLTIMO degrau — não o único. Quem
+# instalou por Flatpak, Arch, Fedora, Debian ou Nix pode receber o gesto com
+# nome, e recebe.
+#
+# O QUE ISTO NÃO FAZ: adivinhar o formato pela distribuição. "Tem `apt`, logo
+# é `.deb`" está errado para todo AppImage e todo `pip install --user` numa
+# máquina Debian — e gesto errado é pior que gesto vago. A pergunta é sempre
+# sobre ESTE arquivo no disco: quem é o dono dele?
+#
+# A cópia em Python é `integrations/storm_doctor.GESTO_DE_ATUALIZAR` +
+# `formato_desta_instalacao`. DUPLICAÇÃO DECLARADA, pelo mesmo motivo de
+# sempre (este script é shell e não importa Python), e com o mesmo portão em
+# cima: `test_bg06_…::test_o_gesto_e_nomeado_por_formato` compara as duas nos
+# cinco formatos e reprova se divergirem.
+#
+# **PROVISÓRIO — decisão dela**: os cinco gestos nomeados são texto novo de
+# tela. Carimbo herdado da T-03, que redigiu a genérica e parou aqui de
+# propósito.
+
+#: Qual gerenciador de pacotes assume um caminho. `$1` é o caminho; ecoa
+#: `arch`/`debian`/`fedora` ou NADA. É uma pergunta ao disco, não um palpite:
+#: AppImage e instalação à mão não são de ninguém, e caem na genérica.
+_dono_do_arquivo() {
+    local alvo="${1:?}"
+    if command -v pacman >/dev/null 2>&1 && pacman -Qo "${alvo}" >/dev/null 2>&1; then
+        printf 'arch'
+    elif command -v dpkg >/dev/null 2>&1 && dpkg -S "${alvo}" >/dev/null 2>&1; then
+        printf 'debian'
+    elif command -v rpm >/dev/null 2>&1 && rpm -qf "${alvo}" >/dev/null 2>&1; then
+        printf 'fedora'
+    fi
+}
+
+#: O formato desta instalação em uma palavra. `$1` é o caminho do código a
+#: interrogar (default: este script) — é parâmetro, e não variável de
+#: ambiente, porque é assim que a bancada planta um `/nix/store` de mentira
+#: sem abrir uma porta dos fundos no produto.
+#:
+#: A ordem é uma ESCADA, e cada degrau é medição: checkout (o `install.sh` ao
+#: lado), flatpak (o `/.flatpak-info` que o próprio flatpak monta), nix (o
+#: código dentro do `/nix/store`), o dono do arquivo, e a genérica.
+_formato_desta_instalacao() {
+    local alvo="${1:-${BASH_SOURCE[0]}}" dono
+    if esta_instalacao_e_um_checkout; then
+        printf 'checkout'
+        return 0
+    fi
+    local marca_flatpak="${HEFESTO_MARCA_SANDBOX:-/.flatpak-info}"
+    if [[ -f "${marca_flatpak}" || -n "${FLATPAK_ID:-}" ]]; then
+        printf 'flatpak'
+        return 0
+    fi
+    if [[ "${alvo}" == /nix/store/* ]]; then
+        printf 'nix'
+        return 0
+    fi
+    dono="$(_dono_do_arquivo "${alvo}")"
+    printf '%s' "${dono:-desconhecido}"
+}
+
+#: O gesto de atualizar com nome, ou a genérica. `$1` é repassado ao
+#: `_formato_desta_instalacao`.
+#:
+#: Cada gesto é UM GESTO ("rode X"), pela mesma razão da genérica: ele entra no
+#: MESMO lugar da frase ("…, ou <isto>", "traga o alvo: <isto>"), e uma oração
+#: inteira ali quebra a gramática de quem a hospeda.
+_gesto_de_atualizar() {
+    case "$(_formato_desta_instalacao "${1:-}")" in
+        flatpak) printf 'rode flatpak update' ;;
+        arch)    printf 'rode sudo pacman -Syu' ;;
+        fedora)  printf 'rode sudo dnf upgrade' ;;
+        debian)  printf 'rode sudo apt upgrade' ;;
+        nix)     printf 'rode nix profile upgrade' ;;
+        *)       printf '%s' "${_CONSELHO_GESTO_GENERICO}" ;;
+    esac
+}
+# ---------------------------------------------------------------------------
+
 # O gesto de instalar/reparar que serve para ESTA máquina.
 #   $1 — o que vem DEPOIS de `./install.sh` no checkout (as flags). Opcional.
 #   $2 — o CAMINHO de um reparador que os pacotes levam e que refaz este passo
@@ -156,7 +237,10 @@ conselho_de_instalacao() {
         printf 'rode o reparador que veio no seu pacote: sudo %s%s' \
             "${reparador}" "${ressalva:+ ${ressalva}}"
     else
-        printf '%s' "${_CONSELHO_GESTO_GENERICO}"
+        # BG-06b: a genérica deixou de ser o único destino deste ramo — ela é
+        # o último degrau de `_gesto_de_atualizar`, e continua sendo a resposta
+        # de quem não tem dono (AppImage, instalação à mão).
+        printf '%s' "$(_gesto_de_atualizar)"
     fi
 }
 
