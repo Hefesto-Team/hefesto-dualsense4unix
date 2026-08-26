@@ -4209,6 +4209,23 @@ class Daemon:
         `backend_pydualsense.set_game_authority_provider`). Propaga
         qualquer exceção para o chamador (`_sync_game_signal`), que
         degrada para `unknown` (fail-safe).
+
+        SINAL-DE-JOGO-01/E4 (26/08/2026): a quarta evidência — o PROCESSO do
+        jogo vivo — entra aqui, e é a única que não depende do detector de
+        janela nem do wrapper. **A casa já sabia e o produto não fazia:** a
+        `steam_game_running_appid` responde essa pergunta desde 08/08, o
+        próprio daemon já a chamava no MESMO tique lento (`_sondar_steam_jogo`,
+        ABA-DO-JOGO-01, para a aba da janela) e o sinal de jogo a ignorava.
+
+        **Custo por tique: zero a mais.** A varredura tem memória de 5 s
+        (`VALIDADE_DA_VARREDURA_S`, BG-03) e as duas chamadas do tique caem na
+        mesma foto; o positivo, ao contrário do negativo, é reconfirmado toda
+        vez, então nada aqui vira sticky (veto do módulo `game_signal`).
+
+        **Por que não ler `store.steam_jogo_lido`**, que a sonda já publica:
+        aquele campo GUARDA a última resposta boa quando a sonda falha, e uma
+        evidência que não decai prende a autoridade em `game` para sempre —
+        exatamente o veto do `window_detect_last_class`.
         """
         from hefesto_dualsense4unix.daemon.launch_env import (
             pid_is_alive,
@@ -4216,6 +4233,9 @@ class Daemon:
             read_last_exit_pid,
             read_last_run_marker,
             read_last_run_pid,
+        )
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            steam_game_running_appid,
         )
 
         mono_now = time.monotonic()
@@ -4247,6 +4267,7 @@ class Daemon:
             "marker_pid": marker_pid,
             "exit_marker": exit_marker,
             "exit_pid": exit_pid,
+            "appid_de_jogo_vivo": steam_game_running_appid(),
             "session_open": self._any_game_session_open(),
             "now": time.time(),
         }
