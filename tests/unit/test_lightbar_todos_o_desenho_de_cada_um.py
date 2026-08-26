@@ -76,6 +76,16 @@ class _Caixa:
         self.active = bool(valor)
 
 
+def _aceitou(uniq: str | None) -> dict[str, Any]:
+    """Corpo de um ``led.player_set`` que ESCREVEU em ``uniq`` (BG-01)."""
+    return {
+        "status": "ok",
+        "bits": [],
+        "aplicado_em": [uniq] if uniq else [],
+        "guardado_em": [],
+    }
+
+
 class _Host(LightbarActionsMixin):
     """Host da aba com DOIS controles na mesa e o alvo em "Todos"."""
 
@@ -137,8 +147,9 @@ def test_todos_nao_pode_pintar_o_numero_de_um_no_outro(
     enviados: dict[str, tuple[bool, ...]] = {}
     monkeypatch.setattr(
         lightbar_actions,
-        "player_leds_set",
-        lambda bits, uniq=None: enviados.__setitem__(uniq, tuple(bits)) or True,
+        "player_leds_set_detalhado",
+        lambda bits, uniq=None: enviados.__setitem__(uniq, tuple(bits))
+        or _aceitou(uniq),
     )
     host = _Host(_draft())
 
@@ -184,7 +195,9 @@ def test_a_tela_para_de_esconder_que_o_clique_vai_para_todos(
     asserção reprova.
     """
     monkeypatch.setattr(
-        lightbar_actions, "player_leds_set", lambda *a, **kw: True
+        lightbar_actions,
+        "player_leds_set_detalhado",
+        lambda _bits, uniq=None: _aceitou(uniq),
     )
     host = _Host(_draft())
 
@@ -201,7 +214,9 @@ def test_com_um_controle_so_a_frase_do_para_todos_nao_aparece(
 ) -> None:
     """A recíproca: contar "1 controle" seria ruído, não informação."""
     monkeypatch.setattr(
-        lightbar_actions, "player_leds_set", lambda *a, **kw: True
+        lightbar_actions,
+        "player_leds_set_detalhado",
+        lambda _bits, uniq=None: _aceitou(uniq),
     )
     host = _Host(_draft())
     host._target_uniq_by_index = {0: UNIQ_1}
@@ -224,8 +239,9 @@ def test_os_dois_atalhos_para_todos_ficam_fora_da_pergunta(
     enviados: list[tuple[Any, str | None]] = []
     monkeypatch.setattr(
         lightbar_actions,
-        "player_leds_set",
-        lambda bits, uniq=None: enviados.append((tuple(bits), uniq)) or True,
+        "player_leds_set_detalhado",
+        lambda bits, uniq=None: enviados.append((tuple(bits), uniq))
+        or _aceitou(uniq),
     )
     host = _Host(_draft())
 

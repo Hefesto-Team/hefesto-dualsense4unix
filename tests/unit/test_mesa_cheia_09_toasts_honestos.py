@@ -103,6 +103,13 @@ class _Host(LightbarActionsMixin):
         self._target_uniq_by_index = conectados
         self._coop_ligado = coop
         self._modo_nativo_ligado = nativo
+        # BG-01 (26/08/2026): o dublê do daemon precisa das MESMAS duas coisas
+        # que o daemon de verdade usa para montar `aplicado_em`/`guardado_em`
+        # — quem está na mesa e se o output está mutado pelo Modo Nativo.
+        _MESA_DO_DAEMON["conectados"] = {
+            v for v in conectados.values() if isinstance(v, str) and v
+        }
+        _MESA_DO_DAEMON["nativo"] = nativo
         self._current_rgb = (255, 0, 0)
         self._current_brightness = 0.8
         self._widgets: dict[str, Any] = {}
@@ -116,14 +123,50 @@ class _Host(LightbarActionsMixin):
         self._toasts.append(msg)
 
 
+#: BG-01 (26/08/2026): o que o DAEMON sabe da mesa, alimentado por `_Host`.
+_MESA_DO_DAEMON: dict[str, Any] = {"conectados": set(), "nativo": False}
+
+
+def _corpo_por_uniq(uniq: str | None) -> dict[str, Any]:
+    """A resposta que o daemon monta para um ``led.set``/``led.player_set``.
+
+    BG-01. Este dublê deixou de dizer só "sim": ele reproduz o mapa que
+    ``ipc_handlers._destinos_por_uniq`` faz do que
+    ``backend_pydualsense.apply_output_for`` devolveu, e são as três palavras
+    que importam aqui:
+
+    * controle na mesa, output livre -> ``"escreveu"`` -> ``aplicado_em``;
+    * controle FORA da mesa (``handle is None``) -> ``"registrado"`` ->
+      ``guardado_em``;
+    * Modo Nativo (``_output_mute``) -> ``"registrado"`` -> ``guardado_em``,
+      que é o conserto 1.3.
+
+    **Sem isto o dublê seria uma régua que só sabe passar**: dizendo sempre
+    ``aplicado_em: [uniq]`` ele afirmaria escrita onde o produto mede
+    registro, e a aba — que agora decide pelo CORPO — repetiria a afirmação.
+    O dublê tem de saber recusar; é a régua da casa.
+    """
+    if uniq and _MESA_DO_DAEMON["nativo"]:
+        return {"status": "ok", "aplicado_em": [], "guardado_em": [uniq]}
+    if uniq and uniq in _MESA_DO_DAEMON["conectados"]:
+        return {"status": "ok", "aplicado_em": [uniq], "guardado_em": []}
+    if uniq:
+        return {"status": "ok", "aplicado_em": [], "guardado_em": [uniq]}
+    return {"status": "ok", "aplicado_em": [], "guardado_em": []}
+
+
 @pytest.fixture(autouse=True)
 def _ipc_mudo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O daemon sempre aceita — o que está em julgamento é a FRASE."""
+    """O daemon responde como o daemon — o que está em julgamento é a FRASE."""
     monkeypatch.setattr(
-        lightbar_actions, "led_set", lambda *_a, **_kw: True
+        lightbar_actions,
+        "led_set_detalhado",
+        lambda _rgb, brightness=None, uniq=None: _corpo_por_uniq(uniq),
     )
     monkeypatch.setattr(
-        lightbar_actions, "player_leds_set", lambda *_a, **_kw: True
+        lightbar_actions,
+        "player_leds_set_detalhado",
+        lambda _bits, uniq=None: _corpo_por_uniq(uniq),
     )
 
 
@@ -158,18 +201,37 @@ class TestACorDaLightbar:
         assert GUARDADO in toast
         assert "vai valer quando o Controle 2 voltar" in toast
 
-    def test_sem_o_mapa_a_janela_nao_inventa_guardado(self) -> None:
+    def test_sem_o_mapa_a_janela_nao_promete_uma_volta_que_nao_conhece(
+        self,
+    ) -> None:
         """O ÚNICO "não sei" que sobrou: a janela não tem o atributo.
 
         Aqui ela de fato não sabe (mixin instanciada sozinha, sem a aba
-        Status). Dizer "guardado" mandaria esperar um controle que talvez
-        esteja ali — trocaria uma mentira por outra pior.
+        Status).
+
+        **BG-01 (26/08/2026) INVERTEU o que este teste mede, e o nome mudou
+        junto.** Ele nasceu exigindo que a frase NÃO dissesse "guardado" —
+        porque quem a dizia era a heurística da janela, e uma janela sem mapa
+        estaria inventando. Desde a BG-01 quem diz é o DAEMON, que sabe: com o
+        alvo fora da mesa ele responde ``guardado_em: [uniq]``, e repetir a
+        palavra dele não é invenção, é a única resposta honesta.
+
+        O que continua valendo — e é o que a mordida guarda — é a segunda
+        metade da frase: **a janela não pode prometer a VOLTA de um controle
+        que ela não sabe se está lá.** Sem o mapa, o "vai valer quando o
+        Controle 2 voltar" não pode aparecer, porque essa parte é dela e não
+        do daemon.
         """
         host = _Host(alvo=FORA_DA_MESA, conectados={})
         del host._target_uniq_by_index
         host._aplicar_cor_no_controle()
         (toast,) = host._toasts
-        assert GUARDADO not in toast
+        assert GUARDADO in toast, "o daemon disse guardado; a tela cala isso?"
+        assert "voltar" not in toast, (
+            "a janela prometeu a volta de um controle que ela não sabe se "
+            "está fora da mesa"
+        )
+        assert "enviada" not in toast
 
     def test_o_estado_de_mapa_vazio_com_alvo_de_pe_existe_no_produto(self) -> None:
         """A guarda antiga se justificava com um estado impossível; este é o
@@ -575,6 +637,17 @@ class TestOVocabularioMoraNumLugarSo:
         for modulo in (lightbar_actions, triggers_actions):
             fonte = Path(modulo.__file__).read_text(encoding="utf-8")
             assert "textos_de_aplicacao" in fonte, modulo.__name__
-            assert f'"{GUARDADO}' not in fonte, (
+            # BG-01 (26/08/2026): a régua passou a ignorar `"guardado_em"`,
+            # que NÃO é a palavra da tela — é o nome do campo que o daemon
+            # publica (`ipc_handlers._destinos_por_uniq`) e que a aba Lightbar
+            # monta ao somar as N respostas de um envio por MAC. Confundir os
+            # dois faria a régua reprovar quem lê o protocolo direito, que é
+            # pior que régua nenhuma: ensina a não acreditar nela.
+            escrita_a_mao = [
+                trecho
+                for trecho in fonte.split(f'"{GUARDADO}')[1:]
+                if not trecho.startswith("_em")
+            ]
+            assert not escrita_a_mao, (
                 f"{modulo.__name__} escreveu a palavra em vez de importá-la"
             )

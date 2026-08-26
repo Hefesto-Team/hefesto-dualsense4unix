@@ -115,12 +115,24 @@ def _draft() -> draft_mod.DraftConfig:
 
 
 def _selar_led_set(monkeypatch: pytest.MonkeyPatch, aceito: bool = True) -> None:
-    """Sela a rota ``led.set``: nenhum teste daqui escreve num controle."""
-    monkeypatch.setattr(
-        lightbar_actions,
-        "led_set",
-        lambda *_a, **_kw: aceito,
-    )
+    """Sela a rota ``led.set``: nenhum teste daqui escreve num controle.
+
+    BG-01 (26/08/2026): a aba passou a ler o CORPO do daemon
+    (``led_set_detalhado``), então o dublê fala o corpo do handler.
+    ``aceito=False`` vira o ``None`` de "o daemon não respondeu", que é o
+    ``False`` que a ponte estreita devolvia.
+    """
+
+    def _detalhado(*_a: Any, uniq: str | None = None, **_kw: Any) -> Any:
+        if not aceito:
+            return None
+        return {
+            "status": "ok",
+            "aplicado_em": [uniq] if uniq else [],
+            "guardado_em": [],
+        }
+
+    monkeypatch.setattr(lightbar_actions, "led_set_detalhado", _detalhado)
 
 
 def _selar_apply_draft(monkeypatch: pytest.MonkeyPatch) -> None:
