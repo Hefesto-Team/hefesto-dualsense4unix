@@ -9,6 +9,7 @@ interface reportam PASSED contra um GTK de mentira. Cobertura falsa é pior do
 que cobertura ausente. Ver ``exigir_gi_real`` e ``pytest_collectstart`` abaixo.
 """
 
+import atexit
 import contextlib
 import datetime
 import errno
@@ -336,11 +337,36 @@ def pytest_runtest_setup(item: Any) -> None:
         vigia.quem = str(getattr(item, "nodeid", item))
 
 
-def pytest_report_header(config: Any) -> str:
-    """Diz, no cabeçalho do run, contra QUAL GTK a suíte vai rodar."""
+def pytest_report_header(config: Any) -> list[str]:
+    """Diz, no cabeçalho do run, contra QUAL GTK a suíte vai rodar.
+
+    E — LUZ-CEGA-01/E8, 25/08/2026 — quantos endereços de FIXTURE já moram no
+    `config_dir()` REAL antes de a suíte começar. É o `--casa` do
+    `scripts/check_faixa_sintetica.py` ganhando o chamador que ele nunca teve:
+    `scripts/portoes.sh` só roda o `--arvore`, e o `~/.config` de verdade não
+    era olhado por instrumento nenhum em estado PARADO — só o DELTA da
+    FAIXA-NO-BERCO-01 o olhava, e delta é cego para a sujeira que já estava lá.
+    Foi essa cegueira que deixou quatro endereços forjados morarem na fila dela
+    de 22/08 a 25/08.
+
+    RELATO, nunca portão, e a razão é a mesma que o cabeçalho do script já
+    escreve: a decisão sobre o que JÁ está gravado é de quem é dono da máquina.
+    Um vermelho que ninguém pode limpar hoje é um vermelho que se aprende a
+    desligar.
+    """
     estado = "REAL (python3-gi + typelibs)" if GI_REAL_DISPONIVEL else "AUSENTE"
     extra = " | HEFESTO_EXIGE_GTK_REAL=1 (pulo vira reprovação)" if EXIGE_GTK_REAL else ""
-    return f"guarda-gi-real-01: PyGObject {estado}{extra}"
+    linhas = [f"guarda-gi-real-01: PyGObject {estado}{extra}"]
+    if _FAIXA_NO_INICIO:
+        onde = _FAIXA_DIR_REAL[0] if _FAIXA_DIR_REAL else _faixa_config_dir_real()
+        arquivos = sorted({chave.split("::")[0] for chave in _FAIXA_NO_INICIO})
+        linhas.append(
+            f"faixa-no-berco-01: {len(_FAIXA_NO_INICIO)} endereço(s) de FIXTURE "
+            f"JÁ moram em {onde}, em {len(arquivos)} arquivo(s) — "
+            f"`python3 scripts/check_faixa_sintetica.py --casa` lista quais. "
+            "Não é desta sessão; a suíte só reprova o que APARECER agora."
+        )
+    return linhas
 
 
 def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any) -> None:
@@ -504,6 +530,12 @@ _FAIXA_DESLIGADA_ENV = "HEFESTO_SEM_FAIXA_SINTETICA"
 #: `{"<arquivo>::<endereço>"}` no início da sessão. O que já estava lá é dela.
 _FAIXA_NO_INICIO: set[str] = set()
 
+#: O `config_dir()` REAL, fixado no `sessionstart` ANTES do desvio do
+#: LAR-DE-SESSAO-01. Só para RELATAR (`pytest_report_header`): a partir do
+#: desvio, `_faixa_config_dir_real()` resolve o dublê, e o cabeçalho tem de
+#: dizer o caminho que a pessoa reconhece.
+_FAIXA_DIR_REAL: list[Path] = []
+
 #: Selo, pelo mesmo motivo do `_CANARIO_ARMADO`: sem a foto inicial, comparar
 #: contra um conjunto vazio acusaria a poluição VELHA como se fosse desta
 #: sessão — o alarme mais falso que existe.
@@ -558,10 +590,15 @@ def _faixa_no_fim_da_sessao(session: Any) -> None:
         f"durante esta sessão ({len(novos)}):",
         *[f"  - {n}" for n in novos],
         "  Isto é a mesa de produção, não um dublê. Algum teste (ou um processo",
-        "  que ele acordou) resolveu o `config_dir()` verdadeiro: procure",
-        "  constante de módulo avaliada no import, registro singleton que",
-        "  sobrevive ao teste e grava depois do teardown do monkeypatch, e",
-        "  subprocesso que não herdou o XDG_CONFIG_HOME isolado.",
+        "  que ele acordou) resolveu o `config_dir()` verdadeiro.",
+        "  As TRÊS classes que o LAR-DE-SESSAO-01 já fecha — constante de módulo",
+        "  avaliada no import, escrita depois do teardown do monkeypatch e",
+        f"  subprocesso — só voltam com {_LAR_DESLIGADO_ENV}=1. Se ele está",
+        "  desligado, ligue-o de volta antes de procurar em qualquer outro lugar.",
+        "  Com ele LIGADO e este alarme aceso, o caminho não passou por",
+        "  `HOME`/`XDG_*`: procure caminho ABSOLUTO escrito à mão, `pwd`/",
+        "  `getpwuid` (que ignoram o HOME) e `sudo`/`systemd-run`, que trocam de",
+        "  usuário e de ambiente.",
         f"  Escotilha: {_FAIXA_DESLIGADA_ENV}=1 (e ela NÃO é a do canário).",
     ])
     session.exitstatus = 1
@@ -879,6 +916,12 @@ def _nascidos_fora_do_berco() -> list[str]:
     novos = agora - _TMP_ANTES
     if nosso is not None:
         novos.discard(nosso.name)
+    # LAR-DE-SESSAO-01: o lar de mentira nasce FORA do berço de propósito (ele
+    # precisa sobreviver à varredura, ver a seção dele) e é NOSSO — acusá-lo
+    # aqui seria o instrumento denunciando o próprio instrumento.
+    lar = lar_de_sessao()
+    if lar is not None:
+        novos.discard(lar.name)
     return sorted(novos)
 
 
@@ -948,18 +991,367 @@ def _varrer_berco(session: Any, exitstatus: int) -> None:
         ])
 
 
+# ---------------------------------------------------------------------------
+# LAR-DE-SESSAO-01 — o isolamento sobrevive ao teardown do `monkeypatch`
+# ---------------------------------------------------------------------------
+# O PORQUÊ, medido pelo forense em 25/08/2026 e confirmado no disco DELA:
+# quatro endereços da faixa de fixture `aa:bb:cc:00:00:0{1..4}` moravam no
+# `~/.config/hefesto-dualsense4unix/controllers.json` de PRODUÇÃO, ocupando os
+# postos 2 a 5 e empurrando os DualSense REAIS dela para 6, 7 e 8 — e
+# `core/led_control.py` só tem cor de PS5 para 1..4. É REINCIDÊNCIA: o backup
+# `backup-limpeza-20260811-233704/controllers.json` já trazia forjados em 11/08.
+#
+# O MECANISMO, em quatro linhas:
+#
+#   1. `identity._path()` resolve o caminho na hora do SAVE, não no import;
+#   2. o isolamento de `XDG_CONFIG_HOME`/`HOME` é `monkeypatch` de escopo de
+#      FUNÇÃO (`_hefesto_fake_env`). No teardown ele DESFAZ — e desfazer
+#      significa devolver o valor que a variável tinha antes do teste;
+#   3. o que ela tinha antes do teste era o `~/.config` DELA;
+#   4. logo, tudo que grava DEPOIS do teardown — finalizador, `atexit`, thread
+#      de escopo maior que a função, subprocesso que sobreviveu, singleton que
+#      atravessa os casos — grava na mesa dela.
+#
+# A CURA não é apertar o teardown: é mudar PARA ONDE ele desfaz. Aqui, no
+# `sessionstart` (antes da COLETA, portanto antes de qualquer import de módulo
+# de teste), o `HOME` e os quatro `XDG_*` passam a apontar para um lar de
+# MENTIRA da sessão inteira. A partir daí:
+#
+#   - `_hefesto_fake_env` continua isolando por teste, como sempre;
+#   - o teardown dele desfaz para o lar de MENTIRA, não para o `~/.config` dela;
+#   - constante de módulo avaliada na importação também cai no dublê (a coleta
+#     acontece depois deste hook), que é a classe que a RÉGUA 1 do
+#     `test_luz_cega_e8_o_berco_nao_vaza.py` só sabe ACUSAR, não impedir;
+#   - subprocesso HERDA o ambiente desviado — e essa é a classe que nenhuma
+#     sonda dentro do processo enxerga.
+#
+# O que este mecanismo NÃO faz: escrever no lar de mentira não é erro nenhum, e
+# ele não reprova ninguém. Quem reprova continua sendo o CANARIO-FS-01 (delta
+# de conteúdo no `$HOME` real) e a FAIXA-NO-BERCO-01 (endereço de fixture novo
+# no `config_dir()` real). Este é o cinto; aqueles são os dois alarmes.
+#
+# O LAR DE MENTIRA MORA FORA DO BERÇO, de propósito: o berço é varrido no
+# `sessionfinish`, e o que precisa continuar de pé DEPOIS dele é justamente
+# este. Quem o leva embora é um `atexit` registrado no `sessionstart` — e
+# `atexit` é LIFO, então o nosso, registrado primeiro, roda POR ÚLTIMO, depois
+# de todo handler que a suíte tenha registrado durante os testes.
+
+#: Escotilha PRÓPRIA — não é a do canário nem a do berço. Quem PRECISA rodar a
+#: suíte contra o `$HOME` de verdade desliga aqui. É também o que dá a mordida
+#: permanente: com isto ligado, o vazamento volta a acontecer (ver
+#: `tests/unit/test_g8_o_lar_de_sessao_fecha_a_janela_do_teardown.py`).
+_LAR_DESLIGADO_ENV = "HEFESTO_SEM_LAR_DE_SESSAO"
+
+#: Prefixo do lar de mentira. Carrega o pid pelo mesmo motivo do berço: o
+#: critério de varredura é POSITIVO ("nasceu desta sessão"), nunca negativo.
+_LAR_PREFIXO = "hefesto-lar-de-sessao-"
+
+#: No máximo um elemento — o lar de mentira desta sessão.
+_LAR_DE_SESSAO: list[Path] = []
+
+#: O `$HOME` REAL, fixado ANTES do desvio. Quem precisa do de verdade (o
+#: `rustup`/`cargo` do `_hefesto_fake_env`) pergunta a `lar_real()`.
+_LAR_REAL: list[Path] = []
+
+#: O valor de cada variável ANTES do desvio (None = não existia).
+_LAR_ENV_ANTES: dict[str, str | None] = {}
+
+#: E o valor DEPOIS, calculado uma vez no arme. Guardado porque o desvio é
+#: reaplicado depois dos portões de fim de sessão, e recalcular ali leria um
+#: ambiente que já é o real — o dublê apontaria para dentro de si mesmo.
+_LAR_ENV_DEPOIS: dict[str, str] = {}
+
+#: As variáveis desviadas, e o caminho PADRÃO de cada uma dentro de um `$HOME`.
+#: O caminho serve para dois usos: montar o valor novo dentro do dublê e
+#: reconhecer o valor REAL quando ele é o default (a máquina dela não seta
+#: nenhuma das quatro).
+_VARS_DO_LAR: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("HOME", ()),
+    ("XDG_CONFIG_HOME", (".config",)),
+    ("XDG_DATA_HOME", (".local", "share")),
+    ("XDG_CACHE_HOME", (".cache",)),
+    ("XDG_STATE_HOME", (".local", "state")),
+)
+
+#: O QUE NASCE VAZIO NO DUBLÊ, e é a decisão central deste mecanismo.
+#:
+#: Um lar de mentira VAZIO fechava o vazamento e QUEBRAVA outra coisa: medido
+#: em 25/08/2026, quatro testes de layout (`test_layout_orcamento_altura.py`,
+#: `test_status_som_02_controle_de_volume.py`) passam a REPROVAR, porque o GTK
+#: e o fontconfig leem `~/.config/gtk-3.0/settings.ini` no `Gtk.init()` — que
+#: acontece na IMPORTAÇÃO dos módulos, portanto depois deste desvio — e sem os
+#: ajustes de fonte dela as larguras medidas em pixel mudam. Trocar um defeito
+#: por outro não é cura.
+#:
+#: Por isso o dublê é um ESPELHO: cada entrada do `$HOME` dela entra por
+#: symlink, e só estes quatro diretórios — os únicos que o produto ESCREVE —
+#: nascem vazios e de verdade. Quem lê configuração de terceiro continua vendo
+#: a dela; quem grava do produto grava no `/tmp`.
+#:
+#: O QUE ISSO NÃO PROTEGE, escrito para ninguém confiar demais: escrita fora
+#: destes quatro caminhos atravessa o symlink e chega ao disco dela — que é
+#: exatamente o que já acontecia antes deste mecanismo existir. Este espelho
+#: NUNCA é pior que o estado anterior; ele só é melhor nos quatro. Quem vigia
+#: o resto continua sendo o CANARIO-FS-01.
+_NOME_DO_PRODUTO = "hefesto-dualsense4unix"
+
+_DIRS_DO_PRODUTO: tuple[tuple[str, ...], ...] = (
+    (".config", _NOME_DO_PRODUTO),
+    (".local", "share", _NOME_DO_PRODUTO),
+    (".local", "state", _NOME_DO_PRODUTO),
+    (".cache", _NOME_DO_PRODUTO),
+)
+
+#: Os RAMOS: todo prefixo próprio dos caminhos acima. Um ramo vira diretório de
+#: verdade no dublê (para poder conter o dublê do produto) e continua espelhado
+#: entrada por entrada; tudo que não é ramo nem folha vira symlink.
+_RAMOS_DO_PRODUTO: frozenset[tuple[str, ...]] = frozenset(
+    folha[:n] for folha in _DIRS_DO_PRODUTO for n in range(1, len(folha))
+)
+
+#: `id()` da Session que ARMOU o desvio. Mesma razão do `_SESSAO_REAL` do
+#: berço: os testes do canário chamam `pytest_sessionfinish` com uma Session de
+#: mentira, de propósito, e sem esta guarda a primeira dessas chamadas
+#: devolveria o `$HOME` real no meio da sessão VIVA.
+_SESSAO_DO_LAR: list[int] = []
+
+
+def _lar_ligado() -> bool:
+    return os.environ.get(_LAR_DESLIGADO_ENV) != "1"
+
+
+def lar_real() -> Path:
+    """O `$HOME` de verdade — o de antes do desvio, quando ele está armado.
+
+    Fora de uma sessão armada devolve o `$HOME` vivo, que é o que ele é.
+    """
+    if _LAR_REAL:
+        return _LAR_REAL[0]
+    return Path(os.environ.get("HOME") or os.path.expanduser("~"))
+
+
+def lar_de_sessao() -> Path | None:
+    """O lar de mentira desta sessão, ou None quando o desvio não está armado."""
+    return _LAR_DE_SESSAO[0] if _LAR_DE_SESSAO else None
+
+
+def _lares_orfaos(raiz: Path) -> list[Path]:
+    """Lares de sessões MORTAS — mesmo critério por pid do `_bercos_orfaos`."""
+    orfaos: list[Path] = []
+    with contextlib.suppress(OSError):
+        for entrada in raiz.iterdir():
+            nome = entrada.name
+            if not nome.startswith(_LAR_PREFIXO):
+                continue
+            cauda = nome[len(_LAR_PREFIXO):]
+            if not cauda.isdigit():
+                continue
+            if not entrada.is_dir() or entrada.is_symlink():
+                continue
+            if _pid_vivo(int(cauda)):
+                continue
+            orfaos.append(entrada)
+    return orfaos
+
+
+def _espelhar_o_lar(
+    real: Path, destino: Path, prefixo: tuple[str, ...] = ()
+) -> None:
+    """Espelha `real` em `destino`: symlink em tudo, menos nos quatro do produto.
+
+    Ver `_DIRS_DO_PRODUTO` para o PORQUÊ de não ser um diretório vazio.
+    """
+    destino.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with contextlib.suppress(OSError):
+        for entrada in sorted(real.iterdir()):
+            caminho = (*prefixo, entrada.name)
+            if caminho in _DIRS_DO_PRODUTO:
+                continue  # nasce vazio no bloco final, exista ou não na casa dela
+            if caminho in _RAMOS_DO_PRODUTO:
+                _espelhar_o_lar(entrada, destino / entrada.name, caminho)
+                continue
+            with contextlib.suppress(OSError):
+                (destino / entrada.name).symlink_to(entrada)
+    if prefixo:
+        return
+    # Os quatro do produto existem SEMPRE aqui, mesmo quando não existem na casa
+    # dela: um `config_dir(ensure=True)` que os criasse por conta própria já
+    # estaria resolvendo o caminho — e resolver o caminho certo é o assunto.
+    for folha in _DIRS_DO_PRODUTO:
+        with contextlib.suppress(OSError):
+            destino.joinpath(*folha).mkdir(mode=0o700, parents=True, exist_ok=True)
+
+
+def _destino_no_duble(var: str, padrao: tuple[str, ...], duble: Path) -> str:
+    """Para onde `var` passa a apontar dentro do dublê.
+
+    O caso comum (e o da máquina dela) é a variável NÃO estar setada: vale o
+    default XDG, que é um caminho dentro do `$HOME`, e o dublê tem o mesmo
+    caminho dentro dele. Uma variável apontada para fora do `$HOME` ganha um
+    espelho próprio — senão o desvio a jogaria num diretório que não espelha
+    nada e o defeito das fontes voltaria por outra porta.
+    """
+    real = lar_real()
+    if not padrao:
+        return str(duble)
+    bruto = (os.environ.get(var) or "").strip()
+    if not bruto:
+        return str(duble.joinpath(*padrao))
+    atual = Path(bruto)
+    if atual.is_relative_to(real):
+        return str(duble / atual.relative_to(real))
+    proprio = duble / f"fora-do-lar-{var.lower()}"
+    if not proprio.exists():
+        proprio.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with contextlib.suppress(OSError):
+            for entrada in sorted(atual.iterdir()):
+                if entrada.name == _NOME_DO_PRODUTO:
+                    continue
+                with contextlib.suppress(OSError):
+                    (proprio / entrada.name).symlink_to(entrada)
+        with contextlib.suppress(OSError):
+            (proprio / _NOME_DO_PRODUTO).mkdir(mode=0o700, exist_ok=True)
+    return str(proprio)
+
+
+def _aplicar_o_lar_de_sessao() -> None:
+    """Aponta `HOME` e os quatro `XDG_*` para dentro do lar de mentira."""
+    destino = lar_de_sessao()
+    if destino is None:
+        return
+    for var, valor in _LAR_ENV_DEPOIS.items():
+        os.environ[var] = valor
+
+
+def _armar_lar_de_sessao(session: Any) -> None:
+    """Cria o lar de mentira e desvia `HOME` + os quatro `XDG_*` para dentro.
+
+    Chamado no FIM do `sessionstart`, depois de toda fotografia: o CANARIO-FS-01
+    e a FAIXA-NO-BERCO-01 medem o `$HOME` REAL, e as duas leem `os.environ` na
+    hora — se o desvio viesse antes, as fotos do início seriam do dublê.
+    """
+    if not _lar_ligado() or _LAR_DE_SESSAO:
+        return
+    raiz = _TMP_REAL[0] if _TMP_REAL else Path(tempfile.gettempdir())
+    for orfao in _lares_orfaos(raiz):
+        shutil.rmtree(orfao, ignore_errors=True)
+    destino = raiz / f"{_LAR_PREFIXO}{os.getpid()}"
+    # `shutil.rmtree` NÃO segue symlink (ele os desliga, um a um) — e é isso que
+    # torna seguro varrer um espelho cheio de links para a casa dela.
+    shutil.rmtree(destino, ignore_errors=True)
+    try:
+        _espelhar_o_lar(lar_real(), destino)
+    except OSError:  # pragma: no cover — /tmp sem escrita derruba a suíte antes
+        shutil.rmtree(destino, ignore_errors=True)
+        return
+    _LAR_DE_SESSAO.append(destino)
+    _SESSAO_DO_LAR.append(id(session))
+    for var, padrao in _VARS_DO_LAR:
+        _LAR_ENV_ANTES[var] = os.environ.get(var)
+        _LAR_ENV_DEPOIS[var] = _destino_no_duble(var, padrao, destino)
+    _aplicar_o_lar_de_sessao()
+    # LIFO: registrado AQUI, roda por ÚLTIMO — depois de todo `atexit` que a
+    # suíte registrar durante os testes, que é a classe mais tardia que existe.
+    atexit.register(_fechar_o_lar_de_sessao)
+
+
+def _devolver_o_ambiente_real() -> None:
+    """Repõe os cinco valores de antes do desvio. Não apaga o lar de mentira."""
+    for var, valor in _LAR_ENV_ANTES.items():
+        if valor is None:
+            os.environ.pop(var, None)
+        else:
+            os.environ[var] = valor
+
+
+@contextlib.contextmanager
+def _com_o_ambiente_real(session: Any) -> Iterator[None]:
+    """Devolve o `$HOME` real SÓ pelo tempo dos portões de fim de sessão.
+
+    O CANARIO-FS-01 e a FAIXA-NO-BERCO-01 resolvem os alvos contra o `HOME`
+    VIVO (é o contrato deles, e `test_conftest_canario_fs.py` o exercita
+    monkeypatchando `HOME`). Para que a foto do FIM caia na mesma árvore da
+    foto do INÍCIO, o ambiente volta ao real enquanto eles medem — e volta ao
+    dublê logo depois, porque a janela de escrita tardia continua aberta até o
+    interpretador morrer.
+    """
+    if not _LAR_DE_SESSAO or id(session) not in _SESSAO_DO_LAR:
+        yield
+        return
+    _devolver_o_ambiente_real()
+    try:
+        yield
+    finally:
+        _aplicar_o_lar_de_sessao()
+
+
+def _fechar_o_lar_de_sessao() -> None:
+    """`atexit`: devolve o ambiente de verdade e leva o lar de mentira embora."""
+    with contextlib.suppress(Exception):
+        _devolver_o_ambiente_real()
+    _LAR_ENV_ANTES.clear()
+    _LAR_ENV_DEPOIS.clear()
+    destino = lar_de_sessao()
+    _LAR_DE_SESSAO.clear()
+    _SESSAO_DO_LAR.clear()
+    if destino is not None:
+        # Seguro sobre o espelho: `rmtree` desliga symlink, nunca o segue.
+        shutil.rmtree(destino, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# SINGLETON-QUE-ATRAVESSA-01 — o registro de identidade não é do processo
+# ---------------------------------------------------------------------------
+# Irmão da cura acima, e a outra metade do mesmo defeito. `identity._registry`
+# é um singleton de MÓDULO: uma vez criado, ele atravessa todos os casos do
+# processo. Foi ele que acumulou os QUATRO endereços de fixture que nenhum
+# arquivo de teste junta sozinho — cada caso põe o seu, ninguém tira, e o
+# primeiro save depois do teardown grava a fila inteira de uma vez.
+#
+# `reset_identity_registry()` existe desde sempre e sete arquivos de teste já a
+# chamam À MÃO. Chamar à mão é o defeito: quem escreve o teste novo não sabe
+# que precisa. Aqui ela roda em TODO caso, nos dois lados.
+#
+# O import é por `sys.modules`, e não por `import`: este conftest é carregado
+# também pelo job leve do CI, que instala só o pytest (ver
+# `test_o_conftest_roda_onde_o_produto_nao_esta_instalado.py`). Se nenhum teste
+# importou o módulo, não há singleton para descartar — e o custo é uma consulta
+# a um dicionário.
+
+_MODULO_DA_IDENTIDADE = "hefesto_dualsense4unix.daemon.subsystems.identity"
+
+
+def _descartar_registro_de_identidade() -> None:
+    """Descarta `identity._registry`, se o módulo estiver carregado."""
+    modulo = sys.modules.get(_MODULO_DA_IDENTIDADE)
+    if modulo is None:
+        return
+    descartar = getattr(modulo, "reset_identity_registry", None)
+    if descartar is None:
+        return
+    with contextlib.suppress(Exception):
+        descartar()
+
+
 def pytest_sessionstart(session: Any) -> None:
     """CANARIO-FS-01: primeira fotografia dos diretórios REAIS da usuária.
 
     E BERCO-DE-TMP-01: a partir daqui, todo temporário desta sessão nasce
     dentro de um diretório que só esta sessão conhece.
+
+    E, por ÚLTIMO de propósito, o LAR-DE-SESSAO-01: a partir daqui o `$HOME` e
+    os quatro `XDG_*` apontam para um dublê que dura a sessão INTEIRA — depois
+    de toda fotografia, que precisa ser do `$HOME` de verdade.
     """
     global _CANARIO_ARMADO, _FAIXA_ARMADA
+    if not _LAR_REAL:
+        _LAR_REAL.append(Path(os.environ.get("HOME") or os.path.expanduser("~")))
     _armar_berco(session)
     # FAIXA-NO-BERCO-01: a foto do que JÁ estava sujo. Fora do `if` do canário
     # de propósito — esta régua fica de pé mesmo com aquele desligado, que é a
     # razão de ela existir.
     if _faixa_ligada():
+        _FAIXA_DIR_REAL.append(_faixa_config_dir_real())
         _FAIXA_NO_INICIO.update(_faixa_enderecos())
         _FAIXA_ARMADA = True
     # VIGIA-DE-APARELHO-01: antes da COLETA, porque um módulo de teste que
@@ -967,11 +1359,15 @@ def pytest_sessionstart(session: Any) -> None:
     # (fixture de sessão só nasce no primeiro teste, depois de importar tudo).
     _armar_vigia_de_aparelho()
     _INICIO_DA_SESSAO.append(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    if not _canario_ligado():
-        return
-    _CANARIO_FOTO_INICIAL.update(_fotografar_tudo())
-    _CANARIO_FOTO_AVISO.update(_fotografar_tudo_de_aviso())
-    _CANARIO_ARMADO = True
+    if _canario_ligado():
+        _CANARIO_FOTO_INICIAL.update(_fotografar_tudo())
+        _CANARIO_FOTO_AVISO.update(_fotografar_tudo_de_aviso())
+        _CANARIO_ARMADO = True
+    # LAR-DE-SESSAO-01 por ÚLTIMO, e fora de todo `if` acima: as fotos são do
+    # `$HOME` de verdade, e tudo o que vier DEPOIS deste ponto — coleta,
+    # importação de módulo, teste, teardown, finalizador, `atexit` — cai no
+    # dublê. É a ordem que faz a cura valer.
+    _armar_lar_de_sessao(session)
 
 
 def _escrever_no_terminal(session: Any, linhas: list[str]) -> None:
@@ -1000,9 +1396,16 @@ def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
     da ARVORE-CONGELADA-01 mora dentro do berço: varrer primeiro apagaria o
     lado esquerdo da comparação que decide se o produto mudou no meio da
     medição.
+
+    LAR-DE-SESSAO-01: os portões medem com o `$HOME` de VERDADE reposto (as
+    duas fotos têm de ser da mesma árvore), e o dublê volta ao sair do `with`.
+    Ele NÃO é desfeito aqui de propósito: o teardown das fixtures de sessão do
+    pytest roda DEPOIS deste hook, e a escrita tardia é justamente o defeito.
+    Quem desfaz é o `atexit` de `_fechar_o_lar_de_sessao`.
     """
     try:
-        _sessionfinish_das_guardas(session)
+        with _com_o_ambiente_real(session):
+            _sessionfinish_das_guardas(session)
     finally:
         _varrer_berco(session, getattr(session, "exitstatus", exitstatus))
 
@@ -1689,7 +2092,13 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # O Rust não é o que este isolamento protege (é o `$HOME` DELA, para o
     # Python/GTK); então os dois apontam de volta para o `$HOME` real antes
     # dele ser sobrescrito.
-    real_home = Path(os.environ.get("HOME", str(Path.home())))
+    #
+    # CORREÇÃO 25/08/2026 (LAR-DE-SESSAO-01): esta linha lia `os.environ["HOME"]`
+    # — e desde o desvio de sessão o `HOME` vivo JÁ é o dublê, então o `rustup`
+    # cairia num `.rustup` vazio e o cargo recusaria com "no default toolchain
+    # configured". `lar_real()` devolve o `$HOME` fixado ANTES do desvio, que é
+    # o que estas duas variáveis sempre quiseram dizer.
+    real_home = lar_real()
     monkeypatch.setenv("RUSTUP_HOME", str(real_home / ".rustup"))
     monkeypatch.setenv("CARGO_HOME", str(real_home / ".cargo"))
     home_dir = xdg_root / "home"
@@ -1748,6 +2157,25 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # `test_carona_do_wrapper_01_*.py` faz). Não é flag de produto: em produção
     # a variável não existe e a carona está sempre ligada.
     monkeypatch.setenv("HEFESTO_CARONA_WRAPPER", "0")
+
+
+@pytest.fixture(autouse=True)
+def _nenhum_registro_de_identidade_atravessa() -> Iterator[None]:
+    """SINGLETON-QUE-ATRAVESSA-01 — o `identity._registry` morre com o caso.
+
+    Definida DEPOIS de `_hefesto_fake_env` de propósito: fixtures do mesmo
+    escopo montam na ordem em que são declaradas e desmontam na ordem
+    INVERSA, então o descarte de saída acontece com o `XDG_CONFIG_HOME` do
+    teste ainda de pé — e não depois de ele ser desfeito.
+
+    Nos DOIS lados: na entrada porque um caso anterior pode ter morrido no meio
+    e deixado o singleton populado, e na saída porque é a saída que impede o
+    acúmulo. Descartar não grava nada: `reset_identity_registry` só zera a
+    referência de módulo.
+    """
+    _descartar_registro_de_identidade()
+    yield
+    _descartar_registro_de_identidade()
 
 
 # ---------------------------------------------------------------------------
