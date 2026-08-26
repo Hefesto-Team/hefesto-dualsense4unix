@@ -268,7 +268,14 @@ OUIS = ("d84489", "a0fa9c", "e417d8", "e0f6b5",
         "48b25d", "143a9a", "d42f4b", "444648")
 # Imagem e catálogo compilado ficam de fora: três bytes casam por acaso em dado
 # comprimido, e PNG que muda a cada captura de tela geraria alarme intermitente.
-PULA = (".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
+# `.svg` SAIU daqui em 26/08/2026, e a razão é a mesma que tirou o `.svg` do
+# `EXCLUIR_SUFIXO` do irmão no mesmo dia: SVG é XML de TEXTO PURO, e o motivo
+# escrito para os outros desta lista ("três bytes casam por acaso em dado
+# comprimido") não vale para ele. Medido: um serial de fábrica de 17 caracteres
+# dentro de um `<text>` de SVG COMMITADO saía rc=0; o mesmo conteúdo, byte a
+# byte, num `.md` saía rc=1. São 49 SVGs versionados, todos texto (46 utf-8,
+# 3 us-ascii). Duas réguas independentes é o que revela — e as duas estavam cegas.
+PULA = (".png", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
 
 # 23/08/2026 — o portão passou a DESCOMPRIMIR em vez de pular o comprimido.
 #
@@ -416,7 +423,14 @@ PADRAO = (
 SERIAL = re.compile(PADRAO)
 PAR_HEX = re.compile(rb"(?<![0-9A-Fa-f])([0-9A-Fa-f]{2})(?![0-9A-Fa-f])")
 HEX_COLADO = re.compile(rb"(?<![0-9A-Fa-f])((?:[0-9A-Fa-f]{2}){17,})(?![0-9A-Fa-f])")
-PULA = (".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
+# `.svg` SAIU daqui em 26/08/2026, e a razão é a mesma que tirou o `.svg` do
+# `EXCLUIR_SUFIXO` do irmão no mesmo dia: SVG é XML de TEXTO PURO, e o motivo
+# escrito para os outros desta lista ("três bytes casam por acaso em dado
+# comprimido") não vale para ele. Medido: um serial de fábrica de 17 caracteres
+# dentro de um `<text>` de SVG COMMITADO saía rc=0; o mesmo conteúdo, byte a
+# byte, num `.md` saía rc=1. São 49 SVGs versionados, todos texto (46 utf-8,
+# 3 us-ascii). Duas réguas independentes é o que revela — e as duas estavam cegas.
+PULA = (".png", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
 PUBLICOS = 6
 
 
