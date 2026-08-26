@@ -73,6 +73,44 @@ rc=0
 # suíte que o executa por subprocess (test_check_packaging_parity.py).
 GREP_EXCLUDES=(--exclude-dir=target --exclude-dir=.flatpak-builder --exclude-dir=build)
 
+#: O QUE UM EMPACOTADOR COPIA DE `scripts/` PARA FORA DO CHECKOUT.
+#:
+#: DONO ÚNICO da pergunta, e é por isso que ele mora aqui em cima, fora de toda
+#: seção: duas seções perguntam a mesma coisa — "irmão sem carona" (o que este
+#: script instalado chama, e foi junto?) e "scripts do produto" (os cinco que a
+#: janela e o doctor executam chegaram a todo formato?). Copiar a função para a
+#: segunda seção era o caminho fácil, e é o defeito que esta casa pagou mais
+#: caro em 25/08/2026: uma função copiada em dois lugares que divergiram.
+#:
+#: DUAS FORMAS DE CITAÇÃO, porque as duas existem na árvore: o nome literal na
+#: linha de cópia (`build_deb.sh:196`) e o laço com variável
+#: (`build_deb.sh:234`), que o grep literal não vê. O laço só conta quando a
+#: MESMA variável aparece numa linha de cópia — senão qualquer `for x in ...`
+#: do arquivo daria carona de graça.
+#:
+#: A DOBRA DAS CONTINUAÇÕES VEM PRIMEIRO, e não é enfeite — MEDIDO em
+#: 25/08/2026: sem ela, a forma `install -Dm755 -t DIR \` com um nome por linha
+#: some INTEIRA, porque só a primeira linha casa com `install -D` e os nomes
+#: estão nas outras. O portão via `dkms_lib.sh install-host-udev.sh` no
+#: PKGBUILD e no `.spec` e NÃO via os sete `bt_*.sh` que os dois levam desde
+#: 22/08 — quinze scripts distribuídos que nenhuma das duas seções auditava.
+_pkg_scripts_copiados_de() {
+    local _arq="$1" _codigo _copias _var _lista
+    [[ -f "${_arq}" ]] || return 0
+    _codigo="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' "${_arq}" 2>/dev/null \
+        | grep -vE '^[[:space:]]*#' || true)"
+    _copias="$(grep -E '(install[[:space:]]+-D|(^|[[:space:]])cp([[:space:]]|$))' <<<"${_codigo}" || true)"
+    grep -oE 'scripts/[A-Za-z0-9_.-]+\.(sh|py)' <<<"${_copias}" | sed 's|^scripts/||' || true
+    while IFS= read -r _var; do
+        [[ -n "${_var}" ]] || continue
+        grep -qE "scripts/\\\$\\{?${_var}\\}?" <<<"${_copias}" || continue
+        _lista="$(grep -oE "for[[:space:]]+${_var}[[:space:]]+in[[:space:]][^;]*" <<<"${_codigo}" \
+            | sed -E "s/^for[[:space:]]+${_var}[[:space:]]+in[[:space:]]//" || true)"
+        tr ' \t' '\n\n' <<<"${_lista}"
+    done < <(grep -oE 'for[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+in' <<<"${_codigo}" 2>/dev/null \
+        | awk '{print $2}' | sort -u)
+}
+
 echo "== nome de unit do hotplug (assets/packaging/flatpak) =="
 if grep -rn "${GREP_EXCLUDES[@]}" 'hefesto-gui-hotplug' assets/ packaging/ flatpak/ 2>/dev/null \
         | grep -v 'hefesto-dualsense4unix-gui-hotplug'; then
@@ -1390,27 +1428,6 @@ else
     _carona_existentes="$(find scripts -maxdepth 1 -type f \( -name '*.sh' -o -name '*.py' \) \
         -printf '%f\n' 2>/dev/null | sort)"
 
-    #: O que UM instalador copia de `scripts/` para fora do checkout. Duas formas,
-    #: porque as duas existem na árvore: o nome literal na linha de cópia
-    #: (`build_deb.sh:193`) e o laço com variável (`install.sh:1720` e
-    #: `build_deb.sh:216`), que o grep literal não vê. O laço só conta quando a
-    #: MESMA variável aparece numa linha de cópia — senão qualquer `for x in ...`
-    #: do arquivo daria carona de graça.
-    _carona_copiados_de() {
-        local _arq="$1" _codigo _copias _var _lista
-        _codigo="$(grep -vE '^[[:space:]]*#' "${_arq}" 2>/dev/null || true)"
-        _copias="$(grep -E '(install[[:space:]]+-D|(^|[[:space:]])cp([[:space:]]|$))' <<<"${_codigo}" || true)"
-        grep -oE 'scripts/[A-Za-z0-9_.-]+\.(sh|py)' <<<"${_copias}" | sed 's|^scripts/||' || true
-        while IFS= read -r _var; do
-            [[ -n "${_var}" ]] || continue
-            grep -qE "scripts/\\\$\\{?${_var}\\}?" <<<"${_copias}" || continue
-            _lista="$(grep -oE "for[[:space:]]+${_var}[[:space:]]+in[[:space:]][^;]*" "${_arq}" \
-                | sed -E "s/^for[[:space:]]+${_var}[[:space:]]+in[[:space:]]//" || true)"
-            tr ' \t' '\n\n' <<<"${_lista}"
-        done < <(grep -oE 'for[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+in' "${_arq}" 2>/dev/null \
-            | awk '{print $2}' | sort -u)
-    }
-
     #: O que UM script chama. Ver a régua estreita explicada no cabeçalho: posição
     #: de comando com nome literal, mais o caminho absoluto de runtime; linha de
     #: recado fora. Em Python a pergunta é o `import` de módulo irmão — e ali não
@@ -1442,7 +1459,7 @@ else
     _carona_faltas=()
     _carona_pares=0
     for _carona_inst in "${_carona_instaladores[@]}"; do
-        _carona_set="$(_carona_copiados_de "${_carona_inst}" | sort -u)"
+        _carona_set="$(_pkg_scripts_copiados_de "${_carona_inst}" | sort -u)"
         [[ -n "${_carona_set}" ]] || continue
         while IFS= read -r _carona_s; do
             [[ -n "${_carona_s}" ]] || continue
@@ -1472,6 +1489,168 @@ else
         rc=1
     else
         echo "[ OK ] irmão sem carona: ${_carona_pares} chamada(s) de irmão em script distribuído, todas com carona ou guarda"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# SCRIPTS DO PRODUTO × OS FORMATOS (25/08/2026, BG-04)
+#
+# O DEFEITO, do lado de quem usa: quem instalou por Flatpak, AppImage, Arch,
+# Fedora ou Nix apertava "Deixar tudo pronto" ou o botão do microfone e recebia
+# "Script do WirePlumber não encontrado" — e o único conselho que a tela dava
+# era rodar um `./install.sh` que não existe na máquina de quem não clonou o
+# repositório. Medido em 24/08 (SISTEMA-O-VIGIA-VIVO-01, §2.2): UM formato
+# levava os scripts, cinco não.
+#
+# E NENHUM PORTÃO VIA, porque este arquivo declara por escrito que não olha
+# para `scripts/` (:8) — a exceção foi escrita para UM nome de unit do hotplug
+# e virou cegueira para o diretório inteiro. A seção "irmão sem carona" acima
+# responde a pergunta VIZINHA ("o que este script distribuído chama foi
+# junto?") e não esta: um script que NENHUM formato distribui não tem irmão a
+# cobrar, e some das duas contas.
+#
+# A ÂNCORA É O CONSUMIDOR, e é isso que impede a lista de envelhecer: quem
+# manda aqui é o `src/`, não uma lista escrita à mão neste arquivo. O censo
+# abaixo lê do CÓDIGO quem executa script de `scripts/` em runtime — pela
+# chamada nomeada (`_find_repo_file("scripts/X.sh")`, `_run_script(...)`) e
+# pelo caminho absoluto de instalação — e exige que tudo que ele achar esteja
+# na lista. Consumidor novo com script novo reprova até alguém decidir o que
+# fazer com ele.
+#
+# O LIMITE, dito de frente: caminho montado em variável não é visto
+# (`cli/cmd_mic.py:93` é `Path(".../scripts") / _SCRIPT_NAME`). É o mesmo
+# limite que a seção "irmão sem carona" declara, e pela mesma razão — portão
+# não adivinha o valor de uma variável. Aqui ele não abre buraco: o mesmo
+# script aparece por nome literal em `emulation_actions.py:1201`. Duas réguas
+# independentes é o que revela.
+echo "== scripts do produto (o que a janela e o doctor EXECUTAM) × os empacotamentos =="
+if [[ ! -d src/hefesto_dualsense4unix || ! -d scripts ]]; then
+    echo "[ OK ] scripts do produto: sem src/ (ou sem scripts/) neste checkout — nada a checar"
+else
+    _prod_faltas=()
+
+    #: A LISTA. Quatro nomes saem do censo do `src/` logo abaixo; o quinto —
+    #: `bluez_config.sh` — entra pela REGRA DE PAR que a seção "config do
+    #: BlueZ" já cobra: o `doctor.sh` lê a config do BlueZ EXCLUSIVAMENTE por
+    #: ele (`doctor.sh:2484`), e pacote que leva o doctor sem ele fica com o
+    #: detector CEGO. Está aqui para a falha nomear os cinco de uma vez, não
+    #: para inventar regra nova.
+    _PRODSCRIPTS=(
+        doctor.sh
+        bluez_config.sh
+        disable_steam_input.sh
+        fix_wireplumber_default_source.sh
+        install_snd_quirk.sh
+    )
+
+    #: O CENSO INDEPENDENTE, lido do `src/` e não desta lista. Duas formas,
+    #: porque as duas existem no código: a chamada nomeada e o caminho absoluto
+    #: de instalação.
+    _prod_censo_chamada="$(grep -rhoE '_(find_repo_file|find_doctor_sh|run_script)\([[:space:]]*"scripts/[A-Za-z0-9_.-]+\.sh"' \
+        src/hefesto_dualsense4unix 2>/dev/null || true)"
+    _prod_censo_abs="$(grep -rhoE '/usr/(local/)?share/hefesto-dualsense4unix/scripts/[A-Za-z0-9_.-]+\.sh' \
+        src/hefesto_dualsense4unix 2>/dev/null || true)"
+    _prod_censo="$(printf '%s\n%s\n' "${_prod_censo_chamada}" "${_prod_censo_abs}" \
+        | grep -oE '[A-Za-z0-9_.-]+\.sh' | sort -u || true)"
+
+    while IFS= read -r _prod_c; do
+        [[ -n "${_prod_c}" ]] || continue
+        _prod_na_lista=0
+        for _prod_s in "${_PRODSCRIPTS[@]}"; do
+            [[ "${_prod_s}" == "${_prod_c}" ]] && _prod_na_lista=1
+        done
+        [[ "${_prod_na_lista}" -eq 1 ]] \
+            || _prod_faltas+=("o código EXECUTA scripts/${_prod_c} e ele não está em _PRODSCRIPTS deste portão — ou ele entra na lista (e em todo formato), ou o consumidor some")
+    done <<<"${_prod_censo}"
+
+    #: A régua ao contrário: nome na lista que já não existe no disco vira
+    #: exigência-fantasma, e todo formato passaria a carregar um arquivo morto.
+    for _prod_s in "${_PRODSCRIPTS[@]}"; do
+        [[ -f "scripts/${_prod_s}" ]] \
+            || _prod_faltas+=("scripts/${_prod_s} está em _PRODSCRIPTS e não existe mais no disco — APAGUE-o da lista e dos empacotadores")
+    done
+
+    #: `arquivo|o nome do formato na boca de quem usa|o destino que o
+    #: consumidor PROCURA`. O destino é conferido uma vez por formato, e não
+    #: por arquivo, porque a forma `install -t DIR a.sh b.sh` escreve o
+    #: diretório uma vez só.
+    _PRODPKGS=(
+        "scripts/build_deb.sh|.deb|share/hefesto-dualsense4unix/scripts"
+        "flatpak/br.andrefarias.Hefesto.yml|Flatpak|/app/share/hefesto-dualsense4unix/scripts"
+        "scripts/build_appimage.sh|AppImage (CLI)|share/hefesto-dualsense4unix/scripts"
+        "scripts/build_appimage_gui.sh|AppImage (GUI)|share/hefesto-dualsense4unix/scripts"
+        "packaging/arch/PKGBUILD|Arch|share/hefesto-dualsense4unix/scripts"
+        "packaging/fedora/hefesto-dualsense4unix.spec|Fedora|%{app_id}/scripts"
+        "packaging/nix/package.nix|Nix|share/hefesto-dualsense4unix/scripts"
+    )
+
+    _prod_conferidos=()
+    for _prod_pkg in "${_PRODPKGS[@]}"; do
+        _prod_arq="${_prod_pkg%%|*}"
+        _prod_resto="${_prod_pkg#*|}"
+        _prod_forma="${_prod_resto%%|*}"
+        _prod_dest="${_prod_resto##*|}"
+        if [[ ! -f "${_prod_arq}" ]]; then
+            _prod_faltas+=("${_prod_forma}: ${_prod_arq} não existe neste checkout — o formato sumiu ou mudou de nome; ACERTE _PRODPKGS")
+            continue
+        fi
+        _prod_conferidos+=("${_prod_forma}")
+        _prod_leva="$(_pkg_scripts_copiados_de "${_prod_arq}" | sort -u)"
+        for _prod_s in "${_PRODSCRIPTS[@]}"; do
+            grep -qxF -- "${_prod_s}" <<<"${_prod_leva}" \
+                || _prod_faltas+=("${_prod_forma} (${_prod_arq}) NÃO leva scripts/${_prod_s}")
+        done
+        _prod_codigo="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' "${_prod_arq}" 2>/dev/null \
+            | grep -vE '^[[:space:]]*#' || true)"
+        grep -qF -- "${_prod_dest}" <<<"${_prod_codigo}" \
+            || _prod_faltas+=("${_prod_forma} (${_prod_arq}) não cita o destino ${_prod_dest}/ — pôr os arquivos em OUTRO diretório é o mesmo que não levá-los, porque BASES_DE_INSTALACAO não olha para lá")
+
+        #: O `.spec` tem uma exigência A MAIS, e ela é do rpmbuild e não deste
+        #: portão: arquivo instalado e ausente do `%files` ABORTA o build
+        #: inteiro com "Installed (but unpackaged) file(s) found" — a cicatriz
+        #: que as fontes do hid-playstation deixaram escrita ali.
+        if [[ "${_prod_arq}" == *.spec ]]; then
+            _prod_files="$(sed -n '/^%files/,/^%changelog/p' "${_prod_arq}" 2>/dev/null || true)"
+            for _prod_s in "${_PRODSCRIPTS[@]}"; do
+                grep -qF -- "/scripts/${_prod_s}" <<<"${_prod_files}" \
+                    || _prod_faltas+=("${_prod_forma}: ${_prod_s} é instalado no %install e não aparece no %files — o rpmbuild aborta o pacote inteiro")
+            done
+        fi
+    done
+
+    #: A LACUNA DECLARADA — o que esta seção NÃO resolve, escrito para não
+    #: virar paisagem. Mesmo molde de `_ARTEFATO_SEM_DONO_HOJE` e de
+    #: `_SVG_LACUNAS_HOJE`: declarar é honesto, e o portão não castiga
+    #: honestidade — só não deixa a lápide envelhecer calada.
+    _PRODSCRIPT_LACUNAS_HOJE=(
+        "25/08/2026 — LEVAR NÃO É ACHAR. BASES_DE_INSTALACAO (app/actions/daemon_actions.py) conhece quatro bases: a raiz do checkout, /app/share (Flatpak), /usr/share e /usr/local/share. O Nix instala em \$out/share e as duas receitas de AppImage em \$APPDIR/usr/share, e nenhuma das duas é uma delas — nesses três formatos os arquivos agora VIAJAM e o consumidor ainda não olha para onde caíram. A cura é uma base derivada de sys.prefix, num arquivo que a frente BG-04 não possui."
+    )
+
+    #: E a lápide sabe morrer: no dia em que o consumidor derivar uma base de
+    #: `sys.prefix`, esta entrada vira mentira e o portão manda apagá-la. Se o
+    #: bloco mudar de arquivo (a BG-05 fala em `utils/repo_files.py`), o
+    #: `-f` abaixo cala e a lacuna sobrevive um dia a mais — erra para o lado
+    #: de guardar, que é o lado certo para uma dívida.
+    _prod_consumidor="src/hefesto_dualsense4unix/app/actions/daemon_actions.py"
+    if [[ "${#_PRODSCRIPT_LACUNAS_HOJE[@]}" -gt 0 && -f "${_prod_consumidor}" ]]; then
+        _prod_bases="$(sed -n '/^BASES_DE_INSTALACAO/,/^)/p' "${_prod_consumidor}" 2>/dev/null || true)"
+        if grep -qF 'sys.prefix' <<<"${_prod_bases}"; then
+            _prod_faltas+=("lacuna declarada que já não vale: BASES_DE_INSTALACAO já deriva de sys.prefix — APAGUE a entrada de _PRODSCRIPT_LACUNAS_HOJE")
+        fi
+    fi
+
+    if [[ "${#_prod_faltas[@]}" -eq 0 ]]; then
+        echo "[ OK ] scripts do produto: os ${#_PRODSCRIPTS[@]} viajam nos ${#_prod_conferidos[@]} formatos (${_prod_conferidos[*]}), no destino que o consumidor procura — ${#_PRODSCRIPT_LACUNAS_HOJE[@]} lacuna(s) declarada(s)"
+    else
+        for _prod_f in "${_prod_faltas[@]}"; do
+            echo "[FAIL] scripts do produto: ${_prod_f}"
+        done
+        echo "       Na máquina de quem instalou por esse formato, \"Deixar tudo"
+        echo "       pronto\" e o botão do microfone respondem \"não encontrado\" e"
+        echo "       mandam rodar um ./install.sh que não está lá — quem não clonou"
+        echo "       o repositório não tem checkout nenhum. O destino não é escolha"
+        echo "       livre: é o que BASES_DE_INSTALACAO procura."
+        rc=1
     fi
 fi
 
