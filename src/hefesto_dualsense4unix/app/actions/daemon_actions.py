@@ -34,7 +34,12 @@ from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor
 from hefesto_dualsense4unix.daemon.service_install import SERVICE_NORMAL, ServiceInstaller
 from hefesto_dualsense4unix.integrations.steam_launch_options import juntar_rotulos
+from hefesto_dualsense4unix.utils import repo_files
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import (
+    bases_de_instalacao,
+    encontrar_arquivo_do_repo,
+)
 
 logger = get_logger(__name__)
 
@@ -482,54 +487,42 @@ DONO_DO_GESTO: dict[str, tuple[str, str]] = {
 
 #: Onde os scripts que os botões desta aba rodam podem estar instalados.
 #:
-#: `parents[4]` é a raiz do checkout (este arquivo mora em
-#: `src/hefesto_dualsense4unix/app/actions/`) — a BUG-GUI-REPO-ROOT-OFFBYONE-01
-#: já pagou o preço de contar errado, e o teste de regressão dela continua de
-#: pé.
+#: **BG-BASES-01 (26/08/2026): a lista à mão morreu.** Ela tinha quatro bases
+#: e `utils/repo_files.bases_de_instalacao()` tem seis — faltavam
+#: `sys.prefix/share/…` (AppImage, venv, Nix) e o `share/` do usuário. Este
+#: nome sobreviveu **derivado**, nunca escrito à mão: é o que os testes de
+#: 25/08 monkeypatcham para plantar um layout de mentira, e é o que
+#: `_find_repo_file` e `esta_instalacao_e_um_checkout` consultam.
 #:
-#: T-02(b) (25/08/2026): `/app/share/hefesto-dualsense4unix` entrou porque é
-#: onde o Flatpak instala, e a lista não o conhecia — medido com
-#: `grep -rn "/app/share" daemon_actions.py`, que voltava vazio. Sem esta
-#: linha, os dois botões de topo do cartão continuariam sem achar os scripts
-#: dentro da sandbox **mesmo depois** de o manifesto passar a levá-los.
-BASES_DE_INSTALACAO: tuple[Path, ...] = (
-    Path(__file__).resolve().parents[4],
-    Path("/app/share/hefesto-dualsense4unix"),
-    Path("/usr/share/hefesto-dualsense4unix"),
-    Path("/usr/local/share/hefesto-dualsense4unix"),
-)
+#: Ele congela no import, e isso é aceitável: `sys.prefix` e `XDG_DATA_HOME`
+#: não mudam no meio de um processo. Quem precisa da resolução FRESCA (o
+#: teste que monta um Flatpak de mentira trocando `sys.prefix`) chama
+#: `bases_de_instalacao()` direto — é para isso que ela é função.
+BASES_DE_INSTALACAO: tuple[Path, ...] = bases_de_instalacao()
 
 
 def esta_instalacao_e_um_checkout() -> bool:
     """Há um `install.sh` ao lado deste código?
 
-    É a pergunta inteira: `./install.sh` só existe para quem clonou o
-    repositório. Quem instalou por Flatpak, AppImage, Arch, Fedora ou Nix não
-    tem checkout nenhum na máquina — e mandá-lo rodar `./install.sh` é
-    mandá-lo a um lugar que não existe.
+    A resposta mora em `utils/repo_files`; aqui fica só o nome, porque três
+    frases de tela fora do `app/` também precisam dela (uma delas em
+    `integrations/`, que não pode importar de `app/`). Consulta
+    `BASES_DE_INSTALACAO` deste módulo para honrar quem a monkeypatcha.
     """
-    return (BASES_DE_INSTALACAO[0] / "install.sh").is_file()
+    return repo_files.esta_instalacao_e_um_checkout(BASES_DE_INSTALACAO)
 
 
 def como_atualizar_esta_instalacao() -> str:
     """O gesto de atualizar que serve para ESTA instalação, sem jargão.
 
-    T-03 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026). As frases desta aba não
-    mentiam — elas davam um **conselho impossível**: quatro lugares diziam
-    "rode `./install.sh`" como única instrução, e em cinco dos seis formatos
-    em que este produto é instalado esse arquivo não está na máquina.
-
-    O produto já sabia distinguir os dois casos; ninguém tinha perguntado.
-
-    **PROVISÓRIO — aguarda o olho dela** (carimbo [OLHO DELA] da sprint): o
-    ramo de fora do checkout usa o *mínimo aceitável* que a própria sprint
-    redigiu. Ele é honesto e universal, mas não nomeia o gesto (um
-    `flatpak update`, um `apt upgrade`). Nomear é mais útil e é texto novo de
-    tela — decisão dela, não minha.
+    O texto é de `utils/repo_files.FRASE_DE_ATUALIZAR` — um lugar só, e
+    comparado palavra por palavra com o do `scripts/doctor.sh` por portão.
+    A **pergunta** é a deste módulo, para que trocar
+    `esta_instalacao_e_um_checkout` aqui mude a resposta aqui.
     """
-    if esta_instalacao_e_um_checkout():
-        return "rode ./install.sh para atualizar o Hefesto"
-    return "atualize o Hefesto pelo mesmo caminho por onde você o instalou"
+    return repo_files.como_atualizar_esta_instalacao(
+        e_checkout=esta_instalacao_e_um_checkout()
+    )
 
 
 def format_steam_ready_result(
@@ -1069,19 +1062,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
     # --- anti-storm / sistema (FEAT-DSX-UNIFY-01) ------------------------
 
     def _find_repo_file(self, relpath: str) -> Path | None:
-        """Localiza um arquivo do repo (ex.: scripts/install_snd_quirk.sh) em layouts conhecidos.
+        """Localiza um arquivo do repo (ex.: scripts/install_snd_quirk.sh).
 
-        BUG-GUI-REPO-ROOT-OFFBYONE-01: `parents[3]` resolvia para `<repo>/src`
-        (este arquivo está em src/hefesto_dualsense4unix/app/actions/) — nenhum
-        script era encontrado e os botões do cartão anti-storm eram no-op
-        SILENCIOSO (toast de sucesso, nada executado). A raiz do repo é
-        `parents[4]`. Coberto por teste de regressão.
+        A busca é de `utils/repo_files` — esta era uma das cinco listas de
+        "onde estão os scripts", e a que contava a raiz do checkout à mão já
+        pagou a BUG-GUI-REPO-ROOT-OFFBYONE-01 (os botões do cartão anti-storm
+        viravam no-op SILENCIOSO: toast de sucesso, nada executado).
         """
-        for base in BASES_DE_INSTALACAO:
-            candidate = base / relpath
-            if candidate.is_file():
-                return candidate
-        return None
+        return encontrar_arquivo_do_repo(relpath, bases=BASES_DE_INSTALACAO)
 
     def _refresh_storm_diag(self) -> None:
         """Popula o cartão anti-storm (read-only) em thread worker."""
