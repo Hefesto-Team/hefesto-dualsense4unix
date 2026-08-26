@@ -761,6 +761,10 @@
     "razoes": [
      {
       "selo": "derivado",
+      "txt": "esta opção não usa a entrada 15a, onde ele está hoje"
+     },
+     {
+      "selo": "derivado",
       "txt": "no alto do rack, com a antena acima da linha das cabeças"
      },
      {
@@ -777,9 +781,9 @@
      }
     ],
     "peso": "essencial",
-    "ganho": -7,
-    "forcado": false,
-    "essencial": false
+    "ganho": "Infinity",
+    "forcado": true,
+    "essencial": true
    },
    "bt-c": {
     "razoes": [
@@ -844,6 +848,29 @@
   }
  },
  "receita/sem-ext": [
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Mova o dongle Bluetooth da entrada 15a para a 15",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Hoje ele está na entrada <b>15a</b> (<code>3-1.1.4</code>)."
+    },
+    {
+     "s": "derivado",
+     "t": "Esta opção não usa a entrada 15a, onde ele está hoje."
+    },
+    {
+     "s": "derivado",
+     "t": "No alto do rack, com a antena acima da linha das cabeças."
+    },
+    {
+     "s": "espec",
+     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+    }
+   ]
+  },
   {
    "essencial": true,
    "ganho": "Infinity",
@@ -1026,6 +1053,10 @@
    "bt-a": {
     "razoes": [
      {
+      "selo": "derivado",
+      "txt": "esta opção não usa a entrada 9, onde ele está hoje"
+     },
+     {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
      },
@@ -1035,21 +1066,25 @@
      }
     ],
     "peso": "essencial",
-    "ganho": -60,
-    "forcado": false,
-    "essencial": false
+    "ganho": "Infinity",
+    "forcado": true,
+    "essencial": true
    },
    "bt-b": {
     "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "esta opção não usa a entrada 15a, onde ele está hoje"
+     },
      {
       "selo": "espec",
       "txt": "sem o Wi-Fi usando o SuperSpeed do mesmo hub"
      }
     ],
     "peso": "essencial",
-    "ganho": -130,
-    "forcado": false,
-    "essencial": false
+    "ganho": "Infinity",
+    "forcado": true,
+    "essencial": true
    },
    "bt-c": {
     "razoes": [
@@ -1094,6 +1129,48 @@
   }
  },
  "receita/so-pc": [
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Mova o dongle Bluetooth da entrada 9 para a 5",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Hoje ele está na entrada <b>9</b> (<code>3-1.2</code>)."
+    },
+    {
+     "s": "derivado",
+     "t": "Esta opção não usa a entrada 9, onde ele está hoje."
+    },
+    {
+     "s": "espec",
+     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+    },
+    {
+     "s": "espec",
+     "t": "Sem outro rádio de 2,4 GHz na entrada colada."
+    }
+   ]
+  },
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Mova o dongle Bluetooth da entrada 15a para a 7",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Hoje ele está na entrada <b>15a</b> (<code>3-1.1.4</code>)."
+    },
+    {
+     "s": "derivado",
+     "t": "Esta opção não usa a entrada 15a, onde ele está hoje."
+    },
+    {
+     "s": "espec",
+     "t": "Sem o Wi-Fi usando o SuperSpeed do mesmo hub."
+    }
+   ]
+  },
   {
    "essencial": true,
    "ganho": "Infinity",
@@ -1258,6 +1335,29 @@
    ]
   },
   {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Mova o cabo do hub da entrada 4 para a 3",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Hoje ele está na entrada <b>4</b> (<code>3-1</code>)."
+    },
+    {
+     "s": "derivado",
+     "t": "A entrada 4 passou a ser do Wi-Fi, entao este precisa de outro lugar."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada direta do PC — o hub não pode pendurar em si mesmo."
+    },
+    {
+     "s": "derivado",
+     "t": "Entrada azul, para o hub entregar o que ele oferece."
+    }
+   ]
+  },
+  {
    "essencial": false,
    "ganho": "Infinity",
    "titulo": "Ponha a webcam na entrada 2  ·  melhora, não é urgente",
@@ -1307,6 +1407,10 @@
     "razoes": [
      {
       "selo": "derivado",
+      "txt": "a entrada 4 passou a ser do Wi-Fi, entao este precisa de outro lugar"
+     },
+     {
+      "selo": "derivado",
       "txt": "entrada direta do PC — o hub não pode pendurar em si mesmo"
      },
      {
@@ -1315,9 +1419,9 @@
      }
     ],
     "peso": "essencial",
-    "ganho": 0,
-    "forcado": false,
-    "essencial": false
+    "ganho": "Infinity",
+    "forcado": true,
+    "essencial": true
    },
    "teclado": {
     "razoes": [
@@ -1884,9 +1988,9 @@
    }
   ],
   "carga": {
-   "bt-a": 277,
-   "bt-b": 554,
-   "bt-c": 277
+   "bt-a": 276.7,
+   "bt-b": 553.4,
+   "bt-c": 276.7
   },
   "destino": {
    "Jogador 1": "bt-a",
@@ -1916,7 +2020,7 @@
    }
   ],
   "carga": {
-   "bt-a": 277,
+   "bt-a": 276.7,
    "bt-b": 0,
    "bt-c": 0
   },
@@ -1945,8 +2049,8 @@
    }
   ],
   "carga": {
-   "bt-a": 277,
-   "bt-b": 277,
+   "bt-a": 276.7,
+   "bt-b": 276.7,
    "bt-c": 0
   },
   "destino": {
@@ -1975,9 +2079,9 @@
    }
   ],
   "carga": {
-   "bt-a": 277,
-   "bt-b": 277,
-   "bt-c": 277
+   "bt-a": 276.7,
+   "bt-b": 276.7,
+   "bt-c": 276.7
   },
   "destino": {
    "Jogador 1": "bt-a",
@@ -2006,9 +2110,9 @@
    }
   ],
   "carga": {
-   "bt-a": 277,
-   "bt-b": 554,
-   "bt-c": 277
+   "bt-a": 276.7,
+   "bt-b": 553.4,
+   "bt-c": 276.7
   },
   "destino": {
    "Jogador 1": "bt-a",
@@ -2038,9 +2142,9 @@
    }
   ],
   "carga": {
-   "bt-a": 260,
-   "bt-b": 520,
-   "bt-c": 260
+   "bt-a": 260.4,
+   "bt-b": 520.8,
+   "bt-c": 260.4
   },
   "destino": {
    "Jogador 1": "bt-a",
@@ -2070,9 +2174,9 @@
    }
   ],
   "carga": {
-   "bt-a": 554,
-   "bt-b": 277,
-   "bt-c": 277
+   "bt-a": 553.3999999999999,
+   "bt-b": 276.7,
+   "bt-c": 276.7
   },
   "destino": {
    "Jogador 1": "bt-a",
@@ -2102,9 +2206,9 @@
    }
   ],
   "carga": {
-   "bt-a": 554,
-   "bt-b": 277,
-   "bt-c": 277
+   "bt-a": 553.4,
+   "bt-b": 276.7,
+   "bt-c": 276.7
   },
   "destino": {
    "Jogador 1": "bt-a",
