@@ -73,7 +73,7 @@ class _FakeDaemon:
 def no_persist(monkeypatch: pytest.MonkeyPatch) -> None:
     """Neutraliza a escrita em disco das flags de sessão."""
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda *a, **k: None)
-    monkeypatch.setattr(session, "save_mouse_emulation_enabled", lambda *a, **k: None)
+    monkeypatch.setattr(session, "save_mouse_emulation", lambda *a, **k: None)
 
 
 def _patch_for_flavor(monkeypatch: pytest.MonkeyPatch) -> list[_FakeDevice]:

@@ -11,7 +11,6 @@ direto do disco e mostra "daemon offline".
 """
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
@@ -309,9 +308,15 @@ def run_tui() -> None:
     HefestoApp().run()
 
 
-def main_async(argv: list[str] | None = None) -> None:
-    """Entry point síncrono que roda o asyncio app."""
-    asyncio.run(HefestoApp().run_async())
+# `main_async` MOROU AQUI, e foi PODADA em 26/08/2026.
+#
+# Ela se declarava "entry point síncrono", e nada a declarava de volta: MEDIDO
+# em 26/08/2026, ZERO chamadores em `src/`, em `tests/`, em `scripts/`, nos
+# heredocs Python de `install.sh`/`uninstall.sh` e em `pyproject.toml`. Os dois
+# consoles de `[project.scripts]` são `cli.app:main` e `app.main:main`; a TUI
+# entra pela irmã `run_tui`, logo acima, que É a entrada e continua de pé.
+# Era também o único acusado da lista SEM sequer um teste que o exercitasse —
+# resto puro, e o nome enganava quem lesse o módulo procurando a entrada.
 
 
 __all__ = [

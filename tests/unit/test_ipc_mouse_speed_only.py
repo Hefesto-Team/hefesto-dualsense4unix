@@ -152,11 +152,6 @@ def test_set_mouse_speed_sem_device_nao_liga_nem_cria(monkeypatch) -> None:
     persist_calls: list[object] = []
     monkeypatch.setattr(
         session,
-        "save_mouse_emulation_enabled",
-        lambda enabled: persist_calls.append(enabled),
-    )
-    monkeypatch.setattr(
-        session,
         "save_mouse_emulation",
         lambda *a, **k: persist_calls.append((a, k)),
     )
