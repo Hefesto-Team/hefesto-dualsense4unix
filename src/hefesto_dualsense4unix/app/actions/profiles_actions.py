@@ -792,15 +792,26 @@ _NOMES_DAS_SECOES_DA_ATIVACAO: dict[str, str] = {
 }
 
 #: PROVISÓRIO — decisão dela. Como nomear o alto-falante DE UM controle quando a
-#: mesa tem quatro. A chave é `speaker:<uniq>` (`profiles/manager.py:809`), e o
-#: `uniq` é o identificador do aparelho — nunca palavra de tela.
+#: mesa tem quatro. A chave é `speaker:<uniq>` (`profiles/manager.py`), e o
+#: `uniq` é o identificador do aparelho.
 #:
-#: Esta frase não diz QUAL controle, e a limitação é honesta em vez de
-#: escondida: o léxico da casa para isso é "Controle {N}"
-#: (`widgets/controller_card.py:1033`), e o número do slot NÃO está ao alcance
-#: aqui — `relato_da_ativacao` é função pura, recebe só a resposta do daemon, e
-#: o mapa `uniq -> índice` mora no mixin (`_target_uniq_by_index`). Levar o mapa
-#: até aqui muda a assinatura e os chamadores, e é decisão de desenho, não de
+#: O NOME CARREGA O `uniq`, e não é enfeite — é o que impede as peças de se
+#: fundirem. `relato_da_ativacao` monta `failed` como um dict indexado pelo NOME
+#: traduzido: nome igual é a MESMA entrada, e um rótulo fixo faria os quatro
+#: alto-falantes da mesa virarem um só. Medido em 26/08/2026, com três caídos:
+#: "Aplicado, menos: alto-falante de um controle." — bonito, e dois controles
+#: sumiram da frase. Com o `uniq` os três aparecem, e o quarto vira o "e mais 1"
+#: de `footer_actions._lista_de_secoes`. É a decisão que
+#: `ProfileManager.apply_controller_speakers` já tinha escrito para a chave —
+#: *"para a GUI conseguir dizer QUAL peça foi ignorada pela trava manual em vez
+#: de fundir tudo num rótulo só"* —, e ela vale igual para o nome.
+#:
+#: A frase diz QUAL controle pelo identificador, não pelo número do slot, e a
+#: limitação é honesta em vez de escondida: o léxico da casa é "Controle {N}"
+#: (`widgets/controller_card.py`), e o número NÃO está ao alcance aqui —
+#: `relato_da_ativacao` é função pura, recebe só a resposta do daemon, e o mapa
+#: `uniq -> índice` mora no mixin (`_target_uniq_by_index`). Levar o mapa até
+#: aqui muda a assinatura e os chamadores, e é decisão de desenho, não de
 #: redação. As duas saídas estão relatadas na entrega da L3-E.
 _PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE = "speaker:"
 _NOME_DO_ALTO_FALANTE_POR_CONTROLE = "alto-falante de um controle"
@@ -815,7 +826,8 @@ def nome_da_secao_da_ativacao(chave: str) -> str:
     certo é chegar cru o que TEM nome.
     """
     if chave.startswith(_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE):
-        return _NOME_DO_ALTO_FALANTE_POR_CONTROLE
+        uniq = chave[len(_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE) :]
+        return f"{_NOME_DO_ALTO_FALANTE_POR_CONTROLE} ({uniq})"
     return _NOMES_DAS_SECOES_DA_ATIVACAO.get(chave, chave)
 
 
