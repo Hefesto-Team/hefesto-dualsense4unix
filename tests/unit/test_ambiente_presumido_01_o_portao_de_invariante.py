@@ -5,7 +5,7 @@ Nenhum conserto em `src/`: este é o portão que impede T-01
 futuro sem que ninguém perceba.
 
 A invariante: no bloco `window_detect_*` de `IpcHandlersMixin._window_detect_payload`
-(`daemon/ipc_handlers.py:2066-2110`), **`healthy=True` com `useful_age_sec=None`
+(`daemon/ipc_handlers.py:2237-2287`), **`healthy=True` com `useful_age_sec=None`
 e `seeing=False` é estado impossível** — diz "estou bem" e "nunca vi nada", ao
 mesmo tempo. É exatamente o que a bancada dela mediu em 23/08/2026: `DISPLAY=:1`
 presente, servidor recusando, `healthy=True` a sessão inteira porque o

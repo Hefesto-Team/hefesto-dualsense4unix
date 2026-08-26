@@ -320,7 +320,7 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
         achados = _leitores_de_osk(alvo)
         assert achados, (
             "nenhum arquivo em app/ lê 'osk_disponivel' -- a chave publicada "
-            "em daemon/ipc_handlers.py:2009 continua órfã (F2)"
+            "em daemon/ipc_handlers.py:2091 continua órfã (F2)"
         )
         assert any(p.name == "ambiente_na_tela.py" for p in achados)
 

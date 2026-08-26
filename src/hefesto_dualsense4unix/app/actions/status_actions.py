@@ -240,7 +240,7 @@ def texto_do_coop_derrubado(bloco_coop: object) -> str:
     """Frase do banner quando o jogo derruba o co-op — ``""`` quando não há.
 
     CONTAGEM-E-COOP-01 (E1a). O daemon publica o fato desde 29/07
-    (`ipc_handlers.py:1657-1662`: `coop.derrubado_por_steam_input` e
+    (`ipc_handlers.py:2774-2775`: `coop.derrubado_por_steam_input` e
     `coop.secundarios_derrubados`) e NENHUMA linha da janela o lia. Pior que
     calada, a janela ficava enganosa: `CoopManager.disable()` não zera
     `coop_enabled`, então o `state_full` segue publicando `coop.enabled=True`
@@ -253,12 +253,12 @@ def texto_do_coop_derrubado(bloco_coop: object) -> str:
       (que já voltou a 1 no tique seguinte — é o defeito original);
     - a NEGAÇÃO ("não foi você") desfaz a ambiguidade do `enabled=True`;
     - a PROMESSA de volta é verdadeira: `resume_vpads_after_steam_input`
-      chama `coop.sync(force=True)` (`gamepad.py:598-608`), e mesmo pelo
+      chama `coop.sync(force=True)` (`gamepad.py:1026`), e mesmo pelo
       caminho manual o ciclo normal recria os secundários porque `disable()`
       não desligou `coop_enabled`.
 
     Devolve ``""`` também quando o gatilho está aceso mas o número é zero: as
-    duas mortes do contador (`gamepad.py:565-579` e `:1401-1411`) existem para
+    duas mortes do contador (`gamepad.py:985` e `:1987`) existem para
     o aviso não sobreviver ao retorno do co-op, e aviso pendurado sem número
     seria a mentira nova que elas evitam.
 
@@ -2267,8 +2267,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         """Avisa no banner que o JOGO derrubou o co-op — e some quando ele volta.
 
         CONTAGEM-E-COOP-01 (E1a). O ramo que ESCONDE é tão obrigatório quanto o
-        que mostra: as duas mortes do contador no daemon (`gamepad.py:565-579`
-        e `:1401-1411`) existem para o aviso não sobreviver ao retorno dos
+        que mostra: as duas mortes do contador no daemon (`gamepad.py:985`
+        e `:1987`) existem para o aviso não sobreviver ao retorno dos
         jogadores, e um badge pendurado seria a mentira nova que elas evitam.
         """
         badge = getattr(self, "_coop_badge", None)
