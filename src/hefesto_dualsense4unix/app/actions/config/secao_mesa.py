@@ -1537,10 +1537,23 @@ _RESUMO_DO_MAPA = "Mesa: {faces} faces, {entradas} entradas, {colocados} aparelh
 
 #: O que a linha diz para quem nunca desenhou. Ela é o estado mais comum lá
 #: fora, e diz o preço de não desenhar em vez de cobrar o desenho.
+#:
+#: A SEGUNDA METADE É O JUÍZO QUE O PRODUTO DEIXA DE FAZER, e ela entrou em
+#: 25/08/2026 junto com a decisão dela de tirar o `peer` do `/sys` de
+#: `mapa_das_portas.irmas_de`. Sem o desenho, `irmas_de` devolve `{}`, o motor do
+#: arranjo fica sem `Entrada.par`, e as três penalidades de vizinho rádio (-30 no
+#: teclado, -45 no Bluetooth, -40 no mouse) nunca disparam. Calar sobre isso faria
+#: a tela publicar juízo otimista silencioso — "aqui fica bem" onde ela não tem
+#: como saber —, que é o defeito de forma que esta casa persegue. O "o que fazer"
+#: não está na frase de propósito: ele é o botão ao lado, que diz "Desenhar a
+#: minha mesa".
 #: PROVISÓRIO — decisão dela.
 _SEM_MAPA = (
     "Você ainda não desenhou a sua mesa. Enquanto isso o Hefesto diz o caminho "
-    "do sistema (3-1.1.4) em vez do número da sua entrada."
+    "do sistema (3-1.1.4) em vez do número da sua entrada, e não sabe quais "
+    "entradas ficam coladas no metal — então ele não avisa quando dois "
+    "receptores sem fio estão encostados. Não é que esteja tudo bem: ele não "
+    "sabe."
 )
 
 #: O botão que abre a janela do desenho.
