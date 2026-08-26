@@ -177,7 +177,16 @@ from hefesto_dualsense4unix.utils.maquina import (
 logger = get_logger(__name__)
 
 #: O título como ela o lê na tela.
-TITULO = "A mesa"
+#:
+#: **"Conexões", e a palavra é dela** (LEX-1). A seção se chamava "A mesa" — a
+#: metáfora da casa para o conjunto de controles —, e o título usava a mesma
+#: palavra para outra coisa: os adaptadores, os rádios e as entradas do
+#: gabinete. Duas coisas com um nome só é o que faz a pessoa procurar controle
+#: aqui dentro.
+#:
+#: O rodapé acompanha sozinho: `ipc_bridge._rotulos_dos_campos` LÊ esta
+#: constante (`ipc_bridge.py:812`), nunca a copia.
+TITULO = "Conexões"
 
 #: A dica do título, palavra por palavra como saiu do desenho aprovado
 #: (`TOOLTIPS.md`). Ela não se reescreve na hora.
@@ -223,7 +232,7 @@ _SELO_DECLARADO = "(você disse)"
 #: A dica do selo `(lido)`. Ela é a única coisa na tela que diz DE ONDE veio a
 #: palavra — sem ela, a classificação parece chute do produto.
 _DICA_LIDO = (
-    "O sistema informou o que este aparelho é, pelo próprio barramento USB. "
+    "O próprio aparelho informou ao sistema o que ele é. "
     'Se estiver errado, clique em "Corrigir".'
 )
 
@@ -298,6 +307,47 @@ _PAINEL_EM_PORTUGUES: dict[str, str] = {
 #: sempre atrás de um hub. Chutar "Frente" aqui seria a tela afirmando o que
 #: ninguém mediu.
 _PAINEL_DESCONHECIDO = "Não sei"
+
+# -- as duas perguntas que máquina nenhuma responde (LEX-9) -------------------
+#
+# A REDAÇÃO É DECIDIDA, e a decisão é `D-REDACAO-DAS-DUAS-PERGUNTAS-DE-RADIO`
+# (`docs/data/decisoes-dela.csv:36`, decidida por delegação em 25/08/2026,
+# marcada para o olho dela). A queixa que a derrubou é dela, de 24/08:
+# *"Eu não sei o que é altura da antena. nem linha de visada. sinceramente não
+# faço ideia."*
+#
+# O CONTEÚDO NÃO SAI — o `GUIA-RADIO-DA-SALA.md` §4.4 mede que subir 40 cm rende
+# mais que aproximar 5 m, e é isso que as duas perguntas colhem. O que muda é a
+# palavra: jargão que a pessoa teria de pesquisar é defeito, não precisão.
+#
+# **AS CHAVES E OS VALORES DO ESQUEMA NÃO MUDAM.** `MesaDeclarada` usa `Literal`
+# com `extra="forbid"`: trocar `"acima"` por `"sim"` faria o pydantic recusar o
+# DOCUMENTO INTEIRO de quem já declarou, e o sintoma seria "não consegui
+# gravar" — a causa certa com o sintoma errado. Só o RÓTULO e a PALAVRA DO
+# BOTÃO mudam; a tradução botão -> valor está na tupla de cada `_linha_declarada`.
+#
+# A INVERSÃO DA SEGUNDA É DE PROPÓSITO. "Linha de visada: Livre" virou "Tem
+# gente sentada entre o dongle e o sofá? Não" — a pergunta trocou de sinal, e
+# por isso "Sim" grava `com_gente` e "Não" grava `livre`. Manter a ordem antiga
+# faria a tela gravar o oposto do que ela respondeu.
+
+#: PROVISÓRIO — decisão dela (a redação está decidida; o olho dela não a viu).
+_PERGUNTA_DA_ALTURA = "O dongle fica acima da cabeça de quem joga sentado?"
+
+#: PROVISÓRIO — decisão dela.
+_DICA_DA_ALTURA = (
+    "Corpo humano absorve 2,4 GHz. Um dongle acima da linha das cabeças rende "
+    "mais que um dongle perto. Isto nenhum sistema sabe — só você."
+)
+
+#: PROVISÓRIO — decisão dela.
+_PERGUNTA_DA_VISADA = "Tem gente sentada entre o dongle e o sofá?"
+
+#: PROVISÓRIO — decisão dela.
+_DICA_DA_VISADA = (
+    "Gente no caminho entre o dongle e quem joga custa alcance, e também não "
+    "há como medir daqui."
+)
 
 #: A dica do par colado, literal do desenho aprovado (`TOOLTIPS.md`).
 _DICA_COLADOS = (
@@ -513,10 +563,14 @@ class _PainelDaMesa:
         self._caixa_radios = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         caixa.pack_start(self._caixa_radios, False, False, 0)
 
-        # As três declarações desta seção são DIFERIDAS, e a frase é a
-        # mesma do Orçamento — literalmente a mesma constante. Ver
-        # `moldura.QUANDO_VALE` para o defeito que ela fecha.
-        caixa.pack_start(rotulo_de_apoio(QUANDO_VALE), False, False, 0)
+        # LEX-2, ITEM 3 — A `QUANDO_VALE` SAIU DA PÁGINA (26/08/2026).
+        #
+        # As três declarações desta seção continuam DIFERIDAS e a frase
+        # continua sendo a mesma constante do Desempenho e de Os controles
+        # (`moldura.QUANDO_VALE`) — o que mudou é onde ela mora. Ela diria a
+        # mesma coisa com a mesa vazia e com a mesa cheia, logo é EXPLICAÇÃO, e
+        # explicação vai para o hover do widget que ela explica: as fileiras de
+        # `_linha_declarada`, que são exatamente o que acumula no rascunho.
         caixa.pack_start(self._botao_de_reexame(), False, False, 0)
         # Montar lê o BARRAMENTO e nada mais. O `daemon.state_full` que
         # alimenta o medidor fica de fora daqui de propósito, pelo mesmo motivo
@@ -540,11 +594,13 @@ class _PainelDaMesa:
         caixa.pack_start(
             self._linha_declarada(
                 "altura_da_antena",
-                "Altura da antena:",
-                "Corpo humano absorve 2,4 GHz. Antena acima da linha das "
-                "cabeças rende mais que antena perto. Nenhum barramento sabe "
-                "disto — só você.",
-                [("acima", "Acima"), ("abaixo", "Abaixo"), ("nao_sei", "Não sei")],
+                _PERGUNTA_DA_ALTURA,
+                _DICA_DA_ALTURA,
+                [
+                    ("acima", "Sim"),
+                    ("abaixo", "Não"),
+                    ("nao_sei", "Não sei"),
+                ],
             ),
             False,
             False,
@@ -553,12 +609,11 @@ class _PainelDaMesa:
         caixa.pack_start(
             self._linha_declarada(
                 "linha_de_visada",
-                "Linha de visada:",
-                "Sem obstáculo entre a antena e quem joga. Também não há como "
-                "medir.",
+                _PERGUNTA_DA_VISADA,
+                _DICA_DA_VISADA,
                 [
-                    ("livre", "Livre"),
-                    ("com_gente", "Com gente"),
+                    ("com_gente", "Sim"),
+                    ("livre", "Não"),
                     ("nao_sei", "Não sei"),
                 ],
             ),
@@ -589,7 +644,11 @@ class _PainelDaMesa:
         fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         texto = Gtk.Label(label=_(rotulo))
         texto.set_xalign(0.0)
-        texto.set_tooltip_text(_(dica))
+        # A `QUANDO_VALE` viaja ANEXADA à dica da fileira, e não como parágrafo
+        # (LEX-2, item 3). Aqui e não noutro widget porque É esta fileira que
+        # acumula no rascunho: quem clica num destes botões e não vê nada
+        # acontecer é quem precisa da frase, e ela está sob o cursor dele.
+        texto.set_tooltip_text(f"{_(dica)} {_(QUANDO_VALE)}")
         with contextlib.suppress(Exception):
             texto.get_style_context().add_class("hefesto-rotulo")
         fileira.pack_start(texto, False, False, 0)
@@ -1056,7 +1115,7 @@ class _PainelDaMesa:
         if not mesa.radios:
             self._caixa_radios.pack_start(
                 rotulo_de_apoio(
-                    "Nenhum outro rádio encontrado no barramento USB.",
+                    "Nenhum outro rádio espetado no computador.",
                     largura_max=_LARGURA_DA_FRASE,
                 ),
                 False,
@@ -2006,6 +2065,12 @@ def _onde_esta_o_adaptador(
     # saiu: `bMaxPower` NÃO distingue hub alimentado — medido, o hub USB 3.1
     # com fonte reporta 0mA e o USB 2.1 sem fonte reporta 100mA, o oposto do
     # palpite. Afirmar "com fonte" seria a tela inventando uma medição.
+    # LEX-11 PARADA AQUI, E A PARADA É MEDIDA. Esta frase e o
+    # `f"Barramento {busnum}, porta {devpath}"` acima são as duas últimas das
+    # cinco que dizem "barramento" na tela. Trocá-las reprova
+    # `test_a_porta_dela_chega_na_frase.py::test_sem_mapa_a_frase_e_a_de_hoje`
+    # (`:141-151`), que prende as duas letra por letra — e aquele arquivo não
+    # está na posse desta frente (R-A). Ver a entrega da LEVA-4-A.
     return " · ".join(partes), "Lido do barramento USB: o Hefesto reconhece o hub."
 
 

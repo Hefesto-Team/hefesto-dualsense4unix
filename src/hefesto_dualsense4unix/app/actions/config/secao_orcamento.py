@@ -57,6 +57,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.app.actions.config.moldura import (
     QUANDO_VALE,
+    marcar_afordancias,
     rotulo_de_apoio,
 )
 from hefesto_dualsense4unix.app.widgets.segmented_selector import SegmentedSelector
@@ -69,15 +70,18 @@ logger = get_logger(__name__)
 
 #: O título como ela o lê na tela.
 #:
-#: **PENDENTE DE COSTURA — DESEMP-1.** A `D-PERFIL-DE-DESEMPENHO` renomeia a
-#: seção para "Desempenho", e o renome tem DUAS pontas: esta constante e
-#: `ipc_bridge._CAMPOS_DA_MAQUINA["orcamento"]`, que é a frase com que o rodapé
-#: nomeia o campo descartado. `ipc_bridge.py` é território de outra frente
-#: nesta leva, e trocar só uma das duas pontas deixaria o rodapé chamando a
-#: seção por um nome que não existe mais. O portão
-#: `test_o_titulo_da_secao_e_o_rotulo_do_rodape_sao_a_mesma_palavra` já está de
-#: pé e reprova a meia-correção — trocar as duas linhas de uma vez é o gesto.
-TITULO = "Orçamento"
+#: **FEITO EM 26/08/2026 (LEX-1).** A `D-PERFIL-DE-DESEMPENHO` mandou renomear
+#: a seção de "Orçamento" para "Desempenho", e o renome tinha DUAS pontas: esta
+#: constante e o rótulo com que o rodapé nomeia o campo descartado. A segunda
+#: ponta deixou de existir antes desta troca: `ipc_bridge._CAMPOS_DA_MAQUINA`
+#: virou DERIVADO (`ipc_bridge._rotulos_dos_campos`, `:812`), que lê o `TITULO`
+#: de cada seção em vez de guardar cópia. Logo esta linha é o gesto inteiro, e o
+#: portão `test_o_titulo_da_secao_e_o_rotulo_do_rodape_sao_a_mesma_palavra`
+#: continua guardando o invariante.
+#:
+#: A chave do disco NÃO acompanha: `maquina.json` continua com `orcamento`, e
+#: renomeá-la apagaria a declaração de quem já a tinha.
+TITULO = "Desempenho"
 
 #: A dica do título. Ela mudou com a `D-PERFIL-DE-DESEMPENHO`: não é mais "um
 #: teto", é um perfil que decide o que fica ligado.
@@ -279,6 +283,18 @@ def alcance_de_hoje() -> str:
     )
 
 
+# LEX-2, ITEM 8 — A FRASE DO ALCANCE VIRA A SEGUNDA METADE DA DICA DO TÍTULO.
+#
+# Ela era um `rotulo_de_apoio` no pé da seção e diria a mesma coisa com a mesa
+# vazia e com a mesa cheia: é explicação, e explicação vai para o hover.
+#
+# ANEXADA AQUI, e não lá em cima junto do `TITULO`, porque ela é DERIVADA de
+# `LINHAS_DO_TETO` — `alcance_de_hoje()` só existe depois desta linha do
+# módulo. Derivar em vez de repetir continua sendo a regra: um dono só, e a
+# tabela e a dica não podem divergir.
+DICA = f"{DICA} {alcance_de_hoje()}"
+
+
 def orcamento_em_vigor(host: Any = None) -> str | None:
     """A chave do orçamento que está GRAVADA — nunca a que espera o "Aplicar".
 
@@ -391,11 +407,16 @@ def montar(host: Any, caixa: Any) -> None:
     derrubar a janela. Quem chama já embrulha em `contextlib.suppress`, mas a
     tolerância começa aqui.
     """
+    # LEX-2, ITENS 5 E 8 — DOIS PARÁGRAFOS SAÍRAM DA PÁGINA (26/08/2026).
+    #
+    # A `QUANDO_VALE` virou a segunda metade da dica de cada um dos três
+    # perfis (`_fileira_dos_perfis`), que é o botão que ela explica; a
+    # `alcance_de_hoje()` virou a segunda metade da `DICA` do título. As duas
+    # diriam a mesma coisa com a mesa vazia e com a mesa cheia, logo são
+    # EXPLICAÇÃO, e explicação vai para o hover.
     caixa.pack_start(_fileira_dos_perfis(host), False, False, 0)
-    caixa.pack_start(rotulo_de_apoio(QUANDO_VALE), False, False, 0)
     caixa.pack_start(_bloco_da_conta(host), False, False, 0)
     caixa.pack_start(_tabela_das_consequencias(), False, False, 0)
-    caixa.pack_start(rotulo_de_apoio(alcance_de_hoje()), False, False, 0)
 
 
 def _fileira_dos_perfis(host: Any) -> Any:
@@ -420,7 +441,12 @@ def _fileira_dos_perfis(host: Any) -> Any:
     with contextlib.suppress(Exception):
         seletor.set_orientation(Gtk.Orientation.HORIZONTAL)
     seletor.set_items([(perfil, ROTULOS_DOS_PERFIS[perfil]) for perfil in PERFIS])
-    seletor.set_tooltips(dict(DICAS))
+    # A `QUANDO_VALE` ANEXADA à dica de cada perfil (LEX-2, item 5). Nos três, e
+    # não num só: a pessoa lê a dica do botão em que está o cursor, e um perfil
+    # que calasse sobre o "Aplicar" leria como perfil que grava na hora.
+    seletor.set_tooltips(
+        {perfil: f"{dica} {QUANDO_VALE}" for perfil, dica in DICAS.items()}
+    )
     perfil = perfil_na_tela(host)
     if perfil in PERFIS:
         with contextlib.suppress(Exception):
@@ -712,11 +738,55 @@ class _ContaDeSlots:
         return {}
 
     def _desenhar(self) -> None:
+        """As falas viram rótulos — menos as que a LEX-2 mandou para o hover.
+
+        A `frase_do_preco_por_controle` é a conta de fatias, e ela diria a mesma
+        coisa com a mesa vazia e com a mesa cheia: é EXPLICAÇÃO, e explicação
+        vai para o hover pela regra do léxico desta aba.
+
+        **Ela continua em :meth:`falas`, e isso não é descuido.** A pergunta que
+        a `falas` responde nunca foi "está impresso na página?" — é "o que esta
+        seção DIZ à pessoa?", e é sobre essa lista que o portão das
+        `PALAVRAS_DE_CULPA` varre tudo. Uma fala que muda de rótulo para dica
+        continua sendo fala; tirá-la daqui abriria um buraco no portão do
+        tamanho exato da frase que saiu da página. É a mesma migração que o
+        `_textos` -> `_falas` de
+        `test_a_aba_diz_quando_a_escolha_fica_guardada.py` fez em 25/08.
+
+        A CASA DELA É O TÍTULO DA CONTA, que é a primeira fala e a única que
+        existe nos três estados do bloco (sem resposta, rádio vazio, rádio
+        cheio) — a frase explica a conta inteira, não uma linha dela.
+        """
         with contextlib.suppress(Exception):
             for filho in list(self.caixa.get_children()):
                 self.caixa.remove(filho)
+        no_hover = plano_de_radio.frase_do_preco_por_controle()
+        primeiro = True
         for texto in self.falas():
-            self.caixa.pack_start(rotulo_de_apoio(texto), False, False, 0)
+            if texto == no_hover:
+                continue
+            rotulo = rotulo_de_apoio(texto)
+            if primeiro:
+                with contextlib.suppress(Exception):
+                    rotulo.set_tooltip_text(no_hover)
+                primeiro = False
+            self.caixa.pack_start(rotulo, False, False, 0)
+        # A MARCA VISUAL É PEDIDA AQUI, E A CHAMADA NÃO É REDUNDANTE.
+        #
+        # `moldura.marcar_afordancias` varre a seção uma vez na montagem e
+        # depois se pendura no "add" de cada caixa para alcançar o que nasce
+        # tarde — mas por `GLib.idle_add` (`moldura.py:234`), que só corre com
+        # laço principal vivo. Este bloco é redesenhado a cada resposta do
+        # daemon, e a partir de 26/08/2026 ele carrega uma dica: sem esta linha,
+        # o rótulo nasce com explicação e sem marca — que é exatamente o defeito
+        # que aquela função cura, e o portão
+        # `test_afordancia_de_dica_na_aba_configuracoes.py::
+        # test_nenhum_rotulo_com_dica_fica_invisivel` o pegou nomeando
+        # "Quanto do rádio cada adaptador já gasta".
+        #
+        # Idempotente: `add_class` numa classe que já está não faz nada.
+        with contextlib.suppress(Exception):
+            marcar_afordancias(self.caixa)
         with contextlib.suppress(Exception):
             self.caixa.show_all()
 
