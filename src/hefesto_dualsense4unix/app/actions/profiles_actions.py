@@ -298,7 +298,7 @@ def _match_label(match: object) -> str:
 
     R-12 (auditoria 23/07): ``MatchCriteria`` com TODOS os campos vazios é o
     caso do preset ``coop_local`` de fábrica — ``MatchCriteria.matches``
-    devolve ``False`` sem condição alguma (schema.py:52), então o perfil é
+    devolve ``False`` sem condição alguma (schema.py:125), então o perfil é
     INALCANÇÁVEL pelo autoswitch. A coluna dizia "Só neste programa", o que é
     falso duas vezes: não há programa nenhum, e ele nunca entra sozinho.
     """
@@ -451,7 +451,7 @@ def explicacao_da_disputa(
 # boot. Por isso a lista parte dele em vez de partir do vazio.
 
 #: A cor do "ligado" desta casa — `@green` do `gui/theme.css:26`, a mesma que a
-#: janela compacta já usa para o perfil ativo (`compact_window.py:309`). Literal
+#: janela compacta já usa para o perfil ativo (`compact_window.py:320`). Literal
 #: pelo mesmo motivo dela: `@define-color` não chega à célula de um
 #: `GtkTreeView`, que quer uma cor e não um nome do tema.
 COR_DO_PERFIL_ATIVO = "#50fa7b"
@@ -745,7 +745,7 @@ def rebaixamento_para_so_manual(antes: object, depois: object) -> bool:
 # que ela SENTE, que é o mecanismo direto da queixa "às vezes pega".
 #
 # `mode_aplicado` e `motivo` NÃO são lidos aqui de propósito: os dois derivam
-# de `secoes["mode"]` (daemon/ipc_handlers.py:470-477), e ler a fonte em vez
+# de `secoes["mode"]` (daemon/ipc_handlers.py:862-870), e ler a fonte em vez
 # dos derivados é o que impede as duas leituras de divergirem.
 
 #: Nomes das seções que só o `profile.switch` relata. O mapa do rodapé
@@ -753,12 +753,82 @@ def rebaixamento_para_so_manual(antes: object, depois: object) -> bool:
 #: não tem `mode`/`suppression`/`rumble_policy`/`speaker`. Este dicionário
 #: COMPLEMENTA aquele, nunca o substitui: as seções comuns continuam saindo de
 #: lá, dona única da frase (a lição do `texto_do_custo_da_mascara`).
+#:
+#: BG-07c (26/08/2026), e o que a medição encontrou. O manager escreve ONZE
+#: chaves no relatório e este mapa traduzia QUATRO, com a chave crua como
+#: fallback (`relato_da_ativacao`, abaixo). MEDIDO nesta árvore, seção a seção,
+#: pela frase que a pessoa lê de fato:
+#:
+#:     keyboard  -> "Aplicado, menos: teclado."      <- já traduzia
+#:     mouse     -> "Aplicado, menos: mouse."        <- já traduzia
+#:     mic       -> "Aplicado, menos: microfone."    <- já traduzia
+#:     trigger   -> "Aplicado, menos: trigger."      <- CRU
+#:     led       -> "Aplicado, menos: led."          <- CRU
+#:
+#: CORREÇÃO DE FATO, escrita porque a versão errada custaria a próxima
+#: investigação: `keyboard`, `mouse` e `mic` NÃO chegam crus. O rodapé os tem
+#: em `footer_actions._NOMES_DE_SECAO` desde a APLICAR-VERDADE-01, e a chave
+#: crua que sai daqui atravessa aquele mapa antes de virar frase. Quem chegava
+#: cru eram `trigger` e `led` — **no SINGULAR**, e é aí que está o defeito: o
+#: mapa do rodapé tem `triggers` e `leds`, no plural, porque nasceu para o
+#: `profile.apply_draft`. O manager escreve o singular de propósito (é o
+#: vocabulário que a trava manual já usa, `profiles/manager.py:488`), e as duas
+#: grafias nunca se encontraram. A palavra de tela é a MESMA das plurais —
+#: "gatilhos" e "luzes" — porque é a mesma seção; o que muda é só a chave.
 _NOMES_DAS_SECOES_DA_ATIVACAO: dict[str, str] = {
     "mode": "modo",
     "suppression": "modo jogo",
     "rumble_policy": "vibração",
     "speaker": "alto-falante",
+    # As duas do singular. Mesma palavra de tela das irmãs plurais do rodapé.
+    "trigger": "gatilhos",
+    "led": "luzes",
+    # PROVISÓRIO — decisão dela. A seção nasceu MUDA (o applier era chamado e o
+    # resultado descartado, `profiles/manager.py`); agora ela relata, e precisa
+    # de nome. "vibração do jogo" deriva do que já existe: "vibração" é o nome
+    # da irmã `rumble_policy` aqui do lado, e o botão que liga esta seção se
+    # chama "Deixar o jogo controlar a vibração" (`gui/main.glade:2028`).
+    "rumble_passthrough": "vibração do jogo",
 }
+
+#: PROVISÓRIO — decisão dela. Como nomear o alto-falante DE UM controle quando a
+#: mesa tem quatro. A chave é `speaker:<uniq>` (`profiles/manager.py`), e o
+#: `uniq` é o identificador do aparelho.
+#:
+#: O NOME CARREGA O `uniq`, e não é enfeite — é o que impede as peças de se
+#: fundirem. `relato_da_ativacao` monta `failed` como um dict indexado pelo NOME
+#: traduzido: nome igual é a MESMA entrada, e um rótulo fixo faria os quatro
+#: alto-falantes da mesa virarem um só. Medido em 26/08/2026, com três caídos:
+#: "Aplicado, menos: alto-falante de um controle." — bonito, e dois controles
+#: sumiram da frase. Com o `uniq` os três aparecem, e o quarto vira o "e mais 1"
+#: de `footer_actions._lista_de_secoes`. É a decisão que
+#: `ProfileManager.apply_controller_speakers` já tinha escrito para a chave —
+#: *"para a GUI conseguir dizer QUAL peça foi ignorada pela trava manual em vez
+#: de fundir tudo num rótulo só"* —, e ela vale igual para o nome.
+#:
+#: A frase diz QUAL controle pelo identificador, não pelo número do slot, e a
+#: limitação é honesta em vez de escondida: o léxico da casa é "Controle {N}"
+#: (`widgets/controller_card.py`), e o número NÃO está ao alcance aqui —
+#: `relato_da_ativacao` é função pura, recebe só a resposta do daemon, e o mapa
+#: `uniq -> índice` mora no mixin (`_target_uniq_by_index`). Levar o mapa até
+#: aqui muda a assinatura e os chamadores, e é decisão de desenho, não de
+#: redação. As duas saídas estão relatadas na entrega da L3-E.
+_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE = "speaker:"
+_NOME_DO_ALTO_FALANTE_POR_CONTROLE = "alto-falante de um controle"
+
+
+def nome_da_secao_da_ativacao(chave: str) -> str:
+    """A palavra de tela desta seção, ou a chave crua quando não há nome.
+
+    Devolver a chave crua continua sendo o certo para o que este mapa não
+    conhece — "melhor um termo estranho do que omitir que algo ficou de fora",
+    como `footer_actions._lista_de_secoes` já escreve. O que deixou de ser
+    certo é chegar cru o que TEM nome.
+    """
+    if chave.startswith(_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE):
+        uniq = chave[len(_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE) :]
+        return f"{_NOME_DO_ALTO_FALANTE_POR_CONTROLE} ({uniq})"
+    return _NOMES_DAS_SECOES_DA_ATIVACAO.get(chave, chave)
 
 
 def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
@@ -780,7 +850,7 @@ def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
         return None
     aplicadas = [str(s) for s, estado in secoes.items() if str(estado) == "aplicado"]
     nao_entraram = {
-        _NOMES_DAS_SECOES_DA_ATIVACAO.get(str(s), str(s)): str(estado)
+        nome_da_secao_da_ativacao(str(s)): str(estado)
         for s, estado in secoes.items()
         if str(estado) != "aplicado"
     }
@@ -859,7 +929,7 @@ def mensagem_do_salvar(
 
 # --- P2: o carimbo de ponte aparece NESTA aba ------------------------------
 # PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/1 (24/08/2026). O daemon PUBLICA
-# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1971`), com o
+# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1999`), com o
 # comentário dizendo a intenção em letra: *"para a janela dizer 'este jogo já
 # sabe por onde entra'"*. Medido:
 #
@@ -2626,13 +2696,15 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         """Pede ao daemon o carimbo de cada jogo — por GESTO, nunca por tique.
 
         **Por que `daemon.status` e não o `state_full` que a janela já lê a cada
-        tique:** medido em 25/08/2026, `pontes_confirmadas` é publicado por
-        `_handle_daemon_status` (`daemon/ipc_handlers.py:1971`) e **não existe
-        no `daemon.state_full`** — que é o payload do tique. Publicá-lo lá é o
-        conserto de fundo e mora no `daemon/`, que é de outra frente nesta leva.
-        Enquanto isso, uma leitura por gesto entrega o dado sem somar um segundo
-        poller: o carimbo só muda quando um perfil é salvo ou confirmado, então
-        uma busca ao abrir a caixa do jogo é atual o bastante.
+        tique:** o `state_full` TAMBÉM publica `pontes_confirmadas` desde a
+        BG-02 (`daemon/ipc_handlers.py:2483`, dentro de
+        `_handle_daemon_state_full`), mas **atrás de um cache de 5 s**
+        (`_PONTES_CONFIRMADAS_TTL_SEC`, `:189`) — porque a leitura crua abre
+        CADA perfil do disco sob `FileLock` e o tique roda a 10-20 Hz. Quem
+        precisa da resposta exata no instante seguinte ao gesto é esta caixa: o
+        carimbo muda justamente quando um perfil é salvo ou confirmado, e o
+        `daemon.status` não passa pelo cache. A escolha está escrita dos dois
+        lados — ver o comentário do TTL, que nomeia esta aba.
 
         Best-effort inteiro: daemon offline deixa o cache como está e a linha
         simplesmente não aparece — que é o silêncio já contratado no §P2.
@@ -3234,7 +3306,12 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
     def _on_profile_switch_failure(self, exc: Exception) -> bool:
         """Callback GTK de falha do switch (daemon offline / erro de transporte)."""
         logger.debug("profile_switch_falhou", err=str(exc))
-        self._toast_profile("Falha (daemon offline?)")
+        # BG-TOAST-02 (26/08/2026): dizia "Falha (daemon offline?)" — `daemon
+        # offline` é o primeiro termo que a E3 da PALAVRA-01 aposentou, e a
+        # frase sobreviveu porque o portão da palavra não lia toast. A redação
+        # segue a irmã já escrita para o mesmo desfecho em `footer_actions.py`
+        # ("Não consegui aplicar o perfil — o Hefesto pode estar desligado.").
+        self._toast_profile("Não consegui trocar de perfil — o Hefesto pode estar desligado.")
         return False
 
     def on_profile_reload(self, _btn: Gtk.Button | None) -> None:

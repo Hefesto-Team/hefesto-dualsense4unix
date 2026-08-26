@@ -725,13 +725,40 @@ class ProfileManager:
         # SPRINT-GAME-RUMBLE-01: aplica o `rumble.passthrough` do perfil — solta
         # o rumble FIXADO pela GUI para o JOGO controlar a vibração. SEMPRE (o
         # default True cobre todo perfil); o applier só age se há rumble fixado.
+        #
+        # BG-07c (26/08/2026): esta seção era a única MUDA das sete. O applier
+        # era chamado, o retorno descartado e a exceção engolida num
+        # `logger.warning` — `resultado` não ganhava chave nenhuma. Consequência
+        # medida na frase que a pessoa lê: com o passthrough falhando, o rodapé
+        # dizia "Perfil aplicado ao controle." sem uma palavra sobre a vibração
+        # que não voltou para o jogo. Agora ela FALA quando cai.
+        #
+        # E POR QUE ELA NÃO USA `_estado_da_secao` COMO OS CINCO IRMÃOS —
+        # medido em 26/08, na volta da conferência. `_estado_da_secao(None)`
+        # devolve `"aplicado"`, e o applier REAL desta seção
+        # (`lifecycle.apply_profile_rumble_passthrough`) devolve `None` em TODOS
+        # os caminhos, inclusive nos três no-op de saída antecipada — ele não
+        # sabe dizer se aplicou. Como ele está SEMPRE ligado em produção
+        # (`daemon/connection.py`), carimbar `"aplicado"` aqui punha uma seção
+        # no `applied` de toda ativação e deixava
+        # `footer_actions._mensagem_de_aplicacao` sem o caminho do `applied`
+        # vazio: com o jogo aberto e o gate R-04 adiando TUDO, o rodapé dizia
+        # "Aplicado, menos: mouse." onde antes dizia "Nada foi aplicado ao
+        # controle." — a janela comemorando depois de nada ter chegado ao
+        # controle, o defeito que a APLICAR-VERDADE-02 e a P3b existem para
+        # matar. Então: só entra no relatório o que o applier SOUBE dizer (um
+        # estado do vocabulário do lifecycle) ou a exceção, que é notícia de
+        # verdade. Silêncio de quem não sabe continua silêncio.
         if self.rumble_passthrough_applier is not None:
             rumble_cfg = getattr(profile, "rumble", None)
             try:
-                self.rumble_passthrough_applier(
+                estado_passthrough = self.rumble_passthrough_applier(
                     bool(getattr(rumble_cfg, "passthrough", True))
                 )
+                if isinstance(estado_passthrough, str):
+                    resultado["rumble_passthrough"] = estado_passthrough
             except Exception as exc:
+                resultado["rumble_passthrough"] = "falhou"
                 logger.warning(
                     "profile_rumble_passthrough_apply_failed",
                     profile=profile.name,

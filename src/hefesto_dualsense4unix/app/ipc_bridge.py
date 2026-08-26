@@ -461,33 +461,6 @@ def trigger_set(side: str, mode: str, params: list[int]) -> bool:
     return ok
 
 
-def trigger_reset(
-    side: str | None = None, uniq: str | None = None
-) -> tuple[bool, str | None]:
-    """LIBERA a trava manual e devolve o gatilho ao perfil (`trigger.reset`).
-
-    R-19 (auditoria 23/07): o RPC já existia e já estava roteado
-    (`ipc_server.py:102`), mas a GUI não o expunha — então o botão "Desligar" da
-    aba Gatilhos mandava outro `trigger.set` com modo "Off". A diferença é
-    decisiva: `trigger.set` **ARMA** `mark_manual_trigger_active`, então o botão
-    que a usuária usa para "voltar ao normal" era mais um jeito de PAUSAR a
-    troca automática de perfil. É a queixa "estado armado que nunca é liberado".
-
-    ABAS-06 (25/07): `uniq` — MAC do controle escolhido no seletor. Este era o
-    ÚNICO comando de saída da janela sem alvo: com "Controle 2" selecionado,
-    "Desligar" zerava o gatilho dos QUATRO, enquanto o "Aplicar" ao lado
-    mandava para um só. Omitido = comportamento global clássico.
-
-    ABAS-05 (25/07): o clear das TRÊS categorias (documentado aqui como
-    "contrato deliberado" até 24/07) foi estreitado para a categoria `trigger`
-    — desligar um gatilho apagava a trava de LED e de vibração de outras abas e
-    reabria a troca automática para reescrever a cor recém-aplicada.
-
-    **Não diz ONDE resetou** — para isso existe :func:`trigger_reset_detalhado`.
-    """
-    return _call_checked("trigger.reset", _payload_trigger_reset(side, uniq))
-
-
 def _payload_trigger_reset(side: str | None, uniq: str | None) -> dict[str, Any]:
     """Payload do ``trigger.reset`` — um dono só, para as duas portas não divergirem."""
     payload: dict[str, Any] = {}
@@ -501,12 +474,32 @@ def _payload_trigger_reset(side: str | None, uniq: str | None) -> dict[str, Any]
 def trigger_reset_detalhado(
     side: str | None = None, uniq: str | None = None
 ) -> tuple[bool, str | None, dict[str, Any] | None]:
-    """``trigger.reset`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
+    """LIBERA a trava manual e devolve o gatilho ao perfil (`trigger.reset`).
 
     Mesmo contrato de :func:`trigger_set_detalhado` — e o mesmo corpo
     (``status``/``aplicado_em``/``guardado_em``), porque os dois handlers foram
-    escritos como espelho um do outro. Ver :func:`trigger_reset` para o que o
-    comando faz.
+    escritos como espelho um do outro (ELO-MUDO-01, 23/08).
+
+    R-19 (auditoria 23/07): o RPC já existia e já estava roteado
+    (`ipc_server.py:102`), mas a GUI não o expunha — então o botão "Desligar" da
+    aba Gatilhos mandava outro `trigger.set` com modo "Off". A diferença é
+    decisiva: `trigger.set` **ARMA** `mark_manual_trigger_active`, então o botão
+    que a usuária usa para "voltar ao normal" era mais um jeito de PAUSAR a
+    troca automática de perfil. É a queixa "estado armado que nunca é liberado".
+
+    ABAS-06 (25/07): `uniq` — MAC do controle escolhido no seletor. Este era o
+    ÚNICO comando de saída da janela sem alvo: com "Controle 2" selecionado,
+    "Desligar" zerava o gatilho dos QUATRO, enquanto o "Aplicar" ao lado
+    mandava para um só. Omitido = comportamento global clássico.
+
+    ABAS-05 (25/07): o clear das TRÊS categorias (documentado como "contrato
+    deliberado" até 24/07) foi estreitado para a categoria `trigger` —
+    desligar um gatilho apagava a trava de LED e de vibração de outras abas e
+    reabria a troca automática para reescrever a cor recém-aplicada.
+
+    Estes três parágrafos moraram no invólucro `trigger_reset`, podado em
+    26/08/2026 por não ter chamador nenhum: quem aperta "Desligar" é
+    `app/actions/triggers_actions.py:697`, e chama esta.
     """
     ok, motivo, corpo = _call_checked_detalhado(
         "trigger.reset", _payload_trigger_reset(side, uniq)
@@ -661,43 +654,26 @@ def rumble_policy_set_checked(
 ) -> tuple[bool, str | None]:
     """Altera a intensidade devolvendo o MOTIVO quando o daemon RECUSA.
 
+    ``policy`` é um de "economia", "balanceado", "max", "auto", "custom"
+    (FEAT-RUMBLE-POLICY-01).
+
     Mesmo tratamento dos gatilhos (ver ``_call_checked``): a aba Rumble afirmava
     "O Hefesto não está rodando" também para erro JSON-RPC — daemon VIVO que
     recusou o pedido. ``timeout`` é do chamador: a folga de leitura de estado
     mora em ``app.actions.mode_transition``, que importa este módulo (importá-lo
     aqui seria ciclo).
+
+    Esta é a ÚNICA porta do ``rumble.policy_set`` desde 26/08/2026, e as duas
+    que caíram deixaram medição: o invólucro ``rumble_policy_set`` descartava o
+    motivo da recusa (nunca teve chamador de produção), e o
+    ``rumble_policy_set_detalhado`` existia pela uniformidade das três rotas de
+    ``_call_checked``, mas o corpo deste RPC é ECO — ``{"status": "ok",
+    "policy": <a pedida>}``, medido em 23/08/2026 — então não havia verdade
+    nenhuma escondida no corpo para a aba recuperar. Se um dia o daemon passar
+    a resolver a política EFETIVA (``auto`` virando um valor concreto), é aqui
+    que a forma ``(ok, motivo, corpo)`` volta.
     """
     return _call_checked("rumble.policy_set", {"policy": policy}, timeout=timeout)
-
-
-def rumble_policy_set_detalhado(
-    policy: str, *, timeout: float | None = 0.25
-) -> tuple[bool, str | None, dict[str, Any] | None]:
-    """``rumble.policy_set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01).
-
-    Terceira e última rota que passava por ``_call_checked`` e perdia o corpo.
-    O corpo de hoje é ``{"status": "ok", "policy": <a pedida>}`` — o daemon ecoa
-    a política, não resolve nada — então aqui não há mentira medida: o que esta
-    função paga é a UNIFORMIDADE, para as três rotas de ``_call_checked``
-    responderem com a mesma forma e a próxima pessoa não ter de descobrir qual
-    delas guarda a verdade. Devolve ``(ok, motivo, corpo)`` como
-    :func:`trigger_set_detalhado`.
-    """
-    ok, motivo, corpo = _call_checked_detalhado(
-        "rumble.policy_set", {"policy": policy}, timeout=timeout
-    )
-    return ok, motivo or _recusa_no_corpo(corpo), corpo
-
-
-def rumble_policy_set(policy: str) -> bool:
-    """Altera política global de intensidade de rumble (FEAT-RUMBLE-POLICY-01).
-
-    ``policy`` deve ser um de "economia", "balanceado", "max", "auto", "custom".
-    Retorna True se o daemon confirmou; False se offline ou parâmetro inválido.
-    Descarta o motivo da recusa — use ``rumble_policy_set_checked`` para tê-lo.
-    """
-    ok, _motivo = rumble_policy_set_checked(policy)
-    return ok
 
 
 def rumble_policy_custom(mult: float) -> bool:
@@ -972,18 +948,19 @@ def player_leds_set_detalhado(
 def apply_draft_detalhado(draft_dict: dict) -> dict | None:  # type: ignore[type-arg]
     """Envia ``profile.apply_draft`` e devolve a RESPOSTA INTEIRA do daemon.
 
-    APLICAR-VERDADE-01/E2. Esta é a função primitiva; a ``apply_draft`` abaixo
-    é um invólucro dela que estreita o resultado para ``bool``.
+    APLICAR-VERDADE-01/E2. Esta é a ÚNICA porta do ``profile.apply_draft``
+    desde 26/08/2026 — quem decide "deu ou não deu" passa o retorno por
+    :func:`aplicacao_confirmada`, que é o dono único da regra R-18.
 
-    Por que uma função a mais em vez de trocar o tipo de retorno da
-    ``apply_draft`` (as duas formas estavam desenhadas na sprint): a
-    ``apply_draft`` está no ``__all__`` deste módulo e o valor-verdade dela É o
-    contrato R-18 — ``{"status": "ok", "applied": []}`` significa "nada entrou"
-    e tem de valer False. Um ``dict`` devolvido no lugar do ``bool`` é SEMPRE
-    verdadeiro num ``if``, então qualquer chamador que não fosse migrado na
-    mesma leva voltaria a dizer "aplicado" para um no-op — a cura de 23/07
-    desfeita em silêncio, que é justamente trocar uma mentira por outra.
-    Aditivo: ninguém quebra, e quem precisa da verdade inteira pede por ela.
+    Houve um invólucro ``apply_draft`` que já fazia essas duas coisas e
+    devolvia só o ``bool``. Ele foi podado por não ter chamador de produção
+    nenhum, mas a medição que o justificava fica: um ``dict`` devolvido no
+    lugar do ``bool`` é SEMPRE verdadeiro num ``if``, então trocar o tipo de
+    retorno de uma porta booleana faria qualquer chamador não migrado dizer
+    "aplicado" para um no-op — ``{"status": "ok", "applied": []}`` significa
+    "nada entrou" e TEM de valer False. Por isso a forma detalhada nasceu como
+    função nova em vez de reescrever a antiga, e por isso o ``bool`` nunca
+    volta a esta assinatura sem passar pela ``aplicacao_confirmada``.
 
     ``draft_dict`` segue o contrato definido em ``DraftConfig.to_ipc_dict()``:
     chaves triggers/leds/rumble/mouse.
@@ -1006,9 +983,9 @@ def apply_draft_detalhado(draft_dict: dict) -> dict | None:  # type: ignore[type
 def aplicacao_confirmada(resposta: Any) -> bool:
     """A resposta do ``profile.apply_draft`` confirma que algo entrou? (R-18).
 
-    Dono ÚNICO da regra de sucesso da aplicação — a ``apply_draft`` e os
-    chamadores que pedem a resposta detalhada decidem os dois por aqui, para
-    não nascerem duas leituras do mesmo payload.
+    Dono ÚNICO da regra de sucesso da aplicação — todo chamador de
+    :func:`apply_draft_detalhado` decide por aqui, para não nascerem duas
+    leituras do mesmo payload.
 
     R-18 (auditoria 23/07): `status` é SEMPRE "ok" — o handler responde isso
     mesmo quando o applier não aplicou seção nenhuma, e a GUI toastava "aplicado"
@@ -1078,21 +1055,6 @@ def alvo_honrado(resposta: Any) -> bool | None:
         return None
     valor = resposta.get("por_uniq")
     return valor if isinstance(valor, bool) else None
-
-
-def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
-    """Envia ``profile.apply_draft`` ao daemon via IPC (FEAT-PROFILE-STATE-01).
-
-    Retorna True se o daemon confirmou aplicação. False se daemon offline, erro
-    de transporte, resposta inesperada ou nenhuma seção aplicada (R-18).
-
-    Invólucro de ``apply_draft_detalhado`` + ``aplicacao_confirmada``: quem só
-    precisa saber "deu ou não deu" continua com esta; quem precisa DIZER o que
-    não entrou chama a detalhada — este ``bool`` não tem como carregar o
-    ``failed``, e era por essa fronteira que a verdade morria antes de chegar
-    na aba Lightbar (APLICAR-VERDADE-01/E2).
-    """
-    return aplicacao_confirmada(apply_draft_detalhado(draft_dict))
 
 
 def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
@@ -1315,34 +1277,34 @@ def speaker_set_detalhado(
     return _corpo_do_daemon("speaker.set", payload)
 
 
-def mouse_emulation_set(
-    enabled: bool | None,
-    speed: int | None = None,
-    scroll_speed: int | None = None,
-) -> bool:
-    """Liga/desliga emulação de mouse e atualiza velocidades via IPC.
-
-    ``enabled=None`` omite o campo do payload — rota speed-only do daemon
-    (BUG-MOUSE-GUI-SYNC-01 A4): atualiza só as velocidades, sem ligar/desligar
-    a emulação nem persistir o flag.
-    """
-    params: dict[str, Any] = {}
-    if enabled is not None:
-        params["enabled"] = bool(enabled)
-    if speed is not None:
-        params["speed"] = int(speed)
-    if scroll_speed is not None:
-        params["scroll_speed"] = int(scroll_speed)
-    ok, _ = _safe_call("mouse.emulation.set", params)
-    return ok
-
+# PODA DE 26/08/2026 (BG-07) — cinco pontes públicas sem NENHUM chamador em
+# `src/` foram apagadas daqui, e o `__all__` abaixo é o registro do que ficou:
+# `apply_draft`, `rumble_policy_set`, `rumble_policy_set_detalhado`,
+# `trigger_reset` e `mouse_emulation_set`. As quatro primeiras deixaram a
+# medição delas na docstring da irmã que ficou. A quinta não tem irmã, e a
+# medição dela é esta: a aba Mouse fala `mouse.emulation.set` por `call_async`
+# DIRETO, em DOIS pontos (`app/actions/mouse_actions.py:462` — o interruptor —
+# e `:560` — o controle deslizante), sem passar por invólucro. A rota
+# speed-only do daemon (BUG-MOUSE-GUI-SYNC-01 A4, que atualiza só as
+# velocidades omitindo `enabled` do payload) continua viva: é o `:560`. E a
+# ponte podada não podia ser usada nem se alguém quisesse — ela não sabia
+# mandar `origin: "manual"`, o campo que a ORIGEM-QUE-MENTE-01 exige dos dois
+# pontos vivos. Duas pontes para o mesmo método IPC é como uma delas apodrece
+# sem ninguém ver, e era esta que estava apodrecendo.
+#
+# A trava que segurava a poda desde 12/08/2026 — "a assinatura pode estar
+# sendo importada pelo applet do COSMIC" — CAIU, e está medida em 26/08/2026:
+# o applet mora em `packaging/cosmic-applet/src/{app,ipc,main}.rs`, fala
+# JSON-RPC por socket Unix (`ipc.rs:3`: "Espelha `cli/ipc_client.py`"), e
+# `grep` pelos cinco nomes ali devolve ZERO. Um processo Rust não importa
+# função Python; o que ele espelha é o PROTOCOLO, e nenhum método IPC foi
+# tocado por esta poda.
 
 __all__ = [
     "PROFILE_SWITCH_TIMEOUT_S",
     "active_profile_name",
     "alvo_honrado",
     "aplicacao_confirmada",
-    "apply_draft",
     "apply_draft_detalhado",
     "autoswitch_lock_set",
     "call_async",
@@ -1357,22 +1319,18 @@ __all__ = [
     "mic_set",
     "mic_set_detalhado",
     "mic_volume_set_detalhado",
-    "mouse_emulation_set",
     "player_leds_set",
     "player_leds_set_detalhado",
     "profile_list",
     "profile_switch",
     "rumble_passthrough",
     "rumble_policy_custom",
-    "rumble_policy_set",
     "rumble_policy_set_checked",
-    "rumble_policy_set_detalhado",
     "rumble_set",
     "rumble_stop",
     "run_in_thread",
     "speaker_set",
     "speaker_set_detalhado",
-    "trigger_reset",
     "trigger_reset_detalhado",
     "trigger_set",
     "trigger_set_checked",

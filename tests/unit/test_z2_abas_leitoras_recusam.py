@@ -101,7 +101,7 @@ def test_lightbar_desconhecido_aplicar_recusa_com_motivo_e_zero_ipc(
     host = _HostLuzes()
     monkeypatch.setattr(
         lightbar_actions,
-        "led_set",
+        "led_set_detalhado",
         lambda *a, **kw: (_ for _ in ()).throw(
             AssertionError("IPC chamado com o alvo DESCONHECIDO")
         ),
@@ -118,7 +118,7 @@ def test_lightbar_off_desconhecido_tambem_recusa(monkeypatch: Any) -> None:
     host = _HostLuzes()
     monkeypatch.setattr(
         lightbar_actions,
-        "led_set",
+        "led_set_detalhado",
         lambda *a, **kw: (_ for _ in ()).throw(AssertionError("IPC chamado")),
     )
     host.on_lightbar_off(None)  # type: ignore[arg-type]

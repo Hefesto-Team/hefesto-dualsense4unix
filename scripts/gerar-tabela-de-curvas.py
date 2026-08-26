@@ -108,6 +108,48 @@ def divergencias(publicado: str, regerado: str) -> list[str]:
     ))
 
 
+def frase_do_tamanho(caminho: Path, quantas: int) -> str:
+    """O que a régua mediu, dito em voz alta — ou a confissão de que não mediu.
+
+    26/08/2026 (LEVA-4-E). Este script imprimia `atualizado (0 curva(s) no
+    catálogo)` e saía `rc=0` sobre um catálogo que **não existe no disco**.
+    `rc=0` ali é honesto — o bloco publicado de fato bate com a tabela vazia —,
+    mas a PALAVRA `atualizado` é a mentira: nada foi conferido, porque não há
+    nada para conferir, e quem lê a linha do `portoes.sh` conta um verde a
+    mais. É o padrão que a casa nomeou em 25/08 — *a régua confunde a PALAVRA
+    com o ATO* — e a saída aprovada naquele dia foi a régua do teclado, que
+    disse *"a régua não achou NENHUM valor produzível — ela cegou"*.
+
+    Um catálogo com UMA curva também não é medição: com um único item não há
+    ordenação, nem colisão de nome, nem formatação a divergir.
+    """
+    try:
+        onde = caminho.relative_to(RAIZ).as_posix()
+    except ValueError:
+        #: Catálogo fora da árvore só acontece em teste — e ali o endereço
+        #: absoluto é o que ajuda a ler a falha.
+        onde = caminho.as_posix()
+    if not caminho.is_file():
+        return (
+            f"A RÉGUA NÃO MEDIU NADA: {onde} não existe no disco. O bloco "
+            "publicado bate com a tabela VAZIA que um catálogo ausente produz "
+            "— isso não é a tabela conferida contra o dado, é a ausência "
+            "conferida contra si mesma."
+        )
+    if quantas == 0:
+        return (
+            f"A RÉGUA NÃO MEDIU NADA: {onde} existe e está SEM CURVA nenhuma. "
+            "Zero linha comparada não é acordo entre a tabela e a fonte."
+        )
+    if quantas == 1:
+        return (
+            f"A RÉGUA MEDIU QUASE NADA: {onde} tem 1 curva. Com um item só não "
+            "há ordem, nem nome repetido, nem formatação a divergir — o que "
+            "passa aqui não diz quase nada sobre o que passaria com dez."
+        )
+    return f"atualizado ({quantas} curva(s) no catálogo {onde})"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
@@ -140,13 +182,16 @@ def main() -> int:
             print(f"a fonte é: {CATALOGO.relative_to(RAIZ).as_posix()}", file=sys.stderr)
             print("rode: python3 scripts/gerar-tabela-de-curvas.py", file=sys.stderr)
             return 1
-        print(f"{DOCUMENTO.relative_to(RAIZ)}: atualizado "
-              f"({len(carrega_catalogo(CATALOGO).curvas)} curva(s) no catálogo)")
+        quantas = len(carrega_catalogo(CATALOGO).curvas)
+        print(f"{DOCUMENTO.relative_to(RAIZ)}: {frase_do_tamanho(CATALOGO, quantas)}")
         return 0
 
     caminho.write_text(documento_com_o_bloco(documento, regerado), encoding="utf-8")
-    print(f"{DOCUMENTO.relative_to(RAIZ)}: bloco reescrito com "
-          f"{len(carrega_catalogo(CATALOGO).curvas)} curva(s)")
+    quantas = len(carrega_catalogo(CATALOGO).curvas)
+    print(f"{DOCUMENTO.relative_to(RAIZ)}: bloco reescrito com {quantas} curva(s) "
+          f"de {CATALOGO.relative_to(RAIZ).as_posix()}"
+          + ("" if quantas > 1 else " — e um bloco vazio ou de item único não "
+                                    "prova que o gerador sabe gerar"))
     return 0
 
 

@@ -135,6 +135,87 @@ esta_instalacao_e_um_checkout() {
 #: visto renderando as 33 lado a lado, não lendo o fonte.
 _CONSELHO_GESTO_GENERICO="atualize o Hefesto pelo mesmo caminho por onde você o instalou"
 
+# ---------------------------------------------------------------------------
+# BG-06b (26/08/2026) — O GESTO GANHA NOME, POR FORMATO.
+#
+# A frase acima é honesta e universal, e é o ÚLTIMO degrau — não o único. Quem
+# instalou por Flatpak, Arch, Fedora, Debian ou Nix pode receber o gesto com
+# nome, e recebe.
+#
+# O QUE ISTO NÃO FAZ: adivinhar o formato pela distribuição. "Tem `apt`, logo
+# é `.deb`" está errado para todo AppImage e todo `pip install --user` numa
+# máquina Debian — e gesto errado é pior que gesto vago. A pergunta é sempre
+# sobre ESTE arquivo no disco: quem é o dono dele?
+#
+# A cópia em Python é `integrations/storm_doctor.GESTO_DE_ATUALIZAR` +
+# `formato_desta_instalacao`. DUPLICAÇÃO DECLARADA, pelo mesmo motivo de
+# sempre (este script é shell e não importa Python), e com o mesmo portão em
+# cima: `test_bg06_…::test_o_gesto_e_nomeado_por_formato` compara as duas nos
+# cinco formatos e reprova se divergirem.
+#
+# **PROVISÓRIO — decisão dela**: os cinco gestos nomeados são texto novo de
+# tela. Carimbo herdado da T-03, que redigiu a genérica e parou aqui de
+# propósito.
+
+#: Qual gerenciador de pacotes assume um caminho. `$1` é o caminho; ecoa
+#: `arch`/`debian`/`fedora` ou NADA. É uma pergunta ao disco, não um palpite:
+#: AppImage e instalação à mão não são de ninguém, e caem na genérica.
+_dono_do_arquivo() {
+    local alvo="${1:?}"
+    if command -v pacman >/dev/null 2>&1 && pacman -Qo "${alvo}" >/dev/null 2>&1; then
+        printf 'arch'
+    elif command -v dpkg >/dev/null 2>&1 && dpkg -S "${alvo}" >/dev/null 2>&1; then
+        printf 'debian'
+    elif command -v rpm >/dev/null 2>&1 && rpm -qf "${alvo}" >/dev/null 2>&1; then
+        printf 'fedora'
+    fi
+}
+
+#: O formato desta instalação em uma palavra. `$1` é o caminho do código a
+#: interrogar (default: este script) — é parâmetro, e não variável de
+#: ambiente, porque é assim que a bancada planta um `/nix/store` de mentira
+#: sem abrir uma porta dos fundos no produto.
+#:
+#: A ordem é uma ESCADA, e cada degrau é medição: checkout (o `install.sh` ao
+#: lado), flatpak (o `/.flatpak-info` que o próprio flatpak monta), nix (o
+#: código dentro do `/nix/store`), o dono do arquivo, e a genérica.
+_formato_desta_instalacao() {
+    local alvo="${1:-${BASH_SOURCE[0]}}" dono
+    if esta_instalacao_e_um_checkout; then
+        printf 'checkout'
+        return 0
+    fi
+    local marca_flatpak="${HEFESTO_MARCA_SANDBOX:-/.flatpak-info}"
+    if [[ -f "${marca_flatpak}" || -n "${FLATPAK_ID:-}" ]]; then
+        printf 'flatpak'
+        return 0
+    fi
+    if [[ "${alvo}" == /nix/store/* ]]; then
+        printf 'nix'
+        return 0
+    fi
+    dono="$(_dono_do_arquivo "${alvo}")"
+    printf '%s' "${dono:-desconhecido}"
+}
+
+#: O gesto de atualizar com nome, ou a genérica. `$1` é repassado ao
+#: `_formato_desta_instalacao`.
+#:
+#: Cada gesto é UM GESTO ("rode X"), pela mesma razão da genérica: ele entra no
+#: MESMO lugar da frase ("…, ou <isto>", "traga o alvo: <isto>"), e uma oração
+#: inteira ali quebra a gramática de quem a hospeda.
+_gesto_de_atualizar() {
+    case "$(_formato_desta_instalacao "${1:-}")" in
+        flatpak) printf 'rode flatpak update' ;;
+        arch)    printf 'rode sudo pacman -Syu' ;;
+        fedora)  printf 'rode sudo dnf upgrade' ;;
+        debian)  printf 'rode sudo apt upgrade' ;;
+        nix)     printf 'rode nix profile upgrade' ;;
+        *)       printf '%s' "${_CONSELHO_GESTO_GENERICO}" ;;
+    esac
+}
+# ---------------------------------------------------------------------------
+
 # O gesto de instalar/reparar que serve para ESTA máquina.
 #   $1 — o que vem DEPOIS de `./install.sh` no checkout (as flags). Opcional.
 #   $2 — o CAMINHO de um reparador que os pacotes levam e que refaz este passo
@@ -156,7 +237,10 @@ conselho_de_instalacao() {
         printf 'rode o reparador que veio no seu pacote: sudo %s%s' \
             "${reparador}" "${ressalva:+ ${ressalva}}"
     else
-        printf '%s' "${_CONSELHO_GESTO_GENERICO}"
+        # BG-06b: a genérica deixou de ser o único destino deste ramo — ela é
+        # o último degrau de `_gesto_de_atualizar`, e continua sendo a resposta
+        # de quem não tem dono (AppImage, instalação à mão).
+        printf '%s' "$(_gesto_de_atualizar)"
     fi
 }
 
@@ -996,6 +1080,14 @@ check_wireplumber_source() {
         pass "microfone ativo é o DualSense (o promotor está instalado — foi pedido)"
         return
     fi
+    # DROPIN-AMBIGUO-01 (26/08/2026) — a OUTRA metade do mesmo defeito. Sem o
+    # 51, quem promoveu o mic a dedo (`mic promote`) recebia o FAIL abaixo a
+    # cada execução do doctor, e um aviso que se aprende a ignorar é pior que
+    # aviso nenhum. Agora quem responde é o GESTO gravado, não a ausência.
+    if [[ -f "$(_marca_do_gesto_do_mic)" ]]; then
+        pass "microfone ativo é o DualSense (foi pedido — marca do gesto em $(_marca_do_gesto_do_mic))"
+        return
+    fi
     # ativo É o DualSense (não desejado) — distingue escassez (única fonte) de falha real.
     local has_other=""
     if command -v wpctl >/dev/null 2>&1; then
@@ -1046,6 +1138,19 @@ _default_source_classe() {
     fi
 }
 
+# DROPIN-AMBIGUO-01 — o caminho da MARCA DO GESTO, num lugar só.
+#
+# Quem escreve é `scripts/fix_wireplumber_default_source.sh` (nos gestos de
+# LIGAR o mic) e o `install.sh --keep-dualsense-mic`; quem apaga são os gestos
+# contrários e o `uninstall.sh`. Aqui só se LÊ. O caminho é duplicado por
+# necessidade — o doctor não pode `source` um script que despacha —, e é o
+# `tests/unit/test_dropin_ambiguo_01_a_marca_do_gesto.py` que cobra que os
+# três arquivos digam o mesmo nome.
+_marca_do_gesto_do_mic() {
+    printf '%s/hefesto-dualsense4unix/mic-do-dualsense-pedido.conf\n' \
+        "${XDG_STATE_HOME:-${HOME}/.local/state}"
+}
+
 # 0 quando o mic do DualSense PODE ser eleito fonte padrão do sistema.
 #
 # Três sinais EXPLÍCITOS, nenhum adivinhado — e a ordem é a hierarquia de quem
@@ -1067,11 +1172,31 @@ _prefere_mic_do_dualsense() {
         1|true|yes|TRUE|YES) return 0 ;;
     esac
     # 3. O drop-in 51 é a política DEFAULT do install: rebaixar. Enquanto ele
-    #    estiver no lugar, o controle é a ÚLTIMA opção — não a primeira. Sua
-    #    ausência (ex.: `fix_wireplumber_default_source.sh --promote-source`,
-    #    `mic promote`) é a promoção explícita.
+    #    estiver no lugar, o controle é a ÚLTIMA opção — não a primeira.
     [[ -f "${conf}/51-hefesto-dualsense-no-default-source.conf" ]] && return 1
-    return 0
+    # 4. A MARCA DO GESTO (DROPIN-AMBIGUO-01, curado em 26/08/2026). Sem o 51,
+    #    é ELA quem diz que a promoção foi pedida — e ela existe porque quem
+    #    pediu deixou o gesto gravado, não porque um arquivo faltou.
+    [[ -f "$(_marca_do_gesto_do_mic)" ]] && return 0
+    # 5. Nem o 51 nem a marca: NÃO SEI, e "não sei" nunca é "ela pediu".
+    #
+    #    FATO ERRADO, SUBSTITUÍDO — esta linha era `return 0`, com o
+    #    comentário *"sua ausência (ex.: --promote-source, mic promote) é a
+    #    promoção explícita"*. A ausência tem DUAS origens e o disco não as
+    #    distingue: a promoção explícita e o `uninstall` que desarmou a cura
+    #    (ou a instalação que nunca houve). Lendo as duas como uma, o doctor
+    #    dava [OK] — e ELEGIA o mic do controle a fonte padrão do sistema, com
+    #    `pass` na tela — em cima de uma máquina com a cura desarmada. É desse
+    #    estado que saiu a queixa dela de 04/08: *"não funciona nem mic, nem os
+    #    botões de sons do jogo"* (DROPIN-AMBIGUO-01).
+    #
+    #    A migração escolhida é a CONSERVADORA (E4 da sprint, opção (b)):
+    #    máquina que promoveu ANTES desta cura existir não tem marca e passa a
+    #    ser tratada como "não sei". O preço é conhecido e pequeno — ela deixa
+    #    de ser a primeira da fila quando a fonte padrão é um monitor, e o
+    #    caminho de volta é um gesto só (`mic promote`). O preço da escolha
+    #    oposta era o [OK] em cima do defeito, que já custou uma noite.
+    return 1
 }
 
 # PURA: 0 quando a PORTA ATIVA da source `$1` está marcada `not available` pelo
@@ -1302,6 +1427,44 @@ fix_default_source_monitor() {
 # haptic-de-áudio. Instalado SÓ pelo fluxo de mic-off (--disable-source /
 # install --with-wireplumber-disable-mic). Aqui só REPORTAMOS: presença = saída
 # do controle desligada de propósito. NÃO afeta o rumble in-game (HID/vpad).
+# DROPIN-AMBIGUO-01, E3 — o check que fala do ARQUIVO, não do sintoma.
+#
+# Todos os outros checks de microfone dependem do sintoma estar MANIFESTO:
+# precisam de um mic ativo para ter o que reprovar. Com o DualSense na gaveta
+# — que é a hora em que a maioria das instalações roda — o doctor ficava mudo
+# sobre uma cura desarmada, e a máquina só descobria no meio do jogo. Este
+# aqui lê disco, e por isso vale com nenhum controle conectado.
+#
+# PROVISÓRIO — decisão dela: as três frases desta função são texto novo de
+# tela (LEVA-1-D, 26/08/2026).
+check_dropin_do_mic_armado() {
+    local conf="${HOME}/.config/wireplumber/wireplumber.conf.d"
+    local marca; marca="$(_marca_do_gesto_do_mic)"
+    if [[ -f "${conf}/52-hefesto-dualsense-disable-source.conf" ]]; then
+        info "microfone do DualSense desligado de propósito (drop-in 52) — não há política de eleição a armar"
+        return
+    fi
+    if [[ -f "${conf}/51-hefesto-dualsense-no-default-source.conf" ]]; then
+        pass "a política de microfone do install está armada (drop-in 51 no lugar)"
+        return
+    fi
+    # Sem o 51. O que essa AUSÊNCIA significa quem responde é o degrau da
+    # marca do gesto — nunca a ausência por si.
+    if _prefere_mic_do_dualsense; then
+        local quando=""
+        [[ -r "${marca}" ]] && quando="$(sed -n 's/^data=//p' "${marca}" | head -n1)"
+        if [[ -n "${quando}" ]]; then
+            pass "o mic do DualSense é escolha dela, de ${quando} (marca do gesto em ${marca})"
+        else
+            pass "o mic do DualSense é escolha dela (sinal explícito: DUALSENSE_MIC_INTENDED)"
+        fi
+        return
+    fi
+    warn "a política de microfone do install NÃO está armada e ninguém pediu para promover o controle — sem o drop-in 51 o WirePlumber pode eleger o mic do DualSense sozinho, e o que os aplicativos gravam vira o eco da saída em vez da voz"
+    info "  se foi um uninstall que a desarmou, rearme: bash scripts/fix_wireplumber_default_source.sh --install"
+    info "  se o mic do controle é o que você quer, peça de propósito: hefesto-dualsense4unix mic promote (isso grava a marca em ${marca}, e o doctor para de reclamar)"
+}
+
 check_dualsense_sink_disabled() {
     local d="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
     if [[ -f "${d}" ]]; then
@@ -3817,20 +3980,15 @@ _entrada_alcancavel_pelo_jogo() {
 #: O veredito POR CONTROLE (E3 da sprint): não "quantos nós hidraw estão 0600",
 #: e sim "este controle está escondido DO JOGO?".
 #:
-#: CORREÇÃO DE FATO — 25/08/2026, conferência da frente C4. Este comentário
-#: dizia que isto fecha "o item 3.1 do O-QUE-FICOU-ABERTO-01, aberto desde
-#: 16/08". **NÃO FECHA, e é METADE da E3.** O 3.1 pede o veredito por
-#: comparação com o CENSO DE FÍSICOS — "o `pass` só é honesto quando
-#: `escondidos == físicos`" (2026-08-16-O-QUE-FICOU-ABERTO-01:288-291). Aqui o
-#: denominador é "o que o broker escondeu", não "o que está na mesa": um
-#: DualSense físico que o broker NUNCA escondeu é invisível para esta função, e
-#: a cena exata de 16/08 (dois físicos, um escondido) continua saindo verde.
-#: O que falta é barato e está a poucas linhas daqui — o bloco python de
-#: `check_hidraw_broker` já monta `candidatos` varrendo
-#: `/sys/class/hidraw/hidraw*/device/uevent` por `054C`, e só o usa para o teste
-#: do `cmd open`. Publicar essa lista e comparar os conjuntos fecha o 3.1.
-#: NÃO foi feito aqui porque não há DualSense nesta bancada para medir, e régua
-#: de esconder que ninguém exerceu com aparelho é como a que já mentiu.
+#: ESTA FUNÇÃO É METADE DA E3, e a outra metade mora no `_veredito_do_hide`.
+#: O item 3.1 do O-QUE-FICOU-ABERTO-01 pede o veredito por comparação com o
+#: CENSO DE FÍSICOS — "o `pass` só é honesto quando `escondidos == físicos`"
+#: (2026-08-16-O-QUE-FICOU-ABERTO-01:288-291). Aqui o denominador continua
+#: sendo "o que o broker escondeu", de propósito: quem compara com a MESA é o
+#: bloco do censo no `_veredito_do_hide`, que roda ANTES desta medição e
+#: devolve `warn` sem chegar aqui quando os dois conjuntos divergem
+#: (26/08/2026 — antes disso a cena de 16/08, dois físicos e um escondido,
+#: saía verde).
 #:
 #: Preenche CINCO globais porque bash não devolve lista (esta lista dizia
 #: quatro e o código escrevia cinco — o `TRES_SUP_N_ABERTOS` sai na tela dentro
@@ -3872,14 +4030,41 @@ _tres_superficies_medir() {
     TRES_SUP_ABERTOS="${TRES_SUP_ABERTOS# }"
 }
 
+#: O CENSO DE FÍSICOS — o denominador que faltava (3.1 do O-QUE-FICOU-ABERTO-01,
+#: aberto desde 16/08/2026, fechado em 26/08).
+#:
+#: Nunca reimplementa o critério: chama `physical_nodes_exposure`, que é o
+#: MESMO validador que o broker usa para decidir o que é um DualSense físico
+#: (e que recusa o vpad uhid). Duas réguas para a mesma pergunta é como esta
+#: casa já produziu alarme convincente e falso.
+#:
+#: Só leitura, e cala em vez de falhar: sem o pacote alcançável a saída é
+#: vazia, e o veredito trata "censo vazio" como "não sei", nunca como zero.
+_censo_de_fisicos() {
+    local py; py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || return 0
+    HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - <<'PY' 2>/dev/null || true
+import os
+import sys
+
+sys.path.insert(0, os.environ.get("HEFESTO_SRC", ""))
+try:
+    from hefesto_dualsense4unix.broker.hidraw_broker import physical_nodes_exposure
+except Exception:  # noqa: BLE001 - sem o pacote o censo simplesmente cala
+    sys.exit(0)
+print(" ".join(sorted(physical_nodes_exposure(os.getuid()))), end="")
+PY
+}
+
 #: O veredito do hide, separado do `check_hidraw_broker` para ser TESTÁVEL sem
 #: systemd, sem socket e sem aparelho — a régua que mentia nunca teve teste
 #: justamente porque vivia soldada dentro de uma função de 220 linhas.
 #: $1 = nós hidraw escondidos (contagem do broker); $2 = 1 se o daemon responde
-#: IPC; $3 = native_mode como o IPC o devolve; $4.. = os nós escondidos.
+#: IPC; $3 = native_mode como o IPC o devolve; $4 = o CENSO DE FÍSICOS (nós
+#: separados por espaço, vazio = não sei); $5.. = os nós escondidos.
 _veredito_do_hide() {
-    local hidden_count="$1" daemon_vivo="$2" native_mode="$3"
-    shift 3
+    local hidden_count="$1" daemon_vivo="$2" native_mode="$3" censo="$4"
+    shift 4
     if [[ "${hidden_count}" -le 0 ]]; then
         info "broker sem nós escondidos no momento (emulação desligada ou nenhum grab ativo)"
         return
@@ -3890,6 +4075,35 @@ _veredito_do_hide() {
     fi
     if [[ "${native_mode}" == "True" ]]; then
         warn "broker com ${hidden_count} nó(s) escondido(s) em Modo Nativo — o físico deveria estar exposto ao jogo"
+        return
+    fi
+    # O DENOMINADOR, e por que ele vem ANTES de medir superfície nenhuma.
+    #
+    # Até 26/08/2026 tudo abaixo desta linha olhava SÓ os nós que o broker
+    # escondeu — o veredito perguntava "o que eu escondi está fechado?" e
+    # respondia "o jogo só vê o vpad", que é uma afirmação sobre a MESA
+    # inteira. Um DualSense físico que o broker nunca escondeu era invisível
+    # para a régua, e a cena exata de 16/08 (dois físicos, um escondido)
+    # continuava saindo verde — com o controle dobrado dentro do jogo. O
+    # comentário do `_tres_superficies_medir`, logo acima, já confessava isto
+    # por escrito desde 25/08; o que faltava era o censo, e o produto já sabia
+    # levantá-lo (`broker/hidraw_broker.py:physical_nodes_exposure`).
+    #
+    # Censo VAZIO é "não sei" (sem o pacote alcançável, ou sysfs ilegível) e
+    # não vira zero: ausência de dado não é prova de cura.
+    local _fisico _escondido _visto fora=""
+    for _fisico in ${censo}; do
+        _visto=0
+        for _escondido in "$@"; do
+            [[ "${_escondido}" == "${_fisico}" ]] && { _visto=1; break; }
+        done
+        [[ "${_visto}" -eq 0 ]] && fora="${fora} ${_fisico}"
+    done
+    fora="${fora# }"
+    if [[ -n "${fora}" ]]; then
+        # PROVISÓRIO — decisão dela: texto novo de tela (LEVA-1-D, 26/08/2026).
+        warn "o hide não cobre a mesa inteira: ${hidden_count} nó(s) escondido(s), mas o censo do produto vê DualSense físico FORA do hide (${fora}) — o jogo enxerga esse(s) controle(s) direto, e quem enumerar /dev/input ou hidraw acha o controle dobrado; este check NÃO afirma que o jogo só vê o vpad"
+        info "  confira se a emulação está ligada para ele na aba Emulação; se estiver, o broker não pegou o nó: sudo systemctl restart hefesto-hidraw-broker.service"
         return
     fi
     _tres_superficies_medir "$@"
@@ -4116,8 +4330,12 @@ PYEOF
 
     local daemon_vivo=0
     [[ -S "${sock}" ]] && daemon_vivo=1
+    # O CENSO DE FÍSICOS é o denominador do veredito (ESCONDE-SÓ-O-HIDRAW-01,
+    # item 3.1): sem ele a régua mede só o que ela mesma escondeu.
+    local censo_fisicos
+    censo_fisicos="$(_censo_de_fisicos)"
     # shellcheck disable=SC2086  # a lista de nós é gerada aqui e não tem espaço no nome
-    _veredito_do_hide "${hidden_count}" "${daemon_vivo}" "${native_mode}" ${hidden_nodes}
+    _veredito_do_hide "${hidden_count}" "${daemon_vivo}" "${native_mode}" "${censo_fisicos}" ${hidden_nodes}
 
     # Recusa a outro uid — best-effort (só roda com sudo -n disponível e o
     # usuário nobody presente); nunca falha o doctor por esta checagem.
@@ -5719,6 +5937,7 @@ main() {
     check_perfis_inalcancaveis
     hdr "áudio (microfone)"
     check_wireplumber_source
+    check_dropin_do_mic_armado
     check_default_source_monitor
     check_dualsense_sink_disabled
     check_audio_sink_muted

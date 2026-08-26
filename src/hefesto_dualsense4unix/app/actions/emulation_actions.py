@@ -27,7 +27,6 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     apply_mode,
     mode_of_state,
 )
-from hefesto_dualsense4unix.app.constants import ROOT_DIR
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor, call_async, run_in_thread
 from hefesto_dualsense4unix.integrations.hotkey_daemon import DEFAULT_BUFFER_MS
@@ -40,6 +39,10 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     XBOX360_VENDOR,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import (
+    como_atualizar_esta_instalacao,
+    encontrar_arquivo_do_repo,
+)
 
 logger = get_logger(__name__)
 
@@ -352,7 +355,7 @@ def format_steam_input_result(
     if status == "sem_script":
         return (
             "Não encontrei o script que desliga o Steam Input nesta "
-            "instalação — rode ./install.sh para atualizar o Hefesto."
+            f"instalação — {como_atualizar_esta_instalacao()}."
         )
     if status == "jogo_aberto" or tag == "recusado-jogo-aberto":
         return (
@@ -490,7 +493,7 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     ),
     "sem_device": (
         "Ligado, mas o teclado virtual não subiu. Abra a aba Sistema e clique "
-        "em “Aplicar correções”."
+        "em “Consertar problemas conhecidos”."
     ),
     "modo_jogo": (
         "Ligado, em pausa agora: o modo jogo está suspendendo mouse e teclado."
@@ -753,9 +756,11 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
 # Vulkan implícita". Ela procura pelo que SENTE, e a palavra é dela — *"o
 # Sackboy engasga"*. É o molde do "A luz não acende"
 # (`app/actions/config/secao_controles.py`): o rótulo é a queixa, não o remédio.
-# O verbo na frente vem do vizinho de fileira — "Aplicar correções", "Copiar
-# opções para os jogos", "Travar Proton validado" —, que é a gramática do bloco
-# Avançado onde o botão mora.
+# O verbo na frente vem do vizinho de fileira — "Consertar problemas
+# conhecidos", "Copiar opções para os jogos", "Fixar a versão que funciona" —,
+# que é a gramática do bloco Avançado onde o botão mora. (Os dois vizinhos
+# citados chamavam-se "Aplicar correções" e "Travar Proton validado" até
+# 26/08/2026, quando a BG-PALAVRA-02 pagou a dívida da E3 da PALAVRA-01.)
 #
 # O QUE ELE FAZ: desliga, dentro do prefixo Wine de cada jogo, as camadas Vulkan
 # implícitas que não são o driver do Wine nem ferramenta reconhecida. Elas
@@ -1196,17 +1201,10 @@ class EmulationActionsMixin(WidgetAccessMixin):
     _PLACAS_ALSA = "/proc/asound/cards"
 
     def _mic_script(self) -> Path | None:
-        for cand in (
-            ROOT_DIR / "scripts" / "fix_wireplumber_default_source.sh",
-            Path("/usr/share/hefesto-dualsense4unix/scripts/fix_wireplumber_default_source.sh"),
-            Path(
-                "/usr/local/share/hefesto-dualsense4unix/scripts/"
-                "fix_wireplumber_default_source.sh"
-            ),
-        ):
-            if cand.is_file():
-                return cand
-        return None
+        """BG-BASES-01 (26/08/2026): eram três bases à mão, hoje é a busca única."""
+        return encontrar_arquivo_do_repo(
+            "scripts/fix_wireplumber_default_source.sh"
+        )
 
     @staticmethod
     def _placas_de_microfone() -> int:
@@ -1389,7 +1387,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             done = (
                 "Mic ligado — atenção: sem o ajuste de áudio o controle pode "
                 "travar no meio do jogo. Abra a aba Sistema e clique em "
-                "“Aplicar correções” (vale no próximo boot)."
+                "“Consertar problemas conhecidos” (vale no próximo boot)."
             )
         self._run_mic("--enable-mic", done)
 
@@ -1583,7 +1581,16 @@ class EmulationActionsMixin(WidgetAccessMixin):
         )
 
     def on_emulation_gamepad_xbox(self, _btn: Gtk.Button) -> None:
-        self._apply_mode(MODE_GAMEPAD, "xbox", "Gamepad Xbox 360 ligado (vibra no jogo)")
+        # BG-TOAST-01 (26/08/2026): o recibo dizia "(vibra no jogo)" enquanto o
+        # tooltip do MESMO botão já carregava a ressalva da EMULACAO-UM-DONO-SO-01
+        # — e quem clica lê o toast, não o tooltip. A ressalva é colada VERBATIM
+        # de `RESSALVA_DE_TRANSPORTE`, que é a única cópia dela nesta casa.
+        self._apply_mode(
+            MODE_GAMEPAD,
+            "xbox",
+            "Gamepad Xbox 360 ligado. A "
+            + RESSALVA_DE_TRANSPORTE["vibracao.rumble.passthrough@dualsense"],
+        )
 
     def _set_suppress(self, suppressed: bool, msg: str) -> None:
         def _on_ok(_res: Any) -> bool:
@@ -1759,14 +1766,14 @@ class EmulationActionsMixin(WidgetAccessMixin):
     # (touchpad/teclado vazam, mic spam). Botão pra verificar/desligar.
 
     def _steam_input_script(self) -> Path | None:
-        for cand in (
-            ROOT_DIR / "scripts" / "disable_steam_input.sh",
-            Path("/usr/share/hefesto-dualsense4unix/scripts/disable_steam_input.sh"),
-            Path("/usr/local/share/hefesto-dualsense4unix/scripts/disable_steam_input.sh"),
-        ):
-            if cand.is_file():
-                return cand
-        return None
+        """BG-BASES-01 (26/08/2026): a lista curta é que fazia o botão calar.
+
+        No Flatpak o `disable_steam_input.sh` **está** instalado (o manifesto
+        o põe em `/app/share/hefesto-dualsense4unix/scripts/`), e nenhuma das
+        três bases desta lista olhava para lá: quem clicasse em "Verificar" ou
+        "Desligar Steam Input" recebia *"Não encontrei o script…"*.
+        """
+        return encontrar_arquivo_do_repo("scripts/disable_steam_input.sh")
 
     @staticmethod
     def _steam_input_is_on() -> bool | None:

@@ -18,6 +18,7 @@ from __future__ import annotations
 import ast
 import re
 import xml.etree.ElementTree as ET
+from typing import Any
 from pathlib import Path
 
 import pytest
@@ -74,28 +75,53 @@ def _paginas() -> list[tuple[str, ET.Element]]:
     return saida
 
 
+def _rotulo_do_botao(obj: Any) -> str | None:
+    """O texto que a pessoa LÊ no botão — direto, ou no `GtkLabel` filho.
+
+    **26/08/2026:** um `GtkButton` tem o rótulo como propriedade própria até o
+    dia em que ele precisa QUEBRAR LINHA — aí o rótulo vira um `<child>` com um
+    `GtkLabel` que carrega `wrap`. Foi o que aconteceu com o
+    `btn_storm_fix_safe`: a linha "Avançado" tem cinco botões e um `GtkBox`
+    horizontal pede a SOMA dos mínimos; com o rótulo novo ela foi a 1230px
+    contra os 1180px da janela, sem barra horizontal para onde fugir.
+
+    A régua lia só a propriedade direta e o botão SUMIU do universo dela —
+    passando a acusar como inexistente um botão que está na tela. Quem vê a
+    tela vê o mesmo texto nos dois casos, então a régua tem de ver os dois.
+    """
+    for prop in obj.findall("property"):
+        if prop.get("name") == "label" and prop.text:
+            return prop.text
+    for filho in obj.findall("child"):
+        for interno in filho.findall("object"):
+            if interno.get("class") != "GtkLabel":
+                continue
+            for prop in interno.findall("property"):
+                if prop.get("name") == "label" and prop.text:
+                    return prop.text
+    return None
+
+
 def _aba_do_botao(rotulo: str) -> str | None:
     """Nome da aba onde mora o ``GtkButton`` de rótulo ``rotulo``, ou None."""
     for aba, pagina in _paginas():
         for obj in pagina.iter("object"):
             if obj.get("class") != "GtkButton":
                 continue
-            for prop in obj.findall("property"):
-                if prop.get("name") == "label" and prop.text == rotulo:
-                    return aba
+            if _rotulo_do_botao(obj) == rotulo:
+                return aba
     return None
 
 
 def _rotulos_de_botao() -> set[str]:
     """Todo rótulo de ``GtkButton`` da janela — o universo dos alvos válidos."""
     raiz = ET.parse(_GLADE).getroot()
-    return {
-        prop.text
+    achados = (
+        _rotulo_do_botao(obj)
         for obj in raiz.iter("object")
         if obj.get("class") == "GtkButton"
-        for prop in obj.findall("property")
-        if prop.get("name") == "label" and prop.text
-    }
+    )
+    return {r for r in achados if r}
 
 
 def _corpo_de_funcao(caminho: Path, nome: str) -> str:

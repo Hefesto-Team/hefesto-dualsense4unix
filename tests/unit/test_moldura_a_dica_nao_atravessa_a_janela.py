@@ -171,11 +171,24 @@ def aba_montada() -> Any:
 
 def _rotulos_de_apoio(pagina: Any) -> list[Any]:
     achados = [w for w in _descer(pagina) if _e_rotulo_de_apoio(w) and w.get_mapped()]
-    assert len(achados) >= 8, (
-        f"a bancada achou {len(achados)} rótulos de apoio mapeados na aba, e a "
-        "aba tinha onze quando isto foi medido. Menos que isso é sinal de que a "
-        "assinatura de `_e_rotulo_de_apoio` deixou de casar com o que "
-        "`rotulo_de_apoio` produz — e um teste que não acha o alvo passa sempre."
+    #: O PISO existe para o teste não passar por não achar nada — "um teste que
+    #: não acha o alvo passa sempre" é o defeito de instrumento que esta casa
+    #: mais paga. Ele NÃO é uma trava contra a página emagrecer.
+    #:
+    #: **DESCEU de 8 para 3 em 26/08/2026**, e o que mudou foi a PÁGINA, não a
+    #: régua: a LEX-2 tirou quatro parágrafos de apoio da aba de propósito
+    #: (8 únicos → 4), levando-os para dica, a pedido dela — *"tudo isso em azul
+    #: deveria ser tooltip"*. O piso velho reprovava justamente o emagrecimento
+    #: que era o objetivo da frente. Um piso que sobe com a página vira trava
+    #: contra o próprio trabalho; o que ele tem de garantir é só que a
+    #: assinatura de `_e_rotulo_de_apoio` continua casando com o que
+    #: `rotulo_de_apoio` produz.
+    piso = 3
+    assert len(achados) >= piso, (
+        f"a bancada achou {len(achados)} rótulos de apoio mapeados na aba, e o "
+        f"piso é {piso}. Menos que isso é sinal de que a assinatura de "
+        "`_e_rotulo_de_apoio` deixou de casar com o que `rotulo_de_apoio` "
+        "produz — e um teste que não acha o alvo passa sempre."
     )
     return achados
 

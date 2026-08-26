@@ -18,7 +18,9 @@ O que este arquivo trava, por entrega da sprint:
     de perfil** e **sem o cadeado bloquear** (o cadeado congela perfil, não modo);
   - **B2** — o cadeado cede também ao perfil que DECLARA ser de jogo (não
     catch-all, `mode.kind` em {gamepad, native}): era o `coop_local`, que casa
-    por título, e todo jogo fora da Steam;
+    por título, e todo jogo fora da Steam. (O preset `coop_local` foi podado da
+    fábrica em 26/08/2026; a entrega B2 não depende dele — o teste que a trava
+    escreve o perfil no berço de teste, não lê a fábrica.);
   - **B1** — perfil novo de jogo nasce com o modo jogo pré-selecionado;
   - **B5** — o `ProfileManager` de leitura do daemon é cacheado (a dedup do veto
     é campo de instância e a instância nova a cada tique a zerava);
@@ -1048,7 +1050,13 @@ class TestPerfilDeJogoNasceComModo:
 class TestPresetsDeJogoNascemComModo:
     """Dos 12 presets, 10 não tinham seção `mode` — inclusive o `fps`, que
     estava persistido como ATIVO no disco dela. Sem a seção, ativar o perfil do
-    jogo não liga modo nenhum."""
+    jogo não liga modo nenhum.
+
+    NOTA DATADA — 26/08/2026: a fábrica encolheu de 12 para 9 (`bow`,
+    `coop_local` e `sackboy_nativo` podados a pedido dela). Os cinco presets
+    de gênero abaixo são o que restou com `mode: gamepad`, e o que a sprint
+    MODO-01 entregou neles continua travado aqui.
+    """
 
     @staticmethod
     def _preset(nome: str) -> dict[str, Any]:
@@ -1063,7 +1071,6 @@ class TestPresetsDeJogoNascemComModo:
             "acao",  # slug do arquivo acao.json (noqa-acento)
             "corrida",
             "esportes",
-            "coop_local",
         ],
     )
     def test_preset_de_jogo_tem_modo_gamepad(self, nome: str) -> None:
@@ -1076,12 +1083,36 @@ class TestPresetsDeJogoNascemComModo:
         """O mínimo desta sprint é não inventar modo onde não há jogo."""
         assert self._preset(nome).get("mode") is None
 
-    def test_coop_local_vence_a_navegacao(self) -> None:
-        """Prioridade 45 o deixava atrás de `Navegação` (50) — o único preset de
-        fábrica que faz o modo jogo ligar em co-op fora da Steam perdia para um
-        perfil de navegador."""
-        coop = self._preset("coop_local")["priority"]
+    def test_o_jogo_vence_a_navegacao(self) -> None:
+        """A ordem que o MODO-01 fixou, medida no que a fábrica embarca HOJE.
+
+        NOTA DATADA — 26/08/2026. Aqui estava `test_coop_local_vence_a_
+        navegacao`, que comparava três prioridades: `coop_local` (75) contra
+        `navegacao` (50) e contra `sackboy_nativo` (80). Dois dos três
+        arquivos foram podados nesta data, e o teste passou a abrir arquivo
+        que não existe.
+
+        O que ele guardava NÃO era o co-op: era a ordem — o perfil que declara
+        ser de jogo tem de vencer o genérico de desktop, senão abrir um jogo
+        entrega o perfil do navegador. Essa ordem continua medível com o que
+        sobrou, e é o que este teste faz agora. O terceiro degrau (o perfil do
+        PRÓPRIO jogo, prioridade 80) não vem mais de um asset: vem de
+        `PRIORIDADE_DO_PERFIL_DE_JOGO`, no `loader`, que é quem semeia os
+        perfis por jogo desde 22/08.
+        """
+        from hefesto_dualsense4unix.profiles.loader import (
+            PRIORIDADE_DO_PERFIL_DE_JOGO,
+        )
+
         navegacao = self._preset("navegacao")["priority"]
-        sackboy = self._preset("sackboy_nativo")["priority"]
-        assert coop > navegacao
-        assert coop < sackboy  # o perfil do PRÓPRIO jogo segue ganhando
+        for nome in ("fps", "aventura", "acao", "corrida", "esportes"):  # (noqa-acento)
+            jogo = self._preset(nome)["priority"]
+            assert jogo > navegacao, (
+                f"{nome} (prio {jogo}) perde para a Navegação (prio "
+                f"{navegacao}): abrir o jogo entregaria o perfil de navegador"
+            )
+            assert jogo < PRIORIDADE_DO_PERFIL_DE_JOGO, (
+                f"{nome} (prio {jogo}) empata ou ganha do perfil do PRÓPRIO "
+                f"jogo (prio {PRIORIDADE_DO_PERFIL_DE_JOGO}): o genérico de "
+                "gênero passaria na frente da regra específica"
+            )

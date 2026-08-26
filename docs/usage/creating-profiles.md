@@ -35,7 +35,22 @@ fonte única dos nomes aceitos — 19 exatamente, listados na seção "Modos de
 trigger" abaixo. Nome fora dessa lista faz `Profile.model_validate` levantar
 `ValidationError` citando os válidos, e o perfil não carrega.
 
-Arquivo fallback com `match.type = "any"` e `priority: 0` é obrigatório para garantir que algum perfil sempre case.
+Arquivo fallback com `match.type = "any"` e `priority: 0` é **opcional**, e
+ele NÃO garante que algum perfil sempre case.
+
+**FATO SUBSTITUÍDO em 26/08/2026** — esta linha dizia "é obrigatório para
+garantir que algum perfil sempre case". Duas medições a derrubam:
+
+- **o disco dela**: 29 perfis, **zero** catch-all. A configuração que o
+  produto roda todo dia é exatamente a que a linha chamava de impossível;
+- **o código**: quando a janela em foco é um jogo (`steam_app_<appid>`) e os
+  únicos candidatos são catch-all, `select_for_window` devolve `None` **de
+  propósito** — é o veto R-21, e a resposta honesta é "nenhum perfil opina
+  sobre este jogo". O catch-all não pode entrar num jogo por ser catch-all;
+  ter um não muda isso.
+
+O fallback continua servindo para o **desktop**: fora de jogo, ele é o piso
+que evita o controle ficar sem perfil nenhum. É conveniência, não contrato.
 
 **Os campos que um perfil v1 aceita** (`profiles/schema.py`). Cada um é opcional
 salvo `name` e `match`; ausente = **sem opinião**, o perfil não toca naquilo ao
@@ -379,7 +394,17 @@ hefesto-dualsense4unix profile delete old_one --yes        # remove arquivo
 }
 ```
 
-Sem fallback, `select_for_window` retorna `None` e nenhum perfil é aplicado quando a janela ativa não casa com nenhum matcher específico.
+Sem fallback, `select_for_window` retorna `None` quando a janela ativa não
+casa com nenhum matcher específico — e o autoswitch **retém o perfil
+corrente** em vez de desligar tudo.
+
+**FATO SUBSTITUÍDO em 26/08/2026:** aqui se lia "e nenhum perfil é
+aplicado", o que sugere um controle sem perfil a cada janela desconhecida.
+Não é o que acontece, e não é o que o produto quer que aconteça: `None`
+significa "ninguém opina", e ninguém opinar não é motivo para desfazer o
+que já estava valendo. Ter um fallback com `priority: 0` só troca esse
+silêncio por uma opinião fraca — útil no desktop, e recusada dentro de jogo
+pelo veto R-21.
 
 ## Modos de trigger
 

@@ -498,3 +498,161 @@ def test_carrega_perfis_default_do_assets_simulado(isolated_profiles_dir: Path):
     # Ao menos fallback + algum outro
     assert "fallback" in names
     assert len(names) >= 2
+
+
+# ---------------------------------------------------------------------------
+# A MIGRAÇÃO APOSENTADA NÃO É MUDA (26/08/2026)
+# ---------------------------------------------------------------------------
+# A poda da fábrica apagou `assets/profiles_default/coop_local.json`, e é dele
+# que `migrate_coop_local_match` e o ramo `coop_local` de
+# `migrate_modo_jogo_nos_presets` copiam `match` e `priority`. Sem o asset,
+# `_seed_source_file` devolve `None` — e o código ANTIGO fazia `continue`.
+#
+# O custo desse `continue`: quem tem um `coop_local` velho no disco (o de
+# 14/07, com `criteria` de campos todos vazios) fica preso com um perfil que o
+# autoswitch NUNCA escolhe, para sempre, e nada em lugar nenhum diz por quê.
+# É a forma exata do defeito que esta casa chama de "a casa sabe e o produto
+# não faz", com o agravante de o silêncio ser total.
+#
+# A cura não é adivinhar o regex perdido — escrever `match` de memória em
+# perfil de alguém é o produto escolhendo por ela. A cura é RELATAR.
+
+
+class TestAMigracaoAposentadaNaoEMuda:
+    """MORDE: trocar o relato por um `continue` no `_seed_source_file` ausente.
+
+    Arrancando a cura (as duas chamadas a `_relatar_migracao_aposentada`), as
+    duas migrações voltam a ser no-op silencioso e os dois testes abaixo
+    reprovam nomeando o caminho calado.
+    """
+
+    @staticmethod
+    def _coop_local_de_fabrica_velho(destino: Path) -> Path:
+        """O `coop_local` de 14/07: `criteria` vazio, inalcançável, intocado."""
+        caminho = destino / "coop_local.json"
+        caminho.write_text(
+            json.dumps(
+                {
+                    "name": "coop_local",
+                    "version": 1,
+                    "match": {"type": "criteria"},
+                    "priority": 45,
+                    "mode": {"kind": "gamepad", "coop": True},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return caminho
+
+    def test_a_migracao_aposentada_nao_e_muda(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem asset, `migrate_coop_local_match` RELATA em vez de calar."""
+        import structlog.testing
+
+        destino = tmp_path / "profiles"
+        destino.mkdir()
+        caminho = self._coop_local_de_fabrica_velho(destino)
+        antes = caminho.read_text(encoding="utf-8")
+
+        # Nenhum diretório-fonte existe: é o estado de quem instalou a versão
+        # podada e ainda tem o preset velho no disco.
+        monkeypatch.setattr(
+            loader_module, "_DEFAULT_SEED_SOURCE_DIRS", (tmp_path / "sem_assets",)
+        )
+
+        with structlog.testing.capture_logs() as registros:
+            migrados = loader_module.migrate_coop_local_match(dest_dir=destino)
+
+        assert migrados == [], (
+            "sem asset não há de onde copiar `match` — a migração não pode "
+            "inventar regra no perfil dela"
+        )
+        assert caminho.read_text(encoding="utf-8") == antes, (
+            "a migração aposentada mexeu no arquivo"
+        )
+
+        relatos = [
+            r for r in registros
+            if r.get("event") == "migracao_aposentada_sem_asset"
+        ]
+        assert relatos, (
+            "a migração virou no-op SILENCIOSO: quem tem um `coop_local` velho "
+            "no disco fica preso com um perfil inalcançável e o journal não "
+            "diz uma palavra sobre isso. Eventos vistos: "
+            f"{sorted({str(r.get('event')) for r in registros})}"
+        )
+        assert relatos[0].get("arquivo") == "coop_local.json"
+        assert relatos[0].get("migracao") == "coop_local_match"  # slug, sem acento (noqa-acento)
+
+    def test_o_ramo_do_modo_jogo_tambem_relata(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A irmã: `migrate_modo_jogo_nos_presets` tem o mesmo ramo aposentado.
+
+        Consertar uma e esquecer a outra deixaria metade do silêncio de pé —
+        é o defeito "corrigir pela metade" que esta casa já pagou.
+        """
+        import structlog.testing
+
+        destino = tmp_path / "profiles"
+        destino.mkdir()
+        self._coop_local_de_fabrica_velho(destino)
+        monkeypatch.setattr(
+            loader_module, "_DEFAULT_SEED_SOURCE_DIRS", (tmp_path / "sem_assets",)
+        )
+
+        with structlog.testing.capture_logs() as registros:
+            migrados = loader_module.migrate_modo_jogo_nos_presets(dest_dir=destino)
+
+        assert migrados == []
+        relatos = [
+            r for r in registros
+            if r.get("event") == "migracao_aposentada_sem_asset"
+            and r.get("migracao") == "modo_jogo_nos_presets"  # slug, sem acento (noqa-acento)
+        ]
+        assert relatos, (
+            "o ramo `coop_local` de `migrate_modo_jogo_nos_presets` virou "
+            "no-op silencioso — a prioridade 45 do preset velho fica atrás da "
+            "Navegação para sempre, sem uma linha no journal"
+        )
+
+    def test_com_asset_presente_a_migracao_continua_migrando(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Guarda do instrumento: régua que só sabe acusar não é régua.
+
+        Se `migrate_coop_local_match` tivesse sido esvaziada em vez de
+        aposentada, os dois testes acima passariam igual — e quem ainda tem o
+        asset (uma instalação antiga, um `.deb` velho, o `/usr/share` de outra
+        versão) perderia a migração de verdade sem ninguém notar.
+        """
+        destino = tmp_path / "profiles"
+        destino.mkdir()
+        caminho = self._coop_local_de_fabrica_velho(destino)
+
+        fonte = tmp_path / "assets"
+        fonte.mkdir()
+        (fonte / "coop_local.json").write_text(
+            json.dumps(
+                {
+                    "name": "coop_local",
+                    "version": 1,
+                    "match": {
+                        "type": "criteria",
+                        "window_title_regex": ".*(Sackboy|Overcooked).*",
+                    },
+                    "priority": 75,
+                    "mode": {"kind": "gamepad", "coop": True},
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(loader_module, "_DEFAULT_SEED_SOURCE_DIRS", (fonte,))
+
+        migrados = loader_module.migrate_coop_local_match(dest_dir=destino)
+
+        assert migrados == ["coop_local.json"]
+        depois = json.loads(caminho.read_text(encoding="utf-8"))
+        assert depois["match"]["window_title_regex"] == ".*(Sackboy|Overcooked).*"
+        assert depois["priority"] == 75

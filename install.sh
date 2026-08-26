@@ -3524,6 +3524,18 @@ elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
     fi
 else
     printf '      pulado (--keep-dualsense-mic): o DualSense pode virar o microfone padrão\n'
+    # DROPIN-AMBIGUO-01 (26/08/2026) — o carimbo do GESTO, e a razão de ele
+    # existir: até hoje este ramo terminava exatamente igual a uma máquina que
+    # nunca instalou nada (sem o drop-in 51 no disco), e o
+    # `doctor.sh:_prefere_mic_do_dualsense` lia essa ausência como "ela
+    # promoveu o mic a dedo". Um estado, dois significados — e o [OK] caía em
+    # cima do defeito. `--keep-dualsense-mic` É o pedido explícito, então ele
+    # deixa de ser inferido e passa a ser escrito.
+    if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --marcar-gesto-do-mic; then
+        printf '      marca do gesto gravada: o doctor sabe que a ausência do drop-in 51 aqui foi pedido seu\n'
+    else
+        warn "não consegui gravar a marca do gesto do microfone — o doctor vai avisar que a política não está armada"
+    fi
 fi
 
 # MIC-USB-01, entrega 7 — a cura das camadas 1 e 2 do microfone mudo, que

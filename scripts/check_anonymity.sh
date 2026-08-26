@@ -88,32 +88,43 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
     # `src/.../novo.py` contendo "# by claude" e NUNCA adicionado devolvia
     # "OK: anonimato preservado." e exit 0.
     #
-    # ANONIMATO-MAIUSCULA-01 (13/08/2026) — ACHADO, MEDIDO, E DEIXADO DE PÉ,
-    # porque consertá-lo é decisão dela e não do portão:
+    # ANONIMATO-MAIUSCULA-01 (13/08/2026) — ACHADO em 13/08, CURADO em
+    # 26/08/2026. O `-i` está de volta na linha do `grep`, logo abaixo.
     #
-    # o grep daqui NÃO leva `-i`, e a regex acima é toda minúscula. Logo, no
-    # ramo do git, maiúscula é esconderijo: um arquivo RASTREADO com "escrito
-    # com Claude Opus" passa verde (medido num repo de mentira em 13/08/2026).
-    # O `-i` existia (`git grep -niE`, commit 9cbfcc0) e sumiu em c51c902,
-    # quando o `-I` do parágrafo abaixo entrou NO LUGAR do `i` em vez de ao
-    # lado dele. A suíte não viu porque o teste que cobre esse caso
+    # O DEFEITO: o grep daqui não levava `-i`, e a regex acima é toda
+    # minúscula. No ramo do git, maiúscula virava esconderijo — e ninguém
+    # escreve nome próprio em minúscula. Um arquivo RASTREADO com "Escrito com
+    # Claude Opus." ou "Feito na Anthropic." passava VERDE. O `-i` existia
+    # (`git grep -niE`, commit 9cbfcc0) e sumiu em c51c902, quando o `-I` do
+    # parágrafo abaixo entrou NO LUGAR do `i` em vez de ao lado dele. A suíte
+    # não viu porque o teste que cobria o caso
     # (`test_ainda_pega_o_modelo_composto`) exercita o ramo de FALLBACK, que
     # nunca perdeu o `-i`.
     #
-    # O PREÇO DE DEVOLVER O `-i`, medido na árvore de 13/08/2026: 25
-    # reprovações em 7 arquivos, e TODAS são a mesma coisa — o nome do arquivo
-    # `CLAUDE.md`, citado por quem escreve sobre as regras da casa
-    # (test_portoes_da_casa_estao_ligados_no_ci.py sozinho responde por 19).
-    # ZERO são violação de verdade. Devolver o `-i` sem antes decidir o que
-    # fazer com esse nome transformaria o portão num gerador de ruído, e a
-    # regra da casa é que portão que grita falso é portão que se desliga.
+    # POR QUE FICOU TRÊS SEMANAS DE PÉ: o preço de devolver o `-i` era ruído, e
+    # portão que grita falso é portão que se desliga. A saída registrada na
+    # época era "decisão dela", entre três caminhos — o nome vira exceção
+    # explícita, o texto passa a citá-lo de outro jeito, ou o ramo segue
+    # sensível a maiúscula. **O primeiro caminho foi tomado**, e está no
+    # `RUIDO_MEDIDO` abaixo: é o de menor dano, porque não pede que ninguém
+    # reescreva 26 arquivos para caber num portão.
     #
-    # A decisão é dela porque é a MESMA decisão do `CLAUDE.md`: o arquivo é
-    # proibido de ser versionado por .github/workflows/anonymity-check.yml, e
-    # é ela quem escolhe se o NOME dele vira exceção explícita do regex, se o
-    # texto passa a citá-lo de outro jeito, ou se o ramo do git segue sensível
-    # a maiúscula de propósito. Enquanto não escolher, fica registrado aqui:
-    # este ramo NÃO pega o nome de modelo capitalizado.
+    # FATO ERRADO, SUBSTITUÍDO: este comentário dizia "25 reprovações em 7
+    # arquivos, e TODAS são a mesma coisa". Remedido em 26/08/2026, no `dev` e
+    # na árvore da leva, com o mesmo comando que o script roda: **59 acusações
+    # em 27 arquivos, e são DUAS famílias**, não uma. Zero violação real nas
+    # duas.
+    #
+    #   1. o literal `CLAUDE.md`  — 56 acusações em 26 arquivos. É o nome de um
+    #      arquivo, citado por quem escreve sobre as regras da casa
+    #      (test_portoes_da_casa_estao_ligados_no_ci.py sozinho responde por
+    #      21). O arquivo é proibido de ser versionado por
+    #      .github/workflows/anonymity-check.yml; o NOME dele, não.
+    #   2. `feito por ela`        — 3 acusações, todas em docs/data/ensaios.csv
+    #      (:176, :177, :178), na MESMA frase de ensaio: "O par foi feito POR
+    #      ELA, fechando a Steam no meio". É atribuição a uma PESSOA, e é o
+    #      oposto do que o portão caça. O `\bfeito por\b` do regex acima nasceu
+    #      para pegar "feito por uma IA".
     #
     # ANONIMATO-BINARIO-FALSO-POSITIVO-01 (01/08/2026): o `-I` NÃO é opcional.
     # Sem ele o `git grep` varre os PNGs de `docs/usage/assets/` e um deles
@@ -141,7 +152,7 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
     if [[ "${#ARQUIVOS[@]}" -gt 0 ]]; then
         # `2>/dev/null` cobre o caso do arquivo apagado do disco mas ainda no
         # índice, que o `--cached` lista e o grep não acha.
-        HITS=$(grep -HnIE "$FORBIDDEN" -- "${ARQUIVOS[@]}" 2>/dev/null || true)
+        HITS=$(grep -HnIiE "$FORBIDDEN" -- "${ARQUIVOS[@]}" 2>/dev/null || true)
     else
         HITS=""
     fi
@@ -160,6 +171,32 @@ else
         --exclude="check_anonymity.sh" --exclude="test_check_anonymity.py" \
         --exclude="anonymity-check.yml" \
         2>/dev/null || true)
+fi
+
+# ---------------------------------------------------------------------------
+# O RUÍDO MEDIDO da ANONIMATO-MAIUSCULA-01 (26/08/2026). As duas famílias estão
+# descritas no comentário longo lá em cima, com a contagem.
+#
+# A ISENÇÃO É POR CASAMENTO, E NUNCA POR LINHA, e isso não é preciosismo: um
+# `grep -v` descartaria a LINHA inteira, e aí "escrito com Claude Opus — ver
+# CLAUDE.md" sumiria junto com o ruído. É o mesmo defeito que o
+# `check_test_data.sh` carregava no `grep -vE "$ALLOWED_MAC"`. Aqui o que se faz
+# é APAGAR o trecho isento da linha e perguntar de novo: se ainda casa, é
+# violação de verdade e continua reprovando.
+RUIDO_MEDIDO='CLAUDE\.md|\bfeito por ela\b'
+
+_filtrar_ruido_medido() {
+    local linha resto
+    while IFS= read -r linha; do
+        resto=$(printf '%s' "$linha" | sed -E "s/${RUIDO_MEDIDO}//gI")
+        if printf '%s' "$resto" | grep -qEi "$FORBIDDEN"; then
+            printf '%s\n' "$linha"
+        fi
+    done
+}
+
+if [[ -n "$HITS" ]]; then
+    HITS=$(printf '%s\n' "$HITS" | _filtrar_ruido_medido)
 fi
 
 if [[ -n "$HITS" ]]; then
@@ -231,7 +268,14 @@ OUIS = ("d84489", "a0fa9c", "e417d8", "e0f6b5",
         "48b25d", "143a9a", "d42f4b", "444648")
 # Imagem e catálogo compilado ficam de fora: três bytes casam por acaso em dado
 # comprimido, e PNG que muda a cada captura de tela geraria alarme intermitente.
-PULA = (".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
+# `.svg` SAIU daqui em 26/08/2026, e a razão é a mesma que tirou o `.svg` do
+# `EXCLUIR_SUFIXO` do irmão no mesmo dia: SVG é XML de TEXTO PURO, e o motivo
+# escrito para os outros desta lista ("três bytes casam por acaso em dado
+# comprimido") não vale para ele. Medido: um serial de fábrica de 17 caracteres
+# dentro de um `<text>` de SVG COMMITADO saía rc=0; o mesmo conteúdo, byte a
+# byte, num `.md` saía rc=1. São 49 SVGs versionados, todos texto (46 utf-8,
+# 3 us-ascii). Duas réguas independentes é o que revela — e as duas estavam cegas.
+PULA = (".png", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
 
 # 23/08/2026 — o portão passou a DESCOMPRIMIR em vez de pular o comprimido.
 #
@@ -379,7 +423,14 @@ PADRAO = (
 SERIAL = re.compile(PADRAO)
 PAR_HEX = re.compile(rb"(?<![0-9A-Fa-f])([0-9A-Fa-f]{2})(?![0-9A-Fa-f])")
 HEX_COLADO = re.compile(rb"(?<![0-9A-Fa-f])((?:[0-9A-Fa-f]{2}){17,})(?![0-9A-Fa-f])")
-PULA = (".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
+# `.svg` SAIU daqui em 26/08/2026, e a razão é a mesma que tirou o `.svg` do
+# `EXCLUIR_SUFIXO` do irmão no mesmo dia: SVG é XML de TEXTO PURO, e o motivo
+# escrito para os outros desta lista ("três bytes casam por acaso em dado
+# comprimido") não vale para ele. Medido: um serial de fábrica de 17 caracteres
+# dentro de um `<text>` de SVG COMMITADO saía rc=0; o mesmo conteúdo, byte a
+# byte, num `.md` saía rc=1. São 49 SVGs versionados, todos texto (46 utf-8,
+# 3 us-ascii). Duas réguas independentes é o que revela — e as duas estavam cegas.
+PULA = (".png", ".mo", ".ico", ".gif", ".jpg", ".jpeg")
 PUBLICOS = 6
 
 

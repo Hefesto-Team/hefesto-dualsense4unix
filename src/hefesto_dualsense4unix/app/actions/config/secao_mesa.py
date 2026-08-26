@@ -91,6 +91,25 @@ inverte entre boots e por isso ele nunca é guardado — a correspondência é
 refeita a cada leitura, e as duas leituras acontecem no mesmo gesto. O que vai
 para a escrita é sempre o BD Address.
 
+AS TRÊS COSTURAS DE 26/08/2026 (L2-E)
+--------------------------------------
+
+As três fecham a mesma classe de defeito — a casa sabe e o produto não faz — e
+cada uma tem o "porquê" inteiro junto da constante que a carrega:
+
+1. **o gabinete que o install já contou.** O ``install.sh`` grava o
+   ``gabinete.json`` em toda instalação desde 25/08/2026 e nenhuma linha de
+   ``app/`` o abria. Agora a seção o publica — **as duas contagens lado a lado
+   quando elas divergem, e nunca uma escolha** (:func:`_linhas_do_gabinete`);
+2. **o hub em comum.** A coluna "Onde está" escrevia ``Em hub`` linha a linha e
+   nunca comparava as linhas entre si; ``censo_do_barramento.hub_em_comum``
+   respondia desde 22/08 e não tinha chamador (:func:`_frase_do_hub_em_comum`);
+3. **a porta da calibração.** ``app/widgets/calibrar_entradas.py`` nasceu
+   inteira na leva 1 e nada a abria (:meth:`_PainelDaMesa._abrir_a_calibracao`).
+
+Todo texto novo delas está marcado ``PROVISÓRIO — decisão dela``, e a prova de
+tela não fechou: a palavra final é dela.
+
 **O nome grava NA HORA**, e a frase ao lado do campo diz isso. As três
 declarações desta seção esperam o "Aplicar" do rodapé porque moram no
 `maquina.json`; o alias mora no BlueZ, que não passa pelo rascunho da máquina
@@ -115,7 +134,18 @@ from hefesto_dualsense4unix.integrations.apelido_do_dongle import (
 from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     GRAU_LIDO,
     Censo,
+    hub_em_comum,
     ler_o_barramento,
+)
+from hefesto_dualsense4unix.integrations.censo_do_gabinete import (
+    contagens_declaradas,
+    ler_do_disco,
+    pergunta_pendente,
+)
+from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
+    Furo,
+    NoDeEntrada,
+    listar_entradas,
 )
 from hefesto_dualsense4unix.integrations.mapa_das_portas import (
     porta_de,
@@ -126,6 +156,9 @@ from hefesto_dualsense4unix.integrations.mesa_de_radio import (
     Mesa,
     RadioUsb,
     ler_a_mesa,
+)
+from hefesto_dualsense4unix.integrations.portas_do_barramento import (
+    livres,
 )
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     PALAVRA_FOLGADA,
@@ -144,7 +177,16 @@ from hefesto_dualsense4unix.utils.maquina import (
 logger = get_logger(__name__)
 
 #: O título como ela o lê na tela.
-TITULO = "A mesa"
+#:
+#: **"Conexões", e a palavra é dela** (LEX-1). A seção se chamava "A mesa" — a
+#: metáfora da casa para o conjunto de controles —, e o título usava a mesma
+#: palavra para outra coisa: os adaptadores, os rádios e as entradas do
+#: gabinete. Duas coisas com um nome só é o que faz a pessoa procurar controle
+#: aqui dentro.
+#:
+#: O rodapé acompanha sozinho: `ipc_bridge._rotulos_dos_campos` LÊ esta
+#: constante (`ipc_bridge.py:812`), nunca a copia.
+TITULO = "Conexões"
 
 #: A dica do título, palavra por palavra como saiu do desenho aprovado
 #: (`TOOLTIPS.md`). Ela não se reescreve na hora.
@@ -190,7 +232,7 @@ _SELO_DECLARADO = "(você disse)"
 #: A dica do selo `(lido)`. Ela é a única coisa na tela que diz DE ONDE veio a
 #: palavra — sem ela, a classificação parece chute do produto.
 _DICA_LIDO = (
-    "O sistema informou o que este aparelho é, pelo próprio barramento USB. "
+    "O próprio aparelho informou ao sistema o que ele é. "
     'Se estiver errado, clique em "Corrigir".'
 )
 
@@ -265,6 +307,47 @@ _PAINEL_EM_PORTUGUES: dict[str, str] = {
 #: sempre atrás de um hub. Chutar "Frente" aqui seria a tela afirmando o que
 #: ninguém mediu.
 _PAINEL_DESCONHECIDO = "Não sei"
+
+# -- as duas perguntas que máquina nenhuma responde (LEX-9) -------------------
+#
+# A REDAÇÃO É DECIDIDA, e a decisão é `D-REDACAO-DAS-DUAS-PERGUNTAS-DE-RADIO`
+# (`docs/data/decisoes-dela.csv:36`, decidida por delegação em 25/08/2026,
+# marcada para o olho dela). A queixa que a derrubou é dela, de 24/08:
+# *"Eu não sei o que é altura da antena. nem linha de visada. sinceramente não
+# faço ideia."*
+#
+# O CONTEÚDO NÃO SAI — o `GUIA-RADIO-DA-SALA.md` §4.4 mede que subir 40 cm rende
+# mais que aproximar 5 m, e é isso que as duas perguntas colhem. O que muda é a
+# palavra: jargão que a pessoa teria de pesquisar é defeito, não precisão.
+#
+# **AS CHAVES E OS VALORES DO ESQUEMA NÃO MUDAM.** `MesaDeclarada` usa `Literal`
+# com `extra="forbid"`: trocar `"acima"` por `"sim"` faria o pydantic recusar o
+# DOCUMENTO INTEIRO de quem já declarou, e o sintoma seria "não consegui
+# gravar" — a causa certa com o sintoma errado. Só o RÓTULO e a PALAVRA DO
+# BOTÃO mudam; a tradução botão -> valor está na tupla de cada `_linha_declarada`.
+#
+# A INVERSÃO DA SEGUNDA É DE PROPÓSITO. "Linha de visada: Livre" virou "Tem
+# gente sentada entre o dongle e o sofá? Não" — a pergunta trocou de sinal, e
+# por isso "Sim" grava `com_gente` e "Não" grava `livre`. Manter a ordem antiga
+# faria a tela gravar o oposto do que ela respondeu.
+
+#: PROVISÓRIO — decisão dela (a redação está decidida; o olho dela não a viu).
+_PERGUNTA_DA_ALTURA = "O dongle fica acima da cabeça de quem joga sentado?"
+
+#: PROVISÓRIO — decisão dela.
+_DICA_DA_ALTURA = (
+    "Corpo humano absorve 2,4 GHz. Um dongle acima da linha das cabeças rende "
+    "mais que um dongle perto. Isto nenhum sistema sabe — só você."
+)
+
+#: PROVISÓRIO — decisão dela.
+_PERGUNTA_DA_VISADA = "Tem gente sentada entre o dongle e o sofá?"
+
+#: PROVISÓRIO — decisão dela.
+_DICA_DA_VISADA = (
+    "Gente no caminho entre o dongle e quem joga custa alcance, e também não "
+    "há como medir daqui."
+)
 
 #: A dica do par colado, literal do desenho aprovado (`TOOLTIPS.md`).
 _DICA_COLADOS = (
@@ -371,6 +454,19 @@ class _PainelDaMesa:
         #: mesmo motivo das outras três: reexaminar esvazia e preenche de novo,
         #: e a ordem dos filhos da seção nunca muda.
         self._caixa_do_mapa: Any = None
+        #: O `gabinete.json` que o install gravou — `{}` quando não há, que é a
+        #: primeira instalação e todo install anterior a 25/08/2026. Vazio a
+        #: seção fala exatamente como falava antes desta leva.
+        self._gabinete: dict[str, Any] = {}
+        #: Os nós de ENTRADA, inclusive os vazios. É a única leitura que alcança
+        #: um buraco sem aparelho, e é dela que sai tanto o conselho do hub
+        #: quanto o que a janela de calibração recebe pronto.
+        self._entradas: tuple[NoDeEntrada, ...] = ()
+        #: A caixa das contagens do gabinete mais o botão da calibração.
+        self._caixa_do_gabinete: Any = None
+        #: A caixa da linha do hub em comum. Ela fica colada na tabela dos
+        #: adaptadores porque é sobre eles que ela fala.
+        self._caixa_do_hub: Any = None
         #: Os adaptadores pela ótica do BlueZ — endereço, alias e quem hospeda
         #: Nintendo. Tupla vazia é o caso comum e legítimo: sem `busctl`, com o
         #: `bluetoothd` parado, no Flatpak, ou em máquina sem adaptador.
@@ -424,11 +520,24 @@ class _PainelDaMesa:
         self._caixa_adaptadores = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         caixa.pack_start(self._caixa_adaptadores, False, False, 0)
 
+        # O hub em comum fala dos ADAPTADORES, e por isso mora colado na tabela
+        # deles — a linha responde a pergunta que a coluna "Em hub" levanta e
+        # não responde. PROVISÓRIO — o lugar da linha é decisão dela.
+        self._caixa_do_hub = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        caixa.pack_start(self._caixa_do_hub, False, False, 0)
+
         # A linha do mapa fica colada na tabela que ela explica: é a coluna
         # "Onde está" que passa a falar o número dela. PROVISÓRIO — o lugar da
         # linha é decisão dela, e a prova de tela desta leva não fechou.
         self._caixa_do_mapa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         caixa.pack_start(self._caixa_do_mapa, False, False, 0)
+
+        # O gabinete que o install contou vem logo abaixo do mapa: as duas
+        # falam de ENTRADA, e a cerimônia de calibração é o que preenche o mapa
+        # com o que o desenho à mão não alcança — a entrada vazia.
+        # PROVISÓRIO — o lugar do bloco é decisão dela.
+        self._caixa_do_gabinete = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        caixa.pack_start(self._caixa_do_gabinete, False, False, 0)
 
         caixa.pack_start(self._declaracoes(), False, False, 0)
 
@@ -454,10 +563,14 @@ class _PainelDaMesa:
         self._caixa_radios = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         caixa.pack_start(self._caixa_radios, False, False, 0)
 
-        # As três declarações desta seção são DIFERIDAS, e a frase é a
-        # mesma do Orçamento — literalmente a mesma constante. Ver
-        # `moldura.QUANDO_VALE` para o defeito que ela fecha.
-        caixa.pack_start(rotulo_de_apoio(QUANDO_VALE), False, False, 0)
+        # LEX-2, ITEM 3 — A `QUANDO_VALE` SAIU DA PÁGINA (26/08/2026).
+        #
+        # As três declarações desta seção continuam DIFERIDAS e a frase
+        # continua sendo a mesma constante do Desempenho e de Os controles
+        # (`moldura.QUANDO_VALE`) — o que mudou é onde ela mora. Ela diria a
+        # mesma coisa com a mesa vazia e com a mesa cheia, logo é EXPLICAÇÃO, e
+        # explicação vai para o hover do widget que ela explica: as fileiras de
+        # `_linha_declarada`, que são exatamente o que acumula no rascunho.
         caixa.pack_start(self._botao_de_reexame(), False, False, 0)
         # Montar lê o BARRAMENTO e nada mais. O `daemon.state_full` que
         # alimenta o medidor fica de fora daqui de propósito, pelo mesmo motivo
@@ -481,11 +594,13 @@ class _PainelDaMesa:
         caixa.pack_start(
             self._linha_declarada(
                 "altura_da_antena",
-                "Altura da antena:",
-                "Corpo humano absorve 2,4 GHz. Antena acima da linha das "
-                "cabeças rende mais que antena perto. Nenhum barramento sabe "
-                "disto — só você.",
-                [("acima", "Acima"), ("abaixo", "Abaixo"), ("nao_sei", "Não sei")],
+                _PERGUNTA_DA_ALTURA,
+                _DICA_DA_ALTURA,
+                [
+                    ("acima", "Sim"),
+                    ("abaixo", "Não"),
+                    ("nao_sei", "Não sei"),
+                ],
             ),
             False,
             False,
@@ -494,12 +609,11 @@ class _PainelDaMesa:
         caixa.pack_start(
             self._linha_declarada(
                 "linha_de_visada",
-                "Linha de visada:",
-                "Sem obstáculo entre a antena e quem joga. Também não há como "
-                "medir.",
+                _PERGUNTA_DA_VISADA,
+                _DICA_DA_VISADA,
                 [
-                    ("livre", "Livre"),
-                    ("com_gente", "Com gente"),
+                    ("com_gente", "Sim"),
+                    ("livre", "Não"),
                     ("nao_sei", "Não sei"),
                 ],
             ),
@@ -530,7 +644,11 @@ class _PainelDaMesa:
         fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         texto = Gtk.Label(label=_(rotulo))
         texto.set_xalign(0.0)
-        texto.set_tooltip_text(_(dica))
+        # A `QUANDO_VALE` viaja ANEXADA à dica da fileira, e não como parágrafo
+        # (LEX-2, item 3). Aqui e não noutro widget porque É esta fileira que
+        # acumula no rascunho: quem clica num destes botões e não vê nada
+        # acontecer é quem precisa da frase, e ela está sob o cursor dele.
+        texto.set_tooltip_text(f"{_(dica)} {_(QUANDO_VALE)}")
         with contextlib.suppress(Exception):
             texto.get_style_context().add_class("hefesto-rotulo")
         fileira.pack_start(texto, False, False, 0)
@@ -628,10 +746,14 @@ class _PainelDaMesa:
             mesa = self._ler()
             self._mesa = mesa
             self._censo = self._ler_o_censo()
+            self._entradas = self._ler_as_entradas()
+            self._gabinete = self._ler_o_gabinete()
             self._mapa = self._mapa_em_vigor()
             self._ler_os_dongles_de_bancada()
             self._desenhar_adaptadores(mesa)
+            self._desenhar_o_hub()
             self._desenhar_o_mapa()
+            self._desenhar_o_gabinete()
             self._desenhar_radios(mesa)
             self._desenhar_medidores()
         except Exception:
@@ -676,6 +798,53 @@ class _PainelDaMesa:
         if getattr(self._host, "_mesa_leitor", None) is not None:
             return Censo()
         return ler_o_barramento()
+
+    def _ler_as_entradas(self) -> tuple[NoDeEntrada, ...]:
+        """Os nós de entrada, inclusive os VAZIOS — ou a bancada de mentira.
+
+        Terceira varredura de `/sys` por reexame, e ela responde o que as outras
+        duas não sabem responder: **uma entrada vazia não tem aparelho**, logo
+        não aparece nem em `ler_a_mesa` nem em `ler_o_barramento`. É esta
+        leitura que sustenta o "há entrada livre em outro caminho" do hub e é
+        ela que a janela de calibração recebe pronta, sem reler.
+
+        A guarda do retrato é a mesma das outras duas, e pelo mesmo motivo: sem
+        dublê, durante uma captura, a resposta é tupla vazia — nunca leitura
+        viva. Sem entradas o conselho do hub não nasce, que é o desenho certo:
+        um conselho que não sabe para onde mandar não é conselho.
+        """
+        leitor = getattr(self._host, "_entradas_leitor", None)
+        if leitor is not None:
+            with contextlib.suppress(Exception):
+                return tuple(leitor())
+            return ()
+        if getattr(self._host, "_mesa_leitor", None) is not None:
+            return ()
+        return listar_entradas()
+
+    def _ler_o_gabinete(self) -> dict[str, Any]:
+        """O `gabinete.json` que o install gravou — `{}` quando não há.
+
+        Ele é a ÚNICA fonte da tabela SMBIOS tipo 8 nesta janela: o arquivo do
+        DMI é `400 root` e a janela é sudo-zero, então quem leu foi o install,
+        uma vez, como root. Aqui só se abre o que ele deixou.
+
+        `ler_do_disco` já engole arquivo ausente, truncado e de formato futuro —
+        os três dão a mesma resposta honesta, e nenhum derruba a seção.
+
+        A guarda do retrato existe para que a foto não publique a contagem da
+        máquina de quem capturou: sem dublê, durante uma captura, o gabinete é
+        vazio e o bloco não aparece.
+        """
+        leitor = getattr(self._host, "_gabinete_leitor", None)
+        if leitor is not None:
+            with contextlib.suppress(Exception):
+                lido = leitor()
+                return lido if isinstance(lido, dict) else {}
+            return {}
+        if getattr(self._host, "_mesa_leitor", None) is not None:
+            return {}
+        return ler_do_disco()
 
     def _ler_os_dongles_de_bancada(self) -> None:
         """A leitura do BlueZ quando ela é de mentira — e só então.
@@ -946,7 +1115,7 @@ class _PainelDaMesa:
         if not mesa.radios:
             self._caixa_radios.pack_start(
                 rotulo_de_apoio(
-                    "Nenhum outro rádio encontrado no barramento USB.",
+                    "Nenhum outro rádio espetado no computador.",
                     largura_max=_LARGURA_DA_FRASE,
                 ),
                 False,
@@ -1372,6 +1541,86 @@ class _PainelDaMesa:
         )
         self._caixa_do_mapa.show_all()
 
+    def _desenhar_o_hub(self) -> None:
+        """A linha do hub em comum — e o conselho, quando há para onde mandar.
+
+        Some inteira quando não há hub em comum, quando há menos de dois
+        adaptadores, ou quando a leitura de entradas não respondeu. Linha que só
+        sabe dizer "não sei" ocupa a largura que esta janela não tem.
+        """
+        if self._caixa_do_hub is None:
+            return
+        from gi.repository import Gtk
+
+        self._esvaziar(self._caixa_do_hub)
+        fato, por_que, conselho = _frase_do_hub_em_comum(
+            self._mesa, self._censo, self._entradas
+        )
+        if not fato:
+            return
+        caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        caixa.set_margin_top(6)
+        for texto in (fato, por_que, conselho):
+            if texto:
+                caixa.pack_start(
+                    rotulo_de_apoio(texto, largura_max=_LARGURA_DA_FRASE),
+                    False,
+                    False,
+                    0,
+                )
+        self._caixa_do_hub.pack_start(caixa, False, False, 0)
+        self._caixa_do_hub.show_all()
+
+    def _desenhar_o_gabinete(self) -> None:
+        """As contagens do gabinete, a pergunta, e o botão da calibração.
+
+        O botão nasce SEMPRE — inclusive sem `gabinete.json`, que é o caso de
+        quem nunca instalou desde 25/08/2026. Ele é a única porta da janela de
+        calibração, e amarrá-lo ao censo esconderia a cerimônia de quem mais
+        precisa dela.
+        """
+        if self._caixa_do_gabinete is None:
+            return
+        from gi.repository import Gtk
+
+        self._esvaziar(self._caixa_do_gabinete)
+        caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        caixa.set_margin_top(6)
+        for texto in _linhas_do_gabinete(self._gabinete):
+            caixa.pack_start(
+                rotulo_de_apoio(texto, largura_max=_LARGURA_DA_FRASE), False, False, 0
+            )
+        fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        botao = Gtk.Button(label=_(_BOTAO_CALIBRAR))
+        botao.set_tooltip_text(_(_DICA_CALIBRAR))
+        botao.connect("clicked", self._abrir_a_calibracao)
+        fileira.pack_start(botao, False, False, 0)
+        caixa.pack_start(fileira, False, False, 0)
+        self._caixa_do_gabinete.pack_start(caixa, False, False, 0)
+        self._caixa_do_gabinete.show_all()
+
+    def _abrir_a_calibracao(self, _botao: Any = None) -> None:
+        """Abre a cerimônia de calibração — a janela que a leva 1 entregou.
+
+        Ela recebe mapa, censo e entradas JÁ LIDOS: a seção acabou de varrer o
+        `/sys` três vezes, e uma quarta varredura aqui mediria uma máquina
+        levemente diferente da que está desenhada na tela.
+
+        Grava a cada resposta, direto no disco, sem IPC — por isso o `ao_fechar`
+        relê a mesa em vez de mexer no rascunho: o que ela ensinou já está
+        gravado quando a janela fecha.
+        """
+        from hefesto_dualsense4unix.app.widgets.calibrar_entradas import (
+            JanelaDeCalibrarEntradas,
+        )
+
+        janela = JanelaDeCalibrarEntradas(
+            self._host, self._mapa, self._censo, self._entradas
+        )
+        with contextlib.suppress(Exception):
+            janela.connect("destroy", lambda *_a: self.reexaminar())
+        janela.show_all()
+
     def _abrir_o_desenho(self, _botao: Any = None) -> None:
         """Abre a janela do mapa 2D — e ela grava no rascunho, não no disco.
 
@@ -1560,6 +1809,91 @@ _SEM_MAPA = (
 #: PROVISÓRIO — decisão dela.
 _BOTAO_DESENHAR = "Desenhar a minha mesa"
 
+# -- o gabinete que o install já contou (26/08/2026) -------------------------
+#
+# O `install.sh` grava o `gabinete.json` em TODA instalação
+# (`install_censo_do_gabinete_host()`, `:1305`, chamado em `:1878` e `:2559`) e
+# até 26/08/2026 nenhuma linha de `app/` o abria. As três frases abaixo são o
+# consumidor que faltava.
+#
+# A REGRA QUE ELAS CARREGAM: **quando as fontes divergem, a aba mostra a
+# divergência; ela nunca escolhe.** A BIOS desta placa declara 5 conectores USB
+# onde a traseira entrega 8 — gabarito de fabricante copiado sem ajustar —, e o
+# censo já grava `divergem=true` com a pergunta pronta. Publicar só um dos dois
+# números desenharia um gabinete que ninguém tem, e ela confiaria nele.
+
+#: A contagem que veio da tabela SMBIOS tipo 8, lida com root pelo install.
+#: PROVISÓRIO — decisão dela.
+_GABINETE_FIRMWARE = "A BIOS desta placa conta {numero} entradas USB."
+
+#: A contagem que o kernel dá de graça, sem root. A palavra "buraco" é a do
+#: censo; na tela ela vira "entrada", que é a decisão `D-A-PALAVRA-ENTRADA`.
+#: PROVISÓRIO — decisão dela.
+_GABINETE_SISTEMA = "Contando pelo que o sistema enxerga, são {numero}."
+
+#: O que ELA respondeu, quando respondeu. Vem do mesmo arquivo, com o selo
+#: `declarado-por-ela`, e sobrevive a reinstalar (`preservar_o_que_ela_disse`).
+#: PROVISÓRIO — decisão dela.
+_GABINETE_DELA = "Você disse que a sua traseira tem {numero}."
+
+#: O botão que abre a cerimônia de calibração — a janela que a leva 1 entregou
+#: inteira e que até 26/08/2026 não tinha porta nenhuma.
+#: PROVISÓRIO — decisão dela.
+_BOTAO_CALIBRAR = "Ensinar as minhas entradas"
+
+#: A dica do botão. Diz o que a cerimônia faz e o que ela custa, porque a fase
+#: em pé manda a pessoa para trás do gabinete e isso não pode ser surpresa.
+#: PROVISÓRIO — decisão dela.
+_DICA_CALIBRAR = (
+    "Um toque por aparelho, sentado, e o Hefesto aprende em que entrada cada "
+    "um está. As entradas vazias só o computador não alcança — essas você "
+    "ensina de pé, se quiser, e pode parar em qualquer passo."
+)
+
+# -- o hub que está acima de TODOS os adaptadores (26/08/2026) ---------------
+#
+# A coluna "Onde está" escreve "Em hub" LINHA A LINHA, a partir do
+# `adaptador.atras_de_hub`, e nunca compara as linhas entre si. Hub em comum é
+# disputa de barramento, que é causa de engasgo — e o produto já sabia
+# responder: `censo_do_barramento.hub_em_comum` existe desde 22/08/2026.
+#
+# **Comparar o pai NÃO responde.** Medido em 22/08: os três adaptadores desta
+# casa têm dois pais diferentes (`3-3.1` e `3-3`) e um único hub em comum, o
+# `3-3`. Quem compara pai diz que não estão juntos, e diz errado.
+
+#: O FATO, e ele nasce sempre que há hub em comum. Nunca acusa um adaptador de
+#: atrapalhar outro — é a contra-regra obrigatória de R3 da
+#: `ORDEM-DE-SERVICO-01`, e três adaptadores no mesmo hub é o arranjo que o
+#: próprio `GUIA-RADIO-DA-SALA.md` manda comprar.
+#: PROVISÓRIO — decisão dela.
+_HUB_EM_COMUM = (
+    "Os {numero} adaptadores chegam ao computador por dentro do mesmo hub."
+)
+
+#: POR QUE O FATO IMPORTA — e ele fala do hub, nunca de um dos adaptadores.
+#: PROVISÓRIO — decisão dela.
+_HUB_POR_QUE = (
+    "Tudo que passa por esse hub divide o mesmo caminho com o que mais estiver "
+    "nele."
+)
+
+#: O CONSELHO, e ele só nasce quando há para onde mandar: buraco livre, que uma
+#: pessoa alcança com a mão, numa controladora DIFERENTE. Sem destino a seção
+#: fica no fato e cala sobre o que fazer, porque não há o que fazer — mandar
+#: mudar de buraco dentro do mesmo hub não muda o caminho que ele divide.
+#: PROVISÓRIO — decisão dela.
+_HUB_CONSELHO_UMA = (
+    "Há 1 entrada livre num caminho diferente do computador: levar um dos "
+    "adaptadores para lá tira o hub do caminho dele."
+)
+
+#: O mesmo conselho no plural.
+#: PROVISÓRIO — decisão dela.
+_HUB_CONSELHO_VARIAS = (
+    "Há {numero} entradas livres num caminho diferente do computador: levar um "
+    "dos adaptadores para lá tira o hub do caminho dele."
+)
+
 
 def _linha_do_mapa(
     mapa: MapaDaMesa, censo: Censo, ao_clicar: Any
@@ -1593,6 +1927,113 @@ def _linha_do_mapa(
     return fileira
 
 
+def _linhas_do_gabinete(gabinete: dict[str, Any]) -> tuple[str, ...]:
+    """As contagens de entrada lado a lado, mais a pergunta — nunca uma escolha.
+
+    **A CURA, e é a primeira mordida.** Com o censo desta bancada — BIOS a
+    declarar 5 conectores USB e o barramento a contar 8 buracos — saem TRÊS
+    frases: os dois números e a pergunta que o censo já traz pronta. Arrancada
+    a regra (deixando o firmware vencer, ou o kernel vencer), a aba desenha um
+    gabinete que ninguém tem e a pessoa procura na traseira buracos que o mapa
+    não mostra. Mordida:
+    ``test_a_aba_mostra_a_divergencia_em_vez_de_escolher``.
+
+    Sem ``gabinete.json`` — primeira instalação, ou install de antes de 25/08 —
+    a resposta é tupla vazia, e a seção fala exatamente como falava antes desta
+    leva. Firmware é FONTE, nunca premissa.
+
+    O desempacotamento do par ``{valor, de_onde_sei}`` NÃO acontece aqui: quem
+    o faz é ``censo_do_gabinete.contagens_declaradas``, que é o dono do formato.
+    Repetir a forma do JSON em código de tela seria a segunda verdade de sempre.
+    """
+    numeros = contagens_declaradas(gabinete)
+    frases = {
+        "firmware": _GABINETE_FIRMWARE,
+        "kernel_buracos": _GABINETE_SISTEMA,
+        "declarado_por_ela": _GABINETE_DELA,
+    }
+    linhas = [
+        frases[fonte].format(numero=numero)
+        for fonte, numero in numeros.items()
+        if fonte in frases
+    ]
+    pergunta = pergunta_pendente(gabinete)
+    if pergunta:
+        linhas.append(pergunta)
+    return tuple(linhas)
+
+
+def _frase_do_hub_em_comum(
+    mesa: Mesa, censo: Censo, entradas: Sequence[NoDeEntrada]
+) -> tuple[str, str, str]:
+    """`(fato, por quê, conselho)` do hub que está acima de TODOS os adaptadores.
+
+    **A CURA, e é a segunda mordida.** A coluna "Onde está" escreve "Em hub"
+    linha a linha e nunca compara as linhas entre si; quem compara é
+    ``hub_em_comum``, e ela sobe a cadeia em vez de olhar o pai. Trocada por uma
+    comparação de pai, os três adaptadores desta casa param de aparecer juntos —
+    eles têm dois pais (``3-3.1`` e ``3-3``) e um só hub em comum.
+
+    **O conselho é a metade opcional, e a contra-regra R3 é quem o segura.**
+    Três adaptadores no mesmo hub é o arranjo que o próprio
+    ``GUIA-RADIO-DA-SALA.md`` manda comprar: o fato sozinho não é queixa. O
+    conselho só nasce quando há para onde mandar — buraco livre, alcançável com
+    a mão, numa controladora DIFERENTE. E nenhuma das três frases acusa um
+    adaptador de atrapalhar outro; o que elas contam é que o caminho até o
+    computador passa por um hub. Mordida:
+    ``test_o_hub_em_comum_so_vira_conselho_com_buraco_livre_em_outra_pci``.
+
+    Menos de dois adaptadores não tem "em comum" nenhum, e a resposta é o
+    silêncio das três.
+    """
+    nos = [adaptador.no for adaptador in mesa.adaptadores if adaptador.no]
+    if len(nos) < 2:
+        return "", "", ""
+    hub = hub_em_comum(censo, nos)
+    if not hub:
+        return "", "", ""
+    fato = _HUB_EM_COMUM.format(numero=len(nos))
+    quantos = len(_livres_em_outra_controladora(censo, entradas, hub))
+    if quantos == 0:
+        return fato, _HUB_POR_QUE, ""
+    if quantos == 1:
+        return fato, _HUB_POR_QUE, _HUB_CONSELHO_UMA
+    return fato, _HUB_POR_QUE, _HUB_CONSELHO_VARIAS.format(numero=quantos)
+
+
+def _livres_em_outra_controladora(
+    censo: Censo, entradas: Sequence[NoDeEntrada], hub: str
+) -> tuple[Furo, ...]:
+    """Os buracos livres que NÃO pendem da mesma controladora deste hub.
+
+    **Não conta buraco nenhum por conta própria**: quem responde "quais buracos
+    estão vazios e uma pessoa alcança" é ``portas_do_barramento.livres``, que é
+    a dona declarada dessa régua (o C5 da ``ORDEM-DE-SERVICO-01``). Aqui só mora
+    o filtro por controladora, e o filtro é a contra-regra em forma de função:
+    mudar o adaptador para outro buraco da MESMA controladora não muda o caminho
+    que ele divide.
+
+    Sem ``controlador_pci`` legível nenhum buraco é oferecido — silêncio é
+    melhor que um destino que não ajuda, e é a mesma escolha de
+    ``ordens_da_mesa._livres_fora_da_controladora``, que faz esta conta para os
+    cards do exame. **As duas convivem porque as posses são de frentes
+    diferentes nesta leva**; unificá-las é conserto de quem tiver as duas.
+    """
+    aparelho = censo.aparelho(hub)
+    controlador = aparelho.controlador_pci if aparelho is not None else ""
+    if not controlador:
+        return ()
+    controlador_por_hub = {
+        atual.nome_do_kernel: atual.controlador_pci for atual in censo.aparelhos
+    }
+    return tuple(
+        furo
+        for furo in livres(entradas)
+        if controlador
+        not in {controlador_por_hub.get(no.hub, "") for no in furo.entradas}
+    )
+
+
 def _onde_esta_o_adaptador(
     adaptador: Adaptador, mapa: MapaDaMesa | None = None
 ) -> tuple[str, str | None]:
@@ -1624,6 +2065,12 @@ def _onde_esta_o_adaptador(
     # saiu: `bMaxPower` NÃO distingue hub alimentado — medido, o hub USB 3.1
     # com fonte reporta 0mA e o USB 2.1 sem fonte reporta 100mA, o oposto do
     # palpite. Afirmar "com fonte" seria a tela inventando uma medição.
+    # LEX-11 PARADA AQUI, E A PARADA É MEDIDA. Esta frase e o
+    # `f"Barramento {busnum}, porta {devpath}"` acima são as duas últimas das
+    # cinco que dizem "barramento" na tela. Trocá-las reprova
+    # `test_a_porta_dela_chega_na_frase.py::test_sem_mapa_a_frase_e_a_de_hoje`
+    # (`:141-151`), que prende as duas letra por letra — e aquele arquivo não
+    # está na posse desta frente (R-A). Ver a entrega da LEVA-4-A.
     return " · ".join(partes), "Lido do barramento USB: o Hefesto reconhece o hub."
 
 

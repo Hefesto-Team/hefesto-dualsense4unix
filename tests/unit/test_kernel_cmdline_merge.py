@@ -160,13 +160,27 @@ class TestUninstallStrip:
 
 
 class TestRegistroDeDono:
+    """PODA de 26/08/2026: quem monta o registro é o SHELL, e é ele que se mede.
+
+    Até aqui estas duas medidas passavam por `kc.ownership_record`, uma função
+    Python que montava `{"cmdline.<param>": "<dono>"}` e que NENHUM caminho de
+    produção chamava. O registro é gravado — só que pelo caminho vivo: o heredoc
+    do passo `3e` do `install.sh` imprime o `a.owner` de cada ação do plano, e o
+    shell o repassa a `_register_cmdline_owner cmdline.<param> <dono>`. As
+    medidas continuam sendo as mesmas duas, agora sobre o que o heredoc lê de
+    verdade: `a.param` e `a.owner` de cada `CmdlineAction`.
+    """
+
+    @staticmethod
+    def _registro(cmdline: str) -> dict[str, str]:
+        """O que o passo `3e` do install monta a partir do plano."""
+        return {f"cmdline.{a.param}": a.owner for a in kc.plan_cmdline(cmdline)}
+
     def test_chaves_do_estado_local(self) -> None:
-        registro = kc.ownership_record(kc.plan_cmdline(CMDLINE_VIRGEM))
-        assert registro == {
+        assert self._registro(CMDLINE_VIRGEM) == {
             "cmdline.usbcore.autosuspend": "hefesto",
             "cmdline.usbcore.quirks": "hefesto",
         }
 
     def test_aurora_registra_terceiro(self) -> None:
-        registro = kc.ownership_record(kc.plan_cmdline(CMDLINE_AURORA))
-        assert set(registro.values()) == {"terceiro"}
+        assert set(self._registro(CMDLINE_AURORA).values()) == {"terceiro"}

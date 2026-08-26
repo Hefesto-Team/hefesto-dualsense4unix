@@ -18,13 +18,17 @@ Política (V2-4 + V3-2 + FEAT-HOTKEY-STEAM-01):
   - PS solo (FEAT-HOTKEY-STEAM-01): se PS é pressionado e solto sem
     combo em `buffer_ms`, dispara `on_ps_solo` (default: abrir/focar
     Steam). Detecção: após o release do PS sem combo ter disparado.
+  - TETO do toque curto (PS-TOQUE-CURTO-01): o release só é toque se o
+    hold couber em `ps_toque_curto_teto_ms` (700 ms). Acima disso é o
+    gesto de RELIGAR o controle, não um toque — nada dispara, e o
+    journal diz `ps_solo_ignorado_hold_longo`.
   - PS + R3 (FEAT-HOTKEY-PONTE-CYCLE-01): próxima PONTE — a
     forma como o jogo enxerga o controle. Ver
     `daemon/subsystems/hotkey.py:build_next_bridge_callback` para o que o
     gesto pode e o que NÃO pode prometer.
 
 Vocabulário completo dos gestos:
-    PS sozinho          abre/foca a Steam (buffer de 150 ms)
+    PS sozinho          abre/foca a Steam (toque de até 700 ms)
     PS + cima           perfil seguinte
     PS + baixo          perfil anterior
     PS + R3             próxima ponte
@@ -39,6 +43,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -60,6 +65,56 @@ PS_BUTTON = "ps"
 # a Steam que passava de ~1s alternava o modo). O modo jogo agora e' so pelo
 # combo deliberado PS+Options. Quem quiser o gesto de volta: ps_long_press_ms>0.
 DEFAULT_PS_LONG_PRESS_MS = 0
+# PS-TOQUE-CURTO-01 (E1) — o TETO de duração do "toque curto" do PS, em ms.
+# Acima dele o release deixa de ser toque: nada dispara, e o motivo vai para o
+# journal (E2, `ps_solo_ignorado_hold_longo`).
+#
+# POR QUE ELE EXISTE. O README publica *"PS (toque curto) → abre a Steam"* e o
+# comentário deste módulo dizia "toque curto" — mas o código não comparava
+# duração com teto nenhum: TODA duração de release caía no mesmo ramo. A única
+# barreira era `_ps_long_press_fired`, que nunca arma porque o long-press nasce
+# desligado (`DEFAULT_PS_LONG_PRESS_MS = 0`, por causa do modo-jogo acidental).
+# Composição das duas decisões: **segurar o PS por cinco segundos para RELIGAR
+# um DualSense que caiu no rádio abria a Steam** — duas vezes em 45 s na sessão
+# dela, e com a Steam já aberta abria uma segunda janela.
+#
+# POR QUE 700. Um clique intencional humano fica em 80-250 ms; o religamento
+# medido no journal dela foi de 5.038 ms. 700 ms é folgado para o primeiro e
+# corta o segundo com sobra. É um número único, e não uma configuração nova a
+# mais para ela entender (a sprint recomenda esta saída, a (a), e recusa
+# explicitamente reaproveitar `ps_long_press_ms`: amarrar dois gestos
+# independentes ao mesmo número faria o toque curto virar 2 s no dia em que ela
+# ligasse o long-press em 2000 ms).
+#
+# 0 (ou negativo) DESLIGA o teto e restaura o comportamento antigo — qualquer
+# duração vira toque. Mesma semântica de `ps_long_press_ms`.
+DEFAULT_PS_TOQUE_CURTO_TETO_MS = 700
+#: Env var que sobrescreve o teto acima, lida na construção do `HotkeyConfig`.
+#: Este módulo NÃO lê `daemon.toml` (ver docstring do topo): a config efetiva
+#: vem de env vars + IPC, e é por env que `ps_long_press_ms` também se ajusta.
+ENV_PS_TOQUE_CURTO_TETO_MS = "HEFESTO_DUALSENSE4UNIX_PS_TOQUE_CURTO_TETO_MS"
+
+
+def _teto_do_toque_curto_do_ambiente() -> int:
+    """Resolve o teto do toque curto: env var se legível, senão o default.
+
+    Valor ilegível (vazio, texto, float) NÃO derruba o daemon nem desliga o
+    teto: cai no default. Desligar é escolha explícita — `=0`.
+    """
+    bruto = os.getenv(ENV_PS_TOQUE_CURTO_TETO_MS)
+    if bruto is None:
+        return DEFAULT_PS_TOQUE_CURTO_TETO_MS
+    try:
+        return int(bruto)
+    except ValueError:
+        logger.warning(
+            "ps_toque_curto_teto_ms_ilegivel",
+            valor=bruto,
+            usando=DEFAULT_PS_TOQUE_CURTO_TETO_MS,
+        )
+        return DEFAULT_PS_TOQUE_CURTO_TETO_MS
+
+
 # FEAT-EMULATION-GAMEMODE-COMBO-01: combo que alterna o modo jogo. Default
 # PS+Options — gesto deliberado que NAO colide com o PS solo (Steam) nem com
 # next/prev (PS+dpad). Tupla vazia desliga o combo.
@@ -94,6 +149,11 @@ class HotkeyConfig:
     prev_profile: tuple[str, ...] = DEFAULT_COMBO_PREV
     passthrough_in_emulation: bool = False
     ps_long_press_ms: int = DEFAULT_PS_LONG_PRESS_MS
+    # PS-TOQUE-CURTO-01 (E1): acima deste teto o release do PS não é toque.
+    # 0 ou negativo desliga o teto. Default via env (ver a constante).
+    ps_toque_curto_teto_ms: int = field(
+        default_factory=_teto_do_toque_curto_do_ambiente
+    )
     gamemode_toggle: tuple[str, ...] = DEFAULT_COMBO_GAMEMODE
     next_bridge: tuple[str, ...] = DEFAULT_COMBO_PONTE
 
@@ -219,11 +279,13 @@ class HotkeyManager:
 
         Regras:
           - PS acabou de ser pressionado → armazena timestamp.
-          - PS foi liberado → se nenhum combo disparou E o release veio
-            depois do buffer, considera PS solo. Se veio antes do buffer,
-            também e' PS solo (toque curto). Se ocorreu com outros botoes
+          - PS foi liberado → se nenhum combo disparou E o hold coube no
+            teto (`ps_toque_curto_teto_ms`), é PS solo, tenha o release
+            vindo antes ou depois do buffer. Se ocorreu com outros botoes
             pressionados junto (que não formaram combo), também dispara
             ao release — mantemos a semantica de "PS isolado terminado".
+          - Hold ACIMA do teto → não é toque: nada dispara (PS-TOQUE-
+            CURTO-01, o gesto de religar o controle no rádio).
         """
         if ps_now:
             if self._ps_pressed_at is None:
@@ -275,8 +337,22 @@ class HotkeyManager:
             )
             return None
 
-        # Release sem combo nem long-press — considera PS solo (toque curto).
+        # Release sem combo nem long-press. PS-TOQUE-CURTO-01 (E1): só é TOQUE
+        # se coube no teto. O gesto de RELIGAR o controle (segurar o PS por
+        # ~5 s) passa por aqui exatamente como um toque passava, e sem o teto
+        # abria a Steam.
         held_ms = (t - pressed_at) * 1000
+        teto_ms = self.config.ps_toque_curto_teto_ms
+        if teto_ms > 0 and held_ms > teto_ms:
+            # E2: a recusa tem de APARECER. Um hold longo engolido em silêncio
+            # manda a próxima investigação procurar o que não existe.
+            logger.info(
+                "ps_solo_ignorado_hold_longo",
+                held_ms=round(held_ms, 1),
+                teto_ms=teto_ms,
+            )
+            return None
+
         logger.info("ps_solo_released", held_ms=round(held_ms, 1))
         self._fire_ps_solo()
         return "ps_solo"

@@ -58,8 +58,16 @@ venv/bin/pip install jeepney
 venv/bin/pip install dbus-fast
 ```
 
-Se nenhuma biblioteca estiver disponivel, o autoswitch fica em modo silencioso
-(sempre usa `fallback.json`). O log mostra `autoswitch_compositor_unsupported`.
+Se nenhuma biblioteca estiver disponivel, o autoswitch fica em modo silencioso:
+sem informação de janela ele **pula o tique inteiro e mantém o perfil que já
+está ativo**. Você troca de perfil pela janela, pela CLI ou pelo combo no
+controle. O log mostra `autoswitch_compositor_unsupported`.
+
+**FATO SUBSTITUÍDO em 26/08/2026** — esta linha dizia "sempre usa
+`fallback.json`". É o contrário do que o código faz: a histerese da UX-01
+existe justamente porque leitura SEM informação não significa "é o desktop".
+Tratá-la como desktop trocava o perfil no meio da partida — e o custo medido
+foi o perfil do jogo caindo num alt-tab. Sem informação, o produto não mexe.
 
 ### Cenario 3 — Sem display (servidor headless)
 

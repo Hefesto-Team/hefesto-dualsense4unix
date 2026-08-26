@@ -508,8 +508,35 @@ class TestQuemPodeSerPromovido:
             "o controle desfaz a escolha do instalador"
         )
 
-    def test_sem_o_dropin_51_a_promocao_e_explicita(self, cenario: Cenario) -> None:
-        """A ausência do 51 é o que `--promote-source` / `mic promote` deixam."""
+    def test_sem_o_dropin_51_e_sem_marca_ninguem_sabe(self, cenario: Cenario) -> None:
+        """CORRIGIDO em 26/08/2026 — DROPIN-AMBIGUO-01, e o produto é que mudou.
+
+        Este teste afirmava `rc == 0` para a ausência do 51 SOZINHA, isto é,
+        que sumir o drop-in já era prova de que ela pediu o controle como
+        microfone. **A ausência tem duas origens** — ela promoveu de propósito,
+        ou um `uninstall` desarmou a cura — e tratá-las como uma só é o que
+        fazia o exame responder `[OK]` no meio do defeito que produziu a queixa
+        dela: *"não funciona nem mic, nem os botões de sons do jogo"*.
+
+        Agora a prova é a MARCA DO GESTO, e a ausência das duas é "não sei".
+        """
+        assert self._rc_prefere(cenario) == 1, (
+            "sem o 51 e sem a marca do gesto, ninguém sabe se ela promoveu o "
+            "controle ou se um uninstall desarmou a cura — e adivinhar aqui é "
+            "o falso verde que a DROPIN-AMBIGUO-01 derrubou"
+        )
+
+    def test_a_marca_do_gesto_e_o_que_prova_a_promocao(self, cenario: Cenario) -> None:
+        """E a marca SOZINHA basta: é o carimbo que `mic promote` deixa."""
+        marca = (
+            cenario.home
+            / ".local"
+            / "state"
+            / "hefesto-dualsense4unix"
+            / "mic-do-dualsense-pedido.conf"
+        )
+        marca.parent.mkdir(parents=True, exist_ok=True)
+        marca.write_text("# carimbo do gesto\n", encoding="utf-8")
         assert self._rc_prefere(cenario) == 0
 
     def test_o_opt_in_da_usuaria_vence_o_dropin_51(self, cenario: Cenario) -> None:

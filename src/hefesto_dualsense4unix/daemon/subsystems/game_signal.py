@@ -30,6 +30,12 @@ Vetos permanentes (unânimes dos 3 juízes da síntese, NUNCA violar):
     — prenderia a autoridade em `game` para sempre após o jogo fechar.
     Usamos `window_class_current` (a leitura CRUA do tick) e a IDADE de
     `game_window_seen_at` (que DECAI — ver `classify`), nunca o sticky.
+  - A evidência E4 (processo do jogo vivo) entra por `appid_de_jogo_vivo`, e
+    entra JUSTAMENTE porque não é sticky: a varredura da casa reconfirma o
+    pid a cada pergunta e **nunca devolve um positivo velho** (BG-03,
+    `steam_launch_options._steam_launch_cmdline`). Ler um campo de store que
+    guarda a última resposta boa violaria o veto acima — o valor não decairia
+    e prenderia a autoridade em `game` para sempre.
   - Fail-safe sempre assimétrico para o lado do jogo: qualquer ambiguidade
     (detector não-saudável, I/O ilegível, exceção no cômputo) vira
     `unknown`, nunca `daemon` — bloquear réplica/repintar exige evidência
@@ -75,6 +81,7 @@ def classify(
     now: float,
     marker_pid: int | None = None,
     exit_pid: int | None = None,
+    appid_de_jogo_vivo: int | None = None,
 ) -> Authority:
     """Classifica a autoridade de exibição num instante — 100% pura, sem I/O.
 
@@ -98,6 +105,35 @@ def classify(
        correlacionam um `last_exit` global ao launch CERTO — sem eles, um
        `last_exit` de outro launch concorrente pode invalidar este marker
        (achado da auditoria da Onda N).
+    4. `appid_de_jogo_vivo`: há PROCESSO de jogo vivo agora — a evidência E4
+       da SINAL-DE-JOGO-01, e a única das quatro que **não depende nem do
+       detector de janela nem do wrapper**. Quem responde é a varredura
+       canônica da casa (`steam_launch_options.steam_game_running_appid`,
+       agulha `SteamLaunch AppId=<dígitos>` na cmdline), lida pelo
+       `lifecycle._gather_game_signal_inputs`.
+
+       **Por que ela é a cura, e não mais uma perna:** as evidências 1 e 2
+       exigem o detector enxergando e a 3 exige o wrapper. Medido em 31/07 na
+       máquina dela, o jogo NÃO passa pelo wrapper — sobrava uma perna só, e
+       o detector cegar no meio da partida derrubava a autoridade sem nada ter
+       acontecido no jogo.
+
+       **E é ela que tira do `WRAPPER_MARKER_WINDOW_SEC` (900 s) o poder de
+       matar um jogo vivo.** A evidência 3 avalia o teto de frescor ANTES de
+       olhar o pid (`launch_env.wrapper_game_running`), então uma partida mais
+       longa que 15 min deixava de ser evidência com o pid de pé. A varredura
+       não tem teto: enquanto o processo do jogo estiver vivo, ele é evidência.
+       O que o teto cobria era o PID RECICLADO, e a varredura não corre esse
+       risco — ela lê a cmdline do processo de AGORA, não um número gravado em
+       arquivo (o mesmo raciocínio que `autoswitch.jogo_do_wrapper_vivo` já
+       tinha registrado por outra porta).
+
+       **O que NÃO conta, e é o incidente das 14:42 escrito como contrato:**
+       `steam`, `steamwebhelper` e `reaper` vivos são a ÁRVORE da Steam, não
+       um jogo — o cliente sem jogo nenhum já escreveu lightbar e player-LEDs
+       com o daemon defendendo a cor dele. A agulha exige `SteamLaunch
+       AppId=`, que só existe no launch de um jogo; e `appid <= 0` é recusado
+       aqui, porque um appid zero não identifica jogo nenhum.
 
     Sem NENHUMA evidência: `daemon` exige `window_healthy` (evidência
     POSITIVA de detector são — desktop vazio/alt-tab observado, não
@@ -119,7 +155,8 @@ def classify(
         exit_pid=exit_pid,
         now=now,
     )
-    if ev_janela or ev_perfil or ev_marker:
+    ev_processo = appid_de_jogo_vivo is not None and appid_de_jogo_vivo > 0
+    if ev_janela or ev_perfil or ev_marker or ev_processo:
         return "game"
     if window_healthy:
         return "daemon"

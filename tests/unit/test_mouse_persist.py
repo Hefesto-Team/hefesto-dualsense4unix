@@ -27,20 +27,20 @@ def tmp_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_roundtrip_liga_desliga(tmp_config: Path) -> None:
-    assert session.load_mouse_emulation_enabled() is False
-    session.save_mouse_emulation_enabled(True)
+    assert session.load_mouse_emulation()[0] is False
+    session.save_mouse_emulation(True)
     assert (tmp_config / "mouse_emulation.flag").exists()
-    assert session.load_mouse_emulation_enabled() is True
-    session.save_mouse_emulation_enabled(False)
+    assert session.load_mouse_emulation()[0] is True
+    session.save_mouse_emulation(False)
     # HARM-06: o "off" agora é GRAVADO (era o apagar do arquivo). O que a
     # usuária desligou tem que ser distinguível do que ela nunca configurou —
     # senão "Controlar o PC" religa o mouse contra a vontade dela.
     assert (tmp_config / "mouse_emulation.flag").exists()
-    assert session.load_mouse_emulation_enabled() is False
+    assert session.load_mouse_emulation()[0] is False
 
 
 def test_load_false_sem_arquivo(tmp_config: Path) -> None:
-    assert session.load_mouse_emulation_enabled() is False
+    assert session.load_mouse_emulation()[0] is False
 
 
 def test_save_best_effort_nao_propaga_excecao(
@@ -51,8 +51,8 @@ def test_save_best_effort_nao_propaga_excecao(
 
     monkeypatch.setattr(session, "config_dir", _boom)
     # Não deve levantar (best-effort); e load também é tolerante.
-    session.save_mouse_emulation_enabled(True)
-    assert session.load_mouse_emulation_enabled() is False
+    session.save_mouse_emulation(True)
+    assert session.load_mouse_emulation()[0] is False
     session.save_mouse_emulation(True, speed=9, scroll_speed=3)
     assert session.load_mouse_emulation() == (False, None, None)
 
@@ -86,7 +86,6 @@ def test_flag_legado_conteudo_1_conta_como_ligado(tmp_config: Path) -> None:
     """Flag gravado por versão anterior ("1\\n") → ligado, velocidades default."""
     (tmp_config / "mouse_emulation.flag").write_text("1\n", encoding="utf-8")
     assert session.load_mouse_emulation() == (True, None, None)
-    assert session.load_mouse_emulation_enabled() is True
 
 
 def test_flag_json_malformado_ou_tipos_errados_tolerado(tmp_config: Path) -> None:
@@ -99,13 +98,22 @@ def test_flag_json_malformado_ou_tipos_errados_tolerado(tmp_config: Path) -> Non
     assert session.load_mouse_emulation() == (True, None, None)
 
 
-def test_wrappers_legados_continuam_funcionando(tmp_config: Path) -> None:
-    """Os nomes antigos delegam ao flag novo (não tocar testes/callers legados)."""
-    session.save_mouse_emulation_enabled(True)
-    assert session.load_mouse_emulation_enabled() is True
+def test_os_involucros_legados_nao_existem_mais(tmp_config: Path) -> None:
+    """PODA de 26/08/2026 — os nomes antigos saíram, e ficou UMA forma só.
+
+    Este teste era `test_wrappers_legados_continuam_funcionando` e afirmava o
+    contrário: que `save_mouse_emulation_enabled`/`load_mouse_emulation_enabled`
+    delegavam ao flag novo. Eles delegavam, e nenhum caminho de produção os
+    chamava — só `tests/`. Duas formas para a mesma gravação é a duplicação que
+    a poda veio tirar; o que sobrou é `save_mouse_emulation`, que grava as
+    velocidades junto, e `load_mouse_emulation`, que as devolve.
+    """
+    assert not hasattr(session, "save_mouse_emulation_enabled")
+    assert not hasattr(session, "load_mouse_emulation_enabled")
+    session.save_mouse_emulation(True)
     assert session.load_mouse_emulation() == (True, None, None)
-    session.save_mouse_emulation_enabled(False)
-    assert session.load_mouse_emulation_enabled() is False
+    session.save_mouse_emulation(False)
+    assert session.load_mouse_emulation()[0] is False
 
 
 # --- restore no boot do daemon (restart simulado) ----------------------------

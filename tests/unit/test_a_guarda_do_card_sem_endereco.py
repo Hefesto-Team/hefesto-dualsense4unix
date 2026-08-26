@@ -288,10 +288,17 @@ class TestNaTela:
             "speaker_set",
             lambda **kw: pedidos.append(("speaker.set", kw.get("uniq"))) or True,
         )
+        # MIC-DA-MESA-CHEIA-01 (26/08/2026): o card passou a chamar a rota
+        # DETALHADA, para ler o `por_uniq` e não gravar no rascunho dela um
+        # volume que foi parar no microfone de outra pessoa. O espião muda de
+        # nome junto — o que esta guarda mede continua sendo o `uniq` que sai
+        # no pedido, e ele é o mesmo argumento nas duas rotas. O corpo devolvido
+        # é o de um alvo HONRADO, que é o caso normal deste teste.
         monkeypatch.setattr(
             ipc_bridge,
-            "mic_volume_set",
-            lambda **kw: pedidos.append(("mic.volume.set", kw.get("uniq"))) or True,
+            "mic_volume_set_detalhado",
+            lambda **kw: pedidos.append(("mic.volume.set", kw.get("uniq")))
+            or {"status": "ok", "por_uniq": True},
         )
         return pedidos
 
