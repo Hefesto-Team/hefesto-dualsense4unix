@@ -3234,7 +3234,12 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
     def _on_profile_switch_failure(self, exc: Exception) -> bool:
         """Callback GTK de falha do switch (daemon offline / erro de transporte)."""
         logger.debug("profile_switch_falhou", err=str(exc))
-        self._toast_profile("Falha (daemon offline?)")
+        # BG-TOAST-02 (26/08/2026): dizia "Falha (daemon offline?)" — `daemon
+        # offline` é o primeiro termo que a E3 da PALAVRA-01 aposentou, e a
+        # frase sobreviveu porque o portão da palavra não lia toast. A redação
+        # segue a irmã já escrita para o mesmo desfecho em `footer_actions.py`
+        # ("Não consegui aplicar o perfil — o Hefesto pode estar desligado.").
+        self._toast_profile("Não consegui trocar de perfil — o Hefesto pode estar desligado.")
         return False
 
     def on_profile_reload(self, _btn: Gtk.Button | None) -> None:
