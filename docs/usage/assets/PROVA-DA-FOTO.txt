@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho para
 # sempre. Ver FOTO-QUE-NAO-MOVE-PIXEL-01 no próprio script.
 
-ensaio:  2026-08-26 11:41
+ensaio:  2026-08-26 12:05
 abas:    16
 modo:    padrão
 fixture: nenhum — os dublês nascem fixos no próprio script (padrão de dois controles)
