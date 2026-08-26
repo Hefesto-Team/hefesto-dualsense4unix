@@ -1416,9 +1416,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "o que nenhuma leitura respondia: quais entradas USB EXISTEM, "
         "**incluindo as vazias** — o nó da entrada existe com `state = not "
         "attached`, e é isso que torna a calibração possível sem root. ONDE O "
-        "CAMINHO SE PERDE: as telas da calibração (CAL-3 a CAL-7) ficaram "
-        "para a leva seguinte, porque dependem do campo `mapa` que outra "
-        "frente escrevia em paralelo. O QUE O FECHA: a janela de calibração. "
+        "CAMINHO SE PERDE (REMEDIDO em 26/08/2026): a janela de calibração "
+        "NASCEU — `app/widgets/calibrar_entradas.py` a chama em "
+        "`furo_do_aparelho` e em `confirmar_entrada_nova` —, mas nada abre "
+        "essa janela: o botão é da L2-E. A lápide continua porque o portão "
+        "mede alcance a partir dos PONTOS DE ENTRADA, e a janela ainda não "
+        "está no grafo. O QUE O FECHA: o botão da L2-E. "
         "A mordida do agrupamento por `peer` foi refeita por quem coordena: "
         "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
         "passa a visitar o buraco ocupado); devolvida, 12 passam. "
@@ -1550,6 +1553,59 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # apontava o rodapé como quem a fecharia; quem fechou foi a aba Gatilhos, e
     # tanto faz — a promessa era ter caminho de produção. Lápide que sobrevive
     # à própria cura é o defeito que este portão existe para matar.
+    # --- 26/08/2026: a janela de calibrar entradas (L1-F) nasceu inteira, e o
+    #     BOTÃO que a abre é da L2-E, na leva seguinte. Os seis símbolos abaixo
+    #     caem juntos no dia em que esse botão existir.
+    "app/widgets/calibrar_entradas.py::LogicaDaCalibracao": (
+        "MEDIDO em 26/08/2026: a cerimônia inteira da CALIBRAR-AS-ENTRADAS-01 "
+        "(CAL-2 a CAL-7), cujo desenho ela APROVOU vendo o mockup em 25/08 às "
+        "~03h55. É quem transforma a resposta dela em `mapa` no disco, sem "
+        "IPC — e por isso grava com o Hefesto desligado. "
+        "ONDE O CAMINHO SE PERDE: nada abre esta janela. O botão vive em "
+        "`app/actions/config/secao_mesa.py`, que é posse da L2-E. "
+        "O QUE A FECHA: esse botão construir a janela — o construtor é de uma "
+        "linha, e recebe mapa, censo e entradas como argumento."
+    ),
+    "app/widgets/calibrar_entradas.py::Pergunta": (
+        "MEDIDO em 26/08/2026: um passo da fase sentada — o aparelho e tudo "
+        "que pende dele. É o que `LogicaDaCalibracao.perguntas_sentadas` "
+        "devolve, e cai junto com ela, pelo mesmo botão da L2-E. Não ganha "
+        "entrada de conserto própria porque não tem conserto próprio."
+    ),
+    "app/widgets/calibrar_entradas.py::Laudo": (
+        "MEDIDO em 26/08/2026: os quatro blocos do exame da mesa (CAL-7), e o "
+        "quarto — 'O que eu não meço' — nunca some, que é o que impede o "
+        "laudo de virar promessa. É o retorno de `LogicaDaCalibracao.laudo`, "
+        "e cai junto com ela, pelo mesmo botão da L2-E."
+    ),
+    "app/widgets/calibrar_entradas.py::NavegacaoPorControle": (
+        "MEDIDO em 26/08/2026: o payload vivo do DualSense virando gesto, sem "
+        "teclado e sem mouse (R1 da sprint) — durante a fase em pé a pessoa "
+        "está atrás do gabinete, com um cabo na mão e sem ver a tela. "
+        "ONDE O CAMINHO SE PERDE: quem a alimenta é a janela, e nada abre a "
+        "janela. O QUE A FECHA: o botão da L2-E."
+    ),
+    "app/widgets/calibrar_entradas.py::PosseDoVocabulario": (
+        "MEDIDO em 26/08/2026: quem declara que os quatro botões da cerimônia "
+        "são da janela enquanto ela tem foco (o furo F-3). "
+        "ONDE O CAMINHO SE PERDE: é a janela quem toma e solta a posse, e "
+        "nada abre a janela. O QUE A FECHA: o botão da L2-E."
+    ),
+    "app/widgets/calibrar_entradas.py::botoes_para_o_jogo": (
+        "MEDIDO em 26/08/2026, e esta é a lápide que MENOS depende da L2-E: a "
+        "peneira que a posse arma, e quem tem de perguntar por ela é o "
+        "DESPACHO — `daemon/lifecycle.py`, no bloco do "
+        "`_dispatch_gamepad_emulation`, que hoje manda os botões CRUS ao "
+        "gamepad virtual gateado só pelos 0,3 s de grace e sobrevive de "
+        "propósito ao `daemon.pause` e ao modo jogo. Sem essa pergunta, "
+        "confirmar uma entrada com o cabo na mão dispara um pulo ou um tiro "
+        "no jogo aberto atrás da janela. "
+        "ONDE O CAMINHO SE PERDE: o daemon não pergunta. NÃO fiz porque "
+        "`daemon/lifecycle.py` não é posse da L1-F (regra R-A da leva: "
+        "precisou de arquivo alheio, relata e para). "
+        "O QUE A FECHA: uma linha no despacho, subtraindo o que esta função "
+        "devolve. DONO: a Onda do daemon, ou quem coordena a leva seguinte."
+    ),
     "app/fala_do_mapa.py::formata_pt_br": (
         "MEDIDO em 25/08/2026: irmã do `Numero` abaixo, mesma leva. Nasceu na "
         "ONDA0-Z6 (`26e0ccc`, 24/08) — 'a medição chega à tela por portão, "
