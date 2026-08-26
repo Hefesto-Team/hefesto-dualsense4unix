@@ -118,6 +118,20 @@ class _BotaoDeCor:
         return None
 
 
+def _aceitou(uniq: str | None) -> dict[str, Any]:
+    """Corpo de um ``led.set``/``led.player_set`` que ESCREVEU em ``uniq``.
+
+    BG-01 (26/08/2026): a aba lê o CORPO do daemon, não mais o ``bool`` da
+    ponte estreita. O que estes testes julgam segue sendo a RECUSA e o
+    ENDEREÇO — o corpo aqui é só o "sim" do daemon.
+    """
+    return {
+        "status": "ok",
+        "aplicado_em": [uniq] if uniq else [],
+        "guardado_em": [],
+    }
+
+
 class _HostLightbar(LightbarActionsMixin):
     """Host mínimo da aba Lightbar — o molde de ``test_lightbar_todos_por_mac_r14``."""
 
@@ -255,8 +269,8 @@ def test_mesa_desconhecida_a_cor_recusa_e_a_paleta_sobrevive(
     chamadas: list[Any] = []
     monkeypatch.setattr(
         lightbar_actions,
-        "led_set",
-        lambda *a, **kw: chamadas.append((a, kw)) or True,
+        "led_set_detalhado",
+        lambda *a, **kw: chamadas.append((a, kw)) or _aceitou(kw.get("uniq")),
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
@@ -394,7 +408,7 @@ def test_envio_recusado_o_rotulo_nao_afirma_o_desenho(
     """
     monkeypatch.setattr(
         lightbar_actions,
-        "player_leds_set",
+        "player_leds_set_detalhado",
         lambda *a, **kw: pytest.fail("nenhum envio pode sair com a mesa vazia"),
     )
     host = _HostLightbar(
@@ -621,8 +635,8 @@ def test_cada_botao_de_desenho_sai_da_tabela_canonica(
     enviados: list[tuple[bool, ...]] = []
     monkeypatch.setattr(
         lightbar_actions,
-        "player_leds_set",
-        lambda bits, uniq=None: enviados.append(tuple(bits)) or True,
+        "player_leds_set_detalhado",
+        lambda bits, uniq=None: enviados.append(tuple(bits)) or _aceitou(uniq),
     )
     host = _HostLightbar(_draft(auto=False), alvo=UNIQ_1, conectados={0: UNIQ_1})
 
@@ -648,8 +662,8 @@ def test_a_fiação_alcança_os_desenhos_5_a_8(monkeypatch: pytest.MonkeyPatch) 
     enviados: list[tuple[bool, ...]] = []
     monkeypatch.setattr(
         lightbar_actions,
-        "player_leds_set",
-        lambda bits, uniq=None: enviados.append(tuple(bits)) or True,
+        "player_leds_set_detalhado",
+        lambda bits, uniq=None: enviados.append(tuple(bits)) or _aceitou(uniq),
     )
     host = _HostLightbar(_draft(auto=False), alvo=UNIQ_1, conectados={0: UNIQ_1})
 

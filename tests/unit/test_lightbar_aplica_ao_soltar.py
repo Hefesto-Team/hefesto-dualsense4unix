@@ -178,27 +178,41 @@ def _draft(auto: bool = True) -> draft_mod.DraftConfig:
 
 
 class _EspiaoDeEscrita:
-    """Conta as escritas que chegariam ao controle."""
+    """Conta as escritas que chegariam ao controle.
+
+    BG-01 (26/08/2026): a aba trocou ``led_set`` (``bool``) por
+    ``led_set_detalhado``, que devolve o CORPO do daemon. O espião passou a
+    devolver o corpo — e ``resposta=False`` virou ``respondeu=False``, que é
+    o ``None`` de ``ipc_bridge._corpo_do_daemon``: o daemon não falou.
+    """
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[Any, Any, str | None]] = []
-        self.resposta = True
+        self.respondeu = True
 
-    def led_set(
+    def led_set_detalhado(
         self,
         rgb: tuple[int, int, int],
         brightness: float | None = None,
         uniq: str | None = None,
-    ) -> bool:
+    ) -> dict[str, Any] | None:
         self.chamadas.append((rgb, brightness, uniq))
-        return self.resposta
+        if not self.respondeu:
+            return None
+        return {
+            "status": "ok",
+            "aplicado_em": [uniq] if uniq else [],
+            "guardado_em": [],
+        }
 
 
 @pytest.fixture
 def escritas(monkeypatch: pytest.MonkeyPatch) -> _EspiaoDeEscrita:
     """Sela TODA saída para o hardware — nenhum teste toca no daemon real."""
     espiao = _EspiaoDeEscrita()
-    monkeypatch.setattr(lightbar_actions, "led_set", espiao.led_set)
+    monkeypatch.setattr(
+        lightbar_actions, "led_set_detalhado", espiao.led_set_detalhado
+    )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
         "apply_draft_detalhado",
@@ -340,7 +354,7 @@ def test_daemon_offline_nao_explode_e_conta_a_verdade(
     escritas: _EspiaoDeEscrita,
 ) -> None:
     """Controle desconectado falha em silêncio, como o resto do módulo."""
-    escritas.resposta = False
+    escritas.respondeu = False
     host, escala = _host_com_brilho()
     _arrastar(host, escala, 100, 70)
     escala.disparar("button-release-event", escala, None)
