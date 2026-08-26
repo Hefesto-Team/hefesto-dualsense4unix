@@ -493,7 +493,7 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     ),
     "sem_device": (
         "Ligado, mas o teclado virtual não subiu. Abra a aba Sistema e clique "
-        "em “Aplicar correções”."
+        "em “Consertar problemas conhecidos”."
     ),
     "modo_jogo": (
         "Ligado, em pausa agora: o modo jogo está suspendendo mouse e teclado."
@@ -756,9 +756,11 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
 # Vulkan implícita". Ela procura pelo que SENTE, e a palavra é dela — *"o
 # Sackboy engasga"*. É o molde do "A luz não acende"
 # (`app/actions/config/secao_controles.py`): o rótulo é a queixa, não o remédio.
-# O verbo na frente vem do vizinho de fileira — "Aplicar correções", "Copiar
-# opções para os jogos", "Travar Proton validado" —, que é a gramática do bloco
-# Avançado onde o botão mora.
+# O verbo na frente vem do vizinho de fileira — "Consertar problemas
+# conhecidos", "Copiar opções para os jogos", "Fixar a versão que funciona" —,
+# que é a gramática do bloco Avançado onde o botão mora. (Os dois vizinhos
+# citados chamavam-se "Aplicar correções" e "Travar Proton validado" até
+# 26/08/2026, quando a BG-PALAVRA-02 pagou a dívida da E3 da PALAVRA-01.)
 #
 # O QUE ELE FAZ: desliga, dentro do prefixo Wine de cada jogo, as camadas Vulkan
 # implícitas que não são o driver do Wine nem ferramenta reconhecida. Elas
@@ -1385,7 +1387,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             done = (
                 "Mic ligado — atenção: sem o ajuste de áudio o controle pode "
                 "travar no meio do jogo. Abra a aba Sistema e clique em "
-                "“Aplicar correções” (vale no próximo boot)."
+                "“Consertar problemas conhecidos” (vale no próximo boot)."
             )
         self._run_mic("--enable-mic", done)
 
