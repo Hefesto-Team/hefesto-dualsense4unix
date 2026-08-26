@@ -117,6 +117,29 @@ if [[ -d "$HERE/assets/profiles_default" ]]; then
         "$HERE/assets/profiles_default/"*.json
 fi
 
+# OS CINCO SCRIPTS QUE O PRODUTO EXECUTA (25/08/2026, BG-04). Até aqui só o
+# .deb os levava (build_deb.sh:234): quem instalava por AppImage apertava
+# "Deixar tudo pronto" ou o botão do microfone e recebia "Script do WirePlumber
+# não encontrado", com um único conselho — rodar um ./install.sh que não existe
+# na máquina de quem não clonou o repositório. Quem consome cada um está
+# escrito no manifesto do Flatpak, dono único dessa lista.
+#
+# A METADE QUE ESTÁ AQUI E A METADE QUE FALTA, dito de frente: dentro do bundle
+# este diretório é $APPDIR/usr/share/hefesto-dualsense4unix/scripts, e
+# BASES_DE_INSTALACAO (app/actions/daemon_actions.py) NÃO o conhece — ela
+# conhece a raiz do checkout, /app/share (Flatpak), /usr/share e
+# /usr/local/share, e nenhuma delas é o AppDir. Levar os arquivos é condição
+# NECESSÁRIA e não suficiente: enquanto o consumidor não olhar para
+# `sys.prefix/share/hefesto-dualsense4unix`, o botão continua sem achar. A
+# lacuna está DECLARADA em _PRODSCRIPT_LACUNAS_HOJE, em
+# scripts/check_packaging_parity.sh, e o portão reprova quando ela caducar.
+install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/" \
+    "$HERE/scripts/doctor.sh" \
+    "$HERE/scripts/bluez_config.sh" \
+    "$HERE/scripts/disable_steam_input.sh" \
+    "$HERE/scripts/fix_wireplumber_default_source.sh" \
+    "$HERE/scripts/install_snd_quirk.sh"
+
 echo "[4/6] Criando AppRun (entrypoint da GUI)..."
 cat > "$APPDIR/AppRun" <<'APPRUN'
 #!/bin/bash

@@ -185,6 +185,47 @@ python3Packages.buildPythonApplication rec {
     install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
         $out/share/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg
 
+    # OS CINCO SCRIPTS QUE O PRODUTO EXECUTA (25/08/2026, BG-04). Ate aqui so o
+    # .deb os levava (build_deb.sh:234): quem instalava por aqui apertava
+    # "Deixar tudo pronto" ou o botao do microfone e recebia "Script do
+    # WirePlumber nao encontrado", com um unico conselho — rodar um
+    # ./install.sh que nao existe na maquina de quem nao clonou o repositorio.
+    # Quem consome cada um esta escrito no manifesto do Flatpak, dono unico
+    # dessa lista.
+    #
+    # A METADE QUE ESTA AQUI E A METADE QUE FALTA, dito de frente: o Nix nao
+    # tem /usr/share, e $out/share/hefesto-dualsense4unix/scripts NAO e uma das
+    # bases que BASES_DE_INSTALACAO (app/actions/daemon_actions.py) procura
+    # hoje — ela conhece a raiz do checkout, /app/share (Flatpak), /usr/share e
+    # /usr/local/share. Levar os arquivos e condicao NECESSARIA e nao
+    # suficiente: enquanto o consumidor nao olhar para `sys.prefix/share/
+    # hefesto-dualsense4unix`, o botao continua sem achar. A lacuna esta
+    # DECLARADA em _PRODSCRIPT_LACUNAS_HOJE, em
+    # scripts/check_packaging_parity.sh, e o portao reprova quando ela caducar.
+    #
+    # Sem patchShebangs: o fixup do nixpkgs so o roda em bin/sbin/libexec, e
+    # $out/share fica de fora. Os cinco comecam com `#!/usr/bin/env bash`, que
+    # resolve pelo PATH de quem os chama — e quem os chama e o proprio produto,
+    # ja embrulhado pelo wrapGAppsHook.
+    # Um `install` por linha, e nao um laco, pela mesma razao que o resto deste
+    # postInstall: nome literal e o que qualquer leitor — pessoa ou portao —
+    # enxerga sem interpretar shell. A primeira versao daqui usava um `for`
+    # com a lista quebrada em duas linhas, e o check_packaging_parity.sh
+    # reprovou dizendo que o doctor.sh chamava um irmao que este arquivo NAO
+    # levava (25/08/2026). Aquele ponto cego do portao foi curado no mesmo dia
+    # (as continuacoes agora sao dobradas antes do grep); o nome literal fica
+    # porque e mais claro, nao porque o portao ainda precise dele.
+    install -Dm755 scripts/doctor.sh \
+        $out/share/hefesto-dualsense4unix/scripts/doctor.sh
+    install -Dm755 scripts/bluez_config.sh \
+        $out/share/hefesto-dualsense4unix/scripts/bluez_config.sh
+    install -Dm755 scripts/disable_steam_input.sh \
+        $out/share/hefesto-dualsense4unix/scripts/disable_steam_input.sh
+    install -Dm755 scripts/fix_wireplumber_default_source.sh \
+        $out/share/hefesto-dualsense4unix/scripts/fix_wireplumber_default_source.sh
+    install -Dm755 scripts/install_snd_quirk.sh \
+        $out/share/hefesto-dualsense4unix/scripts/install_snd_quirk.sh
+
     # Catalogos i18n compilados.
     if [ -d locale ]; then
       for lang_dir in locale/*/; do

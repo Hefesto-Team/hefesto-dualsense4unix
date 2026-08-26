@@ -246,6 +246,25 @@ package() {
     install -Dm644 -t "$pkgdir/usr/share/hefesto-dualsense4unix/systemd/" \
         assets/systemd/hefesto-bt-bonds-snapshot.service
 
+    # OS CINCO SCRIPTS QUE O PRODUTO EXECUTA (25/08/2026, BG-04). Ate aqui so o
+    # .deb os levava (build_deb.sh:234): quem instalava por aqui apertava
+    # "Deixar tudo pronto" ou o botao do microfone e recebia "Script do
+    # WirePlumber nao encontrado", com um unico conselho — rodar um
+    # ./install.sh que nao existe na maquina de quem nao clonou o repositorio.
+    #
+    # O DESTINO NAO E ESCOLHA LIVRE: /usr/share/hefesto-dualsense4unix e uma
+    # das bases que BASES_DE_INSTALACAO (app/actions/daemon_actions.py) procura.
+    # Quem consome cada um esta escrito no manifesto do Flatpak, dono unico
+    # dessa lista; a regra de PAR doctor.sh+bluez_config.sh e conferida pela
+    # secao "config do BlueZ" de scripts/check_packaging_parity.sh, e a
+    # cobertura dos cinco pela secao "scripts do produto" do mesmo portao.
+    install -Dm755 -t "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/" \
+        scripts/doctor.sh \
+        scripts/bluez_config.sh \
+        scripts/disable_steam_input.sh \
+        scripts/fix_wireplumber_default_source.sh \
+        scripts/install_snd_quirk.sh
+
     # Catalogos i18n compilados em /usr/share/locale/<lang>/LC_MESSAGES/.
     if [ -d locale ]; then
         for lang_dir in locale/*/; do

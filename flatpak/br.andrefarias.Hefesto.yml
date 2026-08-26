@@ -373,6 +373,41 @@ modules:
       - install -Dm644 assets/systemd/hefesto-bt-bonds-snapshot.service
           /app/share/hefesto-dualsense4unix/systemd/hefesto-bt-bonds-snapshot.service
 
+      # OS CINCO SCRIPTS QUE O PRODUTO EXECUTA (25/08/2026, BG-04). Até aqui só
+      # o `.deb` os levava (`build_deb.sh:234`): quem instalava por Flatpak
+      # apertava "Deixar tudo pronto" ou o botão do microfone e recebia
+      # "Script do WirePlumber não encontrado" — e o único conselho da tela era
+      # rodar um `./install.sh` que não existe na máquina de quem não clonou.
+      #
+      # O DESTINO NÃO É ESCOLHA LIVRE: é o que `BASES_DE_INSTALACAO`
+      # (`app/actions/daemon_actions.py`) procura, e `/app/share/…` entrou lá
+      # em 25/08 justamente para este dia — a nota de lá diz que sem ela os
+      # botões continuariam sem achar os scripts "mesmo depois de o manifesto
+      # passar a levá-los". Este é o depois.
+      #
+      # Quem consome cada um (medido em `src/`, não citado de memória):
+      #   doctor.sh                          cli/cmd_doctor.py:38 (o exame)
+      #   bluez_config.sh                    doctor.sh:2484 — dono único da
+      #                                      config do BlueZ; quem leva o
+      #                                      doctor leva ele (regra de PAR)
+      #   disable_steam_input.sh             daemon_actions.py:1216 e :1604
+      #   fix_wireplumber_default_source.sh  daemon_actions.py:1217,
+      #                                      emulation_actions.py:1201 (mic)
+      #   install_snd_quirk.sh               cli/cmd_doctor.py:186 (--fix)
+      #
+      # Portão: a seção "scripts do produto" de
+      # `scripts/check_packaging_parity.sh`.
+      - install -Dm755 scripts/doctor.sh
+          /app/share/hefesto-dualsense4unix/scripts/doctor.sh
+      - install -Dm755 scripts/bluez_config.sh
+          /app/share/hefesto-dualsense4unix/scripts/bluez_config.sh
+      - install -Dm755 scripts/disable_steam_input.sh
+          /app/share/hefesto-dualsense4unix/scripts/disable_steam_input.sh
+      - install -Dm755 scripts/fix_wireplumber_default_source.sh
+          /app/share/hefesto-dualsense4unix/scripts/fix_wireplumber_default_source.sh
+      - install -Dm755 scripts/install_snd_quirk.sh
+          /app/share/hefesto-dualsense4unix/scripts/install_snd_quirk.sh
+
       # Instalar script de setup de udev (executado pelo usuário uma vez)
       - install -Dm755 scripts/install-host-udev.sh
           /app/bin/install-host-udev.sh
