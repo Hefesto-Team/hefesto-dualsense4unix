@@ -547,7 +547,7 @@ def test_quem_so_sabe_que_e_vermelho_continua_achando() -> None:
     )
 
 
-def test_clicar_numa_linha_escolhe_AQUELA_linha() -> None:
+def test_clicar_numa_linha_escolhe_aquela_linha() -> None:
     """O gesto inteiro: digitar, ver duas sugestões, clicar na SEGUNDA.
 
     A segunda e não a primeira de propósito: uma implementação que sempre

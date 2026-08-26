@@ -79,10 +79,11 @@ from hefesto_dualsense4unix.app import ambiente as ambiente_mod
 from hefesto_dualsense4unix.app import theme as theme_mod
 from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG, ConfigActionsMixin
 from hefesto_dualsense4unix.app.actions.config import secao_janela
-from hefesto_dualsense4unix.app.actions.home_actions import (
-    id_da_pagina,
-    id_da_pagina_corrente,
-)
+# `id_da_pagina_corrente` saiu do import em 25/08/2026, junto com o teste do
+# botão "Abrir a aba Sistema" que a LEX-4 removeu a pedido dela. Import órfão
+# não é sujeira de estilo: ele faz o arquivo parecer exercitar um caminho que
+# ninguém exercita mais.
+from hefesto_dualsense4unix.app.actions.home_actions import id_da_pagina
 from hefesto_dualsense4unix.app.constants import MAIN_GLADE
 
 #: O id da extensão que a instrução do GNOME precisa carregar.
@@ -424,9 +425,16 @@ def test_a_tela_diz_que_o_tamanho_vale_ao_reabrir(
     Sem a frase, o clique não faz nada visível e a pessoa conclui que a opção
     está quebrada.
     """
+    # A FRASE VIROU DICA em 25/08/2026 (LEX-2, decisão dela): ela saiu do corpo
+    # da página e passou a morar no tooltip do próprio rótulo. O teste segue o
+    # texto em vez de fossilizar o lugar dele — travar a posição faria esta
+    # régua reprovar toda vez que a aba respirasse.
     bancada = _montar(monkeypatch)
-    frase = bancada.rotulo_que_comeca_com("O tamanho novo")
-    assert "abrir o Hefesto" in frase.get_text()
+    rotulo = bancada.rotulo_que_comeca_com("Tamanho do texto")
+    assert "abrir o Hefesto" in (rotulo.get_tooltip_text() or ""), (
+        "a gravação diferida sumiu da tela: sem a frase, em lugar nenhum, o "
+        "clique não faz nada visível e a pessoa conclui que a opção quebrou."
+    )
 
 
 # --- 3. A sonda da barra do sistema -----------------------------------------
@@ -567,31 +575,10 @@ def test_o_espelho_nao_e_editavel(monkeypatch: pytest.MonkeyPatch) -> None:
     assert isinstance(bancada.host._config_autostart_estado, Gtk.Label)
 
 
-def test_o_atalho_abre_a_aba_sistema_pelo_id(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A página é achada pelo id do Glade, nunca pelo número (EST-10).
-
-    O teste REORDENA o notebook antes de clicar, e é isso que o torna um
-    portão: hoje `daemon_box` é a página 7, então um `set_current_page(7)`
-    escrito à mão passaria calado por um teste que não mexesse na ordem — e
-    passaria a abrir a aba errada no dia em que alguém inserisse uma página
-    antes dela. Esta leva acabou de inserir uma.
-
-    Mordida: trocar a busca por `set_current_page(7)`, o índice CERTO de hoje.
-    """
-    bancada = _montar(monkeypatch)
-    notebook = bancada.builder.get_object("main_notebook")
-    sistema = _pagina_do_notebook(notebook, "daemon_box")
-    assert notebook.page_num(sistema) == 7, (
-        "a página Sistema mudou de lugar; o índice citado na mordida caducou"
-    )
-    notebook.reorder_child(sistema, 0)
-
-    pagina_config = bancada.builder.get_object("scroll_tab_config_box")
-    notebook.set_current_page(notebook.page_num(pagina_config))
-    assert id_da_pagina_corrente(notebook) == ABA_CONFIG
-
-    bancada.botao("Abrir a aba Sistema").clicked()
-
-    assert id_da_pagina_corrente(notebook) == "daemon_box"
+# `test_o_atalho_abre_a_aba_sistema_pelo_id` SAIU em 25/08/2026, e a razão é
+# dela: o botão "Abrir a aba Sistema" foi REMOVIDO da seção "A janela" (LEX-4,
+# pedido literal). Um teste que exige um botão que o produto não tem mais não é
+# regressão — é fóssil, e fóssil protege o defeito que a remoção veio curar.
+#
+# A cobertura não se perdeu, mudou de lado: `test_a_janela_nao_tem_botao_de_abrir_a_aba_sistema`,
+# em `test_o_lexico_da_aba_configuracoes.py:431`, garante que ele NÃO VOLTA.
