@@ -133,6 +133,86 @@ class TestDescreverTecladoNaTela:
                 assert termo not in texto, f"{termo!r} vazou para {texto!r}"
 
 
+class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
+    """MEDIDO em 26/08/2026 (LEVA-3-D): esta frase NÃO pode ser pendurada.
+
+    A ordem da frente era pendurar `descrever_teclado_na_tela` na legenda do L3
+    — o gancho que a lápide do `portao_a_casa_sabe_e_o_produto_nao_faz` nomeia.
+    A medição derrubou a ordem, por DUAS razões independentes, e as duas estão
+    travadas aqui para que a próxima pessoa não pague o mesmo caminho:
+
+    1. **A frase lê a chave no NÍVEL ERRADO.** O daemon publica
+       `osk_disponivel` DENTRO do bloco `keyboard_emulation`
+       (`_keyboard_emulation_payload`), e esta função a procura no TOPO do
+       `state`. Contra os dois `state_full` reais desta bancada — capturados
+       com a máquina TENDO teclado na tela (`keyboard_emulation.osk_disponivel
+       == True`) — ela responde *"não consegui ler — o Hefesto pode estar
+       desligado"*. Pendurá-la seria pôr uma frase FALSA na tela dela;
+    2. **o defeito que ela existia para curar já fechou, por outro caminho.**
+       Em 25/08 (`e909b62`, N12) `mouse_actions._anotar_teclado_na_tela` passou
+       a ler a chave do lugar certo e `input_actions.frase_do_teclado_na_tela`
+       a transformar na frase da legenda do L3 — no gancho exato que a lápide
+       nomeia. Pendurar esta função ao lado daquela poria DUAS frases sobre o
+       mesmo fato na mesma legenda, uma delas errada.
+
+    Este teste MORDE nos dois sentidos: se alguém consertar o nível da chave
+    sem decidir o que fazer com a duplicata, ele reprova e obriga a decisão.
+    """
+
+    #: O `state_full` como o daemon o publica: a chave mora DENTRO do bloco.
+    #: Não é dublê de conveniência — é a forma que
+    #: `tests/fixtures/state_full_quatro_controles.json` traz, e a que
+    #: `mouse_actions._anotar_teclado_na_tela` lê.
+    PAYLOAD_REAL = {"keyboard_emulation": {"osk_disponivel": True}}
+
+    def test_a_chave_nao_mora_no_topo_do_state_full(self) -> None:
+        """A prova de que o payload acima é o de verdade, e não invenção minha."""
+        import json
+        from pathlib import Path
+
+        fixture = (
+            Path(__file__).resolve().parents[1]
+            / "fixtures"
+            / "state_full_quatro_controles.json"
+        )
+        state = json.loads(fixture.read_text(encoding="utf-8"))
+        assert "osk_disponivel" not in state, (
+            "o daemon passou a publicar `osk_disponivel` no TOPO do state_full "
+            "— se isso é verdade, `descrever_teclado_na_tela` finalmente "
+            "alcança a chave e a decisão da duplicata (ver o docstring desta "
+            "classe) tem de ser tomada"
+        )
+        assert state["keyboard_emulation"]["osk_disponivel"] is True
+
+    def test_contra_o_payload_real_a_frase_diz_que_nao_conseguiu_ler(self) -> None:
+        """A MORDIDA: a máquina TEM teclado na tela e a frase não vê.
+
+        Consertado o nível da chave, este teste reprova — e é para reprovar:
+        ele é o lembrete de que a frase corrigida vira a SEGUNDA frase sobre o
+        mesmo fato na legenda do L3, e de que a casa não deixa duas versões
+        vivas do mesmo fato.
+        """
+        texto = ambiente_na_tela.descrever_teclado_na_tela(self.PAYLOAD_REAL)
+        assert "não consegui ler" in texto, (
+            "`descrever_teclado_na_tela` passou a alcançar "
+            "`keyboard_emulation.osk_disponivel`. Ela agora DIZ a verdade — e "
+            "por isso passa a competir com "
+            "`input_actions.frase_do_teclado_na_tela`, que ocupa o mesmo "
+            "gancho desde 25/08. ESCOLHA uma das duas e apague a outra; a "
+            f"frase de hoje é {texto!r}"
+        )
+
+    def test_o_gancho_do_l3_ja_tem_dono_e_nao_e_esta_funcao(self) -> None:
+        """Quem fala do teclado na tela na legenda do L3 é a frente da Navegação."""
+        from hefesto_dualsense4unix.app.actions import input_actions
+
+        assert input_actions.frase_do_teclado_na_tela(True), (
+            "a frase viva da legenda do L3 sumiu — se ela saiu de propósito, "
+            "o gancho ficou vago e `descrever_teclado_na_tela` volta a ser "
+            "candidata (depois de consertado o nível da chave)"
+        )
+
+
 class TestDescreverDisplayGrafico:
     def test_ausente_do_payload_e_terceiro_estado(self) -> None:
         assert "não consegui ler" in ambiente_na_tela.descrever_display_grafico({})
