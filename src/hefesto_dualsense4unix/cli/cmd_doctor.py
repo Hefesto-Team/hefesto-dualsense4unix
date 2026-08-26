@@ -16,26 +16,45 @@ import typer
 from rich.console import Console
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+from hefesto_dualsense4unix.utils.repo_files import (
+    bases_de_instalacao,
+    encontrar_arquivo_do_repo,
+)
 
 console = Console()
 
 
-def _find_repo_file(relpath: str) -> Path | None:
-    """Localiza um arquivo do repo (ex.: scripts/install_snd_quirk.sh) em layouts conhecidos."""
-    candidates = [
-        Path(__file__).resolve().parents[3] / relpath,
-        Path("/usr/share/hefesto-dualsense4unix") / relpath,
-        Path("/usr/local/share/hefesto-dualsense4unix") / relpath,
-    ]
-    for path in candidates:
-        if path.is_file():
-            return path
-    return None
-
-
 def _find_doctor_sh() -> Path | None:
-    """Localiza `scripts/doctor.sh` em layouts conhecidos (editable e .deb)."""
-    return _find_repo_file("scripts/doctor.sh")
+    """Localiza `scripts/doctor.sh` na instalação que está rodando.
+
+    BG-05 (25/08/2026): a busca era uma cópia LOCAL que conhecia três layouts
+    — checkout, `/usr/share` e `/usr/local/share`. O Flatpak não é nenhum dos
+    três, e a cópia gêmea em `app/actions/daemon_actions.py` já havia ganhado
+    `/app/share` na T-02(b) do mesmo dia: duas respostas para a mesma pergunta,
+    divergindo em silêncio. A resposta agora tem dono único, em
+    `utils/repo_files.py`.
+    """
+    return encontrar_arquivo_do_repo("scripts/doctor.sh")
+
+
+def _avisar_ausente(relpath: str, consequencia: str) -> None:
+    """Diz que um script não veio nesta instalação — e ONDE se procurou.
+
+    A frase antiga era "`{relpath}` não encontrado — pulado", e ela deixava
+    quem lê sem saber se o arquivo não foi instalado ou se o produto procurou
+    no lugar errado. Como o defeito desta frente foi exatamente o segundo
+    caso, a lista dos diretórios consultados é o dado que fecha a pergunta —
+    e é o próprio doctor, cujo trabalho é diagnosticar, quem a imprime.
+
+    Só os DIRETÓRIOS-base saem na lista: o nome do arquivo já está na primeira
+    linha, e repeti-lo seis vezes só faz o `rich` quebrar caminho no meio. Por
+    isso também o `soft_wrap` — caminho partido ao meio não se copia nem se
+    cola.
+    """
+    console.print(f"[yellow]{relpath} não veio nesta instalação — {consequencia}[/yellow]")
+    console.print("[dim]       procurei o share do Hefesto em:[/dim]")
+    for base in bases_de_instalacao():
+        console.print(f"[dim]         {base}[/dim]", soft_wrap=True, highlight=False)
 
 
 async def _daemon_checks() -> list[tuple[str, str]]:
@@ -62,9 +81,9 @@ async def _daemon_checks() -> list[tuple[str, str]]:
 
 def _run_script(relpath: str, *args: str, confirm: str | None = None) -> int:
     """Roda um script do repo. `confirm` != None pede confirmação antes."""
-    script = _find_repo_file(relpath)
+    script = encontrar_arquivo_do_repo(relpath)
     if script is None:
-        console.print(f"[yellow]{relpath} não encontrado — pulado[/yellow]")
+        _avisar_ausente(relpath, "pulado")
         return 0
     if confirm is not None and not typer.confirm(confirm):
         console.print("[dim]cancelado.[/dim]")
@@ -160,9 +179,7 @@ def doctor_cmd(
             args.append("--quiet")
         rc = subprocess.run(args, check=False).returncode
     else:
-        console.print(
-            "[yellow]scripts/doctor.sh não encontrado — só os checks do daemon[/yellow]"
-        )
+        _avisar_ausente("scripts/doctor.sh", "só os checks do daemon")
 
     _print_storm_block()
 
