@@ -33,18 +33,22 @@ A BANCADA
 ----------
 
 ``tests/unit/test_mapa_a_bancada_de_mentira`` — a leitura de 25/08 às 02h30.
-Nenhum caminho de ``/sys`` desta máquina é tocado; os nós de entrada abaixo são
-os NOMES medidos naquela leitura, montados à mão.
+Nenhum caminho de ``/sys`` desta máquina é tocado.
+
+A FONTE DA IRMÃ É UMA SÓ, E É O DESENHO DELA (25/08/2026)
+-----------------------------------------------------------
+
+Esta bateria nasceu com DUAS fontes para ``Entrada.par`` — o ``peer`` do
+``/sys`` e o desenho dela — e ela reverteu no mesmo dia: o ``peer`` saiu. A
+medição que derrubou a premissa, e a régua que impede o ``peer`` de voltar,
+moram em ``tests/unit/test_o_par_vem_do_desenho_dela.py``.
 """
 from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
 
-from hefesto_dualsense4unix.integrations.entradas_do_gabinete import NoDeEntrada
 from hefesto_dualsense4unix.integrations.mapa_das_portas import (
-    SELO_DECLARADO,
-    SELO_INFERIDO,
     irmas_de,
     vizinhas_de_verdade,
 )
@@ -68,32 +72,6 @@ PARES_DO_MOCKUP: dict[str, str] = {
     "11": "12", "12": "11",
     "13": "14", "14": "13",
 }
-
-#: MEDIDO em 25/08/2026 nesta bancada, ``readlink`` em cada ``*/peer`` dos 38
-#: nós de entrada. TODO ``peer`` atravessa dois hubs-raiz: ele amarra o lado 2.0
-#: e o lado 3.x de UM MESMO BURACO, e nunca dois buracos vizinhos.
-PEER_DA_BANCADA: dict[str, str] = {
-    "usb1-port5": "usb2-port1",
-    "usb2-port1": "usb1-port5",
-    "usb1-port6": "usb2-port2",
-    "usb2-port2": "usb1-port6",
-    "usb1-port7": "usb2-port3",
-    "usb2-port3": "usb1-port7",
-}
-
-
-def _leitura(peer: dict[str, str]) -> tuple[NoDeEntrada, ...]:
-    """Nós de entrada com o ``peer`` que se quer medir, e nada mais.
-
-    ``hub`` e ``numero`` são preenchidos porque o dataclass os exige; nenhuma
-    função sob teste os lê, e enchê-los de valor plausível seria dar ao teste
-    uma aparência de medição que ele não tem.
-    """
-    return tuple(
-        NoDeEntrada(no=no, caminho_sysfs="", hub="", numero=0, par=par)
-        for no, par in sorted(peer.items())
-    )
-
 
 # --- 1. A face guarda o que só ela sabe --------------------------------------
 
@@ -203,7 +181,7 @@ def test_a_irma_bate_com_o_desenho_dela_entrada_por_entrada() -> None:
     imprimindo as catorze entradas que perderam a irmã — que é o estado em que
     as penalidades de vizinho rádio nunca disparam.
     """
-    achadas = {n: irma.numero for n, irma in irmas_de(mapa_dela()).items()}
+    achadas = irmas_de(mapa_dela())
     assert achadas == PARES_DO_MOCKUP, (
         "a irmã derivada divergiu do desenho dela: "
         f"faltam {sorted(set(PARES_DO_MOCKUP) - set(achadas))}, "
@@ -229,12 +207,10 @@ def test_a_irma_responde_com_o_gabinete_inteiro_vazio() -> None:
         }
     )
     assert vizinhas_de_verdade(mapa, bancada_de_agora().censo()) == ()
-    irmas = irmas_de(mapa)
-    assert {n: irma.numero for n, irma in irmas.items()} == {
+    assert irmas_de(mapa) == {
         "1": "2", "2": "1", "3": "4", "4": "3", "5": "6", "6": "5", "7": "8",
         "8": "7",
     }
-    assert {irma.de_onde_sei for irma in irmas.values()} == {SELO_DECLARADO}
 
 
 def test_a_fileira_impar_deixa_a_ultima_sem_irma_e_a_esticada_de_fora() -> None:
@@ -260,83 +236,12 @@ def test_a_irma_nao_e_a_vizinha_da_fileira() -> None:
     ``11`` ao mesmo tempo, e ``Entrada.par`` é um valor só.
     """
     irmas = irmas_de(mapa_dela())
-    assert irmas["9"].numero == "10"
-    assert irmas["10"].numero == "9", "a relação tem de ser recíproca"
-    assert irmas["11"].numero == "12"
+    assert irmas["9"] == "10"
+    assert irmas["10"] == "9", "a relação tem de ser recíproca"
+    assert irmas["11"] == "12"
 
 
-# --- 4. As duas fontes, e o selo de cada uma ---------------------------------
-
-
-def test_o_peer_da_bancada_nao_amarra_duas_entradas_e_o_desenho_responde() -> None:
-    """MEDIDO: o ``peer`` desta placa não sabe dizer quem está colado em quem.
-
-    Nos 38 nós desta bancada, todo ``peer`` atravessa dois hubs-raiz
-    (``usb1-port5`` ↔ ``usb2-port1``): ele amarra os DOIS NÓS DE UM BURACO — o
-    lado 2.0 e o lado 3.x — e nunca dois buracos vizinhos. Num mapa declarado
-    por buraco, que é o que ``PortaDeclarada.nos`` existe para permitir, os dois
-    nós caem na MESMA entrada e a fonte do ``peer`` não responde por ninguém.
-
-    Isto não é um defeito da implementação: é a medição contradizendo a
-    premissa da ``D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS``, e está escrita como teste
-    para que a próxima pessoa não a redescubra do zero. O ``peer`` continua no
-    código porque a decisão é dela e porque ele pega o mapa mal calibrado do
-    teste seguinte.
-    """
-    mapa = MapaDaMesa.model_validate(
-        {
-            "faces": [{"nome": "Traseira", "portas": ["5", "6", "7"]}],
-            "portas": {
-                "5": {"nos": ["usb1-port5", "usb2-port1"]},
-                "6": {"nos": ["usb1-port6", "usb2-port2"]},
-                "7": {"nos": ["usb1-port7", "usb2-port3"]},
-            },
-        }
-    )
-    irmas = irmas_de(mapa, _leitura(PEER_DA_BANCADA))
-    assert {n: irma.numero for n, irma in irmas.items()} == {"5": "6", "6": "5"}
-    assert {irma.de_onde_sei for irma in irmas.values()} == {SELO_DECLARADO}, (
-        "o peer desta placa não amarra duas entradas: quem respondeu foi o "
-        "desenho dela, e o selo tem de dizer isso"
-    )
-
-
-def test_o_peer_vence_quando_ele_fala_e_entra_como_inferencia() -> None:
-    """O mapa que declarou os dois lados do mesmo buraco como duas entradas.
-
-    É um erro de calibração, e um que vale mostrar em vez de esconder: a fonte
-    do ``peer`` responde, o desenho perde, e o selo diz ``inferido`` — *"lido do
-    sistema, nunca como fato dela"* (``D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS``).
-
-    Mordida: tirei o ``achadas.setdefault`` do ``irmas_de`` e deixei o desenho
-    sobrescrever. A entrada ``5`` passou a responder ``6`` com selo
-    ``declarado``, e o teste reprovou — a procedência tinha virado enfeite, que
-    é exatamente o que o selo existe para não ser.
-    """
-    mapa = MapaDaMesa.model_validate(
-        {
-            "faces": [{"nome": "Traseira", "portas": ["5", "6"]}],
-            "portas": {
-                "5": {"nos": ["usb1-port5"]},
-                "6": {"nos": ["usb2-port1"]},
-            },
-        }
-    )
-    irmas = irmas_de(mapa, _leitura(PEER_DA_BANCADA))
-    assert irmas["5"].numero == "6" and irmas["5"].de_onde_sei == SELO_INFERIDO
-    assert irmas["6"].numero == "5" and irmas["6"].de_onde_sei == SELO_INFERIDO
-
-
-def test_peer_que_aponta_para_fora_do_mapa_nao_inventa_irma() -> None:
-    """Nó cujo par não está declarado não vira irmã de ninguém.
-
-    O outro lado pode ser um cabeçote interno que ela nunca numerou. Inventar
-    uma irmã ali poria uma penalidade de -45 num vizinho que não existe.
-    """
-    mapa = MapaDaMesa.model_validate(
-        {"portas": {"5": {"nos": ["usb1-port5"]}}}
-    )
-    assert irmas_de(mapa, _leitura(PEER_DA_BANCADA)) == {}
+# --- 4. O mapa de ontem continua abrindo -------------------------------------
 
 
 def test_o_mapa_de_ontem_continua_valendo() -> None:
@@ -350,6 +255,6 @@ def test_o_mapa_de_ontem_continua_valendo() -> None:
     antigo = mapa_dela()
     assert all(not f.perto and not f.alto for f in antigo.faces)
     assert all(p.nos == [] for p in antigo.portas.values())
-    assert irmas_de(antigo)["1"].numero == "2", (
+    assert irmas_de(antigo)["1"] == "2", (
         "o desenho dela responde sem uma linha de campo novo declarada"
     )
