@@ -88,7 +88,7 @@ class TestProtonPinWiring:
         "scripts/install-host-udev.sh",
         "uninstall.sh",
         "scripts/doctor.sh",
-        "flatpak/br.andrefarias.Hefesto.yml",
+        "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml",
         "packaging/fedora/hefesto-dualsense4unix.spec",
         "packaging/arch/PKGBUILD",
     ],

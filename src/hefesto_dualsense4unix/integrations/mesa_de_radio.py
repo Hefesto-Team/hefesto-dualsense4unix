@@ -27,7 +27,8 @@ tem arquivo ``address`` — o ``_adapter_addresses`` do próprio projeto
 (``broker/hidraw_broker.py:165``) devolve ``set()`` sobre ``/sys``. O endereço
 existe pelo BlueZ no D-Bus de sistema, que hoje o produto não abre em lugar
 nenhum e que o manifesto Flatpak não permite
-(``flatpak/br.andrefarias.Hefesto.yml``: sem ``--socket=system-bus``). Por isso
+(``flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml``:
+sem ``--socket=system-bus``). Por isso
 o nome de um adaptador aqui é a **identidade física**, que é estável entre
 boots — ao contrário de ``hciN``, que inverte — e ainda responde "onde está" de
 quebra. É a decisão M1 de ``DECISOES-DA-EXECUCAO.md``.

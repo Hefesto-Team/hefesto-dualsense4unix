@@ -125,7 +125,7 @@ def test_rm_compensatorio_de_73_74_permanece_no_install_udev() -> None:
         "uninstall.sh",
         "scripts/doctor.sh",
         "scripts/build_deb.sh",
-        "flatpak/br.andrefarias.Hefesto.yml",
+        "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml",
         "packaging/fedora/hefesto-dualsense4unix.spec",
     ],
 )

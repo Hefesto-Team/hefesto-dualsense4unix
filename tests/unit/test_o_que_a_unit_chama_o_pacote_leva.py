@@ -35,7 +35,7 @@ FORMATOS: dict[str, Path] = {
     "deb": RAIZ / "scripts" / "build_deb.sh",
     "arch": RAIZ / "packaging" / "arch" / "PKGBUILD",
     "fedora": RAIZ / "packaging" / "fedora" / "hefesto-dualsense4unix.spec",
-    "flatpak": RAIZ / "flatpak" / "br.andrefarias.Hefesto.yml",
+    "flatpak": RAIZ / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml",
 }
 
 _ALVO = re.compile(r"/usr/local/lib/hefesto-dualsense4unix/([A-Za-z0-9_.-]+\.sh)")

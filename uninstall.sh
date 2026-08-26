@@ -357,11 +357,11 @@ systemctl --user daemon-reload >/dev/null 2>&1 || true
 # `daemon ` (espaço final) cobre `daemon start/run`, `-gui` cobre o launcher,
 # `_dualsense4unix` (underscore) cobre processos Python que importam o módulo.
 log "matando processos hefesto*"
-for pat in 'hefesto-dualsense4unix daemon ' 'hefesto-dualsense4unix-gui' 'hefesto_dualsense4unix' 'br\.andrefarias\.Hefesto'; do
+for pat in 'hefesto-dualsense4unix daemon ' 'hefesto-dualsense4unix-gui' 'hefesto_dualsense4unix' 'io\.github\.hefesto_team\.hefesto_dualsense4unix' 'br\.andrefarias\.Hefesto'; do
     pkill -TERM -f "$pat" 2>/dev/null || true
 done
 sleep 2
-for pat in 'hefesto-dualsense4unix daemon ' 'hefesto-dualsense4unix-gui' 'hefesto_dualsense4unix' 'br\.andrefarias\.Hefesto'; do
+for pat in 'hefesto-dualsense4unix daemon ' 'hefesto-dualsense4unix-gui' 'hefesto_dualsense4unix' 'io\.github\.hefesto_team\.hefesto_dualsense4unix' 'br\.andrefarias\.Hefesto'; do
     pkill -KILL -f "$pat" 2>/dev/null || true
 done
 
@@ -1348,12 +1348,47 @@ fi
 
 # Flatpak: desinstalar app + cleanup runtime (mas não remove runtime GNOME
 # se outras apps usam — flatpak gerencia rc).
-if flatpak list --user --app 2>/dev/null | grep -q "br.andrefarias.Hefesto"; then
-    log "desinstalando Flatpak br.andrefarias.Hefesto"
-    flatpak uninstall --user -y br.andrefarias.Hefesto >/dev/null 2>&1 || true
-fi
-# Cache flatpak do app (logs, dados em runtime/sandbox)
-rm -rf "${HOME}/.var/app/br.andrefarias.Hefesto" 2>/dev/null || true
+#
+# IDENTIDADE-01 (25/08/2026): são DOIS app-ids, e não um. O Flatpak não migra
+# id — para ele o id novo é outro aplicativo —, então quem instalou antes de
+# 25/08 tem `br.andrefarias.Hefesto` na máquina. Um uninstall que só
+# conhecesse o id de hoje deixaria o aplicativo antigo instalado, com atalho
+# no menu e ícone na grade: o "lixo" que esta lista existe para não deixar.
+HEFESTO_FLATPAK_APP_IDS=(
+    "io.github.hefesto_team.hefesto_dualsense4unix"
+    "br.andrefarias.Hefesto"
+)
+for _fp_id in "${HEFESTO_FLATPAK_APP_IDS[@]}"; do
+    if flatpak list --user --app 2>/dev/null | grep -q "${_fp_id}"; then
+        log "desinstalando Flatpak ${_fp_id}"
+        flatpak uninstall --user -y "${_fp_id}" >/dev/null 2>&1 || true
+    fi
+done
+
+# A CASA DO SANDBOX. Quem instalou por Flatpak tem os perfis em
+# `~/.var/app/<app-id>/config/hefesto-dualsense4unix/` — não em `~/.config`.
+# Até 25/08/2026 esta parte apagava a casa INTEIRA, sempre, contradizendo a
+# linha logo abaixo que promete "configs preservadas por padrão"; e a
+# IDENTIDADE-01 tornou o defeito caro, porque é exatamente essa pasta que a
+# migração de app-id (`utils/migrate_legacy_paths.py`) lê para os perfis dela
+# atravessarem a troca de id. Agora só o `cache/` (volátil) sai por padrão; a
+# casa inteira só com `--purge-config`, e aí com backup, como o bloco de
+# configs faz.
+for _fp_id in "${HEFESTO_FLATPAK_APP_IDS[@]}"; do
+    _fp_home="${HOME}/.var/app/${_fp_id}"
+    [[ -d "${_fp_home}" ]] || continue
+    rm -rf "${_fp_home}/cache" 2>/dev/null || true
+    if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+        _fp_backup="${HOME}/.config/hefesto-dualsense4unix.backup-$(date +%s)-flatpak-${_fp_id}"
+        mkdir -p "${_fp_backup}"
+        cp -a "${_fp_home}/." "${_fp_backup}/" 2>/dev/null || true
+        log "backup do sandbox ${_fp_id} em ${_fp_backup}"
+        log "removendo ${_fp_home}"
+        rm -rf "${_fp_home}" 2>/dev/null || true
+    else
+        log "config do sandbox ${_fp_id} preservada (use --purge-config para apagar)"
+    fi
+done
 
 # AppImage em locais convencionais
 for appimg_dir in "${HOME}/Aplicativos" "${HOME}/Applications" "${HOME}/Downloads" "${HOME}/.local/bin"; do

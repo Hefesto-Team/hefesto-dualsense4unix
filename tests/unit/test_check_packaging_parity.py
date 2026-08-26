@@ -899,14 +899,15 @@ def test_icone_do_repo_real_esta_verde() -> None:
 # Achado de 06/08/2026, MEDIDO: a lista de empacotadores trazia
 # `scripts/build_flatpak.sh`, que é um INVÓLUCRO de 120 linhas — chama o
 # `flatpak-builder` e não lista arquivo nenhum. Quem declara o conteúdo do
-# pacote é o MANIFESTO `flatpak/br.andrefarias.Hefesto.yml`, que não estava em
-# lista nenhuma. Como o invólucro não cita `doctor.sh`, o `continue` disparava e
+# pacote é o MANIFESTO
+# `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml`, que não estava
+# em lista nenhuma. Como o invólucro não cita `doctor.sh`, o `continue` disparava e
 # a regra de PAR NUNCA alcançava o Flatpak: pôr o doctor no manifesto sem o
 # `bluez_config.sh` passava VERDE — e o detector empacotado fica CEGO, porque lê
 # exclusivamente pelo dono único em `${ROOT_DIR}/scripts/bluez_config.sh`.
 # ---------------------------------------------------------------------------
 
-_MANIFESTO = "flatpak/br.andrefarias.Hefesto.yml"
+_MANIFESTO = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"
 
 
 @pytest.fixture

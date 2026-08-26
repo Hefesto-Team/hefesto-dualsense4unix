@@ -354,8 +354,8 @@ class TestParidadePackaging:
             "packaging/fedora/hefesto-dualsense4unix.spec": (
                 REPO_ROOT / "packaging" / "fedora" / "hefesto-dualsense4unix.spec"
             ),
-            "flatpak/br.andrefarias.Hefesto.yml": (
-                REPO_ROOT / "flatpak" / "br.andrefarias.Hefesto.yml"
+            "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml": (
+                REPO_ROOT / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml"
             ),
         }
         for nome, caminho in manifestos.items():

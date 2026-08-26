@@ -83,7 +83,7 @@ stdenv.mkDerivation {
 """
 
 FLATPAK_BOM = """\
-app-id: br.andrefarias.Hefesto
+app-id: io.github.hefesto_team.hefesto_dualsense4unix
 runtime: org.gnome.Platform
 runtime-version: "47"
 sdk: org.gnome.Sdk
@@ -154,7 +154,7 @@ def repo(tmp_path: Path) -> Path:
     escreve(tmp_path, "packaging/fedora/hefesto-dualsense4unix.spec", SPEC_BOM)
     escreve(tmp_path, "packaging/arch/PKGBUILD", PKGBUILD_BOM)
     escreve(tmp_path, "packaging/nix/package.nix", NIX_BOM)
-    escreve(tmp_path, "flatpak/br.andrefarias.Hefesto.yml", FLATPAK_BOM)
+    escreve(tmp_path, "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml", FLATPAK_BOM)
     # A lacuna declarada aponta para este arquivo; sem ele a seção reprovaria
     # por "lacuna que já não vale", que é outro assunto.
     escreve(tmp_path, "scripts/build_appimage_gui.sh", "# empacotador de mentira\n")
@@ -245,7 +245,7 @@ class TestASecaoMorde:
         Trocar de runtime derruba a premissa, e a isenção morre junto."""
         escreve(
             repo,
-            "flatpak/br.andrefarias.Hefesto.yml",
+            "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml",
             FLATPAK_BOM.replace("org.gnome.Platform", "org.freedesktop.Platform"),
         )
         s = secao(roda(repo).stdout)
@@ -257,7 +257,7 @@ class TestASecaoMorde:
         """Trocar de runtime não é proibido — ficar sem o loader é."""
         escreve(
             repo,
-            "flatpak/br.andrefarias.Hefesto.yml",
+            "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml",
             FLATPAK_BOM.replace("org.gnome.Platform", "org.freedesktop.Platform")
             + "modules:\n  - name: librsvg\n",
         )

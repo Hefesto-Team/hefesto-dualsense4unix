@@ -241,7 +241,7 @@ def test_nenhum_formato_empacota_os_dropins_do_wireplumber() -> None:
         RAIZ / "packaging" / "fedora" / "hefesto-dualsense4unix.spec",
         RAIZ / "packaging" / "arch" / "PKGBUILD",
         RAIZ / "packaging" / "nix" / "package.nix",
-        RAIZ / "flatpak" / "br.andrefarias.Hefesto.yml",
+        RAIZ / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml",
     ]
     achados: list[str] = []
     conferidas = 0

@@ -245,7 +245,7 @@ def test_flatpak_se_salva_pelo_runtime_e_isso_fica_registrado() -> None:
     terceiro: aí a isenção deixa de estar medida e alguém tem de medir de novo
     antes de confiar nela.
     """
-    manifesto = RAIZ / "flatpak/br.andrefarias.Hefesto.yml"
+    manifesto = RAIZ / "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"
     texto = _sem_comentarios(manifesto.read_text(encoding="utf-8"))
     casamento = re.search(r"^runtime:\s*(\S+)", texto, re.MULTILINE)
     assert casamento, "o manifesto Flatpak não declara runtime"

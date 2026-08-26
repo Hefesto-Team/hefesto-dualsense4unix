@@ -223,7 +223,7 @@ def test_o_shutil_e_o_subprocess_sao_os_do_modulo() -> None:
 # ---------------------------------------------------------------------------
 #: Raiz do repositório (mesma convenção de `test_loader_svg_nos_empacotamentos`).
 _RAIZ = Path(__file__).resolve().parents[2]
-_MANIFESTO = _RAIZ / "flatpak" / "br.andrefarias.Hefesto.yml"
+_MANIFESTO = _RAIZ / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml"
 
 
 class TestOFlatpakEnxergaASteam:
