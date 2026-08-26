@@ -166,8 +166,15 @@ def _roda(
     daemon_vivo: int = 1,
     native_mode: str = "False",
     doctor: str | None = None,
+    censo: list[str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Extrai as funções do doctor, reancora os caminhos na cena e roda."""
+    """Extrai as funções do doctor, reancora os caminhos na cena e roda.
+
+    ``censo`` é o CENSO DE FÍSICOS — a mesa inteira, como
+    `broker/hidraw_broker.py:physical_nodes_exposure` a enxerga. `None` (o
+    default) encena a mesa em que o broker escondeu TUDO o que existe, que é a
+    premissa que todos os testes anteriores a 26/08/2026 assumiam sem dizer.
+    """
     fonte = DOCTOR if doctor is None else doctor
     corpo = "\n".join(_extrai_funcao_bash(fonte, nome) for nome in FUNCOES)
     corpo = corpo.replace("/sys/class/hidraw/", f"{raiz}/sys/class/hidraw/")
@@ -190,6 +197,7 @@ def _roda(
         'info() { echo "[INFO] $*"; }\n'
         + corpo
         + f'\n_veredito_do_hide "{hidden_count}" "{daemon_vivo}" "{native_mode}"'
+        + ' "{}"'.format(" ".join(nos if censo is None else censo))
         + "".join(f' "{no}"' for no in nos)
         + "\n",
         encoding="utf-8",
@@ -257,6 +265,134 @@ class TestOVeredictoNaoMenteMais:
         assert "1 de 2" in r.stdout, r.stdout
         assert "event31" in r.stdout
         assert "js0" not in r.stdout, "o nó FECHADO não pode entrar na lista de abertos"
+
+
+class TestODenominadorEAMesa:
+    """O item 3.1 do O-QUE-FICOU-ABERTO-01, aberto desde 16/08/2026.
+
+    Até 26/08 o veredito olhava SÓ os nós que o broker escondeu e concluía *"o
+    jogo só vê o vpad"* — uma afirmação sobre a MESA. Um DualSense físico que
+    o broker nunca escondeu era invisível para a régua: a cena de 16/08 (dois
+    físicos, um escondido) saía **verde**, com o controle dobrado dentro do
+    jogo. O denominador certo é o censo de físicos, e o produto já sabia
+    levantá-lo (`broker/hidraw_broker.py:physical_nodes_exposure`).
+    """
+
+    def test_fisico_que_o_broker_nunca_escondeu_derruba_o_verde(
+        self, tmp_path: Path
+    ) -> None:
+        """A CENA DE 16/08: dois DualSense na mesa, um escondido.
+
+        O escondido está com as três superfícies fechadas — o caso em que o
+        veredito antigo dizia, com todas as letras, que o jogo só via o vpad.
+        """
+        cena: dict[str, list[Entrada] | None] = {
+            "hidraw4": [Entrada("event21", 0o600), Entrada("js0", 0o600)]
+        }
+        r = _roda(tmp_path, cena, censo=["/dev/hidraw4", "/dev/hidraw5"])
+        assert "[PASS]" not in r.stdout, (
+            "verde sobre uma mesa com um DualSense físico FORA do hide — é a "
+            f"cena de 16/08/2026 saindo verde:\n{r.stdout}"
+        )
+        assert "[WARN]" in r.stdout, r.stdout
+
+    def test_o_aviso_nomeia_o_que_ficou_de_fora(self, tmp_path: Path) -> None:
+        """Sem o nome do nó, quem lê não sabe qual controle o jogo enxerga."""
+        cena: dict[str, list[Entrada] | None] = {
+            "hidraw4": [Entrada("event21", 0o600), Entrada("js0", 0o600)]
+        }
+        r = _roda(tmp_path, cena, censo=["/dev/hidraw4", "/dev/hidraw5"])
+        assert "/dev/hidraw5" in r.stdout, r.stdout
+        for linha in r.stdout.splitlines():
+            if linha.startswith("[PASS]"):
+                assert FRASE_ANTIGA not in linha, (
+                    "a régua não pode AFIRMAR a mesa inteira sem ter olhado a "
+                    f"mesa inteira. Linha: {linha}"
+                )
+        assert f"NÃO afirma que {FRASE_ANTIGA}" in r.stdout, (
+            "o aviso precisa NEGAR a frase forte em voz alta — quem lê o "
+            f"doctor decide o próximo passo por ela.\n{r.stdout}"
+        )
+
+    def test_censo_igual_ao_hide_continua_podendo_ser_verde(
+        self, tmp_path: Path
+    ) -> None:
+        """A cura não pode ter custado o verde quando ele é VERDADE.
+
+        Sem esta guarda passaria um "conserto" que avisasse sempre — e o
+        `pass` deixaria de dizer o que a pessoa precisa saber no caso em que a
+        mesa inteira está escondida e fechada.
+        """
+        r = _roda(tmp_path, _cena_fechada(), censo=["/dev/hidraw4"])
+        assert "[PASS]" in r.stdout, r.stdout
+        assert FRASE_ANTIGA in r.stdout, r.stdout
+
+    def test_censo_vazio_e_nao_sei_e_nao_zero(self, tmp_path: Path) -> None:
+        """Ausência de dado não é prova de divergência — nem de cura.
+
+        Sem o pacote alcançável (`python3` sem o `src` no caminho) o censo sai
+        vazio. Tratá-lo como "zero físicos na mesa" faria a régua acusar o
+        hide de esconder o que não existe; tratá-lo como divergência faria
+        toda máquina sem o pacote sair amarela. Vazio é seguir sem comparar.
+        """
+        r = _roda(tmp_path, _cena_fechada(), censo=[])
+        assert "[PASS]" in r.stdout, r.stdout
+        assert "[WARN]" not in r.stdout, r.stdout
+
+    def test_a_mordida_o_denominador_antigo_volta_a_ficar_verde(
+        self, tmp_path: Path
+    ) -> None:
+        """A prova de que esta régua não sabe só passar.
+
+        Devolvido o denominador antigo — o veredito comparando o censo consigo
+        mesmo, que é o que "medir só o que eu escondi" quer dizer —, a cena de
+        16/08 volta a sair verde com a frase que mentia.
+        """
+        alvo = "    for _fisico in ${censo}; do"
+        assert alvo in DOCTOR, "o laço do censo mudou de forma"
+        arrancado = DOCTOR.replace(alvo, '    for _fisico in "$@"; do')
+        cena: dict[str, list[Entrada] | None] = {
+            "hidraw4": [Entrada("event21", 0o600), Entrada("js0", 0o600)]
+        }
+        r = _roda(
+            tmp_path, cena, censo=["/dev/hidraw4", "/dev/hidraw5"], doctor=arrancado
+        )
+        assert "[PASS]" in r.stdout, (
+            "com o denominador antigo a cena de 16/08 devia voltar a ser "
+            f"verde — se não voltou, esta régua não está medindo.\n{r.stdout}"
+        )
+        assert FRASE_ANTIGA in r.stdout, r.stdout
+
+
+class TestOCensoUsaARegraDoProduto:
+    """Duas réguas para a mesma pergunta já produziram alarme falso aqui.
+
+    O censo NÃO reimplementa "o que é um DualSense físico": ele chama o mesmo
+    `physical_nodes_exposure` que o broker usa, com o mesmo validador que
+    recusa o vpad uhid.
+    """
+
+    def test_o_censo_chama_o_validador_do_produto(self) -> None:
+        corpo = _extrai_funcao_bash(DOCTOR, "_censo_de_fisicos")
+        assert "physical_nodes_exposure" in corpo, (
+            "o censo parou de usar a régua do produto — reimplementar o "
+            "critério aqui é como esta casa já produziu alarme convincente e "
+            "falso"
+        )
+        for verbo in ("054C", "0CE6"):
+            assert verbo not in corpo, (
+                f"o censo passou a reconhecer aparelho por conta própria ({verbo})"
+            )
+
+    def test_o_check_levanta_o_censo_e_o_repassa(self) -> None:
+        corpo = _extrai_funcao_bash(DOCTOR, "check_hidraw_broker")
+        assert "_censo_de_fisicos" in corpo, "o check não levanta mais o censo"
+        chamada = re.search(r"_veredito_do_hide[^\n]*", corpo)
+        assert chamada is not None, "o check parou de chamar o veredito"
+        assert "${censo_fisicos}" in chamada.group(0), (
+            "o veredito foi chamado sem o censo: ele voltaria a medir só o "
+            f"que o broker escondeu. Chamada: {chamada.group(0)}"
+        )
 
 
 class TestAsTresFormasDeAlcancar:
