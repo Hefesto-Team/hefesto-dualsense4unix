@@ -59,13 +59,17 @@ from __future__ import annotations
 import itertools
 import os
 import re
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor
 from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     Aparelho,
     Censo,
     cadeia_de_hubs,
+)
+from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
+    VELOCIDADE_SUPERSPEED_MBPS,
 )
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
@@ -399,8 +403,317 @@ def porta_do_adaptador(
 
 
 # ---------------------------------------------------------------------------
+# A MESA DO MOTOR — a junção que faltava
+# ---------------------------------------------------------------------------
+#
+# O motor do arranjo (``integrations/arranjo_da_mesa``) recebe a mesa como
+# ARGUMENTO e não lê nada — é isso que o torna testável sem aparelho. Faltava
+# quem montasse esse argumento a partir do que o produto de fato tem na mão: o
+# desenho DELA (``MapaDaMesa``) e a leitura de AGORA (``Censo``). É a mesma
+# junção que este módulo já faz para o número da entrada, e por isso mora aqui.
+
+#: As chaves do que o desenho NÃO diz. São CONTRATO, nunca texto de tela: este
+#: módulo não escreve frase (ver o cabeçalho), e quem as traduz para a palavra
+#: dela é a janela do mapa.
+#:
+#: Elas existem porque a alternativa é pior: um campo que ninguém preencheu
+#: cai no valor por omissão da dataclass do motor, e o motor não tem como
+#: distinguir "é assim" de "ninguém disse". O juízo sai otimista e CALADO, que
+#: é o defeito que a ``D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS`` fechou com todas as
+#: letras: *"a linha do mapa DIZ isso em vez de calar"*.
+LACUNA_PAR = "par"
+LACUNA_POSICAO = "posicao"  # noqa-acento: chave de contrato ASCII, não texto de tela
+LACUNA_VELOCIDADE = "velocidade"
+LACUNA_REGIAO = "regiao"  # noqa-acento: chave de contrato ASCII, não texto de tela
+LACUNA_ESPECIE = "especie"  # noqa-acento: chave de contrato ASCII, não texto de tela
+
+#: ``(classe, subclasse, protocolo)`` do kernel -> a classe que o motor julga.
+#:
+#: É a MESMA régua de ``censo_do_barramento._especie`` e de
+#: ``ordens_da_mesa._e_bluetooth``, e é a única fonte honesta que existe: o
+#: ``product`` de dois dongles idênticos desta bancada diverge ("UB500 Adapter"
+#: e "Bluetooth USB Adapter"), e adivinhar por texto é como se erra com
+#: confiança.
+_CLASSE_DO_MOTOR_POR_TRIPLA: dict[tuple[str, str, str], str] = {
+    ("e0", "01", "01"): "bt",
+    ("03", "01", "01"): "teclado",
+    ("03", "01", "02"): "mouse",
+}
+
+#: Classe de vídeo (UVC). A webcam é a única espécie do motor que a classe
+#: sozinha resolve.
+_CLASSE_DE_VIDEO = "0e"
+
+#: O sufixo que separa o hub que hospeda do número da entrada nele:
+#: ``usb1-port5`` -> ``usb1``, ``3-1-port4`` -> ``3-1``. Não é uma terceira
+#: cópia da forma do nó (ela já está em ``utils/maquina`` e em
+#: ``entradas_do_gabinete``, declarada nos dois): ``MapaDaMesa`` valida a forma
+#: ao carregar, e aqui só se corta o que já passou pelo validador.
+_SUFIXO_DO_NO = "-port"
+
+
+@dataclass(frozen=True)
+class Bancada:
+    """A mesa do motor **e** o que o desenho não disse para montá-la.
+
+    Os dois juntos, num valor só, de propósito: quem recebe a mesa sem receber
+    as lacunas não tem como saber que o juízo que ela produz está apoiado em
+    campo que ninguém preencheu — e publicaria "aqui fica bem" com a mesma cara
+    de quem mediu.
+    """
+
+    mesa: motor.Mesa
+    lacunas: tuple[str, ...] = ()
+
+
+def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
+    """O desenho dela mais a leitura de agora, na forma que o motor entende.
+
+    O que cada campo do motor recebe, e de onde:
+
+    ==========================  ==================================================
+    campo                       fonte
+    ==========================  ==================================================
+    ``Aparelho.classe``         a tripla do kernel (ver ``_CLASSE_DO_MOTOR_POR_TRIPLA``)
+    ``Face.perto`` / ``.alto``  ``FaceDeclarada.perto`` / ``.alto`` — fato dela
+    ``Entrada.par``             :func:`irmas_de` — o desenho dela, de duas em duas
+    ``Entrada.filho``           :func:`filhas_de` — a extensão que ela declarou
+    ``Entrada.onde``            ``arranjo_da_mesa.regiao_do_caminho``, do barramento
+    ``Entrada.usb``             o hub em que o nó declarado mora, pela velocidade
+    ``Entrada.pos``             **NINGUÉM** — ver ``LACUNA_POSICAO``
+    ==========================  ==================================================
+
+    ``leitura`` mapeia cada aparelho para o próprio caminho de barramento
+    porque é ele que serve de ``id`` aqui: o motor foi portado de um mockup em
+    que os aparelhos tinham apelido (``"bt-a"``), e o produto não tem apelido
+    nenhum — tem o nome do kernel, que é único e é o que o mapa dela declara.
+
+    **O Wi-Fi não tem classe, e isso é MEDIDO, não descuido:** o Archer T3U
+    desta bancada declina de se classificar (``ff/ff/ff``). Nenhuma leitura o
+    separa de um adaptador de rede com fio, e as regras de Wi-Fi do motor
+    (o SuperSpeed no mesmo hub) valem só para rádio. Ele entra com classe
+    vazia e a lacuna ``LACUNA_ESPECIE`` diz isso.
+    """
+    aparelhos = tuple(_aparelho_do_motor(a) for a in censo.conectados())
+    leitura = {aparelho.id: aparelho.id for aparelho in aparelhos}
+    declarado = {
+        numero: porta.caminho
+        for numero, porta in sorted(mapa.portas.items())
+        if porta.caminho
+    }
+
+    # O esboço existe para uma pergunta só: qual é o caminho do hub externo.
+    # `caminho_do_hub` só olha aparelhos e leitura, e é ele quem decide a
+    # região de cada entrada — que é o que as faces ainda não têm.
+    esboco = motor.Mesa(
+        aparelhos=aparelhos, faces=(), mapa=declarado, leitura=leitura
+    )
+    caminho_hub = motor.caminho_do_hub(esboco)
+
+    pares = irmas_de(mapa)
+    velocidades = _velocidade_por_hub(censo)
+    lacunas: set[str] = set()
+    if any(not aparelho.classe for aparelho in aparelhos):
+        lacunas.add(LACUNA_ESPECIE)
+    if mapa.faces:
+        # NÃO é condicional, e por isso não olha entrada nenhuma: `Entrada.pos`
+        # é a posição do buraco na fileira do metal, e ela não existe em fonte
+        # alguma — nem no `MapaDaMesa`, nem no censo, nem no `/sys`. Sem ela o
+        # `_bonus_separacao` (+6 por posição de folga, teto 6) nunca dispara, e
+        # dois adaptadores de rádio nas pontas opostas da fileira do hub
+        # recebem o mesmo juízo de dois colados.
+        lacunas.add(LACUNA_POSICAO)
+
+    faces: list[motor.Face] = []
+    for face in mapa.faces:
+        numeros = _entradas_da_fileira_da_face(mapa, face.portas)
+        regioes: dict[str, str | None] = {}
+        for numero in _entradas_da_face(mapa, numeros):
+            regioes[numero] = motor.regiao_do_caminho(
+                declarado.get(numero), caminho_hub
+            )
+        conhecidas = [regiao for regiao in regioes.values() if regiao]
+        if not conhecidas:
+            lacunas.add(LACUNA_REGIAO)
+        regiao_da_face = (
+            "hub" if conhecidas.count("hub") > conhecidas.count("pc") else "pc"
+        )
+        entradas: list[motor.Entrada] = []
+        for numero in numeros:
+            filhas = filhas_de(mapa, numero)
+            filho = None
+            if filhas:
+                filho = _entrada_do_motor(
+                    mapa,
+                    filhas[0],
+                    pares=pares,
+                    regiao=regioes.get(filhas[0]) or regiao_da_face,
+                    velocidades=velocidades,
+                    lacunas=lacunas,
+                    esticada=True,
+                )
+            entradas.append(
+                _entrada_do_motor(
+                    mapa,
+                    numero,
+                    pares=pares,
+                    regiao=regioes.get(numero) or regiao_da_face,
+                    velocidades=velocidades,
+                    lacunas=lacunas,
+                    filho=filho,
+                )
+            )
+        faces.append(
+            motor.Face(
+                nome=face.nome,
+                regiao=regiao_da_face,
+                entradas=tuple(entradas),
+                perto=face.perto,
+                alto=face.alto,
+            )
+        )
+
+    return Bancada(
+        mesa=motor.Mesa(
+            aparelhos=aparelhos,
+            faces=tuple(faces),
+            mapa=declarado,
+            leitura=leitura,
+        ),
+        lacunas=tuple(sorted(lacunas)),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Interno
 # ---------------------------------------------------------------------------
+
+
+def _aparelho_do_motor(aparelho: Aparelho) -> motor.Aparelho:
+    """Um aparelho do censo na forma do motor — sem inventar o que falta.
+
+    ``nome`` cai na espécie quando o descritor não traz produto: os TP-Link
+    desta bancada publicam ``manufacturer`` com um espaço dentro, e espaço em
+    branco é ausência.
+    """
+    return motor.Aparelho(
+        id=aparelho.nome_do_kernel,
+        tipo=aparelho.especie,
+        nome=aparelho.produto.strip() or aparelho.especie,
+        classe=_classe_do_motor(aparelho),
+    )
+
+
+def _classe_do_motor(aparelho: Aparelho) -> str:
+    """A classe que o motor julga, ou ``""`` quando o kernel não disse.
+
+    ``""`` é resposta, e é a resposta certa para o Archer T3U (``ff/ff/ff``) e
+    para o DualSense por cabo (``03/00/00``, HID sem protocolo de arranque):
+    nenhuma regra do motor fala deles, e forçá-los numa classe faria o quadrado
+    julgar pelo aparelho errado.
+    """
+    if aparelho.e_hub:
+        return "hub"
+    achada = _CLASSE_DO_MOTOR_POR_TRIPLA.get(
+        (aparelho.classe, aparelho.subclasse, aparelho.protocolo)
+    )
+    if achada:
+        return achada
+    return "webcam" if aparelho.classe == _CLASSE_DE_VIDEO else ""
+
+
+def _entrada_do_motor(
+    mapa: MapaDaMesa,
+    numero: str,
+    *,
+    pares: Mapping[str, str],
+    regiao: str,
+    velocidades: Mapping[str, float],
+    lacunas: set[str],
+    esticada: bool = False,
+    filho: motor.Entrada | None = None,
+) -> motor.Entrada:
+    """Uma entrada do desenho na forma do motor, anotando o que faltou."""
+    par = pares.get(numero)
+    if par is None and not esticada:
+        # A entrada por extensão NÃO tem irmã por desenho (o cabo de um metro a
+        # põe longe de todo mundo), e essa ausência não é lacuna.
+        lacunas.add(LACUNA_PAR)
+    declarada = mapa.portas.get(numero)
+    rapido = _rapido_do_no(() if declarada is None else declarada.nos, velocidades)
+    if rapido is None:
+        lacunas.add(LACUNA_VELOCIDADE)
+    return motor.Entrada(
+        n=numero,
+        usb=3 if rapido else 2,
+        onde="hub" if regiao == "hub" else "pc",
+        par=par,
+        pos=None,
+        esticada=esticada,
+        filho=filho,
+    )
+
+
+def _entradas_da_fileira_da_face(
+    mapa: MapaDaMesa, numeros: Sequence[str]
+) -> tuple[str, ...]:
+    """Os números da fileira desta face, sem repetir — a regra de ``irmas_de``.
+
+    A entrada repetida conta UMA vez, pela primeira aparição. É a mesma regra
+    do pareamento, e as duas precisam concordar: se a fileira contasse a
+    repetição e o pareamento não, uma entrada ficaria sem irmã só por estar
+    desenhada duas vezes.
+    """
+    achados: list[str] = []
+    vistos: set[str] = set()
+    for numero in numeros:
+        if numero in vistos:
+            continue
+        vistos.add(numero)
+        achados.append(numero)
+    return tuple(achados)
+
+
+def _velocidade_por_hub(censo: Censo) -> dict[str, float]:
+    """``hub -> Mbps``, para os hubs-raiz e para os hubs da mesa.
+
+    É o que responde se um buraco é azul: o nome do nó declarado carrega o hub
+    em que ele mora (``usb3-port1``, ``4-1-port2``), e o lado SuperSpeed de um
+    hub de dois chips enumera num barramento próprio.
+    """
+    achadas = {
+        barramento.nome_do_kernel: barramento.velocidade_mbps
+        for barramento in censo.barramentos
+    }
+    for aparelho in censo.aparelhos:
+        if aparelho.e_hub:
+            achadas[aparelho.nome_do_kernel] = aparelho.velocidade_mbps
+    return achadas
+
+
+def _rapido_do_no(
+    nos: Sequence[str], velocidades: Mapping[str, float]
+) -> bool | None:
+    """O buraco declarado alcança SuperSpeed? ``None`` = não deu para saber.
+
+    Mesma régua de ``entradas_do_gabinete.Furo.rapido``, e de propósito: a
+    velocidade mora no HUB que hospeda, nunca no nó. ``None`` é a resposta de
+    quem nunca abriu a janela de calibração — e é a maioria hoje: o único
+    escritor de ``PortaDeclarada.nos`` é ``app/widgets/calibrar_entradas.py``,
+    que nasceu em 26/08/2026.
+    """
+    lidas = [
+        velocidades[hub]
+        for hub in (no.rpartition(_SUFIXO_DO_NO)[0] for no in nos)
+        if hub in velocidades
+    ]
+    if not lidas:
+        return None
+    if any(valor >= VELOCIDADE_SUPERSPEED_MBPS for valor in lidas):
+        return True
+    if all(valor <= 0 for valor in lidas):
+        return None
+    return False
 
 
 def _caminhos_do_censo(censo: Censo) -> frozenset[str]:
@@ -536,12 +849,19 @@ def _serial_do_no(no: str) -> str:
 
 
 __all__ = [
+    "LACUNA_ESPECIE",
+    "LACUNA_PAR",
+    "LACUNA_POSICAO",
+    "LACUNA_REGIAO",
+    "LACUNA_VELOCIDADE",
+    "Bancada",
     "Incoerencia",
     "Resumo",
     "caminho_de",
     "filhas_de",
     "incoerencias",
     "irmas_de",
+    "mesa_do_motor",
     "porta_de",
     "porta_do_adaptador",
     "portas_livres",
