@@ -393,6 +393,22 @@ def _sync_run_in_thread(
         on_success(resultado)
 
 
+def _daemon_aceita(*_a: Any, **kw: Any) -> dict[str, Any]:
+    """Corpo de um ``led.set``/``led.player_set`` que ESCREVEU no alvo pedido.
+
+    BG-01 (26/08/2026). É a forma exata que o handler monta
+    (``daemon/ipc_handlers.py``): ``status`` fixo em "ok" por contrato, mais os
+    dois destinos que a MESA-CHEIA-09 acrescentou. Aqui o que está em jogo não
+    é o destino — é que a aba não fale com o daemon de verdade.
+    """
+    uniq = kw.get("uniq")
+    return {
+        "status": "ok",
+        "aplicado_em": [uniq] if uniq else [],
+        "guardado_em": [],
+    }
+
+
 def _ligar(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
     """Liga a janela ao disco em memória e neutraliza diálogos/IPC."""
     import hefesto_dualsense4unix.app.gui_dialogs as gd
@@ -436,8 +452,11 @@ def _ligar(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(fa.ipc_bridge, "run_in_thread", _sync_run_in_thread)
     monkeypatch.setattr(fa.ipc_bridge, "call_async", lambda *_a, **_kw: None)
     # Aba Lightbar (o clique na cor não pode tentar falar com o daemon).
-    monkeypatch.setattr(la, "led_set", lambda *_a, **_kw: True)
-    monkeypatch.setattr(la, "player_leds_set", lambda *_a, **_kw: True)
+    # BG-01 (26/08/2026): a aba passou a chamar as pontes `_detalhado`, que
+    # devolvem o CORPO do daemon em vez de `bool` — o dublê devolve o corpo
+    # de um daemon que aceitou e escreveu no alvo pedido.
+    monkeypatch.setattr(la, "led_set_detalhado", _daemon_aceita)
+    monkeypatch.setattr(la, "player_leds_set_detalhado", _daemon_aceita)
 
 
 # ---------------------------------------------------------------------------

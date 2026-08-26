@@ -30,7 +30,10 @@ class TestR17ApagarMandaOUniq:
         # `str | None` — o alvo vem de `estado_alvo.uniq`, lido uma vez no
         # topo da função. A garantia do R-17 é a mesma: o "Apagar" manda o
         # MAC do controle selecionado, nunca broadcast.
-        assert "led_set((0, 0, 0), uniq=estado_alvo.uniq)" in fonte, (
+        # BG-01 (26/08/2026): a chamada virou `led_set_detalhado` — a aba lê o
+        # CORPO do daemon em vez do `bool`. O `uniq`, que é o que este teste
+        # guarda, viaja igual.
+        assert "led_set_detalhado((0, 0, 0), uniq=estado_alvo.uniq)" in fonte, (
             "apagar sem `uniq` vira broadcast: apaga a lightbar dos quatro "
             "quando ela pediu para apagar a de um"
         )
@@ -41,7 +44,9 @@ class TestR17ApagarMandaOUniq:
 
         from hefesto_dualsense4unix.app import ipc_bridge
 
-        assert "uniq" in inspect.signature(ipc_bridge.led_set).parameters
+        assert (
+            "uniq" in inspect.signature(ipc_bridge.led_set_detalhado).parameters
+        )
 
 
 class TestR18SucessoHonesto:

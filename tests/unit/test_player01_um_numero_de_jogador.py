@@ -672,6 +672,16 @@ class _FakeRotulo:
         return None
 
 
+def _aceitou(uniq: str | None) -> dict[str, Any]:
+    """Corpo de um ``led.player_set`` que ESCREVEU em ``uniq`` (BG-01)."""
+    return {
+        "status": "ok",
+        "bits": [],
+        "aplicado_em": [uniq] if uniq else [],
+        "guardado_em": [],
+    }
+
+
 def _host_lightbar(draft: DraftConfig, uniq: str | None, slot: int | None) -> Any:
     """Hospedeiro mínimo do mixin: draft + alvo + rótulo de leitura de volta.
 
@@ -820,10 +830,12 @@ def test_preset_sem_destinatario_recusa_em_vez_de_gravar_abaixo_do_automatico(
     from hefesto_dualsense4unix.app.actions import lightbar_actions as la
 
     enviados: list[Any] = []
+    # BG-01 (26/08/2026): a aba lê o CORPO do daemon (`_detalhado`), não mais
+    # o `bool` da ponte estreita. O que estes testes julgam é o DESTINATÁRIO.
     monkeypatch.setattr(
         la,
-        "player_leds_set",
-        lambda bits, uniq=None: enviados.append((bits, uniq)) or True,
+        "player_leds_set_detalhado",
+        lambda bits, uniq=None: enviados.append((bits, uniq)) or _aceitou(uniq),
     )
 
     host = _host_sem_mapa_de_controles()
@@ -842,10 +854,12 @@ def test_aplicar_sem_destinatario_tambem_recusa(
     from hefesto_dualsense4unix.app.actions import lightbar_actions as la
 
     enviados: list[Any] = []
+    # BG-01 (26/08/2026): a aba lê o CORPO do daemon (`_detalhado`), não mais
+    # o `bool` da ponte estreita. O que estes testes julgam é o DESTINATÁRIO.
     monkeypatch.setattr(
         la,
-        "player_leds_set",
-        lambda bits, uniq=None: enviados.append((bits, uniq)) or True,
+        "player_leds_set_detalhado",
+        lambda bits, uniq=None: enviados.append((bits, uniq)) or _aceitou(uniq),
     )
 
     host = _host_sem_mapa_de_controles()
@@ -865,8 +879,9 @@ def test_com_alvo_escolhido_o_pedido_vai_por_mac(
     enviados: list[Any] = []
     monkeypatch.setattr(
         la,
-        "player_leds_set",
-        lambda bits, uniq=None: enviados.append((tuple(bits), uniq)) or True,
+        "player_leds_set_detalhado",
+        lambda bits, uniq=None: enviados.append((tuple(bits), uniq))
+        or _aceitou(uniq),
     )
 
     host = _host_lightbar(DraftConfig.from_profile(_perfil_novo()), UNIQ_A, 1)
