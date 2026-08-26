@@ -270,7 +270,7 @@ class TestOVeredictoNaoMenteMais:
 class TestODenominadorEAMesa:
     """O item 3.1 do O-QUE-FICOU-ABERTO-01, aberto desde 16/08/2026.
 
-    Até 26/08 o veredito media SÓ os nós que o broker escondeu e concluía *"o
+    Até 26/08 o veredito olhava SÓ os nós que o broker escondeu e concluía *"o
     jogo só vê o vpad"* — uma afirmação sobre a MESA. Um DualSense físico que
     o broker nunca escondeu era invisível para a régua: a cena de 16/08 (dois
     físicos, um escondido) saía **verde**, com o controle dobrado dentro do
