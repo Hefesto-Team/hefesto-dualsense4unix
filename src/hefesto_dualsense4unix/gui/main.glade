@@ -3928,8 +3928,20 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                 </child>
 
                 <child>
+                  <!-- BG-NAV-01 (26/08/2026): a dica mandava "ver aba Emulação"
+                       para a regra udev, e a linha de estado desta MESMA coluna
+                       mandava para a aba Sistema — duas direções para o mesmo
+                       pré-requisito, na mesma tela. Nenhuma aba do produto
+                       CONFERE a regra udev do uinput: quem responde "está
+                       pronto?" para o mouse é o `mouse_uinput_status_label`
+                       logo acima, e é para lá que a dica passa a apontar.
+                       "módulo uinput" e "regra udev" ficam como estão de
+                       propósito — reescrevê-los em português de quem joga é
+                       redação de tela, e sai com o olho dela.
+                       PROVISÓRIO — decisão dela: o trecho "(o estado aparece na
+                       linha acima)" é o ponteiro novo, e ela ainda não o viu. -->
                   <object class="GtkLabel">
-                    <property name="label" translatable="yes">&lt;i&gt;Útil para navegar o desktop, apresentações e jogos que só aceitam mouse/teclado. Requer módulo uinput carregado e regra udev (ver aba Emulação).&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Útil para navegar o desktop, apresentações e jogos que só aceitam mouse/teclado. Requer módulo uinput carregado e regra udev (o estado aparece na linha acima).&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>

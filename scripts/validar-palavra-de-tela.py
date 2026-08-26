@@ -377,10 +377,15 @@ def conferir(caminho: Path) -> list[str]:
 #: trocar a frase, e o portão reprova se alguém esquecer de apagar a entrada.
 #:
 #: As duas primeiras são jargão PURO, e o conserto é redação de tela — decisão
-#: dela, como a E3 da PALAVRA-01 sempre foi. As três últimas CITAM um rótulo do
-#: `.glade` que já está em `DIVIDA_DA_PALAVRA_01`: elas têm de mudar no mesmo
-#: commit que o botão, senão a frase manda clicar num botão que não existe
-#: mais.
+#: dela, como a E3 da PALAVRA-01 sempre foi. A terceira CITA um rótulo do
+#: `.glade`: ela tem de mudar no mesmo commit que o botão, senão a frase manda
+#: clicar num botão que não existe mais.
+#:
+#: 26/08/2026 (BG-NAV-01): as DUAS entradas de `mouse_actions.py` saíram daqui.
+#: Elas mandavam clicar em "Aplicar correções" para um defeito de `uinput`, e
+#: aquele botão não toca no `uinput` — o ponteiro estava errado no ALVO, não só
+#: no nome. As frases agora dão o gesto de atualizar esta instalação, que é o
+#: que a aba Emulação já dizia para a mesma condição.
 DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
     "Daemon offline": (
         "23/08/2026 — `app/compact_window.py`, o rótulo de estado da janela "
@@ -396,20 +401,6 @@ DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
     "Asset 'meu_perfil.json' não encontrado — Restaurar Default indisponível.": (
         "23/08/2026 — `app/actions/footer_actions.py`. CITA o botão "
         "`Restaurar Default`, que é dívida do `.glade`; muda junto com ele."
-    ),
-    (
-        '<span foreground="#ff5555">O mouse virtual está sem permissão — abra a aba '
-        'Sistema e clique em “Aplicar correções”</span>'
-    ): (
-        "23/08/2026 — `app/actions/mouse_actions.py`. CITA o botão `Aplicar "
-        "correções`, que é dívida do `.glade`; muda junto com ele."
-    ),
-    (
-        '<span foreground="#ffb86c">O mouse virtual ainda não está pronto — abra a aba '
-        'Sistema e clique em “Aplicar correções”</span>'
-    ): (
-        "23/08/2026 — `app/actions/mouse_actions.py`. CITA o botão `Aplicar "
-        "correções`, que é dívida do `.glade`; muda junto com ele."
     ),
 }
 
