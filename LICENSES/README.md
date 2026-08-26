@@ -93,7 +93,7 @@ diretório sem linha correspondente nos alvos reprova a suíte.
 | sdist `.tar.gz` | automático: o `hatchling` inclui o que está versionado |
 | tarball da tag | automático: `git archive` inclui o que está versionado |
 | `.deb` | `scripts/build_deb.sh` |
-| `.flatpak` | `flatpak/br.andrefarias.Hefesto.yml` |
+| `.flatpak` | `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml` |
 | Arch | `packaging/arch/PKGBUILD` |
 | Fedora | `packaging/fedora/hefesto-dualsense4unix.spec` |
 | **a instalação nativa** (`./install.sh`) | `scripts/dkms_lib.sh` — copia para `/usr/src/<pkg>-<ver>/LICENSES/` |

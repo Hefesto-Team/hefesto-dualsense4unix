@@ -124,7 +124,9 @@ fica aqui porque a hipótese chegou a ser escrita:
   - o tarball de fonte da tag v0.4.0 carrega os mesmos 36 (git archive v0.4.0);
   - o .deb os copia em scripts/build_deb.sh:246-262, e o release.yml:155 constrói
     esse .deb e o publica no release (release.yml:416-421);
-  - o bundle .flatpak os copia em flatpak/br.andrefarias.Hefesto.yml:256-263;
+  - o bundle .flatpak os copia em flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml,
+    nos `cp -a assets/dkms/…` do módulo `hefesto` (que também leva o
+    diretório LICENSES/ para o mesmo destino);
   - o PKGBUILD do Arch os copia em packaging/arch/PKGBUILD:156-169 (a linha 56,
     com optdepends 'dkms', é sobre a FERRAMENTA dkms, não sobre os fontes);
   - o .spec do Fedora os copia em
@@ -192,7 +194,8 @@ copiadas de memória:
 
 Uma ressalva que vale registrar em voz alta: o bundle Flatpak **embute** as
 dependências dentro de /app, incluindo python-uinput e python-xlib
-(flatpak/br.andrefarias.Hefesto.yml:82 e :86). Ou seja, o artefato .flatpak
+(as linhas `"python-uinput"` e `"python-xlib>=0.33"` do módulo
+`hefesto-deps`, em flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml). Ou seja, o artefato .flatpak
 publicado redistribui código LGPL e GPL-3.0 junto com o código MIT do Hefesto —
 o que as duas licenças permitem, desde que os avisos delas sigam junto, e é o
 caso: o pip instala cada pacote com o seu próprio dist-info e o seu texto de

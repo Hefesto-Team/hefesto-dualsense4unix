@@ -86,7 +86,7 @@ ALVOS_QUE_COPIAM_DKMS = [
     "scripts/build_deb.sh",
     "packaging/arch/PKGBUILD",
     "packaging/fedora/hefesto-dualsense4unix.spec",
-    "flatpak/br.andrefarias.Hefesto.yml",
+    "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml",
 ]
 
 

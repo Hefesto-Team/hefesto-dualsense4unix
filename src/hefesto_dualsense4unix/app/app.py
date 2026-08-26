@@ -777,7 +777,10 @@ class HefestoApp(
         # Cobre child Popen (não-systemd), GUIs zumbi de fork antigo, daemons
         # spawned por hotplug-gui, instâncias Flatpak. Idempotente — se já
         # morreu, pkill retorna 1 silente.
+        # IDENTIDADE-01 (25/08/2026): os DOIS app-ids do Flatpak. O Flatpak
+        # não migra id, então na transição os dois podem estar instalados.
         for pat in ("hefesto_dualsense4unix", "hefesto-dualsense4unix daemon",
+                    "io.github.hefesto_team.hefesto_dualsense4unix",
                     "br.andrefarias.Hefesto"):
             with contextlib.suppress(FileNotFoundError, subprocess.SubprocessError):
                 subprocess.run(["pkill", "-KILL", "-f", pat],

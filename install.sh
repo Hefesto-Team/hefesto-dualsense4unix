@@ -1634,7 +1634,7 @@ format_flatpak() {
     bash "${ROOT_DIR}/scripts/build_flatpak.sh" --install \
         || die "build_flatpak.sh falhou"
     install_udev_host
-    printf '\n      Abrir: flatpak run br.andrefarias.Hefesto\n'
+    printf '\n      Abrir: flatpak run io.github.hefesto_team.hefesto_dualsense4unix\n'
 }
 
 format_appimage() {
@@ -2194,9 +2194,9 @@ else
     # o host, mas o usuário pode esperar simetria explícita "tudo pro
     # Flatpak". A chamada é no-op se as regras já estão lá).
     if command -v flatpak >/dev/null 2>&1 \
-       && flatpak info br.andrefarias.Hefesto >/dev/null 2>&1; then
+       && flatpak info io.github.hefesto_team.hefesto_dualsense4unix >/dev/null 2>&1; then
         printf '      Flatpak Hefesto detectado — sincronizando regras via bundle\n'
-        flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto \
+        flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix \
             >/dev/null 2>&1 \
             || warn "flatpak install-host-udev.sh falhou (regras já vieram via install_udev.sh)"
     fi
@@ -3893,6 +3893,26 @@ printf '────────────────────────
 printf ' Abrir:       hefesto-dualsense4unix-gui\n'
 printf ' Desinstalar: ./uninstall.sh\n'
 printf '─────────────────────────────────────────\n'
+
+# IDENTIDADE-01 (25/08/2026): o app-id mudou, e o Flatpak NÃO MIGRA ID. Para
+# ele o id novo é outro aplicativo: não atualiza o antigo, instala do lado — e
+# quem já usava fica com DOIS Hefestos no menu, o velho parado e o novo vivo.
+# Não desinstalamos por conta própria: mexer no que a pessoa instalou, sem
+# pedir, é o tipo de surpresa que esta casa não faz. Avisamos e damos o comando.
+APP_ID_FLATPAK_ANTIGO="br.andrefarias.Hefesto"
+if command -v flatpak >/dev/null 2>&1 \
+   && flatpak info "${APP_ID_FLATPAK_ANTIGO}" >/dev/null 2>&1; then
+    printf '\n'
+    printf ' Você tem a versão ANTIGA do Hefesto instalada pelo Flatpak.\n'
+    printf '   O aplicativo trocou de identidade nesta versão, e o Flatpak trata\n'
+    printf '   identidade nova como outro aplicativo: ele instala ao lado em vez de\n'
+    printf '   atualizar. Ficam dois Hefestos no menu, e só o novo recebe conserto.\n'
+    printf '   Os seus perfis não se perdem — o novo lê os do antigo ao abrir pela\n'
+    printf '   primeira vez, sem apagar nada.\n'
+    printf '   Para tirar o antigo do menu:\n'
+    printf '     flatpak uninstall --user %s\n' "${APP_ID_FLATPAK_ANTIGO}"
+    printf '─────────────────────────────────────────\n'
+fi
 
 # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: recomendação (apenas print) para quem usa
 # o microfone do DualSense. O quirk de áudio USB (usbcore.quirks=054c:0ce6:gn) é

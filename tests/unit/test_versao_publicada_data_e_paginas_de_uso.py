@@ -3,7 +3,7 @@
 PUBLICAÇÃO-FIEL-01 (31/07). Três coisas que a v0.4.0 publicou erradas, e a
 régua que deixou passar:
 
-  - `flatpak/br.andrefarias.Hefesto.metainfo.xml` anunciava a 0.4.0 com
+  - `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml` anunciava a 0.4.0 com
     `date="2026-07-28"` e com o texto da 0.3.0, e a 0.3.0 tinha sumido da série.
     O commit do bump trocou uma linha — `version="0.3.0"` virou
     `version="0.4.0"` — porque o `scripts/check_version_consistency.py` conferia
@@ -43,7 +43,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 
 GATE_REL = "scripts/check_version_consistency.py"
-METAINFO_REL = "flatpak/br.andrefarias.Hefesto.metainfo.xml"
+METAINFO_REL = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml"
 CHANGELOG_REL = "CHANGELOG.md"
 INSTALACAO_REL = "docs/usage/instalacao.md"
 PAGINAS_DE_USO = (INSTALACAO_REL, "docs/usage/quickstart.md", "docs/usage/flatpak.md")

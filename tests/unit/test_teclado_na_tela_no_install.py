@@ -512,7 +512,7 @@ class TestEmpacotamentosDeclaram:
             ("packaging/arch/PKGBUILD", r"^\s*'wvkbd:"),
             ("packaging/nix/package.nix", r"makeBinPath.*wvkbd"),
             (
-                "flatpak/br.andrefarias.Hefesto.yml",
+                "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml",
                 r"^\s*-\s*name:\s*wvkbd\s*$",
             ),
         ],
@@ -534,9 +534,9 @@ class TestEmpacotamentosDeclaram:
         o módulo, `shutil.which("wvkbd-mobintl")` devolveria None para sempre,
         por construção — e o formato Flatpak nunca teria como escrever texto.
         """
-        manifesto = (RAIZ / "flatpak" / "br.andrefarias.Hefesto.yml").read_text(
-            encoding="utf-8"
-        )
+        manifesto = (
+            RAIZ / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml"
+        ).read_text(encoding="utf-8")
         assert re.search(r"^\s*-\s*name:\s*wvkbd\s*$", manifesto, re.MULTILINE)
         assert "sha256:" in manifesto.split("name: wvkbd", 1)[1][:800], (
             "módulo sem SHA-256 — o byte que chega deixaria de ser o revisado"

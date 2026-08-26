@@ -269,7 +269,10 @@ def test_dentro_do_sandbox_o_detector_diz_que_nao_sabe(tmp_path: Path) -> None:
     sei se você está segura".
     """
     marca = tmp_path / "flatpak-info-de-mentira"
-    marca.write_text("[Application]\nname=br.andrefarias.Hefesto\n", encoding="utf-8")
+    marca.write_text(
+        "[Application]\nname=io.github.hefesto_team.hefesto_dualsense4unix\n",
+        encoding="utf-8",
+    )
 
     proc = _rodar(tmp_path, None, extra={"HEFESTO_MARCA_SANDBOX": str(marca)})
 
@@ -402,13 +405,14 @@ def test_empacotamento_leva_o_dono_do_bluez() -> None:
     # O FLATPAK ENTRA PELO MANIFESTO, não pelo invólucro (achado de 06/08/2026,
     # MEDIDO): `scripts/build_flatpak.sh` tem 120 linhas, chama o
     # `flatpak-builder` e NÃO LISTA ARQUIVO NENHUM. Quem declara o conteúdo do
-    # pacote é `flatpak/br.andrefarias.Hefesto.yml`. Com o invólucro na lista,
+    # pacote é `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml`.
+    # Com o invólucro na lista,
     # pôr o `doctor.sh` no manifesto sem o `bluez_config.sh` passava verde aqui
     # e no `check_packaging_parity.sh`: o invólucro não cita `doctor.sh`, o
     # `continue` disparava, e a regra de PAR nunca alcançava o Flatpak.
     empacotadores = [
         RAIZ / "scripts" / "build_deb.sh",
-        RAIZ / "flatpak" / "br.andrefarias.Hefesto.yml",
+        RAIZ / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.yml",
         RAIZ / "scripts" / "build_appimage.sh",
         RAIZ / "scripts" / "build_appimage_gui.sh",
         RAIZ / "packaging" / "fedora" / "hefesto-dualsense4unix.spec",

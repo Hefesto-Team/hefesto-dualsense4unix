@@ -6,6 +6,34 @@ adotam o Flatpak como formato canônico de distribuição de aplicativos.
 
 ---
 
+## Se você já usava o Hefesto pelo Flatpak antes de 25/08/2026
+
+O aplicativo trocou de identidade: era `br.andrefarias.Hefesto`, do tempo em
+que o repositório vivia numa conta pessoal, e passou a ser
+`io.github.hefesto_team.hefesto_dualsense4unix` — a forma que o Flathub exige
+para projeto hospedado no GitHub.
+
+**O Flatpak não migra identidade.** Para ele, identidade nova é outro
+aplicativo: ele instala ao lado em vez de atualizar. Ficam dois Hefestos no
+menu, e só o novo recebe conserto.
+
+**Os seus perfis não se perdem.** Na primeira vez que abre, o Hefesto novo lê a
+configuração do antigo e a copia para a casa dele, sem apagar nada da antiga.
+
+Depois de abrir o novo pelo menos uma vez, tire o antigo:
+
+```bash
+flatpak uninstall --user br.andrefarias.Hefesto
+```
+
+Se quiser apagar também a casa antiga (que continua servindo de backup):
+
+```bash
+rm -rf ~/.var/app/br.andrefarias.Hefesto/
+```
+
+---
+
 ## Requisitos
 
 - Flatpak instalado (`sudo apt install flatpak` ou equivalente).
@@ -24,11 +52,11 @@ adotam o Flatpak como formato canônico de distribuição de aplicativos.
 
 ### Instalar a partir do bundle local
 
-Se você baixou o arquivo `br.andrefarias.Hefesto.flatpak` (gerado pelo CI ou por
+Se você baixou o arquivo `io.github.hefesto_team.hefesto_dualsense4unix.flatpak` (gerado pelo CI ou por
 `scripts/build_flatpak.sh --bundle`):
 
 ```bash
-flatpak install --user br.andrefarias.Hefesto.flatpak
+flatpak install --user io.github.hefesto_team.hefesto_dualsense4unix.flatpak
 ```
 
 ### Construir localmente a partir do código-fonte
@@ -46,7 +74,7 @@ git checkout v0.9.4.5
 O script cuida de:
 
 1. Construir o wheel Python (`python -m build`).
-2. Chamar `flatpak-builder` com o manifest `flatpak/br.andrefarias.Hefesto.yml`.
+2. Chamar `flatpak-builder` com o manifest `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml`.
 3. Instalar no repositório local do usuário (`--user`).
 
 ---
@@ -58,7 +86,7 @@ necessário executar o script de instalação de udev no host uma vez, com senha
 de administrador:
 
 ```bash
-flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
+flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix
 ```
 
 O script copia o mesmo conjunto canônico que o `install_udev.sh` do código-fonte
@@ -88,7 +116,7 @@ Após a instalação, desconecte e reconecte o controle DualSense.
 ## Executar o Hefesto - Dualsense4Unix
 
 ```bash
-flatpak run br.andrefarias.Hefesto
+flatpak run io.github.hefesto_team.hefesto_dualsense4unix
 ```
 
 Ou pelo lançador de aplicativos do sistema (Menu de aplicativos / COSMIC Store
@@ -102,15 +130,15 @@ Dentro do sandbox Flatpak, os caminhos XDG são redirecionados:
 
 | Caminho original (nativo)    | Caminho dentro do Flatpak                                      |
 |------------------------------|----------------------------------------------------------------|
-| `~/.config/hefesto-dualsense4unix/`         | `~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/`            |
-| `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`  | `$XDG_RUNTIME_DIR/app/br.andrefarias.Hefesto/hefesto-dualsense4unix/`         |
+| `~/.config/hefesto-dualsense4unix/`         | `~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/config/hefesto-dualsense4unix/`            |
+| `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`  | `$XDG_RUNTIME_DIR/app/io.github.hefesto_team.hefesto_dualsense4unix/hefesto-dualsense4unix/`         |
 
 Para copiar perfis criados fora do Flatpak:
 
 ```bash
-mkdir -p ~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/profiles/
+mkdir -p ~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/config/hefesto-dualsense4unix/profiles/
 cp ~/.config/hefesto-dualsense4unix/profiles/*.json \
-   ~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/profiles/
+   ~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/config/hefesto-dualsense4unix/profiles/
 ```
 
 ---
@@ -120,7 +148,7 @@ cp ~/.config/hefesto-dualsense4unix/profiles/*.json \
 O Flatpak não tem acesso ao systemd do usuário; por isso o **daemon é executado
 como processo filho da GUI** (sem `--install-service`). O ciclo de vida é:
 
-1. `flatpak run br.andrefarias.Hefesto` inicia a GUI.
+1. `flatpak run io.github.hefesto_team.hefesto_dualsense4unix` inicia a GUI.
 2. A GUI verifica se há daemon ativo; se não, inicia um processo filho interno.
 3. Ao fechar a janela principal, o daemon filho é encerrado junto.
 
@@ -130,7 +158,7 @@ permissão de execução em segundo plano ao compositor.
 
 **Limitação conhecida**: o daemon Flatpak não é gerenciado pelo systemd do
 usuário. Reinicializações do sistema não reiniciam o daemon automaticamente.
-Para autostart, o usuário pode adicionar `flatpak run br.andrefarias.Hefesto`
+Para autostart, o usuário pode adicionar `flatpak run io.github.hefesto_team.hefesto_dualsense4unix`
 ao autostart do ambiente gráfico.
 
 ---
@@ -177,16 +205,16 @@ fica em inglês, só os rótulos do esqueleto fixo):
 
 ```bash
 flatpak run --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
-    br.andrefarias.Hefesto
+    io.github.hefesto_team.hefesto_dualsense4unix
 ```
 
 Ou persistir o override permanentemente:
 
 ```bash
 flatpak override --user --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
-    br.andrefarias.Hefesto
+    io.github.hefesto_team.hefesto_dualsense4unix
 # Próxima execução já pega EN sem precisar passar --env:
-flatpak run br.andrefarias.Hefesto
+flatpak run io.github.hefesto_team.hefesto_dualsense4unix
 ```
 
 > **Importante**: o sandbox Flatpak **filtra `LANG`/`LANGUAGE`** do
@@ -210,7 +238,7 @@ produto".
 
 ## Permissões do sandbox
 
-O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões:
+O manifest `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml` declara as seguintes permissões:
 
 | Permissão                                  | Motivo                                              |
 |--------------------------------------------|-----------------------------------------------------|
@@ -241,7 +269,7 @@ O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões
 
 3. **Bluetooth**: o acesso a Bluetooth dentro do sandbox exige permissão adicional
    via D-Bus (`--talk-name=org.bluez.*`). Se o DualSense via BT não for detectado,
-   execute `flatpak override --user --talk-name=org.bluez.* br.andrefarias.Hefesto`.
+   execute `flatpak override --user --talk-name=org.bluez.* io.github.hefesto_team.hefesto_dualsense4unix`.
 
 4. **Flathub**: o Hefesto - Dualsense4Unix não está publicado no Flathub ainda. A instalação é
    via bundle local ou build a partir do código-fonte.
@@ -270,7 +298,7 @@ O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões
 
 ```bash
 ./scripts/build_flatpak.sh --bundle
-# Gera: br.andrefarias.Hefesto.flatpak no diretório raiz
+# Gera: io.github.hefesto_team.hefesto_dualsense4unix.flatpak no diretório raiz
 ```
 
 ### CI/CD
@@ -283,10 +311,10 @@ em cada push para `main` e disponibiliza o artifact `hefesto-dualsense4unix-flat
 ## Desinstalar
 
 ```bash
-flatpak uninstall --user br.andrefarias.Hefesto
+flatpak uninstall --user io.github.hefesto_team.hefesto_dualsense4unix
 
 # Opcional: remover dados do usuário
-rm -rf ~/.var/app/br.andrefarias.Hefesto/
+rm -rf ~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/
 ```
 
 As regras udev instaladas no host permanecem. Para removê-las:

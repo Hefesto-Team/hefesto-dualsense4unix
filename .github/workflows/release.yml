@@ -260,7 +260,7 @@ jobs:
             --default-branch=stable \
             --repo=flatpak-repo \
             flatpak-build-dir \
-            flatpak/br.andrefarias.Hefesto.yml
+            flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml
       # PACOTE-COM-NOME-01: o bundle era o ÚNICO artefato sem versão no nome —
       # o AppImage e os dois .deb já a carregam. Duas releases publicavam o
       # mesmo `Hefesto-Dualsense4Unix.flatpak`, e quem baixasse não tinha como
@@ -272,7 +272,7 @@ jobs:
           flatpak build-bundle \
             flatpak-repo \
             "Hefesto-Dualsense4Unix-${VERSION}-x86_64.flatpak" \
-            br.andrefarias.Hefesto \
+            io.github.hefesto_team.hefesto_dualsense4unix \
             stable
       - name: Upload bundle
         uses: actions/upload-artifact@v4

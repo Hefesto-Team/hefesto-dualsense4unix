@@ -251,7 +251,7 @@ def test_a_regra_e_instalada_por_todos_os_formatos() -> None:
         "packaging/arch/PKGBUILD": REGRA.name,
         "packaging/fedora/hefesto-dualsense4unix.spec": REGRA.name,
         "packaging/nix/package.nix": REGRA.name,
-        "flatpak/br.andrefarias.Hefesto.yml": REGRA.name,
+        "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml": REGRA.name,
     }
     faltando = []
     for rel, agulha in alvos.items():

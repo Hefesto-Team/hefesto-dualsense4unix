@@ -63,7 +63,7 @@ groups $USER | grep -E 'input|plugdev'  # opcional, ACL via udev tag uaccess é 
    sudo bash /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
 
    # Flatpak instalado (helper exposto via flatpak run)
-   flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
+   flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix
    ```
 
    Todos aplicam o mesmo conjunto canônico — **15 regras** por padrão (mais a
@@ -170,7 +170,7 @@ a extensão está faltando.
 
 ## 5. Flatpak: controle não detectado dentro do sandbox
 
-**Sintoma**: `flatpak run br.andrefarias.Hefesto` abre GUI mas
+**Sintoma**: `flatpak run io.github.hefesto_team.hefesto_dualsense4unix` abre GUI mas
 `status` reporta `connected: False`.
 
 **Diagnóstico**:
@@ -189,7 +189,7 @@ ls /etc/udev/rules.d/70-ps5-controller.rules 2>&1
 ```bash
 # As regras udev precisam estar no host (fora do sandbox).
 # Use o helper bundled:
-flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
+flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix
 
 # Replug o controle (udev reaplica).
 ```
@@ -338,7 +338,7 @@ antiga — atualize via:
 sudo apt install --reinstall ./dist/hefesto-dualsense4unix_<versão>_amd64_<pytag>.deb
 
 # Flatpak
-flatpak update br.andrefarias.Hefesto
+flatpak update io.github.hefesto_team.hefesto_dualsense4unix
 
 # Fonte
 git pull && ./scripts/dev_bootstrap.sh --with-tray
@@ -392,7 +392,7 @@ continuam valendo:
 ### Sintoma A — labels continuam em PT-BR mesmo com `LANG=en_US.UTF-8`
 
 ```bash
-LANG=en_US.UTF-8 flatpak run br.andrefarias.Hefesto
+LANG=en_US.UTF-8 flatpak run io.github.hefesto_team.hefesto_dualsense4unix
 # Janela abre com "Aplicar", "Salvar", "Sair" mesmo após `LANG=` no shell.
 ```
 
@@ -403,15 +403,15 @@ runtime GNOME 47).
 **Fix**:
 
 ```bash
-flatpak run --env=LANG=en_US.UTF-8 --env=LANGUAGE=en br.andrefarias.Hefesto
+flatpak run --env=LANG=en_US.UTF-8 --env=LANGUAGE=en io.github.hefesto_team.hefesto_dualsense4unix
 ```
 
 Ou persistir o override de uma vez só:
 
 ```bash
 flatpak override --user --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
-    br.andrefarias.Hefesto
-flatpak run br.andrefarias.Hefesto   # agora pega EN automaticamente
+    io.github.hefesto_team.hefesto_dualsense4unix
+flatpak run io.github.hefesto_team.hefesto_dualsense4unix   # agora pega EN automaticamente
 ```
 
 ### Sintoma B — Flatpak v3.4.0 só traduzia EN; PT-BR ficava em fallback
@@ -432,7 +432,7 @@ flatpak install --user -y --reinstall \
     dist/flatpak/hefesto-dualsense4unix-3.4.1.flatpak
 
 # Validar:
-flatpak run --command=find br.andrefarias.Hefesto \
+flatpak run --command=find io.github.hefesto_team.hefesto_dualsense4unix \
     /app/share/hefesto-dualsense4unix/locale/ -name "*.mo"
 # Esperado:
 #   /app/share/.../locale/en/LC_MESSAGES/hefesto-dualsense4unix.mo

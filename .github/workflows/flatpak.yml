@@ -30,9 +30,9 @@ jobs:
         run: |
           python3 -c "
           import yaml, sys
-          with open('flatpak/br.andrefarias.Hefesto.yml') as f:
+          with open('flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml') as f:
               doc = yaml.safe_load(f)
-          assert doc['app-id'] == 'br.andrefarias.Hefesto'
+          assert doc['app-id'] == 'io.github.hefesto_team.hefesto_dualsense4unix'
           assert doc['command'] == 'hefesto-dualsense4unix-gui'
           print('Manifest YAML valido.')
           print(f'  app-id: {doc[\"app-id\"]}')
@@ -47,7 +47,7 @@ jobs:
       - name: Validar metainfo AppStream
         run: |
           appstreamcli validate --no-net \
-            flatpak/br.andrefarias.Hefesto.metainfo.xml
+            flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml
 
   build-flatpak:
     name: Build Flatpak
@@ -92,28 +92,30 @@ jobs:
             --force-clean \
             --repo=flatpak-repo \
             flatpak-build-dir \
-            flatpak/br.andrefarias.Hefesto.yml
+            flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml
 
       - name: Exportar bundle .flatpak
         run: |
           flatpak build-bundle \
             flatpak-repo \
             Hefesto-Dualsense4Unix.flatpak \
-            br.andrefarias.Hefesto
+            io.github.hefesto_team.hefesto_dualsense4unix
 
       - name: Install --user do bundle (smoke de instalação)
         run: |
           flatpak install --user --noninteractive --bundle \
             Hefesto-Dualsense4Unix.flatpak
-          # App-id Flatpak preservado como br.andrefarias.Hefesto durante o
-          # rebrand (composite com qualificador br.andrefarias., decisão do
-          # v3.0.0 — não muda para evitar quebrar instalações existentes).
+          # IDENTIDADE-01 (25/08/2026): o app-id passou de `br.andrefarias.Hefesto`
+          # para `io.github.hefesto_team.hefesto_dualsense4unix`, a forma que o
+          # Flathub exige para projeto hospedado no GitHub (4 componentes, porção
+          # de domínio em minúsculas, hífen convertido em `_`) e que mapeia para
+          # `github.com/hefesto-team/hefesto-dualsense4unix`, que existe.
           # O grep casa o app-id, não o nome interno hefesto-dualsense4unix.
-          flatpak list --user --app | grep -i "br.andrefarias.Hefesto"
+          flatpak list --user --app | grep -i "io.github.hefesto_team.hefesto_dualsense4unix"
 
       - name: Validar registro do app
         run: |
-          flatpak info --user br.andrefarias.Hefesto
+          flatpak info --user io.github.hefesto_team.hefesto_dualsense4unix
           # Execução real de GUI requer DISPLAY; em runner headless a execução
           # via `flatpak run` pode falhar por falta de sessão X11/Wayland.
           # Aqui o critério é o pacote estar corretamente instalado e

@@ -188,7 +188,8 @@ def _kill_previous_instances(logger: structlog.stdlib.BoundLogger) -> None:
       - Daemon avulso (hefesto-dualsense4unix daemon start) — APENAS se NÃO
         managed por systemd. Daemons via systemctl ficam intactos para o
         Restart=on-failure não bater em StartLimitBurst.
-      - Flatpak runtime do app (br.andrefarias.Hefesto)
+      - Flatpak runtime do app — os DOIS app-ids
+        (io.github.hefesto_team.hefesto_dualsense4unix e o anterior)
 
     Pula próprio PID + PPID. Defesa anti-loop: daemons systemd-managed são
     detectados via /proc/<pid>/status PPid e preservados.
@@ -199,6 +200,11 @@ def _kill_previous_instances(logger: structlog.stdlib.BoundLogger) -> None:
     patterns = [
         r"hefesto_dualsense4unix\.app\.main",
         r"hefesto-dualsense4unix-gui",
+        # IDENTIDADE-01 (25/08/2026): OS DOIS app-ids. O Flatpak não migra id,
+        # então durante a transição a máquina pode ter os dois instalados — e
+        # uma janela do id antigo ainda de pé é exatamente a instância anterior
+        # que esta função existe para tirar do caminho.
+        r"io\.github\.hefesto_team\.hefesto_dualsense4unix",
         r"br\.andrefarias\.Hefesto",
     ]
     # Daemon: pattern separado para checar systemd-managed antes de matar.

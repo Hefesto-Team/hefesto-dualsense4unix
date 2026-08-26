@@ -19,8 +19,8 @@ set -euo pipefail
 
 # Raiz do repositório (relativa ao script)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MANIFEST="${REPO_ROOT}/flatpak/br.andrefarias.Hefesto.yml"
-APP_ID="br.andrefarias.Hefesto"
+MANIFEST="${REPO_ROOT}/flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"
+APP_ID="io.github.hefesto_team.hefesto_dualsense4unix"
 BUILD_DIR="${REPO_ROOT}/flatpak-build-dir"
 REPO_DIR="${REPO_ROOT}/flatpak-repo"
 

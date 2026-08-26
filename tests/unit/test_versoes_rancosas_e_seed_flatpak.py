@@ -7,7 +7,7 @@ tempo, e nenhum era visto por portão nenhum:
     `hefesto-dualsense4unix_3.0.0_amd64.deb`, nome que o build_deb.sh não gera
     mais (hoje é `_<versão>_amd64_py<tag>.deb`). Esse banner é o PRIMEIRO texto
     que alguém novo lê.
-  - `flatpak/br.andrefarias.Hefesto.metainfo.xml` tinha como release mais
+  - `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml` tinha como release mais
     recente a 3.13.3 de 14/07 e nenhuma 0.x — a loja anunciava duas semanas de
     atraso.
   - `packaging/cosmic-applet/Cargo.toml` estava em 0.1.0 (e com e-mail pessoal
@@ -43,10 +43,10 @@ REPO = Path(__file__).resolve().parents[2]
 
 GATE_REL = "scripts/check_version_consistency.py"
 ENTRYPOINT_REL = "assets/appimage/entrypoint.sh"
-METAINFO_REL = "flatpak/br.andrefarias.Hefesto.metainfo.xml"
+METAINFO_REL = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml"
 CARGO_REL = "packaging/cosmic-applet/Cargo.toml"
 CARGO_LOCK_REL = "packaging/cosmic-applet/Cargo.lock"
-MANIFESTO_REL = "flatpak/br.andrefarias.Hefesto.yml"
+MANIFESTO_REL = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"
 BUILD_GUI_REL = "scripts/build_appimage_gui.sh"
 
 #: Alvos que este sprint acrescentou ao portão, com um conteúdo mínimo válido

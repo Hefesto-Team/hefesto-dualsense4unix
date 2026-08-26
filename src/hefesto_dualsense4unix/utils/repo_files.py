@@ -55,7 +55,8 @@ def bases_de_instalacao() -> tuple[Path, ...]:
        esta linha ALCANÇA o Flatpak sozinha.
     3. **`/app/share/…`** — o Flatpak escrito por extenso. É cinto e
        suspensório do item 2: o manifesto instala em `/app/share/…` de forma
-       literal (`flatpak/br.andrefarias.Hefesto.yml:231,246,267`), e se um dia
+       literal (`flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml`,
+       nos `install -Dm644 … /app/share/…` do módulo `hefesto`), e se um dia
        o wheel for instalado com outro prefixo dentro da sandbox o item 2
        deixa de casar e este continua.
     4. **`XDG_DATA_HOME/…`** (`~/.local/share/hefesto-dualsense4unix`) — o
