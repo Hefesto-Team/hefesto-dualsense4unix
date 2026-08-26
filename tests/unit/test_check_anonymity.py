@@ -342,3 +342,106 @@ def test_git_nao_reprova_arquivo_novo_que_o_gitignore_manda_ignorar(
 
     result = run_check(fake_repo)
     assert result.returncode == 0, result.stdout
+
+
+# =============================================================================
+# ANONIMATO-MAIUSCULA-01 (achado 13/08/2026, curado 26/08/2026)
+#
+# O ramo do GIT não levava `-i`, e a regex do script é toda minúscula. Ninguém
+# escreve nome próprio em minúscula, então maiúscula era esconderijo — e a
+# suíte não via, porque `test_ainda_pega_o_modelo_composto` (lá em cima)
+# exercita o ramo de FALLBACK, que nunca perdeu o `-i`.
+#
+# Por isso TODO teste desta seção chama `_git_de_mentira` e faz `git add`: é o
+# ramo do `grep -HnIiE` da linha ~144 que está sob a régua, e nenhum outro.
+# =============================================================================
+
+def test_maiuscula_nao_e_esconderijo(fake_repo: Path) -> None:
+    """Nome de modelo capitalizado reprova NO RAMO DO GIT, não só no fallback."""
+    _git_de_mentira(fake_repo)
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
+        "# Escrito com Claude Opus.\n"
+    )
+    subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
+
+    result = run_check(fake_repo)
+    assert result.returncode == 1, (
+        "maiúscula passou verde no ramo do git: o `-i` do grep sumiu de novo.\n"
+        f"saída:\n{result.stdout}"
+    )
+    assert "a.py" in result.stdout, result.stdout
+
+
+def test_maiuscula_de_provedor_nao_e_esconderijo(fake_repo: Path) -> None:
+    """A segunda forma medida: o nome do provedor, também capitalizado."""
+    _git_de_mentira(fake_repo)
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
+        "# Feito na Anthropic.\n"
+    )
+    subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
+
+    result = run_check(fake_repo)
+    assert result.returncode == 1, result.stdout
+
+
+def test_o_nome_do_arquivo_de_regras_nao_e_violacao(fake_repo: Path) -> None:
+    """Primeira família do ruído medido: o literal `CLAUDE.md`.
+
+    São 56 acusações em 26 arquivos desta árvore, todas citações do NOME de um
+    arquivo por quem escreve sobre as regras da casa. O arquivo é proibido de
+    ser versionado; o nome dele, não.
+    """
+    _git_de_mentira(fake_repo)
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
+        "# a regra está no `CLAUDE.md`, bloco 'As regras desta casa'\n"
+    )
+    subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
+
+    result = run_check(fake_repo)
+    assert result.returncode == 0, (
+        "o portão virou gerador de ruído: o nome do arquivo de regras não é "
+        f"violação.\nsaída:\n{result.stdout}"
+    )
+
+
+def test_atribuicao_a_uma_pessoa_nao_e_violacao(fake_repo: Path) -> None:
+    """Segunda família: `feito por ela` é atribuição a uma PESSOA."""
+    _git_de_mentira(fake_repo)
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
+        "# O par foi feito POR ELA, fechando a Steam no meio.\n"
+    )
+    subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
+
+    result = run_check(fake_repo)
+    assert result.returncode == 0, result.stdout
+
+
+def test_a_isencao_e_por_casamento_e_nao_por_linha(fake_repo: Path) -> None:
+    """A mordida que separa a cura certa da cura preguiçosa.
+
+    Um `grep -v` descartaria a LINHA inteira, e a violação de verdade sairia de
+    carona com o ruído. A isenção apaga só o TRECHO isento e pergunta de novo.
+    """
+    _git_de_mentira(fake_repo)
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
+        "# Escrito com Claude Opus — ver `CLAUDE.md`\n"
+    )
+    subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
+
+    result = run_check(fake_repo)
+    assert result.returncode == 1, (
+        "violação real escondida atrás do ruído isento: a isenção está "
+        f"descartando a LINHA em vez do CASAMENTO.\nsaída:\n{result.stdout}"
+    )
+
+
+def test_atribuicao_a_uma_ia_continua_reprovando(fake_repo: Path) -> None:
+    """A contraparte de `feito por ela`: o `\\bfeito por\\b` não foi afrouxado."""
+    _git_de_mentira(fake_repo)
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
+        "# Feito por uma IA.\n"
+    )
+    subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
+
+    result = run_check(fake_repo)
+    assert result.returncode == 1, result.stdout
