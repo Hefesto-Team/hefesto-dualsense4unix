@@ -27,7 +27,6 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     apply_mode,
     mode_of_state,
 )
-from hefesto_dualsense4unix.app.constants import ROOT_DIR
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor, call_async, run_in_thread
 from hefesto_dualsense4unix.integrations.hotkey_daemon import DEFAULT_BUFFER_MS
@@ -40,6 +39,10 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     XBOX360_VENDOR,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import (
+    como_atualizar_esta_instalacao,
+    encontrar_arquivo_do_repo,
+)
 
 logger = get_logger(__name__)
 
@@ -352,7 +355,7 @@ def format_steam_input_result(
     if status == "sem_script":
         return (
             "Não encontrei o script que desliga o Steam Input nesta "
-            "instalação — rode ./install.sh para atualizar o Hefesto."
+            f"instalação — {como_atualizar_esta_instalacao()}."
         )
     if status == "jogo_aberto" or tag == "recusado-jogo-aberto":
         return (
@@ -1196,17 +1199,10 @@ class EmulationActionsMixin(WidgetAccessMixin):
     _PLACAS_ALSA = "/proc/asound/cards"
 
     def _mic_script(self) -> Path | None:
-        for cand in (
-            ROOT_DIR / "scripts" / "fix_wireplumber_default_source.sh",
-            Path("/usr/share/hefesto-dualsense4unix/scripts/fix_wireplumber_default_source.sh"),
-            Path(
-                "/usr/local/share/hefesto-dualsense4unix/scripts/"
-                "fix_wireplumber_default_source.sh"
-            ),
-        ):
-            if cand.is_file():
-                return cand
-        return None
+        """BG-BASES-01 (26/08/2026): eram três bases à mão, hoje é a busca única."""
+        return encontrar_arquivo_do_repo(
+            "scripts/fix_wireplumber_default_source.sh"
+        )
 
     @staticmethod
     def _placas_de_microfone() -> int:
@@ -1759,14 +1755,14 @@ class EmulationActionsMixin(WidgetAccessMixin):
     # (touchpad/teclado vazam, mic spam). Botão pra verificar/desligar.
 
     def _steam_input_script(self) -> Path | None:
-        for cand in (
-            ROOT_DIR / "scripts" / "disable_steam_input.sh",
-            Path("/usr/share/hefesto-dualsense4unix/scripts/disable_steam_input.sh"),
-            Path("/usr/local/share/hefesto-dualsense4unix/scripts/disable_steam_input.sh"),
-        ):
-            if cand.is_file():
-                return cand
-        return None
+        """BG-BASES-01 (26/08/2026): a lista curta é que fazia o botão calar.
+
+        No Flatpak o `disable_steam_input.sh` **está** instalado (o manifesto
+        o põe em `/app/share/hefesto-dualsense4unix/scripts/`), e nenhuma das
+        três bases desta lista olhava para lá: quem clicasse em "Verificar" ou
+        "Desligar Steam Input" recebia *"Não encontrei o script…"*.
+        """
+        return encontrar_arquivo_do_repo("scripts/disable_steam_input.sh")
 
     @staticmethod
     def _steam_input_is_on() -> bool | None:
