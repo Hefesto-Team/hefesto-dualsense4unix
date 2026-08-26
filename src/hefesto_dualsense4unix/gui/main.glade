@@ -2839,6 +2839,20 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                         <property name="xalign">0</property>
                         <property name="selectable">True</property>
                         <property name="wrap">True</property>
+                        <!-- LARGURA-01/E3, aplicado em 26/08/2026: o `wrap` sozinho NAO
+                             baixa a largura MINIMA — o GTK a calcula pela linha mais longa
+                             sem quebra, e a politica desta janela e horizontal `never`
+                             (`app/app.py`), sem barra para onde fugir. A leva de 26/08
+                             reescreveu as doze frases do cartao no molde "O que fazer", e a
+                             do Steam Input chegou a 311 caracteres numa linha so quando ha
+                             dois jogos na lista: a aba Sistema foi a 1284px contra os
+                             1180px com que a janela abre. Com o teto ela volta a caber.
+                             So age junto com o `wrap` e com o `halign=start` abaixo. -->
+                        <property name="max-width-chars">100</property>
+                        <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                             acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                             esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                        <property name="halign">start</property>
                       </object>
                     </child>
                     <!-- JANELA-CEGA-01 (pendência declarada): a troca de perfil
@@ -2971,9 +2985,29 @@ Espera 5 segundos antes de trocar de faixa, para não ficar oscilando.</property
                         <property name="spacing">4</property>
                         <child>
                           <object class="GtkButton" id="btn_storm_fix_safe">
-                            <property name="label" translatable="yes">Consertar problemas conhecidos</property>
+                            <!-- LARGURA-01/E3 no RÓTULO DO BOTÃO, 26/08/2026. A linha
+                                 "Avançado" tem CINCO botões lado a lado e um GtkBox
+                                 horizontal pede a SOMA dos mínimos: 1230px contra os 1180px
+                                 com que a janela abre, e a política é horizontal `never`
+                                 (`app/app.py`) — não há barra para onde fugir. O que
+                                 empurrou foi o renomeio de "Aplicar correções" (17
+                                 caracteres) para o rótulo abaixo (30), que está CERTO: o
+                                 velho não dizia o que o botão faz. Com `wrap`, o mínimo cai
+                                 (o rótulo quebra em duas linhas quando falta espaço) e o
+                                 NATURAL não muda — em tela larga fica idêntico ao de hoje,
+                                 numa linha só. NÃO usar GtkFlowBox aqui: a casa já tentou no
+                                 rodapé e ele dropou 3 dos 4 botões com "Negative content
+                                 width" (FIX-GUI-COSMIC-REMEDIATION-01/F1). -->
                             <property name="tooltip-text" translatable="yes">Não pede senha e NUNCA fecha a Steam: ajusta o áudio do controle e, só se a Steam estiver fechada, desliga o Steam Input — com ela aberta eu aviso que adiei, não finjo que apliquei.</property>
                             <signal name="clicked" handler="on_storm_fix_safe"/>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Consertar problemas conhecidos</property>
+                                <property name="wrap">True</property>
+                                <property name="justify">center</property>
+                                <property name="max-width-chars">18</property>
+                              </object>
+                            </child>
                           </object>
                         </child>
                         <child>

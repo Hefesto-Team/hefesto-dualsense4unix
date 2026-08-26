@@ -773,10 +773,10 @@ class _ContaDeSlots:
             self.caixa.pack_start(rotulo, False, False, 0)
         # A MARCA VISUAL É PEDIDA AQUI, E A CHAMADA NÃO É REDUNDANTE.
         #
-        # `moldura.marcar_afordancias` varre a seção uma vez na montagem e
-        # depois se pendura no "add" de cada caixa para alcançar o que nasce
-        # tarde — mas por `GLib.idle_add` (`moldura.py:234`), que só corre com
-        # laço principal vivo. Este bloco é redesenhado a cada resposta do
+        # `moldura.marcar_afordancias` (`moldura.py:158`) varre a seção uma vez
+        # na montagem e depois se pendura no "add" de cada caixa para alcançar o
+        # que nasce tarde — mas o gancho do "add" agenda a revarredura por
+        # `GLib.idle_add`, que só corre com laço principal vivo. Este bloco é redesenhado a cada resposta do
         # daemon, e a partir de 26/08/2026 ele carrega uma dica: sem esta linha,
         # o rótulo nasce com explicação e sem marca — que é exatamente o defeito
         # que aquela função cura, e o portão

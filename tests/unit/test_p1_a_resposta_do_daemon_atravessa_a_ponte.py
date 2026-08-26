@@ -346,15 +346,14 @@ class TestMicrofoneEntregaAResposta:
         assert espiao.chamadas == [], "a guarda tem de barrar ANTES do socket"
 
 
-class TestRumblePolicyEntregaOCorpo:
-    def test_policy_chega(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
-        daemon_diz(RUMBLE_POLICY_OK)
-
-        assert ipc_bridge.rumble_policy_set_detalhado("economia") == (
-            True,
-            None,
-            RUMBLE_POLICY_OK,
-        )
+#: PODADAS em 26/08/2026 (`c2e6a81a`, "as cinco pontes sem travessia saem"):
+#: `rumble_policy_set_detalhado`, `rumble_policy_set` e `trigger_reset` não
+#: existem mais. Não é regressão — nenhuma linha de tela as chamava, e o portão
+#: de lápides as tinha declaradas. Os testes que as exercitavam saíram JUNTO com
+#: elas: guardar régua de função que não existe é o mesmo defeito ao contrário —
+#: a régua vira mentira e a próxima pessoa perde uma tarde. As irmãs VIVAS
+#: (`rumble_policy_set_checked`, `trigger_set_checked`, `trigger_set`) continuam
+#: medidas logo abaixo, e são elas que o produto chama.
 
 
 # ---------------------------------------------------------------------------
@@ -383,10 +382,6 @@ class TestOsInvolucrosDeHojeNaoMudaram:
         """
         daemon_diz(TRIGGER_RECUSADO)
         assert ipc_bridge.trigger_set_checked("left", "Off", []) == (True, None)
-
-    def test_trigger_reset_continua_dupla(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
-        daemon_diz(TRIGGER_MESA_VAZIA)
-        assert ipc_bridge.trigger_reset() == (True, None)
 
     def test_trigger_set_bool_continua_bool(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
         daemon_diz(TRIGGER_MESA_VAZIA)
@@ -452,4 +447,3 @@ class TestOsInvolucrosDeHojeNaoMudaram:
     def test_rumble_policy_set_checked_continua_dupla(self, daemon_diz) -> None:  # type: ignore[no-untyped-def]
         daemon_diz(RUMBLE_POLICY_OK)
         assert ipc_bridge.rumble_policy_set_checked("economia") == (True, None)
-        assert ipc_bridge.rumble_policy_set("economia") is True
