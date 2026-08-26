@@ -39,6 +39,7 @@ import contextlib
 from collections.abc import Callable
 from typing import Any
 
+from hefesto_dualsense4unix.app.actions.config import secao_mesa
 from hefesto_dualsense4unix.app.actions.config.moldura import (
     QUANDO_VALE,
     rotulo_de_apoio,
@@ -210,8 +211,6 @@ FRASE_NAO_CAIU = (
     "O controle não chegou a cair do rádio, então não houve o que reconectar. "
     "Ele continua pareado."
 )
-
-from hefesto_dualsense4unix.app.actions.config import secao_mesa
 
 
 def frase_da_procura(restantes: int) -> str:
