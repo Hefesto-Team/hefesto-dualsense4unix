@@ -583,7 +583,7 @@ class TestAMigracaoAposentadaNaoEMuda:
             f"{sorted({str(r.get('event')) for r in registros})}"
         )
         assert relatos[0].get("arquivo") == "coop_local.json"
-        assert relatos[0].get("migracao") == "coop_local_match"  # noqa: acentuacao — slug de perfil, sem acento por desenho
+        assert relatos[0].get("migracao") == "coop_local_match"  # slug, sem acento (noqa-acento)
 
     def test_o_ramo_do_modo_jogo_tambem_relata(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -609,7 +609,7 @@ class TestAMigracaoAposentadaNaoEMuda:
         relatos = [
             r for r in registros
             if r.get("event") == "migracao_aposentada_sem_asset"
-            and r.get("migracao") == "modo_jogo_nos_presets"  # noqa: acentuacao — slug de perfil, sem acento por desenho
+            and r.get("migracao") == "modo_jogo_nos_presets"  # slug, sem acento (noqa-acento)
         ]
         assert relatos, (
             "o ramo `coop_local` de `migrate_modo_jogo_nos_presets` virou "
