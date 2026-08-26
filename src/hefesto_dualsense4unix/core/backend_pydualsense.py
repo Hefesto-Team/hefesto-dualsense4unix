@@ -2417,9 +2417,18 @@ class PyDualSenseController(IController):
         Chamado sob `_io_lock` nos DOIS caminhos em que o primário some: o
         hotplug-out (`_close_handles`) e o `disconnect()` do `reconnect()`. Os
         dois são a mesma coisa vista de longe — o controle dela piscou.
+
+        RESERVA-DO-POSTO-01 §5 — **por que INFO e não debug.** O nível padrão do
+        produto é INFO (`utils/logging_config.py`), e a retomada
+        (`primario_retomou_o_posto`) sempre foi `info`. Com a reserva e a
+        caducidade em `debug`, o journal de uma instalação normal só guardava o
+        caso BEM-SUCEDIDO: perguntar a ele com que frequência o posto se perde
+        seria contar apenas as amostras que confirmam a resposta desejada. Os
+        três eventos carregam a MESMA chave de correlação (`key`), que é o que
+        permite casar reserva → caducou/retomou no mesmo journal.
         """
         self._primario_deposto = (key, self._relogio())
-        logger.debug("primario_deposto_reservado", key=key)
+        logger.info("primario_deposto_reservado", key=key)
 
     def _posto_reservado_de_volta(self) -> str | None:
         """A key do primário deposto, se ele VOLTOU dentro da janela. Senão None.
@@ -2427,6 +2436,12 @@ class PyDualSenseController(IController):
         Também é aqui que a reserva CADUCA: passou de `PRIMARIO_RESERVA_SEC`,
         ela é esquecida — o posto não fica pendurado num controle que ficou na
         gaveta, e o próximo `next(iter(...))` volta a valer sem concorrência.
+
+        A caducidade é `info` pela mesma razão da reserva (ver
+        `_reservar_o_posto_de_primario`): ela é o desfecho ALTERNATIVO da
+        retomada, e um journal que só registra o desfecho bom não mede coisa
+        nenhuma. **A constante `PRIMARIO_RESERVA_SEC` não se mexe aqui** — o
+        valor só se decide depois da bancada, e a bancada é dela.
         """
         reserva = self._primario_deposto
         if reserva is None:
@@ -2434,7 +2449,7 @@ class PyDualSenseController(IController):
         key, quando = reserva
         if self._relogio() - quando >= PRIMARIO_RESERVA_SEC:
             self._primario_deposto = None
-            logger.debug("primario_reserva_caducou", key=key)
+            logger.info("primario_reserva_caducou", key=key)
             return None
         if key not in self._handles or key == self._primary_key:
             return None
