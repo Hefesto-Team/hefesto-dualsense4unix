@@ -48,9 +48,10 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     ID_DE_OUTRA_COR,
     MODE_SELECTOR_TOOLTIP,
     MODOS_DO_APARELHO,
-    cores_do_plastico_items,
-    dicas_das_cores,
+    cores_para_busca,
+    dicas_da_busca,
     nome_oficial_da_cor,
+    sinonimos_da_busca,
 )
 from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_ACIONA, Fala, frase_de_exibicao
 from hefesto_dualsense4unix.utils.i18n import _
@@ -121,6 +122,32 @@ AVISO_SEM_ENDERECO = (
 #: O placeholder e o nome acessível do campo livre, literais do desenho.
 PLACEHOLDER_DA_COR = "Diga a cor"
 NOME_ACESSIVEL_DA_COR = "Nome da cor deste controle"
+
+#: O placeholder da BUSCA de cor (LEX-5). Ele é o único texto que ensina o
+#: gesto: sem ele, um campo vazio ao lado de "Cor:" leria como o campo livre que
+#: mora três linhas abaixo, e a lista de vinte e uma nunca apareceria.
+#:
+#: PROVISÓRIO — decisão dela (PROVA-DE-TELA-01). Texto novo de tela.
+PLACEHOLDER_DA_BUSCA = "Escreva a cor"
+
+#: O rótulo do botão que abre a busca sobre uma cor já LIDA. Mesma palavra do
+#: "Corrigir" da coluna "O que é" (`secao_mesa.py`), de propósito: é o mesmo
+#: gesto — o produto classifica sozinho e ela só corrige.
+#:
+#: PROVISÓRIO — decisão dela (PROVA-DE-TELA-01). Texto novo de tela.
+CORRIGIR_A_COR = "Corrigir"
+
+#: O selo de procedência da cor lida. Literal de `secao_mesa._SELO_LIDO`, e
+#: copiado aqui de propósito: aquele módulo é de outra frente nesta leva, e a
+#: palavra é curta demais para valer um import que cruza territórios. Se as duas
+#: divergirem um dia, a de `secao_mesa` é a fonte.
+#:
+#: PROVISÓRIO — decisão dela (PROVA-DE-TELA-01). Texto novo NESTA tela.
+SELO_LIDO = "(lido)"
+
+#: Os ids da busca cujo rótulo é redação NOSSA, e não nome de fábrica. Só estes
+#: passam por `_()` — ver `_busca_da_cor`.
+_ROTULOS_NOSSOS = frozenset({ID_DE_OUTRA_COR, ID_DE_NAO_SEI})
 
 #: A dica do campo livre. Ela responde à armadilha do próprio desenho, que
 #: sugeria digitar "Volcanic Red" — um nome que a casa JÁ conhece (é o código
@@ -206,6 +233,7 @@ try:
     gi.require_version("Gtk", "3.0")
     from gi.repository import Gtk
 
+    from hefesto_dualsense4unix.app.widgets.campo_de_busca import CampoDeBusca
     from hefesto_dualsense4unix.app.widgets.segmented_selector import SegmentedSelector
 
     # Com um stub parcial de `gi` (testes antigos, sem display), o import acima
@@ -276,16 +304,32 @@ if _GTK_DISPONIVEL:
         # -- as linhas -----------------------------------------------------
 
         def _linha_da_cor(self, dados: DadosDoControle) -> Any:
-            """A cor: valor estático quando foi LIDA, lista quando não.
+            """A cor: valor LIDO quando o aparelho respondeu, busca quando não.
 
             A ordem das três situações é a decisão de quem manda: **a escolha
             dela vence a tabela e vence a leitura** (`docs/data/cores-do-plastico.md`,
             21/08/2026). Então:
 
-            1. há cor DECLARADA → a lista, com a escolha dela marcada;
-            2. não há, mas o aparelho respondeu → o valor, com a amostra ao lado
-               e nada a preencher, como no desenho;
-            3. nenhuma das duas → a lista, sem nada marcado. É o "não sei".
+            1. há cor DECLARADA → a busca, com a escolha dela escrita no campo;
+            2. não há, mas o aparelho respondeu → o valor, com a amostra, o selo
+               `(lido)` e um "Corrigir" que abre a busca;
+            3. nenhuma das duas → a busca, com o campo vazio. É o "não sei".
+
+            A BUSCA SUBSTITUIU OITO BOTÕES EM TRÊS FILEIRAS (LEX-5, 25/08/2026).
+            O que estava na tela era um `SegmentedSelector(wrap=True)` de seis
+            cores mais "Outra" e "Não sei" — grade de três colunas fixas, três
+            fileiras. Medido lado a lado na foto de 24/08: a barra "A luz não
+            acende" nascia mais baixa nos cards do rádio (que mostravam a grade)
+            do que nos do cabo (que mostravam a cor lida numa linha), e como o
+            grid da seção iguala as fileiras (`row_homogeneous`), um card com
+            grade encarecia a fileira inteira.
+
+            **Por que o cabo responde e o rádio não**, que é o que justifica os
+            dois desenhos: `docs/data/mapa-controles.csv:111`
+            (`identidade.cor_do_aparelho@dualsense`) mede `cabo_aciona=sim`,
+            `radio_aciona=não` — o `SET_FEATURE 0x80` devolve `EIO` imediato por
+            rádio. No cabo a busca só existe para corrigir; no rádio ela é o
+            único caminho, e a dica que diz isso já existia.
             """
             declarada = bool(dados.cor_id)
             if not declarada and dados.cor_lida:
@@ -301,6 +345,14 @@ if _GTK_DISPONIVEL:
                 nome = Gtk.Label(label=dados.cor_lida)
                 nome.set_xalign(0.0)
                 valor.pack_start(nome, False, False, 0)
+                # O selo de procedência, na gramática que a coluna "O que é" da
+                # seção "A mesa" já usa (`secao_mesa.py:187`): sem ele a tela
+                # afirma "Cosmic Red" e não diz quem afirmou.
+                selo = Gtk.Label(label=_(SELO_LIDO))
+                selo.set_xalign(0.0)
+                with contextlib.suppress(Exception):
+                    selo.get_style_context().add_class("dim-label")
+                valor.pack_start(selo, False, False, 0)
                 valor.pack_start(
                     _ajuda(
                         DICA_DO_VALOR_NO_CABO if dados.no_cabo else DICA_DO_VALOR_NO_RADIO
@@ -310,32 +362,42 @@ if _GTK_DISPONIVEL:
                     0,
                 )
                 caixa.pack_start(valor, False, False, 0)
+
+                # "Corrigir" é a mesma gramática que ela já aprovou em 22/08 —
+                # *classifica sozinho, você só corrige*. A busca nasce montada e
+                # ESCONDIDA: montá-la só no clique custaria um `show_all` no meio
+                # de um card já desenhado, e é mais um caminho para errar.
+                busca = self._busca_da_cor(dados)
+                busca.set_no_show_all(True)
+                busca.set_visible(False)
+                corrigir = Gtk.Button(label=_(CORRIGIR_A_COR))
+                corrigir.set_halign(Gtk.Align.START)
+                corrigir.connect(
+                    "clicked", lambda botao: _revelar(botao, busca)
+                )
+                caixa.pack_start(corrigir, False, False, 0)
+                caixa.pack_start(busca, False, False, 0)
+                # O campo livre entra AQUI TAMBÉM desde a LEX-5, e não é
+                # simetria de enfeite: até 25/08 este ramo não tinha lista
+                # nenhuma, então "Outra" era inalcançável nele. Com o "Corrigir"
+                # abrindo a busca, ela passou a ser alcançável — e sem o campo
+                # livre o `_ao_escolher_cor` cairia no `texto = ""` e declararia
+                # `None`, ou seja, o clique em "Outra" apagaria a cor em vez de
+                # abrir a caixa de escrever.
+                caixa.pack_start(self._campo_livre_da_cor(dados), False, False, 0)
                 return caixa
 
             caixa = _bloco("Cor:", DICA_DA_COR_NAO_LIDA)
-            seletor = SegmentedSelector(wrap=True)
-            seletor.set_items(
-                [(ident, _(rotulo)) for ident, rotulo in cores_do_plastico_items()]
-            )
-            # Os seis nomes de fábrica NÃO passam por `_()`: "Cosmic Red" é o
-            # que está escrito na caixa e no serial do aparelho, e traduzi-lo
-            # inventaria um nome que a Sony não usa e que não casa com nenhuma
-            # outra fonte. As frases do "Outra" e do "Não sei" são redação
-            # nossa, e passam.
-            dicas = dicas_das_cores()
-            dicas[ID_DE_OUTRA_COR] = _(dicas[ID_DE_OUTRA_COR])
-            dicas[ID_DE_NAO_SEI] = _(dicas[ID_DE_NAO_SEI])
-            seletor.set_tooltips(dicas)
-            # ANTES do connect: `set_active_id` emite "changed", e com o handler
-            # ligado a montagem gravaria sozinha o que ninguém escolheu.
-            if dados.cor_id:
-                with contextlib.suppress(Exception):
-                    seletor.set_active_id(dados.cor_id)
-            else:
-                seletor.limpar_ativo()
-            seletor.connect("changed", self._ao_escolher_cor)
-            caixa.pack_start(seletor, False, False, 0)
+            caixa.pack_start(self._busca_da_cor(dados), False, False, 0)
+            caixa.pack_start(self._campo_livre_da_cor(dados), False, False, 0)
+            return caixa
 
+        def _campo_livre_da_cor(self, dados: DadosDoControle) -> Any:
+            """A caixa de escrever o nome, para quando nada na lista serve.
+
+            Decisão C2: "Outra" abre texto livre, e o campo reconhece os vinte e
+            um nomes de fábrica quando é um deles.
+            """
             campo = Gtk.Entry()
             campo.set_placeholder_text(_(PLACEHOLDER_DA_COR))
             campo.set_tooltip_text(_(DICA_DO_CAMPO_LIVRE))
@@ -350,8 +412,53 @@ if _GTK_DISPONIVEL:
             campo.set_no_show_all(True)
             campo.set_visible(dados.cor_id == ID_DE_OUTRA_COR)
             self._campo_livre = campo
-            caixa.pack_start(campo, False, False, 0)
-            return caixa
+            return campo
+
+        def _busca_da_cor(self, dados: DadosDoControle) -> Any:
+            """O campo de busca da cor, montado e já com a escolha dentro.
+
+            As VINTE E UMA cores de fábrica, não as seis de antes: com a lista
+            aparecendo só enquanto ela digita, o recorte perdeu a razão de ser.
+            Quem tem uma edição especial acha o próprio controle pelo nome que
+            está na caixa dele, em vez de digitá-lo no campo livre.
+
+            Os nomes de fábrica NÃO passam por `_()`, e a decisão veio junto com
+            a lista antiga: "Cosmic Red" é o que está escrito na caixa e no
+            serial do aparelho. As duas últimas linhas ("Outra", "Não sei") são
+            redação nossa, e passam.
+            """
+            busca = CampoDeBusca(
+                placeholder=PLACEHOLDER_DA_BUSCA,
+                nome_acessivel=NOME_ACESSIVEL_DA_COR,
+            )
+            busca.set_items(
+                [
+                    (ident, _(rotulo) if ident in _ROTULOS_NOSSOS else rotulo)
+                    for ident, rotulo in cores_para_busca()
+                ]
+            )
+            dicas = dicas_da_busca()
+            for ident in _ROTULOS_NOSSOS:
+                if ident in dicas:
+                    dicas[ident] = _(dicas[ident])
+            busca.set_tooltips(dicas)
+            # Os sinônimos em português: quem digita "vermelho" acha "Cosmic
+            # Red", e a linha continua dizendo "Cosmic Red". Sem eles, trocar a
+            # lista de seis botões pela busca teria tirado da tela a única
+            # palavra em português que a cor tinha.
+            busca.set_sinonimos(
+                {ident: _(rotulo) for ident, rotulo in sinonimos_da_busca().items()}
+            )
+            # ANTES do connect, e é a mesma cura de sempre: `set_active_id`
+            # EMITE "changed" (espelha o `GtkComboBox`), e com o handler já
+            # ligado a montagem gravaria sozinha o que ninguém escolheu.
+            if dados.cor_id:
+                with contextlib.suppress(Exception):
+                    busca.set_active_id(dados.cor_id)
+            else:
+                busca.limpar_ativo()
+            busca.connect("changed", self._ao_escolher_cor)
+            return busca
 
         def _linha_do_modo(self, dados: DadosDoControle) -> Any:
             """O modo DEDUZIDO, em seletor INSENSÍVEL — decisões T1, T2 e T3.
@@ -577,6 +684,29 @@ if _GTK_DISPONIVEL:
         seletor = SegmentedSelector()
         seletor.set_orientation(Gtk.Orientation.HORIZONTAL)
         return seletor
+
+    def _revelar(botao: Any, alvo: Any) -> None:
+        """Mostra a busca escondida e apaga o botão que a chamou.
+
+        O botão some porque ele é a PORTA, não um interruptor: uma vez aberta a
+        busca, um "Corrigir" ainda na tela seria um segundo gesto para o mesmo
+        efeito, e quem clicasse de novo não veria nada acontecer — que é
+        exatamente o defeito que esta leva está pagando na seção "A janela".
+
+        Tudo sob `suppress`: isto roda de dentro de um handler de sinal do GTK,
+        onde uma exceção não tem quem a pegue.
+        """
+        with contextlib.suppress(Exception):
+            # `no_show_all` bloqueia o `show_all()` NESTE widget também, não só o
+            # do pai — então ele tem de sair antes, ou os filhos da busca nascem
+            # invisíveis dentro de uma busca visível. A lista de sugestões
+            # continua escondida: o `no_show_all` dela é próprio, e fica.
+            alvo.set_no_show_all(False)
+            alvo.show_all()
+            botao.set_visible(False)
+            entrada = getattr(alvo, "get_entrada", None)
+            if entrada is not None:
+                entrada().grab_focus()
 
     def _ajuda(dica: str) -> Any:
         """O `?` do desenho: recebe foco pelo teclado, porque a dica é a única

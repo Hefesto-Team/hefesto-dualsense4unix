@@ -18,10 +18,17 @@ ou que não salvou quando já salvou. É a mesma família do que ela relatou em
 de dentro: a tela não diz o que fez com o gesto.
 
 A RÉGUA É MECÂNICA, e é o que faz este portão valer para a seção que ainda não
-existe: **quem escreve no rascunho tem de mostrar `QUANDO_VALE`; quem grava na
-hora tem de mostrar `VALE_JA`; e quem não faz nem uma coisa nem outra não
-mostra nenhuma das duas** — uma seção só de leitura ("Está tudo certo?") que
-prometesse gravar seria a mentira inversa.
+existe: **quem escreve no rascunho tem de DIZER `QUANDO_VALE`; quem grava na
+hora tem de DIZER `VALE_JA`; e quem não faz nem uma coisa nem outra não diz
+nenhuma das duas** — uma seção só de leitura ("Está tudo certo?") que prometesse
+gravar seria a mentira inversa.
+
+DIZER, E NÃO IMPRIMIR — a troca de 25/08/2026, com a LEX-2. A regra do léxico
+desta aba é *fica na página o que MUDA, vai para o hover o que EXPLICA*, e as
+duas frases são explicação pura: diriam a mesma coisa com a seção intocada e com
+a seção toda mexida. Elas continuam obrigatórias, agora como dica do rótulo que
+explicam. O coletor `_falas` é quem acompanhou a mudança; a pergunta do portão
+não mudou uma vírgula.
 
 Quem escreve é lido do FONTE, por AST, e não de uma lista escrita à mão: uma
 lista à mão caduca na próxima seção e o portão volta a mentir dizendo que está
@@ -97,8 +104,26 @@ class _HospedeiroVazio:
         self.builder = None
 
 
-def _textos(secao: Any) -> list[str]:
-    """Todo texto de rótulo que a seção põe na caixa, montada de verdade."""
+def _falas(secao: Any) -> list[str]:
+    """Tudo que a seção DIZ à pessoa: rótulo impresso **e** dica no hover.
+
+    ELA SE CHAMAVA `_textos` E COLHIA SÓ `Gtk.Label.get_text()`. A troca é de
+    25/08/2026 e é semântica, não de forma: com a regra do léxico da LEX-2 —
+    *fica na página o que MUDA, vai para o hover o que EXPLICA* — a `VALE_JA` e a
+    `QUANDO_VALE` deixaram de nascer impressas e passaram a ser dica do rótulo
+    que elas explicam. Um coletor cego a dicas reprovaria a cura e obrigaria a
+    apagar quatro testes.
+
+    A pergunta que esta bateria faz nunca foi "está impresso na página?". Era, e
+    continua sendo, **"está ao alcance de quem procura?"** — e a decisão dela
+    (*"tudo isso em azul deveria ser tooltip, não deveria poluir a interface"*)
+    é o que move a resposta de um lugar para o outro sem mudar a pergunta.
+
+    `Gtk.Frame` entra pelo `get_label_widget()`: o título de seção mora ali, e é
+    nele que a dica da seção pousa (`moldura.moldura_de_secao`). Sem esta perna,
+    a dica de título seria invisível para o coletor — e é para lá que a LEX-2
+    manda três das frases.
+    """
     import contextlib
 
     caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -110,12 +135,33 @@ def _textos(secao: Any) -> list[str]:
     def _andar(widget: Any) -> None:
         if isinstance(widget, Gtk.Label):
             achados.append(widget.get_text())
+        dica = None
+        with contextlib.suppress(Exception):
+            dica = widget.get_tooltip_text()
+        if dica:
+            achados.append(dica)
+        if isinstance(widget, Gtk.Frame):
+            rotulo = widget.get_label_widget()
+            if rotulo is not None:
+                _andar(rotulo)
         if hasattr(widget, "get_children"):
             for filho in widget.get_children():
                 _andar(filho)
 
     _andar(caixa)
     return achados
+
+
+def _diz(secao: Any, frase: str) -> bool:
+    """A seção diz esta frase — impressa ou no hover, inteira ou dentro de outra.
+
+    `in` sobre a lista não serve mais: a LEX-2 ANEXA a frase à dica que já
+    existia no rótulo (*"...precisa de uma extensão instalada. A escolha fica
+    guardada na hora..."*), então a fala colhida CONTÉM a constante em vez de
+    ser igual a ela. Comparar por igualdade aqui faria o portão reprovar a
+    própria cura que ele deveria aprovar.
+    """
+    return any(frase in fala for fala in _falas(secao))
 
 
 def test_quem_escreve_no_rascunho_diz_que_espera_o_aplicar() -> None:
@@ -127,7 +173,7 @@ def test_quem_escreve_no_rascunho_diz_que_espera_o_aplicar() -> None:
     caladas = [
         secao.TITULO
         for secao in SECOES_DA_ABA
-        if _escreve_no_rascunho(secao) and QUANDO_VALE not in _textos(secao)
+        if _escreve_no_rascunho(secao) and not _diz(secao, QUANDO_VALE)
     ]
     assert not caladas, (
         f"estas seções acumulam no rascunho e não dizem que esperam o "
@@ -139,13 +185,15 @@ def test_quem_escreve_no_rascunho_diz_que_espera_o_aplicar() -> None:
 def test_quem_grava_na_hora_diz_que_nao_espera_o_aplicar() -> None:
     """A contraparte: "A janela" é a única que grava sozinha, e tem de dizer.
 
-    Mordida: tirar o `pack_start(rotulo_de_apoio(VALE_JA), ...)` de
-    `secao_janela`.
+    Mordida (25/08/2026, refeita depois da LEX-2): tirar o `VALE_JA` da dica dos
+    rótulos "Tamanho do texto:" e "Ambiente:" em `secao_janela` — reprova
+    nomeando "A janela". Era `pack_start(rotulo_de_apoio(VALE_JA), ...)` antes de
+    a frase migrar do parágrafo para o hover.
     """
     caladas = [
         secao.TITULO
         for secao in SECOES_DA_ABA
-        if _grava_na_hora(secao) and VALE_JA not in _textos(secao)
+        if _grava_na_hora(secao) and not _diz(secao, VALE_JA)
     ]
     assert not caladas, (
         f"estas seções gravam no próprio clique e não dizem isso: {caladas}. "
@@ -162,7 +210,7 @@ def test_as_duas_frases_nunca_aparecem_na_mesma_secao() -> None:
     ambas = [
         secao.TITULO
         for secao in SECOES_DA_ABA
-        if QUANDO_VALE in _textos(secao) and VALE_JA in _textos(secao)
+        if _diz(secao, QUANDO_VALE) and _diz(secao, VALE_JA)
     ]
     assert not ambas, f"estas seções afirmam as duas coisas ao mesmo tempo: {ambas}"
 
@@ -177,7 +225,7 @@ def test_secao_que_so_le_nao_promete_gravacao() -> None:
         for secao in SECOES_DA_ABA
         if not _escreve_no_rascunho(secao)
         and not _grava_na_hora(secao)
-        and (QUANDO_VALE in _textos(secao) or VALE_JA in _textos(secao))
+        and (_diz(secao, QUANDO_VALE) or _diz(secao, VALE_JA))
     ]
     assert not mentindo, (
         f"estas seções não gravam nada e mesmo assim falam de gravar: {mentindo}"

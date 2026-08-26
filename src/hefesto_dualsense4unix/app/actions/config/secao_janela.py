@@ -25,7 +25,16 @@ preço medido do outro lado:
 3. **"Ligar junto com o computador" é espelho, não um segundo dono.** O
    interruptor de verdade vive na aba Sistema, sob `_daemon_autostart_guard`;
    um segundo widget editável seria dono duplo do mesmo gesto, que é a cicatriz
-   que a casa já pagou uma vez.
+   que a casa já pagou uma vez. **E desde 25/08/2026 o espelho é só espelho:**
+   o botão "Abrir a aba Sistema" saiu (LEX-4, pedido dela), e quem diz onde se
+   muda é a dica do rótulo de estado.
+
+A QUARTA, de 25/08/2026, é a que muda o que se vê: **esta seção responde ao
+CLIQUE.** As três frases de apoio que ocupavam a página viraram dica dos rótulos
+que elas explicam, e no lugar delas nasceu o RECIBO — um rótulo vazio no fim da
+fileira que ganha "Guardado." em verde no instante do gesto. O sintoma que isso
+cura é o dela: *"janela ok, muito bom mas os botões não funcionam"*. Os handlers
+sempre estiveram lá; o que faltava era a tela dizer que o gesto chegou.
 
 TERRITÓRIO DE CONFIG-07. Quem trabalha nesta seção escreve AQUI — o título, a
 dica e todo widget dela. O montador da aba (`mixin.py`) só cria a moldura e
@@ -39,6 +48,7 @@ import html
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.config.moldura import (
+    RECIBO_GUARDADO,
     VALE_JA,
     rotulo_de_apoio,
 )
@@ -84,6 +94,34 @@ _ESPACAMENTO_DA_FILEIRA = 8
 #: `rumble_actions.py:868`.
 _COR_DE_ATENCAO = "#ffb86c"
 
+#: VERDE é a cor de confirmação desta casa, da mesma linha do `theme.css:13` e
+#: do mesmo `@green` (`theme.css:26`) que `daemon_actions.py:157` e
+#: `emulation_actions.py:451` já escrevem em hexa pelo mesmo motivo.
+_COR_DE_CONFIRMACAO = "#50fa7b"
+
+#: A frase que explica QUANDO o tamanho novo aparece. Ela era o primeiro
+#: parágrafo de apoio da seção (`:111` até 25/08/2026) e virou dica do rótulo
+#: "Tamanho do texto:" pela regra do léxico da LEX-2: *fica na página o que
+#: MUDA, vai para o hover o que EXPLICA*. Esta frase diria a mesma coisa com a
+#: janela recém-aberta e com a janela toda mexida — logo, explica.
+#:
+#: Ela NÃO é o recibo e não o substitui: responde "quando o tema é aplicado", e
+#: a decisão 1 do topo (o `apply_theme` que COMPÕE) é o que a torna verdadeira.
+#: Quem responde "isto ficou guardado?" é o `RECIBO_GUARDADO`.
+_QUANDO_O_TAMANHO_APARECE = "O tamanho novo vale na próxima vez que você abrir o Hefesto."
+
+#: A dica do rótulo de estado do espelho de autostart. Ela nasceu junto com a
+#: SAÍDA do botão "Abrir a aba Sistema" (LEX-4, pedido literal dela: *"não
+#: deveriam ter o botão de abrir aba sistema"*): sem o botão, a fileira precisa
+#: dizer por outro caminho onde o interruptor de verdade mora — senão o espelho
+#: vira um estado que ninguém sabe mudar.
+#:
+#: PROVISÓRIO — decisão dela (PROVA-DE-TELA-01).
+_ONDE_SE_LIGA_JUNTO = (
+    "Este valor é um espelho. Quem liga e desliga é o interruptor da aba "
+    "Sistema."
+)
+
 #: Rótulo de tela de cada degrau. O que existe e em que ordem é de `theme.py`
 #: (dono único da escala); aqui mora só como cada um se chama na tela. Degrau
 #: sem rótulo cai no id com inicial maiúscula, em vez de sumir da fileira.
@@ -106,22 +144,17 @@ def montar(host: Any, caixa: Any) -> None:
     derrubar a janela. Quem chama já embrulha em `contextlib.suppress`, mas a
     tolerância começa aqui.
     """
+    # A LISTA DOS RECIBOS nasce aqui, e nasce VAZIA a cada montagem: a aba pode
+    # ser remontada, e um rótulo de uma montagem morta na lista faria o próximo
+    # clique tentar apagar um widget destruído.
+    host._config_recibos = []
+
     caixa.pack_start(_fileira_do_tamanho(host), False, False, 0)
-    caixa.pack_start(
-        rotulo_de_apoio("O tamanho novo vale na próxima vez que você abrir o Hefesto."),
-        False,
-        False,
-        0,
-    )
     caixa.pack_start(_fileira_do_ambiente(host), False, False, 0)
+    # ESTADO, e por isso FICA na página: esta frase muda com a máquina — ela diz
+    # qual ambiente foi detectado, e é o único jeito de a pessoa saber que há
+    # algo a corrigir ali.
     caixa.pack_start(rotulo_de_apoio(frase_do_detectado(ambiente_lido())), False, False, 0)
-    # A ÚNICA seção da aba que grava NA HORA, e por isso a única que precisa
-    # dizer o contrário das outras. As duas escolhas acima vão ao disco no
-    # próprio clique (`set_pref` e `gravar_correcao_de_ambiente`) — o "Aplicar"
-    # do rodapé não tem nada a ver com elas. Sem esta linha, "A janela" era a
-    # única seção sem resposta para "isto ficou guardado?": a frase que existia
-    # ali fala de QUANDO o tema é aplicado, não de se a escolha foi guardada.
-    caixa.pack_start(rotulo_de_apoio(VALE_JA), False, False, 0)
 
     bandeja = rotulo_de_apoio("Conferindo o ícone na barra do sistema.")
     host._config_bandeja_rotulo = bandeja
@@ -146,7 +179,14 @@ def _fileira_do_tamanho(host: Any) -> Any:
     SESSÃO, e depois de uma gravação nesta mesma tela ela apontaria para o
     degrau antigo — a fileira mentiria sobre a própria escolha da pessoa.
     """
-    linha, _rotulo = _fileira("Tamanho do texto:")
+    linha, _rotulo = _fileira(
+        "Tamanho do texto:",
+        # As duas frases que saíram da página na LEX-2, juntas na dica do rótulo
+        # que elas explicam: quando o tamanho novo aparece, e que a escolha já
+        # está guardada. A marca visual do "tenho dica" quem dá é
+        # `moldura.marcar_afordancias`, que varre a seção montada.
+        dica=f"{_QUANDO_O_TAMANHO_APARECE} {VALE_JA}",
+    )
     # `wrap=True` com TRÊS itens é o jeito de ter a fileira DEITADA, e a
     # descoberta é medida: sem ele, o `SegmentedSelector` é um `Gtk.Box`
     # VERTICAL (`segmented_selector.py:206`) e empilha as opções uma sobre a
@@ -178,20 +218,27 @@ def _fileira_do_tamanho(host: Any) -> Any:
     # (`home_actions.py:1523`, empacotado com `False, False` e assim mesmo
     # cheio). Aqui o desenho pede o contrário: rótulo e opções lado a lado.
     seletor.set_hexpand(False)
-    seletor.connect("changed", _ao_trocar_o_tamanho)
+    seletor.connect("changed", lambda sel: _ao_trocar_o_tamanho(host, sel))
     host._config_escala_seletor = seletor
     linha.pack_start(seletor, False, False, 0)
+    host._config_recibo_do_tamanho = _recibo(host, linha)
     return linha
 
 
-def _ao_trocar_o_tamanho(seletor: Any) -> None:
-    """Grava o degrau escolhido. NÃO reaplica o tema — ver a decisão 1 do topo."""
+def _ao_trocar_o_tamanho(host: Any, seletor: Any) -> None:
+    """Grava o degrau escolhido e ESCREVE O RECIBO.
+
+    NÃO reaplica o tema — ver a decisão 1 do topo. E é justamente por isso que
+    o recibo existe: sem ele, um clique aqui não muda um pixel da janela, e o
+    gesto fica indistinguível de um gesto que não aconteceu.
+    """
     nome = seletor.get_active_id()
     valor = DEGRAUS_DE_ESCALA.get(nome) if nome is not None else None
     if valor is None:
         return
     set_pref(CHAVE_ESCALA, valor)
     logger.info("config_escala_gravada", degrau=nome, delta=valor)
+    _escrever_o_recibo(host, getattr(host, "_config_recibo_do_tamanho", None))
 
 
 # ---------------------------------------------------------------------------
@@ -209,7 +256,11 @@ def _fileira_do_ambiente(host: Any) -> Any:
         "Ambiente:",
         dica=(
             "O ícone na barra do sistema depende do ambiente. No COSMIC aparece "
-            "sozinho; no GNOME precisa de uma extensão instalada."
+            "sozinho; no GNOME precisa de uma extensão instalada. "
+            # A `VALE_JA` ANEXA aqui, e não substitui: as duas explicam coisas
+            # diferentes sobre a mesma fileira. Anexar é o mesmo desenho da
+            # LEX-2 para `_NOME_VALE_JA` em `secao_mesa`.
+            + VALE_JA
         ),
     )
     # `wrap=True` pelo mesmo motivo medido de `_fileira_do_tamanho`.
@@ -222,23 +273,84 @@ def _fileira_do_ambiente(host: Any) -> Any:
     seletor.connect("changed", lambda sel: _ao_corrigir_o_ambiente(host, sel))
     host._config_ambiente_seletor = seletor
     linha.pack_start(seletor, False, False, 0)
+    host._config_recibo_do_ambiente = _recibo(host, linha)
     return linha
 
 
 def _ao_corrigir_o_ambiente(host: Any, seletor: Any) -> None:
-    """Grava a correção e REPINTA a mensagem da bandeja — e nada mais.
+    """Grava a correção, escreve o RECIBO e repinta a mensagem da bandeja.
 
-    Repintar é a entrega inteira desta correção: o ambiente não muda uma linha
-    do que o produto faz, muda o que a seção sabe recomendar quando o ícone não
+    Repintar é a entrega da correção em si: o ambiente não muda uma linha do
+    que o produto faz, muda o que a seção sabe recomendar quando o ícone não
     sobe. É também o que torna o aceite "num GNOME sem a extensão, a seção
     mostra a instrução" verificável numa bancada que não tem GNOME.
+
+    O RECIBO É INDEPENDENTE DO REPINTAR, e é essa separação que resolve o
+    sintoma dela. `ambiente.mensagem_da_bandeja` devolve a MESMA frase para os
+    três ambientes quando o ícone sobe (`ambiente.py:143-144`) — que é o caso
+    da máquina dela, provado pela foto da aba ("A barra do sistema desta sessão
+    recebe o ícone do Hefesto"). Trocar COSMIC → GNOME → Outro ali não mudava um
+    pixel, e o clique lia como botão quebrado. O recibo responde ao GESTO; a
+    bandeja responde ao FATO, e os dois deixam de ser a mesma coisa.
     """
     escolha = seletor.get_active_id()
     if escolha is None:
         return
     gravar_correcao_de_ambiente(escolha)
     logger.info("config_ambiente_corrigido", escolha=escolha)
+    _escrever_o_recibo(host, getattr(host, "_config_recibo_do_ambiente", None))
     _pintar_a_bandeja(host)
+
+
+# ---------------------------------------------------------------------------
+# O recibo — a resposta ao clique, na fileira que o recebeu
+# ---------------------------------------------------------------------------
+
+
+def _recibo(host: Any, linha: Any) -> Any:
+    """Um rótulo VAZIO no fim da fileira, e o registro dele na lista do host.
+
+    Nasce vazio de propósito, e essa é a diferença inteira em relação ao
+    parágrafo que ele substitui: a `VALE_JA` estava na página ANTES do clique,
+    então não distinguia "cliquei" de "não cliquei". Um rótulo que só ganha
+    texto depois do gesto responde à pergunta que a pessoa faz — *isto ficou
+    guardado?* — no instante em que ela a faz.
+    """
+    from gi.repository import Gtk
+
+    rotulo = Gtk.Label(label="")
+    rotulo.set_xalign(0.0)
+    linha.pack_start(rotulo, False, False, 0)
+    with contextlib.suppress(Exception):
+        host._config_recibos.append(rotulo)
+    return rotulo
+
+
+def _escrever_o_recibo(host: Any, rotulo: Any) -> None:
+    """Escreve o recibo NESTA fileira e apaga o das outras.
+
+    Apagar os outros é o que impede a seção de acumular confirmações antigas:
+    dois recibos verdes ao mesmo tempo diriam que dois gestos acabaram de
+    acontecer, quando só um aconteceu.
+
+    Tudo sob `suppress` porque isto roda de dentro de um handler de sinal do
+    GTK, onde uma exceção não tem quem a pegue — vira traço na saída de erro com
+    a janela já de pé. E `html.escape` pela mesma razão medida de
+    `_pintar_a_bandeja`: a frase é texto de tela e pode ganhar um "&" na próxima
+    revisão de redação, que derrubaria a análise do Pango e deixaria o rótulo em
+    branco.
+    """
+    if rotulo is None:
+        return
+    with contextlib.suppress(Exception):
+        for outro in getattr(host, "_config_recibos", ()):
+            if outro is not rotulo:
+                outro.set_text("")
+    with contextlib.suppress(Exception):
+        rotulo.set_markup(
+            f'<span foreground="{_COR_DE_CONFIRMACAO}">'
+            f"{html.escape(_(RECIBO_GUARDADO), quote=False)}</span>"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +425,7 @@ def _pintar_a_bandeja(host: Any) -> None:
 
 
 def _fileira_do_autostart(host: Any) -> Any:
-    """O espelho do interruptor da aba Sistema, mais o atalho para lá.
+    """O espelho do interruptor da aba Sistema. Só o espelho, desde a LEX-4.
 
     Devolve `None` quando o interruptor de origem não existe (dublê de teste,
     glade antigo): espelho sem original é um rótulo que nunca fica certo, e
@@ -331,14 +443,18 @@ def _fileira_do_autostart(host: Any) -> Any:
 
     linha, _rotulo = _fileira("Ligar junto com o computador")
     estado = _rotulo_simples("")
+    # LEX-4 (25/08/2026): o botão "Abrir a aba Sistema" SAIU daqui, a pedido
+    # literal dela — *"não deveriam ter o botão de abrir aba sistema"*. Ele
+    # funcionava (a busca era por id, nunca por índice); o problema era outro:
+    # numa fileira que já é espelho, um botão de navegação é o único elemento
+    # clicável, e ele parece o controle que muda o estado ao lado.
+    #
+    # A dica no rótulo de estado é o que sobra no lugar, e ela entrega o que o
+    # botão entregava de fato: dizer ONDE se muda. O espelho continua espelho.
+    with contextlib.suppress(Exception):
+        estado.set_tooltip_text(_(_ONDE_SE_LIGA_JUNTO))
     host._config_autostart_estado = estado
     linha.pack_start(estado, False, False, 0)
-
-    from gi.repository import Gtk
-
-    botao = Gtk.Button(label=_("Abrir a aba Sistema"))
-    botao.connect("clicked", lambda _b: _abrir_a_aba_sistema(host))
-    linha.pack_start(botao, False, False, 0)
 
     _espelhar_o_autostart(estado, interruptor)
     interruptor.connect(
@@ -357,27 +473,11 @@ def _espelhar_o_autostart(estado: Any, interruptor: Any) -> None:
         estado.set_text(_("Ligado") if interruptor.get_active() else _("Desligado"))
 
 
-def _abrir_a_aba_sistema(host: Any) -> None:
-    """Leva a janela para a aba Sistema, procurando a página pelo ID do Glade.
-
-    Nunca por índice (EST-10): acrescentar uma aba renumera todas, e um atalho
-    por número passaria a abrir a aba errada em silêncio. `id_da_pagina`
-    desembrulha o rolador que `_wrap_notebook_pages_in_scroll` pôs em volta das
-    páginas, e é o dono único desse desembrulho.
-    """
-    from hefesto_dualsense4unix.app.actions.home_actions import id_da_pagina
-
-    notebook = host._get("main_notebook")
-    if notebook is None:
-        return
-    with contextlib.suppress(Exception):
-        for pagina in notebook.get_children():
-            if id_da_pagina(pagina) != "daemon_box":
-                continue
-            indice = notebook.page_num(pagina)
-            if isinstance(indice, int) and indice >= 0:
-                notebook.set_current_page(indice)
-            return
+# `_abrir_a_aba_sistema` VIVEU AQUI e saiu com o botão dela (LEX-4, 25/08/2026).
+# Ela procurava a página `daemon_box` pelo ID do Glade, nunca por índice, e o
+# `id_da_pagina` que ela usava CONTINUA vivo e público em `home_actions` — ele
+# tem outros oito chamadores (`app.py`, `status_actions.py`, e a EST-10 depende
+# dele). Não o apague junto: o que morreu foi o botão, não o desembrulho.
 
 
 # ---------------------------------------------------------------------------

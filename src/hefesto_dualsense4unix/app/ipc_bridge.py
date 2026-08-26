@@ -784,29 +784,84 @@ _MOTIVOS_MAQUINA: dict[str, str] = {
 }
 
 
-#: CONFIG-06 (23/08/2026): campo de topo do ``MaquinaConfig`` traduzido para o
-#: rótulo da seção que o declara na aba Configurações. Mesma fronteira e mesma
-#: razão do :data:`_MOTIVOS_MAQUINA`: quando um campo é descartado, a frase do
-#: rodapé precisa nomear o que se perdeu, e ela nunca pode nomeá-lo
-#: ``orcamento``. Os rótulos são os ``TITULO`` de ``app/actions/config/`` —
-#: ``secao_mesa``, ``secao_controles``, ``secao_orcamento``.
+#: CONFIG-06 (23/08/2026): campo de topo do ``MaquinaConfig`` → o módulo de
+#: seção que o declara na aba Configurações. Mesma fronteira e mesma razão do
+#: :data:`_MOTIVOS_MAQUINA`: quando um campo é descartado, a frase do rodapé
+#: precisa nomear o que se perdeu, e ela nunca pode nomeá-lo ``orcamento``.
 #:
-#: Campo sem entrada aqui cai no nome cru: feio, e por isso há teste que exige
-#: uma entrada para cada campo do schema (e reprova entrada SOBRANDO — é o que
-#: pegou ``ambiente`` quando ele saiu do schema em T2, CONFIGURAÇÕES-FECHA-01,
-#: 24/08/2026). Esconder seria pior — a pessoa perderia o único aviso do que
-#: sumiu do arquivo dela.
-_CAMPOS_DA_MAQUINA: dict[str, str] = {
-    "mesa": "A mesa",
-    "controles": "Os controles",
-    "orcamento": "Orçamento",
-    # CONEXÕES · MAPA 2D 01 (25/08/2026). Este não é um ``TITULO`` de seção, e
-    # é o único assim: o mapa não tem seção própria — ele mora numa janela que
-    # abre de dentro de "A mesa". O rótulo nomeia o que se PERDE, que é o
-    # desenho do gabinete, e não a seção de onde ele é aberto: dizer "A mesa"
-    # aqui faria a frase do rodapé acusar a perda de outra coisa.
+#: AQUI FICA O VÍNCULO, NUNCA A PALAVRA. Até 25/08/2026 este mapa guardava os
+#: rótulos por CÓPIA — ``{"mesa": "A mesa", "orcamento": "Orçamento"}`` — com um
+#: comentário dizendo que "os rótulos são os ``TITULO`` de
+#: ``app/actions/config/``". Eram, mas por cópia: renomear a seção sem tocar
+#: aqui fazia o rodapé acusar a perda de "A mesa" numa aba onde a seção se chama
+#: outra coisa, e nenhum portão via a divergência, porque os dois lados passavam
+#: em separado. A LEX-1 da CONFIGURAÇÕES-O-LÉXICO-01 (25/08/2026) troca a cópia
+#: pela derivação: o ``TITULO`` do módulo vira o único dono da palavra.
+_SECAO_DO_CAMPO: dict[str, str] = {
+    "mesa": "secao_mesa",
+    "controles": "secao_controles",
+    "orcamento": "secao_orcamento",
+}
+
+#: Os campos que NÃO derivam de um ``TITULO``, com a razão de cada um.
+#:
+#: CONEXÕES · MAPA 2D 01 (25/08/2026). O ``mapa`` é o único assim: ele não tem
+#: seção própria — mora numa janela que abre de dentro de "A mesa". O rótulo
+#: nomeia o que se PERDE, que é o desenho do gabinete, e não a seção de onde ele
+#: é aberto: dizer "A mesa" aqui faria a frase do rodapé acusar a perda de outra
+#: coisa.
+_ROTULOS_SEM_SECAO: dict[str, str] = {
     "mapa": "O desenho da mesa",
 }
+
+
+def _rotulos_dos_campos() -> dict[str, str]:
+    """``{campo do schema: rótulo de tela}``, LIDO das seções, nunca copiado.
+
+    O import é PREGUIÇOSO, e é obrigatório que seja: ``secao_janela`` importa
+    este módulo no topo (``secao_janela.py:54``), então um import de
+    ``config.secoes`` no topo daqui fecharia o ciclo e derrubaria a janela na
+    abertura. Preguiçoso, ele só roda quando o rodapé precisa da frase — muito
+    depois de todos os módulos estarem de pé.
+
+    Campo sem rótulo cai no nome cru, e há portão que exige uma entrada para
+    cada campo do schema — e que reprova entrada SOBRANDO, que foi o que pegou
+    ``ambiente`` quando ele saiu do schema (T2, CONFIGURAÇÕES-FECHA-01,
+    24/08/2026). Esconder seria pior: a pessoa perderia o único aviso do que
+    sumiu do arquivo dela.
+    """
+    from hefesto_dualsense4unix.app.actions.config import secoes
+
+    por_modulo = {
+        secao.__name__.rsplit(".", 1)[-1]: secao.TITULO
+        for secao in secoes.SECOES_DA_ABA
+    }
+    rotulos = {
+        campo: por_modulo[modulo]
+        for campo, modulo in _SECAO_DO_CAMPO.items()
+        if modulo in por_modulo
+    }
+    rotulos.update(_ROTULOS_SEM_SECAO)
+    return rotulos
+
+
+def __getattr__(nome: str) -> Any:
+    """``ipc_bridge._CAMPOS_DA_MAQUINA`` continua existindo, agora DERIVADO.
+
+    Ele deixou de ser uma atribuição de módulo e passou a ser calculado na hora
+    da leitura (PEP 562). Duas razões, e as duas são de fronteira:
+
+    * como atribuição no topo, a derivação rodaria na IMPORTAÇÃO do módulo, que
+      é exatamente o instante em que o ciclo com ``secao_janela`` se fecha;
+    * três arquivos de teste leem ``ipc_bridge._CAMPOS_DA_MAQUINA`` como
+      dicionário (``test_descartados_chegam_ao_rodape.py:374``,
+      ``test_o_teto_da_mesa_diz_o_que_faz.py:96``). Trocar a forma do nome
+      público quebraria portões de outras frentes por uma mudança que é de
+      redação — e a regra desta fronteira é aditiva, não destrutiva.
+    """
+    if nome == "_CAMPOS_DA_MAQUINA":
+        return _rotulos_dos_campos()
+    raise AttributeError(f"module {__name__!r} has no attribute {nome!r}")
 
 
 def _rotulos_dos_descartados(result: dict[str, Any]) -> tuple[str, ...]:
@@ -819,8 +874,9 @@ def _rotulos_dos_descartados(result: dict[str, Any]) -> tuple[str, ...]:
     descartados = result.get("descartados")
     if not isinstance(descartados, list):
         return ()
+    rotulos = _rotulos_dos_campos()
     return tuple(
-        _CAMPOS_DA_MAQUINA.get(campo, campo)
+        rotulos.get(campo, campo)
         for campo in descartados
         if isinstance(campo, str) and campo
     )
