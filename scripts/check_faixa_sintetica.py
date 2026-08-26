@@ -47,6 +47,7 @@ Uso:
     python3 scripts/check_faixa_sintetica.py             # --arvore (default)
     python3 scripts/check_faixa_sintetica.py --casa      # o config_dir() real
     python3 scripts/check_faixa_sintetica.py --config-dir /algum/lugar
+    python3 scripts/check_faixa_sintetica.py --arvore --raiz /outra/arvore
 """
 from __future__ import annotations
 
@@ -172,10 +173,28 @@ _ARVORE_IGNORADA = ("tests", "docs", ".git", "captures", "examples")
 
 
 def achados_na_arvore(raiz: Path) -> list[str]:
-    """Artefatos de tempo de execução COMMITADOS que trazem faixa sintética."""
+    """Artefatos de tempo de execução COMMITADOS que trazem faixa sintética.
+
+    A BUSCA É POR PREFIXO, e a correção é de 26/08/2026. Até aqui esta função
+    fazia ``rglob(nome)`` — casamento EXATO —, e por isso o ponto cego que
+    :func:`_vale_varrer` fechou em 25/08 continuava aberto exatamente onde a
+    poluição foi encontrada: num arquivo de BACKUP. A cura de 25/08 foi para
+    :func:`achados`, o varredor ``--casa``, que o cabeçalho deste arquivo
+    declara não reprovar em lugar nenhum; o varredor que o CI roda é este, e
+    ele nunca chamava ``_vale_varrer``.
+
+    ``rglob(nome + "*")`` traz ``controllers.json.antes-de-X`` junto com
+    ``controllers.json``, e ``_vale_varrer`` filtra o que veio a mais: um
+    ``controllers.jsonl`` tem ``suffixes == ['.jsonl']`` e cai fora, um
+    ``controllers.json.bak`` tem ``['.json', '.bak']`` e entra.
+    """
     linhas: list[str] = []
     for nome in NOMES_DE_TEMPO_DE_EXECUCAO:
-        for caminho in sorted(raiz.rglob(nome)):
+        for caminho in sorted(raiz.rglob(nome + "*")):
+            if not caminho.is_file():
+                continue
+            if not _vale_varrer(caminho):
+                continue
             relativo = caminho.relative_to(raiz)
             if relativo.parts and relativo.parts[0] in _ARVORE_IGNORADA:
                 continue
@@ -211,10 +230,20 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="varre a árvore versionada (é o DEFAULT quando nada é pedido)",
     )
+    parser.add_argument(
+        "--raiz",
+        type=Path,
+        default=None,
+        help="a raiz da árvore a varrer no modo --arvore (padrão: a deste script)",
+    )
     args = parser.parse_args(argv)
 
     if args.config_dir is None and not args.casa:
-        raiz = Path(__file__).resolve().parents[1]
+        raiz = (
+            args.raiz.resolve()
+            if args.raiz is not None
+            else Path(__file__).resolve().parents[1]
+        )
         encontrados = achados_na_arvore(raiz)
         if encontrados:
             print(f"FAIL: artefato de tempo de execução versionado em '{raiz}':")
