@@ -1490,49 +1490,15 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`mesa_de_radio.vizinhancas_apertadas`, porque a porta-filha (o "
         "extensor) muda o cálculo de vizinhança. "
     ),
-    # --- 25/08/2026: O CATÁLOGO DE ORDENS DE SERVIÇO NASCEU SEM A SEÇÃO
-    # ORDEM-DE-SERVIÇO-01. O módulo inteiro é a metade de baixo de uma sprint
-    # cuja metade de cima é TELA, e tela não fecha sem o olho dela
-    # (PROVA-DE-TELA-01). As seis regras estão medidas e com bateria própria
-    # (`test_ordens_da_mesa.py`, `test_o_selo_de_procedencia_nunca_falta.py`,
-    # `test_a_ordem_confirma_que_ela_moveu.py` e
-    # `test_o_estado_bom_nao_e_o_estado_vazio.py`); o que não existe é o
-    # chamador.
-    #
-    # ONDE O CAMINHO SE PERDE, para todo símbolo deste bloco: nem
-    # `integrations/exame_da_mesa.py` (ORDEM-4: o campo `Item.ordem` e a chave
-    # nova em `como_dicionario`) nem `app/actions/config/secao_exame.py`
-    # (ORDEM-5: os cards e as duas zonas) foram escritos. Enquanto os dois
-    # faltarem, o catálogo é dado que ninguém pede.
-    #
-    # O QUE FECHA: ORDEM-4 liga o catálogo ao exame e ORDEM-5 publica os cards.
-    # ORDEM-5 é texto novo na tela e passa pelo olho dela ANTES.
-    # DONO: a própria ORDEM-DE-SERVIÇO-01, frente B da leva Configurações.
-    "integrations/ordens_da_mesa.py::cabecalho": (
-        "MEDIDO em 25/08/2026: os quatro cabeçalhos da §8.3, derivados num "
-        "lugar só. Cai junto com `catalogo` e pelo mesmo motivo — e é por isso "
-        "que não ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::identidades": (
-        "MEDIDO em 25/08/2026: a tripla que decide a ambiguidade, e onde o "
-        "serial morre. Cai junto com `catalogo` e pelo mesmo motivo — e é por "
-        "isso que não ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::ordens_novas": (
-        "MEDIDO em 25/08/2026: o leitor de `MesaDeclarada.ordens_dispensadas`. "
-        "Cai junto com `catalogo` e pelo mesmo motivo — e é por isso que não "
-        "ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::ordens_caladas": (
-        "MEDIDO em 25/08/2026: o irmão dele, que CONTA a decisão dela. Cai "
-        "junto com `catalogo` e pelo mesmo motivo — e é por isso que não ganha "
-        "entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::resposta_ao_ja_movi": (
-        "MEDIDO em 25/08/2026: as quatro respostas do botão que a seção ainda "
-        "não desenhou. Cai junto com `catalogo` e pelo mesmo motivo — e é por "
-        "isso que não ganha entrada própria de conserto."
-    ),
+    # --- 26/08/2026: AS CINCO LÁPIDES DO CATÁLOGO DE ORDENS CAÍRAM.
+    # A ORDEM-5 e a ORDEM-6 fecharam na leva 2
+    # (`app/actions/config/secao_exame.py`): o card de ordem ganhou
+    # `[Já movi — reexaminar]` e `[Ignorar]`, o selo do topo passou a dizer
+    # o texto de `cabecalho()`, a dispensa dela filtra por `ordens_novas` e
+    # é CONTADA por `ordens_caladas`, e `identidades` é quem separa dois
+    # adaptadores de mesmo `vid:pid` pelo serial para que o produto não
+    # diga "Confirmei" sem saber qual dos dois ela moveu.
+    # A mordida está em `test_a_dispensa_volta_quando_o_arranjo_muda.py`.
     # `portas_do_barramento.py` é a camada de sysfs que `ordens_da_mesa`
     # consome. Ela tem chamador de produção (`mesmo_hub_fisico` importa
     # `hubs_do_mesmo_plastico` desde 25/08), mas esse chamador é o próprio
