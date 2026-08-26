@@ -60,10 +60,31 @@ desta árvore virou uma regra escrita, não uma exclusão de caminho:
 * **serial que é só dígito não é OUI.** Doze hexadecimais sem uma letra é hash,
   carimbo ou soma — não endereço.
 
-A LISTAGEM é ``git ls-files`` + leitura, NUNCA ``git grep``: o ``git grep`` só
-enxerga o ÍNDICE, e arquivo recém-escrito por um agente ainda não está lá. É a
-cicatriz ANONIMATO-CEGO-A-ARQUIVO-NOVO-01, de 13/08/2026, e ela vale igual aqui
-— foi exatamente assim que as duas sprints de hoje passariam.
+A LISTAGEM é ``git ls-files`` + leitura, NUNCA ``git grep``. E a listagem tem de
+levar ``--cached --others --exclude-standard``, senão a troca não resolve nada.
+
+**CORREÇÃO DE FATO (26/08/2026).** Este parágrafo dizia que a cicatriz
+ANONIMATO-CEGO-A-ARQUIVO-NOVO-01 estava curada aqui, e ela NÃO estava: a
+chamada era ``git ls-files -z`` pelado, que enxerga só o ÍNDICE — exatamente a
+mesma cegueira do ``git grep`` que o parágrafo dizia ter evitado. Trocar a
+BUSCA pela LISTA não bastava; o que cura é a LISTA trazer o arquivo novo.
+Medido nesta árvore, com um endereço de aparência real (a regra deste arquivo
+proíbe repeti-lo aqui) num arquivo recém-escrito::
+
+    sem ``git add``   ->  "OK: nenhum endereço de rádio real…"  rc=0
+    com ``git add``   ->  "FALHA: 1 endereço(s)…"               rc=1
+
+A cura já estava pronta no irmão desde 15/08 — ``test_docs_mac_anonimato.py``,
+``_tracked_files``, cicatriz ANONIMATO-CEGO-A-ARQUIVO-NOVO-02 — e foi copiada
+para cá. ``--exclude-standard`` mantém o ``.gitignore`` respeitado.
+
+**``.svg`` NÃO é binário, e saiu do ``EXCLUIR_SUFIXO`` no mesmo dia.** São 49
+arquivos versionados, todos texto puro (``file --mime-encoding``: 46 utf-8, 3
+us-ascii). Enquanto o sufixo estava na lista, um endereço dentro de um SVG
+passava **mesmo já commitado** — não era cegueira a arquivo novo, era um buraco
+permanente. A companhia do ``.png`` era analogia, não medição: em PNG doze
+hexadecimais são bytes comprimidos casando por acaso; num SVG são caracteres
+que alguém digitou.
 """
 from __future__ import annotations
 
@@ -75,8 +96,11 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 
 #: Binário e artefato onde doze hexadecimais são ruído, não endereço.
+#:
+#: ``.svg`` SAIU daqui em 26/08/2026: é XML de texto puro, e o que estava dentro
+#: dele nunca foi varrido — nem depois do commit. Ver a docstring do módulo.
 EXCLUIR_SUFIXO = {
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".svg",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf",
     ".mo", ".woff", ".woff2", ".zip", ".gz", ".xz", ".sha256",
 }
 #: Caminhos cujo conteúdo é lista de soma — doze hex por linha, de propósito.
@@ -165,7 +189,13 @@ def acusa_serial(linha: str) -> list[str]:
 def arquivos_versionados() -> list[Path]:
     try:
         saida = subprocess.run(
-            ["git", "ls-files", "-z"], cwd=RAIZ, check=True,
+            # `--cached --others --exclude-standard`: o rastreado E o novo, sem
+            # o ignorado. Sem os três, `git ls-files` lê só o ÍNDICE e o portão
+            # cala no arquivo que ninguém revisou ainda — ver a docstring do
+            # módulo (ANONIMATO-CEGO-A-ARQUIVO-NOVO-01, curada aqui em 26/08).
+            ["git", "ls-files", "-z", "--cached", "--others",
+             "--exclude-standard"],
+            cwd=RAIZ, check=True,
             capture_output=True, text=True,
         ).stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
