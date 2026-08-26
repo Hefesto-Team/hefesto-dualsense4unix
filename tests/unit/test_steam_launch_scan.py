@@ -34,6 +34,21 @@ ISCA_EXECCOND = (
 )
 
 
+@pytest.fixture(autouse=True)
+def _sem_foto_herdada():
+    """A varredura ganhou memória na BG-03 (25/08/2026) — e memória vaza.
+
+    O `_ultima_varredura` do módulo guarda `(quando, pid do jogo)` e sobrevive
+    ao fim do teste: sem este reset, o `/proc` sintético de um teste responde
+    pelo do seguinte (medido: quatro destes onze reprovavam por herança, não
+    por defeito). Cada caso aqui declara o seu `/proc` inteiro; nenhum quer o
+    do vizinho.
+    """
+    slo.invalidar_varredura_de_proc()
+    yield
+    slo.invalidar_varredura_de_proc()
+
+
 @pytest.fixture
 def proc_falso(monkeypatch):
     """Instala um /proc sintético. Devolve um setter que recebe {pid: cmdline}."""
