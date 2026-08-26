@@ -2713,9 +2713,45 @@ class PyDualSenseController(IController):
         # "Qualquer controle conectado". `ds.connected` é o canônico do
         # pydualsense (bool). AUDIT-FINDING-LOG-EXC-INFO-01: default conservador
         # `False` quando o atributo está ausente (estado desconhecido).
+        #
+        # BORDA-DE-QUEDA-01: isto é um AGREGADO, e por isso não serve para
+        # perceber a queda de UM controle quando outro segue de pé — a resposta
+        # continua "sim" e a borda nunca acontece. Quem precisa da borda por
+        # controle usa `alvos_conectados()`, logo abaixo.
         with self._io_lock:
             handles = list(self._handles.values())
         return any(bool(getattr(h, "connected", False)) for h in handles)
+
+    def alvos_conectados(self) -> dict[str, str | None]:
+        """Os controles conectados AGORA, um por handle: `{key: uniq|None}`.
+
+        BORDA-DE-QUEDA-01 — a metade por ALVO do que `is_connected()` só sabe
+        responder no agregado. Com dois ou mais na mesa, a queda de um não muda
+        o `any(...)`: quem observa só o agregado nunca vê a borda, e o controle
+        que caiu some sem uma linha sequer. Comparar dois retornos deste método
+        entre dois tiques dá as duas bordas por controle — quem entrou e quem
+        saiu — porque a queda aparece das DUAS formas possíveis: o handle é
+        podado de `_handles` (`_close_handles`) ou fica lá com
+        `connected=False`.
+
+        A CHAVE é a key interna do handle (MAC ou path de fallback), estável
+        entre tiques e nunca None; o VALOR é o `uniq` público — o MAC
+        normalizado que a GUI, o perfil e o áudio usam, e que é None quando a
+        key é um path sem serial. Precisamos das duas: a key identifica, o uniq
+        endereça.
+
+        Custo: só getattrs baratos sob o `_io_lock`, sem HID I/O — pode rodar a
+        cada tique do probe. Diferente de `describe_controllers()`, não lê
+        bateria nem transporte: quem só quer saber QUEM está na mesa não deve
+        pagar por isso.
+        """
+        with self._io_lock:
+            items = list(self._handles.items())
+        return {
+            key: self._key_to_uniq(key)
+            for key, handle in items
+            if bool(getattr(handle, "connected", False))
+        }
 
     def heal_evdev_if_stale(self) -> bool:
         """Watchdog HID x evdev: se o evdev reader ficou preso num node OBSOLETO
