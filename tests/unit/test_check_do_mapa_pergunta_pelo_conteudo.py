@@ -47,6 +47,22 @@ from pathlib import Path
 
 import pytest
 
+def _specs_de(raiz: Path) -> Path:
+    """O caminho do `specs.html` numa árvore de brinquedo, com a pasta criada.
+
+    A página mudou da raiz para `html/` em 25/08/2026, e as árvores de teste
+    passaram a precisar da pasta ANTES do `write_text` — senão o erro é um
+    `FileNotFoundError` de diretório, que não diz nada sobre o que se testa.
+
+    Existe como função, e não como duas linhas repetidas em cada caso, pelo
+    motivo de sempre nesta casa: no dia em que o caminho mudar de novo, muda
+    num lugar só.
+    """
+    pasta = raiz / "html"
+    pasta.mkdir(parents=True, exist_ok=True)
+    return pasta / "specs.html"
+
+
 RAIZ = Path(__file__).resolve().parents[2]
 GERADOR = RAIZ / "scripts" / "gerar-mapa.py"
 
@@ -81,9 +97,15 @@ def arvore(tmp_path: Path) -> Path:
     # Esta lista é o preço de copiar scripts para um tmp em vez de rodá-los na
     # árvore: toda dependência nova precisa ser lembrada aqui. O `ImportError`
     # grita, que é o comportamento certo — foi assim que este teste avisou.
+    # `carimbo_da_casa.py` entrou em 25/08/2026, pelo MESMO caminho da paleta:
+    # os quatro instrumentos HTML passaram a dividir um rodapé de procedência
+    # (commit, branch, data, sujeira da árvore), e sem ele a cópia do gerador
+    # morre com `ModuleNotFoundError` na árvore de teste. O aviso veio deste
+    # teste, como o comentário acima previa que viria.
     for script in (
         "gerar-mapa.py",
         "paleta_da_casa.py",
+        "carimbo_da_casa.py",
         "eliminacao.py",
         "check_paridade_transporte.py",
     ):
@@ -120,7 +142,7 @@ def confere(arvore: Path) -> subprocess.CompletedProcess:
 
 
 def pagina(arvore: Path) -> Path:
-    return arvore / "specs.html"
+    return _specs_de(arvore)
 
 
 def envelhece_as_fontes(arvore: Path) -> None:

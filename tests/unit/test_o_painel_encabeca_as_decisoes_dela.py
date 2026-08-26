@@ -88,7 +88,7 @@ def test_a_secao_vem_antes_do_estado_do_projeto() -> None:
 
     MORDE: mover o bloco das decisões para baixo, ou tirá-lo do `monta`.
     """
-    pagina = (RAIZ / "painel.html").read_text(encoding="utf-8")
+    pagina = (RAIZ / "html" / "painel.html").read_text(encoding="utf-8")
 
     onde_decisoes = pagina.find("O que espera você")
     onde_portoes = pagina.find("Os portões")
@@ -103,7 +103,7 @@ def test_a_secao_vem_antes_do_estado_do_projeto() -> None:
 
 def test_toda_decisao_do_csv_chega_a_pagina() -> None:
     """MORDE: filtrar qualquer decisão na renderização."""
-    pagina = (RAIZ / "painel.html").read_text(encoding="utf-8")
+    pagina = (RAIZ / "html" / "painel.html").read_text(encoding="utf-8")
     with CSV_.open(newline="", encoding="utf-8") as f:
         for d in csv.DictReader(f):
             assert d["id"] in pagina, (
@@ -186,7 +186,7 @@ def test_o_check_do_painel_sabe_reprovar() -> None:
     MORDE: fazer o `--check` comparar mtime em vez de conteúdo, ou devolver
     sempre zero.
     """
-    publicado = RAIZ / "painel.html"
+    publicado = RAIZ / "html" / "painel.html"
     guardado = publicado.read_bytes()
 
     def _check() -> int:

@@ -359,6 +359,12 @@ def main() -> int:
         )
         return 1
 
+    # A PASTA DE SAÍDA É DO GERADOR, não de quem o chama — 25/08/2026.
+    # As páginas mudaram para `html/`, e as árvores de brinquedo dos testes
+    # copiam o gerador para um `tmp_path` onde essa pasta não existe. O erro
+    # que sai daí é um `FileNotFoundError` de DIRETÓRIO, que não diz nada
+    # sobre o que se testa. Quem sabe onde escreve sabe criar o lugar.
+    SAIDA.parent.mkdir(parents=True, exist_ok=True)
     SAIDA.write_text(novo, encoding="utf-8")
     print(f"{SAIDA.relative_to(RAIZ)}: {len(novo) // 1024} KB, sem rede e sem CDN.")
     return 0

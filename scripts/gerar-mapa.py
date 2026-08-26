@@ -1136,6 +1136,9 @@ def main() -> int:
     # `gerar-mapa.py`, e um arquivo que nunca fica limpo ensina a próxima pessoa
     # a ignorar o `git status` inteiro. Os SVGs interpolados são a fonte das
     # caudas; apará-las aqui é mais barato que caçá-las nos três desenhos.
+    # A pasta de saída é do GERADOR — 25/08/2026: as páginas mudaram
+    # para `html/`, e a árvore de brinquedo dos testes não a tem.
+    SAIDA.parent.mkdir(parents=True, exist_ok=True)
     SAIDA.write_text(
         "\n".join(linha.rstrip() for linha in monta().split("\n")), encoding="utf-8"
     )

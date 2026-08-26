@@ -36,6 +36,7 @@ from pathlib import Path
 # mínimo já estão medidos lá, e duas cópias divergiriam no dia em que uma coluna
 # entrasse. O que este arquivo acrescenta é o CADERNO — que o irmão não escreve.
 from tests.unit.test_check_paridade_transporte import (
+    _specs_de,
     CABECALHO as CABECALHO_DO_IRMAO,
 )
 from tests.unit.test_check_paridade_transporte import (
@@ -165,7 +166,7 @@ def monta_arvore(
     pasta_de_testes.mkdir(parents=True, exist_ok=True)
     (pasta_de_testes / "test_exemplo.py").write_text(TESTE_FALSO, encoding="utf-8")
 
-    (tmp_path / "specs.html").write_text(
+    _specs_de(tmp_path).write_text(
         "<html><body>" + " ".join(linha.get("id", "") for linha in linhas) + "</body></html>",
         encoding="utf-8",
     )
@@ -760,7 +761,7 @@ def test_a_escada_tem_um_dono_so(tmp_path: Path) -> None:
     # A legenda publicada sai da escada, e o método a define em prosa. Os dois
     # têm de nomear os CINCO degraus, ou a página e a régua contam histórias
     # diferentes.
-    publicado = (RAIZ_REAL / "specs.html").read_text(encoding="utf-8")
+    publicado = (RAIZ_REAL / "html" / "specs.html").read_text(encoding="utf-8")
     metodo = (RAIZ_REAL / "docs" / "process" / "METODO-DE-ISOLAMENTO.md").read_text(
         encoding="utf-8"
     )
