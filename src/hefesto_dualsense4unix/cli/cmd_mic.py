@@ -52,6 +52,8 @@ from typing import Any
 import typer
 from rich.console import Console
 
+from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
+
 console = Console()
 
 _SCRIPT_NAME = "fix_wireplumber_default_source.sh"
@@ -87,16 +89,14 @@ _RECONCILIA_S = 5.0
 
 
 def _find_script() -> Path | None:
-    """Localiza o script do WirePlumber em layouts conhecidos (editable e .deb)."""
-    candidates = [
-        Path(__file__).resolve().parents[3] / "scripts" / _SCRIPT_NAME,
-        Path("/usr/share/hefesto-dualsense4unix/scripts") / _SCRIPT_NAME,
-        Path("/usr/local/share/hefesto-dualsense4unix/scripts") / _SCRIPT_NAME,
-    ]
-    for path in candidates:
-        if path.is_file():
-            return path
-    return None
+    """Localiza o script do WirePlumber.
+
+    BG-BASES-01 (26/08/2026): esta lista tinha TRÊS bases e nenhuma delas era
+    `/app/share` nem `sys.prefix/share` — quem instalou por Flatpak, AppImage,
+    venv ou Nix recebia "script não encontrado" com o arquivo na máquina. A
+    resposta é uma só, e é de `utils/repo_files`.
+    """
+    return encontrar_arquivo_do_repo(f"scripts/{_SCRIPT_NAME}")
 
 
 def mic_cmd(action: str = "status", uniq: str | None = None) -> None:

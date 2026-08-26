@@ -22,6 +22,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
     DEFAULT_SCROLL_SPEED,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
 logger = get_logger(__name__)
 
@@ -601,9 +602,12 @@ class MouseActionsMixin(WidgetAccessMixin):
                 '<span foreground="#50fa7b">Pronto para usar como mouse</span>'
             )
         elif not module_ok:
+            # BG-INSTALL-01 (26/08/2026): dizia "rode a instalação de novo
+            # (./install.sh)", e esse arquivo só existe para quem clonou o
+            # repositório. O gesto agora é o desta instalação.
             label.set_markup(
                 '<span foreground="#ff5555">Falta um componente do mouse virtual — '
-                'rode a instalação de novo (./install.sh)</span>'
+                f'{como_atualizar_esta_instalacao()}</span>'
             )
         elif dev_exists and not dev_writable:
             label.set_markup(
