@@ -1249,6 +1249,119 @@ install_bt_ponte_privilegiada_host() {
     fi
 }
 
+# MOTOR-7 (25/08/2026) — o install lê o firmware, e a aba abre com o gabinete
+# JÁ DESENHADO.
+#
+# Pedido dela, deste dia: *"manda isso tudo pro nosso install viu. não podemos
+# deixar isso passar. a ideia é que o install faça o trampo sujo todo pro user
+# sempre ter facilidade"*. É a regra da casa (toda cura entra no install, sem
+# flag) aplicada ao censo do gabinete.
+#
+# O QUE SÓ O INSTALL CONSEGUE. A tabela SMBIOS **tipo 8** — *Port Connector
+# Information*, o inventário de conectores que o fabricante escreveu — mora em
+# `/sys/firmware/dmi/tables/DMI` e em `/sys/firmware/dmi/entries/8-*/raw`, os
+# dois `400 root`. O install passa por root UMA vez; a janela nunca pede senha.
+# Sem este passo, os três números da §7.1 da sprint teriam de ser digitados por
+# ela — e digitados de novo a cada máquina.
+#
+# ESTA FUNÇÃO NUNCA DESISTE, e é o que a separa das *_host acima. A
+# `install_bt_ponte_privilegiada_host` sem sudo não tem o que fazer e volta;
+# esta tem METADE do trabalho que não precisa de root nenhum:
+#
+#   - os soquetes e os buracos do barramento (`/sys/bus/usb/devices`) — 22 e 15
+#     nesta bancada, medidos em 25/08/2026 às 21h18;
+#   - a identificação da placa (`/sys/class/dmi/id/`, legível por todo mundo);
+#   - e a CONTAGEM da tabela 8, que sai do `ls` do diretório mesmo com o `raw`
+#     ilegível. É ela que separa *"a sua placa não tem tabela de conectores"* de
+#     *"tem 18 entradas e eu não tive root para lê-las"* — duas frases que mandam
+#     a pessoa fazer coisas diferentes.
+#
+# Sem root o `gabinete.json` sai com `tabela_8_respondeu: false` e a aba abre
+# perguntando; com root ele sai com os conectores. Nos dois casos ele EXISTE, e a
+# aba não precisa saber qual foi o caso: ela lê o selo de cada campo.
+#
+# A BIOS DESTA PLACA MENTE, e é por isso que este passo não elege ninguém.
+# MEDIDO em 25/08/2026 na Gigabyte B450M S2H: a tabela declara **5** conectores
+# USB onde a traseira entrega **8**, e inventa um `USB-C` que esta placa não tem
+# — gabarito genérico do fabricante, copiado sem ajustar. O kernel, do outro
+# lado, conta **22** soquetes, porque conta cabeçote interno e a duplicação
+# 2.0/3.0 do mesmo furo. As três contagens divergem e NENHUMA é autoritativa: o
+# módulo grava as três, marca `divergem`, e a aba PERGUNTA. Divergência
+# declarada é informação; divergência escondida é o defeito de forma F6.
+#
+# E ELE NÃO GRAVA POR CIMA DA RESPOSTA DELA. Este arquivo tem dois escritores —
+# o install, que traz o firmware, e a aba, onde ela diz quantos buracos a
+# traseira tem. Reinstalar apagando isso perderia o trabalho dela em silêncio;
+# `preservar_o_que_ela_disse` carrega a declaração adiante, e só a descarta
+# quando a PLACA mudou (aí as faces descreveriam outro metal).
+#
+# Quem DECIDE é o módulo puro `integrations/censo_do_gabinete.py` (100% stdlib,
+# testável sem root e sem placa nenhuma); aqui só conseguimos o texto e
+# escolhemos o destino — a mesma política do `kernel_cmdline.py` no passo 3e.
+#
+# ACIMA DA BIFURCAÇÃO e chamada dos DOIS lados: ler firmware é trabalho de HOST,
+# ortogonal ao formato do aplicativo. Portão:
+# `tests/unit/test_install_serve_os_dois_lados_da_cerca.py`.
+install_censo_do_gabinete_host() {
+    local _gab_alvo="${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
+    local _gab_tmp _gab_saida
+    if ! command -v python3 >/dev/null 2>&1; then
+        warn "python3 ausente — censo do gabinete pulado (a aba Conexões vai pedir os números à mão, e funciona assim)"
+        return 0
+    fi
+    _gab_tmp="$(mktemp)" || {
+        warn "não consegui criar arquivo temporário — censo do gabinete pulado"
+        return 0
+    }
+    # As três razões de o texto sair vazio são a MESMA resposta para o módulo —
+    # "não respondeu" — e NENHUMA delas interrompe o passo: o que o kernel dá de
+    # graça continua valendo, e é a maior parte do arquivo.
+    if ! command -v dmidecode >/dev/null 2>&1; then
+        warn "dmidecode ausente — o censo sai só com o barramento; a BIOS não foi consultada"
+    elif ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
+        warn "sem root agora — a tabela de conectores da BIOS não foi lida; o censo sai com o barramento e a aba pergunta o resto (re-execute ./install.sh)"
+    else
+        # SC2024 avisa que o `sudo` não alcança o redirecionamento — e aqui isso
+        # é o desejado, não um descuido: o `mktemp` acima é da USUÁRIA, e quem
+        # precisa de privilégio é só o `dmidecode`. Escrever com `sudo tee`
+        # deixaria no disco um arquivo de root que este passo teria de apagar
+        # com sudo depois.
+        # shellcheck disable=SC2024
+        sudo -n dmidecode -t 8 >"${_gab_tmp}" 2>/dev/null || : >"${_gab_tmp}"
+    fi
+    _gab_saida="$(python3 - "${ROOT_DIR}" "${_gab_tmp}" "${_gab_alvo}" <<'PYEOF'
+import os
+import sys
+
+raiz, texto_bruto, alvo = sys.argv[1], sys.argv[2], sys.argv[3]
+sys.path.insert(0, os.path.join(raiz, "src"))
+from hefesto_dualsense4unix.integrations import censo_do_gabinete as cdg
+
+try:
+    with open(texto_bruto, encoding="utf-8", errors="ignore") as arquivo:
+        do_dmidecode = arquivo.read()
+except OSError:
+    do_dmidecode = ""
+
+censo = cdg.ler_o_gabinete(dmidecode=do_dmidecode)
+censo = cdg.preservar_o_que_ela_disse(censo, cdg.ler_do_disco(alvo), cdg.ler_a_placa())
+cdg.gravar(censo, alvo)
+if censo.get("substituiu_outra_placa"):
+    print("censo anterior era de OUTRA placa — substituído")
+print(cdg.resumo(censo))
+PYEOF
+)" || _gab_saida=""
+    rm -f "${_gab_tmp}"
+    if [[ -s "${_gab_alvo}" ]]; then
+        printf '      censo do gabinete gravado: %s\n' "${_gab_alvo}"
+        while IFS= read -r _gab_linha; do
+            [[ -n "${_gab_linha}" ]] && printf '        %s\n' "${_gab_linha}"
+        done <<<"${_gab_saida}"
+    else
+        warn "não consegui gravar ${_gab_alvo} — a aba Conexões vai abrir pedindo os números à mão (e funciona assim)"
+    fi
+}
+
 # Onda T (desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md):
 # módulo hid-nintendo patchado (probe BT resiliente + module params) via DKMS
 # genérico (scripts/dkms_lib.sh — reusado pela Onda W/rtw88). DEFAULT ON (regra
@@ -1756,6 +1869,13 @@ if [[ "${FORMAT}" != "native" ]]; then
     # flatpak/appimage/deb sairia com a aba de rádio pedindo senha a cada gesto.
     step "bt-ponte" "PONTE-PRIVILEGIADA-01: a ponte de root do Bluetooth (DEFAULT em todo formato)"
     install_bt_ponte_privilegiada_host
+    # MOTOR-7: mesma razão das duas linhas acima. Ler a tabela SMBIOS é trabalho
+    # de HOST — quem tem a tabela é a placa, não o formato do aplicativo. Sem
+    # esta chamada, quem instala por flatpak/appimage/deb sairia pelo `exit 0`
+    # abaixo com a aba Conexões pedindo os três números à mão, e sem nem saber
+    # que a BIOS tinha uma resposta a dar.
+    step "gabinete" "MOTOR-7: censo do gabinete pelo firmware (DEFAULT em todo formato)"
+    install_censo_do_gabinete_host
     # Onda T (achado equivalente ao #7 do broker): DKMS é mudança de
     # SISTEMA/kernel, ortogonal ao formato do app — mesma função do passo 3i
     # do fluxo native. Opt-out: --no-dkms.
@@ -2425,6 +2545,18 @@ install_bt_resilience_host
 # fica colada na resiliência porque é a mesma camada de Bluetooth.
 step "3e-ter" "PONTE-PRIVILEGIADA-01: mover controle entre dongles sem pedir senha"
 install_bt_ponte_privilegiada_host
+
+# ---------------------------------------------------------------------------
+# 3e-quater. MOTOR-7: o censo do gabinete, lido do firmware
+# ---------------------------------------------------------------------------
+# O corpo mora em `install_censo_do_gabinete_host`, acima da bifurcação de
+# formato, e o outro lado da cerca a chama também — o racional inteiro está lá.
+# A POSIÇÃO AQUI é a única que importa: DEPOIS do 3e-ter, porque é ali que o
+# `sudo -n` desta execução já foi exercitado, e ANTES de qualquer passo que
+# demore — o censo custa um `dmidecode` e uma varredura de `/sys` de 6,87 ms, e
+# não faz sentido a pessoa esperar um DKMS para o gabinete dela aparecer.
+step "3e-quater" "MOTOR-7: censo do gabinete (tabela SMBIOS 8 + barramento)"
+install_censo_do_gabinete_host
 
 # ---------------------------------------------------------------------------
 # 3f. ONDA-R: BlueZ resiliente (backport local — alvo 5.86) — DEFAULT
