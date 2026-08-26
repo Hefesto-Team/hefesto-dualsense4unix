@@ -231,7 +231,19 @@ install -Dm755 scripts/bt_bonds_snapshot.sh \
 # Portão: `tests/unit/test_doctor_justworks_comportamento.py`
 # (`test_empacotamento_leva_o_dono_do_bluez`) e a seção de paridade do BlueZ em
 # `scripts/check_packaging_parity.sh` — quem levar doctor.sh leva bluez_config.sh.
-for _s in doctor.sh bluez_config.sh disable_steam_input.sh fix_wireplumber_default_source.sh dsx_recover.sh; do
+#
+# O `dsx_recover.sh` SAIU desta lista em 26/08/2026 (LEVA-4-E), e o motivo é o
+# inverso do que trouxe os outros: ele viajava só aqui e NINGUÉM o executava.
+# Medido: `grep -rn dsx_recover src/` -> vazio; a unit que o rodava
+# (`hefesto-dsx-recover.service`) foi apagada em 31/07/2026 e há teste que a
+# impede de voltar (`test_a_unit_dsx_recover_nao_existe_em_lugar_nenhum`). Peso
+# num formato só, sem consumidor em nenhum — e, se alguém ligar o consumidor um
+# dia, ele funcionaria no `.deb` e falharia em SILÊNCIO nos outros seis. O
+# arquivo continua no repositório como instrumento de bancada, que é o que ele
+# é hoje; quem o ressuscitar como produto põe o consumidor E os sete formatos
+# no mesmo commit, e aí `_PRODSCRIPTS` do `check_packaging_parity.sh` passa a
+# cobrá-lo sozinho.
+for _s in doctor.sh bluez_config.sh disable_steam_input.sh fix_wireplumber_default_source.sh; do
     [ -f "scripts/${_s}" ] && install -Dm755 "scripts/${_s}" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/${_s}"
 done
