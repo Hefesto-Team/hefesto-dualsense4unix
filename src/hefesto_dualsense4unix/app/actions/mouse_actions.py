@@ -61,10 +61,12 @@ MODO_DESCONHECIDO_HINT = (
 #: ESTADO ("Ligado, em pausa agora…") e esta descreve o desfecho de um CLIQUE,
 #: e um texto que serve para os dois não serve direito para nenhum.
 #:
-#: Enquanto a N5 não publicar `bloqueio` na resposta de `mouse.emulation.set`,
-#: esta tabela só é alcançada por um daemon mais novo que esta janela. A recusa
-#: sem motivo cai em `RECUSA_SEM_MOTIVO`, que DIZ que o motivo faltou em vez de
-#: inventar um.
+#: **Alcançada desde 25/08/2026 (BG-02):** `mouse.emulation.set` devolve
+#: `bloqueio` junto do `failed` (`daemon/ipc_handlers._handle_mouse_emulation_set`)
+#: — antes disso a tabela estava commitada e não era chamada por ninguém, e
+#: toda recusa caía em `RECUSA_SEM_MOTIVO`. Um daemon mais VELHO que esta
+#: janela ainda não manda o campo, e continua caindo lá: `RECUSA_SEM_MOTIVO`
+#: DIZ que o motivo faltou, em vez de inventar um.
 BLOQUEIO_DO_MOUSE_EM_PORTUGUES: dict[str, str] = {
     "desligada": "a emulação de mouse está desligada no Hefesto",
     "sem_device": (
@@ -136,6 +138,61 @@ class MouseActionsMixin(WidgetAccessMixin):
     #: pacote; dizê-la porque ninguém respondeu é a janela afirmando sobre uma
     #: máquina que ela não olhou.
     _osk_disponivel: bool | None = None
+
+    #: BG-02 — o mouse virtual está NO AR, segundo o daemon (o último
+    #: `state_full`). TRI-ESTADO, e os três casos são diferentes de verdade:
+    #:
+    #: - `True`  -- o daemon tem o device aberto (`mouse_emulation.device_ativo`);
+    #: - `False` -- o interruptor está LIGADO e o device NÃO subiu
+    #:              (`bloqueio == "sem_device"`) — é o defeito que esta frente
+    #:              existe para tornar visível: o cursor não anda e a aba calava;
+    #: - `None`  -- não sei. Ninguém respondeu, o daemon é mais velho que esta
+    #:              janela (sem as chaves novas), **ou a emulação está
+    #:              simplesmente desligada** — e este último é o caso que obriga
+    #:              o tri-estado: sem device porque ela desligou não é defeito
+    #:              nenhum, e mandá-la em "Aplicar correções" por causa de um
+    #:              interruptor que ela mesma baixou seria alarme falso.
+    _mouse_virtual_no_ar: bool | None = None
+
+    def _anotar_mouse_virtual(self, state: Any) -> None:
+        """Lê `mouse_emulation.device_ativo`/`bloqueio` e repinta o rótulo.
+
+        MOUSE-SEM-RAZÃO-01 (BG-02, 25/08/2026). `_refresh_mouse_view` respondia
+        "o mouse virtual está pronto?" com uma sonda LOCAL — `import uinput` e
+        `os.access("/dev/uinput")` dentro do processo da JANELA. Ela erra nos
+        dois sentidos, e os dois foram o caso dela:
+
+        - num Flatpak a janela olha o sandbox e grita "sem permissão" sobre um
+          `/dev/uinput` que o daemon abre sem dificuldade nenhuma;
+        - com permissão em ordem e o device NÃO no ar (a flag persistida religa
+          no boot, `UinputMouseDevice.start()` falha, `_mouse_device` fica
+          `None` com o interruptor em pé), a sonda local diz *"Pronto para usar
+          como mouse"* enquanto o cursor não anda.
+
+        Quem abre o device é o daemon; a resposta tem de vir de quem executa —
+        a mesma disciplina do `osk_disponivel` do vizinho de cima.
+
+        Nenhuma frase nova entra na tela: as quatro do rótulo são as de sempre,
+        e o que muda é QUAL delas é a verdadeira.
+        """
+        bloco = state.get("mouse_emulation") if isinstance(state, dict) else None
+        novo: bool | None
+        if not isinstance(bloco, dict):
+            novo = None
+        elif bloco.get("device_ativo") is True:
+            novo = True
+        elif bloco.get("bloqueio") == "sem_device":
+            novo = False
+        else:
+            # "desligada", "modo_jogo", "vpad_suspenso_pelo_steam_input" e o
+            # daemon velho sem as chaves caem aqui: nenhum deles é o rótulo
+            # falando. O modo jogo já tem a frase dele em
+            # `mouse_mode_hint_label`, e desligada é escolha dela.
+            novo = None
+        if novo == self._mouse_virtual_no_ar:
+            return
+        self._mouse_virtual_no_ar = novo
+        self._refresh_mouse_view()
 
     def _anotar_teclado_na_tela(self, state: Any) -> None:
         """Lê `keyboard_emulation.osk_disponivel` do estado vivo e avisa a aba.
@@ -264,6 +321,11 @@ class MouseActionsMixin(WidgetAccessMixin):
             # mouse, e perdê-lo porque a seção do perfil está preenchida seria
             # o dado chegar no fio e a tela continuar sem ele.
             self._anotar_teclado_na_tela(state)
+            # BG-02: e pelo mesmo motivo ainda — "o mouse virtual subiu?" não
+            # tem nada a ver com edição pendente nem com seção de perfil. Sair
+            # pelos returns abaixo com o dado na mão deixaria o rótulo mentindo
+            # exatamente quando ela está mexendo na aba.
+            self._anotar_mouse_virtual(state)
             me = state.get("mouse_emulation") if isinstance(state, dict) else None
             if not isinstance(me, dict):
                 return False
@@ -306,6 +368,9 @@ class MouseActionsMixin(WidgetAccessMixin):
             # tela. Guardar o último valor conhecido seria afirmar sobre uma
             # máquina que ninguém acabou de olhar.
             self._anotar_teclado_na_tela(None)
+            # BG-02: idem para o mouse virtual — sem daemon o rótulo volta à
+            # sonda local, que é o melhor palpite que a janela sabe dar sozinha.
+            self._anotar_mouse_virtual(None)
             return False
 
         ipc_bridge.call_async(
@@ -500,6 +565,24 @@ class MouseActionsMixin(WidgetAccessMixin):
         return bool(toggle and toggle.get_active())
 
     def _refresh_mouse_view(self) -> None:
+        """Pinta "o mouse virtual está pronto?" — o daemon manda, a sonda ajuda.
+
+        BG-02. A sonda local (`import uinput` + `os.access`) continua aqui e
+        continua útil: ela é a única que sabe QUAL é o defeito (falta o módulo?
+        falta permissão no nó?) e é o melhor palpite quando ninguém respondeu.
+        O que ela não pode mais fazer é decidir sozinha, porque quem abre o
+        device é o daemon — ver `_anotar_mouse_virtual`.
+
+        A ordem abaixo é essa hierarquia, e nenhuma frase mudou:
+
+        - device no ar segundo o daemon → pronto, mesmo que a sonda local
+          discorde (o caso do Flatpak, que olha o sandbox);
+        - módulo ausente → falta componente (a sonda é a única que vê isso);
+        - nó sem permissão para ESTE processo → a frase da permissão;
+        - device fora do ar segundo o daemon, ou nó inexistente → "ainda não
+          está pronto". É aqui que entra o caso que a aba calava: permissão em
+          ordem, interruptor em pé e o cursor parado.
+        """
         label = self._get("mouse_uinput_status_label")
         if label is None:
             return
@@ -511,25 +594,30 @@ class MouseActionsMixin(WidgetAccessMixin):
 
         dev_exists = os.path.exists(UINPUT_DEV)
         dev_writable = os.access(UINPUT_DEV, os.W_OK) if dev_exists else False
+        no_ar = self._mouse_virtual_no_ar
 
-        if module_ok and dev_writable:
+        if no_ar is True:
             label.set_markup(
                 '<span foreground="#50fa7b">Pronto para usar como mouse</span>'
             )
-        elif module_ok and dev_exists:
+        elif not module_ok:
+            label.set_markup(
+                '<span foreground="#ff5555">Falta um componente do mouse virtual — '
+                'rode a instalação de novo (./install.sh)</span>'
+            )
+        elif dev_exists and not dev_writable:
             label.set_markup(
                 '<span foreground="#ff5555">O mouse virtual está sem permissão — '
                 'abra a aba Sistema e clique em “Aplicar correções”</span>'
             )
-        elif module_ok:
+        elif no_ar is False or not dev_exists:
             label.set_markup(
                 '<span foreground="#ffb86c">O mouse virtual ainda não está pronto — '
                 'abra a aba Sistema e clique em “Aplicar correções”</span>'
             )
         else:
             label.set_markup(
-                '<span foreground="#ff5555">Falta um componente do mouse virtual — '
-                'rode a instalação de novo (./install.sh)</span>'
+                '<span foreground="#50fa7b">Pronto para usar como mouse</span>'
             )
 
     def _toast_mouse(self, msg: str) -> None:
