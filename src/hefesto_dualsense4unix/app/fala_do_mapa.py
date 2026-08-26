@@ -220,9 +220,24 @@ class Numero:
 
 
 def formata_pt_br(valor: float) -> str:
-    """`260.4` → `"260,4"`. A MESMA forma que `_numero()` de
-    `app/actions/config/secao_controles.py:431` produz (uma casa decimal,
-    vírgula) — nunca redigitada aqui, para as duas nunca divergirem em como
-    arredondam (Z6-08).
+    """`260.4` → `"260,4"` — uma casa decimal, vírgula. **O DONO ÚNICO.**
+
+    Toda a árvore passa por aqui desde 26/08/2026: o portão do mapa
+    (`scripts/validar-fala-de-tela.py`, que importa esta função em vez de
+    redigitá-la — ver `tests/unit/test_a_regua_e_a_legenda_sao_a_mesma_peca.py`),
+    o `_numero` da seção "Controles" (`app/actions/config/secao_controles.py`) e
+    o `_numero` do plano de rádio (`integrations/plano_de_radio.py`).
+
+    **Eram três implementações independentes da mesma regra**, e a do plano de
+    rádio ainda dizia em comentário *"mesma forma que…"* enquanto reescrevia a
+    conta. A saída das três era idêntica, então **nada mudou na tela** — o que
+    mudou é que no dia em que o arredondamento mudar, duas células param de
+    discordar. É o mesmo motivo do `pedido_mais_forte` em `core/rumble.py`: duas
+    cópias divergem na primeira mudança.
+
+    A forma da linha abaixo é travada por
+    `tests/unit/test_a_regua_e_a_legenda_sao_a_mesma_peca.py`, que a reescreve
+    para provar que o portão segue a tela. Mudar o literal sem mudar o teste faz
+    a mordida dele parar de morder — em voz alta, de propósito.
     """
     return f"{valor:.1f}".replace(".", ",")

@@ -93,6 +93,10 @@ AS QUATRO ARMADILHAS QUE A VARREDURA ANTERIOR CAIU, e como esta não cai
    anterior CINCO vezes. Aqui, todo literal de texto de ``src/`` é quebrado em
    palavras e cada palavra conta como chamador. É por isso que ``_stop_bt_mic``
    (despachado em ``connection.py``:829) não aparece na lista.
+   Corolário medido em 26/08/2026: uma promessa que ganha chamador de verdade
+   SAI da lista sozinha — foi assim com ``app/fala_do_mapa.py::formata_pt_br``,
+   que virou dono único da vírgula e cuja lápide teve de ser apagada no mesmo
+   commit (``test_nenhuma_lapide_sobreviveu_a_propria_cura``).
 2. **Uso dentro do próprio arquivo.** A regra proposta era "chamador fora do
    próprio arquivo": medi, e ela acusa **846** símbolos, porque a maioria dos
    auxiliares é usada no próprio módulo — e o módulo é produção QUANDO ele é
@@ -101,8 +105,11 @@ AS QUATRO ARMADILHAS QUE A VARREDURA ANTERIOR CAIU, e como esta não cai
    recursão e auto-citação satisfaçam o portão sozinhas).
 3. **Docstring e ``__all__``.** Um símbolo citado só no próprio docstring, ou só
    na lista de reexportação, não é alcançado por ninguém. Ambos são descartados
-   — e é por isso que ``RumbleEngine`` aparece aqui apesar de
-   ``ipc_handlers.py``:2237 afirmar, num comentário, que ele "segue em uso".
+   — e é por isso que ``RumbleEngine`` aparece aqui apesar de DUAS frases de
+   comentário terem afirmado, por meses, que ele "segue em uso" e que uma rota
+   inteira "depende" dele. Este portão foi a primeira coisa da árvore a
+   discordar das duas; as duas foram substituídas pela informação certa (24/08 e
+   26/08/2026), e ele continua aqui. O comentário não é chamador.
 4. **Alvo de atribuição.** ``X = 1`` não é uso de ``X``. Contar o ``ast.Store``
    fazia toda constante se satisfazer com a própria linha de definição.
 
@@ -1534,19 +1541,27 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "O QUE A FECHA: uma linha no despacho, subtraindo o que esta função "
         "devolve. DONO: a Onda do daemon, ou quem coordena a leva seguinte."
     ),
-    "app/fala_do_mapa.py::formata_pt_br": (
-        "MEDIDO em 25/08/2026: irmã do `Numero` abaixo, mesma leva. Nasceu na "
-        "ONDA0-Z6 (`26e0ccc`, 24/08) — 'a medição chega à tela por portão, "
-        "não por lembrança' — e nenhuma tela a chama. "
-        "ONDE O CAMINHO SE PERDE: as abas continuam formatando número à mão. "
-        "O QUE A FECHA: as frases que publicam medição passarem por aqui. "
-        "DONO: a frente do léxico (CONFIGURACOES-O-LEXICO-01), que é a dona "
-        "única do texto e entra por último de propósito."
-    ),
+    # `formata_pt_br` SAIU daqui em 26/08/2026, na edição que o ligou (BG-03):
+    # ele virou o DONO ÚNICO da conversão `260.4` → `260,4`, e as duas cópias
+    # que a árvore mantinha — `app/actions/config/secao_controles.py::_numero` e
+    # `integrations/plano_de_radio.py::_numero`, esta última com um comentário
+    # que prometia "mesma forma que…" enquanto reescrevia a conta — passaram a
+    # chamá-lo. A razão antiga dizia "as abas continuam formatando número à
+    # mão"; era exatamente isso, e é isso que deixou de valer. Não se guarda a
+    # entrada velha ao lado da nova.
     "app/fala_do_mapa.py::Numero": (
-        "MEDIDO em 25/08/2026: o tipo que `formata_pt_br` recebe, órfão pelo "
-        "mesmo motivo e pela mesma leva. Cai junto com ela — e é por isso que "
-        "não ganha entrada própria de conserto."
+        "MEDIDO em 25/08/2026, e REMEDIDO em 26/08 — quando a irmã dele "
+        "(`formata_pt_br`) GANHOU CAMINHO e saiu daqui, e ele NÃO caiu junto. "
+        "A razão antiga dizia 'cai junto com ela'; era um palpite, e a medição "
+        "o derrubou. Ele é o tipo que amarra uma constante Python medida a uma "
+        "célula em prosa do mapa (`fala_do_mapa.py`:200-222). "
+        "ONDE O CAMINHO SE PERDE: quem publica os números medidos é a tupla "
+        "crua `NUMEROS_MEDIDOS_NO_MAPA` de `integrations/radio_da_mesa.py`:153-157, "
+        "com os mesmos quatro campos e nenhum construtor que os valide — o "
+        "`__post_init__` do `Numero` nunca roda sobre ela. "
+        "O QUE A FECHA: aquela tupla virar uma tupla de `Numero`. NÃO fiz na "
+        "L3-F porque `integrations/radio_da_mesa.py` não é posse dela (regra "
+        "R-A da leva de 26/08). DONO: quem tocar o medidor de rádio."
     ),
     "profiles/schema.py::resolver_teclado_emulado": (
         "MEDIDO em 25/08/2026: está no `__all__` (:1345), o próprio módulo a "
@@ -1654,18 +1669,27 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "fechar o registro inteiro — trabalho de desenho, não de uma linha."
     ),
     "core/rumble.py::RumbleEngine": (
-        "MEDIDO em 12/08/2026: nenhuma instanciação em `src/`. Todas as "
-        "ocorrências fora da definição são docstring, comentário ou `__all__` — "
-        "inclusive daemon/ipc_handlers.py:2237, que afirma num comentário que "
-        "`O RumbleEngine segue em uso`, e daemon/ipc_rumble_policy.py:5, que "
-        "diz depender de `RumbleEngine.update_auto_state`. As duas frases estão "
-        "erradas hoje, e este portão é a primeira coisa da árvore a discordar "
-        "delas. O throttle de rumble com política vive escrito e desligado. "
-        "O QUE A FECHA: descobrir se o caminho do rumble foi SUBSTITUÍDO (e "
-        "então a classe é resto, e os dois comentários se substituem pela "
-        "informação certa) ou se nunca foi ligado (e então é dívida do "
-        "FEAT-RUMBLE-POLICY-01). Essa diferença está fora do que grep responde, "
-        "e é a primeira coisa a medir com o aparelho na mão."
+        "MEDIDO em 12/08/2026, e REMEDIDO em 26/08/2026: nenhuma instanciação "
+        "em `src/`, e agora nenhum resto de leitura também. A pergunta que esta "
+        "entrada abriu — 'foi SUBSTITUÍDO ou nunca foi ligado?' — está "
+        "RESPONDIDA: foi SUBSTITUÍDO. O funil vivo da política de vibração é "
+        "`core/rumble.py::_effective_mult`, e as três rotas que o chamam "
+        "(`daemon/ipc_rumble_policy.apply_rumble_policy`, "
+        "`daemon/subsystems/rumble.reassert_rumble` e "
+        "`daemon/subsystems/gamepad._game_rumble_mult`) guardam o debounce na "
+        "memória do daemon (`_last_auto_mult` / `_last_auto_change_at`). As "
+        "DUAS frases que afirmavam o contrário foram substituídas pela "
+        "informação certa: a de `daemon/ipc_handlers.py` em 24/08 e a de "
+        "`daemon/ipc_rumble_policy.py` na L3-F, em 26/08 — junto com o "
+        "`getattr(daemon, '_rumble_engine')` que a sustentava. "
+        "ONDE O CAMINHO SE PERDE: a classe segue na árvore, com throttle e "
+        "`link()`, sem ninguém que a construa. "
+        "O QUE A FECHA: **apagá-la**, que é o que 'é resto' quer dizer. NÃO "
+        "fiz na L3-F porque os chamadores restantes são TESTES fora da posse "
+        "dela (`test_rumble_policy.py`, `test_led_and_rumble.py`, "
+        "`test_politica_de_vibracao_a_escada_que_amplifica.py`) e a regra R-A "
+        "da leva de 26/08 manda relatar, não escrever em arquivo alheio. "
+        "DONO: quem coordenar a leva seguinte, num commit só com os três testes."
     ),
     # `daemon/subsystems/external_mask.py::ExternalMaskRegistry` MOROU AQUI e
     # foi APAGADA em 15/08/2026, pelo motivo que a própria entrada mandava:
@@ -3554,16 +3578,18 @@ class TestOPortaoMorde:
         (copia / "integrations" / "steam_input_ponte.py").unlink()
 
         soltas = promessas_sem_caminho(copia)
-        # CANÁRIO TROCADO EM 25/08/2026, e a troca é o próprio portão
-        # funcionando: o canário era `prontuario_dos_jogos.py::Prontuario`, e
-        # aquele módulo GANHOU CAMINHO nesta madrugada. Um canário que deixa de
-        # ser inalcançável para de medir o que promete — e reprova por um motivo
-        # que não é o defeito. O novo é `app/fala_do_mapa.py::formata_pt_br`,
-        # que nasceu na ONDA0-Z6 (`26e0ccc`, 24/08) e segue sem tela que o
-        # chame: enquanto ele estiver declarado em `_SEM_CAMINHO_HOJE`, serve.
-        # No dia em que alguém o fiar, esta linha reprova — e o conserto é
-        # trocar o canário de novo, não silenciar.
-        assert "app/fala_do_mapa.py::formata_pt_br" in soltas, (
+        # CANÁRIO TROCADO DUAS VEZES, e as duas trocas são o próprio portão
+        # funcionando. Era `prontuario_dos_jogos.py::Prontuario`, e aquele
+        # módulo GANHOU CAMINHO em 25/08. Virou
+        # `app/fala_do_mapa.py::formata_pt_br`, e ele ganhou caminho em 26/08
+        # (BG-03: virou o dono único da vírgula, e a lápide dele foi apagada no
+        # mesmo commit) — esta linha reprovou, que é exatamente o que ela
+        # promete fazer. Hoje é `app/fala_do_mapa.py::Numero`, irmão dele no
+        # mesmo módulo, que a medição de 26/08 mostrou NÃO ter caído junto.
+        # Enquanto estiver declarado em `_SEM_CAMINHO_HOJE`, serve. No dia em
+        # que alguém o fiar, o conserto é trocar o canário de novo, não
+        # silenciar.
+        assert "app/fala_do_mapa.py::Numero" in soltas, (
             "sem o ponto de entrada a varredura devolveu algo inesperado — a "
             "medição de controle caiu junto e este caso não prova nada"
         )
