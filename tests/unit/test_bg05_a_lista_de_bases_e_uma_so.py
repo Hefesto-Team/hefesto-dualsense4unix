@@ -133,10 +133,10 @@ class TestNenhumaListaAMaoSobreviveu:
     def test_nenhum_resolvedor_a_mao_sobreviveu(self) -> None:
         """Os quatro corpos, lidos no fonte de verdade por `inspect`."""
         faltas: list[str] = []
-        for nome, funcao, _relpath in RESOLVEDORES:
+        for nome, resolvedor, _relpath in RESOLVEDORES:
             # `inspect.getsource` devolve o método indentado dentro da
             # classe, e `ast.parse` recusa isso — daí o `dedent`.
-            fonte = textwrap.dedent(inspect.getsource(funcao))
+            fonte = textwrap.dedent(inspect.getsource(resolvedor))
             for numero, texto in _codigo_de(fonte):
                 for literal in LITERAIS_DE_LISTA_A_MAO:
                     if literal in texto:
@@ -252,7 +252,7 @@ class TestOsQuatroObedecemABuscaUnica:
         return plantada
 
     @pytest.mark.parametrize(
-        ("nome", "funcao", "relpath"),
+        ("nome", "resolvedor", "relpath"),
         RESOLVEDORES,
         ids=[nome for nome, _f, _r in RESOLVEDORES],
     )
@@ -261,7 +261,7 @@ class TestOsQuatroObedecemABuscaUnica:
         base_de_mentira: Path,
         monkeypatch: pytest.MonkeyPatch,
         nome: str,
-        funcao: Callable[..., Path | None],
+        resolvedor: Callable[..., Path | None],
         relpath: str,
     ) -> None:
         alvo = base_de_mentira / relpath
@@ -278,9 +278,9 @@ class TestOsQuatroObedecemABuscaUnica:
             )
 
         achado = (
-            funcao(object(), relpath) if "_find_repo_file" in nome
-            else funcao(object()) if "Mixin" in nome
-            else funcao()
+            resolvedor(object(), relpath) if "_find_repo_file" in nome
+            else resolvedor(object()) if "Mixin" in nome
+            else resolvedor()
         )
 
         assert achado == alvo, (
@@ -296,8 +296,8 @@ class TestOsQuatroObedecemABuscaUnica:
         `None` — que é *"não veio nesta instalação"*, não *"quebrou"*. É o
         caminho de erro que o dublê que só sabe passar nunca exercita.
         """
-        for nome, funcao, _relpath in RESOLVEDORES:
+        for nome, resolvedor, _relpath in RESOLVEDORES:
             if "_find_repo_file" in nome:
                 continue  # consulta a lista do próprio módulo; coberto acima
-            achado = funcao(object()) if "Mixin" in nome else funcao()
+            achado = resolvedor(object()) if "Mixin" in nome else resolvedor()
             assert achado is None, f"{nome} devolveu {achado!r} de um lugar vazio"
