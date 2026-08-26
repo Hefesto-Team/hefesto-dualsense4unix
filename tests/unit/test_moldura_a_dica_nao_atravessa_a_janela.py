@@ -183,10 +183,10 @@ def _rotulos_de_apoio(pagina: Any) -> list[Any]:
     #: contra o próprio trabalho; o que ele tem de garantir é só que a
     #: assinatura de `_e_rotulo_de_apoio` continua casando com o que
     #: `rotulo_de_apoio` produz.
-    PISO = 3
-    assert len(achados) >= PISO, (
+    piso = 3
+    assert len(achados) >= piso, (
         f"a bancada achou {len(achados)} rótulos de apoio mapeados na aba, e o "
-        f"piso é {PISO}. Menos que isso é sinal de que a assinatura de "
+        f"piso é {piso}. Menos que isso é sinal de que a assinatura de "
         "`_e_rotulo_de_apoio` deixou de casar com o que `rotulo_de_apoio` "
         "produz — e um teste que não acha o alvo passa sempre."
     )
