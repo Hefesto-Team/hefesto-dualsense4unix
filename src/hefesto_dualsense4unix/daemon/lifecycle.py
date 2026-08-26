@@ -256,7 +256,7 @@ class DaemonConfig:
     #
     # É uma FONTE (chamável), não uma cópia da chave, e a diferença é o gesto
     # do "Aplicar": o `machine.declare` relê o `maquina.json` e REBINDA
-    # `daemon._maquina` (`ipc_handlers.py:4858`), então uma cópia tirada no boot
+    # `daemon._maquina` (`ipc_handlers.py:5246`), então uma cópia tirada no boot
     # ficaria velha no instante exato em que ela acabou de escolher — e o teto
     # novo só valeria no próximo início do Hefesto. Com a fonte, o próximo
     # cálculo de vibração já lê a declaração nova, sem tique nem invalidação.
@@ -2762,7 +2762,7 @@ class Daemon:
         minutos de jogo fechado sem se mexer; quem reverte é a borda de
         processo, porque o disco nunca aprendia a máscara do perfil.
 
-        NOTA DATADA sobre a R-07 (23/07/2026, `subsystems/gamepad.py:2068`):
+        NOTA DATADA sobre a R-07 (23/07/2026, `subsystems/gamepad.py:2093`):
         ela diz que **só gesto manual** escreve a máscara em disco, e curou
         *"ela escolhia Xbox, abria o Sackboy e a flag virava dualsense"*. A
         decisão de 22/08 revira o eixo da MÁSCARA — perfil é gesto dela também,

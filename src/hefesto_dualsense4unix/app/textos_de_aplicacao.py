@@ -276,11 +276,11 @@ def frase_de_guardado(
 #:
 #: CORREÇÃO DE FATO — 25/08/2026, achada pela conferência da frente C1.
 #: Esta constante era UMA só e afirmava a causa: *"não há controle na mesa"*.
-#: **`_destinos_do_broadcast` (daemon/ipc_handlers.py:1158-1183) devolve duas
+#: **`_destinos_do_broadcast` (daemon/ipc_handlers.py:1130-1205) devolve duas
 #: listas vazias em CINCO situações, e só UMA é mesa vazia** — as outras são
-#: Modo Nativo ligado COM controle na mesa (:1162), `get_output_target_index`
-#: ausente (:1168), exceção ao ler o índice (:1173) e alvo sem uniq estável
-#: (:1183). Nas quatro últimas a barra afirmava um fato falso, e no Modo
+#: Modo Nativo ligado COM controle na mesa (:1183), `get_output_target_index`
+#: ausente (:1190), exceção ao ler o índice (:1195) e alvo sem uniq estável
+#: (:1203). Nas quatro últimas a barra afirmava um fato falso, e no Modo
 #: Nativo era REGRESSÃO: o código anterior a `41541a7` acertava, dizendo
 #: *"guardado; em Modo Nativo quem manda no controle é o jogo"*.
 #:
