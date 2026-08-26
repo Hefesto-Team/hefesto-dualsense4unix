@@ -1301,7 +1301,7 @@ def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool
     """A precedência da T14 (Z4, 24/08/2026), PURA: perfil com opinião VENCE.
 
     ``Profile.teclado_emulado`` é ``None`` por padrão — "sem opinião", e nesse
-    caso a flag global (``utils.session.load_keyboard_emulation`` hoje) segue
+    caso a flag global (``utils.session.load_keyboard_preference`` hoje) segue
     mandando, o comportamento de sempre. Quando o perfil TEM opinião
     (``True``/``False``), ele vence — mesma regra do ``mouse``/``mic``/
     ``speaker`` desta classe (contrato ``None`` = sem opinião), e a MESMA

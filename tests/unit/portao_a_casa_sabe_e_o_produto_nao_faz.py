@@ -514,7 +514,10 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "três, escrita em daemon/main.py:104 — default da dataclass (True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(daemon/lifecycle.py:1300, na borda que alterna o teclado em runtime). "
+        "(daemon/lifecycle.py:1481-1485, dentro de `set_keyboard_emulation`, na "
+        "borda que alterna o teclado em runtime — o endereço era :1300 e caducou; "
+        "RECONFERIDO em 26/08/2026, quando a frente da poda o mediu de novo "
+        "JUSTAMENTE para saber se podia apagá-lo. Não pode: tem chamador vivo). "
         "Logo a FEATURE tem mão — a env é o atalho de quem quer forçar o degrau "
         "do meio sem gravar decisão nenhuma no disco dela.",
     ),
@@ -657,6 +660,42 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "GET_REPORT num controle ocioso estoura o timeout de 5 s do hidp com "
         "EIO. Religá-la seria a regressão, não a cura."
     ),
+    "integrations/kernel_cmdline.py::plan_cmdline": (
+        "RECLASSIFICADA em 26/08/2026, e esta entrada SUBSTITUI uma que morava "
+        "em `_SEM_CAMINHO_HOJE` afirmando um FATO ERRADO: que *'enquanto o "
+        "shell do install for o dono, este módulo é uma segunda implementação "
+        "da mesma regra em outra linguagem'*. Não existe segunda implementação. "
+        "O instalador IMPORTA este próprio módulo, num heredoc Python do passo "
+        "`3e` (`sys.path.insert(0, root/'src')`, depois `kc.plan_tokens(tokens)` "
+        "e `kc.forbidden_reintroductions(actions)`), e o `install.sh` declara a "
+        "política com todas as letras: *'quem DECIDE é o módulo puro "
+        "integrations/kernel_cmdline.py (100% stdlib, testável); aqui só "
+        "traduzimos o plano'*. A regra tem UM dono, e é este arquivo. "
+        "O que sobra é diferença de FORMA, não de regra, e é por isso que a "
+        "função não é promessa sem caminho: a produção nunca tem o "
+        "`/proc/cmdline` cru na mão — lê tokens do JSON do kernelstub ou da "
+        "linha do GRUB — e por isso chama a irmã `plan_tokens`, que É alcançada. "
+        "Esta é a porta de string crua, irmã do `apply_plan` logo abaixo e da "
+        "mesma espécie: quem tem a linha inteira usa. NÃO foi podada de "
+        "propósito; a nota datada está no docstring dela."
+    ),
+    "profiles/sanidade.py::verificar_perfis_do_disco": (
+        "RECLASSIFICADA em 26/08/2026, e esta entrada SUBSTITUI uma que morava "
+        "em `_SEM_CAMINHO_HOJE` prescrevendo a cura ERRADA: *'o `doctor` chamar "
+        "isto. É a lacuna mais barata desta lista de fechar — uma chamada'*. "
+        "MEDIDO: o doctor JÁ faz o trabalho inteiro, e faz MELHOR. "
+        "`cli/cmd_doctor.py::_linhas_perfis` chama `load_all_profiles()` dentro "
+        "de um `try/except OSError`, e só então `sanidade.verificar_perfis` e "
+        "`sanidade.linhas_de_relatorio`; `_print_bloco_perfis` imprime o bloco "
+        "`== perfis (coerência entre eles) ==` e devolve o achado grave para o "
+        "código de saída. A corrente não está quebrada: ela roda. "
+        "E fiar ESTA conveniência no lugar seria PIORAR o produto — ela não tem "
+        "o `except OSError`, então trocaria a linha *'não deu para ler os "
+        "perfis: <erro>'* por um traceback na cara de quem foi pedir "
+        "diagnóstico justamente porque algo quebrou. É atalho de teste "
+        "(`test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py`:319), com "
+        "nota datada no próprio docstring, e não deve ganhar chamador."
+    ),
     "integrations/kernel_cmdline.py::apply_plan": (
         "MEDIDO em 12/08/2026. Instrumento: o docstring diz `SIMULA o plano "
         "sobre os tokens (para testes e para o doctor comparar)` e `Não toca "
@@ -711,15 +750,17 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "com guarda contra as duas se separarem. Apagar uma delas é decisão "
         "DELA, não deste portão."
     ),
-    "utils/session.py::load_coop_enabled": (
-        "MEDIDO em 12/08/2026. LÁPIDE COM NOTA DATADA — `COOP-SEM-INTERRUPTOR-01`, "
-        "06/08/2026, escrita no próprio docstring: a função lia "
-        "`coop_disabled.flag` e um `True` gravado por versão antiga podia deixar "
-        "a máquina dela sem co-op; hoje devolve `True` sempre. O docstring "
-        "declara por que o corpo fica de pé: a assinatura é contrato público "
-        "que CLI, applet e testes importam, e uma lápide legível vale mais que "
-        "um `ImportError` para quem for reabrir a decisão."
-    ),
+    # `utils/session.py::load_coop_enabled` MOROU AQUI e a entrada SAIU em
+    # 26/08/2026 porque o SÍMBOLO foi podado — não porque a classificação
+    # mudasse. A entrada dizia que o corpo ficava de pé porque "a assinatura é
+    # contrato público que CLI, applet e testes importam". As duas metades da
+    # razão eram falsas, e foram medidas: nenhum `.py` de `src/` a importa (a
+    # CLI inclusive), e o applet do COSMIC é RUST — `packaging/cosmic-applet/`
+    # tem `Cargo.toml` e `src/{main,app,ipc}.rs`, fala JSON-RPC com o daemon, e
+    # não há um único `.py` sob `packaging/`. Sobrava `tests/`, que nunca foi
+    # caminho. A DECISÃO MEDIDA que a lápide guardava (COOP-SEM-INTERRUPTOR-01,
+    # 06/08/2026: o co-op local não tem mais opt-out) continua escrita, com a
+    # data, no lugar onde a função morava, em `utils/session.py`.
     "app/audio_saida.py::estado_do_sono": (
         "MEDIDO em 18/08/2026. LÁPIDE COM NOTA DATADA, e a nota está no próprio "
         "docstring, escrita nesta data. A promessa que a fez nascer é o item 6 "
@@ -1414,82 +1455,53 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "desenho pronto esperando a superfície, não defeito."
     ),
     # --- preferências de sessão que a janela não lê -------------------------
-    "utils/session.py::save_mouse_emulation_enabled": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. O próprio docstring a "
-        "declara `Wrapper legado (FEAT-MOUSE-PERSIST-01)` e manda `Preferir a "
-        "função nova, que grava as velocidades junto` — e é a nova "
-        "(`save_mouse_emulation`) que a janela usa. "
-        "O QUE A FECHA: apagar, junto com a irmã de leitura. Não apago nesta "
-        "leva porque as duas são símbolo público e podem estar sendo importadas "
-        "por fora de `src/` — o applet do COSMIC e os plugins de terceiros são "
-        "os dois lugares onde este portão é cego por desenho."
-    ),
-    "utils/session.py::load_mouse_emulation_enabled": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Irmã de leitura da anterior, "
-        "e também `Wrapper legado` pelo próprio docstring: devolve só o toggle, "
-        "descartando as velocidades. Quem a janela usa é `load_mouse_preference` "
-        "/ `load_mouse_emulation`. "
-        "O QUE A FECHA: a mesma decisão da entrada anterior, e as duas juntas."
-    ),
-    "utils/session.py::load_keyboard_emulation_enabled": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama, e este caso é DIFERENTE dos "
-        "dois anteriores: não é invólucro legado, é a única leitura da "
-        "preferência de teclado emulado que aplica o default correto. O "
-        "docstring documenta uma `ASSIMETRIA DELIBERADA` com o mouse (o teclado "
-        "nasce LIGADO, porque carrega os atalhos, o teclado virtual em L3/R3 e "
-        "as três regiões do touchpad), e essa decisão só vale se alguém "
-        "chamar a função. "
-        "O QUE A FECHA: chamar do boot do daemon, onde o `keyboard_emulation.flag` "
-        "já é lido — daemon/main.py:104-109 declara a precedência "
-        "(default < env < flag) e é lá que a assimetria tem de valer. Vale medir "
-        "com o aparelho antes: se o flag já é lido por outro caminho, o "
-        "default deste invólucro pode estar sendo aplicado em outro lugar."
-    ),
+    # AS TRÊS ENTRADAS QUE MORAVAM AQUI — `utils/session.py`:
+    # `::save_mouse_emulation_enabled`, `::load_mouse_emulation_enabled` e
+    # `::load_keyboard_emulation_enabled` — SAÍRAM em 26/08/2026 porque os três
+    # símbolos foram PODADOS. As duas primeiras eram invólucros legados
+    # (FEAT-MOUSE-PERSIST-01) que o próprio docstring mandava não usar; a
+    # terceira somava um default PRÓPRIO a uma precedência que já tem dono.
+    #
+    # A TRAVA QUE AS SEGURAVA CAIU, e a queda é medida. A entrada do
+    # `save_mouse_emulation_enabled` dizia: *"não apago nesta leva porque as
+    # duas são símbolo público e podem estar sendo importadas por fora de
+    # `src/` — o applet do COSMIC e os plugins de terceiros são os dois lugares
+    # onde este portão é cego por desenho"*. MEDIDO em 26/08/2026: o applet do
+    # COSMIC é RUST (`packaging/cosmic-applet/Cargo.toml` +
+    # `src/{main,app,ipc}.rs`), conversa com o daemon por JSON-RPC no socket, e
+    # NÃO existe um único arquivo `.py` sob `packaging/`. Ele não importa
+    # Python — logo não importa estes nomes. O `plugin_api` continua sendo
+    # ponto cego por desenho, mas ele é contrato de MÉTODO (`on_*`), que este
+    # portão nem varre, e nenhum destes três nomes aparece nele.
+    #
+    # A CORREÇÃO DE FATO da terceira: a entrada mandava fechá-la *"chamando do
+    # boot do daemon, onde o `keyboard_emulation.flag` já é lido"*. O boot JÁ
+    # lê o flag, e não por ela: `daemon/lifecycle.py:841-842` chama
+    # `load_keyboard_preference()` direto e só sobrescreve o piso quando há
+    # opinião gravada. Fiá-la seria pôr um segundo default no meio de uma
+    # precedência que já tem um. A ASSIMETRIA que ela documentava (teclado nasce
+    # LIGADO, mouse nasce desligado) NÃO se perdeu: está escrita, com a data,
+    # onde a função morava, em `utils/session.py`.
     # --- linha de comando do kernel ----------------------------------------
-    "integrations/kernel_cmdline.py::plan_cmdline": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. É a porta de entrada "
-        "'string crua' do planejador (recebe `/proc/cmdline` e delega a "
-        "`plan_tokens`). Quem escreve a linha de comando do kernel de verdade "
-        "hoje é o instalador, em shell. "
-        "O QUE A FECHA: decidir de quem é o planejamento. Enquanto o shell do "
-        "install for o dono, este módulo é uma segunda implementação da mesma "
-        "regra em outra linguagem — e duas implementações da mesma regra é o "
-        "estado de onde nascem as divergências que o `doctor` depois tem de "
-        "explicar."
-    ),
-    "integrations/kernel_cmdline.py::ownership_record": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Produz o registro de dono "
-        "`{'cmdline.<param>': '<dono>'}` para o estado local — o dado que diz se "
-        "fomos NÓS que pusemos um parâmetro na linha de comando do kernel, e "
-        "portanto se podemos removê-lo no desinstalar. "
-        "DUAS FRASES DESTA ENTRADA FORAM SUBSTITUÍDAS em 15/08/2026 porque eram "
-        "FALSAS, não decisão a preservar: ela dizia *'sem chamador, ninguém "
-        "grava esse registro'* e *'o desinstalar não sabe o que é dele'*. O "
-        "registro É GRAVADO, em produção, na MESMA forma de chave: o heredoc do "
-        "passo `3e` do install imprime o `a.owner` de cada ação do plano, e o "
-        "shell o repassa às DUAS chamadas de `_register_cmdline_owner "
-        "cmdline.<param> <dono>` desse mesmo passo. A função (definida logo "
-        "abaixo de `CMDLINE_OWNERS_FILE`, no install.sh) escreve "
-        "`cmdline.<param>=<dono>` em "
-        "`~/.local/state/hefesto-dualsense4unix/cmdline-owners.conf`, e o "
-        "`uninstall.sh` LÊ esse mesmo arquivo — ele define o próprio "
-        "`CMDLINE_OWNERS_FILE` para reverter só o que é nosso. Quem estava "
-        "errado era esta razão, não a árvore. "
-        "O QUE SOBRA DE VERDADE, e é o mesmo dono da entrada anterior: a regra "
-        "do dono está escrita DUAS vezes, aqui em Python e no shell, e as duas "
-        "JÁ divergem — o shell preserva um dono anterior 'hefesto'/"
-        "'compartilhado' quando o plano novo diz 'terceiro', dentro do próprio "
-        "`_register_cmdline_owner`, e esta função não tem essa lógica. A "
-        "divergência é DELIBERADA e está "
-        "declarada no docstring do módulo (*'o dono reportado pelo plano vale "
-        "para a PRIMEIRA instalação: a lane de wiring preserva o registro "
-        "anterior'*), o que faz desta função a forma de primeira instalação e "
-        "não uma cura desligada. "
-        "O QUE A FECHA: decidir de quem é o planejamento, exatamente como na "
-        "entrada de `plan_cmdline`. NÃO fecho por conta própria porque fechar "
-        "aqui é mexer no `install.sh`, e todo passo dele tem de ser provado por "
-        "ciclo uninstall→install."
-    ),
+    # `integrations/kernel_cmdline.py::plan_cmdline` MOROU AQUI, e foi
+    # RECLASSIFICADA para `_NAO_E_PROMESSA` em 26/08/2026 — não é dívida, e a
+    # razão que a punha aqui era um FATO ERRADO, substituído lá.
+    # `integrations/kernel_cmdline.py::ownership_record` MOROU AQUI, e a
+    # entrada SAIU em 26/08/2026 porque o símbolo foi PODADO. A razão longa que
+    # estava aqui já tinha corrigido, em 15/08, o fato errado de que "ninguém
+    # grava esse registro": ele É gravado, em produção, pelo heredoc do passo
+    # `3e` do `install.sh` (que imprime o `a.owner` de cada ação) mais o
+    # `_register_cmdline_owner` do shell, que escreve
+    # `~/.local/state/hefesto-dualsense4unix/cmdline-owners.conf` — o arquivo
+    # que o `uninstall.sh` lê. E ela já dizia o resto: a regra do dono estava
+    # escrita DUAS vezes, e as duas JÁ divergiam (o shell preserva um dono
+    # anterior "hefesto"/"compartilhado" quando o plano novo diz "terceiro";
+    # esta função não tinha essa lógica).
+    # A entrada pedia "decidir de quem é o planejamento" e recusava fechar por
+    # conta própria "porque fechar aqui é mexer no `install.sh`". A poda decide
+    # sem tocar no `install.sh`: sai a forma SEM chamador, fica a que roda na
+    # máquina dela. Quem quiser o par continua tendo `a.param` e `a.owner` em
+    # cada `CmdlineAction` — é exatamente o que o heredoc lê.
     # `integrations/kernel_cmdline.py::strip_quirks_token` MOROU AQUI, e a
     # entrada afirmava "esse cuidado está escrito e nunca roda", pedindo como
     # cura que "o `uninstall.sh` chamar este caminho". SUBSTITUÍDO em
@@ -1513,29 +1525,18 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # O símbolo voltou à lista, agora em `_NAO_E_PROMESSA`, e a razão está lá.
     # A lápide fica porque o movimento de 13/08 aconteceu; a conclusão dele —
     # "o caminho de produção nasceu" — é que era falsa.
-    "profiles/sanidade.py::verificar_perfis_do_disco": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. É a conveniência que junta "
-        "as duas metades que já existem e funcionam — carrega os perfis do XDG "
-        "e roda as REGRAS sobre eles. As irmãs `verificar_perfis` e "
-        "`linhas_de_relatorio` (que o docstring diz ser o que `o doctor imprime`) "
-        "existem; falta quem comece a corrente. "
-        "O QUE A FECHA: o `doctor` chamar isto. É a lacuna mais barata desta "
-        "lista de fechar — uma chamada — e por isso mesmo não a fecho: 'barato' "
-        "não é o mesmo que 'pedido', e acrescentar saída nova ao doctor muda o "
-        "que ela lê quando algo quebra."
-    ),
+    # `profiles/sanidade.py::verificar_perfis_do_disco` MOROU AQUI, e foi
+    # RECLASSIFICADA para `_NAO_E_PROMESSA` em 26/08/2026: não é dívida, e a
+    # razão que a punha aqui era um FATO ERRADO, substituído lá.
     # --- a TUI --------------------------------------------------------------
-    "tui/app.py::main_async": (
-        "MEDIDO em 12/08/2026: nenhum chamador em lugar nenhum — nem `tests/`, "
-        "nem `scripts/`, nem `pyproject.toml`. É um ponto de entrada declarado "
-        "(`Entry point síncrono que roda o asyncio app`) que nada declara: os "
-        "dois consoles de `[project.scripts]` são `cli.app:main` e "
-        "`app.main:main`, e a TUI entra pelo irmão `run_tui`. "
-        "O QUE A FECHA: um console script em `pyproject.toml`, se a TUI for "
-        "para ter entrada própria; ou apagar, se `run_tui` já é a entrada. "
-        "Como este é o único acusado da lista SEM sequer um teste que o "
-        "exercite, é também o mais provável de ser resto puro."
-    ),
+    # `tui/app.py::main_async` MOROU AQUI, e a entrada SAIU em 26/08/2026
+    # porque o símbolo foi PODADO. A entrada oferecia duas curas — "um console
+    # script em `pyproject.toml`, se a TUI for para ter entrada própria; ou
+    # apagar, se `run_tui` já é a entrada" — e a segunda é a certa: `run_tui` É
+    # a entrada, e o console script novo seria produto novo, que não é decisão
+    # de agente. REMEDIDO em 26/08/2026: zero chamadores em `src/`, `tests/`,
+    # `scripts/`, `pyproject.toml` e nos heredocs Python do
+    # `install.sh`/`uninstall.sh`.
     # --- AS TRÊS CORRENTES FECHADAS EM SI MESMAS (22/08/2026) ----------------
     # As 21 entradas abaixo são o que a régua PLANA perdoava e a régua de
     # alcance acusou. Nenhuma é dívida nova: são três módulos inteiros escritos

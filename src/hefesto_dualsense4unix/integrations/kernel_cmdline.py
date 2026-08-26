@@ -228,7 +228,22 @@ def plan_cmdline(
     cmdline: str,
     desired_quirk_ids: Sequence[str] = HEFESTO_QUIRK_IDS,
 ) -> list[CmdlineAction]:
-    """Como :func:`plan_tokens`, recebendo a string crua (/proc/cmdline)."""
+    """Como :func:`plan_tokens`, recebendo a string crua (/proc/cmdline).
+
+    NOTA DATADA — 26/08/2026, e ela SUBSTITUI um fato errado. O portão de
+    lápides dizia que, *"enquanto o shell do install for o dono, este módulo é
+    uma segunda implementação da mesma regra em outra linguagem"*. É FALSO, e
+    foi medido: o instalador **importa este próprio módulo** num heredoc Python
+    (`install.sh`, passo `3e` — `sys.path.insert(0, root/"src")`, depois
+    `kc.plan_tokens(tokens)` e `kc.forbidden_reintroductions(actions)`). Não
+    existe segunda implementação da regra: existe UMA, que é esta, e o shell só
+    traduz o plano — como o próprio `install.sh` declara (*"quem DECIDE é o
+    módulo puro integrations/kernel_cmdline.py; aqui só traduzimos o plano"*).
+    O que sobra desta função é uma diferença de FORMA, não de regra: a produção
+    nunca tem a string crua na mão (lê tokens do JSON do kernelstub ou da linha
+    do GRUB) e por isso chama `plan_tokens` direto. Esta é a porta de string
+    crua, que quem tem um `/proc/cmdline` inteiro usa — hoje, os testes.
+    """
     return plan_tokens(parse_cmdline(cmdline), desired_quirk_ids)
 
 
@@ -247,9 +262,21 @@ def apply_plan(tokens: Sequence[str], actions: Iterable[CmdlineAction]) -> list[
     return result
 
 
-def ownership_record(actions: Iterable[CmdlineAction]) -> dict[str, str]:
-    """Registro de dono p/ o estado local: ``{"cmdline.<param>": "<dono>"}``."""
-    return {f"cmdline.{a.param}": a.owner for a in actions}
+# `ownership_record` MOROU AQUI, e foi PODADA em 26/08/2026. Ela montava
+# `{"cmdline.<param>": "<dono>"}` — e esse registro É gravado em produção, só
+# que por OUTRO caminho, que é o vivo: o heredoc do passo `3e` do `install.sh`
+# imprime o `a.owner` de cada ação do plano, e o shell o repassa a
+# `_register_cmdline_owner cmdline.<param> <dono>`, que escreve
+# `~/.local/state/hefesto-dualsense4unix/cmdline-owners.conf` — o mesmo arquivo
+# que o `uninstall.sh` lê para reverter só o que é nosso.
+#
+# Ou seja: esta função era uma SEGUNDA forma da mesma regra, sem chamador de
+# produção, e as duas JÁ divergiam — o shell preserva um dono anterior
+# "hefesto"/"compartilhado" quando o plano novo diz "terceiro" (a lane de
+# wiring), e esta não tinha essa lógica. Manter as duas era guardar a
+# divergência; o dono agora é um só, e é o que roda.
+# Quem quiser o par continua tendo `a.param` e `a.owner` em cada `CmdlineAction`
+# — é exatamente o que o heredoc lê.
 
 
 def forbidden_reintroductions(actions: Iterable[CmdlineAction]) -> list[str]:
