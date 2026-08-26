@@ -1105,7 +1105,7 @@ class TestPresetsDeJogoNascemComModo:
         )
 
         navegacao = self._preset("navegacao")["priority"]
-        for nome in ("fps", "aventura", "acao", "corrida", "esportes"):
+        for nome in ("fps", "aventura", "acao", "corrida", "esportes"):  # noqa: acentuacao — slug de perfil, sem acento por desenho
             jogo = self._preset(nome)["priority"]
             assert jogo > navegacao, (
                 f"{nome} (prio {jogo}) perde para a Navegação (prio "

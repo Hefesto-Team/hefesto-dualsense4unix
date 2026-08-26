@@ -169,7 +169,7 @@ class TestColunaQuandoUsar:
 #   - a família de defeito ("preset de fábrica que o autoswitch nunca escolhe")
 #     virou régua sobre a fábrica INTEIRA em
 #     `test_match_sem_caixa_e_sentinel_manual.py`, que é MAIS do que esta
-#     classe media;
+#     classe media;  # noqa: acentuacao — verbo medir no imperfeito, não o substantivo
 #   - a ordem de prioridades (gênero 55-70 < jogo 80) e o porquê dela estão em
 #     `profiles/loader.py`, na nota de `PRIORIDADE_DO_PERFIL_DE_JOGO`;
 #   - a decisão do MODO-01 sobre a prioridade do co-op está na sprint
