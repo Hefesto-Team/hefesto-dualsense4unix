@@ -142,6 +142,7 @@ def test_o_gesto_manual_dispensa_a_excecao(daemon_com_jogo_marcado: _DaemonFalso
 )
 def test_a_dispensa_morre_quando_o_jogo_sai_da_frente(
     daemon_com_jogo_marcado: _DaemonFalso,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A marca dela volta a valer na próxima abertura.
 
@@ -150,6 +151,37 @@ def test_a_dispensa_morre_quando_o_jogo_sai_da_frente(
     ninguém dizer.
     """
     d = daemon_com_jogo_marcado
+
+    # O DUBLÊ QUE FALTAVA, e ele é a mesa dela — 25/08/2026.
+    #
+    # `sync_steam_input_exception` chega a `resume_vpads_after_steam_input`, que
+    # termina em `start_gamepad_emulation` — e ESSA cria um vpad de verdade:
+    # `integrations/uinput_gamepad.py:464` chama `evdev.UInput`, que bate na
+    # porta do kernel DA MÁQUINA DE QUEM RODA. A `VIGIA-DE-APARELHO-01` do
+    # conftest o flagrava duas vezes por execução e deixava a sessão VERMELHA,
+    # com razão.
+    #
+    # O dublê `_nenhum_uinput_de_verdade` do conftest NÃO cobre este caminho, e
+    # a própria docstring dele diz isso desde 22/08: ele troca `uinput.Device`,
+    # e o vpad nasce de `evdev.UInput`. Nessas portas o desenho é outro — a
+    # vigia REGISTRA E RECUSA, e cobra o dublê de quem passa. É o que este é.
+    #
+    # O que está em jogo não é o verde da suíte: em 20/08 foram **1289 nós**
+    # `Hefesto - Dualsense4Unix Virtual Keyboard` num dia, e a tela cheia dela
+    # caindo no meio do jogo — para o compositor Wayland, cada add/remove de
+    # teclado é um re-assentamento de seat.
+    #
+    # Dublar aqui não estreita o que o teste mede: o assunto é o DESTINO da
+    # dispensa (`_steam_input_excecao_dispensada_appid`), e a criação do vpad é
+    # efeito colateral do caminho. A chamada continua acontecendo — e fica
+    # registrada, para o dublê não virar um "não chamou" silencioso.
+    retomadas: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        gp,
+        "start_gamepad_emulation",
+        lambda daemon, **kw: retomadas.append(dict(kw)) or True,
+    )
+
     d._steam_input_excecao_dispensada_appid = APPID
     d._appid_visivel = None  # o jogo saiu da frente
     # A saída da exceção tenta devolver os vpads: consulta o backend para decidir
