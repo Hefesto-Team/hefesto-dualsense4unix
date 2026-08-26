@@ -1363,8 +1363,10 @@ fi
 # **"o que este arquivo instalado chama, e isso foi junto?"**.
 #
 # O DEFEITO QUE A FEZ EXISTIR, MEDIDO em 12/08/2026: `scripts/build_deb.sh:216`
-# leva cinco scripts para dentro do pacote — `doctor.sh`, `bluez_config.sh`,
-# `disable_steam_input.sh`, `fix_wireplumber_default_source.sh`, `dsx_recover.sh`
+# levava cinco scripts para dentro do pacote — `doctor.sh`, `bluez_config.sh`,
+# `disable_steam_input.sh`, `fix_wireplumber_default_source.sh` e
+# `dsx_recover.sh`, este último RETIRADO do laço em 26/08/2026 por não ter
+# consumidor em lugar nenhum (LEVA-4-E; hoje o laço leva quatro)
 # — e o `doctor.sh` chamava, em `apply_fixes`, um SEXTO que ninguém levou:
 # `sudo bash "${ROOT_DIR}/scripts/install_udev.sh"`. Como o `ROOT_DIR` do doctor
 # é derivado do lugar do próprio arquivo (`scripts/doctor.sh:60`), no layout do
