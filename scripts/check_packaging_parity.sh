@@ -900,14 +900,14 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
     # MEDIDO): a lista trazia `scripts/build_flatpak.sh`, que é um INVÓLUCRO de
     # 120 linhas — ele chama o `flatpak-builder` e não lista arquivo nenhum.
     # Quem declara o conteúdo do pacote é o MANIFESTO
-    # `flatpak/br.andrefarias.Hefesto.yml`, que não estava em lista nenhuma.
+    # `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml`, que não estava em lista nenhuma.
     # Resultado: pôr o `doctor.sh` no manifesto SEM o `bluez_config.sh` passava
     # VERDE aqui e na bancada — o invólucro não cita `doctor.sh`, então o
     # `continue` disparava e a regra de PAR nunca era aplicada ao Flatpak.
     # O manifesto é YAML e comenta com `#`, então o descarte de comentários
     # acima continua valendo letra por letra.
     _bt_olhados=(); _bt_pulados=()
-    for _bt_pkg in scripts/build_deb.sh flatpak/br.andrefarias.Hefesto.yml \
+    for _bt_pkg in scripts/build_deb.sh flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml \
                    scripts/build_appimage.sh scripts/build_appimage_gui.sh \
                    packaging/fedora/hefesto-dualsense4unix.spec \
                    packaging/arch/PKGBUILD packaging/nix/package.nix; do
@@ -1030,7 +1030,7 @@ else
         "packaging/fedora/hefesto-dualsense4unix.spec:^(Requires|Recommends|Suggests):[[:space:]]*wvkbd"
         "packaging/arch/PKGBUILD:^[[:space:]]*'wvkbd:"
         "packaging/nix/package.nix:makeBinPath.*wvkbd"
-        "flatpak/br.andrefarias.Hefesto.yml:^[[:space:]]*-[[:space:]]*name:[[:space:]]*wvkbd[[:space:]]*$"
+        "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml:^[[:space:]]*-[[:space:]]*name:[[:space:]]*wvkbd[[:space:]]*$"
     )
     for _osk_item in "${_osk_declaram[@]}"; do
         _osk_decl="${_osk_item%%:*}"
@@ -1576,7 +1576,7 @@ else
     #: diretório uma vez só.
     _PRODPKGS=(
         "scripts/build_deb.sh|.deb|share/hefesto-dualsense4unix/scripts"
-        "flatpak/br.andrefarias.Hefesto.yml|Flatpak|/app/share/hefesto-dualsense4unix/scripts"
+        "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml|Flatpak|/app/share/hefesto-dualsense4unix/scripts"
         "scripts/build_appimage.sh|AppImage (CLI)|share/hefesto-dualsense4unix/scripts"
         "scripts/build_appimage_gui.sh|AppImage (GUI)|share/hefesto-dualsense4unix/scripts"
         "packaging/arch/PKGBUILD|Arch|share/hefesto-dualsense4unix/scripts"
@@ -1746,10 +1746,10 @@ else
     # PREMISSA: se um dia o manifesto trocar para um runtime que não a garante
     # (`org.freedesktop.Platform`, por exemplo), a isenção morre junto e alguém
     # tem de declarar o módulo à mão.
-    if [[ -f flatpak/br.andrefarias.Hefesto.yml ]]; then
-        _svg_runtime="$(sed -n 's/^runtime:[[:space:]]*//p' flatpak/br.andrefarias.Hefesto.yml | head -1)"
+    if [[ -f flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml ]]; then
+        _svg_runtime="$(sed -n 's/^runtime:[[:space:]]*//p' flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml | head -1)"
         if [[ "${_svg_runtime}" != "org.gnome.Platform" ]]; then
-            grep -qi 'rsvg' flatpak/br.andrefarias.Hefesto.yml 2>/dev/null \
+            grep -qi 'rsvg' flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml 2>/dev/null \
                 || missing+=("flatpak: runtime '${_svg_runtime}' não é o org.gnome.Platform que garantia o loader SVG, e o manifesto não bundla nenhum — a isenção caducou")
         fi
     fi

@@ -5,7 +5,7 @@
 # Pode ser executado de 3 formas (todas idempotentes):
 #
 #   1. Dentro do Flatpak (caminho oficial pós-install):
-#        flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
+#        flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix
 #      Resolve as regras em /app/share/hefesto-dualsense4unix/udev-rules/.
 #
 #   2. Direto do repositório clonado (instalação via fonte):

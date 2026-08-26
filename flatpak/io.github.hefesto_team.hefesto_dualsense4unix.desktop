@@ -2,7 +2,7 @@
 Name=Hefesto - Dualsense4Unix
 Comment=Gerenciador DualSense para Linux
 Exec=hefesto-dualsense4unix-gui
-Icon=br.andrefarias.Hefesto
+Icon=io.github.hefesto_team.hefesto_dualsense4unix
 Terminal=false
 Type=Application
 Categories=Utility;Game;Settings;HardwareSettings;

@@ -152,11 +152,17 @@ purge_deb() {
 }
 
 # 5) Flatpak: garantir remoção (uninstall já tenta; reforço aqui).
+# IDENTIDADE-01 (25/08/2026): os DOIS app-ids. O Flatpak não migra id, então
+# quem instalou antes de 25/08 tem `br.andrefarias.Hefesto` instalado ao lado —
+# e este script existe justamente para não deixar resto.
 purge_flatpak() {
-    if flatpak list --app 2>/dev/null | grep -q "br.andrefarias.Hefesto"; then
-        log "desinstalando Flatpak br.andrefarias.Hefesto"
-        run flatpak uninstall -y br.andrefarias.Hefesto 2>/dev/null || true
-    fi
+    local _fp_id
+    for _fp_id in "io.github.hefesto_team.hefesto_dualsense4unix" "br.andrefarias.Hefesto"; do
+        if flatpak list --app 2>/dev/null | grep -q "${_fp_id}"; then
+            log "desinstalando Flatpak ${_fp_id}"
+            run flatpak uninstall -y "${_fp_id}" 2>/dev/null || true
+        fi
+    done
 }
 
 main() {
