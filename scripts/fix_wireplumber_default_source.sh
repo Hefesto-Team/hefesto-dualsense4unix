@@ -22,6 +22,12 @@
 #                       mais a cura das camadas 1 e 2 e a eleição de fato.
 #     --unmute-routes   SÓ tira o `"mute":true` persistido das rotas do DualSense
 #                       (camada 1) — sem mexer em drop-in nem em fonte padrão.
+#     --marcar-gesto-do-mic   DROPIN-AMBIGUO-01: só grava a MARCA DO GESTO
+#                       ("o mic do DualSense é escolha dela, em <data>"). Não
+#                       toca em drop-in, em fonte padrão nem no WirePlumber.
+#                       É por onde o `install.sh --keep-dualsense-mic` carimba.
+#     --apagar-gesto-do-mic   o contrário: só apaga a marca. É por onde o
+#                       `install.sh` carimba os ramos que decidem o oposto.
 #     --nunca-dorme     SOM-QUE-NAO-DORME-01: instala SÓ o 54, que impede o
 #                       WirePlumber de suspender o SINK (alto-falante) do
 #                       controle. Não fala do microfone, não é opt-in, e o
@@ -105,6 +111,23 @@ readonly DROPIN_ACORDADO_NAME="54-hefesto-dualsense-alto-falante-nunca-dorme.con
 readonly DROPIN_ACORDADO_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_ACORDADO_NAME}"
 readonly DROPIN_ACORDADO_DST="${DROPIN_DIR}/${DROPIN_ACORDADO_NAME}"
 readonly STATE_FILE="${HOME}/.local/state/wireplumber/default-nodes"
+# DROPIN-AMBIGUO-01 (04/08/2026, curado em 26/08/2026) — A MARCA DO GESTO.
+#
+# O `doctor.sh:_prefere_mic_do_dualsense` lia a AUSÊNCIA do drop-in 51 como
+# "ela promoveu o mic do controle a dedo". A ausência tem DUAS origens e o
+# disco não as distingue: a promoção explícita e o `uninstall` que desarmou a
+# cura (ou a instalação que nunca houve). Máquina curada e máquina quebrada
+# eram o MESMO estado — e foi desse estado que saiu a queixa dela de 04/08,
+# *"não funciona nem mic, nem os botões de sons do jogo"*.
+#
+# A cura é marcar o GESTO, nunca o estado: quem LIGA o microfone do DualSense
+# (`--enable-mic`, `--promote-source`, o botão "Ligar" da aba Emulação, e o
+# `install.sh --keep-dualsense-mic`) grava este carimbo, com data. Quem faz o
+# gesto CONTRÁRIO — `--install`, `--disable-source`, o `uninstall.sh` — apaga.
+# Sem carimbo e sem o 51 o veredito passa a ser "NÃO SEI", que é o que o disco
+# de fato diz.
+readonly MARCA_MIC_DIR="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix"
+readonly MARCA_MIC_DST="${MARCA_MIC_DIR}/mic-do-dualsense-pedido.conf"
 # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o doctor é o dono do critério de "fonte de
 # captura que se sustenta" (`_sources_com_porta_usavel` + `_melhor_source_de_captura`).
 # Reusamos as funções PURAS dele em vez de reescrever o critério aqui.
@@ -120,6 +143,8 @@ for arg in "$@"; do
         --promote-source) MODE="promote" ;;
         --unmute-routes)  MODE="unmute-routes" ;;
         --nunca-dorme)    MODE="nunca-dorme" ;;
+        --marcar-gesto-do-mic)  MODE="marcar-gesto" ;;
+        --apagar-gesto-do-mic)  MODE="apagar-gesto" ;;
         --status)         MODE="status" ;;
         *) printf '[wp-fix] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
@@ -591,7 +616,59 @@ _arma_dropins_do_mic() {
     return 0
 }
 
+# DROPIN-AMBIGUO-01 — grava a MARCA DO GESTO. SÓ ARQUIVO: nenhum `systemctl`,
+# `wpctl` ou `pactl` vive aqui, pelo mesmo motivo do `_arma_dropins_do_mic` (o
+# portão exercita a função DE VERDADE num HOME de mentira).
+#
+# Idempotente, e a data do carimbo é a do PRIMEIRO gesto: reescrevê-la a cada
+# `--enable-mic` apagaria a única informação que a marca carrega além da
+# própria existência — QUANDO ela pediu. $1 = o gesto, para o arquivo dizer de
+# onde veio.
+_marca_do_gesto_gravar() {
+    local gesto="${1:-enable-mic}"
+    if [[ -f "${MARCA_MIC_DST}" ]]; then
+        log "marca do gesto já existe: ${MARCA_MIC_DST} (a data do primeiro pedido fica)"
+        return 0
+    fi
+    mkdir -p "${MARCA_MIC_DIR}" || { log "AVISO: não consegui criar ${MARCA_MIC_DIR}"; return 1; }
+    {
+        printf '# MARCA DO GESTO — DROPIN-AMBIGUO-01\n'
+        printf '#\n'
+        printf '# Este arquivo diz: "o microfone do DualSense é escolha DELA".\n'
+        printf '# Sem ele, a ausência do drop-in 51 não distingue a promoção\n'
+        printf '# explícita da cura que um uninstall desarmou — e o doctor dava\n'
+        printf '# [OK] no meio do defeito. Ele é escrito pelo GESTO de ligar o\n'
+        printf '# mic e apagado pelo gesto contrário; nunca inferido de estado.\n'
+        printf '#\n'
+        printf '# Quem lê: scripts/doctor.sh:_prefere_mic_do_dualsense\n'
+        printf '# Quem escreve: scripts/fix_wireplumber_default_source.sh, install.sh\n'
+        printf '# Quem apaga: --install, --disable-source, uninstall.sh\n'
+        printf 'gesto=%s\n' "${gesto}"
+        printf 'data=%s\n' "$(date -Is 2>/dev/null || date)"
+    } > "${MARCA_MIC_DST}" || { log "AVISO: não consegui gravar ${MARCA_MIC_DST}"; return 1; }
+    log "marca do gesto gravada: ${MARCA_MIC_DST} (gesto=${gesto})"
+    return 0
+}
+
+# O gesto CONTRÁRIO apaga a marca. Sem isto a marca viraria estado — e estado
+# que não se apaga é exatamente o defeito que ela cura.
+_marca_do_gesto_apagar() {
+    if [[ -f "${MARCA_MIC_DST}" ]]; then
+        rm -f "${MARCA_MIC_DST}" && log "marca do gesto removida: ${MARCA_MIC_DST}"
+    fi
+    return 0
+}
+
 enable_mic_dualsense() {
+    # DROPIN-AMBIGUO-01: ligar o mic é o GESTO, e o gesto deixa marca. Vem
+    # ANTES de tudo de propósito — inclusive do `sem-promotor` do
+    # `--promote-source`, que apaga o 51 logo abaixo: é a partir daí que a
+    # ausência do 51 precisa de alguém dizendo de onde ela veio.
+    if [[ "${1:-}" == "sem-promotor" ]]; then
+        _marca_do_gesto_gravar "promote-source" || true
+    else
+        _marca_do_gesto_gravar "enable-mic" || true
+    fi
     # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: ligar o mic SEM o quirk de áudio USB
     # ativo nesta sessão pode REABRIR o storm -71 (o controle começa a cair no
     # meio do jogo). Avisamos no stderr e PROSSEGUIMOS — a usuária pode querer o
@@ -704,7 +781,7 @@ promote_source_dualsense() {
 #
 # `--status` é o único de fora: ele é leitura, e leitura não escreve.
 ACORDADO_MUDOU=1
-if [[ "${MODE}" != "status" ]]; then
+if [[ "${MODE}" != "status" && "${MODE}" != "marcar-gesto" && "${MODE}" != "apagar-gesto" ]]; then
     rc_acordado=0
     install_dropin_acordado || rc_acordado=$?
     case "${rc_acordado}" in
@@ -735,6 +812,17 @@ case "${MODE}" in
         fi
         exit 0
         ;;
+    marcar-gesto)
+        # DROPIN-AMBIGUO-01: SÓ o carimbo. Existe para o `install.sh` poder
+        # dizer "ela pediu para não mexerem no mic dela" (`--keep-dualsense-mic`)
+        # sem que isso vire mais uma inferência de estado no doctor.
+        _marca_do_gesto_gravar "keep-dualsense-mic"
+        exit 0
+        ;;
+    apagar-gesto)
+        _marca_do_gesto_apagar
+        exit 0
+        ;;
     enable-mic)
         enable_mic_dualsense
         show_status
@@ -758,6 +846,12 @@ case "${MODE}" in
         show_status
         ;;
     install)
+        # DROPIN-AMBIGUO-01: `--install` é o gesto CONTRÁRIO ao de ligar o mic
+        # — ele repõe a política default (o 51 no lugar, o controle fora da
+        # eleição automática). Deixar a marca de pé aqui manteria dois sinais
+        # dizendo coisas opostas sobre o mesmo disco, que é o defeito que a
+        # marca cura.
+        _marca_do_gesto_apagar
         install_dropin
         reset_default_source
         restart_wireplumber
@@ -768,6 +862,9 @@ case "${MODE}" in
         exit "${rc}"
         ;;
     disable)
+        # DROPIN-AMBIGUO-01: desligar o mic de vez é o gesto mais explícito de
+        # "não quero o mic do controle" — a marca do gesto oposto sai junto.
+        _marca_do_gesto_apagar
         install_disable_dropin
         remove_configured_dualsense
         restart_wireplumber
