@@ -3896,20 +3896,15 @@ _entrada_alcancavel_pelo_jogo() {
 #: O veredito POR CONTROLE (E3 da sprint): não "quantos nós hidraw estão 0600",
 #: e sim "este controle está escondido DO JOGO?".
 #:
-#: CORREÇÃO DE FATO — 25/08/2026, conferência da frente C4. Este comentário
-#: dizia que isto fecha "o item 3.1 do O-QUE-FICOU-ABERTO-01, aberto desde
-#: 16/08". **NÃO FECHA, e é METADE da E3.** O 3.1 pede o veredito por
-#: comparação com o CENSO DE FÍSICOS — "o `pass` só é honesto quando
-#: `escondidos == físicos`" (2026-08-16-O-QUE-FICOU-ABERTO-01:288-291). Aqui o
-#: denominador é "o que o broker escondeu", não "o que está na mesa": um
-#: DualSense físico que o broker NUNCA escondeu é invisível para esta função, e
-#: a cena exata de 16/08 (dois físicos, um escondido) continua saindo verde.
-#: O que falta é barato e está a poucas linhas daqui — o bloco python de
-#: `check_hidraw_broker` já monta `candidatos` varrendo
-#: `/sys/class/hidraw/hidraw*/device/uevent` por `054C`, e só o usa para o teste
-#: do `cmd open`. Publicar essa lista e comparar os conjuntos fecha o 3.1.
-#: NÃO foi feito aqui porque não há DualSense nesta bancada para medir, e régua
-#: de esconder que ninguém exerceu com aparelho é como a que já mentiu.
+#: ESTA FUNÇÃO É METADE DA E3, e a outra metade mora no `_veredito_do_hide`.
+#: O item 3.1 do O-QUE-FICOU-ABERTO-01 pede o veredito por comparação com o
+#: CENSO DE FÍSICOS — "o `pass` só é honesto quando `escondidos == físicos`"
+#: (2026-08-16-O-QUE-FICOU-ABERTO-01:288-291). Aqui o denominador continua
+#: sendo "o que o broker escondeu", de propósito: quem compara com a MESA é o
+#: bloco do censo no `_veredito_do_hide`, que roda ANTES desta medição e
+#: devolve `warn` sem chegar aqui quando os dois conjuntos divergem
+#: (26/08/2026 — antes disso a cena de 16/08, dois físicos e um escondido,
+#: saía verde).
 #:
 #: Preenche CINCO globais porque bash não devolve lista (esta lista dizia
 #: quatro e o código escrevia cinco — o `TRES_SUP_N_ABERTOS` sai na tela dentro
@@ -3951,14 +3946,41 @@ _tres_superficies_medir() {
     TRES_SUP_ABERTOS="${TRES_SUP_ABERTOS# }"
 }
 
+#: O CENSO DE FÍSICOS — o denominador que faltava (3.1 do O-QUE-FICOU-ABERTO-01,
+#: aberto desde 16/08/2026, fechado em 26/08).
+#:
+#: Nunca reimplementa o critério: chama `physical_nodes_exposure`, que é o
+#: MESMO validador que o broker usa para decidir o que é um DualSense físico
+#: (e que recusa o vpad uhid). Duas réguas para a mesma pergunta é como esta
+#: casa já produziu alarme convincente e falso.
+#:
+#: Só leitura, e cala em vez de falhar: sem o pacote alcançável a saída é
+#: vazia, e o veredito trata "censo vazio" como "não sei", nunca como zero.
+_censo_de_fisicos() {
+    local py; py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || return 0
+    HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - <<'PY' 2>/dev/null || true
+import os
+import sys
+
+sys.path.insert(0, os.environ.get("HEFESTO_SRC", ""))
+try:
+    from hefesto_dualsense4unix.broker.hidraw_broker import physical_nodes_exposure
+except Exception:  # noqa: BLE001 - sem o pacote o censo simplesmente cala
+    sys.exit(0)
+print(" ".join(sorted(physical_nodes_exposure(os.getuid()))), end="")
+PY
+}
+
 #: O veredito do hide, separado do `check_hidraw_broker` para ser TESTÁVEL sem
 #: systemd, sem socket e sem aparelho — a régua que mentia nunca teve teste
 #: justamente porque vivia soldada dentro de uma função de 220 linhas.
 #: $1 = nós hidraw escondidos (contagem do broker); $2 = 1 se o daemon responde
-#: IPC; $3 = native_mode como o IPC o devolve; $4.. = os nós escondidos.
+#: IPC; $3 = native_mode como o IPC o devolve; $4 = o CENSO DE FÍSICOS (nós
+#: separados por espaço, vazio = não sei); $5.. = os nós escondidos.
 _veredito_do_hide() {
-    local hidden_count="$1" daemon_vivo="$2" native_mode="$3"
-    shift 3
+    local hidden_count="$1" daemon_vivo="$2" native_mode="$3" censo="$4"
+    shift 4
     if [[ "${hidden_count}" -le 0 ]]; then
         info "broker sem nós escondidos no momento (emulação desligada ou nenhum grab ativo)"
         return
@@ -3969,6 +3991,35 @@ _veredito_do_hide() {
     fi
     if [[ "${native_mode}" == "True" ]]; then
         warn "broker com ${hidden_count} nó(s) escondido(s) em Modo Nativo — o físico deveria estar exposto ao jogo"
+        return
+    fi
+    # O DENOMINADOR, e por que ele vem ANTES de medir superfície nenhuma.
+    #
+    # Até 26/08/2026 tudo abaixo desta linha media SÓ os nós que o broker
+    # escondeu — o veredito perguntava "o que eu escondi está fechado?" e
+    # respondia "o jogo só vê o vpad", que é uma afirmação sobre a MESA
+    # inteira. Um DualSense físico que o broker nunca escondeu era invisível
+    # para a régua, e a cena exata de 16/08 (dois físicos, um escondido)
+    # continuava saindo verde — com o controle dobrado dentro do jogo. O
+    # comentário do `_tres_superficies_medir`, logo acima, já confessava isto
+    # por escrito desde 25/08; o que faltava era o censo, e o produto já sabia
+    # levantá-lo (`broker/hidraw_broker.py:physical_nodes_exposure`).
+    #
+    # Censo VAZIO é "não sei" (sem o pacote alcançável, ou sysfs ilegível) e
+    # não vira zero: ausência de dado não é prova de cura.
+    local _fisico _escondido _visto fora=""
+    for _fisico in ${censo}; do
+        _visto=0
+        for _escondido in "$@"; do
+            [[ "${_escondido}" == "${_fisico}" ]] && { _visto=1; break; }
+        done
+        [[ "${_visto}" -eq 0 ]] && fora="${fora} ${_fisico}"
+    done
+    fora="${fora# }"
+    if [[ -n "${fora}" ]]; then
+        # PROVISÓRIO — decisão dela: texto novo de tela (LEVA-1-D, 26/08/2026).
+        warn "o hide não cobre a mesa inteira: ${hidden_count} nó(s) escondido(s), mas o censo do produto vê DualSense físico FORA do hide (${fora}) — o jogo enxerga esse(s) controle(s) direto, e quem enumerar /dev/input ou hidraw acha o controle dobrado; este check NÃO afirma que o jogo só vê o vpad"
+        info "  confira se a emulação está ligada para ele na aba Emulação; se estiver, o broker não pegou o nó: sudo systemctl restart hefesto-hidraw-broker.service"
         return
     fi
     _tres_superficies_medir "$@"
@@ -4195,8 +4246,12 @@ PYEOF
 
     local daemon_vivo=0
     [[ -S "${sock}" ]] && daemon_vivo=1
+    # O CENSO DE FÍSICOS é o denominador do veredito (ESCONDE-SÓ-O-HIDRAW-01,
+    # item 3.1): sem ele a régua mede só o que ela mesma escondeu.
+    local censo_fisicos
+    censo_fisicos="$(_censo_de_fisicos)"
     # shellcheck disable=SC2086  # a lista de nós é gerada aqui e não tem espaço no nome
-    _veredito_do_hide "${hidden_count}" "${daemon_vivo}" "${native_mode}" ${hidden_nodes}
+    _veredito_do_hide "${hidden_count}" "${daemon_vivo}" "${native_mode}" "${censo_fisicos}" ${hidden_nodes}
 
     # Recusa a outro uid — best-effort (só roda com sudo -n disponível e o
     # usuário nobody presente); nunca falha o doctor por esta checagem.
