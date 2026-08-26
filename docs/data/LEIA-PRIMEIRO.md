@@ -19,30 +19,38 @@ ela fica.
 
 ## 1. O que existe, onde, e quanto custa
 
-Medido em 22/08/2026 com `stat` e `csv.DictReader`. **Este carimbo é a data da
-última medição, não a data em que a seção foi escrita** — em 19/08 o arquivo foi
-editado sem que ele mudasse, e os números passaram três dias caducos com cara de
-frescos.
+**Todo número desta tabela é GERADO, não digitado** — desde 26/08/2026. Ele
+mora entre marcas HTML que a renderização não mostra, e quem o mede é
+`python3 scripts/check_paridade_transporte.py --leia-primeiro` (com
+`--escrever`, regrava). O teste
+`tests/unit/test_leia_primeiro_nao_digita_numero_a_mao.py` reprova quando o
+publicado diverge da medição, e reprova **nomeando** o número podre.
+
+Por que isto deixou de ser digitado: em 22/08 estes números foram medidos à
+mão e carimbados com a data. Quatro dias depois, **sete dos dez tamanhos
+estavam errados** — o mapa em 700.602 contra 696.546 publicados, este portão em
+102.818 contra 85.063 —, as colunas diziam 47 contra as 49 que o `csv.reader`
+devolve, os pares diziam 13 contra 14, e o `specs.html` era listado na raiz, de
+onde saiu em 25/08. Corrigir à mão seria pagar o mesmo preço de novo amanhã.
 
 | Arquivo | Bytes | O que é | Quando abrir |
 |---|---:|---|---|
-| `docs/data/mapa-controles.csv` | 696.546 | **A FONTE.** 308 linhas x 47 colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
-| `docs/data/ensaios.csv` | 149.862 | **O LASTRO.** 177 ensaios x 14 colunas. Cada linha é uma medição com hardware na mesa. Casa com o mapa por `linha_id == id`. **`degrau` e `ponte` existem no cabeçalho desde 20/08/2026 e estão VAZIAS em 177 de 177** — não procure dado que ninguém escreveu ainda. | Quando a célula do mapa diz `medido` e você quer ver a medição. |
-| `specs.html` | 1.341.232 | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
-| `docs/protocol/dualsense-referencia-canonica.md` | 97.475 | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
-| `docs/protocol/paridade-bluetooth-versus-cabo.md` | 17.383 | Tabela cabo x rádio em prosa. Declara-se desempatador nas linhas `MEDIDO AO VIVO`. | Para visão geral. **Onde divergir do mapa fora das linhas `MEDIDO AO VIVO`, o mapa vence** — ele tem domínio fechado e portão; a tabela é prosa. |
-| `docs/process/METODO-DE-ISOLAMENTO.md` | 60.445 | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
-| `scripts/check_paridade_transporte.py` | 85.063 | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — hoje ela vai da linha 2 à 249. |
-| `scripts/eliminacao.py` | 11.675 | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
-| `bancada.py` | 25.197 | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`, linha 78) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
-| `docs/data/mapa-controles-v1.csv` | 138.192 | Arqueologia. O mapa antes da migração. | Praticamente nunca. |
+| `docs/data/mapa-controles.csv` | <!--@bytes:docs/data/mapa-controles.csv-->700.602<!--/--> | **A FONTE.** <!--@linhas-do-mapa-->308<!--/--> linhas x <!--@colunas-do-mapa-->49<!--/--> colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
+| `docs/data/ensaios.csv` | <!--@bytes:docs/data/ensaios.csv-->150.714<!--/--> | **O LASTRO.** <!--@linhas-do-caderno-->178<!--/--> ensaios x <!--@colunas-do-caderno-->14<!--/--> colunas. Cada linha é uma medição com hardware na mesa. Casa com o mapa por `linha_id == id`. **`degrau` e `ponte` existem no cabeçalho desde 20/08/2026 e quase ninguém as respondeu:** `ponte` está vazia em <!--@caderno-sem-ponte-->178<!--/--> ensaios e `degrau` em <!--@caderno-sem-degrau-->177<!--/-->. Não procure dado que ninguém escreveu ainda. | Quando a célula do mapa diz `medido` e você quer ver a medição. |
+| `html/specs.html` | <!--@bytes:html/specs.html-->1.364.796<!--/--> | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. Mudou da raiz para `html/` em 25/08/2026. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
+| `docs/protocol/dualsense-referencia-canonica.md` | <!--@bytes:docs/protocol/dualsense-referencia-canonica.md-->98.370<!--/--> | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
+| `docs/protocol/paridade-bluetooth-versus-cabo.md` | <!--@bytes:docs/protocol/paridade-bluetooth-versus-cabo.md-->18.193<!--/--> | Tabela cabo x rádio em prosa. Declara-se desempatador nas linhas `MEDIDO AO VIVO`. | Para visão geral. **Onde divergir do mapa fora das linhas `MEDIDO AO VIVO`, o mapa vence** — ele tem domínio fechado e portão; a tabela é prosa. |
+| `docs/process/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/process/METODO-DE-ISOLAMENTO.md-->63.404<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
+| `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->120.204<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — ela vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->282<!--/-->. |
+| `scripts/eliminacao.py` | <!--@bytes:scripts/eliminacao.py-->11.675<!--/--> | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
+| `bancada.py` | <!--@bytes:bancada.py-->25.465<!--/--> | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
+| `docs/data/mapa-controles-v1.csv` | <!--@bytes:docs/data/mapa-controles-v1.csv-->138.192<!--/--> | Arqueologia. O mapa antes da migração. | Praticamente nunca. |
 
-**Cura de raiz, ainda não feita:** o bloco *Resumo do censo* de
-`scripts/check_paridade_transporte.py` já imprime **11** dos contadores das
-seções 1 a 3 — os do censo do mapa. Continuam digitados à mão os bytes dos dez
-arquivos, as 47 colunas, os 13 pares, o `existe`, as duas réguas por valor e as
-20 casas do cruzamento. Gerar os 11 dali já acaba com parte do digitar à mão que
-deixou este arquivo caduco uma vez.
+**O que ainda é digitado à mão**, e por que não entrou nesta leva: o `existe`,
+as duas réguas por valor e as 20 casas do cruzamento (seções 2 e 3). Esses o
+bloco *Resumo do censo* do portão **não** imprime hoje — ele conta afirmação
+forte, grau e ponte, não a distribuição por valor. Gerá-los pede contadores
+novos no portão, e é a continuação natural desta cura.
 
 **Sobre os estudos.** `docs/process/estudos/` guarda o histórico por frente. O
 molde do que um estudo deve ser está em
@@ -60,8 +68,9 @@ o estudo guarda o caminho.
 `vibracao.rumble.ff@dualsense` é uma chave de busca legítima. Os três controles
 são `dualsense` (110 linhas), `pro` (99) e `sn30` (99).
 
-26 das 47 colunas vêm em pares `cabo_*` / `radio_*` (13 pares) — cabo e rádio respondidos
-lado a lado na mesma linha. As que importam para decidir:
+<!--@colunas-em-pares-->28<!--/--> das <!--@colunas-do-mapa-->49<!--/--> colunas
+vêm em pares `cabo_*` / `radio_*` (<!--@pares-de-transporte-->14<!--/--> pares) —
+cabo e rádio respondidos lado a lado na mesma linha. As que importam para decidir:
 
 - `existe` — a peça existe no aparelho? (`tem` 139 · `desconhecido` 83 ·
   `nao-tem` 67 · `parcial` 19)

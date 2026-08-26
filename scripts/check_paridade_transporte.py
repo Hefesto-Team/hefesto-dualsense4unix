@@ -34,11 +34,21 @@ FALHA
                           Afirmação forte sem rede é o defeito-mãe da sprint.
   2. `mordida-fantasma` — `teste_que_morde` que aponta para algo que o pytest
                           NÃO coleta (arquivo, classe ou função que não existe,
-                          ou nome fora da convenção de coleta). Conferido por
-                          LEITURA DE AST de `tests/`, nunca executando a suíte:
-                          o portão precisa rodar num runner pelado, e um
-                          `ImportError` viraria "zero testes" — o que faria a
-                          regra acusar todo mundo.
+                          ou nome fora da convenção de coleta) **ou que ele
+                          coleta e que não exercita nada**: corpo vazio (só
+                          docstring, `pass` ou `...`) e `skip` incondicional
+                          (no teste, na classe ou no `pytestmark` do módulo).
+                          A segunda metade é de 26/08/2026 e fecha um buraco
+                          estrutural: até então a regra conferia só se o alvo
+                          era COLETÁVEL, e um `def test_x(): pass` passa
+                          também com a cura arrancada — que é exatamente a
+                          rede-que-não-existe que a regra 1 existe para pegar.
+                          `skipif` com condição de verdade continua valendo:
+                          é honestidade, não teste desligado.
+                          Conferido por LEITURA DE AST de `tests/`, nunca
+                          executando a suíte: o portão precisa rodar num
+                          runner pelado, e um `ImportError` viraria "zero
+                          testes" — o que faria a regra acusar todo mundo.
   3. `prova-vencida`    — `provado_em` + `validade_dias` já no passado. Se as
                           DUAS colunas estiverem vazias, não reprova: a política
                           de validade ainda é decisão dela, e portão que castiga
@@ -761,10 +771,24 @@ class Achado:
 
 @dataclass
 class ArquivoDeTeste:
-    """O que o pytest coletaria de um arquivo, lido por AST."""
+    """O que o pytest coletaria de um arquivo, lido por AST.
+
+    `inertes` e `puladas` são a metade que nasceu em 26/08/2026: coletar não é
+    morder. Um `def test_x(): pass` é coletado, passa sempre, e passa TAMBÉM
+    com a cura arrancada — que é a definição de rede que não existe. As chaves
+    das duas são o nome qualificado como o pytest o escreve, sem o arquivo:
+    `test_y` para função solta, `TestClasse::test_y` para método.
+    """
 
     funcoes: frozenset[str] = frozenset()
     classes: dict[str, frozenset[str]] = field(default_factory=dict)
+    #: Nomes qualificados cujo corpo não exercita nada (só docstring, `pass`
+    #: ou `...`).
+    inertes: frozenset[str] = frozenset()
+    #: Nome qualificado -> o marcador que o desliga SEMPRE.
+    puladas: dict[str, str] = field(default_factory=dict)
+    #: O marcador que desliga o módulo inteiro via `pytestmark`, ou "".
+    modulo_pulado: str = ""
 
 
 @dataclass
@@ -804,6 +828,91 @@ def e_arquivo_que_pytest_coleta(nome: str) -> bool:
     return nome.startswith(PREFIXO_DE_ARQUIVO) or nome.endswith(SUFIXO_DE_ARQUIVO)
 
 
+def _nome_pontilhado(no: ast.expr) -> str:
+    """`pytest.mark.skip` a partir do nó do decorador, ou "" se não for um nome."""
+    partes: list[str] = []
+    atual: ast.expr = no
+    while isinstance(atual, ast.Attribute):
+        partes.append(atual.attr)
+        atual = atual.value
+    if not isinstance(atual, ast.Name):
+        return ""
+    partes.append(atual.id)
+    return ".".join(reversed(partes))
+
+
+def corpo_e_inerte(corpo: list[ast.stmt]) -> bool:
+    """True quando o corpo não exercita nada: só docstring, `pass` ou `...`.
+
+    Deliberadamente NÃO tenta julgar se o corpo é *bom* — isso é leitura de
+    gente. Ele responde a única pergunta que uma máquina responde sem mentir:
+    este teste chegaria ao fim sem tocar em nada? Se chega, ele passa também
+    com a cura arrancada.
+    """
+    for no in corpo:
+        if isinstance(no, ast.Pass):
+            continue
+        if isinstance(no, ast.Expr) and isinstance(no.value, ast.Constant):
+            continue  # docstring, ou o `...` de esqueleto
+        return False
+    return True
+
+
+def marcador_que_desliga_sempre(decorador: ast.expr) -> str:
+    """O nome do marcador que desliga o teste SEMPRE, ou "" quando não desliga.
+
+    `skipif` com condição de verdade (`sys.platform == "win32"`) é honesto: o
+    teste morde onde pode morder, e a célula do mapa continua tendo rede em
+    algum lugar. `skipif(True)` e `skip` puro não são condição nenhuma — são um
+    teste desligado com cara de teste.
+    """
+    alvo = decorador.func if isinstance(decorador, ast.Call) else decorador
+    nome = _nome_pontilhado(alvo)
+    if not nome:
+        return ""
+    ultimo = nome.rsplit(".", 1)[-1]
+    if ultimo == "skip":
+        return nome
+    if ultimo == "skipif":
+        if isinstance(decorador, ast.Call) and decorador.args:
+            condicao = decorador.args[0]
+            if isinstance(condicao, ast.Constant) and bool(condicao.value):
+                return f"{nome}({condicao.value!r})"
+        return ""
+    return ""
+
+
+def primeiro_marcador_que_desliga(decoradores: list[ast.expr]) -> str:
+    """O primeiro decorador da lista que desliga sempre, ou ""."""
+    for decorador in decoradores:
+        marcador = marcador_que_desliga_sempre(decorador)
+        if marcador:
+            return marcador
+    return ""
+
+
+def _pytestmark_que_desliga(arvore: ast.Module) -> str:
+    """O marcador de `pytestmark` que desliga o módulo inteiro, ou ""."""
+    for no in arvore.body:
+        alvos: list[ast.expr] = []
+        if isinstance(no, ast.Assign):
+            alvos = list(no.targets)
+        elif isinstance(no, ast.AnnAssign):
+            alvos = [no.target]
+        else:
+            continue
+        if not any(isinstance(alvo, ast.Name) and alvo.id == "pytestmark" for alvo in alvos):
+            continue
+        valor = no.value
+        if valor is None:
+            continue
+        marcadores = list(valor.elts) if isinstance(valor, (ast.List, ast.Tuple)) else [valor]
+        nome = primeiro_marcador_que_desliga(marcadores)
+        if nome:
+            return nome
+    return ""
+
+
 def indexar_testes(raiz: Path) -> dict[str, ArquivoDeTeste]:
     """Mapeia `caminho relativo -> o que o pytest coletaria`, por AST.
 
@@ -830,19 +939,44 @@ def indexar_testes(raiz: Path) -> dict[str, ArquivoDeTeste]:
 
         funcoes: set[str] = set()
         classes: dict[str, frozenset[str]] = {}
+        inertes: set[str] = set()
+        puladas: dict[str, str] = {}
+
         for no in arvore.body:
             if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if no.name.startswith(PREFIXO_DE_FUNCAO):
                     funcoes.add(no.name)
+                    if corpo_e_inerte(no.body):
+                        inertes.add(no.name)
+                    marcador = primeiro_marcador_que_desliga(no.decorator_list)
+                    if marcador:
+                        puladas[no.name] = marcador
             elif isinstance(no, ast.ClassDef) and no.name.startswith(PREFIXO_DE_CLASSE):
-                classes[no.name] = frozenset(
-                    metodo.name
-                    for metodo in no.body
-                    if isinstance(metodo, (ast.FunctionDef, ast.AsyncFunctionDef))
-                    and metodo.name.startswith(PREFIXO_DE_FUNCAO)
-                )
+                metodos: set[str] = set()
+                pulada_a_classe = primeiro_marcador_que_desliga(no.decorator_list)
+                for metodo in no.body:
+                    if not isinstance(metodo, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        continue
+                    if not metodo.name.startswith(PREFIXO_DE_FUNCAO):
+                        continue
+                    metodos.add(metodo.name)
+                    qualificado = f"{no.name}::{metodo.name}"
+                    if corpo_e_inerte(metodo.body):
+                        inertes.add(qualificado)
+                    marcador = pulada_a_classe or primeiro_marcador_que_desliga(
+                        metodo.decorator_list
+                    )
+                    if marcador:
+                        puladas[qualificado] = marcador
+                classes[no.name] = frozenset(metodos)
         relativo = caminho.relative_to(raiz).as_posix()
-        indice[relativo] = ArquivoDeTeste(frozenset(funcoes), classes)
+        indice[relativo] = ArquivoDeTeste(
+            frozenset(funcoes),
+            classes,
+            frozenset(inertes),
+            puladas,
+            _pytestmark_que_desliga(arvore),
+        )
     return indice
 
 
@@ -902,6 +1036,98 @@ def motivo_de_o_pytest_nao_coletar(
         return None
 
     return f"`{alvo}` tem mais níveis do que um id de nó do pytest carrega"
+
+
+def testes_cobertos_pelo_alvo(alvo: str, arquivo: ArquivoDeTeste) -> list[str]:
+    """Os nomes qualificados que este alvo manda o pytest rodar.
+
+    Um alvo pode ser o arquivo inteiro, uma classe, ou um teste só — e a
+    pergunta "isto morde?" só se responde sabendo o conjunto que ele cobre.
+    """
+    resto = alvo.partition("::")[2]
+    partes = [parte for parte in resto.split("::") if parte.strip()]
+    if partes:
+        partes[-1] = partes[-1].split("[", 1)[0].strip()
+
+    todos = sorted(arquivo.funcoes) + [
+        f"{classe}::{metodo}"
+        for classe in sorted(arquivo.classes)
+        for metodo in sorted(arquivo.classes[classe])
+    ]
+    if not partes:
+        return todos
+    if len(partes) == 1:
+        nome = partes[0]
+        if nome in arquivo.funcoes:
+            return [nome]
+        if nome in arquivo.classes:
+            return [f"{nome}::{metodo}" for metodo in sorted(arquivo.classes[nome])]
+        return []
+    return ["::".join(partes[:2])]
+
+
+def motivo_de_a_mordida_nao_morder(
+    alvo: str, indice: dict[str, ArquivoDeTeste], raiz: Path
+) -> str | None:
+    """Devolve por que este alvo NÃO é rede, ou None quando é.
+
+    Duas perguntas, nesta ordem, e a segunda nasceu em 26/08/2026:
+
+    1. o pytest coleta este alvo? (`motivo_de_o_pytest_nao_coletar`)
+    2. o que ele coleta **exercita alguma coisa**?
+
+    O buraco que a 2 fecha era latente e estrutural: a regra 1 (`sem-mordida`)
+    existe porque a queixa dela é *"tínhamos algo para o cabo e na hora do
+    vamos ver a versão de BT não funcionava"* — a célula que afirma forte
+    precisa de um teste que REPROVE quando aquilo quebrar. Um
+    `def test_x(): pass` satisfazia a regra 2 inteira: ele é coletado, ele
+    passa, e passa **também com a cura arrancada**. O mesmo vale para um
+    `@pytest.mark.skip` incondicional, que sequer roda.
+
+    Medido no dia em que a checagem entrou: nenhum dos alvos citados pelo mapa
+    era vazio ou pulado. A régua não foi escrita para consertar um alvo podre
+    de hoje — foi escrita para que o primeiro não atravesse calado.
+    """
+    motivo = motivo_de_o_pytest_nao_coletar(alvo, indice, raiz)
+    if motivo is not None:
+        return motivo
+
+    caminho = alvo.partition("::")[0].strip()
+    arquivo = indice[caminho]
+
+    if arquivo.modulo_pulado:
+        return (
+            f"`{alvo}` é coletado, mas o módulo inteiro está desligado por "
+            f"`{arquivo.modulo_pulado}` em `pytestmark`: nunca roda, logo nunca morde"
+        )
+
+    cobertos = testes_cobertos_pelo_alvo(alvo, arquivo)
+    if not cobertos:
+        return (
+            f"`{alvo}` não cobre um teste sequer que o pytest colete: "
+            "não há o que morder"
+        )
+
+    vivos = [
+        nome
+        for nome in cobertos
+        if nome not in arquivo.inertes and nome not in arquivo.puladas
+    ]
+    if vivos:
+        return None
+
+    mortos = []
+    for nome in cobertos:
+        if nome in arquivo.puladas:
+            mortos.append(f"`{nome}` desligado por `{arquivo.puladas[nome]}`")
+        else:
+            mortos.append(f"`{nome}` tem corpo vazio (só docstring, `pass` ou `...`)")
+    return (
+        f"`{alvo}` é coletado, mas não exercita nada: "
+        + "; ".join(mortos)
+        + ". Um teste que passa com a cura arrancada não é rede: deixe a "
+        "célula VAZIA — vazio é pergunta aberta — em vez de apontar para ele"
+    )
 
 
 def le_data(texto: str) -> date | None:
@@ -1394,7 +1620,7 @@ def censo(
             resumo.alvos_de_teste += len(mordidas)
         if mordidas and indice_de_testes:
             for alvo in mordidas:
-                motivo = motivo_de_o_pytest_nao_coletar(alvo, indice_de_testes, raiz)
+                motivo = motivo_de_a_mordida_nao_morder(alvo, indice_de_testes, raiz)
                 if motivo:
                     achados.append(
                         Achado(FALHA, "mordida-fantasma", numero, ident, "", motivo)
@@ -2079,6 +2305,192 @@ def regra_id_estavel(
     return achados
 
 
+# ---------------------------------------------------------------------------
+# A porta de entrada das specs, e por que os números dela saem daqui
+# ---------------------------------------------------------------------------
+# `docs/data/LEIA-PRIMEIRO.md` é o caminho barato até o mapa, e ele publica um
+# censo: o tamanho de dez arquivos, quantas colunas o CSV tem, quantos pares
+# `cabo_*`/`radio_*` existem. Tudo isso era DIGITADO À MÃO, e o próprio arquivo
+# já confessava a cura de raiz que ninguém tinha feito.
+#
+# O preço medido em 26/08/2026, antes desta cura: SETE dos dez tamanhos
+# estavam errados (o mapa em 700.602 contra 696.546 publicados; este script em
+# 102.818 contra 85.063), as colunas diziam 47 contra as 49 que o `csv.reader`
+# devolve, os pares diziam 13 contra 14, e o `specs.html` era listado na raiz,
+# de onde saiu em 25/08. Corrigir à mão é pagar o mesmo preço de novo amanhã —
+# foi o que já se fez uma vez, e caducou em três dias.
+#
+# A forma: cada número gerado mora entre marcas HTML no `.md`, que não aparecem
+# na renderização. `--leia-primeiro` confere; `--leia-primeiro --escrever`
+# regrava. Quem cobra o frescor é
+# `tests/unit/test_leia_primeiro_nao_digita_numero_a_mao.py`, na suíte — e não
+# a lista de portões, que tem dono único.
+LEIA_PRIMEIRO_RELATIVO = "docs/data/LEIA-PRIMEIRO.md"
+
+#: `<!--@chave-->valor<!--/-->`. A chave é legível de propósito: quando o
+#: número diverge, a mensagem de erro NOMEIA o que está podre.
+_MARCA_GERADA = re.compile(r"<!--@([A-Za-z0-9:/._-]+)-->(.*?)<!--/-->")
+
+#: A chave `bytes:<caminho>` mede o arquivo. As outras vêm do mapa, ou deste
+#: próprio script.
+_PREFIXO_DE_BYTES = "bytes:"
+
+
+def _milhar(numero: int) -> str:
+    """`700602` -> `700.602`, que é como esta casa escreve número."""
+    return f"{numero:,}".replace(",", ".")
+
+
+def ultima_linha_da_docstring(caminho: Path) -> int:
+    """A linha em que o docstring de módulo fecha, contando a partir de 1.
+
+    O `LEIA-PRIMEIRO.md` manda ler a docstring inteira deste portão e diz até
+    onde ela vai. Esse número muda toda vez que alguém escreve uma regra — e
+    já estava caduco (dizia 249) quando ninguém tinha mexido no arquivo por
+    outro motivo.
+    """
+    arvore = ast.parse(caminho.read_text(encoding="utf-8"))
+    primeiro = arvore.body[0] if arvore.body else None
+    if (
+        isinstance(primeiro, ast.Expr)
+        and isinstance(primeiro.value, ast.Constant)
+        and isinstance(primeiro.value.value, str)
+        and primeiro.end_lineno is not None
+    ):
+        return primeiro.end_lineno
+    return 0
+
+
+def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
+    """Os números que o `LEIA-PRIMEIRO.md` publica, medidos agora.
+
+    Só as chaves fixas — `bytes:<caminho>` é resolvida na hora, contra o disco,
+    porque a lista de arquivos é do documento e não deste script.
+    """
+    caminho_csv = raiz / CSV_RELATIVO
+    with caminho_csv.open(encoding="utf-8", newline="") as arquivo:
+        leitor = csv.reader(arquivo)
+        cabecalho = next(leitor, [])
+        linhas = sum(1 for _ in leitor)
+    pares = pares_de_transporte(cabecalho)
+
+    caminho_caderno = raiz / ENSAIOS_RELATIVO
+    with caminho_caderno.open(encoding="utf-8", newline="") as arquivo:
+        ensaios = list(csv.DictReader(arquivo))
+        cabecalho_do_caderno = list(ensaios[0]) if ensaios else []
+
+    def sem_coluna(nome: str) -> int:
+        return sum(1 for ensaio in ensaios if not (ensaio.get(nome) or "").strip())
+
+    return {
+        "linhas-do-mapa": _milhar(linhas),
+        "colunas-do-mapa": _milhar(len(cabecalho)),
+        "colunas-em-pares": _milhar(2 * len(pares)),
+        "pares-de-transporte": _milhar(len(pares)),
+        "linhas-do-caderno": _milhar(len(ensaios)),
+        "colunas-do-caderno": _milhar(len(cabecalho_do_caderno)),
+        "caderno-sem-degrau": _milhar(sem_coluna("degrau")),
+        "caderno-sem-ponte": _milhar(sem_coluna("ponte")),
+        "ultima-linha-da-docstring-do-portao": str(
+            ultima_linha_da_docstring(Path(__file__).resolve())
+        ),
+    }
+
+
+def valor_gerado(chave: str, fixos: dict[str, str], raiz: Path) -> tuple[str, str | None]:
+    """O valor de uma chave, ou `("", motivo)` quando ela não se resolve."""
+    if chave.startswith(_PREFIXO_DE_BYTES):
+        relativo = chave[len(_PREFIXO_DE_BYTES) :]
+        alvo = raiz / relativo
+        if not alvo.is_file():
+            return "", (
+                f"`{chave}`: `{relativo}` não existe nesta árvore. O documento "
+                "aponta um endereço que ninguém abre — corrija o caminho, ou "
+                "tire a linha"
+            )
+        return _milhar(alvo.stat().st_size), None
+    if chave in fixos:
+        return fixos[chave], None
+    return "", (
+        f"`{chave}` não é uma chave que este gerador saiba medir. As que ele "
+        f"sabe: `{_PREFIXO_DE_BYTES}<caminho>`, " + ", ".join(f"`{k}`" for k in sorted(fixos))
+    )
+
+
+def gera_leia_primeiro(texto: str, raiz: Path) -> tuple[str, list[str]]:
+    """Reescreve cada marca com o número medido agora.
+
+    Devolve `(texto novo, problemas)`. Problema é chave que não se resolve —
+    nunca divergência de valor: divergência é o serviço deste gerador, e quem
+    a reporta é quem compara o antes com o depois.
+    """
+    fixos = numeros_do_leia_primeiro(raiz)
+    problemas: list[str] = []
+
+    def troca(casamento: re.Match[str]) -> str:
+        chave = casamento.group(1)
+        valor, motivo = valor_gerado(chave, fixos, raiz)
+        if motivo:
+            problemas.append(motivo)
+            return casamento.group(0)
+        return f"<!--@{chave}-->{valor}<!--/-->"
+
+    return _MARCA_GERADA.sub(troca, texto), problemas
+
+
+def confere_leia_primeiro(raiz: Path, escrever: bool) -> int:
+    """`--leia-primeiro`: confere (ou regrava) os números do documento."""
+    caminho = raiz / LEIA_PRIMEIRO_RELATIVO
+    if not caminho.is_file():
+        print(f"ERRO: {LEIA_PRIMEIRO_RELATIVO} inexistente em {raiz}")
+        return 2
+
+    antes = caminho.read_text(encoding="utf-8")
+    marcas = _MARCA_GERADA.findall(antes)
+    if not marcas:
+        print(
+            f"FALHA: {LEIA_PRIMEIRO_RELATIVO} não tem uma única marca "
+            "`<!--@chave-->valor<!--/-->`: todo número dele é literal digitado "
+            "à mão, e literal caduca calado."
+        )
+        return 1
+
+    depois, problemas = gera_leia_primeiro(antes, raiz)
+    for problema in problemas:
+        print(f"  FALHA chave-de-geracao: {problema}")
+
+    divergentes = [
+        (chave, publicado, medido)
+        for (chave, publicado), (_, medido) in zip(
+            marcas, _MARCA_GERADA.findall(depois), strict=True
+        )
+        if publicado != medido
+    ]
+
+    if escrever:
+        if depois != antes:
+            caminho.write_text(depois, encoding="utf-8")
+        for chave, publicado, medido in divergentes:
+            print(f"  atualizado `{chave}`: {publicado} -> {medido}")
+        print(
+            f"{LEIA_PRIMEIRO_RELATIVO}: {len(marcas)} número(s) gerado(s), "
+            f"{len(divergentes)} atualizado(s)."
+        )
+        return 1 if problemas else 0
+
+    for chave, publicado, medido in divergentes:
+        print(
+            f"  FALHA numero-caduco: `{chave}` publica {publicado} e a medição "
+            f"de agora diz {medido}"
+        )
+    if divergentes or problemas:
+        print("")
+        print("Rode: python3 scripts/check_paridade_transporte.py --leia-primeiro --escrever")
+        return 1
+    print(f"OK: {LEIA_PRIMEIRO_RELATIVO} — os {len(marcas)} números conferem com a medição.")
+    return 0
+
+
 def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
     """O quadro que ela lê para saber ONDE o mapa está cego."""
     print("")
@@ -2181,11 +2593,30 @@ def main(argv: list[str] | None = None) -> int:
             "anonymity-check.yml)"
         ),
     )
+    parser.add_argument(
+        "--leia-primeiro",
+        action="store_true",
+        help=(
+            f"confere os números que {LEIA_PRIMEIRO_RELATIVO} publica contra a "
+            "medição de agora, em vez de censurar o mapa"
+        ),
+    )
+    parser.add_argument(
+        "--escrever",
+        action="store_true",
+        help="com --leia-primeiro: regrava os números medidos no documento",
+    )
     args = parser.parse_args(argv)
 
     raiz = args.raiz.resolve()
     if not raiz.is_dir():
         print(f"ERRO: raiz inexistente: {raiz}")
+        return 2
+
+    if args.leia_primeiro:
+        return confere_leia_primeiro(raiz, args.escrever)
+    if args.escrever:
+        print("ERRO: --escrever só existe junto de --leia-primeiro")
         return 2
 
     caminho_csv = args.csv.resolve() if args.csv else raiz / CSV_RELATIVO
