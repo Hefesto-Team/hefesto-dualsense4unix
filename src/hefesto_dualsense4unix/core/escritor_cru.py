@@ -85,10 +85,36 @@ MAX_PIDS_DA_STEAM: int = 8
 #: Quanto um veredito vale antes de a sonda poder rodar de novo. Existe para
 #: que uma rajada de escritas nossas (arrastar o seletor de cor da GUI) não
 #: vire uma rajada de ``pgrep``: a rajada inteira lê o MESMO veredito.
+#:
+#: **DAEMON-ACORDADO-01/BG-03 (25/08/2026): agora ela cobre também a
+#: VARREDURA, e não só o veredito.** O número existia desde a ESCRITOR-CRU-01
+#: com este comentário, e mesmo assim o ``pgrep`` continuava forkando a cada
+#: chamada — porque a validade morava no :class:`SentinelaDeEscritorCru` e o
+#: caminho da JANELA (``controller.list`` → ``ipc_handlers._steam_hidraw_holders``
+#: → :func:`holders_de_hidraw` → :func:`pids_da_steam`) **não passa pelo
+#: sentinela**. Era a cura escrita e nunca ligada.
 VALIDADE_DO_VEREDITO_S: float = 5.0
 
+#: A última lista de PIDs e QUANDO ela foi colhida — ``None`` = nunca.
+#: Escrita numa tupla só de propósito: a atribuição é atômica sob a GIL, e a
+#: sonda roda em thread (``asyncio.to_thread`` do inventário) enquanto o vigia
+#: da lightbar pode ler. Duas gravações concorrentes custam um ``pgrep`` a
+#: mais, nunca uma foto meio velha e meio nova.
+_ultima_foto_de_pids: tuple[float, tuple[int, ...]] | None = None
 
-def pids_da_steam() -> list[int]:
+
+def invalidar_pids_da_steam() -> None:
+    """Joga fora a foto de PIDs: a próxima chamada forka de verdade.
+
+    Existe para o ``forcar=True`` de :meth:`SentinelaDeEscritorCru.sondar`
+    continuar valendo o que a docstring dele promete — sem isto, um cache
+    novo por baixo transformaria "ignora a validade" em mentira.
+    """
+    global _ultima_foto_de_pids
+    _ultima_foto_de_pids = None
+
+
+def pids_da_steam(*, agora: float | None = None, forcar: bool = False) -> list[int]:
     """PIDs do processo Steam via ``pgrep`` — padrões do ``steam_running``.
 
     Mesmos matches de ``integrations/steam_launch_options.steam_running``
@@ -96,7 +122,32 @@ def pids_da_steam() -> list[int]:
     solto — o falso-positivo histórico do earlyoom), mais ``-x steam`` para
     instalações fora do runtime. Best-effort: qualquer falha devolve o que
     juntou.
+
+    **O resultado vale ``VALIDADE_DO_VEREDITO_S`` (BG-03, 25/08/2026).** O que
+    o cache paga, medido em 25/08 com a janela do Hefesto ABERTA e um DualSense
+    no cabo: o par de ``pgrep`` daqui saía a cada 3,3 s (o ritmo do
+    ``controller.list``), e **um** ``pgrep`` custa 2.533 ``read()`` e 724 KB de
+    ``rchar`` nesta máquina — 61 % das leituras e 84 % dos bytes do daemon não
+    eram do controle. Cada leitura de ``/proc/<pid>/cmdline`` que o ``pgrep``
+    faz toma o ``mmap_read_lock`` do processo alvo, **inclusive o do jogo**.
+
+    ``agora`` é injetável pelo mesmo motivo do ``GatilhoDeFimDeSequencia``:
+    exercitar cinco segundos de validade em microssegundos de teste. ``forcar``
+    ignora a foto.
+
+    **O preço, dito antes que alguém descubra do jeito caro:** a lista de PIDs
+    pode estar até ``VALIDADE_DO_VEREDITO_S`` atrasada. A Steam que ABRIU há
+    três segundos ainda não aparece, e quem lê isso responde "não vi ninguém
+    segurando". É o mesmo atraso que o veredito do sentinela já tinha; a
+    varredura de ``/proc/<pid>/fd`` continua fresca a cada chamada — só a lista
+    de pids é que envelhece.
     """
+    global _ultima_foto_de_pids
+    agora = time.monotonic() if agora is None else float(agora)
+    if not forcar:
+        foto = _ultima_foto_de_pids
+        if foto is not None and (agora - foto[0]) < VALIDADE_DO_VEREDITO_S:
+            return list(foto[1])
     pids: set[int] = set()
     for args in (["pgrep", "-f", "steamrt64/steam"], ["pgrep", "-x", "steam"]):
         try:
@@ -114,7 +165,9 @@ def pids_da_steam() -> list[int]:
         for token in proc.stdout.split():
             with contextlib.suppress(ValueError):
                 pids.add(int(token))
-    return sorted(pids)[:MAX_PIDS_DA_STEAM]
+    achados = sorted(pids)[:MAX_PIDS_DA_STEAM]
+    _ultima_foto_de_pids = (agora, tuple(achados))
+    return achados
 
 
 def holders_de_hidraw(
@@ -130,11 +183,17 @@ def holders_de_hidraw(
     ``nos`` filtra o resultado aos nós que interessam (os DualSense da mesa);
     ``None`` devolve todos os hidraw que a Steam segura — é a forma que o
     inventário de externos (8BIT-01) usa.
+
+    O relógio é lido **uma vez** e serve às duas contas — o orçamento da
+    varredura e a validade da foto de PIDs. É o que faz o caminho da janela
+    inteiro (``controller.list`` → aqui → :func:`pids_da_steam`) obedecer a um
+    relógio só, inclusive o falso dos testes.
     """
     interesse = {str(n) for n in nos} if nos is not None else None
     holders: dict[str, list[int]] = {}
-    deadline = time.monotonic() + ORCAMENTO_DA_VARREDURA_S
-    for pid in pids_da_steam():
+    agora = time.monotonic()
+    deadline = agora + ORCAMENTO_DA_VARREDURA_S
+    for pid in pids_da_steam(agora=agora):
         fd_dir = f"/proc/{pid}/fd"
         try:
             entries = os.listdir(fd_dir)
@@ -253,6 +312,12 @@ class SentinelaDeEscritorCru:
         da validade é no-op e devolve a foto que já existe, com borda vazia —
         e isso é resposta, não falha.
 
+        **BG-03 (25/08/2026): ``forcar`` também joga fora a foto de PIDs.** O
+        cache novo de :func:`pids_da_steam` fica DEBAIXO desta classe, e sem
+        esta linha "ignora a validade" passaria a ignorar só metade dela — o
+        ``forcar=True`` da chegada de um controle (``connection.py``) veria
+        pids de até cinco segundos atrás.
+
         Falha da sonda **preserva a foto anterior**: um ``pgrep`` que morreu
         não é prova de que a Steam fechou, e apagar o veredito por causa dele
         faria a aba Status mentir para o outro lado.
@@ -262,6 +327,8 @@ class SentinelaDeEscritorCru:
             return self._veredito, ()
         if not forcar and self.fresco(agora):
             return self._veredito, ()
+        if forcar:
+            invalidar_pids_da_steam()
         try:
             bruto = self._sonda(alvos)
         except Exception as exc:  # sonda é best-effort por contrato
@@ -294,5 +361,6 @@ __all__ = [
     "Sonda",
     "Veredito",
     "holders_de_hidraw",
+    "invalidar_pids_da_steam",
     "pids_da_steam",
 ]
