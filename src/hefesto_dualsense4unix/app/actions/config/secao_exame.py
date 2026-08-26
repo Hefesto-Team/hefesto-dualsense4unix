@@ -43,6 +43,44 @@ acontece no arranque da janela — é o caminho por onde o retrato das abas pass
 e um exame ali poria leitura viva de `/sys` e do rádio dentro de um PNG que
 entra em `docs/usage/assets/` sem revisão humana.
 
+O CARD RESPONDE (26/08/2026)
+-----------------------------
+
+Até esta data o card de ordem era só leitura: ela lia "mova o aparelho", ia lá,
+movia — e não tinha como dizer isso ao produto. A seção tinha UM botão
+("Examinar de novo") e o conselho dispensado nunca sumia. A lógica inteira já
+estava escrita e medida em `integrations/ordens_da_mesa.py`
+(`resposta_ao_ja_movi`, `ordens_novas`, `ordens_caladas`, `cabecalho`,
+`identidades`) e não tinha um único chamador: era a
+`A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na forma cara — cinco funções medidas e
+nenhuma tela.
+
+Agora cada card de ordem traz `[Já movi — reexaminar]` e `[Ignorar]`:
+
+* **Já movi** refaz o exame e COMPARA o arranjo, respondendo uma das quatro
+  frases de `FRASE_DA_RESPOSTA`. A resposta FICA na tela até o próximo exame —
+  um card que simplesmente some é indistinguível de um card que nunca foi
+  desenhado, e ela apertou um botão e precisa ver o que ele fez;
+* **Ignorar** grava a dispensa no rascunho da máquina, chaveada pelo ARRANJO
+  (`D-ORDEM-IGNORADA-VOLTA`). Ela mexeu nos cabos e a mesma regra disparou com
+  arranjo novo? é fato novo, e a ordem VOLTA.
+
+O TOPO, E QUEM DECIDE A COR (26/08/2026)
+------------------------------------------
+
+O selo passa a dizer o texto de `ordens_da_mesa.cabecalho()` — os quatro
+cabeçalhos da §8.3 da ORDEM-DE-SERVIÇO-01, que curam a queixa dela de que
+*"o 'está tudo certo' não fala nada"*: o estado bom passa a contar QUANTA coisa
+foi conferida, e o "não soube" deixa de se disfarçar dele.
+
+**A cor continua sendo de `exame_da_mesa.veredito()`, e por uma razão medida:**
+`cabecalho()` não vê `ESTADO_PROBLEMA` — a assinatura dele conhece ordens e duas
+contagens, e nada mais. Um selo pintado só por ele mostraria "Nada a mudar" em
+VERDE com a linha de pareamentos em VERMELHO logo abaixo, que é a cicatriz de
+`6c86e295` voltando pela porta dos fundos. Por isso o topo é o estado MAIS
+GRAVE entre os dois, e quem for mais grave também é quem dá a frase. Escalar
+nunca inventa um verde; só o apaga.
+
 TERRITÓRIO DE CONFIG-09. Quem trabalha nesta seção escreve AQUI — o título, a
 dica e todo widget dela. O montador da aba (`mixin.py`) só cria a moldura e
 chama `montar`; ele não sabe o que há dentro, e é assim que cinco seções
@@ -52,9 +90,15 @@ from __future__ import annotations
 
 import contextlib
 import time
+from collections.abc import Mapping, Sequence
+from dataclasses import replace
+from datetime import date
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.config.moldura import rotulo_de_apoio
+from hefesto_dualsense4unix.app.actions.config.moldura import (
+    QUANDO_VALE,
+    rotulo_de_apoio,
+)
 from hefesto_dualsense4unix.integrations.exame_da_mesa import (
     ESTADO_ATENCAO,
     ESTADO_CERTO,
@@ -62,10 +106,22 @@ from hefesto_dualsense4unix.integrations.exame_da_mesa import (
     ESTADO_PROBLEMA,
     ROTULOS_DA_ORDEM,
     Item,
+    veredito,
 )
 from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
+    CONFIRMEI,
+    FRASE_DA_RESPOSTA,
+    MOVEU_E_CONTINUA,
+    NAO_CONSEGUI_CONFIRMAR,
+    SEM_MUDANCA,
     TEXTO_DO_SELO,
+    Identidade,
     Ordem,
+    cabecalho,
+    identidades,
+    ordens_caladas,
+    ordens_novas,
+    resposta_ao_ja_movi,
 )
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -202,6 +258,35 @@ MARGEM_DO_CARD = 8
 ROTULO_DO_BOTAO = "Examinar de novo"
 DICA_DO_BOTAO = "Refaz o exame agora. Leva alguns segundos e não altera nada."
 
+#: Os dois botões de um card de ordem, palavra por palavra como estão escritos
+#: na `2026-08-24-ORDEM-DE-SERVICO-01`, §7 — não se reescrevem na hora.
+ROTULO_JA_MOVI = "Já movi — reexaminar"
+ROTULO_IGNORAR = "Ignorar"
+
+#: O estado (logo, a cor e o glifo) de cada uma das quatro respostas ao
+#: "Já movi". Os quatro saem da §7.2: verde só quando a regra parou de disparar;
+#: laranja quando ela moveu e continua apertado; cinza nos dois casos em que o
+#: produto não tem o que afirmar. A FRASE vem de `FRASE_DA_RESPOSTA`, no módulo
+#: — aqui mora só a tradução para cor, que é o que esta camada decide.
+ESTADO_DA_RESPOSTA = {
+    CONFIRMEI: ESTADO_CERTO,
+    MOVEU_E_CONTINUA: ESTADO_ATENCAO,
+    SEM_MUDANCA: ESTADO_NAO_SEI,
+    NAO_CONSEGUI_CONFIRMAR: ESTADO_NAO_SEI,
+}
+
+#: A escada de gravidade, do mais grave ao menos. É a MESMA de
+#: `exame_da_mesa.veredito()` e existe aqui por uma razão só: comparar dois
+#: estados que vieram de duas perguntas diferentes (o veredito das linhas e o
+#: cabeçalho das ordens). Nenhum estado nasce daqui — só se escolhe entre dois
+#: que já existem, e a escolha é sempre a do PIOR.
+ESCADA_DE_GRAVIDADE = (
+    ESTADO_PROBLEMA,
+    ESTADO_ATENCAO,
+    ESTADO_NAO_SEI,
+    ESTADO_CERTO,
+)
+
 #: Colunas da grade de linhas. Duas, como no desenho — e sem homogeneidade:
 #: coluna homogênea numa fileira de rótulo longo já custou 1004 dos 1066px da
 #: largura mínima da janela, que abre com 1180 e não tem rolagem horizontal.
@@ -273,6 +358,69 @@ def _linha_da_ordem(rotulo: str, texto: str, selo: str) -> str:
     )
 
 
+def _markup_da_resposta(resposta: str) -> str:
+    """A frase do "Já movi", com o glifo e a cor do estado dela.
+
+    A FRASE não é escrita aqui: ela vem de `ordens_da_mesa.FRASE_DA_RESPOSTA`,
+    que é o dono único das quatro. O que esta camada decide é a cor — e ela é a
+    mesma escada de sempre, para que "Confirmei" leia verde e os dois casos em
+    que o produto não sabe leiam cinza, nunca verde.
+    """
+    estado = ESTADO_DA_RESPOSTA.get(resposta, ESTADO_NAO_SEI)
+    frase = FRASE_DA_RESPOSTA.get(resposta, "")
+    return (
+        f'<span foreground="{COR[estado]}" weight="bold">'
+        f"{_escapar(GLIFO[estado])}</span> {_escapar(_(frase))}"
+    )
+
+
+def o_mais_grave(primeiro: str, segundo: str) -> str:
+    """O pior dos dois estados — e, no empate, o segundo.
+
+    Existe porque DUAS perguntas respondem sobre o topo da seção e nenhuma das
+    duas vê a outra: `exame_da_mesa.veredito()` lê as cinco linhas conferidas e
+    conhece `ESTADO_PROBLEMA`; `ordens_da_mesa.cabecalho()` lê as ordens e as
+    contagens e **não** conhece. Um selo pintado só pelo segundo diria "Nada a
+    mudar" em verde com a linha de pareamentos em vermelho — a cicatriz de
+    `6c86e295`, que a casa pagou duas vezes em agosto.
+
+    Escalar não é uma segunda conta: nenhum estado nasce aqui, e o resultado é
+    sempre um dos dois que entraram. O que ela não consegue fazer é inventar um
+    verde, e é essa a propriedade que interessa.
+
+    O empate devolve `segundo` de propósito: quem chama passa o cabeçalho ali, e
+    é ele que tem a FRASE que conta quanta coisa foi conferida — a queixa dela
+    de que *"o 'está tudo certo' não fala nada"*.
+    """
+    for estado in ESCADA_DE_GRAVIDADE:
+        if segundo == estado:
+            return segundo
+        if primeiro == estado:
+            return primeiro
+    return segundo
+
+
+def contagens_do_cabecalho(itens: Sequence[Item]) -> tuple[int, int]:
+    """Quantas checagens responderam, e quantas rodaram sem saber.
+
+    As duas contagens são de propósito diferentes, e `cabecalho()` as recebe
+    separadas: *"conferi 5 coisas"* e *"5 coisas não deram resposta"* são
+    afirmações opostas, e a tela que as colapsa é a tela que mente de verde.
+
+    Só CONFERÊNCIA entra na conta. Um item com `ordem` é uma ordem de serviço, e
+    ordem não é coisa conferida — ela já é contada pelo primeiro cabeçalho, e
+    somá-la aqui faria o número da tela crescer com o problema em vez de com o
+    exame. A linha `CHAVE_DAS_ORDENS`, ao contrário, ENTRA: ela é o catálogo
+    confessando que não conseguiu olhar, e é exatamente o que `sem_resposta`
+    existe para contar.
+    """
+    conferencias = [item for item in itens if item.ordem is None]
+    sem_resposta = sum(
+        1 for item in conferencias if item.estado == ESTADO_NAO_SEI
+    )
+    return len(conferencias) - sem_resposta, sem_resposta
+
+
 def _leitura_das_ordens(maquina: Any) -> Any:
     """O que o catálogo de ordens lê — o barramento MAIS o desenho dela.
 
@@ -336,13 +484,36 @@ class PainelDoExame:
     pendurado por `montar` — e é o que a costura da aba precisa.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, host: Any = None) -> None:
+        self.host = host
         self.selo: Any = None
         self.quando: Any = None
         self.botao: Any = None
+        self.botao_do_cabecalho: Any = None
         self.linhas: dict[str, Any] = {}
         self.cards: Any = None
         self._examinando = False
+        #: Os itens da última rodada. Guardados porque "Ignorar" e "Ver"
+        #: redesenham a zona SEM refazer o exame: apertar um botão dela não
+        #: pode custar uma varredura do barramento inteiro.
+        self._itens: list[Item] = []
+        #: O selo que `veredito()` devolveu para esses itens.
+        self._veredito: str = ESTADO_NAO_SEI
+        #: `{chave da regra: arranjo dispensado}` — o disco com o rascunho por
+        #: cima, mais o que ela dispensou nesta sessão.
+        self._dispensadas: dict[str, str] = {}
+        #: `{nome do kernel: Identidade}` da última leitura. É o que separa dois
+        #: aparelhos de mesmo `vid:pid` pelo serial, e é o que impede o produto
+        #: de dizer "Confirmei" quando não sabe qual dos dois ela moveu.
+        self._identidades: dict[str, Identidade] = {}
+        #: As ordens que estavam na tela quando ela apertou "Já movi", à espera
+        #: do exame novo para comparar o arranjo.
+        self._aguardando: dict[str, Ordem] = {}
+        #: `{chave da regra: (resposta, a ordem de antes)}` — o que o "Já movi"
+        #: respondeu, e que FICA na tela até o próximo exame.
+        self._respostas: dict[str, tuple[str, Ordem]] = {}
+        #: O `[Ver]` do cabeçalho está apertado? Só ele revela as caladas.
+        self._mostrar_caladas = False
 
     # --- montagem -------------------------------------------------------
 
@@ -350,13 +521,23 @@ class PainelDoExame:
         """Desenha o cabeçalho, o escopo e a grade das linhas. NÃO examina."""
         from gi.repository import Gtk
 
-        cabecalho = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self.selo = Gtk.Label()
         self.selo.set_xalign(0.0)
         self.selo.set_markup(
             self._markup_do_selo(GLIFO_PENDENTE, COR_APAGADA, _(FRASE_ANTES_DO_EXAME))
         )
-        cabecalho.pack_start(self.selo, False, False, 0)
+        fileira.pack_start(self.selo, False, False, 0)
+
+        # O `[Ver]` da §8.2 — e ele só existe quando há o que revelar. As
+        # ordens que ela dispensou são a ÚNICA coisa desta seção que fica
+        # escondida: a tira do que foi conferido está sempre embaixo, então
+        # `[Ver o que conferi]` e `[Ver quais]` abririam o que já está aberto.
+        # O rótulo vem de `Cabecalho.botao` e nunca é escrito aqui.
+        self.botao_do_cabecalho = Gtk.Button()
+        self.botao_do_cabecalho.set_no_show_all(True)
+        self.botao_do_cabecalho.connect("clicked", self._ao_ver_as_caladas)
+        fileira.pack_start(self.botao_do_cabecalho, False, False, 0)
 
         self.quando = Gtk.Label()
         self.quando.set_xalign(1.0)
@@ -372,11 +553,24 @@ class PainelDoExame:
         self.botao.connect("clicked", self._ao_clicar)
         # A ordem do `pack_end` é da direita para a esquerda: o carimbo encosta
         # na borda e o botão fica à esquerda dele.
-        cabecalho.pack_end(self.quando, False, False, 0)
-        cabecalho.pack_end(self.botao, False, False, 0)
-        caixa.pack_start(cabecalho, False, False, 0)
+        fileira.pack_end(self.quando, False, False, 0)
+        fileira.pack_end(self.botao, False, False, 0)
+        caixa.pack_start(fileira, False, False, 0)
 
-        caixa.pack_start(rotulo_de_apoio(ESCOPO), False, False, 0)
+        escopo = rotulo_de_apoio(ESCOPO)
+        # A seção deixou de ser só leitura em 26/08/2026: o `[Ignorar]` de um
+        # card acumula no rascunho e espera o "Aplicar" do rodapé, como as
+        # outras três seções diferidas — e quem clica e não vê nada acontecer
+        # conclui que não salvou (`moldura.QUANDO_VALE`).
+        #
+        # A promessa mora AQUI, e não só no botão, porque o botão nasce e morre
+        # com o card: numa mesa sem nenhuma ordem ele não existe, e a frase
+        # ficaria sem casa. Em dica e não impressa, pela regra do léxico desta
+        # aba (LEX-2): fica na página o que MUDA, vai para o hover o que
+        # EXPLICA — e esta frase diria a mesma coisa com a seção intocada.
+        with contextlib.suppress(Exception):
+            escopo.set_tooltip_text(_(QUANDO_VALE))
+        caixa.pack_start(escopo, False, False, 0)
 
         # A ZONA DOS CARDS, e ela nasce VAZIA. A montagem não examina (ver o
         # cabeçalho), então não há ordem nenhuma para desenhar aqui — e uma
@@ -465,7 +659,9 @@ class PainelDoExame:
         moldura.add(corpo)
         return moldura
 
-    def _card_da_ordem(self, ordem: Ordem) -> Any:
+    def _card_da_ordem(
+        self, ordem: Ordem, *, resposta: str = "", calada: bool = False
+    ) -> Any:
         """O card de uma ordem de serviço: o imperativo e as TRÊS linhas.
 
         AS TRÊS, SEMPRE — inclusive a que confessa que o ganho não foi medido.
@@ -478,6 +674,16 @@ class PainelDoExame:
         imperativo que manda mover para lugar nenhum é pior que silêncio. Nesse
         caso o glifo encabeça a primeira das três linhas, para o card não
         começar sem sinal.
+
+        `resposta` é a chave devolvida por `resposta_ao_ja_movi` na rodada em
+        que ela apertou o botão, e entra como uma QUARTA linha somada — nunca
+        no lugar de uma das três. A ordem continua valendo: o que a resposta
+        acrescenta é o que mudou desde que ela leu.
+
+        `calada` é uma ordem que ela dispensou e que o `[Ver]` do cabeçalho
+        revelou. Ela vem SEM os dois botões: "Já movi" e "Ignorar" são gestos
+        sobre um conselho vivo, e um conselho que ela já mandou calar não tem
+        o que confirmar nem o que dispensar de novo.
         """
         glifo = (
             f'<span foreground="{COR[ESTADO_ATENCAO]}" weight="bold">'
@@ -500,7 +706,48 @@ class PainelDoExame:
             )
             glifo = ""
             recuo = 12
+        if resposta:
+            filhos.append(self._etiqueta(_markup_da_resposta(resposta), margem=12))
+        if not calada:
+            filhos.append(self._botoes_da_ordem(ordem))
         return self._card(filhos)
+
+    def _botoes_da_ordem(self, ordem: Ordem) -> Any:
+        """A fileira `[Já movi — reexaminar] [Ignorar]` de um card.
+
+        Os dois `connect` moram AQUI, e não no `_signal_handlers()` do
+        `app.py`, pela mesma razão do botão do cabeçalho: o widget nasce nesta
+        função e morre com ela a cada redesenho da zona: um handler declarado
+        noutro arquivo para um widget que é destruído e recriado é como botão
+        nasce morto em silêncio nesta casa.
+
+        A ordem viaja como dado do `connect`, e é ela que o handler recebe:
+        procurar a ordem pela chave na hora do clique faria o botão agir sobre a
+        leitura de AGORA enquanto ela leu a de ANTES — e "antes contra agora" é
+        precisamente o que o "Já movi" compara.
+        """
+        from gi.repository import Gtk
+
+        fileira = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        fileira.set_margin_top(6)
+        ja_movi = Gtk.Button(label=_(ROTULO_JA_MOVI))
+        ja_movi.connect("clicked", self._ao_ja_movi, ordem)
+        fileira.pack_start(ja_movi, False, False, 0)
+        ignorar = Gtk.Button(label=_(ROTULO_IGNORAR))
+        ignorar.set_tooltip_text(_(QUANDO_VALE))
+        ignorar.connect("clicked", self._ao_ignorar, ordem)
+        fileira.pack_start(ignorar, False, False, 0)
+        return fileira
+
+    def _card_da_resposta(self, resposta: str) -> Any:
+        """O card que sobra quando a regra PAROU de disparar.
+
+        Sem ele, "Confirmei" não teria onde aparecer: a ordem sumiu do exame, e
+        um card que simplesmente some é indistinguível de um card que nunca foi
+        desenhado. Ela apertou um botão, mudou o mundo, e o produto tem de
+        dizer o que mudou — é o F7 aplicado ao próprio gesto dela.
+        """
+        return self._card([self._etiqueta(_markup_da_resposta(resposta))])
 
     def _card_da_cura(self, item: Item) -> Any:
         """O card de uma conferência que tem cura e não tem ordem.
@@ -536,6 +783,13 @@ class PainelDoExame:
         As ordens vêm antes das curas de conferência: uma ordem sabe de onde
         veio cada frase dela, e uma cura de conferência não. O que afirma mais
         vem primeiro.
+
+        A DISPENSA DELA FILTRA AQUI, e por `ordens_novas` — nunca por uma
+        comparação escrita nesta camada. A chave do dispensado é o ARRANJO
+        (`D-ORDEM-IGNORADA-VOLTA`): a decisão dela vale para a mesa que ela viu,
+        e uma regra que volta a disparar com arranjo novo é FATO NOVO. Filtrar
+        pelo slug faria a decisão de ontem calar uma medição de hoje, que é o
+        defeito que a decisão dela existe para impedir.
         """
         if self.cards is None:
             return
@@ -543,17 +797,208 @@ class PainelDoExame:
             for filho in self.cards.get_children():
                 self.cards.remove(filho)
                 filho.destroy()
+        todas = [item.ordem for item in itens if item.ordem is not None]
+        novas = ordens_novas(todas, self._dispensadas)
+        chaves_novas = {ordem.chave for ordem in novas}
         desenhados: list[Any] = []
-        for item in itens:
-            if item.ordem is not None:
-                desenhados.append(self._card_da_ordem(item.ordem))
+        for ordem in novas:
+            respondida = self._respostas.get(ordem.chave)
+            desenhados.append(
+                self._card_da_ordem(
+                    ordem, resposta="" if respondida is None else respondida[0]
+                )
+            )
+        # A regra parou de disparar depois do "Já movi": não há card de ordem
+        # para pendurar a resposta, e a resposta é justamente o que ela precisa
+        # ver. Sem esta passagem, "Confirmei" morre com o card que sumiu.
+        for chave, (resposta, _antes) in self._respostas.items():
+            if chave not in chaves_novas:
+                desenhados.append(self._card_da_resposta(resposta))
         for item in itens:
             if item.ordem is None and item.cura and item.estado != ESTADO_CERTO:
                 desenhados.append(self._card_da_cura(item))
+        if self._mostrar_caladas:
+            for ordem in ordens_caladas(todas, self._dispensadas):
+                desenhados.append(self._card_da_ordem(ordem, calada=True))
         with contextlib.suppress(Exception):
             for card in desenhados:
                 self.cards.pack_start(card, False, False, 0)
             self.cards.show_all()
+
+    def _escrever_o_cabecalho(self, itens: Sequence[Item]) -> None:
+        """O selo do topo: a frase de `cabecalho()` e a cor do estado mais grave.
+
+        Duas perguntas respondem sobre este selo e nenhuma vê a outra — está
+        escrito no cabeçalho deste arquivo e em :func:`o_mais_grave`.
+
+        O veredito que entra na conta é o dos itens que ela NÃO calou. Não é
+        uma segunda fórmula: é a MESMA `exame_da_mesa.veredito()`, com a lista
+        de que ela retirou o que dispensou. Sem isso, uma ordem dispensada
+        seguraria o topo em laranja para sempre e o `[Ignorar]` não faria nada
+        visível — que é a definição de botão morto.
+        """
+        if self.selo is None:
+            return
+        todas = [item.ordem for item in itens if item.ordem is not None]
+        novas = ordens_novas(todas, self._dispensadas)
+        caladas = ordens_caladas(todas, self._dispensadas)
+        conferidas, sem_resposta = contagens_do_cabecalho(itens)
+        topo = cabecalho(
+            ordens=novas,
+            conferidas=conferidas,
+            sem_resposta=sem_resposta,
+            dispensadas=len(caladas),
+        )
+        chaves_caladas = {ordem.chave for ordem in caladas}
+        vivos = [
+            item
+            for item in itens
+            if item.ordem is None or item.ordem.chave not in chaves_caladas
+        ]
+        estado = o_mais_grave(
+            self._veredito if not caladas else veredito(vivos), topo.estado
+        )
+        frase = topo.texto if estado == topo.estado else FRASE_DO_SELO[estado]
+        with contextlib.suppress(Exception):
+            self.selo.set_markup(
+                self._markup_do_selo(GLIFO[estado], COR[estado], _(frase))
+            )
+        self._mostrar_o_botao_do_cabecalho(topo.botao, bool(caladas))
+
+    def _mostrar_o_botao_do_cabecalho(self, rotulo: str, ha_caladas: bool) -> None:
+        """O `[Ver]` da §8.2 — e só ele, porque só ele revela algo.
+
+        `Cabecalho.botao` traz também `[Ver o que conferi]` e `[Ver quais]`, e
+        os dois abririam o que já está aberto: a tira do que foi conferido mora
+        logo abaixo, sempre visível, com o glifo de cada estado. Um botão que
+        não muda a tela ensina que os botões desta seção não fazem nada.
+        """
+        if self.botao_do_cabecalho is None:
+            return
+        with contextlib.suppress(Exception):
+            if rotulo and ha_caladas:
+                self.botao_do_cabecalho.set_label(_(rotulo))
+                self.botao_do_cabecalho.show()
+            else:
+                self._mostrar_caladas = False
+                self.botao_do_cabecalho.hide()
+
+    def _redesenhar(self) -> None:
+        """Refaz as duas zonas com os itens que já estão em mãos.
+
+        NÃO reexamina. "Ignorar" e "Ver" mudam o que a tela mostra, não o que a
+        máquina é: pagar uma varredura do barramento por clique dela seria
+        cobrar segundos por um gesto que não mediu nada.
+        """
+        self._desenhar_o_que_fazer(list(self._itens))
+        self._escrever_o_cabecalho(self._itens)
+
+    # --- os dois botões do card ------------------------------------------
+
+    def _com_ambiguidade_fina(self, ordem: Ordem) -> Ordem:
+        """A ordem com a ambiguidade que só o SERIAL enxerga.
+
+        `ordens_da_mesa._identidade_do_caminho` marca `ambigua` quando há dois
+        aparelhos de mesmo `vid:pid` na mesa — e nesta casa os três adaptadores
+        Bluetooth são `2357:0604`, então TODA ordem sobre eles nasceria ambígua
+        e nenhuma jamais poderia dizer "Confirmei". Quem separa é o serial, e
+        quem o lê (e o descarta na mesma função) é `identidades`.
+
+        O serial não chega aqui: o que volta de `identidades` é a `Identidade`,
+        que não tem campo para ele. É assim que ele não entra no PNG que o
+        retrato das abas versiona.
+        """
+        fina = self._identidades.get(ordem.alvo.caminho)
+        if fina is None:
+            return ordem
+        return replace(ordem, alvo=replace(ordem.alvo, ambigua=fina.ambigua))
+
+    def _ao_ja_movi(self, _botao: Any, ordem: Ordem) -> None:
+        """Guarda a ordem que ela leu e refaz o exame para comparar o arranjo.
+
+        A ordem de ANTES tem de ser guardada antes do exame novo: é ela que
+        `resposta_ao_ja_movi` compara com a de agora, e ela deixa de existir no
+        instante em que o exame novo chega.
+        """
+        self._aguardando[ordem.chave] = ordem
+        self.reexaminar()
+
+    def _responder_ao_ja_movi(self, itens: Sequence[Item]) -> None:
+        """Compara o antes e o depois de cada ordem que ela disse ter movido."""
+        if not self._aguardando:
+            return
+        agora = {
+            item.ordem.chave: item.ordem for item in itens if item.ordem is not None
+        }
+        for chave, antes in self._aguardando.items():
+            depois = agora.get(chave)
+            self._respostas[chave] = (
+                resposta_ao_ja_movi(
+                    self._com_ambiguidade_fina(antes),
+                    None if depois is None else self._com_ambiguidade_fina(depois),
+                ),
+                antes,
+            )
+        self._aguardando = {}
+
+    def _ao_ignorar(self, _botao: Any, ordem: Ordem) -> None:
+        """Cala esta ordem NESTE arranjo, e grava a decisão no rascunho.
+
+        A chave do dispensado é o ARRANJO, não a recomendação
+        (`D-ORDEM-IGNORADA-VOLTA`): ela mexeu nos cabos, o conselho pode ter
+        mudado, e um conselho dispensado sobre um arranjo que não existe mais
+        não é o mesmo conselho.
+
+        A tela obedece na hora e o disco espera o "Aplicar" do rodapé — mesmo
+        contrato de `secao_mesa._ao_declarar` e de `secao_orcamento`: chamar
+        `machine.declare` daqui criaria um segundo dono do gesto de gravar, que
+        é a classe de defeito que a `ABAS-01` curou.
+        """
+        self._dispensadas[ordem.chave] = ordem.arranjo
+        self._respostas.pop(ordem.chave, None)
+        self._gravar_a_dispensa(ordem)
+        self._redesenhar()
+
+    def _gravar_a_dispensa(self, ordem: Ordem) -> None:
+        """Acumula a dispensa em `host._maquina_pendente`, sob `mesa`.
+
+        Fusão e não substituição: as cinco seções da aba escrevem no MESMO
+        rascunho pelo mesmo gesto, e a última a clicar apagaria as outras
+        quatro se cada uma trocasse o documento.
+
+        `quando` é só a DATA. A hora não muda nenhuma decisão do produto e é um
+        dado a mais sobre a rotina dela num arquivo que ela cola em relato de
+        defeito — `OrdemDispensada._so_a_data` reprova qualquer outra forma.
+        """
+        from hefesto_dualsense4unix.utils.maquina import fundir_declaracao
+
+        with contextlib.suppress(Exception):
+            self.host._maquina_pendente = fundir_declaracao(
+                getattr(self.host, "_maquina_pendente", None),
+                {
+                    "mesa": {
+                        "ordens_dispensadas": {
+                            ordem.chave: {
+                                "quando": date.today().isoformat(),
+                                "arranjo": ordem.arranjo,
+                            }
+                        }
+                    }
+                },
+            )
+        marcar = getattr(self.host, "_marcar_declaracao_por_aplicar", None)
+        if marcar is not None:
+            with contextlib.suppress(Exception):
+                marcar()
+
+    def _ao_ver_as_caladas(self, _botao: Any) -> None:
+        """O `[Ver]`: mostra as ordens que a decisão dela está segurando.
+
+        Dispensa que some sem deixar marca é a mesma classe de defeito do card
+        que some: ela deixaria de saber que existe uma decisão dela ali.
+        """
+        self._mostrar_caladas = not self._mostrar_caladas
+        self._redesenhar()
 
     # --- o exame --------------------------------------------------------
 
@@ -571,10 +1016,17 @@ class PainelDoExame:
         Reentrância barrada por um sinalizador: entrar na aba e clicar no botão
         no mesmo segundo enfileiraria dois exames no executor de UM worker, e o
         segundo só serviria para o carimbo pular duas vezes.
+
+        AS RESPOSTAS DO "JÁ MOVI" SÃO LIMPAS AQUI, e é o que faz "fica na tela
+        até ela sair da aba" ser verdade sem um relógio: o refresher da aba
+        chama este mesmo método ao ENTRAR, então a frase sobrevive a tudo menos
+        a um exame novo — que é exatamente quando ela deixa de ser notícia. As
+        que este ciclo produzir são escritas depois, em :meth:`aplicar`.
         """
         if self._examinando:
             return
         self._examinando = True
+        self._respostas = {}
         self._marcar_examinando()
 
         def _trabalho() -> None:
@@ -592,17 +1044,39 @@ class PainelDoExame:
                 # a declaração é esta seção, e passa por argumento.
                 maquina = carregar_maquina()
                 mesa = maquina.mesa
+                # A leitura do catálogo é guardada de passagem, e continua
+                # PREGUIÇOSA: `_itens_das_ordens` embrulha esta chamada num
+                # `try`, e uma varredura feita aqui fora derrubaria o exame
+                # inteiro por uma falha que hoje vira uma linha "não sei".
+                guardado: dict[str, Any] = {}
+
+                def _ler_as_ordens() -> Any:
+                    guardado["leitura"] = _leitura_das_ordens(maquina)
+                    return guardado["leitura"]
+
                 itens = exame_da_mesa.exame(
                     altura_da_antena=mesa.altura_da_antena,
                     linha_de_visada=mesa.linha_de_visada,
-                    leitura_das_ordens=lambda: _leitura_das_ordens(maquina),
+                    leitura_das_ordens=_ler_as_ordens,
                 )
                 selo = exame_da_mesa.veredito(itens)
+                quem: dict[str, Identidade] = {}
+                leitura = guardado.get("leitura")
+                if leitura is not None:
+                    with contextlib.suppress(Exception):
+                        quem = identidades(leitura.censo)
+                dispensadas = {
+                    chave: dispensa.arranjo
+                    for chave, dispensa in mesa.ordens_dispensadas.items()
+                }
+                dispensadas.update(self._dispensas_do_rascunho())
             except Exception as exc:
                 logger.warning("exame_da_mesa_falhou", erro=str(exc))
                 self._examinando = False
                 return
-            GLib.idle_add(self.aplicar, itens, selo, time.time())
+            GLib.idle_add(
+                self.aplicar, itens, selo, time.time(), quem, dispensadas
+            )
 
         try:
             from hefesto_dualsense4unix.app.ipc_bridge import _get_executor
@@ -611,6 +1085,28 @@ class PainelDoExame:
         except Exception as exc:  # pragma: no cover - sem executor não há janela
             logger.warning("exame_da_mesa_sem_worker", erro=str(exc))
             self._examinando = False
+
+    def _dispensas_do_rascunho(self) -> dict[str, str]:
+        """O que ela dispensou e ainda não aplicou — `{chave: arranjo}`.
+
+        O rascunho é mais novo que o disco, e mostrar o disco faria o clique
+        dela parecer perdido ao trocar de aba e voltar. É a mesma ordem de
+        `secao_mesa._mesa_em_vigor` e de `secao_controles._declarado_hoje`.
+        """
+        pendente = getattr(self.host, "_maquina_pendente", None)
+        if not isinstance(pendente, Mapping):
+            return {}
+        mesa = pendente.get("mesa")
+        if not isinstance(mesa, Mapping):
+            return {}
+        dispensadas = mesa.get("ordens_dispensadas")
+        if not isinstance(dispensadas, Mapping):
+            return {}
+        return {
+            str(chave): str(valor.get("arranjo", ""))
+            for chave, valor in dispensadas.items()
+            if isinstance(valor, Mapping)
+        }
 
     def _marcar_examinando(self) -> None:
         if self.selo is not None:
@@ -624,7 +1120,14 @@ class PainelDoExame:
             with contextlib.suppress(Exception):
                 self.botao.set_sensitive(False)
 
-    def aplicar(self, itens: list[Item], selo: str, quando: float) -> bool:
+    def aplicar(
+        self,
+        itens: list[Item],
+        selo: str,
+        quando: float,
+        quem: Mapping[str, Identidade] | None = None,
+        dispensadas: Mapping[str, str] | None = None,
+    ) -> bool:
         """Escreve o resultado nos widgets. Roda na thread do GTK.
 
         Devolve `False` porque é alvo de `GLib.idle_add`: um `True` faria o
@@ -636,17 +1139,20 @@ class PainelDoExame:
         `quando` é o instante em que o worker terminou, não o instante em que o
         GTK chegou a atender o `idle_add`. A diferença é o que o carimbo mostra,
         e ela não é sempre zero: numa janela ocupada o `idle_add` espera.
+
+        `quem` e `dispensadas` chegam do WORKER, e não são buscados aqui: as
+        duas leituras são disco e `/sys`, e esta função roda na thread do GTK.
+        `None` mantém o que a rodada anterior trouxe — é o que permite a esta
+        função ser chamada com três argumentos por quem só quer pintar itens.
         """
         self._examinando = False
-        if self.selo is not None:
-            with contextlib.suppress(Exception):
-                self.selo.set_markup(
-                    self._markup_do_selo(
-                        GLIFO.get(selo, "?"),
-                        COR.get(selo, COR_APAGADA),
-                        _(FRASE_DO_SELO.get(selo, FRASE_DO_SELO[ESTADO_NAO_SEI])),
-                    )
-                )
+        if quem is not None:
+            self._identidades = dict(quem)
+        if dispensadas is not None:
+            self._dispensadas = dict(dispensadas)
+        self._itens = list(itens)
+        self._veredito = selo
+        self._responder_ao_ja_movi(itens)
         for item in itens:
             etiqueta = self.linhas.get(item.chave)
             if etiqueta is None:
@@ -659,6 +1165,7 @@ class PainelDoExame:
                 )
                 etiqueta.set_tooltip_text(_dica_do_item(item))
         self._desenhar_o_que_fazer(list(itens))
+        self._escrever_o_cabecalho(itens)
         if self.quando is not None:
             with contextlib.suppress(Exception):
                 self.quando.set_markup(
@@ -690,7 +1197,7 @@ def montar(host: Any, caixa: Any) -> None:
     derrubar a janela. Quem chama já embrulha em `contextlib.suppress`, mas a
     tolerância começa aqui.
     """
-    painel = PainelDoExame()
+    painel = PainelDoExame(host)
     painel.montar(caixa)
     host._painel_do_exame = painel
     setattr(host, NOME_DO_REFRESH, painel.reexaminar)
