@@ -279,6 +279,27 @@ LEITURA_VAZIA_AVISO_SEC: float = 1.0
 # é imperceptível no desligamento — contra os 90 s do SIGKILL do systemd.
 CLOSE_JOIN_TIMEOUT_SEC = 0.5
 
+#: COOP-QUE-NAO-DESMONTA-01 / E2(a): por quanto tempo o controle que ERA o
+#: primário mantém o posto reservado depois de cair.
+#:
+#: O porquê da reserva existir: o primário é a 1ª chave de inserção ainda
+#: presente, e quem cai e volta entra no FIM do dict — então, no rádio, cada
+#: piscada do controle dela embaralhava quem é o Jogador 1. No cabo isso nunca
+#: aparecia (o primário praticamente não cai); por Bluetooth, cair é rotina, e
+#: foram quatro trocas em 22 minutos na mesa dela (journal de 02/08/2026).
+#:
+#: O porquê de 30 s: é a MESMA janela que o `reconnect_loop` já usa como
+#: fallback online (`daemon/connection.py: RECONNECT_ONLINE_CHECK_INTERVAL_SEC`)
+#: — o teto do tempo que um controle pode sumir sem que o produto tenha
+#: reconciliado nada. Uma piscada de rádio cabe folgada dentro dela (as duas
+#: medidas do journal foram 8 s e 27 s); guardar o posto por mais tempo
+#: passaria a atrapalhar o gesto oposto, que também é dela: desligar o
+#: controle e continuar jogando com o outro.
+#:
+#: NÃO é constante de configuração e não vira opção: é o prazo de um mecanismo
+#: interno, e a usuária não tem como saber que ele existe.
+PRIMARIO_RESERVA_SEC: float = 30.0
+
 #: AUDIO-STATUS-01: índice do byte de estado de áudio dentro do `states`
 #: NORMALIZADO da pydualsense (o mesmo em USB e BT — ver
 #: `_PinnedPyDualSense._captura_status_audio`). Um a mais que o índice de
@@ -1504,6 +1525,16 @@ class PyDualSenseController(IController):
         # cutuca no retarget de primário (`_recompute_primary`), junto do
         # `_evdev.retarget` — quem cria/para o reader é o subsystem gamepad.
         self._motion_reader: Any | None = None
+        # COOP-QUE-NAO-DESMONTA-01 / E1: quem quer ser AVISADO, ANTES do
+        # retarget, de que o primário mudou. Ver `set_primary_change_observer`.
+        self._primary_change_observer: Callable[[str | None, str | None], None] | None = None
+        # COOP-QUE-NAO-DESMONTA-01 / E2(a): `(key, instante)` do primário que
+        # caiu — o posto fica reservado a ele por `PRIMARIO_RESERVA_SEC`.
+        self._primario_deposto: tuple[str, float] | None = None
+        # Seam de relógio (só isto, e só para a bancada de queda programável do
+        # E4 poder envelhecer a reserva sem dormir de verdade). O produto usa
+        # `time.monotonic` e nada mais.
+        self._relogio: Callable[[], float] = time.monotonic
 
     # --- identidade ------------------------------------------------------
 
@@ -1693,6 +1724,64 @@ class PyDualSenseController(IController):
         """
         with self._io_lock:
             self._feature_opener = fn
+
+    def set_primary_change_observer(
+        self, fn: Callable[[str | None, str | None], None] | None
+    ) -> None:
+        """Injeta (ou remove, com None) quem é AVISADO da troca de primário.
+
+        COOP-QUE-NAO-DESMONTA-01 / E1 — a cura do "Jogador 2 que dura dois
+        segundos". Quem escuta é o co-op (`CoopManager.ceder_ao_primario`), e a
+        razão de o aviso existir está no journal de 02/08/2026:
+
+        ```
+        21:10:41.867  coop_player_grab_pending  path=/dev/input/event30 player=2
+        21:10:43.700  controller_primary_bound  transport=usb
+        21:10:43.754  evdev_started             path=/dev/input/event30
+        21:10:43.754  evdev_grab_failed         [Errno 16] EBUSY
+        21:10:44.116  coop_player_removed       players=1
+        ```
+
+        O `EBUSY` não veio da Steam nem do jogo: veio de DENTRO do daemon. O
+        co-op pegou o `event30` como Jogador 2, e 1,9 s depois o leitor do
+        primário foi apontado para o MESMO node. Os dois donos descobriam a
+        colisão pelo erro do kernel, e quem morria era o jogador que já existia.
+
+        O contrato, e ele é sobre ORDEM:
+
+        - o observador é chamado ANTES de `self._evdev.retarget(...)`, ainda
+          dentro de `_recompute_primary`, com `(uniq_anterior, uniq_novo)` —
+          MACs normalizados, ou None quando a key não resolve MAC;
+        - ele existe para o ouvinte SOLTAR o que precisa soltar (o `EVIOCGRAB`
+          do secundário que virou primário). Depois do retarget seria tarde:
+          o `EBUSY` já teria acontecido;
+        - roda na thread que chamou `connect()` (o executor 'hefesto-hid' do
+          `reconnect_loop`), SOB o `_io_lock`. Logo: **tem de ser barato e não
+          pode reentrar no backend por outro lock**. O ouvinte do co-op faz um
+          `ungrab` e marca o jogador; o desmonte do vpad fica para o poll loop,
+          que é o dono do `_players`.
+
+        Exceção do observador é engolida com log — um ouvinte quebrado jamais
+        derruba a eleição de primário (mesmo fail-safe de
+        `set_auto_output_provider`).
+        """
+        with self._io_lock:
+            self._primary_change_observer = fn
+
+    def _avisar_troca_de_primario(self, anterior: str | None, novo: str | None) -> None:
+        """Chama o observador de troca de primário. Nunca propaga exceção."""
+        fn = self._primary_change_observer
+        if fn is None:
+            return
+        try:
+            fn(anterior, novo)
+        except Exception as exc:
+            logger.warning(
+                "primary_change_observer_falhou",
+                anterior=anterior,
+                novo=novo,
+                err=str(exc),
+            )
 
     def set_game_authority_provider(
         self, fn: Callable[[], str] | None
@@ -2317,7 +2406,39 @@ class PyDualSenseController(IController):
             with contextlib.suppress(Exception):
                 handle.close()
         if self._primary_key is not None and self._primary_key not in self._handles:
+            self._reservar_o_posto_de_primario(self._primary_key)
             self._primary_key = None
+
+    # --- estabilidade do primário (COOP-QUE-NAO-DESMONTA-01 / E2a) --------
+
+    def _reservar_o_posto_de_primario(self, key: str) -> None:
+        """Guarda o posto de primário para `key`, que acabou de cair.
+
+        Chamado sob `_io_lock` nos DOIS caminhos em que o primário some: o
+        hotplug-out (`_close_handles`) e o `disconnect()` do `reconnect()`. Os
+        dois são a mesma coisa vista de longe — o controle dela piscou.
+        """
+        self._primario_deposto = (key, self._relogio())
+        logger.debug("primario_deposto_reservado", key=key)
+
+    def _posto_reservado_de_volta(self) -> str | None:
+        """A key do primário deposto, se ele VOLTOU dentro da janela. Senão None.
+
+        Também é aqui que a reserva CADUCA: passou de `PRIMARIO_RESERVA_SEC`,
+        ela é esquecida — o posto não fica pendurado num controle que ficou na
+        gaveta, e o próximo `next(iter(...))` volta a valer sem concorrência.
+        """
+        reserva = self._primario_deposto
+        if reserva is None:
+            return None
+        key, quando = reserva
+        if self._relogio() - quando >= PRIMARIO_RESERVA_SEC:
+            self._primario_deposto = None
+            logger.debug("primario_reserva_caducou", key=key)
+            return None
+        if key not in self._handles or key == self._primary_key:
+            return None
+        return key
 
     def _recompute_primary(self) -> None:
         """(Re)elege o primário e re-atrela evdev/transport SÓ quando ele muda.
@@ -2326,12 +2447,40 @@ class PyDualSenseController(IController):
         Controles novos entram no fim, então nunca roubam o primário de um já
         conectado; se o primário cai, promove o próximo mais antigo. Chamado sob
         `_io_lock`.
+
+        COOP-QUE-NAO-DESMONTA-01 / E2(a) — **com UMA exceção à regra da 1ª
+        chave**: o controle que ERA o primário e voltou dentro de
+        `PRIMARIO_RESERVA_SEC` RETOMA o posto, mesmo já havendo outro sentado
+        nele. Sem isso, quem cai entra no fim do dict e nunca mais é o Jogador
+        1 — e no rádio, onde cair é rotina, quem é o Jogador 1 depois de
+        algumas piscadas é essencialmente sorteio. A regra da 1ª chave continua
+        valendo para todo o resto: controle NOVO nunca rouba o posto de ninguém.
+
+        A armadilha que a sprint nomeou fica coberta por construção: a retomada
+        entra pelo MESMO caminho da promoção, então `_detect_transport` e o
+        `retarget` do evdev são refeitos igual. Um atalho que devolvesse o posto
+        sem passar por aqui deixaria o daemon achando que o controle está no
+        cabo quando ele voltou por rádio.
+
+        COOP-QUE-NAO-DESMONTA-01 / E1 — e o AVISO sai daqui, antes do
+        `retarget`: ver `set_primary_change_observer`.
         """
         prev = self._primary_key
-        if self._primary_key is None or self._primary_key not in self._handles:
+        retomada = self._posto_reservado_de_volta()
+        if retomada is not None:
+            self._primary_key = retomada
+            self._primario_deposto = None
+            logger.info("primario_retomou_o_posto", key=retomada)
+        elif self._primary_key is None or self._primary_key not in self._handles:
             self._primary_key = next(iter(self._handles), None)
         if self._primary_key is None or self._primary_key == prev:
             return
+        # E1: o co-op precisa SOLTAR o node do controle que virou primário
+        # ANTES de o leitor do primário mirar nele. Depois do retarget é tarde:
+        # o `EBUSY` já aconteceu, e quem morre é o Jogador 2 que já existia.
+        self._avisar_troca_de_primario(
+            self._key_to_uniq(prev) if prev else None, self.primary_uniq
+        )
         # Trocou o primário: re-detecta transport e re-atrela o evdev a ele.
         self._transport = self._detect_transport(self._handles[self._primary_key])
         # FEAT-DSX-CONTROLLER-IDENTITY-01: o reader passa a mirar o MAC do
@@ -2371,6 +2520,12 @@ class PyDualSenseController(IController):
                 handle = self._handles.pop(key)
                 with contextlib.suppress(Exception):
                     handle.close()
+            # E2(a): o `reconnect()` do poll loop é disconnect + connect — do
+            # ponto de vista dela, a mesma piscada do hotplug-out. Sem reservar
+            # aqui, um blip de leitura devolvia o posto para quem enumerasse
+            # primeiro, que é sorteio.
+            if self._primary_key is not None:
+                self._reservar_o_posto_de_primario(self._primary_key)
             self._primary_key = None
             self._sysfs = {}
 
