@@ -173,6 +173,21 @@ class _NumeroForaDaMesaError(Exception):
 #: `state_full` — leitura de arquivo, mesma justificativa do cache acima.
 _WRAPPER_MARKER_TTL_SEC = 2.0
 
+#: BG-02 (25/08/2026): TTL (s) das pontes confirmadas NO TIQUE do `state_full`.
+#:
+#: Aqui a leitura é a mais cara deste arquivo: `manager.pontes_confirmadas`
+#: chama `load_all_profiles()`, que varre `profiles_dir()` e abre CADA `.json`
+#: sob `FileLock`. Sem teto, publicar o carimbo no `state_full` significaria a
+#: biblioteca inteira de perfis lida do disco 10 a 20 vezes por segundo dentro
+#: do ÚNICO event loop do daemon — o preço que o `_LIGHTBAR_READ_TTL_SEC`
+#: existe para não pagar, multiplicado pelo número de perfis dela.
+#:
+#: 5 s é folgado de propósito: o carimbo só muda quando um perfil é salvo ou
+#: uma ponte é confirmada, e os dois são GESTO. Quem precisa da resposta exata
+#: no instante seguinte ao gesto — a caixa do jogo na aba Perfis — continua
+#: perguntando por `daemon.status`, que NÃO passa por este cache.
+_PONTES_CONFIRMADAS_TTL_SEC = 5.0
+
 
 # ---------------------------------------------------------------------------
 # CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026): o controle que está LIGADO e que o
@@ -712,6 +727,12 @@ class IpcHandlersMixin:
     #: attributes (o mixin não é dataclass) com shadow por instância no 1º uso.
     _wrapper_marker_cache: tuple[float, tuple[int, int] | None] | None = None
     _wrapper_first_seen: tuple[int, float] | None = None
+
+    #: BG-02: cache TTL das pontes confirmadas NO TIQUE (ver
+    #: `_pontes_confirmadas_no_tique` e `_PONTES_CONFIRMADAS_TTL_SEC`). Mesmo
+    #: padrão dos caches acima: class attribute (o mixin não é dataclass) com
+    #: shadow por instância no primeiro uso.
+    _pontes_confirmadas_cache: tuple[float, dict[str, Any]] | None = None
 
     #: CONTROLE-QUE-NAO-ENTROU-01: cache TTL da varredura de
     #: `/sys/bus/hid/devices` (ver `dualsense_sem_driver`). Mesmo padrão dos
@@ -1969,6 +1990,12 @@ class IpcHandlersMixin:
             # é o `ProfileManager.confirmar_ponte`, e só o gesto dela ou a
             # escolha dela na aba de perfil o chamam. Publicar aqui é o que tira
             # o carimbo do disco e o põe na frente de quem decide.
+            #
+            # BG-02 (25/08): a MESMA chave viaja no `state_full` desde hoje, e
+            # a leitura é a mesma função — o que difere é só o teto. Este
+            # caminho é o do GESTO e continua indo ao disco, para que a caixa
+            # do jogo veja o carimbo no instante seguinte a confirmá-lo; o do
+            # tique paga cache (`_pontes_confirmadas_no_tique`).
             "pontes_confirmadas": _pontes_confirmadas_seguro(),
             "battery_pct": controller.battery_pct if controller else None,
             # FEAT-DAEMON-PAUSE-RESUME-01: distingue pausado (vivo, sem input) de parado.
@@ -2037,22 +2064,9 @@ class IpcHandlersMixin:
         cfg = getattr(daemon, "config", None) if daemon is not None else None
         enabled = bool(getattr(cfg, "keyboard_emulation_enabled", False))
         device_ativo = bool(getattr(daemon, "_keyboard_device", None) is not None)
-        suprimido = bool(getattr(daemon, "_emulation_suppressed", False))
-        motivo_jogo: str | None = None
-        predicado = getattr(daemon, "_jogo_no_controle_do_desktop", None)
-        if callable(predicado):
-            with contextlib.suppress(Exception):
-                bruto = predicado()
-                motivo_jogo = bruto if isinstance(bruto, str) else None
-        bloqueio: str | None
-        if not enabled:
-            bloqueio = "desligada"
-        elif not device_ativo:
-            bloqueio = "sem_device"
-        elif suprimido:
-            bloqueio = "modo_jogo"
-        else:
-            bloqueio = motivo_jogo
+        bloqueio = self._bloqueio_da_emulacao_de_desktop(
+            enabled=enabled, device_ativo=device_ativo
+        )
         # Pergunta ao `_OSKController` do daemon quando ele existe (o cache dele
         # já está quente) e cai na sonda de módulo quando não existe — que é o
         # caso enquanto a emulação de teclado está desligada, justamente quando
@@ -2075,6 +2089,95 @@ class IpcHandlersMixin:
             "despachando": bloqueio is None,
             "bloqueio": bloqueio,
             "osk_disponivel": osk_disponivel,
+        }
+
+    def _bloqueio_da_emulacao_de_desktop(
+        self, *, enabled: bool, device_ativo: bool
+    ) -> str | None:
+        """Por que a emulação de DESKTOP não emitiria agora, ou `None` se emite.
+
+        UM DONO SÓ, e é este método. O mouse e o teclado de desktop são calados
+        pela MESMA conjunção — `lifecycle._poll_loop` decide os dois no mesmo
+        `if` (`emu_active = not self._emulation_suppressed`, `motivo_jogo =
+        self._jogo_no_controle_do_desktop()`) e só então pergunta, para cada um,
+        se o device existe. Escrever a leitura duas vezes é como as duas
+        respostas divergem: o teclado dizendo "modo jogo" e o mouse dizendo
+        "ligado e feliz" no mesmo instante, sobre o mesmo controle.
+
+        Só os dois termos que DIFEREM entram por parâmetro (`enabled` é a flag
+        de cada um na config; `device_ativo` é `_mouse_device` ou
+        `_keyboard_device`). A ordem das respostas é a de quem lê a tela: o
+        interruptor primeiro, depois o device, depois o jogo — a primeira coisa
+        a consertar é a primeira que aparece.
+
+        Vocabulário (o mesmo dos dois payloads, e o que
+        `app/actions/mouse_actions.BLOQUEIO_DO_MOUSE_EM_PORTUGUES` traduz):
+        `"desligada"`, `"sem_device"`, `"modo_jogo"` e o que o predicado do
+        daemon devolver (hoje `"vpad_suspenso_pelo_steam_input"`).
+        """
+        daemon = self.daemon
+        if not enabled:
+            return "desligada"
+        if not device_ativo:
+            return "sem_device"
+        if bool(getattr(daemon, "_emulation_suppressed", False)):
+            return "modo_jogo"
+        predicado = getattr(daemon, "_jogo_no_controle_do_desktop", None)
+        if callable(predicado):
+            with contextlib.suppress(Exception):
+                bruto = predicado()
+                return bruto if isinstance(bruto, str) else None
+        return None
+
+    def _bloqueio_do_mouse(self) -> str | None:
+        """Por que o cursor NÃO andaria agora, ou `None` se ele anda.
+
+        MOUSE-SEM-RAZÃO-01 (25/08/2026, BG-02). *"Ela liga o mouse pelo
+        controle, o cursor não anda, e a aba não diz por quê."* As três razões
+        reais — o interruptor desligado, a permissão de `/dev/uinput` e o modo
+        jogo — o daemon conhecia uma a uma e não publicava nenhuma.
+
+        A permissão de `uinput` entra por `device_ativo`, e é a peça que a
+        janela não tem como olhar sozinha: `UinputMouseDevice.start()` falha sem
+        acesso ao nó e `_mouse_device` fica `None` com o interruptor EM PÉ (a
+        flag persistida religa no boot; o device não sobe). Uma sonda de
+        `os.access` na janela responderia pelo processo dela — dentro de um
+        Flatpak, pelo sandbox — e não por quem abre o device.
+
+        `getattr` defensivo: daemon/config dublados em teste não conhecem os
+        campos, e isto roda no caminho do `state_full` (10-20 Hz).
+        """
+        daemon = self.daemon
+        cfg = getattr(daemon, "config", None) if daemon is not None else None
+        return self._bloqueio_da_emulacao_de_desktop(
+            enabled=bool(getattr(cfg, "mouse_emulation_enabled", False)),
+            device_ativo=getattr(daemon, "_mouse_device", None) is not None,
+        )
+
+    def _mouse_emulation_payload(self) -> dict[str, Any]:
+        """Bloco `mouse_emulation` do `state_full` — o estado E a razão.
+
+        As três chaves de sempre são FEAT-CLI-PARITY-01 (o `mouse status` da
+        CLI lê daqui). As três novas são BG-02, e são o molde do vizinho
+        `_keyboard_emulation_payload`, chave por chave, de propósito:
+
+        - `device_ativo` -- o mouse virtual existe AGORA;
+        - `despachando`  -- ele moveria o cursor neste instante;
+        - `bloqueio`     -- por que não moveria (ver `_bloqueio_do_mouse`).
+
+        Chamado sob o guard `daemon_cfg is not None` do `state_full`: sem config
+        acessível o bloco continua OMITIDO, e o cliente lê a ausência como
+        "estado indisponível" — que é o contrato desde o FEAT-CLI-PARITY-01.
+        """
+        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        bloqueio = self._bloqueio_do_mouse()
+        return {
+            "enabled": bool(getattr(daemon_cfg, "mouse_emulation_enabled", False)),
+            "speed": int(getattr(daemon_cfg, "mouse_speed", 6)),
+            "scroll_speed": int(getattr(daemon_cfg, "mouse_scroll_speed", 1)),
+            "device_ativo": getattr(self.daemon, "_mouse_device", None) is not None,
+            "despachando": bloqueio is None,
+            "bloqueio": bloqueio,
         }
 
     def _steam_input_payload(self) -> dict[str, bool]:
@@ -2372,6 +2475,13 @@ class IpcHandlersMixin:
         # opostas nos dois casos.
         result["jogo_steam"] = self._jogo_steam_payload()
 
+        # PONTE-CONFIRMADA-01 + BG-02 (25/08/2026): a ponte que cada jogo já
+        # CONFIRMOU, ao lado do jogo aberto agora — as duas perguntas que o
+        # editor de perfil faz sobre o mesmo jogo, no mesmo estado. Publicado
+        # aqui porque só existia no `daemon.status`, e o tique é onde a janela
+        # já olha; ver `_pontes_confirmadas_no_tique` para o teto de leitura.
+        result["pontes_confirmadas"] = self._pontes_confirmadas_no_tique()
+
         # FEAT-DSX-MULTI-CONTROLLER-01: lista de controles conectados (uma entrada
         # por controle físico, com transporte e qual é o primário) para a GUI, o
         # tray e o applet mostrarem "N controles" sem uma chamada IPC separada.
@@ -2464,13 +2574,14 @@ class IpcHandlersMixin:
 
         # Paridade CLI-GUI: expõe estado da emulação de mouse se o daemon
         # dono da IPC tiver config acessível (FEAT-CLI-PARITY-01).
+        #
+        # BG-02 (25/08/2026): o bloco deixou de ser só `enabled/speed/scroll` e
+        # passou a dizer POR QUE o cursor não anda — ver
+        # `_mouse_emulation_payload`. Mesmo molde e mesmo vocabulário do
+        # `keyboard_emulation` acima, porque é o mesmo gate do poll loop.
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if daemon_cfg is not None:
-            result["mouse_emulation"] = {
-                "enabled": bool(getattr(daemon_cfg, "mouse_emulation_enabled", False)),
-                "speed": int(getattr(daemon_cfg, "mouse_speed", 6)),
-                "scroll_speed": int(getattr(daemon_cfg, "mouse_scroll_speed", 1)),
-            }
+            result["mouse_emulation"] = self._mouse_emulation_payload()
             # FEAT-DSX-GAMEPAD-FLAVOR-01: estado do gamepad virtual p/ GUI/applet.
             result["gamepad_emulation"] = {
                 "enabled": bool(getattr(daemon_cfg, "gamepad_emulation_enabled", False)),
@@ -3769,6 +3880,30 @@ class IpcHandlersMixin:
                     divergente=resultado.get("divergente"),
                 )
 
+    def _pontes_confirmadas_no_tique(self) -> dict[str, Any]:
+        """As pontes confirmadas para o `state_full`, com cache TTL.
+
+        BG-02 (25/08/2026). O carimbo existia só no `daemon.status` desde
+        19/08, e o preço disso era medido e visível: a aba de perfil precisava
+        de uma SEGUNDA ida ao daemon por gesto só para saber se aquele jogo já
+        tem ponte (`app/actions/profiles_actions._buscar_as_pontes_confirmadas`
+        diz isso com todas as letras). No `state_full` o editor de perfil sabe
+        no MESMO estado que já lê no tique.
+
+        A leitura crua é `_pontes_confirmadas_seguro` — a mesma que o
+        `daemon.status` usa, e é isso que evita duas respostas para a mesma
+        pergunta. O que muda aqui é só o TETO: ver
+        `_PONTES_CONFIRMADAS_TTL_SEC` para por que o tique paga cache e o gesto
+        paga o disco.
+        """
+        now = time.monotonic()
+        hit = self._pontes_confirmadas_cache
+        if hit is not None and (now - hit[0]) < _PONTES_CONFIRMADAS_TTL_SEC:
+            return hit[1]
+        pontes = _pontes_confirmadas_seguro()
+        self._pontes_confirmadas_cache = (now, pontes)
+        return pontes
+
     def _wrapper_marker_cached(self) -> tuple[int, int] | None:
         """Marker `last_run` com cache TTL — o state_full roda a 10-20 Hz."""
         now = time.monotonic()
@@ -4724,6 +4859,20 @@ class IpcHandlersMixin:
         Sem ``enabled`` (BUG-MOUSE-GUI-SYNC-01 A4): atualiza SÓ as velocidades
         na config e no device vivo (se existir), sem start/stop e sem persistir
         o flag — os sliders da GUI não conseguem religar uma emulação desligada.
+
+        BG-02 (25/08/2026) — **a recusa passa a ter motivo.** Quando a resposta
+        é `failed`, ela leva também `bloqueio`, e é ele que
+        `app/actions/mouse_actions.frase_da_recusa_do_mouse` traduz para a
+        statusbar. Sem o campo, aquela função caía em `RECUSA_SEM_MOTIVO` — *"O
+        Hefesto recusou o pedido e não disse por quê"* — e a tabela
+        `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`, commitada e pronta desde 25/08, não
+        era alcançada por ninguém.
+
+        O campo só viaja no `failed` de propósito: aqui `bloqueio` responde
+        *"por que a resposta foi NÃO"*, e num `ok` não houve não. O `bloqueio`
+        que descreve o ESTADO — ligado e mesmo assim calado, por modo jogo ou
+        pelo Steam Input — é o do bloco `mouse_emulation` do `state_full`, que
+        a aba lê no tique.
         """
         enabled = params.get("enabled")
         if enabled is not None and not isinstance(enabled, bool):
@@ -4740,12 +4889,15 @@ class IpcHandlersMixin:
 
         if enabled is None:
             ok = self.daemon.set_mouse_speed(speed=speed, scroll_speed=scroll_speed)
-            return {
+            resposta: dict[str, Any] = {
                 "status": "ok" if ok else "failed",
                 "enabled": bool(
                     getattr(self.daemon.config, "mouse_emulation_enabled", False)
                 ),
             }
+            if not ok:
+                resposta["bloqueio"] = self._bloqueio_do_mouse()
+            return resposta
 
         ok = self.daemon.set_mouse_emulation(
             enabled=enabled,
@@ -4753,7 +4905,21 @@ class IpcHandlersMixin:
             scroll_speed=scroll_speed,
             origin=origem_do_pedido(params),
         )
-        return {"status": "ok" if ok else "failed", "enabled": enabled and ok}
+        resposta = {"status": "ok" if ok else "failed", "enabled": enabled and ok}
+        if not ok:
+            bloqueio = self._bloqueio_do_mouse()
+            if enabled and bloqueio == "desligada":
+                # LIGAR falhou: `start_mouse_emulation` só marca
+                # `mouse_emulation_enabled` DEPOIS de o device subir, então a
+                # leitura pós-fato responde "desligada" — que é devolver o
+                # pedido dela como motivo do próprio pedido. O que falhou foi o
+                # device (`UinputMouseDevice.start()`), e é ele que a frase tem
+                # de nomear: sem permissão em `/dev/uinput` o texto certo manda
+                # abrir a aba Sistema, e "desligada" mandaria ligar o que ela
+                # acabou de tentar ligar.
+                bloqueio = "sem_device"
+            resposta["bloqueio"] = bloqueio
+        return resposta
 
     async def _handle_mouse_emulation_restore(
         self, _params: dict[str, Any]
