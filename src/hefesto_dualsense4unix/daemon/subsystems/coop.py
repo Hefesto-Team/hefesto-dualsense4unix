@@ -250,6 +250,13 @@ class _SecondaryPlayer:
     reader: EvdevReader
     player_index: int
     vpad: VirtualPad | None = None
+    # COOP-QUE-NAO-DESMONTA-01 / E1: este jogador CEDEU o controle dele ao
+    # primário — o `EVIOCGRAB` já foi solto (na thread do `connect()`), e o
+    # que falta é o desmonte do vpad, que só o poll loop pode fazer. Enquanto
+    # a marca está de pé o `forward_all` NÃO repassa nada: o físico agora
+    # alimenta o P1, e repassá-lo também ao vpad do P2 seria o input dobrado
+    # que o grab existe para impedir.
+    cedido_ao_primario: bool = False
     # GYRO-01 (co-op): espelho de motion do FÍSICO deste jogador → vpad dele
     # (`core.physical_report_reader.PhysicalReportReader`). Só nasce quando o
     # vpad é uhid E o backend resolve hidraw por-uniq (DualSense); None para
@@ -301,6 +308,12 @@ class CoopManager:
         # imutável de verdade. `_teardown_player` limpa a marca, então replug/
         # respawn ganham uma tentativa nova sem nunca repetir o custo por tick.
         self._calib_sem_leitura: set[str] = set()
+        # COOP-QUE-NAO-DESMONTA-01 / E1: o backend em que o aviso de troca de
+        # primário já foi pendurado. Guardamos o OBJETO (não um bool) porque
+        # `daemon.controller` pode ser trocado em runtime (fake→real nos
+        # testes, reconstrução do backend): comparar por identidade re-liga o
+        # aviso no backend novo, e um bool o deixaria mudo para sempre.
+        self._backend_avisado: Any = None
 
     # -- estado / gate --------------------------------------------------
 
@@ -491,6 +504,94 @@ class CoopManager:
         path = self._primary_evdev_path()
         return f"path:{path}" if path else None
 
+    # -- a troca de primário (COOP-QUE-NAO-DESMONTA-01 / E1) -------------
+
+    def _garantir_aviso_de_primario(self) -> None:
+        """Pendura o aviso de troca de primário no backend. Idempotente.
+
+        Fica AQUI, e não na fiação do `lifecycle`, porque quem precisa do aviso
+        é este manager e ele nasce sob demanda (`get_coop_manager`) — no boot o
+        backend pode nem existir ainda. Custo por tick: um `getattr` e uma
+        comparação de identidade.
+
+        Backend sem `set_primary_change_observer` (fakes, backend legado) segue
+        como antes: o co-op continua funcional e descobre a troca pelo `sync`,
+        que é o comportamento com o defeito. É degradação declarada, não
+        silêncio — a linha de debug diz que o aviso não existe naquele backend.
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        if ctrl is None or ctrl is self._backend_avisado:
+            return
+        fn = getattr(ctrl, "set_primary_change_observer", None)
+        if not callable(fn):
+            self._backend_avisado = ctrl
+            logger.debug("coop_aviso_de_primario_indisponivel")
+            return
+        fn(self.ceder_ao_primario)
+        self._backend_avisado = ctrl
+        logger.debug("coop_aviso_de_primario_ligado")
+
+    def ceder_ao_primario(self, anterior: str | None, novo: str | None) -> None:
+        """O controle `novo` virou o primário — solte-o AGORA, antes do retarget.
+
+        É a metade do co-op da cura do "Jogador 2 que dura dois segundos".
+        Chamada pelo backend de dentro de `_recompute_primary`
+        (`set_primary_change_observer`), **na thread do `connect()` e sob o
+        `_io_lock` do backend**. Daí as três regras do que se pode fazer aqui:
+
+        1. **solta o grab, e só.** É o que impede o `EBUSY`: um `ungrab` é um
+           ioctl, custa microssegundos e não bloqueia;
+        2. **não para o reader** (`stop()` faz `join(timeout=2.0)` — dois
+           segundos segurando o `_io_lock` congelariam `read_state` e todo o
+           fan-out de output);
+        3. **não desmonta o vpad.** O `_players` é do poll loop; mexer nele de
+           outra thread desfaria o vizinho em silêncio. A marca
+           `cedido_ao_primario` é o recado, e o `forward_all` do próximo tick
+           (~10 ms) faz o desmonte explícito no dono certo.
+
+        Entre o `ungrab` daqui e o desmonte de lá o vpad deste jogador fica
+        MUDO, não solto: o `forward_all` pula quem está cedido. Sem isso o
+        físico alimentaria o vpad do P1 **e** o do P2 ao mesmo tempo — o input
+        dobrado que o grab existe para impedir.
+
+        `anterior` não é usado hoje e está na assinatura de propósito: é o
+        contrato do observador (quem sai, quem entra), e o lado "quem sai" é o
+        que a E2 vai querer quando o deposto virar secundário sem esperar o
+        próximo `sync`.
+        """
+        if novo is None:
+            return
+        player = self._players.get(novo)
+        if player is None or player.cedido_ao_primario:
+            return
+        # A marca vem ANTES do ungrab: quem lê é o poll loop, e é melhor ele
+        # calar um tick a mais do que repassar um físico já solto.
+        player.cedido_ao_primario = True
+        with contextlib.suppress(Exception):
+            player.reader.set_grab(False)
+        # O ciclo cheio do próximo sync, mesmo sem mudança em /dev/input —
+        # trocar de primário não mexe nos nodes, então o watch não veria nada.
+        self._retry_spawn = True
+        logger.info(
+            "coop_player_cedido_ao_primario",
+            identity=novo,
+            anterior=anterior,
+            player=player.player_index,
+        )
+
+    def _recolher_os_cedidos(self) -> None:
+        """Desmonta, no poll loop, os jogadores que cederam o controle ao P1.
+
+        A segunda metade do `ceder_ao_primario`: aqui já estamos na thread dona
+        do `_players`, então o desmonte é o normal (vpad fechado, LED do perfil
+        devolvido, envs do wrapper regravadas) — **explícito, e não um `EBUSY`
+        no meio**, que é o que a entrega E1 pede com todas as letras.
+        """
+        for identity in [
+            mac for mac, p in self._players.items() if p.cedido_ao_primario
+        ]:
+            self._teardown_player(identity)
+
     # -- reconciliação --------------------------------------------------
 
     def sync(self, *, force: bool = False) -> None:
@@ -513,6 +614,10 @@ class CoopManager:
         (d) `force=True` (toggle explícito da usuária). Ticks quietos custam
         um listdir (~µs).
         """
+        # E1: antes de qualquer gate — o aviso tem de estar pendurado mesmo com
+        # o co-op suspenso, senão a primeira troca de primário depois que ele
+        # voltar passaria sem recado.
+        self._garantir_aviso_de_primario()
         if not self.should_be_active():
             self._was_active = False
             if self._players or self._leds_overridden:
@@ -524,6 +629,10 @@ class CoopManager:
 
         activated = not self._was_active
         self._was_active = True
+        # E1: quem cedeu o controle ao primário sai ANTES de tudo — o `want`
+        # abaixo já não o contém (ele virou o primário), mas desmontar aqui em
+        # cima deixa o ciclo com uma verdade só sobre quem está na mesa.
+        self._recolher_os_cedidos()
         self._promote_pending()
         retry_needed = self._retry_spawn
         self._retry_spawn = False
@@ -1715,11 +1824,23 @@ class CoopManager:
         VPAD-01): o vpad nasce aqui, poucos ms depois de o grab confirmar —
         sem esperar o próximo sync (~2s). Jogadores ainda pendentes são
         pulados (não existe vpad para repassar; o jogo não vê nada).
+
+        COOP-QUE-NAO-DESMONTA-01 / E1: e quem CEDEU o controle ao primário sai
+        aqui, no tick (~10 ms) e não no sync (~2 s). O caminho é este e não o
+        `sync` porque o jogador cedido já está com o físico solto: cada tick a
+        mais com o vpad de pé é um tick a mais de mesa desequilibrada.
         """
+        self._recolher_os_cedidos()
         self._promote_pending()
         for player in list(self._players.values()):
             if player.vpad is None:
                 continue  # aguardando confirmação de grab
+            if player.cedido_ao_primario:
+                # A marca pode ter sido posta pela thread do `connect()` DEPOIS
+                # do `_recolher_os_cedidos` acima — este `continue` é o que
+                # garante que nem UM tick do físico já cedido chegue a dois
+                # vpads ao mesmo tempo. O desmonte vem no tick seguinte.
+                continue
             try:
                 snap = player.reader.snapshot()
                 player.vpad.forward_analog(
