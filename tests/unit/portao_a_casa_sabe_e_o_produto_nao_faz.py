@@ -1410,45 +1410,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     ),
     # --- 25/08/2026: `integrations/entradas_do_gabinete.py` nasceu nesta
     #     madrugada, e ainda não tem tela que o consuma
-    "integrations/entradas_do_gabinete.py::Furo": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, na CAL-1 da CALIBRAR-AS- "
-        "ENTRADAS-01, cuja tela ela APROVOU vendo o mockup às 03h55. Responde "
-        "o que nenhuma leitura respondia: quais entradas USB EXISTEM, "
-        "**incluindo as vazias** — o nó da entrada existe com `state = not "
-        "attached`, e é isso que torna a calibração possível sem root. ONDE O "
-        "CAMINHO SE PERDE: as telas da calibração (CAL-3 a CAL-7) ficaram "
-        "para a leva seguinte, porque dependem do campo `mapa` que outra "
-        "frente escrevia em paralelo. O QUE O FECHA: a janela de calibração. "
-        "A mordida do agrupamento por `peer` foi refeita por quem coordena: "
-        "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
-        "passa a visitar o buraco ocupado); devolvida, 12 passam. "
-    ),
-    "integrations/entradas_do_gabinete.py::NoDeEntrada": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, na CAL-1 da CALIBRAR-AS- "
-        "ENTRADAS-01, cuja tela ela APROVOU vendo o mockup às 03h55. Responde "
-        "o que nenhuma leitura respondia: quais entradas USB EXISTEM, "
-        "**incluindo as vazias** — o nó da entrada existe com `state = not "
-        "attached`, e é isso que torna a calibração possível sem root. ONDE O "
-        "CAMINHO SE PERDE: as telas da calibração (CAL-3 a CAL-7) ficaram "
-        "para a leva seguinte, porque dependem do campo `mapa` que outra "
-        "frente escrevia em paralelo. O QUE O FECHA: a janela de calibração. "
-        "A mordida do agrupamento por `peer` foi refeita por quem coordena: "
-        "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
-        "passa a visitar o buraco ocupado); devolvida, 12 passam. "
-    ),
-    "integrations/entradas_do_gabinete.py::entrada_de": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, na CAL-1 da CALIBRAR-AS- "
-        "ENTRADAS-01, cuja tela ela APROVOU vendo o mockup às 03h55. Responde "
-        "o que nenhuma leitura respondia: quais entradas USB EXISTEM, "
-        "**incluindo as vazias** — o nó da entrada existe com `state = not "
-        "attached`, e é isso que torna a calibração possível sem root. ONDE O "
-        "CAMINHO SE PERDE: as telas da calibração (CAL-3 a CAL-7) ficaram "
-        "para a leva seguinte, porque dependem do campo `mapa` que outra "
-        "frente escrevia em paralelo. O QUE O FECHA: a janela de calibração. "
-        "A mordida do agrupamento por `peer` foi refeita por quem coordena: "
-        "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
-        "passa a visitar o buraco ocupado); devolvida, 12 passam. "
-    ),
     "integrations/entradas_do_gabinete.py::furo_declarado": (
         "MEDIDO em 25/08/2026: nasceu HOJE, na CAL-1 da CALIBRAR-AS- "
         "ENTRADAS-01, cuja tela ela APROVOU vendo o mockup às 03h55. Responde "
@@ -1462,56 +1423,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
         "passa a visitar o buraco ocupado); devolvida, 12 passam. "
     ),
-    "integrations/entradas_do_gabinete.py::furos": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, na CAL-1 da CALIBRAR-AS- "
-        "ENTRADAS-01, cuja tela ela APROVOU vendo o mockup às 03h55. Responde "
-        "o que nenhuma leitura respondia: quais entradas USB EXISTEM, "
-        "**incluindo as vazias** — o nó da entrada existe com `state = not "
-        "attached`, e é isso que torna a calibração possível sem root. ONDE O "
-        "CAMINHO SE PERDE: as telas da calibração (CAL-3 a CAL-7) ficaram "
-        "para a leva seguinte, porque dependem do campo `mapa` que outra "
-        "frente escrevia em paralelo. O QUE O FECHA: a janela de calibração. "
-        "A mordida do agrupamento por `peer` foi refeita por quem coordena: "
-        "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
-        "passa a visitar o buraco ocupado); devolvida, 12 passam. "
-    ),
-    "integrations/entradas_do_gabinete.py::listar_entradas": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, na CAL-1 da CALIBRAR-AS- "
-        "ENTRADAS-01, cuja tela ela APROVOU vendo o mockup às 03h55. Responde "
-        "o que nenhuma leitura respondia: quais entradas USB EXISTEM, "
-        "**incluindo as vazias** — o nó da entrada existe com `state = not "
-        "attached`, e é isso que torna a calibração possível sem root. ONDE O "
-        "CAMINHO SE PERDE: as telas da calibração (CAL-3 a CAL-7) ficaram "
-        "para a leva seguinte, porque dependem do campo `mapa` que outra "
-        "frente escrevia em paralelo. O QUE O FECHA: a janela de calibração. "
-        "A mordida do agrupamento por `peer` foi refeita por quem coordena: "
-        "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
-        "passa a visitar o buraco ocupado); devolvida, 12 passam. "
-    ),
-    "integrations/entradas_do_gabinete.py::vazias": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, na CAL-1 da CALIBRAR-AS- "
-        "ENTRADAS-01, cuja tela ela APROVOU vendo o mockup às 03h55. Responde "
-        "o que nenhuma leitura respondia: quais entradas USB EXISTEM, "
-        "**incluindo as vazias** — o nó da entrada existe com `state = not "
-        "attached`, e é isso que torna a calibração possível sem root. ONDE O "
-        "CAMINHO SE PERDE: as telas da calibração (CAL-3 a CAL-7) ficaram "
-        "para a leva seguinte, porque dependem do campo `mapa` que outra "
-        "frente escrevia em paralelo. O QUE O FECHA: a janela de calibração. "
-        "A mordida do agrupamento por `peer` foi refeita por quem coordena: "
-        "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
-        "passa a visitar o buraco ocupado); devolvida, 12 passam. "
-    ),
     # --- 25/08/2026: `integrations/lugar_declarado.py` nasceu nesta madrugada, e ainda não tem tela
-    "integrations/lugar_declarado.py::Recibo": (
-        "MEDIDO em 25/08/2026: a CAL-2 da calibração. Existe para curar um "
-        "defeito nomeado: hoje o ÚNICO escritor do `maquina.json` é o IPC "
-        "`machine.declare`, logo **com o daemon parado nada do que ela "
-        "declara chega ao disco** — o rodapé responde 'O Hefesto está "
-        "desligado, não gravei o que você declarou'. Este módulo liga o "
-        "`gravar_rascunho_da_mesa`, que estava escrito desde 24/08 e nunca "
-        "teve chamador. ONDE O CAMINHO SE PERDE: quem o chamaria é a janela "
-        "de calibração, que é da leva seguinte. O QUE O FECHA: a CAL-3. "
-    ),
     "integrations/lugar_declarado.py::declarar_a_mesa": (
         "MEDIDO em 25/08/2026: a CAL-2 da calibração. Existe para curar um "
         "defeito nomeado: hoje o ÚNICO escritor do `maquina.json` é o IPC "
@@ -1523,6 +1435,23 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "de calibração, que é da leva seguinte. O QUE O FECHA: a CAL-3. "
     ),
     # --- 25/08/2026: `integrations/mapa_das_portas.py` nasceu nesta madrugada, e ainda não tem tela
+    "integrations/mapa_das_portas.py::irmas_de": (
+        "NASCEU em 25/08/2026, na frente G3, e nasce COM a lápide de propósito. "
+        "É a fonte do `Entrada.par` que `arranjo_da_mesa.nota_de` precisa para "
+        "disparar as penalidades de vizinho rádio (-30 teclado, -45 bluetooth, "
+        "-40 mouse) — sem ela o motor publica juízo otimista demais, dizendo "
+        "'aqui fica bem' onde deveria dizer 'aqui não'. "
+        "POR QUE ACRESCENTAR EM VEZ DE EDITAR `vizinhas_de_verdade`: dois "
+        "batedores mandaram coisas opostas sobre a mesma função, e a que já "
+        "existe tem consumidor e teste — mexer nela para servir a um segundo "
+        "propósito é como se perde a primeira. "
+        "ONDE O CAMINHO SE PERDE: quem a consome é a G5, a janela do desenho "
+        "que julga cada quadrado, e a G5 não saiu nesta leva — ela espera a "
+        "medição das duas réguas do arranjo (decisão dela de 25/08) e o olho "
+        "dela sobre a janela do mapa, que ninguém nunca viu. "
+        "O QUE O FECHA: `mapa_da_mesa.py` chamar `irmas_de(mapa, entradas)` ao "
+        "montar a `Mesa`. Uma linha, quando a G5 sair."
+    ),
     "integrations/mapa_das_portas.py::incoerencias": (
         "MEDIDO em 25/08/2026: as quatro funções de junção da CONEXOES- "
         "MAPA-2D-01 (`portas_livres`, `vizinhas_de_verdade`, `incoerencias`, "
@@ -1536,30 +1465,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "extensor) muda o cálculo de vizinhança. "
     ),
     "integrations/mapa_das_portas.py::porta_do_adaptador": (
-        "MEDIDO em 25/08/2026: as quatro funções de junção da CONEXOES- "
-        "MAPA-2D-01 (`portas_livres`, `vizinhas_de_verdade`, `incoerencias`, "
-        "`porta_do_adaptador`). Prontas e testadas. ONDE O CAMINHO SE PERDE: "
-        "quem as consome é a ORDEM-DE-SERVICO-01, que rodou na MESMA "
-        "madrugada, e as tarefas de tela dela pararam no olho dela (D3). O "
-        "QUE O FECHA: as frases da ordem de serviço na aba Conexões. A sprint "
-        "do mapa manda explicitamente que a Frente B consuma "
-        "`vizinhas_de_verdade` em vez de mexer em "
-        "`mesa_de_radio.vizinhancas_apertadas`, porque a porta-filha (o "
-        "extensor) muda o cálculo de vizinhança. "
-    ),
-    "integrations/mapa_das_portas.py::portas_livres": (
-        "MEDIDO em 25/08/2026: as quatro funções de junção da CONEXOES- "
-        "MAPA-2D-01 (`portas_livres`, `vizinhas_de_verdade`, `incoerencias`, "
-        "`porta_do_adaptador`). Prontas e testadas. ONDE O CAMINHO SE PERDE: "
-        "quem as consome é a ORDEM-DE-SERVICO-01, que rodou na MESMA "
-        "madrugada, e as tarefas de tela dela pararam no olho dela (D3). O "
-        "QUE O FECHA: as frases da ordem de serviço na aba Conexões. A sprint "
-        "do mapa manda explicitamente que a Frente B consuma "
-        "`vizinhas_de_verdade` em vez de mexer em "
-        "`mesa_de_radio.vizinhancas_apertadas`, porque a porta-filha (o "
-        "extensor) muda o cálculo de vizinhança. "
-    ),
-    "integrations/mapa_das_portas.py::vizinhas_de_verdade": (
         "MEDIDO em 25/08/2026: as quatro funções de junção da CONEXOES- "
         "MAPA-2D-01 (`portas_livres`, `vizinhas_de_verdade`, `incoerencias`, "
         "`porta_do_adaptador`). Prontas e testadas. ONDE O CAMINHO SE PERDE: "
@@ -1589,65 +1494,15 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # O QUE FECHA: ORDEM-4 liga o catálogo ao exame e ORDEM-5 publica os cards.
     # ORDEM-5 é texto novo na tela e passa pelo olho dela ANTES.
     # DONO: a própria ORDEM-DE-SERVIÇO-01, frente B da leva Configurações.
-    "integrations/ordens_da_mesa.py::catalogo": (
-        "MEDIDO em 25/08/2026: é a porta do módulo — as seis regras entram por "
-        "aqui, e o que sai não é consumido por ninguém. Ver o bloco acima para "
-        "onde o caminho se perde e o que o fecha."
-    ),
-    "integrations/ordens_da_mesa.py::radio_largo_no_mesmo_hub": (
-        "MEDIDO em 25/08/2026: R1, a regra que só existe porque o `peer` "
-        "atravessa o `busnum`. Cai junto com `catalogo` e pelo mesmo motivo — e "
-        "é por isso que não ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::dois_radios_colados": (
-        "MEDIDO em 25/08/2026: R2, a que filtra a webcam de cabo. Cai junto com "
-        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
-        "própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::dongle_atras_de_hub": (
-        "MEDIDO em 25/08/2026: R3, com a contra-regra que nunca acusa dongle de "
-        "dongle. Cai junto com `catalogo` e pelo mesmo motivo — e é por isso "
-        "que não ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::teclado_so_no_hub": (
-        "MEDIDO em 25/08/2026: R4, a única que não fala de rádio. Cai junto com "
-        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
-        "própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::dongle_dorme": (
-        "MEDIDO em 25/08/2026: R5, que CALA nesta bancada, e isso é resultado. "
-        "Cai junto com `catalogo` e pelo mesmo motivo — e é por isso que não "
-        "ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::entrada_reclamou_de_corrente": (
-        "MEDIDO em 25/08/2026: R6, que CALA pelo mesmo motivo. Cai junto com "
-        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
-        "própria de conserto."
-    ),
     "integrations/ordens_da_mesa.py::cabecalho": (
         "MEDIDO em 25/08/2026: os quatro cabeçalhos da §8.3, derivados num "
         "lugar só. Cai junto com `catalogo` e pelo mesmo motivo — e é por isso "
         "que não ganha entrada própria de conserto."
     ),
-    "integrations/ordens_da_mesa.py::Cabecalho": (
-        "MEDIDO em 25/08/2026: o tipo que `cabecalho` devolve. Cai junto com "
-        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
-        "própria de conserto."
-    ),
     "integrations/ordens_da_mesa.py::identidades": (
         "MEDIDO em 25/08/2026: a tripla que decide a ambiguidade, e onde o "
         "serial morre. Cai junto com `catalogo` e pelo mesmo motivo — e é por "
         "isso que não ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::Identidade": (
-        "MEDIDO em 25/08/2026: o que `identidades` devolve, já sem o serial. "
-        "Cai junto com `catalogo` e pelo mesmo motivo — e é por isso que não "
-        "ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::mesmo_hub_fisico": (
-        "MEDIDO em 25/08/2026: a régua de plástico que R1 consome. Cai junto "
-        "com `catalogo` e pelo mesmo motivo — e é por isso que não ganha "
-        "entrada própria de conserto."
     ),
     "integrations/ordens_da_mesa.py::ordens_novas": (
         "MEDIDO em 25/08/2026: o leitor de `MesaDeclarada.ordens_dispensadas`. "
@@ -1664,36 +1519,11 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "não desenhou. Cai junto com `catalogo` e pelo mesmo motivo — e é por "
         "isso que não ganha entrada própria de conserto."
     ),
-    "integrations/ordens_da_mesa.py::Ordem": (
-        "MEDIDO em 25/08/2026: o tipo que todas as regras devolvem. Cai junto "
-        "com `catalogo` e pelo mesmo motivo — e é por isso que não ganha "
-        "entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::Linha": (
-        "MEDIDO em 25/08/2026: a frase com selo de procedência. Cai junto com "
-        "`catalogo` e pelo mesmo motivo — e é por isso que não ganha entrada "
-        "própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::Leitura": (
-        "MEDIDO em 25/08/2026: o ponto único de injeção que as regras recebem. "
-        "Cai junto com `catalogo` e pelo mesmo motivo — e é por isso que não "
-        "ganha entrada própria de conserto."
-    ),
     # `portas_do_barramento.py` é a camada de sysfs que `ordens_da_mesa`
     # consome. Ela tem chamador de produção (`mesmo_hub_fisico` importa
     # `hubs_do_mesmo_plastico` desde 25/08), mas esse chamador é o próprio
     # catálogo — que também não chega à tela. Cai tudo junto, e pela mesma
     # ORDEM-4/ORDEM-5.
-    "integrations/portas_do_barramento.py::hubs_do_mesmo_plastico": (
-        "MEDIDO em 25/08/2026: a régua de `peer` que "
-        "`ordens_da_mesa.mesmo_hub_fisico` consome. Cai junto com o catálogo de "
-        "ordens, que é quem a consumiria até a tela."
-    ),
-    "integrations/portas_do_barramento.py::hubs_de": (
-        "MEDIDO em 25/08/2026: os hubs que hospedam o buraco onde um aparelho "
-        "está. Cai junto com o catálogo de ordens, que é quem a consumiria até "
-        "a tela."
-    ),
     "integrations/portas_do_barramento.py::mesmo_hub_fisico": (
         "MEDIDO em 25/08/2026: a pergunta de plástico em forma de par de "
         "caminhos. Cai junto com o catálogo de ordens, que é quem a consumiria "
@@ -1703,11 +1533,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "MEDIDO em 25/08/2026: o caso em que 'mude um dos dois de entrada' é a "
         "ordem errada. Cai junto com o catálogo de ordens, que é quem a "
         "consumiria até a tela."
-    ),
-    "integrations/portas_do_barramento.py::livres": (
-        "MEDIDO em 25/08/2026: os buracos vazios que uma pessoa alcança com a "
-        "mão. Cai junto com o catálogo de ordens, que é quem a consumiria até a "
-        "tela."
     ),
     "integrations/portas_do_barramento.py::livres_fora_de": (
         "MEDIDO em 25/08/2026: a contra-regra de R3 virada em função. Cai junto "
@@ -2227,16 +2052,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "chama só `default_steam_root`. O QUE FECHA: a Onda 5 · Emulação liga "
         "o botão a esta função e decide a frase final com a Z1 (§10 da "
         "sprint)."
-    ),
-    "utils/maquina.py::gravar_rascunho_da_mesa": (
-        "ENTREGUE em 24/08/2026 (T-07, ONDA0-Z7). Mesma gravação atômica de "
-        "`gravar_maquina`, escopada à seção `mesa`, para o gesto de "
-        "'declarar sem clicar Aplicar' ter primitiva própria. ONDE O CAMINHO "
-        "SE PERDE: Z7-B não toca `app/actions/footer_actions.py` (posse "
-        "declarada em §5) — o único escritor de `maquina.json` hoje continua "
-        "sendo o botão 'Aplicar'. O QUE FECHA: a Onda 1 · Configurações "
-        "(CONFIG-03) chama esta função no gesto de declarar, sem esperar o "
-        "clique (§10 da sprint, item 4 do aceite)."
     ),
 }
 
