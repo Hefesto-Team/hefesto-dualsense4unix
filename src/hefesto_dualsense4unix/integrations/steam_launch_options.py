@@ -601,6 +601,9 @@ def apply_wrapper_to_all_games(
         "skipped": [],
         "errors": [],
     }
+    # BG-03: daqui em diante o vdf é reescrito e a Steam pode ser fechada —
+    # um negativo de até 5 s não pode guardar um gesto que mata jogo.
+    invalidar_varredura_de_proc()
     if not dry_run and steam_game_running():
         result["errors"].append(
             {"vdf": "", "appid": "", "reason": "jogo_da_steam_aberto"}
@@ -729,6 +732,30 @@ def steam_running() -> bool:
 #: casa. É o mesmo contrato de antes, não uma regressão.
 _STEAM_LAUNCH_RE = re.compile(r"SteamLaunch AppId=\d")
 
+#: DAEMON-ACORDADO-01/BG-03 (25/08/2026): quanto vale uma varredura de `/proc`
+#: antes de valer a pena varrer de novo. A PERF-PROC-SCAN-01 trocou o `pgrep`
+#: por uma varredura nativa e ficou 5x mais barata — mas continuou pagando
+#: **400 `openat` a cada 2 s, para sempre**, porque o poll loop do daemon
+#: (`lifecycle._sync_game_signal`) chama isto duas vezes por tique
+#: (`steam_game_running` e `steam_game_running_appid`).
+VALIDADE_DA_VARREDURA_S: float = 5.0
+
+#: `(quando a última varredura COMPLETA rodou, pid do jogo que ela achou)`.
+#: `None` = nunca varreu; pid `None` = varreu e não havia jogo. Tupla única
+#: pelo mesmo motivo do `escritor_cru`: a gravação é atômica sob a GIL.
+_ultima_varredura: tuple[float, int | None] | None = None
+
+
+def invalidar_varredura_de_proc() -> None:
+    """Joga fora a foto da varredura: a próxima pergunta varre `/proc` de novo.
+
+    É o que todo gesto destrutivo chama antes de perguntar se há jogo aberto
+    (fechar a Steam com jogo aberto MATA o jogo), e é o que os testes chamam
+    para não herdar a foto do teste anterior.
+    """
+    global _ultima_varredura
+    _ultima_varredura = None
+
 
 def _cmdline_of(pid: str | int) -> str:
     """Cmdline de um pid, com os NUL virando espaço. `""` se não der para ler.
@@ -743,7 +770,7 @@ def _cmdline_of(pid: str | int) -> str:
         return ""
 
 
-def _steam_launch_cmdline() -> str | None:
+def _steam_launch_cmdline(*, agora: float | None = None) -> str | None:
     """A cmdline do launch da Steam em curso, ou None. Sem forkar nada.
 
     PERF-PROC-SCAN-01 (12/08/2026). Isto substitui um `pgrep -f` que o daemon
@@ -766,7 +793,7 @@ def _steam_launch_cmdline() -> str | None:
     aberto, então ele não absolve também. O que segue é redução de custo com
     semântica idêntica, não uma cura de bug provado.
 
-    Duas camadas, nesta ordem:
+    QUATRO camadas, nesta ordem (as duas do meio são da BG-03, 25/08/2026):
 
     1. **Marker do wrapper** — o `hefesto-launch` já grava `appid` e `pid` em
        `launch_env/last_run` justamente para isto. Confirmamos lendo a cmdline
@@ -774,8 +801,16 @@ def _steam_launch_cmdline() -> str | None:
        marker, um da cmdline). A confirmação é o que elimina o "pid reuse" que o
        NUMA-01 documenta — aqui não precisamos do `last_exit`, porque não
        confiamos no pid sozinho.
-    2. **Varredura em Python** — quando o marker falta (jogo lançado fora do
-       wrapper, atalho não-Steam, marker de um launch já morto), varremos
+    2. **Reconfirmação do pid que a última varredura achou** — mesmo truque da
+       camada 1, para o jogo que NÃO veio pelo wrapper: um `open` na cmdline
+       daquele pid. **Isto nunca devolve resposta velha** — se o pid morreu ou
+       foi reusado, a agulha não casa e caímos adiante. É a camada que apaga a
+       varredura completa enquanto um jogo fora do wrapper está aberto, que é
+       justo o caso em que a varredura toma o `mmap_read_lock` DO JOGO.
+    3. **Negativo ainda fresco** — varreu há menos de
+       `VALIDADE_DA_VARREDURA_S` e não achou nada: devolve None sem varrer de
+       novo. É o estado permanente de um daemon 24/7 (jogo fechado).
+    4. **Varredura em Python** — quando nenhuma das três resolveu, varremos
        `/proc` lendo UM arquivo por pid em vez de cinco, e sem `fork`/`execve`.
 
     Números honestos, medidos nesta máquina (auditoria de 12/08/2026 corrigiu a
@@ -787,11 +822,33 @@ def _steam_launch_cmdline() -> str | None:
         é global e sobrevive ao jogo, então o pid dele está morto, o caminho
         rápido falha e caímos na varredura — **400 `openat`, 4,2 ms por tique**.
         Contra os ~2.100 do `pgrep`, ainda é ~5x menos, e sem `fork`/`execve`.
+        **A camada 3 divide esse resto por ~3** (a varredura passa a sair a
+        cada 5 s em vez de a cada 2 s, e o poll loop faz DUAS perguntas por
+        tique — a segunda deixa de custar qualquer coisa).
+      - **Jogo aberto FORA do wrapper**: era a varredura completa a cada tique;
+        com a camada 2 passa a ser **1 `openat`** — o do próprio jogo.
+
+    **O preço da camada 3, dito antes que alguém descubra do jeito caro:** um
+    jogo lançado **fora** do wrapper pode demorar até `VALIDADE_DA_VARREDURA_S`
+    para ser notado. Pelo wrapper (o caminho normal) não há atraso nenhum: a
+    camada 1 vê o marker no primeiro tique, sem tocar na foto.
+
+    Onde a resposta guarda um gesto destrutivo — `steam -shutdown` com jogo
+    aberto MATA o jogo — o chamador tem de gastar `invalidar_varredura_de_proc()`
+    antes de perguntar: um `openat` a mais num clique não se compara a fechar um
+    jogo dela. **Os três caminhos DESTE módulo já gastam** (`--apply` da CLI,
+    `apply_wrapper_to_all_games`, `with_steam_closed`). **Quatro caminhos FORA
+    dele ainda não**, e é dívida declarada da BG-03, não descuido:
+    `proton_pin._steam_gate`, `app/actions/daemon_actions.py`,
+    `app/actions/emulation_actions.py` e `app/actions/carona_do_wrapper.py` —
+    os quatro tinham dono em outra árvore em 25/08/2026, e R1 manda relatar em
+    vez de editar.
 
     O retorno é a cmdline crua para o chamador extrair o que quiser — é o que
     permite `steam_game_running` e `steam_game_running_appid` compartilharem uma
     varredura só, e é por isso que ambas enxergam exatamente o mesmo processo.
     """
+    global _ultima_varredura
     # 1) Caminho rápido: o marker que o próprio wrapper grava no launch.
     #
     #    Import TARDIO porque este módulo é stdlib puro de propósito (ver o
@@ -827,17 +884,39 @@ def _steam_launch_cmdline() -> str | None:
         if _STEAM_LAUNCH_RE.search(cmd) and re.search(rf"AppId={appid}\b", cmd):
             return cmd
 
-    # 2) Varredura direta, sem forkar. Um `open` por pid.
+    agora = time.monotonic() if agora is None else float(agora)
+    foto = _ultima_varredura
+
+    # 2) Reconfirmação do pid da última varredura: UM `open`, e a resposta é
+    #    de AGORA — pid morto ou reusado não casa a agulha e cai adiante.
+    if foto is not None and foto[1] is not None:
+        cmd = _cmdline_of(foto[1])
+        if _STEAM_LAUNCH_RE.search(cmd):
+            return cmd
+        # O jogo daquela foto acabou. A hora fica (é dela que a camada 3 mede);
+        # o pid sai, senão reconfirmaríamos um morto a cada tique.
+        _ultima_varredura = foto = (foto[0], None)
+
+    # 3) Negativo ainda fresco: não varre `/proc` de novo.
+    if foto is not None and (agora - foto[0]) < VALIDADE_DA_VARREDURA_S:
+        return None
+
+    # 4) Varredura direta, sem forkar. Um `open` por pid.
     try:
         entries = os.listdir("/proc")
     except OSError:
+        # Sem `/proc` não houve varredura: NÃO carimba a foto. Carimbar aqui
+        # transformaria uma falha de leitura em cinco segundos de "não há
+        # jogo", que é a mentira que a casa proíbe (ausência ≠ negativo).
         return None
     for entry in entries:
         if not entry.isdigit():
             continue
         cmd = _cmdline_of(entry)
         if _STEAM_LAUNCH_RE.search(cmd):
+            _ultima_varredura = (agora, int(entry))
             return cmd
+    _ultima_varredura = (agora, None)
     return None
 
 
@@ -851,6 +930,12 @@ def steam_game_running() -> bool:
 
     A detecção em si mora em `_steam_launch_cmdline` desde PERF-PROC-SCAN-01
     (12/08/2026) — mesma semântica de antes, sem forkar `pgrep`.
+
+    BG-03 (25/08/2026): sem jogo aberto a resposta pode vir de um negativo de
+    até `VALIDADE_DA_VARREDURA_S` — **jamais um positivo velho**, que o pid é
+    reconfirmado toda vez. Quem for FECHAR a Steam chama
+    `invalidar_varredura_de_proc()` antes desta pergunta; a lista de quem já
+    chama e de quem ainda não está em `_steam_launch_cmdline`.
     """
     return _steam_launch_cmdline() is not None
 
@@ -878,6 +963,9 @@ def steam_game_running_appid() -> int | None:
     pagava o `pgrep -af` — 1.287 `openat`/s varrendo `/proc` inteiro. A
     varredura foi para `_steam_launch_cmdline`, que resolve pelo marker do
     wrapper quando ele existe. Semântica de retorno intacta.
+
+    BG-03 (25/08/2026): é ela que o poll loop chama, e é por ela que a
+    varredura completa deixa de sair a cada 2 s.
     """
     cmd = _steam_launch_cmdline()
     if cmd is None:
@@ -1022,6 +1110,7 @@ def with_steam_closed(
     A reabertura é `finally`: uma exceção na ação não pode deixar a usuária
     sem Steam.
     """
+    invalidar_varredura_de_proc()  # BG-03: gesto destrutivo — varre de verdade
     if steam_game_running():
         return STEAM_JANELA_JOGO_ABERTO, None
     estava_rodando = steam_running()
@@ -1704,6 +1793,7 @@ def main(argv: list[str] | None = None) -> int:
         # DEDUP-05 exigência 2: com um JOGO aberto, tanto o `--stop-steam`
         # (que mataria o jogo via steam -shutdown/pkill) quanto a edição em
         # si são recusados — antes de qualquer decisão sobre a Steam.
+        invalidar_varredura_de_proc()  # BG-03: idem — vai fechar a Steam
         if steam_game_running():
             print(
                 "[launch-options] ERRO: há um JOGO da Steam em execução — "
