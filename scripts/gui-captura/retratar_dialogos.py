@@ -142,11 +142,17 @@ CSS = RAIZ / "src/hefesto_dualsense4unix/gui/theme.css"
 DESTINO_DOC = RAIZ / "docs/usage/assets/dialogos"
 
 #: Os perfis que aparecem nas fotos. Os dois são perfis de FÁBRICA, versionados
-#: em `assets/profiles_default/` — estão no repositório desde sempre e não
-#: contam nada sobre a máquina de ninguém. Trocar um destes por um nome lido do
-#: disco dela é exatamente o gesto que o portão irmão reprova.
-PERFIL_EDITADO = "sackboy_nativo"
-PERFIL_ATIVADO = "coop_local"
+#: em `assets/profiles_default/` — estão no repositório e não contam nada sobre
+#: a máquina de ninguém. Trocar um destes por um nome lido do disco dela é
+#: exatamente o gesto que o portão irmão reprova.
+#:
+#: TROCADOS em 26/08/2026: eram `sackboy_nativo` e `coop_local`, e os dois
+#: foram PODADOS da fábrica nesse dia (a pedido dela — nenhum dos podados
+#: estava ativo no disco dela). Um nome que já não vive no repositório perde
+#: exatamente a propriedade que o fazia seguro aqui, e o portão irmão passa a
+#: reprovar. Os dois de agora são presets de gênero, que ficam.
+PERFIL_EDITADO = "fps"
+PERFIL_ATIVADO = "corrida"
 
 
 def _assentar(vezes: int = 8) -> None:
