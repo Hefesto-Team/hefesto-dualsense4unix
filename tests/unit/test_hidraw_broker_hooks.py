@@ -141,7 +141,7 @@ class _FakeDaemon:
 @pytest.fixture()
 def wired(monkeypatch: pytest.MonkeyPatch) -> _FakeDaemon:
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda *a, **k: None)
-    monkeypatch.setattr(session, "save_mouse_emulation_enabled", lambda *a, **k: None)
+    monkeypatch.setattr(session, "save_mouse_emulation", lambda *a, **k: None)
     monkeypatch.setattr(prr, "PhysicalReportReader", _FakeReader)
     monkeypatch.setattr(vp, "make_virtual_pad", lambda *_a, **_k: _FakeVpad())
     return _FakeDaemon()
