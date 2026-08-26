@@ -625,6 +625,20 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "app/ipc_bridge.py::mic_volume_set": (
+        "MEDIDO em 26/08/2026, e é a SOMBRA de uma cura que chegou. Ela é o "
+        "embrulho `bool` sobre `mic_volume_set_detalhado`, e ficou sem chamador "
+        "de produção no dia em que `controller_card.py` passou a chamar a "
+        "detalhada — que é literalmente o que a lápide de `alvo_honrado` "
+        "prescrevia como cura, e que esta leva executou. O `bool` colapsava "
+        "`sem_fonte`, daemon offline e sem-controle no mesmo `False`; com a "
+        "mesa cheia isso mexia no microfone de OUTRA pessoa devolvendo `True`. "
+        "NÃO É PROMESSA PENDENTE, é resto: o caminho existe e está fiado. O que "
+        "a apaga é a poda, junto com a do `led_set` e a do `player_leds_set`, "
+        "que carregam esta mesma nota. DONO: a próxima leva. O docstring dela "
+        "guarda a tabela das três camadas do microfone (firmware x fonte do "
+        "sistema) e essa medição tem de sobreviver à poda."
+    ),
     "daemon/subsystems/identity.py::reset_identity_registry": (
         "MEDIDO em 12/08/2026. Instrumento de isolamento entre casos: o próprio "
         "docstring diz `APENAS testes — isola estado entre casos`, e o corpo "
@@ -1431,19 +1445,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "O QUE A FECHA: a mesma poda do `led_set`, no mesmo commit e pelo mesmo "
         "dono. DONO: a próxima leva — ver a correção de fato na razão do "
         "`led_set`, que vale igual para este."
-    ),
-    "app/ipc_bridge.py::alvo_honrado": (
-        "MEDIDO em 23/08/2026: lê o `por_uniq` que o `mic.volume.set` publica "
-        "em `ipc_handlers.py:4538` e que o `bool` da ponte apagava — com a mesa "
-        "cheia há DUAS placas de som, e o gesto que cai na rota global mexe no "
-        "microfone de OUTRA pessoa devolvendo o mesmo `True`. "
-        "O QUE A FECHA: `app/widgets/controller_card.py:3684`, trocando "
-        "`mic_volume_set` por `mic_volume_set_detalhado`, e "
-        "`_mic_confirmado_pelo_daemon:3993` deixando de gravar o volume no "
-        "rascunho dela quando o alvo não foi honrado. Esta é a mais cara das "
-        "sete: separar `sem_fonte` de daemon offline pede um estado NOVO na "
-        "tela (controle insensível com a dica), e isso é desenho — foto antes e "
-        "depois, e a palavra é dela."
     ),
     "app/actions/external_controllers.py::short_button_label": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. O docstring descreve uma "
