@@ -1304,43 +1304,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `OutputSpec` de `profiles/manager.py:392`. Não eram dívida; eram uma
     # afirmação errada citada como prova. Ver as razões novas lá em cima.
     # --- a janela pedindo ao daemon ----------------------------------------
-    "app/ipc_bridge.py::apply_draft": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Quem a janela usa é a irmã "
-        "`apply_draft_detalhado` (app/actions/lightbar_actions.py:646 e :735), "
-        "e o próprio docstring de :530 explica que a detalhada é a `função "
-        "primitiva` e que `as duas formas estavam desenhadas na sprint` "
-        "(APLICAR-VERDADE-01/E2) — a forma booleana ficou no `__all__` e ninguém "
-        "a atravessou. "
-        "ESTA ENTRADA É O ACHADO DA RÉGUA: ela estava escondida enquanto o "
-        "portão contava PALAVRA de literal, porque a chave de IPC "
-        "`\"profile.apply_draft\"`, escrita em daemon/ipc_server.py:109 para "
-        "outra coisa, a dava por alcançada. Casar o literal inteiro a revelou. "
-        "O QUE A FECHA: apagar, se a detalhada é a forma que ficou; ou fiar, se "
-        "o valor-verdade simples ainda é útil a algum chamador. Antes de "
-        "apagar, conferir o applet do COSMIC — este portão é cego a Rust."
-    ),
-    "app/ipc_bridge.py::rumble_policy_set": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. É o invólucro que DESCARTA "
-        "o motivo da recusa, e o próprio docstring manda preferir o irmão: "
-        "`use rumble_policy_set_checked para tê-lo`. A janela usa o `_checked`. "
-        "O QUE A FECHA: apagar. Esta é a candidata mais clara a `resto` desta "
-        "lista — mas apagar símbolo público é mudança que ninguém pediu, e a "
-        "assinatura pode estar sendo importada pelo applet do COSMIC, que vive "
-        "em packaging/cosmic-applet/ e é Rust falando por IPC, fora do alcance "
-        "desta varredura. Conferir antes de apagar."
-    ),
-    "app/ipc_bridge.py::mouse_emulation_set": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Fala `mouse.emulation.set` "
-        "por IPC — o handler do outro lado EXISTE e está fiado "
-        "(daemon/ipc_server.py:152 despacha para `_handle_mouse_emulation_set`), "
-        "então a promessa é do lado da JANELA: a ponte existe e nenhuma "
-        "superfície a atravessa. O docstring cita a rota speed-only do "
-        "BUG-MOUSE-GUI-SYNC-01 A4. "
-        "O QUE A FECHA: descobrir por qual outra ponte a aba do mouse fala com "
-        "o daemon hoje, e então unificar — duas pontes para o mesmo método IPC "
-        "é como uma delas apodrece sem ninguém ver."
-    ),
-    # --- ELO-MUDO-01 / P1 (23/08/2026): a ponte já entrega, a aba ainda não pede
+    # ELO-MUDO-01 / P1 (23/08/2026): a ponte já entrega, a aba ainda não pede.
     # As entradas desta leva nasceram JUNTAS e por decisão dela: o conserto do
     # lado da ponte é aditivo de propósito, porque os chamadores moram em
     # arquivos que outras frentes estavam editando no mesmo dia. Cada uma diz
@@ -1351,33 +1315,22 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # (GATILHOS-APLICADO-COM-PROVA/T3): `_apply_trigger`, `_send_trigger_named`
     # e `_reset_trigger` de `app/actions/triggers_actions.py` chamam os dois, e
     # o `_toast_trigger` decide pelo CORPO do daemon, via `frase_do_desfecho`.
-    # Restam as QUATRO abaixo — Lightbar (duas), Rumble e o mic da mesa cheia.
-    # E a troca criou UMA entrada nova, logo aqui: o invólucro estreito que
-    # ficou sem chamador. Era previsível e está declarado em vez de escondido.
-    "app/ipc_bridge.py::trigger_reset": (
-        "MEDIDO em 25/08/2026, e é EFEITO da própria cura: o único chamador de "
-        "produção era `app/actions/triggers_actions.py:671`, o botão `Desligar` "
-        "da aba Gatilhos, que a T3 trocou por `trigger_reset_detalhado`. Ficou "
-        "o invólucro que descarta o corpo, com zero chamadores — a mesma forma "
-        "do par `apply_draft`/`apply_draft_detalhado` que já mora nesta lista. "
-        "O IRMÃO NÃO CAIU JUNTO, e a diferença importa: `trigger_set_checked` "
-        "continua com caminho porque `trigger_set` o chama dentro do próprio "
-        "`ipc_bridge.py` — a cadeia dele é que teria de ser desfeita inteira. "
-        "O QUE A FECHA: apagar `trigger_reset` e deixar só o `_detalhado`, com "
-        "o docstring de R-19/ABAS-06/ABAS-05 mudando de casa (é lá que está a "
-        "medição de por que `trigger.reset` não é `trigger.set` com `Off`). "
-        "NÃO fiz porque `app/ipc_bridge.py` é posse da frente B8 nesta "
-        "madrugada, e porque é símbolo público no `__all__` (:1319) — poda de "
-        "símbolo público é dela. DONO: a próxima leva."
-    ),
-    # `led_set_detalhado` e `player_leds_set_detalhado` SAÍRAM daqui em
-    # 26/08/2026 (BG-01), na mesma edição que os ligou: `_aplicar_cor_no_controle`,
+    # `led_set_detalhado` e `player_leds_set_detalhado` saíram pelo mesmo
+    # motivo em 26/08/2026 (BG-01): `_aplicar_cor_no_controle`,
     # `on_lightbar_off`, `_enviar_led_em_todos` e `_enviar_player_leds` de
-    # `app/actions/lightbar_actions.py` chamam os dois, e a frase de cada gesto
-    # sai de `textos_de_aplicacao.frase_do_desfecho` pelo CORPO do daemon.
-    # E a troca criou DUAS entradas novas, logo abaixo — os invólucros estreitos
-    # que ficaram sem chamador. Era previsível, e está declarado em vez de
-    # escondido, como no par `trigger_reset` de 25/08.
+    # `app/actions/lightbar_actions.py` chamam os dois.
+    #
+    # PODA DE 26/08/2026 (BG-07, LEVA-3-C): CINCO entradas de
+    # `app/ipc_bridge.py` saíram daqui porque o SÍMBOLO saiu do módulo —
+    # `apply_draft`, `rumble_policy_set`, `rumble_policy_set_detalhado`,
+    # `trigger_reset` e `mouse_emulation_set`. Eram invólucros estreitos, sem
+    # nenhum chamador de produção, e as razões deles mandavam apagar. A trava
+    # que os segurava — "a assinatura pode estar sendo importada pelo applet do
+    # COSMIC" — CAIU: o applet é Rust (`packaging/cosmic-applet/src/`), fala
+    # JSON-RPC por socket (`ipc.rs:3`) e `grep` pelos cinco nomes ali devolve
+    # ZERO. Um processo Rust não importa função Python.
+    #
+    # RESTAM TRÊS, abaixo: as duas da Lightbar e o mic da mesa cheia.
     "app/ipc_bridge.py::led_set": (
         "MEDIDO em 26/08/2026, e é EFEITO da própria cura (BG-01): os três "
         "chamadores de produção eram `app/actions/lightbar_actions.py` — o "
@@ -1385,13 +1338,23 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "BG-01 trocou os três por `led_set_detalhado`, porque o `bool` desta "
         "função jogava fora o `aplicado_em`/`guardado_em` que o daemon publica "
         "desde a APLICAR-VERDADE-01. Ficou o invólucro que descarta o corpo, "
-        "com zero chamadores — a mesma forma do par `apply_draft`/"
-        "`apply_draft_detalhado` que já mora nesta lista. "
+        "com zero chamadores — a mesma forma dos cinco invólucros podados em "
+        "26/08/2026 pela BG-07, cuja nota está no comentário logo acima. "
         "O QUE A FECHA: apagar `led_set` e deixar só o `_detalhado`, levando o "
-        "docstring do FEAT-LED-BRIGHTNESS-01/PERFIL-05 junto. NÃO fiz porque "
-        "`app/ipc_bridge.py` está no `nao_toca` desta leva (tem dono nas levas "
-        "2 e 3) e porque é símbolo público no `__all__` — poda de símbolo "
-        "público é dela. DONO: a próxima leva."
+        "docstring do FEAT-LED-BRIGHTNESS-01/PERFIL-05 junto. "
+        "FATO ERRADO, SUBSTITUÍDO em 26/08/2026: esta razão dizia que "
+        "`app/ipc_bridge.py` estava no `nao_toca` da leva. Está na POSSE da "
+        "LEVA-3-C, e a BG-07 podou cinco irmãos deste no mesmo arquivo. O que "
+        "segurou `led_set` foi a ORDEM da frente, que nomeia cinco funções e "
+        "não esta — e a razão escrita ali (`led_set` continuaria viva por "
+        "outro caminho) foi MEDIDA e é falsa: AST e `grep` concordam que não "
+        "há chamador nenhum em `src/` fora do próprio módulo. "
+        "DONO: a próxima leva, e agora sem trava — é poda pura de dez linhas, "
+        "mais os CINCO pontos que as citam em "
+        "`tests/unit/test_ipc_bridge.py` (:148, :152, :176, :257, :262) e os "
+        "DOIS métodos de "
+        "`tests/unit/test_p1_a_resposta_do_daemon_atravessa_a_ponte.py` (:396 "
+        "e :407)."
     ),
     "app/ipc_bridge.py::player_leds_set": (
         "MEDIDO em 26/08/2026: irmão exato do `led_set` acima, e pela mesma "
@@ -1401,17 +1364,8 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`player_leds_set_detalhado`, que entrega o corpo com `bits` ecoado "
         "(`ipc_handlers.py`, `_handle_led_player_set`). "
         "O QUE A FECHA: a mesma poda do `led_set`, no mesmo commit e pelo mesmo "
-        "dono — `app/ipc_bridge.py` não é posse desta leva. DONO: a próxima leva."
-    ),
-    "app/ipc_bridge.py::rumble_policy_set_detalhado": (
-        "MEDIDO em 23/08/2026: terceira e última rota que passava pelo "
-        "`_call_checked` e perdia o corpo. Aqui NÃO há mentira medida — o corpo "
-        "de hoje é `{status: ok, policy: <a pedida>}` e o daemon só ecoa. O que "
-        "esta função paga é a uniformidade das três rotas. "
-        "O QUE A FECHA: `app/actions/rumble_actions.py:579`, quando a aba "
-        "quiser mostrar a política EFETIVA em vez da pedida; ou APAGAR, se até "
-        "lá o corpo continuar sendo um eco. É a candidata mais clara a `resto` "
-        "desta leva, e está escrito de propósito."
+        "dono. DONO: a próxima leva — ver a correção de fato na razão do "
+        "`led_set`, que vale igual para este."
     ),
     "app/ipc_bridge.py::alvo_honrado": (
         "MEDIDO em 23/08/2026: lê o `por_uniq` que o `mic.volume.set` publica "
@@ -1647,7 +1601,9 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
 #: módulo, para outra coisa, e que por conter a palavra o dava por alcançado.
 #: Casar o literal INTEIRO não perdeu isenção legítima nenhuma (conferido: as
 #: cinco chamadas por string continuam alcançadas) e devolveu uma promessa
-#: solta de verdade.
+#: solta de verdade. (Esse símbolo foi PODADO em 26/08/2026, pela BG-07; a
+#: medição do instrumento é que fica — é ela que explica por que o casamento
+#: é do literal inteiro, e não de palavra.)
 
 #: Decoradores que ENTREGAM o símbolo a um framework, que passa a ser o
 #: chamador. Derivado do decorador, nunca de uma lista de nomes de função:
