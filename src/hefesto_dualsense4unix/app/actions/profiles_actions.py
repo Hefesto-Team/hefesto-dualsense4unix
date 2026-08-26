@@ -298,7 +298,7 @@ def _match_label(match: object) -> str:
 
     R-12 (auditoria 23/07): ``MatchCriteria`` com TODOS os campos vazios é o
     caso do preset ``coop_local`` de fábrica — ``MatchCriteria.matches``
-    devolve ``False`` sem condição alguma (schema.py:52), então o perfil é
+    devolve ``False`` sem condição alguma (schema.py:125), então o perfil é
     INALCANÇÁVEL pelo autoswitch. A coluna dizia "Só neste programa", o que é
     falso duas vezes: não há programa nenhum, e ele nunca entra sozinho.
     """
@@ -451,7 +451,7 @@ def explicacao_da_disputa(
 # boot. Por isso a lista parte dele em vez de partir do vazio.
 
 #: A cor do "ligado" desta casa — `@green` do `gui/theme.css:26`, a mesma que a
-#: janela compacta já usa para o perfil ativo (`compact_window.py:309`). Literal
+#: janela compacta já usa para o perfil ativo (`compact_window.py:320`). Literal
 #: pelo mesmo motivo dela: `@define-color` não chega à célula de um
 #: `GtkTreeView`, que quer uma cor e não um nome do tema.
 COR_DO_PERFIL_ATIVO = "#50fa7b"
@@ -745,7 +745,7 @@ def rebaixamento_para_so_manual(antes: object, depois: object) -> bool:
 # que ela SENTE, que é o mecanismo direto da queixa "às vezes pega".
 #
 # `mode_aplicado` e `motivo` NÃO são lidos aqui de propósito: os dois derivam
-# de `secoes["mode"]` (daemon/ipc_handlers.py:470-477), e ler a fonte em vez
+# de `secoes["mode"]` (daemon/ipc_handlers.py:862-870), e ler a fonte em vez
 # dos derivados é o que impede as duas leituras de divergirem.
 
 #: Nomes das seções que só o `profile.switch` relata. O mapa do rodapé
@@ -929,7 +929,7 @@ def mensagem_do_salvar(
 
 # --- P2: o carimbo de ponte aparece NESTA aba ------------------------------
 # PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/1 (24/08/2026). O daemon PUBLICA
-# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1971`), com o
+# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1999`), com o
 # comentário dizendo a intenção em letra: *"para a janela dizer 'este jogo já
 # sabe por onde entra'"*. Medido:
 #
@@ -2696,13 +2696,15 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
         """Pede ao daemon o carimbo de cada jogo — por GESTO, nunca por tique.
 
         **Por que `daemon.status` e não o `state_full` que a janela já lê a cada
-        tique:** medido em 25/08/2026, `pontes_confirmadas` é publicado por
-        `_handle_daemon_status` (`daemon/ipc_handlers.py:1971`) e **não existe
-        no `daemon.state_full`** — que é o payload do tique. Publicá-lo lá é o
-        conserto de fundo e mora no `daemon/`, que é de outra frente nesta leva.
-        Enquanto isso, uma leitura por gesto entrega o dado sem somar um segundo
-        poller: o carimbo só muda quando um perfil é salvo ou confirmado, então
-        uma busca ao abrir a caixa do jogo é atual o bastante.
+        tique:** o `state_full` TAMBÉM publica `pontes_confirmadas` desde a
+        BG-02 (`daemon/ipc_handlers.py:2483`, dentro de
+        `_handle_daemon_state_full`), mas **atrás de um cache de 5 s**
+        (`_PONTES_CONFIRMADAS_TTL_SEC`, `:189`) — porque a leitura crua abre
+        CADA perfil do disco sob `FileLock` e o tique roda a 10-20 Hz. Quem
+        precisa da resposta exata no instante seguinte ao gesto é esta caixa: o
+        carimbo muda justamente quando um perfil é salvo ou confirmado, e o
+        `daemon.status` não passa pelo cache. A escolha está escrita dos dois
+        lados — ver o comentário do TTL, que nomeia esta aba.
 
         Best-effort inteiro: daemon offline deixa o cache como está e a linha
         simplesmente não aparece — que é o silêncio já contratado no §P2.

@@ -1,7 +1,7 @@
 """P2 — o daemon publica o carimbo de ponte, e a janela não tinha UM leitor.
 
 PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/1 (24/08/2026). O `daemon.status` publica
-`pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1971`), e o
+`pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:1999`), e o
 comentário ao lado diz a intenção em letra: *"para a janela dizer 'este jogo já
 sabe por onde entra'"*. Medido:
 
@@ -23,10 +23,14 @@ nada — nunca "ponte desconhecida". `pontes_confirmadas` só publica os appids
 COM carimbo justamente porque a ausência da chave já significa "não sei", e
 escrever isso na tela transformaria falta de informação em aviso.
 
-**MEDIDO E ABERTO** (§"o que sobrou"): `pontes_confirmadas` existe no
-`daemon.status` e **não** no `daemon.state_full`, que é o payload do tique da
-janela. Por isso a aba busca por GESTO. Publicá-lo também no `state_full` é o
-conserto de fundo, e mora no `daemon/`.
+**FATO SUBSTITUÍDO — 26/08/2026.** Este cabeçalho dizia que
+`pontes_confirmadas` existia no `daemon.status` e **não** no
+`daemon.state_full`, e pedia o conserto de fundo. Ele foi feito: a BG-02
+publicou a chave no tique (`daemon/ipc_handlers.py:2483`). O que sobrou não é
+ausência, é TETO — o tique paga um cache de 5 s
+(`_PONTES_CONFIRMADAS_TTL_SEC`, `:189`) porque a leitura crua abre cada perfil
+do disco sob `FileLock`. A aba continua buscando por GESTO porque precisa da
+resposta no instante seguinte ao salvar, e o `daemon.status` não paga o cache.
 """
 from __future__ import annotations
 
@@ -241,12 +245,17 @@ class TestABuscaDoCarimbo:
     def test_a_aba_pede_o_carimbo_ao_daemon_status_e_nao_ao_tique(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """MEDIDO em 25/08: `pontes_confirmadas` NÃO existe no `state_full`.
+        """MEDIDO em 26/08: o `state_full` publica o carimbo ATRÁS DE CACHE.
 
-        Ele é publicado por `_handle_daemon_status` e só por ele
-        (`daemon/ipc_handlers.py:1971`). Uma leitura do `state_full` — o
-        payload do tique — devolveria `None` para sempre, e a linha nunca
-        apareceria. Se alguém trocar o método aqui, este teste reprova.
+        A razão de 25/08 (*"`pontes_confirmadas` não existe no `state_full`"*)
+        caducou na BG-02: ele é publicado nos dois lugares — por
+        `_handle_daemon_status` (`daemon/ipc_handlers.py:1999`) e por
+        `_handle_daemon_state_full` (`:2483`). O que separa os dois é o TETO
+        DE LEITURA: o tique passa por `_PONTES_CONFIRMADAS_TTL_SEC` (`:189`),
+        cinco segundos de cache, porque a leitura crua abre cada perfil do
+        disco sob `FileLock`. Esta caixa precisa da resposta no instante
+        seguinte ao gesto de salvar, e o `daemon.status` não paga o cache.
+        Se alguém trocar o método aqui, este teste reprova.
         """
         pedidos: list[str] = []
         monkeypatch.setattr(
