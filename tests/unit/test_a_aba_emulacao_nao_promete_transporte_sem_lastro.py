@@ -377,3 +377,167 @@ def test_a_frase_cita_um_controle_que_existe_para_a_excecao_por_jogo() -> None:
         )
         abas = _ABA_CITADA.findall(frase)
         assert abas, f"a frase não diz em que aba o controle mora: {frase!r}"
+
+
+# ---------------------------------------------------------------------------
+# BG-TOAST-01 — o recibo carrega a mesma ressalva do rótulo
+# ---------------------------------------------------------------------------
+# 26/08/2026. O tooltip de "Xbox 360" foi corrigido ONTEM pela E8 e passou a
+# dizer *"A vibração ainda não foi conferida no aparelho — nem no cabo, nem no
+# rádio"*. O recibo do MESMO botão continuou dizendo *"Gamepad Xbox 360 ligado
+# (vibra no jogo)"* — e quem clica lê o toast, não o tooltip que precisa de
+# meio segundo parado em cima do botão para aparecer.
+#
+# R1 (acima) não alcançava isso: ela lê o `gui/main.glade`, e o toast é montado
+# em Python. Régua que não alcança o defeito não é redundância a remover; é o
+# motivo de haver a segunda — a mesma razão escrita no topo deste arquivo sobre
+# a `validar-fala-de-tela.py`.
+#
+# Como acima, `emulation_actions.py` é lido por AST e nunca importado: ele puxa
+# GTK, e um runner sem GTK transformaria `ImportError` em "zero toasts
+# encontrados" — o jeito silencioso de este portão se desligar.
+
+#: Os escoadouros de RECIBO desta aba, e quais posições carregam o texto.
+#: `_apply_mode(mode_id, flavor, msg)` tem a frase na posição 2;
+#: `_toast_emulation(msg)`, na 0.
+_ESCOADOUROS_DE_RECIBO: dict[str, tuple[int, ...]] = {
+    "_toast_emulation": (0,),
+    "_apply_mode": (2,),
+}
+
+_BURACO = "{}"
+
+
+def _handler_do_botao(wid: str) -> str | None:
+    """O handler de `clicked` do widget, lido do glade. None se não for botão."""
+    for obj in _pagina_da_emulacao().iter("object"):
+        if obj.get("id") != wid:
+            continue
+        for sinal in obj.findall("signal"):
+            if sinal.get("name") == "clicked":
+                return sinal.get("handler")
+    return None
+
+
+def _texto_do_no(no: ast.expr, ressalvas: dict[str, str]) -> str | None:
+    """A expressão remontada como a pessoa a LÊ, ou None se não for texto.
+
+    `RESSALVA_DE_TRANSPORTE["…"]` é resolvido para o valor real, de propósito:
+    o produto deve citar a constante em vez de duplicar a frase (uma cópia só,
+    que é a regra desta casa sobre fato errado), e a régua tem de enxergar o
+    texto FINAL mesmo assim. Um pedaço calculado em tempo de execução vira
+    `{}` — visível, para não inventar uma frase que ninguém escreveu.
+    """
+    if isinstance(no, ast.Constant):
+        return no.value if isinstance(no.value, str) else None
+    if isinstance(no, ast.Subscript):
+        alvo, chave = no.value, no.slice
+        if (
+            isinstance(alvo, ast.Name)
+            and alvo.id == "RESSALVA_DE_TRANSPORTE"
+            and isinstance(chave, ast.Constant)
+            and isinstance(chave.value, str)
+        ):
+            return ressalvas.get(chave.value, _BURACO)
+        return None
+    if isinstance(no, ast.JoinedStr):
+        pedacos: list[str] = []
+        for pedaco in no.values:
+            texto = _texto_do_no(pedaco, ressalvas) if not isinstance(
+                pedaco, ast.FormattedValue
+            ) else None
+            pedacos.append(texto if texto is not None else _BURACO)
+        return "".join(pedacos)
+    if isinstance(no, ast.BinOp) and isinstance(no.op, ast.Add):
+        esquerda = _texto_do_no(no.left, ressalvas)
+        direita = _texto_do_no(no.right, ressalvas)
+        if esquerda is None and direita is None:
+            return None
+        return (esquerda or _BURACO) + (direita or _BURACO)
+    return None
+
+
+def _recibos_do_handler(handler: str, ressalvas: dict[str, str]) -> list[str]:
+    """Os textos de recibo que o handler manda para a barra de estado."""
+    arvore = ast.parse(_ACOES.read_text(encoding="utf-8"), filename=str(_ACOES))
+    corpo: ast.FunctionDef | None = None
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.FunctionDef) and no.name == handler:
+            corpo = no
+            break
+    assert corpo is not None, (
+        f"o glade liga o botão ao handler {handler!r}, que não existe em "
+        f"{_ACOES.relative_to(_RAIZ)}"
+    )
+    saida: list[str] = []
+    for no in ast.walk(corpo):
+        if not isinstance(no, ast.Call) or not isinstance(no.func, ast.Attribute):
+            continue
+        posicoes = _ESCOADOUROS_DE_RECIBO.get(no.func.attr)
+        if posicoes is None:
+            continue
+        for indice in posicoes:
+            if indice < len(no.args):
+                texto = _texto_do_no(no.args[indice], ressalvas)
+                if texto and texto.replace(_BURACO, "").strip():
+                    saida.append(texto)
+        for nomeado in no.keywords:
+            if nomeado.arg in ("msg", "texto"):
+                texto = _texto_do_no(nomeado.value, ressalvas)
+                if texto and texto.replace(_BURACO, "").strip():
+                    saida.append(texto)
+    return saida
+
+
+def test_o_recibo_carrega_a_mesma_ressalva_do_rotulo() -> None:
+    afirmacoes = _declaracao("AFIRMACOES_DE_TRANSPORTE_DA_ABA")
+    ressalvas = _declaracao("RESSALVA_DE_TRANSPORTE")
+    radicais = _declaracao("RADICAIS_DE_TRANSPORTE")
+    assert isinstance(afirmacoes, dict)
+    assert isinstance(ressalvas, dict)
+    assert isinstance(radicais, dict)
+    fatos = _fatos_do_mapa()
+    textos_do_glade = _textos_da_aba()
+
+    conferidos = 0
+    faltando: list[str] = []
+    for wid in afirmacoes:
+        handler = _handler_do_botao(wid)
+        if handler is None:  # rótulo, não botão: R1 já responde por ele
+            continue
+        recibos = _recibos_do_handler(handler, ressalvas)
+        assert recibos, (
+            f"{wid} é um botão e o handler {handler!r} não manda recibo nenhum "
+            "para a barra de estado — se o recibo saiu, esta régua deixou de "
+            "medir e a declaração tem de sair junto"
+        )
+        for recibo in recibos:
+            conferidos += 1
+            for chave, radical in radicais.items():
+                if radical.lower() not in recibo.lower():
+                    continue
+                if tem_lastro_nos_dois(fatos[chave]):
+                    continue
+                ressalva = ressalvas.get(chave)
+                assert ressalva, (
+                    f"{chave!r} não tem lastro nos dois transportes e não há "
+                    "ressalva declarada para ela em RESSALVA_DE_TRANSPORTE"
+                )
+                if ressalva in recibo:
+                    continue
+                faltando.append(
+                    f"  {wid} ({handler}) afirma {chave} nos DOIS lugares, e só "
+                    "o tooltip carrega a ressalva:\n"
+                    f"    tooltip: {' '.join(textos_do_glade.get(wid, []))!r}\n"
+                    f"    recibo : {recibo!r}\n"
+                    f"    falta  : {ressalva!r}"
+                )
+    assert conferidos, (
+        "nenhum recibo foi conferido — os botões da aba Emulação deixaram de "
+        "chegar a `_apply_mode`/`_toast_emulation`, e esta régua virou "
+        "decoração. Ajuste `_ESCOADOUROS_DE_RECIBO`."
+    )
+    assert not faltando, (
+        "o recibo promete o que o rótulo já ressalvou — quem clica lê o "
+        "toast:\n" + "\n".join(faltando)
+    )
