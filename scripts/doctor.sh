@@ -996,6 +996,14 @@ check_wireplumber_source() {
         pass "microfone ativo é o DualSense (o promotor está instalado — foi pedido)"
         return
     fi
+    # DROPIN-AMBIGUO-01 (26/08/2026) — a OUTRA metade do mesmo defeito. Sem o
+    # 51, quem promoveu o mic a dedo (`mic promote`) recebia o FAIL abaixo a
+    # cada execução do doctor, e um aviso que se aprende a ignorar é pior que
+    # aviso nenhum. Agora quem responde é o GESTO gravado, não a ausência.
+    if [[ -f "$(_marca_do_gesto_do_mic)" ]]; then
+        pass "microfone ativo é o DualSense (foi pedido — marca do gesto em $(_marca_do_gesto_do_mic))"
+        return
+    fi
     # ativo É o DualSense (não desejado) — distingue escassez (única fonte) de falha real.
     local has_other=""
     if command -v wpctl >/dev/null 2>&1; then
@@ -1046,6 +1054,19 @@ _default_source_classe() {
     fi
 }
 
+# DROPIN-AMBIGUO-01 — o caminho da MARCA DO GESTO, num lugar só.
+#
+# Quem escreve é `scripts/fix_wireplumber_default_source.sh` (nos gestos de
+# LIGAR o mic) e o `install.sh --keep-dualsense-mic`; quem apaga são os gestos
+# contrários e o `uninstall.sh`. Aqui só se LÊ. O caminho é duplicado por
+# necessidade — o doctor não pode `source` um script que despacha —, e é o
+# `tests/unit/test_dropin_ambiguo_01_a_marca_do_gesto.py` que cobra que os
+# três arquivos digam o mesmo nome.
+_marca_do_gesto_do_mic() {
+    printf '%s/hefesto-dualsense4unix/mic-do-dualsense-pedido.conf\n' \
+        "${XDG_STATE_HOME:-${HOME}/.local/state}"
+}
+
 # 0 quando o mic do DualSense PODE ser eleito fonte padrão do sistema.
 #
 # Três sinais EXPLÍCITOS, nenhum adivinhado — e a ordem é a hierarquia de quem
@@ -1067,11 +1088,31 @@ _prefere_mic_do_dualsense() {
         1|true|yes|TRUE|YES) return 0 ;;
     esac
     # 3. O drop-in 51 é a política DEFAULT do install: rebaixar. Enquanto ele
-    #    estiver no lugar, o controle é a ÚLTIMA opção — não a primeira. Sua
-    #    ausência (ex.: `fix_wireplumber_default_source.sh --promote-source`,
-    #    `mic promote`) é a promoção explícita.
+    #    estiver no lugar, o controle é a ÚLTIMA opção — não a primeira.
     [[ -f "${conf}/51-hefesto-dualsense-no-default-source.conf" ]] && return 1
-    return 0
+    # 4. A MARCA DO GESTO (DROPIN-AMBIGUO-01, curado em 26/08/2026). Sem o 51,
+    #    é ELA quem diz que a promoção foi pedida — e ela existe porque quem
+    #    pediu deixou o gesto gravado, não porque um arquivo faltou.
+    [[ -f "$(_marca_do_gesto_do_mic)" ]] && return 0
+    # 5. Nem o 51 nem a marca: NÃO SEI, e "não sei" nunca é "ela pediu".
+    #
+    #    FATO ERRADO, SUBSTITUÍDO — esta linha era `return 0`, com o
+    #    comentário *"sua ausência (ex.: --promote-source, mic promote) é a
+    #    promoção explícita"*. A ausência tem DUAS origens e o disco não as
+    #    distingue: a promoção explícita e o `uninstall` que desarmou a cura
+    #    (ou a instalação que nunca houve). Lendo as duas como uma, o doctor
+    #    dava [OK] — e ELEGIA o mic do controle a fonte padrão do sistema, com
+    #    `pass` na tela — em cima de uma máquina com a cura desarmada. É desse
+    #    estado que saiu a queixa dela de 04/08: *"não funciona nem mic, nem os
+    #    botões de sons do jogo"* (DROPIN-AMBIGUO-01).
+    #
+    #    A migração escolhida é a CONSERVADORA (E4 da sprint, opção (b)):
+    #    máquina que promoveu ANTES desta cura existir não tem marca e passa a
+    #    ser tratada como "não sei". O preço é conhecido e pequeno — ela deixa
+    #    de ser a primeira da fila quando a fonte padrão é um monitor, e o
+    #    caminho de volta é um gesto só (`mic promote`). O preço da escolha
+    #    oposta era o [OK] em cima do defeito, que já custou uma noite.
+    return 1
 }
 
 # PURA: 0 quando a PORTA ATIVA da source `$1` está marcada `not available` pelo
@@ -1302,6 +1343,44 @@ fix_default_source_monitor() {
 # haptic-de-áudio. Instalado SÓ pelo fluxo de mic-off (--disable-source /
 # install --with-wireplumber-disable-mic). Aqui só REPORTAMOS: presença = saída
 # do controle desligada de propósito. NÃO afeta o rumble in-game (HID/vpad).
+# DROPIN-AMBIGUO-01, E3 — o check que fala do ARQUIVO, não do sintoma.
+#
+# Todos os outros checks de microfone dependem do sintoma estar MANIFESTO:
+# precisam de um mic ativo para ter o que reprovar. Com o DualSense na gaveta
+# — que é a hora em que a maioria das instalações roda — o doctor ficava mudo
+# sobre uma cura desarmada, e a máquina só descobria no meio do jogo. Este
+# aqui lê disco, e por isso vale com nenhum controle conectado.
+#
+# PROVISÓRIO — decisão dela: as três frases desta função são texto novo de
+# tela (LEVA-1-D, 26/08/2026).
+check_dropin_do_mic_armado() {
+    local conf="${HOME}/.config/wireplumber/wireplumber.conf.d"
+    local marca; marca="$(_marca_do_gesto_do_mic)"
+    if [[ -f "${conf}/52-hefesto-dualsense-disable-source.conf" ]]; then
+        info "microfone do DualSense desligado de propósito (drop-in 52) — não há política de eleição a armar"
+        return
+    fi
+    if [[ -f "${conf}/51-hefesto-dualsense-no-default-source.conf" ]]; then
+        pass "a política de microfone do install está armada (drop-in 51 no lugar)"
+        return
+    fi
+    # Sem o 51. O que essa AUSÊNCIA significa quem responde é o degrau da
+    # marca do gesto — nunca a ausência por si.
+    if _prefere_mic_do_dualsense; then
+        local quando=""
+        [[ -r "${marca}" ]] && quando="$(sed -n 's/^data=//p' "${marca}" | head -n1)"
+        if [[ -n "${quando}" ]]; then
+            pass "o mic do DualSense é escolha dela, de ${quando} (marca do gesto em ${marca})"
+        else
+            pass "o mic do DualSense é escolha dela (sinal explícito: DUALSENSE_MIC_INTENDED)"
+        fi
+        return
+    fi
+    warn "a política de microfone do install NÃO está armada e ninguém pediu para promover o controle — sem o drop-in 51 o WirePlumber pode eleger o mic do DualSense sozinho, e o que os aplicativos gravam vira o eco da saída em vez da voz"
+    info "  se foi um uninstall que a desarmou, rearme: bash scripts/fix_wireplumber_default_source.sh --install"
+    info "  se o mic do controle é o que você quer, peça de propósito: hefesto-dualsense4unix mic promote (isso grava a marca em ${marca}, e o doctor para de reclamar)"
+}
+
 check_dualsense_sink_disabled() {
     local d="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
     if [[ -f "${d}" ]]; then
@@ -5719,6 +5798,7 @@ main() {
     check_perfis_inalcancaveis
     hdr "áudio (microfone)"
     check_wireplumber_source
+    check_dropin_do_mic_armado
     check_default_source_monitor
     check_dualsense_sink_disabled
     check_audio_sink_muted
