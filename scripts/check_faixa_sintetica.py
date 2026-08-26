@@ -27,14 +27,21 @@ gancho, nem lista do ``CLAUDE.md``. Portão que ninguém chama é o defeito
   errado, e se ele trouxer faixa de fixture o defeito atravessou outra porta.
   É determinístico, não depende de ``$HOME`` e por isso vale no CI, onde o
   ``~/.config`` está vazio e a varredura dele seria verde por vacuidade;
-* ``--casa`` varre o ``config_dir()`` REAL. **Não roda sozinho em lugar
-  nenhum**, de propósito: na máquina de quem já tem a poluição gravada ele
-  fica vermelho todo dia até alguém decidir limpar — e a decisão sobre o que
-  já está no disco é de quem é dono da máquina. Quem quer a resposta pede;
+* ``--casa`` varre o ``config_dir()`` REAL. **Não REPROVA em lugar nenhum**,
+  de propósito: na máquina de quem já tem a poluição gravada ele ficaria
+  vermelho todo dia até alguém decidir limpar — e a decisão sobre o que já
+  está no disco é de quem é dono da máquina;
 * a suíte chama a função :func:`enderecos` no ``tests/conftest.py``
   (FAIXA-NO-BERCO-01): ali a régua é o DELTA — reprova só se apareceu um
   endereço sintético que não estava lá no começo da sessão. Assim ela é verde
-  numa máquina já poluída e vermelha no dia em que um teste polui.
+  numa máquina já poluída e vermelha no dia em que um teste polui;
+* e o CABEÇALHO da suíte (``pytest_report_header``, mesmo ``conftest.py``,
+  25/08/2026) RELATA a contagem do ``--casa`` em toda execução. **Esta linha é
+  a correção de um fato:** até 25/08 este cabeçalho dizia que o ``--casa`` não
+  rodava sozinho em lugar nenhum, e a consequência foi medida — o estado
+  PARADO do ``~/.config`` dela não era olhado por instrumento nenhum, e quatro
+  endereços forjados moraram na fila dela de 22/08 a 25/08 sem ninguém ver. O
+  delta é cego para a sujeira que já estava lá; o relato do cabeçalho não é.
 
 Uso:
     python3 scripts/check_faixa_sintetica.py             # --arvore (default)
