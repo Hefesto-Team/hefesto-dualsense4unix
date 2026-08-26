@@ -505,8 +505,22 @@ def _esta_em_identificador_snake(line: str, start: int, end: int) -> bool:
     """
     antes = line[start - 1] if start > 0 else ""
     depois = line[end] if end < len(line) else ""
-    sep = {"_", ".", "-", "$", "{", "=", "/"}
+    # `@` entrou em 25/08/2026: é a marca de token de OUTRA LINGUAGEM dentro de
+    # um arquivo desta casa — `@media` do CSS, `@property`, `@pytest.mark`. A
+    # régua acusava `@media` como "média" mal acentuada em todo gerador de HTML
+    # que tem uma consulta de mídia, e o CSS não tem como escrever de outro
+    # jeito: é palavra-chave da linguagem, não português.
+    sep = {"_", ".", "-", "$", "{", "=", "/", "@"}
     if antes in sep or depois in sep:
+        return True
+    # VALOR DE ATRIBUTO HTML/CSS — `data-voto="nao"`, `type="acao"`. O valor é
+    # um token que o JavaScript compara byte a byte; acentuá-lo quebraria o
+    # código sem melhorar português nenhum, porque ninguém o LÊ na tela.
+    #
+    # Casa só o par ATRIBUTO=VALOR (com o `=` colado nas aspas), e não qualquer
+    # texto entre aspas: prosa citada continua sendo cobrada, que é o que este
+    # portão existe para fazer.
+    if antes in {'"', "'"} and start >= 2 and line[start - 2] == "=":
         return True
     # def foo(), class Bar, alias baz, function qux
     prefix = line[:start].rstrip()

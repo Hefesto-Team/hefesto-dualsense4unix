@@ -170,6 +170,6 @@ sabe hoje é mais preciso que "protocolo proprietário":
   existe, o firmware responde, e o payload não foi identificado.*
 
 Linha por linha, com a procedência de cada célula, no
-[mapa de canais](../../specs.html) — `audio.microfone@dualsense`,
+[mapa de canais](../../html/specs.html) — `audio.microfone@dualsense`,
 `audio.saida_dedicada@dualsense` e
 `audio.saida_dedicada.payload_do_degrau@dualsense`.

@@ -15,6 +15,22 @@ import subprocess
 import sys
 from pathlib import Path
 
+def _specs_de(raiz: Path) -> Path:
+    """O caminho do `specs.html` numa árvore de brinquedo, com a pasta criada.
+
+    A página mudou da raiz para `html/` em 25/08/2026, e as árvores de teste
+    passaram a precisar da pasta ANTES do `write_text` — senão o erro é um
+    `FileNotFoundError` de diretório, que não diz nada sobre o que se testa.
+
+    Existe como função, e não como duas linhas repetidas em cada caso, pelo
+    motivo de sempre nesta casa: no dia em que o caminho mudar de novo, muda
+    num lugar só.
+    """
+    pasta = raiz / "html"
+    pasta.mkdir(parents=True, exist_ok=True)
+    return pasta / "specs.html"
+
+
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "check_paridade_transporte.py"
 
@@ -97,7 +113,7 @@ def monta_repo(tmp_path: Path) -> Path:
     pasta_de_testes = tmp_path / "tests" / "unit"
     pasta_de_testes.mkdir(parents=True, exist_ok=True)
     (pasta_de_testes / "test_exemplo.py").write_text(TESTE_FALSO, encoding="utf-8")
-    (tmp_path / "specs.html").write_text(
+    _specs_de(tmp_path).write_text(
         "<html><body>luz.lightbar.cor@dualsense</body></html>", encoding="utf-8"
     )
     _git("add", "-A", cwd=tmp_path)
@@ -142,7 +158,7 @@ def test_id_renomeado_com_id_v1_passa(tmp_path: Path) -> None:
     )
     # o specs.html também precisa publicar o novo id (regra 5) — não é o foco
     # deste teste, então republica aqui.
-    (raiz / "specs.html").write_text(
+    _specs_de(raiz).write_text(
         "<html><body>luz.lightbar.cor@dualsense_novo</body></html>", encoding="utf-8"
     )
     processo = rodar(raiz, "--contra", "HEAD")

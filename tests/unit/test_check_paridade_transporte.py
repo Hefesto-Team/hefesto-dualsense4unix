@@ -23,6 +23,22 @@ from pathlib import Path
 
 import pytest
 
+def _specs_de(raiz: Path) -> Path:
+    """O caminho do `specs.html` numa árvore de brinquedo, com a pasta criada.
+
+    A página mudou da raiz para `html/` em 25/08/2026, e as árvores de teste
+    passaram a precisar da pasta ANTES do `write_text` — senão o erro é um
+    `FileNotFoundError` de diretório, que não diz nada sobre o que se testa.
+
+    Existe como função, e não como duas linhas repetidas em cada caso, pelo
+    motivo de sempre nesta casa: no dia em que o caminho mudar de novo, muda
+    num lugar só.
+    """
+    pasta = raiz / "html"
+    pasta.mkdir(parents=True, exist_ok=True)
+    return pasta / "specs.html"
+
+
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "check_paridade_transporte.py"
 CSV_REAL = RAIZ_REAL / "docs" / "data" / "mapa-controles.csv"
@@ -136,7 +152,7 @@ def monta_arvore(
     (pasta_de_testes / "ajudantes.py").write_text("VALOR = 1\n", encoding="utf-8")
 
     publicados = [linha.get("id", "") for linha in linhas] if publicar else []
-    (tmp_path / "specs.html").write_text(
+    _specs_de(tmp_path).write_text(
         "<html><body>" + " ".join(publicados) + "</body></html>", encoding="utf-8"
     )
     return caminho_csv
@@ -509,7 +525,7 @@ def test_linha_que_nao_chegou_ao_specs_reprova(tmp_path: Path) -> None:
 
 def test_sem_specs_a_regra_cinco_se_desliga(tmp_path: Path) -> None:
     caminho = monta_arvore(tmp_path, [linha_forte()])
-    (tmp_path / "specs.html").unlink()
+    _specs_de(tmp_path).unlink()
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout
     assert "regra DESLIGADA" in processo.stdout
