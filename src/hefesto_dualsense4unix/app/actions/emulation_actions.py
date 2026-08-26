@@ -39,7 +39,10 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     XBOX360_VENDOR,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
+from hefesto_dualsense4unix.utils.repo_files import (
+    como_atualizar_esta_instalacao,
+    encontrar_arquivo_do_repo,
+)
 
 logger = get_logger(__name__)
 
@@ -352,7 +355,7 @@ def format_steam_input_result(
     if status == "sem_script":
         return (
             "Não encontrei o script que desliga o Steam Input nesta "
-            "instalação — rode ./install.sh para atualizar o Hefesto."
+            f"instalação — {como_atualizar_esta_instalacao()}."
         )
     if status == "jogo_aberto" or tag == "recusado-jogo-aberto":
         return (

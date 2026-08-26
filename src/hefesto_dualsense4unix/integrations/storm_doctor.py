@@ -13,6 +13,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
+
 # Tags no padrão do doctor.
 OK = "[ OK ]"
 WARN = "[WARN]"
@@ -329,11 +331,16 @@ def check_snd_quirk(
     # senha"). Quem instala esta cura é o `install.sh` (via
     # `scripts/install_snd_quirk.sh`, em /etc/modprobe.d), e ela pega no
     # próximo replug do controle. É esse o ponteiro honesto.
+    # BG-INSTALL-01 (26/08/2026): o "rode ./install.sh" era cravado, e este
+    # laudo aparece em TODO formato de instalação — inclusive nos cinco que
+    # não têm o arquivo. `como_atualizar_esta_instalacao()` mora em
+    # `utils/repo_files` justamente para este chamador: `integrations/` não
+    # pode importar de `app/`, que é onde a função nasceu.
     return (
         WARN,
-        "cura do travamento do USB AUSENTE — rode ./install.sh e reconecte os "
-        "controles (o botão 'Aplicar correções' não instala esta cura; sem ela "
-        "os controles podem desconectar no meio do jogo)",
+        f"cura do travamento do USB AUSENTE — {como_atualizar_esta_instalacao()} "
+        "e reconecte os controles (o botão 'Aplicar correções' não instala "
+        "esta cura; sem ela os controles podem desconectar no meio do jogo)",
     )
 
 
