@@ -405,6 +405,17 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "(daemon/main.py:98). Calibração de gesto; afinada por quem mede, não "
         "escolhida por quem usa. MEDIDO em 12/08/2026."
     ),
+    "HEFESTO_DUALSENSE4UNIX_PS_TOQUE_CURTO_TETO_MS": (
+        "O TETO de duração do toque curto do PS "
+        "(integrations/hotkey_daemon.py::_teto_do_toque_curto_do_ambiente). "
+        "Irmã da PS_LONG_PRESS_MS acima e da mesma natureza: calibração de "
+        "gesto, afinada por quem mede. Não abre feature nenhuma — o teto já "
+        "nasce LIGADO em 700 ms, que é o que separa o toque humano (80-250 ms) "
+        "do gesto de religar o controle no rádio (5.038 ms medidos no journal "
+        "dela). Quem não a define recebe o comportamento certo; `=0` desliga o "
+        "teto, que é a escolha de quem quer o comportamento anterior de volta. "
+        "MEDIDO em 26/08/2026 (PS-TOQUE-CURTO-01, E1)."
+    ),
     "HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC": (
         "Intervalo mínimo entre escritas de report de saída "
         "(core/backend_pydualsense.py:214). Número de calibração do transporte, "
