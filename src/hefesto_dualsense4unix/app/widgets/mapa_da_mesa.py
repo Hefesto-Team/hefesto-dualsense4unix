@@ -69,6 +69,8 @@ import contextlib
 from collections.abc import Callable, Mapping
 from typing import Any
 
+from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor
+from hefesto_dualsense4unix.integrations import mapa_das_portas
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Aparelho, Censo
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -122,6 +124,44 @@ _LETRAS = "abcdefghijklmnopqrstuvwxyz"
 #: Sete é a fileira do hub dela, que é a maior face desta casa.
 _COLUNAS = 7
 
+#: O cabeçalho da confissão, e a frase de cada coisa que o desenho não diz.
+#: PROVISÓRIO — decisão dela: texto novo, e a prova de tela não fechou.
+#:
+#: O cabeçalho sai do léxico que já existe: ``calibrar_entradas.LAUDO_NAO_CONFERI``
+#: é "O que eu não consegui conferir", e esta é a mesma coisa dita sobre o
+#: desenho em vez de sobre a entrada.
+#:
+#: POR QUE ELAS EXISTEM: o motor recebe cada campo com o valor por omissão
+#: quando ninguém o preencheu, e não tem como distinguir "é assim" de "ninguém
+#: disse". Publicar o juízo sem publicar isto é o juízo otimista CALADO que a
+#: ``D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS`` mandou acabar: *"a linha do mapa DIZ
+#: isso em vez de calar"*.
+CONFISSAO_ABERTURA = "O que eu não consegui conferir neste desenho:"
+CONFISSAO: dict[str, str] = {
+    mapa_das_portas.LACUNA_POSICAO: (
+        "em que ponto da fileira cada entrada fica. Sem isso eu não conto a "
+        "folga entre dois adaptadores de rádio, e duas entradas nas pontas "
+        "opostas do hub recebem o mesmo juízo de duas coladas."
+    ),
+    mapa_das_portas.LACUNA_PAR: (
+        "quais entradas ficam coladas no metal: alguma face está com um "
+        "número sobrando. Eu as leio de duas em duas, na ordem em que você as "
+        "desenhou."
+    ),
+    mapa_das_portas.LACUNA_VELOCIDADE: (
+        "quais entradas são azuis. Enquanto você não passar por "
+        "\"Calibrar as entradas\", eu trato todas como pretas."
+    ),
+    mapa_das_portas.LACUNA_REGIAO: (
+        "se alguma face é do gabinete ou de um hub — nenhuma entrada dela tem "
+        "aparelho declarado."
+    ),
+    mapa_das_portas.LACUNA_ESPECIE: (
+        "o que é algum dos aparelhos da lista: o sistema não diz o que ele é, "
+        "e sobre ele eu não tenho juízo nenhum."
+    ),
+}
+
 
 class LogicaDoMapa:
     """O rascunho do gabinete e os quatro gestos que o mudam — sem GTK.
@@ -133,8 +173,18 @@ class LogicaDoMapa:
 
     def __init__(self, mapa: MapaDaMesa) -> None:
         bruto = mapa.model_dump(mode="json")
+        #: ``perto`` e ``alto`` viajam intactos, e não é zelo: são FATO DELA
+        #: (a face virada para quem senta, a face no alto do rack), só ela os
+        #: tem, e a gravação SUBSTITUI a lista de faces inteira. Deixá-los cair
+        #: aqui faria o primeiro "Aplicar" depois de um clique no desenho
+        #: apagar do disco o que ela declarou noutra tela.
         self.faces: list[dict[str, Any]] = [
-            {"nome": face.get("nome", ""), "portas": list(face.get("portas", []))}
+            {
+                "nome": face.get("nome", ""),
+                "portas": list(face.get("portas", [])),
+                "perto": bool(face.get("perto", False)),
+                "alto": bool(face.get("alto", False)),
+            }
             for face in bruto.get("faces", [])
         ]
         self.portas: dict[str, dict[str, Any]] = {
@@ -150,7 +200,12 @@ class LogicaDoMapa:
         """O rascunho no formato do ``maquina.json``, pronto para o rodapé."""
         return {
             "faces": [
-                {"nome": face["nome"], "portas": list(face["portas"])}
+                {
+                    "nome": face["nome"],
+                    "portas": list(face["portas"]),
+                    "perto": bool(face.get("perto", False)),
+                    "alto": bool(face.get("alto", False)),
+                }
                 for face in self.faces
             ],
             "portas": {
@@ -259,7 +314,9 @@ class LogicaDoMapa:
         limpo = nome.strip()
         if not limpo:
             return False
-        self.faces.append({"nome": limpo, "portas": []})
+        self.faces.append(
+            {"nome": limpo, "portas": [], "perto": False, "alto": False}
+        )
         return True
 
     def tirar_face(self, indice: int) -> bool:
@@ -285,6 +342,69 @@ class LogicaDoMapa:
         entrada["caminho"] = None
         if "filha_de" not in entrada:
             entrada["filha_de"] = None
+
+
+def bancada_do_rascunho(logica: LogicaDoMapa, censo: Censo) -> mapa_das_portas.Bancada:
+    """A mesa do motor montada a partir do RASCUNHO — não do disco.
+
+    Do rascunho porque é ele que está na frente dela: assim o juízo de cada
+    quadrado responde ao clique que ela acabou de dar, e não ao que o
+    "Aplicar" ainda não gravou. Um mapa que só julgasse depois do botão faria
+    a pessoa aplicar para descobrir se o lugar era bom.
+    """
+    return mapa_das_portas.mesa_do_motor(
+        MapaDaMesa.model_validate(logica.como_documento()), censo
+    )
+
+
+def classe_do_escolhido(bancada: mapa_das_portas.Bancada, caminho: str) -> str:
+    """A classe que o motor julga para o aparelho na mão — ``""`` se ele não a tem.
+
+    ``""`` acontece de verdade e não é borda: o Archer T3U desta bancada
+    declina de se classificar e o DualSense por cabo é HID sem protocolo de
+    arranque. Para eles não há regra no motor, e o quadrado cala em vez de
+    julgar pelo aparelho errado.
+    """
+    if not caminho:
+        return ""
+    for aparelho in bancada.mesa.aparelhos:
+        if aparelho.id == caminho:
+            return aparelho.classe
+    return ""
+
+
+def veredito_do_quadrado(
+    bancada: mapa_das_portas.Bancada, numero: str, escolhido: str
+) -> motor.Veredito | None:
+    """O que este quadrado diz sobre o aparelho que está na mão dela.
+
+    ``None`` quando não há nada a dizer — e é a maioria das vezes, porque
+    ``None`` é o que o motor devolve para uma entrada vazia sem aparelho na
+    mão. Publicar o veredito só no gesto de dois tempos é o mesmo desenho do
+    resto da janela: ela clica no aparelho, e aí cada entrada responde.
+    """
+    entrada = motor.por_num(bancada.mesa.faces, numero)
+    if entrada is None:
+        return None
+    return motor.julgar(
+        entrada,
+        classe_do_escolhido(bancada, escolhido) or None,
+        bancada.mesa,
+        escolhido or None,
+    )
+
+
+def confissao_do_desenho(bancada: mapa_das_portas.Bancada) -> tuple[str, ...]:
+    """As frases do que o desenho não diz, na ordem das chaves.
+
+    Vazio quando o desenho responde por tudo. Chave sem frase não some calada:
+    ela sai com o próprio nome, para que a próxima pessoa veja que falta a
+    palavra em vez de ver o silêncio.
+    """
+    return tuple(
+        _(CONFISSAO[chave]) if chave in CONFISSAO else chave
+        for chave in bancada.lacunas
+    )
 
 
 def aparelhos_para_colocar(censo: Censo) -> tuple[Aparelho, ...]:
@@ -348,6 +468,15 @@ if _GTK_DISPONIVEL:
             #: quadrado sem varrer a árvore de widgets.
             self.quadrados: dict[str, Any] = {}
             self.aparelhos: dict[str, Any] = {}
+            #: `número -> veredito`, o juízo publicado no último redesenho. Fica
+            #: aqui pelo mesmo motivo de `quadrados`: para o teste e o retrato
+            #: alcançarem o que a tela diz sem varrer a árvore de widgets.
+            self.vereditos: dict[str, motor.Veredito] = {}
+            #: As frases do que o desenho não diz, no último redesenho.
+            self.confissao: tuple[str, ...] = ()
+            self._bancada = mapa_das_portas.Bancada(
+                mesa=motor.Mesa(aparelhos=(), faces=(), mapa={}, leitura={})
+            )
 
             self.set_default_size(720, 520)
             with contextlib.suppress(Exception):
@@ -366,6 +495,9 @@ if _GTK_DISPONIVEL:
             )
             self._caixa_faces = Gtk.Box(
                 orientation=Gtk.Orientation.VERTICAL, spacing=8
+            )
+            self._caixa_confissao = Gtk.Box(
+                orientation=Gtk.Orientation.VERTICAL, spacing=2
             )
             self._montar()
             self._redesenhar()
@@ -389,6 +521,7 @@ if _GTK_DISPONIVEL:
             corpo.pack_start(esquerda, False, False, 0)
             corpo.pack_start(self._caixa_faces, True, True, 0)
             self._raiz.pack_start(corpo, True, True, 0)
+            self._raiz.pack_start(self._caixa_confissao, False, False, 0)
 
             acoes = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             self.botao_tirar = Gtk.Button(label=_(ROTULO_TIRAR))
@@ -427,8 +560,10 @@ if _GTK_DISPONIVEL:
 
         def _redesenhar(self) -> None:
             """Redesenha a lista e as faces a partir do rascunho."""
+            self._remontar_a_bancada()
             self._desenhar_aparelhos()
             self._desenhar_faces()
+            self._desenhar_confissao()
             self.botao_tirar.set_sensitive(
                 bool(self._em_foco) and bool(self.logica.caminho_em(self._em_foco))
             )
@@ -436,6 +571,38 @@ if _GTK_DISPONIVEL:
                 bool(self._em_foco) and self._em_foco.isdigit()
             )
             self.show_all()
+
+        def _remontar_a_bancada(self) -> None:
+            """A mesa do motor, refeita a cada gesto — o desenho mudou de forma.
+
+            Refazer inteiro em vez de remendar: acrescentar uma entrada muda o
+            pareamento da face toda (as irmãs saem de duas em duas), e um
+            pareamento remendado seria a segunda verdade que este produto mais
+            paga para matar.
+            """
+            try:
+                self._bancada = bancada_do_rascunho(self.logica, self._censo)
+            except Exception:
+                # Rascunho que ainda não passa no esquema (uma face sem nome
+                # recém-criada, por exemplo): o desenho continua na tela e o
+                # juízo cala até o rascunho voltar a ser válido.
+                logger.debug("o rascunho do mapa ainda não monta a mesa", exc_info=True)
+
+        def _desenhar_confissao(self) -> None:
+            """O que o desenho não diz, escrito — nunca calado."""
+            for filho in self._caixa_confissao.get_children():
+                self._caixa_confissao.remove(filho)
+            self.confissao = confissao_do_desenho(self._bancada)
+            if not self.confissao:
+                return
+            for texto in (_(CONFISSAO_ABERTURA), *self.confissao):
+                linha = Gtk.Label(label=texto)
+                linha.set_xalign(0.0)
+                linha.set_line_wrap(True)
+                linha.set_max_width_chars(84)
+                with contextlib.suppress(Exception):
+                    linha.get_style_context().add_class("dim-label")
+                self._caixa_confissao.pack_start(linha, False, False, 0)
 
         def _desenhar_aparelhos(self) -> None:
             for filho in self._caixa_aparelhos.get_children():
@@ -459,6 +626,7 @@ if _GTK_DISPONIVEL:
             for filho in self._caixa_faces.get_children():
                 self._caixa_faces.remove(filho)
             self.quadrados = {}
+            self.vereditos = {}
             if not self.logica.faces:
                 vazio = Gtk.Label(label=_(ROTULO_SEM_FACE))
                 vazio.set_xalign(0.0)
@@ -511,12 +679,16 @@ if _GTK_DISPONIVEL:
             corpo = self._o_que_esta_em(caminho)
             if extensao:
                 corpo = f"{corpo}\n{_(ROTULO_POR_EXTENSAO)}"
+            veredito = self._veredito_em(numero)
+            if veredito is not None:
+                corpo = f"{corpo}\n{veredito.texto}"
             botao = Gtk.Button(label=f"{numero}\n{corpo}")
             with contextlib.suppress(Exception):
                 botao.get_child().set_justify(Gtk.Justification.CENTER)
             botao.set_size_request(84, 56)
+            dizeres: list[str] = []
             if extensao:
-                botao.set_tooltip_text(
+                dizeres.append(
                     _(
                         "Foi você quem disse que há uma extensão aqui. Nenhuma "
                         "leitura do sistema distingue isto de um aparelho na "
@@ -524,12 +696,32 @@ if _GTK_DISPONIVEL:
                     )
                 )
             elif caminho:
-                botao.set_tooltip_text(
+                dizeres.append(
                     _("O sistema enumera este aparelho como {c}.").format(c=caminho)
                 )
+            if veredito is not None and veredito.porque:
+                dizeres.append(veredito.porque)
+            if dizeres:
+                botao.set_tooltip_text("\n".join(dizeres))
             botao.connect("clicked", self._ao_clicar_na_entrada, numero)
             self.quadrados[numero] = botao
             return botao
+
+        def _veredito_em(self, numero: str) -> motor.Veredito | None:
+            """O juízo do motor sobre esta entrada, guardado para quem olhar.
+
+            Sem aparelho escolhido não há juízo a publicar: a pergunta que o
+            motor responde é *"e para ESTE aparelho, aqui serve?"*, e sem a
+            primeira metade do gesto ela não tem sujeito.
+            """
+            if not self.logica.escolhido:
+                return None
+            veredito = veredito_do_quadrado(
+                self._bancada, numero, self.logica.escolhido
+            )
+            if veredito is not None:
+                self.vereditos[numero] = veredito
+            return veredito
 
         def _o_que_esta_em(self, caminho: str) -> str:
             if not caminho:
@@ -623,5 +815,9 @@ __all__ = [
     "LogicaDoMapa",
     "acumular_no_rascunho",
     "aparelhos_para_colocar",
+    "bancada_do_rascunho",
+    "classe_do_escolhido",
+    "confissao_do_desenho",
     "rotulo_do_aparelho",
+    "veredito_do_quadrado",
 ]
