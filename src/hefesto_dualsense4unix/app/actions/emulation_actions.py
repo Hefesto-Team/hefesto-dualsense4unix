@@ -1579,7 +1579,16 @@ class EmulationActionsMixin(WidgetAccessMixin):
         )
 
     def on_emulation_gamepad_xbox(self, _btn: Gtk.Button) -> None:
-        self._apply_mode(MODE_GAMEPAD, "xbox", "Gamepad Xbox 360 ligado (vibra no jogo)")
+        # BG-TOAST-01 (26/08/2026): o recibo dizia "(vibra no jogo)" enquanto o
+        # tooltip do MESMO botão já carregava a ressalva da EMULACAO-UM-DONO-SO-01
+        # — e quem clica lê o toast, não o tooltip. A ressalva é colada VERBATIM
+        # de `RESSALVA_DE_TRANSPORTE`, que é a única cópia dela nesta casa.
+        self._apply_mode(
+            MODE_GAMEPAD,
+            "xbox",
+            "Gamepad Xbox 360 ligado. A "
+            + RESSALVA_DE_TRANSPORTE["vibracao.rumble.passthrough@dualsense"],
+        )
 
     def _set_suppress(self, suppressed: bool, msg: str) -> None:
         def _on_ok(_res: Any) -> bool:
