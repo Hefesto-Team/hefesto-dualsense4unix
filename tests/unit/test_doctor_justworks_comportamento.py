@@ -170,19 +170,30 @@ def test_confirm_e_aprovado(tmp_path: Path) -> None:
     assert "RESUMO fails=0 warns=0" in proc.stdout
 
 
-def test_confirm_com_agente_morto_avisa(tmp_path: Path) -> None:
+def test_confirm_com_agente_morto_reprova(tmp_path: Path) -> None:
     """A contrapartida honesta da cura: `confirm` DEPENDE do agente registrado.
 
     Com o `hefesto-bt-agent.service` morto (já falhou duas vezes em 04/08), o
     re-pareamento legítimo dela é RECUSADO — e é o doctor que tem de dizer isso
     antes que ela descubra pelo controle que não conecta.
+
+    O GRAU MUDOU EM 25/08/2026 (BG-06), e este teste mudou com ele. Até então a
+    cena saía `[WARN]`, e a decisão que este arquivo registrava era "avisar".
+    Ela caducou por um motivo medido: um aviso no meio de centenas de linhas
+    SOME, e o que a cena descreve não é um risco à espreita — é o pareamento
+    por rádio parado. A régua nova, com a cena inteira e as contraprovas, está
+    em `tests/unit/test_bg06_o_grau_e_o_conselho_que_serve_para_esta_instalacao.py`;
+    esta asserção fica aqui para que o vizinho de arquivo não volte a rebaixar
+    o grau sem tropeçar.
     """
     proc = _rodar(tmp_path, _MAIN_CONF["confirm"], agente="inactive")
 
     assert "[ OK ]" in proc.stdout, "o valor continua certo; o que falta é o agente"
-    assert "[WARN]" in proc.stdout
+    assert "[FAIL]" in proc.stdout, (
+        "o agente morto voltou a sair como aviso — ver a BG-06"
+    )
     assert "hefesto-bt-agent.service" in proc.stdout
-    assert "RESUMO fails=0 warns=1" in proc.stdout
+    assert "RESUMO fails=1 warns=0" in proc.stdout
 
 
 def test_chave_ausente_avisa_o_default_da_distro(tmp_path: Path) -> None:
