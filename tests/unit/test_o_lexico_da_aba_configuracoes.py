@@ -53,6 +53,7 @@ from gi.repository import Gtk
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG, ConfigActionsMixin
 from hefesto_dualsense4unix.app.actions.config import secao_janela, secao_mesa
+from hefesto_dualsense4unix.app.actions.config.secoes import SECOES_DA_ABA
 from hefesto_dualsense4unix.app.actions.config.moldura import RECIBO_GUARDADO, VALE_JA
 from hefesto_dualsense4unix.app.constants import MAIN_GLADE
 from hefesto_dualsense4unix.app.widgets import external_card
@@ -96,28 +97,34 @@ PARAGRAFOS_QUE_FICAM: dict[str, str] = {
 #: `external_controllers.py` e `ipc_bridge.py`. As três seções abaixo são de
 #: frentes que rodam ao lado; editá-las daqui desfaria o trabalho delas em
 #: silêncio (R1). Apague a entrada no commit que tirar o parágrafo.
+#: **QUATRO DAS CINCO ENTRADAS FORAM PAGAS EM 26/08/2026** (LEVA-4-A, LEX-2).
+#: Cada uma saiu no commit que moveu a frase da página para o hover, que é o
+#: que esta lista sempre pediu:
+#:
+#: * itens 3/4/5, a `QUANDO_VALE` nas três seções — virou dica da fileira de
+#:   `_linha_declarada` (`secao_mesa`), da frase de capacidade
+#:   (`secao_controles`) e dos três perfis (`secao_orcamento`);
+#: * item 1, a `ESCOPO` — anexada à `DICA` do título "Está tudo certo?", e a
+#:   `QUANDO_VALE` que viajava de carona nela mudou para o selo;
+#: * item 8, a `ALCANCE_DE_HOJE` — anexada à `DICA` de "Desempenho";
+#: * a conta de fatias (`frase_do_preco_por_controle`) — virou dica do título
+#:   da conta, e CONTINUA em `BlocoDaConta.falas`, que é a lista sobre a qual o
+#:   portão das `PALAVRAS_DE_CULPA` varre tudo.
 AINDA_NA_PAGINA: dict[str, str] = {
-    'A escolha passa a valer quando você clicar em "Aplicar", no rodapé.': (
-        "LEX-2, itens 3/4/5 — a MESMA frase em três seções ao mesmo tempo "
-        "(`secao_mesa`, `secao_controles`, `secao_orcamento`). Vira dica do "
-        "título de cada uma. Nenhum dos três arquivos é da G9."
-    ),
-    "Este exame olha a mesa": (
-        "LEX-2, item 1 — `secao_exame.py:261` (`ESCOPO`). Vira dica do título "
-        '"Está tudo certo?". Arquivo da frente B.'
-    ),
     "Com o microfone ligado, um controle no rádio troca": (
-        "LEX-2, item 2 — `secao_controles.py:635`. CEDIDO à frente C: a frase "
-        "acompanha a caixinha do microfone quando ela se muda para Desempenho."
-    ),
-    "Por enquanto o teto alcança": (
-        "LEX-2, item 8 — `secao_orcamento.py:226` (`ALCANCE_DE_HOJE`). Vira "
-        'dica da DICA de "Desempenho". Arquivo da frente C.'
-    ),
-    "Um controle no rádio ocupa": (
-        "LEX-2 — `secao_orcamento.py`, a conta de fatias como parágrafo fixo. "
-        "É explicação: diz o mesmo com a mesa vazia e com a mesa cheia. "
-        "Arquivo da frente C."
+        "LEX-2, item 2 — `secao_controles.montar`. BLOQUEADO EM 26/08/2026, e a "
+        "medição é esta: `test_o_interruptor_do_microfone_na_aba_configuracoes"
+        ".py::test_a_frase_aparece_uma_unica_vez_na_secao` (`:445-452`) exige "
+        "`_rotulos(caixa).count(frase) == 1`, e o `_rotulos` daquele arquivo "
+        "(`:139-151`) colhe SÓ `get_label()` — nunca dica. Mover a frase para o "
+        "hover deixa a contagem em zero e reprova. O conserto é o mesmo que a "
+        "G9 já fez no `_textos` -> `_falas` de "
+        "`test_a_aba_diz_quando_a_escolha_fica_guardada.py`: o coletor passa a "
+        "colher `get_tooltip_text()` junto. Aquele arquivo não está na posse "
+        "da LEVA-4-A (R-A), então a frente relata em vez de editar.\n"
+        "Ela também é a única casa da `QUANDO_VALE` em `secao_controles`: numa "
+        "mesa sem controle nenhum, o interruptor que a frase explica não "
+        "existe. Quem mover a frase move a dica junto."
     ),
 }
 
@@ -128,9 +135,20 @@ AINDA_NA_PAGINA: dict[str, str] = {
 #:
 #: O número é baixo de propósito: a aba LÊ O BARRAMENTO REAL da máquina, então
 #: numa bancada sem adaptador nenhum algumas seções não desenham as fileiras que
-#: carregam parágrafo. Medido em 25/08/2026 nesta árvore, sem DualSense e sem
-#: dongle: 8 parágrafos únicos, 10 no total.
-NUNCA_MENOS_QUE = 4
+#: carregam parágrafo.
+#:
+#: **DESCEU DE 4 PARA 2 EM 26/08/2026, NO MESMO COMMIT QUE PAGOU A LEX-2.** Em
+#: 25/08 a medição nesta árvore era **8 parágrafos únicos, 10 no total**; depois
+#: da LEX-2 são **4 únicos, 4 no total** — três de `PARAGRAFOS_QUE_FICAM` mais a
+#: frase do microfone, que é a última entrada de `AINDA_NA_PAGINA`.
+#:
+#: POR QUE 2 E NÃO 4, que é o que esta bancada acha: só DOIS dos quatro são
+#: incondicionais. A frase de capacidade do microfone e o "Não sei quem está no
+#: rádio" nascem em toda montagem (`montar` nunca pergunta ao daemon); os outros
+#: dois somem sozinhos numa bancada com controle na mesa ("Nenhum controle na
+#: mesa agora.") ou com a mesa já desenhada ("Você ainda não desenhou a sua
+#: mesa."). Um piso de 4 reprovaria na máquina DELA, que tem as duas coisas.
+NUNCA_MENOS_QUE = 2
 
 
 def _aba_montada() -> Any:
@@ -737,3 +755,175 @@ def test_o_rodape_nao_perde_o_campo_que_nao_tem_secao() -> None:
     campo cai no nome cru `mapa` e o portão de cobertura do schema reprova.
     """
     assert ipc_bridge._rotulos_dos_campos()["mapa"] == "O desenho da mesa"
+
+
+# ---------------------------------------------------------------------------
+# Dente 7 — as duas seções dizem a palavra DELA (LEX-1)
+# ---------------------------------------------------------------------------
+
+#: As duas palavras que ela mandou trocar, e o que cada uma virou. Elas são
+#: decisão dela, e o dente 6 acima já garante que o rodapé as segue sozinho —
+#: o que este par de constantes prende é a TROCA, não a derivação.
+RENOMES_DA_LEX_1: dict[str, str] = {
+    "A mesa": "Conexões",
+    "Orçamento": "Desempenho",
+}
+
+
+def test_as_duas_secoes_renomeadas_dizem_a_palavra_dela() -> None:
+    """"A mesa" virou "Conexões" e "Orçamento" virou "Desempenho".
+
+    A primeira porque a casa já usava "a mesa" para o CONJUNTO DE CONTROLES, e
+    a seção fala de adaptadores, rádios e entradas do gabinete: duas coisas com
+    um nome só é o que faz a pessoa procurar controle na seção errada. A
+    segunda é a `D-PERFIL-DE-DESEMPENHO`, que trocou um teto por um perfil.
+
+    MORDIDA: devolva `TITULO = "A mesa"` a `secao_mesa` — reprova nomeando a
+    palavra velha e a seção.
+    """
+    titulos = {
+        secao.__name__.rsplit(".", 1)[-1]: secao.TITULO for secao in SECOES_DA_ABA
+    }
+    velhas = {
+        modulo: titulo
+        for modulo, titulo in titulos.items()
+        if titulo in RENOMES_DA_LEX_1
+    }
+    assert not velhas, (
+        "estas seções voltaram ao nome velho: "
+        + ", ".join(
+            f"{modulo} diz {titulo!r} e devia dizer "
+            f"{RENOMES_DA_LEX_1[titulo]!r}"
+            for modulo, titulo in sorted(velhas.items())
+        )
+    )
+    assert titulos["secao_mesa"] == "Conexões"
+    assert titulos["secao_orcamento"] == "Desempenho"
+
+
+# ---------------------------------------------------------------------------
+# Dente 8 — as duas perguntas de rádio em português de gente (LEX-9)
+# ---------------------------------------------------------------------------
+
+#: As palavras que ela disse não entender: *"Eu não sei o que é altura da
+#: antena. nem linha de visada. sinceramente não faço ideia."* (24/08/2026).
+JARGAO_DAS_DUAS_PERGUNTAS = ("antena", "visada")
+
+#: O que cada botão TEM de gravar, depois da troca de redação. É a metade que
+#: impede a reescrita de virar quebra de esquema: `MesaDeclarada` usa `Literal`
+#: com `extra="forbid"`, e um valor novo faria o pydantic recusar o DOCUMENTO
+#: INTEIRO de quem já declarou — o sintoma seria "não consegui gravar".
+#:
+#: A INVERSÃO DA SEGUNDA É DE PROPÓSITO: a pergunta trocou de sinal ("Tem gente
+#: sentada entre o dongle e o sofá?"), então "Sim" grava `com_gente`.
+VALORES_QUE_NAO_MUDAM: dict[str, dict[str, str]] = {
+    "altura_da_antena": {"Sim": "acima", "Não": "abaixo", "Não sei": "nao_sei"},
+    "linha_de_visada": {"Sim": "com_gente", "Não": "livre", "Não sei": "nao_sei"},
+}
+
+
+class _HospedeiroDaMesa:
+    """O mínimo que a seção da mesa toca: o rascunho, e nada mais."""
+
+    def __init__(self) -> None:
+        self._maquina_pendente: dict[str, Any] | None = None
+
+
+def _declaracoes_montadas() -> tuple[Any, Any]:
+    """`(host, caixa)` com as duas perguntas desenhadas, sem tocar o `/sys`.
+
+    Os três desvios são os do portão vizinho
+    (`test_a_mesa_guarda_o_que_ela_declarou.py:86-99`): sem eles a seção varre
+    o barramento desta máquina e o resultado passa a depender do que está
+    espetado no PC de quem roda.
+    """
+    from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
+
+    host = _HospedeiroDaMesa()
+    painel = secao_mesa._PainelDaMesa(host)
+    painel._ler = lambda: Mesa()  # type: ignore[method-assign]
+    painel._ler_o_censo = lambda: Censo()  # type: ignore[method-assign]
+    painel._pedir_o_estado = lambda: None  # type: ignore[method-assign]
+    return host, painel._declaracoes()
+
+
+def test_as_duas_perguntas_de_radio_nao_falam_antena_nem_visada() -> None:
+    """A redação da `D-REDACAO-DAS-DUAS-PERGUNTAS-DE-RADIO`, na tela.
+
+    O CONTEÚDO não sai — o `GUIA-RADIO-DA-SALA.md` §4.4 mede que subir 40 cm
+    rende mais que aproximar 5 m, e é isso que as duas perguntas colhem. O que
+    sai é o jargão: palavra que a pessoa teria de pesquisar é defeito, não
+    precisão.
+
+    MORDIDA: devolva `"Altura da antena:"` ao primeiro `_linha_declarada` —
+    reprova nomeando a palavra e o texto inteiro.
+    """
+    _host, caixa = _declaracoes_montadas()
+    falados = [
+        texto
+        for widget in _descer(caixa)
+        if isinstance(widget, Gtk.Label)
+        for texto in (widget.get_text() or "",)
+        if texto
+    ]
+    assert falados, "a caixa das declarações não desenhou rótulo nenhum"
+    culpados = [
+        texto
+        for texto in falados
+        for palavra in JARGAO_DAS_DUAS_PERGUNTAS
+        if palavra in texto.lower()
+    ]
+    assert not culpados, (
+        "as duas perguntas de rádio voltaram ao jargão que ela disse não "
+        "entender: " + "; ".join(sorted(set(culpados)))
+    )
+    assert any(texto.endswith("?") for texto in falados), (
+        "nenhuma das fileiras é uma pergunta — a gramática das duas é a de "
+        f'"Está tudo certo?". Textos: {falados}'
+    )
+
+
+def test_a_redacao_nova_grava_os_mesmos_valores_de_esquema() -> None:
+    """Trocar a palavra do botão não pode trocar o valor que vai ao disco.
+
+    MORDIDA: troque `("acima", "Sim")` por `("sim", "Sim")` no
+    `_declaracoes` — reprova nomeando a chave e o valor gravado. E é a metade
+    que importa: com o valor errado o pydantic recusa o documento INTEIRO dela,
+    e o sintoma na tela é "não consegui gravar", nunca "valor inválido".
+
+    A SEGUNDA PERGUNTA TROCOU DE SINAL, e o teste cobra a inversão: "Livre"
+    virou "Não". Manter a ordem antiga gravaria o oposto do que ela respondeu,
+    e nada na tela denunciaria.
+    """
+    from hefesto_dualsense4unix.app.widgets.segmented_selector import (
+        SegmentedSelector,
+    )
+
+    for chave, esperado in VALORES_QUE_NAO_MUDAM.items():
+        _host, caixa = _declaracoes_montadas()
+        # As fileiras vêm na ordem do desenho — altura primeiro, visada depois.
+        # `get_children()` e não `_descer`: aquele empilha e desempilha, então
+        # devolve a árvore ao contrário, e o teste leria a segunda pergunta
+        # achando que lê a primeira. Foi assim que este próprio teste reprovou
+        # na primeira rodada, em 26/08/2026.
+        fileiras = list(caixa.get_children())
+        assert len(fileiras) == len(VALORES_QUE_NAO_MUDAM), (
+            f"a caixa das declarações tem {len(fileiras)} fileira(s) e as "
+            f"perguntas são {len(VALORES_QUE_NAO_MUDAM)}"
+        )
+        fileira = fileiras[list(VALORES_QUE_NAO_MUDAM).index(chave)]
+        seletores = [
+            widget
+            for widget in fileira.get_children()
+            if isinstance(widget, SegmentedSelector)
+        ]
+        assert len(seletores) == 1, f"a fileira de {chave!r} não tem um seletor"
+        ids = {rotulo: ident for ident, rotulo in seletores[0]._items}
+        for palavra, valor in esperado.items():
+            assert ids.get(palavra) == valor, (
+                f'o botão "{palavra}" da pergunta {chave!r} grava '
+                f"{ids.get(palavra)!r} e tem de gravar {valor!r} — o "
+                "`Literal` de `MesaDeclarada` não mudou, e um valor novo faz "
+                "o pydantic recusar o documento inteiro dela"
+            )

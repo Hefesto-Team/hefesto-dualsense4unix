@@ -684,8 +684,22 @@ class _PainelDosControles:
         # informação. Ela fica fora de `self._caixa` pelo mesmo motivo da outra
         # — aquela caixa é esvaziada a cada reexame, e a capacidade do rádio não
         # é dado da mesa.
-        caixa.pack_start(rotulo_de_apoio(frase_da_capacidade_do_mic()), False, False, 0)
-        caixa.pack_start(rotulo_de_apoio(QUANDO_VALE), False, False, 0)
+        #
+        # LEX-2, ITEM 4 — A `QUANDO_VALE` SAIU DA PÁGINA (26/08/2026) e virou a
+        # dica da frase de capacidade. Ela diria a mesma coisa com a mesa vazia
+        # e com a mesa cheia, logo é EXPLICAÇÃO, e explicação vai para o hover.
+        #
+        # POR QUE ESTE RÓTULO E NÃO O INTERRUPTOR QUE ELA EXPLICA: o
+        # interruptor nasce e morre com o card, e numa mesa sem controle nenhum
+        # não existe widget nenhum para hospedar a frase — que é exatamente o
+        # caso que `test_a_aba_diz_quando_a_escolha_fica_guardada.py` monta
+        # (hospedeiro vazio). Este rótulo é o único desta seção que existe
+        # sempre e que fica FORA de `self._caixa`, a caixa que o reexame
+        # esvazia.
+        capacidade = rotulo_de_apoio(frase_da_capacidade_do_mic())
+        with contextlib.suppress(Exception):
+            capacidade.set_tooltip_text(_(QUANDO_VALE))
+        caixa.pack_start(capacidade, False, False, 0)
         self.reexaminar()
 
     # -- leitura -----------------------------------------------------------
