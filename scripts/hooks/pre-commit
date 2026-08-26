@@ -9,8 +9,14 @@
 # viajar, e `scripts/instalar-hooks.sh` o liga.
 #
 # O QUE ELE FAZ, e o que ele DELIBERADAMENTE NÃO FAZ:
-#   FAZ  — regenera o painel.html (~80 ms) e o põe no commit.
-#   FAZ  — confere que o specs.html publicado bate com o CSV.
+#   CURA — os QUATRO instrumentos HTML saem em dia no MESMO commit que mudou o
+#          dado deles. Pedido dela, 25/08/2026: *"todos precisam ser auto
+#          atualizados via hooks"*. Até esta data só o painel era curado; o
+#          `specs.html` e o `frases-de-tela.html` só ACUSAVAM, e quem commitasse
+#          sem rodar o gerador levava um vermelho em vez de uma página em dia.
+#   DIZ  — quando uma página muda de CONTEÚDO, ele nomeia a página e o tamanho
+#          da mudança. Curar em silêncio poria no commit dela coisa que ela não
+#          viu, e isso é informação, não conveniência.
 #   FAZ  — confere os dois documentos DERIVADOS do código: o contrato IPC e as
 #          citações `arquivo:linha` de docs/protocol/ (~110 ms os dois juntos).
 #   FAZ  — cobra a FOTO quando o commit mexe no código da tela (~40 ms; não
@@ -18,46 +24,162 @@
 #   NÃO FAZ — rodar a suíte, o mypy ou os portões pesados. Gancho que demora
 #             sete minutos é gancho que a pessoa desliga, e um gancho desligado
 #             protege menos que nenhum. Esses moram no `--completo` e no CI.
+#   NÃO FAZ — travar o commit porque um gerador não achou o dado dele. Quem trava
+#             por falta de JSON é gancho que alguém desliga; aqui ele avisa e
+#             deixa passar, e quem cobra depois é o CI.
+#
+# A RÉGUA DE QUANDO REGERAR — e ela é o coração deste arquivo
+# ===========================================================
+# Regerar 1,3 MB de `specs.html` a cada commit é o caminho mais curto para
+# alguém desligar o gancho. E o custo NÃO é o relógio — MEDIDO em 25/08/2026,
+# os quatro geradores somados custam menos de 1 s. O custo é o REPOSITÓRIO:
+# cada geração troca a linha do carimbo (hora e commit), e uma linha trocada num
+# arquivo de 1,3 MB é um objeto novo de **351 KB** no `.git`. Nos últimos 200
+# commits desta casa isso seriam 70 MB de blob para páginas cujo conteúdo não
+# mudou.
+#
+# A régua PODERIA ser uma lista de caminhos-fonte por gerador. Não é, e a razão
+# é a regra desta casa sobre lista duplicada: as fontes do `specs.html` são o
+# CSV, o caderno de ensaios, os três desenhos, seis scripts E a árvore
+# `src/hefesto_dualsense4unix/app/` (a fila de placeholders sai das falas de
+# tela). Uma lista dessas aqui apodrece calada no dia em que o gerador ganhar
+# uma fonte nova — que é exatamente o defeito do `--check` por MTIME que a
+# MAPA-CONTEUDO-01 já matou uma vez.
+#
+# Então quem dispara é o próprio `--check`, que PERGUNTA PELO CONTEÚDO e não
+# pode apodrecer: ele regera a página em memória e compara com a publicada,
+# ignorando o carimbo. Verde, o gancho não escreve nada e o commit não engorda.
+# Vermelho, o gancho cura. Custo típico medido: 0,34 s (specs) + 0,04 s
+# (frases), e ZERO byte no commit.
+#
+# Duas exceções, as duas por medição:
+#   - o PAINEL não é conferido, é regerado sempre. Uma das fontes dele é o
+#     estado do `git` (HEAD, branch, assunto, sujos), que mudou em 100% dos
+#     commits — conferir primeiro pagaria 0,35 s para descobrir o que já se
+#     sabe. É o comportamento que este gancho já tinha.
+#   - o ÍNDICE é regerado sempre que alguma página foi reescrita, e por último.
+#     Ele mostra o carimbo das outras três; rodar antes delas publica um índice
+#     que descreve o estado anterior.
 set -euo pipefail
 RAIZ="$(git rev-parse --show-toplevel)"
 cd "$RAIZ"
 
 falhou=0
+reescreveu=0
 
-# 1. O painel — regenera e entra no commit. Só o RÁPIDO (sprints, CSV, git).
-#    Os números caros vêm do cache e a própria página mostra a idade deles.
-if [ -f scripts/gerar-painel.py ]; then
-  if python3 scripts/gerar-painel.py >/dev/null 2>&1; then
-    git add painel.html 2>/dev/null || true
-  else
-    echo "pre-commit: gerar-painel.py falhou — o painel.html vai velho neste commit." >&2
+# A pasta dos instrumentos tem UM dono (`scripts/carimbo_da_casa.py`), e é dele
+# que este gancho a lê — não de um caminho fixo. Em 25/08/2026 os três HTML
+# saíram da raiz para `html/`; um gancho com o caminho escrito à mão teria
+# nascido quebrado nesse dia. Sem o módulo (árvore anterior à mudança), a raiz.
+PASTA_HTML="$(python3 -c 'import sys; sys.path.insert(0, "scripts"); from carimbo_da_casa import PASTA; print(PASTA)' 2>/dev/null || true)"
+[ -n "$PASTA_HTML" ] || PASTA_HTML="."
+
+# `git add` da página e, se o conteúdo mudou, uma linha dizendo QUANTO.
+# O tamanho vem do `git diff --cached --numstat`, que é o que o commit vai
+# carregar de verdade — não da fala do gerador, que muda de formato.
+inclui_e_diz() {
+  local pagina="$1" quieto="${2:-}" n=""
+  if [ -f "$pagina" ] && git add -- "$pagina" 2>/dev/null; then
+    reescreveu=1
+    if [ -z "$quieto" ]; then
+      n="$(git diff --cached --numstat -- "$pagina" 2>/dev/null | awk '{print "+"$1"/-"$2}' || true)"
+      if [ -n "$n" ]; then
+        echo "pre-commit: ${pagina#./} saiu em dia NESTE commit ($n linhas). Olhe antes de empurrar." >&2
+      fi
+    fi
   fi
-fi
+  return 0
+}
 
-# 2. O specs.html — este é PORTÃO, não conveniência: uma página publicada que
-#    não bate com o CSV é o mapa mentindo, e o mapa é rede contra regressão.
-#    Regenerar sozinho seria pior: esconderia que o dado mudou.
+# Roda o gerador, inclui a página, e conta o que deu errado sem travar o commit.
+#
+# A página é incluída MESMO quando o gerador reprova, e isso é medido: o
+# `gerar-mapa.py` escreve o `specs.html` e SÓ ENTÃO devolve 1 quando o CSV tem
+# peça órfã (ver o comentário no fim do `main()` de lá). A página escrita está
+# certa para o dado que existe; o que está errado é o dado. Deixá-la de fora
+# deixaria a árvore permanentemente suja, que é como se ensina alguém a ignorar
+# o `git status` inteiro.
+cura() {
+  local gerador="$1" pagina="$2" quieto="${3:-}" saida
+  [ -f "$gerador" ] || return 0
+  if saida="$(python3 "$gerador" 2>&1)"; then
+    inclui_e_diz "$pagina" "$quieto"
+    return 0
+  fi
+  inclui_e_diz "$pagina" "$quieto"
+  echo "pre-commit: \`$gerador\` reprovou — o commit segue, mas leia:" >&2
+  echo "${saida:-(sem saída)}" | head -n 12 | sed 's/^/  /' >&2 || true
+  return 0
+}
+
+# 1. O specs.html — o `--check` é o gatilho, e ele pergunta pelo CONTEÚDO.
+#    Antes de 25/08/2026 este bloco BLOQUEAVA com "cure com: gerar-mapa.py", e a
+#    razão escrita era "regenerar sozinho esconderia que o dado mudou". A razão
+#    continua boa; o remédio é que estava errado. Hoje ele cura E diz.
 if [ -f scripts/gerar-mapa.py ]; then
   if ! python3 scripts/gerar-mapa.py --check >/dev/null 2>&1; then
-    echo "pre-commit: BLOQUEADO — specs.html não bate com o mapa-controles.csv." >&2
-    echo "  cure com: python3 scripts/gerar-mapa.py" >&2
-    falhou=1
+    cura scripts/gerar-mapa.py "$PASTA_HTML/specs.html"
   fi
 fi
 
-# 3. Os dois documentos DERIVADOS do código. MEDIDO em 24/08/2026: eles estavam
+# 2. O frases-de-tela.html — mesma régua, e ele é barato dos dois lados (0,04 s
+#    para conferir). O dado dele é um JSON versionado; se o JSON não estiver no
+#    disco, o gerador reprova, o gancho AVISA e o commit passa.
+if [ -f scripts/gerar-frases-de-tela.py ]; then
+  if ! python3 scripts/gerar-frases-de-tela.py --check >/dev/null 2>&1; then
+    cura scripts/gerar-frases-de-tela.py "$PASTA_HTML/frases-de-tela.html"
+  fi
+fi
+
+# 3. O painel — regerado SEMPRE, e em silêncio. Só o RÁPIDO (sprints, CSV, git).
+#    Os números caros vêm do cache e a própria página mostra a idade deles.
+#    Silencioso de propósito: o estado do git muda em todo commit, então uma
+#    linha de aviso aqui sairia em 100% deles e ensinaria a ignorar as outras.
+cura scripts/gerar-painel.py "$PASTA_HTML/painel.html" quieto
+
+# 4. O índice — por último, porque ele lê o carimbo dos outros três.
+if [ "$reescreveu" = "1" ] || [ ! -f "$PASTA_HTML/index.html" ]; then
+  cura scripts/gerar-indice-html.py "$PASTA_HTML/index.html" quieto
+fi
+
+# 4b. A ÚLTIMA PASSADA: as quatro páginas entram no índice sempre que o disco e
+#     o índice discordarem, mesmo que este gancho não as tenha reescrito.
+#
+#     MEDIDO em 25/08/2026, e não é zelo: `git commit -- caminho` (com pathspec)
+#     monta um índice TEMPORÁRIO, commita por ele, e no fim RESTAURA o índice de
+#     verdade ao estado anterior — por definição, um commit com pathspec não
+#     mexe no índice. Resultado: a página entra no commit certa, e o índice fica
+#     com a versão ANTERIOR dela staged. Sem esta passada, o PRÓXIMO commit
+#     normal levaria a página para TRÁS: o `--check` acharia o disco em dia (e
+#     está), não regeraria nada, e o commit sairia com o que o índice guardou.
+#
+#     `git add` de arquivo já em dia é no-op de `stat`: as quatro somadas ficam
+#     ABAIXO da resolução de 10 ms do `time`. É barato o bastante para rodar
+#     sempre, e rodar sempre é o que também cobre o caso trivial de alguém ter
+#     rodado o gerador à mão e esquecido de incluir a página.
+for _p in specs painel frases-de-tela index; do
+  _f="$PASTA_HTML/$_p.html"
+  if [ -f "$_f" ]; then
+    git add -- "$_f" 2>/dev/null || true
+  fi
+done
+unset _p _f
+
+# 5. Os dois documentos DERIVADOS do código. MEDIDO em 24/08/2026: eles estavam
 #    declarados no `.pre-commit-config.yaml`, mas o `core.hooksPath` global dela
 #    desvia o git para o gancho global, que encadeia ESTE arquivo — e a
 #    ferramenta `pre-commit` não está instalada nesta máquina. Resultado: os dois
 #    só rodavam no CI. O commit 913f422 (ONDA0-Z5) mexeu +32/-2 linhas no
 #    `ipc_handlers.py`, deslocando 38 dos 39 endereços do bloco gerado de 3 a 50
 #    linhas de uma vez, e a podridão viajou por SETE merges até a integração.
-#    Custam 0,11 s somados — menos que o specs.html logo acima.
+#    Custam 0,11 s somados.
 #
-#    Os dois BLOQUEIAM em vez de curar sozinhos, e por motivos diferentes: o
-#    bloco IPC vive dentro de um documento escrito à mão, então um `git add`
-#    automático varreria prosa não preparada para dentro do commit; e o endereço
-#    escrito à mão nenhum gerador sabe reapontar — quem escreveu é que sabe.
+#    Os dois BLOQUEIAM em vez de curar sozinhos — e a diferença para os quatro
+#    HTML acima é de POSSE, não de gosto: o bloco IPC vive dentro de um documento
+#    escrito à mão, então um `git add` automático varreria prosa não preparada
+#    para dentro do commit; e o endereço `arquivo:linha` escrito à mão nenhum
+#    gerador sabe reapontar — quem escreveu é que sabe. Os HTML são gerados
+#    INTEIROS, e por isso podem ser curados inteiros.
 if [ -f scripts/gerar-contrato-ipc.py ]; then
   if ! python3 scripts/gerar-contrato-ipc.py --check >/dev/null 2>&1; then
     echo "pre-commit: BLOQUEADO — o bloco gerado de ipc-unix-socket.md não bate" >&2
@@ -75,7 +197,7 @@ if [ -f scripts/validar-citacoes-de-linha.py ]; then
   fi
 fi
 
-# 4. A FOTO da tela. MEDIDO em 24/08/2026: a regra "fotografe se a mudança
+# 6. A FOTO da tela. MEDIDO em 24/08/2026: a regra "fotografe se a mudança
 #    tocou a tela" está escrita em três documentos e é do coordenador — e o
 #    coordenador integrou NOVE branches de interface sem abrir a tela uma vez,
 #    furando a ORDEM do próprio checklist (commitou no passo 5 antes de
