@@ -3995,7 +3995,7 @@ _veredito_do_hide() {
     fi
     # O DENOMINADOR, e por que ele vem ANTES de medir superfície nenhuma.
     #
-    # Até 26/08/2026 tudo abaixo desta linha media SÓ os nós que o broker
+    # Até 26/08/2026 tudo abaixo desta linha olhava SÓ os nós que o broker
     # escondeu — o veredito perguntava "o que eu escondi está fechado?" e
     # respondia "o jogo só vê o vpad", que é uma afirmação sobre a MESA
     # inteira. Um DualSense físico que o broker nunca escondeu era invisível
