@@ -197,40 +197,25 @@ JARGAO_BANIDO: dict[str, str] = {
 #: que impede a palavra de voltar.
 _A_PALAVRA_QUE_ESPERA_A_LEX_6 = "barramento"
 
-#: Os rótulos que AINDA carregam jargão nesta árvore, um a um, medidos em
-#: 13/08/2026. Não é perdão: é a dívida da E1-E4 escrita com nome e endereço,
-#: para que o portão possa entrar hoje sem derrubar o CI por um trabalho de
-#: redação que não é dele. Some daqui no commit que trocar o rótulo — e o
-#: portão reprova se alguém esquecer de apagar a entrada.
-DIVIDA_DA_PALAVRA_01: dict[str, str] = {
-    "Aplicar correções": (
-        "13/08/2026 — sobrevivente da E3 da PALAVRA-01, que ainda não foi "
-        "executada. Vira `Consertar problemas conhecidos`."
-    ),
-    "Travar Proton validado": (
-        "13/08/2026 — sobrevivente da E3 da PALAVRA-01, que ainda não foi "
-        "executada. Vira `Fixar a versão que funciona`."
-    ),
-    "Gamepads:": (
-        "13/08/2026 — sobrevivente da E3 da PALAVRA-01, que ainda não foi "
-        "executada. Vira `Controles detectados:`."
-    ),
-    "Restaurar Default": (
-        "13/08/2026 — sobrevivente da E3 da PALAVRA-01, que ainda não foi "
-        "executada. Vira `Voltar ao padrão`."
-    ),
-    "VID:PID:": (
-        "25/08/2026 — `main.glade:3147`, o rótulo do par de códigos do gamepad "
-        "virtual na aba Sistema. É o ÚNICO texto de tela desta árvore que a "
-        "entrada `vid:pid` da LEX-10 pegou, e a medição foi feita ao ligá-la: "
-        "uma reprovação, num rótulo real, numa aba que não é a Configurações — "
-        "que é a prova de que o termo morde fora do território que o criou. "
-        "O conserto é redação de tela e o `.glade` não é da CONFIGURAÇÕES-O-"
-        "LÉXICO-01: o par vira `Código do fabricante:`, com o `045E:028E` "
-        "abaixo intacto. Apague esta entrada no commit que trocar o rótulo — o "
-        "portão reprova se alguém esquecer."
-    ),
-}
+#: Os rótulos que AINDA carregam jargão nesta árvore, um a um. Não é perdão: é
+#: a dívida da E1-E4 escrita com nome e endereço, para que o portão possa
+#: entrar sem derrubar o CI por um trabalho de redação que não é dele. Some
+#: daqui no commit que trocar o rótulo — e o portão reprova se alguém esquecer
+#: de apagar a entrada.
+#:
+#: **A LISTA ESTÁ VAZIA DESDE 26/08/2026** (BG-PALAVRA-02), e a vazia vale mais
+#: que a cheia: as cinco entradas que moravam aqui — `Aplicar correções`,
+#: `Travar Proton validado`, `Gamepads:`, `Restaurar Default` e `VID:PID:` —
+#: saíram no commit que trocou os cinco rótulos, que é o que a própria tabela
+#: mandava. O `dict` fica de pé porque o mecanismo continua valendo: o próximo
+#: rótulo que nascer com jargão declara a dívida aqui ou reprova.
+#:
+#: CORREÇÃO DE FATO, junto: a entrada de `VID:PID:` dizia que o rótulo morava na
+#: aba **Sistema**. Morava na **Emulação** — as etiquetas de aba do
+#: `gui/main.glade` são `Sistema` e `Emulação`, e o rótulo ficava dentro do
+#: cartão de diagnóstico da segunda, ao lado do `Controles detectados:`. Quem
+#: fosse conferir o conserto pela aba errada não o acharia.
+DIVIDA_DA_PALAVRA_01: dict[str, str] = {}
 
 
 class Rotulo:
@@ -392,10 +377,15 @@ def conferir(caminho: Path) -> list[str]:
 #: trocar a frase, e o portão reprova se alguém esquecer de apagar a entrada.
 #:
 #: As duas primeiras são jargão PURO, e o conserto é redação de tela — decisão
-#: dela, como a E3 da PALAVRA-01 sempre foi. As três últimas CITAM um rótulo do
-#: `.glade` que já está em `DIVIDA_DA_PALAVRA_01`: elas têm de mudar no mesmo
-#: commit que o botão, senão a frase manda clicar num botão que não existe
-#: mais.
+#: dela, como a E3 da PALAVRA-01 sempre foi. A terceira CITA um rótulo do
+#: `.glade`: ela tem de mudar no mesmo commit que o botão, senão a frase manda
+#: clicar num botão que não existe mais.
+#:
+#: 26/08/2026 (BG-NAV-01): as DUAS entradas de `mouse_actions.py` saíram daqui.
+#: Elas mandavam clicar em "Aplicar correções" para um defeito de `uinput`, e
+#: aquele botão não toca no `uinput` — o ponteiro estava errado no ALVO, não só
+#: no nome. As frases agora dão o gesto de atualizar esta instalação, que é o
+#: que a aba Emulação já dizia para a mesma condição.
 DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
     "Daemon offline": (
         "23/08/2026 — `app/compact_window.py`, o rótulo de estado da janela "
@@ -411,20 +401,6 @@ DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
     "Asset 'meu_perfil.json' não encontrado — Restaurar Default indisponível.": (
         "23/08/2026 — `app/actions/footer_actions.py`. CITA o botão "
         "`Restaurar Default`, que é dívida do `.glade`; muda junto com ele."
-    ),
-    (
-        '<span foreground="#ff5555">O mouse virtual está sem permissão — abra a aba '
-        'Sistema e clique em “Aplicar correções”</span>'
-    ): (
-        "23/08/2026 — `app/actions/mouse_actions.py`. CITA o botão `Aplicar "
-        "correções`, que é dívida do `.glade`; muda junto com ele."
-    ),
-    (
-        '<span foreground="#ffb86c">O mouse virtual ainda não está pronto — abra a aba '
-        'Sistema e clique em “Aplicar correções”</span>'
-    ): (
-        "23/08/2026 — `app/actions/mouse_actions.py`. CITA o botão `Aplicar "
-        "correções`, que é dívida do `.glade`; muda junto com ele."
     ),
 }
 
