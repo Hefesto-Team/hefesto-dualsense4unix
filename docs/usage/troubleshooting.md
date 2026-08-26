@@ -246,7 +246,14 @@ journalctl --user -u hefesto-dualsense4unix.service | grep autoswitch | tail -10
 
 1. **Lock manual de 30s ativo**: se você acabou de trocar via tray/CLI,
    o auto-switch fica congelado por 30s para não conflitar com sua
-   escolha. Espere ou troque para `fallback` para destravar.
+   escolha. **Espere os 30s** — passado o prazo o autoswitch volta sozinho,
+   sem reset e sem comando nenhum.
+
+   **FATO SUBSTITUÍDO em 26/08/2026** — aqui se lia "Espere ou troque para
+   `fallback` para destravar", e trocar de perfil é o pior conselho possível
+   aqui: toda troca manual RE-ARMA o lock por mais 30s, porque é ela que o
+   arma. O conselho fazia o problema durar mais. (E `fallback` é um preset
+   opcional: quem não o tem no disco não tinha nem como seguir a instrução.)
 2. **X11 sem python-xlib**: `pip install --user python-xlib` se via
    fonte. Em `.deb` já vem como Recommends.
 3. **Wayland sem portal nem wlrctl**: `sudo apt install wlrctl` resolve nos

@@ -158,8 +158,10 @@ cada 10 segundos.
 O rodapé opera em tudo de uma vez (gatilhos, LEDs, rumble, navegação):
 **Aplicar**, **Salvar Perfil**, **Importar**, **Restaurar Default**.
 
-Perfis pré-instalados na aba **Perfis**: `navegacao`, `fps`, `aventura`, `acao`,
-`corrida`, `esportes` e o slot editável `meu_perfil`. O autoswitch por janela
+Perfis pré-instalados na aba **Perfis** — são **nove**: os cinco de gênero
+(`fps`, `aventura`, `acao`, `corrida`, `esportes`), o `navegacao` para o
+desktop, o `point_and_click` para jogo de apontar-e-clicar, o `fallback` de
+piso e o slot editável `meu_perfil`. O autoswitch por janela
 ativa troca sozinho (abrir o navegador → `navegacao`; abrir um jogo de corrida →
 `corrida`) — e o cadeado da aba Início desliga esse automatismo quando você quer
 mandar na mão.

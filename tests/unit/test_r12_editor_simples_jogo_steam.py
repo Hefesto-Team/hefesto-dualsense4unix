@@ -25,9 +25,6 @@ dizendo "Só neste programa".
 """
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Profile
@@ -151,60 +148,35 @@ class TestColunaQuandoUsar:
         assert _match_label("regex_do_futuro") == "regex_do_futuro"
 
 
-class TestPresetCoopLocalDeFabrica:
-    """O preset tinha alvo VAZIO — nunca casava com janela nenhuma."""
-
-    @staticmethod
-    def _asset() -> Profile:
-        caminho = (
-            Path(__file__).resolve().parents[2]
-            / "assets/profiles_default/coop_local.json"
-        )
-        return Profile.model_validate(json.loads(caminho.read_text(encoding="utf-8")))
-
-    def test_tem_alvo_de_verdade(self) -> None:
-        p = self._asset()
-        assert isinstance(p.match, MatchCriteria)
-        assert p.match.window_title_regex, (
-            "com criteria vazio o preset é inalcançável pelo autoswitch — foi "
-            "assim que ele passou meses no disco sem nunca entrar"
-        )
-
-    def test_nao_virou_catch_all(self) -> None:
-        """Contradição 12 do plano: mais um catch-all agravaria R-01."""
-        p = self._asset()
-        assert not isinstance(p.match, MatchAny)
-        assert not p.e_catch_all
-        assert not p.matches({"wm_class": "firefox", "wm_name": "Firefox"})
-
-    def test_casa_com_jogo_de_coop_pelo_titulo(self) -> None:
-        p = self._asset()
-        assert p.matches({"wm_name": "Overcooked! 2"})
-        assert p.matches({"wm_name": "Sackboy: A Big Adventure"})
-
-    def test_perde_para_o_perfil_do_proprio_jogo(self) -> None:
-        """`sackboy_nativo` (prio 80, `steam_app_1599660`) continua vencendo.
-
-        MODO-01 (sprint 25/07) SUPERA a segunda metade da decisão do R-12. Ela
-        era "prioridade ABAIXO da `Navegação` (50) porque o título da janela do
-        CLIENTE Steam também pode citar um jogo de co-op" — e o preço medido foi
-        alto demais: o `coop_local` é o ÚNICO preset de fábrica com `mode:
-        gamepad` que casa por TÍTULO, isto é, o único que faz o modo jogo ligar
-        em jogo de co-op fora da Steam, e perder para a `Navegação` o mantinha
-        atrás de um perfil de navegador. A colisão que o R-12 temia é estreita
-        (exige a janela do cliente Steam com um título citando um jogo de co-op)
-        e o custo de errar para o lado do modo jogo é baixo; o custo de errar
-        para o outro lado é a queixa desta sprint.
-
-        Fica travado o que NÃO mudou: o perfil do PRÓPRIO jogo (prio 80) segue
-        ganhando do genérico de co-op.
-        """
-        p = self._asset()
-        assert p.priority < 80
-        assert p.priority >= 75
-
-    def test_o_modo_de_coop_esta_intacto(self) -> None:
-        p = self._asset()
-        assert p.mode is not None
-        assert p.mode.kind == "gamepad" and p.mode.coop is True
-        assert p.suppress_desktop_emulation is True
+# ---------------------------------------------------------------------------
+# NOTA DATADA — 26/08/2026: `TestPresetCoopLocalDeFabrica` saiu daqui
+# ---------------------------------------------------------------------------
+# A classe abria `assets/profiles_default/coop_local.json` e travava cinco
+# coisas sobre ele: que tinha alvo de verdade (o conserto do R-12), que NÃO
+# virou catch-all, que casava por título com jogo de co-op, que a prioridade
+# ficava entre a `Navegação` (50) e o perfil do próprio jogo (80) — a decisão
+# do MODO-01 que superou a segunda metade do R-12 — e que o `mode: gamepad`
+# com `coop: true` seguia intacto.
+#
+# O ARQUIVO FOI PODADO da fábrica nesta data. Palavra dela: *"em termos de
+# perfis de jogo vamos manter os que temos ativos apenas"*, e nenhum dos três
+# podados (`bow`, `coop_local`, `sackboy_nativo`) estava ativo no disco dela —
+# os três já estavam no `.historico/`. Um teste que abre um arquivo apagado
+# não mede coisa alguma; ele só reprova.
+#
+# O QUE NÃO SE PERDE, e onde está agora — porque decisão medida não se apaga:
+#
+#   - a família de defeito ("preset de fábrica que o autoswitch nunca escolhe")
+#     virou régua sobre a fábrica INTEIRA em
+#     `test_match_sem_caixa_e_sentinel_manual.py`, que é MAIS do que esta
+#     classe media;
+#   - a ordem de prioridades (gênero 55-70 < jogo 80) e o porquê dela estão em
+#     `profiles/loader.py`, na nota de `PRIORIDADE_DO_PERFIL_DE_JOGO`;
+#   - a decisão do MODO-01 sobre a prioridade do co-op está na sprint
+#     `docs/process/sprints/2026-07-25-MODO-01-o-modo-jogo-liga-sozinho.md`.
+#
+# As duas migrações que dependiam deste asset foram APOSENTADAS no mesmo
+# commit, e não caladas: `profiles/loader.py` relata
+# `migracao_aposentada_sem_asset` quando encontra um `coop_local` velho no
+# disco sem asset de onde copiar. A mordida disso é
+# `test_a_migracao_aposentada_nao_e_muda`, em `test_profile_loader.py`.
