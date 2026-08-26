@@ -101,8 +101,19 @@ RAIZ = Path(__file__).resolve().parent.parent
 #: dele nunca foi varrido — nem depois do commit. Ver a docstring do módulo.
 EXCLUIR_SUFIXO = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf",
-    ".mo", ".woff", ".woff2", ".zip", ".gz", ".xz", ".sha256",
+    ".mo", ".woff", ".woff2", ".zip", ".xz", ".sha256",
 }
+#: ``.gz`` SAIU daqui em 26/08/2026, e a cura já estava escrita na casa desde
+#: 23/08 — no comentário do ``check_anonymity.sh``: *"A cura NÃO é acrescentar
+#: '.gz' ao PULA: isso cegaria o portão para um MAC de verdade dentro de um
+#: comprimido. A cura é olhar o CONTEÚDO."* O irmão descomprime desde então;
+#: este pulava. Medido em 26/08: o mesmo endereço, em texto, dentro de um
+#: ``.csv.gz`` versionado saía rc=0; como ``.csv`` cru, rc=1 nomeando o arquivo.
+#: E a segunda régua NÃO cobria esta: o ``check_anonymity.sh`` descomprime, mas
+#: só procura os oito OUIs da bancada em BYTES CRUS — um MAC em TEXTO dentro de
+#: um ``.gz`` não era visto por portão nenhum desta casa. Há cinco ``.csv.gz``
+#: versionados hoje (``docs/process/estudos/dados/``); os cinco foram
+#: descomprimidos e conferidos: zero endereços. O buraco era LATENTE, e fechou.
 #: Caminhos cujo conteúdo é lista de soma — doze hex por linha, de propósito.
 EXCLUIR_CAMINHO = {
     "docs/usage/assets/PROVA-DA-FOTO.txt",
@@ -213,13 +224,32 @@ def arquivos_versionados() -> list[Path]:
     return fora
 
 
+def _texto_de(p: Path) -> str | None:
+    """O texto do arquivo — e o de DENTRO dele, quando é comprimido.
+
+    Espelha o ``_conteudo()`` do ``check_anonymity.sh``, que faz isto desde
+    23/08/2026. Um ``.gz`` ilegível ou que não seja texto devolve ``None`` em
+    vez de levantar: portão que morre no primeiro arquivo estranho é portão que
+    alguém desliga, e a varredura tem de chegar ao fim.
+    """
+    if p.suffix.lower() == ".gz":
+        import gzip
+        try:
+            return gzip.decompress(p.read_bytes()).decode("utf-8", errors="strict")
+        except (OSError, EOFError, UnicodeDecodeError, gzip.BadGzipFile):
+            return None
+    return p.read_text(encoding="utf-8", errors="strict")
+
+
 def main() -> int:
     achados: list[str] = []
     for p in arquivos_versionados():
         try:
-            texto = p.read_text(encoding="utf-8", errors="strict")
+            texto = _texto_de(p)
         except (UnicodeDecodeError, OSError):
             continue                    # binário ou ilegível: não é nosso caso
+        if texto is None:
+            continue
         rel = p.relative_to(RAIZ)
         for n, linha in enumerate(texto.splitlines(), 1):
             if ISENCAO.search(linha):
