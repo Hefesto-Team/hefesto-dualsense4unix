@@ -160,6 +160,22 @@ _NUMERO_DE_ENTRADA = re.compile(r"^[0-9]{1,3}[a-z]?$")
 _MAXIMO_DE_FACES = 8
 _MAXIMO_DE_ENTRADAS = 64
 
+#: O nome de kernel de um NÓ DE ENTRADA — ``usb1-port5`` (entrada de hub-raiz)
+#: ou ``3-1-port2`` (entrada de hub comum). É a MESMA forma de
+#: ``integrations/entradas_do_gabinete._NO_DE_ENTRADA``, e é de propósito que
+#: seja outra coisa que o ``_CAMINHO_DE_BARRAMENTO``: o caminho nomeia o
+#: APARELHO (``3-1.2``) e some quando ele sai; o nó nomeia o BURACO e responde
+#: com o buraco vazio.
+_NO_DE_ENTRADA = re.compile(r"^(?:usb[0-9]+|[0-9]+-[0-9]+(?:\.[0-9]+)*)-port[0-9]+$")
+
+#: Teto de nós por entrada. MEDIDO em 25/08/2026 nesta bancada: o ``peer`` do
+#: kernel é recíproco e sempre de DOIS — 38 nós, 19 pares, nenhuma cadeia de
+#: três. O teto é 4 e não 2 de propósito: um teto colado na medição de uma placa
+#: faria a gravação INTEIRA ser recusada numa placa que publique mais, e o
+#: sintoma na tela seria "não consegui gravar" em vez de "valor inválido" — a
+#: mesma armadilha que ``secao_mesa._ao_declarar`` documenta.
+_MAXIMO_DE_NOS_POR_ENTRADA = 4
+
 #: A chave de ``ordens_dispensadas`` é o slug da regra que produziu a ordem
 #: (``radio_largo_no_mesmo_hub``), que é a mesma chave de teste do catálogo em
 #: ``integrations/ordens_da_mesa.py``. ASCII com sublinhado, nunca o texto de
@@ -310,12 +326,45 @@ class FaceDeclarada(BaseModel):
     ela desenha dentro do quadrado da entrada que a hospeda, e pô-la na fileira
     faria a fileira de sete do hub virar oito — o desenho deixaria de bater com
     o metal.
+
+    ``perto`` E ``alto`` SÃO O FATO FÍSICO, E SÓ ELA O TEM
+    ------------------------------------------------------
+
+    O motor do arranjo (``integrations/arranjo_da_mesa``) lê os dois em
+    ``Face.perto`` e ``Face.alto``, e até 25/08/2026 **nenhum dos dois tinha
+    fonte**: o esquema não tinha onde guardá-los, então toda face nascia
+    ``perto=False`` e ``alto=False`` e o bônus de +20 do teclado ("na frente,
+    que é a mais perto de você") nunca podia disparar. Juízo montado sobre um
+    fato que nunca chega é juízo otimista demais, e isso é pior que juízo
+    nenhum.
+
+    Os dois são **fato dela**, nunca leitura: o ``/sys`` desta bancada responde
+    ``panel=right``, ``horizontal_position=left`` e ``vertical_position=lower``
+    — idênticos — para ``usb1-port3`` e ``usb1-port6``, que ficam em faces
+    DIFERENTES do metal, e a ACPI desta placa nunca diz "front" nem "back".
+    Nenhuma leitura chega perto de saber se a face está virada para a pessoa ou
+    se ela está acima da linha das cabeças.
+
+    ``False`` não é "não sei", é "não": uma face que ela não marcou não ganha
+    bônus nenhum, que é exatamente o que acontecia antes destes campos
+    existirem. São ``bool`` e não ``bool | None`` de propósito — "não sei se a
+    frente é a frente" não é uma resposta que mude alguma coisa, e um terceiro
+    estado sem consumidor é campo que a próxima pessoa tem de decifrar.
+
+    ``_podar`` **não** tira o ``False`` (ele tira ``None``, ``{}`` e ``[]``),
+    então uma face declarada carrega os dois campos no disco. É barato e é
+    verdade: o arquivo diz que a pergunta foi feita e a resposta foi "não".
     """
 
     model_config = ConfigDict(extra="forbid")
 
     nome: str = ""
     portas: list[str] = Field(default_factory=list)
+    #: Esta é a face virada para quem está sentado — a "frente do gabinete".
+    perto: bool = False
+    #: Esta face fica no alto (o hub em cima do rack), com a antena de quem
+    #: mora nela acima da linha das cabeças.
+    alto: bool = False
 
     @field_validator("portas")
     @classmethod
@@ -347,6 +396,27 @@ class PortaDeclarada(BaseModel):
     dentro de string é exatamente o que o portão de acentuação reprova (ver o
     cabeçalho deste módulo).
 
+    ``nos`` É O QUE ALCANÇA A ENTRADA **VAZIA**, e o ``caminho`` não alcança
+    ---------------------------------------------------------------------
+
+    ``caminho`` nomeia o APARELHO (``3-1.2``) e some do ``/sys`` quando ele sai;
+    ``nos`` nomeia o BURACO (``usb1-port5``), e o nó do buraco responde
+    ``state=not attached`` com o buraco vazio — MEDIDO em 25/08/2026: 38 nós de
+    entrada nesta bancada, todos respondendo ``state`` e ``connect_type``, com e
+    sem aparelho. É por isso que uma entrada nunca declarada some do mapa: sem
+    ``nos``, "a entrada 7" só existe enquanto houver algo nela.
+
+    A lista tem DOIS elementos quando o buraco é 3.x e o kernel publicou o
+    ``peer``: um buraco USB 3.0 tem um nó no hub-raiz 2.0 e outro no 3.x, e o
+    DualSense (que é 2.0) sempre enumera no lado 2.0. Sem a lista, o produto
+    acha que são dois buracos e manda a pessoa se ajoelhar atrás do gabinete
+    duas vezes pelo mesmo furo.
+
+    Quem RESOLVE esta lista contra a leitura de agora é
+    ``integrations/entradas_do_gabinete.furo_declarado``, e a comparação é por
+    INTERSEÇÃO: um buraco declarado com dois nós continua sendo o mesmo buraco
+    quando o kernel de hoje publica um só.
+
     **Entrada vazia não tem entrada aqui.** ``_podar`` tira ``None`` e vazio do
     documento antes de escrever, e a ausência é a resposta "aqui não tem nada"
     — a mesma gramática de "não sei" do arquivo inteiro.
@@ -356,6 +426,7 @@ class PortaDeclarada(BaseModel):
 
     caminho: str | None = None
     filha_de: str | None = None
+    nos: list[str] = Field(default_factory=list)
 
     @field_validator("caminho")
     @classmethod
@@ -375,6 +446,25 @@ class PortaDeclarada(BaseModel):
                 f"número de entrada {valor!r} não é até três dígitos com uma "
                 "letra opcional"
             )
+        return valor
+
+    @field_validator("nos")
+    @classmethod
+    def _nos_sao_nomes_de_kernel(cls, valor: list[str]) -> list[str]:
+        if len(valor) > _MAXIMO_DE_NOS_POR_ENTRADA:
+            raise ValueError(
+                f"{len(valor)} nós numa entrada só, e o teto é "
+                f"{_MAXIMO_DE_NOS_POR_ENTRADA}"
+            )
+        for no in valor:
+            if not _NO_DE_ENTRADA.match(no):
+                raise ValueError(
+                    f"nó de entrada {no!r} não é o nome do kernel "
+                    "('usb1-port5' ou '3-1-port2': o hub, traço, 'port' e o "
+                    "número)"
+                )
+        if len(set(valor)) != len(valor):
+            raise ValueError(f"nó repetido na mesma entrada: {valor!r}")
         return valor
 
 
