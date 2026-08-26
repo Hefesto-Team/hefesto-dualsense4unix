@@ -263,6 +263,25 @@ install -Dm755 -t %{buildroot}%{_datadir}/%{app_id}/scripts/ \
 install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
     assets/systemd/hefesto-bt-bonds-snapshot.service
 
+# OS CINCO SCRIPTS QUE O PRODUTO EXECUTA (25/08/2026, BG-04). Ate aqui so o
+# .deb os levava (build_deb.sh:234): quem instalava por aqui apertava "Deixar
+# tudo pronto" ou o botao do microfone e recebia "Script do WirePlumber nao
+# encontrado", com um unico conselho — rodar um ./install.sh que nao existe na
+# maquina de quem nao clonou o repositorio.
+#
+# O DESTINO NAO E ESCOLHA LIVRE: %{_datadir}/%{app_id} resolve para
+# /usr/share/hefesto-dualsense4unix, uma das bases que BASES_DE_INSTALACAO
+# (app/actions/daemon_actions.py) procura. Quem consome cada um esta escrito no
+# manifesto do Flatpak, dono unico dessa lista. Os cinco tambem entram no
+# %files logo abaixo — sem isso o rpmbuild ABORTA com "Installed (but
+# unpackaged) file(s) found", a mesma cicatriz das fontes do hid-playstation.
+install -Dm755 -t %{buildroot}%{_datadir}/%{app_id}/scripts/ \
+    scripts/doctor.sh \
+    scripts/bluez_config.sh \
+    scripts/disable_steam_input.sh \
+    scripts/fix_wireplumber_default_source.sh \
+    scripts/install_snd_quirk.sh
+
 %post
 # Recarrega udev rules + carrega uinput. Idempotente.
 /usr/sbin/udevadm control --reload-rules || :
@@ -436,6 +455,13 @@ fi
 %{_datadir}/%{app_id}/scripts/bt_rebind_orphans.sh
 %{_datadir}/%{app_id}/scripts/bt_bonds_snapshot.sh
 %{_datadir}/%{app_id}/systemd/hefesto-bt-bonds-snapshot.service
+# Os cinco scripts que o produto EXECUTA (25/08/2026, BG-04) — ver o bloco no
+# %install. Um instalado e nao listado aqui aborta o rpmbuild inteiro.
+%{_datadir}/%{app_id}/scripts/doctor.sh
+%{_datadir}/%{app_id}/scripts/bluez_config.sh
+%{_datadir}/%{app_id}/scripts/disable_steam_input.sh
+%{_datadir}/%{app_id}/scripts/fix_wireplumber_default_source.sh
+%{_datadir}/%{app_id}/scripts/install_snd_quirk.sh
 
 %changelog
 * Tue Aug 19 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.5-1
