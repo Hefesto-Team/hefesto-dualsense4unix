@@ -230,7 +230,7 @@ def test_a_regra_e_instalada_por_todos_os_formatos() -> None:
         "packaging/arch/PKGBUILD",
         "packaging/fedora/hefesto-dualsense4unix.spec",
         "packaging/nix/package.nix",
-        "flatpak/br.andrefarias.Hefesto.yml",
+        "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml",
     )
     faltando = [
         rel

@@ -1,5 +1,12 @@
 # Manifest Flatpak — Hefesto - Dualsense4Unix
-# App ID: br.andrefarias.Hefesto (preservado por design no rebrand v3.0.0)
+# App ID: io.github.hefesto_team.hefesto_dualsense4unix
+#   IDENTIDADE-01 (25/08/2026): era `br.andrefarias.Hefesto`, do tempo em que o
+#   repositório vivia numa conta pessoal. A forma nova é a que o Flathub exige
+#   para projeto hospedado no GitHub — prefixo `io.github.`, ao menos quatro
+#   componentes, porção de domínio em minúsculas e hífen convertido em `_` — e
+#   ela MAPEIA para `github.com/hefesto-team/hefesto-dualsense4unix`, que é o
+#   repositório que existe. O Flatpak NÃO migra id sozinho: quem tinha o antigo
+#   instalado tem outro aplicativo, e o `install.sh` avisa.
 # Runtime: org.gnome.Platform//47 (GTK3, PyGObject, python3 3.12, gi-repository)
 # Construção local: scripts/build_flatpak.sh
 # CI: .github/workflows/flatpak.yml
@@ -12,7 +19,7 @@
 #   - v3.0.0 rebrand (2026-04-27): paths internos hefesto -> hefesto-dualsense4unix;
 #     command -> hefesto-dualsense4unix-gui; runtime e deps mantidos.
 
-app-id: br.andrefarias.Hefesto
+app-id: io.github.hefesto_team.hefesto_dualsense4unix
 runtime: org.gnome.Platform
 runtime-version: "47"
 sdk: org.gnome.Sdk
@@ -41,8 +48,17 @@ finish-args:
   # Socket IPC do daemon Hefesto - Dualsense4Unix em $XDG_RUNTIME_DIR/hefesto-dualsense4unix/
   - --filesystem=xdg-run/hefesto-dualsense4unix:create
   # Perfis e configurações em ~/.config/hefesto-dualsense4unix/
-  # Dentro do sandbox: ~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/
+  # Dentro do sandbox: ~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/config/hefesto-dualsense4unix/
   - --filesystem=xdg-config/hefesto-dualsense4unix:create
+  # IDENTIDADE-01 (25/08/2026): a casa do app-id ANTERIOR, em LEITURA APENAS.
+  # Trocar o app-id troca a pasta de configuração dentro do sandbox, e o
+  # Flatpak não migra id sozinho — sem esta linha quem já usava abriria a
+  # janela com a lista de perfis vazia e os perfis dele existindo, invisíveis,
+  # dois diretórios ao lado. Quem lê é `utils/migrate_legacy_paths.py`, que
+  # copia só o que falta e NUNCA apaga a origem; por isso `:ro` basta, e dar
+  # escrita seria dar mais do que o código usa (mesmo critério das duas linhas
+  # da Steam empacotada, logo abaixo).
+  - --filesystem=~/.var/app/br.andrefarias.Hefesto:ro
   # AMBIENTE-PRESUMIDO-01 (23/08/2026): SEM estas quatro linhas, a integração
   # com a Steam morria INTEIRA dentro do sandbox, e em silêncio — o cartão
   # dizia "Steam não encontrada", o catálogo de jogos saía vazio, o wrapper
@@ -222,7 +238,7 @@ modules:
 
       # Instalar ícone 256x256 para o lançador do sistema
       - install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png
-          /app/share/icons/hicolor/256x256/apps/br.andrefarias.Hefesto.png
+          /app/share/icons/hicolor/256x256/apps/io.github.hefesto_team.hefesto_dualsense4unix.png
 
       # Glyphs SVG dos botões do DualSense. Sem isto, ButtonGlyph não acha os
       # assets dentro do sandbox (nem ~/.local/share nem /usr/share resolvem)
@@ -247,12 +263,12 @@ modules:
           assets/profiles_default/*.json
 
       # Instalar arquivo .desktop adaptado para o App ID Flatpak
-      - install -Dm644 flatpak/br.andrefarias.Hefesto.desktop
-          /app/share/applications/br.andrefarias.Hefesto.desktop
+      - install -Dm644 flatpak/io.github.hefesto_team.hefesto_dualsense4unix.desktop
+          /app/share/applications/io.github.hefesto_team.hefesto_dualsense4unix.desktop
 
       # Instalar metadata AppStream
-      - install -Dm644 flatpak/br.andrefarias.Hefesto.metainfo.xml
-          /app/share/metainfo/br.andrefarias.Hefesto.metainfo.xml
+      - install -Dm644 flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml
+          /app/share/metainfo/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml
 
       # Copiar regras udev para dentro do bundle (leitura apenas)
       # Instalação no host via scripts/install-host-udev.sh + pkexec.

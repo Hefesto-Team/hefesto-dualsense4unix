@@ -216,7 +216,7 @@ Os formatos abaixo existem, mas para a alfa o caminho testado é o do código-fo
 - **`.deb`** — `scripts/build_deb.sh` gera `dist/hefesto-dualsense4unix_<versão>_amd64_<pytag>.deb`
   com o ambiente virtual embutido em `/opt/hefesto-dualsense4unix/venv/`.
   Metadados em `packaging/debian/`.
-- **Flatpak** — manifesto em `flatpak/br.andrefarias.Hefesto.yml`; build por
+- **Flatpak** — manifesto em `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml`; build por
   `scripts/build_flatpak.sh`. Detalhes de sandbox em [`flatpak.md`](flatpak.md).
 - **AppImage** — `scripts/build_appimage.sh` (só CLI) e `scripts/build_appimage_gui.sh`
   (com GTK3 embutido).
@@ -243,7 +243,7 @@ sudo bash scripts/install_udev.sh
 sudo bash /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
 
 # Flatpak
-flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
+flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix
 ```
 
 Os três aplicam o mesmo conjunto e são idempotentes. Depois de rodar, desconecte

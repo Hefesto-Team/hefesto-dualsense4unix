@@ -88,8 +88,9 @@ A política do BlueZ em ``/usr/share/dbus-1/system.d/bluetooth.conf`` tem
 
 O ponto de injeção ``executar`` existe assim mesmo, por duas razões que não são
 privilégio: a suíte precisa de um D-Bus dublado, e dentro do Flatpak o barramento
-de sistema **não está montado** (``flatpak/br.andrefarias.Hefesto.yml`` não tem
-``--socket=system-bus`` nem ``--system-talk-name=org.bluez``) — lá a leitura e a
+de sistema **não está montado** (o manifesto
+``flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml``
+não tem ``--socket=system-bus`` nem ``--system-talk-name=org.bluez``) — lá a leitura e a
 escrita simplesmente não chegam ao BlueZ, e quem resolver isso pluga aqui.
 
 **A escrita é ASSÍNCRONA.** Medido: ler a propriedade imediatamente depois de

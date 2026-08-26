@@ -1,14 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- AppStream metadata — Hefesto - Dualsense4Unix -->
-<!-- Valide com: appstreamcli validate (opcao no-net) flatpak/br.andrefarias.Hefesto.metainfo.xml -->
+<!-- Valide com: appstreamcli validate (opcao no-net) flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml -->
 <component type="desktop-application">
-  <id>br.andrefarias.Hefesto</id>
+  <id>io.github.hefesto_team.hefesto_dualsense4unix</id>
+
+  <!-- IDENTIDADE-01 (25/08/2026): o id anterior, do tempo em que o
+       repositório vivia numa conta pessoal. Declará-lo aqui é o que faz a
+       loja de aplicativos entender que este componente SUBSTITUI aquele,
+       em vez de mostrar dois Hefestos lado a lado. Não é a mesma coisa que
+       o Flatpak migrar o id — ele não migra, e por isso o `install.sh`
+       avisa e o produto lê a configuração da casa antiga. -->
+  <replaces>
+    <id>br.andrefarias.Hefesto</id>
+  </replaces>
 
   <name>Hefesto - Dualsense4Unix</name>
   <summary>Gerenciador DualSense para Linux</summary>
 
   <!-- Metadados de lançamento -->
-  <launchable type="desktop-id">br.andrefarias.Hefesto.desktop</launchable>
+  <launchable type="desktop-id">io.github.hefesto_team.hefesto_dualsense4unix.desktop</launchable>
 
   <!-- Versão atual.
        METAINFO-VERSAO-RANCOSA-01 (30/07): a entrada mais recente aqui era a

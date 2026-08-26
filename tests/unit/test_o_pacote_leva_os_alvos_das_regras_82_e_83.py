@@ -77,7 +77,7 @@ FORMATOS = {
     "deb": Path("scripts/build_deb.sh"),
     "arch": Path("packaging/arch/PKGBUILD"),
     "fedora": Path("packaging/fedora/hefesto-dualsense4unix.spec"),
-    "flatpak": Path("flatpak/br.andrefarias.Hefesto.yml"),
+    "flatpak": Path("flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"),
     "nix": Path("packaging/nix/package.nix"),
 }
 

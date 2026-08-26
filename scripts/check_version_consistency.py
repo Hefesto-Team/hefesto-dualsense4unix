@@ -90,7 +90,7 @@ _TARGETS: list[tuple[str, str, str]] = [
     # AppStream: a PRIMEIRA <release> do bloco é a que a loja mostra como atual.
     # `re.search` para o primeiro casamento é exatamente o que se quer aqui.
     ("metainfo Flatpak (release mais recente)",
-     "flatpak/br.andrefarias.Hefesto.metainfo.xml",
+     "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml",
      r'<release\s+version="([^"]+)"'),
     # Cargo: `^version` ancorado no início da linha é obrigatório — sem a âncora
     # o regex casaria o `version = "1"` do tokio dentro de [dependencies].
@@ -147,7 +147,7 @@ _TRADUTORES: dict[str, Callable[[str], str]] = {
 
 #: Conferência de data: a primeira <release> do metainfo contra a seção
 #: correspondente do CHANGELOG.md.
-_METAINFO_REL = "flatpak/br.andrefarias.Hefesto.metainfo.xml"
+_METAINFO_REL = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml"
 _CHANGELOG_REL = "CHANGELOG.md"
 
 #: `version` e `date` na ordem em que o arquivo os escreve. Exigir os dois no
