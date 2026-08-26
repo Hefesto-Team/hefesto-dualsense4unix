@@ -480,6 +480,12 @@ jobs:
       # gate silencioso é o defeito de que a PORTÃO-VIVO-01 nasceu.
       - name: A tabela de curvas próprias reflete o catálogo
         run: python3 scripts/gerar-tabela-de-curvas.py --check
+      # A página das frases de tela é GERADA de um JSON versionado, como o
+      # specs.html e o painel.html. Sem este passo, o HTML publicado e o dado
+      # divergiriam em silêncio — e o que ela abre para decidir passaria a
+      # mostrar uma lista que já não é a do disco.
+      - name: A página das frases de tela reflete o dado versionado
+        run: python3 scripts/gerar-frases-de-tela.py --check
       # GUARDA-GI-REAL-01: um módulo que some da coleta some CALADO. O `pytest`
       # aborta com "Interrupted: N errors during collection" no meio de
       # milhares de linhas de log, e um `6 skipped` na coleta não aparece em

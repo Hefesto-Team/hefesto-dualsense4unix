@@ -59,6 +59,10 @@ rapido|caducos|py|scripts/validar-caducos.py --all
 rapido|palavra-de-tela|py|scripts/validar-palavra-de-tela.py --all
 rapido|version-consistency|py|scripts/check_version_consistency.py
 rapido|curvas|py|scripts/gerar-tabela-de-curvas.py --check
+# 25/08/2026: a página das frases de tela é gerada de um JSON versionado.
+# Sem este portão, o HTML publicado e o dado divergiriam em silêncio — e o que
+# ela abre para decidir passaria a mostrar uma lista que já não é a do disco.
+rapido|frases-de-tela|py|scripts/gerar-frases-de-tela.py --check
 rapido|paridade-transporte|py|scripts/check_paridade_transporte.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py

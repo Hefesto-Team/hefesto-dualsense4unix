@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>As frases que esperam você — Hefesto</title>
+<style>
+:root {
+  /* Paleta Drácula — a mesma que o produto usa em 82 lugares no código.
+     O mapa tem de parecer parte do Hefesto, não um site sobre ele. */
+  --color-paper:      #282a36;
+  --color-paper-2:    #21222c;
+  --color-paper-3:    #343746;
+  --color-rule:       #44475a;
+  --color-ink:        #f8f8f2;
+  --color-ink-quiet:  #a8b0c8;
+  --color-ink-faint:  #6272a4;
+  --color-accent:     #bd93f9;   /* o literal que set_accent() já substitui */
+  --color-ok:         #50fa7b;
+  --color-lacuna:     #ffb86c;   /* a casa sabe e o produto não faz */
+  --color-nulo:       #6272a4;
+  --color-alerta:     #ff5555;
+  --color-frio:       #8be9fd;
+
+  /* Pilha do sistema: nada de fonte web, para o arquivo abrir sem rede. */
+  --font-corpo: ui-sans-serif, system-ui, "Cantarell", "Segoe UI", Roboto, sans-serif;
+  --font-dado:  ui-monospace, "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono", monospace;
+
+  --space-3xs: .25rem; --space-2xs: .5rem;  --space-xs: .75rem;
+  --space-sm:  1rem;   --space-md:  1.5rem; --space-lg: 2.5rem;
+  --space-xl:  4rem;   --space-2xl: 6rem;
+
+  --text-xs: .75rem;  --text-sm: .8125rem; --text-base: .9375rem;
+  --text-lg: 1.125rem; --text-xl: 1.5rem;  --text-2xl: 2rem;
+  --text-display: clamp(2rem, 5vw, 3.25rem);
+
+  --rule-hair: 1px;
+  --radius-sm: 3px; --radius-md: 6px;
+  --ease-out: cubic-bezier(.22,.61,.36,1);
+  --dur-fast: 120ms; --dur-base: 200ms;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--color-paper);color:var(--color-ink);
+  font-family:var(--font-corpo);font-size:var(--text-base);line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+.env{max-width:70rem;margin:0 auto;padding:var(--space-md) var(--space-sm) var(--space-2xl)}
+header{padding:var(--space-lg) 0 var(--space-md);border-bottom:2px solid var(--color-accent)}
+h1{font-size:var(--text-display);line-height:1.05;margin:0 0 var(--space-xs);
+  font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+.sub{color:var(--color-ink-quiet);max-width:62ch;margin:0}
+.conta{display:flex;flex-wrap:wrap;gap:var(--space-md);margin-top:var(--space-md);
+  font-family:var(--font-dado);font-size:var(--text-sm)}
+.conta div{display:flex;flex-direction:column;gap:2px}
+.conta b{font-size:var(--text-xl);font-variant-numeric:tabular-nums;line-height:1}
+.conta span{color:var(--color-ink-faint);font-size:var(--text-xs);
+  text-transform:uppercase;letter-spacing:.08em}
+.riscado{text-decoration:line-through;color:var(--color-ink-faint)}
+.nota{margin:var(--space-md) 0 0;padding:var(--space-sm);
+  border-left:3px solid var(--color-lacuna);background:var(--color-paper-2);
+  color:var(--color-ink-quiet);font-size:var(--text-sm);max-width:70ch}
+.nota strong{color:var(--color-lacuna)}
+.barra{position:sticky;top:0;z-index:5;background:var(--color-paper);
+  padding:var(--space-sm) 0;border-bottom:var(--rule-hair) solid var(--color-rule);
+  display:flex;flex-wrap:wrap;gap:var(--space-3xs);align-items:center}
+.barra button{font:inherit;font-size:var(--text-xs);font-family:var(--font-dado);
+  background:var(--color-paper-3);color:var(--color-ink-quiet);
+  border:var(--rule-hair) solid var(--color-rule);border-radius:var(--radius-sm);
+  padding:.3rem .55rem;cursor:pointer;
+  transition:color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out)}
+.barra button:hover{color:var(--color-ink);border-color:var(--color-ink-faint)}
+.barra button[aria-pressed="true"]{background:var(--color-accent);
+  color:var(--color-paper);border-color:var(--color-accent);font-weight:600}
+.barra .placar{margin-left:auto;font-family:var(--font-dado);font-size:var(--text-xs);
+  color:var(--color-ink-faint);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--color-frio);outline-offset:2px}
+h2{font-size:var(--text-xl);margin:var(--space-lg) 0 var(--space-2xs);font-weight:700;
+  display:flex;align-items:baseline;gap:var(--space-2xs);text-wrap:balance}
+h2 .n{font-family:var(--font-dado);font-size:var(--text-sm);
+  color:var(--color-ink-faint);font-weight:400;font-variant-numeric:tabular-nums}
+.secao-nota{color:var(--color-ink-faint);font-size:var(--text-sm);
+  margin:0 0 var(--space-sm);max-width:62ch}
+.item{border:var(--rule-hair) solid var(--color-rule);border-radius:var(--radius-md);
+  background:var(--color-paper-2);margin-bottom:var(--space-2xs);overflow:hidden;
+  transition:border-color var(--dur-base) var(--ease-out),opacity var(--dur-base) var(--ease-out)}
+.item[data-voto="sim"]{border-color:var(--color-ok)}
+.item[data-voto="nao"]{border-color:var(--color-alerta)}
+.item[data-voto="nao"] .par{opacity:.5}
+.item .onde{font-family:var(--font-dado);font-size:var(--text-xs);
+  color:var(--color-ink-faint);padding:var(--space-2xs) var(--space-xs);
+  border-bottom:var(--rule-hair) solid var(--color-rule);
+  display:flex;gap:var(--space-2xs);align-items:center;flex-wrap:wrap}
+.conferir{color:var(--color-lacuna);border:var(--rule-hair) solid var(--color-lacuna);
+  border-radius:var(--radius-sm);padding:0 .35rem;font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;white-space:nowrap}
+.par{display:grid;grid-template-columns:1fr 1fr;gap:var(--rule-hair);
+  background:var(--color-rule)}
+@media (max-width:46rem){.par{grid-template-columns:1fr}}
+.lado{background:var(--color-paper-2);padding:var(--space-xs)}
+.lado .rot{font-family:var(--font-dado);font-size:10px;text-transform:uppercase;
+  letter-spacing:.1em;margin-bottom:var(--space-3xs)}
+.saiu .rot{color:var(--color-alerta)}
+.entrou .rot{color:var(--color-ok)}
+.frase{font-family:var(--font-dado);font-size:var(--text-sm);line-height:1.5;
+  white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.saiu .frase{color:var(--color-ink-quiet)}
+.entrou .frase{color:var(--color-ink)}
+.frase em{font-style:normal;color:var(--color-frio)}
+.porque{padding:var(--space-2xs) var(--space-xs);font-size:var(--text-sm);
+  color:var(--color-ink-quiet);border-top:var(--rule-hair) solid var(--color-rule);
+  display:flex;gap:var(--space-xs);align-items:flex-start;justify-content:space-between}
+.porque p{margin:0;max-width:70ch}
+.votos{display:flex;gap:var(--space-3xs);flex-shrink:0}
+.votos button{font:inherit;font-family:var(--font-dado);font-size:var(--text-xs);
+  background:transparent;color:var(--color-ink-faint);
+  border:var(--rule-hair) solid var(--color-rule);border-radius:var(--radius-sm);
+  padding:.15rem .5rem;cursor:pointer;white-space:nowrap;
+  transition:all var(--dur-fast) var(--ease-out)}
+.votos button:hover{color:var(--color-ink);border-color:var(--color-ink-faint)}
+.votos button[aria-pressed="true"][data-v="sim"]{background:var(--color-ok);
+  color:var(--color-paper);border-color:var(--color-ok)}
+.votos button[aria-pressed="true"][data-v="nao"]{background:var(--color-alerta);
+  color:var(--color-ink);border-color:var(--color-alerta)}
+.oito{list-style:none;padding:0;margin:0;counter-reset:oito}
+.oito li{counter-increment:oito;position:relative;padding-left:2.2rem;
+  margin-bottom:var(--space-2xs);color:var(--color-ink-quiet);max-width:74ch}
+.oito li::before{content:counter(oito,decimal-leading-zero);position:absolute;
+  left:0;top:.1rem;font-family:var(--font-dado);font-size:var(--text-sm);
+  color:var(--color-accent);font-weight:700}
+.oito li strong{color:var(--color-ink)}
+footer{margin-top:var(--space-xl);padding-top:var(--space-md);
+  border-top:var(--rule-hair) solid var(--color-rule);
+  color:var(--color-ink-faint);font-size:var(--text-sm)}
+footer code{color:var(--color-ink-quiet)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style></head><body>
+<div class="env">
+<header><h1>As frases que esperam você</h1>
+<p class="sub">As mudanças de texto de tela da madrugada de 25/08, aba por aba, na ordem em que elas aparecem na sua janela. Nenhuma foi aprovada — a palavra final é sua.</p>
+<div class="conta">
+<div><b>60</b><span>frases</span></div>
+<div><b>11</b><span>abas</span></div>
+<div><b class="riscado">43</b><span>o número publicado</span></div>
+<div><b style="color:var(--color-lacuna)">43</b><span>a conferir no código</span></div>
+</div>
+<p class="nota"><strong>O número publicado era 43, e a lista não existia.</strong> O <code>ONDE-PARAMOS</code> mandava buscar a lista completa no “relatório do conferente da leva”. Esse relatório nunca existiu — os 27 arquivos estão no disco e nenhum é do conferente. Esta é a primeira enumeração. E o piso é maior: cinco linhas aqui são <em>pacotes</em> (as oito frases do <code>./install.sh</code>, as 38 dicas dos 19 modos de gatilho, e mais três). Frase por frase, passa de cem.</p>
+</header>
+<h2>As oito que mais mudam o que você vê</h2>
+<p class="secao-nota">Ranqueadas por uma régua só: a frase antiga levaria você a uma decisão errada, ou afirmava sobre o seu aparelho algo que o produto não tinha como saber.</p>
+<ol class="oito">
+<li>**Emulação — o microfone para de pintar <em>Ligado</em> em verde sobre alvo que a aba nunca olhou.** A conclusão saía de três arquivos do WirePlumber, sem jamais perguntar se existe microfone a ligar — e o caso comum disso é o controle no RÁDIO, onde não há placa ALSA nenhuma. Nasce um quarto estado, <em>sem alvo</em>. (`emulation_actions.py:1169-1170`; texto novo não citado no relatório.)</li>
+<li>**Gatilhos — <em>Rigid aplicado</em> com zero destino vira <em>nenhum controle recebeu — não há controle na mesa</em>.** O daemon respondeu `aplicado_em: []`, `guardado_em: []`: nenhum byte no fio, e a barra dizia <em>aplicado</em>. Com a mesa vazia ela leria a barra e concluiria que o gatilho está armado.</li>
+<li>**Rodapé — <em>Perfil aplicado.</em> sobre uma RECUSA do daemon.** A troca de máscara era recusada e o rodapé comemorava; a frase nova é a do desfecho da recusa, que contém <em>Ainda não</em>. A mordida é literal e cruel: `assert &#x27;Ainda não&#x27; in &#x27;Perfil aplicado.&#x27;`. O rodapé aparece em todas as abas.</li>
+<li>**Início — a pausa chega à primeira aba.** Com o daemon em pausa, a aba prometia luz e vibração que não saem. A frase da pausa entra NO LUGAR da promessa do modo, não ao lado dela — duas frases no mesmo instante fariam a aba dizer duas coisas.</li>
+<li>**Início — <em>você escolheu</em> para de acusar sobre gesto que ela não deu, e vira <em>o perfil ativo pede</em>.** A divergência de máscara era medida contra a máscara do PERFIL, que entra sozinho; só gesto dela mantém <em>você escolheu</em>.</li>
+<li>**Emulação — a aba para de prometer vibração que ninguém mediu.** Entra, nas frases do gamepad virtual: <em>A vibração ainda não foi conferida no aparelho — nem no cabo, nem no rádio: o caminho está montado, e se ela não vier não é erro seu.</em> O mapa diz `de_onde_sei = inferido-do-codigo` nos DOIS transportes.</li>
+<li>**Lightbar — <em>Aceso agora:</em> vira <em>Desenho que mandamos:</em>.** <em>Aceso</em> é leitura de volta que o produto não tem e não pode ter: `luz.led_jogador.leitura@dualsense` é `cabo_aceita = não` e `radio_aceita = não`. O texto de espera acompanha: <em>Aceso agora: consultando…</em> → <em>Desenho que mandamos: lendo o perfil…</em>.</li>
+<li>**Perfis — remover diz quando o perfil é o que está valendo.** Três frases novas (o quê / por quê / o que fazer), ANTES da linha <em>permanente e não pode ser desfeita</em> — que é a que se aprende a pular. Apagar o perfil ativo era um clique sem uma palavra.</li>
+</ol>
+<div class="barra" role="group" aria-label="Filtrar por aba">
+<button data-f="todas" aria-pressed="true">todas</button>
+<button data-f="Início" aria-pressed="false">Início <span style="opacity:.6">9</span></button>
+<button data-f="Status" aria-pressed="false">Status <span style="opacity:.6">2</span></button>
+<button data-f="No jogo" aria-pressed="false">No jogo <span style="opacity:.6">1</span></button>
+<button data-f="Gatilhos" aria-pressed="false">Gatilhos <span style="opacity:.6">4</span></button>
+<button data-f="Lightbar" aria-pressed="false">Lightbar <span style="opacity:.6">4</span></button>
+<button data-f="Rumble" aria-pressed="false">Rumble <span style="opacity:.6">5</span></button>
+<button data-f="Perfis" aria-pressed="false">Perfis <span style="opacity:.6">3</span></button>
+<button data-f="Sistema" aria-pressed="false">Sistema <span style="opacity:.6">6</span></button>
+<button data-f="Emulação" aria-pressed="false">Emulação <span style="opacity:.6">6</span></button>
+<button data-f="Navegação" aria-pressed="false">Navegação <span style="opacity:.6">4</span></button>
+<button data-f="Configurações" aria-pressed="false">Configurações <span style="opacity:.6">10</span></button>
+<button data-f="Rodapé (fora de aba — ela vê em todas)" aria-pressed="false">Rodapé <span style="opacity:.6">2</span></button>
+<button data-f="Terminal — `scripts/doctor.sh` (não é janela)" aria-pressed="false">Terminal <span style="opacity:.6">4</span></button>
+<span class="placar" id="placar"></span>
+</div>
+<section data-aba="Início">
+<h2>Início <span class="n">9</span></h2>
+<article class="item" data-id="f1" data-voto="">
+<div class="onde"><span>descrição do modo no `_render_home` — o terceiro estado, escrito pela função pura nova `texto_da_pausa`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não citada no relatório) — a promessa do modo: a frase que descreve o modo e fala de luz e de vibração</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citada no relatório) — a frase da pausa, que entra NO LUGAR da promessa do modo, não como banner ao lado dela</p></div>
+</div>
+<div class="porque"><p>com o daemon em pausa a aba prometia luz e vibração que não saem; deixar as duas frases faria a aba dizer duas coisas no mesmo instante.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f2" data-voto="">
+<div class="onde"><span>frase da divergência de máscara — `_mascara_escolhida_com_fonte`, `FONTE_GESTO_DELA` / `FONTE_PERFIL`, e o leitor novo `mascara_divergente_do_daemon`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">você escolheu</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">o perfil ativo pede</p></div>
+</div>
+<div class="porque"><p>a frase acusava um gesto que ela não deu — a máscara vinha do perfil, que entra sozinho. Com o alarme do daemon populado, a frase passa a nomear o perfil do jogo em cena; só gesto dela mantém <em>você escolheu</em>.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f3" data-voto="">
+<div class="onde"><span>linha <em>Ponte com o jogo:</em> — quarto veredito de `texto_da_ponte`, com a função pura `controles_na_mesa`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não citada no relatório) — a linha da ponte acendendo mesmo com a mesa vazia</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citada no relatório) — o quarto veredito: sobre mesa vazia a ponte NÃO acende</p></div>
+</div>
+<div class="porque"><p>sem controle na mesa não há ponte a afirmar, e o payload medido de 23/08 produzia verde. Falso verde na primeira tela.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f4" data-voto="">
+<div class="onde"><span>linha do cadeado (autoswitch) — função NOVA `texto_do_cadeado_cego`, deliberadamente fora de `autoswitch_lock_text`, que também alimenta o toast do rodapé</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não citada no relatório) — a linha do cadeado com uma metade só</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citada no relatório) — a segunda metade, que diz quando o mecanismo que o cadeado governa está cego</p></div>
+</div>
+<div class="porque"><p>o cadeado afirmava governar um detector de janela que podia estar sem enxergar nada. Ausência da chave é <em>não sei</em>, nunca <em>está cego</em>.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f5" data-voto="">
+<div class="onde"><span>conta de jogadores e cards da fileira — `_format_players_hint(controllers, externos)`, `externos_na_mesa`, `_format_external_title` / `_format_external_subtitle`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não citada no relatório) — a conta que, com dois DualSense e um externo na mesa, dizia <em>dois controles</em></p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citada no relatório) — a conta que inclui o externo SEM prometer que ele é um jogador, mais um card de externo novo na fileira, na gramática do card de DualSense (não o `ExternalCard` da aba Configurações)</p></div>
+</div>
+<div class="porque"><p>a aba contava só DualSense e escondia quem mais estava na mesa; e o mapa diz `plataforma.vpad@sn30 = existe: desconhecido`, então a frase não pode prometer jogador.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f6" data-voto="">
+<div class="onde"><span>card do controle, aviso quando `is_primary and gamepad_on and grab_state == <em>failed</em>` — condição movida para a função pura `aviso_de_grab`</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Grab falhou — input pode dobrar no jogo</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">O jogo pode receber cada botão duas vezes</p></div>
+</div>
+<div class="porque"><p><em>grab</em> é o nome da peça do kernel que falhou, e o card é a primeira tela de quem quer jogar. A consequência agora está medida (ESCONDE-SÓ-O-HIDRAW-01).</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f7" data-voto="">
+<div class="onde"><span>linha <em>Ponte com o jogo:</em>, ramo da exceção de Steam Input — `home_actions.py:1112-1116`, ramo APAGADO (Saída A)</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">pelo Steam Input — neste jogo a Steam entrega os botões</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">pelo Hefesto</p></div>
+</div>
+<div class="porque"><p>a frase é do mundo de 06/08, quando a exceção suspendia o vpad. Desde 09/08 (ESCONDER-EM-VEZ-DE-SAIR-01) a exceção esconde o físico e MANTÉM o vpad de pé — publicá-la seria pôr um fato derrubado na primeira tela.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f8" data-voto="">
+<div class="onde"><span>card do controle — `palavra_do_transporte`, o subtítulo que diz por onde o controle está ligado</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">?</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">não sei por onde</p></div>
+</div>
+<div class="porque"><p>o <em>?</em> não diz nada a quem lê. No mesmo gesto, `usb` passou a sair como <em>cabo</em> e `bt` como <em>rádio</em> (a língua do mapa), e valor desconhecido volta CRU, para aparecer em vez de sumir.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f9" data-voto="">
+<div class="onde"><span>hover (tooltip) do mesmo aviso de grab — `warn.set_tooltip_text(porque)`, no desenho da fita apagada do cabeçalho</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Outro programa pegou este controle antes e não solta, ...</p></div>
+</div>
+<div class="porque"><p>sem o hover a linha diz o que aconteceu e não diz o que fazer. A frase NÃO acusa a Steam, porque quem segura o dispositivo não está provado (GRAB-DOBRADO-01). O relatório trunca a citação com <em>...</em> na própria saída do pytest.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Status">
+<h2>Status <span class="n">2</span></h2>
+<article class="item" data-id="f10" data-voto="">
+<div class="onde"><span>barra da bateria do estado global — a decisão saiu do `_render_slow_state` e passou a morar na função pura `_bateria_da_mesa`, que olha o topo E a lista</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">75 %</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">— %</p></div>
+</div>
+<div class="porque"><p>a barra escrevia a bateria do topo do payload com ZERO controles na lista do daemon. Ausência de lista, porém, continua não sendo evidência de mesa vazia — nesse caso o número segue saindo.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f11" data-voto="">
+<div class="onde"><span>faixa da bateria do card único — o `_motion_label` (GYRO-03) passa a ser empacotado nos DOIS modos, ao lado da bateria</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia na tela) — o rótulo era alimentado a cada tique e nunca chegava à tela fora do card compacto, que produção nenhuma constrói desde a EMPILHA-02</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citada no relatório) — a linha do giroscópio com o hertz; o teste procura &#x27;Hz&#x27; entre os textos visíveis</p></div>
+</div>
+<div class="porque"><p>de 17/08 a 25/08 o hertz do giroscópio não apareceu em configuração nenhuma da janela: a SEM-BARRA-DA-VERDADE-01 desempacotou a linha da verdade, que era a única portadora do número. Marcado `PROVISÓRIO — decisão dela` no código: a escolha entre a saída (a) e a (b) é dela.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="No jogo">
+<h2>No jogo <span class="n">1</span></h2>
+<article class="item" data-id="f12" data-voto="">
+<div class="onde"><span>a linha do TOPO da aba (o cabeçalho). Lê `mascara_divergente` do `state_full` — campo que existia desde 19/08 e que a GUI nunca leu</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">O jogo vê o controle como: DualSense</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Jogar (gamepad virtual) · O jogo vê o controle como: DualSense (botões PlayStation) — o perfil deste jogo pedia Xbox 360</p></div>
+</div>
+<div class="porque"><p>a linha afirmava a máscara viva como se ninguém tivesse pedido outra: não era falsa, era a metade que engana. A LISTA `mascara_divergencias` (jogo fechado) ficou de fora de propósito.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Gatilhos">
+<h2>Gatilhos <span class="n">4</span></h2>
+<article class="item" data-id="f13" data-voto="">
+<div class="onde"><span>a barra/toast que responde ao <em>Aplicar</em> e a cada troca de modo — `_toast_trigger` em `app/actions/triggers_actions.py`, caso <em>mesa vazia</em> (o toast também dispara sozinho 300 ms depois de cada clique de modo, via `_schedule_live_preview` em `:322`)</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Gatilho esquerdo (L2): Rigid aplicado</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Gatilho esquerdo (L2): Rigid — nenhum controle recebeu — não há controle na mesa</p></div>
+</div>
+<div class="porque"><p>a barra afirmava <em>aplicado</em> sem destino nenhum: o daemon respondeu `aplicado_em: []`, `guardado_em: []` — zero destino, nenhum byte no fio.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f14" data-voto="">
+<div class="onde"><span>a MESMA barra/toast, ramo do Modo Nativo ligado com controle NA mesa — `frase_do_desfecho` em `app/textos_de_aplicacao.py`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Gatilho esquerdo (L2): Rigid — guardado; em Modo Nativo quem manda no controle é o jogo. Vale quando o Modo Nativo sair.</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não transcrita no relatório; CONFERIDA POR MIM em `textos_de_aplicacao.py:295` + `:173`) <em>Gatilho esquerdo (L2): Rigid — nenhum controle recebeu — em Modo Nativo quem manda no controle é o jogo</em></p></div>
+</div>
+<div class="porque"><p>durante algumas horas do dia este ramo passou a dizer <em>não há controle na mesa</em> — FALSO, e num caso que o código acertava antes. Quem coordena consertou no mesmo dia: a frase de mesa vazia deixou de cobrir os cinco motivos de `([], [])`. A frase transitória nunca chegou a ela.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f15" data-voto="">
+<div class="onde"><span>a MESMA barra/toast, ramo dos três casos que a janela NÃO tem como enxergar — constante `NADA_ACONTECEU` (`textos_de_aplicacao.py:293`)</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">&lt;assunto&gt; — nenhum controle recebeu — não há controle na mesa</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">nenhum controle recebeu</p></div>
+</div>
+<div class="porque"><p>uma frase só embutia a causa de cinco situações diferentes; virou três (a genérica, a de mesa vazia e a de Modo Nativo). Nos três caminhos que a janela não enxerga a frase agora CALA em vez de diagnosticar — <em>olhei e não sei por quê</em> é uma resposta.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f16" data-voto="">
+<div class="onde"><span>dica (tooltip) de cada botão de modo — `sel.set_tooltips({spec.name: spec.description for spec in PRESETS})` em `app/actions/triggers_actions.py`: 19 modos, 38 dicas na tela (os dois lados)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Barreira rígida numa posição fixa</p></div>
+</div>
+<div class="porque"><p>as 19 descrições do `PRESETS` já estavam escritas e nenhuma chegava à tela; e o campo `TriggerParamSpec.help_text`, com 73 parâmetros, 73 vazios e zero leitores, saiu. ATENÇÃO: a frase citada é a ÚNICA das 19 transcrita no relatório (a do `Rigid`, num `grep`), e o agente avisa que NÃO fotografou a aba — <em>não vi as 38 dicas na tela</em>.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Lightbar">
+<h2>Lightbar <span class="n">4</span></h2>
+<article class="item" data-id="f17" data-voto="">
+<div class="onde"><span>rótulo `player_leds_estado` — `_PREFIXO_DESENHO`, usado nas quatro bifurcações de `texto_do_desenho_aceso`</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Aceso agora:</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Desenho que mandamos:</p></div>
+</div>
+<div class="porque"><p>a função é pura do rascunho e nada nela consulta o aparelho — e o mapa mede que consultar é IMPOSSÍVEL: `luz.led_jogador.leitura@dualsense` tem `cabo_aceita = não` e `radio_aceita = não`.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f18" data-voto="">
+<div class="onde"><span>rótulo NOVO `lightbar_estado_no_controle` — nasce oculto e só aparece quando há aviso; a frase vem importada de `widgets/controller_card.rotulo_lightbar`, nunca recopiada</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">A Steam tem este controle aberto</p></div>
+</div>
+<div class="porque"><p>só o card (Status, Início e <em>No jogo</em>) lia `lightbar_source`. Quem estava na aba da COR era justamente quem não era avisado de que a Steam segura o hidraw deste controle. A frase citada é uma das quatro; a ordem de precedência é Modo Nativo → disputa → fonte desconhecida → apagada, e as outras três não estão citadas.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f19" data-voto="">
+<div class="onde"><span>toast do <em>Aplicar o desenho</em> — `_msg_do_desenho`, com `_AVISO_MESMO_DESENHO_NOS_QUATRO` e `_quantos_recebem_o_desenho`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Desenho das luzes atualizado — LEDs acesos: 2 e 4</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citada por inteiro no relatório) — o toast passa a contar em quantos controles o clique pegou, dizendo <em>os 2 controles da mesa</em></p></div>
+</div>
+<div class="porque"><p>nada avisava que um clique em <em>Desenho do P2</em> com o alvo em <em>Todos</em> ia para os quatro controles.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f20" data-voto="">
+<div class="onde"><span>`gui/main.glade` · `player_leds_estado`, o texto de espera do rótulo</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Aceso agora: consultando…</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Desenho que mandamos: lendo o perfil…</p></div>
+</div>
+<div class="porque"><p>o <em>consultando…</em> prometia uma consulta ao aparelho que não existe. É a mesma correção do rótulo em código, no segundo lugar onde ela aparecia.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Rumble">
+<h2>Rumble <span class="n">5</span></h2>
+<article class="item" data-id="f21" data-voto="">
+<div class="onde"><span>`gui/main.glade`, NOS DOIS LUGARES: widgets `rumble_policy_auto` e `rumble_policy_auto_label`</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">conforme a bateria do controle</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">do controle principal — e a força escolhida vale para todos os controles da mesa</p></div>
+</div>
+<div class="porque"><p><em>a bateria do controle</em> não dizia de QUAL controle, e escondia que a força escolhida vale para a mesa toda. O relatório escreve a troca como fragmento→fragmento; a frase inteira de tela não aparece.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f22" data-voto="">
+<div class="onde"><span>rótulo novo nascido em CÓDIGO (`_pintar_a_linha_do_alcance_do_gesto`, chamado de `_apply_policy_to_widgets`), na cor `#8be9fd` (token de INFO). Aparece só com um controle escolhido; com <em>Todos</em>, não aparece</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citado no relatório) — a aba passa a dizer que o comando vivo vai para a mesa e que só o PERFIL fica da peça</p></div>
+</div>
+<div class="porque"><p>a aba não dizia que o comando vivo vale para a mesa inteira e que só o perfil fica da peça escolhida.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f23" data-voto="">
+<div class="onde"><span>o toast de `_gravar_intensidade_no_rascunho` (que passou a devolver `bool`), ao escolher <em>Auto</em> com uma peça escolhida</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Intensidade da vibração: Auto</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase"> — e este controle voltou ao ajuste geral…</p></div>
+</div>
+<div class="porque"><p>o <em>Auto</em> com peça escolhida apagava o override daquele controle em SILÊNCIO, sem nomear o apagamento. O relatório cita só o PEDAÇO que a mordida exige dentro da frase nova, com reticências.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f24" data-voto="">
+<div class="onde"><span>`texto_dos_pedidos_de_vibracao`, ramo `_pedidos_por_jogador` — vale só quando há 2+ vpads</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">o jogo falou de vibração 12x, mas pediu força zero em todas</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Jogador 1: 12x, todas com força zero</p></div>
+</div>
+<div class="porque"><p>com dois ou mais vpads o contador somava os pedidos de todos num número só, como se houvesse um jogador. Com um jogador só, o relatório afirma que a frase é BYTE-IDÊNTICA à antiga; o trecho citado é o que a mordida exige dentro da frase nova, não a frase inteira.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f25" data-voto="">
+<div class="onde"><span>as QUATRO dicas de política em `gui/main.glade` (a mordida nomeia dois dos botões: `rumble_policy_economia` e `rumble_policy_balanceado`)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(o relatório NÃO cita as dicas antigas)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita as dicas novas) — <em>nomeiam o TETO DE MESA, em oração derivada do léxico da Configurações</em></p></div>
+</div>
+<div class="porque"><p>as dicas de política não nomeavam o teto de mesa — a pessoa não tinha como saber que o limite é da mesa, não da peça.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Perfis">
+<h2>Perfis <span class="n">3</span></h2>
+<article class="item" data-id="f26" data-voto="">
+<div class="onde"><span>o diálogo de confirmar remoção (`confirm_delete_profile`, em `app/gui_dialogs.py`, via parâmetro novo `aviso: str | None = None`). São TRÊS frases, na ordem o quê / por quê / o que fazer, e ANTES da linha <em>permanente e não pode ser desfeita</em></span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia — apagar o perfil que está valendo era um clique sem uma palavra)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita as três frases; cita só a linha VELHA que passou a vir depois delas: <em>permanente e não pode ser desfeita</em>)</p></div>
+</div>
+<div class="porque"><p>apagar o perfil ATIVO não avisava que era o ativo — e a linha que se aprende a pular estava na frente da que muda a decisão. Compara por slug; se o dono do §P1 responde `nao_sei`, o aviso cala.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f27" data-voto="">
+<div class="onde"><span>seção <em>Modo</em> do editor de perfil, montada em código (sem tocar o `main.glade`), ao escolher <em>Conexão Nativa (Sony)</em></span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia nesta aba — `native_bt_fragil` tinha leitor num arquivo só, `home_actions.py`)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita a frase; é a MESMA que a aba Início já mostra — <em>o que espera o olho dela é o lugar, não o texto</em>)</p></div>
+</div>
+<div class="porque"><p>esta aba oferece <em>Conexão Nativa (Sony)</em> — inclusive num perfil de co-op — sem dizer que o rádio está frágil, aviso que só existia na Início. `texto_do_radio_fragil` foi extraída de `vpad_degradation_text` e virou dona única; há teste exigindo IGUALDADE de string entre as duas abas.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f28" data-voto="">
+<div class="onde"><span>linha do carimbo de ponte confirmada, em ITÁLICO, abaixo do nome do jogo — entregue no rótulo que JÁ existe ao lado do campo do jogo, sem tocar o `main.glade` (`frase_da_ponte_confirmada`)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia — a aba preservava o carimbo no Salvar e nunca o mostrou)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita a frase; só diz que ela fala o léxico da aba Início: `_MODE_KIND_ITEMS` / `_MODE_FLAVOR_ITEMS`)</p></div>
+</div>
+<div class="porque"><p>o daemon publica `pontes_confirmadas` desde 19/08 com zero leitores — o comentário ao lado dizia &quot;para a janela dizer &#x27;este jogo já sabe por onde entra&#x27;<em>, e a janela não dizia. Sem carimbo, a linha não diz nada: silêncio, nunca </em>ponte desconhecida&quot;. Nascer visível ou colapsada é decisão dela.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Sistema">
+<h2>Sistema <span class="n">6</span></h2>
+<article class="item" data-id="f29" data-voto="">
+<div class="onde"><span>`format_proton_lock_result` — o ramo de RECUSA, que não existia; a ponte `lock_proton_for_all_games` passou a repassar `status`/`reason`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia — a recusa saía com a frase de SUCESSO)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita a frase nova; diz que o vocabulário é o que a aba já falava em `_frase_steam_input`: <em>havia um jogo aberto</em>)</p></div>
+</div>
+<div class="porque"><p>a ponte jogava `status`/`reason` fora e a recusa virava comemoração: a tela dizia que travou o Proton sem ter travado.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f30" data-voto="">
+<div class="onde"><span>OITO frases do módulo que mandavam rodar o instalador; todas passaram a chamar `como_atualizar_esta_instalacao()`. Uma delas é a de `format_steam_ready_result` (nomeada na mordida)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">./install.sh</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita o texto novo — diz que o ramo de fora do checkout usa <em>o *mínimo aceitável* redigido na própria sprint</em>)</p></div>
+</div>
+<div class="porque"><p>as oito frases mandavam rodar `./install.sh` como única instrução, e ele só existe para quem clonou o repositório — quem instalou por Flatpak/AppImage não tem esse arquivo. O relatório marca esta como <em>PROVISÓRIO, aguarda o olho dela</em>, e não lista as oito nem cita nenhuma inteira.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f31" data-voto="">
+<div class="onde"><span>a frase pintada em `src/hefesto_dualsense4unix/integrations/storm_doctor.py:261` — o último lugar de `src/` onde ela ainda ia para a tela (o docstring de `emulation_actions.py` que a repetia também saiu, mas docstring não é tela)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">ex.: jogos cujo DualSense é entregue pela Steam)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita o texto novo — só diz: <em>A redação nova é a da caixinha de Perfis, palavra por palavra.</em>)</p></div>
+</div>
+<div class="porque"><p>a frase afirmava que a Steam entrega o DualSense ao jogo — afirmação que ela derrubou em 09/08 e que seguia sendo pintada na tela.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f32" data-voto="">
+<div class="onde"><span>cartão <em>Saúde do sistema</em> — uma linha nova, SÓ quando há divergência, no molde do `medir_guarda_do_steam_input`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia — o cartão calava)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita o texto da linha nova)</p></div>
+</div>
+<div class="porque"><p>o prontuário dos jogos já media a divergência e nada na tela dizia — a casa sabia e o produto não fazia. É o primeiro chamador de produção de `prontuario_dos_jogos.py` (1.037 linhas, zero chamadores até aqui).</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f33" data-voto="">
+<div class="onde"><span>o painel de detalhe técnico (`_detalhe_tecnico()`): a saída crua entra como RODAPÉ do painel, antes do toast, e sobrevive ao `_refresh_daemon_view_async()` que vem logo depois</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia no painel — o motivo da falha só passava pelo toast, que some)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita o texto; é a saída crua do comando, mais uma frase de reserva não citada, provada por `test_falha_sem_saida_crua_ainda_diz_alguma_coisa`)</p></div>
+</div>
+<div class="porque"><p>o motivo da falha só aparecia no toast e sumia — o painel não guardava o que tinha dado errado.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f34" data-voto="">
+<div class="onde"><span>o botão do daemon, em `_apply_daemon_view`: passa a nascer cinza quando não há trabalho a fazer, com tooltip dizendo por quê. São DOIS tooltips novos (a mordida cita <em>os quatro estados da matriz + os dois tooltips</em>)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia — o botão ficava clicável e mudo)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório NÃO cita o texto dos dois tooltips)</p></div>
+</div>
+<div class="porque"><p>o botão continuava clicável sem trabalho a fazer, e nada na tela dizia por quê.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Emulação">
+<h2>Emulação <span class="n">6</span></h2>
+<article class="item" data-id="f35" data-voto="">
+<div class="onde"><span>o cartão do microfone — o ramo do alvo em `app/actions/emulation_actions.py:1169-1170`; nasce um quarto estado, <em>sem alvo</em></span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Ligado (escrito em verde `#50fa7b` mesmo sem placa de áudio do controle no sistema)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(NÃO ACHEI o texto novo literal — o relatório diz que <em>a frase da tela fala de «placa de áudio neste computador», nomeia o rádio como o caso normal</em>, e que um caso do portão guarda a formulação, proibindo conclusões sobre o aparelho)</p></div>
+</div>
+<div class="porque"><p>a aba concluía <em>Ligado</em> olhando só três arquivos do WirePlumber, sem nunca olhar se existe microfone a ligar — e o caso mais comum disso é o controle no rádio, onde não há placa ALSA nenhuma.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f36" data-voto="">
+<div class="onde"><span>moldura do gamepad virtual — o rótulo/botão `emulation_gamepad_xbox_button` (`gui/main.glade:3402`), a <em>frase do Xbox</em></span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(NÃO ACHEI o texto literal — o relatório só a chama de <em>a frase do Xbox</em> e diz que a mordida a faz <em>voltar ao texto de 24/08</em>, que afirmava a vibração sem ressalva)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">A vibração ainda não foi conferida no aparelho — nem no cabo, nem no rádio: o caminho está montado, e se ela não vier não é erro seu.</p></div>
+</div>
+<div class="porque"><p>a frase afirmava a vibração como coisa provada, e o mapa diz `de_onde_sei = inferido-do-codigo` nos DOIS transportes para `vibracao.rumble.passthrough@dualsense` — nem o cabo é medido.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f37" data-voto="">
+<div class="onde"><span>a dica da máscara — `emulation_gamepad_hint_label` (`gui/main.glade:3411`)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(NÃO ACHEI o texto literal — o relatório só diz que a mordida faz <em>a dica da máscara voltar ao texto de 24/08</em>, que afirmava a vibração sem ressalva)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">A vibração ainda não foi conferida no aparelho — nem no cabo, nem no rádio: o caminho está montado, e se ela não vier não é erro seu.</p></div>
+</div>
+<div class="porque"><p>mesma afirmação sem lastro: a dica prometia vibração que o mapa não mede em nenhum dos dois transportes. É o segundo dos quatro lugares da E8, e recebe a MESMA frase do primeiro.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f38" data-voto="">
+<div class="onde"><span>a frase da exceção por jogo, dentro da mesma dica `emulation_gamepad_hint_label` (`gui/main.glade:3411`) — DUAS metades da mesma frase, que os leitores relataram em separado e eu fundi</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">o jogo precisa enxergar os controles físicos ... use a exceção por jogo em <em>Steam Input</em> na aba Emulação.</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(NÃO ACHEI o texto novo literal — o relatório diz que <em>a frase nova nomeia o gesto e onde ele mora, e não afirma mecanismo</em>: a caixinha fica na aba PERFIS e o rótulo de hoje é <em>Esconder os controles físicos neste jogo</em> (`gui/main.glade:2469`))</p></div>
+</div>
+<div class="porque"><p>mandava para um controle que não existe — nesta aba só há <em>Verificar</em> e <em>Desligar Steam Input</em>, que LEEM a allowlist; quem escreve é a caixinha da aba Perfis. E a marca inverteu de lado em 09/08 (ESCONDER-EM-VEZ-DE-SAIR-01): hoje o gesto ESCONDE os controles físicos, e a metade antiga ensinava o contrário.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f39" data-voto="">
+<div class="onde"><span>a quarta frase de vibração — `emulation_hint`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">e vibra</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(removida — o relatório diz <em>saiu só o «e vibra»</em>, sem citar a frase inteira antes ou depois)</p></div>
+</div>
+<div class="porque"><p>era afirmação de vibração sem ressalva; tirado o trecho, a frase deixa de afirmar e não precisa carregar a ressalva — o parágrafo e o tooltip levam o detalhe.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f40" data-voto="">
+<div class="onde"><span>as dicas do microfone, nos QUATRO estados; o texto sai do Python, sem tocar o `main.glade` (o relatório cita literalmente só a do estado <em>ligado</em>, pela mordida B em `emulation_actions.py:1279`)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">O microfone do controle está livre e com prioridade acima do eco da saída.</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Isto vale para o computador inteiro, não para este jogo: não entra no perfil e não mexe na ponte de microfone por Bluetooth (aba Configurações).</p></div>
+</div>
+<div class="porque"><p>a dica não dizia de QUAL microfone se tratava — a pessoa podia ler o botão como se ele valesse para o jogo ou mexesse na ponte de microfone por Bluetooth. ATENÇÃO: o <em>entrou</em> é a frase ACRESCENTADA, não a frase final inteira; o relatório não mostra o texto combinado.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Navegação">
+<h2>Navegação <span class="n">4</span></h2>
+<article class="item" data-id="f41" data-voto="">
+<div class="onde"><span>a legenda da lista de atalhos (o bloco que começa por &quot;&lt;b&gt;Como funciona…&quot;), escrita pela função pura `frase_dos_atalhos_fora_da_lista` — `app/actions/input_actions.py:411`</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Guardados, sem linha na lista: Touchpad — lado esquerdo, Touchpad — meio, Touchpad — lado direito. O touchpad voltou a ser o mouse do computador, então esta versão não dispara esses atalhos. O perfil continua guardando o que você escolheu — nada nesta aba os apaga.</p></div>
+</div>
+<div class="porque"><p>o perfil guardava três atalhos de touchpad que a lista nunca mostrava, e a tela não dizia que eles existiam — a pessoa não tinha como saber que estavam lá nem por que não disparam.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f42" data-voto="">
+<div class="onde"><span>a palavra ao lado do interruptor do mouse, no caso <em>Hefesto sem resposta</em> — `app/actions/mouse_actions.py:200-205` (era `texto = MODE_GATE_HINT if blocked and mode is not None else <em></em>`)</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia — o interruptor ficava APAGADO e sem nenhuma palavra ao lado; a mordida mostra `assert &#x27;&#x27; == ...`)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Não consegui falar com o Hefesto agora, então não sei se ligar o mouse derrubaria um jogo em andamento — por isso o interruptor está apagado. Veja como está o Hefesto na aba Sistema.</p></div>
+</div>
+<div class="porque"><p>o interruptor aparecia apagado em silêncio, e a frase do modo jogo afirmaria que há jogo em andamento, que é justo o que ali não se sabe.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f43" data-voto="">
+<div class="onde"><span>a mensagem depois de clicar o interruptor do mouse — `_on_ok`/`_on_err` em `app/actions/mouse_actions.py:290`; passam a ser três saídas (ok, recusado, sem resposta), com `RECUSA_SEM_MOTIVO`, `SEM_RESPOSTA_DO_HEFESTO` e a tabela `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Falha ao comunicar com o daemon</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório cita as duas novas só TRUNCADAS, na mordida N6) <em>O Hefesto recusou: o modo jogo está suspendendo mouse e teclado…</em> e <em>Não obtive resposta do Hefesto…</em></p></div>
+</div>
+<div class="porque"><p>toda resposta `status != <em>ok</em>` caía no texto do timeout: a janela acusava um defeito de comunicação que não houve, quando o daemon apenas tinha recusado.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f44" data-voto="">
+<div class="onde"><span>a legenda do teclado na tela, repintada por `_anotar_teclado_na_tela` a partir de `keyboard_emulation.osk_disponivel` do `state_full` — `app/actions/mouse_actions.py:266`; são duas frases (<em>tem</em> e <em>não tem</em>)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(NÃO ACHEI o texto literal — o relatório diz que <em>a legenda recitava `onboard` e `wvkbd-mobintl` como texto fixo sem nunca dizer se algum estava instalado</em>)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(NÃO ACHEI o texto literal — a mordida N12 só mostra `assert &#x27;Neste computador&#x27; in &#x27;&#x27;`; na frase de <em>não tem</em>, `wvkbd-mobintl` vem ANTES de `onboard`, porque o onboard digita por XTEST e não alcança cliente Wayland nativo)</p></div>
+</div>
+<div class="porque"><p>a legenda recomendava dois programas como texto fixo sem nunca dizer se algum deles existia na máquina — e, na ordem antiga, o primeiro recomendado abre o teclado e não digita.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Configurações">
+<h2>Configurações <span class="n">10</span></h2>
+<article class="item" data-id="f45" data-voto="">
+<div class="onde"><span>seção Orçamento (`secao_orcamento.py`), o `SegmentedSelector` de degraus — `TETO_POR_PERFIL` traduz perfil → chave e `PERFIL_POR_TETO` migra 1-para-1 o que já está gravado</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não citados no relatório) — os CINCO degraus de teto</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Tudo ligado<em> / </em>Bateria longa<em> / </em>Eu escolho</p></div>
+</div>
+<div class="porque"><p>D-PERFIL-DE-DESEMPENHO: os cinco degraus viraram três perfis. O esquema do disco não muda.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f46" data-voto="">
+<div class="onde"><span>seção <em>Conexões</em>, coluna de onde está o aparelho — `secao_mesa._onde_esta_o_adaptador` e `_onde_esta_o_radio`, com parâmetro `mapa` opcional</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Barramento 3, porta 1.2 · Direita</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Entrada 9</p></div>
+</div>
+<div class="porque"><p>o caminho do kernel não é o número que ELA escreveu na mesa. Com mapa declarado, o número dela sobe para a coluna e o caminho do sistema desce para a dica; sem mapa, o texto de hoje sai sem uma vírgula de diferença.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f47" data-voto="">
+<div class="onde"><span>janela NOVA `JanelaDoMapaDaMesa` (`app/widgets/mapa_da_mesa.py`), aberta pelo botão da seção <em>Conexões</em></span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Tirar daqui<em>, </em>Tem uma extensão aqui<em>, </em>Acrescentar entrada<em>, </em>Acrescentar face</p></div>
+</div>
+<div class="porque"><p>é a janela do desenho da mesa — gesto de dois tempos (clique no aparelho, clique na entrada); grava em `host._maquina_pendente` e nunca chama `machine.declare`. Os quatro botões estão citados literalmente; o resto dos rótulos da janela, não.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f48" data-voto="">
+<div class="onde"><span>seção <em>Conexões</em>, `pack_start` logo abaixo da tabela de adaptadores — função de módulo `_linha_do_mapa(mapa, censo, ao_clicar)`; constantes novas `_ENTRADA_DELA`, `_PROCEDENCIA_DA_ENTRADA`, `_RESUMO_DO_MAPA`, `_SEM_MAPA`, `_BOTAO_DESENHAR`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citadas no relatório) — uma linha só, com o resumo do mapa (três números) e o botão de desenhar; custa 40 px de altura de seção contra o teto de 48</p></div>
+</div>
+<div class="porque"><p>a aba não tinha por onde mostrar nem abrir o desenho da mesa dela.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f49" data-voto="">
+<div class="onde"><span>seção Orçamento — a dica do botão <em>Auto</em></span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não citada por inteiro no relatório) — a dica que dizia que o teto <em>acompanha a bateria</em></p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(removida)</p></div>
+</div>
+<div class="porque"><p>era fato errado: descrevia a escada de `_effective_mult` no ramo da política da aba RUMBLE, que aquele clique nunca ligou. Saiu inteira, sem nota e sem data — regra do fato errado que se SUBSTITUI.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f50" data-voto="">
+<div class="onde"><span>seção Orçamento — bloco NOVO no fim da seção (`_ContaDeSlots`), alimentado por `integrations/plano_de_radio.py`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citado no relatório) — uma linha por adaptador com o nome DELA (nunca `hciN`), quem está nele por número de jogador, a conta, a palavra da ocupação, o <em>cabe mais um</em>, a ordem de serviço quando há, o preço do microfone e o selo de três partes; com um adaptador só sai a `FRASE_DO_ADAPTADOR_UNICO`; sem apelido, <em>Adaptador sem nome</em>; o balde <em>Adaptador que não sei qual é</em> nunca é destino de ordem</p></div>
+</div>
+<div class="porque"><p>a `Ocupacao` sozinha não respondia quem está em qual adaptador; e sem resposta do daemon a tela agora diz que NÃO SABE — <em>0/1600 · Folgada</em> e <em>Nenhum controle no rádio agora</em> nunca aparecem sobre um rádio que ninguém leu.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f51" data-voto="">
+<div class="onde"><span>seção 1 <em>Os controles</em> (`app/actions/config/secao_controles.py`, confirmado em `config/__init__.py:21`) — a linha da razão do veredito de nascimento, DEBAIXO do botão que ela explica, no `_BlocoDaLuz`; texto produzido por `frase_do_nascimento` (`:241`, chamada em `:1201`)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(o relatório não transcreve a frase)</p></div>
+</div>
+<div class="porque"><p>o cartório do nascimento existia e carimbava desde 22/08, mas nada na tela dizia o veredito. A razão só aparece quando o veredito CONDENA — sem carimbo, `limpa` e `nao_sei` calam. A aba estava só inferida do caminho no relatório; conferi no código e é esta.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f52" data-voto="">
+<div class="onde"><span>seção Orçamento — a tabela de consequências: `LINHAS_DO_TETO` é dona única das cinco linhas, `COLUNAS` deriva dos perfis (uma coluna por opção oferecida), e `alcance_de_hoje()` deriva a frase de apoio</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não citada no relatório) — a frase de alcance escrita como literal (`ALCANCE_DE_HOJE`)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">Ainda não tem por onde ser limitado</p></div>
+</div>
+<div class="porque"><p>a frase parou de derivar da tabela e podia divergir dela. A célula que atravessa as três colunas de perfil substituiu a mesma frase repetida três vezes na linha (939 px de largura mínima → 356 px).</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f53" data-voto="">
+<div class="onde"><span>seção Orçamento — a dica do perfil <em>Bateria longa</em>, agora DERIVADA de `LINHAS_DO_TETO`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não citada no relatório)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citada no relatório) — texto derivado da tabela, que não pode prometer mais do que ela mostra</p></div>
+</div>
+<div class="porque"><p>a palavra dela na decisão dizia <em>vibração com teto de 30% e barra de luz apagada</em>, e a barra de luz não tem ponto de aplicação nenhum — escrevê-la cometeria, no mesmo botão, o defeito que a sprint existe para curar.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f54" data-voto="">
+<div class="onde"><span>seção Orçamento — `frase_da_capacidade_do_mic` e o preço do microfone, agora na tela em TODOS os estados (ordem de quem coordena)</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não citada no relatório) — a frase anterior, que não dizia os 4 pontos</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citada no relatório) — frase derivada do medidor: 1042 → 1107 e os 4 pontos; e 260,4 sem microfone, 276,7 com, das 1600 fatias</p></div>
+</div>
+<div class="porque"><p>nenhum número é digitado — toda frase deriva das constantes do `radio_da_mesa`; os 4 pontos são o achado que muda a decisão e que a frase anterior não dizia.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Rodapé (fora de aba — ela vê em todas)">
+<h2>Rodapé (fora de aba — ela vê em todas) <span class="n">2</span></h2>
+<article class="item" data-id="f55" data-voto="">
+<div class="onde"><span>`footer_actions._transicao_de_modo` → `desfecho_da_troca` / `toast_da_troca_de_mascara`, entrando pelo `_recado_da_maquina`, que precede o toast final do <em>Aplicar</em></span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">Perfil aplicado.</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">(não citada por inteiro no relatório) — a frase do desfecho da RECUSA, que contém <em>Ainda não</em></p></div>
+</div>
+<div class="porque"><p>o daemon recusava a troca de máscara e o rodapé dizia que tinha aplicado. As duas funções do desfecho ganharam o primeiro chamador de produção da vida delas. A mordida: `assert &#x27;Ainda não&#x27; in &#x27;Perfil aplicado.&#x27;`.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f56" data-voto="">
+<div class="onde"><span>`app/ipc_bridge.py` · `_CAMPOS_DA_MAQUINA`, o rótulo do campo `mapa` na lista do que se PERDE (portão `test_descartados_chegam_ao_rodape.py`)</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">O desenho da mesa</p></div>
+</div>
+<div class="porque"><p>o campo `mapa` entrou no schema e o portão exige um rótulo de tela para cada campo de topo; é o único rótulo que não é `TITULO` de seção, porque o mapa não tem seção própria.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<section data-aba="Terminal — `scripts/doctor.sh` (não é janela)">
+<h2>Terminal — `scripts/doctor.sh` (não é janela) <span class="n">4</span></h2>
+<article class="item" data-id="f57" data-voto="">
+<div class="onde"><span>`scripts/doctor.sh:3078`, exame `check_bt_resilience`</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">[ OK ] modo ativo p/ Nintendo (nome &#x27;Nintendo Mesa&#x27; + SNIFF no adaptador p/ o 8BitDo probar + no-sniff só no Pro genuíno — BT-SNIFF-PER-OUI-01)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">[WARN] modo ativo p/ Nintendo: alias e SNIFF do adaptador OK, mas o Pro genuíno conectado está COM sniff (deveria ser sem). Reaplique: sudo …</p></div>
+</div>
+<div class="porque"><p>o `grep` de UMA faixa não achava um Pro de outra safra, `_pro_lp` ficava <em>ausente</em> e o exame aprovava a cura sem ter olhado controle nenhum — falso verde, reproduzido antes de consertado.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f58" data-voto="">
+<div class="onde"><span>`scripts/doctor.sh:3777`, veredito do `check_hidraw_broker`</span><span class="conferir">conferir no código</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(o relatório não transcreve o texto antigo — diz só que o `pass` afirmava <em>o jogo só vê o vpad</em> olhando apenas o `hidden_count` do broker, sem a expressão <em>TRÊS superfícies</em>)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">broker escondendo ${hidden_count} nó(s) físico(s), e as TRÊS superfícies dos ${TRES_SUP_CONTROLES} controle(s) fechadas … — o jogo só vê o vpad</p></div>
+</div>
+<div class="porque"><p>o `hide` age numa superfície (hidraw) e o mesmo controle mora em três; quem investigasse <em>por que o Steam mostra controle dobrado</em> começava lendo um `pass`. O próprio relatório acha que o número novo AINDA mente: `TRES_SUP_CONTROLES` conta também os nós sem mapa que ficaram fora do veredito (ACHADO 1, ALTA).</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f59" data-voto="">
+<div class="onde"><span>`scripts/doctor.sh`, ressalva que acompanha o veredito do `check_hidraw_broker`</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">[INFO] as superfícies evdev/joydev desses nós não estão legíveis no sysfs agora — este check NÃO afirma que o jogo só vê o vpad</p></div>
+</div>
+<div class="porque"><p>o exame passou a declarar o que NÃO mediu, em vez de afirmar em verde o que não tinha como saber.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+<article class="item" data-id="f60" data-voto="">
+<div class="onde"><span>`scripts/doctor.sh`, linha que precede o veredito do `check_hidraw_broker`</span></div>
+<div class="par">
+<div class="lado saiu"><div class="rot">saiu</div><p class="frase">(não existia)</p></div>
+<div class="lado entrou"><div class="rot">entrou</div><p class="frase">[INFO] 2 nó(s) escondido(s) sem mapa no sysfs — ficaram fora do veredito abaixo</p></div>
+</div>
+<div class="porque"><p>os nós que ninguém conseguiu mapear no sysfs passaram a ser nomeados e declarados fora da conta, em vez de virarem crédito silencioso.</p><span class="votos"><button data-v="sim" aria-pressed="false">boa</button><button data-v="nao" aria-pressed="false">mexer</button></span></div>
+</article>
+</section>
+<footer><p>Gerado por <code>scripts/gerar-frases-de-tela.py</code> a partir de <code>docs/process/dados/frases-de-tela-25-08.json</code>. Autocontido: abre com duplo clique, sem servidor e sem rede. O que você marcar fica guardado neste navegador — pode fechar e voltar.</p></footer>
+</div>
+<script>
+(function(){
+  var CHAVE="hefesto.frases.25-08";
+  var votos={};
+  try{votos=JSON.parse(localStorage.getItem(CHAVE)||"{}")}catch(e){votos={}}
+  function guarda(){try{localStorage.setItem(CHAVE,JSON.stringify(votos))}catch(e){}}
+  function placar(){
+    var itens=document.querySelectorAll(".item"),s=0,n=0;
+    itens.forEach(function(it){var v=it.dataset.voto;if(v==="sim")s++;else if(v==="nao")n++});
+    document.getElementById("placar").textContent=
+      s+" boa \u00b7 "+n+" mexer \u00b7 "+(itens.length-s-n)+" sem olhar";
+  }
+  document.querySelectorAll(".item").forEach(function(it){
+    var id=it.dataset.id,v=votos[id]||"";
+    it.dataset.voto=v;
+    it.querySelectorAll(".votos button").forEach(function(b){
+      b.setAttribute("aria-pressed",String(b.dataset.v===v));
+      b.addEventListener("click",function(){
+        var novo=(it.dataset.voto===b.dataset.v)?"":b.dataset.v;
+        it.dataset.voto=novo;votos[id]=novo;guarda();
+        it.querySelectorAll(".votos button").forEach(function(o){
+          o.setAttribute("aria-pressed",String(o.dataset.v===novo))});
+        placar();
+      });
+    });
+  });
+  document.querySelectorAll(".barra button").forEach(function(b){
+    b.addEventListener("click",function(){
+      var f=b.dataset.f;
+      document.querySelectorAll(".barra button").forEach(function(o){
+        o.setAttribute("aria-pressed",String(o===b))});
+      document.querySelectorAll("section[data-aba]").forEach(function(s){
+        s.hidden=!(f==="todas"||s.dataset.aba===f)});
+    });
+  });
+  placar();
+})();
+</script></body></html>
