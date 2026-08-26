@@ -160,7 +160,7 @@ def test_o_predicado_que_estoura_nao_derruba_o_payload() -> None:
     assert _Handlers(d)._bloqueio_do_mouse() is None
 
 
-def test_o_mouse_e_o_teclado_leem_a_MESMA_conjuncao() -> None:  # noqa: N802  # noqa-acento: maiúsculas para destacar o ponto
+def test_o_mouse_e_o_teclado_leem_a_MESMA_conjuncao() -> None:  # noqa: N802  # maiúsculas para destacar o ponto, sem acento (noqa-acento)
     """Um dono só para o gate do poll loop — ver `_bloqueio_da_emulacao_de_desktop`.
 
     O `lifecycle._poll_loop` cala os dois no MESMO `if`. Duas leituras próprias
@@ -240,7 +240,7 @@ async def test_o_state_full_nao_perdeu_as_tres_chaves_antigas() -> None:
 
 
 @pytest.mark.asyncio
-async def test_sem_config_acessivel_o_bloco_continua_OMITIDO() -> None:  # noqa: N802  # noqa-acento: maiúsculas para destacar o ponto
+async def test_sem_config_acessivel_o_bloco_continua_OMITIDO() -> None:  # noqa: N802  # maiúsculas para destacar o ponto, sem acento (noqa-acento)
     """Contrato desde o FEAT-CLI-PARITY-01: ausência = "estado indisponível"."""
     daemon = Daemon(controller=FakeController(transport="usb"))
     h = _HandlersCompletos(None, daemon.store, daemon.controller)

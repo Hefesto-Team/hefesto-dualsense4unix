@@ -49,7 +49,7 @@ def test_sem_resposta_a_legenda_fica_como_estava() -> None:
     )
 
 
-def test_com_teclado_instalado_a_frase_diz_que_o_L3_abre() -> None:  # noqa: N802  # noqa-acento: L3 é o nome do botão
+def test_com_teclado_instalado_a_frase_diz_que_o_L3_abre() -> None:  # noqa: N802  # L3 é o nome do botão, sem acento (noqa-acento)
     frase = frase_do_teclado_na_tela(True)
     assert "está instalado" in frase
     assert "L3" in frase

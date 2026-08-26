@@ -272,7 +272,7 @@ class TestRetrocompatibilidade:
         de defeito *"preset de fábrica que o autoswitch nunca escolhe"* — a
         que passou meses no disco sem ninguém notar. Por isso ela não some
         junto com o arquivo; ela passa a valer para a fábrica INTEIRA, que é
-        mais do que ela media antes.  # noqa: acentuacao — verbo medir no imperfeito, não o substantivo
+        mais do que ela media antes.  # verbo medir, sem acento (noqa-acento)
         """
         arquivos = sorted(ASSETS_DIR.glob("*.json"))
         assert arquivos, "presets de fábrica sumiram do repositório"
