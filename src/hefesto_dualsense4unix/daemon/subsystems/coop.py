@@ -1367,6 +1367,9 @@ class CoopManager:
             with contextlib.suppress(Exception):
                 player.motion_reader.stop()
             player.motion_reader = None
+        # BORDA-DE-QUEDA-01 (26/08/2026): o motor para ANTES de o vpad morrer.
+        # Ver `_zerar_rumble_do_jogador` — a ordem é o conserto, não o efeito.
+        self._zerar_rumble_do_jogador(identity)
         if player.vpad is not None:
             with contextlib.suppress(Exception):
                 player.vpad.stop()
@@ -1378,6 +1381,45 @@ class CoopManager:
         # DEDUP-04: o conjunto de jogadores mudou — regrava as envs do wrapper.
         self._materialize_launch_env()
         logger.info("coop_player_removed", identity=identity, players=self.player_count())
+
+    def _zerar_rumble_do_jogador(self, identity: str) -> None:
+        """Manda UM report de stop ao controle que está saindo da mesa.
+
+        BORDA-DE-QUEDA-01 (26/08/2026). Jogando com dois ou mais no rádio, um
+        cai e o motor fica vibrando até o teto de 3 s do relógio cortar —
+        quatro vezes em 28 s na sessão dela, uma delas em (230, 230), quase
+        máximo. O `_teardown_player` derrubava reader, motion_reader e vpad
+        **sem uma linha que zerasse o rumble**: a cura de 02/08 só trata o caso
+        em que o JOGO manda parar, e aqui o device sumiu debaixo do jogo — o FF
+        que o kernel já entregou ao firmware fica de pé porque ninguém mais vai
+        mandar report nenhum por aquele caminho.
+
+        A ORDEM é o conserto. Depois do `vpad.stop()` o sink de FF daquele
+        jogador já morreu e o `_players[identity]` já saiu do dict; parar aqui,
+        antes, é o que garante que o último report escrito no controle seja o
+        de motores em 0.
+
+        Best-effort de três jeitos, e nenhum deles pode abortar o teardown (um
+        nó físico ficaria 0600 sem dono, que é pior que um motor preso):
+        backend sem a API (fakes/legado) é no-op; identidade sem MAC
+        (`path:*`, externo) é no-op **de propósito** — sem endereço, a única
+        chamada possível seria o broadcast, e ele pararia o motor de quem
+        continua jogando; falha do backend vira `logger.warning`.
+
+        O relógio (`uhid_gamepad._expirar_rumble_preso`) fica onde está: ele é
+        o segundo cinto, não o primeiro.
+        """
+        if identity.startswith("path:"):
+            return
+        force = getattr(self._daemon.controller, "force_rumble_stop", None)
+        if not callable(force):
+            return
+        try:
+            force(identity)
+        except Exception as exc:
+            logger.warning(
+                "coop_rumble_stop_na_borda_falhou", identity=identity, err=str(exc)
+            )
 
     # -- player LEDs por jogador (FEAT-COOP-PLAYER-LED-01) ---------------
 

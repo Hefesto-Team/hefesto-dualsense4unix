@@ -10,17 +10,17 @@ O RAIO DO ESTRAGO — cinco leitores em produção, e DOIS estão na tela
 --------------------------------------------------------------------
 Censo de 25/08/2026. Nenhum destes cinco pode responder ``True``:
 
-1. ``daemon/lifecycle.py:2254`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
+1. ``daemon/lifecycle.py:2258`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
    do gate do desktop, e ela **nunca é devolvida**;
 2. ``daemon/subsystems/hotkey.py:261`` — ramo de modo, num ``or`` cujo outro
    lado (``steam_input_excecao_ativa``) carrega a decisão sozinho;
-3. ``daemon/ipc_handlers.py:2107`` — publica ``vpad_suspenso`` no ``state_full``
+3. ``daemon/ipc_handlers.py:2210`` — publica ``vpad_suspenso`` no ``state_full``
    sempre ``False``, e a docstring ao lado documenta um contrato de DOIS estados
    dos quais um é inalcançável;
-4. ``app/actions/home_actions.py:1115`` (**Onda 2 · Início**) — a frase da
+4. ``app/actions/home_actions.py:1139`` (**Onda 2 · Início**) — a frase da
    ponte exige ``excecao_ativa and vpad_suspenso``: a aba **nunca** consegue
    dizer "pelo Steam Input";
-5. ``app/actions/emulation_actions.py:408`` (**Onda 5 · Emulação**) — a frase
+5. ``app/actions/emulation_actions.py:529`` (**Onda 5 · Emulação**) — a frase
    *"Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, e o
    controle virtual foi recolhido"* está escrita, revisada, e é **inalcançável**:
    a chave dela É a constante do item 1.
@@ -145,7 +145,7 @@ _PAR_ACEITO: dict[str, str] = {
         "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1). O armador "
         "`suspend_vpads_for_steam_input` (daemon/subsystems/gamepad.py:882) tem ZERO "
         "chamadores em src/; os desarmadores `resume_vpads_after_steam_input` "
-        "(gamepad.py:526) e `start_gamepad_emulation_desfecho` (lifecycle.py:1631) "
+        "(gamepad.py:526) e `start_gamepad_emulation_desfecho` (lifecycle.py:1635) "
         "estão vivos. NÃO é descuido: o commit `d8022ea` (09/08/2026) tirou a chamada "
         "da borda de entrada da exceção de Steam Input e pôs `esconder_o_fisico_para_o_"
         "jogo` no lugar, por decisão DELA — ESCONDER-EM-VEZ-DE-SAIR-01, *a allowlist do "
@@ -155,10 +155,10 @@ _PAR_ACEITO: dict[str, str] = {
         "(`coop_derrubado_pela_excecao_steam_input`, 20 ocorrências num dia). "
         "A ENTRADA FICA ATÉ A DECISÃO DELA, e o que falta está escrito: são CINCO os "
         "leitores em produção, e DOIS deles estão na tela — a frase da ponte em "
-        "app/actions/home_actions.py:1115 (Início) e a frase do vpad recolhido em "
-        "app/actions/emulation_actions.py:408 (Emulação) são inalcançáveis. Os outros "
-        "três: lifecycle.py:2254 (CALADA_VPAD_SUSPENSO), hotkey.py:261 e "
-        "ipc_handlers.py:2107, e nenhuma dessas leituras pode ser verdadeira. Ou as "
+        "app/actions/home_actions.py:1139 (Início) e a frase do vpad recolhido em "
+        "app/actions/emulation_actions.py:529 (Emulação) são inalcançáveis. Os outros "
+        "três: lifecycle.py:2258 (CALADA_VPAD_SUSPENSO), hotkey.py:261 e "
+        "ipc_handlers.py:2210, e nenhuma dessas leituras pode ser verdadeira. Ou as "
         "leituras saem, ou a suspensão ganha caminho de volta — as duas mexem em "
         "arquivo de outra frente e a escolha é DELA, não deste portão."
     ),
@@ -626,7 +626,7 @@ class TestOPortaoMorde:
         invisíveis para quem lesse a reprovação.
         """
         par = pares_com_metade_ligada()["_steam_input_vpad_suspenso"]
-        for endereco in ("daemon/lifecycle.py:2254", "daemon/subsystems/hotkey.py:261"):
+        for endereco in ("daemon/lifecycle.py:2258", "daemon/subsystems/hotkey.py:261"):
             assert any(onde.startswith(endereco) for onde in par.leituras), (
                 f"o portão não nomeia {endereco}, que LÊ a flag pelo acessor. "
                 f"Ele listou: {par.leituras}"
@@ -759,3 +759,349 @@ class TestOPortaoMorde:
             "voltou a contar prosa como despacho, e ela para de medir "
             "exatamente quando alguém escreve uma mensagem boa"
         )
+
+
+# ===========================================================================
+# A SEGUNDA RÉGUA DESTE ARQUIVO — o endereço que envelheceu sozinho
+# ===========================================================================
+#
+# LEVA-4-B (26/08/2026). Esta casa cita endereço de linha em comentário e em
+# docstring o tempo todo, e o endereço é o que ROTEIA o conserto: quem lê
+# "`_handle_daemon_status` (`ipc_handlers.py:1971`)" abre a linha 1971 e
+# acredita no que encontra lá.
+#
+# Só que endereço de linha se move sozinho. Os 164 commits da madrugada de
+# 25/08 deslocaram `daemon/ipc_handlers.py` inteiro, e **nada reprovou**: o
+# `scripts/validar-citacoes-de-linha.py` varre `docs/`, não `src/` — rodado no
+# HEAD desta árvore, ele diz *"OK: 123 citações em 13 documentos"* com dez
+# arquivos de código apontando para o vazio.
+#
+# O preço não é estético. Um endereço morto manda a próxima pessoa ler uma
+# linha que hoje fala de outro assunto, e ela conclui o que aquela linha diz —
+# foi assim que a razão do `stop_autoswitch` acabou prometendo que "a thread é
+# derrubada pelo fim do processo" apontando para um `shutdown` que já a
+# derrubava em linha.
+#
+# O QUE ESTA RÉGUA NÃO ALCANÇA, e é de propósito:
+#   - endereço que caiu numa linha PLAUSÍVEL sem símbolo ao lado passa. Sem
+#     âncora nomeada não há como computar o número real, e inventar um seria
+#     medição falsa. O que ela pega é o que dá para PROVAR;
+#   - alvo fora do repositório (`pydualsense.py`) é ignorado: não é nosso.
+
+import tokenize
+
+#: `arquivo.py:NNN` ou `arquivo.py:NNN-MMM`, em qualquer prosa.
+_CITACAO = re.compile(r"(?P<alvo>[A-Za-z0-9_./]+\.py):(?P<ini>\d+)(?:-(?P<fim>\d+))?")
+
+#: Símbolo em crase (simples ou dupla) na vizinhança da citação.
+_EM_CRASE = re.compile(r"``?([^`\n]+?)``?")
+
+#: A janela de prosa em que a âncora é procurada: a linha da citação e as duas
+#: acima. Medido em 26/08/2026: três linhas cobrem toda citação desta árvore
+#: cujo símbolo veio antes da quebra; quatro só somariam falso positivo.
+_JANELA = 3
+
+#: CITAÇÕES MEDIDAS COMO ENVELHECIDAS EM 26/08/2026 QUE ESTA FRENTE NÃO PODE
+#: CONSERTAR — o arquivo citante é de outra posse (regra R-A da leva: a frente
+#: escreve nos arquivos DELA e relata o resto). Não é lista de tolerância: o
+#: `test_a_lista_de_pendentes_nao_vira_paisagem` exige que cada uma continue
+#: QUEBRADA, então consertar uma obriga a tirá-la daqui.
+#:
+#: Duas famílias, e a diferença importa para quem for fechar:
+#:  * **endereço deslocado** — o alvo existe e mudou de linha. Conserto: medir
+#:    com `grep -n` e reescrever o número;
+#:  * **endereço histórico** — o código citado FOI REMOVIDO pela própria cura
+#:    que o comentário registra (as quatro listas de bases em
+#:    `utils/repo_files.py`, mortas pela BG-BASES-01). Não há número novo para
+#:    escrever: o conserto é a prosa dizer que o endereço é de antes da cura.
+_CITACOES_PENDENTES: frozenset[str] = frozenset({
+    "app/actions/config/moldura.py::test_config_a_janela_na_tela.py:262",
+    "app/actions/config/secao_exame.py::app/app.py:993",
+    "app/actions/config/secao_janela.py::desktop_notifications.py:33",
+    "app/actions/config/secao_janela.py::home_actions.py:1523",
+    "app/actions/config/secao_mesa.py::home_actions.py:1523",
+    "app/actions/footer_actions.py::home_actions.py:1050-1054",
+    "app/actions/footer_actions.py::home_actions.py:1337-1341",
+    "app/actions/home_actions.py::daemon/lifecycle.py:84",
+    "app/actions/lightbar_actions.py::status_actions.py:1998",
+    "app/actions/trigger_specs.py::app/widgets/segmented_selector.py:168-180",
+    "app/actions/trigger_specs.py::profiles/schema.py:161",
+    "app/app.py::status_actions.py:548-551",
+    "cli/cmd_test.py::app/ipc_bridge.py:341",
+    "core/ds_output_report.py::core/backend_pydualsense.py:786-790",
+    "core/led_control.py::core/backend_pydualsense.py:2801",
+    "core/led_control.py::profiles/manager.py:392",
+    "core/rumble.py::profiles/manager.py:1541-1546",
+    "daemon/ipc_handlers.py::app/actions/lightbar_actions.py:828",
+    "daemon/ipc_handlers.py::core/backend_pydualsense.py:1222",
+    "daemon/ipc_handlers.py::core/backend_pydualsense.py:1335",
+    "daemon/ipc_handlers.py::profiles/manager.py:384-387",
+    "daemon/subsystems/external_mask.py::identity.py:858",
+    "daemon/subsystems/hotkey.py::daemon/protocols.py:180",
+    "daemon/subsystems/hotkey.py::profiles/manager.py:384-387",
+    "integrations/exame_da_mesa.py::sentinela_do_wrapper.py:524",
+    "integrations/mesa_de_radio.py::tests/conftest.py:338",
+    "integrations/prontuario_dos_jogos.py::hotkey.py:447",
+    "profiles/loader.py::schema.py:52",
+    "utils/repo_files.py::cli/cmd_doctor.py:23",
+    "utils/repo_files.py::emulation_actions.py:1200",
+    "utils/repo_files.py::emulation_actions.py:1763",
+})
+
+
+@dataclass(frozen=True)
+class CitacaoDeLinha:
+    """Uma citação `arquivo.py:NNN` achada em prosa de código."""
+
+    citante: str
+    """Caminho do arquivo que cita, relativo a `src/hefesto_dualsense4unix`."""
+    bruta: str
+    """A citação como está escrita — `alvo.py:NNN` ou `alvo.py:NNN-MMM`."""
+    linha_da_citacao: int
+    alvo: Path
+    ini: int
+    fim: int
+
+    @property
+    def chave(self) -> str:
+        return f"{self.citante}::{self.bruta}"
+
+
+def _resolver_alvo(alvo: str, raiz: Path) -> Path | None:
+    """O `.py` citado, dentro do repositório — ou `None` se não for nosso.
+
+    `raiz` primeiro, e não o repositório: é o que faz o dublê medir a CÓPIA de
+    `src/` em vez da árvore viva. Sem isso a régua se autoconfirmaria.
+    """
+    for candidato in (raiz / alvo, _RAIZ / alvo, _RAIZ / "src" / alvo):
+        if candidato.is_file():
+            return candidato
+    if Path(alvo).name != alvo:
+        return None
+    achados = [p for p in raiz.rglob(alvo)] or [
+        p for base in ("src", "tests", "scripts") for p in (_RAIZ / base).rglob(alvo)
+    ]
+    return achados[0] if len(achados) == 1 else None
+
+
+def _prosa_de(modulo: Path) -> dict[int, str]:
+    """As linhas do módulo que são COMENTÁRIO ou STRING, pela numeração real.
+
+    `tokenize` e não regex: é o que separa `# ver foo.py:12` de um `foo.py:12`
+    que por acaso aparecesse em código. Linha multi-token vira uma entrada só.
+    """
+    linhas: dict[int, str] = {}
+    with modulo.open("rb") as fh:
+        try:
+            for tok in tokenize.tokenize(fh.readline):
+                if tok.type not in (tokenize.COMMENT, tokenize.STRING):
+                    continue
+                for offset, texto in enumerate(tok.string.splitlines()):
+                    linhas.setdefault(tok.start[0] + offset, "")
+                    linhas[tok.start[0] + offset] += texto
+        except (tokenize.TokenError, SyntaxError):  # módulo quebrado é de outro portão
+            return {}
+    return linhas
+
+
+def citacoes_de_linha(raiz: Path | None = None) -> list[CitacaoDeLinha]:
+    """Toda citação `arquivo.py:NNN` em comentário/docstring de `src/`."""
+    raiz = raiz or _SRC
+    achadas: list[CitacaoDeLinha] = []
+    for modulo in _modulos(raiz):
+        prosa = _prosa_de(modulo)
+        for numero, texto in sorted(prosa.items()):
+            for m in _CITACAO.finditer(texto):
+                alvo = _resolver_alvo(m.group("alvo"), raiz)
+                if alvo is None:
+                    continue
+                ini = int(m.group("ini"))
+                achadas.append(
+                    CitacaoDeLinha(
+                        citante=str(modulo.relative_to(raiz)),
+                        bruta=m.group(0),
+                        linha_da_citacao=numero,
+                        alvo=alvo,
+                        ini=ini,
+                        fim=int(m.group("fim")) if m.group("fim") else ini,
+                    )
+                )
+    return achadas
+
+
+def _ancoras_candidatas(modulo: Path, numero: int) -> list[str]:
+    """Identificadores em crase na janela de prosa em volta da citação."""
+    linhas = modulo.read_text(encoding="utf-8").splitlines()
+    janela = " ".join(linhas[max(0, numero - _JANELA) : numero])
+    nomes: list[str] = []
+    for bruto in _EM_CRASE.findall(janela):
+        pedaco = bruto.strip().split("/")[-1]
+        if pedaco.endswith(".py") or ".py:" in pedaco:
+            continue
+        pedaco = pedaco.split(".")[-1]
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", pedaco):
+            nomes.append(pedaco)
+    return nomes
+
+
+def _definicao_unica(linhas: list[str], nome: str) -> tuple[int, int] | None:
+    """`(primeira, derradeira)` do bloco de `def`/`class` chamado `nome`.
+
+    Só `def` e `class`, e só quando há UMA. Atribuição simples fica de fora de
+    propósito: `address = ...` casaria com meia árvore e a régua acusaria quem
+    está certo — a pior coisa que um portão faz.
+    """
+    padroes = (
+        re.compile(rf"^\s*(?:async\s+)?def\s+{re.escape(nome)}\s*\("),
+        re.compile(rf"^\s*class\s+{re.escape(nome)}\s*[(:]"),
+    )
+    onde = [i + 1 for i, ln in enumerate(linhas) for p in padroes if p.match(ln)]
+    if len(onde) != 1:
+        return None
+    inicio = onde[0]
+    recuo = len(linhas[inicio - 1]) - len(linhas[inicio - 1].lstrip())
+    fim = inicio
+    while fim < len(linhas):
+        atual = linhas[fim]
+        if atual.strip() and (len(atual) - len(atual.lstrip())) <= recuo:
+            break
+        fim += 1
+    return inicio, fim
+
+
+def enderecos_envelhecidos(raiz: Path | None = None) -> dict[str, str]:
+    """`{chave: queixa}` de toda citação que NÃO confere. Vazio é o esperado."""
+    raiz = raiz or _SRC
+    queixas: dict[str, str] = {}
+    for cit in citacoes_de_linha(raiz):
+        linhas = cit.alvo.read_text(encoding="utf-8").splitlines()
+        onde = f"{cit.citante}:{cit.linha_da_citacao}"
+        if cit.ini > len(linhas):
+            queixas[cit.chave] = (
+                f"{onde} cita a linha {cit.ini} de {cit.bruta.split(':')[0]}, "
+                f"que tem {len(linhas)} linhas"
+            )
+            continue
+        if not linhas[cit.ini - 1].strip():
+            queixas[cit.chave] = (
+                f"{onde} cita a linha {cit.ini}, que está EM BRANCO — "
+                "âncora em linha vazia não ancora nada"
+            )
+            continue
+        for nome in _ancoras_candidatas(raiz / cit.citante, cit.linha_da_citacao):
+            bloco = _definicao_unica(linhas, nome)
+            if bloco is None:
+                continue
+            if cit.ini > bloco[1] or cit.fim < bloco[0]:
+                queixas[cit.chave] = (
+                    f"{onde} cita a linha {cit.ini}, mas a âncora `{nome}` "
+                    f"está na linha {bloco[0]} (bloco {bloco[0]}-{bloco[1]})"
+                )
+            break
+    return queixas
+
+
+#: O alvo do dublê: a âncora fica na linha 4 e a linha 2 é código VIVO, não
+#: espaço em branco. As duas escolhas são deliberadas — um símbolo na linha 1
+#: engoliria o erro (a 2 estaria dentro do bloco dele) e uma linha 2 vazia faria
+#: a queixa sair pela régua de linha em branco, sem exercer a de âncora.
+_ALVO_PLANTADO = (
+    "VALOR = 0\nOUTRO = 1\n\ndef ancora_plantada():\n    return 1\n"
+)
+
+
+def _citante_plantado(linha: int) -> str:
+    """Um comentário que promete `ancora_plantada` na linha pedida."""
+    return (
+        f"# `ancora_plantada` mora em `utils/_alvo_da_mordida.py:{linha}`.\n"
+        "VALOR = 1\n"
+    )
+
+
+class TestTodaCitacaoDeLinhaConfere:
+    def test_toda_citacao_de_linha_em_comentario_de_codigo_confere(self) -> None:
+        """O endereço escrito em `src/` tem de apontar para o que ele promete.
+
+        A MORDIDA: envelheça um endereço de propósito — some 1 à linha citada
+        em qualquer comentário que nomeie o símbolo ao lado — e este teste
+        reprova nomeando OS DOIS NÚMEROS, o citado e o real.
+        """
+        queixas = enderecos_envelhecidos()
+        vivas = {k: v for k, v in queixas.items() if k not in _CITACOES_PENDENTES}
+        assert not vivas, (
+            f"{len(vivas)} endereço(s) de linha em `src/` apontam para outro "
+            "lugar hoje:\n"
+            + "\n".join(f"  - {v}" for v in sorted(vivas.values()))
+            + "\nMeça com `grep -n` e reescreva o número. Se o arquivo citante "
+            "for de outra posse, ponha a chave em `_CITACOES_PENDENTES` com o "
+            "motivo — nunca afrouxe a régua."
+        )
+
+    def test_a_lista_de_pendentes_nao_vira_paisagem(self) -> None:
+        """Pendência consertada TEM de sair da lista — senão ela vira ruído.
+
+        É a metade que faz a lista se limpar sozinha: quem consertar um dos
+        endereços de outra posse descobre aqui que precisa apagar a linha.
+        """
+        queixas = enderecos_envelhecidos()
+        curadas = sorted(_CITACOES_PENDENTES - set(queixas))
+        assert not curadas, (
+            f"{len(curadas)} citação(ões) declarada(s) como pendente(s) já "
+            "conferem — apague-as de `_CITACOES_PENDENTES`:\n"
+            + "\n".join(f"  - {c}" for c in curadas)
+        )
+
+    def test_a_regua_sabe_reprovar(self, tmp_path: Path) -> None:
+        """Régua que só sabe passar não é régua (armadilha A2).
+
+        Planta, numa cópia de `src/`, um comentário com o endereço ERRADO de um
+        símbolo que existe — e exige que a queixa nomeie os dois números.
+        """
+        copia = _copia_de_src(tmp_path)
+        (copia / "utils" / "_alvo_da_mordida.py").write_text(
+            _ALVO_PLANTADO, encoding="utf-8"
+        )
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            _citante_plantado(2), encoding="utf-8"
+        )
+        queixas = enderecos_envelhecidos(copia)
+        chave = "utils/_citante_da_mordida.py::utils/_alvo_da_mordida.py:2"
+        assert chave in queixas, (
+            "a régua não viu um endereço plantado fora do símbolo que ele "
+            f"promete. Ela achou: {sorted(queixas)}"
+        )
+        queixa = queixas[chave]
+        assert "linha 2" in queixa and "linha 4" in queixa, (
+            f"a queixa não nomeia OS DOIS números: {queixa!r}"
+        )
+
+    def test_a_regua_nao_acusa_o_endereco_certo(self, tmp_path: Path) -> None:
+        """O outro lado do dublê: o MESMO plantio, com o número certo, passa.
+
+        Sem este caso a régua poderia estar acusando tudo — e um portão que
+        acusa sempre é desligado na primeira semana, como o irmão já mediu.
+        """
+        copia = _copia_de_src(tmp_path)
+        (copia / "utils" / "_alvo_da_mordida.py").write_text(
+            _ALVO_PLANTADO, encoding="utf-8"
+        )
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            _citante_plantado(4), encoding="utf-8"
+        )
+        plantadas = [k for k in enderecos_envelhecidos(copia) if "_da_mordida" in k]
+        assert not plantadas, f"a régua acusou um endereço CERTO: {plantadas}"
+
+    def test_a_regua_ignora_alvo_que_nao_e_desta_casa(self, tmp_path: Path) -> None:
+        """`pydualsense.py:610` é biblioteca de terceiro — não temos as linhas.
+
+        Acusar um arquivo que não está no repositório seria gritar com quem
+        está certo: o número pode estar perfeito para a versão instalada.
+        """
+        copia = _copia_de_src(tmp_path)
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            "# ver `biblioteca_que_nao_existe_aqui.py:99`\nVALOR = 1\n",
+            encoding="utf-8",
+        )
+        assert not [
+            k for k in enderecos_envelhecidos(copia) if "_da_mordida" in k
+        ]

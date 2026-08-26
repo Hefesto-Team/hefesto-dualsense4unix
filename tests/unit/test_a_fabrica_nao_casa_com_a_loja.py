@@ -73,7 +73,14 @@ class TestAFabricaNaoCasaComALoja:
         """Guarda do próprio instrumento: régua que não acha nada passa sempre."""
         assert FABRICA.is_dir(), f"o diretório de fábrica sumiu: {FABRICA}"
         presets = sorted(FABRICA.glob("*.json"))
-        assert len(presets) >= 10, (
+        # PISO BAIXADO de 10 para 9 em 26/08/2026, e o motivo é a poda: `bow`,
+        # `coop_local` e `sackboy_nativo` saíram da fábrica a pedido dela
+        # (*"em termos de perfis de jogo vamos manter os que temos ativos
+        # apenas"*), deixando 9. Não é o piso cedendo por conveniência — a
+        # contagem exata dos 9 está travada em
+        # `test_profiles_preset.py::TestOsPodadosNaoVoltam`, que reprova por
+        # nome se a fábrica mudar de tamanho outra vez.
+        assert len(presets) >= 9, (
             f"a fábrica tem só {len(presets)} presets — se ela encolheu, este "
             "teste passou a medir menos do que promete. Confira antes de "
             "baixar o piso."

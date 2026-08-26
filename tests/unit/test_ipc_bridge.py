@@ -7,12 +7,18 @@ Cobre AUDIT-FINDING-IPC-BRIDGE-BARE-EXCEPT-01:
   (b) daemon online (_run_call retorna valor) → wrapper retorna True;
   (c) exceção inesperada (ValueError, TypeError, RuntimeError) **propaga** —
       bug real não pode ser silenciado;
-  (d) wrappers específicos (profile_switch, led_set, rumble_set, apply_draft
-      etc.) seguem o mesmo contrato.
+  (d) wrappers específicos (profile_switch, led_set, rumble_set etc.) seguem o
+      mesmo contrato.
+
+E, desde 26/08/2026 (BG-07), a régua do ``__all__``:
+``test_o_all_nao_publica_ponte_sem_travessia`` — publicar um nome ali é
+prometer uma rota, e rota que ninguém atravessa apodrece sem ninguém ver.
 """
 from __future__ import annotations
 
+import ast
 import logging
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -112,7 +118,12 @@ class TestSafeCallExcecaoInesperadaPropaga:
 
 
 class TestWrappersRetornamBool:
-    """13 wrappers públicos retornam bool e respeitam o contrato."""
+    """Os wrappers públicos retornam bool e respeitam o contrato.
+
+    Eram treze até 26/08/2026; a poda da BG-07 levou três deles
+    (``apply_draft``, ``rumble_policy_set``, ``mouse_emulation_set``) por não
+    terem chamador nenhum em ``src/``.
+    """
 
     OFFLINE_EXC = FileNotFoundError("daemon offline")
 
@@ -156,10 +167,6 @@ class TestWrappersRetornamBool:
         with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
             assert ipc_bridge.rumble_passthrough(True) is False
 
-    def test_rumble_policy_set_offline_false(self):
-        with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
-            assert ipc_bridge.rumble_policy_set("balanceado") is False
-
     def test_rumble_policy_custom_offline_false(self):
         with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
             assert ipc_bridge.rumble_policy_custom(0.5) is False
@@ -168,34 +175,20 @@ class TestWrappersRetornamBool:
         with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
             assert ipc_bridge.player_leds_set((True, False, True, False, True)) is False
 
-    def test_mouse_emulation_set_offline_false(self):
-        with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
-            assert ipc_bridge.mouse_emulation_set(True, speed=5) is False
-
-    def test_apply_draft_offline_false(self):
-        with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
-            assert ipc_bridge.apply_draft({"triggers": {}}) is False
-
-    def test_apply_draft_status_ok_true(self):
-        with patch.object(ipc_bridge, "_run_call", return_value={"status": "ok"}):
-            assert ipc_bridge.apply_draft({"triggers": {}}) is True
-
-    def test_apply_draft_status_nao_ok_false(self):
-        """Daemon responde, mas status != ok → False (contrato FEAT-PROFILE-STATE-01)."""
-        with patch.object(ipc_bridge, "_run_call", return_value={"status": "erro"}):
-            assert ipc_bridge.apply_draft({"triggers": {}}) is False
-
 
 class TestApplyDraftDetalhado:
     """APLICAR-VERDADE-01/E2 — a ponte para de estreitar a verdade.
 
-    A ``apply_draft`` devolve ``bool`` e o mapa ``failed`` (quais seções NÃO
-    entraram) morria aqui: quem chamava recebia ``False`` e não tinha como
-    distinguir "o daemon está desligado" de "a seção de luzes falhou". A cura
-    foi ADITIVA — a ``apply_draft`` continua devolvendo ``bool`` (o valor-
-    verdade dela É o contrato R-18, e um ``dict`` no lugar seria sempre
-    verdadeiro num ``if``), e quem precisa dizer a verdade na tela chama a
-    detalhada.
+    Havia uma ``apply_draft`` que devolvia ``bool``, e o mapa ``failed``
+    (quais seções NÃO entraram) morria nela: quem chamava recebia ``False`` e
+    não tinha como distinguir "o daemon está desligado" de "a seção de luzes
+    falhou". A cura foi ADITIVA — a booleana ficou de pé (o valor-verdade dela
+    É o contrato R-18, e um ``dict`` no lugar seria sempre verdadeiro num
+    ``if``), e quem precisa dizer a verdade na tela passou a chamar a
+    detalhada. Em 26/08/2026 a booleana foi PODADA (BG-07): ninguém tinha
+    migrado de volta, e ela era a última rota do ``__all__`` sem travessia
+    nesta família. A regra R-18 continua tendo dono único —
+    ``aplicacao_confirmada``, exercitada logo abaixo.
 
     Esta classe é a metade da E2 que NÃO precisa de GTK, então morde também no
     CI headless; a metade da tela mora em
@@ -224,16 +217,6 @@ class TestApplyDraftDetalhado:
     def test_resposta_que_nao_e_dicionario_e_tratada_como_ausencia(self):
         with patch.object(ipc_bridge, "_run_call", return_value="ok"):
             assert ipc_bridge.apply_draft_detalhado({"leds": {}}) is None
-
-    def test_apply_draft_continua_bool(self):
-        """Compatibilidade: a assinatura exportada no ``__all__`` não mudou."""
-        resposta = {"status": "ok", "applied": [], "failed": {"leds": "x"}}
-        with patch.object(ipc_bridge, "_run_call", return_value=resposta):
-            assert ipc_bridge.apply_draft({"leds": {}}) is False
-        with patch.object(
-            ipc_bridge, "_run_call", return_value={"status": "ok", "applied": ["leds"]}
-        ):
-            assert ipc_bridge.apply_draft({"leds": {}}) is True
 
     def test_aplicacao_confirmada_e_o_dono_unico_da_regra_r18(self):
         """A mesma leitura do payload para os dois caminhos — sem ``failed``
@@ -275,11 +258,8 @@ class TestWrappersPropagandoBugs:
             (ipc_bridge.rumble_set, (1, 2)),
             (ipc_bridge.rumble_stop, ()),
             (ipc_bridge.rumble_passthrough, (True,)),
-            (ipc_bridge.rumble_policy_set, ("max",)),
             (ipc_bridge.rumble_policy_custom, (0.3,)),
             (ipc_bridge.player_leds_set, ((True, True, False, False, False),)),
-            (ipc_bridge.mouse_emulation_set, (True,)),
-            (ipc_bridge.apply_draft, ({"x": 1},)),
             (ipc_bridge.apply_draft_detalhado, ({"x": 1},)),
             (ipc_bridge.daemon_state_full, ()),
             (ipc_bridge.daemon_status_basic, ()),
@@ -384,3 +364,228 @@ class TestTriggerSetChecked:
             pytest.raises(TypeError),
         ):
             ipc_bridge.trigger_set_checked("left", "Rigid", [5, 200])
+
+
+# ---------------------------------------------------------------------------
+# BG-07 (26/08/2026) — o `__all__` é lista de ROTAS, não vitrine
+# ---------------------------------------------------------------------------
+
+_RAIZ = Path(__file__).resolve().parents[2]
+_SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
+_PONTE = _SRC / "app" / "ipc_bridge.py"
+
+#: Quem ficou no lugar de cada ponte podada em 26/08/2026. A mensagem de falha
+#: precisa disto: reprovar dizendo só "sem chamador" manda a próxima pessoa
+#: procurar um chamador para uma função que já foi substituída — que é
+#: exatamente o gesto que a poda existe para impedir.
+_QUEM_FICOU_NO_LUGAR: dict[str, str] = {
+    "apply_draft": "apply_draft_detalhado + aplicacao_confirmada",
+    "rumble_policy_set": "rumble_policy_set_checked",
+    "rumble_policy_set_detalhado": "rumble_policy_set_checked",
+    "trigger_reset": "trigger_reset_detalhado",
+    "mouse_emulation_set": (
+        "call_async('mouse.emulation.set', ...) direto, em "
+        "app/actions/mouse_actions.py:462 e :560"
+    ),
+}
+
+#: As rotas publicadas que HOJE ninguém atravessa, cada uma com onde a dívida
+#: já está registrada. Declarar é honesto; o que esta lista não deixa é a
+#: sexta nascer calada.
+#:
+#: Todas as quatro têm lápide viva em
+#: `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`, com o endereço do
+#: que as fecharia — é lá que mora a razão longa, e repeti-la aqui só criaria
+#: duas versões para divergirem.
+_SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
+    "alvo_honrado": (
+        "MIC-DA-MESA-CHEIA-01: lê o `por_uniq` do daemon. Lápide em "
+        "`_SEM_CAMINHO_HOJE`; fecha em app/widgets/controller_card.py, e o "
+        "estado novo de tela que ela pede é DESENHO — a palavra é dela."
+    ),
+    "led_set": (
+        "BG-01 trocou os três chamadores por `led_set_detalhado`. Lápide em "
+        "`_SEM_CAMINHO_HOJE`; a razão manda apagar, e a poda não coube na "
+        "ordem da BG-07, que nomeia cinco funções e não esta."
+    ),
+    "machine_declare": (
+        "CONFIG-03: invólucro estreito de `machine_declare_detalhado`, que é "
+        "quem `app/actions/footer_actions.py:353` chama. Lápide em "
+        "`_NAO_E_PROMESSA`."
+    ),
+    "player_leds_set": (
+        "Irmão exato do `led_set`, pela mesma edição (BG-01) e com a mesma "
+        "lápide. Cai no mesmo commit que ele, quando cair."
+    ),
+}
+
+
+def _nomes_do_all() -> list[str]:
+    """Os nomes do ``__all__`` LIDOS DO ARQUIVO, nunca do módulo importado.
+
+    Importar devolveria o que o interpretador montou; a pergunta aqui é o que
+    o arquivo PUBLICA. São a mesma coisa hoje, e é justamente por serem a mesma
+    coisa hoje que a diferença passaria despercebida amanhã.
+    """
+    arvore = ast.parse(_PONTE.read_text(encoding="utf-8"))
+    for no in arvore.body:
+        if isinstance(no, ast.Assign) and any(
+            isinstance(alvo, ast.Name) and alvo.id == "__all__" for alvo in no.targets
+        ):
+            assert isinstance(no.value, ast.List)
+            return [
+                elemento.value
+                for elemento in no.value.elts
+                if isinstance(elemento, ast.Constant) and isinstance(elemento.value, str)
+            ]
+    raise AssertionError(f"`__all__` não encontrado em {_PONTE}")
+
+
+def _identificadores(no: ast.AST) -> set[str]:
+    """Os nomes que este trecho de árvore CITA — só código, nunca texto.
+
+    Ler por AST, e não por ``grep``, é o que separa citação de chamada: em
+    26/08/2026 `led_set` aparecia duas vezes em `app/actions/lightbar_actions.py`
+    e as duas eram COMENTÁRIO. Comentário não atravessa ponte nenhuma, e um
+    portão que o conta por chamador diz "entregue" sobre código morto.
+    """
+    citados: set[str] = set()
+    for filho in ast.walk(no):
+        if isinstance(filho, ast.Name):
+            citados.add(filho.id)
+        elif isinstance(filho, ast.Attribute):
+            citados.add(filho.attr)
+        elif isinstance(filho, ast.alias):
+            citados.add(filho.name.rsplit(".", 1)[-1])
+    return citados
+
+
+def _travessias() -> dict[str, list[str]]:
+    """``{nome do __all__: quem o cita}``, varrendo `src/` inteiro.
+
+    Uma citação DENTRO do próprio `ipc_bridge.py` só conta quando vem de outro
+    escopo — o corpo de `apply_draft` citando `apply_draft_detalhado` é
+    travessia da segunda, não da primeira. Sem essa distinção, todo invólucro
+    estreito se daria por vivo citando a irmã que o substituiu, e a régua
+    passaria a medir a corrente fechada em vez da rota.
+    """
+    travessias: dict[str, list[str]] = {nome: [] for nome in _nomes_do_all()}
+
+    def registrar(nome: str, onde: str) -> None:
+        if nome in travessias:
+            travessias[nome].append(onde)
+
+    for arquivo in sorted(_SRC.rglob("*.py")):
+        texto = arquivo.read_text(encoding="utf-8")
+        arvore = ast.parse(texto)
+        rotulo = arquivo.relative_to(_SRC).as_posix()
+        if arquivo != _PONTE:
+            for citado in _identificadores(arvore):
+                registrar(citado, rotulo)
+            continue
+        for no in arvore.body:
+            dono = getattr(no, "name", None)
+            if isinstance(no, ast.Assign) and any(
+                isinstance(alvo, ast.Name) and alvo.id == "__all__"
+                for alvo in no.targets
+            ):
+                continue  # o próprio `__all__` não é travessia de ninguém
+            for citado in _identificadores(no):
+                if citado != dono:
+                    registrar(citado, f"{rotulo}:{getattr(no, 'lineno', 0)}")
+    return travessias
+
+
+class TestOAllSoPublicaRotaAtravessada:
+    """Nome no ``__all__`` é promessa de rota; rota sem travessia apodrece.
+
+    Régua da BG-07, e ela NÃO substitui
+    `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`: aquele mede alcance
+    a partir dos pontos de entrada do produto e é mais forte. Esta é mais
+    estreita e mais barata, e responde a pergunta que é só deste arquivo — o
+    que a ponte PUBLICA como rota — em vez de varrer o repositório inteiro.
+    """
+
+    def test_o_all_nao_publica_ponte_sem_travessia(self) -> None:
+        travessias = _travessias()
+        soltas = sorted(
+            nome
+            for nome, quem in travessias.items()
+            if not quem and nome not in _SEM_TRAVESSIA_DECLARADA
+        )
+        assert not soltas, (
+            "o `__all__` de `app/ipc_bridge.py` publica rota que NINGUÉM "
+            "atravessa em `src/`:\n"
+            + "\n".join(
+                f"  - {nome} — quem ficou no lugar: "
+                + _QUEM_FICOU_NO_LUGAR.get(
+                    nome,
+                    f"procure a irmã `{nome}_detalhado`, que é a forma que a "
+                    "janela costuma usar",
+                )
+                for nome in soltas
+            )
+            + "\n`tests/` NÃO conta: foi assim que cinco invólucros estreitos "
+            "passaram por vivos até 26/08/2026 (BG-07).\n"
+            "FAÇA UMA das duas: FIE a rota a partir de `src/`, ou APAGUE o "
+            "invólucro e a lápide dele no portão de lápides. Se a dívida for "
+            "para ficar, DECLARE em `_SEM_TRAVESSIA_DECLARADA` com a razão."
+        )
+
+    def test_a_isencao_declarada_nao_vira_cemiterio(self) -> None:
+        """A outra direção: isenção citando nome que saiu do ``__all__``.
+
+        Sem ela a lista de cima viraria cemitério e passaria a responder a
+        pergunta com entradas mortas — que é o defeito que o portão de lápides
+        já pagou uma vez.
+        """
+        publicados = set(_nomes_do_all())
+        fantasmas = sorted(set(_SEM_TRAVESSIA_DECLARADA) - publicados)
+        assert not fantasmas, (
+            "`_SEM_TRAVESSIA_DECLARADA` isenta nome que o `__all__` não "
+            f"publica mais: {fantasmas}\n"
+            "Se a rota foi podada, apague a isenção junto — ela existe para "
+            "explicar uma dívida VIVA."
+        )
+
+    def test_a_regua_enxerga_chamada_e_ignora_texto(self) -> None:
+        """Validação do instrumento, em fonte FABRICADA e na árvore de verdade.
+
+        Um instrumento quebrado erra em duas direções opostas, e cada metade
+        pega uma:
+
+        * numa fonte fabricada, `chamada_de_verdade` é código e as outras três
+          são comentário, docstring e literal. Contar texto é o falso positivo
+          que já enganou o portão de lápides: a chave de IPC
+          `"profile.apply_draft"`, escrita noutro módulo e para outra coisa,
+          dava a função `apply_draft` por alcançada;
+        * na árvore de verdade, `call_async` é a rota mais atravessada da ponte
+          — dezenas de chamadores em `app/actions/`. Se ela aparecesse sem
+          travessia, a varredura não estaria enxergando chamada nenhuma, e o
+          verde de cima seria o silêncio de uma régua que não mede.
+        """
+        fabricada = ast.parse(
+            '"""Este docstring cita citada_em_docstring."""\n'
+            "# citada_em_comentario(1, 2)\n"
+            "def borda():\n"
+            '    rotulo = "citada_em_literal"\n'
+            "    return chamada_de_verdade(rotulo)\n"
+        )
+        citados = _identificadores(fabricada)
+        assert "chamada_de_verdade" in citados, (
+            "a varredura não enxergou uma chamada explícita"
+        )
+        for texto in (
+            "citada_em_docstring",
+            "citada_em_comentario",
+            "citada_em_literal",
+        ):
+            assert texto not in citados, (
+                f"a varredura contou `{texto}` por chamador — ela está lendo "
+                "TEXTO, e texto não atravessa ponte nenhuma"
+            )
+
+        assert _travessias()["call_async"], (
+            "a varredura não achou chamador de `call_async` em `src/` — ela "
+            "não está enxergando a árvore de verdade"
+        )

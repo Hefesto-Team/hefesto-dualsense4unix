@@ -191,8 +191,18 @@ def varrer_documento(documento: Path, raiz: Path) -> tuple[list[Achado], int, in
 
 
 def documentos_de(raiz: Path) -> list[Path]:
+    """Todo `.md` sob a pasta vigiada, em QUALQUER profundidade.
+
+    ENDURECIMENTO, 26/08/2026 (LEVA-4-E) — e sem defeito vivo para mostrar:
+    `docs/protocol/` é plano hoje, então `glob("*.md")` e `rglob("*.md")`
+    devolvem a mesma lista de 13 documentos, e NADA estava sendo perdido. O que
+    se conserta aqui é o defeito de FORMA: no dia em que a canônica crescer
+    para uma subpasta, o `glob` raso passaria a ficar verde por não olhar. É o
+    mesmo defeito que a casa achou em 25/08 no `test_nome_citado_como_sprint`,
+    e ele não custa nada para fechar antes de morder.
+    """
     pasta = raiz / PASTA
-    return sorted(pasta.glob("*.md")) if pasta.is_dir() else []
+    return sorted(pasta.rglob("*.md")) if pasta.is_dir() else []
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -214,10 +224,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.all:
         alvos = documentos_de(raiz)
     else:
+        #: `is_relative_to`, e não `parent ==`: a mesma correção de forma de
+        #: `documentos_de` — passar à mão um `.md` de subpasta da canônica era
+        #: descartado em silêncio, sem uma palavra de recusa.
+        pasta_vigiada = (raiz / PASTA).resolve()
         alvos = [
             p for p in args.arquivos
             if p.suffix == ".md" and p.is_file()
-            and p.resolve().parent == (raiz / PASTA).resolve()
+            and p.resolve().is_relative_to(pasta_vigiada)
         ]
     if not alvos:
         print("Nenhum documento para varrer.")

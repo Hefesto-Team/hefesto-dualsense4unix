@@ -39,6 +39,7 @@ import contextlib
 from collections.abc import Callable
 from typing import Any
 
+from hefesto_dualsense4unix.app.actions.config import secao_mesa
 from hefesto_dualsense4unix.app.actions.config.moldura import (
     QUANDO_VALE,
     rotulo_de_apoio,
@@ -54,6 +55,7 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     via_do_controle,
 )
 from hefesto_dualsense4unix.app.alvo_de_edicao import alvo_de_edicao
+from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.app.ipc_bridge import (
     call_async,
     identity_number_set,
@@ -467,8 +469,16 @@ DICA_MIC_SEM_ENDERECO = (
 
 
 def _numero(valor: float) -> str:
-    """Uma casa decimal, com vírgula — é assim que ela lê número nesta casa."""
-    return f"{valor:.1f}".replace(".", ",")
+    """Uma casa decimal, com vírgula — é assim que ela lê número nesta casa.
+
+    Delega ao DONO ÚNICO (`app/fala_do_mapa.formata_pt_br`) desde 26/08/2026.
+    Até então era uma segunda implementação da mesma regra, e a saída idêntica
+    é o que fazia ninguém notar: no dia em que uma delas mudasse de
+    arredondamento, esta seção e a célula do mapa passariam a dizer números
+    diferentes sobre o mesmo fato. O nome local fica porque as quatro chamadas
+    abaixo o usam e ele diz o que faz nesta seção.
+    """
+    return formata_pt_br(valor)
 
 
 def frase_da_capacidade_do_mic() -> str:
@@ -481,7 +491,14 @@ def frase_da_capacidade_do_mic() -> str:
     coisas diferentes sobre o mesmo fato.
 
     É CAPACIDADE, não advertência: diz o que o rádio carrega, e a pergunta
-    "cabe?" quem responde é a barra da seção "A mesa".
+    "cabe?" quem responde é a barra da seção vizinha.
+
+    **O NOME DA SEÇÃO É LIDO, nunca digitado — corrigido em 26/08/2026.** Esta
+    frase mandava a pessoa procurar uma seção chamada "A mesa"; a LEX-1 renomeou
+    a seção para o léxico dela no mesmo dia, e a frase passou a apontar para um
+    nome que não existe mais na tira. Quem lesse procuraria "A mesa" e leria
+    "Conexões" — a tela mandando para um lugar que ela mesma renomeou. Ler o
+    ``TITULO`` faz o ponteiro seguir o renomeio de graça, para sempre.
     """
     from hefesto_dualsense4unix.integrations.radio_da_mesa import (
         HZ_AUDIO_COM_MIC,
@@ -496,7 +513,7 @@ def frase_da_capacidade_do_mic() -> str:
         f"relatórios de entrada por segundo por {_numero(HZ_INPUT_COM_MIC)} mais "
         f"{_numero(HZ_AUDIO_COM_MIC)} quadros de áudio: {_numero(total)} das "
         f"{SLOTS_POR_SEGUNDO} fatias daquele adaptador. Quanto já está em uso "
-        'está na seção "A mesa".'
+        f'está na seção "{secao_mesa.TITULO}".'
     )
 
 
@@ -675,8 +692,22 @@ class _PainelDosControles:
         # informação. Ela fica fora de `self._caixa` pelo mesmo motivo da outra
         # — aquela caixa é esvaziada a cada reexame, e a capacidade do rádio não
         # é dado da mesa.
-        caixa.pack_start(rotulo_de_apoio(frase_da_capacidade_do_mic()), False, False, 0)
-        caixa.pack_start(rotulo_de_apoio(QUANDO_VALE), False, False, 0)
+        #
+        # LEX-2, ITEM 4 — A `QUANDO_VALE` SAIU DA PÁGINA (26/08/2026) e virou a
+        # dica da frase de capacidade. Ela diria a mesma coisa com a mesa vazia
+        # e com a mesa cheia, logo é EXPLICAÇÃO, e explicação vai para o hover.
+        #
+        # POR QUE ESTE RÓTULO E NÃO O INTERRUPTOR QUE ELA EXPLICA: o
+        # interruptor nasce e morre com o card, e numa mesa sem controle nenhum
+        # não existe widget nenhum para hospedar a frase — que é exatamente o
+        # caso que `test_a_aba_diz_quando_a_escolha_fica_guardada.py` monta
+        # (hospedeiro vazio). Este rótulo é o único desta seção que existe
+        # sempre e que fica FORA de `self._caixa`, a caixa que o reexame
+        # esvazia.
+        capacidade = rotulo_de_apoio(frase_da_capacidade_do_mic())
+        with contextlib.suppress(Exception):
+            capacidade.set_tooltip_text(_(QUANDO_VALE))
+        caixa.pack_start(capacidade, False, False, 0)
         self.reexaminar()
 
     # -- leitura -----------------------------------------------------------
@@ -713,7 +744,7 @@ class _PainelDosControles:
         """O hospedeiro é o de `scripts/gui-captura/retratar_abas.py`?
 
         O sinal é o `_mesa_leitor`, que aquele host monta para a seção da mesa
-        (`secao_mesa.py:333`) e que nenhum hospedeiro de produção tem. Usar um
+        (`secao_mesa.py:772`, `_mesa_leitor`) e que nenhum hospedeiro de produção tem. Usar um
         sinal que já existe é melhor que inventar uma segunda bandeira: uma
         bandeira nova precisaria ser posta em `retratar_abas.py`, que é
         território de outra frente nesta leva, e até lá a captura sairia falando

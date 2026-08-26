@@ -22,6 +22,29 @@ import types
 import pytest
 
 
+def _rotulo_do_botao_de_consertar() -> str:
+    """O rótulo VIVO do botão da aba Sistema, lido do `main.glade`.
+
+    O dono único do texto é o glade; digitá-lo aqui criaria a segunda verdade, e
+    a primeira vez que alguém melhorasse a palavra o teste reprovaria a melhora.
+    """
+    import re
+    from pathlib import Path
+
+    glade = (
+        Path(__file__).resolve().parents[2]
+        / "src"
+        / "hefesto_dualsense4unix"
+        / "gui"
+        / "main.glade"
+    ).read_text(encoding="utf-8")
+    achados = re.findall(
+        r'<property name="label" translatable="yes">([^<]*[Cc]onsertar[^<]*)</property>',
+        glade,
+    )
+    assert achados, "o botão de consertar sumiu do main.glade"
+    return achados[0]
+
 def _install_gi_stubs() -> None:
     # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
     # o merge abaixo mutaria o gi REAL (sobrescreve GLib.idle_add e
@@ -138,9 +161,18 @@ def test_mic_on_avisa_quando_quirk_ausente(monkeypatch: pytest.MonkeyPatch) -> N
     assert flag == "--enable-mic"
     # ...e o aviso persiste na mensagem FINAL (não num toast que é sobrescrito).
     # EMU-04: sem jargão ("storm -71"/nome de script) — o leigo é mandado para
-    # o botão "Aplicar correções" da aba Sistema.
+    # um BOTÃO da aba Sistema, e o teste prende o VÍNCULO, não a palavra.
+    #
+    # CORRIGIDO em 26/08/2026: esta linha prendia o rótulo "Aplicar correções"
+    # letra por letra. A leva de 26/08 renomeou o botão para "Consertar
+    # problemas conhecidos" no `main.glade` — o renomeio estava CERTO (o rótulo
+    # velho não dizia o que o botão faz), e o teste ficou vermelho acusando a
+    # melhora. É o mesmo defeito de forma que esta casa nomeia: a régua confunde
+    # a PALAVRA com o ATO. Agora ela lê o rótulo do glade, que é o dono único.
     assert "travar" in msg
-    assert "Aplicar correções" in msg
+    assert _rotulo_do_botao_de_consertar() in msg, (
+        f"a mensagem manda a pessoa para um botão que não existe na tela: {msg!r}"
+    )
     assert "storm" not in msg
 
 

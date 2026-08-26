@@ -59,20 +59,54 @@ def test_modo_escolhido_por_ela_nao_e_sobrescrito(tmp_path: Path) -> None:
     assert _le(fps)["mode"] == escolha
 
 
-def test_coop_local_sai_de_tras_do_perfil_de_navegacao(tmp_path: Path) -> None:
-    """Prioridade 45 perdia para `navegacao` (50), que casa a janela da Steam."""
+def test_o_ramo_do_coop_local_esta_aposentado_e_relata(tmp_path: Path) -> None:
+    """NOTA DATADA — 26/08/2026: o ramo `coop_local` desta migração aposentou.
+
+    Aqui estava `test_coop_local_sai_de_tras_do_perfil_de_navegacao`, que
+    escrevia um `coop_local` em prioridade 45 e exigia que a migração o
+    levasse a 75 ou mais — porque 45 perdia para a `navegacao` (50), que casa
+    a janela do cliente Steam.
+
+    A prioridade nova vinha do ASSET `assets/profiles_default/coop_local.json`,
+    e o asset foi PODADO nesta data, a pedido dela (*"em termos de perfis de
+    jogo vamos manter os que temos ativos apenas"* — nenhum dos três podados
+    estava ativo no disco dela). Sem asset não há de onde copiar prioridade, e
+    inventar um número no perfil de alguém é o produto escolhendo por ela.
+
+    O que a migração passa a fazer é RELATAR, e é isso que este teste trava.
+    Migração muda é decisão apagada em silêncio: quem tiver um `coop_local`
+    velho no disco continua em 45, atrás do perfil de navegação, e sem esta
+    linha no journal ninguém descobre por quê.
+    """
+    import structlog.testing
+
     coop = _escreve(tmp_path, "coop_local", {"name": "Co-op local", "priority": 45,
                                              "mode": {"kind": "gamepad"}})
 
-    loader.migrate_modo_jogo_nos_presets(dest_dir=tmp_path)
+    with structlog.testing.capture_logs() as registros:
+        loader.migrate_modo_jogo_nos_presets(dest_dir=tmp_path)
 
-    assert _le(coop)["priority"] >= 75, (
-        "co-op precisa vencer o perfil que casa a janela do cliente Steam"
+    assert _le(coop)["priority"] == 45, (
+        "a migração aposentada escreveu prioridade sem asset de onde copiá-la"
+    )
+    assert [
+        r for r in registros
+        if r.get("event") == "migracao_aposentada_sem_asset"
+        and r.get("arquivo") == "coop_local.json"
+    ], (
+        "a migração virou no-op SILENCIOSO. Eventos vistos: "
+        f"{sorted({str(r.get('event')) for r in registros})}"
     )
 
 
 def test_prioridade_ajustada_por_ela_e_preservada(tmp_path: Path) -> None:
-    """Qualquer número diferente do de fábrica antigo é escolha dela."""
+    """Qualquer número diferente do de fábrica antigo é escolha dela.
+
+    Desde a poda de 26/08/2026 há uma segunda razão para este perfil não ser
+    tocado (não há asset de onde copiar), e as duas levam ao mesmo lugar: o
+    número dela fica. O teste continua porque a primeira razão é a que vale se
+    o asset voltar algum dia.
+    """
     coop = _escreve(tmp_path, "coop_local", {"name": "Co-op local", "priority": 92,
                                              "mode": {"kind": "gamepad"}})
 

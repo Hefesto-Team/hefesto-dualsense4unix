@@ -44,6 +44,7 @@ Arrancar a cura:
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -62,6 +63,9 @@ DOCTOR = RAIZ / "scripts" / "doctor.sh"
 #: Os três ajudantes que PERGUNTAM se há checkout. Uma frase de conselho que
 #: cite o instalador tem de passar por um deles — ou estar dentro do corpo de
 #: um deles, que é onde o nome do arquivo pode aparecer cru.
+#: A frase que NÃO diz o gesto — o último degrau da escada da BG-06b.
+_CONSELHO_GENERICO = "atualize o Hefesto pelo mesmo caminho por onde você o instalou"
+
 AJUDANTES = (
     "esta_instalacao_e_um_checkout",
     "conselho_de_instalacao",
@@ -82,9 +86,15 @@ def _layout_de_pacote(tmp_path: Path) -> Path:
     de `dirname "${BASH_SOURCE[0]}"/..` — responde a verdade sozinho.
     """
     destino = tmp_path / "pacote"
-    (destino / "scripts").mkdir(parents=True)
-    shutil.copy2(DOCTOR, destino / "scripts" / "doctor.sh")
-    return destino / "scripts" / "doctor.sh"
+    copia = destino / "scripts" / "doctor.sh"
+    if copia.is_file():
+        # A mesma cena é montada mais de uma vez no mesmo `tmp_path` (o gesto e
+        # o formato são duas perguntas ao MESMO disco). Remontar do zero
+        # apagaria o `install.sh` que outra cena plantou de propósito.
+        return copia
+    copia.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(DOCTOR, copia)
+    return copia
 
 
 def _rodar(
@@ -530,4 +540,298 @@ class TestAsDuasCopiasNaoPodemDivergir:
         assert '[[ -f "${ROOT_DIR}/install.sh" ]]' in fonte, (
             "o doctor deixou de perguntar pelo arquivo e voltou a presumir o "
             "formato"
+        )
+
+
+# ---------------------------------------------------------------------------
+# BG-06b (26/08/2026) — O GESTO GANHA NOME, E AS DUAS CÓPIAS CONTINUAM IGUAIS
+# ---------------------------------------------------------------------------
+
+#: Os cinco formatos que passaram a ter gesto com nome, mais os dois extremos
+#: que já existiam. A genérica deixou de ser a única resposta de fora do
+#: checkout e virou o ÚLTIMO DEGRAU — quem não tem dono (AppImage, `pip
+#: install --user`, `make install` à mão) continua recebendo ela, e isso é
+#: correto: gesto errado é pior que gesto vago.
+FORMATOS_NOMEADOS = ("flatpak", "arch", "debian", "fedora", "nix")
+
+
+def _dubles_de_gerenciador(tmp_path: Path, dono: str | None) -> str:
+    """Um diretório de `PATH` com `pacman`/`dpkg`/`rpm` — só um responde `0`.
+
+    Os três existem SEMPRE, e é isso que dá mordida: se a detecção passar a
+    responder pelo `command -v` em vez de pela resposta do gerenciador, ela
+    passa a acertar por acaso numa máquina Arch e a errar em todas as outras.
+    Aqui as três máquinas convivem no mesmo `PATH` e só o dono diz sim.
+    """
+    binarios = {"arch": "pacman", "debian": "dpkg", "fedora": "rpm"}
+    pasta = tmp_path / f"bin-{dono or 'ninguem'}"
+    pasta.mkdir(exist_ok=True)
+    for formato, nome in binarios.items():
+        alvo = pasta / nome
+        alvo.write_text(
+            f"#!/usr/bin/env bash\nexit {0 if formato == dono else 1}\n",
+            encoding="utf-8",
+        )
+        alvo.chmod(0o755)
+    return str(pasta)
+
+
+def _cena_do_formato(
+    tmp_path: Path, formato: str
+) -> tuple[Path, str, dict[str, str]]:
+    """`(doctor, caminho a interrogar, ambiente)` para um formato.
+
+    Cada cena monta o DISCO do formato, não uma variável que o anuncie: o
+    layout sem `install.sh`, o marcador que o flatpak monta, o caminho dentro
+    do `/nix/store`, o gerenciador que assume o arquivo. É a mesma disciplina
+    do resto desta bancada — o mesmo arquivo, discos diferentes.
+    """
+    sem_marca = str(tmp_path / "sem-flatpak-info")
+    base = {
+        "HEFESTO_MARCA_SANDBOX": sem_marca,
+        "HEFESTO_MARCA_CONTAINER": str(tmp_path / "sem-containerenv"),
+        "FLATPAK_ID": "",
+        "SNAP": "",
+        "PATH": f"{_dubles_de_gerenciador(tmp_path, None)}:{os.environ.get('PATH', '')}",
+    }
+    if formato == "checkout":
+        return DOCTOR, "", base
+    pacote = _layout_de_pacote(tmp_path)
+    if formato == "flatpak":
+        marca = tmp_path / "flatpak-info-de-mentira"
+        marca.write_text("[Application]\n", encoding="utf-8")
+        return pacote, "", {**base, "HEFESTO_MARCA_SANDBOX": str(marca)}
+    if formato == "nix":
+        return pacote, "/nix/store/abc123-hefesto/share/scripts/doctor.sh", base
+    if formato in {"arch", "debian", "fedora"}:
+        caminho = _dubles_de_gerenciador(tmp_path, formato)
+        return pacote, "", {**base, "PATH": f"{caminho}:{os.environ.get('PATH', '')}"}
+    return pacote, "", base  # desconhecido
+
+
+def _gesto_do_doctor(tmp_path: Path, formato: str) -> str:
+    doctor, alvo, ambiente = _cena_do_formato(tmp_path, formato)
+    proc = _rodar(doctor, f'_gesto_de_atualizar "{alvo}"', ambiente=ambiente)
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout
+
+
+def _formato_visto_pelo_doctor(tmp_path: Path, formato: str) -> str:
+    doctor, alvo, ambiente = _cena_do_formato(tmp_path, formato)
+    proc = _rodar(doctor, f'_formato_desta_instalacao "{alvo}"', ambiente=ambiente)
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout
+
+
+def _gesto_do_produto(tmp_path: Path, formato: str) -> str:
+    """A cópia em Python, no mesmo disco de mentira."""
+    from hefesto_dualsense4unix.integrations import storm_doctor as sd
+
+    sem_marca = tmp_path / "sem-flatpak-info"
+    marca = sem_marca
+    raiz = tmp_path / "pacote" / "scripts" / "doctor.sh"
+    dono: str | None = None
+    if formato == "flatpak":
+        marca = tmp_path / "flatpak-info-de-mentira"
+        marca.write_text("[Application]\n", encoding="utf-8")
+    elif formato == "nix":
+        raiz = Path("/nix/store/abc123-hefesto/share/scripts/doctor.sh")
+    elif formato in {"arch", "debian", "fedora"}:
+        dono = formato
+    return sd.gesto_de_atualizar(
+        e_checkout=(formato == "checkout"),
+        marca_flatpak=marca,
+        raiz_do_codigo=raiz,
+        consultar_dono=lambda _alvo: dono,
+    )
+
+
+class TestOGestoTemNomeEAsDuasCopiasNaoDivergem:
+    """BG-06b — a frase honesta que não dizia o gesto.
+
+    *"atualize o Hefesto pelo mesmo caminho por onde você o instalou"* é
+    verdadeira em todo formato e não ajuda em nenhum: quem instalou por Flatpak
+    recebia uma paráfrase de "se vire". O gesto agora tem nome, e o nome sai de
+    uma MEDIÇÃO do disco.
+
+    Arrancar a cura — devolver a genérica em todo ramo do `_gesto_de_atualizar`
+    ou do `GESTO_DE_ATUALIZAR` — faz `test_o_gesto_e_nomeado_por_formato`
+    reprovar nomeando cada um dos cinco formatos que voltou a ficar mudo.
+    """
+
+    @pytest.mark.parametrize("formato", FORMATOS_NOMEADOS)
+    def test_o_gesto_e_nomeado_por_formato(
+        self, tmp_path: Path, formato: str
+    ) -> None:
+        visto = _formato_visto_pelo_doctor(tmp_path, formato)
+        assert visto == formato, (
+            f"o exame não reconheceu o formato {formato!r} (viu {visto!r}) — "
+            "a detecção olha o disco: o `install.sh` ao lado, o "
+            "`/.flatpak-info`, o `/nix/store`, o gerenciador que assume o "
+            "arquivo."
+        )
+
+        do_doctor = _gesto_do_doctor(tmp_path, formato)
+        do_produto = _gesto_do_produto(tmp_path, formato)
+
+        assert do_doctor != _CONSELHO_GENERICO, (
+            f"o formato {formato!r} voltou a receber a frase que não diz o "
+            f"gesto: {do_doctor!r}"
+        )
+        assert do_doctor == do_produto, (
+            "a aba Sistema e o exame passaram a dizer coisas diferentes para a "
+            f"MESMA pessoa ({formato}):\n  GUI....: {do_produto!r}\n"
+            f"  doctor.: {do_doctor!r}"
+        )
+        assert do_doctor.startswith("rode "), (
+            f"o gesto de {formato!r} deixou de ser um GESTO: {do_doctor!r}. Ele "
+            "entra no MESMO lugar da frase onde entrava 'rode ./install.sh', e "
+            "uma oração inteira ali quebra a gramática de quem a hospeda."
+        )
+
+    def test_o_formato_sem_dono_continua_recebendo_a_generica(
+        self, tmp_path: Path
+    ) -> None:
+        """A régua sabe RECUSAR — e este é o degrau que prova a honestidade.
+
+        AppImage e `pip install --user` não são de gerenciador nenhum. Chutar
+        `apt upgrade` para eles só porque a máquina é Debian seria trocar um
+        conselho vago por um ERRADO, que é pior. Sem esta metade, uma detecção
+        que respondesse "debian" para tudo passaria nos cinco testes acima.
+        """
+        assert _formato_visto_pelo_doctor(tmp_path, "desconhecido") == "desconhecido"
+        assert _gesto_do_doctor(tmp_path, "desconhecido") == _CONSELHO_GENERICO
+        assert _gesto_do_produto(tmp_path, "desconhecido") == _CONSELHO_GENERICO
+
+    def test_no_checkout_nada_mudou(self, tmp_path: Path) -> None:
+        """A cura não podia piorar o caso que já funcionava — o dela."""
+        assert _formato_visto_pelo_doctor(tmp_path, "checkout") == "checkout"
+        assert _frase(DOCTOR, "conselho_de_instalacao") == "rode ./install.sh"
+        assert (
+            _frase(DOCTOR, "conselho_de_instalacao --native")
+            == "rode ./install.sh --native"
+        )
+
+
+# ---------------------------------------------------------------------------
+# O APARTE — a armadilha medida em 25/08, conferida RENDERIZANDO
+# ---------------------------------------------------------------------------
+
+#: As frases hospedeiras: as que interpolam o gesto, o aparte, ou os dois. A
+#: extração é do fonte para que nenhuma escape — foi assim que a redação de
+#: oração inteira quebrou sete de uma vez, e no fonte isso não aparecia.
+_HOSPEDEIRA = re.compile(r'^\s*(?:warn|fail|info|pass)\s+"(.*)"\s*$')
+
+#: Nome de variável citado por uma frase hospedeira (`${x}` ou `${x:-y}`).
+_VARIAVEL_CITADA = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)")
+
+#: O que pôr no lugar de um `${vizinho}` que não é o gesto nem o aparte. O
+#: valor não importa — importa que exista, porque o `doctor.sh` roda com
+#: `set -u` e o que interessa aqui é a JUNÇÃO entre o gesto e o aparte.
+_VALOR_DO_VIZINHO = "…"
+
+
+def _hospedeiras() -> list[tuple[int, str]]:
+    achadas: list[tuple[int, str]] = []
+    for numero, linha in enumerate(DOCTOR.read_text(encoding="utf-8").splitlines(), 1):
+        casa = _HOSPEDEIRA.match(linha)
+        if casa is None:
+            continue
+        texto = casa.group(1)
+        if "so_no_checkout" in texto or "conselho_de_instalacao" in texto:
+            achadas.append((numero, texto))
+    return achadas
+
+
+def _renderizar(doctor: Path, ambiente: dict[str, str]) -> list[str]:
+    """As frases hospedeiras PINTADAS, não lidas.
+
+    "Renderize lado a lado, não leia o fonte" é a lição de 25/08/2026: o
+    aparte já vem com o espaço na frente, e um aparte que comece por pontuação
+    sai como "install.sh ; opt-out". No fonte isso é invisível.
+    """
+    frases = _hospedeiras()
+    citadas = {
+        nome
+        for _n, texto in frases
+        for nome in _VARIAVEL_CITADA.findall(texto)
+        if not nome.startswith("_")
+    }
+    prelude = "".join(f'{nome}="{_VALOR_DO_VIZINHO}"\n' for nome in sorted(citadas))
+    corpo = "\n".join(f'printf "%s\\n" "{t}"' for _n, t in frases)
+    proc = subprocess.run(
+        ["bash", "-c", f'set --; source "$DOCTOR_SH"\n{prelude}{corpo}'],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+        env={**os.environ, "DOCTOR_SH": str(doctor), **ambiente},
+    )
+    linhas = proc.stdout.splitlines()
+    assert len(linhas) == len(frases), (
+        f"nem toda frase renderizou ({len(linhas)} de {len(frases)}): "
+        f"{proc.stderr[-800:]}"
+    )
+    return linhas
+
+
+def _defeitos_de_junta(frase: str) -> list[str]:
+    """Os pedaços de `frase` que denunciam uma colagem torta.
+
+    Devolve o TRECHO, não um booleano, para que a comparação com o molde seja
+    possível e para que a reprovação mostre o que apareceu.
+    """
+    achados = [m.group(0) for m in re.finditer(r"\S? ? [;,.)](?: |$)", frase)]
+    achados += [m.group(0) for m in re.finditer(r"\S   ?\S", frase)]
+    if frase.rstrip().endswith(("—", ":", ";")):
+        achados.append(frase.rstrip()[-12:])
+    return achados
+
+
+class TestOAparteNaoQuebraAGramatica:
+    """A armadilha que já custou sete frases, conferida onde ela aparece."""
+
+    @pytest.mark.parametrize("formato", ["checkout", "debian", "desconhecido"])
+    def test_as_frases_renderizadas_nao_tem_junta_torta(
+        self, tmp_path: Path, formato: str
+    ) -> None:
+        doctor, _alvo, ambiente = _cena_do_formato(tmp_path, formato)
+        tortas: list[str] = []
+        for (numero, fonte), pintada in zip(
+            _hospedeiras(), _renderizar(doctor, ambiente), strict=True
+        ):
+            for defeito in _defeitos_de_junta(pintada):
+                # A conta é o DELTA contra o molde, não o total: o `doctor.sh`
+                # tem espaço duplo DELIBERADO em duas frases (um alinhamento e
+                # uma sub-linha indentada), e cobrar o total acusaria as duas
+                # para sempre — o alarme convincente e falso. O que interessa é
+                # o que a INTERPOLAÇÃO acrescentou.
+                if defeito in fonte:
+                    continue
+                tortas.append(f"doctor.sh:{numero}: {defeito!r} em {pintada!r}")
+
+        assert not tortas, (
+            f"frase com a junta torta no formato {formato!r} — o gesto e o "
+            "aparte não colaram:\n  " + "\n  ".join(tortas)
+        )
+
+    def test_o_aparte_continua_sumindo_fora_do_checkout(
+        self, tmp_path: Path
+    ) -> None:
+        """O gesto novo não podia ressuscitar o aparte do repositório.
+
+        `so_no_checkout` guarda o nome de uma flag e o número de um passo DO
+        INSTALADOR. Num `.deb` que agora recebe "rode sudo apt upgrade", esse
+        aparte falaria de um arquivo que a pessoa não tem — o defeito que a
+        BG-06 curou, de volta por outra porta.
+        """
+        doctor, _alvo, ambiente = _cena_do_formato(tmp_path, "debian")
+        pintadas = _renderizar(doctor, ambiente)
+
+        assert any("rode sudo apt upgrade" in p for p in pintadas), (
+            "nenhuma frase recebeu o gesto nomeado — a cena não morde"
+        )
+        assert not [p for p in pintadas if "./install.sh" in p], (
+            "o aparte do checkout voltou a aparecer para quem instalou por "
+            f"pacote: {[p for p in pintadas if './install.sh' in p]}"
         )

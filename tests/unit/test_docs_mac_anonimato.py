@@ -170,7 +170,12 @@ def _partes(m: re.Match[str]) -> tuple[str, str, str]:
     return m.group("oui_col"), m.group("a2"), m.group("b2")
 
 #: Extensões binárias/geradas — sem texto a auditar.
-_SKIP_SUFFIXES = {".png", ".svg", ".mo", ".ico", ".gif", ".jpg", ".jpeg"}
+#: ``.svg`` SAIU daqui em 26/08/2026. Este é o portão AUTORITATIVO, e ele
+#: estava cego para XML de texto puro — junto com o `check_anonymity.sh` e o
+#: `check_endereco_de_radio.py`, isto é, as TRÊS réguas ao mesmo tempo, que é
+#: exatamente o que "duas réguas independentes" existe para impedir. Medido em
+#: 26/08: serial de fábrica dentro de um `<text>` de SVG commitado passava rc=0.
+_SKIP_SUFFIXES = {".png", ".mo", ".ico", ".gif", ".jpg", ".jpeg"}
 
 
 def _conteudo(path: Path) -> bytes | None:

@@ -137,7 +137,7 @@ def test_resposta_torta_nao_derruba_a_traducao(resposta: Any) -> None:
     assert frase_da_recusa_do_mouse(resposta) == RECUSA_SEM_MOTIVO
 
 
-def test_a_recusa_e_a_falta_de_resposta_sao_TEXTOS_DIFERENTES() -> None:  # noqa: N802  # noqa-acento: nome de teste em maiúsculas para destacar o ponto
+def test_a_recusa_e_a_falta_de_resposta_sao_TEXTOS_DIFERENTES() -> None:  # noqa: N802  # nome de teste em maiúsculas para destacar o ponto, sem acento (noqa-acento)
     """O defeito era um texto só para as duas coisas."""
     assert RECUSA_SEM_MOTIVO != SEM_RESPOSTA_DO_HEFESTO
     for motivo in BLOQUEIO_DO_MOUSE_EM_PORTUGUES.values():

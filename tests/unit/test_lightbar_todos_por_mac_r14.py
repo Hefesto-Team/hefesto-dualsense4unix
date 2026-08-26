@@ -127,6 +127,23 @@ def _draft(auto: bool = True) -> draft_mod.DraftConfig:
     return draft_mod.DraftConfig.from_profile(perfil)
 
 
+def _aceitou(uniq: str | None) -> dict[str, Any]:
+    """O corpo de um ``led.set``/``led.player_set`` que ESCREVEU em ``uniq``.
+
+    BG-01 (26/08/2026): a aba passou a ler o CORPO do daemon em vez do ``bool``
+    da ponte estreita. A forma é a do handler (``daemon/ipc_handlers.py``):
+    ``status`` fixo em "ok" por contrato, ``aplicado_em`` com quem recebeu o
+    byte, ``guardado_em`` vazio — que é o que ``_destinos_por_uniq`` devolve
+    para o ``"escreveu"`` do backend, com o controle na mesa. Aqui o que está
+    em julgamento continua sendo o ENDEREÇO de cada pedido, não a frase.
+    """
+    return {
+        "status": "ok",
+        "aplicado_em": [uniq] if uniq else [],
+        "guardado_em": [],
+    }
+
+
 def _host(auto: bool = True, com_conectados: bool = True) -> _Host:
     conectados = {1: UNIQ_1, 2: UNIQ_2} if com_conectados else None
     return _Host(_draft(auto), conectados)
@@ -190,8 +207,8 @@ def test_player_leds_em_todos_nao_desliga_o_auto(
     enviados: list[tuple[Any, str | None]] = []
     monkeypatch.setattr(
         lightbar_actions,
-        "player_leds_set",
-        lambda bits, uniq=None: enviados.append((bits, uniq)) or True,
+        "player_leds_set_detalhado",
+        lambda bits, uniq=None: enviados.append((bits, uniq)) or _aceitou(uniq),
     )
     host = _host()
     host.on_player_leds_preset_p3(None)
@@ -244,11 +261,11 @@ def test_aplicar_em_todos_manda_led_set_por_mac(
     chamadas: list[tuple[Any, Any, str | None]] = []
     monkeypatch.setattr(
         lightbar_actions,
-        "led_set",
+        "led_set_detalhado",
         lambda rgb, brightness=None, uniq=None: chamadas.append(
             (rgb, brightness, uniq)
         )
-        or True,
+        or _aceitou(uniq),
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
@@ -275,11 +292,15 @@ def test_falha_em_um_controle_nao_vira_sucesso(
     outros ainda recebem o pedido)."""
     vistos: list[str | None] = []
 
-    def _led_set(rgb: Any, brightness: Any = None, uniq: str | None = None) -> bool:
+    def _led_set(
+        rgb: Any, brightness: Any = None, uniq: str | None = None
+    ) -> dict[str, Any] | None:
         vistos.append(uniq)
-        return uniq != UNIQ_1
+        # BG-01: `None` é como o daemon "não respondeu" chega pela ponte
+        # `_detalhado` — o mesmo que o `False` de ontem.
+        return None if uniq == UNIQ_1 else _aceitou(uniq)
 
-    monkeypatch.setattr(lightbar_actions, "led_set", _led_set)
+    monkeypatch.setattr(lightbar_actions, "led_set_detalhado", _led_set)
     host = _host()
     host.on_lightbar_apply(None)
     assert vistos == [UNIQ_1, UNIQ_2]
@@ -304,11 +325,11 @@ def test_apagar_em_todos_manda_preto_por_mac(
     chamadas: list[tuple[Any, Any, str | None]] = []
     monkeypatch.setattr(
         lightbar_actions,
-        "led_set",
+        "led_set_detalhado",
         lambda rgb, brightness=None, uniq=None: chamadas.append(
             (rgb, brightness, uniq)
         )
-        or True,
+        or _aceitou(uniq),
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,

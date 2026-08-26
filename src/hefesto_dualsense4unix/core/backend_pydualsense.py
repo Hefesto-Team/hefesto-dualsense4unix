@@ -2417,9 +2417,18 @@ class PyDualSenseController(IController):
         Chamado sob `_io_lock` nos DOIS caminhos em que o primário some: o
         hotplug-out (`_close_handles`) e o `disconnect()` do `reconnect()`. Os
         dois são a mesma coisa vista de longe — o controle dela piscou.
+
+        RESERVA-DO-POSTO-01 §5 — **por que INFO e não debug.** O nível padrão do
+        produto é INFO (`utils/logging_config.py`), e a retomada
+        (`primario_retomou_o_posto`) sempre foi `info`. Com a reserva e a
+        caducidade em `debug`, o journal de uma instalação normal só guardava o
+        caso BEM-SUCEDIDO: perguntar a ele com que frequência o posto se perde
+        seria contar apenas as amostras que confirmam a resposta desejada. Os
+        três eventos carregam a MESMA chave de correlação (`key`), que é o que
+        permite casar reserva → caducou/retomou no mesmo journal.
         """
         self._primario_deposto = (key, self._relogio())
-        logger.debug("primario_deposto_reservado", key=key)
+        logger.info("primario_deposto_reservado", key=key)
 
     def _posto_reservado_de_volta(self) -> str | None:
         """A key do primário deposto, se ele VOLTOU dentro da janela. Senão None.
@@ -2427,6 +2436,12 @@ class PyDualSenseController(IController):
         Também é aqui que a reserva CADUCA: passou de `PRIMARIO_RESERVA_SEC`,
         ela é esquecida — o posto não fica pendurado num controle que ficou na
         gaveta, e o próximo `next(iter(...))` volta a valer sem concorrência.
+
+        A caducidade é `info` pela mesma razão da reserva (ver
+        `_reservar_o_posto_de_primario`): ela é o desfecho ALTERNATIVO da
+        retomada, e um journal que só registra o desfecho bom não mede coisa
+        nenhuma. **A constante `PRIMARIO_RESERVA_SEC` não se mexe aqui** — o
+        valor só se decide depois da bancada, e a bancada é dela.
         """
         reserva = self._primario_deposto
         if reserva is None:
@@ -2434,7 +2449,7 @@ class PyDualSenseController(IController):
         key, quando = reserva
         if self._relogio() - quando >= PRIMARIO_RESERVA_SEC:
             self._primario_deposto = None
-            logger.debug("primario_reserva_caducou", key=key)
+            logger.info("primario_reserva_caducou", key=key)
             return None
         if key not in self._handles or key == self._primary_key:
             return None
@@ -2713,9 +2728,45 @@ class PyDualSenseController(IController):
         # "Qualquer controle conectado". `ds.connected` é o canônico do
         # pydualsense (bool). AUDIT-FINDING-LOG-EXC-INFO-01: default conservador
         # `False` quando o atributo está ausente (estado desconhecido).
+        #
+        # BORDA-DE-QUEDA-01: isto é um AGREGADO, e por isso não serve para
+        # perceber a queda de UM controle quando outro segue de pé — a resposta
+        # continua "sim" e a borda nunca acontece. Quem precisa da borda por
+        # controle usa `alvos_conectados()`, logo abaixo.
         with self._io_lock:
             handles = list(self._handles.values())
         return any(bool(getattr(h, "connected", False)) for h in handles)
+
+    def alvos_conectados(self) -> dict[str, str | None]:
+        """Os controles conectados AGORA, um por handle: `{key: uniq|None}`.
+
+        BORDA-DE-QUEDA-01 — a metade por ALVO do que `is_connected()` só sabe
+        responder no agregado. Com dois ou mais na mesa, a queda de um não muda
+        o `any(...)`: quem observa só o agregado nunca vê a borda, e o controle
+        que caiu some sem uma linha sequer. Comparar dois retornos deste método
+        entre dois tiques dá as duas bordas por controle — quem entrou e quem
+        saiu — porque a queda aparece das DUAS formas possíveis: o handle é
+        podado de `_handles` (`_close_handles`) ou fica lá com
+        `connected=False`.
+
+        A CHAVE é a key interna do handle (MAC ou path de fallback), estável
+        entre tiques e nunca None; o VALOR é o `uniq` público — o MAC
+        normalizado que a GUI, o perfil e o áudio usam, e que é None quando a
+        key é um path sem serial. Precisamos das duas: a key identifica, o uniq
+        endereça.
+
+        Custo: só getattrs baratos sob o `_io_lock`, sem HID I/O — pode rodar a
+        cada tique do probe. Diferente de `describe_controllers()`, não lê
+        bateria nem transporte: quem só quer saber QUEM está na mesa não deve
+        pagar por isso.
+        """
+        with self._io_lock:
+            items = list(self._handles.items())
+        return {
+            key: self._key_to_uniq(key)
+            for key, handle in items
+            if bool(getattr(handle, "connected", False))
+        }
 
     def heal_evdev_if_stale(self) -> bool:
         """Watchdog HID x evdev: se o evdev reader ficou preso num node OBSOLETO
@@ -3730,8 +3781,8 @@ class PyDualSenseController(IController):
         with self._io_lock:
             self._rumble_scale_by_uniq = novo
 
-    def force_rumble_stop(self) -> None:
-        """Para os motores de TODOS os controles com um report de stop (HARM-16).
+    def force_rumble_stop(self, uniq: str | None = None) -> None:
+        """Para os motores com um report de stop (HARM-16) — todos, ou UM.
 
         `set_rumble(0, 0)` com os nossos motores JÁ em 0 (0→0) não muda o
         report — e report que não muda não é escrito (dedup do `sendReport`), de
@@ -3743,9 +3794,22 @@ class PyDualSenseController(IController):
         `_rumble_stop_pending` em cada handle: UM report com flags ligados e
         motores 0, e o ciclo seguinte volta ao neutro. Broadcast deliberado
         (ignora o seletor de alvo): sair de modo para TODO mundo.
+
+        BORDA-DE-QUEDA-01 (26/08/2026): `uniq` restringe a UM controle, e
+        existe porque a borda de um jogador de co-op não é saída de modo — o
+        jogador 3 cai e os outros três continuam jogando. Parar a mesa inteira
+        ali seria trocar um motor preso por três motores mudos no meio da
+        partida. Endereçamento pelo mesmo `_casar_key` do `enviar_release_leds`
+        (aceita o MAC 12-hex do IPC e a key crua do handle); alvo que não casa
+        handle nenhum é NO-OP silencioso — o controle já saiu da mesa, e é
+        exatamente o caso em que não há nada a parar.
         """
         with self._io_lock:
-            handles = list(self._handles.items())
+            if uniq is not None:
+                key = _casar_key(self._handles, uniq)
+                handles = [(key, self._handles[key])] if key is not None else []
+            else:
+                handles = list(self._handles.items())
         for key, handle in handles:
             try:
                 handle.setLeftMotor(0)

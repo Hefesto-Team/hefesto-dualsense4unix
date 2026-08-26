@@ -256,7 +256,7 @@ class DaemonConfig:
     #
     # É uma FONTE (chamável), não uma cópia da chave, e a diferença é o gesto
     # do "Aplicar": o `machine.declare` relê o `maquina.json` e REBINDA
-    # `daemon._maquina` (`ipc_handlers.py:4858`), então uma cópia tirada no boot
+    # `daemon._maquina` (`ipc_handlers.py:5246`), então uma cópia tirada no boot
     # ficaria velha no instante exato em que ela acabou de escolher — e o teto
     # novo só valeria no próximo início do Hefesto. Com a fonte, o próximo
     # cálculo de vibração já lê a declaração nova, sem tique nem invalidação.
@@ -1187,47 +1187,51 @@ class Daemon:
         ativação vai com `origin="system"`: sair do nativo não é escolha nova
         de perfil e NÃO regrava a intenção manual.
         """
-        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
         from hefesto_dualsense4unix.utils.session import load_last_profile
 
         name = self.store.active_profile or load_last_profile()
         if not name:
             return
-        manager = ProfileManager(
-            controller=self.controller,
+        # A-FÁBRICA-COM-UM-CLIENTE-01/E1 (26/08/2026): esta rota montava o
+        # gerente À MÃO e entregava SEIS dos sete appliers — faltava o
+        # `rumble_passthrough_applier`, e applier ausente NÃO levanta: a seção
+        # `rumble.passthrough` era ignorada em silêncio, com a ativação
+        # respondendo sucesso. O efeito é o dela: com o Modo Nativo ligado ela
+        # testa os motores pela aba Rumble (o "Aplicar" FIXA a vibração em
+        # `config.rumble_active`) e desliga o Modo Nativo — gatilhos, LEDs,
+        # máscara do vpad, política de vibração, alto-falante e microfone
+        # voltam ao que o perfil manda; a vibração do JOGO, não, porque a
+        # fixação continua de pé e `apply_game_rumble` ignora o FF do jogo.
+        # A cura é vir da FÁBRICA, que é a lista única dos sete: uma lista à
+        # mão aqui foi exatamente como esta rota derivou, duas vezes.
+        # Herdadas, e as duas continuam valendo:
+        # - PERFIL-REESCRITO-NA-PARTIDA-01 (05/08/2026), item 6: máscara do
+        #   vpad, política de rumble e volume do alto-falante — as três seções
+        #   que esta rota já perdeu uma vez, e que a fábrica agora garante;
+        # - PERFIL-GUARDA-O-MIC-01 (18/08/2026): o `origin="system"` faz o
+        #   volume do microfone voltar e o mudo NÃO (MIC-GRAVACAO-01).
+        #
+        # O `mode_applier` vai EMBRULHADO, e o embrulho é a nota datada da
+        # decisão que estava aqui: a FEAT-PROFILE-MODE-01 tirou o applier
+        # inteiro porque um `last_profile` com `mode.kind=native` seria
+        # religado na hora (o `_native_mode` já é False quando chegamos
+        # aqui — `set_native_mode` o zera antes do reapply), e sair do
+        # nativo viraria um laço. Aquilo continua verdade e continua
+        # barrado; o que não se justifica é o preço colateral — perder
+        # `gamepad`/`desktop` e a reversão do modo por causa do caso
+        # `native`. O embrulho barra SÓ o `native`, e é o único desvio
+        # NOMEADO que a fábrica aceita.
+        #
+        # `getattr` no embrulho pelo mesmo motivo das outras rotas
+        # (`subsystems/autoswitch.py`, `subsystems/ipc.py`): este método é
+        # chamado desligado da instância por dublês da suíte, e um atributo
+        # ausente não pode derrubar a saída do Modo Nativo — sem o applier,
+        # a seção volta a ser ignorada, que é o comportamento histórico.
+        manager = gerente_do_daemon(
+            self,
             store=self.store,
-            keyboard_device_provider=lambda: getattr(self, "_keyboard_device", None),
-            mouse_applier=self.apply_profile_mouse,
-            suppression_applier=self.apply_profile_suppression,
-            # PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 6: as três
-            # seções que faltavam. Esta rota era a única das quatro que montava
-            # o manager sem elas, e o efeito é o que ela sente ao desligar o
-            # Modo Nativo: gatilhos e LEDs voltam, mas a máscara do vpad, a
-            # política de rumble e o volume do alto-falante do perfil ficam
-            # como o jogo os deixou.
-            #
-            # O `mode_applier` vai EMBRULHADO, e o embrulho é a nota datada da
-            # decisão que estava aqui: a FEAT-PROFILE-MODE-01 tirou o applier
-            # inteiro porque um `last_profile` com `mode.kind=native` seria
-            # religado na hora (o `_native_mode` já é False quando chegamos
-            # aqui — `set_native_mode` o zera antes do reapply), e sair do
-            # nativo viraria um laço. Aquilo continua verdade e continua
-            # barrado; o que não se justifica é o preço colateral — perder
-            # `gamepad`/`desktop` e a reversão do modo por causa do caso
-            # `native`. O embrulho barra SÓ o `native`.
-            #
-            # `getattr` nos três pelo mesmo motivo das outras rotas
-            # (`subsystems/autoswitch.py`, `subsystems/ipc.py`): este método é
-            # chamado desligado da instância por dublês da suíte, e um atributo
-            # ausente não pode derrubar a saída do Modo Nativo — sem o applier,
-            # a seção volta a ser ignorada, que é o comportamento histórico.
             mode_applier=getattr(self, "_mode_applier_ao_sair_do_nativo", None),
-            rumble_policy_applier=getattr(self, "apply_profile_rumble_policy", None),
-            speaker_applier=getattr(self, "apply_profile_speaker", None),
-            # PERFIL-GUARDA-O-MIC-01 (18/08/2026): sair do Modo Nativo reativa o perfil com
-            # `origin="system"` — o volume do microfone volta, o mudo não
-            # (MIC-GRAVACAO-01).
-            mic_applier=getattr(self, "apply_profile_mic", None),
         )
         with contextlib.suppress(Exception):
             manager.activate(name, origin="system")
@@ -2758,7 +2762,7 @@ class Daemon:
         minutos de jogo fechado sem se mexer; quem reverte é a borda de
         processo, porque o disco nunca aprendia a máscara do perfil.
 
-        NOTA DATADA sobre a R-07 (23/07/2026, `subsystems/gamepad.py:2068`):
+        NOTA DATADA sobre a R-07 (23/07/2026, `subsystems/gamepad.py:2093`):
         ela diz que **só gesto manual** escreve a máscara em disco, e curou
         *"ela escolhia Xbox, abria o Sackboy e a flag virava dualsense"*. A
         decisão de 22/08 revira o eixo da MÁSCARA — perfil é gesto dela também,
@@ -4205,6 +4209,23 @@ class Daemon:
         `backend_pydualsense.set_game_authority_provider`). Propaga
         qualquer exceção para o chamador (`_sync_game_signal`), que
         degrada para `unknown` (fail-safe).
+
+        SINAL-DE-JOGO-01/E4 (26/08/2026): a quarta evidência — o PROCESSO do
+        jogo vivo — entra aqui, e é a única que não depende do detector de
+        janela nem do wrapper. **A casa já sabia e o produto não fazia:** a
+        `steam_game_running_appid` responde essa pergunta desde 08/08, o
+        próprio daemon já a chamava no MESMO tique lento (`_sondar_steam_jogo`,
+        ABA-DO-JOGO-01, para a aba da janela) e o sinal de jogo a ignorava.
+
+        **Custo por tique: zero a mais.** A varredura tem memória de 5 s
+        (`VALIDADE_DA_VARREDURA_S`, BG-03) e as duas chamadas do tique caem na
+        mesma foto; o positivo, ao contrário do negativo, é reconfirmado toda
+        vez, então nada aqui vira sticky (veto do módulo `game_signal`).
+
+        **Por que não ler `store.steam_jogo_lido`**, que a sonda já publica:
+        aquele campo GUARDA a última resposta boa quando a sonda falha, e uma
+        evidência que não decai prende a autoridade em `game` para sempre —
+        exatamente o veto do `window_detect_last_class`.
         """
         from hefesto_dualsense4unix.daemon.launch_env import (
             pid_is_alive,
@@ -4212,6 +4233,9 @@ class Daemon:
             read_last_exit_pid,
             read_last_run_marker,
             read_last_run_pid,
+        )
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            steam_game_running_appid,
         )
 
         mono_now = time.monotonic()
@@ -4243,6 +4267,7 @@ class Daemon:
             "marker_pid": marker_pid,
             "exit_marker": exit_marker,
             "exit_pid": exit_pid,
+            "appid_de_jogo_vivo": steam_game_running_appid(),
             "session_open": self._any_game_session_open(),
             "now": time.time(),
         }

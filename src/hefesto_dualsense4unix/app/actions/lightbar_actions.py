@@ -13,11 +13,15 @@ from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions import footer_actions
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, alvo_de_edicao
-from hefesto_dualsense4unix.app.ipc_bridge import led_set, player_leds_set
+from hefesto_dualsense4unix.app.ipc_bridge import (
+    led_set_detalhado,
+    player_leds_set_detalhado,
+)
 from hefesto_dualsense4unix.app.textos_de_aplicacao import (
     alvo_fora_da_mesa,
     coop_manda_nas_luzes,
     frase_de_guardado,
+    frase_do_desfecho,
     modo_nativo_manda_no_output,
 )
 from hefesto_dualsense4unix.utils.i18n import _
@@ -166,6 +170,96 @@ def mensagem_de_secao_fora(resposta: Any) -> str | None:
             secoes=secoes
         )
     return footer_actions._mensagem_de_aplicacao(resposta)
+
+
+def somar_os_corpos(corpos: list[Any]) -> dict[str, Any] | None:
+    """Junta em UM corpo as N respostas de um envio por MAC ("Todos", R-14).
+
+    BG-01 (26/08/2026). Com o alvo em "Todos" esta aba manda um pedido POR
+    CONTROLE — é a R-14/R-17, e é o que faz a cor única vencer a paleta
+    automática sem desligar o automático de ninguém. O daemon responde N
+    vezes; a tela diz UMA frase. Somar é unir ``aplicado_em`` e ``guardado_em``
+    das N respostas, sem repetir MAC e sem perder a ordem em que os controles
+    foram atendidos — o mesmo vocabulário que
+    ``ipc_bridge.destinos_da_aplicacao`` lê, e que
+    ``textos_de_aplicacao.frase_do_desfecho`` decide.
+
+    Somar em vez de olhar só a primeira resposta importa na mesa cheia dela:
+    com dois controles na mesa e um terceiro que caiu, a soma diz *aplicado em
+    2* e *guardado em 1* — escolher uma resposta ao acaso diria uma das duas
+    metades como se fosse a história inteira.
+
+    Devolve ``None`` quando NENHUMA das N respostas veio (daemon desligado,
+    transporte): aí não há corpo a ler, e quem chama cai na frase de sempre.
+    Uma resposta que não é dicionário é ignorada pelo mesmo motivo que
+    ``_corpo_do_daemon`` a descarta — não é o daemon falando.
+
+    ``motivo`` não é somado, e é medido: nem ``led.set`` nem
+    ``led.player_set`` publicam esse campo (``daemon/ipc_handlers.py``, os dois
+    devolvem ``status``/``aplicado_em``/``guardado_em``, mais ``bits`` no
+    segundo). Se um dia publicarem, esta função tem de crescer junto — está
+    escrito aqui de propósito, em vez de descoberto na tela.
+    """
+    aplicado_em: list[str] = []
+    guardado_em: list[str] = []
+    houve_resposta = False
+    for corpo in corpos:
+        if not isinstance(corpo, dict):
+            continue
+        houve_resposta = True
+        aplicado, guardado = ipc_bridge.destinos_da_aplicacao(corpo)
+        for mac in aplicado:
+            if mac not in aplicado_em:
+                aplicado_em.append(mac)
+        for mac in guardado:
+            if mac not in guardado_em:
+                guardado_em.append(mac)
+    if not houve_resposta:
+        return None
+    return {
+        "status": "ok",
+        "aplicado_em": aplicado_em,
+        "guardado_em": guardado_em,
+    }
+
+
+def frase_do_envio(
+    assunto: str,
+    enviado: str,
+    corpo: Any,
+    host: Any,
+    *,
+    coop_aplica: bool = False,
+) -> str:
+    """A frase do gesto decidida pelo CORPO do daemon (BG-01, 26/08/2026).
+
+    **Quem decide é ``textos_de_aplicacao.frase_do_desfecho``, e só ele.** Esta
+    função não lê ``aplicado_em``, não conhece a ordem das razões e não tem
+    opinião sobre ramo nenhum: ela chama o dono da decisão e, no ramo do
+    APLICADO — e só nele —, devolve a frase que esta aba já tinha.
+
+    **Por que a troca de palavra, e por que ela não é preferência.** O ramo do
+    aplicado sai de lá como *"<assunto> aplicado"*, e "aplicada" é uma
+    afirmação que esta aba MEDIU como falsa: LIGHTBAR-BT-RESET-01 (17-18/07,
+    ainda em vigor em 09/08) — por Bluetooth, depois que o daemon adota o
+    controle, o firmware ACEITA E IGNORA as escritas de cor; foram 330 mil
+    escritas ignoradas com a barra apagada. O que o daemon sabe é que o byte
+    saiu no fio, que é exatamente o que "enviada" diz e "aplicada" não. A
+    decisão está registrada em ``_TOAST_COR_ENVIADA``, com a medição; trocar a
+    palavra aqui seria desfazê-la em silêncio.
+
+    **Se o ramo do aplicado mudar de forma lá, esta função para de reconhecê-lo**
+    e a frase de lá aparece na tela com a palavra que esta aba recusa. É um
+    acoplamento REAL, e por isso ele tem régua: ``test_a_regua_do_ramo_aplicado``
+    em ``tests/unit/test_aplicar_verdade_ponte_lightbar.py`` reprova no dia em
+    que as duas formas divergirem, em vez de a divergência sair na tela dela.
+
+    ``coop_aplica`` viaja intacto: só quem escreve os 5 LEDs de jogador o passa
+    ``True`` (``_COOP_LAYER_FIELDS = ("player_leds",)`` no backend), e a cor da
+    lightbar nunca foi governada pelo co-op.
+    """
+    frase = frase_do_desfecho(assunto, corpo, host, coop_aplica=coop_aplica)
+    return enviado if frase.startswith(f"{assunto} aplicado") else frase
 
 
 def nome_do_desenho(bits: tuple[bool, ...] | list[bool]) -> str | None:
@@ -820,9 +914,13 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # `None` nos caminhos que não passam pelo `apply_draft` (led.set), e é
         # o que separa "o Hefesto está desligado" de "a seção de luzes caiu".
         resposta: Any = None
+        # BG-01: o corpo do `led.set`, com `aplicado_em`/`guardado_em`. Fica
+        # `None` na rota COR-04 (`profile.apply_draft`), que publica
+        # `applied`/`failed` e NÃO publica destino — é ele quem separa as duas.
+        corpo: Any = None
         alvos = self._uniqs_conectados() if estado_alvo.uniq is None else []
         if estado_alvo.uniq is None and alvos:
-            ok = self._enviar_led_em_todos(
+            ok, corpo = self._enviar_led_em_todos(
                 self._current_rgb, self._current_brightness, alvos
             )
         elif estado_alvo.uniq is None and draft is not None:
@@ -841,34 +939,51 @@ class LightbarActionsMixin(WidgetAccessMixin):
             # PERFIL-05 (22/07): com um controle selecionado, o MAC viaja no
             # pedido — o daemon aplica SÓ nele (antes: caminho por índice que
             # caía em broadcast quando desalinhava).
-            ok = led_set(
+            corpo = led_set_detalhado(
                 self._current_rgb,
                 brightness=self._current_brightness,
                 uniq=estado_alvo.uniq,
             )
+            # BG-01: `None` é a MESMA resposta que o `led_set` dava como
+            # `False` — daemon sem responder. Ver `ipc_bridge._corpo_do_daemon`.
+            ok = corpo is not None
         if not ok:
             msg = mensagem_de_secao_fora(resposta) or _AVISO_HEFESTO_DESLIGADO
-        else:
-            # MESA-CHEIA-09/E3 + D-9: com o alvo FORA da mesa, o daemon
-            # registra o override e o hotplug o aplica quando ele voltar —
-            # nenhum byte saiu agora. A frase antiga ("Cor enviada ao
-            # controle") era a mesma para os dois casos.
+        elif corpo is not None:
+            # BG-01 (26/08/2026) — A INVERSÃO. Até aqui a frase saía da
+            # HEURÍSTICA do estado da janela (`alvo_fora_da_mesa`,
+            # `modo_nativo_manda_no_output`), que enxerga duas das razões que o
+            # daemon conhece e nenhuma das outras três — e caía na rota que a
+            # bancada mediu em 23/08: mesa vazia, alvo em "Todos", corpo
+            # dizendo ZERO destino, tela dizendo que a cor foi. Agora o corpo
+            # do daemon decide, e as leituras da janela viram a EXPLICAÇÃO
+            # (dentro de `frase_do_desfecho`), nunca mais a decisão.
             #
-            # Conserto 1.3: em Modo Nativo a cor também não sai — a rota sysfs
-            # está desabilitada sob mute e o `0x31` avulso é pulado.
-            #
-            # Conserto 1.5: as duas podem valer JUNTAS (Modo Nativo ligado com
-            # o alvo fora da mesa), e a cadeia if/elif escolhia uma e prometia
-            # a liberação errada. Quem decide a ordem — e quem soma — é o
-            # módulo do vocabulário, num lugar só.
-            #
-            # `coop` fica de fora aqui de propósito, e é medido: a camada do
+            # `coop_aplica` fica no padrão `False`, e é medido: a camada do
             # co-op tem vocabulário de um campo só
             # (`backend_pydualsense._COOP_LAYER_FIELDS = ("player_leds",)`),
             # então ela não governa a COR.
-            assunto = _ASSUNTO_COR.format(pct=pct)
+            msg = frase_do_envio(
+                _ASSUNTO_COR.format(pct=pct),
+                _TOAST_COR_ENVIADA.format(pct=pct),
+                corpo,
+                self,
+            )
+        else:
+            # COR-04, a rota degradada: a cor viaja dentro de um
+            # `profile.apply_draft` parcial, cujo corpo publica `applied` e
+            # `failed` e NÃO publica destino — não há o que ler. Aqui a
+            # heurística continua sendo tudo o que existe, e ela SOMA as
+            # pendências (conserto 1.5), coisa que o ramo sem corpo de
+            # `frase_do_desfecho` não faz. Está relatado como o que sobrou.
+            #
+            # MESA-CHEIA-09/E3 + D-9: com o alvo FORA da mesa, o daemon
+            # registra o override e o hotplug o aplica quando ele voltar —
+            # nenhum byte saiu agora. Conserto 1.3: em Modo Nativo a cor também
+            # não sai — a rota sysfs está desabilitada sob mute e o `0x31`
+            # avulso é pulado.
             msg = frase_de_guardado(
-                assunto,
+                _ASSUNTO_COR.format(pct=pct),
                 alvo_ausente=alvo_fora_da_mesa(self),
                 nativo=modo_nativo_manda_no_output(self),
             ) or _TOAST_COR_ENVIADA.format(pct=pct)
@@ -936,11 +1051,13 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # `_aplicar_cor_no_controle` — "Apagar" é aplicar a cor preta e mente
         # pelo mesmo motivo.
         resposta: Any = None
+        # BG-01: idem `_aplicar_cor_no_controle` — o corpo do `led.set`.
+        corpo: Any = None
         alvos = self._uniqs_conectados() if estado_alvo.uniq is None else []
         if estado_alvo.uniq is None and alvos:
             # R-14: apagar é aplicar a cor única preta — mesma rota por-MAC do
             # "Aplicar", sem desligar a paleta automática de ninguém.
-            ok = self._enviar_led_em_todos((0, 0, 0), None, alvos)
+            ok, corpo = self._enviar_led_em_todos((0, 0, 0), None, alvos)
         elif estado_alvo.uniq is None and draft is not None:
             resposta = ipc_bridge.apply_draft_detalhado(
                 {
@@ -958,16 +1075,24 @@ class LightbarActionsMixin(WidgetAccessMixin):
             # abandonou: apagava a lightbar dos QUATRO controles quando ela
             # pediu para apagar a de UM, e ainda derrubava o override por-MAC
             # dos outros.
-            ok = led_set((0, 0, 0), uniq=estado_alvo.uniq)
+            corpo = led_set_detalhado((0, 0, 0), uniq=estado_alvo.uniq)
+            ok = corpo is not None
         if not ok:
             # E2: o "Falha (daemon offline?)" continua palavra por palavra para
             # o daemon REALMENTE offline; com ele vivo, quem fala é a seção.
             msg = mensagem_de_secao_fora(resposta) or "Falha (daemon offline?)"
-        else:
-            # Conserto 1.5: o quinto gesto entra no mesmo vocabulário dos
-            # outros quatro (ver `_ASSUNTO_APAGAR`). `coop` fica de fora pelo
-            # mesmo motivo medido do "Aplicar": a camada do co-op só governa
+        elif corpo is not None:
+            # BG-01: o quinto gesto de saída da aba passa a decidir pelo corpo
+            # do daemon, como os outros. `coop_aplica` fica de fora pelo mesmo
+            # motivo medido do "Aplicar": a camada do co-op só governa
             # `player_leds`, nunca a cor.
+            msg = frase_do_envio(
+                _ASSUNTO_APAGAR, _TOAST_LIGHTBAR_APAGADA, corpo, self
+            )
+        else:
+            # COR-04: ver o comentário homônimo em `_aplicar_cor_no_controle`.
+            # Conserto 1.5: o quinto gesto entra no mesmo vocabulário dos
+            # outros quatro (ver `_ASSUNTO_APAGAR`).
             msg = frase_de_guardado(
                 _ASSUNTO_APAGAR,
                 alvo_ausente=alvo_fora_da_mesa(self),
@@ -1076,7 +1201,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         rgb: tuple[int, int, int],
         brightness: float | None,
         alvos: list[str],
-    ) -> bool:
+    ) -> tuple[bool, dict[str, Any] | None]:
         """``led.set`` por MAC em cada controle conectado (R-14).
 
         "Todos" deixa de ser um broadcast sem dono: cada controle recebe o
@@ -1089,21 +1214,29 @@ class LightbarActionsMixin(WidgetAccessMixin):
         Sucesso só quando TODOS aceitaram: um controle que ficou de fora é
         falha visível, não silêncio. Sem curto-circuito — o `and` preguiçoso
         pularia os controles seguintes na primeira falha.
+
+        BG-01 (26/08/2026): devolve ``(ok, corpo)``. O ``ok`` é o de sempre —
+        ``None`` do daemon é o ``False`` de ontem —, e o ``corpo`` é a SOMA das
+        N respostas (:func:`somar_os_corpos`), para a frase sair do que o
+        daemon disse e não do que a janela deduziu.
         """
-        resultados = [
-            bool(led_set(rgb, brightness=brightness, uniq=alvo)) for alvo in alvos
+        corpos = [
+            led_set_detalhado(rgb, brightness=brightness, uniq=alvo)
+            for alvo in alvos
         ]
-        return all(resultados)
+        return all(corpo is not None for corpo in corpos), somar_os_corpos(corpos)
 
     def _enviar_player_leds(
         self, bits: tuple[bool, bool, bool, bool, bool]
-    ) -> tuple[bool, str | None]:
+    ) -> tuple[bool, str | None, dict[str, Any] | None]:
         """Envia o desenho das 5 luzes ao alvo certo (R-14/R-17/PLAYER-01).
 
-        Devolve ``(ok, motivo)``: ``motivo`` preenchido é uma recusa NOSSA,
-        com explicação própria — o chamador a mostra em vez da frase genérica
-        "o Hefesto pode estar desligado", que mandaria a usuária caçar o
-        problema no lugar errado.
+        Devolve ``(ok, motivo, corpo)``: ``motivo`` preenchido é uma recusa
+        NOSSA, com explicação própria — o chamador a mostra em vez da frase
+        genérica "o Hefesto pode estar desligado", que mandaria a usuária caçar
+        o problema no lugar errado. ``corpo`` é a resposta do daemon (BG-01,
+        26/08/2026), somada quando o pedido foi por MAC em vários controles —
+        é dela que sai a frase, e não mais da heurística da janela.
 
         Alvo selecionado → só ele. "Todos" com os conectados conhecidos → um
         pedido POR MAC (override por-uniq vence a numeração automática no
@@ -1123,14 +1256,19 @@ class LightbarActionsMixin(WidgetAccessMixin):
         estado_alvo = self._edit_uniq()
         if estado_alvo.desconhecido:
             # Z2-2: mesma família da recusa acima — motivo próprio, sem IPC.
-            return False, estado_alvo.recusa()
+            return False, estado_alvo.recusa(), None
         if estado_alvo.uniq is not None:
-            return bool(player_leds_set(bits, uniq=estado_alvo.uniq)), None
+            corpo = player_leds_set_detalhado(bits, uniq=estado_alvo.uniq)
+            return corpo is not None, None, corpo
         alvos = self._uniqs_conectados()
         if not alvos:
-            return False, _AVISO_SEM_DESTINATARIO
-        resultados = [bool(player_leds_set(bits, uniq=alvo)) for alvo in alvos]
-        return all(resultados), None
+            return False, _AVISO_SEM_DESTINATARIO, None
+        corpos = [player_leds_set_detalhado(bits, uniq=alvo) for alvo in alvos]
+        return (
+            all(corpo is not None for corpo in corpos),
+            None,
+            somar_os_corpos(corpos),
+        )
 
     def _d4_disable_auto_for_single_color(self) -> bool:
         """D4 fora do ``_persist_leds_update``: desliga o auto no draft.
@@ -1224,10 +1362,15 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # ONDA-U (U9): player-LEDs em "Todos" com o automático ligado também
         # dispara o D4 (mesma composição de toast do on_lightbar_apply).
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok, motivo = self._enviar_player_leds(bits)
+        ok, motivo, corpo = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(bits)
         msg = self._msg_do_desenho(
-            ok=ok, motivo=motivo, descricao=descricao, feito="aplicado", fazer="aplicar"
+            ok=ok,
+            motivo=motivo,
+            corpo=corpo,
+            descricao=descricao,
+            feito="aplicado",
+            fazer="aplicar",
         )
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
@@ -1252,11 +1395,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         # ONDA-U (U9): idem — player-LEDs em "Todos" com auto ligado dispara D4.
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok, motivo = self._enviar_player_leds(bits)
+        ok, motivo, corpo = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(bits)
         msg = self._msg_do_desenho(
             ok=ok,
             motivo=motivo,
+            corpo=corpo,
             descricao=descricao,
             feito="atualizado",
             fazer="atualizar",
@@ -1288,11 +1432,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         # ONDA-U (U9): presets também disparam o D4 em "Todos" com auto ligado.
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok, motivo = self._enviar_player_leds(bits)
+        ok, motivo, corpo = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(pattern)
         msg = self._msg_do_desenho(
             ok=ok,
             motivo=motivo,
+            corpo=corpo,
             descricao=descricao,
             feito="atualizado",
             fazer="atualizar",
@@ -1326,7 +1471,14 @@ class LightbarActionsMixin(WidgetAccessMixin):
         return (states[0], states[1], states[2], states[3], states[4])
 
     def _msg_do_desenho(
-        self, *, ok: bool, motivo: str | None, descricao: str, feito: str, fazer: str
+        self,
+        *,
+        ok: bool,
+        motivo: str | None,
+        corpo: dict[str, Any] | None,
+        descricao: str,
+        feito: str,
+        fazer: str,
     ) -> str:
         """A frase do desenho das 5 luzes — UMA, para os três gestos.
 
@@ -1352,6 +1504,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         quando o controle cai — o toast prometia *"Vale quando o co-op sair"*,
         e sair do co-op não faz valer nada: o controle continua fora. A ordem
         (e a soma) mora agora em `textos_de_aplicacao.frase_de_guardado`.
+
+        **BG-01 (26/08/2026): quem decide passou a ser o CORPO do daemon.** As
+        três razões acima continuam na frase — como EXPLICAÇÃO de um guardado
+        que o daemon declarou, nunca mais como a dedução que o declara. O
+        `coop_aplica=True` é obrigatório aqui e só aqui nesta aba: o co-op
+        governa `player_leds` e nada mais.
         """
         if not ok:
             return motivo or (
@@ -1359,12 +1517,31 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 "estar desligado (ligue na aba Sistema)"
             )
         assunto = f"Desenho das luzes ({descricao})"
-        frase = frase_de_guardado(
-            assunto,
-            alvo_ausente=alvo_fora_da_mesa(self),
-            coop=coop_manda_nas_luzes(self),
-            nativo=modo_nativo_manda_no_output(self),
-        ) or f"Desenho das luzes {feito} — {descricao}"
+        enviado = f"Desenho das luzes {feito} — {descricao}"
+        if coop_manda_nas_luzes(self):
+            # BG-01 + MESA-CHEIA-09: aqui o corpo do daemon NÃO basta, e é
+            # MEDIDO. Com o co-op ligado e o controle na mesa, o byte SAI —
+            # `apply_output_for` escreve o campo cru e devolve `"escreveu"`,
+            # logo o daemon responde `aplicado_em: [uniq]` — e no mesmo
+            # handler o `reassert_resolved_outputs` reescreve o desenho do
+            # co-op por cima, porque a camada dele vence a manual no merge por
+            # campo (R-13). O daemon diz a verdade sobre o BYTE; quem sabe que
+            # ele não FICA é a janela. Deixar o corpo decidir aqui devolveria o
+            # toast que contradiz o rótulo de leitura de volta três centímetros
+            # acima — o defeito que a MESA-CHEIA-09 mediu e curou.
+            #
+            # É a ÚNICA exceção da aba, e ela é do co-op sobre `player_leds`:
+            # a cor e o Modo Nativo o daemon já reporta certo (`"registrado"`
+            # -> `guardado_em`), e por isso os outros dois gestos entregaram a
+            # decisão inteira ao corpo.
+            frase = frase_de_guardado(
+                assunto,
+                alvo_ausente=alvo_fora_da_mesa(self),
+                coop=True,
+                nativo=modo_nativo_manda_no_output(self),
+            ) or enviado
+        else:
+            frase = frase_do_envio(assunto, enviado, corpo, self, coop_aplica=True)
         quantos = self._quantos_recebem_o_desenho()
         if quantos >= 2:
             frase = f"{frase} {_AVISO_MESMO_DESENHO_NOS_QUATRO.format(n=quantos)}"

@@ -369,19 +369,18 @@ def load_mouse_emulation() -> tuple[bool, int | None, int | None]:
     return bool(enabled), speed, scroll_speed
 
 
-def save_mouse_emulation_enabled(enabled: bool) -> None:
-    """Wrapper legado (FEAT-MOUSE-PERSIST-01) — persiste só o toggle.
-
-    Delega para `save_mouse_emulation` sem velocidades (quando ligada, o JSON
-    sai vazio e o load devolve speeds ``None`` → defaults). Preferir a função
-    nova, que grava as velocidades junto.
-    """
-    save_mouse_emulation(enabled)
-
-
-def load_mouse_emulation_enabled() -> bool:
-    """Wrapper legado — retorna só se a emulação foi deixada ligada."""
-    return load_mouse_emulation()[0]
+# `save_mouse_emulation_enabled` e `load_mouse_emulation_enabled` MORAVAM AQUI,
+# e foram PODADOS em 26/08/2026. Os dois eram invólucros legados
+# (FEAT-MOUSE-PERSIST-01) que o próprio docstring mandava não usar: o de gravar
+# delegava a `save_mouse_emulation` sem velocidades, o de ler devolvia
+# `load_mouse_emulation()[0]`. Nenhum caminho de produção os chamava — só
+# `tests/`, e as fixtures que neutralizavam disco patchando o invólucro
+# neutralizavam o que a produção NÃO chama (a produção chama
+# `save_mouse_emulation`), ou seja, não neutralizavam nada.
+# A trava que segurava a poda era "o applet do COSMIC pode importar isto".
+# MEDIDA e CAÍDA em 26/08/2026: o applet é RUST (`packaging/cosmic-applet/src/`
+# — `main.rs`, `app.rs`, `ipc.rs`), fala com o daemon por JSON-RPC no socket, e
+# não há um único `.py` sob `packaging/`. Ele não importa Python nenhum.
 
 
 _KEYBOARD_EMULATION_FLAG_FILE = "keyboard_emulation.flag"
@@ -413,7 +412,8 @@ def load_keyboard_preference() -> bool | None:
 
     ``None`` = **nunca configurada** (arquivo ausente, que é o caso de toda
     instalação anterior a esta sprint). Quem lê no boot mantém, nesse caso, o
-    default histórico da config — ver `load_keyboard_emulation_enabled`.
+    default histórico da config (`DaemonConfig.keyboard_emulation_enabled`,
+    hoje `True`) — ver a precedência em `daemon/lifecycle.py:839-844`.
 
     Tolerante a conteúdo legado/malformado do mesmo jeito que
     `_read_mouse_flag`: arquivo vazio ou JSON inválido conta como "ligada" (era
@@ -441,18 +441,17 @@ def load_keyboard_preference() -> bool | None:
     return True
 
 
-def load_keyboard_emulation_enabled(*, default: bool = True) -> bool:
-    """True se o teclado emulado deve subir; ``default`` quando nunca configurada.
-
-    ASSIMETRIA DELIBERADA com `load_mouse_emulation` (que devolve False para
-    "nunca configurada"): o teclado emulado é ligado desde o
-    FEAT-KEYBOARD-EMULATOR-01 e carrega, além dos atalhos, o teclado virtual do
-    sistema em L3/R3 e as três regiões do touchpad. Um upgrade que o desligasse
-    em silêncio tiraria acessibilidade de quem já a usava. Quem quiser o
-    teclado opt-in passa ``default=False``.
-    """
-    pref = load_keyboard_preference()
-    return default if pref is None else pref
+# `load_keyboard_emulation_enabled` MOROU AQUI, e foi PODADA em 26/08/2026.
+# A ASSIMETRIA DELIBERADA que ela documentava NÃO se apagou junto — ela está
+# viva e é DECISÃO MEDIDA: o teclado emulado nasce LIGADO (carrega os atalhos,
+# o teclado virtual do sistema em L3/R3 e as três regiões do touchpad), ao
+# contrário do mouse, que nasce desligado. Quem a aplica hoje é o piso
+# `DaemonConfig.keyboard_emulation_enabled = True`, e o boot só o sobrescreve
+# quando `load_keyboard_preference()` devolve uma opinião — ver a precedência
+# escrita em `daemon/lifecycle.py:839-844`.
+# A razão da poda: o invólucro somava um default PRÓPRIO a essa precedência, e
+# ninguém em produção o chamava — o boot lê `load_keyboard_preference` direto.
+# Duas fontes para o mesmo default é a forma cara do defeito desta casa.
 
 
 _GAMEPAD_EMULATION_FLAG_FILE = "gamepad_emulation.flag"
@@ -611,30 +610,31 @@ def migrate_coop_optout() -> bool:
         return False
 
 
-def load_coop_enabled() -> bool:
-    """Sempre True — o co-op local não tem mais opt-out (lápide, 06/08/2026).
-
-    COOP-SEM-INTERRUPTOR-01 — NOTA DATADA. Até 06/08/2026 esta função lia
-    `coop_disabled.flag` e um `True` gravado por versão antiga podia deixar a
-    máquina dela sem co-op. O disco deixou de governar: quem manda é o piso do
-    `DaemonConfig.coop_enabled`, e o flag em si é apagado no boot por
-    `migrate_coop_optout`. A função fica de pé porque a assinatura é contrato
-    público (CLI, applet e testes a importam) — e porque uma lápide legível vale
-    mais que um `ImportError` para quem for reabrir esta decisão.
-    """
-    return True
+# `load_coop_enabled` MOROU AQUI, e foi PODADA em 26/08/2026.
+#
+# A DECISÃO MEDIDA que ela guardava CONTINUA VALENDO, e é esta: desde
+# 06/08/2026 (COOP-SEM-INTERRUPTOR-01) o co-op local não tem mais opt-out. Até
+# lá esta função lia `coop_disabled.flag`, e um `True` gravado por versão antiga
+# podia deixar a máquina dela sem co-op. O disco deixou de governar: quem manda
+# é o piso `DaemonConfig.coop_enabled`, e o flag órfão é apagado no boot por
+# `migrate_coop_optout` (chamada em `daemon/lifecycle.py`). Nada disso muda com
+# a poda — o corpo era `return True`, e o piso é quem responde.
+#
+# A RAZÃO ESCRITA PARA MANTÊ-LA ERA FALSA, e por isso foi substituída em vez de
+# preservada: o docstring dizia que a assinatura era "contrato público (CLI,
+# applet e testes a importam)". MEDIDO em 26/08/2026 — a CLI não a importa
+# (nenhum `.py` de `src/` a cita), e o applet do COSMIC é RUST
+# (`packaging/cosmic-applet/src/{main,app,ipc}.rs`), que fala com o daemon por
+# JSON-RPC e não importa Python nenhum. Sobrava `tests/`, que nunca foi caminho.
 
 
 __all__ = [
     "load_autoswitch_locked",
-    "load_coop_enabled",
     "load_gamepad_emulation",
     "load_gamepad_preference",
-    "load_keyboard_emulation_enabled",
     "load_keyboard_preference",
     "load_last_profile",
     "load_mouse_emulation",
-    "load_mouse_emulation_enabled",
     "load_mouse_preference",
     "load_paused_state",
     "read_active_marker",
@@ -646,6 +646,5 @@ __all__ = [
     "save_keyboard_emulation",
     "save_last_profile",
     "save_mouse_emulation",
-    "save_mouse_emulation_enabled",
     "save_paused_state",
 ]

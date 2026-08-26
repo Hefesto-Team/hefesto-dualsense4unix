@@ -91,7 +91,22 @@ def test_ps_long_press_zero_nao_alterna_em_hold() -> None:
     hm.observe({"ps"}, now=2.0)  # segurou 2s
     assert "toggle" not in calls, "long-press desligado não deve alternar no hold"
     hm.observe(set(), now=2.05)  # soltou sem combo
-    assert calls == ["steam"], "PS solo deve abrir a Steam no release"
+
+    # CORRIGIDO em 26/08/2026, e o que mudou foi o PRODUTO, não o teste.
+    # Esta linha exigia `calls == ["steam"]` DEPOIS de um hold de 2,05 s, e com
+    # isso travava a AUSÊNCIA de teto no toque curto — que é o defeito que a
+    # PS-TOQUE-CURTO-01 mandou encarar: com o long-press em 0 (decisão certa,
+    # contra o modo-jogo acidental), nada limitava a duração, e segurar o PS por
+    # ~5 s para RELIGAR o controle abria a Steam na cara dela. O teto entrou em
+    # 700 ms. O que este teste existe para provar — "long-press desligado não
+    # alterna no hold" — continua provado na asserção acima e ficou intacto.
+    assert calls == [], "hold de 2 s passa do teto de 700 ms: não é toque curto"
+
+    # E o toque curto continua abrindo a Steam — sem isto, a cura poderia ter
+    # sido "o botão PS parou de funcionar" e este arquivo aplaudiria.
+    hm.observe({"ps"}, now=10.0)
+    hm.observe(set(), now=10.2)  # 200 ms: um toque humano
+    assert calls == ["steam"], "PS solo deve abrir a Steam no release curto"
 
 
 def test_ps_solo_toque_curto_abre_steam() -> None:

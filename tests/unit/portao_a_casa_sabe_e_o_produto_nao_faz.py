@@ -93,6 +93,10 @@ AS QUATRO ARMADILHAS QUE A VARREDURA ANTERIOR CAIU, e como esta não cai
    anterior CINCO vezes. Aqui, todo literal de texto de ``src/`` é quebrado em
    palavras e cada palavra conta como chamador. É por isso que ``_stop_bt_mic``
    (despachado em ``connection.py``:829) não aparece na lista.
+   Corolário medido em 26/08/2026: uma promessa que ganha chamador de verdade
+   SAI da lista sozinha — foi assim com ``app/fala_do_mapa.py::formata_pt_br``,
+   que virou dono único da vírgula e cuja lápide teve de ser apagada no mesmo
+   commit (``test_nenhuma_lapide_sobreviveu_a_propria_cura``).
 2. **Uso dentro do próprio arquivo.** A regra proposta era "chamador fora do
    próprio arquivo": medi, e ela acusa **846** símbolos, porque a maioria dos
    auxiliares é usada no próprio módulo — e o módulo é produção QUANDO ele é
@@ -101,8 +105,11 @@ AS QUATRO ARMADILHAS QUE A VARREDURA ANTERIOR CAIU, e como esta não cai
    recursão e auto-citação satisfaçam o portão sozinhas).
 3. **Docstring e ``__all__``.** Um símbolo citado só no próprio docstring, ou só
    na lista de reexportação, não é alcançado por ninguém. Ambos são descartados
-   — e é por isso que ``RumbleEngine`` aparece aqui apesar de
-   ``ipc_handlers.py``:2237 afirmar, num comentário, que ele "segue em uso".
+   — e é por isso que ``RumbleEngine`` aparece aqui apesar de DUAS frases de
+   comentário terem afirmado, por meses, que ele "segue em uso" e que uma rota
+   inteira "depende" dele. Este portão foi a primeira coisa da árvore a
+   discordar das duas; as duas foram substituídas pela informação certa (24/08 e
+   26/08/2026), e ele continua aqui. O comentário não é chamador.
 4. **Alvo de atribuição.** ``X = 1`` não é uso de ``X``. Contar o ``ast.Store``
    fazia toda constante se satisfazer com a própria linha de definição.
 
@@ -405,6 +412,17 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "(daemon/main.py:98). Calibração de gesto; afinada por quem mede, não "
         "escolhida por quem usa. MEDIDO em 12/08/2026."
     ),
+    "HEFESTO_DUALSENSE4UNIX_PS_TOQUE_CURTO_TETO_MS": (
+        "O TETO de duração do toque curto do PS "
+        "(integrations/hotkey_daemon.py::_teto_do_toque_curto_do_ambiente). "
+        "Irmã da PS_LONG_PRESS_MS acima e da mesma natureza: calibração de "
+        "gesto, afinada por quem mede. Não abre feature nenhuma — o teto já "
+        "nasce LIGADO em 700 ms, que é o que separa o toque humano (80-250 ms) "
+        "do gesto de religar o controle no rádio (5.038 ms medidos no journal "
+        "dela). Quem não a define recebe o comportamento certo; `=0` desliga o "
+        "teto, que é a escolha de quem quer o comportamento anterior de volta. "
+        "MEDIDO em 26/08/2026 (PS-TOQUE-CURTO-01, E1)."
+    ),
     "HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC": (
         "Intervalo mínimo entre escritas de report de saída "
         "(core/backend_pydualsense.py:214). Número de calibração do transporte, "
@@ -496,7 +514,10 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "três, escrita em daemon/main.py:104 — default da dataclass (True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(daemon/lifecycle.py:1300, na borda que alterna o teclado em runtime). "
+        "(daemon/lifecycle.py:1481-1485, dentro de `set_keyboard_emulation`, na "
+        "borda que alterna o teclado em runtime — o endereço era :1300 e caducou; "
+        "RECONFERIDO em 26/08/2026, quando a frente da poda o mediu de novo "
+        "JUSTAMENTE para saber se podia apagá-lo. Não pode: tem chamador vivo). "
         "Logo a FEATURE tem mão — a env é o atalho de quem quer forçar o degrau "
         "do meio sem gravar decisão nenhuma no disco dela.",
     ),
@@ -604,6 +625,20 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "app/ipc_bridge.py::mic_volume_set": (
+        "MEDIDO em 26/08/2026, e é a SOMBRA de uma cura que chegou. Ela é o "
+        "embrulho `bool` sobre `mic_volume_set_detalhado`, e ficou sem chamador "
+        "de produção no dia em que `controller_card.py` passou a chamar a "
+        "detalhada — que é literalmente o que a lápide de `alvo_honrado` "
+        "prescrevia como cura, e que esta leva executou. O `bool` colapsava "
+        "`sem_fonte`, daemon offline e sem-controle no mesmo `False`; com a "
+        "mesa cheia isso mexia no microfone de OUTRA pessoa devolvendo `True`. "
+        "NÃO É PROMESSA PENDENTE, é resto: o caminho existe e está fiado. O que "
+        "a apaga é a poda, junto com a do `led_set` e a do `player_leds_set`, "
+        "que carregam esta mesma nota. DONO: a próxima leva. O docstring dela "
+        "guarda a tabela das três camadas do microfone (firmware x fonte do "
+        "sistema) e essa medição tem de sobreviver à poda."
+    ),
     "daemon/subsystems/identity.py::reset_identity_registry": (
         "MEDIDO em 12/08/2026. Instrumento de isolamento entre casos: o próprio "
         "docstring diz `APENAS testes — isola estado entre casos`, e o corpo "
@@ -638,6 +673,42 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "propósito, e o docstring explica por quê: por Bluetooth cada "
         "GET_REPORT num controle ocioso estoura o timeout de 5 s do hidp com "
         "EIO. Religá-la seria a regressão, não a cura."
+    ),
+    "integrations/kernel_cmdline.py::plan_cmdline": (
+        "RECLASSIFICADA em 26/08/2026, e esta entrada SUBSTITUI uma que morava "
+        "em `_SEM_CAMINHO_HOJE` afirmando um FATO ERRADO: que *'enquanto o "
+        "shell do install for o dono, este módulo é uma segunda implementação "
+        "da mesma regra em outra linguagem'*. Não existe segunda implementação. "
+        "O instalador IMPORTA este próprio módulo, num heredoc Python do passo "
+        "`3e` (`sys.path.insert(0, root/'src')`, depois `kc.plan_tokens(tokens)` "
+        "e `kc.forbidden_reintroductions(actions)`), e o `install.sh` declara a "
+        "política com todas as letras: *'quem DECIDE é o módulo puro "
+        "integrations/kernel_cmdline.py (100% stdlib, testável); aqui só "
+        "traduzimos o plano'*. A regra tem UM dono, e é este arquivo. "
+        "O que sobra é diferença de FORMA, não de regra, e é por isso que a "
+        "função não é promessa sem caminho: a produção nunca tem o "
+        "`/proc/cmdline` cru na mão — lê tokens do JSON do kernelstub ou da "
+        "linha do GRUB — e por isso chama a irmã `plan_tokens`, que É alcançada. "
+        "Esta é a porta de string crua, irmã do `apply_plan` logo abaixo e da "
+        "mesma espécie: quem tem a linha inteira usa. NÃO foi podada de "
+        "propósito; a nota datada está no docstring dela."
+    ),
+    "profiles/sanidade.py::verificar_perfis_do_disco": (
+        "RECLASSIFICADA em 26/08/2026, e esta entrada SUBSTITUI uma que morava "
+        "em `_SEM_CAMINHO_HOJE` prescrevendo a cura ERRADA: *'o `doctor` chamar "
+        "isto. É a lacuna mais barata desta lista de fechar — uma chamada'*. "
+        "MEDIDO: o doctor JÁ faz o trabalho inteiro, e faz MELHOR. "
+        "`cli/cmd_doctor.py::_linhas_perfis` chama `load_all_profiles()` dentro "
+        "de um `try/except OSError`, e só então `sanidade.verificar_perfis` e "
+        "`sanidade.linhas_de_relatorio`; `_print_bloco_perfis` imprime o bloco "
+        "`== perfis (coerência entre eles) ==` e devolve o achado grave para o "
+        "código de saída. A corrente não está quebrada: ela roda. "
+        "E fiar ESTA conveniência no lugar seria PIORAR o produto — ela não tem "
+        "o `except OSError`, então trocaria a linha *'não deu para ler os "
+        "perfis: <erro>'* por um traceback na cara de quem foi pedir "
+        "diagnóstico justamente porque algo quebrou. É atalho de teste "
+        "(`test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py`:319), com "
+        "nota datada no próprio docstring, e não deve ganhar chamador."
     ),
     "integrations/kernel_cmdline.py::apply_plan": (
         "MEDIDO em 12/08/2026. Instrumento: o docstring diz `SIMULA o plano "
@@ -693,15 +764,17 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "com guarda contra as duas se separarem. Apagar uma delas é decisão "
         "DELA, não deste portão."
     ),
-    "utils/session.py::load_coop_enabled": (
-        "MEDIDO em 12/08/2026. LÁPIDE COM NOTA DATADA — `COOP-SEM-INTERRUPTOR-01`, "
-        "06/08/2026, escrita no próprio docstring: a função lia "
-        "`coop_disabled.flag` e um `True` gravado por versão antiga podia deixar "
-        "a máquina dela sem co-op; hoje devolve `True` sempre. O docstring "
-        "declara por que o corpo fica de pé: a assinatura é contrato público "
-        "que CLI, applet e testes importam, e uma lápide legível vale mais que "
-        "um `ImportError` para quem for reabrir a decisão."
-    ),
+    # `utils/session.py::load_coop_enabled` MOROU AQUI e a entrada SAIU em
+    # 26/08/2026 porque o SÍMBOLO foi podado — não porque a classificação
+    # mudasse. A entrada dizia que o corpo ficava de pé porque "a assinatura é
+    # contrato público que CLI, applet e testes importam". As duas metades da
+    # razão eram falsas, e foram medidas: nenhum `.py` de `src/` a importa (a
+    # CLI inclusive), e o applet do COSMIC é RUST — `packaging/cosmic-applet/`
+    # tem `Cargo.toml` e `src/{main,app,ipc}.rs`, fala JSON-RPC com o daemon, e
+    # não há um único `.py` sob `packaging/`. Sobrava `tests/`, que nunca foi
+    # caminho. A DECISÃO MEDIDA que a lápide guardava (COOP-SEM-INTERRUPTOR-01,
+    # 06/08/2026: o co-op local não tem mais opt-out) continua escrita, com a
+    # data, no lugar onde a função morava, em `utils/session.py`.
     "app/audio_saida.py::estado_do_sono": (
         "MEDIDO em 18/08/2026. LÁPIDE COM NOTA DATADA, e a nota está no próprio "
         "docstring, escrita nesta data. A promessa que a fez nascer é o item 6 "
@@ -815,614 +888,194 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "troca do laço pelo caminho medido, que precisa da bancada dela para "
         "confirmar que a conta baixou no processo vivo. "
     ),
-    # --- 25/08/2026: `integrations/arranjo_da_mesa.py` nasceu nesta madrugada, e ainda não tem tela
-    "integrations/arranjo_da_mesa.py::Contexto": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Entrada": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Face": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Linha": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Mesa": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Motivo": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Movimento": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Mudanca": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Nota": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Opcoes": (  # noqa-acento: nome de símbolo Python, não pode ter acento
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Plano": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::PlanoDosControles": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Razao": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Regra": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::SemEntrada": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Variante": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::Veredito": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
+    # --- `integrations/arranjo_da_mesa.py`: o motor GANHOU TELA em 26/08/2026,
+    # e destas 37 lápides sobraram NOVE. A janela do mapa
+    # (`app/widgets/mapa_da_mesa.py`) passou a montar a `Mesa` por
+    # `mapa_das_portas.mesa_do_motor` e a chamar `julgar` em cada quadrado; com o
+    # módulo alcançado, todo símbolo que ele usa por dentro ganhou chamador de
+    # produção junto. As nove que ficam são as que NADA alcança, nem de fora nem
+    # de dentro: a RECEITA (o que mover para onde), as VARIANTES, o reexame e a
+    # conta de slots. A razão de cada uma está corrigida abaixo.
+    #
+    # A `::Entrada` já havia saído antes, por um motivo do INSTRUMENTO e não do
+    # produto: `app/widgets/calibrar_entradas.py` tem `PALAVRA_DA_ENTRADA =
+    # "Entrada"`, e pela armadilha 1 do topo deste arquivo todo literal de texto
+    # de `src/` é quebrado em PALAVRAS — a palavra num rótulo de tela satisfazia
+    # o símbolo. Fica registrado porque é o tipo de perdão que este portão dá
+    # calado, e quem ler a contagem precisa saber que uma das 37 caiu por isso.
     "integrations/arranjo_da_mesa.py::adaptadores_da_mesa": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::alocacao": (  # noqa-acento: nome de símbolo Python, não pode ter acento
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::caminho_do_hub": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
+        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
+        "do motor que rodava só dentro do mockup "
+        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "de equivalência que rodam o original em `node`. "
+        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
+        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
+        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
+        "quadrado, e 28 lápides deste registro caíram junto. "
+        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
+        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
+        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
+        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
+        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
+        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
+        "onde.py`, e ela ainda não escolheu. "
+        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
+        "dela sobre qual régua vence. "
     ),
     "integrations/arranjo_da_mesa.py::candidatas": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
+        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
+        "do motor que rodava só dentro do mockup "
+        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "de equivalência que rodam o original em `node`. "
+        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
+        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
+        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
+        "quadrado, e 28 lápides deste registro caíram junto. "
+        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
+        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
+        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
+        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
+        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
+        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
+        "onde.py`, e ela ainda não escolheu. "
+        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
+        "dela sobre qual régua vence. "
     ),
     "integrations/arranjo_da_mesa.py::consequencias": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::eh_radio": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::entrada_de_em": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::julgar": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::nota_de": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::ocupada": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::planejar": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
+        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
+        "do motor que rodava só dentro do mockup "
+        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "de equivalência que rodam o original em `node`. "
+        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
+        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
+        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
+        "quadrado, e 28 lápides deste registro caíram junto. "
+        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
+        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
+        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
+        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
+        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
+        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
+        "onde.py`, e ela ainda não escolheu. "
+        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
+        "dela sobre qual régua vence. "
     ),
     "integrations/arranjo_da_mesa.py::plano_dos_controles": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::por_num": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
+        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
+        "do motor que rodava só dentro do mockup "
+        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "de equivalência que rodam o original em `node`. "
+        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
+        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
+        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
+        "quadrado, e 28 lápides deste registro caíram junto. "
+        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
+        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
+        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
+        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
+        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
+        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
+        "onde.py`, e ela ainda não escolheu. "
+        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
+        "dela sobre qual régua vence. "
     ),
     "integrations/arranjo_da_mesa.py::qualidade": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
+        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
+        "do motor que rodava só dentro do mockup "
+        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "de equivalência que rodam o original em `node`. "
+        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
+        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
+        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
+        "quadrado, e 28 lápides deste registro caíram junto. "
+        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
+        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
+        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
+        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
+        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
+        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
+        "onde.py`, e ela ainda não escolheu. "
+        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
+        "dela sobre qual régua vence. "
     ),
     "integrations/arranjo_da_mesa.py::receita": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
+        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
+        "do motor que rodava só dentro do mockup "
+        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "de equivalência que rodam o original em `node`. "
+        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
+        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
+        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
+        "quadrado, e 28 lápides deste registro caíram junto. "
+        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
+        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
+        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
+        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
+        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
+        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
+        "onde.py`, e ela ainda não escolheu. "
+        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
+        "dela sobre qual régua vence. "
     ),
     "integrations/arranjo_da_mesa.py::reexame": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::regiao_do_caminho": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
+        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
+        "do motor que rodava só dentro do mockup "
+        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "de equivalência que rodam o original em `node`. "
+        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
+        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
+        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
+        "quadrado, e 28 lápides deste registro caíram junto. "
+        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
+        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
+        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
+        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
+        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
+        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
+        "onde.py`, e ela ainda não escolheu. "
+        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
+        "dela sobre qual régua vence. "
     ),
     "integrations/arranjo_da_mesa.py::sem_entrada": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
-    "integrations/arranjo_da_mesa.py::todas_as_entradas": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
+        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
+        "do motor que rodava só dentro do mockup "
+        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "de equivalência que rodam o original em `node`. "
+        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
+        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
+        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
+        "quadrado, e 28 lápides deste registro caíram junto. "
+        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
+        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
+        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
+        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
+        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
+        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
+        "onde.py`, e ela ainda não escolheu. "
+        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
+        "dela sobre qual régua vence. "
     ),
     "integrations/arranjo_da_mesa.py::variante_por_id": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
+        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
+        "do motor que rodava só dentro do mockup "
+        "`2026-08-24-ABA-CONEXOES/mockup/mapa-das-portas.html`, com 114 testes "
+        "de equivalência que rodam o original em `node`. "
+        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
+        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
+        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
+        "quadrado, e 28 lápides deste registro caíram junto. "
+        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
+        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
+        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
+        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
+        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
+        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
+        "onde.py`, e ela ainda não escolheu. "
+        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
+        "dela sobre qual régua vence. "
     ),
     # --- 25/08/2026: `integrations/entradas_do_gabinete.py` nasceu nesta
     #     madrugada, e ainda não tem tela que o consuma
-    "integrations/entradas_do_gabinete.py::furo_declarado": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, na CAL-1 da CALIBRAR-AS- "
-        "ENTRADAS-01, cuja tela ela APROVOU vendo o mockup às 03h55. Responde "
-        "o que nenhuma leitura respondia: quais entradas USB EXISTEM, "
-        "**incluindo as vazias** — o nó da entrada existe com `state = not "
-        "attached`, e é isso que torna a calibração possível sem root. ONDE O "
-        "CAMINHO SE PERDE: as telas da calibração (CAL-3 a CAL-7) ficaram "
-        "para a leva seguinte, porque dependem do campo `mapa` que outra "
-        "frente escrevia em paralelo. O QUE O FECHA: a janela de calibração. "
-        "A mordida do agrupamento por `peer` foi refeita por quem coordena: "
-        "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
-        "passa a visitar o buraco ocupado); devolvida, 12 passam. "
-    ),
     # --- 25/08/2026: `integrations/lugar_declarado.py` nasceu nesta madrugada, e ainda não tem tela
     "integrations/lugar_declarado.py::declarar_a_mesa": (
         "MEDIDO em 25/08/2026: a CAL-2 da calibração. Existe para curar um "
@@ -1435,23 +1088,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "de calibração, que é da leva seguinte. O QUE O FECHA: a CAL-3. "
     ),
     # --- 25/08/2026: `integrations/mapa_das_portas.py` nasceu nesta madrugada, e ainda não tem tela
-    "integrations/mapa_das_portas.py::irmas_de": (
-        "NASCEU em 25/08/2026, na frente G3, e nasce COM a lápide de propósito. "
-        "É a fonte do `Entrada.par` que `arranjo_da_mesa.nota_de` precisa para "
-        "disparar as penalidades de vizinho rádio (-30 teclado, -45 bluetooth, "
-        "-40 mouse) — sem ela o motor publica juízo otimista demais, dizendo "
-        "'aqui fica bem' onde deveria dizer 'aqui não'. "
-        "POR QUE ACRESCENTAR EM VEZ DE EDITAR `vizinhas_de_verdade`: dois "
-        "batedores mandaram coisas opostas sobre a mesma função, e a que já "
-        "existe tem consumidor e teste — mexer nela para servir a um segundo "
-        "propósito é como se perde a primeira. "
-        "ONDE O CAMINHO SE PERDE: quem a consome é a G5, a janela do desenho "
-        "que julga cada quadrado, e a G5 não saiu nesta leva — ela espera a "
-        "medição das duas réguas do arranjo (decisão dela de 25/08) e o olho "
-        "dela sobre a janela do mapa, que ninguém nunca viu. "
-        "O QUE O FECHA: `mapa_da_mesa.py` chamar `irmas_de(mapa, entradas)` ao "
-        "montar a `Mesa`. Uma linha, quando a G5 sair."
-    ),
     "integrations/mapa_das_portas.py::incoerencias": (
         "MEDIDO em 25/08/2026: as quatro funções de junção da CONEXOES- "
         "MAPA-2D-01 (`portas_livres`, `vizinhas_de_verdade`, `incoerencias`, "
@@ -1476,49 +1112,15 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`mesa_de_radio.vizinhancas_apertadas`, porque a porta-filha (o "
         "extensor) muda o cálculo de vizinhança. "
     ),
-    # --- 25/08/2026: O CATÁLOGO DE ORDENS DE SERVIÇO NASCEU SEM A SEÇÃO
-    # ORDEM-DE-SERVIÇO-01. O módulo inteiro é a metade de baixo de uma sprint
-    # cuja metade de cima é TELA, e tela não fecha sem o olho dela
-    # (PROVA-DE-TELA-01). As seis regras estão medidas e com bateria própria
-    # (`test_ordens_da_mesa.py`, `test_o_selo_de_procedencia_nunca_falta.py`,
-    # `test_a_ordem_confirma_que_ela_moveu.py` e
-    # `test_o_estado_bom_nao_e_o_estado_vazio.py`); o que não existe é o
-    # chamador.
-    #
-    # ONDE O CAMINHO SE PERDE, para todo símbolo deste bloco: nem
-    # `integrations/exame_da_mesa.py` (ORDEM-4: o campo `Item.ordem` e a chave
-    # nova em `como_dicionario`) nem `app/actions/config/secao_exame.py`
-    # (ORDEM-5: os cards e as duas zonas) foram escritos. Enquanto os dois
-    # faltarem, o catálogo é dado que ninguém pede.
-    #
-    # O QUE FECHA: ORDEM-4 liga o catálogo ao exame e ORDEM-5 publica os cards.
-    # ORDEM-5 é texto novo na tela e passa pelo olho dela ANTES.
-    # DONO: a própria ORDEM-DE-SERVIÇO-01, frente B da leva Configurações.
-    "integrations/ordens_da_mesa.py::cabecalho": (
-        "MEDIDO em 25/08/2026: os quatro cabeçalhos da §8.3, derivados num "
-        "lugar só. Cai junto com `catalogo` e pelo mesmo motivo — e é por isso "
-        "que não ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::identidades": (
-        "MEDIDO em 25/08/2026: a tripla que decide a ambiguidade, e onde o "
-        "serial morre. Cai junto com `catalogo` e pelo mesmo motivo — e é por "
-        "isso que não ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::ordens_novas": (
-        "MEDIDO em 25/08/2026: o leitor de `MesaDeclarada.ordens_dispensadas`. "
-        "Cai junto com `catalogo` e pelo mesmo motivo — e é por isso que não "
-        "ganha entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::ordens_caladas": (
-        "MEDIDO em 25/08/2026: o irmão dele, que CONTA a decisão dela. Cai "
-        "junto com `catalogo` e pelo mesmo motivo — e é por isso que não ganha "
-        "entrada própria de conserto."
-    ),
-    "integrations/ordens_da_mesa.py::resposta_ao_ja_movi": (
-        "MEDIDO em 25/08/2026: as quatro respostas do botão que a seção ainda "
-        "não desenhou. Cai junto com `catalogo` e pelo mesmo motivo — e é por "
-        "isso que não ganha entrada própria de conserto."
-    ),
+    # --- 26/08/2026: AS CINCO LÁPIDES DO CATÁLOGO DE ORDENS CAÍRAM.
+    # A ORDEM-5 e a ORDEM-6 fecharam na leva 2
+    # (`app/actions/config/secao_exame.py`): o card de ordem ganhou
+    # `[Já movi — reexaminar]` e `[Ignorar]`, o selo do topo passou a dizer
+    # o texto de `cabecalho()`, a dispensa dela filtra por `ordens_novas` e
+    # é CONTADA por `ordens_caladas`, e `identidades` é quem separa dois
+    # adaptadores de mesmo `vid:pid` pelo serial para que o produto não
+    # diga "Confirmei" sem saber qual dos dois ela moveu.
+    # A mordida está em `test_a_dispensa_volta_quando_o_arranjo_muda.py`.
     # `portas_do_barramento.py` é a camada de sysfs que `ordens_da_mesa`
     # consome. Ela tem chamador de produção (`mesmo_hub_fisico` importa
     # `hubs_do_mesmo_plastico` desde 25/08), mas esse chamador é o próprio
@@ -1550,19 +1152,49 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # apontava o rodapé como quem a fecharia; quem fechou foi a aba Gatilhos, e
     # tanto faz — a promessa era ter caminho de produção. Lápide que sobrevive
     # à própria cura é o defeito que este portão existe para matar.
-    "app/fala_do_mapa.py::formata_pt_br": (
-        "MEDIDO em 25/08/2026: irmã do `Numero` abaixo, mesma leva. Nasceu na "
-        "ONDA0-Z6 (`26e0ccc`, 24/08) — 'a medição chega à tela por portão, "
-        "não por lembrança' — e nenhuma tela a chama. "
-        "ONDE O CAMINHO SE PERDE: as abas continuam formatando número à mão. "
-        "O QUE A FECHA: as frases que publicam medição passarem por aqui. "
-        "DONO: a frente do léxico (CONFIGURACOES-O-LEXICO-01), que é a dona "
-        "única do texto e entra por último de propósito."
+    # --- 26/08/2026: a janela de calibrar entradas (L1-F) nasceu inteira, e o
+    #     BOTÃO que a abre chegou na L2-E, no MESMO dia. CINCO das seis lápides
+    #     saíram daqui nessa edição — `LogicaDaCalibracao`, `Pergunta`, `Laudo`,
+    #     `NavegacaoPorControle` e `PosseDoVocabulario` —, junto com
+    #     `entradas_do_gabinete::furo_declarado`, que a janela chama (`:694`).
+    #     A sexta ficou, e a razão dela já dizia por quê: quem tem de perguntar
+    #     por ela é o DESPACHO do daemon, não a janela.
+    "app/widgets/calibrar_entradas.py::botoes_para_o_jogo": (
+        "MEDIDO em 26/08/2026, e esta é a lápide que MENOS depende da L2-E: a "
+        "peneira que a posse arma, e quem tem de perguntar por ela é o "
+        "DESPACHO — `daemon/lifecycle.py`, no bloco do "
+        "`_dispatch_gamepad_emulation`, que hoje manda os botões CRUS ao "
+        "gamepad virtual gateado só pelos 0,3 s de grace e sobrevive de "
+        "propósito ao `daemon.pause` e ao modo jogo. Sem essa pergunta, "
+        "confirmar uma entrada com o cabo na mão dispara um pulo ou um tiro "
+        "no jogo aberto atrás da janela. "
+        "ONDE O CAMINHO SE PERDE: o daemon não pergunta. NÃO fiz porque "
+        "`daemon/lifecycle.py` não é posse da L1-F (regra R-A da leva: "
+        "precisou de arquivo alheio, relata e para). "
+        "O QUE A FECHA: uma linha no despacho, subtraindo o que esta função "
+        "devolve. DONO: a Onda do daemon, ou quem coordena a leva seguinte."
     ),
+    # `formata_pt_br` SAIU daqui em 26/08/2026, na edição que o ligou (BG-03):
+    # ele virou o DONO ÚNICO da conversão `260.4` → `260,4`, e as duas cópias
+    # que a árvore mantinha — `app/actions/config/secao_controles.py::_numero` e
+    # `integrations/plano_de_radio.py::_numero`, esta última com um comentário
+    # que prometia "mesma forma que…" enquanto reescrevia a conta — passaram a
+    # chamá-lo. A razão antiga dizia "as abas continuam formatando número à
+    # mão"; era exatamente isso, e é isso que deixou de valer. Não se guarda a
+    # entrada velha ao lado da nova.
     "app/fala_do_mapa.py::Numero": (
-        "MEDIDO em 25/08/2026: o tipo que `formata_pt_br` recebe, órfão pelo "
-        "mesmo motivo e pela mesma leva. Cai junto com ela — e é por isso que "
-        "não ganha entrada própria de conserto."
+        "MEDIDO em 25/08/2026, e REMEDIDO em 26/08 — quando a irmã dele "
+        "(`formata_pt_br`) GANHOU CAMINHO e saiu daqui, e ele NÃO caiu junto. "
+        "A razão antiga dizia 'cai junto com ela'; era um palpite, e a medição "
+        "o derrubou. Ele é o tipo que amarra uma constante Python medida a uma "
+        "célula em prosa do mapa (`fala_do_mapa.py`:200-222). "
+        "ONDE O CAMINHO SE PERDE: quem publica os números medidos é a tupla "
+        "crua `NUMEROS_MEDIDOS_NO_MAPA` de `integrations/radio_da_mesa.py`:153-157, "
+        "com os mesmos quatro campos e nenhum construtor que os valide — o "
+        "`__post_init__` do `Numero` nunca roda sobre ela. "
+        "O QUE A FECHA: aquela tupla virar uma tupla de `Numero`. NÃO fiz na "
+        "L3-F porque `integrations/radio_da_mesa.py` não é posse dela (regra "
+        "R-A da leva de 26/08). DONO: quem tocar o medidor de rádio."
     ),
     "profiles/schema.py::resolver_teclado_emulado": (
         "MEDIDO em 25/08/2026: está no `__all__` (:1345), o próprio módulo a "
@@ -1574,55 +1206,44 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "madrugada. DONO: B2, ou a Onda 6 - Perfis na leva seguinte."
     ),
     # --- A aba Configurações (23/08/2026): o censo mede, e a tela não pergunta
-    "integrations/censo_do_barramento.py::hub_em_comum": (
-        "MEDIDO em 23/08/2026, NA BANCADA DELA: é promessa ao produto, ela "
-        "funciona, e a tela ainda não faz a pergunta. O próprio docstring diz "
-        "qual é a pergunta — *'os três rádios de controle estão no mesmo "
-        "hub?'* — e a resposta importa porque hub em comum é disputa de "
-        "barramento, que é causa de engasgo. Rodada agora, nos três "
-        "adaptadores Bluetooth desta casa: devolve `.../usb3/3-3`, o hub que "
-        "está acima dos três; dois deles ainda dividem um segundo, o `3-3.1`. "
-        "Comparar o pai diria que não estão juntos, e diria errado — que é "
-        "exatamente o motivo de a função existir. "
-        "ONDE O CAMINHO SE PERDE: `app/actions/config/secao_mesa.py:1409-1411` "
-        "escreve a palavra `Em hub` linha a linha, a partir do "
-        "`adaptador.atras_de_hub` que o `mesa_de_radio` já traz, e nunca "
-        "compara as linhas entre si. A seção importa `ler_o_barramento` e "
-        "`GRAU_LIDO` do mesmo módulo (`:115-119`) e não importa esta função. "
-        "O QUE A FECHA: uma linha de resumo na seção 'A mesa' — 'os três estão "
-        "no mesmo hub' — alimentada por esta função. NÃO fiz porque é texto "
-        "novo na tela, e desenho é palavra dela (PROVA-DE-TELA-01): pede foto "
-        "antes e depois."
-    ),
+    # `hub_em_comum` SAIU daqui em 26/08/2026, na edição que a ligou: a seção
+    # "A mesa" (`app/actions/config/secao_mesa.py::_frase_do_hub_em_comum`) a
+    # chama e publica a linha do hub em comum. A razão antiga dizia "NÃO fiz
+    # porque é texto novo na tela"; o texto entrou marcado `PROVISÓRIO — decisão
+    # dela`, que é o caminho que a R-E da leva abriu para não travar a frente.
     "integrations/censo_do_barramento.py::filhos_de": (
-        "MEDIDO em 23/08/2026: é promessa ao produto e cai junto com "
-        "`hub_em_comum`, pela mesma leva. Ela responde 'quem pendura "
-        "DIRETAMENTE neste nó, em ordem de porta', que é a pergunta de baixo "
-        "da mesma tela: mostrado o hub em comum, a próxima é *quem mais está "
-        "nele* — o que separa 'três adaptadores num hub sobrando' de 'três "
-        "adaptadores num hub com webcam e HD externo'. "
-        "ONDE O CAMINHO SE PERDE: a seção 'A mesa' desenha uma linha por "
-        "ADAPTADOR e nunca desenha o hub como nó com filhos; não há widget "
-        "onde a resposta caberia. "
-        "O QUE A FECHA: a mesma linha de resumo de `hub_em_comum`, estendida "
-        "para dizer o que mais divide o hub. As duas entram juntas — o hub "
-        "sem os vizinhos é meia resposta."
+        "MEDIDO em 23/08/2026, e REMEDIDO em 26/08: continua sem chamador de "
+        "produção. Ela responde 'quem pendura DIRETAMENTE neste nó, em ordem "
+        "de porta', que é a pergunta de baixo da linha do hub em comum — o que "
+        "separa 'três adaptadores num hub sobrando' de 'três adaptadores num "
+        "hub com webcam e HD externo'. "
+        "ONDE O CAMINHO SE PERDE: a linha do hub que a L2-E plantou em 26/08 "
+        "conta os ADAPTADORES e o destino, e não diz o que MAIS divide o hub; "
+        "a seção continua sem widget onde uma lista de vizinhos caberia. "
+        "O QUE A FECHA: uma segunda frase nessa mesma linha, dizendo quem mais "
+        "está no hub. NÃO fiz na L2-E porque é frase nova de tela além da que "
+        "a ordem daquela frente pediu, e cada frase provisória a mais é uma "
+        "decisão a mais na fila dela. DONO: a frente do léxico, ou quem "
+        "coordenar a leva que fizer a prova de tela desta linha."
     ),
     "integrations/apelido_do_dongle.py::costurar_a_mesa": (
-        "MEDIDO em 22/08/2026 e RECONFERIDO em 23/08: é promessa ao produto e "
-        "o caminho está DELIBERADAMENTE fechado — a nota datada está no "
-        "próprio docstring da função (`:587-601`), e ela diz o contrário do "
-        "que um chamador faria. Desde `e5376a0` (22/08, 21h26) o "
-        "`scripts/bt_active_mode.sh:281` itera TODOS os adaptadores que "
-        "hospedam Nintendo, e o mesmo commit registra que resolveu 'a "
-        "duplicidade … dois escritores do mesmo alias'. "
+        "MEDIDO em 22/08/2026, RECONFERIDO em 23/08 e DECIDIDO em 25/08: é "
+        "promessa ao produto e o caminho está DELIBERADAMENTE fechado — a "
+        "nota datada está no próprio docstring da função (`:588-602`), e ela "
+        "diz o contrário do que um chamador faria. Desde `e5376a0` (22/08, "
+        "21h26) o `scripts/bt_active_mode.sh:349` itera TODOS os adaptadores "
+        "que hospedam Nintendo (`_hci_com_nintendo`, `:281`), e o mesmo commit "
+        "registra que resolveu 'a duplicidade … dois escritores do mesmo "
+        "alias'. "
         "ONDE O CAMINHO SE PERDE, e é de propósito: ligar esta função no "
         "install ou no arranque do daemon RECRIA a duplicidade que aquele "
         "commit desfez — dois escritores do mesmo alias de BlueZ. "
-        "O QUE A FECHA: uma decisão de dono, não uma linha de código. Ou o "
-        "produto assume a costura (e o script para de costurar), ou o script "
-        "continua dono (e esta função é a rota que espera). Enquanto o dono "
-        "não for declarado, dar chamador a ela é regressão, não cura."
+        "O QUE A FECHA: nada, e é isso que mudou. A pergunta de dono virou "
+        "`D-COSTURA-BLUEZ` em `docs/data/decisoes-dela.csv` e foi DECIDIDA em "
+        "25/08/2026 — **o script continua dono**. Esta entrada deixou de ser "
+        "uma pergunta em aberto e passou a ser o registro de uma escolha: dar "
+        "chamador a esta função é REGRESSÃO até que a decisão seja revertida, "
+        "e quando for, o `bt_active_mode.sh` para de costurar NO MESMO commit."
     ),
     # LÁPIDE — PONTE-NA-TELA-01, e a cura chegou em 25/08/2026.
     #
@@ -1640,35 +1261,43 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # dívida de caminho, e não é aqui que se registra.
     # --- a família mais numerosa: o desligar que ninguém chama --------------
     "daemon/subsystems/ipc.py::stop_ipc": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. É a terceira instância de "
-        "um mesmo defeito de forma — o `shutdown` de daemon/connection.py:821-900 "
-        "derruba bt_mic, plugins, co-op, mouse, gamepad virtual, executor e o "
-        "lease do broker, e não chama NENHUMA das utilitárias `stop_*` dos "
-        "subsystems, que existem e fazem trabalho real (aqui: "
-        "`daemon._ipc_server.stop()` e o descarte da referência). "
-        "O QUE A FECHA: uma linha no `shutdown`. NÃO consertei porque a decisão "
-        "é de DESENHO e vale para as três juntas: ou o `shutdown` passa a "
-        "chamar as utilitárias, ou as utilitárias somem e o `shutdown` continua "
-        "sendo o único dono do desligar. Escolher uma das duas metades por "
-        "conta própria deixaria a árvore pior que os dois estados coerentes. "
-        "INFERIDO do código, não observado num daemon vivo."
+        "REMEDIDO em 26/08/2026, e a razão de 12/08 estava ERRADA. Ela dizia "
+        "que o `shutdown` não derrubava o servidor de IPC e mandava a próxima "
+        "pessoa caçar um defeito vivo; o endereço que citava "
+        "(connection.py:821-900) nem existe mais. O `shutdown` está em "
+        "`daemon/connection.py:1286` e derruba o IPC ele mesmo, em linha: "
+        "`await asyncio.wait_for(daemon._ipc_server.stop(), timeout=2.0)` "
+        "(`:1364`) e `daemon._ipc_server = None` (`:1365`). "
+        "ONDE O CAMINHO SE PERDE: não há caminho perdido — há DUPLICAÇÃO. "
+        "Esta utilitária faz exatamente o que aquelas duas linhas fazem, e só "
+        "`tests/` a chama. "
+        "O QUE A FECHA: a mesma decisão de desenho de sempre, agora com o "
+        "preço certo na mesa — ou o `shutdown` passa a delegar às três "
+        "utilitárias (e ganha o teto de 2 s num lugar só), ou as três somem e "
+        "o `shutdown` segue dono único do desligar. Não é urgência: nada fica "
+        "de pé hoje por causa disto."
     ),
     "daemon/subsystems/udp.py::stop_udp": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Irmã de `stop_ipc`, mesma "
-        "forma e mesmo corpo (`daemon._udp_server.stop()` e descarte da "
-        "referência), e mesma ausência no `shutdown` de connection.py:821-900. "
-        "O QUE A FECHA: a mesma decisão de desenho descrita na entrada de "
-        "`stop_ipc` — as três se fecham juntas ou nenhuma. "
-        "INFERIDO do código, não observado num daemon vivo."
+        "REMEDIDO em 26/08/2026, junto com `stop_ipc`, e pelo mesmo motivo: a "
+        "razão de 12/08 apontava um `shutdown` que não derruba o UDP, e o "
+        "`shutdown` (`daemon/connection.py:1286`) derruba — "
+        "`await asyncio.wait_for(daemon._udp_server.stop(), timeout=2.0)` "
+        "(`:1368`), `daemon._udp_server = None` (`:1369`). "
+        "ONDE O CAMINHO SE PERDE: em lugar nenhum; o que sobra é DUPLICAÇÃO "
+        "de duas linhas, com só `tests/` chamando a utilitária. "
+        "O QUE A FECHA: a decisão de desenho descrita na entrada de "
+        "`stop_ipc` — as três se fecham juntas ou nenhuma."
     ),
     "daemon/subsystems/autoswitch.py::stop_autoswitch": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Terceira irmã: para o "
-        "`AutoSwitcher` e descarta `daemon._autoswitch`. O `shutdown` não a "
-        "chama, então a thread do autoswitch é derrubada pelo fim do processo "
-        "em vez de por um caminho de parada — e é justamente o autoswitch que "
-        "toca disco (grava o perfil ativo). "
-        "O QUE A FECHA: a mesma decisão de desenho da entrada de `stop_ipc`. "
-        "INFERIDO do código, não observado num daemon vivo."
+        "REMEDIDO em 26/08/2026. A razão de 12/08 dizia que 'a thread do "
+        "autoswitch é derrubada pelo fim do processo em vez de por um caminho "
+        "de parada' — e isso é FALSO: o `shutdown` "
+        "(`daemon/connection.py:1286`) chama `daemon._autoswitch.stop()` "
+        "(`:1372`) e descarta a referência (`:1373`). O autoswitch toca disco, "
+        "então a razão velha mandava caçar uma perda de dado que não existe. "
+        "ONDE O CAMINHO SE PERDE: em lugar nenhum — DUPLICAÇÃO, como nas duas "
+        "irmãs, com só `tests/` chamando a utilitária. "
+        "O QUE A FECHA: a mesma decisão de desenho da entrada de `stop_ipc`."
     ),
     # --- subsystems e motores que nada instancia ---------------------------
     "daemon/subsystems/hotkey.py::HotkeySubsystem": (
@@ -1684,18 +1313,27 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "fechar o registro inteiro — trabalho de desenho, não de uma linha."
     ),
     "core/rumble.py::RumbleEngine": (
-        "MEDIDO em 12/08/2026: nenhuma instanciação em `src/`. Todas as "
-        "ocorrências fora da definição são docstring, comentário ou `__all__` — "
-        "inclusive daemon/ipc_handlers.py:2237, que afirma num comentário que "
-        "`O RumbleEngine segue em uso`, e daemon/ipc_rumble_policy.py:5, que "
-        "diz depender de `RumbleEngine.update_auto_state`. As duas frases estão "
-        "erradas hoje, e este portão é a primeira coisa da árvore a discordar "
-        "delas. O throttle de rumble com política vive escrito e desligado. "
-        "O QUE A FECHA: descobrir se o caminho do rumble foi SUBSTITUÍDO (e "
-        "então a classe é resto, e os dois comentários se substituem pela "
-        "informação certa) ou se nunca foi ligado (e então é dívida do "
-        "FEAT-RUMBLE-POLICY-01). Essa diferença está fora do que grep responde, "
-        "e é a primeira coisa a medir com o aparelho na mão."
+        "MEDIDO em 12/08/2026, e REMEDIDO em 26/08/2026: nenhuma instanciação "
+        "em `src/`, e agora nenhum resto de leitura também. A pergunta que esta "
+        "entrada abriu — 'foi SUBSTITUÍDO ou nunca foi ligado?' — está "
+        "RESPONDIDA: foi SUBSTITUÍDO. O funil vivo da política de vibração é "
+        "`core/rumble.py::_effective_mult`, e as três rotas que o chamam "
+        "(`daemon/ipc_rumble_policy.apply_rumble_policy`, "
+        "`daemon/subsystems/rumble.reassert_rumble` e "
+        "`daemon/subsystems/gamepad._game_rumble_mult`) guardam o debounce na "
+        "memória do daemon (`_last_auto_mult` / `_last_auto_change_at`). As "
+        "DUAS frases que afirmavam o contrário foram substituídas pela "
+        "informação certa: a de `daemon/ipc_handlers.py` em 24/08 e a de "
+        "`daemon/ipc_rumble_policy.py` na L3-F, em 26/08 — junto com o "
+        "`getattr(daemon, '_rumble_engine')` que a sustentava. "
+        "ONDE O CAMINHO SE PERDE: a classe segue na árvore, com throttle e "
+        "`link()`, sem ninguém que a construa. "
+        "O QUE A FECHA: **apagá-la**, que é o que 'é resto' quer dizer. NÃO "
+        "fiz na L3-F porque os chamadores restantes são TESTES fora da posse "
+        "dela (`test_rumble_policy.py`, `test_led_and_rumble.py`, "
+        "`test_politica_de_vibracao_a_escada_que_amplifica.py`) e a regra R-A "
+        "da leva de 26/08 manda relatar, não escrever em arquivo alheio. "
+        "DONO: quem coordenar a leva seguinte, num commit só com os três testes."
     ),
     # `daemon/subsystems/external_mask.py::ExternalMaskRegistry` MOROU AQUI e
     # foi APAGADA em 15/08/2026, pelo motivo que a própria entrada mandava:
@@ -1756,43 +1394,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `OutputSpec` de `profiles/manager.py:392`. Não eram dívida; eram uma
     # afirmação errada citada como prova. Ver as razões novas lá em cima.
     # --- a janela pedindo ao daemon ----------------------------------------
-    "app/ipc_bridge.py::apply_draft": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Quem a janela usa é a irmã "
-        "`apply_draft_detalhado` (app/actions/lightbar_actions.py:646 e :735), "
-        "e o próprio docstring de :530 explica que a detalhada é a `função "
-        "primitiva` e que `as duas formas estavam desenhadas na sprint` "
-        "(APLICAR-VERDADE-01/E2) — a forma booleana ficou no `__all__` e ninguém "
-        "a atravessou. "
-        "ESTA ENTRADA É O ACHADO DA RÉGUA: ela estava escondida enquanto o "
-        "portão contava PALAVRA de literal, porque a chave de IPC "
-        "`\"profile.apply_draft\"`, escrita em daemon/ipc_server.py:109 para "
-        "outra coisa, a dava por alcançada. Casar o literal inteiro a revelou. "
-        "O QUE A FECHA: apagar, se a detalhada é a forma que ficou; ou fiar, se "
-        "o valor-verdade simples ainda é útil a algum chamador. Antes de "
-        "apagar, conferir o applet do COSMIC — este portão é cego a Rust."
-    ),
-    "app/ipc_bridge.py::rumble_policy_set": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. É o invólucro que DESCARTA "
-        "o motivo da recusa, e o próprio docstring manda preferir o irmão: "
-        "`use rumble_policy_set_checked para tê-lo`. A janela usa o `_checked`. "
-        "O QUE A FECHA: apagar. Esta é a candidata mais clara a `resto` desta "
-        "lista — mas apagar símbolo público é mudança que ninguém pediu, e a "
-        "assinatura pode estar sendo importada pelo applet do COSMIC, que vive "
-        "em packaging/cosmic-applet/ e é Rust falando por IPC, fora do alcance "
-        "desta varredura. Conferir antes de apagar."
-    ),
-    "app/ipc_bridge.py::mouse_emulation_set": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Fala `mouse.emulation.set` "
-        "por IPC — o handler do outro lado EXISTE e está fiado "
-        "(daemon/ipc_server.py:152 despacha para `_handle_mouse_emulation_set`), "
-        "então a promessa é do lado da JANELA: a ponte existe e nenhuma "
-        "superfície a atravessa. O docstring cita a rota speed-only do "
-        "BUG-MOUSE-GUI-SYNC-01 A4. "
-        "O QUE A FECHA: descobrir por qual outra ponte a aba do mouse fala com "
-        "o daemon hoje, e então unificar — duas pontes para o mesmo método IPC "
-        "é como uma delas apodrece sem ninguém ver."
-    ),
-    # --- ELO-MUDO-01 / P1 (23/08/2026): a ponte já entrega, a aba ainda não pede
+    # ELO-MUDO-01 / P1 (23/08/2026): a ponte já entrega, a aba ainda não pede.
     # As entradas desta leva nasceram JUNTAS e por decisão dela: o conserto do
     # lado da ponte é aditivo de propósito, porque os chamadores moram em
     # arquivos que outras frentes estavam editando no mesmo dia. Cada uma diz
@@ -1803,63 +1405,57 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # (GATILHOS-APLICADO-COM-PROVA/T3): `_apply_trigger`, `_send_trigger_named`
     # e `_reset_trigger` de `app/actions/triggers_actions.py` chamam os dois, e
     # o `_toast_trigger` decide pelo CORPO do daemon, via `frase_do_desfecho`.
-    # Restam as QUATRO abaixo — Lightbar (duas), Rumble e o mic da mesa cheia.
-    # E a troca criou UMA entrada nova, logo aqui: o invólucro estreito que
-    # ficou sem chamador. Era previsível e está declarado em vez de escondido.
-    "app/ipc_bridge.py::trigger_reset": (
-        "MEDIDO em 25/08/2026, e é EFEITO da própria cura: o único chamador de "
-        "produção era `app/actions/triggers_actions.py:671`, o botão `Desligar` "
-        "da aba Gatilhos, que a T3 trocou por `trigger_reset_detalhado`. Ficou "
-        "o invólucro que descarta o corpo, com zero chamadores — a mesma forma "
-        "do par `apply_draft`/`apply_draft_detalhado` que já mora nesta lista. "
-        "O IRMÃO NÃO CAIU JUNTO, e a diferença importa: `trigger_set_checked` "
-        "continua com caminho porque `trigger_set` o chama dentro do próprio "
-        "`ipc_bridge.py` — a cadeia dele é que teria de ser desfeita inteira. "
-        "O QUE A FECHA: apagar `trigger_reset` e deixar só o `_detalhado`, com "
-        "o docstring de R-19/ABAS-06/ABAS-05 mudando de casa (é lá que está a "
-        "medição de por que `trigger.reset` não é `trigger.set` com `Off`). "
-        "NÃO fiz porque `app/ipc_bridge.py` é posse da frente B8 nesta "
-        "madrugada, e porque é símbolo público no `__all__` (:1319) — poda de "
-        "símbolo público é dela. DONO: a próxima leva."
+    # `led_set_detalhado` e `player_leds_set_detalhado` saíram pelo mesmo
+    # motivo em 26/08/2026 (BG-01): `_aplicar_cor_no_controle`,
+    # `on_lightbar_off`, `_enviar_led_em_todos` e `_enviar_player_leds` de
+    # `app/actions/lightbar_actions.py` chamam os dois.
+    #
+    # PODA DE 26/08/2026 (BG-07, LEVA-3-C): CINCO entradas de
+    # `app/ipc_bridge.py` saíram daqui porque o SÍMBOLO saiu do módulo —
+    # `apply_draft`, `rumble_policy_set`, `rumble_policy_set_detalhado`,
+    # `trigger_reset` e `mouse_emulation_set`. Eram invólucros estreitos, sem
+    # nenhum chamador de produção, e as razões deles mandavam apagar. A trava
+    # que os segurava — "a assinatura pode estar sendo importada pelo applet do
+    # COSMIC" — CAIU: o applet é Rust (`packaging/cosmic-applet/src/`), fala
+    # JSON-RPC por socket (`ipc.rs:3`) e `grep` pelos cinco nomes ali devolve
+    # ZERO. Um processo Rust não importa função Python.
+    #
+    # RESTAM TRÊS, abaixo: as duas da Lightbar e o mic da mesa cheia.
+    "app/ipc_bridge.py::led_set": (
+        "MEDIDO em 26/08/2026, e é EFEITO da própria cura (BG-01): os três "
+        "chamadores de produção eram `app/actions/lightbar_actions.py` — o "
+        "`Aplicar no controle`, o `Apagar` e o funil por MAC do `Todos` —, e a "
+        "BG-01 trocou os três por `led_set_detalhado`, porque o `bool` desta "
+        "função jogava fora o `aplicado_em`/`guardado_em` que o daemon publica "
+        "desde a APLICAR-VERDADE-01. Ficou o invólucro que descarta o corpo, "
+        "com zero chamadores — a mesma forma dos cinco invólucros podados em "
+        "26/08/2026 pela BG-07, cuja nota está no comentário logo acima. "
+        "O QUE A FECHA: apagar `led_set` e deixar só o `_detalhado`, levando o "
+        "docstring do FEAT-LED-BRIGHTNESS-01/PERFIL-05 junto. "
+        "FATO ERRADO, SUBSTITUÍDO em 26/08/2026: esta razão dizia que "
+        "`app/ipc_bridge.py` estava no `nao_toca` da leva. Está na POSSE da "
+        "LEVA-3-C, e a BG-07 podou cinco irmãos deste no mesmo arquivo. O que "
+        "segurou `led_set` foi a ORDEM da frente, que nomeia cinco funções e "
+        "não esta — e a razão escrita ali (`led_set` continuaria viva por "
+        "outro caminho) foi MEDIDA e é falsa: AST e `grep` concordam que não "
+        "há chamador nenhum em `src/` fora do próprio módulo. "
+        "DONO: a próxima leva, e agora sem trava — é poda pura de dez linhas, "
+        "mais os CINCO pontos que as citam em "
+        "`tests/unit/test_ipc_bridge.py` (:148, :152, :176, :257, :262) e os "
+        "DOIS métodos de "
+        "`tests/unit/test_p1_a_resposta_do_daemon_atravessa_a_ponte.py` (:396 "
+        "e :407)."
     ),
-    "app/ipc_bridge.py::led_set_detalhado": (
-        "MEDIDO em 23/08/2026: o `led.set` publica `aplicado_em`/`guardado_em` "
-        "desde a APLICAR-VERDADE-01 e o invólucro `led_set` estreitava tudo "
-        "para `bool` — a aba Lightbar re-deduzia o `guardado` do estado da "
-        "janela, como a de Gatilhos. "
-        "O QUE A FECHA: `app/actions/lightbar_actions.py:934` "
-        "(`_enviar_cor_por_mac`), o funil por onde os três chamadores de "
-        "`led_set` (:689, :801, :934) passam."
-    ),
-    "app/ipc_bridge.py::player_leds_set_detalhado": (
-        "MEDIDO em 23/08/2026: irmão do `led_set_detalhado`, mesmo corpo mais "
-        "o `bits` que o daemon ecoa (`ipc_handlers.py:1352-1356`). Mesma perda "
-        "e mesma cura. "
-        "O QUE A FECHA: `app/actions/lightbar_actions.py:965` e :969, dentro de "
-        "`_enviar_player_leds:938` — sai da mesma edição do `led_set_detalhado`."
-    ),
-    "app/ipc_bridge.py::rumble_policy_set_detalhado": (
-        "MEDIDO em 23/08/2026: terceira e última rota que passava pelo "
-        "`_call_checked` e perdia o corpo. Aqui NÃO há mentira medida — o corpo "
-        "de hoje é `{status: ok, policy: <a pedida>}` e o daemon só ecoa. O que "
-        "esta função paga é a uniformidade das três rotas. "
-        "O QUE A FECHA: `app/actions/rumble_actions.py:579`, quando a aba "
-        "quiser mostrar a política EFETIVA em vez da pedida; ou APAGAR, se até "
-        "lá o corpo continuar sendo um eco. É a candidata mais clara a `resto` "
-        "desta leva, e está escrito de propósito."
-    ),
-    "app/ipc_bridge.py::alvo_honrado": (
-        "MEDIDO em 23/08/2026: lê o `por_uniq` que o `mic.volume.set` publica "
-        "em `ipc_handlers.py:4538` e que o `bool` da ponte apagava — com a mesa "
-        "cheia há DUAS placas de som, e o gesto que cai na rota global mexe no "
-        "microfone de OUTRA pessoa devolvendo o mesmo `True`. "
-        "O QUE A FECHA: `app/widgets/controller_card.py:3684`, trocando "
-        "`mic_volume_set` por `mic_volume_set_detalhado`, e "
-        "`_mic_confirmado_pelo_daemon:3993` deixando de gravar o volume no "
-        "rascunho dela quando o alvo não foi honrado. Esta é a mais cara das "
-        "sete: separar `sem_fonte` de daemon offline pede um estado NOVO na "
-        "tela (controle insensível com a dica), e isso é desenho — foto antes e "
-        "depois, e a palavra é dela."
+    "app/ipc_bridge.py::player_leds_set": (
+        "MEDIDO em 26/08/2026: irmão exato do `led_set` acima, e pela mesma "
+        "edição (BG-01). O único chamador de produção era `_enviar_player_leds` "
+        "em `app/actions/lightbar_actions.py`, nas duas rotas — alvo escolhido "
+        "e um pedido por MAC em `Todos` —, e as duas passaram a "
+        "`player_leds_set_detalhado`, que entrega o corpo com `bits` ecoado "
+        "(`ipc_handlers.py`, `_handle_led_player_set`). "
+        "O QUE A FECHA: a mesma poda do `led_set`, no mesmo commit e pelo mesmo "
+        "dono. DONO: a próxima leva — ver a correção de fato na razão do "
+        "`led_set`, que vale igual para este."
     ),
     "app/actions/external_controllers.py::short_button_label": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. O docstring descreve uma "
@@ -1871,82 +1467,53 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "desenho pronto esperando a superfície, não defeito."
     ),
     # --- preferências de sessão que a janela não lê -------------------------
-    "utils/session.py::save_mouse_emulation_enabled": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. O próprio docstring a "
-        "declara `Wrapper legado (FEAT-MOUSE-PERSIST-01)` e manda `Preferir a "
-        "função nova, que grava as velocidades junto` — e é a nova "
-        "(`save_mouse_emulation`) que a janela usa. "
-        "O QUE A FECHA: apagar, junto com a irmã de leitura. Não apago nesta "
-        "leva porque as duas são símbolo público e podem estar sendo importadas "
-        "por fora de `src/` — o applet do COSMIC e os plugins de terceiros são "
-        "os dois lugares onde este portão é cego por desenho."
-    ),
-    "utils/session.py::load_mouse_emulation_enabled": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Irmã de leitura da anterior, "
-        "e também `Wrapper legado` pelo próprio docstring: devolve só o toggle, "
-        "descartando as velocidades. Quem a janela usa é `load_mouse_preference` "
-        "/ `load_mouse_emulation`. "
-        "O QUE A FECHA: a mesma decisão da entrada anterior, e as duas juntas."
-    ),
-    "utils/session.py::load_keyboard_emulation_enabled": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama, e este caso é DIFERENTE dos "
-        "dois anteriores: não é invólucro legado, é a única leitura da "
-        "preferência de teclado emulado que aplica o default correto. O "
-        "docstring documenta uma `ASSIMETRIA DELIBERADA` com o mouse (o teclado "
-        "nasce LIGADO, porque carrega os atalhos, o teclado virtual em L3/R3 e "
-        "as três regiões do touchpad), e essa decisão só vale se alguém "
-        "chamar a função. "
-        "O QUE A FECHA: chamar do boot do daemon, onde o `keyboard_emulation.flag` "
-        "já é lido — daemon/main.py:104-109 declara a precedência "
-        "(default < env < flag) e é lá que a assimetria tem de valer. Vale medir "
-        "com o aparelho antes: se o flag já é lido por outro caminho, o "
-        "default deste invólucro pode estar sendo aplicado em outro lugar."
-    ),
+    # AS TRÊS ENTRADAS QUE MORAVAM AQUI — `utils/session.py`:
+    # `::save_mouse_emulation_enabled`, `::load_mouse_emulation_enabled` e
+    # `::load_keyboard_emulation_enabled` — SAÍRAM em 26/08/2026 porque os três
+    # símbolos foram PODADOS. As duas primeiras eram invólucros legados
+    # (FEAT-MOUSE-PERSIST-01) que o próprio docstring mandava não usar; a
+    # terceira somava um default PRÓPRIO a uma precedência que já tem dono.
+    #
+    # A TRAVA QUE AS SEGURAVA CAIU, e a queda é medida. A entrada do
+    # `save_mouse_emulation_enabled` dizia: *"não apago nesta leva porque as
+    # duas são símbolo público e podem estar sendo importadas por fora de
+    # `src/` — o applet do COSMIC e os plugins de terceiros são os dois lugares
+    # onde este portão é cego por desenho"*. MEDIDO em 26/08/2026: o applet do
+    # COSMIC é RUST (`packaging/cosmic-applet/Cargo.toml` +
+    # `src/{main,app,ipc}.rs`), conversa com o daemon por JSON-RPC no socket, e
+    # NÃO existe um único arquivo `.py` sob `packaging/`. Ele não importa
+    # Python — logo não importa estes nomes. O `plugin_api` continua sendo
+    # ponto cego por desenho, mas ele é contrato de MÉTODO (`on_*`), que este
+    # portão nem varre, e nenhum destes três nomes aparece nele.
+    #
+    # A CORREÇÃO DE FATO da terceira: a entrada mandava fechá-la *"chamando do
+    # boot do daemon, onde o `keyboard_emulation.flag` já é lido"*. O boot JÁ
+    # lê o flag, e não por ela: `daemon/lifecycle.py:841-842` chama
+    # `load_keyboard_preference()` direto e só sobrescreve o piso quando há
+    # opinião gravada. Fiá-la seria pôr um segundo default no meio de uma
+    # precedência que já tem um. A ASSIMETRIA que ela documentava (teclado nasce
+    # LIGADO, mouse nasce desligado) NÃO se perdeu: está escrita, com a data,
+    # onde a função morava, em `utils/session.py`.
     # --- linha de comando do kernel ----------------------------------------
-    "integrations/kernel_cmdline.py::plan_cmdline": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. É a porta de entrada "
-        "'string crua' do planejador (recebe `/proc/cmdline` e delega a "
-        "`plan_tokens`). Quem escreve a linha de comando do kernel de verdade "
-        "hoje é o instalador, em shell. "
-        "O QUE A FECHA: decidir de quem é o planejamento. Enquanto o shell do "
-        "install for o dono, este módulo é uma segunda implementação da mesma "
-        "regra em outra linguagem — e duas implementações da mesma regra é o "
-        "estado de onde nascem as divergências que o `doctor` depois tem de "
-        "explicar."
-    ),
-    "integrations/kernel_cmdline.py::ownership_record": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. Produz o registro de dono "
-        "`{'cmdline.<param>': '<dono>'}` para o estado local — o dado que diz se "
-        "fomos NÓS que pusemos um parâmetro na linha de comando do kernel, e "
-        "portanto se podemos removê-lo no desinstalar. "
-        "DUAS FRASES DESTA ENTRADA FORAM SUBSTITUÍDAS em 15/08/2026 porque eram "
-        "FALSAS, não decisão a preservar: ela dizia *'sem chamador, ninguém "
-        "grava esse registro'* e *'o desinstalar não sabe o que é dele'*. O "
-        "registro É GRAVADO, em produção, na MESMA forma de chave: o heredoc do "
-        "passo `3e` do install imprime o `a.owner` de cada ação do plano, e o "
-        "shell o repassa às DUAS chamadas de `_register_cmdline_owner "
-        "cmdline.<param> <dono>` desse mesmo passo. A função (definida logo "
-        "abaixo de `CMDLINE_OWNERS_FILE`, no install.sh) escreve "
-        "`cmdline.<param>=<dono>` em "
-        "`~/.local/state/hefesto-dualsense4unix/cmdline-owners.conf`, e o "
-        "`uninstall.sh` LÊ esse mesmo arquivo — ele define o próprio "
-        "`CMDLINE_OWNERS_FILE` para reverter só o que é nosso. Quem estava "
-        "errado era esta razão, não a árvore. "
-        "O QUE SOBRA DE VERDADE, e é o mesmo dono da entrada anterior: a regra "
-        "do dono está escrita DUAS vezes, aqui em Python e no shell, e as duas "
-        "JÁ divergem — o shell preserva um dono anterior 'hefesto'/"
-        "'compartilhado' quando o plano novo diz 'terceiro', dentro do próprio "
-        "`_register_cmdline_owner`, e esta função não tem essa lógica. A "
-        "divergência é DELIBERADA e está "
-        "declarada no docstring do módulo (*'o dono reportado pelo plano vale "
-        "para a PRIMEIRA instalação: a lane de wiring preserva o registro "
-        "anterior'*), o que faz desta função a forma de primeira instalação e "
-        "não uma cura desligada. "
-        "O QUE A FECHA: decidir de quem é o planejamento, exatamente como na "
-        "entrada de `plan_cmdline`. NÃO fecho por conta própria porque fechar "
-        "aqui é mexer no `install.sh`, e todo passo dele tem de ser provado por "
-        "ciclo uninstall→install."
-    ),
+    # `integrations/kernel_cmdline.py::plan_cmdline` MOROU AQUI, e foi
+    # RECLASSIFICADA para `_NAO_E_PROMESSA` em 26/08/2026 — não é dívida, e a
+    # razão que a punha aqui era um FATO ERRADO, substituído lá.
+    # `integrations/kernel_cmdline.py::ownership_record` MOROU AQUI, e a
+    # entrada SAIU em 26/08/2026 porque o símbolo foi PODADO. A razão longa que
+    # estava aqui já tinha corrigido, em 15/08, o fato errado de que "ninguém
+    # grava esse registro": ele É gravado, em produção, pelo heredoc do passo
+    # `3e` do `install.sh` (que imprime o `a.owner` de cada ação) mais o
+    # `_register_cmdline_owner` do shell, que escreve
+    # `~/.local/state/hefesto-dualsense4unix/cmdline-owners.conf` — o arquivo
+    # que o `uninstall.sh` lê. E ela já dizia o resto: a regra do dono estava
+    # escrita DUAS vezes, e as duas JÁ divergiam (o shell preserva um dono
+    # anterior "hefesto"/"compartilhado" quando o plano novo diz "terceiro";
+    # esta função não tinha essa lógica).
+    # A entrada pedia "decidir de quem é o planejamento" e recusava fechar por
+    # conta própria "porque fechar aqui é mexer no `install.sh`". A poda decide
+    # sem tocar no `install.sh`: sai a forma SEM chamador, fica a que roda na
+    # máquina dela. Quem quiser o par continua tendo `a.param` e `a.owner` em
+    # cada `CmdlineAction` — é exatamente o que o heredoc lê.
     # `integrations/kernel_cmdline.py::strip_quirks_token` MOROU AQUI, e a
     # entrada afirmava "esse cuidado está escrito e nunca roda", pedindo como
     # cura que "o `uninstall.sh` chamar este caminho". SUBSTITUÍDO em
@@ -1970,29 +1537,18 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # O símbolo voltou à lista, agora em `_NAO_E_PROMESSA`, e a razão está lá.
     # A lápide fica porque o movimento de 13/08 aconteceu; a conclusão dele —
     # "o caminho de produção nasceu" — é que era falsa.
-    "profiles/sanidade.py::verificar_perfis_do_disco": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. É a conveniência que junta "
-        "as duas metades que já existem e funcionam — carrega os perfis do XDG "
-        "e roda as REGRAS sobre eles. As irmãs `verificar_perfis` e "
-        "`linhas_de_relatorio` (que o docstring diz ser o que `o doctor imprime`) "
-        "existem; falta quem comece a corrente. "
-        "O QUE A FECHA: o `doctor` chamar isto. É a lacuna mais barata desta "
-        "lista de fechar — uma chamada — e por isso mesmo não a fecho: 'barato' "
-        "não é o mesmo que 'pedido', e acrescentar saída nova ao doctor muda o "
-        "que ela lê quando algo quebra."
-    ),
+    # `profiles/sanidade.py::verificar_perfis_do_disco` MOROU AQUI, e foi
+    # RECLASSIFICADA para `_NAO_E_PROMESSA` em 26/08/2026: não é dívida, e a
+    # razão que a punha aqui era um FATO ERRADO, substituído lá.
     # --- a TUI --------------------------------------------------------------
-    "tui/app.py::main_async": (
-        "MEDIDO em 12/08/2026: nenhum chamador em lugar nenhum — nem `tests/`, "
-        "nem `scripts/`, nem `pyproject.toml`. É um ponto de entrada declarado "
-        "(`Entry point síncrono que roda o asyncio app`) que nada declara: os "
-        "dois consoles de `[project.scripts]` são `cli.app:main` e "
-        "`app.main:main`, e a TUI entra pelo irmão `run_tui`. "
-        "O QUE A FECHA: um console script em `pyproject.toml`, se a TUI for "
-        "para ter entrada própria; ou apagar, se `run_tui` já é a entrada. "
-        "Como este é o único acusado da lista SEM sequer um teste que o "
-        "exercite, é também o mais provável de ser resto puro."
-    ),
+    # `tui/app.py::main_async` MOROU AQUI, e a entrada SAIU em 26/08/2026
+    # porque o símbolo foi PODADO. A entrada oferecia duas curas — "um console
+    # script em `pyproject.toml`, se a TUI for para ter entrada própria; ou
+    # apagar, se `run_tui` já é a entrada" — e a segunda é a certa: `run_tui` É
+    # a entrada, e o console script novo seria produto novo, que não é decisão
+    # de agente. REMEDIDO em 26/08/2026: zero chamadores em `src/`, `tests/`,
+    # `scripts/`, `pyproject.toml` e nos heredocs Python do
+    # `install.sh`/`uninstall.sh`.
     # --- AS TRÊS CORRENTES FECHADAS EM SI MESMAS (22/08/2026) ----------------
     # As 21 entradas abaixo são o que a régua PLANA perdoava e a régua de
     # alcance acusou. Nenhuma é dívida nova: são três módulos inteiros escritos
@@ -2018,22 +1574,40 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # entregues DELIBERADAMENTE sem fiação — a sprint (§10) nomeia quem
     # pendura cada uma, para não colidir com as ondas de aba em andamento.
     "app/actions/ambiente_na_tela.py::descrever_teclado_na_tela": (
-        "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `osk_disponivel` — "
-        "publicada por `daemon/ipc_handlers.py:2009` desde 10/08/2026 e órfã "
-        "de leitor em `app/` (medido: `grep -rn osk_disponivel app/ gui/` "
-        "devolvia vazio). ONDE O CAMINHO SE PERDE: nenhuma tela ainda chama "
-        "esta função — o arquivo nasceu vazio de dono de propósito (§5 da "
-        "sprint), para não entrar em `app/actions/input_actions.py`. O QUE "
-        "FECHA: a Onda 10 · Navegação pendura esta frase perto do binding do "
-        "L3 (§10 da sprint nomeia o gancho)."
+        "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7); a razão foi SUBSTITUÍDA em "
+        "26/08/2026 (LEVA-3-D), porque a de antes mandava pendurar esta frase "
+        "e a medição derrubou a ordem. ONDE O CAMINHO SE PERDE, e agora são "
+        "duas coisas: (1) a função procura `osk_disponivel` no TOPO do "
+        "`state`, e o daemon a publica DENTRO do bloco `keyboard_emulation` "
+        "(`daemon/ipc_handlers.py:_keyboard_emulation_payload`) — contra "
+        "`tests/fixtures/state_full_quatro_controles.json`, capturado com a "
+        "máquina TENDO teclado na tela, ela responde 'não consegui ler'; "
+        "(2) o defeito que ela existia para curar FECHOU por outro caminho em "
+        "25/08 (`e909b62`, N12): `app/actions/mouse_actions.py:_anotar_teclado"
+        "_na_tela` lê a chave do lugar certo e "
+        "`app/actions/input_actions.py:265 frase_do_teclado_na_tela` a "
+        "transforma na frase da legenda — no gancho exato que a razão antiga "
+        "nomeava. Pendurá-la hoje poria DUAS frases sobre o mesmo fato na "
+        "mesma legenda, uma delas falsa. O QUE FECHA: a DECISÃO entre as duas "
+        "— consertar o nível da chave e apagar a irmã, ou apagar esta. Enquanto "
+        "não se decide, `tests/unit/test_ambiente_presumido_01_o_que_a_maquina"
+        "_nao_tem.py::TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade` trava a "
+        "medição e reprova em quem consertar o nível sem escolher."
     ),
     "app/actions/ambiente_na_tela.py::descrever_display_grafico": (
         "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê "
         "`window_detect_backend`/`window_detect_reason`, complementando (sem "
-        "substituir) `daemon_actions.descrever_deteccao_de_janela`. ONDE O "
-        "CAMINHO SE PERDE: mesma razão da irmã acima — arquivo sem dono de "
-        "propósito. O QUE FECHA: a Onda 11 · Sistema pendura esta frase perto "
-        "do cartão de saúde do ambiente gráfico (§10 da sprint)."
+        "substituir) `daemon_actions.descrever_deteccao_de_janela`. REMEDIDO "
+        "em 26/08/2026 (LEVA-3-D): ao contrário da irmã acima, esta função LÊ "
+        "as chaves certas — `daemon/ipc_handlers.py:_window_detect_payload` as "
+        "publica no TOPO do `state_full`, e contra os três fixtures reais ela "
+        "responde a verdade. ONDE O CAMINHO SE PERDE: só falta o chamador, e "
+        "ele mora fora do alcance de quem escreveu isto — o cartão é o "
+        "`storm_card` do `gui/main.glade:2823` ('Saúde do sistema'), pintado "
+        "por `app/actions/daemon_actions.py:1160 _refresh_window_detect_diag`, "
+        "e uma frase a mais ali pede um `GtkLabel` novo no Glade (recurso de "
+        "bancada, uma sprint por vez). O QUE FECHA: a Onda 11 · Sistema, com o "
+        "rótulo no Glade e a pintura ao lado do `window_detect_diag_label`."
     ),
     "app/actions/ambiente_na_tela.py::descrever_steam_encontrada": (
         "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `steam_layout_achado` — "
@@ -2082,7 +1656,9 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
 #: módulo, para outra coisa, e que por conter a palavra o dava por alcançado.
 #: Casar o literal INTEIRO não perdeu isenção legítima nenhuma (conferido: as
 #: cinco chamadas por string continuam alcançadas) e devolveu uma promessa
-#: solta de verdade.
+#: solta de verdade. (Esse símbolo foi PODADO em 26/08/2026, pela BG-07; a
+#: medição do instrumento é que fica — é ela que explica por que o casamento
+#: é do literal inteiro, e não de palavra.)
 
 #: Decoradores que ENTREGAM o símbolo a um framework, que passa a ser o
 #: chamador. Derivado do decorador, nunca de uma lista de nomes de função:
@@ -3567,16 +3143,18 @@ class TestOPortaoMorde:
         (copia / "integrations" / "steam_input_ponte.py").unlink()
 
         soltas = promessas_sem_caminho(copia)
-        # CANÁRIO TROCADO EM 25/08/2026, e a troca é o próprio portão
-        # funcionando: o canário era `prontuario_dos_jogos.py::Prontuario`, e
-        # aquele módulo GANHOU CAMINHO nesta madrugada. Um canário que deixa de
-        # ser inalcançável para de medir o que promete — e reprova por um motivo
-        # que não é o defeito. O novo é `app/fala_do_mapa.py::formata_pt_br`,
-        # que nasceu na ONDA0-Z6 (`26e0ccc`, 24/08) e segue sem tela que o
-        # chame: enquanto ele estiver declarado em `_SEM_CAMINHO_HOJE`, serve.
-        # No dia em que alguém o fiar, esta linha reprova — e o conserto é
-        # trocar o canário de novo, não silenciar.
-        assert "app/fala_do_mapa.py::formata_pt_br" in soltas, (
+        # CANÁRIO TROCADO DUAS VEZES, e as duas trocas são o próprio portão
+        # funcionando. Era `prontuario_dos_jogos.py::Prontuario`, e aquele
+        # módulo GANHOU CAMINHO em 25/08. Virou
+        # `app/fala_do_mapa.py::formata_pt_br`, e ele ganhou caminho em 26/08
+        # (BG-03: virou o dono único da vírgula, e a lápide dele foi apagada no
+        # mesmo commit) — esta linha reprovou, que é exatamente o que ela
+        # promete fazer. Hoje é `app/fala_do_mapa.py::Numero`, irmão dele no
+        # mesmo módulo, que a medição de 26/08 mostrou NÃO ter caído junto.
+        # Enquanto estiver declarado em `_SEM_CAMINHO_HOJE`, serve. No dia em
+        # que alguém o fiar, o conserto é trocar o canário de novo, não
+        # silenciar.
+        assert "app/fala_do_mapa.py::Numero" in soltas, (
             "sem o ponto de entrada a varredura devolveu algo inesperado — a "
             "medição de controle caiu junto e este caso não prova nada"
         )

@@ -22,6 +22,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
     DEFAULT_SCROLL_SPEED,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
 logger = get_logger(__name__)
 
@@ -69,10 +70,18 @@ MODO_DESCONHECIDO_HINT = (
 #: DIZ que o motivo faltou, em vez de inventar um.
 BLOQUEIO_DO_MOUSE_EM_PORTUGUES: dict[str, str] = {
     "desligada": "a emulação de mouse está desligada no Hefesto",
-    "sem_device": (
-        "o mouse virtual não subiu — abra a aba Sistema e clique em "
-        "“Aplicar correções”"
-    ),
+    # BG-NAV-01 (26/08/2026): mandava clicar no botão da aba Sistema, que roda
+    # o `disable_steam_input.sh` e o `fix_wireplumber_default_source.sh` — nem
+    # um nem outro cria o mouse virtual nem escreve a regra udev do `uinput`.
+    # Ponteiro que não leva ao conserto é ponteiro errado, e este mandava a
+    # pessoa clicar e voltar sem nada. O gesto que serve é o mesmo que a linha
+    # de estado desta aba e o campo UINPUT da Emulação já dão.
+    #
+    # `{gesto}` é trocado em `frase_da_recusa_do_mouse` pela frase única de
+    # `utils/repo_files.FRASE_DE_ATUALIZAR`. Não dá para resolvê-lo aqui: seria
+    # um `stat` no disco em tempo de importação, e a resposta muda conforme a
+    # instalação (checkout, AppImage, Nix, venv, pip --user, pacote).
+    "sem_device": "o mouse virtual não subiu — {gesto}",
     "modo_jogo": "o modo jogo está suspendendo mouse e teclado",
     "vpad_suspenso_pelo_steam_input": (
         "neste jogo quem entrega o controle é a Steam, e o controle virtual foi "
@@ -116,6 +125,9 @@ def frase_da_recusa_do_mouse(resposta: object) -> str:
             f"O Hefesto recusou o pedido (motivo: {bloqueio}). O mouse emulado "
             "não foi alterado."
         )
+    # `{gesto}` só existe no motivo que precisa dele; `str.replace` num texto
+    # que não o tem é no-op, então não há caso especial por chave.
+    motivo = motivo.replace("{gesto}", como_atualizar_esta_instalacao())
     return f"O Hefesto recusou: {motivo}. O mouse emulado não foi alterado."
 
 
@@ -601,19 +613,27 @@ class MouseActionsMixin(WidgetAccessMixin):
                 '<span foreground="#50fa7b">Pronto para usar como mouse</span>'
             )
         elif not module_ok:
+            # BG-INSTALL-01 (26/08/2026): dizia "rode a instalação de novo
+            # (./install.sh)", e esse arquivo só existe para quem clonou o
+            # repositório. O gesto agora é o desta instalação.
             label.set_markup(
                 '<span foreground="#ff5555">Falta um componente do mouse virtual — '
-                'rode a instalação de novo (./install.sh)</span>'
+                f'{como_atualizar_esta_instalacao()}</span>'
             )
         elif dev_exists and not dev_writable:
+            # BG-NAV-01 (26/08/2026): as duas frases abaixo mandavam clicar num
+            # botão da aba Sistema que não toca no `uinput` — ver a nota em
+            # `BLOQUEIO_DO_MOUSE_EM_PORTUGUES`. Agora dão o mesmo gesto do ramo
+            # de cima e do campo UINPUT da aba Emulação, que é o que de fato
+            # reescreve a regra udev e a permissão do nó.
             label.set_markup(
                 '<span foreground="#ff5555">O mouse virtual está sem permissão — '
-                'abra a aba Sistema e clique em “Aplicar correções”</span>'
+                f'{como_atualizar_esta_instalacao()}</span>'
             )
         elif no_ar is False or not dev_exists:
             label.set_markup(
                 '<span foreground="#ffb86c">O mouse virtual ainda não está pronto — '
-                'abra a aba Sistema e clique em “Aplicar correções”</span>'
+                f'{como_atualizar_esta_instalacao()}</span>'
             )
         else:
             label.set_markup(

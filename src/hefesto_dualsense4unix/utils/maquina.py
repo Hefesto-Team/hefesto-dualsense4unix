@@ -45,7 +45,7 @@ também neste arquivo criaria dois donos do mesmo valor — a classe de defeito 
 ABAS-01 curou:
 
 * **número de jogador** → ``controllers.json``, pelo ``identity.number.set``
-  (``daemon/ipc_handlers.py:1513``);
+  (``daemon/ipc_handlers.py:1590``);
 * **máscara por aparelho** → ``controller_masks.json``
   (``daemon/subsystems/external_mask.py:175``);
 * **tamanho do texto** → ``gui_preferences.json`` (``app/theme.py:39-40``).

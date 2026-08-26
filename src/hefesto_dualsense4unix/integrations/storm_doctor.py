@@ -10,13 +10,231 @@ ritual-Aurora — aqui só REPORTAMOS o estado, não mexemos.
 """
 from __future__ import annotations
 
+import os
 import re
+import shutil
+import subprocess
+from collections.abc import Callable
+from functools import lru_cache
 from pathlib import Path
+
+from hefesto_dualsense4unix.utils.repo_files import (
+    FRASE_DE_ATUALIZAR,
+    esta_instalacao_e_um_checkout,
+)
 
 # Tags no padrão do doctor.
 OK = "[ OK ]"
 WARN = "[WARN]"
 INFO = "[INFO]"
+
+#: O prefixo do gesto, palavra por palavra do molde já aprovado na aba
+#: Configurações (`app/actions/config/secao_exame.PREFIXO_DA_CURA`, e a foto
+#: `docs/usage/assets/readme_configuracoes.png`: *"O que fazer: Vale mudar um
+#: deles de porta."*).
+#:
+#: **DUPLICAÇÃO DECLARADA, não descuido.** O dono do prefixo é o `secao_exame`,
+#: que vive em `app/` — e `integrations/` não pode importar de `app/` sem
+#: inverter a camada (é a mesma razão que mudou o conselho de atualizar de casa,
+#: em `utils/repo_files.py:35-41`). A saída certa é o prefixo descer para
+#: `utils/`, e isso está RELATADO na entrega desta frente.
+PREFIXO_DA_CURA = "O que fazer: "
+
+
+#: Os rótulos dos botões que as frases desta casa mandam clicar. LIDOS do
+#: `main.glade`, nunca digitados — corrigido em 26/08/2026, e o defeito era
+#: vivo: a leva daquele dia renomeou "Aplicar correções" para "Consertar
+#: problemas conhecidos" (o rótulo velho não dizia o que o botão faz), e esta
+#: frase continuou mandando a pessoa procurar um botão QUE NÃO EXISTE MAIS na
+#: janela. Quem pegou foi `tests/unit/test_steam_input_ponteiros.py`, que
+#: compara a frase com os rótulos vivos — e é por isso que ele existe.
+_ROTULOS_EM_CACHE: dict[str, str] = {}
+
+
+def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
+    """O rótulo VIVO de um botão do `main.glade`, pelo id dele.
+
+    `se_faltar` é o que sai quando o glade não está ao alcance (empacotamento
+    parcial, teste sem recurso). Uma frase que some é pior que uma frase com um
+    nome velho, então isto nunca levanta.
+    """
+    if widget_id in _ROTULOS_EM_CACHE:
+        return _ROTULOS_EM_CACHE[widget_id]
+    alvo = se_faltar
+    try:
+        import re as _re
+        from pathlib import Path as _Path
+
+        glade = (
+            _Path(__file__).resolve().parents[1] / "gui" / "main.glade"
+        ).read_text(encoding="utf-8")
+        # A janela termina no PRÓXIMO `id=`, e não num número de caracteres:
+        # o rótulo pode ser propriedade direta do botão OU, quando ele precisa
+        # quebrar linha, um `<child><object class="GtkLabel">` alguns comentários
+        # abaixo. Um teto fixo de caracteres achava o primeiro caso e perdia o
+        # segundo — medido em 26/08, com o `btn_storm_fix_safe`, que é
+        # exatamente o botão que virou filho naquele dia.
+        bloco = glade.split(f'id="{widget_id}"', 1)[1]
+        bloco = bloco.split(' id="', 1)[0]
+        achado = _re.search(
+            r'<property name="label" translatable="yes">([^<]+)</property>', bloco
+        )
+        if achado:
+            alvo = achado.group(1)
+    except (OSError, IndexError):
+        pass
+    _ROTULOS_EM_CACHE[widget_id] = alvo
+    return alvo
+
+
+# ---------------------------------------------------------------------------
+# O GESTO DE ATUALIZAR, POR FORMATO DE INSTALAÇÃO (BG-06b)
+#
+# ESTE BLOCO MORA AQUI POR POSSE, NÃO POR DESENHO. A casa dele é
+# `utils/repo_files.py`, ao lado de `FRASE_DE_ATUALIZAR` e de
+# `esta_instalacao_e_um_checkout` — é a MESMA pergunta ("o que esta instalação
+# tem ao lado do código?"), um grau mais fina. `repo_files.py` está fora da
+# posse desta frente (LEVA-2-G, 26/08/2026), e a regra da leva é relatar em vez
+# de escrever em arquivo alheio. Fica RELATADO: enquanto ele não descer,
+# `app/actions/mouse_actions.py` e `app/actions/emulation_actions.py` — que
+# chamam `repo_files.como_atualizar_esta_instalacao()` direto — continuam
+# entregando a frase genérica, que é o último degrau desta escada e não uma
+# contradição.
+#
+# O QUE ELE NÃO FAZ: adivinhar o formato pela distribuição. "Tem `apt`, logo é
+# `.deb`" está errado para todo AppImage e todo `pip install --user` numa
+# máquina Debian — e um gesto errado é pior que um gesto vago. A pergunta é
+# sempre sobre ESTE código no disco: quem é o dono dele?
+# ---------------------------------------------------------------------------
+
+FORMATO_CHECKOUT = "checkout"
+FORMATO_FLATPAK = "flatpak"
+FORMATO_NIX = "nix"
+FORMATO_ARCH = "arch"
+FORMATO_DEBIAN = "debian"
+FORMATO_FEDORA = "fedora"
+FORMATO_DESCONHECIDO = "desconhecido"
+
+#: O gesto de cada formato. **PROVISÓRIO — decisão dela**: os cinco nomeados
+#: são texto novo de tela (o carimbo é herdado da T-03, que redigiu a genérica
+#: e parou aqui de propósito).
+#:
+#: A forma é a mesma dos dois que já existiam, e não é estilo: a frase entra no
+#: MESMO lugar de outras ("…, ou <isto>", "— <isto> e reconecte os controles"),
+#: então ela é um GESTO ("rode X"), nunca uma oração inteira. Os dois extremos
+#: da escada vêm de `repo_files.FRASE_DE_ATUALIZAR` por referência — redigi-los
+#: de novo aqui é como duas verdades começam nesta casa.
+GESTO_DE_ATUALIZAR: dict[str, str] = {
+    FORMATO_CHECKOUT: FRASE_DE_ATUALIZAR[True],
+    FORMATO_FLATPAK: "rode flatpak update",
+    FORMATO_ARCH: "rode sudo pacman -Syu",
+    FORMATO_FEDORA: "rode sudo dnf upgrade",
+    FORMATO_DEBIAN: "rode sudo apt upgrade",
+    FORMATO_NIX: "rode nix profile upgrade",
+    FORMATO_DESCONHECIDO: FRASE_DE_ATUALIZAR[False],
+}
+
+#: Quem responde "este arquivo é meu", e o formato de cada um. A ordem não
+#: importa: numa máquina só um deles reconhece o caminho.
+_GERENCIADORES: tuple[tuple[str, str, str], ...] = (
+    (FORMATO_ARCH, "pacman", "-Qo"),
+    (FORMATO_DEBIAN, "dpkg", "-S"),
+    (FORMATO_FEDORA, "rpm", "-qf"),
+)
+
+
+@lru_cache(maxsize=8)
+def _dono_do_arquivo(caminho: str) -> str | None:
+    """Qual gerenciador de pacotes diz ser dono deste caminho, ou ``None``.
+
+    ``None`` é o degrau final da escada e significa *"ninguém assume"* —
+    AppImage, `pip install --user`, `make install` à mão. É a resposta honesta,
+    e é ela que devolve a frase genérica.
+
+    Em cache porque a resposta não muda no meio de um processo (o pacote não é
+    reinstalado por baixo da GUI aberta) e porque a frase é interpolada em
+    muitas linhas do mesmo laudo — sem cache, o cartão "Saúde do sistema"
+    pagaria um `dpkg -S` por linha. A chave é `str` e não `Path` de propósito:
+    quem injeta o consultor nos testes não passa por aqui.
+    """
+    for formato, binario, flag in _GERENCIADORES:
+        if shutil.which(binario) is None:
+            continue
+        try:
+            proc = subprocess.run(
+                [binario, flag, caminho],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if proc.returncode == 0 and proc.stdout.strip():
+            return formato
+    return None
+
+
+def formato_desta_instalacao(
+    *,
+    e_checkout: bool | None = None,
+    marca_flatpak: Path | None = None,
+    raiz_do_codigo: Path | None = None,
+    consultar_dono: Callable[[str], str | None] | None = None,
+) -> str:
+    """Como este Hefesto foi instalado — em uma palavra.
+
+    Os quatro parâmetros existem para a bancada e para quem já perguntou; em
+    produção ninguém passa nenhum. Eles são o que dá mordida ao teste: um
+    `/nix/store` de mentira é um `Path`, não uma variável de ambiente de
+    fundo de gaveta.
+
+    A escada, e cada degrau é uma MEDIÇÃO, não um palpite:
+
+    1. **checkout** — há um `install.sh` ao lado do código (`repo_files`);
+    2. **flatpak** — o `/.flatpak-info` que o próprio flatpak monta em todo
+       sandbox, ou o `FLATPAK_ID` do ambiente;
+    3. **nix** — o código está dentro do `/nix/store`;
+    4. **arch/debian/fedora** — o gerenciador de pacotes ASSUME o arquivo;
+    5. **desconhecido** — ninguém assume, e a frase volta a ser a genérica.
+    """
+    if e_checkout is None:
+        e_checkout = esta_instalacao_e_um_checkout()
+    if e_checkout:
+        return FORMATO_CHECKOUT
+
+    marca = marca_flatpak or Path("/.flatpak-info")
+    if marca.is_file() or os.environ.get("FLATPAK_ID"):
+        return FORMATO_FLATPAK
+
+    raiz = raiz_do_codigo or Path(__file__).resolve()
+    if str(raiz).startswith("/nix/store"):
+        return FORMATO_NIX
+
+    dono = (consultar_dono or _dono_do_arquivo)(str(raiz))
+    return dono or FORMATO_DESCONHECIDO
+
+
+def gesto_de_atualizar(
+    *,
+    e_checkout: bool | None = None,
+    marca_flatpak: Path | None = None,
+    raiz_do_codigo: Path | None = None,
+    consultar_dono: Callable[[str], str | None] | None = None,
+) -> str:
+    """O gesto de atualizar que serve para ESTA instalação, sem jargão.
+
+    Substitui `repo_files.como_atualizar_esta_instalacao()` nos chamadores que
+    esta frente possui. Os argumentos são os de :func:`formato_desta_instalacao`.
+    """
+    return GESTO_DE_ATUALIZAR[
+        formato_desta_instalacao(
+            e_checkout=e_checkout,
+            marca_flatpak=marca_flatpak,
+            raiz_do_codigo=raiz_do_codigo,
+            consultar_dono=consultar_dono,
+        )
+    ]
 
 _QUIRK_RE = re.compile(r"054c:0ce6")
 # SPRINT-GAME-RUMBLE-01: a cura de raiz é o quirk_flags do snd_usb_audio para o
@@ -154,7 +372,20 @@ def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
             quirks_text = ""
     if _QUIRK_RE.search(quirks_text or ""):
         return OK, "quirk anti-storm ativo (054c:0ce6 — áudio USB espaçado)"
-    return WARN, "quirk anti-storm AUSENTE do usbcore (storm pode reincidir sob carga)"
+    # BG-SAUDE-01 (26/08/2026) — **PROVISÓRIO — decisão dela**.
+    # A frase dizia *"quirk anti-storm AUSENTE do usbcore (storm pode reincidir
+    # sob carga)"*: o quê e o porquê em linguagem de kernel, e nenhum
+    # o-que-fazer. Aqui o gesto honesto é NADA, e isso não é evasiva — este
+    # quirk é o cinto extra (a alavanca A do `doctor.sh:837`), e a cura de raiz
+    # é a linha de cima, do `check_snd_quirk`. Mandar mexer no cmdline do
+    # kernel quem já está curado seria trabalho inventado; o público desta tela
+    # não tem PS5 nem guia de USB.
+    return WARN, (
+        "o cinto extra do áudio USB não está posto (sob carga o travamento "
+        f"pode voltar). {PREFIXO_DA_CURA}nada, enquanto a linha da cura do "
+        "travamento do USB, logo acima, estiver verde — é ela que resolve na "
+        "raiz."
+    )
 
 
 def find_localconfig_vdfs(home: Path) -> list[Path]:
@@ -191,7 +422,18 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
     home = home or Path.home()
     vdfs = find_localconfig_vdfs(home)
     if not vdfs:
-        return INFO, "Steam Input: nenhum localconfig.vdf encontrado (Steam instalada?)"
+        # BG-SAUDE-01 — **PROVISÓRIO — decisão dela**. Era *"Steam Input:
+        # nenhum localconfig.vdf encontrado (Steam instalada?)"*: o nome de um
+        # arquivo que a pessoa nunca vai abrir, e uma pergunta em vez de um
+        # gesto. O nome do arquivo fica entre parênteses porque o `doctor.sh`
+        # e o `disable_steam_input.sh` falam dele — mas ele deixou de ser a
+        # frase.
+        return INFO, (
+            "Steam Input: não encontrei a Steam nesta máquina (nenhum "
+            f"localconfig.vdf). {PREFIXO_DA_CURA}nada, se você não usa a "
+            "Steam. Se usa, abra a Steam e faça login uma vez — depois volte "
+            "a esta aba."
+        )
     # STEAM-INPUT-ALLOWLIST-01: opt-in per-app deliberado (ex.: MMJ) não é
     # conflito — só acusa o que a transformação do guard corrigiria.
     allow = steam_input_allowlist()
@@ -225,14 +467,15 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
             partes.append(
                 f"Steam Input ligado para {jogos} — o Hefesto vai desligá-lo no "
                 f"próximo ciclo do guarda, porque {sujeito} na sua lista de "
-                "exceções. Para manter a sua escolha, abra o jogo e clique "
-                "'Este jogo não funciona' na aba Sistema."
+                f"exceções. {PREFIXO_DA_CURA}para manter a sua escolha, abra o "
+                "jogo e clique 'Este jogo não funciona' na aba Sistema."
             )
         if global_ligado:
             partes.append(
                 "Steam Input LIGADO no ajuste GLOBAL da Steam (vale para todo "
-                "jogo, não é escolha por jogo) — clique 'Aplicar correções' na "
-                "aba Sistema para desligar."
+                f"jogo, não é escolha por jogo). {PREFIXO_DA_CURA}clique "
+                f"'{rotulo_do_botao('btn_storm_fix_safe', 'Consertar problemas conhecidos')}' "
+                "na aba Sistema para desligar."
             )
         return WARN, " ".join(partes)
     excecoes = [
@@ -277,7 +520,17 @@ def check_wireplumber(dropin_dir: Path | None = None) -> tuple[str, str]:
     present = [n for n in names if (dropin_dir / n).is_file()]
     if present:
         return OK, f"WirePlumber configurado ({', '.join(present)})"
-    return INFO, "WirePlumber sem drop-in do hefesto ('doctor --fix-safe' instala)"
+    # BG-SAUDE-01 — **PROVISÓRIO — decisão dela**. Esta era a pior das doze:
+    # dizia *"WirePlumber sem drop-in do hefesto ('doctor --fix-safe'
+    # instala)"* — mandava a pessoa a um comando de terminal enquanto o botão
+    # que roda EXATAMENTE esse script está três linhas abaixo, na mesma tela
+    # ("Aplicar correções" → `on_storm_fix_safe`, que chama o
+    # `scripts/fix_wireplumber_default_source.sh --install`).
+    return INFO, (
+        "o ajuste de áudio do Hefesto não está instalado — sem ele o controle "
+        "pode virar o microfone padrão do sistema sozinho. "
+        f"{PREFIXO_DA_CURA}clique 'Aplicar correções' na aba Sistema."
+    )
 
 
 def check_authorized_rule(rules_dir: Path | None = None) -> tuple[str, str]:
@@ -288,8 +541,20 @@ def check_authorized_rule(rules_dir: Path | None = None) -> tuple[str, str]:
     rules_dir = rules_dir or Path("/etc/udev/rules.d")
     rule = rules_dir / "75-ps5-controller-disable-usb-audio.rules"
     if rule.is_file():
-        return INFO, "regra áudio-off (authorized=0) ATIVA — mic/fone do controle off"
-    return INFO, "regra áudio-off inativa (áudio do controle preservado)"
+        # BG-SAUDE-01 — **PROVISÓRIO — decisão dela**. `authorized=0` é o nome
+        # do gesto no kernel, não na tela. O estado é DELIBERADO (a regra 75 é
+        # opt-in do instalador), então o gesto é "nada" — com a saída escrita
+        # ao lado, que é o que faltava.
+        return INFO, (
+            "o mic e o fone do controle estão DESLIGADOS de propósito (regra "
+            f"áudio-off ATIVA). {PREFIXO_DA_CURA}nada, se foi você que pediu. "
+            "Para ter mic e fone de volta, reinstale o Hefesto sem a opção de "
+            "desligar o áudio do controle."
+        )
+    return INFO, (
+        "regra áudio-off inativa — o mic e o fone do controle estão "
+        f"liberados. {PREFIXO_DA_CURA}nada."
+    )
 
 
 def check_snd_quirk(
@@ -317,7 +582,13 @@ def check_snd_quirk(
     if persisted:
         # MESA-CHEIA-11/E4: são os QUATRO a reconectar — o quirk pega no replug
         # de cada controle, não no primeiro que voltar.
-        return INFO, "cura do travamento agendada (reconecte os controles p/ ativar)"
+        # BG-SAUDE-01 — o gesto já estava aqui; o que faltava era estar no
+        # molde, para a pessoa achá-lo sempre no mesmo lugar da frase.
+        return INFO, (
+            "a cura do travamento está agendada. "
+            f"{PREFIXO_DA_CURA}desconecte e reconecte os controles para ela "
+            "valer agora."
+        )
     # STEAM-INPUT-01 (entrega 9), com reenquadramento: a sprint mandou trocar o
     # rótulo morto ('Reaplicar fixes seguros') pelo nome do botão real, e aqui
     # isso seria uma mentira NOVA. O "Aplicar correções" (`on_storm_fix_safe`,
@@ -329,11 +600,20 @@ def check_snd_quirk(
     # senha"). Quem instala esta cura é o `install.sh` (via
     # `scripts/install_snd_quirk.sh`, em /etc/modprobe.d), e ela pega no
     # próximo replug do controle. É esse o ponteiro honesto.
+    # BG-INSTALL-01 (26/08/2026): o "rode ./install.sh" era cravado, e este
+    # laudo aparece em TODO formato de instalação — inclusive nos cinco que
+    # não têm o arquivo.
+    # BG-06b (26/08/2026): a frase deixou de parar no honesto-e-vago. O
+    # `gesto_de_atualizar()` NOMEIA o gesto do formato desta máquina
+    # (`flatpak update`, `pacman -Syu`, …) e só cai na genérica quando ninguém
+    # assume o arquivo — ver o bloco no topo deste módulo.
     return (
         WARN,
-        "cura do travamento do USB AUSENTE — rode ./install.sh e reconecte os "
-        "controles (o botão 'Aplicar correções' não instala esta cura; sem ela "
-        "os controles podem desconectar no meio do jogo)",
+        f"cura do travamento do USB AUSENTE — sem ela os controles podem "
+        f"desconectar no meio do jogo. {PREFIXO_DA_CURA}{gesto_de_atualizar()} "
+        f"e reconecte os controles (o botão "
+        f"'{rotulo_do_botao('btn_storm_fix_safe', 'Consertar problemas conhecidos')}' "
+        "não instala esta cura).",
     )
 
 
@@ -429,7 +709,11 @@ def check_snd_audio_healthy(
     if esperados is None:
         if placas:
             return OK, "áudio do controle presente (mic+fone do DualSense ativos)"
-        return INFO, "áudio do controle ausente (controle desconectado? — ou áudio-off)"
+        return INFO, (
+            "áudio do controle ausente (controle desconectado? — ou "
+            f"áudio-off). {PREFIXO_DA_CURA}conecte o controle pelo cabo — no "
+            "rádio o mic e o fone não passam."
+        )
     if esperados == 0:
         if placas:
             return (
@@ -439,7 +723,9 @@ def check_snd_audio_healthy(
         return (
             INFO,
             "nenhum controle no cabo — o áudio USB não se aplica (no rádio o "
-            "mic e o fone não passam por placa de som)",
+            f"mic e o fone não passam por placa de som). {PREFIXO_DA_CURA}"
+            "nada; conecte pelo cabo se quiser usar o mic e o fone do "
+            "controle.",
         )
     if placas >= esperados:
         return (
@@ -451,7 +737,9 @@ def check_snd_audio_healthy(
         return (
             INFO,
             f"áudio ausente {_frase_do_cabo(esperados)} "
-            "(áudio-off ligado? — ou a placa ainda subindo)",
+            f"(áudio-off ligado? — ou a placa ainda subindo). {PREFIXO_DA_CURA}"
+            "espere alguns segundos e olhe de novo; se não voltar, desconecte "
+            "e reconecte o cabo.",
         )
     # Aqui `esperados >= 2` sempre (0 < placas < esperados), então o denominador
     # é plural de verdade; o que varia é quantos ficaram de fora.
@@ -459,7 +747,8 @@ def check_snd_audio_healthy(
     return (
         WARN,
         f"áudio presente em {placas} de {esperados} controles no cabo — "
-        f"{faltam} sem mic nem fone",
+        f"{faltam} sem mic nem fone. {PREFIXO_DA_CURA}desconecte e reconecte "
+        "no cabo quem ficou de fora.",
     )
 
 
@@ -499,6 +788,8 @@ def _safe_read(path: Path) -> str:
 
 
 __all__ = [
+    "GESTO_DE_ATUALIZAR",
+    "PREFIXO_DA_CURA",
     "check_authorized_rule",
     "check_quirk",
     "check_snd_audio_healthy",
@@ -508,6 +799,8 @@ __all__ = [
     "contar_placas_dualsense",
     "controles_no_cabo",
     "find_localconfig_vdfs",
+    "formato_desta_instalacao",
+    "gesto_de_atualizar",
     "steam_input_allowlist",
     "steam_input_fora_da_allowlist",
     "steam_input_on_fora_da_allowlist",

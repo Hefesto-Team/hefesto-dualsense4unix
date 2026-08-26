@@ -258,11 +258,42 @@ class TestRetrocompatibilidade:
             profile = Profile.model_validate(data)
             assert profile.match.type in ("any", "criteria")
 
-    def test_coop_local_de_fabrica_segue_alcancavel(self) -> None:
-        """O preset migrado no R-12 casa por título — não virou manual."""
-        data = json.loads((ASSETS_DIR / "coop_local.json").read_text(encoding="utf-8"))
-        profile = Profile.model_validate(data)
-        assert profile.matches({"wm_name": "Sackboy: A Big Adventure"}) is True
+    def test_nenhum_preset_de_fabrica_ficou_inalcancavel(self) -> None:
+        """O defeito do R-12 era um preset que NUNCA casava — e ele volta calado.
+
+        NOTA DATADA — 26/08/2026. Aqui estava
+        `test_coop_local_de_fabrica_segue_alcancavel`, que abria
+        `coop_local.json` e afirmava que o preset migrado no R-12 casava por
+        título. O preset foi PODADO da fábrica nesta data (a pedido dela, e
+        nenhum dos podados estava ativo no disco dela), então o alvo do teste
+        não existe mais.
+
+        O que a régua guardava, porém, não era o `coop_local`: era a família
+        de defeito *"preset de fábrica que o autoswitch nunca escolhe"* — a
+        que passou meses no disco sem ninguém notar. Por isso ela não some
+        junto com o arquivo; ela passa a valer para a fábrica INTEIRA, que é
+        mais do que ela media antes.  # verbo medir, sem acento (noqa-acento)
+        """
+        arquivos = sorted(ASSETS_DIR.glob("*.json"))
+        assert arquivos, "presets de fábrica sumiram do repositório"
+        for path in arquivos:
+            profile = Profile.model_validate(
+                json.loads(path.read_text(encoding="utf-8"))
+            )
+            match = profile.match
+            if isinstance(match, MatchAny):
+                continue  # catch-all casa com tudo, por definição
+            assert isinstance(match, MatchCriteria)
+            assert (
+                match.window_class
+                or match.window_title_regex
+                or match.process_name
+            ), (
+                f"{path.name}: `criteria` com os três campos vazios — "
+                "`matches()` devolve False sem condição alguma, e o autoswitch "
+                "NUNCA escolhe este preset. Foi assim que o `coop_local` de "
+                "fábrica passou meses inalcançável."
+            )
 
     def test_json_v1_sem_o_tipo_novo_nao_mudou_de_significado(self) -> None:
         """`any` e `criteria` gravados antes desta mudança leem igual."""

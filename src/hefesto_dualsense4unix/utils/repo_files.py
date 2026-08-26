@@ -13,11 +13,32 @@ código, que já haviam divergido:
 - `cli/cmd_doctor.py:23` (`_find_repo_file`) — ficou com as três bases de
   sempre, e por isso o `doctor` continuava cego no Flatpak.
 
-Este módulo é a resposta única. O `cmd_doctor` já a consome; o
-`daemon_actions` tem dono em outra árvore neste momento e é a próxima parada
-(está no relatório da frente).
+Este módulo é a resposta única. **BG-BASES-01 (26/08/2026): as outras quatro
+listas morreram aqui.** Eram cinco no total, e as quatro que sobreviviam ao
+`cmd_doctor` cobriam bases diferentes umas das outras — por isso o mesmo
+clique achava o script num formato de instalação e falhava no outro:
+
+| resolvedor | bases | o que faltava |
+|---|---|---|
+| `daemon_actions.py:495` (`BASES_DE_INSTALACAO`) | 4 | `sys.prefix` e o `share/` do usuário |
+| `emulation_actions.py:1200` (`_mic_script`) | 3 | as duas acima **e `/app/share`** |
+| `emulation_actions.py:1763` (`_steam_input_script`) | 3 | as mesmas três |
+| `cli/cmd_mic.py:92` (`_find_script`) | 3 | as mesmas três |
+
+`sys.prefix/share/…` é AppImage, venv e Nix; `/app/share` é o Flatpak; o
+`share/` do usuário é o `pip install --user`.
+
+Todas passaram a chamar `encontrar_arquivo_do_repo()`.
 
 Cada base abaixo é um destino MEDIDO de instalação, não uma suposição.
+
+**O conselho de atualizar mora aqui pelo mesmo motivo** (BG-INSTALL-01):
+`esta_instalacao_e_um_checkout()` e `como_atualizar_esta_instalacao()`
+nasceram na T-03 dentro de `app/actions/daemon_actions.py`, e três frases de
+tela que precisavam delas vivem FORA do `app/` — `integrations/storm_doctor.py`
+é uma delas, e fazer `integrations/` importar de `app/` inverteria a camada.
+A pergunta é a mesma deste módulo (*"o que esta instalação tem ao lado do
+código?"*), então a resposta fica no mesmo lugar.
 """
 from __future__ import annotations
 
@@ -111,4 +132,70 @@ def encontrar_arquivo_do_repo(
     return None
 
 
-__all__ = ["NOME_NO_SHARE", "bases_de_instalacao", "encontrar_arquivo_do_repo"]
+#: O gesto de atualizar, nos dois únicos casos que existem.
+#:
+#: **PROVISÓRIO — decisão dela** (carimbo herdado da T-03, 25/08/2026): a
+#: frase de fora do checkout é o *mínimo aceitável* — honesta e universal,
+#: mas não nomeia o gesto do formato (um `flatpak update`, um `apt upgrade`).
+#: Nomear é texto novo de tela, e isso é dela.
+#:
+#: **A frase de fora do checkout é comparada palavra por palavra** com a do
+#: `scripts/doctor.sh` (`_CONSELHO_GESTO_GENERICO`) por
+#: `tests/unit/test_bg06_o_grau_e_o_conselho_que_serve_para_esta_instalacao.py`:
+#: são duas cópias declaradas da mesma decisão, e o portão existe para elas
+#: não divergirem. Mudar uma sem a outra reprova.
+#:
+#: **ELA É UM GESTO, não uma explicação**, e isso é de propósito: entra no
+#: MESMO lugar da frase onde entrava "rode ./install.sh" ("…, ou <isto>",
+#: "— <isto> e reconecte os controles"). Uma oração inteira no lugar quebra a
+#: gramática de quem a interpola.
+FRASE_DE_ATUALIZAR: dict[bool, str] = {
+    True: "rode ./install.sh para atualizar o Hefesto",
+    False: "atualize o Hefesto pelo mesmo caminho por onde você o instalou",
+}
+
+
+def esta_instalacao_e_um_checkout(bases: Sequence[Path] | None = None) -> bool:
+    """Há um `install.sh` ao lado deste código?
+
+    É a pergunta inteira: `./install.sh` só existe para quem clonou o
+    repositório. Quem instalou por Flatpak, AppImage, Arch, Fedora ou Nix não
+    tem checkout nenhum na máquina — e mandá-lo rodar `./install.sh` é
+    mandá-lo a um lugar que não existe.
+
+    Não é presunção sobre o formato: é a existência do arquivo no disco. A
+    primeira base é a raiz do checkout (`bases_de_instalacao()[0]`), e é lá
+    que o instalador estaria.
+
+    `bases` existe para o teste e para quem quiser perguntar por uma lista
+    específica, como em `encontrar_arquivo_do_repo`; em produção ninguém passa.
+    """
+    lista = bases if bases is not None else bases_de_instalacao()
+    return (lista[0] / "install.sh").is_file()
+
+
+def como_atualizar_esta_instalacao(e_checkout: bool | None = None) -> str:
+    """O gesto de atualizar que serve para ESTA instalação, sem jargão.
+
+    T-03 (SISTEMA-O-VIGIA-VIVO-01, 25/08/2026). As frases que mandavam rodar
+    o instalador não mentiam — elas davam um **conselho impossível**: em cinco
+    dos seis formatos em que este produto é instalado, `./install.sh` não está
+    na máquina. O produto já sabia distinguir os dois casos; ninguém tinha
+    perguntado.
+
+    `e_checkout` é para quem JÁ perguntou e não quer perguntar duas vezes (é
+    um `stat` no disco). Sem ele, a função pergunta sozinha.
+    """
+    if e_checkout is None:
+        e_checkout = esta_instalacao_e_um_checkout()
+    return FRASE_DE_ATUALIZAR[bool(e_checkout)]
+
+
+__all__ = [
+    "FRASE_DE_ATUALIZAR",
+    "NOME_NO_SHARE",
+    "bases_de_instalacao",
+    "como_atualizar_esta_instalacao",
+    "encontrar_arquivo_do_repo",
+    "esta_instalacao_e_um_checkout",
+]

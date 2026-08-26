@@ -67,11 +67,9 @@ def test_flag_roundtrip_liga_desliga(tmp_config: Path) -> None:
     assert flag.exists()
     assert json.loads(flag.read_text("utf-8")) == {"enabled": False}
     assert session.load_keyboard_preference() is False
-    assert session.load_keyboard_emulation_enabled() is False
 
     session.save_keyboard_emulation(True)
     assert session.load_keyboard_preference() is True
-    assert session.load_keyboard_emulation_enabled() is True
 
 
 def test_flag_ausente_e_nunca_configurada(tmp_config: Path) -> None:
@@ -82,8 +80,12 @@ def test_flag_ausente_e_nunca_configurada(tmp_config: Path) -> None:
     sistema (L3/R3) e as três regiões do touchpad de quem já os usava.
     """
     assert session.load_keyboard_preference() is None
-    assert session.load_keyboard_emulation_enabled() is True
-    assert session.load_keyboard_emulation_enabled(default=False) is False
+    # PODA de 26/08/2026: quem aplicava o default aqui era o invólucro
+    # `load_keyboard_emulation_enabled`, que ninguém em produção chamava. O
+    # default vive onde sempre valeu — no piso da config — e é ELE que a
+    # assimetria descrita acima descreve. `None` = "nunca decidiu" = o piso
+    # manda, e o piso do teclado é `True`.
+    assert DaemonConfig().keyboard_emulation_enabled is True
 
 
 def test_conteudo_legado_e_lixo_contam_como_ligada(tmp_config: Path) -> None:

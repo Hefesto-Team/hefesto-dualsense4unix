@@ -49,7 +49,13 @@ gi.require_version("Gtk", "3.0")
 from hefesto_dualsense4unix.app.actions import footer_actions, lightbar_actions
 from hefesto_dualsense4unix.app.actions.lightbar_actions import (
     LightbarActionsMixin,
+    frase_do_envio,
     mensagem_de_secao_fora,
+)
+from hefesto_dualsense4unix.app.textos_de_aplicacao import (
+    GUARDADO,
+    NADA_ACONTECEU,
+    frase_do_desfecho,
 )
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
@@ -294,3 +300,180 @@ def test_daemon_antigo_sem_os_campos_novos_nao_vira_falha(
     host.on_lightbar_apply(None)
 
     assert "Cor enviada ao controle" in _ultimo_toast(host)
+
+
+# ---------------------------------------------------------------------------
+# BG-01 (26/08/2026) — a aba parou de ADIVINHAR e passou a perguntar ao daemon
+#
+# O defeito, medido na bancada viva em 23/08 e ainda de pé nesta aba: a frase
+# de "Cor enviada" x "guardada" saía da HEURÍSTICA do estado da janela
+# (`alvo_fora_da_mesa`, `modo_nativo_manda_no_output`), que enxerga DUAS das
+# razões e joga fora o corpo do daemon, que traz `aplicado_em`/`guardado_em`.
+# A mesma aba já lia o daemon no outro ramo (`apply_draft_detalhado`): eram
+# duas verdades sobre o mesmo gesto numa tela só.
+# ---------------------------------------------------------------------------
+
+UNIQ_ALVO = "aabbcc000001"
+
+#: A janela num estado em que a HEURÍSTICA diria "aplicado": o alvo escolhido
+#: ESTÁ na mesa, o Modo Nativo está desligado, o co-op está desligado. Se a
+#: decisão voltar a ser dela, o toast volta a dizer "Cor enviada ao controle".
+#: A cor é o gesto: o co-op não governa a cor, e é medido.
+def _host_que_a_heuristica_leria_como_aplicado() -> _Host:
+    host = _host()
+    host._edit_target_uniq = UNIQ_ALVO
+    host._edit_target_label = "Controle 1 (USB)"
+    host._target_uniq_by_index = {0: UNIQ_ALVO}
+    host._modo_nativo_ligado = False
+    host._coop_ligado = False
+    host._current_rgb = (10, 20, 30)
+    host._current_brightness = 0.8
+    return host
+
+
+def _selar_corpo(monkeypatch: pytest.MonkeyPatch, corpo: Any) -> None:
+    """Sela a rota `led.set` por MAC com um corpo escolhido do daemon."""
+    monkeypatch.setattr(
+        lightbar_actions,
+        "led_set_detalhado",
+        lambda *_a, **_kw: corpo,
+    )
+
+
+def test_zero_destinos_nao_vira_cor_enviada(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A MORDIDA da BG-01, e ela é uma frase contra a outra.
+
+    O daemon responde `aplicado_em: []` e `guardado_em: [uniq]` — nada saiu no
+    fio, o override ficou registrado — com a janela num estado que a heurística
+    leria como "aplicado". A frase tem de dizer GUARDADA.
+
+    **Com a cura arrancada** (trocar `frase_do_envio(...)` de volta por
+    `frase_de_guardado(alvo_ausente=alvo_fora_da_mesa(self), ...) or
+    _TOAST_COR_ENVIADA...` em `_aplicar_cor_no_controle`), a janela não vê
+    pendência nenhuma, a heurística devolve `None`, e o toast volta a ser
+    "Cor enviada ao controle (80% de brilho)" — este teste reprova imprimindo
+    as duas frases lado a lado.
+    """
+    host = _host_que_a_heuristica_leria_como_aplicado()
+    _selar_corpo(
+        monkeypatch,
+        {"status": "ok", "aplicado_em": [], "guardado_em": [UNIQ_ALVO]},
+    )
+
+    host._aplicar_cor_no_controle()
+
+    frase = _ultimo_toast(host)
+    heuristica = "Cor enviada ao controle (80% de brilho)"
+    assert GUARDADO in frase, (
+        "o daemon disse que NADA saiu no fio e a tela afirmou que a cor foi.\n"
+        f"  daemon    : aplicado_em=[] guardado_em=['{UNIQ_ALVO}']\n"
+        f"  a tela diz: {frase!r}\n"
+        f"  heurística: {heuristica!r}  <- a frase que a adivinhação devolve"
+    )
+    assert frase != heuristica
+
+
+def test_com_o_daemon_dizendo_aplicado_a_frase_e_a_de_sempre(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A mordida gêmea: a cura não pode avançar longe demais.
+
+    Com `aplicado_em` cheio, o byte saiu — e a palavra desta aba continua
+    sendo "enviada", nunca "aplicada" (LIGHTBAR-BT-RESET-01: por Bluetooth o
+    firmware aceita e IGNORA a escrita de cor; foram 330 mil escritas com a
+    barra apagada). Sem este teste, uma cura que dissesse "guardado" sempre
+    passaria no de cima.
+    """
+    host = _host_que_a_heuristica_leria_como_aplicado()
+    _selar_corpo(
+        monkeypatch,
+        {"status": "ok", "aplicado_em": [UNIQ_ALVO], "guardado_em": []},
+    )
+
+    host._aplicar_cor_no_controle()
+
+    assert _ultimo_toast(host) == "Cor enviada ao controle (80% de brilho)"
+
+
+def test_as_duas_listas_vazias_dizem_que_ninguem_recebeu(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A rota EXATA que a bancada mediu em 23/08: zero destino, tela verde.
+
+    `{"status": "ok", "aplicado_em": [], "guardado_em": []}` é o que o daemon
+    devolve em cinco situações (`_destinos_do_broadcast`), e a única coisa
+    honesta a dizer é que ninguém recebeu.
+    """
+    host = _host_que_a_heuristica_leria_como_aplicado()
+    _selar_corpo(monkeypatch, {"status": "ok", "aplicado_em": [], "guardado_em": []})
+
+    host._aplicar_cor_no_controle()
+
+    frase = _ultimo_toast(host)
+    assert NADA_ACONTECEU in frase
+    assert "enviada" not in frase
+
+
+def test_o_apagar_tambem_pergunta_ao_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O quinto gesto da aba escreve pela mesma rota e mentia pelo mesmo motivo."""
+    host = _host_que_a_heuristica_leria_como_aplicado()
+    _selar_corpo(
+        monkeypatch,
+        {"status": "ok", "aplicado_em": [], "guardado_em": [UNIQ_ALVO]},
+    )
+
+    host.on_lightbar_off(None)
+
+    frase = _ultimo_toast(host)
+    assert GUARDADO in frase
+    assert frase != "Lightbar apagada"
+
+
+def test_as_cinco_luzes_do_jogador_tambem_perguntam(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A BG-01 vale para a cor E para o desenho das 5 luzes (mesma ponte)."""
+    host = _host_que_a_heuristica_leria_como_aplicado()
+    monkeypatch.setattr(
+        lightbar_actions,
+        "player_leds_set_detalhado",
+        lambda *_a, **_kw: {
+            "status": "ok",
+            "bits": [],
+            "aplicado_em": [],
+            "guardado_em": [UNIQ_ALVO],
+        },
+    )
+
+    host.on_player_leds_preset_p2(None)
+
+    frase = _ultimo_toast(host)
+    assert GUARDADO in frase
+    assert "Desenho das luzes atualizado" not in frase
+
+
+def test_a_regua_do_ramo_aplicado(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O acoplamento REAL de `frase_do_envio`, medido em vez de suposto.
+
+    `frase_do_envio` reconhece o ramo do aplicado de `frase_do_desfecho` pela
+    FORMA com que ele sai de lá — `"<assunto> aplicado"` e
+    `"<assunto> aplicado em N controles"`. No dia em que aquela frase mudar de
+    forma, esta aba deixa de reconhecê-la e passa a mostrar na tela a palavra
+    "aplicado", que ela recusa por medição. Este teste reprova nesse dia, em
+    vez de a divergência sair na tela dela.
+    """
+    corpo_um = {"status": "ok", "aplicado_em": ["a"], "guardado_em": []}
+    corpo_tres = {"status": "ok", "aplicado_em": ["a", "b", "c"], "guardado_em": []}
+    host = _host_que_a_heuristica_leria_como_aplicado()
+
+    for corpo in (corpo_um, corpo_tres):
+        assert frase_do_desfecho("Assunto", corpo, host).startswith(
+            "Assunto aplicado"
+        ), "o ramo do aplicado mudou de forma — `frase_do_envio` não o vê mais"
+        assert frase_do_envio("Assunto", "a frase desta aba", corpo, host) == (
+            "a frase desta aba"
+        )

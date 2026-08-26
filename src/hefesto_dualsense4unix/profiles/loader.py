@@ -92,7 +92,7 @@ def _lock_path(path: Path) -> Path:
 # O caminho nativo roda scripts/install_profiles.sh no install.sh, mas o .deb e
 # o AppImage não têm gancho por-usuário (o postinst roda como root e não conhece
 # o $HOME de quem vai usar) — sem isto, quem instala pelo .deb nunca recebe
-# sackboy_nativo/coop_local/point_and_click etc. A semântica é IDÊNTICA à do
+# navegacao/fps/point_and_click etc. A semântica é IDÊNTICA à do
 # shell script (copy-if-absent + marker `.seeded_presets` que respeita deleção
 # proposital da usuária); o formato do marker (um filename por linha) é contrato
 # COMPARTILHADO entre os dois semeadores — mantê-los em sincronia.
@@ -235,11 +235,45 @@ def seed_default_presets(
 #: co-op; `seed_default_presets` não sobrescreve (está no `.seeded_presets`),
 #: então o arquivo LOCAL de quem já tinha o preset velho fica preso — por isso
 #: esta migração one-shot.
+#:
+#: APOSENTADA em 26/08/2026, e a nota fica porque a decisão foi MEDIDA. A poda
+#: da fábrica (palavra dela: *"em termos de perfis de jogo vamos manter os que
+#: temos ativos apenas"*) apagou `assets/profiles_default/coop_local.json`, e é
+#: desse asset que esta migração copia `match` e `priority`. Sem ele
+#: `_seed_source_file` devolve `None` e a migração vira no-op — quem tem um
+#: `coop_local` velho no disco fica preso com o `match` inalcançável para
+#: sempre. O código NÃO tenta adivinhar o regex perdido: escrever `match` de
+#: memória em perfil de alguém é o produto escolhendo por ela. O que ele faz é
+#: **relatar** — `migracao_aposentada_sem_asset` no journal, uma vez, com o
+#: arquivo e o efeito — porque migração muda é decisão apagada em silêncio, e
+#: silêncio é o defeito que esta casa mais paga.
 _COOP_LOCAL_MATCH_MIGRATION_MARKER = ".coop_local_match_migrated"
+
+
+def _relatar_migracao_aposentada(migracao: str, arquivo: str) -> None:
+    """Diz no journal que uma migração one-shot perdeu o asset que a alimenta.
+
+    A alternativa era o `continue` mudo, e ele é pior do que parece: o perfil
+    velho continua no disco, inalcançável, e nada em lugar nenhum diz por quê.
+    Quem for diagnosticar *"por que este perfil nunca entra?"* precisa desta
+    linha para não reabrir a investigação do zero.
+    """
+    logger.info(
+        "migracao_aposentada_sem_asset",
+        migracao=migracao,
+        arquivo=arquivo,
+        motivo="o preset de fábrica foi podado em 26/08/2026",
+        efeito="o perfil local fica como está — nada é reescrito",
+    )
 
 
 def migrate_coop_local_match(dest_dir: Path | None = None) -> list[str]:
     """One-shot: dá um `match` alcançável ao coop_local que veio VAZIO de fábrica.
+
+    APOSENTADA em 26/08/2026 — o asset de fábrica que a alimenta foi podado, e
+    sem ele ela não tem de onde copiar `match`. Continua sendo chamada, e nesse
+    estado o que ela faz é RELATAR (`migracao_aposentada_sem_asset`) em vez de
+    calar. O porquê inteiro está na nota do marker, acima.
 
     R-12 (auditoria 23/07). Só reescreve quando o preset ainda está EXATAMENTE
     no estado inalcançável de fábrica — `MatchCriteria` com os três campos
@@ -260,6 +294,9 @@ def migrate_coop_local_match(dest_dir: Path | None = None) -> list[str]:
             return []
         path = directory / "coop_local.json"
         asset = _seed_source_file("coop_local.json")
+        if path.is_file() and asset is None:
+            # APOSENTADA (26/08/2026): o asset foi podado. Relata e não mexe.
+            _relatar_migracao_aposentada("coop_local_match", "coop_local.json")
         if path.is_file() and asset is not None:
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
@@ -369,6 +406,12 @@ _MODO_JOGO_MIGRATION_MARKER = ".modo_jogo_nos_presets_migrated"
 #: de fora porque já nasce com modo — dele só muda a prioridade.
 _PRESETS_DE_JOGO = ("fps", "aventura", "acao", "corrida", "esportes")  # (noqa-acento)
 
+#: O ramo `coop_local` desta migração está APOSENTADO desde 26/08/2026, pelo
+#: mesmo motivo da `migrate_coop_local_match`: o asset foi podado da fábrica e
+#: a prioridade nova vinha DELE. Os cinco presets de gênero acima continuam
+#: sendo migrados normalmente — o asset de cada um segue no repositório.
+_COOP_LOCAL_APOSENTADO = "coop_local"
+
 
 def migrate_modo_jogo_nos_presets(dest_dir: Path | None = None) -> list[str]:
     """One-shot: leva `mode` e prioridade novos aos presets JÁ instalados (MODO-01).
@@ -397,10 +440,13 @@ def migrate_modo_jogo_nos_presets(dest_dir: Path | None = None) -> list[str]:
     with FileLock(str(_lock_path(marker))):
         if marker.exists():
             return []
-        for nome in (*_PRESETS_DE_JOGO, "coop_local"):
+        for nome in (*_PRESETS_DE_JOGO, _COOP_LOCAL_APOSENTADO):
             arquivo = f"{nome}.json"
             path = directory / arquivo
             asset = _seed_source_file(arquivo)
+            if path.is_file() and asset is None:
+                # APOSENTADO (26/08/2026): o asset foi podado. Relata e não mexe.
+                _relatar_migracao_aposentada("modo_jogo_nos_presets", arquivo)
             if not path.is_file() or asset is None:
                 continue
             try:
@@ -419,7 +465,7 @@ def migrate_modo_jogo_nos_presets(dest_dir: Path | None = None) -> list[str]:
                     mudou = True
             # A prioridade sobe só se ainda for a de fábrica ANTIGA: qualquer
             # outro número é escolha dela e vence a migração.
-            if nome == "coop_local" and data.get("priority") == 45:
+            if nome == _COOP_LOCAL_APOSENTADO and data.get("priority") == 45:
                 data["priority"] = asset_data.get("priority", 75)
                 mudou = True
             if mudou:
@@ -522,11 +568,15 @@ def _maybe_seed_presets() -> None:
 #: perfil que ela apagou de propósito não ressuscita).
 MARCA_DE_SEMEADURA_DE_JOGOS = ".perfis_de_jogo_semeados"
 
-#: A prioridade do perfil semeado, e ela é COPIADA, não escolhida: 80 é o que
-#: `assets/profiles_default/sackboy_nativo.json` — o único preset de fábrica que
-#: mira um jogo — já usa. Fica acima dos presets de gênero (55-70), do co-op
-#: (75) e da Navegação (50), que é a ordem que o autoswitch precisa para que a
-#: regra do JOGO ganhe do genérico de desktop.
+#: A prioridade do perfil semeado. O 80 foi COPIADO, não escolhido: era o do
+#: `sackboy_nativo`, o preset de fábrica que mirava um jogo.
+#:
+#: FONTE APOSENTADA em 26/08/2026 — a poda da fábrica apagou aquele asset, e o
+#: número ficou. Ele NÃO se apaga junto: a ordem que o autoswitch precisa
+#: continua sendo a mesma, e é ela que justifica o 80 hoje — acima dos presets
+#: de gênero (55-70) e da Navegação (50), para que a regra do JOGO ganhe do
+#: genérico de desktop. O que caducou foi o endereço de onde o número veio, e
+#: por isso ele está escrito aqui em vez de citado num arquivo que já não abre.
 PRIORIDADE_DO_PERFIL_DE_JOGO = 80
 
 #: Piso entre duas varreduras no MESMO processo. Cinco minutos é o compromisso
@@ -666,8 +716,10 @@ def _appids_com_dono(directory: Path) -> dict[str, str]:
     """``{appid: arquivo}`` dos jogos que JÁ têm perfil no diretório.
 
     **A conferência é pelo APPID, nunca pelo nome do arquivo**, e isso é medido
-    no disco dela: o preset de fábrica do Sackboy se chama ``sackboy_nativo``,
-    não ``Sackboy: A Big Adventure``. Uma checagem por nome de arquivo não o
+    no disco dela: o perfil do Sackboy se chamava ``sackboy_nativo``, não
+    ``Sackboy: A Big Adventure`` (o preset de fábrica com esse nome foi podado
+    em 26/08/2026; o perfil DELA continua lá, com o mesmo descasamento entre
+    nome de arquivo e nome de jogo). Uma checagem por nome de arquivo não o
     encontraria, e o produto criaria um SEGUNDO perfil para o mesmo jogo —
     dois perfis empatados em 80 disputando a mesma janela, que é o defeito que
     `profiles/sanidade.py` chama de `prioridades_empatadas`.

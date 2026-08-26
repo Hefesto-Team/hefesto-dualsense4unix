@@ -17,7 +17,9 @@ fábrica faz), SEIS delas declarando os sete appliers — cinco rotas de ativaç
 migradas nesta leva, e o ``connection.py::restore_last_profile``, que declara os
 sete e neutraliza dois de propósito. Uma já tinha derivado —
 ``daemon/lifecycle.py::_reapply_last_profile``, a rota que roda ao desligar o
-Modo Nativo, passava SEIS.
+Modo Nativo, passava SEIS. **FECHADA em 26/08/2026** (LEVA-1-B): a rota passou
+a vir de ``gerente_do_daemon`` com o embrulho do ``mode`` como único desvio, e
+a entrada dela em :data:`_A_MAO_COM_RAZAO` foi apagada no mesmo commit.
 
 O QUE ESTE ARQUIVO VIGIA
 ------------------------
@@ -171,26 +173,6 @@ _A_MAO_COM_RAZAO: dict[tuple[str, str], Razao] = {
             "A-FÁBRICA-COM-UM-CLIENTE-01."
         ),
     ),
-    (
-        "daemon.lifecycle",
-        "_reapply_last_profile",
-    ): Razao(
-        appliers=frozenset(_NOMES_DE_APPLIER - {"rumble_passthrough_applier"}),
-        motivo=(
-            "DÍVIDA ABERTA, 22/08/2026 — é O defeito que a "
-            "A-FÁBRICA-COM-UM-CLIENTE-01/E1 nomeia: a rota que roda ao DESLIGAR "
-            "o Modo Nativo passa 6 dos 7 appliers, e o que falta é o "
-            "`rumble_passthrough_applier`, que existe desde 14/07 (4820cc5). O "
-            "efeito está em "
-            "`test_sair_do_modo_nativo_devolve_a_vibracao_ao_jogo`, neste "
-            "arquivo, com `xfail(strict=True)`. O conserto mora em "
-            "src/hefesto_dualsense4unix/daemon/lifecycle.py, território de outra "
-            "frente nesta leva: a rota inteira passa a ser "
-            "`gerente_do_daemon(daemon, store=self.store, "
-            "mode_applier=getattr(self, '_mode_applier_ao_sair_do_nativo', None))`. "
-            "APAGUE esta entrada e o `xfail` no mesmo commit."
-        ),
-    ),
 }
 
 
@@ -305,8 +287,11 @@ def test_a_tabela_nao_envelhece_calada() -> None:
     é escrita à mão, mas ela é conferida contra a árvore a cada rodada. Sem
     isto a dívida da E1 vira paisagem no dia em que alguém a consertar.
 
-    Mordida: acrescentar `rumble_passthrough_applier` à entrada da
-    `daemon.lifecycle::_reapply_last_profile` sem tocar no produto.
+    Mordida: apagar um applier da entrada de
+    `daemon.connection::restore_last_profile` sem tocar no produto — a tabela
+    passa a dizer seis onde a árvore diz sete, e o portão nomeia a divergência.
+    Foi assim que a entrada da `daemon.lifecycle::_reapply_last_profile` foi
+    cobrada e apagada em 26/08/2026, quando a E1 fechou.
     """
     por_chave = {c.chave: c for c in _construcoes() if c.appliers}
     problemas: list[str] = []
@@ -719,17 +704,6 @@ def test_rota_do_lancamento_mantem_o_desvio_da_allowlist(
 # ===========================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "A-FÁBRICA-COM-UM-CLIENTE-01/E1, 22/08/2026: "
-        "`daemon/lifecycle.py::_reapply_last_profile` monta o `ProfileManager` "
-        "com 6 dos 7 appliers, sem o `rumble_passthrough_applier`. O conserto "
-        "é uma linha em `daemon/lifecycle.py`, território de outra frente nesta "
-        "leva. Quando ele entrar, este caso PASSA e o `xfail(strict=True)` "
-        "reprova — apague o marcador e a entrada de `_A_MAO_COM_RAZAO`."
-    ),
-)
 def test_sair_do_modo_nativo_devolve_a_vibracao_ao_jogo(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

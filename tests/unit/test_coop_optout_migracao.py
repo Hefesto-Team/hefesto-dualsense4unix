@@ -14,10 +14,17 @@ deste arquivo CADUCOU. Até aqui `load_coop_enabled()` LIA o flag, e por isso
 fazia sentido medir "o disco desligou o co-op" e "quem desligar DEPOIS da
 migração é respeitado". O opt-out deixou de existir por decisão dela — *"todos
 e tudo no Hefesto tem que tá com o permitir co-op ligado"* —, então o disco
-deixou de governar: `load_coop_enabled()` é lápide que devolve `True`, e
+deixou de governar: `load_coop_enabled()` virou lápide que devolvia `True`, e
 `save_coop_enabled` só APAGA. A migração continua tendo trabalho (o arquivo
 existe na máquina de quem atualiza, e um arquivo órfão é dívida que confunde a
 próxima leitura), e é isso que as medidas abaixo passaram a travar.
+
+**PODA (26/08/2026).** A lápide `load_coop_enabled()` foi APAGADA: medido, nem a
+CLI nem o applet do COSMIC (que é Rust, e fala JSON-RPC) a importavam — só
+`tests/`, que nunca foi caminho. As asserções `load_coop_enabled() is True`
+saíram daqui porque mediam o `return True` de uma lápide, não o produto. Quem
+responde pelo piso do co-op é `DaemonConfig.coop_enabled`, e é ele que
+`test_o_piso_do_coop_nasce_ligado_no_dataclass` trava, no fim deste arquivo.
 """
 from __future__ import annotations
 
@@ -42,12 +49,10 @@ class TestMigracaoDoOptOut:
 
         assert session.migrate_coop_optout() is True
 
-        assert session.load_coop_enabled() is True
         assert not (config_isolado / "coop_disabled.flag").exists()
 
     def test_sem_flag_nao_faz_nada(self, config_isolado: Path) -> None:
         assert session.migrate_coop_optout() is False
-        assert session.load_coop_enabled() is True
 
     def test_e_idempotente(self, config_isolado: Path) -> None:
         (config_isolado / "coop_disabled.flag").write_text("1\n")
@@ -76,7 +81,6 @@ class TestMigracaoDoOptOut:
         assert not (config_isolado / "coop_disabled.flag").exists(), (
             "o escritor ressuscitou o opt-out — o co-op volta a poder morrer no disco"
         )
-        assert session.load_coop_enabled() is True
         assert session.migrate_coop_optout() is False  # segue one-shot
 
     def test_falha_de_disco_nao_derruba_o_boot(
@@ -106,6 +110,8 @@ def test_o_daemon_migra_no_boot_e_nao_le_mais_a_preferencia() -> None:
     )
     # AST, não `in fonte`: a lápide CITA a linha que saiu, de propósito, e um
     # grep de texto proibiria explicar a decisão dentro do próprio arquivo.
+    # Desde a poda de 26/08/2026 o símbolo nem existe mais, então esta medida
+    # passou a travar algo mais forte: que ninguém o RESSUSCITE no boot.
     chamadas = {
         no.func.id
         for no in ast.walk(ast.parse(fonte))

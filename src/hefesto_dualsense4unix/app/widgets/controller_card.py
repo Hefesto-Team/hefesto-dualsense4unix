@@ -596,6 +596,25 @@ DICA_MIC_ESCALA: Final[str] = (
     "vermelha do microfone. Salvar ou aplicar o perfil grava este valor."
 )
 
+#: A CONFISSÃO do gesto que caiu na rota global (MIC-DA-MESA-CHEIA-01).
+#:
+#: **PROVISÓRIO — decisão dela.** Com dois DualSense no cabo há DUAS placas de
+#: som, e `mic.volume.set` sem alvo honrado mexe na PRIMEIRA — o microfone de
+#: outra pessoa. O daemon já responde `por_uniq` desde 23/08 justamente para a
+#: tela poder dizer isto, e a resposta morria no `bool` da ponte: o gesto que
+#: acertou o controle errado voltava com o mesmo `True` do que acertou o certo,
+#: e o número era gravado no rascunho DELA como se o alvo tivesse sido honrado.
+#:
+#: A frase é do MEIO das três que a lápide previa: ela confessa o que aconteceu
+#: e diz o que NÃO aconteceu (o perfil deste controle não mudou). A primeira e a
+#: terceira — separar `sem_fonte` de daemon offline — pedem um estado NOVO na
+#: tela (controle insensível com a dica), e isso é desenho: não entra aqui.
+TEXTO_MIC_ALVO_NAO_HONRADO: Final[str] = (
+    "O volume foi para o microfone de OUTRO controle: o Hefesto não conseguiu "
+    "mirar este, e o pedido caiu no controle PRIMÁRIO. O perfil deste controle "
+    "não mudou."
+)
+
 #: Repouso do controle deslizante do microfone, em ms. Mesmo número do
 #: alto-falante e pela mesma razão: `value-changed` dispara por pixel de
 #: arrasto e o IPC é bloqueante, então quem manda é o fim do gesto ou o
@@ -2130,6 +2149,26 @@ def audio_sem_endereco(entry: Any) -> bool:
     return uniq_do_entry(entry) is None
 
 
+def frase_do_alvo_do_mic(honrado: bool | None) -> str:
+    """O que dizer sobre DE QUEM foi o microfone que o daemon mexeu (função pura).
+
+    MIC-DA-MESA-CHEIA-01. Recebe o que `ipc_bridge.alvo_honrado` leu do
+    `por_uniq` — e os TRÊS estados dele importam, que é a razão de a ponte não
+    devolver `bool`:
+
+    ==========  ==========================================================
+    ``True``    o daemon mexeu no controle escolhido — nada a dizer.
+    ``None``    o daemon não se pronunciou (rota sem o campo, daemon velho,
+                ou o gesto do MUDO, que ainda responde `bool`). "Não sei"
+                não é "não honrei": inventar a confissão aqui acusaria o
+                produto de um erro que ninguém mediu.
+    ``False``   o pedido caiu na rota global — o microfone é de outra
+                pessoa, e a tela confessa.
+    ==========  ==========================================================
+    """
+    return TEXTO_MIC_ALVO_NAO_HONRADO if honrado is False else ""
+
+
 def accent_do_card(entry: dict[str, Any], state_global: dict[str, Any]) -> RGB:
     """Cor AJUSTADA dos traços do card (contraste mínimo garantido).
 
@@ -2616,6 +2655,25 @@ if _GTK_DISPONIVEL:
             aviso.hide()
             self._audio_aviso = aviso
             corpo.pack_start(aviso, False, False, 0)
+
+            # MIC-DA-MESA-CHEIA-01 — a CONFISSÃO do alvo que não foi honrado.
+            # Mesmo desenho do aviso acima, e pelo mesmo motivo medido: nasce
+            # com `no_show_all`, então o `show_all()` do card não o revela, um
+            # filho escondido não entra no pedido de tamanho do `GtkBox`, e no
+            # caso normal — que é todo gesto que acerta o controle escolhido —
+            # ele custa ZERO pixel. Fica no CORPO, e não na coluna do som, pela
+            # medição já paga logo acima: na coluna a frase quebraria em três
+            # linhas contra uma faixa que já pede 463 dos 467 que a aba dá.
+            aviso_alvo = Gtk.Label(label=TEXTO_MIC_ALVO_NAO_HONRADO)
+            aviso_alvo.set_xalign(0.0)
+            aviso_alvo.set_line_wrap(True)
+            aviso_alvo.get_style_context().add_class(
+                "hefesto-dualsense4unix-status-warn"
+            )
+            aviso_alvo.set_no_show_all(True)
+            aviso_alvo.hide()
+            self._mic_aviso_alvo = aviso_alvo
+            corpo.pack_start(aviso_alvo, False, False, 0)
 
             # GYRO-03: linha discreta do giroscópio espelhado — inline
             # (dim-label), nunca popup (veto cosmic-comp). Só aparece com o
@@ -3871,8 +3929,16 @@ if _GTK_DISPONIVEL:
             # VAZIO. Ele agora anota no rascunho o volume que ficou de pé,
             # como o do alto-falante já fazia, e por isso o número dela
             # sobrevive ao "Salvar Perfil".
+            # MIC-DA-MESA-CHEIA-01 (26/08/2026) — a rota DETALHADA, e a troca é
+            # o conserto: o `bool` do `mic_volume_set` colapsava "mexi no
+            # controle que você escolheu" e "mexi no microfone de outra pessoa"
+            # no mesmo `True`, e o rascunho dela gravava os dois igual. O corpo
+            # carrega o `por_uniq` que o daemon publica desde 23/08, e quem o lê
+            # é `ipc_bridge.alvo_honrado`, no callback abaixo.
             ipc_bridge.run_in_thread(
-                lambda: ipc_bridge.mic_volume_set(volume=volume, uniq=uniq),
+                lambda: ipc_bridge.mic_volume_set_detalhado(
+                    volume=volume, uniq=uniq
+                ),
                 self._mic_confirmado_pelo_daemon(volume=volume),
             )
 
@@ -4202,18 +4268,43 @@ if _GTK_DISPONIVEL:
             ficou DE PÉ, para o "Salvar Perfil" persistir.
 
             ``ok`` falso é o daemon tendo RECUSADO — e, no volume, também o
-            ``sem_fonte`` do Bluetooth sem a ponte de áudio de pé
-            (``ipc_bridge.mic_volume_set`` devolve False nos dois casos). Nos
-            dois, não há o que registrar: o rascunho descreve o que está de pé,
-            não a intenção.
+            ``sem_fonte`` do Bluetooth sem a ponte de áudio de pé. Nos dois, não
+            há o que registrar: o rascunho descreve o que está de pé, não a
+            intenção.
+
+            **DUAS FORMAS DE ``ok``, e é de propósito (MIC-DA-MESA-CHEIA-01,
+            26/08/2026).** O gesto do MUDO chega com o ``bool`` de
+            ``ipc_bridge.mic_set``; o do VOLUME chega com o CORPO de
+            ``mic_volume_set_detalhado``, que é um ``dict`` (ou ``None``). O
+            corpo é o que permite a pergunta que o ``bool`` apagava: *o daemon
+            mexeu no controle que ela escolheu?* — ``por_uniq``, lido aqui por
+            ``ipc_bridge.alvo_honrado``.
+
+            **ALVO NÃO HONRADO NÃO ENTRA NO RASCUNHO.** O daemon respondeu
+            ``ok``, mas mexeu no microfone de OUTRO controle (a rota global, com
+            a mesa cheia, pega a primeira das duas placas de som). Gravar esse
+            número no rascunho deste controle seria a tela guardando, no perfil
+            dela, um volume que este controle nunca teve. ``None`` — o daemon
+            não se pronunciou — continua registrando: "não sei" não é "não
+            honrei", e recusar por ausência de notícia inventaria um defeito.
 
             Não pinta nada, como o gesto nunca pintou: quem repinta é o tique
-            de 10 Hz relendo ``daemon.state_full``. Devolver ``False`` é o
-            contrato do ``run_in_thread`` (repostado pelo laço ocioso do GLib).
+            de 10 Hz relendo ``daemon.state_full``. A única coisa que aparece é
+            a CONFISSÃO, e só no caso em que ela é verdade. Devolver ``False`` é
+            o contrato do ``run_in_thread`` (repostado pelo laço ocioso do
+            GLib).
             """
 
             def _feito(ok: Any) -> bool:
-                if ok:
+                corpo = ok if isinstance(ok, dict) else None
+                honrado = (
+                    ipc_bridge.alvo_honrado(corpo) if corpo is not None else None
+                )
+                self._dizer_alvo_do_mic(honrado)
+                aceito = (
+                    corpo.get("status") == "ok" if corpo is not None else bool(ok)
+                )
+                if aceito and honrado is not False:
                     registrar_microfone_no_rascunho(
                         self._dono_do_rascunho,
                         volume=volume,
@@ -4223,6 +4314,22 @@ if _GTK_DISPONIVEL:
                 return False
 
             return _feito
+
+        def _dizer_alvo_do_mic(self, honrado: bool | None) -> None:
+            """Mostra (ou apaga) a confissão do alvo não honrado.
+
+            Tolera card sem o rótulo — o stub de teste e qualquer hospedeiro que
+            monte só parte do card. Um aviso que não existe não é motivo para
+            derrubar o registro no rascunho, que é o trabalho de verdade deste
+            callback.
+            """
+            aviso = getattr(self, "_mic_aviso_alvo", None)
+            if aviso is None:
+                return
+            if frase_do_alvo_do_mic(honrado):
+                aviso.show()
+            else:
+                aviso.hide()
 
         def _volume_lido_do_daemon(self) -> int | None:
             """A preferência de volume que o daemon publica, ou None.
@@ -5640,6 +5747,7 @@ __all__ = [
     "TEXTO_BOTAO_SPEAKER_DEVOLVER",
     "TEXTO_BOTAO_SPEAKER_SEM_DADO",
     "TEXTO_BOTAO_SPEAKER_SILENCIAR",
+    "TEXTO_MIC_ALVO_NAO_HONRADO",
     "TEXTO_MIC_AUSENTE",
     "TEXTO_MIC_SEM_MUTE",
     "TEXTO_SELO_CANAL_DORMINDO",
@@ -5659,6 +5767,7 @@ __all__ = [
     "cor_do_swatch",
     "desenhar_swatch",
     "dica_do_titulo",
+    "frase_do_alvo_do_mic",
     "frase_mais_longa_do_que_chega_ao_jogo",
     "glyph_size",
     "glyph_size_unico",
