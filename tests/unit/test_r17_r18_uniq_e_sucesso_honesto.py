@@ -52,12 +52,30 @@ class TestR17ApagarMandaOUniq:
 class TestR18SucessoHonesto:
     @staticmethod
     def _apply(monkeypatch: pytest.MonkeyPatch, resposta: Any) -> bool:
+        """A R-18 medida onde ela mora HOJE, e a regra não mudou uma vírgula.
+
+        **26/08/2026:** até aqui esta régua chamava `ipc_bridge.apply_draft`, o
+        invólucro `bool`. Ele foi PODADO por não ter um único chamador de
+        produção, e a regra que ele guardava passou a ter dono único e
+        nomeado — `aplicacao_confirmada` —, atravessada pela porta
+        `apply_draft_detalhado`. O teste segue a regra para onde ela foi: medir
+        função que não existe mais é régua que vira mentira, e afrouxar a R-18
+        seria pior ainda. As quatro asserções abaixo continuam idênticas.
+
+        A composição é exercitada de ponta a ponta de propósito (a porta E o
+        juiz), porque foi entre as duas que o defeito histórico morava: um
+        `dict` devolvido no lugar do `bool` é SEMPRE verdadeiro num `if`, e um
+        chamador não migrado diria "aplicado" para um no-op.
+        """
         from hefesto_dualsense4unix.app import ipc_bridge
 
         monkeypatch.setattr(
             ipc_bridge, "_safe_call", lambda *a, **k: (True, resposta)
         )
-        return ipc_bridge.apply_draft({"leds": {"lightbar_rgb": [1, 2, 3]}})
+        corpo = ipc_bridge.apply_draft_detalhado(
+            {"leds": {"lightbar_rgb": [1, 2, 3]}}
+        )
+        return ipc_bridge.aplicacao_confirmada(corpo)
 
     def test_nada_aplicado_nao_e_sucesso(self, monkeypatch: pytest.MonkeyPatch) -> None:
         assert self._apply(monkeypatch, {"status": "ok", "applied": []}) is False, (

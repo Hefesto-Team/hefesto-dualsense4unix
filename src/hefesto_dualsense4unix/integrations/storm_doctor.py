@@ -40,6 +40,53 @@ INFO = "[INFO]"
 #: `utils/`, e isso está RELATADO na entrega desta frente.
 PREFIXO_DA_CURA = "O que fazer: "
 
+
+#: Os rótulos dos botões que as frases desta casa mandam clicar. LIDOS do
+#: `main.glade`, nunca digitados — corrigido em 26/08/2026, e o defeito era
+#: vivo: a leva daquele dia renomeou "Aplicar correções" para "Consertar
+#: problemas conhecidos" (o rótulo velho não dizia o que o botão faz), e esta
+#: frase continuou mandando a pessoa procurar um botão QUE NÃO EXISTE MAIS na
+#: janela. Quem pegou foi `tests/unit/test_steam_input_ponteiros.py`, que
+#: compara a frase com os rótulos vivos — e é por isso que ele existe.
+_ROTULOS_EM_CACHE: dict[str, str] = {}
+
+
+def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
+    """O rótulo VIVO de um botão do `main.glade`, pelo id dele.
+
+    `se_faltar` é o que sai quando o glade não está ao alcance (empacotamento
+    parcial, teste sem recurso). Uma frase que some é pior que uma frase com um
+    nome velho, então isto nunca levanta.
+    """
+    if widget_id in _ROTULOS_EM_CACHE:
+        return _ROTULOS_EM_CACHE[widget_id]
+    alvo = se_faltar
+    try:
+        import re as _re
+        from pathlib import Path as _Path
+
+        glade = (
+            _Path(__file__).resolve().parents[1] / "gui" / "main.glade"
+        ).read_text(encoding="utf-8")
+        # A janela termina no PRÓXIMO `id=`, e não num número de caracteres:
+        # o rótulo pode ser propriedade direta do botão OU, quando ele precisa
+        # quebrar linha, um `<child><object class="GtkLabel">` alguns comentários
+        # abaixo. Um teto fixo de caracteres achava o primeiro caso e perdia o
+        # segundo — medido em 26/08, com o `btn_storm_fix_safe`, que é
+        # exatamente o botão que virou filho naquele dia.
+        bloco = glade.split(f'id="{widget_id}"', 1)[1]
+        bloco = bloco.split(' id="', 1)[0]
+        achado = _re.search(
+            r'<property name="label" translatable="yes">([^<]+)</property>', bloco
+        )
+        if achado:
+            alvo = achado.group(1)
+    except (OSError, IndexError):
+        pass
+    _ROTULOS_EM_CACHE[widget_id] = alvo
+    return alvo
+
+
 # ---------------------------------------------------------------------------
 # O GESTO DE ATUALIZAR, POR FORMATO DE INSTALAÇÃO (BG-06b)
 #
@@ -427,7 +474,8 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
             partes.append(
                 "Steam Input LIGADO no ajuste GLOBAL da Steam (vale para todo "
                 f"jogo, não é escolha por jogo). {PREFIXO_DA_CURA}clique "
-                "'Aplicar correções' na aba Sistema para desligar."
+                f"'{rotulo_do_botao('btn_storm_fix_safe', 'Consertar problemas conhecidos')}' "
+                "na aba Sistema para desligar."
             )
         return WARN, " ".join(partes)
     excecoes = [
@@ -563,8 +611,9 @@ def check_snd_quirk(
         WARN,
         f"cura do travamento do USB AUSENTE — sem ela os controles podem "
         f"desconectar no meio do jogo. {PREFIXO_DA_CURA}{gesto_de_atualizar()} "
-        "e reconecte os controles (o botão 'Aplicar correções' não instala "
-        "esta cura).",
+        f"e reconecte os controles (o botão "
+        f"'{rotulo_do_botao('btn_storm_fix_safe', 'Consertar problemas conhecidos')}' "
+        "não instala esta cura).",
     )
 
 
