@@ -128,6 +128,20 @@ class _Host(LightbarActionsMixin):
         self._toasts.append(msg)
 
 
+def _aceitou(uniq: str | None) -> dict[str, Any]:
+    """Corpo de um ``led.set``/``led.player_set`` que ESCREVEU em ``uniq``.
+
+    BG-01 (26/08/2026): a aba lê o CORPO do daemon, e não mais o ``bool`` da
+    ponte estreita. A forma é a do handler; o que estes testes julgam continua
+    sendo o D4 e o ENDEREÇO do pedido, nunca a frase.
+    """
+    return {
+        "status": "ok",
+        "aplicado_em": [uniq] if uniq else [],
+        "guardado_em": [],
+    }
+
+
 def _host_com_checkbox(
     draft: DraftConfig, uniq: str | None = None
 ) -> tuple[_Host, _FakeCheck]:
@@ -338,7 +352,9 @@ def test_player_leds_em_todos_com_auto_on_dispara_d4(
     (``on_player_leds_apply``), não só ``_persist_leds_update`` isolado — é o
     chamador quem compõe o toast."""
     monkeypatch.setattr(
-        lightbar_actions, "player_leds_set", lambda _bits, uniq=None: True
+        lightbar_actions,
+        "player_leds_set_detalhado",
+        lambda _bits, uniq=None: _aceitou(uniq),
     )
     host, check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=True)))
     check.active = True  # espelho visual do draft
@@ -354,7 +370,9 @@ def test_player_leds_em_todos_com_auto_off_nao_dispara_de_novo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        lightbar_actions, "player_leds_set", lambda _bits, uniq=None: True
+        lightbar_actions,
+        "player_leds_set_detalhado",
+        lambda _bits, uniq=None: _aceitou(uniq),
     )
     host, _check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=False)))
 
@@ -369,7 +387,9 @@ def test_player_leds_com_alvo_selecionado_nao_dispara_d4(
 ) -> None:
     """Fluxo por-controle permanece como está: override, auto intacto."""
     monkeypatch.setattr(
-        lightbar_actions, "player_leds_set", lambda _bits, uniq=None: True
+        lightbar_actions,
+        "player_leds_set_detalhado",
+        lambda _bits, uniq=None: _aceitou(uniq),
     )
     host, _check = _host_com_checkbox(
         DraftConfig.from_profile(_perfil(auto=True)), uniq=UNIQ_2
@@ -401,7 +421,7 @@ def test_aplicar_no_controle_em_todos_leva_toggle_no_ipc(
     )
     monkeypatch.setattr(
         lightbar_actions,
-        "led_set",
+        "led_set_detalhado",
         lambda *_a, **_kw: pytest.fail("em 'Todos' o caminho é apply_draft"),
     )
     host._current_rgb = (10, 20, 30)
@@ -436,11 +456,11 @@ def test_aplicar_no_controle_com_alvo_usa_led_set(
     chamadas: list[Any] = []
     monkeypatch.setattr(
         lightbar_actions,
-        "led_set",
+        "led_set_detalhado",
         lambda rgb, brightness=None, uniq=None: chamadas.append(
             (rgb, brightness, uniq)
         )
-        or True,
+        or _aceitou(uniq),
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,

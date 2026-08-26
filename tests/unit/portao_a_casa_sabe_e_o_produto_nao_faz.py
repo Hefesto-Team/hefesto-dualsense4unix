@@ -1822,21 +1822,38 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "madrugada, e porque é símbolo público no `__all__` (:1319) — poda de "
         "símbolo público é dela. DONO: a próxima leva."
     ),
-    "app/ipc_bridge.py::led_set_detalhado": (
-        "MEDIDO em 23/08/2026: o `led.set` publica `aplicado_em`/`guardado_em` "
-        "desde a APLICAR-VERDADE-01 e o invólucro `led_set` estreitava tudo "
-        "para `bool` — a aba Lightbar re-deduzia o `guardado` do estado da "
-        "janela, como a de Gatilhos. "
-        "O QUE A FECHA: `app/actions/lightbar_actions.py:934` "
-        "(`_enviar_cor_por_mac`), o funil por onde os três chamadores de "
-        "`led_set` (:689, :801, :934) passam."
+    # `led_set_detalhado` e `player_leds_set_detalhado` SAÍRAM daqui em
+    # 26/08/2026 (BG-01), na mesma edição que os ligou: `_aplicar_cor_no_controle`,
+    # `on_lightbar_off`, `_enviar_led_em_todos` e `_enviar_player_leds` de
+    # `app/actions/lightbar_actions.py` chamam os dois, e a frase de cada gesto
+    # sai de `textos_de_aplicacao.frase_do_desfecho` pelo CORPO do daemon.
+    # E a troca criou DUAS entradas novas, logo abaixo — os invólucros estreitos
+    # que ficaram sem chamador. Era previsível, e está declarado em vez de
+    # escondido, como no par `trigger_reset` de 25/08.
+    "app/ipc_bridge.py::led_set": (
+        "MEDIDO em 26/08/2026, e é EFEITO da própria cura (BG-01): os três "
+        "chamadores de produção eram `app/actions/lightbar_actions.py` — o "
+        "`Aplicar no controle`, o `Apagar` e o funil por MAC do `Todos` —, e a "
+        "BG-01 trocou os três por `led_set_detalhado`, porque o `bool` desta "
+        "função jogava fora o `aplicado_em`/`guardado_em` que o daemon publica "
+        "desde a APLICAR-VERDADE-01. Ficou o invólucro que descarta o corpo, "
+        "com zero chamadores — a mesma forma do par `apply_draft`/"
+        "`apply_draft_detalhado` que já mora nesta lista. "
+        "O QUE A FECHA: apagar `led_set` e deixar só o `_detalhado`, levando o "
+        "docstring do FEAT-LED-BRIGHTNESS-01/PERFIL-05 junto. NÃO fiz porque "
+        "`app/ipc_bridge.py` está no `nao_toca` desta leva (tem dono nas levas "
+        "2 e 3) e porque é símbolo público no `__all__` — poda de símbolo "
+        "público é dela. DONO: a próxima leva."
     ),
-    "app/ipc_bridge.py::player_leds_set_detalhado": (
-        "MEDIDO em 23/08/2026: irmão do `led_set_detalhado`, mesmo corpo mais "
-        "o `bits` que o daemon ecoa (`ipc_handlers.py:1352-1356`). Mesma perda "
-        "e mesma cura. "
-        "O QUE A FECHA: `app/actions/lightbar_actions.py:965` e :969, dentro de "
-        "`_enviar_player_leds:938` — sai da mesma edição do `led_set_detalhado`."
+    "app/ipc_bridge.py::player_leds_set": (
+        "MEDIDO em 26/08/2026: irmão exato do `led_set` acima, e pela mesma "
+        "edição (BG-01). O único chamador de produção era `_enviar_player_leds` "
+        "em `app/actions/lightbar_actions.py`, nas duas rotas — alvo escolhido "
+        "e um pedido por MAC em `Todos` —, e as duas passaram a "
+        "`player_leds_set_detalhado`, que entrega o corpo com `bits` ecoado "
+        "(`ipc_handlers.py`, `_handle_led_player_set`). "
+        "O QUE A FECHA: a mesma poda do `led_set`, no mesmo commit e pelo mesmo "
+        "dono — `app/ipc_bridge.py` não é posse desta leva. DONO: a próxima leva."
     ),
     "app/ipc_bridge.py::rumble_policy_set_detalhado": (
         "MEDIDO em 23/08/2026: terceira e última rota que passava pelo "
