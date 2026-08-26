@@ -368,6 +368,21 @@ def verificar_perfis_do_disco() -> list[Achado]:
 
     Import local do loader para manter este módulo importável em contexto de
     teste sem tocar disco algum.
+
+    NOTA DATADA — 26/08/2026. Esta função NÃO deve ganhar chamador de produção,
+    e a razão substitui a que estava escrita no portão de lápides (que a
+    chamava de *"a lacuna mais barata desta lista de fechar — uma chamada"*).
+    MEDIDO: o `doctor` já faz o trabalho inteiro, e faz MELHOR —
+    `cli/cmd_doctor.py::_linhas_perfis` chama `load_all_profiles()` dentro de um
+    `try/except OSError` e só então roda `verificar_perfis` e
+    `linhas_de_relatorio`. Esta conveniência **não tem** o `except OSError`:
+    fiá-la no doctor trocaria a linha *"não deu para ler os perfis: <erro>"* por
+    um traceback na cara de quem foi justamente pedir diagnóstico. Seria piorar
+    o produto para fechar uma lápide.
+    Ela fica de pé como atalho de teste (é assim que
+    `test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py:319` a usa) — e
+    quem precisar da corrente em produção usa as duas metades separadas, como o
+    doctor usa.
     """
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
 

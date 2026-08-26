@@ -108,7 +108,7 @@ class _FakeDaemon:
 def wired(monkeypatch: pytest.MonkeyPatch) -> tuple[_FakeDaemon, dict[str, Any]]:
     """Daemon falso + factory de vpad patchada devolvendo um uhid falso."""
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda *a, **k: None)
-    monkeypatch.setattr(session, "save_mouse_emulation_enabled", lambda *a, **k: None)
+    monkeypatch.setattr(session, "save_mouse_emulation", lambda *a, **k: None)
     monkeypatch.setattr(prr, "PhysicalReportReader", _FakeReader)
     capturado: dict[str, Any] = {}
 
