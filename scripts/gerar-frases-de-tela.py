@@ -11,7 +11,7 @@ Os três dividem a paleta (``scripts/paleta_da_casa.py``) e a regra que a
 originou, que não se negocia: **autocontido, zero rede, zero CDN, zero fonte
 web.** Abre com duplo clique, sem servidor, sem venv e sem internet.
 
-    scripts/gerar-frases-de-tela.py            # reescreve frases-de-tela.html
+    scripts/gerar-frases-de-tela.py            # reescreve html/frases-de-tela.html
     scripts/gerar-frases-de-tela.py --check    # rc=1 se o publicado divergir
 
 POR QUE ELE EXISTE, E NÃO UM ARTEFATO NA NUVEM
@@ -55,11 +55,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from paleta_da_casa import TOKENS  # noqa: E402
+from carimbo_da_casa import CSS as CARIMBO_CSS
+from carimbo_da_casa import PASTA as PASTA_HTML
+from carimbo_da_casa import carimbo, sem_carimbo
+from paleta_da_casa import TOKENS
 
 RAIZ = Path(__file__).resolve().parents[1]
 DADO = RAIZ / "docs" / "process" / "dados" / "frases-de-tela-25-08.json"
-SAIDA = RAIZ / "frases-de-tela.html"
+SAIDA = RAIZ / PASTA_HTML / "frases-de-tela.html"
 
 #: A ordem da TIRA — como ela vê as abas na janela, e não a alfabética.
 #:
@@ -237,7 +240,7 @@ def construir() -> str:
     P.append('<html lang="pt-BR"><head><meta charset="utf-8">')
     P.append('<meta name="viewport" content="width=device-width, initial-scale=1">')
     P.append("<title>As frases que esperam você — Hefesto</title>")
-    P.append(f"<style>{TOKENS}{ESTILO}</style></head><body>")
+    P.append(f"<style>{TOKENS}{ESTILO}{CARIMBO_CSS}</style></head><body>")
     P.append('<div class="env">')
 
     P.append("<header><h1>As frases que esperam você</h1>")
@@ -322,6 +325,7 @@ def construir() -> str:
         "com duplo clique, sem servidor e sem rede. O que você marcar fica guardado "
         "neste navegador — pode fechar e voltar.</p></footer>"
     )
+    P.append(carimbo("scripts/gerar-frases-de-tela.py"))
     P.append("</div>")
     P.append(f"<script>{SCRIPT}</script></body></html>")
     return "\n".join(P) + "\n"
@@ -343,11 +347,13 @@ def main() -> int:
     novo = construir()
     if args.check:
         atual = SAIDA.read_text(encoding="utf-8") if SAIDA.is_file() else ""
-        if atual == novo:
-            print(f"OK: {SAIDA.name} está em dia com o dado versionado.")
+        # O carimbo da casa sai dos dois lados: ele traz commit e hora, e um
+        # `--check` que os enxergasse ficaria vermelho a cada commit.
+        if sem_carimbo(atual) == sem_carimbo(novo):
+            print(f"OK: {SAIDA.relative_to(RAIZ)} está em dia com o dado versionado.")
             return 0
         print(
-            f"DIVERGE: {SAIDA.name} não é o que este script produz hoje.\n"
+            f"DIVERGE: {SAIDA.relative_to(RAIZ)} não é o que este script produz hoje.\n"
             "  Cure rodando: scripts/gerar-frases-de-tela.py",
             file=sys.stderr,
         )

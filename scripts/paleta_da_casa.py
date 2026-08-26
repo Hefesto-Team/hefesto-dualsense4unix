@@ -5,9 +5,14 @@ ele com o specs.html também?"*, sobre o painel do plano. Sincronizar dois HTML
 gerados por scripts diferentes só é verdade se a paleta tiver **um dono**; duas
 cópias do mesmo hexadecimal divergem no dia em que alguém corrige uma delas.
 
-Quem lê daqui:
-  - ``scripts/gerar-mapa.py``    → ``specs.html``  (o mapa de canais)
-  - ``scripts/gerar-painel.py``  → ``painel.html`` (o estado do projeto)
+Quem lê daqui (todos escrevem em ``html/``, desde 25/08/2026):
+  - ``scripts/gerar-mapa.py``           → ``html/specs.html``  (o mapa de canais)
+  - ``scripts/gerar-painel.py``         → ``html/painel.html`` (o estado do projeto)
+  - ``scripts/gerar-frases-de-tela.py`` → ``html/frases-de-tela.html``
+  - ``scripts/gerar-indice-html.py``    → ``html/index.html`` (a porta dos quatro)
+
+A procedência que os quatro dividem — commit e hora — tem outro dono, o irmão
+``scripts/carimbo_da_casa.py``, e pelo mesmo motivo escrito aqui.
 
 **A REGRA QUE NÃO SE NEGOCIA: nada de fonte web.** O texto abaixo é o do
 ``gerar-mapa.py`` que a originou, e vale igual aqui: *"uma fonte que não carrega
