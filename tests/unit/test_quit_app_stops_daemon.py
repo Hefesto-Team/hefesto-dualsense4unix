@@ -310,13 +310,28 @@ def test_quit_app_sigkill_apos_grace(monkeypatch, tmp_path):
     assert sigterms == [(12345, _signal.SIGTERM)]
     assert sigkills == [(12345, _signal.SIGKILL)]
 
-    # Garantia broad-stroke pós-SIGKILL: 1 systemctl stop + 3 pkill -KILL -f
+    # Garantia broad-stroke pós-SIGKILL: 1 systemctl stop + 4 pkill -KILL -f
     # (era o que fazia o assert antigo de "1 chamada" ficar stale quando o
     # caminho completo era percorrido — GATE-STALE-TEST-01).
+    #
+    # O QUARTO nasceu em 25/08/2026 com a migração de app-id, e é deliberado:
+    # quem tinha o Flatpak antigo pode estar com uma instância de pé sob
+    # `br.andrefarias.Hefesto`. Fechar só o id novo deixaria a antiga rodando,
+    # segurando o hidraw, e a pessoa veria "já está aberto" sobre um aplicativo
+    # que ela acabou de fechar.
     cmds = [c.args[0] for c in captured["run"].call_args_list if c.args]
     assert cmds[0] == ["systemctl", "--user", "stop", "hefesto-dualsense4unix.service"]
     pkills = [cmd for cmd in cmds if cmd[:3] == ["pkill", "-KILL", "-f"]]
-    assert len(pkills) == 3
+    assert len(pkills) == 4, (
+        "o número de `pkill` mudou. Se um id foi ACRESCENTADO, atualize aqui e "
+        "diga por quê; se um SUMIU, o defeito é lá — uma instância sobrevive ao "
+        f"fechar. Vieram: {[p[3] for p in pkills]}"
+    )
+    alvos = {p[3] for p in pkills}
+    assert "br.andrefarias.Hefesto" in alvos, (
+        "o id ANTIGO saiu da lista de quem se mata ao fechar. Quem migrou do "
+        "Flatpak antigo fica com a instância velha de pé, segurando o hidraw."
+    )
 
 
 def test_quit_app_main_quit_antes_do_cleanup(monkeypatch):
