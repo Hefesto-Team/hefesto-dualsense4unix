@@ -119,9 +119,38 @@ repos:
       # (o `--fix` do validar-acentuacao reescreve arquivos) para ele nascer
       # "mais novo" que as fontes. Hoje regenera em memória e compara o
       # CONTEÚDO, então vale igual aqui e no runner.
+      #
+      # A-CASA-ARRUMADA-01/HOOK (25/08): desde esta data o gancho LOCAL
+      # (`scripts/hooks/pre-commit`) CURA os quatro instrumentos HTML — pedido
+      # dela, *"todos precisam ser auto atualizados via hooks"*. Aqui eles
+      # continuam sendo `--check`, e a assimetria é decisão: o CI não pode
+      # ESCREVER na árvore. Uma página regerada dentro do runner passaria por
+      # verde sem entrar em commit nenhum, e a divergência voltaria no push
+      # seguinte — verde falso, que é pior que vermelho.
       - id: mapa-de-canais-publicado
         name: specs.html reflete o CSV e os desenhos (rode scripts/gerar-mapa.py)
         entry: python3 scripts/gerar-mapa.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+      # Os dois IRMÃOS do specs.html. Ambos declaravam `--check` no próprio
+      # cabeçalho e NENHUM workflow, hook ou teste os chamava — a família da
+      # PORTÃO-VIVO-01 outra vez, e é o que a sprint A-CASA-ARRUMADA-01 veio
+      # curar: página que envelhece em silêncio.
+      - id: frases-de-tela-publicado
+        name: frases-de-tela.html reflete o JSON versionado (rode scripts/gerar-frases-de-tela.py)
+        entry: python3 scripts/gerar-frases-de-tela.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+      # DEPENDÊNCIA DECLARADA: `scripts/gerar-indice-html.py` nasce na frente
+      # HTML da mesma sprint. Se ela não entrar no merge, ESTA entrada tem de
+      # sair junto — senão o `pre-commit run --all-files` do CI fica vermelho
+      # por arquivo ausente, que é o defeito de 25/08 (portão vermelho no `dev`
+      # por horas) repetido.
+      - id: indice-html-publicado
+        name: index.html reflete o carimbo dos três (rode scripts/gerar-indice-html.py)
+        entry: python3 scripts/gerar-indice-html.py --check
         language: system
         pass_filenames: false
         always_run: true
