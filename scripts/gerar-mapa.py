@@ -39,18 +39,19 @@ possíveis (medido em 12/08/2026):
 - por RELÓGIO: qualquer ferramenta que TOQUE o HTML depois da geração o deixa
   "mais novo" que as fontes (o `--fix` do `scripts/validar-acentuacao.py`
   reescreve arquivos), e no CI o `actions/checkout` escreve a árvore em ordem
-  de caminho — `specs.html` (raiz) nasce depois de `docs/` e de `scripts/`, e
-  o `--check` passava SEMPRE, qualquer que fosse o conteúdo.
+  de caminho — e o `--check` passava SEMPRE, qualquer que fosse o conteúdo.
 
 Comparar conteúdo responde a pergunta certa — *a página publicada é a que
 estas fontes produzem?* — e vale igual na máquina de quem edita e no runner.
-Duas coisas são normalizadas antes da comparação, e só duas: o espaço no FIM
+TRÊS coisas são normalizadas antes da comparação, e só três: o espaço no FIM
 da linha (a saída do gerador tem ~20 linhas com espaço sobrando dentro dos
-`<style>` herdados dos SVG, que alguma ferramenta apara depois) e a hora da
-geração no selo do rodapé, que é a única parte da página que não vem do dado.
+`<style>` herdados dos SVG, que alguma ferramenta apara depois), a hora da
+geração no selo do rodapé, e o carimbo da casa (`scripts/carimbo_da_casa.py`,
+25/08/2026), que traz commit e hora — as três partes da página que não vêm
+do dado.
 
 Uso:
-    python3 scripts/gerar-mapa.py            # escreve specs.html na raiz
+    python3 scripts/gerar-mapa.py            # escreve html/specs.html
     python3 scripts/gerar-mapa.py --check    # o publicado bate com as fontes?
 """
 from __future__ import annotations
@@ -67,6 +68,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import eliminacao  # o caderno de eliminação de suspeitos
+from carimbo_da_casa import CSS as CARIMBO_CSS
+from carimbo_da_casa import PASTA as PASTA_HTML
+from carimbo_da_casa import carimbo, sem_carimbo
 
 # A escada de `ate_onde_foi` NÃO se redigita aqui. Até 19/08/2026 a legenda
 # abaixo trazia os três degraus escritos à mão, e o portão trazia os mesmos três
@@ -82,7 +86,7 @@ from check_paridade_transporte import (
 
 RAIZ = Path(__file__).resolve().parent.parent
 CSV = RAIZ / "docs" / "data" / "mapa-controles.csv"
-SAIDA = RAIZ / "specs.html"
+SAIDA = RAIZ / PASTA_HTML / "specs.html"
 SVGS = {
     "dualsense": RAIZ / "assets" / "control-svg" / "dualsense.svg",
     "pro": RAIZ / "assets" / "control-svg" / "nintendo-pro.svg",
@@ -910,7 +914,7 @@ def monta() -> str:
  * pre-emit critique: P5 H4 E4 S5 R5 V4
  * ARQUIVO GERADO por scripts/gerar-mapa.py — não edite à mão.
  */
-{TOKENS}{ESTILO}
+{TOKENS}{ESTILO}{CARIMBO_CSS}
 </style>
 </head>
 <body>
@@ -1032,6 +1036,8 @@ def monta() -> str:
     {bloco_fila}
   </footer>
 
+  {carimbo("scripts/gerar-mapa.py")}
+
 </div>
 <script>window.__MAPA__ = {dados};</script>
 <script>{SCRIPT}</script>
@@ -1040,9 +1046,10 @@ def monta() -> str:
 """
 
 
-#: O selo do rodapé, a ÚNICA parte da página que não sai das fontes. Ignorá-lo
-#: é o que torna a comparação possível: com ele, todo `--check` reprovaria pelo
-#: relógio, que é exatamente o defeito de onde estamos saindo.
+#: O selo do rodapé — uma das partes da página que não saem das fontes (a outra
+#: é o carimbo da casa, tirado por `sem_carimbo`). Ignorá-lo é o que torna a
+#: comparação possível: com ele, todo `--check` reprovaria pelo relógio, que é
+#: exatamente o defeito de onde estamos saindo.
 SELO = re.compile(r"gerado em \d{2}/\d{2}/\d{4} \d{2}:\d{2} a partir de")
 
 #: Quantas linhas de divergência o erro imprime. O corte não é frescura: uma
@@ -1054,7 +1061,7 @@ LARGURA_DIFF = 200
 def normaliza(pagina: str) -> list[str]:
     """A página em linhas, sem o que não é dado.
 
-    Duas normalizações, cada uma com um defeito medido atrás:
+    Três normalizações, cada uma com um defeito medido atrás:
 
     - `rstrip()`: a saída do gerador tem ~20 linhas com espaço sobrando dentro
       dos `<style>` herdados dos SVG, e o arquivo commitado não tem — alguma
@@ -1062,9 +1069,11 @@ def normaliza(pagina: str) -> list[str]:
       sempre, e um portão que reprova sempre é desligado na semana seguinte.
     - o selo: a hora da geração muda a cada execução. Comparar relógio já é o
       erro do qual este `--check` está saindo.
+    - o carimbo da casa: traz o commit, que muda a CADA commit. Sem tirá-lo,
+      este portão ficaria vermelho no segundo commit de qualquer leva.
     """
     return [SELO.sub("gerado em <momento> a partir de", linha).rstrip()
-            for linha in pagina.splitlines()]
+            for linha in sem_carimbo(pagina)]
 
 
 def recorta(linha: str) -> str:
@@ -1082,7 +1091,7 @@ def divergencias(publicado: str, regerado: str) -> list[str]:
     """As linhas em que a página publicada difere da que as fontes produzem."""
     return list(difflib.unified_diff(
         normaliza(publicado), normaliza(regerado),
-        fromfile="specs.html publicado", tofile="o que as fontes produzem hoje",
+        fromfile="html/specs.html publicado", tofile="o que as fontes produzem hoje",
         lineterm="", n=0,
     ))
 
@@ -1090,7 +1099,7 @@ def divergencias(publicado: str, regerado: str) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
-                    help="reprova se specs.html não for a página que as fontes produzem")
+                    help="reprova se html/specs.html não for a página que as fontes produzem")
     args = ap.parse_args()
 
     if args.check:
@@ -1101,11 +1110,11 @@ def main() -> int:
         if reprova_por_orfas(pecas_orfas(le_csv())):
             return 1
         if not SAIDA.exists():
-            print("specs.html: NAO EXISTE — rode scripts/gerar-mapa.py", file=sys.stderr)
+            print("html/specs.html: NAO EXISTE — rode scripts/gerar-mapa.py", file=sys.stderr)
             return 1
         difs = divergencias(SAIDA.read_text(encoding="utf-8"), monta())
         if difs:
-            print("specs.html: DESATUALIZADO — a página publicada não é a que estas "
+            print("html/specs.html: DESATUALIZADO — a página publicada não é a que estas "
                   "fontes produzem", file=sys.stderr)
             for linha in difs[:LIMITE_DIFF]:
                 print(f"  {recorta(linha)}", file=sys.stderr)
@@ -1116,7 +1125,7 @@ def main() -> int:
                   file=sys.stderr)
             print("rode: python3 scripts/gerar-mapa.py", file=sys.stderr)
             return 1
-        print("specs.html: atualizado (confere com o CSV, com o caderno de ensaios "
+        print("html/specs.html: atualizado (confere com o CSV, com o caderno de ensaios "
               "e com os três desenhos)")
         return 0
 

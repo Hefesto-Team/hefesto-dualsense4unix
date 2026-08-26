@@ -47,10 +47,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from carimbo_da_casa import CSS as CARIMBO_CSS
+from carimbo_da_casa import PASTA as PASTA_HTML
+from carimbo_da_casa import carimbo, sem_carimbo
 from paleta_da_casa import TOKENS
 
 RAIZ = Path(__file__).resolve().parent.parent
-SAIDA = RAIZ / "painel.html"
+SAIDA = RAIZ / PASTA_HTML / "painel.html"
 CACHE = RAIZ / "docs" / "data" / "painel-cache.json"
 SPRINTS = RAIZ / "docs" / "process" / "sprints"
 DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
@@ -634,6 +637,13 @@ def monta(rapido: dict, cache: dict) -> str:
         )
 
     agora = datetime.now(timezone.utc).astimezone().strftime("%d/%m/%Y às %H:%M")
+    # Montada AQUI, e não dentro do template, para caber numa linha SÓ da página:
+    # `_recorta_selo` filtra por linha, e o commit numa segunda linha escapava do
+    # filtro — o `--check` reprovava a cada commit novo (medido em 25/08/2026).
+    arvore = (
+        f"Árvore: {git['sujos']} arquivo(s) com mudança não commitada em "
+        f"<code>{escape(git['head'])}</code> — <em>{escape(git['assunto'][:96])}</em>."
+    )
     return f"""<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -644,7 +654,7 @@ def monta(rapido: dict, cache: dict) -> str:
 /* ARQUIVO GERADO por scripts/gerar-painel.py — não edite à mão.
  * Paleta e tipografia: scripts/paleta_da_casa.py, dividida com o specs.html.
  * Autocontido: zero rede, zero CDN, zero fonte web. */
-{TOKENS}{ESTILO}
+{TOKENS}{ESTILO}{CARIMBO_CSS}
 </style>
 </head>
 <body>
@@ -716,9 +726,10 @@ def monta(rapido: dict, cache: dict) -> str:
        idade ao lado. <strong>Ausência de medição é declarada, nunca preenchida com
        zero</strong> — é a mesma regra do mapa de canais, e existe porque zero pinta
        verde.</p>
-    <p>Árvore: {git['sujos']} arquivo(s) com mudança não commitada em
-       <code>{escape(git['head'])}</code> — <em>{escape(git['assunto'][:96])}</em>.</p>
+    <p>{arvore}</p>
   </footer>
+
+  {carimbo("scripts/gerar-painel.py")}
 
 </div>
 </body>
@@ -727,9 +738,17 @@ def monta(rapido: dict, cache: dict) -> str:
 
 
 def _recorta_selo(pagina: str) -> list[str]:
-    """Tira as linhas que mudam a cada geração, para o --check comparar conteúdo."""
+    """Tira as linhas que mudam a cada geração, para o --check comparar conteúdo.
+
+    O carimbo da casa sai por `sem_carimbo` — ele traz o commit, que muda a cada
+    commit, e um portão que reprova sempre é desligado na semana seguinte.
+    """
+    # Cada marca tem de ficar na MESMA linha do dado que ela protege. Medido em
+    # 25/08/2026: o parágrafo da "Árvore:" quebrava em duas linhas e o commit
+    # ficava na SEGUNDA — a marca não o alcançava, e este `--check` reprovava a
+    # cada commit novo. Só não doeu porque o gancho regenera o painel antes.
     fora = ("gerado em", "Árvore:", "medido ", "nunca medido")
-    return [ln for ln in pagina.splitlines() if not any(m in ln for m in fora)]
+    return [ln for ln in sem_carimbo(pagina) if not any(m in ln for m in fora)]
 
 
 def main() -> int:
@@ -737,7 +756,7 @@ def main() -> int:
     ap.add_argument("--completo", action="store_true",
                     help="roda a suíte e os portões, e regrava o cache")
     ap.add_argument("--check", action="store_true",
-                    help="o painel.html publicado bate com as fontes de agora?")
+                    help="o html/painel.html publicado bate com as fontes de agora?")
     args = ap.parse_args()
 
     if args.completo:
@@ -758,18 +777,18 @@ def main() -> int:
     if args.check:
         publicado = _texto(SAIDA)
         if not publicado:
-            print("painel.html: NÃO EXISTE — rode `python3 scripts/gerar-painel.py`")
+            print("html/painel.html: NÃO EXISTE — rode `python3 scripts/gerar-painel.py`")
             return 1
         if _recorta_selo(publicado) != _recorta_selo(pagina):
-            print("painel.html: DESATUALIZADO — o conteúdo não bate com as fontes.")
+            print("html/painel.html: DESATUALIZADO — o conteúdo não bate com as fontes.")
             print("  cure com: python3 scripts/gerar-painel.py")
             return 1
-        print("painel.html: atualizado (confere com as sprints, o CSV e o cache)")
+        print("html/painel.html: atualizado (confere com as sprints, o CSV e o cache)")
         return 0
 
     SAIDA.write_text(pagina, encoding="utf-8")
     censo = rapido["censo"]
-    print(f"painel.html: {censo['arquivos']} sprints, "
+    print(f"{SAIDA.relative_to(RAIZ)}: {censo['arquivos']} sprints, "
           f"{rapido['mapa'].get('chaves', '?')} chaves do mapa, "
           f"{_idade(le_cache().get('medido_em'))[0]}")
     return 0
