@@ -3730,8 +3730,8 @@ class PyDualSenseController(IController):
         with self._io_lock:
             self._rumble_scale_by_uniq = novo
 
-    def force_rumble_stop(self) -> None:
-        """Para os motores de TODOS os controles com um report de stop (HARM-16).
+    def force_rumble_stop(self, uniq: str | None = None) -> None:
+        """Para os motores com um report de stop (HARM-16) — todos, ou UM.
 
         `set_rumble(0, 0)` com os nossos motores JÁ em 0 (0→0) não muda o
         report — e report que não muda não é escrito (dedup do `sendReport`), de
@@ -3743,9 +3743,22 @@ class PyDualSenseController(IController):
         `_rumble_stop_pending` em cada handle: UM report com flags ligados e
         motores 0, e o ciclo seguinte volta ao neutro. Broadcast deliberado
         (ignora o seletor de alvo): sair de modo para TODO mundo.
+
+        BORDA-DE-QUEDA-01 (26/08/2026): `uniq` restringe a UM controle, e
+        existe porque a borda de um jogador de co-op não é saída de modo — o
+        jogador 3 cai e os outros três continuam jogando. Parar a mesa inteira
+        ali seria trocar um motor preso por três motores mudos no meio da
+        partida. Endereçamento pelo mesmo `_casar_key` do `enviar_release_leds`
+        (aceita o MAC 12-hex do IPC e a key crua do handle); alvo que não casa
+        handle nenhum é NO-OP silencioso — o controle já saiu da mesa, e é
+        exatamente o caso em que não há nada a parar.
         """
         with self._io_lock:
-            handles = list(self._handles.items())
+            if uniq is not None:
+                key = _casar_key(self._handles, uniq)
+                handles = [(key, self._handles[key])] if key is not None else []
+            else:
+                handles = list(self._handles.items())
         for key, handle in handles:
             try:
                 handle.setLeftMotor(0)
