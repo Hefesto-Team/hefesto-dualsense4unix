@@ -40,6 +40,7 @@ from typing import Any
 from hefesto_dualsense4unix.app import gui_dialogs, ipc_bridge
 from hefesto_dualsense4unix.app.actions.carona_do_wrapper import GESTO_APLICAR
 from hefesto_dualsense4unix.app.actions.profile_writer import ProfileWriterMixin
+from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
 from hefesto_dualsense4unix.profiles.loader import (
     _seed_source_file,
     load_all_profiles,
@@ -313,9 +314,38 @@ class FooterActionsMixin(ProfileWriterMixin):
         já congela a janela, e o teto de 1,0 s da ponte é menor que o do
         ``apply_draft`` que vem em seguida.
 
-        A pendência só é limpa quando o daemon CONFIRMA. Recusa e daemon offline
-        deixam a declaração de pé: as escolhas seguem marcadas na aba e clicar de
-        novo tenta de novo — o contrário perderia em silêncio o que ela declarou.
+        A pendência só é limpa quando a gravação CONFIRMA — pelo daemon ou pelo
+        disco. Recusa deixa a declaração de pé: as escolhas seguem marcadas na
+        aba e clicar de novo tenta de novo — o contrário perderia em silêncio o
+        que ela declarou.
+
+        O HEFESTO DESLIGADO NÃO É MOTIVO PARA PERDER O QUE ELA DECLAROU
+        ---------------------------------------------------------------
+
+        CONEXÕES · MAPA 2D 01 / G3 (25/08/2026). Até hoje o ÚNICO escritor de
+        produção do ``maquina.json`` era o handler ``machine.declare``, atrás do
+        IPC — e o ``maquina.json`` não depende de daemon nenhum: é um arquivo
+        de configuração que a própria janela sabe gravar, com o mesmo lock e a
+        mesma gravação atômica (``utils/maquina``). Com o Hefesto parado, a tela
+        respondia *"não gravei o que você declarou"* e jogava fora a mesa, o
+        desenho, os controles e o orçamento que ela acabara de declarar.
+
+        O caminho de disco é FALLBACK, e o gatilho é exato: ``motivo is None``
+        quer dizer que o daemon **não respondeu** (contrato de
+        ``machine_declare_detalhado``). Daemon VIVO que recusou vem com motivo, e
+        aí o disco não é tentado — gravar por trás de um daemon que disse "não"
+        deixaria a memória dele divergindo do arquivo, que é pior que não
+        gravar.
+
+        **Não nasce um segundo dono do gesto.** O dono continua sendo este
+        método; o que mudou foi o que ele faz quando a ponte está morta. A
+        objeção escrita em ``config/secao_mesa._ao_declarar`` — *"chamar
+        ``machine.declare`` daqui criaria um segundo dono do gesto de gravar"* —
+        segue valendo, e nenhuma seção da aba ganhou porta própria para o disco.
+
+        E o daemon lê o arquivo ao ligar (``daemon/lifecycle.py``:788,
+        ``carregar_maquina``), então o que desce ao disco aqui chega a ele
+        sozinho no próximo start — não há segunda metade a fazer depois.
         """
         declaracao = self._maquina_pendente
         if not declaracao:
@@ -323,6 +353,8 @@ class FooterActionsMixin(ProfileWriterMixin):
         ok, motivo, descartados = ipc_bridge.machine_declare_detalhado(
             dict(declaracao)
         )
+        if not ok and motivo is None:
+            return self._gravar_declaracao_no_disco(dict(declaracao))
         if ok:
             self._maquina_pendente = None
             if descartados:
@@ -340,6 +372,47 @@ class FooterActionsMixin(ProfileWriterMixin):
         logger.warning("footer_declaracao_de_maquina_nao_gravada", motivo=motivo)
         return (False, motivo or _(
             "O Hefesto está desligado — não gravei o que você declarou"
+        ))
+
+    def _gravar_declaracao_no_disco(
+        self, declaracao: dict[str, Any]
+    ) -> tuple[bool, str | None]:
+        """O mesmo gesto, sem a ponte: grava direto no ``maquina.json``.
+
+        Só é alcançado quando o daemon NÃO RESPONDEU — ver
+        ``_gravar_declaracao_de_maquina``, que é o dono do gesto e o único
+        chamador desta função.
+
+        Síncrono na thread do GTK como o irmão de cima, e pelo mesmo argumento:
+        o clique no "Aplicar" já congela a janela, e aqui não há sequer o teto
+        de 1,0 s da ponte a esperar — é uma escrita de arquivo pequeno.
+
+        ``declarar_a_maquina`` **nunca levanta**: um erro de disco ou de schema
+        volta como recusa com motivo, porque quem chama é um handler de clique e
+        uma exceção aqui levaria junto a declaração inteira.
+        """
+        recibo = declarar_a_maquina(declaracao)
+        if not recibo.gravou:
+            logger.warning(
+                "footer_declaracao_de_maquina_nem_no_disco", motivo=recibo.motivo
+            )
+            return (False, _(
+                "O Hefesto está desligado — não gravei o que você declarou"
+            ))
+        self._maquina_pendente = None
+        if recibo.descartados:
+            # Os nomes dos campos ficam no log, e não na frase: a tabela de
+            # rótulos de tela (`ipc_bridge._CAMPOS_DA_MAQUINA`) tem dono único e
+            # não é este arquivo. Uma segunda cópia dela aqui divergiria da
+            # primeira no dia em que o esquema ganhasse um campo.
+            logger.warning(
+                "footer_declaracao_no_disco_com_descartes",
+                descartados=list(recibo.descartados),
+            )
+        # Redação PROVISÓRIA: texto novo na tela é classe estrutural e espera o
+        # olho dela.
+        return (True, _(
+            "O Hefesto está desligado — gravei aqui, e ele lê isso ao ligar."
         ))
 
     def _dizer_com_o_recado_da_maquina(self, msg: str) -> None:
