@@ -3,7 +3,27 @@
 O `scripts/doctor.sh` tem milhares de linhas de diagnóstico e é invisível para
 quem não abre terminal, que é a maior parte de quem usa o produto. Esta seção
 dá cara de gente ao que já existe: um selo com o veredito, o botão que refaz o
-exame, e as linhas do que foi conferido.
+exame, os CARDS do que fazer, e as linhas do que foi conferido.
+
+DUAS ZONAS, E O QUE MANDA VEM EM CIMA (25/08/2026)
+----------------------------------------------------
+
+Até esta data a seção publicava cinco palavras e mais nada: a cura de quatro
+das cinco conferências existia, e chegava à tela SÓ dentro de um
+`set_tooltip_text` (`_dica_do_item`, e não havia um segundo caminho). Quem não
+passasse o mouse por cima da palavra certa nunca descobria o que fazer — a
+`A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na forma mais barata de consertar.
+
+Agora há duas zonas: em cima os cards do que fazer, embaixo a tira do que foi
+conferido. Um card de ORDEM (`integrations/ordens_da_mesa.Ordem`) traz o
+imperativo e as TRÊS linhas de porquê, cada uma com o selo de procedência; um
+card de CURA traz o que fazer e o que se mediu, sem selo, porque uma cura de
+conferência não tem medição por trás dizendo de onde vem o conselho.
+
+**A terceira linha é sempre visível**, inclusive quando confessa que o ganho não
+foi medido. É ela que impede raciocínio de se vestir de medição: uma ordem que
+manda mover sem dizer quanto se ganha é honesta; a mesma com o ganho escondido é
+palpite com cara de laudo.
 
 Fonte única: a seção NÃO reimplementa checagem nenhuma. Toda medição vem de
 `integrations/exame_da_mesa.py`, e o SELO vem de `exame_da_mesa.veredito()` —
@@ -40,7 +60,12 @@ from hefesto_dualsense4unix.integrations.exame_da_mesa import (
     ESTADO_CERTO,
     ESTADO_NAO_SEI,
     ESTADO_PROBLEMA,
+    ROTULOS_DA_ORDEM,
     Item,
+)
+from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
+    TEXTO_DO_SELO,
+    Ordem,
 )
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -162,6 +187,17 @@ DICAS_DAS_LINHAS = {
     ),
 }
 
+#: O prefixo da cura, e ele tem UM dono. Nasceu dentro de `_dica_do_item` e
+#: passou a valer também para o card, quando a cura deixou de morar só no
+#: tooltip: duas cópias da mesma palavra divergiriam na primeira edição, e a
+#: pessoa leria "O que fazer" na dica e outra coisa no card.
+PREFIXO_DA_CURA = "O que fazer: "
+
+#: A moldura de um card de ordem. A gramática visual é a mesma dos cards das
+#: outras abas: um `Gtk.Frame` sem rótulo, com margem interna — uma aba nova sem
+#: `Gtk.Frame` já leu como quebrada nesta casa (22/08/2026).
+MARGEM_DO_CARD = 8
+
 #: Rótulo e dica do botão (`TOOLTIPS.md:75`).
 ROTULO_DO_BOTAO = "Examinar de novo"
 DICA_DO_BOTAO = "Refaz o exame agora. Leva alguns segundos e não altera nada."
@@ -201,13 +237,94 @@ def _dica_do_item(item: Item) -> str:
     a de baixo, a dica de "Pareamentos salvos" continuaria afirmando que está
     tudo salvo com a linha pintada de vermelho ao lado — é a
     LED-QUE-NÃO-AFIRMA-01 aplicada a uma dica.
+
+    A CURA CONTINUA AQUI, E DEIXOU DE SER SÓ AQUI. Até 25/08/2026 este era o
+    ÚNICO caminho de `Item.cura` até a tela, e quem não passasse o mouse por
+    cima da palavra certa nunca descobria o que fazer. Agora ela também sai em
+    card (:meth:`PainelDoExame._desenhar_o_que_fazer`); a dica a mantém porque
+    quem já está com o ponteiro na linha não deve ter de procurar embaixo.
     """
     partes = [_(DICAS_DAS_LINHAS.get(item.chave, ""))]
     if item.porque:
         partes.append(_(item.porque))
     if item.cura:
-        partes.append(_("O que fazer: ") + _(item.cura))
+        partes.append(_(PREFIXO_DA_CURA) + _(item.cura))
     return "\n\n".join(p for p in partes if p)
+
+
+def _linha_da_ordem(rotulo: str, texto: str, selo: str) -> str:
+    """Uma das três frases de uma ordem, com o selo de procedência à direita.
+
+    O selo vai na MESMA linha e em cinza: ele qualifica a frase, e uma linha
+    própria o transformaria numa quarta afirmação.
+
+    A `fonte` da linha NÃO chega aqui, e a ausência é decisão de tela: no módulo
+    ela é um caminho de arquivo desta árvore (`docs/protocol/…`), porque é isso
+    que um portão consegue conferir em disco. Caminho de repositório na tela
+    dela é jargão do mesmo tipo de `usb1-port5` — quem usa o produto não tem
+    esta árvore. O que ela lê é "especificação de terceiro", que é a afirmação
+    honesta; QUEM é o terceiro ainda não existe em forma de nome legível, e
+    inventá-lo aqui seria a tela pondo palavra na boca do módulo.
+    """
+    return (
+        f"<b>{_escapar(_(rotulo))}:</b> {_escapar(_(texto))} "
+        f'<span foreground="{COR_APAGADA}" size="small">'
+        f"[{_escapar(_(TEXTO_DO_SELO.get(selo, selo)))}]</span>"
+    )
+
+
+def _leitura_das_ordens(maquina: Any) -> Any:
+    """O que o catálogo de ordens lê — o barramento MAIS o desenho dela.
+
+    O módulo do exame é 100% stdlib e não pode abrir o `maquina.json` (contrato
+    de CONFIG-09, T3 da CONFIGURAÇÕES-FECHA-01): quem carrega a declaração é
+    esta seção e passa por argumento. Aqui isso vale para cinco campos de uma
+    vez, e cada um muda o que a ordem consegue AFIRMAR:
+
+    * `vizinhas` e `ocupante_da_entrada` — sem o desenho dela, R2 cala. Calar é
+      a resposta certa: rádio colado a rádio é uma afirmação sobre o METAL, e o
+      `/sys` não sabe onde os buracos ficam no gabinete;
+    * `entradas_livres_declaradas` — é o que troca "para uma entrada do próprio
+      computador" por "para a entrada 4". Sem desenho, a ordem manda, e diz que
+      só ela pode dizer para onde;
+    * `nomes_declarados` — é o que autoriza a ordem a chamar o aparelho de
+      5 Gbps pelo nome DELA. Sem isso ele é "um aparelho que você ainda não
+      identificou", e nunca "Wi-Fi": ler o `product` para nomear é adivinhar por
+      texto;
+    * `tipos_declarados` — é o filtro que impede a webcam de cabo de ser acusada
+      de irradiar 2,4 GHz, que foi o falso positivo que fez esta sprint existir.
+
+    A varredura mora aqui e não na montagem: ela roda no worker do exame, que é
+    o mesmo lugar onde as outras cinco leituras já rodam.
+    """
+    from hefesto_dualsense4unix.integrations import (
+        censo_do_barramento,
+        entradas_do_gabinete,
+        mapa_das_portas,
+        ordens_da_mesa,
+    )
+
+    censo = censo_do_barramento.ler_o_barramento()
+    mapa = maquina.mapa
+    radios = maquina.mesa.radios
+    return ordens_da_mesa.Leitura(
+        censo=censo,
+        entradas=entradas_do_gabinete.listar_entradas(),
+        vizinhas=mapa_das_portas.vizinhas_de_verdade(mapa, censo),
+        ocupante_da_entrada={
+            numero: (mapa_das_portas.caminho_de(mapa, numero) or "")
+            for numero in mapa.portas
+        },
+        entradas_livres_declaradas=mapa_das_portas.portas_livres(mapa, censo),
+        nomes_declarados={
+            chave: radio.apelido
+            for chave, radio in radios.items()
+            if radio.apelido
+        },
+        tipos_declarados={
+            chave: radio.tipo for chave, radio in radios.items() if radio.tipo
+        },
+    )
 
 
 class PainelDoExame:
@@ -224,6 +341,7 @@ class PainelDoExame:
         self.quando: Any = None
         self.botao: Any = None
         self.linhas: dict[str, Any] = {}
+        self.cards: Any = None
         self._examinando = False
 
     # --- montagem -------------------------------------------------------
@@ -259,6 +377,17 @@ class PainelDoExame:
         caixa.pack_start(cabecalho, False, False, 0)
 
         caixa.pack_start(rotulo_de_apoio(ESCOPO), False, False, 0)
+
+        # A ZONA DOS CARDS, e ela nasce VAZIA. A montagem não examina (ver o
+        # cabeçalho), então não há ordem nenhuma para desenhar aqui — e uma
+        # caixa vazia não ocupa altura, então a seção recém-montada continua
+        # com a cara que o retrato das abas fotografa.
+        #
+        # Em CIMA da tira de propósito: o que MANDA vem antes do que foi
+        # conferido. A tira responde "está tudo certo?"; o card responde "o que
+        # eu faço?", e é a segunda pergunta que traz alguém a esta aba.
+        self.cards = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        caixa.pack_start(self.cards, False, False, 0)
 
         grade = Gtk.Grid()
         grade.set_column_spacing(24)
@@ -302,6 +431,130 @@ class PainelDoExame:
             f"<b>{_escapar(frase)}</b>"
         )
 
+    # --- os cards: onde a cura deixa de morar no tooltip ------------------
+
+    @staticmethod
+    def _etiqueta(markup: str, *, margem: int = 0) -> Any:
+        """Um rótulo de card: quebra linha, alinhado à esquerda, com markup.
+
+        `set_line_wrap` não é enfeite — a frase de uma ordem tem duas linhas de
+        texto, e um rótulo sem quebra empurra a largura mínima da janela para
+        além dos 1180 px com que ela abre.
+        """
+        from gi.repository import Gtk
+
+        etiqueta = Gtk.Label()
+        etiqueta.set_xalign(0.0)
+        etiqueta.set_line_wrap(True)
+        etiqueta.set_max_width_chars(70)
+        etiqueta.set_margin_start(margem)
+        etiqueta.set_markup(markup)
+        return etiqueta
+
+    def _card(self, filhos: list[Any]) -> Any:
+        """A moldura de um card, com os rótulos já prontos dentro."""
+        from gi.repository import Gtk
+
+        corpo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        for filho in filhos:
+            corpo.pack_start(filho, False, False, 0)
+        for lado in ("start", "end", "top", "bottom"):
+            with contextlib.suppress(Exception):
+                getattr(corpo, f"set_margin_{lado}")(MARGEM_DO_CARD)
+        moldura = Gtk.Frame()
+        moldura.add(corpo)
+        return moldura
+
+    def _card_da_ordem(self, ordem: Ordem) -> Any:
+        """O card de uma ordem de serviço: o imperativo e as TRÊS linhas.
+
+        AS TRÊS, SEMPRE — inclusive a que confessa que o ganho não foi medido.
+        Uma ordem que manda mover um aparelho sem dizer quanto se ganha é uma
+        ordem honesta; a mesma ordem com o ganho escondido é um palpite com cara
+        de laudo, e esconder a terceira linha custaria uma linha de tela e a
+        confiança inteira.
+
+        Uma ordem sem destino nasce sem imperativo, e o card respeita isso: um
+        imperativo que manda mover para lugar nenhum é pior que silêncio. Nesse
+        caso o glifo encabeça a primeira das três linhas, para o card não
+        começar sem sinal.
+        """
+        glifo = (
+            f'<span foreground="{COR[ESTADO_ATENCAO]}" weight="bold">'
+            f"{_escapar(GLIFO[ESTADO_ATENCAO])}</span> "
+        )
+        filhos: list[Any] = []
+        recuo = 0
+        if ordem.tem_acao:
+            filhos.append(
+                self._etiqueta(f"{glifo}<b>{_escapar(_(ordem.acao))}</b>")
+            )
+            glifo = ""
+            recuo = 12
+        for rotulo, linha in zip(ROTULOS_DA_ORDEM, ordem.linhas, strict=True):
+            filhos.append(
+                self._etiqueta(
+                    glifo + _linha_da_ordem(rotulo, linha.texto, linha.selo),
+                    margem=recuo,
+                )
+            )
+            glifo = ""
+            recuo = 12
+        return self._card(filhos)
+
+    def _card_da_cura(self, item: Item) -> Any:
+        """O card de uma conferência que tem cura e não tem ordem.
+
+        Quatro das cinco conferências escrevem uma cura, e até 25/08/2026 as
+        quatro morriam dentro de um `set_tooltip_text`. Este card é o caminho
+        que faltava — e ele é MENOR que o da ordem de propósito: uma cura de
+        conferência não traz selo de procedência, porque não há medição por trás
+        dela dizendo de onde vem o conselho. Pôr um selo aqui seria dar ao
+        raciocínio a roupa da medição, que é o que o selo existe para impedir.
+        """
+        cor = COR.get(item.estado, COR_APAGADA)
+        return self._card(
+            [
+                self._etiqueta(
+                    f'<span foreground="{cor}" weight="bold">'
+                    f"{_escapar(GLIFO.get(item.estado, '?'))}</span> "
+                    f"<b>{_escapar(_(PREFIXO_DA_CURA) + _(item.cura or ''))}</b>"
+                ),
+                self._etiqueta(_escapar(_(item.porque)), margem=12),
+            ]
+        )
+
+    def _desenhar_o_que_fazer(self, itens: list[Item]) -> None:
+        """Refaz a zona de cards a partir dos itens desta rodada.
+
+        Destrói e reconstrói em vez de atualizar no lugar: o número de cards
+        muda a cada exame, e uma zona que só acrescenta acumularia a
+        recomendação de dois exames atrás — o defeito de tela mais barato de
+        cometer e o mais difícil de notar, porque ele parece uma tela cheia de
+        informação.
+
+        As ordens vêm antes das curas de conferência: uma ordem sabe de onde
+        veio cada frase dela, e uma cura de conferência não. O que afirma mais
+        vem primeiro.
+        """
+        if self.cards is None:
+            return
+        with contextlib.suppress(Exception):
+            for filho in self.cards.get_children():
+                self.cards.remove(filho)
+                filho.destroy()
+        desenhados: list[Any] = []
+        for item in itens:
+            if item.ordem is not None:
+                desenhados.append(self._card_da_ordem(item.ordem))
+        for item in itens:
+            if item.ordem is None and item.cura and item.estado != ESTADO_CERTO:
+                desenhados.append(self._card_da_cura(item))
+        with contextlib.suppress(Exception):
+            for card in desenhados:
+                self.cards.pack_start(card, False, False, 0)
+            self.cards.show_all()
+
     # --- o exame --------------------------------------------------------
 
     def _ao_clicar(self, _botao: Any) -> None:
@@ -337,10 +590,12 @@ class PainelDoExame:
                 # T3, CONFIGURAÇÕES-FECHA-01: o exame é 100% stdlib e não lê o
                 # `maquina.json` sozinho (contrato de CONFIG-09) — quem carrega
                 # a declaração é esta seção, e passa por argumento.
-                mesa = carregar_maquina().mesa
+                maquina = carregar_maquina()
+                mesa = maquina.mesa
                 itens = exame_da_mesa.exame(
                     altura_da_antena=mesa.altura_da_antena,
                     linha_de_visada=mesa.linha_de_visada,
+                    leitura_das_ordens=lambda: _leitura_das_ordens(maquina),
                 )
                 selo = exame_da_mesa.veredito(itens)
             except Exception as exc:
@@ -403,6 +658,7 @@ class PainelDoExame:
                     f"{_escapar(_(item.rotulo))}"
                 )
                 etiqueta.set_tooltip_text(_dica_do_item(item))
+        self._desenhar_o_que_fazer(list(itens))
         if self.quando is not None:
             with contextlib.suppress(Exception):
                 self.quando.set_markup(

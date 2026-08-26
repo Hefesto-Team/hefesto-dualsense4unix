@@ -46,6 +46,10 @@ import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - só para o verificador de tipos
+    from hefesto_dualsense4unix.integrations.ordens_da_mesa import Leitura, Ordem
 
 #: Os quatro estados de uma linha do exame. O quarto não é enfeite: é o que a
 #: checagem devolve quando a resposta exigiria root, ou quando a ferramenta de
@@ -64,6 +68,21 @@ ROTULO_ENERGIA_DAS_PORTAS = "Energia das portas"
 ROTULO_PAREAMENTOS = "Pareamentos salvos"
 ROTULO_SUPORTE_AO_CONTROLE = "Suporte ao controle"
 ROTULO_VIZINHANCA = "Vizinhança das portas"
+
+#: O rótulo de uma linha que NÃO é conferência: é uma ordem de serviço vinda de
+#: `integrations/ordens_da_mesa.py`. Um rótulo só para as seis regras, e não um
+#: por regra, porque o que a pessoa lê no card é o IMPERATIVO — este texto só
+#: aparece no relatório de terminal, onde ele diz de que espécie é a linha.
+ROTULO_DA_ORDEM = "Mudança recomendada"
+
+#: E o rótulo da linha que confessa que o catálogo não rodou. Distinto do de
+#: cima de propósito: "não recomendei nada" e "não consegui olhar" são
+#: afirmações opostas, e colapsá-las é o F7 desta casa.
+ROTULO_DAS_ORDENS = "Mudanças recomendadas"
+
+#: A chave da linha de cima. Não é o slug de regra nenhuma — ela existe
+#: justamente para o caso em que nenhuma regra chegou a rodar.
+CHAVE_DAS_ORDENS = "ordens_da_mesa"
 
 #: Teto de espera de cada chamada ao `busctl`, em segundos. O número é o mesmo
 #: teto curto que a casa usa para leitura viva de BT — a conferência inteira
@@ -89,6 +108,17 @@ class Item:
     ``porque`` é a MEDIÇÃO em uma frase, não a mensagem do doctor. ``cura`` é o
     que a pessoa pode fazer sem terminal e sem senha — ``None`` quando não há
     nada a fazer, que é o caso normal do estado ``certo``.
+
+    ``ordem`` é a ORDEM DE SERVIÇO desta linha, quando ela tem uma
+    (`integrations/ordens_da_mesa.Ordem`): o imperativo, as três linhas de
+    porquê e o selo de procedência de cada uma. É por este campo que a cura
+    deixa de morar só no ``set_tooltip_text`` — a tela desenha um card com o
+    que está aqui, e quem não passa o mouse por cima da palavra certa passa a
+    descobrir o que fazer.
+
+    O campo é ``None`` nas cinco conferências, e é assim que ele fica: uma
+    conferência responde "está certo?" e uma ordem responde "faça isto". Item
+    com ordem é card; item sem ordem continua sendo uma linha da tira.
     """
 
     chave: str
@@ -96,16 +126,27 @@ class Item:
     estado: str
     porque: str
     cura: str | None = None
+    ordem: Ordem | None = None
 
     def como_dicionario(self) -> dict[str, object]:
-        """Forma JSON — é o que o `doctor.sh` consome (`--censo`)."""
-        return {
+        """Forma JSON — é o que o `doctor.sh` consome (`--censo`).
+
+        A chave ``ordem`` só existe quando há ordem, e a assimetria é
+        deliberada: as cinco conferências publicam exatamente os cinco campos
+        que publicavam antes, e nenhum consumidor de `--censo` precisa aprender
+        um campo novo para continuar lendo o que já lia. Quem quiser a ordem
+        pergunta com ``.get("ordem")``.
+        """
+        forma: dict[str, object] = {
             "chave": self.chave,
             "rotulo": self.rotulo,
             "estado": self.estado,
             "porque": self.porque,
             "cura": self.cura,
         }
+        if self.ordem is not None:
+            forma["ordem"] = self.ordem.como_dicionario()
+        return forma
 
 
 # ---------------------------------------------------------------------------
@@ -501,6 +542,88 @@ def vizinhanca_das_portas(
 
 
 # ---------------------------------------------------------------------------
+# As ordens de serviço — a sexta espécie de linha, e a única que MANDA.
+# ---------------------------------------------------------------------------
+
+
+def leitura_do_sistema() -> Leitura:
+    """O que o catálogo de ordens precisa ler, direto do ``/sys``.
+
+    Só as duas varreduras que não dependem de declaração nenhuma: o censo do
+    barramento e os nós de entrada. O desenho do gabinete, os apelidos dos
+    rádios e as entradas livres pelo NÚMERO dela moram no ``maquina.json``, que
+    é pydantic — e este módulo é 100% stdlib porque o `doctor.sh` o carrega pelo
+    ``python3`` do sistema. Quem tem a declaração monta a :class:`Leitura`
+    inteira e a passa por argumento, do mesmo jeito que já faz com a altura da
+    antena.
+
+    Sem a declaração o catálogo continua respondendo — R1, R3 e R5 saem só do
+    barramento. O que ele perde é o ENDEREÇO: sem desenho, a ordem manda mover
+    para "uma entrada do próprio computador" em vez de "para a entrada 4".
+
+    Import tardio pela mesma razão de :func:`_vizinhancas_do_sistema`: as duas
+    varreduras não podem acontecer no import deste arquivo, que o doctor carrega
+    a cada conferência.
+    """
+    from hefesto_dualsense4unix.integrations import ordens_da_mesa
+    from hefesto_dualsense4unix.integrations.censo_do_barramento import (
+        ler_o_barramento,
+    )
+    from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
+        listar_entradas,
+    )
+
+    return ordens_da_mesa.Leitura(
+        censo=ler_o_barramento(), entradas=listar_entradas()
+    )
+
+
+def _itens_das_ordens(leitura: Callable[[], Leitura]) -> list[Item]:
+    """Uma linha por ordem de serviço achada — e uma linha se não deu para ver.
+
+    A ordem vira ``Item`` em vez de ganhar uma lista paralela por uma razão de
+    dono único: o selo do topo sai de :func:`veredito`, que lê ``estado`` de uma
+    lista só. Uma segunda lista obrigaria um segundo lugar a decidir a cor do
+    topo, que é exatamente como o verde volta a conviver com o vermelho
+    (`6c86e295`, 16/08/2026).
+
+    ``chave`` é o slug da regra, que não colide com as cinco chaves da tira —
+    há teste que reprova se um dia colidir, porque a colisão seria muda: a tira
+    pintaria a linha errada e ninguém veria erro nenhum.
+
+    Falha de leitura vira ``nao_sei``, com rótulo próprio. Calar deixaria "não
+    recomendei nada" indistinguível de "não consegui olhar", que é o F7 desta
+    casa aplicado à parte da tela que MANDA.
+    """
+    from hefesto_dualsense4unix.integrations import ordens_da_mesa
+
+    try:
+        catalogo = ordens_da_mesa.catalogo(leitura())
+    except Exception:
+        return [
+            Item(
+                chave=CHAVE_DAS_ORDENS,
+                rotulo=ROTULO_DAS_ORDENS,
+                estado=ESTADO_NAO_SEI,
+                porque=(
+                    "Não deu para conferir como os aparelhos estão encaixados."
+                ),
+            )
+        ]
+    return [
+        Item(
+            chave=ordem.chave,
+            rotulo=ROTULO_DA_ORDEM,
+            estado=ESTADO_ATENCAO,
+            porque=ordem.o_que_eu_vi.texto,
+            cura=ordem.acao or None,
+            ordem=ordem,
+        )
+        for ordem in catalogo
+    ]
+
+
+# ---------------------------------------------------------------------------
 # O exame inteiro, e o veredito único.
 # ---------------------------------------------------------------------------
 
@@ -516,6 +639,7 @@ def exame(
     leitura_da_vizinhanca: Callable[[], Sequence[object]] | None = None,
     altura_da_antena: str | None = None,
     linha_de_visada: str | None = None,
+    leitura_das_ordens: Callable[[], Leitura] | None = None,
 ) -> list[Item]:
     """As cinco linhas, na ORDEM DA TELA.
 
@@ -529,6 +653,17 @@ def exame(
 
     `altura_da_antena` e `linha_de_visada` só alimentam
     :func:`vizinhanca_das_portas` — ver o parágrafo sobre CONFIG-09 lá.
+
+    `leitura_das_ordens` É O ÚNICO ARGUMENTO CUJO DEFAULT NÃO É O SISTEMA REAL,
+    e a exceção é a proteção da foto. Os cinco caminhos acima apontam para
+    arquivos fixos, e uma bancada os substitui um a um; o catálogo de ordens
+    varre o barramento INTEIRO, e quem monta uma bancada para os cinco não tem
+    como adivinhar que precisa de um sexto substituto. Pior: o
+    `test_com_as_raizes_injetadas_nada_do_sistema_real_e_lido` vigia
+    ``pathlib``, e as duas varreduras do catálogo usam ``os.listdir`` e
+    ``open`` — o portão passaria verde sobre um exame lendo a máquina dela.
+    Com o default desligado, quem quer ordens pede: `main()` pede,
+    `app/actions/config/secao_exame.py` pede, e o `retratar_abas.py` não pede.
     """
     argumentos_do_radio: dict[str, Path] = {}
     if parametro_do_radio is not None:
@@ -541,7 +676,7 @@ def exame(
     if diretorio_do_modulo is not None:
         argumentos_do_suporte["diretorio_do_modulo"] = diretorio_do_modulo
 
-    return [
+    itens = [
         energia_do_radio(**argumentos_do_radio),
         energia_das_portas(**({"raiz": raiz_usb} if raiz_usb is not None else {})),
         pareamentos(executar=executar_busctl),
@@ -552,6 +687,9 @@ def exame(
             linha_de_visada=linha_de_visada,
         ),
     ]
+    if leitura_das_ordens is not None:
+        itens.extend(_itens_das_ordens(leitura_das_ordens))
+    return itens
 
 
 def veredito(itens: Sequence[Item]) -> str:
@@ -585,8 +723,16 @@ def censo(itens: Sequence[Item] | None = None) -> dict[str, object]:
     Recebe os itens em vez de repetir a assinatura de `exame()`: quem quiser
     injetar bancada falsa chama `exame(...)` e passa o resultado, e assim uma
     checagem nova não obriga a mexer aqui.
+
+    Sem itens, é o caminho do terminal — e lá o catálogo de ordens ENTRA: quem
+    rodou o comando pediu para olhar esta máquina. Com itens, quem chamou já
+    decidiu o que entra, inclusive se há ordens.
     """
-    linhas = list(exame()) if itens is None else list(itens)
+    linhas = (
+        list(exame(leitura_das_ordens=leitura_do_sistema))
+        if itens is None
+        else list(itens)
+    )
     return {
         "itens": [item.como_dicionario() for item in linhas],
         "veredito": veredito(linhas),
@@ -608,12 +754,28 @@ _MARCA = {
 }
 
 
+#: O rótulo de cada uma das três linhas de uma ordem, na ordem da tela. Mora
+#: aqui, e não só na seção da aba, porque o `--relatorio` do terminal imprime as
+#: mesmas três: dois conjuntos de rótulos para a mesma frase divergiriam na
+#: primeira edição — a lição de `ROTULO_ENERGIA_DO_RADIO` e companhia.
+ROTULOS_DA_ORDEM = ("O que eu vi aqui", "Por que importa", "Ganho esperado")
+
+
 def _imprimir_relatorio(itens: Sequence[Item]) -> int:
     """Uma linha por conferência, mais o veredito. Devolve o código de saída."""
     for item in itens:
         print(f"{_MARCA.get(item.estado, '[INFO]')} {item.rotulo}: {item.porque}")
         if item.cura:
             print(f"        o que fazer: {item.cura}")
+        if item.ordem is not None:
+            # As TRÊS, sempre — inclusive a que confessa que o ganho não foi
+            # medido. Uma ordem que manda mover sem dizer quanto se ganha é
+            # honesta; a mesma com o ganho escondido é palpite com cara de laudo.
+            for rotulo, linha in zip(
+                ROTULOS_DA_ORDEM, item.ordem.linhas, strict=True
+            ):
+                fonte = f" ({linha.fonte})" if linha.fonte else ""
+                print(f"        {rotulo}: {linha.texto} [{linha.selo}]{fonte}")
     final = veredito(itens)
     print(f"{_MARCA.get(final, '[INFO]')} exame da mesa: {final}")
     return 1 if final == ESTADO_PROBLEMA else 0
@@ -626,7 +788,8 @@ def main(argv: list[str] | None = None) -> int:
             "Confere, sem root e sem escrever nada, o que atrapalha um "
             "controle na mesa: energia do rádio, energia das portas, "
             "pareamento pela metade, suporte ao DualSense e a vizinhança das "
-            "portas. Sem argumentos, --relatorio."
+            "portas — e manda as mudanças que valem a pena, com de onde sai "
+            "cada afirmação. Sem argumentos, --relatorio."
         ),
     )
     grupo = parser.add_mutually_exclusive_group()
@@ -639,7 +802,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.censo:
         print(json.dumps(censo(), ensure_ascii=False))
         return 0
-    return _imprimir_relatorio(exame())
+    return _imprimir_relatorio(exame(leitura_das_ordens=leitura_do_sistema))
 
 
 if __name__ == "__main__":  # pragma: no cover - entrypoint do doctor
