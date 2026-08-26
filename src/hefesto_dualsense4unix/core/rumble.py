@@ -248,6 +248,14 @@ class RumbleEngine:
     A política de rumble é aplicada pelo método `_apply_with_policy` antes
     de enviar ao hardware. Requer `link(config, state_ref)` para funcionar
     em modo não-default.
+
+    **ESTA CLASSE NÃO É INSTANCIADA EM `src/`** (medido em 12/08/2026, remedido
+    em 26/08). Ela tem lápide própria em
+    `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`. As duas frases que
+    afirmavam o contrário — em `daemon/ipc_handlers.py` e em
+    `daemon/ipc_rumble_policy.py` — foram substituídas pela informação certa
+    (24/08 e 26/08). Quem for ligar a política de vibração NÃO começa por aqui:
+    o funil vivo é `_effective_mult`, logo acima, e as três rotas que o chamam.
     """
 
     def __init__(
@@ -330,10 +338,19 @@ class RumbleEngine:
         """Atualiza o estado de debounce do modo "auto" e o mult efetivo aplicado.
 
         Encapsula a escrita dos campos privados `_last_auto_mult`,
-        `_last_auto_change_at` e `_last_mult_applied`. Usado por chamadores
-        externos (ex.: `_apply_rumble_policy` em `ipc_server.py`) que precisam
-        propagar o resultado de `_effective_mult` de volta ao engine sem
-        tocar atributos privados diretamente.
+        `_last_auto_change_at` e `_last_mult_applied` para quem precise propagar
+        o resultado de `_effective_mult` de volta ao engine sem tocar atributos
+        privados diretamente.
+
+        **FATO ERRADO, SUBSTITUÍDO em 26/08/2026:** estas linhas nomeavam
+        `_apply_rumble_policy` (`daemon/ipc_server.py` → hoje
+        `daemon/ipc_rumble_policy.py`) como o chamador externo. Ele NUNCA
+        chegava aqui: o `daemon._rumble_engine` de que ele dependia não é
+        instanciado em lugar nenhum de `src/`, então a chamada morria no
+        `if rumble_engine is not None`. Aquela rota passou a ler e escrever a
+        memória viva do daemon (`_last_auto_mult` / `_last_auto_change_at`), que
+        é a mesma do poll loop e do rumble do jogo. **Hoje este método não tem
+        chamador em `src/`** — só os testes do encapsulamento o exercitam.
 
         Args:
             auto_mult: novo valor do debounce state de auto (último mult alvo
