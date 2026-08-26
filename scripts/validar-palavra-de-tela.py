@@ -35,7 +35,17 @@ respondida por FLUXO: uma string é texto de tela quando ela CHEGA A UM
 ESCOADOURO DE TELA — argumento de `set_label`/`set_text`/`set_markup`/
 `set_tooltip_text`/`set_title`/`add_button`, de `_()` (gettext), de um
 construtor de widget com texto (`Gtk.Label(label=...)`), ou de um dos ajudantes
-de tela desta casa (`moldura_de_secao`, `rotulo_de_apoio`).
+de tela desta casa (`moldura_de_secao`, `rotulo_de_apoio`), ou de um dos
+ajudantes de TOAST (`_toast_profile`, `_status_toast`, ...).
+
+O TOAST entrou em 26/08/2026 (BG-TOAST-02), e ele conserta outra fresta medida.
+O toast é a ÚNICA frase que a pessoa lê depois de clicar, e era o único pedaço
+da tela sem régua: nenhum dos treze nomes de `ESCOADOUROS` continha "toast", e
+das 170 chamadas de toast de `app/` havia 163 carregando texto que régua nenhuma
+lia. Foi por essa fresta que `"Falha (daemon offline?)"` sobreviveu num toast
+com o portão verde, dias depois de o mesmo termo ser banido no rótulo. Ligar
+`ESCOADOUROS_DE_RECIBO` levou o alcance de `app/` de 344 rótulos (288 únicos)
+para 420 (363).
 
 Consequência, e é ela que mantém o portão calado sobre o que não é tela:
 chave de dicionário, id de widget, nome de sinal, valor de enum, caminho de
@@ -429,6 +439,73 @@ ESCOADOUROS: dict[str, int] = {
     "rotulo_de_apoio": 1,
 }
 
+#: O RECIBO DO GESTO — os ajudantes de toast desta casa, com a POSIÇÃO exata do
+#: argumento que a pessoa lê. Entrou em 26/08/2026 (BG-TOAST-02), e é o conserto
+#: de uma fresta MEDIDA: o toast é a única frase que a pessoa lê depois de
+#: clicar, e era o único pedaço da tela sem régua. Nenhum dos treze nomes de
+#: `ESCOADOUROS` contém "toast"; das 170 chamadas de toast de `app/`, 163
+#: carregavam texto que régua nenhuma lia. Foi por essa fresta que dois toasts
+#: continuaram dizendo `daemon offline` — a palavra que a E3 da PALAVRA-01
+#: aposentou primeiro — com o portão verde.
+#:
+#: POR QUE UM DICIONÁRIO DE POSIÇÕES, e não o `int` de `ESCOADOUROS`. O
+#: `ESCOADOUROS` conta posições INICIAIS, e o ajudante mais usado desta família
+#: não cabe nesse molde: `_status_toast(context, msg)` (`actions/base.py:346`)
+#: tem o texto na posição **1** e um id de contexto de statusbar (`"daemon"`,
+#: `"footer"`, `"profiles"`) na **0**. Contar duas posições iniciais arrastaria
+#: esses ids para dentro do portão — e `"daemon"` é justamente o começo de um
+#: termo banido. Cada entrada aqui foi lida na assinatura do ajudante.
+#:
+#: FICA DE FORA, e a ausência é medida:
+#:
+#: * `_toast_trigger(side, preset_id, ok, *, motivo=..., spec=..., corpo=...)`
+#:   (`triggers_actions.py:700`) — nenhum argumento dele é texto de tela; ele
+#:   COMPÕE a frase lá dentro, a partir de `motivo` e do preset. O que sai dali
+#:   é texto de execução, e quem alcança isso é o portão de widget montado;
+#: * `toast_da_escolha`, `toast_do_relancamento` (`relancar.py`),
+#:   `reconciliar_toast`, `toast_da_troca_de_mascara` (`home_actions.py`) — os
+#:   quatro DEVOLVEM a frase em vez de mostrá-la. Quem mostra é um `_toast_*`
+#:   desta lista, e o que chega lá é uma variável (ver a lacuna do texto de
+#:   execução no topo do arquivo).
+ESCOADOUROS_DE_RECIBO: dict[str, tuple[int, ...]] = {
+    # `actions/base.py` — o funil por onde TODOS os outros passam.
+    "_status_toast": (1,),
+    "_toast_do_relancar": (0,),
+    # Um por aba/área, todos com a mesma assinatura `(msg)`.
+    "_carona_toast": (0,),
+    "_footer_toast": (0,),
+    "_toast_camadas": (0,),
+    "_toast_daemon": (0,),
+    "_toast_de_gravacao": (0,),
+    "_toast_emulation": (0,),
+    "_toast_input": (0,),
+    "_toast_keyboard": (0,),
+    "_toast_light": (0,),
+    "_toast_mouse": (0,),
+    "_toast_profile": (0,),
+    "_toast_rumble": (0,),
+}
+
+#: O jargão que sobreviveu DENTRO DE UM TOAST, um a um. Mesmo molde e mesmo
+#: contrato de `DIVIDA_DA_PALAVRA_01_PY`: não é perdão, é a dívida com nome e
+#: endereço, e o portão reprova se a entrada envelhecer sem ser apagada.
+#:
+#: **A LISTA NASCE VAZIA, E A MEDIÇÃO É O QUE AUTORIZA ISSO.** Nascer vazia
+#: "para não incomodar" é o defeito-mãe desta casa (PORTÃO-VIVO-01), escrito no
+#: topo deste arquivo — por isso a lista só pode nascer vazia com o número na
+#: mão. Ele está aqui, medido em 26/08/2026 nesta árvore: ligar
+#: `ESCOADOUROS_DE_RECIBO` levou o alcance de `app/` de **344 rótulos (288
+#: únicos) para 420 (363)** — 75 textos que régua nenhuma lia — e o vermelho
+#: novo foi de UM só: `profiles_actions.py:3237`, `"Falha (daemon offline?)"`.
+#: Ele foi TROCADO no mesmo commit que ampliou o alcance, e é por isso que não
+#: há dívida a declarar. Dívida que nasce quando dá para consertar é dívida
+#: escolhida.
+#:
+#: O `dict` fica de pé porque o mecanismo continua valendo, exatamente como o
+#: `DIVIDA_DA_PALAVRA_01` do `.glade`: o próximo toast que nascer com jargão
+#: declara a dívida aqui — com o endereço e o que a frase vira — ou reprova.
+DIVIDA_DO_RECIBO: dict[str, str] = {}
+
 #: Construtores de widget cujo primeiro argumento — ou o `label=` — é texto de
 #: tela. Casados pelo NOME DO ATRIBUTO (`Gtk.Label(...)`), que é como o código
 #: desta casa os escreve.
@@ -443,8 +520,21 @@ NOMEADOS_DE_TELA = frozenset(
 )
 
 
-def _escoadouro_de(no: ast.Call) -> int | None:
-    """Quantas posições iniciais desta chamada são texto de tela, ou None.
+def _posicoes_do_nome(nome: str) -> tuple[int, ...] | None:
+    """As posições de texto de tela deste nome de chamada, ou None.
+
+    Os dois dicionários dizem a mesma coisa em molde diferente: `ESCOADOUROS`
+    conta posições INICIAIS (`add_button` tem 1, `moldura_de_secao` tem 2) e
+    `ESCOADOUROS_DE_RECIBO` dá o índice exato, porque o funil dos toasts
+    (`_status_toast(context, msg)`) tem o texto na segunda.
+    """
+    if nome in ESCOADOUROS:
+        return tuple(range(ESCOADOUROS[nome]))
+    return ESCOADOUROS_DE_RECIBO.get(nome)
+
+
+def _escoadouro_de(no: ast.Call) -> tuple[int, ...] | None:
+    """Que posições desta chamada são texto de tela, ou None.
 
     None significa "esta chamada não põe nada na tela" — que é o veredito para
     a esmagadora maioria das chamadas de `app/`, e é por isso que o portão fica
@@ -452,18 +542,21 @@ def _escoadouro_de(no: ast.Call) -> int | None:
     """
     alvo = no.func
     if isinstance(alvo, ast.Name):
-        return ESCOADOUROS.get(alvo.id)
+        return _posicoes_do_nome(alvo.id)
     if isinstance(alvo, ast.Attribute):
-        if alvo.attr in ESCOADOUROS:
-            return ESCOADOUROS[alvo.attr]
+        posicoes = _posicoes_do_nome(alvo.attr)
+        if posicoes is not None:
+            return posicoes
         if alvo.attr in CONSTRUTORES_COM_TEXTO:
-            return 1
+            return (0,)
     return None
 
 
-def _argumentos_de_tela(no: ast.Call, posicoes: int) -> Iterator[ast.expr]:
+def _argumentos_de_tela(no: ast.Call, posicoes: tuple[int, ...]) -> Iterator[ast.expr]:
     """Só o que ocupa posição de texto de tela nesta chamada."""
-    yield from no.args[:posicoes]
+    for indice in posicoes:
+        if indice < len(no.args):
+            yield no.args[indice]
     for nomeado in no.keywords:
         if nomeado.arg in NOMEADOS_DE_TELA:
             yield nomeado.value
@@ -622,7 +715,8 @@ def conferir_python(caminho: Path, nomes_de_tela: set[str]) -> list[str]:
         # escrito acima de `DIVIDA_DA_PALAVRA_01_PY`: 49 reprovações, nenhum
         # defeito.
         termo = jargao_em(rotulo.texto)
-        if termo is not None and rotulo.texto not in DIVIDA_DA_PALAVRA_01_PY:
+        perdoado = rotulo.texto in DIVIDA_DA_PALAVRA_01_PY or rotulo.texto in DIVIDA_DO_RECIBO
+        if termo is not None and not perdoado:
             achados.append(
                 f"{rotulo.arquivo}:{rotulo.linha}: o texto de tela "
                 f"{rotulo.texto!r} ({rotulo.propriedade}) contém o jargão "
@@ -652,13 +746,17 @@ def conferir_app(raiz: Path = APP) -> list[str]:
         achados.extend(conferir_python(caminho, nomes_de_tela))
         presentes.update(rotulo.texto for rotulo in rotulos_do_python(caminho, nomes_de_tela))
 
-    for declarado in DIVIDA_DA_PALAVRA_01_PY:
-        if declarado not in presentes:
-            achados.append(
-                f"{raiz}: a dívida {declarado!r} não existe mais em `app/` — a "
-                "frase foi trocada, e é uma boa notícia. APAGUE a entrada de "
-                "`DIVIDA_DA_PALAVRA_01_PY`."
-            )
+    for lista, nome_da_lista in (
+        (DIVIDA_DA_PALAVRA_01_PY, "DIVIDA_DA_PALAVRA_01_PY"),
+        (DIVIDA_DO_RECIBO, "DIVIDA_DO_RECIBO"),
+    ):
+        for declarado in lista:
+            if declarado not in presentes:
+                achados.append(
+                    f"{raiz}: a dívida {declarado!r} não existe mais em `app/` "
+                    "— a frase foi trocada, e é uma boa notícia. APAGUE a "
+                    f"entrada de `{nome_da_lista}`."
+                )
     return achados
 
 
@@ -670,6 +768,13 @@ def mostrar_criterio() -> None:
     print(f"  Python varrido: {APP.relative_to(RAIZ)}/**/*.py (por AST)")
     print("  regra de tela do Python: a string CHEGA a um escoadouro de tela.")
     print(f"    escoadouros: {', '.join(sorted(ESCOADOUROS))}")
+    print(
+        "    recibos do gesto (toast), com a posição do texto: "
+        + ", ".join(
+            f"{nome}[{','.join(str(i) for i in posicoes)}]"
+            for nome, posicoes in sorted(ESCOADOUROS_DE_RECIBO.items())
+        )
+    )
     print(f"    construtores: {', '.join(sorted(CONSTRUTORES_COM_TEXTO))}")
     print(f"    argumentos nomeados: {', '.join(sorted(NOMEADOS_DE_TELA))}")
     print(
@@ -699,6 +804,10 @@ def mostrar_criterio() -> None:
     print()
     print("Dívida declarada em app/ (frases ainda não trocadas):")
     for rotulo, razao in DIVIDA_DA_PALAVRA_01_PY.items():
+        print(f"  {rotulo!r}: {razao}")
+    print()
+    print("Dívida declarada no recibo do gesto (toasts ainda não trocados):")
+    for rotulo, razao in DIVIDA_DO_RECIBO.items():
         print(f"  {rotulo!r}: {razao}")
 
 

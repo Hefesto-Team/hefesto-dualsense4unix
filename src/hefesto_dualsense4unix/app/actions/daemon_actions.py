@@ -2259,7 +2259,11 @@ class DaemonActionsMixin(WidgetAccessMixin):
         `GLib.idle_add`. Cobre ausência de systemd e falha do unit exibindo
         MessageDialog não-bloqueante (response handler em vez de `dialog.run()`).
         """
-        self._toast_daemon("Reiniciando daemon...")
+        # BG-07c (26/08/2026): dizia "Reiniciando daemon...". O botão que dispara
+        # este recibo se chama "Reiniciar o Hefesto" (`gui/main.glade:2805`) e o
+        # recibo de sucesso, doze linhas abaixo, já diz "Hefesto reiniciado." —
+        # era a linha do meio que falava a língua do sistema.
+        self._toast_daemon("Reiniciando o Hefesto…")
 
         def _worker() -> None:
             err_type: str | None = None
