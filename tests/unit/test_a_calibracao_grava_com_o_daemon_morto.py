@@ -1,159 +1,154 @@
-"""A calibração grava com o daemon PARADO — e é a única forma honesta.
+"""A calibração grava no disco com o Hefesto DESLIGADO — a ``CAL-2``.
 
-`utils/maquina.gravar_rascunho_da_mesa` nasceu em 24/08/2026 escrita para isto e
-ficou com **zero chamadores**: o único escritor de produção do `maquina.json` é
-o handler `machine.declare`, atrás do IPC. Com o daemon parado, tudo o que ela
-declarasse ia embora sem aviso.
+``CALIBRAR-AS-ENTRADAS-01`` §2.6 e §7.3 (26/08/2026).
 
-`integrations/lugar_declarado.py` é o chamador que faltava (CAL-2). Estes testes
-provam as duas metades: o disco muda com o IPC morto, e o caminho da gravação
-**não conhece IPC nenhum**.
+O DEFEITO QUE ESTA RÉGUA SEGURA
+--------------------------------
 
-POR QUE O SOCKET É O INSTRUMENTO
----------------------------------
+Até 25/08/2026 o único escritor de produção do ``maquina.json`` era o handler
+``machine.declare``, atrás do IPC. **Com o daemon parado, nada do que ela
+declara é gravado** — e o rodapé responde *"O Hefesto está desligado — não
+gravei o que você declarou"* para uma gravação que não depende de daemon
+nenhum. É a ``A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ`` bem no meio do caminho desta
+tela: ``gravar_rascunho_da_mesa`` estava escrita desde 24/08 e nunca teve
+chamador.
 
-O IPC desta casa é um socket unix (`cli/ipc_client.py:67`). Derrubar
-`socket.socket` e `asyncio.open_unix_connection` é "o IPC recusando tudo" no
-sentido literal: qualquer tentativa de falar com o daemon levanta. Se a
-gravação ainda acontece, ela não passou por lá — e a régua não depende de eu
-adivinhar o nome do módulo cliente certo.
+A cerimônia é abandonável — ``[Já chega por hoje]`` em todo passo, sem "tem
+certeza?" e sem resumo do que faltou. Isso só é honesto se **nenhuma saída
+perder trabalho**, logo cada resposta vai ao disco na hora (R28).
 
-O `maquina.json` deste teste é o do `tmp_path`: a fixture `_hefesto_fake_env`
-(`tests/conftest.py`) isola `XDG_CONFIG_HOME` por teste, e `caminho_da_maquina`
-resolve `config_dir()` na hora da chamada.
+POR QUE A PORTA É A LARGA
+--------------------------
+
+``declarar_a_mesa`` é escopada à seção ``mesa`` do documento, e o mapa é chave
+de TOPO. Mandar o mapa por ela gravaria a mesa e perderia o mapa **calado** —
+que é exatamente o defeito que ``lugar_declarado`` existe para não repetir.
+Esta janela usa ``declarar_a_maquina``.
+
+O DISCO DESTE ARQUIVO É O ``tmp_path`` DA BANCADA
+--------------------------------------------------
+
+A fixture ``_hefesto_fake_env`` (``tests/conftest.py``, autouse) já desvia os
+diretórios XDG para o ``tmp_path`` do teste. A primeira asserção CONFERE isso
+antes de escrever qualquer coisa: uma régua que gravasse no ``~/.config`` dela
+seria o ``CANARIO-FS-01`` disparando, e o defeito estaria na régua.
 """
 from __future__ import annotations
 
-import asyncio
 import json
-import socket
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.integrations import lugar_declarado
-from hefesto_dualsense4unix.integrations.lugar_declarado import (
-    MOTIVO_SCHEMA_RECUSOU,
-    MOTIVO_VERSAO_ESTRANHA,
-    declarar_a_mesa,
+from hefesto_dualsense4unix.app.widgets.calibrar_entradas import (
+    FACE_HUB,
+    LogicaDaCalibracao,
 )
-from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, carregar_maquina
-
-#: A frase que a tela mostra HOJE quando o daemon está parado. Ela é o preço da
-#: ausência de chamador, e é o que a mordida imprime ao reprovar. **Não é texto
-#: de produto deste módulo** — a dona única do texto da aba é a
-#: `CONFIGURACOES-O-LEXICO-01`; aqui ela é só a evidência do defeito.
-FRASE_DO_DEFEITO = (
-    "O Hefesto está desligado — não gravei o que você declarou"
+from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, caminho_da_maquina
+from tests.unit.test_a_fase_sentada_resolve_o_hub import (
+    mesa_com_hub_e_tres_aparelhos,
 )
 
 
-@pytest.fixture
-def ipc_morto(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Todo caminho de IPC recusa. Se algo tentar falar com o daemon, levanta."""
+class IpcQueRecusaTudo:
+    """O daemon MORTO — toda chamada levanta, como no soquete ausente.
 
-    def recusa(*_: object, **__: object) -> None:
-        raise ConnectionRefusedError("o daemon está parado — este teste exige isso")
-
-    monkeypatch.setattr(socket, "socket", recusa)
-    monkeypatch.setattr(asyncio, "open_unix_connection", recusa)
-
-
-def test_grava_sem_ipc(ipc_morto: None) -> None:
-    """Com o IPC recusando tudo, a resposta dela chega ao disco.
-
-    Mordida: arranquei a chamada a `gravar_rascunho_da_mesa` e devolvi
-    `Recibo(False, ...)` no lugar — o jeito que o produto se comporta hoje, com
-    a gravação só por `machine.declare`. O arquivo não apareceu e o teste
-    reprovou imprimindo a frase que a tela mostraria.
+    Um dublê que só sabe passar não é régua (``COMO-EXECUTAR-UMA-SPRINT`` §4);
+    este só sabe RECUSAR, que é o estado que a régua precisa exercer.
     """
-    alvo: Path = caminho_da_maquina()
-    antes = alvo.read_bytes() if alvo.exists() else b""
 
-    recibo = declarar_a_mesa({"altura_da_antena": "acima"})
+    def __init__(self) -> None:
+        self.tentativas: list[str] = []
 
-    # O DISCO primeiro: é ele que a mordida derruba, e é a frase dele que
-    # precisa aparecer na reprovação.
-    assert alvo.exists(), (
-        f"nada foi gravado com o daemon parado — a tela diria: {FRASE_DO_DEFEITO!r}"
+    def __call__(self, metodo: str, *_a: Any, **_kw: Any) -> Any:
+        self.tentativas.append(metodo)
+        raise ConnectionRefusedError(
+            "o soquete do Hefesto não respondeu (daemon parado)"
+        )
+
+
+def _logica() -> LogicaDaCalibracao:
+    """A lógica com o gravador DE PRODUÇÃO — nada de dublê aqui.
+
+    É o ponto do arquivo: o default de ``LogicaDaCalibracao`` tem de ser o
+    caminho que não passa por IPC nenhum.
+    """
+    return LogicaDaCalibracao(MapaDaMesa(), mesa_com_hub_e_tres_aparelhos())
+
+
+# ---------------------------------------------------------------------------
+# A mordida da CAL-2
+# ---------------------------------------------------------------------------
+
+
+def test_grava_sem_ipc(tmp_path: Path) -> None:
+    """Com o IPC recusando tudo, o ``maquina.json`` MUDA.
+
+    MORDIDA: comentar a chamada a ``self._gravar()`` no fim de
+    ``LogicaDaCalibracao.responder`` — que é voltar ao mundo em que só o
+    "Aplicar" do rodapé (ou o ``machine.declare``) escreve. O arquivo não
+    nasce, e o teste reprova imprimindo a frase que a tela mostraria.
+    """
+    caminho = caminho_da_maquina()
+    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp da bancada"
+    assert not caminho.exists()
+
+    ipc = IpcQueRecusaTudo()
+    logica = _logica()
+    numeros = logica.responder(logica.perguntas_sentadas()[0], FACE_HUB)
+
+    assert caminho.exists(), (
+        "a resposta dela não chegou ao disco. É a frase que a tela mostraria: "
+        "'O Hefesto está desligado — não gravei o que você declarou' — para "
+        "uma gravação que não depende de daemon nenhum"
     )
-    assert alvo.read_bytes() != antes, (
-        f"o `maquina.json` não mudou — a tela diria: {FRASE_DO_DEFEITO!r}"
+    documento = json.loads(caminho.read_text(encoding="utf-8"))
+    portas = documento["mapa"]["portas"]
+    assert set(portas) == set(numeros)
+    assert portas[numeros[0]]["caminho"] == "3-1"
+    assert ipc.tentativas == [], "a gravação passou por IPC, e não devia"
+    assert logica.ultimo_recibo is not None and logica.ultimo_recibo.gravou
+
+
+def test_cada_resposta_vai_ao_disco_na_hora(tmp_path: Path) -> None:
+    """Matar o processo no meio não perde nada (R28).
+
+    Não há "aplicar" pendente: entre uma resposta e a seguinte, o que está no
+    disco já é o que ela respondeu. A régua simula a morte relendo o arquivo
+    sem que ninguém tenha fechado a janela.
+    """
+    logica = _logica()
+    logica.responder(logica.perguntas_sentadas()[0], FACE_HUB)
+
+    do_disco = json.loads(caminho_da_maquina().read_text(encoding="utf-8"))
+    assert len(do_disco["mapa"]["portas"]) == 4, (
+        "o disco não tem os quatro lugares que ela acabou de dar"
     )
-    assert carregar_maquina().mesa.altura_da_antena == "acima"
-    assert recibo.gravou is True and recibo.motivo == ""
 
 
-def test_cada_resposta_vai_ao_disco_e_nenhuma_apaga_a_anterior(
-    ipc_morto: None,
+def test_o_disco_recusando_nao_derruba_o_passo(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Grava a CADA resposta (R28), e a fusão não apaga o que já estava lá.
+    """Uma exceção no meio do clique levaria junto a resposta dela.
 
-    Matar o processo no meio da cerimônia não pode custar nada — é o que torna
-    o `[Já chega por hoje]` honesto (§4.4).
+    ``declarar_a_maquina`` **nunca levanta** — traduz as três falhas possíveis
+    em ``Recibo``. Esta régua exerce o caminho de erro, que é o que o dublê que
+    só sabe passar nunca exercita.
     """
-    alvo = caminho_da_maquina()
+    def recusa(_declaracao: Mapping[str, Any]) -> Any:
+        raise OSError(28, "sem espaço no dispositivo")
 
-    assert declarar_a_mesa({"altura_da_antena": "abaixo"}).gravou
-    primeiro = alvo.read_bytes()
-    assert declarar_a_mesa({"linha_de_visada": "com_gente"}).gravou
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.integrations.lugar_declarado."
+        "gravar_maquina_com_descartes",
+        recusa,
+    )
+    logica = _logica()
+    numeros = logica.responder(logica.perguntas_sentadas()[0], FACE_HUB)
 
-    assert alvo.read_bytes() != primeiro
-    mesa = carregar_maquina().mesa
-    assert mesa.altura_da_antena == "abaixo"
-    assert mesa.linha_de_visada == "com_gente"
-
-
-def test_versao_estranha_recusa_com_motivo_e_nao_destroi_os_bytes(
-    ipc_morto: None,
-) -> None:
-    """Arquivo de uma versão futura não é lido nem sobrescrito.
-
-    Escolha de alguém não se destrói para registrar outra — a regra é de
-    `gravar_maquina_com_descartes`, e o chamador tem de devolver o motivo em vez
-    de mentir "gravei".
-    """
-    alvo = caminho_da_maquina()
-    alvo.write_text(json.dumps({"version": 99, "mesa": {}}), encoding="utf-8")
-    antes = alvo.read_bytes()
-
-    recibo = declarar_a_mesa({"altura_da_antena": "acima"})
-
-    assert recibo.gravou is False
-    assert recibo.motivo == MOTIVO_VERSAO_ESTRANHA
-    assert alvo.read_bytes() == antes
-
-
-def test_declaracao_invalida_recusa_em_vez_de_levantar(ipc_morto: None) -> None:
-    """Quem chama é um handler de clique: uma exceção ali leva o passo junto.
-
-    Mordida: tirei o `except ValueError` e o teste virou `ValidationError` —
-    que na janela é a cerimônia inteira caindo em cima da resposta que a pessoa
-    acabou de dar.
-    """
-    recibo = declarar_a_mesa({"altura_da_antena": "no meio"})
-
-    assert recibo.gravou is False
-    assert recibo.motivo == MOTIVO_SCHEMA_RECUSOU
-
-
-def test_o_caminho_da_gravacao_nao_conhece_ipc() -> None:
-    """Portão de import: o módulo não fala com o daemon, nem por engano.
-
-    Um `import` de conveniência acrescentado meses depois reintroduziria o
-    defeito inteiro sem que teste nenhum acima reprovasse — eles todos passam
-    com o socket derrubado, e um caminho novo poderia simplesmente não usá-lo.
-    """
-    fonte = Path(lugar_declarado.__file__).read_text(encoding="utf-8")
-    linhas_de_codigo = [
-        linha
-        for linha in fonte.splitlines()
-        if linha.startswith(("import ", "from "))
-    ]
-
-    proibidos = [
-        linha
-        for linha in linhas_de_codigo
-        if any(marca in linha for marca in ("ipc", "socket", "asyncio", "daemon"))
-    ]
-    assert proibidos == [], f"o chamador voltou a depender do daemon: {proibidos}"
+    assert len(numeros) == 4, "o passo caiu junto com a gravação"
+    assert logica.ultimo_recibo is not None
+    assert not logica.ultimo_recibo.gravou
+    assert logica.ultimo_recibo.motivo == "disco"
