@@ -95,10 +95,10 @@ from dataclasses import replace
 from datetime import date
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.config.moldura import (
-    QUANDO_VALE,
-    rotulo_de_apoio,
-)
+# `rotulo_de_apoio` saiu do import em 26/08/2026 junto com o parágrafo do
+# `ESCOPO` (LEX-2, item 1): esta seção não imprime mais nenhum parágrafo de
+# apoio na página.
+from hefesto_dualsense4unix.app.actions.config.moldura import QUANDO_VALE
 from hefesto_dualsense4unix.integrations.exame_da_mesa import (
     ESTADO_ATENCAO,
     ESTADO_CERTO,
@@ -133,9 +133,27 @@ TITULO = "Está tudo certo?"
 
 #: A dica do título, palavra por palavra como saiu do desenho aprovado
 #: (`TOOLTIPS.md`). Ela não se reescreve na hora.
+#: E5 da leva: a janela passa a ter DUAS telas de saúde, e cada uma declara o
+#: seu escopo. Sem esta linha, a pessoa tem de adivinhar por que há dois
+#: diagnósticos e qual deles responde à pergunta dela.
+ESCOPO = (
+    "Este exame olha a mesa: portas, energia e rádio. O estado do Hefesto e "
+    "do som fica na aba Sistema."
+)
+
+#: **A `ESCOPO` foi ANEXADA aqui em 26/08/2026 (LEX-2, item 1).** Ela era um
+#: parágrafo esmaecido no alto da seção, e dizia a mesma coisa com a mesa vazia
+#: e com a mesa cheia — logo é explicação, e explicação vai para o hover pela
+#: regra do léxico desta aba. Anexada, e não substituída: as duas metades
+#: respondem perguntas diferentes ("o que este exame faz" e "onde está o
+#: resto").
+#:
+#: DERIVADA da constante, nunca copiada: a frase digitada duas vezes divergiria
+#: na primeira correção, e as duas versões viveriam lado a lado — que é o
+#: defeito que a régua de fato errado desta casa existe para matar.
 DICA: str | None = (
     "O mesmo exame que o Hefesto já sabe fazer pelo terminal, agora com "
-    "resposta em uma linha. Só lê — não muda nada na máquina."
+    f"resposta em uma linha. Só lê — não muda nada na máquina. {ESCOPO}"
 )
 
 #: O nome do método que a seção pendura no hospedeiro, e que a costura da aba
@@ -144,14 +162,6 @@ DICA: str | None = (
 #: dois arquivos é a forma clássica de um refresher nascer morto em silêncio
 #: (BUG-GUI-EMULATION-HANDLERS-UNWIRED-01).
 NOME_DO_REFRESH = "_refresh_saude_da_mesa"
-
-#: E5 da leva: a janela passa a ter DUAS telas de saúde, e cada uma declara o
-#: seu escopo. Sem esta linha, a pessoa tem de adivinhar por que há dois
-#: diagnósticos e qual deles responde à pergunta dela.
-ESCOPO = (
-    "Este exame olha a mesa: portas, energia e rádio. O estado do Hefesto e "
-    "do som fica na aba Sistema."
-)
 
 #: A frase do selo, por estado. Ela responde à pergunta do título, e responde
 #: em português de gente — as chaves de estado do módulo são vocabulário de
@@ -557,20 +567,25 @@ class PainelDoExame:
         fileira.pack_end(self.botao, False, False, 0)
         caixa.pack_start(fileira, False, False, 0)
 
-        escopo = rotulo_de_apoio(ESCOPO)
-        # A seção deixou de ser só leitura em 26/08/2026: o `[Ignorar]` de um
-        # card acumula no rascunho e espera o "Aplicar" do rodapé, como as
-        # outras três seções diferidas — e quem clica e não vê nada acontecer
-        # conclui que não salvou (`moldura.QUANDO_VALE`).
+        # LEX-2, ITEM 1 — O PARÁGRAFO DO ESCOPO SAIU DA PÁGINA (26/08/2026).
+        # `ESCOPO` era um `rotulo_de_apoio` aqui, e dizia a mesma coisa com a
+        # mesa vazia e com a mesa cheia: é explicação, e foi anexada à `DICA`
+        # do título "Está tudo certo?" (ver a constante lá em cima).
         #
-        # A promessa mora AQUI, e não só no botão, porque o botão nasce e morre
-        # com o card: numa mesa sem nenhuma ordem ele não existe, e a frase
-        # ficaria sem casa. Em dica e não impressa, pela regra do léxico desta
-        # aba (LEX-2): fica na página o que MUDA, vai para o hover o que
-        # EXPLICA — e esta frase diria a mesma coisa com a seção intocada.
+        # A `QUANDO_VALE` que viajava de carona nele muda de casa em vez de
+        # sumir: a seção deixou de ser só leitura em 26/08 (o `[Ignorar]` de um
+        # card acumula no rascunho e espera o "Aplicar" do rodapé), e quem
+        # clica sem ver nada acontecer conclui que não salvou.
+        #
+        # O SELO É A CASA CERTA, e a razão é de portão: o `[Ignorar]` nasce e
+        # morre com o card, então numa mesa sem nenhuma ordem a frase ficaria
+        # sem widget nenhum — e
+        # `test_a_aba_diz_quando_a_escolha_fica_guardada.py` monta a seção com
+        # hospedeiro VAZIO, exatamente esse caso. O selo é a única linha desta
+        # seção que existe sempre, e é ela que a pessoa está lendo quando o
+        # exame responde.
         with contextlib.suppress(Exception):
-            escopo.set_tooltip_text(_(QUANDO_VALE))
-        caixa.pack_start(escopo, False, False, 0)
+            self.selo.set_tooltip_text(_(QUANDO_VALE))
 
         # A ZONA DOS CARDS, e ela nasce VAZIA. A montagem não examina (ver o
         # cabeçalho), então não há ordem nenhuma para desenhar aqui — e uma
