@@ -24,6 +24,15 @@ DE ONDE VÊM OS NÚMEROS DESTE ARQUIVO
 * **22 nós de raiz, 15 buracos, 11 de encaixe, ``maxchild`` 10+4+4+4** — remedido
   nesta árvore em 25/08/2026 às 21h18, com o hub externo de volta ao barramento
   (``listar_entradas`` devolve 38 nós no total, 16 deles do hub dela).
+
+E A SEXTA MORDIDA MEDE O CONSUMIDOR, NÃO O CENSO (26/08/2026)
+---------------------------------------------------------------
+
+O censo já gravava a divergência e a pergunta desde 25/08, e **nenhuma linha de
+``app/`` abria o arquivo** — o defeito não estava aqui, estava na ausência de
+quem lesse. Por isso este arquivo importa ``app/actions/config/secao_mesa`` e
+mede as duas funções de MÓDULO que a seção ganhou. Nenhuma delas monta widget:
+sem GTK, sem display e sem ``/sys``, como o resto do arquivo.
 """
 
 import json
@@ -31,8 +40,11 @@ import re
 
 import pytest
 
+from hefesto_dualsense4unix.app.actions.config import secao_mesa
 from hefesto_dualsense4unix.integrations import censo_do_gabinete as cg
+from hefesto_dualsense4unix.integrations.censo_do_barramento import Aparelho, Censo
 from hefesto_dualsense4unix.integrations.entradas_do_gabinete import NoDeEntrada
+from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador, Mesa
 
 # ---------------------------------------------------------------------------
 # As fixtures — a placa desta bancada, e a placa que só tem gabarito
@@ -719,3 +731,192 @@ def _todos_os_fatos(no, caminho=""):
         for indice, filho in enumerate(no):
             achados += _todos_os_fatos(filho, f"{caminho}[{indice}]")
     return achados
+
+
+# ---------------------------------------------------------------------------
+# MORDIDA 6 — a ABA publica a divergência, e o hub em comum vira conselho
+# ---------------------------------------------------------------------------
+#
+# As duas moram aqui, e não num arquivo de tela, porque o que elas medem é a
+# CHEGADA do censo à seção "A mesa": o `install.sh` grava o `gabinete.json` em
+# toda instalação desde 25/08/2026 e, até 26/08, nenhuma linha de `app/` o
+# abria. A régua que faltava não era do censo — era do consumidor.
+#
+# Nenhuma delas monta widget: as duas funções sob medição são de MÓDULO e puras,
+# que é o mesmo desenho de `_onde_esta_o_adaptador` (a régua de
+# `test_a_porta_dela_chega_na_frase.py`). Sem GTK, sem display, sem `/sys`.
+
+#: A controladora xHCI onde mora o hub desta bancada, e a OUTRA. Os dois valores
+#: são a forma real de um `controlador_pci` — o caminho PCI do `/sys` —, e o que
+#: importa aqui é só que são diferentes.
+_PCI_DO_HUB = "0000:0c:00.3"
+_PCI_DA_PLACA = "0000:03:00.0"
+
+
+def _bancada_dos_tres_adaptadores():
+    """O arranjo medido em 22/08/2026: três adaptadores, DOIS pais, um hub.
+
+    ``3-3.1.1`` e ``3-3.1.2`` penduram no hub ``3-3.1``; ``3-3.2`` pendura direto
+    no ``3-3``. É por isso que comparar o pai responde "não estão juntos", e
+    responde errado — os três têm o ``3-3`` acima.
+    """
+    def _hub(no, pai, pci):
+        return Aparelho(
+            no=no, nome_do_kernel=no.rsplit("/", 1)[-1], pai=pai,
+            controlador_pci=pci, e_hub=True,
+        )
+
+    censo = Censo(
+        aparelhos=(
+            Aparelho(no="/sys/usb1", nome_do_kernel="usb1",
+                     controlador_pci=_PCI_DA_PLACA, e_hub=True, e_raiz=True),
+            Aparelho(no="/sys/usb3", nome_do_kernel="usb3",
+                     controlador_pci=_PCI_DO_HUB, e_hub=True, e_raiz=True),
+            _hub("/sys/3-3", "/sys/usb3", _PCI_DO_HUB),
+            _hub("/sys/3-3.1", "/sys/3-3", _PCI_DO_HUB),
+            Aparelho(no="/sys/3-3.1.1", nome_do_kernel="3-3.1.1", pai="/sys/3-3.1",
+                     controlador_pci=_PCI_DO_HUB, atras_de_hub=True),
+            Aparelho(no="/sys/3-3.1.2", nome_do_kernel="3-3.1.2", pai="/sys/3-3.1",
+                     controlador_pci=_PCI_DO_HUB, atras_de_hub=True),
+            Aparelho(no="/sys/3-3.2", nome_do_kernel="3-3.2", pai="/sys/3-3",
+                     controlador_pci=_PCI_DO_HUB, atras_de_hub=True),
+        )
+    )
+    mesa = Mesa(
+        adaptadores=(
+            Adaptador(interface="hci0", no="/sys/3-3.1.1", busnum=3, devpath="3.1.1",
+                      atras_de_hub=True),
+            Adaptador(interface="hci1", no="/sys/3-3.1.2", busnum=3, devpath="3.1.2",
+                      atras_de_hub=True),
+            Adaptador(interface="hci2", no="/sys/3-3.2", busnum=3, devpath="3.2",
+                      atras_de_hub=True),
+        )
+    )
+    return mesa, censo
+
+
+def _entradas(hub, quantas, *, encaixe="hotplug"):
+    """``quantas`` entradas VAZIAS neste hub — nenhum ``peer``, um nó por buraco."""
+    return tuple(
+        _no(hub, numero, encaixe=encaixe) for numero in range(1, quantas + 1)
+    )
+
+
+def test_a_aba_mostra_a_divergencia_em_vez_de_escolher():
+    """**A MORDIDA.** BIOS 5, barramento 8: a seção publica AS DUAS e a pergunta.
+
+    É o §7.4 chegando à tela. O censo já grava as duas contagens e a pergunta
+    desde 25/08/2026; o que faltava era alguém publicá-las.
+
+    ARRANCANDO a cura — fazendo ``_linhas_do_gabinete`` eleger uma fonte, que é
+    o que qualquer "simplificação" faria — este teste reprova imprimindo o
+    número que sumiu da tela.
+    """
+    contagens = cg.declarar_divergencia(firmware=5, soquetes=None, buracos=8)
+    assert contagens["divergem"] is True
+    linhas = secao_mesa._linhas_do_gabinete({"contagens": contagens})
+    juntas = " | ".join(linhas)
+    # As contagens têm de estar na tela POR SI, e não só de carona dentro da
+    # pergunta. Medido ao arrancar a cura em 26/08/2026: com a seção elegendo o
+    # firmware, o "8" continuava aparecendo — dentro do texto da pergunta — e a
+    # régua passava com o defeito de pé. Uma régua que só sabe passar não é
+    # régua, e esta linha é a diferença.
+    contadas = [linha for linha in linhas if linha != contagens["pergunta"]]
+    for numero in ("5", "8"):
+        assert any(numero in linha for linha in contadas), (
+            f"a seção deixou de publicar a contagem {numero}: {juntas!r}. "
+            "Com as fontes em briga a aba mostra AS DUAS — escolher uma "
+            "desenha um gabinete que ninguém tem"
+        )
+    assert contagens["pergunta"] in linhas, (
+        "a pergunta sumiu da tela. Divergência declarada e escondida é a "
+        f"mesma coisa que divergência não declarada: {juntas!r}"
+    )
+
+
+def test_sem_gabinete_gravado_a_secao_fala_como_antes():
+    """A outra metade da régua: ela precisa saber ficar CALADA.
+
+    Primeira instalação, ou install anterior a 25/08/2026: não há
+    ``gabinete.json``, e a seção não pode inventar contagem nenhuma. Um gabinete
+    de mentira é pior que nenhum, porque ela confia nele.
+    """
+    assert secao_mesa._linhas_do_gabinete({}) == ()
+    assert secao_mesa._linhas_do_gabinete({"contagens": "lixo de outra versão"}) == ()
+
+
+def test_a_resposta_dela_entra_na_tela_e_cala_a_pergunta():
+    """Respondido uma vez, o produto para de perguntar — e mostra o que ela disse."""
+    censo = censo_desta_bancada()
+    guardado = cg.preservar_o_que_ela_disse(
+        censo, _censo_com_a_palavra_dela(), dict(PLACA_DESTA_BANCADA)
+    )
+    linhas = secao_mesa._linhas_do_gabinete(guardado)
+    assert any("8" in linha for linha in linhas)
+    assert cg.pergunta_pendente(guardado) == ""
+    assert not any(linha.endswith("?") for linha in linhas), linhas
+
+
+def test_o_hub_em_comum_so_vira_conselho_com_buraco_livre_em_outra_pci():
+    """**A MORDIDA.** O fato nasce sempre; o conselho, só com para onde mandar.
+
+    Três adaptadores no mesmo hub é o arranjo que o próprio
+    ``GUIA-RADIO-DA-SALA.md`` manda comprar — a contra-regra R3 da
+    ``ORDEM-DE-SERVICO-01``. Sem buraco livre em OUTRA controladora não há
+    conselho a dar, e dar um seria mandar a pessoa se ajoelhar atrás do gabinete
+    para nada.
+
+    ARRANCANDO ``hub_em_comum`` — trocando-o por uma comparação de pai — os três
+    param de aparecer juntos (eles têm dois pais, ``3-3.1`` e ``3-3``), o fato
+    some, e este teste reprova nas duas metades.
+    """
+    mesa, censo = _bancada_dos_tres_adaptadores()
+
+    # (a) o hub está lotado e a placa não tem buraco livre: fato, e silêncio.
+    fato, por_que, conselho = secao_mesa._frase_do_hub_em_comum(
+        mesa, censo, _entradas("3-3", 2)
+    )
+    assert "3" in fato, (
+        f"o fato do hub em comum não nasceu: {fato!r}. Comparar o pai diria "
+        "que os três não estão juntos, e diria errado"
+    )
+    assert por_que
+    assert conselho == "", (
+        "nasceu conselho sem para onde mandar. Mudar de buraco dentro do mesmo "
+        f"hub não muda o caminho que ele divide: {conselho!r}"
+    )
+
+    # (b) a mesma mesa com buracos livres na OUTRA controladora: o conselho vem.
+    _, _, com_destino = secao_mesa._frase_do_hub_em_comum(
+        mesa, censo, _entradas("3-3", 2) + _entradas("usb1", 2)
+    )
+    assert "2" in com_destino, (
+        f"o conselho não nasceu com dois buracos livres em {_PCI_DA_PLACA}: "
+        f"{com_destino!r}"
+    )
+
+    # E ele NUNCA acusa um adaptador de atrapalhar outro (a contra-regra R3).
+    for frase in (fato, por_que, com_destino):
+        assert "atrapalh" not in frase.lower(), frase
+
+
+def test_o_conselho_do_hub_ignora_o_buraco_que_a_mao_nao_alcanca():
+    """``connect_type`` que não é ``hotplug`` é conector soldado dentro da caixa.
+
+    Mandar alguém encaixar um cabo ali é pior que não mandar nada — e é a régua
+    de ``portas_do_barramento.livres``, que esta seção NÃO reimplementa.
+    """
+    mesa, censo = _bancada_dos_tres_adaptadores()
+    _, _, conselho = secao_mesa._frase_do_hub_em_comum(
+        mesa, censo, _entradas("usb1", 3, encaixe="unknown")
+    )
+    assert conselho == ""
+
+
+def test_um_adaptador_sozinho_nao_tem_hub_em_comum():
+    """Menos de dois não tem "em comum" nenhum — e a linha some inteira."""
+    mesa, censo = _bancada_dos_tres_adaptadores()
+    sozinho = Mesa(adaptadores=mesa.adaptadores[:1])
+    assert secao_mesa._frase_do_hub_em_comum(
+        sozinho, censo, _entradas("usb1", 4)
+    ) == ("", "", "")

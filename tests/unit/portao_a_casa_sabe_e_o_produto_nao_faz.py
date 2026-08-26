@@ -843,22 +843,20 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
         "silenciosa que o isolamento existe para matar. "
     ),
-    "integrations/arranjo_da_mesa.py::Entrada": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
-        "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
-        "portas.html` — 1058 linhas de JavaScript que a GUI não tinha. A "
-        "porta vem com **114 testes de equivalência** que rodam o motor "
-        "original em `node` e comparam estrutura a estrutura; a suíte de "
-        "fumaça do mockup dá 29/29. ONDE O CAMINHO SE PERDE: nenhuma tela o "
-        "consome ainda, e é de propósito — a MOTOR-5 e a MOTOR-6, que fiariam "
-        "o cálculo à aba Conexões, dependem do campo `mapa` do `maquina.json` "
-        "e da conta de slots, e as duas frentes correram em paralelo nesta "
-        "mesma madrugada. O QUE O FECHA: a leva das telas da aba Conexões. O "
-        "motor recebe a mesa como ARGUMENTO, então a costura é um construtor "
-        "de uma linha. POR QUE NÃO FIAR AGORA: `app/actions/config/` é posse "
-        "de outra frente nesta leva, e fiar por cima seria a sobrescrita "
-        "silenciosa que o isolamento existe para matar. "
-    ),
+    # LÁPIDE — `integrations/arranjo_da_mesa.py::Entrada` SAIU em 26/08/2026, e
+    # o motivo é do INSTRUMENTO, não do produto. O motor do arranjo continua sem
+    # tela: os outros dezesseis símbolos dele seguem aqui embaixo, com a mesma
+    # razão de 25/08. O que mudou foi `app/widgets/calibrar_entradas.py` ganhar
+    # o botão que o alcança (L2-E) — e aquele arquivo tem
+    # `PALAVRA_DA_ENTRADA = "Entrada"`. Pela armadilha 1 do topo deste arquivo,
+    # todo literal de texto de `src/` é quebrado em PALAVRAS e cada palavra conta
+    # como chamador; a palavra "Entrada" num rótulo de tela passou a satisfazer
+    # o símbolo `Entrada`. MEDIDO: trocando o literal para "Entradaa", o símbolo
+    # volta à acusação junto com os outros 36 do módulo.
+    # A entrada teve de sair — `test_nenhuma_lapide_sobreviveu_a_propria_cura`
+    # reprova com ela de pé —, mas a DÍVIDA não fechou: quem for fiar o motor à
+    # aba Conexões continua com o trabalho inteiro pela frente, e o registro dos
+    # irmãos dele é onde ele está escrito.
     "integrations/arranjo_da_mesa.py::Face": (
         "MEDIDO em 25/08/2026: nasceu HOJE, portado byte a byte do motor que "
         "rodava só dentro do mockup `2026-08-24-ABA-CONEXOES/mockup/mapa-das- "
@@ -1421,22 +1419,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     ),
     # --- 25/08/2026: `integrations/entradas_do_gabinete.py` nasceu nesta
     #     madrugada, e ainda não tem tela que o consuma
-    "integrations/entradas_do_gabinete.py::furo_declarado": (
-        "MEDIDO em 25/08/2026: nasceu HOJE, na CAL-1 da CALIBRAR-AS- "
-        "ENTRADAS-01, cuja tela ela APROVOU vendo o mockup às 03h55. Responde "
-        "o que nenhuma leitura respondia: quais entradas USB EXISTEM, "
-        "**incluindo as vazias** — o nó da entrada existe com `state = not "
-        "attached`, e é isso que torna a calibração possível sem root. ONDE O "
-        "CAMINHO SE PERDE (REMEDIDO em 26/08/2026): a janela de calibração "
-        "NASCEU — `app/widgets/calibrar_entradas.py` a chama em "
-        "`furo_do_aparelho` e em `confirmar_entrada_nova` —, mas nada abre "
-        "essa janela: o botão é da L2-E. A lápide continua porque o portão "
-        "mede alcance a partir dos PONTOS DE ENTRADA, e a janela ainda não "
-        "está no grafo. O QUE O FECHA: o botão da L2-E. "
-        "A mordida do agrupamento por `peer` foi refeita por quem coordena: "
-        "arrancada, 4 reprovam (o par 2.0/3.0 vira dois buracos e a caminhada "
-        "passa a visitar o buraco ocupado); devolvida, 12 passam. "
-    ),
     # --- 25/08/2026: `integrations/lugar_declarado.py` nasceu nesta madrugada, e ainda não tem tela
     "integrations/lugar_declarado.py::declarar_a_mesa": (
         "MEDIDO em 25/08/2026: a CAL-2 da calibração. Existe para curar um "
@@ -1531,43 +1513,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # tanto faz — a promessa era ter caminho de produção. Lápide que sobrevive
     # à própria cura é o defeito que este portão existe para matar.
     # --- 26/08/2026: a janela de calibrar entradas (L1-F) nasceu inteira, e o
-    #     BOTÃO que a abre é da L2-E, na leva seguinte. Os seis símbolos abaixo
-    #     caem juntos no dia em que esse botão existir.
-    "app/widgets/calibrar_entradas.py::LogicaDaCalibracao": (
-        "MEDIDO em 26/08/2026: a cerimônia inteira da CALIBRAR-AS-ENTRADAS-01 "
-        "(CAL-2 a CAL-7), cujo desenho ela APROVOU vendo o mockup em 25/08 às "
-        "~03h55. É quem transforma a resposta dela em `mapa` no disco, sem "
-        "IPC — e por isso grava com o Hefesto desligado. "
-        "ONDE O CAMINHO SE PERDE: nada abre esta janela. O botão vive em "
-        "`app/actions/config/secao_mesa.py`, que é posse da L2-E. "
-        "O QUE A FECHA: esse botão construir a janela — o construtor é de uma "
-        "linha, e recebe mapa, censo e entradas como argumento."
-    ),
-    "app/widgets/calibrar_entradas.py::Pergunta": (
-        "MEDIDO em 26/08/2026: um passo da fase sentada — o aparelho e tudo "
-        "que pende dele. É o que `LogicaDaCalibracao.perguntas_sentadas` "
-        "devolve, e cai junto com ela, pelo mesmo botão da L2-E. Não ganha "
-        "entrada de conserto própria porque não tem conserto próprio."
-    ),
-    "app/widgets/calibrar_entradas.py::Laudo": (
-        "MEDIDO em 26/08/2026: os quatro blocos do exame da mesa (CAL-7), e o "
-        "quarto — 'O que eu não meço' — nunca some, que é o que impede o "
-        "laudo de virar promessa. É o retorno de `LogicaDaCalibracao.laudo`, "
-        "e cai junto com ela, pelo mesmo botão da L2-E."
-    ),
-    "app/widgets/calibrar_entradas.py::NavegacaoPorControle": (
-        "MEDIDO em 26/08/2026: o payload vivo do DualSense virando gesto, sem "
-        "teclado e sem mouse (R1 da sprint) — durante a fase em pé a pessoa "
-        "está atrás do gabinete, com um cabo na mão e sem ver a tela. "
-        "ONDE O CAMINHO SE PERDE: quem a alimenta é a janela, e nada abre a "
-        "janela. O QUE A FECHA: o botão da L2-E."
-    ),
-    "app/widgets/calibrar_entradas.py::PosseDoVocabulario": (
-        "MEDIDO em 26/08/2026: quem declara que os quatro botões da cerimônia "
-        "são da janela enquanto ela tem foco (o furo F-3). "
-        "ONDE O CAMINHO SE PERDE: é a janela quem toma e solta a posse, e "
-        "nada abre a janela. O QUE A FECHA: o botão da L2-E."
-    ),
+    #     BOTÃO que a abre chegou na L2-E, no MESMO dia. CINCO das seis lápides
+    #     saíram daqui nessa edição — `LogicaDaCalibracao`, `Pergunta`, `Laudo`,
+    #     `NavegacaoPorControle` e `PosseDoVocabulario` —, junto com
+    #     `entradas_do_gabinete::furo_declarado`, que a janela chama (`:694`).
+    #     A sexta ficou, e a razão dela já dizia por quê: quem tem de perguntar
+    #     por ela é o DESPACHO do daemon, não a janela.
     "app/widgets/calibrar_entradas.py::botoes_para_o_jogo": (
         "MEDIDO em 26/08/2026, e esta é a lápide que MENOS depende da L2-E: a "
         "peneira que a posse arma, e quem tem de perguntar por ela é o "
@@ -1607,39 +1558,25 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "madrugada. DONO: B2, ou a Onda 6 - Perfis na leva seguinte."
     ),
     # --- A aba Configurações (23/08/2026): o censo mede, e a tela não pergunta
-    "integrations/censo_do_barramento.py::hub_em_comum": (
-        "MEDIDO em 23/08/2026, NA BANCADA DELA: é promessa ao produto, ela "
-        "funciona, e a tela ainda não faz a pergunta. O próprio docstring diz "
-        "qual é a pergunta — *'os três rádios de controle estão no mesmo "
-        "hub?'* — e a resposta importa porque hub em comum é disputa de "
-        "barramento, que é causa de engasgo. Rodada agora, nos três "
-        "adaptadores Bluetooth desta casa: devolve `.../usb3/3-3`, o hub que "
-        "está acima dos três; dois deles ainda dividem um segundo, o `3-3.1`. "
-        "Comparar o pai diria que não estão juntos, e diria errado — que é "
-        "exatamente o motivo de a função existir. "
-        "ONDE O CAMINHO SE PERDE: `app/actions/config/secao_mesa.py:1409-1411` "
-        "escreve a palavra `Em hub` linha a linha, a partir do "
-        "`adaptador.atras_de_hub` que o `mesa_de_radio` já traz, e nunca "
-        "compara as linhas entre si. A seção importa `ler_o_barramento` e "
-        "`GRAU_LIDO` do mesmo módulo (`:115-119`) e não importa esta função. "
-        "O QUE A FECHA: uma linha de resumo na seção 'A mesa' — 'os três estão "
-        "no mesmo hub' — alimentada por esta função. NÃO fiz porque é texto "
-        "novo na tela, e desenho é palavra dela (PROVA-DE-TELA-01): pede foto "
-        "antes e depois."
-    ),
+    # `hub_em_comum` SAIU daqui em 26/08/2026, na edição que a ligou: a seção
+    # "A mesa" (`app/actions/config/secao_mesa.py::_frase_do_hub_em_comum`) a
+    # chama e publica a linha do hub em comum. A razão antiga dizia "NÃO fiz
+    # porque é texto novo na tela"; o texto entrou marcado `PROVISÓRIO — decisão
+    # dela`, que é o caminho que a R-E da leva abriu para não travar a frente.
     "integrations/censo_do_barramento.py::filhos_de": (
-        "MEDIDO em 23/08/2026: é promessa ao produto e cai junto com "
-        "`hub_em_comum`, pela mesma leva. Ela responde 'quem pendura "
-        "DIRETAMENTE neste nó, em ordem de porta', que é a pergunta de baixo "
-        "da mesma tela: mostrado o hub em comum, a próxima é *quem mais está "
-        "nele* — o que separa 'três adaptadores num hub sobrando' de 'três "
-        "adaptadores num hub com webcam e HD externo'. "
-        "ONDE O CAMINHO SE PERDE: a seção 'A mesa' desenha uma linha por "
-        "ADAPTADOR e nunca desenha o hub como nó com filhos; não há widget "
-        "onde a resposta caberia. "
-        "O QUE A FECHA: a mesma linha de resumo de `hub_em_comum`, estendida "
-        "para dizer o que mais divide o hub. As duas entram juntas — o hub "
-        "sem os vizinhos é meia resposta."
+        "MEDIDO em 23/08/2026, e REMEDIDO em 26/08: continua sem chamador de "
+        "produção. Ela responde 'quem pendura DIRETAMENTE neste nó, em ordem "
+        "de porta', que é a pergunta de baixo da linha do hub em comum — o que "
+        "separa 'três adaptadores num hub sobrando' de 'três adaptadores num "
+        "hub com webcam e HD externo'. "
+        "ONDE O CAMINHO SE PERDE: a linha do hub que a L2-E plantou em 26/08 "
+        "conta os ADAPTADORES e o destino, e não diz o que MAIS divide o hub; "
+        "a seção continua sem widget onde uma lista de vizinhos caberia. "
+        "O QUE A FECHA: uma segunda frase nessa mesma linha, dizendo quem mais "
+        "está no hub. NÃO fiz na L2-E porque é frase nova de tela além da que "
+        "a ordem daquela frente pediu, e cada frase provisória a mais é uma "
+        "decisão a mais na fila dela. DONO: a frente do léxico, ou quem "
+        "coordenar a leva que fizer a prova de tela desta linha."
     ),
     "integrations/apelido_do_dongle.py::costurar_a_mesa": (
         "MEDIDO em 22/08/2026 e RECONFERIDO em 23/08: é promessa ao produto e "
