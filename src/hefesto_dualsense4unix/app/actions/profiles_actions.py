@@ -753,12 +753,70 @@ def rebaixamento_para_so_manual(antes: object, depois: object) -> bool:
 #: não tem `mode`/`suppression`/`rumble_policy`/`speaker`. Este dicionário
 #: COMPLEMENTA aquele, nunca o substitui: as seções comuns continuam saindo de
 #: lá, dona única da frase (a lição do `texto_do_custo_da_mascara`).
+#:
+#: BG-07c (26/08/2026), e o que a medição encontrou. O manager escreve ONZE
+#: chaves no relatório e este mapa traduzia QUATRO, com a chave crua como
+#: fallback (`relato_da_ativacao`, abaixo). MEDIDO nesta árvore, seção a seção,
+#: pela frase que a pessoa lê de fato:
+#:
+#:     keyboard  -> "Aplicado, menos: teclado."      <- já traduzia
+#:     mouse     -> "Aplicado, menos: mouse."        <- já traduzia
+#:     mic       -> "Aplicado, menos: microfone."    <- já traduzia
+#:     trigger   -> "Aplicado, menos: trigger."      <- CRU
+#:     led       -> "Aplicado, menos: led."          <- CRU
+#:
+#: CORREÇÃO DE FATO, escrita porque a versão errada custaria a próxima
+#: investigação: `keyboard`, `mouse` e `mic` NÃO chegam crus. O rodapé os tem
+#: em `footer_actions._NOMES_DE_SECAO` desde a APLICAR-VERDADE-01, e a chave
+#: crua que sai daqui atravessa aquele mapa antes de virar frase. Quem chegava
+#: cru eram `trigger` e `led` — **no SINGULAR**, e é aí que está o defeito: o
+#: mapa do rodapé tem `triggers` e `leds`, no plural, porque nasceu para o
+#: `profile.apply_draft`. O manager escreve o singular de propósito (é o
+#: vocabulário que a trava manual já usa, `profiles/manager.py:488`), e as duas
+#: grafias nunca se encontraram. A palavra de tela é a MESMA das plurais —
+#: "gatilhos" e "luzes" — porque é a mesma seção; o que muda é só a chave.
 _NOMES_DAS_SECOES_DA_ATIVACAO: dict[str, str] = {
     "mode": "modo",
     "suppression": "modo jogo",
     "rumble_policy": "vibração",
     "speaker": "alto-falante",
+    # As duas do singular. Mesma palavra de tela das irmãs plurais do rodapé.
+    "trigger": "gatilhos",
+    "led": "luzes",
+    # PROVISÓRIO — decisão dela. A seção nasceu MUDA (o applier era chamado e o
+    # resultado descartado, `profiles/manager.py`); agora ela relata, e precisa
+    # de nome. "vibração do jogo" deriva do que já existe: "vibração" é o nome
+    # da irmã `rumble_policy` aqui do lado, e o botão que liga esta seção se
+    # chama "Deixar o jogo controlar a vibração" (`gui/main.glade:2028`).
+    "rumble_passthrough": "vibração do jogo",
 }
+
+#: PROVISÓRIO — decisão dela. Como nomear o alto-falante DE UM controle quando a
+#: mesa tem quatro. A chave é `speaker:<uniq>` (`profiles/manager.py:809`), e o
+#: `uniq` é o identificador do aparelho — nunca palavra de tela.
+#:
+#: Esta frase não diz QUAL controle, e a limitação é honesta em vez de
+#: escondida: o léxico da casa para isso é "Controle {N}"
+#: (`widgets/controller_card.py:1033`), e o número do slot NÃO está ao alcance
+#: aqui — `relato_da_ativacao` é função pura, recebe só a resposta do daemon, e
+#: o mapa `uniq -> índice` mora no mixin (`_target_uniq_by_index`). Levar o mapa
+#: até aqui muda a assinatura e os chamadores, e é decisão de desenho, não de
+#: redação. As duas saídas estão relatadas na entrega da L3-E.
+_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE = "speaker:"
+_NOME_DO_ALTO_FALANTE_POR_CONTROLE = "alto-falante de um controle"
+
+
+def nome_da_secao_da_ativacao(chave: str) -> str:
+    """A palavra de tela desta seção, ou a chave crua quando não há nome.
+
+    Devolver a chave crua continua sendo o certo para o que este mapa não
+    conhece — "melhor um termo estranho do que omitir que algo ficou de fora",
+    como `footer_actions._lista_de_secoes` já escreve. O que deixou de ser
+    certo é chegar cru o que TEM nome.
+    """
+    if chave.startswith(_PREFIXO_DO_ALTO_FALANTE_POR_CONTROLE):
+        return _NOME_DO_ALTO_FALANTE_POR_CONTROLE
+    return _NOMES_DAS_SECOES_DA_ATIVACAO.get(chave, chave)
 
 
 def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
@@ -780,7 +838,7 @@ def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
         return None
     aplicadas = [str(s) for s, estado in secoes.items() if str(estado) == "aplicado"]
     nao_entraram = {
-        _NOMES_DAS_SECOES_DA_ATIVACAO.get(str(s), str(s)): str(estado)
+        nome_da_secao_da_ativacao(str(s)): str(estado)
         for s, estado in secoes.items()
         if str(estado) != "aplicado"
     }

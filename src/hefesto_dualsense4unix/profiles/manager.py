@@ -725,13 +725,24 @@ class ProfileManager:
         # SPRINT-GAME-RUMBLE-01: aplica o `rumble.passthrough` do perfil — solta
         # o rumble FIXADO pela GUI para o JOGO controlar a vibração. SEMPRE (o
         # default True cobre todo perfil); o applier só age se há rumble fixado.
+        #
+        # BG-07c (26/08/2026): esta seção era a única MUDA das sete. O applier
+        # era chamado, o retorno descartado e a exceção engolida num
+        # `logger.warning` — `resultado` não ganhava chave nenhuma. Consequência
+        # medida na frase que a pessoa lê: com o passthrough falhando, o rodapé
+        # dizia "Perfil aplicado ao controle." sem uma palavra sobre a vibração
+        # que não voltou para o jogo. Agora ela responde como os cinco irmãos —
+        # `_estado_da_secao` no caminho feliz, `"falhou"` no except.
         if self.rumble_passthrough_applier is not None:
             rumble_cfg = getattr(profile, "rumble", None)
             try:
-                self.rumble_passthrough_applier(
-                    bool(getattr(rumble_cfg, "passthrough", True))
+                resultado["rumble_passthrough"] = _estado_da_secao(
+                    self.rumble_passthrough_applier(
+                        bool(getattr(rumble_cfg, "passthrough", True))
+                    )
                 )
             except Exception as exc:
+                resultado["rumble_passthrough"] = "falhou"
                 logger.warning(
                     "profile_rumble_passthrough_apply_failed",
                     profile=profile.name,
