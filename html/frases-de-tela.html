@@ -131,6 +131,14 @@ footer{margin-top:var(--space-xl);padding-top:var(--space-md);
   color:var(--color-ink-faint);font-size:var(--text-sm)}
 footer code{color:var(--color-ink-quiet)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── o carimbo da casa · scripts/carimbo_da_casa.py ──────────── */
+.carimbo { font-family: var(--font-dado); font-size: var(--text-xs);
+           color: var(--color-ink-faint); margin: var(--space-md) 0 0;
+           padding-top: var(--space-2xs);
+           border-top: var(--rule-hair) solid var(--color-rule); }
+.carimbo code { color: var(--color-ink-quiet); font-family: inherit; }
+.carimbo a { color: var(--color-accent); }
 </style></head><body>
 <div class="env">
 <header><h1>As frases que esperam você</h1>
@@ -692,6 +700,7 @@ footer code{color:var(--color-ink-quiet)}
 </article>
 </section>
 <footer><p>Gerado por <code>scripts/gerar-frases-de-tela.py</code> a partir de <code>docs/process/dados/frases-de-tela-25-08.json</code>. Autocontido: abre com duplo clique, sem servidor e sem rede. O que você marcar fica guardado neste navegador — pode fechar e voltar.</p></footer>
+<p class="carimbo" data-carimbo="1">gerado em 25/08/2026 às 23:19 · commit <code>872818f</code> na branch <code>voo/A-CASA-ARRUMADA-01-HTML</code> · árvore com 11 mudança(s) não commitada(s) · por <code>scripts/gerar-frases-de-tela.py</code> · <a href="index.html">índice dos instrumentos</a></p>
 </div>
 <script>
 (function(){
