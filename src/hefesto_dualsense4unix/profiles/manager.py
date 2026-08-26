@@ -1710,6 +1710,36 @@ APPLIERS_DO_DAEMON: tuple[tuple[str, str], ...] = (
 )
 
 
+#: A SEÇÃO DE PERFIL que cada applier atende, no vocabulário do arquivo do
+#: perfil (`profiles/schema.py::Profile`) — e não no do construtor.
+#:
+#: POR QUE ESTE MAPA EXISTE (BG-07, 25/08/2026). `APPLIERS_DO_DAEMON` sabe
+#: QUEM injeta e de ONDE vem, e não sabe dizer O QUE fica sem dono quando um
+#: par sai da lista. Sem isto, a única frase possível diante de uma ausência é
+#: *"falta `rumble_passthrough_applier`"* — que é o nome do parâmetro, não o
+#: nome da coisa que ela deixa de sentir. **Applier ausente não levanta: a
+#: seção é ignorada em silêncio**, e uma ausência que não pode ser NOMEADA é
+#: ausência que ninguém nota.
+#:
+#: Cada valor é o caminho do campo no `Profile` — `rumble` aparece duas vezes
+#: porque UM campo do esquema é DUAS seções com appliers distintos e contratos
+#: distintos (`policy` reverte o que outro perfil ligou; `passthrough` só
+#: solta o que a GUI fixou).
+#:
+#: Portão: `tests/unit/test_toda_secao_de_perfil_tem_quem_a_aplique.py`, que
+#: confere este mapa contra os campos do `Profile` E contra o que a fábrica
+#: entrega de fato — e reprova nomeando a SEÇÃO órfã.
+SECAO_DO_APPLIER: dict[str, str] = {
+    "mouse_applier": "mouse",
+    "suppression_applier": "suppress_desktop_emulation",
+    "mode_applier": "mode",
+    "rumble_policy_applier": "rumble.policy",
+    "rumble_passthrough_applier": "rumble.passthrough",
+    "speaker_applier": "speaker",
+    "mic_applier": "mic",
+}
+
+
 #: Sentinela de "não informado" para o `mode_applier` da fábrica. Precisa ser
 #: distinta de `None` porque `None` é uma escolha LEGÍTIMA e medida — ver o
 #: docstring de `gerente_do_daemon`.
@@ -1746,6 +1776,15 @@ def gerente_do_daemon(
     ``daemon=None`` quando não há daemon, e por isso ``controller`` e ``store``
     podem vir por fora.
 
+    **O que MUDOU em 25/08/2026 (BG-07): a ausência PARCIAL deixou de ser
+    muda.** O contrato acima continua inteiro — nenhuma seção passou a
+    derrubar ativação, nenhum `getattr` virou obrigatório —, mas um gerente
+    que sai daqui com ALGUNS appliers e não com todos escreve uma linha de
+    aviso no journal nomeando as SEÇÕES órfãs (ver
+    :func:`_avisa_secoes_sem_applier`). Nenhum applier é o contrato da CLI e
+    dos dublês, e segue calado; todos é a rota sã. Faltar METADE é a forma do
+    defeito, e era exatamente a metade que nunca deixava rastro.
+
     ``mode_applier`` É O ÚNICO DESVIO DECLARADO, e é nomeado de propósito.
     A fábrica não aceita ``**sobrescritas``: um saco genérico ao lado da lista
     é a lista à mão de volta, com outro nome. Divergência que se justifique
@@ -1781,7 +1820,66 @@ def gerente_do_daemon(
         argumentos[parametro] = getattr(daemon, atributo, None)
     if mode_applier is not HERDA_DO_DAEMON:
         argumentos["mode_applier"] = mode_applier
+    _avisa_secoes_sem_applier(
+        argumentos,
+        declarados=(
+            () if mode_applier is HERDA_DO_DAEMON else ("mode_applier",)
+        ),
+    )
     return ProfileManager(**argumentos)
+
+
+def _avisa_secoes_sem_applier(
+    argumentos: dict[str, Any],
+    *,
+    declarados: tuple[str, ...] = (),
+) -> list[str]:
+    """Faz BARULHO quando a fábrica monta um gerente PELA METADE (BG-07).
+
+    O defeito desta família, em uma linha: **applier ausente não levanta — a
+    seção é ignorada em silêncio**. A rota nasce funcionando "quase", o "quase"
+    só aparece no aparelho dela, e o journal não guarda uma linha sequer sobre
+    a seção que não foi aplicada. Foi assim que a saída do Modo Nativo passou
+    de 05/08 a 25/08 devolvendo tudo menos a vibração.
+
+    QUANDO ELE FALA, e o critério é a FORMA do defeito, não a contagem:
+
+    - o daemon entregou TODOS → silêncio. É a rota sã;
+    - o daemon não entregou NENHUM → silêncio, e não é descuido. É contrato
+      escrito no docstring de `gerente_do_daemon`: rotas de CLI e dublês da
+      suíte sobem sem daemon (`daemon=None`, `controller`/`store` por fora),
+      e ali "seção ignorada" é o comportamento histórico e desejado;
+    - o daemon entregou ALGUNS → **é este o formato do defeito**, e o aviso
+      nomeia as SEÇÕES órfãs, não os parâmetros: o que ela sente é
+      `rumble.passthrough`, não `rumble_passthrough_applier`.
+
+    ``declarados`` é a lista dos appliers que o CHAMADOR informou de propósito
+    — hoje só o `mode_applier`, o único desvio nomeado da fábrica. `None` ali
+    é escolha medida (ver o docstring de `gerente_do_daemon`), e chamar de
+    ausência uma escolha explícita seria alarme falso — o defeito que esta casa
+    mede desde a `O-PORTAO-QUE-NAO-MEDE-O-QUE-PROMETE`. Eles saem da conta
+    inteira: nem contam como ausentes, nem como presentes.
+
+    Devolve as seções órfãs (ordenadas) para quem quiser conferir sem ler log.
+    """
+    considerados = [
+        parametro
+        for parametro, _atributo in APPLIERS_DO_DAEMON
+        if parametro not in declarados
+    ]
+    ausentes = [
+        parametro for parametro in considerados if argumentos.get(parametro) is None
+    ]
+    orfas = sorted(
+        SECAO_DO_APPLIER.get(parametro, parametro) for parametro in ausentes
+    )
+    if ausentes and len(ausentes) < len(considerados):
+        logger.warning(
+            "gerente_com_secao_sem_applier",
+            secoes=orfas,
+            appliers=sorted(ausentes),
+        )
+    return orfas
 
 
 __all__ = [
@@ -1790,6 +1888,7 @@ __all__ = [
     "MOTIVO_JOGO_SEM_PERFIL_PROPRIO",
     "MOTIVO_SELECIONADO",
     "MOTIVO_SEM_CANDIDATO",
+    "SECAO_DO_APPLIER",
     "ProfileManager",
     "_controllers_to_led_scales",
     "_controllers_to_specs",
