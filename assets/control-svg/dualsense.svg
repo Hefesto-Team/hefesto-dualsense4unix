@@ -78,7 +78,7 @@
   </g>
   <g id="grupo-ombros">
     <title>OMBROS E GATILHOS</title>
-    <g id="r1" data-entrada="r1" transform="translate(0 25.6200) scale(1 0.81639) translate(0 -25.6200)">
+    <g id="r1" data-entrada="r1" transform="translate(0 25.6200) scale(1 0.96813) translate(0 -25.6200)">
       <title>R1</title>
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
     </g>
@@ -86,7 +86,7 @@
       <title>R2 — gatilho adaptativo</title>
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
     </g>
-    <g id="l1" transform="translate(0 25.6400) scale(1 0.81459) translate(0 -25.6400) matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l1">
+    <g id="l1" transform="translate(0 25.6400) scale(1 0.96657) translate(0 -25.6400) matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l1">
       <title>L1</title>
       <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
     </g>
@@ -220,11 +220,11 @@
       <title>Glifo — D-pad Esquerda</title>
       <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="fill: rgb(216, 216, 216); stroke: rgb(0, 0, 0); stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0, -1, 1, 0, -151.568924, -340.16214)"/>
     </g>
-    <g id="glifo-l1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.195302, -0.027448, 0.027448, 0.195302, 15.730036, 12.319454)">
+    <g id="glifo-l1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.195302, -0.027448, 0.027448, 0.195302, 15.730036, 12.819365)">
       <title>Glifo — L1</title>
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre; transform-box: fill-box; transform-origin: 50% 50%;" x="16" y="16" transform="matrix(0.999391, 0.034899, -0.034899, 0.999391, 0.000011, -0.000007)">L1</text>
     </g>
-    <g id="glifo-r1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.194224, 0.034247, -0.034247, 0.194224, 80.452019, 12.310077)">
+    <g id="glifo-r1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.194224, 0.034247, -0.034247, 0.194224, 80.452019, 12.810075)">
       <title>Glifo — R1</title>
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="16" y="16">R1</text>
     </g>
