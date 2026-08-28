@@ -69,26 +69,35 @@ Conferido contra o fonte de `dualshock-tools.github.io`,
 é `01 13`. No WebHID o id do report NÃO entra no vetor de dados; no `hidraw`
 ele é o byte 0 do buffer. Daí o nosso buffer começar em `80 01 13`.
 
-O QUE ESTE INSTRUMENTO NÃO SABE FAZER, E DIZ
----------------------------------------------
-Por rádio, o APARELHO recusa — medido em 23/08/2026, nos dois DualSense desta
-bancada, com CRC-32 de semente `0xA3` e com a cauda zerada. O canal existe (o
-`0x80`/`0x81` está no descritor destes controles, conferido pelo parser de
-`comum.py`) e o pacote sai inteiro: `btmon` mostra TX de 65 bytes no canal de
-controle L2CAP e, ~5 ms depois, RX `04` — `HANDSHAKE`, `ERR_INVALID_PARAMETER`,
-do próprio controle. O `-EIO` que o Python vê é máscara do uhid
-(`hid-playstation.c:901`), não a causa.
+ELE FUNCIONA NOS DOIS TRANSPORTES — e o rádio custou uma semente
+----------------------------------------------------------------
+Medido em 27/08/2026: cabo e rádio, os dois entregam o serial.
 
-Que o fio está bom, prova o `GET_FEATURE 0x20` no MESMO canal e no MESMO
-instante: responde em ~6 ms, com as três âncoras batendo (firmware, hardware e
-CRC contra o sysfs). O caminho continua aqui (`envelope_de_radio`), atrás de
-`--radio-a-serio`, agora como MEDIDA e não como desenho: ele não funciona, e a
-razão é o firmware.
+    hidraw7  cabo    M65A05...  05  Starlight Blue
+    hidraw8  rádio   F55602...  02  Cosmic Red
 
-**O galho que segue sem medição:** as duas caudas tentadas (semente `0xA3` e
-zeros) são ambas inválidas para um firmware que valide CRC no sentido de
-ESCRITA. Semente `0xA2` (saída), `0xA1` (entrada) e buffer curto de 3 bytes
-seguem por tentar — e escrita na família de fábrica é decisão dela.
+**FATO ERRADO, SUBSTITUÍDO.** Este cabeçalho dizia *"por rádio, o APARELHO
+recusa (…) ele não funciona, e a razão é o firmware"*, a partir do ensaio de
+23/08. **Não era o firmware: era a semente do nosso CRC.**
+
+O `0xA3` é a semente de `HIDP DATA|FEATURE` — o feature que CHEGA, a resposta
+do `0x81`, que esta casa já validava certo. Um `SET_FEATURE` não é `DATA`, é
+`SET_REPORT`: semente `0x53` (`0x50 | 0x03`). Ver `SEMENTE_SET_FEATURE_BT`.
+
+O experimento, mesmo controle e mesmo comando, um byte diferente:
+
+    --semente feature      (0xA3, a de 23/08)   errno 5   <- reproduziu a falha
+    --semente output       (0xA2, candidato)    errno 5
+    --semente set-feature  (0x53)               ACEITO    <- Cosmic Red
+
+O antigo cabeçalho listava `0xA2`, `0xA1` e buffer curto como o que faltava
+tentar. **Nenhum dos três era o certo.** Fica a lição: o galho estava escrito e
+com os candidatos errados — escrever que falta medir não basta, é preciso
+medir.
+
+O que continua verdade do ensaio de 23/08: o `-EIO` que o Python vê é máscara
+do uhid (`hid-playstation.c:901`), não a causa; e o `GET_FEATURE 0x20` no mesmo
+canal responde em ~6 ms, o que sempre descartou o fio.
 """
 
 from __future__ import annotations
@@ -198,6 +207,37 @@ CORES = {
 #: Escrita aqui, e não importada, para que este instrumento rode num checkout
 #: sem o pacote instalado.
 SEMENTE_FEATURE_BT = 0xA3
+
+#: A semente do CRC-32 no sentido de ESCRITA de feature por Bluetooth.
+#:
+#: DE ONDE VEM, e por que ela não é a de cima. As sementes deste CRC são o
+#: **byte de cabeçalho da transação HIDP**, e há um por sentido:
+#:
+#:     0xA1 = HIDP_TRANS_DATA      (0xA0) | RTYPE_INPUT   (0x01)
+#:     0xA2 = HIDP_TRANS_DATA      (0xA0) | RTYPE_OUTPUT  (0x02)
+#:     0xA3 = HIDP_TRANS_DATA      (0xA0) | RTYPE_FEATURE (0x03)
+#:     0x53 = HIDP_TRANS_SET_REPORT(0x50) | RTYPE_FEATURE (0x03)   <-- esta
+#:
+#: O `0xA3` é o do feature que CHEGA (a resposta do `0x81`, que esta casa já
+#: valida). Um `SET_FEATURE` não é `DATA`, é `SET_REPORT` — cabeçalho outro,
+#: semente outra.
+#:
+#: POR QUE ISTO EXISTE (27/08/2026): o ensaio de 23/08 concluiu "o firmware
+#: recusa por rádio" a partir de uma tentativa assinada com `0xA3`. O galho
+#: ficou escrito no cabeçalho deste arquivo — "as duas caudas tentadas são
+#: ambas inválidas para um firmware que valide CRC no sentido de ESCRITA" —
+#: e listou `0xA2`, `0xA1` e buffer curto como o que faltava tentar.
+#: **Nenhum dos três é o certo.** Se o `0x53` passar, a conclusão de 23/08 cai:
+#: o `ERR_INVALID_PARAMETER` era CRC errado, não firmware fechando a porta.
+SEMENTE_SET_FEATURE_BT = 0x53
+
+#: As sementes que este instrumento aceita em `--semente`, por nome.
+SEMENTES = {
+    "set-feature": SEMENTE_SET_FEATURE_BT,  # 0x53 — HIDP SET_REPORT|FEATURE
+    "feature": SEMENTE_FEATURE_BT,          # 0xA3 — HIDP DATA|FEATURE (a de 23/08)
+    "output": 0xA2,                         # HIDP DATA|OUTPUT
+    "input": 0xA1,                          # HIDP DATA|INPUT
+}
 
 
 def conferir_a_semente() -> str:
@@ -505,7 +545,13 @@ def pedir_feature(fd: int, report_id: int, tamanho: int, *, tentativas: int = 4)
     return resposta
 
 
-def mandar_o_comando(fd: int, payload: bytearray, *, bytes_de_crc: int = 0) -> str:
+def mandar_o_comando(
+    fd: int,
+    payload: bytearray,
+    *,
+    bytes_de_crc: int = 0,
+    semente: int = SEMENTE_FEATURE_BT,
+) -> str:
     """A ÚNICA escrita deste arquivo. Confere, e só então solta.
 
     Devolve "" no sucesso, ou a frase da falha. Entre a conferência e o `ioctl`
@@ -526,7 +572,12 @@ def mandar_o_comando(fd: int, payload: bytearray, *, bytes_de_crc: int = 0) -> s
     if bytes_de_crc:
         miolo = payload[: len(payload) - bytes_de_crc]
         conferir_payload(miolo)
-        esperado = zlib.crc32(bytes([SEMENTE_FEATURE_BT]) + bytes(miolo)) & 0xFFFFFFFF
+        # A semente vem de QUEM MONTOU o envelope, e a conferência continua
+        # sendo uma segunda régua: ela recalcula o CRC do zero e compara. Em
+        # 27/08 esta linha mordeu de verdade — o `--semente set-feature`
+        # passou por aqui com o CRC de 0x53 e a trava, ainda fixa em 0xA3,
+        # recusou a escrita. Nenhum byte chegou ao aparelho.
+        esperado = zlib.crc32(bytes([semente]) + bytes(miolo)) & 0xFFFFFFFF
         veio = int.from_bytes(payload[len(payload) - bytes_de_crc :], "little")
         if veio != esperado:
             raise PayloadRecusadoError(
@@ -642,7 +693,9 @@ def decodificar(dados: bytes) -> Serial:
 # ---------------------------------------------------------------------------
 
 
-def envelope_de_radio(payload: bytes | bytearray) -> bytearray:
+def envelope_de_radio(
+    payload: bytes | bytearray, semente: int = SEMENTE_FEATURE_BT
+) -> bytearray:
     """O mesmo comando com o envelope de Bluetooth: CRC-32 nos 4 últimos bytes.
 
     **GRAU: DESENHO. Não medido.** O que se sabe, e de onde:
@@ -678,10 +731,17 @@ def envelope_de_radio(payload: bytes | bytearray) -> bytearray:
        muda os bytes do COMANDO: `01 13` continua sendo `01 13`, e a trava de
        `conferir_payload` roda igual nos dois casos.
     """
-    print(f"    semente do CRC ... {conferir_a_semente()}")
+    nome = next((n for n, v in SEMENTES.items() if v == semente), "?")
+    if semente == SEMENTE_FEATURE_BT:
+        print(f"    semente do CRC ... {conferir_a_semente()}")
+    else:
+        print(
+            f"    semente do CRC ... 0x{semente:02x} ({nome}) — "
+            "NÃO é a de 23/08; ver SEMENTE_SET_FEATURE_BT"
+        )
     envelope = bytearray(payload)
     crc = zlib.crc32(
-        bytes([SEMENTE_FEATURE_BT]) + bytes(envelope[: len(envelope) - 4])
+        bytes([semente]) + bytes(envelope[: len(envelope) - 4])
     ) & 0xFFFFFFFF
     envelope[len(envelope) - 4 :] = crc.to_bytes(4, "little")
     return envelope
@@ -755,7 +815,14 @@ def escolher_alvo(alvos: list[Aparelho], pedido: str, *, exigir_mac: str = "") -
     )
 
 
-def medir(aparelho: Aparelho, *, escrever: bool, radio_a_serio: bool, com_crc: bool) -> Medida:
+def medir(
+    aparelho: Aparelho,
+    *,
+    escrever: bool,
+    radio_a_serio: bool,
+    com_crc: bool,
+    semente: int = SEMENTE_FEATURE_BT,
+) -> Medida:
     """A rodada inteira num controle: prova, comando, resposta, prova de novo."""
     medida = Medida(aparelho=aparelho)
     tamanhos = tamanhos_do_descritor(aparelho.dir_device)["feature"]
@@ -766,7 +833,7 @@ def medir(aparelho: Aparelho, *, escrever: bool, radio_a_serio: bool, com_crc: b
     leva_crc = aparelho.transporte == RADIO and com_crc
     payload = montar_payload(tamanho_comando)
     if leva_crc:
-        payload = envelope_de_radio(payload)
+        payload = envelope_de_radio(payload, semente)
     medida.payload = bytes(payload)
 
     print()
@@ -835,7 +902,10 @@ def medir(aparelho: Aparelho, *, escrever: bool, radio_a_serio: bool, com_crc: b
 
         print(f"\n  [2/3] ESCREVENDO SET_FEATURE 0x{FEATURE_COMANDO:02x} ...")
         falha = mandar_o_comando(
-            no.fd, bytearray(payload), bytes_de_crc=4 if leva_crc else 0
+            no.fd,
+            bytearray(payload),
+            bytes_de_crc=4 if leva_crc else 0,
+            semente=semente,
         )
         if falha:
             medida.erro_da_escrita = falha
@@ -1003,6 +1073,16 @@ def main() -> int:
         help="no radio, manda SEM o CRC-32 no fim (a segunda tentativa, não a primeira)",
     )
     analisador.add_argument(
+        "--semente",
+        choices=sorted(SEMENTES),
+        default="feature",
+        help=(
+            "qual semente de CRC-32 assina o comando no radio. "
+            "'feature' (0xA3) e a de 23/08, que o aparelho recusou; "
+            "'set-feature' (0x53) e a do sentido de ESCRITA, por tentar"
+        ),
+    )
+    analisador.add_argument(
         "--sem-mascara",
         action="store_true",
         help="mostra o MAC inteiro na TELA (arquivo nenhum sai sem máscara)",
@@ -1082,6 +1162,7 @@ def _corpo(argumentos: argparse.Namespace, transcrito: Transcrito) -> int:
         escrever=argumentos.escrever,
         radio_a_serio=argumentos.radio_a_serio,
         com_crc=not argumentos.sem_crc,
+        semente=SEMENTES[argumentos.semente],
     )
     if medida.serial.texto:
         transcrito.seriais.append(medida.serial.texto)

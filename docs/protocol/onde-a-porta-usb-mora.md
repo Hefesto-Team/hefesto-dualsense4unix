@@ -219,7 +219,7 @@ produto ainda não usa**:
 proíbe declarar o que o produto pode medir. Onde a controladora responde, **o
 produto sabe**, e perguntar vira a tela fingindo ignorância. A pergunta legítima
 encolhe para onde o dado não existe — e a §3 diz exatamente onde é. A
-[sprint das portas](../process/sprints/2026-08-24-PORTAS-DA-CASA-01-o-produto-sabe-onde-cada-radio-mora-e-nao-diz.md)
+[sprint das portas](../process/sprints/2026-08-27-A-FAXINA-o-que-saiu-e-por-que.md)
 depende desta página para desenhar essa fronteira.
 
 ---
@@ -325,5 +325,5 @@ dependa desta página tem de sobreviver a isso.
 - [GUIA-RADIO-DA-SALA.md](../../GUIA-RADIO-DA-SALA.md) — por que a posição
   física de um rádio 2,4 GHz importa. Esta página é o instrumento; aquela é o
   motivo.
-- [PORTAS-DA-CASA-01](../process/sprints/2026-08-24-PORTAS-DA-CASA-01-o-produto-sabe-onde-cada-radio-mora-e-nao-diz.md)
+- [PORTAS-DA-CASA-01](../process/sprints/2026-08-27-A-FAXINA-o-que-saiu-e-por-que.md)
   — a leva que consome esta medição.
