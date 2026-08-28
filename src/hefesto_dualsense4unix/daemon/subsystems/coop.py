@@ -1601,12 +1601,21 @@ class CoopManager:
         """
         numero: int | None = None
         registry = getattr(self._daemon, "identity_registry", None)
+        # 27/08/2026: `numero_da_lampada` primeiro, `slot_for` só como degrau
+        # de compatibilidade (dublê de teste / backend legado sem o método).
+        # A diferença morde: `slot_for(assign=False)` responde um AUSENTE pelo
+        # LUGAR GRAVADO, que é de outro espaço de numeração e já colidiu com
+        # o número de um presente — quem acende lâmpada não pode ler aquilo.
+        lampada = (
+            getattr(registry, "numero_da_lampada", None) if registry is not None else None
+        )
         slot_for = getattr(registry, "slot_for", None) if registry is not None else None
-        if callable(slot_for):
+        consulta = lampada if callable(lampada) else slot_for
+        if callable(consulta):
             with contextlib.suppress(Exception):
                 # `assign=False`: acender LED jamais aloca identidade (o dono
                 # da atribuição é o provider de cor / o `sync_connected`).
-                bruto = slot_for(identity, assign=False)
+                bruto = consulta(identity, assign=False)
                 if isinstance(bruto, int) and not isinstance(bruto, bool) and bruto >= 1:
                     numero = bruto
         if numero is None or numero in usados:

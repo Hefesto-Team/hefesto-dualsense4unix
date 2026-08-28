@@ -386,7 +386,10 @@ def no_do_controle(
     listar: Any = os.listdir,
     ler: Any = None,
 ) -> str | None:
-    """``/dev/hidrawN`` do DualSense NO CABO cujo endereço é ``uniq``.
+    """``/dev/hidrawN`` do DualSense cujo endereço é ``uniq`` — hoje, só no cabo.
+
+    O "só no cabo" é o estado de HOJE, não uma propriedade do aparelho: ver o
+    primeiro filtro abaixo, e a ``ONDA-CONEXOES-11``, que o tira.
 
     ``raiz``, ``listar`` e ``ler`` entram por argumento com o default do sistema
     real (regra F4 de ``DECISOES-DA-EXECUCAO.md``, e o ``CANARIO-FS-01`` pega
@@ -397,14 +400,22 @@ def no_do_controle(
     endereço, quando ele está no rádio, ou quando o que casou é o nosso próprio
     vpad. Três filtros, e nenhum é zelo:
 
-    * **cabo**: por rádio o firmware do controle RECUSA o ``0x80``. Medido em
-      23/08/2026 nos dois DualSense desta bancada, com e sem CRC: o
-      ``SET_REPORT`` sai inteiro no canal de controle L2CAP (``btmon``: TX 65
-      bytes) e o CONTROLE responde ``HANDSHAKE 0x04``
-      (``ERR_INVALID_PARAMETER``) em ~5 ms. Não é o BlueZ, não é o uhid, não é
-      o kernel, não é o daemon — é o aparelho. O ``-EIO`` que chega ao Python é
-      máscara do uhid (``hid-playstation.c:901``). O ``GET_FEATURE 0x20`` no
-      MESMO canal responde em ~6 ms, o que prova que o fio está bom;
+    * **cabo** — e este filtro é NOSSO, não do aparelho. **FATO ERRADO,
+      SUBSTITUÍDO (27/08/2026).** Estas linhas diziam: *"por rádio o firmware do
+      controle RECUSA o 0x80 (…) Não é o BlueZ, não é o uhid, não é o kernel,
+      não é o daemon — é o aparelho."* **Não era o aparelho: era o nosso CRC.**
+      As sementes desse CRC são o byte de cabeçalho da transação HIDP, e há uma
+      por sentido; o ensaio de 23/08 assinou um ``SET_REPORT`` com a de
+      ``DATA|FEATURE`` (``0xA3``), quando a que sai é ``SET_REPORT|FEATURE``
+      (``0x53``). Medido em 27/08/2026 no mesmo controle e no mesmo comando,
+      mudando só a semente: ``0xA3`` e ``0xA2`` devolvem ``errno 5``; ``0x53``
+      é aceito, e os quatro DualSense desta bancada responderam pelo rádio.
+      Ver ``docs/protocol/dualsense-referencia-canonica.md``, seção "O caminho
+      da cor do plástico". **O filtro continua aqui porque ninguém o tirou
+      ainda** — tirá-lo é a ``ONDA-CONEXOES-11``, junto com os outros dois
+      portões que recusam o rádio (a trava de bytes zerados em
+      ``conferir_pedido`` e o ``transporte != "usb"`` da janela). Não pare aqui
+      achando que o aparelho recusa: ele não recusa;
     * **VID:PID de DualSense**: o comando é da família de fábrica da Sony, e
       mandá-lo para o aparelho de outro fabricante é escrever às cegas;
     * **vpad**: ele forja VID/PID/bus de DualSense no cabo, então sem o filtro o

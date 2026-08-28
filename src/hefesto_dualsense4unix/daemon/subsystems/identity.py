@@ -862,6 +862,83 @@ class ControllerIdentityRegistry:
                 break
         return bruto - set(self._ordem.values())
 
+    def _numeros_da_mesa_locked(self) -> dict[str, int]:
+        """Número EXIBIDO de CADA presente, numa leitura só (sob ``self._lock``).
+
+        **É o ponto ÚNICO onde um endereço vira número de jogador**, e a
+        unicidade é ESTRUTURAL, não conferida depois: a tabela nasce de um
+        ``zip`` entre a FILA DO MOMENTO e os ``postos`` ordenados, e a conta
+        de cada linha (``posicao`` + quantos externos vêm antes do posto) é
+        estritamente crescente nas duas parcelas. Dois presentes não podem
+        sair com o mesmo número nem com o arquivo corrompido.
+
+        Isto era um cálculo POR CONSULTA dentro de ``_posicao_locked``, e a
+        aritmética aqui é a mesma — o que muda é haver UMA tabela por leitura
+        da mesa, que é o que permite provar a unicidade e o que o resto da
+        casa consome (``numeros_da_mesa``, ``numero_da_lampada``).
+        """
+        presentes = [k for k in self._connected if k in self._ordem]
+        if not presentes:
+            return {}
+        postos = sorted(self._ordem[k] for k in presentes)
+        externos = self._external_present_ranks_locked()
+        numeros: dict[str, int] = {}
+        for posicao, (chave, posto) in enumerate(
+            zip(self._ordem_do_momento_locked(presentes), postos, strict=True)
+        ):
+            numeros[chave] = posicao + sum(1 for r in externos if r < posto) + 1
+        return numeros
+
+    def numeros_da_mesa(self) -> dict[str, int]:
+        """Tabela key→número de TODOS os presentes agora. Leitura pura.
+
+        A forma honesta de perguntar "quem acende o quê nesta mesa": uma
+        leitura, uma mesa, e a garantia de que nenhum número se repete. Quem
+        pergunta por UM controle chama ``numero_da_lampada``.
+        """
+        with self._lock:
+            self._avaliar_mesa_locked()
+            return self._numeros_da_mesa_locked()
+
+    def numero_da_lampada(self, uniq: str | None, *, assign: bool = True) -> int | None:
+        """Número que ``uniq`` pode ACENDER agora — None quando não há um.
+
+        Irmão de ``slot_for``, e a diferença é a PERGUNTA que cada um responde:
+
+        - ``slot_for`` responde *"que número este endereço tem — ou TERIA se
+          estivesse na mesa"*. Para um AUSENTE a resposta sai do LUGAR
+          GRAVADO, que é um número de OUTRO espaço: o da fila de preferência,
+          onde o ausente continua contando. É a resposta certa para um
+          rótulo de GUI ("Controle 1" continua sendo dele) e a resposta
+          ERRADA para uma lâmpada;
+        - aqui a pergunta é *"que número este controle acende AGORA"*, e ela
+          só tem resposta para quem está na mesa. Ausente devolve ``None``,
+          que o provider de cor lê como "sem opinião" — o controle segue com
+          o que já tinha até o próximo batimento, em vez de acender um
+          número que outro já está acendendo.
+
+        MEDIDO em 27/08/2026, com os quatro DualSense dela no rádio: o link
+        de um caiu e voltou entre dois ``sync_connected``. Ele continuou
+        recebendo escrita (o handle voltou antes do batimento) e acendeu o
+        LUGAR GRAVADO dele, que era 1; o primeiro da mesa também acendia 1.
+        Dois controles no jogador 1, nenhum no 4, e assim ficou por 28
+        minutos — porque a lâmpada só é reescrita quando algo acontece.
+
+        ``assign=True`` (padrão) mantém o contrato do R-14 §1: ATRIBUIR lugar
+        na fila é identidade, não aparência, e acontece pelo mesmo caminho de
+        sempre (``slot_for``) antes de qualquer teste de presença.
+        """
+        if assign:
+            self.slot_for(uniq)
+        if not uniq or not isinstance(uniq, str):
+            return None
+        key, persistable = self._canonical(uniq)
+        if not key or (persistable and key.startswith(_VPAD_MAC_PREFIX)):
+            return None
+        with self._lock:
+            self._avaliar_mesa_locked()
+            return self._numeros_da_mesa_locked().get(key)
+
     def _posicao_locked(self, key: str) -> int | None:
         """Colocação de ``key`` entre os PRESENTES (já sob ``self._lock``).
 
@@ -880,23 +957,25 @@ class ControllerIdentityRegistry:
         fechando sem buraco e sem duplicata — e um controle AUSENTE segue
         sendo colocado pelo lugar gravado dele, que é a resposta à pergunta
         "que número ele teria se estivesse na mesa".
+
+        **Os dois ramos abaixo são dois ESPAÇOS DE NUMERAÇÃO diferentes**, e
+        misturá-los na mesma mesa foi o defeito de 27/08/2026 (ver
+        ``numero_da_lampada``): o presente é colocado entre os presentes, o
+        ausente é colocado pelo gravado. Quem acende lâmpada NÃO chama isto
+        — chama ``numero_da_lampada``, que só conhece o primeiro ramo.
         """
         rank = self._ordem.get(key)
         if rank is None:
             return None
+        numero = self._numeros_da_mesa_locked().get(key)
+        if numero is not None:
+            return numero
+        # Ausente: não está na fila do momento (não chegou), então a
+        # pergunta só pode ser respondida pelo gravado — comportamento
+        # idêntico ao de antes de D-30.
         presentes = [k for k in self._connected if k in self._ordem]
-        if key in self._connected:
-            postos = sorted(self._ordem[k] for k in presentes)
-            posicao = self._ordem_do_momento_locked(presentes).index(key)
-            meu_posto = postos[posicao]
-        else:
-            # Ausente: não está na fila do momento (não chegou), então a
-            # pergunta só pode ser respondida pelo gravado — comportamento
-            # idêntico ao de antes de D-30.
-            meu_posto = rank
-            posicao = sum(1 for k in presentes if self._ordem[k] < rank)
-        antes = posicao
-        antes += sum(1 for r in self._external_present_ranks_locked() if r < meu_posto)
+        antes = sum(1 for k in presentes if self._ordem[k] < rank)
+        antes += sum(1 for r in self._external_present_ranks_locked() if r < rank)
         return antes + 1
 
     def mark_disconnected(self, uniq: str | None) -> None:
@@ -1305,8 +1384,12 @@ def make_auto_output_provider(
     )
 
     def provider(uniq: str) -> _DesiredOutput | None:
-        # R-14 §1: a ATRIBUIÇÃO acontece sempre (ver docstring).
-        slot = registry.slot_for(uniq)
+        # R-14 §1: a ATRIBUIÇÃO acontece sempre (ver docstring) — é o que
+        # `numero_da_lampada(assign=True)` faz antes de qualquer outra coisa.
+        # O NÚMERO, esse, sai da mesa de AGORA: quem não está nela não acende
+        # (None = sem opinião), porque o lugar gravado do ausente é de outro
+        # espaço de numeração e já colidiu com o de um presente (27/08/2026).
+        slot = registry.numero_da_lampada(uniq)
         if slot is None:
             return None
         campos: dict[str, Any] = {}
