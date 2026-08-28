@@ -33,8 +33,8 @@ dpad_up,D-pad Cima,↑,botao,direcional,dpad_up,dpad_up,25.5,38.46,32.5,47,ALTA,
 dpad_right,D-pad Direita,→,botao,direcional,dpad_right,dpad_right,30.96,45.46,39.5,52.46,ALTA,,0,-
 dpad_down,D-pad Baixo,↓,botao,direcional,dpad_down,dpad_down,25.5,50.92,32.5,59.46,ALTA,,0,-
 dpad_left,D-pad Esquerda,←,botao,direcional,dpad_left,dpad_left,18.5,45.46,27.04,52.46,ALTA,,0,-
-l1,L1,-,botao,ombros,l1,l1,26.31,25.64,37.02,31,ALTA,"Ombro, o de CIMA, e ele ENCOSTA no casco — ela, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.",0,-
-r1,R1,-,botao,ombros,r1,r1,91.07,25.62,101.78,31,ALTA,"Ombro, o de CIMA, encostado no casco.",0,-
+l1,L1,-,botao,ombros,l1,l1,26.31,25.64,37.02,32,ALTA,"Ombro, o de CIMA, e ele ENCOSTA no casco — ela, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.",0,-
+r1,R1,-,botao,ombros,r1,r1,91.07,25.62,101.78,32,ALTA,"Ombro, o de CIMA, encostado no casco.",0,-
 l2,L2,gatilho adaptativo esquerdo,gatilho,gatilhos,l2,l2,19.43,28.13,28.02,33.62,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-
 r2,R2,gatilho adaptativo direito,gatilho,gatilhos,r2,r2,100.07,28.11,108.66,33.61,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-
 stick_l,Analógico Esquerdo,L3,eixo,analogicos,stick_l,stick_l,39.62,55.68,55.62,71.68,ALTA,"UMA volta, não três: 'os analógicos tem várias voltas ao invés de uma'. Clique e direção são duas entradas na mesma peça.",0,-
