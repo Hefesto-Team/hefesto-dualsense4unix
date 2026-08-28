@@ -1417,6 +1417,12 @@ class PyDualSenseController(IController):
         # `_merged_desired_for_key`, SOB `_io_lock` — o provider DEVE ser
         # barato e sem I/O.
         self._auto_output_provider: Callable[[str], _DesiredOutput | None] | None = None
+        # MESA-NO-MEIO-DO-LOTE-01 (27/08/2026): chaves já APRESENTADAS ao
+        # provider automático desde a última mudança de `_handles`. Ver
+        # `_assentar_mesa_locked` — sem isto, um controle que reapareceu entra
+        # na mesa NO MEIO de um lote de escrita e os que já foram numerados
+        # ficaram com a mesa antiga (dois "jogador 1", ninguém no 4).
+        self._mesa_apresentada: frozenset[str] = frozenset()
         # S-5 (auditoria 21/07): opener broker-aware da leitura da feature 0x05
         # (calibração). Sem ele, `read_calibration` abre por `os.open(path)` e,
         # quando o broker ESCONDE o hidraw (0600 root — promoção VPAD-02 com
@@ -1849,6 +1855,7 @@ class PyDualSenseController(IController):
         uniq = self._key_to_uniq(key)
         override = self._desired_by_uniq.get(uniq) if uniq is not None else None
         base = self._desired_default
+        self._assentar_mesa_locked()
         provider = self._auto_output_provider
         if provider is not None and uniq is not None:
             try:
@@ -1877,6 +1884,59 @@ class PyDualSenseController(IController):
         if game is not None and self._game_wins():
             resolved = _merge_desired(resolved, game)
         return resolved
+
+    def _assentar_mesa_locked(self) -> None:
+        """Apresenta a mesa INTEIRA ao provider antes de numerar alguém.
+
+        MESA-NO-MEIO-DO-LOTE-01 — a causa raiz medida em 27/08/2026, com os
+        quatro DualSense dela no rádio. Toda escrita de LED por aqui é um
+        LOTE: `enviar_gatilho_da_cor`, `reassert_resolved_outputs`, o
+        priming de hotplug e o unmute resolvem `_merged_desired_for_key` de
+        VÁRIAS chaves de uma vez, sob o mesmo `_io_lock`. E o provider de
+        identidade não é uma leitura pura: ele ADMITE na mesa o controle que
+        pergunta (`slot_for`, atribuição lazy do R-14 §1).
+
+        Daí o defeito: o link de um controle caiu e voltou entre dois
+        batimentos do `sync_connected` (~2 s). Quando o lote correu, os TRÊS
+        primeiros foram numerados com a mesa de três — e o quarto, ao ser
+        resolvido, entrou na mesa e foi numerado com a mesa de quatro.
+        Resultado gravado no journal: dois controles com o padrão do jogador
+        1, ninguém com o do 4. Ficou assim por 28 minutos, porque a lâmpada
+        só é reescrita quando algo acontece.
+
+        A cura é anterior ao número, não posterior: antes de o primeiro
+        controle do lote perguntar o seu, TODOS são apresentados. A mesa
+        deixa de se mexer no meio, e a tabela que o registro devolve é a
+        mesma para todos do lote — que é a única forma de dois números não
+        colidirem.
+
+        Barato por contrato (`set_auto_output_provider`: sem I/O, só
+        memória) e feito UMA vez por composição de `_handles`: enquanto os
+        handles não mudam, isto é uma comparação de `frozenset`. A marca é
+        gravada ANTES do laço de propósito — o provider não reentra aqui,
+        mas a ordem torna a reentrância impossível em vez de improvável.
+
+        **A APRESENTAÇÃO É NA ORDEM DE `_handles` (primário primeiro), nunca
+        na do `frozenset`.** O conjunto é só para saber SE mudou; quem entra
+        no laço é a ordem do dict. É a mesma regra do R-24 no
+        `_sync_identity_registry` (*"nunca passar um `set`, que numeraria por
+        hash"*) e ela morde igual aqui: com o `frozenset` no laço, dois
+        controles virgens recebiam lugar na fila em ordem de hash, e o
+        segundo da mesa nascia Controle 1.
+        """
+        atual = frozenset(self._handles)
+        if atual == self._mesa_apresentada:
+            return
+        self._mesa_apresentada = atual
+        provider = self._auto_output_provider
+        if provider is None:
+            return
+        for chave in list(self._handles):
+            uniq = self._key_to_uniq(chave)
+            if uniq is None:
+                continue
+            with contextlib.suppress(Exception):
+                provider(uniq)
 
     def _scaled_led(self, uniq: str, desired: _DesiredOutput) -> _DesiredOutput:
         """Aplica a escala de brilho por-uniq (R-20 item 2). Sob `_io_lock`.
